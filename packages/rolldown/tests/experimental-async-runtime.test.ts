@@ -52,6 +52,22 @@ const COUNTER_FIELDS: Array<keyof BindingRuntimeMetrics> = [
   'maxActiveBlockingTasks',
 ];
 
+const RESETTABLE_EVENT_FIELDS: Array<keyof BindingRuntimeMetrics> = [
+  'tasksSpawned',
+  'tasksCompleted',
+  'tasksPanicked',
+  'runnableSchedules',
+  'runnablePolls',
+  'blockingTasksStarted',
+  'blockingTasksCompleted',
+];
+
+const HIGH_WATER_FIELDS: Array<keyof BindingRuntimeMetrics> = [
+  'maxQueuedRunnables',
+  'maxActiveRunnables',
+  'maxActiveBlockingTasks',
+];
+
 describe('experimental async runtime API', () => {
   test('configureAsyncRuntime throws the feature-disabled error on the default build', () => {
     // Guard: only meaningful on the default `tokio-runtime` build. On an
@@ -94,17 +110,17 @@ describe('experimental async runtime API', () => {
     }
   });
 
-  // The increment path (counters rise after a bundle, reset back to zero) is
+  // The increment path (event counters rise after a bundle, then reset) is
   // only exercised on an `async-runtime` build, where the Rolldown scheduler is
   // installed and async binding work is actually counted. On the default
   // `tokio-runtime` build this is a clean skip — the scheduler is Tokio and the
   // counters stay zero, so there is nothing to observe.
   test.skipIf(isDefaultBuild)(
-    'metrics rise after a bundle and reset to zero (async-runtime build only)',
+    'event metrics reset without corrupting live gauges (async-runtime build only)',
     async () => {
       resetAsyncRuntimeMetrics();
       const before = getAsyncRuntimeMetrics();
-      for (const field of COUNTER_FIELDS) {
+      for (const field of RESETTABLE_EVENT_FIELDS) {
         expect(before[field], `reset metric ${String(field)}`).toBe(0);
       }
 
@@ -131,11 +147,20 @@ describe('experimental async runtime API', () => {
       // A real bundle drives the scheduler: at least one task is spawned.
       expect(after.tasksSpawned).toBeGreaterThan(before.tasksSpawned);
 
-      // Reset zeroes the counters again.
+      // Reset clears cumulative events but preserves live gauges and lifetime
+      // high-water marks. The build is closed, so every live gauge is zero.
       resetAsyncRuntimeMetrics();
       const reset = getAsyncRuntimeMetrics();
-      for (const field of COUNTER_FIELDS) {
+      for (const field of RESETTABLE_EVENT_FIELDS) {
         expect(reset[field], `post-reset metric ${String(field)}`).toBe(0);
+      }
+      expect(reset.queuedRunnables).toBe(0);
+      expect(reset.activeRunnables).toBe(0);
+      expect(reset.activeBlockingTasks).toBe(0);
+      for (const field of HIGH_WATER_FIELDS) {
+        expect(reset[field], `preserved metric ${String(field)}`).toBeGreaterThanOrEqual(
+          after[field],
+        );
       }
     },
   );

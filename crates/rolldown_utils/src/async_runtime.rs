@@ -80,8 +80,15 @@ impl RuntimeOptions {
     }
     if self.flavor == RuntimeFlavor::CurrentThread {
       self.worker_threads = 1;
+      self.max_blocking_tasks = 1;
+    } else {
+      // Blocking closures execute on the shared Rayon pool. Keep one execution
+      // lane available for runnable futures and timer service even when every
+      // admitted blocking job is stalled. A one-worker configuration gets one
+      // internal reserve worker in `MultiThreadExecutor::new`.
+      let blocking_capacity = self.worker_threads.saturating_sub(1).max(1);
+      self.max_blocking_tasks = self.max_blocking_tasks.min(blocking_capacity);
     }
-    self.max_blocking_tasks = self.max_blocking_tasks.min(self.worker_threads);
     #[cfg(target_family = "wasm")]
     if self.flavor == RuntimeFlavor::MultiThread {
       return Err(RuntimeConfigError(
@@ -285,10 +292,24 @@ pub struct JoinHandle<T>(JoinHandleInner<T>);
 impl<T> Unpin for JoinHandle<T> {}
 
 impl<T> JoinHandle<T> {
-  pub fn detach(self) {
-    if let JoinHandleInner::Task(task) = self.0 {
+  fn detach_task(&mut self) {
+    let inner = std::mem::replace(&mut self.0, JoinHandleInner::Ready(None));
+    if let JoinHandleInner::Task(task) = inner {
       task.detach();
     }
+  }
+
+  pub fn detach(mut self) {
+    self.detach_task();
+  }
+}
+
+impl<T> Drop for JoinHandle<T> {
+  fn drop(&mut self) {
+    // Tokio's JoinHandle detaches on drop. Preserve that compatibility:
+    // fire-and-forget callers must not silently cancel work merely because
+    // they ignore the returned handle.
+    self.detach_task();
   }
 }
 
@@ -355,6 +376,11 @@ struct RuntimeMetrics {
   blocking_tasks_completed: AtomicU64,
   active_blocking_tasks: AtomicU64,
   max_active_blocking_tasks: AtomicU64,
+  // Seqlock generation around resets. The deadlock detector snapshots
+  // resettable counters, so it must distinguish identical counter values from
+  // different reset generations instead of mistaking that ABA for no progress.
+  reset_generation: AtomicU64,
+  reset_lock: Mutex<()>,
 }
 
 impl RuntimeMetrics {
@@ -396,37 +422,53 @@ impl RuntimeMetrics {
   /// so a submission is progress the moment it is made -- not only once a
   /// worker gets to run it (Codex round-2).
   fn progress_fingerprint(&self) -> ProgressFingerprint {
-    ProgressFingerprint {
-      runnable_schedules: self.runnable_schedules.load(Ordering::Relaxed),
-      runnable_polls: self.runnable_polls.load(Ordering::Relaxed),
-      tasks_completed: self.tasks_completed.load(Ordering::Relaxed),
-      blocking_tasks_scheduled: self.blocking_tasks_scheduled.load(Ordering::Relaxed),
-      blocking_tasks_started: self.blocking_tasks_started.load(Ordering::Relaxed),
-      blocking_tasks_completed: self.blocking_tasks_completed.load(Ordering::Relaxed),
+    loop {
+      let reset_generation = self.reset_generation.load(Ordering::SeqCst);
+      if !reset_generation.is_multiple_of(2) {
+        std::hint::spin_loop();
+        continue;
+      }
+      let fingerprint = ProgressFingerprint {
+        reset_generation,
+        runnable_schedules: self.runnable_schedules.load(Ordering::Relaxed),
+        runnable_polls: self.runnable_polls.load(Ordering::Relaxed),
+        tasks_completed: self.tasks_completed.load(Ordering::Relaxed),
+        blocking_tasks_scheduled: self.blocking_tasks_scheduled.load(Ordering::Relaxed),
+        blocking_tasks_started: self.blocking_tasks_started.load(Ordering::Relaxed),
+        blocking_tasks_completed: self.blocking_tasks_completed.load(Ordering::Relaxed),
+      };
+      if self.reset_generation.load(Ordering::SeqCst) == reset_generation {
+        return fingerprint;
+      }
     }
   }
 
   fn reset(&self) {
+    let _reset = self.reset_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    // Event counters are safe to reset independently. Live gauges are not:
+    // queued/active guards may still hold a future decrement, and zeroing a
+    // gauge underneath them wraps the unsigned counter on completion.
+    //
+    // High-water gauges remain lifetime values. Resetting them concurrently
+    // with fetch_max would either lose a real peak or require synchronization
+    // on every hot-path metric update.
+    self.reset_generation.fetch_add(1, Ordering::SeqCst);
     self.tasks_spawned.store(0, Ordering::Relaxed);
     self.tasks_completed.store(0, Ordering::Relaxed);
     self.tasks_panicked.store(0, Ordering::Relaxed);
     self.runnable_schedules.store(0, Ordering::Relaxed);
     self.runnable_polls.store(0, Ordering::Relaxed);
-    self.queued_runnables.store(0, Ordering::Relaxed);
-    self.max_queued_runnables.store(0, Ordering::Relaxed);
     self.blocking_tasks_scheduled.store(0, Ordering::Relaxed);
-    self.active_runnables.store(0, Ordering::Relaxed);
-    self.max_active_runnables.store(0, Ordering::Relaxed);
     self.blocking_tasks_started.store(0, Ordering::Relaxed);
     self.blocking_tasks_completed.store(0, Ordering::Relaxed);
-    self.active_blocking_tasks.store(0, Ordering::Relaxed);
-    self.max_active_blocking_tasks.store(0, Ordering::Relaxed);
+    self.reset_generation.fetch_add(1, Ordering::SeqCst);
   }
 }
 
 /// See [`RuntimeMetrics::progress_fingerprint`].
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct ProgressFingerprint {
+  reset_generation: u64,
   runnable_schedules: u64,
   runnable_polls: u64,
   tasks_completed: u64,
@@ -645,21 +687,32 @@ impl CurrentThreadExecutor {
   }
 }
 
-// Identifies the executor whose pool worker is currently draining runnables /
-// blocking jobs on THIS thread (or `None` when not on a pool worker). Used by
-// `MultiThreadExecutor::block_on` to detect a re-entrant (on-pool) call OF THE
-// SAME EXECUTOR and drive the queue cooperatively instead of parking the worker
-// (RD-1). Carrying the executor id (not a bare bool) keeps this marker scoped
-// exactly like `BlockingOwnerToken.executor_id`: a worker of executor A that
-// re-enters `block_on` on executor B must NOT be treated as B's on-pool driver
-// -- it owns none of B's accounting, so it parks like any foreign-thread caller
-// rather than driving B's queues as an unaccounted within-cap driver. Under the
-// single global executor used in production these ids always match, so this is a
+// Identifies the executor whose Rayon pool owns THIS worker thread (or `None`
+// when not on a pool worker). Used by `MultiThreadExecutor::block_on` to detect
+// a re-entrant (on-pool) call OF THE SAME EXECUTOR and drive the queue
+// cooperatively instead of parking the worker (RD-1). Carrying the executor id
+// (not a bare bool) keeps this marker scoped exactly like
+// `BlockingOwnerToken.executor_id`: a worker of executor A that re-enters
+// `block_on` on executor B must NOT be treated as B's on-pool driver -- it owns
+// none of B's accounting, so it parks like any foreign-thread caller rather
+// than driving B's queues as an unaccounted within-cap driver. Under the single
+// global executor used in production these ids always match, so this is a
 // defensive scoping gate (consistent with the blocking-owner machinery), not a
 // reachable production change.
 #[cfg(not(target_family = "wasm"))]
 thread_local! {
   static ON_POOL_WORKER: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
+}
+
+// Identifies scheduler-driver frames on a pool worker. Unlike
+// `ON_POOL_WORKER`, this is not installed by Rayon's worker start hook:
+// arbitrary nested Rayon jobs need cooperative `block_on` classification, but
+// must not place work in the per-thread LIFO slot because no drain frame may
+// remain to consume it after the Rayon job returns.
+#[cfg(not(target_family = "wasm"))]
+thread_local! {
+  static IN_SCHEDULER_DRIVER: std::cell::Cell<Option<u64>> =
+    const { std::cell::Cell::new(None) };
 }
 
 // Per-worker LIFO slot (wake-path §6(c), tokio-style): holds at most ONE
@@ -685,7 +738,10 @@ thread_local! {
 }
 
 #[cfg(not(target_family = "wasm"))]
-struct OnPoolWorkerGuard(Option<u64>);
+struct OnPoolWorkerGuard {
+  previous_worker: Option<u64>,
+  previous_driver: Option<u64>,
+}
 
 #[cfg(not(target_family = "wasm"))]
 impl OnPoolWorkerGuard {
@@ -693,14 +749,18 @@ impl OnPoolWorkerGuard {
   // (possibly from different executors on the same thread) restore the exact
   // prior executor id on drop instead of unconditionally clearing it.
   fn enter(id: u64) -> Self {
-    Self(ON_POOL_WORKER.with(|flag| flag.replace(Some(id))))
+    Self {
+      previous_worker: ON_POOL_WORKER.with(|flag| flag.replace(Some(id))),
+      previous_driver: IN_SCHEDULER_DRIVER.with(|flag| flag.replace(Some(id))),
+    }
   }
 }
 
 #[cfg(not(target_family = "wasm"))]
 impl Drop for OnPoolWorkerGuard {
   fn drop(&mut self) {
-    ON_POOL_WORKER.with(|flag| flag.set(self.0));
+    IN_SCHEDULER_DRIVER.with(|flag| flag.set(self.previous_driver));
+    ON_POOL_WORKER.with(|flag| flag.set(self.previous_worker));
   }
 }
 
@@ -812,32 +872,54 @@ struct MultiThreadExecutor {
 
 #[cfg(not(target_family = "wasm"))]
 impl MultiThreadExecutor {
-  /// Max consecutive runnable runs before a worker yields: `drain` exits (and
-  /// respawns via `finish_draining`) and `cooperative_block_on` flushes its
-  /// LIFO slot, so a hot slot streak cannot starve the shared FIFO or the
-  /// blocking queue on either loop (wake-path §8.7).
+  /// Max work units before a drainer yields. Cooperative drivers use the same
+  /// value as the LIFO streak cap.
   const RUNNABLE_BUDGET: usize = 64;
+  /// Force one blocking admission after this many consecutive runnable polls
+  /// when blocking capacity and queued work are both available.
+  const RUNNABLE_FAIRNESS_QUANTUM: usize = 16;
 
   fn new(
     options: &RuntimeOptions,
     metrics: Arc<RuntimeMetrics>,
   ) -> Result<Self, RuntimeConfigError> {
+    let id = NEXT_EXECUTOR_ID.fetch_add(1, Ordering::Relaxed);
     let thread_name_prefix = options.thread_name_prefix.clone();
+    // Validated configurations reserve one lane from blocking admission. A
+    // one-worker configuration cannot express that inside a one-thread pool,
+    // so add one internal reserve worker while preserving one CPU worker as
+    // the public configuration.
+    let pool_threads = options.worker_threads.max(options.max_blocking_tasks.saturating_add(1));
     let pool = ThreadPoolBuilder::new()
-      .num_threads(options.worker_threads)
+      .num_threads(pool_threads)
       .thread_name(move |index| format!("{thread_name_prefix}-{index}"))
+      .start_handler(move |_| {
+        ON_POOL_WORKER.with(|worker| worker.set(Some(id)));
+      })
+      .exit_handler(move |_| {
+        ON_POOL_WORKER.with(|worker| {
+          if worker.get() == Some(id) {
+            worker.set(None);
+          }
+        });
+        IN_SCHEDULER_DRIVER.with(|driver| {
+          if driver.get() == Some(id) {
+            driver.set(None);
+          }
+        });
+      })
       .build()
       .map_err(|error| RuntimeConfigError(format!("failed to create runtime workers: {error}")))?;
     Ok(Self {
-      id: NEXT_EXECUTOR_ID.fetch_add(1, Ordering::Relaxed),
+      id,
       pool,
       queue: Mutex::new(VecDeque::new()),
       blocking_queue: Mutex::new(VecDeque::new()),
       active_drainers: AtomicUsize::new(0),
       active_blocking: AtomicUsize::new(0),
       parked_drivers: ParkedDrivers::default(),
-      max_drainers: options.worker_threads,
-      max_blocking: options.max_blocking_tasks.min(options.worker_threads),
+      max_drainers: pool_threads,
+      max_blocking: options.max_blocking_tasks,
       park_deadline: options.park_deadline,
       timers: TimerHeap::default(),
       metrics,
@@ -867,7 +949,7 @@ impl MultiThreadExecutor {
     // (A cooperative poll entered FROM a blocking closure also carries the
     // closure's token and loses the fast path -- a rare, conservative,
     // correctness-first trade.)
-    if ON_POOL_WORKER.with(std::cell::Cell::get) == Some(self.id)
+    if IN_SCHEDULER_DRIVER.with(std::cell::Cell::get) == Some(self.id)
       && BLOCKING_OWNER.with(std::cell::Cell::get).is_none()
     {
       match LIFO_SLOT.with(std::cell::Cell::take) {
@@ -919,6 +1001,15 @@ impl MultiThreadExecutor {
     }
   }
 
+  fn wake_for_blocking_work(self: &Arc<Self>) {
+    // The timer timekeeper is registered for runnable wakes but is
+    // deliberately ineligible for blocking work. Prefer a cooperative driver
+    // that can consume the blocking FIFO; otherwise arm a normal drainer.
+    if !self.parked_drivers.wake_one_blocking() {
+      self.ensure_drainer();
+    }
+  }
+
   fn schedule_blocking<F, T>(self: &Arc<Self>, function: F) -> JoinHandle<T>
   where
     F: FnOnce() -> T + Send + 'static,
@@ -950,9 +1041,9 @@ impl MultiThreadExecutor {
         }),
       },
     );
-    // Wake a parked cooperative driver so it can run this blocking job inline if
-    // every blocking slot is held by parked drivers (RD-1 (b)).
-    self.wake_for_new_work();
+    // Wake a blocking-capable cooperative driver, or arm a normal drainer.
+    // Never spend the only wake on the runnable-only timer timekeeper.
+    self.wake_for_blocking_work();
     JoinHandle(JoinHandleInner::Blocking(receiver))
   }
 
@@ -985,32 +1076,9 @@ impl MultiThreadExecutor {
     // wrappers are catch_unwind'd) but must not lose a task if they happen.
     let _slot_backstop = LifoSlotFlushGuard(&self);
 
-    // The LIFO slot shares this budget with the FIFO: a hot wake/await pair
-    // can hold the slot for at most RUNNABLE_BUDGET consecutive runs (the
-    // streak cap, wake-path §8.7) before this drainer exits, flushes the slot
-    // and lets `finish_draining` re-arm fairness for FIFO and blocking work.
+    let mut runnable_streak = 0usize;
     for _ in 0..Self::RUNNABLE_BUDGET {
-      if let Some(runnable) = self.pop_lifo_slot() {
-        // Same lexical owner-clear as `run_one`'s slot/FIFO pops: the POP can
-        // run while an owner frame is ambient (e.g. a cooperative `block_on`
-        // entered from a blocking closure), and the slot must not smuggle
-        // that frame's over-cap privilege into the runnable (RD-1 (B)).
-        let _non_owner = BlockingOwnerGuard::enter(None);
-        run_runnable(&self.metrics, runnable);
-        continue;
-      }
-      let runnable =
-        self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
-      if let Some(runnable) = runnable {
-        run_runnable(&self.metrics, runnable);
-        continue;
-      }
-      if let Some(blocking) = self.take_blocking() {
-        {
-          let _owner = BlockingOwnerGuard::enter(Some(self.fresh_owner_token()));
-          blocking();
-        }
-        self.active_blocking.fetch_sub(1, Ordering::Release);
+      if self.run_one_fair(&mut runnable_streak) {
         continue;
       }
       // MANDATORY flush before finish_draining (wake-path §8.3). On this path
@@ -1102,10 +1170,8 @@ impl MultiThreadExecutor {
     }
   }
 
-  /// Run a single unit of queued work (this worker's LIFO slot first, then a
-  /// shared-FIFO runnable, else a blocking job). Returns `true` if work was
-  /// performed. Mirrors the body of `drain`.
-  fn run_one(self: &Arc<Self>) -> bool {
+  /// Run one runnable, preferring this worker's LIFO slot over the shared FIFO.
+  fn run_one_runnable(self: &Arc<Self>) -> bool {
     if let Some(runnable) = self.pop_lifo_slot() {
       // Same owner-clear as the FIFO branch below (RD-1 (B)): the slot must
       // not smuggle an owner frame's over-cap privilege into the runnables it
@@ -1125,6 +1191,10 @@ impl MultiThreadExecutor {
       run_runnable(&self.metrics, runnable);
       return true;
     }
+    false
+  }
+
+  fn run_one_blocking(self: &Arc<Self>) -> bool {
     if let Some(blocking) = self.take_blocking() {
       {
         let _owner = BlockingOwnerGuard::enter(Some(self.fresh_owner_token()));
@@ -1134,6 +1204,33 @@ impl MultiThreadExecutor {
       return true;
     }
     false
+  }
+
+  /// Run one fair scheduler unit. Runnable locality remains the normal
+  /// priority, but a continuously hot runnable stream must yield one quantum
+  /// to the blocking FIFO.
+  fn run_one_fair(self: &Arc<Self>, runnable_streak: &mut usize) -> bool {
+    if *runnable_streak >= Self::RUNNABLE_FAIRNESS_QUANTUM {
+      *runnable_streak = 0;
+      if self.run_one_blocking() {
+        return true;
+      }
+    }
+    if self.run_one_runnable() {
+      *runnable_streak += 1;
+      return true;
+    }
+    if self.run_one_blocking() {
+      *runnable_streak = 0;
+      return true;
+    }
+    false
+  }
+
+  #[cfg(test)]
+  fn run_one(self: &Arc<Self>) -> bool {
+    let mut runnable_streak = 0;
+    self.run_one_fair(&mut runnable_streak)
   }
 
   /// Token-matched, cooperative-only fallback for a re-entrant `block_on` that is
@@ -1211,7 +1308,8 @@ impl MultiThreadExecutor {
     // loop inside `run_one` forever and the shared FIFO would never be
     // reached from this thread -- a deadlock on a 1-worker pool when the
     // awaited future depends on a FIFO task (wake-path §8.7).
-    let mut streak = 0usize;
+    let mut runnable_streak = 0usize;
+    let mut work_streak = 0usize;
     loop {
       if future.as_mut().poll(&mut cx).is_ready() {
         // MANDATORY exit flush (wake-path §8.3): the final poll above may
@@ -1234,19 +1332,20 @@ impl MultiThreadExecutor {
         }
         return;
       }
-      if self.run_one() {
-        streak += 1;
-        if streak >= Self::RUNNABLE_BUDGET {
+      if self.run_one_fair(&mut runnable_streak) {
+        work_streak += 1;
+        if work_streak >= Self::RUNNABLE_BUDGET {
           // Budget yield: move a hot slot occupant to the shared FIFO (with
           // a wake), so the next `run_one` pops the FIFO front (the oldest
           // work) and other workers can steal the chain. The awaited future
           // is polled every iteration regardless, so it is never starved.
           self.flush_lifo_slot();
-          streak = 0;
+          work_streak = 0;
         }
         continue;
       }
-      streak = 0;
+      runnable_streak = 0;
+      work_streak = 0;
       // Only a worker that owns a counted blocking frame OF THIS EXECUTOR may run
       // a queued blocking job over the cap, and only the job that frame itself
       // scheduled (the genuine nested-blocking case it must unblock). A plain
@@ -1383,11 +1482,15 @@ impl MultiThreadExecutor {
   /// so it cannot appear concurrently with this driver's park -- the loop's
   /// `try_owned_blocking_over_cap` step always observes it first.
   fn has_queued_work(&self) -> bool {
-    if !self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty() {
+    if self.has_queued_runnable() {
       return true;
     }
     self.active_blocking.load(Ordering::Acquire) < self.max_blocking
       && !self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty()
+  }
+
+  fn has_queued_runnable(&self) -> bool {
+    !self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty()
   }
 
   /// Pop the next queued blocking job FIFO within the cap, ignoring its owner tag
@@ -1696,10 +1799,16 @@ fn run_deadline_verdict_test_hook() {
 #[cfg(not(target_family = "wasm"))]
 #[derive(Default)]
 struct ParkedDrivers {
-  parked: Mutex<Vec<Arc<DriverParker>>>,
+  parked: Mutex<Vec<ParkedDriver>>,
   // Mirror of `parked.len()`, maintained under the mutex and read lock-free
   // by `wake_one`'s no-waiter fast path.
   count: AtomicUsize,
+}
+
+#[cfg(not(target_family = "wasm"))]
+struct ParkedDriver {
+  parker: Arc<DriverParker>,
+  can_run_blocking: bool,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -1707,8 +1816,16 @@ impl ParkedDrivers {
   /// Register `parker` as parked-or-parking. MUST precede the caller's final
   /// work re-check -- see the lost-wakeup argument at [`Self::wake_one`].
   fn register(&self, parker: &Arc<DriverParker>) {
+    self.register_with_role(parker, true);
+  }
+
+  fn register_timekeeper(&self, parker: &Arc<DriverParker>) {
+    self.register_with_role(parker, false);
+  }
+
+  fn register_with_role(&self, parker: &Arc<DriverParker>, can_run_blocking: bool) {
     let mut parked = self.parked.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    parked.push(Arc::clone(parker));
+    parked.push(ParkedDriver { parker: Arc::clone(parker), can_run_blocking });
     self.count.store(parked.len(), Ordering::SeqCst);
   }
 
@@ -1717,7 +1834,8 @@ impl ParkedDrivers {
   /// every park (and after a re-check aborts one).
   fn deregister(&self, parker: &Arc<DriverParker>) {
     let mut parked = self.parked.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    if let Some(index) = parked.iter().position(|candidate| Arc::ptr_eq(candidate, parker)) {
+    if let Some(index) = parked.iter().position(|candidate| Arc::ptr_eq(&candidate.parker, parker))
+    {
       parked.swap_remove(index);
       self.count.store(parked.len(), Ordering::SeqCst);
     }
@@ -1754,7 +1872,32 @@ impl ParkedDrivers {
     }
     let parker = {
       let mut parked = self.parked.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      let parker = parked.pop();
+      let parker = parked.pop().map(|driver| driver.parker);
+      self.count.store(parked.len(), Ordering::SeqCst);
+      parker
+    };
+    match parker {
+      Some(parker) => {
+        parker.unpark();
+        true
+      }
+      None => false,
+    }
+  }
+
+  /// Wake the most recently parked cooperative driver that is eligible to
+  /// consume blocking work. Timer timekeepers remain registered for runnable
+  /// wakes but are skipped here.
+  fn wake_one_blocking(&self) -> bool {
+    if self.count.load(Ordering::SeqCst) == 0 {
+      return false;
+    }
+    let parker = {
+      let mut parked = self.parked.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      let parker = parked
+        .iter()
+        .rposition(|driver| driver.can_run_blocking)
+        .map(|index| parked.swap_remove(index).parker);
       self.count.store(parked.len(), Ordering::SeqCst);
       parker
     };
@@ -1774,10 +1917,10 @@ impl ParkedDrivers {
 //
 //   * MultiThread: a runtime-owned binary heap on the executor plus a
 //     dedicated TIMEKEEPER -- one pool job that parks with `park_timeout`
-//     until the earliest deadline and doubles as a DRAINER while awake, so
-//     queued work still runs when `worker_threads = 1` (the timekeeper's
-//     parker sits in `parked_drivers`, so queue-wakes reach it like any
-//     cooperative driver). Cooperative re-entrant `block_on` parks are ALSO
+//     until the earliest deadline and doubles as a RUNNABLE drainer while
+//     awake, so async work still runs when `worker_threads = 1` (the
+//     timekeeper's parker sits in `parked_drivers`, so runnable wakes reach it
+//     like any cooperative driver). Cooperative re-entrant `block_on` parks are ALSO
 //     bounded by the earliest deadline: on a 1-worker pool whose only thread
 //     is parked inside `cooperative_block_on`, the timekeeper job has no free
 //     thread to run on, so the parked driver itself must fire due timers.
@@ -2218,14 +2361,19 @@ impl MultiThreadExecutor {
 
   /// The dedicated timekeeper job (timer intel §4(a), the load-bearing
   /// piece): waits out the earliest heap deadline with `park_timeout` and
-  /// fires due timers -- and between waits it is a full DRAINER (`run_one`
-  /// with the same streak cap and LIFO-slot flush duties as
-  /// `cooperative_block_on`), so a 1-worker pool still runs queued work while
-  /// a long timer pends. Its parker is registered in `parked_drivers` around
-  /// every park, so queue-wakes reach it; its wait is a plain bounded park,
-  /// NEVER `park_with_deadline` -- a timer wait has a guaranteed wall-clock
-  /// wake and must not trip the opt-in deadlock detection (interaction with
-  /// wake-path §6(d); see the section comment).
+  /// fires due timers -- and between waits it drains RUNNABLES with the same
+  /// streak cap and LIFO-slot flush duties as `cooperative_block_on`, so a
+  /// one-worker configuration still runs async work while a long timer pends.
+  /// It never executes blocking closures: a stalled closure must not retain
+  /// the only role that can fire timers. `schedule_blocking` skips this
+  /// parker, waking a blocking-capable cooperative driver or arming a normal
+  /// drainer instead.
+  ///
+  /// Its parker is registered in `parked_drivers` around every park, so
+  /// runnable wakes reach it; its wait is a plain bounded park, NEVER
+  /// `park_with_deadline` -- a timer wait has a guaranteed wall-clock wake and
+  /// must not trip the opt-in deadlock detection (interaction with wake-path
+  /// §6(d); see the section comment).
   ///
   /// Deliberately NOT counted in `active_drainers`: while parked it must not
   /// block `ensure_drainer` from spawning real drainers for new work (they
@@ -2251,7 +2399,7 @@ impl MultiThreadExecutor {
     let mut streak = 0usize;
     loop {
       self.fire_due_timers();
-      if self.run_one() {
+      if self.run_one_runnable() {
         streak += 1;
         if streak >= Self::RUNNABLE_BUDGET {
           // Streak cap (wake-path §8.7): hand a hot slot chain to the shared
@@ -2280,8 +2428,8 @@ impl MultiThreadExecutor {
       // `ParkedDrivers::wake_one`). An earlier timer registered after the
       // re-check unparks us directly via `note_earlier_timer` (the parker
       // slot is already published), so the permit protocol covers that race.
-      self.parked_drivers.register(&parker);
-      if self.has_queued_work() || self.next_timer_deadline() != Some(next) {
+      self.parked_drivers.register_timekeeper(&parker);
+      if self.has_queued_runnable() || self.next_timer_deadline() != Some(next) {
         self.parked_drivers.deregister(&parker);
         continue;
       }
@@ -2614,8 +2762,10 @@ struct RuntimeController {
 
 impl RuntimeController {
   fn new() -> Self {
+    let options =
+      RuntimeOptions::default().validate().expect("default async runtime options must be valid");
     Self {
-      state: Mutex::new(RuntimeState { options: RuntimeOptions::default(), backend: None }),
+      state: Mutex::new(RuntimeState { options, backend: None }),
       metrics: Arc::new(RuntimeMetrics::default()),
     }
   }
@@ -2785,6 +2935,57 @@ mod tests {
     assert_eq!(futures::executor::block_on(task), 42);
     assert_eq!(metrics.runnable_polls.load(Ordering::Relaxed), 1);
     assert_eq!(metrics.active_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  #[test]
+  fn dropping_join_handle_detaches_task_like_tokio() {
+    let completed = Arc::new(AtomicBool::new(false));
+    let completed_task = Arc::clone(&completed);
+    let (runnable, task) = async_task::spawn(
+      async move {
+        completed_task.store(true, Ordering::SeqCst);
+        Ok::<(), JoinError>(())
+      },
+      |_| {},
+    );
+    let handle = JoinHandle(JoinHandleInner::Task(task));
+
+    drop(handle);
+    runnable.run();
+    assert!(completed.load(Ordering::SeqCst));
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn every_rayon_worker_is_classified_without_enabling_the_lifo_slot() {
+    use std::{sync::mpsc, time::Duration};
+
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 1,
+      thread_name_prefix: "worker-classification".to_string(),
+      park_deadline: None,
+    };
+    let executor =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    let id = executor.id;
+    let (tx, rx) = mpsc::sync_channel(1);
+
+    executor.pool.spawn(move || {
+      tx.send((
+        ON_POOL_WORKER.with(std::cell::Cell::get),
+        IN_SCHEDULER_DRIVER.with(std::cell::Cell::get),
+      ))
+      .unwrap();
+    });
+
+    let (worker, driver) = rx.recv_timeout(Duration::from_secs(1)).unwrap();
+    assert_eq!(worker, Some(id), "nested Rayon work must use cooperative block_on");
+    assert_eq!(
+      driver, None,
+      "arbitrary Rayon work must not use a LIFO slot that no scheduler frame will drain"
+    );
   }
 
   #[cfg(not(target_family = "wasm"))]
@@ -3211,6 +3412,27 @@ mod tests {
 
   #[cfg(not(target_family = "wasm"))]
   #[test]
+  fn blocking_wake_skips_runnable_only_timekeeper() {
+    let registry = ParkedDrivers::default();
+    let cooperative = Arc::new(DriverParker::default());
+    let timekeeper = Arc::new(DriverParker::default());
+
+    registry.register(&cooperative);
+    // Register the timekeeper last so an untyped LIFO wake would choose the
+    // wrong parker.
+    registry.register_timekeeper(&timekeeper);
+
+    assert!(registry.wake_one_blocking());
+    assert!(cooperative.consume_permit(), "blocking wake must reach a cooperative driver");
+    assert!(!timekeeper.consume_permit(), "timekeeper must remain parked for timer service");
+    assert_eq!(registry.count.load(Ordering::SeqCst), 1);
+
+    assert!(registry.wake_one());
+    assert!(timekeeper.consume_permit(), "ordinary runnable wakes may target the timekeeper");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
   fn multi_thread_future_wake_targets_its_own_parked_driver() {
     // Wake-path (b) targeting: a future-wake must reach the driver that
     // AWAITS that future, not "some parked driver". D1 parks first awaiting
@@ -3505,6 +3727,47 @@ mod tests {
       *order.lock().unwrap(),
       vec!["new", "old"],
       "the slot runnable (newest) must run before older FIFO work"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn drain_fifo_runnable_does_not_inherit_blocking_owner() {
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 1,
+      thread_name_prefix: "fifo-owner".to_string(),
+      park_deadline: None,
+    };
+    let executor =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    let observed_owner = Arc::new(Mutex::new(None));
+    let observed = Arc::clone(&observed_owner);
+    let (runnable, task) = async_task::spawn(
+      async move {
+        *observed.lock().unwrap() = Some(BLOCKING_OWNER.with(std::cell::Cell::get));
+      },
+      |_| {},
+    );
+    task.detach();
+    executor.metrics.runnable_scheduled();
+    executor.queue.lock().unwrap().push_back(runnable);
+    executor.active_drainers.store(1, Ordering::Release);
+
+    let owner = executor.fresh_owner_token();
+    let _owner_guard = BlockingOwnerGuard::enter(Some(owner));
+    Arc::clone(&executor).drain();
+
+    assert_eq!(
+      *observed_owner.lock().unwrap(),
+      Some(None),
+      "FIFO runnables must not borrow a blocking closure's over-cap privilege"
+    );
+    assert_eq!(
+      BLOCKING_OWNER.with(std::cell::Cell::get),
+      Some(owner),
+      "the ambient blocking owner must be restored after the runnable"
     );
   }
 
@@ -3951,7 +4214,7 @@ mod tests {
       let options = RuntimeOptions {
         flavor: RuntimeFlavor::MultiThread,
         worker_threads: 1,
-        max_blocking_tasks: 1,
+        max_blocking_tasks: 0,
         thread_name_prefix: "lifo-streak".to_string(),
         park_deadline: None,
       };
@@ -4060,6 +4323,114 @@ mod tests {
     match done_rx.recv_timeout(Duration::from_secs(15)) {
       Ok(()) => runner.join().unwrap(),
       Err(error) => panic!("LIFO blocking-fairness test did not complete ({error})"),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn infinite_hot_runnable_yields_to_blocking_fifo() {
+    use std::sync::mpsc;
+
+    struct HotFuture {
+      stop: Arc<AtomicBool>,
+    }
+
+    impl Future for HotFuture {
+      type Output = ();
+
+      fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
+        if self.stop.load(Ordering::SeqCst) {
+          Poll::Ready(())
+        } else {
+          cx.waker().wake_by_ref();
+          Poll::Pending
+        }
+      }
+    }
+
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 1,
+      thread_name_prefix: "blocking-fairness".to_string(),
+      park_deadline: None,
+    };
+    let executor =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    let stop = Arc::new(AtomicBool::new(false));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(HotFuture { stop: Arc::clone(&stop) }, move |r| scheduler.schedule(r));
+    task.detach();
+    let (blocking_tx, blocking_rx) = mpsc::sync_channel(1);
+    executor.blocking_queue.lock().unwrap().push_back(QueuedBlocking {
+      owner: None,
+      run: Box::new(move || blocking_tx.send(()).unwrap()),
+    });
+
+    let _driver = OnPoolWorkerGuard::enter(executor.id);
+    executor.schedule(runnable);
+    let mut runnable_streak = 0;
+    for _ in 0..=MultiThreadExecutor::RUNNABLE_FAIRNESS_QUANTUM {
+      assert!(executor.run_one_fair(&mut runnable_streak));
+    }
+    blocking_rx
+      .try_recv()
+      .expect("an infinite self-waker must yield a bounded quantum to blocking work");
+
+    stop.store(true, Ordering::SeqCst);
+    assert!(executor.run_one_fair(&mut runnable_streak));
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn blocking_saturation_preserves_a_runnable_execution_lane() {
+    use std::{
+      sync::{Barrier, mpsc},
+      time::Duration,
+    };
+
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 2,
+      thread_name_prefix: "blocking-reserve".to_string(),
+      park_deadline: None,
+    };
+    let executor =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    let release = Arc::new(Barrier::new(3));
+    let (started_tx, started_rx) = mpsc::channel();
+    let mut blocking = Vec::new();
+    for _ in 0..2 {
+      let release = Arc::clone(&release);
+      let started_tx = started_tx.clone();
+      blocking.push(executor.schedule_blocking(move || {
+        started_tx.send(()).unwrap();
+        release.wait();
+      }));
+    }
+    for _ in 0..2 {
+      started_rx.recv_timeout(Duration::from_secs(1)).unwrap();
+    }
+
+    let (runnable_tx, runnable_rx) = mpsc::sync_channel(1);
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) = async_task::spawn(
+      async move {
+        runnable_tx.send(()).unwrap();
+      },
+      move |r| scheduler.schedule(r),
+    );
+    task.detach();
+    executor.schedule(runnable);
+    runnable_rx
+      .recv_timeout(Duration::from_secs(1))
+      .expect("all admitted blocking jobs consumed the scheduler's runnable execution capacity");
+
+    release.wait();
+    for handle in blocking {
+      futures::executor::block_on(handle).unwrap();
     }
   }
 
@@ -4180,7 +4551,10 @@ mod tests {
       let options = RuntimeOptions {
         flavor: RuntimeFlavor::MultiThread,
         worker_threads: 1,
-        max_blocking_tasks: 1,
+        // This locality test needs one physical worker. Production-validated
+        // one-worker configurations use an internal reserve because they
+        // admit one blocking task.
+        max_blocking_tasks: 0,
         thread_name_prefix: "coop-budget".to_string(),
         park_deadline: None,
       };
@@ -4911,43 +5285,14 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_rd2_long_lived_blocking_consumer_does_not_starve_async_producers() {
-    // Regression for RD-2 (the scan_stage native-magic-string sourcemap bug): a
-    // long-lived `while let Ok(msg) = rx.recv()` consumer that DEPENDS on async
-    // runnables to feed its channel must live on a dedicated OS thread, NOT the
-    // runtime's blocking pool.
-    //
-    // This is a TWO-TOPOLOGY guard. With `worker_threads == 1` there is exactly one
-    // pool worker, so `max_drainers == max_blocking == 1`:
-    //
-    //   Topology A (PRE-FIX, the hazard): the consumer recv-loop is routed through
-    //   `schedule_blocking`. The sole drainer takes it via `take_blocking` and then
-    //   blocks forever in `rx.recv()`. `active_drainers` is now at `max_drainers`,
-    //   so `ensure_drainer` cannot spawn a replacement; the pool-scheduled async
-    //   producers (and their terminate signal) never get polled, the channel is
-    //   never fed, and `recv()` never returns => hard deadlock. We OBSERVE the
-    //   consumer fail to complete within a short bound. This is NOT a timing race:
-    //   the producers are genuinely unreachable, so no extra time lets A complete --
-    //   the bound only sets how long we wait before declaring the deadlock real.
-    //   Reverting scan_stage to the `spawn_blocking` shape is exactly what A models
-    //   as broken.
-    //
-    //   Topology B (FIXED, mirrors the scan_stage fix): the SAME workload, but the
-    //   consumer recv-loop runs on a DEDICATED `std::thread::spawn`. The sole drainer
-    //   is then free to poll the producers, which feed the channel; the consumer sums
-    //   them and terminates on `None`. Everything COMPLETES and the sum is correct.
-    //
-    // The test passes ONLY when A is observed stuck AND B completes.
+    // A long-lived blocking consumer may consume the entire configured
+    // blocking allowance, but it must not consume the reserve lane required
+    // by the async producers that feed it.
     use std::sync::mpsc;
     use std::time::Duration;
 
     const PRODUCER_COUNT: usize = 8;
 
-    // Schedule PRODUCER_COUNT `Some(i)` producers followed by one `None` terminator,
-    // all as detached POOL runnables (`async_task::spawn` + `executor.schedule`) --
-    // NOT driven from the caller thread. FIFO scheduling on a single worker keeps
-    // every `Some` ahead of the `None`, so a consumer that actually drains the
-    // channel observes the full sum before terminating. `detach` keeps each future
-    // (and its `tx` clone) alive on the queue instead of cancelling it.
     fn schedule_pool_workload(
       executor: &Arc<MultiThreadExecutor>,
       tx: &mpsc::Sender<Option<usize>>,
@@ -4972,14 +5317,8 @@ mod tests {
     }
 
     let expected_sum: usize = (0..PRODUCER_COUNT).sum();
-
-    // ---- Topology A: PRE-FIX shape must DEADLOCK -------------------------------
-    // Run on a child thread so the suite can never hang: the child performs the
-    // bounded deadlock observation itself and reports the outcome over a channel.
-    // The pool worker it leaves wedged in `rx.recv()` is deliberately abandoned
-    // (see the `forget` below) -- we must never join a genuinely-deadlocked thread.
-    let (a_report_tx, a_report_rx) = mpsc::channel::<bool>();
-    std::thread::spawn(move || {
+    let (done_tx, done_rx) = mpsc::sync_channel(1);
+    let runner = std::thread::spawn(move || {
       let options = RuntimeOptions {
         flavor: RuntimeFlavor::MultiThread,
         worker_threads: 1,
@@ -4991,11 +5330,7 @@ mod tests {
         Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
 
       let (tx, rx) = mpsc::channel::<Option<usize>>();
-      let (started_tx, started_rx) = mpsc::channel::<()>();
-      let (done_tx, done_rx) = mpsc::channel::<()>();
-
-      // The long-lived consumer routed through the BLOCKING pool (the hazard). It
-      // signals the moment it occupies the sole drainer, then loops on `recv()`.
+      let (started_tx, started_rx) = mpsc::sync_channel(1);
       let handle = executor.schedule_blocking(move || {
         started_tx.send(()).unwrap();
         let mut sum = 0usize;
@@ -5005,92 +5340,22 @@ mod tests {
             None => break,
           }
         }
-        done_tx.send(()).unwrap();
         sum
       });
-      // Never await this handle (`recv()` would block forever); the consumer
-      // reports liveness via the channels above. Dropping it just discards the
-      // unused result receiver.
-      drop(handle);
-
-      // Wait until the consumer is CONFIRMED to occupy the sole drainer, THEN
-      // schedule the producers. They can only run if a second drainer exists --
-      // which it cannot (`active_drainers == max_drainers == 1`) -- so they starve.
-      started_rx.recv().unwrap();
+      started_rx.recv_timeout(Duration::from_secs(1)).unwrap();
       schedule_pool_workload(&executor, &tx, PRODUCER_COUNT);
-      // Keep the producer channel open forever so `rx.recv()` blocks (rather than
-      // returning Err on disconnect) even after this harness thread exits -- the
-      // modeled hazard is starvation, not channel closure.
-      std::mem::forget(tx);
-
-      // Bounded observation: under the hazard the consumer never receives `None`,
-      // so this times out. Not a race -- the producers are unreachable.
-      let completed = done_rx.recv_timeout(Duration::from_millis(1500)).is_ok();
-
-      // Deliberately abandon the executor: its sole pool worker is wedged forever
-      // in `rx.recv()`, so dropping the pool (which may wait on its workers) could
-      // hang. Leak it instead of joining a deadlocked thread.
-      std::mem::forget(executor);
-      let _ = a_report_tx.send(completed);
+      let sum = futures::executor::block_on(handle).unwrap();
+      done_tx.send(sum).unwrap();
     });
 
-    let a_completed = a_report_rx
-      .recv_timeout(Duration::from_secs(10))
-      .expect("Topology A harness did not report (unexpected hang outside the modeled deadlock)");
-    assert!(
-      !a_completed,
-      "Topology A (pre-fix `schedule_blocking` consumer) was expected to DEADLOCK: the recv-loop \
-       occupies the sole drainer and starves the pool-scheduled async producers, so the consumer \
-       never receives its terminate signal. It completed instead -- this test no longer models the \
-       RD-2 hazard."
-    );
-
-    // ---- Topology B: FIXED shape must COMPLETE ---------------------------------
-    let (b_done_tx, b_done_rx) = mpsc::channel::<usize>();
-    let b_runner = std::thread::spawn(move || {
-      let options = RuntimeOptions {
-        flavor: RuntimeFlavor::MultiThread,
-        worker_threads: 1,
-        max_blocking_tasks: 1,
-        thread_name_prefix: "rd2-fixed".to_string(),
-        park_deadline: None,
-      };
-      let executor =
-        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
-
-      let (tx, rx) = mpsc::channel::<Option<usize>>();
-
-      // The SAME consumer recv-loop, now on a DEDICATED OS thread (the scan_stage
-      // fix). It does not occupy a drainer, so the sole drainer is free to feed it.
-      let consumer = std::thread::spawn(move || {
-        let mut sum = 0usize;
-        while let Ok(msg) = rx.recv() {
-          match msg {
-            Some(value) => sum += value,
-            None => break,
-          }
-        }
-        sum
-      });
-
-      schedule_pool_workload(&executor, &tx, PRODUCER_COUNT);
-
-      let sum = consumer.join().unwrap();
-      b_done_tx.send(sum).unwrap();
-    });
-
-    match b_done_rx.recv_timeout(Duration::from_secs(10)) {
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
       Ok(sum) => {
-        b_runner.join().unwrap();
-        assert_eq!(
-          sum, expected_sum,
-          "Topology B (dedicated-thread consumer) produced the wrong sum"
-        );
+        runner.join().unwrap();
+        assert_eq!(sum, expected_sum);
       }
-      Err(error) => panic!(
-        "Topology B (fixed shape) failed to complete within the bound ({error}): a dedicated-thread \
-         consumer must let the sole drainer feed the async producers"
-      ),
+      Err(error) => {
+        panic!("a saturated blocking lane starved the async producers that feed it ({error})")
+      }
     }
   }
 
@@ -5162,9 +5427,7 @@ mod tests {
   // (after applying the clamp), so this success assertion is valid off-wasm only.
   #[cfg(not(target_family = "wasm"))]
   #[test]
-  fn validate_clamps_max_blocking_tasks_to_worker_threads() {
-    // MultiThread keeps `worker_threads`; `max_blocking_tasks` is clamped down to
-    // it via `.min(worker_threads)` when it exceeds the worker count.
+  fn validate_reserves_one_worker_from_blocking_admission() {
     let validated = RuntimeOptions {
       flavor: RuntimeFlavor::MultiThread,
       worker_threads: 2,
@@ -5175,7 +5438,20 @@ mod tests {
     .validate()
     .expect("MultiThread options must validate");
     assert_eq!(validated.worker_threads, 2);
-    assert_eq!(validated.max_blocking_tasks, 2);
+    assert_eq!(validated.max_blocking_tasks, 1);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn runtime_controller_default_reserves_one_worker_from_blocking_admission() {
+    let controller = RuntimeController::new();
+    let options = controller.options();
+    assert_eq!(options.flavor, RuntimeFlavor::MultiThread);
+    assert_eq!(
+      options.max_blocking_tasks,
+      options.worker_threads.saturating_sub(1).max(1),
+      "the unconfigured Rust API must use the same validated reserve as the binding"
+    );
   }
 
   #[test]
@@ -5447,63 +5723,36 @@ mod tests {
   }
 
   #[test]
-  fn runtime_metrics_reset_zeroes_every_counter() {
-    // RD-11: `reset()` must return EVERY counter to zero. Operates on a LOCALLY
-    // constructed instance only -- it never touches the process-global `RUNTIME`
-    // / `metrics()` snapshot path (that singleton is shared across parallel tests
-    // and would make this flaky). Each field is asserted individually so that a
-    // future-added counter which `reset()` forgets to clear fails here loudly.
-    //
-    // NOTE: adding a counter to `RuntimeMetrics` requires updating BOTH the
-    // drive-non-zero loop and the per-field zero assertions below.
-    let metrics = RuntimeMetrics::default();
-
-    // Drive every counter to a distinct non-zero value so reset() has something
-    // to clear in each field (distinct values also guard against a field being
-    // cleared by clobbering a neighbour).
+  fn runtime_metrics_reset_preserves_live_and_high_water_gauges() {
+    let metrics = Arc::new(RuntimeMetrics::default());
     metrics.tasks_spawned.store(1, Ordering::Relaxed);
     metrics.tasks_completed.store(2, Ordering::Relaxed);
     metrics.tasks_panicked.store(3, Ordering::Relaxed);
     metrics.runnable_schedules.store(4, Ordering::Relaxed);
     metrics.runnable_polls.store(5, Ordering::Relaxed);
-    metrics.queued_runnables.store(6, Ordering::Relaxed);
-    metrics.max_queued_runnables.store(7, Ordering::Relaxed);
-    metrics.active_runnables.store(8, Ordering::Relaxed);
-    metrics.max_active_runnables.store(9, Ordering::Relaxed);
     metrics.blocking_tasks_scheduled.store(14, Ordering::Relaxed);
     metrics.blocking_tasks_started.store(10, Ordering::Relaxed);
     metrics.blocking_tasks_completed.store(11, Ordering::Relaxed);
-    metrics.active_blocking_tasks.store(12, Ordering::Relaxed);
-    metrics.max_active_blocking_tasks.store(13, Ordering::Relaxed);
-
-    // Sanity: confirm the pre-reset state is genuinely non-zero everywhere, so a
-    // green assertion below cannot be a vacuous "was already zero".
-    assert_ne!(metrics.tasks_spawned.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.tasks_completed.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.tasks_panicked.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.runnable_schedules.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.runnable_polls.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.max_queued_runnables.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.active_runnables.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.max_active_runnables.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.blocking_tasks_scheduled.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.blocking_tasks_started.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.blocking_tasks_completed.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.active_blocking_tasks.load(Ordering::Relaxed), 0);
-    assert_ne!(metrics.max_active_blocking_tasks.load(Ordering::Relaxed), 0);
+    metrics.runnable_scheduled();
+    let runnable_guard = metrics.runnable_started();
+    let blocking_guard = metrics.blocking_started();
+    let fingerprint_before_reset = metrics.progress_fingerprint();
 
     metrics.reset();
 
+    assert!(
+      metrics.progress_fingerprint() != fingerprint_before_reset,
+      "a reset must advance the deadlock detector generation even if counters later repeat"
+    );
     assert_eq!(metrics.tasks_spawned.load(Ordering::Relaxed), 0, "tasks_spawned");
     assert_eq!(metrics.tasks_completed.load(Ordering::Relaxed), 0, "tasks_completed");
     assert_eq!(metrics.tasks_panicked.load(Ordering::Relaxed), 0, "tasks_panicked");
     assert_eq!(metrics.runnable_schedules.load(Ordering::Relaxed), 0, "runnable_schedules");
     assert_eq!(metrics.runnable_polls.load(Ordering::Relaxed), 0, "runnable_polls");
-    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0, "queued_runnables");
-    assert_eq!(metrics.max_queued_runnables.load(Ordering::Relaxed), 0, "max_queued_runnables");
-    assert_eq!(metrics.active_runnables.load(Ordering::Relaxed), 0, "active_runnables");
-    assert_eq!(metrics.max_active_runnables.load(Ordering::Relaxed), 0, "max_active_runnables");
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+    assert_eq!(metrics.max_queued_runnables.load(Ordering::Relaxed), 1);
+    assert_eq!(metrics.active_runnables.load(Ordering::Relaxed), 1);
+    assert_eq!(metrics.max_active_runnables.load(Ordering::Relaxed), 1);
     assert_eq!(
       metrics.blocking_tasks_scheduled.load(Ordering::Relaxed),
       0,
@@ -5515,12 +5764,18 @@ mod tests {
       0,
       "blocking_tasks_completed"
     );
-    assert_eq!(metrics.active_blocking_tasks.load(Ordering::Relaxed), 0, "active_blocking_tasks");
+    assert_eq!(metrics.active_blocking_tasks.load(Ordering::Relaxed), 1);
+    assert_eq!(metrics.max_active_blocking_tasks.load(Ordering::Relaxed), 1);
+
+    drop(runnable_guard);
+    drop(blocking_guard);
+    assert_eq!(metrics.active_runnables.load(Ordering::Relaxed), 0);
     assert_eq!(
-      metrics.max_active_blocking_tasks.load(Ordering::Relaxed),
+      metrics.active_blocking_tasks.load(Ordering::Relaxed),
       0,
-      "max_active_blocking_tasks"
+      "a live blocking guard completed after reset without unsigned underflow"
     );
+    assert_eq!(metrics.blocking_tasks_completed.load(Ordering::Relaxed), 1);
   }
 
   // ---- Wake-path §6(d): self-detecting block_on deadlocks -------------------
@@ -6247,10 +6502,10 @@ mod tests {
   #[test]
   fn multi_thread_timekeeper_runs_queued_work_while_waiting() {
     // BINDING REQUIREMENT (timer intel §4(a)): the timekeeper is a
-    // wait-with-deadline DRAINER. With `worker_threads = 1` the parked
-    // timekeeper IS the only worker; runnables scheduled while a long timer
-    // pends must be woken through `parked_drivers` and run by the timekeeper
-    // itself, long before the timer's deadline.
+    // wait-with-deadline RUNNABLE drainer. With `worker_threads = 1`,
+    // runnables scheduled while a long timer pends must be woken through
+    // `parked_drivers` and may run on the timekeeper itself, long before the
+    // timer's deadline.
     use std::sync::mpsc;
 
     let (done_tx, done_rx) = mpsc::channel();
@@ -6313,6 +6568,47 @@ mod tests {
         "queued work starved behind a parked timekeeper on a 1-worker pool ({error}): the timekeeper must double as a drainer"
       ),
     }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn timekeeper_never_enters_a_blocking_closure() {
+    use std::{
+      sync::{Barrier, mpsc},
+      time::Duration,
+    };
+
+    let executor = multi_thread_executor(1, None, "timer-blocking-isolation");
+    let timer_exec = Arc::clone(&executor);
+    let (timer_tx, timer_rx) = mpsc::sync_channel(1);
+    let scheduler = Arc::clone(&executor);
+    let (timer_runnable, timer_task) = async_task::spawn(
+      async move {
+        heap_sleep(&timer_exec, Instant::now() + Duration::from_millis(100)).await;
+        timer_tx.send(()).unwrap();
+      },
+      move |r| scheduler.schedule(r),
+    );
+    executor.schedule(timer_runnable);
+    wait_until("the timekeeper parked before blocking work was submitted", || {
+      executor.timers.inner.lock().unwrap().timekeeper_parker.is_some()
+    });
+
+    let release = Arc::new(Barrier::new(2));
+    let blocker_release = Arc::clone(&release);
+    let (started_tx, started_rx) = mpsc::sync_channel(1);
+    let blocking = executor.schedule_blocking(move || {
+      started_tx.send(()).unwrap();
+      blocker_release.wait();
+    });
+    started_rx.recv_timeout(Duration::from_secs(1)).unwrap();
+
+    timer_rx.recv_timeout(Duration::from_secs(2)).expect(
+      "the timer timekeeper entered a stalled blocking closure and stopped servicing timers",
+    );
+    release.wait();
+    futures::executor::block_on(blocking).unwrap();
+    futures::executor::block_on(timer_task);
   }
 
   #[cfg(not(target_family = "wasm"))]

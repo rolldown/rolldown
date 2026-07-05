@@ -216,8 +216,8 @@ pub fn get_async_runtime_config() -> BindingRuntimeConfig {
 // The per-backend DEFAULTS are preserved exactly as measured:
 // - tokio-native keeps `physical * 3 / 2` workers and the dedicated
 //   4-thread blocking pool (the PR #6270 world);
-// - the shared runtime keeps `physical` workers with `max_blocking_tasks`
-//   defaulting to the resolved worker count (Task 15 measurement);
+// - the shared runtime keeps `physical` workers and reserves one execution
+//   lane from blocking admission;
 // - the threaded-WASI tokio artifact keeps mirroring the napi-rs loader's
 //   async work pool size;
 // - the shared wasm artifact keeps `RuntimeOptions::default()`'s
@@ -371,6 +371,17 @@ fn resolve_runtime_flavor(
   }
 }
 
+fn clamp_shared_blocking_tasks(
+  flavor: ResolvedRuntimeFlavor,
+  worker_threads: usize,
+  requested: usize,
+) -> usize {
+  match flavor {
+    ResolvedRuntimeFlavor::CurrentThread => 1,
+    ResolvedRuntimeFlavor::MultiThread => requested.min(worker_threads.saturating_sub(1).max(1)),
+  }
+}
+
 // The size of the async work pool the napi-rs WASI loader actually creates on the
 // threaded WASI artifact. Mirrors `packages/rolldown/src/rolldown-binding.wasi.cjs`:
 //   Number(NAPI_RS_ASYNC_WORK_POOL_SIZE ?? UV_THREADPOOL_SIZE), used when `> 0`,
@@ -460,11 +471,10 @@ fn resolve_runtime_config_for(
         // `available_parallelism` and `ROLLDOWN_WORKER_THREADS` is ignored.
         std::thread::available_parallelism().map_or(1, usize::from)
       };
-      // The blocking default follows the RESOLVED worker count (Task 15
-      // measurement), matching the previous `resolve_thread_count(env,
-      // options.worker_threads)` ordering.
-      let max_blocking_tasks =
+      let requested_blocking_tasks =
         resolve_thread_count(env.max_blocking_threads.clone(), worker_threads);
+      let max_blocking_tasks =
+        clamp_shared_blocking_tasks(flavor, worker_threads, requested_blocking_tasks);
       ResolvedRuntimeConfig {
         backend,
         target,
@@ -554,7 +564,10 @@ pub fn get_async_runtime_metrics() -> BindingRuntimeMetrics {
 
 #[cfg(feature = "async-runtime")]
 #[napi]
-/// Reset the async runtime metrics counters to zero.
+/// Reset cumulative async runtime event counters to zero.
+///
+/// Live gauges and their lifetime high-water marks are preserved so active
+/// task guards can complete without corrupting concurrent observations.
 ///
 /// A no-op on the default `tokio-runtime` build.
 pub fn reset_async_runtime_metrics() {
@@ -563,7 +576,7 @@ pub fn reset_async_runtime_metrics() {
 
 #[cfg(not(feature = "async-runtime"))]
 #[napi]
-/// Reset the async runtime metrics counters to zero.
+/// Reset cumulative async runtime event counters to zero.
 ///
 /// A no-op on the default `tokio-runtime` build.
 pub fn reset_async_runtime_metrics() {}
@@ -1123,28 +1136,28 @@ mod tests {
   }
 
   #[test]
-  fn shared_native_defaults_follow_the_task15_measurement() {
+  fn shared_native_defaults_reserve_one_runnable_lane() {
     let resolved = resolve(ResolvedRuntimeBackend::Shared, ResolvedRuntimeTarget::Native, &env());
     assert_eq!(resolved.flavor, ResolvedRuntimeFlavor::MultiThread);
     assert_eq!(resolved.worker_threads, num_cpus::get_physical());
     assert_eq!(
-      resolved.max_blocking_tasks, resolved.worker_threads,
-      "the shared blocking default is the resolved worker count"
+      resolved.max_blocking_tasks,
+      resolved.worker_threads.saturating_sub(1).max(1),
+      "blocking admission must preserve one runnable execution lane"
     );
     assert_eq!(resolved.park_deadline_ms, None);
   }
 
   #[test]
   fn shared_native_env_overrides_and_flavor_selection() {
-    // The blocking default follows the RESOLVED worker count, not the cpu
-    // default: with workers overridden to 7 and no blocking override, the
-    // blocking cap is 7.
+    // The blocking default follows the RESOLVED worker count, then reserves
+    // one lane: with workers overridden to 7 the blocking cap is 6.
     let resolved = resolve(
       ResolvedRuntimeBackend::Shared,
       ResolvedRuntimeTarget::Native,
       &RuntimeEnv { worker_threads: Some("7".to_string()), ..RuntimeEnv::default() },
     );
-    assert_eq!((resolved.worker_threads, resolved.max_blocking_tasks), (7, 7));
+    assert_eq!((resolved.worker_threads, resolved.max_blocking_tasks), (7, 6));
 
     for (raw, expected) in [
       ("single", ResolvedRuntimeFlavor::CurrentThread),
@@ -1196,7 +1209,7 @@ mod tests {
         "the shared wasm default flavor is CurrentThread"
       );
       assert_eq!(resolved.worker_threads, host_parallelism);
-      assert_eq!(resolved.max_blocking_tasks, resolved.worker_threads);
+      assert_eq!(resolved.max_blocking_tasks, 1);
 
       // ROLLDOWN_WORKER_THREADS has never applied on wasm; the blocking
       // override and the flavor selection do. (Selecting `multi` here is
@@ -1216,7 +1229,7 @@ mod tests {
         overridden.worker_threads, host_parallelism,
         "the env worker override must stay ignored on wasm"
       );
-      assert_eq!(overridden.max_blocking_tasks, 3);
+      assert_eq!(overridden.max_blocking_tasks, 3.min(host_parallelism.saturating_sub(1).max(1)));
       assert_eq!(overridden.flavor, ResolvedRuntimeFlavor::MultiThread);
     }
   }

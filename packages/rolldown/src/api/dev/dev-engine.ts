@@ -57,11 +57,10 @@ export class DevEngine {
       ? function (rawResult: BindingResult<[BindingClientHmrUpdate[], string[]]>) {
           const result = normalizeBindingResult(rawResult);
           if (result instanceof Error) {
-            userOnHmrUpdates(result);
-            return;
+            return userOnHmrUpdates(result);
           }
           const [updates, changedFiles] = result;
-          userOnHmrUpdates({
+          return userOnHmrUpdates({
             updates,
             changedFiles,
           });
@@ -73,10 +72,9 @@ export class DevEngine {
       ? function (rawResult) {
           const result = normalizeBindingResult(rawResult);
           if (result instanceof Error) {
-            userOnOutput(result);
-            return;
+            return userOnOutput(result);
           }
-          userOnOutput(transformToRollupOutput(result));
+          return userOnOutput(transformToRollupOutput(result));
         }
       : undefined;
 
@@ -84,7 +82,7 @@ export class DevEngine {
     const bindingOnAdditionalAssets: BindingDevOptions['onAdditionalAssets'] =
       userOnAdditionalAssets
         ? function (output) {
-            userOnAdditionalAssets(transformToRollupOutput(output));
+            return userOnAdditionalAssets(transformToRollupOutput(output));
           }
         : undefined;
 

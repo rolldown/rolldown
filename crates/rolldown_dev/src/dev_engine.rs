@@ -20,7 +20,7 @@ use rolldown::{Bundler, BundlerBuilder, BundlerConfig, NormalizedBundlerOptions}
 use crate::{
   BundleOutput, DevOptions, SharedClients,
   bundle_coordinator::BundleCoordinator,
-  dev_context::{DevContext, PinBoxSendStaticFuture},
+  dev_context::{DevContext, PinBoxSendStaticFuture, dev_callback_result_to_build_result},
   normalize_dev_options,
   type_aliases::CoordinatorSender,
   types::{
@@ -184,7 +184,9 @@ impl DevEngine {
     };
 
     if let Some(bundling_future) = status.running_future {
-      bundling_future.await;
+      dev_callback_result_to_build_result(bundling_future.await)?;
+    } else if let Some(error) = status.last_callback_error {
+      dev_callback_result_to_build_result(Err(error))?;
     }
 
     Ok(())
@@ -193,20 +195,7 @@ impl DevEngine {
   pub async fn get_bundle_state(&self) -> BuildResult<BundleState> {
     self.create_error_if_closed()?;
 
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-    self
-      .coordinator_sender
-      .send(CoordinatorMsg::GetState { reply: reply_sender })
-      .map_err_to_unhandleable()
-      .context(
-        "DevEngine: failed to send GetState to coordinator within has_latest_bundle_output",
-      )?;
-
-    let status = reply_receiver.await.map_err_to_unhandleable().context(
-      "DevEngine: coordinator closed before responding to GetStatus within get_bundle_state",
-    )?;
-
-    Ok(status.into())
+    Ok(self.get_coordinator_state_snapshot().await?.into())
   }
 
   // Ensure there's latest bundle output available for browser loading/reloading scenarios
@@ -243,13 +232,18 @@ impl DevEngine {
       // Wait for the build if one is running or was scheduled
       if let Some(ret) = received {
         // Either a build is ongoing, or a new build was scheduled - wait for it to complete
-        ret.future.await;
+        dev_callback_result_to_build_result(ret.future.await)?;
         if ret.is_ensure_latest_bundle_output_future {
           break;
         }
       } else {
         break;
       }
+    }
+
+    let status = self.get_coordinator_state_snapshot().await?;
+    if let Some(error) = status.last_callback_error {
+      dev_callback_result_to_build_result(Err(error))?;
     }
 
     Ok(())
@@ -347,18 +341,31 @@ impl DevEngine {
       )
       .await;
 
-    if result.is_ok() {
+    let additional_assets = if result.is_ok() {
       // Deliver assets emitted while compiling the lazy entry (e.g. an image
       // imported by the lazy module) before returning the code, so the consumer
       // can register/serve them before the client requests them.
       if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
         let mut output = BundleOutput::default();
         bundler.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
-        if !output.assets.is_empty() {
-          on_additional_assets(output);
+        if output.assets.is_empty() {
+          None
+        } else {
+          Some((Arc::clone(on_additional_assets), output))
         }
+      } else {
+        None
       }
+    } else {
+      None
+    };
+    drop(bundler);
 
+    if let Some((on_additional_assets, output)) = additional_assets {
+      dev_callback_result_to_build_result(on_additional_assets(output).await)?;
+    }
+
+    if result.is_ok() {
       // Notify that the proxy module has changed so build output gets updated.
       // This ensures future page loads get the fetched template directly.
       self.notify_module_changed(proxy_module_id);
@@ -501,6 +508,21 @@ impl DevEngine {
   /// Returns a clone of the shared normalized bundler options
   pub async fn bundler_options(&self) -> Arc<NormalizedBundlerOptions> {
     Arc::clone(self.bundler.lock().await.options())
+  }
+
+  async fn get_coordinator_state_snapshot(&self) -> BuildResult<CoordinatorStateSnapshot> {
+    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    self
+      .coordinator_sender
+      .send(CoordinatorMsg::GetState { reply: reply_sender })
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to send GetState to coordinator")?;
+
+    reply_receiver
+      .await
+      .map_err_to_unhandleable()
+      .context("DevEngine: coordinator closed before responding to GetState")
+      .map_err(Into::into)
   }
 
   #[cfg(feature = "testing")]

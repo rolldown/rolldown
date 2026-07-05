@@ -109,6 +109,7 @@ pub enum CoordinatorMsg {
   BundleCompleted {                          // a BundlingTask finished
     error_stage: Option<ErrorStage>,         // None on success; see §10
     has_generated_bundle_output: bool,
+    callback_error: Option<DevCallbackError>,// rejected/thrown consumer callback
   },
   ScheduleBuildIfStale { reply: … },         // ask coordinator to drain its queue
   GetState { reply: … },                     // snapshot of coordinator state
@@ -956,9 +957,14 @@ do not retain the Node-specific parallel-worker startup module.
 
 Parallel plugin callbacks are weak napi TSFNs, so they do not keep a worker
 environment alive. `parallel-plugin-worker.ts` explicitly refs its
-`parentPort`; the main thread still calls `Worker.unref()` so workers do not pin
-process exit, while the owned `stopWorkers()` path remains the explicit
-termination boundary.
+`parentPort`. The main thread keeps each `Worker` referenced until its
+supervised bootstrap response settles, then calls `Worker.unref()` so an
+initialized pool does not pin process exit. File workers receive a sanitized
+copy of `process.execArgv`: parent-only string-input modes (`--input-type`,
+`--eval`/`-e`, `--print`/`-p`, check/interactive modes) are removed while
+the parent `--run <script>` mode is also removed; compatible preload, loader,
+condition, diagnostic, and runtime flags are preserved. The owned
+`stopWorkers()` path remains the explicit termination boundary.
 
 ---
 
@@ -1057,7 +1063,10 @@ the method:
 
 **Callback (async lifecycle)** — work that happens asynchronously inside a
 `BundlingTask` is reported through the `on_output` / `on_hmr_updates`
-callbacks registered when the engine was constructed (see §10).
+callbacks registered when the engine was constructed (see §10). All three dev
+callbacks accept synchronous or promise-returning functions. The Rust binding
+awaits either form before the task completes; a synchronous throw or rejected
+promise is an operation failure, not a detached JS exception.
 
 Used by: every error produced inside `BundlingTask::run_inner` —
 `watch_change`, `generate_hmr_updates`, `rebuild`. The consumer subscribes
@@ -1098,6 +1107,16 @@ an HMR error had no callback to surface it through (matching how the older
 `watch_change` is short-circuiting: if a plugin's `watchChange` hook fails,
 neither HMR generation nor rebuild can proceed safely, so `run_inner` returns
 early.
+
+Callback execution failures are distinct from the `BuildResult` payload being
+delivered. `BundlingTask::run` returns a shared `DevCallbackResult`, includes
+the same error in `BundleCompleted`, and sets the corresponding HMR/Rebuild
+stage flag. The coordinator retains that error after the task future is
+cleared, clears it only when a subsequent task starts, and replays it through
+`run()`, `wait_for_ongoing_bundle()` / `ensureCurrentBuildFinish()`, and
+terminal `close()`. This makes watcher-driven callback rejection observable
+even when the consumer starts waiting after the task settled. A callback
+failure while close also fails is merged with the cleanup diagnostics.
 
 ### 16d. Engine-closed: surface to the binding consumer by default
 
@@ -1332,9 +1351,11 @@ the consumer. It fires **before** the patch / lazy code reaches the client (in
 `generate_hmr_updates` it runs before `on_hmr_updates`; in `compile_lazy_entry`
 before the code is returned), so a consumer that serves built files (e.g. Vite,
 which writes them to `memoryFiles`) can serve the asset by the time the browser
-requests it. It carries only what `add_additional_files` produces (emit_file'd
-assets + prebuilt chunks) — not the rendered chunks, and not assets emitted
-inside a `generateBundle` hook (that hook does not run for patches). It is a
+requests it. Delivery is awaited; rejection prevents the HMR update or lazy
+code from being exposed and is propagated to the lifecycle/API waiter. It
+carries only what `add_additional_files` produces (emit_file'd assets +
+prebuilt chunks) — not the rendered chunks, and not assets emitted inside a
+`generateBundle` hook (that hook does not run for patches). It is a
 `BundleOutput` so `add_additional_files` warnings ride along, as on `on_output`.
 
 ---

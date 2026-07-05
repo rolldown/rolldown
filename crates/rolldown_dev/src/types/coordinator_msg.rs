@@ -1,3 +1,4 @@
+use rolldown_dev_common::types::DevCallbackError;
 use rolldown_fs_watcher::FsEventResult;
 
 use crate::type_aliases::{CloseSender, EnsureLatestBundleOutputSender, GetStateSender};
@@ -15,6 +16,9 @@ pub enum CoordinatorMsg {
     /// the next file change. See `internal-docs/dev-engine/implementation.md` §7.
     error_stage: Option<ErrorStage>,
     has_generated_bundle_output: bool,
+    /// Callback execution failure, retained separately from build diagnostics
+    /// so lifecycle waiters can observe rejected/throwing consumer callbacks.
+    callback_error: Option<DevCallbackError>,
   },
   #[cfg(feature = "testing")]
   ScheduleBuildIfStale {

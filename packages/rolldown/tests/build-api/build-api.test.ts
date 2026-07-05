@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { rolldown } from 'rolldown';
+import { build, rolldown } from 'rolldown';
 import { defineParallelPlugin } from 'rolldown/experimental';
 import { expect, test, vi } from 'vitest';
 
@@ -216,6 +216,74 @@ test('passes errors from closeBundle hook', async () => {
   } finally {
     expect(handledError).toBeTruthy();
   }
+});
+
+test('build preserves both the primary build failure and cleanup failure', async () => {
+  const buildError = new TypeError('primary build failed');
+  const closeError = new RangeError('cleanup close failed');
+
+  const error = await build({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    write: false,
+    plugins: [
+      {
+        name: 'dual-build-failure',
+        renderStart() {
+          throw buildError;
+        },
+        closeBundle() {
+          throw closeError;
+        },
+      },
+    ],
+  }).catch((error: unknown) => error);
+
+  expect(error).toBeInstanceOf(AggregateError);
+  const aggregate = error as AggregateError;
+  expect(aggregate.errors[0]).toBeInstanceOf(Error);
+  expect((aggregate.errors[0] as Error).message).toContain('primary build failed');
+  expect((aggregate.errors[0] as { errors: unknown[] }).errors[0]).toBe(buildError);
+  expect(aggregate.errors[1]).toBe(closeError);
+  expect(aggregate.cause).toBe(aggregate.errors[0]);
+  expect(aggregate.message).toBe('Build and cleanup both failed');
+});
+
+test('build preserves a lone primary or cleanup failure', async () => {
+  const buildError = new Error('primary-only failure');
+  const closeError = new Error('cleanup-only failure');
+
+  const primaryOnly = await build({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    write: false,
+    plugins: [
+      {
+        name: 'primary-only-failure',
+        renderStart() {
+          throw buildError;
+        },
+      },
+    ],
+  }).catch((error: unknown) => error);
+  expect(primaryOnly).toBeInstanceOf(Error);
+  expect((primaryOnly as Error).message).toContain('primary-only failure');
+  expect((primaryOnly as { errors: unknown[] }).errors[0]).toBe(buildError);
+
+  const cleanupOnly = await build({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    write: false,
+    plugins: [
+      {
+        name: 'cleanup-only-failure',
+        closeBundle() {
+          throw closeError;
+        },
+      },
+    ],
+  }).catch((error: unknown) => error);
+  expect(cleanupOnly).toBe(closeError);
 });
 
 test('supports closeBundle hook', async () => {

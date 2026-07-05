@@ -185,7 +185,7 @@ When `load` is called for a proxy module:
 
 ### Emitted Assets (#9815)
 
-Lazy compiles (like HMR patches) never run the generate stage, so assets emitted during the compile have no `onOutput` path. Instead, on success `DevEngine::compile_lazy_entry` drains `file_emitter.add_additional_files` into a `BundleOutput` and fires the `onAdditionalAssets` dev callback **before** returning the code — so the consumer can register/serve the assets (test-dev-server puts them in `memoryFiles`) before the browser requests them (fixes vitejs/vite#22596, pinned by the emitted-asset spec).
+Lazy compiles (like HMR patches) never run the generate stage, so assets emitted during the compile have no `onOutput` path. Instead, on success `DevEngine::compile_lazy_entry` drains `file_emitter.add_additional_files` into a `BundleOutput` and awaits the `onAdditionalAssets` dev callback **before** returning the code — so the consumer can register/serve the assets (test-dev-server puts them in `memoryFiles`) before the browser requests them (fixes vitejs/vite#22596, pinned by the emitted-asset spec). A synchronous throw or rejected callback promise rejects `compileEntry`; the code is not returned and the background `ModuleChanged` rebuild is not queued.
 
 Design constraint for consumers: asset URLs must be resolved **eagerly at `load`** (`emitFile` + `getFileName`, as the dev server's Vite-style asset plugin does) — a `renderChunk`-time placeholder scheme would leak, because the lazy render path never runs `renderChunk`.
 
@@ -196,8 +196,8 @@ After successful lazy compilation, the dev engine's success branch does two thin
 ```rust
 // In DevEngine::compile_lazy_entry
 if result.is_ok() {
-  // 1. deliver assets emitted during the compile (before the code returns)
-  if let Some(on_additional_assets) = ... { ... }
+  // 1. await delivery of assets emitted during the compile
+  if let Some(on_additional_assets) = ... { on_additional_assets(...).await? }
   // 2. queue the background rebuild
   self.notify_module_changed(proxy_module_id);
 }

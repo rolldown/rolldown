@@ -1,10 +1,58 @@
 import { spawnSync } from 'node:child_process';
 import nodePath from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { expect, test } from 'vitest';
 
 const testsDir = fileURLToPath(new URL('.', import.meta.url));
 const childPath = nodePath.join(testsDir, 'fixtures', 'parallel-worker-supervision', 'child.mjs');
+const bootstrapChildPath = nodePath.join(
+  testsDir,
+  'fixtures',
+  'parallel-worker-bootstrap',
+  'child.mjs',
+);
+
+test(
+  'parallel workers keep a one-shot process alive through delayed bootstrap',
+  {
+    timeout: 30_000,
+  },
+  () => {
+    const child = spawnSync(process.execPath, [bootstrapChildPath], {
+      cwd: testsDir,
+      encoding: 'utf8',
+      env: { ...process.env },
+      timeout: 25_000,
+    });
+
+    expect(child.error).toBeUndefined();
+    expect(child.signal).toBeNull();
+    expect(child.status, child.stderr || child.stdout).toBe(0);
+    expect(child.stdout).toContain('parallel worker bootstrap completed');
+  },
+);
+
+test('parallel file workers discard inherited string-input execArgv', { timeout: 30_000 }, () => {
+  const child = spawnSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '--eval',
+      `import(${JSON.stringify(pathToFileURL(bootstrapChildPath).href)})`,
+    ],
+    {
+      cwd: testsDir,
+      encoding: 'utf8',
+      env: { ...process.env },
+      timeout: 25_000,
+    },
+  );
+
+  expect(child.error).toBeUndefined();
+  expect(child.signal).toBeNull();
+  expect(child.status, child.stderr || child.stdout).toBe(0);
+  expect(child.stdout).toContain('parallel worker bootstrap completed');
+});
 
 test.each([
   ['error', 'delayed parallel-plugin worker fault'],

@@ -2,6 +2,7 @@
 import { EventEmitter } from 'node:events';
 import {
   initializeWorkerPool,
+  sanitizeFileWorkerExecArgv,
   superviseWorker,
   type SupervisedWorker,
   terminateWorkersWithRetry,
@@ -18,6 +19,49 @@ class TestWorker extends EventEmitter {
 }
 
 describe('parallel plugin worker cleanup', () => {
+  test('sanitizes parent invocation modes while preserving file-worker flags', () => {
+    expect(
+      sanitizeFileWorkerExecArgv([
+        '--input-type=module',
+        '--eval',
+        'import("./child.mjs")',
+        '-p',
+        'process.version',
+        '--check',
+        '--interactive',
+        '--run',
+        'parent-script',
+        '--import',
+        './register.mjs',
+        '--experimental-loader=./loader.mjs',
+        '--conditions',
+        'development',
+        '--trace-warnings',
+      ]),
+    ).toEqual([
+      '--import',
+      './register.mjs',
+      '--experimental-loader=./loader.mjs',
+      '--conditions',
+      'development',
+      '--trace-warnings',
+    ]);
+
+    expect(
+      sanitizeFileWorkerExecArgv([
+        '--input-type',
+        'commonjs',
+        '--eval=0',
+        '--print=process.version',
+        '--run=parent-script',
+        '-e',
+        '0',
+        '-c',
+        '-i',
+      ]),
+    ).toEqual([]);
+  });
+
   test('retries only workers whose first termination attempt failed', async () => {
     const recovered = {
       terminate: vi

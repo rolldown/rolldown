@@ -9,6 +9,7 @@ use arcstr::ArcStr;
 use futures::FutureExt;
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
+use rolldown_dev_common::types::{DevCallbackError, DevCallbackResult};
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
 use rolldown_utils::{
@@ -21,7 +22,9 @@ use rolldown::Bundler;
 
 use crate::{
   bundling_task::BundlingTask,
-  dev_context::{BundlingFuture, PinBoxSendStaticFuture, SharedDevContext},
+  dev_context::{
+    BundlingFuture, PinBoxSendStaticFuture, SharedDevContext, dev_callback_result_to_build_result,
+  },
   type_aliases::{CoordinatorReceiver, CoordinatorSender},
   types::{
     coordinator_msg::CoordinatorMsg, coordinator_state::CoordinatorState,
@@ -48,6 +51,7 @@ pub struct BundleCoordinator {
   queued_tasks: VecDeque<TaskInput>,
   has_stale_bundle_output: bool,
   current_bundling_future: Option<BundlingFuture>,
+  last_callback_error: Option<DevCallbackError>,
 }
 
 impl BundleCoordinator {
@@ -70,6 +74,7 @@ impl BundleCoordinator {
       queued_tasks: VecDeque::from([]),
       has_stale_bundle_output: true,
       current_bundling_future: None,
+      last_callback_error: None,
     }
   }
 
@@ -103,8 +108,14 @@ impl BundleCoordinator {
         CoordinatorMsg::WatchEvent(watch_event) => {
           self.handle_watch_event(watch_event).await;
         }
-        CoordinatorMsg::BundleCompleted { error_stage, has_generated_bundle_output } => {
-          self.handle_bundle_completed(error_stage, has_generated_bundle_output).await;
+        CoordinatorMsg::BundleCompleted {
+          error_stage,
+          has_generated_bundle_output,
+          callback_error,
+        } => {
+          self
+            .handle_bundle_completed(error_stage, has_generated_bundle_output, callback_error)
+            .await;
         }
         #[cfg(feature = "testing")]
         CoordinatorMsg::ScheduleBuildIfStale { reply } => {
@@ -150,13 +161,18 @@ impl BundleCoordinator {
           // stage. Wait for the complete task before closing the bundler so
           // `closeBundle` always runs on the final installed plugin driver.
           // See internal-docs/dev-engine/implementation.md.
-          if let Some(bundling_future) = self.current_bundling_future.take() {
-            bundling_future.await;
-          }
-          let result = {
+          let callback_result = if let Some(bundling_future) = self.current_bundling_future.take() {
+            bundling_future.await
+          } else if let Some(error) = self.last_callback_error.take() {
+            Err(error)
+          } else {
+            Ok(())
+          };
+          let close_result = {
             let mut bundler = self.bundler.lock().await;
             bundler.close().await
           };
+          let result = Self::merge_callback_and_close_results(callback_result, close_result);
           let _ = reply.send(result);
           break;
         }
@@ -271,7 +287,9 @@ impl BundleCoordinator {
     &mut self,
     error_stage: Option<ErrorStage>,
     has_generated_bundle_output: bool,
+    callback_error: Option<DevCallbackError>,
   ) {
+    self.last_callback_error = callback_error;
     match self.state {
       CoordinatorState::Initialized
       | CoordinatorState::Failed { .. }
@@ -388,8 +406,13 @@ impl BundleCoordinator {
           } else {
             self.set_initial_build_state(CoordinatorState::InProgress);
           }
-          let bundling_future = (Box::pin(bundling_task.run()) as PinBoxSendStaticFuture).shared();
-          spawn_detached(bundling_future.clone());
+          self.last_callback_error = None;
+          let bundling_future =
+            (Box::pin(bundling_task.run()) as PinBoxSendStaticFuture<DevCallbackResult>).shared();
+          let detached_bundling_future = bundling_future.clone();
+          spawn_detached(async move {
+            let _ = detached_bundling_future.await;
+          });
 
           self.current_bundling_future = Some(bundling_future.clone());
 
@@ -481,7 +504,23 @@ impl BundleCoordinator {
       running_future: self.current_bundling_future.clone(),
       last_build_errored,
       last_error_stage,
+      last_callback_error: self.last_callback_error.clone(),
       has_stale_output: self.has_stale_bundle_output,
+    }
+  }
+
+  fn merge_callback_and_close_results(
+    callback_result: DevCallbackResult,
+    close_result: BuildResult<()>,
+  ) -> BuildResult<()> {
+    match (dev_callback_result_to_build_result(callback_result), close_result) {
+      (Ok(()), Ok(())) => Ok(()),
+      (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
+      (Err(callback_error), Err(close_error)) => {
+        let mut errors = callback_error.into_vec();
+        errors.extend(close_error.into_vec());
+        Err(errors.into())
+      }
     }
   }
 

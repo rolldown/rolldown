@@ -60,15 +60,41 @@ async function build(
   } else {
     const { output, write = true, ...inputOptions } = options;
     const build = await rolldown(inputOptions);
+    let result!: RolldownOutput;
+    let buildError: unknown;
+    let buildFailed = false;
     try {
       if (write) {
-        return await build.write(output);
+        result = await build.write(output);
       } else {
-        return await build.generate(output);
+        result = await build.generate(output);
       }
-    } finally {
-      await build.close();
+    } catch (error) {
+      buildFailed = true;
+      buildError = error;
     }
+
+    let closeError: unknown;
+    let closeFailed = false;
+    try {
+      await build.close();
+    } catch (error) {
+      closeFailed = true;
+      closeError = error;
+    }
+
+    if (buildFailed && closeFailed) {
+      throw new AggregateError([buildError, closeError], 'Build and cleanup both failed', {
+        cause: buildError,
+      });
+    }
+    if (buildFailed) {
+      throw buildError;
+    }
+    if (closeFailed) {
+      throw closeError;
+    }
+    return result;
   }
 }
 

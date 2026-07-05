@@ -1,6 +1,7 @@
 use napi_derive::napi;
 use rolldown_dev::{
-  BundleState, OnAdditionalAssetsCallback, OnHmrUpdatesCallback, OnOutputCallback,
+  BundleState, DevCallbackError, DevCallbackFuture, OnAdditionalAssetsCallback,
+  OnHmrUpdatesCallback, OnOutputCallback,
 };
 use rolldown_error::BatchedBuildDiagnostic;
 use std::path::{Path, PathBuf};
@@ -12,13 +13,14 @@ use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
 use crate::types::binding_error_stage::BindingErrorStage;
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
+use crate::types::js_callback::MaybeAsyncJsCallbackExt;
 use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
 };
 use futures::channel::oneshot;
 use napi::bindgen_prelude::{FnArgs, PromiseRaw};
-use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
+use napi::{Either, Env};
 
 type BindingDevEngineCloseOutcome = Result<(), Arc<BatchedBuildDiagnostic>>;
 
@@ -27,6 +29,16 @@ fn dev_engine_close_error(error: &BatchedBuildDiagnostic) -> napi::Error {
     return error.try_clone().unwrap_or_else(|clone_error| clone_error);
   }
   napi::Error::from_reason(format!("Failed to close dev engine: {error:#}"))
+}
+
+fn dev_engine_operation_error(
+  context: &'static str,
+  error: &BatchedBuildDiagnostic,
+) -> napi::Error {
+  if let Some(error) = error.iter().find_map(|diagnostic| diagnostic.downcast_napi_error().ok()) {
+    return error.try_clone().unwrap_or_else(|clone_error| clone_error);
+  }
+  napi::Error::from_reason(format!("{context}: {error:#}"))
 }
 
 fn dev_engine_closed_error() -> napi::Error {
@@ -170,14 +182,45 @@ impl BindingDevEngine {
         move |result: rolldown_error::BuildResult<(
           Vec<rolldown_common::ClientHmrUpdate>,
           Vec<String>,
-        )>| {
-          let binding_result: BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)> =
-            match result {
-              Ok((updates, changed_files)) => {
-                let binding_updates: Vec<BindingClientHmrUpdate> =
-                  updates.into_iter().map(BindingClientHmrUpdate::from).collect();
-                Either::B((binding_updates, changed_files))
-              }
+        )>|
+              -> DevCallbackFuture {
+          let js_callback = Arc::clone(&js_callback);
+          let cwd = Arc::<Path>::clone(&cwd);
+          Box::pin(async move {
+            let binding_result: BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)> =
+              match result {
+                Ok((updates, changed_files)) => {
+                  let binding_updates: Vec<BindingClientHmrUpdate> =
+                    updates.into_iter().map(BindingClientHmrUpdate::from).collect();
+                  Either::B((binding_updates, changed_files))
+                }
+                Err(errors) => {
+                  let binding_errors: Vec<_> = errors
+                    .iter()
+                    .map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf()))
+                    .collect();
+                  Either::A(BindingErrors::new(binding_errors))
+                }
+              };
+            js_callback
+              .await_call(FnArgs { data: (binding_result,) })
+              .await
+              .map_err(|error| Arc::new(error) as DevCallbackError)
+          })
+        },
+      ) as OnHmrUpdatesCallback
+    });
+
+    // If callback is provided, wrap it to convert BuildResult<BundleOutput> to BindingResult<BindingOutputs>
+    let on_output = on_output_callback.map(|js_callback| {
+      let cwd = Arc::<Path>::clone(&cwd);
+      Arc::new(
+        move |result: rolldown_error::BuildResult<rolldown::BundleOutput>| -> DevCallbackFuture {
+          let js_callback = Arc::clone(&js_callback);
+          let cwd = Arc::<Path>::clone(&cwd);
+          Box::pin(async move {
+            let binding_result: BindingResult<BindingOutputs> = match result {
+              Ok(bundle_output) => Either::B(BindingOutputs::from(bundle_output.assets)),
               Err(errors) => {
                 let binding_errors: Vec<_> = errors
                   .iter()
@@ -186,36 +229,27 @@ impl BindingDevEngine {
                 Either::A(BindingErrors::new(binding_errors))
               }
             };
-          js_callback
-            .call(FnArgs { data: (binding_result,) }, ThreadsafeFunctionCallMode::Blocking);
+            js_callback
+              .await_call(FnArgs { data: (binding_result,) })
+              .await
+              .map_err(|error| Arc::new(error) as DevCallbackError)
+          })
         },
-      ) as OnHmrUpdatesCallback
-    });
-
-    // If callback is provided, wrap it to convert BuildResult<BundleOutput> to BindingResult<BindingOutputs>
-    let on_output = on_output_callback.map(|js_callback| {
-      let cwd = Arc::<Path>::clone(&cwd);
-      Arc::new(move |result: rolldown_error::BuildResult<rolldown::BundleOutput>| {
-        let binding_result: BindingResult<BindingOutputs> = match result {
-          Ok(bundle_output) => Either::B(BindingOutputs::from(bundle_output.assets)),
-          Err(errors) => {
-            let binding_errors: Vec<_> = errors
-              .iter()
-              .map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf()))
-              .collect();
-            Either::A(BindingErrors::new(binding_errors))
-          }
-        };
-        js_callback.call(FnArgs { data: (binding_result,) }, ThreadsafeFunctionCallMode::Blocking);
-      }) as OnOutputCallback
+      ) as OnOutputCallback
     });
 
     // Assets emitted during an HMR patch / lazy compile (these never go through
     // `on_output`). Forward the assets; warnings stay Rust-side, as in `on_output`.
     let on_additional_assets = on_additional_assets_callback.map(|js_callback| {
-      Arc::new(move |output: rolldown::BundleOutput| {
-        let binding_outputs = BindingOutputs::from(output.assets);
-        js_callback.call(FnArgs { data: (binding_outputs,) }, ThreadsafeFunctionCallMode::Blocking);
+      Arc::new(move |output: rolldown::BundleOutput| -> DevCallbackFuture {
+        let js_callback = Arc::clone(&js_callback);
+        Box::pin(async move {
+          let binding_outputs = BindingOutputs::from(output.assets);
+          js_callback
+            .await_call(FnArgs { data: (binding_outputs,) })
+            .await
+            .map_err(|error| Arc::new(error) as DevCallbackError)
+        })
       }) as OnAdditionalAssetsCallback
     });
 
@@ -272,8 +306,10 @@ impl BindingDevEngine {
     };
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
-      let result =
-        inner.run().await.map_err(|_e| napi::Error::from_reason("Failed to run dev engine"));
+      let result = inner
+        .run()
+        .await
+        .map_err(|error| dev_engine_operation_error("Failed to run dev engine", &error));
       drop(operation);
       result
     })
@@ -289,10 +325,9 @@ impl BindingDevEngine {
     };
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
-      let result = inner
-        .wait_for_ongoing_bundle()
-        .await
-        .map_err(|_e| napi::Error::from_reason("Failed to ensure current build finish"));
+      let result = inner.wait_for_ongoing_bundle().await.map_err(|error| {
+        dev_engine_operation_error("Failed to ensure current build finish", &error)
+      });
       drop(operation);
       result
     })
@@ -472,7 +507,7 @@ impl BindingDevEngine {
       let result = inner
         .compile_lazy_entry(module_id, client_id)
         .await
-        .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")));
+        .map_err(|error| dev_engine_operation_error("Failed to compile lazy entry", &error));
       drop(operation);
       result
     })

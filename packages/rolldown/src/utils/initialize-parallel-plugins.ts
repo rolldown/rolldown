@@ -39,6 +39,37 @@ export interface SupervisedWorker extends TerminableWorker {
   waitForBootstrap(): Promise<void>;
 }
 
+const FILE_WORKER_CONTEXT_FLAGS_WITH_VALUE = new Set([
+  '--eval',
+  '-e',
+  '--input-type',
+  '--print',
+  '-p',
+  '--run',
+]);
+const FILE_WORKER_CONTEXT_FLAGS = new Set(['--check', '-c', '--interactive', '-i']);
+
+/** @internal Remove parent invocation modes that are invalid or meaningless for a file worker. */
+export function sanitizeFileWorkerExecArgv(execArgv: readonly string[]): string[] {
+  const sanitized: string[] = [];
+  for (let index = 0; index < execArgv.length; index += 1) {
+    const argument = execArgv[index];
+    const equalsIndex = argument.indexOf('=');
+    const flag = equalsIndex === -1 ? argument : argument.slice(0, equalsIndex);
+    if (FILE_WORKER_CONTEXT_FLAGS_WITH_VALUE.has(flag)) {
+      if (equalsIndex === -1) {
+        index += 1;
+      }
+      continue;
+    }
+    if (FILE_WORKER_CONTEXT_FLAGS.has(argument)) {
+      continue;
+    }
+    sanitized.push(argument);
+  }
+  return sanitized;
+}
+
 /** @internal Retry only workers whose previous termination attempt failed. */
 export async function terminateWorkersWithRetry<T extends TerminableWorker>(
   workers: T[],
@@ -160,11 +191,17 @@ async function initializeWorker(
     threadNumber,
   };
 
-  const worker = new Worker(new URL(urlString), { workerData });
+  const worker = new Worker(new URL(urlString), {
+    workerData,
+    execArgv: sanitizeFileWorkerExecArgv(process.execArgv),
+  });
   const supervisedWorker = superviseWorker(worker);
   registerWorker(supervisedWorker);
-  worker.unref();
-  await supervisedWorker.waitForBootstrap();
+  try {
+    await supervisedWorker.waitForBootstrap();
+  } finally {
+    worker.unref();
+  }
 }
 
 /** @internal Retain worker fault supervision from construction through shutdown. */

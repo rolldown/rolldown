@@ -46,6 +46,143 @@ test('rolldown concurrent write', async () => {
   }
 });
 
+test('concurrent outputs are not serialized for their full build futures', async () => {
+  let buildStarts = 0;
+  let releaseBuilds!: () => void;
+  const bothBuildsStarted = new Promise<void>((resolve) => {
+    releaseBuilds = resolve;
+  });
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'concurrent-output-barrier',
+        async buildStart() {
+          buildStarts += 1;
+          if (buildStarts === 2) {
+            releaseBuilds();
+          }
+          await bothBuildsStarted;
+        },
+      },
+    ],
+  });
+
+  await Promise.all([bundle.generate({ format: 'esm' }), bundle.generate({ format: 'cjs' })]);
+  expect(buildStarts).toBe(2);
+  await bundle.close();
+});
+
+test('close waits for output setup and native build entry', { timeout: 5_000 }, async () => {
+  let releaseOutputSetup!: () => void;
+  const delayedOutputPlugin = new Promise<{ name: string }>((resolve) => {
+    releaseOutputSetup = () => resolve({ name: 'delayed-output-setup' });
+  });
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+  });
+
+  const generatePromise = bundle.generate({ plugins: [delayedOutputPlugin] });
+  let closeSettled = false;
+  const closePromise = bundle.close();
+  const concurrentClosePromise = bundle.close();
+  expect(concurrentClosePromise).toBe(closePromise);
+  const observedClosePromise = closePromise.finally(() => {
+    closeSettled = true;
+  });
+  await Promise.resolve();
+  expect(closeSettled).toBe(false);
+
+  releaseOutputSetup();
+  await expect(generatePromise).resolves.toBeDefined();
+  await expect(observedClosePromise).resolves.toBeUndefined();
+  await expect(concurrentClosePromise).resolves.toBeUndefined();
+});
+
+test('concurrent outputs retain and terminate every parallel worker pool', async () => {
+  const originalTerminate = Object.getOwnPropertyDescriptor(Worker.prototype, 'terminate')!
+    .value as (this: Worker) => Promise<number>;
+  const terminateCalls = new Map<Worker, number>();
+  const terminateSpy = vi
+    .spyOn(Worker.prototype, 'terminate')
+    .mockImplementation(function (this: Worker) {
+      terminateCalls.set(this, (terminateCalls.get(this) ?? 0) + 1);
+      return Reflect.apply(originalTerminate, this, []);
+    });
+  const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
+  const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(
+    path.join(import.meta.dirname, 'parallel-close-plugin.mjs'),
+  );
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [parallelPlugin({ state })],
+  });
+
+  try {
+    await Promise.all([bundle.generate(), bundle.generate()]);
+    const initializedWorkers = Atomics.load(state, 0);
+    expect(initializedWorkers).toBeGreaterThan(0);
+
+    await bundle.close();
+    expect(terminateCalls.size).toBe(initializedWorkers);
+    expect([...terminateCalls.values()]).toEqual(
+      Array.from({ length: initializedWorkers }, () => 1),
+    );
+  } finally {
+    await bundle.close().catch(() => {});
+    terminateSpy.mockRestore();
+  }
+});
+
+test('close retries a superseded concurrent worker pool after cleanup failure', async () => {
+  const cleanupError = new Error('superseded worker termination failed');
+  const originalTerminate = Object.getOwnPropertyDescriptor(Worker.prototype, 'terminate')!
+    .value as (this: Worker) => Promise<number>;
+  const terminateCalls = new Map<Worker, number>();
+  const failedWorkers = new WeakSet<Worker>();
+  let injectedFailure = false;
+  const terminateSpy = vi
+    .spyOn(Worker.prototype, 'terminate')
+    .mockImplementation(function (this: Worker) {
+      terminateCalls.set(this, (terminateCalls.get(this) ?? 0) + 1);
+      if (!injectedFailure) {
+        injectedFailure = true;
+        failedWorkers.add(this);
+        return Promise.reject(cleanupError);
+      }
+      return Reflect.apply(originalTerminate, this, []);
+    });
+  const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
+  const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(
+    path.join(import.meta.dirname, 'parallel-close-plugin.mjs'),
+  );
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [parallelPlugin({ state })],
+  });
+
+  try {
+    const results = await Promise.allSettled([bundle.generate(), bundle.generate()]);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(results.find((result) => result.status === 'rejected')).toMatchObject({
+      reason: cleanupError,
+    });
+
+    await expect(bundle.close()).resolves.toBeUndefined();
+    expect(terminateCalls.size).toBe(Atomics.load(state, 0));
+    for (const [worker, calls] of terminateCalls) {
+      expect(calls).toBe(failedWorkers.has(worker) ? 2 : 1);
+    }
+  } finally {
+    await bundle.close().catch(() => {});
+    terminateSpy.mockRestore();
+  }
+});
+
 test('should support `Symbol.asyncDispose` of the rolldown bundle and set closed state to true', async () => {
   const bundle = await rolldown({
     input: ['./main.js'],

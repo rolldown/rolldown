@@ -21,6 +21,12 @@ import type { BundleError } from '../../utils/error';
 // @ts-expect-error TS2540: the polyfill of `asyncDispose`.
 Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose');
 
+interface BuildOperation {
+  settled: boolean;
+  stopPromise?: Promise<void>;
+  stopWorkers?: () => Promise<void>;
+}
+
 /**
  * The bundle object returned by {@linkcode rolldown} function.
  *
@@ -30,8 +36,12 @@ export class RolldownBuild {
   #inputOptions: InputOptions;
   #bundler: BindingBundler;
   #runtimeLease: RuntimeLease;
-  #stopWorkers?: () => Promise<void>;
+  #activeBuilds = new Set<Promise<RolldownOutput>>();
+  #workerOwners = new Set<BuildOperation>();
+  #latestBuildOperation: BuildOperation | undefined;
+  #nativeEntryQueue: Promise<void> = Promise.resolve();
   #nativeClosePromise: Promise<void> | undefined;
+  #closeRequested = false;
   #closeCoordinator = new CloseCoordinator(
     'Bundle native close, parallel-plugin worker shutdown, or runtime release failed',
   );
@@ -61,7 +71,7 @@ export class RolldownBuild {
    * If the bundle is closed, calling other methods will throw an error.
    */
   get closed(): boolean {
-    return this.#bundler.closed;
+    return this.#closeRequested || this.#bundler.closed;
   }
 
   /**
@@ -74,7 +84,7 @@ export class RolldownBuild {
    * @throws {@linkcode BundleError} When an error occurs during the build.
    */
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    return this.#build(false, outputOptions);
+    return this.#startBuild(false, outputOptions);
   }
 
   /**
@@ -87,7 +97,7 @@ export class RolldownBuild {
    * @throws {@linkcode BundleError} When an error occurs during the build.
    */
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    return this.#build(true, outputOptions);
+    return this.#startBuild(true, outputOptions);
   }
 
   /**
@@ -112,12 +122,14 @@ export class RolldownBuild {
    * ```
    */
   close(): Promise<void> {
+    this.#closeRequested = true;
     return this.#closeCoordinator.close(() => this.#close());
   }
 
   async #close(): Promise<CloseAttemptResult> {
     const errors: unknown[] = [];
     let retryable = false;
+    await Promise.allSettled(this.#activeBuilds);
     this.#nativeClosePromise ??= (async () => this.#bundler.close())();
     try {
       await this.#nativeClosePromise;
@@ -125,15 +137,13 @@ export class RolldownBuild {
       errors.push(error);
     }
 
-    const stopWorkers = this.#stopWorkers;
-    try {
-      await stopWorkers?.();
-      if (this.#stopWorkers === stopWorkers) {
-        this.#stopWorkers = undefined;
+    for (const owner of this.#workerOwners) {
+      try {
+        await this.#stopWorkerOwner(owner);
+      } catch (error) {
+        errors.push(error);
+        retryable = true;
       }
-    } catch (error) {
-      errors.push(error);
-      retryable = true;
     }
 
     try {
@@ -162,40 +172,107 @@ export class RolldownBuild {
     return Promise.resolve(this.#bundler.getWatchFiles());
   }
 
+  #startBuild(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
+    if (this.#closeRequested) {
+      return Promise.reject(
+        new Error(
+          '[ALREADY_CLOSED] Bundle is already closed, no more calls to "generate" or "write" are allowed.\n',
+        ),
+      );
+    }
+
+    const result = this.#build(isWrite, outputOptions);
+    this.#activeBuilds.add(result);
+    void result.then(
+      () => this.#activeBuilds.delete(result),
+      () => this.#activeBuilds.delete(result),
+    );
+    return result;
+  }
+
   async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
-    const previousStopWorkers = this.#stopWorkers;
-    if (previousStopWorkers) {
-      await previousStopWorkers();
-      if (this.#stopWorkers === previousStopWorkers) {
-        this.#stopWorkers = undefined;
-      }
-    }
     const option = await createBundlerOptions(this.#inputOptions, outputOptions, false);
+    const operation: BuildOperation = {
+      settled: false,
+      stopWorkers: option.stopWorkers,
+    };
+    if (operation.stopWorkers) {
+      this.#workerOwners.add(operation);
+    }
 
+    let result: RolldownOutput;
     try {
-      this.#stopWorkers = option.stopWorkers;
-      let output: Awaited<ReturnType<BindingBundler['generate']>>;
-      if (isWrite) {
-        output = await this.#bundler.write(option.bundlerOptions);
-      } else {
-        output = await this.#bundler.generate(option.bundlerOptions);
-      }
-      return new RolldownOutputImpl(unwrapBindingResult(output));
-    } catch (e) {
+      const { nativePromise } = await this.#enterNativeBuild(
+        operation,
+        isWrite,
+        option.bundlerOptions,
+      );
+      result = new RolldownOutputImpl(unwrapBindingResult(await nativePromise));
+    } catch (error) {
+      let cleanupError: unknown;
       try {
-        await option.stopWorkers?.();
-        if (this.#stopWorkers === option.stopWorkers) {
-          this.#stopWorkers = undefined;
-        }
-      } catch (cleanupError) {
+        await this.#stopWorkerOwner(operation);
+      } catch (caughtCleanupError) {
+        cleanupError = caughtCleanupError;
+      }
+      operation.settled = true;
+      if (cleanupError) {
         throw new AggregateError(
-          [e, cleanupError],
+          [error, cleanupError],
           'Bundle build and parallel-plugin worker cleanup both failed',
         );
       }
-      throw e;
+      throw error;
     }
+
+    operation.settled = true;
+    if (this.#latestBuildOperation !== operation) {
+      await this.#stopWorkerOwner(operation);
+    }
+    return result;
+  }
+
+  #enterNativeBuild(
+    operation: BuildOperation,
+    isWrite: boolean,
+    bundlerOptions: Parameters<BindingBundler['generate']>[0],
+  ): Promise<{
+    nativePromise: ReturnType<BindingBundler['generate']>;
+  }> {
+    const entry = this.#nativeEntryQueue.then(async () => {
+      const previous = this.#latestBuildOperation;
+      if (previous?.settled) {
+        await this.#stopWorkerOwner(previous);
+      }
+
+      const nativePromise = isWrite
+        ? this.#bundler.write(bundlerOptions)
+        : this.#bundler.generate(bundlerOptions);
+      this.#latestBuildOperation = operation;
+      return { nativePromise };
+    });
+    this.#nativeEntryQueue = entry.then(
+      () => {},
+      () => {},
+    );
+    return entry;
+  }
+
+  async #stopWorkerOwner(owner: BuildOperation): Promise<void> {
+    const stopWorkers = owner.stopWorkers;
+    if (!stopWorkers) return;
+
+    owner.stopPromise ??= stopWorkers();
+    try {
+      await owner.stopPromise;
+    } catch (error) {
+      owner.stopPromise = undefined;
+      throw error;
+    }
+    owner.stopPromise = undefined;
+    owner.stopWorkers = undefined;
+    this.#workerOwners.delete(owner);
   }
 }
 

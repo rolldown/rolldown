@@ -147,6 +147,7 @@ async fn close_waits_for_hmr_rebuild_before_closing_the_final_bundle_handle() {
               let _ = sender.send(());
             }
             callback_gate.wait();
+            Box::pin(async { Ok(()) })
           })
         }),
         watch: Some(DevWatchOptions {

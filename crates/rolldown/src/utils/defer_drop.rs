@@ -70,19 +70,17 @@ type DropJob = Box<dyn FnOnce() + Send + 'static>;
 /// on that pool and then waiting in `drain()` deadlocks the worker against its
 /// own queue.
 #[cfg(not(target_family = "wasm"))]
-static DROP_QUEUE: LazyLock<Sender<DropJob>> = LazyLock::new(|| {
+static DROP_QUEUE: LazyLock<Option<Sender<DropJob>>> = LazyLock::new(|| {
   let (sender, receiver) = channel::<DropJob>();
-  std::thread::Builder::new()
-    .name("rolldown-deferred-drop".to_string())
-    .spawn(move || {
+  let worker =
+    std::thread::Builder::new().name("rolldown-deferred-drop".to_string()).spawn(move || {
       while let Ok(job) = receiver.recv() {
         // A user-defined Drop panic must retire its pending count and must not
         // kill the process-global worker.
         let _ = catch_unwind(AssertUnwindSafe(job));
       }
-    })
-    .expect("failed to create the deferred-drop worker");
-  sender
+    });
+  worker.ok().map(|_| sender)
 });
 
 /// Decrements `PENDING` on drop, so the count goes down even if the deferred
@@ -113,17 +111,23 @@ pub fn spawn_drop<T: Send + 'static>(value: T) {
   drop(value);
   #[cfg(not(target_family = "wasm"))]
   {
-    let sender = &*DROP_QUEUE;
-    *PENDING.lock().unwrap_or_else(PoisonError::into_inner) += 1;
-    let job: DropJob = Box::new(move || {
-      let _guard = PendingGuard;
-      drop(value);
-    });
-    if let Err(error) = sender.send(job) {
-      // The worker should be process-lived. If it ever exits unexpectedly,
-      // preserve correctness by completing this drop synchronously without
-      // exposing a user-defined Drop panic that the worker path contains.
-      let _ = catch_unwind(AssertUnwindSafe(error.0));
+    if let Some(sender) = &*DROP_QUEUE {
+      *PENDING.lock().unwrap_or_else(PoisonError::into_inner) += 1;
+      let job: DropJob = Box::new(move || {
+        let _guard = PendingGuard;
+        drop(value);
+      });
+      if let Err(error) = sender.send(job) {
+        // The worker should be process-lived. If it ever exits unexpectedly,
+        // preserve correctness by completing this drop synchronously without
+        // exposing a user-defined Drop panic that the worker path contains.
+        let _ = catch_unwind(AssertUnwindSafe(error.0));
+      }
+    } else {
+      // Thread creation can fail under resource pressure. Deferred destruction
+      // is an optimization, so preserve correctness with the same panic
+      // containment instead of failing the build or poisoning initialization.
+      let _ = catch_unwind(AssertUnwindSafe(|| drop(value)));
     }
   }
 }

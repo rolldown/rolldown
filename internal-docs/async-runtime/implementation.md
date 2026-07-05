@@ -215,7 +215,10 @@ and every build entry calls `drain()` before starting new scan/link/render work.
 The worker is deliberately outside Rayon: a rebuild may call `drain()` from a
 pool worker while every other execution lane is unavailable, so inheriting
 that Rayon registry could deadlock the build against its own maintenance
-queue.
+queue. If the operating system refuses to create the maintenance thread,
+deferred destruction falls back to synchronous, panic-contained drops because
+moving destruction off the caller is an optimization rather than a correctness
+requirement.
 
 ### Timers and native watch mode
 

@@ -565,7 +565,7 @@ impl DevEngine {
 
     // Wait for the build that was triggered by the file change
     if let Ok(Some(ret)) = reply_rx.await {
-      ret.future.await;
+      let _ = ret.future.await;
     }
   }
 

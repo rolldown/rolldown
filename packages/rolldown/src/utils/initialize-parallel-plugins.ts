@@ -27,12 +27,16 @@ export interface TerminableWorker {
 }
 
 export interface BootstrapWorker extends TerminableWorker {
+  on(event: 'error', listener: (error: Error) => void): this;
+  on(event: 'exit', listener: (code: number) => void): this;
   off(event: 'error', listener: (error: Error) => void): this;
   off(event: 'exit', listener: (code: number) => void): this;
   off(event: 'message', listener: (message: unknown) => void): this;
-  once(event: 'error', listener: (error: Error) => void): this;
-  once(event: 'exit', listener: (code: number) => void): this;
   once(event: 'message', listener: (message: unknown) => void): this;
+}
+
+export interface SupervisedWorker extends TerminableWorker {
+  waitForBootstrap(): Promise<void>;
 }
 
 /** @internal Retry only workers whose previous termination attempt failed. */
@@ -75,9 +79,12 @@ export async function initializeParallelPlugins(plugins: RolldownPlugin[]): Prom
   const parallelJsPluginRegistry = new ParallelJsPluginRegistry(count);
   const registryId = parallelJsPluginRegistry.id;
 
-  const stopWorkers = await initializeWorkerPool(count, async (threadNumber, registerWorker) => {
-    await initializeWorker(registryId, pluginInfos, threadNumber, registerWorker);
-  });
+  const stopWorkers = await initializeWorkerPool<SupervisedWorker>(
+    count,
+    async (threadNumber, registerWorker) => {
+      await initializeWorker(registryId, pluginInfos, threadNumber, registerWorker);
+    },
+  );
 
   return { registry: parallelJsPluginRegistry, stopWorkers };
 }
@@ -144,7 +151,7 @@ async function initializeWorker(
   registryId: number,
   pluginInfos: ParallelPluginInfo[],
   threadNumber: number,
-  registerWorker: (worker: Worker) => void,
+  registerWorker: (worker: SupervisedWorker) => void,
 ) {
   const urlString = import.meta.resolve('#parallel-plugin-worker');
   const workerData: WorkerData = {
@@ -154,61 +161,141 @@ async function initializeWorker(
   };
 
   const worker = new Worker(new URL(urlString), { workerData });
-  registerWorker(worker);
+  const supervisedWorker = superviseWorker(worker);
+  registerWorker(supervisedWorker);
   worker.unref();
-  await waitForWorkerBootstrap(worker);
+  await supervisedWorker.waitForBootstrap();
 }
 
-/** @internal Wait for the worker bootstrap protocol and reject on transport failure. */
-export function waitForWorkerBootstrap(worker: BootstrapWorker): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const cleanupListeners = () => {
-      worker.off('message', onMessage);
-      worker.off('error', onError);
-      worker.off('exit', onExit);
-    };
-    const settle = (callback: () => void) => {
-      cleanupListeners();
-      callback();
-    };
-    const onMessage = (message: unknown) => {
-      if (
-        typeof message === 'object' &&
-        message !== null &&
-        'type' in message &&
-        message.type === 'success'
-      ) {
-        settle(resolve);
-        return;
+/** @internal Retain worker fault supervision from construction through shutdown. */
+export function superviseWorker(worker: BootstrapWorker): SupervisedWorker {
+  return new WorkerSupervisor(worker);
+}
+
+type WorkerPhase = 'bootstrapping' | 'running' | 'failed' | 'stopping' | 'stopped';
+
+class WorkerSupervisor implements SupervisedWorker {
+  readonly #worker: BootstrapWorker;
+  readonly #bootstrapPromise: Promise<void>;
+  #resolveBootstrap!: () => void;
+  #rejectBootstrap!: (error: unknown) => void;
+  #phase: WorkerPhase = 'bootstrapping';
+  #faults: unknown[] = [];
+  #exitCode = 0;
+
+  constructor(worker: BootstrapWorker) {
+    this.#worker = worker;
+    this.#bootstrapPromise = new Promise<void>((resolve, reject) => {
+      this.#resolveBootstrap = resolve;
+      this.#rejectBootstrap = reject;
+    });
+    worker.once('message', this.#onMessage);
+    worker.on('error', this.#onError);
+    worker.on('exit', this.#onExit);
+  }
+
+  waitForBootstrap(): Promise<void> {
+    return this.#bootstrapPromise;
+  }
+
+  async terminate(): Promise<number> {
+    let terminationError: unknown;
+    let hasTerminationError = false;
+    const previousPhase = this.#phase;
+    if (this.#phase !== 'stopped') {
+      this.#phase = 'stopping';
+      try {
+        this.#exitCode = await this.#worker.terminate();
+        this.#phase = 'stopped';
+        this.#disposeListeners();
+      } catch (error) {
+        terminationError = error;
+        hasTerminationError = true;
+        if (this.#phase !== 'stopped') {
+          this.#phase = previousPhase === 'running' ? 'running' : 'failed';
+        }
       }
-      if (
-        typeof message === 'object' &&
-        message !== null &&
-        'type' in message &&
-        message.type === 'error'
-      ) {
-        settle(() => reject('error' in message ? message.error : message));
-        return;
-      }
-      settle(() => reject(new Error('Parallel-plugin worker sent an invalid bootstrap response')));
-    };
-    const onError = (error: Error) => {
-      settle(() => reject(error));
-    };
-    const onExit = (code: number) => {
-      settle(() =>
-        reject(
-          new Error(
-            `Parallel-plugin worker exited before initialization completed (exit code ${code})`,
-          ),
+    }
+
+    const errors = this.#faults;
+    this.#faults = [];
+    if (hasTerminationError) {
+      errors.push(terminationError);
+    }
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
+      throw new AggregateError(errors, 'Parallel-plugin worker fault or shutdown failed', {
+        cause: errors[0],
+      });
+    }
+    return this.#exitCode;
+  }
+
+  readonly #onMessage = (message: unknown) => {
+    if (this.#phase !== 'bootstrapping') return;
+    this.#worker.off('message', this.#onMessage);
+    if (
+      typeof message === 'object' &&
+      message !== null &&
+      'type' in message &&
+      message.type === 'success'
+    ) {
+      this.#phase = 'running';
+      this.#resolveBootstrap();
+      return;
+    }
+    this.#phase = 'failed';
+    if (
+      typeof message === 'object' &&
+      message !== null &&
+      'type' in message &&
+      message.type === 'error'
+    ) {
+      this.#rejectBootstrap('error' in message ? message.error : message);
+      return;
+    }
+    this.#rejectBootstrap(new Error('Parallel-plugin worker sent an invalid bootstrap response'));
+  };
+
+  readonly #onError = (error: Error) => {
+    if (this.#phase === 'bootstrapping') {
+      this.#phase = 'failed';
+      this.#worker.off('message', this.#onMessage);
+      this.#rejectBootstrap(error);
+      return;
+    }
+    if (this.#phase !== 'failed' && this.#phase !== 'stopped') {
+      this.#faults.push(error);
+    }
+  };
+
+  readonly #onExit = (code: number) => {
+    this.#exitCode = code;
+    if (this.#phase === 'bootstrapping') {
+      this.#phase = 'stopped';
+      this.#worker.off('message', this.#onMessage);
+      this.#disposeListeners();
+      this.#rejectBootstrap(
+        new Error(
+          `Parallel-plugin worker exited before initialization completed (exit code ${code})`,
         ),
       );
-    };
+      return;
+    }
+    if (this.#phase === 'running') {
+      this.#faults.push(
+        new Error(`Parallel-plugin worker exited unexpectedly (exit code ${code})`),
+      );
+    }
+    this.#phase = 'stopped';
+    this.#disposeListeners();
+  };
 
-    worker.once('message', onMessage);
-    worker.once('error', onError);
-    worker.once('exit', onExit);
-  });
+  #disposeListeners(): void {
+    this.#worker.off('message', this.#onMessage);
+    this.#worker.off('error', this.#onError);
+    this.#worker.off('exit', this.#onExit);
+  }
 }
 
 const availableParallelism = () => {

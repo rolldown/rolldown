@@ -17,7 +17,9 @@ import type { WorkerData } from './utils/initialize-parallel-plugins';
 const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
 // Plugin callbacks are weak TSFNs and therefore do not keep this worker env
 // alive. The owner explicitly terminates workers through `stopWorkers()`;
-// retain the control port until that lifecycle boundary.
+// retain the control port until that lifecycle boundary. The owner also keeps
+// error/exit supervision installed after bootstrap so delayed transport faults
+// become retryable close errors instead of uncaught parent-process failures.
 parentPort!.ref();
 (async () => {
   try {

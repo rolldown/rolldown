@@ -20,16 +20,15 @@ export {
   getAsyncRuntimeConfig,
   getAsyncRuntimeMetrics,
   getRuntimeCapabilities,
-  isolatedDeclaration,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,
-  isolatedDeclarationSync,
-  moduleRunnerTransform,
   type NapiResolveOptions as ResolveOptions,
   type ResolveResult,
-  ResolverFactory,
   resetAsyncRuntimeMetrics,
 } from './binding.cjs';
+export { isolatedDeclaration, isolatedDeclarationSync } from './utils/isolated-declaration';
+export { moduleRunnerTransform } from './utils/module-runner-transform';
+export { ResolverFactory } from './utils/resolver-factory';
 export { resolveTsconfig } from './utils/resolve-tsconfig';
 
 export { defineParallelPlugin } from './plugin/parallel-plugin';

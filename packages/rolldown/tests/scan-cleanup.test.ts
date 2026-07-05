@@ -25,7 +25,7 @@ vi.mock('../src/utils/create-bundler-option', () => ({
 // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
 import { scan } from '../src/api/experimental';
 // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
-import { getRetryableCleanup } from '../src/utils/initialize-parallel-plugins';
+import { getRetryableCleanup } from '../src/utils/retryable-cleanup';
 
 beforeEach(() => {
   mocks.acquireRuntimeLease.mockReset();

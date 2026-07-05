@@ -257,7 +257,14 @@ JS lease consumes the implicit native owner without calling
 `startAsyncRuntime`, then releases it with `shutdownAsyncRuntime`. After that
 count reaches zero, every later JS lease calls `startAsyncRuntime` before it can
 release. Build, scan, watch, and dev objects each own one lease for their whole
-lifecycle. Native and threadless artifacts receive no-op leases.
+lifecycle. Standalone binding-backed promise utilities (`parse`,
+`parseAstAsync`, `transform`, `minify`, isolated declarations, module-runner
+transforms, and asynchronous resolver methods) own one lease per invocation.
+Overlapping calls therefore retain independent owners until their own promises
+settle, and a call after the final release restarts the stopped runtime. The
+added direct-binding wrappers are selected only for threaded WASI; native
+isolated-declaration, module-runner, and `ResolverFactory` identities remain the
+binding exports. Native and threadless artifacts receive no-op leases.
 
 Package copies in one JavaScript realm share the manager through a realm-global
 weak registry keyed by the loaded binding's `startAsyncRuntime` function
@@ -269,6 +276,16 @@ release before starting another owner. Changing the native initial count to
 zero requires changing the JS first-acquire path in the same change; otherwise
 the first release is a native no-op and leaves the runtime running without a
 tracked owner.
+
+Parallel-plugin workers are supervised from construction through shutdown, not
+only until their bootstrap message. Delayed worker `error` events and
+unexpected exits are retained as close failures instead of becoming uncaught
+parent-process events. A supervisor that has already exited does not physically
+terminate again, but rejects one cleanup attempt with its retained fault so the
+existing retryable-cleanup protocol preserves ownership; the next attempt
+clears that logical owner. Bootstrap pools await every startup attempt before
+taking their cleanup snapshot, so a late-registering sibling cannot escape
+termination after another sibling fails.
 
 ### Non-threaded WASI
 

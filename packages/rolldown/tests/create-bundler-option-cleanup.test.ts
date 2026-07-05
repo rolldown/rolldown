@@ -16,7 +16,7 @@ vi.mock('../src/utils/initialize-parallel-plugins', async (importOriginal) => ({
 }));
 
 import { createBundlerOptions } from '../src/utils/create-bundler-option';
-import { getRetryableCleanup } from '../src/utils/initialize-parallel-plugins';
+import { getRetryableCleanup } from '../src/utils/retryable-cleanup';
 
 beforeEach(() => {
   mocks.bindingifyInputOptions.mockReset();

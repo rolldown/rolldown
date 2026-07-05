@@ -1,13 +1,16 @@
 // @ts-nocheck These focused unit tests intentionally reach package source outside the test rootDir.
 import { EventEmitter } from 'node:events';
 import {
-  getRetryableCleanup,
   initializeWorkerPool,
+  superviseWorker,
+  type SupervisedWorker,
+  terminateWorkersWithRetry,
+} from '../src/utils/initialize-parallel-plugins';
+import {
+  getRetryableCleanup,
   recoverRetryableCleanups,
   retryCleanupFromError,
-  terminateWorkersWithRetry,
-  waitForWorkerBootstrap,
-} from '../src/utils/initialize-parallel-plugins';
+} from '../src/utils/retryable-cleanup';
 import { describe, expect, test, vi } from 'vitest';
 
 class TestWorker extends EventEmitter {
@@ -122,20 +125,25 @@ describe('parallel plugin worker cleanup', () => {
   test('rejects bootstrap on a worker transport error', async () => {
     const worker = new TestWorker();
     const startupError = new Error('worker failed before bootstrap');
+    const supervisedWorker = superviseWorker(worker);
 
-    const result = waitForWorkerBootstrap(worker);
+    const result = supervisedWorker.waitForBootstrap();
     worker.emit('error', startupError);
 
     await expect(result).rejects.toBe(startupError);
     expect(worker.listenerCount('message')).toBe(0);
+    expect(worker.listenerCount('error')).toBe(1);
+    expect(worker.listenerCount('exit')).toBe(1);
+    await supervisedWorker.terminate();
     expect(worker.listenerCount('error')).toBe(0);
     expect(worker.listenerCount('exit')).toBe(0);
   });
 
   test('rejects bootstrap when a worker exits before reporting readiness', async () => {
     const worker = new TestWorker();
+    const supervisedWorker = superviseWorker(worker);
 
-    const result = waitForWorkerBootstrap(worker);
+    const result = supervisedWorker.waitForBootstrap();
     worker.emit('exit', 17);
 
     await expect(result).rejects.toThrow(
@@ -144,6 +152,91 @@ describe('parallel plugin worker cleanup', () => {
     expect(worker.listenerCount('message')).toBe(0);
     expect(worker.listenerCount('error')).toBe(0);
     expect(worker.listenerCount('exit')).toBe(0);
+  });
+
+  test('retains delayed worker errors until shutdown without reterminating the worker', async () => {
+    const worker = new TestWorker();
+    const workerError = new Error('worker failed after bootstrap');
+    const supervisedWorker = superviseWorker(worker);
+    worker.emit('message', { type: 'success' });
+    await supervisedWorker.waitForBootstrap();
+
+    expect(worker.listenerCount('error')).toBe(1);
+    expect(worker.listenerCount('exit')).toBe(1);
+    worker.emit('error', workerError);
+
+    await expect(supervisedWorker.terminate()).rejects.toBe(workerError);
+    expect(worker.terminate).toHaveBeenCalledOnce();
+    expect(worker.listenerCount('error')).toBe(0);
+    expect(worker.listenerCount('exit')).toBe(0);
+    await expect(supervisedWorker.terminate()).resolves.toBe(0);
+    expect(worker.terminate).toHaveBeenCalledOnce();
+  });
+
+  test('retries physical termination after a delayed fault and first termination rejection', async () => {
+    const workerFault = new Error('worker failed after bootstrap');
+    const terminationError = new Error('first termination failed');
+    const worker = new TestWorker();
+    worker.terminate.mockRejectedValueOnce(terminationError).mockResolvedValue(0);
+
+    const stopWorkers = await initializeWorkerPool<SupervisedWorker>(
+      1,
+      async (_, registerWorker) => {
+        const supervisedWorker = superviseWorker(worker);
+        registerWorker(supervisedWorker);
+        worker.emit('message', { type: 'success' });
+        await supervisedWorker.waitForBootstrap();
+      },
+    );
+    worker.emit('error', workerFault);
+
+    const firstError = await stopWorkers().catch((error: unknown) => error);
+    expect(firstError).toBeInstanceOf(AggregateError);
+    expect((firstError as AggregateError).errors).toEqual([workerFault, terminationError]);
+    expect(worker.terminate).toHaveBeenCalledOnce();
+
+    await expect(stopWorkers()).resolves.toBeUndefined();
+    expect(worker.terminate).toHaveBeenCalledTimes(2);
+  });
+
+  test('retains unexpected worker exits until cleanup observes them', async () => {
+    const worker = new TestWorker();
+    const supervisedWorker = superviseWorker(worker);
+    worker.emit('message', { type: 'success' });
+    await supervisedWorker.waitForBootstrap();
+
+    worker.emit('exit', 23);
+
+    await expect(supervisedWorker.terminate()).rejects.toThrow(
+      'Parallel-plugin worker exited unexpectedly (exit code 23)',
+    );
+    expect(worker.terminate).not.toHaveBeenCalled();
+    await expect(supervisedWorker.terminate()).resolves.toBe(23);
+    expect(worker.terminate).not.toHaveBeenCalled();
+  });
+
+  test('keeps setup errors primary when a bootstrapped worker faults before cleanup', async () => {
+    const setupError = new Error('pool setup failed');
+    const workerError = new Error('worker failed after bootstrap');
+    const worker = new TestWorker();
+
+    const result = initializeWorkerPool<SupervisedWorker>(1, async (_, registerWorker) => {
+      const supervisedWorker = superviseWorker(worker);
+      registerWorker(supervisedWorker);
+      worker.emit('message', { type: 'success' });
+      await supervisedWorker.waitForBootstrap();
+      worker.emit('error', workerError);
+      throw setupError;
+    });
+
+    const error = await result.catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(AggregateError);
+    expect((error as AggregateError).errors).toEqual([setupError, workerError]);
+    expect((error as AggregateError).cause).toBe(setupError);
+    expect(worker.terminate).toHaveBeenCalledOnce();
+
+    await expect(getRetryableCleanup(error)?.()).resolves.toBeUndefined();
+    expect(worker.terminate).toHaveBeenCalledOnce();
   });
 
   test('cleans partially started siblings and retains a failed termination for retry', async () => {

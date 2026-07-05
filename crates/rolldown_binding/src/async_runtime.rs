@@ -621,11 +621,25 @@ impl JsCurrentThreadTaskHostInner {
   }
 
   fn evict(&self) {
+    self.evict_inner(true);
+  }
+
+  fn evict_after_sweep(&self) {
+    self.evict_inner(false);
+  }
+
+  fn evict_inner(&self, request_redispatch: bool) {
     self.dead.store(true, std::sync::atomic::Ordering::SeqCst);
     let registration =
       self.registration.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take();
     if let Some(id) = registration {
       unregister_current_thread_task_driver(id);
+      if request_redispatch {
+        // The dead host may have accepted a weak-TSFN callback that its env
+        // discarded before delivery. Clear that stale dispatch token and move
+        // queued work to the newest remaining live host.
+        request_current_thread_task_drain();
+      }
     }
   }
 }
@@ -642,7 +656,9 @@ impl CurrentThreadTaskDriver for JsCurrentThreadTaskHost {
   }
 
   fn on_swept(&self) {
-    self.inner.evict();
+    // The registry is already selecting/dispatching a fallback. Avoid
+    // recursively starting another selection pass from its sweep callback.
+    self.inner.evict_after_sweep();
   }
 }
 
@@ -846,6 +862,36 @@ struct PendingHostTimer {
 }
 
 #[cfg(feature = "async-runtime")]
+enum PendingHostTimerRegistration {
+  Refreshed(std::task::Waker),
+  Armed(u32),
+}
+
+#[cfg(feature = "async-runtime")]
+fn register_pending_host_timer(
+  pending: &std::sync::Mutex<rustc_hash::FxHashMap<TimerId, PendingHostTimer>>,
+  relay_ids: &RelayIdAllocator,
+  id: TimerId,
+  waker: std::task::Waker,
+) -> PendingHostTimerRegistration {
+  let mut pending = pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+  if let Some(slot) = pending.get_mut(&id) {
+    return PendingHostTimerRegistration::Refreshed(std::mem::replace(&mut slot.waker, waker));
+  }
+  let relay_id = relay_ids.reserve();
+  pending.insert(id, PendingHostTimer { relay_id, waker, relay_armed: false });
+  PendingHostTimerRegistration::Armed(relay_id)
+}
+
+#[cfg(feature = "async-runtime")]
+fn take_pending_host_timers(
+  pending: &std::sync::Mutex<rustc_hash::FxHashMap<TimerId, PendingHostTimer>>,
+) -> rustc_hash::FxHashMap<TimerId, PendingHostTimer> {
+  let mut pending = pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+  std::mem::take(&mut *pending)
+}
+
+#[cfg(feature = "async-runtime")]
 fn wake_host_timer_safely(waker: std::task::Waker) {
   // Host eviction runs from a napi env cleanup hook. A custom RawWaker must
   // not unwind through that FFI boundary or abort the remaining timer drain.
@@ -858,6 +904,10 @@ impl JsTimerHostInner {
     &self,
   ) -> std::sync::MutexGuard<'_, rustc_hash::FxHashMap<TimerId, PendingHostTimer>> {
     self.pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+  }
+
+  fn register_pending(&self, id: TimerId, waker: std::task::Waker) -> PendingHostTimerRegistration {
+    register_pending_host_timer(&self.pending, &self.relay_ids, id, waker)
   }
 
   /// Can this host still deliver wakes? The `aborted` probe reads the
@@ -911,9 +961,8 @@ impl JsTimerHostInner {
     if let Some(id) = registration {
       unregister_timer_driver(id);
     }
-    let pending: Vec<PendingHostTimer> =
-      self.lock_pending().drain().map(|(_, pending)| pending).collect();
-    for pending in pending {
+    let pending = take_pending_host_timers(&self.pending);
+    for (_, pending) in pending {
       if pending.relay_armed {
         self.cancel_relay(pending.relay_id);
       }
@@ -933,16 +982,14 @@ impl TimerDriver for JsTimerHost {
       wake_host_timer_safely(waker);
       return;
     }
-    let relay_id = {
-      let mut pending = self.inner.lock_pending();
-      if let Some(slot) = pending.get_mut(&id) {
-        // Re-poll of a still-armed sleep: refresh the waker only.
-        slot.waker = waker;
+    let relay_id = match self.inner.register_pending(id, waker) {
+      PendingHostTimerRegistration::Refreshed(replaced_waker) => {
+        // A custom RawWaker destructor may re-enter timer code. `register_pending`
+        // returns the old waker so its destructor runs after `pending` unlocks.
+        drop(replaced_waker);
         return;
       }
-      let relay_id = self.inner.relay_ids.reserve();
-      pending.insert(id, PendingHostTimer { relay_id, waker, relay_armed: false });
-      relay_id
+      PendingHostTimerRegistration::Armed(relay_id) => relay_id,
     };
     let ms = deadline.saturating_duration_since(std::time::Instant::now()).as_secs_f64() * 1000.0;
     let inner = std::sync::Arc::clone(&self.inner);
@@ -1241,7 +1288,8 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
 mod tests {
   #[cfg(feature = "async-runtime")]
   use super::{
-    RelayIdAllocator, RolldownAsyncRuntime, install_cleanup_hook_or_rollback,
+    PendingHostTimer, PendingHostTimerRegistration, RelayIdAllocator, RolldownAsyncRuntime,
+    install_cleanup_hook_or_rollback, register_pending_host_timer, take_pending_host_timers,
     wake_host_timer_safely,
   };
   use super::{
@@ -1286,6 +1334,80 @@ mod tests {
 
     let waker = std::task::Waker::from(std::sync::Arc::new(PanickingWake));
     wake_host_timer_safely(waker);
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn host_timer_registry_drops_wakers_after_unlock() {
+    struct LockCheckingDrop {
+      pending: std::sync::Weak<
+        std::sync::Mutex<
+          rustc_hash::FxHashMap<rolldown_utils::async_runtime::TimerId, PendingHostTimer>,
+        >,
+      >,
+      dropped: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    }
+
+    #[expect(
+      clippy::manual_noop_waker,
+      reason = "the Arc-backed no-op waker exists to exercise its re-entrant destructor"
+    )]
+    impl std::task::Wake for LockCheckingDrop {
+      fn wake(self: std::sync::Arc<Self>) {}
+    }
+
+    impl Drop for LockCheckingDrop {
+      fn drop(&mut self) {
+        let pending = self.pending.upgrade().expect("the pending registry must outlive its waker");
+        let _guard = pending.try_lock().unwrap_or_else(|_| {
+          panic!("a host-timer waker was dropped while the pending registry was locked")
+        });
+        self.dropped.store(true, std::sync::atomic::Ordering::SeqCst);
+      }
+    }
+
+    let pending = std::sync::Arc::new(std::sync::Mutex::new(rustc_hash::FxHashMap::default()));
+    let relay_ids = RelayIdAllocator::default();
+    let dropped = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let old_waker = std::task::Waker::from(std::sync::Arc::new(LockCheckingDrop {
+      pending: std::sync::Arc::downgrade(&pending),
+      dropped: std::sync::Arc::clone(&dropped),
+    }));
+    assert!(matches!(
+      register_pending_host_timer(&pending, &relay_ids, 1, old_waker),
+      PendingHostTimerRegistration::Armed(_)
+    ));
+
+    let replaced_waker =
+      match register_pending_host_timer(&pending, &relay_ids, 1, futures::task::noop_waker()) {
+        PendingHostTimerRegistration::Refreshed(waker) => waker,
+        PendingHostTimerRegistration::Armed(_) => {
+          panic!("a re-poll must refresh the existing timer")
+        }
+      };
+    assert!(
+      !dropped.load(std::sync::atomic::Ordering::SeqCst),
+      "the helper must return ownership instead of dropping under its lock"
+    );
+    drop(replaced_waker);
+    assert!(dropped.load(std::sync::atomic::Ordering::SeqCst));
+
+    let evicted_waker_dropped = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let evicted_waker = std::task::Waker::from(std::sync::Arc::new(LockCheckingDrop {
+      pending: std::sync::Arc::downgrade(&pending),
+      dropped: std::sync::Arc::clone(&evicted_waker_dropped),
+    }));
+    assert!(matches!(
+      register_pending_host_timer(&pending, &relay_ids, 2, evicted_waker),
+      PendingHostTimerRegistration::Armed(_)
+    ));
+    let evicted = take_pending_host_timers(&pending);
+    assert!(
+      !evicted_waker_dropped.load(std::sync::atomic::Ordering::SeqCst),
+      "bulk eviction must move wakers out instead of dropping under its lock"
+    );
+    drop(evicted);
+    assert!(evicted_waker_dropped.load(std::sync::atomic::Ordering::SeqCst));
   }
 
   #[cfg(feature = "async-runtime")]

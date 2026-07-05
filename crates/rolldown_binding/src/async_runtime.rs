@@ -918,6 +918,15 @@ fn drop_host_timer_waker_safely(waker: std::task::Waker) {
 }
 
 #[cfg(feature = "async-runtime")]
+fn recover_host_timer_failure(recover: impl FnOnce(), diagnostic: std::fmt::Arguments<'_>) {
+  recover();
+  run_host_timer_cleanup_safely(|| {
+    use std::io::Write as _;
+    let _ = writeln!(std::io::stderr().lock(), "{diagnostic}");
+  });
+}
+
+#[cfg(feature = "async-runtime")]
 impl JsTimerHostInner {
   fn lock_pending(
     &self,
@@ -1046,8 +1055,10 @@ impl TimerDriver for JsTimerHost {
         // so each re-polls onto the next live registrant -- instead of waking
         // into a busy retry loop against the corpse.
         Err(error) if should_evict_for_relay_error(error.status, inner.is_live()) => {
-          eprintln!("rolldown: host timer callback failed (host gone, evicting): {error}");
-          inner.evict();
+          recover_host_timer_failure(
+            || inner.evict(),
+            format_args!("rolldown: host timer callback failed (host gone, evicting): {error}"),
+          );
         }
         // A failure on a provably LIVE host (a JS throw or rejection --
         // regardless of what its message says -- or a wrong return type): do
@@ -1060,19 +1071,25 @@ impl TimerDriver for JsTimerHost {
           let strikes =
             inner.transient_failures.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
           if strikes >= HOST_TIMER_MAX_TRANSIENT_FAILURES {
-            eprintln!(
-              "rolldown: host timer callback failed {strikes} times in a row, evicting this \
-               timer host: {error}"
+            recover_host_timer_failure(
+              || inner.evict(),
+              format_args!(
+                "rolldown: host timer callback failed {strikes} times in a row, evicting this \
+                 timer host: {error}"
+              ),
             );
-            inner.evict();
           } else {
-            eprintln!(
-              "rolldown: host timer callback failed \
-               ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction): {error}"
+            recover_host_timer_failure(
+              || {
+                if let Some(pending) = inner.take_pending_relay(id, relay_id) {
+                  wake_host_timer_safely(pending.waker);
+                }
+              },
+              format_args!(
+                "rolldown: host timer callback failed \
+                 ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction): {error}"
+              ),
             );
-            if let Some(pending) = inner.take_pending_relay(id, relay_id) {
-              wake_host_timer_safely(pending.waker);
-            }
           }
         }
       }
@@ -1310,7 +1327,8 @@ mod tests {
   use super::{
     BindingRuntimeFlavor, BindingRuntimeOptions, PendingHostTimer, PendingHostTimerRegistration,
     RelayIdAllocator, RolldownAsyncRuntime, install_cleanup_hook_or_rollback,
-    register_pending_host_timer, take_pending_host_timers, wake_host_timer_safely,
+    recover_host_timer_failure, register_pending_host_timer, take_pending_host_timers,
+    wake_host_timer_safely,
   };
   use super::{
     ResolvedRuntimeBackend, ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RuntimeEnv,
@@ -1416,6 +1434,29 @@ mod tests {
       output.status.code(),
       String::from_utf8_lossy(&output.stdout),
       String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn host_timer_failure_recovery_precedes_and_survives_diagnostic_panics() {
+    struct PanickingDiagnostic;
+
+    impl std::fmt::Display for PanickingDiagnostic {
+      fn fmt(&self, _formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        panic!("intentional host timer diagnostic panic");
+      }
+    }
+
+    let recovered = std::sync::atomic::AtomicBool::new(false);
+    let diagnostic = PanickingDiagnostic;
+    recover_host_timer_failure(
+      || recovered.store(true, std::sync::atomic::Ordering::SeqCst),
+      format_args!("{diagnostic}"),
+    );
+    assert!(
+      recovered.load(std::sync::atomic::Ordering::SeqCst),
+      "timer recovery must complete before fallible diagnostics run"
     );
   }
 

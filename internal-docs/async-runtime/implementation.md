@@ -218,7 +218,13 @@ that Rayon registry could deadlock the build against its own maintenance
 queue. If the operating system refuses to create the maintenance thread,
 deferred destruction falls back to synchronous, panic-contained drops because
 moving destruction off the caller is an optimization rather than a correctness
-requirement.
+requirement. Worker execution and both synchronous fallback paths use a
+two-stage unwind boundary: a deferred destructor panic is caught, then its
+panic payload is destroyed behind a second boundary. A hostile payload can
+therefore neither kill the worker nor discard queued jobs whose pending counts
+would otherwise remain registered forever. The pending count is retired only
+after both boundaries complete, so the next build cannot begin while a caught
+panic payload is still being destroyed.
 
 ### Timers and native watch mode
 
@@ -242,11 +248,14 @@ released, so a waker destructor may safely re-enter timer cancellation.
 CurrentThread host-driver wakes have the same containment, including env
 cleanup eviction and panic-payload destruction, so a custom `RawWaker` cannot
 unwind through the NAPI cleanup hook or prevent later pending timers from being
-drained. Timer-driver liveness callbacks and sweep hooks are also
-panic-contained, matching the runnable-host registry: a panicking liveness
-probe is treated as a dead driver and selection falls back to another live
-host. Timer-driver callbacks and driver destruction run without the registry
-mutex held; selection probes a snapshot and retries if
+drained. Relay failures evict or wake their affected timers before emitting
+best-effort diagnostics, and diagnostic formatting/output is independently
+panic-contained, so a closed stderr or hostile formatter cannot strand a
+sleep. Timer-driver liveness callbacks and sweep hooks are also panic-contained,
+matching the runnable-host registry: a panicking liveness probe is treated as a
+dead driver and selection falls back to another live host. Timer-driver
+callbacks and driver destruction run without the registry mutex held;
+selection probes a snapshot and retries if
 concurrent registry mutation makes it stale.
 
 CurrentThread runnable-host registration follows the same newest-live-driver

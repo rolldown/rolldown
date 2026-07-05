@@ -79,7 +79,9 @@ The existing Tokio runtime remains the default and is selected by the
    payload produced by a hostile payload destructor is quarantined, so normal
    payload state is reclaimed without letting a second panic leave the
    controller permanently stuck in `Stopping` or escape a napi environment
-   cleanup callback.
+   cleanup callback. The deferred-destruction worker uses the same boundary so
+   it cannot die and discard queued jobs while leaving their pending counts
+   permanently registered.
 
 8. **Detached-task behavior matches Tokio.** Dropping Rolldown's `JoinHandle`
    detaches rather than cancels the task during normal operation. Runtime

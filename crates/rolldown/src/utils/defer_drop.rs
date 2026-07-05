@@ -64,6 +64,17 @@ static PENDING_IS_ZERO: Condvar = Condvar::new();
 #[cfg(not(target_family = "wasm"))]
 type DropJob = Box<dyn FnOnce() + Send + 'static>;
 
+#[cfg(not(target_family = "wasm"))]
+fn run_drop_safely(drop_job: impl FnOnce()) {
+  if let Err(payload) = catch_unwind(AssertUnwindSafe(drop_job))
+    && let Err(nested_payload) = catch_unwind(AssertUnwindSafe(|| drop(payload)))
+  {
+    // The original unwind is contained. Quarantine only the nested payload
+    // produced by a hostile panic-payload destructor.
+    std::mem::forget(nested_payload);
+  }
+}
+
 /// Deferred drops use their own serial worker instead of inheriting the
 /// caller's Rayon registry. A one-worker build may begin its next rebuild on
 /// the same Rayon worker that queued the previous drop; putting the drop back
@@ -75,9 +86,10 @@ static DROP_QUEUE: LazyLock<Option<Sender<DropJob>>> = LazyLock::new(|| {
   let worker =
     std::thread::Builder::new().name("rolldown-deferred-drop".to_string()).spawn(move || {
       while let Ok(job) = receiver.recv() {
-        // A user-defined Drop panic must retire its pending count and must not
-        // kill the process-global worker.
-        let _ = catch_unwind(AssertUnwindSafe(job));
+        // Retire the pending count only after the value and any caught panic
+        // payload have finished destruction.
+        run_drop_safely(job);
+        drop(PendingGuard);
       }
     });
   worker.ok().map(|_| sender)
@@ -113,21 +125,19 @@ pub fn spawn_drop<T: Send + 'static>(value: T) {
   {
     if let Some(sender) = &*DROP_QUEUE {
       *PENDING.lock().unwrap_or_else(PoisonError::into_inner) += 1;
-      let job: DropJob = Box::new(move || {
-        let _guard = PendingGuard;
-        drop(value);
-      });
+      let job: DropJob = Box::new(move || drop(value));
       if let Err(error) = sender.send(job) {
         // The worker should be process-lived. If it ever exits unexpectedly,
         // preserve correctness by completing this drop synchronously without
         // exposing a user-defined Drop panic that the worker path contains.
-        let _ = catch_unwind(AssertUnwindSafe(error.0));
+        run_drop_safely(error.0);
+        drop(PendingGuard);
       }
     } else {
       // Thread creation can fail under resource pressure. Deferred destruction
       // is an optimization, so preserve correctness with the same panic
       // containment instead of failing the build or poisoning initialization.
-      let _ = catch_unwind(AssertUnwindSafe(|| drop(value)));
+      run_drop_safely(|| drop(value));
     }
   }
 }
@@ -152,11 +162,12 @@ pub fn drain() {
 #[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
   use std::{
+    panic::panic_any,
     sync::mpsc::{Receiver, SyncSender, sync_channel},
-    time::Duration,
+    time::{Duration, Instant},
   };
 
-  use super::{drain, spawn_drop};
+  use super::{PENDING, drain, spawn_drop};
 
   struct NotifyOnDrop(SyncSender<()>);
 
@@ -187,5 +198,95 @@ mod tests {
       .expect("deferred drop was queued behind its caller in the one-worker Rayon pool");
     release_tx.send(()).unwrap();
     drain();
+  }
+
+  #[test]
+  fn hostile_panic_payload_does_not_kill_worker_or_strand_pending_count() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_DEFER_DROP_HOSTILE_PAYLOAD_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      struct BlockingPanicPayload {
+        entered: SyncSender<()>,
+        release: Receiver<()>,
+      }
+
+      impl Drop for BlockingPanicPayload {
+        fn drop(&mut self) {
+          self.entered.send(()).unwrap();
+          self.release.recv().unwrap();
+          panic!("intentional deferred-drop panic payload destructor panic");
+        }
+      }
+
+      struct PanicOnDrop(Option<BlockingPanicPayload>);
+
+      impl Drop for PanicOnDrop {
+        fn drop(&mut self) {
+          panic_any(self.0.take().unwrap());
+        }
+      }
+
+      let (payload_entered_tx, payload_entered_rx) = sync_channel(0);
+      let (release_payload_tx, release_payload_rx) = sync_channel(0);
+      spawn_drop(PanicOnDrop(Some(BlockingPanicPayload {
+        entered: payload_entered_tx,
+        release: release_payload_rx,
+      })));
+      payload_entered_rx
+        .recv_timeout(Duration::from_secs(1))
+        .expect("the worker must begin destroying the caught panic payload");
+
+      let (drained_tx, drained_rx) = sync_channel(1);
+      std::thread::spawn(move || {
+        drain();
+        drained_tx.send(()).unwrap();
+      });
+      assert!(
+        drained_rx.recv_timeout(Duration::from_millis(100)).is_err(),
+        "drain must wait until caught panic payload destruction finishes"
+      );
+
+      release_payload_tx.send(()).unwrap();
+      drained_rx
+        .recv_timeout(Duration::from_secs(1))
+        .expect("drain must finish after the caught panic payload is contained");
+
+      let (second_dropped_tx, second_dropped_rx) = sync_channel(1);
+      spawn_drop(NotifyOnDrop(second_dropped_tx));
+      second_dropped_rx
+        .recv_timeout(Duration::from_secs(1))
+        .expect("the worker must survive the hostile payload and execute the queued drop");
+
+      let deadline = Instant::now() + Duration::from_secs(1);
+      loop {
+        let pending = *PENDING.lock().unwrap();
+        if pending == 0 {
+          break;
+        }
+        assert!(
+          Instant::now() < deadline,
+          "a queued job was discarded when the worker exited, leaving PENDING at {pending}"
+        );
+        std::thread::yield_now();
+      }
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg(
+        "utils::defer_drop::tests::hostile_panic_payload_does_not_kill_worker_or_strand_pending_count",
+      )
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the deferred-drop subprocess must start");
+    assert!(
+      output.status.success(),
+      "deferred-drop panic payload destruction must stay contained; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
   }
 }

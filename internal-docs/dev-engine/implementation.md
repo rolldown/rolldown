@@ -945,7 +945,14 @@ returned by option normalization. `DevEngine.close()` is memoized and awaits
 the native `BindingDevEngine.close()` phase first; native close waits for an
 active build, `closeBundle`, and coordinator shutdown. Parallel workers are
 terminated only afterward, including when native close rejects. Constructor
-failure also terminates workers that were already initialized.
+failure also terminates workers that were already initialized. Runtime-lease
+acquisition and binding-construction failures combine worker shutdown with
+lease release under one retryable setup-cleanup owner. A transient cleanup
+failure is retried immediately; if cleanup still fails, ownership remains in
+the shared pending-cleanup registry so a later option initialization can
+recover it instead of abandoning workers or a lease. The shared registry is
+implemented in platform-neutral `utils/retryable-cleanup.ts` so browser builds
+do not retain the Node-specific parallel-worker startup module.
 
 Parallel plugin callbacks are weak napi TSFNs, so they do not keep a worker
 environment alive. `parallel-plugin-worker.ts` explicitly refs its

@@ -9,12 +9,12 @@ import { PluginDriver } from '../plugin/plugin-driver';
 import { getObjectPlugins } from '../plugin/plugin-driver';
 import { bindingifyInputOptions } from './bindingify-input-options';
 import { bindingifyOutputOptions } from './bindingify-output-options';
+import { initializeParallelPlugins } from './initialize-parallel-plugins';
 import {
   createCleanupFailureError,
-  initializeParallelPlugins,
   isCleanupFailureError,
   retryCleanupFromError,
-} from './initialize-parallel-plugins';
+} from './retryable-cleanup';
 import {
   ANONYMOUS_OUTPUT_PLUGIN_PREFIX,
   ANONYMOUS_PLUGIN_PREFIX,

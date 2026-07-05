@@ -14,6 +14,15 @@ import {
   type BundlerOptionWithStopWorker,
   createBundlerOptions,
 } from '../../utils/create-bundler-option';
+import {
+  createCleanupFailureError,
+  getRetryableCleanup,
+  hasRetryableCleanupOwnership,
+  retryCleanupFromError,
+  runRetryableCleanup,
+  trackRetryableCleanupOwnership,
+  type RetryableCleanup,
+} from '../../utils/retryable-cleanup';
 import { arraify } from '../../utils/misc';
 import type { WatcherEmitter } from './watch-emitter';
 
@@ -224,12 +233,14 @@ export async function createWatcher(
       setupErrors.push(result.reason);
     }
   }
+  const workerCleanups = collectParallelPluginCleanups(bundlerOptions, setupErrors);
   if (setupErrors.length > 0) {
-    const cleanupErrors = await stopParallelPluginWorkers(bundlerOptions);
-    const errors = [...setupErrors, ...cleanupErrors];
-    throw errors.length === 1
-      ? errors[0]
-      : new AggregateError(errors, 'Watcher setup and parallel-plugin worker cleanup failed');
+    return throwWatcherSetupErrorAfterCleanup(
+      createSetupError(setupErrors, 'Watcher option setup failed'),
+      createWatcherSetupCleanup(workerCleanups),
+      'Watcher setup and parallel-plugin worker cleanup failed',
+      'Watcher setup and parallel-plugin worker retry cleanup failed',
+    );
   }
 
   warnMultiplePollingOptions(bundlerOptions);
@@ -237,14 +248,12 @@ export async function createWatcher(
   try {
     runtimeLease = acquireRuntimeLease();
   } catch (error) {
-    const cleanupErrors = await stopParallelPluginWorkers(bundlerOptions);
-    if (cleanupErrors.length > 0) {
-      throw new AggregateError(
-        [error, ...cleanupErrors],
-        'Watcher runtime setup and parallel-plugin worker cleanup failed',
-      );
-    }
-    throw error;
+    return throwWatcherSetupErrorAfterCleanup(
+      error,
+      createWatcherSetupCleanup(workerCleanups),
+      'Watcher runtime setup and parallel-plugin worker cleanup failed',
+      'Watcher runtime setup and parallel-plugin worker retry cleanup failed',
+    );
   }
 
   let onNativeClose = () => {};
@@ -256,19 +265,12 @@ export async function createWatcher(
       callback,
     );
   } catch (error) {
-    const cleanupErrors = await stopParallelPluginWorkers(bundlerOptions);
-    try {
-      runtimeLease.release();
-    } catch (cleanupError) {
-      cleanupErrors.push(cleanupError);
-    }
-    if (cleanupErrors.length > 0) {
-      throw new AggregateError(
-        [error, ...cleanupErrors],
-        'Watcher construction, parallel-plugin worker cleanup, or runtime release failed',
-      );
-    }
-    throw error;
+    return throwWatcherSetupErrorAfterCleanup(
+      error,
+      createWatcherSetupCleanup(workerCleanups, runtimeLease),
+      'Watcher construction, parallel-plugin worker cleanup, or runtime release failed',
+      'Watcher construction and retry cleanup failed',
+    );
   }
   const watcher = new Watcher(
     emitter,
@@ -304,13 +306,88 @@ export async function createWatcher(
   }
 }
 
-async function stopParallelPluginWorkers(
+function collectParallelPluginCleanups(
   bundlerOptions: BundlerOptionWithStopWorker[],
-): Promise<unknown[]> {
-  const results = await Promise.allSettled(
-    bundlerOptions.map(async (option) => option.stopWorkers?.()),
+  setupErrors: unknown[],
+): RetryableCleanup[] {
+  const cleanups = new Set<RetryableCleanup>();
+  for (const option of bundlerOptions) {
+    if (option.stopWorkers) cleanups.add(option.stopWorkers);
+  }
+  for (const error of setupErrors) {
+    const cleanup = getRetryableCleanup(error);
+    if (cleanup) cleanups.add(cleanup);
+  }
+  return [...cleanups];
+}
+
+function createWatcherSetupCleanup(
+  initialWorkerCleanups: RetryableCleanup[],
+  initialRuntimeLease?: RuntimeLease,
+): RetryableCleanup | undefined {
+  if (initialWorkerCleanups.length === 0 && !initialRuntimeLease) return undefined;
+
+  let workerCleanups = initialWorkerCleanups;
+  let runtimeLease = initialRuntimeLease;
+  const cleanup: RetryableCleanup = async () => {
+    const errors: unknown[] = [];
+    const ownedWorkerCleanups = workerCleanups;
+    const workerResults = await Promise.allSettled(
+      ownedWorkerCleanups.map((stopWorkers) => runRetryableCleanup(stopWorkers, false)),
+    );
+    workerCleanups = ownedWorkerCleanups.filter(
+      (stopWorkers, index) =>
+        workerResults[index].status === 'rejected' && hasRetryableCleanupOwnership(stopWorkers),
+    );
+    for (const result of workerResults) {
+      if (result.status === 'rejected') errors.push(result.reason);
+    }
+
+    const ownedRuntimeLease = runtimeLease;
+    try {
+      ownedRuntimeLease?.release();
+      if (runtimeLease === ownedRuntimeLease) {
+        runtimeLease = undefined;
+      }
+    } catch (error) {
+      errors.push(error);
+    }
+
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
+      throw new AggregateError(
+        errors,
+        'Watcher parallel-plugin worker cleanup or runtime release failed',
+      );
+    }
+  };
+  trackRetryableCleanupOwnership(
+    cleanup,
+    () => workerCleanups.length > 0 || runtimeLease !== undefined,
   );
-  return results.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
+  return cleanup;
+}
+
+async function throwWatcherSetupErrorAfterCleanup(
+  error: unknown,
+  cleanup: RetryableCleanup | undefined,
+  message: string,
+  retryMessage: string,
+): Promise<never> {
+  if (!cleanup) throw error;
+  try {
+    await runRetryableCleanup(cleanup);
+  } catch (cleanupError) {
+    return retryCleanupFromError(
+      createCleanupFailureError(error, cleanupError, cleanup, message),
+      retryMessage,
+    );
+  }
+  throw error;
+}
+
+function createSetupError(errors: unknown[], message: string): unknown {
+  return errors.length === 1 ? errors[0] : new AggregateError(errors, message);
 }
 
 function warnMultiplePollingOptions(bundlerOptions: BundlerOptionWithStopWorker[]) {

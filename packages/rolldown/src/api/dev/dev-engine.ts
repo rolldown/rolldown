@@ -11,6 +11,14 @@ import type { OutputOptions } from '../../options/output-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { normalizeBindingResult, unwrapBindingResult } from '../../utils/error';
+import {
+  createCleanupFailureError,
+  hasRetryableCleanupOwnership,
+  retryCleanupFromError,
+  runRetryableCleanup,
+  trackRetryableCleanupOwnership,
+  type RetryableCleanup,
+} from '../../utils/retryable-cleanup';
 import { normalizedStringOrRegex } from '../../utils/normalize-string-or-regex';
 import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
 import {
@@ -108,35 +116,24 @@ export class DevEngine {
     try {
       runtimeLease = acquireRuntimeLease();
     } catch (error) {
-      try {
-        await options.stopWorkers?.();
-      } catch (cleanupError) {
-        throw new AggregateError(
-          [error, cleanupError],
-          'Dev engine runtime setup and parallel-plugin worker cleanup both failed',
-        );
-      }
-      throw error;
+      return throwDevSetupErrorAfterCleanup(
+        error,
+        createDevSetupCleanup(options.stopWorkers),
+        'Dev engine runtime setup and parallel-plugin worker cleanup both failed',
+        'Dev engine runtime setup and parallel-plugin worker retry cleanup both failed',
+      );
     }
 
     try {
       const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
       return new DevEngine(inner, runtimeLease, options.stopWorkers);
     } catch (error) {
-      const errors = [error];
-      try {
-        await options.stopWorkers?.();
-      } catch (cleanupError) {
-        errors.push(cleanupError);
-      }
-      try {
-        runtimeLease.release();
-      } catch (cleanupError) {
-        errors.push(cleanupError);
-      }
-      throw errors.length === 1
-        ? error
-        : new AggregateError(errors, 'Dev engine setup and cleanup failed');
+      return throwDevSetupErrorAfterCleanup(
+        error,
+        createDevSetupCleanup(options.stopWorkers, runtimeLease),
+        'Dev engine setup and cleanup failed',
+        'Dev engine setup and retry cleanup failed',
+      );
     }
   }
 
@@ -277,4 +274,72 @@ export class DevEngine {
       }
     }
   }
+}
+
+function createDevSetupCleanup(
+  initialStopWorkers: RetryableCleanup | undefined,
+  initialRuntimeLease?: RuntimeLease,
+): RetryableCleanup | undefined {
+  if (!initialStopWorkers && !initialRuntimeLease) return undefined;
+
+  let stopWorkers = initialStopWorkers;
+  let runtimeLease = initialRuntimeLease;
+  const cleanup: RetryableCleanup = async () => {
+    const errors: unknown[] = [];
+    const ownedStopWorkers = stopWorkers;
+    try {
+      if (ownedStopWorkers) {
+        await runRetryableCleanup(ownedStopWorkers, false);
+      }
+      if (stopWorkers === ownedStopWorkers) {
+        stopWorkers = undefined;
+      }
+    } catch (error) {
+      if (ownedStopWorkers && !hasRetryableCleanupOwnership(ownedStopWorkers)) {
+        stopWorkers = undefined;
+      }
+      errors.push(error);
+    }
+
+    const ownedRuntimeLease = runtimeLease;
+    try {
+      ownedRuntimeLease?.release();
+      if (runtimeLease === ownedRuntimeLease) {
+        runtimeLease = undefined;
+      }
+    } catch (error) {
+      errors.push(error);
+    }
+
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
+      throw new AggregateError(
+        errors,
+        'Dev engine parallel-plugin worker cleanup or runtime release failed',
+      );
+    }
+  };
+  trackRetryableCleanupOwnership(
+    cleanup,
+    () => stopWorkers !== undefined || runtimeLease !== undefined,
+  );
+  return cleanup;
+}
+
+async function throwDevSetupErrorAfterCleanup(
+  error: unknown,
+  cleanup: RetryableCleanup | undefined,
+  message: string,
+  retryMessage: string,
+): Promise<never> {
+  if (!cleanup) throw error;
+  try {
+    await runRetryableCleanup(cleanup);
+  } catch (cleanupError) {
+    return retryCleanupFromError(
+      createCleanupFailureError(error, cleanupError, cleanup, message),
+      retryMessage,
+    );
+  }
+  throw error;
 }

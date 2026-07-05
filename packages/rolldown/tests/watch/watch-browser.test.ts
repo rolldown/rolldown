@@ -58,6 +58,10 @@ async function buildBrowserWatcherHarness(): Promise<string> {
   const watcherPath = path.resolve(import.meta.dirname, '../../src/api/watch/watcher.ts');
   const emitterPath = path.resolve(import.meta.dirname, '../../src/api/watch/watch-emitter.ts');
   const asyncContextPath = path.resolve(import.meta.dirname, '../../src/utils/async-context.ts');
+  const retryableCleanupPath = path.resolve(
+    import.meta.dirname,
+    '../../src/utils/retryable-cleanup.ts',
+  );
   const virtualModules = new Map<string, string>([
     [
       'binding',
@@ -171,6 +175,7 @@ async function buildBrowserWatcherHarness(): Promise<string> {
           if (id === '../../binding.cjs') return '\0binding';
           if (id === '../../runtime-lifecycle') return '\0runtime-lifecycle';
           if (id === '../../utils/create-bundler-option') return '\0create-bundler-option';
+          if (id === '../../utils/retryable-cleanup') return retryableCleanupPath;
           if (id === '../../plugin/plugin-driver') return '\0plugin-driver';
           if (id === '../../log/logging') return '\0logging';
           if (id === '../../log/logs') return '\0logs';

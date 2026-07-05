@@ -11,7 +11,7 @@ import {
   isCleanupFailureError,
   retryCleanupFromError,
   trackRetryableCleanupOwnership,
-} from '../utils/initialize-parallel-plugins';
+} from '../utils/retryable-cleanup';
 import { validateOption } from '../utils/validator';
 
 export { freeExternalMemory } from '../types/external-memory-handle';

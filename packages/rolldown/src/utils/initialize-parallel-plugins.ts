@@ -2,6 +2,26 @@ import os from 'node:os';
 import { Worker } from 'node:worker_threads';
 import { ParallelJsPluginRegistry } from '../binding.cjs';
 import type { RolldownPlugin } from '../plugin';
+import {
+  cleanupAfterError,
+  clearRetryableCleanup,
+  recoverRetryableCleanups,
+  trackRetryableCleanupOwnership,
+  type RetryableCleanup,
+} from './retryable-cleanup';
+
+export {
+  attachRetryableCleanup,
+  cleanupAfterError,
+  createCleanupFailureError,
+  getRetryableCleanup,
+  hasRetryableCleanupOwnership,
+  isCleanupFailureError,
+  recoverRetryableCleanups,
+  retryCleanupFromError,
+  runRetryableCleanup,
+  trackRetryableCleanupOwnership,
+} from './retryable-cleanup';
 
 export type WorkerData = {
   registryId: number;
@@ -26,140 +46,6 @@ export interface BootstrapWorker extends TerminableWorker {
   once(event: 'error', listener: (error: Error) => void): this;
   once(event: 'exit', listener: (code: number) => void): this;
   once(event: 'message', listener: (message: unknown) => void): this;
-}
-
-type RetryableCleanup = () => Promise<void>;
-
-const retryableCleanups = new WeakMap<object, RetryableCleanup>();
-const cleanupOwnershipChecks = new WeakMap<RetryableCleanup, () => boolean>();
-const cleanupFailureErrors = new WeakSet<object>();
-const pendingCleanups = new Set<RetryableCleanup>();
-const cleanupAttempts = new WeakMap<RetryableCleanup, Promise<void>>();
-let pendingCleanupRecovery: Promise<void> | undefined;
-
-/** @internal Associate cleanup ownership with an error without changing its public shape. */
-export function attachRetryableCleanup(error: Error, cleanup: RetryableCleanup): void {
-  retryableCleanups.set(error, cleanup);
-  pendingCleanups.add(cleanup);
-}
-
-/** @internal Retrieve cleanup ownership retained by a setup error. */
-export function getRetryableCleanup(error: unknown): RetryableCleanup | undefined {
-  return typeof error === 'object' && error !== null ? retryableCleanups.get(error) : undefined;
-}
-
-/** @internal Tell retry propagation whether a cleanup closure still owns resources. */
-export function trackRetryableCleanupOwnership(
-  cleanup: RetryableCleanup,
-  hasOwnership: () => boolean,
-): void {
-  cleanupOwnershipChecks.set(cleanup, hasOwnership);
-}
-
-/** @internal Identify an aggregate created while associating primary and cleanup failures. */
-export function isCleanupFailureError(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && cleanupFailureErrors.has(error);
-}
-
-function runCleanup(cleanup: RetryableCleanup): Promise<void> {
-  const activeAttempt = cleanupAttempts.get(cleanup);
-  if (activeAttempt) return activeAttempt;
-
-  const attempt = cleanup().finally(() => {
-    if (cleanupAttempts.get(cleanup) === attempt) {
-      cleanupAttempts.delete(cleanup);
-    }
-  });
-  cleanupAttempts.set(cleanup, attempt);
-  return attempt;
-}
-
-/** @internal Recover setup cleanups whose caller discarded the associated error. */
-export function recoverRetryableCleanups(): Promise<void> {
-  return (pendingCleanupRecovery ??= (async () => {
-    const errors: unknown[] = [];
-    const cleanups = Array.from(pendingCleanups);
-    for (const cleanup of cleanups) {
-      pendingCleanups.delete(cleanup);
-      try {
-        await runCleanup(cleanup);
-      } catch (error) {
-        if (cleanupOwnershipChecks.get(cleanup)?.() === false) {
-          continue;
-        }
-        pendingCleanups.add(cleanup);
-        errors.push(error);
-      }
-    }
-    if (errors.length === 1) throw errors[0];
-    if (errors.length > 1) {
-      throw new AggregateError(errors, 'Pending parallel-plugin worker cleanup failed');
-    }
-  })().finally(() => {
-    pendingCleanupRecovery = undefined;
-  }));
-}
-
-/** @internal Retry cleanup retained by an earlier setup failure, then rethrow that failure. */
-export async function retryCleanupFromError(error: unknown, message: string): Promise<never> {
-  const cleanup = getRetryableCleanup(error);
-  if (!cleanup) throw error;
-
-  pendingCleanups.delete(cleanup);
-  try {
-    await runCleanup(cleanup);
-  } catch (cleanupError) {
-    const hasOwnership = cleanupOwnershipChecks.get(cleanup)?.();
-    if (hasOwnership === false) {
-      if (typeof error === 'object' && error !== null) {
-        retryableCleanups.delete(error);
-      }
-      throw error;
-    }
-    pendingCleanups.add(cleanup);
-    throw createCleanupFailureError(error, cleanupError, cleanup, message);
-  }
-  if (typeof error === 'object' && error !== null) {
-    retryableCleanups.delete(error);
-  }
-  throw error;
-}
-
-/** @internal Run owned cleanup while preserving both the primary failure and retry ownership. */
-export async function cleanupAfterError(
-  error: unknown,
-  cleanup: RetryableCleanup | undefined,
-  message: string,
-): Promise<never> {
-  if (!cleanup) throw error;
-  try {
-    await runCleanup(cleanup);
-  } catch (cleanupError) {
-    throw createCleanupFailureError(error, cleanupError, cleanup, message);
-  }
-  throw error;
-}
-
-/** @internal Keep the primary error first while retaining only live cleanup ownership. */
-export function createCleanupFailureError(
-  error: unknown,
-  cleanupError: unknown,
-  cleanup: RetryableCleanup | undefined,
-  message: string,
-): AggregateError {
-  const aggregate = new AggregateError([error, cleanupError], message, { cause: error });
-  cleanupFailureErrors.add(aggregate);
-  if (cleanup) {
-    if (
-      typeof cleanupError === 'object' &&
-      cleanupError !== null &&
-      retryableCleanups.get(cleanupError) === cleanup
-    ) {
-      retryableCleanups.delete(cleanupError);
-    }
-    attachRetryableCleanup(aggregate, cleanup);
-  }
-  return aggregate;
 }
 
 /** @internal Retry only workers whose previous termination attempt failed. */
@@ -250,7 +136,7 @@ function createWorkerCleanup<T extends TerminableWorker>(initialWorkers: T[]): R
     const result = await terminateWorkersWithRetry(workers, 1);
     workers = result.remainingWorkers;
     if (result.errors.length === 0) {
-      pendingCleanups.delete(stopWorkers);
+      clearRetryableCleanup(stopWorkers);
       return;
     }
     const error =

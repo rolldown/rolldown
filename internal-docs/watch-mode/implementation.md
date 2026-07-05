@@ -309,7 +309,16 @@ reported as `ERROR` with `result: null`, followed by `END`, matching Rollup's
 pre-build error shape. The emitter is then bound to a terminal close lifecycle,
 so a same-tick `close()` cannot remain pending. Setup also uses all-settled
 option initialization and terminates workers from every successfully initialized
-output if another output or native watcher construction fails.
+output if another output or native watcher construction fails. Rejected option
+initialization can also retain worker-cleanup ownership; the JavaScript setup
+path adopts those closures together with fulfilled-option workers and the
+runtime lease under one retryable cleanup owner. Cleanup is retried once
+immediately. If it still fails, the owner remains in the shared pending-cleanup
+registry so later parallel-plugin initialization can recover the workers or
+lease instead of discarding them with the setup error. The registry and retry
+coalescing live in the platform-neutral `utils/retryable-cleanup.ts`; keeping
+them separate from worker startup prevents browser watch builds from retaining
+Node worker-thread code.
 
 ### Error Recovery
 

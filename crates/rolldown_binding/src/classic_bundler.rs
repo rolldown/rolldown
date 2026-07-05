@@ -128,9 +128,11 @@ impl ClassicBundler {
     // - We need the future to be `Send + 'static` for napi-rs, so we can't use `async fn` directly here.
     // - Read `BindingBundler#close` in `crates/rolldown_binding/src/binding_bundler.rs` for more details.
     async move {
+      let mut errors = Vec::new();
       if let Some(handle) = last_bundle_handle {
-        let plugin_driver = handle.plugin_driver();
-        plugin_driver.close_bundle(None).await?;
+        if let Err(error) = handle.close().await {
+          errors.push(format!("{error:#}"));
+        }
       }
       if let Some(rx) = devtools_flush_rx {
         // Block on the writer-thread ack in a blocking task so we don't stall
@@ -139,27 +141,24 @@ impl ClassicBundler {
         // All three failure modes (timeout, writer disconnected, blocking task
         // panicked) are surfaced as errors so the documented "logs readable
         // after close()" contract does not silently break.
-        let join_result =
-          spawn_blocking(move || rx.recv_timeout(std::time::Duration::from_secs(30)))
-            .await
-            .map_err(|err| anyhow::anyhow!("devtools flush task failed to join: {err}"))?;
-        match join_result {
-          Ok(()) => {}
-          Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
-            return Err(anyhow::anyhow!(
+        let flush_result =
+          match spawn_blocking(move || rx.recv_timeout(std::time::Duration::from_secs(30))).await {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(std::sync::mpsc::RecvTimeoutError::Timeout)) => Err(anyhow::anyhow!(
               "devtools writer did not acknowledge session flush within 30s; \
                node_modules/.rolldown log files may be truncated"
-            ));
-          }
-          Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-            return Err(anyhow::anyhow!(
+            )),
+            Ok(Err(std::sync::mpsc::RecvTimeoutError::Disconnected)) => Err(anyhow::anyhow!(
               "devtools writer thread disconnected before acknowledging flush; \
                node_modules/.rolldown log files may be truncated"
-            ));
-          }
+            )),
+            Err(error) => Err(anyhow::anyhow!("devtools flush task failed to join: {error}")),
+          };
+        if let Err(error) = flush_result {
+          errors.push(format!("{error:#}"));
         }
       }
-      Ok(())
+      if errors.is_empty() { Ok(()) } else { Err(anyhow::anyhow!(errors.join("\n"))) }
     }
   }
 

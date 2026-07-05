@@ -93,7 +93,11 @@ export class DevEngine {
     try {
       inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
     } catch (error) {
-      await options.stopWorkers?.();
+      try {
+        await options.stopWorkers?.();
+      } catch (cleanupError) {
+        throw new AggregateError([error, cleanupError], 'Dev engine setup and cleanup both failed');
+      }
       throw error;
     }
 
@@ -113,8 +117,10 @@ export class DevEngine {
     if (this.#cachedBuildFinishPromise) {
       return this.#cachedBuildFinishPromise;
     }
-    const promise = this.#inner.ensureCurrentBuildFinish().then(() => {
-      this.#cachedBuildFinishPromise = null;
+    const promise = this.#inner.ensureCurrentBuildFinish().finally(() => {
+      if (this.#cachedBuildFinishPromise === promise) {
+        this.#cachedBuildFinishPromise = null;
+      }
     });
     this.#cachedBuildFinishPromise = promise;
     return promise;
@@ -149,32 +155,30 @@ export class DevEngine {
   }
 
   async #close(): Promise<void> {
-    let nativeError: unknown;
+    const errors: unknown[] = [];
     try {
       // Native close waits for any active build and its closeBundle hooks.
       // Parallel-plugin workers must remain alive until that phase settles.
       await this.#inner.close();
     } catch (error) {
-      nativeError = error;
+      errors.push(error);
     }
 
     const stopWorkers = this.#stopWorkers;
     this.#stopWorkers = undefined;
-    let workerError: unknown;
     try {
       await stopWorkers?.();
     } catch (error) {
-      workerError = error;
+      errors.push(error);
     }
 
-    if (nativeError !== undefined && workerError !== undefined) {
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
       throw new AggregateError(
-        [nativeError, workerError],
+        errors,
         'Dev engine native close and parallel-plugin worker shutdown both failed',
       );
     }
-    if (nativeError !== undefined) throw nativeError;
-    if (workerError !== undefined) throw workerError;
   }
 
   /**

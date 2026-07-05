@@ -31,6 +31,8 @@ use crate::{
 
 type DevEngineCloseResult = Result<(), Arc<str>>;
 type DevEngineCloseFuture = Shared<PinBoxSendStaticFuture<DevEngineCloseResult>>;
+type CoordinatorTaskResult = Result<(), Arc<str>>;
+type CoordinatorTaskFuture = Shared<PinBoxSendStaticFuture<CoordinatorTaskResult>>;
 
 #[cfg(feature = "testing")]
 use crate::ClientSession;
@@ -41,7 +43,7 @@ use std::path::PathBuf;
 
 pub struct CoordinatorState {
   coordinator: Option<BundleCoordinator>,
-  handle: Option<Shared<PinBoxSendStaticFuture<()>>>,
+  handle: Option<CoordinatorTaskFuture>,
 }
 
 pub struct DevEngine {
@@ -127,8 +129,10 @@ impl DevEngine {
     if let Some(coordinator) = coordinator_state.coordinator.take() {
       let join_handle = spawn(coordinator.run());
       let coordinator_handle = Box::pin(async move {
-        join_handle.await.unwrap();
-      }) as PinBoxSendStaticFuture;
+        join_handle
+          .await
+          .map_err(|error| Arc::<str>::from(format!("DevEngine coordinator task failed: {error}")))
+      }) as PinBoxSendStaticFuture<CoordinatorTaskResult>;
       coordinator_state.handle = Some(coordinator_handle.shared());
     }
     drop(coordinator_state);
@@ -146,7 +150,9 @@ impl DevEngine {
 
     let coordinator_state = self.coordinator_state.lock().await;
     if let Some(coordinator_handle) = coordinator_state.handle.clone() {
-      coordinator_handle.await;
+      if let Err(error) = coordinator_handle.await {
+        return Err(anyhow::anyhow!("{error}"))?;
+      }
     }
     Ok(())
   }
@@ -423,19 +429,52 @@ impl DevEngine {
         "DevEngine: failed to send Close message to coordinator - coordinator may have already terminated",
       );
     if let Err(error) = send_result {
-      coordinator_handle.await;
-      return Self::close_bundler_after_coordinator_error(bundler, error.into()).await;
+      let coordinator_error =
+        Self::merge_coordinator_task_result(error.into(), coordinator_handle.await);
+      return Self::close_bundler_after_coordinator_error(bundler, coordinator_error).await;
     }
 
     let close_result = reply_receiver
       .await
       .map_err_to_unhandleable()
       .context("DevEngine: coordinator closed before responding to Close");
-    coordinator_handle.await;
+    let coordinator_task_result = coordinator_handle.await;
 
-    match close_result {
-      Ok(result) => result,
-      Err(error) => Self::close_bundler_after_coordinator_error(bundler, error.into()).await,
+    match (close_result, coordinator_task_result) {
+      (Ok(close_result), Ok(())) => close_result,
+      (Ok(close_result), Err(task_error)) => {
+        Self::merge_build_results(close_result, Err(anyhow::anyhow!("{task_error}").into()))
+      }
+      (Err(error), task_result) => {
+        let coordinator_error = Self::merge_coordinator_task_result(error.into(), task_result);
+        Self::close_bundler_after_coordinator_error(bundler, coordinator_error).await
+      }
+    }
+  }
+
+  fn merge_coordinator_task_result(
+    coordinator_error: BatchedBuildDiagnostic,
+    task_result: CoordinatorTaskResult,
+  ) -> BatchedBuildDiagnostic {
+    match task_result {
+      Ok(()) => coordinator_error,
+      Err(task_error) => {
+        let mut errors = coordinator_error.into_vec();
+        errors.extend(BatchedBuildDiagnostic::from(anyhow::anyhow!("{task_error}")).into_vec());
+        BatchedBuildDiagnostic::new(errors)
+      }
+    }
+  }
+
+  fn merge_build_results(primary: BuildResult<()>, secondary: BuildResult<()>) -> BuildResult<()> {
+    match (primary, secondary) {
+      (Ok(()), Ok(())) => Ok(()),
+      (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
+      (Err(primary), Err(secondary)) => {
+        let mut errors = primary.into_vec();
+        errors.extend(secondary.into_vec());
+        Err(BatchedBuildDiagnostic::new(errors))
+      }
     }
   }
 

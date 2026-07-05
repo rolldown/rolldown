@@ -111,10 +111,14 @@ mod async_runtime_lease {
     use super::Manager;
 
     #[test]
-    fn release_is_idempotent_after_the_last_owner() {
+    fn implicit_owner_matches_the_first_js_lease_without_starting() {
       let manager = Manager::new(1);
+      let start_calls = AtomicUsize::new(0);
       let shutdown_calls = AtomicUsize::new(0);
 
+      // PR #9978's WasiRuntimeLeaseManager claims this implicit owner for its
+      // first JS lease without calling startAsyncRuntime.
+      assert_eq!(manager.active_task_count(), 1);
       manager
         .release(|| {
           shutdown_calls.fetch_add(1, Ordering::SeqCst);
@@ -130,6 +134,22 @@ mod async_runtime_lease {
 
       assert_eq!(manager.active_task_count(), 0);
       assert_eq!(shutdown_calls.load(Ordering::SeqCst), 1);
+
+      manager
+        .acquire(|| {
+          start_calls.fetch_add(1, Ordering::SeqCst);
+          Ok(())
+        })
+        .unwrap();
+      assert_eq!(manager.active_task_count(), 1);
+      assert_eq!(start_calls.load(Ordering::SeqCst), 1);
+      manager
+        .release(|| {
+          shutdown_calls.fetch_add(1, Ordering::SeqCst);
+          Ok(())
+        })
+        .unwrap();
+      assert_eq!(shutdown_calls.load(Ordering::SeqCst), 2);
     }
 
     #[test]

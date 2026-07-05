@@ -625,6 +625,43 @@ struct JsTimerHost {
   inner: std::sync::Arc<JsTimerHostInner>,
 }
 
+#[cfg(feature = "async-runtime")]
+#[derive(Default)]
+struct RelayIdAllocator {
+  next: std::sync::atomic::AtomicU32,
+  active: std::sync::Mutex<rustc_hash::FxHashSet<u32>>,
+}
+
+#[cfg(feature = "async-runtime")]
+impl RelayIdAllocator {
+  fn reserve(&self) -> u32 {
+    let mut active = self.active.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    loop {
+      let id = self.next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+      if active.insert(id) {
+        return id;
+      }
+    }
+  }
+
+  fn release(&self, id: u32) {
+    self.active.lock().unwrap_or_else(std::sync::PoisonError::into_inner).remove(&id);
+  }
+}
+
+#[cfg(feature = "async-runtime")]
+struct RelayIdReservation {
+  allocator: std::sync::Arc<RelayIdAllocator>,
+  id: u32,
+}
+
+#[cfg(feature = "async-runtime")]
+impl Drop for RelayIdReservation {
+  fn drop(&mut self) {
+    self.allocator.release(self.id);
+  }
+}
+
 /// Consecutive NON-LIFETIME relay failures tolerated on one live host before
 /// eviction (Codex task-7 round 4, finding 2). A transient failure (a one-off
 /// JS rejection, a queueing hiccup) must not poison a live driver -- on a
@@ -674,7 +711,7 @@ struct JsTimerHostInner {
   callback: JsCallback<FnArgs<(u32, f64)>, Promise<()>>,
   cancel_callback: JsCallback<FnArgs<(u32,)>, ()>,
   pending: std::sync::Mutex<rustc_hash::FxHashMap<TimerId, PendingHostTimer>>,
-  next_relay_id: std::sync::atomic::AtomicU32,
+  relay_ids: std::sync::Arc<RelayIdAllocator>,
   /// Latched by [`JsTimerHostInner::evict`]: this host's env is gone (or its
   /// callback failed) and it must never serve another timer.
   dead: std::sync::atomic::AtomicBool,
@@ -781,13 +818,16 @@ impl TimerDriver for JsTimerHost {
         slot.waker = waker;
         return;
       }
-      let relay_id = self.inner.next_relay_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+      let relay_id = self.inner.relay_ids.reserve();
       pending.insert(id, PendingHostTimer { relay_id, waker, relay_armed: false });
       relay_id
     };
     let ms = deadline.saturating_duration_since(std::time::Instant::now()).as_secs_f64() * 1000.0;
     let inner = std::sync::Arc::clone(&self.inner);
+    let relay_id_reservation =
+      RelayIdReservation { allocator: std::sync::Arc::clone(&inner.relay_ids), id: relay_id };
     spawn_detached(async move {
+      let _relay_id_reservation = relay_id_reservation;
       let result = match inner.callback.invoke_async(FnArgs { data: (relay_id, ms) }).await {
         Ok(promise) => {
           // `invoke_async` returns only after the JS schedule callback has
@@ -893,7 +933,7 @@ pub fn register_timer_host(
     callback: schedule,
     cancel_callback: cancel,
     pending: std::sync::Mutex::default(),
-    next_relay_id: std::sync::atomic::AtomicU32::new(0),
+    relay_ids: std::sync::Arc::default(),
     dead: std::sync::atomic::AtomicBool::new(false),
     registration: std::sync::Mutex::default(),
     transient_failures: std::sync::atomic::AtomicU32::new(0),
@@ -1073,7 +1113,7 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
 #[cfg(test)]
 mod tests {
   #[cfg(feature = "async-runtime")]
-  use super::RolldownAsyncRuntime;
+  use super::{RelayIdAllocator, RolldownAsyncRuntime};
   use super::{
     ResolvedRuntimeBackend, ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RuntimeEnv,
     parse_park_deadline_ms, resolve_runtime_config_for, wasm_async_work_pool_size,
@@ -1081,6 +1121,26 @@ mod tests {
 
   fn env() -> RuntimeEnv {
     RuntimeEnv::default()
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn relay_ids_do_not_alias_live_relays_across_wraparound() {
+    let allocator = RelayIdAllocator::default();
+    allocator.next.store(u32::MAX, std::sync::atomic::Ordering::Relaxed);
+
+    let last = allocator.reserve();
+    let wrapped = allocator.reserve();
+    assert_eq!(last, u32::MAX);
+    assert_eq!(wrapped, 0);
+
+    allocator.next.store(u32::MAX, std::sync::atomic::Ordering::Relaxed);
+    let skipped = allocator.reserve();
+    assert_eq!(skipped, 1, "live relay ids at the wrap boundary must be skipped");
+
+    allocator.release(last);
+    allocator.next.store(u32::MAX, std::sync::atomic::Ordering::Relaxed);
+    assert_eq!(allocator.reserve(), u32::MAX, "released relay ids may be reused");
   }
 
   fn resolve(

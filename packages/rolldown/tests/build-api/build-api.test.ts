@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { rolldown } from 'rolldown';
+import { defineParallelPlugin } from 'rolldown/experimental';
 import { expect, test } from 'vitest';
 
 test('rolldown write twice', async () => {
@@ -99,6 +100,24 @@ test('supports closeBundle hook', async () => {
   } finally {
     expect(closeBundleCalls).toBe(1);
   }
+});
+
+test('parallel closeBundle hooks run before workers terminate', async () => {
+  const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
+  const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(
+    path.join(import.meta.dirname, 'parallel-close-plugin.mjs'),
+  );
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [parallelPlugin({ state })],
+  });
+
+  await bundle.generate();
+  const workerCount = Atomics.load(state, 0);
+  expect(workerCount).toBeGreaterThan(0);
+  await bundle.close();
+  expect(Atomics.load(state, 1)).toBe(workerCount);
 });
 
 test('closeBundle hook is not called if closed directly', async () => {

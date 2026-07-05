@@ -195,6 +195,16 @@ transition shuts it down. A failed start leaves the count at zero; a failed
 shutdown retains the last owner so a later release can retry. Releasing at
 zero is idempotent, and concurrent releases cannot underflow the count.
 
+The native count and the dependent JS lease manager are one protocol. The
+native `ASYNC_RUNTIME_LEASES` count starts at one while PR #9978's
+`WasiRuntimeLeaseManager` starts with `#initialLeaseAvailable = true`: its
+first JS lease consumes the implicit native owner without calling
+`startAsyncRuntime`, then releases it with `shutdownAsyncRuntime`. After that
+count reaches zero, every later JS lease must call `startAsyncRuntime` before
+it can release. Changing the native initial count to zero requires changing
+the JS first-acquire path in the same restack; otherwise the first release is
+a native no-op and leaves the runtime running without a tracked owner.
+
 ### Non-threaded WASI
 
 The current-thread executor is the runtime half of the non-threaded

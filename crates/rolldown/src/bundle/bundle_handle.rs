@@ -1,4 +1,8 @@
-use std::sync::{Arc, Mutex};
+use std::{
+  any::Any,
+  panic::AssertUnwindSafe,
+  sync::{Arc, Mutex},
+};
 
 use futures::{FutureExt, future::BoxFuture, future::Shared};
 use rolldown_common::SharedNormalizedBundlerOptions;
@@ -6,6 +10,16 @@ use rolldown_plugin::SharedPluginDriver;
 
 type CloseResult = Result<(), Arc<str>>;
 type CloseFuture = Shared<BoxFuture<'static, CloseResult>>;
+
+fn panic_payload_message(payload: &(dyn Any + Send)) -> &str {
+  if let Some(message) = payload.downcast_ref::<String>() {
+    message
+  } else if let Some(message) = payload.downcast_ref::<&str>() {
+    message
+  } else {
+    "non-string panic payload"
+  }
+}
 
 /// A lightweight handle to access bundle state after the `Bundle` has been consumed.
 ///
@@ -76,10 +90,14 @@ impl BundleHandle {
         .get_or_insert_with(|| {
           let plugin_driver = Arc::clone(&self.plugin_driver);
           async move {
-            let result = plugin_driver
-              .close_bundle(None)
-              .await
-              .map_err(|error| Arc::<str>::from(format!("{error:#}")));
+            let result =
+              match AssertUnwindSafe(plugin_driver.close_bundle(None)).catch_unwind().await {
+                Ok(result) => result.map_err(|error| Arc::<str>::from(format!("{error:#}"))),
+                Err(payload) => Err(Arc::<str>::from(format!(
+                  "closeBundle hook panicked: {}",
+                  panic_payload_message(&*payload)
+                ))),
+              };
             plugin_driver.clear();
             result
           }
@@ -110,6 +128,30 @@ mod tests {
     calls: Arc<AtomicUsize>,
     entered: Arc<Notify>,
     release: Arc<Notify>,
+  }
+
+  #[derive(Debug)]
+  struct PanickingClosePlugin {
+    calls: Arc<AtomicUsize>,
+  }
+
+  impl Plugin for PanickingClosePlugin {
+    fn name(&self) -> Cow<'static, str> {
+      "panicking-close".into()
+    }
+
+    fn register_hook_usage(&self) -> HookUsage {
+      HookUsage::CloseBundle
+    }
+
+    async fn close_bundle(
+      &self,
+      _ctx: &PluginContext,
+      _args: Option<&HookCloseBundleArgs<'_>>,
+    ) -> HookNoopReturn {
+      self.calls.fetch_add(1, Ordering::SeqCst);
+      panic!("native close panic");
+    }
   }
 
   impl Plugin for GatedFailingClosePlugin {
@@ -176,6 +218,29 @@ mod tests {
     assert!(handle.watch_files().is_empty());
 
     let late_error = handle.close().await.expect_err("late close should replay failure");
+    assert_eq!(late_error.to_string(), first_error.to_string());
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn close_contains_panics_clears_resources_and_replays_the_failure() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let mut factory = BundleFactory::new(BundleFactoryOptions {
+      plugins: vec![Arc::new(PanickingClosePlugin { calls: Arc::clone(&calls) })],
+      disable_tracing_setup: true,
+      ..Default::default()
+    })
+    .expect("create bundle factory");
+    let bundle = factory.create_bundle(BundleMode::FullBuild, None).expect("create bundle");
+    let handle = bundle.context();
+    handle.watch_files().insert("retained.js".into());
+
+    let first_error = handle.close().await.expect_err("panicking close must become an error");
+    assert!(first_error.to_string().contains("closeBundle hook panicked: native close panic"));
+    assert!(handle.watch_files().is_empty(), "cleanup must run after a hook panic");
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+
+    let late_error = handle.close().await.expect_err("late close must replay the panic failure");
     assert_eq!(late_error.to_string(), first_error.to_string());
     assert_eq!(calls.load(Ordering::SeqCst), 1);
   }

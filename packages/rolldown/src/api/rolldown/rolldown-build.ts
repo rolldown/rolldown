@@ -24,6 +24,7 @@ export class RolldownBuild {
   #inputOptions: InputOptions;
   #bundler: BindingBundler;
   #stopWorkers?: () => Promise<void>;
+  #closePromise: Promise<void> | undefined;
 
   /** @internal */
   static asyncRuntimeShutdown = false;
@@ -90,12 +91,40 @@ export class RolldownBuild {
    * }
    * ```
    */
-  async close(): Promise<void> {
-    await this.#stopWorkers?.();
-    await this.#bundler.close();
-    shutdownAsyncRuntime();
-    RolldownBuild.asyncRuntimeShutdown = true;
-    this.#stopWorkers = void 0;
+  close(): Promise<void> {
+    return (this.#closePromise ??= this.#close());
+  }
+
+  async #close(): Promise<void> {
+    const errors: unknown[] = [];
+    try {
+      await this.#bundler.close();
+    } catch (error) {
+      errors.push(error);
+    }
+
+    const stopWorkers = this.#stopWorkers;
+    this.#stopWorkers = undefined;
+    try {
+      await stopWorkers?.();
+    } catch (error) {
+      errors.push(error);
+    }
+
+    try {
+      shutdownAsyncRuntime();
+      RolldownBuild.asyncRuntimeShutdown = true;
+    } catch (error) {
+      errors.push(error);
+    }
+
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
+      throw new AggregateError(
+        errors,
+        'Bundle native close, parallel-plugin worker shutdown, or runtime shutdown failed',
+      );
+    }
   }
 
   /** @hidden documented in close method */
@@ -116,11 +145,14 @@ export class RolldownBuild {
 
   async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
-    await this.#stopWorkers?.();
+    const previousStopWorkers = this.#stopWorkers;
+    this.#stopWorkers = undefined;
+    await previousStopWorkers?.();
     const option = await createBundlerOptions(this.#inputOptions, outputOptions, false);
 
     if (RolldownBuild.asyncRuntimeShutdown) {
       startAsyncRuntime();
+      RolldownBuild.asyncRuntimeShutdown = false;
     }
 
     try {
@@ -133,6 +165,9 @@ export class RolldownBuild {
       }
       return new RolldownOutputImpl(unwrapBindingResult(output));
     } catch (e) {
+      if (this.#stopWorkers === option.stopWorkers) {
+        this.#stopWorkers = undefined;
+      }
       await option.stopWorkers?.();
       throw e;
     }

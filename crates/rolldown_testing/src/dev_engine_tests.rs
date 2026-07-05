@@ -284,3 +284,53 @@ async fn concurrent_and_late_close_callers_replay_the_terminal_failure() {
   assert_eq!(late_error.to_string(), first_error.to_string());
   assert_eq!(calls.load(Ordering::SeqCst), 1);
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn close_contains_a_panicked_bundling_future_and_runs_fallback_cleanup() {
+  let test_dir = TestDir::new();
+  let input = test_dir.0.join("main.js");
+  fs::write(&input, "export const value = 1;").expect("write input");
+
+  let close_calls = Arc::new(AtomicUsize::new(0));
+  let engine = Arc::new(
+    DevEngine::new(
+      BundlerConfig::new(
+        BundlerOptions {
+          cwd: Some(test_dir.0.clone()),
+          input: Some(vec![input.to_string_lossy().into_owned().into()]),
+          experimental: Some(ExperimentalOptions {
+            incremental_build: Some(true),
+            dev_mode: Some(DevModeOptions::default()),
+            ..Default::default()
+          }),
+          ..Default::default()
+        },
+        vec![Arc::new(LifecyclePlugin {
+          build_start_calls: Arc::new(AtomicUsize::new(0)),
+          close_calls: Arc::clone(&close_calls),
+          close_observed_build_start_calls: Arc::new(AtomicUsize::new(0)),
+        })],
+      ),
+      DevOptions {
+        on_output: Some(Arc::new(|_| panic!("consumer output callback panic"))),
+        watch: Some(DevWatchOptions {
+          disable_watcher: Some(true),
+          skip_write: Some(true),
+          ..Default::default()
+        }),
+        ..Default::default()
+      },
+    )
+    .expect("create dev engine"),
+  );
+
+  let run_engine = Arc::clone(&engine);
+  let run = tokio::spawn(async move { run_engine.run().await });
+  let run_error = run.await.expect_err("the consumer callback panic must fail the run task");
+  assert!(run_error.is_panic());
+
+  let close_error =
+    engine.close().await.expect_err("close must report the coordinator panic instead of panicking");
+  assert!(close_error.to_string().contains("DevEngine coordinator task failed"));
+  assert_eq!(close_calls.load(Ordering::SeqCst), 1, "fallback cleanup must run closeBundle");
+}

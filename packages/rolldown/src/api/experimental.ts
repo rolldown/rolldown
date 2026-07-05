@@ -31,34 +31,55 @@ export const scan = async (
   validateOption('output', rawOutputOptions);
 
   const inputOptions = await PluginDriver.callOptionsHook(rawInputOptions);
-
   const ret = await createBundlerOptions(inputOptions, rawOutputOptions, false);
-
   const bundler = new BindingBundler();
 
   if (RolldownBuild.asyncRuntimeShutdown) {
     startAsyncRuntime();
+    RolldownBuild.asyncRuntimeShutdown = false;
   }
 
-  async function cleanup() {
-    await bundler.close();
-    await ret.stopWorkers?.();
-    shutdownAsyncRuntime();
-    RolldownBuild.asyncRuntimeShutdown = true;
-  }
-
-  let cleanupPromise = Promise.resolve();
+  let cleanupPromise: Promise<void> | undefined;
+  const cleanup = () =>
+    (cleanupPromise ??= (async () => {
+      const errors: unknown[] = [];
+      try {
+        await bundler.close();
+      } catch (error) {
+        errors.push(error);
+      }
+      try {
+        await ret.stopWorkers?.();
+      } catch (error) {
+        errors.push(error);
+      }
+      try {
+        shutdownAsyncRuntime();
+        RolldownBuild.asyncRuntimeShutdown = true;
+      } catch (error) {
+        errors.push(error);
+      }
+      if (errors.length === 1) throw errors[0];
+      if (errors.length > 1) {
+        throw new AggregateError(
+          errors,
+          'Scan native close, parallel-plugin worker shutdown, or runtime shutdown failed',
+        );
+      }
+    })());
 
   try {
     const result = await bundler.scan(ret.bundlerOptions);
     unwrapBindingResult(result);
-  } catch (err) {
-    await cleanup();
-    throw err;
-  } finally {
-    cleanupPromise = cleanup();
+  } catch (error) {
+    try {
+      await cleanup();
+    } catch (cleanupError) {
+      throw new AggregateError([error, cleanupError], 'Scan and cleanup both failed');
+    }
+    throw error;
   }
 
   // Instead of blocking here, we return a promise to let the caller decide when to wait for cleanup.
-  return cleanupPromise;
+  return cleanup();
 };

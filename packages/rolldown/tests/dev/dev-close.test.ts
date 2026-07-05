@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { InputOptions, OutputOptions } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
-import { dev as _dev } from 'rolldown/experimental';
+import { defineParallelPlugin, dev as _dev } from 'rolldown/experimental';
 import { expect, test } from 'vitest';
 
 const TEST_TIMEOUT = 60_000;
@@ -87,5 +87,69 @@ test.skipIf(isSingleThread)(
     // from a polling loop without a `.catch()` handler — a rejection here
     // surfaces as an unhandled promise rejection that crashes the host.
     await expect(engine.ensureCurrentBuildFinish()).resolves.toBeUndefined();
+  },
+);
+
+test.skipIf(isSingleThread)(
+  'close waits for an active parallel-plugin build before terminating workers',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-parallel-close-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const input = path.join(dir, 'main.js');
+    fs.writeFileSync(input, 'console.log(1)');
+
+    const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 3));
+    const parallelPlugin = defineParallelPlugin<{
+      state: Int32Array;
+    }>(path.join(import.meta.dirname, 'parallel-close-plugin.mjs'));
+    const engine = await dev(
+      {
+        input,
+        experimental: { devMode: true },
+        plugins: [parallelPlugin({ state })],
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      Atomics.store(state, 1, 1);
+      Atomics.notify(state, 1);
+      await engine.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    let runRejected = false;
+    let runError: unknown;
+    // Closing an active initial build may cause `run()` to report the
+    // cancellation. Before the hook starts, however, a rejection means the
+    // production worker path failed to become usable and should fail fast.
+    const runPromise = engine.run().catch((error) => {
+      runRejected = true;
+      runError = error;
+    });
+    while (Atomics.load(state, 0) === 0) {
+      if (runRejected) throw runError;
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+
+    let closeSettled = false;
+    const closePromise = engine.close().finally(() => {
+      closeSettled = true;
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(closeSettled).toBe(false);
+    expect(Atomics.load(state, 2)).toBe(0);
+
+    Atomics.store(state, 1, 1);
+    Atomics.notify(state, 1);
+
+    await Promise.all([runPromise, closePromise]);
+    expect(Atomics.load(state, 0)).toBeGreaterThan(0);
+    expect(Atomics.load(state, 2)).toBe(Atomics.load(state, 0));
   },
 );

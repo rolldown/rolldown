@@ -133,10 +133,15 @@ impl Watcher {
     }
   }
 
-  /// Close the watcher and wait for the coordinator to finish.
-  /// Must be called after `run()` — calling before `run()` will skip cleanup hooks.
+  /// Close the watcher and wait for the coordinator to finish. Closing before
+  /// the first scheduled `run()` still starts the coordinator so plugin and
+  /// handler cleanup runs through the normal state machine.
   pub async fn close(&self) -> Result<()> {
     self.closed.store(true, std::sync::atomic::Ordering::Relaxed);
+    // Publish close before spawning a not-yet-started coordinator. Otherwise
+    // a pool worker could enter the initial build between `run()` and this
+    // store, making same-tick close nondeterministically start a bundle.
+    self.run();
     // Wake the coordinator even when it is waiting for a user event callback. The mpsc message
     // remains the normal state-machine input when the coordinator is idle or debouncing.
     self.close_notify.notify_one();

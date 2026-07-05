@@ -15,6 +15,10 @@ import { PluginContextData } from './plugin/plugin-context-data';
 import type { WorkerData } from './utils/initialize-parallel-plugins';
 
 const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
+// Plugin callbacks are weak TSFNs and therefore do not keep this worker env
+// alive. The owner explicitly terminates workers through `stopWorkers()`;
+// retain the control port until that lifecycle boundary.
+parentPort!.ref();
 (async () => {
   try {
     const plugins = await Promise.all(
@@ -50,7 +54,5 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
     parentPort!.postMessage({ type: 'success' });
   } catch (error) {
     parentPort!.postMessage({ type: 'error', error });
-  } finally {
-    parentPort!.unref();
   }
 })();

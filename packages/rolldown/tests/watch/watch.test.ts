@@ -176,6 +176,82 @@ test.concurrent(
   },
 );
 
+test.concurrent(
+  'watcher close in the creation tick runs native cleanup once',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-immediate-close', retryCount);
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const closeWatcherFn = vi.fn();
+    const closeBundleFn = vi.fn();
+    const closeEventFn = vi.fn();
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'immediate-close-lifecycle',
+          closeWatcher: closeWatcherFn,
+          closeBundle: closeBundleFn,
+        },
+      ],
+    });
+    watcher.on('close', async () => {
+      await Promise.resolve();
+      closeEventFn();
+    });
+
+    await Promise.all([watcher.close(), watcher.close()]);
+
+    expect(closeWatcherFn).toHaveBeenCalledTimes(1);
+    expect(closeBundleFn).not.toHaveBeenCalled();
+    expect(closeEventFn).toHaveBeenCalledTimes(1);
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
+test.concurrent(
+  'watcher close listener failure rejects every concurrent close caller',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-close-listener-failure',
+      retryCount,
+    );
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const closeWatcherFn = vi.fn();
+    const listenerError = new Error('close listener failed');
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [{ name: 'close-listener-failure', closeWatcher: closeWatcherFn }],
+    });
+    watcher.on('close', async () => {
+      await Promise.resolve();
+      throw listenerError;
+    });
+
+    const results = await Promise.allSettled([watcher.close(), watcher.close()]);
+    expect(results).toEqual([
+      { status: 'rejected', reason: listenerError },
+      { status: 'rejected', reason: listenerError },
+    ]);
+    expect(closeWatcherFn).toHaveBeenCalledTimes(1);
+  },
+);
+
 // https://github.com/rolldown/rolldown/issues/9462
 test.concurrent(
   'watcher.close() can be awaited inside an event callback',

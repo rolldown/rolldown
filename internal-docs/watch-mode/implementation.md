@@ -17,7 +17,7 @@ function watch(input: WatchOptions | WatchOptions[]): RolldownWatcher;
 
 - Accepts a single config or an array of configs.
 - Each config may have multiple `output` entries. Internally, **each output creates a separate bundler** (a `WatchTask`).
-- Returns a `RolldownWatcher` immediately. The first build is deferred to `process.nextTick` so the caller can attach event listeners first. This matches Rollup's pattern: the constructor calls `process.nextTick(() => this.run())` where `run()` is private.
+- Returns a `RolldownWatcher` immediately. The first build is deferred to `process.nextTick` so the caller can attach event listeners first. This matches Rollup's pattern: the constructor calls `process.nextTick(() => this.run())` where `run()` is private. `WatcherEmitter.close()` is bound through a deferred handler, so a close in the same creation tick waits for asynchronous option/plugin setup instead of becoming a no-op.
 
 ```typescript
 interface RolldownWatcher {
@@ -63,7 +63,7 @@ watcher.run();       // spawns the coordinator (non-blocking)
 watcher.close().await?;  // sends Close, awaits completion
 ```
 
-Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` spawns it on the tokio runtime. `close()` sets the shared close signal, sends a fire-and-forget `Close` message, and awaits the shared completion future. `wait_for_close()` gives consumers a reliable way to await the watcher's completion without closing it.
+Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` spawns it on the selected runtime. `close()` first publishes the shared close signal, then calls the idempotent `run()`, sends a fire-and-forget `Close` message, and awaits the shared completion future. Publishing close before a not-yet-started coordinator prevents a creation-tick close from racing into the initial build. `wait_for_close()` gives consumers a reliable way to await the watcher's completion without closing it.
 
 ### Known Divergences from Rollup
 
@@ -259,11 +259,15 @@ File change detected by per-task FsWatcher
 
 ```
 watcher.close() sends WatcherMsg::Close (fire-and-forget)
-  → sets the close flag and notifies any in-progress consumer callback wait
+  → sets the close flag before starting a not-yet-started coordinator
+  → starts the coordinator if the scheduled run tick has not happened
+  → notifies any in-progress consumer callback wait
   → awaits shared coordinator future (wait_for_close)
   → handle_close():
       1. State → Closing
       2. task.call_hook_close_watcher() for each task (plugin hook, awaited)
+         - if no build created a plugin driver, Bundler creates a temporary
+           driver for closeWatcher and discards it without closeBundle
       3. task.close() for each task (bundler cleanup)
       4. handler.on_close() (awaited)
       5. State → Closed
@@ -277,6 +281,16 @@ for that callback. The JavaScript callback and its promise continue running. The
 runs the normal close hooks, closes every bundler, and emits `close`; only after that does the
 original `watcher.close()` promise resolve. This breaks the self-wait cycle without weakening the
 meaning of a resolved close promise.
+
+The JavaScript wrapper has two memoized phases. `nativeClosePromise` awaits
+`BindingWatcher.close()` and therefore all Rust hooks/coordinator cleanup.
+Only after that settles does the outer `closePromise` terminate parallel-plugin
+workers and dispatch `close` listeners sequentially. The native `close` event
+callback merely starts/observes this outer lifecycle and returns immediately,
+so the Rust coordinator never waits on a listener that waits on itself. During
+close-event dispatch, a reentrant `watcher.close()` returns the already-settled
+native phase; outside callers receive the outer promise and therefore observe
+listener completion or rejection.
 
 ### Error Recovery
 
@@ -408,7 +422,7 @@ close() → inner.close()         // sends Close msg, awaits shared future
 
 ### Event Emitter
 
-`WatcherEmitter` uses a simple `Map<string, Function[]>` for listener storage (on/off). Async `emit()` dispatches handlers sequentially (`for...of` + `await`) so side effects from earlier handlers (e.g. `result.close()` triggering `closeBundle`) are visible to later handlers. No external dependency needed.
+`WatcherEmitter` uses a simple `Map<string, Function[]>` for listener storage (on/off). Async `emit()` dispatches handlers sequentially (`for...of` + `await`) so side effects from earlier handlers (e.g. `result.close()` triggering `closeBundle`) are visible to later handlers. It also owns a deferred close-handler Promise so `close()` is valid before `createWatcher()` finishes asynchronous plugin setup. The bound `Watcher` remains the authority for native/full-phase memoization. No external dependency is needed.
 
 ### Event Mapping
 

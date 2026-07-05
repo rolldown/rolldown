@@ -908,7 +908,7 @@ Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 | `get_bundle_state()`                             | `GetState` → `BundleState { last_build_errored, has_stale_output }`                            |
 | `invalidate(caller, first_invalidated_by)`       | locks the bundler, calls `compute_update_for_calling_invalidate` per client                    |
 | `compile_lazy_entry(proxy_module_id, client_id)` | compiles a lazy entry; on success sends `ModuleChanged`                                        |
-| `close()`                                        | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                                 |
+| `close()`                                        | sends `Close`, waits active build/`closeBundle`, awaits coordinator shutdown                   |
 | `is_closed()` / `bundler_options()`              | accessors                                                                                      |
 
 `ModuleChanged` handling (`bundle_coordinator.rs:123-140`): updates watch
@@ -919,6 +919,21 @@ The `#[cfg(feature = "testing")]` methods —
 `ensure_task_with_changed_files`, `get_watched_files`,
 `create_client_for_testing` — exist for the test harness to drive
 synthetic file changes and inspect coordinator state.
+
+### TypeScript parallel-plugin ownership
+
+`packages/rolldown/src/api/dev/dev-engine.ts` owns the `stopWorkers` closure
+returned by option normalization. `DevEngine.close()` is memoized and awaits
+the native `BindingDevEngine.close()` phase first; native close waits for an
+active build, `closeBundle`, and coordinator shutdown. Parallel workers are
+terminated only afterward, including when native close rejects. Constructor
+failure also terminates workers that were already initialized.
+
+Parallel plugin callbacks are weak napi TSFNs, so they do not keep a worker
+environment alive. `parallel-plugin-worker.ts` explicitly refs its
+`parentPort`; the main thread still calls `Worker.unref()` so workers do not pin
+process exit, while the owned `stopWorkers()` path remains the explicit
+termination boundary.
 
 ---
 

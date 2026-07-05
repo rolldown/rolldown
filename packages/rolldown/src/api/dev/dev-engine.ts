@@ -17,6 +17,8 @@ import type { DevOptions } from './dev-options';
 
 export class DevEngine {
   #inner: BindingDevEngine;
+  #stopWorkers: (() => Promise<void>) | undefined;
+  #closePromise: Promise<void> | null = null;
   #cachedBuildFinishPromise: Promise<void> | null = null;
 
   static async create(
@@ -87,13 +89,20 @@ export class DevEngine {
       },
     };
 
-    const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
+    let inner: BindingDevEngine;
+    try {
+      inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
+    } catch (error) {
+      await options.stopWorkers?.();
+      throw error;
+    }
 
-    return new DevEngine(inner);
+    return new DevEngine(inner, options.stopWorkers);
   }
 
-  private constructor(inner: BindingDevEngine) {
+  private constructor(inner: BindingDevEngine, stopWorkers: (() => Promise<void>) | undefined) {
     this.#inner = inner;
+    this.#stopWorkers = stopWorkers;
   }
 
   async run(): Promise<void> {
@@ -135,8 +144,37 @@ export class DevEngine {
     await this.#inner.removeClient(clientId);
   }
 
-  async close(): Promise<void> {
-    await this.#inner.close();
+  close(): Promise<void> {
+    return (this.#closePromise ??= this.#close());
+  }
+
+  async #close(): Promise<void> {
+    let nativeError: unknown;
+    try {
+      // Native close waits for any active build and its closeBundle hooks.
+      // Parallel-plugin workers must remain alive until that phase settles.
+      await this.#inner.close();
+    } catch (error) {
+      nativeError = error;
+    }
+
+    const stopWorkers = this.#stopWorkers;
+    this.#stopWorkers = undefined;
+    let workerError: unknown;
+    try {
+      await stopWorkers?.();
+    } catch (error) {
+      workerError = error;
+    }
+
+    if (nativeError !== undefined && workerError !== undefined) {
+      throw new AggregateError(
+        [nativeError, workerError],
+        'Dev engine native close and parallel-plugin worker shutdown both failed',
+      );
+    }
+    if (nativeError !== undefined) throw nativeError;
+    if (workerError !== undefined) throw workerError;
   }
 
   /**

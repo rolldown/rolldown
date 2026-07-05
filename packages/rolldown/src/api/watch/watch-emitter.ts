@@ -89,6 +89,15 @@ export interface RolldownWatcher {
 
 export class WatcherEmitter implements RolldownWatcher {
   private listeners = new Map<WatcherEvent, Array<(...parameters: any[]) => MaybePromise<void>>>();
+  private closeHandlerPromise: Promise<() => Promise<void>>;
+  private resolveCloseHandler!: (handler: () => Promise<void>) => void;
+  private closeHandler: (() => Promise<void>) | undefined;
+
+  constructor() {
+    this.closeHandlerPromise = new Promise((resolve) => {
+      this.resolveCloseHandler = resolve;
+    });
+  }
 
   on(event: WatcherEvent, listener: (...parameters: any[]) => MaybePromise<void>): this {
     const listeners = this.listeners.get(event);
@@ -124,7 +133,16 @@ export class WatcherEmitter implements RolldownWatcher {
     }
   }
 
-  async close(): Promise<void> {
-    // Overridden by Watcher to also close the native watcher
+  /** @internal Bind the native lifecycle after asynchronous option/plugin setup. */
+  bindClose(handler: () => Promise<void>): void {
+    this.closeHandler = handler;
+    this.resolveCloseHandler(handler);
+  }
+
+  close(): Promise<void> {
+    // `watch()` returns before createWatcher finishes asynchronous plugin
+    // setup. A same-tick close waits for that setup and then enters the same
+    // memoized native lifecycle instead of becoming a no-op.
+    return this.closeHandler?.() ?? this.closeHandlerPromise.then((handler) => handler());
   }
 }

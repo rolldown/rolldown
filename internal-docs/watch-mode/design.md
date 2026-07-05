@@ -15,7 +15,8 @@ design and the open questions; the machinery lives in
 ## Design Principles
 
 - **JS API aligns with Rollup** — The TypeScript surface (events, options, plugin hooks, lifecycle ordering) should match Rollup's behavior unless there's a technical reason not to. Divergences are documented explicitly.
-- **Close is re-entrant** — A watcher event listener may call and await `watcher.close()`. The close promise still means cleanup is complete; the coordinator must not break the deadlock by resolving it after merely queueing the request.
+- **Close is complete from the creation tick onward** — Calling `close()` immediately after `watch()` must still start the native coordinator, run `closeWatcher`, stop parallel-plugin workers, and emit `close`. No build means no synthetic `closeBundle`.
+- **Close is re-entrant** — A watcher event listener may call and await `watcher.close()`. Native cleanup and listener completion are separate memoized phases: a close listener awaits the completed native phase, while outside callers await the full phase including every close listener. Listener failures reject the full close promise coherently.
 - **Rust code follows Rust idioms** — The Rust core should feel native: ownership-driven, enum state machines, trait-based extensibility, no unnecessary `Arc`/`Mutex` beyond what the architecture requires.
 - **Consistent naming across the stack** — Rollup defines the canonical event/concept names (e.g. `BUNDLE_START`/`BUNDLE_END`). The Rust side should use the same terminology so there's a clean 1:1 mapping and no mental translation at the NAPI boundary.
 

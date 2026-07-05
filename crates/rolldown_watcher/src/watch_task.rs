@@ -336,12 +336,10 @@ impl WatchTask {
   /// Call close_watcher plugin hooks
   #[tracing::instrument(level = "debug", skip_all)]
   pub(crate) async fn call_hook_close_watcher(&self) {
-    let bundler = self.bundler.lock().await;
-    if let Some(last_bundle_handle) = &bundler.last_bundle_handle {
-      let _ = last_bundle_handle.plugin_driver().close_watcher().await.map_err(|e| {
-        tracing::error!("close_watcher plugin hook error: {e:?}");
-      });
-    }
+    let mut bundler = self.bundler.lock().await;
+    let _ = bundler.close_watcher().await.map_err(|e| {
+      tracing::error!("close_watcher plugin hook error: {e:?}");
+    });
   }
 
   /// Close the bundler (calls `closeBundle` plugin hook for the last built bundle, if any).

@@ -13,6 +13,7 @@ import type { WatcherEmitter } from './watch-emitter';
 
 function createEventCallback(
   emitter: WatcherEmitter,
+  onNativeClose: () => void,
 ): (event: BindingWatcherEvent) => Promise<void> {
   return async (event: BindingWatcherEvent) => {
     switch (event.eventKind()) {
@@ -49,7 +50,12 @@ function createEventCallback(
         await emitter.emit('restart');
         break;
       case 'close':
-        await emitter.emit('close');
+        // The native coordinator awaits this callback. Dispatching listeners
+        // here would make a close listener that calls `watcher.close()`
+        // self-await the coordinator. Start/observe the JS close lifecycle
+        // without awaiting listener dispatch; the public close promise emits
+        // after native cleanup and worker termination finish.
+        onNativeClose();
         break;
     }
   };
@@ -60,6 +66,9 @@ class Watcher {
   inner: BindingWatcher;
   emitter: WatcherEmitter;
   stopWorkers: ((() => Promise<void>) | undefined)[];
+  nativeClosePromise: Promise<void> | undefined;
+  closePromise: Promise<void> | undefined;
+  dispatchingCloseEvent: boolean;
 
   constructor(
     emitter: WatcherEmitter,
@@ -67,13 +76,9 @@ class Watcher {
     stopWorkers: ((() => Promise<void>) | undefined)[],
   ) {
     this.closed = false;
+    this.dispatchingCloseEvent = false;
     this.inner = inner;
     this.emitter = emitter;
-    const originClose = emitter.close.bind(emitter);
-    emitter.close = async () => {
-      await this.close();
-      originClose();
-    };
     this.stopWorkers = stopWorkers;
 
     // Defer so watch() returns the emitter before the first build,
@@ -82,14 +87,57 @@ class Watcher {
     process.nextTick(() => this.run());
   }
 
-  async close(): Promise<void> {
-    if (this.closed) return;
-    this.closed = true;
-    for (const stop of this.stopWorkers) {
-      await stop?.();
+  close(): Promise<void> {
+    // A close listener cannot await the outer promise that is currently
+    // awaiting that listener. Native cleanup is already complete at this
+    // point, so expose the memoized native phase to reentrant callers.
+    if (this.dispatchingCloseEvent) {
+      return this.nativeClosePromise ?? Promise.resolve();
     }
-    await this.inner.close();
-    shutdownAsyncRuntime();
+    return (this.closePromise ??= this.closeLifecycle());
+  }
+
+  onNativeClose(): void {
+    // Native close can be observed without a public caller (for example if
+    // the coordinator exits independently). Preserve the memoized rejection
+    // for a later `close()` call while avoiding an unhandled rejection.
+    void this.close().catch(() => {});
+  }
+
+  private async closeLifecycle(): Promise<void> {
+    this.closed = true;
+    this.nativeClosePromise ??= this.inner.close();
+
+    let nativeError: unknown;
+    try {
+      await this.nativeClosePromise;
+    } catch (error) {
+      nativeError = error;
+    }
+
+    let workerError: unknown;
+    try {
+      await Promise.all(this.stopWorkers.map(async (stop) => stop?.()));
+    } catch (error) {
+      workerError = error;
+    }
+
+    try {
+      if (nativeError !== undefined && workerError !== undefined) {
+        throw new AggregateError(
+          [nativeError, workerError],
+          'Watcher native close and parallel-plugin worker shutdown both failed',
+        );
+      }
+      if (nativeError !== undefined) throw nativeError;
+      if (workerError !== undefined) throw workerError;
+
+      this.dispatchingCloseEvent = true;
+      await this.emitter.emit('close');
+    } finally {
+      this.dispatchingCloseEvent = false;
+      shutdownAsyncRuntime();
+    }
   }
 
   private async run(): Promise<void> {
@@ -115,16 +163,19 @@ export async function createWatcher(
       .flat(),
   );
   warnMultiplePollingOptions(bundlerOptions);
-  const callback = createEventCallback(emitter);
+  let onNativeClose = () => {};
+  const callback = createEventCallback(emitter, () => onNativeClose());
   const bindingWatcher = new BindingWatcher(
     bundlerOptions.map((option) => option.bundlerOptions),
     callback,
   );
-  new Watcher(
+  const watcher = new Watcher(
     emitter,
     bindingWatcher,
     bundlerOptions.map((option) => option.stopWorkers),
   );
+  emitter.bindClose(() => watcher.close());
+  onNativeClose = () => watcher.onNativeClose();
 }
 
 function warnMultiplePollingOptions(bundlerOptions: BundlerOptionWithStopWorker[]) {

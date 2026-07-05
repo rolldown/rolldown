@@ -251,6 +251,31 @@ test.concurrent(
 );
 
 test.concurrent(
+  'setup-failure close listeners can await close without recursion',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ expect }) => {
+    const watcher = watch({
+      plugins: [
+        {
+          name: 'setup-failure-reentrant-close',
+          options() {
+            throw new Error('watcher setup failed');
+          },
+        },
+      ],
+    });
+    let closeListenerCalls = 0;
+    watcher.on('close', async () => {
+      await watcher.close();
+      closeListenerCalls += 1;
+    });
+
+    await watcher.close();
+    expect(closeListenerCalls).toBe(1);
+  },
+);
+
+test.concurrent(
   'watcher close listener failure rejects every concurrent close caller',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {
@@ -283,6 +308,54 @@ test.concurrent(
       { status: 'rejected', reason: listenerError },
     ]);
     expect(closeWatcherFn).toHaveBeenCalledTimes(1);
+  },
+);
+
+test.concurrent(
+  'external close during an async close listener awaits and receives its failure',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-close-listener-concurrent-caller',
+      retryCount,
+    );
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const listenerError = new Error('close listener failed');
+    const watcher = watch({ input, output: { file: output } });
+    let markListenerStarted!: () => void;
+    const listenerStarted = new Promise<void>((resolve) => {
+      markListenerStarted = resolve;
+    });
+    let releaseListener!: () => void;
+    const listenerRelease = new Promise<void>((resolve) => {
+      releaseListener = resolve;
+    });
+    watcher.on('close', async () => {
+      markListenerStarted();
+      await Promise.resolve();
+      await watcher.close();
+      await listenerRelease;
+      throw listenerError;
+    });
+
+    const firstClose = watcher.close();
+    await listenerStarted;
+    let secondSettled = false;
+    const secondClose = watcher.close().finally(() => {
+      secondSettled = true;
+    });
+    await Promise.resolve();
+    expect(secondSettled).toBe(false);
+
+    releaseListener();
+    await expect(firstClose).rejects.toBe(listenerError);
+    await expect(secondClose).rejects.toBe(listenerError);
   },
 );
 

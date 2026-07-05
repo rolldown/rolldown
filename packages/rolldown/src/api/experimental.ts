@@ -1,10 +1,10 @@
-import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../binding.cjs';
+import { BindingBundler } from '../binding.cjs';
 import type { InputOptions } from '../options/input-options';
 import { PluginDriver } from '../plugin/plugin-driver';
+import { acquireRuntimeLease, type RuntimeLease } from '../runtime-lifecycle';
 import { createBundlerOptions } from '../utils/create-bundler-option';
 import { unwrapBindingResult } from '../utils/error';
 import { validateOption } from '../utils/validator';
-import { RolldownBuild } from './rolldown/rolldown-build';
 
 export { freeExternalMemory } from '../types/external-memory-handle';
 
@@ -12,31 +12,53 @@ export { freeExternalMemory } from '../types/external-memory-handle';
  * This is an experimental API. Its behavior may change in the future.
  *
  * - Calling this API will only execute the `scan/build` stage of rolldown.
- * - `scan` will clean up all resources automatically, but if you want to ensure timely cleanup, you need to wait for the returned promise to resolve.
+ * - `scan` waits for all resources to be cleaned up before its promise resolves.
  *
- * @example To ensure cleanup of resources, use the returned promise to wait for the scan to complete.
+ * @example Wait for the scan and its cleanup to complete.
  * ```ts
  * import { scan } from 'rolldown/api/experimental';
  *
- * const cleanupPromise = await scan(...);
- * await cleanupPromise;
+ * await scan(...);
  * // Now all resources have been cleaned up.
  * ```
  */
-export const scan = async (
-  rawInputOptions: InputOptions,
-  rawOutputOptions = {},
-): Promise<Promise<void>> => {
+export const scan = async (rawInputOptions: InputOptions, rawOutputOptions = {}): Promise<void> => {
   validateOption('input', rawInputOptions);
   validateOption('output', rawOutputOptions);
 
   const inputOptions = await PluginDriver.callOptionsHook(rawInputOptions);
   const ret = await createBundlerOptions(inputOptions, rawOutputOptions, false);
-  const bundler = new BindingBundler();
+  let runtimeLease: RuntimeLease;
+  try {
+    runtimeLease = acquireRuntimeLease();
+  } catch (error) {
+    try {
+      await ret.stopWorkers?.();
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        'Scan runtime setup and parallel-plugin worker cleanup both failed',
+      );
+    }
+    throw error;
+  }
 
-  if (RolldownBuild.asyncRuntimeShutdown) {
-    startAsyncRuntime();
-    RolldownBuild.asyncRuntimeShutdown = false;
+  let bundler: BindingBundler;
+  try {
+    bundler = new BindingBundler();
+  } catch (error) {
+    const errors = [error];
+    try {
+      await ret.stopWorkers?.();
+    } catch (cleanupError) {
+      errors.push(cleanupError);
+    }
+    try {
+      runtimeLease.release();
+    } catch (cleanupError) {
+      errors.push(cleanupError);
+    }
+    throw errors.length === 1 ? error : new AggregateError(errors, 'Scan setup and cleanup failed');
   }
 
   let cleanupPromise: Promise<void> | undefined;
@@ -54,8 +76,7 @@ export const scan = async (
         errors.push(error);
       }
       try {
-        shutdownAsyncRuntime();
-        RolldownBuild.asyncRuntimeShutdown = true;
+        runtimeLease.release();
       } catch (error) {
         errors.push(error);
       }
@@ -63,7 +84,7 @@ export const scan = async (
       if (errors.length > 1) {
         throw new AggregateError(
           errors,
-          'Scan native close, parallel-plugin worker shutdown, or runtime shutdown failed',
+          'Scan native close, parallel-plugin worker shutdown, or runtime release failed',
         );
       }
     })());
@@ -80,6 +101,5 @@ export const scan = async (
     throw error;
   }
 
-  // Instead of blocking here, we return a promise to let the caller decide when to wait for cleanup.
-  return cleanup();
+  await cleanup();
 };

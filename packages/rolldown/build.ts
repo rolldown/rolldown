@@ -188,6 +188,7 @@ function removeBuiltModules(): Plugin {
         }
         if (
           id === 'node:os' ||
+          id === 'node:async_hooks' ||
           id === 'node:worker_threads' ||
           id === 'node:url' ||
           id === 'node:fs/promises' ||

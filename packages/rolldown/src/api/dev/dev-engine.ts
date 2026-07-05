@@ -13,12 +13,22 @@ import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { normalizeBindingResult, unwrapBindingResult } from '../../utils/error';
 import { normalizedStringOrRegex } from '../../utils/normalize-string-or-regex';
 import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
+import {
+  acquireRuntimeLease,
+  CloseCoordinator,
+  type CloseAttemptResult,
+  type RuntimeLease,
+} from '../../runtime-lifecycle';
 import type { DevOptions } from './dev-options';
 
 export class DevEngine {
   #inner: BindingDevEngine;
+  #runtimeLease: RuntimeLease;
   #stopWorkers: (() => Promise<void>) | undefined;
-  #closePromise: Promise<void> | null = null;
+  #nativeClosePromise: Promise<void> | undefined;
+  #closeCoordinator = new CloseCoordinator(
+    'Dev engine native close, parallel-plugin worker shutdown, or runtime release failed',
+  );
   #cachedBuildFinishPromise: Promise<void> | null = null;
 
   static async create(
@@ -89,23 +99,49 @@ export class DevEngine {
       },
     };
 
-    let inner: BindingDevEngine;
+    let runtimeLease: RuntimeLease;
     try {
-      inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
+      runtimeLease = acquireRuntimeLease();
     } catch (error) {
       try {
         await options.stopWorkers?.();
       } catch (cleanupError) {
-        throw new AggregateError([error, cleanupError], 'Dev engine setup and cleanup both failed');
+        throw new AggregateError(
+          [error, cleanupError],
+          'Dev engine runtime setup and parallel-plugin worker cleanup both failed',
+        );
       }
       throw error;
     }
 
-    return new DevEngine(inner, options.stopWorkers);
+    try {
+      const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
+      return new DevEngine(inner, runtimeLease, options.stopWorkers);
+    } catch (error) {
+      const errors = [error];
+      try {
+        await options.stopWorkers?.();
+      } catch (cleanupError) {
+        errors.push(cleanupError);
+      }
+      try {
+        runtimeLease.release();
+      } catch (cleanupError) {
+        errors.push(cleanupError);
+      }
+      throw errors.length === 1
+        ? error
+        : new AggregateError(errors, 'Dev engine setup and cleanup failed');
+    }
   }
 
-  private constructor(inner: BindingDevEngine, stopWorkers: (() => Promise<void>) | undefined) {
+  private constructor(
+    inner: BindingDevEngine,
+    runtimeLease: RuntimeLease,
+    stopWorkers: (() => Promise<void>) | undefined,
+  ) {
     this.#inner = inner;
+    this.#runtimeLease = runtimeLease;
     this.#stopWorkers = stopWorkers;
   }
 
@@ -151,34 +187,40 @@ export class DevEngine {
   }
 
   close(): Promise<void> {
-    return (this.#closePromise ??= this.#close());
+    return this.#closeCoordinator.close(() => this.#close());
   }
 
-  async #close(): Promise<void> {
+  async #close(): Promise<CloseAttemptResult> {
     const errors: unknown[] = [];
+    let retryable = false;
+    this.#nativeClosePromise ??= (async () => this.#inner.close())();
     try {
       // Native close waits for any active build and its closeBundle hooks.
       // Parallel-plugin workers must remain alive until that phase settles.
-      await this.#inner.close();
+      await this.#nativeClosePromise;
     } catch (error) {
       errors.push(error);
     }
 
     const stopWorkers = this.#stopWorkers;
-    this.#stopWorkers = undefined;
     try {
       await stopWorkers?.();
+      if (this.#stopWorkers === stopWorkers) {
+        this.#stopWorkers = undefined;
+      }
     } catch (error) {
       errors.push(error);
+      retryable = true;
     }
 
-    if (errors.length === 1) throw errors[0];
-    if (errors.length > 1) {
-      throw new AggregateError(
-        errors,
-        'Dev engine native close and parallel-plugin worker shutdown both failed',
-      );
+    try {
+      this.#runtimeLease.release();
+    } catch (error) {
+      errors.push(error);
+      retryable = true;
     }
+
+    return { errors, retryable };
   }
 
   /**

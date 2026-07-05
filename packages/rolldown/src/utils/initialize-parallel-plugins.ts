@@ -15,6 +15,26 @@ type ParallelPluginInfo = {
   options: unknown;
 };
 
+export interface TerminableWorker {
+  terminate(): Promise<number>;
+}
+
+/** @internal Retry only workers whose previous termination attempt failed. */
+export async function terminateWorkersWithRetry<T extends TerminableWorker>(
+  workers: T[],
+  maxAttempts: number,
+): Promise<{ errors: unknown[]; remainingWorkers: T[] }> {
+  let remainingWorkers = workers;
+  let errors: unknown[] = [];
+  for (let attempt = 0; attempt < maxAttempts && remainingWorkers.length > 0; attempt += 1) {
+    const currentWorkers = remainingWorkers;
+    const results = await Promise.allSettled(currentWorkers.map((worker) => worker.terminate()));
+    remainingWorkers = currentWorkers.filter((_, index) => results[index].status === 'rejected');
+    errors = results.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
+  }
+  return { errors, remainingWorkers };
+}
+
 export async function initializeParallelPlugins(plugins: RolldownPlugin[]): Promise<
   | {
       registry: ParallelJsPluginRegistry;
@@ -37,9 +57,14 @@ export async function initializeParallelPlugins(plugins: RolldownPlugin[]): Prom
   const parallelJsPluginRegistry = new ParallelJsPluginRegistry(count);
   const registryId = parallelJsPluginRegistry.id;
 
-  const workers = await initializeWorkers(registryId, count, pluginInfos);
+  let workers = await initializeWorkers(registryId, count, pluginInfos);
   const stopWorkers = async () => {
-    await Promise.all(workers.map((worker) => worker.terminate()));
+    const result = await terminateWorkersWithRetry(workers, 1);
+    workers = result.remainingWorkers;
+    if (result.errors.length === 1) throw result.errors[0];
+    if (result.errors.length > 1) {
+      throw new AggregateError(result.errors, 'Parallel-plugin worker shutdown failed');
+    }
   };
 
   return { registry: parallelJsPluginRegistry, stopWorkers };

@@ -1,5 +1,6 @@
 import type { BindingWatcherBundler } from '../../binding.cjs';
 import type { MaybePromise } from '../../types/utils';
+import { createAsyncContext } from '../../utils/async-context';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { OutputOptions } from '../../options/output-options';
 
@@ -9,6 +10,14 @@ type ChangeEvent = 'create' | 'update' | 'delete';
 
 // TODO: find a way use `RolldownBuild` instead of `Bundler`.
 type RolldownWatchBuild = BindingWatcherBundler;
+
+interface CloseListenerInvocation {
+  active: boolean;
+  emitter: WatcherEmitter;
+  reentrantClosePromise: Promise<void>;
+}
+
+const closeListenerContext = createAsyncContext<CloseListenerInvocation>();
 
 /**
  * - `START`: the watcher is (re)starting
@@ -133,6 +142,73 @@ export class WatcherEmitter implements RolldownWatcher {
     }
   }
 
+  /** @internal Dispatch close listeners with a reentrant close result. */
+  async emitClose(reentrantClosePromise: Promise<void>): Promise<void> {
+    const handlers = this.listeners.get('close');
+    if (!handlers?.length) return;
+
+    const dispatch = async () => {
+      for (const handler of handlers) {
+        await handler();
+      }
+    };
+    const invocation: CloseListenerInvocation = {
+      active: true,
+      emitter: this,
+      reentrantClosePromise,
+    };
+    try {
+      if (closeListenerContext) {
+        await closeListenerContext.run(invocation, dispatch);
+      } else {
+        await dispatch();
+      }
+    } finally {
+      invocation.active = false;
+    }
+  }
+
+  private createSetupFailureClose(): () => Promise<void> {
+    let closePromise: Promise<void> | undefined;
+    return () => {
+      const reentrantClosePromise = this.getReentrantClosePromise();
+      if (reentrantClosePromise) return reentrantClosePromise;
+      if (!closePromise) {
+        let resolveClose!: () => void;
+        let rejectClose!: (error: unknown) => void;
+        closePromise = new Promise<void>((resolve, reject) => {
+          resolveClose = resolve;
+          rejectClose = reject;
+        });
+        void (async () => {
+          try {
+            await this.emitClose(Promise.resolve());
+            resolveClose();
+          } catch (error) {
+            rejectClose(error);
+          }
+        })();
+      }
+      return closePromise;
+    };
+  }
+
+  close(): Promise<void> {
+    const reentrantClosePromise = this.getReentrantClosePromise();
+    if (reentrantClosePromise) return reentrantClosePromise;
+    // `watch()` returns before createWatcher finishes asynchronous plugin
+    // setup. A same-tick close waits for that setup and then enters the same
+    // memoized native lifecycle instead of becoming a no-op.
+    return this.closeHandler?.() ?? this.closeHandlerPromise.then((handler) => handler());
+  }
+
+  private getReentrantClosePromise(): Promise<void> | undefined {
+    const invocation = closeListenerContext?.getStore();
+    return invocation?.emitter === this && invocation.active
+      ? invocation.reentrantClosePromise
+      : undefined;
+  }
+
   /** @internal Bind the native lifecycle after asynchronous option/plugin setup. */
   bindClose(handler: () => Promise<void>): void {
     this.closeHandler = handler;
@@ -140,43 +216,14 @@ export class WatcherEmitter implements RolldownWatcher {
   }
 
   /** @internal Surface setup failures through the normal watcher event API. */
-  failSetup(error: unknown, onClose: () => void): Promise<void> {
+  failSetup(error: unknown): Promise<void> {
     const normalizedError = error instanceof Error ? error : new Error(String(error));
     const reportPromise = (async () => {
       await this.emit('event', { code: 'ERROR', error: normalizedError, result: null });
       await this.emit('event', { code: 'END' });
     })();
 
-    let closePromise: Promise<void> | undefined;
-    this.bindClose(
-      () =>
-        (closePromise ??= (async () => {
-          const errors: unknown[] = [];
-          try {
-            await this.emit('close');
-          } catch (error) {
-            errors.push(error);
-          }
-          try {
-            onClose();
-          } catch (error) {
-            errors.push(error);
-          }
-          if (errors.length === 1) {
-            throw errors[0];
-          }
-          if (errors.length > 1) {
-            throw new AggregateError(errors, 'Watcher close listener or runtime shutdown failed');
-          }
-        })()),
-    );
+    this.bindClose(this.createSetupFailureClose());
     return reportPromise;
-  }
-
-  close(): Promise<void> {
-    // `watch()` returns before createWatcher finishes asynchronous plugin
-    // setup. A same-tick close waits for that setup and then enters the same
-    // memoized native lifecycle instead of becoming a no-op.
-    return this.closeHandler?.() ?? this.closeHandlerPromise.then((handler) => handler());
   }
 }

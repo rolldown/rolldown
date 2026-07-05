@@ -2495,7 +2495,7 @@ impl TimerDriverRegistry {
       let mut dead_ids = Vec::new();
       let mut selected_id = None;
       for (id, driver) in &snapshot {
-        if driver.is_live() {
+        if catch_unwind(AssertUnwindSafe(|| driver.is_live())).unwrap_or(false) {
           selected_id = Some(*id);
         } else {
           dead_ids.push(*id);
@@ -2524,7 +2524,7 @@ impl TimerDriverRegistry {
       };
 
       for driver in swept {
-        driver.on_swept();
+        let _ = catch_unwind(AssertUnwindSafe(|| driver.on_swept()));
       }
       if !retry {
         return selected;
@@ -3820,14 +3820,20 @@ pub fn metrics() -> RuntimeMetricsSnapshot {
 mod tests {
   use super::*;
 
-  static CURRENT_THREAD_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
+  static CURRENT_THREAD_RECOVERY_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
+  static CURRENT_THREAD_BUDGET_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
 
   fn accept_current_thread_host_dispatch() -> bool {
     true
   }
 
-  fn count_current_thread_host_dispatch() -> bool {
-    CURRENT_THREAD_HOST_DISPATCHES.fetch_add(1, Ordering::SeqCst);
+  fn count_current_thread_recovery_host_dispatch() -> bool {
+    CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.fetch_add(1, Ordering::SeqCst);
+    true
+  }
+
+  fn count_current_thread_budget_host_dispatch() -> bool {
+    CURRENT_THREAD_BUDGET_HOST_DISPATCHES.fetch_add(1, Ordering::SeqCst);
     true
   }
 
@@ -3940,11 +3946,11 @@ mod tests {
 
   #[test]
   fn current_thread_new_host_recovers_lost_dispatch_and_stale_callbacks_are_harmless() {
-    CURRENT_THREAD_HOST_DISPATCHES.store(0, Ordering::SeqCst);
+    CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.store(0, Ordering::SeqCst);
     let metrics = Arc::new(RuntimeMetrics::default());
     let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
       Arc::clone(&metrics),
-      count_current_thread_host_dispatch,
+      count_current_thread_recovery_host_dispatch,
     ));
     let scheduler = Arc::clone(&executor);
     let completed = Arc::new(AtomicBool::new(false));
@@ -3957,13 +3963,13 @@ mod tests {
     );
 
     executor.schedule(runnable);
-    assert_eq!(CURRENT_THREAD_HOST_DISPATCHES.load(Ordering::SeqCst), 1);
+    assert_eq!(CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst), 1);
 
     // Model the first host dying after its TSFN accepted the call but before
     // JavaScript invoked drive_current_thread_runtime_tasks.
     executor.request_drain_if_queued();
     assert_eq!(
-      CURRENT_THREAD_HOST_DISPATCHES.load(Ordering::SeqCst),
+      CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst),
       2,
       "the newly registered host must supersede the lost accepted callback"
     );
@@ -3988,7 +3994,7 @@ mod tests {
     );
     executor.schedule(second_runnable);
     assert_eq!(
-      CURRENT_THREAD_HOST_DISPATCHES.load(Ordering::SeqCst),
+      CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst),
       3,
       "work queued after the stale callback must receive a new dispatch"
     );
@@ -4004,7 +4010,7 @@ mod tests {
       async_task::spawn(async {}, move |runnable| third_scheduler.schedule(runnable));
     executor.schedule(third_runnable);
     assert_eq!(
-      CURRENT_THREAD_HOST_DISPATCHES.load(Ordering::SeqCst),
+      CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst),
       4,
       "a stale callback must not leave the dispatch latch stuck"
     );
@@ -4031,11 +4037,11 @@ mod tests {
       }
     }
 
-    CURRENT_THREAD_HOST_DISPATCHES.store(0, Ordering::SeqCst);
+    CURRENT_THREAD_BUDGET_HOST_DISPATCHES.store(0, Ordering::SeqCst);
     let metrics = Arc::new(RuntimeMetrics::default());
     let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
       Arc::clone(&metrics),
-      count_current_thread_host_dispatch,
+      count_current_thread_budget_host_dispatch,
     ));
     let scheduler = Arc::clone(&executor);
     let (runnable, task) = async_task::spawn(
@@ -4051,7 +4057,7 @@ mod tests {
       CurrentThreadExecutor::HOST_TURN_RUNNABLE_BUDGET as u64
     );
     assert_eq!(
-      CURRENT_THREAD_HOST_DISPATCHES.load(Ordering::SeqCst),
+      CURRENT_THREAD_BUDGET_HOST_DISPATCHES.load(Ordering::SeqCst),
       2,
       "remaining hot work must continue through a fresh host turn"
     );
@@ -8201,6 +8207,25 @@ mod tests {
     }
   }
 
+  struct PanickingTimerDriver {
+    swept: AtomicBool,
+  }
+
+  impl TimerDriver for PanickingTimerDriver {
+    fn register(&self, _id: TimerId, _deadline: Instant, _waker: Waker) {}
+
+    fn cancel(&self, _id: TimerId) {}
+
+    fn is_live(&self) -> bool {
+      panic!("intentional timer-driver liveness panic");
+    }
+
+    fn on_swept(&self) {
+      self.swept.store(true, Ordering::SeqCst);
+      panic!("intentional timer-driver sweep panic");
+    }
+  }
+
   struct ReentrantLivenessDriver {
     registry: std::sync::Weak<TimerDriverRegistry>,
     registration: Mutex<Option<TimerDriverId>>,
@@ -8753,6 +8778,26 @@ mod tests {
     registry.unregister(a_id);
     assert!(registry.current().is_none());
     assert!(!registry.has_live_driver(), "an emptied registry must not report a live driver");
+  }
+
+  #[test]
+  fn timer_driver_registry_contains_callback_panics_and_falls_back() {
+    let registry = TimerDriverRegistry::default();
+    let fallback = ManualStubDriver::new();
+    let fallback_id = registry.register(Arc::clone(&fallback) as Arc<dyn TimerDriver>);
+    let panicking = Arc::new(PanickingTimerDriver { swept: AtomicBool::new(false) });
+    registry.register(Arc::clone(&panicking) as Arc<dyn TimerDriver>);
+
+    assert_eq!(
+      registry.current().map(|(id, _)| id),
+      Some(fallback_id),
+      "a panicking liveness callback must be treated as a dead driver"
+    );
+    assert!(
+      panicking.swept.load(Ordering::SeqCst),
+      "a panicking liveness callback must still run its contained sweep hook"
+    );
+    assert!(registry.has_live_driver(), "the healthy fallback must remain selectable");
   }
 
   #[test]

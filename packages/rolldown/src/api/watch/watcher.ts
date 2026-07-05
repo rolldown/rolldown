@@ -1,9 +1,15 @@
-import { type BindingWatcherEvent, BindingWatcher, shutdownAsyncRuntime } from '../../binding.cjs';
+import { type BindingWatcherEvent, BindingWatcher } from '../../binding.cjs';
 import { LOG_LEVEL_WARN } from '../../log/logging';
 import { logMultipleWatcherOption } from '../../log/logs';
 import { aggregateBindingErrorsIntoJsError } from '../../utils/error';
 import type { WatchOptions } from '../../options/watch-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
+import {
+  acquireRuntimeLease,
+  CloseCoordinator,
+  type CloseAttemptResult,
+  type RuntimeLease,
+} from '../../runtime-lifecycle';
 import {
   type BundlerOptionWithStopWorker,
   createBundlerOptions,
@@ -65,20 +71,24 @@ class Watcher {
   closed: boolean;
   inner: BindingWatcher;
   emitter: WatcherEmitter;
+  runtimeLease: RuntimeLease;
   stopWorkers: ((() => Promise<void>) | undefined)[];
   nativeClosePromise: Promise<void> | undefined;
-  closePromise: Promise<void> | undefined;
-  dispatchingCloseEvent: boolean;
+  closeEventPromise: Promise<void> | undefined;
+  closeCoordinator = new CloseCoordinator(
+    'Watcher native close, parallel-plugin worker shutdown, close listener, or runtime release failed',
+  );
 
   constructor(
     emitter: WatcherEmitter,
     inner: BindingWatcher,
+    runtimeLease: RuntimeLease,
     stopWorkers: ((() => Promise<void>) | undefined)[],
   ) {
     this.closed = false;
-    this.dispatchingCloseEvent = false;
     this.inner = inner;
     this.emitter = emitter;
+    this.runtimeLease = runtimeLease;
     this.stopWorkers = stopWorkers;
 
     // Defer so watch() returns the emitter before the first build,
@@ -88,13 +98,7 @@ class Watcher {
   }
 
   close(): Promise<void> {
-    // A close listener cannot await the outer promise that is currently
-    // awaiting that listener. Native cleanup is already complete at this
-    // point, so expose the memoized native phase to reentrant callers.
-    if (this.dispatchingCloseEvent) {
-      return this.nativeClosePromise ?? Promise.resolve();
-    }
-    return (this.closePromise ??= this.closeLifecycle());
+    return this.closeCoordinator.close(() => this.closeLifecycle());
   }
 
   onNativeClose(): void {
@@ -104,45 +108,47 @@ class Watcher {
     void this.close().catch(() => {});
   }
 
-  private async closeLifecycle(): Promise<void> {
+  private async closeLifecycle(): Promise<CloseAttemptResult> {
     this.closed = true;
-    this.nativeClosePromise ??= this.inner.close();
+    this.nativeClosePromise ??= (async () => this.inner.close())();
 
     const errors: unknown[] = [];
+    let retryable = false;
     try {
       await this.nativeClosePromise;
     } catch (error) {
       errors.push(error);
     }
 
-    const workerResults = await Promise.allSettled(this.stopWorkers.map(async (stop) => stop?.()));
-    errors.push(
-      ...workerResults.flatMap((result) => (result.status === 'rejected' ? [result.reason] : [])),
-    );
-
-    try {
-      this.dispatchingCloseEvent = true;
-      await this.emitter.emit('close');
-    } catch (error) {
-      errors.push(error);
-    } finally {
-      this.dispatchingCloseEvent = false;
-      try {
-        shutdownAsyncRuntime();
-      } catch (error) {
-        errors.push(error);
+    const stopWorkers = this.stopWorkers;
+    const workerResults = await Promise.allSettled(stopWorkers.map(async (stop) => stop?.()));
+    this.stopWorkers = stopWorkers.filter((_, index) => workerResults[index].status === 'rejected');
+    for (const result of workerResults) {
+      if (result.status === 'rejected') {
+        errors.push(result.reason);
+        retryable = true;
       }
     }
 
-    if (errors.length === 1) {
-      throw errors[0];
+    try {
+      this.closeEventPromise ??= this.dispatchCloseEvent();
+      await this.closeEventPromise;
+    } catch (error) {
+      errors.push(error);
     }
-    if (errors.length > 1) {
-      throw new AggregateError(
-        errors,
-        'Watcher native close, parallel-plugin worker shutdown, close listener, or runtime shutdown failed',
-      );
+
+    try {
+      this.runtimeLease.release();
+    } catch (error) {
+      errors.push(error);
+      retryable = true;
     }
+
+    return { errors, retryable };
+  }
+
+  private async dispatchCloseEvent(): Promise<void> {
+    await this.emitter.emitClose(this.nativeClosePromise ?? Promise.resolve());
   }
 
   private async run(): Promise<void> {
@@ -185,6 +191,20 @@ export async function createWatcher(
   }
 
   warnMultiplePollingOptions(bundlerOptions);
+  let runtimeLease: RuntimeLease;
+  try {
+    runtimeLease = acquireRuntimeLease();
+  } catch (error) {
+    const cleanupErrors = await stopParallelPluginWorkers(bundlerOptions);
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(
+        [error, ...cleanupErrors],
+        'Watcher runtime setup and parallel-plugin worker cleanup failed',
+      );
+    }
+    throw error;
+  }
+
   let onNativeClose = () => {};
   const callback = createEventCallback(emitter, () => onNativeClose());
   let bindingWatcher: BindingWatcher;
@@ -195,10 +215,15 @@ export async function createWatcher(
     );
   } catch (error) {
     const cleanupErrors = await stopParallelPluginWorkers(bundlerOptions);
+    try {
+      runtimeLease.release();
+    } catch (cleanupError) {
+      cleanupErrors.push(cleanupError);
+    }
     if (cleanupErrors.length > 0) {
       throw new AggregateError(
         [error, ...cleanupErrors],
-        'Watcher construction and parallel-plugin worker cleanup failed',
+        'Watcher construction, parallel-plugin worker cleanup, or runtime release failed',
       );
     }
     throw error;
@@ -206,6 +231,7 @@ export async function createWatcher(
   const watcher = new Watcher(
     emitter,
     bindingWatcher,
+    runtimeLease,
     bundlerOptions.map((option) => option.stopWorkers),
   );
   emitter.bindClose(() => watcher.close());

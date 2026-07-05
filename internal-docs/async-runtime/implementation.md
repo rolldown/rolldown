@@ -22,11 +22,13 @@ napi-rs's Tokio support.
 
 In that combined profile, napi-rs's established public free `spawn`,
 `spawn_blocking`, `block_on`, and runtime-entry helpers retain their Tokio API
-and behavior. Only a pure `async-runtime` build routes those free helpers
-through the registered implementation. Rolldown's own task creation uses
-`rolldown_utils::futures`, so it still reaches the shared scheduler directly;
-arbitrary transitive calls to napi-rs's free helpers must not be assumed to use
-Rolldown's scheduler or bounded blocking lane.
+and behavior. The explicit `spawn_on_custom_runtime` and
+`spawn_blocking_on_custom_runtime` helpers route through the registered
+implementation in both pure and combined `async-runtime` builds, with stable
+signatures under Cargo feature unification. Rolldown's own task creation uses
+`rolldown_utils::futures`, so it reaches the shared scheduler directly;
+arbitrary transitive calls to napi-rs's Tokio helper names must not be assumed
+to use Rolldown's scheduler or bounded blocking lane.
 
 Promise resolution, panic rejection, and cancellation handles remain owned by
 napi-rs. `AsyncRuntime::spawn` transfers an opaque `AsyncRuntimeTask` and
@@ -193,9 +195,11 @@ timekeeper or strand shutdown.
 CurrentThread host-driver wakes have the same containment, including env
 cleanup eviction, so a custom `RawWaker` cannot unwind through the NAPI cleanup
 hook or prevent later pending timers from being drained. Timer-driver liveness
-callbacks, sweep hooks, and driver destruction all run without the registry
-mutex held; selection probes a snapshot and retries if concurrent registry
-mutation makes it stale.
+callbacks and sweep hooks are also panic-contained, matching the runnable-host
+registry: a panicking liveness probe is treated as a dead driver and selection
+falls back to another live host. Timer-driver callbacks and driver destruction
+run without the registry mutex held; selection probes a snapshot and retries if
+concurrent registry mutation makes it stale.
 
 CurrentThread runnable-host registration follows the same newest-live-driver
 model. Driver liveness, dispatch, and sweep callbacks run outside the registry
@@ -221,6 +225,14 @@ error object and its message/stack/properties for concurrent and late close
 callers. The pinned napi-rs revision also aborts environment tasks only after
 releasing its task-registry mutex, because abort synchronously wakes and drops
 registrations that re-enter that registry during final env teardown.
+TypeScript close coordinators memoize terminal native and listener results but
+clear the outer single-flight promise after retryable worker or runtime-release
+failures. Worker stop closures retain only workers whose termination rejected,
+so a later close retries unfinished cleanup without terminating successful
+workers again. Watch close-listener reentrancy is scoped through
+`AsyncLocalStorage`: the listener's own `close()` receives the completed native
+phase, while unrelated callers continue awaiting the full close lifecycle and
+observe its listener/runtime result.
 
 Native watch mode is supported on both runtime flavors. Binding dev mode is
 still skipped on CurrentThread, and WASI watch remains unsupported because it
@@ -236,15 +248,25 @@ transition shuts it down. A failed start leaves the count at zero; a failed
 shutdown retains the last owner so a later release can retry. Releasing at
 zero is idempotent, and concurrent releases cannot underflow the count.
 
-The native count and the dependent JS lease manager are one protocol. The
-native `ASYNC_RUNTIME_LEASES` count starts at one while PR #9978's
-`WasiRuntimeLeaseManager` starts with `#initialLeaseAvailable = true`: its
-first JS lease consumes the implicit native owner without calling
+The native count and `packages/rolldown/src/runtime-lifecycle.ts` are one
+protocol. The native `ASYNC_RUNTIME_LEASES` count starts at one while
+`WasiRuntimeLeaseManager` starts with `#initialLeaseAvailable = true`: its first
+JS lease consumes the implicit native owner without calling
 `startAsyncRuntime`, then releases it with `shutdownAsyncRuntime`. After that
-count reaches zero, every later JS lease must call `startAsyncRuntime` before
-it can release. Changing the native initial count to zero requires changing
-the JS first-acquire path in the same restack; otherwise the first release is
-a native no-op and leaves the runtime running without a tracked owner.
+count reaches zero, every later JS lease calls `startAsyncRuntime` before it can
+release. Build, scan, watch, and dev objects each own one lease for their whole
+lifecycle. Native and threadless artifacts receive no-op leases.
+
+Package copies in one JavaScript realm share the manager through a realm-global
+weak registry keyed by the loaded binding's `startAsyncRuntime` function
+identity. Copies backed by the same binding therefore cannot each consume its
+single implicit owner, while distinct bindings remain independent. A failed
+release stays owned by its lease and can be retried by the same close call; if
+that caller abandons the failure, the next acquisition retries every retained
+release before starting another owner. Changing the native initial count to
+zero requires changing the JS first-acquire path in the same change; otherwise
+the first release is a native no-op and leaves the runtime running without a
+tracked owner.
 
 ### Non-threaded WASI
 

@@ -1,4 +1,3 @@
-import { shutdownAsyncRuntime } from '../../binding.cjs';
 import type { WatchOptions } from '../../options/watch-options';
 import { type RolldownWatcher, WatcherEmitter } from './watch-emitter';
 import { createWatcher } from './watcher';
@@ -38,7 +37,7 @@ import { createWatcher } from './watcher';
 export function watch(input: WatchOptions | WatchOptions[]): RolldownWatcher {
   const emitter = new WatcherEmitter();
   void createWatcher(emitter, input)
-    .catch((error) => emitter.failSetup(error, shutdownAsyncRuntime))
+    .catch((error) => emitter.failSetup(error))
     .catch((error) => console.error('watcher setup error listener failed', error));
   return emitter;
 }

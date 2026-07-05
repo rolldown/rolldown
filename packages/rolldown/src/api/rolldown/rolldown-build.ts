@@ -1,6 +1,12 @@
-import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../../binding.cjs';
+import { BindingBundler } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
+import {
+  acquireRuntimeLease,
+  CloseCoordinator,
+  type CloseAttemptResult,
+  type RuntimeLease,
+} from '../../runtime-lifecycle';
 import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
 import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
@@ -23,16 +29,30 @@ Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose');
 export class RolldownBuild {
   #inputOptions: InputOptions;
   #bundler: BindingBundler;
+  #runtimeLease: RuntimeLease;
   #stopWorkers?: () => Promise<void>;
-  #closePromise: Promise<void> | undefined;
-
-  /** @internal */
-  static asyncRuntimeShutdown = false;
+  #nativeClosePromise: Promise<void> | undefined;
+  #closeCoordinator = new CloseCoordinator(
+    'Bundle native close, parallel-plugin worker shutdown, or runtime release failed',
+  );
 
   /** @hidden should not be used directly */
   constructor(inputOptions: InputOptions) {
     this.#inputOptions = inputOptions;
-    this.#bundler = new BindingBundler();
+    this.#runtimeLease = acquireRuntimeLease();
+    try {
+      this.#bundler = new BindingBundler();
+    } catch (error) {
+      try {
+        this.#runtimeLease.release();
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          'Bundle construction and runtime release both failed',
+        );
+      }
+      throw error;
+    }
   }
 
   /**
@@ -92,39 +112,38 @@ export class RolldownBuild {
    * ```
    */
   close(): Promise<void> {
-    return (this.#closePromise ??= this.#close());
+    return this.#closeCoordinator.close(() => this.#close());
   }
 
-  async #close(): Promise<void> {
+  async #close(): Promise<CloseAttemptResult> {
     const errors: unknown[] = [];
+    let retryable = false;
+    this.#nativeClosePromise ??= (async () => this.#bundler.close())();
     try {
-      await this.#bundler.close();
+      await this.#nativeClosePromise;
     } catch (error) {
       errors.push(error);
     }
 
     const stopWorkers = this.#stopWorkers;
-    this.#stopWorkers = undefined;
     try {
       await stopWorkers?.();
+      if (this.#stopWorkers === stopWorkers) {
+        this.#stopWorkers = undefined;
+      }
     } catch (error) {
       errors.push(error);
+      retryable = true;
     }
 
     try {
-      shutdownAsyncRuntime();
-      RolldownBuild.asyncRuntimeShutdown = true;
+      this.#runtimeLease.release();
     } catch (error) {
       errors.push(error);
+      retryable = true;
     }
 
-    if (errors.length === 1) throw errors[0];
-    if (errors.length > 1) {
-      throw new AggregateError(
-        errors,
-        'Bundle native close, parallel-plugin worker shutdown, or runtime shutdown failed',
-      );
-    }
+    return { errors, retryable };
   }
 
   /** @hidden documented in close method */
@@ -146,14 +165,13 @@ export class RolldownBuild {
   async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
     const previousStopWorkers = this.#stopWorkers;
-    this.#stopWorkers = undefined;
-    await previousStopWorkers?.();
-    const option = await createBundlerOptions(this.#inputOptions, outputOptions, false);
-
-    if (RolldownBuild.asyncRuntimeShutdown) {
-      startAsyncRuntime();
-      RolldownBuild.asyncRuntimeShutdown = false;
+    if (previousStopWorkers) {
+      await previousStopWorkers();
+      if (this.#stopWorkers === previousStopWorkers) {
+        this.#stopWorkers = undefined;
+      }
     }
+    const option = await createBundlerOptions(this.#inputOptions, outputOptions, false);
 
     try {
       this.#stopWorkers = option.stopWorkers;
@@ -165,10 +183,17 @@ export class RolldownBuild {
       }
       return new RolldownOutputImpl(unwrapBindingResult(output));
     } catch (e) {
-      if (this.#stopWorkers === option.stopWorkers) {
-        this.#stopWorkers = undefined;
+      try {
+        await option.stopWorkers?.();
+        if (this.#stopWorkers === option.stopWorkers) {
+          this.#stopWorkers = undefined;
+        }
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [e, cleanupError],
+          'Bundle build and parallel-plugin worker cleanup both failed',
+        );
       }
-      await option.stopWorkers?.();
       throw e;
     }
   }

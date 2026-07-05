@@ -1,7 +1,8 @@
 import path from 'node:path';
+import { Worker } from 'node:worker_threads';
 import { rolldown } from 'rolldown';
 import { defineParallelPlugin } from 'rolldown/experimental';
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 
 test('rolldown write twice', async () => {
   const bundle = await rolldown({
@@ -118,6 +119,51 @@ test('parallel closeBundle hooks run before workers terminate', async () => {
   expect(workerCount).toBeGreaterThan(0);
   await bundle.close();
   expect(Atomics.load(state, 1)).toBe(workerCount);
+});
+
+test('close retries only parallel-plugin workers whose termination failed', async () => {
+  const cleanupError = new Error('worker termination failed');
+  const originalTerminate = Object.getOwnPropertyDescriptor(Worker.prototype, 'terminate')!
+    .value as (this: Worker) => Promise<number>;
+  const terminateCalls = new Map<Worker, number>();
+  const failedWorkers = new WeakSet<Worker>();
+  let injectedFailure = false;
+  const terminateSpy = vi
+    .spyOn(Worker.prototype, 'terminate')
+    .mockImplementation(function (this: Worker) {
+      terminateCalls.set(this, (terminateCalls.get(this) ?? 0) + 1);
+      if (!injectedFailure) {
+        injectedFailure = true;
+        failedWorkers.add(this);
+        return Promise.reject(cleanupError);
+      }
+      return Reflect.apply(originalTerminate, this, []);
+    });
+
+  const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
+  const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(
+    path.join(import.meta.dirname, 'parallel-close-plugin.mjs'),
+  );
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [parallelPlugin({ state })],
+  });
+
+  try {
+    await bundle.generate();
+    await expect(bundle.close()).rejects.toBe(cleanupError);
+    expect([...terminateCalls].filter(([worker]) => failedWorkers.has(worker))).toHaveLength(1);
+    expect([...terminateCalls].filter(([worker]) => failedWorkers.has(worker))[0][1]).toBe(1);
+
+    await expect(bundle.close()).resolves.toBeUndefined();
+    for (const [worker, calls] of terminateCalls) {
+      expect(calls).toBe(failedWorkers.has(worker) ? 2 : 1);
+    }
+  } finally {
+    terminateSpy.mockRestore();
+    await bundle.close().catch(() => {});
+  }
 });
 
 test('closeBundle hook is not called if closed directly', async () => {

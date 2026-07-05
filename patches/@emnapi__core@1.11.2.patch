@@ -1,5 +1,5 @@
 diff --git a/dist/emnapi-core.cjs.js b/dist/emnapi-core.cjs.js
-index 40d09ef4d21ea4f54cc4d80cc0616375711bee15..d40ddc560a4dd514f8cde3737b6c9bee1f1c6c3c 100644
+index 822495213a92dcb7efc1a9322f72fcd9a65b2d96..06424655a57079879f190f7ec61fa2c43746545f 100644
 --- a/dist/emnapi-core.cjs.js
 +++ b/dist/emnapi-core.cjs.js
 @@ -1440,12 +1440,11 @@ function createNapiModule(options) {
@@ -75,7 +75,7 @@ index 40d09ef4d21ea4f54cc4d80cc0616375711bee15..d40ddc560a4dd514f8cde3737b6c9bee
                  return envObject.getReturnStatus();
              }
 diff --git a/dist/emnapi-core.esm-bundler.js b/dist/emnapi-core.esm-bundler.js
-index d914d4fe1f1c8d12ef095d4cadc787f48e3f7d49..977eabaf81d6661b297b43a8cd823db2c0f3bcb6 100644
+index fbefd04e7b555b7185593601d05615196571ffe4..ae44a8dad6894fc2ebc36b7c307f57f86de575b1 100644
 --- a/dist/emnapi-core.esm-bundler.js
 +++ b/dist/emnapi-core.esm-bundler.js
 @@ -1646,12 +1646,11 @@ function createNapiModule(options) {
@@ -154,7 +154,7 @@ index d914d4fe1f1c8d12ef095d4cadc787f48e3f7d49..977eabaf81d6661b297b43a8cd823db2
                  return envObject.getReturnStatus();
              }
 diff --git a/dist/emnapi-core.mjs b/dist/emnapi-core.mjs
-index a03582b92695d64fb4353060e51c61b726c6556d..d738a2e3df0eee3535fdedcd013a1ddd6d869f83 100644
+index 76ea12034ef6880cdd9481b9282fa4a65cfdf369..ac4d9e1724723447ac82964d037bf442a565207b 100644
 --- a/dist/emnapi-core.mjs
 +++ b/dist/emnapi-core.mjs
 @@ -1441,12 +1441,11 @@ function createNapiModule(options) {

@@ -51,8 +51,10 @@ the registered implementation; `start` and `shutdown` report failures through
   generation. Submissions in `Stopping` or `Stopped` return their task or
   closure untouched. An explicit restart waits while `Stopping`, then creates
   the next `Running` generation. Configuration remains frozen after shutdown.
-  Start, shutdown, and submission use the same mutex, so a racing submission
-  cannot recreate the backend after shutdown.
+  Full configuration, partial merge/validation/commit, start, shutdown, and
+  submission use the same mutex. A racing submission cannot recreate the
+  backend after shutdown, and concurrent partial updates cannot read the same
+  stale options snapshot and overwrite one another.
 - Each backend owns a generation work registry. Async tasks register an abort
   handle and all accepted operations register a retirement guard while the
   controller mutex is held. A generation stop registry also owns every active
@@ -147,6 +149,12 @@ The binding adapter and JS-facing configuration live in
   from `rolldown/experimental`
 
 Configuration must happen before the first async binding call.
+`configureAsyncRuntime` converts its optional fields to a
+`RuntimeOptionsPatch`; the controller merges that patch into the latest
+committed options, validates the complete candidate, and commits it in one
+critical section. Omitted fields are preserved, concurrent calls apply in lock
+order without stale-snapshot overwrites, and validation failure commits
+nothing.
 
 On shared WebAssembly builds, the resolver always reports and configures
 `CurrentThread`. `ROLLDOWN_RUNTIME=multi` is accepted as an inherited

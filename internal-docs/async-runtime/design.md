@@ -52,7 +52,10 @@ The existing Tokio runtime remains the default and is selected by the
    initial lifecycle `start` leaves backend creation lazy. Once the backend is
    created, or shutdown begins, configuration remains frozen. Submissions
    during `Stopping` and after shutdown are rejected until `start` creates the
-   next backend.
+   next backend. Partial binding updates merge, validate, and commit while
+   holding the controller mutex, so concurrent calls serialize against the
+   latest committed options instead of overwriting disjoint fields from stale
+   snapshots. A rejected candidate leaves the prior configuration unchanged.
 
 7. **Lifecycle transitions linearize with submission and generations do not
    overlap.** Backend acquisition, explicit start, and shutdown share one

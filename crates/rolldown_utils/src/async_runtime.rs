@@ -59,6 +59,33 @@ pub struct RuntimeOptions {
   pub park_deadline: Option<Duration>,
 }
 
+/// A partial update to the runtime options exposed by the binding.
+///
+/// [`configure_partial`] merges these fields into the latest configured
+/// options, validates the merged candidate, and commits it while holding the
+/// runtime controller lock. Fields that are not exposed for partial updates,
+/// such as `thread_name_prefix` and `park_deadline`, remain unchanged.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RuntimeOptionsPatch {
+  pub flavor: Option<RuntimeFlavor>,
+  pub worker_threads: Option<usize>,
+  pub max_blocking_tasks: Option<usize>,
+}
+
+impl RuntimeOptionsPatch {
+  fn apply_to(self, options: &mut RuntimeOptions) {
+    if let Some(flavor) = self.flavor {
+      options.flavor = flavor;
+    }
+    if let Some(worker_threads) = self.worker_threads {
+      options.worker_threads = worker_threads;
+    }
+    if let Some(max_blocking_tasks) = self.max_blocking_tasks {
+      options.max_blocking_tasks = max_blocking_tasks;
+    }
+  }
+}
+
 impl Default for RuntimeOptions {
   fn default() -> Self {
     let worker_threads = std::thread::available_parallelism().map_or(1, usize::from);
@@ -3986,14 +4013,39 @@ impl RuntimeController {
   fn configure(&self, options: RuntimeOptions) -> Result<(), RuntimeConfigError> {
     let options = options.validate()?;
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    if !matches!(&state.lifecycle, RuntimeLifecycle::Initial) {
-      return Err(RuntimeConfigError(
-        "the async runtime configuration is frozen; configure it before the first async call"
-          .to_string(),
-      ));
-    }
+    Self::ensure_configuration_mutable(&state)?;
     state.options = options;
     Ok(())
+  }
+
+  fn configure_partial(&self, patch: RuntimeOptionsPatch) -> Result<(), RuntimeConfigError> {
+    self.configure_partial_inner(patch, |_| {})
+  }
+
+  fn configure_partial_inner(
+    &self,
+    patch: RuntimeOptionsPatch,
+    after_merge: impl FnOnce(&RuntimeOptions),
+  ) -> Result<(), RuntimeConfigError> {
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    Self::ensure_configuration_mutable(&state)?;
+
+    let mut options = state.options.clone();
+    patch.apply_to(&mut options);
+    after_merge(&options);
+    let options = options.validate()?;
+    state.options = options;
+    Ok(())
+  }
+
+  fn ensure_configuration_mutable(state: &RuntimeState) -> Result<(), RuntimeConfigError> {
+    if matches!(&state.lifecycle, RuntimeLifecycle::Initial) {
+      return Ok(());
+    }
+    Err(RuntimeConfigError(
+      "the async runtime configuration is frozen; configure it before the first async call"
+        .to_string(),
+    ))
   }
 
   fn backend_locked(&self, state: &mut RuntimeState) -> Result<RuntimeBackend, RuntimeConfigError> {
@@ -4311,6 +4363,10 @@ static RUNTIME: LazyLock<RuntimeController> = LazyLock::new(RuntimeController::n
 
 pub fn configure(options: RuntimeOptions) -> Result<(), RuntimeConfigError> {
   RUNTIME.configure(options)
+}
+
+pub fn configure_partial(patch: RuntimeOptionsPatch) -> Result<(), RuntimeConfigError> {
+  RUNTIME.configure_partial(patch)
 }
 
 pub fn configured_options() -> RuntimeOptions {
@@ -7795,6 +7851,136 @@ mod tests {
     );
   }
 
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn concurrent_partial_configuration_merges_from_latest_committed_options() {
+    use std::{sync::mpsc, time::Duration};
+
+    let controller = Arc::new(multi_thread_controller("partial-config-race", 8, 1));
+    let (first_merged_tx, first_merged_rx) = mpsc::sync_channel(1);
+    let (release_first_tx, release_first_rx) = mpsc::sync_channel(1);
+    let first_controller = Arc::clone(&controller);
+    let first = std::thread::spawn(move || {
+      first_controller
+        .configure_partial_inner(
+          RuntimeOptionsPatch { max_blocking_tasks: Some(3), ..RuntimeOptionsPatch::default() },
+          |candidate| {
+            assert_eq!((candidate.worker_threads, candidate.max_blocking_tasks), (8, 3));
+            first_merged_tx.send(()).expect("the race coordinator must still be listening");
+            release_first_rx
+              .recv_timeout(Duration::from_secs(5))
+              .expect("the first partial configuration must be released");
+          },
+        )
+        .expect("the first partial configuration must commit");
+    });
+    first_merged_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("the first partial configuration must hold the controller lock after merging");
+
+    let (second_started_tx, second_started_rx) = mpsc::sync_channel(1);
+    let (second_candidate_tx, second_candidate_rx) = mpsc::sync_channel(1);
+    let second_controller = Arc::clone(&controller);
+    let second = std::thread::spawn(move || {
+      second_started_tx.send(()).expect("the race coordinator must still be listening");
+      second_controller
+        .configure_partial_inner(
+          RuntimeOptionsPatch { worker_threads: Some(6), ..RuntimeOptionsPatch::default() },
+          |candidate| {
+            second_candidate_tx
+              .send((candidate.worker_threads, candidate.max_blocking_tasks))
+              .expect("the race coordinator must still be listening");
+          },
+        )
+        .expect("the second partial configuration must commit");
+    });
+    second_started_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("the second partial configuration thread must start");
+    release_first_tx.send(()).expect("the first partial configuration must still be waiting");
+
+    first.join().expect("the first configuration thread must not panic");
+    second.join().expect("the second configuration thread must not panic");
+    assert_eq!(
+      second_candidate_rx
+        .recv_timeout(Duration::from_secs(5))
+        .expect("the second partial configuration must expose its merged candidate"),
+      (6, 3),
+      "the second caller must merge against the first caller's committed options"
+    );
+
+    let options = controller.options();
+    assert_eq!((options.worker_threads, options.max_blocking_tasks), (6, 3));
+    assert_eq!(options.thread_name_prefix, "partial-config-race");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn invalid_concurrent_partial_configuration_cannot_overwrite_a_valid_peer() {
+    use std::{sync::mpsc, time::Duration};
+
+    let controller = Arc::new(multi_thread_controller("partial-config-rollback", 6, 2));
+    let (invalid_merged_tx, invalid_merged_rx) = mpsc::sync_channel(1);
+    let (release_invalid_tx, release_invalid_rx) = mpsc::sync_channel(1);
+    let invalid_controller = Arc::clone(&controller);
+    let invalid = std::thread::spawn(move || {
+      invalid_controller
+        .configure_partial_inner(
+          RuntimeOptionsPatch { worker_threads: Some(0), ..RuntimeOptionsPatch::default() },
+          |candidate| {
+            assert_eq!((candidate.worker_threads, candidate.max_blocking_tasks), (0, 2));
+            invalid_merged_tx.send(()).expect("the race coordinator must still be listening");
+            release_invalid_rx
+              .recv_timeout(Duration::from_secs(5))
+              .expect("the invalid partial configuration must be released");
+          },
+        )
+        .expect_err("the invalid partial configuration must be rejected")
+        .to_string()
+    });
+    invalid_merged_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("the invalid partial configuration must hold the lock after merging");
+
+    let (valid_started_tx, valid_started_rx) = mpsc::sync_channel(1);
+    let (valid_candidate_tx, valid_candidate_rx) = mpsc::sync_channel(1);
+    let valid_controller = Arc::clone(&controller);
+    let valid = std::thread::spawn(move || {
+      valid_started_tx.send(()).expect("the race coordinator must still be listening");
+      valid_controller
+        .configure_partial_inner(
+          RuntimeOptionsPatch { max_blocking_tasks: Some(4), ..RuntimeOptionsPatch::default() },
+          |candidate| {
+            valid_candidate_tx
+              .send((candidate.worker_threads, candidate.max_blocking_tasks))
+              .expect("the race coordinator must still be listening");
+          },
+        )
+        .expect("the valid partial configuration must commit");
+    });
+    valid_started_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("the valid partial configuration thread must start");
+    release_invalid_tx.send(()).expect("the invalid partial configuration must still be waiting");
+
+    assert_eq!(
+      invalid.join().expect("the invalid configuration thread must not panic"),
+      "worker_threads must be greater than zero"
+    );
+    valid.join().expect("the valid configuration thread must not panic");
+    assert_eq!(
+      valid_candidate_rx
+        .recv_timeout(Duration::from_secs(5))
+        .expect("the valid partial configuration must expose its merged candidate"),
+      (6, 4),
+      "the valid caller must merge against the last committed options, not the rejected candidate"
+    );
+
+    let options = controller.options();
+    assert_eq!((options.worker_threads, options.max_blocking_tasks), (6, 4));
+    assert_eq!(options.thread_name_prefix, "partial-config-rollback");
+  }
+
   #[test]
   fn configure_after_backend_started_is_rejected() {
     // A local controller, not the global `RUNTIME`. Use a CurrentThread backend
@@ -7816,6 +8002,23 @@ mod tests {
     let error = controller
       .configure(RuntimeOptions::default())
       .expect_err("configure after the backend started must be rejected");
+    assert_eq!(
+      error.to_string(),
+      "the async runtime configuration is frozen; configure it before the first async call"
+    );
+  }
+
+  #[test]
+  fn partial_configuration_after_backend_started_is_rejected() {
+    let controller = current_thread_controller("partial-config-frozen");
+    let _backend = controller.backend();
+
+    let error = controller
+      .configure_partial(RuntimeOptionsPatch {
+        worker_threads: Some(2),
+        ..RuntimeOptionsPatch::default()
+      })
+      .expect_err("partial configuration after the backend started must be rejected");
     assert_eq!(
       error.to_string(),
       "the async runtime configuration is frozen; configure it before the first async call"

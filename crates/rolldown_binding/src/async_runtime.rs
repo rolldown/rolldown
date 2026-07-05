@@ -19,11 +19,11 @@ use napi_derive::napi;
 #[cfg(feature = "async-runtime")]
 use rolldown_utils::async_runtime::{
   CurrentThreadTaskDriver, CurrentThreadTaskDriverId, RuntimeFlavor, RuntimeMetricsSnapshot,
-  RuntimeOptions, TimerDriver, TimerDriverId, TimerId, block_on_dyn, configure, configured_options,
-  drive_current_thread_tasks, metrics, register_current_thread_task_driver, register_timer_driver,
-  request_current_thread_task_drain, reset_metrics, shutdown, spawn_detached, start,
-  try_spawn_blocking, try_spawn_detached, unregister_current_thread_task_driver,
-  unregister_timer_driver,
+  RuntimeOptions, RuntimeOptionsPatch, TimerDriver, TimerDriverId, TimerId, block_on_dyn,
+  configure, configure_partial, configured_options, drive_current_thread_tasks, metrics,
+  register_current_thread_task_driver, register_timer_driver, request_current_thread_task_drain,
+  reset_metrics, shutdown, spawn_detached, start, try_spawn_blocking, try_spawn_detached,
+  unregister_current_thread_task_driver, unregister_timer_driver,
 };
 
 use crate::types::js_callback::JsCallback;
@@ -93,6 +93,17 @@ pub struct BindingRuntimeOptions {
   pub flavor: Option<BindingRuntimeFlavor>,
   pub worker_threads: Option<u32>,
   pub max_blocking_tasks: Option<u32>,
+}
+
+#[cfg(feature = "async-runtime")]
+impl From<BindingRuntimeOptions> for RuntimeOptionsPatch {
+  fn from(value: BindingRuntimeOptions) -> Self {
+    Self {
+      flavor: value.flavor.map(Into::into),
+      worker_threads: value.worker_threads.map(|count| count as usize),
+      max_blocking_tasks: value.max_blocking_tasks.map(|count| count as usize),
+    }
+  }
 }
 
 #[napi(object)]
@@ -169,17 +180,7 @@ fn saturating_u32(value: u64) -> u32 {
 /// `tokio-runtime` build this throws a feature-disabled error; only the
 /// `async-runtime` build honors it.
 pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<()> {
-  let mut current = configured_options();
-  if let Some(flavor) = options.flavor {
-    current.flavor = flavor.into();
-  }
-  if let Some(worker_threads) = options.worker_threads {
-    current.worker_threads = worker_threads as usize;
-  }
-  if let Some(max_blocking_tasks) = options.max_blocking_tasks {
-    current.max_blocking_tasks = max_blocking_tasks as usize;
-  }
-  configure(current).map_err(|error| napi::Error::from_reason(error.to_string()))
+  configure_partial(options.into()).map_err(|error| napi::Error::from_reason(error.to_string()))
 }
 
 #[cfg(not(feature = "async-runtime"))]
@@ -1288,9 +1289,9 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
 mod tests {
   #[cfg(feature = "async-runtime")]
   use super::{
-    PendingHostTimer, PendingHostTimerRegistration, RelayIdAllocator, RolldownAsyncRuntime,
-    install_cleanup_hook_or_rollback, register_pending_host_timer, take_pending_host_timers,
-    wake_host_timer_safely,
+    BindingRuntimeFlavor, BindingRuntimeOptions, PendingHostTimer, PendingHostTimerRegistration,
+    RelayIdAllocator, RolldownAsyncRuntime, install_cleanup_hook_or_rollback,
+    register_pending_host_timer, take_pending_host_timers, wake_host_timer_safely,
   };
   use super::{
     ResolvedRuntimeBackend, ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RuntimeEnv,
@@ -1299,6 +1300,22 @@ mod tests {
 
   fn env() -> RuntimeEnv {
     RuntimeEnv::default()
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn binding_runtime_options_convert_to_a_partial_core_patch() {
+    use rolldown_utils::async_runtime::{RuntimeFlavor, RuntimeOptionsPatch};
+
+    let patch = RuntimeOptionsPatch::from(BindingRuntimeOptions {
+      flavor: Some(BindingRuntimeFlavor::CurrentThread),
+      worker_threads: None,
+      max_blocking_tasks: Some(7),
+    });
+
+    assert!(matches!(patch.flavor, Some(RuntimeFlavor::CurrentThread)));
+    assert_eq!(patch.worker_threads, None);
+    assert_eq!(patch.max_blocking_tasks, Some(7));
   }
 
   #[cfg(feature = "async-runtime")]

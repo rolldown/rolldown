@@ -25,7 +25,7 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_utils::futures::spawn_detached;
+use rolldown_utils::futures::{spawn, spawn_detached};
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
@@ -154,6 +154,21 @@ pub struct ModuleLoaderOutput {
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
   pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
+}
+
+fn spawn_module_task<F>(future: F, tx: tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>)
+where
+  F: std::future::Future<Output = ()> + Send + 'static,
+{
+  let handle = spawn(future);
+  spawn_detached(async move {
+    if let Err(error) = handle.await {
+      let diagnostic = BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
+        "module loader task failed before reporting completion: {error}"
+      ));
+      let _ = tx.send(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
+    }
+  });
 }
 
 impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
@@ -350,9 +365,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       self.request_all_exports_for_entry(idx, user_defined_entries);
     }
     let ctx = Arc::clone(&self.shared_context);
+    let tx = self.shared_context.tx.clone();
     if resolved_id.external.is_external() {
       let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
-      spawn_detached(task.run().instrument(tracing::info_span!("external_module_task")));
+      spawn_module_task(task.run().instrument(tracing::info_span!("external_module_task")), tx);
     } else {
       let task = ModuleTask::new(
         ctx,
@@ -364,7 +380,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         self.flat_options,
         self.magic_string_tx.clone(),
       );
-      spawn_detached(task.run().instrument(tracing::info_span!("normal_module_task")));
+      spawn_module_task(task.run().instrument(tracing::info_span!("normal_module_task")), tx);
     }
     self.remaining += 1;
     idx
@@ -395,7 +411,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     if let Entry::Vacant(e) = self.cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
       let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
       let task = RuntimeModuleTask::new(idx, Arc::clone(&self.shared_context), self.flat_options);
-      spawn_detached(task.run().instrument(tracing::info_span!("runtime_module_task")));
+      spawn_module_task(
+        task.run().instrument(tracing::info_span!("runtime_module_task")),
+        self.shared_context.tx.clone(),
+      );
       e.insert(VisitState::Seen(idx));
       self.remaining += 1;
     }
@@ -1165,5 +1184,45 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       barrel_module_state.tracked_records = tracked_records;
       barrel_module_state.remaining_imported_specifiers = remaining_imported_specifiers;
     }
+  }
+}
+
+#[cfg(all(test, feature = "async-runtime"))]
+mod tests {
+  use std::{sync::mpsc, time::Duration};
+
+  use rolldown_common::ModuleLoaderMsg;
+
+  use super::spawn_module_task;
+
+  #[test]
+  fn panicking_module_task_reports_completion_error() {
+    let (done_tx, done_rx) = mpsc::sync_channel(1);
+    std::thread::spawn(move || {
+      let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+      spawn_module_task(
+        async {
+          panic!("module task probe");
+        },
+        tx,
+      );
+
+      let message = rolldown_utils::futures::block_on(async { rx.recv().await })
+        .expect("supervisor must report a panicking module task");
+      let mut remaining = 1;
+      match message {
+        ModuleLoaderMsg::BuildErrors(errors) => {
+          assert_eq!(errors.len(), 1);
+          remaining -= 1;
+        }
+        _ => panic!("module task panic must be converted to BuildErrors"),
+      }
+      assert_eq!(remaining, 0, "the module loader must not wait forever after a task panic");
+      done_tx.send(()).unwrap();
+    });
+
+    done_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("panicking module task left the loader completion count unresolved");
   }
 }

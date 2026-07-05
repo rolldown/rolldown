@@ -1,9 +1,11 @@
-//! Drop heavy values on rayon worker threads instead of the caller's thread.
+//! Drop heavy values on a dedicated serial worker instead of the caller's
+//! thread or the shared Rayon pool.
 //!
 //! Freeing the link stage output (module_table, metas, stmt_infos, ...)
 //! takes ~15ms of hot-thread time on a 20k-module build, after the output is
-//! already produced. The rayon workers are idle by then, so shipping the
-//! drop to one of them takes the free() off the critical path.
+//! already produced. Shipping the drop to a maintenance worker takes the
+//! free() off the critical path without making the next one-worker rebuild
+//! wait on work queued behind itself.
 //!
 //! Deferred drops cannot pile up across builds: this is ENFORCED, not
 //! assumed. Every pending drop is counted, and [`drain`] blocks until the
@@ -44,7 +46,13 @@
 //! loop.
 
 #[cfg(not(target_family = "wasm"))]
-use std::sync::{Condvar, Mutex, PoisonError};
+use std::{
+  panic::{AssertUnwindSafe, catch_unwind},
+  sync::{
+    Condvar, LazyLock, Mutex, PoisonError,
+    mpsc::{Sender, channel},
+  },
+};
 
 /// Number of `spawn_drop` closures that have been enqueued but not yet
 /// finished dropping their value.
@@ -52,6 +60,30 @@ use std::sync::{Condvar, Mutex, PoisonError};
 static PENDING: Mutex<usize> = Mutex::new(0);
 #[cfg(not(target_family = "wasm"))]
 static PENDING_IS_ZERO: Condvar = Condvar::new();
+
+#[cfg(not(target_family = "wasm"))]
+type DropJob = Box<dyn FnOnce() + Send + 'static>;
+
+/// Deferred drops use their own serial worker instead of inheriting the
+/// caller's Rayon registry. A one-worker build may begin its next rebuild on
+/// the same Rayon worker that queued the previous drop; putting the drop back
+/// on that pool and then waiting in `drain()` deadlocks the worker against its
+/// own queue.
+#[cfg(not(target_family = "wasm"))]
+static DROP_QUEUE: LazyLock<Sender<DropJob>> = LazyLock::new(|| {
+  let (sender, receiver) = channel::<DropJob>();
+  std::thread::Builder::new()
+    .name("rolldown-deferred-drop".to_string())
+    .spawn(move || {
+      while let Ok(job) = receiver.recv() {
+        // A user-defined Drop panic must retire its pending count and must not
+        // kill the process-global worker.
+        let _ = catch_unwind(AssertUnwindSafe(job));
+      }
+    })
+    .expect("failed to create the deferred-drop worker");
+  sender
+});
 
 /// Decrements `PENDING` on drop, so the count goes down even if the deferred
 /// value's `Drop` impl panics — a panic must not wedge `drain()` forever.
@@ -69,7 +101,7 @@ impl Drop for PendingGuard {
   }
 }
 
-/// Drop `value` on a rayon worker thread instead of the caller's thread.
+/// Drop `value` on the dedicated deferred-drop worker.
 ///
 /// See the module docs for the invariants call sites must uphold.
 pub fn spawn_drop<T: Send + 'static>(value: T) {
@@ -81,11 +113,18 @@ pub fn spawn_drop<T: Send + 'static>(value: T) {
   drop(value);
   #[cfg(not(target_family = "wasm"))]
   {
+    let sender = &*DROP_QUEUE;
     *PENDING.lock().unwrap_or_else(PoisonError::into_inner) += 1;
-    rayon::spawn(move || {
+    let job: DropJob = Box::new(move || {
       let _guard = PendingGuard;
       drop(value);
     });
+    if let Err(error) = sender.send(job) {
+      // The worker should be process-lived. If it ever exits unexpectedly,
+      // preserve correctness by completing this drop synchronously without
+      // exposing a user-defined Drop panic that the worker path contains.
+      let _ = catch_unwind(AssertUnwindSafe(error.0));
+    }
   }
 }
 
@@ -103,5 +142,46 @@ pub fn drain() {
     while *pending > 0 {
       pending = PENDING_IS_ZERO.wait(pending).unwrap_or_else(PoisonError::into_inner);
     }
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+mod tests {
+  use std::{
+    sync::mpsc::{Receiver, SyncSender, sync_channel},
+    time::Duration,
+  };
+
+  use super::{drain, spawn_drop};
+
+  struct NotifyOnDrop(SyncSender<()>);
+
+  impl Drop for NotifyOnDrop {
+    fn drop(&mut self) {
+      self.0.send(()).unwrap();
+    }
+  }
+
+  #[test]
+  fn deferred_drop_does_not_depend_on_the_callers_one_worker_rayon_pool() {
+    let pool = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
+    let (dropped_tx, dropped_rx) = sync_channel(1);
+    let (queued_tx, queued_rx) = sync_channel(1);
+    let (release_tx, release_rx): (SyncSender<()>, Receiver<()>) = sync_channel(0);
+
+    pool.spawn(move || {
+      spawn_drop(NotifyOnDrop(dropped_tx));
+      queued_tx.send(()).unwrap();
+      // Keep the sole Rayon worker occupied. A deferred drop accidentally
+      // queued into this registry cannot run until this gate is released.
+      release_rx.recv().unwrap();
+    });
+
+    queued_rx.recv_timeout(Duration::from_secs(1)).unwrap();
+    dropped_rx
+      .recv_timeout(Duration::from_secs(1))
+      .expect("deferred drop was queued behind its caller in the one-worker Rayon pool");
+    release_tx.send(()).unwrap();
+    drain();
   }
 }

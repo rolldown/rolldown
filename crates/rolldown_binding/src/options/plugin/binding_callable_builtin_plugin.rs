@@ -1,9 +1,13 @@
-use std::sync::Arc;
+use std::{
+  future::Future,
+  panic::{AssertUnwindSafe, catch_unwind},
+  sync::Arc,
+};
 
 use arcstr::ArcStr;
 use napi::{
-  Env,
-  bindgen_prelude::{AsyncBlock, AsyncBlockBuilder},
+  Env, Status,
+  bindgen_prelude::{AsyncBlock, AsyncBlockBuilder, ToNapiValue},
 };
 use napi_derive::napi;
 use rolldown::ModuleType;
@@ -33,6 +37,67 @@ use super::{
 pub struct BindingCallableBuiltinPlugin {
   inner: Arc<dyn Pluginable>,
   context: SharedTransformPluginContext,
+}
+
+struct CallableRuntimeLease<Release: FnOnce() -> napi::Result<()>> {
+  release: Option<Release>,
+}
+
+impl CallableRuntimeLease<fn() -> napi::Result<()>> {
+  fn acquire() -> napi::Result<Self> {
+    crate::start_async_runtime()?;
+    Ok(Self::new(crate::shutdown_async_runtime))
+  }
+}
+
+impl<Release: FnOnce() -> napi::Result<()>> CallableRuntimeLease<Release> {
+  fn new(release: Release) -> Self {
+    Self { release: Some(release) }
+  }
+
+  fn settle<T>(mut self, result: napi::Result<T>) -> napi::Result<T> {
+    let release_result = self.release();
+    match (result, release_result) {
+      (result, Ok(())) => result,
+      (Ok(_), Err(release_error)) => Err(release_error),
+      (Err(primary_error), Err(release_error)) => {
+        let mut error = napi::Error::new(
+          Status::GenericFailure,
+          format!(
+            "Callable builtin hook failed and async runtime release also failed: {}",
+            release_error.reason
+          ),
+        );
+        error.cause = Some(Box::new(primary_error));
+        Err(error)
+      }
+    }
+  }
+
+  fn release(&mut self) -> napi::Result<()> {
+    self.release.take().map_or(Ok(()), |release| release())
+  }
+}
+
+impl<Release: FnOnce() -> napi::Result<()>> Drop for CallableRuntimeLease<Release> {
+  fn drop(&mut self) {
+    let Some(release) = self.release.take() else {
+      return;
+    };
+    // Cancellation and environment teardown destroy the future instead of
+    // settling it. Contain cleanup panics because Drop may already run during
+    // unwinding.
+    let _ = catch_unwind(AssertUnwindSafe(release));
+  }
+}
+
+fn build_callable_async_block<V, F>(env: &Env, future: F) -> napi::Result<AsyncBlock<V>>
+where
+  V: ToNapiValue + Send + 'static,
+  F: Future<Output = napi::Result<V>> + Send + 'static,
+{
+  let runtime_lease = CallableRuntimeLease::acquire()?;
+  AsyncBlockBuilder::with(async move { runtime_lease.settle(future.await) }).build(env)
 }
 
 #[napi]
@@ -89,8 +154,7 @@ impl BindingCallableBuiltinPlugin {
   ) -> napi::Result<AsyncBlock<Option<BindingHookJsResolveIdOutput>>> {
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
-    crate::start_async_runtime()?;
-    AsyncBlockBuilder::with(async move {
+    build_callable_async_block(&env, async move {
       plugin
         .call_resolve_id(
           &context.inner,
@@ -106,8 +170,6 @@ impl BindingCallableBuiltinPlugin {
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))
     })
-    .with_dispose(|_| crate::shutdown_async_runtime())
-    .build(&env)
   }
 
   #[napi]
@@ -118,8 +180,7 @@ impl BindingCallableBuiltinPlugin {
   ) -> napi::Result<AsyncBlock<Option<BindingHookJsLoadOutput>>> {
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
-    crate::start_async_runtime()?;
-    AsyncBlockBuilder::with(async move {
+    build_callable_async_block(&env, async move {
       let module_idx = rolldown_common::ModuleIdx::new(0);
       let load_ctx = Arc::new(LoadPluginContext::new(context.inner.clone(), module_idx));
       plugin
@@ -128,8 +189,6 @@ impl BindingCallableBuiltinPlugin {
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))
     })
-    .with_dispose(|_| crate::shutdown_async_runtime())
-    .build(&env)
   }
 
   #[napi]
@@ -143,8 +202,7 @@ impl BindingCallableBuiltinPlugin {
     let module_type = ModuleType::from_known_str(&options.module_type)?;
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
-    crate::start_async_runtime()?;
-    AsyncBlockBuilder::with(async move {
+    build_callable_async_block(&env, async move {
       let code_arc = ArcStr::from(code.as_str());
       plugin
         .call_transform(
@@ -155,8 +213,6 @@ impl BindingCallableBuiltinPlugin {
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))
     })
-    .with_dispose(|_| crate::shutdown_async_runtime())
-    .build(&env)
   }
 
   #[napi]
@@ -169,15 +225,94 @@ impl BindingCallableBuiltinPlugin {
     let kind = event.bindingify_watcher_change_kind()?;
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
-    crate::start_async_runtime()?;
-    AsyncBlockBuilder::with(async move {
+    build_callable_async_block(&env, async move {
       plugin
         .call_watch_change(&context.inner, &path, kind)
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
     })
-    .with_dispose(|_| crate::shutdown_async_runtime())
-    .build(&env)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::{
+    future::pending,
+    panic::{AssertUnwindSafe, catch_unwind},
+    sync::{
+      Arc,
+      atomic::{AtomicUsize, Ordering},
+    },
+  };
+
+  use super::CallableRuntimeLease;
+
+  #[test]
+  fn callable_runtime_lease_releases_on_success_and_error() {
+    let releases = Arc::new(AtomicUsize::new(0));
+    let lease = CallableRuntimeLease::new({
+      let releases = Arc::clone(&releases);
+      move || {
+        releases.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+      }
+    });
+    assert!(lease.settle::<()>(Ok(())).is_ok());
+
+    let lease = CallableRuntimeLease::new({
+      let releases = Arc::clone(&releases);
+      move || {
+        releases.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+      }
+    });
+    assert_eq!(
+      lease.settle::<()>(Err(napi::Error::from_reason("hook failed"))).unwrap_err().reason,
+      "hook failed"
+    );
+    assert_eq!(releases.load(Ordering::SeqCst), 2);
+  }
+
+  #[test]
+  fn callable_runtime_lease_releases_when_an_unpolled_future_is_cancelled() {
+    let releases = Arc::new(AtomicUsize::new(0));
+    let lease = CallableRuntimeLease::new({
+      let releases = Arc::clone(&releases);
+      move || {
+        releases.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+      }
+    });
+    let future = async move {
+      let _lease = lease;
+      pending::<()>().await;
+    };
+    drop(future);
+    assert_eq!(releases.load(Ordering::SeqCst), 1);
+  }
+
+  #[test]
+  fn callable_runtime_lease_contains_cleanup_panics_during_cancellation() {
+    let lease = CallableRuntimeLease::new(|| -> napi::Result<()> {
+      panic!("cleanup panic");
+    });
+    let result = catch_unwind(AssertUnwindSafe(|| {
+      let future = async move {
+        let _lease = lease;
+        pending::<()>().await;
+      };
+      drop(future);
+    }));
+    assert!(result.is_ok());
+  }
+
+  #[test]
+  fn callable_runtime_lease_preserves_primary_and_cleanup_failures() {
+    let lease =
+      CallableRuntimeLease::new(|| Err(napi::Error::from_reason("runtime release failed")));
+    let error = lease.settle::<()>(Err(napi::Error::from_reason("hook failed"))).unwrap_err();
+    assert!(error.reason.contains("runtime release failed"));
+    assert_eq!(error.cause.as_deref().map(|cause| cause.reason.as_str()), Some("hook failed"));
   }
 }
 

@@ -1,10 +1,11 @@
-use std::sync::{
-  Arc,
-  atomic::{AtomicBool, Ordering},
-};
+use std::sync::{Arc, Mutex};
 
+use futures::{FutureExt, future::BoxFuture, future::Shared};
 use rolldown_common::SharedNormalizedBundlerOptions;
 use rolldown_plugin::SharedPluginDriver;
+
+type CloseResult = Result<(), Arc<str>>;
+type CloseFuture = Shared<BoxFuture<'static, CloseResult>>;
 
 /// A lightweight handle to access bundle state after the `Bundle` has been consumed.
 ///
@@ -44,7 +45,7 @@ use rolldown_plugin::SharedPluginDriver;
 pub struct BundleHandle {
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) plugin_driver: SharedPluginDriver,
-  pub(crate) closed: Arc<AtomicBool>,
+  pub(crate) close_future: Arc<Mutex<Option<CloseFuture>>>,
 }
 
 impl BundleHandle {
@@ -69,11 +70,113 @@ impl BundleHandle {
 
   /// Close this bundle handle, calling the `closeBundle` plugin hook.
   pub async fn close(&self) -> anyhow::Result<()> {
-    if self.closed.swap(true, Ordering::SeqCst) {
-      return Ok(());
+    let close_future = {
+      let mut state = self.close_future.lock().expect("BundleHandle close state lock poisoned");
+      state
+        .get_or_insert_with(|| {
+          let plugin_driver = Arc::clone(&self.plugin_driver);
+          async move {
+            let result = plugin_driver
+              .close_bundle(None)
+              .await
+              .map_err(|error| Arc::<str>::from(format!("{error:#}")));
+            plugin_driver.clear();
+            result
+          }
+          .boxed()
+          .shared()
+        })
+        .clone()
+    };
+
+    close_future.await.map_err(|error| anyhow::anyhow!("{error}"))
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::{BundleFactory, BundleFactoryOptions};
+  use rolldown_common::BundleMode;
+  use rolldown_plugin::{HookCloseBundleArgs, HookNoopReturn, HookUsage, Plugin, PluginContext};
+  use std::{
+    borrow::Cow,
+    sync::atomic::{AtomicUsize, Ordering},
+  };
+  use tokio::sync::Notify;
+
+  #[derive(Debug)]
+  struct GatedFailingClosePlugin {
+    calls: Arc<AtomicUsize>,
+    entered: Arc<Notify>,
+    release: Arc<Notify>,
+  }
+
+  impl Plugin for GatedFailingClosePlugin {
+    fn name(&self) -> Cow<'static, str> {
+      "gated-failing-close".into()
     }
-    self.plugin_driver.close_bundle(None).await?;
-    self.plugin_driver.clear();
-    Ok(())
+
+    fn register_hook_usage(&self) -> HookUsage {
+      HookUsage::CloseBundle
+    }
+
+    async fn close_bundle(
+      &self,
+      _ctx: &PluginContext,
+      _args: Option<&HookCloseBundleArgs<'_>>,
+    ) -> HookNoopReturn {
+      self.calls.fetch_add(1, Ordering::SeqCst);
+      self.entered.notify_one();
+      self.release.notified().await;
+      Err(anyhow::anyhow!("close bundle failed"))
+    }
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn close_waits_for_and_replays_one_terminal_result_while_clearing_resources() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let entered = Arc::new(Notify::new());
+    let release = Arc::new(Notify::new());
+    let mut factory = BundleFactory::new(BundleFactoryOptions {
+      plugins: vec![Arc::new(GatedFailingClosePlugin {
+        calls: Arc::clone(&calls),
+        entered: Arc::clone(&entered),
+        release: Arc::clone(&release),
+      })],
+      disable_tracing_setup: true,
+      ..Default::default()
+    })
+    .expect("create bundle factory");
+    let bundle = factory.create_bundle(BundleMode::FullBuild, None).expect("create bundle");
+    let handle = bundle.context();
+    handle.watch_files().insert("retained.js".into());
+
+    let first_handle = handle.clone();
+    let mut first = tokio::spawn(async move { first_handle.close().await });
+    tokio::select! {
+      () = entered.notified() => {}
+      result = &mut first => {
+        panic!("first close completed before entering closeBundle: {result:?}");
+      }
+    }
+
+    let second_handle = handle.clone();
+    let second = tokio::spawn(async move { second_handle.close().await });
+    tokio::task::yield_now().await;
+    assert!(!second.is_finished(), "concurrent close must wait for the hook");
+
+    release.notify_waiters();
+    let first_error = first.await.expect("first close task").expect_err("first close should fail");
+    let second_error =
+      second.await.expect("second close task").expect_err("second close should fail");
+    assert!(first_error.to_string().contains("close bundle failed"));
+    assert_eq!(second_error.to_string(), first_error.to_string());
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert!(handle.watch_files().is_empty());
+
+    let late_error = handle.close().await.expect_err("late close should replay failure");
+    assert_eq!(late_error.to_string(), first_error.to_string());
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
   }
 }

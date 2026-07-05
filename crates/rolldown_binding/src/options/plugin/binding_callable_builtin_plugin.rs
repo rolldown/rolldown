@@ -89,7 +89,7 @@ impl BindingCallableBuiltinPlugin {
   ) -> napi::Result<AsyncBlock<Option<BindingHookJsResolveIdOutput>>> {
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
-    crate::start_async_runtime();
+    crate::start_async_runtime()?;
     AsyncBlockBuilder::with(async move {
       plugin
         .call_resolve_id(
@@ -106,10 +106,7 @@ impl BindingCallableBuiltinPlugin {
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))
     })
-    .with_dispose(|_| {
-      crate::shutdown_async_runtime();
-      Ok(())
-    })
+    .with_dispose(|_| crate::shutdown_async_runtime())
     .build(&env)
   }
 
@@ -121,7 +118,7 @@ impl BindingCallableBuiltinPlugin {
   ) -> napi::Result<AsyncBlock<Option<BindingHookJsLoadOutput>>> {
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
-    crate::start_async_runtime();
+    crate::start_async_runtime()?;
     AsyncBlockBuilder::with(async move {
       let module_idx = rolldown_common::ModuleIdx::new(0);
       let load_ctx = Arc::new(LoadPluginContext::new(context.inner.clone(), module_idx));
@@ -131,10 +128,7 @@ impl BindingCallableBuiltinPlugin {
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))
     })
-    .with_dispose(|_| {
-      crate::shutdown_async_runtime();
-      Ok(())
-    })
+    .with_dispose(|_| crate::shutdown_async_runtime())
     .build(&env)
   }
 
@@ -149,7 +143,7 @@ impl BindingCallableBuiltinPlugin {
     let module_type = ModuleType::from_known_str(&options.module_type)?;
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
-    crate::start_async_runtime();
+    crate::start_async_runtime()?;
     AsyncBlockBuilder::with(async move {
       let code_arc = ArcStr::from(code.as_str());
       plugin
@@ -161,10 +155,7 @@ impl BindingCallableBuiltinPlugin {
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))
     })
-    .with_dispose(|_| {
-      crate::shutdown_async_runtime();
-      Ok(())
-    })
+    .with_dispose(|_| crate::shutdown_async_runtime())
     .build(&env)
   }
 
@@ -178,17 +169,14 @@ impl BindingCallableBuiltinPlugin {
     let kind = event.bindingify_watcher_change_kind()?;
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
-    crate::start_async_runtime();
+    crate::start_async_runtime()?;
     AsyncBlockBuilder::with(async move {
       plugin
         .call_watch_change(&context.inner, &path, kind)
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
     })
-    .with_dispose(|_| {
-      crate::shutdown_async_runtime();
-      Ok(())
-    })
+    .with_dispose(|_| crate::shutdown_async_runtime())
     .build(&env)
   }
 }

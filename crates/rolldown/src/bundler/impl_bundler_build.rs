@@ -55,10 +55,9 @@ impl Bundler {
   /// Close the bundler, calling the `closeBundle` plugin hook.
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&mut self) -> BuildResult<()> {
-    if self.closed {
-      return Ok(());
+    if !self.closed {
+      self.closed = true;
     }
-    self.closed = true;
     if let Some(handle) = &self.last_bundle_handle {
       handle.close().await?;
     }

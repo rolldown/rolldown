@@ -18,12 +18,6 @@
 // already `FxBuildHasher` at every use site).
 #![allow(clippy::disallowed_types)]
 
-#[cfg(all(target_family = "wasm", tokio_unstable))]
-use std::sync::{
-  LazyLock,
-  atomic::{AtomicU32, Ordering},
-};
-
 use napi_derive::napi;
 
 pub mod async_runtime;
@@ -56,23 +50,157 @@ pub mod worker_manager;
 pub use oxc_parser_napi;
 pub use oxc_resolver_napi;
 
+#[cfg(any(test, all(target_family = "wasm", tokio_unstable)))]
+mod async_runtime_lease {
+  use std::sync::Mutex;
+
+  use napi::{Error, Status};
+
+  pub struct Manager {
+    active_task_count: Mutex<u32>,
+  }
+
+  impl Manager {
+    pub const fn new(active_task_count: u32) -> Self {
+      Self { active_task_count: Mutex::new(active_task_count) }
+    }
+
+    pub fn acquire(&self, start: impl FnOnce() -> napi::Result<()>) -> napi::Result<()> {
+      let mut active_task_count =
+        self.active_task_count.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      let next_count = active_task_count.checked_add(1).ok_or_else(|| {
+        Error::new(Status::GenericFailure, "Async runtime owner count overflowed")
+      })?;
+      if *active_task_count == 0 {
+        start()?;
+      }
+      *active_task_count = next_count;
+      Ok(())
+    }
+
+    pub fn release(&self, shutdown: impl FnOnce() -> napi::Result<()>) -> napi::Result<()> {
+      let mut active_task_count =
+        self.active_task_count.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      match *active_task_count {
+        0 => Ok(()),
+        1 => {
+          shutdown()?;
+          *active_task_count = 0;
+          Ok(())
+        }
+        _ => {
+          *active_task_count -= 1;
+          Ok(())
+        }
+      }
+    }
+
+    #[cfg(test)]
+    fn active_task_count(&self) -> u32 {
+      *self.active_task_count.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+  }
+
+  #[cfg(test)]
+  mod tests {
+    use std::sync::{
+      Arc,
+      atomic::{AtomicUsize, Ordering},
+    };
+
+    use super::Manager;
+
+    #[test]
+    fn release_is_idempotent_after_the_last_owner() {
+      let manager = Manager::new(1);
+      let shutdown_calls = AtomicUsize::new(0);
+
+      manager
+        .release(|| {
+          shutdown_calls.fetch_add(1, Ordering::SeqCst);
+          Ok(())
+        })
+        .unwrap();
+      manager
+        .release(|| {
+          shutdown_calls.fetch_add(1, Ordering::SeqCst);
+          Ok(())
+        })
+        .unwrap();
+
+      assert_eq!(manager.active_task_count(), 0);
+      assert_eq!(shutdown_calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn failed_start_and_shutdown_preserve_the_transition_owner() {
+      let stopped = Manager::new(0);
+      let start_error =
+        stopped.acquire(|| Err(napi::Error::from_reason("start failed"))).unwrap_err();
+      assert_eq!(start_error.reason, "start failed");
+      assert_eq!(stopped.active_task_count(), 0);
+      stopped.acquire(|| Ok(())).unwrap();
+      assert_eq!(stopped.active_task_count(), 1);
+
+      let shutdown_error =
+        stopped.release(|| Err(napi::Error::from_reason("shutdown failed"))).unwrap_err();
+      assert_eq!(shutdown_error.reason, "shutdown failed");
+      assert_eq!(stopped.active_task_count(), 1);
+      stopped.release(|| Ok(())).unwrap();
+      assert_eq!(stopped.active_task_count(), 0);
+    }
+
+    #[test]
+    fn concurrent_release_never_underflows() {
+      let manager = Arc::new(Manager::new(64));
+      let shutdown_calls = Arc::new(AtomicUsize::new(0));
+      let threads = (0..128)
+        .map(|_| {
+          let manager = Arc::clone(&manager);
+          let shutdown_calls = Arc::clone(&shutdown_calls);
+          std::thread::spawn(move || {
+            manager
+              .release(|| {
+                shutdown_calls.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+              })
+              .unwrap();
+          })
+        })
+        .collect::<Vec<_>>();
+
+      for thread in threads {
+        thread.join().unwrap();
+      }
+
+      assert_eq!(manager.active_task_count(), 0);
+      assert_eq!(shutdown_calls.load(Ordering::SeqCst), 1);
+    }
+  }
+}
+
 #[cfg(all(target_family = "wasm", tokio_unstable))]
-pub static ACTIVE_TASK_COUNT: LazyLock<AtomicU32> = LazyLock::new(|| AtomicU32::new(1));
+// See internal-docs/async-runtime/implementation.md.
+static ASYNC_RUNTIME_LEASES: async_runtime_lease::Manager = async_runtime_lease::Manager::new(1);
+
+#[cfg(not(all(target_family = "wasm", tokio_unstable)))]
+#[expect(clippy::unnecessary_wraps, reason = "matches the fallible threaded-WASI export")]
+fn no_op_async_runtime_transition() -> napi::Result<()> {
+  Ok(())
+}
 
 #[napi]
 /// Shutdown the tokio runtime manually.
 ///
 /// This is required for the wasm target with `tokio_unstable` cfg.
 /// In the wasm runtime, the `park` threads will hang there until the tokio::Runtime is shutdown.
-pub fn shutdown_async_runtime() {
+pub fn shutdown_async_runtime() -> napi::Result<()> {
   #[cfg(all(target_family = "wasm", tokio_unstable))]
   {
-    if ACTIVE_TASK_COUNT.load(Ordering::Relaxed) > 0 {
-      if ACTIVE_TASK_COUNT.fetch_sub(1, Ordering::Relaxed) == 1 {
-        napi::bindgen_prelude::shutdown_async_runtime();
-      }
-    }
+    return ASYNC_RUNTIME_LEASES.release(napi::bindgen_prelude::try_shutdown_async_runtime);
   }
+  #[cfg(not(all(target_family = "wasm", tokio_unstable)))]
+  no_op_async_runtime_transition()
 }
 
 #[napi]
@@ -80,12 +208,13 @@ pub fn shutdown_async_runtime() {
 ///
 /// This is required when the async runtime is shutdown manually.
 /// Usually it's used in test.
-pub fn start_async_runtime() {
+pub fn start_async_runtime() -> napi::Result<()> {
   #[cfg(all(target_family = "wasm", tokio_unstable))]
   {
-    napi::bindgen_prelude::start_async_runtime();
-    ACTIVE_TASK_COUNT.fetch_add(1, Ordering::Relaxed);
+    return ASYNC_RUNTIME_LEASES.acquire(napi::bindgen_prelude::try_start_async_runtime);
   }
+  #[cfg(not(all(target_family = "wasm", tokio_unstable)))]
+  no_op_async_runtime_transition()
 }
 
 #[napi_derive::module_init]

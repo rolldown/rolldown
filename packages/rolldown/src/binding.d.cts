@@ -2757,9 +2757,11 @@ export interface BindingRuntimeCapabilities {
    */
   watchSupported: boolean
   /**
-   * `block_on` over a JS-thread continuation cannot deadlock the calling
-   * thread. False on the CurrentThread flavor (the block_on-over-JS
-   * hazard: parking the only thread starves the JS continuation forever).
+   * An arbitrary `block_on` entered from the JavaScript host thread may await
+   * a JavaScript continuation without starving that continuation. Currently
+   * false on every artifact: MultiThread keeps native pool work progressing,
+   * but a foreign `block_on` still parks Node's main event-loop thread. This
+   * can become true only with a proven host-pumping/non-parking mechanism.
    */
   blockOnJsThreadSafe: boolean
 }
@@ -3161,16 +3163,15 @@ export declare function registerPlugins(id: number, plugins: Array<BindingPlugin
 /**
  * Install the host timer callback backing the shared async runtime's
  * CurrentThread timers (watch-mode debounce). Called at import by every
- * binding-loading JS entry with
- * `(ms) => new Promise((resolve) => setTimeout(resolve, ms))`; each
+ * binding-loading JS entry with paired setTimeout/clearTimeout callbacks; each
  * importing env (main thread and workers alike) registers its own host, and
  * the newest live one serves. A no-op on the default `tokio-runtime` build
  * (tokio owns its timer wheel).
  */
-export declare function registerTimerHost(callback: (ms: number) => Promise<void>): void
+export declare function registerTimerHost(schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): void
 
 /**
- * Reset the async runtime metrics counters to zero.
+ * Reset cumulative async runtime event counters to zero.
  *
  * A no-op on the default `tokio-runtime` build.
  */

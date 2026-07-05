@@ -1,6 +1,6 @@
 use rolldown_fs_watcher::FsEventResult;
 
-use crate::type_aliases::{EnsureLatestBundleOutputSender, GetStateSender};
+use crate::type_aliases::{CloseSender, EnsureLatestBundleOutputSender, GetStateSender};
 #[cfg(feature = "testing")]
 use crate::type_aliases::{GetWatchedFilesSender, ScheduleBuildIfStaleSender};
 use crate::types::error_stage::ErrorStage;
@@ -35,5 +35,7 @@ pub enum CoordinatorMsg {
   ModuleChanged {
     module_id: String,
   },
-  Close,
+  Close {
+    reply: CloseSender,
+  },
 }

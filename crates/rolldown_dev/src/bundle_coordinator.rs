@@ -145,12 +145,19 @@ impl BundleCoordinator {
 
           let _ = self.schedule_build_if_stale().await;
         }
-        CoordinatorMsg::Close => {
-          // Wait for any running bundling task to complete before exiting
-          // to avoid the task panicking when it tries to send BundleCompleted
+        CoordinatorMsg::Close { reply } => {
+          // A running task may replace `last_bundle_handle` after its HMR
+          // stage. Wait for the complete task before closing the bundler so
+          // `closeBundle` always runs on the final installed plugin driver.
+          // See internal-docs/dev-engine/implementation.md.
           if let Some(bundling_future) = self.current_bundling_future.take() {
             bundling_future.await;
           }
+          let result = {
+            let mut bundler = self.bundler.lock().await;
+            bundler.close().await
+          };
+          let _ = reply.send(result);
           break;
         }
       }

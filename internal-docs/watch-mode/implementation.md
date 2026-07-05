@@ -63,7 +63,7 @@ watcher.run();       // spawns the coordinator (non-blocking)
 watcher.close().await?;  // sends Close, awaits completion
 ```
 
-Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` spawns it on the selected runtime. `close()` first publishes the shared close signal, then calls the idempotent `run()`, sends a fire-and-forget `Close` message, and awaits the shared completion future. Publishing close before a not-yet-started coordinator prevents a creation-tick close from racing into the initial build. `wait_for_close()` gives consumers a reliable way to await the watcher's completion without closing it.
+Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` spawns it on the selected runtime. `close()` first publishes the shared close signal, then calls the idempotent `run()`, sends a fire-and-forget `Close` message, and awaits the shared completion future. The future carries a cloneable terminal close result, so concurrent and later `close()` callers observe the same success or failure. Publishing close before a not-yet-started coordinator prevents a creation-tick close from racing into the initial build. `wait_for_close()` is intentionally completion-only: it keeps Node alive but does not surface the close error through an otherwise ignored promise.
 
 ### Known Divergences from Rollup
 
@@ -268,10 +268,14 @@ watcher.close() sends WatcherMsg::Close (fire-and-forget)
       2. task.call_hook_close_watcher() for each task (plugin hook, awaited)
          - if no build created a plugin driver, Bundler creates a temporary
            driver for closeWatcher and discards it without closeBundle
-      3. task.close() for each task (bundler cleanup)
+         - failures are recorded; remaining tasks still run
+      3. task.close() for each task (final BundleHandle close)
+         - failures are recorded; remaining tasks still run
       4. handler.on_close() (awaited)
       5. State → Closed
-      6. coordinator future completes → all wait_for_close() callers resolve
+      6. coordinator future completes with the aggregated native result
+         → close() callers resolve/reject identically
+         → wait_for_close() callers resolve as a liveness signal
 ```
 
 Consumer callbacks are normally blocking, but the coordinator waits for them together with the
@@ -284,13 +288,15 @@ meaning of a resolved close promise.
 
 The JavaScript wrapper has two memoized phases. `nativeClosePromise` awaits
 `BindingWatcher.close()` and therefore all Rust hooks/coordinator cleanup.
-Only after that settles does the outer `closePromise` terminate parallel-plugin
-workers and dispatch `close` listeners sequentially. The native `close` event
-callback merely starts/observes this outer lifecycle and returns immediately,
-so the Rust coordinator never waits on a listener that waits on itself. During
-close-event dispatch, a reentrant `watcher.close()` returns the already-settled
-native phase; outside callers receive the outer promise and therefore observe
-listener completion or rejection.
+Regardless of native failure, the outer `closePromise` then awaits every
+parallel-plugin worker termination and dispatches `close` listeners
+sequentially. Native, worker, and listener failures are aggregated after all
+phases have been attempted (a single failure is rethrown unchanged). The native
+`close` event callback merely starts/observes this outer lifecycle and returns
+immediately, so the Rust coordinator never waits on a listener that waits on
+itself. During close-event dispatch, a reentrant `watcher.close()` returns the
+already-settled native phase; outside callers receive the outer promise and
+therefore observe listener completion or rejection.
 
 Asynchronous setup failures (for example an `options` hook rejection) are
 reported as `ERROR` with `result: null`, followed by `END`, matching Rollup's
@@ -413,7 +419,7 @@ impl WatcherEventHandler for NapiWatcherEventHandler {
 
 ### Event Loop Keepalive
 
-`ThreadsafeFunction` uses `Weak = true` (unref'd), so it doesn't prevent Node.js from exiting. `Watcher::wait_for_close()` returns a `Shared<Future>` that resolves when the coordinator finishes — idempotent, so multiple callers (or late callers after completion) all resolve immediately. The NAPI binding exposes this as `waitForClose()` — the pending JS Promise keeps the event loop alive. This replaces the old `setInterval(() => {}, 1e9)` hack.
+`ThreadsafeFunction` uses `Weak = true` (unref'd), so it doesn't prevent Node.js from exiting. The coordinator is a `Shared<Future>` carrying the terminal native close result. `Watcher::close()` replays that result, while `Watcher::wait_for_close()` deliberately discards it and resolves when the coordinator finishes. The NAPI binding exposes the latter as `waitForClose()` — the pending JS Promise keeps the event loop alive without creating an unhandled rejection. This replaces the old `setInterval(() => {}, 1e9)` hack.
 
 ```
 constructor(options, listener)  // creates Watcher with handler, ready to run

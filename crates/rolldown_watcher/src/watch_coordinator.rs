@@ -15,6 +15,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::sync::{Notify, mpsc};
 
+pub type CoordinatorCloseResult = Result<(), Arc<str>>;
+
 /// The coordinator actor that owns all state and runs the event loop.
 pub struct WatchCoordinator<H: WatcherEventHandler> {
   rx: mpsc::UnboundedReceiver<WatcherMsg>,
@@ -24,6 +26,7 @@ pub struct WatchCoordinator<H: WatcherEventHandler> {
   tasks: IndexVec<WatchTaskIdx, WatchTask>,
   closed: Arc<AtomicBool>,
   close_notify: Arc<Notify>,
+  close_error: Option<Arc<str>>,
 }
 
 impl<H: WatcherEventHandler> WatchCoordinator<H> {
@@ -43,15 +46,16 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       tasks,
       closed,
       close_notify,
+      close_error: None,
     }
   }
 
   /// Main event loop: initial build → loop on state
-  pub(crate) async fn run(mut self) {
+  pub(crate) async fn run(mut self) -> CoordinatorCloseResult {
     // Perform initial build
     if !self.run_initial_build().await {
       self.handle_close().await;
-      return;
+      return self.close_result();
     }
 
     loop {
@@ -108,6 +112,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         }
       }
     }
+
+    self.close_result()
   }
 
   /// Run the initial build for all tasks
@@ -306,21 +312,34 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     self.state = new_state;
 
     if should_close {
+      let mut errors = Vec::new();
+
       // Close watcher hooks on all tasks
-      for task in &self.tasks {
-        task.call_hook_close_watcher().await;
+      for (task_index, task) in self.tasks.iter().enumerate() {
+        if let Err(error) = task.call_hook_close_watcher().await {
+          errors.push(format!("watch task {task_index} closeWatcher failed: {error}"));
+        }
       }
 
       // Close all bundlers
-      for task in &self.tasks {
-        if let Err(e) = task.close().await {
-          tracing::error!("Error closing bundler: {e:?}");
+      for (task_index, task) in self.tasks.iter().enumerate() {
+        if let Err(error) = task.close().await {
+          errors.push(format!("watch task {task_index} closeBundle failed: {error}"));
         }
       }
 
       self.handler.on_close().await;
+
+      if !errors.is_empty() {
+        self.close_error =
+          Some(Arc::from(format!("Watcher close failed:\n- {}", errors.join("\n- "))));
+      }
     }
 
     self.state = mem::take(&mut self.state).to_closed();
+  }
+
+  fn close_result(&self) -> CoordinatorCloseResult {
+    self.close_error.clone().map_or(Ok(()), Err)
   }
 }

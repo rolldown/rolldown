@@ -286,6 +286,145 @@ test.concurrent(
   },
 );
 
+test.concurrent(
+  'bundle result close waits for one terminal hook result and replays failures',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-bundle-close-failure-replay',
+      retryCount,
+    );
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    let releaseClose!: () => void;
+    const closeRelease = new Promise<void>((resolve) => {
+      releaseClose = resolve;
+    });
+    let markCloseStarted!: () => void;
+    const closeStarted = new Promise<void>((resolve) => {
+      markCloseStarted = resolve;
+    });
+    const closeBundleFn = vi.fn(async () => {
+      markCloseStarted();
+      await closeRelease;
+      throw new Error('closeBundle terminal failure');
+    });
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [{ name: 'close-failure-replay', closeBundle: closeBundleFn }],
+    });
+
+    const resultPromise = new Promise<{ close(): Promise<void> }>((resolve, reject) => {
+      watcher.on('event', (event) => {
+        if (event.code === 'BUNDLE_END') resolve(event.result);
+        if (event.code === 'ERROR') reject(event.error);
+      });
+    });
+    const result = await resultPromise;
+
+    const firstClose = result.close();
+    await closeStarted;
+    const secondClose = result.close();
+    const closeResultsPromise = Promise.allSettled([firstClose, secondClose]);
+    let secondSettled = false;
+    void secondClose.then(
+      () => {
+        secondSettled = true;
+      },
+      () => {
+        secondSettled = true;
+      },
+    );
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(secondSettled).toBe(false);
+
+    releaseClose();
+    const closeResults = await closeResultsPromise;
+    expect(closeResults).toHaveLength(2);
+    for (const closeResult of closeResults) {
+      expect(closeResult.status).toBe('rejected');
+      if (closeResult.status === 'rejected') {
+        expect(closeResult.reason.message).toContain('closeBundle terminal failure');
+      }
+    }
+    expect(closeBundleFn).toHaveBeenCalledTimes(1);
+
+    await expect(result.close()).rejects.toThrow('closeBundle terminal failure');
+    await expect(watcher.close()).rejects.toThrow('closeBundle terminal failure');
+    expect(closeBundleFn).toHaveBeenCalledTimes(1);
+  },
+);
+
+test.concurrent(
+  'watcher close aggregates native lifecycle and close listener failures',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-close-error-aggregation',
+      retryCount,
+    );
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const closeWatcherFn = vi.fn(() => {
+      throw new Error('native closeWatcher failure');
+    });
+    const closeBundleFn = vi.fn(() => {
+      throw new Error('native closeBundle failure');
+    });
+    const closeListenerFn = vi.fn(() => {
+      throw new Error('JavaScript close listener failure');
+    });
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'close-error-aggregation',
+          closeWatcher: closeWatcherFn,
+          closeBundle: closeBundleFn,
+        },
+      ],
+    });
+    watcher.on('close', closeListenerFn);
+    await waitBuildFinished(watcher);
+
+    const firstClose = watcher.close();
+    const concurrentClose = watcher.close();
+    const [firstResult, concurrentResult] = await Promise.allSettled([firstClose, concurrentClose]);
+    expect(firstResult.status).toBe('rejected');
+    expect(concurrentResult.status).toBe('rejected');
+    if (firstResult.status !== 'rejected' || concurrentResult.status !== 'rejected') return;
+
+    expect(firstResult.reason).toBe(concurrentResult.reason);
+    expect(firstResult.reason).toBeInstanceOf(AggregateError);
+    const aggregate = firstResult.reason as AggregateError;
+    expect(aggregate.errors).toHaveLength(2);
+    expect(aggregate.errors[0].message).toContain('native closeWatcher failure');
+    expect(aggregate.errors[0].message).toContain('native closeBundle failure');
+    expect(aggregate.errors[1].message).toContain('JavaScript close listener failure');
+    expect(closeWatcherFn).toHaveBeenCalledTimes(1);
+    expect(closeBundleFn).toHaveBeenCalledTimes(1);
+    expect(closeListenerFn).toHaveBeenCalledTimes(1);
+
+    const lateResult = await Promise.allSettled([watcher.close()]);
+    expect(lateResult[0]).toEqual({ status: 'rejected', reason: firstResult.reason });
+    expect(closeWatcherFn).toHaveBeenCalledTimes(1);
+    expect(closeBundleFn).toHaveBeenCalledTimes(1);
+    expect(closeListenerFn).toHaveBeenCalledTimes(1);
+  },
+);
+
 // https://github.com/rolldown/rolldown/issues/9462
 test.concurrent(
   'watcher.close() can be awaited inside an event callback',

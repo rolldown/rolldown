@@ -160,7 +160,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     BundleHandle {
       options: Arc::clone(&self.options),
       plugin_driver: Arc::clone(&self.plugin_driver),
-      closed: Arc::default(),
+      close_future: Arc::default(),
     }
   }
 

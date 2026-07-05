@@ -23,7 +23,7 @@ the machinery that realizes them, see
 
 ## Design principles
 
-Four principles govern when the dev engine rebuilds and how its errors
+Five principles govern when the dev engine rebuilds and how its errors
 flow out to the binding consumer. They define rolldown_dev's contract
 with its consumer (typically Vite) and constrain the implementation in
 §7, §13, and §16.
@@ -104,6 +104,17 @@ behavior, recoverable by editing source. Rolldown and Vite themselves
 are assumed bug-free in this model. The only state not recoverable
 through a file-change cycle is a panic, which signals an invariant
 violation in rolldown_dev itself (§16g).
+
+### 5. Quiesce before terminal cleanup
+
+Closing publishes the engine's closed state immediately so new work is
+rejected, then asks the coordinator to drain the active HMR/rebuild task.
+That task may install a replacement bundle handle, so only the coordinator
+can identify and close the final handle after the task settles. Its
+`closeBundle` hooks finish while parallel-plugin workers are still alive;
+worker shutdown follows native close. Concurrent and later `close()` callers
+share and replay the same terminal success or failure instead of returning
+before cleanup completes or retrying a partially consumed hook chain.
 
 ## Unresolved Questions
 

@@ -108,35 +108,40 @@ class Watcher {
     this.closed = true;
     this.nativeClosePromise ??= this.inner.close();
 
-    let nativeError: unknown;
+    const errors: unknown[] = [];
     try {
       await this.nativeClosePromise;
     } catch (error) {
-      nativeError = error;
+      errors.push(error);
     }
 
-    let workerError: unknown;
-    try {
-      await Promise.all(this.stopWorkers.map(async (stop) => stop?.()));
-    } catch (error) {
-      workerError = error;
-    }
+    const workerResults = await Promise.allSettled(this.stopWorkers.map(async (stop) => stop?.()));
+    errors.push(
+      ...workerResults.flatMap((result) => (result.status === 'rejected' ? [result.reason] : [])),
+    );
 
     try {
-      if (nativeError !== undefined && workerError !== undefined) {
-        throw new AggregateError(
-          [nativeError, workerError],
-          'Watcher native close and parallel-plugin worker shutdown both failed',
-        );
-      }
-      if (nativeError !== undefined) throw nativeError;
-      if (workerError !== undefined) throw workerError;
-
       this.dispatchingCloseEvent = true;
       await this.emitter.emit('close');
+    } catch (error) {
+      errors.push(error);
     } finally {
       this.dispatchingCloseEvent = false;
-      shutdownAsyncRuntime();
+      try {
+        shutdownAsyncRuntime();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+
+    if (errors.length === 1) {
+      throw errors[0];
+    }
+    if (errors.length > 1) {
+      throw new AggregateError(
+        errors,
+        'Watcher native close, parallel-plugin worker shutdown, close listener, or runtime shutdown failed',
+      );
     }
   }
 

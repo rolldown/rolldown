@@ -1002,9 +1002,11 @@ pub struct BindingRuntimeCapabilities {
   /// public entry registers the timer host the watch debounce needs before
   /// exposing any API.
   pub watch_supported: bool,
-  /// `block_on` over a JS-thread continuation cannot deadlock the calling
-  /// thread. False on the CurrentThread flavor (the block_on-over-JS
-  /// hazard: parking the only thread starves the JS continuation forever).
+  /// An arbitrary `block_on` entered from the JavaScript host thread may await
+  /// a JavaScript continuation without starving that continuation. Currently
+  /// false on every artifact: MultiThread keeps native pool work progressing,
+  /// but a foreign `block_on` still parks Node's main event-loop thread. This
+  /// can become true only with a proven host-pumping/non-parking mechanism.
   pub block_on_js_thread_safe: bool,
 }
 
@@ -1059,7 +1061,7 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
     // Static per artifact (see the field doc): the capability contract must
     // not depend on import order or registration state.
     watch_supported: !wasi,
-    block_on_js_thread_safe: threads,
+    block_on_js_thread_safe: false,
   }
 }
 
@@ -1070,9 +1072,11 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
 // `OnceLock` initializer of `resolved_runtime_config`.
 #[cfg(test)]
 mod tests {
+  #[cfg(feature = "async-runtime")]
+  use super::RolldownAsyncRuntime;
   use super::{
-    ResolvedRuntimeBackend, ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RolldownAsyncRuntime,
-    RuntimeEnv, parse_park_deadline_ms, resolve_runtime_config_for, wasm_async_work_pool_size,
+    ResolvedRuntimeBackend, ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RuntimeEnv,
+    parse_park_deadline_ms, resolve_runtime_config_for, wasm_async_work_pool_size,
   };
 
   fn env() -> RuntimeEnv {

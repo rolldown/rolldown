@@ -8,7 +8,7 @@ use futures::{FutureExt, future::Shared};
 use rolldown_common::ClientHmrUpdate;
 #[cfg(feature = "testing")]
 use rolldown_common::WatcherChangeKind;
-use rolldown_error::{BuildResult, ResultExt};
+use rolldown_error::{BatchedBuildDiagnostic, BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
 use rolldown_utils::futures::spawn;
 #[cfg(feature = "testing")]
@@ -29,6 +29,9 @@ use crate::{
   },
 };
 
+type DevEngineCloseResult = Result<(), Arc<str>>;
+type DevEngineCloseFuture = Shared<PinBoxSendStaticFuture<DevEngineCloseResult>>;
+
 #[cfg(feature = "testing")]
 use crate::ClientSession;
 #[cfg(feature = "testing")]
@@ -47,7 +50,8 @@ pub struct DevEngine {
   /// Shared dev context, kept so out-of-coordinator entry points (e.g.
   /// `compile_lazy_entry`) can reach `options.on_additional_assets`.
   dev_context: Arc<DevContext>,
-  coordinator_state: Mutex<CoordinatorState>,
+  coordinator_state: Arc<Mutex<CoordinatorState>>,
+  close_future: std::sync::Mutex<Option<DevEngineCloseFuture>>,
   pub clients: SharedClients,
   is_closed: AtomicBool,
   /// Counter for HMR patch IDs used by invalidate() method
@@ -100,10 +104,11 @@ impl DevEngine {
       coordinator_sender: coordinator_tx,
       bundler,
       dev_context: Arc::clone(&ctx),
-      coordinator_state: Mutex::new(CoordinatorState {
+      coordinator_state: Arc::new(Mutex::new(CoordinatorState {
         coordinator: Some(coordinator),
         handle: None,
-      }),
+      })),
+      close_future: std::sync::Mutex::new(None),
       clients,
       is_closed: AtomicBool::new(false),
       next_invalidate_patch_id: Arc::new(AtomicU32::new(0)),
@@ -363,30 +368,94 @@ impl DevEngine {
   }
 
   pub async fn close(&self) -> BuildResult<()> {
-    if self.is_closed.swap(true, std::sync::atomic::Ordering::SeqCst) {
-      return Ok(());
-    }
+    // Reject new work immediately, independently of how long terminal cleanup
+    // takes or whether it eventually fails.
+    self.is_closed.store(true, std::sync::atomic::Ordering::SeqCst);
 
-    // Send close message to coordinator
-    self.coordinator_sender.send(CoordinatorMsg::Close)
+    let close_future = {
+      let mut state = self.close_future.lock().expect("DevEngine close future lock poisoned");
+      state
+        .get_or_insert_with(|| {
+          let coordinator_sender = self.coordinator_sender.clone();
+          let bundler = Arc::clone(&self.bundler);
+          let coordinator_state = Arc::clone(&self.coordinator_state);
+          (Box::pin(async move {
+            Self::close_inner(coordinator_sender, bundler, coordinator_state)
+              .await
+              .map_err(|error| Arc::<str>::from(format!("{error:#}")))
+          }) as PinBoxSendStaticFuture<DevEngineCloseResult>)
+            .shared()
+        })
+        .clone()
+    };
+
+    match close_future.await {
+      Ok(()) => Ok(()),
+      Err(error) => Err(anyhow::anyhow!("{error}"))?,
+    }
+  }
+
+  async fn close_inner(
+    coordinator_sender: CoordinatorSender,
+    bundler: Arc<Mutex<Bundler>>,
+    coordinator_state: Arc<Mutex<CoordinatorState>>,
+  ) -> BuildResult<()> {
+    let coordinator_handle = {
+      let mut coordinator_state = coordinator_state.lock().await;
+      if coordinator_state.handle.is_none() {
+        // `close()` before `run()` has no task to coordinate. Drop the
+        // unstarted coordinator (and its watcher) and close the bundler here.
+        coordinator_state.coordinator.take();
+      }
+      coordinator_state.handle.clone()
+    };
+
+    let Some(coordinator_handle) = coordinator_handle else {
+      let mut bundler = bundler.lock().await;
+      return bundler.close().await;
+    };
+
+    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    let send_result = coordinator_sender
+      .send(CoordinatorMsg::Close { reply: reply_sender })
       .map_err_to_unhandleable()
-      .context("DevEngine: failed to send Close message to coordinator - coordinator may have already terminated")?;
-
-    // Close the bundler (calls `closeBundle` plugin hook).
-    // The bundler lock MUST be released before waiting for the coordinator below.
-    // Otherwise we'd deadlock: the coordinator's Close handler waits for any running
-    // bundling task to finish, and that task may need to acquire the bundler lock.
-    {
-      let mut bundler = self.bundler.lock().await;
-      bundler.close().await?;
-    }
-
-    // Wait for coordinator to close (coordinator handles watcher cleanup)
-    let coordinator_state = self.coordinator_state.lock().await;
-    if let Some(coordinator_handle) = coordinator_state.handle.clone() {
+      .context(
+        "DevEngine: failed to send Close message to coordinator - coordinator may have already terminated",
+      );
+    if let Err(error) = send_result {
       coordinator_handle.await;
+      return Self::close_bundler_after_coordinator_error(bundler, error.into()).await;
     }
-    Ok(())
+
+    let close_result = reply_receiver
+      .await
+      .map_err_to_unhandleable()
+      .context("DevEngine: coordinator closed before responding to Close");
+    coordinator_handle.await;
+
+    match close_result {
+      Ok(result) => result,
+      Err(error) => Self::close_bundler_after_coordinator_error(bundler, error.into()).await,
+    }
+  }
+
+  async fn close_bundler_after_coordinator_error(
+    bundler: Arc<Mutex<Bundler>>,
+    coordinator_error: BatchedBuildDiagnostic,
+  ) -> BuildResult<()> {
+    let fallback_result = {
+      let mut bundler = bundler.lock().await;
+      bundler.close().await
+    };
+
+    match fallback_result {
+      Ok(()) => Err(coordinator_error),
+      Err(fallback_error) => {
+        let mut errors = coordinator_error.into_vec();
+        errors.extend(fallback_error.into_vec());
+        Err(BatchedBuildDiagnostic::new(errors))
+      }
+    }
   }
 
   pub fn is_closed(&self) -> bool {

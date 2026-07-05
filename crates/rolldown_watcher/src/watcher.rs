@@ -1,6 +1,6 @@
 use crate::handler::WatcherEventHandler;
 use crate::task_fs_event_handler::TaskFsEventHandler;
-use crate::watch_coordinator::WatchCoordinator;
+use crate::watch_coordinator::{CoordinatorCloseResult, WatchCoordinator};
 use crate::watch_task::{WatchTask, WatchTaskIdx};
 use crate::watcher_msg::WatcherMsg;
 use anyhow::Result;
@@ -61,11 +61,11 @@ impl WatcherConfig {
   }
 }
 
-type CoordinatorFuture = Shared<Pin<Box<dyn Future<Output = ()> + Send>>>;
+type CoordinatorFuture = Shared<Pin<Box<dyn Future<Output = CoordinatorCloseResult> + Send>>>;
 
 struct CoordinatorState {
   /// The coordinator future, before `run()` is called.
-  coordinator: Option<Pin<Box<dyn Future<Output = ()> + Send>>>,
+  coordinator: Option<Pin<Box<dyn Future<Output = CoordinatorCloseResult> + Send>>>,
   /// The spawned handle, after `run()` is called. Shared so multiple callers can await.
   handle: Option<CoordinatorFuture>,
 }
@@ -100,7 +100,8 @@ impl Watcher {
       Arc::clone(&closed),
       Arc::clone(&close_notify),
     );
-    let coordinator_future: Pin<Box<dyn Future<Output = ()> + Send>> = Box::pin(coordinator.run());
+    let coordinator_future: Pin<Box<dyn Future<Output = CoordinatorCloseResult> + Send>> =
+      Box::pin(coordinator.run());
 
     Ok(Self {
       coordinator_state: std::sync::Mutex::new(CoordinatorState {
@@ -118,9 +119,13 @@ impl Watcher {
     let mut state = self.coordinator_state.lock().unwrap();
     if let Some(coordinator) = state.coordinator.take() {
       let join_handle = spawn(coordinator);
-      let handle: Pin<Box<dyn Future<Output = ()> + Send>> = Box::pin(async move {
-        let _ = join_handle.await;
-      });
+      let handle: Pin<Box<dyn Future<Output = CoordinatorCloseResult> + Send>> =
+        Box::pin(async move {
+          match join_handle.await {
+            Ok(result) => result,
+            Err(error) => Err(Arc::from(format!("Watcher coordinator task failed: {error}"))),
+          }
+        });
       state.handle = Some(handle.shared());
     }
   }
@@ -129,7 +134,7 @@ impl Watcher {
   pub async fn wait_for_close(&self) {
     let handle = self.coordinator_state.lock().unwrap().handle.clone();
     if let Some(handle) = handle {
-      handle.await;
+      let _ = handle.await;
     }
   }
 
@@ -146,8 +151,11 @@ impl Watcher {
     // remains the normal state-machine input when the coordinator is idle or debouncing.
     self.close_notify.notify_one();
     let _ = self.tx.send(WatcherMsg::Close);
-    self.wait_for_close().await;
-    Ok(())
+    let handle = self.coordinator_state.lock().unwrap().handle.clone();
+    match handle {
+      Some(handle) => handle.await.map_err(|error| anyhow::anyhow!("{error}")),
+      None => Ok(()),
+    }
   }
 
   fn create_tasks(
@@ -173,7 +181,70 @@ impl Watcher {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use std::time::Duration;
+  use crate::WatchEvent;
+  use rolldown::{BundlerOptions, plugin};
+  use rolldown_common::WatcherChangeKind;
+  use std::{
+    borrow::Cow,
+    sync::{
+      Arc,
+      atomic::{AtomicUsize, Ordering},
+    },
+    time::Duration,
+  };
+  use tokio::sync::Notify;
+
+  struct RecordingHandler {
+    end: Arc<Notify>,
+    close_calls: Arc<AtomicUsize>,
+  }
+
+  impl WatcherEventHandler for RecordingHandler {
+    async fn on_event(&self, event: WatchEvent) {
+      if matches!(event, WatchEvent::End) {
+        self.end.notify_one();
+      }
+    }
+
+    async fn on_change(&self, _path: &str, _kind: WatcherChangeKind) {}
+
+    async fn on_restart(&self) {}
+
+    async fn on_close(&self) {
+      self.close_calls.fetch_add(1, Ordering::SeqCst);
+    }
+  }
+
+  #[derive(Debug)]
+  struct FailingClosePlugin {
+    message: &'static str,
+    close_watcher_calls: Arc<AtomicUsize>,
+    close_bundle_calls: Arc<AtomicUsize>,
+  }
+
+  impl plugin::Plugin for FailingClosePlugin {
+    fn name(&self) -> Cow<'static, str> {
+      self.message.into()
+    }
+
+    fn register_hook_usage(&self) -> plugin::HookUsage {
+      plugin::HookUsage::CloseWatcher | plugin::HookUsage::CloseBundle
+    }
+
+    async fn close_watcher(&self, _ctx: &plugin::PluginContext) -> plugin::HookNoopReturn {
+      self.close_watcher_calls.fetch_add(1, Ordering::SeqCst);
+      Err(anyhow::anyhow!("{} closeWatcher", self.message))
+    }
+
+    async fn close_bundle(
+      &self,
+      _ctx: &plugin::PluginContext,
+      _args: Option<&plugin::HookCloseBundleArgs<'_>>,
+    ) -> plugin::HookNoopReturn {
+      self.close_bundle_calls.fetch_add(1, Ordering::SeqCst);
+      Err(anyhow::anyhow!("{} closeBundle", self.message))
+    }
+  }
 
   #[test]
   fn test_watcher_config_default_debounce() {
@@ -199,5 +270,57 @@ mod tests {
     let config = WatcherConfig { poll_interval: Some(250), ..Default::default() };
     let fs_config = config.to_fs_watcher_config();
     assert_eq!(fs_config.poll_interval, 250);
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn close_aggregates_hook_errors_and_replays_them_to_later_callers() {
+    let close_watcher_calls = Arc::new(AtomicUsize::new(0));
+    let close_bundle_calls = Arc::new(AtomicUsize::new(0));
+    let handler_close_calls = Arc::new(AtomicUsize::new(0));
+    let end = Arc::new(Notify::new());
+    let configs = ["first close failure", "second close failure"]
+      .into_iter()
+      .map(|message| {
+        BundlerConfig::new(
+          BundlerOptions::default(),
+          vec![Arc::new(FailingClosePlugin {
+            message,
+            close_watcher_calls: Arc::clone(&close_watcher_calls),
+            close_bundle_calls: Arc::clone(&close_bundle_calls),
+          })],
+        )
+      })
+      .collect();
+    let watcher = Watcher::new(
+      configs,
+      RecordingHandler { end: Arc::clone(&end), close_calls: Arc::clone(&handler_close_calls) },
+      &WatcherConfig::default(),
+    )
+    .expect("create watcher");
+    watcher.run();
+    end.notified().await;
+    let close_bundle_calls_before_shutdown = close_bundle_calls.load(Ordering::SeqCst);
+
+    let (first, concurrent) = tokio::join!(watcher.close(), watcher.close());
+    let first_error = first.expect_err("close should fail").to_string();
+    let concurrent_error = concurrent.expect_err("concurrent close should fail").to_string();
+    assert_eq!(concurrent_error, first_error);
+    assert!(first_error.contains("watch task 0 closeWatcher failed"));
+    assert!(first_error.contains("first close failure closeWatcher"));
+    assert!(first_error.contains("watch task 1 closeWatcher failed"));
+    assert!(first_error.contains("second close failure closeWatcher"));
+    assert!(first_error.contains("watch task 0 closeBundle failed"));
+    assert!(first_error.contains("first close failure closeBundle"));
+    assert!(first_error.contains("watch task 1 closeBundle failed"));
+    assert!(first_error.contains("second close failure closeBundle"));
+    assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 2);
+    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown + 2);
+    assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
+
+    let second_error = watcher.close().await.expect_err("later close should replay the failure");
+    assert_eq!(second_error.to_string(), first_error);
+    assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 2);
+    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown + 2);
+    assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
   }
 }

@@ -46,7 +46,9 @@ describe('getRuntimeCapabilities', () => {
 
     expect(['CurrentThread', 'MultiThread']).toContain(caps.flavor);
     expect(caps.threads).toBe(caps.flavor === 'MultiThread');
-    expect(caps.blockOnJsThreadSafe).toBe(caps.threads);
+    // Worker threads keep native tasks progressing, but a foreign block_on
+    // entered on Node's main thread still parks the JS event loop.
+    expect(caps.blockOnJsThreadSafe).toBe(false);
 
     // One pipeline: the capability flavor and the config reporter's flavor
     // come from the same resolved snapshot / runtime controller.

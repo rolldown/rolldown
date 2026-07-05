@@ -222,9 +222,13 @@ This is what fixed the bug where `this.getModuleInfo()` returned nothing on the 
 
 4. **Unnecessary `ScanStageCache` materialization in non-incremental watch mode** (rolldown/rolldown#6894) — Earlier versions materialized scan-stage state even when watch mode ran with `incremental: false`, making the separation problem visible. `BundleMode` made this explicit. Current code resets `ScanStageCache` when incremental build is disabled (see `Bundle::scan_modules()`), so it is no longer retained across non-incremental builds.
 
-## Unresolved Questions
+## Close lifecycle
 
-- `Bundler::close()` still exists with a `closed` flag, but `closeBundle` is a per-build concern. It should move to `BundleHandle` — see [rust-bundler.md](../rust-bundler/implementation.md).
+`closeBundle` state is owned by the per-build `BundleHandle`; the long-lived
+`Bundler::close()` only marks the owner closed and delegates to its latest
+handle. The handle clears bundle-level plugin-driver resources on both success
+and failure and memoizes one terminal result for all clones. See
+[rust-bundler](../rust-bundler/implementation.md).
 
 ## Related
 

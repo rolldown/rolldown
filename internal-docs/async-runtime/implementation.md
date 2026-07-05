@@ -185,6 +185,16 @@ Native watch mode is supported on both runtime flavors. Binding dev mode is
 still skipped on CurrentThread, and WASI watch remains unsupported because it
 stalls during the initial build before debounce timers are involved.
 
+### Threaded WASI runtime ownership
+
+The binding starts with one implicit threaded-WASI runtime owner. Its
+`startAsyncRuntime` and `shutdownAsyncRuntime` exports update a mutex-serialized
+native owner count and return napi errors from the fallible napi-rs lifecycle
+APIs. Only the `0 -> 1` transition starts the runtime, and only the `1 -> 0`
+transition shuts it down. A failed start leaves the count at zero; a failed
+shutdown retains the last owner so a later release can retry. Releasing at
+zero is idempotent, and concurrent releases cannot underflow the count.
+
 ### Non-threaded WASI
 
 The current-thread executor is the runtime half of the non-threaded

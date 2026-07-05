@@ -34,12 +34,7 @@ if (!import.meta.browserBuild && globalThis.setTimeout && globalThis.clearTimeou
 
   const active = new Map<number, TimerEntry>();
 
-  const registerTimerHostWithCancel = registerTimerHost as unknown as (
-    schedule: (id: number, ms: number) => Promise<void>,
-    cancel: (id: number) => void,
-  ) => void;
-
-  registerTimerHostWithCancel(
+  registerTimerHost(
     (id, ms) =>
       new Promise<void>((resolve) => {
         const handle = globalThis.setTimeout(() => {

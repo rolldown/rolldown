@@ -116,23 +116,23 @@ pub enum CoordinatorMsg {
   TriggerFullBuild,                           // unconditional full build (fire-and-forget)
   GetWatchedFiles { reply: … },              // list of watched paths
   ModuleChanged { module_id: String },       // programmatic module change
-  Close,                                     // shut the coordinator down
+  Close { reply: … },                        // quiesce, close final bundle, reply
 }
 ```
 
 Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
 
-| Message                    | Handler                                      |
-| -------------------------- | -------------------------------------------- |
-| `WatchEvent`               | `handle_watch_event` → `handle_file_changes` |
-| `BundleCompleted`          | `handle_bundle_completed`                    |
-| `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result |
-| `GetState`                 | `create_state_snapshot`, reply               |
-| `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply         |
-| `TriggerFullBuild`         | `trigger_full_build` (no reply)              |
-| `GetWatchedFiles`          | reply with the `watched_files` set           |
-| `ModuleChanged`            | queue a `Rebuild`, schedule                  |
-| `Close`                    | await running task, then `break` the loop    |
+| Message                    | Handler                                                  |
+| -------------------------- | -------------------------------------------------------- |
+| `WatchEvent`               | `handle_watch_event` → `handle_file_changes`             |
+| `BundleCompleted`          | `handle_bundle_completed`                                |
+| `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result             |
+| `GetState`                 | `create_state_snapshot`, reply                           |
+| `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply                     |
+| `TriggerFullBuild`         | `trigger_full_build` (no reply)                          |
+| `GetWatchedFiles`          | reply with the `watched_files` set                       |
+| `ModuleChanged`            | queue a `Rebuild`, schedule                              |
+| `Close`                    | await running task, close final bundle, reply, then exit |
 
 The producers:
 
@@ -266,8 +266,11 @@ of them.
    initial build (`Idle → FullBuildInProgress`).
 3. Enters the `while let Some(msg) = self.rx.recv().await` loop,
    dispatching each `CoordinatorMsg` as in §2.
-4. On `Close`, awaits any running `BundlingTask` (so it doesn't panic
-   trying to send `BundleCompleted` into a dropped channel) and breaks.
+4. On `Close`, awaits the complete running `BundlingTask`, then acquires the
+   bundler and calls `Bundler::close()`. The task boundary includes both HMR
+   update generation and any following rebuild, so a rebuild cannot install a
+   replacement `BundleHandle` after shutdown closed the previous one. The
+   coordinator sends the close result through the message reply and then exits.
 
 `BundleCoordinator::new` initializes: `state = Initialized`,
 `queued_tasks = []`, `has_stale_bundle_output = true`,
@@ -908,7 +911,7 @@ Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 | `get_bundle_state()`                             | `GetState` → `BundleState { last_build_errored, has_stale_output }`                            |
 | `invalidate(caller, first_invalidated_by)`       | locks the bundler, calls `compute_update_for_calling_invalidate` per client                    |
 | `compile_lazy_entry(proxy_module_id, client_id)` | compiles a lazy entry; on success sends `ModuleChanged`                                        |
-| `close()`                                        | sends `Close`, waits active build/`closeBundle`, awaits coordinator shutdown                   |
+| `close()`                                        | sends `Close { reply }`; coordinator waits active work, closes the final bundle, and replies   |
 | `is_closed()` / `bundler_options()`              | accessors                                                                                      |
 
 `ModuleChanged` handling (`bundle_coordinator.rs:123-140`): updates watch
@@ -919,6 +922,21 @@ The `#[cfg(feature = "testing")]` methods —
 `ensure_task_with_changed_files`, `get_watched_files`,
 `create_client_for_testing` — exist for the test harness to drive
 synthetic file changes and inspect coordinator state.
+
+Calling `close()` before `run()` is the only path without a running
+coordinator. It drops the unstarted coordinator and closes the bundler
+directly. Once `run()` has spawned the actor, terminal bundler cleanup belongs
+to the coordinator so accepting a close request establishes one ordering point
+for quiescence, final-handle selection, and error delivery.
+
+`DevEngine::close()` sets `is_closed` before starting cleanup so new API work is
+rejected immediately. Cleanup itself is a separate shared future: concurrent
+callers wait for the same coordinated shutdown, and later callers replay its
+terminal success or failure without sending another `Close` message or rerunning
+`closeBundle`. If the close message cannot be delivered or the coordinator
+exits without replying, `DevEngine` awaits that exit and falls back to
+`Bundler::close()`. A fallback hook failure is aggregated with the coordinator
+transport failure so cleanup is still attempted without hiding either cause.
 
 ### TypeScript parallel-plugin ownership
 

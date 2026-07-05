@@ -241,6 +241,7 @@ impl<'a> LinkStage<'a> {
     self.reference_needed_symbols();
     let unreachable_import_expression_node_ids = self.cross_module_optimization();
     self.include_statements(&unreachable_import_expression_node_ids);
+    self.recover_constants_with_dead_writers();
     self.patch_module_dependencies();
 
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
@@ -271,6 +272,51 @@ impl<'a> LinkStage<'a> {
       self.ast_table,
       self.used_symbol_refs,
     )
+  }
+
+  /// Recover constants whose only writers were tree-shaken away. inline-const runs before
+  /// tree-shaking, so a `let X = <literal>` written only inside dead code is initially treated as
+  /// reassigned. Once tree-shaking has marked the writer statements excluded, re-derive const-ness
+  /// (in ESM all writes to an exported `let` are in its own module) and re-run inline-const +
+  /// tree-shaking so cross-chunk reads fold and the now-dead branches drop. No-op (one cheap scan,
+  /// no extra passes) when there are no candidates, i.e. when inline-const is disabled.
+  fn recover_constants_with_dead_writers(&mut self) {
+    loop {
+      let mut newly: Vec<(SymbolRef, ConstExportMeta)> = vec![];
+      for (module_idx, module) in self.module_table.modules.iter_enumerated() {
+        let Some(m) = module.as_normal() else { continue };
+        if m.ecma_view.mutated_constant_candidates.is_empty() {
+          continue;
+        }
+        let included = &self.metas[module_idx].stmt_info_included;
+        for (symbol_id, meta) in &m.ecma_view.mutated_constant_candidates {
+          let symbol_ref: SymbolRef = (module_idx, *symbol_id).into();
+          let canonical = self.symbols.canonical_ref_for(symbol_ref);
+          if self.global_constant_symbol_map.contains_key(&canonical) {
+            continue;
+          }
+          // Sound only if we actually captured this symbol's writers. `symbol_is_mutated` (which put
+          // it in the candidate map) guarantees at least one write exists; if `reassigned_stmt_map`
+          // has none, our scan missed a write form, so stay conservative and skip. Inline only when
+          // every captured writer statement was tree-shaken out.
+          let all_writers_dead =
+            m.ecma_view.reassigned_stmt_map.get(symbol_id).is_some_and(|stmts| {
+              !stmts.is_empty() && stmts.iter().all(|s| !included.has_bit(*s))
+            });
+          if all_writers_dead {
+            newly.push((canonical, meta.clone()));
+          }
+        }
+      }
+      if newly.is_empty() {
+        break;
+      }
+      for (canonical, meta) in newly {
+        self.global_constant_symbol_map.insert(canonical, meta);
+      }
+      let unreachable = self.cross_module_optimization();
+      self.include_statements(&unreachable);
+    }
   }
 
   /// A helper function used to debug symbol in link process

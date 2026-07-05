@@ -1,5 +1,12 @@
 # Benchmarks: tokio runtime vs shared async runtime
 
+> Historical baseline: these measurements predate the scheduler hardening that
+> reserves one execution lane from blocking admission and moves deferred
+> destruction to a serial maintenance worker. The recorded A/B remains useful
+> evidence for the original architecture, but its default blocking cap and
+> peak-thread counts no longer describe head. Re-run the committed harness
+> before making a release performance claim for the hardened scheduler.
+
 Committed, reproducible A/B results for the two native binding builds:
 
 - **tokio** — default build (`pnpm --filter rolldown build-binding --release`)

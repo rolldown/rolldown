@@ -31,12 +31,29 @@ instead of napi's dedicated-thread fallback.
 - `CurrentThreadExecutor` uses a reentrancy-safe FIFO runnable queue. Wakes drain
   cooperatively on the calling thread. Blocking work executes inline.
 - `MultiThreadExecutor` schedules bounded queue-drain jobs on a custom Rayon
-  pool. The same pool is inherited by nested `par_iter` calls.
+  pool. The same pool is inherited by nested `par_iter` calls. Rayon worker
+  start hooks classify every nested worker for cooperative `block_on`; a
+  separate driver marker limits the per-worker LIFO slot to scheduler frames
+  that will actually drain it.
 - A second FIFO holds blocking closures. `active_blocking` limits how many
-  Rayon workers may block at once.
-- `JoinHandle` normalizes async-task, blocking-job, and immediate results.
+  Rayon workers may block at once. Validation reserves one worker from
+  blocking admission. A one-worker configuration creates one internal reserve
+  worker, while configurations with two or more workers reserve capacity by
+  clamping `max_blocking_tasks` to `worker_threads - 1`.
+- Drain and cooperative loops force a blocking turn after 16 consecutive
+  runnable polls when the blocking FIFO has capacity. The timer timekeeper uses
+  the runnable-only path, so a stalled blocking closure cannot stop timer
+  service. Parked-driver registration records whether a parker may consume
+  blocking work; blocking submissions skip the runnable-only timekeeper and
+  wake a cooperative driver or arm a normal drainer.
+- `JoinHandle` normalizes async-task, blocking-job, and immediate results and
+  detaches async tasks on drop to match Tokio.
 - Atomic metrics expose task, poll, queue-depth, active-worker, panic, and
-  blocking-concurrency counters.
+  blocking-concurrency counters. Reset clears cumulative event counters only;
+  live gauges and lifetime high-water marks remain intact because active guards
+  may still need to decrement them. A reset generation is part of the
+  deadlock-detector fingerprint, preventing repeated counter values across a
+  reset from being mistaken for no progress.
 
 The binding adapter and JS-facing configuration live in
 `crates/rolldown_binding/src/async_runtime.rs`. Configuration sources are:
@@ -71,10 +88,24 @@ routed through the selected runtime:
 
 The native-magic-string sourcemap consumer deliberately uses one dedicated OS
 thread in modes where threads are supported. It cannot occupy the bounded
-blocking lane: its long-lived channel receive loop would monopolize a worker and
-deadlock a one-worker runtime before module tasks could produce messages. The
-consumer is disabled for current-thread mode, where the existing inline
-sourcemap path remains active.
+blocking lane: its long-lived channel receive loop would monopolize the entire
+blocking allowance of a one-worker configuration and delay unrelated blocking
+work. The consumer is disabled for current-thread mode, where the existing
+inline sourcemap path remains active.
+
+Module-loader tasks are spawned with a supervisor. Normal completion still
+arrives through `ModuleLoaderMsg`; a task panic or cancellation is converted
+into `BuildErrors`, which retires the loader's `remaining` count instead of
+leaving the build pending forever.
+
+### Deferred destruction
+
+`crates/rolldown/src/utils/defer_drop.rs` owns one process-global serial
+maintenance worker. Heavy link-stage values are sent there after generation,
+and every build entry calls `drain()` before starting new scan/link/render work.
+The worker is deliberately outside Rayon: a one-worker rebuild may call
+`drain()` on the same pool worker that queued the previous drop, so inheriting
+that Rayon registry would deadlock the worker against its own queue.
 
 ### Timers and native watch mode
 
@@ -110,12 +141,13 @@ Superseded: committed, reproducible measurements now live in
 observation — the Tokio-async + Tokio-blocking + Rayon thread population
 collapses to a single shared pool (56 → 25 peak threads on the measured host)
 — and add wall-time, instruction, RSS, and context-switch comparisons across
-four fixtures, plus the blocking-cap A/B that validated keeping the
-`max_blocking_tasks = worker_threads` default.
+four fixtures. Those measurements predate the production-hardening reserve
+lane and dedicated deferred-drop worker; [benchmarks.md](./benchmarks.md)
+records them as historical evidence and calls out the required re-measurement.
 
 ## Related
 
 - [benchmarks.md](./benchmarks.md) - committed tokio-vs-shared measurements
 - [design.md](./design.md) - goals and trade-offs
 - [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md) -
-  deferred-drop interaction with Rayon
+  deferred-drop interaction with rebuild ownership

@@ -17,7 +17,7 @@ function watch(input: WatchOptions | WatchOptions[]): RolldownWatcher;
 
 - Accepts a single config or an array of configs.
 - Each config may have multiple `output` entries. Internally, **each output creates a separate bundler** (a `WatchTask`).
-- Returns a `RolldownWatcher` immediately. The first build is deferred to `process.nextTick` so the caller can attach event listeners first. This matches Rollup's pattern: the constructor calls `process.nextTick(() => this.run())` where `run()` is private. `WatcherEmitter.close()` is bound through a deferred handler, so a close in the same creation tick waits for asynchronous option/plugin setup instead of becoming a no-op.
+- Returns a `RolldownWatcher` immediately. The first build is deferred to a zero-delay host timer so the caller can attach event listeners first in Node.js and browsers. `WatcherEmitter.close()` is bound through a deferred handler, so a close in the same creation tick waits for asynchronous option/plugin setup instead of becoming a no-op.
 
 ```typescript
 interface RolldownWatcher {
@@ -294,9 +294,15 @@ sequentially. Native, worker, and listener failures are aggregated after all
 phases have been attempted (a single failure is rethrown unchanged). The native
 `close` event callback merely starts/observes this outer lifecycle and returns
 immediately, so the Rust coordinator never waits on a listener that waits on
-itself. During close-event dispatch, a reentrant `watcher.close()` returns the
-already-settled native phase; outside callers receive the outer promise and
-therefore observe listener completion or rejection.
+itself. On Node.js, `AsyncLocalStorage` identifies close-listener continuations:
+a reentrant `watcher.close()` returns the already-settled native phase, while
+outside callers receive the outer promise and therefore observe listener
+completion or rejection. Browser hosts do not expose an equivalent async
+context. There, the emitter keeps the native-phase fallback active for the
+entire close-listener promise so calls after an `await` cannot self-deadlock.
+Calls started before listener dispatch still hold the outer promise, but an
+unrelated same-watcher call made while the listener is active is
+indistinguishable and receives the native phase.
 
 Asynchronous setup failures (for example an `options` hook rejection) are
 reported as `ERROR` with `result: null`, followed by `END`, matching Rollup's
@@ -435,7 +441,7 @@ close() → inner.close()         // sends Close msg, awaits shared future
 
 ### Event Emitter
 
-`WatcherEmitter` uses a simple `Map<string, Function[]>` for listener storage (on/off). Async `emit()` dispatches handlers sequentially (`for...of` + `await`) so side effects from earlier handlers (e.g. `result.close()` triggering `closeBundle`) are visible to later handlers. It also owns a deferred close-handler Promise so `close()` is valid before `createWatcher()` finishes asynchronous plugin setup. The bound `Watcher` remains the authority for native/full-phase memoization. No external dependency is needed.
+`WatcherEmitter` uses a simple `Map<string, Function[]>` for listener storage (on/off). Async `emit()` dispatches handlers sequentially (`for...of` + `await`) so side effects from earlier handlers (e.g. `result.close()` triggering `closeBundle`) are visible to later handlers. It also owns a deferred close-handler Promise so `close()` is valid before `createWatcher()` finishes asynchronous plugin setup. The bound `Watcher` remains the authority for native/full-phase memoization. Close-listener reentrancy uses `AsyncLocalStorage` on Node.js and a per-emitter active-listener fallback in browser builds; the browser fallback intentionally prioritizes no deadlock over distinguishing unrelated calls during the listener promise. No external dependency is needed.
 
 ### Event Mapping
 

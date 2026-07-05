@@ -101,6 +101,7 @@ export class WatcherEmitter implements RolldownWatcher {
   private closeHandlerPromise: Promise<() => Promise<void>>;
   private resolveCloseHandler!: (handler: () => Promise<void>) => void;
   private closeHandler: (() => Promise<void>) | undefined;
+  private browserCloseListenerInvocation: CloseListenerInvocation | undefined;
 
   constructor() {
     this.closeHandlerPromise = new Promise((resolve) => {
@@ -147,24 +148,32 @@ export class WatcherEmitter implements RolldownWatcher {
     const handlers = this.listeners.get('close');
     if (!handlers?.length) return;
 
-    const dispatch = async () => {
-      for (const handler of handlers) {
-        await handler();
-      }
-    };
     const invocation: CloseListenerInvocation = {
       active: true,
       emitter: this,
       reentrantClosePromise,
     };
     try {
+      const dispatch = async () => {
+        for (const handler of handlers) {
+          await handler();
+        }
+      };
       if (closeListenerContext) {
         await closeListenerContext.run(invocation, dispatch);
       } else {
+        // Browser hosts do not provide async context. Keep the native-phase
+        // fallback active across listener awaits to prevent self-deadlock.
+        // Calls from unrelated tasks during this window are indistinguishable
+        // and receive the same fallback.
+        this.browserCloseListenerInvocation = invocation;
         await dispatch();
       }
     } finally {
       invocation.active = false;
+      if (this.browserCloseListenerInvocation === invocation) {
+        this.browserCloseListenerInvocation = undefined;
+      }
     }
   }
 
@@ -203,7 +212,7 @@ export class WatcherEmitter implements RolldownWatcher {
   }
 
   private getReentrantClosePromise(): Promise<void> | undefined {
-    const invocation = closeListenerContext?.getStore();
+    const invocation = closeListenerContext?.getStore() ?? this.browserCloseListenerInvocation;
     return invocation?.emitter === this && invocation.active
       ? invocation.reentrantClosePromise
       : undefined;
@@ -223,7 +232,9 @@ export class WatcherEmitter implements RolldownWatcher {
       await this.emit('event', { code: 'END' });
     })();
 
-    this.bindClose(this.createSetupFailureClose());
+    if (!this.closeHandler) {
+      this.bindClose(this.createSetupFailureClose());
+    }
     return reportPromise;
   }
 }

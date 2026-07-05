@@ -68,9 +68,11 @@ The existing Tokio runtime remains the default and is selected by the
    Rejected convenience submissions hold the lifecycle transition until their
    contained destructor finishes, so restart cannot expose a new generation to
    destructor re-entry.
-   User-owned destructors and timer wakers are isolated during shutdown; caught
-   hostile panic payloads are quarantined rather than dropped again, so a panic
-   cannot leave the controller permanently stuck in `Stopping`.
+   User-owned destructors and timer wakers are isolated during shutdown. Caught
+   panic payloads are dropped under a second unwind boundary; only the nested
+   payload produced by a hostile payload destructor is quarantined, so normal
+   payload state is reclaimed without letting a second panic leave the
+   controller permanently stuck in `Stopping`.
 
 8. **Detached-task behavior matches Tokio.** Dropping Rolldown's `JoinHandle`
    detaches rather than cancels the task during normal operation. Runtime

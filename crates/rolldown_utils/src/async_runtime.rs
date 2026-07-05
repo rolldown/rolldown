@@ -287,19 +287,21 @@ impl fmt::Display for JoinError {
 
 impl std::error::Error for JoinError {}
 
-fn forget_panic_payload(payload: Box<dyn Any + Send + 'static>) {
-  // A panic payload is user-owned state. Its destructor may panic too, which
-  // would otherwise escape the catch boundary while the first panic is being
-  // retired. Leaking a hostile payload is the only generally sound containment
-  // strategy because Rust has no non-panicking way to destroy it.
-  std::mem::forget(payload);
+fn discard_panic_payload(payload: Box<dyn Any + Send + 'static>) {
+  // The original unwind is already caught, so ordinary payloads should be
+  // destroyed normally. A hostile payload destructor can panic again; catch
+  // that nested unwind and leak only its new payload, whose destructor is
+  // likewise untrusted.
+  if let Err(nested_payload) = catch_unwind(AssertUnwindSafe(|| drop(payload))) {
+    std::mem::forget(nested_payload);
+  }
 }
 
 fn catch_unwind_contained<T>(function: impl FnOnce() -> T) -> Option<T> {
   match catch_unwind(AssertUnwindSafe(function)) {
     Ok(value) => Some(value),
     Err(payload) => {
-      forget_panic_payload(payload);
+      discard_panic_payload(payload);
       None
     }
   }
@@ -310,7 +312,7 @@ fn catch_unwind_join_error<T>(function: impl FnOnce() -> T) -> Result<T, JoinErr
     Ok(value) => Ok(value),
     Err(payload) => {
       let error = JoinError::from_panic(&*payload);
-      forget_panic_payload(payload);
+      discard_panic_payload(payload);
       Err(error)
     }
   }
@@ -318,7 +320,7 @@ fn catch_unwind_join_error<T>(function: impl FnOnce() -> T) -> Result<T, JoinErr
 
 fn panic_payload_to_join_error(payload: Box<dyn Any + Send + 'static>) -> JoinError {
   let error = JoinError::from_panic(&*payload);
-  forget_panic_payload(payload);
+  discard_panic_payload(payload);
   error
 }
 
@@ -4479,6 +4481,48 @@ mod tests {
   static CURRENT_THREAD_RECOVERY_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
   static CURRENT_THREAD_BUDGET_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
 
+  #[test]
+  fn caught_panic_payload_destructor_runs() {
+    struct DropSignal(Arc<AtomicBool>);
+
+    impl Drop for DropSignal {
+      fn drop(&mut self) {
+        self.0.store(true, Ordering::SeqCst);
+      }
+    }
+
+    let dropped = Arc::new(AtomicBool::new(false));
+    let payload = DropSignal(Arc::clone(&dropped));
+
+    assert!(
+      catch_unwind_contained(|| -> () { std::panic::panic_any(payload) }).is_none(),
+      "the original panic must remain contained"
+    );
+    assert!(dropped.load(Ordering::SeqCst), "an ordinary caught panic payload must be destroyed");
+  }
+
+  #[test]
+  fn hostile_caught_panic_payload_destructor_remains_contained() {
+    struct PanicOnDrop(Arc<AtomicBool>);
+
+    impl Drop for PanicOnDrop {
+      fn drop(&mut self) {
+        self.0.store(true, Ordering::SeqCst);
+        panic!("caught panic payload destructor escaped");
+      }
+    }
+
+    let dropped = Arc::new(AtomicBool::new(false));
+    let payload = PanicOnDrop(Arc::clone(&dropped));
+    let result = catch_unwind(AssertUnwindSafe(|| {
+      catch_unwind_contained(|| -> () { std::panic::panic_any(payload) })
+    }));
+
+    assert!(result.is_ok(), "the payload destructor's nested panic must remain contained");
+    assert!(result.unwrap().is_none(), "the original panic must remain contained");
+    assert!(dropped.load(Ordering::SeqCst), "the hostile payload destructor must be attempted");
+  }
+
   fn accept_current_thread_host_dispatch() -> bool {
     true
   }
@@ -8257,7 +8301,7 @@ mod tests {
 
   #[cfg(not(target_family = "wasm"))]
   #[test]
-  fn shutdown_forgets_hostile_caught_panic_payload() {
+  fn shutdown_contains_hostile_caught_panic_payload() {
     use std::{panic::panic_any, sync::mpsc};
 
     struct PanicAgain;

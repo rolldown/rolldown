@@ -122,9 +122,10 @@ the registered implementation; `start` and `shutdown` report failures through
   generation identity. Convenience APIs that own a rejected future/closure
   register its contained destruction while holding the lifecycle lock;
   shutdown/restart cannot finish the transition until those registrations
-  retire. Shutdown timer wakes are isolated too, and caught panic payloads are
-  forgotten after diagnostics are extracted, so hostile payload destructors
-  cannot re-panic through the boundary. The full blocking
+  retire. Shutdown timer wakes are isolated too. After diagnostics are
+  extracted, caught panic payloads are dropped under a second `catch_unwind`;
+  only a nested panic payload from a hostile payload destructor is forgotten.
+  The full blocking
   result-delivery boundary is also contained: dropping a panic-on-drop result
   after its join handle detached cannot bypass blocking-slot or drainer
   retirement and strand shutdown.

@@ -1,3 +1,5 @@
+#![allow(clippy::ignore_without_reason)]
+
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_testing::fixture::Fixture;
 use std::{path::PathBuf, sync::Arc};

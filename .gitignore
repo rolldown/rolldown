@@ -159,6 +159,10 @@ docs/.vitepress/cache
 docs/reference
 docs/public/og
 
+# void
+docs/.void
+docs/.wrangler
+
 # ci release avoid lerna error: Working tree has uncommitted changes
 crates/rolldown_binding/artifacts/
 packages/**/THIRD-PARTY-LICENSE
@@ -187,3 +191,7 @@ nul
 
 # Zed local config
 .zed
+
+# Vendored Vite submodule (test-dev-server browser backend): the gitlink is
+# tracked, but repo tools must not lint/format the submodule contents.
+/packages/test-dev-server/vite/

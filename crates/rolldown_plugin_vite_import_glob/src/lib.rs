@@ -4,7 +4,7 @@ use std::{borrow::Cow, path::PathBuf};
 
 use oxc::ast_visit::Visit;
 use rolldown_common::ModuleType;
-use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
+use rolldown_plugin::{HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin};
 use sugar_path::SugarPath as _;
 
 #[derive(Debug, Default)]
@@ -41,10 +41,15 @@ impl Plugin for ViteImportGlobPlugin {
         ModuleType::Tsx => oxc::span::SourceType::tsx(),
         _ => unreachable!(),
       };
-      let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type).parse();
+      let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type)
+        .with_options(oxc::parser::ParseOptions {
+          preserve_parens: false,
+          ..oxc::parser::ParseOptions::default()
+        })
+        .parse();
       if parser_ret.panicked
         && let Some(err) =
-          parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
+          parser_ret.diagnostics.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
       {
         return Err(anyhow::anyhow!(format!(
           "Failed to parse code in '{}': {:?}",
@@ -72,7 +77,7 @@ impl Plugin for ViteImportGlobPlugin {
       if let Some(magic_string) = visitor.magic_string {
         return Ok(Some(HookTransformOutput {
           code: Some(magic_string.to_string()),
-          map: self.sourcemap.then(|| {
+          map: HookTransformOutputMap::from_if_enabled(self.sourcemap, || {
             magic_string.source_map(string_wizard::SourceMapOptions {
               hires: string_wizard::Hires::Boundary,
               source: args.id.into(),

@@ -6,12 +6,13 @@ use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
   ChunkIdx, ChunkKind, InstantiationKind, OutputExports, PackageJson, PathsOutputOption,
+  UsedSymbolRefs, UsedSymbolRefsBuilder,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{
-  PathBufExt as _, PathExt as _, representative_file_name_for_preserve_modules,
+  PathBufExt as _, representative_file_name_for_preserve_modules, strip_path_prefix_to_slash,
 };
 use rolldown_utils::{
   dashmap::FxDashMap,
@@ -86,6 +87,7 @@ use crate::{
   BundleOutput, SharedOptions,
   chunk_graph::ChunkGraph,
   stages::link_stage::LinkStageOutput,
+  type_alias::IndexEcmaAst,
   types::generator::GenerateContext,
   utils::chunk::{
     deconflict_chunk_symbols::deconflict_chunk_symbols,
@@ -99,6 +101,7 @@ mod chunk_ext;
 mod chunk_optimizer;
 mod code_splitting;
 mod compute_cross_chunk_links;
+mod compute_wrapped_esm_init_metadata;
 mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
 mod finalize_modules;
@@ -110,6 +113,10 @@ mod render_chunk_to_assets;
 
 pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
+  /// Per-module AST table threaded by value from `LinkStage::link()`. Moved out
+  /// of `self` into `render_chunk_to_assets` so it falls out of scope (and is
+  /// dropped) at the consumer's exit, before post-codegen stages run.
+  ast_table: IndexEcmaAst,
   options: &'a SharedOptions,
   plugin_driver: &'a SharedPluginDriver,
   /// Pre-resolved paths for external modules. When the user provides a JS function for the
@@ -121,24 +128,42 @@ pub struct GenerateStage<'a> {
 impl<'a> GenerateStage<'a> {
   pub fn new(
     link_output: &'a mut LinkStageOutput,
+    ast_table: IndexEcmaAst,
     options: &'a SharedOptions,
     plugin_driver: &'a SharedPluginDriver,
   ) -> Self {
-    Self { link_output, options, plugin_driver, resolved_paths: None }
+    Self { link_output, ast_table, options, plugin_driver, resolved_paths: None }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
+  pub async fn generate(
+    &mut self,
+    mut used_symbol_refs: UsedSymbolRefsBuilder,
+  ) -> BuildResult<BundleOutput> {
     self.plugin_driver.render_start(self.options).await?;
-    let mut chunk_graph = self.generate_chunks().await?;
+    let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs).await?;
 
-    if chunk_graph.chunk_table.len() > 1 {
+    // The chunk optimizer's re-run of the inclusion pass (inside `generate_chunks`) was the
+    // last writer; sealing consumes the builder, so nothing downstream can mutate the set.
+    let used_symbol_refs = used_symbol_refs.seal();
+
+    // Count only live chunks. Chunks merged away during chunk optimization (e.g.
+    // the standalone runtime chunk folded back into its host) stay in
+    // `chunk_table` as tombstones but are skipped at render time, so they must
+    // not count toward the multi-chunk check that gates single-file output.
+    let live_chunk_count = chunk_graph
+      .chunk_table
+      .len()
+      .saturating_sub(chunk_graph.post_chunk_optimization_operations.len());
+    if live_chunk_count > 1 {
       validate_options_for_multi_chunk_output(self.options)?;
     }
 
     self.finalized_module_namespace_ref_usage();
 
-    self.compute_cross_chunk_links(&mut chunk_graph);
+    self.compute_retained_export_symbols(&used_symbol_refs);
+
+    self.compute_cross_chunk_links(&mut chunk_graph, &used_symbol_refs);
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);
 
@@ -146,11 +171,11 @@ impl<'a> GenerateStage<'a> {
 
     self.merge_cjs_namespace(&mut chunk_graph);
 
-    // See meta/design/devtools.md for devtools action lifecycle.
+    // See internal-docs/devtools/implementation.md for devtools action lifecycle.
     self.trace_action_chunks_infos(&chunk_graph);
 
     let mut warnings = vec![];
-    self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings)?;
+    self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings, &used_symbol_refs)?;
     if !warnings.is_empty() {
       self.link_output.warnings.extend(warnings);
     }
@@ -182,9 +207,11 @@ impl<'a> GenerateStage<'a> {
       self.resolved_paths = Some(paths.resolve_all(ids).await);
     }
 
-    self.finalize_modules(&mut chunk_graph);
+    let mut ast_table = std::mem::take(&mut self.ast_table);
+    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph);
+    self.finalize_modules(&mut chunk_graph, &mut ast_table);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
-    self.render_chunk_to_assets(&chunk_graph).await
+    self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs).await
   }
 
   /// Notices:
@@ -228,10 +255,13 @@ impl<'a> GenerateStage<'a> {
                 let p = PathBuf::from(sanitized_absolute_filename.as_str());
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
-                    if absolute_chunk_file_name.starts_with(preserve_modules_root.as_str()) {
-                      absolute_chunk_file_name[preserve_modules_root.len()..]
-                        .trim_start_matches(['/', '\\'])
-                        .to_string()
+                    // See internal-docs/module-id/implementation.md: output paths may normalize separators even
+                    // when module ids keep native separators.
+                    if let Some(relative_path) = strip_path_prefix_to_slash(
+                      absolute_chunk_file_name.as_path(),
+                      preserve_modules_root.as_path(),
+                    ) {
+                      relative_path
                     } else {
                       p.relative(input_base.as_str()).to_slash_lossy().into_owned()
                     }
@@ -278,9 +308,7 @@ impl<'a> GenerateStage<'a> {
                 }
               }
             } else {
-              let chunk_name = sanitize_filename
-                .call(&module.id().as_str().as_path().representative_file_name())
-                .await?;
+              let chunk_name = sanitize_filename.call(&module.id().representative_name()).await?;
 
               PreGeneratedChunkName {
                 representative_chunk_name: chunk_name.clone(),
@@ -297,8 +325,7 @@ impl<'a> GenerateStage<'a> {
               chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id())
             {
               let module = &modules[*module_id];
-              let module_id = module.id().as_str();
-              let name = module_id.as_path().representative_file_name();
+              let name = module.id().representative_name();
               let sanitized_filename = sanitize_filename.call(&name).await?;
               Ok(PreGeneratedChunkName {
                 representative_chunk_name: sanitized_filename.clone(),
@@ -370,6 +397,7 @@ impl<'a> GenerateStage<'a> {
     &self,
     chunk_graph: &mut ChunkGraph,
     warnings: &mut Vec<BuildDiagnostic>,
+    used_symbol_refs: &UsedSymbolRefs,
   ) -> BuildResult<()> {
     // Collect all the chunk data we need first
     let mut chunk_export_data = Vec::new();
@@ -388,6 +416,7 @@ impl<'a> GenerateStage<'a> {
           chunk: &chunk_graph.chunk_table[chunk_idx],
           options: self.options,
           link_output: self.link_output,
+          used_symbol_refs,
           chunk_graph,
           plugin_driver: self.plugin_driver,
           module_id_to_codegen_ret: Vec::new(),

@@ -123,7 +123,11 @@ pub enum EventKind {
   /// Such modules can significantly slow down module resolution. Consider using
   /// [`@rolldown/plugin-transform-imports`](https://github.com/rolldown/plugins/tree/main/packages/transform-imports)
   /// to rewrite barrel imports at the source level so the barrel file is never loaded.
+  ///
+  /// See [Large barrel modules](https://rolldown.rs/in-depth/lazy-barrel-optimization#large-barrel-modules) for more details.
   LargeBarrelModules = 46,
+  /// Whether to emit warnings when a plugin transforms code without generating a sourcemap.
+  SourcemapBroken = 47,
 }
 
 impl Display for EventKind {
@@ -185,6 +189,7 @@ impl Display for EventKind {
       EventKind::IneffectiveDynamicImport => write!(f, "INEFFECTIVE_DYNAMIC_IMPORT"),
       EventKind::RequireTlaError => write!(f, "REQUIRE_TLA"),
       EventKind::LargeBarrelModules => write!(f, "LARGE_BARREL_MODULES"),
+      EventKind::SourcemapBroken => write!(f, "SOURCEMAP_BROKEN"),
     }
   }
 }

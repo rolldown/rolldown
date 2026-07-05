@@ -7,7 +7,10 @@ use crate::{
     binding_outputs::{BindingOutputs, to_binding_error},
     error::{BindingError, BindingErrors, BindingResult},
   },
-  utils::{handle_result, handle_warnings, normalize_binding_options::normalize_binding_options},
+  utils::{
+    handle_result, handle_warnings, normalize_binding_options::normalize_binding_options,
+    spawn_boxed_future,
+  },
 };
 use napi::{Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
@@ -36,7 +39,7 @@ impl BindingBundler {
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let normalized = Self::normalize_binding_options(options)?;
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "generate") {
-      return env.spawn_future(async move { Ok(result) });
+      return spawn_boxed_future(env, async move { Ok(result) });
     }
 
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
@@ -74,7 +77,7 @@ impl BindingBundler {
 
       Ok(napi::Either::B(bundle_output.assets.into()))
     };
-    env.spawn_future(fut)
+    spawn_boxed_future(env, fut)
   }
 
   #[napi]
@@ -85,7 +88,7 @@ impl BindingBundler {
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let normalized = Self::normalize_binding_options(options)?;
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "write") {
-      return env.spawn_future(async move { Ok(result) });
+      return spawn_boxed_future(env, async move { Ok(result) });
     }
 
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
@@ -122,7 +125,7 @@ impl BindingBundler {
 
       Ok(napi::Either::B(bundle_output.assets.into()))
     };
-    env.spawn_future(fut)
+    spawn_boxed_future(env, fut)
   }
 
   #[napi]
@@ -133,7 +136,7 @@ impl BindingBundler {
   ) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
     let normalized = Self::normalize_binding_options(options)?;
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "scan") {
-      return env.spawn_future(async move { Ok(result) });
+      return spawn_boxed_future(env, async move { Ok(result) });
     }
 
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
@@ -165,7 +168,7 @@ impl BindingBundler {
         }
       }
     };
-    env.spawn_future(fut)
+    spawn_boxed_future(env, fut)
   }
 
   #[napi]
@@ -176,7 +179,7 @@ impl BindingBundler {
   // - This also affects how the code is written in `Bundler::close()/inner.close()`, see the implementation there for more details.
   pub fn close<'env>(&mut self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let cleanup_fut = self.inner.close();
-    env.spawn_future(async move {
+    spawn_boxed_future(env, async move {
       let res = cleanup_fut.await;
       handle_result(res)?;
       Ok(())

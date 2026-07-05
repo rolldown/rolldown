@@ -1,8 +1,9 @@
 use crate::event::WatchEvent;
 use rolldown_common::WatcherChangeKind;
 
-/// Handler for watcher events. All methods are async and awaited by the coordinator,
-/// providing blocking semantics matching Rollup's behavior.
+/// Handler for watcher events. Methods are async and normally awaited by the coordinator,
+/// providing blocking semantics matching Rollup's behavior. A close request may interrupt the
+/// wait for `on_event`, `on_change`, or `on_restart` so callbacks can close their own watcher.
 ///
 /// NAPI bindings will implement this trait in a follow-up PR.
 pub trait WatcherEventHandler: Send + Sync {

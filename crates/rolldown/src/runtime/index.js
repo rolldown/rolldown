@@ -10,11 +10,23 @@ export var __hasOwnProp = Object.prototype.hasOwnProperty;
 // This is for lazily-initialized ESM code. This has two implementations, a
 // compact one for minified code and a verbose one that generates friendly
 // names in V8's profiler and in stack traces.
-export var __esm = (fn, res) =>
+export var __esm = (fn, res, err) =>
   function() {
-    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+    if (err) throw err[0];
+    try {
+      return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+    } catch (e) {
+      throw (err = [e]), e;
+    }
   };
-export var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+export var __esmMin = (fn, res, err) => () => {
+  if (err) throw err[0];
+  try {
+    return fn && (res = fn(fn = 0)), res;
+  } catch (e) {
+    throw (err = [e]), e;
+  }
+};
 // Wraps a CommonJS closure and returns a require() function. This has two
 // implementations, a compact one for minified code and a verbose one that
 // generates friendly names in V8's profiler and in stack traces.

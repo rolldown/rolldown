@@ -1,14 +1,22 @@
+#[cfg(feature = "experimental")]
 use super::Bundler;
+#[cfg(feature = "experimental")]
 use crate::hmr::hmr_stage::{HmrStage, HmrStageInput};
+#[cfg(feature = "experimental")]
 use rolldown_common::WatcherChangeKind;
+#[cfg(feature = "experimental")]
 use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate};
+#[cfg(feature = "experimental")]
 use rolldown_error::BuildResult;
+#[cfg(feature = "experimental")]
 use rolldown_utils::indexmap::FxIndexMap;
+#[cfg(feature = "experimental")]
 use rustc_hash::FxHashSet;
+#[cfg(feature = "experimental")]
 use std::sync::{Arc, atomic::AtomicU32};
 
+#[cfg(feature = "experimental")]
 impl Bundler {
-  #[cfg(feature = "experimental")]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
@@ -16,6 +24,10 @@ impl Bundler {
     clients: &[ClientHmrInput<'_>],
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
+    // HMR partial scans use the shared rayon pool without passing through
+    // `BundleFactory::build_bundle`; wait for any deferred drops here too.
+    crate::utils::defer_drop::drain();
+
     let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
       return Err(anyhow::format_err!(
         "HMR requires to run at least one bundle before invalidation"
@@ -32,7 +44,6 @@ impl Bundler {
     hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths, clients).await
   }
 
-  #[cfg(feature = "experimental")]
   pub async fn compute_update_for_calling_invalidate(
     &mut self,
     invalidate_caller: String,
@@ -41,6 +52,10 @@ impl Bundler {
     executed_modules: &FxHashSet<String>,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<HmrUpdate> {
+    // HMR partial scans use the shared rayon pool without passing through
+    // `BundleFactory::build_bundle`; wait for any deferred drops here too.
+    crate::utils::defer_drop::drain();
+
     let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
       return Err(anyhow::format_err!(
         "HMR requires to run at least one bundle before invalidation"
@@ -69,7 +84,6 @@ impl Bundler {
   /// This is called when a dynamically imported module is first requested at runtime.
   /// The module was previously stubbed with a proxy, and now we need to compile the
   /// actual module and its dependencies.
-  #[cfg(feature = "experimental")]
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: String,
@@ -77,6 +91,10 @@ impl Bundler {
     executed_modules: &FxHashSet<String>,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<String> {
+    // HMR partial scans use the shared rayon pool without passing through
+    // `BundleFactory::build_bundle`; wait for any deferred drops here too.
+    crate::utils::defer_drop::drain();
+
     let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
       panic!("Lazy compilation requires at least one bundle to be built first");
     };

@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#endregion
+//#region src/zod/locales.js
+function en() {
+	return "en";
+}
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+if (en() !== "en") throw new Error("expected z.locales.en() to be 'en'");
+//#endregion
+
+```

@@ -8,7 +8,7 @@ use rolldown::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule};
 use rolldown_utils::js_regex::HybridRegex;
 
 use crate::{
-  types::js_callback::{JsCallback, JsCallbackExt},
+  types::js_callback::{JsCallback, JsCallbackExt, JsCallbackResultExt},
   types::js_regex::JsRegExp,
 };
 
@@ -57,7 +57,6 @@ pub struct BindingModuleSideEffectsRule {
   #[napi(ts_type = "RegExp | undefined")]
   pub test: Option<JsRegExp>,
   pub side_effects: bool,
-  #[napi(ts_type = "boolean | undefined")]
   pub external: Option<bool>,
 }
 
@@ -86,7 +85,11 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
           let id = id.to_string();
           let ts_fn = Arc::clone(&ts_fn);
           Box::pin(async move {
-            ts_fn.invoke_async((id.clone(), is_external).into()).await.map_err(anyhow::Error::from)
+            ts_fn
+              .invoke_async((id.clone(), is_external).into())
+              .await
+              .context("treeshake.moduleSideEffects option")
+              .map_err(anyhow::Error::from)
           })
         }))
       }

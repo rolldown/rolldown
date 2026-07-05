@@ -34,7 +34,7 @@ impl PluginDriverFactory {
     file_emitter: &SharedFileEmitter,
     options: &SharedNormalizedBundlerOptions,
     session: &rolldown_devtools::Session,
-    initial_bundle_span: &Arc<tracing::Span>,
+    initial_bundle_span: &tracing::Span,
     module_infos: SharedModuleInfoDashMap,
     transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   ) -> Arc<crate::plugin_driver::PluginDriver> {
@@ -43,15 +43,14 @@ impl PluginDriverFactory {
     let tx = Arc::new(std::sync::Mutex::new(None));
     let mut plugin_usage_vec = IndexVec::new();
 
-    // Clone the Arc to share across contexts
-    let bundle_span_arc = Arc::clone(initial_bundle_span);
+    let bundle_span = initial_bundle_span.clone();
 
     // Create derived span for manual resolve calls
-    let manual_resolve_span_arc = Arc::new(tracing::debug_span!(
-      parent: bundle_span_arc.as_ref(),
+    let manual_resolve_span = tracing::debug_span!(
+      parent: &bundle_span,
       "plugin_context_resolve",
       CONTEXT_hook_resolve_id_trigger = "manual"
-    ));
+    );
 
     // Create timing collector only if checks.pluginTimings is enabled
     let hook_timing_collector = if options.checks.contains(EventKindSwitcher::PluginTimings) {
@@ -89,8 +88,8 @@ impl PluginDriverFactory {
           watch_files: Arc::clone(&watch_files),
           tx: Arc::clone(&tx),
           session: session.clone(),
-          bundle_span: Arc::clone(&bundle_span_arc),
-          manual_resolve_span: Arc::clone(&manual_resolve_span_arc),
+          bundle_span: bundle_span.clone(),
+          manual_resolve_span: manual_resolve_span.clone(),
         })));
       });
 

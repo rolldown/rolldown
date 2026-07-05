@@ -14,7 +14,7 @@
         "import": "./c.js"
       }
     ],
-    "manualCodeSplitting": {
+    "codeSplitting": {
       "groups": [
         {
           "minShareCount": 2,

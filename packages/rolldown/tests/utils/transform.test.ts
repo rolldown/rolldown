@@ -23,6 +23,108 @@ describe('enhanced transform', () => {
       expect(result.code).toBe('const x = 1;\n');
       expect(result.map).toBeDefined();
     });
+
+    it('should preserve import defer syntax', async () => {
+      const result = await transform(
+        'test.js',
+        'import defer * as ns from "./dep.js"; ns.value; import.defer("./lazy.js");',
+      );
+      expect(result.errors).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
+      expect(result.code).toBe(
+        'import defer * as ns from "./dep.js";\nns.value;\nimport.defer("./lazy.js");\n',
+      );
+    });
+
+    it('should preserve import source syntax', async () => {
+      const result = await transform('test.js', 'import source wasm from "./dep.wasm"; wasm;');
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toBe('import source wasm from "./dep.wasm";\nwasm;\n');
+    });
+  });
+
+  describe('decorator metadata (strictNullChecks)', () => {
+    const code = `
+      function dec(_target: any, _key: string) {}
+      class MyClass {
+        @dec
+        field: string | null = null;
+      }
+    `;
+
+    it('emits Object for a nullable union by default (strict)', () => {
+      const result = transformSync('test.ts', code, {
+        decorator: { legacy: true, emitDecoratorMetadata: true },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*Object/);
+    });
+
+    it('emits the underlying primitive when strictNullChecks is false', () => {
+      const result = transformSync('test.ts', code, {
+        decorator: { legacy: true, emitDecoratorMetadata: true, strictNullChecks: false },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*String/);
+      expect(result.code).not.toMatch(/design:type",\s*Object/);
+    });
+  });
+
+  describe('decorator metadata strictNullChecks from tsconfig', () => {
+    const code = `
+      function dec(_target: any, _key: string) {}
+      class MyClass {
+        @dec
+        field: string | null = null;
+      }
+    `;
+
+    it('infers strictNullChecks: false from tsconfig (emits the primitive)', () => {
+      const result = transformSync('test.ts', code, {
+        tsconfig: {
+          compilerOptions: {
+            experimentalDecorators: true,
+            emitDecoratorMetadata: true,
+            strictNullChecks: false,
+          },
+        },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*String/);
+    });
+
+    it('falls back to tsconfig `strict` when strictNullChecks is unset', () => {
+      const result = transformSync('test.ts', code, {
+        tsconfig: {
+          compilerOptions: {
+            experimentalDecorators: true,
+            emitDecoratorMetadata: true,
+            strict: false,
+          },
+        },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*String/);
+    });
+
+    it('keeps the strict default (Object) when tsconfig sets neither', () => {
+      const result = transformSync('test.ts', code, {
+        tsconfig: {
+          compilerOptions: { experimentalDecorators: true, emitDecoratorMetadata: true },
+        },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*Object/);
+    });
+
+    it('explicit transform.decorator.strictNullChecks overrides tsconfig', () => {
+      const result = transformSync('test.ts', code, {
+        decorator: { legacy: true, emitDecoratorMetadata: true, strictNullChecks: true },
+        tsconfig: { compilerOptions: { strictNullChecks: false } },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*Object/);
+    });
   });
 
   describe('tsconfig - raw options', () => {

@@ -31,7 +31,6 @@ export {
   viteReactRefreshWrapperPlugin,
   viteReporterPlugin,
   viteResolvePlugin,
-  viteWasmFallbackPlugin,
   viteWebWorkerPostPlugin,
 } from './builtin-plugin/constructors';
 

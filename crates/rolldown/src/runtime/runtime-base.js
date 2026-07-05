@@ -5,11 +5,23 @@ export var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 export var __getOwnPropNames = Object.getOwnPropertyNames;
 export var __getProtoOf = Object.getPrototypeOf;
 export var __hasOwnProp = Object.prototype.hasOwnProperty;
-export var __esm = (fn, res) =>
+export var __esm = (fn, res, err) =>
   function () {
-    return (fn && (res = (0, fn[__getOwnPropNames(fn)[0]])((fn = 0))), res);
+    if (err) throw err[0];
+    try {
+      return (fn && (res = (0, fn[__getOwnPropNames(fn)[0]])((fn = 0))), res);
+    } catch (e) {
+      throw ((err = [e]), e);
+    }
   };
-export var __esmMin = (fn, res) => () => (fn && (res = fn((fn = 0))), res);
+export var __esmMin = (fn, res, err) => () => {
+  if (err) throw err[0];
+  try {
+    return (fn && (res = fn((fn = 0))), res);
+  } catch (e) {
+    throw ((err = [e]), e);
+  }
+};
 export var __commonJS = (cb, mod) =>
   function () {
     return (

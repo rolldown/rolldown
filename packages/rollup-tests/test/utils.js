@@ -6,7 +6,7 @@
  * @typedef {import('./types').TestConfigBase} TestConfigBase
  */
 
-const assert = require('node:assert');
+const assert = require('node:assert/strict');
 const {
 	closeSync,
 	fsyncSync,
@@ -82,6 +82,11 @@ function normalizeError(error, locExpected) {
 		// binding is not set for native errors, so it is removed from expected errors
 		// but binding is set for errors created on JS side
 		delete clone.binding;
+	}
+	if (clone.code === 'SOURCEMAP_BROKEN') {
+		// Rolldown attaches the module id to this warning, but Rollup's
+		// `logSourcemapBroken` is emitted at chunk-collapse time and carries no id.
+		delete clone.id;
 	}
 	for (const key in clone) {
 		if (clone[key] === undefined) {

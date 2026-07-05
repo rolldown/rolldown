@@ -24,7 +24,7 @@ use crate::{
   types::{
     coordinator_msg::CoordinatorMsg, coordinator_state::CoordinatorState,
     coordinator_state_snapshot::CoordinatorStateSnapshot,
-    ensure_latest_bundle_output_return::EnsureLatestBundleOutputReturn,
+    ensure_latest_bundle_output_return::EnsureLatestBundleOutputReturn, error_stage::ErrorStage,
     schedule_build_return::ScheduleBuildReturn, task_input::TaskInput,
   },
   watcher_event_handler::WatcherEventHandler,
@@ -101,9 +101,10 @@ impl BundleCoordinator {
         CoordinatorMsg::WatchEvent(watch_event) => {
           self.handle_watch_event(watch_event).await;
         }
-        CoordinatorMsg::BundleCompleted { has_encountered_error, has_generated_bundle_output } => {
-          self.handle_bundle_completed(has_encountered_error, has_generated_bundle_output).await;
+        CoordinatorMsg::BundleCompleted { error_stage, has_generated_bundle_output } => {
+          self.handle_bundle_completed(error_stage, has_generated_bundle_output).await;
         }
+        #[cfg(feature = "testing")]
         CoordinatorMsg::ScheduleBuildIfStale { reply } => {
           let result = self.schedule_build_if_stale().await;
           let _ = reply.send(result);
@@ -116,6 +117,10 @@ impl BundleCoordinator {
           let result = self.ensure_latest_bundle_output().await;
           let _ = reply.send(result);
         }
+        CoordinatorMsg::TriggerFullBuild => {
+          self.trigger_full_build().await;
+        }
+        #[cfg(feature = "testing")]
         CoordinatorMsg::GetWatchedFiles { reply } => {
           let result = self.watched_files.iter().map(|s| s.to_string()).collect();
           let _ = reply.send(result);
@@ -204,11 +209,27 @@ impl BundleCoordinator {
       CoordinatorState::FullBuildInProgress => {
         self.queued_file_changes_waited_for_full_build.extend(changed_files);
       }
-      CoordinatorState::Idle | CoordinatorState::InProgress | CoordinatorState::Failed => {
-        // The metal model for being `CoordinatorState::Failed` and receiving file changes is a bit of non-intuitive.
-        // Like the file is edited 2 times, the first edit is invalid and the second edit fixes the error.
-        // We just think the file is changed to second edit directly, ignoring the first invalid edit and follow the usual flow.
+      CoordinatorState::Idle | CoordinatorState::InProgress => {
         let task_input = if self.ctx.options.rebuild_strategy.is_always() {
+          TaskInput::HmrRebuild { changed_files }
+        } else {
+          TaskInput::Hmr { changed_files }
+        };
+
+        self.queued_tasks.push_back(task_input);
+
+        let _ = self.schedule_build_if_stale().await;
+      }
+      CoordinatorState::Failed { last_error_stage } => {
+        // Mental model: if the file is edited twice and the first edit was invalid,
+        // we treat the second edit as the only edit and follow the usual flow.
+        //
+        // Recovery choice (per Design principles §3 corollary): a Rebuild-stage
+        // failure left the bundle output stale w.r.t. source, so the recovery
+        // task must include a rebuild. An Hmr-stage failure (incl. watch_change
+        // hook) is recoverable by re-running the Hmr task alone.
+        let force_rebuild = matches!(last_error_stage, ErrorStage::Rebuild);
+        let task_input = if force_rebuild || self.ctx.options.rebuild_strategy.is_always() {
           TaskInput::HmrRebuild { changed_files }
         } else {
           TaskInput::Hmr { changed_files }
@@ -239,12 +260,12 @@ impl BundleCoordinator {
   /// Handle build completion notification
   async fn handle_bundle_completed(
     &mut self,
-    has_encountered_error: bool,
+    error_stage: Option<ErrorStage>,
     has_generated_bundle_output: bool,
   ) {
     match self.state {
       CoordinatorState::Initialized
-      | CoordinatorState::Failed
+      | CoordinatorState::Failed { .. }
       | CoordinatorState::FullBuildFailed
       | CoordinatorState::Idle => {
         tracing::error!(
@@ -259,7 +280,9 @@ impl BundleCoordinator {
         // so that a new full build is triggered by the change for those files
         let _ = self.update_watch_paths().await;
 
-        if has_encountered_error {
+        if error_stage.is_some() {
+          // FullBuildFailed always recovers via FullBuild on next file change,
+          // so the originating stage is not tracked.
           self.set_initial_build_state(CoordinatorState::FullBuildFailed);
           self.has_stale_bundle_output = true;
         } else {
@@ -284,8 +307,8 @@ impl BundleCoordinator {
         // (e.g. an edit that introduced a new transitive import).
         let _ = self.update_watch_paths().await;
 
-        if has_encountered_error {
-          self.set_initial_build_state(CoordinatorState::Failed);
+        if let Some(stage) = error_stage {
+          self.set_initial_build_state(CoordinatorState::Failed { last_error_stage: stage });
           self.has_stale_bundle_output = true;
         } else {
           self.has_stale_bundle_output = !has_generated_bundle_output;
@@ -320,7 +343,9 @@ impl BundleCoordinator {
         // So, we only need to wait for the latest build to finish.
         Some(ScheduleBuildReturn { future: self.current_bundling_future.clone().unwrap() })
       }
-      CoordinatorState::Idle | CoordinatorState::FullBuildFailed | CoordinatorState::Failed => {
+      CoordinatorState::Idle
+      | CoordinatorState::FullBuildFailed
+      | CoordinatorState::Failed { .. } => {
         if let Some(mut task_input) = self.queued_tasks.pop_front() {
           tracing::trace!(
             "[BundleCoordinator] scheduling new build task\n - state: {:?}\n - task_input: {task_input:#?}",
@@ -419,29 +444,38 @@ impl BundleCoordinator {
           is_ensure_latest_bundle_output_future: false,
         })
       }
-      CoordinatorState::FullBuildFailed | CoordinatorState::Failed => {
-        // Clear all queued tasks and schedule a new full build
-        self.queued_tasks.clear();
-        self.queued_tasks.push_back(TaskInput::FullBuild);
-        let schedule_result = self.schedule_build_if_stale().await;
-        schedule_result.map(|ret| EnsureLatestBundleOutputReturn {
-          future: ret.future,
-          is_ensure_latest_bundle_output_future: true,
-        })
+      CoordinatorState::FullBuildFailed | CoordinatorState::Failed { .. } => {
+        // Don't auto-retry — without file changes the same error would recur.
+        // Recovery is driven by file change events from the watcher (see handle_file_changes).
+        None
       }
     }
   }
 
+  /// Unconditionally schedule a full build, regardless of current state.
+  /// Used for explicit manual retry (e.g., dev server `r` signal).
+  async fn trigger_full_build(&mut self) {
+    self.queued_tasks.clear();
+    self.queued_tasks.push_back(TaskInput::FullBuild);
+    self.schedule_build_if_stale().await;
+  }
+
   /// Get current build status - atomic operation that doesn't block
   fn create_state_snapshot(&self) -> CoordinatorStateSnapshot {
+    let last_build_errored =
+      matches!(self.state, CoordinatorState::Failed { .. } | CoordinatorState::FullBuildFailed);
+    let last_error_stage = match self.state {
+      CoordinatorState::Failed { last_error_stage } => Some(last_error_stage),
+      _ => None,
+    };
     CoordinatorStateSnapshot {
       running_future: self.current_bundling_future.clone(),
-      last_full_build_failed: self.state == CoordinatorState::FullBuildFailed,
+      last_build_errored,
+      last_error_stage,
       has_stale_output: self.has_stale_bundle_output,
     }
   }
 
-  /// Set initial build state with logging
   fn set_initial_build_state(&mut self, new_state: CoordinatorState) {
     self.state = new_state;
   }

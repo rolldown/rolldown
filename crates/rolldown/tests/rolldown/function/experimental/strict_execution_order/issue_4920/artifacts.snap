@@ -14,7 +14,7 @@ function foo() {
 }
 var dep_default;
 var init_dep = __esmMin((() => {
-	dep_default = /* @__PURE__ */ foo();
+	dep_default = /*#__PURE__*/ foo();
 }));
 //#endregion
 __esmMin((() => {
@@ -40,7 +40,7 @@ function foo() {
 }
 var dep_default;
 var init_dep = __esmMin((() => {
-	dep_default = /* @__PURE__ */ foo();
+	dep_default = /*#__PURE__*/ foo();
 }));
 //#endregion
 __esmMin((() => {

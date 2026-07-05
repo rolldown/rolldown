@@ -36,6 +36,7 @@ use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
+use super::events::sourcemap_broken::SourcemapBroken;
 
 use super::events::tsconfig_error::TsConfigError;
 use super::events::unhandleable_error::UnhandleableError;
@@ -93,8 +94,15 @@ impl BuildDiagnostic {
     annotation: String,
     source: ArcStr,
     span: oxc::span::Span,
+    is_before_function_declaration: bool,
   ) -> Self {
-    Self::new_inner(InvalidAnnotation { module_id, annotation, source, span })
+    Self::new_inner(InvalidAnnotation {
+      module_id,
+      annotation,
+      source,
+      span,
+      is_before_function_declaration,
+    })
   }
 
   pub fn resolve_error(
@@ -277,7 +285,7 @@ impl BuildDiagnostic {
           id.to_string(),
           error.help.take().unwrap_or_default().into(),
           error.message.to_string(),
-          error.labels.take().unwrap_or_default(),
+          error.labels.to_vec(),
           event_kind,
         );
         if matches!(severity, Severity::Warning) {
@@ -412,6 +420,10 @@ impl BuildDiagnostic {
     Self::new_inner(DuplicateShebang { filename, source: source.to_string() })
   }
 
+  pub fn sourcemap_broken(plugin_name: String, id: Option<String>) -> Self {
+    Self::new_inner(SourcemapBroken { plugin_name, id })
+  }
+
   pub fn tsconfig_error(file_path: String, reason: ResolveError) -> Self {
     Self::new_inner(TsConfigError { file_paths: vec![file_path], reason })
   }
@@ -435,8 +447,8 @@ impl BuildDiagnostic {
     mut static_importers: Vec<String>,
     mut dynamic_importers: Vec<String>,
   ) -> Self {
-    static_importers.sort();
-    dynamic_importers.sort();
+    static_importers.sort_unstable();
+    dynamic_importers.sort_unstable();
     Self::new_inner(super::events::ineffective_dynamic_import::IneffectiveDynamicImport {
       module_id,
       static_importers,

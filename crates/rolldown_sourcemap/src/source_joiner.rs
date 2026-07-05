@@ -1,5 +1,6 @@
-use oxc_sourcemap::{ConcatSourceMapBuilder, SourceMap};
+use oxc_sourcemap::ConcatSourceMapBuilder;
 
+use crate::SourceMap;
 use crate::source::Source;
 
 #[derive(Default)]
@@ -44,29 +45,40 @@ impl<'source> SourceJoiner<'source> {
         + sources_len;
     let mut ret_source = String::with_capacity(size_hint_of_ret_source);
 
-    let mut line_offset = 0;
-
-    let mut sourcemap_builder = self.enable_sourcemap.then(|| {
-      ConcatSourceMapBuilder::with_capacity(
-        self.names_len,
-        self.sources_len,
-        self.tokens_len,
-        self.token_chunks_len,
-      )
-    });
-    for (index, source) in sources_iter {
-      if let Some(sourcemap_builder) = &mut sourcemap_builder {
-        source.sourcemap().inspect(|map| {
-          sourcemap_builder.add_sourcemap(map, line_offset);
-        });
+    // Fast path: when no source carries a sourcemap, `join` is a plain
+    // concatenation with `\n` separators. `line_offset` and the per-source
+    // `lines_count()` newline scan exist only to feed the sourcemap builder,
+    // so skip them entirely here. Splitting the loop (rather than branching
+    // inside it) also keeps the sourcemap loop below free of per-iteration
+    // builder checks.
+    if !self.enable_sourcemap {
+      for (index, source) in sources_iter {
+        ret_source.push_str(source.content());
+        if index < sources_len - 1 {
+          ret_source.push('\n');
+        }
       }
+      return (ret_source, None);
+    }
+
+    let mut line_offset = 0;
+    let mut sourcemap_builder = ConcatSourceMapBuilder::with_capacity(
+      self.names_len,
+      self.sources_len,
+      self.tokens_len,
+      self.token_chunks_len,
+    );
+    for (index, source) in sources_iter {
+      source.sourcemap().inspect(|map| {
+        sourcemap_builder.add_sourcemap(map, line_offset);
+      });
       ret_source.push_str(source.content());
       if index < sources_len - 1 {
         ret_source.push('\n');
         line_offset += source.lines_count() + 1; // +1 for the newline
       }
     }
-    (ret_source, sourcemap_builder.map(ConcatSourceMapBuilder::into_sourcemap))
+    (ret_source, Some(sourcemap_builder.into_sourcemap().into_owned()))
   }
 
   fn accumulate_sourcemap_data_size(&mut self, hint: &SourceMap) {
@@ -106,7 +118,7 @@ fn test_concat_sourcemaps() {
       ..CodegenOptions::default()
     })
     .build(&ret1.program);
-  source_joiner.append_source(SourceMapSource::new(code, map.as_ref().unwrap().clone()));
+  source_joiner.append_source(SourceMapSource::new(code, map.unwrap().into_owned()));
 
   let (content, map) = source_joiner.join();
 

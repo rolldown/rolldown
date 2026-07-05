@@ -93,7 +93,7 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
     }
   }
 
-  pub fn iter(&self) -> impl Iterator<Item = &T> {
+  pub fn iter(&self) -> impl ExactSizeIterator<Item = &T> {
     match self {
       HybridIndexVec::IndexVec(index_vec) => itertools::Either::Left(index_vec.iter()),
       HybridIndexVec::Map(hash_map) => itertools::Either::Right(hash_map.values()),

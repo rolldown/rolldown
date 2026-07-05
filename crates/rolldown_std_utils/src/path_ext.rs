@@ -34,23 +34,20 @@ impl PathExt for Path {
   }
 
   /// It doesn't ensure the file name is a valid identifier in JS.
+  ///
+  /// Callers pass module ids / specifiers, which are always valid UTF-8, so names
+  /// are extracted with `to_str()` and this never needs `to_string_lossy()`.
   fn representative_file_name(&self) -> Cow<'_, str> {
     let file_name =
-      self.file_stem().map_or_else(|| self.to_string_lossy(), |stem| stem.to_string_lossy());
+      self.file_stem().and_then(OsStr::to_str).or_else(|| self.to_str()).unwrap_or_default();
 
-    match &*file_name {
+    match file_name {
       // "index": Node.js use `index` as a special name for directory import.
       // "mod": https://docs.deno.com/runtime/manual/references/contributing/style_guide#do-not-use-the-filename-indextsindexjs.
-      "index" | "mod" => {
-        if let Some(parent_dir_name) =
-          self.parent().and_then(Path::file_name).map(OsStr::to_string_lossy)
-        {
-          parent_dir_name
-        } else {
-          file_name
-        }
-      }
-      _ => file_name,
+      "index" | "mod" => Cow::Borrowed(
+        self.parent().and_then(Path::file_name).and_then(OsStr::to_str).unwrap_or(file_name),
+      ),
+      _ => Cow::Borrowed(file_name),
     }
   }
 }
@@ -59,10 +56,17 @@ impl PathExt for Path {
 pub fn representative_file_name_for_preserve_modules(
   path: &Path,
 ) -> (Cow<'_, str>, String, Option<Cow<'_, str>>) {
-  let file_name =
-    path.file_stem().map_or_else(|| path.to_string_lossy(), |stem| stem.to_string_lossy());
-  let ab_path = path.with_extension("").to_string_lossy().into_owned();
-  (file_name, ab_path, path.extension().map(|item| item.to_string_lossy()))
+  // As above: `path` is a module id (valid UTF-8), so `to_str()` is infallible
+  // and we avoid `to_string_lossy()`.
+  let file_name = Cow::Borrowed(
+    path.file_stem().and_then(OsStr::to_str).or_else(|| path.to_str()).unwrap_or_default(),
+  );
+  let ab_path = path.with_extension("").to_str().unwrap_or_default().to_owned();
+  (file_name, ab_path, path.extension().and_then(OsStr::to_str).map(Cow::Borrowed))
+}
+
+pub fn strip_path_prefix_to_slash(path: &Path, prefix: &Path) -> Option<String> {
+  path.strip_prefix(prefix).ok().map(PathExt::expect_to_slash)
 }
 
 #[test]
@@ -89,4 +93,23 @@ fn test_representative_file_name() {
     let path = cwd.join("src").join("vue.js");
     assert_eq!(representative_file_name_for_preserve_modules(&path).1, "./project/src/vue");
   }
+}
+
+#[test]
+fn test_strip_path_prefix_to_slash() {
+  let path = Path::new("/project/src/bin/index");
+  let prefix = Path::new("/project/src");
+  assert_eq!(strip_path_prefix_to_slash(path, prefix).as_deref(), Some("bin/index"));
+
+  let path = Path::new("/project/src2/bin/index");
+  let prefix = Path::new("/project/src");
+  assert_eq!(strip_path_prefix_to_slash(path, prefix), None);
+}
+
+#[cfg(target_os = "windows")]
+#[test]
+fn test_strip_path_prefix_to_slash_with_mixed_windows_separators() {
+  let path = Path::new(r"C:/project/src/bin/index");
+  let prefix = Path::new(r"C:\project\src");
+  assert_eq!(strip_path_prefix_to_slash(path, prefix).as_deref(), Some("bin/index"));
 }

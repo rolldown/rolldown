@@ -4,15 +4,15 @@ use std::{
 };
 
 use rolldown_common::{ClientHmrInput, ScanMode};
-use rolldown_error::BuildResult;
 use rolldown_utils::indexmap::FxIndexMap;
 use tokio::sync::Mutex;
 
 use rolldown::Bundler;
 
 use crate::{
+  BundleOutput,
   dev_context::SharedDevContext,
-  types::{coordinator_msg::CoordinatorMsg, task_input::TaskInput},
+  types::{coordinator_msg::CoordinatorMsg, error_stage::ErrorStage, task_input::TaskInput},
 };
 
 pub struct BundlingTask {
@@ -20,7 +20,11 @@ pub struct BundlingTask {
   pub bundler: Arc<Mutex<Bundler>>,
   pub dev_context: SharedDevContext,
   pub next_hmr_patch_id: Arc<AtomicU32>,
-  has_encountered_error: bool,
+  /// Set when `watch_change` hook or `generate_hmr_updates` errored.
+  hmr_errored: bool,
+  /// Set when `rebuild()` errored. Takes precedence over `hmr_errored`
+  /// when deriving the final stage — see `final_error_stage`.
+  rebuild_errored: bool,
   has_rebuild_happen: bool,
 }
 
@@ -51,43 +55,61 @@ impl BundlingTask {
       dev_context,
       next_hmr_patch_id,
       has_rebuild_happen: false,
-      has_encountered_error: false,
+      hmr_errored: false,
+      rebuild_errored: false,
+    }
+  }
+
+  /// Rebuild precedes Hmr: if both stages errored in the same task (only
+  /// possible after the auto-upgrade rewrite), `Rebuild` is reported so
+  /// recovery forces a fresh rebuild on the next file change.
+  fn final_error_stage(&self) -> Option<ErrorStage> {
+    if self.rebuild_errored {
+      Some(ErrorStage::Rebuild)
+    } else if self.hmr_errored {
+      Some(ErrorStage::Hmr)
+    } else {
+      None
     }
   }
 
   pub async fn run(mut self) {
     tracing::trace!("[BundlingTask] starts to run.\n - Task Input: {:#?}", self.input);
-    let task_run_result = self.run_inner().await;
-
-    if let Err(err) = &task_run_result {
-      tracing::error!("[BundlingTask] fails to run");
-      // FIXME: Should handle the error properly.
-      tracing::error!("Bundling task run with error: {err}"); // FIXME: handle this error
-    }
+    self.run_inner().await;
 
     let has_generated_bundle_output = self.has_rebuild_happen;
-    let has_encountered_error = self.has_encountered_error || task_run_result.is_err();
+    let error_stage = self.final_error_stage();
 
     tracing::trace!(
       "[BundlingTask] completed\n - has_generated_bundle_output: {has_generated_bundle_output:?}",
     );
 
     self.dev_context.coordinator_tx.send(CoordinatorMsg::BundleCompleted {
-      has_encountered_error,
+      error_stage,
       has_generated_bundle_output,
     }).expect(
       "Coordinator channel closed while sending BundleCompleted - coordinator terminated unexpectedly"
     );
   }
 
-  async fn run_inner(&mut self) -> BuildResult<()> {
+  async fn run_inner(&mut self) {
     {
       let bundler = self.bundler.lock().await;
       for (changed_file, event) in self.input.changed_files() {
         if let Some(plugin_driver) =
           bundler.last_bundle_handle.as_ref().map(rolldown::BundleHandle::plugin_driver)
         {
-          plugin_driver.watch_change(changed_file.to_str().unwrap(), *event).await?;
+          if let Err(err) = plugin_driver.watch_change(changed_file.to_str().unwrap(), *event).await
+          {
+            tracing::error!("[BundlingTask] watchChange hook failed: {err:?}");
+            // Classified as Hmr stage: the next Hmr task re-runs watch_change,
+            // which is sufficient to retry the hook.
+            self.hmr_errored = true;
+            if let Some(on_output) = self.dev_context.options.on_output.as_ref() {
+              on_output(Err(err.into()));
+            }
+            return;
+          }
         }
       }
     }
@@ -95,10 +117,16 @@ impl BundlingTask {
     let mut has_full_reload_update = false;
     if self.input.require_generate_hmr_update() {
       tracing::trace!("[BundlingTask] starts to generate HMR updates");
-      self.generate_hmr_updates(&mut has_full_reload_update).await?;
+      let may_continue = self.generate_hmr_updates(&mut has_full_reload_update).await;
       tracing::trace!(
         "[BundlingTask] completed generating HMR updates\n - has_full_reload_update: {has_full_reload_update}"
       );
+      // Stop only when HMR errored AND no callback was registered to receive
+      // the error — preserving the pre-refactor `?` short-circuit. When the
+      // consumer was informed via callback, the rebuild still runs.
+      if !may_continue {
+        return;
+      }
     }
 
     // If the rebuild strategy is auto and there's a full reload update, we need to rebuild.
@@ -115,17 +143,14 @@ impl BundlingTask {
 
     if self.input.requires_rebuild() {
       self.has_rebuild_happen = true;
-      self.rebuild().await?;
+      self.rebuild().await;
     }
-
-    Ok(())
   }
 
+  /// Returns `true` if subsequent build stages may continue.
+  /// Callers should skip subsequent build stages on `false`.
   #[tracing::instrument(level = "trace", skip(self))]
-  pub async fn generate_hmr_updates(
-    &mut self,
-    has_full_reload_update: &mut bool,
-  ) -> BuildResult<()> {
+  pub async fn generate_hmr_updates(&mut self, has_full_reload_update: &mut bool) -> bool {
     let mut bundler = self.bundler.lock().await;
     let changed_files = self
       .input
@@ -161,32 +186,41 @@ impl BundlingTask {
       }
     }
 
+    let succeeded = hmr_result.is_ok();
+    let has_callback = self.dev_context.options.on_hmr_updates.is_some();
     if let Err(err) = &hmr_result {
       tracing::error!("[BundlingTask] failed to generate HMR updates: {:?}", err);
-      self.has_encountered_error = true;
+      self.hmr_errored = true;
+    }
+
+    // Deliver any assets emitted while generating this HMR patch (e.g. an image
+    // newly imported by the changed module) BEFORE sending the patch, so the
+    // consumer can register/serve them before the client requests them. A pure
+    // HMR patch never triggers `on_output`, so this is their only delivery path.
+    if succeeded {
+      if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
+        let mut output = BundleOutput::default();
+        bundler.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
+        if !output.assets.is_empty() {
+          on_additional_assets(output);
+        }
+      }
     }
 
     // Call on_hmr_updates callback if provided
     if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
-      match hmr_result {
-        Ok(client_updates) => {
-          on_hmr_updates(Ok((
-            client_updates,
-            changed_files.iter().map(|(p, _)| p.clone()).collect(),
-          )));
-        }
-        Err(e) => {
-          on_hmr_updates(Err(e));
-        }
-      }
-      Ok(())
-    } else {
-      hmr_result.map(|_| ())
+      on_hmr_updates(hmr_result.map(|client_updates| {
+        (client_updates, changed_files.iter().map(|(p, _)| p.clone()).collect())
+      }));
     }
+
+    // Continue when HMR succeeded, or when the consumer was informed of the
+    // failure via the callback. Stop only on an undeliverable error.
+    succeeded || has_callback
   }
 
   #[tracing::instrument(level = "trace", skip_all)]
-  async fn rebuild(&mut self) -> BuildResult<()> {
+  async fn rebuild(&mut self) {
     let mut bundler = self.bundler.lock().await;
 
     // TODO: hyf0 `skip_write` in watch mode won't trigger generate stage, need to investigate why.
@@ -211,14 +245,12 @@ impl BundlingTask {
 
     if let Err(err) = &build_result {
       tracing::error!("[BundlingTask] rebuild failed: {:?}", err);
-      self.has_encountered_error = true;
+      self.rebuild_errored = true;
     }
 
     // Call on_output callback if provided
     if let Some(on_output) = self.dev_context.options.on_output.as_ref() {
       on_output(build_result);
     }
-
-    Ok(())
   }
 }

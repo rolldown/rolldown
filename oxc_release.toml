@@ -1,0 +1,7 @@
+# Configuration file for [cargo release oxc](https://github.com/oxc-project/cargo-release-oxc)
+
+# Release `--release crates`
+[[releases]]
+name = "crates"
+root_crate = "rolldown"
+versioned_files = ["Cargo.toml"]

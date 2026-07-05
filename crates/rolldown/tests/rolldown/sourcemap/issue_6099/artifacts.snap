@@ -38,7 +38,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 (5:0) "}" --> (26:3) "}"
 (5:1) ");\n" --> (26:4) ");\n"
 - ../main.js
-(2:6) "foo = mod." --> (27:6) "))."
+(2:6) "foo = mod." --> (27:6) "))"
+(2:6) "foo = mod." --> (27:8) "."
 (2:16) "version." --> (27:9) "version."
 (2:24) "startsWith(" --> (27:17) "startsWith("
 (2:35) "'1'" --> (27:28) "\"1\""

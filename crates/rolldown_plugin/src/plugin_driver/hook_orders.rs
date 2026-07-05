@@ -37,91 +37,151 @@ impl PluginHookOrders {
     plugin_usage_vec: &IndexVec<PluginIdx, HookUsage>,
   ) -> Self {
     Self {
-      order_by_build_start_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::BuildStart).then(|| p.call_build_start_meta())
-      }),
-      order_by_resolve_id_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::ResolveId).then(|| p.call_resolve_id_meta())
-      }),
+      order_by_build_start_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::BuildStart,
+        |p| p.call_build_start_meta(),
+      ),
+      order_by_resolve_id_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::ResolveId,
+        |p| p.call_resolve_id_meta(),
+      ),
       order_by_resolve_dynamic_import_meta: Self::sort_plugins_by_hook_meta(
         index_plugins,
-        |i, p| {
-          plugin_usage_vec[i]
-            .contains(HookUsage::ResolveDynamicImport)
-            .then(|| p.call_resolve_dynamic_import_meta())
-        },
+        plugin_usage_vec,
+        HookUsage::ResolveDynamicImport,
+        |p| p.call_resolve_dynamic_import_meta(),
       ),
-      order_by_load_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::Load).then(|| p.call_load_meta())
-      }),
-      order_by_transform_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::Transform).then(|| p.call_transform_meta())
-      }),
-      order_by_module_parsed_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::ModuleParsed).then(|| p.call_module_parsed_meta())
-      }),
-      order_by_build_end_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::BuildEnd).then(|| p.call_build_end_meta())
-      }),
-      order_by_render_start_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::RenderStart).then(|| p.call_render_start_meta())
-      }),
-      order_by_banner_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::Banner).then(|| p.call_banner_meta())
-      }),
-      order_by_footer_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::Footer).then(|| p.call_footer_meta())
-      }),
-      order_by_intro_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::Intro).then(|| p.call_intro_meta())
-      }),
-      order_by_outro_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::Outro).then(|| p.call_outro_meta())
-      }),
-      order_by_render_chunk_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::RenderChunk).then(|| p.call_render_chunk_meta())
-      }),
-      order_by_augment_chunk_hash_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i]
-          .contains(HookUsage::AugmentChunkHash)
-          .then(|| p.call_augment_chunk_hash_meta())
-      }),
-      order_by_render_error_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::RenderError).then(|| p.call_render_error_meta())
-      }),
-      order_by_generate_bundle_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i]
-          .contains(HookUsage::GenerateBundle)
-          .then(|| p.call_generate_bundle_meta())
-      }),
-      order_by_write_bundle_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::WriteBundle).then(|| p.call_write_bundle_meta())
-      }),
-      order_by_close_bundle_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::CloseBundle).then(|| p.call_close_bundle_meta())
-      }),
-      order_by_watch_change_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::WatchChange).then(|| p.call_watch_change_meta())
-      }),
-      order_by_close_watcher_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::CloseWatcher).then(|| p.call_close_watcher_meta())
-      }),
-      order_by_transform_ast_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::TransformAst).then(|| p.call_transform_ast_meta())
-      }),
+      order_by_load_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::Load,
+        |p| p.call_load_meta(),
+      ),
+      order_by_transform_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::Transform,
+        |p| p.call_transform_meta(),
+      ),
+      order_by_module_parsed_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::ModuleParsed,
+        |p| p.call_module_parsed_meta(),
+      ),
+      order_by_build_end_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::BuildEnd,
+        |p| p.call_build_end_meta(),
+      ),
+      order_by_render_start_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::RenderStart,
+        |p| p.call_render_start_meta(),
+      ),
+      order_by_banner_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::Banner,
+        |p| p.call_banner_meta(),
+      ),
+      order_by_footer_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::Footer,
+        |p| p.call_footer_meta(),
+      ),
+      order_by_intro_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::Intro,
+        |p| p.call_intro_meta(),
+      ),
+      order_by_outro_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::Outro,
+        |p| p.call_outro_meta(),
+      ),
+      order_by_render_chunk_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::RenderChunk,
+        |p| p.call_render_chunk_meta(),
+      ),
+      order_by_augment_chunk_hash_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::AugmentChunkHash,
+        |p| p.call_augment_chunk_hash_meta(),
+      ),
+      order_by_render_error_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::RenderError,
+        |p| p.call_render_error_meta(),
+      ),
+      order_by_generate_bundle_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::GenerateBundle,
+        |p| p.call_generate_bundle_meta(),
+      ),
+      order_by_write_bundle_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::WriteBundle,
+        |p| p.call_write_bundle_meta(),
+      ),
+      order_by_close_bundle_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::CloseBundle,
+        |p| p.call_close_bundle_meta(),
+      ),
+      order_by_watch_change_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::WatchChange,
+        |p| p.call_watch_change_meta(),
+      ),
+      order_by_close_watcher_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::CloseWatcher,
+        |p| p.call_close_watcher_meta(),
+      ),
+      order_by_transform_ast_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::TransformAst,
+        |p| p.call_transform_ast_meta(),
+      ),
     }
   }
 
+  #[inline(never)]
   fn sort_plugins_by_hook_meta(
     index_plugins: &IndexPluginable,
-    get_hook_meta: impl Fn(PluginIdx, &SharedPluginable) -> Option<Option<PluginHookMeta>>,
+    plugin_usage_vec: &IndexVec<PluginIdx, HookUsage>,
+    hook_usage: HookUsage,
+    get_hook_meta: fn(&SharedPluginable) -> Option<PluginHookMeta>,
   ) -> Vec<PluginIdx> {
     let mut pre_plugins = Vec::new();
     let mut post_plugins = Vec::new();
     let mut pin_post_plugins = Vec::new();
     let mut normal_plugins = Vec::with_capacity(index_plugins.len());
     for (idx, plugin) in index_plugins.iter_enumerated() {
-      let Some(meta) = get_hook_meta(idx, plugin) else { continue };
+      if !plugin_usage_vec[idx].contains(hook_usage) {
+        continue;
+      }
+      let meta = get_hook_meta(plugin);
       match meta {
         None => normal_plugins.push(idx),
         Some(meta) => match meta.order {

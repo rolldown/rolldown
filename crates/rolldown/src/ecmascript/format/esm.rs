@@ -1,8 +1,8 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
 use rolldown_common::{
-  AddonRenderContext, ExportsKind, ExternalModule, ImportRecordIdx, ModuleIdx, ModuleTable,
-  Specifier, SymbolRef,
+  AddonRenderContext, ExportsKind, ExternalModule, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
+  ModuleTable, Specifier, SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
@@ -58,7 +58,39 @@ pub fn render_esm<'code>(
         let importee = &ctx.link_output.module_table[importee_idx];
         if let Some(m) = importee.as_external() {
           let ext_name = m.get_import_path(ctx.chunk, ctx.resolved_paths);
-          source_joiner.append_source(concat_string!("export * from \"", ext_name, "\"\n"));
+          // Preserve the `with { ... }` import attribute from the originating
+          // `export * from "..." with { ... }` record (issue #9160) instead of dropping it.
+          // Find the entry-level export-star record (in a chunk module) that resolved to this
+          // external and reuse its attribute. Notes:
+          // - If no such record carries an attribute, `with_clause` is `None` and we emit the
+          //   plain `export * from` exactly as before (safe degradation, no regression). This is
+          //   also what happens if the owning module lives in a different chunk.
+          // - If several records re-export the same external with *different* attributes (a
+          //   pathological, conflicting input), the first by chunk exec-order wins — consistent
+          //   with the existing import-side behavior (see the TODO in `render_esm_chunk_imports`).
+          let with_clause = ctx
+            .chunk
+            .modules
+            .iter()
+            .filter_map(|module_idx| ctx.link_output.module_table[*module_idx].as_normal())
+            .find_map(|module| {
+              module.import_records.iter_enumerated().find_map(|(rec_idx, rec)| {
+                (rec.resolved_module == Some(importee_idx)
+                  && rec.meta.contains(ImportRecordMeta::IsExportStar)
+                  && rec.meta.contains(ImportRecordMeta::EntryLevelExternal))
+                .then(|| module.import_attribute_map.get(&rec_idx))
+                .flatten()
+              })
+            });
+          // An absent attribute is just an empty suffix, so both cases collapse to a
+          // single `append_source` (same shape `create_import_declaration` uses below).
+          source_joiner.append_source(concat_string!(
+            "export * from \"",
+            ext_name,
+            "\"",
+            with_clause.map(|attr| concat_string!(" ", attr.to_string())).unwrap_or_default(),
+            "\n"
+          ));
         }
       }
     }
@@ -126,27 +158,27 @@ fn render_chunk_content<'code>(
       }
       continue;
     }
-    let (hoisted_fns, hoisted_vars) = group
-      .modules
-      .iter()
-      .filter_map(|idx| {
-        let render_concatenated_module =
-          ctx.chunk.module_idx_to_render_concatenated_module.get(idx)?;
-        let hoisted_fns = render_concatenated_module.hoisted_functions_or_module_ns_decl.join("");
-        let hoisted_vars = render_concatenated_module.hoisted_vars.join(", ");
-        Some((hoisted_fns, hoisted_vars))
-      })
-      .fold(
-        (String::new(), String::new()),
-        |(mut acc_hoisted_fns, mut acc_hoisted_vars), (hoisted_fn, hoisted_vars)| {
-          acc_hoisted_fns += &hoisted_fn;
-          if !hoisted_vars.is_empty() && !acc_hoisted_vars.is_empty() {
-            acc_hoisted_vars += ", ";
-          }
-          acc_hoisted_vars += &hoisted_vars;
-          (acc_hoisted_fns, acc_hoisted_vars)
-        },
-      );
+    // Concatenate hoisted functions and comma-join hoisted vars across the group's modules by
+    // appending each element directly into the accumulators, instead of allocating a temporary
+    // joined `String` per module just to append it.
+    let mut hoisted_fns = String::new();
+    let mut hoisted_vars = String::new();
+    for idx in &group.modules {
+      let Some(render_concatenated_module) =
+        ctx.chunk.module_idx_to_render_concatenated_module.get(idx)
+      else {
+        continue;
+      };
+      for hoisted_fn in &render_concatenated_module.hoisted_functions_or_module_ns_decl {
+        hoisted_fns.push_str(hoisted_fn);
+      }
+      for hoisted_var in &render_concatenated_module.hoisted_vars {
+        if !hoisted_vars.is_empty() {
+          hoisted_vars.push_str(", ");
+        }
+        hoisted_vars.push_str(hoisted_var);
+      }
+    }
 
     let entry_module_stable_id = ctx.link_output.module_table[group.entry].stable_id();
     // render var init_entry = __esm("", () => {
@@ -160,6 +192,12 @@ fn render_chunk_content<'code>(
       .wrap_ref_name
       .as_ref()
       .unwrap();
+
+    // The concatenated closure holds the bodies of every module in the group. If the group's
+    // entry is TLA-tainted (has top-level `await`, or awaits a TLA importee's `init` call), those
+    // `await`s land inside this closure, so it must be `async`. This mirrors the flag threaded
+    // into `make_esm_wrapper_stmt` for the non-concatenated wrapper.
+    let is_async = ctx.link_output.metas[group.entry].is_tla_or_contains_tla_dependency;
 
     source_joiner.append_source(hoisted_fns);
     if !hoisted_vars.is_empty() {
@@ -178,7 +216,7 @@ fn render_chunk_content<'code>(
         String::new()
       },
       if is_pife_for_module_wrappers_enabled { "(" } else { "" },
-      "() => {"
+      if is_async { "async () => {" } else { "() => {" }
     ));
     // we render each module in the group by exec order.
     group.modules.iter().for_each(|module_idx| {
@@ -342,7 +380,15 @@ where
   let specifiers = named_imports
     .filter_map(|(_importer, named_import)| {
       let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
-      if !ctx.link_output.used_symbol_refs.contains(&canonical_ref) {
+      // A named import that is itself re-exported skips the external binding merger
+      // (`bind_imports_and_exports`), so its canonical ref stays importer-local; its usage
+      // is still answered by `used_symbol_refs` until exports get their own tracking.
+      let is_used = if ctx.link_output.module_table[canonical_ref.owner].is_external() {
+        ctx.link_output.used_external_symbols.contains(&canonical_ref)
+      } else {
+        ctx.used_symbol_refs.contains(&canonical_ref)
+      };
+      if !is_used {
         return None;
       }
       let alias = ctx

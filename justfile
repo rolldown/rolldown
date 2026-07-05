@@ -12,7 +12,7 @@ setup:
   just setup-vite-plus
   vp install
   cargo install cargo-binstall
-  cargo binstall cargo-insta cargo-deny cargo-shear@1.11.2 typos-cli -y
+  cargo binstall cargo-insta cargo-deny cargo-shear@1.12.4 typos-cli -y
   just setup-submodule
   just setup-bench
   @echo "✅✅✅ Setup complete!"
@@ -89,7 +89,7 @@ test-node-rollup *args="": build-rolldown
   just t-node-rollup {{ args }}
 
 # Run both Rolldown's tests and Rollup's test suite.
-test-node *args="": build-rolldown
+test-node *args="": build-rolldown build-rolldown-test-dev-server
   just test-node-rolldown {{ args }}
   just test-node-rollup
 
@@ -134,7 +134,7 @@ fix: fix-rust fix-node fix-repo
 # Fix formatting, linting and code fixing issues for Rust files.
 fix-rust:
   cargo fmt --all -- --emit=files
-  -cargo shear --fix # omit exit status with `-`
+  -cargo shear --fix --check-test-targets # omit exit status with `-`
   cargo fix --allow-dirty --allow-staged
 
 # Fix linting issues for Node.js files.
@@ -190,6 +190,10 @@ build-rolldown-binding:
 build-rolldown:
   vp run --filter rolldown build-native:debug
 
+# Build `@rolldown/test-dev-server` itself.
+build-rolldown-test-dev-server:
+  vp run --filter @rolldown/test-dev-server build
+
 # Build `rolldown` located in `packages/rolldown` itself and its `.wasm` binding for WASI.
 build-rolldown-wasi:
   vp run --filter rolldown build-wasi:debug
@@ -217,6 +221,12 @@ build-browser-release:
 build-test-dev-server:
   vp run --filter @rolldown/test-dev-server build
 
+# Set up the vendored Vite submodule for `@rolldown/test-dev-server` (init the
+# submodule, link the workspace rolldown into it, install + build vite).
+# Requires `just build-rolldown` first.
+setup-test-dev-server-vite:
+  vp run --filter @rolldown/test-dev-server setup-vite
+
 # --- `bench` series commands aim to provide a easy way to run benchmarks.
 
 bench-rust:
@@ -241,6 +251,11 @@ bump-packages *args:
 # - Event kind switching logic (crates/rolldown_error/src/generated/event_kind_switcher.rs)
 update-generated-code:
   cargo run --bin generator
+
+# Update the allocation-count snapshot (tasks/track_memory_allocations/allocs.snap).
+# Run after changes to `rolldown_sourcemap` if the allocs CI gate fails.
+allocs:
+  cargo allocs
 
 # Run the `rolldown` cli using node.
 run *args:

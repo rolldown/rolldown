@@ -21,6 +21,7 @@ export default defineConfig({
       'packages/rolldown/tests/magic-string/*.test.ts',
       'packages/rolldown/src/binding.*',
       'packages/test-dev-server/tests/fixtures/**',
+      'packages/test-dev-server/tests/playground/**',
       'packages/vite-tests/repo/**',
       'rollup/**',
       'test262/**',
@@ -60,6 +61,21 @@ export default defineConfig({
         {
           varsIgnorePattern: '^_',
           argsIgnorePattern: '^_',
+        },
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'assert',
+              message: "Use 'assert/strict' instead of 'assert'.",
+            },
+            {
+              name: 'node:assert',
+              message: "Use 'node:assert/strict' instead of 'node:assert'.",
+            },
+          ],
         },
       ],
       'unicorn/prefer-node-protocol': 'error',
@@ -104,6 +120,7 @@ export default defineConfig({
       'crates/rolldown/tests/rolldown/topics/hmr/generate_patch_error/**/*.js',
       'crates/rolldown/tests/rolldown/topics/hmr/error_recovery/**/*.js',
       'crates/rolldown/tests/rolldown/topics/deconflict/.reserved_names/*.js',
+      'crates/rolldown/tests/rolldown/warnings/import_defer_phase/main.js',
       'crates/rolldown_plugin_hmr/src/runtime',
       'crates/rolldown_testing/_config.schema.json',
       'packages/rolldown/src/binding.cjs',
@@ -118,6 +135,7 @@ export default defineConfig({
       'packages/rollup-tests',
       'packages/rollup/test',
       'packages/vite-tests',
+      'packages/test-dev-server/tests/playground',
       'scripts/snap-diff/stats',
       'scripts/snap-diff/summary',
       'scripts/src/esbuild-tests/snap-diff/**/*.md',

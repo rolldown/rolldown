@@ -4,12 +4,12 @@ use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
 use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
-use oxc::parser::Parser;
+use oxc::parser::{ParseOptions, Parser};
 use oxc::transformer::Transformer;
 use rolldown_common::{BundlerTransformOptions, ModuleType};
 use rolldown_ecmascript::semantic_builder_for_transform;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
-use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
+use rolldown_plugin::{HookTransformOutputMap, HookUsage, Plugin, SharedTransformPluginContext};
 use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, url::clean_url};
 
 #[derive(Debug, Default)]
@@ -59,10 +59,12 @@ impl Plugin for ViteTransformPlugin {
       self.get_modified_transform_options(&ctx, args.id, &cwd, extension, args.code)?;
 
     let allocator = oxc::allocator::Allocator::default();
-    let ret = Parser::new(&allocator, args.code, source_type).parse();
-    if ret.panicked || !ret.errors.is_empty() {
+    let ret = Parser::new(&allocator, args.code, source_type)
+      .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
+      .parse();
+    if ret.panicked || !ret.diagnostics.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
-        ret.errors,
+        ret.diagnostics,
         args.code,
         args.id,
         Severity::Error,
@@ -79,9 +81,9 @@ impl Plugin for ViteTransformPlugin {
       .into_scoping();
     let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
     let transformer_return = transformer.build_with_scoping(scoping, &mut program);
-    if !transformer_return.errors.is_empty() {
+    if !transformer_return.diagnostics.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
-        transformer_return.errors,
+        transformer_return.diagnostics,
         args.code,
         args.id,
         Severity::Error,
@@ -102,7 +104,11 @@ impl Plugin for ViteTransformPlugin {
     }
 
     Ok(Some(rolldown_plugin::HookTransformOutput {
-      map,
+      map: if let Some(map) = map {
+        map.into_owned().into()
+      } else {
+        HookTransformOutputMap::Omitted
+      },
       code: Some(code),
       module_type: Some(ModuleType::Js),
       ..Default::default()

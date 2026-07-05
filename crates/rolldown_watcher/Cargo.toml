@@ -1,11 +1,12 @@
 [package]
 name = "rolldown_watcher"
-version = "0.1.0"
+version = "1.1.4"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Watcher for rolldown with state machine-based implementation"
+readme = "../../README.md"
 
 [lib]
 doctest = false
@@ -18,7 +19,7 @@ anyhow = { workspace = true }
 arcstr = { workspace = true }
 futures = { workspace = true }
 oxc_index = { workspace = true }
-rolldown = { path = "../rolldown", features = ["experimental"] }
+rolldown = { workspace = true, features = ["experimental"] }
 rolldown_common = { workspace = true }
 rolldown_error = { workspace = true }
 rolldown_fs_watcher = { workspace = true }

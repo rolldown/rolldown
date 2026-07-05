@@ -12,7 +12,6 @@ use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookTransformAstArgs;
 use rolldown_utils::mime::guess_mime;
 use rustc_hash::FxHashMap;
-use sugar_path::SugarPath;
 
 use super::pre_process_ecma_ast::PreProcessEcmaAst;
 
@@ -62,7 +61,7 @@ pub async fn parse_to_ecma_ast(
     ..
   } = ctx;
 
-  let path = resolved_id.id.as_path();
+  let path = Path::new(resolved_id.id.as_str());
   let is_user_defined_entry = ctx.is_user_defined_entry;
 
   let (has_lazy_export, source, parsed_type) =

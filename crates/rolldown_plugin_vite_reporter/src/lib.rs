@@ -13,7 +13,7 @@ use std::{
 };
 
 use cow_utils::CowUtils;
-use owo_colors::{OwoColorize, Stream};
+use owo_colors::Style;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use sugar_path::SugarPath as _;
@@ -60,10 +60,10 @@ impl Plugin for ViteReporterPlugin {
         utils::write_line(&format!(
           "transforming ({}) {}",
           itoa::Buffer::new().format(transformed_count + 1),
-          Path::new(args.id)
-            .relative(&self.root)
-            .to_string_lossy()
-            .if_supports_color(Stream::Stdout, |text| { text.dimmed() })
+          utils::paint(
+            Path::new(args.id).relative(&self.root).to_string_lossy(),
+            Style::new().dimmed(),
+          )
         ));
 
         *self.latest_checkpoint.write().unwrap() = now;
@@ -95,7 +95,7 @@ impl Plugin for ViteReporterPlugin {
 
     utils::log_info(&format!(
       "{} {} modules transformed.",
-      "✓".if_supports_color(Stream::Stdout, |text| text.green()),
+      utils::paint("✓", Style::new().green()),
       self.transformed_count.load(Ordering::SeqCst)
     ));
 
@@ -217,6 +217,7 @@ impl Plugin for ViteReporterPlugin {
       let out_dir =
         args.options.cwd.join(&args.options.out_dir).normalize().relative(&args.options.cwd);
       let out_dir = out_dir.to_slash_lossy();
+      let out_dir_prefix = format!("{out_dir}/");
 
       let mut info = String::new();
       for group in utils::GROUPS {
@@ -226,21 +227,14 @@ impl Plugin for ViteReporterPlugin {
         }
         filtered.sort_by_key(|a| a.size);
         for log_entry in filtered {
-          let _ = write!(
-            &mut info,
-            "{}",
-            format!("{out_dir}/").if_supports_color(Stream::Stdout, |text| text.dimmed())
-          );
+          let _ = write!(&mut info, "{}", utils::paint(&out_dir_prefix, Style::new().dimmed()));
 
           let is_asset = !self.is_lib && Path::new(log_entry.name).starts_with(&self.assets_dir);
           if is_asset {
             let _ = write!(
               &mut info,
               "{}",
-              self
-                .assets_dir
-                .cow_replace('\\', "/")
-                .if_supports_color(Stream::Stdout, |text| text.dimmed())
+              utils::paint(self.assets_dir.cow_replace('\\', "/"), Style::new().dimmed())
             );
           }
 
@@ -253,30 +247,22 @@ impl Plugin for ViteReporterPlugin {
 
           let _ = match group {
             utils::AssetGroup::JS => {
-              write!(&mut info, "{}", name.if_supports_color(Stream::Stdout, |text| text.cyan()))
+              write!(&mut info, "{}", utils::paint(&name, Style::new().cyan()))
             }
             utils::AssetGroup::Css => {
-              write!(&mut info, "{}", name.if_supports_color(Stream::Stdout, |text| text.magenta()))
+              write!(&mut info, "{}", utils::paint(&name, Style::new().magenta()))
             }
             utils::AssetGroup::Assets => {
-              write!(&mut info, "{}", name.if_supports_color(Stream::Stdout, |text| text.green()))
+              write!(&mut info, "{}", utils::paint(&name, Style::new().green()))
             }
           };
 
           let size = format!("{:>size_pad$}", utils::display_size(log_entry.size));
           if group == utils::AssetGroup::JS && log_entry.size.div_ceil(1000) > self.chunk_limit {
             has_large_chunks = true;
-            let _ = write!(
-              &mut info,
-              "{}",
-              size.if_supports_color(Stream::Stdout, |text| text.bold().yellow().to_string())
-            );
+            let _ = write!(&mut info, "{}", utils::paint(&size, Style::new().bold().yellow()));
           } else {
-            let _ = write!(
-              &mut info,
-              "{}",
-              size.if_supports_color(Stream::Stdout, |text| text.bold().dimmed().to_string())
-            );
+            let _ = write!(&mut info, "{}", utils::paint(&size, Style::new().bold().dimmed()));
           }
 
           if let Some(compressed_size) = log_entry.compressed_size {
@@ -284,8 +270,7 @@ impl Plugin for ViteReporterPlugin {
             let _ = write!(
               &mut info,
               "{}",
-              format!(" │ gzip: {size:>compress_pad$}")
-                .if_supports_color(Stream::Stdout, |text| text.dimmed())
+              utils::paint(format!(" │ gzip: {size:>compress_pad$}"), Style::new().dimmed())
             );
           }
 
@@ -294,8 +279,7 @@ impl Plugin for ViteReporterPlugin {
             let _ = write!(
               &mut info,
               "{}",
-              format!(" │ map: {size:>map_pad$}")
-                .if_supports_color(Stream::Stdout, |text| text.dimmed())
+              utils::paint(format!(" │ map: {size:>map_pad$}"), Style::new().dimmed())
             );
           }
 
@@ -313,10 +297,14 @@ impl Plugin for ViteReporterPlugin {
       });
     }
     if self.warn_large_chunks && has_large_chunks {
-      let message = format!(
-        "\n(!) Some chunks are larger than {} kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
-        itoa::Buffer::new().format(self.chunk_limit)
-      ).if_supports_color(Stream::Stdout, |text| { text.bold().yellow().to_string() }).to_string();
+      let message = utils::paint(
+        format!(
+          "\n(!) Some chunks are larger than {} kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+          itoa::Buffer::new().format(self.chunk_limit)
+        ),
+        Style::new().bold().yellow(),
+      )
+      .to_string();
       ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });
     }
     Ok(())

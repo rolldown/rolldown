@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+//#region aliased.json
+var aliased_default = { v: "before" };
+//#endregion
+//#region argument.json
+var argument_default = { v: "before" };
+//#endregion
+//#region main.js
+const alias = aliased_default;
+alias.v = "after";
+assert.strictEqual(aliased_default.v, "after");
+function mutate(object) {
+	object.v = "after";
+}
+mutate(argument_default);
+assert.strictEqual(argument_default.v, "after");
+//#endregion
+
+```

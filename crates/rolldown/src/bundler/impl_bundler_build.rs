@@ -1,5 +1,7 @@
 use crate::types::bundle_output::BundleOutput;
-use rolldown_common::{BundleMode, ScanMode};
+use rolldown_common::BundleMode;
+#[cfg(feature = "experimental")]
+use rolldown_common::ScanMode;
 use rolldown_error::BuildResult;
 
 use super::bundler::Bundler;

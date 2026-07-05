@@ -5,10 +5,10 @@ use std::sync::Arc;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use itertools::Itertools;
+use oxc::semantic::NodeId;
 use oxc::semantic::{ScopeId, Scoping};
 use oxc::span::Span;
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
-use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::{
@@ -116,7 +116,7 @@ pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   cache: &'a mut ScanStageCache,
   pub flat_options: FlatOptions,
-  pub magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+  pub magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
   tla_module_count: usize,
   /// Centralized map from modules that contain top-level `await` to the span
   /// of the first TLA keyword. Stored here instead of on every `EcmaView`
@@ -166,7 +166,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     plugin_driver: SharedPluginDriver,
     cache: &'a mut ScanStageCache,
     is_full_scan: bool,
-    magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+    magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
   ) -> BuildResult<Self> {
     if is_full_scan {
       // TODO: drop the cache in another thread
@@ -217,6 +217,29 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     })
   }
 
+  /// Lazy barrel must not skip any of an entry's re-exports — an entry has to
+  /// preserve all of its exports. Request `All` from it: if it has already been
+  /// loaded as a barrel, load its remaining (deferred) records now; otherwise
+  /// record the request so they get loaded once it finishes loading.
+  #[expect(clippy::rc_buffer)]
+  fn request_all_exports_for_entry(
+    &mut self,
+    idx: ModuleIdx,
+    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
+  ) {
+    if let Some(barrel_module_state) = self.cache.barrel_state.barrel_infos.get(&idx) {
+      // If the module is already a barrel module, we need to load its remaining re-export import records
+      if barrel_module_state.is_some() {
+        self.process_barrel_import_record(
+          &mut VecDeque::from_iter([(idx, ImportedExports::All)]),
+          user_defined_entries,
+        );
+      }
+    } else {
+      self.cache.barrel_state.requested_exports.insert(idx, ImportedExports::All);
+    }
+  }
+
   #[expect(clippy::rc_buffer)]
   fn try_spawn_new_task(
     &mut self,
@@ -229,17 +252,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let idx = match self.cache.module_id_to_idx.get(&resolved_id.id).copied() {
       Some(VisitState::Seen(idx)) => {
         if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
-          if let Some(barrel_module_state) = self.cache.barrel_state.barrel_infos.get(&idx) {
-            // If the module is already a barrel module, we need to load its remaining re-export import records
-            if barrel_module_state.is_some() {
-              self.process_barrel_import_record(
-                &mut VecDeque::from_iter([(idx, ImportedExports::All)]),
-                user_defined_entries,
-              );
-            }
-          } else {
-            self.cache.barrel_state.requested_exports.insert(idx, ImportedExports::All);
-          }
+          self.request_all_exports_for_entry(idx, user_defined_entries);
         }
         return idx;
       }
@@ -263,6 +276,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         idx
       }
     };
+    if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
+      self.request_all_exports_for_entry(idx, user_defined_entries);
+    }
     let ctx = Arc::clone(&self.shared_context);
     if resolved_id.external.is_external() {
       let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
@@ -368,7 +384,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut work_queue: VecDeque<(ModuleIdx, ImportedExports)> = VecDeque::new();
     let mut dynamic_import_entry_ids: FxHashMap<
       ModuleIdx,
-      Vec<(ModuleIdx, StmtInfoIdx, Address, ImportRecordIdx)>,
+      Vec<(ModuleIdx, StmtInfoIdx, NodeId, ImportRecordIdx)>,
     > = FxHashMap::default();
 
     let mut dynamic_import_exports_usage_pairs = vec![];
@@ -505,7 +521,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
               match dynamic_import_entry_ids.entry(idx) {
                 Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {
                   Some(info) => {
-                    vac.insert(vec![(module_idx, info.stmt_info_idx, info.address, rec_idx)]);
+                    vac.insert(vec![(module_idx, info.stmt_info_idx, info.node_id, rec_idx)]);
                   }
                   None => {
                     vac.insert(vec![]);
@@ -513,7 +529,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
                 },
                 Entry::Occupied(mut occ) => {
                   if let Some(info) = raw_rec.dynamic_import_expr_info.as_ref() {
-                    occ.get_mut().push((module_idx, info.stmt_info_idx, info.address, rec_idx));
+                    occ.get_mut().push((module_idx, info.stmt_info_idx, info.node_id, rec_idx));
                   }
                 }
               }
@@ -583,7 +599,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             ast,
             raw_import_records,
             resolved_deps,
+            warnings,
           } = *task_result;
+          all_warnings.extend(warnings);
 
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
           for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {

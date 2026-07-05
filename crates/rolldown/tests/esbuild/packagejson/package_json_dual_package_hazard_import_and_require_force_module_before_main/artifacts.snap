@@ -6,7 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import assert from "node:assert";
+import assert from "node:assert/strict";
+import assert$1 from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region node_modules/demo-pkg/module.js
 var module_exports = /* @__PURE__ */ __exportAll({ default: () => module_default });
@@ -20,7 +21,7 @@ assert.deepEqual((init_module(), __toCommonJS(module_exports)), { default: "modu
 //#endregion
 //#region src/test-module.js
 init_module();
-assert.equal(module_default, "module");
+assert$1.equal(module_default, "module");
 //#endregion
 
 ```

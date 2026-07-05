@@ -22,7 +22,9 @@ export async function bundleWithConfig(
     process.env.ROLLDOWN_WATCH = 'true';
   }
 
-  const config = await loadConfig(configPath);
+  const config = await loadConfig(configPath, {
+    configLoader: cliOptions.configLoader,
+  });
   // If config is a function, call it with raw command line arguments
   const resolvedConfig = typeof config === 'function' ? await config(rawArgs) : config;
 

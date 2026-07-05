@@ -10,7 +10,7 @@
         "import": "./entry-b.js"
       }
     ],
-    "manualCodeSplitting": {
+    "codeSplitting": {
       "groups": [
         {
           "name": "Splitted",

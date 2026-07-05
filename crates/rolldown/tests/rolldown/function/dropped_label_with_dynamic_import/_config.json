@@ -1,0 +1,6 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/9521 — a dynamic import nested inside a dropped labeled block must not be added to the module graph, so its (potentially unresolvable) dependencies are never resolved.",
+  "config": {
+    "dropLabels": ["DEBUG"]
+  }
+}

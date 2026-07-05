@@ -2,7 +2,7 @@ use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, OutputExports,
-  PathsOutputOption, SymbolRef,
+  PathsOutputOption, SymbolRef, UsedSymbolRefs,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
@@ -16,6 +16,8 @@ pub struct GenerateContext<'a> {
   pub chunk: &'a Chunk,
   pub options: &'a NormalizedBundlerOptions,
   pub link_output: &'a LinkStageOutput,
+  /// Sealed record of inclusion-fixpoint liveness; see [`UsedSymbolRefs`].
+  pub used_symbol_refs: &'a UsedSymbolRefs,
   pub chunk_graph: &'a ChunkGraph,
   pub plugin_driver: &'a SharedPluginDriver,
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,
@@ -67,7 +69,7 @@ impl GenerateContext<'_> {
           // Scoped symbols don't get assigned a `ChunkIdx`. There are skipped for performance reason, because they are surely
           // belong to the chunk they are declared in and won't link to other chunks.
           let symbol_name = canonical_ref.name(symbol_db);
-          panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which isn't unexpected");
+          panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
         });
 
         let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
@@ -79,16 +81,26 @@ impl GenerateContext<'_> {
           let require_binding = &self.chunk_graph.chunk_table[cur_chunk_idx]
             .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
 
-          let exported_name = &self.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
-            .exports_to_other_chunks[&canonical_ref][0];
+          let exporter_chunk = &self.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol];
+          let exported_name = &exporter_chunk.exports_to_other_chunks[&canonical_ref][0];
           if exported_name == "default" {
-            match self.options.exports {
-              OutputExports::Auto => require_binding.clone(),
-              OutputExports::Default | OutputExports::Named => {
+            // Use the exporter chunk's actual `output_exports`, not the user-level
+            // `options.exports`. Each chunk decides its own export mode (e.g. under
+            // `preserveModules`, non-input modules are forced to `Named` and emit
+            // `exports.default = ...`), so the access pattern must match what the
+            // exporter actually renders.
+            match exporter_chunk.output_exports {
+              OutputExports::Default => require_binding.clone(),
+              OutputExports::Named => {
                 rolldown_utils::ecmascript::property_access_str(require_binding, exported_name)
               }
-              // Already validated at https://github.com/rolldown/rolldown/blob/e50d4419df86af63b25b4b8d40035dad2478a3fe/crates/rolldown/src/utils/chunk/determine_export_mode.rs#L8-L66
-              OutputExports::None => unreachable!(),
+              // `Auto` is always resolved away by `determine_export_mode`. `None`
+              // is unreachable here because we just indexed
+              // `exports_to_other_chunks[canonical_ref]` successfully — a non-empty
+              // entry means the chunk has at least one cross-chunk export, which
+              // forces `output_exports` to `Default` or `Named` (entry chunks via
+              // `determine_export_mode`; common chunks are unconditionally `Named`).
+              OutputExports::Auto | OutputExports::None => unreachable!(),
             }
           } else {
             rolldown_utils::ecmascript::property_access_str(require_binding, exported_name)

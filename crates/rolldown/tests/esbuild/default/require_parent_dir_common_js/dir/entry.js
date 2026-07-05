@@ -1,2 +1,2 @@
-import assert from 'node:assert'
+import assert from 'node:assert/strict'
 assert.deepEqual(require('..'), 123)

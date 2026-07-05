@@ -108,6 +108,7 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
   },
 })
 module.exports = __napiModule.exports
+module.exports.LegalCommentsMode = __napiModule.exports.LegalCommentsMode
 module.exports.minify = __napiModule.exports.minify
 module.exports.minifySync = __napiModule.exports.minifySync
 module.exports.Severity = __napiModule.exports.Severity
@@ -154,12 +155,12 @@ module.exports.BindingWatcherBundler = __napiModule.exports.BindingWatcherBundle
 module.exports.BindingWatcherChangeData = __napiModule.exports.BindingWatcherChangeData
 module.exports.BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
-module.exports.ScheduledBuild = __napiModule.exports.ScheduledBuild
 module.exports.TraceSubscriberGuard = __napiModule.exports.TraceSubscriberGuard
 module.exports.TsconfigCache = __napiModule.exports.TsconfigCache
 module.exports.BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 module.exports.BindingChunkModuleOrderBy = __napiModule.exports.BindingChunkModuleOrderBy
+module.exports.BindingErrorStage = __napiModule.exports.BindingErrorStage
 module.exports.BindingLogLevel = __napiModule.exports.BindingLogLevel
 module.exports.BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 module.exports.BindingPropertyReadSideEffects = __napiModule.exports.BindingPropertyReadSideEffects

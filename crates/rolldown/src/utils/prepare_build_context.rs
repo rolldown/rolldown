@@ -5,9 +5,9 @@ use itertools::Either;
 use oxc::{transformer::EngineTargets, transformer_plugins::InjectGlobalVariablesConfig};
 use rolldown_common::{
   AttachDebugInfo, CodeSplittingMode, GlobalsOutputOption, InjectImport, JsxOptions, JsxPreset,
-  LegalComments, MinifyOptions, ModuleType, NormalizedBundlerOptions, OutputFormat, Platform,
-  PreserveEntrySignatures, RawTransformOptions, TransformOptions, TreeshakeOptions, TsConfig,
-  merge_transform_options_with_tsconfig, normalize_optimization_option,
+  LegalComments, ManualCodeSplittingOptions, MinifyOptions, ModuleType, NormalizedBundlerOptions,
+  OutputFormat, Platform, PreserveEntrySignatures, RawTransformOptions, TransformOptions,
+  TreeshakeOptions, TsConfig, merge_transform_options_with_tsconfig, normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
@@ -25,6 +25,19 @@ pub struct PrepareBuildContext {
   pub warnings: Vec<BuildDiagnostic>,
 }
 
+fn has_non_recursive_dependency_capture(options: &ManualCodeSplittingOptions) -> bool {
+  match &options.groups {
+    Some(groups) if !groups.is_empty() => groups.iter().any(|group| {
+      !group
+        .include_dependencies_recursively
+        .or(options.include_dependencies_recursively)
+        .unwrap_or(true)
+    }),
+    // Without groups, the global option alone decides, defaulting to `true`.
+    _ => !options.include_dependencies_recursively.unwrap_or(true),
+  }
+}
+
 fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<BuildDiagnostic>> {
   let mut warnings: Vec<BuildDiagnostic> = Vec::new();
   let mut errors: Vec<BuildDiagnostic> = Vec::new();
@@ -34,6 +47,17 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
       BuildDiagnostic::invalid_option(InvalidOptionType::InvalidOutputDirOption)
         .with_severity_warning(),
     );
+  }
+
+  // `output.file` must contain a final file-name component. Values like `""`, `"/"`,
+  // `"."`, `".."`, or any path ending in `..` make `Path::file_name()` return `None`,
+  // which would otherwise panic later when deriving the chunk basename.
+  if let Some(file) = raw_options.file.as_ref()
+    && Path::new(file).file_name().is_none()
+  {
+    errors.push(BuildDiagnostic::invalid_option(InvalidOptionType::OutputFileWithoutName(
+      file.clone(),
+    )));
   }
 
   if let Some(entity) = raw_options.context.as_ref() {
@@ -46,7 +70,10 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
   }
 
   if let Some(format @ (OutputFormat::Umd | OutputFormat::Iife)) = raw_options.format {
-    if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(true))) {
+    if matches!(
+      &raw_options.code_splitting,
+      Some(CodeSplittingMode::Bool(true) | CodeSplittingMode::Advanced(_))
+    ) {
       warnings.push(
         BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedCodeSplittingFormat(
           format.to_string(),
@@ -56,7 +83,7 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     }
   }
 
-  if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(false))) {
+  if matches!(&raw_options.code_splitting, Some(CodeSplittingMode::Bool(false))) {
     if let Some(input) = &raw_options.input
       && input.len() > 1
     {
@@ -69,14 +96,16 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
         InvalidOptionType::CodeSplittingDisabledWithPreserveModules,
       ));
     }
-    if raw_options.manual_code_splitting.is_some() {
-      errors.push(BuildDiagnostic::invalid_option(
-        InvalidOptionType::CodeSplittingDisabledWithManualCodeSplitting,
-      ));
-    }
+    // `codeSplitting: false` and the object form (manual groups) are mutually exclusive
+    // by construction, so a "disabled + groups" conflict can no longer be expressed.
   }
 
-  if let Some(manual_code_splitting) = &raw_options.manual_code_splitting {
+  // Manual chunk grouping arrives via the merged `codeSplitting` object form (`Advanced`).
+  let manual_code_splitting = match &raw_options.code_splitting {
+    Some(CodeSplittingMode::Advanced(options)) => Some(options),
+    _ => None,
+  };
+  if let Some(manual_code_splitting) = manual_code_splitting {
     let has_groups = manual_code_splitting.groups.as_ref().is_some_and(|groups| !groups.is_empty());
 
     if !has_groups {
@@ -110,8 +139,8 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
       }
     }
 
-    // Check if `codeSplitting.include_dependencies_recursively` conflict with `preserveEntrySignatures`
-    if matches!(manual_code_splitting.include_dependencies_recursively, Some(false)) {
+    // Check if any group's effective `includeDependenciesRecursively` is false, which conflicts with `preserveEntrySignatures`
+    if has_non_recursive_dependency_capture(manual_code_splitting) {
       if let Some(preserve_signatures) = &raw_options.preserve_entry_signatures {
         if matches!(
           preserve_signatures,
@@ -138,9 +167,18 @@ pub fn prepare_build_context(
 
   let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
 
-  let preserve_entry_signatures = if let Some(manual_code_splitting) =
-    &raw_options.manual_code_splitting
-    && matches!(manual_code_splitting.include_dependencies_recursively, Some(false))
+  // Decompose the merged `codeSplitting` option into the gate (`code_splitting`) and the
+  // grouping config (`manual_code_splitting`). The raw option may carry the object form
+  // (`Advanced`) mirroring the public JS `codeSplitting: { groups, ... }`; the normalized
+  // layer keeps them as two separate fields.
+  let (raw_code_splitting_mode, manual_code_splitting) = match raw_options.code_splitting.take() {
+    Some(CodeSplittingMode::Advanced(options)) => (CodeSplittingMode::Bool(true), Some(options)),
+    Some(mode @ CodeSplittingMode::Bool(_)) => (mode, None),
+    None => (CodeSplittingMode::default(), None),
+  };
+
+  let preserve_entry_signatures = if let Some(manual_code_splitting) = &manual_code_splitting
+    && has_non_recursive_dependency_capture(manual_code_splitting)
     && raw_options.preserve_entry_signatures.is_none()
   {
     warnings.push(
@@ -234,9 +272,14 @@ pub fn prepare_build_context(
       .unwrap_or_default(),
   );
 
+  let mut raw_treeshake = raw_options.treeshake;
   let mut experimental = raw_options.experimental.unwrap_or_default();
   if experimental.dev_mode.is_some() {
     experimental.incremental_build = Some(true);
+    // Dev mode requires treeshaking to be disabled, and lazy barrel relies on
+    // treeshaking, so it must be disabled as well.
+    raw_treeshake = TreeshakeOptions::Boolean(false);
+    experimental.lazy_barrel = Some(false);
   }
 
   if experimental.attach_debug_info.is_none() {
@@ -245,7 +288,7 @@ pub fn prepare_build_context(
 
   let code_splitting = match format {
     OutputFormat::Umd | OutputFormat::Iife => CodeSplittingMode::Bool(false),
-    _ => raw_options.code_splitting.unwrap_or_default(),
+    _ => raw_code_splitting_mode,
   };
 
   // If the `file` is provided, use the parent directory of the file as the `out_dir`.
@@ -261,12 +304,6 @@ pub fn prepare_build_context(
   );
   let cwd =
     raw_options.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
-
-  let mut raw_treeshake = raw_options.treeshake;
-  if experimental.dev_mode.is_some() {
-    // Dev mode requires treeshaking to be disabled
-    raw_treeshake = TreeshakeOptions::Boolean(false);
-  }
 
   let tsconfig = raw_options.tsconfig.map(|tsconfig| tsconfig.with_base(&cwd)).unwrap_or_default();
   let yarn_pnp = raw_resolve.yarn_pnp.unwrap_or(false);
@@ -325,9 +362,9 @@ pub fn prepare_build_context(
     match tsconfig {
       ref v @ TsConfig::Manual(ref path) => {
         // Manual mode: Resolve tsconfig now and create Normal mode
-        let resolved_tsconfig = resolver.resolve_tsconfig(&path).map_err(|err| {
-          anyhow::anyhow!("Failed to resolve `tsconfig` option: {}", path.display()).context(err)
-        })?;
+        let resolved_tsconfig = resolver
+          .resolve_tsconfig(&path)
+          .map_err(|err| BuildDiagnostic::tsconfig_error(path.display().to_string(), err))?;
         Box::new(if resolved_tsconfig.references_resolved.is_empty() {
           TransformOptions::new(
             merge_transform_options_with_tsconfig(
@@ -415,7 +452,7 @@ pub fn prepare_build_context(
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
     code_splitting,
     dynamic_import_in_cjs: raw_options.dynamic_import_in_cjs.unwrap_or(true),
-    manual_code_splitting: raw_options.manual_code_splitting,
+    manual_code_splitting,
     checks: raw_options.checks.unwrap_or_default().into(),
     watch: raw_options.watch.unwrap_or_default(),
     legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),

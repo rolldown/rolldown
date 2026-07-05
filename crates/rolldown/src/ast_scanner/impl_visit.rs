@@ -1,4 +1,3 @@
-use oxc::allocator::{GetAddress, UnstableAddress};
 use oxc::{
   ast::{
     AstKind,
@@ -13,8 +12,8 @@ use oxc::{
 };
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  MemberExprObjectReferencedType, OutputFormat, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoIdx,
-  StmtInfoMeta, SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
+  MemberExprObjectReferencedType, MemberExprRef, OutputFormat, RUNTIME_MODULE_KEY, StmtEvalFlags,
+  StmtInfoIdx, StmtInfoMeta, SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
@@ -26,7 +25,7 @@ use crate::ast_scanner::cjs_export_analyzer::CommonJsAstType;
 
 use super::{
   AstScanner, UntranspiledSyntax, cjs_export_analyzer::CjsGlobalAssignmentType,
-  side_effect_detector::SideEffectDetector,
+  stmt_eval_analyzer::StmtEvalAnalyzer,
 };
 
 impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
@@ -74,14 +73,14 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       {
         self.current_stmt_idx = StmtInfoIdx::from_raw_unchecked(idx as u32 + 1);
       }
-      let detector = SideEffectDetector::new(
+      let analyzer = StmtEvalAnalyzer::new(
         &self.result.symbol_ref_db.ast_scopes,
         self.immutable_ctx.flat_options,
         self.immutable_ctx.options,
         None,
         Some(&self.namespace_object_symbol_ids),
       );
-      self.current_stmt_info.side_effect = detector.detect_side_effect_of_stmt(stmt);
+      self.current_stmt_info.eval_flags = analyzer.analyze_stmt(stmt);
 
       #[cfg(debug_assertions)]
       {
@@ -89,10 +88,10 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       }
 
       self.visit_statement(stmt);
-      if self.current_stmt_info.side_effect.intersects(
-        SideEffectDetail::Unknown
-          | SideEffectDetail::GlobalVarAccess
-          | SideEffectDetail::PureAnnotation,
+      if self.current_stmt_info.eval_flags.intersects(
+        StmtEvalFlags::UnknownSideEffect
+          | StmtEvalFlags::GlobalVarAccess
+          | StmtEvalFlags::PureAnnotation,
       ) {
         self.result.ecma_view_meta.insert(EcmaViewMeta::ExecutionOrderSensitive);
       }
@@ -192,6 +191,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         request.as_str(),
         ImportKind::DynamicImport,
         expr.source.span(),
+        expr.span,
         {
           let mut meta = ImportRecordMeta::empty();
           meta.set(ImportRecordMeta::IsTopLevel, self.is_root_scope());
@@ -199,10 +199,10 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           meta.set(ImportRecordMeta::InTryCatchBlock, self.in_side_try_catch_block());
           meta
         },
-        Some(expr.unstable_address()),
+        Some(expr.node_id()),
       );
       self.init_dynamic_import_binding_usage_info(import_rec_idx);
-      self.result.imports.insert(expr.span, import_rec_idx);
+      self.result.imports.insert(expr.node_id(), import_rec_idx);
     } else if matches!(self.immutable_ctx.options.format, OutputFormat::Cjs)
       && !self.immutable_ctx.options.dynamic_import_in_cjs
     {
@@ -217,8 +217,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       match member_expr.object() {
         Expression::Identifier(id) => {
           if id.name == "module"
-            && self.is_global_identifier_reference(id)
             && member_expr.static_property_name() == Some("exports")
+            && self.is_global_identifier_reference(id)
           {
             self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
             // `module.exports = <value>` replaces the entire exports object,
@@ -251,8 +251,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         Expression::StaticMemberExpression(member_expr) => {
           if let Expression::Identifier(ref id) = member_expr.object {
             if id.name == "module"
-              && self.is_global_identifier_reference(id)
               && member_expr.property.name == "exports"
+              && self.is_global_identifier_reference(id)
             {
               self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
             }
@@ -309,7 +309,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_this_expression(&mut self, it: &ast::ThisExpression) {
     if !self.is_this_nested() {
-      self.top_level_this_expr_set.insert(it.span);
+      self.top_level_this_expr_set.insert(it.node_id());
     }
     walk::walk_this_expression(self, it);
   }
@@ -561,7 +561,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 self.result.ast_usage.insert(EcmaModuleAstUsage::UnknownExportsRead);
               }
               None => match self.try_extract_parent_static_member_expr_chain(1) {
-                Some((_span, prop)) => {
+                Some((_node_id, _span, prop)) => {
                   self.cjs_named_exports_usage.entry(prop[0].name.clone()).or_default().read += 1;
                 }
                 _ => {
@@ -588,7 +588,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 .polyfill_require_for_esm_format_with_node_platform()
             {
               self.current_stmt_info.meta.insert(StmtInfoMeta::HasDummyRecord);
-              self.result.dummy_record_set.insert(ident_ref.span);
+              self.result.dummy_record_set.insert(ident_ref.node_id());
             }
           }
           _ => {}
@@ -615,7 +615,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               (MemberExprObjectReferencedType::Named, usize::MAX)
             }
           };
-          if let Some((span, props)) =
+          if let Some((node_id, span, props)) =
             self.try_extract_parent_static_member_expr_chain(max_tract_len)
           {
             if !span.is_unspanned() {
@@ -632,14 +632,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 let symbol_ref_flags = root_symbol_id.flags_mut(&mut self.result.symbol_ref_db);
                 *symbol_ref_flags |= SymbolRefFlags::HasComputedMemberWrite;
               }
-              self.add_member_expr_reference(
+              self.add_member_expr_reference(MemberExprRef::new(
                 root_symbol_id,
                 props,
+                node_id,
                 span,
                 ty,
                 ident_ref.reference_id.get(),
                 is_member_write,
-              );
+              ));
             }
           } else if is_member_write
             && matches!(
@@ -701,7 +702,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if let AstKind::CallExpression(call_expr) = parent {
       if ident_ref.name == "eval"
         && !call_expr.optional
-        && call_expr.callee.address() == ident_ref.unstable_address()
+        && call_expr.callee.node_id() == ident_ref.node_id()
       {
         // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
         // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
@@ -769,8 +770,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     let in_side_try_catch_block = self.in_side_try_catch_block();
     init_meta.set(ImportRecordMeta::InTryCatchBlock, in_side_try_catch_block);
-    let id = self.add_import_record(value.as_ref(), ImportKind::Require, span, init_meta, None);
-    self.result.imports.insert(expr.span, id);
+    let id =
+      self.add_import_record(value.as_ref(), ImportKind::Require, span, expr.span, init_meta, None);
+    self.result.imports.insert(expr.node_id(), id);
     true
   }
 

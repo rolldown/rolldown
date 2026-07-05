@@ -6,3 +6,5 @@ mod _4895;
 mod _5011;
 #[path = "./7833/mod.rs"]
 mod _7833;
+#[path = "./9593/mod.rs"]
+mod _9593;

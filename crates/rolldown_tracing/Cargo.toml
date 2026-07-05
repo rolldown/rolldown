@@ -1,8 +1,9 @@
 [package]
 name = "rolldown_tracing"
-version = "0.1.0"
+version = "1.1.4"
 publish = true
 description = "rolldown_tracing"
+readme = "../../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -21,5 +22,10 @@ test = false
 
 [dependencies]
 tracing = { workspace = true, features = ["valuable"] }
-tracing-chrome = { workspace = true }
-tracing-subscriber = { workspace = true, default-features = false, features = ["std"] }
+tracing-chrome = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, default-features = false, features = ["fmt", "ansi"] }
+
+[features]
+# Enables the `RD_LOG_OUTPUT=chrome-json` profiling trace layer. Off by default so
+# it is excluded from release builds; enable it for profile builds when needed.
+chrome-tracing = ["dep:tracing-chrome"]

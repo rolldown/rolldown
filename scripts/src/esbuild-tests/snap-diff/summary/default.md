@@ -168,6 +168,7 @@
 ## [re_export_default_no_bundle_es6](../../../../../crates/rolldown/tests/esbuild/default/re_export_default_no_bundle_es6)
 ## [re_export_fs_node](../../../../../crates/rolldown/tests/esbuild/default/re_export_fs_node)
 ## [rename_labels_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/rename_labels_no_bundle)
+## [rename_nested_var](../../../../../crates/rolldown/tests/esbuild/default/rename_nested_var)
 ## [rename_private_identifiers_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle)
 ## [require_bad_argument_count](../../../../../crates/rolldown/tests/esbuild/default/require_bad_argument_count)
 ## [require_child_dir_common_js](../../../../../crates/rolldown/tests/esbuild/default/require_child_dir_common_js)

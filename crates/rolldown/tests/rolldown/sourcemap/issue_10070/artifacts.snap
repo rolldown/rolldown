@@ -1,0 +1,59 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region app.js
+var import_dep = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports.hello = function() {
+		return "hi";
+	};
+})))();
+function app() {
+	globalThis.side = 1;
+	return 42;
+}
+//#endregion
+//#region main.js
+globalThis.h = import_dep.hello;
+globalThis.a = app;
+//#endregion
+
+//# sourceMappingURL=main.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../dep.cjs
+(0:0) "module." --> (5:1) "module."
+(0:7) "exports." --> (5:8) "exports."
+(0:15) "hello = " --> (5:16) "hello = "
+(0:23) "function () " --> (5:24) "function() "
+(0:35) "{\n" --> (5:35) "{\n"
+(1:2) "return " --> (6:2) "return "
+(1:9) "'hi';\n" --> (6:9) "\"hi\";\n"
+(2:0) "};\n" --> (7:1) "};\n"
+- ../app.js
+(0:0) "export function " --> (9:0) "function "
+(0:16) "app() " --> (9:9) "app() "
+(0:22) "{\n" --> (9:15) "{\n"
+(1:2) "globalThis." --> (10:1) "globalThis."
+(1:13) "side = " --> (10:12) "side = "
+(1:20) "1;\n" --> (10:19) "1;\n"
+(2:2) "return " --> (11:1) "return "
+(2:9) "42;\n" --> (11:8) "42;\n"
+(3:0) "}\n" --> (12:0) "}\n"
+- ../main.js
+(2:0) "globalThis." --> (15:0) "globalThis."
+(2:11) "h = " --> (15:11) "h = "
+(2:15) "hello;\n" --> (15:15) "import_dep."
+(2:15) "hello;\n" --> (15:26) "hello;\n"
+(3:0) "globalThis." --> (16:0) "globalThis."
+(3:11) "a = " --> (16:11) "a = "
+(3:15) "app;\n" --> (16:15) "app;\n"
+```

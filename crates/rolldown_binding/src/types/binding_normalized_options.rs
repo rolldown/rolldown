@@ -139,8 +139,12 @@ impl BindingNormalizedOptions {
 
   #[napi(getter)]
   pub fn code_splitting(&self) -> bool {
-    match self.inner.code_splitting {
-      rolldown_common::CodeSplittingMode::Bool(v) => v,
+    // The normalized layer never holds the `Advanced` object form (it is decomposed
+    // into the gate + `manual_code_splitting` during normalization), but match it
+    // exhaustively as "enabled" for completeness.
+    match &self.inner.code_splitting {
+      rolldown_common::CodeSplittingMode::Bool(v) => *v,
+      rolldown_common::CodeSplittingMode::Advanced(_) => true,
     }
   }
 

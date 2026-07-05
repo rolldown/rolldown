@@ -43,7 +43,7 @@ const {
     })
     worker.addEventListener('message', __wasmCreateOnMessageForFsProxy(__fs))
 
-    worker.addEventListener('error', (event) => {
+    worker.addEventListener('message', (event) => {
       if (event.data && typeof event.data === 'object' && event.data.type === 'error') {
         window.dispatchEvent(new CustomEvent('napi-rs-worker-error', { detail: event.data }))
       }
@@ -69,6 +69,7 @@ const {
   },
 })
 export default __napiModule.exports
+export const LegalCommentsMode = __napiModule.exports.LegalCommentsMode
 export const minify = __napiModule.exports.minify
 export const minifySync = __napiModule.exports.minifySync
 export const Severity = __napiModule.exports.Severity
@@ -115,12 +116,12 @@ export const BindingWatcherBundler = __napiModule.exports.BindingWatcherBundler
 export const BindingWatcherChangeData = __napiModule.exports.BindingWatcherChangeData
 export const BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 export const ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
-export const ScheduledBuild = __napiModule.exports.ScheduledBuild
 export const TraceSubscriberGuard = __napiModule.exports.TraceSubscriberGuard
 export const TsconfigCache = __napiModule.exports.TsconfigCache
 export const BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 export const BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 export const BindingChunkModuleOrderBy = __napiModule.exports.BindingChunkModuleOrderBy
+export const BindingErrorStage = __napiModule.exports.BindingErrorStage
 export const BindingLogLevel = __napiModule.exports.BindingLogLevel
 export const BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 export const BindingPropertyReadSideEffects = __napiModule.exports.BindingPropertyReadSideEffects

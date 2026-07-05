@@ -1,0 +1,15 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/9956 — `@__NO_SIDE_EFFECTS__` should apply to namespace-member calls (`ns.fn()`) even when the annotated module is emitted as a shared chunk. Two entries force `shared.js` into a shared chunk; both `ns.fn()` calls should be eliminated.",
+  "config": {
+    "input": [
+      {
+        "name": "entry-a",
+        "import": "./entry-a.js"
+      },
+      {
+        "name": "entry-b",
+        "import": "./entry-b.js"
+      }
+    ]
+  }
+}

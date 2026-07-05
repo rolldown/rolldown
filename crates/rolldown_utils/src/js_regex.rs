@@ -63,9 +63,13 @@ impl HybridRegex {
     match self {
       HybridRegex::Optimize(r) => r.replace(haystack, replacement),
       HybridRegex::Ecma(reg) => {
-        let next = reg.find_iter(haystack).next();
-        let Some(m) = next else { return Cow::Borrowed(haystack) };
-        Cow::Owned(concat_string!(&haystack[..m.start()], replacement, &haystack[m.end()..]))
+        // `regress` uses regex-crate-style replacement tokens, not full
+        // `String.prototype.replace` semantics. Numbered captures match JS and
+        // are what Vite aliases rely on.
+        if reg.find(haystack).is_none() {
+          return Cow::Borrowed(haystack);
+        }
+        Cow::Owned(reg.replace(haystack, replacement))
       }
     }
   }
@@ -73,36 +77,19 @@ impl HybridRegex {
   pub fn replace_all<'a>(&self, haystack: &'a str, replacement: &str) -> Cow<'a, str> {
     match self {
       HybridRegex::Optimize(r) => r.replace_all(haystack, replacement),
-      HybridRegex::Ecma(reg) => regress_regexp_replace_all(reg, haystack, replacement),
+      HybridRegex::Ecma(reg) => {
+        if reg.find(haystack).is_none() {
+          return Cow::Borrowed(haystack);
+        }
+        Cow::Owned(reg.replace_all(haystack, replacement))
+      }
     }
   }
 }
 
-fn regress_regexp_replace_all<'h>(
-  reg: &regress::Regex,
-  haystack: &'h str,
-  replacement: &str,
-) -> Cow<'h, str> {
-  let iter = reg.find_iter(haystack);
-  let mut iter = iter.peekable();
-  if iter.peek().is_none() {
-    return Cow::Borrowed(haystack);
-  }
-
-  let mut ret = String::with_capacity(haystack.len());
-  let mut last = 0;
-  for m in iter {
-    ret.push_str(&haystack[last..m.start()]);
-    ret.push_str(replacement);
-    last = m.end();
-  }
-  ret.push_str(&haystack[last..]);
-  Cow::Owned(ret)
-}
-
 #[cfg(test)]
 mod test {
-  use crate::js_regex::{HybridRegex, regress_regexp_replace_all};
+  use crate::js_regex::HybridRegex;
 
   #[test]
   fn with_flags() {
@@ -115,8 +102,27 @@ mod test {
 
   #[test]
   fn regress_replace_all() {
-    let reg = regress::Regex::new("\\d+").unwrap();
-    assert_eq!(regress_regexp_replace_all(&reg, "111aa111", "1"), "1aa1");
+    let reg = HybridRegex::new(r"\d+(?!\d)").unwrap();
+    assert!(matches!(reg, HybridRegex::Ecma(_)));
+    assert_eq!(reg.replace_all("111aa111", "1"), "1aa1");
+  }
+
+  #[test]
+  fn ecma_replace_expands_replacement_tokens() {
+    let reg = HybridRegex::new(r"^@app(?!/(?:excluded))(/.*)?$").unwrap();
+    assert!(matches!(reg, HybridRegex::Ecma(_)));
+    assert_eq!(reg.replace("@app/utils", "/abs/src/app$1"), "/abs/src/app/utils");
+
+    let reg = HybridRegex::new(r"(foo)(?!bar)").unwrap();
+    assert!(matches!(reg, HybridRegex::Ecma(_)));
+    assert_eq!(reg.replace("foo baz", "$0:$$:$1:$2"), "foo:$:foo: baz");
+  }
+
+  #[test]
+  fn ecma_replace_all_expands_replacement_tokens() {
+    let reg = HybridRegex::new(r"(\d+)(?=px)").unwrap();
+    assert!(matches!(reg, HybridRegex::Ecma(_)));
+    assert_eq!(reg.replace_all("10px 20px", "$1rem"), "10rempx 20rempx");
   }
 
   #[test]

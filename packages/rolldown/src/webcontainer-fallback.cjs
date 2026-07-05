@@ -10,7 +10,7 @@ if (!fs.existsSync(bindingEntry)) {
   const bindingPkg = `@rolldown/binding-wasm32-wasi@${version}`;
   fs.rmSync(baseDir, { recursive: true, force: true });
   fs.mkdirSync(baseDir, { recursive: true });
-  // eslint-disable-next-line: no-console
+  // eslint-disable-next-line no-console
   console.log(`[rolldown] Downloading ${bindingPkg} on WebContainer...`);
   childProcess.execFileSync('pnpm', ['i', bindingPkg], {
     cwd: baseDir,

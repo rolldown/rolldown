@@ -1,5 +1,4 @@
 use oxc::{
-  allocator::{GetAddress, UnstableAddress},
   ast::{
     AstKind, MemberExpressionKind,
     ast::{Expression, IdentifierReference, UnaryOperator},
@@ -25,10 +24,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         if let Some(parent) = self.visit_path.last() {
           let expr_span = match parent {
             AstKind::CallExpression(call_expr) => {
-              (call_expr.callee.address() == ident.unstable_address()).then_some(call_expr.span)
+              (call_expr.callee.node_id() == ident.node_id()).then_some(call_expr.span)
             }
             AstKind::TaggedTemplateExpression(call_expr) => {
-              (call_expr.tag.address() == ident.unstable_address()).then_some(call_expr.span)
+              (call_expr.tag.node_id() == ident.node_id()).then_some(call_expr.span)
             }
             _ => None,
           };

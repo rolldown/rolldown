@@ -63,7 +63,7 @@ impl Plugin for DataUrlPlugin {
         // SAFETY: `data` is valid utf8
         unsafe { String::from_utf8_unchecked(data) }.into()
       } else {
-        urlencoding::decode(parsed.data)?.as_ref().into()
+        percent_encoding::percent_decode_str(parsed.data).decode_utf8()?.as_ref().into()
       };
 
       let id: ArcStr =

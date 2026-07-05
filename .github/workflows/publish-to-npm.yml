@@ -69,8 +69,9 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
+          version: '0.2.1'
           cache: true
 
       - name: Git Reset Hard
@@ -118,6 +119,11 @@ jobs:
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
 
       - name: Publish(Dry Run)
+        # `NAPI_DRY_RUN` makes rolldown's `prepublishOnly` hook pass `--dry-run`
+        # through to `napi pre-publish`. Without it, the hook publishes the
+        # `@rolldown/binding-*` packages for real during this "dry run" step.
+        env:
+          NAPI_DRY_RUN: '1'
         run: |
           vp pm publish -r --tag latest --dry-run --no-git-checks
 

@@ -15,7 +15,8 @@ impl TryFrom<BindingSourcemap> for rolldown_sourcemap::SourceMap {
 
   fn try_from(value: BindingSourcemap) -> Result<Self, Self::Error> {
     match value.inner {
-      Either::A(s) => rolldown_sourcemap::SourceMap::from_json_string(&s)
+      Either::A(s) => oxc_sourcemap::SourceMap::from_json_string(&s)
+        .map(oxc_sourcemap::SourceMap::into_owned)
         .context("Failed to convert string sourcemap to struct"),
       Either::B(v) => v.try_into(),
     }

@@ -41,6 +41,7 @@ pub struct BindingMatchGroup {
   pub entries_aware: Option<bool>,
   pub entries_aware_merge_threshold: Option<f64>,
   pub tags: Option<Vec<String>>,
+  pub include_dependencies_recursively: Option<bool>,
 }
 
 #[napi_derive::napi]

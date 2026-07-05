@@ -3,23 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## chunk.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__commonJSMin", {
-	enumerable: true,
-	get: function() {
-		return __commonJSMin;
-	}
-});
-
-```
-
 ## main.js
 
 ```js
-(/* @__PURE__ */ require("./chunk.js").__commonJSMin(((exports, module) => {
+(/* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = console.log("cjs-dep");
 })))();
 //#endregion
@@ -29,9 +16,22 @@ Object.defineProperty(exports, "__commonJSMin", {
 ## main2.js
 
 ```js
-(/* @__PURE__ */ require("./chunk.js").__commonJSMin(((exports, module) => {
+(/* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = console.log("cjs-dep2");
 })))();
 //#endregion
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
 
 ```

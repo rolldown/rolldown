@@ -1,0 +1,121 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
+const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
+__rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
+if (dep_hot) dep_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+console.log("dep");
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+//#region dep.js
+var init_dep_0 = __rolldown_runtime__.createEsmInitializer("dep.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "FAIL_GENERATE_BUNDLE";
+		if (hot_dep) {
+			hot_dep.accept();
+		}
+	} finally {}
+}));
+
+//#endregion
+init_dep_0()
+__rolldown_runtime__.applyUpdates([['dep.js', 'dep.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: dep.js, accepted_via: dep.js
+
+## Build Output
+
+### Errors
+
+#### PLUGIN_ERROR
+
+```text
+[fail-generate-bundle-on-marker] Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
+simulated post-link generate_bundle failure
+
+```
+
+# HMR Step 1
+
+## Code
+
+```js
+//#region dep.js
+var init_dep_0 = __rolldown_runtime__.createEsmInitializer("dep.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "recovered";
+		if (hot_dep) {
+			hot_dep.accept();
+		}
+	} finally {}
+}));
+
+//#endregion
+init_dep_0()
+__rolldown_runtime__.applyUpdates([['dep.js', 'dep.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: dep.js, accepted_via: dep.js
+
+## Build Output
+
+### Assets
+
+#### entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
+__rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
+const value = "recovered";
+if (dep_hot) dep_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+console.log(value);
+//#endregion
+
+```

@@ -118,7 +118,7 @@ impl ClassicBundler {
     }
     // When devtools is active, ask the writer thread to drain this session and
     // receive an ack. Consumers rely on "files are readable after
-    // `bundle.close()` resolves" — see `meta/design/devtools.md`.
+    // `bundle.close()` resolves" — see `internal-docs/devtools/implementation.md`.
     let devtools_flush_rx = self
       .debug_tracer
       .as_ref()

@@ -93,7 +93,7 @@ struct ManualSplitter<'a> {
 
 impl ManualSplitter<'_> {
   async fn split(&mut self) -> BuildResult<()> {
-    let (mut module_groups, mut entries_aware_groups) = self.build_module_groups().await?;
+    let (mut module_groups, entries_aware_groups) = self.build_module_groups().await?;
 
     if module_groups.iter().all(|group| group.modules.is_empty())
       && entries_aware_groups.iter().all(|group| group.modules.is_empty())
@@ -101,7 +101,6 @@ impl ManualSplitter<'_> {
       return Ok(());
     }
 
-    self.extract_runtime_chunk(&mut module_groups, &mut entries_aware_groups);
     self.process_entries_aware_groups(entries_aware_groups, &mut module_groups);
 
     let module_groups = self.into_priority_sorted_groups(module_groups);
@@ -134,7 +133,7 @@ impl ManualSplitter<'_> {
       .modules
       .iter()
       .filter_map(Module::as_normal)
-      .sorted_by(|a, b| a.stable_id.cmp(&b.stable_id));
+      .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id));
 
     for normal_module in sorted_normal_modules {
       if !metas[normal_module.idx].is_included {
@@ -160,7 +159,7 @@ impl ManualSplitter<'_> {
           continue;
         }
 
-        // Filter by module tags. See meta/design/module-tags.md
+        // Filter by module tags. See internal-docs/module-tags/implementation.md
         if let Some(required_tags) = &self.match_group_required_tags[match_group_index] {
           if !splitting_info.tags_bit_set.contains_all(required_tags) {
             continue;
@@ -200,8 +199,10 @@ impl ManualSplitter<'_> {
         let entries_aware = match_group.entries_aware.unwrap_or(false);
         let module_group_id = ModuleGroupId { match_group_index, name: group_name.clone() };
 
-        let include_dependencies_recursively =
-          self.chunking_options.include_dependencies_recursively.unwrap_or(true);
+        let include_dependencies_recursively = match_group
+          .include_dependencies_recursively
+          .or(self.chunking_options.include_dependencies_recursively)
+          .unwrap_or(true);
 
         let group: &mut ModuleGroup = if entries_aware {
           let idx = match entries_aware_idx_by_id.entry(module_group_id) {
@@ -243,6 +244,7 @@ impl ManualSplitter<'_> {
           normal_module.idx,
           &self.link_output.metas,
           &self.link_output.module_table,
+          self.module_to_assigned,
           &mut FxHashSet::default(),
           include_dependencies_recursively,
         );
@@ -327,48 +329,6 @@ impl ManualSplitter<'_> {
     }
   }
 
-  fn extract_runtime_chunk(
-    &mut self,
-    module_groups: &mut IndexVec<ModuleGroupIdx, ModuleGroup>,
-    entries_aware_groups: &mut [ModuleGroup],
-  ) {
-    // Manually pull out the runtime module into a standalone chunk.
-    let metas = &self.link_output.metas;
-    let runtime_module_idx = self.link_output.runtime.id();
-    assert!(
-      matches!(&self.link_output.module_table[runtime_module_idx], Module::Normal(_)),
-      "rolldown runtime is always a normal module"
-    );
-
-    if metas[runtime_module_idx].is_included {
-      let runtime_chunk = Chunk::new(
-        Some("rolldown-runtime".into()),
-        None,
-        self.index_splitting_info[runtime_module_idx].bits.clone(),
-        vec![],
-        ChunkKind::Common,
-        self.input_base.clone(),
-        None,
-      );
-      let chunk_idx = self.chunk_graph.add_chunk(runtime_chunk);
-      module_groups.iter_mut().for_each(|group| {
-        group.remove_module(runtime_module_idx, &self.link_output.module_table);
-      });
-      entries_aware_groups.iter_mut().for_each(|group| {
-        group.remove_module(runtime_module_idx, &self.link_output.module_table);
-      });
-      self.chunk_graph.chunk_table[chunk_idx]
-        .bits
-        .union(&self.index_splitting_info[runtime_module_idx].bits);
-      self.chunk_graph.add_module_to_chunk(
-        runtime_module_idx,
-        chunk_idx,
-        self.link_output.metas[runtime_module_idx].depended_runtime_helper,
-      );
-      self.module_to_assigned.set_bit(runtime_module_idx);
-    }
-  }
-
   fn into_priority_sorted_groups(
     &self,
     module_groups: IndexVec<ModuleGroupIdx, ModuleGroup>,
@@ -432,7 +392,7 @@ impl ManualSplitter<'_> {
   ) -> Option<(ModuleGroup, ModuleGroup)> {
     let mut modules = group.modules.iter().copied().collect::<Vec<_>>();
     // Split by lexical relevance first (stable module id), then by size constraints.
-    modules.sort_by(|lhs, rhs| {
+    modules.sort_unstable_by(|lhs, rhs| {
       let lhs_module = &self.link_output.module_table[*lhs];
       let rhs_module = &self.link_output.module_table[*rhs];
       lhs_module
@@ -843,7 +803,8 @@ fn derive_entries_aware_chunk_name(
           let module = &link_output.module_table[entry_point.idx];
           Path::new(module.stable_id().as_str())
             .file_stem()
-            .map(|s| s.to_string_lossy().to_string())
+            .and_then(|s| s.to_str())
+            .map(ToString::to_string)
             .unwrap_or_else(|| module.stable_id().to_string())
         }))
       } else {
@@ -876,6 +837,7 @@ fn add_module_and_dependencies_to_group_recursively(
   module_idx: ModuleIdx,
   module_metas: &LinkingMetadataVec,
   module_table: &ModuleTable,
+  module_to_assigned: &IndexBitSet<ModuleIdx>,
   visited: &mut FxHashSet<ModuleIdx>,
   recursively: bool,
 ) {
@@ -889,11 +851,13 @@ fn add_module_and_dependencies_to_group_recursively(
     return;
   }
 
-  if !module_metas[module_idx].is_included {
+  if module_to_assigned.has_bit(module_idx) {
     return;
   }
 
-  visited.insert(module_idx);
+  if !module_metas[module_idx].is_included {
+    return;
+  }
 
   module_group.add_module(module_idx, module_table);
   if recursively {
@@ -903,6 +867,7 @@ fn add_module_and_dependencies_to_group_recursively(
         *dep,
         module_metas,
         module_table,
+        module_to_assigned,
         visited,
         recursively,
       );

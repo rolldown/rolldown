@@ -10,16 +10,16 @@ pub enum Hires {
   Boundary,
 }
 
-pub struct SourcemapBuilder {
+pub struct SourcemapBuilder<'a> {
   hires: Hires,
   generated_code_line: u32,
   /// `generated_code_column` is calculated based on utf-16.
   generated_code_column: u32,
   source_id: u32,
-  source_map_builder: oxc_sourcemap::SourceMapBuilder,
+  source_map_builder: oxc_sourcemap::SourceMapBuilder<'a>,
 }
 
-impl SourcemapBuilder {
+impl<'a> SourcemapBuilder<'a> {
   pub fn new(hires: Hires) -> Self {
     Self {
       hires,
@@ -30,11 +30,13 @@ impl SourcemapBuilder {
     }
   }
 
-  pub fn into_source_map(self) -> oxc_sourcemap::SourceMap {
-    self.source_map_builder.into_sourcemap()
+  pub fn into_source_map(self) -> oxc_sourcemap::SourceMap<'static> {
+    // The oxc builder borrows its strings for `'a`; copy them once into a
+    // `'static` sourcemap so the result can be stored independently.
+    self.source_map_builder.into_owned_sourcemap().into_inner()
   }
 
-  pub fn set_source_and_content(&mut self, id: &str, content: &str) {
+  pub fn set_source_and_content(&mut self, id: &'a str, content: &'a str) {
     self.source_id = self.source_map_builder.set_source_and_content(id, content);
   }
 
@@ -44,7 +46,7 @@ impl SourcemapBuilder {
     chunk_start_utf16: u32,
     locator: &Locator,
     source: &str,
-    name: Option<&str>,
+    name: Option<&'a str>,
   ) {
     let name_id = if chunk.keep_in_mappings {
       name.map(|name| self.source_map_builder.add_name(name))
@@ -74,6 +76,8 @@ impl SourcemapBuilder {
             loc.bump_line();
             self.bump_line();
             new_line = true;
+            // A newline ends the current word run.
+            char_in_hires_boundary = false;
           }
           _ => {
             if new_line || !matches!(self.hires, Hires::False) {

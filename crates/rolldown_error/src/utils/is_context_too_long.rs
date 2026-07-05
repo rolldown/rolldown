@@ -18,25 +18,27 @@ pub fn is_context_too_long(
   if source.len() < 600 {
     return false;
   }
-  let rope = ropey::Rope::from_str(source);
 
-  if span.start() > rope.len_bytes() || span.end() > rope.len_bytes() {
+  // Only the ~300 chars on either side of the span matter, so slice the source
+  // string directly instead of building a whole-file rope. Building a rope here
+  // is O(file length) per call, which turns rendering N diagnostics in one large
+  // file into O(N^2) (see #9748).
+  let (Some(prefix), Some(postfix)) = (source.get(..span.start()), source.get(span.end()..)) else {
     eprintln!(
       "Internal error: Diagnostic span is out of range. \
-       Span: {}..{}, Rope length: {} bytes, Source ID: {:?}, Label message: {:?}. \
+       Span: {}..{}, source length: {} bytes, Source ID: {:?}, Label message: {:?}. \
        Please report this bug with the source file that triggered this error.",
       span.start(),
       span.end(),
-      rope.len_bytes(),
+      source.len(),
       source_id,
       label.display_info().msg()
     );
     return true;
-  }
+  };
 
   // 1. If start to beginning of the file is less than 300 characters, treated as it has line feed before.
   // 2. If end to end of the file is less than 300 characters, treated as it has line feed after.
-  let postfix = rope.byte_slice(span.end()..);
   let mut has_line_feed_after = false;
   let mut cnt = 0;
   for ch in postfix.chars() {
@@ -54,11 +56,9 @@ pub fn is_context_too_long(
     has_line_feed_after = true;
   }
 
-  let prefix = rope.byte_slice(..span.start());
-
   let mut has_line_feed_before = false;
   let mut cnt = 0;
-  for ch in prefix.chars().reversed() {
+  for ch in prefix.chars().rev() {
     if ch == '\n' {
       has_line_feed_before = true;
       break;

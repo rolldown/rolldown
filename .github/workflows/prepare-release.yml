@@ -23,23 +23,37 @@ jobs:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0 # for changelog
           persist-credentials: true # for create-pull-request
 
-      - uses: taiki-e/install-action@e1c4cd42111751368541a7cb5db3522bd1f846a4 # v2.78.0
+      - uses: taiki-e/install-action@682e7d9e49c5e653d371fc6adbda67653461378a # v2.82.4
         with:
           tool: just
 
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
+          version: '0.2.1'
           cache: true
+
+      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          cache-key: warm
+          tools: cargo-release-oxc
 
       - name: Set version
         env:
           INPUT_VERSION: ${{ inputs.version }}
         run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
+
+      - name: Bump crate versions
+        run: |
+          mkdir -p target
+          cargo release-oxc update --release crates --version ${VERSION}
+
+      - name: Update Cargo.lock after crate bump
+        run: cargo check
 
       - run: just bump-packages ${VERSION}
 
@@ -72,6 +86,9 @@ jobs:
             CHANGELOG.md
             packages/**/package.json
             packages/rolldown/src/binding.cjs
+            Cargo.toml
+            Cargo.lock
+            crates/**/Cargo.toml
           commit-message: 'release: v${{ env.VERSION }}'
           body: ${{ steps.changelog.outputs.content }}
           branch: release-v${{ env.VERSION }}

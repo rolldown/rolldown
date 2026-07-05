@@ -20,7 +20,7 @@ import type { AttachDebugOptions, DevModeOptions, InputOptions } from '../option
 import type { OutputOptions } from '../options/output-options';
 import type { RolldownPlugin } from '../plugin';
 import { bindingifyPlugin } from '../plugin/bindingify-plugin';
-import { PluginContextData } from '../plugin/plugin-context-data';
+import type { PluginContextData } from '../plugin/plugin-context-data';
 import { arraify } from './misc';
 import { normalizedStringOrRegex } from './normalize-string-or-regex';
 import {
@@ -32,19 +32,12 @@ export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
-  normalizedInputPlugins: RolldownPlugin[],
+  pluginContextData: PluginContextData,
   normalizedOutputPlugins: RolldownPlugin[],
   onLog: LogHandler,
   logLevel: LogLevelOption,
   watchMode: boolean,
 ): BindingInputOptions {
-  const pluginContextData = new PluginContextData(
-    onLog,
-    outputOptions,
-    normalizedInputPlugins,
-    normalizedOutputPlugins,
-  );
-
   const plugins = rawPlugins.map((plugin) => {
     if ('_parallel' in plugin) {
       return undefined;

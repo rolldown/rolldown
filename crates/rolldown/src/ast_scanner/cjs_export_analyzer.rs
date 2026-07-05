@@ -1,9 +1,8 @@
-use oxc::allocator::{GetAddress, UnstableAddress};
 use oxc::ast::{
   AstKind, MemberExpressionKind,
   ast::{self, AssignmentExpression, Expression, IdentifierReference, PropertyKey},
 };
-use oxc::span::Span;
+use oxc::semantic::NodeId;
 use oxc_str::CompactStr;
 use rolldown_common::{AstScopes, EcmaModuleAstUsage};
 use rolldown_ecmascript_utils::ExpressionExt;
@@ -42,7 +41,7 @@ pub enum CommonJsAstType {
   /// `console.log(exports)`
   ExportsRead,
   EsModuleFlag,
-  Reexport(Span),
+  Reexport(NodeId),
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -77,7 +76,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               if call_expr
                 .arguments
                 .first()
-                .is_some_and(|arg| arg.address() == parent.address()) =>
+                .is_some_and(|arg| arg.node_id() == parent.node_id()) =>
             {
               self.check_object_define_property(call_expr)
             }
@@ -95,10 +94,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
       },
       AstKind::CallExpression(call_expr)
-        if call_expr
-          .arguments
-          .first()
-          .is_some_and(|arg| arg.address() == ident_ref.unstable_address()) =>
+        if call_expr.arguments.first().is_some_and(|arg| arg.node_id() == ident_ref.node_id()) =>
       {
         // one scenario:
         // 1. Object.defineProperty(exports, "__esModule", { value: true });
@@ -119,9 +115,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       Some(CommonJsAstType::ExportsPropWrite(prop)) if prop == "*" => {
         self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
       }
-      Some(CommonJsAstType::Reexport(span)) => {
+      Some(CommonJsAstType::Reexport(node_id)) => {
         self.result.ast_usage.insert(EcmaModuleAstUsage::IsCjsReexport);
-        self.result.cjs_reexport_require_spans.push(*span);
+        self.result.cjs_reexport_require_node_ids.push(*node_id);
       }
       _ => {}
     }
@@ -170,8 +166,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let callee = call_expr.callee.as_identifier()?;
 
     if !(callee.name == "require"
-      && matches!(self.resolve_identifier_reference(callee), IdentifierReferenceKind::Global,)
-      && call_expr.arguments.len() == 1)
+      && call_expr.arguments.len() == 1
+      && matches!(self.resolve_identifier_reference(callee), IdentifierReferenceKind::Global,))
     {
       return None;
     }
@@ -181,7 +177,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .as_expression()?
       .as_string_literal()
       .is_some()
-      .then_some(CommonJsAstType::Reexport(call_expr.span))
+      .then_some(CommonJsAstType::Reexport(call_expr.node_id()))
   }
 }
 
@@ -198,18 +194,18 @@ pub fn is_object_define_property_es_module(
 ) -> Option<CommonJsAstType> {
   let callee = call_expr.callee.as_member_expression()?;
   let callee_object = callee.object().as_identifier()?;
-  // Check if it is global variable `Object`.
+  if callee_object.name != "Object" {
+    return Some(CommonJsAstType::ExportsRead);
+  }
+  if callee.static_property_name()? != "defineProperty" {
+    return Some(CommonJsAstType::ExportsRead);
+  }
   if !scope.is_unresolved(callee_object.reference_id()) {
     return None;
   }
-  let key_eq_object = callee_object.name == "Object";
-  let property_eq_define_property = callee.static_property_name()? == "defineProperty";
-  if !(key_eq_object && property_eq_define_property) {
-    return Some(CommonJsAstType::ExportsRead);
-  }
   let first = call_expr.arguments.first()?.as_expression()?.as_identifier()?;
 
-  if !scope.is_unresolved(first.reference_id()) || first.name != "exports" {
+  if first.name != "exports" || !scope.is_unresolved(first.reference_id()) {
     return None;
   }
 

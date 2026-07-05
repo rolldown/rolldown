@@ -13,7 +13,7 @@ use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTag,
   ModuleTagBitSet, ModuleTagRegistry, PostChunkOptimizationOperation, PreserveEntrySignatures,
-  SymbolRef, WrapKind,
+  RetainedExportSymbols, SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
@@ -31,7 +31,7 @@ use super::{GenerateStage, chunk_ext::ChunkCreationReason};
 pub struct SplittingInfo {
   pub bits: BitSet,
   pub share_count: u32,
-  /// Module tags bitset. See meta/design/module-tags.md
+  /// Module tags bitset. See internal-docs/module-tags/implementation.md
   pub tags_bit_set: ModuleTagBitSet,
 }
 
@@ -39,7 +39,11 @@ pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn generate_chunks(&mut self) -> BuildResult<ChunkGraph> {
+  #[expect(clippy::too_many_lines)]
+  pub async fn generate_chunks(
+    &mut self,
+    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+  ) -> BuildResult<ChunkGraph> {
     // Count total entry points (not unique modules) to handle duplicates correctly
     let entries_len: u32 = self
       .link_output
@@ -49,9 +53,6 @@ impl GenerateStage<'_> {
       .sum::<usize>()
       .try_into()
       .expect("Too many entries, u32 overflowed.");
-    // If we are in test environment, to make the runtime module always fall into a standalone chunk,
-    // we create a facade entry point for it.
-
     let mut chunk_graph = ChunkGraph::new(self.link_output.module_table.modules.len());
     chunk_graph.chunk_table.chunks.reserve(entries_len as usize);
 
@@ -152,7 +153,13 @@ impl GenerateStage<'_> {
       self.init_entry_point(&mut chunk_graph, &mut bits_to_chunk, entries_len, &input_base);
 
       self
-        .split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk, &input_base)
+        .split_chunks(
+          &mut index_splitting_info,
+          &mut chunk_graph,
+          &mut bits_to_chunk,
+          &input_base,
+          used_symbol_refs,
+        )
         .await?;
     }
     // Merge external import namespaces at chunk level.
@@ -171,9 +178,7 @@ impl GenerateStage<'_> {
           continue;
         }
         group.sort_unstable_by_key(|item| self.link_output.module_table[item.owner].exec_order());
-        let Some(idx) =
-          group.iter().position(|item| self.link_output.used_symbol_refs.contains(item))
-        else {
+        let Some(idx) = group.iter().position(|item| used_symbol_refs.contains(item)) else {
           continue;
         };
         // In the extreme case, idx would eq to group.len() - 1, which means the first symbol is the only one that is used.
@@ -251,7 +256,7 @@ impl GenerateStage<'_> {
     let sorted_chunk_idx_vec = chunk_graph
       .chunk_table
       .iter_enumerated()
-      .sorted_by_key(|(index, chunk)| match &chunk.kind {
+      .sorted_unstable_by_key(|(index, chunk)| match &chunk.kind {
         ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) => {
           (0, index.raw())
         }
@@ -563,16 +568,44 @@ impl GenerateStage<'_> {
         } else {
           false
         };
-        Some((m.namespace_object_ref, is_namespace_referenced))
+        Some((module_idx, is_namespace_referenced))
       })
       .collect_vec();
-    for (namespace_ref, flag) in to_eliminate {
-      if flag {
-        self.link_output.used_symbol_refs.insert(namespace_ref);
+    for (module_idx, flag) in to_eliminate {
+      self.link_output.metas[module_idx].namespace_included = flag;
+    }
+  }
+
+  /// Projects `used_symbol_refs` onto the export domain: for every module's resolved export,
+  /// record the export's symbol ref and its canonical form when used. Must run after
+  /// [`Self::finalized_module_namespace_ref_usage`] so the namespace decision is folded in
+  /// (an `export * as ns` export resolves to a namespace ref).
+  pub fn compute_retained_export_symbols(&mut self, used_symbol_refs: &UsedSymbolRefs) {
+    let link_output = &self.link_output;
+    // A normal module's namespace ref answers to the namespace decision, not to the
+    // inclusion fixpoint (see `finalized_module_namespace_ref_usage`).
+    let is_used = |symbol_ref: SymbolRef| {
+      if let Some(m) = link_output.module_table[symbol_ref.owner].as_normal()
+        && m.namespace_object_ref == symbol_ref
+      {
+        link_output.metas[symbol_ref.owner].namespace_included
       } else {
-        self.link_output.used_symbol_refs.remove(&namespace_ref);
+        used_symbol_refs.contains(&symbol_ref)
+      }
+    };
+    let mut retained = RetainedExportSymbols::default();
+    for meta in &link_output.metas {
+      for export in meta.resolved_exports.values() {
+        if is_used(export.symbol_ref) {
+          retained.insert(export.symbol_ref);
+        }
+        let canonical_ref = link_output.symbol_db.canonical_ref_for(export.symbol_ref);
+        if is_used(canonical_ref) {
+          retained.insert(canonical_ref);
+        }
       }
     }
+    self.link_output.retained_export_symbols = retained;
   }
 
   /// Find all entry level external modules, and re propagate `has_dynamic_exports` for affected modules.
@@ -651,7 +684,7 @@ impl GenerateStage<'_> {
         }
       }
       let mut vec = entry_level_external_modules.into_iter().collect_vec();
-      vec.sort_by_key(|idx| self.link_output.module_table[*idx].exec_order());
+      vec.sort_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order());
       chunk_graph.chunk_table[chunk_idx].entry_level_external_module_idx = vec;
     }
     // re propagate `meta.has_dynamic_exports` for affect modules
@@ -695,16 +728,14 @@ impl GenerateStage<'_> {
         if self.options.preserve_modules
           || self.link_output.user_defined_entry_modules.contains(&item.idx)
         {
-          Path::new(item.id.as_ref()).is_absolute().then_some(item.id.as_ref())
+          item.id.is_path().then_some(item.id.as_ref())
         } else {
           None
         }
       }
       Module::External(external_module) => {
         if self.options.preserve_modules {
-          Path::new(external_module.id.as_str())
-            .is_absolute()
-            .then_some(external_module.id.as_ref())
+          external_module.id.is_path().then_some(external_module.id.as_ref())
         } else {
           None
         }
@@ -721,7 +752,8 @@ impl GenerateStage<'_> {
     }
     match modules_count {
       0 => None,
-      1 => ret.and_then(|item| Path::new(&item).parent().map(|p| p.to_string_lossy().to_string())),
+      1 => ret
+        .and_then(|item| Path::new(&item).parent().and_then(Path::to_str).map(ToString::to_string)),
       _ => ret,
     }
   }
@@ -823,6 +855,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
+    used_symbol_refs: &mut UsedSymbolRefsBuilder,
   ) -> BuildResult<()> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     let tag_registry = ModuleTagRegistry::new();
@@ -845,6 +878,9 @@ impl GenerateStage<'_> {
       );
     }
 
+    let mut module_is_assigned: IndexBitSet<ModuleIdx> =
+      IndexBitSet::new(self.link_output.module_table.modules.len());
+
     let has_tla_or_tla_dependency =
       self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
     let allow_merge_common_chunks =
@@ -852,7 +888,7 @@ impl GenerateStage<'_> {
     let allow_avoid_redundant_chunk_loads =
       self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
         && !has_tla_or_tla_dependency;
-    // See meta/design/code-splitting.md#dynamic-already-loaded-analysis.
+    // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self
         .link_output
@@ -864,9 +900,12 @@ impl GenerateStage<'_> {
         .expect("Too many entries, u32 overflowed.");
       self.optimize_dynamic_entry_bits(index_splitting_info, chunk_graph, entries_len);
     }
-
-    let mut module_is_assigned: IndexBitSet<ModuleIdx> =
-      IndexBitSet::new(self.link_output.module_table.modules.len());
+    self.extract_standalone_runtime_chunk(
+      index_splitting_info,
+      &mut module_is_assigned,
+      chunk_graph,
+      input_base,
+    );
 
     self
       .apply_manual_code_splitting(
@@ -961,10 +1000,61 @@ impl GenerateStage<'_> {
         input_base,
         &mut module_is_assigned,
         &temp_chunk_graph,
+        used_symbol_refs,
       );
     }
 
+    self.try_merge_runtime_chunk(chunk_graph, None);
+
     Ok(())
+  }
+
+  pub(super) fn extract_standalone_runtime_chunk(
+    &self,
+    index_splitting_info: &IndexSplittingInfo,
+    module_is_assigned: &mut IndexBitSet<ModuleIdx>,
+    chunk_graph: &mut ChunkGraph,
+    input_base: &ArcStr,
+  ) -> Option<ChunkIdx> {
+    let runtime_module_idx = self.link_output.runtime.id();
+    if self.options.code_splitting.is_disabled()
+      || !self.link_output.metas[runtime_module_idx].is_included
+      || module_is_assigned.has_bit(runtime_module_idx)
+    {
+      return None;
+    }
+
+    debug_assert!(
+      matches!(&self.link_output.module_table[runtime_module_idx], Module::Normal(_)),
+      "rolldown runtime is always a normal module"
+    );
+
+    // See internal-docs/code-splitting/implementation.md#runtime-module-placement.
+    let bits = &index_splitting_info[runtime_module_idx].bits;
+    // Keep the `rolldown-runtime` name: downstream tooling (Vite / @vitejs/plugin-rsc)
+    // identifies the runtime chunk by it. `None` emits a generic `chunk-[hash].js`
+    // and silently breaks them. See rolldown/rolldown#9685.
+    let mut runtime_chunk = Chunk::new(
+      Some("rolldown-runtime".into()),
+      None,
+      bits.clone(),
+      vec![],
+      ChunkKind::Common,
+      input_base.clone(),
+      None,
+    );
+    runtime_chunk.add_creation_reason(
+      ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
+      self.options,
+    );
+    let runtime_chunk_idx = chunk_graph.add_chunk(runtime_chunk);
+    chunk_graph.add_module_to_chunk(
+      runtime_module_idx,
+      runtime_chunk_idx,
+      self.link_output.metas[runtime_module_idx].depended_runtime_helper,
+    );
+    module_is_assigned.set_bit(runtime_module_idx);
+    Some(runtime_chunk_idx)
   }
 
   fn determine_reachable_modules_for_entry(
@@ -997,7 +1087,7 @@ impl GenerateStage<'_> {
       index_splitting_info[module_idx].bits.set_bit(entry_index);
       index_splitting_info[module_idx].share_count += 1;
       // Tag as initial if reachable from a user-defined entry via static imports.
-      // See meta/design/module-tags.md
+      // See internal-docs/module-tags/implementation.md
       if is_user_defined_entry {
         index_splitting_info[module_idx].tags_bit_set.set_bit(ModuleTag::INITIAL_BIT);
       }

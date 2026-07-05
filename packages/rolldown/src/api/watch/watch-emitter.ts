@@ -20,7 +20,7 @@ type RolldownWatchBuild = BindingWatcherBundler;
  * - `END`: finished building all bundles
  * - `ERROR`: encountered an error while bundling
  *   - `error`: the error that was thrown
- *   - `result`: the bundle object
+ *   - `result`: the bundle object, or `null` if setup failed before a bundle was created
  *
  * @category Programmatic APIs
  */
@@ -42,7 +42,7 @@ export type RolldownWatcherEvent =
   | {
       code: 'ERROR';
       error: Error /* the error is not compilable with rollup */;
-      result: RolldownWatchBuild;
+      result: RolldownWatchBuild | null;
     };
 
 /**
@@ -137,6 +137,28 @@ export class WatcherEmitter implements RolldownWatcher {
   bindClose(handler: () => Promise<void>): void {
     this.closeHandler = handler;
     this.resolveCloseHandler(handler);
+  }
+
+  /** @internal Surface setup failures through the normal watcher event API. */
+  failSetup(error: unknown, onClose: () => void): Promise<void> {
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    const reportPromise = (async () => {
+      await this.emit('event', { code: 'ERROR', error: normalizedError, result: null });
+      await this.emit('event', { code: 'END' });
+    })();
+
+    let closePromise: Promise<void> | undefined;
+    this.bindClose(
+      () =>
+        (closePromise ??= (async () => {
+          try {
+            await this.emit('close');
+          } finally {
+            onClose();
+          }
+        })()),
+    );
+    return reportPromise;
   }
 
   close(): Promise<void> {

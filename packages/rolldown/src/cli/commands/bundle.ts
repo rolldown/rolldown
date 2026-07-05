@@ -136,7 +136,7 @@ async function watchInner(
         break;
 
       case 'ERROR':
-        await event.result.close();
+        await event.result?.close();
         logger.error(event.error);
         break;
 

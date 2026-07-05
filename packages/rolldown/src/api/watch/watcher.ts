@@ -152,7 +152,7 @@ export async function createWatcher(
   input: WatchOptions | WatchOptions[],
 ): Promise<void> {
   const options = arraify(input);
-  const bundlerOptions = await Promise.all(
+  const bundlerOptionResults = await Promise.allSettled(
     options
       .map((option) =>
         arraify(option.output || {}).map(async (output) => {
@@ -162,13 +162,42 @@ export async function createWatcher(
       )
       .flat(),
   );
+  const bundlerOptions: BundlerOptionWithStopWorker[] = [];
+  const setupErrors: unknown[] = [];
+  for (const result of bundlerOptionResults) {
+    if (result.status === 'fulfilled') {
+      bundlerOptions.push(result.value);
+    } else {
+      setupErrors.push(result.reason);
+    }
+  }
+  if (setupErrors.length > 0) {
+    const cleanupErrors = await stopParallelPluginWorkers(bundlerOptions);
+    const errors = [...setupErrors, ...cleanupErrors];
+    throw errors.length === 1
+      ? errors[0]
+      : new AggregateError(errors, 'Watcher setup and parallel-plugin worker cleanup failed');
+  }
+
   warnMultiplePollingOptions(bundlerOptions);
   let onNativeClose = () => {};
   const callback = createEventCallback(emitter, () => onNativeClose());
-  const bindingWatcher = new BindingWatcher(
-    bundlerOptions.map((option) => option.bundlerOptions),
-    callback,
-  );
+  let bindingWatcher: BindingWatcher;
+  try {
+    bindingWatcher = new BindingWatcher(
+      bundlerOptions.map((option) => option.bundlerOptions),
+      callback,
+    );
+  } catch (error) {
+    const cleanupErrors = await stopParallelPluginWorkers(bundlerOptions);
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(
+        [error, ...cleanupErrors],
+        'Watcher construction and parallel-plugin worker cleanup failed',
+      );
+    }
+    throw error;
+  }
   const watcher = new Watcher(
     emitter,
     bindingWatcher,
@@ -176,6 +205,15 @@ export async function createWatcher(
   );
   emitter.bindClose(() => watcher.close());
   onNativeClose = () => watcher.onNativeClose();
+}
+
+async function stopParallelPluginWorkers(
+  bundlerOptions: BundlerOptionWithStopWorker[],
+): Promise<unknown[]> {
+  const results = await Promise.allSettled(
+    bundlerOptions.map(async (option) => option.stopWorkers?.()),
+  );
+  return results.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
 }
 
 function warnMultiplePollingOptions(bundlerOptions: BundlerOptionWithStopWorker[]) {

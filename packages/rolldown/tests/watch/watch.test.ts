@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { RolldownWatcher, WatchOptions } from 'rolldown';
+import type { RolldownWatcher, RolldownWatcherEvent, WatchOptions } from 'rolldown';
 import { rolldown, watch as _watch } from 'rolldown';
 import { sleep } from 'rolldown-tests/utils';
 import { test, vi } from 'vitest';
@@ -213,6 +213,40 @@ test.concurrent(
     expect(closeBundleFn).not.toHaveBeenCalled();
     expect(closeEventFn).toHaveBeenCalledTimes(1);
     expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
+test.concurrent(
+  'watcher setup failure emits an error and remains closable',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ expect }) => {
+    const setupError = new Error('watcher setup failed');
+    const watcher = watch({
+      plugins: [
+        {
+          name: 'setup-failure',
+          async options() {
+            await Promise.resolve();
+            throw setupError;
+          },
+        },
+      ],
+    });
+
+    const events: RolldownWatcherEvent[] = [];
+    const closeEventFn = vi.fn();
+    const endPromise = new Promise<void>((resolve) => {
+      watcher.on('event', (event) => {
+        events.push(event);
+        if (event.code === 'END') resolve();
+      });
+    });
+    watcher.on('close', closeEventFn);
+
+    await Promise.all([endPromise, watcher.close(), watcher.close()]);
+
+    expect(events).toEqual([{ code: 'ERROR', error: setupError, result: null }, { code: 'END' }]);
+    expect(closeEventFn).toHaveBeenCalledTimes(1);
   },
 );
 
@@ -493,7 +527,7 @@ test.concurrent(
     });
     watcher.on('event', async (event) => {
       if (event.code === 'ERROR') {
-        await event.result.close();
+        await event.result?.close();
       }
     });
     onTestFinished(async () => {

@@ -47,7 +47,7 @@ type RolldownWatcherEvent =
   | { code: 'BUNDLE_START' }
   | { code: 'BUNDLE_END'; duration: number; output: readonly string[]; result: RolldownWatchBuild }
   | { code: 'END' }
-  | { code: 'ERROR'; error: Error; result: RolldownWatchBuild };
+  | { code: 'ERROR'; error: Error; result: RolldownWatchBuild | null };
 ```
 
 Event listeners are normally **awaited** before proceeding — blocking semantics matching Rollup.
@@ -292,6 +292,13 @@ close-event dispatch, a reentrant `watcher.close()` returns the already-settled
 native phase; outside callers receive the outer promise and therefore observe
 listener completion or rejection.
 
+Asynchronous setup failures (for example an `options` hook rejection) are
+reported as `ERROR` with `result: null`, followed by `END`, matching Rollup's
+pre-build error shape. The emitter is then bound to a terminal close lifecycle,
+so a same-tick `close()` cannot remain pending. Setup also uses all-settled
+option initialization and terminates workers from every successfully initialized
+output if another output or native watcher construction fails.
+
 ### Error Recovery
 
 Build errors do **not** stop the watcher. On error, `event('ERROR')` is emitted with the error details and a `result` handle. The watcher continues watching — when the user fixes the error and saves, a rebuild triggers.
@@ -478,7 +485,7 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 
 ### NAPI + TypeScript Bridge
 
-- [ ] Surface setup errors (e.g. `options` hook) as `ERROR` events, not unhandled rejections ([#6482](https://github.com/rolldown/rolldown/issues/6482))
+- [x] Surface setup errors (e.g. `options` hook) as `ERROR` events with `result: null`, then `END`, without leaking partially initialized parallel-plugin workers ([#6482](https://github.com/rolldown/rolldown/issues/6482))
 
 ### Cleanup
 

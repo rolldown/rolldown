@@ -36,7 +36,9 @@ const isDefaultBuild = !getRuntimeCapabilities().asyncRuntimeBuild;
 // The non-config, non-flavor metrics fields: the pure runtime counters that
 // must all be zero on the default build (and that rise after work on an
 // async-runtime build).
-const COUNTER_FIELDS: Array<keyof BindingRuntimeMetrics> = [
+type NumericMetricField = Exclude<keyof BindingRuntimeMetrics, 'flavor'>;
+
+const COUNTER_FIELDS: NumericMetricField[] = [
   'tasksSpawned',
   'tasksCompleted',
   'tasksPanicked',
@@ -52,7 +54,7 @@ const COUNTER_FIELDS: Array<keyof BindingRuntimeMetrics> = [
   'maxActiveBlockingTasks',
 ];
 
-const RESETTABLE_EVENT_FIELDS: Array<keyof BindingRuntimeMetrics> = [
+const RESETTABLE_EVENT_FIELDS: NumericMetricField[] = [
   'tasksSpawned',
   'tasksCompleted',
   'tasksPanicked',
@@ -62,7 +64,7 @@ const RESETTABLE_EVENT_FIELDS: Array<keyof BindingRuntimeMetrics> = [
   'blockingTasksCompleted',
 ];
 
-const HIGH_WATER_FIELDS: Array<keyof BindingRuntimeMetrics> = [
+const HIGH_WATER_FIELDS: NumericMetricField[] = [
   'maxQueuedRunnables',
   'maxActiveRunnables',
   'maxActiveBlockingTasks',

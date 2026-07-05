@@ -43,14 +43,23 @@ implementation is selected by `async-runtime`. See
 6. **Configuration is immutable after first use.** Runtime flavor, worker
    count, and blocking concurrency may be configured from the binding API or
    environment before the first async call. Lazy startup makes top-level
-   configuration possible without changing module registration order.
+   configuration possible without changing module registration order: napi's
+   initial lifecycle `start` leaves backend creation lazy. Once the backend is
+   created, or shutdown enters an explicit stopped state, configuration remains
+   frozen. Submissions after shutdown are rejected until `start` recreates the
+   backend.
 
-7. **Detached-task behavior matches Tokio.** Dropping Rolldown's `JoinHandle`
+7. **Lifecycle transitions linearize with submission.** Backend acquisition,
+   explicit start, and shutdown share one controller mutex. A submission either
+   acquires the running backend before shutdown or observes the stopped state;
+   it can never lazily recreate a backend after shutdown.
+
+8. **Detached-task behavior matches Tokio.** Dropping Rolldown's `JoinHandle`
    detaches rather than cancels the task. Internal module-loader tasks are
    supervised so panic or cancellation is converted into a build diagnostic
    and completion accounting cannot hang.
 
-8. **The compatibility path does not change.** Builds without
+9. **The compatibility path does not change.** Builds without
    `async-runtime` retain napi-rs's Tokio executor and Rolldown's previous
    behavior.
 

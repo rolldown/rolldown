@@ -11,14 +11,14 @@
 use std::{future::Future, pin::Pin};
 
 #[cfg(feature = "async-runtime")]
-use napi::bindgen_prelude::{AsyncRuntime, create_custom_async_runtime};
+use napi::bindgen_prelude::{AsyncRuntime, AsyncRuntimeTask, create_custom_async_runtime};
 use napi::bindgen_prelude::{FnArgs, Promise};
 use napi_derive::napi;
 #[cfg(feature = "async-runtime")]
 use rolldown_utils::async_runtime::{
   RuntimeFlavor, RuntimeMetricsSnapshot, RuntimeOptions, TimerDriver, TimerDriverId, TimerId,
   block_on_dyn, configure, configured_options, metrics, register_timer_driver, reset_metrics,
-  shutdown, spawn_detached, unregister_timer_driver,
+  shutdown, spawn_detached, start, try_spawn_blocking, try_spawn_detached, unregister_timer_driver,
 };
 
 use crate::types::js_callback::JsCallback;
@@ -30,8 +30,8 @@ struct RolldownAsyncRuntime;
 
 #[cfg(feature = "async-runtime")]
 impl AsyncRuntime for RolldownAsyncRuntime {
-  fn spawn(&self, future: Pin<Box<dyn Future<Output = ()> + Send + 'static>>) {
-    spawn_detached(future);
+  fn spawn(&self, task: AsyncRuntimeTask) -> std::result::Result<(), AsyncRuntimeTask> {
+    try_spawn_detached(task)
   }
 
   fn block_on(&self, future: Pin<&mut dyn Future<Output = ()>>) {
@@ -42,14 +42,18 @@ impl AsyncRuntime for RolldownAsyncRuntime {
     &self,
     work: Box<dyn FnOnce() + Send + 'static>,
   ) -> std::result::Result<(), Box<dyn FnOnce() + Send + 'static>> {
-    // Keep napi and transitive callers in the same bounded blocking lane as
-    // Rolldown's facade. See internal-docs/async-runtime/implementation.md.
-    rolldown_utils::async_runtime::spawn_blocking(work).detach();
-    Ok(())
+    // Route blocking work submitted through this SPI to the same bounded lane
+    // as Rolldown's facade. See internal-docs/async-runtime/implementation.md.
+    try_spawn_blocking(work).map(rolldown_utils::async_runtime::JoinHandle::detach)
   }
 
-  fn shutdown(&self) {
+  fn start(&self) -> napi::Result<()> {
+    start().map_err(|error| napi::Error::from_reason(error.to_string()))
+  }
+
+  fn shutdown(&self) -> napi::Result<()> {
     shutdown();
+    Ok(())
   }
 }
 
@@ -987,8 +991,8 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
 #[cfg(test)]
 mod tests {
   use super::{
-    ResolvedRuntimeBackend, ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RuntimeEnv,
-    parse_park_deadline_ms, resolve_runtime_config_for, wasm_async_work_pool_size,
+    ResolvedRuntimeBackend, ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RolldownAsyncRuntime,
+    RuntimeEnv, parse_park_deadline_ms, resolve_runtime_config_for, wasm_async_work_pool_size,
   };
 
   fn env() -> RuntimeEnv {
@@ -1005,18 +1009,21 @@ mod tests {
 
   #[cfg(feature = "async-runtime")]
   #[test]
-  fn napi_spawn_blocking_routes_through_the_shared_runtime() {
-    rolldown_utils::async_runtime::reset_metrics();
-    let handle =
-      napi::bindgen_prelude::spawn_blocking(|| std::thread::current().name().map(str::to_owned));
-    let thread_name = futures::executor::block_on(handle)
-      .expect("the shared blocking lane should execute napi work");
+  fn rolldown_runtime_accepts_napi_blocking_work() {
+    use std::{sync::mpsc, time::Duration};
 
-    assert_ne!(
-      thread_name.as_deref(),
-      Some(napi::bindgen_prelude::SPAWN_BLOCKING_FALLBACK_THREAD_NAME),
-      "Rolldown's hook must accept the work instead of using napi's fallback thread"
-    );
+    rolldown_utils::async_runtime::reset_metrics();
+    let (done_tx, done_rx) = mpsc::channel();
+    napi::bindgen_prelude::AsyncRuntime::spawn_blocking(
+      &RolldownAsyncRuntime,
+      Box::new(move || {
+        done_tx.send(()).expect("test receiver must still be listening");
+      }),
+    )
+    .unwrap_or_else(|_| panic!("the shared blocking lane must accept napi work"));
+    done_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("the shared blocking lane must execute accepted napi work");
     assert!(
       rolldown_utils::async_runtime::metrics().blocking_tasks_started >= 1,
       "napi work should be recorded by the shared blocking scheduler"

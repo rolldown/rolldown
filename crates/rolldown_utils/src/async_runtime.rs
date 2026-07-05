@@ -2750,9 +2750,29 @@ impl RuntimeBackend {
   }
 }
 
+enum RuntimeLifecycle {
+  Initial,
+  Running(RuntimeBackend),
+  Stopped,
+}
+
 struct RuntimeState {
   options: RuntimeOptions,
-  backend: Option<RuntimeBackend>,
+  lifecycle: RuntimeLifecycle,
+}
+
+#[cfg(test)]
+thread_local! {
+  static BEFORE_RUNTIME_SUBMISSION_LOCK_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> = const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(test)]
+fn run_before_runtime_submission_lock_test_hook() {
+  if let Some(hook) = BEFORE_RUNTIME_SUBMISSION_LOCK_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
+    hook();
+  }
 }
 
 struct RuntimeController {
@@ -2765,7 +2785,7 @@ impl RuntimeController {
     let options =
       RuntimeOptions::default().validate().expect("default async runtime options must be valid");
     Self {
-      state: Mutex::new(RuntimeState { options, backend: None }),
+      state: Mutex::new(RuntimeState { options, lifecycle: RuntimeLifecycle::Initial }),
       metrics: Arc::new(RuntimeMetrics::default()),
     }
   }
@@ -2773,9 +2793,9 @@ impl RuntimeController {
   fn configure(&self, options: RuntimeOptions) -> Result<(), RuntimeConfigError> {
     let options = options.validate()?;
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    if state.backend.is_some() {
+    if !matches!(&state.lifecycle, RuntimeLifecycle::Initial) {
       return Err(RuntimeConfigError(
-        "the async runtime is already running; configure it before the first async call"
+        "the async runtime configuration is frozen; configure it before the first async call"
           .to_string(),
       ));
     }
@@ -2783,15 +2803,65 @@ impl RuntimeController {
     Ok(())
   }
 
-  fn backend(&self) -> RuntimeBackend {
+  fn try_backend(&self) -> Result<RuntimeBackend, RuntimeConfigError> {
+    #[cfg(test)]
+    run_before_runtime_submission_lock_test_hook();
+
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    if let Some(backend) = &state.backend {
-      return backend.clone();
+    match &state.lifecycle {
+      RuntimeLifecycle::Running(backend) => return Ok(backend.clone()),
+      RuntimeLifecycle::Stopped => {
+        return Err(RuntimeConfigError(
+          "the async runtime is stopped; call start before submitting work".to_string(),
+        ));
+      }
+      RuntimeLifecycle::Initial => {}
     }
-    let backend = RuntimeBackend::new(&state.options, Arc::clone(&self.metrics))
-      .expect("validated async runtime configuration must create a backend");
-    state.backend = Some(backend.clone());
-    backend
+    let backend = RuntimeBackend::new(&state.options, Arc::clone(&self.metrics))?;
+    state.lifecycle = RuntimeLifecycle::Running(backend.clone());
+    Ok(backend)
+  }
+
+  fn backend(&self) -> RuntimeBackend {
+    self.try_backend().unwrap_or_else(|error| panic!("{error}"))
+  }
+
+  fn try_spawn_detached<F>(&self, future: F) -> Result<(), F>
+  where
+    F: Future<Output = ()> + Send + 'static,
+  {
+    match self.try_backend() {
+      Ok(backend) => {
+        spawn_with_backend(&backend, Arc::clone(&self.metrics), future).detach();
+        Ok(())
+      }
+      Err(_) => Err(future),
+    }
+  }
+
+  fn try_spawn_blocking<F, T>(&self, function: F) -> Result<JoinHandle<T>, F>
+  where
+    F: FnOnce() -> T + Send + 'static,
+    T: Send + 'static,
+  {
+    match self.try_backend() {
+      Ok(backend) => Ok(backend.spawn_blocking(function, &self.metrics)),
+      Err(_) => Err(function),
+    }
+  }
+
+  fn start(&self) -> Result<(), RuntimeConfigError> {
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    match &state.lifecycle {
+      // napi starts the runtime while the addon is still being registered.
+      // Keep the first backend lazy so configureAsyncRuntime remains usable
+      // until the first async binding call.
+      RuntimeLifecycle::Initial | RuntimeLifecycle::Running(_) => return Ok(()),
+      RuntimeLifecycle::Stopped => {}
+    }
+    let backend = RuntimeBackend::new(&state.options, Arc::clone(&self.metrics))?;
+    state.lifecycle = RuntimeLifecycle::Running(backend);
+    Ok(())
   }
 
   fn options(&self) -> RuntimeOptions {
@@ -2799,8 +2869,13 @@ impl RuntimeController {
   }
 
   fn shutdown(&self) {
-    let backend =
-      self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).backend.take();
+    let backend = {
+      let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      match std::mem::replace(&mut state.lifecycle, RuntimeLifecycle::Stopped) {
+        RuntimeLifecycle::Running(backend) => Some(backend),
+        RuntimeLifecycle::Initial | RuntimeLifecycle::Stopped => None,
+      }
+    };
     // Drain-fire pending heap timers before dropping the backend (timer
     // facility): a task parked on a debounce sleep must be woken -- and its
     // Sleep resolved early via the `fired` flag -- or a pending
@@ -2829,13 +2904,15 @@ pub fn is_multi_threaded() -> bool {
   RUNTIME.options().flavor == RuntimeFlavor::MultiThread
 }
 
-pub fn spawn<F, T>(future: F) -> JoinHandle<T>
+fn spawn_with_backend<F, T>(
+  backend: &RuntimeBackend,
+  metrics: Arc<RuntimeMetrics>,
+  future: F,
+) -> JoinHandle<T>
 where
   F: Future<Output = T> + Send + 'static,
   T: Send + 'static,
 {
-  let backend = RUNTIME.backend();
-  let metrics = Arc::clone(&RUNTIME.metrics);
   metrics.tasks_spawned.fetch_add(1, Ordering::Relaxed);
   let wrapped = async move {
     let result =
@@ -2855,6 +2932,26 @@ where
   JoinHandle(JoinHandleInner::Task(task))
 }
 
+pub fn spawn<F, T>(future: F) -> JoinHandle<T>
+where
+  F: Future<Output = T> + Send + 'static,
+  T: Send + 'static,
+{
+  match RUNTIME.try_backend() {
+    Ok(backend) => spawn_with_backend(&backend, Arc::clone(&RUNTIME.metrics), future),
+    Err(error) => {
+      JoinHandle(JoinHandleInner::Ready(Some(Err(JoinError { message: error.to_string() }))))
+    }
+  }
+}
+
+pub fn try_spawn_detached<F>(future: F) -> Result<(), F>
+where
+  F: Future<Output = ()> + Send + 'static,
+{
+  RUNTIME.try_spawn_detached(future)
+}
+
 pub fn spawn_detached<F>(future: F)
 where
   F: Future<Output = ()> + Send + 'static,
@@ -2867,9 +2964,20 @@ where
   F: FnOnce() -> T + Send + 'static,
   T: Send + 'static,
 {
-  let backend = RUNTIME.backend();
-  let metrics = Arc::clone(&RUNTIME.metrics);
-  backend.spawn_blocking(function, &metrics)
+  match RUNTIME.try_backend() {
+    Ok(backend) => backend.spawn_blocking(function, &RUNTIME.metrics),
+    Err(error) => {
+      JoinHandle(JoinHandleInner::Ready(Some(Err(JoinError { message: error.to_string() }))))
+    }
+  }
+}
+
+pub fn try_spawn_blocking<F, T>(function: F) -> Result<JoinHandle<T>, F>
+where
+  F: FnOnce() -> T + Send + 'static,
+  T: Send + 'static,
+{
+  RUNTIME.try_spawn_blocking(function)
 }
 
 pub fn block_on<F: Future>(future: F) -> F::Output {
@@ -2885,6 +2993,10 @@ pub fn block_on<F: Future>(future: F) -> F::Output {
 
 pub fn block_on_dyn(future: Pin<&mut dyn Future<Output = ()>>) {
   RUNTIME.backend().block_on(future);
+}
+
+pub fn start() -> Result<(), RuntimeConfigError> {
+  RUNTIME.start()
 }
 
 pub fn shutdown() {
@@ -5477,7 +5589,148 @@ mod tests {
       .expect_err("configure after the backend started must be rejected");
     assert_eq!(
       error.to_string(),
-      "the async runtime is already running; configure it before the first async call"
+      "the async runtime configuration is frozen; configure it before the first async call"
+    );
+  }
+
+  fn current_thread_controller(thread_name_prefix: &str) -> RuntimeController {
+    let controller = RuntimeController::new();
+    controller
+      .configure(RuntimeOptions {
+        flavor: RuntimeFlavor::CurrentThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: thread_name_prefix.to_string(),
+        park_deadline: None,
+      })
+      .expect("CurrentThread test configuration must be accepted");
+    controller
+  }
+
+  #[test]
+  fn initial_lifecycle_start_preserves_lazy_configuration() {
+    let controller = RuntimeController::new();
+    controller.start().expect("initial lifecycle start must succeed");
+    controller
+      .configure(RuntimeOptions {
+        flavor: RuntimeFlavor::CurrentThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "lifecycle-initial-start".to_string(),
+        park_deadline: None,
+      })
+      .expect("module-registration start must not consume the configuration window");
+
+    let state = controller.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    assert!(matches!(&state.lifecycle, RuntimeLifecycle::Initial));
+  }
+
+  #[test]
+  fn runtime_controller_rejects_submissions_after_shutdown() {
+    let controller = current_thread_controller("lifecycle-reject");
+    controller.start().expect("runtime must start");
+    controller.shutdown();
+
+    let async_ran = Arc::new(AtomicBool::new(false));
+    let async_ran_task = Arc::clone(&async_ran);
+    let Err(rejected_future) = controller.try_spawn_detached(async move {
+      async_ran_task.store(true, Ordering::SeqCst);
+    }) else {
+      panic!("shutdown must reject async work");
+    };
+    assert!(!async_ran.load(Ordering::SeqCst), "a rejected future must not be polled");
+    futures::executor::block_on(rejected_future);
+    assert!(async_ran.load(Ordering::SeqCst), "the original future must remain usable");
+
+    let blocking_ran = Arc::new(AtomicBool::new(false));
+    let blocking_ran_task = Arc::clone(&blocking_ran);
+    let Err(rejected_work) = controller.try_spawn_blocking(move || {
+      blocking_ran_task.store(true, Ordering::SeqCst);
+      7
+    }) else {
+      panic!("shutdown must reject blocking work");
+    };
+    assert!(!blocking_ran.load(Ordering::SeqCst), "rejected blocking work must not run");
+    assert_eq!(rejected_work(), 7, "the original closure must remain usable");
+
+    let config_error = controller
+      .configure(RuntimeOptions::default())
+      .expect_err("shutdown must not make runtime configuration mutable again");
+    assert_eq!(
+      config_error.to_string(),
+      "the async runtime configuration is frozen; configure it before the first async call"
+    );
+
+    let state = controller.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    assert!(matches!(&state.lifecycle, RuntimeLifecycle::Stopped));
+  }
+
+  #[test]
+  fn runtime_controller_start_after_shutdown_accepts_work() {
+    let controller = current_thread_controller("lifecycle-restart");
+    controller.start().expect("runtime must start");
+    controller.shutdown();
+    controller.start().expect("runtime must restart");
+
+    let async_ran = Arc::new(AtomicBool::new(false));
+    let async_ran_task = Arc::clone(&async_ran);
+    controller
+      .try_spawn_detached(async move {
+        async_ran_task.store(true, Ordering::SeqCst);
+      })
+      .unwrap_or_else(|_| panic!("restarted runtime must accept async work"));
+    assert!(async_ran.load(Ordering::SeqCst), "restarted runtime must poll submitted work");
+
+    let Ok(handle) = controller.try_spawn_blocking(|| 11) else {
+      panic!("restarted runtime must accept blocking work");
+    };
+    assert_eq!(
+      futures::executor::block_on(handle).expect("blocking work must complete after restart"),
+      11
+    );
+  }
+
+  #[test]
+  fn spawn_racing_shutdown_cannot_recreate_backend() {
+    use std::sync::mpsc;
+
+    let controller = Arc::new(current_thread_controller("lifecycle-race"));
+    controller.start().expect("runtime must start");
+
+    let (at_hook_tx, at_hook_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let ran = Arc::new(AtomicBool::new(false));
+    let ran_task = Arc::clone(&ran);
+    let worker_controller = Arc::clone(&controller);
+    let worker = std::thread::spawn(move || {
+      BEFORE_RUNTIME_SUBMISSION_LOCK_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          at_hook_tx.send(()).expect("test coordinator must still be listening");
+          release_rx.recv().expect("test coordinator must release the submission");
+        }));
+      });
+
+      let future = async move {
+        ran_task.store(true, Ordering::SeqCst);
+      };
+      match worker_controller.try_spawn_detached(future) {
+        Ok(()) => panic!("a submission linearized after shutdown must be rejected"),
+        Err(future) => drop(future),
+      }
+    });
+
+    at_hook_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("submitting thread must stop before taking the controller lock");
+    controller.shutdown();
+    release_tx.send(()).expect("submitting thread must still be waiting");
+    worker.join().expect("submitting thread must not panic");
+
+    assert!(!ran.load(Ordering::SeqCst), "the rejected task must never run");
+    let state = controller.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    assert!(
+      matches!(&state.lifecycle, RuntimeLifecycle::Stopped),
+      "the rejected submission must not lazily recreate a backend"
     );
   }
 

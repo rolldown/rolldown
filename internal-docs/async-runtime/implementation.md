@@ -14,20 +14,42 @@ and routes Rolldown task creation through `rolldown_utils::futures`. The
 
 The sibling napi-rs checkout adds the `async-runtime` feature and
 `AsyncRuntime` registration interface in `crates/napi/src/tokio_runtime.rs`.
-When the feature is enabled, registered-runtime execution takes precedence even
-if another dependency enables `tokio_rt` through Cargo feature unification.
-This is required because OXC's NAPI crates enable napi-rs async support.
+Generated JavaScript-facing futures and `#[napi(async_runtime)]` entry points
+use the registered implementation whenever `async-runtime` is enabled, even if
+another dependency also enables `tokio_rt` through Cargo feature unification.
+Rolldown has this combined feature profile because OXC's NAPI crates enable
+napi-rs's Tokio support.
 
-Promise resolution and panic rejection remain owned by napi-rs. Runtime start,
-shutdown, entry, spawn, block-on, and blocking-work operations delegate to the
-registered implementation. The optional `AsyncRuntime::spawn_blocking` hook is
-implemented so napi and transitive callers use Rolldown's bounded blocking lane
-instead of napi's dedicated-thread fallback.
+In that combined profile, napi-rs's established public free `spawn`,
+`spawn_blocking`, `block_on`, and runtime-entry helpers retain their Tokio API
+and behavior. Only a pure `async-runtime` build routes those free helpers
+through the registered implementation. Rolldown's own task creation uses
+`rolldown_utils::futures`, so it still reaches the shared scheduler directly;
+arbitrary transitive calls to napi-rs's free helpers must not be assumed to use
+Rolldown's scheduler or bounded blocking lane.
+
+Promise resolution, panic rejection, and cancellation handles remain owned by
+napi-rs. `AsyncRuntime::spawn` transfers an opaque `AsyncRuntimeTask` and
+Rolldown returns it untouched when the controller is stopped. The optional
+`AsyncRuntime::spawn_blocking` hook follows the same ownership rule for its
+closure. Accepted tasks and closures retain napi-rs's cancel-on-drop guards.
+Generated-task submission and custom runtime lifecycle operations delegate to
+the registered implementation; `start` and `shutdown` report failures through
+`napi::Result`.
 
 ### Rolldown scheduler
 
 `crates/rolldown_utils/src/async_runtime.rs` owns the lazy global controller.
 
+- The controller lifecycle is `Initial`, `Running`, or `Stopped`. Initial work
+  may lazily create the backend. napi invokes `start` during addon registration,
+  so `start` leaves `Initial` unchanged to preserve the documented
+  pre-first-async-call configuration window. Shutdown changes the state to
+  `Stopped` under the controller mutex before releasing the backend; later
+  submissions return their task or closure until an explicit `start`
+  successfully creates a new backend. Configuration remains frozen after
+  shutdown. Start, shutdown, and submission use the same mutex, so a racing
+  submission cannot recreate the backend after shutdown.
 - `CurrentThreadExecutor` uses a reentrancy-safe FIFO runnable queue. Wakes drain
   cooperatively on the calling thread. Blocking work executes inline.
 - `MultiThreadExecutor` schedules bounded queue-drain jobs on a custom Rayon

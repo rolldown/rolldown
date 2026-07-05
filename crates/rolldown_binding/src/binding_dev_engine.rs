@@ -4,7 +4,7 @@ use rolldown_dev::{
 };
 use rolldown_error::BatchedBuildDiagnostic;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex as StdMutex};
 
 use crate::binding_dev_options::BindingDevOptions;
 use crate::types::binding_bundler_options::BindingBundlerOptions;
@@ -16,8 +16,11 @@ use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
 };
+use futures::channel::oneshot;
 use napi::bindgen_prelude::{FnArgs, PromiseRaw};
 use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
+
+type BindingDevEngineCloseOutcome = Result<(), Arc<BatchedBuildDiagnostic>>;
 
 fn dev_engine_close_error(error: &BatchedBuildDiagnostic) -> napi::Error {
   if let Some(error) = error.iter().find_map(|diagnostic| diagnostic.downcast_napi_error().ok()) {
@@ -26,9 +29,90 @@ fn dev_engine_close_error(error: &BatchedBuildDiagnostic) -> napi::Error {
   napi::Error::from_reason(format!("Failed to close dev engine: {error:#}"))
 }
 
+fn dev_engine_closed_error() -> napi::Error {
+  napi::Error::from_reason("Dev engine is closed")
+}
+
+// See internal-docs/dev-engine/implementation.md sections 15-16.
+struct BindingDevEngineLifecycleState {
+  closing: bool,
+  active_operations: usize,
+  operations_drained: Vec<oneshot::Sender<()>>,
+  close_outcome: Option<BindingDevEngineCloseOutcome>,
+}
+
+struct BindingDevEngineLifecycle {
+  state: StdMutex<BindingDevEngineLifecycleState>,
+}
+
+enum BeginBindingDevEngineClose {
+  Close(Option<oneshot::Receiver<()>>),
+  Finished(BindingDevEngineCloseOutcome),
+}
+
+impl BindingDevEngineLifecycle {
+  fn new() -> Self {
+    Self {
+      state: StdMutex::new(BindingDevEngineLifecycleState {
+        closing: false,
+        active_operations: 0,
+        operations_drained: Vec::new(),
+        close_outcome: None,
+      }),
+    }
+  }
+
+  fn begin_operation(self: &Arc<Self>) -> Option<BindingDevEngineOperationGuard> {
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if state.closing {
+      return None;
+    }
+    state.active_operations += 1;
+    Some(BindingDevEngineOperationGuard { lifecycle: Arc::clone(self) })
+  }
+
+  fn begin_close(&self) -> BeginBindingDevEngineClose {
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Some(outcome) = state.close_outcome.clone() {
+      return BeginBindingDevEngineClose::Finished(outcome);
+    }
+    state.closing = true;
+    let operations_drained = if state.active_operations == 0 {
+      None
+    } else {
+      let (sender, receiver) = oneshot::channel();
+      state.operations_drained.push(sender);
+      Some(receiver)
+    };
+    BeginBindingDevEngineClose::Close(operations_drained)
+  }
+
+  fn finish_close(&self, outcome: BindingDevEngineCloseOutcome) {
+    self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).close_outcome =
+      Some(outcome);
+  }
+}
+
+struct BindingDevEngineOperationGuard {
+  lifecycle: Arc<BindingDevEngineLifecycle>,
+}
+
+impl Drop for BindingDevEngineOperationGuard {
+  fn drop(&mut self) {
+    let mut state = self.lifecycle.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    state.active_operations -= 1;
+    if state.active_operations == 0 && state.closing {
+      for operations_drained in std::mem::take(&mut state.operations_drained) {
+        let _ = operations_drained.send(());
+      }
+    }
+  }
+}
+
 #[napi]
 pub struct BindingDevEngine {
   inner: Arc<rolldown_dev::DevEngine>,
+  lifecycle: Arc<BindingDevEngineLifecycle>,
   cwd: Arc<Path>,
   _session_id: Arc<str>,
   _session: rolldown_devtools::Session,
@@ -172,15 +256,26 @@ impl BindingDevEngine {
     let inner = rolldown_dev::DevEngine::new(bundler_config, rolldown_dev_options)
       .map_err(|e| napi::Error::from_reason(format!("Fail to create dev engine: {e:#?}")))?;
 
-    Ok(Self { inner: Arc::new(inner), cwd, _session_id: session_id, _session: session })
+    Ok(Self {
+      inner: Arc::new(inner),
+      lifecycle: Arc::new(BindingDevEngineLifecycle::new()),
+      cwd,
+      _session_id: session_id,
+      _session: session,
+    })
   }
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn run<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
+    let Some(operation) = self.lifecycle.begin_operation() else {
+      return PromiseRaw::reject(env, dev_engine_closed_error());
+    };
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
-      inner.run().await.map_err(|_e| napi::Error::from_reason("Failed to run dev engine"))?;
-      Ok(())
+      let result =
+        inner.run().await.map_err(|_e| napi::Error::from_reason("Failed to run dev engine"));
+      drop(operation);
+      result
     })
   }
 
@@ -189,13 +284,17 @@ impl BindingDevEngine {
     &self,
     env: &'env Env,
   ) -> napi::Result<PromiseRaw<'env, ()>> {
+    let Some(operation) = self.lifecycle.begin_operation() else {
+      return PromiseRaw::resolve(env, ());
+    };
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
-      inner
+      let result = inner
         .wait_for_ongoing_bundle()
         .await
-        .map_err(|_e| napi::Error::from_reason("Failed to ensure current build finish"))?;
-      Ok(())
+        .map_err(|_e| napi::Error::from_reason("Failed to ensure current build finish"));
+      drop(operation);
+      result
     })
   }
 
@@ -204,13 +303,18 @@ impl BindingDevEngine {
     &self,
     env: &'env Env,
   ) -> napi::Result<PromiseRaw<'env, BindingBundleState>> {
+    let Some(operation) = self.lifecycle.begin_operation() else {
+      return PromiseRaw::reject(env, dev_engine_closed_error());
+    };
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
-      inner
+      let result = inner
         .get_bundle_state()
         .await
         .map(Into::into)
-        .map_err(|_e| napi::Error::from_reason("Failed to get bundle state"))
+        .map_err(|_e| napi::Error::from_reason("Failed to get bundle state"));
+      drop(operation);
+      result
     })
   }
 
@@ -219,10 +323,13 @@ impl BindingDevEngine {
     &self,
     env: &'env Env,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
+    let Some(operation) = self.lifecycle.begin_operation() else {
+      return PromiseRaw::reject(env, dev_engine_closed_error());
+    };
     let inner = Arc::clone(&self.inner);
     let cwd = Arc::clone(&self.cwd);
     spawn_boxed_future(env, async move {
-      match inner.ensure_latest_bundle_output().await {
+      let result = match inner.ensure_latest_bundle_output().await {
         Ok(()) => Ok(Either::B(())),
         Err(errors) => {
           let binding_errors: Vec<_> = errors
@@ -231,13 +338,21 @@ impl BindingDevEngine {
             .collect();
           Ok(Either::A(BindingErrors::new(binding_errors)))
         }
-      }
+      };
+      drop(operation);
+      result
     })
   }
 
   #[napi]
-  pub fn trigger_full_build(&self) {
-    self.inner.trigger_full_build().expect("Should handle this error");
+  pub fn trigger_full_build(&self) -> napi::Result<()> {
+    let Some(_operation) = self.lifecycle.begin_operation() else {
+      return Err(dev_engine_closed_error());
+    };
+    self
+      .inner
+      .trigger_full_build()
+      .map_err(|error| napi::Error::from_reason(format!("Failed to trigger full build: {error:#}")))
   }
 
   #[napi]
@@ -247,10 +362,13 @@ impl BindingDevEngine {
     caller: String,
     first_invalidated_by: Option<String>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<Vec<BindingClientHmrUpdate>>>> {
+    let Some(operation) = self.lifecycle.begin_operation() else {
+      return PromiseRaw::reject(env, dev_engine_closed_error());
+    };
     let inner = Arc::clone(&self.inner);
     let cwd = Arc::clone(&self.cwd);
     spawn_boxed_future(env, async move {
-      match inner.invalidate(caller, first_invalidated_by).await {
+      let result = match inner.invalidate(caller, first_invalidated_by).await {
         Ok(updates) => {
           let binding_updates =
             updates.into_iter().map(BindingClientHmrUpdate::from).collect::<Vec<_>>();
@@ -263,7 +381,9 @@ impl BindingDevEngine {
             .collect();
           Ok(Either::A(BindingErrors::new(binding_errors)))
         }
-      }
+      };
+      drop(operation);
+      result
     })
   }
 
@@ -274,9 +394,13 @@ impl BindingDevEngine {
     client_id: String,
     modules: Vec<String>,
   ) -> napi::Result<PromiseRaw<'env, ()>> {
+    let Some(operation) = self.lifecycle.begin_operation() else {
+      return PromiseRaw::reject(env, dev_engine_closed_error());
+    };
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
       inner.clients.lock().await.entry(client_id).or_default().executed_modules.extend(modules);
+      drop(operation);
       Ok(())
     })
   }
@@ -287,19 +411,44 @@ impl BindingDevEngine {
     env: &'env Env,
     client_id: String,
   ) -> napi::Result<PromiseRaw<'env, ()>> {
+    let Some(operation) = self.lifecycle.begin_operation() else {
+      return PromiseRaw::reject(env, dev_engine_closed_error());
+    };
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
       inner.clients.lock().await.remove(&client_id);
+      drop(operation);
       Ok(())
     })
   }
 
   #[napi(ts_return_type = "Promise<void>")]
   pub fn close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
+    let close = match self.lifecycle.begin_close() {
+      BeginBindingDevEngineClose::Finished(outcome) => {
+        return match outcome {
+          Ok(()) => PromiseRaw::resolve(env, ()),
+          Err(error) => PromiseRaw::reject(env, dev_engine_close_error(error.as_ref())),
+        };
+      }
+      close @ BeginBindingDevEngineClose::Close(_) => close,
+    };
+
     let inner = Arc::clone(&self.inner);
+    let lifecycle = Arc::clone(&self.lifecycle);
     spawn_boxed_future(env, async move {
-      inner.close().await.map_err(|error| dev_engine_close_error(&error))?;
-      Ok(())
+      let outcome = match close {
+        BeginBindingDevEngineClose::Close(operations_drained) => {
+          let outcome = inner.close().await;
+          if let Some(operations_drained) = operations_drained {
+            let _ = operations_drained.await;
+          }
+          lifecycle.finish_close(outcome.clone());
+          outcome
+        }
+        BeginBindingDevEngineClose::Finished(outcome) => outcome,
+      };
+      outcome.map_err(|error| dev_engine_close_error(error.as_ref()))
     })
   }
 
@@ -315,12 +464,17 @@ impl BindingDevEngine {
     module_id: String,
     client_id: String,
   ) -> napi::Result<PromiseRaw<'env, String>> {
+    let Some(operation) = self.lifecycle.begin_operation() else {
+      return PromiseRaw::reject(env, dev_engine_closed_error());
+    };
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
-      inner
+      let result = inner
         .compile_lazy_entry(module_id, client_id)
         .await
-        .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")))
+        .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")));
+      drop(operation);
+      result
     })
   }
 }
@@ -345,5 +499,37 @@ impl From<BundleState> for BindingBundleState {
       last_error_stage: state.last_error_stage.map(Into::into),
       has_stale_output: state.has_stale_output,
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn lifecycle_close_waits_for_active_operations_and_replays_outcome() {
+    let lifecycle = Arc::new(BindingDevEngineLifecycle::new());
+    let first_operation = lifecycle.begin_operation().expect("engine should start open");
+    let second_operation = lifecycle.begin_operation().expect("engine should start open");
+
+    let BeginBindingDevEngineClose::Close(Some(mut first_close)) = lifecycle.begin_close() else {
+      panic!("close should wait for active operations");
+    };
+    let BeginBindingDevEngineClose::Close(Some(mut concurrent_close)) = lifecycle.begin_close()
+    else {
+      panic!("concurrent close should share the operation barrier");
+    };
+    assert!(lifecycle.begin_operation().is_none(), "close must reject new operations");
+    assert_eq!(first_close.try_recv().expect("sender should remain live"), None);
+    assert_eq!(concurrent_close.try_recv().expect("sender should remain live"), None);
+
+    drop(first_operation);
+    assert_eq!(first_close.try_recv().expect("sender should remain live"), None);
+    drop(second_operation);
+    assert_eq!(first_close.try_recv().expect("barrier should resolve"), Some(()));
+    assert_eq!(concurrent_close.try_recv().expect("barrier should resolve"), Some(()));
+
+    lifecycle.finish_close(Ok(()));
+    assert!(matches!(lifecycle.begin_close(), BeginBindingDevEngineClose::Finished(Ok(()))));
   }
 }

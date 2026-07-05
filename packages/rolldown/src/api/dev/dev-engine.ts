@@ -30,6 +30,11 @@ export class DevEngine {
     'Dev engine native close, parallel-plugin worker shutdown, or runtime release failed',
   );
   #cachedBuildFinishPromise: Promise<void> | null = null;
+  // See internal-docs/dev-engine/implementation.md sections 15-16.
+  #isClosing = false;
+  #activeOperations = 0;
+  #operationsDrainedPromise: Promise<void> | undefined;
+  #resolveOperationsDrained: (() => void) | undefined;
 
   static async create(
     inputOptions: InputOptions,
@@ -146,14 +151,17 @@ export class DevEngine {
   }
 
   async run(): Promise<void> {
-    await this.#inner.run();
+    await this.#runOperation(() => this.#inner.run());
   }
 
   async ensureCurrentBuildFinish(): Promise<void> {
+    if (this.#isClosing) {
+      return;
+    }
     if (this.#cachedBuildFinishPromise) {
       return this.#cachedBuildFinishPromise;
     }
-    const promise = this.#inner.ensureCurrentBuildFinish().finally(() => {
+    const promise = this.#runOperation(() => this.#inner.ensureCurrentBuildFinish()).finally(() => {
       if (this.#cachedBuildFinishPromise === promise) {
         this.#cachedBuildFinishPromise = null;
       }
@@ -163,30 +171,41 @@ export class DevEngine {
   }
 
   async getBundleState(): Promise<BindingBundleState> {
-    return this.#inner.getBundleState();
+    return this.#runOperation(() => this.#inner.getBundleState());
   }
 
   async ensureLatestBuildOutput(): Promise<void> {
-    unwrapBindingResult(await this.#inner.ensureLatestBuildOutput());
+    unwrapBindingResult(await this.#runOperation(() => this.#inner.ensureLatestBuildOutput()));
   }
 
   triggerFullBuild(): void {
+    this.#assertOpen();
     this.#inner.triggerFullBuild();
   }
 
   async invalidate(file: string, firstInvalidatedBy?: string): Promise<BindingClientHmrUpdate[]> {
-    return unwrapBindingResult(await this.#inner.invalidate(file, firstInvalidatedBy));
+    return unwrapBindingResult(
+      await this.#runOperation(() => this.#inner.invalidate(file, firstInvalidatedBy)),
+    );
   }
 
   async registerModules(clientId: string, modules: string[]): Promise<void> {
-    await this.#inner.registerModules(clientId, modules);
+    await this.#runOperation(() => this.#inner.registerModules(clientId, modules));
   }
 
   async removeClient(clientId: string): Promise<void> {
-    await this.#inner.removeClient(clientId);
+    await this.#runOperation(() => this.#inner.removeClient(clientId));
   }
 
   close(): Promise<void> {
+    if (!this.#isClosing) {
+      this.#isClosing = true;
+      if (this.#activeOperations > 0) {
+        this.#operationsDrainedPromise = new Promise((resolve) => {
+          this.#resolveOperationsDrained = resolve;
+        });
+      }
+    }
     return this.#closeCoordinator.close(() => this.#close());
   }
 
@@ -201,6 +220,7 @@ export class DevEngine {
     } catch (error) {
       errors.push(error);
     }
+    await this.#operationsDrainedPromise;
 
     const stopWorkers = this.#stopWorkers;
     try {
@@ -235,6 +255,26 @@ export class DevEngine {
    * @returns The compiled JavaScript code as a string (HMR patch format)
    */
   async compileEntry(moduleId: string, clientId: string): Promise<string> {
-    return this.#inner.compileEntry(moduleId, clientId);
+    return this.#runOperation(() => this.#inner.compileEntry(moduleId, clientId));
+  }
+
+  #assertOpen(): void {
+    if (this.#isClosing) {
+      throw new Error('Dev engine is closed');
+    }
+  }
+
+  async #runOperation<T>(operation: () => Promise<T>): Promise<T> {
+    this.#assertOpen();
+    this.#activeOperations += 1;
+    try {
+      return await operation();
+    } finally {
+      this.#activeOperations -= 1;
+      if (this.#isClosing && this.#activeOperations === 0) {
+        this.#resolveOperationsDrained?.();
+        this.#resolveOperationsDrained = undefined;
+      }
+    }
   }
 }

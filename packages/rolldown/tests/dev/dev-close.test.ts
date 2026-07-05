@@ -91,6 +91,48 @@ test.skipIf(isSingleThread)(
 );
 
 test.skipIf(isSingleThread)(
+  'post-close methods settle without re-entering the runtime',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-post-close-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const input = path.join(dir, 'main.js');
+    fs.writeFileSync(input, 'console.log(1)');
+
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const engine = await dev(
+      {
+        input,
+        experimental: { devMode: true },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    await engine.run();
+    await engine.close();
+
+    const closedError = 'Dev engine is closed';
+    await expect(engine.run()).rejects.toThrow(closedError);
+    await expect(engine.ensureCurrentBuildFinish()).resolves.toBeUndefined();
+    await expect(engine.getBundleState()).rejects.toThrow(closedError);
+    await expect(engine.ensureLatestBuildOutput()).rejects.toThrow(closedError);
+    expect(() => engine.triggerFullBuild()).toThrow(closedError);
+    await expect(engine.invalidate(input)).rejects.toThrow(closedError);
+    await expect(engine.registerModules('client', [input])).rejects.toThrow(closedError);
+    await expect(engine.removeClient('client')).rejects.toThrow(closedError);
+    await expect(engine.compileEntry(input, 'client')).rejects.toThrow(closedError);
+    await expect(engine.close()).resolves.toBeUndefined();
+  },
+);
+
+test.skipIf(isSingleThread)(
   'close preserves the terminal closeBundle failure',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -172,14 +214,20 @@ test.skipIf(isSingleThread)(
     });
 
     let runRejected = false;
+    let runSettled = false;
     let runError: unknown;
     // Closing an active initial build may cause `run()` to report the
     // cancellation. Before the hook starts, however, a rejection means the
     // production worker path failed to become usable and should fail fast.
-    const runPromise = engine.run().catch((error) => {
-      runRejected = true;
-      runError = error;
-    });
+    const runPromise = engine
+      .run()
+      .catch((error) => {
+        runRejected = true;
+        runError = error;
+      })
+      .finally(() => {
+        runSettled = true;
+      });
     while (Atomics.load(state, 0) === 0) {
       if (runRejected) throw runError;
       await new Promise<void>((resolve) => setImmediate(resolve));
@@ -192,11 +240,15 @@ test.skipIf(isSingleThread)(
     await new Promise<void>((resolve) => setImmediate(resolve));
     expect(closeSettled).toBe(false);
     expect(Atomics.load(state, 2)).toBe(0);
+    await expect(engine.ensureCurrentBuildFinish()).resolves.toBeUndefined();
+    await expect(engine.getBundleState()).rejects.toThrow('Dev engine is closed');
+    expect(() => engine.triggerFullBuild()).toThrow('Dev engine is closed');
 
     Atomics.store(state, 1, 1);
     Atomics.notify(state, 1);
 
     await Promise.all([runPromise, closePromise]);
+    expect(runSettled).toBe(true);
     expect(Atomics.load(state, 0)).toBeGreaterThan(0);
     expect(Atomics.load(state, 2)).toBe(Atomics.load(state, 0));
   },

@@ -330,4 +330,4 @@ debug = "full"
 strip = "none"
 
 [patch.crates-io]
-napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "19888377d9dc7897fb5acc871f9a3b529559c504" }
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "eea1ee8aa42e5e2e0bc63e9d1fe29d096a2567ed" }

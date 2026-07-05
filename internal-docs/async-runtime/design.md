@@ -55,14 +55,17 @@ for the component map.
 The new runtime treats these as one scheduling problem rather than independent
 Tokio, Tokio-blocking, Rayon, and ad-hoc thread-pool tuning problems.
 
-## Unresolved Questions
+## Implemented Follow-ups
 
-- Watch/dev mode still uses Tokio's timer API. The custom runtime supports its
-  task and channel usage, but timer-driven watch coordination needs a
-  runtime-independent timer before current-thread watch mode can be supported.
-- The single-thread browser build currently uses the same package artifact name
-  as the threaded WASI build, so release jobs must build them in separate
-  package pipelines.
+- Watch debounce uses a runtime-independent `sleep_until` facade. Multi-thread
+  mode owns a timer heap; current-thread mode delegates to the host event loop.
+  Native watch mode therefore works on both flavors. Binding dev mode remains
+  unsupported on current-thread, and WASI watch still stalls during the initial
+  build.
+- Threaded and single-thread WASI builds use distinct artifact names. The
+  threaded build retains the `wasi` loader/wasm names and worker scripts; the
+  single-thread build uses `wasip1` names, includes the deferred workerd loader,
+  and ships no worker scripts.
 
 ## Related
 

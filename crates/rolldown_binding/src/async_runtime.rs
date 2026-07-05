@@ -38,6 +38,16 @@ impl AsyncRuntime for RolldownAsyncRuntime {
     block_on_dyn(future);
   }
 
+  fn spawn_blocking(
+    &self,
+    work: Box<dyn FnOnce() + Send + 'static>,
+  ) -> std::result::Result<(), Box<dyn FnOnce() + Send + 'static>> {
+    // Keep napi and transitive callers in the same bounded blocking lane as
+    // Rolldown's facade. See internal-docs/async-runtime/implementation.md.
+    rolldown_utils::async_runtime::spawn_blocking(work).detach();
+    Ok(())
+  }
+
   fn shutdown(&self) {
     shutdown();
   }
@@ -978,6 +988,26 @@ mod tests {
     env: &RuntimeEnv,
   ) -> super::ResolvedRuntimeConfig {
     resolve_runtime_config_for(backend, target, env)
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn napi_spawn_blocking_routes_through_the_shared_runtime() {
+    rolldown_utils::async_runtime::reset_metrics();
+    let handle =
+      napi::bindgen_prelude::spawn_blocking(|| std::thread::current().name().map(str::to_owned));
+    let thread_name = futures::executor::block_on(handle)
+      .expect("the shared blocking lane should execute napi work");
+
+    assert_ne!(
+      thread_name.as_deref(),
+      Some(napi::bindgen_prelude::SPAWN_BLOCKING_FALLBACK_THREAD_NAME),
+      "Rolldown's hook must accept the work instead of using napi's fallback thread"
+    );
+    assert!(
+      rolldown_utils::async_runtime::metrics().blocking_tasks_started >= 1,
+      "napi work should be recorded by the shared blocking scheduler"
+    );
   }
 
   #[test]

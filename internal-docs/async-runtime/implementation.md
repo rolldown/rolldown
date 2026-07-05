@@ -19,8 +19,10 @@ if another dependency enables `tokio_rt` through Cargo feature unification.
 This is required because OXC's NAPI crates enable napi-rs async support.
 
 Promise resolution and panic rejection remain owned by napi-rs. Runtime start,
-shutdown, entry, spawn, and block-on operations delegate to the registered
-implementation.
+shutdown, entry, spawn, block-on, and blocking-work operations delegate to the
+registered implementation. The optional `AsyncRuntime::spawn_blocking` hook is
+implemented so napi and transitive callers use Rolldown's bounded blocking lane
+instead of napi's dedicated-thread fallback.
 
 ### Rolldown scheduler
 
@@ -58,25 +60,47 @@ returns zeroed counters.
 
 ### Routed work
 
-`rolldown_utils::futures` is the compatibility facade. The following work no
-longer calls Tokio or `std::thread` directly under the new feature:
+`rolldown_utils::futures` is the compatibility facade. The following work is
+routed through the selected runtime:
 
 - module-loader tasks
 - blocking source reads
 - asset/copy plugin reads
 - dev and watch coordinator tasks
-- the native-magic-string sourcemap consumer
 - binding close/flush blocking work
 
-The sourcemap consumer is disabled for current-thread mode because a blocking
-channel receiver cannot make progress on the same cooperative thread. The
-existing inline sourcemap path remains active.
+The native-magic-string sourcemap consumer deliberately uses one dedicated OS
+thread in modes where threads are supported. It cannot occupy the bounded
+blocking lane: its long-lived channel receive loop would monopolize a worker and
+deadlock a one-worker runtime before module tasks could produce messages. The
+consumer is disabled for current-thread mode, where the existing inline
+sourcemap path remains active.
+
+### Timers and native watch mode
+
+`rolldown_utils::time::sleep_until` routes watcher debounce timers to Tokio on
+the default build and to the shared runtime otherwise. `MultiThreadExecutor`
+uses an executor-owned timer heap and timekeeper role. `CurrentThreadExecutor`
+uses the host `TimerDriver` registered by `packages/rolldown/src/timer-host.ts`,
+which delegates to `setTimeout` in each importing environment.
+
+Native watch mode is supported on both runtime flavors. Binding dev mode is
+still skipped on CurrentThread, and WASI watch remains unsupported because it
+stalls during the initial build before debounce timers are involved.
 
 ### Non-threaded WASI
 
 The current-thread executor is the runtime half of the non-threaded
 `wasm32-wasip1` build. Packaging, generated loaders, and the emnapi
 memory-growth backport are handled in the dependent browser/WASI change.
+
+The two WASI flavors have distinct artifact sets:
+
+- threaded `wasm32-wasip1-threads`: `rolldown-binding.wasm32-wasi.wasm`,
+  `.wasi.cjs`, `.wasi-browser.js`, and worker scripts
+- single-thread `wasm32-wasip1`: `rolldown-binding.wasm32-wasip1.wasm`,
+  `.wasip1.cjs`, `.wasip1-browser.js`, and `.wasip1-deferred.js`, without
+  worker scripts
 
 ## Metrics And Baseline
 

@@ -30,7 +30,10 @@ The existing Tokio runtime remains the default and is selected by the
    queued alongside runnable futures, but multi-thread validation reserves one
    worker from blocking admission. MultiThread has a truthful minimum of two
    configured and physical workers, and the blocking cap is at most
-   `worker_threads - 1`. No hidden reserve worker exists.
+   `worker_threads - 1`. No hidden reserve worker exists. Blocking task
+   start/completion metrics include exact-dependency work run through a nested
+   `block_on`, while active/high-water metrics count admitted physical lanes;
+   dependency lending reuses its owner's lane instead of reporting another one.
 
 4. **Work classes receive bounded service.** Runnable locality remains the
    normal priority, but a continuously hot runnable stream yields to the
@@ -75,7 +78,8 @@ The existing Tokio runtime remains the default and is selected by the
    panic payloads are dropped under a second unwind boundary; only the nested
    payload produced by a hostile payload destructor is quarantined, so normal
    payload state is reclaimed without letting a second panic leave the
-   controller permanently stuck in `Stopping`.
+   controller permanently stuck in `Stopping` or escape a napi environment
+   cleanup callback.
 
 8. **Detached-task behavior matches Tokio.** Dropping Rolldown's `JoinHandle`
    detaches rather than cancels the task during normal operation. Runtime

@@ -893,10 +893,28 @@ fn take_pending_host_timers(
 }
 
 #[cfg(feature = "async-runtime")]
+fn run_host_timer_cleanup_safely(cleanup: impl FnOnce()) {
+  if let Err(payload) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(cleanup))
+    && let Err(nested_payload) =
+      std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop(payload)))
+  {
+    // The original unwind is contained. A hostile payload destructor may
+    // panic again; quarantine only that nested payload so its destructor
+    // cannot unwind through the napi env cleanup hook either.
+    std::mem::forget(nested_payload);
+  }
+}
+
+#[cfg(feature = "async-runtime")]
 fn wake_host_timer_safely(waker: std::task::Waker) {
   // Host eviction runs from a napi env cleanup hook. A custom RawWaker must
   // not unwind through that FFI boundary or abort the remaining timer drain.
-  let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| waker.wake()));
+  run_host_timer_cleanup_safely(|| waker.wake());
+}
+
+#[cfg(feature = "async-runtime")]
+fn drop_host_timer_waker_safely(waker: std::task::Waker) {
+  run_host_timer_cleanup_safely(|| drop(waker));
 }
 
 #[cfg(feature = "async-runtime")]
@@ -987,7 +1005,7 @@ impl TimerDriver for JsTimerHost {
       PendingHostTimerRegistration::Refreshed(replaced_waker) => {
         // A custom RawWaker destructor may re-enter timer code. `register_pending`
         // returns the old waker so its destructor runs after `pending` unlocks.
-        drop(replaced_waker);
+        drop_host_timer_waker_safely(replaced_waker);
         return;
       }
       PendingHostTimerRegistration::Armed(relay_id) => relay_id,
@@ -1067,6 +1085,7 @@ impl TimerDriver for JsTimerHost {
       if pending.relay_armed {
         self.inner.cancel_relay(pending.relay_id);
       }
+      drop_host_timer_waker_safely(pending.waker);
     }
   }
 
@@ -1351,6 +1370,53 @@ mod tests {
 
     let waker = std::task::Waker::from(std::sync::Arc::new(PanickingWake));
     wake_host_timer_safely(waker);
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn host_timer_cleanup_contains_panicking_payload_drop_across_ffi() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_HOST_TIMER_PANIC_PAYLOAD_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      struct PanicOnDrop;
+
+      impl Drop for PanicOnDrop {
+        fn drop(&mut self) {
+          panic!("intentional host timer panic payload destructor panic");
+        }
+      }
+
+      struct PanickingWake;
+
+      impl std::task::Wake for PanickingWake {
+        fn wake(self: std::sync::Arc<Self>) {
+          std::panic::panic_any(PanicOnDrop);
+        }
+      }
+
+      extern "C" fn cleanup_shim() {
+        let waker = std::task::Waker::from(std::sync::Arc::new(PanickingWake));
+        wake_host_timer_safely(waker);
+      }
+
+      cleanup_shim();
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::host_timer_cleanup_contains_panicking_payload_drop_across_ffi")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the host timer cleanup subprocess must start");
+    assert!(
+      output.status.success(),
+      "host timer cleanup must contain panic-payload destruction across the C ABI; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
   }
 
   #[cfg(feature = "async-runtime")]

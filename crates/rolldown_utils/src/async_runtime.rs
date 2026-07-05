@@ -670,11 +670,13 @@ impl RuntimeMetrics {
     self.blocking_tasks_scheduled.fetch_add(1, Ordering::Relaxed);
   }
 
-  fn blocking_started(self: &Arc<Self>) -> ActiveBlockingGuard {
+  fn blocking_started(self: &Arc<Self>, count_active_lane: bool) -> BlockingTaskGuard {
     self.blocking_tasks_started.fetch_add(1, Ordering::Relaxed);
-    let active = self.active_blocking_tasks.fetch_add(1, Ordering::Relaxed) + 1;
-    self.max_active_blocking_tasks.fetch_max(active, Ordering::Relaxed);
-    ActiveBlockingGuard { metrics: Arc::clone(self) }
+    if count_active_lane {
+      let active = self.active_blocking_tasks.fetch_add(1, Ordering::Relaxed) + 1;
+      self.max_active_blocking_tasks.fetch_max(active, Ordering::Relaxed);
+    }
+    BlockingTaskGuard { metrics: Arc::clone(self), count_active_lane }
   }
 
   /// Coarse liveness fingerprint for deadline-based deadlock detection (wake
@@ -751,13 +753,16 @@ impl Drop for ActiveRunnableGuard<'_> {
   }
 }
 
-struct ActiveBlockingGuard {
+struct BlockingTaskGuard {
   metrics: Arc<RuntimeMetrics>,
+  count_active_lane: bool,
 }
 
-impl Drop for ActiveBlockingGuard {
+impl Drop for BlockingTaskGuard {
   fn drop(&mut self) {
-    self.metrics.active_blocking_tasks.fetch_sub(1, Ordering::Relaxed);
+    if self.count_active_lane {
+      self.metrics.active_blocking_tasks.fetch_sub(1, Ordering::Relaxed);
+    }
     self.metrics.blocking_tasks_completed.fetch_add(1, Ordering::Relaxed);
   }
 }
@@ -1673,7 +1678,6 @@ impl MultiThreadExecutor {
     T: Send + 'static,
   {
     let (sender, receiver) = oneshot::channel();
-    let metrics = Arc::clone(&self.metrics);
     let dependency = BlockingJobId(NEXT_BLOCKING_JOB_ID.fetch_add(1, Ordering::Relaxed));
     // Enqueue-time progress signal, BEFORE the queue push/wake (Codex
     // round-2): the deadlock detector's fingerprint must be able to observe
@@ -1683,7 +1687,6 @@ impl MultiThreadExecutor {
     let queued = QueuedBlocking {
       id: dependency,
       run: Box::new(move || {
-        let _active = metrics.blocking_started();
         let result = catch_unwind_join_error(function);
         let _ = sender.send(result);
       }),
@@ -1887,6 +1890,7 @@ impl MultiThreadExecutor {
   fn run_one_blocking(self: &Arc<Self>) -> bool {
     if let Some(blocking) = self.take_blocking() {
       {
+        let _task = self.metrics.blocking_started(true);
         let _owner = BlockingOwnerGuard::enter(Some(self.fresh_owner_token()));
         // The queued wrapper contains panics from the user function, but
         // delivering its result can still drop user-owned state when the
@@ -1946,6 +1950,9 @@ impl MultiThreadExecutor {
       }
     };
     if let Some(job) = job {
+      // Dependency lending reuses the current blocking owner's physical lane:
+      // it is a distinct started/completed task, but not another active lane.
+      let _task = self.metrics.blocking_started(false);
       let _owner = BlockingOwnerGuard::enter(Some(self.fresh_owner_token()));
       let _ = catch_unwind_contained(job.run);
       true
@@ -3841,7 +3848,7 @@ impl RuntimeBackend {
         // Same submitted-counter semantics as the MultiThread path (the job
         // just also runs inline immediately here).
         metrics.blocking_scheduled();
-        let _active = metrics.blocking_started();
+        let _task = metrics.blocking_started(true);
         let result = catch_unwind_join_error(function);
         JoinHandle(JoinHandleInner::Ready(Some(result)))
       }
@@ -7002,6 +7009,55 @@ mod tests {
 
   #[cfg(not(target_family = "wasm"))]
   #[test]
+  fn dependency_lending_keeps_public_blocking_metrics_within_cap() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_DEPENDENCY_LENDING_METRICS_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      configure(RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "dependency-lending-metrics".to_string(),
+        park_deadline: None,
+      })
+      .unwrap();
+
+      let outer = spawn_blocking(|| {
+        let inner = spawn_blocking(|| 42usize);
+        block_on(inner).unwrap()
+      });
+      assert_eq!(block_on(outer).unwrap(), 42);
+
+      let snapshot = metrics();
+      assert_eq!(snapshot.blocking_tasks_started, 2);
+      assert_eq!(snapshot.blocking_tasks_completed, 2);
+      assert_eq!(snapshot.active_blocking_tasks, 0);
+      assert_eq!(
+        snapshot.max_active_blocking_tasks, snapshot.max_blocking_tasks as u64,
+        "dependency lending reuses the owner's admitted lane instead of increasing the active gauge"
+      );
+      shutdown().unwrap();
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::dependency_lending_keeps_public_blocking_metrics_within_cap")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the dependency-lending metrics subprocess must start");
+    assert!(
+      output.status.success(),
+      "dependency lending must preserve the public blocking-cap metric invariant; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
   fn nested_blocking_runs_exact_awaited_job_before_same_owner_sibling() {
     use std::sync::mpsc;
 
@@ -9139,7 +9195,7 @@ mod tests {
     let guard_metrics = Arc::clone(&metrics);
     let guard_thread = std::thread::spawn(move || {
       let runnable_guard = guard_metrics.runnable_started();
-      let blocking_guard = guard_metrics.blocking_started();
+      let blocking_guard = guard_metrics.blocking_started(true);
       guards_live_tx.send(()).unwrap();
       release_rx.recv().unwrap();
       drop(runnable_guard);

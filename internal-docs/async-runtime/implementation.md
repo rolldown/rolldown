@@ -92,14 +92,17 @@ the registered implementation; `start` and `shutdown` report failures through
   an effective count of two, then clamps `max_blocking_tasks` to
   `worker_threads - 1`. The Rayon pool creates exactly the effective configured
   count; configuration and metrics therefore report physical workers, with no
-  hidden reserve. Every blocking job has a stable executor-scoped id copied
-  into its `JoinHandle`. Pending dependencies propagate through async task
-  handles, so a saturated blocking owner can lend its lane to the exact job its
-  nested `block_on` awaits, never an earlier detached sibling. Dependency
-  contexts form a thread-local stack: polling unrelated scheduler work pushes
-  that task's own context above the driving `block_on`, so its blocking waits
-  cannot leak into the owner's over-cap lineage. Dependency transitions and
-  abandoned handles clear and wake parent contexts.
+  hidden reserve. Blocking start/completion counters count every executed
+  closure, including exact-dependency work, while active/high-water counters
+  count admitted lanes and therefore remain bounded by `max_blocking_tasks`.
+  Every blocking job has a stable executor-scoped id copied into its
+  `JoinHandle`. Pending dependencies propagate through async task handles, so a
+  saturated blocking owner can lend its lane to the exact job its nested
+  `block_on` awaits, never an earlier detached sibling. Dependency contexts form
+  a thread-local stack: polling unrelated scheduler work pushes that task's own
+  context above the driving `block_on`, so its blocking waits cannot leak into
+  the owner's over-cap lineage. Dependency transitions and abandoned handles
+  clear and wake parent contexts.
 - Drain and cooperative loops force a blocking turn after 16 consecutive
   runnable polls when the blocking FIFO has capacity. After the cooperative
   LIFO budget is exhausted, one shared-FIFO pop is mandatory even if the next
@@ -127,6 +130,8 @@ the registered implementation; `start` and `shutdown` report failures through
   retire. Shutdown timer wakes are isolated too. After diagnostics are
   extracted, caught panic payloads are dropped under a second `catch_unwind`;
   only a nested panic payload from a hostile payload destructor is forgotten.
+  The binding host-timer adapter applies the same two-stage boundary before
+  returning through napi's environment-cleanup C ABI.
   The full blocking
   result-delivery boundary is also contained: dropping a panic-on-drop result
   after its join handle detached cannot bypass blocking-slot or drainer
@@ -232,12 +237,13 @@ timekeeper or strand shutdown. Replaced and cancelled heap wakers are moved out
 under the heap mutex, then destroyed with panic containment after the lock is
 released, so a waker destructor may safely re-enter timer cancellation.
 CurrentThread host-driver wakes have the same containment, including env
-cleanup eviction, so a custom `RawWaker` cannot unwind through the NAPI cleanup
-hook or prevent later pending timers from being drained. Timer-driver liveness
-callbacks and sweep hooks are also panic-contained, matching the runnable-host
-registry: a panicking liveness probe is treated as a dead driver and selection
-falls back to another live host. Timer-driver callbacks and driver destruction
-run without the registry mutex held; selection probes a snapshot and retries if
+cleanup eviction and panic-payload destruction, so a custom `RawWaker` cannot
+unwind through the NAPI cleanup hook or prevent later pending timers from being
+drained. Timer-driver liveness callbacks and sweep hooks are also
+panic-contained, matching the runnable-host registry: a panicking liveness
+probe is treated as a dead driver and selection falls back to another live
+host. Timer-driver callbacks and driver destruction run without the registry
+mutex held; selection probes a snapshot and retries if
 concurrent registry mutation makes it stale.
 
 CurrentThread runnable-host registration follows the same newest-live-driver

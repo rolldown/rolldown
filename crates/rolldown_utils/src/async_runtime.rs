@@ -1505,7 +1505,11 @@ impl MultiThreadExecutor {
     if let Some(blocking) = self.take_blocking() {
       {
         let _owner = BlockingOwnerGuard::enter(Some(self.fresh_owner_token()));
-        blocking();
+        // The queued wrapper contains panics from the user function, but
+        // delivering its result can still drop user-owned state when the
+        // receiver is gone. Contain that destructor boundary as well so an
+        // unwind cannot bypass blocking-slot and drainer retirement.
+        let _ = catch_unwind(AssertUnwindSafe(blocking));
       }
       self.active_blocking.fetch_sub(1, Ordering::Release);
       return true;
@@ -1564,7 +1568,7 @@ impl MultiThreadExecutor {
     };
     if let Some(job) = job {
       let _owner = BlockingOwnerGuard::enter(Some(self.fresh_owner_token()));
-      (job.run)();
+      let _ = catch_unwind(AssertUnwindSafe(job.run));
       true
     } else {
       false
@@ -7111,6 +7115,59 @@ mod tests {
       .try_spawn_blocking(|| 17usize)
       .unwrap_or_else(|_| panic!("the restarted controller must accept work"));
     assert_eq!(futures::executor::block_on(restarted).unwrap(), 17);
+    controller.shutdown().unwrap();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_dropped_blocking_result_panic_does_not_strand_shutdown() {
+    use std::sync::mpsc;
+
+    struct PanicOnDrop(mpsc::Sender<()>);
+    impl Drop for PanicOnDrop {
+      fn drop(&mut self) {
+        let _ = self.0.send(());
+        panic!("intentional dropped blocking result panic");
+      }
+    }
+
+    let controller = Arc::new(multi_thread_controller("blocking-result-drop-panic", 2, 1));
+    let (started_tx, started_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let (dropped_tx, dropped_rx) = mpsc::channel();
+    let handle = controller
+      .try_spawn_blocking(move || {
+        started_tx.send(()).unwrap();
+        release_rx.recv().unwrap();
+        PanicOnDrop(dropped_tx)
+      })
+      .unwrap_or_else(|_| panic!("running blocking work must be accepted"));
+    started_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+
+    // Detach the receiver before the result is delivered. Sending then drops
+    // the result on the worker, whose destructor intentionally panics.
+    drop(handle);
+    release_tx.send(()).unwrap();
+    dropped_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("the dropped blocking result must be reclaimed");
+
+    let (shutdown_done_tx, shutdown_done_rx) = mpsc::channel();
+    let shutdown_controller = Arc::clone(&controller);
+    let shutdown = std::thread::spawn(move || {
+      shutdown_controller.shutdown().unwrap();
+      shutdown_done_tx.send(()).unwrap();
+    });
+    shutdown_done_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("a dropped-result destructor panic must not strand shutdown");
+    shutdown.join().expect("shutdown must contain the destructor panic");
+
+    controller.start().expect("the stopped controller must restart");
+    let restarted = controller
+      .try_spawn_blocking(|| 19usize)
+      .unwrap_or_else(|_| panic!("the restarted controller must accept work"));
+    assert_eq!(futures::executor::block_on(restarted).unwrap(), 19);
     controller.shutdown().unwrap();
   }
 

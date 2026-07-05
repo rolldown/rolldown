@@ -102,7 +102,9 @@ the registered implementation; `start` and `shutdown` report failures through
   `catch_unwind`; a submission that races queue closure is rejected and dropped
   with the same isolation outside the queue lock. Shutdown timer wakes are
   isolated too, so user-owned `Drop`/`RawWaker` panics cannot strand the
-  lifecycle transition.
+  lifecycle transition. The full blocking result-delivery boundary is also
+  contained: dropping a panic-on-drop result after its join handle detached
+  cannot bypass blocking-slot or drainer retirement and strand shutdown.
 - Atomic metrics expose task, poll, queue-depth, active-worker, panic, and
   blocking-concurrency counters. Reset clears cumulative event counters only;
   live gauges and lifetime high-water marks remain intact because active guards

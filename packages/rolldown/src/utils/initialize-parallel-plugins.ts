@@ -10,19 +10,6 @@ import {
   type RetryableCleanup,
 } from './retryable-cleanup';
 
-export {
-  attachRetryableCleanup,
-  cleanupAfterError,
-  createCleanupFailureError,
-  getRetryableCleanup,
-  hasRetryableCleanupOwnership,
-  isCleanupFailureError,
-  recoverRetryableCleanups,
-  retryCleanupFromError,
-  runRetryableCleanup,
-  trackRetryableCleanupOwnership,
-} from './retryable-cleanup';
-
 export type WorkerData = {
   registryId: number;
   pluginInfos: ParallelPluginInfo[];

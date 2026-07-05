@@ -34,8 +34,11 @@ The existing Tokio runtime remains the default and is selected by the
 
 4. **Work classes receive bounded service.** Runnable locality remains the
    normal priority, but a continuously hot runnable stream yields to the
-   blocking FIFO after a fixed quantum. The timer timekeeper drains runnables
-   only; it never enters a potentially unbounded blocking closure.
+   blocking FIFO after a fixed quantum, and exhausting the LIFO budget forces
+   one shared-FIFO turn even if polling the awaited future immediately refills
+   the local slot. The timer timekeeper drains runnables only; that role remains
+   runnable-only through nested `block_on` and never enters a potentially
+   unbounded blocking closure.
 
 5. **Wakeups are batched.** A future wake enqueues a runnable. At most one
    bounded drain loop per worker is submitted to Rayon, and each loop processes
@@ -60,13 +63,22 @@ The existing Tokio runtime remains the default and is selected by the
    work and scheduler roles, and observes every Rayon worker exit. Concurrent
    `start` waits for that quiescence. Calling `start` or `shutdown` from work in
    the generation being retired returns an error instead of self-deadlocking.
-   User-owned destructors and timer wakers are isolated during shutdown so a
-   panic cannot leave the controller permanently stuck in `Stopping`.
+   Shutdown closes and drain-fires timers, wakes every runtime-owned `block_on`
+   parker, and scopes queued/rejected destruction to the retiring generation.
+   Rejected convenience submissions hold the lifecycle transition until their
+   contained destructor finishes, so restart cannot expose a new generation to
+   destructor re-entry.
+   User-owned destructors and timer wakers are isolated during shutdown; caught
+   hostile panic payloads are quarantined rather than dropped again, so a panic
+   cannot leave the controller permanently stuck in `Stopping`.
 
 8. **Detached-task behavior matches Tokio.** Dropping Rolldown's `JoinHandle`
    detaches rather than cancels the task during normal operation. Runtime
    shutdown may cancel an accepted detached task by dropping its future, as
-   Tokio runtime shutdown does. Internal module-loader execution and
+   Tokio runtime shutdown does. The complete async-task generator is held in a
+   manually-dropped containment wrapper because async-task aborts the process if
+   a future destructor unwinds; detached outputs use the same containment before
+   async-task owns their destruction. Internal module-loader execution and
    supervision are one accepted task, so panic, shutdown cancellation, or
    rejected submission becomes exactly one build diagnostic and completion
    accounting cannot hang.

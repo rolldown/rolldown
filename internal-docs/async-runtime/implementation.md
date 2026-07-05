@@ -55,11 +55,17 @@ the registered implementation; `start` and `shutdown` report failures through
   cannot recreate the backend after shutdown.
 - Each backend owns a generation work registry. Async tasks register an abort
   handle and all accepted operations register a retirement guard while the
-  controller mutex is held. Shutdown atomically closes that registry, aborts
-  accepted async work, closes and drains the queued blocking FIFO, and waits
-  for every guard to retire. Async-task scheduler closures and heap sleeps hold
-  weak executor references, so completed or cancelled work cannot keep an old
-  pool alive accidentally.
+  controller mutex is held. A generation stop registry also owns every active
+  `block_on` parker. Shutdown closes and drain-fires timers, wakes those parkers,
+  atomically closes the work registry, aborts accepted async work, closes and
+  drains the queued blocking FIFO, and waits for every guard to retire.
+  Async-task scheduler closures and heap sleeps hold weak executor references,
+  so completed or cancelled work cannot keep an old pool alive accidentally.
+  The complete async-task generator is wrapped in a generation-scoped
+  `ManuallyDrop` future whose destructor catches and quarantines panics before
+  async-task's abort-on-panicking-drop boundary. Task outputs remain in an
+  equivalent wrapper until a live `JoinHandle` extracts them, covering detached
+  completion as well as cancellation.
 - `CurrentThreadExecutor` uses a reentrancy-safe FIFO runnable queue. In a host
   embedding, a wake requests a fresh host turn before polling: futures such as
   `futures::Shared` invoke outer wakers while holding internal locks, so polling
@@ -68,10 +74,11 @@ the registered implementation; `start` and `shutdown` report failures through
   task driver per environment; an accepted dispatch is coalesced until the host
   calls `drive_current_thread_tasks`. This registration is also present in the
   browser build because fresh-turn polling is a future/scheduler requirement,
-  independent of Node timers. Pure Rust use without a registered host retains
-  cooperative inline draining. A host turn polls at most 64 runnables before
-  redispatching, so a self-waking task cannot monopolize the JavaScript event
-  loop. Blocking work executes inline.
+  independent of Node timers. Wakes are enqueue-only even when no host is
+  registered; pure Rust use makes progress through an explicit `block_on` or
+  `drive_current_thread_tasks` call. A host turn polls at most 64 runnables
+  before redispatching, so a self-waking task cannot monopolize the JavaScript
+  event loop. Blocking work executes inline.
 - `MultiThreadExecutor` schedules bounded queue-drain jobs on a custom Rayon
   pool. The same pool is inherited by nested `par_iter` calls. Rayon worker
   start hooks classify every nested worker for cooperative `block_on`; a
@@ -83,13 +90,24 @@ the registered implementation; `start` and `shutdown` report failures through
   an effective count of two, then clamps `max_blocking_tasks` to
   `worker_threads - 1`. The Rayon pool creates exactly the effective configured
   count; configuration and metrics therefore report physical workers, with no
-  hidden reserve.
+  hidden reserve. Every blocking job has a stable executor-scoped id copied
+  into its `JoinHandle`. Pending dependencies propagate through async task
+  handles, so a saturated blocking owner can lend its lane to the exact job its
+  nested `block_on` awaits, never an earlier detached sibling. Dependency
+  contexts form a thread-local stack: polling unrelated scheduler work pushes
+  that task's own context above the driving `block_on`, so its blocking waits
+  cannot leak into the owner's over-cap lineage. Dependency transitions and
+  abandoned handles clear and wake parent contexts.
 - Drain and cooperative loops force a blocking turn after 16 consecutive
-  runnable polls when the blocking FIFO has capacity. The timer timekeeper uses
-  the runnable-only path, so a stalled blocking closure cannot stop timer
-  service. Parked-driver registration records whether a parker may consume
-  blocking work; blocking submissions skip the runnable-only timekeeper and
-  wake a cooperative driver or arm a normal drainer.
+  runnable polls when the blocking FIFO has capacity. After the cooperative
+  LIFO budget is exhausted, one shared-FIFO pop is mandatory even if the next
+  awaited-future poll refills the local slot. The timer timekeeper uses a sticky
+  runnable-only scheduler role, including through nested `block_on`, so a
+  stalled blocking closure cannot stop timer service. Parked-driver registration
+  records whether a parker may consume blocking work; blocking submissions and
+  exit miss compensation skip the runnable-only timekeeper. A completing
+  blocking-capable driver consumes one admitted blocking-only residue itself
+  when handing it to a queued Rayon drainer could leave no physical lane.
 - `JoinHandle` normalizes async-task, blocking-job, and immediate results and
   detaches async tasks on drop to match Tokio. Scheduler shutdown instead
   aborts accepted async tasks and resolves retained handles with `JoinError`.
@@ -100,11 +118,16 @@ the registered implementation; `start` and `shutdown` report failures through
   worker of the generation being stopped returns an error rather than waiting
   on itself. Queued blocking closures are dropped one at a time behind
   `catch_unwind`; a submission that races queue closure is rejected and dropped
-  with the same isolation outside the queue lock. Shutdown timer wakes are
-  isolated too, so user-owned `Drop`/`RawWaker` panics cannot strand the
-  lifecycle transition. The full blocking result-delivery boundary is also
-  contained: dropping a panic-on-drop result after its join handle detached
-  cannot bypass blocking-slot or drainer retirement and strand shutdown.
+  with the same isolation outside the queue lock and under the retiring
+  generation identity. Convenience APIs that own a rejected future/closure
+  register its contained destruction while holding the lifecycle lock;
+  shutdown/restart cannot finish the transition until those registrations
+  retire. Shutdown timer wakes are isolated too, and caught panic payloads are
+  forgotten after diagnostics are extracted, so hostile payload destructors
+  cannot re-panic through the boundary. The full blocking
+  result-delivery boundary is also contained: dropping a panic-on-drop result
+  after its join handle detached cannot bypass blocking-slot or drainer
+  retirement and strand shutdown.
 - Atomic metrics expose task, poll, queue-depth, active-worker, panic, and
   blocking-concurrency counters. Reset clears cumulative event counters only;
   live gauges and lifetime high-water marks remain intact because active guards
@@ -190,10 +213,15 @@ which delegates to paired `setTimeout`/`clearTimeout` callbacks in each
 importing environment. The Rust relay records whether the JS schedule callback
 has returned before sending cancellation, preventing cancel from overtaking
 timeout creation. Cancellation clears the timeout and resolves the schedule
-Promise so the detached relay task retires immediately.
+Promise so the detached relay task retires immediately. Each CurrentThread
+generation also retains the armed host wakers; shutdown closes that registry,
+marks every sleep fired, wakes active `block_on` calls, and makes later polls
+resolve while their host-side timers are cancelled.
 MultiThread timer wakes, including shutdown drain-fire, are individually
 wrapped with `catch_unwind`; a user-supplied `RawWaker` cannot unwind the
-timekeeper or strand shutdown.
+timekeeper or strand shutdown. Replaced and cancelled heap wakers are moved out
+under the heap mutex, then destroyed with panic containment after the lock is
+released, so a waker destructor may safely re-enter timer cancellation.
 CurrentThread host-driver wakes have the same containment, including env
 cleanup eviction, so a custom `RawWaker` cannot unwind through the NAPI cleanup
 hook or prevent later pending timers from being drained. Timer-driver liveness
@@ -205,13 +233,13 @@ concurrent registry mutation makes it stale.
 
 CurrentThread runnable-host registration follows the same newest-live-driver
 model. Driver liveness, dispatch, and sweep callbacks run outside the registry
-mutex and are panic-contained. Once one host dispatch has been accepted, that
-runtime generation remains host-driven: if every environment temporarily
-disappears, runnables remain queued for the next registration or are cancelled
-by shutdown rather than falling back to inline polling. A newly registered host
-supersedes any pending dispatch because an accepted weak threadsafe-function
-call may have been discarded when its previous environment died; duplicate
-host callbacks are harmless because the executor serializes queue draining.
+mutex and are panic-contained. If every environment temporarily disappears,
+runnables remain queued for the next registration, an explicit hostless drive,
+or shutdown cancellation; wake callers never poll inline. A newly registered
+host supersedes any pending dispatch because an accepted weak
+threadsafe-function call may have been discarded when its previous environment
+died; duplicate host callbacks are harmless because the executor serializes
+queue draining.
 If installing an environment cleanup hook fails, registration is rolled back
 immediately so no driver survives without a teardown owner.
 Shutdown closes the queue before dropping pending runnables, so cancellation

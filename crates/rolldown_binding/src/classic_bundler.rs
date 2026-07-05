@@ -131,7 +131,7 @@ impl ClassicBundler {
       let mut errors = Vec::new();
       if let Some(handle) = last_bundle_handle {
         if let Err(error) = handle.close().await {
-          errors.push(format!("{error:#}"));
+          errors.push(error);
         }
       }
       if let Some(rx) = devtools_flush_rx {
@@ -155,10 +155,16 @@ impl ClassicBundler {
             Err(error) => Err(anyhow::anyhow!("devtools flush task failed to join: {error}")),
           };
         if let Err(error) = flush_result {
-          errors.push(format!("{error:#}"));
+          errors.push(error);
         }
       }
-      if errors.is_empty() { Ok(()) } else { Err(anyhow::anyhow!(errors.join("\n"))) }
+      match errors.len() {
+        0 => Ok(()),
+        1 => Err(errors.pop().expect("one close error was recorded")),
+        _ => Err(anyhow::anyhow!(
+          errors.iter().map(|error| format!("{error:#}")).collect::<Vec<_>>().join("\n")
+        )),
+      }
     }
   }
 

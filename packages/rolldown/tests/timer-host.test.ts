@@ -1,11 +1,16 @@
 import { afterEach, expect, test, vi } from 'vitest';
 
 const callbacks = vi.hoisted(() => ({
+  taskDispatch: undefined as undefined | (() => void),
   schedule: undefined as undefined | ((id: number, ms: number) => Promise<void>),
   cancel: undefined as undefined | ((id: number) => void),
 }));
 
 vi.mock('../src/binding.cjs', () => ({
+  driveCurrentThreadRuntimeTasks: vi.fn(),
+  registerCurrentThreadTaskHost: vi.fn((dispatch: () => void) => {
+    callbacks.taskDispatch = dispatch;
+  }),
   registerTimerHost: vi.fn(
     (schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void) => {
       callbacks.schedule = schedule;
@@ -23,6 +28,7 @@ test('CurrentThread host cancellation clears the JS timeout and resolves its rel
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
   await import('../src/timer-host');
 
+  expect(callbacks.taskDispatch).toBeDefined();
   const relay = callbacks.schedule?.(7, 60_000);
   expect(relay).toBeDefined();
   expect(vi.getTimerCount()).toBe(1);

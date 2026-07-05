@@ -1,5 +1,6 @@
 use std::{
   any::Any,
+  fmt,
   panic::AssertUnwindSafe,
   sync::{Arc, Mutex},
 };
@@ -8,8 +9,29 @@ use futures::{FutureExt, future::BoxFuture, future::Shared};
 use rolldown_common::SharedNormalizedBundlerOptions;
 use rolldown_plugin::SharedPluginDriver;
 
-type CloseResult = Result<(), Arc<str>>;
+type CloseResult = Result<(), Arc<anyhow::Error>>;
 type CloseFuture = Shared<BoxFuture<'static, CloseResult>>;
+
+#[derive(Debug)]
+struct SharedCloseError(Arc<anyhow::Error>);
+
+impl SharedCloseError {
+  fn new(error: Arc<anyhow::Error>) -> Self {
+    Self(error)
+  }
+}
+
+impl fmt::Display for SharedCloseError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{:#}", self.0)
+  }
+}
+
+impl std::error::Error for SharedCloseError {
+  fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    Some(self.0.root_cause())
+  }
+}
 
 fn panic_payload_message(payload: &(dyn Any + Send)) -> &str {
   if let Some(message) = payload.downcast_ref::<String>() {
@@ -92,8 +114,8 @@ impl BundleHandle {
           async move {
             let result =
               match AssertUnwindSafe(plugin_driver.close_bundle(None)).catch_unwind().await {
-                Ok(result) => result.map_err(|error| Arc::<str>::from(format!("{error:#}"))),
-                Err(payload) => Err(Arc::<str>::from(format!(
+                Ok(result) => result.map_err(Arc::new),
+                Err(payload) => Err(Arc::new(anyhow::anyhow!(
                   "closeBundle hook panicked: {}",
                   panic_payload_message(&*payload)
                 ))),
@@ -107,7 +129,7 @@ impl BundleHandle {
         .clone()
     };
 
-    close_future.await.map_err(|error| anyhow::anyhow!("{error}"))
+    close_future.await.map_err(|error| anyhow::Error::new(SharedCloseError::new(error)))
   }
 }
 

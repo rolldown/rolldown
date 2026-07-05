@@ -18,9 +18,12 @@ use napi::threadsafe_function::ThreadsafeFunctionCallMode;
 use napi_derive::napi;
 #[cfg(feature = "async-runtime")]
 use rolldown_utils::async_runtime::{
-  RuntimeFlavor, RuntimeMetricsSnapshot, RuntimeOptions, TimerDriver, TimerDriverId, TimerId,
-  block_on_dyn, configure, configured_options, metrics, register_timer_driver, reset_metrics,
-  shutdown, spawn_detached, start, try_spawn_blocking, try_spawn_detached, unregister_timer_driver,
+  CurrentThreadTaskDriver, CurrentThreadTaskDriverId, RuntimeFlavor, RuntimeMetricsSnapshot,
+  RuntimeOptions, TimerDriver, TimerDriverId, TimerId, block_on_dyn, configure, configured_options,
+  drive_current_thread_tasks, metrics, register_current_thread_task_driver, register_timer_driver,
+  request_current_thread_task_drain, reset_metrics, shutdown, spawn_detached, start,
+  try_spawn_blocking, try_spawn_detached, unregister_current_thread_task_driver,
+  unregister_timer_driver,
 };
 
 use crate::types::js_callback::JsCallback;
@@ -596,6 +599,118 @@ pub fn reset_async_runtime_metrics() {
 /// A no-op on the default `tokio-runtime` build.
 pub fn reset_async_runtime_metrics() {}
 
+/// Per-environment host-turn driver for the shared runtime's CurrentThread
+/// runnable queue. The callback is a weak threadsafe function, so scheduling a
+/// Rust task never keeps a Node worker alive by itself.
+#[cfg(feature = "async-runtime")]
+struct JsCurrentThreadTaskHost {
+  inner: std::sync::Arc<JsCurrentThreadTaskHostInner>,
+}
+
+#[cfg(feature = "async-runtime")]
+struct JsCurrentThreadTaskHostInner {
+  callback: JsCallback<(), ()>,
+  dead: std::sync::atomic::AtomicBool,
+  registration: std::sync::Mutex<Option<CurrentThreadTaskDriverId>>,
+}
+
+#[cfg(feature = "async-runtime")]
+impl JsCurrentThreadTaskHostInner {
+  fn is_live(&self) -> bool {
+    !self.dead.load(std::sync::atomic::Ordering::SeqCst) && !self.callback.aborted()
+  }
+
+  fn evict(&self) {
+    self.dead.store(true, std::sync::atomic::Ordering::SeqCst);
+    let registration =
+      self.registration.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take();
+    if let Some(id) = registration {
+      unregister_current_thread_task_driver(id);
+    }
+  }
+}
+
+#[cfg(feature = "async-runtime")]
+impl CurrentThreadTaskDriver for JsCurrentThreadTaskHost {
+  fn dispatch(&self) -> bool {
+    self.inner.is_live()
+      && self.inner.callback.call((), ThreadsafeFunctionCallMode::NonBlocking) == napi::Status::Ok
+  }
+
+  fn is_live(&self) -> bool {
+    self.inner.is_live()
+  }
+
+  fn on_swept(&self) {
+    self.inner.evict();
+  }
+}
+
+#[cfg(feature = "async-runtime")]
+fn install_cleanup_hook_or_rollback<T>(
+  install: impl FnOnce() -> napi::Result<T>,
+  rollback: impl FnOnce(),
+) -> napi::Result<()> {
+  match install() {
+    Ok(_) => Ok(()),
+    Err(error) => {
+      rollback();
+      Err(error)
+    }
+  }
+}
+
+#[cfg(feature = "async-runtime")]
+#[napi(ts_args_type = "dispatch: () => void")]
+/// Install the host-turn callback used to poll CurrentThread runnables without
+/// re-entering arbitrary future waker locks. Called once per importing env.
+pub fn register_current_thread_task_host(
+  env: &napi::Env,
+  dispatch: JsCallback<(), ()>,
+) -> napi::Result<()> {
+  let inner = std::sync::Arc::new(JsCurrentThreadTaskHostInner {
+    callback: dispatch,
+    dead: std::sync::atomic::AtomicBool::new(false),
+    registration: std::sync::Mutex::default(),
+  });
+  {
+    let mut slot = inner.registration.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    *slot =
+      Some(register_current_thread_task_driver(std::sync::Arc::new(JsCurrentThreadTaskHost {
+        inner: std::sync::Arc::clone(&inner),
+      })));
+  }
+  request_current_thread_task_drain();
+  let hook_inner = std::sync::Arc::clone(&inner);
+  install_cleanup_hook_or_rollback(
+    || {
+      env.add_env_cleanup_hook(hook_inner, |inner| {
+        inner.evict();
+      })
+    },
+    || inner.evict(),
+  )?;
+  Ok(())
+}
+
+#[cfg(not(feature = "async-runtime"))]
+#[napi(ts_args_type = "dispatch: () => void")]
+pub fn register_current_thread_task_host(dispatch: JsCallback<(), ()>) {
+  let _ = dispatch;
+}
+
+#[cfg(feature = "async-runtime")]
+#[napi]
+/// Poll queued CurrentThread runnables from a callback dispatched by
+/// `registerCurrentThreadTaskHost`.
+pub fn drive_current_thread_runtime_tasks() {
+  drive_current_thread_tasks();
+}
+
+#[cfg(not(feature = "async-runtime"))]
+#[napi]
+pub fn drive_current_thread_runtime_tasks() {}
+
 /// Host timer driver for the shared runtime's CurrentThread flavor (timer
 /// intel §4(b)): `sleep_until` on the single-thread executor cannot park a
 /// helper thread (none exists on threadless wasm), so it delegates each timer
@@ -731,6 +846,13 @@ struct PendingHostTimer {
 }
 
 #[cfg(feature = "async-runtime")]
+fn wake_host_timer_safely(waker: std::task::Waker) {
+  // Host eviction runs from a napi env cleanup hook. A custom RawWaker must
+  // not unwind through that FFI boundary or abort the remaining timer drain.
+  let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| waker.wake()));
+}
+
+#[cfg(feature = "async-runtime")]
 impl JsTimerHostInner {
   fn lock_pending(
     &self,
@@ -795,7 +917,7 @@ impl JsTimerHostInner {
       if pending.relay_armed {
         self.cancel_relay(pending.relay_id);
       }
-      pending.waker.wake();
+      wake_host_timer_safely(pending.waker);
     }
   }
 }
@@ -808,7 +930,7 @@ impl TimerDriver for JsTimerHost {
       // bookkeeping ran, then wake immediately so the sleep re-selects from
       // the registry (which no longer offers this host).
       self.inner.evict();
-      waker.wake();
+      wake_host_timer_safely(waker);
       return;
     }
     let relay_id = {
@@ -845,7 +967,7 @@ impl TimerDriver for JsTimerHost {
         Ok(()) => {
           inner.transient_failures.store(0, std::sync::atomic::Ordering::SeqCst);
           if let Some(pending) = inner.take_pending_relay(id, relay_id) {
-            pending.waker.wake();
+            wake_host_timer_safely(pending.waker);
           }
         }
         // A dead env surfaces here as an error, never a silent hang. The
@@ -883,7 +1005,7 @@ impl TimerDriver for JsTimerHost {
                ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction): {error}"
             );
             if let Some(pending) = inner.take_pending_relay(id, relay_id) {
-              pending.waker.wake();
+              wake_host_timer_safely(pending.waker);
             }
           }
         }
@@ -951,9 +1073,14 @@ pub fn register_timer_host(
   // mechanism; the `aborted` probe and the relay-failure path in the driver
   // are the backstops for anything the hook cannot reach in time.
   let hook_inner = std::sync::Arc::clone(&inner);
-  env.add_env_cleanup_hook(hook_inner, |inner| {
-    inner.evict();
-  })?;
+  install_cleanup_hook_or_rollback(
+    || {
+      env.add_env_cleanup_hook(hook_inner, |inner| {
+        inner.evict();
+      })
+    },
+    || inner.evict(),
+  )?;
   Ok(())
 }
 
@@ -1113,7 +1240,10 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
 #[cfg(test)]
 mod tests {
   #[cfg(feature = "async-runtime")]
-  use super::{RelayIdAllocator, RolldownAsyncRuntime};
+  use super::{
+    RelayIdAllocator, RolldownAsyncRuntime, install_cleanup_hook_or_rollback,
+    wake_host_timer_safely,
+  };
   use super::{
     ResolvedRuntimeBackend, ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RuntimeEnv,
     parse_park_deadline_ms, resolve_runtime_config_for, wasm_async_work_pool_size,
@@ -1141,6 +1271,41 @@ mod tests {
     allocator.release(last);
     allocator.next.store(u32::MAX, std::sync::atomic::Ordering::Relaxed);
     assert_eq!(allocator.reserve(), u32::MAX, "released relay ids may be reused");
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn host_timer_wake_contains_panics() {
+    struct PanickingWake;
+
+    impl std::task::Wake for PanickingWake {
+      fn wake(self: std::sync::Arc<Self>) {
+        panic!("intentional host timer waker panic");
+      }
+    }
+
+    let waker = std::task::Waker::from(std::sync::Arc::new(PanickingWake));
+    wake_host_timer_safely(waker);
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn cleanup_hook_registration_failure_rolls_back_host_registration() {
+    let rollback_calls = std::sync::atomic::AtomicUsize::new(0);
+    let result = install_cleanup_hook_or_rollback(
+      || -> napi::Result<()> {
+        Err(napi::Error::new(
+          napi::Status::GenericFailure,
+          "intentional cleanup-hook registration failure",
+        ))
+      },
+      || {
+        rollback_calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+      },
+    );
+
+    assert!(result.is_err());
+    assert_eq!(rollback_calls.load(std::sync::atomic::Ordering::SeqCst), 1);
   }
 
   fn resolve(

@@ -3043,6 +3043,8 @@ export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcema
  */
 export declare function configureAsyncRuntime(options: BindingRuntimeOptions): void
 
+export declare function driveCurrentThreadRuntimeTasks(): void
+
 export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
 
 export declare function enhancedTransformSync(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingEnhancedTransformResult
@@ -3157,6 +3159,8 @@ export interface PreRenderedChunk {
   /** Exported variable names from this chunk. */
   exports: Array<string>
 }
+
+export declare function registerCurrentThreadTaskHost(dispatch: () => void): void
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 

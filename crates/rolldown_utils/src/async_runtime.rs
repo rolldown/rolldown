@@ -628,8 +628,11 @@ fn run_runnable(metrics: &RuntimeMetrics, runnable: Runnable) {
 }
 
 struct CurrentThreadExecutor {
-  queue: Mutex<VecDeque<Runnable>>,
+  queue: Mutex<CurrentThreadQueue>,
   draining: AtomicBool,
+  dispatch_pending: AtomicBool,
+  host_driven: AtomicBool,
+  task_dispatch: fn() -> bool,
   metrics: Arc<RuntimeMetrics>,
   // Deadlock detection (wake-path §6(d)). `threadless`: no second thread can
   // EVER deliver a wake to a parked `block_on`, so a park decision with an
@@ -652,7 +655,16 @@ struct CurrentThreadExecutor {
   host_timers: Arc<HostTimerRegistry>,
 }
 
+struct CurrentThreadQueue {
+  closed: bool,
+  runnables: VecDeque<Runnable>,
+}
+
 impl CurrentThreadExecutor {
+  /// Bound one host callback so a self-waking task cannot monopolize the
+  /// JavaScript event loop. Remaining work is continued in a fresh host turn.
+  const HOST_TURN_RUNNABLE_BUDGET: usize = 64;
+
   /// Build-default construction, kept for the pre-existing unit tests
   /// (production goes through [`Self::with_detection`] in
   /// `RuntimeBackend::new`, which also resolves the env deadline).
@@ -672,8 +684,11 @@ impl CurrentThreadExecutor {
     park_deadline: Option<Duration>,
   ) -> Self {
     Self {
-      queue: Mutex::new(VecDeque::new()),
+      queue: Mutex::new(CurrentThreadQueue { closed: false, runnables: VecDeque::new() }),
       draining: AtomicBool::new(false),
+      dispatch_pending: AtomicBool::new(false),
+      host_driven: AtomicBool::new(false),
+      task_dispatch: dispatch_current_thread_tasks,
       metrics,
       threadless,
       park_deadline,
@@ -681,10 +696,93 @@ impl CurrentThreadExecutor {
     }
   }
 
+  #[cfg(test)]
+  fn with_task_dispatch(metrics: Arc<RuntimeMetrics>, task_dispatch: fn() -> bool) -> Self {
+    let mut executor = Self::new(metrics);
+    executor.task_dispatch = task_dispatch;
+    executor
+  }
+
   fn schedule(self: &Arc<Self>, runnable: Runnable) {
     self.metrics.runnable_scheduled();
-    self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push_back(runnable);
-    self.drain();
+    let rejected = {
+      let mut queue = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      if queue.closed {
+        Some(runnable)
+      } else {
+        queue.runnables.push_back(runnable);
+        None
+      }
+    };
+    if let Some(runnable) = rejected {
+      self.metrics.queued_runnables.fetch_sub(1, Ordering::Relaxed);
+      let _ = catch_unwind(AssertUnwindSafe(|| drop(runnable)));
+      return;
+    }
+    if !self.draining.load(Ordering::Acquire) {
+      self.request_drain();
+    }
+  }
+
+  /// Ask the host to enter a fresh JavaScript turn before polling queued work.
+  ///
+  /// A `Waker` may be invoked while its producer holds an internal mutex
+  /// (`futures::Shared` does this). Polling inline from the scheduler callback
+  /// can then re-enter that future and self-deadlock on the same mutex. Once a
+  /// host dispatcher has accepted work, this executor stays host-driven for
+  /// the rest of its generation; a temporarily missing env leaves work queued
+  /// for the next registration or for shutdown cancellation.
+  fn request_drain(self: &Arc<Self>) {
+    if self
+      .dispatch_pending
+      .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+      .is_err()
+    {
+      return;
+    }
+    if (self.task_dispatch)() {
+      self.host_driven.store(true, Ordering::Release);
+      return;
+    }
+    self.dispatch_pending.store(false, Ordering::Release);
+    if !self.host_driven.load(Ordering::Acquire) {
+      // Pure Rust embedders have no JavaScript host. Preserve the original
+      // cooperative inline behavior until a host dispatcher is first used.
+      self.drain();
+    }
+  }
+
+  fn drive_host_turn(self: &Arc<Self>) {
+    self.dispatch_pending.store(false, Ordering::Release);
+    if self.draining.compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed).is_err() {
+      return;
+    }
+
+    for _ in 0..Self::HOST_TURN_RUNNABLE_BUDGET {
+      if !self.drain_one() {
+        break;
+      }
+    }
+    self.draining.store(false, Ordering::Release);
+    self.request_drain_if_work_remains();
+  }
+
+  fn request_drain_if_queued(self: &Arc<Self>) {
+    // A previously accepted host callback may have been discarded when its
+    // napi env died. A newly registered host supersedes that stale dispatch;
+    // duplicate callbacks are harmless because `draining` serializes polls.
+    self.dispatch_pending.store(false, Ordering::Release);
+    self.request_drain_if_work_remains();
+  }
+
+  fn request_drain_if_work_remains(self: &Arc<Self>) {
+    let has_queued = {
+      let queue = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      !queue.closed && !queue.runnables.is_empty()
+    };
+    if has_queued && !self.draining.load(Ordering::Acquire) {
+      self.request_drain();
+    }
   }
 
   fn drain(self: &Arc<Self>) {
@@ -697,7 +795,7 @@ impl CurrentThreadExecutor {
       self.draining.store(false, Ordering::Release);
 
       let has_more =
-        !self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty();
+        !self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).runnables.is_empty();
       if !has_more
         || self
           .draining
@@ -710,7 +808,8 @@ impl CurrentThreadExecutor {
   }
 
   fn drain_one(&self) -> bool {
-    let runnable = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
+    let runnable =
+      self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).runnables.pop_front();
     if let Some(runnable) = runnable {
       run_runnable(&self.metrics, runnable);
       true
@@ -807,6 +906,21 @@ impl CurrentThreadExecutor {
           }
         },
       }
+    }
+  }
+
+  fn begin_shutdown(&self) {
+    let queued = {
+      let mut queue = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      queue.closed = true;
+      std::mem::take(&mut queue.runnables)
+    };
+    self.dispatch_pending.store(false, Ordering::Release);
+    for runnable in queued {
+      self.metrics.queued_runnables.fetch_sub(1, Ordering::Relaxed);
+      // Dropping the last runnable cancels its detached async-task and retires
+      // the generation guard. Isolate user future destructors from shutdown.
+      let _ = catch_unwind(AssertUnwindSafe(|| drop(runnable)));
     }
   }
 }
@@ -2149,6 +2263,134 @@ impl ParkedDrivers {
 //     frozen-JS-event-loop signature that the deadline-based detection
 //     exists to catch, so it must NOT suppress the panic.
 
+/// Host-turn dispatcher for the CurrentThread runnable queue.
+///
+/// The NAPI binding registers one weak threadsafe-function-backed driver per
+/// importing environment. Scheduling through a fresh host turn is required for
+/// soundness: arbitrary futures may invoke their waker while holding internal
+/// locks, so polling the runnable inline from that wake can self-deadlock.
+pub trait CurrentThreadTaskDriver: Send + Sync + 'static {
+  /// Queue one host turn that will call [`drive_current_thread_tasks`].
+  /// `false` means this driver can no longer dispatch and must be swept.
+  fn dispatch(&self) -> bool;
+
+  fn is_live(&self) -> bool {
+    true
+  }
+
+  /// Called after this driver has been removed from the registry, with no
+  /// registry lock held. Must be idempotent with explicit host cleanup.
+  fn on_swept(&self) {}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CurrentThreadTaskDriverId(u64);
+
+#[derive(Default)]
+struct CurrentThreadTaskDriverRegistry {
+  entries: Mutex<Vec<(u64, Arc<dyn CurrentThreadTaskDriver>)>>,
+  next_id: AtomicU64,
+}
+
+impl CurrentThreadTaskDriverRegistry {
+  fn register(&self, driver: Arc<dyn CurrentThreadTaskDriver>) -> CurrentThreadTaskDriverId {
+    let id = self.next_id.fetch_add(1, Ordering::Relaxed);
+    self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push((id, driver));
+    CurrentThreadTaskDriverId(id)
+  }
+
+  fn unregister(&self, id: CurrentThreadTaskDriverId) {
+    let removed = {
+      let mut entries = self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      entries.iter().position(|(entry_id, _)| *entry_id == id.0).map(|index| entries.remove(index))
+    };
+    drop(removed);
+  }
+
+  fn current(&self) -> Option<(CurrentThreadTaskDriverId, Arc<dyn CurrentThreadTaskDriver>)> {
+    loop {
+      let snapshot: Vec<(u64, Arc<dyn CurrentThreadTaskDriver>)> = {
+        let entries = self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        entries.iter().map(|(id, driver)| (*id, Arc::clone(driver))).collect()
+      };
+      let mut dead_ids = Vec::new();
+      let mut selected_id = None;
+      for (id, driver) in &snapshot {
+        if catch_unwind(AssertUnwindSafe(|| driver.is_live())).unwrap_or(false) {
+          selected_id = Some(*id);
+        } else {
+          dead_ids.push(*id);
+        }
+      }
+
+      let (selected, swept, retry) = {
+        let mut entries = self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut swept = Vec::new();
+        entries.retain(|(id, driver)| {
+          if dead_ids.contains(id) {
+            swept.push(Arc::clone(driver));
+            false
+          } else {
+            true
+          }
+        });
+        let (selected, retry) = match (selected_id, entries.last()) {
+          (Some(selected_id), Some((current_id, driver))) if selected_id == *current_id => {
+            (Some((CurrentThreadTaskDriverId(*current_id), Arc::clone(driver))), false)
+          }
+          (None, None) => (None, false),
+          _ => (None, true),
+        };
+        (selected, swept, retry)
+      };
+
+      for driver in swept {
+        let _ = catch_unwind(AssertUnwindSafe(|| driver.on_swept()));
+      }
+      if !retry {
+        return selected;
+      }
+    }
+  }
+
+  fn dispatch(&self) -> bool {
+    loop {
+      let Some((id, driver)) = self.current() else {
+        return false;
+      };
+      if catch_unwind(AssertUnwindSafe(|| driver.dispatch())).unwrap_or(false) {
+        return true;
+      }
+      self.unregister(id);
+      let _ = catch_unwind(AssertUnwindSafe(|| driver.on_swept()));
+    }
+  }
+}
+
+static CURRENT_THREAD_TASK_DRIVERS: LazyLock<CurrentThreadTaskDriverRegistry> =
+  LazyLock::new(CurrentThreadTaskDriverRegistry::default);
+
+pub fn register_current_thread_task_driver(
+  driver: Arc<dyn CurrentThreadTaskDriver>,
+) -> CurrentThreadTaskDriverId {
+  CURRENT_THREAD_TASK_DRIVERS.register(driver)
+}
+
+/// Request service for work that may have accumulated while no live host
+/// dispatcher was registered. A new host supersedes any accepted callback
+/// that may have been discarded with its previous napi environment.
+pub fn request_current_thread_task_drain() {
+  RUNTIME.request_current_thread_drain();
+}
+
+pub fn unregister_current_thread_task_driver(id: CurrentThreadTaskDriverId) {
+  CURRENT_THREAD_TASK_DRIVERS.unregister(id);
+}
+
+fn dispatch_current_thread_tasks() -> bool {
+  CURRENT_THREAD_TASK_DRIVERS.dispatch()
+}
+
 pub type TimerId = u64;
 
 /// Process-global id source for [`Sleep`] futures (both drivers).
@@ -2225,41 +2467,69 @@ impl TimerDriverRegistry {
 
   /// Drop the registration behind `id` (no-op when already swept/removed).
   pub fn unregister(&self, id: TimerDriverId) {
-    self
-      .entries
-      .lock()
-      .unwrap_or_else(std::sync::PoisonError::into_inner)
-      .retain(|(entry_id, _)| *entry_id != id.0);
+    let removed = {
+      let mut entries = self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      entries.iter().position(|(entry_id, _)| *entry_id == id.0).map(|index| entries.remove(index))
+    };
+    // A driver's destructor may re-enter this registry. Keep it outside the
+    // entries lock just like is_live/on_swept callbacks.
+    drop(removed);
   }
 
   /// The newest LIVE driver, sweeping dead entries out as a side effect.
   /// `None` when no live driver remains registered.
   ///
-  /// LOCK DISCIPLINE: each swept driver's [`TimerDriver::on_swept`] hook runs
-  /// AFTER the entries lock is released. The hook re-enters the registry --
-  /// the binding's implementation evicts (which calls `unregister`, taking
-  /// this same lock) and wakes pending sleeps whose re-polls call `current()`
-  /// again -- so invoking it under the lock would deadlock or self-deadlock
-  /// on re-entry. Sweeping under the lock and hooking outside it is safe: the
-  /// entry is already gone from `entries` when the hook runs, so a re-entrant
-  /// selection can never hand the swept driver out again.
+  /// LOCK DISCIPLINE: no driver callback or destructor runs with the entries
+  /// lock held. `is_live` is externally implemented and may re-enter this
+  /// registry; `on_swept` does so in the binding by calling `unregister` and
+  /// waking pending sleeps whose re-polls call `current()` again. Selection
+  /// therefore probes a snapshot, removes dead entries under the lock, then
+  /// runs hooks after release. A concurrent registration/unregistration can
+  /// stale the snapshot, in which case selection retries.
   fn current(&self) -> Option<(TimerDriverId, Arc<dyn TimerDriver>)> {
-    let mut swept: Vec<Arc<dyn TimerDriver>> = Vec::new();
-    let selected = {
-      let mut entries = self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      entries.retain(|(_, driver)| {
-        let live = driver.is_live();
-        if !live {
-          swept.push(Arc::clone(driver));
+    loop {
+      let snapshot: Vec<(u64, Arc<dyn TimerDriver>)> = {
+        let entries = self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        entries.iter().map(|(id, driver)| (*id, Arc::clone(driver))).collect()
+      };
+      let mut dead_ids = Vec::new();
+      let mut selected_id = None;
+      for (id, driver) in &snapshot {
+        if driver.is_live() {
+          selected_id = Some(*id);
+        } else {
+          dead_ids.push(*id);
         }
-        live
-      });
-      entries.last().map(|(id, driver)| (TimerDriverId(*id), Arc::clone(driver)))
-    };
-    for driver in swept {
-      driver.on_swept();
+      }
+
+      let (selected, swept, retry) = {
+        let mut entries = self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut swept = Vec::new();
+        entries.retain(|(id, driver)| {
+          if dead_ids.contains(id) {
+            swept.push(Arc::clone(driver));
+            false
+          } else {
+            true
+          }
+        });
+        let (selected, retry) = match (selected_id, entries.last()) {
+          (Some(selected_id), Some((current_id, driver))) if selected_id == *current_id => {
+            (Some((TimerDriverId(*current_id), Arc::clone(driver))), false)
+          }
+          (None, None) => (None, false),
+          _ => (None, true),
+        };
+        (selected, swept, retry)
+      };
+
+      for driver in swept {
+        driver.on_swept();
+      }
+      if !retry {
+        return selected;
+      }
     }
-    selected
   }
 
   /// Whether a LIVE driver is currently registered (dead-only counts as no).
@@ -3057,9 +3327,10 @@ impl RuntimeBackend {
 
   fn begin_shutdown(&self) {
     self.work.close_and_abort();
-    #[cfg(not(target_family = "wasm"))]
-    if let RuntimeExecutor::MultiThread(executor) = &self.executor {
-      executor.begin_shutdown();
+    match &self.executor {
+      RuntimeExecutor::CurrentThread(executor) => executor.begin_shutdown(),
+      #[cfg(not(target_family = "wasm"))]
+      RuntimeExecutor::MultiThread(executor) => executor.begin_shutdown(),
     }
   }
 
@@ -3300,6 +3571,30 @@ impl RuntimeController {
     self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).options.clone()
   }
 
+  fn running_current_thread_executor(&self) -> Option<Arc<CurrentThreadExecutor>> {
+    let state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let RuntimeLifecycle::Running(backend) = &state.lifecycle else {
+      return None;
+    };
+    match &backend.executor {
+      RuntimeExecutor::CurrentThread(executor) => Some(Arc::clone(executor)),
+      #[cfg(not(target_family = "wasm"))]
+      RuntimeExecutor::MultiThread(_) => None,
+    }
+  }
+
+  fn request_current_thread_drain(&self) {
+    if let Some(executor) = self.running_current_thread_executor() {
+      executor.request_drain_if_queued();
+    }
+  }
+
+  fn drive_current_thread_tasks(&self) {
+    if let Some(executor) = self.running_current_thread_executor() {
+      executor.drive_host_turn();
+    }
+  }
+
   fn shutdown(&self) -> Result<(), RuntimeConfigError> {
     let backend = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
@@ -3487,6 +3782,14 @@ pub fn shutdown() -> Result<(), RuntimeConfigError> {
   RUNTIME.shutdown()
 }
 
+/// Poll the shared runtime's CurrentThread queue from a host-dispatched turn.
+///
+/// Embedders normally call this from their [`CurrentThreadTaskDriver`]
+/// callback. It is a no-op before backend creation and on MultiThread.
+pub fn drive_current_thread_tasks() {
+  RUNTIME.drive_current_thread_tasks();
+}
+
 pub fn reset_metrics() {
   RUNTIME.metrics.reset();
 }
@@ -3517,6 +3820,17 @@ pub fn metrics() -> RuntimeMetricsSnapshot {
 mod tests {
   use super::*;
 
+  static CURRENT_THREAD_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
+
+  fn accept_current_thread_host_dispatch() -> bool {
+    true
+  }
+
+  fn count_current_thread_host_dispatch() -> bool {
+    CURRENT_THREAD_HOST_DISPATCHES.fetch_add(1, Ordering::SeqCst);
+    true
+  }
+
   #[test]
   fn current_thread_executor_drives_spawned_tasks() {
     let metrics = Arc::new(RuntimeMetrics::default());
@@ -3531,6 +3845,364 @@ mod tests {
     assert_eq!(futures::executor::block_on(task), 42);
     assert_eq!(metrics.runnable_polls.load(Ordering::Relaxed), 1);
     assert_eq!(metrics.active_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  #[test]
+  fn current_thread_host_dispatch_does_not_poll_inline_from_shared_wake() {
+    use std::{sync::mpsc, time::Duration};
+
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      accept_current_thread_host_dispatch,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let completed = Arc::new(AtomicBool::new(false));
+    let completed_task = Arc::clone(&completed);
+    let (wake_tx, wake_rx) = futures::channel::oneshot::channel::<()>();
+    let shared = async move {
+      wake_rx.await.expect("wake sender dropped");
+    }
+    .boxed()
+    .shared();
+    let (runnable, task) = async_task::spawn(
+      async move {
+        shared.await;
+        completed_task.store(true, Ordering::SeqCst);
+      },
+      move |runnable| scheduler.schedule(runnable),
+    );
+
+    executor.schedule(runnable);
+    assert!(!completed.load(Ordering::SeqCst), "accepted host dispatch must defer the first poll");
+    executor.drive_host_turn();
+
+    let (send_returned_tx, send_returned_rx) = mpsc::sync_channel(1);
+    std::thread::spawn(move || {
+      wake_tx.send(()).expect("shared wake receiver dropped");
+      send_returned_tx.send(()).unwrap();
+    });
+    send_returned_rx
+      .recv_timeout(Duration::from_secs(1))
+      .expect("Shared wake re-entered its own waker mutex through inline polling");
+    assert!(
+      !completed.load(Ordering::SeqCst),
+      "the wake must remain queued until a fresh host turn"
+    );
+
+    executor.drive_host_turn();
+    futures::executor::block_on(task);
+    assert!(completed.load(Ordering::SeqCst));
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  #[test]
+  fn current_thread_shutdown_cancels_host_queued_task() {
+    use std::sync::mpsc;
+
+    struct DropSignal(mpsc::Sender<()>);
+
+    impl Drop for DropSignal {
+      fn drop(&mut self) {
+        self.0.send(()).unwrap();
+      }
+    }
+
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      accept_current_thread_host_dispatch,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (dropped_tx, dropped_rx) = mpsc::channel();
+    let signal = DropSignal(dropped_tx);
+    let (runnable, task) = async_task::spawn(
+      async move {
+        let _signal = signal;
+        futures::future::pending::<()>().await;
+      },
+      move |runnable| scheduler.schedule(runnable),
+    );
+
+    executor.schedule(runnable);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 1);
+    executor.begin_shutdown();
+
+    dropped_rx
+      .recv_timeout(Duration::from_secs(1))
+      .expect("shutdown must drop a task queued behind a host turn");
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+    assert!(
+      futures::executor::block_on(task.fallible()).is_none(),
+      "the queued task handle must resolve as cancelled"
+    );
+  }
+
+  #[test]
+  fn current_thread_new_host_recovers_lost_dispatch_and_stale_callbacks_are_harmless() {
+    CURRENT_THREAD_HOST_DISPATCHES.store(0, Ordering::SeqCst);
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      count_current_thread_host_dispatch,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let completed = Arc::new(AtomicBool::new(false));
+    let completed_task = Arc::clone(&completed);
+    let (runnable, task) = async_task::spawn(
+      async move {
+        completed_task.store(true, Ordering::SeqCst);
+      },
+      move |runnable| scheduler.schedule(runnable),
+    );
+
+    executor.schedule(runnable);
+    assert_eq!(CURRENT_THREAD_HOST_DISPATCHES.load(Ordering::SeqCst), 1);
+
+    // Model the first host dying after its TSFN accepted the call but before
+    // JavaScript invoked drive_current_thread_runtime_tasks.
+    executor.request_drain_if_queued();
+    assert_eq!(
+      CURRENT_THREAD_HOST_DISPATCHES.load(Ordering::SeqCst),
+      2,
+      "the newly registered host must supersede the lost accepted callback"
+    );
+
+    // The callback queued by the dead host may still arrive after the
+    // replacement dispatch. Callbacks are deliberately fungible: this stale
+    // one safely drains the current queue and makes the replacement callback
+    // an eventual no-op.
+    executor.drive_host_turn();
+    futures::executor::block_on(task);
+    assert!(completed.load(Ordering::SeqCst));
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+
+    let second_completed = Arc::new(AtomicBool::new(false));
+    let second_completed_task = Arc::clone(&second_completed);
+    let second_scheduler = Arc::clone(&executor);
+    let (second_runnable, second_task) = async_task::spawn(
+      async move {
+        second_completed_task.store(true, Ordering::SeqCst);
+      },
+      move |runnable| second_scheduler.schedule(runnable),
+    );
+    executor.schedule(second_runnable);
+    assert_eq!(
+      CURRENT_THREAD_HOST_DISPATCHES.load(Ordering::SeqCst),
+      3,
+      "work queued after the stale callback must receive a new dispatch"
+    );
+
+    // Now the replacement callback from dispatch 2 is stale relative to
+    // dispatch 3. It can service the work without losing future dispatches.
+    executor.drive_host_turn();
+    futures::executor::block_on(second_task);
+    assert!(second_completed.load(Ordering::SeqCst));
+
+    let third_scheduler = Arc::clone(&executor);
+    let (third_runnable, third_task) =
+      async_task::spawn(async {}, move |runnable| third_scheduler.schedule(runnable));
+    executor.schedule(third_runnable);
+    assert_eq!(
+      CURRENT_THREAD_HOST_DISPATCHES.load(Ordering::SeqCst),
+      4,
+      "a stale callback must not leave the dispatch latch stuck"
+    );
+    executor.drive_host_turn();
+    futures::executor::block_on(third_task);
+  }
+
+  #[test]
+  fn current_thread_host_turn_yields_after_runnable_budget() {
+    struct SelfWakingFuture {
+      remaining: usize,
+    }
+
+    impl Future for SelfWakingFuture {
+      type Output = ();
+
+      fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        if self.remaining == 0 {
+          return Poll::Ready(());
+        }
+        self.remaining -= 1;
+        cx.waker().wake_by_ref();
+        Poll::Pending
+      }
+    }
+
+    CURRENT_THREAD_HOST_DISPATCHES.store(0, Ordering::SeqCst);
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      count_current_thread_host_dispatch,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) = async_task::spawn(
+      SelfWakingFuture { remaining: CurrentThreadExecutor::HOST_TURN_RUNNABLE_BUDGET + 1 },
+      move |runnable| scheduler.schedule(runnable),
+    );
+
+    executor.schedule(runnable);
+    executor.drive_host_turn();
+
+    assert_eq!(
+      metrics.runnable_polls.load(Ordering::Relaxed),
+      CurrentThreadExecutor::HOST_TURN_RUNNABLE_BUDGET as u64
+    );
+    assert_eq!(
+      CURRENT_THREAD_HOST_DISPATCHES.load(Ordering::SeqCst),
+      2,
+      "remaining hot work must continue through a fresh host turn"
+    );
+
+    executor.drive_host_turn();
+    futures::executor::block_on(task);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  enum TestCurrentThreadTaskDriverBehavior {
+    Healthy,
+    PanicInLivenessAndSweep,
+    PanicInDispatchAndSweep,
+  }
+
+  struct TestCurrentThreadTaskDriver {
+    behavior: TestCurrentThreadTaskDriverBehavior,
+    dispatched: AtomicBool,
+  }
+
+  struct ReentrantCurrentThreadTaskDriver {
+    registry: std::sync::Weak<CurrentThreadTaskDriverRegistry>,
+    registration: Mutex<Option<CurrentThreadTaskDriverId>>,
+  }
+
+  impl CurrentThreadTaskDriver for ReentrantCurrentThreadTaskDriver {
+    fn dispatch(&self) -> bool {
+      true
+    }
+
+    fn is_live(&self) -> bool {
+      let registration = *self.registration.lock().unwrap();
+      if let (Some(registry), Some(id)) = (self.registry.upgrade(), registration) {
+        registry.unregister(id);
+      }
+      false
+    }
+  }
+
+  struct ReentrantCurrentThreadTaskDriverDrop {
+    registry: std::sync::Weak<CurrentThreadTaskDriverRegistry>,
+    fallback: CurrentThreadTaskDriverId,
+  }
+
+  impl CurrentThreadTaskDriver for ReentrantCurrentThreadTaskDriverDrop {
+    fn dispatch(&self) -> bool {
+      true
+    }
+  }
+
+  impl Drop for ReentrantCurrentThreadTaskDriverDrop {
+    fn drop(&mut self) {
+      if let Some(registry) = self.registry.upgrade() {
+        registry.unregister(self.fallback);
+      }
+    }
+  }
+
+  impl CurrentThreadTaskDriver for TestCurrentThreadTaskDriver {
+    fn dispatch(&self) -> bool {
+      assert!(
+        !matches!(self.behavior, TestCurrentThreadTaskDriverBehavior::PanicInDispatchAndSweep),
+        "intentional task-driver dispatch panic"
+      );
+      self.dispatched.store(true, Ordering::SeqCst);
+      true
+    }
+
+    fn is_live(&self) -> bool {
+      assert!(
+        !matches!(self.behavior, TestCurrentThreadTaskDriverBehavior::PanicInLivenessAndSweep),
+        "intentional task-driver liveness panic"
+      );
+      true
+    }
+
+    fn on_swept(&self) {
+      assert!(
+        matches!(self.behavior, TestCurrentThreadTaskDriverBehavior::Healthy),
+        "intentional task-driver sweep panic"
+      );
+    }
+  }
+
+  #[test]
+  fn current_thread_task_driver_panics_fall_back_to_a_live_host() {
+    let registry = CurrentThreadTaskDriverRegistry::default();
+    let fallback = Arc::new(TestCurrentThreadTaskDriver {
+      behavior: TestCurrentThreadTaskDriverBehavior::Healthy,
+      dispatched: AtomicBool::new(false),
+    });
+    registry.register(Arc::clone(&fallback) as Arc<dyn CurrentThreadTaskDriver>);
+    registry.register(Arc::new(TestCurrentThreadTaskDriver {
+      behavior: TestCurrentThreadTaskDriverBehavior::PanicInLivenessAndSweep,
+      dispatched: AtomicBool::new(false),
+    }));
+    registry.register(Arc::new(TestCurrentThreadTaskDriver {
+      behavior: TestCurrentThreadTaskDriverBehavior::PanicInDispatchAndSweep,
+      dispatched: AtomicBool::new(false),
+    }));
+
+    assert!(registry.dispatch(), "a panicking newest host must fall back to a live host");
+    assert!(fallback.dispatched.load(Ordering::SeqCst));
+  }
+
+  #[test]
+  fn current_thread_task_driver_callbacks_and_drops_run_outside_registry_lock() {
+    use std::{sync::mpsc, time::Duration};
+
+    let registry = Arc::new(CurrentThreadTaskDriverRegistry::default());
+    let fallback = Arc::new(TestCurrentThreadTaskDriver {
+      behavior: TestCurrentThreadTaskDriverBehavior::Healthy,
+      dispatched: AtomicBool::new(false),
+    });
+    let fallback_id = registry.register(Arc::clone(&fallback) as Arc<dyn CurrentThreadTaskDriver>);
+    let reentrant = Arc::new(ReentrantCurrentThreadTaskDriver {
+      registry: Arc::downgrade(&registry),
+      registration: Mutex::new(None),
+    });
+    let reentrant_id =
+      registry.register(Arc::clone(&reentrant) as Arc<dyn CurrentThreadTaskDriver>);
+    *reentrant.registration.lock().unwrap() = Some(reentrant_id);
+
+    let (selection_tx, selection_rx) = mpsc::sync_channel(1);
+    let selection_registry = Arc::clone(&registry);
+    let selection_thread = std::thread::spawn(move || {
+      selection_tx.send(selection_registry.current().map(|(id, _)| id)).unwrap();
+    });
+    assert_eq!(
+      selection_rx.recv_timeout(Duration::from_secs(1)).expect("is_live re-entry deadlocked"),
+      Some(fallback_id)
+    );
+    selection_thread.join().unwrap();
+
+    let drop_driver: Arc<dyn CurrentThreadTaskDriver> =
+      Arc::new(ReentrantCurrentThreadTaskDriverDrop {
+        registry: Arc::downgrade(&registry),
+        fallback: fallback_id,
+      });
+    let drop_id = registry.register(Arc::clone(&drop_driver));
+    drop(drop_driver);
+
+    let (drop_tx, drop_rx) = mpsc::sync_channel(1);
+    let drop_registry = Arc::clone(&registry);
+    let drop_thread = std::thread::spawn(move || {
+      drop_registry.unregister(drop_id);
+      drop_tx.send(()).unwrap();
+    });
+    drop_rx.recv_timeout(Duration::from_secs(1)).expect("driver destructor re-entry deadlocked");
+    drop_thread.join().unwrap();
+    assert!(registry.current().is_none(), "the destructor must unregister the fallback");
   }
 
   #[test]
@@ -7529,6 +8201,44 @@ mod tests {
     }
   }
 
+  struct ReentrantLivenessDriver {
+    registry: std::sync::Weak<TimerDriverRegistry>,
+    registration: Mutex<Option<TimerDriverId>>,
+  }
+
+  impl TimerDriver for ReentrantLivenessDriver {
+    fn register(&self, _id: TimerId, _deadline: Instant, _waker: Waker) {}
+
+    fn cancel(&self, _id: TimerId) {}
+
+    fn is_live(&self) -> bool {
+      let registration = *self.registration.lock().unwrap();
+      if let (Some(registry), Some(id)) = (self.registry.upgrade(), registration) {
+        registry.unregister(id);
+      }
+      false
+    }
+  }
+
+  struct ReentrantDropDriver {
+    registry: std::sync::Weak<TimerDriverRegistry>,
+    fallback: TimerDriverId,
+  }
+
+  impl TimerDriver for ReentrantDropDriver {
+    fn register(&self, _id: TimerId, _deadline: Instant, _waker: Waker) {}
+
+    fn cancel(&self, _id: TimerId) {}
+  }
+
+  impl Drop for ReentrantDropDriver {
+    fn drop(&mut self) {
+      if let Some(registry) = self.registry.upgrade() {
+        registry.unregister(self.fallback);
+      }
+    }
+  }
+
   /// Waker whose `wake` just latches a flag -- observable evidence that a
   /// wake was DELIVERED (not merely that eviction bookkeeping ran).
   #[derive(Default)]
@@ -8043,6 +8753,47 @@ mod tests {
     registry.unregister(a_id);
     assert!(registry.current().is_none());
     assert!(!registry.has_live_driver(), "an emptied registry must not report a live driver");
+  }
+
+  #[test]
+  fn timer_driver_registry_callbacks_and_drops_run_outside_registry_lock() {
+    use std::{sync::mpsc, time::Duration};
+
+    let registry = Arc::new(TimerDriverRegistry::default());
+    let fallback = ManualStubDriver::new();
+    let fallback_id = registry.register(Arc::clone(&fallback) as Arc<dyn TimerDriver>);
+    let reentrant = Arc::new(ReentrantLivenessDriver {
+      registry: Arc::downgrade(&registry),
+      registration: Mutex::new(None),
+    });
+    let reentrant_id = registry.register(Arc::clone(&reentrant) as Arc<dyn TimerDriver>);
+    *reentrant.registration.lock().unwrap() = Some(reentrant_id);
+
+    let (selection_tx, selection_rx) = mpsc::sync_channel(1);
+    let selection_registry = Arc::clone(&registry);
+    let selection_thread = std::thread::spawn(move || {
+      selection_tx.send(selection_registry.current().map(|(id, _)| id)).unwrap();
+    });
+    assert_eq!(
+      selection_rx.recv_timeout(Duration::from_secs(1)).expect("is_live re-entry deadlocked"),
+      Some(fallback_id)
+    );
+    selection_thread.join().unwrap();
+
+    let drop_driver: Arc<dyn TimerDriver> =
+      Arc::new(ReentrantDropDriver { registry: Arc::downgrade(&registry), fallback: fallback_id });
+    let drop_id = registry.register(Arc::clone(&drop_driver));
+    drop(drop_driver);
+
+    let (drop_tx, drop_rx) = mpsc::sync_channel(1);
+    let drop_registry = Arc::clone(&registry);
+    let drop_thread = std::thread::spawn(move || {
+      drop_registry.unregister(drop_id);
+      drop_tx.send(()).unwrap();
+    });
+    drop_rx.recv_timeout(Duration::from_secs(1)).expect("driver destructor re-entry deadlocked");
+    drop_thread.join().unwrap();
+    assert!(registry.current().is_none(), "the destructor must be able to unregister the fallback");
   }
 
   #[test]

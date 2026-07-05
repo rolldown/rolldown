@@ -29,7 +29,7 @@ use crate::{
   },
 };
 
-type DevEngineCloseResult = Result<(), Arc<str>>;
+type DevEngineCloseResult = Result<(), Arc<BatchedBuildDiagnostic>>;
 type DevEngineCloseFuture = Shared<PinBoxSendStaticFuture<DevEngineCloseResult>>;
 type CoordinatorTaskResult = Result<(), Arc<str>>;
 type CoordinatorTaskFuture = Shared<PinBoxSendStaticFuture<CoordinatorTaskResult>>;
@@ -373,7 +373,7 @@ impl DevEngine {
     let _ = self.coordinator_sender.send(CoordinatorMsg::ModuleChanged { module_id });
   }
 
-  pub async fn close(&self) -> BuildResult<()> {
+  pub async fn close(&self) -> Result<(), Arc<BatchedBuildDiagnostic>> {
     // Reject new work immediately, independently of how long terminal cleanup
     // takes or whether it eventually fails.
     self.is_closed.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -388,17 +388,14 @@ impl DevEngine {
           (Box::pin(async move {
             Self::close_inner(coordinator_sender, bundler, coordinator_state)
               .await
-              .map_err(|error| Arc::<str>::from(format!("{error:#}")))
+              .map_err(Arc::new)
           }) as PinBoxSendStaticFuture<DevEngineCloseResult>)
             .shared()
         })
         .clone()
     };
 
-    match close_future.await {
-      Ok(()) => Ok(()),
-      Err(error) => Err(anyhow::anyhow!("{error}"))?,
-    }
+    close_future.await
   }
 
   async fn close_inner(

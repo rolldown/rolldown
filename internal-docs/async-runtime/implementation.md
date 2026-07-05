@@ -58,8 +58,18 @@ the registered implementation; `start` and `shutdown` report failures through
   for every guard to retire. Async-task scheduler closures and heap sleeps hold
   weak executor references, so completed or cancelled work cannot keep an old
   pool alive accidentally.
-- `CurrentThreadExecutor` uses a reentrancy-safe FIFO runnable queue. Wakes drain
-  cooperatively on the calling thread. Blocking work executes inline.
+- `CurrentThreadExecutor` uses a reentrancy-safe FIFO runnable queue. In a host
+  embedding, a wake requests a fresh host turn before polling: futures such as
+  `futures::Shared` invoke outer wakers while holding internal locks, so polling
+  inline from the scheduler callback can re-enter the same future and
+  self-deadlock. The Node binding registers one weak threadsafe-function-backed
+  task driver per environment; an accepted dispatch is coalesced until the host
+  calls `drive_current_thread_tasks`. This registration is also present in the
+  browser build because fresh-turn polling is a future/scheduler requirement,
+  independent of Node timers. Pure Rust use without a registered host retains
+  cooperative inline draining. A host turn polls at most 64 runnables before
+  redispatching, so a self-waking task cannot monopolize the JavaScript event
+  loop. Blocking work executes inline.
 - `MultiThreadExecutor` schedules bounded queue-drain jobs on a custom Rayon
   pool. The same pool is inherited by nested `par_iter` calls. Rayon worker
   start hooks classify every nested worker for cooperative `block_on`; a
@@ -180,6 +190,37 @@ Promise so the detached relay task retires immediately.
 MultiThread timer wakes, including shutdown drain-fire, are individually
 wrapped with `catch_unwind`; a user-supplied `RawWaker` cannot unwind the
 timekeeper or strand shutdown.
+CurrentThread host-driver wakes have the same containment, including env
+cleanup eviction, so a custom `RawWaker` cannot unwind through the NAPI cleanup
+hook or prevent later pending timers from being drained. Timer-driver liveness
+callbacks, sweep hooks, and driver destruction all run without the registry
+mutex held; selection probes a snapshot and retries if concurrent registry
+mutation makes it stale.
+
+CurrentThread runnable-host registration follows the same newest-live-driver
+model. Driver liveness, dispatch, and sweep callbacks run outside the registry
+mutex and are panic-contained. Once one host dispatch has been accepted, that
+runtime generation remains host-driven: if every environment temporarily
+disappears, runnables remain queued for the next registration or are cancelled
+by shutdown rather than falling back to inline polling. A newly registered host
+supersedes any pending dispatch because an accepted weak threadsafe-function
+call may have been discarded when its previous environment died; duplicate
+host callbacks are harmless because the executor serializes queue draining.
+If installing an environment cleanup hook fails, registration is rolled back
+immediately so no driver survives without a teardown owner.
+Shutdown closes the queue before dropping pending runnables, so cancellation
+retires generation guards without waiting for a host callback. A stale callback
+from an older generation is also harmless: it either finds no running
+CurrentThread executor or services the current generation as an extra host
+turn.
+
+Replayable bundle/dev/watch close state retains the original error chain rather
+than flattening it to text. At the NAPI boundary, a nested `napi::Error` is
+cloned through napi-rs's shared exception reference, preserving the original JS
+error object and its message/stack/properties for concurrent and late close
+callers. The pinned napi-rs revision also aborts environment tasks only after
+releasing its task-registry mutex, because abort synchronously wakes and drops
+registrations that re-enter that registry during final env teardown.
 
 Native watch mode is supported on both runtime flavors. Binding dev mode is
 still skipped on CurrentThread, and WASI watch remains unsupported because it

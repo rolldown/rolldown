@@ -91,6 +91,54 @@ test.skipIf(isSingleThread)(
 );
 
 test.skipIf(isSingleThread)(
+  'close preserves the terminal closeBundle failure',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-close-error-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const input = path.join(dir, 'main.js');
+    fs.writeFileSync(input, 'console.log(1)');
+    const closeError = Object.assign(new TypeError('dev close terminal failure'), {
+      closeCode: 'DEV_CLOSE_TERMINAL',
+    });
+
+    const engine = await dev(
+      {
+        input,
+        experimental: { devMode: true },
+        plugins: [
+          {
+            name: 'close-failure',
+            closeBundle() {
+              throw closeError;
+            },
+          },
+        ],
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    const firstError = await engine.close().catch((error: unknown) => error);
+    expect(firstError).toBe(closeError);
+    expect(firstError).toBeInstanceOf(TypeError);
+    expect((firstError as typeof closeError).closeCode).toBe('DEV_CLOSE_TERMINAL');
+
+    const replayedError = await engine.close().catch((error: unknown) => error);
+    expect(replayedError).toBe(closeError);
+  },
+);
+
+test.skipIf(isSingleThread)(
   'close waits for an active parallel-plugin build before terminating workers',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

@@ -2,6 +2,7 @@ use napi_derive::napi;
 use rolldown_dev::{
   BundleState, OnAdditionalAssetsCallback, OnHmrUpdatesCallback, OnOutputCallback,
 };
+use rolldown_error::BatchedBuildDiagnostic;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -17,6 +18,13 @@ use crate::utils::{
 };
 use napi::bindgen_prelude::{FnArgs, PromiseRaw};
 use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
+
+fn dev_engine_close_error(error: &BatchedBuildDiagnostic) -> napi::Error {
+  if let Some(error) = error.iter().find_map(|diagnostic| diagnostic.downcast_napi_error().ok()) {
+    return error.try_clone().unwrap_or_else(|clone_error| clone_error);
+  }
+  napi::Error::from_reason(format!("Failed to close dev engine: {error:#}"))
+}
 
 #[napi]
 pub struct BindingDevEngine {
@@ -290,7 +298,7 @@ impl BindingDevEngine {
   pub fn close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
-      inner.close().await.map_err(|_e| napi::Error::from_reason("Failed to close dev engine"))?;
+      inner.close().await.map_err(|error| dev_engine_close_error(&error))?;
       Ok(())
     })
   }

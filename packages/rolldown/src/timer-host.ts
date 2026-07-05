@@ -1,8 +1,13 @@
-import { registerTimerHost } from './binding.cjs';
+import {
+  driveCurrentThreadRuntimeTasks,
+  registerCurrentThreadTaskHost,
+  registerTimerHost,
+} from './binding.cjs';
 
-// Timer host for the `--features async-runtime` binding: its CurrentThread
-// flavor delegates timers (e.g. the watch-mode debounce) to the host event
-// loop. A no-op on the default tokio build.
+// Host integration for the `--features async-runtime` binding. CurrentThread
+// runnable wakes enter through a fresh host turn instead of polling inline from
+// an arbitrary Rust Waker call; timers delegate to setTimeout. Both are no-ops
+// on the default tokio build.
 //
 // This lives in its own side-effect module because every public entry that
 // loads the binding needs it (library entry via `setup.ts`, the CLI, and the
@@ -26,6 +31,8 @@ import { registerTimerHost } from './binding.cjs';
 //   a CurrentThread sleep would panic there.
 // - wasm artifacts: each worker instantiates its own wasm instance with its
 //   own driver registry, so each thread MUST register its own driver.
+registerCurrentThreadTaskHost(driveCurrentThreadRuntimeTasks);
+
 if (!import.meta.browserBuild && globalThis.setTimeout && globalThis.clearTimeout) {
   type TimerEntry = {
     handle: ReturnType<typeof setTimeout>;

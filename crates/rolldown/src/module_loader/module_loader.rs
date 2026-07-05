@@ -1,9 +1,10 @@
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
+use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use futures::future::join_all;
+use futures::{FutureExt, future::join_all};
 use itertools::Itertools;
 use oxc::semantic::NodeId;
 use oxc::semantic::{ScopeId, Scoping};
@@ -25,7 +26,10 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_utils::futures::{spawn, spawn_detached};
+#[cfg(feature = "async-runtime")]
+use rolldown_utils::async_runtime::try_spawn_detached;
+#[cfg(not(feature = "async-runtime"))]
+use rolldown_utils::futures::spawn_detached;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
@@ -156,19 +160,57 @@ pub struct ModuleLoaderOutput {
   pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
+struct ModuleTaskSupervisor {
+  tx: Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>,
+}
+
+impl ModuleTaskSupervisor {
+  fn report(&mut self, message: &'static str) {
+    let Some(tx) = self.tx.take() else {
+      return;
+    };
+    let diagnostic = BuildDiagnostic::unhandleable_error(anyhow::anyhow!(message));
+    let _ = tx.send(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
+  }
+
+  fn disarm(&mut self) {
+    self.tx = None;
+  }
+}
+
+impl Drop for ModuleTaskSupervisor {
+  fn drop(&mut self) {
+    self.report("module loader task was cancelled before reporting completion");
+  }
+}
+
+fn supervised_module_task<F>(
+  future: F,
+  tx: tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>,
+) -> impl std::future::Future<Output = ()> + Send + 'static
+where
+  F: std::future::Future<Output = ()> + Send + 'static,
+{
+  let mut supervisor = ModuleTaskSupervisor { tx: Some(tx) };
+  async move {
+    match AssertUnwindSafe(future).catch_unwind().await {
+      Ok(()) => supervisor.disarm(),
+      Err(_) => supervisor.report("module loader task panicked before reporting completion"),
+    }
+  }
+}
+
 fn spawn_module_task<F>(future: F, tx: tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>)
 where
   F: std::future::Future<Output = ()> + Send + 'static,
 {
-  let handle = spawn(future);
-  spawn_detached(async move {
-    if let Err(error) = handle.await {
-      let diagnostic = BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
-        "module loader task failed before reporting completion: {error}"
-      ));
-      let _ = tx.send(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
-    }
-  });
+  let future = supervised_module_task(future, tx);
+  #[cfg(feature = "async-runtime")]
+  if let Err(future) = try_spawn_detached(future) {
+    drop(future);
+  }
+  #[cfg(not(feature = "async-runtime"))]
+  spawn_detached(future);
 }
 
 impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
@@ -1193,7 +1235,7 @@ mod tests {
 
   use rolldown_common::ModuleLoaderMsg;
 
-  use super::spawn_module_task;
+  use super::{spawn_module_task, supervised_module_task};
 
   #[test]
   fn panicking_module_task_reports_completion_error() {
@@ -1218,11 +1260,27 @@ mod tests {
         _ => panic!("module task panic must be converted to BuildErrors"),
       }
       assert_eq!(remaining, 0, "the module loader must not wait forever after a task panic");
+      assert!(rx.try_recv().is_err(), "a panic must produce exactly one completion error");
       done_tx.send(()).unwrap();
     });
 
     done_rx
       .recv_timeout(Duration::from_secs(5))
       .expect("panicking module task left the loader completion count unresolved");
+  }
+
+  #[test]
+  fn cancelled_module_task_reports_exactly_one_completion_error() {
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    let future = supervised_module_task(std::future::pending(), tx);
+    drop(future);
+
+    let message = rolldown_utils::futures::block_on(async { rx.recv().await })
+      .expect("dropping an accepted/rejected supervised task must retire loader accounting");
+    match message {
+      ModuleLoaderMsg::BuildErrors(errors) => assert_eq!(errors.len(), 1),
+      _ => panic!("module task cancellation must be converted to BuildErrors"),
+    }
+    assert!(rx.try_recv().is_err(), "cancellation must produce exactly one completion error");
   }
 }

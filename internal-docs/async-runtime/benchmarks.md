@@ -1,11 +1,16 @@
 # Benchmarks: tokio runtime vs shared async runtime
 
 > Historical baseline: these measurements predate the scheduler hardening that
-> reserves one execution lane from blocking admission and moves deferred
-> destruction to a serial maintenance worker. The recorded A/B remains useful
-> evidence for the original architecture, but its default blocking cap and
-> peak-thread counts no longer describe head. Re-run the committed harness
-> before making a release performance claim for the hardened scheduler.
+> reserves one execution lane from blocking admission, enforces an exact
+> two-worker MultiThread minimum, tracks and cancels accepted work, waits for
+> generation-quiescent shutdown, and moves deferred destruction to a serial
+> maintenance worker. The recorded A/B remains useful evidence for the original
+> architecture, but its default blocking cap, lifecycle cost, and peak-thread
+> interpretation do not describe head. Re-run the committed harness before
+> making a release performance claim for the hardened scheduler.
+> The harness also does not exercise watcher host-timer cancellation,
+> shutdown/restart churn, or parallel-plugin worker lifetime; do not infer
+> those lifecycle costs from the build-only tables below.
 
 Committed, reproducible A/B results for the two native binding builds:
 
@@ -26,10 +31,10 @@ medians of 3 samples; peak threads via a 50 ms `ps -M` sampler).
 
 ## Effective runtime defaults (what was measured)
 
-| build  | worker threads                  | blocking limit                                                                                                                            | where                                                                                                                                                  |
-| ------ | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| tokio  | 27 (`physical * 3 / 2`)         | dedicated blocking pool, capped at **4** threads                                                                                          | `crates/rolldown_binding/src/lib.rs` `init` + `resolve_default_runtime_threads` (`crates/rolldown_binding/src/async_runtime.rs:200-209`)               |
-| shared | 18 (`num_cpus::get_physical()`) | `max_blocking_tasks` defaults to **worker_threads (18)**; blocking jobs run _on_ the shared pool (no extra threads), clamped to pool size | `register_async_runtime` (`crates/rolldown_binding/src/async_runtime.rs:386-392`), clamp at `crates/rolldown_utils/src/async_runtime.rs:69` and `:485` |
+| build  | worker threads                  | blocking limit                                                                                                                                                               | where                                                                                                                                    |
+| ------ | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| tokio  | 27 (`physical * 3 / 2`)         | dedicated blocking pool, capped at **4** threads                                                                                                                             | `crates/rolldown_binding/src/lib.rs` `init` + `resolve_default_runtime_threads` (`crates/rolldown_binding/src/async_runtime.rs:200-209`) |
+| shared | 18 (`num_cpus::get_physical()`) | **Historical measured behavior:** `max_blocking_tasks` defaulted to **worker_threads (18)**; blocking jobs ran _on_ the shared pool (no extra threads), clamped to pool size | Commit `d6622e8f0`; current head instead reserves one physical worker from blocking admission                                            |
 
 Both limits honor `ROLLDOWN_MAX_BLOCKING_THREADS`; worker counts honor
 `ROLLDOWN_WORKER_THREADS`. Verified end-to-end: with the env var set to 1/4/
@@ -80,7 +85,7 @@ Summary vs the acceptance bar:
   blocking pool, plus worker park/unpark syscalls. Wall time is still lower;
   see the A/B below for why capping does not help.
 
-## Blocking-cap A/B (`apps/10000`): keep `max_blocking_tasks = worker_threads`
+## Historical blocking-cap A/B (`apps/10000`)
 
 PR #6270 capped the _tokio_ blocking pool at 4 threads on macOS (sys-time
 collapsed ~63%, wall 553→458 ms on an IO-heavy path). Decision rule for the
@@ -106,15 +111,14 @@ is at least 65 ms faster than cap-4's fastest run (548.3); the three
 cap-default burst runs are slower than every cap-4 run, and the medians —
 which include them — still put cap-4 20.0% behind.
 
-The rule fires in the _opposite_ direction: cap-4 loses decisively on every
-axis, so the default stays `max_blocking_tasks = worker_threads`. The #6270
-result does not transfer because the mechanism differs: tokio's cap shrinks a
-_dedicated_ thread pool (fewer threads issuing concurrent kernel IO), while
-the shared runtime's cap only limits how many of the existing pool threads may
-occupy the blocking lane — the pool keeps all 18 threads, and the starved lane
-turns into queueing plus park/unpark churn (the 7× involuntary-context-switch
-and +4.4e9-instruction signature above). No Rust change was made
-(`register_async_runtime` is untouched), so no crate tests were required.
+At the measured commit, the rule fired in the _opposite_ direction: cap-4 lost
+decisively on every axis, so that revision kept
+`max_blocking_tasks = worker_threads`. The #6270 result did not transfer
+because the mechanism differs: tokio's cap shrinks a _dedicated_ thread pool
+(fewer threads issuing concurrent kernel IO), while the shared runtime's cap
+only limits how many existing pool threads may occupy the blocking lane. Head
+now caps blocking admission at `worker_threads - 1` for scheduler liveness, so
+this historical A/B cannot justify the current default or quantify its cost.
 
 ## Anomalies observed (full disclosure)
 

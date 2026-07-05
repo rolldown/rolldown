@@ -41,15 +41,23 @@ the registered implementation; `start` and `shutdown` report failures through
 
 `crates/rolldown_utils/src/async_runtime.rs` owns the lazy global controller.
 
-- The controller lifecycle is `Initial`, `Running`, or `Stopped`. Initial work
-  may lazily create the backend. napi invokes `start` during addon registration,
-  so `start` leaves `Initial` unchanged to preserve the documented
-  pre-first-async-call configuration window. Shutdown changes the state to
-  `Stopped` under the controller mutex before releasing the backend; later
-  submissions return their task or closure until an explicit `start`
-  successfully creates a new backend. Configuration remains frozen after
-  shutdown. Start, shutdown, and submission use the same mutex, so a racing
-  submission cannot recreate the backend after shutdown.
+- The controller lifecycle is `Initial -> Running -> Stopping -> Stopped`.
+  Initial work may lazily create the backend. napi invokes `start` during addon
+  registration, so the initial `start` leaves `Initial` unchanged to preserve
+  the documented pre-first-async-call configuration window. Shutdown changes
+  `Running` to `Stopping` under the controller mutex before closing the
+  generation. Submissions in `Stopping` or `Stopped` return their task or
+  closure untouched. An explicit restart waits while `Stopping`, then creates
+  the next `Running` generation. Configuration remains frozen after shutdown.
+  Start, shutdown, and submission use the same mutex, so a racing submission
+  cannot recreate the backend after shutdown.
+- Each backend owns a generation work registry. Async tasks register an abort
+  handle and all accepted operations register a retirement guard while the
+  controller mutex is held. Shutdown atomically closes that registry, aborts
+  accepted async work, closes and drains the queued blocking FIFO, and waits
+  for every guard to retire. Async-task scheduler closures and heap sleeps hold
+  weak executor references, so completed or cancelled work cannot keep an old
+  pool alive accidentally.
 - `CurrentThreadExecutor` uses a reentrancy-safe FIFO runnable queue. Wakes drain
   cooperatively on the calling thread. Blocking work executes inline.
 - `MultiThreadExecutor` schedules bounded queue-drain jobs on a custom Rayon
@@ -59,9 +67,11 @@ the registered implementation; `start` and `shutdown` report failures through
   that will actually drain it.
 - A second FIFO holds blocking closures. `active_blocking` limits how many
   Rayon workers may block at once. Validation reserves one worker from
-  blocking admission. A one-worker configuration creates one internal reserve
-  worker, while configurations with two or more workers reserve capacity by
-  clamping `max_blocking_tasks` to `worker_threads - 1`.
+  blocking admission. MultiThread promotes a requested worker count of one to
+  an effective count of two, then clamps `max_blocking_tasks` to
+  `worker_threads - 1`. The Rayon pool creates exactly the effective configured
+  count; configuration and metrics therefore report physical workers, with no
+  hidden reserve.
 - Drain and cooperative loops force a blocking turn after 16 consecutive
   runnable polls when the blocking FIFO has capacity. The timer timekeeper uses
   the runnable-only path, so a stalled blocking closure cannot stop timer
@@ -69,7 +79,18 @@ the registered implementation; `start` and `shutdown` report failures through
   blocking work; blocking submissions skip the runnable-only timekeeper and
   wake a cooperative driver or arm a normal drainer.
 - `JoinHandle` normalizes async-task, blocking-job, and immediate results and
-  detaches async tasks on drop to match Tokio.
+  detaches async tasks on drop to match Tokio. Scheduler shutdown instead
+  aborts accepted async tasks and resolves retained handles with `JoinError`.
+- MultiThread shutdown waits in three stages: accepted work retirement,
+  drainer/timekeeper exit, then physical Rayon worker exit. Only after all
+  three stages does the controller publish `Stopped` and wake a waiting
+  `start`. A lifecycle call made from a task poll, blocking closure, or Rayon
+  worker of the generation being stopped returns an error rather than waiting
+  on itself. Queued blocking closures are dropped one at a time behind
+  `catch_unwind`; a submission that races queue closure is rejected and dropped
+  with the same isolation outside the queue lock. Shutdown timer wakes are
+  isolated too, so user-owned `Drop`/`RawWaker` panics cannot strand the
+  lifecycle transition.
 - Atomic metrics expose task, poll, queue-depth, active-worker, panic, and
   blocking-concurrency counters. Reset clears cumulative event counters only;
   live gauges and lifetime high-water marks remain intact because active guards
@@ -88,6 +109,12 @@ The binding adapter and JS-facing configuration live in
   from `rolldown/experimental`
 
 Configuration must happen before the first async binding call.
+
+On shared WebAssembly builds, the resolver always reports and configures
+`CurrentThread`. `ROLLDOWN_RUNTIME=multi` is accepted as an inherited
+environment value but normalized before the module-init `configure` call;
+otherwise loading a threadless WASI artifact would panic while registering the
+addon.
 
 This API is feature-gated. `configureAsyncRuntime`, `getAsyncRuntimeConfig`, and
 `getAsyncRuntimeMetrics` are exported on every build, but only the
@@ -108,26 +135,36 @@ routed through the selected runtime:
 - dev and watch coordinator tasks
 - binding close/flush blocking work
 
+Native plugin-context logging uses `spawn_detached`: log callbacks are
+fire-and-forget by contract and must survive dropping the local spawn handle.
+The Vite import-glob plugin pre-resolves bare glob patterns asynchronously
+before its synchronous AST rewrite. Results are grouped per
+`import.meta.glob` call, so an unresolved entry that aborts one array cannot
+shift unused resolutions into a later call.
+
 The native-magic-string sourcemap consumer deliberately uses one dedicated OS
 thread in modes where threads are supported. It cannot occupy the bounded
 blocking lane: its long-lived channel receive loop would monopolize the entire
-blocking allowance of a one-worker configuration and delay unrelated blocking
-work. The consumer is disabled for current-thread mode, where the existing
-inline sourcemap path remains active.
+blocking allowance of the smallest MultiThread configuration and delay
+unrelated blocking work. The consumer is disabled for current-thread mode,
+where the existing inline sourcemap path remains active.
 
-Module-loader tasks are spawned with a supervisor. Normal completion still
-arrives through `ModuleLoaderMsg`; a task panic or cancellation is converted
-into `BuildErrors`, which retires the loader's `remaining` count instead of
-leaving the build pending forever.
+Module-loader execution and its supervisor are submitted as one scheduler
+task. Normal completion still arrives through `ModuleLoaderMsg`; a task panic
+is caught inside that task, while scheduler cancellation or rejected submission
+drops the same supervised future. Each failure path emits exactly one
+`BuildErrors`, which retires the loader's `remaining` count instead of leaving
+the build pending forever.
 
 ### Deferred destruction
 
 `crates/rolldown/src/utils/defer_drop.rs` owns one process-global serial
 maintenance worker. Heavy link-stage values are sent there after generation,
 and every build entry calls `drain()` before starting new scan/link/render work.
-The worker is deliberately outside Rayon: a one-worker rebuild may call
-`drain()` on the same pool worker that queued the previous drop, so inheriting
-that Rayon registry would deadlock the worker against its own queue.
+The worker is deliberately outside Rayon: a rebuild may call `drain()` from a
+pool worker while every other execution lane is unavailable, so inheriting
+that Rayon registry could deadlock the build against its own maintenance
+queue.
 
 ### Timers and native watch mode
 
@@ -135,7 +172,14 @@ that Rayon registry would deadlock the worker against its own queue.
 the default build and to the shared runtime otherwise. `MultiThreadExecutor`
 uses an executor-owned timer heap and timekeeper role. `CurrentThreadExecutor`
 uses the host `TimerDriver` registered by `packages/rolldown/src/timer-host.ts`,
-which delegates to `setTimeout` in each importing environment.
+which delegates to paired `setTimeout`/`clearTimeout` callbacks in each
+importing environment. The Rust relay records whether the JS schedule callback
+has returned before sending cancellation, preventing cancel from overtaking
+timeout creation. Cancellation clears the timeout and resolves the schedule
+Promise so the detached relay task retires immediately.
+MultiThread timer wakes, including shutdown drain-fire, are individually
+wrapped with `catch_unwind`; a user-supplied `RawWaker` cannot unwind the
+timekeeper or strand shutdown.
 
 Native watch mode is supported on both runtime flavors. Binding dev mode is
 still skipped on CurrentThread, and WASI watch remains unsupported because it
@@ -164,8 +208,10 @@ observation — the Tokio-async + Tokio-blocking + Rayon thread population
 collapses to a single shared pool (56 → 25 peak threads on the measured host)
 — and add wall-time, instruction, RSS, and context-switch comparisons across
 four fixtures. Those measurements predate the production-hardening reserve
-lane and dedicated deferred-drop worker; [benchmarks.md](./benchmarks.md)
-records them as historical evidence and calls out the required re-measurement.
+lane, exact two-thread minimum, accepted-work cancellation tracking,
+generation-quiescent shutdown, and dedicated deferred-drop worker;
+[benchmarks.md](./benchmarks.md) records them as historical evidence and calls
+out the required re-measurement.
 
 ## Related
 

@@ -26,6 +26,36 @@ import { registerTimerHost } from './binding.cjs';
 //   a CurrentThread sleep would panic there.
 // - wasm artifacts: each worker instantiates its own wasm instance with its
 //   own driver registry, so each thread MUST register its own driver.
-if (!import.meta.browserBuild) {
-  registerTimerHost((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+if (!import.meta.browserBuild && globalThis.setTimeout && globalThis.clearTimeout) {
+  type TimerEntry = {
+    handle: ReturnType<typeof setTimeout>;
+    resolve: () => void;
+  };
+
+  const active = new Map<number, TimerEntry>();
+
+  const registerTimerHostWithCancel = registerTimerHost as unknown as (
+    schedule: (id: number, ms: number) => Promise<void>,
+    cancel: (id: number) => void,
+  ) => void;
+
+  registerTimerHostWithCancel(
+    (id, ms) =>
+      new Promise<void>((resolve) => {
+        const handle = globalThis.setTimeout(() => {
+          active.delete(id);
+          resolve();
+        }, ms);
+        active.set(id, { handle, resolve });
+      }),
+    (id) => {
+      const timer = active.get(id);
+      if (!timer) return;
+      active.delete(id);
+      globalThis.clearTimeout(timer.handle);
+      // The Rust relay awaits the schedule Promise. Resolve it after clearing
+      // the host timeout so cancellation retires both sides of the bridge.
+      timer.resolve();
+    },
+  );
 }

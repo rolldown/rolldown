@@ -9,7 +9,7 @@ use std::{
   panic::{AssertUnwindSafe, catch_unwind},
   pin::Pin,
   sync::{
-    Arc, LazyLock, Mutex,
+    Arc, Condvar, LazyLock, Mutex, Weak,
     atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
   },
   task::{Context, Poll, Waker},
@@ -18,8 +18,13 @@ use std::{
 
 use rustc_hash::FxHashMap;
 
-use async_task::{Runnable, Task};
-use futures::FutureExt;
+#[cfg(test)]
+use async_task::Task;
+use async_task::{FallibleTask, Runnable};
+use futures::{
+  FutureExt,
+  future::{AbortHandle, AbortRegistration, Abortable},
+};
 
 #[cfg(not(target_family = "wasm"))]
 use futures::channel::oneshot;
@@ -84,9 +89,10 @@ impl RuntimeOptions {
     } else {
       // Blocking closures execute on the shared Rayon pool. Keep one execution
       // lane available for runnable futures and timer service even when every
-      // admitted blocking job is stalled. A one-worker configuration gets one
-      // internal reserve worker in `MultiThreadExecutor::new`.
-      let blocking_capacity = self.worker_threads.saturating_sub(1).max(1);
+      // admitted blocking job is stalled. MultiThread therefore has a truthful
+      // minimum of two physical/configured workers rather than a hidden reserve.
+      self.worker_threads = self.worker_threads.max(2);
+      let blocking_capacity = self.worker_threads - 1;
       self.max_blocking_tasks = self.max_blocking_tasks.min(blocking_capacity);
     }
     #[cfg(target_family = "wasm")]
@@ -281,7 +287,7 @@ impl fmt::Display for JoinError {
 impl std::error::Error for JoinError {}
 
 enum JoinHandleInner<T> {
-  Task(Task<Result<T, JoinError>>),
+  Task(FallibleTask<Result<T, JoinError>>),
   #[cfg(not(target_family = "wasm"))]
   Blocking(oneshot::Receiver<Result<T, JoinError>>),
   Ready(Option<Result<T, JoinError>>),
@@ -318,7 +324,13 @@ impl<T> Future for JoinHandle<T> {
 
   fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
     match &mut self.get_mut().0 {
-      JoinHandleInner::Task(task) => Pin::new(task).poll(cx),
+      JoinHandleInner::Task(task) => match Pin::new(task).poll(cx) {
+        Poll::Ready(Some(result)) => Poll::Ready(result),
+        Poll::Ready(None) => Poll::Ready(Err(JoinError {
+          message: "async runtime stopped before the task completed".to_string(),
+        })),
+        Poll::Pending => Poll::Pending,
+      },
       #[cfg(not(target_family = "wasm"))]
       JoinHandleInner::Blocking(receiver) => match Pin::new(receiver).poll(cx) {
         Poll::Ready(Ok(result)) => Poll::Ready(result),
@@ -495,6 +507,118 @@ impl Drop for ActiveBlockingGuard {
   fn drop(&mut self) {
     self.metrics.active_blocking_tasks.fetch_sub(1, Ordering::Relaxed);
     self.metrics.blocking_tasks_completed.fetch_add(1, Ordering::Relaxed);
+  }
+}
+
+static NEXT_RUNTIME_GENERATION: AtomicU64 = AtomicU64::new(0);
+
+thread_local! {
+  static ACTIVE_RUNTIME_GENERATION: std::cell::Cell<Option<u64>> =
+    const { std::cell::Cell::new(None) };
+}
+
+struct RuntimeGenerationGuard {
+  previous: Option<u64>,
+}
+
+impl RuntimeGenerationGuard {
+  fn enter(generation: u64) -> Self {
+    Self { previous: ACTIVE_RUNTIME_GENERATION.with(|current| current.replace(Some(generation))) }
+  }
+}
+
+impl Drop for RuntimeGenerationGuard {
+  fn drop(&mut self) {
+    ACTIVE_RUNTIME_GENERATION.with(|current| current.set(self.previous));
+  }
+}
+
+struct GenerationWorkState {
+  closed: bool,
+  next_task_id: u64,
+  active: usize,
+  abort_handles: FxHashMap<u64, AbortHandle>,
+}
+
+struct GenerationWork {
+  id: u64,
+  state: Mutex<GenerationWorkState>,
+  idle: Condvar,
+}
+
+impl GenerationWork {
+  fn new() -> Arc<Self> {
+    Arc::new(Self {
+      id: NEXT_RUNTIME_GENERATION.fetch_add(1, Ordering::Relaxed),
+      state: Mutex::new(GenerationWorkState {
+        closed: false,
+        next_task_id: 0,
+        active: 0,
+        abort_handles: FxHashMap::default(),
+      }),
+      idle: Condvar::new(),
+    })
+  }
+
+  fn try_register_async(self: &Arc<Self>) -> Option<(AbortRegistration, GenerationWorkGuard)> {
+    let (abort_handle, abort_registration) = AbortHandle::new_pair();
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if state.closed {
+      return None;
+    }
+    let task_id = state.next_task_id;
+    state.next_task_id = state.next_task_id.wrapping_add(1);
+    state.active += 1;
+    state.abort_handles.insert(task_id, abort_handle);
+    Some((
+      abort_registration,
+      GenerationWorkGuard { work: Arc::clone(self), task_id: Some(task_id) },
+    ))
+  }
+
+  fn try_register_work(self: &Arc<Self>) -> Option<GenerationWorkGuard> {
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if state.closed {
+      return None;
+    }
+    state.active += 1;
+    Some(GenerationWorkGuard { work: Arc::clone(self), task_id: None })
+  }
+
+  fn close_and_abort(&self) {
+    let abort_handles = {
+      let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      state.closed = true;
+      state.abort_handles.values().cloned().collect::<Vec<_>>()
+    };
+    for abort_handle in abort_handles {
+      abort_handle.abort();
+    }
+  }
+
+  fn wait_until_idle(&self) {
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    while state.active != 0 {
+      state = self.idle.wait(state).unwrap_or_else(std::sync::PoisonError::into_inner);
+    }
+  }
+}
+
+struct GenerationWorkGuard {
+  work: Arc<GenerationWork>,
+  task_id: Option<u64>,
+}
+
+impl Drop for GenerationWorkGuard {
+  fn drop(&mut self) {
+    let mut state = self.work.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Some(task_id) = self.task_id {
+      state.abort_handles.remove(&task_id);
+    }
+    state.active = state.active.checked_sub(1).expect("generation work count underflow");
+    if state.active == 0 {
+      self.work.idle.notify_all();
+    }
   }
 }
 
@@ -837,15 +961,57 @@ struct QueuedBlocking {
 }
 
 #[cfg(not(target_family = "wasm"))]
+struct BlockingQueue {
+  closed: bool,
+  jobs: VecDeque<QueuedBlocking>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+struct WorkerLifecycle {
+  remaining: Mutex<usize>,
+  exited: Condvar,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl WorkerLifecycle {
+  fn new(worker_threads: usize) -> Arc<Self> {
+    Arc::new(Self { remaining: Mutex::new(worker_threads), exited: Condvar::new() })
+  }
+
+  fn worker_exited(&self) {
+    let mut remaining = self.remaining.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    *remaining = remaining.checked_sub(1).expect("runtime worker exit count underflow");
+    if *remaining == 0 {
+      self.exited.notify_all();
+    }
+  }
+
+  fn wait_for_all_workers(&self) {
+    let mut remaining = self.remaining.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    while *remaining != 0 {
+      remaining = self.exited.wait(remaining).unwrap_or_else(std::sync::PoisonError::into_inner);
+    }
+  }
+
+  #[cfg(test)]
+  fn remaining(&self) -> usize {
+    *self.remaining.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+  }
+}
+
+#[cfg(not(target_family = "wasm"))]
 struct MultiThreadExecutor {
   // Stable per-executor id; tags owner tokens so a stale token from a shut-down
   // executor can never authorize an over-cap escape on a replacement (RD-1 (B)).
   id: u64,
   pool: ThreadPool,
   queue: Mutex<VecDeque<Runnable>>,
-  blocking_queue: Mutex<VecDeque<QueuedBlocking>>,
+  blocking_queue: Mutex<BlockingQueue>,
   active_drainers: AtomicUsize,
   active_blocking: AtomicUsize,
+  scheduler_idle_lock: Mutex<()>,
+  scheduler_idle: Condvar,
+  worker_lifecycle: Arc<WorkerLifecycle>,
   // Registry of pool workers currently parked inside a re-entrant cooperative
   // `block_on`, woken ONE at a time when new queue work is scheduled. The pool
   // has a fixed number of OS threads, so a parked worker cannot rely on
@@ -885,11 +1051,12 @@ impl MultiThreadExecutor {
   ) -> Result<Self, RuntimeConfigError> {
     let id = NEXT_EXECUTOR_ID.fetch_add(1, Ordering::Relaxed);
     let thread_name_prefix = options.thread_name_prefix.clone();
-    // Validated configurations reserve one lane from blocking admission. A
-    // one-worker configuration cannot express that inside a one-thread pool,
-    // so add one internal reserve worker while preserving one CPU worker as
-    // the public configuration.
-    let pool_threads = options.worker_threads.max(options.max_blocking_tasks.saturating_add(1));
+    // Production options are validated before construction, so this exact
+    // physical count is also the configured/reported count. Direct executor
+    // unit tests may still construct a one-thread topology intentionally.
+    let pool_threads = options.worker_threads;
+    let worker_lifecycle = WorkerLifecycle::new(pool_threads);
+    let exit_lifecycle = Arc::clone(&worker_lifecycle);
     let pool = ThreadPoolBuilder::new()
       .num_threads(pool_threads)
       .thread_name(move |index| format!("{thread_name_prefix}-{index}"))
@@ -907,6 +1074,7 @@ impl MultiThreadExecutor {
             driver.set(None);
           }
         });
+        exit_lifecycle.worker_exited();
       })
       .build()
       .map_err(|error| RuntimeConfigError(format!("failed to create runtime workers: {error}")))?;
@@ -914,9 +1082,12 @@ impl MultiThreadExecutor {
       id,
       pool,
       queue: Mutex::new(VecDeque::new()),
-      blocking_queue: Mutex::new(VecDeque::new()),
+      blocking_queue: Mutex::new(BlockingQueue { closed: false, jobs: VecDeque::new() }),
       active_drainers: AtomicUsize::new(0),
       active_blocking: AtomicUsize::new(0),
+      scheduler_idle_lock: Mutex::new(()),
+      scheduler_idle: Condvar::new(),
+      worker_lifecycle,
       parked_drivers: ParkedDrivers::default(),
       max_drainers: pool_threads,
       max_blocking: options.max_blocking_tasks,
@@ -1030,20 +1201,35 @@ impl MultiThreadExecutor {
     // ordinary capped job (`None`) (RD-1 (B)).
     let owner =
       BLOCKING_OWNER.with(std::cell::Cell::get).filter(|token| token.executor_id == self.id);
-    self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push_back(
-      QueuedBlocking {
-        owner,
-        run: Box::new(move || {
-          let _active = metrics.blocking_started();
-          let result = catch_unwind(AssertUnwindSafe(function))
-            .map_err(|panic| JoinError::from_panic(&*panic));
-          let _ = sender.send(result);
-        }),
-      },
-    );
-    // Wake a blocking-capable cooperative driver, or arm a normal drainer.
-    // Never spend the only wake on the runnable-only timer timekeeper.
-    self.wake_for_blocking_work();
+    let queued = QueuedBlocking {
+      owner,
+      run: Box::new(move || {
+        let _active = metrics.blocking_started();
+        let result =
+          catch_unwind(AssertUnwindSafe(function)).map_err(|panic| JoinError::from_panic(&*panic));
+        let _ = sender.send(result);
+      }),
+    };
+    let rejected = {
+      let mut queue = self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      if queue.closed {
+        Some(queued)
+      } else {
+        queue.jobs.push_back(queued);
+        None
+      }
+    };
+    if let Some(rejected) = rejected {
+      // Shutdown may close the queue after the controller registered this
+      // generation work but before it reaches the executor. Drop captured
+      // user values outside the queue lock and contain hostile destructors,
+      // matching the queued-job shutdown path.
+      let _ = catch_unwind(AssertUnwindSafe(|| drop(rejected)));
+    } else {
+      // Wake a blocking-capable cooperative driver, or arm a normal drainer.
+      // Never spend the only wake on the runnable-only timer timekeeper.
+      self.wake_for_blocking_work();
+    }
     JoinHandle(JoinHandleInner::Blocking(receiver))
   }
 
@@ -1146,10 +1332,17 @@ impl MultiThreadExecutor {
     let has_runnable =
       !self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty();
     let has_blocking = self.active_blocking.load(Ordering::Acquire) < self.max_blocking
-      && !self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty();
+      && !self
+        .blocking_queue
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .jobs
+        .is_empty();
     if has_runnable || has_blocking {
       self.ensure_drainer();
     }
+    let _idle = self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    self.scheduler_idle.notify_all();
   }
 
   fn block_on(self: &Arc<Self>, future: Pin<&mut dyn Future<Output = ()>>) {
@@ -1250,8 +1443,8 @@ impl MultiThreadExecutor {
   fn run_owned_blocking_over_cap(self: &Arc<Self>, token: BlockingOwnerToken) -> bool {
     let job = {
       let mut queue = self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      match queue.iter().position(|queued| queued.owner == Some(token)) {
-        Some(index) => queue.remove(index),
+      match queue.jobs.iter().position(|queued| queued.owner == Some(token)) {
+        Some(index) => queue.jobs.remove(index),
         None => None,
       }
     };
@@ -1486,7 +1679,12 @@ impl MultiThreadExecutor {
       return true;
     }
     self.active_blocking.load(Ordering::Acquire) < self.max_blocking
-      && !self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty()
+      && !self
+        .blocking_queue
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .jobs
+        .is_empty()
   }
 
   fn has_queued_runnable(&self) -> bool {
@@ -1503,7 +1701,7 @@ impl MultiThreadExecutor {
         return None;
       }
       let mut queue = self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      if queue.is_empty() {
+      if queue.jobs.is_empty() {
         return None;
       }
       if self
@@ -1511,7 +1709,7 @@ impl MultiThreadExecutor {
         .compare_exchange_weak(active, active + 1, Ordering::AcqRel, Ordering::Relaxed)
         .is_ok()
       {
-        return queue.pop_front().map(|queued| queued.run);
+        return queue.jobs.pop_front().map(|queued| queued.run);
       }
     }
   }
@@ -2242,6 +2440,9 @@ impl Drop for TimekeeperRoleGuard<'_> {
     if self.executor.next_timer_deadline().is_some() {
       self.executor.ensure_timekeeper();
     }
+    let _idle =
+      self.executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    self.executor.scheduler_idle.notify_all();
   }
 }
 
@@ -2317,7 +2518,9 @@ impl MultiThreadExecutor {
       due
     };
     for waker in due {
-      waker.wake();
+      // Wakers may originate outside this executor. Isolate user RawWaker
+      // implementations so a panic cannot unwind the timekeeper role.
+      let _ = catch_unwind(AssertUnwindSafe(|| waker.wake()));
     }
   }
 
@@ -2362,12 +2565,13 @@ impl MultiThreadExecutor {
   /// The dedicated timekeeper job (timer intel §4(a), the load-bearing
   /// piece): waits out the earliest heap deadline with `park_timeout` and
   /// fires due timers -- and between waits it drains RUNNABLES with the same
-  /// streak cap and LIFO-slot flush duties as `cooperative_block_on`, so a
-  /// one-worker configuration still runs async work while a long timer pends.
-  /// It never executes blocking closures: a stalled closure must not retain
-  /// the only role that can fire timers. `schedule_blocking` skips this
-  /// parker, waking a blocking-capable cooperative driver or arming a normal
-  /// drainer instead.
+  /// streak cap and LIFO-slot flush duties as `cooperative_block_on`. This
+  /// keeps the intentionally supported one-worker low-level executor topology
+  /// live while a long timer pends; production MultiThread configuration has
+  /// a truthful two-worker minimum. It never executes blocking closures: a
+  /// stalled closure must not retain the only role that can fire timers.
+  /// `schedule_blocking` skips this parker, waking a blocking-capable
+  /// cooperative driver or arming a normal drainer instead.
   ///
   /// Its parker is registered in `parked_drivers` around every park, so
   /// runnable wakes reach it; its wait is a plain bounded park, NEVER
@@ -2459,11 +2663,40 @@ impl MultiThreadExecutor {
       (wakers, inner.timekeeper_parker.clone())
     };
     for waker in wakers {
-      waker.wake();
+      // A user-provided RawWaker may panic. Shutdown is a lifecycle
+      // transition, so one hostile wake must not leave the controller stuck
+      // in `Stopping` and prevent every later restart.
+      let _ = catch_unwind(AssertUnwindSafe(|| waker.wake()));
     }
     // Wake the timekeeper so it observes the now-empty heap and exits.
     if let Some(parker) = parker {
       parker.unpark();
+    }
+  }
+
+  fn begin_shutdown(&self) {
+    let queued = {
+      let mut queue = self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      queue.closed = true;
+      std::mem::take(&mut queue.jobs)
+    };
+    // Captured values belong to user code and may panic in Drop. Retire each
+    // rejected closure independently so one destructor cannot strand the
+    // runtime in `Stopping` or prevent the remaining queued jobs from being
+    // cancelled.
+    for queued in queued {
+      let _ = catch_unwind(AssertUnwindSafe(|| drop(queued)));
+    }
+    self.shutdown_timers();
+  }
+
+  fn wait_until_scheduler_idle(&self) {
+    let mut idle =
+      self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    while self.active_drainers.load(Ordering::Acquire) != 0
+      || self.timers.timekeeper_claimed.load(Ordering::Acquire)
+    {
+      idle = self.scheduler_idle.wait(idle).unwrap_or_else(std::sync::PoisonError::into_inner);
     }
   }
 }
@@ -2486,7 +2719,7 @@ enum SleepInner {
 #[cfg(not(target_family = "wasm"))]
 struct HeapSleep {
   id: TimerId,
-  executor: Arc<MultiThreadExecutor>,
+  executor: Weak<MultiThreadExecutor>,
   fired: Arc<AtomicBool>,
   registered: bool,
 }
@@ -2526,12 +2759,19 @@ impl Future for Sleep {
           if heap.registered {
             // Wall-clock completion may beat the (busy) timekeeper's fire:
             // retire the registration so it cannot wake spuriously later.
-            heap.executor.cancel_timer(heap.id);
+            if let Some(executor) = heap.executor.upgrade() {
+              executor.cancel_timer(heap.id);
+            }
             heap.registered = false;
           }
           return Poll::Ready(());
         }
-        heap.executor.register_timer(heap.id, deadline, cx.waker().clone(), &heap.fired);
+        let Some(executor) = heap.executor.upgrade() else {
+          heap.fired.store(true, Ordering::SeqCst);
+          heap.registered = false;
+          return Poll::Ready(());
+        };
+        executor.register_timer(heap.id, deadline, cx.waker().clone(), &heap.fired);
         heap.registered = true;
         // Registration on a closed (shut-down) heap stores nothing and sets
         // `fired` instead: re-check so this poll resolves rather than parking
@@ -2603,7 +2843,9 @@ impl Drop for Sleep {
       #[cfg(not(target_family = "wasm"))]
       SleepInner::Heap(heap) => {
         if heap.registered {
-          heap.executor.cancel_timer(heap.id);
+          if let Some(executor) = heap.executor.upgrade() {
+            executor.cancel_timer(heap.id);
+          }
         }
       }
       SleepInner::Host(host) => {
@@ -2633,18 +2875,18 @@ fn make_sleep(
   deadline: Instant,
 ) -> Sleep {
   let id = NEXT_TIMER_ID.fetch_add(1, Ordering::Relaxed);
-  match backend {
+  match &backend.executor {
     #[cfg(not(target_family = "wasm"))]
-    RuntimeBackend::MultiThread(executor) => Sleep {
+    RuntimeExecutor::MultiThread(executor) => Sleep {
       deadline,
       inner: SleepInner::Heap(HeapSleep {
         id,
-        executor: Arc::clone(executor),
+        executor: Arc::downgrade(executor),
         fired: Arc::new(AtomicBool::new(false)),
         registered: false,
       }),
     },
-    RuntimeBackend::CurrentThread(executor) => {
+    RuntimeExecutor::CurrentThread(executor) => {
       // Fail loud at CREATION when no live driver exists (the
       // never-registered case gets its diagnostic at the sleep_until call
       // site, not on some later poll). The driver is NOT pinned here: each
@@ -2679,10 +2921,40 @@ fn make_sleep(
 }
 
 #[derive(Clone)]
-enum RuntimeBackend {
+enum RuntimeExecutor {
   CurrentThread(Arc<CurrentThreadExecutor>),
   #[cfg(not(target_family = "wasm"))]
   MultiThread(Arc<MultiThreadExecutor>),
+}
+
+enum WeakRuntimeExecutor {
+  CurrentThread(Weak<CurrentThreadExecutor>),
+  #[cfg(not(target_family = "wasm"))]
+  MultiThread(Weak<MultiThreadExecutor>),
+}
+
+impl WeakRuntimeExecutor {
+  fn schedule(&self, runnable: Runnable) {
+    match self {
+      Self::CurrentThread(executor) => {
+        if let Some(executor) = executor.upgrade() {
+          executor.schedule(runnable);
+        }
+      }
+      #[cfg(not(target_family = "wasm"))]
+      Self::MultiThread(executor) => {
+        if let Some(executor) = executor.upgrade() {
+          executor.schedule(runnable);
+        }
+      }
+    }
+  }
+}
+
+#[derive(Clone)]
+struct RuntimeBackend {
+  work: Arc<GenerationWork>,
+  executor: RuntimeExecutor,
 }
 
 impl RuntimeBackend {
@@ -2690,41 +2962,75 @@ impl RuntimeBackend {
     options: &RuntimeOptions,
     metrics: Arc<RuntimeMetrics>,
   ) -> Result<Self, RuntimeConfigError> {
-    match options.flavor {
-      RuntimeFlavor::CurrentThread => Ok(Self::CurrentThread(Arc::new(
+    let work = GenerationWork::new();
+    let executor = match options.flavor {
+      RuntimeFlavor::CurrentThread => RuntimeExecutor::CurrentThread(Arc::new(
         CurrentThreadExecutor::with_detection(metrics, THREADLESS_BUILD, options.park_deadline),
-      ))),
+      )),
       RuntimeFlavor::MultiThread => {
         #[cfg(not(target_family = "wasm"))]
         {
-          Ok(Self::MultiThread(Arc::new(MultiThreadExecutor::new(options, metrics)?)))
+          RuntimeExecutor::MultiThread(Arc::new(MultiThreadExecutor::new(options, metrics)?))
         }
         #[cfg(target_family = "wasm")]
         {
           let _ = metrics;
-          Err(RuntimeConfigError(
+          return Err(RuntimeConfigError(
             "the multi-thread runtime is unavailable in this WebAssembly build".to_string(),
-          ))
+          ));
         }
+      }
+    };
+    Ok(Self { work, executor })
+  }
+
+  #[cfg(test)]
+  fn from_executor(executor: RuntimeExecutor) -> Self {
+    Self { work: GenerationWork::new(), executor }
+  }
+
+  fn generation(&self) -> u64 {
+    self.work.id
+  }
+
+  fn downgrade_executor(&self) -> WeakRuntimeExecutor {
+    match &self.executor {
+      RuntimeExecutor::CurrentThread(executor) => {
+        WeakRuntimeExecutor::CurrentThread(Arc::downgrade(executor))
+      }
+      #[cfg(not(target_family = "wasm"))]
+      RuntimeExecutor::MultiThread(executor) => {
+        WeakRuntimeExecutor::MultiThread(Arc::downgrade(executor))
       }
     }
   }
 
   fn schedule(&self, runnable: Runnable) {
-    match self {
-      Self::CurrentThread(executor) => executor.schedule(runnable),
+    match &self.executor {
+      RuntimeExecutor::CurrentThread(executor) => executor.schedule(runnable),
       #[cfg(not(target_family = "wasm"))]
-      Self::MultiThread(executor) => executor.schedule(runnable),
+      RuntimeExecutor::MultiThread(executor) => executor.schedule(runnable),
     }
   }
 
-  fn spawn_blocking<F, T>(&self, function: F, metrics: &Arc<RuntimeMetrics>) -> JoinHandle<T>
+  fn spawn_registered_blocking<F, T>(
+    &self,
+    function: F,
+    registration: GenerationWorkGuard,
+    metrics: &Arc<RuntimeMetrics>,
+  ) -> JoinHandle<T>
   where
     F: FnOnce() -> T + Send + 'static,
     T: Send + 'static,
   {
-    match self {
-      Self::CurrentThread(_) => {
+    let generation = self.generation();
+    let function = move || {
+      let _registration = registration;
+      let _generation = RuntimeGenerationGuard::enter(generation);
+      function()
+    };
+    match &self.executor {
+      RuntimeExecutor::CurrentThread(_) => {
         // Same submitted-counter semantics as the MultiThread path (the job
         // just also runs inline immediately here).
         metrics.blocking_scheduled();
@@ -2734,7 +3040,7 @@ impl RuntimeBackend {
         JoinHandle(JoinHandleInner::Ready(Some(result)))
       }
       #[cfg(not(target_family = "wasm"))]
-      Self::MultiThread(executor) => {
+      RuntimeExecutor::MultiThread(executor) => {
         let _ = metrics;
         executor.schedule_blocking(function)
       }
@@ -2742,17 +3048,77 @@ impl RuntimeBackend {
   }
 
   fn block_on(&self, future: Pin<&mut dyn Future<Output = ()>>) {
-    match self {
-      Self::CurrentThread(executor) => executor.block_on(future),
+    match &self.executor {
+      RuntimeExecutor::CurrentThread(executor) => executor.block_on(future),
       #[cfg(not(target_family = "wasm"))]
-      Self::MultiThread(executor) => executor.block_on(future),
+      RuntimeExecutor::MultiThread(executor) => executor.block_on(future),
     }
+  }
+
+  fn begin_shutdown(&self) {
+    self.work.close_and_abort();
+    #[cfg(not(target_family = "wasm"))]
+    if let RuntimeExecutor::MultiThread(executor) = &self.executor {
+      executor.begin_shutdown();
+    }
+  }
+
+  fn wait_until_idle(&self) {
+    self.work.wait_until_idle();
+    #[cfg(not(target_family = "wasm"))]
+    if let RuntimeExecutor::MultiThread(executor) = &self.executor {
+      executor.wait_until_scheduler_idle();
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  fn worker_lifecycle(&self) -> Option<Arc<WorkerLifecycle>> {
+    match &self.executor {
+      RuntimeExecutor::CurrentThread(_) => None,
+      RuntimeExecutor::MultiThread(executor) => Some(Arc::clone(&executor.worker_lifecycle)),
+    }
+  }
+
+  fn stop_identity(&self) -> RuntimeStopIdentity {
+    RuntimeStopIdentity {
+      generation: self.generation(),
+      #[cfg(not(target_family = "wasm"))]
+      executor_id: match &self.executor {
+        RuntimeExecutor::CurrentThread(_) => None,
+        RuntimeExecutor::MultiThread(executor) => Some(executor.id),
+      },
+    }
+  }
+
+  fn is_current(&self) -> bool {
+    self.stop_identity().is_current()
+  }
+}
+
+#[derive(Clone, Copy)]
+struct RuntimeStopIdentity {
+  generation: u64,
+  #[cfg(not(target_family = "wasm"))]
+  executor_id: Option<u64>,
+}
+
+impl RuntimeStopIdentity {
+  fn is_current(self) -> bool {
+    if ACTIVE_RUNTIME_GENERATION.with(std::cell::Cell::get) == Some(self.generation) {
+      return true;
+    }
+    #[cfg(not(target_family = "wasm"))]
+    if self.executor_id.is_some() && ON_POOL_WORKER.with(std::cell::Cell::get) == self.executor_id {
+      return true;
+    }
+    false
   }
 }
 
 enum RuntimeLifecycle {
   Initial,
   Running(RuntimeBackend),
+  Stopping(RuntimeStopIdentity),
   Stopped,
 }
 
@@ -2777,6 +3143,7 @@ fn run_before_runtime_submission_lock_test_hook() {
 
 struct RuntimeController {
   state: Mutex<RuntimeState>,
+  lifecycle_changed: Condvar,
   metrics: Arc<RuntimeMetrics>,
 }
 
@@ -2786,6 +3153,7 @@ impl RuntimeController {
       RuntimeOptions::default().validate().expect("default async runtime options must be valid");
     Self {
       state: Mutex::new(RuntimeState { options, lifecycle: RuntimeLifecycle::Initial }),
+      lifecycle_changed: Condvar::new(),
       metrics: Arc::new(RuntimeMetrics::default()),
     }
   }
@@ -2803,14 +3171,10 @@ impl RuntimeController {
     Ok(())
   }
 
-  fn try_backend(&self) -> Result<RuntimeBackend, RuntimeConfigError> {
-    #[cfg(test)]
-    run_before_runtime_submission_lock_test_hook();
-
-    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+  fn backend_locked(&self, state: &mut RuntimeState) -> Result<RuntimeBackend, RuntimeConfigError> {
     match &state.lifecycle {
       RuntimeLifecycle::Running(backend) => return Ok(backend.clone()),
-      RuntimeLifecycle::Stopped => {
+      RuntimeLifecycle::Stopping(_) | RuntimeLifecycle::Stopped => {
         return Err(RuntimeConfigError(
           "the async runtime is stopped; call start before submitting work".to_string(),
         ));
@@ -2822,20 +3186,52 @@ impl RuntimeController {
     Ok(backend)
   }
 
+  fn try_backend(&self) -> Result<RuntimeBackend, RuntimeConfigError> {
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    self.backend_locked(&mut state)
+  }
+
   fn backend(&self) -> RuntimeBackend {
     self.try_backend().unwrap_or_else(|error| panic!("{error}"))
+  }
+
+  fn try_spawn<F, T>(&self, future: F) -> Result<JoinHandle<T>, (RuntimeConfigError, F)>
+  where
+    F: Future<Output = T> + Send + 'static,
+    T: Send + 'static,
+  {
+    #[cfg(test)]
+    run_before_runtime_submission_lock_test_hook();
+
+    let (backend, registration) = {
+      let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      let backend = match self.backend_locked(&mut state) {
+        Ok(backend) => backend,
+        Err(error) => return Err((error, future)),
+      };
+      let Some(registration) = backend.work.try_register_async() else {
+        return Err((
+          RuntimeConfigError(
+            "the async runtime is stopped; call start before submitting work".to_string(),
+          ),
+          future,
+        ));
+      };
+      (backend, registration)
+    };
+    Ok(spawn_registered(&backend, Arc::clone(&self.metrics), future, registration))
   }
 
   fn try_spawn_detached<F>(&self, future: F) -> Result<(), F>
   where
     F: Future<Output = ()> + Send + 'static,
   {
-    match self.try_backend() {
-      Ok(backend) => {
-        spawn_with_backend(&backend, Arc::clone(&self.metrics), future).detach();
+    match self.try_spawn(future) {
+      Ok(handle) => {
+        handle.detach();
         Ok(())
       }
-      Err(_) => Err(future),
+      Err((_, future)) => Err(future),
     }
   }
 
@@ -2844,20 +3240,56 @@ impl RuntimeController {
     F: FnOnce() -> T + Send + 'static,
     T: Send + 'static,
   {
-    match self.try_backend() {
-      Ok(backend) => Ok(backend.spawn_blocking(function, &self.metrics)),
-      Err(_) => Err(function),
-    }
+    #[cfg(test)]
+    run_before_runtime_submission_lock_test_hook();
+
+    let (backend, registration) = {
+      let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      let Ok(backend) = self.backend_locked(&mut state) else {
+        return Err(function);
+      };
+      let Some(registration) = backend.work.try_register_work() else {
+        return Err(function);
+      };
+      (backend, registration)
+    };
+    Ok(backend.spawn_registered_blocking(function, registration, &self.metrics))
+  }
+
+  fn block_on(&self, future: Pin<&mut dyn Future<Output = ()>>) {
+    let (backend, registration) = {
+      let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      let backend = self.backend_locked(&mut state).unwrap_or_else(|error| panic!("{error}"));
+      let registration = backend.work.try_register_work().unwrap_or_else(|| {
+        panic!("the async runtime is stopped; call start before submitting work")
+      });
+      (backend, registration)
+    };
+    let _registration = registration;
+    let _generation = RuntimeGenerationGuard::enter(backend.generation());
+    backend.block_on(future);
   }
 
   fn start(&self) -> Result<(), RuntimeConfigError> {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    match &state.lifecycle {
-      // napi starts the runtime while the addon is still being registered.
-      // Keep the first backend lazy so configureAsyncRuntime remains usable
-      // until the first async binding call.
-      RuntimeLifecycle::Initial | RuntimeLifecycle::Running(_) => return Ok(()),
-      RuntimeLifecycle::Stopped => {}
+    loop {
+      match &state.lifecycle {
+        // napi starts the runtime while the addon is still being registered.
+        // Keep the first backend lazy so configureAsyncRuntime remains usable
+        // until the first async binding call.
+        RuntimeLifecycle::Initial | RuntimeLifecycle::Running(_) => return Ok(()),
+        RuntimeLifecycle::Stopping(identity) => {
+          if identity.is_current() {
+            return Err(RuntimeConfigError(
+              "cannot restart the async runtime from work in the generation being stopped"
+                .to_string(),
+            ));
+          }
+          state =
+            self.lifecycle_changed.wait(state).unwrap_or_else(std::sync::PoisonError::into_inner);
+        }
+        RuntimeLifecycle::Stopped => break,
+      }
     }
     let backend = RuntimeBackend::new(&state.options, Arc::clone(&self.metrics))?;
     state.lifecycle = RuntimeLifecycle::Running(backend);
@@ -2868,25 +3300,62 @@ impl RuntimeController {
     self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).options.clone()
   }
 
-  fn shutdown(&self) {
+  fn shutdown(&self) -> Result<(), RuntimeConfigError> {
     let backend = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      match std::mem::replace(&mut state.lifecycle, RuntimeLifecycle::Stopped) {
-        RuntimeLifecycle::Running(backend) => Some(backend),
-        RuntimeLifecycle::Initial | RuntimeLifecycle::Stopped => None,
+      loop {
+        match &state.lifecycle {
+          RuntimeLifecycle::Initial => {
+            state.lifecycle = RuntimeLifecycle::Stopped;
+            self.lifecycle_changed.notify_all();
+            return Ok(());
+          }
+          RuntimeLifecycle::Running(backend) => {
+            if backend.is_current() {
+              return Err(RuntimeConfigError(
+                "cannot shut down the async runtime from work running on that runtime".to_string(),
+              ));
+            }
+            let identity = backend.stop_identity();
+            let RuntimeLifecycle::Running(backend) =
+              std::mem::replace(&mut state.lifecycle, RuntimeLifecycle::Stopping(identity))
+            else {
+              unreachable!();
+            };
+            break backend;
+          }
+          RuntimeLifecycle::Stopping(identity) => {
+            if identity.is_current() {
+              return Err(RuntimeConfigError(
+                "cannot wait for async runtime shutdown from work in the generation being stopped"
+                  .to_string(),
+              ));
+            }
+            state =
+              self.lifecycle_changed.wait(state).unwrap_or_else(std::sync::PoisonError::into_inner);
+          }
+          RuntimeLifecycle::Stopped => return Ok(()),
+        }
       }
     };
-    // Drain-fire pending heap timers before dropping the backend (timer
-    // facility): a task parked on a debounce sleep must be woken -- and its
-    // Sleep resolved early via the `fired` flag -- or a pending
-    // `watcher.close()` would hang forever on a runtime that no longer has a
-    // timekeeper. (CurrentThread host timers need no drain: the host event
-    // loop still fires their callbacks, and the driver outlives the backend.)
+
+    backend.begin_shutdown();
+    backend.wait_until_idle();
+
     #[cfg(not(target_family = "wasm"))]
-    if let Some(RuntimeBackend::MultiThread(executor)) = &backend {
-      executor.shutdown_timers();
-    }
+    let worker_lifecycle = backend.worker_lifecycle();
     drop(backend);
+
+    #[cfg(not(target_family = "wasm"))]
+    if let Some(worker_lifecycle) = worker_lifecycle {
+      worker_lifecycle.wait_for_all_workers();
+    }
+
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    debug_assert!(matches!(state.lifecycle, RuntimeLifecycle::Stopping(_)));
+    state.lifecycle = RuntimeLifecycle::Stopped;
+    self.lifecycle_changed.notify_all();
+    Ok(())
   }
 }
 
@@ -2904,32 +3373,47 @@ pub fn is_multi_threaded() -> bool {
   RUNTIME.options().flavor == RuntimeFlavor::MultiThread
 }
 
-fn spawn_with_backend<F, T>(
+fn spawn_registered<F, T>(
   backend: &RuntimeBackend,
   metrics: Arc<RuntimeMetrics>,
   future: F,
+  registration: (AbortRegistration, GenerationWorkGuard),
 ) -> JoinHandle<T>
 where
   F: Future<Output = T> + Send + 'static,
   T: Send + 'static,
 {
   metrics.tasks_spawned.fetch_add(1, Ordering::Relaxed);
+  let generation = backend.generation();
+  let (abort_registration, work_registration) = registration;
   let wrapped = async move {
-    let result =
-      AssertUnwindSafe(future).catch_unwind().await.map_err(|panic| JoinError::from_panic(&*panic));
-    if result.is_ok() {
-      metrics.tasks_completed.fetch_add(1, Ordering::Relaxed);
-    } else {
-      metrics.tasks_panicked.fetch_add(1, Ordering::Relaxed);
+    let _work_registration = work_registration;
+    let abortable = Abortable::new(future, abort_registration);
+    let mut abortable = std::pin::pin!(abortable);
+    let polled = futures::future::poll_fn(|cx| {
+      let _generation = RuntimeGenerationGuard::enter(generation);
+      abortable.as_mut().poll(cx)
+    });
+    match AssertUnwindSafe(polled).catch_unwind().await {
+      Ok(Ok(output)) => {
+        metrics.tasks_completed.fetch_add(1, Ordering::Relaxed);
+        Ok(output)
+      }
+      Ok(Err(_)) => {
+        Err(JoinError { message: "async runtime stopped before the task completed".to_string() })
+      }
+      Err(panic) => {
+        metrics.tasks_panicked.fetch_add(1, Ordering::Relaxed);
+        Err(JoinError::from_panic(&*panic))
+      }
     }
-    result
   };
-  let scheduler = backend.clone();
+  let scheduler = backend.downgrade_executor();
   let (runnable, task) = async_task::spawn(wrapped, move |runnable| {
     scheduler.schedule(runnable);
   });
   backend.schedule(runnable);
-  JoinHandle(JoinHandleInner::Task(task))
+  JoinHandle(JoinHandleInner::Task(task.fallible()))
 }
 
 pub fn spawn<F, T>(future: F) -> JoinHandle<T>
@@ -2937,9 +3421,9 @@ where
   F: Future<Output = T> + Send + 'static,
   T: Send + 'static,
 {
-  match RUNTIME.try_backend() {
-    Ok(backend) => spawn_with_backend(&backend, Arc::clone(&RUNTIME.metrics), future),
-    Err(error) => {
+  match RUNTIME.try_spawn(future) {
+    Ok(handle) => handle,
+    Err((error, _future)) => {
       JoinHandle(JoinHandleInner::Ready(Some(Err(JoinError { message: error.to_string() }))))
     }
   }
@@ -2964,11 +3448,11 @@ where
   F: FnOnce() -> T + Send + 'static,
   T: Send + 'static,
 {
-  match RUNTIME.try_backend() {
-    Ok(backend) => backend.spawn_blocking(function, &RUNTIME.metrics),
-    Err(error) => {
-      JoinHandle(JoinHandleInner::Ready(Some(Err(JoinError { message: error.to_string() }))))
-    }
+  match RUNTIME.try_spawn_blocking(function) {
+    Ok(handle) => handle,
+    Err(_function) => JoinHandle(JoinHandleInner::Ready(Some(Err(JoinError {
+      message: "the async runtime is stopped; call start before submitting work".to_string(),
+    })))),
   }
 }
 
@@ -2992,15 +3476,15 @@ pub fn block_on<F: Future>(future: F) -> F::Output {
 }
 
 pub fn block_on_dyn(future: Pin<&mut dyn Future<Output = ()>>) {
-  RUNTIME.backend().block_on(future);
+  RUNTIME.block_on(future);
 }
 
 pub fn start() -> Result<(), RuntimeConfigError> {
   RUNTIME.start()
 }
 
-pub fn shutdown() {
-  RUNTIME.shutdown();
+pub fn shutdown() -> Result<(), RuntimeConfigError> {
+  RUNTIME.shutdown()
 }
 
 pub fn reset_metrics() {
@@ -3060,7 +3544,7 @@ mod tests {
       },
       |_| {},
     );
-    let handle = JoinHandle(JoinHandleInner::Task(task));
+    let handle = JoinHandle(JoinHandleInner::Task(task.fallible()));
 
     drop(handle);
     runnable.run();
@@ -3170,7 +3654,7 @@ mod tests {
     let metrics = Arc::new(RuntimeMetrics::default());
     let options = RuntimeOptions {
       flavor: RuntimeFlavor::MultiThread,
-      worker_threads: 2,
+      worker_threads: 3,
       max_blocking_tasks: 2,
       thread_name_prefix: "rd1-caller".to_string(),
       park_deadline: None,
@@ -4475,7 +4959,7 @@ mod tests {
       async_task::spawn(HotFuture { stop: Arc::clone(&stop) }, move |r| scheduler.schedule(r));
     task.detach();
     let (blocking_tx, blocking_rx) = mpsc::sync_channel(1);
-    executor.blocking_queue.lock().unwrap().push_back(QueuedBlocking {
+    executor.blocking_queue.lock().unwrap().jobs.push_back(QueuedBlocking {
       owner: None,
       run: Box::new(move || blocking_tx.send(()).unwrap()),
     });
@@ -4497,10 +4981,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn blocking_saturation_preserves_a_runnable_execution_lane() {
-    use std::{
-      sync::{Barrier, mpsc},
-      time::Duration,
-    };
+    use std::{sync::mpsc, time::Duration};
 
     let options = RuntimeOptions {
       flavor: RuntimeFlavor::MultiThread,
@@ -4508,23 +4989,28 @@ mod tests {
       max_blocking_tasks: 2,
       thread_name_prefix: "blocking-reserve".to_string(),
       park_deadline: None,
-    };
+    }
+    .validate()
+    .expect("production options must reserve a runnable lane");
+    assert_eq!((options.worker_threads, options.max_blocking_tasks), (2, 1));
     let executor =
       Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
-    let release = Arc::new(Barrier::new(3));
+    let (release_tx, release_rx) = mpsc::channel();
     let (started_tx, started_rx) = mpsc::channel();
-    let mut blocking = Vec::new();
-    for _ in 0..2 {
-      let release = Arc::clone(&release);
-      let started_tx = started_tx.clone();
-      blocking.push(executor.schedule_blocking(move || {
-        started_tx.send(()).unwrap();
-        release.wait();
-      }));
-    }
-    for _ in 0..2 {
-      started_rx.recv_timeout(Duration::from_secs(1)).unwrap();
-    }
+    let first = executor.schedule_blocking(move || {
+      started_tx.send(()).unwrap();
+      release_rx.recv().unwrap();
+    });
+    started_rx.recv_timeout(Duration::from_secs(1)).unwrap();
+
+    let (queued_tx, queued_rx) = mpsc::channel();
+    let second = executor.schedule_blocking(move || {
+      queued_tx.send(()).unwrap();
+    });
+    assert!(
+      queued_rx.try_recv().is_err(),
+      "the second blocking job must remain queued while the sole blocking slot is occupied"
+    );
 
     let (runnable_tx, runnable_rx) = mpsc::sync_channel(1);
     let scheduler = Arc::clone(&executor);
@@ -4540,10 +5026,12 @@ mod tests {
       .recv_timeout(Duration::from_secs(1))
       .expect("all admitted blocking jobs consumed the scheduler's runnable execution capacity");
 
-    release.wait();
-    for handle in blocking {
-      futures::executor::block_on(handle).unwrap();
-    }
+    release_tx.send(()).unwrap();
+    futures::executor::block_on(first).unwrap();
+    futures::executor::block_on(second).unwrap();
+    queued_rx
+      .recv_timeout(Duration::from_secs(1))
+      .expect("queued blocking work must run after the occupied slot is released");
   }
 
   #[cfg(not(target_family = "wasm"))]
@@ -4651,7 +5139,7 @@ mod tests {
     // `drain`'s RUNNABLE_BUDGET streak cap. `run_one` pops the slot before
     // the FIFO, so a hot chain (every link schedules its successor into the
     // slot) keeps run_one succeeding forever and the FIFO is never reached
-    // from this thread. On a 1-worker pool (legal config) a FIFO task that
+    // from this thread. On the direct 1-worker test topology a FIFO task that
     // completes the awaited future then never runs: deadlock. The budgeted
     // loop must flush the slot every RUNNABLE_BUDGET runs so the FIFO task
     // gets its turn.
@@ -4663,9 +5151,8 @@ mod tests {
       let options = RuntimeOptions {
         flavor: RuntimeFlavor::MultiThread,
         worker_threads: 1,
-        // This locality test needs one physical worker. Production-validated
-        // one-worker configurations use an internal reserve because they
-        // admit one blocking task.
+        // This locality test intentionally bypasses RuntimeOptions::validate
+        // to isolate one physical worker without admitting blocking work.
         max_blocking_tasks: 0,
         thread_name_prefix: "coop-budget".to_string(),
         park_deadline: None,
@@ -5215,11 +5702,11 @@ mod tests {
       let _h = exec2.schedule_blocking(|| 0usize);
     }
     assert_eq!(
-      exec2.blocking_queue.lock().unwrap().front().unwrap().owner,
+      exec2.blocking_queue.lock().unwrap().jobs.front().unwrap().owner,
       None,
       "a job scheduled under a foreign-executor token must be tagged None"
     );
-    exec2.blocking_queue.lock().unwrap().clear();
+    exec2.blocking_queue.lock().unwrap().jobs.clear();
 
     // (2) Drive the PRODUCTION executor-id gate through the ambient thread-local.
     // Inject a job tagged with exec1's FOREIGN token into exec2's queue. With that
@@ -5229,7 +5716,7 @@ mod tests {
     // token and run it -- so this is an honest regression guard for the gate.
     let ran = Arc::new(AtomicBool::new(false));
     let ran_job = Arc::clone(&ran);
-    exec2.blocking_queue.lock().unwrap().push_back(QueuedBlocking {
+    exec2.blocking_queue.lock().unwrap().jobs.push_back(QueuedBlocking {
       owner: Some(token1),
       run: Box::new(move || ran_job.store(true, Ordering::SeqCst)),
     });
@@ -5242,7 +5729,7 @@ mod tests {
     }
     assert!(!ran.load(Ordering::SeqCst), "foreign-tagged job must not have run");
     assert_eq!(
-      exec2.blocking_queue.lock().unwrap().len(),
+      exec2.blocking_queue.lock().unwrap().jobs.len(),
       1,
       "the gate-rejected job must be left in exec2's queue"
     );
@@ -5258,7 +5745,7 @@ mod tests {
       );
     }
     assert!(!ran.load(Ordering::SeqCst), "token-mismatched job must not have run");
-    exec2.blocking_queue.lock().unwrap().clear();
+    exec2.blocking_queue.lock().unwrap().jobs.clear();
 
     // MATCHING ambient token: a job tagged with exec2's own frame is run by the
     // production seam (gate passes AND the token-exact scan matches), even over the
@@ -5266,7 +5753,7 @@ mod tests {
     let token2 = exec2.fresh_owner_token();
     let ran2 = Arc::new(AtomicBool::new(false));
     let ran2_job = Arc::clone(&ran2);
-    exec2.blocking_queue.lock().unwrap().push_back(QueuedBlocking {
+    exec2.blocking_queue.lock().unwrap().jobs.push_back(QueuedBlocking {
       owner: Some(token2),
       run: Box::new(move || ran2_job.store(true, Ordering::SeqCst)),
     });
@@ -5437,7 +5924,9 @@ mod tests {
         max_blocking_tasks: 1,
         thread_name_prefix: "rd2-pre-fix".to_string(),
         park_deadline: None,
-      };
+      }
+      .validate()
+      .expect("production MultiThread options must provide a reserve lane");
       let executor =
         Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
 
@@ -5474,11 +5963,14 @@ mod tests {
   #[test]
   fn current_thread_blocking_work_completes_inline() {
     let metrics = Arc::new(RuntimeMetrics::default());
-    let backend =
-      RuntimeBackend::CurrentThread(Arc::new(CurrentThreadExecutor::new(Arc::clone(&metrics))));
+    let backend = RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::new(
+      CurrentThreadExecutor::new(Arc::clone(&metrics)),
+    )));
+    let registration = backend.work.try_register_work().unwrap();
 
-    let value = futures::executor::block_on(backend.spawn_blocking(|| 7, &metrics))
-      .expect("blocking task should complete");
+    let value =
+      futures::executor::block_on(backend.spawn_registered_blocking(|| 7, registration, &metrics))
+        .expect("blocking task should complete");
 
     assert_eq!(value, 7);
     assert_eq!(metrics.blocking_tasks_started.load(Ordering::Relaxed), 1);
@@ -5555,6 +6047,22 @@ mod tests {
 
   #[cfg(not(target_family = "wasm"))]
   #[test]
+  fn validate_promotes_multi_thread_one_to_truthful_two_worker_minimum() {
+    let validated = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 1,
+      max_blocking_tasks: 8,
+      thread_name_prefix: "rd8-minimum".to_string(),
+      park_deadline: None,
+    }
+    .validate()
+    .expect("MultiThread options must validate");
+    assert_eq!(validated.worker_threads, 2);
+    assert_eq!(validated.max_blocking_tasks, 1);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
   fn runtime_controller_default_reserves_one_worker_from_blocking_admission() {
     let controller = RuntimeController::new();
     let options = controller.options();
@@ -5607,6 +6115,25 @@ mod tests {
     controller
   }
 
+  #[cfg(not(target_family = "wasm"))]
+  fn multi_thread_controller(
+    thread_name_prefix: &str,
+    worker_threads: usize,
+    max_blocking_tasks: usize,
+  ) -> RuntimeController {
+    let controller = RuntimeController::new();
+    controller
+      .configure(RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads,
+        max_blocking_tasks,
+        thread_name_prefix: thread_name_prefix.to_string(),
+        park_deadline: None,
+      })
+      .expect("MultiThread test configuration must be accepted");
+    controller
+  }
+
   #[test]
   fn initial_lifecycle_start_preserves_lazy_configuration() {
     let controller = RuntimeController::new();
@@ -5629,7 +6156,7 @@ mod tests {
   fn runtime_controller_rejects_submissions_after_shutdown() {
     let controller = current_thread_controller("lifecycle-reject");
     controller.start().expect("runtime must start");
-    controller.shutdown();
+    controller.shutdown().expect("runtime must stop");
 
     let async_ran = Arc::new(AtomicBool::new(false));
     let async_ran_task = Arc::clone(&async_ran);
@@ -5669,7 +6196,7 @@ mod tests {
   fn runtime_controller_start_after_shutdown_accepts_work() {
     let controller = current_thread_controller("lifecycle-restart");
     controller.start().expect("runtime must start");
-    controller.shutdown();
+    controller.shutdown().expect("runtime must stop");
     controller.start().expect("runtime must restart");
 
     let async_ran = Arc::new(AtomicBool::new(false));
@@ -5722,7 +6249,7 @@ mod tests {
     at_hook_rx
       .recv_timeout(Duration::from_secs(5))
       .expect("submitting thread must stop before taking the controller lock");
-    controller.shutdown();
+    controller.shutdown().expect("runtime must stop");
     release_tx.send(()).expect("submitting thread must still be waiting");
     worker.join().expect("submitting thread must not panic");
 
@@ -5732,6 +6259,322 @@ mod tests {
       matches!(&state.lifecycle, RuntimeLifecycle::Stopped),
       "the rejected submission must not lazily recreate a backend"
     );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_controller_reports_its_exact_physical_worker_count() {
+    let controller = multi_thread_controller("lifecycle-physical", 1, 8);
+    let options = controller.options();
+    assert_eq!((options.worker_threads, options.max_blocking_tasks), (2, 1));
+
+    let backend = controller.backend();
+    let RuntimeExecutor::MultiThread(executor) = &backend.executor else {
+      panic!("configured MultiThread backend must create a Rayon executor");
+    };
+    assert_eq!(executor.pool.current_num_threads(), options.worker_threads);
+    let lifecycle = Arc::clone(&executor.worker_lifecycle);
+    drop(backend);
+
+    controller.shutdown().expect("runtime must stop");
+    assert_eq!(lifecycle.remaining(), 0, "shutdown must observe every physical worker exit");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_shutdown_cancels_an_accepted_pending_task() {
+    use std::sync::mpsc;
+
+    struct DropSignal(mpsc::Sender<()>);
+    impl Drop for DropSignal {
+      fn drop(&mut self) {
+        let _ = self.0.send(());
+      }
+    }
+
+    let controller = multi_thread_controller("lifecycle-cancel", 2, 1);
+    let (polled_tx, polled_rx) = mpsc::channel();
+    let (dropped_tx, dropped_rx) = mpsc::channel();
+    controller
+      .try_spawn_detached(async move {
+        let _drop_signal = DropSignal(dropped_tx);
+        polled_tx.send(()).unwrap();
+        std::future::pending::<()>().await;
+      })
+      .unwrap_or_else(|_| panic!("running runtime must accept the pending task"));
+    polled_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("the pending task must be polled before shutdown");
+
+    controller.shutdown().expect("shutdown must cancel accepted async work");
+    dropped_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("shutdown must drop the accepted task future before returning");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_shutdown_drops_queued_blocking_and_waits_for_running_blocking() {
+    use std::sync::mpsc;
+
+    struct DropSignal(mpsc::Sender<()>);
+    impl Drop for DropSignal {
+      fn drop(&mut self) {
+        let _ = self.0.send(());
+      }
+    }
+
+    let controller = Arc::new(multi_thread_controller("lifecycle-blocking", 2, 1));
+    let (running_tx, running_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let running = controller
+      .try_spawn_blocking(move || {
+        running_tx.send(()).unwrap();
+        release_rx.recv().unwrap();
+        7usize
+      })
+      .unwrap_or_else(|_| panic!("running blocking work must be accepted"));
+    running_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("the first blocking job must hold the only blocking slot");
+
+    let queued_ran = Arc::new(AtomicBool::new(false));
+    let queued_ran_work = Arc::clone(&queued_ran);
+    let (queued_dropped_tx, queued_dropped_rx) = mpsc::channel();
+    let queued_drop_signal = DropSignal(queued_dropped_tx);
+    let queued = controller
+      .try_spawn_blocking(move || {
+        let _drop_signal = queued_drop_signal;
+        queued_ran_work.store(true, Ordering::SeqCst);
+        11usize
+      })
+      .unwrap_or_else(|_| panic!("queued blocking work must be accepted"));
+
+    let (shutdown_done_tx, shutdown_done_rx) = mpsc::channel();
+    let shutdown_controller = Arc::clone(&controller);
+    let shutdown = std::thread::spawn(move || {
+      shutdown_controller.shutdown().unwrap();
+      shutdown_done_tx.send(()).unwrap();
+    });
+
+    queued_dropped_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("shutdown must drop queued blocking work");
+    assert!(!queued_ran.load(Ordering::SeqCst), "queued blocking work must not execute");
+    assert!(
+      shutdown_done_rx.try_recv().is_err(),
+      "shutdown must wait while an accepted blocking closure is still running"
+    );
+
+    release_tx.send(()).unwrap();
+    shutdown_done_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("shutdown must finish after running blocking work retires");
+    shutdown.join().unwrap();
+    assert_eq!(futures::executor::block_on(running).unwrap(), 7);
+    assert!(
+      futures::executor::block_on(queued).is_err(),
+      "the queued blocking handle must resolve as cancelled"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_shutdown_contains_panicking_queued_blocking_destructor_and_restarts() {
+    use std::sync::mpsc;
+
+    struct PanicOnDrop(mpsc::Sender<()>);
+    impl Drop for PanicOnDrop {
+      fn drop(&mut self) {
+        let _ = self.0.send(());
+        panic!("intentional queued blocking destructor panic");
+      }
+    }
+
+    let controller = Arc::new(multi_thread_controller("lifecycle-drop-panic", 2, 1));
+    let (running_tx, running_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let running = controller
+      .try_spawn_blocking(move || {
+        running_tx.send(()).unwrap();
+        release_rx.recv().unwrap();
+      })
+      .unwrap_or_else(|_| panic!("running blocking work must be accepted"));
+    running_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+
+    let (drop_tx, drop_rx) = mpsc::channel();
+    let panic_on_drop = PanicOnDrop(drop_tx);
+    let queued = controller
+      .try_spawn_blocking(move || {
+        let _keep_captured_until_run = &panic_on_drop;
+      })
+      .unwrap_or_else(|_| panic!("queued blocking work must be accepted"));
+
+    let (shutdown_done_tx, shutdown_done_rx) = mpsc::channel();
+    let shutdown_controller = Arc::clone(&controller);
+    let shutdown = std::thread::spawn(move || {
+      shutdown_controller.shutdown().unwrap();
+      shutdown_done_tx.send(()).unwrap();
+    });
+
+    drop_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("shutdown must attempt to drop the queued closure");
+    release_tx.send(()).unwrap();
+    shutdown_done_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("a panicking queued destructor must not strand shutdown");
+    shutdown.join().expect("shutdown must contain the destructor panic");
+    futures::executor::block_on(running).unwrap();
+    assert!(futures::executor::block_on(queued).is_err());
+
+    controller.start().expect("the stopped controller must restart");
+    let restarted = controller
+      .try_spawn_blocking(|| 17usize)
+      .unwrap_or_else(|_| panic!("the restarted controller must accept work"));
+    assert_eq!(futures::executor::block_on(restarted).unwrap(), 17);
+    controller.shutdown().unwrap();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_closed_queue_contains_panicking_blocking_destructor() {
+    use std::sync::mpsc;
+
+    struct PanicOnDrop(mpsc::Sender<()>);
+    impl Drop for PanicOnDrop {
+      fn drop(&mut self) {
+        let _ = self.0.send(());
+        panic!("intentional late blocking destructor panic");
+      }
+    }
+
+    let executor = multi_thread_executor(2, None, "closed-queue-drop");
+    executor.begin_shutdown();
+
+    let (drop_tx, drop_rx) = mpsc::channel();
+    let panic_on_drop = PanicOnDrop(drop_tx);
+    let handle = executor.schedule_blocking(move || {
+      let _keep_captured_until_run = &panic_on_drop;
+    });
+
+    drop_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("the closed queue must retire the rejected closure");
+    assert!(
+      futures::executor::block_on(handle).is_err(),
+      "the rejected blocking handle must resolve as cancelled"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_shutdown_contains_panicking_timer_waker_and_restarts() {
+    struct PanicWake;
+    impl std::task::Wake for PanicWake {
+      fn wake(self: Arc<Self>) {
+        panic!("intentional timer waker panic");
+      }
+    }
+
+    let controller = multi_thread_controller("lifecycle-waker-panic", 2, 1);
+    let backend = controller.backend();
+    let RuntimeExecutor::MultiThread(executor) = &backend.executor else {
+      panic!("configured MultiThread backend must create a Rayon executor");
+    };
+    let mut sleep = heap_sleep(executor, Instant::now() + Duration::from_mins(1));
+    let waker = Waker::from(Arc::new(PanicWake));
+    let mut cx = Context::from_waker(&waker);
+    assert!(Pin::new(&mut sleep).poll(&mut cx).is_pending());
+    drop(backend);
+
+    controller.shutdown().expect("shutdown must contain the timer waker panic");
+    controller.start().expect("the stopped controller must restart");
+    let restarted = controller
+      .try_spawn_blocking(|| 23usize)
+      .unwrap_or_else(|_| panic!("the restarted controller must accept work"));
+    assert_eq!(futures::executor::block_on(restarted).unwrap(), 23);
+    controller.shutdown().unwrap();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_restart_waits_for_old_generation_worker_exit() {
+    use std::sync::mpsc;
+
+    let controller = Arc::new(multi_thread_controller("lifecycle-generation", 2, 1));
+    let backend = controller.backend();
+    let old_generation = backend.generation();
+    let RuntimeExecutor::MultiThread(executor) = &backend.executor else {
+      panic!("configured MultiThread backend must create a Rayon executor");
+    };
+    let old_workers = Arc::clone(&executor.worker_lifecycle);
+    drop(backend);
+
+    let (running_tx, running_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let running = controller
+      .try_spawn_blocking(move || {
+        running_tx.send(()).unwrap();
+        release_rx.recv().unwrap();
+      })
+      .unwrap_or_else(|_| panic!("running blocking work must be accepted"));
+    running_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+
+    let (shutdown_done_tx, shutdown_done_rx) = mpsc::channel();
+    let shutdown_controller = Arc::clone(&controller);
+    let shutdown = std::thread::spawn(move || {
+      shutdown_controller.shutdown().unwrap();
+      shutdown_done_tx.send(()).unwrap();
+    });
+    wait_until("controller entered Stopping", || {
+      let state = controller.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      matches!(&state.lifecycle, RuntimeLifecycle::Stopping(_))
+    });
+
+    let (start_done_tx, start_done_rx) = mpsc::channel();
+    let start_controller = Arc::clone(&controller);
+    let starter = std::thread::spawn(move || {
+      start_controller.start().unwrap();
+      start_done_tx.send(()).unwrap();
+    });
+    assert!(start_done_rx.try_recv().is_err(), "start must wait while shutdown is quiescing");
+    assert!(old_workers.remaining() > 0, "the held old generation must still own workers");
+
+    release_tx.send(()).unwrap();
+    futures::executor::block_on(running).unwrap();
+    shutdown_done_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    start_done_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    shutdown.join().unwrap();
+    starter.join().unwrap();
+    assert_eq!(old_workers.remaining(), 0, "restart may begin only after every old worker exits");
+
+    let backend = controller.backend();
+    assert_ne!(backend.generation(), old_generation);
+    let RuntimeExecutor::MultiThread(executor) = &backend.executor else {
+      panic!("restarted backend must remain MultiThread");
+    };
+    assert_eq!(executor.pool.current_num_threads(), controller.options().worker_threads);
+    drop(backend);
+    controller.shutdown().unwrap();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn shutdown_from_runtime_work_is_rejected_instead_of_self_deadlocking() {
+    let controller = Arc::new(multi_thread_controller("lifecycle-self-stop", 2, 1));
+    let task_controller = Arc::clone(&controller);
+    let handle = controller
+      .try_spawn(async move {
+        task_controller
+          .shutdown()
+          .expect_err("runtime work must not wait for its own generation")
+          .to_string()
+      })
+      .unwrap_or_else(|_| panic!("running runtime must accept the task"));
+    let message = futures::executor::block_on(handle).unwrap();
+    assert!(message.contains("cannot shut down"));
+    controller.shutdown().unwrap();
   }
 
   // ---- RD-9: MultiThread blocking cap + RUNNABLE_BUDGET drain + panic->JoinError --
@@ -5960,7 +6803,7 @@ mod tests {
       executor.schedule(runnable);
 
       let result: Result<(), JoinError> =
-        futures::executor::block_on(JoinHandle(JoinHandleInner::Task(task)));
+        futures::executor::block_on(JoinHandle(JoinHandleInner::Task(task.fallible())));
       let _ = done_tx.send(result);
     });
 
@@ -5976,7 +6819,9 @@ mod tests {
   }
 
   #[test]
-  fn runtime_metrics_reset_preserves_live_and_high_water_gauges() {
+  fn concurrent_runtime_metrics_reset_preserves_live_and_high_water_gauges() {
+    use std::sync::mpsc;
+
     let metrics = Arc::new(RuntimeMetrics::default());
     metrics.tasks_spawned.store(1, Ordering::Relaxed);
     metrics.tasks_completed.store(2, Ordering::Relaxed);
@@ -5987,8 +6832,18 @@ mod tests {
     metrics.blocking_tasks_started.store(10, Ordering::Relaxed);
     metrics.blocking_tasks_completed.store(11, Ordering::Relaxed);
     metrics.runnable_scheduled();
-    let runnable_guard = metrics.runnable_started();
-    let blocking_guard = metrics.blocking_started();
+    let (guards_live_tx, guards_live_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let guard_metrics = Arc::clone(&metrics);
+    let guard_thread = std::thread::spawn(move || {
+      let runnable_guard = guard_metrics.runnable_started();
+      let blocking_guard = guard_metrics.blocking_started();
+      guards_live_tx.send(()).unwrap();
+      release_rx.recv().unwrap();
+      drop(runnable_guard);
+      drop(blocking_guard);
+    });
+    guards_live_rx.recv().unwrap();
     let fingerprint_before_reset = metrics.progress_fingerprint();
 
     metrics.reset();
@@ -6020,8 +6875,8 @@ mod tests {
     assert_eq!(metrics.active_blocking_tasks.load(Ordering::Relaxed), 1);
     assert_eq!(metrics.max_active_blocking_tasks.load(Ordering::Relaxed), 1);
 
-    drop(runnable_guard);
-    drop(blocking_guard);
+    release_tx.send(()).unwrap();
+    guard_thread.join().unwrap();
     assert_eq!(metrics.active_runnables.load(Ordering::Relaxed), 0);
     assert_eq!(
       metrics.active_blocking_tasks.load(Ordering::Relaxed),
@@ -6713,7 +7568,7 @@ mod tests {
   fn heap_sleep(executor: &Arc<MultiThreadExecutor>, deadline: Instant) -> Sleep {
     // The MultiThread arm never touches the driver registry; empty is fine.
     make_sleep(
-      &RuntimeBackend::MultiThread(Arc::clone(executor)),
+      &RuntimeBackend::from_executor(RuntimeExecutor::MultiThread(Arc::clone(executor))),
       &Arc::new(TimerDriverRegistry::default()),
       deadline,
     )
@@ -6799,11 +7654,9 @@ mod tests {
         executor.schedule(runnable);
         tasks.push(task);
       }
-      let blocking = executor.schedule_blocking(|| 27usize);
       for task in tasks {
         futures::executor::block_on(task);
       }
-      assert_eq!(futures::executor::block_on(blocking).unwrap(), 27);
       assert_eq!(counter.load(Ordering::SeqCst), 32);
       assert!(
         !sleep_done.load(Ordering::SeqCst),
@@ -6952,37 +7805,45 @@ mod tests {
 
     let (done_tx, done_rx) = mpsc::channel();
     let runner = std::thread::spawn(move || {
-      let controller = RuntimeController::new();
+      let controller = Arc::new(RuntimeController::new());
       // Default options: MultiThread on native.
       let backend = controller.backend();
-      let RuntimeBackend::MultiThread(executor) = &backend else {
+      let RuntimeExecutor::MultiThread(executor) = &backend.executor else {
         panic!("default native backend must be MultiThread");
       };
+      let executor = Arc::downgrade(executor);
+      let mut late = heap_sleep(
+        &executor.upgrade().expect("the initial executor must be live"),
+        Instant::now() + Duration::from_mins(2),
+      );
+      drop(backend);
 
       let (parked_tx, parked_rx) = mpsc::channel();
-      let block_exec = Arc::clone(executor);
+      let block_controller = Arc::clone(&controller);
+      let block_exec = Weak::clone(&executor);
       let blocker = std::thread::spawn(move || {
         let mut future = std::pin::pin!(async {
-          let sleep = heap_sleep(&block_exec, Instant::now() + Duration::from_mins(2));
+          let executor = block_exec.upgrade().expect("the runtime must remain live while blocking");
+          let sleep = heap_sleep(&executor, Instant::now() + Duration::from_mins(2));
+          drop(executor);
           parked_tx.send(()).unwrap();
           sleep.await;
         });
-        block_exec.block_on(future.as_mut());
+        block_controller.block_on(future.as_mut());
       });
       parked_rx.recv().unwrap();
       wait_until("the 120s sleep registered in the heap", || {
-        executor.next_timer_deadline().is_some()
+        executor.upgrade().is_some_and(|executor| executor.next_timer_deadline().is_some())
       });
 
       // The acceptance surface: controller shutdown while a sleep is armed.
-      controller.shutdown();
+      controller.shutdown().expect("runtime shutdown must succeed");
       blocker.join().expect("the blocked sleep must be drain-fired by shutdown, not hang");
 
       // A Sleep polled AFTER shutdown resolves immediately instead of
       // registering with a dead heap.
       let waker = Waker::from(Arc::new(CountingWake(AtomicUsize::new(0))));
       let mut cx = Context::from_waker(&waker);
-      let mut late = heap_sleep(executor, Instant::now() + Duration::from_mins(2));
       assert!(
         Pin::new(&mut late).poll(&mut cx).is_ready(),
         "a Sleep polled after shutdown must fire early, never park a closing runtime"
@@ -7133,7 +7994,7 @@ mod tests {
     // debounce, never a misleading certain-deadlock panic later.
     let metrics = Arc::new(RuntimeMetrics::default());
     let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
-    let backend = RuntimeBackend::CurrentThread(executor);
+    let backend = RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(executor));
 
     let payload = catch_unwind(AssertUnwindSafe(|| {
       let _sleep = make_sleep(
@@ -7193,7 +8054,8 @@ mod tests {
     // armed on when dropped.
     let metrics = Arc::new(RuntimeMetrics::default());
     let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
-    let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+    let backend =
+      RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
 
     let a = ManualStubDriver::new();
     let b = ManualStubDriver::new();
@@ -7248,7 +8110,8 @@ mod tests {
     // round-3 constraints), never park a wake-less sleep silently.
     let metrics = Arc::new(RuntimeMetrics::default());
     let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
-    let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+    let backend =
+      RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
 
     let a = ManualStubDriver::new();
     let registry = registry_with(Arc::clone(&a) as Arc<dyn TimerDriver>);
@@ -7284,7 +8147,8 @@ mod tests {
     // driver wakes its pending sleeps into re-selection.
     let metrics = Arc::new(RuntimeMetrics::default());
     let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
-    let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+    let backend =
+      RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
 
     let a = ManualStubDriver::new();
     let b = ManualStubDriver::new();
@@ -7326,7 +8190,8 @@ mod tests {
     let runner = std::thread::spawn(move || {
       let metrics = Arc::new(RuntimeMetrics::default());
       let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
-      let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+      let backend =
+        RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
       let driver: Arc<dyn TimerDriver> = Arc::new(StubHostTimerDriver::new());
 
       let started = Instant::now();
@@ -7370,7 +8235,8 @@ mod tests {
       // play the host loop from a helper thread, but the panic must land at
       // the first park decision, long before its 60ms fire.
       let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, true, None));
-      let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+      let backend =
+        RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
       let driver: Arc<dyn TimerDriver> = Arc::new(StubHostTimerDriver::new());
 
       let payload = catch_unwind(AssertUnwindSafe(|| {
@@ -7418,7 +8284,8 @@ mod tests {
     let runner = std::thread::spawn(move || {
       let metrics = Arc::new(RuntimeMetrics::default());
       let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, true, None));
-      let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+      let backend =
+        RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
       let driver: Arc<dyn TimerDriver> = Arc::new(StubHostTimerDriver::new());
 
       // Created and held across the park decision, but NEVER polled: no host
@@ -7463,7 +8330,8 @@ mod tests {
         false,
         Some(Duration::from_millis(30)),
       ));
-      let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+      let backend =
+        RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
       let driver: Arc<dyn TimerDriver> = Arc::new(StubHostTimerDriver::new());
 
       let started = Instant::now();

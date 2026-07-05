@@ -13,6 +13,8 @@ use std::{future::Future, pin::Pin};
 #[cfg(feature = "async-runtime")]
 use napi::bindgen_prelude::{AsyncRuntime, AsyncRuntimeTask, create_custom_async_runtime};
 use napi::bindgen_prelude::{FnArgs, Promise};
+#[cfg(feature = "async-runtime")]
+use napi::threadsafe_function::ThreadsafeFunctionCallMode;
 use napi_derive::napi;
 #[cfg(feature = "async-runtime")]
 use rolldown_utils::async_runtime::{
@@ -52,8 +54,7 @@ impl AsyncRuntime for RolldownAsyncRuntime {
   }
 
   fn shutdown(&self) -> napi::Result<()> {
-    shutdown();
-    Ok(())
+    shutdown().map_err(|error| napi::Error::from_reason(error.to_string()))
   }
 }
 
@@ -220,12 +221,12 @@ pub fn get_async_runtime_config() -> BindingRuntimeConfig {
 // The per-backend DEFAULTS are preserved exactly as measured:
 // - tokio-native keeps `physical * 3 / 2` workers and the dedicated
 //   4-thread blocking pool (the PR #6270 world);
-// - the shared runtime keeps `physical` workers and reserves one execution
-//   lane from blocking admission;
+// - the shared runtime keeps `max(physical, 2)` workers and reserves one
+//   execution lane from blocking admission;
 // - the threaded-WASI tokio artifact keeps mirroring the napi-rs loader's
 //   async work pool size;
-// - the shared wasm artifact keeps `RuntimeOptions::default()`'s
-//   `available_parallelism` workers (no env worker override, as before).
+// - the shared wasm artifact reports the CurrentThread executor's one physical
+//   execution lane (no env worker override, as before).
 
 /// Which scheduler this binding was compiled with.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -308,10 +309,10 @@ impl RuntimeEnv {
   }
 }
 
-/// The typed result of config resolution: what the runtime is built from
-/// (shared backend: PRE-validation values handed to `configure`, which still
-/// clamps CurrentThread to one worker) and what the tokio-backend reporter
-/// serves.
+/// The typed result of config resolution: the effective values the runtime is
+/// built from and the tokio-backend reporter serves. Shared CurrentThread is
+/// normalized to one worker; shared MultiThread is normalized to a truthful
+/// minimum of two workers before it reaches the controller.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ResolvedRuntimeConfig {
   pub backend: ResolvedRuntimeBackend,
@@ -465,8 +466,14 @@ fn resolve_runtime_config_for(
       } else {
         ResolvedRuntimeFlavor::CurrentThread
       };
-      let flavor = resolve_runtime_flavor(env.runtime.as_deref(), default_flavor);
-      let worker_threads = if native {
+      let requested_flavor = resolve_runtime_flavor(env.runtime.as_deref(), default_flavor);
+      // The shared scheduler has no MultiThread executor on WebAssembly:
+      // `rolldown_utils` does not compile Rayon there. Normalize an unsupported
+      // environment override before the module-init hook calls `configure`, so
+      // loading a threadless WASI artifact can never panic because
+      // `ROLLDOWN_RUNTIME=multi` leaked in from a native process environment.
+      let flavor = if native { requested_flavor } else { ResolvedRuntimeFlavor::CurrentThread };
+      let requested_worker_threads = if native {
         resolve_thread_count(env.worker_threads.clone(), num_cpus::get_physical())
       } else {
         // `RuntimeOptions::default()` parity: the env worker override has
@@ -474,6 +481,10 @@ fn resolve_runtime_config_for(
         // was `not(target_family = "wasm")`), so the default stays
         // `available_parallelism` and `ROLLDOWN_WORKER_THREADS` is ignored.
         std::thread::available_parallelism().map_or(1, usize::from)
+      };
+      let worker_threads = match flavor {
+        ResolvedRuntimeFlavor::CurrentThread => 1,
+        ResolvedRuntimeFlavor::MultiThread => requested_worker_threads.max(2),
       };
       let requested_blocking_tasks =
         resolve_thread_count(env.max_blocking_threads.clone(), worker_threads);
@@ -589,14 +600,15 @@ pub fn reset_async_runtime_metrics() {}
 /// intel §4(b)): `sleep_until` on the single-thread executor cannot park a
 /// helper thread (none exists on threadless wasm), so it delegates each timer
 /// to the host event loop through the JS callback registered at import --
-/// `(ms) => new Promise((resolve) => setTimeout(resolve, ms))`.
+/// `(id, ms) => new Promise((resolve) => setTimeout(resolve, ms))`, paired
+/// with a cancellation callback that clears the timeout and resolves the
+/// relay promise.
 ///
 /// Per timer id: the FIRST `register` arms one host timeout via a detached
 /// relay task; re-registers (`Sleep` re-polls) only refresh the stored waker.
-/// The resolve-time map removal doubles as the cancellation check -- a
-/// `cancel`led (dropped) sleep's entry is gone, so the stale JS timeout fires
-/// into nothing (bounded leak: the timeout itself runs out on the JS side,
-/// which is at most the debounce delay for the watch coordinator's use).
+/// `cancel` removes the pending waker and invokes the host cancellation
+/// callback. The JS side clears the timeout and resolves its promise, so a
+/// dropped sleep leaves neither a live timeout nor a detached relay task.
 ///
 /// LIFETIME (Codex task-7 round 3): each importing napi env registers its own
 /// host, and a host dies WITH its env -- the weak threadsafe function does
@@ -659,8 +671,10 @@ fn should_evict_for_relay_error(status: napi::Status, host_is_live: bool) -> boo
 
 #[cfg(feature = "async-runtime")]
 struct JsTimerHostInner {
-  callback: JsCallback<FnArgs<(f64,)>, Promise<()>>,
-  pending: std::sync::Mutex<rustc_hash::FxHashMap<TimerId, std::task::Waker>>,
+  callback: JsCallback<FnArgs<(u32, f64)>, Promise<()>>,
+  cancel_callback: JsCallback<FnArgs<(u32,)>, ()>,
+  pending: std::sync::Mutex<rustc_hash::FxHashMap<TimerId, PendingHostTimer>>,
+  next_relay_id: std::sync::atomic::AtomicU32,
   /// Latched by [`JsTimerHostInner::evict`]: this host's env is gone (or its
   /// callback failed) and it must never serve another timer.
   dead: std::sync::atomic::AtomicBool,
@@ -673,10 +687,17 @@ struct JsTimerHostInner {
 }
 
 #[cfg(feature = "async-runtime")]
+struct PendingHostTimer {
+  relay_id: u32,
+  waker: std::task::Waker,
+  relay_armed: bool,
+}
+
+#[cfg(feature = "async-runtime")]
 impl JsTimerHostInner {
   fn lock_pending(
     &self,
-  ) -> std::sync::MutexGuard<'_, rustc_hash::FxHashMap<TimerId, std::task::Waker>> {
+  ) -> std::sync::MutexGuard<'_, rustc_hash::FxHashMap<TimerId, PendingHostTimer>> {
     self.pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
   }
 
@@ -684,7 +705,38 @@ impl JsTimerHostInner {
   /// threadsafe function's own closing flag, so a dying env is detected even
   /// before any eviction path ran.
   fn is_live(&self) -> bool {
-    !self.dead.load(std::sync::atomic::Ordering::SeqCst) && !self.callback.aborted()
+    !self.dead.load(std::sync::atomic::Ordering::SeqCst)
+      && !self.callback.aborted()
+      && !self.cancel_callback.aborted()
+  }
+
+  fn cancel_relay(&self, relay_id: u32) {
+    let _ = self
+      .cancel_callback
+      .call(FnArgs { data: (relay_id,) }, ThreadsafeFunctionCallMode::NonBlocking);
+  }
+
+  /// Mark the JS timeout as armed. Returns `true` when Rust cancellation
+  /// already removed this relay, in which case the caller must cancel the JS
+  /// timeout now that the schedule callback has definitely run.
+  fn mark_relay_armed(&self, id: TimerId, relay_id: u32) -> bool {
+    let mut pending = self.lock_pending();
+    match pending.get_mut(&id) {
+      Some(slot) if slot.relay_id == relay_id => {
+        slot.relay_armed = true;
+        false
+      }
+      _ => true,
+    }
+  }
+
+  fn take_pending_relay(&self, id: TimerId, relay_id: u32) -> Option<PendingHostTimer> {
+    let mut pending = self.lock_pending();
+    if pending.get(&id).is_some_and(|slot| slot.relay_id == relay_id) {
+      pending.remove(&id)
+    } else {
+      None
+    }
   }
 
   /// Remove this host from timer duty: latch `dead`, drop the registry
@@ -700,10 +752,13 @@ impl JsTimerHostInner {
     if let Some(id) = registration {
       unregister_timer_driver(id);
     }
-    let wakers: Vec<std::task::Waker> =
-      self.lock_pending().drain().map(|(_, waker)| waker).collect();
-    for waker in wakers {
-      waker.wake();
+    let pending: Vec<PendingHostTimer> =
+      self.lock_pending().drain().map(|(_, pending)| pending).collect();
+    for pending in pending {
+      if pending.relay_armed {
+        self.cancel_relay(pending.relay_id);
+      }
+      pending.waker.wake();
     }
   }
 }
@@ -719,25 +774,38 @@ impl TimerDriver for JsTimerHost {
       waker.wake();
       return;
     }
-    {
+    let relay_id = {
       let mut pending = self.inner.lock_pending();
       if let Some(slot) = pending.get_mut(&id) {
         // Re-poll of a still-armed sleep: refresh the waker only.
-        *slot = waker;
+        slot.waker = waker;
         return;
       }
-      pending.insert(id, waker);
-    }
+      let relay_id = self.inner.next_relay_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+      pending.insert(id, PendingHostTimer { relay_id, waker, relay_armed: false });
+      relay_id
+    };
     let ms = deadline.saturating_duration_since(std::time::Instant::now()).as_secs_f64() * 1000.0;
     let inner = std::sync::Arc::clone(&self.inner);
     spawn_detached(async move {
-      let result = async { inner.callback.invoke_async(FnArgs { data: (ms,) }).await?.await }.await;
+      let result = match inner.callback.invoke_async(FnArgs { data: (relay_id, ms) }).await {
+        Ok(promise) => {
+          // `invoke_async` returns only after the JS schedule callback has
+          // executed and returned its Promise. Its Promise constructor arms
+          // the timeout synchronously, so a cancellation sent from here can
+          // no longer overtake timeout creation.
+          if inner.mark_relay_armed(id, relay_id) {
+            inner.cancel_relay(relay_id);
+          }
+          promise.await
+        }
+        Err(error) => Err(error),
+      };
       match result {
         Ok(()) => {
           inner.transient_failures.store(0, std::sync::atomic::Ordering::SeqCst);
-          let woken = inner.lock_pending().remove(&id);
-          if let Some(waker) = woken {
-            waker.wake();
+          if let Some(pending) = inner.take_pending_relay(id, relay_id) {
+            pending.waker.wake();
           }
         }
         // A dead env surfaces here as an error, never a silent hang. The
@@ -774,9 +842,8 @@ impl TimerDriver for JsTimerHost {
               "rolldown: host timer callback failed \
                ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction): {error}"
             );
-            let woken = inner.lock_pending().remove(&id);
-            if let Some(waker) = woken {
-              waker.wake();
+            if let Some(pending) = inner.take_pending_relay(id, relay_id) {
+              pending.waker.wake();
             }
           }
         }
@@ -785,7 +852,12 @@ impl TimerDriver for JsTimerHost {
   }
 
   fn cancel(&self, id: TimerId) {
-    let _ = self.inner.lock_pending().remove(&id);
+    let pending = self.inner.lock_pending().remove(&id);
+    if let Some(pending) = pending {
+      if pending.relay_armed {
+        self.inner.cancel_relay(pending.relay_id);
+      }
+    }
   }
 
   fn is_live(&self) -> bool {
@@ -803,21 +875,25 @@ impl TimerDriver for JsTimerHost {
 }
 
 #[cfg(feature = "async-runtime")]
-#[napi(ts_args_type = "callback: (ms: number) => Promise<void>")]
+#[napi(
+  ts_args_type = "schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void"
+)]
 /// Install the host timer callback backing the shared async runtime's
 /// CurrentThread timers (watch-mode debounce). Called at import by every
-/// binding-loading JS entry with
-/// `(ms) => new Promise((resolve) => setTimeout(resolve, ms))`; each
+/// binding-loading JS entry with paired setTimeout/clearTimeout callbacks; each
 /// importing env (main thread and workers alike) registers its own host, and
 /// the newest live one serves. A no-op on the default `tokio-runtime` build
 /// (tokio owns its timer wheel).
 pub fn register_timer_host(
   env: &napi::Env,
-  callback: JsCallback<FnArgs<(f64,)>, Promise<()>>,
+  schedule: JsCallback<FnArgs<(u32, f64)>, Promise<()>>,
+  cancel: JsCallback<FnArgs<(u32,)>, ()>,
 ) -> napi::Result<()> {
   let inner = std::sync::Arc::new(JsTimerHostInner {
-    callback,
+    callback: schedule,
+    cancel_callback: cancel,
     pending: std::sync::Mutex::default(),
+    next_relay_id: std::sync::atomic::AtomicU32::new(0),
     dead: std::sync::atomic::AtomicBool::new(false),
     registration: std::sync::Mutex::default(),
     transient_failures: std::sync::atomic::AtomicU32::new(0),
@@ -842,25 +918,29 @@ pub fn register_timer_host(
 }
 
 #[cfg(not(feature = "async-runtime"))]
-#[napi(ts_args_type = "callback: (ms: number) => Promise<void>")]
+#[napi(
+  ts_args_type = "schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void"
+)]
 /// Install the host timer callback backing the shared async runtime's
 /// CurrentThread timers (watch-mode debounce). Called at import by every
-/// binding-loading JS entry with
-/// `(ms) => new Promise((resolve) => setTimeout(resolve, ms))`; each
+/// binding-loading JS entry with paired setTimeout/clearTimeout callbacks; each
 /// importing env (main thread and workers alike) registers its own host, and
 /// the newest live one serves. A no-op on the default `tokio-runtime` build
 /// (tokio owns its timer wheel).
-pub fn register_timer_host(callback: JsCallback<FnArgs<(f64,)>, Promise<()>>) {
-  let _ = callback;
+pub fn register_timer_host(
+  schedule: JsCallback<FnArgs<(u32, f64)>, Promise<()>>,
+  cancel: JsCallback<FnArgs<(u32,)>, ()>,
+) {
+  let _ = (schedule, cancel);
 }
 
 #[cfg(feature = "async-runtime")]
 #[napi_derive::module_init]
 fn register_async_runtime() {
   // Consume the SAME resolved snapshot the reporter and the capability export
-  // read (the single config-resolution pipeline); `configure` still validates
-  // and clamps (CurrentThread => one worker), and the runtime controller's
-  // validated options remain the reporting authority on this build.
+  // read (the single config-resolution pipeline). `configure` validates the
+  // already-normalized values, and the runtime controller's options remain
+  // the reporting authority on this build.
   let resolved = resolved_runtime_config();
   let options = RuntimeOptions {
     flavor: resolved.flavor.into(),
@@ -1009,24 +1089,62 @@ mod tests {
 
   #[cfg(feature = "async-runtime")]
   #[test]
-  fn rolldown_runtime_accepts_napi_blocking_work() {
-    use std::{sync::mpsc, time::Duration};
+  fn rolldown_runtime_rejects_after_shutdown_and_accepts_after_restart() {
+    use std::{
+      sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+        mpsc,
+      },
+      time::Duration,
+    };
 
+    napi::bindgen_prelude::AsyncRuntime::start(&RolldownAsyncRuntime)
+      .expect("the adapter runtime must start");
     rolldown_utils::async_runtime::reset_metrics();
-    let (done_tx, done_rx) = mpsc::channel();
+    let (first_tx, first_rx) = mpsc::channel();
     napi::bindgen_prelude::AsyncRuntime::spawn_blocking(
       &RolldownAsyncRuntime,
       Box::new(move || {
-        done_tx.send(()).expect("test receiver must still be listening");
+        first_tx.send(()).expect("test receiver must still be listening");
       }),
     )
     .unwrap_or_else(|_| panic!("the shared blocking lane must accept napi work"));
-    done_rx
+    first_rx
       .recv_timeout(Duration::from_secs(5))
       .expect("the shared blocking lane must execute accepted napi work");
+
+    napi::bindgen_prelude::AsyncRuntime::shutdown(&RolldownAsyncRuntime)
+      .expect("the adapter runtime must shut down");
+    let rejected_ran = Arc::new(AtomicBool::new(false));
+    let rejected_ran_work = Arc::clone(&rejected_ran);
+    let rejected = napi::bindgen_prelude::AsyncRuntime::spawn_blocking(
+      &RolldownAsyncRuntime,
+      Box::new(move || {
+        rejected_ran_work.store(true, Ordering::SeqCst);
+      }),
+    )
+    .expect_err("the adapter must reject work while stopped");
+    assert!(!rejected_ran.load(Ordering::SeqCst));
+    rejected();
+    assert!(rejected_ran.load(Ordering::SeqCst), "rejected work must be returned intact");
+
+    napi::bindgen_prelude::AsyncRuntime::start(&RolldownAsyncRuntime)
+      .expect("the adapter runtime must restart");
+    let (second_tx, second_rx) = mpsc::channel();
+    napi::bindgen_prelude::AsyncRuntime::spawn_blocking(
+      &RolldownAsyncRuntime,
+      Box::new(move || {
+        second_tx.send(()).expect("test receiver must still be listening");
+      }),
+    )
+    .unwrap_or_else(|_| panic!("the restarted runtime must accept napi work"));
+    second_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("the restarted runtime must execute accepted napi work");
     assert!(
-      rolldown_utils::async_runtime::metrics().blocking_tasks_started >= 1,
-      "napi work should be recorded by the shared blocking scheduler"
+      rolldown_utils::async_runtime::metrics().blocking_tasks_started >= 2,
+      "both accepted adapter submissions should reach the shared blocking scheduler"
     );
   }
 
@@ -1186,6 +1304,25 @@ mod tests {
   }
 
   #[test]
+  fn shared_multi_thread_one_worker_override_reports_effective_two_worker_minimum() {
+    let resolved = resolve(
+      ResolvedRuntimeBackend::Shared,
+      ResolvedRuntimeTarget::Native,
+      &RuntimeEnv {
+        worker_threads: Some("1".to_string()),
+        max_blocking_threads: Some("8".to_string()),
+        ..RuntimeEnv::default()
+      },
+    );
+    assert_eq!(resolved.flavor, ResolvedRuntimeFlavor::MultiThread);
+    assert_eq!(
+      (resolved.worker_threads, resolved.max_blocking_tasks),
+      (2, 1),
+      "the resolved snapshot must match the physical pool the controller will create"
+    );
+  }
+
+  #[test]
   fn shared_park_deadline_parsing_treats_unset_zero_and_garbage_as_disabled() {
     // Ports the parse test from rolldown_utils (the read AND the parse moved
     // here): never panic module init over a typo, just disable detection.
@@ -1207,7 +1344,6 @@ mod tests {
 
   #[test]
   fn shared_wasi_defaults_keep_runtime_options_parity() {
-    let host_parallelism = std::thread::available_parallelism().map_or(1, usize::from);
     for target in [ResolvedRuntimeTarget::Wasi, ResolvedRuntimeTarget::WasiThreads] {
       let resolved = resolve(ResolvedRuntimeBackend::Shared, target, &env());
       assert_eq!(
@@ -1215,13 +1351,17 @@ mod tests {
         ResolvedRuntimeFlavor::CurrentThread,
         "the shared wasm default flavor is CurrentThread"
       );
-      assert_eq!(resolved.worker_threads, host_parallelism);
+      assert_eq!(
+        resolved.worker_threads, 1,
+        "CurrentThread reporting must match its single physical execution lane"
+      );
       assert_eq!(resolved.max_blocking_tasks, 1);
 
-      // ROLLDOWN_WORKER_THREADS has never applied on wasm; the blocking
-      // override and the flavor selection do. (Selecting `multi` here is
-      // still resolved raw -- `configure`'s validation is what rejects it on
-      // a threadless build, exactly as before.)
+      // ROLLDOWN_WORKER_THREADS has never applied on wasm. An inherited
+      // `ROLLDOWN_RUNTIME=multi` must be normalized before module init:
+      // `configure` rejects MultiThread on every shared WebAssembly build,
+      // and an expect panic while loading the addon is not an acceptable
+      // configuration error.
       let overridden = resolve(
         ResolvedRuntimeBackend::Shared,
         target,
@@ -1232,12 +1372,9 @@ mod tests {
           ..RuntimeEnv::default()
         },
       );
-      assert_eq!(
-        overridden.worker_threads, host_parallelism,
-        "the env worker override must stay ignored on wasm"
-      );
-      assert_eq!(overridden.max_blocking_tasks, 3.min(host_parallelism.saturating_sub(1).max(1)));
-      assert_eq!(overridden.flavor, ResolvedRuntimeFlavor::MultiThread);
+      assert_eq!(overridden.flavor, ResolvedRuntimeFlavor::CurrentThread);
+      assert_eq!(overridden.worker_threads, 1);
+      assert_eq!(overridden.max_blocking_tasks, 1);
     }
   }
 

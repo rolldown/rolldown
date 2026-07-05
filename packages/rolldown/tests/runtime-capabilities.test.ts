@@ -283,8 +283,9 @@ describe('getRuntimeCapabilities', () => {
       // exactly the form the timer-host import takes on the wasi dist) must
       // contain the registration call. Top-level chunk code executes on
       // import, so presence in the graph IS registration in the worker's
-      // env. The `(ms) => new Promise(... setTimeout(resolve, ms))` lambda
-      // body only exists in that statement.
+      // env. The paired host bridge must include both timeout creation and
+      // cancellation; resolving the relay after clearTimeout lets Rust retire
+      // the detached schedule task immediately.
       const entryText = readFileSync(parallelWorkerEntry, 'utf8');
       let graphText = entryText;
       for (const match of entryText.matchAll(/(?:from\s+|import\s+)["'](\.\/[^"']+)["']/g)) {
@@ -293,7 +294,9 @@ describe('getRuntimeCapabilities', () => {
           graphText += readFileSync(chunkPath, 'utf8');
         }
       }
-      expect(graphText).toContain('setTimeout(resolve, ms)');
+      expect(graphText).toContain('globalThis.setTimeout');
+      expect(graphText).toContain('globalThis.clearTimeout');
+      expect(graphText).toContain('timer.resolve()');
 
       // BEHAVIORAL: the real entry must actually run as a worker under this
       // lane's flavor (empty plugin set: registerPlugins(id, []) no-ops on an
@@ -384,11 +387,27 @@ describe('getRuntimeCapabilities', () => {
       // A LIVE host: rejects its FIRST call with the colliding message, then
       // behaves normally. Newest registrant => it serves the debounce.
       let calls = 0;
-      binding.registerTimerHost((ms) => {
-        calls += 1;
-        if (calls === 1) return Promise.reject(new Error('oneshot canceled'));
-        return new Promise((resolve) => setTimeout(resolve, ms));
-      });
+      const active = new Map();
+      binding.registerTimerHost(
+        (id, ms) => {
+          calls += 1;
+          if (calls === 1) return Promise.reject(new Error('oneshot canceled'));
+          return new Promise((resolve) => {
+            const handle = setTimeout(() => {
+              active.delete(id);
+              resolve();
+            }, ms);
+            active.set(id, { handle, resolve });
+          });
+        },
+        (id) => {
+          const timer = active.get(id);
+          if (!timer) return;
+          active.delete(id);
+          clearTimeout(timer.handle);
+          timer.resolve();
+        },
+      );
 
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rd-collision-'));
       const input = path.join(dir, 'main.js');

@@ -8638,6 +8638,11 @@ mod tests {
       });
       assert_eq!(block_on(outer).unwrap(), 42);
 
+      // Result delivery wakes the joiner from inside the blocking closure,
+      // immediately before the scheduler-owned metrics guard retires. Use
+      // shutdown quiescence before sampling completed/live counters so this
+      // test does not race that final bookkeeping.
+      shutdown().unwrap();
       let snapshot = metrics();
       assert_eq!(snapshot.blocking_tasks_started, 2);
       assert_eq!(snapshot.blocking_tasks_completed, 2);
@@ -8646,7 +8651,6 @@ mod tests {
         snapshot.max_active_blocking_tasks, snapshot.max_blocking_tasks as u64,
         "dependency lending reuses the owner's admitted lane instead of increasing the active gauge"
       );
-      shutdown().unwrap();
       return;
     }
 

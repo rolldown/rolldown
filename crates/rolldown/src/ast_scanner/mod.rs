@@ -5,7 +5,7 @@ mod hmr;
 pub mod impl_visit;
 mod import_analyzer;
 mod new_url;
-pub mod side_effect_detector;
+pub mod stmt_eval_analyzer;
 
 use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, try_extract_const_literal};
@@ -33,7 +33,7 @@ use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
   ExportsKind, FlatOptions, HmrInfo, ImportAttribute, ImportKind, ImportRecordIdx,
   ImportRecordMeta, LocalExport, MemberExprProp, MemberExprRef, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, RawImportRecord, SideEffectDetail, Specifier, StmtInfo, StmtInfoIdx,
+  ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtEvalFlags, StmtInfo, StmtInfoIdx,
   StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef,
   ThisExprReplaceKind, generate_replace_this_expr_map,
 };
@@ -285,11 +285,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// }
   /// ```
   pub fn is_valid_tla_scope(&self) -> bool {
-    self
-      .scope_stack
-      .iter()
-      .rev()
-      .all(|flag| flag.intersects(ScopeFlags::Top | ScopeFlags::StrictMode) || flag.is_block())
+    self.scope_stack.iter().rev().all(|flag| flag.is_top() || flag.is_block())
   }
 
   pub fn is_root_scope(&self) -> bool {
@@ -384,7 +380,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             let stmt_info_idx_list =
               self.result.stmt_infos.declared_stmts_by_symbol(&resolved.referenced).to_vec();
             for idx in stmt_info_idx_list {
-              self.result.stmt_infos[idx].side_effect |= SideEffectDetail::Unknown;
+              self.result.stmt_infos[idx].eval_flags |= StmtEvalFlags::UnknownSideEffect;
             }
           }
           if !usage.can_be_inlined() {
@@ -465,14 +461,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self
       .current_stmt_info
       .declared_symbols
-      .push(TaggedSymbolRef::Normal((self.immutable_ctx.idx, id).into()));
+      .push(TaggedSymbolRef::normal((self.immutable_ctx.idx, id).into()));
   }
 
   fn declare_link_only_symbol_ref(&mut self, id: SymbolId) {
     self
       .current_stmt_info
       .declared_symbols
-      .push(TaggedSymbolRef::LinkOnly((self.immutable_ctx.idx, id).into()));
+      .push(TaggedSymbolRef::link_only((self.immutable_ctx.idx, id).into()));
   }
 
   fn get_root_binding(&self, name: &str) -> Option<SymbolId> {
@@ -633,7 +629,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self
       .current_stmt_info
       .declared_symbols
-      .push(rolldown_common::TaggedSymbolRef::Normal(generated_imported_as_ref));
+      .push(rolldown_common::TaggedSymbolRef::normal(generated_imported_as_ref));
     let name_import = NamedImport {
       imported: imported.into(),
       imported_as: generated_imported_as_ref,
@@ -664,7 +660,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self
       .current_stmt_info
       .declared_symbols
-      .push(rolldown_common::TaggedSymbolRef::Normal(generated_imported_as_ref));
+      .push(rolldown_common::TaggedSymbolRef::normal(generated_imported_as_ref));
     let name_import = NamedImport {
       imported: Specifier::Star,
       span_imported: span_for_export_name,

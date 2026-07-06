@@ -12,7 +12,6 @@ use crate::types::{
 pub struct BindingViteManifestPluginConfig {
   pub root: String,
   pub out_path: String,
-  pub is_enable_v2: Option<bool>,
   #[napi(ts_type = "(args: BindingNormalizedOptions) => boolean")]
   pub is_legacy: Option<JsCallback<BindingNormalizedOptions, bool>>,
   #[napi(ts_type = "() => Record<string, string>")]
@@ -24,7 +23,6 @@ impl From<BindingViteManifestPluginConfig> for ViteManifestPlugin {
     Self {
       root: value.root,
       out_path: value.out_path,
-      is_enable_v2: value.is_enable_v2.unwrap_or_default(),
       is_legacy: value.is_legacy.map(|cb| -> Arc<IsLegacyFn> {
         Arc::new(move |opts| {
           let opts = Arc::clone(opts);

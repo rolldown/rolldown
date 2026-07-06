@@ -217,6 +217,7 @@ impl Plugin for ViteReporterPlugin {
       let out_dir =
         args.options.cwd.join(&args.options.out_dir).normalize().relative(&args.options.cwd);
       let out_dir = out_dir.to_slash_lossy();
+      let out_dir_prefix = format!("{out_dir}/");
 
       let mut info = String::new();
       for group in utils::GROUPS {
@@ -226,8 +227,7 @@ impl Plugin for ViteReporterPlugin {
         }
         filtered.sort_by_key(|a| a.size);
         for log_entry in filtered {
-          let _ =
-            write!(&mut info, "{}", utils::paint(format!("{out_dir}/"), Style::new().dimmed()));
+          let _ = write!(&mut info, "{}", utils::paint(&out_dir_prefix, Style::new().dimmed()));
 
           let is_asset = !self.is_lib && Path::new(log_entry.name).starts_with(&self.assets_dir);
           if is_asset {

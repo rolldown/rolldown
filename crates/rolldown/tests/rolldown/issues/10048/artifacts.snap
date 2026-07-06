@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region data.js
+var themes;
+var init_data = __esmMin((() => {
+	themes = {
+		light: {
+			base: "light",
+			appBg: "#ffffff"
+		},
+		dark: {
+			base: "dark",
+			appBg: "#000000"
+		}
+	};
+}));
+//#endregion
+//#region theming.js
+var init_theming = __esmMin((() => {
+	init_data();
+}));
+//#endregion
+//#region entry.js
+function getProjectAnnotations() {
+	return [globalThis.__themes];
+}
+//#endregion
+__esmMin((() => {
+	init_theming();
+	globalThis.__themes = themes;
+}))();
+export { getProjectAnnotations };
+
+```

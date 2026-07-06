@@ -7,7 +7,7 @@ use rolldown_common::{
   Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType,
   FacadeChunkEliminationReason, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTable,
   NormalModule, PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, StmtInfos,
-  WrapKind,
+  UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_utils::{BitSet, IndexBitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -15,7 +15,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   chunk_graph::ChunkGraph,
   stages::link_stage::{
-    IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
+    IncludeContext, SymbolIncludeReason, compute_body_demand_keys, include_runtime_symbol,
+    include_symbol,
   },
   types::linking_metadata::{
     LinkingMetadata, LinkingMetadataVec, included_info_to_linking_metadata_vec,
@@ -813,12 +814,33 @@ impl GenerateStage<'_> {
 
       if meta.intersects(ChunkMeta::UserDefinedEntry) {
         if matches!(target_chunk.kind, ChunkKind::Common) {
-          let can_merge = match chunk.preserve_entry_signature {
-            Some(PreserveEntrySignatures::Strict) => {
-              self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
-            }
-            _ => true,
-          };
+          // Execution-isolation guard (issue #9463).
+          //
+          // Folding the common chunk *into* this user-defined entry chunk makes the
+          // entry chunk eagerly run this entry's top-level (its `init_*` call)
+          // whenever the chunk is loaded. If the common chunk also holds *another*
+          // user-defined entry's module, that other entry would be forced to import
+          // this entry chunk just to reach its own module — and would then run this
+          // entry's side effects. e.g. loading entry `b` would trigger entry `a`'s
+          // side effects. This happens when manual code splitting (a `codeSplitting`
+          // group, possibly via `entriesAware` subgroup merging) lumps several
+          // entries' modules into one shared chunk.
+          //
+          // Keep the thin facade in that case, so each entry imports the (wrapped)
+          // shared chunk and runs only its own `init_*`. A shared chunk that holds
+          // just this entry's module (plus non-entry deps a sibling genuinely
+          // depends on) is still folded in, preserving the #5726 facade-elimination.
+          let holds_other_user_entry = target_chunk.modules.iter().any(|&module_idx| {
+            module_idx != module
+              && self.link_output.user_defined_entry_modules.contains(&module_idx)
+          });
+          let can_merge = !holds_other_user_entry
+            && match chunk.preserve_entry_signature {
+              Some(PreserveEntrySignatures::Strict) => {
+                self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
+              }
+              _ => true,
+            };
           if can_merge {
             // merge all common chunk modules into entry chunk
             // swap original from_chunk_idx and target_chunk_idx
@@ -952,6 +974,7 @@ impl GenerateStage<'_> {
     input_base: &ArcStr,
     module_is_assigned: &mut IndexBitSet<ModuleIdx>,
     temp_chunk_opt_graph: &ChunkOptimizationGraph,
+    used_symbol_refs: &mut UsedSymbolRefsBuilder,
   ) {
     // Find empty dynamic entry chunks that should be merged with their target common chunks
     let (mut facade_eliminations, common_chunk_merges, emitted_chunk_groups) =
@@ -990,8 +1013,7 @@ impl GenerateStage<'_> {
           .retain(|item| match item {
             rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
               // module namespace symbol requires `__exportAll` runtime helper
-              self.link_output.used_symbol_refs.contains(symbol_ref)
-                || symbol_ref.owner == runtime_module_idx
+              used_symbol_refs.contains(symbol_ref) || symbol_ref.owner == runtime_module_idx
             }
             rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
           });
@@ -1000,6 +1022,17 @@ impl GenerateStage<'_> {
 
     let (mut stmt_info_included_vec, mut module_included_vec, mut module_namespace_reason_vec) =
       linking_metadata_vec_to_included_info(&mut self.link_output.metas);
+
+    // Replay the link-stage inclusion semantics: side-effectful statements of
+    // user-declared side-effect-free modules join only through body demand.
+    // Already-included statements make the replayed edges no-ops.
+    let body_demand_keys = compute_body_demand_keys(
+      &self.link_output.module_table.modules,
+      &self.link_output.stmt_infos,
+      &self.link_output.symbol_db,
+      self.options.treeshake.is_some(),
+      &self.link_output.user_defined_entry_modules,
+    );
 
     let runtime = &self.link_output.runtime;
     let context = &mut IncludeContext {
@@ -1011,7 +1044,8 @@ impl GenerateStage<'_> {
       tree_shaking: self.options.treeshake.is_some(),
       runtime_idx: self.link_output.runtime.id(),
       metas: &self.link_output.metas,
-      used_symbol_refs: &mut self.link_output.used_symbol_refs,
+      used_symbol_refs,
+      used_external_symbols: &mut self.link_output.used_external_symbols,
       constant_symbol_map: &self.link_output.global_constant_symbol_map,
       options: self.options,
       normal_symbol_exports_chain_map: &self.link_output.normal_symbol_exports_chain_map,
@@ -1020,6 +1054,10 @@ impl GenerateStage<'_> {
       module_namespace_included_reason: &mut module_namespace_reason_vec,
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
+      entry_module_idxs: &self.link_output.user_defined_entry_modules,
+      body_demand_keys: &body_demand_keys,
+      body_demand_swept: FxHashSet::default(),
+      pending: Vec::new(),
     };
 
     let mut runtime_dependent_chunks = FxHashSet::default();
@@ -1511,6 +1549,10 @@ impl GenerateStage<'_> {
   ///   post-optimization graph.
   /// - Self-edges (`target_chunk == current`) are skipped — an intra-chunk
   ///   import can't form an inter-chunk cycle.
+  /// - Besides module import records, an entry-point chunk whose entry module
+  ///   was captured into another chunk (e.g. by a `codeSplitting` group) gets a
+  ///   render-time static import of that module's wrapper/namespace from the
+  ///   capturing chunk, so that facade edge is followed too (#9993).
   fn chunk_reaches_via_static_import(
     from: ChunkIdx,
     to: ChunkIdx,
@@ -1525,6 +1567,14 @@ impl GenerateStage<'_> {
       }
       if current == to {
         return true;
+      }
+      if let ChunkKind::EntryPoint { module: entry_module_idx, .. } =
+        chunk_graph.chunk_table[current].kind
+        && let Some(entry_module_chunk) = chunk_graph.module_to_chunk[entry_module_idx]
+        && entry_module_chunk != current
+        && !chunk_graph.post_chunk_optimization_operations.contains_key(&entry_module_chunk)
+      {
+        queue.push_back(entry_module_chunk);
       }
       for &module_idx in &chunk_graph.chunk_table[current].modules {
         let Some(module) = module_table[module_idx].as_normal() else {

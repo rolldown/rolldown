@@ -1,6 +1,4 @@
 use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
-use rolldown_std_utils::PathExt as _;
-use sugar_path::SugarPath as _;
 
 use crate::chunk_graph::ChunkGraph;
 
@@ -28,8 +26,7 @@ impl GenerateStage<'_> {
         }
 
         let has_ineffective = module.ecma_view.dynamic_importers.iter().any(|importer_id| {
-          !importer_id.as_path().is_in_node_modules()
-            && pre_rendered_chunk.module_ids.contains(importer_id)
+          !importer_id.is_in_node_modules() && pre_rendered_chunk.module_ids.contains(importer_id)
         });
 
         if has_ineffective {

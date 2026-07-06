@@ -267,15 +267,6 @@ const config = defineConfig({
     ['meta', { property: 'og:url', content: 'https://rolldown.rs/' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
     ['meta', { name: 'twitter:site', content: '@rolldown_rs' }],
-    [
-      'script',
-      {
-        src: 'https://cdn.usefathom.com/script.js',
-        'data-site': 'RBMPDFTV',
-        'data-spa': 'auto',
-        defer: '',
-      },
-    ],
   ],
 
   themeConfig: {
@@ -289,11 +280,11 @@ const config = defineConfig({
       },
     },
 
-    banner: {
-      id: 'viteplus-alpha',
-      text: 'Announcing Vite+ Alpha: Open source. Unified. Next-gen.',
-      url: 'https://voidzero.dev/posts/announcing-vite-plus-alpha?utm_source=rolldown&utm_content=top_banner',
-    },
+    // banner: {
+    //   id: 'viteplus-alpha',
+    //   text: 'Announcing Vite+ Alpha: Open source. Unified. Next-gen.',
+    //   url: 'https://voidzero.dev/posts/announcing-vite-plus-alpha?utm_source=rolldown&utm_content=top_banner',
+    // },
 
     // https://vitepress.dev/reference/default-theme-config
     nav: [
@@ -406,7 +397,7 @@ const config = defineConfig({
 
   vite: {
     optimizeDeps: {
-      exclude: ['@docsearch/css'],
+      exclude: ['@docsearch/css', 'vitepress-plugin-feedback-tracker'],
     },
     plugins: [
       groupIconVitePlugin({

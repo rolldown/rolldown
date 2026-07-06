@@ -9,7 +9,7 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolRef, UsedSymbolRefs, WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -28,7 +28,11 @@ type IndexImportsFromOtherChunks =
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
+  pub fn compute_cross_chunk_links(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+    used_symbol_refs: &UsedSymbolRefs,
+  ) {
     let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
       index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
@@ -59,8 +63,9 @@ impl GenerateStage<'_> {
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
       &mut index_chunk_indirect_imports_from_external_modules,
+      used_symbol_refs,
     );
-    self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols);
+    self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols, used_symbol_refs);
 
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
       .par_iter_enumerated()
@@ -348,6 +353,7 @@ impl GenerateStage<'_> {
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
     index_chunk_indirect_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
+    used_symbol_refs: &UsedSymbolRefs,
   ) {
     // For each module that has been absorbed as a facade namespace, we need to know
     // which other modules dynamically import it so we can tell whether the absorbed
@@ -403,12 +409,17 @@ impl GenerateStage<'_> {
             self.options,
             module_idx,
           );
+          // Under `preserveModules`, every module is emitted as its own file that must mirror its
+          // full declared export interface, so always emit the entry signature — the
+          // `is_user_defined` / `is_dynamic_imported` / `preserveEntrySignatures` narrowing does not
+          // apply (see the "preserve_entry_signatures has no effect" contract in
+          // `code_splitting.rs`). The synthetic runtime module is the one exception: it is an
+          // internal implementation detail, not a user file imported by path, so its helpers stay
+          // demand-driven (exported only when another chunk imports them), exactly as before.
+          let is_preserved_user_module =
+            self.options.preserve_modules && module_idx != self.link_output.runtime.id();
           let needs_export_entry_signatures = if self.options.preserve_modules {
-            if is_user_defined {
-              !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
-            } else {
-              is_dynamic_imported
-            }
+            is_preserved_user_module || is_dynamic_imported
           } else {
             is_dynamic_imported
               || !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
@@ -416,19 +427,47 @@ impl GenerateStage<'_> {
           if needs_export_entry_signatures {
             // If the entry point is external, we don't need to compute exports.
             let meta = &self.link_output.metas[module_idx];
+            // `preserveModules` emits the complete interface (`UserDefined` kind bypasses the
+            // dynamic-import partial-export trimming); otherwise honor the entry's actual kind.
+            let entry_point_kind = if is_preserved_user_module || is_user_defined {
+              EntryPointKind::UserDefined
+            } else {
+              EntryPointKind::DynamicImport
+            };
             for (name, symbol) in meta
               .referenced_canonical_exports_symbols(
                 module_idx,
-                if is_user_defined {
-                  EntryPointKind::UserDefined
-                } else {
-                  EntryPointKind::DynamicImport
-                },
+                entry_point_kind,
                 &self.link_output.dynamic_import_exports_usage_map,
                 false,
               )
               .map(|(name, export)| (name, export.symbol_ref))
             {
+              // `preserveModules` emits a module's complete declared interface (#9934). A JSON
+              // module synthesizes a named export per top-level key, but the finalizer
+              // (`try_inline_json_module_prop`) may fold a key's `var` binding into the
+              // self-contained default-export object, leaving no standalone declaration. Listing
+              // such a key here produces an `export { key }` with no binding ->
+              // `SyntaxError: Export 'x' is not defined in module` (#10020).
+              //
+              // Drop a key iff the finalizer inlines it away. That decision is gated on
+              // `need_inline_json_prop` (see `finalizer_context.rs`): JSON, ESM exports, and the
+              // module namespace object NOT included; and within that, a key is inlined iff it is
+              // absent from `json_module_none_self_reference_included_symbol` (i.e. not reached by
+              // a named import, entry export, or — keeping every key materialized — a namespace
+              // import). Mirror that full condition so the export interface never lists an
+              // inlined-away key, while a namespace-imported JSON chunk still exports its complete
+              // interface (every key keeps its binding).
+              if let Module::Normal(normal_module) = &self.link_output.module_table[module_idx]
+                && let Some(none_self_referenced) =
+                  normal_module.json_module_none_self_reference_included_symbol.as_deref()
+                && !normal_module.exports_kind.is_commonjs()
+                && !self.link_output.metas[module_idx].namespace_included
+                && !none_self_referenced
+                  .contains(&self.link_output.symbol_db.canonical_ref_for(symbol))
+              {
+                continue;
+              }
               index_chunk_exported_symbols[chunk_id].entry(symbol).or_default().push(name.clone());
             }
           }
@@ -492,7 +531,19 @@ impl GenerateStage<'_> {
 
         let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
         for import_ref in chunk_meta_imports.iter().copied() {
-          if !self.link_output.used_symbol_refs.contains(&import_ref) {
+          // Depended symbols are over-collected; drop refs that are not live. A normal
+          // module's namespace ref answers to the namespace decision; everything else to
+          // the inclusion fixpoint (whose dead refs here are constants that got inlined —
+          // constants kept as bindings, e.g. entry exports, stay live — and over-collected
+          // refs).
+          let is_live = if let Some(m) = self.link_output.module_table[import_ref.owner].as_normal()
+            && m.namespace_object_ref == import_ref
+          {
+            self.link_output.metas[import_ref.owner].namespace_included
+          } else {
+            used_symbol_refs.contains(&import_ref)
+          };
+          if !is_live {
             continue;
           }
           // If the symbol from external module and the format is commonjs, we might need to insert runtime
@@ -640,6 +691,7 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &mut ChunkGraph,
     index_chunk_exported_symbols: &IndexChunkExportedSymbols,
+    used_symbol_refs: &UsedSymbolRefs,
   ) {
     let is_preserve_modules_enabled = self.options.preserve_modules;
     let allow_to_minify_internal_exports =
@@ -663,7 +715,7 @@ impl GenerateStage<'_> {
           entry_module.canonical_exports(false).for_each(|(name, export)| {
             let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
             if !exported_chunk_symbols.contains_key(&export.symbol_ref)
-              || !self.link_output.used_symbol_refs.contains(&export.symbol_ref)
+              || !self.link_output.retained_export_symbols.contains(&export.symbol_ref)
             {
               // Rolldown supports tree-shaking on dynamic entries, so not all exports are used.
               return;
@@ -682,7 +734,7 @@ impl GenerateStage<'_> {
               let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
               // Use canonical ref for lookup since that's the key in exported_chunk_symbols
               if !exported_chunk_symbols.contains_key(&export_ref)
-                || !self.link_output.used_symbol_refs.contains(&export_ref)
+                || !self.link_output.retained_export_symbols.contains(&export_ref)
               {
                 return;
               }
@@ -740,7 +792,16 @@ impl GenerateStage<'_> {
           )
         })
       {
-        if !self.link_output.used_symbol_refs.contains(chunk_export) {
+        // Same liveness rule as the cross-chunk import loop above (dynamic entries
+        // register their namespace refs among the exported-symbol candidates).
+        let is_live = if let Some(m) = self.link_output.module_table[chunk_export.owner].as_normal()
+          && m.namespace_object_ref == *chunk_export
+        {
+          self.link_output.metas[chunk_export.owner].namespace_included
+        } else {
+          used_symbol_refs.contains(chunk_export)
+        };
+        if !is_live {
           continue;
         }
         let original_name: CompactStr = match predefined_names.as_slice() {

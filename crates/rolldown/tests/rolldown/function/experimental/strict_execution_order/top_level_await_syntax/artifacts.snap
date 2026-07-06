@@ -13,3 +13,18 @@ await __esmMin((async () => {
 }))();
 
 ```
+
+# Variant: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+	//#region main.js
+	console.log(123);
+	//#endregion
+}))();
+
+```

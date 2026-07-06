@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
 use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
-use oxc::parser::Parser;
+use oxc::parser::{ParseOptions, Parser};
 use oxc::transformer::Transformer;
 use rolldown_common::{BundlerTransformOptions, ModuleType};
 use rolldown_ecmascript::semantic_builder_for_transform;
@@ -59,7 +59,9 @@ impl Plugin for ViteTransformPlugin {
       self.get_modified_transform_options(&ctx, args.id, &cwd, extension, args.code)?;
 
     let allocator = oxc::allocator::Allocator::default();
-    let ret = Parser::new(&allocator, args.code, source_type).parse();
+    let ret = Parser::new(&allocator, args.code, source_type)
+      .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
+      .parse();
     if ret.panicked || !ret.diagnostics.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         ret.diagnostics,

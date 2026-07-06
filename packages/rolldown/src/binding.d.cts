@@ -1842,11 +1842,6 @@ export declare class ParallelJsPluginRegistry {
   constructor(workerCount: number)
 }
 
-export declare class ScheduledBuild {
-  wait(): Promise<void>
-  alreadyScheduled(): boolean
-}
-
 export declare class TraceSubscriberGuard {
   close(): void
 }
@@ -2011,6 +2006,12 @@ export interface BindingDeferSyncScanData {
 export interface BindingDevOptions {
   onHmrUpdates?: undefined | ((result: BindingResult<[BindingClientHmrUpdate[], string[]]>) => void | Promise<void>)
   onOutput?: undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)
+  /**
+   * Called with assets emitted while generating an HMR patch or compiling a
+   * lazy entry. These never go through `on_output`, so a consumer (e.g. Vite)
+   * must register this to serve them (e.g. write them to its in-memory files).
+   */
+  onAdditionalAssets?: undefined | ((output: BindingOutputs) => void | Promise<void>)
   rebuildStrategy?: BindingRebuildStrategy
   watch?: BindingDevWatchOptions
 }
@@ -2240,10 +2241,6 @@ export interface BindingGeneratedCodeOptions {
   symbols?: boolean
   preset?: string
 }
-
-export type BindingGenerateHmrPatchReturn =
-  | { type: 'Ok', field0: Array<BindingHmrUpdate> }
-  | { type: 'Error', field0: Array<BindingError> }
 
 export interface BindingHmrBoundaryOutput {
   boundary: string
@@ -2825,15 +2822,6 @@ export interface BindingViteBuildImportAnalysisPluginConfig {
   optimizeModulePreloadRelativePaths: boolean
   renderBuiltUrl: boolean
   isRelativeBase: boolean
-  v2?: BindingViteBuildImportAnalysisPluginV2Config
-}
-
-export interface BindingViteBuildImportAnalysisPluginV2Config {
-  isSsr: boolean
-  urlBase: string
-  decodedBase: string
-  modulePreload: false | BindingModulePreloadOptions
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
 }
 
 export interface BindingViteDynamicImportVarsPluginConfig {
@@ -2861,7 +2849,6 @@ export type BindingViteJsonPluginStringify =
 export interface BindingViteManifestPluginConfig {
   root: string
   outPath: string
-  isEnableV2?: boolean
   isLegacy?: (args: BindingNormalizedOptions) => boolean
   cssEntries: () => Record<string, string>
 }

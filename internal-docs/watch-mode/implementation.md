@@ -50,7 +50,10 @@ type RolldownWatcherEvent =
   | { code: 'ERROR'; error: Error; result: RolldownWatchBuild };
 ```
 
-All event listeners are **awaited** before proceeding — blocking semantics matching Rollup.
+Event listeners are normally **awaited** before proceeding — blocking semantics matching Rollup.
+The coordinator may stop waiting for an `event`, `change`, or `restart` listener only when a close
+request wins the close-aware dispatch race described below. The JavaScript callback itself keeps
+running, and `watcher.close()` still waits for the complete close sequence.
 
 ### Rust API
 
@@ -60,7 +63,7 @@ watcher.run();       // spawns the coordinator (non-blocking)
 watcher.close().await?;  // sends Close, awaits completion
 ```
 
-Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` spawns it on the tokio runtime. `close()` sends a fire-and-forget `Close` message and awaits the shared completion future. `wait_for_close()` gives consumers a reliable way to await the watcher's completion without closing it.
+Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` spawns it on the tokio runtime. `close()` sets the shared close signal, sends a fire-and-forget `Close` message, and awaits the shared completion future. `wait_for_close()` gives consumers a reliable way to await the watcher's completion without closing it.
 
 ### Known Divergences from Rollup
 
@@ -77,7 +80,8 @@ Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates
 
 ```
 Watcher (public API)
-  └── tx: mpsc::Sender ──→ WatchCoordinator (actor, owns everything)
+  ├── tx: mpsc::Sender ──→ WatchCoordinator (actor, owns everything)
+  └── close_notify ──────→ wakes the coordinator while it awaits a consumer callback
                                ├── handler: H (WatcherEventHandler impl)
                                ├── state: WatcherState
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
@@ -90,12 +94,15 @@ Watcher (public API)
 
 Data flow:
   DynFsWatcher ──(TaskFsEventHandler: maps notify events → FileChangeEvent)──→ WatcherMsg::FileChanges ──→ WatchCoordinator
-  WatchCoordinator ──(handler.on_event().await)──→ Consumer (NAPI/Rust)
+  WatchCoordinator ──→ dispatch_event / dispatch_change / dispatch_restart
+                         └── await_handler_or_close()
+                               ├── handler.on_*().await ──→ Consumer (NAPI/Rust)
+                               └── close_notify ─────────→ stop the callback wait and run handle_close()
 ```
 
 **Ownership rules:**
 
-- `Watcher` only holds `tx` and `coordinator_state` — lightweight, no bundler access.
+- `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
 - Each `WatchTask` owns its `DynFsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
 - Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
@@ -252,6 +259,7 @@ File change detected by per-task FsWatcher
 
 ```
 watcher.close() sends WatcherMsg::Close (fire-and-forget)
+  → sets the close flag and notifies any in-progress consumer callback wait
   → awaits shared coordinator future (wait_for_close)
   → handle_close():
       1. State → Closing
@@ -261,6 +269,14 @@ watcher.close() sends WatcherMsg::Close (fire-and-forget)
       5. State → Closed
       6. coordinator future completes → all wait_for_close() callers resolve
 ```
+
+Consumer callbacks are normally blocking, but the coordinator waits for them together with the
+dedicated close signal. If an `event`, `change`, or `restart` listener calls and awaits
+`watcher.close()`, the close signal wins the wait and the coordinator drops only its Rust-side wait
+for that callback. The JavaScript callback and its promise continue running. The coordinator then
+runs the normal close hooks, closes every bundler, and emits `close`; only after that does the
+original `watcher.close()` promise resolve. This breaks the self-wait cycle without weakening the
+meaning of a resolved close promise.
 
 ### Error Recovery
 
@@ -348,13 +364,15 @@ pub trait WatcherEventHandler: Send + Sync {
 }
 ```
 
-All methods are awaited — the coordinator blocks on handler calls, ensuring Rollup-compatible sequential semantics.
+All methods are awaited during normal operation, ensuring Rollup-compatible sequential semantics.
+The `on_event`, `on_change`, and `on_restart` waits are close-aware so an awaited listener can close
+its own watcher without deadlocking. `on_close` remains fully awaited as part of the close sequence.
 
 ## NAPI Bridge
 
 ### Event Handler
 
-`NapiWatcherEventHandler` implements `WatcherEventHandler`, bridging all 4 trait methods to a single JS callback via `ThreadsafeFunction`. Each method wraps its data in a `BindingWatcherEvent` variant and calls `listener.await_call()`, which awaits the JS Promise — ensuring the Rust coordinator blocks until JS handlers finish.
+`NapiWatcherEventHandler` implements `WatcherEventHandler`, bridging all 4 trait methods to a single JS callback via `ThreadsafeFunction`. Each method wraps its data in a `BindingWatcherEvent` variant and calls `listener.await_call()`, which awaits the JS Promise. During normal dispatch the coordinator therefore blocks until the JS handlers finish; if the close signal wins, the close-aware dispatch wrapper drops only this Rust-side wait as described above.
 
 ```rust
 struct NapiWatcherEventHandler {
@@ -400,14 +418,19 @@ Lives in `watcher.ts` (`createEventCallback()` — a standalone function), not i
 
 ```
 WatchCoordinator.run_build_sequence()
-  → handler.on_event(WatchEvent::BundleEnd(data)).await
-  → NapiWatcherEventHandler.on_event()
-    → BindingWatcherEvent::from_watch_event(event)
-    → listener.await_call(binding_event).await → ThreadsafeFunction calls JS
-  → JS: createEventCallback() receives BindingWatcherEvent
-    → Maps to RolldownWatcherEvent { code: 'BUNDLE_END', ... }
-    → emitter.emit('event', mapped_event) → sequential for...of await
-  → Rust: await_call resolves → coordinator continues
+  → dispatch_event(WatchEvent::BundleEnd(data))
+    → await_handler_or_close(handler.on_event(...))
+      ├── callback branch:
+      │     → NapiWatcherEventHandler.on_event()
+      │       → BindingWatcherEvent::from_watch_event(event)
+      │       → listener.await_call(binding_event).await → ThreadsafeFunction calls JS
+      │     → JS: createEventCallback() receives BindingWatcherEvent
+      │       → Maps to RolldownWatcherEvent { code: 'BUNDLE_END', ... }
+      │       → emitter.emit('event', mapped_event) → sequential for...of await
+      │     → await_call resolves → coordinator continues
+      └── close branch:
+            → close_notify resolves → dispatch returns close requested
+            → coordinator runs handle_close() and completes the close sequence
 ```
 
 ## Configuration

@@ -149,6 +149,21 @@ describe('cli options for bundling', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  it('camelCases kebab-case keys in nested dot options', async () => {
+    // cac only camelCases top-level option names; nested dot-notation keys
+    // (e.g. `--generated-code.profiler-names`) must be camelCased too (#9932).
+    // Every option below is a real rolldown option spanning several families
+    // (output: generated-code / advanced-chunks; input: transform / optimization
+    // / checks). The config function asserts the camelCased shape it receives,
+    // so an unconverted (or non-existent) key throws and fails the run.
+    const cwd = cliFixturesDir('cli-option-nested-kebab');
+    const status = await $({
+      cwd,
+    })`rolldown -c rolldown.config.js --generated-code.symbols --generated-code.profiler-names --advanced-chunks.min-share-count 2 --transform.assumptions.object-rest-no-symbols --transform.typescript.only-remove-type-imports --optimization.inline-const --checks.circular-dependency`;
+
+    expect(status.exitCode).toBe(0);
+  });
+
   it('should handle comma-separated object options mixed with single object', async () => {
     const cwd = cliFixturesDir('cli-option-object');
     const status = await $({
@@ -462,6 +477,27 @@ describe('config', () => {
     expect(content).toContain('exports.foo');
     expect(content).not.toContain('export {');
   });
+
+  it('should load config with --configLoader native (mjs)', async () => {
+    const cwd = cliFixturesDir('ext-mjs');
+    const status = await $({
+      cwd,
+    })`rolldown -c rolldown.config.mjs --configLoader native`;
+    expect(status.exitCode).toBe(0);
+    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+  });
+
+  it.runIf(process.features.typescript)(
+    'should load ts config with --configLoader native',
+    async () => {
+      const cwd = cliFixturesDir('ext-ts');
+      const status = await $({
+        cwd,
+      })`rolldown -c rolldown.config.ts --configLoader native`;
+      expect(status.exitCode).toBe(0);
+      expect(cleanStdout(status.stdout)).toMatchSnapshot();
+    },
+  );
 
   it('should handle `-c -w` without `-w` being consumed as config filename (#3248)', async () => {
     const cwd = cliFixturesDir('cli-config-with-watch');

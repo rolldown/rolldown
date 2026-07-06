@@ -1,0 +1,7 @@
+{
+  "_comment": "`await` inside a function with its own `\"use strict\"` directive is not top-level await, so a non-ESM (cjs) build must not reject it as unsupported TLA.",
+  "config": {
+    "format": "cjs"
+  },
+  "expectExecuted": false
+}

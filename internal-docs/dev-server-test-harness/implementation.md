@@ -3,15 +3,19 @@
 ## Summary
 
 The `@rolldown/test-dev-server` browser suite drives a real Chromium page against
-the rolldown dev engine (HMR, lazy compilation, error overlay). It runs
+the rolldown dev engine (HMR, lazy compilation, error overlay). The server is
+**Vite's full bundle mode** (`experimental.bundledDev`), loaded at runtime from
+the vendored submodule at `packages/test-dev-server/vite` with its `rolldown`
+resolution linked to the workspace's `packages/rolldown` — the harness adds only
+test instrumentation on top (see [The Vite backend](#the-vite-backend)). It runs
 **in-process**: each spec file starts the dev server inside its own vitest worker
 on an OS-assigned port, connects to one shared Chromium, and tears it down via the
 server's own `close()`. Playground discovery is derived from each spec's own path,
 so there is no central registry — **adding a test is a folder plus a spec, with
-zero central edits**. The companion node **fixtures** suite (the dev server
-building to disk, the artifact run as a child process) is separate and out of
-scope here. Current CI posture: `fileParallelism: false` with `retry` on — both
-intentional (see [Open follow-ups](#open-follow-ups)).
+zero central edits**. The companion node **fixtures** suite (a custom dev server
+building to disk, the artifact run as a child process — Vite's bundled dev is
+client-environment-only, so that platform cannot run on it) shares the status
+helpers but is otherwise separate.
 
 ## Principles
 
@@ -26,11 +30,13 @@ spec — zero central edits.**
 
 ### Listen-before-build
 
-The HMR runtime needs the websocket port baked into the bundle at build time, so
-the server binds the socket **first**, reads the bound port, injects it into
-`experimental.devMode.port`, then builds. That is what makes auto-port work
-without touching the shared runtime (a relative-ws client would be the "right"
-fix but is out of scope).
+The HMR runtime needs the websocket port known up front. On the **node**
+platform the server binds the socket **first**, reads the bound port, injects it
+into `experimental.devMode.port`, then builds. On the **browser** platform Vite
+manages the client's websocket address itself; the harness only reserves an
+OS-assigned port before `createServer` because Vite treats `port: 0` as "use
+the default port" rather than "let the OS pick" (see `getFreePort` in
+`src/vite-server.ts`).
 
 ### One playground per server-config
 
@@ -44,9 +50,9 @@ ways to host several scenarios:
   cannot perturb another's assertions. (Vite's `hmr`; rolldown's
   `lazy-compilation`.)
 - **Sub-page** (one page per scenario): a sub-folder with its own `index.html`,
-  reached by URL on the same server. This needs the dev server to serve multiple
-  HTML entries from one root — which test-dev-server does **not** do today (it
-  emits a single `index.html` from the cwd), so rolldown uses co-tenant only.
+  reached by URL on the same server. Vite's html pipeline can serve multiple
+  HTML entries from one root, but every existing playground uses co-tenant, so
+  prefer it for consistency.
 
 **Lazy cold-start is compatible with co-tenancy.** A lazy chunk is compiled only
 when its own dynamic import fires, so bundling several lazy scenarios into one
@@ -81,44 +87,112 @@ everything after it. Safety is by convention, not isolation:
 
 Two mechanisms. (1) `/_dev/status` polling — `waitForBuildStable`, `buildSeq`,
 `moduleRegistrationSeq` — plus `expect.poll` on DOM text. (2) Browser-log gates
-(`untilBrowserLogAfter`) for things with no DOM signal (reconnect, full reload).
-The runtime's markers are emitted via `console.debug`, which Playwright captures:
+(`untilBrowserLogAfter`) for things with no DOM signal (reconnect, full
+reload). Only string-only console arguments are matchable (object args render
+as a preview, not JSON).
 
-| Event          | Marker                                        | Level |
-| -------------- | --------------------------------------------- | ----- |
-| Runtime loaded | `HMR runtime loaded <addr>`                   | debug |
-| WS connected   | `[hmr]: Connection established with server`   | debug |
-| Patch received | `[hmr]: Loading HMR patch: <path>`            | debug |
-| Full reload    | `[hmr]: Full reload required, reloading page` | log   |
+Browser specs assert on **Vite's own signals**:
 
-Only string-only markers are matchable (object args render as a preview, not
-JSON). test-dev-server adds its own `[test-dev-server] hot updated: …`,
-`error overlay shown: …`, and `build ok` markers from the injected overlay
-client for post-apply / overlay assertions.
+| Signal        | Where                        | Marker                                              |
+| ------------- | ---------------------------- | --------------------------------------------------- |
+| WS connected  | browser log                  | `[vite] connected.`                                 |
+| Patch applied | browser log                  | `[vite] hot updated: …`                             |
+| Build error   | server log                   | `✘ Build error: …`                                  |
+| HMR / reload  | server log                   | `hmr update …`, `hmr invalidate …`, `page reload`   |
+| Error overlay | DOM (`<vite-error-overlay>`) | `errorOverlay()` / `errorOverlayText()` in `~utils` |
+
+The overlay renders in a **shadow root**, so `locator(...).textContent()` on
+the host element returns nothing — always go through the `~utils` helpers. The
+node fixtures assert on the rolldown runtime's `[hmr]: …` markers instead.
 
 ## Implementation (as built)
+
+### The Vite backend
+
+The browser platform is Vite's full bundle mode; the harness owns none of the
+serving. What the harness does own lives in `src/vite-server.ts`:
+
+- **Config translation.** `dev.config.mjs` → Vite inline config:
+  `experimental.bundledDev: true`, the playground copy as `root` (its
+  `index.html` module script is the entry), fixture plugins passed through
+  (Vite 8 runs rolldown natively), `assetsInlineLimit: 0` for asset-request
+  assertions, `treeshake` forwarded. Full bundle mode forces
+  `devMode.lazy: true`, so lazy compilation is always on in browser runs.
+- **`vite` is not a package dependency.** It is dynamic-imported by file URL
+  from the submodule's built dist (`loadVite()`), with local structural types
+  for the API slice the harness touches. Node-platform fixtures and CI jobs
+  that never run browser tests work without the submodule; a missing dist
+  fails with a "run `just setup-test-dev-server-vite`" hint.
+- **Test instrumentation** (`createHarnessPlugin`): the `/_dev/status`
+  middleware; `buildSeq` counts `buildStart` plus broadcast
+  `update`/`full-reload` payloads and deliberately **not** `error` payloads
+  (the server replays the cached error to every fresh client, and the
+  conservative-rebuild specs assert a refresh on a broken build does not move
+  `buildSeq`); `moduleRegistrationSeq` counts `vite:module-loaded` events;
+  bundle state is read live from `bundledDev.devEngine.getBundleState()`.
+- **Workarounds for upstream gaps**, each commented `WORKAROUND` in the code
+  and deletable once fixed in Vite:
+  - _Recovery reload_: upstream only full-reloads after a successful build
+    when a reload was already pending from HMR, so clients on the error
+    overlay or the fallback page never learn an errored → ok build succeeded.
+    The plugin observes broadcast `error` payloads and, on the next successful
+    `generateBundle`, clears the cached error and reloads after
+    `ensureLatestBuildOutput()`.
+  - _Stale-error replay guard_: upstream clears `lastBuildError` only in
+    `onOutput`, and the client hard-reloads when its first update meets an
+    existing overlay — the reconnect would get a stale error replayed. A
+    `vite:client:connect` listener (registered before Vite's own replay
+    listener) drops the stale error when the tracked build state is healthy.
+
+**The submodule stays byte-pristine.** No tracked-file edits, no patches —
+bumping it is a plain pointer update. Everything environment-specific happens
+in untracked files, via `scripts/setup-vite.mjs`
+(`just setup-test-dev-server-vite`, idempotent, `vp`-only):
+
+1. init the submodule, or re-sync a checkout that is not on the pinned commit — so re-running after a submodule bump picks up the new commit (shallow fetch, repo-root cwd),
+2. `vp install --frozen-lockfile` (vp delegates to the submodule's pinned
+   pnpm; this also resets a previous step-4 swap, so the build always uses
+   Vite's own pinned rolldown),
+3. build `packages/vite` by invoking its pinned rolldown CLI directly (vp's
+   workspace scan trips over Vite's intentionally-broken BOM fixture;
+   `build-types` is skipped — the harness has its own types),
+4. swap `vite/packages/vite/node_modules/rolldown` to a symlink at the
+   workspace's `packages/rolldown`, so Vite's dist resolves the local binding
+   at runtime. Any install inside the submodule resets this — re-run the
+   script.
+
+Repo-wide tools ignore `packages/test-dev-server/vite/**` (a `.gitignore`
+entry covers gitignore-respecting walkers like oxfmt, plus `.typos.toml` and
+`.ls-lint.json` entries) — a repo-wide `vp fmt --write` must never touch
+submodule files. On CI, only the dev-server workflow runs the setup step;
+every other job needs no submodule.
 
 ### Server entry point (`src/`)
 
 - `createDevServer(config, opts?) → { url, port, close }` (`src/dev-server.ts`,
   exported from `src/index.ts` alongside `loadDevConfig(dir)` and a `Logger`
-  type). Binds `opts.port ?? 0`, runs the initial build, and resolves once output
-  is being served.
-- **`close()`** composes: stop the ws server, terminate clients,
-  `closeAllConnections()`, `httpServer.close()`, `env.close()`. `DevServer` is a
-  config-taking class; `serve()` (the CLI/fixtures path) loads the cwd config and
-  delegates to it, and is the only path that wires the stdin `'r'` rebuild
-  trigger. `close()` releases the watcher/tokio threads so a vitest fork exits,
-  and a second engine can start in the same process after the first closes —
-  covered by `dev-engine-close.test.ts` + `dev-engine-close-child.mjs`.
-- **`waitForFirstOutput`.** `env.run()` resolves when the engine settles, but the
-  JS `onOutput` callback that fills `memoryFiles` can lag a tick; `createDevServer`
-  awaits a first-output latch so a resolved start means the first bundle (or its
-  error) is actually being served — a navigation never lands on the spinner.
-- **Injectable `Logger`.** `DevServer` / `FullBundleDevEnvironment` / the
-  dev-server plugin / the lazy middleware / `Clients` log through a `Logger`
-  (default `console`); the harness passes an in-memory logger so server-side
-  output lands in `serverLogs`.
+  type) dispatches on `build.platform`: `browser` → the Vite backend above,
+  anything else → the node transport (`DevServer` +
+  `FullBundleDevEnvironment`). On both paths a resolved promise means the
+  initial build (or its error) has settled: Vite's `listen()` fires the build
+  without awaiting it, so the browser path polls the `initialBuildCompleted`
+  flag `BundledDev` sets once its own `waitForInitialBuildFinish()` (which
+  polls `memoryFiles`) settles and the one-shot ready reload has been
+  broadcast — `ensureCurrentBuildFinish()` alone can resolve before the build
+  starts or before `onOutput` has stored the files; the node path awaits a
+  first-output latch (`waitForFirstOutput`) for the same lag.
+- **`close()`.** Browser: Vite's `server.close()` cascades into
+  `bundledDev.close()` → `devEngine.close()`. Node: stop the ws server,
+  terminate clients, `closeAllConnections()`, `httpServer.close()`,
+  `env.close()`. Both release the watcher/tokio threads so a vitest fork
+  exits, and a second engine can start in the same process after the first
+  closes — covered by `dev-engine-close.test.ts` + `dev-engine-close-child.mjs`.
+- `serve()` (the CLI/fixtures path) loads the cwd config and dispatches the
+  same way; the stdin `'r'` rebuild trigger is wired on the node path only.
+- **Injectable `Logger`.** The node transport logs through it directly; the
+  browser path adapts it to Vite's `customLogger` (`toViteLogger`). The
+  harness passes an in-memory logger so server-side output lands in
+  `serverLogs`.
 - `DEV_SERVER_PORT` is **not** consulted by `createDevServer` (it binds
   `opts.port ?? 0`); it stays the fixtures/CLI channel consumed by `serve()`.
 
@@ -193,10 +267,9 @@ each scenario sub-folder (`basic/`, `aliased-import/`, `shared-module/`,
 (`#<scenario>-btn` / `-status` / `-log`), and there is one spec file per scenario
 in `__tests__/`. This works because compilation is lazy (see the co-tenancy
 principle above): each spec boots its own per-file server and clicks only its
-button, getting a virgin first-fetch for that scenario — exactly what four
-separate servers used to give. The single config is the union of each scenario's
-needs: `viteAliasPlugin` (aliased-import; inert elsewhere), `strictExecutionOrder`,
-and `incrementalBuild` (shared-module, nested).
+button, getting a virgin first-fetch for that scenario — as cold as a dedicated
+server would give. The single config is the union of each scenario's needs:
+currently just `viteAliasPlugin` (aliased-import; inert elsewhere).
 
 ### Knip / workspace
 
@@ -210,17 +283,14 @@ in the `tests` workspace.
 
 ## Open follow-ups
 
-- **Lift the single-spec-file / `fileParallelism: false` constraint.** In-process
-  removed the orphaned child servers that caused Windows `forks` flakiness, so
-  multiple spec files should be safe — but running many `FullBundleDevEnvironment`
-  builds concurrently across workers is untested at scale. Trial parallelism on a
-  Windows CI branch; keep only if green.
-- **Retire the retry crutch.** Once parallelism is proven, drop `retry` and any
-  retry-reset `beforeEach`; remaining flakes are then real bugs or missing waits.
+- **Upstream the two Vite bundled-dev fixes.** The recovery reload and the
+  stale-error replay (see [The Vite backend](#the-vite-backend)) are genuine
+  upstream gaps; once fixed in vitejs/vite and the submodule is bumped, delete
+  the `WORKAROUND` blocks in `src/vite-server.ts`.
 - **Client-reconnect gate after reloads.** Add
-  `untilBrowserLogAfter(() => page.reload(), [/Connection established/])` so an
-  edit fired after a reload can't be lost to a not-yet-reattached websocket — the
-  marker already exists, no runtime change needed.
+  `untilBrowserLogAfter(() => page.reload(), [/\[vite\] connected\./])` so an
+  edit fired after a reload can't be lost to a not-yet-reattached websocket —
+  the marker already exists, no runtime change needed.
 
 ## Related
 

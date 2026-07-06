@@ -803,7 +803,8 @@ fn derive_entries_aware_chunk_name(
           let module = &link_output.module_table[entry_point.idx];
           Path::new(module.stable_id().as_str())
             .file_stem()
-            .map(|s| s.to_string_lossy().to_string())
+            .and_then(|s| s.to_str())
+            .map(ToString::to_string)
             .unwrap_or_else(|| module.stable_id().to_string())
         }))
       } else {
@@ -857,8 +858,6 @@ fn add_module_and_dependencies_to_group_recursively(
   if !module_metas[module_idx].is_included {
     return;
   }
-
-  visited.insert(module_idx);
 
   module_group.add_module(module_idx, module_table);
   if recursively {

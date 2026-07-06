@@ -10,6 +10,7 @@ use tokio::sync::Mutex;
 use rolldown::Bundler;
 
 use crate::{
+  BundleOutput,
   dev_context::SharedDevContext,
   types::{coordinator_msg::CoordinatorMsg, error_stage::ErrorStage, task_input::TaskInput},
 };
@@ -190,6 +191,20 @@ impl BundlingTask {
     if let Err(err) = &hmr_result {
       tracing::error!("[BundlingTask] failed to generate HMR updates: {:?}", err);
       self.hmr_errored = true;
+    }
+
+    // Deliver any assets emitted while generating this HMR patch (e.g. an image
+    // newly imported by the changed module) BEFORE sending the patch, so the
+    // consumer can register/serve them before the client requests them. A pure
+    // HMR patch never triggers `on_output`, so this is their only delivery path.
+    if succeeded {
+      if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
+        let mut output = BundleOutput::default();
+        bundler.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
+        if !output.assets.is_empty() {
+          on_additional_assets(output);
+        }
+      }
     }
 
     // Call on_hmr_updates callback if provided

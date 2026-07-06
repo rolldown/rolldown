@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc::span::Span;
-use sugar_path::SugarPath as _;
 
 use rolldown_common::{
   ExportsKind, FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
@@ -13,7 +12,6 @@ use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher, UnloadableDependencyContext,
   downcast_napi_error_diagnostics,
 };
-use rolldown_std_utils::PathExt as _;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
 use rolldown_fs::FileSystem;
@@ -153,7 +151,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       &raw_import_records,
       ecma_view.source.clone(),
       &mut warnings,
-      &module_type,
     )
     .await?;
 
@@ -173,7 +170,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       }
     }
 
-    let repr_name = self.resolved_id.id.as_path().representative_file_name();
+    let repr_name = self.resolved_id.id.representative_name();
     let repr_name = legitimize_identifier_name(&repr_name).into_owned();
 
     // Build lazy barrel info if the experimental flag is enabled

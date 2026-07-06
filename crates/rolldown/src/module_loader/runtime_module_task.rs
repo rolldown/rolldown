@@ -6,7 +6,7 @@ use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaView, ExportsKind, FlatOptions, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
-  SideEffectDetail, StableModuleId, side_effects::DeterminedSideEffects,
+  StableModuleId, StmtEvalFlags, side_effects::DeterminedSideEffects,
   side_effects::HookSideEffects,
 };
 use rolldown_common::{
@@ -130,7 +130,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       Some(HookSideEffects::True) | None => {
         let has_side_effects = stmt_infos
           .iter()
-          .any(|stmt_info| stmt_info.side_effect.contains(SideEffectDetail::Unknown));
+          .any(|stmt_info| stmt_info.eval_flags.contains(StmtEvalFlags::UnknownSideEffect));
         DeterminedSideEffects::Analyzed(has_side_effects)
       }
     };
@@ -147,7 +147,6 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       &raw_import_records,
       source.clone(),
       &mut vec![],
-      &module_type,
     )
     .await?;
 

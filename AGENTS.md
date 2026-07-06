@@ -6,6 +6,7 @@ Rolldown is a JavaScript/TypeScript bundler written in Rust and TypeScript, desi
 
 - You are an expert Rust, JavaScript and TypeScript developer.
 - Rolldown's performance is critical for developers and tools built on top of it. As such, it is critical to aim for best possible performance when optimizing Rolldown.
+- The `rolldown_*` Rust crates do not follow semver (see `docs/apis/rust-crates.md`). Breaking API changes are expected and acceptable in any version — do not raise them as code-review findings as long as in-repo callers are updated.
 
 </tips>
 
@@ -78,6 +79,10 @@ IMPORTANT: The project uses `just` as a task runner. Always prefer `just` comman
 - `just fix-rust` - Auto-fixes Rust issues
 - `just fix-node` - Auto-fixes Node.js issues
 - `just fix-repo` - Auto-fixes repository issues
+
+# Pull Requests
+
+- **Open PRs as drafts and keep them that way until the user says otherwise.** When you create a pull request, always create it as a **draft** (`gh pr create --draft`). Do NOT convert a draft to "ready for review", mark a PR ready, or request/assign reviewers unless the user has explicitly told you they are ready for team review. Publishing a PR for review pings reviewers and code owners and clutters their inboxes — never trigger that on the user's behalf prematurely. If you are unsure whether the user is ready, leave the PR as a draft and ask first.
 
 # Common Pitfalls & Best Practices
 

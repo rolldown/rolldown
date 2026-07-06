@@ -20,10 +20,6 @@ pub fn semantic_builder_for_transform<'a>() -> SemanticBuilder<'a> {
 }
 
 impl EcmaAst {
-  pub fn is_body_empty(&self) -> bool {
-    self.program().is_empty()
-  }
-
   pub fn make_semantic<'ast>(program: &'ast Program<'ast>) -> Semantic<'ast> {
     SemanticBuilder::new().build(program).semantic
   }

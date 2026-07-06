@@ -22,6 +22,9 @@ impl Plugin for TestPlugin {
     _ctx: SharedTransformPluginContext,
     args: &HookTransformArgs<'_>,
   ) -> HookTransformReturn {
+    if !args.id.ends_with("input.ts") {
+      return Ok(None);
+    }
     let mut code = self.0.lock().unwrap();
     *code = Some(args.code.to_string());
     Ok(None)

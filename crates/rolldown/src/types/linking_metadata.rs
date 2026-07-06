@@ -49,7 +49,6 @@ pub struct LinkingMetadata {
   wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<CompactStr, ResolvedExport>,
-  // pub re_export_all_names: FxHashSet<CompactStr>,
   /// Store the names of exclude ambiguous resolved exports.
   /// It will be used to generate chunk exports and module namespace binding.
   /// The second element means if the export is came from commonjs module.
@@ -86,6 +85,11 @@ pub struct LinkingMetadata {
   /// Set when the runtime module has side effects (e.g. dev/HMR mode).
   pub has_side_effectful_runtime_dep: bool,
   pub module_namespace_included_reason: ModuleNamespaceIncludedReason,
+  /// Final decision on whether this module's namespace object is retained in the output.
+  /// Computed by [`crate::stages::generate_stage`]'s `finalized_module_namespace_ref_usage`
+  /// from `module_namespace_included_reason` together with the module's `exports_kind` and
+  /// `has_dynamic_exports`; only meaningful for passes that run after it.
+  pub namespace_included: bool,
   /// Tracks which statements in this module are included after tree-shaking.
   /// Each entry corresponds to a statement in the module's `stmt_infos`.
   pub stmt_info_included: IndexBitSet<StmtInfoIdx>,

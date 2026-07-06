@@ -67,8 +67,8 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       }),
     );
 
-    let need_renormalize_render_path = !matches!(resolved_id.external, ResolvedExternal::Absolute)
-      && Path::new(resolved_id.id.as_str()).is_absolute();
+    let need_renormalize_render_path =
+      !matches!(resolved_id.external, ResolvedExternal::Absolute) && resolved_id.id.is_path();
 
     let file_name: ArcStr = if need_renormalize_render_path {
       let entries_common_dir = commondir::common_dir(

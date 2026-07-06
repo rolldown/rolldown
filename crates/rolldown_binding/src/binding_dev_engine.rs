@@ -1,5 +1,7 @@
 use napi_derive::napi;
-use rolldown_dev::{BundleState, BundlingFuture, OnHmrUpdatesCallback, OnOutputCallback};
+use rolldown_dev::{
+  BundleState, OnAdditionalAssetsCallback, OnHmrUpdatesCallback, OnOutputCallback,
+};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -9,13 +11,16 @@ use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
 use crate::types::binding_error_stage::BindingErrorStage;
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
-use crate::utils::create_bundler_config_from_binding_options::create_bundler_config_from_binding_options;
-use napi::bindgen_prelude::FnArgs;
+use crate::utils::{
+  create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
+  spawn_boxed_future,
+};
+use napi::bindgen_prelude::{FnArgs, PromiseRaw};
 use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
 
 #[napi]
 pub struct BindingDevEngine {
-  inner: rolldown_dev::DevEngine,
+  inner: Arc<rolldown_dev::DevEngine>,
   cwd: Arc<Path>,
   _session_id: Arc<str>,
   _session: rolldown_devtools::Session,
@@ -34,6 +39,8 @@ impl BindingDevEngine {
 
     let on_hmr_updates_callback = dev_options.as_ref().and_then(|opts| opts.on_hmr_updates.clone());
     let on_output_callback = dev_options.as_ref().and_then(|opts| opts.on_output.clone());
+    let on_additional_assets_callback =
+      dev_options.as_ref().and_then(|opts| opts.on_additional_assets.clone());
 
     let cwd: Arc<Path> = Arc::from(PathBuf::from(options.input_options.cwd.clone()));
 
@@ -111,6 +118,15 @@ impl BindingDevEngine {
       }) as OnOutputCallback
     });
 
+    // Assets emitted during an HMR patch / lazy compile (these never go through
+    // `on_output`). Forward the assets; warnings stay Rust-side, as in `on_output`.
+    let on_additional_assets = on_additional_assets_callback.map(|js_callback| {
+      Arc::new(move |output: rolldown::BundleOutput| {
+        let binding_outputs = BindingOutputs::from(output.assets);
+        js_callback.call(FnArgs { data: (binding_outputs,) }, ThreadsafeFunctionCallMode::Blocking);
+      }) as OnAdditionalAssetsCallback
+    });
+
     let dev_watch_options = if skip_write.is_some()
       || use_polling.is_some()
       || poll_interval.is_some()
@@ -140,6 +156,7 @@ impl BindingDevEngine {
     let rolldown_dev_options = rolldown_dev::DevOptions {
       on_hmr_updates,
       on_output,
+      on_additional_assets,
       rebuild_strategy,
       watch: dev_watch_options,
     };
@@ -147,47 +164,67 @@ impl BindingDevEngine {
     let inner = rolldown_dev::DevEngine::new(bundler_config, rolldown_dev_options)
       .map_err(|e| napi::Error::from_reason(format!("Fail to create dev engine: {e:#?}")))?;
 
-    Ok(Self { inner, cwd, _session_id: session_id, _session: session })
+    Ok(Self { inner: Arc::new(inner), cwd, _session_id: session_id, _session: session })
+  }
+
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn run<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      inner.run().await.map_err(|_e| napi::Error::from_reason("Failed to run dev engine"))?;
+      Ok(())
+    })
+  }
+
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn ensure_current_build_finish<'env>(
+    &self,
+    env: &'env Env,
+  ) -> napi::Result<PromiseRaw<'env, ()>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      inner
+        .wait_for_ongoing_bundle()
+        .await
+        .map_err(|_e| napi::Error::from_reason("Failed to ensure current build finish"))?;
+      Ok(())
+    })
   }
 
   #[napi]
-  pub async fn run(&self) -> napi::Result<()> {
-    self.inner.run().await.map_err(|_e| napi::Error::from_reason("Failed to run dev engine"))?;
-    Ok(())
+  pub fn get_bundle_state<'env>(
+    &self,
+    env: &'env Env,
+  ) -> napi::Result<PromiseRaw<'env, BindingBundleState>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      inner
+        .get_bundle_state()
+        .await
+        .map(Into::into)
+        .map_err(|_e| napi::Error::from_reason("Failed to get bundle state"))
+    })
   }
 
   #[napi]
-  pub async fn ensure_current_build_finish(&self) -> napi::Result<()> {
-    self
-      .inner
-      .wait_for_ongoing_bundle()
-      .await
-      .map_err(|_e| napi::Error::from_reason("Failed to ensure current build finish"))?;
-    Ok(())
-  }
-
-  #[napi]
-  pub async fn get_bundle_state(&self) -> napi::Result<BindingBundleState> {
-    self
-      .inner
-      .get_bundle_state()
-      .await
-      .map(Into::into)
-      .map_err(|_e| napi::Error::from_reason("Failed to get bundle state"))
-  }
-
-  #[napi]
-  pub async fn ensure_latest_build_output(&self) -> napi::Result<BindingResult<()>> {
-    match self.inner.ensure_latest_bundle_output().await {
-      Ok(()) => Ok(Either::B(())),
-      Err(errors) => {
-        let binding_errors: Vec<_> = errors
-          .iter()
-          .map(|diagnostic| to_binding_error(diagnostic, self.cwd.to_path_buf()))
-          .collect();
-        Ok(Either::A(BindingErrors::new(binding_errors)))
+  pub fn ensure_latest_build_output<'env>(
+    &self,
+    env: &'env Env,
+  ) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
+    let inner = Arc::clone(&self.inner);
+    let cwd = Arc::clone(&self.cwd);
+    spawn_boxed_future(env, async move {
+      match inner.ensure_latest_bundle_output().await {
+        Ok(()) => Ok(Either::B(())),
+        Err(errors) => {
+          let binding_errors: Vec<_> = errors
+            .iter()
+            .map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf()))
+            .collect();
+          Ok(Either::A(BindingErrors::new(binding_errors)))
+        }
       }
-    }
+    })
   }
 
   #[napi]
@@ -196,45 +233,66 @@ impl BindingDevEngine {
   }
 
   #[napi]
-  pub async fn invalidate(
+  pub fn invalidate<'env>(
     &self,
+    env: &'env Env,
     caller: String,
     first_invalidated_by: Option<String>,
-  ) -> napi::Result<BindingResult<Vec<BindingClientHmrUpdate>>> {
-    match self.inner.invalidate(caller, first_invalidated_by).await {
-      Ok(updates) => {
-        let binding_updates =
-          updates.into_iter().map(BindingClientHmrUpdate::from).collect::<Vec<_>>();
-        Ok(Either::B(binding_updates))
+  ) -> napi::Result<PromiseRaw<'env, BindingResult<Vec<BindingClientHmrUpdate>>>> {
+    let inner = Arc::clone(&self.inner);
+    let cwd = Arc::clone(&self.cwd);
+    spawn_boxed_future(env, async move {
+      match inner.invalidate(caller, first_invalidated_by).await {
+        Ok(updates) => {
+          let binding_updates =
+            updates.into_iter().map(BindingClientHmrUpdate::from).collect::<Vec<_>>();
+          Ok(Either::B(binding_updates))
+        }
+        Err(errors) => {
+          let binding_errors: Vec<_> = errors
+            .iter()
+            .map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf()))
+            .collect();
+          Ok(Either::A(BindingErrors::new(binding_errors)))
+        }
       }
-      Err(errors) => {
-        let binding_errors: Vec<_> = errors
-          .iter()
-          .map(|diagnostic| to_binding_error(diagnostic, self.cwd.to_path_buf()))
-          .collect();
-        Ok(Either::A(BindingErrors::new(binding_errors)))
-      }
-    }
+    })
   }
 
-  #[napi]
-  pub async fn register_modules(&self, client_id: String, modules: Vec<String>) {
-    self.inner.clients.lock().await.entry(client_id).or_default().executed_modules.extend(modules);
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn register_modules<'env>(
+    &self,
+    env: &'env Env,
+    client_id: String,
+    modules: Vec<String>,
+  ) -> napi::Result<PromiseRaw<'env, ()>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      inner.clients.lock().await.entry(client_id).or_default().executed_modules.extend(modules);
+      Ok(())
+    })
   }
 
-  #[napi]
-  pub async fn remove_client(&self, client_id: String) {
-    self.inner.clients.lock().await.remove(&client_id);
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn remove_client<'env>(
+    &self,
+    env: &'env Env,
+    client_id: String,
+  ) -> napi::Result<PromiseRaw<'env, ()>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      inner.clients.lock().await.remove(&client_id);
+      Ok(())
+    })
   }
 
-  #[napi]
-  pub async fn close(&self) -> napi::Result<()> {
-    self
-      .inner
-      .close()
-      .await
-      .map_err(|_e| napi::Error::from_reason("Failed to close dev engine"))?;
-    Ok(())
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      inner.close().await.map_err(|_e| napi::Error::from_reason("Failed to close dev engine"))?;
+      Ok(())
+    })
   }
 
   /// Compile a lazy entry module and return HMR-style patch code.
@@ -243,32 +301,19 @@ impl BindingDevEngine {
   /// The module was previously stubbed with a proxy, and now we need to compile the
   /// actual module and its dependencies.
   #[napi]
-  pub async fn compile_entry(&self, module_id: String, client_id: String) -> napi::Result<String> {
-    self
-      .inner
-      .compile_lazy_entry(module_id, client_id)
-      .await
-      .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")))
-  }
-}
-
-#[napi]
-pub struct ScheduledBuild {
-  future: BundlingFuture,
-  already_scheduled: bool,
-}
-
-#[napi]
-impl ScheduledBuild {
-  #[napi]
-  pub async fn wait(&self) -> napi::Result<()> {
-    self.future.clone().await;
-    Ok(())
-  }
-
-  #[napi]
-  pub fn already_scheduled(&self) -> bool {
-    self.already_scheduled
+  pub fn compile_entry<'env>(
+    &self,
+    env: &'env Env,
+    module_id: String,
+    client_id: String,
+  ) -> napi::Result<PromiseRaw<'env, String>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      inner
+        .compile_lazy_entry(module_id, client_id)
+        .await
+        .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")))
+    })
   }
 }
 

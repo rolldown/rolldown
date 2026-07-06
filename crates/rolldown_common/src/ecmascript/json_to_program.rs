@@ -33,16 +33,17 @@ pub fn json_value_to_ecma_ast(value: &Value) -> EcmaAst {
   EcmaAst::from_allocator_and_source(source, allocator, |allocator| {
     let builder = AstBuilder::new(allocator);
     let expr = json_value_to_expression(value, builder);
-    let stmt = builder.statement_expression(SPAN, expr);
+    let stmt = oxc::ast::ast::Statement::new_expression_statement(SPAN, expr, &builder);
 
-    builder.program(
+    oxc::ast::ast::Program::new(
       SPAN,
       SourceType::default().with_module(true),
       "",
-      builder.vec(),
+      oxc::allocator::Vec::new_in(&builder),
       None,
-      builder.vec(),
-      builder.vec1(stmt),
+      oxc::allocator::Vec::new_in(&builder),
+      oxc::allocator::Vec::from_value_in(stmt, &builder),
+      &builder,
     )
   })
 }
@@ -62,9 +63,9 @@ pub fn json_value_to_expression<'a>(
   builder: AstBuilder<'a>,
 ) -> oxc::ast::ast::Expression<'a> {
   match value {
-    Value::Null => builder.expression_null_literal(SPAN),
+    Value::Null => oxc::ast::ast::Expression::new_null_literal(SPAN, &builder),
 
-    Value::Bool(b) => builder.expression_boolean_literal(SPAN, *b),
+    Value::Bool(b) => oxc::ast::ast::Expression::new_boolean_literal(SPAN, *b, &builder),
 
     Value::Number(n) => {
       // A JSON number string is always a valid f64 literal, so parsing it never fails:
@@ -73,35 +74,58 @@ pub fn json_value_to_expression<'a>(
       // signed `±Infinity`. `as_f64` can't be used here because it filters out those
       // non-finite results and returns `None`, which is what used to panic.
       let f = n.as_str().parse::<f64>().expect("a JSON number is always a valid f64 literal");
-      builder.expression_numeric_literal(SPAN, f, None, oxc::ast::ast::NumberBase::Decimal)
+      oxc::ast::ast::Expression::new_numeric_literal(
+        SPAN,
+        f,
+        None,
+        oxc::ast::ast::NumberBase::Decimal,
+        &builder,
+      )
     }
 
-    Value::String(s) => builder.expression_string_literal(SPAN, builder.str(s), None),
+    Value::String(s) => oxc::ast::ast::Expression::new_string_literal(
+      SPAN,
+      oxc::ast::ast::Str::from_str_in(s, &builder),
+      None,
+      &builder,
+    ),
 
     Value::Array(arr) => {
-      let elements = builder.vec_from_iter(arr.iter().map(|item| {
-        let expr = json_value_to_expression(item, builder);
-        oxc::ast::ast::ArrayExpressionElement::from(expr)
-      }));
-      builder.expression_array(SPAN, elements)
+      let elements = oxc::allocator::Vec::from_iter_in(
+        arr.iter().map(|item| {
+          let expr = json_value_to_expression(item, builder);
+          oxc::ast::ast::ArrayExpressionElement::from(expr)
+        }),
+        &builder,
+      );
+      oxc::ast::ast::Expression::new_array_expression(SPAN, elements, &builder)
     }
 
     Value::Object(obj) => {
-      let properties = builder.vec_from_iter(obj.iter().map(|(key, val)| {
-        let key_expr = builder.expression_string_literal(SPAN, builder.str(key), None);
-        let value_expr = json_value_to_expression(val, builder);
+      let properties = oxc::allocator::Vec::from_iter_in(
+        obj.iter().map(|(key, val)| {
+          let key_expr = oxc::ast::ast::Expression::new_string_literal(
+            SPAN,
+            oxc::ast::ast::Str::from_str_in(key, &builder),
+            None,
+            &builder,
+          );
+          let value_expr = json_value_to_expression(val, builder);
 
-        builder.object_property_kind_object_property(
-          SPAN,
-          oxc::ast::ast::PropertyKind::Init,
-          oxc::ast::ast::PropertyKey::from(key_expr),
-          value_expr,
-          false, // shorthand
-          false, // computed
-          false, // method
-        )
-      }));
-      builder.expression_object(SPAN, properties)
+          oxc::ast::ast::ObjectPropertyKind::new_object_property(
+            SPAN,
+            oxc::ast::ast::PropertyKind::Init,
+            oxc::ast::ast::PropertyKey::from(key_expr),
+            value_expr,
+            false, // shorthand
+            false, // computed
+            false, // method
+            &builder,
+          )
+        }),
+        &builder,
+      );
+      oxc::ast::ast::Expression::new_object_expression(SPAN, properties, &builder)
     }
   }
 }

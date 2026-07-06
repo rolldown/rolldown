@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use rolldown_std_utils::PathExt as _;
 use sugar_path::SugarPath as _;
 
-use crate::ModuleId;
+use crate::{ModuleId, ModuleIdKind};
 
 /// `StableModuleId` is the stabilized version of `ModuleId`.
 /// - It is calculated based on `ModuleId` to be stable across machines and operating systems.
@@ -24,7 +24,17 @@ impl StableModuleId {
   /// - Escapes virtual module prefixes (`\0` → `\\0`)
   /// - Returns non-path specifiers as-is
   pub fn new(id: &ModuleId, cwd: &Path) -> Self {
-    Self::with_arc_str(id.as_arc_str().clone(), cwd)
+    // Classification already happened once when the `ModuleId` was built; branch on it
+    // instead of re-detecting absolute/virtual here.
+    let inner: ArcStr = match id.kind() {
+      // Absolute path → relative to cwd, slashed (stable across machines/OSes).
+      ModuleIdKind::Path => id.as_str().relative(cwd).as_path().expect_to_slash().into(),
+      // Virtual module → escape the `\0` prefix.
+      ModuleIdKind::Virtual => id.as_str().replace('\0', "\\0").into(),
+      // Bare specifier / URL / … → as-is (cheap `Arc` clone).
+      ModuleIdKind::Bare => id.as_arc_str().clone(),
+    };
+    Self { inner }
   }
 
   /// Creates a new `StableModuleId` from an `ArcStr` without stabilization.
@@ -34,18 +44,7 @@ impl StableModuleId {
 
   #[cfg(test)]
   fn with_str(id: &str, cwd: &Path) -> Self {
-    Self::with_arc_str(ArcStr::from(id), cwd)
-  }
-
-  fn with_arc_str(id: ArcStr, cwd: &Path) -> Self {
-    let arc_str: ArcStr = if id.as_path().is_absolute() {
-      id.relative(cwd).as_path().expect_to_slash().into()
-    } else if id.starts_with('\0') {
-      id.replace('\0', "\\0").into()
-    } else {
-      id
-    };
-    Self { inner: arc_str }
+    Self::new(&ModuleId::new(id), cwd)
   }
 
   pub fn as_str(&self) -> &str {

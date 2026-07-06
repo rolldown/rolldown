@@ -222,17 +222,17 @@ mod relocate {
   #[test]
   fn refuses_to_move_a_selection_to_inside_itself() {
     let mut s = MagicString::new("abcdefghijkl");
-    assert!(s.relocate(3, 6, 3).is_err());
+    s.relocate(3, 6, 3).unwrap_err();
   }
   #[test]
   fn refuses_to_move_a_selection_to_inside_itself2() {
     let mut s = MagicString::new("abcdefghijkl");
-    assert!(s.relocate(3, 6, 4).is_err());
+    s.relocate(3, 6, 4).unwrap_err();
   }
   #[test]
   fn refuses_to_move_a_selection_to_inside_itself3() {
     let mut s = MagicString::new("abcdefghijkl");
-    assert!(s.relocate(3, 6, 6).is_err());
+    s.relocate(3, 6, 6).unwrap_err();
   }
 
   #[test]
@@ -320,6 +320,16 @@ mod indent {
     assert_eq!(s.to_string(), "  abc\n  def\nghi\njkl");
     s.indent_with(IndentOptions { indentor: Some(">>"), exclude: &[(7, 15)] });
     assert_eq!(s.to_string(), ">>  abc\n>>  def\nghi\njkl");
+  }
+
+  #[test]
+  fn excludes_edited_chunks_by_their_own_start() {
+    // Two adjacent edited chunks; only the first is excluded.
+    let mut s = MagicString::new("AB");
+    s.overwrite(0, 1, "x\n");
+    s.overwrite(1, 2, "y\n");
+    s.indent_with(IndentOptions { indentor: Some("  "), exclude: &[(0, 1)] });
+    assert_eq!(s.to_string(), "x\n  y\n");
   }
 
   #[test]
@@ -426,5 +436,29 @@ mod misc {
     assert!(s.clone().remove(1, 6).unwrap().has_changed());
     s.indent();
     assert!(s.has_changed());
+  }
+}
+
+mod trim {
+  use super::*;
+
+  #[test]
+  fn trim_start_aborts_at_an_emptied_chunks_outro() {
+    // chunk[0,1] is emptied but its outro "X" follows it; the space after is not leading.
+    let mut s = MagicString::new("A B");
+    s.remove(0, 1).unwrap();
+    s.append_left(1, "X");
+    s.trim_start(None);
+    assert_eq!(s.to_string(), "X B");
+  }
+
+  #[test]
+  fn trim_end_aborts_at_an_emptied_chunks_intro() {
+    // chunk[2,3] is emptied but its intro "X" precedes it; the space before is not trailing.
+    let mut s = MagicString::new("A B");
+    s.remove(2, 3).unwrap();
+    s.prepend_right(2, "X");
+    s.trim_end(None);
+    assert_eq!(s.to_string(), "A X");
   }
 }

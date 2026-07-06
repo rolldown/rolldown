@@ -1,0 +1,14 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/9806 - with experimental.lazyBarrel, a sideEffects:false barrel has an own derived statement `const Bar = Foo.Bar;` reading a property off a default-imported CJS submodule. The entry imports only an unrelated re-export (`Other`), so the barrel-owned `Foo.Bar` statement must not survive without the `Foo` import it reads. Executes to assert the bundle runs and Other === 'other-value'.",
+  "config": {
+    "external": ["node:assert"],
+    "experimental": {
+      "lazyBarrel": true
+    }
+  },
+  "configVariants": [
+    {
+      "strictExecutionOrder": true
+    }
+  ]
+}

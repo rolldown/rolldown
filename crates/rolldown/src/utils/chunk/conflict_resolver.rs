@@ -1,4 +1,5 @@
 use core::cmp::Reverse;
+use std::collections::hash_map::Entry;
 
 use oxc_str::CompactStr;
 use rolldown_common::{ModuleTable, SymbolRef, SymbolRefDb};
@@ -46,23 +47,34 @@ impl ConflictResolver {
   /// bare-`base` fast path. Returns the chosen name and records it as used.
   #[inline]
   pub fn resolve(&mut self, base: CompactStr, accept: impl Fn(&str, bool) -> bool) -> CompactStr {
-    // Fast path: bare name is free and accepted. `base` is moved straight through
-    // to the caller, so the name it already owns is never re-allocated.
-    if !self.used.contains_key(&base) && accept(&base, true) {
-      self.used.insert(base.clone(), 0);
-      return base;
-    }
-
-    // Slow path: find `base$N`. `conflict_index` jumps past occupied candidates
-    // by reading their stored counter (preserves renamer.rs:217-225).
-    let mut conflict_index = self
-      .used
-      .get_mut(&base)
-      .map(|idx| {
-        *idx += 1;
-        *idx
-      })
-      .unwrap_or(1);
+    // Fast path: probe `base`'s slot exactly once via the entry API. The previous
+    // `contains_key(&base)` followed by `insert(base.clone(), 0)` hashed `base` and
+    // walked the table twice on the common no-conflict path; `resolve` runs once per
+    // top-level symbol during deconfliction, so the extra lookup is pure overhead.
+    //
+    // The match resolves the fast path inline and otherwise yields the
+    // `(base, conflict_index)` seed for the suffix search below. `conflict_index`
+    // jumps past occupied candidates by reading their stored counter
+    // (preserves renamer.rs:217-225).
+    let (base, mut conflict_index) = match self.used.entry(base) {
+      Entry::Vacant(slot) => {
+        if accept(slot.key().as_str(), true) {
+          // Bare name is free and accepted. The map must own the key, so one clone
+          // is unavoidable either way; insert writes the slot we already located.
+          let name = slot.key().clone();
+          slot.insert(0);
+          return name;
+        }
+        // Free but vetoed (would capture a nested binding): leave `base` unrecorded
+        // (another owner may legitimately take it) and start suffixing at 1.
+        (slot.into_key(), 1)
+      }
+      Entry::Occupied(mut slot) => {
+        // `base` is taken: jump past it using its stored counter.
+        *slot.get_mut() += 1;
+        (slot.key().clone(), *slot.get())
+      }
+    };
 
     loop {
       let candidate: CompactStr =

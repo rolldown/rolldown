@@ -49,9 +49,8 @@ pub struct IndentOptions<'a, 'b> {
   /// MagicString will guess the `indentor` from lines of the source if passed `None`.
   pub indentor: Option<&'a str>,
 
-  /// The reason I use `[u32; 2]` instead of `(u32, u32)` to represent a range of text is that
-  /// I want to emphasize that the `[u32; 2]` is the closed interval, which means both the start
-  /// and the end are included in the range.
+  /// Half-open `[start, end)` source-offset ranges (as in `magic-string`) whose characters
+  /// are left un-indented.
   pub exclude: &'b [(u32, u32)],
 }
 
@@ -101,20 +100,19 @@ impl MagicString<'_> {
     let exclude_set = ExcludeSet::new(opts.exclude);
 
     let mut next_chunk_id = Some(self.first_chunk_idx);
-    let mut char_index: u32 = 0;
     while let Some(chunk_idx) = next_chunk_id {
       // Make sure the `next_chunk_id` is updated before we split the chunk. Otherwise, we
       // might process the same chunk twice.
       next_chunk_id = self.chunks[chunk_idx].next;
+      let chunk_start = self.chunks[chunk_idx].start();
       if let Some(edited_content) = self.chunks[chunk_idx].edited_content.as_mut() {
-        if !exclude_set.contains(char_index) {
+        if !exclude_set.contains(chunk_start) {
           indent_frag(edited_content, &mut indent_replacer);
         }
       } else {
         let chunk = &self.chunks[chunk_idx];
         let mut line_starts = vec![];
-        char_index = chunk.start();
-        let chunk_end = chunk.end();
+        let mut char_index = chunk_start;
         for char in chunk.span.text(&self.source).chars() {
           debug_assert!(self.source.is_char_boundary(char_index as usize));
           if !exclude_set.contains(char_index) {
@@ -131,7 +129,6 @@ impl MagicString<'_> {
         for line_start in line_starts {
           self.prepend_right(line_start, indent_replacer.indentor.clone());
         }
-        char_index = chunk_end;
       }
     }
 

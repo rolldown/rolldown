@@ -26,12 +26,6 @@ impl From<ArcStr> for DiagnosticFileId {
 #[derive(Debug, Clone)]
 pub struct RolldownLabelSpan(DiagnosticFileId, Range<usize>);
 
-impl From<(DiagnosticFileId, Range<usize>)> for RolldownLabelSpan {
-  fn from((id, range): (DiagnosticFileId, Range<usize>)) -> Self {
-    Self(id, range)
-  }
-}
-
 impl ariadne::Span for RolldownLabelSpan {
   type SourceId = DiagnosticFileId;
 
@@ -128,14 +122,13 @@ impl Diagnostic {
     for label in self.labels.clone() {
       if is_context_too_long(&label, &self.files) {
         let span = label.span();
-        write!(
+        let _ = write!(
           message,
           "\n - {} in {} at {:?}",
           label.display_info().msg().unwrap_or_default(),
           span.source(),
           span.start()..span.end()
-        )
-        .ok();
+        );
       } else {
         builder = builder.with_label(label);
       }
@@ -184,12 +177,6 @@ impl Diagnostic {
 
   pub fn to_color_string(&self) -> String {
     self.convert_to_string(true)
-  }
-
-  #[must_use]
-  pub fn with_kind(mut self, kind: String) -> Self {
-    self.kind = kind;
-    self
   }
 
   /// Get the primary location information from the first label if available

@@ -12,10 +12,6 @@ pub struct DevTestMeta {
   /// This allows capturing all build outputs triggered by each step.
   /// Default is `false` for backwards compatibility and performance.
   pub ensure_latest_build_output_for_each_step: bool,
-  #[serde(default)]
-  /// If `true`, HMR steps run against a client with an empty `executed_modules`
-  /// set instead of the always-executed "rolldown-tests" client.
-  pub unregistered_client: bool,
 }
 
 impl Default for DevTestMeta {

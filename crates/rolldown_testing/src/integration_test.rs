@@ -240,11 +240,7 @@ impl IntegrationTest {
       // Run initial build (step 0)
       build_results_by_steps.lock().unwrap().push(vec![]);
       dev_engine.run().await.unwrap();
-      if self.test_meta.dev.unregistered_client {
-        dev_engine.create_unregistered_client_for_testing().await;
-      } else {
-        dev_engine.create_client_for_testing().await;
-      }
+      dev_engine.create_client_for_testing().await;
 
       // Process HMR steps
       for hmr_edit_files in hmr_steps {

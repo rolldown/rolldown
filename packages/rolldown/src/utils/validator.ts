@@ -1055,7 +1055,9 @@ const OutputCliOverrideSchema = v.strictObject({
         }),
       ]),
     ),
-    v.description('Code splitting options (true, false, or object)'),
+    v.description(
+      'Code splitting options. Enabled by default; use `--no-codeSplitting` to disable, or `--codeSplitting.minSize` / `--codeSplitting.minShareCount` to configure',
+    ),
   ),
   advancedChunks: v.pipe(
     v.optional(

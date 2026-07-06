@@ -2476,11 +2476,6 @@ export interface BindingMatchGroup {
   includeDependenciesRecursively?: boolean
 }
 
-export interface BindingModulePreloadOptions {
-  polyfill: boolean
-  resolveDependencies?: (filename: string, deps: string[], context: { hostId: string, hostType: 'html' | 'js' }) => string[]
-}
-
 export interface BindingModules {
   values: Array<BindingRenderedModule>
   keys: Array<string>
@@ -2668,29 +2663,12 @@ export declare enum BindingRebuildStrategy {
   Never = 2
 }
 
-export interface BindingRenderBuiltUrlConfig {
-  ssr: boolean
-  type: 'asset' | 'public'
-  hostId: string
-  hostType: 'js' | 'css' | 'html'
-}
-
-export interface BindingRenderBuiltUrlRet {
-  relative?: boolean
-  runtime?: string
-}
-
 export interface BindingReplacePluginConfig {
   values: Record<string, string>
   delimiters?: [string, string]
   preventAssignment?: boolean
   objectGuards?: boolean
   sourcemap?: boolean
-}
-
-export interface BindingResolveDependenciesContext {
-  hostId: string
-  hostType: string
 }
 
 export type BindingResolvedExternal =

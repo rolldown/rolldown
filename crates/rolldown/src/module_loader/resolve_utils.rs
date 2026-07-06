@@ -115,9 +115,13 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
                   None,
                 ));
               } else {
-                let help = matches!(options.platform, rolldown_common::Platform::Neutral).then(|| {
-                  r#"The "main" field here was ignored. Main fields must be configured explicitly when using the "neutral" platform."#.to_string()
-                });
+                let help = if specifier.starts_with("virtual:") {
+                  Some(r#"The id starts with "virtual:", which by convention denotes a virtual module that is expected to be resolved by a plugin. Make sure the plugin that should provide it is registered and resolves the id in its `resolveId` hook."#.to_string())
+                } else {
+                  matches!(options.platform, rolldown_common::Platform::Neutral).then(|| {
+                    r#"The "main" field here was ignored. Main fields must be configured explicitly when using the "neutral" platform."#.to_string()
+                  })
+                };
                 warnings.push(
                   BuildDiagnostic::resolve_error(
                     source.clone(),

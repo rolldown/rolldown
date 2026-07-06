@@ -4,9 +4,11 @@ import nodeNet from 'node:net';
 import nodePath from 'node:path';
 import nodeTimers from 'node:timers/promises';
 import nodeUrl from 'node:url';
+import { DevEngine } from 'rolldown/experimental';
 import type { DevServerHandle } from './dev-server.js';
 import type { Logger } from './types/logger.js';
 import type { DevConfig } from './utils/define-dev-config.js';
+import { getDevWatchOptionsForCi } from './utils/get-dev-watch-options-for-ci.js';
 
 /**
  * Browser-platform dev server backed by Vite's full bundle mode
@@ -29,6 +31,27 @@ import type { DevConfig } from './utils/define-dev-config.js';
  *   initial build has settled (Vite's `listen()` kicks the first build off
  *   without awaiting it).
  */
+
+// --- CI watch options ---------------------------------------------------------
+// WORKAROUND (upstream gap): Vite's bundled dev creates its dev engine with a
+// hardcoded `watch: { skipWrite: true }` — no config surface reaches the
+// watcher. That drops the CI watch options every other dev-server engine runs
+// with (poll watcher + content comparison so same-second rewrites aren't
+// missed — see get-dev-watch-options-for-ci.ts), reopening exactly the blind
+// spot that made the recovery specs hang on CI before rolldown#9736. The
+// vendored submodule stays pristine, so merge the options here instead:
+// Vite's `dev()` helper looks up `DevEngine.create` at call time, and the
+// vendored dist resolves `rolldown` to this same workspace package (see
+// scripts/setup-vite.mjs), so wrapping the static covers Vite's engine too.
+// Vite's own options win the merge, keeping its `skipWrite: true`.
+const originalDevEngineCreate = DevEngine.create.bind(DevEngine);
+DevEngine.create = ((...args: Parameters<typeof DevEngine.create>) => {
+  const [inputOptions, outputOptions, devOptions] = args;
+  return originalDevEngineCreate(inputOptions, outputOptions, {
+    ...devOptions,
+    watch: { ...getDevWatchOptionsForCi(), ...devOptions?.watch },
+  });
+}) as typeof DevEngine.create;
 
 // --- Vite loading -------------------------------------------------------------
 // `vite` is deliberately NOT a package.json dependency: it is loaded at

@@ -11,8 +11,8 @@ use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  ExportsKind, HmrInfo, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, ModuleIdx,
-  NamedImport, ResolvedImportRecord, SourceMutation, SymbolRef,
+  ExportsKind, HmrInfo, ImportRecordIdx, ImporterRecord, LocalExport, ModuleDefFormat, ModuleId,
+  ModuleIdx, NamedImport, ResolvedImportRecord, SourceMutation, SymbolRef,
   side_effects::DeterminedSideEffects, types::source_mutation::ArcSourceMutation,
 };
 
@@ -144,6 +144,23 @@ pub struct EcmaView {
   pub json_module_none_self_reference_included_symbol: Option<Box<FxHashSet<SymbolRef>>>,
   /// Import record indices for `module.exports = require(...)` patterns.
   pub cjs_reexport_import_record_ids: Vec<ImportRecordIdx>,
+}
+
+impl EcmaView {
+  /// Re-derives the importer sets from this module's `ImporterRecord`s.
+  pub fn rebuild_importer_sets(&mut self, records: &[ImporterRecord]) {
+    self.importers.clear();
+    self.importers_idx.clear();
+    self.dynamic_importers.clear();
+    for record in records {
+      if record.kind.is_static() {
+        self.importers.insert(record.importer_path.clone());
+        self.importers_idx.insert(record.importer_idx);
+      } else {
+        self.dynamic_importers.insert(record.importer_path.clone());
+      }
+    }
+  }
 }
 
 bitflags! {

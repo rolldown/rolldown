@@ -1,0 +1,106 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ value: () => "lib" });
+__rolldown_runtime__.createModuleHotContext("lib.js");
+__rolldown_runtime__.registerModule("lib.js", { exports: lib_exports });
+//#endregion
+//#region accepter.js
+var accepter_exports = /* @__PURE__ */ __exportAll({ read: () => read });
+const accepter_hot = __rolldown_runtime__.createModuleHotContext("accepter.js");
+__rolldown_runtime__.registerModule("accepter.js", { exports: accepter_exports });
+const read = () => "lib";
+accepter_hot.accept();
+//#endregion
+//#region dropper.js
+var dropper_exports = /* @__PURE__ */ __exportAll({ tag: () => tag });
+const dropper_hot = __rolldown_runtime__.createModuleHotContext("dropper.js");
+__rolldown_runtime__.registerModule("dropper.js", { exports: dropper_exports });
+const tag = `dropper-lib`;
+dropper_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+//#region dropper.js
+var init_dropper_0 = __rolldown_runtime__.createEsmInitializer("dropper.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ tag: () => tag });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_dropper = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const tag = "dropper";
+		hot_dropper.accept();
+	} finally {}
+}));
+
+//#endregion
+init_dropper_0()
+__rolldown_runtime__.applyUpdates([['dropper.js', 'dropper.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: dropper.js, accepted_via: dropper.js
+
+# HMR Step 1
+
+## Code
+
+```js
+//#region accepter.js
+var init_accepter_0 = __rolldown_runtime__.createEsmInitializer("accepter.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ read: () => read });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		init_lib_1();
+		const hot_accepter = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		var import_lib_00 = __rolldown_runtime__.loadExports("lib.js");
+		const read = () => import_lib_00.value;
+		hot_accepter.accept();
+	} finally {}
+}));
+
+//#endregion
+//#region lib.js
+var init_lib_1 = __rolldown_runtime__.createEsmInitializer("lib.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "lib-edited";
+	} finally {}
+}));
+
+//#endregion
+init_accepter_0()
+__rolldown_runtime__.applyUpdates([['accepter.js', 'accepter.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: accepter.js, accepted_via: accepter.js

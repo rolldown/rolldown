@@ -30,6 +30,11 @@ export { isolatedDeclaration, isolatedDeclarationSync } from './utils/isolated-d
 export { moduleRunnerTransform } from './utils/module-runner-transform';
 export { ResolverFactory } from './utils/resolver-factory';
 export { resolveTsconfig } from './utils/resolve-tsconfig';
+export {
+  getRuntimeSupport,
+  type RuntimeSupport,
+  UnsupportedRuntimeFeatureError,
+} from './runtime-support';
 
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 

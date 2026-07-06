@@ -126,9 +126,56 @@ test.skipIf(isSingleThread)(
     expect(() => engine.triggerFullBuild()).toThrow(closedError);
     await expect(engine.invalidate(input)).rejects.toThrow(closedError);
     await expect(engine.registerModules('client', [input])).rejects.toThrow(closedError);
-    await expect(engine.removeClient('client')).rejects.toThrow(closedError);
+    await expect(engine.removeClient('client')).resolves.toBeUndefined();
     await expect(engine.compileEntry(input, 'client')).rejects.toThrow(closedError);
     await expect(engine.close()).resolves.toBeUndefined();
+  },
+);
+
+test.skipIf(isSingleThread)(
+  'removeClient becomes a no-op while close is in progress',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-remove-client-close-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const input = path.join(dir, 'main.js');
+    fs.writeFileSync(input, 'console.log(1)');
+
+    const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 3));
+    const parallelPlugin = defineParallelPlugin<{
+      state: Int32Array;
+    }>(path.join(import.meta.dirname, 'parallel-close-plugin.mjs'));
+    const engine = await dev(
+      {
+        input,
+        experimental: { devMode: true },
+        plugins: [parallelPlugin({ state })],
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      Atomics.store(state, 1, 1);
+      Atomics.notify(state, 1);
+      await engine.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const runPromise = engine.run().catch(() => {});
+    while (Atomics.load(state, 0) === 0) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+
+    const closePromise = engine.close();
+    await expect(engine.removeClient('late-client')).resolves.toBeUndefined();
+
+    Atomics.store(state, 1, 1);
+    Atomics.notify(state, 1);
+    await Promise.all([runPromise, closePromise]);
   },
 );
 

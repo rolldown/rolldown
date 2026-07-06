@@ -217,6 +217,23 @@ describe('parallel plugin worker cleanup', () => {
     expect(worker.terminate).toHaveBeenCalledOnce();
   });
 
+  test('ignores transport errors emitted by intentional worker termination', async () => {
+    const worker = new TestWorker();
+    const closingError = Object.assign(new Error('The worker environment is closing'), {
+      code: 'Closing',
+    });
+    const supervisedWorker = superviseWorker(worker);
+    worker.emit('message', { type: 'success' });
+    await supervisedWorker.waitForBootstrap();
+    worker.terminate.mockImplementationOnce(async () => {
+      worker.emit('error', closingError);
+      return 0;
+    });
+
+    await expect(supervisedWorker.terminate()).resolves.toBe(0);
+    expect(worker.terminate).toHaveBeenCalledOnce();
+  });
+
   test('retries physical termination after a delayed fault and first termination rejection', async () => {
     const workerFault = new Error('worker failed after bootstrap');
     const terminationError = new Error('first termination failed');

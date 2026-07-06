@@ -14,6 +14,36 @@ const {
   instantiateNapiModuleSync: __emnapiInstantiateNapiModuleSync,
 } = require('@napi-rs/wasm-runtime')
 
+const __fileWorkerContextFlagsWithValue = new Set([
+  '--eval',
+  '-e',
+  '--input-type',
+  '--print',
+  '-p',
+  '--run',
+])
+const __fileWorkerContextFlags = new Set(['--check', '-c', '--interactive', '-i'])
+
+function __sanitizeFileWorkerExecArgv(execArgv) {
+  const sanitized = []
+  for (let index = 0; index < execArgv.length; index += 1) {
+    const argument = execArgv[index]
+    const equalsIndex = argument.indexOf('=')
+    const flag = equalsIndex === -1 ? argument : argument.slice(0, equalsIndex)
+    if (__fileWorkerContextFlagsWithValue.has(flag)) {
+      if (equalsIndex === -1) {
+        index += 1
+      }
+      continue
+    }
+    if (__fileWorkerContextFlags.has(argument)) {
+      continue
+    }
+    sanitized.push(argument)
+  }
+  return sanitized
+}
+
 const __rootDir = __nodePath.parse(process.cwd()).root
 
 const __wasi = new __nodeWASI({
@@ -61,6 +91,7 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
   onCreateWorker() {
     const worker = new Worker(__nodePath.join(__dirname, 'wasi-worker.mjs'), {
       env: process.env,
+      execArgv: __sanitizeFileWorkerExecArgv(process.execArgv),
     })
     worker.onmessage = ({ data }) => {
       __wasmCreateOnMessageForFsProxy(__nodeFs)(data)
@@ -131,6 +162,7 @@ module.exports.moduleRunnerTransform = __napiModule.exports.moduleRunnerTransfor
 module.exports.moduleRunnerTransformSync = __napiModule.exports.moduleRunnerTransformSync
 module.exports.transform = __napiModule.exports.transform
 module.exports.transformSync = __napiModule.exports.transformSync
+module.exports.BindingAsyncRuntimeLease = __napiModule.exports.BindingAsyncRuntimeLease
 module.exports.BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 module.exports.BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
 module.exports.BindingBundler = __napiModule.exports.BindingBundler
@@ -157,6 +189,7 @@ module.exports.BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 module.exports.TraceSubscriberGuard = __napiModule.exports.TraceSubscriberGuard
 module.exports.TsconfigCache = __napiModule.exports.TsconfigCache
+module.exports.acquireAsyncRuntime = __napiModule.exports.acquireAsyncRuntime
 module.exports.BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 module.exports.BindingChunkModuleOrderBy = __napiModule.exports.BindingChunkModuleOrderBy

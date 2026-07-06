@@ -8,6 +8,7 @@ import {
 } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
+import { assertParallelPluginOptionsSupported } from '../../plugin/parallel-plugin';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { normalizeBindingResult, unwrapBindingResult } from '../../utils/error';
@@ -27,6 +28,7 @@ import {
   type CloseAttemptResult,
   type RuntimeLease,
 } from '../../runtime-lifecycle';
+import { assertRuntimeFeature } from '../../runtime-support';
 import type { DevOptions } from './dev-options';
 
 export class DevEngine {
@@ -49,70 +51,26 @@ export class DevEngine {
     outputOptions: OutputOptions = {},
     devOptions: DevOptions = {},
   ): Promise<DevEngine> {
+    assertRuntimeFeature('dev');
+    assertParallelPluginOptionsSupported(inputOptions.plugins, outputOptions.plugins);
     inputOptions = await PluginDriver.callOptionsHook(inputOptions);
     const options = await createBundlerOptions(inputOptions, outputOptions, false);
 
-    const userOnHmrUpdates = devOptions.onHmrUpdates;
-    const bindingOnHmrUpdates: BindingDevOptions['onHmrUpdates'] = userOnHmrUpdates
-      ? function (rawResult: BindingResult<[BindingClientHmrUpdate[], string[]]>) {
-          const result = normalizeBindingResult(rawResult);
-          if (result instanceof Error) {
-            return userOnHmrUpdates(result);
-          }
-          const [updates, changedFiles] = result;
-          return userOnHmrUpdates({
-            updates,
-            changedFiles,
-          });
-        }
-      : undefined;
-
-    const userOnOutput = devOptions.onOutput;
-    const bindingOnOutput: BindingDevOptions['onOutput'] = userOnOutput
-      ? function (rawResult) {
-          const result = normalizeBindingResult(rawResult);
-          if (result instanceof Error) {
-            return userOnOutput(result);
-          }
-          return userOnOutput(transformToRollupOutput(result));
-        }
-      : undefined;
-
-    const userOnAdditionalAssets = devOptions.onAdditionalAssets;
-    const bindingOnAdditionalAssets: BindingDevOptions['onAdditionalAssets'] =
-      userOnAdditionalAssets
-        ? function (output) {
-            return userOnAdditionalAssets(transformToRollupOutput(output));
-          }
-        : undefined;
-
-    const bindingDevOptions: BindingDevOptions = {
-      onHmrUpdates: bindingOnHmrUpdates,
-      onOutput: bindingOnOutput,
-      onAdditionalAssets: bindingOnAdditionalAssets,
-      rebuildStrategy: devOptions.rebuildStrategy
-        ? devOptions.rebuildStrategy === 'always'
-          ? BindingRebuildStrategy.Always
-          : devOptions.rebuildStrategy === 'auto'
-            ? BindingRebuildStrategy.Auto
-            : BindingRebuildStrategy.Never
-        : undefined,
-      watch: devOptions.watch && {
-        skipWrite: devOptions.watch.skipWrite,
-        usePolling: devOptions.watch.usePolling,
-        pollInterval: devOptions.watch.pollInterval,
-        useDebounce: devOptions.watch.useDebounce,
-        debounceDuration: devOptions.watch.debounceDuration,
-        compareContentsForPolling: devOptions.watch.compareContentsForPolling,
-        debounceTickRate: devOptions.watch.debounceTickRate,
-        include: normalizedStringOrRegex(devOptions.watch.include),
-        exclude: normalizedStringOrRegex(devOptions.watch.exclude),
-      },
-    };
+    let bindingDevOptions: BindingDevOptions;
+    try {
+      bindingDevOptions = createBindingDevOptions(devOptions);
+    } catch (error) {
+      return throwDevSetupErrorAfterCleanup(
+        error,
+        createDevSetupCleanup(options.stopWorkers),
+        'Dev engine option setup and parallel-plugin worker cleanup both failed',
+        'Dev engine option setup and parallel-plugin worker retry cleanup both failed',
+      );
+    }
 
     let runtimeLease: RuntimeLease;
     try {
-      runtimeLease = acquireRuntimeLease();
+      runtimeLease = await acquireRuntimeLease();
     } catch (error) {
       return throwDevSetupErrorAfterCleanup(
         error,
@@ -189,6 +147,9 @@ export class DevEngine {
   }
 
   async removeClient(clientId: string): Promise<void> {
+    if (this.#isClosing) {
+      return;
+    }
     await this.#runOperation(() => this.#inner.removeClient(clientId));
   }
 
@@ -272,6 +233,101 @@ export class DevEngine {
       }
     }
   }
+}
+
+function createBindingDevOptions(devOptions: DevOptions): BindingDevOptions {
+  const userOnHmrUpdates = devOptions.onHmrUpdates;
+  const bindingOnHmrUpdates: BindingDevOptions['onHmrUpdates'] = userOnHmrUpdates
+    ? function (rawResult: BindingResult<[BindingClientHmrUpdate[], string[]]>) {
+        const result = normalizeBindingResult(rawResult);
+        if (result instanceof Error) {
+          return userOnHmrUpdates(result);
+        }
+        const [updates, changedFiles] = result;
+        return userOnHmrUpdates({
+          updates,
+          changedFiles,
+        });
+      }
+    : undefined;
+
+  const userOnOutput = devOptions.onOutput;
+  const bindingOnOutput: BindingDevOptions['onOutput'] = userOnOutput
+    ? function (rawResult) {
+        const result = normalizeBindingResult(rawResult);
+        if (result instanceof Error) {
+          return userOnOutput(result);
+        }
+        return userOnOutput(transformToRollupOutput(result));
+      }
+    : undefined;
+
+  const userOnAdditionalAssets = devOptions.onAdditionalAssets;
+  const bindingOnAdditionalAssets: BindingDevOptions['onAdditionalAssets'] = userOnAdditionalAssets
+    ? function (output) {
+        return userOnAdditionalAssets(transformToRollupOutput(output));
+      }
+    : undefined;
+  const rebuildStrategy = devOptions.rebuildStrategy;
+  const watch = devOptions.watch;
+
+  return {
+    onHmrUpdates: bindingOnHmrUpdates,
+    onOutput: bindingOnOutput,
+    onAdditionalAssets: bindingOnAdditionalAssets,
+    rebuildStrategy: bindingifyRebuildStrategy(rebuildStrategy),
+    watch: watch && {
+      skipWrite: watch.skipWrite,
+      usePolling: watch.usePolling,
+      pollInterval: watch.pollInterval,
+      useDebounce: watch.useDebounce,
+      debounceDuration: watch.debounceDuration,
+      compareContentsForPolling: watch.compareContentsForPolling,
+      debounceTickRate: watch.debounceTickRate,
+      include: normalizedStringOrRegex(watch.include),
+      exclude: normalizedStringOrRegex(watch.exclude),
+    },
+  };
+}
+
+function bindingifyRebuildStrategy(
+  strategy: DevOptions['rebuildStrategy'],
+): BindingRebuildStrategy | undefined {
+  switch (strategy) {
+    case undefined:
+      return undefined;
+    case 'always':
+      return BindingRebuildStrategy.Always;
+    case 'auto':
+      return BindingRebuildStrategy.Auto;
+    case 'never':
+      return BindingRebuildStrategy.Never;
+    default:
+      throw new TypeError(
+        `Invalid dev rebuildStrategy ${formatInvalidRebuildStrategy(strategy)}. Expected "always", "auto", or "never".`,
+      );
+  }
+}
+
+function formatInvalidRebuildStrategy(strategy: unknown): string {
+  if (strategy === null) return 'null';
+  switch (typeof strategy) {
+    case 'string':
+      return JSON.stringify(strategy);
+    case 'bigint':
+      return `${strategy}n`;
+    case 'boolean':
+    case 'number':
+    case 'undefined':
+      return String(strategy);
+    case 'symbol':
+      return strategy.toString();
+    case 'function':
+      return '<function>';
+    case 'object':
+      return '<object>';
+  }
+  return '<unknown>';
 }
 
 function createDevSetupCleanup(

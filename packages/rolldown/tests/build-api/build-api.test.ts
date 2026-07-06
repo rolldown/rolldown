@@ -137,7 +137,7 @@ test('concurrent outputs retain and terminate every parallel worker pool', async
   }
 });
 
-test('close retries a superseded concurrent worker pool after cleanup failure', async () => {
+test('close retries a superseded worker pool after cleanup failure', async () => {
   const cleanupError = new Error('superseded worker termination failed');
   const originalTerminate = Object.getOwnPropertyDescriptor(Worker.prototype, 'terminate')!
     .value as (this: Worker) => Promise<number>;
@@ -166,11 +166,8 @@ test('close retries a superseded concurrent worker pool after cleanup failure', 
   });
 
   try {
-    const results = await Promise.allSettled([bundle.generate(), bundle.generate()]);
-    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
-    expect(results.find((result) => result.status === 'rejected')).toMatchObject({
-      reason: cleanupError,
-    });
+    await bundle.generate();
+    await expect(bundle.generate()).rejects.toBe(cleanupError);
 
     await expect(bundle.close()).resolves.toBeUndefined();
     expect(terminateCalls.size).toBe(Atomics.load(state, 0));
@@ -286,6 +283,53 @@ test('build preserves a lone primary or cleanup failure', async () => {
   expect(cleanupOnly).toBe(closeError);
 });
 
+test('build option arrays finish cleanup before starting the next option', async () => {
+  let firstClosed = false;
+  let secondOptionsSawFirstClosed = false;
+  const virtualEntry = (id: string) => ({
+    name: `virtual-${id}`,
+    resolveId(source: string) {
+      if (source === id) return `\0${id}`;
+    },
+    load(source: string) {
+      if (source === `\0${id}`) return 'export default 1';
+    },
+  });
+
+  const outputs = await build([
+    {
+      input: 'first',
+      plugins: [
+        virtualEntry('first'),
+        {
+          name: 'observe-first-close',
+          closeBundle() {
+            firstClosed = true;
+          },
+        },
+      ],
+      write: false,
+    },
+    {
+      input: 'second',
+      plugins: [
+        {
+          name: 'observe-sequential-options',
+          options(options) {
+            secondOptionsSawFirstClosed = firstClosed;
+            return options;
+          },
+        },
+        virtualEntry('second'),
+      ],
+      write: false,
+    },
+  ]);
+
+  expect(outputs).toHaveLength(2);
+  expect(secondOptionsSawFirstClosed).toBe(true);
+});
+
 test('supports closeBundle hook', async () => {
   let closeBundleCalls = 0;
   try {
@@ -322,6 +366,26 @@ test('parallel closeBundle hooks run before workers terminate', async () => {
   await bundle.generate();
   const workerCount = Atomics.load(state, 0);
   expect(workerCount).toBeGreaterThan(0);
+  await bundle.close();
+  expect(Atomics.load(state, 1)).toBe(workerCount);
+});
+
+test('failed builds keep parallel workers alive through closeBundle', async () => {
+  const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
+  const parallelPlugin = defineParallelPlugin<{ state: Int32Array; failRender: boolean }>(
+    path.join(import.meta.dirname, 'parallel-close-plugin.mjs'),
+  );
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [parallelPlugin({ state, failRender: true })],
+  });
+
+  await expect(bundle.generate()).rejects.toThrow('parallel render failure');
+  const workerCount = Atomics.load(state, 0);
+  expect(workerCount).toBeGreaterThan(0);
+  expect(Atomics.load(state, 1)).toBe(0);
+
   await bundle.close();
   expect(Atomics.load(state, 1)).toBe(workerCount);
 });
@@ -368,6 +432,48 @@ test('close retries only parallel-plugin workers whose termination failed', asyn
   } finally {
     terminateSpy.mockRestore();
     await bundle.close().catch(() => {});
+  }
+});
+
+test('build retries a transient parallel-plugin worker termination failure', async () => {
+  const cleanupError = new Error('worker termination failed');
+  const originalTerminate = Object.getOwnPropertyDescriptor(Worker.prototype, 'terminate')!
+    .value as (this: Worker) => Promise<number>;
+  const terminateCalls = new Map<Worker, number>();
+  const failedWorkers = new WeakSet<Worker>();
+  let injectedFailure = false;
+  const terminateSpy = vi
+    .spyOn(Worker.prototype, 'terminate')
+    .mockImplementation(function (this: Worker) {
+      terminateCalls.set(this, (terminateCalls.get(this) ?? 0) + 1);
+      if (!injectedFailure) {
+        injectedFailure = true;
+        failedWorkers.add(this);
+        return Promise.reject(cleanupError);
+      }
+      return Reflect.apply(originalTerminate, this, []);
+    });
+
+  const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
+  const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(
+    path.join(import.meta.dirname, 'parallel-close-plugin.mjs'),
+  );
+
+  try {
+    await expect(
+      build({
+        input: './main.js',
+        cwd: import.meta.dirname,
+        plugins: [parallelPlugin({ state })],
+        write: false,
+      }),
+    ).resolves.toBeDefined();
+    expect(terminateCalls.size).toBe(Atomics.load(state, 0));
+    for (const [worker, calls] of terminateCalls) {
+      expect(calls).toBe(failedWorkers.has(worker) ? 2 : 1);
+    }
+  } finally {
+    terminateSpy.mockRestore();
   }
 });
 

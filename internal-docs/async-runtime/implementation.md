@@ -77,10 +77,19 @@ the registered implementation; `start` and `shutdown` report failures through
   calls `drive_current_thread_tasks`. This registration is also present in the
   browser build because fresh-turn polling is a future/scheduler requirement,
   independent of Node timers. Wakes are enqueue-only even when no host is
-  registered; pure Rust use makes progress through an explicit `block_on` or
-  `drive_current_thread_tasks` call. A host turn polls at most 64 runnables
-  before redispatching, so a self-waking task cannot monopolize the JavaScript
-  event loop. Blocking work executes inline.
+  registered. After publishing a runnable, the queue snapshots and wakes every
+  active explicit `block_on` parker without polling from the wake caller. The
+  fanout is bounded by concurrent explicit drivers and prevents a newer driver
+  blocked inside `poll` from absorbing the only queue wake while an older
+  driver sleeps. Pure Rust use otherwise makes progress through an explicit
+  `block_on` or `drive_current_thread_tasks` call. A host turn polls at most 64
+  runnables before redispatching, so a self-waking task cannot monopolize the
+  JavaScript event loop. Once shutdown is observed after a pending poll, it
+  takes precedence over queue draining and stored self-wake permits. An RAII
+  host-turn role remains scheduler-active through every `Runnable::run`,
+  including async-task's destruction of detached completed outputs;
+  CurrentThread shutdown waits for that role before publishing `Stopped`.
+  Blocking work executes inline.
 - `MultiThreadExecutor` schedules bounded queue-drain jobs on a custom Rayon
   pool. The same pool is inherited by nested `par_iter` calls. Rayon worker
   start hooks classify every nested worker for cooperative `block_on`; a
@@ -95,14 +104,38 @@ the registered implementation; `start` and `shutdown` report failures through
   hidden reserve. Blocking start/completion counters count every executed
   closure, including exact-dependency work, while active/high-water counters
   count admitted lanes and therefore remain bounded by `max_blocking_tasks`.
-  Every blocking job has a stable executor-scoped id copied into its
-  `JoinHandle`. Pending dependencies propagate through async task handles, so a
-  saturated blocking owner can lend its lane to the exact job its nested
-  `block_on` awaits, never an earlier detached sibling. Dependency contexts form
-  a thread-local stack: polling unrelated scheduler work pushes that task's own
+  Every blocking job has a stable executor-scoped id, and its dependency pairs
+  that id with the exact `BlockingOwnerToken` frame whose admitted lane may be
+  reused. Pending dependencies propagate through async task handles, acquiring
+  the ambient owner frame when they enter an owner's lineage, so a saturated
+  owner can lend only to the exact job its nested `block_on` awaits, never an
+  earlier detached sibling or another owner's job. Dependency contexts form a
+  thread-local stack: polling unrelated scheduler work pushes that task's own
   context above the driving `block_on`, so its blocking waits cannot leak into
-  the owner's over-cap lineage. Dependency transitions and abandoned handles
-  clear and wake parent contexts.
+  the owner's over-cap lineage. A stolen Rayon descendant with no thread-local
+  token may attach an untagged dependency only when the per-executor
+  active-owner registry contains exactly one frame and that frame is available;
+  multiple or nested candidates are deliberately ineligible. The selected
+  token is persisted into the same live `TaskDependency` publication before
+  reservation, so claim identity and targeted completion handoff continue to
+  use one lineage. This registry mutex is touched only by blocking-frame
+  entry/exit and the saturated exact-lending path; normal scheduling remains
+  lock-free with respect to owner inference.
+  `TaskDependency` stores its live dependency and retained waiter in one mutex
+  so identity cannot tear across separate atomics. Set, clear, conditional
+  clear, claim, and waiter replacement commit under that mutex, then wake or
+  destroy moved-out wakers after unlocking. Waker clone, replacement drop, wake,
+  retirement, and final destruction run under the dependency generation and
+  independent panic boundaries. Task detachment clears the retained waiter
+  before async-task receives detached ownership. Parked-driver entries publish
+  that dependency for owner-aware handoff, but registry removal moves the entry
+  out before dropping its `Arc<TaskDependency>` so waiter destruction can
+  re-enter scheduler code without holding the registry mutex.
+  The blocking FIFO is a queue of stable ids plus an indexed job map. Normal
+  admission skips tombstoned ids amortized O(1); exact lending removes the job
+  from the map in O(1) after atomically claiming the live dependency. Owner-lane
+  availability uses unique reservation identities, so a delayed stale drop
+  cannot release a newer transfer of the same frame.
 - Drain and cooperative loops force a blocking turn after 16 consecutive
   runnable polls when the blocking FIFO has capacity. After the cooperative
   LIFO budget is exhausted, one shared-FIFO pop is mandatory even if the next
@@ -113,9 +146,31 @@ the registered implementation; `start` and `shutdown` report failures through
   exit miss compensation skip the runnable-only timekeeper. A completing
   blocking-capable driver consumes one admitted blocking-only residue itself
   when handing it to a queued Rayon drainer could leave no physical lane.
+  Exact owner lending is performed by the cooperative driver that already owns
+  the live dependency lineage. When normal blocking admission is saturated, one
+  idle pass checks that dependency, reserves its exact active owner frame, and
+  removes only its indexed job. The dependency job executes on the otherwise
+  idle cooperative lane under a fresh nested owner frame. No worker-specific
+  broadcast or global dependency scan is submitted. One unrelated Rayon worker
+  can therefore remain parked indefinitely without blocking later dependencies
+  or scheduler-idle retirement, and large dependency topologies require one
+  bounded claim attempt per serviced dependency rather than O(N^2) cloned
+  snapshots multiplied by the worker count. Releasing a successfully lent frame
+  wakes at most one parked blocking-capable driver whose published live
+  dependency belongs to that owner. A newer unrelated parker cannot absorb the
+  handoff, so multiple dependencies of one owner rearm linearly without a global
+  wake batch. Park registration is followed by a fresh owner-lane availability
+  check as well as the normal queue recheck; a reservation released just before
+  registration therefore causes another claim attempt instead of a missed
+  handoff and permanent park.
 - `JoinHandle` normalizes async-task, blocking-job, and immediate results and
   detaches async tasks on drop to match Tokio. Scheduler shutdown instead
   aborts accepted async tasks and resolves retained handles with `JoinError`.
+  Dropping a blocking or immediate handle is panic-contained because its
+  receiver/result may already own a completed user value whose destructor
+  unwinds. Task detachment or receiver destruction completes before dependency
+  notification, and the arbitrary dependency waker is invoked behind a separate
+  containment boundary so two hostile callbacks cannot double-panic.
 - MultiThread shutdown waits in three stages: accepted work retirement,
   drainer/timekeeper exit, then physical Rayon worker exit. Only after all
   three stages does the controller publish `Stopped` and wake a waiting
@@ -127,15 +182,18 @@ the registered implementation; `start` and `shutdown` report failures through
   generation identity. Convenience APIs that own a rejected future/closure
   register its contained destruction while holding the lifecycle lock;
   shutdown/restart cannot finish the transition until those registrations
-  retire. Shutdown timer wakes are isolated too. After diagnostics are
-  extracted, caught panic payloads are dropped under a second `catch_unwind`;
-  only a nested panic payload from a hostile payload destructor is forgotten.
+  retire. Public `block_on` performs both the driver call and destruction of its
+  erased future inside the same registered generation scope. CurrentThread
+  blocking calls keep their work and generation guards through panic conversion
+  and payload destruction. Shutdown timer wakes are isolated too. After
+  diagnostics are extracted, caught panic payloads are dropped under a second
+  `catch_unwind`; only a nested panic payload from a hostile payload destructor
+  is forgotten.
   The binding host-timer adapter applies the same two-stage boundary before
   returning through napi's environment-cleanup C ABI.
-  The full blocking
-  result-delivery boundary is also contained: dropping a panic-on-drop result
-  after its join handle detached cannot bypass blocking-slot or drainer
-  retirement and strand shutdown.
+  The full blocking result-delivery boundary is also contained: both a send
+  after its join handle detached and dropping a receiver with a completed value
+  already buffered isolate panic-on-drop results from scheduler retirement.
 - Atomic metrics expose task, poll, queue-depth, active-worker, panic, and
   blocking-concurrency counters. Reset clears cumulative event counters only;
   live gauges and lifetime high-water marks remain intact because active guards
@@ -167,6 +225,26 @@ environment value but normalized before the module-init `configure` call;
 otherwise loading a threadless WASI artifact would panic while registering the
 addon.
 
+The threaded-WASI binding must link Rust's `crt1-reactor.o` and export
+`_initialize`. napi-build locates that startup object relative to Cargo's
+`RUSTC`, but task runners may expose either a bare command or the rustup proxy
+instead of the real toolchain executable. `packages/rolldown/build-binding.ts`
+therefore resolves the active compiler through `rustup which rustc`, with
+`rustc --print sysroot` as the non-rustup fallback, before invoking the WASI
+build. After napi-rs returns, the same script validates every emitted threaded
+artifact as a reactor: `_initialize` must be a function export and `_start`
+must be absent. Omitting the reactor can leave package import synchronously
+executing malformed startup code, which cannot be interrupted by a JavaScript
+promise timeout.
+
+napi-rs generates the Node threaded-WASI loader. The build script patches that
+generated loader before it is copied into the package so its file-backed worker
+removes inherited string-input flags such as `--input-type`, `--eval`, and
+`--print` from `process.execArgv`. Those flags describe the parent process's
+input source and can make Node reject `wasi-worker.mjs`; other runtime flags
+remain inherited. The patch deliberately checks the expected napi-rs template
+and fails the build on template drift.
+
 This API is feature-gated. `configureAsyncRuntime`, `getAsyncRuntimeConfig`, and
 `getAsyncRuntimeMetrics` are exported on every build, but only the
 `async-runtime` build honors them. On the default `tokio-runtime` build
@@ -174,6 +252,21 @@ This API is feature-gated. `configureAsyncRuntime`, `getAsyncRuntimeConfig`, and
 `async-runtime` feature), `getAsyncRuntimeConfig` reports values derived from the
 environment variables and built-in defaults, and `getAsyncRuntimeMetrics` always
 returns zeroed counters.
+
+`getRuntimeCapabilities()` also exposes stable public-workflow gates.
+`devSupported` follows the effective runtime flavor and is false on
+`CurrentThread`; `watchSupported` is false on every WebAssembly artifact. The
+TypeScript `runtime-support.ts` layer maps those binding facts to named public
+features and throws `ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE` before entering
+unsupported setup paths. The layer is intentionally extensible so stacked host
+integrations can add richer workflow support without changing the low-level
+binding contract. Parallel-plugin descriptor consumption has an additional
+synchronous preflight at the public build, rolldown, scan, and dev boundaries
+and at `createBundlerOptions`. It recursively inspects already-materialized
+plugin arrays without assimilating neighboring thenables, so a fabricated or
+older-package descriptor on an unsupported artifact fails before any plugin
+promise, options/outputOptions hook, worker registry, runtime lease, or binding
+construction. Ordinary object plugins do not trigger that gate.
 
 ### Routed work
 
@@ -286,51 +379,133 @@ TypeScript close coordinators memoize terminal native and listener results but
 clear the outer single-flight promise after retryable worker or runtime-release
 failures. Worker stop closures retain only workers whose termination rejected,
 so a later close retries unfinished cleanup without terminating successful
-workers again. Watch close-listener reentrancy is scoped through
-`AsyncLocalStorage`: the listener's own `close()` receives the completed native
-phase, while unrelated callers continue awaiting the full close lifecycle and
-observe its listener/runtime result.
+workers again. `RolldownBuild` keeps the latest operation's worker pool alive
+when its native build promise rejects because that operation's native
+`BundleHandle` still owns `closeBundle`; superseded pools may terminate once a
+new native handle has synchronously replaced them. The convenience `build()`
+API performs one bounded retry when its hidden bundle still owns worker or
+runtime cleanup; a persistent failure is registered with the shared
+retryable-cleanup owner instead of being discarded with the hidden bundle.
+Watch close-listener reentrancy is scoped through `AsyncLocalStorage`: the
+listener's own `close()` receives the completed native phase, while unrelated
+callers continue awaiting the full close lifecycle and observe its
+listener/runtime result.
 
-Native watch mode is supported on both runtime flavors. Binding dev mode is
-still skipped on CurrentThread, and WASI watch remains unsupported because it
-stalls during the initial build before debounce timers are involved.
+Native watch mode is supported on both runtime flavors. Public `dev()` checks
+`devSupported` before reading callbacks, running plugin hooks, creating workers,
+acquiring a runtime lease, or constructing `BindingDevEngine`. Public `watch()`
+creates its emitter first, checks `watchSupported` before calling
+`createWatcher`, and routes failure through `failSetup`; callers therefore
+observe `ERROR` followed by `END`, and `close()` remains usable without any
+worker, lease, or native watcher having been created. WASI watch remains
+unsupported because entering the native initial build can park the JavaScript
+host thread before debounce timers are involved.
 
 ### Threaded WASI runtime ownership
 
-The binding starts with one implicit threaded-WASI runtime owner. Its
-`startAsyncRuntime` and `shutdownAsyncRuntime` exports update a mutex-serialized
-native owner count and return napi errors from the fallible napi-rs lifecycle
-APIs. Only the `0 -> 1` transition starts the runtime, and only the `1 -> 0`
-transition shuts it down. A failed start leaves the count at zero; a failed
-shutdown retains the last owner so a later release can retry. Releasing at
-zero is idempotent, and concurrent releases cannot underflow the count.
+Threaded WASI starts with zero Rolldown owners. Every public asynchronous
+operation calls the binding's `acquireAsyncRuntime()` export and receives one
+`BindingAsyncRuntimeLease` native object. The lease owns exactly one count until
+its idempotent `release()` succeeds; its native finalizer is the backstop if
+promise delivery, JavaScript setup, or user cleanup abandons the object.
+There is no implicit owner shared between JavaScript realms: workers and the
+main realm therefore cannot independently claim the same process-global count.
 
-The native count and `packages/rolldown/src/runtime-lifecycle.ts` are one
-protocol. The native `ASYNC_RUNTIME_LEASES` count starts at one while
-`WasiRuntimeLeaseManager` starts with `#initialLeaseAvailable = true`: its first
-JS lease consumes the implicit native owner without calling
-`startAsyncRuntime`, then releases it with `shutdownAsyncRuntime`. After that
-count reaches zero, every later JS lease calls `startAsyncRuntime` before it can
-release. Build, scan, watch, and dev objects each own one lease for their whole
-lifecycle. Standalone binding-backed promise utilities (`parse`,
-`parseAstAsync`, `transform`, `minify`, isolated declarations, module-runner
-transforms, and asynchronous resolver methods) own one lease per invocation.
-Overlapping calls therefore retain independent owners until their own promises
-settle, and a call after the final release restarts the stopped runtime. The
-added direct-binding wrappers are selected only for threaded WASI; native
-isolated-declaration, module-runner, and `ResolverFactory` identities remain the
-binding exports. Native and threadless artifacts receive no-op leases.
+The native manager serializes `Stopped -> Starting -> Running` and
+`Running -> Stopping -> Stopped` transitions with a mutex and condition
+variable, but drops the mutex before invoking napi lifecycle hooks. Concurrent
+acquisitions share one start transition and then retain independent counts.
+Only the final lease release calls napi shutdown. Failed start leaves zero
+owners; failed shutdown keeps the final lease owned so the same JavaScript
+cleanup can retry. Releasing an already released token is a no-op, and
+concurrent finalization cannot underflow the count.
 
-Package copies in one JavaScript realm share the manager through a realm-global
-weak registry keyed by the loaded binding's `startAsyncRuntime` function
-identity. Copies backed by the same binding therefore cannot each consume its
-single implicit owner, while distinct bindings remain independent. A failed
-release stays owned by its lease and can be retried by the same close call; if
-that caller abandons the failure, the next acquisition retries every retained
-release before starting another owner. Changing the native initial count to
-zero requires changing the JS first-acquire path in the same change; otherwise
-the first release is a native no-op and leaves the runtime running without a
-tracked owner.
+Restart is awaitable because napi's combined custom/Tokio runtime deliberately
+does not overlap Tokio generations. `AcquireAsyncRuntimeTask` runs as N-API
+async work, snapshots napi-rs's retirement waiter, and waits on its condition
+variable off the JavaScript thread. A fresh waiter is used if another lifecycle
+transition creates a newer retirement before start linearizes. The waiter
+reports retirement-worker creation or runtime-drop failures as terminal errors
+instead of waiting forever, and rejects waiting from the generation that is
+retiring. The binding installs one cancellation hub per N-API environment.
+Environment teardown cancels that environment's pending waiters and wakes tasks
+blocked behind another native transition; it never cancels retirement itself.
+
+The task returns the native lease token as its output rather than resolving a
+bare `Promise<void>`. Ownership therefore remains in Rust across async-work
+completion and JavaScript object conversion. If delivery fails, normal Rust or
+N-API finalization releases the token. The legacy `startAsyncRuntime` and
+`shutdownAsyncRuntime` exports retain a separate manual-owner count for
+compatibility, so an unmatched manual shutdown cannot decrement a public
+object's token. Callable builtin hooks rely exclusively on the outer native
+operation token; retaining a manual owner inside their async block would make
+environment-teardown cancellation attempt a lifecycle transition from inside
+the runtime operation guard.
+
+`packages/rolldown/src/runtime-lifecycle.ts` exposes the awaitable lease
+protocol. Build, scan, watch, and dev objects await one lease before native
+construction and retain it for their whole lifecycle. Standalone
+binding-backed promise utilities (`parse`, `parseAstAsync`, `transform`,
+`minify`, isolated declarations, module-runner transforms, callable builtin
+hooks, and asynchronous resolver methods) await one lease per invocation.
+Overlapping calls therefore own independent native tokens until their own
+promises settle.
+
+The TypeScript lease decision is snapshotted once when a package copy loads.
+Generated bindings always provide `getRuntimeCapabilities`; incomplete focused
+test mocks and legacy development shims that omit it conservatively take the
+native no-op lease path instead of throwing during module initialization.
+Bindings from the preceding threaded-WASI protocol report
+`target: 'wasi-threads'` but do not export `acquireAsyncRuntime`. The TypeScript
+layer detects their `startAsyncRuntime`/`shutdownAsyncRuntime` pair and retains
+the old shared implicit-first-owner manager, keyed by the legacy start function
+so mixed package copies do not consume that owner twice. Because that protocol
+cannot remain correct with independent realm-local first-owner state, an
+unavailable or incompatible global registry fails closed for legacy bindings;
+modern native-token bindings can safely fall back to independent local managers.
+A threaded-WASI binding that exposes neither protocol fails acquisition with a
+package/binding version-mismatch diagnostic instead of entering native work
+without an owner.
+Older capability reports also lack `devSupported`; the public workflow layer
+derives it from `threads`, while a shim with no reporter keeps the historical
+native MultiThread feature set.
+
+Package copies in one JavaScript realm share a manager through a realm-global
+weak registry keyed by the loaded binding's `acquireAsyncRuntime` function
+identity. This coalesces failed-release recovery without serializing independent
+native token requests; the native manager owns lifecycle transition ordering.
+Correctness no longer depends on realm-global state: every realm obtains real
+native tokens. Each JavaScript release retries one transient native shutdown
+failure before surfacing it, so setup and utility calls without a reusable close
+object cannot strand every other realm after a one-shot failure. A persistent
+failure stays owned by its lease and can be retried by the same close call; if
+that caller abandons the failure, the next acquisition in the same realm retries
+retained releases before requesting another token. Native and threadless
+artifacts use no-op JavaScript leases, preserving direct binding identities where
+no threaded-WASI ownership is required.
+
+The WASI CI lane runs `packages/rolldown/tests/wasi-runtime-lifecycle.mjs`
+against the generated threaded artifact. It covers overlapping public owners,
+restart after the final release, repeated immediate token reacquisition while
+Tokio's previous generation retires, cancellation of a worker environment whose
+acquisition is blocked behind that retirement, operation and
+binding-construction failures, worker realms, a real dev-engine
+run/close/restart, fail-closed watch and parallel-plugin capability detection,
+and duplicate JavaScript package copies that resolve one shared binding. The
+watch case verifies `ERROR`/`END`, repeated close, and that plugin option hooks
+never run. Parallel JavaScript plugins are rejected by both the public factory
+and option consumption on WASI because the Rust binding does not consume their
+worker registry on wasm targets.
+The consumption guard covers descriptors created directly or by an older
+package copy and runs before plugin promise assimilation, options hooks,
+registry allocation, runtime acquisition, or native construction.
+`rolldown()` checks the result of its input-options hook again before lease
+acquisition, so a hook cannot inject an unsupported descriptor and leave an
+otherwise unusable bundle owner behind. The synchronous descriptor walk tracks
+visited arrays, which keeps malformed cyclic plugin lists bounded while still
+finding a materialized descriptor elsewhere in the graph. A parent-process
+watchdog runs the suite in a child process so a synchronous WASI loader stall
+cannot consume the entire CI job without a bounded failure.
 
 Parallel-plugin workers are supervised from construction through shutdown, not
 only until their bootstrap message. Delayed worker `error` events and
@@ -340,7 +515,12 @@ terminate again, but rejects one cleanup attempt with its retained fault so the
 existing retryable-cleanup protocol preserves ownership; the next attempt
 clears that logical owner. Bootstrap pools await every startup attempt before
 taking their cleanup snapshot, so a late-registering sibling cannot escape
-termination after another sibling fails.
+termination after another sibling fails. Bootstrap failures are normalized to
+a cloneable `ParallelPluginBootstrapError` before crossing `postMessage`. If
+the control-port send itself fails, the worker closes/unrefs that port and
+throws the cloneable diagnostic from a microtask, ensuring the supervisor sees
+an `error` or terminal exit even when unhandled promise rejections are
+configured to warn instead of terminating the worker.
 
 ### Non-threaded WASI
 
@@ -348,7 +528,8 @@ The current-thread executor is the runtime half of the non-threaded
 `wasm32-wasip1` build. Packaging, generated loaders, and the emnapi
 memory-growth backport are handled in the dependent browser/WASI change.
 
-The two WASI flavors have distinct artifact sets:
+The dependent browser/WASI change will publish the two flavors as distinct
+artifact sets:
 
 - threaded `wasm32-wasip1-threads`: `rolldown-binding.wasm32-wasi.wasm`,
   `.wasi.cjs`, `.wasi-browser.js`, and worker scripts

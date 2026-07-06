@@ -7,6 +7,10 @@ import type { OutputOptions } from '../options/output-options';
 import { PluginContextData } from '../plugin/plugin-context-data';
 import { PluginDriver } from '../plugin/plugin-driver';
 import { getObjectPlugins } from '../plugin/plugin-driver';
+import {
+  assertParallelPluginOptionsSupported,
+  assertParallelPluginsSupported,
+} from '../plugin/parallel-plugin';
 import { bindingifyInputOptions } from './bindingify-input-options';
 import { bindingifyOutputOptions } from './bindingify-output-options';
 import { initializeParallelPlugins } from './initialize-parallel-plugins';
@@ -28,6 +32,7 @@ export async function createBundlerOptions(
   outputOptions: OutputOptions,
   watchMode: boolean,
 ): Promise<BundlerOptionWithStopWorker> {
+  assertParallelPluginOptionsSupported(inputOptions.plugins, outputOptions.plugins);
   const inputPlugins = await normalizePluginOption(inputOptions.plugins);
   const outputPlugins = await normalizePluginOption(outputOptions.plugins);
 
@@ -62,9 +67,14 @@ export async function createBundlerOptions(
 
   let parallelPluginInitResult: Awaited<ReturnType<typeof initializeParallelPlugins>>;
   try {
-    parallelPluginInitResult = import.meta.browserBuild
-      ? undefined
-      : await initializeParallelPlugins(plugins);
+    if (import.meta.browserBuild) {
+      if (plugins.some((plugin) => '_parallel' in plugin)) {
+        assertParallelPluginsSupported();
+      }
+      parallelPluginInitResult = undefined;
+    } else {
+      parallelPluginInitResult = await initializeParallelPlugins(plugins);
+    }
   } catch (error) {
     if (!isCleanupFailureError(error)) throw error;
     return retryCleanupFromError(

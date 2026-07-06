@@ -4,12 +4,24 @@ import { beforeEach, expect, test, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   acquireRuntimeLease: vi.fn(),
   bindingConstructionError: undefined as unknown,
+  bindingConstructions: 0,
+  callOptionsHook: vi.fn(async (option) => option),
   createBundlerOptions: vi.fn(),
+  pluginPromiseThenCalls: 0,
+  runtimeCapabilities: {
+    devSupported: true,
+    flavor: 'MultiThread',
+    target: 'native',
+    threads: true,
+    wasi: false,
+    watchSupported: true,
+  },
 }));
 
 vi.mock('../src/binding.cjs', () => ({
   BindingDevEngine: class {
     constructor() {
+      mocks.bindingConstructions += 1;
       if (mocks.bindingConstructionError) throw mocks.bindingConstructionError;
     }
   },
@@ -18,11 +30,12 @@ vi.mock('../src/binding.cjs', () => ({
     Auto: 'auto',
     Never: 'never',
   },
+  getRuntimeCapabilities: () => mocks.runtimeCapabilities,
 }));
 
 vi.mock('../src/plugin/plugin-driver', () => ({
   PluginDriver: {
-    callOptionsHook: vi.fn(async (option) => option),
+    callOptionsHook: mocks.callOptionsHook,
   },
 }));
 
@@ -45,7 +58,80 @@ import {
 beforeEach(() => {
   mocks.acquireRuntimeLease.mockReset();
   mocks.bindingConstructionError = undefined;
+  mocks.bindingConstructions = 0;
+  mocks.callOptionsHook.mockClear();
   mocks.createBundlerOptions.mockReset();
+  mocks.pluginPromiseThenCalls = 0;
+  Object.assign(mocks.runtimeCapabilities, {
+    devSupported: true,
+    flavor: 'MultiThread',
+    target: 'native',
+    threads: true,
+    wasi: false,
+    watchSupported: true,
+  });
+});
+
+test('dev rejects descriptors before plugin promises or setup on threaded WASI', async () => {
+  Object.assign(mocks.runtimeCapabilities, {
+    target: 'wasi-threads',
+    wasi: true,
+  });
+
+  await expect(
+    DevEngine.create(
+      {
+        plugins: [
+          {
+            // oxlint-disable-next-line unicorn/no-thenable -- verifies preflight before promise assimilation
+            then() {
+              mocks.pluginPromiseThenCalls += 1;
+              return new Promise(() => {});
+            },
+          },
+        ],
+      },
+      {
+        plugins: [
+          {
+            _parallel: {
+              fileUrl: 'file:///project/old-package-plugin.mjs',
+              options: {},
+            },
+          } as never,
+        ],
+      },
+    ),
+  ).rejects.toMatchObject({
+    code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
+    feature: 'parallelPlugins',
+  });
+
+  expect(mocks.pluginPromiseThenCalls).toBe(0);
+  expect(mocks.callOptionsHook).not.toHaveBeenCalled();
+  expect(mocks.createBundlerOptions).not.toHaveBeenCalled();
+  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
+  expect(mocks.bindingConstructions).toBe(0);
+});
+
+test('dev rejects CurrentThread before callbacks or setup', async () => {
+  Object.assign(mocks.runtimeCapabilities, {
+    devSupported: false,
+    flavor: 'CurrentThread',
+    threads: false,
+  });
+  const onOutput = vi.fn();
+
+  await expect(DevEngine.create({}, {}, { onOutput })).rejects.toMatchObject({
+    code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
+    feature: 'dev',
+  });
+
+  expect(onOutput).not.toHaveBeenCalled();
+  expect(mocks.callOptionsHook).not.toHaveBeenCalled();
+  expect(mocks.createBundlerOptions).not.toHaveBeenCalled();
+  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
+  expect(mocks.bindingConstructions).toBe(0);
 });
 
 test('dev runtime setup retries failed worker cleanup', async () => {
@@ -56,9 +142,7 @@ test('dev runtime setup retries failed worker cleanup', async () => {
     .mockRejectedValueOnce(cleanupError)
     .mockResolvedValue(undefined);
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
-  mocks.acquireRuntimeLease.mockImplementation(() => {
-    throw setupError;
-  });
+  mocks.acquireRuntimeLease.mockRejectedValue(setupError);
 
   const error = await DevEngine.create({}).catch((error: unknown) => error);
 
@@ -66,6 +150,67 @@ test('dev runtime setup retries failed worker cleanup', async () => {
   expect((error as AggregateError).errors[0]).toBe(setupError);
   expect(stopWorkers).toHaveBeenCalledTimes(2);
   expect(getRetryableCleanup(error)).toBeUndefined();
+});
+
+test('dev option getter failure cleans workers before runtime acquisition', async () => {
+  const setupError = new Error('dev option getter failed');
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  const devOptions = Object.defineProperty({}, 'onHmrUpdates', {
+    get() {
+      throw setupError;
+    },
+  });
+
+  await expect(DevEngine.create({}, {}, devOptions)).rejects.toBe(setupError);
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
+});
+
+test('dev snapshots top-level setup options once after worker initialization', async () => {
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  let rebuildStrategyReads = 0;
+  let watchReads = 0;
+  const watch = { pollInterval: 25 };
+  const devOptions = {
+    get rebuildStrategy() {
+      rebuildStrategyReads += 1;
+      return 'auto' as const;
+    },
+    get watch() {
+      watchReads += 1;
+      return watch;
+    },
+  };
+
+  await expect(DevEngine.create({}, {}, devOptions)).resolves.toBeInstanceOf(DevEngine);
+  expect(rebuildStrategyReads).toBe(1);
+  expect(watchReads).toBe(1);
+});
+
+test('dev rejects invalid rebuild strategies and cleans initialized workers', async () => {
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+
+  await expect(DevEngine.create({}, {}, { rebuildStrategy: 'sometimes' as never })).rejects.toThrow(
+    'Invalid dev rebuildStrategy "sometimes". Expected "always", "auto", or "never".',
+  );
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
+});
+
+test('dev reports non-JSON invalid rebuild strategies without losing cleanup', async () => {
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+
+  await expect(DevEngine.create({}, {}, { rebuildStrategy: 1n as never })).rejects.toThrow(
+    'Invalid dev rebuildStrategy 1n. Expected "always", "auto", or "never".',
+  );
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
 });
 
 test('dev construction retries worker cleanup and runtime release', async () => {
@@ -80,7 +225,7 @@ test('dev construction retries worker cleanup and runtime release', async () => 
     throw releaseError;
   });
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
-  mocks.acquireRuntimeLease.mockReturnValue({ release });
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.bindingConstructionError = constructionError;
 
   const error = await DevEngine.create({}).catch((error: unknown) => error);
@@ -112,7 +257,7 @@ test('dev setup keeps persistent cleanup retryable without hiding the setup erro
       throw secondReleaseError;
     });
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
-  mocks.acquireRuntimeLease.mockReturnValue({ release });
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.bindingConstructionError = constructionError;
 
   const error = await DevEngine.create({}).catch((error: unknown) => error);

@@ -11,6 +11,12 @@ const bootstrapChildPath = nodePath.join(
   'parallel-worker-bootstrap',
   'child.mjs',
 );
+const noncloneableBootstrapChildPath = nodePath.join(
+  testsDir,
+  'fixtures',
+  'parallel-worker-bootstrap',
+  'noncloneable-child.mjs',
+);
 
 test(
   'parallel workers keep a one-shot process alive through delayed bootstrap',
@@ -53,6 +59,31 @@ test('parallel file workers discard inherited string-input execArgv', { timeout:
   expect(child.status, child.stderr || child.stdout).toBe(0);
   expect(child.stdout).toContain('parallel worker bootstrap completed');
 });
+
+test.each([
+  [[], 'parallel worker non-cloneable failure reported'],
+  [['--disrupt-reporting'], 'parallel worker reporting failure terminated'],
+])(
+  'parallel bootstrap failure cannot hang when rejection handling warns (%j)',
+  { timeout: 30_000 },
+  (fixtureArgs, expectedOutput) => {
+    const child = spawnSync(
+      process.execPath,
+      ['--unhandled-rejections=warn', noncloneableBootstrapChildPath, ...fixtureArgs],
+      {
+        cwd: testsDir,
+        encoding: 'utf8',
+        env: { ...process.env },
+        timeout: 25_000,
+      },
+    );
+
+    expect(child.error).toBeUndefined();
+    expect(child.signal).toBeNull();
+    expect(child.status, child.stderr || child.stdout).toBe(0);
+    expect(child.stdout).toContain(expectedOutput);
+  },
+);
 
 test.each([
   ['error', 'delayed parallel-plugin worker fault'],

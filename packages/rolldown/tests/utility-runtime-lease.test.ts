@@ -34,8 +34,12 @@ const binding = vi.hoisted(() => {
     }
   }
 
-  return {
+  const releaseAsyncRuntime = vi.fn();
+  const result = {
     target: 'native',
+    acquireAsyncRuntime: vi.fn(async () => ({
+      release: () => releaseAsyncRuntime(),
+    })),
     collapseSourcemaps: vi.fn(),
     driveCurrentThreadRuntimeTasks: vi.fn(),
     enhancedTransform: vi.fn(() => defer('transform')),
@@ -48,14 +52,15 @@ const binding = vi.hoisted(() => {
     moduleRunnerTransform: vi.fn(() => defer('moduleRunnerTransform')),
     parse: vi.fn(() => defer('parse')),
     parseSync: vi.fn(),
+    pendingCount: (name: string) => pending.get(name)?.length ?? 0,
     registerCurrentThreadTaskHost: vi.fn(),
     registerTimerHost: vi.fn(),
     reject: (name: string, error: unknown) => settle(name, (deferred) => deferred.reject(error)),
+    releaseAsyncRuntime,
     resolve: (name: string, value: unknown) => settle(name, (deferred) => deferred.resolve(value)),
     ResolverFactory,
-    shutdownAsyncRuntime: vi.fn(),
-    startAsyncRuntime: vi.fn(),
   };
+  return result;
 });
 
 vi.mock('../src/binding.cjs', () => binding);
@@ -78,8 +83,8 @@ test('public promise utilities lease only threaded-WASI runtime operations', asy
     Object.getOwnPropertyDescriptor(nativeResolverFactory.ResolverFactory.prototype, 'async')
       ?.value,
   ).toBe(Object.getOwnPropertyDescriptor(binding.ResolverFactory.prototype, 'async')?.value);
-  expect(binding.startAsyncRuntime).not.toHaveBeenCalled();
-  expect(binding.shutdownAsyncRuntime).not.toHaveBeenCalled();
+  expect(binding.acquireAsyncRuntime).not.toHaveBeenCalled();
+  expect(binding.releaseAsyncRuntime).not.toHaveBeenCalled();
 
   binding.target = 'wasi-threads';
   vi.resetModules();
@@ -115,10 +120,18 @@ test('public promise utilities lease only threaded-WASI runtime operations', asy
     resolver.resolveDtsAsync('/project/input.d.ts', './entry'),
   ];
 
-  // The first JS lease consumes the binding's implicit owner. Every
-  // overlapping operation after it retains another native owner.
-  expect(binding.startAsyncRuntime).toHaveBeenCalledTimes(operations.length - 1);
-  expect(binding.shutdownAsyncRuntime).not.toHaveBeenCalled();
+  await vi.waitFor(() => {
+    expect(binding.acquireAsyncRuntime).toHaveBeenCalledTimes(operations.length);
+    expect(binding.parse).toHaveBeenCalledTimes(2);
+    expect(binding.enhancedTransform).toHaveBeenCalledOnce();
+    expect(binding.minify).toHaveBeenCalledOnce();
+    expect(binding.isolatedDeclaration).toHaveBeenCalledOnce();
+    expect(binding.moduleRunnerTransform).toHaveBeenCalledOnce();
+    expect(binding.pendingCount('resolve')).toBe(1);
+    expect(binding.pendingCount('resolveFile')).toBe(1);
+    expect(binding.pendingCount('resolveDts')).toBe(1);
+  });
+  expect(binding.releaseAsyncRuntime).not.toHaveBeenCalled();
 
   const parseResult = {
     errors: [],
@@ -135,28 +148,38 @@ test('public promise utilities lease only threaded-WASI runtime operations', asy
   binding.resolve('resolveDts', { path: '/project/entry.d.ts' });
 
   await expect(Promise.all(operations)).resolves.toHaveLength(operations.length);
-  expect(binding.shutdownAsyncRuntime).toHaveBeenCalledTimes(operations.length);
+  expect(binding.releaseAsyncRuntime).toHaveBeenCalledTimes(operations.length);
 
   const operationError = new Error('module transform failed');
   const rejectedOperation = moduleRunnerTransform('input.js', 'invalid');
-  expect(binding.startAsyncRuntime).toHaveBeenCalledTimes(operations.length);
+  await vi.waitFor(() => {
+    expect(binding.acquireAsyncRuntime).toHaveBeenCalledTimes(operations.length + 1);
+    expect(binding.moduleRunnerTransform).toHaveBeenCalledTimes(2);
+  });
   binding.reject('moduleRunnerTransform', operationError);
   await expect(rejectedOperation).rejects.toBe(operationError);
-  expect(binding.shutdownAsyncRuntime).toHaveBeenCalledTimes(operations.length + 1);
+  expect(binding.releaseAsyncRuntime).toHaveBeenCalledTimes(operations.length + 1);
 
-  // Once all owners stop the runtime, a later standalone utility restarts it.
   const restartedOperation = isolatedDeclaration('input.ts', 'export const restarted = true;');
-  expect(binding.startAsyncRuntime).toHaveBeenCalledTimes(operations.length + 1);
+  await vi.waitFor(() => {
+    expect(binding.acquireAsyncRuntime).toHaveBeenCalledTimes(operations.length + 2);
+    expect(binding.isolatedDeclaration).toHaveBeenCalledTimes(2);
+  });
   binding.resolve('isolatedDeclaration', { code: 'export declare const restarted = true;' });
   await expect(restartedOperation).resolves.toBeDefined();
-  expect(binding.shutdownAsyncRuntime).toHaveBeenCalledTimes(operations.length + 2);
+  expect(binding.releaseAsyncRuntime).toHaveBeenCalledTimes(operations.length + 2);
 
   const releaseError = new Error('runtime release failed');
   const primaryError = new Error('resolution failed');
-  binding.shutdownAsyncRuntime.mockImplementationOnce(() => {
-    throw releaseError;
-  });
+  binding.releaseAsyncRuntime
+    .mockImplementationOnce(() => {
+      throw releaseError;
+    })
+    .mockImplementationOnce(() => {
+      throw releaseError;
+    });
   const failedRelease = resolver.async('/project', './missing');
+  await vi.waitFor(() => expect(binding.pendingCount('resolve')).toBe(1));
   binding.reject('resolve', primaryError);
   const aggregate = await failedRelease.catch((error: unknown) => error);
   expect(aggregate).toBeInstanceOf(AggregateError);
@@ -166,6 +189,9 @@ test('public promise utilities lease only threaded-WASI runtime operations', asy
   // The next acquisition first retries the retained failed release, then owns
   // and releases its new operation normally.
   const recoveredOperation = parse('input.js', 'export const recovered = true;');
+  await vi.waitFor(() => expect(binding.parse).toHaveBeenCalledTimes(3));
   binding.resolve('parse', parseResult);
   await expect(recoveredOperation).resolves.toBe(parseResult);
+  expect(binding.acquireAsyncRuntime).toHaveBeenCalledTimes(operations.length + 4);
+  expect(binding.releaseAsyncRuntime).toHaveBeenCalledTimes(operations.length + 6);
 });

@@ -2,7 +2,6 @@ import { BindingBundler } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import {
-  acquireRuntimeLease,
   CloseCoordinator,
   type CloseAttemptResult,
   type RuntimeLease,
@@ -27,6 +26,21 @@ interface BuildOperation {
   stopWorkers?: () => Promise<void>;
 }
 
+interface BuildCleanupOwnership {
+  runtimeLeaseReleased: boolean;
+  workerOwners: Set<BuildOperation>;
+}
+
+const buildCleanupOwnership = new WeakMap<RolldownBuild, BuildCleanupOwnership>();
+
+/** @internal */
+export function hasRetryableBuildCleanup(build: RolldownBuild): boolean {
+  const ownership = buildCleanupOwnership.get(build);
+  return (
+    ownership !== undefined && (!ownership.runtimeLeaseReleased || ownership.workerOwners.size > 0)
+  );
+}
+
 /**
  * The bundle object returned by {@linkcode rolldown} function.
  *
@@ -47,9 +61,13 @@ export class RolldownBuild {
   );
 
   /** @hidden should not be used directly */
-  constructor(inputOptions: InputOptions) {
+  constructor(inputOptions: InputOptions, runtimeLease: RuntimeLease) {
     this.#inputOptions = inputOptions;
-    this.#runtimeLease = acquireRuntimeLease();
+    this.#runtimeLease = runtimeLease;
+    buildCleanupOwnership.set(this, {
+      runtimeLeaseReleased: false,
+      workerOwners: this.#workerOwners,
+    });
     try {
       this.#bundler = new BindingBundler();
     } catch (error) {
@@ -59,6 +77,7 @@ export class RolldownBuild {
         throw new AggregateError(
           [error, cleanupError],
           'Bundle construction and runtime release both failed',
+          { cause: error },
         );
       }
       throw error;
@@ -130,14 +149,10 @@ export class RolldownBuild {
     const errors: unknown[] = [];
     let retryable = false;
     await Promise.allSettled(this.#activeBuilds);
-    this.#nativeClosePromise ??= (async () => this.#bundler.close())();
-    try {
-      await this.#nativeClosePromise;
-    } catch (error) {
-      errors.push(error);
-    }
 
+    const latestWorkerOwner = this.#latestBuildOperation;
     for (const owner of this.#workerOwners) {
+      if (owner === latestWorkerOwner) continue;
       try {
         await this.#stopWorkerOwner(owner);
       } catch (error) {
@@ -146,11 +161,31 @@ export class RolldownBuild {
       }
     }
 
+    this.#nativeClosePromise ??= (async () => this.#bundler.close())();
     try {
-      this.#runtimeLease.release();
+      await this.#nativeClosePromise;
     } catch (error) {
       errors.push(error);
-      retryable = true;
+    }
+
+    if (latestWorkerOwner && this.#workerOwners.has(latestWorkerOwner)) {
+      try {
+        await this.#stopWorkerOwner(latestWorkerOwner);
+      } catch (error) {
+        errors.push(error);
+        retryable = true;
+      }
+    }
+
+    const cleanupOwnership = buildCleanupOwnership.get(this)!;
+    if (!cleanupOwnership.runtimeLeaseReleased) {
+      try {
+        this.#runtimeLease.release();
+        cleanupOwnership.runtimeLeaseReleased = true;
+      } catch (error) {
+        errors.push(error);
+        retryable = true;
+      }
     }
 
     return { errors, retryable };
@@ -202,33 +237,52 @@ export class RolldownBuild {
     }
 
     let result: RolldownOutput;
+    let supersededCleanupErrors: unknown[] = [];
     try {
-      const { nativePromise } = await this.#enterNativeBuild(
-        operation,
-        isWrite,
-        option.bundlerOptions,
-      );
-      result = new RolldownOutputImpl(unwrapBindingResult(await nativePromise));
+      const nativeBuild = await this.#enterNativeBuild(operation, isWrite, option.bundlerOptions);
+      supersededCleanupErrors = nativeBuild.supersededCleanupErrors;
+      result = new RolldownOutputImpl(unwrapBindingResult(await nativeBuild.nativePromise));
     } catch (error) {
-      let cleanupError: unknown;
-      try {
-        await this.#stopWorkerOwner(operation);
-      } catch (caughtCleanupError) {
-        cleanupError = caughtCleanupError;
-      }
+      const errors: unknown[] = [error];
       operation.settled = true;
-      if (cleanupError) {
+      if (this.#latestBuildOperation !== operation) {
+        try {
+          await this.#stopWorkerOwner(operation);
+        } catch (caughtCleanupError) {
+          errors.push(caughtCleanupError);
+        }
+      }
+      // The latest native BundleHandle still needs its parallel closeBundle
+      // hooks after a rejected build. See internal-docs/async-runtime/implementation.md.
+      errors.push(...supersededCleanupErrors);
+      if (errors.length > 1) {
         throw new AggregateError(
-          [error, cleanupError],
+          errors,
           'Bundle build and parallel-plugin worker cleanup both failed',
+          { cause: error },
         );
       }
       throw error;
     }
 
     operation.settled = true;
+    const cleanupErrors = [...supersededCleanupErrors];
     if (this.#latestBuildOperation !== operation) {
-      await this.#stopWorkerOwner(operation);
+      try {
+        await this.#stopWorkerOwner(operation);
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (cleanupErrors.length === 1) {
+      throw cleanupErrors[0];
+    }
+    if (cleanupErrors.length > 1) {
+      throw new AggregateError(
+        cleanupErrors,
+        'Multiple parallel-plugin worker cleanup attempts failed',
+        { cause: cleanupErrors[0] },
+      );
     }
     return result;
   }
@@ -239,18 +293,28 @@ export class RolldownBuild {
     bundlerOptions: Parameters<BindingBundler['generate']>[0],
   ): Promise<{
     nativePromise: ReturnType<BindingBundler['generate']>;
+    supersededCleanupErrors: unknown[];
   }> {
     const entry = this.#nativeEntryQueue.then(async () => {
       const previous = this.#latestBuildOperation;
-      if (previous?.settled) {
-        await this.#stopWorkerOwner(previous);
-      }
-
       const nativePromise = isWrite
         ? this.#bundler.write(bundlerOptions)
         : this.#bundler.generate(bundlerOptions);
       this.#latestBuildOperation = operation;
-      return { nativePromise };
+
+      const supersededCleanupErrors: unknown[] = [];
+      if (previous?.settled) {
+        try {
+          // Native entry synchronously installs this operation's bundle
+          // handle. Retire the previous workers only after that replacement
+          // is visible, so a failed retirement cannot leave native closeBundle
+          // targeting a partially terminated worker pool.
+          await this.#stopWorkerOwner(previous);
+        } catch (error) {
+          supersededCleanupErrors.push(error);
+        }
+      }
+      return { nativePromise, supersededCleanupErrors };
     });
     this.#nativeEntryQueue = entry.then(
       () => {},

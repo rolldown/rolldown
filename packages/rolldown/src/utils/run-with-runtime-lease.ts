@@ -1,8 +1,7 @@
-import { getRuntimeCapabilities } from '../binding.cjs';
-import { acquireRuntimeLease } from '../runtime-lifecycle';
+import { acquireRuntimeLease, isRuntimeLeaseRequired } from '../runtime-lifecycle';
 
 // See internal-docs/async-runtime/implementation.md.
-const requiresRuntimeLease = getRuntimeCapabilities().target === 'wasi-threads';
+const requiresRuntimeLease = isRuntimeLeaseRequired();
 
 export function runWithRuntimeLease<T>(
   operation: () => Promise<T>,
@@ -12,22 +11,22 @@ export function runWithRuntimeLease<T>(
     return operation();
   }
 
-  const runtimeLease = acquireRuntimeLease();
-  let result: Promise<T>;
+  return runWithRequiredRuntimeLease(operation, aggregateMessage);
+}
+
+async function runWithRequiredRuntimeLease<T>(
+  operation: () => Promise<T>,
+  aggregateMessage: string,
+): Promise<T> {
+  const runtimeLease = await acquireRuntimeLease();
+  let value: T;
   try {
-    result = operation();
+    value = await operation();
   } catch (error) {
     releaseAfterError(runtimeLease, error, aggregateMessage);
   }
-  return result.then(
-    (value) => {
-      runtimeLease.release();
-      return value;
-    },
-    (error) => {
-      releaseAfterError(runtimeLease, error, aggregateMessage);
-    },
-  );
+  runtimeLease.release();
+  return value;
 }
 
 export function leaseAsyncFunction<Args extends unknown[], Result>(
@@ -50,7 +49,7 @@ export function runtimeLeaseRequired(): boolean {
 }
 
 function releaseAfterError(
-  runtimeLease: ReturnType<typeof acquireRuntimeLease>,
+  runtimeLease: Awaited<ReturnType<typeof acquireRuntimeLease>>,
   error: unknown,
   aggregateMessage: string,
 ): never {

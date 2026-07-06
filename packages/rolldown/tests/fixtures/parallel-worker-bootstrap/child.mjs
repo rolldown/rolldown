@@ -8,5 +8,9 @@ const bundle = await rolldown({
   input: 'input.js',
   plugins: [plugin({ delay: 100 })],
 });
-await bundle.close();
+try {
+  await bundle.generate();
+} finally {
+  await bundle.close();
+}
 console.log('parallel worker bootstrap completed');

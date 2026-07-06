@@ -307,18 +307,28 @@ indistinguishable and receives the native phase.
 Asynchronous setup failures (for example an `options` hook rejection) are
 reported as `ERROR` with `result: null`, followed by `END`, matching Rollup's
 pre-build error shape. The emitter is then bound to a terminal close lifecycle,
-so a same-tick `close()` cannot remain pending. Setup also uses all-settled
-option initialization and terminates workers from every successfully initialized
-output if another output or native watcher construction fails. Rejected option
-initialization can also retain worker-cleanup ownership; the JavaScript setup
-path adopts those closures together with fulfilled-option workers and the
-runtime lease under one retryable cleanup owner. Cleanup is retried once
-immediately. If it still fails, the owner remains in the shared pending-cleanup
-registry so later parallel-plugin initialization can recover the workers or
-lease instead of discarding them with the setup error. The registry and retry
-coalescing live in the platform-neutral `utils/retryable-cleanup.ts`; keeping
-them separate from worker startup prevents browser watch builds from retaining
-Node worker-thread code.
+so a same-tick `close()` cannot remain pending. External close calls are gated
+on completion of the terminal report and therefore cannot resolve or dispatch
+`close` before `ERROR` and `END` listeners finish. A close called from inside an
+`ERROR` or `END` listener starts that same lifecycle but receives a reentrant
+nonblocking result, breaking the listener/report self-wait. Close listeners run
+only after terminal reporting, so they may await an `END` observation without
+forming the inverse wait cycle. Node uses async context to identify those
+listener continuations; browser hosts use the same scoped fallback as normal
+close-listener reentrancy.
+
+Setup also uses all-settled option initialization and terminates workers from
+every successfully initialized output if another output or native watcher
+construction fails. Rejected option initialization can also retain
+worker-cleanup ownership; the JavaScript setup path adopts those closures
+together with fulfilled-option workers and the runtime lease under one
+retryable cleanup owner. Cleanup is retried once immediately. If it still
+fails, the owner remains in the shared pending-cleanup registry so later
+parallel-plugin initialization can recover the workers or lease instead of
+discarding them with the setup error. The registry and retry coalescing live in
+the platform-neutral `utils/retryable-cleanup.ts`; keeping them separate from
+worker startup prevents browser watch builds from retaining Node worker-thread
+code.
 
 ### Error Recovery
 
@@ -451,6 +461,11 @@ close() → inner.close()         // sends Close msg, awaits shared future
 ### Event Emitter
 
 `WatcherEmitter` uses a simple `Map<string, Function[]>` for listener storage (on/off). Async `emit()` dispatches handlers sequentially (`for...of` + `await`) so side effects from earlier handlers (e.g. `result.close()` triggering `closeBundle`) are visible to later handlers. It also owns a deferred close-handler Promise so `close()` is valid before `createWatcher()` finishes asynchronous plugin setup. The bound `Watcher` remains the authority for native/full-phase memoization. Close-listener reentrancy uses `AsyncLocalStorage` on Node.js and a per-emitter active-listener fallback in browser builds; the browser fallback intentionally prioritizes no deadlock over distinguishing unrelated calls during the listener promise. No external dependency is needed.
+
+Setup failures are reported as `ERROR` then `END` before an external same-tick
+`close()` can finish. Errors from another JavaScript realm retain their original
+object identity; non-Error thrown values are wrapped with `cause`, including a
+non-coercible fallback that cannot disrupt terminal reporting.
 
 ### Event Mapping
 

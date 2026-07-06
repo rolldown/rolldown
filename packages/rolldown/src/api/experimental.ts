@@ -1,5 +1,7 @@
 import { BindingBundler } from '../binding.cjs';
 import type { InputOptions } from '../options/input-options';
+import type { OutputOptions } from '../options/output-options';
+import { assertParallelPluginOptionsSupported } from '../plugin/parallel-plugin';
 import { PluginDriver } from '../plugin/plugin-driver';
 import { acquireRuntimeLease, type RuntimeLease } from '../runtime-lifecycle';
 import { createBundlerOptions } from '../utils/create-bundler-option';
@@ -30,7 +32,11 @@ export { freeExternalMemory } from '../types/external-memory-handle';
  * // Now all resources have been cleaned up.
  * ```
  */
-export const scan = async (rawInputOptions: InputOptions, rawOutputOptions = {}): Promise<void> => {
+export const scan = async (
+  rawInputOptions: InputOptions,
+  rawOutputOptions: OutputOptions = {},
+): Promise<void> => {
+  assertParallelPluginOptionsSupported(rawInputOptions.plugins, rawOutputOptions.plugins);
   validateOption('input', rawInputOptions);
   validateOption('output', rawOutputOptions);
 
@@ -121,7 +127,7 @@ export const scan = async (rawInputOptions: InputOptions, rawOutputOptions = {})
   };
 
   try {
-    runtimeLease = acquireRuntimeLease();
+    runtimeLease = await acquireRuntimeLease();
     bundler = new BindingBundler();
   } catch (error) {
     return throwAfterCleanupWithRetry(

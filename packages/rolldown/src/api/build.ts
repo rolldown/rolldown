@@ -1,7 +1,14 @@
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
+import { assertParallelPluginOptionsSupported } from '../plugin/parallel-plugin';
 import type { RolldownOutput } from '../types/rolldown-output';
+import {
+  createCleanupFailureError,
+  runRetryableCleanup,
+  trackRetryableCleanupOwnership,
+} from '../utils/retryable-cleanup';
 import { rolldown } from './rolldown';
+import { hasRetryableBuildCleanup, type RolldownBuild } from './rolldown/rolldown-build';
 
 /**
  * The options for {@linkcode build} function.
@@ -55,8 +62,15 @@ async function build(options: BuildOptions[]): Promise<RolldownOutput[]>;
 async function build(
   options: BuildOptions | BuildOptions[],
 ): Promise<RolldownOutput | RolldownOutput[]> {
+  for (const option of Array.isArray(options) ? options : [options]) {
+    assertParallelPluginOptionsSupported(option.plugins, option.output?.plugins);
+  }
   if (Array.isArray(options)) {
-    return Promise.all(options.map((opts) => build(opts)));
+    const outputs: RolldownOutput[] = [];
+    for (const option of options) {
+      outputs.push(await build(option));
+    }
+    return outputs;
   } else {
     const { output, write = true, ...inputOptions } = options;
     const build = await rolldown(inputOptions);
@@ -77,7 +91,7 @@ async function build(
     let closeError: unknown;
     let closeFailed = false;
     try {
-      await build.close();
+      await closeBuild(build);
     } catch (error) {
       closeFailed = true;
       closeError = error;
@@ -95,6 +109,28 @@ async function build(
       throw closeError;
     }
     return result;
+  }
+}
+
+async function closeBuild(build: RolldownBuild): Promise<void> {
+  const cleanup = () => build.close();
+  trackRetryableCleanupOwnership(cleanup, () => hasRetryableBuildCleanup(build));
+
+  try {
+    await cleanup();
+  } catch (error) {
+    if (!hasRetryableBuildCleanup(build)) throw error;
+    try {
+      await runRetryableCleanup(cleanup);
+    } catch (retryError) {
+      if (!hasRetryableBuildCleanup(build)) throw retryError;
+      throw createCleanupFailureError(
+        error,
+        retryError,
+        cleanup,
+        'Build cleanup and retry both failed',
+      );
+    }
   }
 }
 

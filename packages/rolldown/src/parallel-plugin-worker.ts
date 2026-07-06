@@ -14,13 +14,14 @@ import { bindingifyPlugin } from './plugin/bindingify-plugin';
 import { PluginContextData } from './plugin/plugin-context-data';
 import type { WorkerData } from './utils/initialize-parallel-plugins';
 
+const controlPort = parentPort!;
 const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
 // Plugin callbacks are weak TSFNs and therefore do not keep this worker env
 // alive. The owner explicitly terminates workers through `stopWorkers()`;
 // retain the control port until that lifecycle boundary. The owner also keeps
 // error/exit supervision installed after bootstrap so delayed transport faults
 // become retryable close errors instead of uncaught parent-process failures.
-parentPort!.ref();
+controlPort.ref();
 (async () => {
   try {
     const plugins = await Promise.all(
@@ -53,8 +54,76 @@ parentPort!.ref();
 
     registerPlugins(registryId, plugins);
 
-    parentPort!.postMessage({ type: 'success' });
+    postBootstrapResult({ type: 'success' });
   } catch (error) {
-    parentPort!.postMessage({ type: 'error', error });
+    postBootstrapResult({
+      type: 'error',
+      error: createCloneableBootstrapDiagnostic(error),
+    });
   }
 })();
+
+function postBootstrapResult(message: { type: 'success' } | { type: 'error'; error: Error }): void {
+  try {
+    controlPort.postMessage(message);
+  } catch (postMessageError) {
+    // A plugin can throw a value that structured clone cannot transport, and
+    // hostile bootstrap code can also disrupt the control port itself. Never
+    // leave the explicit ref alive after the parent can no longer receive a
+    // terminal message. The uncaught microtask gives WorkerSupervisor a
+    // cloneable `error` event even under --unhandled-rejections=warn.
+    try {
+      controlPort.unref();
+      controlPort.close();
+    } catch {}
+    const bootstrapDiagnostic =
+      message.type === 'error'
+        ? message.error
+        : new Error('Parallel-plugin worker could not report successful initialization');
+    const reportingDiagnostic = createCloneableBootstrapDiagnostic(
+      postMessageError,
+      'Parallel-plugin worker could not report its bootstrap result',
+    );
+    const terminalDiagnostic = new Error(
+      `${bootstrapDiagnostic.message}; ${reportingDiagnostic.message}`,
+    );
+    terminalDiagnostic.name = 'ParallelPluginBootstrapError';
+    queueMicrotask(() => {
+      throw terminalDiagnostic;
+    });
+  }
+}
+
+function createCloneableBootstrapDiagnostic(
+  thrownValue: unknown,
+  prefix = 'Parallel-plugin worker initialization failed',
+): Error {
+  const detail = readThrownValueDetail(thrownValue);
+  const diagnostic = new Error(detail ? `${prefix}: ${detail}` : prefix);
+  diagnostic.name = 'ParallelPluginBootstrapError';
+  try {
+    if (thrownValue instanceof Error && typeof thrownValue.stack === 'string') {
+      diagnostic.stack = thrownValue.stack;
+    }
+  } catch {}
+  return diagnostic;
+}
+
+function readThrownValueDetail(thrownValue: unknown): string | undefined {
+  try {
+    if (
+      thrownValue !== null &&
+      (typeof thrownValue === 'object' || typeof thrownValue === 'function') &&
+      'message' in thrownValue
+    ) {
+      const message = thrownValue.message;
+      if (typeof message === 'string' && message.length > 0) return message;
+    }
+  } catch {}
+  try {
+    const detail = String(thrownValue);
+    return detail === '[object Object]' ? undefined : detail;
+  } catch {
+    return 'a non-coercible thrown value';
+  }
+}

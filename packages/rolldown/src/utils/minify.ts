@@ -6,8 +6,8 @@ import {
   type MinifyResult as OriginalMinifyResult,
   type SourceMap,
 } from '../binding.cjs';
-import { acquireRuntimeLease } from '../runtime-lifecycle';
 import { bindingifySourcemap } from '../types/sourcemap';
+import { runWithRuntimeLease } from './run-with-runtime-lease';
 
 /**
  * Options for minification.
@@ -39,19 +39,10 @@ export async function minify(
   options?: MinifyOptions | null,
 ): Promise<MinifyResult> {
   const inputMap = bindingifySourcemap(options?.inputMap);
-  const runtimeLease = acquireRuntimeLease();
-  let result: OriginalMinifyResult;
-  try {
-    result = await originalMinify(filename, sourceText, options);
-  } catch (error) {
-    try {
-      runtimeLease.release();
-    } catch (cleanupError) {
-      throw new AggregateError([error, cleanupError], 'Minify and runtime release both failed');
-    }
-    throw error;
-  }
-  runtimeLease.release();
+  const result = await runWithRuntimeLease(
+    () => originalMinify(filename, sourceText, options),
+    'Minify and runtime release both failed',
+  );
   if (result.map && inputMap) {
     result.map = {
       version: 3,

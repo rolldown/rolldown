@@ -1502,6 +1502,10 @@ export interface TypeScriptOptions {
    */
   rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
+export declare class BindingAsyncRuntimeLease {
+  release(): void
+}
+
 export declare class BindingBundleEndEventData {
   output: string
   duration: number
@@ -1870,6 +1874,8 @@ export declare class TsconfigCache {
   /** Get the number of cached entries. */
   size(): number
 }
+
+export declare function acquireAsyncRuntime(): Promise<BindingAsyncRuntimeLease>
 
 export interface AliasItem {
   find: string
@@ -2748,6 +2754,12 @@ export interface BindingRuntimeCapabilities {
    */
   timers: boolean
   /**
+   * Binding dev mode is supported by THIS RUNTIME: true when native work can
+   * progress on a MultiThread executor, false on CurrentThread where
+   * `BindingDevEngine::run()` cannot complete its initial build.
+   */
+  devSupported: boolean
+  /**
    * Watch mode is supported by THIS ARTIFACT: static per artifact, true on
    * both native flavors, false on every wasm artifact (watch on WASI stalls
    * on the initial build). Deliberately independent of the live `timers`
@@ -3043,6 +3055,10 @@ export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcema
  */
 export declare function configureAsyncRuntime(options: BindingRuntimeOptions): void
 
+/**
+ * Poll queued CurrentThread runnables from a callback dispatched by
+ * `registerCurrentThreadTaskHost`.
+ */
 export declare function driveCurrentThreadRuntimeTasks(): void
 
 export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
@@ -3075,13 +3091,11 @@ export type FilterTokenKind =  'Id'|
 /**
  * Return the effective async runtime configuration.
  *
- * Reported from the per-process resolved snapshot: on the native default
- * `tokio-runtime` build these are the thread counts the tokio runtime was
- * ACTUALLY built with at addon load (lib.rs `init` builds from the same
- * snapshot), so a later `process.env` change cannot make the report diverge
- * from the live runtime. On the threaded WASI build it reports the napi-rs
- * WASI loader's async work pool size (NAPI_RS_ASYNC_WORK_POOL_SIZE /
- * UV_THREADPOOL_SIZE), resolved once at first query.
+ * On the `async-runtime` build this reports the runtime controller's
+ * validated options: the resolved load-time snapshot (see
+ * `resolved_runtime_config`) as clamped by `configure`, including any
+ * pre-first-use `configureAsyncRuntime` override. The environment is never
+ * re-read.
  */
 export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
 
@@ -3160,6 +3174,10 @@ export interface PreRenderedChunk {
   exports: Array<string>
 }
 
+/**
+ * Install the host-turn callback used to poll CurrentThread runnables without
+ * re-entering arbitrary future waker locks. Called once per importing env.
+ */
 export declare function registerCurrentThreadTaskHost(dispatch: () => void): void
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
@@ -3177,26 +3195,19 @@ export declare function registerTimerHost(schedule: (id: number, ms: number) => 
 /**
  * Reset cumulative async runtime event counters to zero.
  *
+ * Live gauges and their lifetime high-water marks are preserved so active
+ * task guards can complete without corrupting concurrent observations.
+ *
  * A no-op on the default `tokio-runtime` build.
  */
 export declare function resetAsyncRuntimeMetrics(): void
 
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 
-/**
- * Shutdown the tokio runtime manually.
- *
- * This is required for the wasm target with `tokio_unstable` cfg.
- * In the wasm runtime, the `park` threads will hang there until the tokio::Runtime is shutdown.
- */
+/** Shutdown one manually retained async runtime owner. */
 export declare function shutdownAsyncRuntime(): void
 
-/**
- * Start the async runtime manually.
- *
- * This is required when the async runtime is shutdown manually.
- * Usually it's used in test.
- */
+/** Start and manually retain one async runtime owner. */
 export declare function startAsyncRuntime(): void
 
 export interface ViteImportGlobMeta {

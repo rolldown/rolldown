@@ -243,10 +243,19 @@ export async function createWatcher(
     );
   }
 
-  warnMultiplePollingOptions(bundlerOptions);
+  try {
+    warnMultiplePollingOptions(bundlerOptions);
+  } catch (error) {
+    return throwWatcherSetupErrorAfterCleanup(
+      error,
+      createWatcherSetupCleanup(workerCleanups),
+      'Watcher warning and parallel-plugin worker cleanup both failed',
+      'Watcher warning and parallel-plugin worker retry cleanup both failed',
+    );
+  }
   let runtimeLease: RuntimeLease;
   try {
-    runtimeLease = acquireRuntimeLease();
+    runtimeLease = await acquireRuntimeLease();
   } catch (error) {
     return throwWatcherSetupErrorAfterCleanup(
       error,

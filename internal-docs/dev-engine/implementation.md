@@ -953,7 +953,18 @@ failure is retried immediately; if cleanup still fails, ownership remains in
 the shared pending-cleanup registry so a later option initialization can
 recover it instead of abandoning workers or a lease. The shared registry is
 implemented in platform-neutral `utils/retryable-cleanup.ts` so browser builds
-do not retain the Node-specific parallel-worker startup module.
+do not retain the Node-specific parallel-worker startup module. User-controlled
+`DevOptions` getters are materialized under the same setup-cleanup boundary.
+Top-level callback, rebuild-strategy, and watch getters are each read once, and
+a getter failure after parallel-worker startup terminates those workers before
+the creation promise rejects.
+
+`ensureCurrentBuildFinish()` and `removeClient()` are intentional exceptions to
+the normal post-close rejection rule. Vite can leave an initial-build poll or a
+websocket disconnect callback queued while server shutdown closes the engine.
+Once close starts, both methods become no-ops because there is no remaining
+build/client state their late notification can usefully mutate; rejecting them
+would surface as an unhandled host promise after otherwise successful cleanup.
 
 Parallel plugin callbacks are weak napi TSFNs, so they do not keep a worker
 environment alive. `parallel-plugin-worker.ts` explicitly refs its
@@ -965,6 +976,13 @@ copy of `process.execArgv`: parent-only string-input modes (`--input-type`,
 the parent `--run <script>` mode is also removed; compatible preload, loader,
 condition, diagnostic, and runtime flags are preserved. The owned
 `stopWorkers()` path remains the explicit termination boundary.
+
+The public `devSupported` capability is exercised against the actual artifact,
+not inferred from thread availability alone: the threaded-WASI lifecycle suite
+creates a virtual-input engine, runs its initial build, observes output, closes
+it, and repeats the sequence after runtime restart. CurrentThread remains
+rejected before plugin callbacks, option setup, runtime leasing, or native
+construction.
 
 ---
 

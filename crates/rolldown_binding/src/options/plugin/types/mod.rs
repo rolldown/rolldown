@@ -1,4 +1,3 @@
-pub mod binding_asset_inline_limit;
 pub mod binding_asset_source;
 pub mod binding_builtin_plugin_name;
 pub mod binding_emitted_asset;
@@ -13,10 +12,8 @@ pub mod binding_hook_resolve_id_output;
 pub mod binding_hook_side_effects;
 pub mod binding_hook_transform_output;
 pub mod binding_limited_boolean;
-pub mod binding_module_preload;
 pub mod binding_plugin_context_resolve_options;
 pub mod binding_plugin_transform_extra_args;
-pub mod binding_render_built_url;
 pub mod binding_render_chunk_meta_chunks;
 pub mod binding_resolved_external;
 pub mod binding_shared_string;

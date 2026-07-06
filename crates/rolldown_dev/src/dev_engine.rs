@@ -402,24 +402,32 @@ impl DevEngine {
     &self,
     changed_files: FxIndexMap<PathBuf, WatcherChangeKind>,
   ) {
-    for (path, event) in changed_files {
-      // Create a synthetic file change event to simulate real file system changes
-      let notify_event = notify::Event {
-        kind: if event == WatcherChangeKind::Delete {
-          notify::EventKind::Remove(notify::event::RemoveKind::Any)
-        } else {
-          notify::EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Any))
-        },
-        paths: vec![path],
-        attrs: notify::event::EventAttributes::default(),
-      };
+    // Create synthetic file change events to simulate real file system
+    // changes. The whole step goes into ONE batch: one event per message
+    // would spawn one build per file, while the future awaited below only
+    // covers the first, leaving the rest racing the caller's assertions.
+    let events = changed_files
+      .into_iter()
+      .map(|(path, event)| {
+        let notify_event = notify::Event {
+          kind: if event == WatcherChangeKind::Delete {
+            notify::EventKind::Remove(notify::event::RemoveKind::Any)
+          } else {
+            notify::EventKind::Modify(notify::event::ModifyKind::Data(
+              notify::event::DataChange::Any,
+            ))
+          },
+          paths: vec![path],
+          attrs: notify::event::EventAttributes::default(),
+        };
+        rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() }
+      })
+      .collect::<Vec<_>>();
 
-      let event =
-        rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() };
-
+    if !events.is_empty() {
       // Send WatchEvent message to coordinator (simulates real file change)
       // The coordinator will automatically schedule a build via handle_file_changes
-      let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(vec![event])));
+      let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(events)));
     }
 
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
@@ -431,6 +439,11 @@ impl DevEngine {
     if let Ok(Some(ret)) = reply_rx.await {
       ret.future.await;
     }
+  }
+
+  #[cfg(feature = "testing")]
+  pub fn bundler(&self) -> Arc<Mutex<Bundler>> {
+    Arc::clone(&self.bundler)
   }
 
   #[cfg(feature = "testing")]

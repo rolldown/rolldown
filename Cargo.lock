@@ -2443,6 +2443,7 @@ dependencies = [
  "oxc_allocator",
  "oxc_ecmascript",
  "oxc_index",
+ "oxc_sourcemap",
  "oxc_str",
  "oxc_traverse",
  "petgraph",

@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
@@ -108,11 +109,51 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
-    let (source, module_type) = self
-      .load_source(&mut sourcemap_chain, &mut hook_side_effects, self.magic_string_tx.clone())
-      .await?;
-
+    let side_effects_from_resolve = hook_side_effects;
     let stable_id = id.stabilize(&self.ctx.options.cwd);
+
+    // Persistent build cache, keyed on the module's on-disk content: a hit
+    // replays the plugin `load`/`transform` pipeline results plus the resolved
+    // dependencies without calling any hook or the resolver; parsing and
+    // scanning re-run natively on the cached code below.
+    // See internal-docs/build-cache/implementation.md.
+    let mut cached_deps = None;
+    let mut cache_write_key = None;
+    let mut cache_hit = None;
+    if let Some(cache) = &self.ctx.build_cache
+      && let Some(disk_source) = self.read_disk_source_for_cache_key().await
+    {
+      let key =
+        cache.cache_key(stable_id.as_arc_str(), self.asserted_module_type.as_ref(), &disk_source);
+      if let Some(hit) = cache.get(&key).await {
+        // Watch registration mirrors the read-from-disk path in `load_source`.
+        self.ctx.plugin_driver.watch_files.insert(id.as_arc_str().clone());
+        sourcemap_chain = hit.sourcemap_chain;
+        if hit.side_effects.is_some() {
+          hook_side_effects = hit.side_effects;
+        }
+        cached_deps = Some(hit.resolved_deps);
+        cache_hit = Some((StrOrBytes::Str(hit.code), hit.module_type));
+      } else {
+        cache_write_key = Some(key);
+      }
+    }
+
+    let (source, module_type) = match cache_hit {
+      Some(source_and_type) => source_and_type,
+      None => {
+        self
+          .load_source(&mut sourcemap_chain, &mut hook_side_effects, self.magic_string_tx.clone())
+          .await?
+      }
+    };
+
+    // Snapshot what a stored entry needs before `source` moves into the view;
+    // only string sources are cacheable, the pipeline never transforms bytes.
+    let code_to_cache = match (&cache_write_key, &source) {
+      (Some(_), StrOrBytes::Str(code)) => Some(code.clone()),
+      _ => None,
+    };
 
     if matches!(module_type, ModuleType::Css) {
       Err(BuildDiagnostic::unsupported_feature(
@@ -143,16 +184,50 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       )
       .await?;
 
-    let resolved_deps = resolve_dependencies(
-      &self.resolved_id,
-      &self.ctx.options,
-      &self.ctx.resolver,
-      &self.ctx.plugin_driver,
-      &raw_import_records,
-      ecma_view.source.clone(),
-      &mut warnings,
-    )
-    .await?;
+    let resolved_deps = match cached_deps.take() {
+      // Scanning the cached code deterministically reproduces the import
+      // records the stored resolutions are positionally aligned with; a length
+      // mismatch means a corrupt entry, so fall back to a fresh resolution.
+      Some(deps) if deps.len() == raw_import_records.len() => deps,
+      _ => {
+        let warnings_len_before_resolve = warnings.len();
+        let resolved_deps = resolve_dependencies(
+          &self.resolved_id,
+          &self.ctx.options,
+          &self.ctx.resolver,
+          &self.ctx.plugin_driver,
+          &raw_import_records,
+          ecma_view.source.clone(),
+          &mut warnings,
+        )
+        .await?;
+        if let Some(cache) = &self.ctx.build_cache
+          && let Some(key) = &cache_write_key
+          && let Some(code) = &code_to_cache
+          // Resolution warnings (e.g. unresolved imports treated as external)
+          // would not replay on a hit, so such modules are never stored.
+          && warnings.len() == warnings_len_before_resolve
+        {
+          // Side effects may already be set by resolution data outside the
+          // cache key, so only the load/transform pipeline's own override is
+          // stored; storing the pre-existing value would replay stale
+          // resolution data on later hits.
+          let side_effects_override =
+            if hook_side_effects == side_effects_from_resolve { None } else { hook_side_effects };
+          cache
+            .set(
+              key,
+              code,
+              &module_type,
+              side_effects_override,
+              &ecma_view.sourcemap_chain,
+              &resolved_deps,
+            )
+            .await;
+        }
+        resolved_deps
+      }
+    };
 
     for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
       match record.kind {
@@ -310,5 +385,28 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       ))?;
     }
     Ok((source, module_type))
+  }
+
+  /// Reads the module's raw on-disk content, which keys its build cache
+  /// entry. Only absolute filesystem paths are cacheable: virtual modules,
+  /// data URLs, `rolldown:` ids and unreadable files bypass the cache.
+  async fn read_disk_source_for_cache_key(&self) -> Option<Vec<u8>> {
+    if !Path::new(self.resolved_id.id.as_str()).is_absolute() {
+      return None;
+    }
+    let fs = self.ctx.fs.clone();
+    #[cfg(not(target_family = "wasm"))]
+    {
+      let id = self.resolved_id.id.clone();
+      tokio::runtime::Handle::current()
+        .spawn_blocking(move || fs.read(Path::new(id.as_str())).ok())
+        .await
+        .ok()
+        .flatten()
+    }
+    #[cfg(target_family = "wasm")]
+    {
+      fs.read(Path::new(self.resolved_id.id.as_str())).ok()
+    }
   }
 }

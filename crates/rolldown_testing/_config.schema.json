@@ -1033,6 +1033,16 @@
             "boolean",
             "null"
           ]
+        },
+        "buildCache": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BuildCacheOption"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1127,6 +1137,38 @@
         "avoidRedundantChunkLoads": {
           "type": "boolean",
           "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "BuildCacheOption": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/BuildCacheOptions"
+        }
+      ]
+    },
+    "BuildCacheOptions": {
+      "type": "object",
+      "properties": {
+        "dir": {
+          "description": "Directory where cache entries are stored. Relative paths are resolved\nagainst `cwd`. Defaults to `node_modules/.cache/rolldown`.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "key": {
+          "description": "Extra cache invalidation key mixed into every entry's hash. The cache key\nonly captures the rolldown version, the ordered plugin names, each\nmodule's id and on-disk content. Plugin *configuration* or\n*implementation* changes and resolution inputs outside module files\n(lockfile, `tsconfig.json` paths) are invisible to it, so callers must\nfold anything that changes resolve/load/transform output (e.g. a hash of\nthe resolved config and lockfile) into this key.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
         }
       },
       "additionalProperties": false

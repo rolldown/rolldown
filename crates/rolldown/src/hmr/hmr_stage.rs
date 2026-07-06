@@ -92,12 +92,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       first_invalidated_by,
     );
     // Look up by stable_id (matches what client sends from createModuleHotContext)
-    let module_idx = self
-      .cache
-      .module_idx_by_stable_id
-      .get(invalidate_caller.as_str())
-      .copied()
-      .unwrap_or_else(|| panic!("Not found modules for file: {invalidate_caller}"));
+    let Some(module_idx) =
+      self.cache.module_idx_by_stable_id.get(invalidate_caller.as_str()).copied()
+    else {
+      // The client references a module the current graph does not know,
+      // e.g. its bundle predates a failed full build that reset the cache.
+      return Ok(HmrUpdate::FullReload { reason: format!("unknown module `{invalidate_caller}`") });
+    };
 
     let caller = self.module_table().modules[module_idx].as_normal().unwrap();
 
@@ -216,11 +217,24 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     first_invalidated_by: Option<String>,
     clients: &[ClientHmrInput<'_>],
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
+    // Files re-queued by an earlier failed scan (`pending_rescans`) get
+    // re-fetched and merged by this update as well. Treat them as changed so
+    // their recovered content reaches the clients' patches; otherwise only
+    // the server-side graph would learn about their edits.
+    let mut stale_modules = stale_modules.clone();
+    let mut changed_modules = changed_modules.clone();
+    for resolved_id in &self.cache.pending_rescans {
+      if let Some(state) = self.cache.module_id_to_idx.get(&resolved_id.id) {
+        stale_modules.insert(state.idx());
+        changed_modules.insert(state.idx());
+      }
+    }
+
     // 1. Compute prerequisites for each client
     let mut clients_prerequisites = Vec::with_capacity(clients.len());
     for client in clients {
       let prerequisites =
-        self.compute_out_hmr_prerequisites(stale_modules, first_invalidated_by.as_deref(), client);
+        self.compute_out_hmr_prerequisites(&stale_modules, first_invalidated_by.as_deref(), client);
 
       tracing::trace!(
         "[HmrStage] computed prerequisites for client {}\n - require_full_reload: {}\n - boundaries: {:#?}",
@@ -281,7 +295,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
           .collect::<Vec<_>>(),
       );
 
-      self.cache.merge(module_loader_output.into())?;
+      let plugin_driver = Arc::clone(&self.plugin_driver);
+      self.cache.merge(module_loader_output.into(), &plugin_driver)?;
 
       let options = Arc::clone(&self.options);
       self.cache.update_defer_sync_data(&options).await?;
@@ -339,6 +354,21 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // The proxy has been marked as fetched, so the lazy compilation plugin's load hook
     // will return the fetched template which imports the real module.
 
+    // A failed full build leaves `module_id_to_idx` repopulated but the
+    // snapshot unset; `module_table()` would panic. Surface an error the
+    // client can handle instead.
+    if !self.cache.has_snapshot() {
+      return Err(
+        vec![
+          anyhow::anyhow!(
+            "Cannot compile lazy entry `{module_id}`: the last full build failed, so there is no module graph to compile against."
+          )
+          .into(),
+        ]
+        .into(),
+      );
+    }
+
     // 1. Get the originative resolved_id from the cached module
     // The proxy module should already be in the cache from the initial build.
     let (entry_module_idx, resolved_id) = self
@@ -374,7 +404,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
     drop(module_loader);
 
-    self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
+    let plugin_driver = Arc::clone(&self.plugin_driver);
+    self
+      .cache
+      .merge(module_loader_output.into(), &plugin_driver)
+      .map_err(|e| vec![anyhow::anyhow!(e).into()])?;
 
     let options = Arc::clone(&self.options);
     self.cache.update_defer_sync_data(&options).await?;

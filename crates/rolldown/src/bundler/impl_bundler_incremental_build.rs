@@ -57,6 +57,10 @@ impl Bundler {
     is_write: bool,
     scan_mode: ScanMode<ArcStr>,
   ) -> BuildResult<BundleOutput> {
+    // No snapshot, no graph to build on: scan fully. Deciding before the
+    // `BundleMode` choice applies the `IncrementalFullBuild` reset rules to
+    // the plugin driver state.
+    let scan_mode = if self.cache.has_snapshot() { scan_mode } else { ScanMode::Full };
     let bundle_mode = match scan_mode {
       ScanMode::Full => BundleMode::IncrementalFullBuild,
       ScanMode::Partial(_) => BundleMode::IncrementalBuild,

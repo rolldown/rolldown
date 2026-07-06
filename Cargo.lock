@@ -2931,22 +2931,10 @@ dependencies = [
 name = "rolldown_plugin_utils"
 version = "1.1.4"
 dependencies = [
- "anyhow",
- "arcstr",
- "cow-utils",
- "dashmap",
- "derive_more",
- "itertools",
  "memchr",
- "percent-encoding",
- "regex",
- "rolldown_common",
  "rolldown_plugin",
- "rolldown_sourcemap",
  "rolldown_utils",
- "rustc-hash",
  "serde_json",
- "sugar_path",
 ]
 
 [[package]]

@@ -253,7 +253,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       return Ok(output);
     }
 
-    self.cache.merge(output)?;
+    self.cache.merge(output, &self.plugin_driver)?;
     self.cache.update_defer_sync_data(&self.options).await?;
     Ok(self.cache.create_output())
   }

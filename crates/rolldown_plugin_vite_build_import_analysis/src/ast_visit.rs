@@ -79,7 +79,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   fn visit_variable_declaration(&mut self, decl: &mut VariableDeclaration<'a>) {
     if self.insert_preload {
       for decl in &mut decl.declarations {
-        if matches!(decl.id, BindingPattern::ObjectPattern(_))
+        if let BindingPattern::ObjectPattern(object_pat) = &decl.id
           && matches!(
             &decl.init,
             Some(Expression::AwaitExpression(expr)) if matches!(expr.argument, Expression::ImportExpression(_))
@@ -88,7 +88,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
           decl.init = Some(Expression::new_await_expression(
             SPAN,
             self.construct_vite_preload_call(
-              decl.id.clone_in(self.ast_factory.allocator()),
+              object_pat.clone_in(self.ast_factory.allocator()),
               decl.init.take().unwrap(),
             ),
             &self.ast_factory,

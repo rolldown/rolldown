@@ -1,9 +1,8 @@
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { rolldown } from 'rolldown';
 import { expect, test } from 'vitest';
-
-const root = join(import.meta.dirname, 'dist/build-cache');
 
 interface BuildResult {
   calls: { resolve: number; load: number; transform: number };
@@ -11,10 +10,12 @@ interface BuildResult {
   mappings: string;
 }
 
+// Fixtures live in an OS tempdir: other behaviors test files build into the
+// shared `dist/` directory concurrently and could wipe fixtures placed there.
 function setupFixture(name: string): { cwd: string; cacheDir: string } {
-  const cwd = join(root, name, 'src');
-  const cacheDir = join(root, name, 'cache');
-  if (existsSync(join(root, name))) rmSync(join(root, name), { recursive: true });
+  const root = mkdtempSync(join(tmpdir(), `rolldown-build-cache-${name}-`));
+  const cwd = join(root, 'src');
+  const cacheDir = join(root, 'cache');
   mkdirSync(cwd, { recursive: true });
   writeFileSync(
     join(cwd, 'entry.js'),

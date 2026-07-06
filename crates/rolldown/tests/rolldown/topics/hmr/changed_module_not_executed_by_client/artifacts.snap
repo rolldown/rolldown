@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region hmr.js
+var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+const value = "value";
+if (hmr_hot) hmr_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Meta
+
+- update type: full-reload
+- reason: module `hmr.js` is not registered as executed by client `unregistered-client`
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region hmr.js
+var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+const value = "value-updated";
+if (hmr_hot) hmr_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+//#endregion
+
+```

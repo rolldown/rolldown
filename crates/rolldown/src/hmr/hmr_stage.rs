@@ -219,8 +219,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // 1. Compute prerequisites for each client
     let mut clients_prerequisites = Vec::with_capacity(clients.len());
     for client in clients {
-      let prerequisites =
-        self.compute_out_hmr_prerequisites(stale_modules, first_invalidated_by.as_deref(), client);
+      let prerequisites = self.compute_out_hmr_prerequisites(
+        stale_modules,
+        changed_modules,
+        first_invalidated_by.as_deref(),
+        client,
+      );
 
       tracing::trace!(
         "[HmrStage] computed prerequisites for client {}\n - require_full_reload: {}\n - boundaries: {:#?}",
@@ -835,6 +839,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   fn compute_out_hmr_prerequisites(
     &self,
     stale_modules: &FxIndexSet<ModuleIdx>,
+    changed_modules: &FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<&str>,
     client: &ClientHmrInput,
   ) -> HmrPrerequisites {
@@ -860,12 +865,30 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       let mut boundaries = FxIndexSet::default();
 
       if !client.is_module_executed(self.module_table().modules[stale_module].stable_id()) {
+        if changed_modules.contains(&stale_module) {
+          // A client reports executed modules asynchronously (batched
+          // `hmr:module-registered` messages over the socket), so
+          // `executed_modules` can lag what it actually ran, typically right
+          // after a page load. Skipping a changed module here would silently
+          // drop the edit, because the module cache advances regardless. Fall
+          // back to a full reload instead. A lazy-compilation client that
+          // truly never ran the module reloads needlessly, but we cannot tell
+          // the two apart.
+          require_full_reload = true;
+          full_reload_reason = Some(format!(
+            "module `{}` is not registered as executed by client `{}`",
+            self.module_table().modules[stale_module].stable_id(),
+            client.client_id
+          ));
+          break;
+        }
         tracing::trace!(
           "[HmrStage] skip stale module {:?} for client {} since it's not executed",
           self.module_table().modules[stale_module].stable_id(),
           client.client_id,
         );
-        // If this module is not registered, we simply ignore it.
+        // Invalidate flow: nothing changed on disk, so an unexecuted importer
+        // has nothing to re-run.
         continue;
       }
       let propagate_update_status = self.propagate_update(

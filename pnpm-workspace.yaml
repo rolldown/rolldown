@@ -104,7 +104,7 @@ catalog:
   tsx: ^4.22.0
   typescript: ^6.0.0
   unified: ^11.0.5
-  valibot: 1.4.1
+  valibot: 1.4.2
   vite: ^8.0.0
   vitest: ^4.1.6
   vue: ^3.5.35

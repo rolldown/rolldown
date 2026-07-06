@@ -61,7 +61,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       *await_expr = Expression::AwaitExpression(AwaitExpression::boxed(
         SPAN,
         self.construct_vite_preload_call(
-          BindingPattern::ObjectPattern(ObjectPattern::boxed(
+          ObjectPattern::boxed(
             SPAN,
             oxc::allocator::Vec::from_value_in(
               BindingProperty::new(
@@ -76,7 +76,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
             ),
             NONE,
             &self.ast_factory,
-          )),
+          ),
           await_expr.take_in(&self.ast_factory.allocator()),
         ),
         &self.ast_factory,
@@ -110,21 +110,21 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
         Argument::FunctionExpression(func) => &func.params,
         _ => return None,
       };
-      let first_param = params.items.first()?;
-      if matches!(&first_param.pattern, BindingPattern::ObjectPattern(_)) {
-        Some(first_param.pattern.clone_in(self.ast_factory.allocator()))
-      } else {
-        None
+      match &params.items.first()?.pattern {
+        BindingPattern::ObjectPattern(object_pat) => {
+          Some(object_pat.clone_in(self.ast_factory.allocator()))
+        }
+        _ => None,
       }
     });
-    if let Some(binding_pat) = destructuring_pat {
+    if let Some(object_pat) = destructuring_pat {
       // For destructuring: replace only the import() in the callee with __vitePreload(...)
       // keeping the .then() call on the outside
       let Expression::StaticMemberExpression(callee) = &mut call_expr.callee else {
         unreachable!();
       };
       callee.object = self.construct_vite_preload_call(
-        binding_pat,
+        object_pat,
         Expression::new_await_expression(
           SPAN,
           callee.object.take_in(&self.ast_factory.allocator()),
@@ -155,16 +155,11 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
   pub fn construct_vite_preload_call(
     &self,
-    binding_pat: BindingPattern<'a>,
+    object_pat: oxc::allocator::Box<'a, ObjectPattern<'a>>,
     await_expr: Expression<'a>,
   ) -> Expression<'a> {
-    let argument = if let BindingPattern::BindingIdentifier(_) = binding_pat {
-      let Expression::AwaitExpression(expr) = await_expr else {
-        unreachable!("The `await_expr` must be `Expression::AwaitExpression`.")
-      };
-      self.ast_factory.make_arrow_returning(expr.unbox().argument)
-    } else {
-      Expression::ArrowFunctionExpression(ArrowFunctionExpression::boxed(
+    self.vite_preload_call(Argument::from(Expression::ArrowFunctionExpression(
+      ArrowFunctionExpression::boxed(
         SPAN,
         false,
         true,
@@ -190,7 +185,9 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
                   VariableDeclarator::new(
                     SPAN,
                     VariableDeclarationKind::Const,
-                    binding_pat.clone_in(self.ast_factory.allocator()),
+                    BindingPattern::ObjectPattern(
+                      object_pat.clone_in(self.ast_factory.allocator()),
+                    ),
                     NONE,
                     Some(await_expr),
                     false,
@@ -204,7 +201,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
             )));
             statements.push(Statement::ReturnStatement(ReturnStatement::boxed(
               SPAN,
-              Some(binding_pat.into_expression(&self.ast_factory)),
+              Some(BindingPattern::ObjectPattern(object_pat).into_expression(&self.ast_factory)),
               &self.ast_factory,
             )));
             statements
@@ -212,9 +209,8 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
           &self.ast_factory,
         ),
         &self.ast_factory,
-      ))
-    };
-    self.vite_preload_call(Argument::from(argument))
+      ),
+    )))
   }
 
   pub fn vite_preload_call(&self, argument: Argument<'a>) -> Expression<'a> {

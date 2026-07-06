@@ -122,6 +122,18 @@ export default defineConfig({
 
 Flags can be passed as `--foo`, `--foo <value>`, or `--foo=<value>`. Boolean flags like `--minify` don't need a value, while key-value options like `--transform.define` use comma-separated syntax: `--transform.define key:value,key2:value2`. Many flags have short aliases (e.g., `-m` for `--minify`, `-f` for `--format`).
 
+::: warning Disabling boolean flags
+
+To turn a boolean flag _off_, prefix it with `--no-`, e.g. `--no-minify` or `--no-codeSplitting`. Passing `false` as a value—`--minify false` or `--codeSplitting=false`—is **not** supported and will error, because the value is read as the string `"false"` rather than a boolean. This matches [Rollup's CLI behavior](https://rollupjs.org/command-line-interface/) (`--no-treeshake`, etc.).
+
+Some flags accept either a boolean or an object (e.g. `codeSplitting`). For those you can:
+
+- enable with defaults: `--codeSplitting`
+- disable: `--no-codeSplitting`
+- set nested fields with dot-notation: `--codeSplitting.minSize 30000`
+
+:::
+
 ::: info Integration into other tools
 
 Note that your shell interprets arguments before Rolldown sees them—quotes and wildcards may behave unexpectedly. For advanced build processes or integration into other tools, consider using the [JavaScript API](/apis/bundler-api) instead. Key differences when switching from config files to the API:

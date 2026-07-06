@@ -217,6 +217,16 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     })
   }
 
+  /// Marks `idx` for importer-set re-derivation in `ScanStageCache::merge`;
+  /// call it next to every mutation of `intermediate_normal_modules.importers`.
+  /// Writes straight to the cache so marks survive a failed scan. No-op in
+  /// full scan mode, which rebuilds every module's sets anyway.
+  fn mark_module_importers_changed(&mut self, idx: ModuleIdx) {
+    if !self.is_full_scan {
+      self.cache.modules_with_changed_importers.insert(idx);
+    }
+  }
+
   /// Lazy barrel must not skip any of an entry's re-exports — an entry has to
   /// preserve all of its exports. Request `All` from it: if it has already been
   /// loaded as a barrel, load its remaining (deferred) records now; otherwise
@@ -425,11 +435,15 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             && let Some(previous_module) =
               self.cache.get_snapshot().module_table.modules.get(module_idx)
           {
-            let resolved_deps =
-              previous_module.import_records().into_iter().filter_map(|r| r.resolved_module);
+            let resolved_deps = previous_module
+              .import_records()
+              .into_iter()
+              .filter_map(|r| r.resolved_module)
+              .collect::<Vec<_>>();
             for dep_idx in resolved_deps {
               self.intermediate_normal_modules.importers[dep_idx]
                 .retain(|v| v.importer_idx != module_idx);
+              self.mark_module_importers_changed(dep_idx);
             }
           }
 
@@ -505,6 +519,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
               importer_path: module.id().clone(),
               importer_idx: module_idx,
             });
+            self.mark_module_importers_changed(idx);
 
             // Defer usage merging - with only one consumer, keep fetch actions simple
             if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
@@ -617,6 +632,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
               importer_path: module.id.clone(),
               importer_idx: module.idx,
             });
+            self.mark_module_importers_changed(idx);
             import_records.push(raw_rec.into_resolved(Some(idx)));
           }
           module.import_records = import_records;
@@ -730,14 +746,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.
           let importers = &self.intermediate_normal_modules.importers[idx];
-          for importer in importers {
-            if importer.kind.is_static() {
-              module.importers.insert(importer.importer_path.clone());
-              module.importers_idx.insert(importer.importer_idx);
-            } else {
-              module.dynamic_importers.insert(importer.importer_path.clone());
-            }
-          }
+          module.ecma_view.rebuild_importer_sets(importers);
           if !importers.is_empty() {
             idx_of_module_info_need_update.push(idx);
           }
@@ -1024,6 +1033,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
               user_defined_entries,
             );
             self.intermediate_normal_modules.importers[new_idx].push(importer_record);
+            self.mark_module_importers_changed(new_idx);
             // Update resolved module in either cache snapshot or intermediate modules
             if is_module_from_cache_snapshot {
               self

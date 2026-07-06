@@ -281,7 +281,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
           .collect::<Vec<_>>(),
       );
 
-      self.cache.merge(module_loader_output.into())?;
+      let plugin_driver = Arc::clone(&self.plugin_driver);
+      self.cache.merge(module_loader_output.into(), &plugin_driver)?;
 
       let options = Arc::clone(&self.options);
       self.cache.update_defer_sync_data(&options).await?;
@@ -374,7 +375,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
     drop(module_loader);
 
-    self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
+    let plugin_driver = Arc::clone(&self.plugin_driver);
+    self
+      .cache
+      .merge(module_loader_output.into(), &plugin_driver)
+      .map_err(|e| vec![anyhow::anyhow!(e).into()])?;
 
     let options = Arc::clone(&self.options);
     self.cache.update_defer_sync_data(&options).await?;

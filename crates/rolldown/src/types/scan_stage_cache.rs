@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
@@ -6,6 +8,7 @@ use rolldown_common::{
   StableModuleId,
 };
 use rolldown_error::BuildResult;
+use rolldown_plugin::PluginDriver;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
@@ -22,6 +25,10 @@ pub struct ScanStageCache {
   pub barrel_state: BarrelState,
   pub module_id_to_idx: FxHashMap<ModuleId, VisitState>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
+  /// Modules whose `importers` records were mutated by a partial scan.
+  /// [`Self::merge`] re-derives their materialized importer sets, which the
+  /// scan does only for re-scanned modules.
+  pub modules_with_changed_importers: FxHashSet<ModuleIdx>,
   pub user_defined_entry: FxHashSet<ModuleId>,
   // Usage: Map file path emitted by watcher to corresponding module index
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
@@ -67,7 +74,11 @@ impl ScanStageCache {
     self.snapshot.as_ref().unwrap()
   }
 
-  pub fn merge(&mut self, mut scan_stage_output: ScanStageOutput) -> BuildResult<()> {
+  pub fn merge(
+    &mut self,
+    mut scan_stage_output: ScanStageOutput,
+    plugin_driver: &PluginDriver,
+  ) -> BuildResult<()> {
     fn module_has_tla(module: &Module) -> bool {
       module.as_normal().is_some_and(|normal_module| {
         normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait)
@@ -157,6 +168,19 @@ impl ScanStageCache {
       );
     }
 
+    // The scan rebuilds the materialized importer sets only for the modules
+    // it re-scanned. Re-derive them for cached modules whose incoming edges
+    // changed. See internal-docs/cache/implementation.md.
+    let modules_with_changed_importers = std::mem::take(&mut self.modules_with_changed_importers);
+    for idx in &modules_with_changed_importers {
+      // The idx may belong to a module from a scan that failed before merging.
+      let Some(module) = cache.module_table.modules.get_mut(*idx).and_then(Module::as_normal_mut)
+      else {
+        continue;
+      };
+      module.ecma_view.rebuild_importer_sets(&self.importers[*idx]);
+    }
+
     // merge entries
     for entry_point in scan_stage_output.entry_points {
       if let Some(old_entry_point) = cache
@@ -205,7 +229,27 @@ impl ScanStageCache {
         user_defined_entry_modules.insert(idx);
       }
     }
+    // Entries emitted via `emitFile(type: 'chunk')` are only discovered by
+    // full scans (partial scans skip `buildStart`); their rows persist in
+    // `entry_points`, so keep their modules flagged as entries too.
+    for entry in &cache.entry_points {
+      if matches!(entry.kind, rolldown_common::EntryPointKind::EmittedUserDefined) {
+        user_defined_entry_modules.insert(entry.idx);
+      }
+    }
     cache.user_defined_entry_modules = user_defined_entry_modules;
+
+    // Keep the plugin-facing `ModuleInfo.importers` of those modules in
+    // sync as well; the scan refreshes it only for re-scanned modules.
+    for idx in modules_with_changed_importers {
+      let Some(module) = cache.module_table.modules.get(idx).and_then(Module::as_normal) else {
+        continue;
+      };
+      plugin_driver.set_module_info(
+        &module.id,
+        Arc::new(module.to_module_info(None, cache.user_defined_entry_modules.contains(&idx))),
+      );
+    }
 
     Ok(())
   }

@@ -24,6 +24,7 @@ Bundler (long-lived)
   │     ├── snapshot (NormalizedScanStageOutput)
   │     ├── module_id_to_idx
   │     ├── importers
+  │     ├── modules_with_changed_importers
   │     ├── barrel_state
   │     ├── module_idx_by_abs_path
   │     └── module_idx_by_stable_id
@@ -76,14 +77,15 @@ Data created fresh for each build and discarded (or consumed) when the build com
 Bundler.cache (ScanStageCache) ──(move)──> Bundle.cache (temporary holder) ──(build)──> Bundle.cache ──(move)──> Bundler.cache
 ```
 
-| `ScanStageCache` field    | Purpose                                             |
-| ------------------------- | --------------------------------------------------- |
-| `snapshot`                | Full module graph (modules, ASTs, symbols, entries) |
-| `module_id_to_idx`        | Module ID to index lookup                           |
-| `importers`               | Reverse dependency graph                            |
-| `barrel_state`            | Barrel export optimization state                    |
-| `module_idx_by_abs_path`  | Path-based lookup for watcher                       |
-| `module_idx_by_stable_id` | Stable ID lookup for HMR                            |
+| `ScanStageCache` field           | Purpose                                                                      |
+| -------------------------------- | ---------------------------------------------------------------------------- |
+| `snapshot`                       | Full module graph (modules, ASTs, symbols, entries)                          |
+| `module_id_to_idx`               | Module ID to index lookup                                                    |
+| `importers`                      | Reverse dependency graph                                                     |
+| `modules_with_changed_importers` | Modules whose `importers` records a partial scan mutated; drained by `merge` |
+| `barrel_state`                   | Barrel export optimization state                                             |
+| `module_idx_by_abs_path`         | Path-based lookup for watcher                                                |
+| `module_idx_by_stable_id`        | Stable ID lookup for HMR                                                     |
 
 ### Cache integrity on a failed build
 

@@ -1549,6 +1549,10 @@ impl GenerateStage<'_> {
   ///   post-optimization graph.
   /// - Self-edges (`target_chunk == current`) are skipped — an intra-chunk
   ///   import can't form an inter-chunk cycle.
+  /// - Besides module import records, an entry-point chunk whose entry module
+  ///   was captured into another chunk (e.g. by a `codeSplitting` group) gets a
+  ///   render-time static import of that module's wrapper/namespace from the
+  ///   capturing chunk, so that facade edge is followed too (#9993).
   fn chunk_reaches_via_static_import(
     from: ChunkIdx,
     to: ChunkIdx,
@@ -1563,6 +1567,14 @@ impl GenerateStage<'_> {
       }
       if current == to {
         return true;
+      }
+      if let ChunkKind::EntryPoint { module: entry_module_idx, .. } =
+        chunk_graph.chunk_table[current].kind
+        && let Some(entry_module_chunk) = chunk_graph.module_to_chunk[entry_module_idx]
+        && entry_module_chunk != current
+        && !chunk_graph.post_chunk_optimization_operations.contains_key(&entry_module_chunk)
+      {
+        queue.push_back(entry_module_chunk);
       }
       for &module_idx in &chunk_graph.chunk_table[current].modules {
         let Some(module) = module_table[module_idx].as_normal() else {

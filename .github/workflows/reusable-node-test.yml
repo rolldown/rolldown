@@ -40,7 +40,7 @@ jobs:
         if: ${{ inputs.node-version == 20 }}
         run: npm pkg set packageManager=pnpm@10.33.4
 
-      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
+      - uses: voidzero-dev/setup-vp@35171c92dd08b67d5a9d3f2a4327800e58396f2a # v1.13.0
         with:
           version: '0.2.1'
           node-version: ${{ inputs.node-version }}

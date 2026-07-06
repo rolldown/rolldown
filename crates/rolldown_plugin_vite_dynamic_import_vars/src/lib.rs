@@ -119,6 +119,9 @@ impl Plugin for ViteDynamicImportVarsPlugin {
           .map(|glob| async { resolver(glob, args.id.to_string()).await.ok()? });
 
         let importer = args.id.as_path().parent().unwrap();
+        // JS-backed resolvers are rejected on CurrentThread during binding
+        // option conversion. Their TSFN continuation needs the JS host thread,
+        // which this synchronous block_on would otherwise park.
         let result = block_on(block_on_spawn_all(task));
         for (i, item) in result.into_iter().enumerate() {
           if let Some(id) = item {

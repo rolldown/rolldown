@@ -82,13 +82,11 @@ jobs:
 
       - run: just lint-rust
 
-      # `just lint-rust` (and the default `cargo clippy --workspace`) never enables the
-      # `async-runtime` feature, so the entire `rolldown_utils::async_runtime` module and
-      # the async-runtime arms of `rolldown_binding` go unlinted by default. Lint that
-      # feature path explicitly, including the test profile (`--all-targets`), so cfg-gated
-      # dead-code / clippy regressions on it cannot land silently.
+      # `just lint-rust` (and the default `cargo clippy --workspace`) checks the
+      # `tokio-runtime` profile. Lint the supported shared-runtime profile explicitly,
+      # including its test targets, so cfg-gated regressions cannot land silently.
       - name: Clippy (async-runtime feature)
-        run: cargo clippy -p rolldown_utils -p rolldown_binding --features async-runtime --all-targets -- --deny warnings
+        run: cargo clippy -p rolldown_utils -p rolldown_binding --no-default-features --features async-runtime --all-targets -- --deny warnings
 
       - name: Check allocations
         run: |
@@ -202,6 +200,29 @@ jobs:
       # facility replaced tokio's reactor for the watch-mode debounce timer.
       - name: Scheduler unit tests + node & watcher suites (single- and multi-thread flavors)
         run: just test-async-runtime
+
+  native-async-runtime-check:
+    name: Native Async Runtime Build (${{ matrix.os }})
+    needs: changes
+    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          cache-key: native-async-runtime-check-${{ matrix.os }}
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      # `rolldown_binding` produces a cdylib, so use `cargo build` to exercise
+      # platform linkers and N-API linkage instead of stopping at type checking.
+      - name: Build shared async runtime
+        run: cargo build -p rolldown_binding --no-default-features --features async-runtime --locked
 
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]

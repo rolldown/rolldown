@@ -41,12 +41,21 @@ The existing Tokio runtime remains the default and is selected by the
    through an O(1) queue index. A stale transfer drop cannot release a newer
    reservation; a later unrelated job or dependency from another frame cannot
    use it. Dependencies that cross an async `JoinHandle` acquire the ambient
-   owner frame when they enter the owner's lineage. A stolen Rayon descendant
-   that has lost thread-local ancestry may bind its live untagged publication
-   only when that executor's registry contains exactly one active, available
-   owner frame. The binding is persisted before reservation so later targeted
-   handoff sees the same lineage. Multiple or nested owner candidates remain
-   ambiguous and never authorize an over-cap escape.
+   owner frame when they enter the owner's lineage. Lending requires that exact
+   token to remain lexically ambient on the cooperative driver; active-owner
+   registry cardinality is never treated as ancestry. A stolen Rayon descendant
+   that has lost its thread-local token, or a scheduler runnable driven from an
+   owner frame, therefore cannot borrow an unrelated lane even when only one
+   owner is active.
+   Dependency propagation creates one local liveness link per async join hop
+   over a shared one-shot exact-job claim. Link withdrawal and final claiming
+   serialize through that shared claim, so either a withdrawal invalidates the
+   chain first or the exact claim commits first; validation cannot tear across
+   the two. Every task poll withdraws its previous local publication before user
+   code runs. That immediately invalidates ancestors that depended on the old
+   hop, while leaving a child's still-live source claim available for the child
+   to republish. Dropping a blocking handle clears the direct dependency by
+   stable job id even if owner enrichment changed the publication metadata.
    Lending is driver-local and submits no global Rayon broadcast, so an
    unrelated parked worker cannot retain a probe batch, block later lending, or
    keep shutdown-idle accounting active. Each idle cooperative pass performs at
@@ -54,15 +63,21 @@ The existing Tokio runtime remains the default and is selected by the
    worker-count multiplier. Completing one transfer wakes at most one parked
    blocking-capable driver that published the same owner lineage, so an
    unrelated newer parker cannot absorb the handoff. This lets another exact
-   dependency retry without wake amplification.
+   dependency retry without wake amplification. Every reservation release,
+   including a failed exact claim, performs that same owner-targeted handoff. If
+   it races just before parker publication, the registered driver rechecks
+   availability for its lexically ambient exact owner before sleeping. The
+   selected parker retains the owner identity until retry; if its publication is
+   withdrawn first or the driver exits, it forwards the handoff to the next live
+   same-owner waiter instead of consuming the only wake.
 
 4. **Work classes receive bounded service.** Runnable locality remains the
    normal priority, but a continuously hot runnable stream yields to the
    blocking FIFO after a fixed quantum, and exhausting the LIFO budget forces
    one shared-FIFO turn even if polling the awaited future immediately refills
    the local slot. The timer timekeeper drains runnables only; that role remains
-   runnable-only through nested `block_on` and never enters a potentially
-   unbounded blocking closure.
+   runnable-only through nested `block_on`, fires due timers before each nested
+   runnable turn, and never enters a potentially unbounded blocking closure.
 
 5. **Wakeups are batched.** A future wake enqueues a runnable. At most one
    bounded drain loop per worker is submitted to Rayon, and each loop processes

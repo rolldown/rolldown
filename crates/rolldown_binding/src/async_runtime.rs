@@ -11,7 +11,7 @@
 use std::{future::Future, pin::Pin};
 
 #[cfg(feature = "async-runtime")]
-use napi::bindgen_prelude::{AsyncRuntime, AsyncRuntimeTask, create_custom_async_runtime};
+use napi::bindgen_prelude::{AsyncRuntime, AsyncRuntimeTask, register_async_runtime};
 use napi::bindgen_prelude::{FnArgs, Promise};
 #[cfg(feature = "async-runtime")]
 use napi::threadsafe_function::ThreadsafeFunctionCallMode;
@@ -535,7 +535,7 @@ pub fn resolved_runtime_config() -> &'static ResolvedRuntimeConfig {
 /// snapshot), so a later `process.env` change cannot make the report diverge
 /// from the live runtime. On the threaded WASI build it reports the napi-rs
 /// WASI loader's async work pool size (NAPI_RS_ASYNC_WORK_POOL_SIZE /
-/// UV_THREADPOOL_SIZE), resolved once at first query.
+/// UV_THREADPOOL_SIZE), resolved once at addon load.
 pub fn get_async_runtime_config() -> BindingRuntimeConfig {
   let resolved = resolved_runtime_config();
   BindingRuntimeConfig {
@@ -1187,7 +1187,7 @@ pub fn register_timer_host(
 
 #[cfg(feature = "async-runtime")]
 #[napi_derive::module_init]
-fn register_async_runtime() {
+fn install_async_runtime_backend() {
   // Consume the SAME resolved snapshot the reporter and the capability export
   // read (the single config-resolution pipeline). `configure` validates the
   // already-normalized values, and the runtime controller's options remain
@@ -1203,7 +1203,7 @@ fn register_async_runtime() {
     ..RuntimeOptions::default()
   };
   configure(options).expect("Failed to configure the Rolldown async runtime");
-  create_custom_async_runtime(RolldownAsyncRuntime);
+  register_async_runtime(RolldownAsyncRuntime);
 }
 
 /// What this Rolldown binding IS -- backend, flavor, target -- and the
@@ -1246,6 +1246,10 @@ pub struct BindingRuntimeCapabilities {
   /// binding loaded outside the supported entries can observe false (a
   /// CurrentThread `sleep_until` would panic at that point).
   pub timers: bool,
+  /// Binding dev mode is supported by THIS RUNTIME: true when native work can
+  /// progress on a MultiThread executor, false on CurrentThread where
+  /// `BindingDevEngine::run()` cannot complete its initial build.
+  pub dev_supported: bool,
   /// Watch mode is supported by THIS ARTIFACT: static per artifact, true on
   /// both native flavors, false on every wasm artifact (watch on WASI stalls
   /// on the initial build). Deliberately independent of the live `timers`
@@ -1309,6 +1313,7 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
     async_runtime_build,
     threads,
     timers,
+    dev_supported: threads,
     // Static per artifact (see the field doc): the capability contract must
     // not depend on import order or registration state.
     watch_supported: !wasi,

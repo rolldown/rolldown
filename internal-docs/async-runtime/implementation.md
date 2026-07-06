@@ -77,12 +77,13 @@ the registered implementation; `start` and `shutdown` report failures through
   calls `drive_current_thread_tasks`. This registration is also present in the
   browser build because fresh-turn polling is a future/scheduler requirement,
   independent of Node timers. Wakes are enqueue-only even when no host is
-  registered. After publishing a runnable, the queue snapshots and wakes every
-  active explicit `block_on` parker without polling from the wake caller. The
-  fanout is bounded by concurrent explicit drivers and prevents a newer driver
-  blocked inside `poll` from absorbing the only queue wake while an older
-  driver sleeps. Pure Rust use otherwise makes progress through an explicit
-  `block_on` or `drive_current_thread_tasks` call. A host turn polls at most 64
+  registered. After publishing a runnable, the queue walks the generation's
+  parker registry and wakes every active explicit `block_on` driver without
+  allocating a snapshot or polling from the wake caller. The fanout is bounded
+  by concurrent explicit drivers and prevents a newer driver blocked inside
+  `poll` from absorbing the only queue wake while an older driver sleeps. Pure
+  Rust use otherwise makes progress through an explicit `block_on` or
+  `drive_current_thread_tasks` call. A host turn polls at most 64
   runnables before redispatching, so a self-waking task cannot monopolize the
   JavaScript event loop. Once shutdown is observed after a pending poll, it
   takes precedence over queue draining and stored self-wake permits. An RAII
@@ -112,25 +113,32 @@ the registered implementation; `start` and `shutdown` report failures through
   earlier detached sibling or another owner's job. Dependency contexts form a
   thread-local stack: polling unrelated scheduler work pushes that task's own
   context above the driving `block_on`, so its blocking waits cannot leak into
-  the owner's over-cap lineage. A stolen Rayon descendant with no thread-local
-  token may attach an untagged dependency only when the per-executor
-  active-owner registry contains exactly one frame and that frame is available;
-  multiple or nested candidates are deliberately ineligible. The selected
-  token is persisted into the same live `TaskDependency` publication before
-  reservation, so claim identity and targeted completion handoff continue to
-  use one lineage. This registry mutex is touched only by blocking-frame
-  entry/exit and the saturated exact-lending path; normal scheduling remains
-  lock-free with respect to owner inference.
+  the owner's over-cap lineage. Exact lending requires the matching
+  `BlockingOwnerToken` to remain lexically ambient on the cooperative driver.
+  The active-owner registry proves only that this exact frame is still active
+  and unreserved; its cardinality never infers ancestry for a stolen Rayon job
+  or scheduler runnable that has lost the thread-local token.
   `TaskDependency` stores its live dependency and retained waiter in one mutex
   so identity cannot tear across separate atomics. Set, clear, conditional
   clear, claim, and waiter replacement commit under that mutex, then wake or
   destroy moved-out wakers after unlocking. Waker clone, replacement drop, wake,
   retirement, and final destruction run under the dependency generation and
-  independent panic boundaries. Task detachment clears the retained waiter
-  before async-task receives detached ownership. Parked-driver entries publish
-  that dependency for owner-aware handoff, but registry removal moves the entry
-  out before dropping its `Arc<TaskDependency>` so waiter destruction can
-  re-enter scheduler code without holding the registry mutex.
+  independent panic boundaries. A lock-free `has_current` hint lets the common
+  dependency-free task poll skip that mutex. Propagation creates a fresh local
+  liveness link with a non-owning parent edge to the source publication while
+  every hop shares one one-shot exact-job claim. Link cancellation and final
+  claim validation/commit serialize through that shared claim, giving concurrent
+  withdrawal and lending one winner. Poll start invalidates and removes the
+  task's prior local link before polling user code: ancestor chains become stale
+  immediately, but cancelling an intermediate hop cannot cancel the child's
+  source claim. Non-owning edges and iterative liveness traversal keep deeply
+  nested join chains from recursively traversing or destroying the Rust stack.
+  Direct blocking-handle cleanup matches the stable job id, independent of owner
+  enrichment. Task detachment clears the retained waiter before
+  async-task receives detached ownership. Parked-driver entries
+  publish that dependency for owner-aware handoff, but registry removal moves
+  the entry out before dropping its `Arc<TaskDependency>` so waiter destruction
+  can re-enter scheduler code without holding the registry mutex.
   The blocking FIFO is a queue of stable ids plus an indexed job map. Normal
   admission skips tombstoned ids amortized O(1); exact lending removes the job
   from the map in O(1) after atomically claiming the live dependency. Owner-lane
@@ -140,10 +148,12 @@ the registered implementation; `start` and `shutdown` report failures through
   runnable polls when the blocking FIFO has capacity. After the cooperative
   LIFO budget is exhausted, one shared-FIFO pop is mandatory even if the next
   awaited-future poll refills the local slot. The timer timekeeper uses a sticky
-  runnable-only scheduler role, including through nested `block_on`, so a
-  stalled blocking closure cannot stop timer service. Parked-driver registration
-  records whether a parker may consume blocking work; blocking submissions and
-  exit miss compensation skip the runnable-only timekeeper. A completing
+  runnable-only scheduler role, including through nested `block_on`; the nested
+  cooperative loop fires due timers before every runnable turn, so a permanently
+  hot stream cannot suspend the outer timekeeper loop and starve the timer heap.
+  A stalled blocking closure cannot stop timer service either. Parked-driver
+  registration records whether a parker may consume blocking work; blocking
+  submissions and exit miss compensation skip the runnable-only timekeeper. A completing
   blocking-capable driver consumes one admitted blocking-only residue itself
   when handing it to a queued Rayon drainer could leave no physical lane.
   Exact owner lending is performed by the cooperative driver that already owns
@@ -155,14 +165,20 @@ the registered implementation; `start` and `shutdown` report failures through
   can therefore remain parked indefinitely without blocking later dependencies
   or scheduler-idle retirement, and large dependency topologies require one
   bounded claim attempt per serviced dependency rather than O(N^2) cloned
-  snapshots multiplied by the worker count. Releasing a successfully lent frame
-  wakes at most one parked blocking-capable driver whose published live
-  dependency belongs to that owner. A newer unrelated parker cannot absorb the
-  handoff, so multiple dependencies of one owner rearm linearly without a global
-  wake batch. Park registration is followed by a fresh owner-lane availability
-  check as well as the normal queue recheck; a reservation released just before
-  registration therefore causes another claim attempt instead of a missed
-  handoff and permanent park.
+  snapshots multiplied by the worker count. Every reservation release, including
+  a failed exact claim or an already-removed job, wakes at most one parked
+  blocking-capable driver whose published live dependency belongs to that exact
+  owner. A newer unrelated or untagged parker cannot absorb the handoff, so
+  multiple dependencies of one owner rearm linearly without a global wake batch.
+  The selected parker stores the owner identity separately from its ordinary wake
+  permit. It attempts that handoff before unrelated queue work; a withdrawn or
+  replaced publication forwards the identity to the next live same-owner parker,
+  an already-reserved owner leaves it to the active transfer's completion, and a
+  driver exit forwards any unconsumed identity.
+  Park registration is followed by a fresh availability check for the driver's
+  lexically ambient exact owner as well as the normal queue recheck. A
+  reservation released just before registration therefore causes another claim
+  attempt instead of a missed handoff and permanent park.
 - `JoinHandle` normalizes async-task, blocking-job, and immediate results and
   detaches async tasks on drop to match Tokio. Scheduler shutdown instead
   aborts accepted async tasks and resolves retained handles with `JoinError`.

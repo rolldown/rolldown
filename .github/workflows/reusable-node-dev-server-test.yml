@@ -59,5 +59,9 @@ jobs:
       - name: Install Playwright
         run: vp exec playwright install chromium
 
+      - name: Browser Watcher Test
+        if: runner.os == 'Linux' && inputs.node-version == 24
+        run: vp run --filter rolldown-tests test:browser
+
       - name: Dev Server Test
         run: vp run --filter '@rolldown/test-dev-server-tests' test

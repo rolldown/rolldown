@@ -29,6 +29,9 @@ codegen) is unchanged.
    enabled, unless the native magic-string sourcemap channel is active (those
    sourcemaps are generated outside the module task and could not be
    captured; see `create_sourcemap_channel` in `scan_stage.rs`).
+   `BuildCache::new` also returns `None` when no plugin beyond rolldown's
+   cheap inner plugins registers a `resolveId`/`load`/`transform` hook; with
+   nothing to skip, the cache would be pure overhead.
 2. `ModuleTask::run_inner` reads the module's raw on-disk content
    (`read_disk_source_for_cache_key`) before running any hook. Ids that are
    not absolute filesystem paths (virtual modules, data URLs, `rolldown:`)

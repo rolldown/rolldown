@@ -680,6 +680,8 @@ export interface InputOptions {
      * content. Side channels (`this.emitFile`, `this.addWatchFile`, custom
      * module meta) are not replayed on cache hits, and the cache is not
      * applied when `nativeMagicString` is enabled together with sourcemaps.
+     * When no plugin registers a `resolveId`, `load` or `transform` hook the
+     * cache disables itself, since there would be nothing to skip.
      *
      * @default false
      */

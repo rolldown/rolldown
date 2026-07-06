@@ -14,7 +14,7 @@ use rolldown_common::{
   ResolvedExternal, ResolvedId, SourcemapChainElement,
   side_effects::{HookSideEffects, SideEffects},
 };
-use rolldown_plugin::PluginDriver;
+use rolldown_plugin::{HookUsage, PluginDriver};
 use rolldown_utils::{stabilize_id::stabilize_id, xxhash::xxhash_with_base};
 use sugar_path::SugarPath;
 
@@ -23,6 +23,12 @@ use sugar_path::SugarPath;
 const FORMAT_VERSION: u8 = 1;
 const MAGIC: [u8; 4] = *b"RDBC";
 const HEADER_LEN: usize = MAGIC.len() + 1 + 8;
+
+/// Rolldown's always-registered inner plugins (see `apply_inner_plugins`):
+/// their hooks are native early-return filters whose cost is far below the
+/// cache's own per-module overhead, so they don't count as cacheable work.
+const CHEAP_INNER_PLUGINS: [&str; 4] =
+  ["builtin:copy-module", "builtin:asset-module", "builtin:data-url", "builtin:oxc-runtime"];
 
 /// The portion of a module's scan state produced by the plugin `load` and
 /// `transform` pipelines plus dependency resolution. On a cache hit this is
@@ -57,6 +63,24 @@ impl BuildCache {
     plugin_driver: &PluginDriver,
   ) -> Option<Arc<Self>> {
     let cache_options = options.experimental.build_cache_options()?;
+
+    // The cache can only save `resolveId`/`load`/`transform` hook work plus
+    // the dependency resolution it replays. When no plugin (beyond the cheap
+    // inner ones) registers any of those hooks there is nothing expensive to
+    // skip and the cache would only add fs reads and entry decoding to every
+    // module, so it disables itself.
+    let cached_hooks = HookUsage::ResolveId
+      | HookUsage::ResolveDynamicImport
+      | HookUsage::Load
+      | HookUsage::Transform;
+    let has_cacheable_work = plugin_driver.plugins().iter().any(|plugin| {
+      plugin.call_hook_usage().intersects(cached_hooks)
+        && !CHEAP_INNER_PLUGINS.contains(&plugin.call_name().as_ref())
+    });
+    if !has_cacheable_work {
+      return None;
+    }
+
     let dir = options
       .cwd
       .join(cache_options.dir.as_deref().unwrap_or("node_modules/.cache/rolldown"))

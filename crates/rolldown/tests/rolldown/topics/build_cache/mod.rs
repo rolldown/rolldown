@@ -193,6 +193,34 @@ async fn editing_a_module_reruns_only_its_own_pipeline() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn cache_disables_itself_without_cacheable_plugin_hooks() {
+  let (cwd, cache_dir) = fresh_fixture("bypass");
+
+  // No plugin registers `resolveId`/`load`/`transform` (only rolldown's cheap
+  // inner plugins do), so there is nothing for the cache to skip and it must
+  // not pay its own overhead: no entries, not even the cache dir.
+  let mut bundler = Bundler::new(BundlerOptions {
+    input: Some(vec![InputItem {
+      name: Some("entry".to_string()),
+      import: "./entry.js".to_string(),
+    }]),
+    cwd: Some(cwd.clone()),
+    experimental: Some(ExperimentalOptions {
+      build_cache: Some(BuildCacheOption::Options(BuildCacheOptions {
+        dir: Some(cache_dir.to_string_lossy().into_owned()),
+        key: None,
+      })),
+      ..Default::default()
+    }),
+    ..Default::default()
+  })
+  .expect("failed to create bundler");
+  Box::pin(bundler.generate()).await.expect("build should succeed");
+
+  assert!(!cache_dir.exists(), "a build with no cacheable hooks must not touch the cache dir");
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn deleting_a_cached_dependency_falls_back_to_fresh_resolution() {
   let (cwd, cache_dir) = fresh_fixture("delete");
 

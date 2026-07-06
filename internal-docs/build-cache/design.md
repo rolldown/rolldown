@@ -101,6 +101,13 @@ hooks plus the native resolver).
 - **Side effects are stored as a delta.** The pre-`load` value comes from
   resolution data outside the cache key, so only a load/transform-hook
   override is stored and replayed.
+- **The cache disables itself when no plugin registers a cacheable hook.**
+  With nothing to skip, the cache would only add per-module fs reads and
+  entry decoding (measured 1.8x slower warm, 5.7x slower cold on a 10k-module
+  plugin-free build). Rolldown's always-registered inner plugins
+  (`copy-module`, `asset-module`, `data-url`, `oxc-runtime`) are exempt from
+  the check: their hooks are native early-return filters cheaper than the
+  cache itself.
 
 ## Known limitations
 

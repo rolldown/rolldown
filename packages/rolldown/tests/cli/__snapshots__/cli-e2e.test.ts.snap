@@ -49,7 +49,7 @@ OPTIONS
   --checks.unsupportedTsconfigOption Whether to emit warnings when a tsconfig option or combination of options is not supported.
   --chunkFileNames <name>     Name pattern for emitted secondary chunks.
   --cleanDir                  Clean output directory before emitting output.
-  --codeSplitting <codeSplitting>Code splitting options (true, false, or object).
+  --codeSplitting <codeSplitting>Code splitting options. Enabled by default; use \`--no-codeSplitting\` to disable, or \`--codeSplitting.minSize\` / \`--codeSplitting.minShareCount\` to configure.
   --comments <comments>       Control comments in the output.
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
@@ -197,7 +197,7 @@ OPTIONS
   --checks.unsupportedTsconfigOption Whether to emit warnings when a tsconfig option or combination of options is not supported.
   --chunkFileNames <name>     Name pattern for emitted secondary chunks.
   --cleanDir                  Clean output directory before emitting output.
-  --codeSplitting <codeSplitting>Code splitting options (true, false, or object).
+  --codeSplitting <codeSplitting>Code splitting options. Enabled by default; use \`--no-codeSplitting\` to disable, or \`--codeSplitting.minSize\` / \`--codeSplitting.minShareCount\` to configure.
   --comments <comments>       Control comments in the output.
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
@@ -345,7 +345,7 @@ OPTIONS
   --checks.unsupportedTsconfigOption Whether to emit warnings when a tsconfig option or combination of options is not supported.
   --chunkFileNames <name>     Name pattern for emitted secondary chunks.
   --cleanDir                  Clean output directory before emitting output.
-  --codeSplitting <codeSplitting>Code splitting options (true, false, or object).
+  --codeSplitting <codeSplitting>Code splitting options. Enabled by default; use \`--no-codeSplitting\` to disable, or \`--codeSplitting.minSize\` / \`--codeSplitting.minShareCount\` to configure.
   --comments <comments>       Control comments in the output.
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
@@ -493,7 +493,7 @@ OPTIONS
   --checks.unsupportedTsconfigOption Whether to emit warnings when a tsconfig option or combination of options is not supported.
   --chunkFileNames <name>     Name pattern for emitted secondary chunks.
   --cleanDir                  Clean output directory before emitting output.
-  --codeSplitting <codeSplitting>Code splitting options (true, false, or object).
+  --codeSplitting <codeSplitting>Code splitting options. Enabled by default; use \`--no-codeSplitting\` to disable, or \`--codeSplitting.minSize\` / \`--codeSplitting.minShareCount\` to configure.
   --comments <comments>       Control comments in the output.
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.

@@ -5,7 +5,7 @@ use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
   BarrelState, EcmaModuleAstUsage, GetLocalDbMut, ImporterRecord, Module, ModuleId, ModuleIdx,
-  StableModuleId,
+  ResolvedId, StableModuleId,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::PluginDriver;
@@ -29,6 +29,11 @@ pub struct ScanStageCache {
   /// [`Self::merge`] re-derives their materialized importer sets, which the
   /// scan does only for re-scanned modules.
   pub modules_with_changed_importers: FxHashSet<ModuleIdx>,
+  /// Files of an aborted (and reverted) partial scan; the next partial scan
+  /// retries them, so their errors keep surfacing until the files are fixed.
+  /// Only files the graph still needs are queued; see
+  /// [`ModuleLoader::revert_partial_scan`](crate::module_loader::module_loader::ModuleLoader).
+  pub pending_rescans: Vec<ResolvedId>,
   pub user_defined_entry: FxHashSet<ModuleId>,
   // Usage: Map file path emitted by watcher to corresponding module index
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
@@ -72,6 +77,42 @@ impl ScanStageCache {
   /// - if the snapshot is unset
   pub fn get_snapshot(&self) -> &NormalizedScanStageOutput {
     self.snapshot.as_ref().unwrap()
+  }
+
+  /// Between builds the cache is either empty (no snapshot: only a full scan
+  /// is possible) or a valid graph any partial scan can build on. A failed
+  /// partial scan keeps the latter true by reverting its mutations
+  /// (`ModuleLoader::revert_partial_scan`).
+  pub fn has_snapshot(&self) -> bool {
+    self.snapshot.is_some()
+  }
+
+  /// Re-derives the `importers` edge list (one record per resolved import
+  /// record, keyed by the imported module) from the snapshot. Restores the
+  /// pre-scan list up to slot order; consumers treat slots as sets.
+  ///
+  /// # Panic
+  /// - if the snapshot is unset
+  pub fn derive_importers_from_snapshot(&self) -> IndexVec<ModuleIdx, Vec<ImporterRecord>> {
+    let snapshot = self.get_snapshot();
+    let mut importers = IndexVec::from_vec(
+      std::iter::repeat_with(Vec::new).take(snapshot.module_table.modules.len()).collect(),
+    );
+    for module in &snapshot.module_table.modules {
+      let Some(module) = module.as_normal() else {
+        continue;
+      };
+      for record in &module.ecma_view.import_records {
+        if let Some(dep_idx) = record.resolved_module {
+          importers[dep_idx].push(ImporterRecord {
+            importer_path: module.id.clone(),
+            importer_idx: module.idx,
+            kind: record.kind,
+          });
+        }
+      }
+    }
+    importers
   }
 
   pub fn merge(

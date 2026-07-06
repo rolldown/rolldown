@@ -25,6 +25,7 @@ Bundler (long-lived)
   │     ├── module_id_to_idx
   │     ├── importers
   │     ├── modules_with_changed_importers
+  │     ├── pending_rescans
   │     ├── barrel_state
   │     ├── module_idx_by_abs_path
   │     └── module_idx_by_stable_id
@@ -77,15 +78,16 @@ Data created fresh for each build and discarded (or consumed) when the build com
 Bundler.cache (ScanStageCache) ──(move)──> Bundle.cache (temporary holder) ──(build)──> Bundle.cache ──(move)──> Bundler.cache
 ```
 
-| `ScanStageCache` field           | Purpose                                                                      |
-| -------------------------------- | ---------------------------------------------------------------------------- |
-| `snapshot`                       | Full module graph (modules, ASTs, symbols, entries)                          |
-| `module_id_to_idx`               | Module ID to index lookup                                                    |
-| `importers`                      | Reverse dependency graph                                                     |
-| `modules_with_changed_importers` | Modules whose `importers` records a partial scan mutated; drained by `merge` |
-| `barrel_state`                   | Barrel export optimization state                                             |
-| `module_idx_by_abs_path`         | Path-based lookup for watcher                                                |
-| `module_idx_by_stable_id`        | Stable ID lookup for HMR                                                     |
+| `ScanStageCache` field           | Purpose                                                                                       |
+| -------------------------------- | --------------------------------------------------------------------------------------------- |
+| `snapshot`                       | Full module graph (modules, ASTs, symbols, entries)                                           |
+| `module_id_to_idx`               | Module ID to index lookup                                                                     |
+| `importers`                      | Reverse dependency graph                                                                      |
+| `modules_with_changed_importers` | Modules whose `importers` records a partial scan mutated; drained by `merge`                  |
+| `pending_rescans`                | Work queue: files of an aborted (and reverted) partial scan; retried by the next partial scan |
+| `barrel_state`                   | Barrel export optimization state                                                              |
+| `module_idx_by_abs_path`         | Path-based lookup for watcher                                                                 |
+| `module_idx_by_stable_id`        | Stable ID lookup for HMR                                                                      |
 
 ### Cache integrity on a failed build
 
@@ -112,8 +114,53 @@ Each repair therefore runs **unconditionally**:
   `invalidate_js_side_cache` steps.
 - `update_defer_sync_data` restores the snapshot before propagating an error.
 
-A build that fails _before_ touching the cache (e.g. a scan-stage parse error)
-needs no repair — `scan_modules` returns early and the cache is untouched.
+A failed scan must also not leave the cache _out of sync_. Task results are
+applied as they arrive, so an aborted partial scan has already flipped
+re-scanned modules to `Seen` in `module_id_to_idx`, and may have mutated the
+`importers` edge list for completed tasks and allocated indices for newly
+discovered modules, while the snapshot never receives any of it (`merge` does
+not run on the error path). Splicing the next partial scan onto that state
+would serve stale module code silently and shift new module indices away from
+their snapshot positions.
+
+`ModuleLoader::revert_partial_scan` therefore restores the pre-scan state on
+every abort. The snapshot is never touched by a scan, so it acts as the clean
+master copy everything else is recovered from:
+
+- existing `module_id_to_idx` entries end the scan at their pre-scan values
+  (`Seen` -> `Invalidate` -> `Seen`); only the keys inserted for newly
+  discovered modules are removed;
+- the `importers` edge list is re-derived from the snapshot
+  (`ScanStageCache::derive_importers_from_snapshot`), since every edge is a
+  resolved import record of some module;
+- `modules_with_changed_importers` is cleared, `barrel_state` is restored
+  from an upfront clone (taken only when lazy barrel is enabled);
+- `transform_dependencies` entries of the newly allocated (and now freed)
+  module indices are dropped, so a later module reusing an index does not
+  inherit them;
+- the scanned files go into `ScanStageCache::pending_rescans`, a work queue
+  the next partial scan drains, so their errors keep surfacing until the
+  files are fixed. Only files the graph still needs are queued — entries, or
+  files something still imports on the freshest edge state. A broken file
+  whose last import was removed by this very scan is dropped, otherwise its
+  retry would fail every later build that a fresh build of the same tree
+  would pass.
+
+Two consumers depend on that queue's contents:
+
+- `HmrStage::compute_hmr_update` folds the pending files into its stale and
+  changed sets before computing client boundaries, so an edit that was rolled
+  back by a failed scan reaches the clients' patches once the retry succeeds
+  (not only the server-side graph);
+- error enrichment (`trace_import_chain_from_modules`) runs **before** the
+  revert, while the failed scan's modules still exist in `module_id_to_idx`
+  and the live edge list.
+
+The invariant this buys: **between builds the cache is either empty
+(`snapshot` is `None`: fresh bundler, or a failed full scan reset it) or a
+valid graph any partial scan can build on.** `Bundler::incremental_bundle`
+picks the scan mode from that property alone (`has_snapshot`), and no other
+consumer needs to reason about failed builds.
 
 **Why keep a cache from a failed build at all?** Committing a _torn_ cache is
 worse than dropping it: an empty snapshot panics the next `get_snapshot()`, and

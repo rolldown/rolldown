@@ -114,6 +114,9 @@ pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   symbol_ref_db: SymbolRefDb,
   is_full_scan: bool,
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
+  /// Ids inserted into `module_id_to_idx` by this partial scan;
+  /// `revert_partial_scan` removes them again on failure.
+  new_module_ids: Vec<ModuleId>,
   cache: &'a mut ScanStageCache,
   pub flat_options: FlatOptions,
   pub magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
@@ -210,6 +213,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       symbol_ref_db,
       intermediate_normal_modules,
       new_added_modules_from_partial_scan: FxIndexSet::default(),
+      new_module_ids: Vec::new(),
       flat_options,
       magic_string_tx,
       tla_module_count: 0,
@@ -217,10 +221,64 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     })
   }
 
+  /// Restores the cache to its pre-scan state so the next build can stay
+  /// incremental. The snapshot is never touched by a scan; everything else
+  /// is re-derived from it or reset. Existing `module_id_to_idx` entries are
+  /// self-healing (`Seen` -> `Invalidate` -> `Seen`), so only new keys need
+  /// removal. A failed full scan needs nothing: its cache reset already
+  /// forces a full retry.
+  /// See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
+  fn revert_partial_scan(
+    &mut self,
+    scanned_resolved_ids: Vec<ResolvedId>,
+    barrel_state_backup: Option<rolldown_common::BarrelState>,
+  ) {
+    if self.is_full_scan {
+      return;
+    }
+    for module_id in std::mem::take(&mut self.new_module_ids) {
+      self.cache.module_id_to_idx.remove(&module_id);
+    }
+    // New indices are freed for reuse above; drop the `ModuleIdx`-keyed
+    // transform dependencies recorded for them, or a later module reusing the
+    // index would inherit them.
+    for idx in &self.new_added_modules_from_partial_scan {
+      self.shared_context.plugin_driver.transform_dependencies.remove(idx);
+    }
+    // Retry only files the graph still needs: entries, or files something
+    // still imports (judged on the freshest edge state, where modules
+    // re-scanned by this failed scan already updated their edges). A broken
+    // file whose last import was removed must not fail every later build;
+    // a fresh build of the same tree would succeed without it.
+    let pending_rescans = scanned_resolved_ids
+      .into_iter()
+      .filter(|resolved_id| {
+        if self.cache.user_defined_entry.contains(&resolved_id.id) {
+          return true;
+        }
+        let Some(state) = self.cache.module_id_to_idx.get(&resolved_id.id) else {
+          return false;
+        };
+        let idx = state.idx();
+        self.cache.get_snapshot().user_defined_entry_modules.contains(&idx)
+          || self
+            .intermediate_normal_modules
+            .importers
+            .get(idx)
+            .is_some_and(|records| !records.is_empty())
+      })
+      .collect();
+    self.intermediate_normal_modules.importers = self.cache.derive_importers_from_snapshot();
+    self.cache.modules_with_changed_importers.clear();
+    if let Some(backup) = barrel_state_backup {
+      self.cache.barrel_state = backup;
+    }
+    self.cache.pending_rescans = pending_rescans;
+  }
+
   /// Marks `idx` for importer-set re-derivation in `ScanStageCache::merge`;
   /// call it next to every mutation of `intermediate_normal_modules.importers`.
-  /// Writes straight to the cache so marks survive a failed scan. No-op in
-  /// full scan mode, which rebuilds every module's sets anyway.
+  /// No-op in full scan mode, which rebuilds every module's sets anyway.
   fn mark_module_importers_changed(&mut self, idx: ModuleIdx) {
     if !self.is_full_scan {
       self.cache.modules_with_changed_importers.insert(idx);
@@ -277,6 +335,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         let len = self.cache.module_id_to_idx.len();
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(len.into());
         self.new_added_modules_from_partial_scan.insert(idx);
+        self.new_module_ids.push(resolved_id.id.clone());
         self.cache.module_id_to_idx.insert(resolved_id.id.clone(), VisitState::Seen(idx));
         idx
       }
@@ -326,6 +385,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut errors = vec![];
     let mut all_warnings = vec![];
 
+    // Barrel state is accumulated demand, not derivable from the snapshot;
+    // back it up for `revert_partial_scan`. Disabled means empty and untouched.
+    let barrel_state_backup = (!self.is_full_scan && self.flat_options.is_lazy_barrel_enabled())
+      .then(|| self.cache.barrel_state.clone());
+
     // Initialize runtime module task if not yet started
     if let Entry::Vacant(e) = self.cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
       let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
@@ -368,8 +432,18 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
 
     // If it is in partial scan mode, we need to invalidate the changed modules
-    // and re-fetch them, do nothing in full scan mode
-    for resolved_id in fetch_mode.iter().cloned() {
+    // and re-fetch them, do nothing in full scan mode. Files re-queued by a
+    // previous aborted scan (`pending_rescans`) are retried alongside.
+    let mut changed_resolved_ids = Vec::new();
+    let mut seen_changed_ids = FxHashSet::default();
+    for resolved_id in
+      fetch_mode.iter().cloned().chain(std::mem::take(&mut self.cache.pending_rescans))
+    {
+      if seen_changed_ids.insert(resolved_id.id.clone()) {
+        changed_resolved_ids.push(resolved_id);
+      }
+    }
+    for resolved_id in changed_resolved_ids.iter().cloned() {
       self.shared_context.plugin_driver.invalidate_context_load_module(&resolved_id.id);
       if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
         let idx = occ.get().idx();
@@ -699,7 +773,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
 
     if !errors.is_empty() {
-      // Enrich UNRESOLVED_IMPORT errors with import chain
+      // Enrich UNRESOLVED_IMPORT errors with import chain. Must run before
+      // the revert below, which erases the failed scan's modules from the
+      // lookup structures the trace walks.
       for error in &mut errors {
         if let Some(resolve_error) = error.downcast_mut::<DiagnosableResolveError>() {
           let chain = self
@@ -709,6 +785,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           }
         }
       }
+
+      self.revert_partial_scan(changed_resolved_ids, barrel_state_backup);
 
       let errors = consolidate_diagnostics(errors);
       return Err(errors.into());

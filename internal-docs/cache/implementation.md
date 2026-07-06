@@ -111,22 +111,24 @@ pub struct ScanStageCache {
   pub module_id_to_idx: FxHashMap<ModuleId, VisitState>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
   pub modules_with_changed_importers: FxHashSet<ModuleIdx>,
+  pub pending_rescans: Vec<ResolvedId>,
   pub user_defined_entry: FxHashSet<ModuleId>,
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   pub module_idx_by_stable_id: FxHashMap<StableModuleId, ModuleIdx>,
 }
 ```
 
-| Field                            | Purpose                                                                                                                                        |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `snapshot`                       | The full module graph. `None` is a legal transient state; it is `private` and accessed only through the methods below.                         |
-| `barrel_state`                   | Barrel re-export resolution state (`BarrelState`).                                                                                             |
-| `module_id_to_idx`               | The `ModuleId` → `ModuleIdx` registry/allocator (see "Module identity model").                                                                 |
-| `importers`                      | Reverse dependency graph: per module, who imports it.                                                                                          |
-| `modules_with_changed_importers` | Modules whose `importers` records were mutated by a partial scan; `merge` drains it to re-derive their materialized importer sets (see below). |
-| `user_defined_entry`             | The set of configured root entry `ModuleId`s.                                                                                                  |
-| `module_idx_by_abs_path`         | Absolute-path → `ModuleIdx`, used by the watcher. Paths are slash-normalized.                                                                  |
-| `module_idx_by_stable_id`        | `StableModuleId` → `ModuleIdx`, used by HMR.                                                                                                   |
+| Field                            | Purpose                                                                                                                                                                               |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `snapshot`                       | The full module graph. `None` is a legal transient state; it is `private` and accessed only through the methods below.                                                                |
+| `barrel_state`                   | Barrel re-export resolution state (`BarrelState`).                                                                                                                                    |
+| `module_id_to_idx`               | The `ModuleId` → `ModuleIdx` registry/allocator (see "Module identity model").                                                                                                        |
+| `importers`                      | Reverse dependency graph: per module, who imports it.                                                                                                                                 |
+| `modules_with_changed_importers` | Modules whose `importers` records were mutated by a partial scan; `merge` drains it to re-derive their materialized importer sets (see below).                                        |
+| `pending_rescans`                | Work queue: files of an aborted partial scan, whose mutations were reverted (`ModuleLoader::revert_partial_scan`); the next partial scan retries them so their errors keep surfacing. |
+| `user_defined_entry`             | The set of configured root entry `ModuleId`s.                                                                                                                                         |
+| `module_idx_by_abs_path`         | Absolute-path → `ModuleIdx`, used by the watcher. Paths are slash-normalized.                                                                                                         |
+| `module_idx_by_stable_id`        | `StableModuleId` → `ModuleIdx`, used by HMR.                                                                                                                                          |
 
 `module_idx_by_abs_path` and `module_idx_by_stable_id` are **derived** —
 `build_module_index_maps` (`scan_stage_cache.rs:297`) clears and rebuilds both
@@ -369,6 +371,7 @@ as the `module_id_to_idx` lookup and is infallible.
 | `ScanStage::scan(scan_mode, &mut self.cache)`            | called at `bundle.rs:104`                                                               | Non-snapshot fields via the loader.                                                                                                                                                                                                                    |
 | `ModuleLoader` (`cache: &'a mut ScanStageCache`)         | `module_loader.rs:117` and methods                                                      | `module_id_to_idx`, `barrel_state` (e.g. removes `barrel_infos` on invalidate), `importers`, `modules_with_changed_importers`, `user_defined_entry` (full incremental scan).                                                                           |
 | `ScanStageCache::merge`                                  | `scan_stage_cache.rs:80`; called at `bundle.rs:256`, `hmr_stage.rs:284/377`             | `snapshot`, `module_idx_by_abs_path`, `module_idx_by_stable_id`, `barrel_state.resolved_barrel_modules` (drained), `modules_with_changed_importers` (drained), `tla_*` fields in the snapshot; refreshes plugin `module_infos` for re-derived modules. |
+| `ModuleLoader::revert_partial_scan`                      | `module_loader.rs` scan error exit                                                      | Restores `module_id_to_idx` / `importers` / `barrel_state` / importer marks to their pre-scan state and fills `pending_rescans`.                                                                                                                       |
 | `ScanStageCache::set_snapshot`                           | `scan_stage_cache.rs:44`; called at `bundle.rs:250` and inside `update_defer_sync_data` | `snapshot` + rebuilds `module_idx_by_abs_path` / `module_idx_by_stable_id`.                                                                                                                                                                            |
 | `ScanStageCache::update_defer_sync_data`                 | `scan_stage_cache.rs:60`; called at `bundle.rs:257`, `hmr_stage.rs:289/382/623`         | Takes and restores `snapshot`; `defer_sync_scan_data` mutates per-module `side_effects` inside it.                                                                                                                                                     |
 | `ScanStageCache::create_output`                          | `scan_stage_cache.rs:313`; called at `bundle.rs:258`                                    | Mutates `snapshot.symbol_ref_db` (clones it without scoping, swaps); returns a `NormalizedScanStageOutput`.                                                                                                                                            |

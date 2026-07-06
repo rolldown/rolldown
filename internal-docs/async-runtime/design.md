@@ -34,6 +34,14 @@ The existing Tokio runtime remains the default and is selected by the
    start/completion metrics include exact-dependency work run through a nested
    `block_on`, while active/high-water metrics count admitted physical lanes;
    dependency lending reuses its owner's lane instead of reporting another one.
+   CurrentThread has one physical blocking lane. Uncontended work and lexical
+   same-frame nesting execute inline, but a native cross-driver contender is
+   queued instead of parking inside a task poll. If the lane owner is awaiting
+   that task, the existing exact `JoinHandle` dependency chain authorizes the
+   owner's `block_on` frame to service only that queued job on its own lane.
+   Unrelated jobs remain FIFO-serialized until the lane is released. Ownership
+   is therefore neither tied only to the polling OS thread nor inherited by
+   every task spawned from a blocking closure.
    Every dependency record carries its stable job id and, once owner lineage is
    known, the exact `BlockingOwnerToken` frame whose lane it may borrow. The
    cooperative driver claims that live pair atomically, reserves only that

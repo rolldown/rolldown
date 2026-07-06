@@ -90,7 +90,18 @@ the registered implementation; `start` and `shutdown` report failures through
   host-turn role remains scheduler-active through every `Runnable::run`,
   including async-task's destruction of detached completed outputs;
   CurrentThread shutdown waits for that role before publishing `Stopped`.
-  Blocking work executes inline.
+  CurrentThread exposes one physical blocking lane. Uncontended closures and
+  same-frame nested calls execute inline. On native builds, contention from a
+  different driver creates a stable indexed blocking job and returns its
+  `JoinHandle` instead of sleeping inside the task poll. Each native
+  CurrentThread `block_on` frame publishes the same dependency context used by
+  MultiThread: if its awaited async lineage reaches that queued job, the
+  lexically ambient owner frame claims and runs exactly that job without
+  incrementing the active-lane metric. It cannot consume an unrelated queued
+  sibling. Ordinary queued work is serviced FIFO only after the physical lane
+  is released; release also wakes explicit drivers, and a host turn may claim a
+  serviceable released lane. Threadless builds never have a foreign concurrent
+  driver, so their uncontended and same-stack paths remain fully inline.
 - `MultiThreadExecutor` schedules bounded queue-drain jobs on a custom Rayon
   pool. The same pool is inherited by nested `par_iter` calls. Rayon worker
   start hooks classify every nested worker for cooperative `block_on`; a

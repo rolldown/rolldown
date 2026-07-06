@@ -51,6 +51,29 @@ export type ModuleType =
 /** @category Plugin APIs */
 export type ImportKind = BindingHookResolveIdExtraArgs['kind'];
 
+/**
+ * Descriptive metadata a plugin can expose about itself.
+ *
+ * Set it via the {@linkcode Plugin.meta | meta} property of the plugin object.
+ *
+ * @category Plugin APIs
+ */
+export interface PluginMeta {
+  /**
+   * The name of the npm package the plugin ships in, e.g. `@vitejs/plugin-vue`.
+   */
+  packageName?: string;
+  /**
+   * The version of the npm package the plugin ships in, e.g. `5.0.0`. The
+   * `version` field of that package's `package.json`.
+   */
+  version?: string;
+  /**
+   * A short, human-readable description of what the plugin does.
+   */
+  description?: string;
+}
+
 /** @category Plugin APIs */
 export interface CustomPluginOptions {
   [plugin: string]: any;
@@ -61,6 +84,31 @@ export interface ModuleOptions {
   moduleSideEffects: ModuleSideEffects;
   /** See [Custom module meta-data section](https://rolldown.rs/apis/plugin-api/inter-plugin-communication#custom-module-meta-data) for more details. */
   meta: CustomPluginOptions;
+  /**
+   * A short, human-readable description of the module.
+   *
+   * This is useful for virtual modules, whose ids (e.g.
+   * `\0vite/modulepreload-polyfill.js`) do not convey their purpose on their own.
+   *
+   * @example
+   * ```js
+   * function polyfillPlugin() {
+   *   return {
+   *     name: 'vite:modulepreload-polyfill',
+   *      load: {
+   *        filter: { id: /^\0vite\/modulepreload-polyfill\.js$/ },
+   *        handler(id) {
+   *          return {
+   *            code: '',
+   *            description: 'A polyfill for `link` tag with `rel="modulepreload"`',
+   *          };
+   *        }
+   *      },
+   *   };
+   * }
+   * ```
+   */
+  description?: string;
   // flag used to check if user directly modified the `ModuleInfo`
   // this is used to sync state between Rust and JavaScript
   invalidate?: boolean;
@@ -688,6 +736,15 @@ interface OutputPlugin
   name: string;
   /** The version of the plugin, for use in inter-plugin communication scenarios. */
   version?: string;
+  /**
+   * Descriptive metadata about the plugin, such as the npm package it ships in.
+   *
+   * This does not affect bundling; it is informational and intended to be
+   * surfaced by tooling that inspects a build. See {@linkcode PluginMeta}.
+   *
+   * @experimental
+   */
+  meta?: PluginMeta;
 }
 
 /**

@@ -8,6 +8,24 @@ Rolldown devtools is a tracing-based system that emits structured build-time dat
 
 ## Future Directions
 
+### Plugin-Supplied Metadata
+
+Consumers cannot always tell what a virtual module is or which package a plugin came from. Rolldown lets plugins attach descriptive metadata to both, so the devtools output can surface richer, human-authored context. The metadata is informational and does not affect bundling. See vitejs/devtools [#171](https://github.com/vitejs/devtools/issues/171) (module descriptions) and [#172](https://github.com/vitejs/devtools/issues/172) (plugin package name).
+
+**Author-facing contract (already typed in `packages/rolldown`):**
+
+- **Module description** — plugins return a top-level `description` from the `resolveId`/`load`/`transform` hooks. It is a direct optional field on `ModuleOptions` (so it is also readable via `this.getModuleInfo`) and works for dynamically-generated virtual modules.
+- **Plugin metadata** — plugins set `meta.packageName`, `meta.version`, and `meta.description` on the plugin object (`PluginMeta`).
+
+These fields are all optional and inert to bundling. They are general-purpose descriptive metadata; the tracing layer is one consumer that forwards them to tools such as Vite devtools.
+
+**Emission side (not yet wired):** the trace actions need to carry these values so consumers actually receive them.
+
+- `SessionMeta.plugins[]` (`PluginItem` in `rolldown_devtools_action`) should gain `package_name: Option<String>`, `version: Option<String>`, and `description: Option<String>`, populated by reading each plugin's `meta` when the session meta is emitted.
+- Module descriptions should be attached where per-module data is emitted (e.g. `HookLoadCallEnd` / `ModuleGraphReady`), read from the module's resolved `description`.
+
+Until that plumbing lands, setting the fields is a no-op beyond type-checking; the contract is defined first so plugin authors and consumers can align on the shape.
+
 ### Performance
 
 The initial implementation prioritized unblocking consumability — getting structured data out to disk so that external tools could start building on it. Performance was explicitly not a priority at that stage.

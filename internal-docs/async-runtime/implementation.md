@@ -406,6 +406,21 @@ Watch close-listener reentrancy is scoped through `AsyncLocalStorage`: the
 listener's own `close()` receives the completed native phase, while unrelated
 callers continue awaiting the full close lifecycle and observe its
 listener/runtime result.
+`RolldownBuild` and `DevEngine` apply the same owner-scoped rule to every
+normalized callback passed into their native objects. A close requested from a
+plugin hook, output callback, log callback, or dev callback starts the normal
+memoized close lifecycle but returns an immediate acknowledgement to that
+callback, allowing native work to release the callback before close waits for
+quiescence. External and later close callers still receive the full cleanup
+result, including replayed terminal errors and retryable ownership. Node uses
+`AsyncLocalStorage` to distinguish the exact async callback. Each context also
+carries an active invocation bit that is cleared when the callback settles, so
+timers or promises created by that callback cannot retain reentrant-close
+privilege after native code has stopped awaiting it. Browser builds have no
+async context API, so only the exact callback invocation synchronously on the
+stack receives the acknowledgement. Unrelated close callers always await full
+cleanup and observe its failure; a browser callback must request close before
+its first async suspension.
 
 Native watch mode is supported on both runtime flavors. Public `dev()` checks
 `devSupported` before reading callbacks, running plugin hooks, creating workers,

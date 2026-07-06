@@ -197,7 +197,7 @@ itertools = "0.15.0"
 itoa = "1.0.18"
 json-escape-simd = "3"
 json-strip-comments = "3"
-jsonschema = { version = "0.46.8", default-features = false }
+jsonschema = { version = "0.46.10", default-features = false }
 memchr = "2.8.2"
 mimalloc-safe = "0.1.64"
 mime = "0.3.17"
@@ -225,7 +225,7 @@ regex = { version = "1.12.4", default-features = false, features = [
 regress = "0.11.1"
 rolldown-notify = "10.5.0"
 rolldown-notify-debouncer-full = "0.7.9"
-rustc-hash = { version = "2.1.2" }
+rustc-hash = { version = "2.1.3" }
 schemars = "1.2.1"
 self_cell = "1.2.2"
 serde = { version = "1.0.228", features = ["derive"] }

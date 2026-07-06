@@ -461,6 +461,13 @@ impl DevEngine {
     self.clients.lock().await.insert("rolldown-tests".to_string(), client_session);
   }
 
+  /// A real client with an empty `executed_modules` set. Simulates a client
+  /// whose module execution reports have not arrived yet.
+  #[cfg(feature = "testing")]
+  pub async fn create_unregistered_client_for_testing(&self) {
+    self.clients.lock().await.insert("unregistered-client".to_string(), ClientSession::default());
+  }
+
   fn create_error_if_closed(&self) -> BuildResult<()> {
     if self.is_closed.load(std::sync::atomic::Ordering::SeqCst) {
       Err(anyhow::anyhow!("Dev engine is closed"))?;

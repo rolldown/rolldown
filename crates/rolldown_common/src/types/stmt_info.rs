@@ -3,7 +3,7 @@ use oxc_index::IndexVec;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
-use crate::{ImportRecordIdx, SideEffectDetail, SymbolOrMemberExprRef, SymbolRef};
+use crate::{ImportRecordIdx, StmtEvalFlags, SymbolOrMemberExprRef, SymbolRef};
 
 use super::symbol_or_member_expr_ref::TaggedSymbolRef;
 
@@ -93,7 +93,7 @@ impl StmtInfos {
 
   pub fn iter_enumerated_without_namespace_stmt(
     &self,
-  ) -> impl Iterator<Item = (StmtInfoIdx, &StmtInfo)> {
+  ) -> impl ExactSizeIterator<Item = (StmtInfoIdx, &StmtInfo)> {
     self.infos.iter_enumerated().skip(1)
   }
 
@@ -143,7 +143,7 @@ pub struct StmtInfo {
   // here instead of `SymbolId`.
   /// Top level symbols referenced by this statement.
   pub referenced_symbols: Vec<SymbolOrMemberExprRef>,
-  pub side_effect: SideEffectDetail,
+  pub eval_flags: StmtEvalFlags,
   pub import_records: Vec<ImportRecordIdx>,
   #[cfg(debug_assertions)]
   pub debug_label: Option<String>,
@@ -165,7 +165,7 @@ impl StmtInfo {
   ) -> DebugStmtInfoForTreeShaking {
     DebugStmtInfoForTreeShaking {
       is_included,
-      side_effect: self.side_effect,
+      eval_flags: self.eval_flags,
       #[cfg(debug_assertions)]
       source: self.debug_label.clone().unwrap_or_else(|| "<Noop>".into()),
     }
@@ -199,7 +199,7 @@ impl StmtInfo {
 #[derive(Debug)]
 pub struct DebugStmtInfoForTreeShaking {
   pub is_included: bool,
-  pub side_effect: SideEffectDetail,
+  pub eval_flags: StmtEvalFlags,
   #[cfg(debug_assertions)]
   pub source: String,
 }

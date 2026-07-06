@@ -66,7 +66,7 @@ pub fn render_chunk_external_imports<'a>(
         .symbol_db
         .canonical_name_for_or_original(importee.namespace_ref, &ctx.chunk.canonical_names);
 
-      if ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref) {
+      if ctx.link_output.used_external_symbols.contains(&importee.namespace_ref) {
         // Check if this import needs __toESM
         let needs_interop = external_import_needs_interop(named_imports);
         if needs_interop {

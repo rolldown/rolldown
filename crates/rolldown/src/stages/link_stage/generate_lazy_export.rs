@@ -60,7 +60,7 @@ impl LinkStage<'_> {
         // generate `module.exports = expr`
         if module.exports_kind == ExportsKind::CommonJs {
           // since the wrap arguments are generate on demand, we need to insert the module ref usage here.
-          stmt_infos.infos[FIRST_TOP_LEVEL_STMT_IDX].side_effect = true.into();
+          stmt_infos.infos[FIRST_TOP_LEVEL_STMT_IDX].eval_flags = true.into();
           module.ecma_view.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
         }
       });

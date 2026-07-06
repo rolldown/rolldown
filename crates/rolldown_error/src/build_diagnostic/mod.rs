@@ -118,11 +118,6 @@ impl BuildDiagnostic {
     self.inner.as_napi_error().ok_or(self)
   }
 
-  /// Attempt to downcast the inner event to a specific type.
-  pub fn downcast_ref<T: 'static + BuildEvent>(&self) -> Option<&T> {
-    self.inner.as_any().downcast_ref()
-  }
-
   /// Attempt to downcast the inner event to a specific type (mutable).
   pub fn downcast_mut<T: 'static + BuildEvent>(&mut self) -> Option<&mut T> {
     self.inner.as_any_mut().downcast_mut()

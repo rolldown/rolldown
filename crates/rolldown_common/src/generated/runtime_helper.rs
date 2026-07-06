@@ -52,7 +52,7 @@ impl DependedRuntimeHelperMap {
   }
 
   /// Iterate over `(single-bit helper, &statements)` pairs for each defined `RuntimeHelper` bit.
-  pub fn iter(&self) -> impl Iterator<Item = (RuntimeHelper, &Vec<StmtInfoIdx>)> {
+  pub fn iter(&self) -> impl ExactSizeIterator<Item = (RuntimeHelper, &Vec<StmtInfoIdx>)> {
     self.0.iter().enumerate().map(|(i, v)| {
       // `i` is always within `0..RUNTIME_HELPER_NAMES.len()`, matching a defined single-bit flag.
       (RuntimeHelper::from_bits_truncate(1 << i), v)

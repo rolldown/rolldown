@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import nodeAssert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region pkg-barrel/index.mjs
+var import_other = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "other-value";
+})))(), 1);
+//#endregion
+//#region main.js
+nodeAssert.equal(import_other.default, "other-value");
+//#endregion
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import nodeAssert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region pkg-barrel/other.cjs
+var require_other = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "other-value";
+}));
+//#endregion
+//#region pkg-barrel/index.mjs
+var import_other;
+var init_pkg_barrel = __esmMin((() => {
+	import_other = /* @__PURE__ */ __toESM(require_other(), 1);
+}));
+//#endregion
+__esmMin((() => {
+	init_pkg_barrel();
+	nodeAssert.equal(import_other.default, "other-value");
+}))();
+
+```

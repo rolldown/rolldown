@@ -7,32 +7,15 @@ use crate::{
     binding_outputs::{BindingOutputs, to_binding_error},
     error::{BindingError, BindingErrors, BindingResult},
   },
-  utils::{handle_result, handle_warnings, normalize_binding_options::normalize_binding_options},
+  utils::{
+    handle_result, handle_warnings, normalize_binding_options::normalize_binding_options,
+    spawn_boxed_future,
+  },
 };
-use napi::{
-  Env,
-  bindgen_prelude::{PromiseRaw, ToNapiValue},
-};
+use napi::{Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
 use rolldown::{BundleHandle, BundlerConfig};
-use std::{future::Future, pin::Pin, sync::Arc};
-
-/// Box a future before handing it to napi's [`Env::spawn_future`].
-///
-/// `Env::spawn_future` is monomorphized over the concrete future type, so every
-/// distinct async body re-instantiates the whole tokio task harness (`poll_future`,
-/// `Core<T, S>`, the scheduler dispatch, …). These `BindingBundler` entry points run
-/// once per build, so erasing the future to a single `Pin<Box<dyn Future>>` collapses
-/// that machinery to one instantiation per output type, at the cost of one
-/// (perf-irrelevant) heap allocation per call. Do NOT use this for per-module/per-hook
-/// futures, where the extra allocation would be on a hot path.
-fn spawn_boxed_future<T: 'static + Send + ToNapiValue>(
-  env: &Env,
-  fut: impl 'static + Send + Future<Output = napi::Result<T>>,
-) -> napi::Result<PromiseRaw<'_, T>> {
-  let fut: Pin<Box<dyn Future<Output = napi::Result<T>> + Send>> = Box::pin(fut);
-  env.spawn_future(fut)
-}
+use std::sync::Arc;
 
 #[napi]
 pub struct BindingBundler {

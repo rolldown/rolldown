@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { editFile, page, waitForBuildStable } from '~utils';
+import { editFile, errorOverlay, page, waitForBuildStable } from '~utils';
 
 const SLOT = '/* @syntax-error-slot */';
 const BREAK = "const broken = '";
@@ -15,7 +15,7 @@ const BREAK = "const broken = '";
 //   recovers — the broken file is watched even though it never parsed.
 describe('initial-build-error', () => {
   test('error on first load, access never retries, a file change recovers', async () => {
-    const overlay = page.locator('#rolldown-error-overlay');
+    const overlay = errorOverlay();
     await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(1);
 
     // Principle 1: refreshing must not retry the build — without new input the

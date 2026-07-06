@@ -58,3 +58,35 @@ await __esmMin((async () => {
 export { value as normalLibValue, value$1 as tlaLibValue };
 
 ```
+
+# Variant: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region normal-lib.js
+var value;
+var init_normal_lib = __esmMin((() => {
+	value = "normal-dep+normal-lib";
+}));
+//#endregion
+var value$2, value$1;
+var init_tla_lib = __esmMin((async () => {
+	//#region tla-dep.js
+	value$2 = await Promise.resolve("tla-dep");
+	//#endregion
+	//#region tla-lib.js
+	value$1 = value$2 + "+tla-lib";
+	//#endregion
+}));
+//#endregion
+await __esmMin((async () => {
+	init_normal_lib();
+	await init_tla_lib();
+}))();
+export { value as normalLibValue, value$1 as tlaLibValue };
+
+```

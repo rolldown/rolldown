@@ -50,7 +50,7 @@ impl ChunkGraph {
   }
 
   #[expect(unused)]
-  pub fn sorted_chunks(&self) -> impl Iterator<Item = &Chunk> {
+  pub fn sorted_chunks(&self) -> impl ExactSizeIterator<Item = &Chunk> {
     self.sorted_chunk_idx_vec.iter().map(move |&id| &self.chunk_table.chunks[id])
   }
 

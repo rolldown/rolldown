@@ -264,13 +264,13 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
     let start = self.plugin_driver.start_timing();
-    let (mut link_stage_output, ast_table) =
+    let (mut link_stage_output, ast_table, used_symbol_refs) =
       LinkStage::new(scan_stage_output, &self.options).link();
     self.plugin_driver.set_link_stage_time(start);
 
     let bundle_output =
       GenerateStage::new(&mut link_stage_output, ast_table, &self.options, &self.plugin_driver)
-        .generate()
+        .generate(used_symbol_refs)
         .await; // Notice we don't use `?` to break the control flow here.
 
     // `create_output`/`make_copy` strip symbol-table scoping from the cache for

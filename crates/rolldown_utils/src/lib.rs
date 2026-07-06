@@ -28,7 +28,6 @@ pub mod make_unique_name;
 pub mod pattern_filter;
 pub mod replace_all_placeholder;
 pub mod stabilize_id;
-pub mod time;
 pub mod unique_arc;
 pub mod url;
 pub mod uuid;

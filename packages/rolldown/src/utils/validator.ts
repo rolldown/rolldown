@@ -1097,6 +1097,10 @@ const CliOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Watch files in bundle and rebuild on changes'),
   ),
+  configLoader: v.pipe(
+    v.optional(v.union([v.literal('bundle'), v.literal('native')])),
+    v.description('How to load the config file (bundle, native)'),
+  ),
   ...InputCliOptionsSchema.entries,
   ...OutputCliOptionsSchema.entries,
 });

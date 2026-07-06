@@ -5,7 +5,7 @@ mod hmr;
 pub mod impl_visit;
 mod import_analyzer;
 mod new_url;
-pub mod side_effect_detector;
+pub mod stmt_eval_analyzer;
 
 use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, try_extract_const_literal};
@@ -33,7 +33,7 @@ use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
   ExportsKind, FlatOptions, HmrInfo, ImportAttribute, ImportKind, ImportRecordIdx,
   ImportRecordMeta, LocalExport, MemberExprProp, MemberExprRef, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, RawImportRecord, SideEffectDetail, Specifier, StmtInfo, StmtInfoIdx,
+  ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtEvalFlags, StmtInfo, StmtInfoIdx,
   StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef,
   ThisExprReplaceKind, generate_replace_this_expr_map,
 };
@@ -380,7 +380,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             let stmt_info_idx_list =
               self.result.stmt_infos.declared_stmts_by_symbol(&resolved.referenced).to_vec();
             for idx in stmt_info_idx_list {
-              self.result.stmt_infos[idx].side_effect |= SideEffectDetail::Unknown;
+              self.result.stmt_infos[idx].eval_flags |= StmtEvalFlags::UnknownSideEffect;
             }
           }
           if !usage.can_be_inlined() {

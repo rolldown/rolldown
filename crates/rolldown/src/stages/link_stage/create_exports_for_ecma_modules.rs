@@ -77,7 +77,7 @@ impl LinkStage<'_> {
         let stmt_info = StmtInfo {
           declared_symbols: smallvec![TaggedSymbolRef::normal(*symbol_ref)],
           referenced_symbols: vec![],
-          side_effect: false.into(),
+          eval_flags: false.into(),
           import_records: Vec::new(),
           #[cfg(debug_assertions)]
           debug_label: None,
@@ -125,7 +125,7 @@ impl LinkStage<'_> {
         let namespace_stmt_info = StmtInfo {
           declared_symbols,
           referenced_symbols,
-          side_effect: false.into(),
+          eval_flags: false.into(),
           import_records: Vec::new(),
           #[cfg(debug_assertions)]
           debug_label: None,

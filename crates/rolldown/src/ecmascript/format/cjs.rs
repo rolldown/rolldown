@@ -133,7 +133,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         "\")"
       );
 
-      if ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref) {
+      if ctx.link_output.used_external_symbols.contains(&importee.namespace_ref) {
         let external_module_symbol_name = ctx
           .link_output
           .symbol_db

@@ -1,0 +1,17 @@
+{
+  "_comment": "A top-level pure dynamic import of side-effect-free leaf.js with unused exports must not load leaf.js's body (it is modeled as importing an empty namespace), so leaf.js must not be exempt from on-demand side-effect pruning just because it appeared in the dynamic entry set. The entries only use leaf's re-exported `other`; leaf's own `value = first(second)` body must stay dropped even when strictExecutionOrder wraps the re-export path.",
+  "config": {
+    "input": [
+      { "name": "a", "import": "./entry-a.js" },
+      { "name": "b", "import": "./entry-b.js" }
+    ],
+    "external": ["dep"],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "lazyBarrel": true
+    },
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  }
+}

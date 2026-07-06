@@ -13,7 +13,7 @@ use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTag,
   ModuleTagBitSet, ModuleTagRegistry, PostChunkOptimizationOperation, PreserveEntrySignatures,
-  SymbolRef, WrapKind,
+  RetainedExportSymbols, SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
@@ -39,7 +39,11 @@ pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn generate_chunks(&mut self) -> BuildResult<ChunkGraph> {
+  #[expect(clippy::too_many_lines)]
+  pub async fn generate_chunks(
+    &mut self,
+    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+  ) -> BuildResult<ChunkGraph> {
     // Count total entry points (not unique modules) to handle duplicates correctly
     let entries_len: u32 = self
       .link_output
@@ -149,7 +153,13 @@ impl GenerateStage<'_> {
       self.init_entry_point(&mut chunk_graph, &mut bits_to_chunk, entries_len, &input_base);
 
       self
-        .split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk, &input_base)
+        .split_chunks(
+          &mut index_splitting_info,
+          &mut chunk_graph,
+          &mut bits_to_chunk,
+          &input_base,
+          used_symbol_refs,
+        )
         .await?;
     }
     // Merge external import namespaces at chunk level.
@@ -168,9 +178,7 @@ impl GenerateStage<'_> {
           continue;
         }
         group.sort_unstable_by_key(|item| self.link_output.module_table[item.owner].exec_order());
-        let Some(idx) =
-          group.iter().position(|item| self.link_output.used_symbol_refs.contains(item))
-        else {
+        let Some(idx) = group.iter().position(|item| used_symbol_refs.contains(item)) else {
           continue;
         };
         // In the extreme case, idx would eq to group.len() - 1, which means the first symbol is the only one that is used.
@@ -560,16 +568,44 @@ impl GenerateStage<'_> {
         } else {
           false
         };
-        Some((m.namespace_object_ref, is_namespace_referenced))
+        Some((module_idx, is_namespace_referenced))
       })
       .collect_vec();
-    for (namespace_ref, flag) in to_eliminate {
-      if flag {
-        self.link_output.used_symbol_refs.insert(namespace_ref);
+    for (module_idx, flag) in to_eliminate {
+      self.link_output.metas[module_idx].namespace_included = flag;
+    }
+  }
+
+  /// Projects `used_symbol_refs` onto the export domain: for every module's resolved export,
+  /// record the export's symbol ref and its canonical form when used. Must run after
+  /// [`Self::finalized_module_namespace_ref_usage`] so the namespace decision is folded in
+  /// (an `export * as ns` export resolves to a namespace ref).
+  pub fn compute_retained_export_symbols(&mut self, used_symbol_refs: &UsedSymbolRefs) {
+    let link_output = &self.link_output;
+    // A normal module's namespace ref answers to the namespace decision, not to the
+    // inclusion fixpoint (see `finalized_module_namespace_ref_usage`).
+    let is_used = |symbol_ref: SymbolRef| {
+      if let Some(m) = link_output.module_table[symbol_ref.owner].as_normal()
+        && m.namespace_object_ref == symbol_ref
+      {
+        link_output.metas[symbol_ref.owner].namespace_included
       } else {
-        self.link_output.used_symbol_refs.remove(&namespace_ref);
+        used_symbol_refs.contains(&symbol_ref)
+      }
+    };
+    let mut retained = RetainedExportSymbols::default();
+    for meta in &link_output.metas {
+      for export in meta.resolved_exports.values() {
+        if is_used(export.symbol_ref) {
+          retained.insert(export.symbol_ref);
+        }
+        let canonical_ref = link_output.symbol_db.canonical_ref_for(export.symbol_ref);
+        if is_used(canonical_ref) {
+          retained.insert(canonical_ref);
+        }
       }
     }
+    self.link_output.retained_export_symbols = retained;
   }
 
   /// Find all entry level external modules, and re propagate `has_dynamic_exports` for affected modules.
@@ -819,6 +855,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
+    used_symbol_refs: &mut UsedSymbolRefsBuilder,
   ) -> BuildResult<()> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     let tag_registry = ModuleTagRegistry::new();
@@ -963,6 +1000,7 @@ impl GenerateStage<'_> {
         input_base,
         &mut module_is_assigned,
         &temp_chunk_graph,
+        used_symbol_refs,
       );
     }
 

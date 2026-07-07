@@ -6,7 +6,7 @@ use oxc::ast::ast::{
   IdentifierReference, UnaryOperator, VariableDeclarationKind,
 };
 use oxc::ast::match_member_expression;
-use oxc::semantic::{NodeId, SymbolId};
+use oxc::semantic::{NodeId, SymbolFlags, SymbolId};
 use oxc_ecmascript::GlobalContext;
 use oxc_ecmascript::side_effects::{
   MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects,
@@ -23,6 +23,8 @@ bitflags! {
         const GlobalVarAccess = 1;
         /// A call/new expression was marked pure by an annotation or cross-module analysis.
         const PureAnnotation = 1 << 1;
+        /// Reads an imported binding value while evaluating the statement.
+        const ImportBindingRead = 1 << 2;
     }
 }
 
@@ -71,6 +73,13 @@ impl StmtEvalFacts {
   #[inline]
   fn without_unknown_side_effect(mut self) -> Self {
     self.tree_shaking_flags.remove(StmtEvalFlags::UnknownSideEffect);
+    self
+  }
+
+  #[inline]
+  fn only_import_binding_read_reason(mut self) -> Self {
+    self.tree_shaking_flags = StmtEvalFlags::empty();
+    self.order_sensitive_reasons &= StmtOrderSensitiveReasons::ImportBindingRead;
     self
   }
 
@@ -172,6 +181,34 @@ impl<'a> StmtEvalAnalyzer<'a> {
     Some(namespace_ids.contains(&symbol_id))
   }
 
+  fn is_namespace_import_symbol(&self, symbol_id: SymbolId) -> bool {
+    self.namespace_object_symbol_ids.is_some_and(|set| set.contains(&symbol_id))
+  }
+
+  fn symbol_id_for_reference(&self, ident_ref: &IdentifierReference) -> Option<SymbolId> {
+    ident_ref.reference_id.get().and_then(|ref_id| self.scope.symbol_id_for(ref_id))
+  }
+
+  fn is_import_binding_read(&self, ident_ref: &IdentifierReference) -> bool {
+    let Some(symbol_id) = self.symbol_id_for_reference(ident_ref) else {
+      return false;
+    };
+    self.scope.scoping().symbol_flags(symbol_id).contains(SymbolFlags::Import)
+      && !self.is_namespace_import_symbol(symbol_id)
+  }
+
+  fn is_member_expr_root_import_binding_read(&self, expr: &ast::MemberExpression) -> bool {
+    let mut cur = expr.object();
+    loop {
+      match cur {
+        Expression::StaticMemberExpression(e) => cur = &e.object,
+        Expression::ComputedMemberExpression(e) => cur = &e.object,
+        Expression::Identifier(ident) => return self.is_import_binding_read(ident),
+        _ => return false,
+      }
+    }
+  }
+
   fn analyze_member_expr(&self, member_expr: &ast::MemberExpression) -> StmtEvalFacts {
     if self.is_expr_manual_pure_functions(member_expr.object()) {
       return StmtEvalFacts::default();
@@ -180,10 +217,13 @@ impl<'a> StmtEvalAnalyzer<'a> {
     // on them are guaranteed side-effect-free. A computed key is still evaluated,
     // though, and may have its own side effects (e.g. `ns[foo()]`).
     if self.is_namespace_member_access(member_expr) == Some(true) {
-      return match member_expr {
+      let mut facts = StmtEvalFacts::default();
+      facts.set_order_sensitive_reason(StmtOrderSensitiveReasons::ImportBindingRead, true);
+      facts |= match member_expr {
         ast::MemberExpression::ComputedMemberExpression(e) => self.analyze_expr(&e.expression),
         _ => StmtEvalFacts::default(),
       };
+      return facts;
     }
     // Only `import.meta.url` is a spec-defined side-effect-free property read.
     // Other accesses like `import.meta.hot.accept()` may have side effects.
@@ -198,6 +238,15 @@ impl<'a> StmtEvalAnalyzer<'a> {
     let has_side_effect = member_expr.may_have_side_effects(self);
     let mut facts = StmtEvalFacts::from_tree_shaking_side_effect(has_side_effect);
     facts.set_order_sensitive_reason(StmtOrderSensitiveReasons::GlobalVarAccess, is_global);
+    if !has_side_effect {
+      facts.set_order_sensitive_reason(
+        StmtOrderSensitiveReasons::ImportBindingRead,
+        self.is_member_expr_root_import_binding_read(member_expr),
+      );
+      if let ast::MemberExpression::ComputedMemberExpression(e) = member_expr {
+        facts |= self.analyze_expr(&e.expression).only_import_binding_read_reason();
+      }
+    }
     facts
   }
 
@@ -489,6 +538,10 @@ impl<'a> StmtEvalAnalyzer<'a> {
     let has_side_effect = ident_ref.may_have_side_effects(self);
     let mut facts = StmtEvalFacts::from_tree_shaking_side_effect(has_side_effect);
     facts.set_order_sensitive_reason(StmtOrderSensitiveReasons::GlobalVarAccess, is_global);
+    facts.set_order_sensitive_reason(
+      StmtOrderSensitiveReasons::ImportBindingRead,
+      self.is_import_binding_read(ident_ref),
+    );
     facts
   }
 
@@ -701,69 +754,136 @@ mod test {
   use std::sync::Arc;
 
   use itertools::Itertools;
-  use oxc::{parser::Parser, span::SourceType};
-  use rolldown_common::{AstScopes, NormalizedBundlerOptions, StmtEvalFlags};
+  use oxc::{ast::ast, parser::Parser, semantic::SymbolId, span::SourceType};
+  use rolldown_common::{
+    AstScopes, InnerOptions, NormalizedBundlerOptions, PropertyReadSideEffects, StmtEvalFlags,
+  };
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
+  use rustc_hash::FxHashSet;
 
   use super::StmtEvalAnalyzer;
   use rolldown_common::FlatOptions;
 
+  fn collect_namespace_import_symbol_ids(program: &ast::Program) -> FxHashSet<SymbolId> {
+    let mut namespace_object_symbol_ids = FxHashSet::default();
+    for stmt in &program.body {
+      let Some(ast::ModuleDeclaration::ImportDeclaration(decl)) = stmt.as_module_declaration()
+      else {
+        continue;
+      };
+      let Some(specifiers) = &decl.specifiers else { continue };
+      for spec in specifiers {
+        if let ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) = spec {
+          namespace_object_symbol_ids.insert(spec.local.symbol_id());
+        }
+      }
+    }
+    namespace_object_symbol_ids
+  }
+
   fn has_side_effect_for_tree_shaking(code: &str) -> bool {
+    has_side_effect_for_tree_shaking_with_options(code, NormalizedBundlerOptions::default())
+  }
+
+  fn has_side_effect_for_tree_shaking_with_options(
+    code: &str,
+    options: NormalizedBundlerOptions,
+  ) -> bool {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let semantic = EcmaAst::make_semantic(ast.program());
+    let namespace_object_symbol_ids = collect_namespace_import_symbol_ids(ast.program());
     let scoping = semantic.into_scoping();
     let ast_scopes = AstScopes::new(scoping);
 
-    let options = Arc::new(NormalizedBundlerOptions::default());
+    let options = Arc::new(options);
     let flags = FlatOptions::from_shared_options(&options);
     ast.program().body.iter().any(|stmt| {
-      StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
+      StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, Some(&namespace_object_symbol_ids))
         .analyze_stmt(stmt)
         .has_side_effect_for_tree_shaking()
     })
   }
 
   fn get_stmt_eval_flags(code: &str) -> Vec<StmtEvalFlags> {
+    get_stmt_eval_flags_with_options(code, NormalizedBundlerOptions::default())
+  }
+
+  fn get_stmt_eval_flags_with_options(
+    code: &str,
+    options: NormalizedBundlerOptions,
+  ) -> Vec<StmtEvalFlags> {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let semantic = EcmaAst::make_semantic(ast.program());
+    let namespace_object_symbol_ids = collect_namespace_import_symbol_ids(ast.program());
     let scoping = semantic.into_scoping();
     let ast_scopes = AstScopes::new(scoping);
 
-    let options = Arc::new(NormalizedBundlerOptions::default());
+    let options = Arc::new(options);
     let flags = FlatOptions::from_shared_options(&options);
     ast
       .program()
       .body
       .iter()
       .map(|stmt| {
-        StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
-          .analyze_stmt(stmt)
-          .tree_shaking_flags()
+        StmtEvalAnalyzer::new(
+          &ast_scopes,
+          flags,
+          &options,
+          None,
+          Some(&namespace_object_symbol_ids),
+        )
+        .analyze_stmt(stmt)
+        .tree_shaking_flags()
       })
       .collect_vec()
   }
 
   fn get_stmt_order_sensitivity(code: &str) -> Vec<bool> {
+    get_stmt_order_sensitivity_with_options(code, NormalizedBundlerOptions::default())
+  }
+
+  fn get_stmt_order_sensitivity_with_options(
+    code: &str,
+    options: NormalizedBundlerOptions,
+  ) -> Vec<bool> {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let semantic = EcmaAst::make_semantic(ast.program());
+    let namespace_object_symbol_ids = collect_namespace_import_symbol_ids(ast.program());
     let scoping = semantic.into_scoping();
     let ast_scopes = AstScopes::new(scoping);
 
-    let options = Arc::new(NormalizedBundlerOptions::default());
+    let options = Arc::new(options);
     let flags = FlatOptions::from_shared_options(&options);
     ast
       .program()
       .body
       .iter()
       .map(|stmt| {
-        StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
-          .analyze_stmt(stmt)
-          .is_order_sensitive()
+        StmtEvalAnalyzer::new(
+          &ast_scopes,
+          flags,
+          &options,
+          None,
+          Some(&namespace_object_symbol_ids),
+        )
+        .analyze_stmt(stmt)
+        .is_order_sensitive()
       })
       .collect_vec()
+  }
+
+  fn options_with_property_read_side_effects_false() -> NormalizedBundlerOptions {
+    NormalizedBundlerOptions {
+      treeshake: InnerOptions {
+        property_read_side_effects: Some(PropertyReadSideEffects::False),
+        ..Default::default()
+      }
+      .into(),
+      ..Default::default()
+    }
   }
 
   #[test]
@@ -1461,6 +1581,97 @@ mod test {
     assert_eq!(
       get_stmt_order_sensitivity("export default { foo: () => /* @__PURE__ */ pureCall() }"),
       vec![false]
+    );
+  }
+
+  #[test]
+  fn test_import_binding_read_marks_order_sensitive_only() {
+    assert_eq!(
+      get_stmt_eval_flags("import { counter } from './state'; export const snap = counter;"),
+      vec![StmtEvalFlags::empty(), StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("import { counter } from './state'; export const snap = counter;"),
+      vec![false, true]
+    );
+
+    assert_eq!(
+      get_stmt_eval_flags("export const snap = counter; import { counter } from './state';"),
+      vec![StmtEvalFlags::empty(), StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("export const snap = counter; import { counter } from './state';"),
+      vec![true, false]
+    );
+
+    assert_eq!(
+      get_stmt_eval_flags_with_options(
+        "import { obj } from './state'; export const snap = obj.value;",
+        options_with_property_read_side_effects_false()
+      ),
+      vec![StmtEvalFlags::empty(), StmtEvalFlags::empty()]
+    );
+    assert!(!has_side_effect_for_tree_shaking_with_options(
+      "import { obj } from './state'; export const snap = obj.value;",
+      options_with_property_read_side_effects_false()
+    ));
+    assert_eq!(
+      get_stmt_order_sensitivity_with_options(
+        "import { obj } from './state'; export const snap = obj.value;",
+        options_with_property_read_side_effects_false()
+      ),
+      vec![false, true]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity_with_options(
+        "import { key } from './state'; const local = {}; export const snap = local[key];",
+        options_with_property_read_side_effects_false()
+      ),
+      vec![false, false, true]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity_with_options(
+        "const local = {}; export const snap = local[Proxy];",
+        options_with_property_read_side_effects_false()
+      ),
+      vec![false, false]
+    );
+  }
+
+  #[test]
+  fn test_import_binding_read_does_not_enter_function_body() {
+    assert_eq!(
+      get_stmt_order_sensitivity(
+        "import { counter } from './state'; export function read() { return counter; }"
+      ),
+      vec![false, false]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity(
+        "import { counter } from './state'; export const read = () => counter;"
+      ),
+      vec![false, false]
+    );
+  }
+
+  #[test]
+  fn test_namespace_import_member_read_marks_order_sensitive_only() {
+    assert_eq!(
+      get_stmt_eval_flags("import * as ns from './state'; export const snap = ns.counter;"),
+      vec![StmtEvalFlags::empty(), StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("import * as ns from './state'; export const snap = ns.counter;"),
+      vec![false, true]
+    );
+
+    assert_eq!(
+      get_stmt_order_sensitivity("export const snap = ns.counter; import * as ns from './state';"),
+      vec![true, false]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("import * as ns from './state'; export const namespace = ns;"),
+      vec![false, false]
     );
   }
 

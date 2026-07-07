@@ -8,7 +8,7 @@ use dashmap::Entry;
 use oxc::transformer::{ESFeature, EngineTargets, TransformOptions as OxcTransformOptions};
 use oxc_resolver::{ResolveOptions, Resolver, TsconfigDiscovery, TsconfigOptions};
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_utils::dashmap::FxDashMap;
+use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 
 use super::tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig;
 use crate::{BundlerTransformOptions, TsConfig};
@@ -31,6 +31,9 @@ pub struct RawTransformOptions {
   /// Cache key: tsconfig path, or empty PathBuf for files without tsconfig
   pub cache: FxDashMap<PathBuf, Arc<OxcTransformOptions>>,
   resolver: Arc<Resolver>,
+  /// Every tsconfig file discovered so far. Survives `clear_cache` so
+  /// watchers can still recognize tsconfig files when routing file changes.
+  known_tsconfig_paths: FxDashSet<PathBuf>,
 }
 
 impl RawTransformOptions {
@@ -49,7 +52,15 @@ impl RawTransformOptions {
         yarn_pnp,
         ..Default::default()
       })),
+      known_tsconfig_paths: FxDashSet::default(),
     }
+  }
+
+  /// Drop cached tsconfig contents and merged transform options so the next
+  /// build re-reads tsconfig files from disk.
+  pub fn clear_cache(&self) {
+    self.cache.clear();
+    self.resolver.clear_cache();
   }
 
   pub fn get_or_create_for_tsconfig(
@@ -147,6 +158,35 @@ impl TransformOptions {
         };
         raw.get_or_create_for_tsconfig(tsconfig.as_deref(), warnings)
       }
+    }
+  }
+
+  /// Find the tsconfig governing `file_path` so callers can watch it.
+  /// Reference matching is already applied by `find_tsconfig`. The extends
+  /// chain is not reported yet because oxc-resolver does not expose it.
+  /// Discovery errors are ignored because they surface later in
+  /// `options_for_file`.
+  pub fn discover_tsconfig_file(&self, file_path: &Path) -> Option<PathBuf> {
+    let TransformOptionsInner::Raw(raw) = &self.inner else {
+      return None;
+    };
+    let tsconfig = raw.resolver.find_tsconfig(file_path).ok().flatten()?;
+    raw.known_tsconfig_paths.insert(tsconfig.path.clone());
+    Some(tsconfig.path.clone())
+  }
+
+  /// Whether `path` is a tsconfig file discovered by an earlier build.
+  pub fn is_known_tsconfig(&self, path: &Path) -> bool {
+    match &self.inner {
+      TransformOptionsInner::Normal(_) => false,
+      TransformOptionsInner::Raw(raw) => raw.known_tsconfig_paths.contains(path),
+    }
+  }
+
+  /// See [RawTransformOptions::clear_cache].
+  pub fn clear_tsconfig_cache(&self) {
+    if let TransformOptionsInner::Raw(raw) = &self.inner {
+      raw.clear_cache();
     }
   }
 }

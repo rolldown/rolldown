@@ -411,6 +411,8 @@ thread_local! {
   static CURRENT_THREAD_DISPATCH_PUBLICATION_BLOCKED_TEST_HOOK:
     std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
       const { std::cell::RefCell::new(None) };
+  static CURRENT_THREAD_DISPATCH_CALL_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+    const { std::cell::RefCell::new(None) };
 }
 
 #[cfg(all(test, not(target_family = "wasm")))]
@@ -433,6 +435,13 @@ fn run_current_thread_dispatch_publication_blocked_test_hook() {
   if let Some(hook) =
     CURRENT_THREAD_DISPATCH_PUBLICATION_BLOCKED_TEST_HOOK.with(|slot| slot.borrow_mut().take())
   {
+    hook();
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_current_thread_dispatch_call_test_hook() {
+  if let Some(hook) = CURRENT_THREAD_DISPATCH_CALL_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
     hook();
   }
 }
@@ -1573,7 +1582,7 @@ struct CurrentThreadExecutor {
   queue: Mutex<CurrentThreadQueue>,
   blocking_admission: CurrentThreadBlockingAdmission,
   draining: AtomicBool,
-  scheduler_idle_lock: Mutex<()>,
+  scheduler_idle_lock: Mutex<CurrentThreadSchedulerState>,
   scheduler_idle: Condvar,
   /// Exact nonzero capability for the currently accepted host callback.
   /// Superseding a dead host installs a new id in the same runtime generation,
@@ -1614,6 +1623,11 @@ struct CurrentThreadQueue {
   runnables: VecDeque<Runnable>,
 }
 
+#[derive(Default)]
+struct CurrentThreadSchedulerState {
+  active_host_turns: usize,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum CurrentThreadDispatchRequest {
   Accepted,
@@ -1621,14 +1635,41 @@ enum CurrentThreadDispatchRequest {
   Unavailable,
 }
 
-struct CurrentThreadDrainGuard<'a>(&'a CurrentThreadExecutor);
+struct CurrentThreadHostTurn {
+  executor: Arc<CurrentThreadExecutor>,
+  draining: bool,
+}
 
-impl Drop for CurrentThreadDrainGuard<'_> {
+impl CurrentThreadHostTurn {
+  fn drive(mut self) {
+    let executor = Arc::clone(&self.executor);
+    executor.drive_admitted_host_turn(&mut self);
+  }
+
+  fn release_draining(&mut self) {
+    if !self.draining {
+      return;
+    }
+    let _scheduler =
+      self.executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    self.executor.draining.store(false, Ordering::Release);
+    self.draining = false;
+  }
+}
+
+impl Drop for CurrentThreadHostTurn {
   fn drop(&mut self) {
-    let _idle =
-      self.0.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    self.0.draining.store(false, Ordering::Release);
-    self.0.scheduler_idle.notify_all();
+    let mut scheduler =
+      self.executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if self.draining {
+      self.executor.draining.store(false, Ordering::Release);
+      self.draining = false;
+    }
+    scheduler.active_host_turns = scheduler
+      .active_host_turns
+      .checked_sub(1)
+      .expect("CurrentThread active host-turn count underflow");
+    self.executor.scheduler_idle.notify_all();
   }
 }
 
@@ -1734,7 +1775,7 @@ impl CurrentThreadExecutor {
         }),
       },
       draining: AtomicBool::new(false),
-      scheduler_idle_lock: Mutex::new(()),
+      scheduler_idle_lock: Mutex::new(CurrentThreadSchedulerState::default()),
       scheduler_idle: Condvar::new(),
       dispatch_pending: AtomicU64::new(0),
       recovery_dispatch: AtomicU64::new(0),
@@ -1817,13 +1858,13 @@ impl CurrentThreadExecutor {
             let registration =
               registration.take().expect("blocking registration must be available");
             let generation = self.generation;
+            let function = RegisteredBlockingFunction::new(function, registration, generation);
             state.queue.push(QueuedBlocking {
               id: dependency.job,
               run: Box::new(move || {
-                let _registration = registration;
                 let _generation = RuntimeGenerationGuard::enter(generation);
-                let result = catch_unwind_join_error(function)
-                  .map(|output| ContainedTaskOutput::new(output, generation));
+                let result =
+                  function.run().map(|output| ContainedTaskOutput::new(output, generation));
                 let _ = sender.send(result);
               }),
             });
@@ -2054,6 +2095,8 @@ impl CurrentThreadExecutor {
       return CurrentThreadDispatchRequest::Coalesced;
     }
     drop(scheduler);
+    #[cfg(all(test, not(target_family = "wasm")))]
+    run_current_thread_dispatch_call_test_hook();
     if (self.task_dispatch)(dispatch) {
       return CurrentThreadDispatchRequest::Accepted;
     }
@@ -2073,11 +2116,23 @@ impl CurrentThreadExecutor {
     CurrentThreadDispatchRequest::Unavailable
   }
 
-  fn try_admit_host_turn(&self, dispatch: u64) -> bool {
-    let _scheduler =
+  fn claim_host_turn(
+    self: &Arc<Self>,
+    scheduler: &mut CurrentThreadSchedulerState,
+  ) -> CurrentThreadHostTurn {
+    scheduler.active_host_turns = scheduler
+      .active_host_turns
+      .checked_add(1)
+      .expect("CurrentThread active host-turn count exhausted");
+    self.draining.store(true, Ordering::Release);
+    CurrentThreadHostTurn { executor: Arc::clone(self), draining: true }
+  }
+
+  fn try_admit_host_turn(self: &Arc<Self>, dispatch: u64) -> Option<CurrentThreadHostTurn> {
+    let mut scheduler =
       self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     if self.draining.load(Ordering::Acquire) {
-      return false;
+      return None;
     }
     if dispatch == 0
       || self
@@ -2085,46 +2140,49 @@ impl CurrentThreadExecutor {
         .compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire)
         .is_err()
     {
-      return false;
+      return None;
     }
     #[cfg(all(test, not(target_family = "wasm")))]
     run_current_thread_dispatch_claim_test_hook();
     let _ =
       self.recovery_dispatch.compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire);
-    self.draining.store(true, Ordering::Release);
-    true
+    Some(self.claim_host_turn(&mut scheduler))
+  }
+
+  #[cfg(test)]
+  fn try_admit_host_turn_without_dispatch(self: &Arc<Self>) -> Option<CurrentThreadHostTurn> {
+    let mut scheduler =
+      self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if self.draining.load(Ordering::Acquire) {
+      return None;
+    }
+    Some(self.claim_host_turn(&mut scheduler))
   }
 
   #[cfg(test)]
   fn drive_host_turn(self: &Arc<Self>) {
     let dispatch = self.dispatch_pending.load(Ordering::Acquire);
-    let admitted = if dispatch == 0 {
-      self.draining.compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed).is_ok()
+    let host_turn = if dispatch == 0 {
+      self.try_admit_host_turn_without_dispatch()
     } else {
       self.try_admit_host_turn(dispatch)
     };
-    if !admitted {
-      return;
+    if let Some(host_turn) = host_turn {
+      host_turn.drive();
     }
-    self.drive_admitted_host_turn();
   }
 
   #[cfg(test)]
   fn drive_host_turn_for_dispatch(self: &Arc<Self>, dispatch: u64) {
-    if self.try_admit_host_turn(dispatch) {
-      self.drive_admitted_host_turn();
+    if let Some(host_turn) = self.try_admit_host_turn(dispatch) {
+      host_turn.drive();
     }
   }
 
   /// Drive a host turn whose scheduler role was claimed while the controller
   /// still held the lifecycle mutex. See
   /// `internal-docs/async-runtime/implementation.md`.
-  fn drive_admitted_host_turn(self: &Arc<Self>) {
-    // Keep the scheduler role active through the full `Runnable::run`,
-    // including async-task's destruction of a detached completed output.
-    // The guard also retires the role on an unexpected unwind.
-    let draining = CurrentThreadDrainGuard(self);
-
+  fn drive_admitted_host_turn(self: &Arc<Self>, host_turn: &mut CurrentThreadHostTurn) {
     #[cfg(not(target_family = "wasm"))]
     let mut runnable_streak = 0usize;
     for _ in 0..Self::HOST_TURN_RUNNABLE_BUDGET {
@@ -2149,7 +2207,11 @@ impl CurrentThreadExecutor {
       }
       break;
     }
-    drop(draining);
+    // A bounded turn releases queue-drain exclusivity before publishing its
+    // continuation, but remains an active host turn until that publication
+    // returns. Shutdown waits for the latter lifecycle role, not merely the
+    // former exclusivity bit.
+    host_turn.release_draining();
     self.request_drain_if_work_remains();
   }
 
@@ -2435,7 +2497,7 @@ impl CurrentThreadExecutor {
   fn wait_until_scheduler_idle(&self) {
     let mut idle =
       self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    while self.draining.load(Ordering::Acquire) {
+    while idle.active_host_turns != 0 {
       idle = self.scheduler_idle.wait(idle).unwrap_or_else(std::sync::PoisonError::into_inner);
     }
   }
@@ -4065,6 +4127,19 @@ fn run_deadline_verdict_test_hook() {
   }
 }
 
+#[cfg(all(test, not(target_family = "wasm")))]
+thread_local! {
+  static OWNER_HANDOFF_SELECTED_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_owner_handoff_selected_test_hook() {
+  if let Some(hook) = OWNER_HANDOFF_SELECTED_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
 /// Registry of parked (or committed-to-parking) cooperative drivers, used by
 /// queue-wakes to wake exactly one of them.
 #[cfg(not(target_family = "wasm"))]
@@ -4223,12 +4298,20 @@ impl ParkedDrivers {
         }
       }
       let driver = owned.map(|index| parked.swap_remove(index));
+      // Publish the exact-owner token before releasing the registry lock. A
+      // direct future wake can race this selection, but the driver must
+      // deregister under this same lock before it can poll Ready and forward
+      // an unconsumed handoff on exit.
+      if let Some(driver) = &driver {
+        driver.parker.grant_owner_handoff(owner);
+      }
       self.count.store(parked.len(), Ordering::SeqCst);
       driver
     };
+    #[cfg(test)]
+    run_owner_handoff_selected_test_hook();
     match driver {
       Some(driver) => {
-        driver.parker.grant_owner_handoff(owner);
         driver.parker.unpark();
         true
       }
@@ -5599,6 +5682,8 @@ thread_local! {
     std::cell::RefCell<Option<Box<dyn FnOnce()>>> = const { std::cell::RefCell::new(None) };
   static AFTER_CURRENT_THREAD_HOST_ADMISSION_TEST_HOOK:
     std::cell::RefCell<Option<Box<dyn FnOnce()>>> = const { std::cell::RefCell::new(None) };
+  static BEFORE_INITIAL_START_WAIT_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> = const { std::cell::RefCell::new(None) };
   static FAIL_NEXT_RUNTIME_BACKEND_CREATION:
     std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
@@ -5633,6 +5718,13 @@ fn run_after_current_thread_host_admission_test_hook() {
   if let Some(hook) =
     AFTER_CURRENT_THREAD_HOST_ADMISSION_TEST_HOOK.with(|slot| slot.borrow_mut().take())
   {
+    hook();
+  }
+}
+
+#[cfg(test)]
+fn run_before_initial_start_wait_test_hook() {
+  if let Some(hook) = BEFORE_INITIAL_START_WAIT_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
     hook();
   }
 }
@@ -5992,7 +6084,22 @@ impl RuntimeController {
         // napi starts the runtime while the addon is still being registered.
         // Keep the first backend lazy so configureAsyncRuntime remains usable
         // until the first async binding call.
-        RuntimeLifecycle::Initial | RuntimeLifecycle::Running(_) => return Ok(()),
+        RuntimeLifecycle::Initial => {
+          if state.rejected_drops == 0 {
+            return Ok(());
+          }
+          if RejectedSubmissionDropContext::is_current() {
+            return Err(RuntimeConfigError(
+              "cannot start the async runtime while a rejected submission is being destroyed"
+                .to_string(),
+            ));
+          }
+          #[cfg(test)]
+          run_before_initial_start_wait_test_hook();
+          state =
+            self.lifecycle_changed.wait(state).unwrap_or_else(std::sync::PoisonError::into_inner);
+        }
+        RuntimeLifecycle::Running(_) => return Ok(()),
         RuntimeLifecycle::Stopping(identity) => {
           if identity.is_current() {
             return Err(RuntimeConfigError(
@@ -6075,7 +6182,7 @@ impl RuntimeController {
   }
 
   fn drive_current_thread_tasks(&self, dispatch: u64) {
-    let executor = {
+    let host_turn = {
       let state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       let RuntimeLifecycle::Running(backend) = &state.lifecycle else {
         return;
@@ -6085,14 +6192,14 @@ impl RuntimeController {
         #[cfg(not(target_family = "wasm"))]
         RuntimeExecutor::MultiThread(_) => return,
       };
-      if !executor.try_admit_host_turn(dispatch) {
+      let Some(host_turn) = executor.try_admit_host_turn(dispatch) else {
         return;
-      }
-      Arc::clone(executor)
+      };
+      host_turn
     };
     #[cfg(test)]
     run_after_current_thread_host_admission_test_hook();
-    executor.drive_admitted_host_turn();
+    host_turn.drive();
   }
 
   fn shutdown(&self) -> Result<(), RuntimeConfigError> {
@@ -7182,6 +7289,107 @@ mod tests {
     assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
   }
 
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_shutdown_waits_for_continuation_dispatch_publication() {
+    use std::sync::mpsc;
+
+    struct SelfWakingFuture {
+      remaining: usize,
+    }
+
+    impl Future for SelfWakingFuture {
+      type Output = ();
+
+      fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        if self.remaining == 0 {
+          return Poll::Ready(());
+        }
+        self.remaining -= 1;
+        cx.waker().wake_by_ref();
+        Poll::Pending
+      }
+    }
+
+    let controller = Arc::new(current_thread_controller("host-continuation-shutdown"));
+    let old_generation = controller.backend().generation();
+    controller
+      .try_spawn_detached(SelfWakingFuture {
+        remaining: CurrentThreadExecutor::HOST_TURN_RUNNABLE_BUDGET + 1,
+      })
+      .unwrap_or_else(|_| panic!("the CurrentThread runtime must accept the self-waking task"));
+    let dispatch = controller_current_thread_dispatch(&controller);
+
+    let (dispatch_entered_tx, dispatch_entered_rx) = mpsc::channel();
+    let (release_dispatch_tx, release_dispatch_rx) = mpsc::channel();
+    let driver_controller = Arc::clone(&controller);
+    let driver = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_CALL_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          dispatch_entered_tx.send(()).unwrap();
+          release_dispatch_rx.recv().unwrap();
+        }));
+      });
+      driver_controller.drive_current_thread_tasks(dispatch);
+    });
+    dispatch_entered_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the bounded host turn must begin publishing its continuation");
+
+    let (shutdown_tx, shutdown_rx) = mpsc::channel();
+    let shutdown_controller = Arc::clone(&controller);
+    let shutdown = std::thread::spawn(move || {
+      shutdown_tx.send(shutdown_controller.shutdown()).unwrap();
+    });
+    wait_until("CurrentThread shutdown to leave Running", || {
+      let state = controller.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      !matches!(
+        &state.lifecycle,
+        RuntimeLifecycle::Running(backend) if backend.generation() == old_generation
+      )
+    });
+
+    let (restart_tx, restart_rx) = mpsc::channel();
+    let restart_controller = Arc::clone(&controller);
+    let restart = std::thread::spawn(move || {
+      let result = restart_controller.start().map(|()| restart_controller.backend().generation());
+      restart_tx.send(result).unwrap();
+    });
+
+    let early_shutdown = shutdown_rx.recv_timeout(Duration::from_millis(200)).ok();
+    let early_restart = restart_rx.recv_timeout(Duration::from_millis(200)).ok();
+    let shutdown_overlapped = early_shutdown.is_some();
+    let restart_overlapped = early_restart.is_some();
+    release_dispatch_tx.send(()).unwrap();
+    driver.join().unwrap();
+
+    let shutdown_result = early_shutdown.unwrap_or_else(|| {
+      shutdown_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("shutdown must finish after continuation publication retires")
+    });
+    shutdown_result.unwrap();
+    let new_generation = early_restart.unwrap_or_else(|| {
+      restart_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("restart must follow continuation publication and shutdown")
+    });
+    let new_generation = new_generation.unwrap();
+    shutdown.join().unwrap();
+    restart.join().unwrap();
+
+    assert!(
+      !shutdown_overlapped,
+      "shutdown must not publish Stopped while an old-generation continuation dispatch is executing"
+    );
+    assert!(
+      !restart_overlapped,
+      "restart must not overlap an old-generation continuation dispatch"
+    );
+    assert_ne!(new_generation, old_generation);
+    controller.shutdown().unwrap();
+  }
+
   #[test]
   fn current_thread_cancelled_host_dispatch_recovers_without_a_later_wake() {
     reset_current_thread_recovery_host_dispatches();
@@ -7262,6 +7470,105 @@ mod tests {
     );
     executor.drive_host_turn();
     assert_eq!(futures::executor::block_on(later_task).unwrap(), 2);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_terminal_dispatch_failure_keeps_blocking_capture_registered_until_drop() {
+    use std::sync::mpsc;
+
+    struct BlockingDrop {
+      entered: mpsc::Sender<()>,
+      release: mpsc::Receiver<()>,
+    }
+
+    impl Drop for BlockingDrop {
+      fn drop(&mut self) {
+        self.entered.send(()).unwrap();
+        self.release.recv().unwrap();
+      }
+    }
+
+    reset_current_thread_recovery_host_dispatches();
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      count_current_thread_recovery_host_dispatch,
+    ));
+    let backend =
+      RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
+
+    let holder_registration =
+      backend.work.try_register_work().expect("the backend must accept the blocking holder");
+    let (holder_started_tx, holder_started_rx) = mpsc::channel();
+    let (release_holder_tx, release_holder_rx) = mpsc::channel();
+    let holder_executor = Arc::clone(&executor);
+    let holder = std::thread::spawn(move || {
+      let handle = holder_executor.schedule_blocking(
+        move || {
+          holder_started_tx.send(()).unwrap();
+          release_holder_rx.recv().unwrap();
+        },
+        holder_registration,
+      );
+      futures::executor::block_on(handle).unwrap();
+    });
+    holder_started_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the first blocking call must hold the CurrentThread lane");
+
+    let cancelled_registration =
+      backend.work.try_register_work().expect("the backend must accept queued blocking work");
+    let (drop_entered_tx, drop_entered_rx) = mpsc::channel();
+    let (release_drop_tx, release_drop_rx) = mpsc::channel();
+    let blocking_drop = BlockingDrop { entered: drop_entered_tx, release: release_drop_rx };
+    let cancelled = executor.schedule_blocking(
+      move || {
+        let _blocking_drop = blocking_drop;
+      },
+      cancelled_registration,
+    );
+
+    let async_registration =
+      backend.work.try_register_async().expect("the backend must accept queued async work");
+    let pending = spawn_registered(
+      &backend,
+      Arc::clone(&metrics),
+      std::future::pending::<()>(),
+      async_registration,
+    );
+    let failed_dispatch = current_thread_dispatch(&executor);
+    executor.cancel_host_dispatch(failed_dispatch);
+    let replacement_dispatch = current_thread_dispatch(&executor);
+
+    let (cancel_done_tx, cancel_done_rx) = mpsc::channel();
+    let cancelling_executor = Arc::clone(&executor);
+    let cancellation = std::thread::spawn(move || {
+      cancelling_executor.cancel_host_dispatch(replacement_dispatch);
+      cancel_done_tx.send(()).unwrap();
+    });
+    drop_entered_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("terminal dispatch cancellation must destroy the queued blocking capture");
+    let active_during_drop = backend.work.state.lock().unwrap().active;
+    let cancellation_blocked = cancel_done_rx.try_recv().is_err();
+
+    release_drop_tx.send(()).unwrap();
+    cancel_done_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    cancellation.join().unwrap();
+
+    assert_eq!(
+      active_during_drop, 2,
+      "the blocking capture's work registration must remain active until its destructor returns"
+    );
+    assert!(cancellation_blocked, "terminal cancellation must wait for capture destruction");
+    assert!(futures::executor::block_on(cancelled).is_err());
+    assert!(futures::executor::block_on(pending).is_err());
+    assert_eq!(backend.work.state.lock().unwrap().active, 1);
+
+    release_holder_tx.send(()).unwrap();
+    holder.join().unwrap();
+    assert_eq!(backend.work.state.lock().unwrap().active, 0);
   }
 
   #[test]
@@ -8086,6 +8393,78 @@ mod tests {
       valid.take_owner_handoff(),
       Some(owner),
       "the forwarded wake must retain the exact owner identity"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn direct_future_wake_cannot_overtake_owner_handoff_publication() {
+    use std::sync::mpsc;
+
+    let executor = multi_thread_executor(2, None, "owner-handoff-publication");
+    let owner = executor.fresh_owner_token();
+    let fallback_dependency = Arc::new(TaskDependency::default());
+    fallback_dependency
+      .set_owned(BlockingDependency { job: BlockingJobId(u64::MAX - 47), owner: Some(owner) });
+    let exiting_dependency = Arc::new(TaskDependency::default());
+    exiting_dependency
+      .set_owned(BlockingDependency { job: BlockingJobId(u64::MAX - 48), owner: Some(owner) });
+    let fallback = Arc::new(DriverParker::default());
+    let exiting = Arc::new(DriverParker::default());
+
+    executor.parked_drivers.register_with_role(
+      &fallback,
+      true,
+      Some(Arc::clone(&fallback_dependency)),
+    );
+    executor.parked_drivers.register_with_role(
+      &exiting,
+      true,
+      Some(Arc::clone(&exiting_dependency)),
+    );
+
+    let (selected_tx, selected_rx) = mpsc::channel();
+    let (release_selection_tx, release_selection_rx) = mpsc::channel();
+    let selector_executor = Arc::clone(&executor);
+    let selector = std::thread::spawn(move || {
+      OWNER_HANDOFF_SELECTED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          selected_tx.send(()).unwrap();
+          release_selection_rx.recv().unwrap();
+        }));
+      });
+      assert!(selector_executor.parked_drivers.wake_one_owner_dependency(owner));
+    });
+    selected_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("selection must pause after removing the exact-owner parker");
+
+    let (exited_tx, exited_rx) = mpsc::channel();
+    let exiting_executor = Arc::clone(&executor);
+    let exiting_driver = Arc::clone(&exiting);
+    let driver = std::thread::spawn(move || {
+      exiting_driver.park();
+      exiting_executor.parked_drivers.deregister(&exiting_driver);
+      exiting_executor.forward_owner_handoff(&exiting_driver);
+      exited_tx.send(()).unwrap();
+    });
+    exiting.unpark();
+    exited_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the direct future wake must let the selected driver exit");
+
+    release_selection_tx.send(()).unwrap();
+    selector.join().unwrap();
+    driver.join().unwrap();
+
+    assert!(
+      fallback.consume_permit(),
+      "an exiting selected driver must forward the owner handoff to the next dependency"
+    );
+    assert_eq!(
+      fallback.take_owner_handoff(),
+      Some(owner),
+      "the forwarded handoff must retain the exact owner identity"
     );
   }
 
@@ -12725,6 +13104,97 @@ mod tests {
     let dispatch = controller_current_thread_dispatch(&controller);
     controller.drive_current_thread_tasks(dispatch);
     assert_eq!(futures::executor::block_on(handle).unwrap(), 23);
+    controller.shutdown().unwrap();
+  }
+
+  #[test]
+  fn failed_initial_submission_destructor_cannot_reenter_start() {
+    use std::sync::mpsc;
+
+    struct StartOnDrop {
+      controller: Arc<RuntimeController>,
+      result: mpsc::Sender<Result<(), RuntimeConfigError>>,
+      release: mpsc::Receiver<()>,
+    }
+
+    impl Future for StartOnDrop {
+      type Output = ();
+
+      fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+        Poll::Pending
+      }
+    }
+
+    impl Drop for StartOnDrop {
+      fn drop(&mut self) {
+        self.result.send(self.controller.start()).unwrap();
+        self.release.recv().unwrap();
+      }
+    }
+
+    let controller = Arc::new(current_thread_controller("failed-initial-reentrant-start"));
+    let (result_tx, result_rx) = mpsc::channel();
+    let (release_drop_tx, release_drop_rx) = mpsc::channel();
+    let (submission_tx, submission_rx) = mpsc::channel();
+    let submit_controller = Arc::clone(&controller);
+    let submitter = std::thread::spawn(move || {
+      FAIL_NEXT_RUNTIME_BACKEND_CREATION.with(|fail| fail.set(true));
+      let rejected = futures::executor::block_on(submit_controller.spawn(StartOnDrop {
+        controller: Arc::clone(&submit_controller),
+        result: result_tx,
+        release: release_drop_rx,
+      }));
+      submission_tx.send(rejected).unwrap();
+    });
+
+    let error = result_rx
+      .recv_timeout(Duration::from_secs(1))
+      .expect("the rejected destructor must not self-deadlock")
+      .expect_err("rejected destruction must not report a successful runtime start");
+    assert!(error.to_string().contains("rejected submission"));
+    {
+      let state = controller.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert!(matches!(&state.lifecycle, RuntimeLifecycle::Initial));
+      assert_eq!(state.rejected_drops, 1);
+    }
+
+    let (wait_entered_tx, wait_entered_rx) = mpsc::channel();
+    let (external_start_tx, external_start_rx) = mpsc::channel();
+    let start_controller = Arc::clone(&controller);
+    let starter = std::thread::spawn(move || {
+      BEFORE_INITIAL_START_WAIT_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          wait_entered_tx.send(()).unwrap();
+        }));
+      });
+      external_start_tx.send(start_controller.start()).unwrap();
+    });
+    wait_entered_rx
+      .recv_timeout(Duration::from_secs(1))
+      .expect("external start must reach the Initial rejected-destruction wait");
+    assert!(
+      external_start_rx.try_recv().is_err(),
+      "external start must not return while rejected destruction remains active"
+    );
+
+    release_drop_tx.send(()).unwrap();
+    assert!(submission_rx.recv_timeout(Duration::from_secs(2)).unwrap().is_err());
+    submitter.join().unwrap();
+    external_start_rx.recv_timeout(Duration::from_secs(2)).unwrap().unwrap();
+    starter.join().unwrap();
+
+    {
+      let state = controller.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert!(matches!(&state.lifecycle, RuntimeLifecycle::Initial));
+      assert_eq!(state.rejected_drops, 0);
+    }
+
+    let handle = controller
+      .try_spawn(async { 31usize })
+      .unwrap_or_else(|_| panic!("a later backend creation retry must succeed"));
+    let dispatch = controller_current_thread_dispatch(&controller);
+    controller.drive_current_thread_tasks(dispatch);
+    assert_eq!(futures::executor::block_on(handle).unwrap(), 31);
     controller.shutdown().unwrap();
   }
 

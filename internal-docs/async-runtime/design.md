@@ -131,9 +131,10 @@ The existing Tokio runtime remains the default and is selected by the
    backend failed. Initial and already-stopped shutdown first enter an explicit
    zero-backend stopping state; concurrent start and configuration remain
    closed until the initiating shutdown publishes its final stopped state.
-   Reentrant shutdown from the destructor fails instead of waiting on itself,
-   so restart cannot expose a new generation to destructor re-entry. Accepted
-   async and blocking submissions likewise keep
+   Reentrant start or shutdown from the destructor fails instead of waiting on
+   itself, while an external initial start waits for destruction to retire.
+   Restart therefore cannot expose a new generation to destructor re-entry.
+   Accepted async and blocking submissions likewise keep
    their generation registration outside compiler-generated capture drop order:
    if shutdown closes an executor queue after controller admission, user
    captures are destroyed before the registration retires. Public `block_on`
@@ -145,9 +146,10 @@ The existing Tokio runtime remains the default and is selected by the
    also held behind the scheduler's contained-drop wrapper, preventing a poll
    panic plus a panicking future destructor from aborting an unwind-enabled
    native process.
-   CurrentThread host turns are scheduler work until their complete
-   `Runnable::run` returns, including detached task-output destruction, so
-   shutdown and restart cannot overlap a host callback from the old generation.
+   CurrentThread host turns are scheduler work until their complete callback
+   returns, including every `Runnable::run`, detached task-output destruction,
+   and publication of a bounded turn's continuation. Shutdown and restart
+   therefore cannot overlap a host callback from the old generation.
    Every queued host callback carries a globally unique, nonzero dispatch
    capability. Callback admission atomically consumes that exact capability
    and claims the executor's scheduler role while the controller lifecycle

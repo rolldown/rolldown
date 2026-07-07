@@ -82,7 +82,8 @@ binary.
   returns stopped-before-first-use to lazy `Initial`, so repeated zero-work
   start/shutdown cycles do not freeze configuration. If first-backend
   construction fails, no retry may create a generation until rejected user
-  state has been destroyed; reentrant lifecycle calls from that destructor
+  state has been destroyed. An external `start` waits even though the lifecycle
+  is still `Initial`, while reentrant lifecycle calls from that destructor
   return an error instead of self-deadlocking. Shutdown changes
   `Running` to `Stopping` under the controller mutex before closing the
   generation. Submissions while stopped return their task or closure untouched.
@@ -109,12 +110,13 @@ binary.
   Dropping an unpolled handle therefore destroys its output under the producing
   generation even after restart. Controller entry compares that active
   generation with the current running/stopping generation and rejects stale
-  submission, start, and shutdown attempts. MultiThread blocking submissions
-  use a corresponding registered-function wrapper: when controller admission
-  wins but executor queue closure wins before publication, captured user state
-  is destroyed on the submitting thread before its generation work
-  registration retires. Every scheduler-owned blocking execution boundary also
-  holds an outer generation guard through result delivery and caught
+  submission, start, and shutdown attempts. MultiThread and queued
+  CurrentThread blocking submissions use a corresponding registered-function
+  wrapper: when controller admission wins but executor queue closure wins
+  before publication, captured user state is destroyed on the submitting
+  thread before its generation work registration retires. Every scheduler-owned
+  blocking execution boundary also holds an outer generation guard through
+  result delivery and caught
   panic-payload destruction. This covers normal FIFO service and exact
   owner-lane lending in both executors, after an inner function wrapper has
   unwound.
@@ -171,10 +173,12 @@ binary.
   under the generation's existing contained-drop rules. This settles the
   original operation without an unrelated wake and then reopens the executor
   for a later independent dispatch chain. The
-  role remains scheduler-active through
-  every `Runnable::run`, including async-task's destruction of detached
-  completed outputs; CurrentThread shutdown waits for that role before
-  publishing `Stopped`.
+  A bounded host turn releases queue-drain exclusivity before requesting its
+  continuation, but retains a separate active host-turn role until that host
+  dispatch call returns. The role therefore remains scheduler-active through
+  every `Runnable::run`, async-task's destruction of detached completed
+  outputs, and continuation publication; CurrentThread shutdown waits for that
+  role before publishing `Stopped`.
   CurrentThread exposes one physical blocking lane. Uncontended closures and
   same-frame nested calls execute inline. On native builds, contention from a
   different driver creates a stable indexed blocking job and returns its

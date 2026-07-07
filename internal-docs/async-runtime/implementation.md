@@ -338,9 +338,13 @@ binary.
 - Atomic metrics expose task, poll, queue-depth, active-worker, panic, and
   blocking-concurrency counters. Reset clears cumulative event counters only;
   live gauges and lifetime high-water marks remain intact because active guards
-  may still need to decrement them. A reset generation is part of the
-  deadlock-detector fingerprint, preventing repeated counter values across a
-  reset from being mistaken for no progress.
+  may still need to decrement them. Result delivery can wake a joiner or resolve
+  an N-API promise from inside the final runnable/blocking poll, before the
+  enclosing active guard retires. An immediate metrics snapshot after awaiting
+  an operation may therefore still report a live gauge; lifecycle quiescence or
+  polling for guard retirement is required before asserting zero. A reset
+  generation is part of the deadlock-detector fingerprint, preventing repeated
+  counter values across a reset from being mistaken for no progress.
 - Deadline arithmetic is checked. A configured park duration too large to add
   to `Instant::now()` becomes an unbounded but wakeable condvar wait, and an
   overflowing CurrentThread host-timer grace keeps that timer live. This makes

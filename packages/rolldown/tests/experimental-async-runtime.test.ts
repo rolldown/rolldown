@@ -70,6 +70,12 @@ const HIGH_WATER_FIELDS: NumericMetricField[] = [
   'maxActiveBlockingTasks',
 ];
 
+const LIVE_GAUGE_HIGH_WATER_FIELDS = [
+  ['queuedRunnables', 'maxQueuedRunnables'],
+  ['activeRunnables', 'maxActiveRunnables'],
+  ['activeBlockingTasks', 'maxActiveBlockingTasks'],
+] as const satisfies readonly (readonly [NumericMetricField, NumericMetricField])[];
+
 describe('experimental async runtime API', () => {
   test('configureAsyncRuntime throws the feature-disabled error on the default build', () => {
     // Guard: only meaningful on the default `tokio-runtime` build. On an
@@ -150,19 +156,40 @@ describe('experimental async runtime API', () => {
       expect(after.tasksSpawned).toBeGreaterThan(before.tasksSpawned);
 
       // Reset clears cumulative events but preserves live gauges and lifetime
-      // high-water marks. The build is closed, so every live gauge is zero.
+      // high-water marks. N-API may resolve the close promise from inside the
+      // runnable's final poll, before that poll's active guard retires.
       resetAsyncRuntimeMetrics();
       const reset = getAsyncRuntimeMetrics();
       for (const field of RESETTABLE_EVENT_FIELDS) {
         expect(reset[field], `post-reset metric ${String(field)}`).toBe(0);
       }
-      expect(reset.queuedRunnables).toBe(0);
-      expect(reset.activeRunnables).toBe(0);
-      expect(reset.activeBlockingTasks).toBe(0);
+      for (const [liveField, highWaterField] of LIVE_GAUGE_HIGH_WATER_FIELDS) {
+        expect(
+          reset[liveField],
+          `live metric ${String(liveField)} remains bounded after reset`,
+        ).toBeLessThanOrEqual(reset[highWaterField]);
+      }
       for (const field of HIGH_WATER_FIELDS) {
         expect(reset[field], `preserved metric ${String(field)}`).toBeGreaterThanOrEqual(
           after[field],
         );
+      }
+
+      // The final scheduler guard must still retire normally after reset. A
+      // wrapped unsigned gauge would remain very large instead of reaching 0.
+      await expect
+        .poll(
+          () => {
+            const current = getAsyncRuntimeMetrics();
+            return LIVE_GAUGE_HIGH_WATER_FIELDS.map(([field]) => current[field]);
+          },
+          { timeout: 5_000 },
+        )
+        .toEqual(LIVE_GAUGE_HIGH_WATER_FIELDS.map(() => 0));
+
+      const settled = getAsyncRuntimeMetrics();
+      for (const field of RESETTABLE_EVENT_FIELDS) {
+        expect(settled[field], `settled post-reset metric ${String(field)}`).toBe(0);
       }
     },
   );

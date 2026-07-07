@@ -5,11 +5,26 @@ use oxc::ast::CommentKind;
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_sourcemap::SourceMap;
+use rolldown_utils::{
+  hash_placeholder::{
+    HASH_PLACEHOLDER_LEFT_FINDER, extract_hash_placeholders, replace_placeholder_with_hash,
+  },
+  xxhash::encode_hash_with_base,
+};
+use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 use url::Url;
+use xxhash_rust::xxh3::Xxh3;
 
 use super::uuid::uuid_v4_string_from_u128;
 
+/// Returns `(sourcemap_filename, sourcemap_asset)`:
+/// - `sourcemap_filename` is the final name reported on the output chunk. Any `[hash]`
+///   placeholder left in `sourcemap_filename` (from `output.sourcemapFileNames`) is resolved
+///   here from the exact serialized map being emitted, so the name is a faithful cache key
+///   for the file's final contents (after `sourcemapPathTransform`, `sourcemapIgnoreList`,
+///   `sourcemapExcludeSources`, debug ids, ...).
+/// - `sourcemap_asset` is the `.map` file to emit (`sourcemap: true | 'hidden'` only).
 #[expect(clippy::too_many_arguments)]
 pub async fn process_code_and_sourcemap(
   options: &NormalizedBundlerOptions,
@@ -20,7 +35,7 @@ pub async fn process_code_and_sourcemap(
   debug_id: u128,
   is_css: bool,
   sourcemap_filename: Option<String>,
-) -> BuildResult<Option<OutputAsset>> {
+) -> BuildResult<(Option<String>, Option<OutputAsset>)> {
   let source_map_link_comment_kind =
     if is_css { CommentKind::SingleLineBlock } else { CommentKind::Line };
   let file_base_name = Path::new(filename).file_name().expect("should have file name");
@@ -30,8 +45,12 @@ pub async fn process_code_and_sourcemap(
     map.set_source_contents(vec![]);
   }
 
-  let map_filename = sourcemap_filename.unwrap_or_else(|| format!("{filename}.map"));
-  let map_path = file_dir.join(&map_filename);
+  let has_custom_map_filename = sourcemap_filename.is_some();
+  let mut map_filename = sourcemap_filename.unwrap_or_else(|| format!("{filename}.map"));
+  // Rollup always hands `sourcemapIgnoreList`/`sourcemapPathTransform` the default
+  // `<chunk>.map` path, independent of `sourcemapFileNames` — which may still contain an
+  // unresolved `[hash]` here, since that hash derives from the transformed map content.
+  let map_path = file_dir.join(format!("{filename}.map"));
 
   if let Some(source_map_ignore_list) = &options.sourcemap_ignore_list {
     let mut x_google_ignore_list = vec![];
@@ -115,6 +134,11 @@ pub async fn process_code_and_sourcemap(
     match sourcemap {
       SourceMapType::File | SourceMapType::Hidden => {
         let source = map.to_json_string();
+        resolve_sourcemap_hash_placeholders(
+          &mut map_filename,
+          &source,
+          options.hash_characters.base(),
+        );
         if matches!(sourcemap, SourceMapType::File) {
           process_sourcemap_related_reference(
             code,
@@ -129,12 +153,12 @@ pub async fn process_code_and_sourcemap(
                   source.push_str(url.as_str());
                 }
                 None => {
-                  source.push_str(
-                    &Path::new(&map_filename)
-                      .file_name()
-                      .ok_or(anyhow::anyhow!("should have filename"))?
-                      .to_string_lossy(),
-                  );
+                  // Emit a URL that resolves from the chunk's location to the map file: the
+                  // plain basename for default sibling maps, a relative path when
+                  // `sourcemapFileNames` places maps in another directory. (Rollup emits the
+                  // bare basename even then, which cannot resolve — a known upstream quirk.)
+                  let chunk_dir = Path::new(filename).parent().unwrap_or_else(|| Path::new(""));
+                  source.push_str(&Path::new(&map_filename).relative(chunk_dir).to_slash_lossy());
                 }
               }
               Ok(())
@@ -142,14 +166,26 @@ pub async fn process_code_and_sourcemap(
             source_map_link_comment_kind,
           )?;
         }
-        return Ok(Some(OutputAsset {
-          filename: map_filename.as_str().into(),
-          source: source.into(),
-          original_file_names: vec![],
-          names: vec![],
-        }));
+        return Ok((
+          Some(map_filename.clone()),
+          Some(OutputAsset {
+            filename: map_filename.as_str().into(),
+            source: source.into(),
+            original_file_names: vec![],
+            names: vec![],
+          }),
+        ));
       }
       SourceMapType::Inline => {
+        if has_custom_map_filename {
+          // No `.map` file is written, but the resolved name is still reported on the
+          // output chunk (Rollup parity).
+          resolve_sourcemap_hash_placeholders(
+            &mut map_filename,
+            &map.to_json_string(),
+            options.hash_characters.base(),
+          );
+        }
         let data_url = map.to_data_url();
         process_sourcemap_related_reference(
           code,
@@ -160,11 +196,33 @@ pub async fn process_code_and_sourcemap(
           },
           source_map_link_comment_kind,
         )?;
+        return Ok((has_custom_map_filename.then_some(map_filename), None));
       }
     }
   }
 
-  Ok(None)
+  Ok((None, None))
+}
+
+fn resolve_sourcemap_hash_placeholders(map_filename: &mut String, map_json: &str, hash_base: u8) {
+  let placeholders = extract_hash_placeholders(map_filename, &HASH_PLACEHOLDER_LEFT_FINDER);
+  if placeholders.is_empty() {
+    return;
+  }
+  let mut hasher = Xxh3::default();
+  hasher.update(map_json.as_bytes());
+  let hash = encode_hash_with_base(&hasher.digest128().to_le_bytes(), hash_base);
+  let hashes_by_placeholder = placeholders
+    .iter()
+    .map(|placeholder| ((*placeholder).to_string(), &hash[..placeholder.len()]))
+    .collect::<FxHashMap<_, _>>();
+  let resolved = replace_placeholder_with_hash(
+    map_filename,
+    &hashes_by_placeholder,
+    &HASH_PLACEHOLDER_LEFT_FINDER,
+  )
+  .into_owned();
+  *map_filename = resolved;
 }
 
 fn process_sourcemap_related_reference(

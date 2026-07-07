@@ -746,6 +746,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         None,
       )
       .await?
+      .1
     } else {
       None
     };

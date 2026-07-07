@@ -568,6 +568,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         filename.as_str(),
         0,
         /*is_css*/ false,
+        None,
       )
       .await?;
     }
@@ -742,6 +743,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         filename.as_str(),
         0,
         /*is_css*/ false,
+        None,
       )
       .await?
     } else {

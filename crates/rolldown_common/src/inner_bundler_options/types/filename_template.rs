@@ -55,6 +55,7 @@ impl FilenameTemplate {
     name: Option<&str>,
     format: Option<&str>,
     extension: Option<&str>,
+    chunk_hash: Option<&str>,
     hash_replacer: Option<impl Replacer>,
   ) -> Result<String, BuildDiagnostic> {
     let pattern_name = self.pattern_name;
@@ -84,6 +85,10 @@ impl FilenameTemplate {
 
     if let Some(format) = format {
       tmp = tmp.replace_all("[format]", format);
+    }
+
+    if let Some(chunk_hash) = chunk_hash {
+      tmp = tmp.replace_all("[chunkhash]", chunk_hash);
     }
 
     if let Some(hash_replacer) = hash_replacer {
@@ -126,8 +131,9 @@ mod tests {
     let hash_replacer =
       filename_template.has_hash_pattern().then_some(|_| Ok(hash_iter.next().unwrap()));
 
-    let filename =
-      filename_template.render(Some("hello"), None, None, hash_replacer).expect("should render");
+    let filename = filename_template
+      .render(Some("hello"), None, None, None, hash_replacer)
+      .expect("should render");
 
     assert_eq!(filename, "hello-abc-def.js");
   }
@@ -154,7 +160,7 @@ mod tests {
   #[test]
   fn test_invalid_pattern() {
     let template = FilenameTemplate::new("/absolute/path/[name].js".to_string(), "entryFileNames");
-    let result = template.render(Some("test"), None, None, None::<&str>);
+    let result = template.render(Some("test"), None, None, None, None::<&str>);
     assert!(result.is_err());
     assert!(
       result.unwrap_err().to_string().contains("patterns can be neither absolute nor relative")
@@ -164,7 +170,7 @@ mod tests {
   #[test]
   fn test_invalid_name_substitution() {
     let template = FilenameTemplate::new("[name].js".to_string(), "entryFileNames");
-    let result = template.render(Some("/absolute/name"), None, None, None::<&str>);
+    let result = template.render(Some("/absolute/name"), None, None, None, None::<&str>);
     assert!(result.is_err());
     assert!(
       result
@@ -177,7 +183,7 @@ mod tests {
   #[test]
   fn test_valid_subdirectory() {
     let template = FilenameTemplate::new("dist/[name].js".to_string(), "entryFileNames");
-    let result = template.render(Some("test"), None, None, None::<&str>);
+    let result = template.render(Some("test"), None, None, None, None::<&str>);
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "dist/test.js");
   }

@@ -91,6 +91,14 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
+  pub fn sourcemap_filenames(&self) -> Either<&str, Undefined> {
+    match &self.inner.sourcemap_filenames {
+      Some(rolldown::ChunkFilenamesOutputOption::String(inner)) => Either::A(inner),
+      Some(rolldown::ChunkFilenamesOutputOption::Fn(_)) | None => Either::B(()),
+    }
+  }
+
+  #[napi(getter)]
   pub fn asset_filenames(&self) -> Either<&str, Undefined> {
     match &self.inner.asset_filenames {
       rolldown::AssetFilenamesOutputOption::String(inner) => Either::A(inner),

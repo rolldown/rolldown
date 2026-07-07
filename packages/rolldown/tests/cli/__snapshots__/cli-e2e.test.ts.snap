@@ -92,6 +92,7 @@ OPTIONS
   --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
   --sourcemapDebugIds         Inject sourcemap debug IDs.
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
+  --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
   --strictExecutionOrder      Lets modules be executed in the order they are declared.
   --topLevelVar               Rewrite top-level declarations to use \`var\`.
@@ -240,6 +241,7 @@ OPTIONS
   --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
   --sourcemapDebugIds         Inject sourcemap debug IDs.
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
+  --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
   --strictExecutionOrder      Lets modules be executed in the order they are declared.
   --topLevelVar               Rewrite top-level declarations to use \`var\`.
@@ -388,6 +390,7 @@ OPTIONS
   --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
   --sourcemapDebugIds         Inject sourcemap debug IDs.
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
+  --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
   --strictExecutionOrder      Lets modules be executed in the order they are declared.
   --topLevelVar               Rewrite top-level declarations to use \`var\`.
@@ -536,6 +539,7 @@ OPTIONS
   --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
   --sourcemapDebugIds         Inject sourcemap debug IDs.
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
+  --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
   --strictExecutionOrder      Lets modules be executed in the order they are declared.
   --topLevelVar               Rewrite top-level declarations to use \`var\`.

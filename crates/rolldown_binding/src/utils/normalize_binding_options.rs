@@ -513,6 +513,10 @@ pub fn normalize_binding_options(
     post_footer: normalize_addon_option(output_options.post_footer, "post_footer option"),
     intro: normalize_addon_option(output_options.intro, "intro option"),
     outro: normalize_addon_option(output_options.outro, "outro option"),
+    sourcemap_filenames: normalize_chunk_file_names_option(
+      output_options.sourcemap_file_names,
+      "sourcemapFileNames option",
+    )?,
     sourcemap_base_url: output_options
       .sourcemap_base_url
       .map(|maybe_url| {

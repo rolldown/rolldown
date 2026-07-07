@@ -5,6 +5,14 @@ import { describe, it } from 'vitest';
 /**
  * Hand-written tests for rolldown-specific BindingMagicString behaviour.
  * These are NOT auto-generated; do not delete or regenerate this file.
+ *
+ * The `string_wizard: replace` block near the bottom was ported from the plain
+ * `replace` / `replaceAll` unit tests in
+ * `crates/string_wizard/tests/magic_string_replace.rs`. Running them through the
+ * JS `RolldownMagicString` binding exercises the full pipeline — in particular
+ * the UTF-16 (JS string index) -> UTF-8 (byte offset) location conversion that
+ * only exists on the binding boundary. The rest of the string_wizard crate
+ * tests stay in Rust.
  */
 
 describe('offset', () => {
@@ -286,6 +294,42 @@ describe('lastLine', () => {
       s.prepend('pre');
       assert.strictEqual(s.toString(), 'prep\nqrx');
       assert.strictEqual(s.lastLine(), 'qrx');
+    });
+  });
+});
+
+// ===========================================================================
+// Ported from the plain `replace` / `replaceAll` unit tests in
+// `crates/string_wizard/tests/magic_string_replace.rs`. Running them through
+// the JS `RolldownMagicString` binding exercises the full pipeline — in
+// particular the UTF-16 (JS string index) -> UTF-8 (byte offset) location
+// conversion that only exists on the binding boundary.
+// ===========================================================================
+
+describe('string_wizard: replace', () => {
+  it('works with string replace', () => {
+    const s = new MagicString('1 2 1 2');
+    s.replace('2', '3');
+    assert.strictEqual(s.toString(), '1 3 1 2');
+  });
+
+  it('should not search back', () => {
+    const s = new MagicString('122121');
+    s.replace('12', '21');
+    assert.strictEqual(s.toString(), '212121');
+  });
+
+  describe('replaceAll', () => {
+    it('works with string replace', () => {
+      const s = new MagicString('1212');
+      s.replaceAll('2', '3');
+      assert.strictEqual(s.toString(), '1313');
+    });
+
+    it('should not search back', () => {
+      const s = new MagicString('121212');
+      s.replaceAll('12', '21');
+      assert.strictEqual(s.toString(), '212121');
     });
   });
 });

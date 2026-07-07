@@ -64,6 +64,10 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
     var_decl: &mut ast::VariableDeclaration<'ast>,
     named_decl_span: Option<Span>,
   ) -> Vec<Statement<'ast>> {
+    // Keep the original statement span on the first replacement (on the export
+    // wrapper when there is one, on the declaration itself otherwise) so
+    // comments attached to the statement's start position stay attached.
+    let var_decl_span = var_decl.span;
     var_decl
       .declarations
       .take_in(&self.ast_factory.allocator())
@@ -71,7 +75,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
       .enumerate()
       .map(|(i, declarator)| {
         let new_decl = ast::VariableDeclaration::boxed(
-          SPAN,
+          if i == 0 && named_decl_span.is_none() { var_decl_span } else { SPAN },
           var_decl.kind,
           oxc::allocator::Vec::from_iter_in([declarator], &self.ast_factory),
           var_decl.declare,
@@ -95,6 +99,14 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
       .collect_vec()
   }
 
+  fn should_split_var_declaration(var_decl: &ast::VariableDeclaration<'ast>) -> bool {
+    var_decl.declarations.len() > 1
+      && var_decl
+        .declarations
+        .iter()
+        .all(|declarator| matches!(declarator.id, BindingPattern::BindingIdentifier(_)))
+  }
+
   /// Decide whether a single statement should be split into one statement per
   /// declarator, and if so produce the replacement statements.
   ///
@@ -106,8 +118,23 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
   /// referee flag) fragile.
   ///
   /// - `export var a = 1, b = 2;` -> `export var a = 1; export var b = 2;` (always; per-export tree-shaking)
-  /// - `var a = 1, b = 2;`        -> `var a = 1; var b = 2;`               (only under `keepNames`)
-  fn split_multi_declarator(&self, stmt: &mut Statement<'ast>) -> Option<Vec<Statement<'ast>>> {
+  /// - `var a = 1, b = 2;` at top level -> `var a = 1; var b = 2;` (always; per-declarator tree-shaking)
+  /// - `var a = 1, b = 2;` nested -> `var a = 1; var b = 2;` (only under `keepNames`)
+  /// - `const [a] = iterable, b = 2;` -> left grouped; destructuring can perform iterator/property work
+  ///
+  /// Tree-shaking includes whole top-level statements, so a bare multi-declarator
+  /// statement must be split too: demanding one declarator (via `export { a }`, or
+  /// any other reference) would otherwise keep all of them, and the dce-only
+  /// minifier can't clean up declarators that reference each other in a cycle
+  /// (see rolldown/rolldown#10165). Nested declarations never get their own
+  /// statement info, so splitting them only matters for `keepNames`. The split is
+  /// limited to plain identifier bindings because destructuring has binding-time
+  /// effects that are not represented after the declarator is isolated.
+  fn split_multi_declarator(
+    &self,
+    stmt: &mut Statement<'ast>,
+    top_level: bool,
+  ) -> Option<Vec<Statement<'ast>>> {
     match stmt {
       Statement::ExportNamedDeclaration(named_decl) => {
         let named_decl_span = named_decl.span;
@@ -115,18 +142,12 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
         else {
           return None;
         };
-        (var_decl.declarations.len() > 1
-          && var_decl
-            .declarations
-            .iter()
-            // TODO: support nested destructuring tree shake, `export const {a, b} = obj; export
-            // const [a, b] = arr;`
-            .any(|declarator| matches!(declarator.id, BindingPattern::BindingIdentifier(_))))
-        .then(|| self.split_var_declaration(var_decl, Some(named_decl_span)))
+        Self::should_split_var_declaration(var_decl)
+          .then(|| self.split_var_declaration(var_decl, Some(named_decl_span)))
       }
-      Statement::VariableDeclaration(var_decl) => (self.keep_names
-        && var_decl.declarations.len() > 1)
-        .then(|| self.split_var_declaration(var_decl, None)),
+      Statement::VariableDeclaration(var_decl) => ((top_level || self.keep_names)
+        && Self::should_split_var_declaration(var_decl))
+      .then(|| self.split_var_declaration(var_decl, None)),
       _ => None,
     }
   }
@@ -154,7 +175,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
         continue;
       }
       walk_mut::walk_statement(self, &mut stmt);
-      if let Some(split) = self.split_multi_declarator(&mut stmt) {
+      if let Some(split) = self.split_multi_declarator(&mut stmt, true) {
         self.top_level_stmt_temp_storage.extend(split);
       } else if stmt.is_module_declaration_with_source() {
         program.body.push(stmt);
@@ -174,7 +195,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
       return;
     }
     walk_mut::walk_statement(self, it);
-    if let Some(split) = self.split_multi_declarator(it) {
+    if let Some(split) = self.split_multi_declarator(it, false) {
       *it = Statement::BlockStatement(ast::BlockStatement::boxed(
         SPAN,
         oxc::allocator::Vec::from_iter_in(split, &self.ast_factory),
@@ -198,7 +219,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
         continue;
       }
       walk_mut::walk_statement(self, &mut stmt);
-      if let Some(split) = self.split_multi_declarator(&mut stmt) {
+      if let Some(split) = self.split_multi_declarator(&mut stmt, false) {
         it.extend(split);
       } else {
         it.push(stmt);

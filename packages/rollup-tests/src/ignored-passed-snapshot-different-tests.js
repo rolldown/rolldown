@@ -38,6 +38,8 @@ module.exports = [
     "rollup@form@export-default-import: correctly exports a default import, even in ES mode (#513)@generates es", // convert reexport to import and export
     "rollup@form@export-default: single (default) exports@generates es",
     "rollup@form@export-internal-namespace-as: supports exporting and resolving internal namespaces as names",
+    "rollup@form@duplicated-var-declarations: does not remove duplicated var declarations (#716)@generates es", // rolldown splits top-level multi-declarator statements per declarator for tree-shaking
+    "rollup@form@string-indentation-b: handles multiple var declarations inited to strings (#166)@generates es", // rolldown splits top-level multi-declarator statements per declarator for tree-shaking
     "rollup@form@export-live-bindings: exported live bindings@generates es",
     "rollup@form@export-namespace-as: supports exporting namespaces as names in entry points@generates es",
     "rollup@form@external-deshadowing: Externals aliases with deshadowing@generates es",

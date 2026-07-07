@@ -1626,6 +1626,7 @@ struct CurrentThreadQueue {
 #[derive(Default)]
 struct CurrentThreadSchedulerState {
   active_host_turns: usize,
+  active_dispatch_calls: usize,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1638,6 +1639,7 @@ enum CurrentThreadDispatchRequest {
 struct CurrentThreadHostTurn {
   executor: Arc<CurrentThreadExecutor>,
   draining: bool,
+  _generation: RuntimeGenerationGuard,
 }
 
 impl CurrentThreadHostTurn {
@@ -1669,6 +1671,23 @@ impl Drop for CurrentThreadHostTurn {
       .active_host_turns
       .checked_sub(1)
       .expect("CurrentThread active host-turn count underflow");
+    self.executor.scheduler_idle.notify_all();
+  }
+}
+
+struct CurrentThreadDispatchCall<'a> {
+  executor: &'a CurrentThreadExecutor,
+  _generation: RuntimeGenerationGuard,
+}
+
+impl Drop for CurrentThreadDispatchCall<'_> {
+  fn drop(&mut self) {
+    let mut scheduler =
+      self.executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    scheduler.active_dispatch_calls = scheduler
+      .active_dispatch_calls
+      .checked_sub(1)
+      .expect("CurrentThread active dispatch-call count underflow");
     self.executor.scheduler_idle.notify_all();
   }
 }
@@ -2069,7 +2088,7 @@ impl CurrentThreadExecutor {
     next_dispatch: impl FnOnce() -> u64,
   ) -> CurrentThreadDispatchRequest {
     #[cfg(all(test, not(target_family = "wasm")))]
-    let scheduler = match self.scheduler_idle_lock.try_lock() {
+    let mut scheduler = match self.scheduler_idle_lock.try_lock() {
       Ok(scheduler) => scheduler,
       Err(std::sync::TryLockError::WouldBlock) => {
         run_current_thread_dispatch_publication_blocked_test_hook();
@@ -2078,7 +2097,7 @@ impl CurrentThreadExecutor {
       Err(std::sync::TryLockError::Poisoned(error)) => error.into_inner(),
     };
     #[cfg(any(not(test), target_family = "wasm"))]
-    let scheduler =
+    let mut scheduler =
       self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     if self.cancelling_failed_dispatch.load(Ordering::Acquire) {
       return CurrentThreadDispatchRequest::Unavailable;
@@ -2094,6 +2113,7 @@ impl CurrentThreadExecutor {
     {
       return CurrentThreadDispatchRequest::Coalesced;
     }
+    let _dispatch_call = self.claim_dispatch_call(&mut scheduler);
     drop(scheduler);
     #[cfg(all(test, not(target_family = "wasm")))]
     run_current_thread_dispatch_call_test_hook();
@@ -2116,6 +2136,20 @@ impl CurrentThreadExecutor {
     CurrentThreadDispatchRequest::Unavailable
   }
 
+  fn claim_dispatch_call<'a>(
+    &'a self,
+    scheduler: &mut CurrentThreadSchedulerState,
+  ) -> CurrentThreadDispatchCall<'a> {
+    scheduler.active_dispatch_calls = scheduler
+      .active_dispatch_calls
+      .checked_add(1)
+      .expect("CurrentThread active dispatch-call count exhausted");
+    CurrentThreadDispatchCall {
+      executor: self,
+      _generation: RuntimeGenerationGuard::enter(self.generation),
+    }
+  }
+
   fn claim_host_turn(
     self: &Arc<Self>,
     scheduler: &mut CurrentThreadSchedulerState,
@@ -2125,7 +2159,11 @@ impl CurrentThreadExecutor {
       .checked_add(1)
       .expect("CurrentThread active host-turn count exhausted");
     self.draining.store(true, Ordering::Release);
-    CurrentThreadHostTurn { executor: Arc::clone(self), draining: true }
+    CurrentThreadHostTurn {
+      executor: Arc::clone(self),
+      draining: true,
+      _generation: RuntimeGenerationGuard::enter(self.generation),
+    }
   }
 
   fn try_admit_host_turn(self: &Arc<Self>, dispatch: u64) -> Option<CurrentThreadHostTurn> {
@@ -2497,7 +2535,7 @@ impl CurrentThreadExecutor {
   fn wait_until_scheduler_idle(&self) {
     let mut idle =
       self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    while idle.active_host_turns != 0 {
+    while idle.active_host_turns != 0 || idle.active_dispatch_calls != 0 {
       idle = self.scheduler_idle.wait(idle).unwrap_or_else(std::sync::PoisonError::into_inner);
     }
   }
@@ -7386,6 +7424,92 @@ mod tests {
       !restart_overlapped,
       "restart must not overlap an old-generation continuation dispatch"
     );
+    assert_ne!(new_generation, old_generation);
+    controller.shutdown().unwrap();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_shutdown_waits_for_initial_dispatch_publication() {
+    use std::sync::mpsc;
+
+    let controller = Arc::new(current_thread_controller("host-initial-dispatch-shutdown"));
+    let old_generation = controller.backend().generation();
+    let (reentrant_shutdown_tx, reentrant_shutdown_rx) = mpsc::channel();
+    let (dispatch_entered_tx, dispatch_entered_rx) = mpsc::channel();
+    let (release_dispatch_tx, release_dispatch_rx) = mpsc::channel();
+    let submit_controller = Arc::clone(&controller);
+    let reentrant_controller = Arc::clone(&controller);
+    let submitter = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_CALL_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          reentrant_shutdown_tx.send(reentrant_controller.shutdown()).unwrap();
+          dispatch_entered_tx.send(()).unwrap();
+          release_dispatch_rx.recv().unwrap();
+        }));
+      });
+      submit_controller
+        .try_spawn_detached(std::future::pending::<()>())
+        .unwrap_or_else(|_| panic!("the CurrentThread runtime must accept the pending task"));
+    });
+
+    let reentrant_shutdown = reentrant_shutdown_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("dispatch publication must not self-deadlock on reentrant shutdown");
+    dispatch_entered_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the initial host dispatch publication must reach the injected pause");
+
+    let (shutdown_tx, shutdown_rx) = mpsc::channel();
+    let shutdown_controller = Arc::clone(&controller);
+    let shutdown = std::thread::spawn(move || {
+      shutdown_tx.send(shutdown_controller.shutdown()).unwrap();
+    });
+    wait_until("CurrentThread shutdown to leave Running", || {
+      let state = controller.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      !matches!(
+        &state.lifecycle,
+        RuntimeLifecycle::Running(backend) if backend.generation() == old_generation
+      )
+    });
+
+    let (restart_tx, restart_rx) = mpsc::channel();
+    let restart_controller = Arc::clone(&controller);
+    let restart = std::thread::spawn(move || {
+      let result = restart_controller.start().map(|()| restart_controller.backend().generation());
+      restart_tx.send(result).unwrap();
+    });
+
+    let early_shutdown = shutdown_rx.recv_timeout(Duration::from_millis(200)).ok();
+    let early_restart = restart_rx.recv_timeout(Duration::from_millis(200)).ok();
+    let shutdown_overlapped = early_shutdown.is_some();
+    let restart_overlapped = early_restart.is_some();
+    release_dispatch_tx.send(()).unwrap();
+    submitter.join().unwrap();
+
+    let shutdown_result = early_shutdown.unwrap_or_else(|| {
+      shutdown_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("shutdown must finish after initial dispatch publication retires")
+    });
+    shutdown_result.unwrap();
+    let new_generation = early_restart.unwrap_or_else(|| {
+      restart_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("restart must follow initial dispatch publication and shutdown")
+    });
+    let new_generation = new_generation.unwrap();
+    shutdown.join().unwrap();
+    restart.join().unwrap();
+
+    let reentrant_error = reentrant_shutdown
+      .expect_err("dispatch publication must be generation-scoped scheduler work");
+    assert!(reentrant_error.to_string().contains("work running on that runtime"));
+    assert!(
+      !shutdown_overlapped,
+      "shutdown must not publish Stopped while an old-generation host dispatch call is executing"
+    );
+    assert!(!restart_overlapped, "restart must not overlap an old-generation host dispatch call");
     assert_ne!(new_generation, old_generation);
     controller.shutdown().unwrap();
   }

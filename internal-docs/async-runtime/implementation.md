@@ -172,13 +172,17 @@ binary.
   scheduler publications and cancels the affected runnable and blocking queues
   under the generation's existing contained-drop rules. This settles the
   original operation without an unrelated wake and then reopens the executor
-  for a later independent dispatch chain. The
+  for a later independent dispatch chain. Every invocation of the host
+  dispatcher owns a generation-scoped scheduler role from before the callback
+  starts until it returns. This covers initial queue publication, recovery,
+  host replacement, and bounded-turn continuation even when shutdown cancels
+  the queued work and retires its generation registration concurrently.
   A bounded host turn releases queue-drain exclusivity before requesting its
   continuation, but retains a separate active host-turn role until that host
-  dispatch call returns. The role therefore remains scheduler-active through
-  every `Runnable::run`, async-task's destruction of detached completed
-  outputs, and continuation publication; CurrentThread shutdown waits for that
-  role before publishing `Stopped`.
+  dispatch call returns. These roles keep every `Runnable::run`, async-task's
+  destruction of detached completed outputs, and all dispatch publication
+  inside generation quiescence; CurrentThread shutdown waits for both before
+  publishing `Stopped`.
   CurrentThread exposes one physical blocking lane. Uncontended closures and
   same-frame nested calls execute inline. On native builds, contention from a
   different driver creates a stable indexed blocking job and returns its

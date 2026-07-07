@@ -146,10 +146,13 @@ The existing Tokio runtime remains the default and is selected by the
    also held behind the scheduler's contained-drop wrapper, preventing a poll
    panic plus a panicking future destructor from aborting an unwind-enabled
    native process.
-   CurrentThread host turns are scheduler work until their complete callback
-   returns, including every `Runnable::run`, detached task-output destruction,
-   and publication of a bounded turn's continuation. Shutdown and restart
-   therefore cannot overlap a host callback from the old generation.
+   CurrentThread host turns and host-dispatch publications are
+   generation-scoped scheduler work until their complete callback returns.
+   This includes every `Runnable::run`, detached task-output destruction, and
+   every initial, recovery, host-replacement, or bounded-turn continuation
+   dispatch call. Shutdown and restart therefore cannot overlap a host callback
+   from the old generation, even if queue cancellation retires the accepted
+   task that originally requested that callback.
    Every queued host callback carries a globally unique, nonzero dispatch
    capability. Callback admission atomically consumes that exact capability
    and claims the executor's scheduler role while the controller lifecycle

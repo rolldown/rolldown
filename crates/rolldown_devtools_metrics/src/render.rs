@@ -7,7 +7,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{HookStat, MetricsAggregator};
+use crate::{ChunkAgg, HookStat, MetricsAggregator};
 
 /// Minimal snapshot persisted to `.state.json` purely to compute the next build's delta.
 #[derive(Default, Serialize, Deserialize)]
@@ -31,8 +31,119 @@ impl MetricsAggregator {
     }
   }
 
+  /// Real (non-empty) output chunk count. Pure placeholders — 0 bytes AND 0 modules, e.g. the
+  /// runtime stub or async-entry stubs whose code was merged elsewhere — are excluded.
   fn chunk_count(&self) -> usize {
-    self.chunks.len()
+    self
+      .chunks
+      .iter()
+      .filter(|(id, c)| c.module_count > 0 || self.chunk_sizes.get(id).copied().unwrap_or(0) > 0)
+      .count()
+  }
+
+  /// Non-empty chunks as `(id, agg, bytes)`, sorted by size desc with a deterministic tie-break.
+  fn chunks_with_size(&self) -> Vec<(u32, &ChunkAgg, u64)> {
+    let mut chunks: Vec<(u32, &ChunkAgg, u64)> = self
+      .chunks
+      .iter()
+      .map(|(id, c)| (*id, c, self.chunk_sizes.get(id).copied().unwrap_or(0)))
+      .filter(|(_, c, size)| c.module_count > 0 || *size > 0)
+      .collect();
+    chunks
+      .sort_by(|a, b| b.2.cmp(&a.2).then_with(|| self.chunk_label(a.0).cmp(&self.chunk_label(b.0))));
+    chunks
+  }
+
+  /// #2: modules bundled into >1 chunk (they ship multiple times). Returns (total, top-N rows of
+  /// `(module, distinct chunk labels)`), most-duplicated first.
+  fn duplicated_modules(&self) -> (usize, Vec<(String, Vec<String>)>) {
+    let mut all: Vec<(String, Vec<String>)> = self
+      .module_chunks
+      .iter()
+      .filter_map(|(id, chunks)| {
+        let mut labels: Vec<String> = chunks.iter().map(|c| self.chunk_label(*c)).collect();
+        labels.sort();
+        labels.dedup();
+        (labels.len() > 1).then(|| (self.stabilize(id), labels))
+      })
+      .collect();
+    all.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then_with(|| a.0.cmp(&b.0)));
+    let total = all.len();
+    all.truncate(self.config.top_n);
+    (total, all)
+  }
+
+  /// #3: modules reachable from >1 entry point (the real shared-chunk signal, vs raw import
+  /// fan-in). Returns (entry count, top-N rows of `(module, #entries reaching it)`).
+  fn reach_from_entries(&self) -> (usize, Vec<(String, usize)>) {
+    let mut entries: Vec<&str> =
+      self.chunks.values().filter(|c| c.is_entry).filter_map(|c| c.entry_module.as_deref()).collect();
+    entries.sort_unstable();
+    entries.dedup();
+    let mut count: rustc_hash::FxHashMap<&str, usize> = rustc_hash::FxHashMap::default();
+    for entry in &entries {
+      let mut seen: rustc_hash::FxHashSet<&str> = rustc_hash::FxHashSet::default();
+      let mut stack = vec![*entry];
+      while let Some(m) = stack.pop() {
+        if !seen.insert(m) {
+          continue;
+        }
+        if let Some(deps) = self.module_imports.get(m) {
+          for dep in deps {
+            stack.push(dep.as_str());
+          }
+        }
+      }
+      for m in seen {
+        *count.entry(m).or_default() += 1;
+      }
+    }
+    let mut rows: Vec<(String, usize)> =
+      count.into_iter().filter(|(_, n)| *n >= 2).map(|(m, n)| (self.stabilize(m), n)).collect();
+    rows.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    rows.truncate(self.config.top_n);
+    (entries.len(), rows)
+  }
+
+  /// #4: bytes loaded on first paint for an entry chunk = its own size + all transitively
+  /// STATIC-imported chunks (dynamic imports are lazy, so excluded).
+  fn initial_load_bytes(&self, entry_chunk: u32) -> u64 {
+    let mut seen: rustc_hash::FxHashSet<u32> = rustc_hash::FxHashSet::default();
+    let mut stack = vec![entry_chunk];
+    let mut total = 0u64;
+    while let Some(cid) = stack.pop() {
+      if !seen.insert(cid) {
+        continue;
+      }
+      total += self.chunk_sizes.get(&cid).copied().unwrap_or(0);
+      if let Some(chunk) = self.chunks.get(&cid) {
+        for &s in &chunk.static_imports {
+          stack.push(s);
+        }
+      }
+    }
+    total
+  }
+
+  /// #6: package names shipped at >1 distinct version, each with its versions + sizes.
+  fn duplicate_package_versions(&self) -> Vec<(String, Vec<(String, u64)>)> {
+    let mut dups: Vec<(String, Vec<(String, u64)>)> = self
+      .package_versions
+      .iter()
+      .filter_map(|(name, versions)| {
+        let mut distinct: Vec<(String, u64)> = Vec::new();
+        for (v, s) in versions {
+          if !distinct.iter().any(|(dv, _)| dv == v) {
+            distinct.push((v.clone(), *s));
+          }
+        }
+        distinct.sort();
+        (distinct.len() > 1).then(|| (name.clone(), distinct))
+      })
+      .collect();
+    dups.sort_by(|a, b| a.0.cmp(&b.0));
+    dups.truncate(self.config.top_n);
+    dups
   }
 
   fn package_count(&self) -> usize {
@@ -60,23 +171,36 @@ impl MetricsAggregator {
     }
     let mut rows: Vec<(String, usize, u64)> =
       by_plugin.into_iter().map(|(name, (count, micros))| (name.to_string(), count, micros)).collect();
-    rows.sort_by(|a, b| b.2.cmp(&a.2));
+    rows.sort_by(|a, b| b.2.cmp(&a.2).then_with(|| a.0.cmp(&b.0)));
     rows
   }
 
   fn stabilize(&self, id: &str) -> String {
+    let normalized = id.replace('\\', "/");
+    // node_modules paths -> package-relative (e.g. `picomatch/lib/utils.js`). Slicing after the
+    // LAST `/node_modules/` also strips pnpm's `.pnpm/<pkg>@<ver>/node_modules/` nesting, and is
+    // independent of where node_modules lives (project, store, symlink, …).
+    if let Some(pos) = normalized.rfind("/node_modules/") {
+      return normalized[pos + "/node_modules/".len()..].to_string();
+    }
+    if let Some(rest) = normalized.strip_prefix("node_modules/") {
+      return rest.to_string();
+    }
+    // Project-relative (strip the session cwd).
     if let Some(cwd) = &self.cwd {
-      if let Some(rest) = id.strip_prefix(cwd.as_str()) {
-        let rest = rest.trim_start_matches(['/', '\\']);
+      let cwd = cwd.replace('\\', "/");
+      if let Some(rest) = normalized.strip_prefix(&cwd) {
+        let rest = rest.trim_start_matches('/');
         if !rest.is_empty() {
-          return rest.replace('\\', "/");
+          return rest.to_string();
         }
       }
     }
-    if let Some(stripped) = id.strip_prefix('\0') {
+    // Virtual modules (`\0`-prefixed).
+    if let Some(stripped) = normalized.strip_prefix('\0') {
       return format!("\\0{stripped}");
     }
-    id.replace('\\', "/")
+    normalized
   }
 
   /// Human-friendly chunk label: prefer the emitted asset filename, then the chunk's own name.
@@ -136,14 +260,14 @@ impl MetricsAggregator {
     out.push_str("# Build Metrics (devtools metrics mode)\n\n");
     writeln!(
       out,
-      "Build {} · output {} · {} modules ({} external) / {} chunks / {} assets / {} packages · {} / {}\n",
+      "Build {} · output {} · {} ({} external) / {} / {} / {} · {} / {}\n",
       format_ms(self.build_total_ms()),
       format_size(self.total_bytes),
-      self.module_count,
+      plural(self.module_count, "module"),
       self.external_count,
-      self.chunk_count(),
-      self.asset_count,
-      self.package_count(),
+      plural(self.chunk_count(), "chunk"),
+      plural(self.asset_count, "asset"),
+      plural(self.package_count(), "package"),
       self.platform.as_deref().unwrap_or("?"),
       self.format.as_deref().unwrap_or("?"),
     )
@@ -162,10 +286,10 @@ impl MetricsAggregator {
     out.push_str("## Details (load on demand)\n\n");
     out.push_str("| Report | Load this when… |\n| --- | --- |\n");
     out.push_str("| `timing.md` | investigating slow builds / plugin & hook cost |\n");
-    out.push_str("| `chunks.md` | reducing bundle size, inspecting chunk composition & reasons |\n");
-    out.push_str("| `modules.md` | module graph: import kinds, most-imported, transform hotspots |\n");
-    out.push_str("| `packages.md` | dependency bloat: largest npm packages, direct vs transitive |\n");
-    out.push_str("| `graph.md` | code-splitting: entry points & chunk import graph |\n");
+    out.push_str("| `chunks.md` | bundle size: chunk composition, reasons & cross-chunk duplication |\n");
+    out.push_str("| `modules.md` | module graph: import kinds, most-imported, shared-across-entries |\n");
+    out.push_str("| `packages.md` | dependency bloat: largest packages, direct/transitive, duplicate versions |\n");
+    out.push_str("| `graph.md` | code-splitting: entry points, chunk import graph & initial-load cost |\n");
     if prev.is_some() {
       out.push_str("| `delta.md` | checking this build for regressions vs the last |\n");
     }
@@ -187,7 +311,7 @@ impl MetricsAggregator {
     out.push_str("Call counts are exact; durations are approximate (devtools-writer-side).\n\n");
     let mut rows: Vec<(&str, &str, &HookStat)> =
       self.hook_calls.iter().map(|((p, h), s)| (p.as_str(), *h, s)).collect();
-    rows.sort_by(|a, b| b.2.micros.cmp(&a.2.micros));
+    rows.sort_by(|a, b| b.2.micros.cmp(&a.2.micros).then_with(|| a.0.cmp(b.0)).then_with(|| a.1.cmp(b.1)));
     if rows.is_empty() {
       out.push_str("_No plugin hook calls recorded._\n\n");
     } else {
@@ -213,9 +337,12 @@ impl MetricsAggregator {
 
     out.push_str("## Transform hotspots (modules)\n\n");
     let mut modules: Vec<(&String, &HookStat)> = self.module_transform.iter().collect();
-    modules.sort_by(|a, b| b.1.micros.cmp(&a.1.micros));
+    modules.sort_by(|a, b| b.1.micros.cmp(&a.1.micros).then_with(|| a.0.cmp(b.0)));
     if modules.is_empty() {
-      out.push_str("_No transforms recorded._\n");
+      out.push_str(
+        "_No plugin `transform` hooks ran. (Core TS/JSX/TSX transformation happens inside \
+         rolldown, not via a plugin hook, so it isn't attributed per-module here.)_\n",
+      );
     } else {
       out.push_str("| ~Time | Calls | Module |\n| --- | --- | --- |\n");
       for (id, stat) in modules.iter().take(self.config.top_n) {
@@ -231,31 +358,31 @@ impl MetricsAggregator {
     out.push_str("# Chunks\n\n");
     writeln!(
       out,
-      "Output {} ({} JS, {} CSS, {} other) across {} chunks / {} assets.\n",
+      "Output {} ({} JS, {} CSS, {} other) across {} / {}.\n",
       format_size(self.total_bytes),
       format_size(self.js_bytes),
       format_size(self.css_bytes),
       format_size(self.other_bytes),
-      self.chunk_count(),
-      self.asset_count,
+      plural(self.chunk_count(), "chunk"),
+      plural(self.asset_count, "asset"),
     )
     .unwrap();
 
+    let chunks = self.chunks_with_size();
+
     out.push_str("## Chunk reasons\n\n| Reason | Count |\n| --- | --- |\n");
-    let mut reasons: Vec<(&String, &usize)> = self.chunk_reason_hist.iter().collect();
-    reasons.sort_by(|a, b| b.1.cmp(a.1));
+    let mut hist: rustc_hash::FxHashMap<&str, usize> = rustc_hash::FxHashMap::default();
+    for (_, chunk, _) in &chunks {
+      *hist.entry(chunk.reason.as_str()).or_default() += 1;
+    }
+    let mut reasons: Vec<(&str, usize)> = hist.into_iter().collect();
+    reasons.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(b.0)));
     for (reason, count) in reasons {
       writeln!(out, "| {reason} | {count} |").unwrap();
     }
     out.push('\n');
 
     out.push_str("## Largest chunks\n\n");
-    let mut chunks: Vec<(u32, &crate::ChunkAgg, u64)> = self
-      .chunks
-      .iter()
-      .map(|(id, chunk)| (*id, chunk, self.chunk_sizes.get(id).copied().unwrap_or(0)))
-      .collect();
-    chunks.sort_by(|a, b| b.2.cmp(&a.2));
     out.push_str("| Bytes | Entry? | Reason | Modules | Chunk |\n| --- | --- | --- | --- | --- |\n");
     for (id, chunk, size) in chunks.iter().take(self.config.top_n) {
       writeln!(
@@ -276,13 +403,31 @@ impl MetricsAggregator {
     for asset in &self.assets {
       writeln!(out, "| {} | `{}` |", format_size(asset.size), asset.filename).unwrap();
     }
+
+    out.push_str("\n## Duplicated modules (in >1 chunk)\n\n");
+    out.push_str(
+      "Modules bundled into multiple chunks ship multiple times — candidates to hoist into a \
+       shared chunk.\n\n",
+    );
+    let (dup_total, dups) = self.duplicated_modules();
+    if dups.is_empty() {
+      out.push_str("_None — no module is bundled into more than one chunk._\n");
+    } else {
+      writeln!(out, "{} duplicated; most-duplicated:\n", plural(dup_total, "module")).unwrap();
+      out.push_str("| Chunks | Module | In |\n| --- | --- | --- |\n");
+      for (id, labels) in &dups {
+        let inn = labels.iter().map(|l| format!("`{l}`")).collect::<Vec<_>>().join(", ");
+        writeln!(out, "| {} | `{id}` | {inn} |", labels.len()).unwrap();
+      }
+    }
     out
   }
 
   fn render_modules(&self) -> String {
     let mut out = String::new();
     out.push_str("# Modules\n\n");
-    writeln!(out, "{} modules ({} external).\n", self.module_count, self.external_count).unwrap();
+    writeln!(out, "{} ({} external).\n", plural(self.module_count, "module"), self.external_count)
+      .unwrap();
 
     out.push_str("## Import kinds\n\n| Kind | Count |\n| --- | --- |\n");
     let mut kinds: Vec<(&String, &usize)> = self.import_kind_hist.iter().collect();
@@ -293,12 +438,31 @@ impl MetricsAggregator {
     out.push('\n');
 
     out.push_str("## Most-imported modules\n\n");
+    out.push_str("Modules imported by 2+ modules — shared-chunk candidates.\n\n");
     if self.most_imported.is_empty() {
-      out.push_str("_No shared modules detected._\n");
+      out.push_str("_No module is imported by more than one other module._\n");
     } else {
       out.push_str("| Importers | Module |\n| --- | --- |\n");
       for (id, count) in &self.most_imported {
         writeln!(out, "| {count} | `{}` |", self.stabilize(id)).unwrap();
+      }
+    }
+
+    out.push_str("\n## Shared across entry points\n\n");
+    out.push_str(
+      "Modules reachable from 2+ entry points — the real shared-chunk signal (vs. raw import \
+       fan-in above, which counts any importer).\n\n",
+    );
+    let (entry_count, shared) = self.reach_from_entries();
+    if entry_count <= 1 {
+      out.push_str("_Single entry point — no cross-entry sharing to analyze._\n");
+    } else if shared.is_empty() {
+      out.push_str("_No module is reachable from more than one entry point._\n");
+    } else {
+      writeln!(out, "{}:\n", plural(entry_count, "entry point")).unwrap();
+      out.push_str("| Entries | Module |\n| --- | --- |\n");
+      for (id, n) in &shared {
+        writeln!(out, "| {n} | `{id}` |").unwrap();
       }
     }
     out
@@ -309,8 +473,8 @@ impl MetricsAggregator {
     out.push_str("# Packages\n\n");
     writeln!(
       out,
-      "{} packages ({} direct, {} transitive). Top {} by rendered size:\n",
-      self.package_count(),
+      "{} ({} direct, {} transitive). Top {} by rendered size:\n",
+      plural(self.package_count(), "package"),
       self.package_direct,
       self.package_transitive,
       self.packages.len(),
@@ -336,35 +500,54 @@ impl MetricsAggregator {
       )
       .unwrap();
     }
+
+    out.push_str("\n## Duplicate versions\n\n");
+    out.push_str("Same package shipped at multiple versions — deduping can cut size.\n\n");
+    let dups = self.duplicate_package_versions();
+    if dups.is_empty() {
+      out.push_str("_None — every package resolves to a single version._\n");
+    } else {
+      out.push_str("| Package | Versions (size) |\n| --- | --- |\n");
+      for (name, versions) in &dups {
+        let vs =
+          versions.iter().map(|(v, s)| format!("{v} ({})", format_size(*s))).collect::<Vec<_>>().join(", ");
+        writeln!(out, "| `{name}` | {vs} |").unwrap();
+      }
+    }
     out
   }
 
   fn render_graph(&self) -> String {
     let mut out = String::new();
     out.push_str("# Entry Points & Chunk Graph\n\n");
-    let mut entries: Vec<(&u32, &crate::ChunkAgg)> =
-      self.chunks.iter().filter(|(_, chunk)| chunk.is_entry).collect();
-    entries.sort_by(|a, b| {
-      self.chunk_sizes.get(b.0).copied().unwrap_or(0).cmp(&self.chunk_sizes.get(a.0).copied().unwrap_or(0))
-    });
+    let entries: Vec<(u32, &ChunkAgg, u64)> =
+      self.chunks_with_size().into_iter().filter(|(_, chunk, _)| chunk.is_entry).collect();
+    writeln!(
+      out,
+      "{}, {}.\n",
+      plural(entries.len(), "entry point"),
+      plural(self.chunk_count(), "non-empty chunk"),
+    )
+    .unwrap();
     if entries.is_empty() {
       out.push_str("_No entry chunks._\n");
       return out;
     }
-    for (id, chunk) in entries.iter().take(self.config.top_n) {
+    let names = |ids: &[u32]| {
+      ids.iter().map(|i| format!("`{}`", self.chunk_label(*i))).collect::<Vec<_>>().join(", ")
+    };
+    for (id, chunk, size) in entries.iter().take(self.config.top_n) {
       let entry_module =
-        chunk.entry_module.as_ref().map_or_else(|| chunk.name.clone(), |m| self.stabilize(m));
+        chunk.entry_module.as_ref().map_or_else(|| self.chunk_label(*id), |m| self.stabilize(m));
       writeln!(out, "### Entry: `{entry_module}`\n").unwrap();
+      writeln!(out, "- **Output chunk**: `{}` ({})", self.chunk_label(*id), format_size(*size))
+        .unwrap();
       writeln!(
         out,
-        "- **Output chunk**: `{}` ({})",
-        self.chunk_label(**id),
-        format_size(self.chunk_sizes.get(id).copied().unwrap_or(0)),
+        "- **Initial load**: {} (this chunk + its transitive static-import chunks)",
+        format_size(self.initial_load_bytes(*id)),
       )
       .unwrap();
-      let names = |ids: &[u32]| {
-        ids.iter().map(|i| format!("`{}`", self.chunk_label(*i))).collect::<Vec<_>>().join(", ")
-      };
       if chunk.static_imports.is_empty() {
         out.push_str("- **Static imports**: none\n");
       } else {
@@ -445,5 +628,13 @@ fn idiff(prev: usize, curr: usize) -> String {
     format!("+{}", curr - prev)
   } else {
     format!("-{}", prev - curr)
+  }
+}
+
+fn plural(n: usize, word: &str) -> String {
+  if n == 1 {
+    format!("1 {word}")
+  } else {
+    format!("{n} {word}s")
   }
 }

@@ -104,15 +104,22 @@ pub struct MetricsAggregator {
   external_count: usize,
   import_kind_hist: FxHashMap<String, usize>,
   most_imported: Vec<(String, usize)>,
+  /// module id -> imported module ids (static + dynamic). For reachable-from-N-entries (#3).
+  module_imports: FxHashMap<String, Vec<String>>,
 
-  // chunks
-  chunk_reason_hist: FxHashMap<String, usize>,
+  // chunks (reason histogram is computed at render time over non-empty chunks)
   chunks: FxHashMap<u32, ChunkAgg>,
+  /// module id -> chunk ids it is bundled into. Only populated when there is >1 chunk (else no
+  /// duplication is possible). For cross-chunk duplication (#2).
+  module_chunks: FxHashMap<String, Vec<u32>>,
 
   // packages
   package_direct: usize,
   package_transitive: usize,
   packages: Vec<PackageAgg>,
+  /// package name -> [(version, rendered size)] across ALL packages (pre top-N). For duplicate
+  /// version detection (#6).
+  package_versions: FxHashMap<String, Vec<(String, u64)>>,
 
   // assets / sizes
   asset_count: usize,
@@ -197,22 +204,32 @@ impl MetricsAggregator {
     self.module_count = graph.modules.len();
     self.external_count = 0;
     self.import_kind_hist.clear();
+    self.module_imports.clear();
     let mut imported: Vec<(String, usize)> = Vec::new();
     for module in graph.modules {
       if module.is_external {
         self.external_count += 1;
       }
+      let mut deps: Vec<String> = Vec::new();
       if let Some(imports) = module.imports {
         for import in imports {
           *self.import_kind_hist.entry(import.kind).or_default() += 1;
+          deps.push(import.module_id);
         }
       }
+      // Only genuinely shared modules (imported by 2+ modules) are "most-imported" / shared-chunk
+      // candidates; modules imported exactly once are the long tail and only add noise.
       let importer_count = module.importers.map_or(0, |i| i.len());
-      if importer_count > 0 {
-        imported.push((module.id, importer_count));
+      if importer_count >= 2 {
+        imported.push((module.id.clone(), importer_count));
+      }
+      // Import adjacency for reachable-from-N-entries (#3).
+      if !deps.is_empty() {
+        self.module_imports.insert(module.id, deps);
       }
     }
-    imported.sort_by(|a, b| b.1.cmp(&a.1));
+    // Sort by importer count desc, tie-break by id asc for deterministic (diff-stable) output.
+    imported.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
     imported.truncate(self.config.top_n);
     self.most_imported = imported;
   }
@@ -221,10 +238,11 @@ impl MetricsAggregator {
     let Ok(graph) = serde_json::from_value::<MChunkGraph>(value.clone()) else {
       return;
     };
-    self.chunk_reason_hist.clear();
     self.chunks.clear();
+    self.module_chunks.clear();
+    // Duplication is only possible with >1 chunk; skip the bookkeeping otherwise (the common case).
+    let multi_chunk = graph.chunks.len() > 1;
     for chunk in graph.chunks {
-      *self.chunk_reason_hist.entry(chunk.reason.clone()).or_default() += 1;
       let mut static_imports = Vec::new();
       let mut dynamic_imports = Vec::new();
       for import in chunk.imports {
@@ -232,6 +250,11 @@ impl MetricsAggregator {
           dynamic_imports.push(import.chunk_id);
         } else {
           static_imports.push(import.chunk_id);
+        }
+      }
+      if multi_chunk {
+        for module_id in &chunk.modules {
+          self.module_chunks.entry(module_id.clone()).or_default().push(chunk.chunk_id);
         }
       }
       self.chunks.insert(
@@ -255,6 +278,7 @@ impl MetricsAggregator {
     };
     self.package_direct = 0;
     self.package_transitive = 0;
+    self.package_versions.clear();
     let mut packages: Vec<PackageAgg> = Vec::with_capacity(graph.packages.len());
     for package in graph.packages {
       if package.dependency_type == "direct" {
@@ -262,16 +286,24 @@ impl MetricsAggregator {
       } else {
         self.package_transitive += 1;
       }
+      let name = package.name.unwrap_or_else(|| "<unknown>".to_string());
+      let size = u64::from(package.size);
+      // Track every (version, size) per name to flag duplicate versions later (#6).
+      self
+        .package_versions
+        .entry(name.clone())
+        .or_default()
+        .push((package.version.clone().unwrap_or_default(), size));
       packages.push(PackageAgg {
-        name: package.name.unwrap_or_else(|| "<unknown>".to_string()),
+        name,
         version: package.version,
         dependency_type: package.dependency_type,
-        size: u64::from(package.size),
+        size,
         module_count: package.modules.len(),
         is_used: package.is_used,
       });
     }
-    packages.sort_by(|a, b| b.size.cmp(&a.size));
+    packages.sort_by(|a, b| b.size.cmp(&a.size).then_with(|| a.name.cmp(&b.name)));
     packages.truncate(self.config.top_n);
     self.packages = packages;
   }
@@ -307,7 +339,7 @@ impl MetricsAggregator {
       }
       list.push(AssetAgg { filename: asset.filename, size });
     }
-    list.sort_by(|a, b| b.size.cmp(&a.size));
+    list.sort_by(|a, b| b.size.cmp(&a.size).then_with(|| a.filename.cmp(&b.filename)));
     list.truncate(self.config.top_n);
     self.assets = list;
   }
@@ -383,6 +415,8 @@ struct MModule {
 #[derive(Deserialize)]
 struct MImport {
   kind: String,
+  #[serde(default)]
+  module_id: String,
 }
 
 #[derive(Deserialize)]

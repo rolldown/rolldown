@@ -256,15 +256,9 @@ impl Chunk {
     let Some(sourcemap_filename) = &options.sourcemap_filenames else {
       return Ok(PreliminarySourcemapFilename::Empty);
     };
-    if options.sourcemap.is_none() {
-      // No map will be produced, so don't reserve a name (or a hash placeholder) for one.
-      return Ok(PreliminarySourcemapFilename::Empty);
-    }
+    let sourcemap_filename = sourcemap_filename.call(rollup_pre_rendered_chunk).await?;
 
-    let filename_template = FilenameTemplate::new(
-      sourcemap_filename.call(rollup_pre_rendered_chunk).await?,
-      "sourcemap_filename",
-    );
+    let filename_template = FilenameTemplate::new(sourcemap_filename, "sourcemap_filename");
     let has_hash_pattern = filename_template.has_hash_pattern();
 
     let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
@@ -290,6 +284,10 @@ impl Chunk {
     let filename = filename_template
       .render(Some(&chunk_name), Some(options.format.as_str()), None, chunkhash, hash_replacer)?
       .into();
+
+    if options.sourcemap.is_none() {
+      return Ok(PreliminarySourcemapFilename::Empty);
+    }
 
     let name = make_unique_name(&filename, used_name_counts);
 

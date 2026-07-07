@@ -25,14 +25,13 @@ use rolldown_utils::{
   xxhash::{encode_hash_with_base, xxhash_base64_url},
 };
 use rustc_hash::{FxHashMap, FxHashSet};
-use sugar_path::SugarPath;
 use xxhash_rust::xxh3::Xxh3;
 
 use crate::{
   chunk_graph::ChunkGraph,
   stages::link_stage::LinkStageOutput,
   type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
-  utils::process_code_and_sourcemap::process_code_and_sourcemap,
+  utils::process_code_and_sourcemap::{emit_sourcemap, prepare_sourcemap},
 };
 
 #[tracing::instrument(level = "debug", skip_all)]
@@ -67,6 +66,19 @@ pub async fn finalize_assets(
         } else {
           vec![]
         }
+      })
+      .collect::<Vec<_>>()
+      .into();
+
+  let index_sourcemap_hash_placeholders: IndexVec<InsChunkIdx, Option<Vec<String>>> =
+    index_instantiated_chunks
+      .iter()
+      .map(|chunk| {
+        chunk
+          .preliminary_sourcemap_filename
+          .as_ref()
+          .and_then(|filename| filename.hash_placeholder())
+          .map(<[String]>::to_vec)
       })
       .collect::<Vec<_>>()
       .into();
@@ -122,15 +134,10 @@ pub async fn finalize_assets(
     })
     .collect::<Vec<_>>()
     .into();
-  // Inline sourcemaps also resolve `[hash]`: the name is still reported on the output chunk
-  // even though no `.map` asset is written (Rollup parity). With sourcemaps disabled no
-  // preliminary sourcemap filenames exist, so this yields nothing.
-  let sourcemap_final_hashes =
-    generate_sourcemap_hashes_by_idx(&index_instantiated_chunks, hash_base);
 
   deconflict_filenames(&index_instantiated_chunks, &mut index_final_hashes, hash_base);
 
-  let final_hashes_by_placeholder = index_final_hashes
+  let chunk_hashes_by_placeholder = index_final_hashes
     .iter_enumerated()
     .filter_map(|(idx, (hash, _))| {
       index_instantiated_chunks[idx].preliminary_filename.hash_placeholder().map(|placeholders| {
@@ -138,7 +145,6 @@ pub async fn finalize_assets(
       })
     })
     .flatten()
-    .chain(get_sourcemap_hashes_by_placeholder(&sourcemap_final_hashes, &index_instantiated_chunks))
     .collect::<FxHashMap<_, _>>();
 
   let mut assets: AssetVec = index_instantiated_chunks
@@ -149,7 +155,7 @@ pub async fn finalize_assets(
 
       let filename: ArcStr = replace_placeholder_with_hash(
         instantiated_chunk.preliminary_filename.as_str(),
-        &final_hashes_by_placeholder,
+        &chunk_hashes_by_placeholder,
         &HASH_PLACEHOLDER_LEFT_FINDER,
       )
       .into();
@@ -168,7 +174,7 @@ pub async fn finalize_assets(
         ecma_meta.sourcemap_filename = preliminary_filename_str.map(|str| {
           replace_placeholder_with_hash(
             str,
-            &final_hashes_by_placeholder,
+            &chunk_hashes_by_placeholder,
             &HASH_PLACEHOLDER_LEFT_FINDER,
           )
           .into()
@@ -177,7 +183,7 @@ pub async fn finalize_assets(
       if let StrOrBytes::Str(content) = &mut instantiated_chunk.content {
         if let Cow::Owned(replaced) = replace_placeholder_with_hash(
           content,
-          &final_hashes_by_placeholder,
+          &chunk_hashes_by_placeholder,
           &HASH_PLACEHOLDER_LEFT_FINDER,
         ) {
           *content = replaced;
@@ -218,28 +224,70 @@ pub async fn finalize_assets(
     }
   });
 
-  // apply sourcemap related logic
+  finalize_sourcemaps(&mut assets, &index_sourcemap_hash_placeholders, options, hash_base).await?;
 
-  let derived_assets = try_join_all(assets.iter_mut().map(async |asset| {
-    let mut derived_asset: Result<Option<Asset>, anyhow::Error> = Ok(None::<Asset>);
+  Ok(assets)
+}
+
+async fn finalize_sourcemaps(
+  assets: &mut AssetVec,
+  index_sourcemap_hash_placeholders: &IndexVec<InsChunkIdx, Option<Vec<String>>>,
+  options: &NormalizedBundlerOptions,
+  hash_base: u8,
+) -> BuildResult<()> {
+  try_join_all(assets.iter_mut().map(async |asset| {
+    let filename = asset.filename.clone();
+    if let (InstantiationKind::Ecma(ecma_meta), Some(map)) = (&mut asset.meta, asset.map.as_mut()) {
+      let file_path = options.cwd.as_path().join(&options.out_dir).join(filename.as_str());
+      ecma_meta.file_dir =
+        file_path.parent().expect("chunk file name should have a parent").to_path_buf();
+      prepare_sourcemap(options, map, &ecma_meta.file_dir, filename.as_str()).await?;
+    }
+    Ok::<(), anyhow::Error>(())
+  }))
+  .await?;
+
+  // Inline sourcemaps also resolve `[hash]`: the name is still reported on the output chunk
+  // even though no `.map` asset is written.
+  let sourcemap_final_hashes =
+    generate_sourcemap_hashes_by_idx(assets, index_sourcemap_hash_placeholders, hash_base);
+  let sourcemap_hashes_by_placeholder =
+    get_sourcemap_hashes_by_placeholder(&sourcemap_final_hashes, index_sourcemap_hash_placeholders)
+      .collect::<FxHashMap<_, _>>();
+
+  assets.par_iter_mut().for_each(|asset| {
+    if let InstantiationKind::Ecma(ecma_meta) = &mut asset.meta
+      && let Some(sourcemap_filename) = &mut ecma_meta.sourcemap_filename
+      && let Cow::Owned(replaced) = replace_placeholder_with_hash(
+        sourcemap_filename,
+        &sourcemap_hashes_by_placeholder,
+        &HASH_PLACEHOLDER_LEFT_FINDER,
+      )
+    {
+      *sourcemap_filename = replaced;
+    }
+  });
+
+  let mut derived_assets = Vec::new();
+  for asset in assets.iter_mut() {
     match &mut asset.meta {
       InstantiationKind::Ecma(ecma_meta) => {
         let asset_code = mem::take(&mut asset.content);
         let mut code = asset_code.try_into_string()?;
         if let Some(map) = asset.map.as_mut() {
-          if let Some(sourcemap_asset) = process_code_and_sourcemap(
+          let map_filename = ecma_meta
+            .sourcemap_filename
+            .clone()
+            .unwrap_or_else(|| format!("{}.map", asset.filename));
+          if let Some(sourcemap_asset) = emit_sourcemap(
             options,
             &mut code,
             map,
-            &ecma_meta.file_dir,
-            asset.filename.as_str(),
+            &map_filename,
             ecma_meta.debug_id,
             /*is_css*/ false,
-            ecma_meta.sourcemap_filename.clone(),
-          )
-          .await?
-          {
-            derived_asset = Ok(Some(Asset {
+          )? {
+            derived_assets.push(Asset {
               originate_from: None,
               content: sourcemap_asset.source,
               filename: sourcemap_asset.filename.clone(),
@@ -248,7 +296,7 @@ pub async fn finalize_assets(
                 names: sourcemap_asset.names,
                 original_file_names: sourcemap_asset.original_file_names,
               })),
-            }));
+            });
             if ecma_meta.sourcemap_filename.is_none() {
               let sourcemap_filename =
                 if matches!(options.sourcemap, Some(SourceMapType::Inline) | None) {
@@ -264,68 +312,45 @@ pub async fn finalize_assets(
       }
       InstantiationKind::None | InstantiationKind::Sourcemap(_) => {}
     }
-    derived_asset
-  }))
-  .await?;
+  }
 
-  assets.extend(derived_assets.into_iter().flatten());
+  assets.extend(derived_assets);
 
-  Ok(assets)
+  Ok(())
 }
 
 fn generate_sourcemap_hashes_by_idx(
-  index_instantiated_chunks: &IndexInstantiatedChunks,
+  assets: &AssetVec,
+  index_sourcemap_hash_placeholders: &IndexVec<InsChunkIdx, Option<Vec<String>>>,
   hash_base: u8,
 ) -> Vec<(InsChunkIdx, String)> {
-  index_instantiated_chunks
+  assets
     .par_iter()
     .enumerate()
-    .filter_map(|(idx, chunk)| {
-      let (Some(map), Some(preliminary_sourcemap_filename)) =
-        (&chunk.map, &chunk.preliminary_sourcemap_filename)
-      else {
+    .filter_map(|(idx, asset)| {
+      let idx = InsChunkIdx::from(idx);
+      let (Some(map), InstantiationKind::Ecma(_)) = (&asset.map, &asset.meta) else {
         return None;
       };
-      // Only patterns containing `[hash]` need a resolved sourcemap hash.
-      preliminary_sourcemap_filename.hash_placeholder()?;
-      let InstantiationKind::Ecma(ecma_meta) = &chunk.kind else {
-        return None;
-      };
-      // Hash only machine-independent content: `sources` still hold absolute module paths here
-      // (they are only relativized later in `process_code_and_sourcemap`), and the preliminary
-      // filename embeds a transient placeholder index. Feeding either into the hash would
-      // rename sourcemaps across machines or on unrelated graph changes — the same invariant
-      // the placeholder normalization above maintains for chunk content hashes.
-      let mut content_only = map.clone();
-      content_only.set_sources(
-        map
-          .get_sources()
-          .map(|source| {
-            source.as_path().relative(&ecma_meta.file_dir).to_slash_lossy().into_owned()
-          })
-          .collect::<Vec<String>>(),
-      );
+      index_sourcemap_hash_placeholders[idx].as_ref()?;
       let mut hasher = Xxh3::default();
-      hasher.update(content_only.to_json_string().as_bytes());
+      hasher.update(map.to_json_string().as_bytes());
       let hash = encode_hash_with_base(&hasher.digest128().to_le_bytes(), hash_base);
-      Some((InsChunkIdx::from(idx), hash))
+      Some((idx, hash))
     })
     .collect()
 }
+
 fn get_sourcemap_hashes_by_placeholder<'a>(
   sourcemap_final_hashes: &'a [(InsChunkIdx, String)],
-  index_instantiated_chunks: &IndexInstantiatedChunks,
+  index_sourcemap_hash_placeholders: &IndexVec<InsChunkIdx, Option<Vec<String>>>,
 ) -> impl Iterator<Item = (String, &'a str)> {
   sourcemap_final_hashes
     .iter()
     .filter_map(|(idx, hash)| {
-      index_instantiated_chunks[*idx]
-        .preliminary_sourcemap_filename
-        .as_ref()
-        .and_then(|filename| filename.hash_placeholder())
-        .map(|placeholders| {
-          placeholders.iter().map(|placeholder| (placeholder.clone(), &hash[..placeholder.len()]))
-        })
+      index_sourcemap_hash_placeholders[*idx].as_ref().map(|placeholders| {
+        placeholders.iter().map(|placeholder| (placeholder.clone(), &hash[..placeholder.len()]))
+      })
     })
     .flatten()
 }

@@ -11,6 +11,7 @@ use url::Url;
 use super::uuid::uuid_v4_string_from_u128;
 
 #[expect(clippy::too_many_arguments)]
+#[cfg(feature = "experimental")]
 pub async fn process_code_and_sourcemap(
   options: &NormalizedBundlerOptions,
   code: &mut String,
@@ -21,8 +22,17 @@ pub async fn process_code_and_sourcemap(
   is_css: bool,
   sourcemap_filename: Option<String>,
 ) -> BuildResult<Option<OutputAsset>> {
-  let source_map_link_comment_kind =
-    if is_css { CommentKind::SingleLineBlock } else { CommentKind::Line };
+  prepare_sourcemap(options, map, file_dir, filename).await?;
+  let map_filename = sourcemap_filename.unwrap_or_else(|| format!("{filename}.map"));
+  emit_sourcemap(options, code, map, &map_filename, debug_id, is_css)
+}
+
+pub async fn prepare_sourcemap(
+  options: &NormalizedBundlerOptions,
+  map: &mut SourceMap,
+  file_dir: &Path,
+  filename: &str,
+) -> BuildResult<()> {
   let file_base_name = Path::new(filename).file_name().expect("should have file name");
   map.set_file(file_base_name.to_string_lossy().as_ref());
 
@@ -30,7 +40,7 @@ pub async fn process_code_and_sourcemap(
     map.set_source_contents(vec![]);
   }
 
-  let map_filename = sourcemap_filename.unwrap_or_else(|| format!("{filename}.map"));
+  let map_filename = format!("{}.map", file_base_name.to_string_lossy());
   let map_path = file_dir.join(&map_filename);
 
   if let Some(source_map_ignore_list) = &options.sourcemap_ignore_list {
@@ -96,6 +106,20 @@ pub async fn process_code_and_sourcemap(
     );
   }
 
+  Ok(())
+}
+
+pub fn emit_sourcemap(
+  options: &NormalizedBundlerOptions,
+  code: &mut String,
+  map: &mut SourceMap,
+  map_filename: &str,
+  debug_id: u128,
+  is_css: bool,
+) -> BuildResult<Option<OutputAsset>> {
+  let source_map_link_comment_kind =
+    if is_css { CommentKind::SingleLineBlock } else { CommentKind::Line };
+
   if options.sourcemap_debug_ids && options.sourcemap.is_some() {
     let debug_id_str = uuid_v4_string_from_u128(debug_id);
     map.set_debug_id(&debug_id_str);
@@ -124,13 +148,13 @@ pub async fn process_code_and_sourcemap(
               match &options.sourcemap_base_url {
                 Some(url_string) => {
                   let url = Url::parse(url_string)
-                    .and_then(|base| base.join(&map_filename))
+                    .and_then(|base| base.join(map_filename))
                     .map_err_to_unhandleable()?;
                   source.push_str(url.as_str());
                 }
                 None => {
                   source.push_str(
-                    &Path::new(&map_filename)
+                    &Path::new(map_filename)
                       .file_name()
                       .ok_or(anyhow::anyhow!("should have filename"))?
                       .to_string_lossy(),
@@ -143,7 +167,7 @@ pub async fn process_code_and_sourcemap(
           )?;
         }
         return Ok(Some(OutputAsset {
-          filename: map_filename.as_str().into(),
+          filename: map_filename.into(),
           source: source.into(),
           original_file_names: vec![],
           names: vec![],

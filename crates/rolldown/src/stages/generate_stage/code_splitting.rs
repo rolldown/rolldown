@@ -1091,7 +1091,12 @@ impl GenerateStage<'_> {
       if is_user_defined_entry {
         index_splitting_info[module_idx].tags_bit_set.set_bit(ModuleTag::INITIAL_BIT);
       }
-      meta.dependencies.iter().copied().for_each(|dep_idx| {
+      // Walk only the dependencies this module actually loads at runtime (referenced-symbol
+      // owners and side-effect-full import targets). A side-effect-free module whose bindings
+      // resolve elsewhere — e.g. a pure barrel that only re-exports — must not be treated as
+      // reachable, otherwise it (and its subtree) is shared into this entry's chunk group even
+      // though the emitted code never imports it (#8920).
+      meta.load_dependencies.iter().copied().for_each(|dep_idx| {
         q.push_back(dep_idx);
       });
     }

@@ -6,10 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry-a.js
 
 ```js
-import { t as fn } from "./shared.js";
-//#region entry-a.js
-const used = fn();
-console.log(used);
+//#region shared.js
+/* @__NO_SIDE_EFFECTS__ */
+function fn() {
+	console.log("fn side effect");
+}
+console.log(/* @__PURE__ */ fn());
 fn.call(null);
 //#endregion
 
@@ -18,18 +20,5 @@ fn.call(null);
 ## entry-b.js
 
 ```js
-
-```
-
-## shared.js
-
-```js
-//#region shared.js
-/* @__NO_SIDE_EFFECTS__ */
-function fn() {
-	console.log("fn side effect");
-}
-//#endregion
-export { fn as t };
 
 ```

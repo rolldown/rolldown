@@ -3,24 +3,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## common.js
-
-```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-//#region common.js
-function foo() {
-	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
-}
-var common, _;
-var init_common = __esmMin((() => {
-	common = "common";
-	_ = /*#__PURE__*/ foo();
-}));
-//#endregion
-export { common as n, init_common as r, _ as t };
-
-```
-
 ## main.js
 
 ```js
@@ -37,8 +19,17 @@ await __esmMin((async () => {
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as common, r as init_common, t as _ } from "./common.js";
 import nodeAssert from "node:assert";
+//#region common.js
+function foo() {
+	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
+}
+var common, _;
+var init_common = __esmMin((() => {
+	common = "common";
+	_ = /*#__PURE__*/ foo();
+}));
+//#endregion
 //#region page-a.js
 function render() {
 	console.log(common, _);

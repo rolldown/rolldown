@@ -13,6 +13,7 @@ pub mod hook_transform_call_start;
 pub mod module_graph_ready;
 pub mod package_graph_ready;
 pub mod session_meta;
+pub mod strict_execution_order_plan_ready;
 
 #[derive(ts_rs::TS, serde::Serialize)]
 #[ts(export)]
@@ -33,4 +34,5 @@ pub enum Meta {
   HookRenderChunkStart(hook_render_chunk_start::HookRenderChunkStart),
   HookRenderChunkEnd(hook_render_chunk_end::HookRenderChunkEnd),
   AssetsReady(assets_ready::AssetsReady),
+  StrictExecutionOrderPlanReady(strict_execution_order_plan_ready::StrictExecutionOrderPlanReady),
 }

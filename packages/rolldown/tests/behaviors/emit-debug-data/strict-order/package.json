@@ -1,0 +1,14 @@
+{
+  "type": "module",
+  "sideEffects": [
+    "./c.js",
+    "./dynamic.js",
+    "./e.js",
+    "./included-forwarding-barrel.js",
+    "./main.js",
+    "./p.js",
+    "./require-owner.cjs",
+    "./second.js",
+    "./wrapped-owner.js"
+  ]
+}

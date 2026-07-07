@@ -27,12 +27,16 @@ use rolldown_ecmascript_utils::{
 
 mod finalizer_context;
 mod impl_visit_mut;
+mod wrapped_esm_init_targets;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use oxc_str::{CompactStr, Ident};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
+pub use wrapped_esm_init_targets::{
+  WrappedEsmInitTargetContext, collect_wrapped_esm_init_targets_for_import_record,
+};
 
 use crate::utils::external_import_interop::import_record_needs_interop;
 
@@ -165,115 +169,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn collect_wrapped_esm_init_modules_for_import_record(
-    &self,
-    rec_idx: ImportRecordIdx,
-  ) -> Vec<ModuleIdx> {
-    // See internal-docs/linking/reference-needed-symbols/implementation.md for why this follows
-    // canonical owners through non-wrapped barrel modules.
-    //
-    // Duplicate owners are tolerated here rather than deduped via a set: the sole caller filters
-    // each owner through `generated_init_esm_importee_ids` (a persistent `FxHashSet`) *before*
-    // building the init call, so a repeat owner is dropped at that check and never re-emits. A
-    // `Vec` push avoids the per-record hashing/allocation of an `FxIndexSet` that the global set
-    // already subsumes.
-    let mut init_modules = Vec::new();
-    let rec = &self.ctx.module.import_records[rec_idx];
-    let Some(importee_idx) = rec.resolved_module else { return init_modules };
-    let importee_linking_info = &self.ctx.linking_infos[importee_idx];
-    let mut visited_symbols = FxHashSet::default();
-
-    if rec.meta.contains(ImportRecordMeta::IsExportStar) {
-      for resolved_export in importee_linking_info.resolved_exports.values() {
-        self.add_wrapped_esm_init_module_for_symbol(
-          resolved_export.symbol_ref,
-          &mut init_modules,
-          &mut visited_symbols,
-        );
-      }
-      return init_modules;
-    }
-
-    for named_import in
-      self.ctx.module.named_imports.values().filter(|item| item.record_idx == rec_idx)
-    {
-      match &named_import.imported {
-        Specifier::Star => {
-          for resolved_export in importee_linking_info.resolved_exports.values() {
-            self.add_wrapped_esm_init_module_for_symbol(
-              resolved_export.symbol_ref,
-              &mut init_modules,
-              &mut visited_symbols,
-            );
-          }
-        }
-        Specifier::Literal(name) => {
-          if let Some(resolved_export) = importee_linking_info.resolved_exports.get(name) {
-            self.add_wrapped_esm_init_module_for_symbol(
-              resolved_export.symbol_ref,
-              &mut init_modules,
-              &mut visited_symbols,
-            );
-          } else {
-            self.add_wrapped_esm_init_module_for_symbol(
-              named_import.imported_as,
-              &mut init_modules,
-              &mut visited_symbols,
-            );
-          }
-        }
-      }
-    }
-
-    init_modules
-  }
-
-  fn add_wrapped_esm_init_module_for_symbol(
-    &self,
-    symbol_ref: SymbolRef,
-    init_modules: &mut Vec<ModuleIdx>,
-    visited_symbols: &mut FxHashSet<SymbolRef>,
-  ) {
-    let canonical_ref = self.ctx.symbol_db.canonical_ref_resolving_namespace(symbol_ref);
-    if !visited_symbols.insert(canonical_ref) {
-      return;
-    }
-    let meta = &self.ctx.linking_infos[canonical_ref.owner];
-    if matches!(meta.wrap_kind(), WrapKind::Esm)
-      // Only emit `init_*()` for wrapped owners that tree-shaking actually kept.
-      // A non-wrapped barrel can forward a binding (e.g. via `export { ns }` or
-      // `export *`) from a wrapped ESM module that ends up tree-shaken because the
-      // binding is never read. In that case the owner's `init_*` wrapper statement
-      // was never included, so it has no chunk assignment and emitting a call to it
-      // would reference a function that doesn't exist in the output. This mirrors
-      // the `is_included` guard in `collect_transitive_esm_init_targets`.
-      && meta.is_included
-      && meta.wrapper_ref.is_some_and(|wrapper_ref| self.wrapper_is_reachable_in_chunk(wrapper_ref))
-      && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)
-    {
-      init_modules.push(canonical_ref.owner);
-      return;
-    }
-
-    let Some(module) = self.ctx.modules[canonical_ref.owner].as_normal() else {
-      return;
-    };
-    if module.namespace_object_ref != canonical_ref
-      || meta.is_included
-      || !self.ctx.linking_info.hoist_esm_wrapper
-    {
-      return;
-    }
-
-    for resolved_export in meta.resolved_exports.values() {
-      self.add_wrapped_esm_init_module_for_symbol(
-        resolved_export.symbol_ref,
-        init_modules,
-        visited_symbols,
-      );
-    }
-  }
-
   /// Whether a wrapper symbol can be referenced from the chunk being finalized: it is either
   /// declared in this chunk or registered as a cross-chunk import — exactly the symbols
   /// deconfliction assigned a canonical name for. Finalizers run after cross-chunk imports are
@@ -295,34 +190,32 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &mut self,
     rec_idx: ImportRecordIdx,
   ) -> Option<Statement<'ast>> {
-    let rec = &self.ctx.module.import_records[rec_idx];
-    // If the non-wrapped forwarding module is emitted in this chunk, its own
-    // lowered statement already preserves the required init call in execution
-    // order. This fallback is only for barrels that do not execute here.
-    if rec.resolved_module.is_some_and(|importee_idx| {
-      let importee_linking_info = &self.ctx.linking_infos[importee_idx];
-      matches!(importee_linking_info.wrap_kind(), WrapKind::None)
-        && importee_linking_info.is_included
-        && self.ctx.chunk_graph.module_to_chunk[importee_idx] == Some(self.ctx.chunk_idx)
-    }) {
-      return None;
-    }
-
     // `AstFactory` is `Copy`, so copying it out lets the `&mut self` iterator below stay borrowed
     // while we still construct nodes through `factory`. That decouples node construction from the
     // borrow without the throwaway heap `Vec` the previous `.collect()` needed: the common 0/1
     // cases now allocate nothing, and only the rare sequence case allocates — straight in the arena.
     let factory = self.ast_factory;
-    let mut init_exprs = self
-      .collect_wrapped_esm_init_modules_for_import_record(rec_idx)
-      .into_iter()
-      .filter_map(|module_idx| {
-        if !self.generated_init_esm_importee_ids.insert(module_idx) {
-          return None;
-        }
-        // `add_wrapped_esm_init_module_for_symbol` only collects modules with a `wrapper_ref`.
-        Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
-      });
+    let targets = collect_wrapped_esm_init_targets_for_import_record(
+      &WrappedEsmInitTargetContext {
+        importer: self.ctx.module,
+        importer_meta: self.ctx.linking_info,
+        modules: self.ctx.modules,
+        metas: self.ctx.linking_infos,
+        symbol_db: self.ctx.symbol_db,
+      },
+      rec_idx,
+      |wrapper_ref| self.wrapper_is_reachable_in_chunk(wrapper_ref),
+      |forwarding_module_idx| {
+        self.ctx.chunk_graph.module_to_chunk[forwarding_module_idx] == Some(self.ctx.chunk_idx)
+      },
+    );
+    let mut init_exprs = targets.into_iter().filter_map(|module_idx| {
+      if !self.generated_init_esm_importee_ids.insert(module_idx) {
+        return None;
+      }
+      // The shared target resolver only collects modules with a reachable `wrapper_ref`.
+      Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
+    });
     // Drive the iterator by hand. Every branch consumes it to exhaustion, so each owner's
     // `generated_init_esm_importee_ids` insert still runs (the global dedup must observe all of
     // them) regardless of how many statements we end up emitting.

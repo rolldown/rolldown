@@ -1,6 +1,7 @@
 use rolldown_common::UsedSymbolRefsBuilder;
 #[cfg(debug_assertions)]
 use rolldown_common::{ChunkIdx, ChunkKind, WrapKind};
+use rolldown_devtools::trace_action_enabled;
 use rolldown_error::BuildResult;
 #[cfg(debug_assertions)]
 use rustc_hash::FxHashSet;
@@ -11,8 +12,10 @@ use crate::{
 };
 
 use super::GenerateStage;
+use super::order_analysis::OrderAnalysis;
 #[cfg(debug_assertions)]
 use super::order_analysis::OrderWrapPlan;
+use super::strict_execution_order_trace::strict_execution_order_trace_requested;
 
 impl GenerateStage<'_> {
   /// Finalize topology-changing generate-stage decisions before deriving output metadata.
@@ -26,7 +29,7 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     used_symbol_refs: &mut UsedSymbolRefsBuilder,
-  ) -> BuildResult<()> {
+  ) -> BuildResult<Option<OrderAnalysis>> {
     // The order analysis reuses cross-chunk linking logic, which reads finalized namespace and
     // external-export facts. Prepare those inputs on the provisional topology first.
     self.find_entry_level_external_module(chunk_graph);
@@ -54,7 +57,11 @@ impl GenerateStage<'_> {
       validate_options_for_multi_chunk_output(self.options)?;
     }
 
-    Ok(())
+    if strict_execution_order_trace_requested(self.options.devtools) && trace_action_enabled!() {
+      Ok(order_analysis)
+    } else {
+      Ok(None)
+    }
   }
 
   #[cfg(debug_assertions)]

@@ -16,11 +16,59 @@ function expectPathToEndWith(path, suffix) {
   expect(normalizePath(path).endsWith(suffix)).toBe(true);
 }
 
-test(`emit data for devtool`, async () => {
-  // Clean up previous test data if exists
+function cleanDebugData() {
   if (existsSync(dotRolldownFileName)) {
     rmSync(dotRolldownFileName, { recursive: true, force: true });
   }
+}
+
+function readDebugLogs() {
+  const sessions = readdirSync(dotRolldownFileName);
+  expect(sessions).toHaveLength(1);
+  return readFileSync(join(dotRolldownFileName, sessions[0], 'logs.json'), 'utf8')
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line));
+}
+
+function findByModuleSuffix(items, field, suffix) {
+  return items.find((item) => normalizePath(item[field]).endsWith(suffix));
+}
+
+async function runStrictOrderBundle({ strictExecutionOrder, input, trace = true }) {
+  cleanDebugData();
+  const previousTraceValue = process.env.ROLLDOWN_STRICT_ORDER_TRACE;
+  if (trace) {
+    process.env.ROLLDOWN_STRICT_ORDER_TRACE = '1';
+  } else {
+    delete process.env.ROLLDOWN_STRICT_ORDER_TRACE;
+  }
+  const bundle = await rolldown({
+    cwd: import.meta.dirname,
+    devtools: {},
+    input,
+    plugins: [
+      {
+        name: 'strict-order-render-marker',
+        renderChunk(code) {
+          return code;
+        },
+      },
+    ],
+  });
+  const { output } = await bundle.generate({ strictExecutionOrder });
+  await bundle.close();
+  if (previousTraceValue === undefined) {
+    delete process.env.ROLLDOWN_STRICT_ORDER_TRACE;
+  } else {
+    process.env.ROLLDOWN_STRICT_ORDER_TRACE = previousTraceValue;
+  }
+  return { logs: readDebugLogs(), output };
+}
+
+test(`emit data for devtool`, async () => {
+  // Clean up previous test data if exists
+  cleanDebugData();
 
   const renderedModuleSizes = await runBundle();
 
@@ -251,4 +299,210 @@ test(`emit data for devtool`, async () => {
     await bundle.close();
     return renderedModuleSizes;
   }
+});
+
+test('emit the strict execution order plan after final topology is available', async () => {
+  const fixtureDir = join(import.meta.dirname, 'strict-order');
+  const { logs, output } = await runStrictOrderBundle({
+    strictExecutionOrder: true,
+    input: {
+      main: join(fixtureDir, 'main.js'),
+      second: join(fixtureDir, 'second.js'),
+    },
+  });
+
+  const action = logs.find((event) => event.action === 'StrictExecutionOrderPlanReady');
+  expect(action).toBeDefined();
+  expect(action.version).toBe(1);
+  expect(logs.indexOf(action)).toBeLessThan(
+    logs.findIndex((event) => event.action === 'HookRenderChunkStart'),
+  );
+
+  const pPlan = findByModuleSuffix(action.plan_modules, 'module_id', '/strict-order/p.js');
+  expect(pPlan.reasons).toEqual(expect.arrayContaining(['direct-violation', 'sensitive-suffix']));
+  const mainPlan = findByModuleSuffix(action.plan_modules, 'module_id', '/strict-order/main.js');
+  expect(mainPlan.reasons).toEqual(
+    expect.arrayContaining(['sensitive-suffix', 'static-importer', 'top-level-reader']),
+  );
+
+  const mainRoot = findByModuleSuffix(action.roots, 'root_module_id', '/strict-order/main.js');
+  const expectedOrder = mainRoot.expected_order.map(normalizePath);
+  const predictedOrder = mainRoot.predicted_pre_wrap_order.map(normalizePath);
+  const expectedEIndex = expectedOrder.findIndex((id) => id.endsWith('/strict-order/e.js'));
+  const expectedPIndex = expectedOrder.findIndex((id) => id.endsWith('/strict-order/p.js'));
+  const predictedEIndex = predictedOrder.findIndex((id) => id.endsWith('/strict-order/e.js'));
+  const predictedPIndex = predictedOrder.findIndex((id) => id.endsWith('/strict-order/p.js'));
+  expect(expectedEIndex).toBeLessThan(expectedPIndex);
+  expect(predictedPIndex).toBeLessThan(predictedEIndex);
+  expect(
+    mainRoot.at_risk_modules.some((id) => normalizePath(id).endsWith('/strict-order/p.js')),
+  ).toBe(true);
+
+  const pModule = findByModuleSuffix(action.included_modules, 'module_id', '/strict-order/p.js');
+  const mainModule = findByModuleSuffix(
+    action.included_modules,
+    'module_id',
+    '/strict-order/main.js',
+  );
+  const dynamicModule = findByModuleSuffix(
+    action.included_modules,
+    'module_id',
+    '/strict-order/dynamic.js',
+  );
+  expect(pModule).toEqual(
+    expect.objectContaining({
+      original_wrap_kind: 'none',
+      final_wrap_kind: 'esm',
+      wrapper_included: true,
+      tla_tainted: true,
+    }),
+  );
+  expect(mainModule.final_chunk_id).not.toBeNull();
+  expect(mainModule.entry_chunk_id).not.toBeNull();
+
+  const chunksById = new Map(action.rendered_chunks.map((chunk) => [chunk.chunk_id, chunk]));
+  const mainEntryChunk = chunksById.get(mainModule.entry_chunk_id);
+  expect(mainEntryChunk.static_chunk_imports).toContain(mainModule.final_chunk_id);
+  const mainFinalChunk = chunksById.get(mainModule.final_chunk_id);
+  expect(mainFinalChunk.static_chunk_imports).toContain(pModule.final_chunk_id);
+  expect(
+    action.rendered_chunks.some((chunk) =>
+      chunk.dynamic_chunk_imports.includes(dynamicModule.final_chunk_id),
+    ),
+  ).toBe(true);
+
+  const directPObligations = action.init_obligations.filter(
+    (obligation) =>
+      obligation.kind === 'direct-import' &&
+      normalizePath(obligation.importee_id).endsWith('/strict-order/p.js'),
+  );
+  expect(directPObligations).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        awaited: true,
+        importer_tla_tainted: true,
+        importee_tla_tainted: true,
+      }),
+    ]),
+  );
+  expect(directPObligations.map((obligation) => normalizePath(obligation.importer_id))).toEqual([
+    expect.stringMatching(/\/strict-order\/main\.js$/),
+  ]);
+  expect(
+    action.init_obligations.some(
+      (obligation) =>
+        obligation.kind === 'transitive-init-target' &&
+        normalizePath(obligation.importer_id).endsWith('/strict-order/second.js') &&
+        normalizePath(obligation.importee_id).endsWith('/strict-order/p.js') &&
+        obligation.awaited === false,
+    ),
+  ).toBe(true);
+
+  const wrappedOwner = findByModuleSuffix(
+    action.included_modules,
+    'module_id',
+    '/strict-order/wrapped-owner.js',
+  );
+  expect(
+    output
+      .filter((item) => item.type === 'chunk')
+      .map((chunk) => chunk.code)
+      .join('\n'),
+  ).toMatch(/await init_wrapped_owner\d*\(\)/);
+  expect(
+    action.init_obligations.some(
+      (obligation) =>
+        obligation.kind === 'direct-import' &&
+        normalizePath(obligation.importer_id).endsWith('/strict-order/main.js') &&
+        obligation.importee_id === wrappedOwner.module_id &&
+        obligation.awaited === true &&
+        obligation.importee_tla_tainted === true,
+    ),
+  ).toBe(true);
+
+  const includedForwardingBarrel = findByModuleSuffix(
+    action.included_modules,
+    'module_id',
+    '/strict-order/included-forwarding-barrel.js',
+  );
+  const interopOwner = findByModuleSuffix(
+    action.included_modules,
+    'module_id',
+    '/strict-order/interop-owner.js',
+  );
+  expect(includedForwardingBarrel).toEqual(
+    expect.objectContaining({
+      final_chunk_id: mainModule.final_chunk_id,
+      final_wrap_kind: 'none',
+    }),
+  );
+  expect(interopOwner).toEqual(
+    expect.objectContaining({
+      final_wrap_kind: 'esm',
+      wrapper_included: true,
+    }),
+  );
+  expect(
+    output
+      .filter((item) => item.type === 'chunk')
+      .map((chunk) => chunk.code)
+      .join('\n'),
+  ).toMatch(/init_interop_owner\d*\(\)/);
+  expect(
+    action.init_obligations.some(
+      (obligation) =>
+        obligation.kind === 'direct-import' &&
+        obligation.importer_id === mainModule.module_id &&
+        obligation.importee_id === interopOwner.module_id,
+    ),
+  ).toBe(false);
+  expect(
+    action.init_obligations.some(
+      (obligation) =>
+        obligation.kind === 'direct-import' &&
+        obligation.importer_id === includedForwardingBarrel.module_id &&
+        obligation.importee_id === interopOwner.module_id &&
+        obligation.awaited === false,
+    ),
+  ).toBe(true);
+});
+
+test('do not emit the strict execution order plan when strict mode is disabled', async () => {
+  const fixtureDir = join(import.meta.dirname, 'strict-order');
+  const { logs } = await runStrictOrderBundle({
+    strictExecutionOrder: false,
+    input: {
+      main: join(fixtureDir, 'main.js'),
+      second: join(fixtureDir, 'second.js'),
+    },
+  });
+
+  expect(logs.some((event) => event.action === 'StrictExecutionOrderPlanReady')).toBe(false);
+});
+
+test('do not emit the strict execution order plan without the explicit trace opt-in', async () => {
+  const { logs } = await runStrictOrderBundle({
+    strictExecutionOrder: true,
+    trace: false,
+    input: join(import.meta.dirname, 'strict-order/empty.js'),
+  });
+
+  expect(logs.some((event) => event.action === 'StrictExecutionOrderPlanReady')).toBe(false);
+});
+
+test('emit an empty strict execution order plan when analysis ran without a hazard', async () => {
+  const { logs } = await runStrictOrderBundle({
+    strictExecutionOrder: true,
+    input: join(import.meta.dirname, 'strict-order/empty.js'),
+  });
+
+  const action = logs.find((event) => event.action === 'StrictExecutionOrderPlanReady');
+  expect(action).toEqual(
+    expect.objectContaining({
+      action: 'StrictExecutionOrderPlanReady',
+      version: 1,
+      plan_modules: [],
+    }),
+  );
+  expect(action.roots).toHaveLength(1);
 });

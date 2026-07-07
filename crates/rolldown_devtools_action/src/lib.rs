@@ -19,6 +19,10 @@ pub use {
     module_graph_ready::{Module, ModuleGraphReady, ModuleImport},
     package_graph_ready::{PackageGraphReady, PackageInfo},
     session_meta::SessionMeta,
+    strict_execution_order_plan_ready::{
+      StrictExecutionOrderChunk, StrictExecutionOrderInitObligation, StrictExecutionOrderModule,
+      StrictExecutionOrderPlanModule, StrictExecutionOrderPlanReady, StrictExecutionOrderRoot,
+    },
   },
   types::{InputItem, PluginItem},
 };

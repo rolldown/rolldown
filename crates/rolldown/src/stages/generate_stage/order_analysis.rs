@@ -13,7 +13,55 @@ use super::GenerateStage;
 #[derive(Debug)]
 pub(super) struct OrderAnalysis {
   roots: Vec<RootOrderAnalysis>,
-  pub(super) order_wraps: FxHashSet<ModuleIdx>,
+  pub(super) plan: OrderWrapPlan,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum OrderWrapReason {
+  /// The module is missing from one order or executes before an expected predecessor.
+  DirectViolation,
+  /// V1 lowering moves all later sensitive modules behind the same init boundary.
+  SensitiveSuffix,
+  /// The module statically imports another module selected by the plan.
+  StaticImporter,
+  /// A top-level statement reads an export owned by a selected module.
+  TopLevelReader,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct OrderWrapPlan {
+  reasons_by_module: FxHashMap<ModuleIdx, Vec<OrderWrapReason>>,
+}
+
+impl OrderWrapPlan {
+  fn insert(&mut self, module_idx: ModuleIdx, reason: OrderWrapReason) -> bool {
+    let reasons = self.reasons_by_module.entry(module_idx).or_default();
+    let is_new_module = reasons.is_empty();
+    if !reasons.contains(&reason) {
+      reasons.push(reason);
+    }
+    is_new_module
+  }
+
+  pub(super) fn contains(&self, module_idx: &ModuleIdx) -> bool {
+    self.reasons_by_module.contains_key(module_idx)
+  }
+
+  pub(super) fn is_empty(&self) -> bool {
+    self.reasons_by_module.is_empty()
+  }
+
+  pub(super) fn len(&self) -> usize {
+    self.reasons_by_module.len()
+  }
+
+  pub(super) fn modules(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
+    self.reasons_by_module.keys().copied()
+  }
+
+  pub(super) fn reasons(&self, module_idx: ModuleIdx) -> &[OrderWrapReason] {
+    self.reasons_by_module.get(&module_idx).map(Vec::as_slice).unwrap_or_default()
+  }
 }
 
 #[derive(Debug)]
@@ -60,8 +108,8 @@ impl GenerateStage<'_> {
       roots.push(RootOrderAnalysis { root, expected_order, actual_order, at_risk });
     }
 
-    let order_wraps = self.close_order_wrap_set(all_at_risk, &roots);
-    let analysis = OrderAnalysis { roots, order_wraps };
+    let plan = self.build_order_wrap_plan(all_at_risk, &roots);
+    let analysis = OrderAnalysis { roots, plan };
     analysis.log_summary(self);
     Some(analysis)
   }
@@ -287,35 +335,38 @@ impl GenerateStage<'_> {
     sensitive_order
   }
 
-  fn close_order_wrap_set(
+  fn build_order_wrap_plan(
     &self,
     at_risk: FxHashSet<ModuleIdx>,
     roots: &[RootOrderAnalysis],
-  ) -> FxHashSet<ModuleIdx> {
+  ) -> OrderWrapPlan {
     let source_reachable = self.source_reachable_modules(roots);
-    let mut order_wraps = at_risk
-      .into_iter()
-      .filter(|module_idx| self.is_order_wrap_eligible(*module_idx))
-      .collect::<FxHashSet<_>>();
+    let mut plan = OrderWrapPlan::default();
+    for module_idx in
+      at_risk.into_iter().filter(|module_idx| self.is_order_wrap_eligible(*module_idx))
+    {
+      plan.insert(module_idx, OrderWrapReason::DirectViolation);
+    }
 
     loop {
       let mut changed = false;
-      changed |= self.close_expected_sensitive_suffixes(roots, &mut order_wraps);
+      changed |= self.close_expected_sensitive_suffixes(roots, &mut plan);
 
-      let current = order_wraps.iter().copied().collect::<FxHashSet<_>>();
+      let current = plan.modules().collect::<FxHashSet<_>>();
 
       for module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal) {
         if !source_reachable.contains(&module.idx)
           || !self.is_order_wrap_closure_eligible(module.idx)
-          || order_wraps.contains(&module.idx)
+          || plan.contains(&module.idx)
         {
           continue;
         }
-        if self.statically_imports_wrapped_member(module.idx, &current)
-          || self.top_level_reads_wrapped_export(module.idx, &current)
-        {
-          changed |= order_wraps.insert(module.idx);
-        }
+        changed |= record_order_wrap_closure_reasons(
+          &mut plan,
+          module.idx,
+          self.statically_imports_wrapped_member(module.idx, &current),
+          self.top_level_reads_wrapped_export(module.idx, &current),
+        );
       }
 
       if !changed {
@@ -323,20 +374,33 @@ impl GenerateStage<'_> {
       }
     }
 
-    order_wraps
+    // The fixed point only needs to revisit modules that are not yet selected. Once membership is
+    // stable, record any additional reasons that also apply to existing members without extending
+    // the convergence loop.
+    let final_members = plan.modules().collect::<FxHashSet<_>>();
+    for module_idx in plan.modules().collect_vec() {
+      record_order_wrap_closure_reasons(
+        &mut plan,
+        module_idx,
+        self.statically_imports_wrapped_member(module_idx, &final_members),
+        self.top_level_reads_wrapped_export(module_idx, &final_members),
+      );
+    }
+
+    plan
   }
 
   fn close_expected_sensitive_suffixes(
     &self,
     roots: &[RootOrderAnalysis],
-    order_wraps: &mut FxHashSet<ModuleIdx>,
+    plan: &mut OrderWrapPlan,
   ) -> bool {
     let mut changed = false;
 
     for root in roots {
       let expected_sensitive_order = self.sensitive_order(&root.expected_order);
       let Some(first_wrapped_idx) =
-        expected_sensitive_order.iter().position(|module_idx| order_wraps.contains(module_idx))
+        expected_sensitive_order.iter().position(|module_idx| plan.contains(module_idx))
       else {
         continue;
       };
@@ -346,7 +410,7 @@ impl GenerateStage<'_> {
       // boundary.
       for module_idx in expected_sensitive_order[first_wrapped_idx..].iter().copied() {
         if self.is_order_wrap_closure_eligible(module_idx) {
-          changed |= order_wraps.insert(module_idx);
+          changed |= plan.insert(module_idx, OrderWrapReason::SensitiveSuffix);
         }
       }
     }
@@ -570,6 +634,22 @@ fn premature_sensitive_modules(
   premature_modules
 }
 
+fn record_order_wrap_closure_reasons(
+  plan: &mut OrderWrapPlan,
+  module_idx: ModuleIdx,
+  statically_imports_wrapped_member: bool,
+  top_level_reads_wrapped_export: bool,
+) -> bool {
+  let mut changed = false;
+  if statically_imports_wrapped_member {
+    changed |= plan.insert(module_idx, OrderWrapReason::StaticImporter);
+  }
+  if top_level_reads_wrapped_export {
+    changed |= plan.insert(module_idx, OrderWrapReason::TopLevelReader);
+  }
+  changed
+}
+
 impl OrderAnalysis {
   fn log_summary(&self, stage: &GenerateStage<'_>) {
     let root_violation_counts = self
@@ -585,17 +665,18 @@ impl OrderAnalysis {
       })
       .collect_vec();
     let order_wrap_members = self
-      .order_wraps
-      .iter()
-      .copied()
+      .plan
+      .modules()
       .sorted_unstable_by_key(|idx| stage.link_output.module_table[*idx].exec_order())
-      .map(|idx| stage.link_output.module_table[idx].id().to_string())
+      .map(|idx| {
+        (stage.link_output.module_table[idx].id().to_string(), self.plan.reasons(idx).to_vec())
+      })
       .collect_vec();
 
     tracing::debug!(
       target: "rolldown::order_analysis",
       root_count = self.roots.len(),
-      order_wrap_count = self.order_wraps.len(),
+      order_wrap_count = self.plan.len(),
       root_violation_counts = ?root_violation_counts,
       order_wrap_members = ?order_wrap_members,
       "strict execution order analysis"
@@ -628,5 +709,35 @@ mod tests {
     let actual_positions = [(m(0), 0), (m(1), 1), (m(2), 2)].into_iter().collect();
 
     assert!(premature_sensitive_modules(&expected, &actual_positions).is_empty());
+  }
+
+  #[test]
+  fn order_wrap_plan_preserves_all_reasons_for_a_module() {
+    let mut plan = OrderWrapPlan::default();
+
+    assert!(plan.insert(m(0), OrderWrapReason::DirectViolation));
+    assert!(!plan.insert(m(0), OrderWrapReason::DirectViolation));
+    assert!(!plan.insert(m(0), OrderWrapReason::SensitiveSuffix));
+
+    assert_eq!(
+      plan.reasons(m(0)),
+      &[OrderWrapReason::DirectViolation, OrderWrapReason::SensitiveSuffix]
+    );
+  }
+
+  #[test]
+  fn closure_reasons_are_recorded_for_an_already_selected_module() {
+    let mut plan = OrderWrapPlan::default();
+    plan.insert(m(0), OrderWrapReason::DirectViolation);
+
+    assert!(!record_order_wrap_closure_reasons(&mut plan, m(0), true, true));
+    assert_eq!(
+      plan.reasons(m(0)),
+      &[
+        OrderWrapReason::DirectViolation,
+        OrderWrapReason::StaticImporter,
+        OrderWrapReason::TopLevelReader,
+      ]
+    );
   }
 }

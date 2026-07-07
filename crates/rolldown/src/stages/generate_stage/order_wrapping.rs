@@ -1,12 +1,3 @@
-use itertools::Itertools;
-use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  PostChunkOptimizationOperation, RuntimeHelper, StmtEvalFlags, StmtInfoIdx, StmtInfoMeta,
-  SymbolOrMemberExprRef, SymbolRef, UsedSymbolRefsBuilder, WrapKind,
-};
-use rolldown_utils::IndexBitSet;
-use rustc_hash::FxHashSet;
-
 use crate::{
   chunk_graph::ChunkGraph,
   stages::link_stage::{
@@ -17,28 +8,34 @@ use crate::{
     included_info_to_linking_metadata_vec, linking_metadata_vec_to_included_info,
   },
 };
+use itertools::Itertools;
+use rolldown_common::{
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
+  PostChunkOptimizationOperation, RuntimeHelper, StmtEvalFlags, StmtInfoIdx, StmtInfoMeta,
+  SymbolOrMemberExprRef, SymbolRef, UsedSymbolRefsBuilder, WrapKind,
+};
+use rolldown_utils::IndexBitSet;
 
 use super::{
   GenerateStage,
   chunk_ext::{ChunkCreationReason, ChunkDebugExt},
+  order_analysis::OrderWrapPlan,
 };
 
 impl GenerateStage<'_> {
   pub(super) fn apply_order_wraps(
     &mut self,
     chunk_graph: &mut ChunkGraph,
-    order_wraps: &FxHashSet<ModuleIdx>,
+    plan: &OrderWrapPlan,
     used_symbol_refs: &mut UsedSymbolRefsBuilder,
   ) {
-    if order_wraps.is_empty() {
+    if plan.is_empty() {
       return;
     }
 
     let mut runtime_helpers = RuntimeHelper::default();
-    for module_idx in order_wraps
-      .iter()
-      .copied()
-      .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
+    for module_idx in
+      plan.modules().sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
     {
       if !matches!(self.link_output.metas[module_idx].wrap_kind(), WrapKind::None) {
         continue;
@@ -61,11 +58,11 @@ impl GenerateStage<'_> {
       self.add_order_wrap_entry_reference(module_idx);
     }
 
-    runtime_helpers |= self.reregister_order_wrap_imports(order_wraps);
-    self.include_order_wrap_symbols(order_wraps, runtime_helpers, used_symbol_refs);
-    self.place_order_wrap_modules(chunk_graph, order_wraps);
-    self.create_order_wrap_entry_facades(chunk_graph, order_wraps);
-    self.restore_order_wrap_dynamic_entry_facades(chunk_graph, order_wraps);
+    runtime_helpers |= self.reregister_order_wrap_imports(plan);
+    self.include_order_wrap_symbols(plan, runtime_helpers, used_symbol_refs);
+    self.place_order_wrap_modules(chunk_graph, plan);
+    self.create_order_wrap_entry_facades(chunk_graph, plan);
+    self.restore_order_wrap_dynamic_entry_facades(chunk_graph, plan);
     self.ensure_runtime_module_for_order_wraps(chunk_graph);
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
     self.renumber_live_chunks(chunk_graph);
@@ -97,7 +94,7 @@ impl GenerateStage<'_> {
     self.link_output.metas[module_idx].stmt_info_included = included;
   }
 
-  fn reregister_order_wrap_imports(&mut self, order_wraps: &FxHashSet<ModuleIdx>) -> RuntimeHelper {
+  fn reregister_order_wrap_imports(&mut self, plan: &OrderWrapPlan) -> RuntimeHelper {
     let mut runtime_helpers = RuntimeHelper::default();
     let module_indices = self
       .link_output
@@ -119,7 +116,7 @@ impl GenerateStage<'_> {
               self.link_output.module_table[importer_idx]
                 .as_normal()
                 .and_then(|importer| importer.import_records[*rec_idx].resolved_module)
-                .is_some_and(|importee_idx| order_wraps.contains(&importee_idx))
+                .is_some_and(|importee_idx| plan.contains(&importee_idx))
             })
             .collect_vec();
           (!rec_ids.is_empty()).then_some((stmt_info_idx, rec_ids))
@@ -204,7 +201,7 @@ impl GenerateStage<'_> {
 
   fn include_order_wrap_symbols(
     &mut self,
-    order_wraps: &FxHashSet<ModuleIdx>,
+    plan: &OrderWrapPlan,
     runtime_helpers: RuntimeHelper,
     used_symbol_refs: &mut UsedSymbolRefsBuilder,
   ) {
@@ -238,8 +235,8 @@ impl GenerateStage<'_> {
         &body_demand_keys,
       );
 
-      for module_idx in order_wraps {
-        if let Some(wrapper_ref) = self.link_output.metas[*module_idx].wrapper_ref {
+      for module_idx in plan.modules() {
+        if let Some(wrapper_ref) = self.link_output.metas[module_idx].wrapper_ref {
           include_symbol(&mut context, wrapper_ref, SymbolIncludeReason::Normal);
         }
       }
@@ -254,14 +251,9 @@ impl GenerateStage<'_> {
     );
   }
 
-  fn place_order_wrap_modules(
-    &self,
-    chunk_graph: &mut ChunkGraph,
-    order_wraps: &FxHashSet<ModuleIdx>,
-  ) {
-    let sorted_order_wraps = order_wraps
-      .iter()
-      .copied()
+  fn place_order_wrap_modules(&self, chunk_graph: &mut ChunkGraph, plan: &OrderWrapPlan) {
+    let sorted_order_wraps = plan
+      .modules()
       .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
       .collect_vec();
 
@@ -301,18 +293,13 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn create_order_wrap_entry_facades(
-    &self,
-    chunk_graph: &mut ChunkGraph,
-    order_wraps: &FxHashSet<ModuleIdx>,
-  ) {
+  fn create_order_wrap_entry_facades(&self, chunk_graph: &mut ChunkGraph, plan: &OrderWrapPlan) {
     if self.options.code_splitting.is_disabled() {
       return;
     }
 
-    let entries_to_split = order_wraps
-      .iter()
-      .copied()
+    let entries_to_split = plan
+      .modules()
       .filter(|module_idx| self.link_output.entries.contains_key(module_idx))
       .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
       .collect_vec();
@@ -388,15 +375,14 @@ impl GenerateStage<'_> {
   fn restore_order_wrap_dynamic_entry_facades(
     &self,
     chunk_graph: &mut ChunkGraph,
-    order_wraps: &FxHashSet<ModuleIdx>,
+    plan: &OrderWrapPlan,
   ) {
     if self.options.code_splitting.is_disabled() {
       return;
     }
 
-    let dynamic_entries_to_restore = order_wraps
-      .iter()
-      .copied()
+    let dynamic_entries_to_restore = plan
+      .modules()
       .filter(|module_idx| {
         self
           .link_output

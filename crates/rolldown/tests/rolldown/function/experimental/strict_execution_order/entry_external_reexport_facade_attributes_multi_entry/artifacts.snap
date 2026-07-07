@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import "./shared.js";
+export * from "external" with { type: "json" };
+
+```
+
+## b.js
+
+```js
+import "./shared.js";
+export * from "external" with { type: "css" };
+
+```
+
+## shared.js
+
+```js
+//#region setup.js
+globalThis.setupValue = "ready";
+//#endregion
+//#region reader.js
+console.log(globalThis.setupValue);
+//#endregion
+
+```

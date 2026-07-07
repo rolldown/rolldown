@@ -93,7 +93,6 @@ use crate::{
     deconflict_chunk_symbols::deconflict_chunk_symbols,
     determine_export_mode::determine_export_mode, generate_pre_rendered_chunk,
     render_chunk_exports::get_chunk_export_names,
-    validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
   },
 };
 
@@ -104,6 +103,7 @@ mod compute_cross_chunk_links;
 mod compute_wrapped_esm_init_metadata;
 mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
+mod finalize_chunk_plan;
 mod finalize_modules;
 mod manual_code_splitting;
 mod minify_chunks;
@@ -144,24 +144,7 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
     let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs).await?;
 
-    // Count only live chunks. Chunks merged away during chunk optimization (e.g.
-    // the standalone runtime chunk folded back into its host) stay in
-    // `chunk_table` as tombstones but are skipped at render time, so they must
-    // not count toward the multi-chunk check that gates single-file output.
-    let live_chunk_count = chunk_graph
-      .chunk_table
-      .len()
-      .saturating_sub(chunk_graph.post_chunk_optimization_operations.len());
-    if live_chunk_count > 1 {
-      validate_options_for_multi_chunk_output(self.options)?;
-    }
-
-    self.finalized_module_namespace_ref_usage();
-
-    let order_analysis = self.analyze_execution_order(&chunk_graph, &used_symbol_refs);
-    if let Some(analysis) = &order_analysis {
-      self.apply_order_wraps(&mut chunk_graph, &analysis.order_wraps, &mut used_symbol_refs);
-    }
+    self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs)?;
 
     // `apply_order_wraps` may include newly-created wrapper/runtime symbols. Seal only after it
     // has had the last chance to extend the set.

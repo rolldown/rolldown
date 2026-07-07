@@ -198,3 +198,29 @@ async fn restored_dynamic_facade_keeps_dependency_chunk_inert() {
     "the dynamic entry facade should trigger its wrapper only when imported:\n{m29_facade}",
   );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn late_order_wrapping_revalidates_output_file() {
+  let fixture_dir = format!("{FIXTURE_ROOT}/../experimental/strict_execution_order/issue_4782");
+  let mut bundler = Bundler::new(BundlerOptions {
+    input: Some(vec![InputItem {
+      name: Some("main".to_string()),
+      import: "./main.js".to_string(),
+    }]),
+    cwd: Some(fixture_dir.into()),
+    file: Some("bundle.js".to_string()),
+    format: Some(OutputFormat::Esm),
+    strict_execution_order: Some(true),
+    ..Default::default()
+  })
+  .expect("failed to create bundler");
+
+  let Err(error) = bundler.generate().await else {
+    panic!("output.file must reject the final multi-chunk graph after order wrapping");
+  };
+  let message = error.to_string();
+  assert!(
+    message.contains("When building multiple chunks") && message.contains("output.file"),
+    "unexpected diagnostic: {message}"
+  );
+}

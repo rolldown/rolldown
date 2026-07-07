@@ -39,7 +39,6 @@ pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  #[expect(clippy::too_many_lines)]
   pub async fn generate_chunks(
     &mut self,
     used_symbol_refs: &mut UsedSymbolRefsBuilder,
@@ -266,8 +265,6 @@ impl GenerateStage<'_> {
       .collect::<Vec<_>>();
 
     chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
-
-    self.find_entry_level_external_module(&mut chunk_graph);
 
     Ok(chunk_graph)
   }
@@ -609,7 +606,11 @@ impl GenerateStage<'_> {
   }
 
   /// Find all entry level external modules, and re propagate `has_dynamic_exports` for affected modules.
-  fn find_entry_level_external_module(&mut self, chunk_graph: &mut ChunkGraph) {
+  pub(super) fn find_entry_level_external_module(&mut self, chunk_graph: &mut ChunkGraph) {
+    for chunk in chunk_graph.chunk_table.iter_mut() {
+      chunk.entry_level_external_module_idx.clear();
+    }
+
     let module_to_entry_level_external_rec_list_maps = chunk_graph
       .chunk_table
       .par_iter_enumerated()

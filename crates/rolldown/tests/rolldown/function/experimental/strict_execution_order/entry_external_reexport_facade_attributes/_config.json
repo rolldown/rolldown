@@ -1,0 +1,14 @@
+{
+  "config": {
+    "external": ["external"],
+    "strictExecutionOrder": true,
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "reader",
+          "test": "reader\\.js"
+        }
+      ]
+    }
+  }
+}

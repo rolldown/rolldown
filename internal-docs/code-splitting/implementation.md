@@ -54,15 +54,18 @@ generate_chunks()
          └─ ChunkOptimizer           Merge common chunks into entry chunks, remove empty facades
               │
               ▼
-         ChunkGraph                   Final module-to-chunk assignment
+         ChunkGraph                   Provisional module-to-chunk assignment
 
 Post-ChunkGraph processing (in generate()):
 
 ChunkGraph
     │
-    ├─ analyze_execution_order()                     Compute modules that need order wrappers
-    │
-    ├─ apply_order_wraps()                           Create only the needed order wrappers
+    ├─ finalize_chunk_plan()
+    │    ├─ finalize provisional namespace/external facts
+    │    ├─ analyze_execution_order()                Build an OrderWrapPlan with per-module reasons
+    │    ├─ apply_order_wraps()                      Lower the plan into wrappers and topology edits
+    │    ├─ recompute metadata if topology changed
+    │    └─ validate final output shape
     │
     ├─ compute_cross_chunk_links()                    Determine cross-chunk imports/exports
     │
@@ -74,13 +77,18 @@ ChunkGraph
 **Key files:**
 
 - `crates/rolldown/src/stages/generate_stage/code_splitting.rs` — pipeline orchestration, `generate_chunks()`, `ensure_lazy_module_initialization_order()`
-- `crates/rolldown/src/stages/generate_stage/order_analysis.rs` — `strictExecutionOrder` analysis, including the module set that needs order wrappers
+- `crates/rolldown/src/stages/generate_stage/order_analysis.rs` — `strictExecutionOrder` analysis and the reasoned `OrderWrapPlan`
 - `crates/rolldown/src/stages/generate_stage/order_wrapping.rs` — applies order wrappers after chunk assignment
+- `crates/rolldown/src/stages/generate_stage/finalize_chunk_plan.rs` — final topology boundary before output metadata and validation
 - `crates/rolldown/src/stages/generate_stage/dynamic_already_loaded.rs` — Rollup-style dynamic import already-loaded atom reduction
 - `crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs` — merge/optimization
 - `crates/rolldown/src/chunk_graph.rs` — output data structure
 - `crates/rolldown_utils/src/bitset.rs` — compact reachability representation
 - `crates/rolldown/src/types/linking_metadata.rs` — `original_wrap_kind()` used for init order analysis
+
+`finalize_chunk_plan` may run two metadata passes. Namespace usage and entry-level external re-exports are first finalized on the provisional graph because the order analysis reads those facts through the cross-chunk linker. When a non-empty plan changes topology, they are recomputed so newly-created or restored facades carry the metadata that rendering consumes. Flag-off and empty-plan builds keep the single-pass path.
+
+Each planned module retains the reasons that selected it: a direct expected/actual-order violation, the V1 sensitive-suffix rule, a static import of another planned module, or a top-level read of a planned module's export. The lowering consumes only plan membership; reasons remain analysis output for tracing, review, and future lowering strategies.
 
 ## Bit Positions and Entry Points
 
@@ -283,7 +291,7 @@ assert.equal(bar, 'foo'); // require_leaflet() removed from here by remove_map
 
 The function builds `insert_map` and `remove_map` on each chunk to move init calls from their default position to the correct one. `remove_map` suppresses the init call at the original location; `insert_map` prepends it before the module that needs it.
 
-When `strict_execution_order` **is** enabled, all modules are already wrapped and execute in the correct order, so this pass is skipped entirely.
+When `strict_execution_order` **is** enabled, the order plan wraps the eager carriers that need scheduling and closes over their dependent readers/importers. The plan owns lazy-init ordering for that output, so this pass is skipped entirely.
 
 ### Algorithm
 

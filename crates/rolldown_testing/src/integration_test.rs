@@ -11,8 +11,8 @@ use anyhow::Context;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::span::SourceType;
 use rolldown::{
-  BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat, Platform, SourceMapType,
-  plugin::__inner::SharedPluginable,
+  BundleOutput, Bundler, BundlerBuilder, BundlerOptions, IsExternal, OutputFormat, Platform,
+  SourceMapType, plugin::__inner::SharedPluginable,
 };
 use rolldown::{ChecksOptions, NormalizedBundlerOptions};
 use rolldown_common::Output;
@@ -29,6 +29,11 @@ use crate::hmr_files::{
 use crate::types::{
   BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput, HmrStepOutput,
 };
+
+/// RFC 3986 unreserved set — matches the former `urlencoding::encode`: percent-encode
+/// everything except `A-Za-z0-9` and `-._~`.
+const DATA_URL_ENCODE_SET: &percent_encoding::AsciiSet =
+  &percent_encoding::NON_ALPHANUMERIC.remove(b'-').remove(b'.').remove(b'_').remove(b'~');
 
 #[derive(Default)]
 pub struct IntegrationTest {
@@ -118,9 +123,9 @@ impl IntegrationTest {
           .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
           .parse();
 
-        if ret.panicked || !ret.errors.is_empty() {
+        if ret.panicked || !ret.diagnostics.is_empty() {
           let errors_str = ret
-            .errors
+            .diagnostics
             .iter()
             .map(|e| e.clone().with_source_code(chunk.code.clone()).to_string())
             .collect::<Vec<_>>()
@@ -263,6 +268,34 @@ impl IntegrationTest {
         // Optionally wait for async builds to complete
         if self.test_meta.dev.ensure_latest_build_output_for_each_step {
           dev_engine.ensure_latest_bundle_output().await.unwrap();
+        }
+
+        // Compare the incremental scan state with a fresh full build of the
+        // current file state. Running it per step catches divergences that a
+        // later rescan of the affected module would repair. Skipped when the
+        // current state does not build (e.g. a step introducing a syntax
+        // error), and when this step's incremental build failed: a failed
+        // scan is reverted, so the state intentionally stays at the last
+        // good build and cannot mirror the current files yet.
+        if self.test_meta.dev.check_state_parity {
+          let step_failed = {
+            let hmr_updates = hmr_updates_by_steps.lock().unwrap();
+            let build_results = build_results_by_steps.lock().unwrap();
+            hmr_updates.last().is_some_and(|step| step.iter().any(Result::is_err))
+              || build_results.last().is_some_and(|step| step.iter().any(Result::is_err))
+          };
+          if !step_failed {
+            let mut fresh_bundler = BundlerBuilder::default()
+              .with_options(named_options.options.clone())
+              .with_plugins(plugins.clone())
+              .build()
+              .expect("failed to build the state parity bundler");
+            if fresh_bundler.generate().await.is_ok() {
+              let incremental_bundler = dev_engine.bundler();
+              let incremental_bundler = incremental_bundler.lock().await;
+              incremental_bundler.assert_scan_state_parity_with(&fresh_bundler);
+            }
+          }
         }
       }
 
@@ -533,7 +566,8 @@ impl IntegrationTest {
     }
 
     if options.external.is_none() {
-      options.external = Some(IsExternal::from(vec!["node:assert".to_string()]));
+      options.external =
+        Some(IsExternal::from(vec!["node:assert".to_string(), "node:assert/strict".to_string()]));
     }
 
     if options.input.is_none() {
@@ -640,8 +674,10 @@ impl IntegrationTest {
       Self::generate_globals_injection_for_execute_output(config_name, patch_chunks, options);
 
     if !globals_injection.is_empty() {
-      let inject_script_url =
-        format!("data:text/javascript,{}", urlencoding::encode(&globals_injection));
+      let inject_script_url = format!(
+        "data:text/javascript,{}",
+        percent_encoding::utf8_percent_encode(&globals_injection, DATA_URL_ENCODE_SET)
+      );
       node_command.arg("--import");
       node_command.arg(inject_script_url);
     }
@@ -676,8 +712,10 @@ impl IntegrationTest {
       let post_globals_injection =
         Self::generate_post_globals_injection_for_execute_output(patch_chunks, &dist_folder);
       if !post_globals_injection.is_empty() {
-        let inject_script_url =
-          format!("data:text/javascript,{}", urlencoding::encode(&post_globals_injection));
+        let inject_script_url = format!(
+          "data:text/javascript,{}",
+          percent_encoding::utf8_percent_encode(&post_globals_injection, DATA_URL_ENCODE_SET)
+        );
         compiled_entries.push(inject_script_url);
       }
 

@@ -5,6 +5,7 @@ use rolldown_common::{
 };
 use rolldown_utils::IndexBitSet;
 use rustc_hash::FxHashSet;
+use smallvec::smallvec;
 
 use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
 
@@ -225,13 +226,13 @@ pub fn create_wrapper(
         .create_facade_root_symbol_ref(module.idx, &format!("require_{}", &module.repr_name));
 
       let stmt_info = StmtInfo {
-        declared_symbols: vec![TaggedSymbolRef::Normal(wrapper_ref)],
+        declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],
         referenced_symbols: vec![if options.profiler_names {
           runtime.resolve_symbol("__commonJS").into()
         } else {
           runtime.resolve_symbol("__commonJSMin").into()
         }],
-        side_effect: false.into(),
+        eval_flags: false.into(),
         import_records: Vec::new(),
         #[cfg(debug_assertions)]
         debug_label: None,
@@ -256,13 +257,13 @@ pub fn create_wrapper(
         symbols.create_facade_root_symbol_ref(module.idx, &format!("init_{}", &module.repr_name));
 
       let stmt_info = StmtInfo {
-        declared_symbols: vec![TaggedSymbolRef::Normal(wrapper_ref)],
+        declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],
         referenced_symbols: vec![if options.profiler_names {
           runtime.resolve_symbol("__esm").into()
         } else {
           runtime.resolve_symbol("__esmMin").into()
         }],
-        side_effect: true.into(),
+        eval_flags: true.into(),
         import_records: Vec::new(),
         #[cfg(debug_assertions)]
         debug_label: None,

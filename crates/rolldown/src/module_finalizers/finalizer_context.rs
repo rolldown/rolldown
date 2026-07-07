@@ -1,7 +1,7 @@
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
-  ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts, RuntimeModuleBrief,
-  SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb, UsedSymbolRefs,
+  ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts,
+  RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb,
 };
 
 pub type FinalizerMutableFields = (
@@ -11,7 +11,7 @@ pub type FinalizerMutableFields = (
 
 use oxc::ast_visit::VisitMut as _;
 use rolldown_ecmascript::EcmaAst;
-use rolldown_ecmascript_utils::AstSnippet;
+use rolldown_ecmascript_utils::AstFactory;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -41,7 +41,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub file_emitter: &'me SharedFileEmitter,
   pub constant_value_map: &'me FxHashMap<SymbolRef, ConstExportMeta>,
   pub safely_merge_cjs_ns_map: &'me FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
-  pub used_symbol_refs: &'me UsedSymbolRefs,
+  pub retained_export_symbols: &'me RetainedExportSymbols,
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   pub resolved_paths: Option<&'me PathsOutputOption>,
   /// True if any module in the bundle has enum member values to inline.
@@ -59,8 +59,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
     ast.program.with_mut(move |fields| {
       let (oxc_program, alloc) = (fields.program, fields.allocator);
 
-      let module_namespace_included =
-        self.used_symbol_refs.contains(&self.module.namespace_object_ref);
+      let module_namespace_included = self.linking_info.namespace_included;
 
       let need_inline_json_prop = matches!(self.module.module_type, ModuleType::Json)
         && !self.module.exports_kind.is_commonjs()
@@ -78,7 +77,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         alloc,
         ctx: self,
         scope: ast_scope,
-        snippet: AstSnippet::new(alloc),
+        ast_factory: AstFactory::new(alloc),
         generated_init_esm_importee_ids: FxHashSet::default(),
         scope_stack: vec![],
         top_level_var_bindings: FxIndexSet::default(),

@@ -9,12 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region expr-arrow.js
 //! These should all have "no side effects"
 x([
-	/* @__NO_SIDE_EFFECTS__ */ (y) => y,
-	/* @__NO_SIDE_EFFECTS__ */ () => {},
-	/* @__NO_SIDE_EFFECTS__ */ (y) => y,
-	/* @__NO_SIDE_EFFECTS__ */ async (y) => y,
-	/* @__NO_SIDE_EFFECTS__ */ async () => {},
-	/* @__NO_SIDE_EFFECTS__ */ async (y) => y
+	/* #__NO_SIDE_EFFECTS__ */ (y) => y,
+	/* #__NO_SIDE_EFFECTS__ */ () => {},
+	/* #__NO_SIDE_EFFECTS__ */ (y) => y,
+	/* #__NO_SIDE_EFFECTS__ */ async (y) => y,
+	/* #__NO_SIDE_EFFECTS__ */ async () => {},
+	/* #__NO_SIDE_EFFECTS__ */ async (y) => y
 ]);
 //#endregion
 
@@ -26,14 +26,14 @@ x([
 //#region expr-fn.js
 //! These should all have "no side effects"
 x([
-	/* @__NO_SIDE_EFFECTS__ */ function() {},
-	/* @__NO_SIDE_EFFECTS__ */ function y() {},
-	/* @__NO_SIDE_EFFECTS__ */ function* () {},
-	/* @__NO_SIDE_EFFECTS__ */ function* y() {},
-	/* @__NO_SIDE_EFFECTS__ */ async function() {},
-	/* @__NO_SIDE_EFFECTS__ */ async function y() {},
-	/* @__NO_SIDE_EFFECTS__ */ async function* () {},
-	/* @__NO_SIDE_EFFECTS__ */ async function* y() {}
+	/* #__NO_SIDE_EFFECTS__ */ function() {},
+	/* #__NO_SIDE_EFFECTS__ */ function y() {},
+	/* #__NO_SIDE_EFFECTS__ */ function* () {},
+	/* #__NO_SIDE_EFFECTS__ */ function* y() {},
+	/* #__NO_SIDE_EFFECTS__ */ async function() {},
+	/* #__NO_SIDE_EFFECTS__ */ async function y() {},
+	/* #__NO_SIDE_EFFECTS__ */ async function* () {},
+	/* #__NO_SIDE_EFFECTS__ */ async function* y() {}
 ]);
 //#endregion
 
@@ -131,7 +131,7 @@ export { f as default };
 
 ```js
 //#region stmt-export-default-before-async-fn-anon.js
-/*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
+/*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 async function stmt_export_default_before_async_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_before_async_fn_anon_default as default };
@@ -142,7 +142,7 @@ export { stmt_export_default_before_async_fn_anon_default as default };
 
 ```js
 //#region stmt-export-default-before-async-fn-name.js
-/*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
+/*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 async function f() {}
 //#endregion
 export { f as default };
@@ -153,7 +153,7 @@ export { f as default };
 
 ```js
 //#region stmt-export-default-before-async-gen-fn-anon.js
-/*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
+/*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 async function* stmt_export_default_before_async_gen_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_before_async_gen_fn_anon_default as default };
@@ -164,7 +164,7 @@ export { stmt_export_default_before_async_gen_fn_anon_default as default };
 
 ```js
 //#region stmt-export-default-before-async-gen-fn-name.js
-/*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
+/*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 async function* f() {}
 //#endregion
 export { f as default };
@@ -175,7 +175,7 @@ export { f as default };
 
 ```js
 //#region stmt-export-default-before-fn-anon.js
-/*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
+/*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 function stmt_export_default_before_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_before_fn_anon_default as default };
@@ -186,7 +186,7 @@ export { stmt_export_default_before_fn_anon_default as default };
 
 ```js
 //#region stmt-export-default-before-fn-name.js
-/*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
+/*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 function f() {}
 //#endregion
 export { f as default };
@@ -197,7 +197,7 @@ export { f as default };
 
 ```js
 //#region stmt-export-default-before-gen-fn-anon.js
-/*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
+/*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 function* stmt_export_default_before_gen_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_before_gen_fn_anon_default as default };
@@ -208,7 +208,7 @@ export { stmt_export_default_before_gen_fn_anon_default as default };
 
 ```js
 //#region stmt-export-default-before-gen-fn-name.js
-/*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
+/*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 function* f() {}
 //#endregion
 export { f as default };

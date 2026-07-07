@@ -11,6 +11,7 @@ export default defineTest({
         transform(code) {
           return {
             code: code + '\nconsole.log("added")',
+            map: null,
           };
         },
       },
@@ -24,6 +25,10 @@ export default defineTest({
     const map = getOutputAsset(output)[0].source as string;
     const smc = await new SourceMapConsumer(JSON.parse(map));
 
+    // When a transform hook returns `map: null` together with changed code,
+    // the module's original (pre-transform) code is preserved as the source
+    // content — the injected code must not leak into `sourcesContent` (#3092).
+    // The original code stays mapped, while the injected code is left unmapped.
     const generatedLoc = getLocation(code, code.indexOf(`"main"`));
     const originalLoc = smc.originalPositionFor(generatedLoc);
     expect(originalLoc.line).toBe(1);

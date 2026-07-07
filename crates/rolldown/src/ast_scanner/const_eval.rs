@@ -1,5 +1,6 @@
 use oxc::{
-  ast::ast::Expression,
+  allocator::{Allocator, GetAllocator},
+  ast::{ast::Expression, builder::GetAstBuilder},
   minifier::PropertyReadSideEffects,
   semantic::{IsGlobalReference, ReferenceId, Scoping, SymbolId},
 };
@@ -20,9 +21,19 @@ pub struct ConstEvalCtx<'me, 'ast: 'me> {
   >,
 }
 
-impl<'ast> ConstantEvaluationCtx<'ast> for ConstEvalCtx<'_, 'ast> {
-  fn ast(&self) -> oxc::ast::AstBuilder<'ast> {
-    self.ast
+impl<'ast> ConstantEvaluationCtx<'ast> for ConstEvalCtx<'_, 'ast> {}
+
+impl<'ast> GetAllocator<'ast> for ConstEvalCtx<'_, 'ast> {
+  fn allocator(&self) -> &'ast Allocator {
+    self.ast.allocator()
+  }
+}
+
+impl<'ast> GetAstBuilder<'ast> for ConstEvalCtx<'_, 'ast> {
+  type Builder = oxc::ast::AstBuilder<'ast>;
+
+  fn builder(&self) -> &oxc::ast::AstBuilder<'ast> {
+    &self.ast
   }
 }
 

@@ -404,6 +404,7 @@
           ]
         },
         "codeSplitting": {
+          "description": "Mirrors the public `codeSplitting: boolean | CodeSplittingOptions`. The object\nform (`Advanced`) carries the manual chunk grouping config; it is decomposed into\nthe gate + `NormalizedBundlerOptions::manual_code_splitting` during normalization.",
           "anyOf": [
             {
               "$ref": "#/$defs/CodeSplittingMode"
@@ -417,16 +418,6 @@
           "type": [
             "boolean",
             "null"
-          ]
-        },
-        "manualCodeSplitting": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ManualCodeSplittingOptions"
-            },
-            {
-              "type": "null"
-            }
           ]
         },
         "checks": {
@@ -1212,10 +1203,13 @@
       ]
     },
     "CodeSplittingMode": {
-      "description": "Controls how code splitting is performed.\n\n- `Bool(true)`: Default behavior, automatic code splitting with lazy-loaded dynamic imports.\n- `Bool(false)`: Inline all dynamic imports into a single bundle (no code splitting).",
+      "description": "Controls how code splitting is performed. Mirrors the public\n`codeSplitting: boolean | CodeSplittingOptions` option.\n\n- `Bool(true)`: Default behavior, automatic code splitting with lazy-loaded dynamic imports.\n- `Bool(false)`: Inline all dynamic imports into a single bundle (no code splitting).\n- `Advanced(..)`: Automatic code splitting enabled, with user-directed chunk grouping\n  (the object form). During normalization this is decomposed into the gate\n  (`code_splitting`) plus the grouping config (`manual_code_splitting`).",
       "anyOf": [
         {
           "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/ManualCodeSplittingOptions"
         }
       ]
     },
@@ -1347,7 +1341,7 @@
           "format": "double"
         },
         "tags": {
-          "description": "Filter modules by tags. Only modules with all specified tags are captured.\nSee meta/design/module-tags.md",
+          "description": "Filter modules by tags. Only modules with all specified tags are captured.\nSee internal-docs/module-tags/implementation.md",
           "type": [
             "array",
             "null"
@@ -1355,6 +1349,12 @@
           "items": {
             "$ref": "#/$defs/BuiltinModuleTag"
           }
+        },
+        "includeDependenciesRecursively": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false,
@@ -1499,6 +1499,12 @@
           ]
         },
         "largeBarrelModules": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "sourcemapBroken": {
           "type": [
             "boolean",
             "null"
@@ -1833,10 +1839,14 @@
             "null"
           ]
         },
-        "inlineDynamicImports": {
-          "type": [
-            "boolean",
-            "null"
+        "codeSplitting": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CodeSplittingMode"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "dynamicImportInCjs": {
@@ -2028,6 +2038,11 @@
           "description": "If `true`, the test will call `ensure_latest_build_output()` after each HMR step to wait for async builds.\nThis allows capturing all build outputs triggered by each step.\nDefault is `false` for backwards compatibility and performance.",
           "type": "boolean",
           "default": false
+        },
+        "checkStateParity": {
+          "description": "After each HMR step, run a fresh full build of the current file state\nand assert the incremental scan state matches it. Skipped automatically\nfor steps whose state does not build and for steps whose incremental\nbuild failed (a failed scan is reverted, so the state intentionally\nstays at the last good build). Default is `true`.",
+          "type": "boolean",
+          "default": true
         }
       },
       "additionalProperties": false

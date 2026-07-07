@@ -1,8 +1,5 @@
 use crate::{ChunkIdx, ChunkTable, ModuleIdx, ModuleTable};
-use std::{
-  collections::{HashMap, HashSet},
-  hash::BuildHasher,
-};
+use std::hash::BuildHasher;
 
 pub trait IdxDebugExt {
   fn debug(&self, module_table: &ModuleTable, chunk_table: &ChunkTable) -> String;
@@ -36,7 +33,11 @@ impl<T: IdxDebugExt> IdxDebugExt for Vec<T> {
   }
 }
 
-impl<T: IdxDebugExt, S: BuildHasher> IdxDebugExt for HashSet<T, S> {
+#[expect(
+  clippy::disallowed_types,
+  reason = "blanket impl generic over the hasher `S`; `FxHashSet` is an alias and can't express this"
+)]
+impl<T: IdxDebugExt, S: BuildHasher> IdxDebugExt for std::collections::HashSet<T, S> {
   fn debug(&self, module_table: &ModuleTable, chunk_table: &ChunkTable) -> String {
     let items: Vec<String> =
       self.iter().map(|item| item.debug(module_table, chunk_table)).collect();
@@ -44,7 +45,13 @@ impl<T: IdxDebugExt, S: BuildHasher> IdxDebugExt for HashSet<T, S> {
   }
 }
 
-impl<K: IdxDebugExt, V: IdxDebugExt, S: BuildHasher> IdxDebugExt for HashMap<K, V, S> {
+#[expect(
+  clippy::disallowed_types,
+  reason = "blanket impl generic over the hasher `S`; `FxHashMap` is an alias and can't express this"
+)]
+impl<K: IdxDebugExt, V: IdxDebugExt, S: BuildHasher> IdxDebugExt
+  for std::collections::HashMap<K, V, S>
+{
   fn debug(&self, module_table: &ModuleTable, chunk_table: &ChunkTable) -> String {
     let items: Vec<String> = self
       .iter()

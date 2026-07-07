@@ -80,10 +80,15 @@ impl Plugin for ViteDynamicImportVarsPlugin {
         ModuleType::Tsx => oxc::span::SourceType::tsx(),
         _ => unreachable!(),
       };
-      let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type).parse();
+      let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type)
+        .with_options(oxc::parser::ParseOptions {
+          preserve_parens: false,
+          ..oxc::parser::ParseOptions::default()
+        })
+        .parse();
       if parser_ret.panicked
         && let Some(err) =
-          parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
+          parser_ret.diagnostics.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
       {
         return Err(anyhow::anyhow!(format!(
           "Failed to parse code in '{}': {:?}",

@@ -38,6 +38,20 @@ pub struct JsPlugin {
   pub(crate) filter_expr_cache: FilterExprCache,
 }
 
+/// Records whether a per-module hook (resolveId / load / transform) produced a
+/// value or returned nothing, onto the hook's tracing span's `result_kind`
+/// field. In a `chrome-json` trace the value lands on the span's END event, so
+/// counting `result_kind == "null"` per plugin gives an accurate early-return
+/// tally (the primary "this hook should have a `filter`" signal) without any
+/// JS-side instrumentation. `Err` results are left unrecorded — a thrown hook
+/// is not an early return. The span must declare `result_kind = field::Empty`.
+#[inline]
+fn record_hook_result<T>(span: &tracing::Span, result: &anyhow::Result<Option<T>>) {
+  if let Ok(value) = result {
+    span.record("result_kind", if value.is_some() { "value" } else { "null" });
+  }
+}
+
 impl Deref for JsPlugin {
   type Target = BindingPluginOptions;
 
@@ -114,26 +128,31 @@ impl Plugin for JsPlugin {
         .copied(),
     };
 
-    cb.await_call(
-      (
-        ctx.clone().into(),
-        args.specifier.to_string(),
-        args.importer.map(str::to_string),
-        extra_args,
+    let span =
+      debug_span!("resolve_id_hook", plugin_name = self.name, result_kind = tracing::field::Empty);
+    let result = cb
+      .await_call(
+        (
+          ctx.clone().into(),
+          args.specifier.to_string(),
+          args.importer.map(str::to_string),
+          extra_args,
+        )
+          .into(),
       )
-        .into(),
-    )
-    .instrument(debug_span!("resolve_id_hook", plugin_name = self.name))
-    .await?
-    .map(TryInto::try_into)
-    .transpose()
-    .with_context(|| {
-      format!(
-        "resolveId hook threw an error for specifier={} importer={}",
-        args.specifier,
-        args.importer.unwrap_or("undefined")
-      )
-    })
+      .instrument(span.clone())
+      .await?
+      .map(TryInto::try_into)
+      .transpose()
+      .with_context(|| {
+        format!(
+          "resolveId hook threw an error for specifier={} importer={}",
+          args.specifier,
+          args.importer.unwrap_or("undefined")
+        )
+      });
+    record_hook_result(&span, &result);
+    result
   }
 
   fn resolve_id_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
@@ -145,25 +164,29 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
-    match &self.resolve_dynamic_import {
-      Some(cb) => cb
-        .await_call(
-          (ctx.clone().into(), args.specifier.to_string(), args.importer.map(str::to_string))
-            .into(),
+    let Some(cb) = &self.resolve_dynamic_import else { return Ok(None) };
+    let span = debug_span!(
+      "resolve_dynamic_import_hook",
+      plugin_name = self.name,
+      result_kind = tracing::field::Empty
+    );
+    let result = cb
+      .await_call(
+        (ctx.clone().into(), args.specifier.to_string(), args.importer.map(str::to_string)).into(),
+      )
+      .instrument(span.clone())
+      .await?
+      .map(TryInto::try_into)
+      .transpose()
+      .with_context(|| {
+        format!(
+          "resolveDynamicImport hook threw an error for specifier={} importer={}",
+          args.specifier,
+          args.importer.unwrap_or("undefined")
         )
-        .instrument(debug_span!("resolve_dynamic_import_hook", plugin_name = self.name))
-        .await?
-        .map(TryInto::try_into)
-        .transpose()
-        .with_context(|| {
-          format!(
-            "resolveDynamicImport hook threw an error for specifier={} importer={}",
-            args.specifier,
-            args.importer.unwrap_or("undefined")
-          )
-        }),
-      _ => Ok(None),
-    }
+      });
+    record_hook_result(&span, &result);
+    result
   }
 
   fn resolve_dynamic_import_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
@@ -191,12 +214,17 @@ impl Plugin for JsPlugin {
     }
 
     let binding_ctx = BindingLoadPluginContext::new(Arc::clone(&ctx));
-    cb.await_call((binding_ctx, args.id.to_string()).into())
-      .instrument(debug_span!("load_hook", plugin_name = self.name))
+    let span =
+      debug_span!("load_hook", plugin_name = self.name, result_kind = tracing::field::Empty);
+    let result = cb
+      .await_call((binding_ctx, args.id.to_string()).into())
+      .instrument(span.clone())
       .await?
       .map(TryInto::try_into)
       .transpose()
-      .with_context(|| format!("load hook threw an error for id={}", args.id))
+      .with_context(|| format!("load hook threw an error for id={}", args.id));
+    record_hook_result(&span, &result);
+    result
   }
 
   fn load_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
@@ -225,20 +253,25 @@ impl Plugin for JsPlugin {
 
     let extra_args = BindingTransformHookExtraArgs { module_type: args.module_type.to_string() };
 
-    cb.await_call(
-      (
-        BindingTransformPluginContext::new(Arc::clone(&ctx)),
-        BindingSharedString::from(args.code.clone()),
-        args.id.to_string(),
-        extra_args,
+    let span =
+      debug_span!("transform_hook", plugin_name = self.name, result_kind = tracing::field::Empty);
+    let result = cb
+      .await_call(
+        (
+          BindingTransformPluginContext::new(Arc::clone(&ctx)),
+          BindingSharedString::from(args.code.clone()),
+          args.id.to_string(),
+          extra_args,
+        )
+          .into(),
       )
-        .into(),
-    )
-    .instrument(debug_span!("transform_hook", plugin_name = self.name))
-    .await?
-    .map(TryInto::try_into)
-    .transpose()
-    .with_context(|| format!("transform hook threw an error for id={}", args.id))
+      .instrument(span.clone())
+      .await?
+      .map(TryInto::try_into)
+      .transpose()
+      .with_context(|| format!("transform hook threw an error for id={}", args.id));
+    record_hook_result(&span, &result);
+    result
   }
 
   fn transform_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
@@ -434,21 +467,31 @@ impl Plugin for JsPlugin {
       }
     }
 
-    cb.await_call(
-      (
-        ctx.clone().into(),
-        BindingSharedString::from(Arc::clone(&args.code)),
-        BindingRenderedChunk::new(Arc::clone(&args.chunk)),
-        BindingNormalizedOptions::new(Arc::clone(args.options)),
-        BindingRenderedChunkMeta::new(Arc::clone(&args.chunks)),
+    let span = debug_span!(
+      "render_chunk_hook",
+      plugin_name = self.name,
+      result_kind = tracing::field::Empty
+    );
+    let result = cb
+      .await_call(
+        (
+          ctx.clone().into(),
+          BindingSharedString::from(Arc::clone(&args.code)),
+          BindingRenderedChunk::new(Arc::clone(&args.chunk)),
+          BindingNormalizedOptions::new(Arc::clone(args.options)),
+          BindingRenderedChunkMeta::new(Arc::clone(&args.chunks)),
+        )
+          .into(),
       )
-        .into(),
-    )
-    .instrument(debug_span!("render_chunk_hook", plugin_name = self.name))
-    .await?
-    .map(TryInto::try_into)
-    .transpose()
-    .with_context(|| format!("renderChunk hook threw an error for chunkName={}", args.chunk.name))
+      .instrument(span.clone())
+      .await?
+      .map(TryInto::try_into)
+      .transpose()
+      .with_context(|| {
+        format!("renderChunk hook threw an error for chunkName={}", args.chunk.name)
+      });
+    record_hook_result(&span, &result);
+    result
   }
 
   fn render_chunk_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {

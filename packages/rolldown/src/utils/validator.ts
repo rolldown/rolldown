@@ -170,6 +170,7 @@ const HelperModeSchema = v.union([v.literal('Runtime'), v.literal('External')]);
 const DecoratorOptionSchema = v.object({
   legacy: v.optional(v.boolean()),
   emitDecoratorMetadata: v.optional(v.boolean()),
+  strictNullChecks: v.optional(v.boolean()),
 });
 isTypeTrue<
   IsSchemaSubType<typeof DecoratorOptionSchema, Exclude<TransformOptions['decorator'], undefined>>
@@ -422,6 +423,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000)',
     ),
   ),
+  sourcemapBroken: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a plugin transforms code without generating a sourcemap',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
@@ -469,12 +476,22 @@ isTypeTrue<IsSchemaSubType<typeof MangleOptionsKeepNamesSchema, MangleOptionsKee
 const MangleOptionsSchema = v.strictObject({
   toplevel: v.optional(v.boolean()),
   keepNames: v.optional(v.union([v.boolean(), MangleOptionsKeepNamesSchema])),
+  reserved: v.optional(v.array(v.string())),
   debug: v.optional(v.boolean()),
 }) satisfies v.GenericSchema<MangleOptions>;
 isTypeTrue<IsSchemaSubType<typeof MangleOptionsSchema, MangleOptions>>();
 
 const CodegenOptionsSchema = v.strictObject({
   removeWhitespace: v.optional(v.boolean()),
+  legalComments: v.optional(
+    v.union([
+      v.literal('none'),
+      v.literal('inline'),
+      v.literal('eof'),
+      v.literal('external'),
+      v.strictObject({ linked: v.string() }),
+    ]),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof CodegenOptionsSchema, CodegenOptions>>();
 
@@ -818,6 +835,7 @@ const AdvancedChunksSchema = v.strictObject({
         maxModuleSize: v.optional(v.number()),
         entriesAware: v.optional(v.boolean()),
         entriesAwareMergeThreshold: v.optional(v.number()),
+        includeDependenciesRecursively: v.optional(v.boolean()),
         tags: v.optional(v.array(v.string())),
       }),
     ),
@@ -1042,7 +1060,9 @@ const OutputCliOverrideSchema = v.strictObject({
         }),
       ]),
     ),
-    v.description('Code splitting options (true, false, or object)'),
+    v.description(
+      'Code splitting options. Enabled by default; use `--no-codeSplitting` to disable, or `--codeSplitting.minSize` / `--codeSplitting.minShareCount` to configure',
+    ),
   ),
   advancedChunks: v.pipe(
     v.optional(
@@ -1083,6 +1103,10 @@ const CliOptionsSchema = v.strictObject({
   watch: v.pipe(
     v.optional(v.boolean()),
     v.description('Watch files in bundle and rebuild on changes'),
+  ),
+  configLoader: v.pipe(
+    v.optional(v.union([v.literal('bundle'), v.literal('native')])),
+    v.description('How to load the config file (bundle, native)'),
   ),
   ...InputCliOptionsSchema.entries,
   ...OutputCliOptionsSchema.entries,

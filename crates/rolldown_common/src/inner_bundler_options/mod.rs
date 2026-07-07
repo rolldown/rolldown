@@ -10,7 +10,6 @@ use types::invalidate_js_side_cache::InvalidateJsSideCache;
 use types::legal_comments::LegalComments;
 use types::log_level::LogLevel;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
-use types::manual_code_splitting_options::ManualCodeSplittingOptions;
 use types::minify_options::RawMinifyOptions;
 use types::on_log::OnLog;
 use types::optimization::OptimizationOption;
@@ -195,9 +194,11 @@ pub struct BundlerOptions {
   pub keep_names: Option<bool>,
   pub inject: Option<Vec<InjectImport>>,
   pub external_live_bindings: Option<bool>,
+  /// Mirrors the public `codeSplitting: boolean | CodeSplittingOptions`. The object
+  /// form (`Advanced`) carries the manual chunk grouping config; it is decomposed into
+  /// the gate + `NormalizedBundlerOptions::manual_code_splitting` during normalization.
   pub code_splitting: Option<CodeSplittingMode>,
   pub dynamic_import_in_cjs: Option<bool>,
-  pub manual_code_splitting: Option<ManualCodeSplittingOptions>,
   pub checks: Option<ChecksOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",

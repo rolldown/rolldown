@@ -6,7 +6,7 @@
         "import": "main.js"
       }
     ],
-    "manualCodeSplitting": {
+    "codeSplitting": {
       "minShareCount": 2,
       "minSize": 1000,
       "maxSize": 5000,

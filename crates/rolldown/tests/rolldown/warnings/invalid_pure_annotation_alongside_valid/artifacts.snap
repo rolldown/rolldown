@@ -24,7 +24,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.js
-const a = 1;
+const a = /* #__PURE__ */ (() => 1)();
 /* #__PURE__ */ globalThis.foo;
 console.log(a);
 //#endregion

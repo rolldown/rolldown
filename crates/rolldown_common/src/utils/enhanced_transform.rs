@@ -186,8 +186,8 @@ fn generate_declarations(
     IsolatedDeclarationsOptions { strip_internal: options.strip_internal.unwrap_or(false) };
 
   let ret = IsolatedDeclarations::new(allocator, isolated_decl_options).build(program);
-  if !ret.errors.is_empty() {
-    append_oxc_diagnostics(ret.errors, source, filename, warnings, errors);
+  if !ret.diagnostics.is_empty() {
+    append_oxc_diagnostics(ret.diagnostics, source, filename, warnings, errors);
     if !errors.is_empty() {
       return (None, None);
     }
@@ -204,11 +204,11 @@ fn generate_declarations(
       ..Default::default()
     })
     .build(&ret.program);
-  (Some(codegen_ret.code), codegen_ret.map)
+  (Some(codegen_ret.code), codegen_ret.map.map(oxc_sourcemap::SourceMap::into_owned))
 }
 
 fn append_oxc_diagnostics(
-  diagnostics: Vec<OxcDiagnostic>,
+  diagnostics: impl IntoIterator<Item = OxcDiagnostic>,
   source: &ArcStr,
   filename: &str,
   warnings: &mut Vec<BuildDiagnostic>,
@@ -324,10 +324,14 @@ pub fn enhanced_transform(
 
   let allocator = Allocator::default();
   let parse_ret = Parser::new(&allocator, &source, source_type)
-    .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
+    .with_options(ParseOptions {
+      allow_return_outside_function: true,
+      preserve_parens: false,
+      ..Default::default()
+    })
     .parse();
-  if parse_ret.panicked || !parse_ret.errors.is_empty() {
-    append_oxc_diagnostics(parse_ret.errors, &source, filename, &mut warnings, &mut errors);
+  if parse_ret.panicked || !parse_ret.diagnostics.is_empty() {
+    append_oxc_diagnostics(parse_ret.diagnostics, &source, filename, &mut warnings, &mut errors);
     return EnhancedTransformResult::new_for_error(errors, warnings, tsconfig_file_paths);
   }
 
@@ -335,8 +339,8 @@ pub fn enhanced_transform(
 
   let semantic_ret = semantic_builder_for_transform().build(&program);
   let mut scoping = Some(semantic_ret.semantic.into_scoping());
-  if !semantic_ret.errors.is_empty() {
-    append_oxc_diagnostics(semantic_ret.errors, &source, filename, &mut warnings, &mut errors);
+  if !semantic_ret.diagnostics.is_empty() {
+    append_oxc_diagnostics(semantic_ret.diagnostics, &source, filename, &mut warnings, &mut errors);
     if !errors.is_empty() {
       return EnhancedTransformResult::new_for_error(errors, warnings, tsconfig_file_paths);
     }
@@ -392,8 +396,14 @@ pub fn enhanced_transform(
 
   let transform_ret = Transformer::new(&allocator, Path::new(filename), &oxc_transform_options)
     .build_with_scoping(scoping, &mut program);
-  if !transform_ret.errors.is_empty() {
-    append_oxc_diagnostics(transform_ret.errors, &source, filename, &mut warnings, &mut errors);
+  if !transform_ret.diagnostics.is_empty() {
+    append_oxc_diagnostics(
+      transform_ret.diagnostics,
+      &source,
+      filename,
+      &mut warnings,
+      &mut errors,
+    );
     if !errors.is_empty() {
       return EnhancedTransformResult::new_for_error(errors, warnings, tsconfig_file_paths);
     }
@@ -414,7 +424,7 @@ pub fn enhanced_transform(
     })
     .build(&program);
 
-  let output_map = match (input_map, codegen_ret.map) {
+  let output_map = match (input_map, codegen_ret.map.map(oxc_sourcemap::SourceMap::into_owned)) {
     (Some(im), Some(om)) => Some(collapse_sourcemaps(&[&im, &om])),
     (None, map) => map,
     (Some(_), None) => None,

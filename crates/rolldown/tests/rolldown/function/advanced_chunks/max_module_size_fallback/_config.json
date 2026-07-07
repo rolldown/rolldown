@@ -1,6 +1,6 @@
 {
   "config": {
-    "manualCodeSplitting": {
+    "codeSplitting": {
       // Only `size-14.js` will be included in the chunk
       "maxModuleSize": 20,
       "groups": [

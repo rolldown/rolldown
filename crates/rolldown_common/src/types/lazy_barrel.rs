@@ -6,12 +6,13 @@ use rolldown_utils::rustc_hash::{FxHashMapExt as _, FxHashSetExt as _};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  EcmaView, ImportKind, ImportRecordIdx, ImportRecordMeta, ImportRecordStateInit, ModuleIdx,
-  NormalModule, RawImportRecord, ResolvedId, Specifier, side_effects::DeterminedSideEffects,
+  EcmaView, ExportOrigin, ImportKind, ImportRecordIdx, ImportRecordMeta, ImportRecordStateInit,
+  ModuleIdx, NormalModule, RawImportRecord, ResolvedId, Specifier,
+  side_effects::DeterminedSideEffects,
 };
 
 /// State for lazy barrel optimization
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct BarrelState {
   pub barrel_infos: FxHashMap<ModuleIdx, Option<LazyBarrelInfo>>,
   pub requested_exports: FxHashMap<ModuleIdx, ImportedExports>,
@@ -121,7 +122,7 @@ impl ImportedExports {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExportSource {
   imported: Specifier,
   record_idx: ImportRecordIdx,
@@ -130,7 +131,7 @@ pub struct ExportSource {
   is_direct_reexport: bool,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct BarrelInfo {
   /// `export const a = 1`
   pub local: Vec<CompactStr>,
@@ -233,7 +234,14 @@ impl BarrelInfo {
             .extend(self.named.values().filter(|v| v.is_direct_reexport).map(|v| v.record_idx));
           reexports.extend(self.star.iter().copied());
           imported_exports_per_record.retain(|rec_idx, rec| match needs_records.entry(*rec_idx) {
-            Entry::Occupied(_) => true,
+            Entry::Occupied(mut occ) => {
+              if reexports.contains(rec_idx) {
+                true
+              } else {
+                occ.get_mut().merge(rec);
+                false
+              }
+            }
             Entry::Vacant(vac) => {
               if reexports.contains(rec_idx) {
                 vac.insert(ImportedExports::Partial(FxHashSet::default()));
@@ -264,7 +272,7 @@ impl BarrelInfo {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LazyBarrelInfo {
   pub info: BarrelInfo,
   pub remaining_imported_specifiers: FxHashMap<ImportRecordIdx, ImportedExports>,
@@ -295,22 +303,28 @@ pub fn try_extract_lazy_barrel_info(
   // Categorize exports into named re-exports and local (own) exports
   // - Re-exports: `export * as ns from './x'` or `export { c as d } from './x'`
   // - Local exports: `export const a = 1` or `export function foo() {}`
+  //
+  // This classification is shared with tree shaking's body-demand gating
+  // (`ExportOrigin`); the loader's `local` case and the shaker's body-demand keys
+  // must agree, or a retained statement could reference a never-loaded record.
   for (export_name, local_export) in &ecma_view.named_exports {
-    if let Some(named_import) = ecma_view.named_imports.get(&local_export.referenced) {
-      // Re-export: the export references an import
-      let is_direct_reexport =
-        raw_import_records[named_import.record_idx].meta.contains(ImportRecordMeta::IsReExportOnly);
-      barrel_info.named.insert(
-        export_name.clone(),
-        ExportSource {
-          record_idx: named_import.record_idx,
-          imported: named_import.imported.clone(),
-          is_direct_reexport,
-        },
-      );
-    } else {
-      // Local export: the export is defined in this module
-      barrel_info.local.push(export_name.clone());
+    match ecma_view.classify_export(local_export) {
+      ExportOrigin::ReExport(named_import) => {
+        let is_direct_reexport = raw_import_records[named_import.record_idx]
+          .meta
+          .contains(ImportRecordMeta::IsReExportOnly);
+        barrel_info.named.insert(
+          export_name.clone(),
+          ExportSource {
+            record_idx: named_import.record_idx,
+            imported: named_import.imported.clone(),
+            is_direct_reexport,
+          },
+        );
+      }
+      ExportOrigin::Own => {
+        barrel_info.local.push(export_name.clone());
+      }
     }
   }
 

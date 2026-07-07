@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      { "name": "from-ts", "import": "./src/from-ts.ts" },
+      { "name": "from-tsx", "import": "./src/from-tsx.tsx" }
+    ],
+    "external": ["mock-cjs"],
+    "format": "cjs"
+  },
+  "extendedTests": false
+}

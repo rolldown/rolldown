@@ -4,6 +4,7 @@ use oxc::{
   minifier::{CompressOptions, CompressOptionsKeepNames, CompressOptionsUnused, TreeShakeOptions},
   transformer::EngineTargets,
 };
+use oxc_str::CompactStr;
 use rustc_hash::FxHashSet;
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
@@ -14,6 +15,7 @@ use serde::Deserialize;
 pub struct RawMangleOptions {
   pub top_level: Option<bool>,
   pub keep_names: Option<MangleOptionsKeepNames>,
+  pub reserved: Option<FxHashSet<CompactStr>>,
 }
 
 impl RawMangleOptions {
@@ -27,6 +29,7 @@ impl RawMangleOptions {
       } else {
         MangleOptionsKeepNames::all_false()
       }),
+      reserved: self.reserved.unwrap_or_default(),
       debug: false,
     }
   }

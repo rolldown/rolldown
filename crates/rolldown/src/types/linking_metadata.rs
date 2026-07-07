@@ -49,7 +49,6 @@ pub struct LinkingMetadata {
   wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<CompactStr, ResolvedExport>,
-  // pub re_export_all_names: FxHashSet<CompactStr>,
   /// Store the names of exclude ambiguous resolved exports.
   /// It will be used to generate chunk exports and module namespace binding.
   /// The second element means if the export is came from commonjs module.
@@ -68,6 +67,22 @@ pub struct LinkingMetadata {
 
   /// The dependencies of the module. It means if you want include this module, you need to include these dependencies too.
   pub dependencies: FxIndexSet<ModuleIdx>,
+  /// The subset of module graph edges that force the target module to be loaded when this module
+  /// executes, used by code splitting to compute per-entry reachability
+  /// (`determine_reachable_modules_for_entry`):
+  ///
+  /// - modules owning the canonical symbols referenced by this module's included statements
+  ///   (these are what become cross-chunk symbol imports), and
+  /// - import-record targets whose evaluation has side effects, mirroring both
+  ///   `include_side_effectful_dependencies` in tree-shaking and the bare-import emission in
+  ///   `compute_cross_chunk_links`.
+  ///
+  /// Unlike [`Self::dependencies`], a side-effect-free module imported only for bindings that
+  /// canonically resolve elsewhere (e.g. a pure barrel re-exporting them) is *not* a load
+  /// dependency, so an entry that never uses the barrel's own code doesn't pull the barrel (or
+  /// its subtree) into its chunk group (#8920). Populated by `patch_module_dependencies`; with
+  /// tree-shaking disabled it equals [`Self::dependencies`].
+  pub load_dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.
   pub resolved_member_expr_refs: MemberExprRefResolutionMap,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
@@ -86,11 +101,29 @@ pub struct LinkingMetadata {
   /// Set when the runtime module has side effects (e.g. dev/HMR mode).
   pub has_side_effectful_runtime_dep: bool,
   pub module_namespace_included_reason: ModuleNamespaceIncludedReason,
+  /// Final decision on whether this module's namespace object is retained in the output.
+  /// Computed by [`crate::stages::generate_stage`]'s `finalized_module_namespace_ref_usage`
+  /// from `module_namespace_included_reason` together with the module's `exports_kind` and
+  /// `has_dynamic_exports`; only meaningful for passes that run after it.
+  pub namespace_included: bool,
   /// Tracks which statements in this module are included after tree-shaking.
   /// Each entry corresponds to a statement in the module's `stmt_infos`.
   pub stmt_info_included: IndexBitSet<StmtInfoIdx>,
   /// Tracks whether the module is included after tree-shaking.
   pub is_included: bool,
+  /// Set for a standalone wrapped (`WrapKind::Esm`) module whose `__esm` closure body is empty
+  /// (every top-level statement is a hoisted function declaration or a source-less export clause,
+  /// so nothing lands inside the wrapper closure). Calling such an `init_*` is a no-op, so init
+  /// call sites are marked `@__PURE__` and the default `dce-only` minifier drops them (and the
+  /// now-unused wrapper). Computed by [`crate::stages::generate_stage`]'s
+  /// `compute_wrapped_esm_init_metadata`.
+  pub init_is_noop: bool,
+  /// For each non-included top-level re-export statement (`export * from`, `export {x} from`,
+  /// `export * as ns from`) of an included `WrapKind::Esm` module: the ordered wrapped-ESM
+  /// modules whose `init_*()` calls must be emitted in its place to preserve execution order.
+  /// Computed by [`crate::stages::generate_stage`]'s `compute_wrapped_esm_init_metadata`;
+  /// consumed by the module finalizer.
+  pub transitive_esm_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }
 
 impl LinkingMetadata {

@@ -1,12 +1,13 @@
 [package]
 name = "rolldown_plugin"
-version = "0.1.0"
+version = "1.1.4"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
 description = "Plugin interface for Rolldown bundler"
+readme = "../../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -23,10 +24,9 @@ workspace = true
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
-async-trait = { workspace = true }
 bitflags = { workspace = true }
 dashmap = { workspace = true }
-derive_more = { workspace = true, features = ["display"] }
+derive_more = { workspace = true }
 nodejs-built-in-modules = { workspace = true }
 oxc_index = { workspace = true }
 rolldown_common = { workspace = true }

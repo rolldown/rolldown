@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## action.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region form.js
+var form_exports = /* @__PURE__ */ __exportAll({
+	callActionFromForm: () => callActionFromForm,
+	formImpl: () => formImpl
+});
+function formImpl() {
+	return "form-result";
+}
+function callActionFromForm() {
+	return actionImpl();
+}
+//#endregion
+//#region action.js
+var action_exports = /* @__PURE__ */ __exportAll({
+	actionImpl: () => actionImpl,
+	callFormFromAction: () => callFormFromAction
+});
+function actionImpl() {
+	return "action-result";
+}
+function callFormFromAction() {
+	return formImpl();
+}
+//#endregion
+export { form_exports as n, action_exports as t };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+async function main() {
+	const formNs = await import("./action.js").then((n) => n.n);
+	const actionNs = await import("./action.js").then((n) => n.t);
+	globalThis.__9320_formNs = formNs;
+	globalThis.__9320_actionNs = actionNs;
+}
+globalThis.__9320_done = main();
+//#endregion
+
+```

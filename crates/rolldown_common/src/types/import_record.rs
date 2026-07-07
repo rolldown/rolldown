@@ -3,7 +3,7 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use oxc::{allocator::Address, span::Span};
+use oxc::{semantic::NodeId, span::Span};
 use oxc_str::CompactStr;
 
 use crate::{ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
@@ -18,19 +18,24 @@ oxc_index::define_index_type! {
 pub struct DynamicImportExprInfo {
   /// Index of the top-level statement containing the dynamic import expression
   pub stmt_info_idx: StmtInfoIdx,
-  /// Address of the `ImportExpression` node in the AST
-  pub address: Address,
+  /// Node ID of the `ImportExpression` node in the AST
+  pub node_id: NodeId,
 }
 
 #[derive(Debug, Clone)]
 pub struct ImportRecordStateInit {
+  /// Span of the module request.
   pub span: Span,
+  /// Span of the import site that created this record.
+  pub importer_span: Span,
   /// The importee of this import record is asserted to be this specific module type.
   pub asserted_module_type: Option<ModuleType>,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct ImportRecordStateResolved {
+  /// Span of the import site that created this record.
+  pub importer_span: Span,
   pub resolved_module: Option<ModuleIdx>,
 }
 
@@ -89,7 +94,7 @@ pub struct ImportRecord<State: Debug + Clone> {
   pub namespace_ref: SymbolRef,
   pub meta: ImportRecordMeta,
   /// Information about the dynamic import expression, if this is a dynamic import.
-  /// Contains the statement index and AST address for tracking purposes.
+  /// Contains the statement index and AST node ID for tracking purposes.
   ///
   /// Wrapped in `Box` to reduce the size of `ImportRecord` since this field is only
   /// used for dynamic imports (a minority of import records), keeping the common case small.
@@ -124,6 +129,7 @@ impl RawImportRecord {
     kind: ImportKind,
     namespace_ref: SymbolRef,
     span: Span,
+    importer_span: Span,
     assert_module_type: Option<ModuleType>,
     dynamic_import_expr_info: Option<Box<DynamicImportExprInfo>>,
   ) -> RawImportRecord {
@@ -132,7 +138,11 @@ impl RawImportRecord {
       kind,
       namespace_ref,
       meta: ImportRecordMeta::empty(),
-      state: ImportRecordStateInit { span, asserted_module_type: assert_module_type },
+      state: ImportRecordStateInit {
+        span,
+        importer_span,
+        asserted_module_type: assert_module_type,
+      },
       dynamic_import_expr_info,
     }
   }
@@ -144,7 +154,7 @@ impl RawImportRecord {
 
   pub fn into_resolved(self, resolved_module: Option<ModuleIdx>) -> ResolvedImportRecord {
     ResolvedImportRecord {
-      state: ImportRecordStateResolved { resolved_module },
+      state: ImportRecordStateResolved { importer_span: self.state.importer_span, resolved_module },
       module_request: self.module_request,
       kind: self.kind,
       namespace_ref: self.namespace_ref,

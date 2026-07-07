@@ -66,6 +66,14 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
     }
   }
 
+  /// Non-panicking lookup. Absence is a normal outcome for the sparse `Map` variant.
+  pub fn try_get(&self, i: I) -> Option<&T> {
+    match self {
+      HybridIndexVec::IndexVec(index_vec) => index_vec.get(i),
+      HybridIndexVec::Map(map) => map.get(&i),
+    }
+  }
+
   /// # Panic
   /// Caller should ensure the index is exists in container.
   pub fn get(&self, i: I) -> &T {
@@ -93,7 +101,7 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
     }
   }
 
-  pub fn iter(&self) -> impl Iterator<Item = &T> {
+  pub fn iter(&self) -> impl ExactSizeIterator<Item = &T> {
     match self {
       HybridIndexVec::IndexVec(index_vec) => itertools::Either::Left(index_vec.iter()),
       HybridIndexVec::Map(hash_map) => itertools::Either::Right(hash_map.values()),

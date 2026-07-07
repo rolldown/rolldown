@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region classLike.js
-/* @__NO_SIDE_EFFECTS__ */
+/* #__NO_SIDE_EFFECTS__ */
 function classLike() {}
 Object.defineProperty(classLike.prototype, "sideEffect", { get() {
 	console.log("this side effect may not need to be preserved? See https://github.com/javascript-compiler-hints/compiler-notations-spec/issues/8");

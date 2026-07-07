@@ -6,8 +6,9 @@ use oxc_index::IndexVec;
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
   ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, EntryPointKind, FlatOptions, ImportKind,
-  ModuleIdx, ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
-  UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
+  ModuleIdx, ModuleTable, PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief,
+  SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 #[cfg(target_family = "wasm")]
@@ -39,10 +40,8 @@ mod sort_modules;
 mod tree_shaking;
 
 pub use tree_shaking::{
-  ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec,
-  include_statements::{
-    IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
-  },
+  IncludeContext, ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec,
+  SymbolIncludeReason, compute_body_demand_keys, include_runtime_symbol, include_symbol,
 };
 mod wrapping;
 
@@ -59,7 +58,6 @@ pub struct SafelyMergeCjsNsInfo {
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
   pub entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
-  pub ast_table: IndexEcmaAst,
   pub sorted_modules: Vec<ModuleIdx>,
   pub metas: LinkingMetadataVec,
   pub symbol_db: SymbolRefDb,
@@ -68,7 +66,9 @@ pub struct LinkStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
-  pub used_symbol_refs: UsedSymbolRefs,
+  pub used_external_symbols: UsedExternalSymbols,
+  /// See [`RetainedExportSymbols`]; empty until the generate stage projects it.
+  pub retained_export_symbols: RetainedExportSymbols,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
@@ -107,7 +107,8 @@ pub struct LinkStage<'a> {
   pub errors: Vec<BuildDiagnostic>,
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
-  pub used_symbol_refs: UsedSymbolRefs,
+  pub used_symbol_refs: UsedSymbolRefsBuilder,
+  pub used_external_symbols: UsedExternalSymbols,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -182,7 +183,7 @@ impl<'a> LinkStage<'a> {
             .iter()
             .filter_map(|rec| match rec.kind {
               // Dynamically imported modules are included automatically by `include_statements`
-              // when `inlineDynamicImports` is enabled.
+              // when code splitting is disabled (`codeSplitting: false`).
               ImportKind::DynamicImport | ImportKind::Require => None,
               _ => rec.resolved_module,
             })
@@ -210,7 +211,8 @@ impl<'a> LinkStage<'a> {
       ast_table: scan_stage_output.index_ecma_ast,
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
-      used_symbol_refs: UsedSymbolRefs::default(),
+      used_symbol_refs: UsedSymbolRefsBuilder::default(),
+      used_external_symbols: UsedExternalSymbols::default(),
       safely_merge_cjs_ns_map: FxHashMap::default(),
       normal_symbol_exports_chain_map: FxHashMap::default(),
       external_import_namespace_merger: FxHashMap::default(),
@@ -226,7 +228,7 @@ impl<'a> LinkStage<'a> {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn link(mut self) -> LinkStageOutput {
+  pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
     self.sort_modules();
     self.compute_tla();
     self.determine_module_exports_kind();
@@ -237,34 +239,38 @@ impl<'a> LinkStage<'a> {
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
-    let unreachable_import_expression_addrs = self.cross_module_optimization();
-    self.include_statements(&unreachable_import_expression_addrs);
+    let unreachable_import_expression_node_ids = self.cross_module_optimization();
+    self.include_statements(&unreachable_import_expression_node_ids);
     self.patch_module_dependencies();
 
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
-    LinkStageOutput {
-      module_table: self.module_table,
-      entries: self.entries,
-      sorted_modules: self.sorted_modules,
-      metas: self.metas,
-      symbol_db: self.symbols,
-      stmt_infos: self.stmt_infos,
-      runtime: self.runtime,
-      warnings: self.warnings,
-      errors: self.errors,
-      ast_table: self.ast_table,
-      used_symbol_refs: self.used_symbol_refs,
-      dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
-      safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
-      external_import_namespace_merger: self.external_import_namespace_merger,
-      overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
-      entry_point_to_reference_ids: self.entry_point_to_reference_ids,
-      global_constant_symbol_map: self.global_constant_symbol_map,
-      normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
-      user_defined_entry_modules: self.user_defined_entry_modules,
-      has_enum_inlining: self.has_enum_inlining,
-    }
+    (
+      LinkStageOutput {
+        module_table: self.module_table,
+        entries: self.entries,
+        sorted_modules: self.sorted_modules,
+        metas: self.metas,
+        symbol_db: self.symbols,
+        stmt_infos: self.stmt_infos,
+        runtime: self.runtime,
+        warnings: self.warnings,
+        errors: self.errors,
+        used_external_symbols: self.used_external_symbols,
+        retained_export_symbols: RetainedExportSymbols::default(),
+        dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
+        safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
+        external_import_namespace_merger: self.external_import_namespace_merger,
+        overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
+        entry_point_to_reference_ids: self.entry_point_to_reference_ids,
+        global_constant_symbol_map: self.global_constant_symbol_map,
+        normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
+        user_defined_entry_modules: self.user_defined_entry_modules,
+        has_enum_inlining: self.has_enum_inlining,
+      },
+      self.ast_table,
+      self.used_symbol_refs,
+    )
   }
 
   /// A helper function used to debug symbol in link process

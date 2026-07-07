@@ -170,61 +170,50 @@ impl<'text> MagicString<'text> {
 
   /// Returns the content after the last newline in the generated string.
   pub fn last_line(&self) -> String {
-    // Check outro first (last in output order)
-    for outro_part in self.outro.iter().rev() {
-      if let Some(line_index) = memchr::memrchr(b'\n', outro_part.as_bytes()) {
-        return outro_part[line_index + 1..].to_string();
+    // Scan sections from the back — outro, chunks last-to-first, then intro — stopping at
+    // the first newline that completes the last line; earlier sections are never touched.
+    let mut pieces: Vec<&str> = Vec::new();
+    'done: {
+      if Self::scan_last_line(self.outro.iter().rev().map(|s| s.as_ref()), &mut pieces) {
+        break 'done;
       }
-    }
-
-    let mut line_str = self.outro.iter().map(|s| s.as_ref()).collect::<String>();
-
-    // Traverse chunks from last to first
-    let mut chunk_idx = Some(self.last_chunk_idx);
-    while let Some(idx) = chunk_idx {
-      let chunk = &self.chunks[idx];
-
-      // Check chunk outro
-      for outro_part in chunk.outro.iter().rev() {
-        if let Some(line_index) = memchr::memrchr(b'\n', outro_part.as_bytes()) {
-          return outro_part[line_index + 1..].to_string() + &line_str;
+      let mut chunk_idx = Some(self.last_chunk_idx);
+      while let Some(idx) = chunk_idx {
+        let chunk = &self.chunks[idx];
+        let content = chunk
+          .edited_content
+          .as_ref()
+          .map(|s| s.as_ref())
+          .unwrap_or_else(|| chunk.span.text(&self.source));
+        let fragments = (chunk.outro.iter().rev().map(|s| s.as_ref()))
+          .chain(std::iter::once(content))
+          .chain(chunk.intro.iter().rev().map(|s| s.as_ref()));
+        if Self::scan_last_line(fragments, &mut pieces) {
+          break 'done;
         }
+        chunk_idx = chunk.prev;
       }
-      let chunk_outro: String = chunk.outro.iter().map(|s| s.as_ref()).collect();
-      line_str = chunk_outro + &line_str;
-
-      // Check chunk content (edited or original)
-      let content = chunk
-        .edited_content
-        .as_ref()
-        .map(|s| s.as_ref())
-        .unwrap_or_else(|| chunk.span.text(&self.source));
-      if let Some(line_index) = memchr::memrchr(b'\n', content.as_bytes()) {
-        return content[line_index + 1..].to_string() + &line_str;
-      }
-      line_str = content.to_string() + &line_str;
-
-      // Check chunk intro
-      for intro_part in chunk.intro.iter().rev() {
-        if let Some(line_index) = memchr::memrchr(b'\n', intro_part.as_bytes()) {
-          return intro_part[line_index + 1..].to_string() + &line_str;
-        }
-      }
-      let chunk_intro: String = chunk.intro.iter().map(|s| s.as_ref()).collect();
-      line_str = chunk_intro + &line_str;
-
-      chunk_idx = chunk.prev;
+      Self::scan_last_line(self.intro.iter().rev().map(|s| s.as_ref()), &mut pieces);
     }
+    let mut last_line = String::with_capacity(pieces.iter().map(|piece| piece.len()).sum());
+    pieces.iter().rev().for_each(|piece| last_line.push_str(piece));
+    last_line
+  }
 
-    // Check intro last (first in output order, but we're going backwards)
-    for intro_part in self.intro.iter().rev() {
-      if let Some(line_index) = memchr::memrchr(b'\n', intro_part.as_bytes()) {
-        return intro_part[line_index + 1..].to_string() + &line_str;
+  /// Pushes fragments (in reverse output order) onto `pieces`, stopping at and returning
+  /// `true` for the first one that contains a newline (which completes the last line).
+  fn scan_last_line<'a>(
+    fragments: impl Iterator<Item = &'a str>,
+    pieces: &mut Vec<&'a str>,
+  ) -> bool {
+    for fragment in fragments {
+      let newline = memchr::memrchr(b'\n', fragment.as_bytes());
+      pieces.push(&fragment[newline.map_or(0, |index| index + 1)..]);
+      if newline.is_some() {
+        return true;
       }
     }
-
-    let intro_str: String = self.intro.iter().map(|s| s.as_ref()).collect();
-    intro_str + &line_str
+    false
   }
 
   fn prepend_intro(&mut self, content: impl Into<CowStr<'text>>) {

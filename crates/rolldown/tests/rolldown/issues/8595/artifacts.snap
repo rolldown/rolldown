@@ -36,14 +36,6 @@ import "./tt.js";
 
 ```
 
-## chunk.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as t };
-
-```
-
 ## flow.js
 
 ```js
@@ -114,7 +106,7 @@ import "./tt.js";
 ## tt.js
 
 ```js
-import { t as __exportAll } from "./chunk.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region plugins/babel.mjs
 var babel_exports = /* @__PURE__ */ __exportAll({
 	default: () => Ks,

@@ -17,7 +17,7 @@ __esmMin((() => {
 	globalThis.globalValue = "foo";
 	//#endregion
 	//#region dep.js
-	dep_default = /* @__PURE__ */ getGlobalValue();
+	dep_default = /*#__PURE__*/ getGlobalValue();
 	//#endregion
 	//#region main.js
 	assert.strictEqual(dep_default, "foo");

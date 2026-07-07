@@ -1,12 +1,13 @@
 [package]
 name = "rolldown_plugin_utils"
-version = "0.1.0"
+version = "1.1.4"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
 description = "Shared utilities for Rolldown plugins"
+readme = "../../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -17,19 +18,7 @@ doctest = false
 workspace = true
 
 [dependencies]
-anyhow = { workspace = true }
-arcstr = { workspace = true }
-cow-utils = { workspace = true }
-dashmap = { workspace = true }
-derive_more = { workspace = true }
-itertools = { workspace = true }
 memchr = { workspace = true }
-percent-encoding = { workspace = true }
-regex = { workspace = true }
-rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
-rolldown_sourcemap = { workspace = true }
 rolldown_utils = { workspace = true }
-rustc-hash = { workspace = true }
 serde_json = { workspace = true }
-sugar_path = { workspace = true }

@@ -4,7 +4,8 @@ use memchr::memmem;
 use rolldown_common::{EmittedAsset, ModuleType, StrOrBytes, side_effects::HookSideEffects};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookRenderChunkArgs, HookRenderChunkOutput,
-  HookRenderChunkReturn, HookUsage, Plugin, PluginHookMeta, PluginOrder, SharedLoadPluginContext,
+  HookRenderChunkReturn, HookTransformOutputMap, HookUsage, Plugin, PluginHookMeta, PluginOrder,
+  SharedLoadPluginContext,
 };
 use rolldown_utils::url::clean_url;
 use rustc_hash::FxHashSet;
@@ -107,7 +108,7 @@ impl Plugin for AssetModulePlugin {
     if changed {
       Ok(Some(HookRenderChunkOutput {
         code: magic_string.to_string(),
-        map: args.options.sourcemap.is_some().then(|| {
+        map: HookTransformOutputMap::from_if_enabled(args.options.sourcemap.is_some(), || {
           magic_string.source_map(SourceMapOptions {
             hires: string_wizard::Hires::Boundary,
             include_content: false,

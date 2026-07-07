@@ -93,17 +93,17 @@ impl BundleFactory {
     })
   }
 
-  fn generate_unique_bundle_span(&mut self) -> Arc<tracing::Span> {
+  fn generate_unique_bundle_span(&mut self) -> tracing::Span {
     let bundle_id = rolldown_devtools::generate_build_id(self.bundle_id_seed);
     self.bundle_id_seed += 1;
-    Arc::new(tracing::info_span!(
+    tracing::info_span!(
       parent: &self.session.span,
       "build",
       CONTEXT_build_id = bundle_id.as_ref(),
       // - This behaves like default value for `${hook_resolve_id_trigger}`.
       // - For case like injecting `manual`, we will override this field by adding a child span to shadow this one.
       CONTEXT_hook_resolve_id_trigger = "automatic"
-    ))
+    )
   }
 
   pub fn create_bundle(
@@ -152,6 +152,12 @@ impl BundleFactory {
     resolver: SharedResolver<Fs>,
     cache: ScanStageCache,
   ) -> Bundle<Fs> {
+    // Every build passes through here exactly once before any scan/link work
+    // starts. Wait for the previous build's deferred drops to retire so they
+    // can never overlap this build's rayon work; a no-op in steady state.
+    // See `utils::defer_drop` for the full invariant.
+    crate::utils::defer_drop::drain();
+
     let bundle_span = self.generate_unique_bundle_span();
     let module_infos = Arc::clone(&self.module_infos_for_incremental_build);
     let transform_dependencies = Arc::clone(&self.transform_dependencies_for_incremental_build);

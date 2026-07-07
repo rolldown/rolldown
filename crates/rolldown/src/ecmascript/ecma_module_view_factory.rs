@@ -2,13 +2,11 @@ use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, FlatOptions, ImportRecordIdx,
-  RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, SideEffectDetail,
+  RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, StmtEvalFlags,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_error::BuildResult;
-use rolldown_std_utils::PathExt;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
-use sugar_path::SugarPath;
 
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
@@ -44,7 +42,7 @@ pub async fn create_ecma_view(
 
   let module_id = ctx.resolved_id.id.clone();
 
-  let repr_name = module_id.as_path().representative_file_name();
+  let repr_name = module_id.representative_name();
   let repr_name = legitimize_identifier_name(&repr_name);
 
   let scan_result = ast.program.with_mut(|fields| {
@@ -91,7 +89,7 @@ pub async fn create_ecma_view(
     dummy_record_set,
     constant_export_map,
     import_attribute_map,
-    cjs_reexport_require_spans: _,
+    cjs_reexport_require_node_ids: _,
     cjs_reexport_import_record_ids,
   } = scan_result;
   // If a export symbol in commonjs defined in multiple time, we just bailout treeshake it.
@@ -175,7 +173,9 @@ pub async fn normalize_side_effects(
 ) -> BuildResult<DeterminedSideEffects> {
   let side_effects = match hook_side_effects {
     Some(side_effects) => match side_effects {
-      HookSideEffects::True => lazy_check_side_effects(resolved_id, stmt_infos),
+      // The hook explicitly asserted side effects, so it takes priority over the
+      // `package.json#sideEffects`.
+      HookSideEffects::True => lazy_check_side_effects(resolved_id, stmt_infos, false),
       HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
       HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
     },
@@ -191,7 +191,7 @@ pub async fn normalize_side_effects(
             .await?
           {
             Some(value) => DeterminedSideEffects::UserDefined(value),
-            None => lazy_check_side_effects(resolved_id, stmt_infos),
+            None => lazy_check_side_effects(resolved_id, stmt_infos, true),
           }
         } else {
           match opt
@@ -199,7 +199,7 @@ pub async fn normalize_side_effects(
             .native_resolve(&resolved_id.id, resolved_id.external.is_external())
           {
             Some(value) => DeterminedSideEffects::UserDefined(value),
-            None => lazy_check_side_effects(resolved_id, stmt_infos),
+            None => lazy_check_side_effects(resolved_id, stmt_infos, true),
           }
         }
       }
@@ -211,6 +211,7 @@ pub async fn normalize_side_effects(
 pub fn lazy_check_side_effects(
   resolved_id: &ResolvedId,
   stmt_infos: Option<&rolldown_common::StmtInfos>,
+  check_package_json_side_effects: bool,
 ) -> DeterminedSideEffects {
   if resolved_id.external.is_external() {
     return if resolved_id.is_external_without_side_effects {
@@ -220,23 +221,27 @@ pub fn lazy_check_side_effects(
     };
   }
   let stmt_infos = stmt_infos.expect("Normal module should have stmt_infos");
-  resolved_id
-    .package_json
-    .as_ref()
-    .and_then(|p| {
+  if check_package_json_side_effects
+    && let Some(side_effects) = resolved_id.package_json.as_ref().and_then(|p| {
       // the glob expr is based on parent path of package.json, which is package path
-      // so we should use the relative path of the module to package path
-      let module_path_relative_to_package =
-        resolved_id.id.as_path().relative(p.realpath().parent()?);
+      // so we should use the relative path of the module to package path.
+      // A plugin `resolveId` hook can return a non-absolute id (e.g. virtual `\0dep`)
+      // together with a `packageJsonPath`, so `package_json` is populated even when the
+      // id is not a `Path` kind. Treat the raw id as a path here (matching the historical
+      // behavior) so `sideEffects` is still honored for such plugin-resolved modules,
+      // rather than gating on `as_path()` and silently dropping the package metadata.
+      let module_path_relative_to_package = resolved_id.id.relative_path(p.realpath().parent()?);
       p.check_side_effects_for(&module_path_relative_to_package.to_string_lossy())
         .map(DeterminedSideEffects::UserDefined)
     })
-    .unwrap_or_else(|| {
-      // when determining cjs module side effects:
-      // we don't considered `exports.a` has side effects
-      let analyzed_side_effects = stmt_infos
-        .iter()
-        .any(|stmt_info| stmt_info.side_effect.contains(SideEffectDetail::Unknown));
-      DeterminedSideEffects::Analyzed(analyzed_side_effects)
-    })
+  {
+    return side_effects;
+  }
+
+  // when determining cjs module side effects:
+  // we don't considered `exports.a` has side effects
+  let analyzed_side_effects = stmt_infos
+    .iter()
+    .any(|stmt_info| stmt_info.eval_flags.contains(StmtEvalFlags::UnknownSideEffect));
+  DeterminedSideEffects::Analyzed(analyzed_side_effects)
 }

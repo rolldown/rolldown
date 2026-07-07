@@ -41,3 +41,28 @@ await __esmMin((async () => {
 export { value };
 
 ```
+
+# Variant: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+var value$1, value;
+var init_lib = __esmMin((async () => {
+	//#region tla.js
+	value$1 = await Promise.resolve("tla");
+	//#endregion
+	//#region lib.js
+	value = value$1 + "+lib";
+	//#endregion
+}));
+//#endregion
+await __esmMin((async () => {
+	await init_lib();
+}))();
+export { value };
+
+```

@@ -1,12 +1,13 @@
 [package]
 name = "rolldown"
-version = "0.1.0"
+version = "1.1.4"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
 description = "Fast JavaScript bundler in Rust, designed for the future of Vite"
+readme = "../../README.md"
 
 [lints]
 workspace = true
@@ -23,7 +24,6 @@ append-only-vec = { workspace = true }
 arcstr = { workspace = true }
 dashmap = { workspace = true }
 bitflags = { workspace = true }
-commondir = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 itertools = { workspace = true }
@@ -61,6 +61,7 @@ rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, features = ["preserve_order"] }
+smallvec = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
@@ -70,6 +71,7 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
 cow-utils = { workspace = true }
+dunce = { workspace = true }
 insta = { workspace = true }
 regex = { workspace = true }
 rolldown_common = { workspace = true }

@@ -2,10 +2,12 @@ packages:
   - packages/*
   - packages/rolldown/tests
   - packages/test-dev-server/tests
-  - packages/test-dev-server/tests/playground/hmr-full-bundle-mode
+  - packages/test-dev-server/tests/playground/*
   - packages/test-dev-server/tests/fixtures/*
   - packages/rolldown/tests/fixtures/resolve/issue-5846
   - packages/rolldown/tests/fixtures/resolve/issue-5846-2
+  - packages/rolldown/tests/fixtures/tree-shake/module-side-effects-precedence/hook-side-effects-overrides-package-json
+  - packages/rolldown/tests/fixtures/tree-shake/module-side-effects-precedence/option-over-package-json
   - docs
   - examples/*
   - scripts
@@ -33,15 +35,15 @@ overrides:
   vitepress>vite: npm:rolldown-vite@latest
 
 catalog:
-  '@babel/core': ^7.24.7
-  '@babel/preset-env': ^7.24.7
-  '@babel/preset-typescript': ^7.24.7
-  '@napi-rs/cli': ^3.6.1
-  '@napi-rs/wasm-runtime': ^1.1.4
+  '@babel/core': ^7.29.7
+  '@babel/preset-env': ^7.29.7
+  '@babel/preset-typescript': ^7.29.7
+  '@napi-rs/cli': ^3.7.2
+  '@napi-rs/wasm-runtime': ^1.1.6
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
-  '@oxc-project/runtime': '=0.132.0'
-  '@oxc-project/types': '=0.132.0'
+  '@oxc-project/runtime': '=0.139.0'
+  '@oxc-project/types': '=0.139.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
@@ -57,7 +59,7 @@ catalog:
   '@types/serve-static': ^2.0.0
   '@types/strip-comments': ^2.0.4
   '@types/ws': ^8.18.0
-  acorn: ^8.12.1
+  acorn: ^8.17.0
   acorn-import-assertions: ^1.9.0
   astring: ^1.9.0
   buble: ^0.20.0
@@ -74,20 +76,21 @@ catalog:
   fast-glob: ^3.3.3
   fixturify: ^3.0.0
   follow-redirects: ^1.15.6
+  fresh-import: ^0.2.1
   fs-extra: ^11.3.2
   glob: ^13.0.0
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
   mocha: ^11.7.5
-  oxc-minify: '=0.132.0'
-  oxc-parser: '=0.132.0'
-  oxc-transform: '=0.132.0'
+  oxc-minify: '=0.139.0'
+  oxc-parser: '=0.139.0'
+  oxc-transform: '=0.139.0'
   pathe: ^2.0.3
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
   remeda: ^2.34.1
-  rolldown-plugin-dts: ^0.25.1
+  rolldown-plugin-dts: ^0.26.0
   rollup: ^4.60.4
   semver: ^7.8.0
   serve-static: ^2.0.0
@@ -101,15 +104,10 @@ catalog:
   tsx: ^4.22.0
   typescript: ^6.0.0
   unified: ^11.0.5
-  valibot: 1.4.0
+  valibot: 1.4.2
   vite: ^8.0.0
-  vitepress: ^2.0.0-alpha.15
-  vitepress-plugin-group-icons: ^1.7.1
-  vitepress-plugin-llms: ^1.1.0
-  vitepress-plugin-og: ^0.0.5
-  vitepress-plugin-graphviz: ^0.1.0
   vitest: ^4.1.6
-  vue: ^3.5.13
+  vue: ^3.5.35
   web-tree-sitter: ^0.26.0
   ws: ^8.20.1
   zx: ^8.1.2
@@ -124,3 +122,20 @@ trustPolicyExclude:
   - rxjs@7.8.2
 
 verifyDepsBeforeRun: install
+
+minimumReleaseAgeExclude:
+  - '@napi-rs/cli@3.7.2'
+  - '@napi-rs/wasm-runtime@1.1.6'
+  - '@emnapi/core@1.11.1'
+  - '@emnapi/runtime@1.11.1'
+  - emnapi@1.11.1
+  - '@oxc-minify/*'
+  - '@oxc-parser/*'
+  - '@oxc-transform/*'
+  - '@oxc-project/*'
+  - oxc-minify
+  - oxc-parser
+  - oxc-transform
+  - '@voidzero-dev/*'
+  - vite-plus
+  - vitepress-plugin-feedback-tracker@0.2.0-alpha.1

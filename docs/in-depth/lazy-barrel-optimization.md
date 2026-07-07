@@ -244,7 +244,7 @@ If the loaded modules (`a.js`, `b.js`, etc.) are also barrel modules, lazy barre
 
 ## Configuration
 
-Enable lazy barrel optimization in your Rolldown configuration:
+Lazy barrel optimization is currently disabled by default. You can enable it in your Rolldown configuration:
 
 ```js
 // rolldown.config.js
@@ -254,6 +254,10 @@ export default {
   },
 };
 ```
+
+::: warning
+This option is planned to be removed in the future. If you need to opt out, please [open an issue](https://github.com/rolldown/rolldown/issues) describing your use case so we can address it before the option is gone.
+:::
 
 ## Requirements
 

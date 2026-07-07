@@ -128,7 +128,7 @@ export function bindingifyRenderChunk(
         // If map is explicitly null, don't generate sourcemap (opt-out)
         // If map is undefined, auto-generate from MagicString
         if (ret.map === null) {
-          return { code: normalizedCode };
+          return { code: normalizedCode, map: null };
         }
         if (ret.map === undefined) {
           const generatedMap = magicString.generateMap();
@@ -149,8 +149,8 @@ export function bindingifyRenderChunk(
         };
       }
 
-      if (!ret.map) {
-        return { code: ret.code };
+      if (ret.map === null) {
+        return { code: ret.code, map: null };
       }
 
       return {

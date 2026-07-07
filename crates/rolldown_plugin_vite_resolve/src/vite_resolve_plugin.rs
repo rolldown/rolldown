@@ -497,8 +497,13 @@ impl Plugin for ViteResolvePlugin {
     args: &HookLoadArgs<'_>,
   ) -> HookLoadReturn {
     if let Some(id_without_prefix) = args.id.strip_prefix(BROWSER_EXTERNAL_ID) {
+      // A bare `__vite-browser-external` (no `:name` suffix) is a `browser` field `false`
+      // mapping. Per the browser field spec it must resolve to an empty module, not the proxy
+      // that throws on property access.
+      let is_browser_field_false = id_without_prefix.is_empty();
+
       if self.resolve_options.is_build {
-        if self.resolve_options.is_production {
+        if self.resolve_options.is_production || is_browser_field_false {
           // rolldown treats missing export as an error, and will break build.
           // So use cjs to avoid it.
           return Ok(Some(HookLoadOutput {
@@ -507,18 +512,12 @@ impl Plugin for ViteResolvePlugin {
           }));
         } else {
           return Ok(Some(HookLoadOutput {
-            code: get_development_build_browser_external_module_code(
-              // trim leading `:` if it's not empty
-              if id_without_prefix.is_empty() {
-                id_without_prefix
-              } else {
-                &id_without_prefix[1..]
-              },
-            ),
+            // trim leading `:`
+            code: get_development_build_browser_external_module_code(&id_without_prefix[1..]),
             ..Default::default()
           }));
         }
-      } else if self.resolve_options.is_production {
+      } else if self.resolve_options.is_production || is_browser_field_false {
         // in dev, needs to return esm
         return Ok(Some(HookLoadOutput {
           code: arcstr::literal!("export default {}"),
@@ -526,10 +525,8 @@ impl Plugin for ViteResolvePlugin {
         }));
       } else {
         return Ok(Some(HookLoadOutput {
-          code: get_development_dev_browser_external_module_code(
-            // trim leading `:` if it's not empty
-            if id_without_prefix.is_empty() { id_without_prefix } else { &id_without_prefix[1..] },
-          ),
+          // trim leading `:`
+          code: get_development_dev_browser_external_module_code(&id_without_prefix[1..]),
           ..Default::default()
         }));
       }

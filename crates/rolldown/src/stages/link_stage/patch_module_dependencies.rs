@@ -1,5 +1,5 @@
 use rayon::iter::ParallelIterator;
-use rolldown_common::{Module, RuntimeHelper};
+use rolldown_common::{Module, ModuleIdx, RuntimeHelper};
 use rolldown_utils::{index_vec_ext::IndexVecRefExt, indexmap::FxIndexSet};
 
 use super::LinkStage;
@@ -20,6 +20,15 @@ impl LinkStage<'_> {
           |(symbol_ref, _came_from_cjs)| {
             let canonical_ref = self.symbols.canonical_ref_for(*symbol_ref);
             extended_dependencies.insert(canonical_ref.owner);
+            // An entry export may resolve to a facade binding whose value lives on a CJS
+            // module's namespace (e.g. re-exporting a name that a CJS module only provides
+            // dynamically). Inclusion follows that alias (`follow_cjs_namespace_alias`), so the
+            // aliased module is a real dependency of the entry, same as in the statement walk
+            // below.
+            let symbol = self.symbols.get(canonical_ref);
+            if let Some(ns) = &symbol.namespace_alias {
+              extended_dependencies.insert(ns.namespace_ref.owner);
+            }
           },
         );
 
@@ -108,13 +117,37 @@ impl LinkStage<'_> {
     // Currently, only the `toESM` helper needs to be transitively included.
     //
     //
+    let tree_shaking = self.options.treeshake.is_some();
     for (module_idx, extended_dependencies, runtime_helper) in processed_module_results {
+      // Symbol-derived dependencies always force their owner module to be loaded. Import-record
+      // targets (what `meta.dependencies` holds at this point) only do so when evaluating them
+      // has side effects — the same edge semantics `include_side_effectful_dependencies` uses
+      // during tree-shaking and `compute_cross_chunk_links` uses when emitting bare imports.
+      //
+      // Record edges into entry modules are kept even when side-effect-free: an entry's chunk
+      // exists regardless, and letting static importers participate in its bit pattern keeps
+      // shared code co-located with the entry chunk (Rollup collapses such code-less entry
+      // facades onto the chunk holding their exports — e.g. a statically imported re-export
+      // barrel that is also a dynamic entry must not push its re-export targets into a separate
+      // chunk, see rollup's `entry-without-code-dynamic`).
+      let load_dependencies: FxIndexSet<ModuleIdx> = extended_dependencies
+        .iter()
+        .copied()
+        .chain(self.metas[module_idx].dependencies.iter().copied().filter(|dep_idx| {
+          !tree_shaking
+            || self.entries.contains_key(dep_idx)
+            || self.module_table[*dep_idx].side_effects().has_side_effects()
+        }))
+        .collect();
+
       let meta = &mut self.metas[module_idx];
       meta.dependencies.extend(extended_dependencies);
+      meta.load_dependencies = load_dependencies;
       meta.depended_runtime_helper |= runtime_helper;
 
       if !runtime_helper.is_empty() {
         meta.dependencies.insert(self.runtime.id());
+        meta.load_dependencies.insert(self.runtime.id());
       }
     }
 
@@ -126,6 +159,7 @@ impl LinkStage<'_> {
         if runtime_module.side_effects.has_side_effects() {
           for &entry_module_idx in self.entries.keys() {
             self.metas[entry_module_idx].dependencies.insert(runtime_idx);
+            self.metas[entry_module_idx].load_dependencies.insert(runtime_idx);
             self.metas[entry_module_idx].has_side_effectful_runtime_dep = true;
           }
         }

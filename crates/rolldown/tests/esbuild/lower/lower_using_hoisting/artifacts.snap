@@ -229,12 +229,9 @@ export { bar1, foo1 };
 ```js
 //#region hoist-export-local-direct.js
 using a = b;
-var ac1 = [a, c];
-var { x: [x1] } = foo;
-let a1 = a;
-let { y: [y1] } = foo;
-const c1 = c;
-const { z: [z1] } = foo;
+var ac1 = [a, c], { x: [x1] } = foo;
+let a1 = a, { y: [y1] } = foo;
+const c1 = c, { z: [z1] } = foo;
 var { x: [x2] } = foo;
 let { y: [y2] } = foo;
 const { z: [z2] } = foo;

@@ -1,0 +1,16 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/10048 - with `experimental.lazyBarrel` + `strictExecutionOrder`, theming.js imports helper-only bindings (`__commonJS` / `__toESM`) and calls them at the top level, while also re-exporting a passthrough `themes` value from data.js. The entry uses only that passthrough, so theming's helper-dependent body must not be retained without helpers.js. Executing the compiled entry via `_test.mjs` must not throw.",
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      }
+    ],
+    "format": "esm",
+    "strictExecutionOrder": true,
+    "experimental": {
+      "lazyBarrel": true
+    }
+  }
+}

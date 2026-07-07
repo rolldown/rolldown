@@ -1,0 +1,10 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/9961 - `core` is `sideEffects: false`, calls the imported `checkGlobals()` at module top level, and re-exports setupWorker/http from sibling files. `main` imports only setupWorker/http, so strictExecutionOrder must not retain core's own top-level `checkGlobals()` body just because the barrel is wrapped. The bundle should execute cleanly with lazyBarrel enabled.",
+  "config": {
+    "strictExecutionOrder": true,
+    "experimental": {
+      "lazyBarrel": true
+    }
+  },
+  "configVariants": []
+}

@@ -33,6 +33,24 @@ rc_buffer = "deny"
 rc_mutex = "deny"
 rest_pat_in_fully_bound_structs = "deny"
 unnecessary_safety_comment = "deny"
+float_cmp_const = "deny"
+lossy_float_literal = "deny"
+fn_to_numeric_cast_any = "deny"
+mixed_read_write_in_expression = "deny"
+precedence_bits = "deny"
+suspicious_xor_used_as_pow = "deny"
+assertions_on_result_states = "deny"
+unused_result_ok = "deny"
+as_underscore = "deny"
+deref_by_slicing = "deny"
+empty_enum_variants_with_brackets = "deny"
+pathbuf_init_then_push = "deny"
+pub_without_shorthand = "deny"
+self_named_module_files = "deny"
+string_lit_chars_any = "deny"
+unnecessary_safety_doc = "deny"
+unnecessary_self_imports = "deny"
+large_include_file = "deny"
 
 # --- pedantic #https://doc.rust-lang.org/clippy/usage.html#clippypedantic
 # To write the best rust code, pedantic group is enabled by default.
@@ -98,30 +116,30 @@ trivial_regex = "allow"
 
 [workspace.dependencies]
 # publish = true
-rolldown = { version = "0.1.0", path = "crates/rolldown" }
-rolldown_common = { version = "0.1.0", path = "crates/rolldown_common" }
-rolldown_dev = { version = "0.1.0", path = "crates/rolldown_dev" }
-rolldown_dev_common = { version = "0.1.0", path = "crates/rolldown_dev_common" }
-rolldown_devtools = { version = "0.1.0", path = "crates/rolldown_devtools" }
-rolldown_devtools_action = { version = "0.1.0", path = "crates/rolldown_devtools_action" }
-rolldown_ecmascript = { version = "0.1.0", path = "crates/rolldown_ecmascript" }
-rolldown_ecmascript_utils = { version = "0.1.0", path = "crates/rolldown_ecmascript_utils" }
-rolldown_error = { version = "0.1.0", path = "crates/rolldown_error" }
-rolldown_fs = { version = "0.1.0", path = "crates/rolldown_fs" }
-rolldown_fs_watcher = { version = "0.1.0", path = "crates/rolldown_fs_watcher" }
-rolldown_plugin = { version = "0.1.0", path = "crates/rolldown_plugin" }
-rolldown_plugin_chunk_import_map = { version = "0.1.0", path = "crates/rolldown_plugin_chunk_import_map" }
-rolldown_plugin_asset_module = { version = "0.1.0", path = "crates/rolldown_plugin_asset_module" }
-rolldown_plugin_copy_module = { version = "0.1.0", path = "crates/rolldown_plugin_copy_module" }
-rolldown_plugin_bundle_analyzer = { version = "0.1.0", path = "crates/rolldown_plugin_bundle_analyzer" }
-rolldown_plugin_data_url = { version = "0.1.0", path = "crates/rolldown_plugin_data_url" }
-rolldown_plugin_esm_external_require = { version = "0.1.0", path = "crates/rolldown_plugin_esm_external_require" }
-rolldown_plugin_hmr = { version = "0.1.0", path = "crates/rolldown_plugin_hmr" }
-rolldown_plugin_isolated_declaration = { version = "0.1.0", path = "crates/rolldown_plugin_isolated_declaration" }
-rolldown_plugin_lazy_compilation = { version = "0.1.0", path = "crates/rolldown_plugin_lazy_compilation" }
-rolldown_plugin_oxc_runtime = { version = "0.1.0", path = "crates/rolldown_plugin_oxc_runtime" }
-rolldown_plugin_replace = { version = "0.1.0", path = "crates/rolldown_plugin_replace" }
-rolldown_plugin_utils = { version = "0.1.0", path = "crates/rolldown_plugin_utils" }
+rolldown = { version = "1.1.4", path = "crates/rolldown" }
+rolldown_common = { version = "1.1.4", path = "crates/rolldown_common" }
+rolldown_dev = { version = "1.1.4", path = "crates/rolldown_dev" }
+rolldown_dev_common = { version = "1.1.4", path = "crates/rolldown_dev_common" }
+rolldown_devtools = { version = "1.1.4", path = "crates/rolldown_devtools" }
+rolldown_devtools_action = { version = "1.1.4", path = "crates/rolldown_devtools_action" }
+rolldown_ecmascript = { version = "1.1.4", path = "crates/rolldown_ecmascript" }
+rolldown_ecmascript_utils = { version = "1.1.4", path = "crates/rolldown_ecmascript_utils" }
+rolldown_error = { version = "1.1.4", path = "crates/rolldown_error" }
+rolldown_fs = { version = "1.1.4", path = "crates/rolldown_fs" }
+rolldown_fs_watcher = { version = "1.1.4", path = "crates/rolldown_fs_watcher" }
+rolldown_plugin = { version = "1.1.4", path = "crates/rolldown_plugin" }
+rolldown_plugin_chunk_import_map = { version = "1.1.4", path = "crates/rolldown_plugin_chunk_import_map" }
+rolldown_plugin_asset_module = { version = "1.1.4", path = "crates/rolldown_plugin_asset_module" }
+rolldown_plugin_copy_module = { version = "1.1.4", path = "crates/rolldown_plugin_copy_module" }
+rolldown_plugin_bundle_analyzer = { version = "1.1.4", path = "crates/rolldown_plugin_bundle_analyzer" }
+rolldown_plugin_data_url = { version = "1.1.4", path = "crates/rolldown_plugin_data_url" }
+rolldown_plugin_esm_external_require = { version = "1.1.4", path = "crates/rolldown_plugin_esm_external_require" }
+rolldown_plugin_hmr = { version = "1.1.4", path = "crates/rolldown_plugin_hmr" }
+rolldown_plugin_isolated_declaration = { version = "1.1.4", path = "crates/rolldown_plugin_isolated_declaration" }
+rolldown_plugin_lazy_compilation = { version = "1.1.4", path = "crates/rolldown_plugin_lazy_compilation" }
+rolldown_plugin_oxc_runtime = { version = "1.1.4", path = "crates/rolldown_plugin_oxc_runtime" }
+rolldown_plugin_replace = { version = "1.1.4", path = "crates/rolldown_plugin_replace" }
+rolldown_plugin_utils = { version = "1.1.4", path = "crates/rolldown_plugin_utils" }
 rolldown_plugin_vite_alias = { version = "0.1.0", path = "crates/rolldown_plugin_vite_alias" }
 rolldown_plugin_vite_build_import_analysis = { version = "0.1.0", path = "crates/rolldown_plugin_vite_build_import_analysis" }
 rolldown_plugin_vite_dynamic_import_vars = { version = "0.1.0", path = "crates/rolldown_plugin_vite_dynamic_import_vars" }
@@ -132,112 +150,119 @@ rolldown_plugin_vite_manifest = { version = "0.1.0", path = "crates/rolldown_plu
 rolldown_plugin_vite_module_preload_polyfill = { version = "0.1.0", path = "crates/rolldown_plugin_vite_module_preload_polyfill" }
 rolldown_plugin_vite_react_refresh_wrapper = { version = "0.1.0", path = "crates/rolldown_plugin_vite_react_refresh_wrapper" }
 rolldown_plugin_vite_reporter = { version = "0.1.0", path = "crates/rolldown_plugin_vite_reporter" }
-rolldown_plugin_vite_resolve = { version = "0.1.0", path = "crates/rolldown_plugin_vite_resolve" }
+rolldown_plugin_vite_resolve = { version = "1.1.4", path = "crates/rolldown_plugin_vite_resolve" }
 rolldown_plugin_vite_transform = { version = "0.1.0", path = "crates/rolldown_plugin_vite_transform" }
-rolldown_plugin_vite_wasm_fallback = { version = "0.1.0", path = "crates/rolldown_plugin_vite_wasm_fallback" }
 rolldown_plugin_vite_web_worker_post = { version = "0.1.0", path = "crates/rolldown_plugin_vite_web_worker_post" }
-rolldown_resolver = { version = "0.1.0", path = "crates/rolldown_resolver" }
-rolldown_sourcemap = { version = "0.1.0", path = "crates/rolldown_sourcemap" }
-rolldown_std_utils = { version = "0.1.0", path = "crates/rolldown_std_utils" }
+rolldown_resolver = { version = "1.1.4", path = "crates/rolldown_resolver" }
+rolldown_sourcemap = { version = "1.1.4", path = "crates/rolldown_sourcemap" }
+rolldown_std_utils = { version = "1.1.4", path = "crates/rolldown_std_utils" }
 rolldown_testing = { version = "0.1.0", path = "crates/rolldown_testing" }
 rolldown_testing_config = { version = "0.1.0", path = "crates/rolldown_testing_config" }
-rolldown_tracing = { version = "0.1.0", path = "crates/rolldown_tracing" }
-rolldown_utils = { version = "0.1.0", path = "crates/rolldown_utils" }
-rolldown_watcher = { version = "0.1.0", path = "crates/rolldown_watcher" }
-rolldown_workspace = { version = "0.1.0", path = "crates/rolldown_workspace" }
-string_wizard = { version = "0.0.27", path = "crates/string_wizard", features = ["serde"] }
+rolldown_tracing = { version = "1.1.4", path = "crates/rolldown_tracing" }
+rolldown_utils = { version = "1.1.4", path = "crates/rolldown_utils" }
+rolldown_watcher = { version = "1.1.4", path = "crates/rolldown_watcher" }
+rolldown_workspace = { version = "1.1.4", path = "crates/rolldown_workspace" }
+string_wizard = { version = "1.1.4", path = "crates/string_wizard", features = ["serde"] }
 
 #
-anyhow = "1.0.98"
-append-only-vec = "0.1.7"
+anyhow = "1.0.103"
+append-only-vec = "0.1.8"
 arcstr = { version = "1.2.0", default-features = false }
 ariadne = { package = "rolldown-ariadne", version = "0.6.0" }
-async-channel = "2.3.1"
+async-channel = "2.5.0"
 async-scoped = "0.9.0"
-async-trait = "0.1.88"
 base-encode = "0.3.1"
 base64-simd = "0.8.0"
-bitflags = "2.9.1"
-blake3 = "1.8.2"
-commondir = "1.0.0"
+bitflags = "2.13.0"
+blake3 = "1.8.5"
 cow-utils = "0.1.3"
-criterion2 = { version = "3.0.0", default-features = false }
+criterion2 = { version = "3.0.4", default-features = false }
 dashmap = "6.2.1"
-derive_more = { version = "2.0.1", features = ["debug"] }
+derive_more = { version = "2.1.1", features = ["debug"] }
 dunce = "1.0.5" # Normalize Windows paths to the most compatible format, avoiding UNC where possible
-fast-glob = "1.0.0"
+fast-glob = "1.0.1"
 flate2 = { version = "=1.1.9", features = ["zlib-rs"] }
-form_urlencoded = "1.2.1"
-futures = "0.3.31"
-glob = "0.3.2"
+form_urlencoded = "1.2.2"
+futures = "0.3.32"
+glob = "0.3.3"
 heck = "0.5.0"
-html5gum = "0.8.1"
-ignore = "0.4.23"
-indexmap = "2.9.0"
-infer = "0.19.0"
-insta = "1.43.1"
-itertools = "0.14.0"
-itoa = "1.0.15"
+# Pinned to the no-ICU 1.0.0 backend to keep IDNA support turned off.
+# See crates/rolldown_plugin_vite_resolve/Cargo.toml for the full rationale.
+idna_adapter = "=1.0.0"
+ignore = "0.4.27"
+indexmap = "2.14.0"
+infer = { version = "0.19.0", default-features = false }
+insta = "1.48.0"
+itertools = "0.15.0"
+itoa = "1.0.18"
 json-escape-simd = "3"
 json-strip-comments = "3"
-jsonschema = { version = "0.46.5", default-features = false }
-memchr = "2.7.4"
-mimalloc-safe = { git = "https://github.com/shulaoda/mimalloc-safe", branch = "fix/apple-thread-local-recurse-guard" }
+jsonschema = { version = "0.46.10", default-features = false }
+memchr = "2.8.2"
+mimalloc-safe = "0.1.64"
 mime = "0.3.17"
 nodejs-built-in-modules = "1.0.0"
 nom = "8.0.0"
-num-bigint = "0.4.6"
-num-format = "0.4"
+num-bigint = "0.5.1"
 num_cpus = "1.17"
-owo-colors = "4.2.2"
+owo-colors = "4.3.0"
 parking_lot = "0.12.5"
 path-posix = "0.0.1"
-percent-encoding = "2.3.1"
-petgraph = "0.8.1"
-phf = "0.13.0"
-pnp = "0.12.9"
-rayon = "1.10.0"
-regex = "1.11.1"
-regress = "0.11.0"
-rolldown-notify = "10.2.0"
-rolldown-notify-debouncer-full = "0.7.5"
-ropey = "1.6.1"
-rustc-hash = { version = "2.1.1" }
-schemars = "1.0.0"
-self_cell = "1.2.0"
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
+percent-encoding = "2.3.2"
+petgraph = "0.8.3"
+phf = { version = "0.14.0", features = ["macros"] }
+pnp = "0.12.10"
+rayon = "1.12.0"
+# Default features drop the `\p{…}` Unicode property tables (gencat/script/age/bool/segment),
+# which no hardcoded pattern uses. `unicode-perl`/`unicode-case` are kept so `\w \d \s \b` and
+# `(?i)` stay Unicode-aware. User patterns needing `\p{…}` fall back to `regress` via `HybridRegex`.
+regex = { version = "1.12.4", default-features = false, features = [
+  "std",
+  "perf",
+  "unicode-perl",
+  "unicode-case",
+] }
+regress = "0.11.1"
+rolldown-notify = "10.5.0"
+rolldown-notify-debouncer-full = "0.7.9"
+rustc-hash = { version = "2.1.3" }
+schemars = "1.2.1"
+self_cell = "1.2.2"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
 serde_yaml = "0.9.34"
 simdutf8 = "0.1.5"
-string_cache = "0.9.0"
+smallvec = { version = "1.15.2", features = ["union"] }
 sugar_path = { version = "2.0.1", features = ["cached_current_dir"] }
-terminal_size = "0.4.2"
-testing_macros = "1.0.0"
-tokio = { version = "1.45.0", default-features = false }
-tracing = "0.1.41"
+supports-color = "3"
+terminal_size = "0.4.4"
+testing_macros = "1.0.1"
+tokio = { version = "1.52.3", default-features = false }
+tracing = "0.1.44"
 tracing-chrome = "0.7.2"
-tracing-subscriber = { version = "0.3.19", default-features = false }
+tracing-subscriber = { version = "0.3.23", default-features = false }
 ts-rs = "12.0"
 typedmap = "0.6.0"
-url = "2.5.4"
-urlencoding = "2.1.3"
-uuid = "1.17.0"
+url = "2.5.8"
+uuid = "1.23.4"
 vfs = "0.13.0"
 walkdir = "2.5.0"
-xxhash-rust = "0.8.15"
+xxhash-rust = "0.8.16"
 
-prettyplease = "0.2.32"
+prettyplease = "0.2.37"
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "2", default-features = false }
 
 # napi
-napi = { version = "3.0.0", features = ["async", "anyhow", "tracing", "object_indexmap"] }
-napi-build = { version = "2.2.2" }
-napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
+# Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks
+# (e.g. #7289) by showing which napi function is pending.
+napi = { version = "3", features = ["async", "anyhow", "tracing", "object_indexmap"] }
+napi-build = { version = "2" }
+napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.132.0", features = [
+oxc = { version = "0.139.0", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -247,29 +272,28 @@ oxc = { version = "0.132.0", features = [
   "serialize",
   "isolated_declarations",
   "regular_expression",
-  "cfg",
 ] }
-oxc_allocator = { version = "0.132.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.132.0" }
-oxc_napi = { version = "0.132.0" }
-oxc_str = { version = "0.132.0" }
-oxc_minify_napi = { version = "0.132.0" }
-oxc_parser_napi = { version = "0.132.0" }
-oxc_transform_napi = { version = "0.132.0" }
-oxc_traverse = { version = "0.132.0" }
+oxc_allocator = { version = "0.139.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.139.0" }
+oxc_napi = { version = "0.139.0" }
+oxc_str = { version = "0.139.0" }
+oxc_minify_napi = { version = "0.139.0" }
+oxc_parser_napi = { version = "0.139.0" }
+oxc_transform_napi = { version = "0.139.0" }
+oxc_traverse = { version = "0.139.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_resolver_napi oxc_sourcemap oxc_index oxc-browserslist`
-oxc_index = { version = "4", features = [
+oxc_index = { version = "5", features = [
   "rayon",
   "serde",
 ] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver = { version = "11.19.1", features = [
+oxc_resolver = { version = "11.23.0", features = [
   "yarn_pnp",
 ] } # https://github.com/oxc-project/oxc-resolver
-oxc_resolver_napi = { version = "11.19.1", default-features = false, features = ["yarn_pnp"] }
-oxc_sourcemap = { version = "6" } # https://github.com/oxc-project/oxc-sourcemap
+oxc_resolver_napi = { version = "11.23.0", default-features = false, features = ["yarn_pnp"] }
+oxc_sourcemap = { version = "8.1.0" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.

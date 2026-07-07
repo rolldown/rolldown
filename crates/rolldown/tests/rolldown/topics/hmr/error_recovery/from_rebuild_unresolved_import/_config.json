@@ -1,0 +1,10 @@
+{
+  "config": {
+    "experimental": {
+      "devMode": {}
+    }
+  },
+  "dev": {
+    "ensureLatestBuildOutputForEachStep": true
+  }
+}

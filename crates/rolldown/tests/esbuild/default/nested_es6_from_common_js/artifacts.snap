@@ -14,7 +14,9 @@ var import_foo = (/* @__PURE__ */ __commonJSMin(((exports) => {
 		return 123;
 	};
 })))();
-assert.equal((0, import_foo.fn)(), 123);
+(() => {
+	assert.equal((0, import_foo.fn)(), 123);
+})();
 //#endregion
 
 ```

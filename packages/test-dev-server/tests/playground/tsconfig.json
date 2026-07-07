@@ -1,0 +1,14 @@
+{
+  // Dedicated tsconfig for the playground tree so editors resolve the `~utils`
+  // alias (and the typed `page`/`editFile`/… surface) for spec files that live
+  // inside workspace-member playground dirs. `pnpm typecheck` (../tsconfig.json)
+  // is still the authoritative check; this exists for the IDE. Mirrors Vite's
+  // `playground/tsconfig.json`.
+  "extends": "../tsconfig.json",
+  "include": ["**/*.ts"],
+  "compilerOptions": {
+    "paths": {
+      "~utils": ["./test-utils.ts"]
+    }
+  }
+}

@@ -33,3 +33,5 @@ codspeed = ["criterion2/codspeed"]
 [dev-dependencies]
 rustc-hash = { workspace = true }
 mimalloc-safe = { workspace = true }
+oxc = { workspace = true }
+rolldown_sourcemap = { workspace = true }

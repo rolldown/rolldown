@@ -39,6 +39,7 @@ pub fn normalize_binding_transform_options(options: TransformOptions) -> Bundler
   let decorator = options.decorator.map(|decorator| DecoratorOptions {
     legacy: decorator.legacy,
     emit_decorator_metadata: decorator.emit_decorator_metadata,
+    strict_null_checks: decorator.strict_null_checks,
   });
 
   let typescript = options.typescript.map(|typescript| {

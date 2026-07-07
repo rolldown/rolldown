@@ -19,7 +19,6 @@ use rolldown_plugin_vite_react_refresh_wrapper::ViteReactRefreshWrapperPlugin;
 use rolldown_plugin_vite_reporter::ViteReporterPlugin;
 use rolldown_plugin_vite_resolve::ViteResolvePlugin;
 use rolldown_plugin_vite_transform::ViteTransformPlugin;
-use rolldown_plugin_vite_wasm_fallback::ViteWasmFallbackPlugin;
 use rolldown_plugin_vite_web_worker_post::ViteWebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
@@ -90,7 +89,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         } else {
           BindingReplacePluginConfig::default()
         };
-        Arc::new(ReplacePlugin::with_options(config.into())?)
+        Arc::new(ReplacePlugin::with_options(config.try_into()?)?)
       }
       BindingBuiltinPluginName::ViteAlias => {
         let plugin = if let Some(options) = plugin.options {
@@ -196,7 +195,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
-      BindingBuiltinPluginName::ViteWasmFallback => Arc::new(ViteWasmFallbackPlugin),
       BindingBuiltinPluginName::ViteWebWorkerPost => Arc::new(ViteWebWorkerPostPlugin),
       BindingBuiltinPluginName::OxcRuntime => Arc::new(OxcRuntimePlugin),
     })

@@ -28,13 +28,12 @@ jobs:
     outputs:
       rust-changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}
       node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
-      docs-changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}
       # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
       run-windows: "${{ (github.event_name == 'pull_request') && contains(github.event.pull_request.labels.*.name, 'ci: windows') }}"
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: filter
         with:
           filters: |
@@ -60,17 +59,10 @@ jobs:
               - 'examples/**'
               - 'scripts/**'
               - 'rollup'
-            docs-changes:
-              - *infra-changes
-              - 'docs/**'
-              - 'packages/rolldown/src/**'
-              - 'packages/rolldown/package.json'
-              - 'packages/rolldown/tsconfig*.json'
       - name: Show outputs
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
-          echo "Docs changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}"
 
   rust-validation:
     name: Rust Validation
@@ -81,7 +73,7 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just
           cache-key: lint
@@ -89,6 +81,12 @@ jobs:
           components: clippy rustfmt
 
       - run: just lint-rust
+
+      - name: Check allocations
+        run: |
+          cargo allocs
+          git diff --exit-code -- tasks/track_memory_allocations/allocs.snap ||
+          (echo 'Allocations have changed. Run `just allocs` to update the snapshot, otherwise please fix the regression.' && exit 1)
 
   cargo-test:
     needs: changes
@@ -146,6 +144,12 @@ jobs:
       node-version: ${{ matrix.node-version }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
+  wasi:
+    needs: changes
+    uses: ./.github/workflows/reusable-wasi.yml
+    with:
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
@@ -200,8 +204,9 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+      - uses: voidzero-dev/setup-vp@35171c92dd08b67d5a9d3f2a4327800e58396f2a # v1.13.0
         with:
+          version: '0.2.1'
           cache: true
 
       - name: Download Native Rolldown Build
@@ -239,8 +244,9 @@ jobs:
           env-mapping: |
             PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
 
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+      - uses: voidzero-dev/setup-vp@35171c92dd08b67d5a9d3f2a4327800e58396f2a # v1.13.0
         with:
+          version: '0.2.1'
           cache: true
 
       - name: Download Native Rolldown Build
@@ -290,14 +296,15 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just
           cache-key: native-build
           save-cache: false
 
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+      - uses: voidzero-dev/setup-vp@35171c92dd08b67d5a9d3f2a4327800e58396f2a # v1.13.0
         with:
+          version: '0.2.1'
           cache: true
 
       - name: Download Native Rolldown Build
@@ -343,14 +350,15 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           cache-key: repo-validation
           save-cache: ${{ github.ref_name == 'main' }}
           components: rustfmt
 
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+      - uses: voidzero-dev/setup-vp@35171c92dd08b67d5a9d3f2a4327800e58396f2a # v1.13.0
         with:
+          version: '0.2.1'
           cache: true
 
       - name: Lint Filename
@@ -366,40 +374,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: crate-ci/typos@aca895bf05aec0cb7dffa6f94495e923224d9f17 # v1.46.2
+      - uses: crate-ci/typos@bee27e3a4fd1ea2111cf90ab89cd076c870fce14 # v1.48.0
         with:
           files: .
-
-  docs-validation:
-    name: Docs Validation
-    needs: changes
-    if: ${{ needs.changes.outputs.docs-changes == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
-        with:
-          cache: true
-
-      - name: Build Docs
-        run: vp run docs:build
-
-  deploy-void:
-    name: Deploy to Void
-    needs: [docs-validation]
-    if: github.ref_name == 'main'
-    runs-on: ubuntu-latest
-    environment: void
-    steps:
-      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
-        with:
-          cache: true
-
-      - name: Deploy to Void
-        run: vp run docs:void
-        env:
-          VOID_TOKEN: ${{ secrets.VOID_TOKEN }}
-          VOID_PROJECT: rolldown

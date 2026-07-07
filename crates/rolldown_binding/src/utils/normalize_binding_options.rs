@@ -1,11 +1,21 @@
 use super::normalize_binding_transform_options;
 use crate::options::BindingGeneratedCodeOptions;
-use crate::options::binding_manual_code_splitting_options::BindingChunkingContext;
-use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
-use crate::types::binding_string_or_regex::bindingify_string_or_regex_array;
+use crate::options::binding_manual_code_splitting_options::{
+  BindingChunkingContext, BindingManualCodeSplittingOptions,
+};
+use crate::options::{
+  AssetFileNamesOutputOption, BindingOnLog, ChunkFileNamesOutputOption, SanitizeFileName,
+  SourcemapIgnoreListOutputOption,
+};
+use crate::types::binding_string_or_regex::{
+  BindingStringOrRegex, bindingify_string_or_regex_array,
+};
+use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
-  types::js_callback::JsCallbackExt,
+  types::js_callback::{
+    JsCallbackResultExt, {JsCallback, JsCallbackExt},
+  },
 };
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
@@ -54,6 +64,7 @@ fn normalize_generated_code_option(
 
 fn normalize_addon_option(
   addon_option: Option<crate::options::AddonOutputOption>,
+  name: &'static str,
 ) -> Option<AddonOutputOption> {
   addon_option.map(move |value| match value {
     // Static string - no JS function call needed
@@ -65,6 +76,7 @@ fn normalize_addon_option(
         fn_js
           .await_call(FnArgs { data: (BindingRenderedChunk::new(chunk),) })
           .await
+          .context(name)
           .map_err(anyhow::Error::from)
       })
     })),
@@ -73,6 +85,7 @@ fn normalize_addon_option(
 
 fn normalize_chunk_file_names_option(
   option: Option<ChunkFileNamesOutputOption>,
+  name: &'static str,
 ) -> napi::Result<Option<ChunkFilenamesOutputOption>> {
   option
     .map(move |value| match value {
@@ -81,7 +94,7 @@ fn normalize_chunk_file_names_option(
         let func = Arc::clone(&func);
         let chunk = (chunk.clone().into(),);
         Box::pin(async move {
-          func.invoke_async(FnArgs { data: chunk }).await.map_err(anyhow::Error::from)
+          func.invoke_async(FnArgs { data: chunk }).await.context(name).map_err(anyhow::Error::from)
         })
       }))),
     })
@@ -98,7 +111,11 @@ fn normalize_sanitize_filename(
         let func = Arc::clone(&func);
         let name = name.to_string();
         Box::pin(async move {
-          func.invoke_async(FnArgs { data: (name,) }).await.map_err(anyhow::Error::from)
+          func
+            .invoke_async(FnArgs { data: (name,) })
+            .await
+            .context("sanitizeFileName option")
+            .map_err(anyhow::Error::from)
         })
       }))),
     })
@@ -115,7 +132,11 @@ fn normalize_asset_file_names_option(
         let func = Arc::clone(&func);
         let asset = (asset.clone().into(),);
         Box::pin(async move {
-          func.invoke_async(FnArgs { data: asset }).await.map_err(anyhow::Error::from)
+          func
+            .invoke_async(FnArgs { data: asset })
+            .await
+            .context("assetFileNames option")
+            .map_err(anyhow::Error::from)
         })
       }))),
     })
@@ -130,7 +151,13 @@ fn normalize_globals_option(
     Either::B(func) => rolldown_common::GlobalsOutputOption::Fn(Arc::new(move |name| {
       let func = Arc::clone(&func);
       let name = name.to_string();
-      Box::pin(async move { func.invoke_async((name,).into()).await.map_err(anyhow::Error::from) })
+      Box::pin(async move {
+        func
+          .invoke_async((name,).into())
+          .await
+          .context("globals option")
+          .map_err(anyhow::Error::from)
+      })
     })),
   })
 }
@@ -143,7 +170,9 @@ fn normalize_paths_option(
     Either::B(func) => rolldown_common::PathsOutputOption::Fn(Arc::new(move |id| {
       let func = Arc::clone(&func);
       let id = id.to_string();
-      Box::pin(async move { func.invoke_async((id,).into()).await.map_err(anyhow::Error::from) })
+      Box::pin(async move {
+        func.invoke_async((id,).into()).await.context("paths option").map_err(anyhow::Error::from)
+      })
     })),
   })
 }
@@ -187,6 +216,226 @@ fn napi_compress_options_to_raw_compress_options(
   })
 }
 
+fn normalize_external_option(
+  external: Option<
+    Either<Vec<BindingStringOrRegex>, JsCallback<FnArgs<(String, Option<String>, bool)>, bool>>,
+  >,
+) -> Option<IsExternal> {
+  external.map(|external| match external {
+    Either::A(patterns) => IsExternal::StringOrRegex(bindingify_string_or_regex_array(patterns)),
+    Either::B(is_external) => {
+      IsExternal::Fn(Some(Arc::new(move |source, importer, is_resolved| {
+        let source = source.to_string();
+        let importer = importer.map(ToString::to_string);
+        let is_external = Arc::clone(&is_external);
+        Box::pin(async move {
+          is_external
+            .invoke_async((source.clone(), importer, is_resolved).into())
+            .await
+            .context("external option")
+            .map_err(anyhow::Error::from)
+        })
+      })))
+    }
+  })
+}
+
+fn normalize_defer_sync_scan_data_option(
+  defer_sync_scan_data: Option<JsCallback<(), Vec<BindingDeferSyncScanData>>>,
+) -> Option<DeferSyncScanDataOption> {
+  defer_sync_scan_data.map(|ts_fn| {
+    DeferSyncScanDataOption::new(move || {
+      let ts_fn = Arc::clone(&ts_fn);
+      Box::pin(async move {
+        ts_fn
+          .invoke_async(())
+          .await
+          .context("deferSyncScanData option")
+          .and_then(|ret| {
+            ret.into_iter().map(TryInto::try_into).collect::<Result<Vec<DeferSyncScanData>, _>>()
+          })
+          .map_err(anyhow::Error::from)
+      })
+    })
+  })
+}
+
+fn normalize_sourcemap_ignore_list_option(
+  sourcemap_ignore_list: Option<SourcemapIgnoreListOutputOption>,
+) -> Option<rolldown::SourceMapIgnoreList> {
+  sourcemap_ignore_list.map(|option| match option {
+    Either3::A(bool_val) => rolldown::SourceMapIgnoreList::from_bool(bool_val),
+    Either3::B(string_or_regex) => {
+      rolldown::SourceMapIgnoreList::from_string_or_regex(string_or_regex.inner())
+    }
+    Either3::C(ts_fn) => {
+      rolldown::SourceMapIgnoreList::new(Arc::new(move |source, sourcemap_path| {
+        let ts_fn = Arc::clone(&ts_fn);
+        let source = source.to_string();
+        let sourcemap_path = sourcemap_path.to_string();
+        Box::pin(async move {
+          ts_fn
+            .invoke_async((source, sourcemap_path).into())
+            .await
+            .context("sourcemapIgnoreList option")
+            .map_err(anyhow::Error::from)
+        })
+      }))
+    }
+  })
+}
+
+fn normalize_sourcemap_path_transform_option(
+  sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
+) -> Option<rolldown::SourceMapPathTransform> {
+  sourcemap_path_transform.map(|ts_fn| {
+    rolldown::SourceMapPathTransform::new(Arc::new(move |source, sourcemap_path| {
+      let ts_fn = Arc::clone(&ts_fn);
+      let source = source.to_string();
+      let sourcemap_path = sourcemap_path.to_string();
+      Box::pin(async move {
+        ts_fn
+          .invoke_async((source, sourcemap_path).into())
+          .await
+          .context("sourcemapPathTransform option")
+          .map_err(anyhow::Error::from)
+      })
+    }))
+  })
+}
+
+fn normalize_invalidate_js_side_cache_option(
+  invalidate_js_side_cache: Option<JsCallback>,
+) -> Option<rolldown::InvalidateJsSideCache> {
+  invalidate_js_side_cache.map(|ts_fn| {
+    rolldown::InvalidateJsSideCache::new(Arc::new(move || {
+      let ts_fn = Arc::clone(&ts_fn);
+      Box::pin(async move {
+        ts_fn
+          .invoke_async(())
+          .await
+          .context("invalidateJsSideCache option")
+          .map_err(anyhow::Error::from)
+      })
+    }))
+  })
+}
+
+fn normalize_on_log_option(on_log: BindingOnLog) -> Option<rolldown::OnLog> {
+  on_log.map(|ts_fn| {
+    rolldown::OnLog::new(Arc::new(move |level, log| {
+      let ts_fn = Arc::clone(&ts_fn);
+      Box::pin(async move {
+        ts_fn
+          .invoke_async((level.to_string(), log.into()).into())
+          .await
+          .context("onLog option")
+          .map_err(anyhow::Error::from)
+      })
+    }))
+  })
+}
+
+fn normalize_code_splitting(
+  manual_code_splitting: Option<BindingManualCodeSplittingOptions>,
+  inline_dynamic_imports: Option<bool>,
+) -> napi::Result<Option<CodeSplittingMode>> {
+  // Reconcile the two still-separate binding inputs — `inlineDynamicImports` and the
+  // grouping config (`manualCodeSplitting`, fed from JS `advancedChunks` / `manualChunks`)
+  // — into the core's single `codeSplitting` option, whose object form (`Advanced`)
+  // carries the groups.
+  let manual_code_splitting = manual_code_splitting
+    .map(|inner| -> napi::Result<ManualCodeSplittingOptions> {
+      Ok(ManualCodeSplittingOptions {
+        min_size: inner.min_size,
+        min_share_count: inner.min_share_count,
+        min_module_size: inner.min_module_size,
+        max_module_size: inner.max_module_size,
+        max_size: inner.max_size,
+        groups: inner
+          .groups
+          .map(|inner| {
+            inner
+              .into_iter()
+              .map(|item| -> napi::Result<MatchGroup> {
+                Ok(MatchGroup {
+                  name: match item.name {
+                    Either::A(name) => MatchGroupName::Static(name),
+                    Either::B(func) => {
+                      let func = Arc::clone(&func);
+                      MatchGroupName::Dynamic(Arc::new(move |module_id, ctx| {
+                        let module_id = module_id.to_string();
+                        let func = Arc::clone(&func);
+                        let owned_ctx = ctx.clone();
+                        Box::pin(async move {
+                          func
+                            .invoke_async(
+                              (module_id, BindingChunkingContext::new(owned_ctx)).into(),
+                            )
+                            .await
+                            .context("advancedChunks group name option")
+                            .map_err(anyhow::Error::from)
+                        })
+                      }))
+                    }
+                  },
+                  test: item
+                    .test
+                    .map(|inner| -> napi::Result<rolldown::MatchGroupTest> {
+                      match inner {
+                        Either::A(reg) => {
+                          Ok(rolldown::MatchGroupTest::Regex(reg.try_into().map_err(|err| {
+                            napi::Error::from_reason(format!(
+                              "Invalid regex in `manualCodeSplitting` group `test`: {err}"
+                            ))
+                          })?))
+                        }
+                        Either::B(func) => {
+                          Ok(rolldown::MatchGroupTest::Function(Arc::new(move |id: &str| {
+                            let id = id.to_string();
+                            let func = Arc::clone(&func);
+                            Box::pin(async move {
+                              func
+                                .invoke_async((id,).into())
+                                .await
+                                .context("advancedChunks group test option")
+                                .map_err(anyhow::Error::from)
+                            })
+                          })))
+                        }
+                      }
+                    })
+                    .transpose()?,
+                  priority: item.priority,
+                  min_size: item.min_size,
+                  min_share_count: item.min_share_count,
+                  max_module_size: item.max_module_size,
+                  min_module_size: item.min_module_size,
+                  max_size: item.max_size,
+                  entries_aware: item.entries_aware,
+                  entries_aware_merge_threshold: item.entries_aware_merge_threshold,
+                  tags: item.tags.map(|tags| tags.into_iter().map(ModuleTag::from).collect()),
+                  include_dependencies_recursively: item.include_dependencies_recursively,
+                })
+              })
+              .collect::<napi::Result<Vec<_>>>()
+          })
+          .transpose()?,
+        include_dependencies_recursively: inner.include_dependencies_recursively,
+      })
+    })
+    .transpose()?;
+  // `inlineDynamicImports: true` wins and disables splitting. The JS layer already drops
+  // (and warns about) any grouping config in this case, so groups normally reach here only
+  // when a caller sets the binding fields directly; the `_` drops them to stay consistent.
+  Ok(match (inline_dynamic_imports, manual_code_splitting) {
+    (Some(true), _) => Some(CodeSplittingMode::Bool(false)),
+    (_, Some(groups)) => Some(CodeSplittingMode::Advanced(groups)),
+    (Some(false), None) => Some(CodeSplittingMode::Bool(true)),
+    (None, None) => None,
+  })
+}
+
 #[expect(clippy::too_many_lines)]
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
@@ -198,84 +447,16 @@ pub fn normalize_binding_options(
 ) -> napi::Result<BundlerConfig> {
   let cwd = PathBuf::from(input_options.cwd);
 
-  let external = input_options.external.map(|external| match external {
-    Either::A(patterns) => IsExternal::StringOrRegex(bindingify_string_or_regex_array(patterns)),
-    Either::B(is_external) => {
-      IsExternal::Fn(Some(Arc::new(move |source, importer, is_resolved| {
-        let source = source.to_string();
-        let importer = importer.map(ToString::to_string);
-        let is_external = Arc::clone(&is_external);
-        Box::pin(async move {
-          is_external
-            .invoke_async((source.clone(), importer, is_resolved).into())
-            .await
-            .map_err(anyhow::Error::from)
-        })
-      })))
-    }
-  });
-
-  let get_defer_sync_scan_data = input_options.defer_sync_scan_data.map(|ts_fn| {
-    DeferSyncScanDataOption::new(move || {
-      let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move {
-        ts_fn
-          .invoke_async(())
-          .await
-          .and_then(|ret| {
-            ret.into_iter().map(TryInto::try_into).collect::<Result<Vec<DeferSyncScanData>, _>>()
-          })
-          .map_err(anyhow::Error::from)
-      })
-    })
-  });
-
-  let sourcemap_ignore_list = output_options.sourcemap_ignore_list.map(|option| match option {
-    Either3::A(bool_val) => rolldown::SourceMapIgnoreList::from_bool(bool_val),
-    Either3::B(string_or_regex) => {
-      rolldown::SourceMapIgnoreList::from_string_or_regex(string_or_regex.inner())
-    }
-    Either3::C(ts_fn) => {
-      rolldown::SourceMapIgnoreList::new(Arc::new(move |source, sourcemap_path| {
-        let ts_fn = Arc::clone(&ts_fn);
-        let source = source.to_string();
-        let sourcemap_path = sourcemap_path.to_string();
-        Box::pin(async move {
-          ts_fn.invoke_async((source, sourcemap_path).into()).await.map_err(anyhow::Error::from)
-        })
-      }))
-    }
-  });
-
-  let sourcemap_path_transform = output_options.sourcemap_path_transform.map(|ts_fn| {
-    rolldown::SourceMapPathTransform::new(Arc::new(move |source, sourcemap_path| {
-      let ts_fn = Arc::clone(&ts_fn);
-      let source = source.to_string();
-      let sourcemap_path = sourcemap_path.to_string();
-      Box::pin(async move {
-        ts_fn.invoke_async((source, sourcemap_path).into()).await.map_err(anyhow::Error::from)
-      })
-    }))
-  });
-
-  let invalidate_js_side_cache = input_options.invalidate_js_side_cache.map(|ts_fn| {
-    rolldown::InvalidateJsSideCache::new(Arc::new(move || {
-      let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move { ts_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
-    }))
-  });
-
-  let on_log = input_options.on_log.map(|ts_fn| {
-    rolldown::OnLog::new(Arc::new(move |level, log| {
-      let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move {
-        ts_fn
-          .invoke_async((level.to_string(), log.into()).into())
-          .await
-          .map_err(anyhow::Error::from)
-      })
-    }))
-  });
+  let external = normalize_external_option(input_options.external);
+  let get_defer_sync_scan_data =
+    normalize_defer_sync_scan_data_option(input_options.defer_sync_scan_data);
+  let sourcemap_ignore_list =
+    normalize_sourcemap_ignore_list_option(output_options.sourcemap_ignore_list);
+  let sourcemap_path_transform =
+    normalize_sourcemap_path_transform_option(output_options.sourcemap_path_transform);
+  let invalidate_js_side_cache =
+    normalize_invalidate_js_side_cache_option(input_options.invalidate_js_side_cache);
+  let on_log = normalize_on_log_option(input_options.on_log);
 
   let mut module_types = None;
   if let Some(raw) = input_options.module_types {
@@ -310,8 +491,14 @@ pub fn normalize_binding_options(
     shim_missing_exports: input_options.shim_missing_exports,
     name: output_options.name,
     asset_filenames: normalize_asset_file_names_option(output_options.asset_file_names)?,
-    entry_filenames: normalize_chunk_file_names_option(output_options.entry_file_names)?,
-    chunk_filenames: normalize_chunk_file_names_option(output_options.chunk_file_names)?,
+    entry_filenames: normalize_chunk_file_names_option(
+      output_options.entry_file_names,
+      "entryFileNames option",
+    )?,
+    chunk_filenames: normalize_chunk_file_names_option(
+      output_options.chunk_file_names,
+      "chunkFileNames option",
+    )?,
     sanitize_filename: normalize_sanitize_filename(output_options.sanitize_file_name)?,
     dir: output_options.dir,
     file: output_options.file,
@@ -320,13 +507,16 @@ pub fn normalize_binding_options(
       Either::A(es_module_bool) => es_module_bool.into(),
       Either::B(es_module_string) => es_module_string.into(),
     }),
-    banner: normalize_addon_option(output_options.banner),
-    footer: normalize_addon_option(output_options.footer),
-    post_banner: normalize_addon_option(output_options.post_banner),
-    post_footer: normalize_addon_option(output_options.post_footer),
-    intro: normalize_addon_option(output_options.intro),
-    outro: normalize_addon_option(output_options.outro),
-    sourcemap_filenames: normalize_chunk_file_names_option(output_options.sourcemap_file_names)?,
+    banner: normalize_addon_option(output_options.banner, "banner option"),
+    footer: normalize_addon_option(output_options.footer, "footer option"),
+    post_banner: normalize_addon_option(output_options.post_banner, "post_banner option"),
+    post_footer: normalize_addon_option(output_options.post_footer, "post_footer option"),
+    intro: normalize_addon_option(output_options.intro, "intro option"),
+    outro: normalize_addon_option(output_options.outro, "outro option"),
+    sourcemap_filenames: normalize_chunk_file_names_option(
+      output_options.sourcemap_file_names,
+      "sourcemapFileNames option",
+    )?,
     sourcemap_base_url: output_options
       .sourcemap_base_url
       .map(|maybe_url| {
@@ -439,6 +629,10 @@ pub fn normalize_binding_options(
                       class: o.class,
                     },
                 }),
+                reserved: o
+                  .reserved
+                  .as_ref()
+                  .map(|names| names.iter().map(|name| name.as_str().into()).collect()),
               }),
             };
             let compress = match &opts.compress {
@@ -465,65 +659,11 @@ pub fn normalize_binding_options(
       .inject
       .map(|inner| inner.into_iter().map(normalize_binding_inject_import).collect()),
     external_live_bindings: output_options.external_live_bindings,
-    code_splitting: match output_options.inline_dynamic_imports {
-      Some(true) => Some(CodeSplittingMode::Bool(false)),
-      Some(false) => Some(CodeSplittingMode::Bool(true)),
-      None => None,
-    },
+    code_splitting: normalize_code_splitting(
+      output_options.manual_code_splitting,
+      output_options.inline_dynamic_imports,
+    )?,
     dynamic_import_in_cjs: output_options.dynamic_import_in_cjs,
-    manual_code_splitting: output_options.manual_code_splitting.map(|inner| ManualCodeSplittingOptions {
-      min_size: inner.min_size,
-      min_share_count: inner.min_share_count,
-      min_module_size: inner.min_module_size,
-      max_module_size: inner.max_module_size,
-      max_size: inner.max_size,
-      groups: inner.groups.map(|inner| {
-        inner
-          .into_iter()
-          .map(|item| MatchGroup {
-            name: match item.name {
-              Either::A(name) => MatchGroupName::Static(name),
-              Either::B(func) => {
-                let func = Arc::clone(&func);
-                MatchGroupName::Dynamic(Arc::new(move |module_id, ctx| {
-                  let module_id = module_id.to_string();
-                  let func = Arc::clone(&func);
-                  let owned_ctx = ctx.clone();
-                  Box::pin(async move {
-                    func
-                      .invoke_async((module_id, BindingChunkingContext::new(owned_ctx)).into())
-                      .await
-                      .map_err(anyhow::Error::from)
-                  })
-                }))
-              }
-            },
-            test: item.test.map(|inner| match inner {
-              Either::A(reg) => {
-                rolldown::MatchGroupTest::Regex(reg.try_into().expect("Invalid regex pass to test"))
-              }
-              Either::B(func) => rolldown::MatchGroupTest::Function(Arc::new(move |id: &str| {
-                let id = id.to_string();
-                let func = Arc::clone(&func);
-                Box::pin(async move {
-                  func.invoke_async((id,).into()).await.map_err(anyhow::Error::from)
-                })
-              })),
-            }),
-            priority: item.priority,
-            min_size: item.min_size,
-            min_share_count: item.min_share_count,
-            max_module_size: item.max_module_size,
-            min_module_size: item.min_module_size,
-            max_size: item.max_size,
-            entries_aware: item.entries_aware,
-            entries_aware_merge_threshold: item.entries_aware_merge_threshold,
-            tags: item.tags.map(|tags| tags.into_iter().map(ModuleTag::from).collect()),
-          })
-          .collect::<Vec<_>>()
-      }),
-      include_dependencies_recursively: inner.include_dependencies_recursively,
-    }),
     checks: input_options.checks.map(Into::into),
     profiler_names: input_options.profiler_names,
     watch: input_options.watch.map(TryInto::try_into).transpose()?,

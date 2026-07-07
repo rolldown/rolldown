@@ -1,6 +1,5 @@
 #![expect(clippy::print_stderr)]
 
-use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -13,7 +12,7 @@ use rolldown::BundlerOptions;
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions, EventKind};
 use rolldown_testing::integration_test::IntegrationTest;
 use rolldown_testing::test_config::TestMeta;
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
 use sugar_path::SugarPath;
 use walkdir::WalkDir;
@@ -63,7 +62,7 @@ struct Test262FailureMetadata {
   issue: Option<String>,
 }
 
-static KNOWN_FAILURES: LazyLock<HashMap<String, Test262FailureMetadata>> = LazyLock::new(|| {
+static KNOWN_FAILURES: LazyLock<FxHashMap<String, Test262FailureMetadata>> = LazyLock::new(|| {
   let json_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/test262_failures.json");
   let json_content =
     std::fs::read_to_string(json_path).expect("Failed to read test262_failures.json");
@@ -349,6 +348,9 @@ globalThis.$DONE = function(error) {
     if let Err(e) = std::fs::create_dir_all(&temp_dir) {
       return TestOutcome::RuntimeError(format!("Failed to create temp dir: {e}"));
     }
+    // Canonicalize early so Node.js receives the resolved path and its error output
+    // matches the pattern we use for normalization (e.g. Windows 8.3 short names).
+    let temp_dir = dunce::canonicalize(&temp_dir).unwrap_or(temp_dir);
     if let Err(e) = std::fs::write(temp_dir.join("package.json"), r#"{"type":"module"}"#) {
       return TestOutcome::RuntimeError(format!("Failed to write package.json: {e}"));
     }
@@ -377,8 +379,9 @@ globalThis.$DONE = function(error) {
 
     match std::process::Command::new("node").arg(&wrapper_file).output() {
       Ok(node_output) => {
+        let result = self.process_node_output(&node_output, &temp_dir);
         _ = std::fs::remove_dir_all(&temp_dir);
-        self.process_node_output(&node_output, &temp_dir)
+        result
       }
       Err(e) => TestOutcome::RuntimeError(format!("Failed to execute Node.js: {e}")),
     }
@@ -406,9 +409,11 @@ globalThis.$DONE = function(error) {
   /// - Replaces temp directory paths with `<temp>/`
   /// - Removes stack trace lines (lines starting with "at ")
   fn normalize_output(output: &str, temp_dir: &Path) -> String {
-    // Replace temp directory path with <temp>/
-    let pattern = format!("{}/", temp_dir.to_string_lossy());
-    let output = output.replace(&pattern, "<temp>/");
+    let temp_dir_str = temp_dir.to_string_lossy();
+    #[cfg(not(windows))]
+    let output = output.replace(&format!("{temp_dir_str}/"), "<temp>/");
+    #[cfg(windows)]
+    let output = output.replace(&format!("{temp_dir_str}\\"), "<temp>/");
 
     // Remove stack trace lines (lines starting with whitespace followed by "at ")
     output
@@ -533,8 +538,7 @@ fn validate_no_stale_pass_metadata(results: &[TestResult]) {
 
 /// Validates that all KNOWN_FAILURES entries correspond to actual test files
 fn validate_known_failures(results: &[TestResult]) {
-  let all_test_paths: std::collections::HashSet<String> =
-    results.iter().map(TestResult::get_clean_path).collect();
+  let all_test_paths: FxHashSet<String> = results.iter().map(TestResult::get_clean_path).collect();
 
   let unknown_failures: Vec<String> =
     KNOWN_FAILURES.keys().filter(|key| !all_test_paths.contains(key.as_str())).cloned().collect();

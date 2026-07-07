@@ -68,12 +68,13 @@ pub struct MatchGroup {
   /// Only effective when `entriesAware` is set to `true`.
   pub entries_aware_merge_threshold: Option<f64>,
   /// Filter modules by tags. Only modules with all specified tags are captured.
-  /// See meta/design/module-tags.md
+  /// See internal-docs/module-tags/implementation.md
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     schemars(with = "Option<Vec<BuiltinModuleTag>>")
   )]
   pub tags: Option<Vec<ModuleTag>>,
+  pub include_dependencies_recursively: Option<bool>,
 }
 
 type MatchGroupTestFn = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static>>

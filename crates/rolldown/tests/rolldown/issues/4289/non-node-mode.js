@@ -1,4 +1,4 @@
-import nodeAssert from 'node:assert';
+import nodeAssert from 'node:assert/strict';
 
 async function main() {
   const exports = await import('./lib.js');

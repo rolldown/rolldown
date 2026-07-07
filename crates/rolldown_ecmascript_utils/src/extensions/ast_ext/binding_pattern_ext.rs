@@ -1,85 +1,88 @@
+use oxc::allocator::GetAllocator;
 use oxc::{
-  allocator::{Allocator, Box, Dummy as _, IntoIn as _, TakeIn as _},
+  allocator::TakeIn as _,
   ast::ast::{
-    ArrayAssignmentTarget, ArrayExpressionElement, AssignmentTarget, AssignmentTargetMaybeDefault,
-    AssignmentTargetRest, AssignmentTargetWithDefault, BindingPattern, Expression,
-    ObjectAssignmentTarget, ObjectPropertyKind, PropertyKind,
+    ArrayAssignmentTarget, ArrayExpression, ArrayExpressionElement, AssignmentTarget,
+    AssignmentTargetMaybeDefault, AssignmentTargetRest, AssignmentTargetWithDefault,
+    BindingPattern, Elision, Expression, IdentifierReference, ObjectAssignmentTarget,
+    ObjectExpression, ObjectProperty, ObjectPropertyKind, PropertyKind, SpreadElement,
   },
   span::SPAN,
 };
 
-use crate::AstSnippet;
+use crate::AstFactory;
 
 use super::binding_property_ext::BindingPropertyExt as _;
 
 pub trait BindingPatternExt<'ast> {
-  fn into_assignment_target(self, alloc: &'ast Allocator) -> AssignmentTarget<'ast>;
+  fn into_assignment_target(self, ast_factory: &AstFactory<'ast>) -> AssignmentTarget<'ast>;
 
-  fn into_expression(self, snippet: &AstSnippet<'ast>) -> Expression<'ast>;
+  fn into_expression(self, ast_factory: &AstFactory<'ast>) -> Expression<'ast>;
 }
 
 impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
-  fn into_assignment_target(self, alloc: &'ast Allocator) -> AssignmentTarget<'ast> {
+  fn into_assignment_target(self, ast_factory: &AstFactory<'ast>) -> AssignmentTarget<'ast> {
     match self {
       // Turn `var a = 1` into `a = 1`
-      BindingPattern::BindingIdentifier(id) => {
-        AstSnippet::new(alloc).simple_id_assignment_target(&id.name, id.span)
-      }
+      BindingPattern::BindingIdentifier(id) => AssignmentTarget::AssignmentTargetIdentifier(
+        IdentifierReference::boxed(id.span, id.name, ast_factory),
+      ),
       // Turn `var { a, b = 2 } = ...` to `{a, b = 2} = ...`
       BindingPattern::ObjectPattern(mut obj_pat) => {
-        let mut obj_target = ObjectAssignmentTarget {
-          rest: obj_pat.rest.take().map(|rest| {
-            Box::new_in(
-              AssignmentTargetRest {
-                span: rest.span,
-                target: rest.unbox().argument.into_assignment_target(alloc),
-                ..AssignmentTargetRest::dummy(alloc)
-              },
-              alloc,
-            )
-          }),
-          ..ObjectAssignmentTarget::dummy(alloc)
-        };
-        obj_pat.properties.take_in(alloc).into_iter().for_each(|binding_prop| {
-          obj_target.properties.push(binding_prop.into_assignment_target_property(alloc));
+        let rest = obj_pat.rest.take().map(|rest| {
+          AssignmentTargetRest::boxed(
+            rest.span,
+            rest.unbox().argument.into_assignment_target(ast_factory),
+            ast_factory,
+          )
         });
-        AssignmentTarget::ObjectAssignmentTarget(obj_target.into_in(alloc))
+        let mut properties =
+          oxc::allocator::Vec::with_capacity_in(obj_pat.properties.len(), ast_factory);
+        obj_pat.properties.take_in(&ast_factory.allocator()).into_iter().for_each(|binding_prop| {
+          properties.push(binding_prop.into_assignment_target_property(ast_factory));
+        });
+        AssignmentTarget::ObjectAssignmentTarget(ObjectAssignmentTarget::boxed(
+          SPAN,
+          properties,
+          rest,
+          ast_factory,
+        ))
       }
       // Turn `var [a, ,c = 1] = ...` to `[a, ,c = 1] = ...`
       BindingPattern::ArrayPattern(mut arr_pat) => {
-        let mut arr_target = ArrayAssignmentTarget {
-          span: arr_pat.span,
-          rest: arr_pat.rest.take().map(|rest| {
-            Box::new_in(
-              AssignmentTargetRest {
-                span: rest.span,
-                target: rest.unbox().argument.into_assignment_target(alloc),
-                ..AssignmentTargetRest::dummy(alloc)
-              },
-              alloc,
-            )
-          }),
-          elements: oxc::allocator::Vec::with_capacity_in(arr_pat.elements.len(), alloc),
-          ..ArrayAssignmentTarget::dummy(alloc)
-        };
-        arr_pat.elements.take_in(alloc).into_iter().for_each(|binding_pat| {
-          arr_target.elements.push(binding_pat.map(|binding_pat| match binding_pat {
+        let rest = arr_pat.rest.take().map(|rest| {
+          AssignmentTargetRest::boxed(
+            rest.span,
+            rest.unbox().argument.into_assignment_target(ast_factory),
+            ast_factory,
+          )
+        });
+        let mut elements =
+          oxc::allocator::Vec::with_capacity_in(arr_pat.elements.len(), ast_factory);
+        arr_pat.elements.take_in(&ast_factory.allocator()).into_iter().for_each(|binding_pat| {
+          elements.push(binding_pat.map(|binding_pat| match binding_pat {
             BindingPattern::AssignmentPattern(assign_pat) => {
               let assign_pat = assign_pat.unbox();
               AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
-                AssignmentTargetWithDefault {
-                  span: assign_pat.span,
-                  init: assign_pat.right,
-                  binding: assign_pat.left.into_assignment_target(alloc),
-                  ..AssignmentTargetWithDefault::dummy(alloc)
-                }
-                .into_in(alloc),
+                AssignmentTargetWithDefault::boxed(
+                  assign_pat.span,
+                  assign_pat.left.into_assignment_target(ast_factory),
+                  assign_pat.right,
+                  ast_factory,
+                ),
               )
             }
-            _ => AssignmentTargetMaybeDefault::from(binding_pat.into_assignment_target(alloc)),
+            _ => {
+              AssignmentTargetMaybeDefault::from(binding_pat.into_assignment_target(ast_factory))
+            }
           }));
         });
-        AssignmentTarget::ArrayAssignmentTarget(arr_target.into_in(alloc))
+        AssignmentTarget::ArrayAssignmentTarget(ArrayAssignmentTarget::boxed(
+          arr_pat.span,
+          elements,
+          rest,
+          ast_factory,
+        ))
       }
       BindingPattern::AssignmentPattern(_) => {
         unreachable!("`BindingPattern::AssignmentPattern` should be pre-handled in above")
@@ -87,65 +90,119 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
     }
   }
 
-  fn into_expression(self, snippet: &AstSnippet<'ast>) -> Expression<'ast> {
+  fn into_expression(self, ast_factory: &AstFactory<'ast>) -> Expression<'ast> {
     match self {
-      BindingPattern::BindingIdentifier(id) => snippet.builder.expression_identifier(SPAN, id.name),
+      BindingPattern::BindingIdentifier(id) => {
+        Expression::new_identifier(SPAN, id.name, ast_factory)
+      }
       BindingPattern::ObjectPattern(mut obj_pat) => {
         let capacity = obj_pat.properties.len() + usize::from(obj_pat.rest.is_some());
-        let mut properties = snippet.builder.vec_with_capacity(capacity);
-        obj_pat.properties.take_in(snippet.alloc()).into_iter().for_each(|binding_prop| {
-          properties.push(ObjectPropertyKind::ObjectProperty(
-            snippet.builder.alloc_object_property(
-              SPAN,
-              PropertyKind::Init,
-              binding_prop.key,
-              binding_prop.value.into_expression(snippet),
-              false,
-              binding_prop.shorthand,
-              binding_prop.computed,
-            ),
-          ));
+        let mut properties = oxc::allocator::Vec::with_capacity_in(capacity, ast_factory);
+        obj_pat.properties.take_in(&ast_factory.allocator()).into_iter().for_each(|binding_prop| {
+          properties.push(ObjectPropertyKind::ObjectProperty(ObjectProperty::boxed(
+            SPAN,
+            PropertyKind::Init,
+            binding_prop.key,
+            binding_prop.value.into_expression(ast_factory),
+            false,
+            binding_prop.shorthand,
+            binding_prop.computed,
+            ast_factory,
+          )));
         });
         if let Some(rest) = obj_pat.rest.take() {
-          let BindingPattern::BindingIdentifier(ref id) = rest.argument else {
-            unreachable!("The rest element should be `BindingIdentifier`")
-          };
-          properties.push(ObjectPropertyKind::ObjectProperty(
-            snippet.builder.alloc_object_property(
-              SPAN,
-              PropertyKind::Init,
-              snippet.builder.property_key_static_identifier(SPAN, id.name),
-              snippet.builder.expression_identifier(SPAN, id.name),
-              false,
-              true,
-              false,
-            ),
-          ));
+          properties.push(ObjectPropertyKind::SpreadProperty(SpreadElement::boxed(
+            SPAN,
+            rest.unbox().argument.into_expression(ast_factory),
+            ast_factory,
+          )));
         }
-        Expression::ObjectExpression(snippet.builder.alloc_object_expression(SPAN, properties))
+        Expression::ObjectExpression(ObjectExpression::boxed(SPAN, properties, ast_factory))
       }
       BindingPattern::ArrayPattern(mut arg_pat) => {
         let capacity = arg_pat.elements.len() + usize::from(arg_pat.rest.is_some());
-        let mut elements = snippet.builder.vec_with_capacity(capacity);
-        arg_pat.elements.take_in(snippet.alloc()).into_iter().for_each(|binding_pat| {
+        let mut elements = oxc::allocator::Vec::with_capacity_in(capacity, ast_factory);
+        arg_pat.elements.take_in(&ast_factory.allocator()).into_iter().for_each(|binding_pat| {
           elements.push(binding_pat.map_or(
-            ArrayExpressionElement::Elision(snippet.builder.alloc_elision(SPAN)),
-            |binding_pat| ArrayExpressionElement::from(binding_pat.into_expression(snippet)),
+            ArrayExpressionElement::Elision(Elision::boxed(SPAN, ast_factory)),
+            |binding_pat| ArrayExpressionElement::from(binding_pat.into_expression(ast_factory)),
           ));
         });
         if let Some(rest) = arg_pat.rest.take() {
-          let BindingPattern::BindingIdentifier(ref id) = rest.argument else {
-            unreachable!("The rest element should be `BindingIdentifier`")
-          };
-          elements.push(ArrayExpressionElement::Identifier(
-            snippet.builder.alloc_identifier_reference(SPAN, id.name),
-          ));
+          elements.push(ArrayExpressionElement::SpreadElement(SpreadElement::boxed(
+            SPAN,
+            rest.unbox().argument.into_expression(ast_factory),
+            ast_factory,
+          )));
         }
-        Expression::ArrayExpression(snippet.builder.alloc_array_expression(SPAN, elements))
+        Expression::ArrayExpression(ArrayExpression::boxed(SPAN, elements, ast_factory))
       }
       BindingPattern::AssignmentPattern(mut assign_pat) => {
-        assign_pat.left.take_in(snippet.alloc()).into_expression(snippet)
+        assign_pat.left.take_in(&ast_factory.allocator()).into_expression(ast_factory)
       }
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use oxc::{
+    allocator::{Allocator, CloneIn},
+    ast::ast::{ArrayExpressionElement, Expression, ObjectPropertyKind, Statement},
+    parser::Parser,
+    span::SourceType,
+  };
+
+  use crate::{AstFactory, BindingPatternExt as _};
+
+  /// Round-trips the first declarator's binding pattern back to an expression via
+  /// `into_expression`. `source` must be a single `const <pattern> = x;` statement.
+  fn pattern_into_expression<'a>(allocator: &'a Allocator, source: &'a str) -> Expression<'a> {
+    let program = Parser::new(allocator, source, SourceType::default()).parse().program;
+    let Some(Statement::VariableDeclaration(decl)) = program.body.first() else {
+      unreachable!("expected a variable declaration")
+    };
+    let pattern = decl.declarations[0].id.clone_in(allocator);
+    pattern.into_expression(&AstFactory::new(allocator))
+  }
+
+  #[test]
+  fn object_rest_round_trips_to_spread_property() {
+    let allocator = Allocator::default();
+    let Expression::ObjectExpression(obj) =
+      pattern_into_expression(&allocator, "const { a, ...rest } = x;")
+    else {
+      unreachable!("expected an object expression")
+    };
+    // `{ a, ...rest }` must round-trip with a spread, not a `rest` shorthand property.
+    assert!(matches!(obj.properties.last(), Some(ObjectPropertyKind::SpreadProperty(_))));
+  }
+
+  #[test]
+  fn array_rest_round_trips_to_spread_element() {
+    let allocator = Allocator::default();
+    let Expression::ArrayExpression(arr) =
+      pattern_into_expression(&allocator, "const [a, ...rest] = x;")
+    else {
+      unreachable!("expected an array expression")
+    };
+    // `[a, ...rest]` must round-trip with a spread, not a plain element.
+    assert!(matches!(arr.elements.last(), Some(ArrayExpressionElement::SpreadElement(_))));
+  }
+
+  #[test]
+  fn array_nested_rest_round_trips_to_spread() {
+    let allocator = Allocator::default();
+    let Expression::ArrayExpression(arr) =
+      pattern_into_expression(&allocator, "const [a, ...[b, c]] = x;")
+    else {
+      unreachable!("expected an array expression")
+    };
+    // A nested rest pattern (`...[b, c]`) is legal JS; it must round-trip as a spread of
+    // the rebuilt inner pattern rather than panicking on the non-identifier argument.
+    let Some(ArrayExpressionElement::SpreadElement(spread)) = arr.elements.last() else {
+      unreachable!("expected a spread element")
+    };
+    assert!(matches!(spread.argument, Expression::ArrayExpression(_)));
   }
 }

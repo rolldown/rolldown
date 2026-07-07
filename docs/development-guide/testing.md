@@ -196,6 +196,114 @@ To run the `tests/fixtures/resolve/alias` test, you could use `just test-node-ro
 
 :::
 
+## Dev server tests
+
+[`@rolldown/test-dev-server`](https://github.com/rolldown/rolldown/tree/main/packages/test-dev-server) is the test harness for rolldown's **dev engine** — HMR, lazy compilation, and error recovery. Its tests live in `packages/test-dev-server/tests` and come in two suites:
+
+| Suite        | Platform  | What it drives                                                                                                    |
+| ------------ | --------- | ----------------------------------------------------------------------------------------------------------------- |
+| **browser**  | `browser` | A real Chromium page against an **in-process Vite full-bundle-mode dev server**. Most dev-engine tests live here. |
+| **fixtures** | `node`    | A custom dev server building to **disk**, with the built artifact run as a `node` child process.                  |
+
+The browser suite runs on Vite itself (`experimental.bundledDev`), served from the vendored Vite submodule at `packages/test-dev-server/vite` with its `rolldown` dependency linked to the workspace's `packages/rolldown` — so the tests exercise the local rolldown binding through the real Vite integration. The architecture and the reasoning behind the harness are captured in the [Dev Server Test Harness design doc](https://github.com/rolldown/rolldown/blob/main/internal-docs/dev-server-test-harness/implementation.md) — read it before changing the harness itself.
+
+### Browser playgrounds
+
+Most dev-engine regressions are tested as **browser playgrounds**, not unit tests. A playground is a tiny app the in-process dev server serves to a real Chromium page, under:
+
+```text
+playground/<name>/
+```
+
+Each playground normally contains:
+
+```text
+dev.config.mjs            # rolldown dev config (browser platform, no dev.port)
+index.html                # served at /; its module script tag is the build entry
+main.js                   # entry, referenced from index.html
+package.json              # workspace member (copy an existing one)
+__tests__/<name>.spec.ts  # the spec (stays in source, never copied)
+```
+
+Vite discovers the entry from `index.html`'s `<script type="module">` tag (the `input` field in `dev.config.mjs` applies to the node platform only), and lazy compilation is always on in browser runs — full bundle mode forces `devMode.lazy: true`.
+
+The harness discovers the playground from the spec's path, copies it to `playground-temp/<name>/`, starts an in-process dev server on an OS-assigned port, opens a Chromium page, and navigates to it — so **adding a test is a folder plus a spec, with no central registry to edit**.
+
+A spec imports helpers from the `~utils` alias; by the time it runs, the harness has already started the server and navigated `page`:
+
+```ts
+import { describe, expect, test } from 'vitest';
+import { editFile, page, waitForBuildStable } from '~utils';
+
+describe('<name>', () => {
+  test('applies an HMR update', async () => {
+    editFile('main.js', (code) => code.replace('hello', 'world'));
+    await expect.poll(() => page.textContent('h1')).toBe('world');
+  });
+});
+```
+
+:::warning Synchronize on the server's async work — never sleep
+Poll the DOM with `expect.poll`, `await waitForBuildStable()` before a follow-up edit, or wait on a browser log with `untilBrowserLogAfter`. A fixed `sleep` is both flaky and slow.
+:::
+
+#### Asserting on Vite's signals
+
+The server and client are Vite's, so specs assert on Vite's own signals:
+
+- **Error overlay**: Vite's `<vite-error-overlay>` custom element renders in a **shadow root**, so `locator(...).textContent()` on the host returns nothing — use the `errorOverlay()` and `errorOverlayText()` helpers from `~utils`.
+- **Server logs** (collected into `serverLogs`): `✘ Build error: …`, `hmr update …`, `hmr invalidate …`, `page reload`.
+- **Browser logs** (collected into `browserLogs`): `[vite] connected.`, `[vite] hot updated: …`.
+
+#### Building and running
+
+Rebuild once after changing Rust or the dev-server `src/` — the tests import the compiled `dist/`, not the TypeScript source:
+
+```sh
+just build-rolldown
+pnpm --filter @rolldown/test-dev-server build
+```
+
+The browser suite also needs the Vite submodule set up once (init + install + build + link the workspace rolldown into it). Re-run this after bumping the submodule or after running an install inside it (an install resets the rolldown link):
+
+```sh
+just setup-test-dev-server-vite
+```
+
+Then, from `packages/test-dev-server/tests/`:
+
+```sh
+# a single playground
+pnpm exec vitest run --config=vitest.config.e2e.mts playground/<name>
+
+# the whole browser suite
+pnpm test:browser
+```
+
+#### One spec vs. several specs
+
+**Multiple spec files in one playground run concurrently** (file parallelism), each forking its own dev server against the shared `playground-temp/<name>/` copy. That is safe only when the scenarios are **disjoint** — each spec navigates its own DOM and edits only its own files (how `lazy-compilation`'s four specs coexist). When scenarios share one bundle/entry, so that an edit by one would rebuild another spec's page, put them in a **single spec file** instead (why `hmr-full-bundle-mode`'s scenarios are one spec).
+
+Tests in one spec file share a single `page` and run sequentially, so don't let them perturb one another. Keep **edits forward-only** — or restore what they changed, since a later test must not rely on an earlier one's edit being reverted. And **re-acquire element handles after any reload** (`page.locator(...)` / a fresh `page.$`); a reload invalidates the old ones.
+
+Prefer giving each scenario its **own DOM node** so one test's edits can't disturb another's assertions — `hmr-full-bundle-mode` keeps `.app`, `.hmr`, `.hmr-error`, and `.rebuild-error` separate, one per scenario.
+
+#### Cold-start playgrounds
+
+Some lazy-compilation bugs only reproduce on the **first** request to a fresh server. Add `__tests__/serve.ts` so the harness starts the server but does not navigate, letting the spec fire the first request itself:
+
+```ts
+import type { DevServerHandle, ServeContext } from '~utils';
+
+export async function serve(ctx: ServeContext): Promise<DevServerHandle> {
+  return ctx.createServer();
+}
+```
+
+### Node fixtures
+
+Use `fixtures/<name>/` plus `fixtures.test.ts` (run with `pnpm test:fixtures`) for the **node** platform — the dev server building to disk and running the built artifact as a `node` child process. Do not add ordinary HMR / lazy / overlay regressions there when a browser playground can cover the behavior.
+
 ## Rollup behavior alignment tests
 
 We also aim for behavior alignment with Rollup by running Rollup's own tests against Rolldown.

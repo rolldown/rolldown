@@ -17,12 +17,15 @@ use tokio::sync::{Mutex, mpsc::unbounded_channel};
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig, NormalizedBundlerOptions};
 
 use crate::{
-  DevOptions, SharedClients,
+  BundleOutput, DevOptions, SharedClients,
   bundle_coordinator::BundleCoordinator,
   dev_context::{DevContext, PinBoxSendStaticFuture},
   normalize_dev_options,
   type_aliases::CoordinatorSender,
-  types::{coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot},
+  types::{
+    coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
+    error_stage::ErrorStage,
+  },
 };
 
 #[cfg(feature = "testing")]
@@ -40,6 +43,9 @@ pub struct CoordinatorState {
 pub struct DevEngine {
   coordinator_sender: CoordinatorSender,
   bundler: Arc<Mutex<Bundler>>,
+  /// Shared dev context, kept so out-of-coordinator entry points (e.g.
+  /// `compile_lazy_entry`) can reach `options.on_additional_assets`.
+  dev_context: Arc<DevContext>,
   coordinator_state: Mutex<CoordinatorState>,
   pub clients: SharedClients,
   is_closed: AtomicBool,
@@ -92,6 +98,7 @@ impl DevEngine {
     Ok(Self {
       coordinator_sender: coordinator_tx,
       bundler,
+      dev_context: Arc::clone(&ctx),
       coordinator_state: Mutex::new(CoordinatorState {
         coordinator: Some(coordinator),
         handle: None,
@@ -138,21 +145,31 @@ impl DevEngine {
     Ok(())
   }
 
-  // Wait for ongoing bundle to finish if there is one
+  /// Wait for ongoing bundle to finish if there is one.
+  ///
+  /// If the `DevEngine` is closed while waiting, this method will return early without error.
   pub async fn wait_for_ongoing_bundle(&self) -> BuildResult<()> {
-    self.create_error_if_closed()?;
+    if self.is_closed() {
+      return Ok(());
+    }
 
     let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-    self
-      .coordinator_sender
-      .send(CoordinatorMsg::GetState { reply: reply_sender })
-      .map_err_to_unhandleable()
-      .context("DevEngine: failed to send GetState to coordinator")?;
+    if let Err(err) = self.coordinator_sender.send(CoordinatorMsg::GetState { reply: reply_sender })
+    {
+      if self.is_closed() {
+        return Ok(());
+      }
+      return (Err(err))
+        .map_err_to_unhandleable()
+        .context("DevEngine: failed to send GetState to coordinator")?;
+    }
 
-    let status = reply_receiver
-      .await
-      .map_err_to_unhandleable()
-      .context("DevEngine: coordinator closed before responding to GetStatus")?;
+    let Ok(status) = reply_receiver.await else {
+      if self.is_closed() {
+        return Ok(());
+      }
+      return Err(anyhow::anyhow!("DevEngine: coordinator closed before responding to GetState"))?;
+    };
 
     if let Some(bundling_future) = status.running_future {
       bundling_future.await;
@@ -222,6 +239,18 @@ impl DevEngine {
         break;
       }
     }
+
+    Ok(())
+  }
+
+  pub fn trigger_full_build(&self) -> BuildResult<()> {
+    self.create_error_if_closed()?;
+
+    self
+      .coordinator_sender
+      .send(CoordinatorMsg::TriggerFullBuild)
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to send TriggerFullBuild to coordinator")?;
 
     Ok(())
   }
@@ -306,9 +335,20 @@ impl DevEngine {
       )
       .await;
 
-    // Notify that the proxy module has changed so build output gets updated.
-    // This ensures future page loads get the fetched template directly.
     if result.is_ok() {
+      // Deliver assets emitted while compiling the lazy entry (e.g. an image
+      // imported by the lazy module) before returning the code, so the consumer
+      // can register/serve them before the client requests them.
+      if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
+        let mut output = BundleOutput::default();
+        bundler.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
+        if !output.assets.is_empty() {
+          on_additional_assets(output);
+        }
+      }
+
+      // Notify that the proxy module has changed so build output gets updated.
+      // This ensures future page loads get the fetched template directly.
       self.notify_module_changed(proxy_module_id);
     }
 
@@ -362,24 +402,32 @@ impl DevEngine {
     &self,
     changed_files: FxIndexMap<PathBuf, WatcherChangeKind>,
   ) {
-    for (path, event) in changed_files {
-      // Create a synthetic file change event to simulate real file system changes
-      let notify_event = notify::Event {
-        kind: if event == WatcherChangeKind::Delete {
-          notify::EventKind::Remove(notify::event::RemoveKind::Any)
-        } else {
-          notify::EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Any))
-        },
-        paths: vec![path],
-        attrs: notify::event::EventAttributes::default(),
-      };
+    // Create synthetic file change events to simulate real file system
+    // changes. The whole step goes into ONE batch: one event per message
+    // would spawn one build per file, while the future awaited below only
+    // covers the first, leaving the rest racing the caller's assertions.
+    let events = changed_files
+      .into_iter()
+      .map(|(path, event)| {
+        let notify_event = notify::Event {
+          kind: if event == WatcherChangeKind::Delete {
+            notify::EventKind::Remove(notify::event::RemoveKind::Any)
+          } else {
+            notify::EventKind::Modify(notify::event::ModifyKind::Data(
+              notify::event::DataChange::Any,
+            ))
+          },
+          paths: vec![path],
+          attrs: notify::event::EventAttributes::default(),
+        };
+        rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() }
+      })
+      .collect::<Vec<_>>();
 
-      let event =
-        rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() };
-
+    if !events.is_empty() {
       // Send WatchEvent message to coordinator (simulates real file change)
       // The coordinator will automatically schedule a build via handle_file_changes
-      let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(vec![event])));
+      let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(events)));
     }
 
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
@@ -391,6 +439,11 @@ impl DevEngine {
     if let Ok(Some(ret)) = reply_rx.await {
       ret.future.await;
     }
+  }
+
+  #[cfg(feature = "testing")]
+  pub fn bundler(&self) -> Arc<Mutex<Bundler>> {
+    Arc::clone(&self.bundler)
   }
 
   #[cfg(feature = "testing")]
@@ -431,14 +484,21 @@ impl DevEngine {
 
 #[derive(Debug, Clone)]
 pub struct BundleState {
-  pub last_full_build_failed: bool,
+  /// True for any error state (initial or incremental).
+  pub last_build_errored: bool,
+  /// The stage of the last incremental failure (`Some` only in
+  /// `Failed { .. }`; `None` on success and on `FullBuildFailed`). Lets
+  /// the consumer force a full rebuild on access after an `Hmr`-stage
+  /// failure — see `internal-docs/dev-engine/implementation.md` §12.
+  pub last_error_stage: Option<ErrorStage>,
   pub has_stale_output: bool,
 }
 
 impl From<CoordinatorStateSnapshot> for BundleState {
   fn from(snapshot: CoordinatorStateSnapshot) -> Self {
     Self {
-      last_full_build_failed: snapshot.last_full_build_failed,
+      last_build_errored: snapshot.last_build_errored,
+      last_error_stage: snapshot.last_error_stage,
       has_stale_output: snapshot.has_stale_output,
     }
   }

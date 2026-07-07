@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## imp.js
 
 ```js
-import { t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as __commonJSMin } from "./main.js";
 //#region imp.js
 var require_imp = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.imp = 1;
@@ -19,8 +19,8 @@ export { require_imp as t };
 ## main.js
 
 ```js
-import { n as __toESM } from "./rolldown-runtime.js";
 import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
 //#region main.js
 const load = async () => {
 	import("./imp.js").then((n) => /* @__PURE__ */ __toESM(n.t())).then((m) => {
@@ -29,14 +29,7 @@ const load = async () => {
 };
 load();
 //#endregion
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __toESM as n, __commonJSMin as t };
+export { __commonJSMin as t };
 
 ```
 
@@ -48,7 +41,7 @@ export { __toESM as n, __commonJSMin as t };
 
 ```js
 //#region imp.js
-var require_imp = /* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports) => {
+var require_imp = /* @__PURE__ */ require("./main.js").__commonJSMin(((exports) => {
 	exports.imp = 1;
 }));
 //#endregion
@@ -64,35 +57,18 @@ Object.defineProperty(exports, "require_imp", {
 ### main.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
+node_assert = __toESM(node_assert);
 //#region main.js
 const load = async () => {
-	Promise.resolve().then(() => require("./imp.js")).then((n) => /* @__PURE__ */ require_rolldown_runtime.__toESM(n.require_imp())).then((m) => {
+	Promise.resolve().then(() => require("./imp.js")).then((n) => /* @__PURE__ */ __toESM(n.require_imp())).then((m) => {
 		node_assert.default.strictEqual(m.imp, 1);
 	});
 };
 load();
 //#endregion
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__commonJSMin", {
-	enumerable: true,
-	get: function() {
-		return __commonJSMin;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
+exports.__commonJSMin = __commonJSMin;
 
 ```

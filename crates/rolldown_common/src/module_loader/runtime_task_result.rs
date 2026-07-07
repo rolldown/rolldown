@@ -1,5 +1,6 @@
 use oxc_index::IndexVec;
 use rolldown_ecmascript::EcmaAst;
+use rolldown_error::BuildDiagnostic;
 
 use crate::{
   ImportRecordIdx, NormalModule, RawImportRecord, ResolvedId, StmtInfos, SymbolRefDbForModule,
@@ -15,4 +16,5 @@ pub struct RuntimeModuleTaskResult {
   pub stmt_infos: StmtInfos,
   pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedId>,
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
+  pub warnings: Vec<BuildDiagnostic>,
 }

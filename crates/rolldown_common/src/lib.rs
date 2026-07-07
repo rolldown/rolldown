@@ -37,7 +37,7 @@ pub mod bundler_options {
       experimental_options::{
         ChunkOptimizationOption, ChunkOptimizationOptions, ExperimentalOptions,
       },
-      filename_template::{FilenameTemplate, is_path_fragment},
+      filename_template::{FilenameSubstitutionContext, FilenameTemplate, is_path_fragment},
       generated_code_options::GeneratedCodeOptions,
       hash_characters::HashCharacters,
       inject_import::InjectImport,

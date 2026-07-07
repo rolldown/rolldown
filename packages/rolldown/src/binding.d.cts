@@ -2988,6 +2988,8 @@ export interface NativeError {
   id?: string
   /** The exporter associated with the error (for import/export errors) */
   exporter?: string
+  /** Related module ids (e.g. the modules of the chunk that produced an invalid filename) */
+  ids?: Array<string>
   /** Location information (line, column, file) */
   loc?: BindingLogLocation
   /** Position in the source file in UTF-16 code units */

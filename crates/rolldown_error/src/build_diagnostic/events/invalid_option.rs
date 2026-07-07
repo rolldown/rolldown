@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use super::BuildEvent;
 use crate::{types::diagnostic_options::DiagnosticOptions, types::event_kind::EventKind};
 
@@ -13,14 +15,36 @@ pub enum InvalidOptionType {
   InvalidContext(String),
   IncludeDependenciesRecursivelyWithConflictPreserveEntrySignatures(String),
   IncludeDependenciesRecursivelyWithImplicitPreserveEntrySignatures,
-  InvalidFilenamePattern { pattern: String, pattern_name: String },
-  InvalidFilenameSubstitution { name: String, pattern_name: String },
+  InvalidFilenamePattern {
+    pattern: String,
+    pattern_name: String,
+  },
+  InvalidFilenameSubstitution {
+    name: String,
+    pattern_name: String,
+    /// Facade (entry) module of the offending chunk, if any. Used to point users at the source
+    /// of an invalid `[name]` substitution.
+    facade_module_id: Option<String>,
+    /// Module ids contained in the offending chunk, used to help locate where the name came from.
+    module_ids: Vec<String>,
+  },
   CodeSplittingDisabledWithMultipleInputs,
   CodeSplittingDisabledWithPreserveModules,
-  HashLengthTooLong { pattern_name: String, received: usize, max: usize },
-  HashLengthTooShort { pattern_name: String, received: usize, min: usize, chunk_count: u32 },
+  HashLengthTooLong {
+    pattern_name: String,
+    received: usize,
+    max: usize,
+  },
+  HashLengthTooShort {
+    pattern_name: String,
+    received: usize,
+    min: usize,
+    chunk_count: u32,
+  },
   InvalidEmittedFileName(String),
-  NulByteInFilename { pattern_name: String },
+  NulByteInFilename {
+    pattern_name: String,
+  },
 }
 
 #[derive(Debug)]
@@ -31,6 +55,26 @@ pub struct InvalidOption {
 impl BuildEvent for InvalidOption {
   fn kind(&self) -> EventKind {
     EventKind::InvalidOptionError
+  }
+
+  fn id(&self) -> Option<String> {
+    match &self.invalid_option_type {
+      InvalidOptionType::InvalidFilenameSubstitution { facade_module_id, module_ids, .. } => {
+        facade_module_id.clone().or_else(|| module_ids.first().cloned())
+      }
+      _ => None,
+    }
+  }
+
+  fn ids(&self) -> Option<Vec<String>> {
+    match &self.invalid_option_type {
+      InvalidOptionType::InvalidFilenameSubstitution { module_ids, .. }
+        if !module_ids.is_empty() =>
+      {
+        Some(module_ids.clone())
+      }
+      _ => None,
+    }
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
@@ -84,11 +128,33 @@ impl BuildEvent for InvalidOption {
              slash like this: subdirectory/pattern."
           )
         }
-        InvalidOptionType::InvalidFilenameSubstitution { name, pattern_name } => {
-          format!(
+        InvalidOptionType::InvalidFilenameSubstitution { name, pattern_name, facade_module_id, module_ids } => {
+          let mut msg = format!(
             "Invalid substitution \"{name}\" for placeholder \"[name]\" in \"{pattern_name}\" pattern, \
              can be neither absolute nor relative paths."
-          )
+          );
+          if let Some(source) =
+            facade_module_id.as_deref().or_else(|| module_ids.first().map(String::as_str))
+          {
+            let _ = write!(msg, "\nThe \"[name]\" was derived from module: {source}");
+          }
+          if module_ids.len() > 1 {
+            const MAX_PREVIEW: usize = 5;
+            let preview = module_ids.iter().take(MAX_PREVIEW).cloned().collect::<Vec<_>>().join(", ");
+            let suffix = if module_ids.len() > MAX_PREVIEW {
+              format!(", ... ({} modules total)", module_ids.len())
+            } else {
+              String::new()
+            };
+            let _ = write!(msg, "\nThis chunk contains modules: {preview}{suffix}");
+          }
+          msg.push_str(
+            "\nThis usually happens when an emitted or dynamically imported chunk maps to a module \
+             outside the input base (for example inside node_modules), producing a relative \"../\" \
+             name. Check the \"name\" passed to this.emitFile({ type: 'chunk', ... }) or your \
+             \"output.chunkFileNames\"/\"output.entryFileNames\" option.",
+          );
+          msg
         }
         InvalidOptionType::CodeSplittingDisabledWithMultipleInputs => {
           "Invalid value \"false\" for option \"output.codeSplitting\" - multiple inputs are not supported when \"output.codeSplitting\" is false.".to_string()

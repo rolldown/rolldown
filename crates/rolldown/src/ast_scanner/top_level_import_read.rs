@@ -66,6 +66,11 @@ impl<'scopes> TopLevelImportReadDetector<'scopes> {
         self.visit_formal_parameters(&arrow.params);
         self.visit_function_body(&arrow.body);
       }
+      Expression::SequenceExpression(sequence) => {
+        if let Some(last) = sequence.expressions.last() {
+          self.visit_immediately_invoked_function(last);
+        }
+      }
       _ => {}
     }
   }
@@ -229,6 +234,17 @@ mod test {
     assert_eq!(
       detect("import { value } from './state'; export const snapshot = ((x = value) => x)();"),
       vec![false, true]
+    );
+    // A sequence expression calls only its final expression.
+    assert_eq!(
+      detect("import { value } from './state'; export const snapshot = (0, (() => value))();"),
+      vec![false, true]
+    );
+    assert_eq!(
+      detect(
+        "import { value } from './state'; export const snapshot = ((() => value), (() => 0))();"
+      ),
+      vec![false, false]
     );
   }
 

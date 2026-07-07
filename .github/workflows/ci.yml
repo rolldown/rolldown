@@ -204,7 +204,7 @@ jobs:
   native-async-runtime-check:
     name: Native Async Runtime Lifecycle (${{ matrix.os }})
     needs: changes
-    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
+    if: ${{ needs.changes.outputs.node-changes == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -231,13 +231,10 @@ jobs:
       - name: Build shared async runtime probe
         run: just build-rolldown-async-runtime
 
-      # The focused worker test shares the Rolldown test config, which imports
-      # the dev test modules during collection.
-      - name: Build `@rolldown/test-dev-server`
-        run: vp run --filter '@rolldown/test-dev-server' build
-
       - name: Test worker environment teardown
         run: vp run --filter rolldown-tests test:main async-runtime-worker-teardown.test.ts
+        env:
+          ROLLDOWN_TEST_REQUIRE_SHARED_ASYNC_RUNTIME: '1'
 
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]

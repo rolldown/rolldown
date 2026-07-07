@@ -12,6 +12,7 @@ pub fn mangle_options_to_napi_mangle_options(
       };
       Some(Either::B(keep_names))
     },
+    reserved: Some(mangle.reserved.iter().map(ToString::to_string).collect()),
     debug: Some(mangle.debug),
   }
 }

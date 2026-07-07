@@ -625,6 +625,10 @@ pub fn normalize_binding_options(
                       class: o.class,
                     },
                 }),
+                reserved: o
+                  .reserved
+                  .as_ref()
+                  .map(|names| names.iter().map(|name| name.as_str().into()).collect()),
               }),
             };
             let compress = match &opts.compress {

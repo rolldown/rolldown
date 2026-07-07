@@ -1557,6 +1557,13 @@ struct CurrentThreadExecutor {
   /// Superseding a dead host installs a new id in the same runtime generation,
   /// so delayed drive/cancel calls can compare-and-clear only their own turn.
   dispatch_pending: AtomicU64,
+  /// Exact capability of the one replacement dispatch allowed after a host
+  /// scheduler rejects an accepted callback. A second matching cancellation
+  /// fails the queued work instead of retrying forever.
+  recovery_dispatch: AtomicU64,
+  /// Terminal dispatch failure temporarily rejects scheduler publications
+  /// while the affected runnable and blocking queues are cancelled.
+  cancelling_failed_dispatch: AtomicBool,
   task_dispatch: fn(u64) -> bool,
   metrics: Arc<RuntimeMetrics>,
   // Deadlock detection (wake-path §6(d)). `threadless`: no second thread can
@@ -1585,6 +1592,13 @@ struct CurrentThreadQueue {
   runnables: VecDeque<Runnable>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CurrentThreadDispatchRequest {
+  Accepted,
+  Coalesced,
+  Unavailable,
+}
+
 struct CurrentThreadDrainGuard<'a>(&'a CurrentThreadExecutor);
 
 impl Drop for CurrentThreadDrainGuard<'_> {
@@ -1593,6 +1607,14 @@ impl Drop for CurrentThreadDrainGuard<'_> {
       self.0.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     self.0.draining.store(false, Ordering::Release);
     self.0.scheduler_idle.notify_all();
+  }
+}
+
+struct CurrentThreadDispatchCancellationGuard<'a>(&'a CurrentThreadExecutor);
+
+impl Drop for CurrentThreadDispatchCancellationGuard<'_> {
+  fn drop(&mut self) {
+    self.0.cancelling_failed_dispatch.store(false, Ordering::Release);
   }
 }
 
@@ -1693,6 +1715,8 @@ impl CurrentThreadExecutor {
       scheduler_idle_lock: Mutex::new(()),
       scheduler_idle: Condvar::new(),
       dispatch_pending: AtomicU64::new(0),
+      recovery_dispatch: AtomicU64::new(0),
+      cancelling_failed_dispatch: AtomicBool::new(false),
       task_dispatch: dispatch_current_thread_tasks,
       metrics,
       threadless,
@@ -1749,7 +1773,7 @@ impl CurrentThreadExecutor {
     {
       let mut state =
         self.blocking_admission.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      if state.closed {
+      if state.closed || self.cancelling_failed_dispatch.load(Ordering::Acquire) {
         rejected = true;
       } else if ambient_owner.is_some() && state.owner == ambient_owner {
         run_owner = ambient_owner;
@@ -1943,7 +1967,7 @@ impl CurrentThreadExecutor {
     self.metrics.runnable_scheduled();
     let rejected = {
       let mut queue = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      if queue.closed {
+      if queue.closed || self.cancelling_failed_dispatch.load(Ordering::Acquire) {
         Some(runnable)
       } else {
         queue.runnables.push_back(runnable);
@@ -1974,12 +1998,18 @@ impl CurrentThreadExecutor {
   /// the rest of its generation; a temporarily missing env leaves work queued
   /// for the next registration or for shutdown cancellation.
   fn request_drain(self: &Arc<Self>) {
-    self.request_drain_with(next_current_thread_dispatch_id);
+    let _ = self.request_drain_with(next_current_thread_dispatch_id);
   }
 
-  fn request_drain_with(self: &Arc<Self>, next_dispatch: impl FnOnce() -> u64) {
+  fn request_drain_with(
+    self: &Arc<Self>,
+    next_dispatch: impl FnOnce() -> u64,
+  ) -> CurrentThreadDispatchRequest {
+    if self.cancelling_failed_dispatch.load(Ordering::Acquire) {
+      return CurrentThreadDispatchRequest::Unavailable;
+    }
     if self.dispatch_pending.load(Ordering::Acquire) != 0 {
-      return;
+      return CurrentThreadDispatchRequest::Coalesced;
     }
     let dispatch = next_dispatch();
     if self
@@ -1987,17 +2017,25 @@ impl CurrentThreadExecutor {
       .compare_exchange(0, dispatch, Ordering::AcqRel, Ordering::Acquire)
       .is_err()
     {
-      return;
+      return CurrentThreadDispatchRequest::Coalesced;
     }
     if (self.task_dispatch)(dispatch) {
-      return;
+      return CurrentThreadDispatchRequest::Accepted;
     }
-    let _ =
-      self.dispatch_pending.compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire);
+    if self
+      .dispatch_pending
+      .compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire)
+      .is_err()
+    {
+      // A synchronous callback may already have consumed, cancelled, or
+      // superseded this exact capability.
+      return CurrentThreadDispatchRequest::Accepted;
+    }
     // Wakes are enqueue-only even without a host dispatcher. Polling inline
     // from an arbitrary wake caller can re-enter a future while it holds an
     // internal lock. Pure Rust embedders drive queued work explicitly through
     // `block_on`; host embeddings register a fresh-turn dispatcher.
+    CurrentThreadDispatchRequest::Unavailable
   }
 
   fn try_admit_host_turn(&self, dispatch: u64) -> bool {
@@ -2009,6 +2047,8 @@ impl CurrentThreadExecutor {
     {
       return false;
     }
+    let _ =
+      self.recovery_dispatch.compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire);
     self.draining.compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed).is_ok()
   }
 
@@ -2074,19 +2114,69 @@ impl CurrentThreadExecutor {
     // A previously accepted host callback may have been discarded when its
     // napi env died. A newly registered host supersedes that stale dispatch;
     // duplicate callbacks are harmless because `draining` serializes polls.
+    self.recovery_dispatch.store(0, Ordering::Release);
     self.dispatch_pending.store(0, Ordering::Release);
     self.request_drain_if_work_remains();
   }
 
-  fn cancel_host_dispatch(&self, dispatch: u64) {
-    // The host accepted the callback but failed before it could schedule the
-    // fresh turn. Do not poll or redispatch from inside that failing callback;
-    // a later wake or host registration may safely request another turn.
-    let _ =
-      self.dispatch_pending.compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire);
+  fn cancel_host_dispatch(self: &Arc<Self>, dispatch: u64) {
+    // See internal-docs/async-runtime/implementation.md.
+    if dispatch == 0
+      || self
+        .dispatch_pending
+        .compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire)
+        .is_err()
+    {
+      return;
+    }
+
+    if self
+      .recovery_dispatch
+      .compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire)
+      .is_ok()
+    {
+      // The one fresh-turn replacement failed too. Polling inline here would
+      // re-enter the host callback, while another retry could spin forever.
+      // Cancel the work represented by the coalesced dispatch instead.
+      self.cancel_work_after_host_dispatch_failure();
+      return;
+    }
+
+    if !self.has_serviceable_work() {
+      return;
+    }
+
+    // The host accepted the original callback but failed before its JavaScript
+    // scheduler could create the fresh turn. Queue exactly one replacement
+    // notification. `task_dispatch` is enqueue-only; it never polls a runnable
+    // on this cancellation stack.
+    let replacement = next_current_thread_dispatch_id();
+    self.recovery_dispatch.store(replacement, Ordering::Release);
+    match self.request_drain_with(|| replacement) {
+      CurrentThreadDispatchRequest::Accepted => {}
+      CurrentThreadDispatchRequest::Coalesced => {
+        // A wake or newly registered host won the zero-to-pending race. Its
+        // independent dispatch owns recovery from here.
+        let _ = self.recovery_dispatch.compare_exchange(
+          replacement,
+          0,
+          Ordering::AcqRel,
+          Ordering::Acquire,
+        );
+      }
+      CurrentThreadDispatchRequest::Unavailable => {
+        let owns_recovery = self
+          .recovery_dispatch
+          .compare_exchange(replacement, 0, Ordering::AcqRel, Ordering::Acquire)
+          .is_ok();
+        if owns_recovery && self.dispatch_pending.load(Ordering::Acquire) == 0 {
+          self.cancel_work_after_host_dispatch_failure();
+        }
+      }
+    }
   }
 
-  fn request_drain_if_work_remains(self: &Arc<Self>) {
+  fn has_serviceable_work(&self) -> bool {
     let has_queued_runnable = {
       let queue = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       !queue.closed && !queue.runnables.is_empty()
@@ -2095,8 +2185,46 @@ impl CurrentThreadExecutor {
     let has_queued_blocking = self.has_serviceable_blocking_work();
     #[cfg(target_family = "wasm")]
     let has_queued_blocking = false;
-    if (has_queued_runnable || has_queued_blocking) && !self.draining.load(Ordering::Acquire) {
+    has_queued_runnable || has_queued_blocking
+  }
+
+  fn request_drain_if_work_remains(self: &Arc<Self>) {
+    if self.has_serviceable_work() && !self.draining.load(Ordering::Acquire) {
       self.request_drain();
+    }
+  }
+
+  fn cancel_work_after_host_dispatch_failure(&self) {
+    if self
+      .cancelling_failed_dispatch
+      .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+      .is_err()
+    {
+      return;
+    }
+    let _cancelling = CurrentThreadDispatchCancellationGuard(self);
+    self.dispatch_pending.store(0, Ordering::Release);
+    self.recovery_dispatch.store(0, Ordering::Release);
+
+    let queued = {
+      let mut queue = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      std::mem::take(&mut queue.runnables)
+    };
+    #[cfg(not(target_family = "wasm"))]
+    let queued_blocking = {
+      let mut state =
+        self.blocking_admission.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      state.queue.take_all()
+    };
+
+    let _generation = RuntimeGenerationGuard::enter(self.generation);
+    for runnable in queued {
+      self.metrics.queued_runnables.fetch_sub(1, Ordering::Relaxed);
+      let _ = catch_unwind_contained(|| drop(runnable));
+    }
+    #[cfg(not(target_family = "wasm"))]
+    for job in queued_blocking {
+      let _ = catch_unwind_contained(|| drop(job));
     }
   }
 
@@ -2247,6 +2375,7 @@ impl CurrentThreadExecutor {
       std::mem::take(&mut queue.runnables)
     };
     self.dispatch_pending.store(0, Ordering::Release);
+    self.recovery_dispatch.store(0, Ordering::Release);
     for runnable in queued {
       self.metrics.queued_runnables.fetch_sub(1, Ordering::Relaxed);
       // Dropping the last runnable cancels its detached async-task and retires
@@ -6195,9 +6324,10 @@ pub fn shutdown() -> Result<(), RuntimeConfigError> {
 /// Cancel an accepted CurrentThread host dispatch that failed before it could
 /// schedule a fresh turn.
 ///
-/// This only releases the matching dispatch capability. It
-/// deliberately does not poll or redispatch queued work from inside the
-/// failing host callback.
+/// The first matching failure requests one replacement host notification
+/// without polling on the callback stack. If that exact replacement also
+/// fails, the coalesced queued work is cancelled so its waiters settle instead
+/// of hanging indefinitely.
 pub fn cancel_current_thread_task_dispatch(dispatch: u64) {
   RUNTIME.cancel_current_thread_dispatch(dispatch);
 }
@@ -6240,8 +6370,14 @@ pub fn metrics() -> RuntimeMetricsSnapshot {
 mod tests {
   use super::*;
 
-  static CURRENT_THREAD_RECOVERY_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
   static CURRENT_THREAD_BUDGET_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
+
+  thread_local! {
+    static CURRENT_THREAD_RECOVERY_HOST_DISPATCHES: std::cell::Cell<usize> =
+      const { std::cell::Cell::new(0) };
+    static CURRENT_THREAD_ONE_SHOT_HOST_DISPATCHES: std::cell::Cell<usize> =
+      const { std::cell::Cell::new(0) };
+  }
 
   #[test]
   fn unique_ids_fail_before_wraparound() {
@@ -6323,8 +6459,32 @@ mod tests {
   }
 
   fn count_current_thread_recovery_host_dispatch(_dispatch: u64) -> bool {
-    CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.fetch_add(1, Ordering::SeqCst);
+    CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.with(|dispatches| dispatches.set(dispatches.get() + 1));
     true
+  }
+
+  fn reset_current_thread_recovery_host_dispatches() {
+    CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.with(|dispatches| dispatches.set(0));
+  }
+
+  fn current_thread_recovery_host_dispatches() -> usize {
+    CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.with(std::cell::Cell::get)
+  }
+
+  fn accept_only_first_current_thread_host_dispatch(_dispatch: u64) -> bool {
+    CURRENT_THREAD_ONE_SHOT_HOST_DISPATCHES.with(|dispatches| {
+      let previous = dispatches.get();
+      dispatches.set(previous + 1);
+      previous == 0
+    })
+  }
+
+  fn reset_current_thread_one_shot_host_dispatches() {
+    CURRENT_THREAD_ONE_SHOT_HOST_DISPATCHES.with(|dispatches| dispatches.set(0));
+  }
+
+  fn current_thread_one_shot_host_dispatches() -> usize {
+    CURRENT_THREAD_ONE_SHOT_HOST_DISPATCHES.with(std::cell::Cell::get)
   }
 
   fn count_current_thread_budget_host_dispatch(_dispatch: u64) -> bool {
@@ -6688,7 +6848,7 @@ mod tests {
 
   #[test]
   fn current_thread_new_host_recovers_lost_dispatch_and_stale_callbacks_are_harmless() {
-    CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.store(0, Ordering::SeqCst);
+    reset_current_thread_recovery_host_dispatches();
     let metrics = Arc::new(RuntimeMetrics::default());
     let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
       Arc::clone(&metrics),
@@ -6705,14 +6865,14 @@ mod tests {
     );
 
     executor.schedule(runnable);
-    assert_eq!(CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst), 1);
+    assert_eq!(current_thread_recovery_host_dispatches(), 1);
     let lost_dispatch = current_thread_dispatch(&executor);
 
     // Model the first host dying after its TSFN accepted the call but before
     // JavaScript invoked drive_current_thread_runtime_tasks.
     executor.request_drain_if_queued();
     assert_eq!(
-      CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst),
+      current_thread_recovery_host_dispatches(),
       2,
       "the newly registered host must supersede the lost accepted callback"
     );
@@ -6741,7 +6901,7 @@ mod tests {
     );
     executor.schedule(second_runnable);
     assert_eq!(
-      CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst),
+      current_thread_recovery_host_dispatches(),
       3,
       "work queued after the stale callback must receive a new dispatch"
     );
@@ -6760,7 +6920,7 @@ mod tests {
       async_task::spawn(async {}, move |runnable| third_scheduler.schedule(runnable));
     executor.schedule(third_runnable);
     assert_eq!(
-      CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst),
+      current_thread_recovery_host_dispatches(),
       4,
       "a stale callback must not leave the dispatch latch stuck"
     );
@@ -6793,6 +6953,40 @@ mod tests {
       "late failure from the superseded callback must not clear the replacement latch"
     );
     executor.begin_shutdown();
+  }
+
+  #[test]
+  fn current_thread_new_host_supersedes_recovery_without_stale_terminal_cancellation() {
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      accept_current_thread_host_dispatch,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(async { 17usize }, move |runnable| scheduler.schedule(runnable));
+
+    executor.schedule(runnable);
+    let failed_dispatch = current_thread_dispatch(&executor);
+    executor.cancel_host_dispatch(failed_dispatch);
+    let recovery_dispatch = current_thread_dispatch(&executor);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), recovery_dispatch);
+
+    executor.request_drain_if_queued();
+    let new_host_dispatch = current_thread_dispatch(&executor);
+    assert_ne!(new_host_dispatch, recovery_dispatch);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), 0);
+
+    executor.cancel_host_dispatch(recovery_dispatch);
+    assert_eq!(
+      executor.dispatch_pending.load(Ordering::Acquire),
+      new_host_dispatch,
+      "the superseded recovery cancellation must preserve the new host's latch"
+    );
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 1);
+
+    executor.drive_host_turn_for_dispatch(new_host_dispatch);
+    assert_eq!(futures::executor::block_on(task), 17);
   }
 
   #[test]
@@ -6845,39 +7039,116 @@ mod tests {
   }
 
   #[test]
-  fn current_thread_cancelled_host_dispatch_allows_later_wake_to_recover() {
-    CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.store(0, Ordering::SeqCst);
+  fn current_thread_cancelled_host_dispatch_recovers_without_a_later_wake() {
+    reset_current_thread_recovery_host_dispatches();
     let metrics = Arc::new(RuntimeMetrics::default());
     let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
       Arc::clone(&metrics),
       count_current_thread_recovery_host_dispatch,
     ));
 
-    let first_scheduler = Arc::clone(&executor);
-    let (first_runnable, first_task) =
-      async_task::spawn(async { 1usize }, move |runnable| first_scheduler.schedule(runnable));
-    executor.schedule(first_runnable);
-    assert_eq!(CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst), 1);
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(async { 1usize }, move |runnable| scheduler.schedule(runnable));
+    executor.schedule(runnable);
+    assert_eq!(current_thread_recovery_host_dispatches(), 1);
     let failed_dispatch = current_thread_dispatch(&executor);
 
     // Model the host scheduler throwing after Rust accepted the callback but
     // before JavaScript could queue a fresh turn.
     executor.cancel_host_dispatch(failed_dispatch);
-
-    let second_scheduler = Arc::clone(&executor);
-    let (second_runnable, second_task) =
-      async_task::spawn(async { 2usize }, move |runnable| second_scheduler.schedule(runnable));
-    executor.schedule(second_runnable);
     assert_eq!(
-      CURRENT_THREAD_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst),
+      current_thread_recovery_host_dispatches(),
       2,
-      "a later wake must be able to request a replacement host turn"
+      "cancellation must request one replacement without another submission"
     );
+    let replacement_dispatch = current_thread_dispatch(&executor);
+    assert_ne!(replacement_dispatch, failed_dispatch);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), replacement_dispatch);
 
-    executor.drive_host_turn();
-    assert_eq!(futures::executor::block_on(first_task), 1);
-    assert_eq!(futures::executor::block_on(second_task), 2);
+    executor.drive_host_turn_for_dispatch(replacement_dispatch);
+    assert_eq!(futures::executor::block_on(task), 1);
     assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), 0);
+  }
+
+  #[test]
+  fn current_thread_second_host_dispatch_failure_cancels_work_and_reopens() {
+    reset_current_thread_recovery_host_dispatches();
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      count_current_thread_recovery_host_dispatch,
+    ));
+    let backend =
+      RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
+
+    let registration = backend.work.try_register_async().expect("the backend must accept work");
+    let task =
+      spawn_registered(&backend, Arc::clone(&metrics), std::future::pending::<()>(), registration);
+    let failed_dispatch = current_thread_dispatch(&executor);
+    executor.cancel_host_dispatch(failed_dispatch);
+    let replacement_dispatch = current_thread_dispatch(&executor);
+
+    executor.cancel_host_dispatch(replacement_dispatch);
+
+    assert_eq!(
+      current_thread_recovery_host_dispatches(),
+      2,
+      "a second scheduler failure must not create an unbounded retry loop"
+    );
+    assert_eq!(executor.dispatch_pending.load(Ordering::Acquire), 0);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), 0);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+    assert_eq!(
+      futures::executor::block_on(task).unwrap_err().to_string(),
+      "async runtime stopped before the task completed",
+      "terminal host failure must settle the original operation as cancelled"
+    );
+    assert_eq!(backend.work.state.lock().unwrap().active, 0);
+
+    let later_registration =
+      backend.work.try_register_async().expect("terminal cancellation must reopen acceptance");
+    let later_task =
+      spawn_registered(&backend, Arc::clone(&metrics), async { 2usize }, later_registration);
+    assert_eq!(
+      current_thread_recovery_host_dispatches(),
+      3,
+      "terminal cancellation must not permanently close the executor"
+    );
+    executor.drive_host_turn();
+    assert_eq!(futures::executor::block_on(later_task).unwrap(), 2);
+  }
+
+  #[test]
+  fn current_thread_unavailable_recovery_dispatch_cancels_original_work() {
+    reset_current_thread_one_shot_host_dispatches();
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      accept_only_first_current_thread_host_dispatch,
+    ));
+
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(std::future::pending::<()>(), move |runnable| scheduler.schedule(runnable));
+    executor.schedule(runnable);
+    let failed_dispatch = current_thread_dispatch(&executor);
+
+    executor.cancel_host_dispatch(failed_dispatch);
+
+    assert_eq!(
+      current_thread_one_shot_host_dispatches(),
+      2,
+      "the original and its one bounded replacement must be attempted"
+    );
+    assert_eq!(executor.dispatch_pending.load(Ordering::Acquire), 0);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), 0);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+    assert!(
+      futures::executor::block_on(task.fallible()).is_none(),
+      "an unavailable replacement host must settle the original task as cancelled"
+    );
   }
 
   enum TestCurrentThreadTaskDriverBehavior {

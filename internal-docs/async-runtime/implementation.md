@@ -158,9 +158,15 @@ binary.
   cannot transition from that generation's `Running` state without either
   preceding admission or observing the claimed role. If the JavaScript
   scheduler throws before it can queue the fresh turn,
-  `cancel_current_thread_task_dispatch` clears only the matching capability and
-  leaves all work queued. It never polls or immediately redispatches from the
-  failing callback; a later wake or host registration can recover safely. The
+  `cancel_current_thread_task_dispatch` clears only the matching capability. It
+  never polls from the failing callback. Instead it enqueues at most one exact
+  replacement notification through the host driver. Successful drive or host
+  replacement clears that recovery capability. If the replacement is also
+  cancelled, or no live host accepts it, the executor temporarily rejects
+  scheduler publications and cancels the affected runnable and blocking queues
+  under the generation's existing contained-drop rules. This settles the
+  original operation without an unrelated wake and then reopens the executor
+  for a later independent dispatch chain. The
   role remains scheduler-active through
   every `Runnable::run`, including async-task's destruction of detached
   completed outputs; CurrentThread shutdown waits for that role before

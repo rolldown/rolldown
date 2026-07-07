@@ -158,9 +158,13 @@ The existing Tokio runtime remains the default and is selected by the
    wrapping any of them would turn an impossible exhaustion event into an ABA
    authorization bug.
    If the JavaScript host cannot queue the requested fresh turn, it cancels
-   only that accepted dispatch capability. Cancellation never polls or
-   redispatches inline from the failing callback; a later wake or host
-   registration may request a replacement turn.
+   only that accepted dispatch capability. Cancellation never polls inline
+   from the failing callback. It may enqueue one exact replacement host
+   notification; if that replacement also cannot create a fresh turn, the
+   executor cancels the coalesced queued work under the normal generation and
+   panic-containment boundaries. This bounds scheduler failure without
+   requiring an unrelated later wake, while future submissions can start a
+   new dispatch chain.
    Shutdown therefore either transitions first and rejects the callback, or
    observes the claimed role and waits for it. A delayed callback from an older
    generation, or a superseded callback from the same generation, is a no-op

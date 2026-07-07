@@ -5,6 +5,7 @@ import { expect } from 'vitest';
 export default defineTest({
   config: {
     output: {
+      sourcemap: true,
       sourcemapFileNames: '[name]-abcde.js.map',
     },
   },

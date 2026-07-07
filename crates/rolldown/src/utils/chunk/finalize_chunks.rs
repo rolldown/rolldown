@@ -25,6 +25,7 @@ use rolldown_utils::{
   xxhash::{encode_hash_with_base, xxhash_base64_url},
 };
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 use xxhash_rust::xxh3::Xxh3;
 
 use crate::{
@@ -121,11 +122,11 @@ pub async fn finalize_assets(
     })
     .collect::<Vec<_>>()
     .into();
-  let sourcemap_final_hashes = if matches!(&options.sourcemap, Some(SourceMapType::Inline) | None) {
-    vec![]
-  } else {
-    generate_sourcemap_hashes_by_idx(&index_instantiated_chunks, hash_base)
-  };
+  // Inline sourcemaps also resolve `[hash]`: the name is still reported on the output chunk
+  // even though no `.map` asset is written (Rollup parity). With sourcemaps disabled no
+  // preliminary sourcemap filenames exist, so this yields nothing.
+  let sourcemap_final_hashes =
+    generate_sourcemap_hashes_by_idx(&index_instantiated_chunks, hash_base);
 
   deconflict_filenames(&index_instantiated_chunks, &mut index_final_hashes, hash_base);
 
@@ -153,8 +154,13 @@ pub async fn finalize_assets(
       )
       .into();
 
-      let preliminary_filename_str =
-        instantiated_chunk.preliminary_sourcemap_filename.as_ref().map(|f| f.as_str());
+      // Only chunks that actually produced a map report a sourcemap filename; Rollup reports
+      // `sourcemapFileName: null` otherwise.
+      let preliminary_filename_str = if instantiated_chunk.map.is_some() {
+        instantiated_chunk.preliminary_sourcemap_filename.as_ref().map(|f| f.as_str())
+      } else {
+        None
+      };
 
       if let InstantiationKind::Ecma(ecma_meta) = &mut instantiated_chunk.kind {
         let (_, debug_id) = index_final_hashes[asset_idx];
@@ -280,9 +286,27 @@ fn generate_sourcemap_hashes_by_idx(
       else {
         return None;
       };
+      // Only patterns containing `[hash]` need a resolved sourcemap hash.
+      preliminary_sourcemap_filename.hash_placeholder()?;
+      let InstantiationKind::Ecma(ecma_meta) = &chunk.kind else {
+        return None;
+      };
+      // Hash only machine-independent content: `sources` still hold absolute module paths here
+      // (they are only relativized later in `process_code_and_sourcemap`), and the preliminary
+      // filename embeds a transient placeholder index. Feeding either into the hash would
+      // rename sourcemaps across machines or on unrelated graph changes — the same invariant
+      // the placeholder normalization above maintains for chunk content hashes.
+      let mut content_only = map.clone();
+      content_only.set_sources(
+        map
+          .get_sources()
+          .map(|source| {
+            source.as_path().relative(&ecma_meta.file_dir).to_slash_lossy().into_owned()
+          })
+          .collect::<Vec<String>>(),
+      );
       let mut hasher = Xxh3::default();
-      preliminary_sourcemap_filename.hash(&mut hasher);
-      map.to_json_string().hash(&mut hasher);
+      hasher.update(content_only.to_json_string().as_bytes());
       let hash = encode_hash_with_base(&hasher.digest128().to_le_bytes(), hash_base);
       Some((InsChunkIdx::from(idx), hash))
     })

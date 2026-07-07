@@ -256,6 +256,10 @@ impl Chunk {
     let Some(sourcemap_filename) = &options.sourcemap_filenames else {
       return Ok(PreliminarySourcemapFilename::Empty);
     };
+    if options.sourcemap.is_none() {
+      // No map will be produced, so don't reserve a name (or a hash placeholder) for one.
+      return Ok(PreliminarySourcemapFilename::Empty);
+    }
 
     let filename_template = FilenameTemplate::new(
       sourcemap_filename.call(rollup_pre_rendered_chunk).await?,

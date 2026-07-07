@@ -579,6 +579,82 @@ test.concurrent(
   },
 );
 
+test.concurrent(
+  'watcher close preserves a singleton JavaScript hook error object',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-close-error-identity',
+      retryCount,
+    );
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const closeError = Object.assign(new TypeError('watch close identity'), {
+      identityMarker: 'preserved',
+    });
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'close-error-identity',
+          closeWatcher() {
+            throw closeError;
+          },
+        },
+      ],
+    });
+    await waitBuildFinished(watcher);
+
+    await expect(watcher.close()).rejects.toBe(closeError);
+    await expect(watcher.close()).rejects.toBe(closeError);
+    expect(closeError.identityMarker).toBe('preserved');
+  },
+);
+
+test.concurrent(
+  'watcher close preserves a singleton JavaScript closeBundle error object',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-close-bundle-error-identity',
+      retryCount,
+    );
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const closeError = Object.assign(new RangeError('watch closeBundle identity'), {
+      identityMarker: 'preserved',
+    });
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'close-bundle-error-identity',
+          closeBundle() {
+            throw closeError;
+          },
+        },
+      ],
+    });
+    await waitBuildFinished(watcher);
+
+    await expect(watcher.close()).rejects.toBe(closeError);
+    await expect(watcher.close()).rejects.toBe(closeError);
+    expect(closeError.identityMarker).toBe('preserved');
+  },
+);
+
 // https://github.com/rolldown/rolldown/issues/9462
 test.concurrent(
   'watcher.close() can be awaited inside an event callback',

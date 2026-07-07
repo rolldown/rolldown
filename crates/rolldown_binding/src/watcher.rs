@@ -9,6 +9,7 @@ use napi::{
 };
 use napi_derive::napi;
 use rolldown_common::WatcherChangeKind;
+use rolldown_error::BuildDiagnostic;
 use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler};
 
 use crate::types::binding_bundler_options::BindingBundlerOptions;
@@ -18,6 +19,20 @@ use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
 };
+
+fn handle_watcher_close_result(result: anyhow::Result<()>) -> napi::Result<()> {
+  result.map_err(|error| {
+    if let Some(error) = error.chain().find_map(|cause| match cause.downcast_ref::<napi::Error>() {
+      Some(error) => Some(error),
+      None => {
+        cause.downcast_ref::<BuildDiagnostic>().and_then(|error| error.downcast_napi_error().ok())
+      }
+    }) {
+      return error.try_clone().unwrap_or_else(|clone_error| clone_error);
+    }
+    napi::Error::new(napi::Status::GenericFailure, error.to_string())
+  })
+}
 
 /// Bridges watcher events from Rust to JS via a `ThreadsafeFunction`.
 struct NapiWatcherEventHandler {
@@ -123,8 +138,6 @@ impl BindingWatcher {
   #[napi(ts_return_type = "Promise<void>")]
   pub fn close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let inner = Arc::clone(&self.inner);
-    spawn_boxed_future(env, async move {
-      inner.close().await.map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))
-    })
+    spawn_boxed_future(env, async move { handle_watcher_close_result(inner.close().await) })
   }
 }

@@ -14,7 +14,8 @@ use crate::{
 };
 use napi::{Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
-use rolldown::{BundleHandle, BundlerConfig};
+use rolldown::{Bundle, BundleHandle, BundlerConfig};
+use rolldown_error::BatchedBuildDiagnostic;
 use std::sync::Arc;
 
 #[napi]
@@ -42,20 +43,9 @@ impl BindingBundler {
       return spawn_boxed_future(env, async move { Ok(result) });
     }
 
-    let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
-    if let Ok(bundle) = &maybe_bundle {
-      // Extract bundle handle before consuming the bundle
-      self.last_bundle_handle = Some(bundle.context());
-    }
+    let (bundle, bundle_handle) = self.create_bundle(normalized)?;
 
     let fut = async move {
-      // TODO: we probably advance error handling here instead of waiting for an async call
-      let bundle = maybe_bundle.map_err(|err| {
-        napi::Error::new(
-          napi::Status::GenericFailure,
-          err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
-        )
-      })?;
       let cwd = bundle.options().cwd.clone();
       let options = Arc::clone(bundle.options());
       let bundle_output = match bundle.generate().await {
@@ -77,7 +67,9 @@ impl BindingBundler {
 
       Ok(napi::Either::B(bundle_output.assets.into()))
     };
-    spawn_boxed_future(env, fut)
+    let promise = spawn_boxed_future(env, fut)?;
+    self.install_bundle_handle(bundle_handle);
+    Ok(promise)
   }
 
   #[napi]
@@ -91,19 +83,9 @@ impl BindingBundler {
       return spawn_boxed_future(env, async move { Ok(result) });
     }
 
-    let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
-    if let Ok(bundle) = &maybe_bundle {
-      // Extract bundle handle before consuming the bundle
-      self.last_bundle_handle = Some(bundle.context());
-    }
+    let (bundle, bundle_handle) = self.create_bundle(normalized)?;
 
     let fut = async move {
-      let bundle = maybe_bundle.map_err(|err| {
-        napi::Error::new(
-          napi::Status::GenericFailure,
-          err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
-        )
-      })?;
       let cwd = bundle.options().cwd.clone();
       let options = Arc::clone(bundle.options());
       let bundle_output = match bundle.write().await {
@@ -125,7 +107,9 @@ impl BindingBundler {
 
       Ok(napi::Either::B(bundle_output.assets.into()))
     };
-    spawn_boxed_future(env, fut)
+    let promise = spawn_boxed_future(env, fut)?;
+    self.install_bundle_handle(bundle_handle);
+    Ok(promise)
   }
 
   #[napi]
@@ -139,19 +123,9 @@ impl BindingBundler {
       return spawn_boxed_future(env, async move { Ok(result) });
     }
 
-    let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
-    if let Ok(bundle) = &maybe_bundle {
-      // Extract bundle handle before consuming the bundle
-      self.last_bundle_handle = Some(bundle.context());
-    }
+    let (bundle, bundle_handle) = self.create_bundle(normalized)?;
 
     let fut = async move {
-      let bundle = maybe_bundle.map_err(|err| {
-        napi::Error::new(
-          napi::Status::GenericFailure,
-          err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
-        )
-      })?;
       let cwd = bundle.options().cwd.clone();
       match bundle.scan().await {
         Ok(()) => {
@@ -168,7 +142,9 @@ impl BindingBundler {
         }
       }
     };
-    spawn_boxed_future(env, fut)
+    let promise = spawn_boxed_future(env, fut)?;
+    self.install_bundle_handle(bundle_handle);
+    Ok(promise)
   }
 
   #[napi]
@@ -202,6 +178,27 @@ impl BindingBundler {
 }
 
 impl BindingBundler {
+  fn create_bundle(&mut self, normalized: BundlerConfig) -> napi::Result<(Bundle, BundleHandle)> {
+    let bundle = self
+      .inner
+      .create_bundle(normalized.options, normalized.plugins)
+      .map_err(Self::bundle_creation_error)?;
+    let handle = bundle.context();
+    Ok((bundle, handle))
+  }
+
+  fn install_bundle_handle(&mut self, handle: BundleHandle) {
+    self.inner.install_bundle_handle(handle.clone());
+    self.last_bundle_handle = Some(handle);
+  }
+
+  fn bundle_creation_error(error: BatchedBuildDiagnostic) -> napi::Error {
+    napi::Error::new(
+      napi::Status::GenericFailure,
+      error.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
+    )
+  }
+
   fn normalize_binding_options(option: BindingBundlerOptions) -> napi::Result<BundlerConfig> {
     #[cfg(not(target_family = "wasm"))]
     let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;

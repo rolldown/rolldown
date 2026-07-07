@@ -21,19 +21,7 @@ export class CloseCallbackScope {
       active: true,
       scope: this,
     };
-    if (activeCloseCallback) {
-      return activeCloseCallback.run(invocation, () => this.#invoke(invocation, callback));
-    }
-
-    // Browser hosts cannot propagate async context. Keep only the exact
-    // synchronous invocation on the stack. See internal-docs/async-runtime/implementation.md.
-    const previousInvocation = this.#browserInvocation;
-    this.#browserInvocation = invocation;
-    try {
-      return this.#invoke(invocation, callback);
-    } finally {
-      this.#browserInvocation = previousInvocation;
-    }
+    return this.#runInvocation(invocation, () => this.#invoke(invocation, callback));
   }
 
   selectClosePromise(closePromise: Promise<void>): Promise<void> {
@@ -127,12 +115,30 @@ export class CloseCallbackScope {
         invocation.active = false;
         return result;
       }
-      return assimilateThenable(result, then).finally(() => {
+      return assimilateThenable(result, then, (callback) =>
+        this.#runInvocation(invocation, callback),
+      ).finally(() => {
         invocation.active = false;
       }) as T;
     } catch (error) {
       invocation.active = false;
       throw error;
+    }
+  }
+
+  #runInvocation<T>(invocation: CloseCallbackInvocation, callback: () => T): T {
+    if (activeCloseCallback) {
+      return activeCloseCallback.run(invocation, callback);
+    }
+
+    // Browser hosts cannot propagate async context. Keep only the exact
+    // synchronous invocation on the stack. See internal-docs/async-runtime/implementation.md.
+    const previousInvocation = this.#browserInvocation;
+    this.#browserInvocation = invocation;
+    try {
+      return callback();
+    } finally {
+      this.#browserInvocation = previousInvocation;
     }
   }
 
@@ -157,45 +163,98 @@ function getThen(value: unknown): Function | undefined {
   return typeof then === 'function' ? then : undefined;
 }
 
-function assimilateThenable(value: unknown, then: Function): Promise<unknown> {
-  // Match Promise.resolve's deferred then invocation without reading a
-  // user-controlled getter a second time. Box each resolution so the native
-  // Promise algorithm cannot recursively assimilate a cyclic user thenable.
-  const thenableChain = new Set<object>([value as object]);
-  return invokeThenable(value, then, thenableChain).then(resolveThenable);
+function assimilateThenable(
+  value: unknown,
+  then: Function,
+  runSynchronousCallback: SynchronousCallbackRunner,
+): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    settleThenable(
+      value,
+      then,
+      new Set<object>([value as object]),
+      runSynchronousCallback,
+      resolve,
+      reject,
+    );
+  });
 }
 
-function invokeThenable(
+function settleThenable(
   value: unknown,
   then: Function,
   thenableChain: Set<object>,
-): Promise<BoxedThenableResolution> {
-  return Promise.resolve().then(
-    () =>
-      new Promise((resolve, reject) => {
-        Reflect.apply(then, value, [
-          (resolved: unknown) => resolve({ thenableChain, value: resolved }),
-          reject,
-        ]);
-      }),
-  );
+  runSynchronousCallback: SynchronousCallbackRunner,
+  resolve: (value: unknown) => void,
+  reject: (reason?: unknown) => void,
+): void {
+  // Match Promise.resolve's deferred then invocation. Box each resolution so
+  // the native Promise algorithm cannot recursively assimilate a cyclic user
+  // thenable before this resolver can inspect it.
+  void Promise.resolve()
+    .then(
+      () =>
+        new Promise<BoxedThenableResolution>((resolveThenable, rejectThenable) => {
+          runSynchronousCallback(() => {
+            Reflect.apply(then, value, [
+              (resolved: unknown) =>
+                resolveThenable(boxThenableResolution(thenableChain, resolved)),
+              rejectThenable,
+            ]);
+          });
+        }),
+    )
+    .then(
+      (resolution) => resolveThenable(resolution, runSynchronousCallback, resolve, reject),
+      reject,
+    );
 }
 
-function resolveThenable({ thenableChain, value }: BoxedThenableResolution): unknown {
+function resolveThenable(
+  { thenableChain, value }: BoxedThenableResolution,
+  runSynchronousCallback: SynchronousCallbackRunner,
+  resolve: (value: unknown) => void,
+  reject: (reason?: unknown) => void,
+): void {
   if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
-    return value;
-  }
-  if (thenableChain.has(value)) {
-    throw new TypeError('Thenable cycle detected while settling a callback result');
+    resolve(value);
+    return;
   }
 
-  const then = Reflect.get(value, 'then');
-  if (typeof then !== 'function') return value;
+  let then: unknown;
+  try {
+    runSynchronousCallback(() => {
+      then = Reflect.get(value, 'then');
+    });
+  } catch (error) {
+    reject(error);
+    return;
+  }
+  if (typeof then !== 'function') {
+    resolve(value);
+    return;
+  }
+  if (thenableChain.has(value)) {
+    reject(new TypeError('Thenable cycle detected while settling a callback result'));
+    return;
+  }
 
   const nextThenableChain = new Set(thenableChain);
   nextThenableChain.add(value);
-  return invokeThenable(value, then, nextThenableChain).then(resolveThenable);
+  settleThenable(value, then, nextThenableChain, runSynchronousCallback, resolve, reject);
 }
+
+function boxThenableResolution(
+  thenableChain: Set<object>,
+  value: unknown,
+): BoxedThenableResolution {
+  const resolution = Object.create(null) as BoxedThenableResolution;
+  resolution.thenableChain = thenableChain;
+  resolution.value = value;
+  return resolution;
+}
+
+type SynchronousCallbackRunner = <T>(callback: () => T) => T;
 
 interface BoxedThenableResolution {
   thenableChain: Set<object>;

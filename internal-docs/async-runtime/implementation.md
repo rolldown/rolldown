@@ -148,17 +148,21 @@ binary.
   runnables before redispatching, so a self-waking task cannot monopolize the
   JavaScript event loop, and both host turns and explicit `block_on` drivers
   force a blocking turn after 16 consecutive runnable polls. For `block_on`,
-  the exact blocking dependency published by the awaited future has priority
-  over ordinary FIFO work on that turn. Once shutdown is observed after a
-  pending poll, it takes precedence over queue draining and stored self-wake
-  permits. A nonzero pending dispatch coalesces later wakes before they allocate
-  another process-global identity; callers that race after both observing zero
-  still resolve through the exact-capability compare-exchange. Every accepted
-  host dispatch carries a globally unique, nonzero capability.
+  every exact blocking dependency published by the awaited future during one
+  poll remains eligible, with one bounded claim attempt taking priority over
+  ordinary FIFO work on that turn. Every explicit driver checks generation stop
+  before each user poll, so a shutdown wake cannot cause one final poll before
+  stop wins over queue draining and stored self-wake permits. A nonzero pending
+  dispatch coalesces later wakes before they allocate another process-global
+  identity; callers that race after both observing zero still resolve through
+  the exact-capability compare-exchange. Every accepted host dispatch carries a
+  globally unique, nonzero capability.
   Dispatch publication and host-turn admission are serialized by the
-  scheduler-idle mutex. Admission consumes the pending capability and publishes
-  the draining role before releasing that mutex, so a wake cannot observe the
-  intermediate zero-capability state and publish a duplicate host turn.
+  scheduler-idle mutex. Admission rechecks generation stop while holding that
+  mutex, then consumes the pending capability and publishes the draining role
+  before releasing it, so a stale stopped-generation callback cannot claim a
+  turn and a wake cannot observe the intermediate zero-capability state and
+  publish a duplicate host turn.
   The controller atomically consumes that exact capability and claims the
   executor's RAII host-turn role while holding the lifecycle mutex; shutdown
   cannot transition from that generation's `Running` state without either
@@ -199,16 +203,20 @@ binary.
   pool. The same pool is inherited by nested `par_iter` calls. Rayon worker
   start hooks classify every nested worker for cooperative `block_on`; a
   separate driver marker limits the per-worker LIFO slot to scheduler frames
-  that will actually drain it.
+  that will actually drain it. The custom spawn handler retains every native
+  worker `JoinHandle`; after pool destruction, shutdown joins those handles so
+  physical retirement includes OS-thread termination and thread-local
+  destructors, not only Rayon's worker exit hook.
 - A second FIFO holds blocking closures. `active_blocking` limits how many
   Rayon workers may block at once. Validation reserves one worker from
   blocking admission. MultiThread promotes a requested worker count of one to
-  an effective count of two, then clamps `max_blocking_tasks` to
-  `worker_threads - 1`. The Rayon pool creates exactly the effective configured
-  count; configuration and metrics therefore report physical workers, with no
-  hidden reserve. Blocking start/completion counters count every executed
-  closure, including exact-dependency work, while active/high-water counters
-  count admitted lanes and therefore remain bounded by `max_blocking_tasks`.
+  two, clamps it to `rayon::max_num_threads()`, and only then derives
+  `max_blocking_tasks <= worker_threads - 1`. The Rayon pool creates exactly
+  that validated count; configuration and metrics therefore report physically
+  realizable workers, with no hidden reserve. Blocking start/completion counters
+  count every executed closure, including exact-dependency work, while
+  active/high-water counters count admitted lanes and therefore remain bounded
+  by `max_blocking_tasks`.
   Every blocking job has a stable executor-scoped id, and its dependency pairs
   that id with the exact `BlockingOwnerToken` frame whose admitted lane may be
   reused. Pending dependencies propagate through async task handles, acquiring
@@ -222,27 +230,45 @@ binary.
   The active-owner registry proves only that this exact frame is still active
   and unreserved; its cardinality never infers ancestry for a stolen Rayon job
   or scheduler runnable that has lost the thread-local token.
-  `TaskDependency` stores its live dependency and retained waiter in one mutex
-  so identity cannot tear across separate atomics. Set, clear, conditional
-  clear, claim, and waiter replacement commit under that mutex, then wake or
-  destroy moved-out wakers after unlocking. Waker clone, replacement drop, wake,
-  retirement, and final destruction run under the dependency generation and
-  independent panic boundaries. A lock-free `has_current` hint lets the common
-  dependency-free task poll skip that mutex. Propagation creates a fresh local
-  liveness link with a non-owning parent edge to the source publication while
-  every hop shares one one-shot exact-job claim. Link cancellation and final
-  claim validation/commit serialize through that shared claim, giving concurrent
-  withdrawal and lending one winner. Poll start invalidates and removes the
-  task's prior local link before polling user code: ancestor chains become stale
-  immediately, but cancelling an intermediate hop cannot cancel the child's
-  source claim. Non-owning edges and iterative liveness traversal keep deeply
-  nested join chains from recursively traversing or destroying the Rust stack.
+  `TaskDependency` stores the ordered collection of live dependency
+  publications observed during the current poll and its retained waiter in one
+  mutex so identity cannot tear across separate atomics. A later pending handle
+  in the same poll appends instead of replacing an earlier dependency. Every
+  append receives a contiguous, non-reused local sequence id and updates an
+  unowned FIFO or exact-owner FIFO plus an indexed job-to-sequence set. Owned
+  and propagated publications both create a fresh local liveness link, so
+  append is O(1) and does not perform a duplicate scan that could make one poll
+  quadratic. Set, clear, conditional clear, claim, and waiter replacement
+  commit under that mutex, then wake or destroy moved-out wakers after
+  unlocking. The dependency TLS stack also releases its `RefCell` borrow before
+  those operations can invoke a waker, so reentrant wake code may enter another
+  dependency context. Waker clone, replacement drop, wake, retirement, and
+  final destruction run under the dependency generation and independent panic
+  boundaries. A lock-free `has_current` hint lets the common dependency-free
+  task poll skip that mutex. Propagation creates a fresh local liveness link
+  with a non-owning parent edge to each source publication while every hop for
+  that publication shares one one-shot exact-job claim.
+  Link cancellation and final claim validation/commit serialize through that
+  shared claim, giving concurrent withdrawal and lending one winner. Poll start
+  invalidates and removes all of the task's prior local links before polling
+  user code: ancestor chains become stale immediately, but cancelling an
+  intermediate hop cannot cancel the child's source claim. Non-owning edges and
+  iterative liveness traversal keep deeply nested join chains from recursively
+  traversing or destroying the Rust stack.
   Direct blocking-handle cleanup matches the stable job id, independent of owner
-  enrichment. Task detachment clears the retained waiter before
-  async-task receives detached ownership. Parked-driver entries
-  publish that dependency for owner-aware handoff, but registry removal moves
-  the entry out before dropping its `Arc<TaskDependency>` so waiter destruction
-  can re-enter scheduler code without holding the registry mutex.
+  enrichment. Task detachment snapshots the child's live publications, clears
+  its retained waiter before async-task receives detached ownership, then hashes
+  the exact job/claim/immediate-parent identities and retires all matching parent
+  publications in one parent scan. The batch removes matching job-index entries,
+  uses the existing monotonic prefix/FIFO reclamation for owner indexes, and
+  consumes at most one parent waiter, avoiding quadratic cleanup when one poll
+  observes many child dependencies. Parked-driver entries publish that
+  dependency for owner-aware handoff. Selection snapshots only parker and
+  dependency `Arc`s while holding the registry mutex, evaluates the targeted
+  live-owner predicate after unlocking, then reacquires the registry only to
+  grant the selected handoff. Registry removal moves the entry out before
+  dropping its `Arc<TaskDependency>` so waiter destruction can re-enter
+  scheduler code without holding the registry mutex.
   The blocking FIFO is a queue of stable ids plus an indexed job map. Normal
   admission skips tombstoned ids amortized O(1); exact lending removes the job
   from the map in O(1) after atomically claiming the live dependency. Owner-lane
@@ -285,13 +311,25 @@ binary.
   idle cooperative lane under a fresh nested owner frame. No worker-specific
   broadcast or global dependency scan is submitted. One unrelated Rayon worker
   can therefore remain parked indefinitely without blocking later dependencies
-  or scheduler-idle retirement, and large dependency topologies require one
-  bounded claim attempt per serviced dependency rather than O(N^2) cloned
-  snapshots multiplied by the worker count. Every reservation release, including
-  a failed exact claim or an already-removed job, wakes at most one parked
-  blocking-capable driver whose published live dependency belongs to that exact
-  owner. A newer unrelated or untagged parker cannot absorb the handoff, so
-  multiple dependencies of one owner rearm linearly without a global wake batch.
+  or scheduler-idle retirement. Targeted selection clones only the chosen
+  publication and live-owner checks clone none. Exact handoff predicates inspect
+  only that owner's FIFO; availability predicates inspect that FIFO and the
+  unowned FIFO. Each predicate lazily discards a stale sequence at most once,
+  so interspersed stale and wrong-owner publications cannot be rescanned by
+  repeated owner probes. Selection compares the two live FIFO heads and thus
+  preserves global publication order. Binding the older unowned head moves its
+  sequence to the front of the exact-owner FIFO, immediately making a previous
+  negative exact-owner predicate stale. Claims use the selected sequence for
+  O(1) entry lookup and remove its owner/job indexes; claimed or cancelled
+  entries remain sequence-preserving tombstones until prefix reclamation or the
+  next poll reset. Repeatedly servicing live publications interspersed with
+  cancelled and wrong-owner entries therefore remains amortized linear instead
+  of rescanning the shared collection or rebuilding progressively smaller
+  snapshots. Every reservation release, including a failed exact claim or an
+  already-removed job, wakes at most one parked blocking-capable driver whose
+  published live dependency belongs to that exact owner. A newer unrelated or
+  untagged parker cannot absorb the handoff, so multiple dependencies of one
+  owner rearm linearly without a global wake batch.
   The selected parker stores the owner identity separately from its ordinary wake
   permit. It attempts that handoff before unrelated queue work; a withdrawn or
   replaced publication forwards the identity to the next live same-owner parker,
@@ -301,6 +339,11 @@ binary.
   lexically ambient exact owner as well as the normal queue recheck. A
   reservation released just before registration therefore causes another claim
   attempt instead of a missed handoff and permanent park.
+  A cooperative-driver unwind guard performs the same exit duties on every
+  return and user-future panic: deregister the parker, forward an unconsumed
+  owner handoff, flush the worker's LIFO slot, and compensate any absorbed queue
+  wake. Each duty has an independent panic boundary so one hostile cleanup
+  cannot suppress the remaining obligations.
 - `JoinHandle` normalizes async-task, blocking-job, and immediate results and
   detaches async tasks on drop to match Tokio. Scheduler shutdown instead
   aborts accepted async tasks and resolves retained handles with `JoinError`.
@@ -311,11 +354,15 @@ binary.
   dependency notification, and the arbitrary dependency waker is invoked behind
   a separate containment boundary so two hostile callbacks cannot double-panic.
 - MultiThread shutdown waits in three stages: accepted work retirement,
-  drainer/timekeeper exit, then physical Rayon worker exit. Only after all
-  three stages does the controller publish `Stopped` and wake a waiting
-  `start`. A lifecycle call made from a task poll, blocking closure, or Rayon
-  worker of the generation being stopped returns an error rather than waiting
-  on itself. Queued blocking closures are dropped one at a time behind
+  drainer/timekeeper exit, then joined native worker termination. The final
+  join barrier includes worker TLS destructors, which run after Rayon's exit
+  hook. `ON_POOL_WORKER` remains set until OS-thread TLS teardown completes, so
+  lifecycle reentry from a retiring worker's TLS destructor is recognized as
+  self-wait and rejected. Only after all three stages does the controller
+  publish `Stopped` and wake a waiting `start`. A lifecycle call made from a
+  task poll, blocking closure, or Rayon worker of the generation being stopped
+  returns an error rather than waiting on itself. Queued blocking closures are
+  dropped one at a time behind
   `catch_unwind`; a submission that races queue closure is rejected and dropped
   with the same isolation outside the queue lock and under the retiring
   generation identity. Convenience APIs that own a rejected future/closure
@@ -605,8 +652,12 @@ while shared arrays in independent branches remain valid. Callback-return
 thenables likewise capture their `then` method once before deferred
 assimilation, box each nested resolution, and retain path-local ancestry.
 Self-resolving and mutually recursive callback results therefore reject
-instead of monopolizing the microtask queue, and a user-controlled getter is
-never observed twice merely to determine whether the callback is asynchronous.
+instead of monopolizing the microtask queue. A data-property thenable may remove
+or replace its own `then` before resolving itself, matching native Promise
+semantics. Nested `then` accessors are read exactly once under the callback
+scope. A non-function result settles as a plain value, a function is invoked
+under the same scope, and a thrown getter value is preserved as the rejection
+reason.
 
 Native watch mode is supported on both runtime flavors. Public `dev()` checks
 `devSupported` before reading callbacks, running plugin hooks, creating workers,
@@ -642,7 +693,10 @@ before incrementing the owner count. If cleanup wins that race, the manager
 enters `Stopping`, rolls the just-started runtime back, and never exposes a
 lease. A rollback failure retains one abandoned lease owner in
 `ShutdownFailed`, preserving a recoverable retry path instead of reporting zero
-owners for a still-running runtime.
+owners for a still-running runtime. One acquisition can first recover such an
+abandoned owner and then lose the commit race after starting the replacement
+generation, so its shutdown action remains reusable for that second rollback
+instead of leaving the manager stuck in `Stopping`.
 
 Restart is awaitable because napi's combined custom/Tokio runtime deliberately
 does not overlap Tokio generations. `AcquireAsyncRuntimeTask` runs as N-API

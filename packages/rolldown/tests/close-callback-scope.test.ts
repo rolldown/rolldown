@@ -96,6 +96,60 @@ test('unrelated concurrent browser close observes cleanup failure', async () => 
   await expect(unrelatedClose).rejects.toBe(cleanupError);
 });
 
+test('browser callback-return thenables can await reentrant close without leaking scope', async () => {
+  const BrowserCloseCallbackScope = await loadBrowserCloseCallbackScope();
+  const scope = new BrowserCloseCallbackScope();
+  let resolveFullClose!: () => void;
+  const fullClose = new Promise<void>((resolve) => {
+    resolveFullClose = resolve;
+  });
+  const reentrantCloses: Promise<void>[] = [];
+  const escapedCloses: Promise<void>[] = [];
+  const thenCalls: string[] = [];
+
+  const registerClose = () => {
+    const reentrantClose = scope.selectClosePromise(fullClose);
+    reentrantCloses.push(reentrantClose);
+    queueMicrotask(() => {
+      escapedCloses.push(scope.selectClosePromise(fullClose));
+    });
+    return reentrantClose;
+  };
+  const innerThenable = {
+    // oxlint-disable-next-line unicorn/no-thenable -- exercises nested callback-result assimilation
+    then(resolve: (value: string) => void) {
+      thenCalls.push('inner');
+      const thenClose = registerClose();
+      void thenClose.then(() => resolve('settled'));
+    },
+  };
+  const outerThenable = {
+    // oxlint-disable-next-line unicorn/no-thenable -- exercises nested callback-result assimilation
+    then(resolve: (value: typeof innerThenable) => void) {
+      thenCalls.push('outer');
+      const reentrantClose = registerClose();
+      void reentrantClose.then(() => resolve(innerThenable));
+    },
+  };
+
+  let fallbackClosed = false;
+  const fallback = setTimeout(() => {
+    fallbackClosed = true;
+    resolveFullClose();
+  }, 0);
+  const result = await (scope.run(() => outerThenable) as unknown as Promise<string>);
+  clearTimeout(fallback);
+  resolveFullClose();
+  await fullClose;
+
+  expect(result).toBe('settled');
+  expect(fallbackClosed).toBe(false);
+  expect(thenCalls).toEqual(['outer', 'inner']);
+  expect(reentrantCloses).toHaveLength(2);
+  expect(reentrantCloses.every((close) => close !== fullClose)).toBe(true);
+  expect(escapedCloses).toEqual([fullClose, fullClose]);
+});
+
 test.each([
   ['native', async () => CloseCallbackScope],
   ['browser', loadBrowserCloseCallbackScope],
@@ -179,22 +233,160 @@ test.each([
 test.each([
   ['native', async () => CloseCallbackScope],
   ['browser', loadBrowserCloseCallbackScope],
+])(
+  '%s callback-return thenables preserve rejection identity and invoke once',
+  async (_, loadScope) => {
+    const Scope = await loadScope();
+    const scope = new Scope();
+    const rejection = new TypeError('thenable rejected');
+    let callbackCalls = 0;
+    let thenCalls = 0;
+    const thenable = {
+      // oxlint-disable-next-line unicorn/no-thenable -- verifies explicit thenable assimilation
+      then(_resolve: (value: unknown) => void, reject: (error: unknown) => void) {
+        thenCalls += 1;
+        reject(rejection);
+        throw new Error('ignored after rejection');
+      },
+    };
+
+    await expect(
+      scope.run(() => {
+        callbackCalls += 1;
+        return thenable;
+      }) as unknown as Promise<unknown>,
+    ).rejects.toBe(rejection);
+    expect(callbackCalls).toBe(1);
+    expect(thenCalls).toBe(1);
+  },
+);
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
 ])('%s callback-return thenables reject self-resolution cycles', async (_, loadScope) => {
   const Scope = await loadScope();
   const scope = new Scope();
-  let thenReads = 0;
-  // oxlint-disable-next-line unicorn/no-thenable -- verifies cyclic thenable rejection
-  const thenable = Object.defineProperty({}, 'then', {
-    get() {
-      thenReads += 1;
-      return (resolve: (value: typeof thenable) => void) => resolve(thenable);
+  let thenCalls = 0;
+  const thenable = {
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies cyclic thenable rejection
+    then(resolve: (value: typeof thenable) => void) {
+      thenCalls += 1;
+      resolve(thenable);
     },
-  });
+  };
 
   await expect(scope.run(() => thenable) as unknown as Promise<unknown>).rejects.toThrow(
     new TypeError('Thenable cycle detected while settling a callback result'),
   );
-  expect(thenReads).toBe(1);
+  expect(thenCalls).toBe(1);
+});
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])('%s callback-return thenables permit mutable self-resolution', async (_, loadScope) => {
+  const Scope = await loadScope();
+  const scope = new Scope();
+  const thenable: { then?: (resolve: (value: unknown) => void) => void } = {
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies native mutable-thenable semantics
+    then(resolve) {
+      delete thenable.then;
+      resolve(thenable);
+    },
+  };
+
+  await expect(scope.run(() => thenable) as unknown as Promise<unknown>).resolves.toBe(thenable);
+});
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])(
+  '%s callback-return thenables resolve nested accessors returning undefined',
+  async (_, loadScope) => {
+    const Scope = await loadScope();
+    const scope = new Scope();
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies nested accessor assimilation
+    const nested = Object.defineProperty({}, 'then', {
+      get() {
+        return undefined;
+      },
+    });
+    const outer = {
+      // oxlint-disable-next-line unicorn/no-thenable -- verifies nested accessor assimilation
+      then(resolve: (value: typeof nested) => void) {
+        resolve(nested);
+      },
+    };
+
+    await expect(scope.run(() => outer) as unknown as Promise<unknown>).resolves.toBe(nested);
+  },
+);
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])(
+  '%s callback-return thenables assimilate nested accessor-returned functions inside the scope',
+  async (_, loadScope) => {
+    const Scope = await loadScope();
+    const scope = new Scope();
+    const fullClose = new Promise<void>(() => {});
+    let getterCalls = 0;
+    let thenCalls = 0;
+    let reentrantClose: Promise<void> | undefined;
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies nested accessor assimilation
+    const nested = Object.defineProperty({}, 'then', {
+      get() {
+        getterCalls += 1;
+        return (resolve: (value: string) => void) => {
+          thenCalls += 1;
+          reentrantClose = scope.selectClosePromise(fullClose);
+          resolve('settled');
+        };
+      },
+    });
+    const outer = {
+      // oxlint-disable-next-line unicorn/no-thenable -- verifies nested accessor assimilation
+      then(resolve: (value: typeof nested) => void) {
+        resolve(nested);
+      },
+    };
+
+    await expect(scope.run(() => outer) as unknown as Promise<string>).resolves.toBe('settled');
+    expect(getterCalls).toBe(1);
+    expect(thenCalls).toBe(1);
+    expect(reentrantClose).toBeDefined();
+    expect(reentrantClose).not.toBe(fullClose);
+    await expect(reentrantClose).resolves.toBeUndefined();
+  },
+);
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])('%s callback-return thenables preserve nested accessor errors', async (_, loadScope) => {
+  const Scope = await loadScope();
+  const scope = new Scope();
+  const getterError = new TypeError('nested then getter failed');
+  let getterCalls = 0;
+  // oxlint-disable-next-line unicorn/no-thenable -- verifies nested accessor rejection
+  const nested = Object.defineProperty({}, 'then', {
+    get() {
+      getterCalls += 1;
+      throw getterError;
+    },
+  });
+  const outer = {
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies nested accessor rejection
+    then(resolve: (value: typeof nested) => void) {
+      resolve(nested);
+    },
+  };
+
+  await expect(scope.run(() => outer) as unknown as Promise<unknown>).rejects.toBe(getterError);
+  expect(getterCalls).toBe(1);
 });
 
 test.each([

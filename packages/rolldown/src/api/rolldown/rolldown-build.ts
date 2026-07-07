@@ -309,6 +309,8 @@ export class RolldownBuild {
       const nativePromise = isWrite
         ? this.#bundler.write(bundlerOptions)
         : this.#bundler.generate(bundlerOptions);
+      // Binding construction errors throw before this point. Only publish the
+      // operation after Rust has installed its BundleHandle.
       this.#latestBuildOperation = operation;
 
       const supersededCleanupErrors: unknown[] = [];

@@ -209,6 +209,43 @@ test('partial watcher option setup retries cleanup from fulfilled and rejected o
   expect(getRetryableCleanup(error)).toBeUndefined();
 });
 
+test('watcher snapshots output getters before starting option setup', async () => {
+  const outputGetterError = new Error('watch output getter failed');
+  const laterOption = {
+    get output(): never {
+      throw outputGetterError;
+    },
+  };
+
+  await expect(createWatcher(new WatcherEmitter(), [{ output: {} }, laterOption])).rejects.toBe(
+    outputGetterError,
+  );
+
+  expect(mocks.callOptionsHook).not.toHaveBeenCalled();
+  expect(mocks.createBundlerOptions).not.toHaveBeenCalled();
+  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
+  expect(mocks.bindingConstructions).toBe(0);
+});
+
+test('watcher snapshots output array elements before starting option setup', async () => {
+  const outputGetterError = new Error('watch output array element getter failed');
+  const outputs = [{}];
+  Object.defineProperty(outputs, 0, {
+    get() {
+      throw outputGetterError;
+    },
+  });
+
+  await expect(
+    createWatcher(new WatcherEmitter(), [{ output: {} }, { output: outputs }]),
+  ).rejects.toBe(outputGetterError);
+
+  expect(mocks.callOptionsHook).not.toHaveBeenCalled();
+  expect(mocks.createBundlerOptions).not.toHaveBeenCalled();
+  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
+  expect(mocks.bindingConstructions).toBe(0);
+});
+
 test('watcher runtime setup retries failed worker cleanup', async () => {
   const setupError = new Error('runtime lease setup failed');
   const cleanupError = new Error('worker cleanup failed');

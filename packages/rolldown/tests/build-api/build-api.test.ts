@@ -423,6 +423,32 @@ test('failed builds keep parallel workers alive through closeBundle', async () =
   expect(Atomics.load(state, 1)).toBe(workerCount);
 });
 
+test('bundle construction failures keep the previous parallel worker pool alive', async () => {
+  const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
+  const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(
+    path.join(import.meta.dirname, 'parallel-close-plugin.mjs'),
+  );
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [parallelPlugin({ state })],
+  });
+
+  try {
+    await bundle.generate();
+    const workerCount = Atomics.load(state, 0);
+    expect(workerCount).toBeGreaterThan(0);
+
+    await expect(bundle.generate({ file: '/' })).rejects.toThrow('does not contain a file name');
+    expect(Atomics.load(state, 1)).toBe(0);
+
+    await bundle.close();
+    expect(Atomics.load(state, 1)).toBe(workerCount);
+  } finally {
+    await bundle.close().catch(() => {});
+  }
+});
+
 test('close retries only parallel-plugin workers whose termination failed', async () => {
   const cleanupError = new Error('worker termination failed');
   const originalTerminate = Object.getOwnPropertyDescriptor(Worker.prototype, 'terminate')!

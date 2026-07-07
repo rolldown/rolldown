@@ -258,24 +258,29 @@ File change detected by per-task FsWatcher
 ### Close
 
 ```
-watcher.close() sends WatcherMsg::Close (fire-and-forget)
-  → sets the close flag before starting a not-yet-started coordinator
-  → starts the coordinator if the scheduled run tick has not happened
-  → notifies any in-progress consumer callback wait
-  → awaits shared coordinator future (wait_for_close)
+WatchCoordinator::run()
+  → polls run_loop() behind AssertUnwindSafe + FutureExt::catch_unwind
+  → normal stop, WatcherMsg::Close, callback-interrupted close, and event-loop panic
+    all converge on one handle_close() call
+  → a caught panic is recorded first; hostile panic payload destruction is contained
   → handle_close():
       1. State → Closing
       2. task.call_hook_close_watcher() for each task (plugin hook, awaited)
          - if no build created a plugin driver, Bundler creates a temporary
            driver for closeWatcher and discards it without closeBundle
-         - failures are recorded; remaining tasks still run
+         - errors and Rust panics are recorded; remaining tasks still run
       3. task.close() for each task (final BundleHandle close)
-         - failures are recorded; remaining tasks still run
-      4. handler.on_close() (awaited)
+         - errors and Rust panics are recorded; remaining tasks still run
+      4. handler.on_close() (awaited; a panic is recorded)
       5. State → Closed
       6. coordinator future completes with the aggregated native result
+         - event-loop panic and cleanup failures share one stable result
          → close() callers resolve/reject identically
          → wait_for_close() callers resolve as a liveness signal
+
+watcher.close() sets the close flag before starting a not-yet-started coordinator,
+starts it if necessary, notifies any in-progress consumer callback wait, sends the
+fire-and-forget WatcherMsg::Close, and awaits that shared coordinator future.
 ```
 
 Consumer callbacks are normally blocking, but the coordinator waits for them together with the

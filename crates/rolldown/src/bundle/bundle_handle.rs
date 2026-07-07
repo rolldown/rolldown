@@ -1,7 +1,7 @@
 use std::{
   any::Any,
   fmt,
-  panic::AssertUnwindSafe,
+  panic::{AssertUnwindSafe, catch_unwind},
   sync::{Arc, Mutex},
 };
 
@@ -40,6 +40,14 @@ fn panic_payload_message(payload: &(dyn Any + Send)) -> &str {
     message
   } else {
     "non-string panic payload"
+  }
+}
+
+fn discard_panic_payload(payload: Box<dyn Any + Send>) {
+  // A hostile payload destructor can panic again; leak only that nested payload,
+  // whose destructor is likewise untrusted.
+  if let Err(nested_payload) = catch_unwind(AssertUnwindSafe(|| drop(payload))) {
+    std::mem::forget(nested_payload);
   }
 }
 
@@ -115,10 +123,11 @@ impl BundleHandle {
             let result =
               match AssertUnwindSafe(plugin_driver.close_bundle(None)).catch_unwind().await {
                 Ok(result) => result.map_err(Arc::new),
-                Err(payload) => Err(Arc::new(anyhow::anyhow!(
-                  "closeBundle hook panicked: {}",
-                  panic_payload_message(&*payload)
-                ))),
+                Err(payload) => {
+                  let message = panic_payload_message(&*payload).to_owned();
+                  discard_panic_payload(payload);
+                  Err(Arc::new(anyhow::anyhow!("closeBundle hook panicked: {message}")))
+                }
               };
             plugin_driver.clear();
             result
@@ -160,6 +169,43 @@ mod tests {
   #[derive(Debug)]
   struct PanickingClosePlugin {
     calls: Arc<AtomicUsize>,
+  }
+
+  #[derive(Debug)]
+  struct HostilePanicPayload {
+    drops: Arc<AtomicUsize>,
+  }
+
+  impl Drop for HostilePanicPayload {
+    fn drop(&mut self) {
+      self.drops.fetch_add(1, Ordering::SeqCst);
+      panic!("close panic payload destructor escaped");
+    }
+  }
+
+  #[derive(Debug)]
+  struct HostilePanickingClosePlugin {
+    calls: Arc<AtomicUsize>,
+    payload_drops: Arc<AtomicUsize>,
+  }
+
+  impl Plugin for HostilePanickingClosePlugin {
+    fn name(&self) -> Cow<'static, str> {
+      "hostile-panicking-close".into()
+    }
+
+    fn register_hook_usage(&self) -> HookUsage {
+      HookUsage::CloseBundle
+    }
+
+    async fn close_bundle(
+      &self,
+      _ctx: &PluginContext,
+      _args: Option<&HookCloseBundleArgs<'_>>,
+    ) -> HookNoopReturn {
+      self.calls.fetch_add(1, Ordering::SeqCst);
+      std::panic::panic_any(HostilePanicPayload { drops: Arc::clone(&self.payload_drops) });
+    }
   }
 
   impl Plugin for PanickingClosePlugin {
@@ -276,5 +322,40 @@ mod tests {
     let late_error = handle.close().await.expect_err("late close must replay the panic failure");
     assert_eq!(late_error.to_string(), first_error.to_string());
     assert_eq!(calls.load(Ordering::SeqCst), 1);
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn close_contains_panicking_payload_drop_clears_resources_and_replays_the_failure() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let payload_drops = Arc::new(AtomicUsize::new(0));
+    let mut factory = BundleFactory::new(BundleFactoryOptions {
+      plugins: vec![Arc::new(HostilePanickingClosePlugin {
+        calls: Arc::clone(&calls),
+        payload_drops: Arc::clone(&payload_drops),
+      })],
+      disable_tracing_setup: true,
+      ..Default::default()
+    })
+    .expect("create bundle factory");
+    let bundle = factory.create_bundle(BundleMode::FullBuild, None).expect("create bundle");
+    let handle = bundle.context();
+    handle.watch_files().insert("retained.js".into());
+
+    let first_error = timeout(LIVENESS_TIMEOUT, handle.close())
+      .await
+      .expect("panicking payload destruction must not strand close")
+      .expect_err("panicking close must become an error");
+    assert_eq!(first_error.to_string(), "closeBundle hook panicked: non-string panic payload");
+    assert!(handle.watch_files().is_empty(), "cleanup must run after payload destruction panics");
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert_eq!(payload_drops.load(Ordering::SeqCst), 1);
+
+    let late_error = timeout(LIVENESS_TIMEOUT, handle.close())
+      .await
+      .expect("late close must replay the terminal result")
+      .expect_err("late close must replay the panic failure");
+    assert_eq!(late_error.to_string(), first_error.to_string());
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert_eq!(payload_drops.load(Ordering::SeqCst), 1);
   }
 }

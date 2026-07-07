@@ -17,7 +17,7 @@ use std::{
   time::{Duration, Instant},
 };
 
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 #[cfg(test)]
 use async_task::Task;
@@ -30,7 +30,7 @@ use futures::{
 #[cfg(not(target_family = "wasm"))]
 use futures::channel::oneshot;
 #[cfg(not(target_family = "wasm"))]
-use rayon::{ThreadPool, ThreadPoolBuilder};
+use rayon::{ThreadPool, ThreadPoolBuilder, max_num_threads};
 
 /// Stable scheduler identities are equality capabilities. Exhaustion must fail
 /// before reuse can authorize a stale handle or collide in an indexed queue.
@@ -112,7 +112,18 @@ impl Default for RuntimeOptions {
 }
 
 impl RuntimeOptions {
-  fn validate(mut self) -> Result<Self, RuntimeConfigError> {
+  fn validate(self) -> Result<Self, RuntimeConfigError> {
+    #[cfg(target_family = "wasm")]
+    let rayon_max_threads = None;
+    #[cfg(not(target_family = "wasm"))]
+    let rayon_max_threads = Some(max_num_threads());
+    self.validate_with_rayon_max_threads(rayon_max_threads)
+  }
+
+  fn validate_with_rayon_max_threads(
+    mut self,
+    rayon_max_threads: Option<usize>,
+  ) -> Result<Self, RuntimeConfigError> {
     if self.worker_threads == 0 {
       return Err(RuntimeConfigError("worker_threads must be greater than zero".to_string()));
     }
@@ -123,19 +134,25 @@ impl RuntimeOptions {
       self.worker_threads = 1;
       self.max_blocking_tasks = 1;
     } else {
+      let Some(rayon_max_threads) = rayon_max_threads else {
+        return Err(RuntimeConfigError(
+          "the multi-thread runtime is unavailable in this WebAssembly build".to_string(),
+        ));
+      };
+      if rayon_max_threads < 2 {
+        return Err(RuntimeConfigError(
+          "Rayon must support at least two worker threads for the multi-thread runtime".to_string(),
+        ));
+      }
       // Blocking closures execute on the shared Rayon pool. Keep one execution
       // lane available for runnable futures and timer service even when every
       // admitted blocking job is stalled. MultiThread therefore has a truthful
       // minimum of two physical/configured workers rather than a hidden reserve.
-      self.worker_threads = self.worker_threads.max(2);
+      // Apply Rayon's platform cap before deriving the blocking allowance so a
+      // silently reduced physical pool cannot consume that reserved lane.
+      self.worker_threads = self.worker_threads.max(2).min(rayon_max_threads);
       let blocking_capacity = self.worker_threads - 1;
       self.max_blocking_tasks = self.max_blocking_tasks.min(blocking_capacity);
-    }
-    #[cfg(target_family = "wasm")]
-    if self.flavor == RuntimeFlavor::MultiThread {
-      return Err(RuntimeConfigError(
-        "the multi-thread runtime is unavailable in this WebAssembly build".to_string(),
-      ));
     }
     Ok(self)
   }
@@ -413,6 +430,48 @@ thread_local! {
       const { std::cell::RefCell::new(None) };
   static CURRENT_THREAD_DISPATCH_CALL_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
     const { std::cell::RefCell::new(None) };
+  static DEPENDENCY_PREDICATE_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+    const { std::cell::RefCell::new(None) };
+  static WORKER_TLS_DROP_PROBE: std::cell::RefCell<Option<WorkerTlsDropProbe>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+struct WorkerTlsDropProbe {
+  action: Option<WorkerTlsDropAction>,
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+enum WorkerTlsDropAction {
+  Wait {
+    entered: std::sync::mpsc::Sender<()>,
+    release: Arc<(Mutex<bool>, Condvar)>,
+  },
+  ReenterLifecycle {
+    controller: Arc<RuntimeController>,
+    completed: std::sync::mpsc::Sender<(Result<(), String>, Result<(), String>)>,
+  },
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+impl Drop for WorkerTlsDropProbe {
+  fn drop(&mut self) {
+    match self.action.take().expect("worker TLS drop probe action already consumed") {
+      WorkerTlsDropAction::Wait { entered, release } => {
+        let _ = entered.send(());
+        let (released, changed) = &*release;
+        let mut released = released.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        while !*released {
+          released = changed.wait(released).unwrap_or_else(std::sync::PoisonError::into_inner);
+        }
+      }
+      WorkerTlsDropAction::ReenterLifecycle { controller, completed } => {
+        let start = controller.start().map_err(|error| error.to_string());
+        let shutdown = controller.shutdown().map_err(|error| error.to_string());
+        let _ = completed.send((start, shutdown));
+      }
+    }
+  }
 }
 
 #[cfg(all(test, not(target_family = "wasm")))]
@@ -442,6 +501,13 @@ fn run_current_thread_dispatch_publication_blocked_test_hook() {
 #[cfg(all(test, not(target_family = "wasm")))]
 fn run_current_thread_dispatch_call_test_hook() {
   if let Some(hook) = CURRENT_THREAD_DISPATCH_CALL_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_dependency_predicate_test_hook() {
+  if let Some(hook) = DEPENDENCY_PREDICATE_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
     hook();
   }
 }
@@ -534,6 +600,14 @@ impl DependencyLink {
 }
 
 #[cfg(not(target_family = "wasm"))]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct DependencyPublicationIdentity {
+  job: BlockingJobId,
+  claim: *const DependencyClaim,
+  link: *const DependencyLink,
+}
+
+#[cfg(not(target_family = "wasm"))]
 #[derive(Clone, Debug)]
 struct DependencyPublication {
   dependency: BlockingDependency,
@@ -566,14 +640,24 @@ impl DependencyPublication {
       && Arc::ptr_eq(&self.link, &other.link)
   }
 
+  fn identity(&self) -> DependencyPublicationIdentity {
+    DependencyPublicationIdentity {
+      job: self.dependency.job,
+      claim: Arc::as_ptr(&self.claim),
+      link: Arc::as_ptr(&self.link),
+    }
+  }
+
+  fn immediate_source_identity(&self) -> Option<DependencyPublicationIdentity> {
+    Some(DependencyPublicationIdentity {
+      job: self.dependency.job,
+      claim: Arc::as_ptr(&self.claim),
+      link: self.link.parent.as_ref()?.as_ptr(),
+    })
+  }
+
   fn is_derived_from(&self, source: &Self) -> bool {
-    self.dependency.job == source.dependency.job
-      && Arc::ptr_eq(&self.claim, &source.claim)
-      && self
-        .link
-        .parent
-        .as_ref()
-        .is_some_and(|parent| std::ptr::eq(parent.as_ptr(), Arc::as_ptr(&source.link)))
+    self.immediate_source_identity() == Some(source.identity())
   }
 
   fn is_live(&self) -> bool {
@@ -591,14 +675,101 @@ impl DependencyPublication {
 
 #[cfg(not(target_family = "wasm"))]
 struct TaskDependencyEntry {
+  sequence: u64,
   publication: DependencyPublication,
+}
+
+#[cfg(not(target_family = "wasm"))]
+struct SelectedDependencyPublication {
+  sequence: u64,
+  publication: DependencyPublication,
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[derive(Clone, Copy)]
+enum OwnerDependencyMode {
+  Available,
+  Exact,
 }
 
 #[cfg(not(target_family = "wasm"))]
 #[derive(Default)]
 struct TaskDependencyState {
-  current: Option<TaskDependencyEntry>,
+  current: VecDeque<TaskDependencyEntry>,
+  next_sequence: u64,
+  unowned_sequences: VecDeque<u64>,
+  owner_sequences: FxHashMap<BlockingOwnerToken, VecDeque<u64>>,
+  job_sequences: FxHashMap<BlockingJobId, FxHashSet<u64>>,
   waiter: Option<Waker>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl TaskDependencyState {
+  fn append(&mut self, publication: DependencyPublication) {
+    let sequence = self.next_sequence;
+    self.next_sequence =
+      self.next_sequence.checked_add(1).expect("task dependency sequence space exhausted");
+    match publication.dependency.owner {
+      Some(owner) => self.owner_sequences.entry(owner).or_default().push_back(sequence),
+      None => self.unowned_sequences.push_back(sequence),
+    }
+    self.job_sequences.entry(publication.dependency.job).or_default().insert(sequence);
+    self.current.push_back(TaskDependencyEntry { sequence, publication });
+  }
+
+  fn entry_in(
+    current: &VecDeque<TaskDependencyEntry>,
+    sequence: u64,
+  ) -> Option<&TaskDependencyEntry> {
+    let front = current.front()?.sequence;
+    let index = usize::try_from(sequence.checked_sub(front)?).ok()?;
+    let entry = current.get(index)?;
+    (entry.sequence == sequence).then_some(entry)
+  }
+
+  fn entry(&self, sequence: u64) -> Option<&TaskDependencyEntry> {
+    Self::entry_in(&self.current, sequence)
+  }
+
+  fn entry_mut(&mut self, sequence: u64) -> Option<&mut TaskDependencyEntry> {
+    let front = self.current.front()?.sequence;
+    let index = usize::try_from(sequence.checked_sub(front)?).ok()?;
+    let entry = self.current.get_mut(index)?;
+    (entry.sequence == sequence).then_some(entry)
+  }
+
+  fn remove_sequence_indexes(&mut self, sequence: u64, dependency: BlockingDependency) {
+    match dependency.owner {
+      Some(owner) => {
+        let remove_owner = self.owner_sequences.get_mut(&owner).is_some_and(|sequences| {
+          if sequences.front() == Some(&sequence) {
+            sequences.pop_front();
+          }
+          sequences.is_empty()
+        });
+        if remove_owner {
+          self.owner_sequences.remove(&owner);
+        }
+      }
+      None => {
+        if self.unowned_sequences.front() == Some(&sequence) {
+          self.unowned_sequences.pop_front();
+        }
+      }
+    }
+    if let Some(sequences) = self.job_sequences.get_mut(&dependency.job) {
+      sequences.remove(&sequence);
+      if sequences.is_empty() {
+        self.job_sequences.remove(&dependency.job);
+      }
+    }
+  }
+
+  fn clear_indexes(&mut self) {
+    self.unowned_sequences.clear();
+    self.owner_sequences.clear();
+    self.job_sequences.clear();
+  }
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -607,6 +778,8 @@ struct TaskDependency {
   owner_hint: Option<BlockingOwnerToken>,
   has_current: AtomicBool,
   generation: u64,
+  #[cfg(test)]
+  entry_visits: AtomicUsize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -624,6 +797,8 @@ impl TaskDependency {
       owner_hint,
       has_current: AtomicBool::new(false),
       generation,
+      #[cfg(test)]
+      entry_visits: AtomicUsize::new(0),
     }
   }
 
@@ -649,11 +824,16 @@ impl TaskDependency {
   fn clear(&self) {
     let waiter = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      state.current.take().and_then(|current| {
-        current.publication.cancel();
+      if state.current.is_empty() {
+        None
+      } else {
+        for current in state.current.drain(..) {
+          current.publication.cancel();
+        }
+        state.clear_indexes();
         self.has_current.store(false, Ordering::Release);
         state.waiter.take()
-      })
+      }
     };
     self.notify_waiter(waiter);
   }
@@ -661,36 +841,69 @@ impl TaskDependency {
   fn clear_if_dependency(&self, dependency: BlockingDependency) {
     let waiter = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      state
-        .current
-        .as_ref()
-        .is_some_and(|current| current.publication.dependency.job == dependency.job)
-        .then(|| {
-          let current = state.current.take().unwrap();
-          current.publication.cancel();
-          self.has_current.store(false, Ordering::Release);
-          state.waiter.take()
-        })
-    }
-    .flatten();
+      let mut removed = false;
+      if let Some(sequences) = state.job_sequences.remove(&dependency.job) {
+        for sequence in sequences {
+          if let Some(current) = state.entry_mut(sequence) {
+            current.publication.cancel();
+            removed = true;
+          }
+        }
+      }
+      if removed {
+        self.prune_stale_prefix(&mut state);
+        state.waiter.take()
+      } else {
+        None
+      }
+    };
     self.notify_waiter(waiter);
   }
 
-  fn clear_if_publication(&self, publication: &DependencyPublication) {
+  fn clear_if_publications(&self, publications: &[DependencyPublication]) {
+    let Some(first_publication) = publications.first() else {
+      return;
+    };
+    let publication_identities = (publications.len() > 1)
+      .then(|| publications.iter().map(DependencyPublication::identity).collect::<FxHashSet<_>>());
     let waiter = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      state
+      let removed = state
         .current
-        .as_ref()
-        .is_some_and(|current| current.publication.is_derived_from(publication))
-        .then(|| {
-          let current = state.current.take().unwrap();
+        .iter_mut()
+        .filter_map(|current| {
+          self.note_entry_visit();
+          let is_derived = publication_identities.as_ref().map_or_else(
+            || current.publication.is_derived_from(first_publication),
+            |identities| {
+              current
+                .publication
+                .immediate_source_identity()
+                .is_some_and(|identity| identities.contains(&identity))
+            },
+          );
+          if !is_derived {
+            return None;
+          }
           current.publication.cancel();
-          self.has_current.store(false, Ordering::Release);
-          state.waiter.take()
+          Some((current.sequence, current.publication.dependency.job))
         })
-    }
-    .flatten();
+        .collect::<Vec<_>>();
+      for (sequence, job) in &removed {
+        if let Some(sequences) = state.job_sequences.get_mut(job) {
+          sequences.remove(sequence);
+          if sequences.is_empty() {
+            state.job_sequences.remove(job);
+          }
+        }
+      }
+      if removed.is_empty() {
+        None
+      } else {
+        self.prune_stale_prefix(&mut state);
+        state.waiter.take()
+      }
+    };
     self.notify_waiter(waiter);
   }
 
@@ -709,51 +922,143 @@ impl TaskDependency {
   fn set_entry(&self, publication: DependencyPublication) {
     let waiter = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      if state.current.as_ref().is_some_and(|current| current.publication.same_as(&publication)) {
-        None
-      } else {
-        if let Some(current) = state.current.take() {
-          current.publication.cancel();
-        }
-        state.current = Some(TaskDependencyEntry { publication });
-        self.has_current.store(true, Ordering::Release);
-        state.waiter.take()
-      }
+      // Owned publications and propagated publications both create a fresh
+      // local liveness link, so identity cannot already exist in this state.
+      state.append(publication);
+      self.has_current.store(true, Ordering::Release);
+      state.waiter.take()
     };
     self.notify_waiter(waiter);
   }
 
+  fn note_entry_visit(&self) {
+    #[cfg(test)]
+    self.entry_visits.fetch_add(1, Ordering::Relaxed);
+  }
+
+  fn prune_stale_prefix(&self, state: &mut TaskDependencyState) {
+    while state.current.front().is_some_and(|current| {
+      self.note_entry_visit();
+      !current.publication.is_live()
+    }) {
+      let current = state.current.pop_front().expect("the stale prefix entry must exist");
+      state.remove_sequence_indexes(current.sequence, current.publication.dependency);
+    }
+    self.has_current.store(!state.current.is_empty(), Ordering::Release);
+  }
+
+  fn first_live_sequence(
+    &self,
+    current: &VecDeque<TaskDependencyEntry>,
+    sequences: &mut VecDeque<u64>,
+  ) -> Option<u64> {
+    loop {
+      let sequence = *sequences.front()?;
+      let Some(entry) = TaskDependencyState::entry_in(current, sequence) else {
+        sequences.pop_front();
+        continue;
+      };
+      self.note_entry_visit();
+      if entry.publication.is_live() {
+        return Some(sequence);
+      }
+      sequences.pop_front();
+    }
+  }
+
+  fn first_live_owner_sequence(
+    &self,
+    state: &mut TaskDependencyState,
+    owner: BlockingOwnerToken,
+  ) -> Option<u64> {
+    let sequence = {
+      let current = &state.current;
+      state
+        .owner_sequences
+        .get_mut(&owner)
+        .and_then(|sequences| self.first_live_sequence(current, sequences))
+    };
+    if sequence.is_none() {
+      state.owner_sequences.remove(&owner);
+    }
+    sequence
+  }
+
+  fn first_live_unowned_sequence(&self, state: &mut TaskDependencyState) -> Option<u64> {
+    self.first_live_sequence(&state.current, &mut state.unowned_sequences)
+  }
+
+  #[cfg(test)]
   fn get(&self) -> Option<DependencyPublication> {
     self
       .state
       .lock()
       .unwrap_or_else(std::sync::PoisonError::into_inner)
       .current
-      .as_ref()
-      .filter(|current| current.publication.is_live())
+      .iter()
+      .find(|current| current.publication.is_live())
       .map(|current| current.publication.clone())
   }
 
-  fn bind_owner_if_none(
-    &self,
-    publication: &DependencyPublication,
-    owner: BlockingOwnerToken,
-  ) -> Option<DependencyPublication> {
+  fn snapshot_all_live(&self) -> Vec<DependencyPublication> {
+    self
+      .state
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner)
+      .current
+      .iter()
+      .filter(|current| {
+        self.note_entry_visit();
+        current.publication.is_live()
+      })
+      .map(|current| current.publication.clone())
+      .collect()
+  }
+
+  fn select_for_owner(&self, owner: BlockingOwnerToken) -> Option<SelectedDependencyPublication> {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    let current = state.current.as_mut()?;
-    if current.publication.dependency.job != publication.dependency.job
-      || !Arc::ptr_eq(&current.publication.claim, &publication.claim)
-      || !Arc::ptr_eq(&current.publication.link, &publication.link)
-      || !current.publication.is_live()
-    {
-      return None;
+    self.prune_stale_prefix(&mut state);
+    let exact_sequence = self.first_live_owner_sequence(&mut state, owner);
+    let unowned_sequence = self.first_live_unowned_sequence(&mut state);
+    let (sequence, bind_owner) = match (exact_sequence, unowned_sequence) {
+      (Some(exact), Some(unowned)) if exact <= unowned => (exact, false),
+      (Some(_) | None, Some(unowned)) => (unowned, true),
+      (Some(exact), None) => (exact, false),
+      (None, None) => return None,
+    };
+    if bind_owner {
+      let removed = state.unowned_sequences.pop_front();
+      debug_assert_eq!(removed, Some(sequence));
+      let current = state.entry_mut(sequence).expect("the selected dependency must remain indexed");
+      debug_assert_eq!(current.publication.dependency.owner, None);
+      current.publication.dependency.owner = Some(owner);
+      // A previous exact-owner query may have observed no entry. Publishing
+      // this sequence at the front makes the newly bound dependency visible
+      // immediately without restarting a global scan.
+      state.owner_sequences.entry(owner).or_default().push_front(sequence);
     }
-    match current.publication.dependency.owner {
-      Some(current_owner) if current_owner != owner => return None,
-      Some(_) => {}
-      None => current.publication.dependency.owner = Some(owner),
+    let publication = state
+      .entry(sequence)
+      .expect("the selected dependency must remain indexed")
+      .publication
+      .clone();
+    Some(SelectedDependencyPublication { sequence, publication })
+  }
+
+  fn has_live_owner_dependency(
+    &self,
+    owner: BlockingOwnerToken,
+    mode: OwnerDependencyMode,
+  ) -> bool {
+    #[cfg(all(test, not(target_family = "wasm")))]
+    run_dependency_predicate_test_hook();
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    self.prune_stale_prefix(&mut state);
+    if self.first_live_owner_sequence(&mut state, owner).is_some() {
+      return true;
     }
-    Some(current.publication.clone())
+    matches!(mode, OwnerDependencyMode::Available)
+      && self.first_live_unowned_sequence(&mut state).is_some()
   }
 
   #[cfg(test)]
@@ -761,33 +1066,57 @@ impl TaskDependency {
     self.get().map(|publication| publication.dependency)
   }
 
+  #[cfg(test)]
+  fn get_dependencies(&self) -> Vec<BlockingDependency> {
+    self.snapshot_all_live().into_iter().map(|publication| publication.dependency).collect()
+  }
+
+  #[cfg(test)]
+  fn reset_entry_visits(&self) {
+    self.entry_visits.store(0, Ordering::Relaxed);
+  }
+
+  #[cfg(test)]
+  fn entry_visits(&self) -> usize {
+    self.entry_visits.load(Ordering::Relaxed)
+  }
+
   /// Atomically reserve `job` for exact-dependency execution. A dependency
   /// transition that wins this race makes the claim fail, so lending can never
   /// execute a stale job copied from an earlier poll.
-  fn try_claim(&self, publication: &DependencyPublication) -> bool {
+  fn try_claim(&self, selected: &SelectedDependencyPublication) -> bool {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    if !state.current.as_ref().is_some_and(|current| current.publication.same_as(publication)) {
+    let Some(current) = state.entry(selected.sequence) else {
+      return false;
+    };
+    self.note_entry_visit();
+    if !current.publication.same_as(&selected.publication) || !selected.publication.try_claim() {
       return false;
     }
-    if !publication.try_claim() {
-      return false;
-    }
-    let current = state.current.take().unwrap();
-    current.publication.cancel();
-    self.has_current.store(false, Ordering::Release);
+    let dependency = current.publication.dependency;
+    state
+      .entry_mut(selected.sequence)
+      .expect("the claimed dependency must remain indexed")
+      .publication
+      .cancel();
+    state.remove_sequence_indexes(selected.sequence, dependency);
+    self.prune_stale_prefix(&mut state);
     true
   }
 
-  fn register_waiter_and_get(&self, waker: &Waker) -> Option<DependencyPublication> {
+  fn register_waiter_and_get(&self, waker: &Waker) -> Vec<DependencyPublication> {
     let _generation = RuntimeGenerationGuard::enter(self.generation);
-    let waker = catch_unwind_contained(|| waker.clone())?;
+    let Some(waker) = catch_unwind_contained(|| waker.clone()) else {
+      return Vec::new();
+    };
     let (previous, unused, current) = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       let current = state
         .current
-        .as_ref()
+        .iter()
         .filter(|current| current.publication.is_live())
-        .map(|current| current.publication.clone());
+        .map(|current| current.publication.clone())
+        .collect();
       if state.waiter.as_ref().is_some_and(|previous| previous.will_wake(&waker)) {
         (None, Some(waker), current)
       } else {
@@ -809,14 +1138,16 @@ impl TaskDependency {
     }
     let waiter = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      let previous = state.current.take();
-      if let Some(previous) = previous {
-        previous.publication.cancel();
-        self.has_current.store(false, Ordering::Release);
-        state.waiter.take()
-      } else {
+      if state.current.is_empty() {
         self.has_current.store(false, Ordering::Release);
         None
+      } else {
+        for previous in state.current.drain(..) {
+          previous.publication.cancel();
+        }
+        state.clear_indexes();
+        self.has_current.store(false, Ordering::Release);
+        state.waiter.take()
       }
     };
     self.notify_waiter(waiter);
@@ -832,7 +1163,7 @@ impl TaskDependency {
 impl Drop for TaskDependency {
   fn drop(&mut self) {
     let state = self.state.get_mut().unwrap_or_else(std::sync::PoisonError::into_inner);
-    if let Some(current) = state.current.take() {
+    for current in state.current.drain(..) {
       current.publication.cancel();
     }
     if let Some(waiter) = state.waiter.take() {
@@ -892,44 +1223,40 @@ impl BlockOnDependencyGuard {
 
 #[cfg(not(target_family = "wasm"))]
 fn record_blocking_dependency(dependency: BlockingDependency) {
-  CURRENT_DEPENDENCY_STACK.with(|stack| {
-    if let Some(current) = stack.borrow().last() {
-      let dependency = BlockingDependency {
-        owner: dependency.owner.or_else(|| BLOCKING_OWNER.with(std::cell::Cell::get)),
-        ..dependency
-      };
-      current.set_owned(dependency);
-    }
-  });
+  let current = CURRENT_DEPENDENCY_STACK.with(|stack| stack.borrow().last().cloned());
+  if let Some(current) = current {
+    let dependency = BlockingDependency {
+      owner: dependency.owner.or_else(|| BLOCKING_OWNER.with(std::cell::Cell::get)),
+      ..dependency
+    };
+    current.set_owned(dependency);
+  }
 }
 
 #[cfg(not(target_family = "wasm"))]
 fn propagate_blocking_dependency(publication: DependencyPublication) {
-  CURRENT_DEPENDENCY_STACK.with(|stack| {
-    if let Some(current) = stack.borrow().last() {
-      let owner = BLOCKING_OWNER.with(std::cell::Cell::get);
-      let publication = publication.with_owner_if_none(owner);
-      current.set_borrowed(&publication);
-    }
-  });
+  let current = CURRENT_DEPENDENCY_STACK.with(|stack| stack.borrow().last().cloned());
+  if let Some(current) = current {
+    let owner = BLOCKING_OWNER.with(std::cell::Cell::get);
+    let publication = publication.with_owner_if_none(owner);
+    current.set_borrowed(&publication);
+  }
 }
 
 #[cfg(not(target_family = "wasm"))]
 fn clear_blocking_dependency(dependency: BlockingDependency) {
-  CURRENT_DEPENDENCY_STACK.with(|stack| {
-    if let Some(current) = stack.borrow().last() {
-      current.clear_if_dependency(dependency);
-    }
-  });
+  let current = CURRENT_DEPENDENCY_STACK.with(|stack| stack.borrow().last().cloned());
+  if let Some(current) = current {
+    current.clear_if_dependency(dependency);
+  }
 }
 
 #[cfg(not(target_family = "wasm"))]
-fn clear_propagated_blocking_dependency(publication: &DependencyPublication) {
-  CURRENT_DEPENDENCY_STACK.with(|stack| {
-    if let Some(current) = stack.borrow().last() {
-      current.clear_if_publication(publication);
-    }
-  });
+fn clear_propagated_blocking_dependencies(publications: &[DependencyPublication]) {
+  let current = CURRENT_DEPENDENCY_STACK.with(|stack| stack.borrow().last().cloned());
+  if let Some(current) = current {
+    current.clear_if_publications(publications);
+  }
 }
 
 enum JoinHandleInner<T> {
@@ -960,18 +1287,17 @@ impl<T> JoinHandle<T> {
         dependency,
       } => {
         #[cfg(not(target_family = "wasm"))]
-        let current_dependency = dependency.get();
+        let current_dependencies = dependency.snapshot_all_live();
         #[cfg(not(target_family = "wasm"))]
         dependency.clear_waiter();
         task.detach();
         #[cfg(not(target_family = "wasm"))]
-        if let Some(current_dependency) = current_dependency {
-          // Dependency cleanup may wake an arbitrary caller-provided waker.
-          // Retire the task first, then contain the notification boundary so
-          // reentrant wake code cannot observe a half-detached handle.
-          let _ =
-            catch_unwind_contained(|| clear_propagated_blocking_dependency(&current_dependency));
-        }
+        // Dependency cleanup may wake an arbitrary caller-provided waker.
+        // Retire the task first, then contain the notification boundary so
+        // reentrant wake code cannot observe a half-detached handle.
+        let _ = catch_unwind_contained(|| {
+          clear_propagated_blocking_dependencies(&current_dependencies);
+        });
       }
       #[cfg(not(target_family = "wasm"))]
       JoinHandleInner::Blocking { receiver, dependency } => {
@@ -1016,7 +1342,7 @@ impl<T> Future for JoinHandle<T> {
         let poll = Pin::new(task).poll(cx);
         #[cfg(not(target_family = "wasm"))]
         if poll.is_pending() {
-          if let Some(current_dependency) = dependency.register_waiter_and_get(cx.waker()) {
+          for current_dependency in dependency.register_waiter_and_get(cx.waker()) {
             propagate_blocking_dependency(current_dependency);
           }
         } else {
@@ -1981,32 +2307,25 @@ impl CurrentThreadExecutor {
 
   #[cfg(not(target_family = "wasm"))]
   fn try_run_owned_blocking(&self, dependency: &TaskDependency) -> bool {
-    let Some(mut current) = dependency.get() else {
-      return false;
-    };
     let Some(ambient_owner) =
       BLOCKING_OWNER.with(std::cell::Cell::get).filter(|owner| owner.executor_id == self.id)
     else {
       return false;
     };
-    let owner = match current.dependency.owner {
-      Some(owner) if owner == ambient_owner => owner,
-      Some(_) => return false,
-      None => {
-        let Some(bound) = dependency.bind_owner_if_none(&current, ambient_owner) else {
-          return false;
-        };
-        current = bound;
-        ambient_owner
-      }
+    let Some(current) = dependency.select_for_owner(ambient_owner) else {
+      return false;
     };
     let job = {
       let mut state =
         self.blocking_admission.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      if state.owner != Some(owner) {
+      if state.owner != Some(ambient_owner) {
         return false;
       }
-      if dependency.try_claim(&current) { state.queue.remove(current.dependency.job) } else { None }
+      if dependency.try_claim(&current) {
+        state.queue.remove(current.publication.dependency.job)
+      } else {
+        None
+      }
     };
     let Some(job) = job else {
       return false;
@@ -2169,7 +2488,7 @@ impl CurrentThreadExecutor {
   fn try_admit_host_turn(self: &Arc<Self>, dispatch: u64) -> Option<CurrentThreadHostTurn> {
     let mut scheduler =
       self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    if self.draining.load(Ordering::Acquire) {
+    if self.stop.is_stopping() || self.draining.load(Ordering::Acquire) {
       return None;
     }
     if dispatch == 0
@@ -2191,7 +2510,7 @@ impl CurrentThreadExecutor {
   fn try_admit_host_turn_without_dispatch(self: &Arc<Self>) -> Option<CurrentThreadHostTurn> {
     let mut scheduler =
       self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    if self.draining.load(Ordering::Acquire) {
+    if self.stop.is_stopping() || self.draining.load(Ordering::Acquire) {
       return None;
     }
     Some(self.claim_host_turn(&mut scheduler))
@@ -2420,6 +2739,9 @@ impl CurrentThreadExecutor {
     #[cfg(not(target_family = "wasm"))]
     let mut runnable_streak = 0usize;
     loop {
+      if self.stop.is_stopping() {
+        return BlockOnOutcome::Stopped;
+      }
       #[cfg(not(target_family = "wasm"))]
       dependency.clear();
       if future.as_mut().poll(&mut cx).is_ready() {
@@ -2869,27 +3191,44 @@ impl BlockingQueue {
 #[cfg(not(target_family = "wasm"))]
 struct WorkerLifecycle {
   remaining: Mutex<usize>,
-  exited: Condvar,
+  handles: Mutex<Option<Vec<std::thread::JoinHandle<()>>>>,
 }
 
 #[cfg(not(target_family = "wasm"))]
 impl WorkerLifecycle {
   fn new(worker_threads: usize) -> Arc<Self> {
-    Arc::new(Self { remaining: Mutex::new(worker_threads), exited: Condvar::new() })
+    Arc::new(Self {
+      remaining: Mutex::new(worker_threads),
+      handles: Mutex::new(Some(Vec::with_capacity(worker_threads))),
+    })
+  }
+
+  fn retain(&self, handle: std::thread::JoinHandle<()>) {
+    self
+      .handles
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner)
+      .as_mut()
+      .expect("runtime worker handles already joined")
+      .push(handle);
   }
 
   fn worker_exited(&self) {
     let mut remaining = self.remaining.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     *remaining = remaining.checked_sub(1).expect("runtime worker exit count underflow");
-    if *remaining == 0 {
-      self.exited.notify_all();
-    }
   }
 
   fn wait_for_all_workers(&self) {
-    let mut remaining = self.remaining.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    while *remaining != 0 {
-      remaining = self.exited.wait(remaining).unwrap_or_else(std::sync::PoisonError::into_inner);
+    let handles = self
+      .handles
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner)
+      .take()
+      .expect("runtime worker handles already joined");
+    for handle in handles {
+      if let Err(payload) = handle.join() {
+        discard_panic_payload(payload);
+      }
     }
   }
 
@@ -2972,6 +3311,7 @@ impl MultiThreadExecutor {
     let pool_threads = options.worker_threads;
     let worker_lifecycle = WorkerLifecycle::new(pool_threads);
     let exit_lifecycle = Arc::clone(&worker_lifecycle);
+    let spawn_lifecycle = Arc::clone(&worker_lifecycle);
     let pool = ThreadPoolBuilder::new()
       .num_threads(pool_threads)
       .thread_name(move |index| format!("{thread_name_prefix}-{index}"))
@@ -2979,20 +3319,35 @@ impl MultiThreadExecutor {
         ON_POOL_WORKER.with(|worker| worker.set(Some(id)));
       })
       .exit_handler(move |_| {
-        ON_POOL_WORKER.with(|worker| {
-          if worker.get() == Some(id) {
-            worker.set(None);
-          }
-        });
         IN_SCHEDULER_DRIVER.with(|driver| {
           if driver.get().is_some_and(|role| role.executor_id == id) {
             driver.set(None);
           }
         });
+        // Keep ON_POOL_WORKER set until the OS thread exits. TLS destructors
+        // run after this Rayon hook and may re-enter lifecycle APIs while the
+        // external shutdown caller is joining this worker; retaining the
+        // executor identity makes that re-entry fail fast instead of waiting
+        // in Stopping and deadlocking the join.
         exit_lifecycle.worker_exited();
       })
+      .spawn_handler(move |thread| {
+        let mut builder = std::thread::Builder::new();
+        if let Some(name) = thread.name() {
+          builder = builder.name(name.to_string());
+        }
+        if let Some(stack_size) = thread.stack_size() {
+          builder = builder.stack_size(stack_size);
+        }
+        let handle = builder.spawn(move || thread.run())?;
+        spawn_lifecycle.retain(handle);
+        Ok(())
+      })
       .build()
-      .map_err(|error| RuntimeConfigError(format!("failed to create runtime workers: {error}")))?;
+      .map_err(|error| {
+        worker_lifecycle.wait_for_all_workers();
+        RuntimeConfigError(format!("failed to create runtime workers: {error}"))
+      })?;
     Ok(Self {
       generation,
       stop,
@@ -3298,6 +3653,9 @@ impl MultiThreadExecutor {
     let waker = Waker::from(Arc::clone(&parker));
     let mut cx = Context::from_waker(&waker);
     loop {
+      if self.stop.is_stopping() {
+        return BlockOnOutcome::Stopped;
+      }
       if future.as_mut().poll(&mut cx).is_ready() {
         return BlockOnOutcome::Completed;
       }
@@ -3399,32 +3757,16 @@ impl MultiThreadExecutor {
     #[cfg(test)]
     self.owner_lending_attempts.fetch_add(1, Ordering::Relaxed);
 
-    let Some(mut current) = dependency.get() else {
-      return OwnedBlockingOutcome::Ineligible;
-    };
     let Some(ambient_owner) =
       BLOCKING_OWNER.with(std::cell::Cell::get).filter(|owner| owner.executor_id == self.id)
     else {
       return OwnedBlockingOutcome::Ineligible;
     };
-    let owner = match current.dependency.owner {
-      Some(owner) => {
-        if ambient_owner != owner {
-          return OwnedBlockingOutcome::Ineligible;
-        }
-        owner
-      }
-      None => {
-        let Some(bound) = dependency.bind_owner_if_none(&current, ambient_owner) else {
-          return OwnedBlockingOutcome::Ineligible;
-        };
-        current = bound;
-        ambient_owner
-      }
-    };
-    if owner.executor_id != self.id {
+    let Some(current) = dependency.select_for_owner(ambient_owner) else {
       return OwnedBlockingOutcome::Ineligible;
-    }
+    };
+    let owner =
+      current.publication.dependency.owner.expect("selected dependency must carry its owner");
     let Some(reservation) = OwnerLaneReservation::try_acquire(&self.active_blocking_owners, owner)
     else {
       return OwnedBlockingOutcome::OwnerBusy(owner);
@@ -3434,7 +3776,11 @@ impl MultiThreadExecutor {
       // Claim while holding the queue lock. A concurrent clear/switch that
       // wins first makes this fail; once the claim succeeds, no stale snapshot
       // can authorize removal of the old job.
-      if dependency.try_claim(&current) { queue.remove(current.dependency.job) } else { None }
+      if dependency.try_claim(&current) {
+        queue.remove(current.publication.dependency.job)
+      } else {
+        None
+      }
     };
     let ran = if let Some(job) = job {
       let _generation = RuntimeGenerationGuard::enter(self.generation);
@@ -3502,19 +3848,13 @@ impl MultiThreadExecutor {
   }
 
   fn owner_dependency_lane_available(&self, dependency: &TaskDependency) -> bool {
-    let Some(current) = dependency.get() else {
-      return false;
-    };
     let Some(ambient_owner) =
       BLOCKING_OWNER.with(std::cell::Cell::get).filter(|owner| owner.executor_id == self.id)
     else {
       return false;
     };
-    let owner = match current.dependency.owner {
-      Some(owner) => owner,
-      None => ambient_owner,
-    };
-    ambient_owner == owner && self.active_blocking_owners.is_available(owner)
+    self.active_blocking_owners.is_available(ambient_owner)
+      && dependency.has_live_owner_dependency(ambient_owner, OwnerDependencyMode::Available)
   }
 
   /// Cooperative `block_on` for a re-entrant call from a pool worker. Instead
@@ -3543,6 +3883,7 @@ impl MultiThreadExecutor {
       driver_role.is_some_and(|role| role.executor_id == self.id && !role.can_run_blocking);
     let _timekeeper_parker =
       services_timers.then(|| TimekeeperParkerOverrideGuard::enter(self.as_ref(), &parker));
+    let _exit = CooperativeDriverExitGuard { executor: self, parker: &parker, can_run_blocking };
     // WAKE-DOMAIN SPLIT (wake-path §8.2): the awaited future is polled with
     // THIS driver's own parker as its waker, so a future-wake targets exactly
     // the driver that awaits it -- delivered as a stored permit (skip next
@@ -3560,6 +3901,9 @@ impl MultiThreadExecutor {
     let mut work_streak = 0usize;
     let mut force_fifo = false;
     loop {
+      if self.stop.is_stopping() {
+        return BlockOnOutcome::Stopped;
+      }
       // A timekeeper runnable may itself enter nested block_on. Its outer
       // timekeeper loop is then suspended, so this inner driver must preserve
       // the role's timer duty even while a hot runnable stream prevents it
@@ -3569,29 +3913,9 @@ impl MultiThreadExecutor {
       }
       dependency.clear();
       if future.as_mut().poll(&mut cx).is_ready() {
-        self.forward_owner_handoff(&parker);
-        // MANDATORY exit flush (wake-path §8.3): the final poll above may
-        // have scheduled same-executor work into THIS worker's slot (no FIFO
-        // push, no wake). The caller may synchronously wait on that work
-        // after `block_on` returns -- and the enclosing `drain` frame that
-        // would otherwise pop the slot can be arbitrarily far away -- so the
-        // slot must be handed to the shared FIFO (with a wake) before every
-        // return from this loop.
-        self.flush_lifo_slot();
-        // MISS COMPENSATION (wake-path §8.2): a registry wake may have been
-        // delivered to this driver while its future was completing -- the
-        // permit absorbed, the queue item not consumed. Hand the wake on
-        // before exiting so queue work is not stranded while other drivers
-        // stay parked. (The enclosing `drain` loop re-checks the queues too,
-        // but that can be arbitrarily far away, e.g. beneath a long-running
-        // task or blocking closure.)
-        self.compensate_queued_work_wake(can_run_blocking);
         return BlockOnOutcome::Completed;
       }
       if self.stop.is_stopping() {
-        self.forward_owner_handoff(&parker);
-        self.flush_lifo_slot();
-        self.compensate_queued_work_wake(can_run_blocking);
         return BlockOnOutcome::Stopped;
       }
       if self
@@ -3667,10 +3991,6 @@ impl MultiThreadExecutor {
         continue;
       }
       if self.stop.is_stopping() {
-        self.parked_drivers.deregister(&parker);
-        self.forward_owner_handoff(&parker);
-        self.flush_lifo_slot();
-        self.compensate_queued_work_wake(can_run_blocking);
         return BlockOnOutcome::Stopped;
       }
       // TIMER-BOUNDED PARK (timer facility, interaction A): while any heap
@@ -3851,6 +4171,30 @@ impl MultiThreadExecutor {
         return queue.pop_front();
       }
     }
+  }
+}
+
+/// Cooperative-driver exit backstop. A user-future panic can unwind from any
+/// poll, including after this driver absorbed a queue wake, received an exact
+/// owner handoff, or filled its thread-local LIFO slot. Retire each obligation
+/// independently so one cleanup failure cannot suppress the others or
+/// double-panic the process.
+#[cfg(not(target_family = "wasm"))]
+struct CooperativeDriverExitGuard<'a> {
+  executor: &'a Arc<MultiThreadExecutor>,
+  parker: &'a Arc<DriverParker>,
+  can_run_blocking: bool,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Drop for CooperativeDriverExitGuard<'_> {
+  fn drop(&mut self) {
+    let _ = catch_unwind_contained(|| self.executor.parked_drivers.deregister(self.parker));
+    let _ = catch_unwind_contained(|| self.executor.forward_owner_handoff(self.parker));
+    let _ = catch_unwind_contained(|| self.executor.flush_lifo_slot());
+    let _ = catch_unwind_contained(|| {
+      self.executor.compensate_queued_work_wake(self.can_run_blocking);
+    });
   }
 }
 
@@ -4310,50 +4654,60 @@ impl ParkedDrivers {
   /// The dependency is published with the parker, so an unrelated newer
   /// driver cannot consume the bounded owner-lane handoff.
   fn wake_one_owner_dependency(&self, owner: BlockingOwnerToken) -> bool {
-    if self.count.load(Ordering::SeqCst) == 0 {
-      return false;
-    }
-    let driver = {
-      let mut parked = self.parked.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      let mut owned = None;
-      for index in (0..parked.len()).rev() {
-        let driver = &parked[index];
-        if !driver.can_run_blocking {
-          continue;
-        }
-        let Some(dependency) = &driver.dependency else {
-          continue;
-        };
-        let Some(current) = dependency.get() else {
-          continue;
-        };
-        match current.dependency.owner {
-          Some(current_owner) if current_owner == owner => {
-            owned = Some(index);
-            break;
-          }
-          _ => {}
-        }
+    loop {
+      if self.count.load(Ordering::SeqCst) == 0 {
+        return false;
       }
-      let driver = owned.map(|index| parked.swap_remove(index));
-      // Publish the exact-owner token before releasing the registry lock. A
-      // direct future wake can race this selection, but the driver must
-      // deregister under this same lock before it can poll Ready and forward
-      // an unconsumed handoff on exit.
-      if let Some(driver) = &driver {
-        driver.parker.grant_owner_handoff(owner);
-      }
-      self.count.store(parked.len(), Ordering::SeqCst);
-      driver
-    };
-    #[cfg(test)]
-    run_owner_handoff_selected_test_hook();
-    match driver {
-      Some(driver) => {
+      let candidates = {
+        let parked = self.parked.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        parked
+          .iter()
+          .rev()
+          .filter_map(|driver| {
+            if !driver.can_run_blocking {
+              return None;
+            }
+            driver
+              .dependency
+              .as_ref()
+              .map(|dependency| (Arc::clone(&driver.parker), Arc::clone(dependency)))
+          })
+          .collect::<Vec<_>>()
+      };
+      let selected = candidates.into_iter().find(|(_, dependency)| {
+        dependency.has_live_owner_dependency(owner, OwnerDependencyMode::Exact)
+      });
+      let Some((selected_parker, selected_dependency)) = selected else {
+        return false;
+      };
+      let driver = {
+        let mut parked = self.parked.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let driver = parked
+          .iter()
+          .rposition(|driver| {
+            Arc::ptr_eq(&driver.parker, &selected_parker)
+              && driver
+                .dependency
+                .as_ref()
+                .is_some_and(|dependency| Arc::ptr_eq(dependency, &selected_dependency))
+          })
+          .map(|index| parked.swap_remove(index));
+        // Publish the exact-owner token before releasing the registry lock. A
+        // direct future wake can race this selection, but the driver must
+        // deregister under this same lock before it can poll Ready and forward
+        // an unconsumed handoff on exit.
+        if let Some(driver) = &driver {
+          driver.parker.grant_owner_handoff(owner);
+        }
+        self.count.store(parked.len(), Ordering::SeqCst);
+        driver
+      };
+      if let Some(driver) = driver {
+        #[cfg(test)]
+        run_owner_handoff_selected_test_hook();
         driver.parker.unpark();
-        true
+        return true;
       }
-      None => false,
     }
   }
 
@@ -6585,6 +6939,38 @@ mod tests {
       const { std::cell::Cell::new(0) };
   }
 
+  #[cfg(not(target_family = "wasm"))]
+  struct StopPollProbe {
+    polls: Arc<AtomicUsize>,
+    first_poll: Option<std::sync::mpsc::Sender<()>>,
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  impl Future for StopPollProbe {
+    type Output = ();
+
+    fn poll(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+      self.polls.fetch_add(1, Ordering::SeqCst);
+      if let Some(first_poll) = self.first_poll.take() {
+        first_poll.send(()).unwrap();
+      }
+      Poll::Pending
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  fn wait_for_generation_parker_to_sleep(stop: &GenerationStop) {
+    wait_until("the block_on driver to sleep", || {
+      stop
+        .parkers
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .iter()
+        .filter_map(Weak::upgrade)
+        .any(|parker| parker.state.load(Ordering::SeqCst) == PARKER_SLEEPING)
+    });
+  }
+
   #[test]
   fn unique_ids_fail_before_wraparound() {
     let counter = AtomicU64::new(u64::MAX - 1);
@@ -6750,6 +7136,101 @@ mod tests {
     assert_eq!(metrics.active_runnables.load(Ordering::Relaxed), 0);
   }
 
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_shutdown_wake_does_not_repoll_user_future() {
+    use std::sync::mpsc;
+
+    let executor = Arc::new(CurrentThreadExecutor::with_detection(
+      Arc::new(RuntimeMetrics::default()),
+      false,
+      None,
+    ));
+    let polls = Arc::new(AtomicUsize::new(0));
+    let (first_poll_tx, first_poll_rx) = mpsc::channel();
+    let (outcome_tx, outcome_rx) = mpsc::channel();
+    let driver_executor = Arc::clone(&executor);
+    let driver_polls = Arc::clone(&polls);
+    let driver = std::thread::spawn(move || {
+      let mut future =
+        std::pin::pin!(StopPollProbe { polls: driver_polls, first_poll: Some(first_poll_tx) });
+      outcome_tx.send(driver_executor.block_on(future.as_mut())).unwrap();
+    });
+
+    first_poll_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    wait_for_generation_parker_to_sleep(&executor.stop);
+    executor.stop.begin_shutdown();
+
+    assert_eq!(outcome_rx.recv_timeout(Duration::from_secs(2)).unwrap(), BlockOnOutcome::Stopped);
+    driver.join().unwrap();
+    assert_eq!(
+      polls.load(Ordering::SeqCst),
+      1,
+      "a shutdown wake must be checked before the next CurrentThread user poll"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_parking_shutdown_wake_does_not_repoll_user_future() {
+    use std::sync::mpsc;
+
+    let executor = multi_thread_executor(2, None, "parking-stop-before-poll");
+    let polls = Arc::new(AtomicUsize::new(0));
+    let (first_poll_tx, first_poll_rx) = mpsc::channel();
+    let (outcome_tx, outcome_rx) = mpsc::channel();
+    let driver_executor = Arc::clone(&executor);
+    let driver_polls = Arc::clone(&polls);
+    let driver = std::thread::spawn(move || {
+      let mut future =
+        std::pin::pin!(StopPollProbe { polls: driver_polls, first_poll: Some(first_poll_tx) });
+      outcome_tx.send(driver_executor.block_on(future.as_mut())).unwrap();
+    });
+
+    first_poll_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    wait_for_generation_parker_to_sleep(&executor.stop);
+    executor.stop.begin_shutdown();
+
+    assert_eq!(outcome_rx.recv_timeout(Duration::from_secs(2)).unwrap(), BlockOnOutcome::Stopped);
+    driver.join().unwrap();
+    assert_eq!(
+      polls.load(Ordering::SeqCst),
+      1,
+      "a shutdown wake must be checked before the next parking block_on user poll"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_cooperative_shutdown_wake_does_not_repoll_user_future() {
+    use std::sync::mpsc;
+
+    let executor = multi_thread_executor(2, None, "cooperative-stop-before-poll");
+    let polls = Arc::new(AtomicUsize::new(0));
+    let (first_poll_tx, first_poll_rx) = mpsc::channel();
+    let (outcome_tx, outcome_rx) = mpsc::channel();
+    let driver_executor = Arc::clone(&executor);
+    let driver_polls = Arc::clone(&polls);
+    let driver = std::thread::spawn(move || {
+      let _on_pool = OnPoolWorkerGuard::enter(driver_executor.id);
+      let mut future =
+        std::pin::pin!(StopPollProbe { polls: driver_polls, first_poll: Some(first_poll_tx) });
+      outcome_tx.send(driver_executor.block_on(future.as_mut())).unwrap();
+    });
+
+    first_poll_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    wait_for_generation_parker_to_sleep(&executor.stop);
+    executor.stop.begin_shutdown();
+
+    assert_eq!(outcome_rx.recv_timeout(Duration::from_secs(2)).unwrap(), BlockOnOutcome::Stopped);
+    driver.join().unwrap();
+    assert_eq!(
+      polls.load(Ordering::SeqCst),
+      1,
+      "a shutdown wake must be checked before the next cooperative user poll"
+    );
+  }
+
   #[test]
   fn current_thread_pending_dispatch_does_not_allocate_another_capability() {
     let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
@@ -6767,6 +7248,42 @@ mod tests {
 
     assert_eq!(allocations, 0);
     assert_eq!(executor.dispatch_pending.load(Ordering::Acquire), pending);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_stopped_dispatch_claim_is_rejected_under_scheduler_lock() {
+    use std::sync::mpsc;
+
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::new(RuntimeMetrics::default()),
+      accept_current_thread_host_dispatch,
+    ));
+    let dispatch = current_thread_dispatch(&executor);
+    let scheduler =
+      executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let (claiming_tx, claiming_rx) = mpsc::channel();
+    let (claimed_tx, claimed_rx) = mpsc::channel();
+    let claiming_executor = Arc::clone(&executor);
+    let claimant = std::thread::spawn(move || {
+      claiming_tx.send(()).unwrap();
+      claimed_tx.send(claiming_executor.try_admit_host_turn(dispatch).is_some()).unwrap();
+    });
+    claiming_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+
+    executor.stop.begin_shutdown();
+    drop(scheduler);
+
+    assert!(
+      !claimed_rx.recv_timeout(Duration::from_secs(2)).unwrap(),
+      "an old-generation dispatch must not claim a host turn after stop becomes visible"
+    );
+    claimant.join().unwrap();
+    assert_eq!(
+      executor.dispatch_pending.load(Ordering::Acquire),
+      dispatch,
+      "rejecting the stopped claim must not consume its stale capability"
+    );
   }
 
   #[test]
@@ -8434,6 +8951,47 @@ mod tests {
 
   #[cfg(not(target_family = "wasm"))]
   #[test]
+  fn owner_handoff_dependency_predicate_runs_outside_registry_lock() {
+    use std::sync::mpsc;
+
+    let registry = Arc::new(ParkedDrivers::default());
+    let owner = BlockingOwnerToken { executor_id: u64::MAX - 70, frame: u64::MAX - 71 };
+    let dependency = Arc::new(TaskDependency::default());
+    dependency
+      .set_owned(BlockingDependency { job: BlockingJobId(u64::MAX - 72), owner: Some(owner) });
+    let parker = Arc::new(DriverParker::default());
+    registry.register_with_role(&parker, true, Some(Arc::clone(&dependency)));
+
+    let (predicate_tx, predicate_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let selecting_registry = Arc::clone(&registry);
+    let selector = std::thread::spawn(move || {
+      DEPENDENCY_PREDICATE_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          predicate_tx.send(()).unwrap();
+          release_rx.recv().unwrap();
+        }));
+      });
+      selecting_registry.wake_one_owner_dependency(owner)
+    });
+
+    predicate_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("owner selection must reach the dependency predicate");
+    let registry_was_unlocked = registry.parked.try_lock().is_ok();
+    release_tx.send(()).unwrap();
+    assert!(selector.join().unwrap(), "the exact-owner parker must still be selected");
+
+    assert!(
+      registry_was_unlocked,
+      "owner dependency predicates must not run while the parked-driver registry is locked"
+    );
+    assert!(parker.consume_permit());
+    assert_eq!(parker.take_owner_handoff(), Some(owner));
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
   fn blocking_wake_skips_runnable_only_timekeeper() {
     let registry = ParkedDrivers::default();
     let cooperative = Arc::new(DriverParker::default());
@@ -8590,6 +9148,206 @@ mod tests {
       Some(owner),
       "the forwarded handoff must retain the exact owner identity"
     );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn cooperative_panic_forwards_pending_owner_handoff() {
+    use std::sync::mpsc;
+
+    struct PanicAfterWake {
+      dependency: BlockingDependency,
+      first_poll: Option<mpsc::Sender<()>>,
+    }
+
+    impl Future for PanicAfterWake {
+      type Output = ();
+
+      fn poll(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+        if let Some(first_poll) = self.first_poll.take() {
+          record_blocking_dependency(self.dependency);
+          first_poll.send(()).unwrap();
+          return Poll::Pending;
+        }
+        panic!("intentional cooperative driver panic after owner handoff");
+      }
+    }
+
+    let executor = multi_thread_executor(2, None, "panic-owner-handoff");
+    let owner = executor.fresh_owner_token();
+    let fallback_dependency = Arc::new(TaskDependency::default());
+    fallback_dependency
+      .set_owned(BlockingDependency { job: BlockingJobId(u64::MAX - 49), owner: Some(owner) });
+    let fallback = Arc::new(DriverParker::default());
+    executor.parked_drivers.register_with_role(
+      &fallback,
+      true,
+      Some(Arc::clone(&fallback_dependency)),
+    );
+
+    let (first_poll_tx, first_poll_rx) = mpsc::channel();
+    let (panicked_tx, panicked_rx) = mpsc::channel();
+    let driver_executor = Arc::clone(&executor);
+    let driver = std::thread::spawn(move || {
+      let _on_pool = OnPoolWorkerGuard::enter(driver_executor.id);
+      let mut future = std::pin::pin!(PanicAfterWake {
+        dependency: BlockingDependency { job: BlockingJobId(u64::MAX - 50), owner: Some(owner) },
+        first_poll: Some(first_poll_tx),
+      });
+      let panicked = catch_unwind(AssertUnwindSafe(|| {
+        driver_executor.block_on(future.as_mut());
+      }))
+      .is_err();
+      panicked_tx.send(panicked).unwrap();
+    });
+
+    first_poll_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    wait_until("the panicking cooperative driver to park", || {
+      executor.parked_drivers.count.load(Ordering::SeqCst) == 2
+    });
+    assert!(
+      executor.parked_drivers.wake_one_owner_dependency(owner),
+      "the exact owner handoff must select the cooperative driver"
+    );
+    assert!(
+      panicked_rx.recv_timeout(Duration::from_secs(2)).unwrap(),
+      "the test future must unwind from its second poll"
+    );
+    driver.join().unwrap();
+
+    assert!(fallback.consume_permit(), "panic cleanup must forward the unconsumed owner handoff");
+    assert_eq!(
+      fallback.take_owner_handoff(),
+      Some(owner),
+      "panic cleanup must preserve the exact owner identity"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn cooperative_panic_flushes_lifo_slot() {
+    struct ScheduleThenPanic {
+      executor: Arc<MultiThreadExecutor>,
+      ran: Arc<AtomicBool>,
+    }
+
+    impl Future for ScheduleThenPanic {
+      type Output = ();
+
+      fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+        let ran = Arc::clone(&self.ran);
+        let scheduler = Arc::clone(&self.executor);
+        let (runnable, task) = async_task::spawn(
+          async move {
+            ran.store(true, Ordering::SeqCst);
+          },
+          move |runnable| scheduler.schedule(runnable),
+        );
+        self.executor.schedule(runnable);
+        task.detach();
+        panic!("intentional cooperative driver panic with a populated LIFO slot");
+      }
+    }
+
+    let executor = multi_thread_executor(2, None, "panic-lifo-flush");
+    executor.active_drainers.store(executor.max_drainers, Ordering::SeqCst);
+    let ran = Arc::new(AtomicBool::new(false));
+    let panicked = {
+      let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+      let mut future = std::pin::pin!(ScheduleThenPanic {
+        executor: Arc::clone(&executor),
+        ran: Arc::clone(&ran),
+      });
+      catch_unwind(AssertUnwindSafe(|| {
+        executor.block_on(future.as_mut());
+      }))
+      .is_err()
+    };
+
+    assert!(panicked, "the test future must unwind from its first poll");
+    assert!(executor.pop_lifo_slot().is_none(), "panic cleanup must empty the LIFO slot");
+    assert_eq!(
+      executor.queue.lock().unwrap().len(),
+      1,
+      "panic cleanup must move the slot runnable to the shared FIFO"
+    );
+    assert!(executor.run_one(), "the flushed runnable must remain executable");
+    assert!(ran.load(Ordering::SeqCst));
+    executor.active_drainers.store(0, Ordering::SeqCst);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn cooperative_panic_compensates_absorbed_queue_wake() {
+    use std::sync::mpsc;
+
+    struct PanicAfterWake {
+      first_poll: Option<mpsc::Sender<()>>,
+    }
+
+    impl Future for PanicAfterWake {
+      type Output = ();
+
+      fn poll(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+        if let Some(first_poll) = self.first_poll.take() {
+          first_poll.send(()).unwrap();
+          return Poll::Pending;
+        }
+        panic!("intentional cooperative driver panic after a queue wake");
+      }
+    }
+
+    let executor = multi_thread_executor(2, None, "panic-wake-compensation");
+    executor.active_drainers.store(executor.max_drainers, Ordering::SeqCst);
+    let fallback = Arc::new(DriverParker::default());
+    executor.parked_drivers.register(&fallback);
+    let (first_poll_tx, first_poll_rx) = mpsc::channel();
+    let (panicked_tx, panicked_rx) = mpsc::channel();
+    let driver_executor = Arc::clone(&executor);
+    let driver = std::thread::spawn(move || {
+      let _on_pool = OnPoolWorkerGuard::enter(driver_executor.id);
+      let mut future = std::pin::pin!(PanicAfterWake { first_poll: Some(first_poll_tx) });
+      let panicked = catch_unwind(AssertUnwindSafe(|| {
+        driver_executor.block_on(future.as_mut());
+      }))
+      .is_err();
+      panicked_tx.send(panicked).unwrap();
+    });
+
+    first_poll_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    wait_until("the panicking cooperative driver to park after the fallback", || {
+      executor.parked_drivers.count.load(Ordering::SeqCst) == 2
+    });
+
+    let ran = Arc::new(AtomicBool::new(false));
+    let ran_task = Arc::clone(&ran);
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) = async_task::spawn(
+      async move {
+        ran_task.store(true, Ordering::SeqCst);
+      },
+      move |runnable| scheduler.schedule(runnable),
+    );
+    task.detach();
+    executor.metrics.runnable_scheduled();
+    executor.queue.lock().unwrap().push_back(runnable);
+    assert!(
+      executor.parked_drivers.wake_one(),
+      "the queued runnable's wake must be absorbed by the cooperative driver"
+    );
+
+    assert!(
+      panicked_rx.recv_timeout(Duration::from_secs(2)).unwrap(),
+      "the test future must unwind after absorbing the queue wake"
+    );
+    driver.join().unwrap();
+    assert!(
+      fallback.consume_permit(),
+      "panic cleanup must compensate the absorbed queue wake to the fallback driver"
+    );
+    assert!(executor.run_one(), "the queued runnable must remain executable");
+    assert!(ran.load(Ordering::SeqCst));
+    executor.active_drainers.store(0, Ordering::SeqCst);
   }
 
   #[cfg(not(target_family = "wasm"))]
@@ -10773,6 +11531,124 @@ mod tests {
 
   #[cfg(not(target_family = "wasm"))]
   #[test]
+  fn one_dependency_interspersed_owner_publications_stays_linear() {
+    const PUBLICATION_COUNT: usize = 1024;
+
+    let executor = multi_thread_executor(2, None, "linear-publication-lending");
+    let owner = executor.fresh_owner_token();
+    let wrong_owner = executor.fresh_owner_token();
+    let dependency = TaskDependency::new(u64::MAX, Some(owner));
+    let completed = Arc::new(AtomicUsize::new(0));
+    for index in 0..PUBLICATION_COUNT {
+      let cancelled_source = TaskDependency::default();
+      cancelled_source.set_owned(BlockingDependency {
+        job: BlockingJobId(u64::MAX - 100_000 - index as u64),
+        owner: Some(owner),
+      });
+      dependency.set_borrowed(
+        &cancelled_source.get().expect("the source publication must initially be live"),
+      );
+      cancelled_source.clear();
+
+      dependency.set_owned(BlockingDependency {
+        job: BlockingJobId(u64::MAX - 200_000 - index as u64),
+        owner: Some(wrong_owner),
+      });
+      let blocking = BlockingDependency {
+        job: BlockingJobId(u64::MAX - 1_000 - index as u64),
+        owner: Some(owner),
+      };
+      dependency.set_owned(blocking);
+      let completed = Arc::clone(&completed);
+      executor.blocking_queue.lock().unwrap().push(QueuedBlocking {
+        id: blocking.job,
+        run: Box::new(move || {
+          completed.fetch_add(1, Ordering::SeqCst);
+        }),
+      });
+    }
+    dependency.reset_entry_visits();
+
+    let _active_owner = ActiveBlockingOwnerGuard::enter(&executor.active_blocking_owners, owner);
+    let _owner = BlockingOwnerGuard::enter(Some(owner));
+    for _ in 0..PUBLICATION_COUNT {
+      assert!(
+        dependency.has_live_owner_dependency(owner, OwnerDependencyMode::Exact),
+        "the owner-handoff predicate must find the next exact publication"
+      );
+      assert!(
+        dependency.has_live_owner_dependency(owner, OwnerDependencyMode::Available),
+        "the park-availability predicate must find the next serviceable publication"
+      );
+      assert!(executor.try_owned_blocking_over_cap(&dependency));
+    }
+
+    assert_eq!(completed.load(Ordering::SeqCst), PUBLICATION_COUNT);
+    assert!(
+      !dependency.has_live_owner_dependency(owner, OwnerDependencyMode::Exact),
+      "wrong-owner publications must not satisfy an exact handoff"
+    );
+    assert!(
+      !dependency.has_live_owner_dependency(owner, OwnerDependencyMode::Available),
+      "wrong-owner publications must not make the owner's lane appear serviceable"
+    );
+    assert!(
+      dependency.entry_visits() <= PUBLICATION_COUNT * 9 + 8,
+      "selection, handoff/availability predicates, stale retirement, and claims must visit O(n) entries across n publications, visits={}",
+      dependency.entry_visits()
+    );
+    assert!(executor.blocking_queue.lock().unwrap().is_empty());
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn binding_unowned_dependency_updates_exact_owner_predicate() {
+    let owner = BlockingOwnerToken { executor_id: u64::MAX - 200, frame: u64::MAX - 201 };
+    let dependency = TaskDependency::default();
+    let blocking = BlockingDependency { job: BlockingJobId(u64::MAX - 202), owner: None };
+    dependency.set_owned(blocking);
+
+    assert!(
+      !dependency.has_live_owner_dependency(owner, OwnerDependencyMode::Exact),
+      "an unowned publication must not satisfy an exact owner handoff"
+    );
+    assert!(
+      dependency.has_live_owner_dependency(owner, OwnerDependencyMode::Available),
+      "an unowned publication is available to the ambient owner"
+    );
+
+    let selected =
+      dependency.select_for_owner(owner).expect("the owner must bind the unowned publication");
+    assert_eq!(selected.publication.dependency.owner, Some(owner));
+    assert!(
+      dependency.has_live_owner_dependency(owner, OwnerDependencyMode::Exact),
+      "binding must immediately publish the entry to exact-owner predicates"
+    );
+    assert!(dependency.try_claim(&selected));
+    assert!(!dependency.has_live_owner_dependency(owner, OwnerDependencyMode::Exact));
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn owner_selection_preserves_unowned_and_exact_publication_order() {
+    let owner = BlockingOwnerToken { executor_id: u64::MAX - 210, frame: u64::MAX - 211 };
+    let dependency = TaskDependency::default();
+    let first = BlockingDependency { job: BlockingJobId(u64::MAX - 212), owner: None };
+    let second = BlockingDependency { job: BlockingJobId(u64::MAX - 213), owner: Some(owner) };
+    dependency.set_owned(first);
+    dependency.set_owned(second);
+
+    let selected = dependency.select_for_owner(owner).expect("the first publication must be found");
+    assert_eq!(selected.publication.dependency, BlockingDependency { owner: Some(owner), ..first });
+    assert!(dependency.try_claim(&selected));
+
+    let selected =
+      dependency.select_for_owner(owner).expect("the second publication must remain eligible");
+    assert_eq!(selected.publication.dependency, second);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
   fn blocking_queue_exact_removal_reclaims_fifo_links() {
     const JOB_COUNT: u64 = 4096;
 
@@ -11071,6 +11947,78 @@ mod tests {
 
   #[cfg(not(target_family = "wasm"))]
   #[test]
+  fn one_poll_preserves_every_observed_blocking_dependency() {
+    let parent = Arc::new(TaskDependency::default());
+    let _context = TaskDependencyGuard::enter(&parent);
+    let first = BlockingDependency { job: BlockingJobId(u64::MAX - 60), owner: None };
+    let second = BlockingDependency { job: BlockingJobId(u64::MAX - 61), owner: None };
+    let (first_sender, first_receiver) =
+      oneshot::channel::<Result<ContainedTaskOutput<()>, JoinError>>();
+    let (second_sender, second_receiver) =
+      oneshot::channel::<Result<ContainedTaskOutput<()>, JoinError>>();
+    let mut first_handle =
+      JoinHandle(JoinHandleInner::Blocking { receiver: first_receiver, dependency: first });
+    let mut second_handle =
+      JoinHandle(JoinHandleInner::Blocking { receiver: second_receiver, dependency: second });
+    let waker = futures::task::noop_waker();
+    let mut cx = Context::from_waker(&waker);
+
+    assert!(Pin::new(&mut first_handle).poll(&mut cx).is_pending());
+    assert!(Pin::new(&mut second_handle).poll(&mut cx).is_pending());
+    assert_eq!(
+      parent.get_dependencies(),
+      vec![first, second],
+      "publishing a later dependency in one user poll must not replace an earlier dependency"
+    );
+
+    drop(first_handle);
+    drop(second_handle);
+    drop(first_sender);
+    drop(second_sender);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn dependency_tls_borrow_is_released_before_reentrant_wake() {
+    use std::sync::mpsc;
+
+    struct ReenterDependencyContext {
+      dependency: Arc<TaskDependency>,
+      woke: mpsc::Sender<()>,
+    }
+
+    impl std::task::Wake for ReenterDependencyContext {
+      fn wake(self: Arc<Self>) {
+        let _context = TaskDependencyGuard::enter(&self.dependency);
+        self.woke.send(()).unwrap();
+      }
+    }
+
+    let parent = Arc::new(TaskDependency::default());
+    let nested = Arc::new(TaskDependency::default());
+    let (woke_tx, woke_rx) = mpsc::channel();
+    let waiter = Waker::from(Arc::new(ReenterDependencyContext {
+      dependency: Arc::clone(&nested),
+      woke: woke_tx,
+    }));
+    parent.register_waiter(&waiter);
+    let blocking = BlockingDependency { job: BlockingJobId(u64::MAX - 62), owner: None };
+
+    let _context = TaskDependencyGuard::enter(&parent);
+    record_blocking_dependency(blocking);
+    woke_rx
+      .recv_timeout(Duration::from_secs(1))
+      .expect("dependency notification must permit reentrant TLS context access");
+
+    parent.register_waiter(&waiter);
+    clear_blocking_dependency(blocking);
+    woke_rx
+      .recv_timeout(Duration::from_secs(1))
+      .expect("dependency clearing must permit reentrant TLS context access");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
   fn dependency_free_begin_poll_does_not_lock_state() {
     use std::sync::mpsc;
 
@@ -11307,6 +12255,116 @@ mod tests {
     assert!(
       retained_parent_weak.upgrade().is_none(),
       "detachment must clear the dependency waiter instead of retaining its parent task"
+    );
+    drop(runnable);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn detaching_task_clears_many_parent_publications_linearly() {
+    const PUBLICATION_COUNT: usize = 1024;
+
+    struct CountWake(Arc<AtomicUsize>);
+
+    impl std::task::Wake for CountWake {
+      fn wake(self: Arc<Self>) {
+        self.0.fetch_add(1, Ordering::SeqCst);
+      }
+    }
+
+    fn latest_publication(dependency: &TaskDependency) -> DependencyPublication {
+      dependency
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .current
+        .back()
+        .expect("the sentinel publication must be appended")
+        .publication
+        .clone()
+    }
+
+    let owner = BlockingOwnerToken { executor_id: u64::MAX - 300, frame: u64::MAX - 301 };
+    let other_owner = BlockingOwnerToken { executor_id: u64::MAX - 302, frame: u64::MAX - 303 };
+    let child = Arc::new(TaskDependency::default());
+    for index in 0..PUBLICATION_COUNT {
+      child.set_owned(BlockingDependency {
+        job: BlockingJobId(1_000_000 + index as u64),
+        owner: (index % 2 == 0).then_some(owner),
+      });
+    }
+    let child_publications = child.snapshot_all_live();
+    let source = child_publications[0].clone();
+
+    let parent = Arc::new(TaskDependency::default());
+    let _context = TaskDependencyGuard::enter(&parent);
+    let (runnable, task) = async_task::spawn(
+      futures::future::pending::<Result<ContainedTaskOutput<()>, JoinError>>(),
+      |_| {},
+    );
+    let mut handle =
+      JoinHandle(JoinHandleInner::Task { task: task.fallible(), dependency: Arc::clone(&child) });
+    let waker = futures::task::noop_waker();
+    let mut cx = Context::from_waker(&waker);
+    assert!(Pin::new(&mut handle).poll(&mut cx).is_pending());
+    assert_eq!(
+      parent.get_dependencies().len(),
+      PUBLICATION_COUNT,
+      "polling the child handle must propagate every current publication"
+    );
+
+    let mut wrong_claim_source = source.clone();
+    wrong_claim_source.claim = Arc::new(DependencyClaim::new());
+    parent.set_borrowed(&wrong_claim_source);
+    let wrong_claim_publication = latest_publication(&parent);
+
+    let mut wrong_job_source = source.clone();
+    wrong_job_source.dependency.job = BlockingJobId(u64::MAX - 304);
+    parent.set_borrowed(&wrong_job_source);
+    let wrong_job_publication = latest_publication(&parent);
+
+    let wrong_immediate_source = source.derived(None);
+    parent.set_borrowed(&wrong_immediate_source);
+    let wrong_immediate_publication = latest_publication(&parent);
+
+    let wakes = Arc::new(AtomicUsize::new(0));
+    parent.register_waiter(&Waker::from(Arc::new(CountWake(Arc::clone(&wakes)))));
+    parent.reset_entry_visits();
+    drop(handle);
+
+    assert_eq!(
+      wakes.load(Ordering::SeqCst),
+      1,
+      "one batched parent cleanup must emit one waiter notification"
+    );
+    assert!(
+      parent.entry_visits() <= PUBLICATION_COUNT * 2 + 8,
+      "detach must hash child sources once, scan the parent once, and reclaim at most one stale prefix; visits={}",
+      parent.entry_visits()
+    );
+    assert!(wrong_claim_publication.is_live(), "claim identity must remain part of the match");
+    assert!(wrong_job_publication.is_live(), "job identity must remain part of the match");
+    assert!(
+      wrong_immediate_publication.is_live(),
+      "only an exact immediate-parent link may be retired"
+    );
+
+    {
+      let state = parent.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert_eq!(state.current.len(), 3);
+      assert_eq!(
+        state.job_sequences.values().map(FxHashSet::len).sum::<usize>(),
+        3,
+        "the job index must retain only the three non-matching sentinels"
+      );
+      assert!(state.unowned_sequences.is_empty());
+      assert_eq!(state.owner_sequences.len(), 1);
+      assert_eq!(state.owner_sequences.get(&owner).map(VecDeque::len), Some(3));
+    }
+    assert!(parent.has_live_owner_dependency(owner, OwnerDependencyMode::Exact));
+    assert!(
+      !parent.has_live_owner_dependency(other_owner, OwnerDependencyMode::Available),
+      "cancelled unowned publications must not survive in availability predicates"
     );
     drop(runnable);
   }
@@ -11782,6 +12840,7 @@ mod tests {
     let stale = BlockingJobId(u64::MAX - 10);
     let live = BlockingJobId(u64::MAX - 9);
     dependency.set_owned(BlockingDependency { job: stale, owner: Some(owner) });
+    dependency.begin_poll();
     dependency.set_owned(BlockingDependency { job: live, owner: Some(owner) });
 
     let stale_ran = Arc::new(AtomicBool::new(false));
@@ -12727,6 +13786,45 @@ mod tests {
     .expect("MultiThread options must validate");
     assert_eq!(validated.worker_threads, 2);
     assert_eq!(validated.max_blocking_tasks, 1);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn validate_applies_rayon_worker_cap_before_blocking_reserve_and_reporting() {
+    let simulated_32_bit = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 256,
+      max_blocking_tasks: 256,
+      thread_name_prefix: "rd8-rayon-cap-32".to_string(),
+      park_deadline: None,
+    }
+    .validate_with_rayon_max_threads(Some(255))
+    .expect("a 32-bit-sized request must clamp to Rayon's 255-thread cap");
+    assert_eq!(simulated_32_bit.worker_threads, 255);
+    assert_eq!(simulated_32_bit.max_blocking_tasks, 254);
+
+    let rayon_max_threads = max_num_threads();
+    let requested_threads = rayon_max_threads
+      .checked_add(1)
+      .expect("Rayon's supported worker count must leave room for an oversized request");
+    let controller = RuntimeController::new();
+    controller
+      .configure(RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: requested_threads,
+        max_blocking_tasks: requested_threads,
+        thread_name_prefix: "rd8-rayon-cap".to_string(),
+        park_deadline: None,
+      })
+      .expect("an oversized request must clamp to Rayon's physical maximum");
+
+    let reported = controller.options();
+    assert_eq!(reported.worker_threads, rayon_max_threads);
+    assert_eq!(
+      reported.max_blocking_tasks,
+      rayon_max_threads - 1,
+      "the blocking cap must reserve a lane from the physically realizable worker count"
+    );
   }
 
   #[cfg(not(target_family = "wasm"))]
@@ -14162,6 +15260,151 @@ mod tests {
 
     controller.shutdown().expect("runtime must stop");
     assert_eq!(lifecycle.remaining(), 0, "shutdown must observe every physical worker exit");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_shutdown_waits_for_worker_tls_destructors() {
+    use std::sync::mpsc;
+
+    let controller = Arc::new(multi_thread_controller("lifecycle-worker-tls", 2, 1));
+    let backend = controller.backend();
+    let RuntimeExecutor::MultiThread(executor) = &backend.executor else {
+      panic!("configured MultiThread backend must create a Rayon executor");
+    };
+    let worker_count = executor.pool.current_num_threads();
+    let (entered_tx, entered_rx) = mpsc::channel();
+    let release = Arc::new((Mutex::new(false), Condvar::new()));
+    let probe_release = Arc::clone(&release);
+    executor.pool.broadcast(move |_| {
+      WORKER_TLS_DROP_PROBE.with(|slot| {
+        let previous = slot.borrow_mut().replace(WorkerTlsDropProbe {
+          action: Some(WorkerTlsDropAction::Wait {
+            entered: entered_tx.clone(),
+            release: Arc::clone(&probe_release),
+          }),
+        });
+        assert!(previous.is_none(), "each worker must install exactly one TLS drop probe");
+      });
+    });
+    drop(backend);
+
+    let (shutdown_tx, shutdown_rx) = mpsc::channel();
+    let shutdown_controller = Arc::clone(&controller);
+    let shutdown = std::thread::spawn(move || {
+      shutdown_tx.send(shutdown_controller.shutdown()).unwrap();
+    });
+    for _ in 0..worker_count {
+      entered_rx
+        .recv_timeout(Duration::from_secs(5))
+        .expect("every worker TLS destructor must begin during physical retirement");
+    }
+    let early_shutdown = shutdown_rx.recv_timeout(Duration::from_millis(200)).ok();
+    let shutdown_returned_early = early_shutdown.is_some();
+
+    {
+      let (released, changed) = &*release;
+      *released.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = true;
+      changed.notify_all();
+    }
+    let shutdown_result = early_shutdown.unwrap_or_else(|| {
+      shutdown_rx
+        .recv_timeout(Duration::from_secs(5))
+        .expect("shutdown must finish after worker TLS destructors return")
+    });
+    shutdown_result.unwrap();
+    shutdown.join().unwrap();
+
+    assert!(
+      !shutdown_returned_early,
+      "shutdown must not publish Stopped while worker TLS destructors are still running"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn worker_tls_destructor_lifecycle_reentry_fails_fast_without_self_join() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_WORKER_TLS_LIFECYCLE_REENTRY_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      use std::sync::mpsc;
+
+      let controller = Arc::new(multi_thread_controller("worker-tls-reentry", 2, 1));
+      let backend = controller.backend();
+      let RuntimeExecutor::MultiThread(executor) = &backend.executor else {
+        panic!("configured MultiThread backend must create a Rayon executor");
+      };
+      let installed = Arc::new(AtomicBool::new(false));
+      let (completed_tx, completed_rx) = mpsc::channel();
+      let probe_controller = Arc::clone(&controller);
+      let probe_installed = Arc::clone(&installed);
+      executor.pool.broadcast(move |_| {
+        if probe_installed.swap(true, Ordering::SeqCst) {
+          return;
+        }
+        WORKER_TLS_DROP_PROBE.with(|slot| {
+          let previous = slot.borrow_mut().replace(WorkerTlsDropProbe {
+            action: Some(WorkerTlsDropAction::ReenterLifecycle {
+              controller: Arc::clone(&probe_controller),
+              completed: completed_tx.clone(),
+            }),
+          });
+          assert!(previous.is_none(), "the selected worker must have no prior TLS probe");
+        });
+      });
+      assert!(installed.load(Ordering::SeqCst), "one worker must install the lifecycle probe");
+      drop(backend);
+
+      controller.shutdown().expect("external shutdown must join the retiring workers");
+      let (start, shutdown) = completed_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the TLS destructor must complete both lifecycle reentry attempts");
+      assert_eq!(
+        start.unwrap_err(),
+        "cannot restart the async runtime from work in the generation being stopped"
+      );
+      assert_eq!(
+        shutdown.unwrap_err(),
+        "cannot wait for async runtime shutdown from work in the generation being stopped"
+      );
+      return;
+    }
+
+    let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg(
+        "async_runtime::tests::worker_tls_destructor_lifecycle_reentry_fails_fast_without_self_join",
+      )
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .stdout(std::process::Stdio::piped())
+      .stderr(std::process::Stdio::piped())
+      .spawn()
+      .expect("the TLS lifecycle-reentry subprocess must start");
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let status = loop {
+      if let Some(status) = child.try_wait().expect("the subprocess status must be readable") {
+        break status;
+      }
+      if Instant::now() >= deadline {
+        let _ = child.kill();
+        let output = child.wait_with_output().expect("the timed-out subprocess must be reaped");
+        panic!(
+          "worker TLS lifecycle reentry deadlocked shutdown\nstdout={}\nstderr={}",
+          String::from_utf8_lossy(&output.stdout),
+          String::from_utf8_lossy(&output.stderr)
+        );
+      }
+      std::thread::sleep(Duration::from_millis(10));
+    };
+    let output = child.wait_with_output().expect("the completed subprocess output must be read");
+    assert!(
+      status.success(),
+      "worker TLS lifecycle reentry must fail fast; status={:?}\nstdout={}\nstderr={}",
+      status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
   }
 
   #[cfg(not(target_family = "wasm"))]

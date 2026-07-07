@@ -29,12 +29,19 @@ pub struct ClassicBundler {
 }
 ```
 
-Each `create_bundle()` call:
+Each binding build entry:
 
 1. Checks the `closed` flag — rejects if already closed
 2. Creates a **fresh `BundleFactory`** with the provided options and plugins
 3. Creates a `Bundle` with `FullBuild` mode and **no cache** (`None`)
-4. Stores the `BundleHandle` for later cleanup
+4. Creates the N-API promise that owns the bundle operation
+5. Stores the `BundleHandle` for later cleanup only after promise creation
+   succeeds
+
+The last step is intentionally transactional with the JavaScript operation
+owner. A synchronous bundle-construction or N-API promise-creation failure
+leaves the previous handle installed, so `closeBundle` continues to target the
+parallel-plugin worker pool retained by the TypeScript `RolldownBuild`.
 
 There is no persistent state between builds. No `ScanStageCache`, no shared resolver, no reused factory.
 

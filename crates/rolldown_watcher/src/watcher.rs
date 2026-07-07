@@ -1,6 +1,6 @@
 use crate::handler::WatcherEventHandler;
 use crate::task_fs_event_handler::TaskFsEventHandler;
-use crate::watch_coordinator::{CoordinatorCloseResult, WatchCoordinator};
+use crate::watch_coordinator::{CoordinatorCloseError, CoordinatorCloseResult, WatchCoordinator};
 use crate::watch_task::{WatchTask, WatchTaskIdx};
 use crate::watcher_msg::WatcherMsg;
 use anyhow::Result;
@@ -11,6 +11,7 @@ use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::FsWatcherConfig;
 use rolldown_utils::futures::spawn;
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -62,6 +63,21 @@ impl WatcherConfig {
 }
 
 type CoordinatorFuture = Shared<Pin<Box<dyn Future<Output = CoordinatorCloseResult> + Send>>>;
+
+#[derive(Debug)]
+struct SharedCoordinatorCloseError(Arc<CoordinatorCloseError>);
+
+impl fmt::Display for SharedCoordinatorCloseError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    self.0.fmt(f)
+  }
+}
+
+impl std::error::Error for SharedCoordinatorCloseError {
+  fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    Some(self.0.as_ref())
+  }
+}
 
 struct CoordinatorState {
   /// The coordinator future, before `run()` is called.
@@ -123,7 +139,9 @@ impl Watcher {
         Box::pin(async move {
           match join_handle.await {
             Ok(result) => result,
-            Err(error) => Err(Arc::from(format!("Watcher coordinator task failed: {error}"))),
+            Err(error) => Err(Arc::new(CoordinatorCloseError::from_message(format!(
+              "Watcher coordinator task failed: {error}"
+            )))),
           }
         });
       state.handle = Some(handle.shared());
@@ -153,7 +171,9 @@ impl Watcher {
     let _ = self.tx.send(WatcherMsg::Close);
     let handle = self.coordinator_state.lock().unwrap().handle.clone();
     match handle {
-      Some(handle) => handle.await.map_err(|error| anyhow::anyhow!("{error}")),
+      Some(handle) => {
+        handle.await.map_err(|error| anyhow::Error::new(SharedCoordinatorCloseError(error)))
+      }
       None => Ok(()),
     }
   }
@@ -186,6 +206,7 @@ mod tests {
   use rolldown_common::WatcherChangeKind;
   use std::{
     borrow::Cow,
+    panic::panic_any,
     sync::{
       Arc,
       atomic::{AtomicUsize, Ordering},
@@ -212,6 +233,63 @@ mod tests {
 
     async fn on_close(&self) {
       self.close_calls.fetch_add(1, Ordering::SeqCst);
+    }
+  }
+
+  struct PanickingCloseHandler {
+    end: Arc<Notify>,
+    close_calls: Arc<AtomicUsize>,
+  }
+
+  impl WatcherEventHandler for PanickingCloseHandler {
+    async fn on_event(&self, event: WatchEvent) {
+      if matches!(event, WatchEvent::End) {
+        self.end.notify_one();
+      }
+    }
+
+    async fn on_change(&self, _path: &str, _kind: WatcherChangeKind) {}
+
+    async fn on_restart(&self) {}
+
+    async fn on_close(&self) {
+      self.close_calls.fetch_add(1, Ordering::SeqCst);
+      panic!("intentional close event panic");
+    }
+  }
+
+  struct PanickingBuildEventHandler {
+    close_calls: Arc<AtomicUsize>,
+    close_bundle_calls: Arc<AtomicUsize>,
+    close_bundle_calls_before_panic: Arc<AtomicUsize>,
+    panic_payload_drops: Arc<AtomicUsize>,
+  }
+
+  impl WatcherEventHandler for PanickingBuildEventHandler {
+    async fn on_event(&self, event: WatchEvent) {
+      if matches!(event, WatchEvent::BundleEnd(_) | WatchEvent::Error(_)) {
+        self
+          .close_bundle_calls_before_panic
+          .store(self.close_bundle_calls.load(Ordering::SeqCst), Ordering::SeqCst);
+        panic_any(HostilePanicPayload(Arc::clone(&self.panic_payload_drops)));
+      }
+    }
+
+    async fn on_change(&self, _path: &str, _kind: WatcherChangeKind) {}
+
+    async fn on_restart(&self) {}
+
+    async fn on_close(&self) {
+      self.close_calls.fetch_add(1, Ordering::SeqCst);
+    }
+  }
+
+  struct HostilePanicPayload(Arc<AtomicUsize>);
+
+  impl Drop for HostilePanicPayload {
+    fn drop(&mut self) {
+      self.0.fetch_add(1, Ordering::SeqCst);
+      panic!("intentional panic payload destructor panic");
     }
   }
 
@@ -243,6 +321,39 @@ mod tests {
     ) -> plugin::HookNoopReturn {
       self.close_bundle_calls.fetch_add(1, Ordering::SeqCst);
       Err(anyhow::anyhow!("{} closeBundle", self.message))
+    }
+  }
+
+  #[derive(Debug)]
+  struct CleanupProbePlugin {
+    name: &'static str,
+    panic_close_watcher: bool,
+    close_watcher_calls: Arc<AtomicUsize>,
+    close_bundle_calls: Arc<AtomicUsize>,
+  }
+
+  impl plugin::Plugin for CleanupProbePlugin {
+    fn name(&self) -> Cow<'static, str> {
+      self.name.into()
+    }
+
+    fn register_hook_usage(&self) -> plugin::HookUsage {
+      plugin::HookUsage::CloseWatcher | plugin::HookUsage::CloseBundle
+    }
+
+    async fn close_watcher(&self, _ctx: &plugin::PluginContext) -> plugin::HookNoopReturn {
+      self.close_watcher_calls.fetch_add(1, Ordering::SeqCst);
+      assert!(!self.panic_close_watcher, "intentional closeWatcher panic");
+      Ok(())
+    }
+
+    async fn close_bundle(
+      &self,
+      _ctx: &plugin::PluginContext,
+      _args: Option<&plugin::HookCloseBundleArgs<'_>>,
+    ) -> plugin::HookNoopReturn {
+      self.close_bundle_calls.fetch_add(1, Ordering::SeqCst);
+      Ok(())
     }
   }
 
@@ -321,6 +432,107 @@ mod tests {
     assert_eq!(second_error.to_string(), first_error);
     assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 2);
     assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown + 2);
+    assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn close_contains_panics_and_finishes_every_cleanup_phase() {
+    let close_watcher_calls = Arc::new(AtomicUsize::new(0));
+    let close_bundle_calls = Arc::new(AtomicUsize::new(0));
+    let handler_close_calls = Arc::new(AtomicUsize::new(0));
+    let end = Arc::new(Notify::new());
+    let configs = [("panicking", true), ("following", false)]
+      .into_iter()
+      .map(|(name, panic_close_watcher)| {
+        BundlerConfig::new(
+          BundlerOptions::default(),
+          vec![Arc::new(CleanupProbePlugin {
+            name,
+            panic_close_watcher,
+            close_watcher_calls: Arc::clone(&close_watcher_calls),
+            close_bundle_calls: Arc::clone(&close_bundle_calls),
+          })],
+        )
+      })
+      .collect();
+    let watcher = Watcher::new(
+      configs,
+      PanickingCloseHandler {
+        end: Arc::clone(&end),
+        close_calls: Arc::clone(&handler_close_calls),
+      },
+      &WatcherConfig::default(),
+    )
+    .expect("create watcher");
+    watcher.run();
+    end.notified().await;
+    let close_bundle_calls_before_shutdown = close_bundle_calls.load(Ordering::SeqCst);
+
+    let first_error = watcher.close().await.expect_err("close should report contained panics");
+    let first_message = first_error.to_string();
+    assert!(first_message.contains("watch task 0 closeWatcher failed"));
+    assert!(first_message.contains("intentional closeWatcher panic"));
+    assert!(first_message.contains("watch close event handler failed"));
+    assert!(first_message.contains("intentional close event panic"));
+    assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 2);
+    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown + 2);
+    assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
+
+    let replayed = watcher.close().await.expect_err("later close should replay the panic result");
+    assert_eq!(replayed.to_string(), first_message);
+    assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 2);
+    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown + 2);
+    assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn event_panic_runs_cleanup_once_and_aggregates_cleanup_failures() {
+    let close_watcher_calls = Arc::new(AtomicUsize::new(0));
+    let close_bundle_calls = Arc::new(AtomicUsize::new(0));
+    let close_bundle_calls_before_panic = Arc::new(AtomicUsize::new(usize::MAX));
+    let handler_close_calls = Arc::new(AtomicUsize::new(0));
+    let panic_payload_drops = Arc::new(AtomicUsize::new(0));
+    let watcher = Watcher::new(
+      vec![BundlerConfig::new(
+        BundlerOptions::default(),
+        vec![Arc::new(FailingClosePlugin {
+          message: "cleanup failure",
+          close_watcher_calls: Arc::clone(&close_watcher_calls),
+          close_bundle_calls: Arc::clone(&close_bundle_calls),
+        })],
+      )],
+      PanickingBuildEventHandler {
+        close_calls: Arc::clone(&handler_close_calls),
+        close_bundle_calls: Arc::clone(&close_bundle_calls),
+        close_bundle_calls_before_panic: Arc::clone(&close_bundle_calls_before_panic),
+        panic_payload_drops: Arc::clone(&panic_payload_drops),
+      },
+      &WatcherConfig::default(),
+    )
+    .expect("create watcher");
+    watcher.run();
+    watcher.wait_for_close().await;
+
+    let first_error = watcher.close().await.expect_err("event panic should fail watcher close");
+    let first_message = first_error.to_string();
+    assert!(first_message.contains("watch coordinator event loop panicked"));
+    assert!(first_message.contains("non-string panic payload"));
+    assert!(first_message.contains("watch task 0 closeWatcher failed"));
+    assert!(first_message.contains("cleanup failure closeWatcher"));
+    assert!(first_message.contains("watch task 0 closeBundle failed"));
+    assert!(first_message.contains("cleanup failure closeBundle"));
+    assert_eq!(panic_payload_drops.load(Ordering::SeqCst), 1);
+    assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 1);
+    let close_bundle_calls_before_panic = close_bundle_calls_before_panic.load(Ordering::SeqCst);
+    assert_ne!(close_bundle_calls_before_panic, usize::MAX);
+    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_panic + 1);
+    assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
+
+    let replayed = watcher.close().await.expect_err("later close should replay the panic result");
+    assert_eq!(replayed.to_string(), first_message);
+    assert_eq!(panic_payload_drops.load(Ordering::SeqCst), 1);
+    assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 1);
+    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_panic + 1);
     assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
   }
 }

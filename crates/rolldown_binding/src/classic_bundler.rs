@@ -104,10 +104,12 @@ impl ClassicBundler {
     })?;
 
     let bundle = bundle_factory.create_bundle(BundleMode::FullBuild, None)?;
-
-    self.last_bundle_handle = Some(bundle.context());
-
     Ok(bundle)
+  }
+
+  pub fn install_bundle_handle(&mut self, handle: BundleHandle) {
+    // See internal-docs/rust-classic-bundler/implementation.md.
+    self.last_bundle_handle = Some(handle);
   }
 
   #[must_use = "Future must be awaited to do the actual cleanup work"]

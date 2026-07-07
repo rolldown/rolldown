@@ -28,9 +28,10 @@ The existing Tokio runtime remains the default and is selected by the
 
 3. **Blocking I/O cannot consume every execution lane.** Blocking jobs are
    queued alongside runnable futures, but multi-thread validation reserves one
-   worker from blocking admission. MultiThread has a truthful minimum of two
-   configured and physical workers, and the blocking cap is at most
-   `worker_threads - 1`. No hidden reserve worker exists. Blocking task
+   worker from blocking admission. MultiThread first clamps the requested count
+   to `rayon::max_num_threads()`, has a truthful minimum of two configured and
+   physical workers, and limits the blocking cap to `worker_threads - 1`. No
+   hidden reserve worker exists. Blocking task
    start/completion metrics include exact-dependency work run through a nested
    `block_on`, while active/high-water metrics count admitted physical lanes;
    dependency lending reuses its owner's lane instead of reporting another one.
@@ -59,25 +60,29 @@ The existing Tokio runtime remains the default and is selected by the
    over a shared one-shot exact-job claim. Link withdrawal and final claiming
    serialize through that shared claim, so either a withdrawal invalidates the
    chain first or the exact claim commits first; validation cannot tear across
-   the two. Every task poll withdraws its previous local publication before user
-   code runs. That immediately invalidates ancestors that depended on the old
-   hop, while leaving a child's still-live source claim available for the child
-   to republish. Dropping a blocking handle clears the direct dependency by
-   stable job id even if owner enrichment changed the publication metadata.
+   the two. A task retains every blocking dependency publication observed
+   during one user poll; a later pending handle cannot erase an earlier sibling.
+   Every task poll withdraws all previous local publications before user code runs.
+   That immediately invalidates ancestors that depended on the old hops, while
+   leaving a child's still-live source claims available for the child to
+   republish. Dropping a blocking handle clears the direct dependency by stable
+   job id even if owner enrichment changed the publication metadata.
    Lending is driver-local and submits no global Rayon broadcast, so an
    unrelated parked worker cannot retain a probe batch, block later lending, or
-   keep shutdown-idle accounting active. Each idle cooperative pass performs at
-   most one exact claim attempt; there is no dependency-vector cloning or
-   worker-count multiplier. Completing one transfer wakes at most one parked
-   blocking-capable driver that published the same owner lineage, so an
-   unrelated newer parker cannot absorb the handoff. This lets another exact
-   dependency retry without wake amplification. Every reservation release,
-   including a failed exact claim, performs that same owner-targeted handoff. If
-   it races just before parker publication, the registered driver rechecks
-   availability for its lexically ambient exact owner before sleeping. The
-   selected parker retains the owner identity until retry; if its publication is
-   withdrawn first or the driver exits, it forwards the handoff to the next live
-   same-owner waiter instead of consuming the only wake.
+   keep shutdown-idle accounting active. Each idle cooperative pass selects at
+   most one eligible live publication without cloning the full collection; an
+   owner-handoff probe snapshots only parker and dependency handles, releases
+   the parked-driver registry lock, then evaluates dependency predicates.
+   Completing one transfer wakes at most one parked blocking-capable driver that
+   published the same owner lineage, so an unrelated newer parker cannot absorb
+   the handoff. This lets another exact dependency retry without wake
+   amplification. Every reservation release, including a failed exact claim,
+   performs that same owner-targeted handoff. If it races just before parker
+   publication, the registered driver rechecks availability for its lexically
+   ambient exact owner before sleeping. The selected parker retains the owner
+   identity until retry; if its publication is withdrawn first or the driver
+   exits, it forwards the handoff to the next live same-owner waiter instead of
+   consuming the only wake.
 
 4. **Work classes receive bounded service.** Runnable locality remains the
    normal priority, but a continuously hot runnable stream yields to the
@@ -121,9 +126,14 @@ The existing Tokio runtime remains the default and is selected by the
    running generation before shutdown or observes `Stopping`/`Stopped`; it can
    never lazily recreate a backend after shutdown. Shutdown closes acceptance,
    aborts accepted async work, drops queued blocking work, waits for running
-   work and scheduler roles, and observes every Rayon worker exit. Concurrent
-   `start` waits for that quiescence. Calling `start` or `shutdown` from work in
-   the generation being retired returns an error instead of self-deadlocking.
+   work and scheduler roles, and joins every Rayon worker's native thread.
+   Joining, rather than observing only Rayon's exit hook, includes thread-local
+   destructors in the retirement barrier. A retiring worker keeps its runtime
+   identity through TLS teardown, so lifecycle reentry from a TLS destructor
+   fails fast instead of waiting for shutdown to join that same thread.
+   Concurrent `start` waits for that quiescence. Calling `start` or `shutdown`
+   from work in the generation being retired returns an error instead of
+   self-deadlocking.
    Shutdown closes and drain-fires timers, wakes every runtime-owned `block_on`
    parker, and scopes queued/rejected destruction to the retiring generation.
    Rejected convenience submissions hold the lifecycle transition until their
@@ -239,9 +249,11 @@ The existing Tokio runtime remains the default and is selected by the
    that same central panic boundary after committing their state transition.
    Waiter clone, replacement, wake, retirement, and final destruction are also
    generation-scoped and panic-contained, and no waiter destructor runs while
-   the dependency mutex is held. Detaching a task clears its retained waiter
-   before handing ownership to async-task, so a parent cannot remain reachable
-   solely through an abandoned dependency registration.
+   the dependency mutex or dependency-stack `RefCell` is borrowed. Cooperative
+   driver unwind cleanup independently forwards owner handoffs, flushes local
+   slot work, and compensates absorbed queue wakes. Detaching a task clears its
+   retained waiter before handing ownership to async-task, so a parent cannot
+   remain reachable solely through an abandoned dependency registration.
    Internal module-loader execution and supervision are one accepted task, so
    panic, shutdown cancellation, or rejected submission becomes exactly one
    build diagnostic and completion accounting cannot hang.

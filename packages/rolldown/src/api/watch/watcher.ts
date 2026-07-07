@@ -215,10 +215,17 @@ export async function createWatcher(
 ): Promise<void> {
   const options = arraify(input);
   const closeCallbackScope = emitter.closeCallbackScope;
+  // Snapshot every getter before starting options hooks or parallel workers.
+  // A later throwing getter must not abandon setup already running for an
+  // earlier watch configuration.
+  const optionsWithOutputs = materializePresentValues(options).map((option) => ({
+    option,
+    outputs: materializePresentValues(arraify(option.output || {})),
+  }));
   const bundlerOptionResults = await Promise.allSettled(
-    options
-      .map((option) =>
-        arraify(option.output || {}).map(async (output) => {
+    optionsWithOutputs
+      .map(({ option, outputs }) =>
+        outputs.map(async (output) => {
           const inputOptions = await closeCallbackScope.run(() =>
             PluginDriver.callOptionsHook(option, true),
           );
@@ -400,6 +407,15 @@ async function throwWatcherSetupErrorAfterCleanup(
 
 function createSetupError(errors: unknown[], message: string): unknown {
   return errors.length === 1 ? errors[0] : new AggregateError(errors, message);
+}
+
+function materializePresentValues<T>(values: T[]): T[] {
+  const snapshot: T[] = [];
+  const length = values.length;
+  for (let index = 0; index < length; index++) {
+    if (index in values) snapshot.push(values[index]);
+  }
+  return snapshot;
 }
 
 function warnMultiplePollingOptions(bundlerOptions: BundlerOptionWithStopWorker[]) {

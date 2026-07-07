@@ -1,3 +1,6 @@
+use std::ops::{BitOr, BitOrAssign};
+
+use bitflags::bitflags;
 use oxc::ast::ast::{
   self, Argument, AssignmentTarget, BindingPattern, CallExpression, ChainElement, Expression,
   IdentifierReference, UnaryOperator, VariableDeclarationKind,
@@ -12,9 +15,100 @@ use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, St
 use rolldown_ecmascript_utils::ExpressionExt;
 use rustc_hash::FxHashSet;
 
+bitflags! {
+    #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+    /// Reasons that make an otherwise side-effect-free statement sensitive to execution order.
+    struct StmtOrderSensitiveReasons: u8 {
+        /// Reads from an unresolved global or a member chain rooted at one.
+        const GlobalVarAccess = 1;
+        /// A call/new expression was marked pure by an annotation or cross-module analysis.
+        const PureAnnotation = 1 << 1;
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+/// Evaluation facts for a statement.
+///
+/// `tree_shaking_flags` answers whether the statement must be retained. `is_order_sensitive`
+/// combines unknown tree-shaking side effects with order-sensitive reasons to answer whether the
+/// statement's relative execution timing matters.
+pub struct StmtEvalFacts {
+  tree_shaking_flags: StmtEvalFlags,
+  order_sensitive_reasons: StmtOrderSensitiveReasons,
+}
+
+impl StmtEvalFacts {
+  #[inline]
+  fn from_tree_shaking_flags(tree_shaking_flags: StmtEvalFlags) -> Self {
+    Self { tree_shaking_flags, order_sensitive_reasons: StmtOrderSensitiveReasons::empty() }
+  }
+
+  #[inline]
+  fn from_tree_shaking_side_effect(has_side_effect: bool) -> Self {
+    Self::from_tree_shaking_flags(has_side_effect.into())
+  }
+
+  #[inline]
+  fn from_unknown_side_effect() -> Self {
+    Self::from_tree_shaking_flags(StmtEvalFlags::UnknownSideEffect)
+  }
+
+  #[inline]
+  pub fn tree_shaking_flags(&self) -> StmtEvalFlags {
+    self.tree_shaking_flags
+  }
+
+  #[inline]
+  fn set_order_sensitive_reason(&mut self, reason: StmtOrderSensitiveReasons, value: bool) {
+    self.order_sensitive_reasons.set(reason, value);
+  }
+
+  #[inline]
+  fn has_order_sensitive_reason(&self, reason: StmtOrderSensitiveReasons) -> bool {
+    self.order_sensitive_reasons.contains(reason)
+  }
+
+  #[inline]
+  fn without_unknown_side_effect(mut self) -> Self {
+    self.tree_shaking_flags.remove(StmtEvalFlags::UnknownSideEffect);
+    self
+  }
+
+  #[inline]
+  fn has_side_effect_for_tree_shaking(&self) -> bool {
+    self.tree_shaking_flags.has_side_effect_for_tree_shaking()
+  }
+
+  #[inline]
+  pub fn is_order_sensitive(&self) -> bool {
+    // `UnknownSideEffect` is stored in the tree-shaking channel, but unknown runtime work is
+    // inherently order-sensitive. `PureCjs` remains tree-shaking-only.
+    self.tree_shaking_flags.contains(StmtEvalFlags::UnknownSideEffect)
+      || !self.order_sensitive_reasons.is_empty()
+  }
+}
+
+impl BitOr for StmtEvalFacts {
+  type Output = Self;
+
+  fn bitor(self, rhs: Self) -> Self::Output {
+    Self {
+      tree_shaking_flags: self.tree_shaking_flags | rhs.tree_shaking_flags,
+      order_sensitive_reasons: self.order_sensitive_reasons | rhs.order_sensitive_reasons,
+    }
+  }
+}
+
+impl BitOrAssign for StmtEvalFacts {
+  fn bitor_assign(&mut self, rhs: Self) {
+    self.tree_shaking_flags |= rhs.tree_shaking_flags;
+    self.order_sensitive_reasons |= rhs.order_sensitive_reasons;
+  }
+}
+
 /// Collect facts about evaluating a statement.
 ///
-/// The returned flags feed both tree shaking and execution-order-sensitive wrapper decisions.
+/// The returned facts keep tree-shaking side effects separate from order-sensitive reasons.
 pub struct StmtEvalAnalyzer<'a> {
   scope: &'a AstScopes,
   options: &'a SharedNormalizedBundlerOptions,
@@ -78,9 +172,9 @@ impl<'a> StmtEvalAnalyzer<'a> {
     Some(namespace_ids.contains(&symbol_id))
   }
 
-  fn analyze_member_expr(&self, member_expr: &ast::MemberExpression) -> StmtEvalFlags {
+  fn analyze_member_expr(&self, member_expr: &ast::MemberExpression) -> StmtEvalFacts {
     if self.is_expr_manual_pure_functions(member_expr.object()) {
-      return false.into();
+      return StmtEvalFacts::default();
     }
     // ES module namespace objects are frozen/sealed by spec — property reads
     // on them are guaranteed side-effect-free. A computed key is still evaluated,
@@ -88,7 +182,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
     if self.is_namespace_member_access(member_expr) == Some(true) {
       return match member_expr {
         ast::MemberExpression::ComputedMemberExpression(e) => self.analyze_expr(&e.expression),
-        _ => false.into(),
+        _ => StmtEvalFacts::default(),
       };
     }
     // Only `import.meta.url` is a spec-defined side-effect-free property read.
@@ -97,36 +191,38 @@ impl<'a> StmtEvalAnalyzer<'a> {
       if matches!(static_expr.object, Expression::MetaProperty(_))
         && static_expr.property.name == "url"
       {
-        return false.into();
+        return StmtEvalFacts::default();
       }
     }
     let is_global = self.is_member_expr_root_global(member_expr);
     let has_side_effect = member_expr.may_have_side_effects(self);
-    let mut detail = StmtEvalFlags::from(has_side_effect);
-    detail.set(StmtEvalFlags::GlobalVarAccess, is_global);
-    detail
+    let mut facts = StmtEvalFacts::from_tree_shaking_side_effect(has_side_effect);
+    facts.set_order_sensitive_reason(StmtOrderSensitiveReasons::GlobalVarAccess, is_global);
+    facts
   }
 
-  /// Collect `GlobalVarAccess` metadata from a member-like write target.
-  /// Called after Oxc has determined the expression is side-effect-free.
-  /// Writing to a property of an unresolved global mutates shared state.
-  fn collect_write_target_metadata(&self, target: &ast::SimpleAssignmentTarget) -> StmtEvalFlags {
+  /// Analyze a member-like write target after Oxc has determined the full write is side-effect-free.
+  /// Writing to a property of an unresolved global still mutates shared state for tree shaking.
+  fn analyze_side_effect_free_write_target(
+    &self,
+    target: &ast::SimpleAssignmentTarget,
+  ) -> StmtEvalFacts {
     let object_detail = match target {
       ast::SimpleAssignmentTarget::StaticMemberExpression(e) => self.analyze_expr(&e.object),
       ast::SimpleAssignmentTarget::ComputedMemberExpression(e) => {
         self.analyze_expr(&e.object) | self.analyze_expr(&e.expression)
       }
       ast::SimpleAssignmentTarget::PrivateFieldExpression(e) => self.analyze_expr(&e.object),
-      _ => return false.into(),
+      _ => return StmtEvalFacts::default(),
     };
-    if object_detail.contains(StmtEvalFlags::GlobalVarAccess) {
-      object_detail | true.into()
+    if object_detail.has_order_sensitive_reason(StmtOrderSensitiveReasons::GlobalVarAccess) {
+      object_detail | StmtEvalFacts::from_unknown_side_effect()
     } else {
       object_detail
     }
   }
 
-  fn analyze_call_expr(&self, expr: &CallExpression) -> StmtEvalFlags {
+  fn analyze_call_expr(&self, expr: &CallExpression) -> StmtEvalFacts {
     let is_pure_annotated =
       !self.flat_options.ignore_annotations() && (expr.pure || self.is_call_expr_marked_pure(expr));
 
@@ -140,38 +236,40 @@ impl<'a> StmtEvalAnalyzer<'a> {
     let is_global_call = !has_side_effect
       && matches!(&expr.callee, Expression::Identifier(id) if self.is_unresolved_reference(id));
 
-    let mut detail = StmtEvalFlags::from(has_side_effect);
-    detail.set(StmtEvalFlags::PureAnnotation, is_pure_annotated);
-    detail.set(StmtEvalFlags::GlobalVarAccess, is_global_call);
+    let mut facts = StmtEvalFacts::from_tree_shaking_side_effect(has_side_effect);
+    facts.set_order_sensitive_reason(StmtOrderSensitiveReasons::PureAnnotation, is_pure_annotated);
+    facts.set_order_sensitive_reason(StmtOrderSensitiveReasons::GlobalVarAccess, is_global_call);
 
     if !has_side_effect {
-      // Strip the UnknownSideEffect flag from callee since the call itself is known-pure/safe.
-      detail |= self.analyze_expr(&expr.callee) - StmtEvalFlags::UnknownSideEffect;
+      // The call itself is known pure/safe; keep the callee's order-sensitive reasons while
+      // discarding its unknown side-effect marker.
+      facts |= self.analyze_expr(&expr.callee).without_unknown_side_effect();
 
       if is_pure_annotated {
         // Pure-annotated calls bypass Oxc's arg checking, so we must check args
         // through Rolldown's analyzer which has bundler-specific overrides
         // (e.g. import.meta.url is side-effect-free).
         for arg in &expr.arguments {
-          detail |= match arg {
-            Argument::SpreadElement(_) => true.into(),
+          facts |= match arg {
+            Argument::SpreadElement(_) => StmtEvalFacts::from_unknown_side_effect(),
             _ => self.analyze_expr(arg.to_expression()),
           };
-          if detail.has_side_effect_for_tree_shaking() {
+          if facts.has_side_effect_for_tree_shaking() {
             break;
           }
         }
       } else {
-        // Oxc already verified args are side-effect-free; only collect metadata flags.
+        // Oxc already verified args are side-effect-free; keep their order-sensitive reasons while
+        // discarding unknown side-effect markers from this side-effect-free call.
         for arg in &expr.arguments {
           if let Argument::SpreadElement(_) = arg {
             break;
           }
-          detail |= self.analyze_expr(arg.to_expression()) - StmtEvalFlags::UnknownSideEffect;
+          facts |= self.analyze_expr(arg.to_expression()).without_unknown_side_effect();
         }
       }
     }
-    detail
+    facts
   }
 
   fn is_expr_manual_pure_functions(&self, expr: &Expression) -> bool {
@@ -183,12 +281,12 @@ impl<'a> StmtEvalAnalyzer<'a> {
       .is_some_and(|first| manual_pure_functions.contains(first))
   }
 
-  fn analyze_expr(&self, expr: &Expression) -> StmtEvalFlags {
+  fn analyze_expr(&self, expr: &Expression) -> StmtEvalFacts {
     // Peel transparent wrappers (`(x)`, `x as T`, `x satisfies T`, `x!`, `<T>x`, `x<T>`)
     // — they add no runtime semantics, so we recurse into the inner expression.
     let expr = expr.get_inner_expression();
     match expr {
-      // --- Bundler-specific overrides (metadata or custom logic) ---
+      // --- Bundler-specific overrides (order-sensitive reasons or custom logic) ---
       oxc::ast::match_member_expression!(Expression) => {
         self.analyze_member_expr(expr.to_member_expression())
       }
@@ -197,13 +295,13 @@ impl<'a> StmtEvalAnalyzer<'a> {
         // Bundler-specific: CJS `exports.foo = ...` must be checked before Oxc,
         // because Oxc would see a write to an unresolved global and return true.
         if let Some(pure_cjs) = check_pure_cjs_export(self.scope, &assign_expr.left) {
-          return pure_cjs | self.analyze_expr(&assign_expr.right);
+          return StmtEvalFacts::from_tree_shaking_flags(pure_cjs)
+            | self.analyze_expr(&assign_expr.right);
         }
         if assign_expr.may_have_side_effects(self) {
-          return true.into();
+          return StmtEvalFacts::from_unknown_side_effect();
         }
-        // Oxc says side-effect-free; collect GlobalVarAccess metadata.
-        self.collect_write_target_metadata(assign_expr.left.to_simple_assignment_target())
+        self.analyze_side_effect_free_write_target(assign_expr.left.to_simple_assignment_target())
       }
 
       Expression::ChainExpression(chain_expr) => match &chain_expr.expression {
@@ -215,39 +313,43 @@ impl<'a> StmtEvalAnalyzer<'a> {
       },
       Expression::UpdateExpression(update_expr) => {
         if update_expr.may_have_side_effects(self) {
-          return true.into();
+          return StmtEvalFacts::from_unknown_side_effect();
         }
-        // Oxc says side-effect-free; collect GlobalVarAccess metadata.
-        self.collect_write_target_metadata(&update_expr.argument)
+        self.analyze_side_effect_free_write_target(&update_expr.argument)
       }
       Expression::NewExpression(expr) => {
         let has_side_effect = expr.may_have_side_effects(self);
 
-        // METADATA: GlobalVarAccess — constructor is a known global
+        // Order sensitivity: constructor is a known global
         let is_global_constructor = !has_side_effect
           && matches!(&expr.callee, Expression::Identifier(id) if self.is_unresolved_reference(id));
-        // METADATA: PureAnnotation — marked with /*@__PURE__*/
+        // Order sensitivity: marked with /*@__PURE__*/
         let is_pure_annotated = !self.flat_options.ignore_annotations() && expr.pure;
 
-        let mut detail = StmtEvalFlags::from(has_side_effect);
-        detail.set(StmtEvalFlags::GlobalVarAccess, is_global_constructor);
-        detail.set(StmtEvalFlags::PureAnnotation, is_pure_annotated);
+        let mut facts = StmtEvalFacts::from_tree_shaking_side_effect(has_side_effect);
+        facts.set_order_sensitive_reason(
+          StmtOrderSensitiveReasons::GlobalVarAccess,
+          is_global_constructor,
+        );
+        facts
+          .set_order_sensitive_reason(StmtOrderSensitiveReasons::PureAnnotation, is_pure_annotated);
 
         if !has_side_effect {
-          // Oxc already verified args are side-effect-free; only collect metadata flags.
+          // Oxc already verified args are side-effect-free; keep their order-sensitive reasons while
+          // discarding unknown side-effect markers from this side-effect-free constructor.
           for arg in &expr.arguments {
             if let Argument::SpreadElement(_) = arg {
               break;
             }
-            detail |= self.analyze_expr(arg.to_expression()) - StmtEvalFlags::UnknownSideEffect;
+            facts |= self.analyze_expr(arg.to_expression()).without_unknown_side_effect();
           }
         }
-        detail
+        facts
       }
       Expression::CallExpression(expr) => self.analyze_call_expr(expr),
 
       // Transparent wrappers: oxc validates the boolean side-effect status,
-      // we then recurse children to harvest metadata flags
+      // we then recurse children to collect order-sensitive reasons
       // (`PureAnnotation`, `GlobalVarAccess`). Without this, a pure-annotated
       // call buried inside `export default { foo: /* @__PURE__ */ ... }`
       // loses its annotation at the catch-all and the bundler emits the
@@ -289,108 +391,105 @@ impl<'a> StmtEvalAnalyzer<'a> {
       // Covers literals, function/arrow/class expressions (bodies not evaluated
       // here), await/import/yield (inherently side-effectful), tagged-template
       // (handled like a call by oxc; no `pure` flag), JSX, V8 intrinsics, etc.
-      _ => expr.may_have_side_effects(self).into(),
+      _ => StmtEvalFacts::from_tree_shaking_side_effect(expr.may_have_side_effects(self)),
     }
   }
 
   /// Gate-then-fold helper for transparent compound expressions: ask oxc
   /// whether the whole expression has any side effect (fast path, covers
-  /// computed keys / spread reads / etc.), and if not, fold metadata flags
+  /// computed keys / spread reads / etc.), and if not, fold order-sensitive reasons
   /// (`PureAnnotation`, `GlobalVarAccess`) from the child expressions.
   ///
-  /// The trailing `- UnknownSideEffect` is load-bearing: rolldown's analyzer can be
+  /// Removing `UnknownSideEffect` is load-bearing: rolldown's analyzer can be
   /// more conservative than oxc for some sub-expressions (e.g. CJS-export
   /// assignments via [`check_pure_cjs_export`], or future bundler-specific
   /// overrides). Once oxc has certified the parent side-effect-free at the
   /// gate, we trust that judgment for the parent and strip any `UnknownSideEffect`
-  /// that a child contributed — only metadata bits should propagate.
+  /// that a child contributed; order-sensitive reasons should still propagate.
   fn fold_compound<'e>(
     &self,
     expr: &Expression,
     children: impl IntoIterator<Item = &'e Expression<'e>>,
-  ) -> StmtEvalFlags {
+  ) -> StmtEvalFacts {
     if expr.may_have_side_effects(self) {
-      return true.into();
+      return StmtEvalFacts::from_unknown_side_effect();
     }
-    let mut detail = StmtEvalFlags::empty();
+    let mut facts = StmtEvalFacts::default();
     for child in children {
-      detail |= self.analyze_expr(child);
-      if detail.has_side_effect_for_tree_shaking() {
+      facts |= self.analyze_expr(child);
+      if facts.has_side_effect_for_tree_shaking() {
         break;
       }
     }
-    detail - StmtEvalFlags::UnknownSideEffect
+    facts.without_unknown_side_effect()
   }
 
-  fn analyze_var_decl(&self, var_decl: &ast::VariableDeclaration) -> StmtEvalFlags {
+  fn analyze_var_decl(&self, var_decl: &ast::VariableDeclaration) -> StmtEvalFacts {
     match var_decl.kind {
-      VariableDeclarationKind::AwaitUsing => true.into(),
+      VariableDeclarationKind::AwaitUsing => StmtEvalFacts::from_unknown_side_effect(),
       VariableDeclarationKind::Using => self.analyze_using_declarators(&var_decl.declarations),
       _ => {
-        let mut detail = StmtEvalFlags::empty();
+        let mut facts = StmtEvalFacts::default();
         for declarator in &var_decl.declarations {
-          detail |= match &declarator.id {
+          facts |= match &declarator.id {
             BindingPattern::ObjectPattern(_) if self.flat_options.property_read_side_effects() => {
-              true.into()
+              StmtEvalFacts::from_unknown_side_effect()
             }
             BindingPattern::ArrayPattern(pat)
               if pat.elements.iter().any(|p| {
                 p.as_ref().is_some_and(|pat| !matches!(pat, BindingPattern::BindingIdentifier(_)))
               }) =>
             {
-              true.into()
+              StmtEvalFacts::from_unknown_side_effect()
             }
-            _ => {
-              declarator.init.as_ref().map(|init| self.analyze_expr(init)).unwrap_or(false.into())
-            }
+            _ => declarator.init.as_ref().map(|init| self.analyze_expr(init)).unwrap_or_default(),
           };
         }
-        detail
+        facts
       }
     }
   }
 
-  fn analyze_decl(&self, decl: &ast::Declaration) -> StmtEvalFlags {
+  fn analyze_decl(&self, decl: &ast::Declaration) -> StmtEvalFacts {
     match decl {
       ast::Declaration::VariableDeclaration(var_decl) => self.analyze_var_decl(var_decl),
-      _ => decl.may_have_side_effects(self).into(),
+      _ => StmtEvalFacts::from_tree_shaking_side_effect(decl.may_have_side_effects(self)),
     }
   }
 
-  fn analyze_using_declarators(&self, declarators: &[ast::VariableDeclarator]) -> StmtEvalFlags {
-    let mut detail = StmtEvalFlags::empty();
+  fn analyze_using_declarators(&self, declarators: &[ast::VariableDeclarator]) -> StmtEvalFacts {
+    let mut facts = StmtEvalFacts::default();
     for decl in declarators {
-      detail |= decl
+      facts |= decl
         .init
         .as_ref()
         .map(|init| match init {
-          Expression::NullLiteral(_) => false.into(),
+          Expression::NullLiteral(_) => StmtEvalFacts::default(),
           // Side effect detection of identifier is different with other position when as initialization of using declaration.
           // Global variable `undefined` is considered as side effect free.
-          Expression::Identifier(id) => {
-            (!(id.name == "undefined" && self.is_unresolved_reference(id))).into()
-          }
+          Expression::Identifier(id) => StmtEvalFacts::from_tree_shaking_side_effect(
+            !(id.name == "undefined" && self.is_unresolved_reference(id)),
+          ),
           Expression::UnaryExpression(expr) if matches!(expr.operator, UnaryOperator::Void) => {
             self.analyze_expr(&expr.argument)
           }
-          _ => true.into(),
+          _ => StmtEvalFacts::from_unknown_side_effect(),
         })
-        .unwrap_or(StmtEvalFlags::empty());
-      if detail.has_side_effect_for_tree_shaking() {
+        .unwrap_or_default();
+      if facts.has_side_effect_for_tree_shaking() {
         break;
       }
     }
-    detail
+    facts
   }
 
-  fn analyze_identifier(&self, ident_ref: &IdentifierReference) -> StmtEvalFlags {
+  fn analyze_identifier(&self, ident_ref: &IdentifierReference) -> StmtEvalFacts {
     let is_global = self.is_unresolved_reference(ident_ref);
     // Delegate side-effect bool to Oxc (checks known globals, unknown_global_side_effects)
     let has_side_effect = ident_ref.may_have_side_effects(self);
-    let mut detail = StmtEvalFlags::from(has_side_effect);
-    // METADATA: GlobalVarAccess
-    detail.set(StmtEvalFlags::GlobalVarAccess, is_global);
-    detail
+    let mut facts = StmtEvalFacts::from_tree_shaking_side_effect(has_side_effect);
+    facts.set_order_sensitive_reason(StmtOrderSensitiveReasons::GlobalVarAccess, is_global);
+    facts
   }
 
   /// Bundler-specific: module declarations like import/export are treated
@@ -398,13 +497,13 @@ impl<'a> StmtEvalAnalyzer<'a> {
   /// - import/export-all/re-export: side-effect-free (bundler handles them)
   /// - export default: recurse into declaration
   /// - export named with source: side-effect-free
-  fn analyze_module_declaration(&self, decl: &ast::ModuleDeclaration) -> StmtEvalFlags {
+  fn analyze_module_declaration(&self, decl: &ast::ModuleDeclaration) -> StmtEvalFacts {
     match decl {
       ast::ModuleDeclaration::ExportAllDeclaration(_)
       | ast::ModuleDeclaration::ImportDeclaration(_) => {
         // We consider `import ...` has no side effect. However, `import ...` might be rewritten to other statements by the bundler.
         // In that case, we will mark the statement as having side effect in link stage.
-        false.into()
+        StmtEvalFacts::default()
       }
       ast::ModuleDeclaration::ExportDefaultDeclaration(default_decl) => {
         use oxc::ast::ast::ExportDefaultDeclarationKind;
@@ -412,30 +511,30 @@ impl<'a> StmtEvalAnalyzer<'a> {
           decl @ oxc::ast::match_expression!(ExportDefaultDeclarationKind) => {
             self.analyze_expr(decl.to_expression())
           }
-          ast::ExportDefaultDeclarationKind::FunctionDeclaration(_) => false.into(),
+          ast::ExportDefaultDeclarationKind::FunctionDeclaration(_) => StmtEvalFacts::default(),
           ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
-            decl.may_have_side_effects(self).into()
+            StmtEvalFacts::from_tree_shaking_side_effect(decl.may_have_side_effects(self))
           }
-          ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => true.into(),
+          ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
+            StmtEvalFacts::from_unknown_side_effect()
+          }
         }
       }
       ast::ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
         if named_decl.source.is_some() {
-          false.into()
+          StmtEvalFacts::default()
         } else {
-          named_decl
-            .declaration
-            .as_ref()
-            .map(|decl| self.analyze_decl(decl))
-            .unwrap_or(false.into())
+          named_decl.declaration.as_ref().map(|decl| self.analyze_decl(decl)).unwrap_or_default()
         }
       }
       ast::ModuleDeclaration::TSExportAssignment(_)
-      | ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => true.into(),
+      | ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => {
+        StmtEvalFacts::from_unknown_side_effect()
+      }
     }
   }
 
-  pub fn analyze_stmt(&self, stmt: &ast::Statement) -> StmtEvalFlags {
+  pub fn analyze_stmt(&self, stmt: &ast::Statement) -> StmtEvalFacts {
     use oxc::ast::ast::Statement;
     match stmt {
       // Bundler-specific: module declarations
@@ -455,61 +554,57 @@ impl<'a> StmtEvalAnalyzer<'a> {
       Statement::IfStatement(if_stmt) => {
         self.analyze_expr(&if_stmt.test)
           | self.analyze_stmt(&if_stmt.consequent)
-          | if_stmt.alternate.as_ref().map(|s| self.analyze_stmt(s)).unwrap_or(false.into())
+          | if_stmt.alternate.as_ref().map(|s| self.analyze_stmt(s)).unwrap_or_default()
       }
       Statement::ReturnStatement(ret_stmt) => {
-        ret_stmt.argument.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or(false.into())
+        ret_stmt.argument.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or_default()
       }
       Statement::LabeledStatement(labeled_stmt) => self.analyze_stmt(&labeled_stmt.body),
       Statement::TryStatement(try_stmt) => {
-        let mut detail = self.analyze_block(&try_stmt.block);
-        detail |= try_stmt
+        let mut facts = self.analyze_block(&try_stmt.block);
+        facts |= try_stmt
           .handler
           .as_ref()
           .map(|handler| self.analyze_block(&handler.body))
-          .unwrap_or(StmtEvalFlags::empty());
-        detail |= try_stmt
+          .unwrap_or_default();
+        facts |= try_stmt
           .finalizer
           .as_ref()
           .map(|finalizer| self.analyze_block(finalizer))
-          .unwrap_or(StmtEvalFlags::empty());
-        detail
+          .unwrap_or_default();
+        facts
       }
       Statement::SwitchStatement(switch_stmt) => {
-        let mut detail = self.analyze_expr(&switch_stmt.discriminant);
-        if detail.has_side_effect_for_tree_shaking() {
-          return detail;
+        let mut facts = self.analyze_expr(&switch_stmt.discriminant);
+        if facts.has_side_effect_for_tree_shaking() {
+          return facts;
         }
         'outer: for case in &switch_stmt.cases {
-          detail |= case
-            .test
-            .as_ref()
-            .map(|expr| self.analyze_expr(expr))
-            .unwrap_or(StmtEvalFlags::empty());
+          facts |= case.test.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or_default();
           for stmt in &case.consequent {
-            detail |= self.analyze_stmt(stmt);
-            if detail.has_side_effect_for_tree_shaking() {
+            facts |= self.analyze_stmt(stmt);
+            if facts.has_side_effect_for_tree_shaking() {
               break 'outer;
             }
           }
         }
-        detail
+        facts
       }
       // Everything else: delegate to Oxc.
       // This covers Empty, Continue, Break, Debugger, For/ForIn/ForOf, Throw, With.
-      _ => stmt.may_have_side_effects(self).into(),
+      _ => StmtEvalFacts::from_tree_shaking_side_effect(stmt.may_have_side_effects(self)),
     }
   }
 
-  fn analyze_block(&self, block: &ast::BlockStatement) -> StmtEvalFlags {
-    let mut detail = StmtEvalFlags::empty();
+  fn analyze_block(&self, block: &ast::BlockStatement) -> StmtEvalFacts {
+    let mut facts = StmtEvalFacts::default();
     for stmt in &block.body {
-      detail |= self.analyze_stmt(stmt);
-      if detail.has_side_effect_for_tree_shaking() {
+      facts |= self.analyze_stmt(stmt);
+      if facts.has_side_effect_for_tree_shaking() {
         break;
       }
     }
-    detail
+    facts
   }
 }
 
@@ -643,7 +738,30 @@ mod test {
       .body
       .iter()
       .map(|stmt| {
-        StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None).analyze_stmt(stmt)
+        StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
+          .analyze_stmt(stmt)
+          .tree_shaking_flags()
+      })
+      .collect_vec()
+  }
+
+  fn get_stmt_order_sensitivity(code: &str) -> Vec<bool> {
+    let source_type = SourceType::tsx();
+    let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
+    let semantic = EcmaAst::make_semantic(ast.program());
+    let scoping = semantic.into_scoping();
+    let ast_scopes = AstScopes::new(scoping);
+
+    let options = Arc::new(NormalizedBundlerOptions::default());
+    let flags = FlatOptions::from_shared_options(&options);
+    ast
+      .program()
+      .body
+      .iter()
+      .map(|stmt| {
+        StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
+          .analyze_stmt(stmt)
+          .is_order_sensitive()
       })
       .collect_vec()
   }
@@ -1138,7 +1256,11 @@ mod test {
 
     assert_eq!(
       get_stmt_eval_flags("let a = Proxy; let a = JSON.stringify"),
-      vec![StmtEvalFlags::GlobalVarAccess, StmtEvalFlags::GlobalVarAccess]
+      vec![StmtEvalFlags::empty(), StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("let a = Proxy; let a = JSON.stringify"),
+      vec![true, true]
     );
     // should have side effects other global member expr access
     assert!(has_side_effect_for_tree_shaking("let a = Object.test"));
@@ -1147,13 +1269,18 @@ mod test {
 
     assert_eq!(
       get_stmt_eval_flags("let a = Reflect.something"),
-      vec![StmtEvalFlags::UnknownSideEffect | StmtEvalFlags::GlobalVarAccess]
+      vec![StmtEvalFlags::UnknownSideEffect]
     );
+    assert_eq!(get_stmt_order_sensitivity("let a = Reflect.something"), vec![true]);
 
     // sideEffectful Global variable access with pure annotation
     assert_eq!(
       get_stmt_eval_flags("let a = /*@__PURE__ */ Reflect.something()"),
-      vec![StmtEvalFlags::GlobalVarAccess | StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("let a = /*@__PURE__ */ Reflect.something()"),
+      vec![true]
     );
   }
 
@@ -1182,67 +1309,122 @@ mod test {
   fn test_pure_annotation_propagates_through_compound_expr() {
     assert_eq!(
       get_stmt_eval_flags("export default { foo: /* @__PURE__ */ (() => globalValue)() }"),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("export default { foo: /* @__PURE__ */ (() => globalValue)() }"),
+      vec![true]
     );
     assert_eq!(
       get_stmt_eval_flags("export default [/* @__PURE__ */ (() => globalValue)()]"),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("export default [/* @__PURE__ */ (() => globalValue)()]"),
+      vec![true]
     );
     assert_eq!(
       get_stmt_eval_flags("export default (0, /* @__PURE__ */ (() => globalValue)())"),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("export default (0, /* @__PURE__ */ (() => globalValue)())"),
+      vec![true]
     );
     assert_eq!(
       get_stmt_eval_flags("export default true ? /* @__PURE__ */ (() => globalValue)() : null"),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity(
+        "export default true ? /* @__PURE__ */ (() => globalValue)() : null"
+      ),
+      vec![true]
     );
     assert_eq!(
       get_stmt_eval_flags("export default true && /* @__PURE__ */ (() => globalValue)()"),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("export default true && /* @__PURE__ */ (() => globalValue)()"),
+      vec![true]
     );
     // BinaryExpression `===` does not ToPrimitive-coerce, so oxc returns
-    // no own side effect and the metadata harvest can propagate.
+    // no own side effect and the order-sensitive reason can propagate.
     assert_eq!(
       get_stmt_eval_flags("export default /* @__PURE__ */ (() => 2)() === 1"),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("export default /* @__PURE__ */ (() => 2)() === 1"),
+      vec![true]
     );
     // `typeof` never has side effects per spec.
     assert_eq!(
       get_stmt_eval_flags("export default typeof /* @__PURE__ */ (() => true)()"),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("export default typeof /* @__PURE__ */ (() => true)()"),
+      vec![true]
     );
     // Computed key with a pure-annotated call must propagate too.
     assert_eq!(
       get_stmt_eval_flags("export default { [/* @__PURE__ */ (() => 'k')()]: 1 }"),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("export default { [/* @__PURE__ */ (() => 'k')()]: 1 }"),
+      vec![true]
     );
     // GlobalVarAccess on a bare member-expr buried in a compound wrapper
     // must also propagate (same mechanism, different flag).
-    assert_eq!(get_stmt_eval_flags("let a = { x: Proxy }"), vec![StmtEvalFlags::GlobalVarAccess]);
-    assert_eq!(
-      get_stmt_eval_flags("let a = [JSON.stringify]"),
-      vec![StmtEvalFlags::GlobalVarAccess]
-    );
+    assert_eq!(get_stmt_eval_flags("let a = { x: Proxy }"), vec![StmtEvalFlags::empty()]);
+    assert_eq!(get_stmt_order_sensitivity("let a = { x: Proxy }"), vec![true]);
+    assert_eq!(get_stmt_eval_flags("let a = [JSON.stringify]"), vec![StmtEvalFlags::empty()]);
+    assert_eq!(get_stmt_order_sensitivity("let a = [JSON.stringify]"), vec![true]);
     // Nested compound: array inside object inside object — propagation must
     // walk through every layer.
     assert_eq!(
       get_stmt_eval_flags("export default { a: { b: [/* @__PURE__ */ (() => globalValue)()] } }"),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity(
+        "export default { a: { b: [/* @__PURE__ */ (() => globalValue)()] } }"
+      ),
+      vec![true]
     );
     // TS wrapper passthroughs (`SourceType::tsx()` in test helper).
     assert_eq!(
       get_stmt_eval_flags("export default (/* @__PURE__ */ (() => globalValue)() as string)"),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity(
+        "export default (/* @__PURE__ */ (() => globalValue)() as string)"
+      ),
+      vec![true]
     );
     assert_eq!(
       get_stmt_eval_flags(
         "export default (/* @__PURE__ */ (() => globalValue)() satisfies string)"
       ),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity(
+        "export default (/* @__PURE__ */ (() => globalValue)() satisfies string)"
+      ),
+      vec![true]
     );
     assert_eq!(
       get_stmt_eval_flags("export default /* @__PURE__ */ (() => globalValue)()!"),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("export default /* @__PURE__ */ (() => globalValue)()!"),
+      vec![true]
     );
     // TSInstantiationExpression `f<T>` — must be peeled like the other TS
     // wrappers. (`<T>x` TSTypeAssertion is ambiguous with JSX under tsx()
@@ -1250,7 +1432,13 @@ mod test {
     // peels it identically in non-tsx contexts.)
     assert_eq!(
       get_stmt_eval_flags("export default /* @__PURE__ */ ((() => globalValue) as any)<string>()"),
-      vec![StmtEvalFlags::PureAnnotation]
+      vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity(
+        "export default /* @__PURE__ */ ((() => globalValue) as any)<string>()"
+      ),
+      vec![true]
     );
   }
 
@@ -1263,13 +1451,21 @@ mod test {
       vec![StmtEvalFlags::empty()]
     );
     assert_eq!(
+      get_stmt_order_sensitivity("export default () => /* @__PURE__ */ pureCall()"),
+      vec![false]
+    );
+    assert_eq!(
       get_stmt_eval_flags("export default { foo: () => /* @__PURE__ */ pureCall() }"),
       vec![StmtEvalFlags::empty()]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("export default { foo: () => /* @__PURE__ */ pureCall() }"),
+      vec![false]
     );
   }
 
   // A real side effect anywhere in a compound expression must surface as
-  // Unknown — the new metadata-propagation arms must not weaken this.
+  // Unknown — the order-sensitive reason propagation arms must not weaken this.
   #[test]
   fn test_compound_expr_side_effectful_operand_still_unknown() {
     assert!(has_side_effect_for_tree_shaking("let a = { foo: globalCall() }"));

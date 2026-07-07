@@ -368,7 +368,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
       self.visit_statement(stmt);
       if pre_node_id_len != self.side_effect_free_call_expr_node_ids.len() {
         let stmt_info_idx = StmtInfoIdx::new(idx + 1);
-        let stmt_eval_flags = StmtEvalAnalyzer::new(
+        let stmt_eval_facts = StmtEvalAnalyzer::new(
           self.immutable_ctx.ast_scope,
           self.immutable_ctx.flat_options,
           self.immutable_ctx.options,
@@ -376,7 +376,9 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
           Some(self.immutable_ctx.namespace_object_symbol_ids),
         )
         .analyze_stmt(stmt);
-        self.stmt_eval_flags_mutations.insert(stmt_info_idx, stmt_eval_flags);
+        // Cross-module optimization only refreshes tree-shaking flags. Module-level
+        // execution-order sensitivity is recorded during AST scanning.
+        self.stmt_eval_flags_mutations.insert(stmt_info_idx, stmt_eval_facts.tree_shaking_flags());
       }
       self.toplevel_stmt_idx += 1;
     }

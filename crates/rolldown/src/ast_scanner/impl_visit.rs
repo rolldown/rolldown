@@ -12,8 +12,8 @@ use oxc::{
 };
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  MemberExprObjectReferencedType, MemberExprRef, OutputFormat, RUNTIME_MODULE_KEY, StmtEvalFlags,
-  StmtInfoIdx, StmtInfoMeta, SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
+  MemberExprObjectReferencedType, MemberExprRef, OutputFormat, RUNTIME_MODULE_KEY, StmtInfoIdx,
+  StmtInfoMeta, SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
@@ -80,7 +80,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         None,
         Some(&self.namespace_object_symbol_ids),
       );
-      self.current_stmt_info.eval_flags = analyzer.analyze_stmt(stmt);
+      let stmt_eval_facts = analyzer.analyze_stmt(stmt);
+      self.current_stmt_info.eval_flags = stmt_eval_facts.tree_shaking_flags();
 
       #[cfg(debug_assertions)]
       {
@@ -88,11 +89,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       }
 
       self.visit_statement(stmt);
-      if self.current_stmt_info.eval_flags.intersects(
-        StmtEvalFlags::UnknownSideEffect
-          | StmtEvalFlags::GlobalVarAccess
-          | StmtEvalFlags::PureAnnotation,
-      ) {
+      if stmt_eval_facts.is_order_sensitive() {
         self.result.ecma_view_meta.insert(EcmaViewMeta::ExecutionOrderSensitive);
       }
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));

@@ -444,22 +444,68 @@ impl GenerateStage<'_> {
     if module_idx == self.link_output.runtime.id() {
       return false;
     }
-    self.link_output.module_table[module_idx].as_normal().is_some_and(|module| {
-      let meta = &self.link_output.metas[module.idx];
-      meta.is_included
-        && module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
-        && self.link_output.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt().any(
-          |(stmt_info_idx, stmt_info)| {
-            meta.stmt_info_included.has_bit(stmt_info_idx)
-              && stmt_info.eval_flags.intersects(
-                StmtEvalFlags::UnknownSideEffect
-                  | StmtEvalFlags::GlobalVarAccess
-                  | StmtEvalFlags::PureAnnotation
-                  | StmtEvalFlags::ImportBindingRead,
-              )
-          },
-        )
-    })
+    let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+      return false;
+    };
+    let meta = &self.link_output.metas[module.idx];
+    if !meta.is_included {
+      return false;
+    }
+
+    let has_intrinsic_effect = module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
+      && self.link_output.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt().any(
+        |(stmt_info_idx, stmt_info)| {
+          meta.stmt_info_included.has_bit(stmt_info_idx)
+            && stmt_info.eval_flags.intersects(
+              StmtEvalFlags::UnknownSideEffect
+                | StmtEvalFlags::GlobalVarAccess
+                | StmtEvalFlags::PureAnnotation
+                | StmtEvalFlags::ImportBindingRead,
+            )
+        },
+      );
+
+    has_intrinsic_effect || self.eagerly_triggers_interop_side_effect(module_idx)
+  }
+
+  /// A top-level `import` of an interop-wrapped importee (a CJS module, or an ESM module reached via
+  /// `require`) lowers to an eager `require_*()` / `__toESM(require_*())` call inside *this* module's
+  /// own body. When that importee has side effects, this module's body carries them at eval time,
+  /// even though its own statements look inert (e.g. a bare `import './cjs'` pass-through).
+  ///
+  /// The interop wrapper controls *how* the importee is represented, not *when* it runs: its trigger
+  /// stays inline in the importer's chunk body, so code splitting can displace it. The importee
+  /// itself is not order-wrap-eligible (it is already interop-wrapped), so the only way to defer its
+  /// trigger is to order-wrap the carrier hosting it. Marking the carrier order-sensitive lets the
+  /// existing premature / suffix / importer closure decide that wrap; without it the carrier is
+  /// invisible and a displaced CJS side effect goes unwrapped (silent misorder under strict order).
+  fn eagerly_triggers_interop_side_effect(&self, module_idx: ModuleIdx) -> bool {
+    let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+      return false;
+    };
+    let meta = &self.link_output.metas[module_idx];
+    if !meta.is_included {
+      return false;
+    }
+    self.link_output.stmt_infos[module_idx].iter_enumerated_without_namespace_stmt().any(
+      |(stmt_info_idx, stmt_info)| {
+        meta.stmt_info_included.has_bit(stmt_info_idx)
+          && stmt_info.import_records.iter().any(|rec_idx| {
+            let rec = &module.import_records[*rec_idx];
+            // Only static `import` records run eagerly at the importer's position; a `require`
+            // inside a function body is call-time and must not be treated as a top-level trigger.
+            rec.kind == ImportKind::Import
+              && rec.resolved_module.is_some_and(|importee_idx| {
+                self.link_output.module_table[importee_idx].as_normal().is_some_and(|importee| {
+                  !matches!(
+                    self.link_output.metas[importee_idx].original_wrap_kind(),
+                    WrapKind::None
+                  ) && importee.side_effects.has_side_effects()
+                })
+              })
+          })
+      },
+    )
   }
 
   fn is_order_wrap_eligible(&self, module_idx: ModuleIdx) -> bool {

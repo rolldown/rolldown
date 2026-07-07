@@ -1,0 +1,95 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import "./p.js";
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+## main2.js
+
+```js
+import { t as init_p } from "./p.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region e.js
+console.log("E");
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_p();
+		console.log("MAIN");
+	})))();
+}
+//#endregion
+export { init_main as t };
+
+```
+
+## p.js
+
+```js
+import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region c.js
+var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	console.log("C");
+	module.exports = {};
+}));
+function init_p() {
+	return (init_p = __esmMin((() => {
+		require_c();
+	})))();
+}
+//#endregion
+export { init_p as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+//#endregion
+export { __esmMin as n, __commonJSMin as t };
+
+```
+
+## second.js
+
+```js
+import "./p.js";
+import { t as init_second } from "./second2.js";
+init_second();
+
+```
+
+## second2.js
+
+```js
+import { t as init_p } from "./p.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region second.js
+function init_second() {
+	return (init_second = __esmMin((() => {
+		init_p();
+	})))();
+}
+//#endregion
+export { init_second as t };
+
+```

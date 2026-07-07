@@ -406,11 +406,21 @@ static NEXT_BLOCKING_JOB_ID: AtomicU64 = AtomicU64::new(1);
 thread_local! {
   static DEPENDENCY_CLAIM_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
     const { std::cell::RefCell::new(None) };
+  static CURRENT_THREAD_DISPATCH_CLAIM_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+    const { std::cell::RefCell::new(None) };
 }
 
 #[cfg(all(test, not(target_family = "wasm")))]
 fn run_dependency_claim_test_hook() {
   if let Some(hook) = DEPENDENCY_CLAIM_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_current_thread_dispatch_claim_test_hook() {
+  if let Some(hook) = CURRENT_THREAD_DISPATCH_CLAIM_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
     hook();
   }
 }
@@ -2005,10 +2015,12 @@ impl CurrentThreadExecutor {
     self: &Arc<Self>,
     next_dispatch: impl FnOnce() -> u64,
   ) -> CurrentThreadDispatchRequest {
+    let scheduler =
+      self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     if self.cancelling_failed_dispatch.load(Ordering::Acquire) {
       return CurrentThreadDispatchRequest::Unavailable;
     }
-    if self.dispatch_pending.load(Ordering::Acquire) != 0 {
+    if self.draining.load(Ordering::Acquire) || self.dispatch_pending.load(Ordering::Acquire) != 0 {
       return CurrentThreadDispatchRequest::Coalesced;
     }
     let dispatch = next_dispatch();
@@ -2019,6 +2031,7 @@ impl CurrentThreadExecutor {
     {
       return CurrentThreadDispatchRequest::Coalesced;
     }
+    drop(scheduler);
     if (self.task_dispatch)(dispatch) {
       return CurrentThreadDispatchRequest::Accepted;
     }
@@ -2039,6 +2052,11 @@ impl CurrentThreadExecutor {
   }
 
   fn try_admit_host_turn(&self, dispatch: u64) -> bool {
+    let _scheduler =
+      self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if self.draining.load(Ordering::Acquire) {
+      return false;
+    }
     if dispatch == 0
       || self
         .dispatch_pending
@@ -2047,9 +2065,12 @@ impl CurrentThreadExecutor {
     {
       return false;
     }
+    #[cfg(all(test, not(target_family = "wasm")))]
+    run_current_thread_dispatch_claim_test_hook();
     let _ =
       self.recovery_dispatch.compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire);
-    self.draining.compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed).is_ok()
+    self.draining.store(true, Ordering::Release);
+    true
   }
 
   #[cfg(test)]
@@ -2114,8 +2135,12 @@ impl CurrentThreadExecutor {
     // A previously accepted host callback may have been discarded when its
     // napi env died. A newly registered host supersedes that stale dispatch;
     // duplicate callbacks are harmless because `draining` serializes polls.
-    self.recovery_dispatch.store(0, Ordering::Release);
-    self.dispatch_pending.store(0, Ordering::Release);
+    {
+      let _scheduler =
+        self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      self.recovery_dispatch.store(0, Ordering::Release);
+      self.dispatch_pending.store(0, Ordering::Release);
+    }
     self.request_drain_if_work_remains();
   }
 
@@ -6370,6 +6395,7 @@ pub fn metrics() -> RuntimeMetricsSnapshot {
 mod tests {
   use super::*;
 
+  static CURRENT_THREAD_ADMISSION_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
   static CURRENT_THREAD_BUDGET_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
 
   thread_local! {
@@ -6489,6 +6515,11 @@ mod tests {
 
   fn count_current_thread_budget_host_dispatch(_dispatch: u64) -> bool {
     CURRENT_THREAD_BUDGET_HOST_DISPATCHES.fetch_add(1, Ordering::SeqCst);
+    true
+  }
+
+  fn count_current_thread_admission_host_dispatch(_dispatch: u64) -> bool {
+    CURRENT_THREAD_ADMISSION_HOST_DISPATCHES.fetch_add(1, Ordering::SeqCst);
     true
   }
 
@@ -6987,6 +7018,77 @@ mod tests {
 
     executor.drive_host_turn_for_dispatch(new_host_dispatch);
     assert_eq!(futures::executor::block_on(task), 17);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_host_admission_serializes_dispatch_publication() {
+    use std::sync::mpsc;
+
+    CURRENT_THREAD_ADMISSION_HOST_DISPATCHES.store(0, Ordering::SeqCst);
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      count_current_thread_admission_host_dispatch,
+    ));
+    let first_scheduler = Arc::clone(&executor);
+    let (first_runnable, first_task) =
+      async_task::spawn(async {}, move |runnable| first_scheduler.schedule(runnable));
+    first_task.detach();
+    executor.schedule(first_runnable);
+    let dispatch = current_thread_dispatch(&executor);
+    assert_eq!(CURRENT_THREAD_ADMISSION_HOST_DISPATCHES.load(Ordering::SeqCst), 1);
+
+    let (claimed_tx, claimed_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let driver_executor = Arc::clone(&executor);
+    let driver = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_CLAIM_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          claimed_tx.send(()).unwrap();
+          release_rx.recv().unwrap();
+        }));
+      });
+      driver_executor.drive_host_turn_for_dispatch(dispatch);
+    });
+    claimed_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+
+    let second_ran = Arc::new(AtomicBool::new(false));
+    let second_ran_task = Arc::clone(&second_ran);
+    let scheduling_executor = Arc::clone(&executor);
+    let (scheduled_tx, scheduled_rx) = mpsc::channel();
+    let scheduling = std::thread::spawn(move || {
+      let scheduler = Arc::clone(&scheduling_executor);
+      let (runnable, task) = async_task::spawn(
+        async move {
+          second_ran_task.store(true, Ordering::SeqCst);
+        },
+        move |runnable| scheduler.schedule(runnable),
+      );
+      task.detach();
+      scheduling_executor.schedule(runnable);
+      scheduled_tx.send(()).unwrap();
+    });
+
+    assert!(
+      scheduled_rx.recv_timeout(Duration::from_millis(100)).is_err(),
+      "dispatch publication must wait until host admission publishes its draining role"
+    );
+    assert_eq!(
+      CURRENT_THREAD_ADMISSION_HOST_DISPATCHES.load(Ordering::SeqCst),
+      1,
+      "the admission gap must not publish a duplicate host dispatch"
+    );
+
+    release_tx.send(()).unwrap();
+    scheduled_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    scheduling.join().unwrap();
+    driver.join().unwrap();
+    if !second_ran.load(Ordering::SeqCst) {
+      executor.drive_host_turn();
+    }
+    assert!(second_ran.load(Ordering::SeqCst));
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
   }
 
   #[test]

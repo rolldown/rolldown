@@ -153,6 +153,10 @@ binary.
   another process-global identity; callers that race after both observing zero
   still resolve through the exact-capability compare-exchange. Every accepted
   host dispatch carries a globally unique, nonzero capability.
+  Dispatch publication and host-turn admission are serialized by the
+  scheduler-idle mutex. Admission consumes the pending capability and publishes
+  the draining role before releasing that mutex, so a wake cannot observe the
+  intermediate zero-capability state and publish a duplicate host turn.
   The controller atomically consumes that exact capability and claims the
   executor's RAII host-turn role while holding the lifecycle mutex; shutdown
   cannot transition from that generation's `Running` state without either

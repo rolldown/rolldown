@@ -6,6 +6,7 @@ pub mod impl_visit;
 mod import_analyzer;
 mod new_url;
 pub mod stmt_eval_analyzer;
+mod top_level_import_read;
 
 use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, try_extract_const_literal};

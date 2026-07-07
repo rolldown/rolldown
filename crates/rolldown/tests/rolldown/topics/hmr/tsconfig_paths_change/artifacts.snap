@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region a.ts
+var a_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+__rolldown_runtime__.createModuleHotContext("a.ts");
+__rolldown_runtime__.registerModule("a.ts", { exports: a_exports });
+const value = "from-a";
+//#endregion
+//#region main.ts
+var main_exports = /* @__PURE__ */ __exportAll({ result: () => result });
+__rolldown_runtime__.createModuleHotContext("main.ts");
+__rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
+const result = value;
+//#endregion
+export { result };
+
+```
+
+# HMR Step 0
+
+## Meta
+
+- update type: full-reload
+- reason: tsconfig change
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region b.ts
+var b_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+__rolldown_runtime__.createModuleHotContext("b.ts");
+__rolldown_runtime__.registerModule("b.ts", { exports: b_exports });
+const value = "from-b";
+//#endregion
+//#region main.ts
+var main_exports = /* @__PURE__ */ __exportAll({ result: () => result });
+__rolldown_runtime__.createModuleHotContext("main.ts");
+__rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
+const result = value;
+//#endregion
+export { result };
+
+```

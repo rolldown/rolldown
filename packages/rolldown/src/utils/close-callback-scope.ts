@@ -122,11 +122,12 @@ export class CloseCallbackScope {
   #invoke<T>(invocation: CloseCallbackInvocation, callback: () => T): T {
     try {
       const result = callback();
-      if (!isPromiseLike(result)) {
+      const then = getThen(result);
+      if (!then) {
         invocation.active = false;
         return result;
       }
-      return Promise.resolve(result).finally(() => {
+      return assimilateThenable(result, then).finally(() => {
         invocation.active = false;
       }) as T;
     } catch (error) {
@@ -148,9 +149,55 @@ function hasBuiltinPluginName(value: object): boolean {
   return typeof descriptor?.value === 'string' && descriptor.value.startsWith('builtin:');
 }
 
-function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
-  return (
-    ((typeof value === 'object' && value !== null) || typeof value === 'function') &&
-    typeof Reflect.get(value, 'then') === 'function'
+function getThen(value: unknown): Function | undefined {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
+    return;
+  }
+  const then = Reflect.get(value, 'then');
+  return typeof then === 'function' ? then : undefined;
+}
+
+function assimilateThenable(value: unknown, then: Function): Promise<unknown> {
+  // Match Promise.resolve's deferred then invocation without reading a
+  // user-controlled getter a second time. Box each resolution so the native
+  // Promise algorithm cannot recursively assimilate a cyclic user thenable.
+  const thenableChain = new Set<object>([value as object]);
+  return invokeThenable(value, then, thenableChain).then(resolveThenable);
+}
+
+function invokeThenable(
+  value: unknown,
+  then: Function,
+  thenableChain: Set<object>,
+): Promise<BoxedThenableResolution> {
+  return Promise.resolve().then(
+    () =>
+      new Promise((resolve, reject) => {
+        Reflect.apply(then, value, [
+          (resolved: unknown) => resolve({ thenableChain, value: resolved }),
+          reject,
+        ]);
+      }),
   );
+}
+
+function resolveThenable({ thenableChain, value }: BoxedThenableResolution): unknown {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
+    return value;
+  }
+  if (thenableChain.has(value)) {
+    throw new TypeError('Thenable cycle detected while settling a callback result');
+  }
+
+  const then = Reflect.get(value, 'then');
+  if (typeof then !== 'function') return value;
+
+  const nextThenableChain = new Set(thenableChain);
+  nextThenableChain.add(value);
+  return invokeThenable(value, then, nextThenableChain).then(resolveThenable);
+}
+
+interface BoxedThenableResolution {
+  thenableChain: Set<object>;
+  value: unknown;
 }

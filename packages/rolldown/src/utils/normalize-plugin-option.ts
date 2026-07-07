@@ -7,12 +7,25 @@ import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import type { RolldownOutputPlugin, RolldownPlugin } from '../plugin';
 import { asyncFlatten } from './async-flatten';
+import type { CloseCallbackScope } from './close-callback-scope';
 
 export const normalizePluginOption: {
-  (plugins: OutputOptions['plugins']): Promise<RolldownOutputPlugin[]>;
-  (plugins: InputOptions['plugins']): Promise<RolldownPlugin[]>;
-  (plugins: unknown): Promise<any[]>;
-} = async (plugins: any) => (await asyncFlatten([plugins])).filter(Boolean);
+  (
+    plugins: OutputOptions['plugins'],
+    closeCallbackScope?: CloseCallbackScope,
+  ): Promise<RolldownOutputPlugin[]>;
+  (
+    plugins: InputOptions['plugins'],
+    closeCallbackScope?: CloseCallbackScope,
+  ): Promise<RolldownPlugin[]>;
+  (plugins: unknown, closeCallbackScope?: CloseCallbackScope): Promise<any[]>;
+} = async (plugins: any, closeCallbackScope?: CloseCallbackScope) =>
+  (
+    await asyncFlatten(
+      [plugins],
+      closeCallbackScope ? (callback) => closeCallbackScope.run(callback) : undefined,
+    )
+  ).filter(Boolean);
 
 export function checkOutputPluginOption(
   plugins: RolldownOutputPlugin[],

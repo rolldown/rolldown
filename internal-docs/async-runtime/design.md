@@ -81,9 +81,12 @@ The existing Tokio runtime remains the default and is selected by the
 
 4. **Work classes receive bounded service.** Runnable locality remains the
    normal priority, but a continuously hot runnable stream yields to the
-   blocking FIFO after a fixed quantum, and exhausting the LIFO budget forces
-   one shared-FIFO turn even if polling the awaited future immediately refills
-   the local slot. The timer timekeeper drains runnables only; that role remains
+   blocking FIFO after a fixed quantum. A `block_on` driver gives its live exact
+   blocking dependency first claim on that forced turn, including when the
+   normal blocking cap is saturated; unrelated FIFO work cannot displace the
+   dependency the driver is awaiting. Exhausting the LIFO budget forces one
+   shared-FIFO turn even if polling the awaited future immediately refills the
+   local slot. The timer timekeeper drains runnables only; that role remains
    runnable-only through nested `block_on`, fires due timers before each nested
    runnable turn, and never enters a potentially unbounded blocking closure.
 
@@ -100,13 +103,17 @@ The existing Tokio runtime remains the default and is selected by the
    worker count, and blocking concurrency may be configured from the binding
    API or environment before the first async call. Lazy startup makes top-level
    configuration possible without changing module registration order: napi's
-   initial lifecycle `start` leaves backend creation lazy. Once the backend is
-   created, or shutdown begins, configuration remains frozen. Submissions
-   during `Stopping` and after shutdown are rejected until `start` creates the
-   next backend. Partial binding updates merge, validate, and commit while
-   holding the controller mutex, so concurrent calls serialize against the
-   latest committed options instead of overwriting disjoint fields from stale
-   snapshots. A rejected candidate leaves the prior configuration unchanged.
+   initial lifecycle `start` leaves backend creation lazy. Once a backend is
+   created, configuration remains frozen across its shutdown and every later
+   generation. A zero-work environment teardown preserves the pre-first-use
+   window: shutdown enters a non-restartable zero-backend stopping state until
+   rejected user destructors quiesce, then records stopped-before-first-use
+   without creating a backend. The next lifecycle `start` restores lazy
+   `Initial`. Submissions while stopped are rejected until that start. Partial
+   binding updates merge, validate, and commit while holding the controller
+   mutex, so concurrent calls serialize against the latest committed options
+   instead of overwriting disjoint fields from stale snapshots. A rejected
+   candidate leaves the prior configuration unchanged.
 
 7. **Lifecycle transitions linearize with submission and generations do not
    overlap.** Backend acquisition, explicit start, and shutdown share one
@@ -120,15 +127,62 @@ The existing Tokio runtime remains the default and is selected by the
    Shutdown closes and drain-fires timers, wakes every runtime-owned `block_on`
    parker, and scopes queued/rejected destruction to the retiring generation.
    Rejected convenience submissions hold the lifecycle transition until their
-   contained destructor finishes, so restart cannot expose a new generation to
-   destructor re-entry. Public `block_on` keeps the same work and generation
-   guards until its erased future has been destroyed after an early stop.
+   contained destructor finishes, including when construction of the first
+   backend failed. Initial and already-stopped shutdown first enter an explicit
+   zero-backend stopping state; concurrent start and configuration remain
+   closed until the initiating shutdown publishes its final stopped state.
+   Reentrant shutdown from the destructor fails instead of waiting on itself,
+   so restart cannot expose a new generation to destructor re-entry. Accepted
+   async and blocking submissions likewise keep
+   their generation registration outside compiler-generated capture drop order:
+   if shutdown closes an executor queue after controller admission, user
+   captures are destroyed before the registration retires. Public `block_on`
+   keeps the same work and generation guards until its erased future has been
+   destroyed after an early stop. If backend acquisition rejects an owned
+   `block_on` input, its destruction is registered with the same lifecycle
+   barrier used by rejected convenience submissions, so first-backend retry,
+   shutdown, and restart cannot overlap that destructor. The driven future is
+   also held behind the scheduler's contained-drop wrapper, preventing a poll
+   panic plus a panicking future destructor from aborting an unwind-enabled
+   native process.
    CurrentThread host turns are scheduler work until their complete
    `Runnable::run` returns, including detached task-output destruction, so
    shutdown and restart cannot overlap a host callback from the old generation.
-   CurrentThread blocking panic payloads are likewise converted and destroyed
-   before their guards retire, so payload destructors cannot re-enter a newer
-   generation or shut down the generation that is still executing them.
+   Every queued host callback carries a globally unique, nonzero dispatch
+   capability. Callback admission atomically consumes that exact capability
+   and claims the executor's scheduler role while the controller lifecycle
+   mutex still proves its generation is `Running`.
+   Stable scheduler identities fail closed before `u64` reuse. Generation,
+   executor, blocking-job/owner/reservation, host-registration, and timer
+   identities participate in stale-handle rejection or indexed lookup, so
+   wrapping any of them would turn an impossible exhaustion event into an ABA
+   authorization bug.
+   If the JavaScript host cannot queue the requested fresh turn, it cancels
+   only that accepted dispatch capability. Cancellation never polls or
+   redispatches inline from the failing callback; a later wake or host
+   registration may request a replacement turn.
+   Shutdown therefore either transitions first and rejects the callback, or
+   observes the claimed role and waits for it. A delayed callback from an older
+   generation, or a superseded callback from the same generation, is a no-op
+   and cannot drain replacement work.
+   Scheduler-owned blocking execution retains the active generation through
+   result delivery and caught panic-payload destruction, including exact
+   owner-lane lending. Payload destructors therefore cannot re-enter a newer
+   generation or shut down the generation that is still executing them. Every
+   successful result retained by a join handle, including queued blocking and
+   immediate CurrentThread results, remains tagged with its producing
+   generation until a poll transfers ownership to the caller. Destruction of an
+   unpolled old-generation result re-enters that generation, and controller
+   entry rejects its submission or lifecycle calls once another generation is
+   running or stopping.
+   Generation quiescence does not prove that every externally cloned task
+   waker has been dropped: its wake, clone, and drop vtable can remain callable
+   after the task future and all runtime-owned workers retire. Native
+   async-runtime builds therefore deliberately retain the addon image. After a
+   module that registered a custom backend exports successfully, napi-rs pins
+   its native image permanently. This guarantee is independent of Tokio being
+   enabled and independent of runtime-generation cleanup; failed module loads
+   still roll back without retention.
    User-owned destructors and timer wakers are isolated during shutdown. Caught
    panic payloads are dropped under a second unwind boundary; only the nested
    payload produced by a hostile payload destructor is quarantined, so normal
@@ -137,10 +191,21 @@ The existing Tokio runtime remains the default and is selected by the
    cleanup callback. The deferred-destruction worker uses the same boundary so
    it cannot die and discard queued jobs while leaving their pending counts
    permanently registered.
+   Deadlock-detection durations that cannot be represented as an `Instant`
+   deadline are treated as effectively unbounded. Idle drivers remain
+   wakeable, and the same rule keeps an armed host-timer wait live, instead of
+   allowing oversized environment configuration to panic or self-deadlock the
+   scheduler.
    Threaded-WASI JavaScript ownership follows the same rule across host realms:
    every public async operation receives a native RAII token, and a restart
    waits off the JavaScript thread for the previous Tokio generation to retire.
    No realm-local "first owner" may stand in for process-global ownership.
+   Bindings from the preceding implicit-owner protocol fail closed instead of
+   attempting to coordinate that single owner through realm-local JavaScript
+   state.
+   JavaScript close single-flight state is published before invoking cleanup,
+   so synchronous re-entry joins the original lifecycle attempt rather than
+   creating a second owner-release or native-close sequence.
    Environment teardown cancels pending acquisition waits, while native token
    finalization closes the gap between async-work completion and JavaScript
    delivery. Once generation shutdown begins, stop outranks queued work and
@@ -153,8 +218,11 @@ The existing Tokio runtime remains the default and is selected by the
    Tokio runtime shutdown does. The complete async-task generator is held in a
    manually-dropped containment wrapper because async-task aborts the process if
    a future destructor unwinds; detached outputs use the same containment before
-   async-task owns their destruction. Blocking results receive the same boundary
-   when a completed value is still buffered in a detached join receiver.
+   async-task owns their destruction. Every retained successful output carries
+   its producing generation until extracted by a poll, so blocking and immediate
+   results receive the same boundary when a completed value remains unpolled.
+   Owned `block_on` futures use that containment while they are driven and
+   while a rejected runtime acquisition destroys them.
    Handle retirement precedes dependency notification, and the buffered result
    destructor and arbitrary dependency waker have separate unwind boundaries,
    preventing a hostile pair from becoming a double panic.
@@ -171,7 +239,8 @@ The existing Tokio runtime remains the default and is selected by the
 
 9. **The compatibility path does not change.** Builds without
    `async-runtime` retain napi-rs's Tokio executor and Rolldown's previous
-   behavior.
+   behavior. Manual runtime lifecycle exports remain successful no-ops on
+   native and threadless-WASI artifacts, matching their historical contract.
 
 ## Background
 
@@ -208,7 +277,11 @@ Tokio, Tokio-blocking, Rayon, and ad-hoc thread-pool tuning problems.
 The dependent browser/WASI change owns the distinct artifact and publication
 layout. It will retain the threaded build's `wasi` loader/wasm names and worker
 scripts, while the single-thread build will use `wasip1` names, include the
-deferred workerd loader, and ship no worker scripts.
+deferred workerd loader, and ship no worker scripts. Every managed workerd
+instance factory must install both CurrentThread task and timer hosts before
+returning. A synchronous host-turn scheduling failure must clear its coalescing
+state so a later dispatch can retry, and initialization cleanup failures must
+remain visible even when the primary thrown value is a primitive.
 
 ## Related
 

@@ -16,9 +16,17 @@ vi.mock('../src/binding.cjs', () => ({
 }));
 
 // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
-import { assertRuntimeFeature, getRuntimeSupport } from '../src/runtime-support';
+import {
+  assertRuntimeFeature,
+  getRuntimeCapabilitiesCompat,
+  getRuntimeSupport,
+} from '../src/runtime-support';
 
 test('older capability reports derive dev support from scheduler threads', () => {
+  expect(getRuntimeCapabilitiesCompat()).toMatchObject({
+    devSupported: true,
+    watchSupported: true,
+  });
   expect(getRuntimeSupport()).toEqual({
     dev: true,
     parallelPlugins: true,

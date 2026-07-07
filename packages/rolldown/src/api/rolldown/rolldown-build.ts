@@ -10,6 +10,7 @@ import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
 import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
+import { CloseCallbackScope } from '../../utils/close-callback-scope';
 import { unwrapBindingResult } from '../../utils/error';
 import { validateOption } from '../../utils/validator';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
@@ -56,6 +57,7 @@ export class RolldownBuild {
   #nativeEntryQueue: Promise<void> = Promise.resolve();
   #nativeClosePromise: Promise<void> | undefined;
   #closeRequested = false;
+  #closeCallbackScope = new CloseCallbackScope();
   #closeCoordinator = new CloseCoordinator(
     'Bundle native close, parallel-plugin worker shutdown, or runtime release failed',
   );
@@ -142,7 +144,9 @@ export class RolldownBuild {
    */
   close(): Promise<void> {
     this.#closeRequested = true;
-    return this.#closeCoordinator.close(() => this.#close());
+    return this.#closeCallbackScope.selectClosePromise(
+      this.#closeCoordinator.close(() => this.#close()),
+    );
   }
 
   async #close(): Promise<CloseAttemptResult> {
@@ -227,7 +231,12 @@ export class RolldownBuild {
 
   async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
-    const option = await createBundlerOptions(this.#inputOptions, outputOptions, false);
+    const option = await createBundlerOptions(
+      this.#inputOptions,
+      outputOptions,
+      false,
+      this.#closeCallbackScope,
+    );
     const operation: BuildOperation = {
       settled: false,
       stopWorkers: option.stopWorkers,

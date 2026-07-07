@@ -222,6 +222,8 @@ function patchBindingJs(): Plugin {
 if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   try {
     nativeBinding = require('./webcontainer-fallback.cjs');
+    loadedBindingTarget =
+      nativeBinding.__rolldownBindingTarget === 'wasi' ? 'wasi' : 'wasi-threads';
   } catch (err) {
     loadErrors.push(err)
   }

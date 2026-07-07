@@ -10,6 +10,13 @@ export interface RuntimeSupport {
 }
 
 export type RuntimeFeature = keyof RuntimeSupport;
+type BindingRuntimeTarget = BindingRuntimeCapabilities['target'];
+
+const LOADED_BINDING_TARGET_EXPORT = '__rolldownBindingTarget';
+const BINDING_MISMATCH_CODE = 'ERR_ROLLDOWN_BINDING_MISMATCH';
+const RUNTIME_BACKENDS = ['tokio', 'shared'] as const;
+const RUNTIME_FLAVORS = ['CurrentThread', 'MultiThread'] as const;
+const RUNTIME_TARGETS = ['native', 'wasi', 'wasi-threads'] as const;
 
 const FEATURE_NAMES: Record<RuntimeFeature, string> = {
   dev: 'dev()',
@@ -71,32 +78,146 @@ export function assertRuntimeFeature(feature: RuntimeFeature): void {
   }
 }
 
-function getRuntimeCapabilitiesCompat(): BindingRuntimeCapabilities {
+/**
+ * Report the loaded binding's normalized runtime capabilities.
+ *
+ * Older binding reports are completed where the missing fields have stable
+ * compatibility defaults. Malformed or mismatched reports fail closed.
+ */
+export function getRuntimeCapabilitiesCompat(): BindingRuntimeCapabilities {
   const getRuntimeCapabilities = (binding as Record<PropertyKey, unknown>).getRuntimeCapabilities;
   if (typeof getRuntimeCapabilities !== 'function') {
-    return LEGACY_NATIVE_CAPABILITIES;
+    return getLegacyRuntimeCapabilities();
   }
   return normalizeRuntimeCapabilities(
-    (getRuntimeCapabilities as (this: void) => BindingRuntimeCapabilities)(),
+    (getRuntimeCapabilities as (this: void) => unknown)(),
+    getLoadedBindingTarget(),
   );
 }
 
-function normalizeRuntimeCapabilities(
-  runtime: BindingRuntimeCapabilities,
-): BindingRuntimeCapabilities {
-  const legacy = runtime as BindingRuntimeCapabilities & {
-    devSupported?: boolean;
-    watchSupported?: boolean;
-  };
-  if (typeof legacy.devSupported === 'boolean' && typeof legacy.watchSupported === 'boolean') {
-    return runtime;
+function getLegacyRuntimeCapabilities(): BindingRuntimeCapabilities {
+  const target = getLoadedBindingTarget();
+  if (!target) {
+    return LEGACY_NATIVE_CAPABILITIES;
   }
+  switch (target) {
+    case 'wasi':
+      return LEGACY_WASI_CAPABILITIES;
+    case 'wasi-threads':
+      return LEGACY_WASI_THREADS_CAPABILITIES;
+    case 'native':
+      return LEGACY_NATIVE_CAPABILITIES;
+  }
+}
+
+function normalizeRuntimeCapabilities(
+  runtime: unknown,
+  loadedTarget?: BindingRuntimeTarget,
+): BindingRuntimeCapabilities {
+  if (runtime === null || typeof runtime !== 'object') {
+    throw new BindingRuntimeContractError('getRuntimeCapabilities() did not return an object');
+  }
+
+  const report = runtime as Record<PropertyKey, unknown>;
+  const asyncRuntimeBuild = readBooleanCapability(report, 'asyncRuntimeBuild');
+  const backend = readEnumCapability(report, 'backend', RUNTIME_BACKENDS);
+  const blockOnJsThreadSafe = readBooleanCapability(report, 'blockOnJsThreadSafe');
+  const flavor = readEnumCapability(report, 'flavor', RUNTIME_FLAVORS);
+  const target = readEnumCapability(report, 'target', RUNTIME_TARGETS);
+  const threads = readBooleanCapability(report, 'threads');
+  const timers = readBooleanCapability(report, 'timers');
+  const wasi = readBooleanCapability(report, 'wasi');
+  const devSupported = readOptionalBooleanCapability(report, 'devSupported') ?? threads;
+  const watchSupported = readOptionalBooleanCapability(report, 'watchSupported') ?? !wasi;
+
+  if (asyncRuntimeBuild !== (backend === 'shared')) {
+    throw new BindingRuntimeContractError(
+      'asyncRuntimeBuild does not agree with the reported backend',
+    );
+  }
+  if (threads !== (flavor === 'MultiThread')) {
+    throw new BindingRuntimeContractError('threads does not agree with the reported flavor');
+  }
+  if (wasi !== (target !== 'native')) {
+    throw new BindingRuntimeContractError('wasi does not agree with the reported target');
+  }
+  if (loadedTarget && loadedTarget !== target) {
+    throw new BindingRuntimeContractError(
+      'getRuntimeCapabilities().target does not match the generated loader target',
+    );
+  }
+
   return {
-    ...runtime,
-    devSupported: typeof legacy.devSupported === 'boolean' ? legacy.devSupported : runtime.threads,
-    watchSupported:
-      typeof legacy.watchSupported === 'boolean' ? legacy.watchSupported : !runtime.wasi,
+    asyncRuntimeBuild,
+    backend,
+    blockOnJsThreadSafe,
+    devSupported,
+    flavor,
+    target,
+    threads,
+    timers,
+    wasi,
+    watchSupported,
   };
+}
+
+function getLoadedBindingTarget(): BindingRuntimeTarget | undefined {
+  const capabilityBinding = binding as Record<PropertyKey, unknown>;
+  if (!(LOADED_BINDING_TARGET_EXPORT in capabilityBinding)) return;
+  const target = capabilityBinding[LOADED_BINDING_TARGET_EXPORT];
+  if (RUNTIME_TARGETS.some((candidate) => candidate === target)) {
+    return target as BindingRuntimeTarget;
+  }
+  throw new BindingRuntimeContractError(
+    `the generated loader export ${LOADED_BINDING_TARGET_EXPORT} is invalid`,
+  );
+}
+
+function readBooleanCapability(
+  report: Record<PropertyKey, unknown>,
+  key: keyof BindingRuntimeCapabilities,
+): boolean {
+  const value = report[key];
+  if (typeof value !== 'boolean') {
+    throw new BindingRuntimeContractError(`${key} must be a boolean`);
+  }
+  return value;
+}
+
+function readOptionalBooleanCapability(
+  report: Record<PropertyKey, unknown>,
+  key: 'devSupported' | 'watchSupported',
+): boolean | undefined {
+  const value = report[key];
+  if (value === undefined) return;
+  if (typeof value !== 'boolean') {
+    throw new BindingRuntimeContractError(`${key} must be a boolean when present`);
+  }
+  return value;
+}
+
+function readEnumCapability<const T extends readonly string[]>(
+  report: Record<PropertyKey, unknown>,
+  key: keyof BindingRuntimeCapabilities,
+  values: T,
+): T[number] {
+  const value = report[key];
+  if (values.some((candidate) => candidate === value)) {
+    return value as T[number];
+  }
+  throw new BindingRuntimeContractError(`${key} is not a recognized value`);
+}
+
+class BindingRuntimeContractError extends TypeError {
+  readonly code = BINDING_MISMATCH_CODE;
+
+  constructor(detail: string) {
+    super(
+      `The loaded Rolldown binding returned an incompatible runtime capability contract: ` +
+        `${detail}. Reinstall Rolldown so the JavaScript package and binding versions match.`,
+    );
+    this.name = 'BindingRuntimeContractError';
+  }
 }
 
 const LEGACY_NATIVE_CAPABILITIES: BindingRuntimeCapabilities = Object.freeze({
@@ -110,4 +231,30 @@ const LEGACY_NATIVE_CAPABILITIES: BindingRuntimeCapabilities = Object.freeze({
   timers: true,
   wasi: false,
   watchSupported: true,
+});
+
+const LEGACY_WASI_CAPABILITIES: BindingRuntimeCapabilities = Object.freeze({
+  asyncRuntimeBuild: false,
+  backend: 'tokio',
+  blockOnJsThreadSafe: false,
+  devSupported: false,
+  flavor: 'CurrentThread',
+  target: 'wasi' satisfies BindingRuntimeTarget,
+  threads: false,
+  timers: false,
+  wasi: true,
+  watchSupported: false,
+});
+
+const LEGACY_WASI_THREADS_CAPABILITIES: BindingRuntimeCapabilities = Object.freeze({
+  asyncRuntimeBuild: false,
+  backend: 'tokio',
+  blockOnJsThreadSafe: false,
+  devSupported: true,
+  flavor: 'MultiThread',
+  target: 'wasi-threads' satisfies BindingRuntimeTarget,
+  threads: true,
+  timers: true,
+  wasi: true,
+  watchSupported: false,
 });

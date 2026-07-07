@@ -7,7 +7,12 @@ import { rolldown } from '../api/rolldown';
 import type { ConfigExport } from './define-config';
 import type { OutputChunk } from '../types/rolldown-output';
 
-async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<string> {
+interface BundledConfig {
+  outputDir: string;
+  outputFile: string;
+}
+
+async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<BundledConfig> {
   const dirnameVarName = 'injected_original_dirname';
   const filenameVarName = 'injected_original_filename';
   const importMetaUrlVarName = 'injected_original_import_meta_url';
@@ -44,19 +49,50 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<strin
       },
     ],
   });
-  const outputDir = path.dirname(configFile);
-  const result = await bundle.write({
-    dir: outputDir,
-    format: isEsm ? 'esm' : 'cjs',
-    sourcemap: 'inline',
-    // respect the original file extension, mts -> mjs, cts -> cjs
-    // mts should be generate mjs, it avoid add `type: module` at package.json
-    entryFileNames: `rolldown.config.[hash]${path.extname(configFile).replace('ts', 'js')}`,
-  });
-  const fileName = result.output.find(
-    (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
-  )!.fileName;
-  return path.join(outputDir, fileName);
+  let outputDir: string | undefined;
+  let outputFile: string | undefined;
+  let operationError: unknown;
+  try {
+    outputDir = await fs.promises.mkdtemp(path.join(path.dirname(configFile), '.rolldown-config-'));
+    const result = await bundle.write({
+      dir: outputDir,
+      format: isEsm ? 'esm' : 'cjs',
+      sourcemap: 'inline',
+      // respect the original file extension, mts -> mjs, cts -> cjs
+      // mts should be generate mjs, it avoid add `type: module` at package.json
+      entryFileNames: `rolldown.config.[hash]${path.extname(configFile).replace('ts', 'js')}`,
+    });
+    const fileName = result.output.find(
+      (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
+    )?.fileName;
+    if (fileName === undefined) {
+      throw new Error(`Rolldown did not emit an entry chunk for config file "${configFile}"`);
+    }
+    outputFile = path.join(outputDir, fileName);
+  } catch (error) {
+    operationError = error;
+  }
+
+  let closeError: unknown;
+  try {
+    await bundle.close();
+  } catch (error) {
+    closeError = error;
+  }
+
+  const errors: unknown[] = [];
+  if (operationError !== undefined) errors.push(operationError);
+  if (closeError !== undefined) errors.push(closeError);
+  if (errors.length > 0 && outputDir !== undefined) {
+    try {
+      await fs.promises.rm(outputDir, { force: true, recursive: true });
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+
+  throwCollectedErrors(errors, 'Config bundling and cleanup both failed');
+  return { outputDir: outputDir!, outputFile: outputFile! };
 }
 
 const SUPPORTED_JS_CONFIG_FORMATS = ['.js', '.mjs', '.cjs'];
@@ -76,12 +112,34 @@ async function findConfigFileNameInCwd(): Promise<string> {
 
 async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   const isEsm = isFilePathESM(configFile);
-  const file = await bundleTsConfig(configFile, isEsm);
+  const { outputDir, outputFile } = await bundleTsConfig(configFile, isEsm);
+  let config: ConfigExport | undefined;
+  let importError: unknown;
   try {
-    return (await import(pathToFileURL(file).href)).default;
-  } finally {
-    fs.unlink(file, () => {}); // Ignore errors
+    config = (await import(pathToFileURL(outputFile).href)).default;
+  } catch (error) {
+    importError = error;
   }
+
+  let cleanupError: unknown;
+  try {
+    await fs.promises.rm(outputDir, { force: true, recursive: true });
+  } catch (error) {
+    cleanupError = error;
+  }
+
+  const errors: unknown[] = [];
+  if (importError !== undefined) errors.push(importError);
+  if (cleanupError !== undefined) errors.push(cleanupError);
+  throwCollectedErrors(errors, 'Config import and cleanup both failed');
+  return config!;
+}
+
+function throwCollectedErrors(errors: unknown[], message: string): void {
+  if (errors.length > 1) {
+    throw new AggregateError(errors, message, { cause: errors[0] });
+  }
+  if (errors.length === 1) throw errors[0];
 }
 
 function isFilePathESM(filePath: string): boolean {

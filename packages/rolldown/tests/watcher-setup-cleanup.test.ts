@@ -9,10 +9,14 @@ const mocks = vi.hoisted(() => ({
   callOptionsHook: vi.fn(async (option) => option),
   createBundlerOptions: vi.fn(),
   runtimeCapabilities: {
+    asyncRuntimeBuild: false,
+    backend: 'tokio',
+    blockOnJsThreadSafe: false,
     devSupported: true,
     flavor: 'MultiThread',
     target: 'native',
     threads: true,
+    timers: true,
     wasi: false,
     watchSupported: true,
   },
@@ -44,6 +48,7 @@ vi.mock('../src/utils/create-bundler-option', () => ({
 }));
 
 import { watch } from '../src/api/watch';
+import { WatcherEmitter } from '../src/api/watch/watch-emitter';
 import { createWatcher } from '../src/api/watch/watcher';
 import {
   createCleanupFailureError,
@@ -194,7 +199,7 @@ test('partial watcher option setup retries cleanup from fulfilled and rejected o
     .mockResolvedValueOnce(createBundlerOption(fulfilledStopWorkers))
     .mockRejectedValueOnce(rejectedOptionError);
 
-  const error = await createWatcher({}, [{ output: {} }, { output: {} }]).catch(
+  const error = await createWatcher(new WatcherEmitter(), [{ output: {} }, { output: {} }]).catch(
     (error: unknown) => error,
   );
 
@@ -214,7 +219,9 @@ test('watcher runtime setup retries failed worker cleanup', async () => {
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
   mocks.acquireRuntimeLease.mockRejectedValue(setupError);
 
-  const error = await createWatcher({}, { output: {} }).catch((error: unknown) => error);
+  const error = await createWatcher(new WatcherEmitter(), { output: {} }).catch(
+    (error: unknown) => error,
+  );
 
   expect(error).toBeInstanceOf(AggregateError);
   expect((error as AggregateError).errors[0]).toBe(setupError);
@@ -244,7 +251,7 @@ test('watcher warning failure cleans every initialized worker pool', async () =>
       ),
     );
 
-  const error = await createWatcher({}, [{ output: {} }, { output: {} }]).catch(
+  const error = await createWatcher(new WatcherEmitter(), [{ output: {} }, { output: {} }]).catch(
     (error: unknown) => error,
   );
 
@@ -269,7 +276,9 @@ test('watcher construction retries worker cleanup and runtime release', async ()
   mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.bindingConstructionError = constructionError;
 
-  const error = await createWatcher({}, { output: {} }).catch((error: unknown) => error);
+  const error = await createWatcher(new WatcherEmitter(), { output: {} }).catch(
+    (error: unknown) => error,
+  );
 
   expect(error).toBeInstanceOf(AggregateError);
   expect((error as AggregateError).errors[0]).toBe(constructionError);
@@ -290,7 +299,9 @@ test('watcher setup keeps persistent cleanup retryable without hiding the setup 
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
   mocks.acquireRuntimeLease.mockRejectedValue(setupError);
 
-  const error = await createWatcher({}, { output: {} }).catch((error: unknown) => error);
+  const error = await createWatcher(new WatcherEmitter(), { output: {} }).catch(
+    (error: unknown) => error,
+  );
 
   expect(error).toBeInstanceOf(AggregateError);
   expect((error as AggregateError).errors).toEqual([

@@ -1,11 +1,10 @@
 import * as binding from './binding.cjs';
 import {
-  getOrCreateLegacyWasiRuntimeLeaseManager,
   getOrCreateWasiRuntimeLeaseManager,
-  type LegacyWasiRuntimeLeaseManager,
   type RuntimeLease,
   WasiRuntimeLeaseManager,
 } from './runtime-lease-manager';
+import { getRuntimeCapabilitiesCompat } from './runtime-support';
 
 export type { RuntimeLease } from './runtime-lease-manager';
 
@@ -28,7 +27,7 @@ export class CloseCoordinator {
   }
 
   close(attempt: () => Promise<CloseAttemptResult>): Promise<void> {
-    return (this.#closePromise ??= this.#run(attempt));
+    return (this.#closePromise ??= Promise.resolve().then(() => this.#run(attempt)));
   }
 
   async #run(attempt: () => Promise<CloseAttemptResult>): Promise<void> {
@@ -45,21 +44,9 @@ export class CloseCoordinator {
 
 // See internal-docs/async-runtime/implementation.md.
 const capabilityBinding = binding as Record<PropertyKey, unknown>;
-const getRuntimeCapabilities =
-  'getRuntimeCapabilities' in capabilityBinding
-    ? (capabilityBinding.getRuntimeCapabilities as
-        | typeof binding.getRuntimeCapabilities
-        | undefined)
-    : undefined;
-const runtimeLeaseRequired =
-  typeof getRuntimeCapabilities === 'function' &&
-  getRuntimeCapabilities().target === 'wasi-threads';
+const runtimeLeaseRequired = getRuntimeCapabilitiesCompat().target === 'wasi-threads';
 const acquireAsyncRuntime =
   'acquireAsyncRuntime' in capabilityBinding ? capabilityBinding.acquireAsyncRuntime : undefined;
-const startAsyncRuntime =
-  'startAsyncRuntime' in capabilityBinding ? capabilityBinding.startAsyncRuntime : undefined;
-const shutdownAsyncRuntime =
-  'shutdownAsyncRuntime' in capabilityBinding ? capabilityBinding.shutdownAsyncRuntime : undefined;
 
 const runtimeLeaseManager = createRuntimeLeaseManager();
 
@@ -74,7 +61,6 @@ export function isRuntimeLeaseRequired(): boolean {
 
 function createRuntimeLeaseManager():
   | WasiRuntimeLeaseManager
-  | LegacyWasiRuntimeLeaseManager
   | { acquire(): Promise<RuntimeLease> } {
   if (!runtimeLeaseRequired) {
     return new WasiRuntimeLeaseManager({
@@ -91,14 +77,22 @@ function createRuntimeLeaseManager():
     });
   }
 
+  const startAsyncRuntime =
+    'startAsyncRuntime' in capabilityBinding ? capabilityBinding.startAsyncRuntime : undefined;
+  const shutdownAsyncRuntime =
+    'shutdownAsyncRuntime' in capabilityBinding
+      ? capabilityBinding.shutdownAsyncRuntime
+      : undefined;
   if (typeof startAsyncRuntime === 'function' && typeof shutdownAsyncRuntime === 'function') {
-    const start = startAsyncRuntime as (this: void) => void;
-    const shutdown = shutdownAsyncRuntime as (this: void) => void;
-    return getOrCreateLegacyWasiRuntimeLeaseManager(start, {
-      enabled: true,
-      shutdown,
-      start,
-    });
+    return {
+      async acquire() {
+        throw new TypeError(
+          'The loaded threaded-WASI binding uses the legacy implicit runtime-owner protocol, ' +
+            'which cannot be coordinated safely across JavaScript realms. Upgrade Rolldown to ' +
+            'a binding that exposes acquireAsyncRuntime().',
+        );
+      },
+    };
   }
 
   return {

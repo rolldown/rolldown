@@ -32,6 +32,7 @@ onlyBuiltDependencies:
   - tree-sitter
 
 overrides:
+  emnapi: 1.11.2
   vitepress>vite: npm:rolldown-vite@latest
 
 catalog:

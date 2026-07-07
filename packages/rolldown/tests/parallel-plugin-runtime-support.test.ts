@@ -8,10 +8,14 @@ const binding = vi.hoisted(() => ({
 
 vi.mock('../src/binding.cjs', () => ({
   getRuntimeCapabilities: () => ({
+    asyncRuntimeBuild: false,
+    backend: 'tokio',
+    blockOnJsThreadSafe: false,
     devSupported: true,
     flavor: 'MultiThread',
     target: binding.wasi ? 'wasi-threads' : 'native',
     threads: true,
+    timers: true,
     wasi: binding.wasi,
     watchSupported: !binding.wasi,
   }),

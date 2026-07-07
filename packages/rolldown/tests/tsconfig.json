@@ -3,12 +3,15 @@
   "include": ["src/*", "src/**/*", "**/_config.ts", "**/*.test.ts", "**/*.test-d.ts"],
   "compilerOptions": {
     "types": ["node", "vite/client"],
-    "rootDir": "./",
+    // Some focused tests import package internals to validate generated glue
+    // and cleanup behavior without publishing those helpers.
+    "rootDir": "../",
     "allowJs": true,
     "isolatedDeclarations": false,
     // Mirrors the `@tests` alias in vitest.config.mts so type checking (and
     // knip's import resolution) can follow `@tests/*` imports.
     "paths": {
+      "@src/*": ["../src/*"],
       "@tests/*": ["./src/*"]
     }
   }

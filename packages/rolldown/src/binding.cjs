@@ -5,6 +5,7 @@
 
 const { readFileSync } = require('fs')
 let nativeBinding = null
+let loadedBindingTarget = 'native'
 const loadErrors = []
 
 const isMusl = () => {
@@ -541,6 +542,8 @@ if (!nativeBinding || forceWasi) {
   try {
     wasiBinding = require('./rolldown-binding.wasi.cjs')
     nativeBinding = wasiBinding
+      loadedBindingTarget =
+        wasiBinding.__rolldownBindingTarget === 'wasi' ? 'wasi' : 'wasi-threads'
   } catch (err) {
     if (forceWasi) {
       wasiBindingError = err
@@ -550,6 +553,8 @@ if (!nativeBinding || forceWasi) {
     try {
       wasiBinding = require('@rolldown/binding-wasm32-wasi')
       nativeBinding = wasiBinding
+      loadedBindingTarget =
+        wasiBinding.__rolldownBindingTarget === 'wasi' ? 'wasi' : 'wasi-threads'
     } catch (err) {
       if (forceWasi) {
         if (!wasiBindingError) {
@@ -587,6 +592,7 @@ if (!nativeBinding) {
 }
 
 module.exports = nativeBinding
+module.exports.__rolldownBindingTarget = loadedBindingTarget
 module.exports.LegalCommentsMode = nativeBinding.LegalCommentsMode
 module.exports.minify = nativeBinding.minify
 module.exports.minifySync = nativeBinding.minifySync
@@ -648,6 +654,7 @@ module.exports.BindingPropertyReadSideEffects = nativeBinding.BindingPropertyRea
 module.exports.BindingPropertyWriteSideEffects = nativeBinding.BindingPropertyWriteSideEffects
 module.exports.BindingRebuildStrategy = nativeBinding.BindingRebuildStrategy
 module.exports.BindingRuntimeFlavor = nativeBinding.BindingRuntimeFlavor
+module.exports.cancelCurrentThreadRuntimeTaskDispatch = nativeBinding.cancelCurrentThreadRuntimeTaskDispatch
 module.exports.collapseSourcemaps = nativeBinding.collapseSourcemaps
 module.exports.configureAsyncRuntime = nativeBinding.configureAsyncRuntime
 module.exports.driveCurrentThreadRuntimeTasks = nativeBinding.driveCurrentThreadRuntimeTasks

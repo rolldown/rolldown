@@ -6,6 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { createBuildCommand, NapiCli } from '@napi-rs/cli';
 import { globSync } from 'glob';
 
+import {
+  patchNativeBindingLoader,
+  patchWasiBindingLoader,
+  resolveWasiBindingTarget,
+} from './binding-loader-codegen';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WASI_THREADS_TARGET = 'wasm32-wasip1-threads';
 const WASI_BINARY_NAME = 'rolldown-binding.wasm32-wasi';
@@ -34,6 +40,7 @@ console.info('args:', napiArgs);
 try {
   const { task } = await napiCli.build(napiArgs);
   await task;
+  patchBindingTargetMetadata(argsOptions.target);
   patchWasiNodeWorkerExecArgv();
   if (argsOptions.target === WASI_THREADS_TARGET) {
     validateWasiReactorArtifacts();
@@ -104,6 +111,27 @@ function validateWasiReactorArtifacts(): void {
         `WASI reactor invariant failed for ${artifact}: expected a function export named "_initialize" and no "_start" export`,
       );
     }
+  }
+}
+
+function patchBindingTargetMetadata(target: unknown): void {
+  const sourceDir = join(__dirname, 'src');
+  const nativeBindingPath = join(sourceDir, 'binding.cjs');
+  const wasiTarget = resolveWasiBindingTarget(target);
+  const wasiBindingPaths = [
+    join(sourceDir, 'rolldown-binding.wasi.cjs'),
+    join(sourceDir, 'rolldown-binding.wasi-browser.js'),
+  ];
+
+  writeFileSync(
+    nativeBindingPath,
+    patchNativeBindingLoader(readFileSync(nativeBindingPath, 'utf8')),
+  );
+  for (const bindingPath of wasiBindingPaths) {
+    writeFileSync(
+      bindingPath,
+      patchWasiBindingLoader(readFileSync(bindingPath, 'utf8'), wasiTarget),
+    );
   }
 }
 

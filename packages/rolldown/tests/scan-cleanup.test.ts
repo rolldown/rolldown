@@ -8,10 +8,14 @@ const mocks = vi.hoisted(() => ({
   createBundlerOptions: vi.fn(),
   pluginPromiseThenCalls: 0,
   runtimeCapabilities: {
+    asyncRuntimeBuild: false,
+    backend: 'tokio',
+    blockOnJsThreadSafe: false,
     devSupported: true,
     flavor: 'MultiThread',
     target: 'native',
     threads: true,
+    timers: true,
     wasi: false,
     watchSupported: true,
   },
@@ -172,6 +176,42 @@ test('scan retry clears worker ownership even when native close remains failed',
   expect((error as AggregateError).errors[0]).toBe(scanError);
   expect(stopWorkers).toHaveBeenCalledTimes(2);
   expect(mocks.close).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+  expect(getRetryableCleanup(error)).toBeUndefined();
+});
+
+test('scan contains a synchronous native close throw and still completes retryable cleanup', async () => {
+  const scanError = new Error('scan failed');
+  const nativeCloseError = new Error('native close threw synchronously');
+  const cleanupError = new Error('worker termination failed');
+  const release = vi.fn();
+  const stopWorkers = vi
+    .fn<() => Promise<void>>()
+    .mockRejectedValueOnce(cleanupError)
+    .mockResolvedValue(undefined);
+  mocks.createBundlerOptions.mockResolvedValue({
+    bundlerOptions: {},
+    inputOptions: { input: 'entry.js' },
+    onLog: vi.fn(),
+    stopWorkers,
+  });
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.scan.mockRejectedValue(scanError);
+  mocks.close.mockImplementation(() => {
+    throw nativeCloseError;
+  });
+
+  const error = await scan({ input: 'entry.js' }).catch((error: unknown) => error);
+
+  expect(error).toBeInstanceOf(AggregateError);
+  expect((error as AggregateError).errors[0]).toBe(scanError);
+  expect((error as AggregateError).errors[1]).toBeInstanceOf(AggregateError);
+  expect(((error as AggregateError).errors[1] as AggregateError).errors).toEqual([
+    nativeCloseError,
+    cleanupError,
+  ]);
+  expect(mocks.close).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledTimes(2);
   expect(release).toHaveBeenCalledOnce();
   expect(getRetryableCleanup(error)).toBeUndefined();
 });

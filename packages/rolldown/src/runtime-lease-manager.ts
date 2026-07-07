@@ -4,7 +4,7 @@ export interface RuntimeLease {
 
 export interface RuntimeControl {
   enabled: boolean;
-  acquire(this: void): Promise<RuntimeLease>;
+  acquire(this: void): Promise<unknown>;
 }
 
 export interface LegacyRuntimeControl {
@@ -40,7 +40,7 @@ export class WasiRuntimeLeaseManager {
 
   async #acquire(): Promise<RuntimeLease> {
     this.#recoverFailedReleases();
-    const nativeLease = await this.#control.acquire();
+    const nativeLease = validateNativeRuntimeLease(await this.#control.acquire());
     this.#activeLeases += 1;
 
     const state: LeaseState = { nativeLease, released: false };
@@ -167,6 +167,31 @@ function releaseWithRetry(release: () => void): void {
     // control because setup and utility callers have no close object through
     // which another realm could recover a transient failure.
     release();
+  }
+}
+
+function validateNativeRuntimeLease(value: unknown): RuntimeLease {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
+    throw new BindingRuntimeLeaseContractError();
+  }
+  const release = Reflect.get(value, 'release');
+  if (typeof release !== 'function') {
+    throw new BindingRuntimeLeaseContractError();
+  }
+  return {
+    release: () => Reflect.apply(release, value, []),
+  };
+}
+
+class BindingRuntimeLeaseContractError extends TypeError {
+  readonly code = 'ERR_ROLLDOWN_BINDING_MISMATCH';
+
+  constructor() {
+    super(
+      'The loaded Rolldown binding returned an incompatible async runtime lease without a ' +
+        'release() method. Reinstall Rolldown so the JavaScript package and binding versions match.',
+    );
+    this.name = 'BindingRuntimeContractError';
   }
 }
 

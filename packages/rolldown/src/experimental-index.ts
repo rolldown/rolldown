@@ -19,7 +19,6 @@ export {
   configureAsyncRuntime,
   getAsyncRuntimeConfig,
   getAsyncRuntimeMetrics,
-  getRuntimeCapabilities,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,
   type NapiResolveOptions as ResolveOptions,
@@ -31,6 +30,7 @@ export { moduleRunnerTransform } from './utils/module-runner-transform';
 export { ResolverFactory } from './utils/resolver-factory';
 export { resolveTsconfig } from './utils/resolve-tsconfig';
 export {
+  getRuntimeCapabilitiesCompat as getRuntimeCapabilities,
   getRuntimeSupport,
   type RuntimeSupport,
   UnsupportedRuntimeFeatureError,

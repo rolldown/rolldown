@@ -410,8 +410,12 @@ When it spawns a task:
 3. Construct a `BundlingTask`.
 4. If `task_input.requires_full_rebuild()` → state `FullBuildInProgress`;
    else → state `InProgress`.
-5. `tokio::spawn` the task's `run()` as a `Shared` future; store it in
-   `current_bundling_future`.
+5. Wrap the task's `run()` in `BundlingFuture`. Its inner `Shared` future
+   captures a panic as a cloneable terminal outcome, publishes completion, and
+   wakes every waiter before the outer wrapper resumes the panic independently
+   for each waiter. Store it in `current_bundling_future`; a detached driver
+   polls only the inner shared state so the task progresses without becoming a
+   panic observer or consuming the original payload.
 
 The key invariant: at most one `BundlingTask` runs at a time. While one
 runs, the coordinator is in `*InProgress` and new file changes only
@@ -1135,6 +1139,23 @@ cleared, clears it only when a subsequent task starts, and replays it through
 terminal `close()`. This makes watcher-driven callback rejection observable
 even when the consumer starts waiting after the task settled. A callback
 failure while close also fails is merged with the cleanup diagnostics.
+
+A Rust panic inside `BundlingTask::run` follows a separate path. The raw panic
+is caught before polling enters `futures::Shared` and stored as a cloneable
+terminal outcome. `Shared` can therefore complete and wake all registered
+waiters instead of entering its poisoned state with pending waiters. The outer
+`BundlingFuture` resumes the panic after observing that completed outcome, so
+`run()`, coordinator shutdown, and later waiters each see the invariant failure
+without compromising liveness. `String` and `&'static str` payloads retain
+their type and value for every waiter. An arbitrary non-cloneable payload is
+resumed unchanged by its first observer; later observers receive an explicit
+fallback panic because Rust provides no way to clone an arbitrary
+`Box<dyn Any + Send>`. The detached driver never observes the outer future, so
+it cannot consume that original payload. If no observer consumes an opaque
+payload, its destruction is panic-contained, including a destructor that
+produces another hostile panic payload. If the coordinator observes the panic
+while draining for `Close`, its task exits, the close reply is dropped, and
+`DevEngine::close()` runs direct bundler fallback cleanup.
 
 ### 16d. Engine-closed: surface to the binding consumer by default
 

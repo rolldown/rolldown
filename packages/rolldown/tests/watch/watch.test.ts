@@ -217,6 +217,87 @@ test.concurrent(
 );
 
 test.concurrent(
+  'watcher.close() can be awaited from an asynchronous options hook',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-close-inside-options',
+      retryCount,
+    );
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    let watcher!: RolldownWatcher;
+    let optionsHookCompleted = false;
+    watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'reentrant-options-close',
+          async options(options) {
+            await watcher.close();
+            optionsHookCompleted = true;
+            return options;
+          },
+        },
+      ],
+    });
+
+    await watcher.close();
+
+    expect(optionsHookCompleted).toBe(true);
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
+test.concurrent(
+  'watcher.close() can be awaited from closeWatcher and closeBundle hooks',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-close-inside-close-hooks',
+      retryCount,
+    );
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const completedHooks: string[] = [];
+    let watcher!: RolldownWatcher;
+    watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'reentrant-watch-close-hooks',
+          async closeWatcher() {
+            await watcher.close();
+            completedHooks.push('closeWatcher');
+          },
+          async closeBundle() {
+            await watcher.close();
+            completedHooks.push('closeBundle');
+          },
+        },
+      ],
+    });
+
+    await waitBuildFinished(watcher);
+    await watcher.close();
+
+    expect(completedHooks).toEqual(['closeWatcher', 'closeBundle']);
+  },
+);
+
+test.concurrent(
   'watcher setup failure emits an error and remains closable',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ expect }) => {

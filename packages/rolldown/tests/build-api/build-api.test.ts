@@ -101,6 +101,39 @@ test('close waits for output setup and native build entry', { timeout: 5_000 }, 
   await expect(concurrentClosePromise).resolves.toBeUndefined();
 });
 
+test('bundle.close() can be awaited from active JS callbacks', { timeout: 5_000 }, async () => {
+  const completedCallbacks: string[] = [];
+  let bundle!: Awaited<ReturnType<typeof rolldown>>;
+  bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'reentrant-close',
+        async buildStart() {
+          await bundle.close();
+          completedCallbacks.push('buildStart');
+        },
+        async closeBundle() {
+          await bundle.close();
+          completedCallbacks.push('closeBundle');
+        },
+      },
+    ],
+  });
+
+  await bundle.generate({
+    banner: async () => {
+      await bundle.close();
+      completedCallbacks.push('banner');
+      return '';
+    },
+  });
+  await bundle.close();
+
+  expect(completedCallbacks).toEqual(['buildStart', 'banner', 'closeBundle']);
+});
+
 test('concurrent outputs retain and terminate every parallel worker pool', async () => {
   const originalTerminate = Object.getOwnPropertyDescriptor(Worker.prototype, 'terminate')!
     .value as (this: Worker) => Promise<number>;

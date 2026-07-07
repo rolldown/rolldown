@@ -122,7 +122,17 @@ mod async_runtime_lease {
       recover_shutdown: impl FnOnce() -> napi::Result<()>,
       start: impl FnOnce() -> napi::Result<()>,
     ) -> napi::Result<()> {
-      self.acquire(OwnerKind::Lease, is_cancelled, recover_shutdown, start)
+      self.acquire(OwnerKind::Lease, &is_cancelled, || !is_cancelled(), recover_shutdown, start)
+    }
+
+    pub fn acquire_lease_with_commit(
+      &self,
+      is_cancelled: impl Fn() -> bool,
+      try_commit: impl Fn() -> bool,
+      recover_shutdown: impl FnOnce() -> napi::Result<()>,
+      start: impl FnOnce() -> napi::Result<()>,
+    ) -> napi::Result<()> {
+      self.acquire(OwnerKind::Lease, is_cancelled, try_commit, recover_shutdown, start)
     }
 
     pub fn acquire_manual(
@@ -130,13 +140,14 @@ mod async_runtime_lease {
       recover_shutdown: impl FnOnce() -> napi::Result<()>,
       start: impl FnOnce() -> napi::Result<()>,
     ) -> napi::Result<()> {
-      self.acquire(OwnerKind::Manual, || false, recover_shutdown, start)
+      self.acquire(OwnerKind::Manual, || false, || true, recover_shutdown, start)
     }
 
     fn acquire(
       &self,
       owner_kind: OwnerKind,
       is_cancelled: impl Fn() -> bool,
+      try_commit: impl Fn() -> bool,
       recover_shutdown: impl FnOnce() -> napi::Result<()>,
       start: impl FnOnce() -> napi::Result<()>,
     ) -> napi::Result<()> {
@@ -156,6 +167,9 @@ mod async_runtime_lease {
 
         let recovering_shutdown = match state.lifecycle {
           Lifecycle::Running => {
+            if owner_kind == OwnerKind::Lease && !try_commit() {
+              return Err(cancelled_error());
+            }
             increment_owner(&mut state, owner_kind)?;
             return Ok(());
           }
@@ -188,8 +202,8 @@ mod async_runtime_lease {
             start.take().expect("runtime start closure is used at most once"),
           ))
         };
-        let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         if recovering_shutdown {
+          let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
           match &result {
             Ok(Ok(())) => {
               state.lifecycle = Lifecycle::Stopped;
@@ -211,6 +225,40 @@ mod async_runtime_lease {
           }
         }
 
+        if matches!(result, Ok(Ok(()))) && owner_kind == OwnerKind::Lease && !try_commit() {
+          let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+          debug_assert_eq!(state.lifecycle, Lifecycle::Starting);
+          debug_assert_eq!(state.owner_count(), 0);
+          state.lifecycle = Lifecycle::Stopping;
+          drop(state);
+
+          let rollback_result = catch_unwind(AssertUnwindSafe(
+            recover_shutdown
+              .take()
+              .expect("runtime shutdown rollback closure is used at most once"),
+          ));
+          let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+          match &rollback_result {
+            Ok(Ok(())) => {
+              state.lifecycle = Lifecycle::Stopped;
+              debug_assert_eq!(state.owner_count(), 0);
+            }
+            Ok(Err(_)) | Err(_) => {
+              state.lifecycle = Lifecycle::ShutdownFailed;
+              state.abandoned_lease_owner = true;
+              increment_owner(&mut state, OwnerKind::Lease)
+                .expect("cancelled startup rollback must retain one recoverable owner");
+            }
+          }
+          self.transition.notify_all();
+          return match rollback_result {
+            Ok(Ok(())) => Err(cancelled_error()),
+            Ok(Err(error)) => Err(error),
+            Err(payload) => resume_unwind(payload),
+          };
+        }
+
+        let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         match &result {
           Ok(Ok(())) => {
             state.lifecycle = Lifecycle::Running;
@@ -373,7 +421,7 @@ mod async_runtime_lease {
     use std::panic::{AssertUnwindSafe, catch_unwind};
     use std::sync::{
       Arc, Barrier,
-      atomic::{AtomicBool, AtomicUsize, Ordering},
+      atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering},
       mpsc,
     };
 
@@ -532,6 +580,74 @@ mod async_runtime_lease {
       let error = second.join().unwrap().unwrap_err();
       assert_eq!(error.status, napi::Status::Cancelled);
       assert_eq!(manager.owner_count(), 1);
+    }
+
+    #[test]
+    fn cancellation_during_start_rolls_back_before_exposing_an_owner() {
+      const PENDING: u8 = 0;
+      const CANCELLED: u8 = 1;
+      const COMMITTED: u8 = 2;
+
+      let manager = Manager::new();
+      let cancellation = AtomicU8::new(PENDING);
+      let rollback_calls = AtomicUsize::new(0);
+      let error = manager
+        .acquire_lease_with_commit(
+          || cancellation.load(Ordering::SeqCst) == CANCELLED,
+          || {
+            cancellation
+              .compare_exchange(PENDING, COMMITTED, Ordering::SeqCst, Ordering::SeqCst)
+              .is_ok()
+          },
+          || {
+            rollback_calls.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+          },
+          || {
+            cancellation.store(CANCELLED, Ordering::SeqCst);
+            Ok(())
+          },
+        )
+        .unwrap_err();
+
+      assert_eq!(error.status, napi::Status::Cancelled);
+      assert_eq!(rollback_calls.load(Ordering::SeqCst), 1);
+      assert_eq!(manager.owner_count(), 0);
+      assert!(!manager.has_abandoned_lease_owner());
+    }
+
+    #[test]
+    fn failed_cancelled_start_rollback_retains_a_recoverable_owner() {
+      const PENDING: u8 = 0;
+      const CANCELLED: u8 = 1;
+      const COMMITTED: u8 = 2;
+
+      let manager = Manager::new();
+      let cancellation = AtomicU8::new(PENDING);
+      let error = manager
+        .acquire_lease_with_commit(
+          || cancellation.load(Ordering::SeqCst) == CANCELLED,
+          || {
+            cancellation
+              .compare_exchange(PENDING, COMMITTED, Ordering::SeqCst, Ordering::SeqCst)
+              .is_ok()
+          },
+          || Err(napi::Error::from_reason("cancel rollback failed")),
+          || {
+            cancellation.store(CANCELLED, Ordering::SeqCst);
+            Ok(())
+          },
+        )
+        .unwrap_err();
+
+      assert_eq!(error.reason, "cancel rollback failed");
+      assert_eq!(manager.owner_counts(), (1, 0));
+      assert!(manager.has_abandoned_lease_owner());
+
+      manager.acquire_lease(|| false, || Ok(()), || Ok(())).unwrap();
+      assert_eq!(manager.owner_counts(), (1, 0));
+      assert!(!manager.has_abandoned_lease_owner());
+      manager.release_lease(|| Ok(())).unwrap();
     }
 
     #[test]
@@ -730,7 +846,7 @@ mod async_runtime_acquisition {
     collections::HashMap,
     sync::{
       Arc, LazyLock, Mutex, Weak,
-      atomic::{AtomicBool, Ordering},
+      atomic::{AtomicBool, AtomicU8, Ordering},
     },
   };
 
@@ -744,21 +860,38 @@ mod async_runtime_acquisition {
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
   pub struct AcquisitionCancellation {
-    cancelled: AtomicBool,
+    state: AtomicU8,
     waiter: Mutex<Option<TokioRuntimeRetirementWaiter>>,
   }
 
   impl AcquisitionCancellation {
+    const PENDING: u8 = 0;
+    const CANCELLED: u8 = 1;
+    const COMMITTED: u8 = 2;
+
     fn new() -> Self {
-      Self { cancelled: AtomicBool::new(false), waiter: Mutex::new(None) }
+      Self { state: AtomicU8::new(Self::PENDING), waiter: Mutex::new(None) }
     }
 
     pub fn is_cancelled(&self) -> bool {
-      self.cancelled.load(Ordering::Acquire)
+      self.state.load(Ordering::Acquire) == Self::CANCELLED
+    }
+
+    pub fn try_commit(&self) -> bool {
+      self
+        .state
+        .compare_exchange(Self::PENDING, Self::COMMITTED, Ordering::AcqRel, Ordering::Acquire)
+        .is_ok()
     }
 
     fn cancel(&self) {
-      self.cancelled.store(true, Ordering::Release);
+      if self
+        .state
+        .compare_exchange(Self::PENDING, Self::CANCELLED, Ordering::AcqRel, Ordering::Acquire)
+        .is_err()
+      {
+        return;
+      }
       if let Some(waiter) =
         self.waiter.lock().unwrap_or_else(std::sync::PoisonError::into_inner).as_ref()
       {
@@ -945,8 +1078,9 @@ impl napi::Task for AcquireAsyncRuntimeTask {
   fn compute(&mut self) -> napi::Result<Self::Output> {
     #[cfg(all(target_family = "wasm", tokio_unstable))]
     {
-      ASYNC_RUNTIME_LEASES.acquire_lease(
+      ASYNC_RUNTIME_LEASES.acquire_lease_with_commit(
         || self.cancellation.is_cancelled(),
+        || self.cancellation.try_commit(),
         napi::bindgen_prelude::try_shutdown_async_runtime,
         || async_runtime_acquisition::start(&self.cancellation),
       )?;
@@ -982,25 +1116,33 @@ pub fn acquire_async_runtime(
   }
 }
 
-#[cfg(not(all(target_family = "wasm", tokio_unstable)))]
-#[expect(clippy::unnecessary_wraps, reason = "matches the fallible threaded-WASI export")]
-fn no_op_async_runtime_transition() -> napi::Result<()> {
-  Ok(())
-}
-
 #[napi]
-/// Shutdown one manually retained async runtime owner.
+#[cfg_attr(
+  not(all(target_family = "wasm", tokio_unstable)),
+  allow(clippy::unnecessary_wraps, reason = "matches the fallible threaded-WASI export")
+)]
+/// Shutdown one manually retained threaded-WASI async runtime owner.
+///
+/// Native and threadless-WASI artifacts use automatic N-API environment
+/// lifecycle; this compatibility API remains a no-op on those artifacts.
 pub fn shutdown_async_runtime() -> napi::Result<()> {
   #[cfg(all(target_family = "wasm", tokio_unstable))]
   {
     return ASYNC_RUNTIME_LEASES.release_manual(napi::bindgen_prelude::try_shutdown_async_runtime);
   }
   #[cfg(not(all(target_family = "wasm", tokio_unstable)))]
-  no_op_async_runtime_transition()
+  Ok(())
 }
 
 #[napi]
-/// Start and manually retain one async runtime owner.
+#[cfg_attr(
+  not(all(target_family = "wasm", tokio_unstable)),
+  allow(clippy::unnecessary_wraps, reason = "matches the fallible threaded-WASI export")
+)]
+/// Start and manually retain one threaded-WASI async runtime owner.
+///
+/// Native and threadless-WASI artifacts use automatic N-API environment
+/// lifecycle; this compatibility API remains a no-op on those artifacts.
 pub fn start_async_runtime() -> napi::Result<()> {
   #[cfg(all(target_family = "wasm", tokio_unstable))]
   {
@@ -1011,7 +1153,16 @@ pub fn start_async_runtime() -> napi::Result<()> {
     return Ok(());
   }
   #[cfg(not(all(target_family = "wasm", tokio_unstable)))]
-  no_op_async_runtime_transition()
+  Ok(())
+}
+
+#[cfg(all(test, not(all(target_family = "wasm", tokio_unstable))))]
+mod manual_async_runtime_transition_tests {
+  #[test]
+  fn manual_lifecycle_exports_are_noops_outside_threaded_wasi() {
+    super::start_async_runtime().unwrap();
+    super::shutdown_async_runtime().unwrap();
+  }
 }
 
 #[napi_derive::module_init]

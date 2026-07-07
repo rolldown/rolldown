@@ -26,7 +26,7 @@ export { freeExternalMemory } from '../types/external-memory-handle';
  *
  * @example Wait for the scan and its cleanup to complete.
  * ```ts
- * import { scan } from 'rolldown/api/experimental';
+ * import { scan } from 'rolldown/experimental';
  *
  * await scan(...);
  * // Now all resources have been cleaned up.
@@ -62,7 +62,7 @@ export const scan = async (
     (cleanupAttempt ??= (async () => {
       const errors: unknown[] = [];
       if (bundler) {
-        nativeClosePromise ??= bundler.close();
+        nativeClosePromise ??= (async () => bundler!.close())();
         try {
           await nativeClosePromise;
         } catch (error) {

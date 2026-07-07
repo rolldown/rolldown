@@ -111,6 +111,36 @@ test.skipIf(isSingleThread)(
 );
 
 test.skipIf(isSingleThread)(
+  'close can be awaited inside onOutput',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const { dir, input, outputDir } = createFixture('dev-reentrant-output-close');
+    let callbackCompleted = false;
+    let engine!: DevEngine;
+    engine = await dev(
+      { input, experimental: { devMode: true } },
+      { dir: outputDir },
+      {
+        async onOutput(result) {
+          if (result instanceof Error) throw result;
+          await engine.close();
+          callbackCompleted = true;
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close().catch(() => {});
+      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    const runResult = await Promise.allSettled([engine.run()]);
+    await engine.close();
+    expect(callbackCompleted).toBe(true);
+    expect(runResult).toHaveLength(1);
+  },
+);
+
+test.skipIf(isSingleThread)(
   'ensureCurrentBuildFinish observes an async onHmrUpdates rejection',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

@@ -1,6 +1,7 @@
 import type { BindingWatcherBundler } from '../../binding.cjs';
 import type { MaybePromise } from '../../types/utils';
 import { createAsyncContext } from '../../utils/async-context';
+import { CloseCallbackScope } from '../../utils/close-callback-scope';
 import {
   getRetryableCleanup,
   hasRetryableCleanupOwnership,
@@ -104,6 +105,8 @@ export interface RolldownWatcher {
 }
 
 export class WatcherEmitter implements RolldownWatcher {
+  /** @internal Scope shared by setup and native callbacks that may request close. */
+  readonly closeCallbackScope: CloseCallbackScope = new CloseCallbackScope();
   private listeners = new Map<WatcherEvent, Array<(...parameters: any[]) => MaybePromise<void>>>();
   private closeHandlerPromise: Promise<() => Promise<void>>;
   private resolveCloseHandler!: (handler: () => Promise<void>) => void;
@@ -256,7 +259,7 @@ export class WatcherEmitter implements RolldownWatcher {
     // `watch()` returns before createWatcher finishes asynchronous plugin
     // setup. A same-tick close waits for that setup and then enters the same
     // memoized native lifecycle instead of becoming a no-op.
-    return this.invokeCloseHandler();
+    return this.closeCallbackScope.selectClosePromise(this.invokeCloseHandler());
   }
 
   private getReentrantClosePromise(): Promise<void> | undefined {

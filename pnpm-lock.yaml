@@ -236,6 +236,7 @@ catalogs:
       version: 8.8.5
 
 overrides:
+  emnapi: 1.11.2
   vitepress>vite: npm:rolldown-vite@latest
 
 patchedDependencies:
@@ -5995,8 +5996,8 @@ packages:
   electron-to-chromium@1.5.372:
     resolution: {integrity: sha512-M3yhbAlilnwqC8D21t28UCDGHyitShTmmLRU/H+b74P6Ski16Nb9HONYEaVpMj/pwC7BEo5B95FpjODLCWbtfA==}
 
-  emnapi@1.11.1:
-    resolution: {integrity: sha512-kSRjhIcxjMFsBqk7ORvoc9aA5SBKDmecrtF5RMcmOTao0kD/zamaxsuTxMI8C1//wGUuvE7a+19pCE7AEhGVnA==}
+  emnapi@1.11.2:
+    resolution: {integrity: sha512-iMt/XQc69fFn2EvcU6tm14HmXKwyy0lnABugsQlqp6xFuZIUuO+ONVSg2mz+MTVF8WbC+bic65AvRXdoldALKg==}
     peerDependencies:
       node-addon-api: '>= 6.1.0'
     peerDependenciesMeta:
@@ -9902,7 +9903,7 @@ snapshots:
       '@octokit/rest': 22.0.1
       clipanion: 4.0.0-rc.4(typanion@3.14.0)
       colorette: 2.0.20
-      emnapi: 1.11.1
+      emnapi: 1.11.2
       es-toolkit: 1.47.0
       js-yaml: 4.3.0
       obug: 2.1.3
@@ -12448,7 +12449,7 @@ snapshots:
 
   electron-to-chromium@1.5.372: {}
 
-  emnapi@1.11.1: {}
+  emnapi@1.11.2: {}
 
   emoji-regex@8.0.0: {}
 

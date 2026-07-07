@@ -2,8 +2,19 @@ import { describe, expect, test, vi } from 'vitest';
 
 const binding = vi.hoisted(() => ({
   acquireAsyncRuntime: vi.fn(),
-  shutdownAsyncRuntime: undefined,
-  startAsyncRuntime: undefined,
+  getRuntimeCapabilities: () => ({
+    asyncRuntimeBuild: true,
+    backend: 'shared',
+    blockOnJsThreadSafe: false,
+    flavor: 'MultiThread',
+    target: 'native',
+    threads: true,
+    timers: true,
+    wasi: false,
+    watchSupported: true,
+  }),
+  shutdownAsyncRuntime: vi.fn(),
+  startAsyncRuntime: vi.fn(),
 }));
 
 vi.mock('../src/binding.cjs', () => binding);
@@ -19,11 +30,13 @@ const {
   WasiRuntimeLeaseManager,
 } = runtimeLease;
 
-test('an incomplete binding mock uses the module-load native lease fallback', async () => {
+test('the native lease fallback never calls legacy manual lifecycle exports', async () => {
   const lease = await acquireRuntimeLease();
 
   expect(() => lease.release()).not.toThrow();
   expect(binding.acquireAsyncRuntime).not.toHaveBeenCalled();
+  expect(binding.startAsyncRuntime).not.toHaveBeenCalled();
+  expect(binding.shutdownAsyncRuntime).not.toHaveBeenCalled();
 });
 
 describe('WasiRuntimeLeaseManager', () => {
@@ -257,6 +270,47 @@ describe('WasiRuntimeLeaseManager', () => {
     expect(manager.activeLeases).toBe(0);
   });
 
+  test.each([undefined, null, {}, { release: 1 }])(
+    'rejects an invalid native lease token (%j) before recording ownership',
+    async (nativeLease) => {
+      const manager = new WasiRuntimeLeaseManager({
+        enabled: true,
+        acquire: vi.fn().mockResolvedValue(nativeLease),
+      });
+
+      await expect(manager.acquire()).rejects.toMatchObject({
+        code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+        message: expect.stringContaining('runtime lease without a release() method'),
+      });
+      expect(manager.activeLeases).toBe(0);
+    },
+  );
+
+  test('captures the native lease release method once with its original receiver', async () => {
+    let releaseReads = 0;
+    let releaseReceiver: unknown;
+    const nativeLease = Object.defineProperty({}, 'release', {
+      get() {
+        releaseReads += 1;
+        return function (this: unknown) {
+          // oxlint-disable-next-line typescript/no-this-alias -- verifies the native method receiver
+          releaseReceiver = this;
+        };
+      },
+    });
+    const manager = new WasiRuntimeLeaseManager({
+      enabled: true,
+      acquire: vi.fn().mockResolvedValue(nativeLease),
+    });
+
+    const lease = await manager.acquire();
+    lease.release();
+
+    expect(releaseReads).toBe(1);
+    expect(releaseReceiver).toBe(nativeLease);
+    expect(manager.activeLeases).toBe(0);
+  });
+
   test('retries a transient native release before another realm acquires', async () => {
     const release = vi
       .fn()
@@ -367,6 +421,25 @@ describe('WasiRuntimeLeaseManager', () => {
 });
 
 describe('CloseCoordinator', () => {
+  test('publishes the close promise before a synchronous attempt reenters close', async () => {
+    const coordinator = new CloseCoordinator('close failed');
+    let reentered = false;
+    let reentrantClose: Promise<void> | undefined;
+    const attempt = vi.fn(async () => {
+      if (!reentered) {
+        reentered = true;
+        reentrantClose = coordinator.close(attempt);
+      }
+      return { errors: [], retryable: false };
+    });
+
+    const first = coordinator.close(attempt);
+
+    await expect(first).resolves.toBeUndefined();
+    expect(reentrantClose).toBe(first);
+    expect(attempt).toHaveBeenCalledOnce();
+  });
+
   test('coalesces an attempt and retries after a retryable cleanup failure', async () => {
     const cleanupError = new Error('cleanup failed');
     const attempt = vi

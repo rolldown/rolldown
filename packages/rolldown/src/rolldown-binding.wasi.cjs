@@ -139,6 +139,7 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
   },
 })
 module.exports = __napiModule.exports
+module.exports.__rolldownBindingTarget = 'wasi-threads'
 module.exports.LegalCommentsMode = __napiModule.exports.LegalCommentsMode
 module.exports.minify = __napiModule.exports.minify
 module.exports.minifySync = __napiModule.exports.minifySync
@@ -200,6 +201,7 @@ module.exports.BindingPropertyReadSideEffects = __napiModule.exports.BindingProp
 module.exports.BindingPropertyWriteSideEffects = __napiModule.exports.BindingPropertyWriteSideEffects
 module.exports.BindingRebuildStrategy = __napiModule.exports.BindingRebuildStrategy
 module.exports.BindingRuntimeFlavor = __napiModule.exports.BindingRuntimeFlavor
+module.exports.cancelCurrentThreadRuntimeTaskDispatch = __napiModule.exports.cancelCurrentThreadRuntimeTaskDispatch
 module.exports.collapseSourcemaps = __napiModule.exports.collapseSourcemaps
 module.exports.configureAsyncRuntime = __napiModule.exports.configureAsyncRuntime
 module.exports.driveCurrentThreadRuntimeTasks = __napiModule.exports.driveCurrentThreadRuntimeTasks

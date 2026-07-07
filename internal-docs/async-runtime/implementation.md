@@ -17,8 +17,9 @@ The sibling napi-rs checkout adds the `async-runtime` feature and
 Generated JavaScript-facing futures and `#[napi(async_runtime)]` entry points
 use the registered implementation whenever `async-runtime` is enabled, even if
 another dependency also enables `tokio_rt` through Cargo feature unification.
-Rolldown has this combined feature profile because OXC's NAPI crates enable
-napi-rs's Tokio support.
+Rolldown explicitly enables both `napi/async-runtime` and `napi/async` in this
+profile. OXC's NAPI crates currently enable Tokio too, but unload safety must
+not depend on that transitive feature accident.
 
 In that combined profile, napi-rs's established public free `spawn`,
 `spawn_blocking`, `block_on`, and runtime-entry helpers retain their Tokio API
@@ -37,24 +38,60 @@ Rolldown returns it untouched when the controller is stopped. The optional
 closure. Accepted tasks and closures retain napi-rs's cancel-on-drop guards.
 Generated-task submission and custom runtime lifecycle operations delegate to
 the registered implementation; `start` and `shutdown` report failures through
-`napi::Result`.
+`napi::Result`. `AsyncRuntime` is an unsafe implementation contract because
+Node may unload an addon image immediately after environment cleanup:
+`shutdown` must leave no backend-owned thread, task, closure, destructor, or
+callback able to execute addon code after it returns. Rolldown closes
+generation admission, waits for every accepted work guard, drops the executor,
+and waits for all native workers to exit, but that proves only runtime-owned
+quiescence. An externally cloned `Waker` can outlive task/future retirement and
+retain wake, clone, and drop vtables in the addon image.
+
+napi-rs supplies the remaining guarantee independently of Tokio. A custom
+backend may register during module initialization, but napi-rs commits
+permanent native-image retention only after every module export and the
+per-environment support machinery initialize successfully. It pins the image
+with `GetModuleHandleExW(PIN | FROM_ADDRESS)` on Windows or a validated leaked
+`dlopen` reference on supported Unix; unsupported native loaders abort rather
+than return with callable unmapped code. A failed module load still rolls back
+without retention. The backend object is reused across zero-environment
+shutdown/start cycles and its `Drop` is not guaranteed to run, so
+`AsyncRuntime::shutdown` must still release and quiesce all active resources.
+The `unsafe impl AsyncRuntime` comment in
+`crates/rolldown_binding/src/async_runtime.rs` records both halves of this
+contract. Rolldown's pinned napi-rs revision must include that retention
+implementation before this code can ship; the unsafe-trait change deliberately
+makes an older revision fail to compile instead of producing an unpinned
+binary.
 
 ### Rolldown scheduler
 
 `crates/rolldown_utils/src/async_runtime.rs` owns the lazy global controller.
 
-- The controller lifecycle is `Initial -> Running -> Stopping -> Stopped`.
+- The controller lifecycle is
+  `Initial -> Running -> Stopping -> Stopped` for real generations, with a
+  separate `StoppedBeforeFirstUse` state for zero-work environment teardown.
   Initial work may lazily create the backend. napi invokes `start` during addon
   registration, so the initial `start` leaves `Initial` unchanged to preserve
-  the documented pre-first-async-call configuration window. Shutdown changes
+  the documented pre-first-async-call configuration window. Shutting down
+  `Initial` creates no backend. It first records
+  `StoppingWithoutBackend(StoppedBeforeFirstUse)`, waits for rejected
+  convenience-submission destructors, then publishes `StoppedBeforeFirstUse`.
+  Shutdown from an already stopped lifecycle uses the same non-restartable
+  transition with its corresponding final state. The next lifecycle `start`
+  returns stopped-before-first-use to lazy `Initial`, so repeated zero-work
+  start/shutdown cycles do not freeze configuration. If first-backend
+  construction fails, no retry may create a generation until rejected user
+  state has been destroyed; reentrant lifecycle calls from that destructor
+  return an error instead of self-deadlocking. Shutdown changes
   `Running` to `Stopping` under the controller mutex before closing the
-  generation. Submissions in `Stopping` or `Stopped` return their task or
-  closure untouched. An explicit restart waits while `Stopping`, then creates
-  the next `Running` generation. Configuration remains frozen after shutdown.
-  Full configuration, partial merge/validation/commit, start, shutdown, and
-  submission use the same mutex. A racing submission cannot recreate the
-  backend after shutdown, and concurrent partial updates cannot read the same
-  stale options snapshot and overwrite one another.
+  generation. Submissions while stopped return their task or closure untouched.
+  A real-generation restart waits while `Stopping`, then creates the next
+  `Running` generation, and configuration remains frozen once any real backend
+  has existed. Full configuration, partial merge/validation/commit, start,
+  shutdown, and submission use the same mutex. A racing submission cannot
+  recreate the backend after shutdown, and concurrent partial updates cannot
+  read the same stale options snapshot and overwrite one another.
 - Each backend owns a generation work registry. Async tasks register an abort
   handle and all accepted operations register a retirement guard while the
   controller mutex is held. A generation stop registry also owns every active
@@ -65,9 +102,31 @@ the registered implementation; `start` and `shutdown` report failures through
   so completed or cancelled work cannot keep an old pool alive accidentally.
   The complete async-task generator is wrapped in a generation-scoped
   `ManuallyDrop` future whose destructor catches and quarantines panics before
-  async-task's abort-on-panicking-drop boundary. Task outputs remain in an
-  equivalent wrapper until a live `JoinHandle` extracts them, covering detached
-  completion as well as cancellation.
+  async-task's abort-on-panicking-drop boundary. Every successful output
+  retained by a `JoinHandle` uses an equivalent generation-scoped wrapper until
+  a live poll extracts it. This includes async-task completion, MultiThread and
+  queued CurrentThread blocking receivers, and immediate CurrentThread results.
+  Dropping an unpolled handle therefore destroys its output under the producing
+  generation even after restart. Controller entry compares that active
+  generation with the current running/stopping generation and rejects stale
+  submission, start, and shutdown attempts. MultiThread blocking submissions
+  use a corresponding registered-function wrapper: when controller admission
+  wins but executor queue closure wins before publication, captured user state
+  is destroyed on the submitting thread before its generation work
+  registration retires. Every scheduler-owned blocking execution boundary also
+  holds an outer generation guard through result delivery and caught
+  panic-payload destruction. This covers normal FIFO service and exact
+  owner-lane lending in both executors, after an inner function wrapper has
+  unwound.
+- The owned Rust `block_on` helper acquires its generation work scope before
+  moving the input future into the driver. Acquisition failure registers
+  rejected destruction under the controller lifecycle mutex, then destroys the
+  future behind the same panic boundary and reentrancy context used by
+  convenience spawn rejection. Successful driving wraps the future in
+  `ContainedFuture`, so cancellation, an early stop, or a poll panic cannot
+  combine with a panicking future destructor and abort the native process.
+  The borrowed NAPI backend hook remains covered independently by napi-rs's
+  synchronous runtime-use gate and `SafeDrop` wrapper.
 - `CurrentThreadExecutor` uses a reentrancy-safe FIFO runnable queue. In a host
   embedding, a wake requests a fresh host turn before polling: futures such as
   `futures::Shared` invoke outer wakers while holding internal locks, so polling
@@ -85,11 +144,27 @@ the registered implementation; `start` and `shutdown` report failures through
   Rust use otherwise makes progress through an explicit `block_on` or
   `drive_current_thread_tasks` call. A host turn polls at most 64
   runnables before redispatching, so a self-waking task cannot monopolize the
-  JavaScript event loop. Once shutdown is observed after a pending poll, it
-  takes precedence over queue draining and stored self-wake permits. An RAII
-  host-turn role remains scheduler-active through every `Runnable::run`,
-  including async-task's destruction of detached completed outputs;
-  CurrentThread shutdown waits for that role before publishing `Stopped`.
+  JavaScript event loop, and both host turns and explicit `block_on` drivers
+  force a blocking turn after 16 consecutive runnable polls. For `block_on`,
+  the exact blocking dependency published by the awaited future has priority
+  over ordinary FIFO work on that turn. Once shutdown is observed after a
+  pending poll, it takes precedence over queue draining and stored self-wake
+  permits. A nonzero pending dispatch coalesces later wakes before they allocate
+  another process-global identity; callers that race after both observing zero
+  still resolve through the exact-capability compare-exchange. Every accepted
+  host dispatch carries a globally unique, nonzero capability.
+  The controller atomically consumes that exact capability and claims the
+  executor's RAII host-turn role while holding the lifecycle mutex; shutdown
+  cannot transition from that generation's `Running` state without either
+  preceding admission or observing the claimed role. If the JavaScript
+  scheduler throws before it can queue the fresh turn,
+  `cancel_current_thread_task_dispatch` clears only the matching capability and
+  leaves all work queued. It never polls or immediately redispatches from the
+  failing callback; a later wake or host registration can recover safely. The
+  role remains scheduler-active through
+  every `Runnable::run`, including async-task's destruction of detached
+  completed outputs; CurrentThread shutdown waits for that role before
+  publishing `Stopped`.
   CurrentThread exposes one physical blocking lane. Uncontended closures and
   same-frame nested calls execute inline. On native builds, contention from a
   different driver creates a stable indexed blocking job and returns its
@@ -154,11 +229,20 @@ the registered implementation; `start` and `shutdown` report failures through
   admission skips tombstoned ids amortized O(1); exact lending removes the job
   from the map in O(1) after atomically claiming the live dependency. Owner-lane
   availability uses unique reservation identities, so a delayed stale drop
-  cannot release a newer transfer of the same frame.
+  cannot release a newer transfer of the same frame. Every scheduler identity
+  that participates in stale-handle rejection or indexed lookup uses checked
+  allocation and fails before `u64` reuse: generations, per-generation task
+  keys, executors, blocking jobs and owner frames, lending reservations, host
+  driver registrations, and timers. Metrics reset generations likewise check
+  both seqlock increments before publishing the odd reset state, so exhaustion
+  cannot leave readers spinning or recreate an old progress fingerprint.
 - Drain and cooperative loops force a blocking turn after 16 consecutive
-  runnable polls when the blocking FIFO has capacity. After the cooperative
-  LIFO budget is exhausted, one shared-FIFO pop is mandatory even if the next
-  awaited-future poll refills the local slot. The timer timekeeper uses a sticky
+  runnable polls. A cooperative `block_on` attempts its live exact owner
+  dependency first at that boundary, including an owner-lane transfer while the
+  ordinary cap is saturated, then falls back to normal blocking admission.
+  After the cooperative LIFO budget is exhausted, one shared-FIFO pop is
+  mandatory even if the next awaited-future poll refills the local slot. The
+  timer timekeeper uses a sticky
   runnable-only scheduler role, including through nested `block_on`; the nested
   cooperative loop fires due timers before every runnable turn, so a permanently
   hot stream cannot suspend the outer timekeeper loop and starve the timer heap.
@@ -193,11 +277,12 @@ the registered implementation; `start` and `shutdown` report failures through
 - `JoinHandle` normalizes async-task, blocking-job, and immediate results and
   detaches async tasks on drop to match Tokio. Scheduler shutdown instead
   aborts accepted async tasks and resolves retained handles with `JoinError`.
-  Dropping a blocking or immediate handle is panic-contained because its
-  receiver/result may already own a completed user value whose destructor
-  unwinds. Task detachment or receiver destruction completes before dependency
-  notification, and the arbitrary dependency waker is invoked behind a separate
-  containment boundary so two hostile callbacks cannot double-panic.
+  Successful values remain generation-tagged until polling transfers ownership
+  to the caller. Dropping a blocking or immediate handle is panic-contained
+  because its receiver/result may already own a completed user value whose
+  destructor unwinds. Task detachment or receiver destruction completes before
+  dependency notification, and the arbitrary dependency waker is invoked behind
+  a separate containment boundary so two hostile callbacks cannot double-panic.
 - MultiThread shutdown waits in three stages: accepted work retirement,
   drainer/timekeeper exit, then physical Rayon worker exit. Only after all
   three stages does the controller publish `Stopped` and wake a waiting
@@ -210,9 +295,11 @@ the registered implementation; `start` and `shutdown` report failures through
   register its contained destruction while holding the lifecycle lock;
   shutdown/restart cannot finish the transition until those registrations
   retire. Public `block_on` performs both the driver call and destruction of its
-  erased future inside the same registered generation scope. CurrentThread
-  blocking calls keep their work and generation guards through panic conversion
-  and payload destruction. Shutdown timer wakes are isolated too. After
+  erased future inside the same registered generation scope. A failed scope
+  acquisition likewise keeps first-backend retry and lifecycle transitions
+  closed until contained input destruction retires. CurrentThread blocking
+  calls keep their work and generation guards through panic conversion and
+  payload destruction. Shutdown timer wakes are isolated too. After
   diagnostics are extracted, caught panic payloads are dropped under a second
   `catch_unwind`; only a nested panic payload from a hostile payload destructor
   is forgotten.
@@ -227,6 +314,10 @@ the registered implementation; `start` and `shutdown` report failures through
   may still need to decrement them. A reset generation is part of the
   deadlock-detector fingerprint, preventing repeated counter values across a
   reset from being mistaken for no progress.
+- Deadline arithmetic is checked. A configured park duration too large to add
+  to `Instant::now()` becomes an unbounded but wakeable condvar wait, and an
+  overflowing CurrentThread host-timer grace keeps that timer live. This makes
+  arbitrary nonzero `ROLLDOWN_PARK_DEADLINE_MS` values non-panicking.
 
 The binding adapter and JS-facing configuration live in
 `crates/rolldown_binding/src/async_runtime.rs`. Configuration sources are:
@@ -245,6 +336,12 @@ committed options, validates the complete candidate, and commits it in one
 critical section. Omitted fields are preserved, concurrent calls apply in lock
 order without stale-snapshot overwrites, and validation failure commits
 nothing.
+
+The CLI parses and applies `--environment` before importing the timer host or
+any binding-backed command module. Runtime environment variables supplied by
+that flag are therefore visible to the binding's module-initialization
+snapshot, with the same semantics as variables inherited from the parent
+process.
 
 On shared WebAssembly builds, the resolver always reports and configures
 `CurrentThread`. `ROLLDOWN_RUNTIME=multi` is accepted as an inherited
@@ -285,15 +382,27 @@ returns zeroed counters.
 `CurrentThread`; `watchSupported` is false on every WebAssembly artifact. The
 TypeScript `runtime-support.ts` layer maps those binding facts to named public
 features and throws `ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE` before entering
-unsupported setup paths. The layer is intentionally extensible so stacked host
+unsupported setup paths. Missing capability booleans from an older reporter are
+normalized from the stable `threads` and `wasi` fields before either support
+queries or error construction. If the reporter itself is absent, generated
+loaders expose `__rolldownBindingTarget`; compatibility maps `native`, `wasi`,
+and `wasi-threads` to conservative complete capability records instead of
+assuming every legacy artifact is native. Reports with any other missing,
+invalid, or internally inconsistent field fail with
+`ERR_ROLLDOWN_BINDING_MISMATCH`; when loader metadata is available, its target
+must also agree with the reporter. This prevents malformed threaded-WASI
+reports from silently taking the native no-lease path or enabling unsupported
+worker-backed features. The layer is intentionally extensible so stacked host
 integrations can add richer workflow support without changing the low-level
 binding contract. Parallel-plugin descriptor consumption has an additional
 synchronous preflight at the public build, rolldown, scan, and dev boundaries
-and at `createBundlerOptions`. It recursively inspects already-materialized
-plugin arrays without assimilating neighboring thenables, so a fabricated or
-older-package descriptor on an unsupported artifact fails before any plugin
-promise, options/outputOptions hook, worker registry, runtime lease, or binding
-construction. Ordinary object plugins do not trigger that gate.
+and at `createBundlerOptions`. The latter repeats the preflight immediately
+after synchronous `outputOptions` hooks, before normalizing hook-injected
+plugins. Each pass recursively inspects already-materialized plugin arrays
+without assimilating neighboring thenables, so a fabricated or older-package
+descriptor on an unsupported artifact fails before the next asynchronous setup
+boundary, worker registry, runtime lease, or binding construction. Ordinary
+object plugins do not trigger that gate.
 
 ### Routed work
 
@@ -356,10 +465,15 @@ which delegates to paired `setTimeout`/`clearTimeout` callbacks in each
 importing environment. The Rust relay records whether the JS schedule callback
 has returned before sending cancellation, preventing cancel from overtaking
 timeout creation. Cancellation clears the timeout and resolves the schedule
-Promise so the detached relay task retires immediately. Each CurrentThread
-generation also retains the armed host wakers; shutdown closes that registry,
-marks every sleep fired, wakes active `block_on` calls, and makes later polls
-resolve while their host-side timers are cancelled.
+Promise so the detached relay task retires immediately. A host-provided
+`clearTimeout` is allowed to throw, but that exception is contained inside the
+JavaScript cancel callback because it crosses N-API through a non-catching
+TSFN. The schedule Promise is still resolved in `finally`, so a host cleanup
+failure cannot escape as a fatal exception or strand the Rust relay during
+shutdown. Each CurrentThread generation also retains the armed host wakers;
+shutdown closes that registry, marks every sleep fired, wakes active `block_on`
+calls, and makes later polls resolve while their host-side timers are
+cancelled.
 MultiThread timer wakes, including shutdown drain-fire, are individually
 wrapped with `catch_unwind`; a user-supplied `RawWaker` cannot unwind the
 timekeeper or strand shutdown. Replaced and cancelled heap wakers are moved out
@@ -386,14 +500,21 @@ or shutdown cancellation; wake callers never poll inline. A newly registered
 host supersedes any pending dispatch because an accepted weak
 threadsafe-function call may have been discarded when its previous environment
 died; duplicate host callbacks are harmless because the executor serializes
-queue draining.
+queue draining. Dispatches carry a globally unique, non-wrapping `u64`
+capability as an exact high/low `u32` pair, avoiding both JavaScript number
+precision loss and a higher minimum N-API version. The exported drive callback
+must present that same capability; the controller consumes it from the current
+executor and claims the drain role while still holding the lifecycle mutex.
+This linearizes host-turn admission with `Running -> Stopping`.
 If installing an environment cleanup hook fails, registration is rolled back
 immediately so no driver survives without a teardown owner.
 Shutdown closes the queue before dropping pending runnables, so cancellation
-retires generation guards without waiting for a host callback. A stale callback
-from an older generation is also harmless: it either finds no running
-CurrentThread executor or services the current generation as an extra host
-turn.
+retires generation guards without waiting for an unadmitted host callback. A
+callback admitted before shutdown keeps the scheduler role set until it
+retires, so shutdown waits even if host execution is delayed after admission.
+A stale callback from an older generation, or a superseded callback from the
+same generation, is a no-op and never clears or drains replacement dispatch
+state.
 
 Replayable bundle/dev/watch close state retains the original error chain rather
 than flattening it to text. At the NAPI boundary, a nested `napi::Error` is
@@ -404,7 +525,10 @@ releasing its task-registry mutex, because abort synchronously wakes and drops
 registrations that re-enter that registry during final env teardown.
 TypeScript close coordinators memoize terminal native and listener results but
 clear the outer single-flight promise after retryable worker or runtime-release
-failures. Worker stop closures retain only workers whose termination rejected,
+failures. The single-flight promise is published through a deferred microtask
+before the cleanup attempt is invoked, so a synchronously reentrant `close()`
+observes and returns the original promise instead of starting a second attempt.
+Worker stop closures retain only workers whose termination rejected,
 so a later close retries unfinished cleanup without terminating successful
 workers again. `RolldownBuild` keeps the latest operation's worker pool alive
 when its native build promise rejects because that operation's native
@@ -431,7 +555,27 @@ privilege after native code has stopped awaiting it. Browser builds have no
 async context API, so only the exact callback invocation synchronously on the
 stack receives the acknowledgement. Unrelated close callers always await full
 cleanup and observe its failure; a browser callback must request close before
-its first async suspension.
+its first async suspension. Plugin normalization extends this scope to
+user-defined thenables: reading and synchronously invoking each `then` method is
+performed inside `CloseCallbackScope`, as are synchronous `outputOptions`
+hooks. A thenable that requests close before returning therefore receives the
+same acknowledgement instead of deadlocking normalization against native close.
+Each resolution is first boxed in an opaque non-thenable value. Nested thenables
+are therefore processed by a later explicit flatten pass under a fresh scope,
+instead of being recursively assimilated by the native Promise after the
+browser scope has unwound. The boxed promise is awaited outside the synchronous
+invocation boundary, so browser hosts do not accidentally grant reentrant-close
+privilege to unrelated later microtasks. Each branch retains its own thenable
+resolution ancestry, so self-resolving and mutually recursive thenables reject
+with a `TypeError` while the same thenable may still appear in independent
+plugin-array branches. Array flattening uses the same path-local ancestry rule,
+so malformed circular plugin arrays reject without recursive stack overflow
+while shared arrays in independent branches remain valid. Callback-return
+thenables likewise capture their `then` method once before deferred
+assimilation, box each nested resolution, and retain path-local ancestry.
+Self-resolving and mutually recursive callback results therefore reject
+instead of monopolizing the microtask queue, and a user-controlled getter is
+never observed twice merely to determine whether the callback is asynchronous.
 
 Native watch mode is supported on both runtime flavors. Public `dev()` checks
 `devSupported` before reading callbacks, running plugin hooks, creating workers,
@@ -460,7 +604,14 @@ acquisitions share one start transition and then retain independent counts.
 Only the final lease release calls napi shutdown. Failed start leaves zero
 owners; failed shutdown keeps the final lease owned so the same JavaScript
 cleanup can retry. Releasing an already released token is a no-op, and
-concurrent finalization cannot underflow the count.
+concurrent finalization cannot underflow the count. Environment cancellation
+and owner publication are one atomic decision: after a successful start, the
+acquisition compare-exchanges its cancellation state from pending to committed
+before incrementing the owner count. If cleanup wins that race, the manager
+enters `Stopping`, rolls the just-started runtime back, and never exposes a
+lease. A rollback failure retains one abandoned lease owner in
+`ShutdownFailed`, preserving a recoverable retry path instead of reporting zero
+owners for a still-running runtime.
 
 Restart is awaitable because napi's combined custom/Tokio runtime deliberately
 does not overlap Tokio generations. `AcquireAsyncRuntimeTask` runs as N-API
@@ -478,11 +629,13 @@ bare `Promise<void>`. Ownership therefore remains in Rust across async-work
 completion and JavaScript object conversion. If delivery fails, normal Rust or
 N-API finalization releases the token. The legacy `startAsyncRuntime` and
 `shutdownAsyncRuntime` exports retain a separate manual-owner count for
-compatibility, so an unmatched manual shutdown cannot decrement a public
-object's token. Callable builtin hooks rely exclusively on the outer native
-operation token; retaining a manual owner inside their async block would make
-environment-teardown cancellation attempt a lifecycle transition from inside
-the runtime operation guard.
+threaded-WASI compatibility, so an unmatched manual shutdown cannot decrement
+a public object's token. On native and threadless-WASI artifacts they remain
+successful no-ops for compatibility; automatic N-API environment lifecycle
+owns those runtimes. Callable builtin hooks rely exclusively on the outer
+native operation token; retaining a manual owner inside their async block would
+make environment-teardown cancellation attempt a lifecycle transition from
+inside the runtime operation guard.
 
 `packages/rolldown/src/runtime-lifecycle.ts` exposes the awaitable lease
 protocol. Build, scan, watch, and dev objects await one lease before native
@@ -499,15 +652,19 @@ test mocks and legacy development shims that omit it conservatively take the
 native no-op lease path instead of throwing during module initialization.
 Bindings from the preceding threaded-WASI protocol report
 `target: 'wasi-threads'` but do not export `acquireAsyncRuntime`. The TypeScript
-layer detects their `startAsyncRuntime`/`shutdownAsyncRuntime` pair and retains
-the old shared implicit-first-owner manager, keyed by the legacy start function
-so mixed package copies do not consume that owner twice. Because that protocol
-cannot remain correct with independent realm-local first-owner state, an
-unavailable or incompatible global registry fails closed for legacy bindings;
-modern native-token bindings can safely fall back to independent local managers.
+layer detects their `startAsyncRuntime`/`shutdownAsyncRuntime` pair and fails
+lease acquisition closed. JavaScript realms do not share `globalThis`, so no
+realm-local registry can safely consume the protocol's one implicit native
+owner. Modern native-token bindings can safely fall back to independent local
+managers because every acquisition receives a distinct native token.
 A threaded-WASI binding that exposes neither protocol fails acquisition with a
 package/binding version-mismatch diagnostic instead of entering native work
 without an owner.
+Each acquired value is validated for a callable `release()` method, captured
+once with its original receiver, before JavaScript records lease ownership.
+Malformed package/binding combinations therefore fail with
+`ERR_ROLLDOWN_BINDING_MISMATCH` instead of allowing native work to proceed with
+an unreleasable token.
 Older capability reports also lack `devSupported`; the public workflow layer
 derives it from `threads`, while a shim with no reporter keeps the historical
 native MultiThread feature set.
@@ -525,6 +682,15 @@ that caller abandons the failure, the next acquisition in the same realm retries
 retained releases before requesting another token. Native and threadless
 artifacts use no-op JavaScript leases, preserving direct binding identities where
 no threaded-WASI ownership is required.
+
+The native async-runtime integration suite builds a test-only probe and loads
+the raw addon only inside a worker. A pending shared-scheduler task clones its
+real waker to an external native thread. After the worker is terminated and its
+environment cleanup has returned, the parent releases that thread; it calls
+`wake_by_ref`, drops the waker, and publishes completion. The parent process
+never imports the addon, so survival cannot be explained by another live
+environment retaining the image. The probe adds no module-count hooks or
+lifecycle locks.
 
 The WASI CI lane runs `packages/rolldown/tests/wasi-runtime-lifecycle.mjs`
 against the generated threaded artifact. It covers overlapping public owners,
@@ -562,13 +728,24 @@ a cloneable `ParallelPluginBootstrapError` before crossing `postMessage`. If
 the control-port send itself fails, the worker closes/unrefs that port and
 throws the cloneable diagnostic from a microtask, ensuring the supervisor sees
 an `error` or terminal exit even when unhandled promise rejections are
-configured to warn instead of terminating the worker.
+configured to warn instead of terminating the worker. Once a pool is
+initialized, every remaining option-access, warning, binding-conversion, and
+callback-wrapping step runs inside the same cleanup boundary so a synchronous
+setup failure cannot abandon those workers.
 
 ### Non-threaded WASI
 
 The current-thread executor is the runtime half of the non-threaded
 `wasm32-wasip1` build. Packaging, generated loaders, and the emnapi
 memory-growth backport are handled in the dependent browser/WASI change.
+That managed workerd entry must register both the runnable task host and timer
+host for every independently created instance, including callers of the root
+instance factory rather than only the package convenience wrapper. Its task
+host clears `pending` if `setTimeout` or another host scheduler throws
+synchronously, allowing a later runtime wake to retry dispatch. If
+initialization fails and context destruction also fails, object errors retain
+cleanup through `cause`; primitive primary failures are combined with cleanup
+errors in an aggregate so the unrecoverable cleanup failure is not hidden.
 
 The dependent browser/WASI change will publish the two flavors as distinct
 artifact sets:

@@ -3044,6 +3044,14 @@ export interface BindingWatchOption {
   onInvalidate?: ((id: string) => void) | undefined
 }
 
+/**
+ * Cancel an accepted CurrentThread task-host dispatch that failed before its
+ * JavaScript scheduler could queue a fresh turn.
+ *
+ * A no-op on the default `tokio-runtime` build.
+ */
+export declare function cancelCurrentThreadRuntimeTaskDispatch(dispatchHigh: number, dispatchLow: number): void
+
 export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
 
 /**
@@ -3058,8 +3066,10 @@ export declare function configureAsyncRuntime(options: BindingRuntimeOptions): v
 /**
  * Poll queued CurrentThread runnables from a callback dispatched by
  * `registerCurrentThreadTaskHost`.
+ *
+ * A no-op on the default `tokio-runtime` build.
  */
-export declare function driveCurrentThreadRuntimeTasks(): void
+export declare function driveCurrentThreadRuntimeTasks(dispatchHigh: number, dispatchLow: number): void
 
 export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
 
@@ -3091,11 +3101,10 @@ export type FilterTokenKind =  'Id'|
 /**
  * Return the effective async runtime configuration.
  *
- * On the `async-runtime` build this reports the runtime controller's
- * validated options: the resolved load-time snapshot (see
- * `resolved_runtime_config`) as clamped by `configure`, including any
- * pre-first-use `configureAsyncRuntime` override. The environment is never
- * re-read.
+ * On the `async-runtime` build this reports the controller's validated
+ * options, including a pre-first-use `configureAsyncRuntime` override. On the
+ * default `tokio-runtime` build it reports the resolved load-time snapshot
+ * used to construct Tokio. The environment is never re-read.
  */
 export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
 
@@ -3178,7 +3187,7 @@ export interface PreRenderedChunk {
  * Install the host-turn callback used to poll CurrentThread runnables without
  * re-entering arbitrary future waker locks. Called once per importing env.
  */
-export declare function registerCurrentThreadTaskHost(dispatch: () => void): void
+export declare function registerCurrentThreadTaskHost(dispatch: (dispatchHigh: number, dispatchLow: number) => void): void
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
@@ -3204,10 +3213,20 @@ export declare function resetAsyncRuntimeMetrics(): void
 
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 
-/** Shutdown one manually retained async runtime owner. */
+/**
+ * Shutdown one manually retained threaded-WASI async runtime owner.
+ *
+ * Native and threadless-WASI artifacts use automatic N-API environment
+ * lifecycle; this compatibility API remains a no-op on those artifacts.
+ */
 export declare function shutdownAsyncRuntime(): void
 
-/** Start and manually retain one async runtime owner. */
+/**
+ * Start and manually retain one threaded-WASI async runtime owner.
+ *
+ * Native and threadless-WASI artifacts use automatic N-API environment
+ * lifecycle; this compatibility API remains a no-op on those artifacts.
+ */
 export declare function startAsyncRuntime(): void
 
 export interface ViteImportGlobMeta {

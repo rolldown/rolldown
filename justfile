@@ -230,15 +230,16 @@ build-rolldown-wasi:
   vp run --filter rolldown build-wasi:debug
 
 # Build `rolldown` and its native `.node` binding with the shared async
-# runtime (`--no-default-features --features async-runtime`) instead of tokio.
-# The feature build regenerates two committed files: `binding.d.cts` (doc
-# comments follow the compiled cfg arm) and the browser WASI loader (the same
-# expected drift `build-rolldown` restores — see its comment). Restore both so
-# the recipe leaves a clean tree.
+# runtime (`--no-default-features --features
+# async-runtime,runtime-waker-teardown-test`) instead of tokio. The second
+# feature exposes only the worker teardown regression probe, which changes the
+# generated native loader and declarations. Restore those test-profile
+# artifacts plus the generated WASI loaders so the recipe leaves a clean tree;
+# public declaration docs are intentionally identical across runtime profiles.
 build-rolldown-async-runtime:
-  vp run --filter rolldown build-binding --no-default-features --features async-runtime
+  vp run --filter rolldown build-binding --no-default-features --features async-runtime,runtime-waker-teardown-test
   vp run --filter rolldown build-js-glue
-  git checkout -- packages/rolldown/src/binding.d.cts packages/rolldown/src/rolldown-binding.wasi-browser.js
+  git checkout -- packages/rolldown/src/binding.cjs packages/rolldown/src/binding.d.cts packages/rolldown/src/rolldown-binding.wasi.cjs packages/rolldown/src/rolldown-binding.wasi-browser.js
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
 build-rolldown-release:

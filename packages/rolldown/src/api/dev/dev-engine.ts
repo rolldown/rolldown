@@ -11,6 +11,7 @@ import type { OutputOptions } from '../../options/output-options';
 import { assertParallelPluginOptionsSupported } from '../../plugin/parallel-plugin';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
+import { CloseCallbackScope } from '../../utils/close-callback-scope';
 import { normalizeBindingResult, unwrapBindingResult } from '../../utils/error';
 import {
   createCleanupFailureError,
@@ -36,6 +37,7 @@ export class DevEngine {
   #runtimeLease: RuntimeLease;
   #stopWorkers: (() => Promise<void>) | undefined;
   #nativeClosePromise: Promise<void> | undefined;
+  #closeCallbackScope: CloseCallbackScope;
   #closeCoordinator = new CloseCoordinator(
     'Dev engine native close, parallel-plugin worker shutdown, or runtime release failed',
   );
@@ -54,11 +56,17 @@ export class DevEngine {
     assertRuntimeFeature('dev');
     assertParallelPluginOptionsSupported(inputOptions.plugins, outputOptions.plugins);
     inputOptions = await PluginDriver.callOptionsHook(inputOptions);
-    const options = await createBundlerOptions(inputOptions, outputOptions, false);
+    const closeCallbackScope = new CloseCallbackScope();
+    const options = await createBundlerOptions(
+      inputOptions,
+      outputOptions,
+      false,
+      closeCallbackScope,
+    );
 
     let bindingDevOptions: BindingDevOptions;
     try {
-      bindingDevOptions = createBindingDevOptions(devOptions);
+      bindingDevOptions = closeCallbackScope.wrapCallbacks(createBindingDevOptions(devOptions));
     } catch (error) {
       return throwDevSetupErrorAfterCleanup(
         error,
@@ -82,7 +90,7 @@ export class DevEngine {
 
     try {
       const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
-      return new DevEngine(inner, runtimeLease, options.stopWorkers);
+      return new DevEngine(inner, runtimeLease, options.stopWorkers, closeCallbackScope);
     } catch (error) {
       return throwDevSetupErrorAfterCleanup(
         error,
@@ -97,10 +105,12 @@ export class DevEngine {
     inner: BindingDevEngine,
     runtimeLease: RuntimeLease,
     stopWorkers: (() => Promise<void>) | undefined,
+    closeCallbackScope: CloseCallbackScope,
   ) {
     this.#inner = inner;
     this.#runtimeLease = runtimeLease;
     this.#stopWorkers = stopWorkers;
+    this.#closeCallbackScope = closeCallbackScope;
   }
 
   async run(): Promise<void> {
@@ -162,7 +172,9 @@ export class DevEngine {
         });
       }
     }
-    return this.#closeCoordinator.close(() => this.#close());
+    return this.#closeCallbackScope.selectClosePromise(
+      this.#closeCoordinator.close(() => this.#close()),
+    );
   }
 
   async #close(): Promise<CloseAttemptResult> {

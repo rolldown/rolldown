@@ -1,11 +1,6 @@
 import process from 'node:process';
-// Side effect: registers the async-runtime timer host before any bundling
-// (watch mode's debounce timer needs it on the single-thread flavor).
-import '../timer-host';
 import { version } from '../../package.json';
 import { parseCliArguments } from './arguments';
-import { bundleWithCliOptions, bundleWithConfig } from './commands/bundle';
-import { showHelp } from './commands/help';
 import { logger } from './logger';
 import { checkNodeVersion } from './version-check';
 
@@ -32,6 +27,14 @@ async function main() {
       }
     }
   }
+
+  // Binding-backed modules snapshot runtime environment variables during
+  // module initialization, so load them only after applying --environment.
+  await import('../timer-host');
+  const [{ bundleWithCliOptions, bundleWithConfig }, { showHelp }] = await Promise.all([
+    import('./commands/bundle'),
+    import('./commands/help'),
+  ]);
 
   if (cliOptions.help) {
     showHelp();

@@ -1,8 +1,4 @@
-import {
-  driveCurrentThreadRuntimeTasks,
-  registerCurrentThreadTaskHost,
-  registerTimerHost,
-} from './binding.cjs';
+import * as binding from './binding.cjs';
 
 // Host integration for the `--features async-runtime` binding. CurrentThread
 // runnable wakes enter through a fresh host turn instead of polling inline from
@@ -31,33 +27,111 @@ import {
 //   a CurrentThread sleep would panic there.
 // - wasm artifacts: each worker instantiates its own wasm instance with its
 //   own driver registry, so each thread MUST register its own driver.
-registerCurrentThreadTaskHost(driveCurrentThreadRuntimeTasks);
+const { driveCurrentThreadRuntimeTasks, registerCurrentThreadTaskHost, registerTimerHost } =
+  binding as Record<PropertyKey, unknown>;
+const hostFunctions = {
+  driveCurrentThreadRuntimeTasks,
+  registerCurrentThreadTaskHost,
+  registerTimerHost,
+};
+const hostFunctionEntries = Object.entries(hostFunctions);
+const legacyHostContract = hostFunctionEntries.every(([, value]) => value === undefined);
+const completeHostContract = hostFunctionEntries.every(([, value]) => typeof value === 'function');
+type CurrentThreadTaskDispatch = (dispatchHigh: number, dispatchLow: number) => void;
 
-if (!import.meta.browserBuild && globalThis.setTimeout && globalThis.clearTimeout) {
+if (!legacyHostContract && !completeHostContract) {
+  const invalidExports = hostFunctionEntries
+    .filter(([, value]) => typeof value !== 'function')
+    .map(([name]) => name)
+    .join(', ');
+  throw new TypeError(
+    `The loaded Rolldown binding exposes an incomplete async-runtime host contract. ` +
+      `Missing or invalid exports: ${invalidExports}. Reinstall Rolldown so the JavaScript ` +
+      `package and binding versions match.`,
+  );
+}
+
+if (completeHostContract) {
+  (registerCurrentThreadTaskHost as (dispatch: CurrentThreadTaskDispatch) => void)(
+    driveCurrentThreadRuntimeTasks as CurrentThreadTaskDispatch,
+  );
+}
+
+if (
+  completeHostContract &&
+  !import.meta.browserBuild &&
+  globalThis.setTimeout &&
+  globalThis.clearTimeout
+) {
+  const MAX_HOST_TIMEOUT_MS = 2_147_483_647;
+
   type TimerEntry = {
-    handle: ReturnType<typeof setTimeout>;
+    handle: ReturnType<typeof setTimeout> | undefined;
+    remainingMs: number;
+    reject: (error: unknown) => void;
     resolve: () => void;
   };
 
   const active = new Map<number, TimerEntry>();
 
-  registerTimerHost(
-    (id, ms) =>
-      new Promise<void>((resolve) => {
-        const handle = globalThis.setTimeout(() => {
+  const armTimer = (id: number, timer: TimerEntry): void => {
+    const delay = Math.min(timer.remainingMs, MAX_HOST_TIMEOUT_MS);
+    timer.handle = globalThis.setTimeout(() => {
+      if (active.get(id) !== timer) return;
+      timer.remainingMs -= delay;
+      if (timer.remainingMs > 0) {
+        try {
+          armTimer(id, timer);
+        } catch (error) {
           active.delete(id);
-          resolve();
-        }, ms);
-        active.set(id, { handle, resolve });
+          timer.reject(error);
+        }
+        return;
+      }
+      active.delete(id);
+      timer.resolve();
+    }, delay);
+  };
+
+  (
+    registerTimerHost as (
+      schedule: (id: number, ms: number) => Promise<void>,
+      cancel: (id: number) => void,
+    ) => void
+  )(
+    (id, ms) =>
+      new Promise<void>((resolve, reject) => {
+        const timer: TimerEntry = {
+          handle: undefined,
+          remainingMs: Math.max(ms, 0),
+          reject,
+          resolve,
+        };
+        active.set(id, timer);
+        try {
+          armTimer(id, timer);
+        } catch (error) {
+          active.delete(id);
+          reject(error);
+        }
       }),
     (id) => {
       const timer = active.get(id);
       if (!timer) return;
       active.delete(id);
-      globalThis.clearTimeout(timer.handle);
-      // The Rust relay awaits the schedule Promise. Resolve it after clearing
-      // the host timeout so cancellation retires both sides of the bridge.
-      timer.resolve();
+      try {
+        if (timer.handle !== undefined) {
+          globalThis.clearTimeout(timer.handle);
+        }
+      } catch {
+        // This callback crosses N-API through a non-catching TSFN. Host timer
+        // cleanup failures must not escape as fatal JavaScript exceptions.
+      } finally {
+        // The Rust relay awaits the schedule Promise. Settle it even when a
+        // host clearTimeout implementation throws so cancellation retires the
+        // Rust side of the bridge.
+        timer.resolve();
+      }
     },
   );
 }

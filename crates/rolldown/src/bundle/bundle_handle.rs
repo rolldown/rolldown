@@ -143,7 +143,12 @@ mod tests {
     borrow::Cow,
     sync::atomic::{AtomicUsize, Ordering},
   };
-  use tokio::sync::Notify;
+  use tokio::{
+    sync::Notify,
+    time::{Duration, timeout},
+  };
+
+  const LIVENESS_TIMEOUT: Duration = Duration::from_secs(10);
 
   #[derive(Debug)]
   struct GatedFailingClosePlugin {
@@ -230,10 +235,16 @@ mod tests {
     tokio::task::yield_now().await;
     assert!(!second.is_finished(), "concurrent close must wait for the hook");
 
-    release.notify_waiters();
-    let first_error = first.await.expect("first close task").expect_err("first close should fail");
-    let second_error =
-      second.await.expect("second close task").expect_err("second close should fail");
+    release.notify_one();
+    let (first_error, second_error) = timeout(LIVENESS_TIMEOUT, async {
+      let first_error =
+        first.await.expect("first close task").expect_err("first close should fail");
+      let second_error =
+        second.await.expect("second close task").expect_err("second close should fail");
+      (first_error, second_error)
+    })
+    .await
+    .expect("all close callers must finish before the liveness deadline");
     assert!(first_error.to_string().contains("close bundle failed"));
     assert_eq!(second_error.to_string(), first_error.to_string());
     assert_eq!(calls.load(Ordering::SeqCst), 1);

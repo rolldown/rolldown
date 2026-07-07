@@ -5,19 +5,29 @@ use rolldown::{
   },
 };
 use rolldown_common::WatcherChangeKind;
-use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, DevWatchOptions, RebuildStrategy};
+use rolldown_dev::{
+  BundlerConfig, BundlingFuture, DevCallbackResult, DevEngine, DevOptions, DevWatchOptions,
+  RebuildStrategy,
+};
 use std::{
   borrow::Cow,
   fs,
+  future::{Future, poll_fn},
+  panic::panic_any,
   path::PathBuf,
   sync::{
     Arc, Condvar, Mutex,
     atomic::{AtomicUsize, Ordering},
   },
 };
-use tokio::sync::{Notify, oneshot};
+use tokio::{
+  sync::{Notify, oneshot},
+  time::{Duration, timeout},
+};
 
 static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
+const LIVENESS_TIMEOUT: Duration = Duration::from_secs(10);
+const BUNDLING_PANIC_MESSAGE: &str = "deterministic bundling task panic";
 
 struct TestDir(PathBuf);
 
@@ -58,6 +68,24 @@ impl CallbackGate {
     *self.released.lock().expect("callback gate lock poisoned") = true;
     self.release.notify_all();
   }
+}
+
+fn gated_panicking_bundling_task(
+  entered: Arc<Notify>,
+  gate: Arc<CallbackGate>,
+) -> impl Future<Output = DevCallbackResult> + Send {
+  poll_fn(move |_| {
+    entered.notify_one();
+    // Intentionally hold the poll so another clone can register as a waiter.
+    gate.wait();
+    panic_any(BUNDLING_PANIC_MESSAGE.to_string());
+  })
+}
+
+fn assert_string_panic(error: tokio::task::JoinError) {
+  let payload = error.into_panic();
+  let message = payload.downcast::<String>().expect("panic payload must remain a String");
+  assert_eq!(*message, BUNDLING_PANIC_MESSAGE);
 }
 
 #[derive(Debug)]
@@ -174,7 +202,10 @@ async fn close_waits_for_hmr_rebuild_before_closing_the_final_bundle_handle() {
       )
       .await;
   });
-  hmr_started_rx.await.expect("HMR callback should start");
+  timeout(LIVENESS_TIMEOUT, hmr_started_rx)
+    .await
+    .expect("HMR callback must start before the liveness deadline")
+    .expect("HMR callback should start");
 
   let close_engine = Arc::clone(&engine);
   let close_task = tokio::spawn(async move { close_engine.close().await });
@@ -183,8 +214,12 @@ async fn close_waits_for_hmr_rebuild_before_closing_the_final_bundle_handle() {
   }
   callback_gate.release();
 
-  update_task.await.expect("update task should finish");
-  close_task.await.expect("close task should finish").expect("dev engine close should succeed");
+  timeout(LIVENESS_TIMEOUT, async {
+    update_task.await.expect("update task should finish");
+    close_task.await.expect("close task should finish").expect("dev engine close should succeed");
+  })
+  .await
+  .expect("rebuild and close must finish before the liveness deadline");
 
   assert_eq!(close_calls.load(Ordering::SeqCst), 1);
   assert!(
@@ -265,7 +300,9 @@ async fn concurrent_and_late_close_callers_replay_the_terminal_failure() {
 
   let first_engine = Arc::clone(&engine);
   let first = tokio::spawn(async move { first_engine.close().await });
-  entered.notified().await;
+  timeout(LIVENESS_TIMEOUT, entered.notified())
+    .await
+    .expect("closeBundle must start before the liveness deadline");
   assert!(engine.is_closed(), "new work must be rejected while close is pending");
 
   let second_engine = Arc::clone(&engine);
@@ -273,10 +310,15 @@ async fn concurrent_and_late_close_callers_replay_the_terminal_failure() {
   tokio::task::yield_now().await;
   assert!(!second.is_finished(), "concurrent close must await terminal cleanup");
 
-  release.notify_waiters();
-  let first_error = first.await.expect("first close task").expect_err("first close should fail");
-  let second_error =
-    second.await.expect("second close task").expect_err("second close should fail");
+  release.notify_one();
+  let (first_error, second_error) = timeout(LIVENESS_TIMEOUT, async {
+    let first_error = first.await.expect("first close task").expect_err("first close should fail");
+    let second_error =
+      second.await.expect("second close task").expect_err("second close should fail");
+    (first_error, second_error)
+  })
+  .await
+  .expect("all close callers must finish before the liveness deadline");
   assert!(first_error.to_string().contains("dev close terminal failure"));
   assert_eq!(second_error.to_string(), first_error.to_string());
   assert_eq!(calls.load(Ordering::SeqCst), 1);
@@ -284,6 +326,108 @@ async fn concurrent_and_late_close_callers_replay_the_terminal_failure() {
   let late_error = engine.close().await.expect_err("late close should replay failure");
   assert_eq!(late_error.to_string(), first_error.to_string());
   assert_eq!(calls.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn panicked_bundling_future_wakes_and_replays_to_all_waiters() {
+  let entered = Arc::new(Notify::new());
+  let gate = Arc::new(CallbackGate { released: Mutex::new(false), release: Condvar::new() });
+  let bundling_future = BundlingFuture::new_for_testing(gated_panicking_bundling_task(
+    Arc::clone(&entered),
+    Arc::clone(&gate),
+  ));
+
+  let first_future = bundling_future.clone();
+  let first = tokio::spawn(first_future);
+  timeout(LIVENESS_TIMEOUT, entered.notified())
+    .await
+    .expect("the first bundling waiter must enter before the liveness deadline");
+
+  let second_polled = Arc::new(Notify::new());
+  let second_polled_in_task = Arc::clone(&second_polled);
+  let mut second_future = Box::pin(bundling_future.clone());
+  let second = tokio::spawn(async move {
+    poll_fn(move |cx| {
+      let result = second_future.as_mut().poll(cx);
+      second_polled_in_task.notify_one();
+      result
+    })
+    .await
+  });
+  timeout(LIVENESS_TIMEOUT, second_polled.notified())
+    .await
+    .expect("the second bundling waiter must poll before the liveness deadline");
+
+  gate.release();
+
+  let (first_error, second_error) = timeout(LIVENESS_TIMEOUT, async {
+    let first_error = first.await.expect_err("first waiter must replay the bundling panic");
+    let second_error = second.await.expect_err("second waiter must replay the bundling panic");
+    (first_error, second_error)
+  })
+  .await
+  .expect("registered bundling waiters must not remain pending");
+  assert_string_panic(first_error);
+  assert_string_panic(second_error);
+
+  let late_error = timeout(LIVENESS_TIMEOUT, tokio::spawn(bundling_future))
+    .await
+    .expect("late bundling waiter must not remain pending")
+    .expect_err("late waiter must replay the bundling panic");
+  assert_string_panic(late_error);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn bundling_future_preserves_static_str_panic_payload() {
+  const MESSAGE: &str = "static bundling task panic";
+  let bundling_future = BundlingFuture::new_for_testing(async { panic_any(MESSAGE) });
+  let error =
+    tokio::spawn(bundling_future).await.expect_err("the bundling future must replay the panic");
+  let payload = error.into_panic();
+  let message =
+    payload.downcast::<&'static str>().expect("panic payload must remain a static string");
+  assert_eq!(*message, MESSAGE);
+}
+
+#[derive(Debug)]
+struct CallbackPanicPayload(&'static str);
+
+struct NestedPanicPayload(Arc<AtomicUsize>);
+
+impl Drop for NestedPanicPayload {
+  fn drop(&mut self) {
+    self.0.fetch_add(1, Ordering::SeqCst);
+    panic!("nested panic payload destructor panic");
+  }
+}
+
+struct HostilePanicPayload(Arc<AtomicUsize>);
+
+impl Drop for HostilePanicPayload {
+  fn drop(&mut self) {
+    self.0.fetch_add(1, Ordering::SeqCst);
+    panic_any(NestedPanicPayload(Arc::clone(&self.0)));
+  }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn unobserved_opaque_panic_payload_destruction_is_contained() {
+  let drops = Arc::new(AtomicUsize::new(0));
+  let panic_drops = Arc::clone(&drops);
+  let bundling_future = BundlingFuture::new_for_testing(async move {
+    panic_any(HostilePanicPayload(panic_drops));
+  });
+
+  timeout(LIVENESS_TIMEOUT, bundling_future.clone().drive_for_testing())
+    .await
+    .expect("the detached driver must publish the panic outcome");
+  drop(bundling_future);
+
+  assert_eq!(
+    drops.load(Ordering::SeqCst),
+    2,
+    "both hostile payload destructors must run without escaping teardown"
+  );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -313,7 +457,9 @@ async fn close_contains_a_panicked_bundling_future_and_runs_fallback_cleanup() {
         })],
       ),
       DevOptions {
-        on_output: Some(Arc::new(|_| panic!("consumer output callback panic"))),
+        on_output: Some(Arc::new(|_| {
+          panic_any(CallbackPanicPayload("consumer output callback panic"))
+        })),
         watch: Some(DevWatchOptions {
           disable_watcher: Some(true),
           skip_write: Some(true),
@@ -327,11 +473,20 @@ async fn close_contains_a_panicked_bundling_future_and_runs_fallback_cleanup() {
 
   let run_engine = Arc::clone(&engine);
   let run = tokio::spawn(async move { run_engine.run().await });
-  let run_error = run.await.expect_err("the consumer callback panic must fail the run task");
-  assert!(run_error.is_panic());
+  let run_error = timeout(LIVENESS_TIMEOUT, run)
+    .await
+    .expect("the run task must finish before the liveness deadline")
+    .expect_err("the consumer callback panic must fail the run task");
+  let payload = run_error.into_panic();
+  let payload = payload
+    .downcast::<CallbackPanicPayload>()
+    .expect("the first observer must receive the original opaque panic payload");
+  assert_eq!(payload.0, "consumer output callback panic");
 
-  let close_error =
-    engine.close().await.expect_err("close must report the coordinator panic instead of panicking");
+  let close_error = timeout(LIVENESS_TIMEOUT, engine.close())
+    .await
+    .expect("close must finish before the liveness deadline")
+    .expect_err("close must report the coordinator panic instead of panicking");
   assert!(close_error.to_string().contains("DevEngine coordinator task failed"));
   assert_eq!(close_calls.load(Ordering::SeqCst), 1, "fallback cleanup must run closeBundle");
 }

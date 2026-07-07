@@ -26,16 +26,12 @@ vi.mock('../src/binding.cjs', () => ({
 // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
 import { acquireRuntimeLease, isRuntimeLeaseRequired } from '../src/runtime-lifecycle';
 
-test('older threaded-WASI bindings retain their implicit-owner lease protocol', async () => {
+test('older threaded-WASI bindings fail closed instead of sharing implicit owners across realms', async () => {
   expect(isRuntimeLeaseRequired()).toBe(true);
 
-  const first = await acquireRuntimeLease();
+  await expect(acquireRuntimeLease()).rejects.toThrow(
+    'legacy implicit runtime-owner protocol, which cannot be coordinated safely across JavaScript realms',
+  );
   expect(binding.startAsyncRuntime).not.toHaveBeenCalled();
-
-  const second = await acquireRuntimeLease();
-  expect(binding.startAsyncRuntime).toHaveBeenCalledOnce();
-
-  first.release();
-  second.release();
-  expect(binding.shutdownAsyncRuntime).toHaveBeenCalledTimes(2);
+  expect(binding.shutdownAsyncRuntime).not.toHaveBeenCalled();
 });

@@ -6,7 +6,6 @@ use std::{
 
 use anyhow::Context;
 use arcstr::ArcStr;
-use futures::FutureExt;
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_dev_common::types::{DevCallbackError, DevCallbackResult};
@@ -22,9 +21,7 @@ use rolldown::Bundler;
 
 use crate::{
   bundling_task::BundlingTask,
-  dev_context::{
-    BundlingFuture, PinBoxSendStaticFuture, SharedDevContext, dev_callback_result_to_build_result,
-  },
+  dev_context::{BundlingFuture, SharedDevContext, dev_callback_result_to_build_result},
   type_aliases::{CoordinatorReceiver, CoordinatorSender},
   types::{
     coordinator_msg::CoordinatorMsg, coordinator_state::CoordinatorState,
@@ -407,12 +404,9 @@ impl BundleCoordinator {
             self.set_initial_build_state(CoordinatorState::InProgress);
           }
           self.last_callback_error = None;
-          let bundling_future =
-            (Box::pin(bundling_task.run()) as PinBoxSendStaticFuture<DevCallbackResult>).shared();
+          let bundling_future = BundlingFuture::new(bundling_task.run());
           let detached_bundling_future = bundling_future.clone();
-          spawn_detached(async move {
-            let _ = detached_bundling_future.await;
-          });
+          spawn_detached(detached_bundling_future.drive());
 
           self.current_bundling_future = Some(bundling_future.clone());
 

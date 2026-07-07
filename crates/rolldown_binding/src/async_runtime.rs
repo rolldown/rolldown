@@ -20,10 +20,11 @@ use napi_derive::napi;
 use rolldown_utils::async_runtime::{
   CurrentThreadTaskDriver, CurrentThreadTaskDriverId, RuntimeFlavor, RuntimeMetricsSnapshot,
   RuntimeOptions, RuntimeOptionsPatch, TimerDriver, TimerDriverId, TimerId, block_on_dyn,
-  configure, configure_partial, configured_options, drive_current_thread_tasks, metrics,
-  register_current_thread_task_driver, register_timer_driver, request_current_thread_task_drain,
-  reset_metrics, shutdown, spawn_detached, start, try_spawn_blocking, try_spawn_detached,
-  unregister_current_thread_task_driver, unregister_timer_driver,
+  cancel_current_thread_task_dispatch, configure, configure_partial, configured_options,
+  drive_current_thread_tasks, metrics, register_current_thread_task_driver, register_timer_driver,
+  request_current_thread_task_drain, reset_metrics, shutdown, spawn_detached, start,
+  try_spawn_blocking, try_spawn_detached, unregister_current_thread_task_driver,
+  unregister_timer_driver,
 };
 
 use crate::types::js_callback::JsCallback;
@@ -34,7 +35,12 @@ use crate::types::js_callback::JsCallbackExt;
 struct RolldownAsyncRuntime;
 
 #[cfg(feature = "async-runtime")]
-impl AsyncRuntime for RolldownAsyncRuntime {
+// SAFETY: See internal-docs/async-runtime/implementation.md. Shutdown closes
+// admission, waits for the scheduler generation to quiesce, joins native
+// workers, and releases active resources. Independently, napi-rs permanently
+// retains the native image after a module that registered this backend exports
+// successfully, so externally cloned wakers cannot call into unmapped code.
+unsafe impl AsyncRuntime for RolldownAsyncRuntime {
   fn spawn(&self, task: AsyncRuntimeTask) -> std::result::Result<(), AsyncRuntimeTask> {
     try_spawn_detached(task)
   }
@@ -201,11 +207,10 @@ pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<(
 #[napi]
 /// Return the effective async runtime configuration.
 ///
-/// On the `async-runtime` build this reports the runtime controller's
-/// validated options: the resolved load-time snapshot (see
-/// `resolved_runtime_config`) as clamped by `configure`, including any
-/// pre-first-use `configureAsyncRuntime` override. The environment is never
-/// re-read.
+/// On the `async-runtime` build this reports the controller's validated
+/// options, including a pre-first-use `configureAsyncRuntime` override. On the
+/// default `tokio-runtime` build it reports the resolved load-time snapshot
+/// used to construct Tokio. The environment is never re-read.
 pub fn get_async_runtime_config() -> BindingRuntimeConfig {
   configured_options().into()
 }
@@ -529,13 +534,10 @@ pub fn resolved_runtime_config() -> &'static ResolvedRuntimeConfig {
 #[napi]
 /// Return the effective async runtime configuration.
 ///
-/// Reported from the per-process resolved snapshot: on the native default
-/// `tokio-runtime` build these are the thread counts the tokio runtime was
-/// ACTUALLY built with at addon load (lib.rs `init` builds from the same
-/// snapshot), so a later `process.env` change cannot make the report diverge
-/// from the live runtime. On the threaded WASI build it reports the napi-rs
-/// WASI loader's async work pool size (NAPI_RS_ASYNC_WORK_POOL_SIZE /
-/// UV_THREADPOOL_SIZE), resolved once at addon load.
+/// On the `async-runtime` build this reports the controller's validated
+/// options, including a pre-first-use `configureAsyncRuntime` override. On the
+/// default `tokio-runtime` build it reports the resolved load-time snapshot
+/// used to construct Tokio. The environment is never re-read.
 pub fn get_async_runtime_config() -> BindingRuntimeConfig {
   let resolved = resolved_runtime_config();
   BindingRuntimeConfig {
@@ -597,6 +599,9 @@ pub fn reset_async_runtime_metrics() {
 #[napi]
 /// Reset cumulative async runtime event counters to zero.
 ///
+/// Live gauges and their lifetime high-water marks are preserved so active
+/// task guards can complete without corrupting concurrent observations.
+///
 /// A no-op on the default `tokio-runtime` build.
 pub fn reset_async_runtime_metrics() {}
 
@@ -610,7 +615,7 @@ struct JsCurrentThreadTaskHost {
 
 #[cfg(feature = "async-runtime")]
 struct JsCurrentThreadTaskHostInner {
-  callback: JsCallback<(), ()>,
+  callback: JsCallback<FnArgs<(u32, u32)>, ()>,
   dead: std::sync::atomic::AtomicBool,
   registration: std::sync::Mutex<Option<CurrentThreadTaskDriverId>>,
 }
@@ -647,9 +652,15 @@ impl JsCurrentThreadTaskHostInner {
 
 #[cfg(feature = "async-runtime")]
 impl CurrentThreadTaskDriver for JsCurrentThreadTaskHost {
-  fn dispatch(&self) -> bool {
+  fn dispatch(&self, dispatch: u64) -> bool {
+    let dispatch_high = (dispatch >> 32) as u32;
+    let dispatch_low = u32::try_from(dispatch & u64::from(u32::MAX))
+      .expect("the masked dispatch token low word must fit in u32");
     self.inner.is_live()
-      && self.inner.callback.call((), ThreadsafeFunctionCallMode::NonBlocking) == napi::Status::Ok
+      && self.inner.callback.call(
+        FnArgs { data: (dispatch_high, dispatch_low) },
+        ThreadsafeFunctionCallMode::NonBlocking,
+      ) == napi::Status::Ok
   }
 
   fn is_live(&self) -> bool {
@@ -678,12 +689,12 @@ fn install_cleanup_hook_or_rollback<T>(
 }
 
 #[cfg(feature = "async-runtime")]
-#[napi(ts_args_type = "dispatch: () => void")]
+#[napi(ts_args_type = "dispatch: (dispatchHigh: number, dispatchLow: number) => void")]
 /// Install the host-turn callback used to poll CurrentThread runnables without
 /// re-entering arbitrary future waker locks. Called once per importing env.
 pub fn register_current_thread_task_host(
   env: &napi::Env,
-  dispatch: JsCallback<(), ()>,
+  dispatch: JsCallback<FnArgs<(u32, u32)>, ()>,
 ) -> napi::Result<()> {
   let inner = std::sync::Arc::new(JsCurrentThreadTaskHostInner {
     callback: dispatch,
@@ -711,22 +722,56 @@ pub fn register_current_thread_task_host(
 }
 
 #[cfg(not(feature = "async-runtime"))]
-#[napi(ts_args_type = "dispatch: () => void")]
-pub fn register_current_thread_task_host(dispatch: JsCallback<(), ()>) {
+#[napi(ts_args_type = "dispatch: (dispatchHigh: number, dispatchLow: number) => void")]
+/// Install the host-turn callback used to poll CurrentThread runnables without
+/// re-entering arbitrary future waker locks. Called once per importing env.
+///
+/// A no-op on the default `tokio-runtime` build.
+pub fn register_current_thread_task_host(dispatch: JsCallback<FnArgs<(u32, u32)>, ()>) {
   let _ = dispatch;
+}
+
+#[cfg(feature = "async-runtime")]
+#[napi]
+/// Cancel an accepted CurrentThread task-host dispatch that failed before its
+/// JavaScript scheduler could queue a fresh turn.
+///
+/// A no-op on the default `tokio-runtime` build.
+pub fn cancel_current_thread_runtime_task_dispatch(dispatch_high: u32, dispatch_low: u32) {
+  let dispatch = (u64::from(dispatch_high) << 32) | u64::from(dispatch_low);
+  cancel_current_thread_task_dispatch(dispatch);
+}
+
+#[cfg(not(feature = "async-runtime"))]
+#[napi]
+/// Cancel an accepted CurrentThread task-host dispatch that failed before its
+/// JavaScript scheduler could queue a fresh turn.
+///
+/// A no-op on the default `tokio-runtime` build.
+pub fn cancel_current_thread_runtime_task_dispatch(dispatch_high: u32, dispatch_low: u32) {
+  let _ = (dispatch_high, dispatch_low);
 }
 
 #[cfg(feature = "async-runtime")]
 #[napi]
 /// Poll queued CurrentThread runnables from a callback dispatched by
 /// `registerCurrentThreadTaskHost`.
-pub fn drive_current_thread_runtime_tasks() {
-  drive_current_thread_tasks();
+///
+/// A no-op on the default `tokio-runtime` build.
+pub fn drive_current_thread_runtime_tasks(dispatch_high: u32, dispatch_low: u32) {
+  let dispatch = (u64::from(dispatch_high) << 32) | u64::from(dispatch_low);
+  drive_current_thread_tasks(dispatch);
 }
 
 #[cfg(not(feature = "async-runtime"))]
 #[napi]
-pub fn drive_current_thread_runtime_tasks() {}
+/// Poll queued CurrentThread runnables from a callback dispatched by
+/// `registerCurrentThreadTaskHost`.
+///
+/// A no-op on the default `tokio-runtime` build.
+pub fn drive_current_thread_runtime_tasks(dispatch_high: u32, dispatch_low: u32) {
+  let _ = (dispatch_high, dispatch_low);
+}
 
 /// Host timer driver for the shared runtime's CurrentThread flavor (timer
 /// intel §4(b)): `sleep_until` on the single-thread executor cannot park a
@@ -1204,6 +1249,90 @@ fn install_async_runtime_backend() {
   };
   configure(options).expect("Failed to configure the Rolldown async runtime");
   register_async_runtime(RolldownAsyncRuntime);
+}
+
+#[cfg(all(feature = "runtime-waker-teardown-test", not(target_family = "wasm")))]
+struct RetainedSchedulerWakerProbe {
+  sender: Option<std::sync::mpsc::Sender<std::task::Waker>>,
+}
+
+#[cfg(all(feature = "runtime-waker-teardown-test", not(target_family = "wasm")))]
+impl Future for RetainedSchedulerWakerProbe {
+  type Output = ();
+
+  fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<()> {
+    if let Some(sender) = self.sender.take() {
+      let _ = sender.send(cx.waker().clone());
+    }
+    std::task::Poll::Pending
+  }
+}
+
+#[cfg(all(feature = "runtime-waker-teardown-test", not(target_family = "wasm")))]
+fn run_retained_scheduler_waker_probe(
+  receiver: std::sync::mpsc::Receiver<std::task::Waker>,
+  armed_path: std::path::PathBuf,
+  release_path: std::path::PathBuf,
+  completed_path: std::path::PathBuf,
+) {
+  let result = (|| -> Result<(), String> {
+    let waker = receiver
+      .recv()
+      .map_err(|_| "scheduler task retired before publishing its waker".to_string())?;
+    std::fs::write(&armed_path, b"armed")
+      .map_err(|error| format!("failed to publish armed marker: {error}"))?;
+
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    while !release_path.exists() {
+      if std::time::Instant::now() >= deadline {
+        return Err("timed out waiting for the post-teardown release marker".to_string());
+      }
+      std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+      waker.wake_by_ref();
+      drop(waker);
+    }))
+    .map_err(|_| "post-teardown scheduler waker invocation panicked".to_string())
+  })();
+
+  let status = match result {
+    Ok(()) => "completed".to_string(),
+    Err(error) => format!("error: {error}"),
+  };
+  let _ = std::fs::write(completed_path, status);
+}
+
+/// Test-only worker teardown probe. It retains a real shared-scheduler waker
+/// on an external native thread until the caller publishes `release_path`.
+#[cfg(all(feature = "runtime-waker-teardown-test", not(target_family = "wasm")))]
+#[napi(js_name = "__rolldownTestRetainSchedulerWaker")]
+pub fn retain_scheduler_waker_for_worker_teardown(
+  armed_path: String,
+  release_path: String,
+  completed_path: String,
+) -> napi::Result<()> {
+  let (sender, receiver) = std::sync::mpsc::channel();
+  std::thread::Builder::new()
+    .name("rolldown-waker-teardown-test".to_string())
+    .spawn(move || {
+      run_retained_scheduler_waker_probe(
+        receiver,
+        armed_path.into(),
+        release_path.into(),
+        completed_path.into(),
+      );
+    })
+    .map_err(|error| {
+      napi::Error::from_reason(format!(
+        "Failed to start the scheduler waker teardown probe thread: {error}"
+      ))
+    })?;
+
+  try_spawn_detached(RetainedSchedulerWakerProbe { sender: Some(sender) }).map_err(|_| {
+    napi::Error::from_reason("The shared async runtime rejected the scheduler waker teardown probe")
+  })
 }
 
 /// What this Rolldown binding IS -- backend, flavor, target -- and the

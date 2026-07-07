@@ -214,12 +214,15 @@ export async function createWatcher(
   input: WatchOptions | WatchOptions[],
 ): Promise<void> {
   const options = arraify(input);
+  const closeCallbackScope = emitter.closeCallbackScope;
   const bundlerOptionResults = await Promise.allSettled(
     options
       .map((option) =>
         arraify(option.output || {}).map(async (output) => {
-          const inputOptions = await PluginDriver.callOptionsHook(option, true);
-          return createBundlerOptions(inputOptions, output, true);
+          const inputOptions = await closeCallbackScope.run(() =>
+            PluginDriver.callOptionsHook(option, true),
+          );
+          return createBundlerOptions(inputOptions, output, true, closeCallbackScope);
         }),
       )
       .flat(),

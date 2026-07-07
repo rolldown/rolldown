@@ -202,7 +202,7 @@ jobs:
         run: just test-async-runtime
 
   native-async-runtime-check:
-    name: Native Async Runtime Build (${{ matrix.os }})
+    name: Native Async Runtime Lifecycle (${{ matrix.os }})
     needs: changes
     if: ${{ needs.changes.outputs.rust-changes == 'true' }}
     strategy:
@@ -216,13 +216,23 @@ jobs:
       - name: Setup Rust
         uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
+          tools: just
           cache-key: native-async-runtime-check-${{ matrix.os }}
           save-cache: ${{ github.ref_name == 'main' }}
 
-      # `rolldown_binding` produces a cdylib, so use `cargo build` to exercise
-      # platform linkers and N-API linkage instead of stopping at type checking.
-      - name: Build shared async runtime
-        run: cargo build -p rolldown_binding --no-default-features --features async-runtime --locked
+      - uses: voidzero-dev/setup-vp@35171c92dd08b67d5a9d3f2a4327800e58396f2a # v1.13.0
+        with:
+          version: '0.2.1'
+          cache: true
+
+      # Build the real addon with the test-only scheduler-waker probe. The
+      # focused worker test is the unload-safety proof; a cdylib-only build
+      # cannot exercise Node's environment cleanup or native image unloading.
+      - name: Build shared async runtime probe
+        run: just build-rolldown-async-runtime
+
+      - name: Test worker environment teardown
+        run: vp run --filter rolldown-tests test:main -- async-runtime-worker-teardown.test.ts
 
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]

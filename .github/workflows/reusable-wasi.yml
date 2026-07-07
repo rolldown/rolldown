@@ -32,8 +32,40 @@ jobs:
           version: '0.2.1'
           cache: true
 
-      - name: Add WASI target
-        run: rustup target add wasm32-wasip1-threads
+      - name: Add WASI targets
+        run: rustup target add wasm32-wasip1 wasm32-wasip1-threads
+
+      - name: Check shared runtime on threadless WASI
+        run: |
+          emnapi_package_dir="$(
+            cd packages/rolldown
+            node - <<'NODE'
+          const { createRequire } = require('node:module')
+          const { dirname } = require('node:path')
+          const cliRequire = createRequire(require.resolve('@napi-rs/cli/package.json'))
+          console.log(dirname(cliRequire.resolve('emnapi/package.json')))
+          NODE
+          )"
+          RUSTC="$(rustup which rustc)" \
+            EMNAPI_LINK_DIR="$emnapi_package_dir/lib/wasm32-wasip1" \
+            cargo check -p rolldown_binding --target wasm32-wasip1 \
+              --no-default-features --features async-runtime --locked
+
+      - name: Check shared runtime on threaded WASI
+        run: |
+          emnapi_package_dir="$(
+            cd packages/rolldown
+            node - <<'NODE'
+          const { createRequire } = require('node:module')
+          const { dirname } = require('node:path')
+          const cliRequire = createRequire(require.resolve('@napi-rs/cli/package.json'))
+          console.log(dirname(cliRequire.resolve('emnapi/package.json')))
+          NODE
+          )"
+          RUSTC="$(rustup which rustc)" \
+            EMNAPI_LINK_DIR="$emnapi_package_dir/lib/wasm32-wasip1-threads" \
+            cargo check -p rolldown_binding --target wasm32-wasip1-threads \
+              --no-default-features --features async-runtime --locked
 
       - name: Build Rolldown with WASI Binding
         run: just build-rolldown-wasi

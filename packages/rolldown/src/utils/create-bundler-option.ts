@@ -19,6 +19,7 @@ import {
   isCleanupFailureError,
   retryCleanupFromError,
 } from './retryable-cleanup';
+import type { CloseCallbackScope } from './close-callback-scope';
 import {
   ANONYMOUS_OUTPUT_PLUGIN_PREFIX,
   ANONYMOUS_PLUGIN_PREFIX,
@@ -31,10 +32,11 @@ export async function createBundlerOptions(
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
   watchMode: boolean,
+  closeCallbackScope?: CloseCallbackScope,
 ): Promise<BundlerOptionWithStopWorker> {
   assertParallelPluginOptionsSupported(inputOptions.plugins, outputOptions.plugins);
-  const inputPlugins = await normalizePluginOption(inputOptions.plugins);
-  const outputPlugins = await normalizePluginOption(outputOptions.plugins);
+  const inputPlugins = await normalizePluginOption(inputOptions.plugins, closeCallbackScope);
+  const outputPlugins = await normalizePluginOption(outputOptions.plugins, closeCallbackScope);
 
   const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO;
   const onLog = getLogger(
@@ -45,15 +47,20 @@ export async function createBundlerOptions(
   );
 
   // The `outputOptions` hook is called with the input plugins and the output plugins
-  outputOptions = PluginDriver.callOutputOptionsHook(
-    [...inputPlugins, ...outputPlugins],
-    outputOptions,
-    onLog,
-    logLevel,
-    watchMode,
-  );
+  const callOutputOptionsHook = () =>
+    PluginDriver.callOutputOptionsHook(
+      [...inputPlugins, ...outputPlugins],
+      outputOptions,
+      onLog,
+      logLevel,
+      watchMode,
+    );
+  outputOptions = closeCallbackScope
+    ? closeCallbackScope.run(callOutputOptionsHook)
+    : callOutputOptionsHook();
 
-  const hookOutputPlugins = await normalizePluginOption(outputOptions.plugins);
+  assertParallelPluginOptionsSupported(outputOptions.plugins);
+  const hookOutputPlugins = await normalizePluginOption(outputOptions.plugins, closeCallbackScope);
   const normalizedInputPlugins = normalizePlugins(inputPlugins, ANONYMOUS_PLUGIN_PREFIX);
   const normalizedOutputPlugins = normalizePlugins(
     hookOutputPlugins,
@@ -83,14 +90,14 @@ export async function createBundlerOptions(
     );
   }
 
-  // Warn if deprecated experimental.strictExecutionOrder is used
-  if ((inputOptions.experimental as any)?.strictExecutionOrder !== undefined) {
-    console.warn(
-      '`experimental.strictExecutionOrder` has been stabilized and moved to `output.strictExecutionOrder`. Please update your configuration.',
-    );
-  }
-
   try {
+    // Warn if deprecated experimental.strictExecutionOrder is used
+    if ((inputOptions.experimental as any)?.strictExecutionOrder !== undefined) {
+      console.warn(
+        '`experimental.strictExecutionOrder` has been stabilized and moved to `output.strictExecutionOrder`. Please update your configuration.',
+      );
+    }
+
     const pluginContextData = new PluginContextData(
       onLog,
       outputOptions,
@@ -113,12 +120,16 @@ export async function createBundlerOptions(
     // Convert `OutputOptions` to `BindingOutputOptions`
     const bindingOutputOptions = bindingifyOutputOptions(outputOptions, pluginContextData);
 
+    const bundlerOptions: BindingBundlerOptions = {
+      inputOptions: bindingInputOptions,
+      outputOptions: bindingOutputOptions,
+      parallelPluginsRegistry: parallelPluginInitResult?.registry,
+    };
+
     return {
-      bundlerOptions: {
-        inputOptions: bindingInputOptions,
-        outputOptions: bindingOutputOptions,
-        parallelPluginsRegistry: parallelPluginInitResult?.registry,
-      },
+      bundlerOptions: closeCallbackScope
+        ? closeCallbackScope.wrapCallbacks(bundlerOptions)
+        : bundlerOptions,
       inputOptions,
       onLog,
       stopWorkers: parallelPluginInitResult?.stopWorkers,

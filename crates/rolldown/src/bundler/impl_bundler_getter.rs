@@ -15,6 +15,12 @@ impl Bundler {
     self.bundle_factory.resolver.clear_cache();
   }
 
+  /// Clear cached tsconfig contents and their merged transform options so
+  /// the next build re-reads tsconfig files.
+  pub fn clear_tsconfig_cache(&self) {
+    self.bundle_factory.options.transform_options.clear_tsconfig_cache();
+  }
+
   pub fn watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {
     static EMPTY_SET: LazyLock<Arc<FxDashSet<ArcStr>>> =
       LazyLock::new(|| Arc::new(FxDashSet::default()));

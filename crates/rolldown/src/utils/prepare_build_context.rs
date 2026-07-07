@@ -357,31 +357,20 @@ pub fn prepare_build_context(
     }
 
     // Create TransformOptions based on tsconfig mode:
-    // - Auto: Create Raw mode (will resolve tsconfig per file)
-    // - None/Manual: Create Normal mode (resolve tsconfig once now)
+    // - Auto/Manual: Raw mode, resolves tsconfig per file so watch rebuilds
+    //   pick up tsconfig edits once the caches are cleared
+    // - None: Normal mode
     match tsconfig {
       ref v @ TsConfig::Manual(ref path) => {
-        // Manual mode: Resolve tsconfig now and create Normal mode
-        let resolved_tsconfig = resolver
+        // Validate the tsconfig eagerly so a broken one still fails at startup
+        resolver
           .resolve_tsconfig(&path)
           .map_err(|err| BuildDiagnostic::tsconfig_error(path.display().to_string(), err))?;
-        Box::new(if resolved_tsconfig.references_resolved.is_empty() {
-          TransformOptions::new(
-            merge_transform_options_with_tsconfig(
-              raw_transform_options,
-              Some(&resolved_tsconfig),
-              &mut warnings,
-            )?,
-            target,
-            jsx_preset,
-          )
-        } else {
-          TransformOptions::new_raw(
-            RawTransformOptions::new(raw_transform_options, v.clone(), yarn_pnp),
-            target,
-            jsx_preset,
-          )
-        })
+        Box::new(TransformOptions::new_raw(
+          RawTransformOptions::new(raw_transform_options, v.clone(), yarn_pnp),
+          target,
+          jsx_preset,
+        ))
       }
       v @ TsConfig::Auto(is_auto) => {
         Box::new(if is_auto {

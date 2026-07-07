@@ -3186,6 +3186,8 @@ export interface PreRenderedChunk {
 /**
  * Install the host-turn callback used to poll CurrentThread runnables without
  * re-entering arbitrary future waker locks. Called once per importing env.
+ *
+ * A no-op on the default `tokio-runtime` build.
  */
 export declare function registerCurrentThreadTaskHost(dispatch: (dispatchHigh: number, dispatchLow: number) => void): void
 

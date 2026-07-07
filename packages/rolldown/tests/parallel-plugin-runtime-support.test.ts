@@ -1,4 +1,6 @@
 // @ts-nocheck This focused unit test mocks the generated binding surface.
+import { pathToFileURL } from 'node:url';
+
 import { beforeEach, expect, test, vi } from 'vitest';
 
 const binding = vi.hoisted(() => ({
@@ -44,7 +46,7 @@ test('defines parallel plugins for native bindings', () => {
 
   expect(createPlugin({ answer: 42 })).toMatchObject({
     _parallel: {
-      fileUrl: 'file:///project/plugin.mjs',
+      fileUrl: pathToFileURL('/project/plugin.mjs').href,
       options: { answer: 42 },
     },
   });

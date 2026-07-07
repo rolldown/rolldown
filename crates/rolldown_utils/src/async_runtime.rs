@@ -408,6 +408,9 @@ thread_local! {
     const { std::cell::RefCell::new(None) };
   static CURRENT_THREAD_DISPATCH_CLAIM_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
     const { std::cell::RefCell::new(None) };
+  static CURRENT_THREAD_DISPATCH_PUBLICATION_BLOCKED_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
 }
 
 #[cfg(all(test, not(target_family = "wasm")))]
@@ -420,6 +423,15 @@ fn run_dependency_claim_test_hook() {
 #[cfg(all(test, not(target_family = "wasm")))]
 fn run_current_thread_dispatch_claim_test_hook() {
   if let Some(hook) = CURRENT_THREAD_DISPATCH_CLAIM_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
+    hook();
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_current_thread_dispatch_publication_blocked_test_hook() {
+  if let Some(hook) =
+    CURRENT_THREAD_DISPATCH_PUBLICATION_BLOCKED_TEST_HOOK.with(|slot| slot.borrow_mut().take())
   {
     hook();
   }
@@ -2015,6 +2027,16 @@ impl CurrentThreadExecutor {
     self: &Arc<Self>,
     next_dispatch: impl FnOnce() -> u64,
   ) -> CurrentThreadDispatchRequest {
+    #[cfg(all(test, not(target_family = "wasm")))]
+    let scheduler = match self.scheduler_idle_lock.try_lock() {
+      Ok(scheduler) => scheduler,
+      Err(std::sync::TryLockError::WouldBlock) => {
+        run_current_thread_dispatch_publication_blocked_test_hook();
+        self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+      }
+      Err(std::sync::TryLockError::Poisoned(error)) => error.into_inner(),
+    };
+    #[cfg(any(not(test), target_family = "wasm"))]
     let scheduler =
       self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     if self.cancelling_failed_dispatch.load(Ordering::Acquire) {
@@ -7056,8 +7078,14 @@ mod tests {
     let second_ran = Arc::new(AtomicBool::new(false));
     let second_ran_task = Arc::clone(&second_ran);
     let scheduling_executor = Arc::clone(&executor);
+    let (publication_blocked_tx, publication_blocked_rx) = mpsc::channel();
     let (scheduled_tx, scheduled_rx) = mpsc::channel();
     let scheduling = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_PUBLICATION_BLOCKED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          publication_blocked_tx.send(()).unwrap();
+        }));
+      });
       let scheduler = Arc::clone(&scheduling_executor);
       let (runnable, task) = async_task::spawn(
         async move {
@@ -7070,8 +7098,9 @@ mod tests {
       scheduled_tx.send(()).unwrap();
     });
 
+    publication_blocked_rx.recv_timeout(Duration::from_secs(2)).unwrap();
     assert!(
-      scheduled_rx.recv_timeout(Duration::from_millis(100)).is_err(),
+      matches!(scheduled_rx.try_recv(), Err(mpsc::TryRecvError::Empty)),
       "dispatch publication must wait until host admission publishes its draining role"
     );
     assert_eq!(

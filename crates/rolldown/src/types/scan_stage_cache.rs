@@ -79,6 +79,11 @@ impl ScanStageCache {
     self.snapshot.as_ref().unwrap()
   }
 
+  /// Non-panicking variant of [`Self::get_snapshot`].
+  pub fn snapshot(&self) -> Option<&NormalizedScanStageOutput> {
+    self.snapshot.as_ref()
+  }
+
   /// Between builds the cache is either empty (no snapshot: only a full scan
   /// is possible) or a valid graph any partial scan can build on. A failed
   /// partial scan keeps the latter true by reverting its mutations

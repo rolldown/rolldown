@@ -247,12 +247,11 @@ impl<'a> GenerateStage<'a> {
               let (representative_chunk_name, absolute_chunk_file_name, ext) =
                 representative_file_name_for_preserve_modules(module_id.as_path());
 
-              let sanitized_absolute_filename =
-                sanitize_filename.call(absolute_chunk_file_name.as_str()).await?;
-
-              // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
-              let chunk_name = {
-                let p = PathBuf::from(sanitized_absolute_filename.as_str());
+              // Apply the same logic as get_preserve_modules_chunk_name to include directory
+              // structure. Do the path transform on raw ids first, then sanitize the final
+              // relative name so sanitized path collisions do not affect preserveModulesRoot.
+              let raw_chunk_name = {
+                let p = PathBuf::from(absolute_chunk_file_name.as_str());
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
                     // See internal-docs/module-id/implementation.md: output paths may normalize separators even
@@ -280,13 +279,14 @@ impl<'a> GenerateStage<'a> {
                   _ => relative_path,
                 }
               };
+              let chunk_name = sanitize_filename.call(&raw_chunk_name).await?;
 
               let sanitized_representative_chunk_name =
                 sanitize_filename.call(&representative_chunk_name).await?;
               PreGeneratedChunkName {
                 representative_chunk_name: sanitized_representative_chunk_name,
-                chunk_name: chunk_name.into(),
-                chunk_filename: sanitized_absolute_filename,
+                chunk_name,
+                chunk_filename: absolute_chunk_file_name.into(),
               }
             } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {
               // try extract meaningful input name from path

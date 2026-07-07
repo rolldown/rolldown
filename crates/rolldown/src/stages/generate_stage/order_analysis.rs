@@ -255,6 +255,18 @@ impl GenerateStage<'_> {
       }
     }
 
+    // `symmetric_difference` intentionally covers BOTH directions.
+    // `actual ∖ expected` is the true phantom (runs under a root the source never reaches).
+    // `expected ∖ actual` is NOT always empty either, and the reason is a mismatch between two
+    // notions of "side effect": actual-order reachability is built from tree-shaking side effects
+    // (`add_side_effect_imports_for_module` skips importees whose `side_effects().has_side_effects()`
+    // is false), while sensitivity here uses the ordering notion. A module that is order-sensitive
+    // but tree-shaking-side-effect-free — e.g. a `/*#__PURE__*/` call that actually writes a global
+    // — therefore gets no bare side-effect chunk edge, so it is unreachable in the predicted actual
+    // order under a root that imports it only for that (tree-shaking-absent) side effect, yet it is
+    // in `expected`. Catching it here over-wraps it; it then runs correctly via the init chain.
+    // See `strip_plain_chunk_imports` (common.js writes globalThis.value under a pure annotation;
+    // "missing" under page-b, wrapped, runs via init_common).
     for module_idx in premature_sensitive_modules(&expected_sensitive_order, &actual_positions) {
       if self.is_order_wrap_eligible(module_idx) {
         at_risk.insert(module_idx);

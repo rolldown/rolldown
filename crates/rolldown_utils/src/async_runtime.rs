@@ -8421,7 +8421,7 @@ mod tests {
     );
     executor.schedule(timer_runnable);
     wait_until("the runnable-only timekeeper registered and parked first", || {
-      let timekeeper = executor.timers.inner.lock().unwrap().timekeeper_parker.as_ref().cloned();
+      let timekeeper = executor.timers.inner.lock().unwrap().timekeeper_parker.clone();
       let Some(timekeeper) = timekeeper else {
         return false;
       };
@@ -8435,7 +8435,7 @@ mod tests {
     start_driver_tx.send(()).unwrap();
     first_poll_rx.recv_timeout(Duration::from_secs(2)).unwrap();
     wait_until("the cooperative driver registered after the parked timekeeper", || {
-      let timekeeper = executor.timers.inner.lock().unwrap().timekeeper_parker.as_ref().cloned();
+      let timekeeper = executor.timers.inner.lock().unwrap().timekeeper_parker.clone();
       let Some(timekeeper) = timekeeper else {
         return false;
       };
@@ -8458,7 +8458,7 @@ mod tests {
     second_poll_rx.recv_timeout(Duration::from_secs(2)).unwrap();
     {
       let timekeeper =
-        executor.timers.inner.lock().unwrap().timekeeper_parker.as_ref().unwrap().clone();
+        Arc::clone(executor.timers.inner.lock().unwrap().timekeeper_parker.as_ref().unwrap());
       let parked = executor.parked_drivers.parked.lock().unwrap();
       assert!(
         parked.len() == 1

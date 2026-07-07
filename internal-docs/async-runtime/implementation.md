@@ -258,9 +258,18 @@ binary.
   hot stream cannot suspend the outer timekeeper loop and starve the timer heap.
   A stalled blocking closure cannot stop timer service either. Parked-driver
   registration records whether a parker may consume blocking work; blocking
-  submissions and exit miss compensation skip the runnable-only timekeeper. A completing
-  blocking-capable driver consumes one admitted blocking-only residue itself
-  when handing it to a queued Rayon drainer could leave no physical lane.
+  submissions and blocking exit compensation skip the runnable-only
+  timekeeper. Exit compensation treats runnable and blocking residue as
+  independent obligations: it first hands runnable work to an available driver,
+  then, while the generation remains running, a completing blocking-capable
+  driver consumes one admitted blocking job itself even when runnable work was
+  also present. Handing only the blocking job to a queued Rayon drainer could
+  leave no physical lane. Once stop is observable, compensation may still wake
+  abort-generated runnables so their generators retire, but it never starts
+  queued blocking work. MultiThread shutdown closes and drains the blocking
+  FIFO and publishes the stop flag while holding the FIFO mutex; normal and
+  compensation admission check that same state under the mutex, so either a job
+  is claimed before shutdown or it is cancelled.
   Exact owner lending is performed by the cooperative driver that already owns
   the live dependency lineage. When normal blocking admission is saturated, one
   idle pass checks that dependency, reserves its exact active owner frame, and

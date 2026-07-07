@@ -3695,15 +3695,24 @@ impl MultiThreadExecutor {
   fn compensate_queued_work_wake(self: &Arc<Self>, can_run_blocking: bool) {
     if self.has_queued_runnable() {
       self.wake_for_new_work();
-    } else if self.active_blocking.load(Ordering::Acquire) < self.max_blocking
+    }
+    // Shutdown-aborted runnables still need a driver so their generators can
+    // retire, but queued blocking closures are cancelled by begin_shutdown and
+    // must never be admitted by exit compensation after stop is observable.
+    if self.stop.is_stopping() {
+      return;
+    }
+    if self.active_blocking.load(Ordering::Acquire) < self.max_blocking
       && !self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty()
     {
       // This driver may have absorbed the queue wake that made its awaited
-      // future ready. If no other blocking-capable driver is available, merely
-      // spawning a Rayon job is insufficient: this worker may return into
-      // arbitrary synchronous user code while the timer timekeeper occupies
-      // the only other physical lane. Consume one admitted job before exit,
-      // then hand any residue to another blocking-capable driver.
+      // future ready. Runnable and blocking residue are independent: handing a
+      // runnable to the timekeeper must not skip this path. If no other
+      // blocking-capable driver is available, merely spawning a Rayon job is
+      // insufficient: this worker may return into arbitrary synchronous user
+      // code while the timer timekeeper occupies the only other physical lane.
+      // Consume one admitted job before exit, then hand any residue to another
+      // blocking-capable driver.
       let consumed = can_run_blocking && self.run_one_blocking();
       let has_residue = self.active_blocking.load(Ordering::Acquire) < self.max_blocking
         && !self
@@ -3711,7 +3720,7 @@ impl MultiThreadExecutor {
           .lock()
           .unwrap_or_else(std::sync::PoisonError::into_inner)
           .is_empty();
-      if !consumed || has_residue {
+      if !self.stop.is_stopping() && (!consumed || has_residue) {
         self.wake_for_blocking_work();
       }
     }
@@ -3731,7 +3740,7 @@ impl MultiThreadExecutor {
         return None;
       }
       let mut queue = self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      if queue.is_empty() {
+      if queue.closed || self.stop.is_stopping() || queue.is_empty() {
         return None;
       }
       if self
@@ -5087,11 +5096,15 @@ impl MultiThreadExecutor {
 
   fn begin_shutdown(&self) {
     let _generation = RuntimeGenerationGuard::enter(self.generation);
-    self.stop.begin_shutdown();
     let queued = {
       let mut queue = self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      // The blocking FIFO mutex is the admission/stop linearization point.
+      // `take_blocking` either claims a job before this critical section, or it
+      // observes the closed/stopping state after stop becomes visible.
       queue.closed = true;
-      queue.take_all()
+      let queued = queue.take_all();
+      self.stop.begin_shutdown();
+      queued
     };
     // Captured values belong to user code and may panic in Drop. Retire each
     // rejected closure independently so one destructor cannot strand the
@@ -8330,6 +8343,188 @@ mod tests {
     futures::executor::block_on(blocking).unwrap();
     executor.shutdown_timers();
     futures::executor::block_on(timer_task);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn cooperative_exit_compensates_mixed_runnable_and_blocking_residue() {
+    use std::sync::mpsc;
+
+    struct Controlled {
+      first_poll: Option<mpsc::Sender<()>>,
+      second_poll: Option<mpsc::Sender<()>>,
+      release_second_poll: mpsc::Receiver<()>,
+    }
+
+    impl Future for Controlled {
+      type Output = ();
+
+      fn poll(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+        if let Some(first_poll) = self.first_poll.take() {
+          first_poll.send(()).unwrap();
+          return Poll::Pending;
+        }
+        if let Some(second_poll) = self.second_poll.take() {
+          second_poll.send(()).unwrap();
+          self.release_second_poll.recv().unwrap();
+        }
+        Poll::Ready(())
+      }
+    }
+
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 1,
+      thread_name_prefix: "mixed-exit-compensation".to_string(),
+      park_deadline: None,
+    };
+    let executor =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+    // Occupy the first worker before entering cooperative block_on so the
+    // second worker can start and park the runnable-only timekeeper first.
+    let (driver_started_tx, driver_started_rx) = mpsc::channel();
+    let (start_driver_tx, start_driver_rx) = mpsc::channel();
+    let (first_poll_tx, first_poll_rx) = mpsc::channel();
+    let (second_poll_tx, second_poll_rx) = mpsc::channel();
+    let (release_second_poll_tx, release_second_poll_rx) = mpsc::channel();
+    let (returned_tx, returned_rx) = mpsc::channel();
+    let (release_driver_tx, release_driver_rx) = mpsc::channel();
+    let task_exec = Arc::clone(&executor);
+    let scheduler = Arc::clone(&executor);
+    let (driver_runnable, driver_task) = async_task::spawn(
+      async move {
+        driver_started_tx.send(()).unwrap();
+        start_driver_rx.recv().unwrap();
+        let mut future = std::pin::pin!(Controlled {
+          first_poll: Some(first_poll_tx),
+          second_poll: Some(second_poll_tx),
+          release_second_poll: release_second_poll_rx,
+        });
+        task_exec.block_on(future.as_mut());
+        returned_tx.send(()).unwrap();
+        release_driver_rx.recv().unwrap();
+      },
+      move |runnable| scheduler.schedule(runnable),
+    );
+    executor.schedule(driver_runnable);
+    driver_started_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+
+    let timer_exec = Arc::clone(&executor);
+    let timer_scheduler = Arc::clone(&executor);
+    let (timer_runnable, timer_task) = async_task::spawn(
+      async move {
+        heap_sleep(&timer_exec, Instant::now() + Duration::from_mins(2)).await;
+      },
+      move |runnable| timer_scheduler.schedule(runnable),
+    );
+    executor.schedule(timer_runnable);
+    wait_until("the runnable-only timekeeper registered and parked first", || {
+      let timekeeper = executor.timers.inner.lock().unwrap().timekeeper_parker.as_ref().cloned();
+      let Some(timekeeper) = timekeeper else {
+        return false;
+      };
+      let parked = executor.parked_drivers.parked.lock().unwrap();
+      parked.len() == 1
+        && Arc::ptr_eq(&parked[0].parker, &timekeeper)
+        && !parked[0].can_run_blocking
+        && timekeeper.state.load(Ordering::SeqCst) == PARKER_SLEEPING
+    });
+
+    start_driver_tx.send(()).unwrap();
+    first_poll_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    wait_until("the cooperative driver registered after the parked timekeeper", || {
+      let timekeeper = executor.timers.inner.lock().unwrap().timekeeper_parker.as_ref().cloned();
+      let Some(timekeeper) = timekeeper else {
+        return false;
+      };
+      let parked = executor.parked_drivers.parked.lock().unwrap();
+      parked.len() == 2
+        && Arc::ptr_eq(&parked[0].parker, &timekeeper)
+        && !parked[0].can_run_blocking
+        && parked[0].parker.state.load(Ordering::SeqCst) == PARKER_SLEEPING
+        && parked[1].can_run_blocking
+        && parked[1].parker.state.load(Ordering::SeqCst) == PARKER_SLEEPING
+    });
+
+    // This runnable wake removes the newer cooperative driver from the parked
+    // registry. Freeze its next future poll so blocking admission sees only the
+    // runnable-only timekeeper and can merely queue a Rayon drainer.
+    let runnable_scheduler = Arc::clone(&executor);
+    let (residue_runnable, residue_task) =
+      async_task::spawn(async {}, move |runnable| runnable_scheduler.schedule(runnable));
+    executor.schedule(residue_runnable);
+    second_poll_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    {
+      let timekeeper =
+        executor.timers.inner.lock().unwrap().timekeeper_parker.as_ref().unwrap().clone();
+      let parked = executor.parked_drivers.parked.lock().unwrap();
+      assert!(
+        parked.len() == 1
+          && Arc::ptr_eq(&parked[0].parker, &timekeeper)
+          && !parked[0].can_run_blocking,
+        "the runnable wake must remove the newer cooperative driver and leave only the timekeeper"
+      );
+    }
+
+    let (blocking_tx, blocking_rx) = mpsc::channel();
+    let blocking = executor.schedule_blocking(move || {
+      blocking_tx.send(()).unwrap();
+    });
+    release_second_poll_tx.send(()).unwrap();
+    returned_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    let blocking_completed_before_driver_release = blocking_rx.try_recv().is_ok();
+
+    // Always release the occupied worker before asserting so a regression
+    // failure cannot strand the test's Rayon pool.
+    release_driver_tx.send(()).unwrap();
+    futures::executor::block_on(driver_task);
+    futures::executor::block_on(residue_task);
+    futures::executor::block_on(blocking).unwrap();
+    executor.shutdown_timers();
+    futures::executor::block_on(timer_task);
+
+    assert!(
+      blocking_completed_before_driver_release,
+      "mixed exit compensation handed the runnable to the timekeeper but stranded blocking work"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn cooperative_exit_compensation_does_not_start_blocking_after_stop() {
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 1,
+      thread_name_prefix: "stopped-exit-compensation".to_string(),
+      park_deadline: None,
+    };
+    let executor =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    let ran = Arc::new(AtomicBool::new(false));
+    let blocking_ran = Arc::clone(&ran);
+
+    // Keep schedule_blocking from starting a Rayon drainer so the stop flag can
+    // become observable while this job remains queued, matching the original
+    // begin_shutdown ordering window exactly.
+    executor.active_drainers.store(executor.max_drainers, Ordering::SeqCst);
+    let blocking = executor.schedule_blocking(move || {
+      blocking_ran.store(true, Ordering::SeqCst);
+    });
+    assert!(!executor.blocking_queue.lock().unwrap().is_empty());
+
+    executor.stop.begin_shutdown();
+    executor.compensate_queued_work_wake(true);
+    let ran_after_stop = ran.load(Ordering::SeqCst);
+
+    executor.active_drainers.store(0, Ordering::SeqCst);
+    executor.begin_shutdown();
+    let blocking_result = futures::executor::block_on(blocking);
+
+    assert!(!ran_after_stop, "exit compensation started queued blocking work after stop");
+    assert!(blocking_result.is_err(), "shutdown must cancel the queued blocking job");
   }
 
   #[cfg(not(target_family = "wasm"))]

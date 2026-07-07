@@ -1,15 +1,17 @@
-import { createRequire } from 'node:module';
-
 import { expect, test } from 'vitest';
 
-const require = createRequire(import.meta.url);
-const binding = require('../src/binding.cjs');
-const capabilities = binding.getRuntimeCapabilities();
+import { acquireRuntimeLease, isRuntimeLeaseRequired } from '../src/runtime-lifecycle';
+import { getRuntimeCapabilitiesCompat } from '../src/runtime-support';
+
+const capabilities = getRuntimeCapabilitiesCompat();
 
 test.runIf(capabilities.target !== 'wasi-threads')(
-  'manual runtime lifecycle exports remain no-ops outside threaded WASI',
-  () => {
-    expect(binding.startAsyncRuntime()).toBeUndefined();
-    expect(binding.shutdownAsyncRuntime()).toBeUndefined();
+  'runtime leases remain no-ops outside threaded WASI',
+  async () => {
+    expect(isRuntimeLeaseRequired()).toBe(false);
+
+    const lease = await acquireRuntimeLease();
+    expect(() => lease.release()).not.toThrow();
+    expect(() => lease.release()).not.toThrow();
   },
 );

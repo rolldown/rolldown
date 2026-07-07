@@ -129,6 +129,10 @@ async function buildBrowserWatcherHarness(): Promise<string> {
   const emitterPath = path.resolve(import.meta.dirname, '../../src/api/watch/watch-emitter.ts');
   const runtimeSupportPath = path.resolve(import.meta.dirname, '../../src/runtime-support.ts');
   const asyncContextPath = path.resolve(import.meta.dirname, '../../src/utils/async-context.ts');
+  const closeCallbackScopePath = path.resolve(
+    import.meta.dirname,
+    '../../src/utils/close-callback-scope.ts',
+  );
   const retryableCleanupPath = path.resolve(
     import.meta.dirname,
     '../../src/utils/retryable-cleanup.ts',
@@ -156,13 +160,18 @@ async function buildBrowserWatcherHarness(): Promise<string> {
         }
         export function getRuntimeCapabilities() {
           const harness = globalThis.__watchHarness;
+          const wasi = harness?.watchSupported === false;
           return {
-            devSupported: true,
-            flavor: 'MultiThread',
-            target: harness?.watchSupported === false ? 'wasi' : 'native',
-            threads: true,
-            wasi: harness?.watchSupported === false,
-            watchSupported: harness?.watchSupported !== false,
+            asyncRuntimeBuild: false,
+            backend: 'tokio',
+            blockOnJsThreadSafe: false,
+            devSupported: !wasi,
+            flavor: wasi ? 'CurrentThread' : 'MultiThread',
+            target: wasi ? 'wasi' : 'native',
+            threads: !wasi,
+            timers: !wasi,
+            wasi,
+            watchSupported: !wasi,
           };
         }
       `,
@@ -258,7 +267,10 @@ async function buildBrowserWatcherHarness(): Promise<string> {
           if (id === './watch-emitter') return emitterPath;
           if (id === '../../runtime-support') return runtimeSupportPath;
           if (id === './binding.cjs') return '\0binding';
-          if (id === '../../utils/async-context') return asyncContextPath;
+          if (id === '../../utils/async-context' || id === './async-context') {
+            return asyncContextPath;
+          }
+          if (id === '../../utils/close-callback-scope') return closeCallbackScopePath;
           if (id === '../../binding.cjs') return '\0binding';
           if (id === '../../runtime-lifecycle') return '\0runtime-lifecycle';
           if (id === '../../utils/create-bundler-option') return '\0create-bundler-option';
@@ -319,6 +331,11 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
     '../../src/plugin/parallel-plugin.ts',
   );
   const runtimeSupportPath = path.resolve(import.meta.dirname, '../../src/runtime-support.ts');
+  const asyncContextPath = path.resolve(import.meta.dirname, '../../src/utils/async-context.ts');
+  const closeCallbackScopePath = path.resolve(
+    import.meta.dirname,
+    '../../src/utils/close-callback-scope.ts',
+  );
   const virtualModules = new Map<string, string>([
     [
       'binding',
@@ -341,10 +358,14 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
         }
         export function getRuntimeCapabilities() {
           return {
-            devSupported: true,
-            flavor: 'MultiThread',
+            asyncRuntimeBuild: false,
+            backend: 'tokio',
+            blockOnJsThreadSafe: false,
+            devSupported: false,
+            flavor: 'CurrentThread',
             target: 'wasi',
-            threads: true,
+            threads: false,
+            timers: false,
             wasi: true,
             watchSupported: false,
           };
@@ -478,6 +499,7 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
     ['validator', `export function validateOption() {}`],
     ['error', `export function unwrapBindingResult(value) { return value; }`],
     ['rolldown-output-impl', `export class RolldownOutputImpl {}`],
+    ['async-hooks', `export class AsyncLocalStorage {}`],
     ['node-url', `export function pathToFileURL(value) { return { href: String(value) }; }`],
   ]);
 
@@ -488,6 +510,7 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
         name: 'browser-parallel-plugin-harness',
         resolveId(id, importer) {
           if (id === 'browser-parallel-plugin-harness') return `\0${id}`;
+          if (id === 'node:async_hooks') return '\0async-hooks';
           if (id === 'node:url') return '\0node-url';
           if (!importer) return;
           if (id === './rolldown-build') return rolldownBuildPath;
@@ -498,6 +521,10 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
           }
           if (id === '../../runtime-lifecycle') return '\0runtime-lifecycle';
           if (id === '../runtime-support') return runtimeSupportPath;
+          if (id === '../../utils/async-context' || id === './async-context') {
+            return asyncContextPath;
+          }
+          if (id === '../../utils/close-callback-scope') return closeCallbackScopePath;
           if (id === '../../plugin/plugin-driver' || id === '../plugin/plugin-driver') {
             return '\0plugin-driver';
           }

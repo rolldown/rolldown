@@ -1,6 +1,6 @@
 use oxc::ast::ast::{
-  ArrowFunctionExpression, ExportNamedDeclaration, Expression, Function, IdentifierReference,
-  Statement, TSType,
+  ArrowFunctionExpression, CallExpression, ExportNamedDeclaration, Expression, Function,
+  IdentifierReference, Statement, TSType,
 };
 use oxc::ast_visit::{Visit, walk};
 use oxc::semantic::ScopeFlags;
@@ -21,10 +21,10 @@ use rolldown_common::AstScopes;
 /// form can be missed, and any newly added syntax is covered by default.
 ///
 /// What is skipped, and why it stays sound:
-/// - **Function / arrow bodies** (incl. class method bodies and parameter defaults) run at *call*
-///   time, not module-eval time. If such a body actually runs during module evaluation it does so
-///   through a call/`new`, which the side-effect / pure-annotation analysis independently reports
-///   as order-sensitive — so skipping bodies never hides a module-eval-time read.
+/// - **Function / arrow bodies** are skipped when the function is merely declared or stored because
+///   they run at call time. Directly invoked function literals are the exception: their parameter
+///   defaults run immediately, as do non-generator bodies, so `visit_call_expression` traverses
+///   those parts explicitly.
 /// - **Import declarations and re-export specifiers** (`export { a }`, `export { a } from '...'`)
 ///   forward bindings; they do not read a value. Only the `declaration` half of an export (e.g.
 ///   `export const x = imp`) evaluates at module-eval time.
@@ -50,6 +50,24 @@ impl<'scopes> TopLevelImportReadDetector<'scopes> {
     let mut detector = Self { scopes, reads_import: false };
     detector.visit_statement(stmt);
     detector.reads_import
+  }
+
+  fn visit_immediately_invoked_function(&mut self, callee: &Expression<'_>) {
+    match callee.get_inner_expression() {
+      Expression::FunctionExpression(function) => {
+        self.visit_formal_parameters(&function.params);
+        if !function.generator
+          && let Some(body) = &function.body
+        {
+          self.visit_function_body(body);
+        }
+      }
+      Expression::ArrowFunctionExpression(arrow) => {
+        self.visit_formal_parameters(&arrow.params);
+        self.visit_function_body(&arrow.body);
+      }
+      _ => {}
+    }
   }
 }
 
@@ -77,9 +95,19 @@ impl<'ast> Visit<'ast> for TopLevelImportReadDetector<'_> {
     walk::walk_expression(self, it);
   }
 
-  // Bodies run at call time, not module-eval time — skip entirely (params/defaults included).
+  // Merely creating a function does not run its parameters or body.
   fn visit_function(&mut self, _it: &Function<'ast>, _flags: ScopeFlags) {}
   fn visit_arrow_function_expression(&mut self, _it: &ArrowFunctionExpression<'ast>) {}
+
+  fn visit_call_expression(&mut self, it: &CallExpression<'ast>) {
+    if self.reads_import {
+      return;
+    }
+    walk::walk_call_expression(self, it);
+    if !self.reads_import {
+      self.visit_immediately_invoked_function(&it.callee);
+    }
+  }
 
   // `export { a }` / `export { a } from '...'` forward bindings without reading them. Only the
   // declaration half of an export (`export const x = imp`) evaluates at module-eval time.
@@ -181,6 +209,41 @@ mod test {
     // Class method bodies are deferred too.
     assert_eq!(
       detect("import { x } from './state'; export class C { m() { return x; } }"),
+      vec![false, false]
+    );
+  }
+
+  #[test]
+  fn immediately_invoked_functions_run_during_module_evaluation() {
+    assert_eq!(
+      detect("import { value } from './state'; export const snapshot = (() => value)();"),
+      vec![false, true]
+    );
+    assert_eq!(
+      detect(
+        "import { value } from './state'; export const snapshot = (function () { return value })();"
+      ),
+      vec![false, true]
+    );
+    // Parameter defaults run when the function is called.
+    assert_eq!(
+      detect("import { value } from './state'; export const snapshot = ((x = value) => x)();"),
+      vec![false, true]
+    );
+  }
+
+  #[test]
+  fn immediately_invoked_generator_only_runs_parameter_initializers() {
+    assert_eq!(
+      detect(
+        "import { value } from './state'; export const iterator = (function* (x = value) {})();"
+      ),
+      vec![false, true]
+    );
+    assert_eq!(
+      detect(
+        "import { value } from './state'; export const iterator = (function* () { yield value })();"
+      ),
       vec![false, false]
     );
   }

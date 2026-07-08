@@ -6,7 +6,7 @@ use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
   ChunkIdx, ChunkKind, InstantiationKind, OutputExports, PackageJson, PathsOutputOption,
-  PreliminarySourcemapFilename, UsedSymbolRefs, UsedSymbolRefsBuilder,
+  PreliminarySourcemapFilename, RUNTIME_HELPER_NAMES, UsedSymbolRefs, UsedSymbolRefsBuilder,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -15,10 +15,8 @@ use rolldown_std_utils::{
   PathBufExt as _, representative_file_name_for_preserve_modules, strip_path_prefix_to_slash,
 };
 use rolldown_utils::{
-  dashmap::FxDashMap,
-  hash_placeholder::HashPlaceholderGenerator,
-  indexmap::FxIndexSet,
-  rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _},
+  dashmap::FxDashMap, hash_placeholder::HashPlaceholderGenerator, index_vec_ext::IndexVecExt as _,
+  indexmap::FxIndexSet, rayon::ParallelIterator as _,
 };
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath as _;
@@ -185,11 +183,23 @@ impl<'a> GenerateStage<'a> {
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
+    let symbols = &self.link_output.symbol_db;
+    let runtime = &self.link_output.runtime;
+    let order_live_symbols = order_state.live_symbols(
+      |symbol_ref| symbols.canonical_ref_resolving_namespace(symbol_ref),
+      |helper| {
+        let index = helper.bits().trailing_zeros() as usize;
+        runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index])
+      },
+    );
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
-      chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
+      chunk_graph.chunk_table.par_iter_mut_enumerated().for_each(|(chunk_idx, chunk)| {
         deconflict_chunk_symbols(
+          chunk_idx,
           chunk,
           self.link_output,
+          &order_state,
+          &order_live_symbols,
           self.options.format,
           &index_chunk_id_to_name,
         );

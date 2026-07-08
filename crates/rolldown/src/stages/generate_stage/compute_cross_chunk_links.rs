@@ -35,6 +35,7 @@ struct CrossChunkLinkState {
   index_imports_from_other_chunks: IndexImportsFromOtherChunks,
   index_cross_chunk_imports: IndexCrossChunkImports,
   index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports,
+  order_live_symbols: FxHashSet<SymbolRef>,
 }
 
 trait UsedSymbolRefsView {
@@ -68,6 +69,7 @@ impl GenerateStage<'_> {
       index_imports_from_other_chunks,
       index_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
+      order_live_symbols,
     } = self.compute_cross_chunk_link_state(chunk_graph, used_symbol_refs, order_state);
 
     #[cfg(debug_assertions)]
@@ -83,7 +85,12 @@ impl GenerateStage<'_> {
         })
         .collect();
 
-    self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols, used_symbol_refs);
+    self.deconflict_exported_names(
+      chunk_graph,
+      &index_chunk_exported_symbols,
+      used_symbol_refs,
+      &order_live_symbols,
+    );
 
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
       .par_iter_enumerated()
@@ -212,6 +219,15 @@ impl GenerateStage<'_> {
       index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()];
     let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
+    let symbols = &self.link_output.symbol_db;
+    let runtime = &self.link_output.runtime;
+    let order_live_symbols = order_state.live_symbols(
+      |symbol_ref| symbols.canonical_ref_resolving_namespace(symbol_ref),
+      |helper| {
+        let index = helper.bits().trailing_zeros() as usize;
+        runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index])
+      },
+    );
 
     self.collect_depended_symbols(
       chunk_graph,
@@ -231,6 +247,7 @@ impl GenerateStage<'_> {
       &mut index_chunk_indirect_imports_from_external_modules,
       used_symbol_refs,
       order_state,
+      &order_live_symbols,
     );
 
     CrossChunkLinkState {
@@ -240,6 +257,7 @@ impl GenerateStage<'_> {
       index_imports_from_other_chunks,
       index_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
+      order_live_symbols,
     }
   }
 
@@ -412,6 +430,23 @@ impl GenerateStage<'_> {
           }
         }
 
+        for synthetic in order_state.synthetic_statements_for_chunk(chunk_id) {
+          symbol_needs_to_assign.extend(synthetic.declared_symbols.iter().copied());
+          for referenced in &synthetic.referenced_symbols {
+            self.add_depended_symbol_with_wrapped_esm_init(
+              chunk_graph,
+              order_state,
+              depended_symbols,
+              symbols.canonical_ref_resolving_namespace(*referenced),
+            );
+          }
+          for helper in synthetic.runtime_helpers {
+            let index = helper.bits().trailing_zeros() as usize;
+            depended_symbols
+              .insert(self.link_output.runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index]));
+          }
+        }
+
         // Depending runtime helpers
         for helper in chunk.depended_runtime_helper {
           let index = helper.bits().trailing_zeros() as usize;
@@ -514,6 +549,7 @@ impl GenerateStage<'_> {
     index_chunk_indirect_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
     used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
+    order_live_symbols: &FxHashSet<SymbolRef>,
   ) {
     // For each module that has been absorbed as a facade namespace, we need to know
     // which other modules dynamically import it so we can tell whether the absorbed
@@ -695,7 +731,7 @@ impl GenerateStage<'_> {
           {
             self.link_output.metas[import_ref.owner].namespace_included
           } else {
-            used_symbol_refs.contains(&import_ref)
+            non_namespace_symbol_is_live(used_symbol_refs, order_live_symbols, import_ref)
           };
           if !is_live {
             continue;
@@ -856,6 +892,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     index_chunk_exported_symbols: &IndexChunkExportedSymbols,
     used_symbol_refs: &UsedSymbolRefs,
+    order_live_symbols: &FxHashSet<SymbolRef>,
   ) {
     let is_preserve_modules_enabled = self.options.preserve_modules;
     let allow_to_minify_internal_exports =
@@ -963,7 +1000,7 @@ impl GenerateStage<'_> {
         {
           self.link_output.metas[chunk_export.owner].namespace_included
         } else {
-          used_symbol_refs.contains(chunk_export)
+          non_namespace_symbol_is_live(used_symbol_refs, order_live_symbols, *chunk_export)
         };
         if !is_live {
           continue;
@@ -998,6 +1035,14 @@ impl GenerateStage<'_> {
   }
 }
 
+fn non_namespace_symbol_is_live(
+  used_symbol_refs: &impl UsedSymbolRefsView,
+  order_live_symbols: &FxHashSet<SymbolRef>,
+  symbol_ref: SymbolRef,
+) -> bool {
+  used_symbol_refs.contains(&symbol_ref) || order_live_symbols.contains(&symbol_ref)
+}
+
 fn esm_init_target_is_included_in_live_chunk(
   meta: &LinkingMetadata,
   order_state: &super::order_wrap_state::OrderWrapState,
@@ -1022,6 +1067,32 @@ fn module_has_live_chunk(chunk_graph: &ChunkGraph, module_idx: ModuleIdx) -> boo
       != Some(&PostChunkOptimizationOperation::Removed)
       && chunk_graph.chunk_table[chunk_idx].modules.contains(&module_idx)
   })
+}
+
+#[cfg(test)]
+mod tests {
+  use oxc::semantic::SymbolId;
+  use rolldown_common::{ModuleIdx, SymbolRef};
+  use rustc_hash::FxHashSet;
+
+  use super::{UsedSymbolRefsView, non_namespace_symbol_is_live};
+
+  struct EmptyUsedSymbols;
+
+  impl UsedSymbolRefsView for EmptyUsedSymbols {
+    fn contains(&self, _symbol_ref: &SymbolRef) -> bool {
+      false
+    }
+  }
+
+  #[test]
+  fn synthetic_only_symbol_is_live_for_cross_chunk_export_naming() {
+    let module_idx = ModuleIdx::new(7);
+    let symbol_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
+    let order_live_symbols = FxHashSet::from_iter([symbol_ref]);
+
+    assert!(non_namespace_symbol_is_live(&EmptyUsedSymbols, &order_live_symbols, symbol_ref));
+  }
 }
 
 // The same implementation with https://github.com/oxc-project/oxc/blob/crates_v0.86.0/crates/oxc_mangler/src/base54.rs#L30-L31

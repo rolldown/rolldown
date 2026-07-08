@@ -207,10 +207,19 @@ export function coverageBySource({ code, map, atPaint, atSettle }) {
 
 /**
  * One coverage-instrumented navigation. Arms the profiler on a same-origin blank
- * page (so the renderer process that will run index.html is already instrumented),
- * snapshots at first paint (25ms poll) and again after load + readiness + settle.
+ * page, snapshots at first paint (25ms poll) and again after load + readiness +
+ * settle. Retries once: an unlucky arming race loses the run, not the command.
  */
-export async function coverageRun(cdp, {
+export async function coverageRun(cdp, options) {
+  try {
+    return await coverageAttempt(cdp, options);
+  } catch (err) {
+    if (!String(err.message).includes('not seen')) throw err;
+    return await coverageAttempt(cdp, options);
+  }
+}
+
+async function coverageAttempt(cdp, {
   origin,
   throttle,
   expectedFeatures = [],
@@ -218,25 +227,39 @@ export async function coverageRun(cdp, {
   settleMs = 2000,
   timeoutMs = 60_000,
 }) {
+  const debug = process.env.COVERAGE_DEBUG
+    ? (msg) => console.error(`[coverage] ${msg}`)
+    : () => {};
   const page = await openPage(cdp, { throttle, injectScript: OBSERVER_JS });
   try {
     await page.navigate(`${origin}/blank.html`);
     await sleep(150);
     await page.send('Profiler.enable');
-    await page.send('Profiler.startPreciseCoverage', { callCount: false, detailed: true });
+    const armed = await page.send('Profiler.startPreciseCoverage', { callCount: false, detailed: true });
+    debug(`armed on blank (v8 timestamp ${armed?.timestamp})`);
     await page.navigate(`${origin}/index.html`);
+    debug('navigate(index) resolved');
 
     const deadline = Date.now() + timeoutMs;
     for (;;) {
-      const fcp = await page.evaluate('window.__perfMetrics ? window.__perfMetrics.fcp : null');
-      if (fcp != null) break;
+      // Pathname guard: until the index.html navigation commits, evaluate still
+      // runs against the blank warm-up document — never read paint entries there.
+      const fcp = await page.evaluate(
+        "(location.pathname !== '/blank.html' && window.__perfMetrics) ? window.__perfMetrics.fcp : null",
+      );
+      if (fcp != null) {
+        debug(`FCP=${fcp} href=${await page.evaluate('location.href')}`);
+        break;
+      }
       if (Date.now() > deadline) throw new Error('coverage run: FCP never fired');
       await sleep(25);
     }
     const atPaint = await page.send('Profiler.takePreciseCoverage');
+    debug(`atPaint scripts: ${atPaint.result.map((s) => `${s.url || '(inline)'}#${s.functions.length}`).join(', ') || '(none)'}`);
 
     for (;;) {
       const done = await page.evaluate(`(() => {
+        if (location.pathname === '/blank.html') return false;
         const nav = performance.getEntriesByType('navigation')[0];
         if (!nav || !nav.loadEventEnd) return false;
         const r = window.__ready || {};
@@ -250,20 +273,25 @@ export async function coverageRun(cdp, {
     const atSettle = await page.send('Profiler.takePreciseCoverage');
     await page.send('Profiler.stopPreciseCoverage').catch(() => {});
 
-    return {
-      atPaint: entryFunctions(atPaint, entryName),
-      atSettle: entryFunctions(atSettle, entryName),
-    };
+    // Each take only reports functions executed since the previous take (counters
+    // reset), and V8 omits scripts with no new execution entirely. So the entry
+    // may be legitimately absent from one snapshot: from atSettle when the page
+    // runs nothing after first paint, or from atPaint when static HTML painted
+    // before the entry script executed. Absent from BOTH means the page never ran
+    // the entry at all — that one is an error.
+    const paintFunctions = findEntry(atPaint, entryName);
+    const settleFunctions = findEntry(atSettle, entryName);
+    if (!paintFunctions && !settleFunctions) {
+      const seen = [...new Set([...atPaint.result, ...atSettle.result].map((s) => s.url).filter(Boolean))]
+        .join(', ') || '(none)';
+      throw new Error(`coverage: entry script ${entryName} not seen (scripts: ${seen})`);
+    }
+    return { atPaint: paintFunctions ?? [], atSettle: settleFunctions ?? [] };
   } finally {
     await page.close().catch(() => {});
   }
 }
 
-function entryFunctions(result, entryName) {
-  const script = result.result.find((s) => s.url.endsWith(entryName));
-  if (!script) {
-    const seen = result.result.map((s) => s.url).filter(Boolean).join(', ') || '(none)';
-    throw new Error(`coverage: entry script ${entryName} not seen (scripts: ${seen})`);
-  }
-  return script.functions;
+function findEntry(result, entryName) {
+  return result.result.find((s) => s.url.endsWith(entryName))?.functions ?? null;
 }

@@ -93,11 +93,16 @@ function connect(wsUrl) {
     const ws = new WebSocket(wsUrl);
     let nextId = 1;
     const pending = new Map();
+    const listeners = new Map(); // `${sessionId}:${method}` -> handlers
     ws.addEventListener('open', () => resolve(api));
     ws.addEventListener('error', () => reject(new Error(`WebSocket connection failed: ${wsUrl}`)));
     ws.addEventListener('message', (event) => {
       const msg = JSON.parse(event.data);
-      if (msg.id === undefined) return; // events unused; state is polled via Runtime.evaluate
+      if (msg.id === undefined) {
+        const key = `${msg.sessionId ?? ''}:${msg.method}`;
+        for (const handler of listeners.get(key) ?? []) handler(msg.params);
+        return;
+      }
       const entry = pending.get(msg.id);
       if (!entry) return;
       pending.delete(msg.id);
@@ -111,6 +116,11 @@ function connect(wsUrl) {
           pending.set(id, { resolve: res, reject: rej, method });
           ws.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }));
         });
+      },
+      on(method, handler, sessionId = '') {
+        const key = `${sessionId}:${method}`;
+        if (!listeners.has(key)) listeners.set(key, []);
+        listeners.get(key).push(handler);
       },
       close() { ws.close(); },
     };
@@ -140,6 +150,7 @@ export async function openPage(cdp, { throttle, injectScript } = {}) {
   }
   return {
     send,
+    on: (method, handler) => cdp.on(method, handler, sessionId),
     navigate: (url) => send('Page.navigate', { url }),
     async evaluate(expression) {
       const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });

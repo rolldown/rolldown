@@ -167,9 +167,11 @@ export const readyFlags: Record<string, boolean> =
 
 /**
  * Run a side-band feature init strictly after first paint: window load, two
- * animation frames (paint has happened), then a tick. Both the static-import
- * baseline and the dynamic-import deferred form go through this same path, so a
- * measurement compares only download/parse cost, never init scheduling.
+ * animation frames (paint has happened), then a generous tick. Both the
+ * static-import baseline and the dynamic-import deferred form go through this
+ * same path, so a measurement compares only download/parse cost, never init
+ * scheduling. The 250ms tick also gives a coverage snapshot polling for FCP a
+ * wide margin to land before any feature code runs.
  */
 export function scheduleInit(name: string, fn: () => unknown): void {
   readyFlags[name] = false;
@@ -183,7 +185,7 @@ export function scheduleInit(name: string, fn: () => unknown): void {
             .finally(() => {
               readyFlags[name] = true;
             });
-        }, 50);
+        }, 250);
       });
     });
   };

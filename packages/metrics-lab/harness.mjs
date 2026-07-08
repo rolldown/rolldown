@@ -189,7 +189,9 @@ function printMeasureSummary(report, baseline) {
     + `FCP ${ms(m['runtime.fcp_ms'])} | load ${ms(m['runtime.load_ms'])} | `
     + `CLS ${m['runtime.cls']} | transfer ${kb(m['runtime.transfer_bytes'])} | `
     + `${m['runtime.js_request_count']} js requests`);
-  const guardOk = report.guard.allFeaturesReady && report.guard.heroRendered && report.guard.lcpObservedInAllRuns;
+  const guardOk = report.guard.allFeaturesReady
+    && report.guard.heroRendered !== false // null = no hero probe on this app
+    && report.guard.lcpObservedInAllRuns;
   console.log(`guard: ${guardOk ? 'PASS' : `FAIL ${JSON.stringify(report.guard)}`}`);
 
   if (report.baselineDelta?.['runtime.lcp_ms']) {
@@ -200,6 +202,11 @@ function printMeasureSummary(report, baseline) {
         : 'within noise';
     console.log(`vs pinned baseline: LCP ${d.delta > 0 ? '+' : ''}${Math.round(d.delta)}ms `
       + `(${d.pct > 0 ? '+' : ''}${d.pct}%) -> ${call} (noise threshold ${Math.round(threshold)}ms)`);
+    if (call === 'improvement beyond noise') {
+      console.log('next: keep this change - re-pin with `node harness.mjs baseline`, then commit it');
+    } else {
+      console.log('next: this attempt did not clearly improve LCP - revert the change and rebuild (then try a different one)');
+    }
   } else if (baseline) {
     console.log('vs pinned baseline: n/a (metric missing)');
   } else {
@@ -211,19 +218,36 @@ function printMeasureSummary(report, baseline) {
   }
 }
 
+/** The entry chunk of a built app, read from its index.html module script. */
+function detectEntry(distDir) {
+  const indexFile = path.join(distDir, 'index.html');
+  if (!fs.existsSync(indexFile)) return null;
+  const html = fs.readFileSync(indexFile, 'utf8');
+  for (const tag of html.match(/<script\b[^>]*>/g) ?? []) {
+    if (!tag.includes('type="module"')) continue;
+    const src = tag.match(/\bsrc="([^"]+)"/)?.[1];
+    if (src && !src.startsWith('http')) return src.replace(/^\.?\//, '');
+  }
+  return null;
+}
+
 async function cmdCoverage(argv) {
   const opts = parse(argv, {
     settle: { type: 'string', default: '2000' },
     'no-throttle': { type: 'boolean', default: false },
     dist: { type: 'string' },
     features: { type: 'string' },
-    entry: { type: 'string', default: 'main.js' },
+    entry: { type: 'string' },
   });
   const distDir = opts.dist ? path.resolve(opts.dist) : path.join(APP_DIR, 'dist');
   const expectedFeatures = opts.features !== undefined
     ? opts.features.split(',').filter(Boolean)
     : (opts.dist ? [] : FEATURE_NAMES);
-  const entryFile = path.join(distDir, opts.entry);
+  // Hashed asset names (Vite et al.) make a fixed --entry impractical; read the
+  // module script from the built index.html unless one was given explicitly.
+  const entry = opts.entry ?? detectEntry(distDir) ?? 'main.js';
+  if (!opts.entry) console.log(`entry: ${entry} (auto-detected from dist/index.html)`);
+  const entryFile = path.join(distDir, entry);
   const mapFile = `${entryFile}.map`;
   if (!fs.existsSync(mapFile)) {
     throw new Error(`no sourcemap at ${mapFile} - build with sourcemap: true`);
@@ -235,7 +259,7 @@ async function cmdCoverage(argv) {
       origin,
       throttle,
       expectedFeatures,
-      entryName: `/${opts.entry.replaceAll('\\', '/')}`,
+      entryName: `/${entry.replaceAll('\\', '/')}`,
       settleMs: Number(opts.settle),
     }));
 
@@ -272,14 +296,14 @@ async function cmdCoverage(argv) {
   writeJson(COVERAGE_JSON, {
     schemaVersion: 1,
     generatedAtMs: Date.now(),
-    entry: opts.entry,
+    entry,
     deferred: opts.dist ? null : deferredList(),
     thresholds: { candidateMinBytes: CANDIDATE_MIN_BYTES, candidateMaxPaintRatio: CANDIDATE_MAX_PAINT_RATIO },
     modules,
     candidates,
   });
 
-  console.log(`entry-chunk coverage (${opts.entry}, first paint vs settled):\n`);
+  console.log(`entry-chunk coverage (${entry}, first paint vs settled):\n`);
   const pct = (r) => `${(r * 100).toFixed(1)}%`;
   for (const mod of modules) {
     const verdict = mod.paintRatio >= CANDIDATE_MAX_PAINT_RATIO ? 'used-before-paint'
@@ -294,8 +318,12 @@ async function cmdCoverage(argv) {
       console.log(`  ${c.feature ?? c.source}  (${kb(c.totalBytes)})`
         + `${c.feature ? `  -> node harness.mjs defer ${c.feature}` : ''}`);
     }
+    console.log(opts.dist
+      ? '\nnext: change the app so the landing page stops loading these before first paint\n'
+        + '(follow their import chains from the entry), rebuild, run its functional check, then measure.'
+      : '\nnext: defer the top candidate, rebuild, then measure.');
   } else {
-    console.log('\nno defer candidates left at current thresholds.');
+    console.log('\nno defer candidates left at current thresholds - the loop has converged.');
   }
   console.log(`\nfull report: ${COVERAGE_JSON}`);
 }
@@ -348,8 +376,30 @@ async function cmdServe(argv) {
 
 // --- dispatch ----------------------------------------------------------------
 
+async function cmdHelp() {
+  console.log(`browser-loading perf harness - measurement + diagnosis; you drive the loop
+
+commands (this directory):
+  measure --dist <app>/dist --runs 5 --label <name>   throttled runs -> LCP + "vs pinned baseline" verdict
+  baseline                                            pin the last measurement as the fixed reference
+  coverage --dist <app>/dist                          per-module bytes executed at first paint -> candidates
+  gen | build | defer <f> | undefer <f> | status | serve    demo-app helpers (README.md)
+
+the loop:
+  1. build the app; measure --label baseline; baseline (pin BEFORE changing anything)
+  2. coverage: note large modules with ~0% executed at paint
+  3. read the app source; find why the landing page loads them (follow imports from the entry)
+  4. change the app so it stops loading them before paint (never remove features); one change at a time
+  5. rebuild; run the app's functional check; measure --label <change>
+  6. "improvement beyond noise" + check passes -> keep, re-pin (baseline), commit; otherwise revert + rebuild
+  7. repeat from 2; done when coverage says converged or two attempts in a row were not kept
+
+judge only by "vs pinned baseline". full contract: AGENTS.md`);
+}
+
 const [command, ...rest] = process.argv.slice(2);
 const commands = {
+  help: cmdHelp,
   gen: cmdGen,
   build: cmdBuild,
   measure: cmdMeasure,
@@ -362,8 +412,8 @@ const commands = {
 };
 
 if (!command || !commands[command]) {
-  console.error(`usage: node harness.mjs <${Object.keys(commands).join('|')}> [options]\nsee README.md for the loop protocol`);
-  process.exit(2);
+  await cmdHelp();
+  process.exit(command ? 2 : 0);
 }
 try {
   await commands[command](rest);

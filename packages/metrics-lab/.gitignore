@@ -1,3 +1,5 @@
-# Generated demo app (recreate with `node harness.mjs gen`) and measurement state.
+# Generated demo app (recreate with `node harness.mjs gen`) and measurement state
+# (state-* also covers preserved copies of eval-run state).
 app/
 state/
+state-*/

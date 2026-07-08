@@ -41,8 +41,8 @@ const COLLECT_JS = `(() => {
     bytes: (nav ? nav.encodedBodySize : 0) + res.reduce((a, r) => a + (r.encodedBodySize || 0), 0),
     jsRequests: res.filter((r) => r.name.endsWith('.js')).length,
     ready: Object.assign({}, window.__ready || {}),
-    heroTitle: (document.getElementById('hero-title') || {}).textContent || '',
-    heroSubtitle: (document.getElementById('hero-subtitle') || {}).textContent || '',
+    heroTitle: (() => { const el = document.getElementById('hero-title'); return el ? el.textContent || '' : null; })(),
+    heroSubtitle: (() => { const el = document.getElementById('hero-subtitle'); return el ? el.textContent || '' : null; })(),
   };
 })()`;
 
@@ -115,9 +115,13 @@ export function summarize(samples, expectedFeatures = []) {
       allFeaturesReady: samples.every(
         (s) => expectedFeatures.every((f) => s.ready && s.ready[f] === true),
       ),
-      heroRendered: samples.every(
-        (s) => (s.heroTitle || '').length > 0 && (s.heroSubtitle || '').length > 0,
-      ),
+      // null when the page has no hero probe elements (measuring an arbitrary app
+      // via --dist); the demo app must render both.
+      heroRendered: samples.some((s) => s.heroTitle !== null || s.heroSubtitle !== null)
+        ? samples.every(
+          (s) => (s.heroTitle ?? '').length > 0 && (s.heroSubtitle === null || s.heroSubtitle.length > 0),
+        )
+        : null,
       lcpObservedInAllRuns: samples.every((s) => typeof s.lcp === 'number'),
     },
     samples,

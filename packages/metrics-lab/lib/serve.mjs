@@ -16,7 +16,10 @@ const MIME = {
   '.svg': 'image/svg+xml',
 };
 
-const BLANK_HTML = '<!doctype html><title>blank</title>ok';
+// Deliberately contentless: the warm-up page must never fire FCP/LCP, or a
+// coverage/measure poll racing the next navigation could read the blank page's
+// paint entries as the app's.
+const BLANK_HTML = '<!doctype html><title>blank</title>';
 
 export function startServer(rootDir, port = 0) {
   const server = http.createServer((req, res) => {

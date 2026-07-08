@@ -25,7 +25,7 @@ use crate::ast_scanner::cjs_export_analyzer::CommonJsAstType;
 
 use super::{
   AstScanner, UntranspiledSyntax, cjs_export_analyzer::CjsGlobalAssignmentType,
-  stmt_eval_analyzer::StmtEvalAnalyzer,
+  stmt_eval_analyzer::StmtEvalAnalyzer, top_level_import_read::TopLevelImportReadDetector,
 };
 
 impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
@@ -89,7 +89,12 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       }
 
       self.visit_statement(stmt);
-      if stmt_eval_facts.is_order_sensitive() {
+      // Tree-shaking side effects / global reads / pure annotations come from the analyzer.
+      // Top-level reads of imported bindings are detected by a separate uniform walk so the
+      // signal is complete by construction (no per-expression-form gaps).
+      if stmt_eval_facts.is_order_sensitive()
+        || TopLevelImportReadDetector::detect(&self.result.symbol_ref_db.ast_scopes, stmt)
+      {
         self.result.ecma_view_meta.insert(EcmaViewMeta::ExecutionOrderSensitive);
       }
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));

@@ -1,7 +1,8 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ChunkIdx, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx, RuntimeHelper, StmtInfoIdx,
-  SymbolRef, TaggedSymbolRef, WrapKind,
+  ChunkIdx, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx, RUNTIME_HELPER_NAMES,
+  RuntimeHelper, RuntimeModuleBrief, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -11,7 +12,7 @@ oxc_index::define_index_type! {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct OrderWrapState {
+pub struct OrderWrapState {
   modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
   synthetic_statements: IndexVec<OrderSyntheticStmtIdx, OrderSyntheticStmt>,
   synthetic_statements_by_chunk: FxHashMap<ChunkIdx, Vec<OrderSyntheticStmtIdx>>,
@@ -19,6 +20,8 @@ pub(crate) struct OrderWrapState {
   import_overlays_by_importer: FxHashMap<ModuleIdx, Vec<OrderImportKey>>,
   import_overlays_by_statement: FxHashMap<(ModuleIdx, StmtInfoIdx), Vec<OrderImportKey>>,
   namespace_requirements: FxHashMap<SymbolRef, FxIndexSet<ModuleIdx>>,
+  runtime_symbols: FxHashSet<SymbolRef>,
+  nested_reexport_records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
 }
 
 impl OrderWrapState {
@@ -28,10 +31,81 @@ impl OrderWrapState {
       && self.synthetic_statements.is_empty()
       && self.import_overlays.is_empty()
       && self.namespace_requirements.is_empty()
+      && self.runtime_symbols.is_empty()
+      && self.nested_reexport_records.is_empty()
   }
 
   pub(crate) fn has_import_overlays(&self) -> bool {
     !self.import_overlays.is_empty()
+  }
+
+  pub(crate) fn required_runtime_helpers(&self) -> RuntimeHelper {
+    let synthetic_helpers = self
+      .synthetic_statements
+      .iter()
+      .fold(RuntimeHelper::default(), |helpers, stmt| helpers | stmt.runtime_helpers);
+    self
+      .import_overlays
+      .values()
+      .fold(synthetic_helpers, |helpers, overlay| helpers | overlay.runtime_helpers)
+  }
+
+  pub(crate) fn requires_runtime_symbol(
+    &self,
+    runtime: &RuntimeModuleBrief,
+    symbol_ref: SymbolRef,
+  ) -> bool {
+    self.runtime_symbols.contains(&symbol_ref)
+      || self.required_runtime_helpers().into_iter().any(|helper| {
+        runtime.resolve_symbol(RUNTIME_HELPER_NAMES[helper.bit_index()]) == symbol_ref
+      })
+  }
+
+  pub(crate) fn compute_runtime_symbol_closure(
+    &mut self,
+    runtime: &RuntimeModuleBrief,
+    stmt_infos: &StmtInfos,
+    symbols: &SymbolRefDb,
+  ) {
+    let mut pending = self
+      .required_runtime_helpers()
+      .into_iter()
+      .map(|helper| runtime.resolve_symbol(RUNTIME_HELPER_NAMES[helper.bit_index()]))
+      .collect::<Vec<_>>();
+    while let Some(symbol_ref) = pending.pop() {
+      let symbol_ref = symbols.canonical_ref_resolving_namespace(symbol_ref);
+      if !self.runtime_symbols.insert(symbol_ref) {
+        continue;
+      }
+      for stmt_idx in stmt_infos.declared_stmts_by_symbol(&symbol_ref) {
+        for referenced in &stmt_infos[*stmt_idx].referenced_symbols {
+          if let SymbolOrMemberExprRef::Symbol(referenced) = referenced
+            && referenced.owner == runtime.id()
+          {
+            pending.push(*referenced);
+          }
+        }
+      }
+    }
+  }
+
+  pub(crate) fn has_order_wrapper(&self, module_idx: ModuleIdx) -> bool {
+    self.modules.contains_key(&module_idx)
+  }
+
+  pub(crate) fn set_nested_reexport_records(
+    &mut self,
+    records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
+  ) {
+    self.nested_reexport_records = records;
+  }
+
+  pub(crate) fn is_nested_reexport_record(
+    &self,
+    module_idx: ModuleIdx,
+    rec_idx: ImportRecordIdx,
+  ) -> bool {
+    self.nested_reexport_records.contains(&(module_idx, rec_idx))
   }
 
   pub(crate) fn esm_init_target(
@@ -69,11 +143,19 @@ impl OrderWrapState {
     None
   }
 
-  pub(crate) fn record_legacy_order_wrapper(
+  pub(crate) fn insert_order_wrapper(
     &mut self,
     module_idx: ModuleIdx,
     wrapper_ref: SymbolRef,
+    runtime_helper: RuntimeHelper,
   ) {
+    let wrapper_statement = self.add_synthetic_statement(OrderSyntheticStmt {
+      owner: module_idx,
+      declared_symbols: vec![TaggedSymbolRef::normal(wrapper_ref)],
+      referenced_symbols: vec![],
+      runtime_helpers: runtime_helper,
+      chunk: None,
+    });
     assert!(
       self
         .modules
@@ -81,7 +163,7 @@ impl OrderWrapState {
           module_idx,
           OrderWrappedModule {
             wrapper_ref,
-            wrapper_statement: None,
+            wrapper_statement,
             init_is_noop: false,
             transitive_init_targets: FxHashMap::default(),
           },
@@ -91,7 +173,6 @@ impl OrderWrapState {
     );
   }
 
-  #[cfg(test)]
   pub(crate) fn add_synthetic_statement(
     &mut self,
     stmt: OrderSyntheticStmt,
@@ -99,7 +180,6 @@ impl OrderWrapState {
     self.synthetic_statements.push(stmt)
   }
 
-  #[cfg(test)]
   pub(crate) fn assign_synthetic_statement_chunk(
     &mut self,
     stmt_idx: OrderSyntheticStmtIdx,
@@ -113,6 +193,15 @@ impl OrderWrapState {
   #[cfg(test)]
   pub(crate) fn synthetic_statement(&self, stmt_idx: OrderSyntheticStmtIdx) -> &OrderSyntheticStmt {
     &self.synthetic_statements[stmt_idx]
+  }
+
+  pub(crate) fn assign_order_wrapper_chunk(&mut self, module_idx: ModuleIdx, chunk_idx: ChunkIdx) {
+    let wrapper_statement = self
+      .modules
+      .get(&module_idx)
+      .map(|module| module.wrapper_statement)
+      .expect("order-wrapped module should have a synthetic declaration");
+    self.assign_synthetic_statement_chunk(wrapper_statement, chunk_idx);
   }
 
   pub(crate) fn synthetic_statements_for_chunk(
@@ -155,6 +244,7 @@ impl OrderWrapState {
         live_symbols.insert(canonicalize(resolve_runtime_helper(helper)));
       }
     }
+    live_symbols.extend(self.runtime_symbols.iter().copied().map(&mut canonicalize));
     live_symbols
   }
 
@@ -245,38 +335,26 @@ impl OrderWrapState {
 
   pub(crate) fn order_wrapper_chunk(&self, module_idx: ModuleIdx) -> Option<ChunkIdx> {
     let module = self.modules.get(&module_idx)?;
-    self.synthetic_statements.get(module.wrapper_statement?).and_then(|stmt| stmt.chunk)
+    self.synthetic_statements.get(module.wrapper_statement).and_then(|stmt| stmt.chunk)
   }
 }
 
 #[derive(Debug)]
-pub(crate) struct OrderWrappedModule {
+pub struct OrderWrappedModule {
   pub(crate) wrapper_ref: SymbolRef,
-  pub(crate) wrapper_statement: Option<OrderSyntheticStmtIdx>,
+  pub(crate) wrapper_statement: OrderSyntheticStmtIdx,
   pub(crate) init_is_noop: bool,
   pub(crate) transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }
 
-impl OrderWrappedModule {
-  #[cfg(test)]
-  fn new(wrapper_ref: SymbolRef) -> Self {
-    Self {
-      wrapper_ref,
-      wrapper_statement: None,
-      init_is_noop: false,
-      transitive_init_targets: FxHashMap::default(),
-    }
-  }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum EsmInitOrigin {
+pub enum EsmInitOrigin {
   Interop,
   ExecutionOrder,
 }
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct EsmInitTarget {
+pub struct EsmInitTarget {
   pub(crate) wrapper_ref: SymbolRef,
   pub(crate) init_is_noop: bool,
   pub(crate) tla_tainted: bool,
@@ -284,7 +362,7 @@ pub(crate) struct EsmInitTarget {
 }
 
 #[derive(Debug)]
-pub(crate) struct OrderSyntheticStmt {
+pub struct OrderSyntheticStmt {
   pub(crate) owner: ModuleIdx,
   pub(crate) declared_symbols: Vec<TaggedSymbolRef>,
   pub(crate) referenced_symbols: Vec<SymbolRef>,
@@ -293,22 +371,36 @@ pub(crate) struct OrderSyntheticStmt {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct OrderImportKey {
+pub struct OrderImportKey {
   pub(crate) importer: ModuleIdx,
   pub(crate) statement: StmtInfoIdx,
   pub(crate) record: ImportRecordIdx,
 }
 
 #[derive(Debug)]
-pub(crate) struct OrderImportOverlay {
+pub struct OrderImportOverlay {
   pub(crate) referenced_symbols: Vec<SymbolRef>,
   pub(crate) runtime_helpers: RuntimeHelper,
   pub(crate) requires_importer_namespace: bool,
   pub(crate) requires_importee_namespace: bool,
   pub(crate) reexports_dynamic_exports: bool,
+  pub(crate) retained_reexport_path: Vec<(ModuleIdx, ImportRecordIdx)>,
 }
 
 impl OrderImportOverlay {
+  pub(crate) fn transitive_reexport(
+    retained_reexport_path: Vec<(ModuleIdx, ImportRecordIdx)>,
+  ) -> Self {
+    Self {
+      referenced_symbols: vec![],
+      runtime_helpers: RuntimeHelper::default(),
+      requires_importer_namespace: false,
+      requires_importee_namespace: false,
+      reexports_dynamic_exports: false,
+      retained_reexport_path,
+    }
+  }
+
   #[expect(clippy::too_many_arguments)]
   pub(crate) fn from_import_record(
     kind: ImportKind,
@@ -332,6 +424,7 @@ impl OrderImportOverlay {
       requires_importer_namespace: false,
       requires_importee_namespace: false,
       reexports_dynamic_exports: false,
+      retained_reexport_path: vec![],
     };
     let mut reference = |symbol_ref| {
       if !overlay.referenced_symbols.contains(&symbol_ref) {
@@ -386,7 +479,6 @@ mod tests {
 
   use super::{
     EsmInitOrigin, OrderImportKey, OrderImportOverlay, OrderSyntheticStmt, OrderWrapState,
-    OrderWrappedModule,
   };
   use crate::types::linking_metadata::LinkingMetadata;
 
@@ -403,10 +495,11 @@ mod tests {
     let wrapper_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
     let mut state = OrderWrapState::default();
 
-    state.modules.insert(module_idx, OrderWrappedModule::new(wrapper_ref));
+    state.insert_order_wrapper(module_idx, wrapper_ref, RuntimeHelper::EsmMin);
 
     assert_eq!(state.modules.get(&module_idx).map(|module| module.wrapper_ref), Some(wrapper_ref));
     assert_eq!(state.modules.len(), 1);
+    assert_eq!(state.synthetic_statements.len(), 1);
   }
 
   #[test]
@@ -418,38 +511,12 @@ mod tests {
     meta.sync_wrap_kind(WrapKind::Esm);
     meta.wrapper_ref = Some(interop_ref);
     let mut state = OrderWrapState::default();
-    state.modules.insert(module_idx, OrderWrappedModule::new(order_ref));
+    state.insert_order_wrapper(module_idx, order_ref, RuntimeHelper::EsmMin);
 
     let target = state.esm_init_target(module_idx, &meta).unwrap();
 
     assert_eq!(target.origin, EsmInitOrigin::Interop);
     assert_eq!(target.wrapper_ref, interop_ref);
-  }
-
-  #[test]
-  fn legacy_order_bridge_uses_order_origin_and_metadata_owner() {
-    let module_idx = ModuleIdx::new(7);
-    let target_idx = ModuleIdx::new(8);
-    let wrapper_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
-    let stmt_idx = StmtInfoIdx::new(2);
-    let mut meta = LinkingMetadata::default();
-    meta.override_wrap_kind(WrapKind::Esm);
-    meta.wrapper_ref = Some(wrapper_ref);
-    let mut state = OrderWrapState::default();
-    state.modules.insert(module_idx, OrderWrappedModule::new(wrapper_ref));
-    state.set_order_init_metadata(
-      module_idx,
-      true,
-      FxHashMap::from_iter([(stmt_idx, vec![target_idx])]),
-    );
-
-    let target = state.esm_init_target(module_idx, &meta).unwrap();
-
-    assert_eq!(target.origin, EsmInitOrigin::ExecutionOrder);
-    assert!(target.init_is_noop);
-    assert_eq!(state.transitive_init_targets(module_idx, &meta)[&stmt_idx], [target_idx]);
-    assert!(!meta.init_is_noop);
-    assert!(meta.transitive_esm_init_targets.is_empty());
   }
 
   #[test]
@@ -459,7 +526,7 @@ mod tests {
     let mut meta = LinkingMetadata::default();
     meta.is_tla_or_contains_tla_dependency = true;
     let mut state = OrderWrapState::default();
-    state.modules.insert(module_idx, OrderWrappedModule::new(wrapper_ref));
+    state.insert_order_wrapper(module_idx, wrapper_ref, RuntimeHelper::EsmMin);
 
     let target = state.esm_init_target(module_idx, &meta).unwrap();
 
@@ -477,7 +544,7 @@ mod tests {
     let stmt_idx = StmtInfoIdx::new(2);
     let meta = LinkingMetadata::default();
     let mut state = OrderWrapState::default();
-    state.modules.insert(module_idx, OrderWrappedModule::new(wrapper_ref));
+    state.insert_order_wrapper(module_idx, wrapper_ref, RuntimeHelper::EsmMin);
 
     state.set_order_init_metadata(
       module_idx,

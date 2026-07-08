@@ -107,7 +107,7 @@ mod finalize_modules;
 mod manual_code_splitting;
 mod minify_chunks;
 mod order_analysis;
-pub(crate) mod order_wrap_state;
+pub mod order_wrap_state;
 mod order_wrapping;
 mod post_banner_footer;
 mod render_chunk_to_assets;
@@ -146,7 +146,7 @@ impl<'a> GenerateStage<'a> {
     let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs).await?;
 
     let finalize_chunk_plan::FinalizedChunkPlan { analysis: order_analysis, mut order_state } =
-      self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs)?;
+      self.finalize_chunk_plan(&mut chunk_graph, &used_symbol_refs)?;
 
     // `apply_order_wraps` may include newly-created wrapper/runtime symbols. Seal only after it
     // has had the last chance to extend the set.

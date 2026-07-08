@@ -256,7 +256,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];
     match importee_linking_info.wrap_kind() {
       WrapKind::None => {
-        if let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx) {
+        if !self.ctx.order_wrap_state.is_nested_reexport_record(self.ctx.idx, rec_idx)
+          && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
+        {
           *stmt = init_stmt;
           return false;
         }
@@ -1591,8 +1593,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
     old_body.into_iter().enumerate().zip(self.ctx.stmt_infos.iter_enumerated().skip(1)).for_each(
-      |((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
-        let is_stmt_included = self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx);
+      |((_top_stmt_idx, mut top_stmt), (stmt_info_idx, stmt_info))| {
+        let is_order_runtime_stmt = self.ctx.idx == self.ctx.runtime.id()
+          && stmt_info.declared_symbols.iter().any(|declared| {
+            self.ctx.order_wrap_state.requires_runtime_symbol(self.ctx.runtime, declared.inner())
+          });
+        let is_stmt_included =
+          self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx) || is_order_runtime_stmt;
 
         if !is_stmt_included {
           // For ESM-wrapped modules, excluded re-export statements still need init calls for
@@ -1621,10 +1628,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             .ctx
             .order_wrap_state
             .import_overlays_for_statement(self.ctx.idx, stmt_info_idx)
-            .map(|(key, overlay)| (key.record, overlay.reexports_dynamic_exports))
+            .map(|(key, overlay)| {
+              (
+                key.record,
+                overlay.reexports_dynamic_exports,
+                !overlay.retained_reexport_path.is_empty(),
+              )
+            })
             .collect::<Vec<_>>();
-          for (rec_idx, reexports_dynamic_exports) in overlay_records {
-            if let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx) {
+          for (rec_idx, reexports_dynamic_exports, has_retained_reexport_path) in overlay_records {
+            if !has_retained_reexport_path
+              && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
+            {
               program.body.push(init_stmt);
             }
             if !reexports_dynamic_exports {
@@ -1687,7 +1702,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             match &self.ctx.modules[module_idx] {
               Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                if matches!(importee_linking_info.wrap_kind(), WrapKind::None)
+                if !self.ctx.order_wrap_state.is_nested_reexport_record(self.ctx.idx, rec_idx)
+                  && matches!(importee_linking_info.wrap_kind(), WrapKind::None)
                   && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
                 {
                   program.body.push(init_stmt);

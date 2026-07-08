@@ -7,7 +7,7 @@ mod ecmascript;
 mod hmr;
 mod module_finalizers;
 mod module_loader;
-mod stages;
+pub(crate) mod stages;
 mod type_alias;
 mod types;
 mod utils;

@@ -23,13 +23,17 @@ impl GenerateStage<'_> {
     order_state: &super::order_wrap_state::OrderWrapState,
   ) {
     let has_enum_inlining = self.link_output.has_enum_inlining;
+    let has_required_order_runtime = !order_state.required_runtime_helpers().is_empty();
 
     let transfer_parts_rendered_maps = debug_span!("finalize_modules").in_scope(|| {
       ast_table
         .par_iter_mut_enumerated()
         .filter(|(idx, _ast)| {
           self.link_output.module_table[*idx].as_normal().is_some_and(|m| {
-            self.link_output.metas[m.idx].is_included && module_has_live_chunk(chunk_graph, *idx)
+            let is_required_order_runtime =
+              m.idx == self.link_output.runtime.id() && has_required_order_runtime;
+            (self.link_output.metas[m.idx].is_included || is_required_order_runtime)
+              && module_has_live_chunk(chunk_graph, *idx)
           })
         })
         .filter_map(|(idx, ast)| {

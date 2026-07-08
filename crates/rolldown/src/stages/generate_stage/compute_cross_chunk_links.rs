@@ -346,7 +346,13 @@ impl GenerateStage<'_> {
             });
           self.link_output.stmt_infos[module.idx].iter_enumerated().for_each(
             |(stmt_info_idx, stmt_info)| {
-              if !self.link_output.metas[module.idx].stmt_info_included.has_bit(stmt_info_idx) {
+              let is_order_runtime_stmt = module.idx == self.link_output.runtime.id()
+                && stmt_info.declared_symbols.iter().any(|declared| {
+                  order_state.requires_runtime_symbol(&self.link_output.runtime, declared.inner())
+                });
+              if !self.link_output.metas[module.idx].stmt_info_included.has_bit(stmt_info_idx)
+                && !is_order_runtime_stmt
+              {
                 return;
               }
               stmt_info.declared_symbols.iter().for_each(|declared| {
@@ -1100,14 +1106,9 @@ fn esm_init_target_is_included_in_live_chunk(
     super::order_wrap_state::EsmInitOrigin::Interop => meta
       .wrapper_stmt_info
       .is_some_and(|stmt_info_idx| meta.stmt_info_included.has_bit(stmt_info_idx)),
-    super::order_wrap_state::EsmInitOrigin::ExecutionOrder => {
-      order_state
-        .order_wrapper_chunk(module_idx)
-        .is_some_and(|chunk_idx| chunk_graph.module_to_chunk[module_idx] == Some(chunk_idx))
-        || meta
-          .wrapper_stmt_info
-          .is_some_and(|stmt_info_idx| meta.stmt_info_included.has_bit(stmt_info_idx))
-    }
+    super::order_wrap_state::EsmInitOrigin::ExecutionOrder => order_state
+      .order_wrapper_chunk(module_idx)
+      .is_some_and(|chunk_idx| chunk_graph.module_to_chunk[module_idx] == Some(chunk_idx)),
   };
   declaration_is_live && module_has_live_chunk(chunk_graph, module_idx)
 }
@@ -1118,32 +1119,6 @@ fn module_has_live_chunk(chunk_graph: &ChunkGraph, module_idx: ModuleIdx) -> boo
       != Some(&PostChunkOptimizationOperation::Removed)
       && chunk_graph.chunk_table[chunk_idx].modules.contains(&module_idx)
   })
-}
-
-#[cfg(test)]
-mod tests {
-  use oxc::semantic::SymbolId;
-  use rolldown_common::{ModuleIdx, SymbolRef};
-  use rustc_hash::FxHashSet;
-
-  use super::{UsedSymbolRefsView, non_namespace_symbol_is_live};
-
-  struct EmptyUsedSymbols;
-
-  impl UsedSymbolRefsView for EmptyUsedSymbols {
-    fn contains(&self, _symbol_ref: &SymbolRef) -> bool {
-      false
-    }
-  }
-
-  #[test]
-  fn synthetic_only_symbol_is_live_for_cross_chunk_export_naming() {
-    let module_idx = ModuleIdx::new(7);
-    let symbol_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
-    let order_live_symbols = FxHashSet::from_iter([symbol_ref]);
-
-    assert!(non_namespace_symbol_is_live(&EmptyUsedSymbols, &order_live_symbols, symbol_ref));
-  }
 }
 
 // The same implementation with https://github.com/oxc-project/oxc/blob/crates_v0.86.0/crates/oxc_mangler/src/base54.rs#L30-L31
@@ -1170,4 +1145,30 @@ fn generate_minified_names(mut value: u32) -> String {
   }
   // SAFETY: `buffer` is base64 characters, it is valid utf8 characters
   unsafe { String::from_utf8_unchecked(buffer) }
+}
+
+#[cfg(test)]
+mod tests {
+  use oxc::semantic::SymbolId;
+  use rolldown_common::{ModuleIdx, SymbolRef};
+  use rustc_hash::FxHashSet;
+
+  use super::{UsedSymbolRefsView, non_namespace_symbol_is_live};
+
+  struct EmptyUsedSymbols;
+
+  impl UsedSymbolRefsView for EmptyUsedSymbols {
+    fn contains(&self, _symbol_ref: &SymbolRef) -> bool {
+      false
+    }
+  }
+
+  #[test]
+  fn synthetic_only_symbol_is_live_for_cross_chunk_export_naming() {
+    let module_idx = ModuleIdx::new(7);
+    let symbol_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
+    let order_live_symbols = FxHashSet::from_iter([symbol_ref]);
+
+    assert!(non_namespace_symbol_is_live(&EmptyUsedSymbols, &order_live_symbols, symbol_ref));
+  }
 }

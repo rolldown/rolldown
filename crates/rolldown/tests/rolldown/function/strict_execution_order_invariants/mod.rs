@@ -114,6 +114,27 @@ async fn order_wrapper_entry_uses_explicit_prologue() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn order_runtime_helpers_include_dependency_closure() {
+  let fixture_dir = format!("{FIXTURE_ROOT}/../experimental/strict_execution_order/issue_4782");
+  let output = bundle_fixture_with_options(
+    &fixture_dir,
+    vec![InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }],
+    true,
+    BundlerOptions { profiler_names: Some(true), ..Default::default() },
+  )
+  .await;
+
+  let runtime_chunk = output
+    .values()
+    .find(|code| code.contains("var __esm ="))
+    .expect("profiler wrapper should emit the named ESM runtime helper");
+  assert!(
+    runtime_chunk.contains("var __getOwnPropNames ="),
+    "`__esm` dependencies must be retained by the order runtime closure:\n{runtime_chunk}",
+  );
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn dynamic_entry_does_not_static_import_side_effectful_runtime_host() {
   let output = bundle_fixture(
     &format!("{FIXTURE_ROOT}/runtime_inert"),

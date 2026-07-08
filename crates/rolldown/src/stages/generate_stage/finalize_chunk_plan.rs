@@ -34,7 +34,7 @@ impl GenerateStage<'_> {
   pub(super) fn finalize_chunk_plan(
     &mut self,
     chunk_graph: &mut ChunkGraph,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
   ) -> BuildResult<FinalizedChunkPlan> {
     // The order analysis reuses cross-chunk linking logic, which reads finalized namespace and
     // external-export facts. Prepare those inputs on the provisional topology first.
@@ -48,7 +48,7 @@ impl GenerateStage<'_> {
     {
       self.apply_order_wraps(chunk_graph, &analysis.plan, used_symbol_refs, &mut order_state);
       #[cfg(debug_assertions)]
-      self.assert_order_wrap_plan_applied(chunk_graph, &analysis.plan);
+      self.assert_order_wrap_plan_applied(chunk_graph, &analysis.plan, &order_state);
 
       // Applying the plan can replace or restore entry facades and extend namespace inclusion.
       // Recompute topology-derived facts on the graph that will actually be rendered.
@@ -74,18 +74,27 @@ impl GenerateStage<'_> {
   }
 
   #[cfg(debug_assertions)]
-  fn assert_order_wrap_plan_applied(&self, chunk_graph: &ChunkGraph, plan: &OrderWrapPlan) {
+  fn assert_order_wrap_plan_applied(
+    &self,
+    chunk_graph: &ChunkGraph,
+    plan: &OrderWrapPlan,
+    order_state: &OrderWrapState,
+  ) {
     if plan.is_empty() {
       return;
     }
 
     for module_idx in plan.modules() {
       let meta = &self.link_output.metas[module_idx];
-      debug_assert!(matches!(meta.wrap_kind(), WrapKind::Esm));
-      debug_assert!(meta.hoist_esm_wrapper);
-      debug_assert!(
-        meta.wrapper_stmt_info.is_some_and(|stmt_idx| meta.stmt_info_included.has_bit(stmt_idx))
-      );
+      debug_assert!(matches!(meta.wrap_kind(), WrapKind::None));
+      debug_assert!(matches!(meta.original_wrap_kind(), WrapKind::None));
+      debug_assert!(meta.wrapper_ref.is_none());
+      debug_assert!(meta.wrapper_stmt_info.is_none());
+      debug_assert!(order_state.has_order_wrapper(module_idx));
+      debug_assert!(matches!(
+        order_state.esm_init_target(module_idx, meta).map(|target| target.origin),
+        Some(super::order_wrap_state::EsmInitOrigin::ExecutionOrder)
+      ));
       debug_assert!(chunk_graph.module_to_chunk[module_idx].is_some_and(|chunk_idx| {
         is_rendered_chunk(chunk_graph, chunk_idx)
           && chunk_graph.chunk_table[chunk_idx].modules.contains(&module_idx)
@@ -103,7 +112,9 @@ impl GenerateStage<'_> {
       }
     }
     let runtime_idx = self.link_output.runtime.id();
-    if self.link_output.metas[runtime_idx].is_included {
+    if self.link_output.metas[runtime_idx].is_included
+      || !order_state.required_runtime_helpers().is_empty()
+    {
       debug_assert!(chunk_graph.module_to_chunk[runtime_idx].is_some_and(|chunk_idx| {
         is_rendered_chunk(chunk_graph, chunk_idx)
           && chunk_graph.chunk_table[chunk_idx].modules.contains(&runtime_idx)

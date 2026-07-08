@@ -1,20 +1,13 @@
 use crate::{
-  chunk_graph::ChunkGraph,
-  stages::link_stage::{
-    IncludeContext, SymbolIncludeReason, compute_body_demand_keys, create_wrapper,
-    include_runtime_symbol, include_symbol,
-  },
-  types::linking_metadata::{
-    included_info_to_linking_metadata_vec, linking_metadata_vec_to_included_info,
-  },
+  chunk_graph::ChunkGraph, type_alias::IndexStmtInfos, types::linking_metadata::LinkingMetadataVec,
 };
 use itertools::Itertools;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  PostChunkOptimizationOperation, RuntimeHelper, StmtEvalFlags, StmtInfoIdx, StmtInfoMeta,
-  SymbolOrMemberExprRef, SymbolRef, UsedSymbolRefsBuilder, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta,
+  IndexModules, ModuleIdx, PostChunkOptimizationOperation, RuntimeHelper, StmtInfoIdx, SymbolRef,
+  SymbolRefDb, UsedSymbolRefsBuilder, WrapKind,
 };
-use rolldown_utils::IndexBitSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{
   GenerateStage,
@@ -23,52 +16,63 @@ use super::{
   order_wrap_state::{OrderImportKey, OrderImportOverlay, OrderWrapState},
 };
 
+struct OrderLoweringInput<'a> {
+  plan: &'a OrderWrapPlan,
+  modules: &'a IndexModules,
+  linking: &'a LinkingMetadataVec,
+  statements: &'a IndexStmtInfos,
+  export_chains: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  star_reexport_records_by_imported_symbol:
+    &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
+  used_symbols: &'a UsedSymbolRefsBuilder,
+}
+
+struct OrderLoweringOutput<'a> {
+  symbols: &'a mut SymbolRefDb,
+  state: &'a mut OrderWrapState,
+}
+
+struct FrozenReexportUsage {
+  root_paths: FxHashMap<(ModuleIdx, ImportRecordIdx), Vec<(ModuleIdx, ImportRecordIdx)>>,
+  nested_records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
+  consumed_facades: FxHashSet<SymbolRef>,
+}
+
 impl GenerateStage<'_> {
   pub(super) fn apply_order_wraps(
     &mut self,
     chunk_graph: &mut ChunkGraph,
     plan: &OrderWrapPlan,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
     order_state: &mut OrderWrapState,
   ) {
     if plan.is_empty() {
       return;
     }
 
-    let mut runtime_helpers = RuntimeHelper::default();
-    for module_idx in
-      plan.modules().sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
-    {
-      if !matches!(self.link_output.metas[module_idx].wrap_kind(), WrapKind::None) {
-        continue;
-      }
-      let module = self.link_output.module_table[module_idx]
-        .as_normal()
-        .expect("order wrap only applies to normal modules");
-      self.link_output.metas[module_idx].override_wrap_kind(WrapKind::Esm);
-      self.link_output.metas[module_idx].hoist_esm_wrapper = true;
-      create_wrapper(
-        module,
-        &mut self.link_output.stmt_infos[module_idx],
-        &mut self.link_output.metas[module_idx],
-        &mut self.link_output.symbol_db,
-        &self.link_output.runtime,
-        self.options,
-      );
-      order_state.record_legacy_order_wrapper(
-        module_idx,
-        self.link_output.metas[module_idx]
-          .wrapper_ref
-          .expect("legacy order wrapper should have a wrapper ref"),
-      );
-      self.ensure_order_wrap_stmt_inclusion_capacity(module_idx);
-      runtime_helpers.insert(self.esm_runtime_helper());
-      self.add_order_wrap_entry_reference(module_idx, order_state);
-    }
-
-    runtime_helpers |= self.reregister_order_wrap_imports(plan, order_state);
-    self.include_order_wrap_symbols(plan, runtime_helpers, used_symbol_refs);
-    self.place_order_wrap_modules(chunk_graph, plan);
+    let runtime_helper = self.esm_runtime_helper();
+    let code_splitting_disabled = self.options.code_splitting.is_disabled();
+    let input = OrderLoweringInput {
+      plan,
+      modules: &self.link_output.module_table.modules,
+      linking: &self.link_output.metas,
+      statements: &self.link_output.stmt_infos,
+      export_chains: &self.link_output.normal_symbol_exports_chain_map,
+      star_reexport_records_by_imported_symbol: &self
+        .link_output
+        .star_reexport_records_by_imported_symbol,
+      used_symbols: used_symbol_refs,
+    };
+    let mut output =
+      OrderLoweringOutput { symbols: &mut self.link_output.symbol_db, state: order_state };
+    lower_order_state(&input, &mut output, runtime_helper, code_splitting_disabled);
+    let runtime_idx = self.link_output.runtime.id();
+    order_state.compute_runtime_symbol_closure(
+      &self.link_output.runtime,
+      &self.link_output.stmt_infos[runtime_idx],
+      &self.link_output.symbol_db,
+    );
+    self.place_order_wrap_modules(chunk_graph, plan, order_state);
     self.create_order_wrap_entry_facades(chunk_graph, plan);
     self.restore_order_wrap_dynamic_entry_facades(chunk_graph, plan);
     self.ensure_runtime_module_for_order_wraps(chunk_graph);
@@ -76,242 +80,12 @@ impl GenerateStage<'_> {
     self.renumber_live_chunks(chunk_graph);
   }
 
-  fn add_order_wrap_entry_reference(
-    &mut self,
-    module_idx: ModuleIdx,
-    order_state: &OrderWrapState,
-  ) {
-    if !self.link_output.entries.contains_key(&module_idx) {
-      return;
-    }
-    let Some(target) = order_state.esm_init_target(module_idx, &self.link_output.metas[module_idx])
-    else {
-      return;
-    };
-    let referenced =
-      &mut self.link_output.metas[module_idx].referenced_symbols_by_entry_point_chunk;
-    if !referenced.iter().any(|(symbol_ref, _)| *symbol_ref == target.wrapper_ref) {
-      referenced.push((target.wrapper_ref, false));
-    }
-  }
-
-  fn ensure_order_wrap_stmt_inclusion_capacity(&mut self, module_idx: ModuleIdx) {
-    let stmt_count = self.link_output.stmt_infos[module_idx].len();
-    let old_included = self.link_output.metas[module_idx].stmt_info_included.clone();
-    let mut included = IndexBitSet::new(stmt_count);
-    for stmt_info_idx in old_included.index_of_one() {
-      if stmt_info_idx.index() < stmt_count {
-        included.set_bit(stmt_info_idx);
-      }
-    }
-    self.link_output.metas[module_idx].stmt_info_included = included;
-  }
-
-  fn reregister_order_wrap_imports(
-    &mut self,
+  fn place_order_wrap_modules(
+    &self,
+    chunk_graph: &mut ChunkGraph,
     plan: &OrderWrapPlan,
     order_state: &mut OrderWrapState,
-  ) -> RuntimeHelper {
-    let mut runtime_helpers = RuntimeHelper::default();
-    let module_indices = self
-      .link_output
-      .module_table
-      .modules
-      .iter_enumerated()
-      .filter_map(|(idx, module)| module.as_normal().map(|_| idx))
-      .collect_vec();
-
-    for importer_idx in module_indices {
-      let execution_dependencies = &self.link_output.metas[importer_idx].execution_dependencies;
-      let affected_stmts = self.link_output.stmt_infos[importer_idx]
-        .iter_enumerated()
-        .filter_map(|(stmt_info_idx, stmt_info)| {
-          let rec_ids = stmt_info
-            .import_records
-            .iter()
-            .copied()
-            .filter(|rec_idx| {
-              self.link_output.module_table[importer_idx].as_normal().is_some_and(|importer| {
-                let rec = &importer.import_records[*rec_idx];
-                rec.resolved_module.is_some_and(|importee_idx| {
-                  plan.contains(&importee_idx)
-                    && (execution_dependencies.contains(&importee_idx)
-                      || rec.meta.intersects(
-                        ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly,
-                      ))
-                })
-              })
-            })
-            .collect_vec();
-          (!rec_ids.is_empty()).then_some((stmt_info_idx, rec_ids))
-        })
-        .collect_vec();
-
-      for (stmt_info_idx, rec_ids) in affected_stmts {
-        for rec_idx in rec_ids {
-          runtime_helpers |= self.reregister_order_wrap_import_record(
-            importer_idx,
-            stmt_info_idx,
-            rec_idx,
-            order_state,
-          );
-        }
-      }
-    }
-
-    runtime_helpers
-  }
-
-  fn reregister_order_wrap_import_record(
-    &mut self,
-    importer_idx: ModuleIdx,
-    stmt_info_idx: StmtInfoIdx,
-    rec_idx: ImportRecordIdx,
-    order_state: &mut OrderWrapState,
-  ) -> RuntimeHelper {
-    let Some(importer) = self.link_output.module_table[importer_idx].as_normal() else {
-      return RuntimeHelper::default();
-    };
-    let rec = &importer.import_records[rec_idx];
-    let Some(importee_idx) = rec.resolved_module else {
-      return RuntimeHelper::default();
-    };
-    let Some(importee) = self.link_output.module_table[importee_idx].as_normal() else {
-      return RuntimeHelper::default();
-    };
-    if !matches!(self.link_output.metas[importee_idx].wrap_kind(), WrapKind::Esm) {
-      return RuntimeHelper::default();
-    }
-
-    let mut runtime_helpers = RuntimeHelper::default();
-    let wrapper_ref =
-      self.link_output.metas[importee_idx].wrapper_ref.expect("wrapped module has wrapper ref");
-    let importee_namespace_ref = importee.namespace_object_ref;
-    let importer_namespace_ref = importer.namespace_object_ref;
-    let importee_has_dynamic_exports = self.link_output.metas[importee_idx].has_dynamic_exports;
-    let importee_has_side_effects = importee.side_effects.has_side_effects();
-    let active_execution_dependency =
-      self.link_output.metas[importer_idx].execution_dependencies.contains(&importee_idx);
-    let legacy_statement_is_included =
-      self.link_output.metas[importer_idx].stmt_info_included.has_bit(stmt_info_idx);
-    let overlay = OrderImportOverlay::from_import_record(
-      rec.kind,
-      rec.meta,
-      wrapper_ref,
-      importer_namespace_ref,
-      importee_namespace_ref,
-      importee_has_dynamic_exports,
-      active_execution_dependency,
-      self.options.code_splitting.is_disabled(),
-    );
-    let overlay_runtime_helpers =
-      overlay.as_ref().map_or_else(RuntimeHelper::default, |overlay| overlay.runtime_helpers);
-    if let Some(overlay) = overlay {
-      order_state.insert_import_overlay(
-        OrderImportKey { importer: importer_idx, statement: stmt_info_idx, record: rec_idx },
-        overlay,
-        importer_namespace_ref,
-        importee_namespace_ref,
-      );
-    }
-    if !legacy_statement_is_included {
-      return overlay_runtime_helpers;
-    }
-
-    // TODO(strict-execution-order): Delete this compatibility write once finalization consumes
-    // overlays. The lowering API must then borrow statements and linking metadata immutably so
-    // generate-stage order lowering cannot reopen user-code liveness.
-    let stmt_info = self.link_output.stmt_infos[importer_idx].get_mut(stmt_info_idx);
-    match rec.kind {
-      ImportKind::Import => {
-        let is_reexport_all = rec.meta.contains(ImportRecordMeta::IsExportStar);
-        stmt_info
-          .eval_flags
-          .set(StmtEvalFlags::UnknownSideEffect, is_reexport_all || importee_has_side_effects);
-        push_symbol_once(&mut stmt_info.referenced_symbols, wrapper_ref);
-
-        if is_reexport_all && importee_has_dynamic_exports {
-          stmt_info.meta.insert(StmtInfoMeta::ReExportDynamicExports);
-          push_symbol_once(&mut stmt_info.referenced_symbols, importer_namespace_ref);
-          push_symbol_once(&mut stmt_info.referenced_symbols, importee_namespace_ref);
-          runtime_helpers.insert(RuntimeHelper::ReExport);
-        }
-      }
-      ImportKind::Require => {
-        push_symbol_once(&mut stmt_info.referenced_symbols, wrapper_ref);
-        push_symbol_once(&mut stmt_info.referenced_symbols, importee_namespace_ref);
-        if !rec.meta.contains(ImportRecordMeta::IsRequireUnused) {
-          runtime_helpers.insert(RuntimeHelper::ToCommonJs);
-        }
-      }
-      ImportKind::DynamicImport if self.options.code_splitting.is_disabled() => {
-        push_symbol_once(&mut stmt_info.referenced_symbols, wrapper_ref);
-        push_symbol_once(&mut stmt_info.referenced_symbols, importee_namespace_ref);
-      }
-      ImportKind::DynamicImport
-      | ImportKind::AtImport
-      | ImportKind::UrlImport
-      | ImportKind::NewUrl
-      | ImportKind::HotAccept => {}
-    }
-
-    debug_assert_eq!(runtime_helpers, overlay_runtime_helpers);
-    overlay_runtime_helpers
-  }
-
-  fn include_order_wrap_symbols(
-    &mut self,
-    plan: &OrderWrapPlan,
-    runtime_helpers: RuntimeHelper,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
   ) {
-    let (mut stmt_info_included_vec, module_included_vec, mut module_namespace_reason_vec) =
-      linking_metadata_vec_to_included_info(&mut self.link_output.metas);
-    let body_demand_keys = compute_body_demand_keys(
-      &self.link_output.module_table.modules,
-      &self.link_output.stmt_infos,
-      &self.link_output.symbol_db,
-      self.options.treeshake.is_some(),
-      &self.link_output.user_defined_entry_modules,
-    );
-
-    let mut module_included_vec = module_included_vec;
-    {
-      let mut context = IncludeContext::new(
-        &self.link_output.module_table.modules,
-        &self.link_output.stmt_infos,
-        &self.link_output.symbol_db,
-        &mut stmt_info_included_vec,
-        &mut module_included_vec,
-        self.link_output.runtime.id(),
-        &self.link_output.metas,
-        used_symbol_refs,
-        &mut self.link_output.used_external_symbols,
-        &self.link_output.global_constant_symbol_map,
-        self.options,
-        &self.link_output.normal_symbol_exports_chain_map,
-        &mut module_namespace_reason_vec,
-        &self.link_output.user_defined_entry_modules,
-        &body_demand_keys,
-      );
-
-      for module_idx in plan.modules() {
-        if let Some(wrapper_ref) = self.link_output.metas[module_idx].wrapper_ref {
-          include_symbol(&mut context, wrapper_ref, SymbolIncludeReason::Normal);
-        }
-      }
-      include_runtime_symbol(&mut context, &self.link_output.runtime, runtime_helpers);
-    }
-
-    included_info_to_linking_metadata_vec(
-      &mut self.link_output.metas,
-      stmt_info_included_vec,
-      &module_included_vec,
-      &module_namespace_reason_vec,
-    );
-  }
-
-  fn place_order_wrap_modules(&self, chunk_graph: &mut ChunkGraph, plan: &OrderWrapPlan) {
     let sorted_order_wraps = plan
       .modules()
       .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
@@ -350,6 +124,14 @@ impl GenerateStage<'_> {
         fallback_chunk_idx,
         self.link_output.metas[module_idx].depended_runtime_helper,
       );
+    }
+
+    let order_wrapped_modules =
+      plan.modules().filter(|module_idx| order_state.has_order_wrapper(*module_idx)).collect_vec();
+    for module_idx in order_wrapped_modules {
+      let chunk_idx =
+        chunk_graph.module_to_chunk[module_idx].expect("order-wrapped module should have a chunk");
+      order_state.assign_order_wrapper_chunk(module_idx, chunk_idx);
     }
   }
 
@@ -713,10 +495,204 @@ impl GenerateStage<'_> {
   }
 }
 
-fn push_symbol_once(referenced_symbols: &mut Vec<SymbolOrMemberExprRef>, symbol_ref: SymbolRef) {
-  if !referenced_symbols.iter().any(|item| item.symbol_ref() == &symbol_ref) {
-    referenced_symbols.push(symbol_ref.into());
+fn lower_order_state(
+  input: &OrderLoweringInput<'_>,
+  output: &mut OrderLoweringOutput<'_>,
+  runtime_helper: RuntimeHelper,
+  code_splitting_disabled: bool,
+) {
+  let reexport_usage = collect_frozen_reexport_usage(input);
+  output.state.set_nested_reexport_records(reexport_usage.nested_records.clone());
+  for module_idx in
+    input.plan.modules().sorted_unstable_by_key(|idx| input.modules[*idx].exec_order())
+  {
+    if !matches!(input.linking[module_idx].wrap_kind(), WrapKind::None) {
+      continue;
+    }
+    let module =
+      input.modules[module_idx].as_normal().expect("order wrap only applies to normal modules");
+    let wrapper_ref = output
+      .symbols
+      .create_facade_root_symbol_ref(module_idx, &format!("init_{}", module.repr_name));
+    output.state.insert_order_wrapper(module_idx, wrapper_ref, runtime_helper);
   }
+
+  for (importer_idx, module) in input.modules.iter_enumerated() {
+    let Some(importer) = module.as_normal() else {
+      continue;
+    };
+    let execution_dependencies = &input.linking[importer_idx].execution_dependencies;
+    for (stmt_info_idx, stmt_info) in input.statements[importer_idx].iter_enumerated() {
+      for &rec_idx in &stmt_info.import_records {
+        let rec = &importer.import_records[rec_idx];
+        let Some(importee_idx) = rec.resolved_module else {
+          continue;
+        };
+        let direct_target_is_planned = input.plan.contains(&importee_idx);
+        let retained_reexport_path = retained_order_reexport_path(
+          input,
+          &reexport_usage,
+          importer_idx,
+          stmt_info_idx,
+          rec_idx,
+        );
+        if !execution_dependencies.contains(&importee_idx) && retained_reexport_path.is_none() {
+          continue;
+        }
+        let Some(importee) = input.modules[importee_idx].as_normal() else {
+          continue;
+        };
+        if !direct_target_is_planned {
+          if let Some(retained_reexport_path) = retained_reexport_path
+            && static_import_reaches_plan(input, importee_idx)
+          {
+            output.state.insert_import_overlay(
+              OrderImportKey { importer: importer_idx, statement: stmt_info_idx, record: rec_idx },
+              OrderImportOverlay::transitive_reexport(retained_reexport_path),
+              importer.namespace_object_ref,
+              importee.namespace_object_ref,
+            );
+          }
+          continue;
+        }
+        let Some(init_target) =
+          output.state.esm_init_target(importee_idx, &input.linking[importee_idx])
+        else {
+          continue;
+        };
+        let mut overlay = OrderImportOverlay::from_import_record(
+          rec.kind,
+          rec.meta,
+          init_target.wrapper_ref,
+          importer.namespace_object_ref,
+          importee.namespace_object_ref,
+          input.linking[importee_idx].has_dynamic_exports,
+          execution_dependencies.contains(&importee_idx),
+          code_splitting_disabled,
+        );
+        if let Some(overlay) = &mut overlay
+          && let Some(retained_reexport_path) = retained_reexport_path
+        {
+          overlay.retained_reexport_path = retained_reexport_path;
+        }
+        if let Some(overlay) = overlay {
+          output.state.insert_import_overlay(
+            OrderImportKey { importer: importer_idx, statement: stmt_info_idx, record: rec_idx },
+            overlay,
+            importer.namespace_object_ref,
+            importee.namespace_object_ref,
+          );
+        }
+      }
+    }
+  }
+}
+
+fn static_import_reaches_plan(input: &OrderLoweringInput<'_>, root: ModuleIdx) -> bool {
+  let mut visited = rustc_hash::FxHashSet::default();
+  let mut stack = vec![root];
+  while let Some(module_idx) = stack.pop() {
+    if !visited.insert(module_idx) {
+      continue;
+    }
+    if input.plan.contains(&module_idx) {
+      return true;
+    }
+    let Some(module) = input.modules[module_idx].as_normal() else {
+      continue;
+    };
+    stack.extend(
+      module
+        .import_records
+        .iter()
+        .filter(|rec| rec.kind == ImportKind::Import)
+        .filter_map(|rec| rec.resolved_module),
+    );
+  }
+  false
+}
+
+fn collect_frozen_reexport_usage(input: &OrderLoweringInput<'_>) -> FrozenReexportUsage {
+  let mut consumed_facades = FxHashSet::default();
+  for (used_ref, chain) in input.export_chains {
+    if input.used_symbols.contains(used_ref) {
+      consumed_facades.extend(chain.iter().copied());
+    }
+  }
+
+  let mut root_paths =
+    FxHashMap::<(ModuleIdx, ImportRecordIdx), Vec<(ModuleIdx, ImportRecordIdx)>>::default();
+  for (imported_as_ref, paths) in input.star_reexport_records_by_imported_symbol {
+    for path in paths {
+      let Some(root) = path.first().copied() else {
+        continue;
+      };
+      let consumer_is_used = input.used_symbols.contains(imported_as_ref)
+        || consumed_facades.contains(imported_as_ref)
+        || input.linking[root.0]
+          .referenced_symbols_by_entry_point_chunk
+          .iter()
+          .any(|(symbol_ref, _)| symbol_ref == imported_as_ref);
+      if consumer_is_used {
+        root_paths.entry(root).or_default().extend(path.iter().copied());
+      }
+    }
+  }
+
+  let mut nested_records = FxHashSet::default();
+  for (root, path) in &mut root_paths {
+    path.sort_unstable_by_key(|(module_idx, rec_idx)| (module_idx.index(), rec_idx.index()));
+    path.dedup();
+    nested_records.extend(path.iter().copied().filter(|record| record != root));
+  }
+
+  FrozenReexportUsage { root_paths, nested_records, consumed_facades }
+}
+
+fn retained_order_reexport_path(
+  input: &OrderLoweringInput<'_>,
+  reexport_usage: &FrozenReexportUsage,
+  importer_idx: ModuleIdx,
+  stmt_info_idx: StmtInfoIdx,
+  rec_idx: ImportRecordIdx,
+) -> Option<Vec<(ModuleIdx, ImportRecordIdx)>> {
+  let importer = input.modules[importer_idx].as_normal()?;
+  let rec = &importer.import_records[rec_idx];
+  if !rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly) {
+    return None;
+  }
+  let meta = &input.linking[importer_idx];
+  if let Some(path) = reexport_usage.root_paths.get(&(importer_idx, rec_idx)) {
+    return Some(path.clone());
+  }
+  if reexport_usage.nested_records.contains(&(importer_idx, rec_idx)) {
+    return None;
+  }
+  if meta.stmt_info_included.has_bit(stmt_info_idx) {
+    return Some(vec![]);
+  }
+  if rec.meta.contains(ImportRecordMeta::IsExportStar)
+    && meta.namespace_included
+    && rec
+      .resolved_module
+      .is_some_and(|importee_idx| input.linking[importee_idx].has_dynamic_exports)
+  {
+    return Some(vec![]);
+  }
+
+  let facade_is_retained = |facade_ref: SymbolRef| {
+    input.used_symbols.contains(&facade_ref)
+      || reexport_usage.consumed_facades.contains(&facade_ref)
+  };
+  (importer
+    .named_imports
+    .iter()
+    .any(|(facade_ref, import)| import.record_idx == rec_idx && facade_is_retained(*facade_ref))
+    || input.statements[importer_idx][stmt_info_idx]
+      .declared_symbols
+      .iter()
+      .any(|declared| facade_is_retained(declared.inner())))
+  .then_some(vec![])
 }
 
 fn is_live_chunk(chunk_graph: &ChunkGraph, chunk_idx: ChunkIdx) -> bool {

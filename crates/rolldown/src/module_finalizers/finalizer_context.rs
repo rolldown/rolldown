@@ -82,7 +82,6 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
       EsmInitOrigin::Interop => legacy_wrapper_is_included,
       EsmInitOrigin::ExecutionOrder => {
         self.order_wrap_state.order_wrapper_chunk(self.idx) == Some(self.chunk_idx)
-          || legacy_wrapper_is_included
       }
     };
     if !declaration_is_included {

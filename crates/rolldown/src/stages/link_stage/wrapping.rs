@@ -157,7 +157,7 @@ impl LinkStage<'_> {
   }
 }
 
-pub fn create_wrapper(
+fn create_wrapper(
   module: &NormalModule,
   stmt_infos: &mut StmtInfos,
   linking_info: &mut LinkingMetadata,

@@ -45,16 +45,14 @@ pub struct LinkingMetadata {
   /// Intent to make those two fields private, so that we could ensure they are mutated in a more
   /// safe way.
   wrap_kind: WrapKind,
-  /// Order wrapping may need an ESM wrapper binding that is callable before its declaration in
-  /// cross-chunk cycles. Interop ESM wrappers keep the historical `var init = __esm(...)` shape so
-  /// strictExecutionOrder=false output stays unchanged.
-  pub hoist_esm_wrapper: bool,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<CompactStr, ResolvedExport>,
   /// Store the names of exclude ambiguous resolved exports.
   /// It will be used to generate chunk exports and module namespace binding.
   /// The second element means if the export is came from commonjs module.
   pub sorted_and_non_ambiguous_resolved_exports: FxIndexMap<CompactStr, bool>,
+  /// Direct `export *` record that first contributed each flattened resolved export.
+  pub star_export_record_by_name: FxHashMap<CompactStr, ImportRecordIdx>,
   // If a esm module has export star from commonjs, it will be marked as ESMWithDynamicFallback at linker.
   // The unknown export name will be resolved at runtime.
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
@@ -160,11 +158,6 @@ impl LinkingMetadata {
   #[inline]
   pub fn original_wrap_kind(&self) -> WrapKind {
     self.original_wrap_kind
-  }
-
-  #[inline]
-  pub fn override_wrap_kind(&mut self, wrap_kind: WrapKind) {
-    self.wrap_kind = wrap_kind;
   }
 
   /// Synchronize the `wrap_kind` with the original wrap kind.

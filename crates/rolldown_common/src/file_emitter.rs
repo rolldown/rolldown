@@ -14,7 +14,7 @@ use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use sugar_path::SugarPath;
 
 #[derive(Debug, Default)]
@@ -80,6 +80,10 @@ pub struct FileEmitter {
   chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
   prebuilt_chunks: FxDashMap<ArcStr, Arc<EmittedPrebuiltChunk>>,
   base_reference_id: AtomicUsize,
+  /// True during the build phase (buildStart through buildEnd), false during the output
+  /// phase. Dedup only re-picks the shortest same-source name while this is true; see the
+  /// guard in `emit_file`.
+  is_build_phase: AtomicBool,
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
   emitted_files: FxDashSet<ArcStr>,
@@ -102,6 +106,7 @@ impl FileEmitter {
       prebuilt_chunks: DashMap::default(),
       emitted_chunks: DashMap::default(),
       base_reference_id: AtomicUsize::new(0),
+      is_build_phase: AtomicBool::new(false),
       options,
       emitted_files: DashSet::default(),
       emitted_filenames: FxDashSet::default(),
@@ -177,13 +182,18 @@ impl FileEmitter {
         Entry::Occupied(entry) => {
           let reference_id = entry.get().clone();
           if let Some(mut output) = self.files.get_mut(&reference_id) {
-            // Keep the shortest name (ties broken lexicographically), so the
-            // surviving file name is deterministic regardless of emission order
-            // and matches Rollup. Uses the same ordering as `names` below.
-            if file
-              .name
-              .as_deref()
-              .is_some_and(|n| output.names.iter().all(|e| (n.len(), n) < (e.len(), e.as_str())))
+            // Re-pick the shortest name (ties broken lexicographically) only while building and
+            // before the asset is flushed to a bundle. Afterwards its name may already have been
+            // read via `get_file_name` and cached by a consumer (Vite does this in renderChunk),
+            // so changing it would leave a stale filename (vitejs/vite#22856). `emitted_files`
+            // covers assets kept from an earlier incremental rebuild, since the emitter is reused.
+            // This matches Rollup: shortest-wins while building, first-wins once output started.
+            if self.is_build_phase.load(Ordering::Relaxed)
+              && !self.emitted_files.contains(&reference_id)
+              && file
+                .name
+                .as_deref()
+                .is_some_and(|n| output.names.iter().all(|e| (n.len(), n) < (e.len(), e.as_str())))
             {
               self.generate_file_name(
                 &mut file,
@@ -411,6 +421,16 @@ impl FileEmitter {
     Ok(())
   }
 
+  /// Enter the build phase, where dedup re-picks the shortest same-source name (see `emit_file`).
+  pub fn enter_build_phase(&self) {
+    self.is_build_phase.store(true, Ordering::Relaxed);
+  }
+
+  /// Enter the output phase, where dedup stops changing already-observed filenames (see `emit_file`).
+  pub fn enter_output_phase(&self) {
+    self.is_build_phase.store(false, Ordering::Relaxed);
+  }
+
   /// Associate a module ID with an emitted file reference ID.
   /// This allows the `new URL()` finalizer to look up asset filenames by module ID.
   pub fn associate_module_with_file_ref(&self, module_id: &str, reference_id: &str) {
@@ -429,6 +449,7 @@ impl FileEmitter {
     self.names.clear();
     self.source_hash_to_reference_id.clear();
     self.base_reference_id.store(0, Ordering::Relaxed);
+    self.is_build_phase.store(false, Ordering::Relaxed);
     self.emitted_files.clear();
     self.emitted_chunks.clear();
     self.emitted_filenames.clear();

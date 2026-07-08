@@ -87,7 +87,7 @@ ChunkGraph
 - `crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs` — merge/optimization
 - `crates/rolldown/src/chunk_graph.rs` — output data structure
 - `crates/rolldown_utils/src/bitset.rs` — compact reachability representation
-- `crates/rolldown/src/types/linking_metadata.rs` — `original_wrap_kind()` used for init order analysis
+- `crates/rolldown/src/types/linking_metadata.rs` — link-owned `wrap_kind()` read by init order analysis
 
 `finalize_chunk_plan` may run two metadata passes. Namespace usage and entry-level external re-exports are first finalized on the provisional graph because the order analysis reads those facts through the cross-chunk linker. When a non-empty plan changes topology, they are recomputed so newly-created or restored facades carry the metadata that rendering consumes. Flag-off and empty-plan builds keep the single-pass path.
 
@@ -309,7 +309,7 @@ The function iterates over every chunk in the `ChunkGraph` and performs six step
 - `WrapKind::Cjs` or `WrapKind::Esm` → pushed onto a `wrapped_modules` list
 - `WrapKind::None` → records how many wrapped modules appeared before it in DFS order (its "wrapped dependency count")
 
-Uses `original_wrap_kind()` from `LinkingMetadata`, which preserves the pre-`strictExecutionOrder` wrap kind.
+Uses `wrap_kind()` from `LinkingMetadata`; generate-stage order wrapping never changes it.
 
 **Step 4 — Determine modules to check.** Collects all unwrapped modules that have wrapped dependencies, plus the wrapped modules they depend on (up to the maximum dependency count). If this set is empty, no reordering is needed and the function returns early.
 

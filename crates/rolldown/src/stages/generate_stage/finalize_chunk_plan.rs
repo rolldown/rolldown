@@ -73,7 +73,6 @@ impl GenerateStage<'_> {
     for module_idx in plan.modules() {
       let meta = &self.link_output.metas[module_idx];
       debug_assert!(matches!(meta.wrap_kind(), WrapKind::None));
-      debug_assert!(matches!(meta.original_wrap_kind(), WrapKind::None));
       debug_assert!(meta.wrapper_ref.is_none());
       debug_assert!(meta.wrapper_stmt_info.is_none());
       debug_assert!(order_state.has_order_wrapper(module_idx));

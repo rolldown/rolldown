@@ -37,7 +37,7 @@ Position is load-bearing: `wrap_modules` propagates wrap requirements transitive
 `determine_module_exports_kind` writes:
 
 - `module.exports_kind` for some normal modules (in-place via `addr_of!` cast — see §"The unsafe block").
-- `self.metas[idx].wrap_kind` (and `original_wrap_kind`) via `LinkingMetadata::sync_wrap_kind`. **Not idempotent** — the last writer wins, so call order is part of the contract.
+- `self.metas[idx].wrap_kind` via `LinkingMetadata::set_wrap_kind`. **Not idempotent** — the last writer wins, so call order is part of the contract.
 
 It does not touch symbol tables, tree-shaking flags, or chunk graph.
 

@@ -40,7 +40,6 @@ pub struct LinkingMetadata {
   pub wrapper_ref: Option<SymbolRef>,
   pub wrapper_stmt_info: Option<StmtInfoIdx>,
   /// The wrap kind decided from module semantics before any generate-stage order wrapping.
-  original_wrap_kind: WrapKind,
   /// The `wrap_kind` used for linking and code generation.
   /// Intent to make those two fields private, so that we could ensure they are mutated in a more
   /// safe way.
@@ -156,14 +155,7 @@ impl LinkingMetadata {
   }
 
   #[inline]
-  pub fn original_wrap_kind(&self) -> WrapKind {
-    self.original_wrap_kind
-  }
-
-  /// Synchronize the `wrap_kind` with the original wrap kind.
-  #[inline]
-  pub fn sync_wrap_kind(&mut self, wrap_kind: WrapKind) {
-    self.original_wrap_kind = wrap_kind;
+  pub fn set_wrap_kind(&mut self, wrap_kind: WrapKind) {
     self.wrap_kind = wrap_kind;
   }
 

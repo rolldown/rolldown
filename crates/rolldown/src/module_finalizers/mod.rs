@@ -2223,6 +2223,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.ast_factory.make_seq_in_parens(wrapper_call_expr, finalized_namespace)
         }
         WrapKind::None => {
+          // Order-wrapped dynamic entries never reach this rewrite: their eliminated facades
+          // are restored in `restore_order_wrap_dynamic_entry_facades`.
+          debug_assert!(
+            self
+              .ctx
+              .order_wrap_state
+              .esm_init_target(importee_idx, &self.ctx.linking_infos[importee_idx])
+              .is_none()
+          );
           let (finalized_expr, _) =
             self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
           finalized_expr
@@ -2316,6 +2325,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               }
             }
             WrapKind::None => {
+              debug_assert!(
+                self
+                  .ctx
+                  .order_wrap_state
+                  .esm_init_target(importee_idx, &self.ctx.linking_infos[importee_idx])
+                  .is_none()
+              );
               let call_expr = self.ast_factory.make_then_extract_property(base_expr, name);
               Some(Expression::CallExpression(call_expr))
             }

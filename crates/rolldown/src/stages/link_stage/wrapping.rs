@@ -37,7 +37,7 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
       ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
       ExportsKind::CommonJs => WrapKind::Cjs,
     };
-    ctx.linking_infos[target].sync_wrap_kind(new_wrap_kind);
+    ctx.linking_infos[target].set_wrap_kind(new_wrap_kind);
   }
 
   module.import_records.iter().for_each(|rec| {

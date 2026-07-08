@@ -82,52 +82,18 @@ impl GenerateStage<'_> {
 
   fn place_order_wrap_modules(
     &self,
-    chunk_graph: &mut ChunkGraph,
+    chunk_graph: &ChunkGraph,
     plan: &OrderWrapPlan,
     order_state: &mut OrderWrapState,
   ) {
-    let sorted_order_wraps = plan
+    // Plan members are included user modules, so chunk assignment already placed every one.
+    // Sorted so synthetic-statement registration order (which feeds deconfliction naming)
+    // stays deterministic.
+    let order_wrapped_modules = plan
       .modules()
+      .filter(|module_idx| order_state.has_order_wrapper(*module_idx))
       .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
       .collect_vec();
-
-    loop {
-      let mut changed = false;
-      for module_idx in &sorted_order_wraps {
-        if chunk_graph.module_to_chunk[*module_idx].is_some() {
-          continue;
-        }
-        if let Some(chunk_idx) = self.preferred_order_wrap_chunk(*module_idx, chunk_graph) {
-          chunk_graph.add_module_to_chunk(
-            *module_idx,
-            chunk_idx,
-            self.link_output.metas[*module_idx].depended_runtime_helper,
-          );
-          changed = true;
-        }
-      }
-
-      if !changed {
-        break;
-      }
-    }
-
-    let Some(fallback_chunk_idx) = self.first_live_chunk(chunk_graph) else {
-      return;
-    };
-    for module_idx in sorted_order_wraps {
-      if chunk_graph.module_to_chunk[module_idx].is_some() {
-        continue;
-      }
-      chunk_graph.add_module_to_chunk(
-        module_idx,
-        fallback_chunk_idx,
-        self.link_output.metas[module_idx].depended_runtime_helper,
-      );
-    }
-
-    let order_wrapped_modules =
-      plan.modules().filter(|module_idx| order_state.has_order_wrapper(*module_idx)).collect_vec();
     for module_idx in order_wrapped_modules {
       let chunk_idx =
         chunk_graph.module_to_chunk[module_idx].expect("order-wrapped module should have a chunk");
@@ -155,7 +121,7 @@ impl GenerateStage<'_> {
         let importee_idx = rec.resolved_module?;
         (self.link_output.entries.contains_key(&importee_idx)
           && self.link_output.metas[module_idx].execution_dependencies.contains(&importee_idx)
-          && matches!(self.link_output.metas[importee_idx].original_wrap_kind(), WrapKind::Cjs))
+          && matches!(self.link_output.metas[importee_idx].wrap_kind(), WrapKind::Cjs))
         .then_some(importee_idx)
       }));
     }
@@ -294,31 +260,6 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn preferred_order_wrap_chunk(
-    &self,
-    module_idx: ModuleIdx,
-    chunk_graph: &ChunkGraph,
-  ) -> Option<ChunkIdx> {
-    let module = self.link_output.module_table[module_idx].as_normal()?;
-
-    module
-      .import_records
-      .iter()
-      .filter(|rec| rec.kind == ImportKind::Import)
-      .filter_map(|rec| rec.resolved_module)
-      .filter_map(|importee_idx| chunk_graph.module_to_chunk[importee_idx])
-      .find(|chunk_idx| is_live_chunk(chunk_graph, *chunk_idx))
-      .or_else(|| {
-        module
-          .importers_idx
-          .iter()
-          .copied()
-          .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
-          .filter_map(|importer_idx| chunk_graph.module_to_chunk[importer_idx])
-          .find(|chunk_idx| is_live_chunk(chunk_graph, *chunk_idx))
-      })
-  }
-
   fn ensure_runtime_module_for_order_wraps(&mut self, chunk_graph: &mut ChunkGraph) {
     let runtime_idx = self.link_output.runtime.id();
     if let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_idx] {
@@ -446,10 +387,6 @@ impl GenerateStage<'_> {
       .iter_enumerated()
       .filter_map(|(chunk_idx, _)| is_live_chunk(chunk_graph, chunk_idx).then_some(chunk_idx))
       .collect_vec()
-  }
-
-  fn first_live_chunk(&self, chunk_graph: &ChunkGraph) -> Option<ChunkIdx> {
-    self.live_chunks(chunk_graph).first().copied()
   }
 
   fn renumber_live_chunks(&self, chunk_graph: &mut ChunkGraph) {

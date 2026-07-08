@@ -41,7 +41,7 @@ function init_page_a() {
 	})))();
 }
 //#endregion
-export { render as n, init_common as r, init_page_a as t };
+export { render as n, init_page_a as t };
 
 ```
 
@@ -57,14 +57,12 @@ export { render };
 ## page-b.js
 
 ```js
-import { r as init_common } from "./page-a.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 import nodeAssert from "node:assert";
 //#region page-b.js
 function render() {}
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
-		init_common();
 		nodeAssert.strictEqual(globalThis.value, 0);
 	})))();
 }
@@ -76,7 +74,6 @@ export { render as n, init_page_b as t };
 ## page-b2.js
 
 ```js
-import "./page-a.js";
 import { n as render, t as init_page_b } from "./page-b.js";
 init_page_b();
 export { render };

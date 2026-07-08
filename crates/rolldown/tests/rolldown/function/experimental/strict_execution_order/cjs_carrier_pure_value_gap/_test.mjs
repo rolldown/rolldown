@@ -7,9 +7,10 @@ console.log = (...args) => {
 };
 
 try {
+  await import('./dist/unused.js');
   await import('./dist/main.js');
 } finally {
   console.log = originalLog;
 }
 
-assert.deepStrictEqual(logs, ['E', 'MAIN:ready']);
+assert.deepStrictEqual(logs, ['UNUSED', 'E', 'MAIN:ready']);

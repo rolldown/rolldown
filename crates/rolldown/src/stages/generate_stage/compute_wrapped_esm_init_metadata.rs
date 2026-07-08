@@ -26,10 +26,10 @@ impl GenerateStage<'_> {
   ///   source-less export clause — so call sites can be marked `@__PURE__` and the default
   ///   `dce-only` minifier drops them (and, once the wrapper is unreferenced, the wrapper
   ///   declaration / runtime helper too).
-  /// - [`LinkingMetadata::transitive_esm_init_targets`]: per non-included top-level static import
-  ///   or re-export statement, the wrapped-ESM modules whose `init_*()` calls must be emitted in
-  ///   the statement's place, so initialization order is preserved when a barrel's import/export
-  ///   glue is tree-shaken while transitive importees stay included.
+  /// - [`LinkingMetadata::transitive_esm_init_targets`]: per non-included top-level import or
+  ///   re-export statement, the wrapped-ESM modules whose `init_*()` calls must be emitted in the
+  ///   statement's place. Re-exports keep the legacy forwarding behavior; an order-wrapped ordinary
+  ///   import keeps an obligation only when it was live before lowering.
   ///
   /// Must run after chunk assignment (`module_to_chunk`) and final order wrapping, and before
   /// [`Self::finalize_modules`]: modules are finalized in parallel, and an
@@ -71,6 +71,7 @@ impl GenerateStage<'_> {
                 module_to_chunk,
                 chunk_idx,
                 order_wrap: meta.hoist_esm_wrapper,
+                load_dependencies: &meta.load_dependencies,
               },
             )
           })
@@ -94,6 +95,7 @@ struct EsmInitTargetContext<'a> {
   module_to_chunk: &'a IndexVec<ModuleIdx, Option<ChunkIdx>>,
   chunk_idx: ChunkIdx,
   order_wrap: bool,
+  load_dependencies: &'a rolldown_utils::indexmap::FxIndexSet<ModuleIdx>,
 }
 
 /// Whether calling the module's `init_*()` is a no-op because nothing lands inside its `__esm`
@@ -176,12 +178,13 @@ fn transitive_esm_init_targets(
       if rec.kind != ImportKind::Import {
         continue;
       }
-      if !ctx.order_wrap
-        && !rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly)
-      {
+      let is_reexport =
+        rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly);
+      let Some(root) = rec.resolved_module else { continue };
+      let was_live_order_wrap_import = ctx.order_wrap && ctx.load_dependencies.contains(&root);
+      if !is_reexport && !was_live_order_wrap_import {
         continue;
       }
-      let Some(root) = rec.resolved_module else { continue };
       let mut targets = vec![];
       if ctx.order_wrap {
         collect_order_wrap_esm_init_targets(

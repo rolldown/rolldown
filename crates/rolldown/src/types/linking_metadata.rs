@@ -121,8 +121,10 @@ pub struct LinkingMetadata {
   /// `compute_wrapped_esm_init_metadata`.
   pub init_is_noop: bool,
   /// For each non-included top-level import/re-export statement of an included `WrapKind::Esm`
-  /// module: the ordered wrapped-ESM modules whose `init_*()` calls must be emitted in its place
-  /// to preserve execution order. Non-order wrappers keep the legacy re-export-only collection.
+  /// module: the ordered wrapped-ESM modules whose `init_*()` calls must be emitted in its place to
+  /// preserve execution order. Order wrappers may retain ordinary-import obligations only for
+  /// targets already present in [`Self::load_dependencies`]. Non-order wrappers keep the legacy
+  /// re-export-only collection.
   /// Computed by [`crate::stages::generate_stage`]'s `compute_wrapped_esm_init_metadata`; consumed
   /// by the module finalizer.
   pub transitive_esm_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,

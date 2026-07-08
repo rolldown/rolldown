@@ -457,11 +457,15 @@ impl GenerateStage<'_> {
     module_idx: ModuleIdx,
     current: &FxHashSet<ModuleIdx>,
   ) -> bool {
-    self.link_output.module_table[module_idx].as_normal().is_some_and(|module| {
-      module.import_records.iter().any(|rec| {
-        rec.kind == ImportKind::Import
-          && rec.resolved_module.is_some_and(|importee_idx| current.contains(&importee_idx))
-      })
+    let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+      return false;
+    };
+    let meta = &self.link_output.metas[module_idx];
+    module.import_records.iter().any(|rec| {
+      rec.kind == ImportKind::Import
+        && rec.resolved_module.is_some_and(|importee_idx| {
+          current.contains(&importee_idx) && meta.load_dependencies.contains(&importee_idx)
+        })
     })
   }
 

@@ -1,3 +1,3 @@
 import { snapshot } from 'pure-carrier';
 
-console.log(snapshot);
+console.log('UNUSED');

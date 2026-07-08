@@ -105,6 +105,7 @@ impl GenerateStage<'_> {
       .collect_vec();
 
     for importer_idx in module_indices {
+      let load_dependencies = &self.link_output.metas[importer_idx].load_dependencies;
       let affected_stmts = self.link_output.stmt_infos[importer_idx]
         .iter_enumerated()
         .filter_map(|(stmt_info_idx, stmt_info)| {
@@ -116,7 +117,9 @@ impl GenerateStage<'_> {
               self.link_output.module_table[importer_idx]
                 .as_normal()
                 .and_then(|importer| importer.import_records[*rec_idx].resolved_module)
-                .is_some_and(|importee_idx| plan.contains(&importee_idx))
+                .is_some_and(|importee_idx| {
+                  plan.contains(&importee_idx) && load_dependencies.contains(&importee_idx)
+                })
             })
             .collect_vec();
           (!rec_ids.is_empty()).then_some((stmt_info_idx, rec_ids))
@@ -298,11 +301,27 @@ impl GenerateStage<'_> {
       return;
     }
 
-    let entries_to_split = plan
+    let mut entries_to_split = plan
       .modules()
       .filter(|module_idx| self.link_output.entries.contains_key(module_idx))
-      .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
       .collect_vec();
+    for module_idx in plan.modules() {
+      let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+        continue;
+      };
+      entries_to_split.extend(module.import_records.iter().filter_map(|rec| {
+        if rec.kind != ImportKind::Import {
+          return None;
+        }
+        let importee_idx = rec.resolved_module?;
+        (self.link_output.entries.contains_key(&importee_idx)
+          && self.link_output.metas[module_idx].load_dependencies.contains(&importee_idx)
+          && matches!(self.link_output.metas[importee_idx].original_wrap_kind(), WrapKind::Cjs))
+        .then_some(importee_idx)
+      }));
+    }
+    entries_to_split.sort_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order());
+    entries_to_split.dedup();
 
     for entry_module_idx in entries_to_split {
       let Some(entry_chunk_idx) =

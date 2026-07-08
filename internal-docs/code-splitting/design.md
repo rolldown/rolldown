@@ -14,7 +14,7 @@ The order decision can only be made after provisional chunk placement. Reusing `
 - User module and statement liveness are fixed before order planning starts.
 - Order lowering may add only synthetic wrapper, init, runtime, facade, symbol, and topology state.
 - Finalization and cross-chunk linking consume interop wrappers and order wrappers through an explicit shared read interface.
-- Empty order plans preserve the flag-off output path without allocating order-wrapper state.
+- Flag-off builds do not allocate order-wrapper state or create strict-only facades.
 - The external differential fuzzer remains the semantic verifier. Rolldown does not add a test-only execution model or assertions that merely turn lowering bugs into build failures.
 
 ## Non-Goals
@@ -104,7 +104,7 @@ pub struct OrderImportOverlay {
 - synthetic declarations participate in chunk assignment and deconfliction through an explicit synthetic-statement API;
 - entry-facade and runtime requirements are explicit outputs of lowering;
 - namespace requirements are recorded independently of whether topology changed;
-- the table is absent for flag-off and empty-plan builds.
+- the table stays empty when no wrappers or import overlays are needed.
 
 ### Lowering API boundary
 
@@ -186,11 +186,11 @@ Removed user import/re-export statements are finalized with any matching `OrderI
 
 ### Entry prologue
 
-Entry rendering consumes the same init-target view as module finalization. An order-wrapped user or dynamic entry emits an explicit order-wrapper call in its entry prologue. A CJS entry facade retains its CJS `require_*()` trigger, while internal importers target the split implementation chunk. This behavior does not depend on an effective or overridden `WrapKind`.
+Entry rendering consumes the same init-target view as module finalization. Order-wrapped entries emit an explicit init call. Interop entries used internally also keep an inert implementation chunk behind their public facade.
 
 ### Topology
 
-`OrderWrapState` drives module placement, runtime placement, CJS entry-facade splitting, restored dynamic facades, and final chunk renumbering. `finalize_chunk_plan()` remains the single boundary after which topology-derived metadata is final. Namespace facts are recomputed when topology changes or when `namespace_requirements` is non-empty; external-entry facts are recomputed when topology changes.
+`OrderWrapState` drives module and runtime placement. Strict entry facades can also change topology without an order wrapper. `finalize_chunk_plan()` remains the boundary after which topology-derived metadata is final.
 
 ## Data Flow
 
@@ -217,7 +217,7 @@ link + tree shaking
 - Every ordinary-import init obligation corresponds to a link-stage execution dependency.
 - Every excluded-statement init obligation is either a retained re-export obligation or a synthetic obligation backed by an execution dependency.
 - Every order-wrapped entry has an explicit entry trigger.
-- Empty order state is observationally identical to strict execution order being disabled.
+- Flag-off builds create no order wrappers or strict-only entry facades.
 
 ## Verification
 

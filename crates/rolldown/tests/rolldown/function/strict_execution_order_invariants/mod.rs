@@ -1,13 +1,42 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
 
-use rolldown::{Bundler, BundlerOptions, InputItem, OutputFormat};
+use rolldown::{Bundler, BundlerOptions, InputItem, OutputFormat, PreserveEntrySignatures};
 use rolldown_common::{
-  CodeSplittingMode, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest, Output,
+  CodeSplittingMode, EmittedChunk, ManualCodeSplittingOptions, MatchGroup, MatchGroupName,
+  MatchGroupTest, Output,
 };
+use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_utils::js_regex::HybridRegex;
 
 const FIXTURE_ROOT: &str =
   concat!(env!("CARGO_MANIFEST_DIR"), "/tests/rolldown/function/strict_execution_order_invariants");
+
+#[derive(Debug)]
+struct EmitTarget;
+
+impl Plugin for EmitTarget {
+  fn name(&self) -> Cow<'static, str> {
+    "emit-target".into()
+  }
+
+  async fn build_start(
+    &self,
+    ctx: &PluginContext,
+    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+  ) -> Result<(), anyhow::Error> {
+    ctx.emit_chunk(EmittedChunk {
+      name: Some("target".into()),
+      id: "./target.js".to_string(),
+      preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
+      ..Default::default()
+    })?;
+    Ok(())
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::BuildStart
+  }
+}
 
 async fn bundle_fixture(
   fixture_dir: &str,
@@ -239,6 +268,60 @@ async fn restored_dynamic_facade_keeps_dependency_chunk_inert() {
   assert!(
     m29_facade.contains("init_m29();"),
     "the dynamic entry facade should trigger its wrapper only when imported:\n{m29_facade}",
+  );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn emitted_dynamic_entry_keeps_order_wrapper_facade() {
+  let fixture_dir = format!("{FIXTURE_ROOT}/emitted_dynamic_entry");
+  let mut bundler = Bundler::with_plugins(
+    BundlerOptions {
+      input: Some(vec![InputItem {
+        name: Some("host".to_string()),
+        import: "./host.js".to_string(),
+      }]),
+      cwd: Some(fixture_dir.into()),
+      format: Some(OutputFormat::Esm),
+      entry_filenames: Some("[name].js".to_string().into()),
+      chunk_filenames: Some("chunks/[name].js".to_string().into()),
+      strict_execution_order: Some(true),
+      code_splitting: Some(CodeSplittingMode::Advanced(ManualCodeSplittingOptions {
+        groups: Some(vec![MatchGroup {
+          name: MatchGroupName::Static("group".to_string()),
+          test: Some(MatchGroupTest::Regex(
+            HybridRegex::new(r"(target|dep-a|dep-b)\.").expect("regex should be valid"),
+          )),
+          ..Default::default()
+        }]),
+        ..Default::default()
+      })),
+      ..Default::default()
+    },
+    vec![Arc::new(EmitTarget)],
+  )
+  .expect("failed to create bundler");
+
+  let output = bundler
+    .generate()
+    .await
+    .expect("build should succeed")
+    .assets
+    .into_iter()
+    .filter_map(|output| match output {
+      Output::Chunk(chunk) => Some((chunk.filename.to_string(), chunk.code.clone())),
+      Output::Asset(_) => None,
+    })
+    .collect::<BTreeMap<_, _>>();
+
+  let host = output.get("host.js").expect("host entry should be emitted");
+  assert!(
+    host.contains("import(\"./chunks/target.js\")"),
+    "the dynamic import should target the restored facade:\n{host}",
+  );
+  let target = output.get("chunks/target.js").expect("target facade should be restored");
+  assert!(
+    target.contains("init_target();"),
+    "target facade should trigger initialization:\n{target}"
   );
 }
 

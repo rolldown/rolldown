@@ -89,7 +89,7 @@ ChunkGraph
 - `crates/rolldown_utils/src/bitset.rs` — compact reachability representation
 - `crates/rolldown/src/types/linking_metadata.rs` — immutable link-stage `wrap_kind()`
 
-`finalize_chunk_plan` may run two metadata passes. Namespace usage and entry-level external re-exports are first finalized on the provisional graph because the order analysis reads those facts through the cross-chunk linker. When a non-empty plan changes topology, they are recomputed so newly-created or restored facades carry the metadata that rendering consumes. Flag-off and empty-plan builds keep the single-pass path.
+`finalize_chunk_plan` may run two metadata passes. Namespace usage and entry-level external re-exports are first finalized on the provisional graph. They are recomputed when order wrapping or strict entry facades change topology.
 
 ## Bit Positions and Entry Points
 

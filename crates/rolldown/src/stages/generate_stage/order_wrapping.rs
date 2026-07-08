@@ -254,13 +254,7 @@ impl GenerateStage<'_> {
 
     let dynamic_entries_to_restore = plan
       .modules()
-      .filter(|module_idx| {
-        self
-          .link_output
-          .entries
-          .get(module_idx)
-          .is_some_and(|entries| entries.iter().any(|entry| entry.kind.is_dynamic_import()))
-      })
+      .filter(|module_idx| self.link_output.entries.contains_key(module_idx))
       .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
       .collect_vec();
 

@@ -258,7 +258,7 @@ impl Chunk {
     };
     let sourcemap_filename = sourcemap_filename.call(rollup_pre_rendered_chunk).await?;
 
-    let filename_template = FilenameTemplate::new(sourcemap_filename, "sourcemap_filename");
+    let filename_template = FilenameTemplate::new(sourcemap_filename, "sourcemapFileNames");
     let has_hash_pattern = filename_template.has_hash_pattern();
 
     let mut hash_placeholder = has_hash_pattern.then_some(vec![]);

@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "m3", "import": "./m3.js" },
+      { "name": "b", "import": "./b.cjs" }
+    ],
+    "strictExecutionOrder": true
+  }
+}

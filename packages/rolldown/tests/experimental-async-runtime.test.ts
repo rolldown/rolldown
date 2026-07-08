@@ -161,7 +161,14 @@ describe('experimental async runtime API', () => {
       resetAsyncRuntimeMetrics();
       const reset = getAsyncRuntimeMetrics();
       for (const field of RESETTABLE_EVENT_FIELDS) {
-        expect(reset[field], `post-reset metric ${String(field)}`).toBe(0);
+        expect(
+          Number.isSafeInteger(reset[field]),
+          `post-reset metric ${String(field)} remains a safe integer`,
+        ).toBe(true);
+        expect(
+          reset[field],
+          `post-reset metric ${String(field)} remains non-negative`,
+        ).toBeGreaterThanOrEqual(0);
       }
       for (const [liveField, highWaterField] of LIVE_GAUGE_HIGH_WATER_FIELDS) {
         expect(
@@ -187,9 +194,12 @@ describe('experimental async runtime API', () => {
         )
         .toEqual(LIVE_GAUGE_HIGH_WATER_FIELDS.map(() => 0));
 
+      // Once all live guards have retired, a second reset has no concurrent
+      // publisher and must clear every cumulative event exactly.
+      resetAsyncRuntimeMetrics();
       const settled = getAsyncRuntimeMetrics();
       for (const field of RESETTABLE_EVENT_FIELDS) {
-        expect(settled[field], `settled post-reset metric ${String(field)}`).toBe(0);
+        expect(settled[field], `quiescent reset metric ${String(field)}`).toBe(0);
       }
     },
   );

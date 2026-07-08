@@ -15,8 +15,9 @@ use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
 use crate::types::js_callback::MaybeAsyncJsCallbackExt;
 use crate::utils::{
+  DetachedFutureSpawn,
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
-  spawn_boxed_future,
+  spawn_boxed_future, try_spawn_detached_future,
 };
 use futures::channel::oneshot;
 use napi::bindgen_prelude::{FnArgs, PromiseRaw};
@@ -148,9 +149,38 @@ impl BindingDevEngineLifecycle {
   }
 
   fn abort_close_start(&self) {
-    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    if state.close_outcome.is_none() {
+    let close_finished = {
+      let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      if state.close_outcome.is_some() {
+        return;
+      }
       state.close_started = false;
+      std::mem::take(&mut state.close_finished)
+    };
+    drop(close_finished);
+  }
+}
+
+struct BindingDevEngineCloseExecutionGuard {
+  lifecycle: Arc<BindingDevEngineLifecycle>,
+  armed: bool,
+}
+
+impl BindingDevEngineCloseExecutionGuard {
+  fn new(lifecycle: Arc<BindingDevEngineLifecycle>) -> Self {
+    Self { lifecycle, armed: true }
+  }
+
+  fn finish(mut self, outcome: BindingDevEngineCloseOutcome) {
+    self.lifecycle.finish_close(outcome);
+    self.armed = false;
+  }
+}
+
+impl Drop for BindingDevEngineCloseExecutionGuard {
+  fn drop(&mut self) {
+    if self.armed {
+      self.lifecycle.abort_close_start();
     }
   }
 }
@@ -188,14 +218,14 @@ impl Drop for BindingDevEngineCallbackGuard {
 
 async fn execute_binding_dev_engine_close(
   inner: Arc<rolldown_dev::DevEngine>,
-  lifecycle: Arc<BindingDevEngineLifecycle>,
+  close_execution: BindingDevEngineCloseExecutionGuard,
   operations_drained: Option<oneshot::Receiver<()>>,
 ) -> BindingDevEngineCloseOutcome {
   if let Some(operations_drained) = operations_drained {
     let _ = operations_drained.await;
   }
   let outcome = inner.close().await;
-  lifecycle.finish_close(outcome.clone());
+  close_execution.finish(outcome.clone());
   outcome
 }
 
@@ -206,16 +236,12 @@ fn spawn_terminal_binding_dev_engine_close(
   cwd: Arc<Path>,
   operations_drained: Option<oneshot::Receiver<()>>,
 ) -> napi::Result<PromiseRaw<'_, BindingResult<()>>> {
-  let close_lifecycle = Arc::clone(&lifecycle);
-  let close = spawn_boxed_future(env, async move {
+  let close_execution = BindingDevEngineCloseExecutionGuard::new(Arc::clone(&lifecycle));
+  spawn_boxed_future(env, async move {
     let outcome =
-      execute_binding_dev_engine_close(inner, close_lifecycle, operations_drained).await;
+      execute_binding_dev_engine_close(inner, close_execution, operations_drained).await;
     Ok(dev_engine_close_binding_result(outcome, cwd.as_ref()))
-  });
-  if close.is_err() {
-    lifecycle.abort_close_start();
-  }
-  close
+  })
 }
 
 fn wait_for_terminal_binding_dev_engine_close(
@@ -577,19 +603,21 @@ impl BindingDevEngine {
       BeginBindingDevEngineClose::Acknowledge => PromiseRaw::resolve(env, Either::B(())),
       BeginBindingDevEngineClose::Start { operations_drained, acknowledge: true } => {
         let inner = Arc::clone(&self.inner);
-        let close_lifecycle = Arc::clone(&self.lifecycle);
-        let background_close = spawn_boxed_future(env, async move {
+        let close_execution = BindingDevEngineCloseExecutionGuard::new(Arc::clone(&self.lifecycle));
+        let background_close = async move {
           let _ =
-            execute_binding_dev_engine_close(inner, close_lifecycle, operations_drained).await;
-          Ok(())
-        });
-        match background_close {
-          Ok(_background_close) => PromiseRaw::resolve(env, Either::B(())),
-          Err(error) => {
-            self.lifecycle.abort_close_start();
-            Err(error)
-          }
+            execute_binding_dev_engine_close(inner, close_execution, operations_drained).await;
+        };
+        if let DetachedFutureSpawn::Rejected(background_close) =
+          try_spawn_detached_future(background_close)
+        {
+          drop(background_close);
+          return PromiseRaw::reject(
+            env,
+            napi::Error::from_reason("The async runtime rejected the dev engine close task"),
+          );
         }
+        PromiseRaw::resolve(env, Either::B(()))
       }
       BeginBindingDevEngineClose::Start { operations_drained, acknowledge: false } => {
         spawn_terminal_binding_dev_engine_close(
@@ -803,6 +831,47 @@ mod tests {
     else {
       panic!("transport setup failure must leave close retryable");
     };
+    drop(operation);
+    assert_eq!(
+      retry_operations_drained.try_recv().expect("retry barrier should resolve"),
+      Some(())
+    );
+  }
+
+  #[test]
+  fn lifecycle_cancelled_close_executor_wakes_waiters_and_allows_retry() {
+    let lifecycle = Arc::new(BindingDevEngineLifecycle::new());
+    let operation = lifecycle.begin_operation().expect("engine should start open");
+    let callback = lifecycle.begin_callback();
+
+    let BeginBindingDevEngineClose::Start {
+      operations_drained: Some(first_operations_drained),
+      acknowledge: true,
+    } = lifecycle.begin_close()
+    else {
+      panic!("callback close should start an acknowledged executor");
+    };
+    let close_execution = BindingDevEngineCloseExecutionGuard::new(Arc::clone(&lifecycle));
+    let BeginBindingDevEngineClose::Wait(mut terminal_close) = lifecycle.begin_terminal_close()
+    else {
+      panic!("terminal close should wait for the active executor");
+    };
+
+    drop(close_execution);
+    assert!(
+      terminal_close.try_recv().is_err(),
+      "cancelling the executor must wake terminal waiters"
+    );
+
+    let BeginBindingDevEngineClose::Start {
+      operations_drained: Some(mut retry_operations_drained),
+      acknowledge: false,
+    } = lifecycle.begin_terminal_close()
+    else {
+      panic!("executor cancellation must leave close retryable");
+    };
+    drop(first_operations_drained);
+    drop(callback);
     drop(operation);
     assert_eq!(
       retry_operations_drained.try_recv().expect("retry barrier should resolve"),

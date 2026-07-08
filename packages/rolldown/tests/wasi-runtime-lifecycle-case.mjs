@@ -241,6 +241,127 @@ await check('dev engine runs, closes, and restarts on threaded WASI', async () =
   await runVirtualDevEngine('threaded-wasi-dev-restart');
 });
 
+await check('cancelled callback close retries after threaded WASI restart', async () => {
+  const copyRoot = mkdtempSync(path.join(packageDir, '.wasi-dev-close-copy-'));
+  const copyDirectory = path.join(copyRoot, 'dist');
+  cpSync(distDir, copyDirectory, { recursive: true });
+
+  const captureKey = '__rolldownWasiDevCloseCapture';
+  const capture = {};
+  globalThis[captureKey] = capture;
+  const bindingExportForwarders = Object.keys(binding)
+    .filter((name) => /^[$A-Z_a-z][$\w]*$/.test(name))
+    .map((name) => `module.exports.${name} = binding.${name};`)
+    .join('\n');
+  writeFileSync(
+    path.join(copyDirectory, 'rolldown-binding.wasi.cjs'),
+    `
+      const binding = require(${JSON.stringify(bindingPath)});
+      ${bindingExportForwarders}
+      module.exports.acquireAsyncRuntime = async function() {
+        const runtimeLease = await binding.acquireAsyncRuntime();
+        globalThis[${JSON.stringify(captureKey)}].runtimeLease = runtimeLease;
+        return runtimeLease;
+      };
+      module.exports.BindingDevEngine = class {
+        constructor(...args) {
+          const engine = new binding.BindingDevEngine(...args);
+          globalThis[${JSON.stringify(captureKey)}].engine = engine;
+          return engine;
+        }
+      };
+    `,
+  );
+
+  let engine;
+  let restartLease;
+  try {
+    const copiedExperimental = await import(
+      pathToFileURL(path.join(copyDirectory, 'experimental-index.mjs')).href
+    );
+    const id = 'virtual:cancelled-callback-close';
+    let resolveCallback;
+    let rejectCallback;
+    const callbackCompleted = new Promise((resolve, reject) => {
+      resolveCallback = resolve;
+      rejectCallback = reject;
+    });
+    engine = await copiedExperimental.dev(
+      {
+        input: id,
+        experimental: { devMode: true },
+        plugins: [
+          {
+            name: 'cancelled-callback-close',
+            resolveId(source) {
+              if (source === id) return `\0${source}`;
+            },
+            load(source) {
+              if (source === `\0${id}`) return 'export const cancelledCallbackClose = true;';
+            },
+          },
+        ],
+      },
+      {},
+      {
+        async onOutput(output) {
+          try {
+            if (output instanceof Error) throw output;
+            assert.ok(capture.engine, 'the copied package must expose its raw dev engine');
+            assert.ok(capture.runtimeLease, 'the copied package must expose its runtime lease');
+            await capture.engine.close();
+            capture.runtimeLease.release();
+            resolveCallback();
+          } catch (error) {
+            rejectCallback(error);
+            throw error;
+          }
+        },
+      },
+    );
+
+    const runResult = engine.run();
+    void runResult.catch(() => {});
+    await withTimeout(
+      callbackCompleted,
+      30_000,
+      'dev callback did not release the final threaded-WASI runtime lease',
+    );
+    const [runOutcome] = await withTimeout(
+      Promise.allSettled([runResult]),
+      30_000,
+      'dev run did not settle after threaded-WASI runtime shutdown',
+    );
+    assert.equal(runOutcome.status, 'rejected');
+
+    restartLease = await withTimeout(
+      binding.acquireAsyncRuntime(),
+      30_000,
+      'threaded-WASI runtime did not restart after cancelling callback close',
+    );
+    await withTimeout(
+      capture.engine.close(),
+      30_000,
+      'raw dev close remained stuck on the cancelled detached executor',
+    );
+    await withTimeout(
+      capture.engine.close(),
+      30_000,
+      'raw dev close did not replay its terminal result',
+    );
+  } finally {
+    if (engine) {
+      await Promise.allSettled([engine.close()]);
+    }
+    capture.runtimeLease?.release();
+    restartLease?.release();
+    delete globalThis[captureKey];
+    rmSync(copyRoot, { force: true, recursive: true });
+  }
+
+  await generateAndClose('restart-after-cancelled-callback-close');
+});
+
 await check('a worker realm acquires, uses, and releases its own runtime lease', async () => {
   const worker = new Worker(
     `

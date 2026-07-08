@@ -56,6 +56,7 @@ fn generate_hook_usage_ts() -> String {
   let hook_usage_kind_list = HOOK_KIND
     .iter()
     .enumerate()
+    .filter(|(_, kind)| !DISABLE_JS_HOOK.contains(kind))
     .map(|(i, &kind)| format!("  {} = 1 << {},", kind.to_lower_camel_case(), i))
     .collect::<Vec<_>>()
     .join("\n");
@@ -137,4 +138,17 @@ bitflags! {{
   ",
     fields.join("\n    "),
   )
+}
+
+#[cfg(test)]
+mod tests {
+  use super::generate_hook_usage_ts;
+
+  #[test]
+  fn disabled_js_hooks_preserve_the_shared_bit_positions() {
+    let generated = generate_hook_usage_ts();
+
+    assert!(!generated.contains("transformAst ="));
+    assert!(generated.contains("banner = 1 << 17,"));
+  }
 }

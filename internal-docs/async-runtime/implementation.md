@@ -451,10 +451,12 @@ binary.
   may still need to decrement them. Result delivery can wake a joiner or resolve
   an N-API promise from inside the final runnable/blocking poll, before the
   enclosing active guard retires. An immediate metrics snapshot after awaiting
-  an operation may therefore still report a live gauge; lifecycle quiescence or
-  polling for guard retirement is required before asserting zero. A reset
-  generation is part of the deadlock-detector fingerprint, preventing repeated
-  counter values across a reset from being mistaken for no progress. The N-API
+  an operation may therefore still report a live gauge, and that in-flight work
+  may publish completion or poll events after a reset. Lifecycle quiescence or
+  polling for guard retirement is required before asserting zero for gauges;
+  post-reset event counters describe events published after the reset point. A
+  reset generation is part of the deadlock-detector fingerprint, preventing
+  repeated counter values across a reset from being mistaken for no progress. The N-API
   surface exports counters as JavaScript numbers through the full exact integer
   range (`Number.MAX_SAFE_INTEGER`) instead of saturating at `u32::MAX`; values
   beyond that range clamp at the last exactly representable integer.

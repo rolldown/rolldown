@@ -39,6 +39,28 @@ pub fn spawn_boxed_future<T: 'static + Send + ToNapiValue>(
   env.spawn_future(fut)
 }
 
+pub enum DetachedFutureSpawn<F> {
+  Spawned,
+  Rejected(F),
+}
+
+pub fn try_spawn_detached_future<F>(fut: F) -> DetachedFutureSpawn<F>
+where
+  F: 'static + Send + Future<Output = ()>,
+{
+  #[cfg(feature = "async-runtime")]
+  return match rolldown_utils::async_runtime::try_spawn_detached(fut) {
+    Ok(()) => DetachedFutureSpawn::Spawned,
+    Err(fut) => DetachedFutureSpawn::Rejected(fut),
+  };
+
+  #[cfg(not(feature = "async-runtime"))]
+  {
+    drop(napi::bindgen_prelude::spawn(fut));
+    DetachedFutureSpawn::Spawned
+  }
+}
+
 #[napi]
 pub struct TraceSubscriberGuard {
   guard: Option<Box<dyn Any + Send>>,

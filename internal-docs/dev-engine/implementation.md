@@ -1000,15 +1000,24 @@ is active waits for, or replays, the terminal result. Because N-API exposes no
 portable way to identify which JavaScript async continuation invoked a method,
 an unrelated raw close racing an active callback also receives the
 acknowledgement and must call close again to observe terminal diagnostics. The
-public TypeScript owner uses the binding's internal terminal-close entry point,
+background executor is a detached Rust runtime task, not an unobserved
+JavaScript Promise; terminal close diagnostics are retained only in the
+lifecycle state for the next explicit close caller and cannot surface as an
+unhandled rejection. An armed execution guard resets the close-start latch and
+wakes terminal waiters if runtime shutdown cancels that detached task, so a
+later close can retry instead of waiting permanently for an executor that no
+longer exists. Detached admission failure drops the same guard and returns a
+rejected JavaScript Promise, preserving the asynchronous `close()` contract.
+The public TypeScript owner uses the binding's internal terminal-close entry point,
 which never acknowledges callback activity. Its dependency-aware close promise
 still acknowledges a close awaited from inside a callback, allowing that
 callback to return while the underlying terminal close continues. Unrelated
 public callers await the terminal result, including late callback and
 `closeBundle` diagnostics, before worker or runtime cleanup. If N-API cannot
-schedule the close executor, the binding rolls back only the `close_started`
-latch so a later close can retry transport setup while the engine remains
-closed to new operations.
+schedule the terminal close executor, dropping its execution guard owns the
+rollback: it clears only the `close_started` latch and wakes waiters so a later
+close can retry transport setup while the engine remains closed to new
+operations.
 
 ### TypeScript parallel-plugin ownership
 

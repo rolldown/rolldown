@@ -180,6 +180,10 @@ impl GenerateStage<'_> {
     }
   }
 
+  /// Runs the real cross-chunk link computation on the provisional graph. It assigns
+  /// `symbol.chunk_idx` as a side effect; that stays valid because lowering keeps every user
+  /// module's chunk index and the one relocated module (the runtime) is cleared explicitly in
+  /// `ensure_runtime_module_for_order_wraps`. The final link run overwrites all of it.
   pub(super) fn predicted_static_import_edges(
     &mut self,
     chunk_graph: &ChunkGraph,
@@ -929,7 +933,11 @@ impl GenerateStage<'_> {
           add_side_effect_imports_for_module(module_idx);
         }
 
-        if let ChunkKind::EntryPoint { module: entry_module_idx, .. } = &chunk.kind
+        // An order-wrap entry facade hosts no modules, but its prologue init call must still
+        // run after the entry's side-effectful dependencies. Strict-gated to keep the flag-off
+        // facade output identical to main.
+        if self.options.is_strict_execution_order_enabled()
+          && let ChunkKind::EntryPoint { module: entry_module_idx, .. } = &chunk.kind
           && !chunk.modules.contains(entry_module_idx)
         {
           add_side_effect_imports_for_module(*entry_module_idx);

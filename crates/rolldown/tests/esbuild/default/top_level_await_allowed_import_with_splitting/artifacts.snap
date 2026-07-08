@@ -13,7 +13,6 @@ import "./b2.js";
 ## b.js
 
 ```js
-import "./c2.js";
 import "./b2.js";
 
 ```

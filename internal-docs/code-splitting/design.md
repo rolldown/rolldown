@@ -214,6 +214,7 @@ link + tree shaking
 - Every synthetic declaration participates in symbol-to-chunk assignment and deconfliction.
 - Every import overlay is backed by an immutable link-stage execution dependency or retained re-export contract.
 - Every synthesized init call references a reachable interop or order wrapper.
+- A planned static chunk SCC includes every eligible order-sensitive module in that SCC.
 - Every ordinary-import init obligation corresponds to a link-stage execution dependency.
 - Every excluded-statement init obligation is either a retained re-export obligation or a synthetic obligation backed by an execution dependency.
 - Every order-wrapped entry has an explicit entry trigger.

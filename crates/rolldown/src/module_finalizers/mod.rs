@@ -1716,16 +1716,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     ConcatenateWrappedModuleKind::Inner
                   )
                 {
-                  // Deliberately not unified with `wrapped_esm_init_call_expr`: this site
-                  // resolves the wrapper via `canonical_name_for` (bare identifier, no
-                  // cross-chunk `require_binding.init_x` form, no `@__PURE__`, no
-                  // `generated_init_esm_importee_ids` dedup); switching it would be a
-                  // behavior change, not a refactor.
-                  let wrapper_ref_name =
-                    self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                  let (wrapper_ref, _) = self.finalized_expr_for_symbol_ref(
+                    importee_linking_info.wrapper_ref.unwrap(),
+                    false,
+                    false,
+                  );
                   let mut init_expr = ast::Expression::new_call_expression(
                     SPAN,
-                    self.ast_factory.make_id_ref_expr(SPAN, wrapper_ref_name),
+                    wrapper_ref,
                     NONE,
                     oxc::allocator::Vec::new_in(&self.ast_factory),
                     false,

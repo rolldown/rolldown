@@ -75,7 +75,7 @@ impl GenerateStage<'_> {
       roots.push(RootOrderAnalysis { root, expected_order });
     }
 
-    Some(self.build_order_wrap_plan(all_at_risk, &roots))
+    Some(self.build_order_wrap_plan(all_at_risk, &roots, chunk_graph, &import_edges))
   }
 
   fn expected_order_for_root(&self, root: ModuleIdx) -> Vec<ModuleIdx> {
@@ -283,6 +283,8 @@ impl GenerateStage<'_> {
     &self,
     at_risk: FxHashSet<ModuleIdx>,
     roots: &[RootOrderAnalysis],
+    chunk_graph: &ChunkGraph,
+    import_edges: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
   ) -> OrderWrapPlan {
     let source_reachable = self.source_reachable_modules(roots);
     let mut plan = OrderWrapPlan::default();
@@ -295,6 +297,7 @@ impl GenerateStage<'_> {
     loop {
       let mut changed = false;
       changed |= self.close_expected_sensitive_suffixes(roots, &mut plan);
+      changed |= self.close_cyclic_chunk_members(chunk_graph, import_edges, &mut plan);
 
       let current = plan.modules().collect::<FxHashSet<_>>();
 
@@ -318,6 +321,44 @@ impl GenerateStage<'_> {
     }
 
     plan
+  }
+
+  fn close_cyclic_chunk_members(
+    &self,
+    chunk_graph: &ChunkGraph,
+    import_edges: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
+    plan: &mut OrderWrapPlan,
+  ) -> bool {
+    let planned_chunks = plan
+      .modules()
+      .filter_map(|module_idx| chunk_graph.module_to_chunk[module_idx])
+      .collect::<FxHashSet<_>>();
+    let mut reverse_edges = index_vec![FxHashSet::default(); import_edges.len()];
+    for (importer_idx, importees) in import_edges.iter_enumerated() {
+      for &importee_idx in importees {
+        reverse_edges[importee_idx].insert(importer_idx);
+      }
+    }
+    let mut changed = false;
+
+    for root_chunk in planned_chunks {
+      let forward = reachable_chunks(root_chunk, import_edges);
+      let backward = reachable_chunks(root_chunk, &reverse_edges);
+      let cycle = forward.intersection(&backward).copied().collect::<FxHashSet<_>>();
+      if cycle.len() < 2 && !import_edges[root_chunk].contains(&root_chunk) {
+        continue;
+      }
+      for chunk_idx in cycle {
+        for &module_idx in &chunk_graph.chunk_table[chunk_idx].modules {
+          if self.is_order_sensitive(module_idx) && self.is_order_wrap_closure_eligible(module_idx)
+          {
+            changed |= plan.insert(module_idx);
+          }
+        }
+      }
+    }
+
+    changed
   }
 
   fn close_expected_sensitive_suffixes(
@@ -575,6 +616,20 @@ fn premature_sensitive_modules(
   }
 
   premature_modules
+}
+
+fn reachable_chunks(
+  root: ChunkIdx,
+  import_edges: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
+) -> FxHashSet<ChunkIdx> {
+  let mut reachable = FxHashSet::default();
+  let mut pending = vec![root];
+  while let Some(chunk_idx) = pending.pop() {
+    if reachable.insert(chunk_idx) {
+      pending.extend(import_edges[chunk_idx].iter().copied());
+    }
+  }
+  reachable
 }
 
 #[cfg(test)]

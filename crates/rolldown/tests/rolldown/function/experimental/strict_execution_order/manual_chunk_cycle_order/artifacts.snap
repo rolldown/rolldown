@@ -1,0 +1,82 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## e0.js
+
+```js
+//#region m0.js
+globalThis.logs.push("m0");
+//#endregion
+
+```
+
+## e1.js
+
+```js
+import { t as init_m1 } from "./g.js";
+import "./m3.js";
+init_m1();
+
+```
+
+## g.js
+
+```js
+import "./e0.js";
+import { t as init_m3 } from "./m3.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region m2.js
+function init_m2() {
+	return (init_m2 = __esmMin((() => {
+		init_m3();
+		globalThis.logs.push("m2");
+	})))();
+}
+//#endregion
+//#region m1.js
+function init_m1() {
+	return (init_m1 = __esmMin((() => {
+		init_m3();
+		globalThis.logs.push("m1");
+	})))();
+}
+//#endregion
+export { init_m2 as n, init_m1 as t };
+
+```
+
+## m3.js
+
+```js
+import { n as init_m2 } from "./g.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region m3.js
+function init_m3() {
+	return (init_m3 = __esmMin((() => {
+		init_m2();
+		globalThis.logs.push("m3");
+	})))();
+}
+//#endregion
+export { init_m3 as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+//#endregion
+export { __esmMin as t };
+
+```

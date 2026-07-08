@@ -91,6 +91,8 @@ ChunkGraph
 
 `finalize_chunk_plan` may run two metadata passes. Namespace usage and entry-level external re-exports are first finalized on the provisional graph. They are recomputed when order wrapping or strict entry facades change topology.
 
+Order planning closes over sensitive suffixes, dependent importers/readers, and eligible sensitive modules in any static chunk SCC already touched by the plan.
+
 ## Bit Positions and Entry Points
 
 `init_entry_point()` iterates `link_output.entries` (an `FxIndexMap<ModuleIdx, Vec<EntryPoint>>`), assigning each entry a sequential bit position via `.enumerate()`:

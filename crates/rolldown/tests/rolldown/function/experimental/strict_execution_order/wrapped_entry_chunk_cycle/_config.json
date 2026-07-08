@@ -13,5 +13,11 @@
       ]
     }
   },
+  "configVariants": [
+    {
+      "_configName": "cjs",
+      "format": "cjs"
+    }
+  ],
   "hiddenRuntimeModule": false
 }

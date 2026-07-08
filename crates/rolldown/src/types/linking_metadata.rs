@@ -39,11 +39,7 @@ pub struct LinkingMetadata {
   /// `wrapper_ref` is the `require_cjs` identifier in above example.
   pub wrapper_ref: Option<SymbolRef>,
   pub wrapper_stmt_info: Option<StmtInfoIdx>,
-  /// The wrap kind decided from module semantics before any generate-stage order wrapping.
-  original_wrap_kind: WrapKind,
-  /// The `wrap_kind` used for linking and code generation.
-  /// Intent to make those two fields private, so that we could ensure they are mutated in a more
-  /// safe way.
+  /// The module representation decided during linking.
   wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<CompactStr, ResolvedExport>,
@@ -83,11 +79,7 @@ pub struct LinkingMetadata {
   /// its subtree) into its chunk group (#8920). Populated by `patch_module_dependencies`; with
   /// tree-shaking disabled it equals [`Self::dependencies`].
   pub load_dependencies: FxIndexSet<ModuleIdx>,
-  /// Dependencies whose module evaluation is required by this module's retained code.
-  ///
-  /// Unlike [`Self::load_dependencies`], this excludes side-effect-free entry targets kept only
-  /// for chunk placement. Generate-stage order lowering consumes this set as the frozen execution
-  /// obligation decided by linking and tree shaking.
+  /// Retained evaluation dependencies, excluding entry targets kept only for placement.
   pub execution_dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.
   pub resolved_member_expr_refs: MemberExprRefResolutionMap,
@@ -124,13 +116,8 @@ pub struct LinkingMetadata {
   /// now-unused wrapper). Computed by [`crate::stages::generate_stage`]'s
   /// `compute_wrapped_esm_init_metadata`.
   pub init_is_noop: bool,
-  /// For each non-included top-level import/re-export statement of an included `WrapKind::Esm`
-  /// module: the ordered wrapped-ESM modules whose `init_*()` calls must be emitted in its place to
-  /// preserve execution order. Order wrappers may retain ordinary-import obligations only for
-  /// targets already present in [`Self::execution_dependencies`]. Non-order wrappers keep the
-  /// legacy re-export-only collection.
-  /// Computed by [`crate::stages::generate_stage`]'s `compute_wrapped_esm_init_metadata`; consumed
-  /// by the module finalizer.
+  /// Wrapped ESM targets emitted at excluded import or re-export statements.
+  /// Ordinary order-wrap imports must already be in [`Self::execution_dependencies`].
   pub transitive_esm_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }
 
@@ -156,14 +143,7 @@ impl LinkingMetadata {
   }
 
   #[inline]
-  pub fn original_wrap_kind(&self) -> WrapKind {
-    self.original_wrap_kind
-  }
-
-  /// Synchronize the `wrap_kind` with the original wrap kind.
-  #[inline]
-  pub fn sync_wrap_kind(&mut self, wrap_kind: WrapKind) {
-    self.original_wrap_kind = wrap_kind;
+  pub fn set_wrap_kind(&mut self, wrap_kind: WrapKind) {
     self.wrap_kind = wrap_kind;
   }
 

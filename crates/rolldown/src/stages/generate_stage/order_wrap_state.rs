@@ -113,7 +113,7 @@ impl OrderWrapState {
     module_idx: ModuleIdx,
     meta: &crate::types::linking_metadata::LinkingMetadata,
   ) -> Option<EsmInitTarget> {
-    if matches!(meta.original_wrap_kind(), WrapKind::Esm) {
+    if matches!(meta.wrap_kind(), WrapKind::Esm) {
       return meta.wrapper_ref.map(|wrapper_ref| EsmInitTarget {
         wrapper_ref,
         init_is_noop: meta.init_is_noop,
@@ -128,15 +128,6 @@ impl OrderWrapState {
         init_is_noop: module.init_is_noop,
         tla_tainted: meta.is_tla_or_contains_tla_dependency,
         origin: EsmInitOrigin::ExecutionOrder,
-      });
-    }
-
-    if matches!(meta.wrap_kind(), WrapKind::Esm) {
-      return meta.wrapper_ref.map(|wrapper_ref| EsmInitTarget {
-        wrapper_ref,
-        init_is_noop: meta.init_is_noop,
-        tla_tainted: meta.is_tla_or_contains_tla_dependency,
-        origin: EsmInitOrigin::Interop,
       });
     }
 
@@ -508,7 +499,7 @@ mod tests {
     let interop_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
     let order_ref = SymbolRef::from((module_idx, SymbolId::from_usize(1)));
     let mut meta = LinkingMetadata::default();
-    meta.sync_wrap_kind(WrapKind::Esm);
+    meta.set_wrap_kind(WrapKind::Esm);
     meta.wrapper_ref = Some(interop_ref);
     let mut state = OrderWrapState::default();
     state.insert_order_wrapper(module_idx, order_ref, RuntimeHelper::EsmMin);

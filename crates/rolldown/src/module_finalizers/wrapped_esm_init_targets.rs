@@ -18,16 +18,8 @@ pub struct WrappedEsmInitTargetContext<'a> {
   pub order_wrap_state: &'a OrderWrapState,
 }
 
-/// Resolve the wrapped ESM modules initialized by one static import/re-export record.
-///
-/// Besides direct wrapped importees, this follows canonical symbols through non-included,
-/// unwrapped forwarding modules. Callers supply the wrapper-reachability check because the
-/// finalizer observes deconflicted canonical names while earlier diagnostic passes observe final
-/// cross-chunk links. They also supply the same-chunk forwarding ownership check: an included
-/// unwrapped forwarding module executes in the importer's chunk and therefore owns its downstream
-/// initialization instead of requiring a synthesized init at the importer.
-///
-/// See `internal-docs/linking/reference-needed-symbols/implementation.md`.
+/// Resolve direct and forwarded ESM init targets for one static import record.
+/// Included same-chunk forwarders own their downstream initialization.
 pub fn collect_wrapped_esm_init_targets_for_import_record(
   ctx: &WrappedEsmInitTargetContext<'_>,
   rec_idx: ImportRecordIdx,

@@ -16,13 +16,7 @@ use super::order_analysis::OrderWrapPlan;
 use super::order_wrap_state::OrderWrapState;
 
 impl GenerateStage<'_> {
-  /// Finalize topology-changing generate-stage decisions before deriving output metadata.
-  ///
-  /// `generate_chunks` produces the provisional layout used by the order analysis. Applying the
-  /// resulting plan may add or restore facades, move the runtime, and renumber chunks, so entry
-  /// metadata, namespace usage, and output-shape validation must observe this final topology.
-  ///
-  /// See `internal-docs/code-splitting/implementation.md`.
+  /// Apply order wrapping and entry facades before deriving final output metadata.
   pub(super) fn finalize_chunk_plan(
     &mut self,
     chunk_graph: &mut ChunkGraph,
@@ -34,13 +28,13 @@ impl GenerateStage<'_> {
     let mut order_state = OrderWrapState::default();
     self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
 
-    let order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs);
-    let topology_changed = if let Some(analysis) = &order_analysis
-      && !analysis.plan.is_empty()
+    let order_plan = self.analyze_execution_order(chunk_graph, used_symbol_refs);
+    let topology_changed = if let Some(plan) = &order_plan
+      && !plan.is_empty()
     {
-      self.apply_order_wraps(chunk_graph, &analysis.plan, used_symbol_refs, &mut order_state);
+      self.apply_order_wraps(chunk_graph, plan, used_symbol_refs, &mut order_state);
       #[cfg(debug_assertions)]
-      self.assert_order_wrap_plan_applied(chunk_graph, &analysis.plan, &order_state);
+      self.assert_order_wrap_plan_applied(chunk_graph, plan, &order_state);
       true
     } else if self.create_strict_execution_order_entry_facades(chunk_graph, None) {
       chunk_graph.sort_chunk_modules(self.link_output, self.options);
@@ -80,7 +74,6 @@ impl GenerateStage<'_> {
     for module_idx in plan.modules() {
       let meta = &self.link_output.metas[module_idx];
       debug_assert!(matches!(meta.wrap_kind(), WrapKind::None));
-      debug_assert!(matches!(meta.original_wrap_kind(), WrapKind::None));
       debug_assert!(meta.wrapper_ref.is_none());
       debug_assert!(meta.wrapper_stmt_info.is_none());
       debug_assert!(order_state.has_order_wrapper(module_idx));

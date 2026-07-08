@@ -326,7 +326,7 @@ impl GenerateStage<'_> {
         })
         .filter_map(|idx| {
           let module = self.link_output.module_table[idx].as_normal()?;
-          (!self.link_output.metas[module.idx].original_wrap_kind().is_none()).then_some(idx)
+          (!self.link_output.metas[module.idx].wrap_kind().is_none()).then_some(idx)
         })
         .collect::<FxHashSet<_>>();
       let chunk_module_to_exec_order = chunk
@@ -342,7 +342,7 @@ impl GenerateStage<'_> {
       let mut none_wrapped_module_to_wrapped_dependency_length = FxHashMap::default();
       let js_import_order = self.js_import_order(&roots, &chunk_module_to_exec_order);
       for idx in js_import_order {
-        match self.link_output.metas[idx].original_wrap_kind() {
+        match self.link_output.metas[idx].wrap_kind() {
           WrapKind::None => {
             if !wrapped_modules.is_empty() {
               none_wrapped_module_to_wrapped_dependency_length.insert(idx, wrapped_modules.len());
@@ -399,7 +399,7 @@ impl GenerateStage<'_> {
         FxHashMap::default();
       let mut remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>> = FxHashMap::default();
       for (module_idx, (importer_idx, rec_idx)) in module_init_position {
-        match self.link_output.metas[module_idx].original_wrap_kind() {
+        match self.link_output.metas[module_idx].wrap_kind() {
           WrapKind::None => {
             if let Some(deps_length) =
               none_wrapped_module_to_wrapped_dependency_length.get(&module_idx)

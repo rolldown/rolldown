@@ -10,57 +10,26 @@ use crate::chunk_graph::ChunkGraph;
 
 use super::GenerateStage;
 
-#[derive(Debug)]
-pub(super) struct OrderAnalysis {
-  roots: Vec<RootOrderAnalysis>,
-  pub(super) plan: OrderWrapPlan,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum OrderWrapReason {
-  /// The module is missing from one order or executes before an expected predecessor.
-  DirectViolation,
-  /// V1 lowering moves all later sensitive modules behind the same init boundary.
-  SensitiveSuffix,
-  /// The module statically imports another module selected by the plan.
-  StaticImporter,
-  /// A top-level statement reads an export owned by a selected module.
-  TopLevelReader,
-}
-
 #[derive(Debug, Default)]
 pub(super) struct OrderWrapPlan {
-  reasons_by_module: FxHashMap<ModuleIdx, Vec<OrderWrapReason>>,
+  modules: FxHashSet<ModuleIdx>,
 }
 
 impl OrderWrapPlan {
-  fn insert(&mut self, module_idx: ModuleIdx, reason: OrderWrapReason) -> bool {
-    let reasons = self.reasons_by_module.entry(module_idx).or_default();
-    let is_new_module = reasons.is_empty();
-    if !reasons.contains(&reason) {
-      reasons.push(reason);
-    }
-    is_new_module
+  fn insert(&mut self, module_idx: ModuleIdx) -> bool {
+    self.modules.insert(module_idx)
   }
 
   pub(super) fn contains(&self, module_idx: &ModuleIdx) -> bool {
-    self.reasons_by_module.contains_key(module_idx)
+    self.modules.contains(module_idx)
   }
 
   pub(super) fn is_empty(&self) -> bool {
-    self.reasons_by_module.is_empty()
-  }
-
-  pub(super) fn len(&self) -> usize {
-    self.reasons_by_module.len()
+    self.modules.is_empty()
   }
 
   pub(super) fn modules(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
-    self.reasons_by_module.keys().copied()
-  }
-
-  pub(super) fn reasons(&self, module_idx: ModuleIdx) -> &[OrderWrapReason] {
-    self.reasons_by_module.get(&module_idx).map(Vec::as_slice).unwrap_or_default()
+    self.modules.iter().copied()
   }
 }
 
@@ -68,8 +37,6 @@ impl OrderWrapPlan {
 struct RootOrderAnalysis {
   root: ModuleIdx,
   expected_order: Vec<ModuleIdx>,
-  actual_order: Vec<ModuleIdx>,
-  at_risk: FxHashSet<ModuleIdx>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -84,7 +51,7 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &ChunkGraph,
     used_symbol_refs: &UsedSymbolRefsBuilder,
-  ) -> Option<OrderAnalysis> {
+  ) -> Option<OrderWrapPlan> {
     if !self.options.is_strict_execution_order_enabled() {
       return None;
     }
@@ -105,23 +72,10 @@ impl GenerateStage<'_> {
       let actual_order = self.actual_order_for_root(root, root_chunk, chunk_graph, &import_edges);
       let at_risk = self.at_risk_modules(&expected_order, &actual_order);
       all_at_risk.extend(at_risk.iter().copied());
-      roots.push(RootOrderAnalysis { root, expected_order, actual_order, at_risk });
+      roots.push(RootOrderAnalysis { root, expected_order });
     }
 
-    let plan = self.build_order_wrap_plan(all_at_risk, &roots);
-    let analysis = OrderAnalysis { roots, plan };
-    analysis.log_summary(self);
-    Some(analysis)
-  }
-
-  #[cfg(test)]
-  #[expect(dead_code)]
-  fn analyze_execution_order_for_test(
-    &mut self,
-    chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
-  ) -> Option<OrderAnalysis> {
-    self.analyze_execution_order(chunk_graph, used_symbol_refs)
+    Some(self.build_order_wrap_plan(all_at_risk, &roots))
   }
 
   fn expected_order_for_root(&self, root: ModuleIdx) -> Vec<ModuleIdx> {
@@ -203,7 +157,7 @@ impl GenerateStage<'_> {
       &mut module_states,
       &mut order,
     );
-    if !self.link_output.metas[root].original_wrap_kind().is_none() {
+    if !self.link_output.metas[root].wrap_kind().is_none() {
       self.execute_actual_module(root, &mut module_states, &mut order);
     }
 
@@ -240,7 +194,7 @@ impl GenerateStage<'_> {
     }
 
     for &module_idx in &chunk_graph.chunk_table[chunk_idx].modules {
-      if self.link_output.metas[module_idx].original_wrap_kind().is_none() {
+      if self.link_output.metas[module_idx].wrap_kind().is_none() {
         self.execute_actual_module(module_idx, module_states, order);
       }
     }
@@ -271,7 +225,7 @@ impl GenerateStage<'_> {
         continue;
       }
       let Some(importee_idx) = rec.resolved_module else { continue };
-      if self.link_output.metas[importee_idx].original_wrap_kind().is_none() {
+      if self.link_output.metas[importee_idx].wrap_kind().is_none() {
         continue;
       }
       self.execute_actual_module(importee_idx, module_states, order);
@@ -303,18 +257,8 @@ impl GenerateStage<'_> {
       }
     }
 
-    // `symmetric_difference` intentionally covers BOTH directions.
-    // `actual ∖ expected` is the true phantom (runs under a root the source never reaches).
-    // `expected ∖ actual` is NOT always empty either, and the reason is a mismatch between two
-    // notions of "side effect": actual-order reachability is built from tree-shaking side effects
-    // (`add_side_effect_imports_for_module` skips importees whose `side_effects().has_side_effects()`
-    // is false), while sensitivity here uses the ordering notion. A module that is order-sensitive
-    // but tree-shaking-side-effect-free — e.g. a `/*#__PURE__*/` call that actually writes a global
-    // — therefore gets no bare side-effect chunk edge, so it is unreachable in the predicted actual
-    // order under a root that imports it only for that (tree-shaking-absent) side effect, yet it is
-    // in `expected`. Catching it here over-wraps it; it then runs correctly via the init chain.
-    // See `strip_plain_chunk_imports` (common.js writes globalThis.value under a pure annotation;
-    // "missing" under page-b, wrapped, runs via init_common).
+    // Keep both sides: tree-shaking reachability can omit an order-sensitive module that still
+    // executes through a synthetic init chain. See `strip_plain_chunk_imports`.
     for module_idx in premature_sensitive_modules(&expected_sensitive_order, &actual_positions) {
       if self.is_order_wrap_eligible(module_idx) {
         at_risk.insert(module_idx);
@@ -345,7 +289,7 @@ impl GenerateStage<'_> {
     for module_idx in
       at_risk.into_iter().filter(|module_idx| self.is_order_wrap_eligible(*module_idx))
     {
-      plan.insert(module_idx, OrderWrapReason::DirectViolation);
+      plan.insert(module_idx);
     }
 
     loop {
@@ -361,30 +305,16 @@ impl GenerateStage<'_> {
         {
           continue;
         }
-        changed |= record_order_wrap_closure_reasons(
-          &mut plan,
-          module.idx,
-          self.statically_imports_wrapped_member(module.idx, &current),
-          self.top_level_reads_wrapped_export(module.idx, &current),
-        );
+        if self.statically_imports_wrapped_member(module.idx, &current)
+          || self.top_level_reads_wrapped_export(module.idx, &current)
+        {
+          changed |= plan.insert(module.idx);
+        }
       }
 
       if !changed {
         break;
       }
-    }
-
-    // The fixed point only needs to revisit modules that are not yet selected. Once membership is
-    // stable, record any additional reasons that also apply to existing members without extending
-    // the convergence loop.
-    let final_members = plan.modules().collect::<FxHashSet<_>>();
-    for module_idx in plan.modules().collect_vec() {
-      record_order_wrap_closure_reasons(
-        &mut plan,
-        module_idx,
-        self.statically_imports_wrapped_member(module_idx, &final_members),
-        self.top_level_reads_wrapped_export(module_idx, &final_members),
-      );
     }
 
     plan
@@ -410,7 +340,7 @@ impl GenerateStage<'_> {
       // boundary.
       for module_idx in expected_sensitive_order[first_wrapped_idx..].iter().copied() {
         if self.is_order_wrap_closure_eligible(module_idx) {
-          changed |= plan.insert(module_idx, OrderWrapReason::SensitiveSuffix);
+          changed |= plan.insert(module_idx);
         }
       }
     }
@@ -569,17 +499,8 @@ impl GenerateStage<'_> {
     has_intrinsic_effect || self.eagerly_triggers_interop_module(module_idx)
   }
 
-  /// An included top-level `import` of an interop-wrapped importee (a CJS module, or an ESM module
-  /// reached via `require`) lowers to an eager `require_*()` / `__toESM(require_*())` call inside
-  /// *this* module's own body. The trigger is order-sensitive even when tree shaking classifies the
-  /// importee as side-effect-free: a retained import can still compute an observed export value.
-  ///
-  /// The interop wrapper controls *how* the importee is represented, not *when* it runs: its trigger
-  /// stays inline in the importer's chunk body, so code splitting can displace it. The importee
-  /// itself is not order-wrap-eligible (it is already interop-wrapped), so the only way to defer its
-  /// trigger is to order-wrap the carrier hosting it. Marking the carrier order-sensitive lets the
-  /// existing premature / suffix / importer closure decide that wrap; without it the carrier is
-  /// invisible and a displaced interop evaluation goes unwrapped.
+  /// A retained static import of an interop module runs its wrapper inside the importer.
+  /// Mark the importer sensitive so code splitting can delay that trigger.
   fn eagerly_triggers_interop_module(&self, module_idx: ModuleIdx) -> bool {
     let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
       return false;
@@ -598,10 +519,7 @@ impl GenerateStage<'_> {
             rec.kind == ImportKind::Import
               && rec.resolved_module.is_some_and(|importee_idx| {
                 self.link_output.module_table[importee_idx].as_normal().is_some_and(|_| {
-                  !matches!(
-                    self.link_output.metas[importee_idx].original_wrap_kind(),
-                    WrapKind::None
-                  )
+                  !matches!(self.link_output.metas[importee_idx].wrap_kind(), WrapKind::None)
                 })
               })
           })
@@ -631,7 +549,7 @@ impl GenerateStage<'_> {
       return false;
     };
     matches!(module.exports_kind, ExportsKind::Esm | ExportsKind::None)
-      && matches!(self.link_output.metas[module_idx].original_wrap_kind(), WrapKind::None)
+      && matches!(self.link_output.metas[module_idx].wrap_kind(), WrapKind::None)
   }
 }
 
@@ -659,56 +577,6 @@ fn premature_sensitive_modules(
   premature_modules
 }
 
-fn record_order_wrap_closure_reasons(
-  plan: &mut OrderWrapPlan,
-  module_idx: ModuleIdx,
-  statically_imports_wrapped_member: bool,
-  top_level_reads_wrapped_export: bool,
-) -> bool {
-  let mut changed = false;
-  if statically_imports_wrapped_member {
-    changed |= plan.insert(module_idx, OrderWrapReason::StaticImporter);
-  }
-  if top_level_reads_wrapped_export {
-    changed |= plan.insert(module_idx, OrderWrapReason::TopLevelReader);
-  }
-  changed
-}
-
-impl OrderAnalysis {
-  fn log_summary(&self, stage: &GenerateStage<'_>) {
-    let root_violation_counts = self
-      .roots
-      .iter()
-      .map(|root| {
-        (
-          stage.link_output.module_table[root.root].id().to_string(),
-          root.at_risk.len(),
-          root.expected_order.len(),
-          root.actual_order.len(),
-        )
-      })
-      .collect_vec();
-    let order_wrap_members = self
-      .plan
-      .modules()
-      .sorted_unstable_by_key(|idx| stage.link_output.module_table[*idx].exec_order())
-      .map(|idx| {
-        (stage.link_output.module_table[idx].id().to_string(), self.plan.reasons(idx).to_vec())
-      })
-      .collect_vec();
-
-    tracing::debug!(
-      target: "rolldown::order_analysis",
-      root_count = self.roots.len(),
-      order_wrap_count = self.plan.len(),
-      root_violation_counts = ?root_violation_counts,
-      order_wrap_members = ?order_wrap_members,
-      "strict execution order analysis"
-    );
-  }
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -734,35 +602,5 @@ mod tests {
     let actual_positions = [(m(0), 0), (m(1), 1), (m(2), 2)].into_iter().collect();
 
     assert!(premature_sensitive_modules(&expected, &actual_positions).is_empty());
-  }
-
-  #[test]
-  fn order_wrap_plan_preserves_all_reasons_for_a_module() {
-    let mut plan = OrderWrapPlan::default();
-
-    assert!(plan.insert(m(0), OrderWrapReason::DirectViolation));
-    assert!(!plan.insert(m(0), OrderWrapReason::DirectViolation));
-    assert!(!plan.insert(m(0), OrderWrapReason::SensitiveSuffix));
-
-    assert_eq!(
-      plan.reasons(m(0)),
-      &[OrderWrapReason::DirectViolation, OrderWrapReason::SensitiveSuffix]
-    );
-  }
-
-  #[test]
-  fn closure_reasons_are_recorded_for_an_already_selected_module() {
-    let mut plan = OrderWrapPlan::default();
-    plan.insert(m(0), OrderWrapReason::DirectViolation);
-
-    assert!(!record_order_wrap_closure_reasons(&mut plan, m(0), true, true));
-    assert_eq!(
-      plan.reasons(m(0)),
-      &[
-        OrderWrapReason::DirectViolation,
-        OrderWrapReason::StaticImporter,
-        OrderWrapReason::TopLevelReader,
-      ]
-    );
   }
 }

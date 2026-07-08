@@ -21,26 +21,8 @@ use super::{
 };
 
 impl GenerateStage<'_> {
-  /// Pre-finalization pass computing, for every included ESM init target, the init-call facts the
-  /// module finalizers consume when emitting `init_*()` calls. Interop wrapper facts remain in
-  /// [`LinkingMetadata`]; execution-order wrapper facts are stored in [`OrderWrapState`]:
-  ///
-  /// - `init_is_noop`: the module's `__esm` closure body is empty — every
-  ///   top-level statement is a hoisted function declaration (lifted out of the closure) or a
-  ///   source-less export clause — so call sites can be marked `@__PURE__` and the default
-  ///   `dce-only` minifier drops them (and, once the wrapper is unreferenced, the wrapper
-  ///   declaration / runtime helper too).
-  /// - `transitive_init_targets`: per non-included top-level import or
-  ///   re-export statement, the wrapped-ESM modules whose `init_*()` calls must be emitted in the
-  ///   statement's place. Re-exports keep the legacy forwarding behavior; an order-wrapped ordinary
-  ///   import keeps an obligation only when it was live before lowering.
-  ///
-  /// Must run after chunk assignment (`module_to_chunk`) and final order wrapping, and before
-  /// [`Self::finalize_modules`]: modules are finalized in parallel, and an
-  /// importer needs its importees' facts while emitting init calls, so neither can be computed
-  /// during finalization itself. The transitive targets cannot be computed in the link stage
-  /// either: which init calls survive depends on chunk assignment. Cross-chunk wrapper imports are
-  /// registered after this pass by `compute_cross_chunk_links`.
+  /// Compute no-op wrappers and excluded-statement init targets after final chunk assignment.
+  /// This must finish before parallel module finalization.
   pub(super) fn compute_wrapped_esm_init_metadata(
     &mut self,
     ast_table: &IndexEcmaAst,
@@ -291,9 +273,7 @@ fn collect_legacy_esm_init_targets(
   }
 }
 
-/// Find the wrapped-ESM modules an excluded re-export statement must still initialize, by
-/// traversing through non-included barrel modules to reach included importees whose wrappers are
-/// assigned to a chunk.
+/// Follow excluded re-exports through barrels to included wrapped importees.
 #[expect(clippy::too_many_arguments)]
 fn collect_order_wrap_esm_init_targets(
   modules: &IndexModules,

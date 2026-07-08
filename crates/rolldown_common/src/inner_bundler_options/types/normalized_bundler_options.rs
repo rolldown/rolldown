@@ -43,6 +43,7 @@ pub struct NormalizedBundlerOptions {
   // --- Input
   pub input: Vec<InputItem>,
   pub cwd: PathBuf,
+  pub normalized_cwd: PathBuf,
   pub external: IsExternal,
   /// corresponding to `false | NormalizedTreeshakeOption`
   pub treeshake: NormalizedTreeshakeOptions,
@@ -126,6 +127,7 @@ impl Default for NormalizedBundlerOptions {
     Self {
       input: Default::default(),
       cwd: Default::default(),
+      normalized_cwd: Default::default(),
       external: Default::default(),
       treeshake: Default::default(),
       platform: Platform::Neutral,

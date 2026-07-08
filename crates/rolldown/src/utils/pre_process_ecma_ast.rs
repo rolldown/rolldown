@@ -39,6 +39,7 @@ impl PreProcessEcmaAst {
     mut ast: EcmaAst,
     stable_id: &str,
     resolved_id: &str,
+    should_warn_on_invalid_annotation: bool,
     parsed_type: &OxcParseType,
     replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
     bundle_options: &NormalizedBundlerOptions,
@@ -94,9 +95,11 @@ impl PreProcessEcmaAst {
     // `CommentContent::PureNotApplied` when their position prevents the parser
     // from applying them (expression-level, statement-level, or variable declarator).
     // Aligns with Rollup's `INVALID_ANNOTATION` log code.
-    warnings.extend(ast.program.with_dependent(|_owner, dep| {
-      invalid_pure_annotation_warnings(&dep.program, &source, resolved_id)
-    }));
+    if should_warn_on_invalid_annotation {
+      warnings.extend(ast.program.with_dependent(|_owner, dep| {
+        invalid_pure_annotation_warnings(&dep.program, &source, resolved_id)
+      }));
+    }
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
@@ -376,6 +379,30 @@ fn invalid_pure_annotation_warnings(
         span,
         is_before_function_declaration,
       )
+      .with_severity_warning()
     })
     .collect()
+}
+
+#[cfg(test)]
+mod tests {
+  use oxc::span::SourceType;
+  use rolldown_ecmascript::EcmaCompiler;
+  use rolldown_error::Severity;
+
+  use super::invalid_pure_annotation_warnings;
+
+  #[test]
+  fn invalid_pure_annotations_are_warning_severity() {
+    let ast =
+      EcmaCompiler::parse("main.js", "/* #__PURE__ */ globalThis.foo;", SourceType::default())
+        .unwrap();
+    let source = ast.source().clone();
+    let warnings = ast.program.with_dependent(|_owner, dep| {
+      invalid_pure_annotation_warnings(&dep.program, &source, "main.js")
+    });
+
+    assert_eq!(warnings.len(), 1);
+    assert_eq!(warnings[0].severity(), Severity::Warning);
+  }
 }

@@ -1,0 +1,11 @@
+{
+  "_comment": "Explicitly disabling invalidAnnotation suppresses warnings from project source.",
+  "config": {
+    "checks": {
+      "invalidAnnotation": false
+    }
+  },
+  "expectExecuted": false,
+  "expectWarning": false,
+  "snapshot": false
+}

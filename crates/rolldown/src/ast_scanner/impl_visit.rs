@@ -17,7 +17,7 @@ use rolldown_common::{
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
-use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
+use rolldown_ecmascript_utils::{ExpressionExt, FunctionExt, is_top_level};
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
 
@@ -73,6 +73,27 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       {
         self.current_stmt_idx = StmtInfoIdx::from_raw_unchecked(idx as u32 + 1);
       }
+      self.current_direct_root_var_decl_symbols.clear();
+      match stmt {
+        ast::Statement::VariableDeclaration(var_decl) => {
+          for decl in &var_decl.declarations {
+            if let BindingPattern::BindingIdentifier(id) = &decl.id {
+              self.current_direct_root_var_decl_symbols.insert(id.symbol_id());
+            }
+          }
+        }
+        ast::Statement::ExportNamedDeclaration(export_decl) => {
+          if let Some(Declaration::VariableDeclaration(var_decl)) = export_decl.declaration.as_ref()
+          {
+            for decl in &var_decl.declarations {
+              if let BindingPattern::BindingIdentifier(id) = &decl.id {
+                self.current_direct_root_var_decl_symbols.insert(id.symbol_id());
+              }
+            }
+          }
+        }
+        _ => {}
+      }
       let analyzer = StmtEvalAnalyzer::new(
         &self.result.symbol_ref_db.ast_scopes,
         self.immutable_ctx.flat_options,
@@ -99,6 +120,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         self.result.ecma_view_meta.insert(EcmaViewMeta::ExecutionOrderSensitive);
       }
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
+      self.current_direct_root_var_decl_symbols.clear();
     }
 
     if self.untranspiled_syntax.contains(UntranspiledSyntax::TypeScript) {
@@ -119,6 +141,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     self.result.dynamic_import_rec_exports_usage =
       std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);
     if self.result.ecma_view_meta.contains(EcmaViewMeta::Eval) {
+      self.discard_side_effect_free_function_symbols();
       // if there exists `eval` in current module, assume all dynamic import are completely used;
       for usage in self.result.dynamic_import_rec_exports_usage.values_mut() {
         *usage = DynamicImportExportsUsage::Complete;
@@ -342,16 +365,57 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
             if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
               self.add_constant_symbol(binding.symbol_id(), ConstExportMeta::new(value, false));
             }
+            let pure_annotation_only = match init {
+              Expression::FunctionExpression(func) => {
+                let empty = func.is_side_effect_free();
+                self.side_effect_free_function_pure_annotation_only(empty, func.pure)
+              }
+              Expression::ArrowFunctionExpression(func) => {
+                let empty = func.is_side_effect_free();
+                self.side_effect_free_function_pure_annotation_only(empty, func.pure)
+              }
+              _ => None,
+            };
+            if self.can_mark_var_initialized_export_side_effect_free(binding.symbol_id())
+              && let Some(pure_annotation_only) = pure_annotation_only
+            {
+              self.add_var_initialized_side_effect_free_function_symbol(
+                binding.symbol_id(),
+                pure_annotation_only,
+              );
+            }
           }
         }
       }
       _ => {
-        if self.immutable_ctx.flat_options.inline_const_enabled() && self.is_root_scope() {
+        if self.is_root_scope() {
+          let can_extract_const = self.immutable_ctx.flat_options.inline_const_enabled();
           for var_decl in &decl.declarations {
             if let BindingPattern::BindingIdentifier(binding) = &var_decl.id {
               if let Some(init) = &var_decl.init {
-                if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
+                if can_extract_const
+                  && let Some(value) = self.extract_constant_value_from_expr(Some(init))
+                {
                   self.add_constant_symbol(binding.symbol_id(), ConstExportMeta::new(value, false));
+                }
+                let pure_annotation_only = match init {
+                  Expression::FunctionExpression(func) => {
+                    let empty = func.is_side_effect_free();
+                    self.side_effect_free_function_pure_annotation_only(empty, func.pure)
+                  }
+                  Expression::ArrowFunctionExpression(func) => {
+                    let empty = func.is_side_effect_free();
+                    self.side_effect_free_function_pure_annotation_only(empty, func.pure)
+                  }
+                  _ => None,
+                };
+                if self.can_mark_var_initialized_export_side_effect_free(binding.symbol_id())
+                  && let Some(pure_annotation_only) = pure_annotation_only
+                {
+                  self.add_var_initialized_side_effect_free_function_symbol(
+                    binding.symbol_id(),
+                    pure_annotation_only,
+                  );
                 }
               }
             }
@@ -366,6 +430,17 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_declaration(&mut self, it: &ast::Declaration<'ast>) {
     match it {
       Declaration::FunctionDeclaration(function) => {
+        if let Some(binding) = &function.id {
+          let symbol_id = binding.symbol_id();
+          if self.is_root_symbol(symbol_id) {
+            let empty = function.is_side_effect_free();
+            if let Some(pure_annotation_only) =
+              self.side_effect_free_function_pure_annotation_only(empty, function.pure)
+            {
+              self.add_side_effect_free_function_symbol(symbol_id, pure_annotation_only);
+            }
+          }
+        }
         self.visit_function_decl(function, ScopeFlags::Function);
       }
       Declaration::ClassDeclaration(class) => {

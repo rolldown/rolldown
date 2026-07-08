@@ -96,6 +96,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
   pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
   pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
+  pub static_import_cycle_cache: FxHashMap<ModuleIdx, bool>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {

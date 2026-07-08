@@ -89,6 +89,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         transferred_import_record,
         rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
+        static_import_cycle_cache: FxHashMap::default(),
       };
       finalizer.visit_program(oxc_program);
       (finalizer.transferred_import_record, finalizer.rendered_concatenated_wrapped_module_parts)

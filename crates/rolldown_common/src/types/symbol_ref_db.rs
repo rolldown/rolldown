@@ -24,7 +24,7 @@ pub struct SymbolRefDataClassic {
 
 bitflags::bitflags! {
   #[derive(Debug, Default, Clone, Copy)]
-  pub struct SymbolRefFlags: u8 {
+  pub struct SymbolRefFlags: u16 {
     const IsNotReassigned = 1;
     /// The function is side-effect-free solely because of a `@__NO_SIDE_EFFECTS__` annotation,
     /// NOT because its body is empty. Such functions may still use their arguments, so
@@ -58,6 +58,14 @@ bitflags::bitflags! {
     /// for facade (generated) symbols — user-defined names are left unchanged
     /// because `<obj.Foo>` is already a valid component reference in JSX.
     const UsedAsJSXMemberExprRoot = 1 << 6;
+    /// The side-effect-free function comes from a top-level variable initializer.
+    /// Unlike function declarations, this binding is not initialized until its
+    /// declaration executes.
+    const VarInitializedSideEffectsFreeFunction = 1 << 7;
+    /// This symbol is exposed through a delayed default export expression such as
+    /// `export default f`. In a static cycle, importing `default` can observe the
+    /// export binding before that export statement executes.
+    const DelayedDefaultExportSideEffectsFreeFunction = 1 << 8;
   }
 }
 

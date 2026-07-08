@@ -208,6 +208,7 @@ impl LinkStage<'_> {
           let mut ctx = CrossModuleOptimizationRunnerContext {
             local_constant_symbol_map: FxHashMap::default(),
             tree_shaking_flags_mutations: FxHashMap::default(),
+            static_import_cycle_cache: FxHashMap::default(),
             side_effect_free_call_expr_node_ids: FxHashSet::default(),
             immutable_ctx: CrossModuleOptimizationImmutableCtx {
               eval_ctx: &eval_ctx,
@@ -300,6 +301,7 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
 struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
   local_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   tree_shaking_flags_mutations: FxHashMap<StmtInfoIdx, StmtEvalFlags>,
+  static_import_cycle_cache: FxHashMap<ModuleIdx, bool>,
   side_effect_free_call_expr_node_ids: FxHashSet<NodeId>,
   immutable_ctx: CrossModuleOptimizationImmutableCtx<'a, 'ast>,
   toplevel_stmt_idx: StmtInfoIdx,
@@ -418,9 +420,12 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
         // whose export binding is later reassigned would, at the call site, invoke the
         // replacement (which may have side effects), so the call must not be dropped. This
         // mirrors what finalization checks for identifier callees.
-        let is_free = symbol_ref
-          .is_side_effect_free_function(self.immutable_ctx.symbols, self.immutable_ctx.modules)
-          && symbol_ref.is_not_reassigned(self.immutable_ctx.symbols);
+        let is_free = symbol_ref.is_side_effect_free_function_with_cycle_cache(
+          self.immutable_ctx.symbols,
+          self.immutable_ctx.modules,
+          self.immutable_ctx.module_idx,
+          &mut self.static_import_cycle_cache,
+        ) && symbol_ref.is_not_reassigned(self.immutable_ctx.symbols);
         let is_annotation_only = is_free
           && self
             .immutable_ctx

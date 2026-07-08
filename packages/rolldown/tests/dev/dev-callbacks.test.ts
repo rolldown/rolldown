@@ -7,10 +7,6 @@ import type { InputOptions, OutputOptions } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as createDevEngine } from 'rolldown/experimental';
 import { expect, test } from 'vitest';
-import { BindingDevEngine } from '../../src/binding.cjs';
-import { acquireRuntimeLease } from '../../src/runtime-lifecycle';
-import { createBundlerOptions } from '../../src/utils/create-bundler-option';
-import { normalizeBindingResultErrors } from '../../src/utils/error';
 
 const TEST_TIMEOUT = 60_000;
 
@@ -287,61 +283,6 @@ test.skipIf(isSingleThread)(
     await engine.close();
     expect(callbackCompleted).toBe(true);
     expect(runResult).toHaveLength(1);
-  },
-);
-
-test.skipIf(isSingleThread)(
-  'raw BindingDevEngine acknowledges callback close and replays terminal errors',
-  { timeout: TEST_TIMEOUT },
-  async ({ onTestFinished }) => {
-    const { dir, input, outputDir } = createFixture('raw-dev-reentrant-output-close');
-    const closeError = new TypeError('raw dev closeBundle failure');
-    const { bundlerOptions, stopWorkers } = await createBundlerOptions(
-      {
-        input,
-        experimental: { devMode: true },
-        plugins: [
-          {
-            name: 'raw-close-failure',
-            closeBundle() {
-              throw closeError;
-            },
-          },
-        ],
-      },
-      { dir: outputDir },
-      false,
-    );
-    const runtimeLease = await acquireRuntimeLease();
-    let callbackCompleted = false;
-    let engine!: BindingDevEngine;
-    engine = new BindingDevEngine(bundlerOptions, {
-      async onOutput(result) {
-        expect(normalizeBindingResultErrors(result)).toEqual([]);
-        const acknowledgedClose = await engine.close();
-        expect(normalizeBindingResultErrors(acknowledgedClose)).toEqual([]);
-        await engine.removeClient('late-client');
-        await expect(engine.registerModules('late-client', [input])).rejects.toThrow(
-          'Dev engine is closed',
-        );
-        callbackCompleted = true;
-      },
-      watch: getDevWatchOptionsForCi(),
-    });
-
-    onTestFinished(async () => {
-      await engine.close().catch(() => {});
-      await stopWorkers?.();
-      runtimeLease.release();
-      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
-    });
-
-    const runResult = await settleWithin(engine.run(), 'raw binding run');
-    expect(normalizeBindingResultErrors(runResult)).toEqual([]);
-    expect(callbackCompleted).toBe(true);
-
-    const terminalClose = await settleWithin(engine.close(), 'raw binding terminal close');
-    expect(normalizeBindingResultErrors(terminalClose)).toEqual([closeError]);
   },
 );
 

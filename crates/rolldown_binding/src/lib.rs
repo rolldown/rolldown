@@ -116,6 +116,7 @@ mod async_runtime_lease {
       }
     }
 
+    #[cfg(test)]
     pub fn acquire_lease(
       &self,
       is_cancelled: impl Fn() -> bool,

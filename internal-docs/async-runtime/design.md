@@ -197,12 +197,52 @@ The existing Tokio runtime remains the default and is selected by the
    Delivery acknowledgement and failure are tracked per host attempt and
    internal dispatch. One host failure cannot invalidate another host's
    accepted or delayed attempt. Only the last unserviced accepting attempt may
-   begin recovery, and that transition closes the old dispatch to newly
-   registering hosts before requesting one exact replacement. If every attempt
-   for that replacement also fails, the executor cancels the coalesced queued
-   work under the normal generation and panic-containment boundaries. This
-   bounds scheduler failure without requiring an unrelated later wake, while
-   future submissions can start a new dispatch chain.
+   begin recovery. Every registry transition to `Cancelling` emits an exact
+   failure capability containing the internal dispatch and its failure epoch.
+   Reopening that dispatch for an armed rebroadcast advances the epoch. The
+   executor validates the complete capability while holding the scheduler-idle
+   mutex before it consumes the pending dispatch, so a delayed completion from
+   an older epoch cannot cancel a rebroadcast already accepted in a newer one.
+   The executor consumes a current old capability and reserves its one exact
+   replacement under the same mutex, so a newly registering host can only join
+   the tagged replacement and cannot publish an untagged dispatch in between.
+   Publication start and completion are coordinated per internal capability
+   under that mutex. A registration arriving while the capability is being
+   broadcast requests one coalesced rebroadcast from the existing publication
+   owner; an older `Unavailable` result therefore cannot retire a capability
+   that the later host request accepted. If the older broadcast returns
+   `Failed`, the owner reopens only that exact closed registry epoch after its
+   publications and host references reach zero, then rebroadcasts the same
+   capability. Rebroadcasting a tagged replacement never allocates a second
+   replacement. If no rebroadcast is armed, removing the failed publication
+   owner and reserving its replacement or claiming terminal cancellation are
+   one scheduler-locked transition. A late host request therefore either joins
+   the old owner before completion, joins the reserved replacement afterward,
+   or observes cancellation; it cannot create a fresh owner for the closed
+   registry dispatch between those decisions. Exact registry cancellation
+   remains RAII-owned while any failed-dispatch action publishes the reserved
+   replacement, and removes state only when both dispatch and epoch still
+   match. A nested replacement unwind therefore retires the old closed epoch
+   without consuming the still-retryable replacement.
+   The executor catches a host-dispatch unwind at the publication-owner
+   boundary: an already-armed rebroadcast runs under that owner before the
+   original panic resumes. A scoped payload owner keeps that first panic
+   authoritative while scheduler resolution and every nested recovery
+   publication run under another unwind boundary. Later payloads, including
+   payloads with panicking destructors, are discarded through the contained
+   payload-drop path before the first panic resumes. Without an armed request,
+   or after stop or terminal cancellation begins, unwind cleanup releases the
+   owner without retrying.
+   Registry publication owners remain RAII-scoped, and the registry allocates
+   every host delivery capability and required output capacity before mutating
+   any physical delivery slot, preventing a partial allocation failure from
+   leaving an undispatched slot occupied. If every attempt for the replacement
+   also fails without a newly armed request, the executor claims terminal
+   cancellation while retiring that publication under the same mutex and
+   cancels the coalesced queued work under the normal generation and
+   panic-containment boundaries.
+   This bounds scheduler failure without requiring an unrelated later wake,
+   while future submissions can start a new dispatch chain.
    The task-host boundary is native-only. Each environment registers a weak
    Node-API threadsafe function whose JavaScript function is null and whose
    custom native callback receives the exact delivery payload on a fresh event

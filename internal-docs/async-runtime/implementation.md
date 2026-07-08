@@ -180,17 +180,70 @@ binary.
   recorded while later provisional hosts are still deciding. The final
   publication returns `Unavailable` only when no attempt or reservation was
   accepted, and `Failed` when all accepted references retired without service.
+  The registry publication count has an unwind guard. Before mutating a host
+  entry, publication reserves every required delivery capability and all output
+  vector capacity while the registry remains locked. An identity-exhaustion
+  panic therefore releases the exact provisional count without leaving an
+  undispatched physical slot or pending capability behind, and a later
+  publication can retry the same internal dispatch.
   Rejection, unregister, and liveness sweep return terminal failures for any
   other coalesced dispatch they retire, so a host cannot strand a newer
   executor capability while rejecting its current physical call. A concurrent
   re-publication of an already-cancelling dispatch also returns `Failed`, never
   `Unavailable`, so it cannot clear the executor capability ahead of recovery.
   Dispatch publication and host-turn admission are serialized by the
-  scheduler-idle mutex. Admission rechecks generation stop while holding that
-  mutex, then consumes the pending capability and publishes the draining role
-  before releasing it, so a stale stopped-generation callback cannot claim a
-  turn and a wake cannot observe the intermediate zero-capability state and
-  publish a duplicate host turn.
+  scheduler-idle mutex. The scheduler also records each in-flight internal
+  capability publication. A new host request for the same capability sets one
+  coalesced republish bit instead of starting an independent dispatcher call.
+  After the host call returns, the publication owner reacquires the mutex and
+  either performs that rebroadcast or retires an `Unavailable` capability while
+  publication start is still excluded. A `Failed` completion with an armed
+  rebroadcast first resets only the exact registry dispatch from `Cancelling`
+  to a fresh pending state after its publication count and host references are
+  both zero. Registry failure notifications carry both the internal dispatch
+  and the current failure epoch; every successful reset advances that epoch.
+  Delayed delivery completion enters the executor with that exact capability.
+  While holding the scheduler-idle mutex, the executor briefly locks the
+  registry to verify that the same epoch is still `Cancelling`, releases the
+  registry lock, and only then mutates executor publication state. The registry
+  never calls back into the scheduler while holding its mutex, preserving the
+  scheduler-before-registry lock order without retaining either registry state
+  or user destructors across the transition. A stale completion can therefore
+  neither clear nor terminally cancel a capability after a later host request
+  joined and successfully rearmed its owner. Without an armed rebroadcast, the
+  owner is removed in the same scheduler-locked transition that validates and
+  consumes the failed capability and either reserves its sole replacement or
+  claims terminal cancellation. Publication admission cannot observe a
+  still-pending, ownerless failed capability between those decisions.
+  The failed-dispatch action frame, whether reached from synchronous
+  publication failure or later delivery failure, owns an exact
+  registry-cancellation guard while it runs that action. Guard cleanup removes
+  the registry entry only if both dispatch and epoch still match. If publishing
+  the reserved replacement unwinds, contained guard cleanup retires only the
+  old `Cancelling` epoch; the replacement remains pending under its original
+  identity and can be retried by a later host request.
+  The dispatch-call owner catches callback unwind, retains the first panic
+  payload in a scoped owner, and services any already-armed rebroadcast before
+  resuming that panic. Scheduler resolution, registry validation, replacement
+  reservation, terminal cancellation, and every nested replacement publication
+  run under a second unwind boundary while that owner remains outside the
+  unwind frame. A later panic is safely discarded through the contained
+  payload-drop path, including when its destructor panics, and the first payload
+  remains authoritative. The scoped owner uses the same contained path if it
+  must be abandoned before resume, so a hostile first payload is never dropped
+  during a later unwind. Without an armed bit, or once stop or terminal
+  cancellation begins, the owner removes its exact publication entry without
+  retrying, so a later registration may retry pending work and shutdown cannot
+  wait on an ownerless publication. Different capabilities may still publish
+  concurrently when a callback consumes an older capability and a bounded-turn
+  continuation starts before the older broadcast returns.
+  Admission rechecks generation stop while holding the mutex, then consumes the
+  pending capability and publishes the draining role before releasing it, so a
+  stale stopped-generation callback cannot claim a turn and a wake cannot
+  observe the intermediate zero-capability state and publish a duplicate host
+  turn. Failed-dispatch recovery uses the same serialization: consuming the
+  failed capability, tagging and reserving its sole replacement, and claiming
+  that replacement's dispatch-call role are one scheduler-locked transition.
   The controller claims the exact delivery, atomically consumes its mapped
   internal capability, and claims the executor's RAII host-turn role while
   holding the lifecycle mutex; shutdown cannot transition from that
@@ -232,16 +285,25 @@ binary.
   dispatch, recovery is suppressed. The last unserviced failure marks the
   dispatch cancelling before releasing the registry lock, preventing a racing
   registration from attaching to the failed capability, then enqueues at most
-  one exact replacement notification. If every attempt for the replacement
-  also fails, the executor temporarily rejects scheduler publications and
-  cancels the affected runnable and blocking queues under the generation's
-  existing contained-drop rules. This settles the original operation without
-  an unrelated wake and then reopens the executor for a later independent
-  dispatch chain. Every invocation of the host
-  dispatcher owns a generation-scoped scheduler role from before the callback
-  starts until it returns. This covers initial queue publication, recovery,
-  host replacement, and bounded-turn continuation even when shutdown cancels
-  the queued work and retires its generation registration concurrently.
+  one exact replacement notification. The executor reserves that replacement
+  before releasing its scheduler-idle mutex, so a concurrent new registration
+  joins the tagged recovery capability through its coalesced republish bit
+  instead of publishing an untagged dispatch. Every such host attempt reuses
+  the same replacement identity. A failed broadcast honors one newly armed bit
+  by reopening and retrying that exact replacement; a subsequent failure
+  without another newly armed request retires its publication owner and claims
+  terminal cancellation atomically under the same mutex. Terminal cancellation
+  temporarily rejects scheduler publications and cancels the affected runnable
+  and blocking queues outside the mutex under the generation's existing
+  contained-drop rules. This settles the original operation without an
+  unrelated wake and then reopens the executor for a later independent dispatch
+  chain. Every invocation of the host dispatcher owns a generation-scoped
+  scheduler role from before the callback starts until it returns or its
+  original panic resumes. One owner may perform multiple coalesced broadcasts
+  of the same internal capability under that role. This covers initial queue
+  publication, recovery, host replacement, and bounded-turn continuation even
+  when shutdown cancels the queued work and retires its generation registration
+  concurrently.
   A bounded host turn releases queue-drain exclusivity before requesting its
   continuation, but retains a separate active host-turn role until that host
   dispatch call returns. These roles keep every `Runnable::run`, async-task's

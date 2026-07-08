@@ -7,7 +7,7 @@ use std::{
   fmt,
   future::Future,
   mem::ManuallyDrop,
-  panic::{AssertUnwindSafe, catch_unwind},
+  panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
   pin::Pin,
   sync::{
     Arc, Condvar, LazyLock, Mutex, Weak,
@@ -355,6 +355,35 @@ fn discard_panic_payload(payload: Box<dyn Any + Send + 'static>) {
   }
 }
 
+#[derive(Default)]
+struct RetainedPanicPayload(Option<Box<dyn Any + Send + 'static>>);
+
+impl RetainedPanicPayload {
+  fn capture(&mut self, payload: Box<dyn Any + Send + 'static>) {
+    if self.0.is_some() {
+      discard_panic_payload(payload);
+    } else {
+      self.0 = Some(payload);
+    }
+  }
+
+  fn is_some(&self) -> bool {
+    self.0.is_some()
+  }
+
+  fn resume(mut self) -> ! {
+    resume_unwind(self.0.take().expect("a retained panic payload must remain owned"))
+  }
+}
+
+impl Drop for RetainedPanicPayload {
+  fn drop(&mut self) {
+    if let Some(payload) = self.0.take() {
+      discard_panic_payload(payload);
+    }
+  }
+}
+
 fn catch_unwind_contained<T>(function: impl FnOnce() -> T) -> Option<T> {
   match catch_unwind(AssertUnwindSafe(function)) {
     Ok(value) => Some(value),
@@ -437,7 +466,15 @@ thread_local! {
   static CURRENT_THREAD_DISPATCH_PUBLICATION_BLOCKED_TEST_HOOK:
     std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
       const { std::cell::RefCell::new(None) };
+  static CURRENT_THREAD_DISPATCH_RECOVERY_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
+  static CURRENT_THREAD_FAILED_PUBLICATION_RETIRED_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
   static CURRENT_THREAD_DISPATCH_CALL_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+    const { std::cell::RefCell::new(None) };
+  static CURRENT_THREAD_DISPATCH_RETURNED_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
     const { std::cell::RefCell::new(None) };
   static DEPENDENCY_PREDICATE_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
     const { std::cell::RefCell::new(None) };
@@ -508,8 +545,35 @@ fn run_current_thread_dispatch_publication_blocked_test_hook() {
 }
 
 #[cfg(all(test, not(target_family = "wasm")))]
+fn run_current_thread_dispatch_recovery_test_hook() {
+  if let Some(hook) =
+    CURRENT_THREAD_DISPATCH_RECOVERY_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
+    hook();
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_current_thread_failed_publication_retired_test_hook() {
+  if let Some(hook) =
+    CURRENT_THREAD_FAILED_PUBLICATION_RETIRED_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
+    hook();
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
 fn run_current_thread_dispatch_call_test_hook() {
   if let Some(hook) = CURRENT_THREAD_DISPATCH_CALL_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_current_thread_dispatch_returned_test_hook() {
+  if let Some(hook) =
+    CURRENT_THREAD_DISPATCH_RETURNED_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
     hook();
   }
 }
@@ -1931,6 +1995,7 @@ struct CurrentThreadExecutor {
   /// while the affected runnable and blocking queues are cancelled.
   cancelling_failed_dispatch: AtomicBool,
   task_dispatch: fn(u64) -> CurrentThreadHostDispatchResult,
+  task_drivers: &'static CurrentThreadTaskDriverRegistry,
   metrics: Arc<RuntimeMetrics>,
   // Deadlock detection (wake-path §6(d)). `threadless`: no second thread can
   // EVER deliver a wake to a parked `block_on`, so a park decision with an
@@ -1962,6 +2027,12 @@ struct CurrentThreadQueue {
 struct CurrentThreadSchedulerState {
   active_host_turns: usize,
   active_dispatch_calls: usize,
+  dispatch_publications: Vec<CurrentThreadDispatchPublication>,
+}
+
+struct CurrentThreadDispatchPublication {
+  dispatch: u64,
+  republish_requested: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1972,10 +2043,21 @@ enum CurrentThreadDispatchRequest {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct CurrentThreadTaskDispatchFailure {
+  dispatch: u64,
+  epoch: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum CurrentThreadHostDispatchResult {
   Accepted,
   Unavailable,
-  Failed,
+  Failed(CurrentThreadTaskDispatchFailure),
+}
+
+enum CurrentThreadDispatchPublicationStep {
+  Republish,
+  Complete(Option<CurrentThreadHostDispatchResult>),
 }
 
 struct CurrentThreadHostTurn {
@@ -2019,13 +2101,36 @@ impl Drop for CurrentThreadHostTurn {
 
 struct CurrentThreadDispatchCall<'a> {
   executor: &'a CurrentThreadExecutor,
+  publication: Option<u64>,
   _generation: RuntimeGenerationGuard,
+}
+
+impl CurrentThreadDispatchCall<'_> {
+  fn finish_publication(&mut self, scheduler: &mut CurrentThreadSchedulerState) {
+    let dispatch =
+      self.publication.expect("the CurrentThread dispatch call must own a publication");
+    let index = scheduler
+      .dispatch_publications
+      .iter()
+      .position(|publication| publication.dispatch == dispatch)
+      .expect("the CurrentThread dispatch publication must remain registered");
+    scheduler.dispatch_publications.swap_remove(index);
+    self.publication = None;
+  }
 }
 
 impl Drop for CurrentThreadDispatchCall<'_> {
   fn drop(&mut self) {
     let mut scheduler =
       self.executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Some(dispatch) = self.publication.take()
+      && let Some(index) = scheduler
+        .dispatch_publications
+        .iter()
+        .position(|publication| publication.dispatch == dispatch)
+    {
+      scheduler.dispatch_publications.swap_remove(index);
+    }
     scheduler.active_dispatch_calls = scheduler
       .active_dispatch_calls
       .checked_sub(1)
@@ -2039,6 +2144,39 @@ struct CurrentThreadDispatchCancellationGuard<'a>(&'a CurrentThreadExecutor);
 impl Drop for CurrentThreadDispatchCancellationGuard<'_> {
   fn drop(&mut self) {
     self.0.cancelling_failed_dispatch.store(false, Ordering::Release);
+  }
+}
+
+enum CurrentThreadDispatchFailureAction<'a> {
+  None,
+  Cancel(CurrentThreadDispatchCancellationGuard<'a>),
+  Publish { dispatch: u64, call: CurrentThreadDispatchCall<'a> },
+}
+
+struct CurrentThreadDispatchFailureRecovery<'a> {
+  action: CurrentThreadDispatchFailureAction<'a>,
+  _registry_cancellation: CurrentThreadRegistryCancellationGuard<'a>,
+}
+
+struct CurrentThreadRegistryCancellationGuard<'a> {
+  registry: &'a CurrentThreadTaskDriverRegistry,
+  failure: Option<CurrentThreadTaskDispatchFailure>,
+}
+
+impl CurrentThreadRegistryCancellationGuard<'_> {
+  fn new(
+    registry: &CurrentThreadTaskDriverRegistry,
+    failure: CurrentThreadTaskDispatchFailure,
+  ) -> CurrentThreadRegistryCancellationGuard<'_> {
+    CurrentThreadRegistryCancellationGuard { registry, failure: Some(failure) }
+  }
+}
+
+impl Drop for CurrentThreadRegistryCancellationGuard<'_> {
+  fn drop(&mut self) {
+    if let Some(failure) = self.failure.take() {
+      let _ = catch_unwind_contained(|| self.registry.finish_cancellation(failure));
+    }
   }
 }
 
@@ -2142,6 +2280,7 @@ impl CurrentThreadExecutor {
       recovery_dispatch: AtomicU64::new(0),
       cancelling_failed_dispatch: AtomicBool::new(false),
       task_dispatch: dispatch_current_thread_tasks,
+      task_drivers: &CURRENT_THREAD_TASK_DRIVERS,
       metrics,
       threadless,
       park_deadline,
@@ -2381,8 +2520,18 @@ impl CurrentThreadExecutor {
     metrics: Arc<RuntimeMetrics>,
     task_dispatch: fn(u64) -> CurrentThreadHostDispatchResult,
   ) -> Self {
+    Self::with_task_dispatch_registry(metrics, task_dispatch, &CURRENT_THREAD_TASK_DRIVERS)
+  }
+
+  #[cfg(test)]
+  fn with_task_dispatch_registry(
+    metrics: Arc<RuntimeMetrics>,
+    task_dispatch: fn(u64) -> CurrentThreadHostDispatchResult,
+    task_drivers: &'static CurrentThreadTaskDriverRegistry,
+  ) -> Self {
     let mut executor = Self::new(metrics);
     executor.task_dispatch = task_dispatch;
+    executor.task_drivers = task_drivers;
     executor
   }
 
@@ -2424,22 +2573,27 @@ impl CurrentThreadExecutor {
     let _ = self.request_drain_with(next_current_thread_dispatch_id);
   }
 
-  fn request_drain_with(
-    self: &Arc<Self>,
-    next_dispatch: impl FnOnce() -> u64,
-  ) -> CurrentThreadDispatchRequest {
+  fn lock_scheduler_for_publication(
+    &self,
+  ) -> std::sync::MutexGuard<'_, CurrentThreadSchedulerState> {
     #[cfg(all(test, not(target_family = "wasm")))]
-    let mut scheduler = match self.scheduler_idle_lock.try_lock() {
+    match self.scheduler_idle_lock.try_lock() {
       Ok(scheduler) => scheduler,
       Err(std::sync::TryLockError::WouldBlock) => {
         run_current_thread_dispatch_publication_blocked_test_hook();
         self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
       }
       Err(std::sync::TryLockError::Poisoned(error)) => error.into_inner(),
-    };
+    }
     #[cfg(any(not(test), target_family = "wasm"))]
-    let mut scheduler =
-      self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+  }
+
+  fn request_drain_with(
+    self: &Arc<Self>,
+    next_dispatch: impl FnOnce() -> u64,
+  ) -> CurrentThreadDispatchRequest {
+    let mut scheduler = self.lock_scheduler_for_publication();
     if self.stop.is_stopping() || self.cancelling_failed_dispatch.load(Ordering::Acquire) {
       return CurrentThreadDispatchRequest::Unavailable;
     }
@@ -2454,48 +2608,147 @@ impl CurrentThreadExecutor {
     {
       return CurrentThreadDispatchRequest::Coalesced;
     }
-    let _dispatch_call = self.claim_dispatch_call(&mut scheduler);
+    let dispatch_call = self
+      .begin_host_dispatch_publication(&mut scheduler, dispatch)
+      .expect("a fresh CurrentThread dispatch must own its publication");
     drop(scheduler);
-    #[cfg(all(test, not(target_family = "wasm")))]
-    run_current_thread_dispatch_call_test_hook();
-    match (self.task_dispatch)(dispatch) {
-      CurrentThreadHostDispatchResult::Accepted => {
-        return CurrentThreadDispatchRequest::Accepted;
+    match self.publish_host_dispatch(dispatch, dispatch_call) {
+      CurrentThreadHostDispatchResult::Accepted | CurrentThreadHostDispatchResult::Failed(_) => {
+        CurrentThreadDispatchRequest::Accepted
       }
-      CurrentThreadHostDispatchResult::Failed => {
-        self.cancel_host_dispatch(dispatch);
-        CURRENT_THREAD_TASK_DRIVERS.finish_cancellation(dispatch);
-        return CurrentThreadDispatchRequest::Accepted;
-      }
-      CurrentThreadHostDispatchResult::Unavailable => {}
+      CurrentThreadHostDispatchResult::Unavailable => CurrentThreadDispatchRequest::Unavailable,
     }
-    if self
-      .dispatch_pending
-      .compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire)
-      .is_err()
-    {
-      // A synchronous callback may already have consumed, cancelled, or
-      // superseded this exact capability.
-      return CurrentThreadDispatchRequest::Accepted;
-    }
-    // Wakes are enqueue-only even without a host dispatcher. Polling inline
-    // from an arbitrary wake caller can re-enter a future while it holds an
-    // internal lock. Pure Rust embedders drive queued work explicitly through
-    // `block_on`; host embeddings register a fresh-turn dispatcher.
-    CurrentThreadDispatchRequest::Unavailable
   }
 
   fn claim_dispatch_call<'a>(
     &'a self,
     scheduler: &mut CurrentThreadSchedulerState,
   ) -> CurrentThreadDispatchCall<'a> {
-    scheduler.active_dispatch_calls = scheduler
+    let generation = RuntimeGenerationGuard::enter(self.generation);
+    let active_dispatch_calls = scheduler
       .active_dispatch_calls
       .checked_add(1)
       .expect("CurrentThread active dispatch-call count exhausted");
-    CurrentThreadDispatchCall {
-      executor: self,
-      _generation: RuntimeGenerationGuard::enter(self.generation),
+    scheduler.active_dispatch_calls = active_dispatch_calls;
+    CurrentThreadDispatchCall { executor: self, publication: None, _generation: generation }
+  }
+
+  fn begin_host_dispatch_publication<'a>(
+    &'a self,
+    scheduler: &mut CurrentThreadSchedulerState,
+    dispatch: u64,
+  ) -> Option<CurrentThreadDispatchCall<'a>> {
+    // See internal-docs/async-runtime/implementation.md.
+    if let Some(publication) = scheduler
+      .dispatch_publications
+      .iter_mut()
+      .find(|publication| publication.dispatch == dispatch)
+    {
+      publication.republish_requested = true;
+      return None;
+    }
+    let mut dispatch_call = self.claim_dispatch_call(scheduler);
+    scheduler
+      .dispatch_publications
+      .push(CurrentThreadDispatchPublication { dispatch, republish_requested: false });
+    dispatch_call.publication = Some(dispatch);
+    Some(dispatch_call)
+  }
+
+  fn publish_host_dispatch(
+    self: &Arc<Self>,
+    dispatch: u64,
+    mut dispatch_call: CurrentThreadDispatchCall<'_>,
+  ) -> CurrentThreadHostDispatchResult {
+    let mut panic_payload = RetainedPanicPayload::default();
+    loop {
+      let result = match catch_unwind(AssertUnwindSafe(|| {
+        #[cfg(all(test, not(target_family = "wasm")))]
+        run_current_thread_dispatch_call_test_hook();
+        let result = (self.task_dispatch)(dispatch);
+        #[cfg(all(test, not(target_family = "wasm")))]
+        run_current_thread_dispatch_returned_test_hook();
+        result
+      })) {
+        Ok(result) => Some(result),
+        Err(payload) => {
+          panic_payload.capture(payload);
+          None
+        }
+      };
+
+      let step = catch_unwind(AssertUnwindSafe(|| {
+        let (republish, cancelling, failure, result) = {
+          let mut scheduler =
+            self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+          let index = scheduler
+            .dispatch_publications
+            .iter()
+            .position(|publication| publication.dispatch == dispatch)
+            .expect("the CurrentThread dispatch publication must remain registered");
+          let dispatch_remains_pending = self.dispatch_pending.load(Ordering::Acquire) == dispatch;
+          let republish = dispatch_remains_pending
+            && !self.stop.is_stopping()
+            && !self.cancelling_failed_dispatch.load(Ordering::Acquire)
+            && scheduler.dispatch_publications[index].republish_requested;
+          if republish {
+            if let Some(CurrentThreadHostDispatchResult::Failed(failure)) = result {
+              let _ = self.task_drivers.rearm_failed_publication(failure);
+            }
+            scheduler.dispatch_publications[index].republish_requested = false;
+            (true, None, None, result)
+          } else {
+            dispatch_call.finish_publication(&mut scheduler);
+            let failure = if let Some(CurrentThreadHostDispatchResult::Failed(failure)) = result {
+              #[cfg(all(test, not(target_family = "wasm")))]
+              run_current_thread_failed_publication_retired_test_hook();
+              self.begin_host_dispatch_failure_locked(&mut scheduler, failure)
+            } else {
+              None
+            };
+            let cancelling = (result == Some(CurrentThreadHostDispatchResult::Unavailable)
+              && dispatch_remains_pending)
+              .then(|| self.retire_unavailable_host_dispatch_locked(dispatch))
+              .flatten();
+            let result = if result == Some(CurrentThreadHostDispatchResult::Unavailable)
+              && !dispatch_remains_pending
+            {
+              // A synchronous callback may already have consumed, cancelled, or
+              // superseded this exact capability.
+              Some(CurrentThreadHostDispatchResult::Accepted)
+            } else {
+              result
+            };
+            (false, cancelling, failure, result)
+          }
+        };
+
+        if republish {
+          return CurrentThreadDispatchPublicationStep::Republish;
+        }
+        if let Some(cancelling) = cancelling {
+          self.cancel_work_after_host_dispatch_failure_claimed(cancelling);
+        }
+        if let Some(failure) = failure {
+          self.run_host_dispatch_failure(failure.action);
+        }
+        CurrentThreadDispatchPublicationStep::Complete(result)
+      }));
+
+      match step {
+        Ok(CurrentThreadDispatchPublicationStep::Republish) => {}
+        Ok(CurrentThreadDispatchPublicationStep::Complete(result)) => {
+          if panic_payload.is_some() {
+            panic_payload.resume();
+          }
+          return result
+            .expect("a CurrentThread host dispatch without a result must resume its panic");
+        }
+        Err(payload) => {
+          panic_payload.capture(payload);
+          panic_payload.resume();
+        }
+      }
     }
   }
 
@@ -2606,8 +2859,7 @@ impl CurrentThreadExecutor {
     if !self.has_serviceable_work() {
       return;
     }
-    let mut scheduler =
-      self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut scheduler = self.lock_scheduler_for_publication();
     if self.stop.is_stopping()
       || self.cancelling_failed_dispatch.load(Ordering::Acquire)
       || self.draining.load(Ordering::Acquire)
@@ -2624,49 +2876,79 @@ impl CurrentThreadExecutor {
     // A newly registered host joins the existing all-host race through its own
     // delivery token. Reusing the executor capability preserves every other
     // host's accepted attempt and lets old registration tokens fail closed.
-    let _dispatch_call = self.claim_dispatch_call(&mut scheduler);
+    let Some(dispatch_call) = self.begin_host_dispatch_publication(&mut scheduler, dispatch) else {
+      return;
+    };
     drop(scheduler);
-    #[cfg(all(test, not(target_family = "wasm")))]
-    run_current_thread_dispatch_call_test_hook();
-    match (self.task_dispatch)(dispatch) {
-      CurrentThreadHostDispatchResult::Accepted => {}
-      CurrentThreadHostDispatchResult::Failed => {
-        self.cancel_host_dispatch(dispatch);
-        CURRENT_THREAD_TASK_DRIVERS.finish_cancellation(dispatch);
-      }
-      CurrentThreadHostDispatchResult::Unavailable => {
-        self.retire_unavailable_host_dispatch(dispatch);
-      }
-    }
+    let _ = self.publish_host_dispatch(dispatch, dispatch_call);
   }
 
-  fn retire_unavailable_host_dispatch(&self, dispatch: u64) {
+  fn retire_unavailable_host_dispatch_locked(
+    &self,
+    dispatch: u64,
+  ) -> Option<CurrentThreadDispatchCancellationGuard<'_>> {
     if self
       .dispatch_pending
       .compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire)
       .is_err()
     {
-      return;
+      return None;
     }
     if self
       .recovery_dispatch
       .compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire)
       .is_ok()
     {
-      self.cancel_work_after_host_dispatch_failure();
+      self.begin_failed_dispatch_cancellation()
+    } else {
+      None
     }
   }
 
-  fn cancel_host_dispatch(self: &Arc<Self>, dispatch: u64) {
+  fn cancel_host_dispatch(self: &Arc<Self>, failure: CurrentThreadTaskDispatchFailure) {
     // See internal-docs/async-runtime/implementation.md.
+    let failure = {
+      let mut scheduler =
+        self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      self.begin_host_dispatch_failure_locked(&mut scheduler, failure)
+    };
+    if let Some(failure) = failure {
+      self.run_host_dispatch_failure(failure.action);
+    }
+  }
+
+  fn begin_host_dispatch_failure_locked<'a>(
+    &'a self,
+    scheduler: &mut CurrentThreadSchedulerState,
+    failure: CurrentThreadTaskDispatchFailure,
+  ) -> Option<CurrentThreadDispatchFailureRecovery<'a>> {
+    if !self.task_drivers.is_current_failure(failure) {
+      return None;
+    }
+    let registry_cancellation =
+      CurrentThreadRegistryCancellationGuard::new(self.task_drivers, failure);
+    let action = self.begin_host_dispatch_failure_transition_locked(scheduler, failure.dispatch);
+    Some(CurrentThreadDispatchFailureRecovery {
+      action,
+      _registry_cancellation: registry_cancellation,
+    })
+  }
+
+  fn begin_host_dispatch_failure_transition_locked<'a>(
+    &'a self,
+    scheduler: &mut CurrentThreadSchedulerState,
+    dispatch: u64,
+  ) -> CurrentThreadDispatchFailureAction<'a> {
     if dispatch == 0
       || self
         .dispatch_pending
         .compare_exchange(dispatch, 0, Ordering::AcqRel, Ordering::Acquire)
         .is_err()
     {
-      return;
+      return CurrentThreadDispatchFailureAction::None;
     }
+    #[cfg(all(test, not(target_family = "wasm")))]
+    run_current_thread_dispatch_recovery_test_hook();
 
     if self
       .recovery_dispatch
@@ -2675,41 +2957,51 @@ impl CurrentThreadExecutor {
     {
       // The one fresh-turn replacement failed too. Polling inline here would
       // re-enter the host callback, while another retry could spin forever.
-      // Cancel the work represented by the coalesced dispatch instead.
-      self.cancel_work_after_host_dispatch_failure();
-      return;
+      // Claim terminal cancellation before allowing another publication.
+      return self.begin_failed_dispatch_cancellation().map_or(
+        CurrentThreadDispatchFailureAction::None,
+        CurrentThreadDispatchFailureAction::Cancel,
+      );
     }
 
-    if !self.has_serviceable_work() {
-      return;
+    if self.stop.is_stopping()
+      || self.cancelling_failed_dispatch.load(Ordering::Acquire)
+      || self.draining.load(Ordering::Acquire)
+      || !self.has_serviceable_work()
+    {
+      return CurrentThreadDispatchFailureAction::None;
     }
 
-    // The host accepted the original callback but failed before its JavaScript
-    // scheduler could create the fresh turn. Queue exactly one replacement
-    // notification. `task_dispatch` is enqueue-only; it never polls a runnable
-    // on this cancellation stack.
+    // Consume the failed capability and reserve its sole replacement while
+    // publication is excluded. A newly registered host can only join this
+    // tagged replacement, never publish an untagged dispatch in between.
     let replacement = next_current_thread_dispatch_id();
     self.recovery_dispatch.store(replacement, Ordering::Release);
-    match self.request_drain_with(|| replacement) {
-      CurrentThreadDispatchRequest::Accepted => {}
-      CurrentThreadDispatchRequest::Coalesced => {
-        // A wake or newly registered host won the zero-to-pending race. Its
-        // independent dispatch owns recovery from here.
-        let _ = self.recovery_dispatch.compare_exchange(
-          replacement,
-          0,
-          Ordering::AcqRel,
-          Ordering::Acquire,
-        );
+    self.dispatch_pending.store(replacement, Ordering::Release);
+    let dispatch_call = self
+      .begin_host_dispatch_publication(scheduler, replacement)
+      .expect("a reserved CurrentThread replacement must own its publication");
+    CurrentThreadDispatchFailureAction::Publish { dispatch: replacement, call: dispatch_call }
+  }
+
+  #[cfg(test)]
+  fn cancel_host_dispatch_for_test(self: &Arc<Self>, dispatch: u64) {
+    let failure = {
+      let mut scheduler =
+        self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      self.begin_host_dispatch_failure_transition_locked(&mut scheduler, dispatch)
+    };
+    self.run_host_dispatch_failure(failure);
+  }
+
+  fn run_host_dispatch_failure(self: &Arc<Self>, failure: CurrentThreadDispatchFailureAction<'_>) {
+    match failure {
+      CurrentThreadDispatchFailureAction::None => {}
+      CurrentThreadDispatchFailureAction::Cancel(cancelling) => {
+        self.cancel_work_after_host_dispatch_failure_claimed(cancelling);
       }
-      CurrentThreadDispatchRequest::Unavailable => {
-        let owns_recovery = self
-          .recovery_dispatch
-          .compare_exchange(replacement, 0, Ordering::AcqRel, Ordering::Acquire)
-          .is_ok();
-        if owns_recovery && self.dispatch_pending.load(Ordering::Acquire) == 0 {
-          self.cancel_work_after_host_dispatch_failure();
-        }
+      CurrentThreadDispatchFailureAction::Publish { dispatch, call } => {
+        let _ = self.publish_host_dispatch(dispatch, call);
       }
     }
   }
@@ -2732,18 +3024,25 @@ impl CurrentThreadExecutor {
     }
   }
 
-  fn cancel_work_after_host_dispatch_failure(&self) {
+  fn begin_failed_dispatch_cancellation(
+    &self,
+  ) -> Option<CurrentThreadDispatchCancellationGuard<'_>> {
     if self
       .cancelling_failed_dispatch
       .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
       .is_err()
     {
-      return;
+      return None;
     }
-    let _cancelling = CurrentThreadDispatchCancellationGuard(self);
     self.dispatch_pending.store(0, Ordering::Release);
     self.recovery_dispatch.store(0, Ordering::Release);
+    Some(CurrentThreadDispatchCancellationGuard(self))
+  }
 
+  fn cancel_work_after_host_dispatch_failure_claimed(
+    &self,
+    _cancelling: CurrentThreadDispatchCancellationGuard<'_>,
+  ) {
     let queued = {
       let mut queue = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       std::mem::take(&mut queue.runnables)
@@ -2917,7 +3216,7 @@ impl CurrentThreadExecutor {
     };
     self.dispatch_pending.store(0, Ordering::Release);
     self.recovery_dispatch.store(0, Ordering::Release);
-    CURRENT_THREAD_TASK_DRIVERS.retire_for_shutdown();
+    self.task_drivers.retire_for_shutdown();
     for runnable in queued {
       self.metrics.queued_runnables.fetch_sub(1, Ordering::Relaxed);
       // Dropping the last runnable cancels its detached async-task and retires
@@ -2933,6 +3232,10 @@ impl CurrentThreadExecutor {
     while idle.active_host_turns != 0 || idle.active_dispatch_calls != 0 {
       idle = self.scheduler_idle.wait(idle).unwrap_or_else(std::sync::PoisonError::into_inner);
     }
+    debug_assert!(
+      idle.dispatch_publications.is_empty(),
+      "an idle CurrentThread scheduler must not retain dispatch publications"
+    );
   }
 }
 
@@ -4881,7 +5184,7 @@ struct CurrentThreadTaskDriverEntry {
   pending: Option<u64>,
 }
 
-#[derive(Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 enum CurrentThreadDispatchPhase {
   #[default]
   Pending,
@@ -4892,6 +5195,7 @@ enum CurrentThreadDispatchPhase {
 #[derive(Default)]
 struct CurrentThreadDispatchState {
   phase: CurrentThreadDispatchPhase,
+  epoch: u64,
   publications: usize,
   accepted: bool,
   accepted_failure: bool,
@@ -4905,6 +5209,10 @@ impl CurrentThreadDispatchState {
   fn is_cancelling(&self) -> bool {
     self.phase == CurrentThreadDispatchPhase::Cancelling
   }
+
+  fn failure(&self, dispatch: u64) -> CurrentThreadTaskDispatchFailure {
+    CurrentThreadTaskDispatchFailure { dispatch, epoch: self.epoch }
+  }
 }
 
 #[derive(Default)]
@@ -4915,18 +5223,41 @@ struct CurrentThreadTaskDriverRegistryState {
 
 struct CurrentThreadTaskDriverSelection {
   live: Vec<(CurrentThreadTaskDriverId, Arc<dyn CurrentThreadTaskDriver>)>,
-  failed_dispatches: Vec<u64>,
+  failed_dispatches: Vec<CurrentThreadTaskDispatchFailure>,
 }
 
 #[derive(Default)]
 struct CurrentThreadTaskDeliveryCompletion {
-  failed_dispatches: Vec<u64>,
+  failed_dispatches: Vec<CurrentThreadTaskDispatchFailure>,
   redispatch: bool,
 }
 
 struct CurrentThreadTaskDispatchCompletion {
   result: CurrentThreadHostDispatchResult,
-  failed_dispatches: Vec<u64>,
+  failed_dispatches: Vec<CurrentThreadTaskDispatchFailure>,
+}
+
+struct CurrentThreadTaskDispatchPublicationGuard<'a> {
+  registry: &'a CurrentThreadTaskDriverRegistry,
+  dispatch: Option<u64>,
+}
+
+impl CurrentThreadTaskDispatchPublicationGuard<'_> {
+  fn finish(mut self) -> CurrentThreadHostDispatchResult {
+    let dispatch =
+      self.dispatch.expect("the CurrentThread task dispatch publication must remain armed");
+    let result = self.registry.finish_publication(dispatch);
+    self.dispatch = None;
+    result
+  }
+}
+
+impl Drop for CurrentThreadTaskDispatchPublicationGuard<'_> {
+  fn drop(&mut self) {
+    if let Some(dispatch) = self.dispatch.take() {
+      self.registry.abort_publication(dispatch);
+    }
+  }
 }
 
 #[derive(Default)]
@@ -5036,7 +5367,7 @@ impl CurrentThreadTaskDriverRegistry {
   }
 
   fn dispatch_with_completion(&self, dispatch: u64) -> CurrentThreadTaskDispatchCompletion {
-    {
+    let publication = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       let dispatch_state = state.dispatches.entry(dispatch).or_default();
       if dispatch_state.is_serviced() {
@@ -5047,7 +5378,7 @@ impl CurrentThreadTaskDriverRegistry {
       }
       if dispatch_state.is_cancelling() {
         return CurrentThreadTaskDispatchCompletion {
-          result: CurrentThreadHostDispatchResult::Failed,
+          result: CurrentThreadHostDispatchResult::Failed(dispatch_state.failure(dispatch)),
           failed_dispatches: Vec::new(),
         };
       }
@@ -5055,7 +5386,8 @@ impl CurrentThreadTaskDriverRegistry {
         .publications
         .checked_add(1)
         .expect("CurrentThread dispatch publication count exhausted");
-    }
+      CurrentThreadTaskDispatchPublicationGuard { registry: self, dispatch: Some(dispatch) }
+    };
 
     let CurrentThreadTaskDriverSelection { live, mut failed_dispatches } = self.live();
     let deliveries = {
@@ -5069,8 +5401,21 @@ impl CurrentThreadTaskDriverRegistry {
       if dispatch_state.is_serviced() || dispatch_state.is_cancelling() {
         Vec::new()
       } else {
-        let mut deliveries = Vec::new();
-        let mut retired = Vec::new();
+        // Reserve every capability and all output storage before mutating an
+        // entry. If ID allocation unwinds, the publication guard can retire
+        // the barrier without leaving an undispatched physical slot occupied.
+        let mut reserved_deliveries = Vec::with_capacity(live.len());
+        for (id, _) in live.iter().rev() {
+          let Some(entry) = state.entries.iter().find(|entry| entry.id == *id) else {
+            continue;
+          };
+          if entry.delivery.is_none() {
+            reserved_deliveries.push(self.next_delivery(*id, dispatch));
+          }
+        }
+        let mut reserved_deliveries = reserved_deliveries.into_iter();
+        let mut deliveries = Vec::with_capacity(live.len());
+        let mut retired = Vec::with_capacity(live.len());
         let mut accepted_reservation = false;
         for (id, driver) in live.into_iter().rev() {
           let Some(entry) = state.entries.iter_mut().find(|entry| entry.id == id) else {
@@ -5087,17 +5432,24 @@ impl CurrentThreadTaskDriverRegistry {
             accepted_reservation = true;
             continue;
           }
+          let delivery = reserved_deliveries
+            .next()
+            .expect("every available CurrentThread host must have a reserved delivery");
           let pending = entry.pending.take();
           let accepted = pending == Some(dispatch);
           if !accepted && pending.is_some() {
             retired.push(pending);
           }
-          let delivery = self.next_delivery(id, dispatch);
           entry.delivery =
             Some(CurrentThreadTaskDeliveryState { delivery, claimed: false, accepted });
           accepted_reservation |= accepted;
           deliveries.push((id, driver, delivery));
         }
+        let all_reserved_deliveries_installed = reserved_deliveries.next().is_none();
+        debug_assert!(
+          all_reserved_deliveries_installed,
+          "every reserved CurrentThread delivery must be installed"
+        );
         if accepted_reservation {
           state
             .dispatches
@@ -5125,9 +5477,9 @@ impl CurrentThreadTaskDriverRegistry {
       }
     }
 
-    let result = self.finish_publication(dispatch);
+    let result = publication.finish();
     debug_assert!(
-      !failed_dispatches.contains(&dispatch),
+      !failed_dispatches.iter().any(|failure| failure.dispatch == dispatch),
       "the active publication must report its own terminal outcome directly"
     );
     CurrentThreadTaskDispatchCompletion { result, failed_dispatches }
@@ -5163,7 +5515,7 @@ impl CurrentThreadTaskDriverRegistry {
     &self,
     id: CurrentThreadTaskDriverId,
     delivery: CurrentThreadTaskDelivery,
-  ) -> (Option<CurrentThreadTaskDriverEntry>, Vec<u64>) {
+  ) -> (Option<CurrentThreadTaskDriverEntry>, Vec<CurrentThreadTaskDispatchFailure>) {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     let Some(index) = state.entries.iter().position(|entry| {
       entry.id == id && entry.delivery.as_ref().is_some_and(|current| current.delivery == delivery)
@@ -5266,7 +5618,7 @@ impl CurrentThreadTaskDriverRegistry {
     dispatch: u64,
     accepted: bool,
     failed: bool,
-    failures: &mut Vec<u64>,
+    failures: &mut Vec<CurrentThreadTaskDispatchFailure>,
   ) {
     let publications = {
       let Some(dispatch_state) = state.dispatches.get_mut(&dispatch) else {
@@ -5279,14 +5631,15 @@ impl CurrentThreadTaskDriverRegistry {
     if Self::has_dispatch_reference(state, dispatch) || publications != 0 {
       return;
     }
-    let dispatch_state =
-      state.dispatches.get_mut(&dispatch).expect("the dispatch state must remain registered");
+    let Some(dispatch_state) = state.dispatches.get_mut(&dispatch) else {
+      return;
+    };
     if dispatch_state.accepted_failure
       && !dispatch_state.is_serviced()
       && !dispatch_state.is_cancelling()
     {
       dispatch_state.phase = CurrentThreadDispatchPhase::Cancelling;
-      failures.push(dispatch);
+      failures.push(dispatch_state.failure(dispatch));
     } else if !dispatch_state.is_cancelling() {
       state.dispatches.remove(&dispatch);
     }
@@ -5295,7 +5648,7 @@ impl CurrentThreadTaskDriverRegistry {
   fn finish_entry_references(
     state: &mut CurrentThreadTaskDriverRegistryState,
     entry: &CurrentThreadTaskDriverEntry,
-    failures: &mut Vec<u64>,
+    failures: &mut Vec<CurrentThreadTaskDispatchFailure>,
   ) {
     if let Some(delivery) = &entry.delivery {
       Self::finish_dispatch_reference(
@@ -5326,14 +5679,15 @@ impl CurrentThreadTaskDriverRegistry {
     if Self::has_dispatch_reference(&state, dispatch) || publications != 0 {
       return CurrentThreadHostDispatchResult::Accepted;
     }
-    let dispatch_state =
-      state.dispatches.get_mut(&dispatch).expect("the dispatch state must remain registered");
+    let Some(dispatch_state) = state.dispatches.get_mut(&dispatch) else {
+      return CurrentThreadHostDispatchResult::Unavailable;
+    };
     if dispatch_state.is_cancelling() {
-      return CurrentThreadHostDispatchResult::Failed;
+      return CurrentThreadHostDispatchResult::Failed(dispatch_state.failure(dispatch));
     }
     if dispatch_state.accepted_failure && !dispatch_state.is_serviced() {
       dispatch_state.phase = CurrentThreadDispatchPhase::Cancelling;
-      return CurrentThreadHostDispatchResult::Failed;
+      return CurrentThreadHostDispatchResult::Failed(dispatch_state.failure(dispatch));
     }
     let accepted = dispatch_state.accepted || dispatch_state.is_serviced();
     state.dispatches.remove(&dispatch);
@@ -5342,6 +5696,52 @@ impl CurrentThreadTaskDriverRegistry {
     } else {
       CurrentThreadHostDispatchResult::Unavailable
     }
+  }
+
+  fn abort_publication(&self, dispatch: u64) {
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let Some(dispatch_state) = state.dispatches.get_mut(&dispatch) else {
+      return;
+    };
+    let Some(publications) = dispatch_state.publications.checked_sub(1) else {
+      return;
+    };
+    dispatch_state.publications = publications;
+    Self::retire_unreferenced_dispatch(&mut state, Some(dispatch));
+  }
+
+  fn rearm_failed_publication(&self, failure: CurrentThreadTaskDispatchFailure) -> bool {
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let can_rearm = state.dispatches.get(&failure.dispatch).is_some_and(|dispatch_state| {
+      dispatch_state.is_cancelling()
+        && dispatch_state.epoch == failure.epoch
+        && dispatch_state.publications == 0
+    }) && !Self::has_dispatch_reference(&state, failure.dispatch);
+    if !can_rearm {
+      return false;
+    }
+    let dispatch_state = state
+      .dispatches
+      .get_mut(&failure.dispatch)
+      .expect("the exact failed CurrentThread dispatch must remain registered");
+    let epoch = dispatch_state
+      .epoch
+      .checked_add(1)
+      .expect("CurrentThread dispatch failure epoch space exhausted");
+    *dispatch_state = CurrentThreadDispatchState { epoch, ..CurrentThreadDispatchState::default() };
+    true
+  }
+
+  fn is_current_failure(&self, failure: CurrentThreadTaskDispatchFailure) -> bool {
+    self
+      .state
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner)
+      .dispatches
+      .get(&failure.dispatch)
+      .is_some_and(|dispatch_state| {
+        dispatch_state.is_cancelling() && dispatch_state.epoch == failure.epoch
+      })
   }
 
   fn retire_unreferenced_dispatch(
@@ -5372,10 +5772,12 @@ impl CurrentThreadTaskDriverRegistry {
     })
   }
 
-  fn finish_cancellation(&self, dispatch: u64) {
+  fn finish_cancellation(&self, failure: CurrentThreadTaskDispatchFailure) {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    if state.dispatches.get(&dispatch).is_some_and(CurrentThreadDispatchState::is_cancelling) {
-      state.dispatches.remove(&dispatch);
+    if state.dispatches.get(&failure.dispatch).is_some_and(|dispatch_state| {
+      dispatch_state.is_cancelling() && dispatch_state.epoch == failure.epoch
+    }) {
+      state.dispatches.remove(&failure.dispatch);
     }
   }
 
@@ -7325,7 +7727,7 @@ impl RuntimeController {
     }
   }
 
-  fn cancel_current_thread_dispatch(&self, dispatch: u64) {
+  fn cancel_current_thread_dispatch(&self, failure: CurrentThreadTaskDispatchFailure) {
     let executor = {
       let state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       let RuntimeLifecycle::Running(backend) = &state.lifecycle else {
@@ -7337,7 +7739,23 @@ impl RuntimeController {
         RuntimeExecutor::MultiThread(_) => return,
       }
     };
-    executor.cancel_host_dispatch(dispatch);
+    executor.cancel_host_dispatch(failure);
+  }
+
+  #[cfg(test)]
+  fn cancel_current_thread_dispatch_for_test(&self, dispatch: u64) {
+    let executor = {
+      let state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      let RuntimeLifecycle::Running(backend) = &state.lifecycle else {
+        return;
+      };
+      match &backend.executor {
+        RuntimeExecutor::CurrentThread(executor) => Arc::clone(executor),
+        #[cfg(not(target_family = "wasm"))]
+        RuntimeExecutor::MultiThread(_) => return,
+      }
+    };
+    executor.cancel_host_dispatch_for_test(dispatch);
   }
 
   fn drive_current_thread_tasks(&self, delivery: u64) -> bool {
@@ -7659,9 +8077,8 @@ pub fn shutdown() -> Result<(), RuntimeConfigError> {
 }
 
 fn complete_current_thread_task_delivery(completion: CurrentThreadTaskDeliveryCompletion) {
-  for dispatch in completion.failed_dispatches {
-    RUNTIME.cancel_current_thread_dispatch(dispatch);
-    CURRENT_THREAD_TASK_DRIVERS.finish_cancellation(dispatch);
+  for failure in completion.failed_dispatches {
+    RUNTIME.cancel_current_thread_dispatch(failure);
   }
   if completion.redispatch {
     RUNTIME.request_current_thread_drain();
@@ -7745,8 +8162,43 @@ mod tests {
   use super::*;
 
   static CURRENT_THREAD_ADMISSION_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
+  static CURRENT_THREAD_ARMED_PANIC_PUBLICATION_DISPATCHES: LazyLock<Mutex<Vec<u64>>> =
+    LazyLock::new(Mutex::default);
+  static CURRENT_THREAD_ARMED_PANIC_PUBLICATION_ONCE: AtomicBool = AtomicBool::new(false);
   static CURRENT_THREAD_BLOCKING_BUDGET_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
   static CURRENT_THREAD_BUDGET_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
+  static CURRENT_THREAD_INITIAL_PUBLICATION_RACE_DISPATCHES: LazyLock<Mutex<Vec<u64>>> =
+    LazyLock::new(Mutex::default);
+  static CURRENT_THREAD_INTERLEAVED_RECOVERY_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
+  static CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS: LazyLock<CurrentThreadTaskDriverRegistry> =
+    LazyLock::new(CurrentThreadTaskDriverRegistry::default);
+  static CURRENT_THREAD_AUTHORITATIVE_PANIC_DISPATCHES: LazyLock<Mutex<Vec<u64>>> =
+    LazyLock::new(Mutex::default);
+  static CURRENT_THREAD_AUTHORITATIVE_PANIC_DISPATCH_CALLS: AtomicUsize = AtomicUsize::new(0);
+  static CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS: LazyLock<
+    CurrentThreadTaskDriverRegistry,
+  > = LazyLock::new(CurrentThreadTaskDriverRegistry::default);
+  static CURRENT_THREAD_FIRST_HOSTILE_PANIC_DROPS: AtomicUsize = AtomicUsize::new(0);
+  static CURRENT_THREAD_LATER_HOSTILE_PANIC_DROPS: AtomicUsize = AtomicUsize::new(0);
+  static CURRENT_THREAD_NESTED_UNWIND_DISPATCHES: LazyLock<Mutex<Vec<u64>>> =
+    LazyLock::new(Mutex::default);
+  static CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS: LazyLock<CurrentThreadTaskDriverRegistry> =
+    LazyLock::new(CurrentThreadTaskDriverRegistry::default);
+  static CURRENT_THREAD_PANICKING_PUBLICATION_DISPATCHES: LazyLock<Mutex<Vec<u64>>> =
+    LazyLock::new(Mutex::default);
+  static CURRENT_THREAD_PANICKING_PUBLICATION_ONCE: AtomicBool = AtomicBool::new(false);
+  static CURRENT_THREAD_REPUBLISH_REARM_DISPATCHES: LazyLock<Mutex<Vec<u64>>> =
+    LazyLock::new(Mutex::default);
+  static CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_DISPATCHES: LazyLock<Mutex<Vec<u64>>> =
+    LazyLock::new(Mutex::default);
+  static CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS: LazyLock<
+    CurrentThreadTaskDriverRegistry,
+  > = LazyLock::new(CurrentThreadTaskDriverRegistry::default);
+  static CURRENT_THREAD_REPLACEMENT_PUBLICATION_RACE_DISPATCHES: LazyLock<Mutex<Vec<u64>>> =
+    LazyLock::new(Mutex::default);
+  static CURRENT_THREAD_SHUTDOWN_REPUBLISH_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
+  static CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS: LazyLock<CurrentThreadTaskDriverRegistry> =
+    LazyLock::new(CurrentThreadTaskDriverRegistry::default);
   static CURRENT_THREAD_STOPPED_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
 
   thread_local! {
@@ -7923,6 +8375,104 @@ mod tests {
     CurrentThreadHostDispatchResult::Accepted
   }
 
+  fn count_current_thread_interleaved_recovery_host_dispatch(
+    _dispatch: u64,
+  ) -> CurrentThreadHostDispatchResult {
+    CURRENT_THREAD_INTERLEAVED_RECOVERY_HOST_DISPATCHES.fetch_add(1, Ordering::SeqCst);
+    CurrentThreadHostDispatchResult::Accepted
+  }
+
+  fn dispatch_late_registration_current_thread_tasks(
+    dispatch: u64,
+  ) -> CurrentThreadHostDispatchResult {
+    CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS.dispatch(dispatch)
+  }
+
+  fn dispatch_nested_unwind_current_thread_tasks(dispatch: u64) -> CurrentThreadHostDispatchResult {
+    CURRENT_THREAD_NESTED_UNWIND_DISPATCHES.lock().unwrap().push(dispatch);
+    CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS.dispatch(dispatch)
+  }
+
+  fn dispatch_authoritative_panic_current_thread_tasks(
+    dispatch: u64,
+  ) -> CurrentThreadHostDispatchResult {
+    CURRENT_THREAD_AUTHORITATIVE_PANIC_DISPATCHES.lock().unwrap().push(dispatch);
+    match CURRENT_THREAD_AUTHORITATIVE_PANIC_DISPATCH_CALLS.fetch_add(1, Ordering::SeqCst) {
+      0 => std::panic::panic_any(FirstHostileCurrentThreadPanic),
+      2 => std::panic::panic_any(LaterHostileCurrentThreadPanic),
+      _ => CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS.dispatch(dispatch),
+    }
+  }
+
+  fn dispatch_stale_failure_current_thread_tasks(dispatch: u64) -> CurrentThreadHostDispatchResult {
+    CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS.dispatch(dispatch)
+  }
+
+  fn panic_once_current_thread_host_dispatch(dispatch: u64) -> CurrentThreadHostDispatchResult {
+    CURRENT_THREAD_PANICKING_PUBLICATION_DISPATCHES.lock().unwrap().push(dispatch);
+    assert!(
+      !CURRENT_THREAD_PANICKING_PUBLICATION_ONCE.swap(false, Ordering::SeqCst),
+      "injected CurrentThread host dispatch panic"
+    );
+    CurrentThreadHostDispatchResult::Accepted
+  }
+
+  fn panic_once_current_thread_armed_republish_host_dispatch(
+    dispatch: u64,
+  ) -> CurrentThreadHostDispatchResult {
+    CURRENT_THREAD_ARMED_PANIC_PUBLICATION_DISPATCHES.lock().unwrap().push(dispatch);
+    assert!(
+      !CURRENT_THREAD_ARMED_PANIC_PUBLICATION_ONCE.swap(false, Ordering::SeqCst),
+      "injected armed CurrentThread host dispatch panic"
+    );
+    CurrentThreadHostDispatchResult::Accepted
+  }
+
+  fn record_current_thread_republish_rearm_dispatch(
+    dispatch: u64,
+  ) -> CurrentThreadHostDispatchResult {
+    CURRENT_THREAD_REPUBLISH_REARM_DISPATCHES.lock().unwrap().push(dispatch);
+    CurrentThreadHostDispatchResult::Accepted
+  }
+
+  fn reject_initial_current_thread_publication_once(
+    dispatch: u64,
+  ) -> CurrentThreadHostDispatchResult {
+    let mut dispatches = CURRENT_THREAD_INITIAL_PUBLICATION_RACE_DISPATCHES.lock().unwrap();
+    dispatches.push(dispatch);
+    if dispatches.len() == 1 {
+      CurrentThreadHostDispatchResult::Unavailable
+    } else {
+      CurrentThreadHostDispatchResult::Accepted
+    }
+  }
+
+  fn reject_current_thread_replacement_publication_once(
+    dispatch: u64,
+  ) -> CurrentThreadHostDispatchResult {
+    let mut dispatches = CURRENT_THREAD_REPLACEMENT_PUBLICATION_RACE_DISPATCHES.lock().unwrap();
+    dispatches.push(dispatch);
+    if dispatches.len() == 2 {
+      CurrentThreadHostDispatchResult::Unavailable
+    } else {
+      CurrentThreadHostDispatchResult::Accepted
+    }
+  }
+
+  fn fail_current_thread_replacement_publication_once(
+    dispatch: u64,
+  ) -> CurrentThreadHostDispatchResult {
+    CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_DISPATCHES.lock().unwrap().push(dispatch);
+    CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS.dispatch(dispatch)
+  }
+
+  fn count_current_thread_shutdown_republish_host_dispatch(
+    _dispatch: u64,
+  ) -> CurrentThreadHostDispatchResult {
+    CURRENT_THREAD_SHUTDOWN_REPUBLISH_HOST_DISPATCHES.fetch_add(1, Ordering::SeqCst);
+    CurrentThreadHostDispatchResult::Accepted
+  }
+
   fn count_current_thread_stopped_host_dispatch(_dispatch: u64) -> CurrentThreadHostDispatchResult {
     CURRENT_THREAD_STOPPED_HOST_DISPATCHES.fetch_add(1, Ordering::SeqCst);
     CurrentThreadHostDispatchResult::Accepted
@@ -7943,6 +8493,13 @@ mod tests {
       Ok(_) => dispatch,
       Err(pending) => pending,
     }
+  }
+
+  fn current_thread_dispatch_failure(
+    dispatch: u64,
+    epoch: u64,
+  ) -> CurrentThreadTaskDispatchFailure {
+    CurrentThreadTaskDispatchFailure { dispatch, epoch }
   }
 
   fn controller_current_thread_dispatch(controller: &RuntimeController) -> u64 {
@@ -8547,7 +9104,7 @@ mod tests {
 
     executor.schedule(runnable);
     let failed_dispatch = current_thread_dispatch(&executor);
-    executor.cancel_host_dispatch(failed_dispatch);
+    executor.cancel_host_dispatch_for_test(failed_dispatch);
     let recovery_dispatch = current_thread_dispatch(&executor);
     assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), recovery_dispatch);
 
@@ -8973,6 +9530,992 @@ mod tests {
   }
 
   #[test]
+  fn current_thread_dispatch_publication_unwind_releases_owner_and_can_republish() {
+    CURRENT_THREAD_PANICKING_PUBLICATION_DISPATCHES.lock().unwrap().clear();
+    CURRENT_THREAD_PANICKING_PUBLICATION_ONCE.store(true, Ordering::SeqCst);
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      panic_once_current_thread_host_dispatch,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(async { 17usize }, move |runnable| scheduler.schedule(runnable));
+
+    let publication = catch_unwind(AssertUnwindSafe(|| executor.schedule(runnable)));
+    assert!(publication.is_err(), "the injected host dispatch panic must unwind");
+    let dispatch = executor.dispatch_pending.load(Ordering::Acquire);
+    {
+      let scheduler =
+        executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert_eq!(scheduler.active_dispatch_calls, 0);
+      assert!(scheduler.dispatch_publications.is_empty());
+    }
+
+    executor.request_drain_if_queued();
+
+    assert_ne!(dispatch, 0);
+    assert_eq!(
+      *CURRENT_THREAD_PANICKING_PUBLICATION_DISPATCHES.lock().unwrap(),
+      vec![dispatch, dispatch],
+      "a later host registration must retry the same pending capability"
+    );
+    {
+      let scheduler =
+        executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert_eq!(scheduler.active_dispatch_calls, 0);
+      assert!(scheduler.dispatch_publications.is_empty());
+    }
+    executor.drive_host_turn_for_dispatch(dispatch);
+    assert_eq!(futures::executor::block_on(task.fallible()), Some(17));
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_publication_unwind_services_armed_republish_before_resuming_panic() {
+    use std::sync::mpsc;
+
+    CURRENT_THREAD_ARMED_PANIC_PUBLICATION_DISPATCHES.lock().unwrap().clear();
+    CURRENT_THREAD_ARMED_PANIC_PUBLICATION_ONCE.store(true, Ordering::SeqCst);
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      panic_once_current_thread_armed_republish_host_dispatch,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(async { 23usize }, move |runnable| scheduler.schedule(runnable));
+
+    let (called_tx, called_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let publishing_executor = Arc::clone(&executor);
+    let publication = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_CALL_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          called_tx.send(()).unwrap();
+          release_rx.recv().unwrap();
+        }));
+      });
+      catch_unwind(AssertUnwindSafe(|| publishing_executor.schedule(runnable)))
+    });
+    called_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the first publication must pause before calling the host dispatcher");
+
+    let dispatch = executor.dispatch_pending.load(Ordering::Acquire);
+    executor.request_drain_if_queued();
+    let publication_state = {
+      let scheduler =
+        executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      (
+        scheduler.active_dispatch_calls,
+        scheduler.dispatch_publications.len(),
+        scheduler.dispatch_publications[0].dispatch,
+        scheduler.dispatch_publications[0].republish_requested,
+      )
+    };
+    release_tx.send(()).unwrap();
+
+    let publication = publication.join().unwrap();
+    assert!(publication.is_err(), "the original host-dispatch panic must resume");
+    assert_ne!(dispatch, 0);
+    assert_eq!(publication_state, (1, 1, dispatch, true));
+    assert_eq!(
+      *CURRENT_THREAD_ARMED_PANIC_PUBLICATION_DISPATCHES.lock().unwrap(),
+      vec![dispatch, dispatch],
+      "the armed request must retry automatically before the original panic resumes"
+    );
+    {
+      let scheduler =
+        executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert_eq!(scheduler.active_dispatch_calls, 0);
+      assert!(scheduler.dispatch_publications.is_empty());
+    }
+    assert_eq!(executor.dispatch_pending.load(Ordering::Acquire), dispatch);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 1);
+
+    executor.drive_host_turn_for_dispatch(dispatch);
+    assert_eq!(futures::executor::block_on(task.fallible()), Some(23));
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_first_panic_survives_failed_republish_and_nested_recovery_panic() {
+    use std::sync::mpsc;
+
+    CURRENT_THREAD_AUTHORITATIVE_PANIC_DISPATCHES.lock().unwrap().clear();
+    CURRENT_THREAD_AUTHORITATIVE_PANIC_DISPATCH_CALLS.store(0, Ordering::SeqCst);
+    CURRENT_THREAD_FIRST_HOSTILE_PANIC_DROPS.store(0, Ordering::SeqCst);
+    CURRENT_THREAD_LATER_HOSTILE_PANIC_DROPS.store(0, Ordering::SeqCst);
+    {
+      let state = CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert!(state.entries.is_empty());
+      assert!(state.dispatches.is_empty());
+    }
+    let failed_registration = CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS
+      .register(Arc::new(FailDuringAuthoritativePanicPublication));
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch_registry(
+      Arc::clone(&metrics),
+      dispatch_authoritative_panic_current_thread_tasks,
+      &CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(async { 41usize }, move |runnable| scheduler.schedule(runnable));
+
+    let (called_tx, called_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let publishing_executor = Arc::clone(&executor);
+    let publication = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_CALL_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          called_tx.send(()).unwrap();
+          release_rx.recv().unwrap();
+        }));
+      });
+      catch_unwind(AssertUnwindSafe(|| publishing_executor.schedule(runnable)))
+    });
+    called_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the first publication must pause before raising its panic");
+
+    let failed_dispatch = executor.dispatch_pending.load(Ordering::Acquire);
+    executor.request_drain_if_queued();
+    release_tx.send(()).unwrap();
+
+    let payload =
+      publication.join().unwrap().expect_err("the first host-dispatch panic must resume");
+    assert!(
+      payload.is::<FirstHostileCurrentThreadPanic>(),
+      "the first panic must remain authoritative over nested recovery"
+    );
+    assert_eq!(
+      CURRENT_THREAD_LATER_HOSTILE_PANIC_DROPS.load(Ordering::SeqCst),
+      1,
+      "the later hostile payload must be discarded under containment"
+    );
+    assert_eq!(
+      CURRENT_THREAD_FIRST_HOSTILE_PANIC_DROPS.load(Ordering::SeqCst),
+      0,
+      "the authoritative payload must remain owned by the resumed unwind"
+    );
+    discard_panic_payload(payload);
+    assert_eq!(CURRENT_THREAD_FIRST_HOSTILE_PANIC_DROPS.load(Ordering::SeqCst), 1);
+
+    let dispatches = CURRENT_THREAD_AUTHORITATIVE_PANIC_DISPATCHES.lock().unwrap().clone();
+    assert_eq!(dispatches.len(), 3);
+    let replacement_dispatch = dispatches[2];
+    assert_eq!(dispatches[0], failed_dispatch);
+    assert_eq!(dispatches[1], failed_dispatch);
+    assert_ne!(replacement_dispatch, failed_dispatch);
+    assert_eq!(executor.dispatch_pending.load(Ordering::Acquire), replacement_dispatch);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), replacement_dispatch);
+    {
+      let state = CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert!(
+        !state.dispatches.contains_key(&failed_dispatch),
+        "nested recovery unwind must retire the exact failed epoch"
+      );
+      assert!(!state.dispatches.contains_key(&replacement_dispatch));
+    }
+
+    CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS.unregister(failed_registration);
+    let healthy = Arc::new(ManualCurrentThreadTaskDriver::default());
+    let healthy_registration = CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS
+      .register(Arc::clone(&healthy) as Arc<dyn CurrentThreadTaskDriver>);
+    executor.request_drain_if_queued();
+
+    assert_eq!(
+      *CURRENT_THREAD_AUTHORITATIVE_PANIC_DISPATCHES.lock().unwrap(),
+      vec![failed_dispatch, failed_dispatch, replacement_dispatch, replacement_dispatch],
+      "retry must retain the replacement reserved before the nested panic"
+    );
+    let delivery = healthy.deliveries()[0];
+    assert_eq!(
+      CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS.claim_delivery(delivery.capability()),
+      Some(replacement_dispatch)
+    );
+    let host_turn = executor
+      .try_admit_host_turn(replacement_dispatch)
+      .expect("the retried replacement delivery must be admitted");
+    CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS.mark_serviced(replacement_dispatch);
+    host_turn.drive();
+    assert!(
+      CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS
+        .finish_delivery(delivery, false)
+        .failed_dispatches
+        .is_empty()
+    );
+    assert_eq!(futures::executor::block_on(task.fallible()), Some(41));
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+
+    CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS.unregister(healthy_registration);
+    let state = CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS
+      .state
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner);
+    assert!(state.entries.is_empty());
+    assert!(state.dispatches.is_empty());
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_shutdown_suppresses_queued_republish() {
+    use std::sync::mpsc;
+
+    CURRENT_THREAD_SHUTDOWN_REPUBLISH_HOST_DISPATCHES.store(0, Ordering::SeqCst);
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      count_current_thread_shutdown_republish_host_dispatch,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(std::future::pending::<()>(), move |runnable| scheduler.schedule(runnable));
+
+    let (returned_tx, returned_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let publishing_executor = Arc::clone(&executor);
+    let publication = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_RETURNED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          returned_tx.send(()).unwrap();
+          release_rx.recv().unwrap();
+        }));
+      });
+      publishing_executor.schedule(runnable);
+    });
+    returned_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the initial publication must reach its completion barrier");
+
+    let dispatch = executor.dispatch_pending.load(Ordering::Acquire);
+    executor.request_drain_if_queued();
+    let publication_state = {
+      let scheduler =
+        executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      (
+        scheduler.active_dispatch_calls,
+        scheduler.dispatch_publications.len(),
+        scheduler.dispatch_publications[0].dispatch,
+        scheduler.dispatch_publications[0].republish_requested,
+      )
+    };
+    executor.begin_shutdown();
+    release_tx.send(()).unwrap();
+    publication.join().unwrap();
+    executor.wait_until_scheduler_idle();
+
+    assert_ne!(dispatch, 0);
+    assert_eq!(publication_state, (1, 1, dispatch, true));
+    assert_eq!(CURRENT_THREAD_SHUTDOWN_REPUBLISH_HOST_DISPATCHES.load(Ordering::SeqCst), 1);
+    {
+      let scheduler =
+        executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert_eq!(scheduler.active_dispatch_calls, 0);
+      assert!(scheduler.dispatch_publications.is_empty());
+    }
+    assert_eq!(executor.dispatch_pending.load(Ordering::Acquire), 0);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), 0);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+    assert_eq!(futures::executor::block_on(task.fallible()), None);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_republish_bit_rearms_across_successive_broadcasts() {
+    use std::sync::mpsc;
+
+    CURRENT_THREAD_REPUBLISH_REARM_DISPATCHES.lock().unwrap().clear();
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      record_current_thread_republish_rearm_dispatch,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(async { 19usize }, move |runnable| scheduler.schedule(runnable));
+
+    let (first_returned_tx, first_returned_rx) = mpsc::channel();
+    let (release_first_tx, release_first_rx) = mpsc::channel();
+    let (second_returned_tx, second_returned_rx) = mpsc::channel();
+    let (release_second_tx, release_second_rx) = mpsc::channel();
+    let publishing_executor = Arc::clone(&executor);
+    let publication = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_RETURNED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          first_returned_tx.send(()).unwrap();
+          release_first_rx.recv().unwrap();
+          CURRENT_THREAD_DISPATCH_RETURNED_TEST_HOOK.with(|slot| {
+            *slot.borrow_mut() = Some(Box::new(move || {
+              second_returned_tx.send(()).unwrap();
+              release_second_rx.recv().unwrap();
+            }));
+          });
+        }));
+      });
+      publishing_executor.schedule(runnable);
+    });
+    first_returned_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the first publication must reach its completion barrier");
+
+    let dispatch = executor.dispatch_pending.load(Ordering::Acquire);
+    executor.request_drain_if_queued();
+    executor.request_drain_if_queued();
+    let first_publication_state = {
+      let scheduler =
+        executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      (
+        scheduler.active_dispatch_calls,
+        scheduler.dispatch_publications.len(),
+        scheduler.dispatch_publications[0].dispatch,
+        scheduler.dispatch_publications[0].republish_requested,
+      )
+    };
+    release_first_tx.send(()).unwrap();
+    second_returned_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the second publication must reach its completion barrier");
+
+    executor.request_drain_if_queued();
+    executor.request_drain_if_queued();
+    let second_publication_state = {
+      let scheduler =
+        executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      (
+        scheduler.active_dispatch_calls,
+        scheduler.dispatch_publications.len(),
+        scheduler.dispatch_publications[0].dispatch,
+        scheduler.dispatch_publications[0].republish_requested,
+      )
+    };
+    release_second_tx.send(()).unwrap();
+    publication.join().unwrap();
+
+    assert_ne!(dispatch, 0);
+    assert_eq!(first_publication_state, (1, 1, dispatch, true));
+    assert_eq!(second_publication_state, (1, 1, dispatch, true));
+    assert_eq!(
+      *CURRENT_THREAD_REPUBLISH_REARM_DISPATCHES.lock().unwrap(),
+      vec![dispatch, dispatch, dispatch],
+      "each newly armed republish bit must add one broadcast while duplicate requests coalesce"
+    );
+    {
+      let scheduler =
+        executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert_eq!(scheduler.active_dispatch_calls, 0);
+      assert!(scheduler.dispatch_publications.is_empty());
+    }
+    executor.drive_host_turn_for_dispatch(dispatch);
+    assert_eq!(futures::executor::block_on(task.fallible()), Some(19));
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_initial_unavailable_cannot_retire_later_accepted_publication() {
+    use std::sync::mpsc;
+
+    CURRENT_THREAD_INITIAL_PUBLICATION_RACE_DISPATCHES.lock().unwrap().clear();
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      reject_initial_current_thread_publication_once,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(async { 11usize }, move |runnable| scheduler.schedule(runnable));
+
+    let (returned_tx, returned_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let publishing_executor = Arc::clone(&executor);
+    let publication = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_RETURNED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          returned_tx.send(()).unwrap();
+          release_rx.recv().unwrap();
+        }));
+      });
+      publishing_executor.schedule(runnable);
+    });
+    returned_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the unavailable initial publication must reach its completion barrier");
+
+    let dispatch = executor.dispatch_pending.load(Ordering::Acquire);
+    executor.request_drain_if_queued();
+    let attempts_while_unavailable_is_paused =
+      CURRENT_THREAD_INITIAL_PUBLICATION_RACE_DISPATCHES.lock().unwrap().len();
+
+    release_tx.send(()).unwrap();
+    publication.join().unwrap();
+
+    let dispatches = CURRENT_THREAD_INITIAL_PUBLICATION_RACE_DISPATCHES.lock().unwrap().clone();
+    assert_ne!(dispatch, 0);
+    assert_eq!(
+      attempts_while_unavailable_is_paused, 1,
+      "a racing host request must join the in-flight publication instead of retiring it independently"
+    );
+    assert_eq!(
+      dispatches,
+      vec![dispatch, dispatch],
+      "the publication owner must retry the same internal capability after the new host joins"
+    );
+    assert_eq!(executor.dispatch_pending.load(Ordering::Acquire), dispatch);
+    executor.drive_host_turn_for_dispatch(dispatch);
+    assert_eq!(futures::executor::block_on(task.fallible()), Some(11));
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_replacement_unavailable_cannot_cancel_later_accepted_publication() {
+    use std::sync::mpsc;
+
+    CURRENT_THREAD_REPLACEMENT_PUBLICATION_RACE_DISPATCHES.lock().unwrap().clear();
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      reject_current_thread_replacement_publication_once,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(async { 13usize }, move |runnable| scheduler.schedule(runnable));
+    executor.schedule(runnable);
+    let failed_dispatch = executor.dispatch_pending.load(Ordering::Acquire);
+    assert_ne!(failed_dispatch, 0);
+
+    let (returned_tx, returned_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let cancelling_executor = Arc::clone(&executor);
+    let cancellation = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_RETURNED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          returned_tx.send(()).unwrap();
+          release_rx.recv().unwrap();
+        }));
+      });
+      cancelling_executor.cancel_host_dispatch_for_test(failed_dispatch);
+    });
+    returned_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the unavailable replacement publication must reach its completion barrier");
+
+    let replacement_dispatch = executor.dispatch_pending.load(Ordering::Acquire);
+    executor.request_drain_if_queued();
+    let attempts_while_unavailable_is_paused =
+      CURRENT_THREAD_REPLACEMENT_PUBLICATION_RACE_DISPATCHES.lock().unwrap().len();
+
+    release_tx.send(()).unwrap();
+    cancellation.join().unwrap();
+
+    let dispatches = CURRENT_THREAD_REPLACEMENT_PUBLICATION_RACE_DISPATCHES.lock().unwrap().clone();
+    assert_ne!(replacement_dispatch, 0);
+    assert_ne!(replacement_dispatch, failed_dispatch);
+    assert_eq!(
+      attempts_while_unavailable_is_paused, 2,
+      "a racing host request must join the in-flight replacement publication"
+    );
+    assert_eq!(
+      dispatches,
+      vec![failed_dispatch, replacement_dispatch, replacement_dispatch],
+      "republication must reuse the sole replacement capability instead of allocating another"
+    );
+    assert_eq!(executor.dispatch_pending.load(Ordering::Acquire), replacement_dispatch);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), replacement_dispatch);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 1);
+
+    executor.drive_host_turn_for_dispatch(replacement_dispatch);
+    assert_eq!(futures::executor::block_on(task.fallible()), Some(13));
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), 0);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_replacement_failed_retries_armed_republish_before_cancellation() {
+    use std::sync::mpsc;
+
+    CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_DISPATCHES.lock().unwrap().clear();
+    {
+      let state = CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert!(state.entries.is_empty());
+      assert!(state.dispatches.is_empty());
+    }
+    let initial = Arc::new(ManualCurrentThreadTaskDriver::default());
+    let initial_registration = CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS
+      .register(Arc::clone(&initial) as Arc<dyn CurrentThreadTaskDriver>);
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch_registry(
+      Arc::clone(&metrics),
+      fail_current_thread_replacement_publication_once,
+      &CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(async { 29usize }, move |runnable| scheduler.schedule(runnable));
+    executor.schedule(runnable);
+    let failed_dispatch = executor.dispatch_pending.load(Ordering::Acquire);
+    assert_ne!(failed_dispatch, 0);
+    let initial_delivery = initial.deliveries()[0];
+    let failed_completion = CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS
+      .finish_delivery(initial_delivery, true);
+    let [failed_dispatch_failure] = failed_completion.failed_dispatches.as_slice() else {
+      panic!("the initial accepted delivery must report one exact failure");
+    };
+    assert_eq!(failed_dispatch_failure.dispatch, failed_dispatch);
+    let failed_dispatch_failure = *failed_dispatch_failure;
+    CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS.unregister(initial_registration);
+    let failed_registration = CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS
+      .register(Arc::new(FailDuringReplacementRepublishPublication));
+
+    let (returned_tx, returned_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let cancelling_executor = Arc::clone(&executor);
+    let cancellation = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_RETURNED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          returned_tx.send(()).unwrap();
+          release_rx.recv().unwrap();
+        }));
+      });
+      cancelling_executor.cancel_host_dispatch(failed_dispatch_failure);
+    });
+    returned_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the failed replacement publication must reach its completion barrier");
+
+    let replacement_dispatch = executor.dispatch_pending.load(Ordering::Acquire);
+    let healthy = Arc::new(ManualCurrentThreadTaskDriver::default());
+    let healthy_registration = CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS
+      .register(Arc::clone(&healthy) as Arc<dyn CurrentThreadTaskDriver>);
+    executor.request_drain_if_queued();
+    let publication_state = {
+      let scheduler =
+        executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      (
+        scheduler.active_dispatch_calls,
+        scheduler.dispatch_publications.len(),
+        scheduler.dispatch_publications[0].dispatch,
+        scheduler.dispatch_publications[0].republish_requested,
+      )
+    };
+    release_tx.send(()).unwrap();
+    cancellation.join().unwrap();
+
+    assert_ne!(replacement_dispatch, 0);
+    assert_ne!(replacement_dispatch, failed_dispatch);
+    assert_eq!(publication_state, (1, 1, replacement_dispatch, true));
+    assert_eq!(
+      *CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_DISPATCHES.lock().unwrap(),
+      vec![failed_dispatch, replacement_dispatch, replacement_dispatch],
+      "the newly armed host request must receive the exact replacement before cancellation"
+    );
+    assert_eq!(executor.dispatch_pending.load(Ordering::Acquire), replacement_dispatch);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), replacement_dispatch);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 1);
+
+    let delivery = healthy.deliveries()[0];
+    assert_eq!(delivery.dispatch, replacement_dispatch);
+    assert_eq!(
+      CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS
+        .claim_delivery(delivery.capability()),
+      Some(replacement_dispatch)
+    );
+    let host_turn = executor
+      .try_admit_host_turn(replacement_dispatch)
+      .expect("the rearmed replacement delivery must be admitted");
+    CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS.mark_serviced(replacement_dispatch);
+    host_turn.drive();
+    assert!(
+      CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS
+        .finish_delivery(delivery, false)
+        .failed_dispatches
+        .is_empty()
+    );
+    assert_eq!(futures::executor::block_on(task.fallible()), Some(29));
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), 0);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+
+    CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS.unregister(failed_registration);
+    CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS.unregister(healthy_registration);
+    let state = CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS
+      .state
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner);
+    assert!(state.entries.is_empty());
+    assert!(state.dispatches.is_empty());
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_delayed_failure_cannot_cancel_successfully_rearmed_epoch() {
+    use std::sync::mpsc;
+
+    {
+      let state = CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert!(state.entries.is_empty());
+      assert!(state.dispatches.is_empty());
+    }
+    let initial = Arc::new(ManualCurrentThreadTaskDriver::default());
+    let initial_registration = CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS
+      .register(Arc::clone(&initial) as Arc<dyn CurrentThreadTaskDriver>);
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch_registry(
+      Arc::clone(&metrics),
+      dispatch_stale_failure_current_thread_tasks,
+      &CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(async { 43usize }, move |runnable| scheduler.schedule(runnable));
+    executor.schedule(runnable);
+
+    let dispatch = executor.dispatch_pending.load(Ordering::Acquire);
+    let initial_delivery = initial.deliveries()[0];
+    let delayed_completion =
+      CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS.finish_delivery(initial_delivery, true);
+    let [delayed_failure] = delayed_completion.failed_dispatches.as_slice() else {
+      panic!("the initial accepted delivery must report one exact failure");
+    };
+    assert_eq!(*delayed_failure, current_thread_dispatch_failure(dispatch, 0));
+    let delayed_failure = *delayed_failure;
+
+    let (returned_tx, returned_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let publishing_executor = Arc::clone(&executor);
+    let publication = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_RETURNED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          returned_tx.send(()).unwrap();
+          release_rx.recv().unwrap();
+        }));
+      });
+      publishing_executor.request_drain_if_queued();
+    });
+    returned_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the old failed epoch must pause before executor recovery");
+
+    let healthy = Arc::new(ManualCurrentThreadTaskDriver::default());
+    let healthy_registration = CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS
+      .register(Arc::clone(&healthy) as Arc<dyn CurrentThreadTaskDriver>);
+    executor.request_drain_if_queued();
+    release_tx.send(()).unwrap();
+    publication.join().unwrap();
+
+    let healthy_delivery = healthy.deliveries()[0];
+    let delayed_initial_delivery = initial.deliveries()[1];
+    {
+      let state = CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+      let dispatch_state =
+        state.dispatches.get(&dispatch).expect("the rearmed dispatch must remain registered");
+      assert_eq!(dispatch_state.epoch, 1);
+      assert!(!dispatch_state.is_cancelling());
+    }
+
+    executor.cancel_host_dispatch(delayed_failure);
+
+    assert_eq!(
+      executor.dispatch_pending.load(Ordering::Acquire),
+      dispatch,
+      "the delayed old-epoch failure must not consume the rearmed executor capability"
+    );
+    assert_eq!(
+      CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .dispatches
+        .get(&dispatch)
+        .map(|state| (state.epoch, state.phase)),
+      Some((1, CurrentThreadDispatchPhase::Pending)),
+      "the delayed old-epoch cancellation must not remove the accepted rearm"
+    );
+
+    assert_eq!(
+      CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS.claim_delivery(healthy_delivery.capability()),
+      Some(dispatch)
+    );
+    let host_turn =
+      executor.try_admit_host_turn(dispatch).expect("the current-epoch delivery must be admitted");
+    CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS.mark_serviced(dispatch);
+    host_turn.drive();
+    assert!(
+      CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS
+        .finish_delivery(healthy_delivery, false)
+        .failed_dispatches
+        .is_empty()
+    );
+    assert!(
+      CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS
+        .finish_delivery(delayed_initial_delivery, false)
+        .failed_dispatches
+        .is_empty()
+    );
+    assert_eq!(futures::executor::block_on(task.fallible()), Some(43));
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+
+    CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS.unregister(initial_registration);
+    CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS.unregister(healthy_registration);
+    let state = CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS
+      .state
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner);
+    assert!(state.entries.is_empty());
+    assert!(state.dispatches.is_empty());
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_failed_replacement_closes_ownerless_registration_gap() {
+    use std::sync::mpsc;
+
+    {
+      let state = CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert!(state.entries.is_empty());
+      assert!(state.dispatches.is_empty());
+    }
+    let failed_registration = CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS
+      .register(Arc::new(FailDuringLateRegistrationPublication));
+
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch_registry(
+      Arc::clone(&metrics),
+      dispatch_late_registration_current_thread_tasks,
+      &CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(std::future::pending::<()>(), move |runnable| scheduler.schedule(runnable));
+    metrics.runnable_scheduled();
+    executor
+      .queue
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner)
+      .runnables
+      .push_back(runnable);
+    let replacement_dispatch = next_current_thread_dispatch_id();
+    executor.recovery_dispatch.store(replacement_dispatch, Ordering::Release);
+    executor.dispatch_pending.store(replacement_dispatch, Ordering::Release);
+
+    let (owner_retired_tx, owner_retired_rx) = mpsc::channel();
+    let (request_blocked_tx, request_blocked_rx) = mpsc::channel();
+    let publishing_executor = Arc::clone(&executor);
+    let publication = std::thread::spawn(move || {
+      CURRENT_THREAD_FAILED_PUBLICATION_RETIRED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          owner_retired_tx.send(()).unwrap();
+          request_blocked_rx
+            .recv_timeout(Duration::from_secs(2))
+            .expect("the binding-like drain request must wait for the failure transition");
+        }));
+      });
+      publishing_executor.request_drain_if_queued();
+    });
+    owner_retired_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the failed replacement publication must retire its owner");
+
+    // Match the binding sequence: publish the host registration first, then
+    // request service for work that may have accumulated before registration.
+    let healthy = Arc::new(ManualCurrentThreadTaskDriver::default());
+    let healthy_registration = CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS
+      .register(Arc::clone(&healthy) as Arc<dyn CurrentThreadTaskDriver>);
+    let requesting_executor = Arc::clone(&executor);
+    let request = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_PUBLICATION_BLOCKED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          request_blocked_tx.send(()).unwrap();
+        }));
+      });
+      requesting_executor.request_drain_if_queued();
+    });
+
+    publication.join().unwrap();
+    request.join().unwrap();
+
+    assert!(
+      healthy.deliveries().is_empty(),
+      "publication admission must not recreate the closed replacement between owner retirement and terminal cancellation"
+    );
+    assert_eq!(executor.dispatch_pending.load(Ordering::Acquire), 0);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), 0);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+    assert_eq!(futures::executor::block_on(task.fallible()), None);
+    {
+      let scheduler =
+        executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert_eq!(scheduler.active_dispatch_calls, 0);
+      assert!(scheduler.dispatch_publications.is_empty());
+    }
+
+    CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS.unregister(failed_registration);
+
+    let scheduler = Arc::clone(&executor);
+    let (later_runnable, later_task) =
+      async_task::spawn(async { 31usize }, move |runnable| scheduler.schedule(runnable));
+    executor.schedule(later_runnable);
+    let later_dispatch = executor.dispatch_pending.load(Ordering::Acquire);
+    let later_delivery = healthy.deliveries()[0];
+    assert_eq!(
+      CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS.claim_delivery(later_delivery.capability()),
+      Some(later_dispatch)
+    );
+    let host_turn = executor
+      .try_admit_host_turn(later_dispatch)
+      .expect("the later exact delivery must be admitted");
+    CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS.mark_serviced(later_dispatch);
+    host_turn.drive();
+    assert!(
+      CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS
+        .finish_delivery(later_delivery, false)
+        .failed_dispatches
+        .is_empty()
+    );
+    assert_eq!(futures::executor::block_on(later_task.fallible()), Some(31));
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+
+    CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS.unregister(healthy_registration);
+    let state = CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS
+      .state
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner);
+    assert!(state.entries.is_empty());
+    assert!(state.dispatches.is_empty());
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_nested_replacement_unwind_finalizes_old_dispatch_and_retries_same_replacement()
+  {
+    CURRENT_THREAD_NESTED_UNWIND_DISPATCHES.lock().unwrap().clear();
+    {
+      let state = CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert!(state.entries.is_empty());
+      assert!(state.dispatches.is_empty());
+    }
+    CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS.next_delivery.store(0, Ordering::Relaxed);
+    let failed_registration = CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS
+      .register(Arc::new(FailDuringNestedUnwindPublication));
+
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch_registry(
+      Arc::clone(&metrics),
+      dispatch_nested_unwind_current_thread_tasks,
+      &CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS,
+    ));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) =
+      async_task::spawn(async { 37usize }, move |runnable| scheduler.schedule(runnable));
+
+    CURRENT_THREAD_FAILED_PUBLICATION_RETIRED_TEST_HOOK.with(|slot| {
+      *slot.borrow_mut() = Some(Box::new(|| {
+        CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS.next_delivery.store(u64::MAX, Ordering::Relaxed);
+      }));
+    });
+    let publication = catch_unwind(AssertUnwindSafe(|| executor.schedule(runnable)));
+    assert!(
+      publication.is_err(),
+      "replacement delivery-id exhaustion must unwind through the outer failed publication"
+    );
+
+    let dispatches = CURRENT_THREAD_NESTED_UNWIND_DISPATCHES.lock().unwrap().clone();
+    assert_eq!(dispatches.len(), 2);
+    let failed_dispatch = dispatches[0];
+    let replacement_dispatch = dispatches[1];
+    assert_ne!(failed_dispatch, replacement_dispatch);
+    assert_eq!(executor.dispatch_pending.load(Ordering::Acquire), replacement_dispatch);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), replacement_dispatch);
+    {
+      let scheduler =
+        executor.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert_eq!(scheduler.active_dispatch_calls, 0);
+      assert!(scheduler.dispatch_publications.is_empty());
+    }
+    {
+      let state = CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert!(
+        !state.dispatches.contains_key(&failed_dispatch),
+        "outer unwind cleanup must retire the exact old cancelling dispatch"
+      );
+      assert!(
+        !state.dispatches.contains_key(&replacement_dispatch),
+        "the replacement publication guard must release its aborted registry state"
+      );
+    }
+
+    CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS.next_delivery.store(1, Ordering::Relaxed);
+    CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS.unregister(failed_registration);
+    let healthy = Arc::new(ManualCurrentThreadTaskDriver::default());
+    let healthy_registration = CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS
+      .register(Arc::clone(&healthy) as Arc<dyn CurrentThreadTaskDriver>);
+
+    executor.request_drain_if_queued();
+
+    assert_eq!(
+      *CURRENT_THREAD_NESTED_UNWIND_DISPATCHES.lock().unwrap(),
+      vec![failed_dispatch, replacement_dispatch, replacement_dispatch],
+      "retry must reuse the replacement reserved before the nested unwind"
+    );
+    let delivery = healthy.deliveries()[0];
+    assert_eq!(delivery.dispatch, replacement_dispatch);
+    assert_eq!(
+      CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS.claim_delivery(delivery.capability()),
+      Some(replacement_dispatch)
+    );
+    let host_turn = executor
+      .try_admit_host_turn(replacement_dispatch)
+      .expect("the retried replacement delivery must be admitted");
+    CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS.mark_serviced(replacement_dispatch);
+    host_turn.drive();
+    assert!(
+      CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS
+        .finish_delivery(delivery, false)
+        .failed_dispatches
+        .is_empty()
+    );
+    assert_eq!(futures::executor::block_on(task.fallible()), Some(37));
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+
+    CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS.unregister(healthy_registration);
+    let state = CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS
+      .state
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner);
+    assert!(state.entries.is_empty());
+    assert!(state.dispatches.is_empty());
+  }
+
+  #[test]
   fn current_thread_cancelled_host_dispatch_recovers_without_a_later_wake() {
     reset_current_thread_recovery_host_dispatches();
     let metrics = Arc::new(RuntimeMetrics::default());
@@ -8990,7 +10533,7 @@ mod tests {
 
     // Model the host scheduler throwing after Rust accepted the callback but
     // before JavaScript could queue a fresh turn.
-    executor.cancel_host_dispatch(failed_dispatch);
+    executor.cancel_host_dispatch_for_test(failed_dispatch);
     assert_eq!(
       current_thread_recovery_host_dispatches(),
       2,
@@ -9021,10 +10564,10 @@ mod tests {
     let task =
       spawn_registered(&backend, Arc::clone(&metrics), std::future::pending::<()>(), registration);
     let failed_dispatch = current_thread_dispatch(&executor);
-    executor.cancel_host_dispatch(failed_dispatch);
+    executor.cancel_host_dispatch_for_test(failed_dispatch);
     let replacement_dispatch = current_thread_dispatch(&executor);
 
-    executor.cancel_host_dispatch(replacement_dispatch);
+    executor.cancel_host_dispatch_for_test(replacement_dispatch);
 
     assert_eq!(
       current_thread_recovery_host_dispatches(),
@@ -9050,6 +10593,104 @@ mod tests {
       3,
       "terminal cancellation must not permanently close the executor"
     );
+    executor.drive_host_turn();
+    assert_eq!(futures::executor::block_on(later_task).unwrap(), 2);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_recovery_reservation_blocks_new_host_publication() {
+    use std::sync::mpsc;
+
+    CURRENT_THREAD_INTERLEAVED_RECOVERY_HOST_DISPATCHES.store(0, Ordering::SeqCst);
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      count_current_thread_interleaved_recovery_host_dispatch,
+    ));
+    let backend =
+      RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
+
+    let registration = backend.work.try_register_async().expect("the backend must accept work");
+    let task =
+      spawn_registered(&backend, Arc::clone(&metrics), std::future::pending::<()>(), registration);
+    let failed_dispatch = current_thread_dispatch(&executor);
+    assert_eq!(CURRENT_THREAD_INTERLEAVED_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst), 1);
+
+    let (recovery_cleared_tx, recovery_cleared_rx) = mpsc::channel();
+    let (release_recovery_tx, release_recovery_rx) = mpsc::channel();
+    let cancelling_executor = Arc::clone(&executor);
+    let cancellation = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_RECOVERY_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          recovery_cleared_tx.send(()).unwrap();
+          release_recovery_rx.recv().unwrap();
+        }));
+      });
+      cancelling_executor.cancel_host_dispatch_for_test(failed_dispatch);
+    });
+    recovery_cleared_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("failed dispatch cancellation must pause after consuming the old capability");
+
+    let (publication_blocked_tx, publication_blocked_rx) = mpsc::channel();
+    let (publication_done_tx, publication_done_rx) = mpsc::channel();
+    let publishing_executor = Arc::clone(&executor);
+    let publication = std::thread::spawn(move || {
+      CURRENT_THREAD_DISPATCH_PUBLICATION_BLOCKED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          publication_blocked_tx.send(()).unwrap();
+        }));
+      });
+      publishing_executor.request_drain_if_queued();
+      publication_done_tx.send(()).unwrap();
+    });
+
+    if let Err(error) = publication_blocked_rx.recv_timeout(Duration::from_secs(2)) {
+      release_recovery_tx.send(()).unwrap();
+      cancellation.join().unwrap();
+      publication.join().unwrap();
+      panic!("a newly registered host must wait for recovery reservation: {error}");
+    }
+    assert!(
+      matches!(publication_done_rx.try_recv(), Err(mpsc::TryRecvError::Empty)),
+      "the new host must not publish in the consumed-to-recovery gap"
+    );
+    release_recovery_tx.send(()).unwrap();
+
+    cancellation.join().unwrap();
+    publication_done_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    publication.join().unwrap();
+
+    let replacement_dispatch = current_thread_dispatch(&executor);
+    assert_ne!(replacement_dispatch, failed_dispatch);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), replacement_dispatch);
+    assert_eq!(
+      CURRENT_THREAD_INTERLEAVED_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst),
+      3,
+      "the original publication and two host attempts for its one replacement must run"
+    );
+
+    executor.cancel_host_dispatch_for_test(replacement_dispatch);
+
+    assert_eq!(
+      CURRENT_THREAD_INTERLEAVED_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst),
+      3,
+      "failure of the tagged replacement must cancel work without a second replacement"
+    );
+    assert_eq!(executor.dispatch_pending.load(Ordering::Acquire), 0);
+    assert_eq!(executor.recovery_dispatch.load(Ordering::Acquire), 0);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+    assert_eq!(
+      futures::executor::block_on(task).unwrap_err().to_string(),
+      "async runtime stopped before the task completed"
+    );
+
+    let later_registration =
+      backend.work.try_register_async().expect("terminal cancellation must reopen acceptance");
+    let later_task =
+      spawn_registered(&backend, Arc::clone(&metrics), async { 2usize }, later_registration);
+    assert_eq!(CURRENT_THREAD_INTERLEAVED_RECOVERY_HOST_DISPATCHES.load(Ordering::SeqCst), 4);
     executor.drive_host_turn();
     assert_eq!(futures::executor::block_on(later_task).unwrap(), 2);
   }
@@ -9120,13 +10761,13 @@ mod tests {
       async_registration,
     );
     let failed_dispatch = current_thread_dispatch(&executor);
-    executor.cancel_host_dispatch(failed_dispatch);
+    executor.cancel_host_dispatch_for_test(failed_dispatch);
     let replacement_dispatch = current_thread_dispatch(&executor);
 
     let (cancel_done_tx, cancel_done_rx) = mpsc::channel();
     let cancelling_executor = Arc::clone(&executor);
     let cancellation = std::thread::spawn(move || {
-      cancelling_executor.cancel_host_dispatch(replacement_dispatch);
+      cancelling_executor.cancel_host_dispatch_for_test(replacement_dispatch);
       cancel_done_tx.send(()).unwrap();
     });
     drop_entered_rx
@@ -9168,7 +10809,7 @@ mod tests {
     executor.schedule(runnable);
     let failed_dispatch = current_thread_dispatch(&executor);
 
-    executor.cancel_host_dispatch(failed_dispatch);
+    executor.cancel_host_dispatch_for_test(failed_dispatch);
 
     assert_eq!(
       current_thread_one_shot_host_dispatches(),
@@ -9200,6 +10841,27 @@ mod tests {
     deliveries: Mutex<Vec<CurrentThreadTaskDelivery>>,
   }
 
+  struct FailDuringAuthoritativePanicPublication;
+  struct FailDuringLateRegistrationPublication;
+  struct FailDuringNestedUnwindPublication;
+  struct FailDuringReplacementRepublishPublication;
+  struct FirstHostileCurrentThreadPanic;
+  struct LaterHostileCurrentThreadPanic;
+
+  impl Drop for FirstHostileCurrentThreadPanic {
+    fn drop(&mut self) {
+      CURRENT_THREAD_FIRST_HOSTILE_PANIC_DROPS.fetch_add(1, Ordering::SeqCst);
+      panic!("the first retained CurrentThread panic payload was dropped");
+    }
+  }
+
+  impl Drop for LaterHostileCurrentThreadPanic {
+    fn drop(&mut self) {
+      CURRENT_THREAD_LATER_HOSTILE_PANIC_DROPS.fetch_add(1, Ordering::SeqCst);
+      panic!("a later CurrentThread panic payload escaped containment");
+    }
+  }
+
   impl ManualCurrentThreadTaskDriver {
     fn deliveries(&self) -> Vec<CurrentThreadTaskDelivery> {
       self.deliveries.lock().unwrap().clone()
@@ -9209,6 +10871,53 @@ mod tests {
   impl CurrentThreadTaskDriver for ManualCurrentThreadTaskDriver {
     fn dispatch(&self, delivery: CurrentThreadTaskDelivery) -> bool {
       self.deliveries.lock().unwrap().push(delivery);
+      true
+    }
+  }
+
+  impl CurrentThreadTaskDriver for FailDuringAuthoritativePanicPublication {
+    fn dispatch(&self, delivery: CurrentThreadTaskDelivery) -> bool {
+      let completion =
+        CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS.finish_delivery(delivery, true);
+      assert!(
+        completion.failed_dispatches.is_empty(),
+        "the failed delivery must remain provisional until its publication retires"
+      );
+      true
+    }
+  }
+
+  impl CurrentThreadTaskDriver for FailDuringLateRegistrationPublication {
+    fn dispatch(&self, delivery: CurrentThreadTaskDelivery) -> bool {
+      let completion =
+        CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS.finish_delivery(delivery, true);
+      assert!(
+        completion.failed_dispatches.is_empty(),
+        "the failed delivery must remain provisional until its publication retires"
+      );
+      true
+    }
+  }
+
+  impl CurrentThreadTaskDriver for FailDuringNestedUnwindPublication {
+    fn dispatch(&self, delivery: CurrentThreadTaskDelivery) -> bool {
+      let completion = CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS.finish_delivery(delivery, true);
+      assert!(
+        completion.failed_dispatches.is_empty(),
+        "the failed delivery must remain provisional until its publication retires"
+      );
+      true
+    }
+  }
+
+  impl CurrentThreadTaskDriver for FailDuringReplacementRepublishPublication {
+    fn dispatch(&self, delivery: CurrentThreadTaskDelivery) -> bool {
+      let completion =
+        CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS.finish_delivery(delivery, true);
+      assert!(
+        completion.failed_dispatches.is_empty(),
+        "the failed delivery must remain provisional until its publication retires"
+      );
       true
     }
   }
@@ -9300,6 +11009,92 @@ mod tests {
       "a panicking newest host must fall back to a live host"
     );
     assert!(fallback.dispatched.load(Ordering::SeqCst));
+  }
+
+  #[test]
+  fn current_thread_registry_publication_unwind_releases_barrier_and_can_retry() {
+    let registry = CurrentThreadTaskDriverRegistry::default();
+    let first = Arc::new(ManualCurrentThreadTaskDriver::default());
+    let second = Arc::new(ManualCurrentThreadTaskDriver::default());
+    registry.register(Arc::clone(&first) as Arc<dyn CurrentThreadTaskDriver>);
+    registry.register(Arc::clone(&second) as Arc<dyn CurrentThreadTaskDriver>);
+    registry.next_delivery.store(u64::MAX - 1, Ordering::Relaxed);
+
+    let publication = catch_unwind(AssertUnwindSafe(|| registry.dispatch(38)));
+    assert!(
+      publication.is_err(),
+      "delivery-id exhaustion on the second host must unwind the publication"
+    );
+    {
+      let state = registry.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert!(
+        !state.dispatches.contains_key(&38),
+        "unwind cleanup must release the exact registry publication barrier"
+      );
+      assert!(
+        state.entries.iter().all(|entry| entry.delivery.is_none() && entry.pending.is_none()),
+        "failed transactional reservation must leave every physical host slot clean"
+      );
+    }
+    assert!(first.deliveries().is_empty());
+    assert!(second.deliveries().is_empty());
+
+    registry.next_delivery.store(0, Ordering::Relaxed);
+    assert_eq!(registry.dispatch(38), CurrentThreadHostDispatchResult::Accepted);
+    let first_delivery = first.deliveries()[0];
+    let second_delivery = second.deliveries()[0];
+    assert_eq!(registry.claim_delivery(first_delivery.capability()), Some(38));
+    assert_eq!(registry.claim_delivery(second_delivery.capability()), Some(38));
+    registry.mark_serviced(38);
+    assert!(registry.finish_delivery(first_delivery, false).failed_dispatches.is_empty());
+    assert!(registry.finish_delivery(second_delivery, false).failed_dispatches.is_empty());
+
+    assert_eq!(registry.dispatch(39), CurrentThreadHostDispatchResult::Accepted);
+    let first_later = first.deliveries()[1];
+    let second_later = second.deliveries()[1];
+    assert_eq!(registry.claim_delivery(first_later.capability()), Some(39));
+    assert_eq!(registry.claim_delivery(second_later.capability()), Some(39));
+    registry.mark_serviced(39);
+    assert!(registry.finish_delivery(first_later, false).failed_dispatches.is_empty());
+    assert!(registry.finish_delivery(second_later, false).failed_dispatches.is_empty());
+    assert!(
+      registry
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .dispatches
+        .is_empty()
+    );
+    let state = registry.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    assert!(state.entries.iter().all(|entry| entry.delivery.is_none() && entry.pending.is_none()));
+  }
+
+  #[test]
+  fn current_thread_registry_rearms_failed_dispatch_for_new_host() {
+    let registry = CurrentThreadTaskDriverRegistry::default();
+    let failed = Arc::new(ManualCurrentThreadTaskDriver::default());
+    let failed_id = registry.register(Arc::clone(&failed) as Arc<dyn CurrentThreadTaskDriver>);
+    let dispatch = 40;
+
+    assert_eq!(registry.dispatch(dispatch), CurrentThreadHostDispatchResult::Accepted);
+    let failed_delivery = failed.deliveries()[0];
+    let failure = current_thread_dispatch_failure(dispatch, 0);
+    assert_eq!(registry.finish_delivery(failed_delivery, true).failed_dispatches, vec![failure]);
+    registry.unregister(failed_id);
+
+    let replacement = Arc::new(ManualCurrentThreadTaskDriver::default());
+    registry.register(Arc::clone(&replacement) as Arc<dyn CurrentThreadTaskDriver>);
+    assert!(
+      registry.rearm_failed_publication(failure),
+      "a closed unreferenced dispatch must reopen for its armed publication owner"
+    );
+    assert_eq!(registry.dispatch(dispatch), CurrentThreadHostDispatchResult::Accepted);
+    let replacement_delivery = replacement.deliveries()[0];
+    assert_eq!(replacement_delivery.dispatch, dispatch);
+    assert_eq!(registry.claim_delivery(replacement_delivery.capability()), Some(dispatch));
+    registry.mark_serviced(dispatch);
+    assert!(registry.finish_delivery(replacement_delivery, false).failed_dispatches.is_empty());
+    assert!(registry.state.lock().unwrap().dispatches.is_empty());
   }
 
   #[test]
@@ -9418,9 +11213,10 @@ mod tests {
     assert_eq!(registry.dispatch(dispatch), CurrentThreadHostDispatchResult::Accepted);
     let delivery = no_op.deliveries()[0];
     let completion = registry.finish_delivery(delivery, false);
+    let failure = current_thread_dispatch_failure(dispatch, 0);
     assert_eq!(
       completion.failed_dispatches,
-      vec![dispatch],
+      vec![failure],
       "a callback return without an exact capability claim must enter recovery"
     );
     assert!(
@@ -9432,7 +11228,7 @@ mod tests {
         .get(&dispatch)
         .is_some_and(CurrentThreadDispatchState::is_cancelling)
     );
-    registry.finish_cancellation(dispatch);
+    registry.finish_cancellation(failure);
     assert!(registry.state.lock().unwrap().dispatches.is_empty());
   }
 
@@ -9471,9 +11267,10 @@ mod tests {
     // rejecting host still has an unresolved provisional delivery.
     registry.register(Arc::new(FailDuringPublication { registry: Arc::downgrade(&registry) }));
 
+    let failure = current_thread_dispatch_failure(57, 0);
     assert_eq!(
       registry.dispatch(57),
-      CurrentThreadHostDispatchResult::Failed,
+      CurrentThreadHostDispatchResult::Failed(failure),
       "the final provisional rejection must expose the earlier accepted failure"
     );
     assert!(
@@ -9487,10 +11284,10 @@ mod tests {
     );
     assert_eq!(
       registry.dispatch(57),
-      CurrentThreadHostDispatchResult::Failed,
+      CurrentThreadHostDispatchResult::Failed(failure),
       "a racing replacement publication must preserve terminal failure until cancellation runs"
     );
-    registry.finish_cancellation(57);
+    registry.finish_cancellation(failure);
   }
 
   #[test]
@@ -9586,9 +11383,10 @@ mod tests {
     registry.mark_serviced(11);
     let completion = registry.finish_delivery(first, false);
     assert!(completion.redispatch);
+    let failure = current_thread_dispatch_failure(12, 0);
     assert_eq!(
       registry.dispatch(12),
-      CurrentThreadHostDispatchResult::Failed,
+      CurrentThreadHostDispatchResult::Failed(failure),
       "an accepted coalesced capability must report failure if its eventual host queue rejects it"
     );
     assert!(
@@ -9600,7 +11398,7 @@ mod tests {
         .get(&12)
         .is_some_and(CurrentThreadDispatchState::is_cancelling)
     );
-    registry.finish_cancellation(12);
+    registry.finish_cancellation(failure);
     assert!(registry.state.lock().unwrap().dispatches.is_empty());
   }
 
@@ -9613,12 +11411,13 @@ mod tests {
     let old_delivery = old.deliveries()[0];
 
     let completion = registry.unregister(old_id);
+    let failure = current_thread_dispatch_failure(73, 0);
     assert_eq!(
       completion.failed_dispatches,
-      vec![73],
+      vec![failure],
       "unregistering the final accepting host must retire its exact dispatch"
     );
-    registry.finish_cancellation(73);
+    registry.finish_cancellation(failure);
     let replacement = Arc::new(ManualCurrentThreadTaskDriver::default());
     let replacement_id =
       registry.register(Arc::clone(&replacement) as Arc<dyn CurrentThreadTaskDriver>);
@@ -9661,9 +11460,10 @@ mod tests {
 
     let completion = registry.dispatch_with_completion(81);
     assert_eq!(completion.result, CurrentThreadHostDispatchResult::Unavailable);
+    let failure = current_thread_dispatch_failure(82, 0);
     assert_eq!(
       completion.failed_dispatches,
-      vec![82],
+      vec![failure],
       "rejecting the physical slot must surface the accepted coalesced dispatch it retired"
     );
     assert!(
@@ -9675,7 +11475,7 @@ mod tests {
         .get(&82)
         .is_some_and(CurrentThreadDispatchState::is_cancelling)
     );
-    registry.finish_cancellation(82);
+    registry.finish_cancellation(failure);
     assert!(registry.state.lock().unwrap().dispatches.is_empty());
   }
 
@@ -15872,14 +17672,14 @@ mod tests {
     let new_dispatch = current_thread_dispatch(executor);
     assert_ne!(new_dispatch, old_dispatch);
 
-    controller.cancel_current_thread_dispatch(old_dispatch);
+    controller.cancel_current_thread_dispatch_for_test(old_dispatch);
     assert_eq!(
       executor.dispatch_pending.load(Ordering::Acquire),
       new_dispatch,
       "a delayed failure from the retired generation must not release the replacement latch"
     );
 
-    controller.cancel_current_thread_dispatch(new_dispatch);
+    controller.cancel_current_thread_dispatch_for_test(new_dispatch);
     assert_eq!(
       executor.dispatch_pending.load(Ordering::Acquire),
       0,

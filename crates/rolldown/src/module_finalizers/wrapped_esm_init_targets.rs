@@ -4,7 +4,10 @@ use rolldown_common::{
 };
 use rustc_hash::FxHashSet;
 
-use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
+use crate::{
+  stages::generate_stage::order_wrap_state::OrderWrapState,
+  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+};
 
 pub struct WrappedEsmInitTargetContext<'a> {
   pub importer: &'a NormalModule,
@@ -12,6 +15,7 @@ pub struct WrappedEsmInitTargetContext<'a> {
   pub modules: &'a IndexModules,
   pub metas: &'a LinkingMetadataVec,
   pub symbol_db: &'a SymbolRefDb,
+  pub order_wrap_state: &'a OrderWrapState,
 }
 
 /// Resolve the wrapped ESM modules initialized by one static import/re-export record.
@@ -35,14 +39,20 @@ pub fn collect_wrapped_esm_init_targets_for_import_record(
   let Some(importee_idx) = record.resolved_module else { return targets };
   let importee_meta = &ctx.metas[importee_idx];
 
-  if matches!(importee_meta.wrap_kind(), WrapKind::None)
+  if ctx.order_wrap_state.esm_init_target(importee_idx, importee_meta).is_none()
+    && matches!(importee_meta.wrap_kind(), WrapKind::None)
     && importee_meta.is_included
     && forwarding_module_owns_initialization(importee_idx)
   {
     return targets;
   }
 
-  if wrapped_esm_target_is_reachable(importee_meta, &wrapper_is_reachable) {
+  if wrapped_esm_target_is_reachable(
+    importee_idx,
+    importee_meta,
+    ctx.order_wrap_state,
+    &wrapper_is_reachable,
+  ) {
     targets.push(importee_idx);
     return targets;
   }
@@ -106,7 +116,12 @@ fn add_wrapped_esm_init_target_for_symbol(
     return;
   }
   let meta = &ctx.metas[canonical_ref.owner];
-  if wrapped_esm_target_is_reachable(meta, wrapper_is_reachable) {
+  if wrapped_esm_target_is_reachable(
+    canonical_ref.owner,
+    meta,
+    ctx.order_wrap_state,
+    wrapper_is_reachable,
+  ) {
     targets.push(canonical_ref.owner);
     return;
   }
@@ -133,11 +148,14 @@ fn add_wrapped_esm_init_target_for_symbol(
 }
 
 fn wrapped_esm_target_is_reachable(
+  module_idx: ModuleIdx,
   meta: &LinkingMetadata,
+  order_wrap_state: &OrderWrapState,
   wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
 ) -> bool {
-  matches!(meta.wrap_kind(), WrapKind::Esm)
+  order_wrap_state
+    .esm_init_target(module_idx, meta)
+    .is_some_and(|target| wrapper_is_reachable(target.wrapper_ref))
     && meta.is_included
-    && meta.wrapper_ref.is_some_and(wrapper_is_reachable)
     && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)
 }

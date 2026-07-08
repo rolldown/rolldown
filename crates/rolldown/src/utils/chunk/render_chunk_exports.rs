@@ -19,63 +19,54 @@ pub fn render_wrapped_entry_chunk(
   ctx: &GenerateContext<'_>,
   export_mode: Option<&OutputExports>,
 ) -> Option<String> {
-  debug_assert!(ctx.order_wrap_state.is_empty());
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
-    match entry_meta.wrap_kind() {
-      WrapKind::Esm => {
-        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-        // init_xxx
-        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
-          *wrapper_ref,
-          ctx.chunk_idx,
-          &ctx.chunk.canonical_names,
-        );
-        if entry_meta.is_tla_or_contains_tla_dependency {
-          Some(concat_string!("await ", wrapper_ref_name, "();"))
-        } else {
-          Some(concat_string!(wrapper_ref_name, "();"))
+    if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+      let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+
+      let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
+        *wrapper_ref,
+        ctx.chunk_idx,
+        &ctx.chunk.canonical_names,
+      );
+
+      return match ctx.options.format {
+        OutputFormat::Esm => {
+          // export default require_xxx();
+          Some(concat_string!("export default ", wrapper_ref_name.as_str(), "();\n"))
         }
-      }
-      WrapKind::Cjs => {
-        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-
-        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
-          *wrapper_ref,
-          ctx.chunk_idx,
-          &ctx.chunk.canonical_names,
-        );
-
-        match ctx.options.format {
-          OutputFormat::Esm => {
-            // export default require_xxx();
-            Some(concat_string!("export default ", wrapper_ref_name.as_str(), "();\n"))
-          }
-          OutputFormat::Cjs => {
-            if matches!(&export_mode, Some(OutputExports::Named)) {
-              Some(render_object_define_property(
-                "default",
-                &concat_string!(wrapper_ref_name, "()"),
-              ))
-            } else {
-              // module.exports = require_xxx();
-              Some(concat_string!("module.exports = ", wrapper_ref_name, "();\n"))
-            }
-          }
-          OutputFormat::Iife | OutputFormat::Umd => {
-            if matches!(&export_mode, Some(OutputExports::Named)) {
-              Some(render_object_define_property(
-                "default",
-                &concat_string!(wrapper_ref_name, "()"),
-              ))
-            } else {
-              // return require_xxx();
-              Some(concat_string!("return ", wrapper_ref_name, "();\n"))
-            }
+        OutputFormat::Cjs => {
+          if matches!(&export_mode, Some(OutputExports::Named)) {
+            Some(render_object_define_property("default", &concat_string!(wrapper_ref_name, "()")))
+          } else {
+            // module.exports = require_xxx();
+            Some(concat_string!("module.exports = ", wrapper_ref_name, "();\n"))
           }
         }
+        OutputFormat::Iife | OutputFormat::Umd => {
+          if matches!(&export_mode, Some(OutputExports::Named)) {
+            Some(render_object_define_property("default", &concat_string!(wrapper_ref_name, "()")))
+          } else {
+            // return require_xxx();
+            Some(concat_string!("return ", wrapper_ref_name, "();\n"))
+          }
+        }
+      };
+    }
+
+    if let Some(target) = ctx.order_wrap_state.esm_init_target(entry_id, entry_meta) {
+      let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
+        target.wrapper_ref,
+        ctx.chunk_idx,
+        &ctx.chunk.canonical_names,
+      );
+      if target.tla_tainted {
+        Some(concat_string!("await ", wrapper_ref_name, "();"))
+      } else {
+        Some(concat_string!(wrapper_ref_name, "();"))
       }
-      WrapKind::None => None,
+    } else {
+      None
     }
   } else {
     None

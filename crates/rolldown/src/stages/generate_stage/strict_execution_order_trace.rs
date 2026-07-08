@@ -24,7 +24,7 @@ impl GenerateStage<'_> {
   pub(super) fn trace_action_strict_execution_order_plan_ready(
     &self,
     chunk_graph: &ChunkGraph,
-    _order_state: &super::order_wrap_state::OrderWrapState,
+    order_state: &super::order_wrap_state::OrderWrapState,
     analysis: Option<OrderAnalysis>,
   ) {
     let Some(analysis) = analysis else { return };
@@ -131,7 +131,7 @@ impl GenerateStage<'_> {
       .collect();
 
     let init_obligations =
-      self.strict_execution_order_init_obligations(chunk_graph, &rendered_modules);
+      self.strict_execution_order_init_obligations(chunk_graph, &rendered_modules, order_state);
 
     trace_action!(action::StrictExecutionOrderPlanReady {
       action: "StrictExecutionOrderPlanReady",
@@ -148,6 +148,7 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
     rendered_modules: &FxHashSet<ModuleIdx>,
+    order_state: &super::order_wrap_state::OrderWrapState,
   ) -> Vec<action::StrictExecutionOrderInitObligation> {
     let mut obligations = Vec::new();
 
@@ -180,6 +181,7 @@ impl GenerateStage<'_> {
                 modules: &self.link_output.module_table.modules,
                 metas: &self.link_output.metas,
                 symbol_db: &self.link_output.symbol_db,
+                order_wrap_state: order_state,
               },
               rec_idx,
               |wrapper_ref| {

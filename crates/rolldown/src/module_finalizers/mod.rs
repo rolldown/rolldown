@@ -144,9 +144,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     await_if_tla: bool,
   ) -> ast::Expression<'ast> {
     let importee_linking_info = &self.ctx.linking_infos[importee_idx];
+    let target = self
+      .ctx
+      .order_wrap_state
+      .esm_init_target(importee_idx, importee_linking_info)
+      .expect("wrapped ESM init call should have an init target");
     // `init_foo`
     let (wrapper_ref_expr, _) =
-      self.finalized_expr_for_symbol_ref(importee_linking_info.wrapper_ref.unwrap(), false, false);
+      self.finalized_expr_for_symbol_ref(target.wrapper_ref, false, false);
     // `init_foo()`
     let init_call = ast::Expression::new_call_expression_with_pure(
       call_span,
@@ -154,10 +159,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       NONE,
       oxc::allocator::Vec::new_in(&self.ast_factory),
       false,
-      mark_pure_if_noop && importee_linking_info.init_is_noop,
+      mark_pure_if_noop && target.init_is_noop,
       &self.ast_factory,
     );
-    if await_if_tla && importee_linking_info.is_tla_or_contains_tla_dependency {
+    if await_if_tla && target.tla_tainted {
       // `await init_foo()`
       ast::Expression::AwaitExpression(ast::AwaitExpression::boxed(
         SPAN,
@@ -202,6 +207,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         modules: self.ctx.modules,
         metas: self.ctx.linking_infos,
         symbol_db: self.ctx.symbol_db,
+        order_wrap_state: self.ctx.order_wrap_state,
       },
       rec_idx,
       |wrapper_ref| self.wrapper_is_reachable_in_chunk(wrapper_ref),

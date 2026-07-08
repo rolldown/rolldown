@@ -58,16 +58,41 @@ Generate-stage finalization creates an optional side table:
 
 ```rust
 pub struct OrderWrapState {
-  modules: IndexVec<ModuleIdx, Option<OrderWrappedModule>>,
+  modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
+  synthetic_statements: Vec<OrderSyntheticStmt>,
+  import_overlays: FxHashMap<OrderImportKey, OrderImportOverlay>,
   runtime_helpers: RuntimeHelper,
   entry_facades: FxIndexSet<ModuleIdx>,
-  synthetic_symbols: FxIndexSet<SymbolRef>,
+  namespace_requirements: FxIndexSet<SymbolRef>,
 }
 
 pub struct OrderWrappedModule {
   pub wrapper_ref: SymbolRef,
+  pub wrapper_statement: OrderSyntheticStmtIdx,
   pub init_is_noop: bool,
   pub transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
+}
+
+pub struct OrderSyntheticStmt {
+  pub owner: ModuleIdx,
+  pub declared_symbols: Vec<TaggedSymbolRef>,
+  pub referenced_symbols: Vec<SymbolRef>,
+  pub runtime_helpers: RuntimeHelper,
+  pub chunk: Option<ChunkIdx>,
+}
+
+pub struct OrderImportKey {
+  pub importer: ModuleIdx,
+  pub statement: StmtInfoIdx,
+  pub record: ImportRecordIdx,
+}
+
+pub struct OrderImportOverlay {
+  pub referenced_symbols: Vec<SymbolRef>,
+  pub runtime_helpers: RuntimeHelper,
+  pub requires_importer_namespace: bool,
+  pub requires_importee_namespace: bool,
+  pub reexports_dynamic_exports: bool,
 }
 ```
 
@@ -75,8 +100,32 @@ pub struct OrderWrappedModule {
 
 - wrapper symbols and init metadata belong to order state, not `LinkingMetadata`;
 - order state does not contain mutable user-statement inclusion;
+- importer-specific references and runtime helpers belong to `import_overlays`, not the original `StmtInfo`;
+- synthetic declarations participate in chunk assignment and deconfliction through an explicit synthetic-statement API;
 - entry-facade and runtime requirements are explicit outputs of lowering;
+- namespace requirements are recorded independently of whether topology changed;
 - the table is absent for flag-off and empty-plan builds.
+
+### Lowering API boundary
+
+The lowerer receives link data through immutable references. Its mutable output surface contains only the symbol database, chunk graph, and the new order state:
+
+```rust
+pub struct OrderLoweringInput<'a> {
+  pub plan: &'a OrderWrapPlan,
+  pub modules: &'a IndexModules,
+  pub linking: &'a LinkingMetadataVec,
+  pub statements: &'a IndexVec<ModuleIdx, StmtInfos>,
+}
+
+pub struct OrderLoweringOutput<'a> {
+  pub symbols: &'a mut SymbolRefDb,
+  pub chunks: &'a mut ChunkGraph,
+  pub state: &'a mut OrderWrapState,
+}
+```
+
+The API does not expose mutable `LinkingMetadata` or `StmtInfos`. Topology-derived link facts are recomputed by separate finalization passes after lowering; the lowerer communicates new namespace and entry requirements through `OrderWrapState`.
 
 ### Shared init-target view
 
@@ -105,9 +154,23 @@ An accessor resolves at most one ESM init target for a module. Interop ESM wrapp
 
 ### Synthetic symbol inclusion
 
-Order wrappers are emitted synthetic declarations. They do not add a `StmtInfo` that tree shaking must rediscover. Lowering creates the wrapper symbol, records its runtime helper and init dependencies, and marks the symbol as an output dependency through order state. Cross-chunk linking assigns its chunk and import/export aliases exactly as it does for other synthetic chunk symbols.
+Order wrappers are emitted synthetic declarations. They do not add a user `StmtInfo` that tree shaking must rediscover. Lowering creates an `OrderSyntheticStmt`, which is live by construction and provides the declared symbols, referenced symbols, runtime helpers, and eventual chunk assignment that cross-chunk linking and deconfliction require.
 
-The order wrapper body contains only user statements that were already included at the finalization boundary. Excluded ordinary imports cannot gain init calls. Excluded re-exports may retain precomputed forwarding init obligations because those obligations are part of the retained export contract, not reopened statement liveness.
+`used_symbol_refs` remains sealed after lowering, but cross-chunk liveness uses a composite view: link-stage used symbols plus every symbol declared or referenced by a live `OrderSyntheticStmt` or `OrderImportOverlay`. Symbol-to-chunk assignment and root-scope deconfliction explicitly iterate synthetic statements instead of discovering them through link-stage statement tables.
+
+The order wrapper body contains only user statements that were already included at the finalization boundary. An excluded ordinary import may retain a synthetic init obligation only when link-stage `execution_dependencies` already records that its target must execute. Excluded re-exports may retain forwarding init obligations because those obligations are part of the retained export contract. Neither case marks the original user statement as included.
+
+### Import overlay
+
+Changing an importee from eager execution to an order wrapper affects its importers even though their user statements do not become live. The overlay records the synthetic consequences currently repaired by mutating `StmtInfo`:
+
+- wrapper and namespace symbol references;
+- `ReExport` and `ToCommonJs` runtime helpers;
+- dynamic-export re-export behavior;
+- importer and importee namespace requirements;
+- direct and transitive init obligations.
+
+Finalization and cross-chunk linking read the overlay alongside the immutable original import record. Tree shaking and user statement inclusion never read it.
 
 ### Finalizer
 
@@ -119,9 +182,15 @@ The module finalizer has three explicit cases:
 
 The execution-order case reuses the established hoisted `function init_*()` code shape but obtains its symbol and init facts from order state. It never observes an overridden interop kind.
 
+Removed user import/re-export statements are finalized with any matching `OrderImportOverlay`. The finalizer may emit a synthetic init or re-export expression in the removed statement's source position, but it does not restore the original statement.
+
+### Entry prologue
+
+Entry rendering consumes the same init-target view as module finalization. An order-wrapped user or dynamic entry emits an explicit order-wrapper call in its entry prologue. A CJS entry facade retains its CJS `require_*()` trigger, while internal importers target the split implementation chunk. This behavior does not depend on an effective or overridden `WrapKind`.
+
 ### Topology
 
-`OrderWrapState` drives module placement, runtime placement, CJS entry-facade splitting, restored dynamic facades, and final chunk renumbering. `finalize_chunk_plan()` remains the single boundary after which topology-derived metadata is final. Namespace and external-entry facts are recomputed only when order state changes topology.
+`OrderWrapState` drives module placement, runtime placement, CJS entry-facade splitting, restored dynamic facades, and final chunk renumbering. `finalize_chunk_plan()` remains the single boundary after which topology-derived metadata is final. Namespace facts are recomputed when topology changes or when `namespace_requirements` is non-empty; external-entry facts are recomputed when topology changes.
 
 ## Data Flow
 
@@ -134,6 +203,7 @@ link + tree shaking
   -> compute init metadata using LinkingMetadata + OrderWrapState
   -> compute cross-chunk links using the shared EsmInitTarget view
   -> finalize modules using explicit interop/order wrapper cases
+  -> render entry prologues using the shared EsmInitTarget view
   -> emit versioned trace
 ```
 
@@ -147,18 +217,24 @@ Each included module reports:
 - `order_wrapped`;
 - final and entry chunk IDs;
 - the selected wrapper origin and inclusion state when an init target exists;
+- explicit entry triggers, including order-wrapper calls and CJS facade requires;
 - TLA taint.
 
-The fuzzer parser accepts the versioned schema and reconstructs the final event graph from chunk imports, wrapper origins, and init obligations. Trace analysis remains diagnostic; source-versus-bundle execution remains the verdict.
+The fuzzer supports both schemas during migration: version 1 remains readable for installed and historical Rolldown builds, while version 2 is required for the refactored local build. Persisted failure artifacts move to a new artifact schema version because trace identity changes. Generated debug types and behavior tests are updated in the same commit as the action definition.
+
+The version-2 fuzzer parser reconstructs the final event graph from chunk module order, static chunk imports, wrapper origins, entry triggers, and init obligations. Trace analysis remains diagnostic; source-versus-bundle execution remains the verdict.
 
 ## Invariants
 
 - No generate-stage call can change `LinkingMetadata::wrap_kind()`.
 - No order-lowering call can set a user statement inclusion bit.
 - Every order wrapper has exactly one symbol owner and one rendered chunk.
+- Every synthetic declaration participates in symbol-to-chunk assignment and deconfliction.
+- Every import overlay is backed by an immutable link-stage execution dependency or retained re-export contract.
 - Every synthesized init call references a reachable interop or order wrapper.
 - Every ordinary-import init obligation corresponds to a link-stage execution dependency.
-- Every excluded-statement init obligation is a retained re-export obligation.
+- Every excluded-statement init obligation is either a retained re-export obligation or a synthetic obligation backed by an execution dependency.
+- Every order-wrapped entry has an explicit entry trigger.
 - Empty order state is observationally identical to strict execution order being disabled.
 
 ## Verification
@@ -167,9 +243,10 @@ Implementation proceeds test-first:
 
 1. Add a structural test proving strict order leaves every module's interop `WrapKind` unchanged.
 2. Add a structural test proving user statement inclusion is identical before and after lowering.
-3. Port existing strict-order invariants and mixed ESM/CJS fixtures without snapshot weakening.
-4. Upgrade the devtools action and fuzzer parser to version 2.
-5. Run installed and local differential campaigns with traced and trace-disabled builds.
-6. Run full Rust, Node, WASI, Vite, formatting, lint, and repository validation.
+3. Add focused tests for importer overlays, synthetic symbol assignment, namespace requirements, and entry prologues.
+4. Port existing strict-order invariants and mixed ESM/CJS fixtures without snapshot weakening.
+5. Upgrade the devtools action and fuzzer parser with dual version support and a new artifact schema.
+6. Run installed and local differential campaigns with traced and trace-disabled builds.
+7. Run full Rust, Node, WASI, Vite, formatting, lint, and repository validation.
 
 The migration is complete only after `override_wrap_kind()`, `hoist_esm_wrapper`, and order-specific reads of interop wrapper fields are removed.

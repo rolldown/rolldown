@@ -111,12 +111,9 @@ pub struct IncludeContext<'a> {
   /// empty before returning. Invariant (debug-asserted at every public entry point): empty
   /// whenever control is outside the engine.
   pending: Vec<WorkItem>,
-  /// Exact-repeat memo for [`handle_include_symbol`]'s canonical-level tail: the tail is a
-  /// deterministic, monotone (insert/enqueue-only) function of `(canonical ref, include
-  /// reason)`, so a repeated pair adds nothing and is skipped — turning O(symbol references)
-  /// tail runs into O(unique (canonical, reason) pairs), in practice ~one per canonical.
-  /// Alias-keyed work (marking `symbol_ref` itself used, property-write retention) runs
-  /// before the memo check and is never skipped.
+  /// Memo for [`handle_include_symbol`]'s canonical-level tail — a deterministic, monotone
+  /// function of `(canonical ref, include reason)`, so exact repeats are skipped. Alias-keyed
+  /// work runs before the memo gate and is never skipped.
   processed_symbol_reasons: FxHashSet<(SymbolRef, SymbolIncludeReason)>,
 }
 
@@ -188,11 +185,8 @@ enum WorkItem {
   Statement(ModuleIdx, StmtInfoIdx),
 }
 
-/// Enqueue a symbol work item. `check_cjs_bailout` is set at sites where the symbol may stand
-/// for a full CJS namespace used opaquely (see [`check_cjs_bailout`]); producers that know the
-/// access is partial (a resolved member expression on a CJS namespace) or internal (wrapper
-/// refs, CJS-interop named exports, runtime symbols) pass `false` to keep CJS tree-shaking
-/// working.
+/// Enqueue a symbol work item. Pass `check_cjs_bailout: false` only when the access is known
+/// to be partial or engine-internal; see [`check_cjs_bailout`].
 fn push_symbol(
   ctx: &mut IncludeContext,
   symbol_ref: SymbolRef,
@@ -235,12 +229,10 @@ pub(super) fn include_symbol_and_check_cjs_bailout(
   debug_assert!(ctx.pending.is_empty(), "public entry points must drain the queue to empty");
 }
 
-/// Check if including this symbol should trigger CJS tree-shaking bailout.
-/// This runs for `WorkItem::Symbol`s pushed with `check_cjs_bailout` — sites where the symbol
-/// is NOT accessed via a resolved member expression on a CJS namespace (i.e., where the full
-/// namespace might be used opaquely). When we know only a specific property is accessed
-/// (member expression with `target_commonjs_exported_symbol`), the producer clears the flag
-/// to allow CJS tree-shaking. Takes the already-resolved canonical of the used symbol.
+/// Check if including this symbol should trigger CJS tree-shaking bailout. Runs for symbols
+/// pushed with `check_cjs_bailout`: sites where the full namespace might be used opaquely.
+/// Producers that resolve a specific property access (`target_commonjs_exported_symbol`)
+/// clear the flag so CJS tree-shaking can work. Takes the already-resolved canonical.
 fn check_cjs_bailout(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
   // If the symbol is a CJS namespace import ref, bail out the target CJS module.
   if let Some(idx) =
@@ -365,10 +357,8 @@ impl LinkStage<'_> {
       let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
       include_cjs_bailout_exports(context, &self.metas, bailout_modules);
 
-      // Only entries not yet included are rescanned: an included entry is settled (inclusion
-      // is monotone), so it leaves `pending_entry_indices` and later iterations shrink to the
-      // dead/undecided tail. An entry sharing its module with an already-included one is
-      // settled by that sibling (same skip the full rescan used to perform via the set).
+      // Included entries are settled (inclusion is monotone) and drop out, so later
+      // iterations rescan only the dead/undecided tail; siblings of an included idx drop too.
       pending_entry_indices.retain(|&entry_index| {
         let entry = &dynamic_entries[entry_index];
         if included_dynamic_entry.contains(&entry.idx) {
@@ -693,18 +683,15 @@ fn handle_include_symbol(
     return;
   }
 
-  // Alias-keyed work: the referencing symbol itself becomes used, and (under
-  // `propertyWriteSideEffects: false`) its property-write statements come along. Keyed by
-  // `symbol_ref`, not the canonical, so it runs for every distinct alias.
+  // Alias-keyed work — keyed by `symbol_ref`, not the canonical, so it must run for every
+  // reference and stays outside the memo gate.
   ctx.used_symbol_refs.insert(symbol_ref);
   if ctx.modules[symbol_ref.owner].is_external() {
     ctx.used_external_symbols.insert(symbol_ref);
   }
   include_property_write_referencing_stmts(ctx, symbol_ref);
 
-  // Everything below is the canonical-level tail: a deterministic, monotone function of
-  // (canonical ref, include reason), so an exact repeat adds nothing and is skipped (see
-  // `processed_symbol_reasons`).
+  // Canonical-level tail below: skip exact repeats (see `processed_symbol_reasons`).
   if !ctx.processed_symbol_reasons.insert((canonical_ref, include_reason)) {
     return;
   }
@@ -878,8 +865,7 @@ fn include_property_write_referencing_stmts(ctx: &mut IncludeContext, symbol_ref
       .unwrap_or(&[]);
     if ctx.modules[symbol_ref.owner].as_normal().is_some() {
       for stmt_info_id in stmt_ids.iter().copied() {
-        // Pure work-skip for repeat references; the authoritative dedup is still `set_bit`
-        // inside the statement handler.
+        // Work-skip only; the authoritative dedup is `set_bit` in the statement handler.
         if !ctx.is_included_vec[symbol_ref.owner].has_bit(stmt_info_id) {
           ctx.pending.push(WorkItem::Statement(symbol_ref.owner, stmt_info_id));
         }

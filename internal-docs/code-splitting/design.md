@@ -1,6 +1,6 @@
 # Code Splitting Design
 
-This document records the target architecture for selective strict execution order. The current implementation is described in [implementation.md](./implementation.md). The design is intentionally stricter than the current proof of concept: order scheduling must not be represented as interop wrapping, and generate-stage lowering must be unable to reopen user-code liveness.
+This document records the architecture for selective strict execution order. The current implementation is described in [implementation.md](./implementation.md). Order scheduling is not represented as interop wrapping, and generate-stage lowering cannot reopen user-code liveness.
 
 ## Problem
 
@@ -15,7 +15,7 @@ The order decision can only be made after provisional chunk placement. Reusing `
 - Order lowering may add only synthetic wrapper, init, runtime, facade, symbol, and topology state.
 - Finalization and cross-chunk linking consume interop wrappers and order wrappers through an explicit shared read interface.
 - Empty order plans preserve the flag-off output path without allocating order-wrapper state.
-- The fuzzer remains the semantic verifier. Rolldown exposes machine-readable facts but does not add a second runtime semantics engine or assertions that merely hide lowering bugs.
+- The external differential fuzzer remains the semantic verifier. Rolldown does not add a test-only execution model or assertions that merely turn lowering bugs into build failures.
 
 ## Non-Goals
 
@@ -29,7 +29,7 @@ The order decision can only be made after provisional chunk placement. Reusing `
 
 ### Late `WrapKind` override
 
-This is the current proof-of-concept bridge. It reuses mature wrapper code, but it conflates representation with scheduling and requires generate-stage code to repair link-owned metadata. Keeping the bridge would preserve the architectural problem even if every known fixture passed.
+This was the original proof-of-concept bridge. It reused mature wrapper code, but it conflated representation with scheduling and required generate-stage code to repair link-owned metadata. Keeping the bridge would preserve the architectural problem even if every known fixture passed.
 
 ### Re-link after planning
 
@@ -37,7 +37,7 @@ The planner could change module representation and then repeat binding, referenc
 
 ### Internal semantic verifier
 
-Rolldown could independently simulate final execution and reject output when the simulation disagrees with source order. That duplicates the fuzzer oracle inside the compiler and turns a lowering bug into a build failure. The compiler should expose the final plan and event graph; the external differential oracle should judge semantics.
+Rolldown could independently simulate final execution and reject output when the simulation disagrees with source order. That duplicates the fuzzer oracle inside the compiler and turns a lowering bug into a build failure. The external differential oracle should judge the normal generated output instead.
 
 ## Target Architecture
 
@@ -204,25 +204,7 @@ link + tree shaking
   -> compute cross-chunk links using the shared EsmInitTarget view
   -> finalize modules using explicit interop/order wrapper cases
   -> render entry prologues using the shared EsmInitTarget view
-  -> emit versioned trace
 ```
-
-## Trace Contract
-
-`StrictExecutionOrderPlanReady` moves to version 2. Version 2 keeps the provisional analysis and final chunk/init facts, but it stops describing order wrapping as a changed interop kind.
-
-Each included module reports:
-
-- immutable `interop_wrap_kind`;
-- `order_wrapped`;
-- final and entry chunk IDs;
-- the selected wrapper origin and inclusion state when an init target exists;
-- explicit entry triggers, including order-wrapper calls and CJS facade requires;
-- TLA taint.
-
-The fuzzer supports both schemas during migration: version 1 remains readable for installed and historical Rolldown builds, while version 2 is required for the refactored local build. Persisted failure artifacts move to a new artifact schema version because trace identity changes. Generated debug types and behavior tests are updated in the same commit as the action definition.
-
-The version-2 fuzzer parser reconstructs the final event graph from chunk module order, static chunk imports, wrapper origins, entry triggers, and init obligations. Trace analysis remains diagnostic; source-versus-bundle execution remains the verdict.
 
 ## Invariants
 
@@ -245,8 +227,7 @@ Implementation proceeds test-first:
 2. Add a structural test proving user statement inclusion is identical before and after lowering.
 3. Add focused tests for importer overlays, synthetic symbol assignment, namespace requirements, and entry prologues.
 4. Port existing strict-order invariants and mixed ESM/CJS fixtures without snapshot weakening.
-5. Upgrade the devtools action and fuzzer parser with dual version support and a new artifact schema.
-6. Run installed and local differential campaigns with traced and trace-disabled builds.
-7. Run full Rust, Node, WASI, Vite, formatting, lint, and repository validation.
+5. Run installed and local black-box differential campaigns against normal generated output.
+6. Run full Rust, Node, WASI, Vite, formatting, lint, and repository validation.
 
 The migration is complete only after `override_wrap_kind()`, `hoist_esm_wrapper`, and order-specific reads of interop wrapper fields are removed.

@@ -73,9 +73,7 @@ ChunkGraph
     │
     ├─ ensure_lazy_module_initialization_order()      Reorder wrapped module init calls
     │
-    ├─ merge_cjs_namespace()                          Merge CJS namespace objects
-    │
-    └─ StrictExecutionOrderPlanReady                  Trace analysis + final topology facts
+    └─ merge_cjs_namespace()                          Merge CJS namespace objects
 ```
 
 **Key files:**
@@ -93,11 +91,7 @@ ChunkGraph
 
 `finalize_chunk_plan` may run two metadata passes. Namespace usage and entry-level external re-exports are first finalized on the provisional graph because the order analysis reads those facts through the cross-chunk linker. When a non-empty plan changes topology, they are recomputed so newly-created or restored facades carry the metadata that rendering consumes. Flag-off and empty-plan builds keep the single-pass path.
 
-Each planned module retains the reasons that selected it: a direct expected/actual-order violation, the V1 sensitive-suffix rule, a static import of another planned module, or a top-level read of a planned module's export. The lowering consumes only plan membership; reasons remain analysis output for tracing, review, and future lowering strategies.
-
-When devtools tracing is enabled **and** `ROLLDOWN_STRICT_ORDER_TRACE=1`, `finalize_chunk_plan()` returns the private `OrderAnalysis` to `GenerateStage::generate()` instead of dropping it at the finalization boundary. The explicit environment gate keeps the large diagnostic snapshot off the ordinary devtools path. The synchronous `StrictExecutionOrderPlanReady` trace call consumes the analysis by value after wrapped-ESM init metadata, final cross-chunk links, lazy init ordering, and CJS namespace merging are complete, so it is dropped before later output-hook awaits or rendering work. Builds without both gates drop the analysis immediately after finalization, and no public bundler API carries it.
-
-The version 1 action deliberately combines two times in the pipeline. Root expected order, predicted pre-wrap order, at-risk modules, and plan reasons describe the provisional graph that selected wrappers. Included-module wrap kinds, wrapper inclusion, TLA taint, final chunk assignments, entry facades, rendered chunk imports, and init obligations describe the graph that will be rendered. Final chunk IDs and edges exclude every chunk in `post_chunk_optimization_operations`, matching the renderer's tombstone rule. Direct and transitive obligations are deduplicated per importer, importee, and kind in first-statement order. Direct obligations use the same complete import-record decision as the module finalizer: a binding forwarded through a tree-shaken unwrapped barrel points at the wrapped canonical owner whose init call is synthesized, while an included unwrapped forwarding barrel in the importer's chunk suppresses that importer-level obligation because the barrel executes and owns downstream initialization. Excluded order-lowered statements are represented by `OrderWrapState` transitive targets and import overlays; interop-only targets remain in `LinkingMetadata`. These are diagnostic facts, not a proof that execution order is correct. Consumers own any semantic verdict and must interpret the action according to its `version`.
+Each planned module retains the reasons that selected it: a direct expected/actual-order violation, the V1 sensitive-suffix rule, a static import of another planned module, or a top-level read of a planned module's export. The lowering consumes only plan membership; reasons remain available to debug logging and focused analysis tests.
 
 ## Bit Positions and Entry Points
 

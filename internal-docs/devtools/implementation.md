@@ -81,7 +81,6 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
       {trace_action!(HookResolveIdCallEnd { ... })}
     </HookResolveIdCallSpan>
     {trace_action!(ModuleGraphReady { ... })}
-    {trace_action!(StrictExecutionOrderPlanReady { version: 1, ... })}
     {trace_action!(ChunkGraphReady { ... })}
     {trace_action!(PackageGraphReady { ... })}
     {trace_action!(BuildEnd { action: "BuildEnd" })}
@@ -119,9 +118,8 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
 1. `trace_action_session_meta()` — emits `SessionMeta` with inputs, plugins, cwd, platform, format, output dir/file
 2. `BuildStart` / `BuildEnd` — emitted both around the outer `write()`/`generate()` call and inside `scan_modules()`, so consumers may see nested pairs per build
 3. `trace_action_module_graph_ready()` — emits after scan stage with all modules and their import relationships
-4. `trace_action_strict_execution_order_plan_ready()` — when `strictExecutionOrder` analysis ran and `ROLLDOWN_STRICT_ORDER_TRACE=1`, emits its versioned diagnostic snapshot after wrapped init metadata and final static/dynamic chunk links exist, before module finalization and rendering
-5. `trace_action_chunks_infos()` — emits after chunk graph construction in the generate stage
-6. `trace_action_package_graph_ready()` — emits after chunk instantiation with package metadata discovered from resolved package.json files
+4. `trace_action_chunks_infos()` — emits after chunk graph construction in the generate stage
+5. `trace_action_package_graph_ready()` — emits after chunk instantiation with package metadata discovered from resolved package.json files
 
 **`PluginDriver`** (plugin hooks):
 
@@ -134,37 +132,24 @@ Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 
 ## Action Catalog
 
-| Action                          | When Emitted                                        | Key Fields                                                                                                                     |
-| ------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `SessionMeta`                   | Start of build (to `meta.json`)                     | inputs, plugins, cwd, platform, format, dir, file                                                                              |
-| `BuildStart`                    | Before scan stage + around write/generate           | —                                                                                                                              |
-| `HookResolveIdCallStart/End`    | Per plugin per resolve call                         | module_request, importer, plugin_name, plugin_id, trigger, call_id, resolved_id                                                |
-| `HookLoadCallStart/End`         | Per plugin per load call                            | module_id, plugin_name, plugin_id, call_id, content                                                                            |
-| `HookTransformCallStart/End`    | Per plugin per transform call                       | module_id, content, plugin_name, plugin_id, call_id                                                                            |
-| `ModuleGraphReady`              | After scan + normalize                              | modules[]{id, is_external, imports[]{module_id, kind, module_request}, importers[]}                                            |
-| `BuildEnd`                      | After scan stage + after write/generate             | —                                                                                                                              |
-| `StrictExecutionOrderPlanReady` | After strict-order planning and final chunk linking | version, roots, plan_modules, included_modules, rendered_chunks, init_obligations                                              |
-| `ChunkGraphReady`               | After chunk graph construction                      | chunks[]{chunk_id, name, reason, modules[], imports[], is_user_defined_entry, is_async_entry, entry_module}                    |
-| `PackageGraphReady`             | After chunk instantiation                           | packages[]{package_id, name, version, package_json_path, package_root, is_used, dependency_type, size, modules[], chunk_ids[]} |
-| `HookRenderChunkStart/End`      | Per plugin per renderChunk call                     | chunk_id, plugin_name, plugin_id, call_id, content                                                                             |
-| `AssetsReady`                   | After final asset generation                        | assets[]{chunk_id, content, size, filename}                                                                                    |
-| `StringRef`                     | Before any action with large strings                | id (blake3 hash), content                                                                                                      |
+| Action                       | When Emitted                              | Key Fields                                                                                                                     |
+| ---------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `SessionMeta`                | Start of build (to `meta.json`)           | inputs, plugins, cwd, platform, format, dir, file                                                                              |
+| `BuildStart`                 | Before scan stage + around write/generate | —                                                                                                                              |
+| `HookResolveIdCallStart/End` | Per plugin per resolve call               | module_request, importer, plugin_name, plugin_id, trigger, call_id, resolved_id                                                |
+| `HookLoadCallStart/End`      | Per plugin per load call                  | module_id, plugin_name, plugin_id, call_id, content                                                                            |
+| `HookTransformCallStart/End` | Per plugin per transform call             | module_id, content, plugin_name, plugin_id, call_id                                                                            |
+| `ModuleGraphReady`           | After scan + normalize                    | modules[]{id, is_external, imports[]{module_id, kind, module_request}, importers[]}                                            |
+| `BuildEnd`                   | After scan stage + after write/generate   | —                                                                                                                              |
+| `ChunkGraphReady`            | After chunk graph construction            | chunks[]{chunk_id, name, reason, modules[], imports[], is_user_defined_entry, is_async_entry, entry_module}                    |
+| `PackageGraphReady`          | After chunk instantiation                 | packages[]{package_id, name, version, package_json_path, package_root, is_used, dependency_type, size, modules[], chunk_ids[]} |
+| `HookRenderChunkStart/End`   | Per plugin per renderChunk call           | chunk_id, plugin_name, plugin_id, call_id, content                                                                             |
+| `AssetsReady`                | After final asset generation              | assets[]{chunk_id, content, size, filename}                                                                                    |
+| `StringRef`                  | Before any action with large strings      | id (blake3 hash), content                                                                                                      |
 
 All actions except `StringRef` carry injected `session_id`, `build_id`, and `timestamp` fields. `StringRef` entries contain only `action`, `id`, and `content`.
 
 `PackageGraphReady.packages` contains packages discovered from resolved module `package.json` files. `is_used` is true when at least one module for that package appears in a generated chunk, and false when all resolved modules for that package are tree-shaken. `dependency_type` is `direct` when any module in the package is imported by a source module under the build `cwd` and outside `node_modules`; otherwise it is `transitive`. This uses the importer graph and does not inspect `package.json` dependency fields. `size` is the sum of the package's rendered module code bytes after tree-shaking/codegen and before chunk-level `renderChunk`, minification, banners, and final asset emission. `modules` contains the package's generated chunk module IDs, and `chunk_ids` contains the matching `ChunkGraphReady` chunk IDs; both arrays are empty for unused packages. The packages are sorted by package name, version, package root, and package id. Rolldown does not emit a duplicate flag; consumers can identify duplicate packages by grouping non-null package names and checking whether a group contains multiple versions or package roots.
-
-### `StrictExecutionOrderPlanReady` version 1
-
-This action is emitted only when devtools tracing is active, `strictExecutionOrder` analysis ran, and the process has `ROLLDOWN_STRICT_ORDER_TRACE=1`. The environment variable is a deliberate high-detail opt-in because the action retains and serializes per-root module orders plus final module/chunk topology; ordinary devtools builds do not pay that cost. A strict build with no selected modules still emits the action with an empty `plan_modules` array when both tracing gates are enabled. A build with strict execution order disabled or without the environment variable emits no action.
-
-- `roots` records each analyzed root module, source-expected module order, predicted pre-wrap order, and the modules classified as at risk.
-- `plan_modules` records every selected module and every reason attached by the fixed-point planner: `direct-violation`, `sensitive-suffix`, `static-importer`, or `top-level-reader`.
-- `included_modules` records every included normal module with its original and final wrap kind, final module chunk, entry facade chunk when applicable, wrapper-statement inclusion, and TLA taint. Chunk IDs are null rather than pointing at a post-optimization tombstone.
-- `rendered_chunks` records live chunk IDs, module IDs, final static chunk imports, and final dynamic chunk imports. Chunks and edges present in `post_chunk_optimization_operations` are excluded, matching renderer eligibility.
-- `init_obligations` records included direct wrapped static import/re-export statements and transitive init targets for excluded statements. Direct records use the module finalizer's complete shared decision: bindings forwarded through tree-shaken unwrapped modules name the wrapped canonical owner whose init is synthesized, while an included unwrapped forwarding module in the importer chunk suppresses the importer-level edge because that module owns initialization. Each item includes importer/importee IDs, TLA taint on both ends, and whether that lowering path awaits the importee init. Entries are deduplicated per importer, importee, and kind while preserving first-statement order. Importers and importees without live rendered chunks are excluded.
-
-The action is intentionally diagnostic. It does not contain a `safe`, `correct`, or equivalent verdict, and consumers must not infer one solely from plan size. Future incompatible schema or interpretation changes require a new numeric `version`; version 1 fields keep their existing meaning.
 
 ## TypeScript Codegen
 

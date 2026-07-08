@@ -111,7 +111,6 @@ pub mod order_wrap_state;
 mod order_wrapping;
 mod post_banner_footer;
 mod render_chunk_to_assets;
-mod strict_execution_order_trace;
 
 pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
@@ -145,8 +144,7 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
     let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs).await?;
 
-    let finalize_chunk_plan::FinalizedChunkPlan { analysis: order_analysis, mut order_state } =
-      self.finalize_chunk_plan(&mut chunk_graph, &used_symbol_refs)?;
+    let mut order_state = self.finalize_chunk_plan(&mut chunk_graph, &used_symbol_refs)?;
 
     // `apply_order_wraps` may include newly-created wrapper/runtime symbols. Seal only after it
     // has had the last chance to extend the set.
@@ -163,10 +161,6 @@ impl<'a> GenerateStage<'a> {
 
     self.merge_cjs_namespace(&mut chunk_graph);
 
-    // See internal-docs/devtools/implementation.md for devtools action lifecycle.
-    // Move the retained analysis into the synchronous trace call so it is dropped before any
-    // later output-hook awaits or rendering work.
-    self.trace_action_strict_execution_order_plan_ready(&chunk_graph, &order_state, order_analysis);
     self.trace_action_chunks_infos(&chunk_graph);
 
     let mut warnings = vec![];
@@ -179,7 +173,6 @@ impl<'a> GenerateStage<'a> {
     if !warnings.is_empty() {
       self.link_output.warnings.extend(warnings);
     }
-
     let index_chunk_id_to_name =
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);

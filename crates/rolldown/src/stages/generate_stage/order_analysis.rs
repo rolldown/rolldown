@@ -12,7 +12,7 @@ use super::GenerateStage;
 
 #[derive(Debug)]
 pub(super) struct OrderAnalysis {
-  pub(super) roots: Vec<RootOrderAnalysis>,
+  roots: Vec<RootOrderAnalysis>,
   pub(super) plan: OrderWrapPlan,
 }
 
@@ -26,17 +26,6 @@ pub(super) enum OrderWrapReason {
   StaticImporter,
   /// A top-level statement reads an export owned by a selected module.
   TopLevelReader,
-}
-
-impl OrderWrapReason {
-  pub(super) fn as_static_str(self) -> &'static str {
-    match self {
-      Self::DirectViolation => "direct-violation",
-      Self::SensitiveSuffix => "sensitive-suffix",
-      Self::StaticImporter => "static-importer",
-      Self::TopLevelReader => "top-level-reader",
-    }
-  }
 }
 
 #[derive(Debug, Default)]
@@ -76,11 +65,11 @@ impl OrderWrapPlan {
 }
 
 #[derive(Debug)]
-pub(super) struct RootOrderAnalysis {
-  pub(super) root: ModuleIdx,
-  pub(super) expected_order: Vec<ModuleIdx>,
-  pub(super) actual_order: Vec<ModuleIdx>,
-  pub(super) at_risk: FxHashSet<ModuleIdx>,
+struct RootOrderAnalysis {
+  root: ModuleIdx,
+  expected_order: Vec<ModuleIdx>,
+  actual_order: Vec<ModuleIdx>,
+  at_risk: FxHashSet<ModuleIdx>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

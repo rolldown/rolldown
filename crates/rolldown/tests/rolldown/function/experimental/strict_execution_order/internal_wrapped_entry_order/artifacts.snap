@@ -1,0 +1,102 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## e1.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as require_m5 } from "./m5.js";
+import { t as init_m2 } from "./m22.js";
+//#region e1.cjs
+var require_e1 = /* @__PURE__ */ __commonJSMin((() => {
+	require_m5();
+	init_m2();
+	globalThis.__entryInteropOrder.push("e1");
+}));
+//#endregion
+export default require_e1();
+
+```
+
+## e2.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as require_m5 } from "./m5.js";
+//#region e2.cjs
+var require_e2 = /* @__PURE__ */ __commonJSMin((() => {
+	require_m5();
+	globalThis.__entryInteropOrder.push("e2");
+}));
+//#endregion
+export default require_e2();
+
+```
+
+## m2.js
+
+```js
+import { r as value, t as init_m2 } from "./m22.js";
+init_m2();
+export { value };
+
+```
+
+## m22.js
+
+```js
+import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
+//#region m2.js
+var m2_exports = /* @__PURE__ */ __exportAll({ value: () => 2 });
+var value;
+var init_m2 = __esmMin((() => {
+	globalThis.__entryInteropOrder.push("m2");
+	value = 2;
+}));
+//#endregion
+export { m2_exports as n, value as r, init_m2 as t };
+
+```
+
+## m5.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+//#region m5.cjs
+var require_m5 = /* @__PURE__ */ __commonJSMin((() => {
+	globalThis.__entryInteropOrder.push("m5");
+}));
+//#endregion
+export { require_m5 as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __defProp = Object.defineProperty;
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
+//#endregion
+export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```

@@ -73,7 +73,7 @@ impl GenerateStage<'_> {
       &self.link_output.symbol_db,
     );
     self.place_order_wrap_modules(chunk_graph, plan, order_state);
-    self.create_order_wrap_entry_facades(chunk_graph, plan);
+    self.create_strict_execution_order_entry_facades(chunk_graph, Some(plan));
     self.restore_order_wrap_dynamic_entry_facades(chunk_graph, plan);
     self.ensure_runtime_module_for_order_wraps(chunk_graph);
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
@@ -135,33 +135,44 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn create_order_wrap_entry_facades(&self, chunk_graph: &mut ChunkGraph, plan: &OrderWrapPlan) {
-    if self.options.code_splitting.is_disabled() {
-      return;
+  pub(super) fn create_strict_execution_order_entry_facades(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    plan: Option<&OrderWrapPlan>,
+  ) -> bool {
+    if !self.options.is_strict_execution_order_enabled()
+      || self.options.code_splitting.is_disabled()
+    {
+      return false;
     }
 
     let mut entries_to_split = plan
-      .modules()
+      .into_iter()
+      .flat_map(OrderWrapPlan::modules)
       .filter(|module_idx| self.link_output.entries.contains_key(module_idx))
       .collect_vec();
-    for module_idx in plan.modules() {
-      let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+    for module in
+      self.link_output.module_table.modules.iter().filter_map(|module| module.as_normal())
+    {
+      let meta = &self.link_output.metas[module.idx];
+      if !meta.is_included {
         continue;
-      };
+      }
       entries_to_split.extend(module.import_records.iter().filter_map(|rec| {
-        if rec.kind != ImportKind::Import {
+        if !matches!(rec.kind, ImportKind::Import | ImportKind::Require) {
           return None;
         }
         let importee_idx = rec.resolved_module?;
         (self.link_output.entries.contains_key(&importee_idx)
-          && self.link_output.metas[module_idx].execution_dependencies.contains(&importee_idx)
-          && matches!(self.link_output.metas[importee_idx].original_wrap_kind(), WrapKind::Cjs))
+          && meta.execution_dependencies.contains(&importee_idx)
+          && !matches!(self.link_output.metas[importee_idx].wrap_kind(), WrapKind::None))
         .then_some(importee_idx)
       }));
     }
     entries_to_split.sort_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order());
     entries_to_split.dedup();
 
+    let mut changed = false;
     for entry_module_idx in entries_to_split {
       let Some(entry_chunk_idx) =
         chunk_graph.entry_module_to_entry_chunk.get(&entry_module_idx).copied()
@@ -227,7 +238,9 @@ impl GenerateStage<'_> {
       if let Some(reference_ids) = chunk_graph.chunk_idx_to_reference_ids.remove(&entry_chunk_idx) {
         chunk_graph.chunk_idx_to_reference_ids.insert(facade_chunk_idx, reference_ids);
       }
+      changed = true;
     }
+    changed
   }
 
   fn restore_order_wrap_dynamic_entry_facades(
@@ -452,7 +465,7 @@ impl GenerateStage<'_> {
     self.live_chunks(chunk_graph).first().copied()
   }
 
-  fn renumber_live_chunks(&self, chunk_graph: &mut ChunkGraph) {
+  pub(super) fn renumber_live_chunks(&self, chunk_graph: &mut ChunkGraph) {
     let live_chunks = chunk_graph
       .chunk_table
       .iter_enumerated()

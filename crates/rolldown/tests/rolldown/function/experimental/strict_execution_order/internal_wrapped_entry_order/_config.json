@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      { "name": "e1", "import": "./e1.cjs" },
+      { "name": "e2", "import": "./e2.cjs" },
+      { "name": "m2", "import": "./m2.js" }
+    ],
+    "strictExecutionOrder": true
+  },
+  "hiddenRuntimeModule": false
+}

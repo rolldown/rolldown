@@ -2,11 +2,98 @@ import { createAsyncContext } from './async-context';
 
 interface CloseCallbackInvocation {
   active: boolean;
+  browserCloseIdentityRetained: boolean;
+  closeDependenciesByPromise: WeakMap<Promise<void>, Set<string>>;
+  closeDependencyUnregisters: Set<() => void>;
+  closeIdentity?: string;
+  parent?: CloseCallbackInvocation;
   scope: CloseCallbackScope;
+}
+
+interface BrowserCloseDependencyCandidate {
+  active: boolean;
+  invocation: CloseCallbackInvocation;
+  unregister: () => void;
 }
 
 const activeCloseCallback = createAsyncContext<CloseCallbackInvocation>();
 const REENTRANT_CLOSE_ACKNOWLEDGEMENT = Promise.resolve();
+const closeDependencies = new Map<string, Map<string, number>>();
+const browserCloseIdentityCounts = new Map<string, number>();
+let browserInvocation: CloseCallbackInvocation | undefined;
+let nextCloseIdentity = 0n;
+
+class CloseDependencyPromise extends Promise<void> {
+  readonly #browserCandidates: BrowserCloseDependencyCandidate[] = [];
+  readonly #closePromise: Promise<void>;
+  readonly #selectObservedPromise: (
+    closePromise: Promise<void>,
+    browserInvocation?: CloseCallbackInvocation,
+  ) => Promise<void>;
+
+  static get [Symbol.species](): PromiseConstructor {
+    return Promise;
+  }
+
+  constructor(
+    closePromise: Promise<void>,
+    selectObservedPromise: (
+      closePromise: Promise<void>,
+      browserInvocation?: CloseCallbackInvocation,
+    ) => Promise<void>,
+  ) {
+    super((resolve, reject) => {
+      void closePromise.then(resolve, reject);
+    });
+    this.#closePromise = closePromise;
+    this.#selectObservedPromise = selectObservedPromise;
+  }
+
+  retainBrowserInvocation(invocation: CloseCallbackInvocation): void {
+    const candidate = {
+      active: true,
+      invocation,
+      unregister: () => {},
+    };
+    const unregister = () => {
+      if (!candidate.active) return;
+      candidate.active = false;
+      invocation.closeDependencyUnregisters.delete(unregister);
+    };
+    candidate.unregister = unregister;
+    this.#browserCandidates.push(candidate);
+    invocation.closeDependencyUnregisters.add(unregister);
+  }
+
+  // oxlint-disable-next-line unicorn/no-thenable -- Promise observation is the dependency signal.
+  override then<TResult1 = void, TResult2 = never>(
+    onfulfilled?: ((value: void) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
+  ): Promise<TResult1 | TResult2> {
+    // Public observation is routed to the underlying close promise. Mark the
+    // mirrored native state handled at the same time so observed failures do
+    // not emit a duplicate rejection, while ignored closes still emit one.
+    void super.then(undefined, () => {});
+    return this.#selectObservedPromise(this.#closePromise, this.#takeBrowserInvocation()).then(
+      onfulfilled,
+      onrejected,
+    );
+  }
+
+  #takeBrowserInvocation(): CloseCallbackInvocation | undefined {
+    while (this.#browserCandidates.length > 0) {
+      const candidate = this.#browserCandidates.pop()!;
+      if (!candidate.active) continue;
+      candidate.unregister();
+      if (candidate.invocation.active) return candidate.invocation;
+    }
+  }
+}
+
+export function createCloseIdentity(namespace: string): string {
+  nextCloseIdentity += 1n;
+  return `${namespace}:${nextCloseIdentity}`;
+}
 
 /**
  * Marks callbacks that native close may be waiting on. A close requested from
@@ -14,24 +101,60 @@ const REENTRANT_CLOSE_ACKNOWLEDGEMENT = Promise.resolve();
  * lifecycle can settle.
  */
 export class CloseCallbackScope {
-  #browserInvocation: CloseCallbackInvocation | undefined;
+  #defaultCloseIdentity: string | undefined;
+  #dependencyAwarePromises = new WeakMap<Promise<void>, Map<string, CloseDependencyPromise>>();
+
+  constructor(defaultCloseIdentity?: string) {
+    this.#defaultCloseIdentity = defaultCloseIdentity;
+  }
 
   run<T>(callback: () => T): T {
+    return this.#run(
+      this.#activeInvocation()?.closeIdentity ?? this.#defaultCloseIdentity,
+      callback,
+    );
+  }
+
+  runWithCloseIdentity<T>(closeIdentity: string, callback: () => T): T {
+    return this.#run(closeIdentity, callback);
+  }
+
+  #run<T>(closeIdentity: string | undefined, callback: () => T): T {
     const invocation: CloseCallbackInvocation = {
       active: true,
+      browserCloseIdentityRetained: false,
+      closeDependenciesByPromise: new WeakMap(),
+      closeDependencyUnregisters: new Set(),
+      closeIdentity,
+      parent: this.#currentInvocation(),
       scope: this,
     };
+    this.#retainBrowserCloseIdentity(invocation);
     return this.#runInvocation(invocation, () => this.#invoke(invocation, callback));
   }
 
-  selectClosePromise(closePromise: Promise<void>): Promise<void> {
-    if (!this.#isActive()) return closePromise;
+  selectClosePromise(closePromise: Promise<void>, closeIdentity?: string): Promise<void> {
+    if (this.#isActive(closeIdentity)) {
+      return acknowledgeReentrantClose(closePromise);
+    }
 
-    // The full result remains memoized for an external or later close call.
-    // Attach a rejection handler because the reentrant caller cannot await the
-    // result without recreating the callback/native-close cycle.
-    void closePromise.catch(() => {});
-    return REENTRANT_CLOSE_ACKNOWLEDGEMENT;
+    const sourceInvocation = this.#activeInvocation();
+    if (closeIdentity === undefined) {
+      return closePromise;
+    }
+
+    if (
+      sourceInvocation &&
+      this.#wouldCompleteCloseDependencyCycle(closeIdentity, sourceInvocation)
+    ) {
+      return acknowledgeReentrantClose(closePromise);
+    }
+
+    const selectedPromise = this.#getDependencyAwarePromise(closePromise, closeIdentity);
+    if (!activeCloseCallback && sourceInvocation) {
+      selectedPromise.retainBrowserInvocation(sourceInvocation);
+    }
+    return selectedPromise;
   }
 
   wrapCallbacks<T>(value: T): T {
@@ -99,12 +222,178 @@ export class CloseCallbackScope {
     return visit(value) as T;
   }
 
-  #isActive(): boolean {
-    if (!activeCloseCallback) {
-      return this.#browserInvocation?.active === true;
+  #isActive(closeIdentity: string | undefined): boolean {
+    if (
+      closeIdentity !== undefined &&
+      !activeCloseCallback &&
+      browserCloseIdentityCounts.has(closeIdentity)
+    ) {
+      return true;
     }
-    const invocation = activeCloseCallback.getStore();
-    return invocation?.scope === this && invocation.active;
+
+    if (closeIdentity === undefined) {
+      let invocation = this.#currentInvocation();
+      while (invocation) {
+        if (invocation.active && invocation.scope === this) return true;
+        invocation = invocation.parent;
+      }
+      return false;
+    }
+
+    return this.#activeInvocation(closeIdentity) !== undefined;
+  }
+
+  #activeInvocation(closeIdentity?: string): CloseCallbackInvocation | undefined {
+    let invocation = this.#currentInvocation();
+    while (invocation) {
+      if (
+        invocation.active &&
+        (closeIdentity === undefined || invocation.closeIdentity === closeIdentity)
+      ) {
+        return invocation;
+      }
+      invocation = invocation.parent;
+    }
+  }
+
+  #currentInvocation(): CloseCallbackInvocation | undefined {
+    return activeCloseCallback?.getStore() ?? browserInvocation;
+  }
+
+  #hasCloseDependencyPath(sourceIdentity: string, targetIdentity: string): boolean {
+    const pending = [sourceIdentity];
+    const visited = new Set<string>();
+    while (pending.length > 0) {
+      const current = pending.pop()!;
+      if (current === targetIdentity) return true;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      const dependencies = closeDependencies.get(current);
+      if (dependencies) pending.push(...dependencies.keys());
+    }
+    return false;
+  }
+
+  #wouldCompleteCloseDependencyCycle(
+    targetIdentity: string,
+    sourceInvocation: CloseCallbackInvocation,
+  ): boolean {
+    return this.#activeIdentityInvocations(sourceInvocation).some(({ closeIdentity }) =>
+      this.#hasCloseDependencyPath(targetIdentity, closeIdentity),
+    );
+  }
+
+  #activeIdentityInvocations(
+    sourceInvocation: CloseCallbackInvocation,
+  ): Array<{ closeIdentity: string; invocation: CloseCallbackInvocation }> {
+    const identities = new Set<string>();
+    const invocations: Array<{
+      closeIdentity: string;
+      invocation: CloseCallbackInvocation;
+    }> = [];
+    let invocation: CloseCallbackInvocation | undefined = sourceInvocation;
+    while (invocation) {
+      const { closeIdentity } = invocation;
+      if (invocation.active && closeIdentity !== undefined && !identities.has(closeIdentity)) {
+        identities.add(closeIdentity);
+        invocations.push({ closeIdentity, invocation });
+      }
+      invocation = invocation.parent;
+    }
+    return invocations;
+  }
+
+  #getDependencyAwarePromise(
+    closePromise: Promise<void>,
+    closeIdentity: string,
+  ): CloseDependencyPromise {
+    let promisesByIdentity = this.#dependencyAwarePromises.get(closePromise);
+    if (!promisesByIdentity) {
+      promisesByIdentity = new Map();
+      this.#dependencyAwarePromises.set(closePromise, promisesByIdentity);
+    }
+
+    let selectedPromise = promisesByIdentity.get(closeIdentity);
+    if (!selectedPromise) {
+      selectedPromise = new CloseDependencyPromise(
+        closePromise,
+        (observedClosePromise, browserInvocation) =>
+          this.#selectObservedClosePromise(observedClosePromise, closeIdentity, browserInvocation),
+      );
+      promisesByIdentity.set(closeIdentity, selectedPromise);
+    }
+    return selectedPromise;
+  }
+
+  #selectObservedClosePromise(
+    closePromise: Promise<void>,
+    closeIdentity: string,
+    browserSourceInvocation?: CloseCallbackInvocation,
+  ): Promise<void> {
+    const sourceInvocation = this.#activeInvocation() ?? browserSourceInvocation;
+    if (!sourceInvocation) return closePromise;
+
+    const sourceInvocations = this.#activeIdentityInvocations(sourceInvocation);
+    if (
+      sourceInvocations.some(
+        ({ closeIdentity: sourceIdentity }) => sourceIdentity === closeIdentity,
+      )
+    ) {
+      return acknowledgeReentrantClose(closePromise);
+    }
+    if (
+      sourceInvocations.some(({ closeIdentity: sourceIdentity }) =>
+        this.#hasCloseDependencyPath(closeIdentity, sourceIdentity),
+      )
+    ) {
+      return acknowledgeReentrantClose(closePromise);
+    }
+
+    for (const { closeIdentity: sourceIdentity, invocation } of sourceInvocations) {
+      this.#registerCloseDependency(closePromise, invocation, sourceIdentity, closeIdentity);
+    }
+    return closePromise;
+  }
+
+  #registerCloseDependency(
+    closePromise: Promise<void>,
+    sourceInvocation: CloseCallbackInvocation,
+    sourceIdentity: string,
+    targetIdentity: string,
+  ): void {
+    let targets = sourceInvocation.closeDependenciesByPromise.get(closePromise);
+    if (!targets) {
+      targets = new Set();
+      sourceInvocation.closeDependenciesByPromise.set(closePromise, targets);
+    }
+    if (targets.has(targetIdentity)) return;
+    targets.add(targetIdentity);
+
+    let dependencies = closeDependencies.get(sourceIdentity);
+    if (!dependencies) {
+      dependencies = new Map();
+      closeDependencies.set(sourceIdentity, dependencies);
+    }
+    dependencies.set(targetIdentity, (dependencies.get(targetIdentity) ?? 0) + 1);
+
+    const unregister = () => {
+      if (!targets.delete(targetIdentity)) return;
+      sourceInvocation.closeDependencyUnregisters.delete(unregister);
+
+      const registeredDependencies = closeDependencies.get(sourceIdentity);
+      const count = registeredDependencies?.get(targetIdentity);
+      if (count === undefined) return;
+      if (count <= 1) {
+        registeredDependencies!.delete(targetIdentity);
+        if (registeredDependencies!.size === 0) {
+          closeDependencies.delete(sourceIdentity);
+        }
+      } else {
+        registeredDependencies!.set(targetIdentity, count - 1);
+      }
+    };
+    sourceInvocation.closeDependencyUnregisters.add(unregister);
+    void closePromise.then(unregister, unregister);
   }
 
   #invoke<T>(invocation: CloseCallbackInvocation, callback: () => T): T {
@@ -112,17 +401,40 @@ export class CloseCallbackScope {
       const result = callback();
       const then = getThen(result);
       if (!then) {
-        invocation.active = false;
+        this.#finishInvocation(invocation);
         return result;
       }
       return assimilateThenable(result, then, (callback) =>
         this.#runInvocation(invocation, callback),
       ).finally(() => {
-        invocation.active = false;
+        this.#finishInvocation(invocation);
       }) as T;
     } catch (error) {
-      invocation.active = false;
+      this.#finishInvocation(invocation);
       throw error;
+    }
+  }
+
+  #retainBrowserCloseIdentity(invocation: CloseCallbackInvocation): void {
+    if (activeCloseCallback || invocation.closeIdentity === undefined) return;
+
+    const count = browserCloseIdentityCounts.get(invocation.closeIdentity) ?? 0;
+    browserCloseIdentityCounts.set(invocation.closeIdentity, count + 1);
+    invocation.browserCloseIdentityRetained = true;
+  }
+
+  #finishInvocation(invocation: CloseCallbackInvocation): void {
+    if (!invocation.active) return;
+    invocation.active = false;
+    for (const unregister of invocation.closeDependencyUnregisters) unregister();
+    if (!invocation.browserCloseIdentityRetained || invocation.closeIdentity === undefined) return;
+
+    invocation.browserCloseIdentityRetained = false;
+    const count = browserCloseIdentityCounts.get(invocation.closeIdentity);
+    if (count === undefined || count <= 1) {
+      browserCloseIdentityCounts.delete(invocation.closeIdentity);
+    } else {
+      browserCloseIdentityCounts.set(invocation.closeIdentity, count - 1);
     }
   }
 
@@ -131,14 +443,15 @@ export class CloseCallbackScope {
       return activeCloseCallback.run(invocation, callback);
     }
 
-    // Browser hosts cannot propagate async context. Keep only the exact
-    // synchronous invocation on the stack. See internal-docs/async-runtime/implementation.md.
-    const previousInvocation = this.#browserInvocation;
-    this.#browserInvocation = invocation;
+    // Browser hosts cannot propagate general async context. Keep the exact
+    // synchronous invocation on the stack; identity-specific close privilege
+    // is retained separately until the callback result settles.
+    const previousInvocation = browserInvocation;
+    browserInvocation = invocation;
     try {
       return callback();
     } finally {
-      this.#browserInvocation = previousInvocation;
+      browserInvocation = previousInvocation;
     }
   }
 
@@ -148,6 +461,14 @@ export class CloseCallbackScope {
       return run(() => Reflect.apply(callback, receiver ?? this, args));
     };
   }
+}
+
+function acknowledgeReentrantClose(closePromise: Promise<void>): Promise<void> {
+  // The full result remains memoized for an external or later close call.
+  // Attach a rejection handler because the reentrant caller cannot await the
+  // result without recreating the callback/native-close cycle.
+  void closePromise.catch(() => {});
+  return REENTRANT_CLOSE_ACKNOWLEDGEMENT;
 }
 
 function hasBuiltinPluginName(value: object): boolean {

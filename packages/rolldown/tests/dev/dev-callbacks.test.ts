@@ -7,6 +7,10 @@ import type { InputOptions, OutputOptions } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as createDevEngine } from 'rolldown/experimental';
 import { expect, test } from 'vitest';
+import { BindingDevEngine } from '../../src/binding.cjs';
+import { acquireRuntimeLease } from '../../src/runtime-lifecycle';
+import { createBundlerOptions } from '../../src/utils/create-bundler-option';
+import { normalizeBindingResultErrors } from '../../src/utils/error';
 
 const TEST_TIMEOUT = 60_000;
 
@@ -35,6 +39,18 @@ function createFixture(label: string, source = 'console.log(1)') {
 async function editFile(filePath: string, source: string) {
   await new Promise((resolve) => setTimeout(resolve, 1_000));
   fs.writeFileSync(filePath, source);
+}
+
+async function settleWithin<T>(promise: Promise<T>, label: string): Promise<T> {
+  let timeoutId: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} did not settle`)), 10_000);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 test.skipIf(isSingleThread)(
@@ -83,6 +99,66 @@ test.skipIf(isSingleThread)(
 
     rejectCallback(callbackError);
     await expect(runPromise).rejects.toBe(callbackError);
+  },
+);
+
+test.skipIf(isSingleThread)(
+  'close drains a rejecting run before closeBundle awaits it',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const { dir, input, outputDir } = createFixture('dev-close-drains-run');
+    const callbackError = new TypeError('onOutput failed before dev close');
+    let callbackStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      callbackStarted = resolve;
+    });
+    let rejectCallback!: (error: unknown) => void;
+    const callbackGate = new Promise<void>((_, reject) => {
+      rejectCallback = reject;
+    });
+    let runPromise!: Promise<void>;
+    let closeBundleCalls = 0;
+
+    const engine = await dev(
+      {
+        input,
+        experimental: { devMode: true },
+        plugins: [
+          {
+            name: 'close-awaits-run',
+            async closeBundle() {
+              closeBundleCalls += 1;
+              await runPromise.catch(() => {});
+            },
+          },
+        ],
+      },
+      { dir: outputDir },
+      {
+        onOutput() {
+          callbackStarted();
+          return callbackGate;
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close().catch(() => {});
+      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    runPromise = engine.run();
+    await started;
+    const closePromise = engine.close();
+    await Promise.resolve();
+    rejectCallback(callbackError);
+
+    const [runResult, closeResult] = await settleWithin(
+      Promise.allSettled([runPromise, closePromise]),
+      'run and close',
+    );
+    expect(runResult).toEqual({ status: 'rejected', reason: callbackError });
+    expect(closeResult).toEqual({ status: 'rejected', reason: callbackError });
+    expect(closeBundleCalls).toBe(1);
   },
 );
 
@@ -137,6 +213,112 @@ test.skipIf(isSingleThread)(
     await engine.close();
     expect(callbackCompleted).toBe(true);
     expect(runResult).toHaveLength(1);
+  },
+);
+
+test.skipIf(isSingleThread)(
+  'raw BindingDevEngine acknowledges callback close and replays terminal errors',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const { dir, input, outputDir } = createFixture('raw-dev-reentrant-output-close');
+    const closeError = new TypeError('raw dev closeBundle failure');
+    const { bundlerOptions, stopWorkers } = await createBundlerOptions(
+      {
+        input,
+        experimental: { devMode: true },
+        plugins: [
+          {
+            name: 'raw-close-failure',
+            closeBundle() {
+              throw closeError;
+            },
+          },
+        ],
+      },
+      { dir: outputDir },
+      false,
+    );
+    const runtimeLease = await acquireRuntimeLease();
+    let callbackCompleted = false;
+    let engine!: BindingDevEngine;
+    engine = new BindingDevEngine(bundlerOptions, {
+      async onOutput(result) {
+        expect(normalizeBindingResultErrors(result)).toEqual([]);
+        const acknowledgedClose = await engine.close();
+        expect(normalizeBindingResultErrors(acknowledgedClose)).toEqual([]);
+        await engine.removeClient('late-client');
+        await expect(engine.registerModules('late-client', [input])).rejects.toThrow(
+          'Dev engine is closed',
+        );
+        callbackCompleted = true;
+      },
+      watch: getDevWatchOptionsForCi(),
+    });
+
+    onTestFinished(async () => {
+      await engine.close().catch(() => {});
+      await stopWorkers?.();
+      runtimeLease.release();
+      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    const runResult = await settleWithin(engine.run(), 'raw binding run');
+    expect(normalizeBindingResultErrors(runResult)).toEqual([]);
+    expect(callbackCompleted).toBe(true);
+
+    const terminalClose = await settleWithin(engine.close(), 'raw binding terminal close');
+    expect(normalizeBindingResultErrors(terminalClose)).toEqual([closeError]);
+  },
+);
+
+test.skipIf(isSingleThread)(
+  'two onOutput callbacks can close each opposing dev engine',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const fixtureA = createFixture('dev-cross-engine-close-a');
+    const fixtureB = createFixture('dev-cross-engine-close-b');
+    let engineA!: DevEngine;
+    let engineB!: DevEngine;
+    let callbackACompleted = false;
+    let callbackBCompleted = false;
+
+    engineA = await dev(
+      { input: fixtureA.input, experimental: { devMode: true } },
+      { dir: fixtureA.outputDir },
+      {
+        async onOutput(result) {
+          if (result instanceof Error) throw result;
+          await Promise.resolve();
+          await engineB.close();
+          callbackACompleted = true;
+        },
+      },
+    );
+    engineB = await dev(
+      { input: fixtureB.input, experimental: { devMode: true } },
+      { dir: fixtureB.outputDir },
+      {
+        async onOutput(result) {
+          if (result instanceof Error) throw result;
+          await Promise.resolve();
+          await engineA.close();
+          callbackBCompleted = true;
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await Promise.allSettled([engineA.close(), engineB.close()]);
+      if (!process.env.CI) {
+        fs.rmSync(fixtureA.dir, { recursive: true, force: true });
+        fs.rmSync(fixtureB.dir, { recursive: true, force: true });
+      }
+    });
+
+    await Promise.allSettled([engineA.run(), engineB.run()]);
+    await Promise.all([engineA.close(), engineB.close()]);
+
+    expect(callbackACompleted).toBe(true);
+    expect(callbackBCompleted).toBe(true);
   },
 );
 

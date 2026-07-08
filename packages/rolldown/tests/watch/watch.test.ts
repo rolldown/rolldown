@@ -3,7 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { RolldownWatcher, RolldownWatcherEvent, WatchOptions } from 'rolldown';
 import { rolldown, watch as _watch } from 'rolldown';
+import { defineParallelPlugin } from 'rolldown/experimental';
 import { sleep } from 'rolldown-tests/utils';
+import { isSingleThread } from '@tests/runtime-flavor';
 import { test, vi } from 'vitest';
 
 const TEST_RETRY = 3;
@@ -115,6 +117,50 @@ test.concurrent(
         expect(closeWatcherFn).toBeCalledTimes(1);
       }
     }
+  },
+);
+
+test.concurrent(
+  'watchChange rejection terminates the watcher and is replayed by close',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-change-rejection', retryCount);
+    const hookError = new TypeError('watchChange rejected');
+    let markHookCalled!: () => void;
+    const hookCalled = new Promise<void>((resolve) => {
+      markHookCalled = resolve;
+    });
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'watch-change-rejection',
+          watchChange() {
+            markHookCalled();
+            throw hookError;
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await waitBuildFinished(watcher);
+    const closed = new Promise<void>((resolve) => {
+      watcher.on('close', resolve);
+    });
+    await editFile(input, 'console.log(2)');
+    await hookCalled;
+    await closed;
+
+    await expect(watcher.close()).rejects.toBe(hookError);
+    await expect(watcher.close()).rejects.toBe(hookError);
   },
 );
 
@@ -298,6 +344,66 @@ test.concurrent(
 );
 
 test.concurrent(
+  'cross-watcher close hook cycles acknowledge the watcher lifecycle ancestor',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const fixtureA = createTestInputAndOutput('watch-cross-close-hook-cycle-a', retryCount);
+    const fixtureB = createTestInputAndOutput('watch-cross-close-hook-cycle-b', retryCount);
+    const completedHooks: string[] = [];
+    let watcherA!: RolldownWatcher;
+    let watcherB!: RolldownWatcher;
+
+    watcherA = watch({
+      input: fixtureA.input,
+      output: { file: fixtureA.output },
+      plugins: [
+        {
+          name: 'cross-close-hook-cycle-a',
+          async closeBundle() {
+            await Promise.resolve();
+            await watcherB.close();
+            completedHooks.push('A closeBundle');
+          },
+        },
+      ],
+    });
+    watcherB = watch({
+      input: fixtureB.input,
+      output: { file: fixtureB.output },
+      plugins: [
+        {
+          name: 'cross-close-hook-cycle-b',
+          async closeWatcher() {
+            await Promise.resolve();
+            await watcherA.close();
+            completedHooks.push('B closeWatcher');
+          },
+          async closeBundle() {
+            await Promise.resolve();
+            await watcherA.close();
+            completedHooks.push('B closeBundle');
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await Promise.allSettled([watcherA.close(), watcherB.close()]);
+      if (!process.env.CI) {
+        fs.rmSync(fixtureA.dir, { recursive: true, force: true });
+        fs.rmSync(fixtureB.dir, { recursive: true, force: true });
+      }
+    });
+
+    await Promise.all([waitBuildFinished(watcherA), waitBuildFinished(watcherB)]);
+    await watcherA.close();
+    await watcherB.close();
+
+    expect(completedHooks).toEqual(['B closeWatcher', 'B closeBundle', 'A closeBundle']);
+  },
+);
+
+test.concurrent(
   'watcher setup failure emits an error and remains closable',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ expect }) => {
@@ -382,6 +488,8 @@ test.concurrent(
       await Promise.resolve();
       throw listenerError;
     });
+    const followingListener = vi.fn();
+    watcher.on('close', followingListener);
 
     const results = await Promise.allSettled([watcher.close(), watcher.close()]);
     expect(results).toEqual([
@@ -389,6 +497,47 @@ test.concurrent(
       { status: 'rejected', reason: listenerError },
     ]);
     expect(closeWatcherFn).toHaveBeenCalledTimes(1);
+    expect(followingListener).toHaveBeenCalledTimes(1);
+    expect((watcher as any).listeners.size).toBe(0);
+  },
+);
+
+test.concurrent(
+  'watch event listener rejection terminates native lifecycle and is replayed by close',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-event-listener-rejection',
+      retryCount,
+    );
+    const listenerError = new RangeError('watch event listener rejected');
+    let markListenerCalled!: () => void;
+    const listenerCalled = new Promise<void>((resolve) => {
+      markListenerCalled = resolve;
+    });
+    const watcher = watch({ input, output: { file: output } });
+    onTestFinished(async () => {
+      await watcher.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') {
+        markListenerCalled();
+        throw listenerError;
+      }
+    });
+    const closed = new Promise<void>((resolve) => {
+      watcher.on('close', resolve);
+    });
+
+    await listenerCalled;
+    await closed;
+    await expect(watcher.close()).rejects.toBe(listenerError);
+    await expect(watcher.close()).rejects.toBe(listenerError);
   },
 );
 
@@ -437,6 +586,49 @@ test.concurrent(
     releaseListener();
     await expect(firstClose).rejects.toBe(listenerError);
     await expect(secondClose).rejects.toBe(listenerError);
+  },
+);
+
+test.concurrent(
+  'mutually closing watcher listeners acknowledge an active ancestor',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const fixtureA = createTestInputAndOutput('watch-close-listener-cycle-a', retryCount);
+    const fixtureB = createTestInputAndOutput('watch-close-listener-cycle-b', retryCount);
+    const watcherA = watch({
+      input: fixtureA.input,
+      output: { file: fixtureA.output },
+    });
+    const watcherB = watch({
+      input: fixtureB.input,
+      output: { file: fixtureB.output },
+    });
+    onTestFinished(async () => {
+      await Promise.allSettled([watcherA.close(), watcherB.close()]);
+      if (!process.env.CI) {
+        fs.rmSync(fixtureA.dir, { recursive: true, force: true });
+        fs.rmSync(fixtureB.dir, { recursive: true, force: true });
+      }
+    });
+
+    const closeListenerA = vi.fn(async () => {
+      await Promise.resolve();
+      await watcherB.close();
+    });
+    const closeListenerB = vi.fn(async () => {
+      await Promise.resolve();
+      await watcherA.close();
+    });
+    watcherA.on('close', closeListenerA);
+    watcherB.on('close', closeListenerB);
+
+    await Promise.all([waitBuildFinished(watcherA), waitBuildFinished(watcherB)]);
+    await watcherA.close();
+    await watcherB.close();
+
+    expect(closeListenerA).toHaveBeenCalledTimes(1);
+    expect(closeListenerB).toHaveBeenCalledTimes(1);
   },
 );
 
@@ -516,6 +708,422 @@ test.concurrent(
 );
 
 test.concurrent(
+  'retained watch results keep per-build plugin resources isolated across rebuilds',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'watch-retained-result-resource-isolation',
+      retryCount,
+    );
+    const references: string[] = [];
+    const closedFileNames: string[] = [];
+    const results: Array<{ close(): Promise<void> }> = [];
+    const watcher = watch({
+      input,
+      output: { dir: outputDir },
+      plugins: [
+        {
+          name: 'retained-result-resource-isolation',
+          buildStart() {
+            const build = references.length;
+            references.push(
+              this.emitFile({
+                type: 'asset',
+                fileName: `build-${build}.txt`,
+                source: `build ${build}`,
+              }),
+            );
+          },
+          closeBundle() {
+            closedFileNames.push(this.getFileName(references[closedFileNames.length]));
+          },
+        },
+      ],
+    });
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') results.push(event.result);
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await waitBuildFinished(watcher);
+    await editFile(input, 'console.log(2)');
+    await waitBuildFinished(watcher);
+    expect(results).toHaveLength(2);
+
+    await results[0].close();
+    await results[1].close();
+    expect(closedFileNames).toEqual(['build-0.txt', 'build-1.txt']);
+  },
+);
+
+test
+  .skipIf(isSingleThread)
+  .concurrent(
+    'watcher close closes every retained result before parallel workers terminate',
+    { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+    async ({ task, expect, onTestFinished }) => {
+      const retryCount = task.result?.retryCount ?? 0;
+      const { input, output, dir } = createTestInputAndOutput(
+        'watch-retained-parallel-result-close',
+        retryCount,
+      );
+      const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
+      const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(
+        path.join(import.meta.dirname, '../build-api/parallel-close-plugin.mjs'),
+      );
+      const results: Array<{ close(): Promise<void> }> = [];
+      const watcher = watch({
+        input,
+        output: { file: output },
+        plugins: [parallelPlugin({ state })],
+      });
+      watcher.on('event', (event) => {
+        if (event.code === 'BUNDLE_END') results.push(event.result);
+      });
+      onTestFinished(async () => {
+        await watcher.close().catch(() => {});
+        if (!process.env.CI) {
+          fs.rmSync(dir, { recursive: true, force: true });
+        }
+      });
+
+      await waitBuildFinished(watcher);
+      await editFile(input, 'console.log(2)');
+      await waitBuildFinished(watcher);
+      expect(results).toHaveLength(2);
+      const expectedCloseBundleCalls = Atomics.load(state, 0);
+      expect(expectedCloseBundleCalls).toBeGreaterThan(0);
+
+      await watcher.close();
+
+      expect(Atomics.load(state, 1)).toBe(expectedCloseBundleCalls);
+      await Promise.all(results.map((result) => result.close()));
+    },
+  );
+
+test.concurrent(
+  'bundle result close can be re-entered from closeBundle without settling external callers',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-bundle-close-reentrant',
+      retryCount,
+    );
+    let result: { close(): Promise<void> } | undefined;
+    let markReentrantCloseCompleted!: () => void;
+    const reentrantCloseCompleted = new Promise<void>((resolve) => {
+      markReentrantCloseCompleted = resolve;
+    });
+    let releaseCloseBundle!: () => void;
+    const closeBundleRelease = new Promise<void>((resolve) => {
+      releaseCloseBundle = resolve;
+    });
+    const closeBundleFn = vi.fn(async () => {
+      if (!result) throw new Error('BUNDLE_END result was not captured');
+      await result.close();
+      markReentrantCloseCompleted();
+      await closeBundleRelease;
+    });
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [{ name: 'close-reentrant-result', closeBundle: closeBundleFn }],
+    });
+    onTestFinished(async () => {
+      releaseCloseBundle();
+      try {
+        await watcher.close();
+      } finally {
+        if (!process.env.CI) {
+          fs.rmSync(dir, { recursive: true, force: true });
+        }
+      }
+    });
+
+    result = await new Promise<{ close(): Promise<void> }>((resolve, reject) => {
+      watcher.on('event', (event) => {
+        if (event.code === 'BUNDLE_END') resolve(event.result);
+        if (event.code === 'ERROR') reject(event.error);
+      });
+    });
+    expect('closeIdentity' in result).toBe(false);
+
+    let externalCloseSettled = false;
+    const externalClose = result.close();
+    void externalClose.then(
+      () => {
+        externalCloseSettled = true;
+      },
+      () => {
+        externalCloseSettled = true;
+      },
+    );
+
+    await reentrantCloseCompleted;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(externalCloseSettled).toBe(false);
+
+    releaseCloseBundle();
+    await externalClose;
+    await result.close();
+    expect(closeBundleFn).toHaveBeenCalledTimes(1);
+  },
+);
+
+test.concurrent(
+  'bundle result close awaits a different result and preserves its closeBundle error',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-bundle-close-cross-result',
+      retryCount,
+    );
+    const closeError = Object.assign(new RangeError('cross-result closeBundle failure'), {
+      identityMarker: 'preserved',
+    });
+    let resultB: { close(): Promise<void> } | undefined;
+    let closeBundleCalls = 0;
+    let observedCloseError: unknown;
+    let bCloseFromA: Promise<void> | undefined;
+    let aFinishedAwaitingB = false;
+    let markBCloseBundleStarted!: () => void;
+    const bCloseBundleStarted = new Promise<void>((resolve) => {
+      markBCloseBundleStarted = resolve;
+    });
+    let releaseBCloseBundle!: () => void;
+    const bCloseBundleRelease = new Promise<void>((resolve) => {
+      releaseBCloseBundle = resolve;
+    });
+    const closeBundleFn = vi.fn(async () => {
+      closeBundleCalls += 1;
+      if (closeBundleCalls === 1) {
+        if (!resultB) throw new Error('second BUNDLE_END result was not captured');
+        try {
+          bCloseFromA = resultB.close();
+          await bCloseFromA;
+        } catch (error) {
+          observedCloseError = error;
+        }
+        aFinishedAwaitingB = true;
+        return;
+      }
+      if (closeBundleCalls === 2) {
+        markBCloseBundleStarted();
+        await bCloseBundleRelease;
+        throw closeError;
+      }
+      throw new Error(`unexpected closeBundle call ${closeBundleCalls}`);
+    });
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [{ name: 'cross-result-close', closeBundle: closeBundleFn }],
+    });
+    onTestFinished(async () => {
+      releaseBCloseBundle();
+      try {
+        await watcher.close();
+      } catch {}
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    let bundleEndCount = 0;
+    let resolveResultA!: (result: { close(): Promise<void> }) => void;
+    let rejectResultA!: (error: unknown) => void;
+    const resultAPromise = new Promise<{ close(): Promise<void> }>((resolve, reject) => {
+      resolveResultA = resolve;
+      rejectResultA = reject;
+    });
+    let resolveResultB!: (result: { close(): Promise<void> }) => void;
+    let rejectResultB!: (error: unknown) => void;
+    const resultBPromise = new Promise<{ close(): Promise<void> }>((resolve, reject) => {
+      resolveResultB = resolve;
+      rejectResultB = reject;
+    });
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') {
+        bundleEndCount += 1;
+        if (bundleEndCount === 1) resolveResultA(event.result);
+        if (bundleEndCount === 2) resolveResultB(event.result);
+      } else if (event.code === 'ERROR') {
+        rejectResultA(event.error);
+        rejectResultB(event.error);
+      }
+    });
+
+    const resultA = await resultAPromise;
+    await editFile(input, 'console.log(2)');
+    resultB = await resultBPromise;
+
+    let aCloseSettled = false;
+    const aClose = resultA.close();
+    void aClose.then(
+      () => {
+        aCloseSettled = true;
+      },
+      () => {
+        aCloseSettled = true;
+      },
+    );
+
+    await bCloseBundleStarted;
+    const concurrentBClose = resultB.close();
+    expect(concurrentBClose).toBe(bCloseFromA);
+    let concurrentBCloseSettled = false;
+    void concurrentBClose.then(
+      () => {
+        concurrentBCloseSettled = true;
+      },
+      () => {
+        concurrentBCloseSettled = true;
+      },
+    );
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(aFinishedAwaitingB).toBe(false);
+    expect(aCloseSettled).toBe(false);
+    expect(concurrentBCloseSettled).toBe(false);
+
+    releaseBCloseBundle();
+    await aClose;
+    expect(aFinishedAwaitingB).toBe(true);
+    expect(observedCloseError).toBe(closeError);
+    await expect(concurrentBClose).rejects.toBe(closeError);
+    const lateBClose = resultB.close();
+    expect(lateBClose).toBe(concurrentBClose);
+    await expect(lateBClose).rejects.toBe(closeError);
+    await expect(watcher.close()).rejects.toBe(closeError);
+    expect(closeError.identityMarker).toBe('preserved');
+    expect(closeBundleFn).toHaveBeenCalledTimes(2);
+  },
+);
+
+test.concurrent(
+  'nested cross-result closeBundle cycle acknowledges the active ancestor',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-bundle-close-ancestor-cycle',
+      retryCount,
+    );
+    let resultA: { close(): Promise<void> } | undefined;
+    let resultB: { close(): Promise<void> } | undefined;
+    let closeBundleCalls = 0;
+    const completedHooks: string[] = [];
+    let markAncestorCloseAcknowledged!: () => void;
+    const ancestorCloseAcknowledged = new Promise<void>((resolve) => {
+      markAncestorCloseAcknowledged = resolve;
+    });
+    let releaseNestedCloseBundle!: () => void;
+    const nestedCloseBundleRelease = new Promise<void>((resolve) => {
+      releaseNestedCloseBundle = resolve;
+    });
+    const closeBundleFn = vi.fn(async () => {
+      closeBundleCalls += 1;
+      if (closeBundleCalls === 1) {
+        if (!resultB) throw new Error('second BUNDLE_END result was not captured');
+        await resultB.close();
+        completedHooks.push('A');
+        return;
+      }
+      if (closeBundleCalls === 2) {
+        if (!resultA) throw new Error('first BUNDLE_END result was not captured');
+        await Promise.resolve();
+        await resultA.close();
+        markAncestorCloseAcknowledged();
+        await nestedCloseBundleRelease;
+        completedHooks.push('B');
+        return;
+      }
+      throw new Error(`unexpected closeBundle call ${closeBundleCalls}`);
+    });
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [{ name: 'nested-cross-result-close', closeBundle: closeBundleFn }],
+    });
+    onTestFinished(async () => {
+      releaseNestedCloseBundle();
+      await Promise.allSettled([resultA?.close(), resultB?.close(), watcher.close()]);
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    let bundleEndCount = 0;
+    let resolveResultA!: (result: { close(): Promise<void> }) => void;
+    let rejectResultA!: (error: unknown) => void;
+    const resultAPromise = new Promise<{ close(): Promise<void> }>((resolve, reject) => {
+      resolveResultA = resolve;
+      rejectResultA = reject;
+    });
+    let resolveResultB!: (result: { close(): Promise<void> }) => void;
+    let rejectResultB!: (error: unknown) => void;
+    const resultBPromise = new Promise<{ close(): Promise<void> }>((resolve, reject) => {
+      resolveResultB = resolve;
+      rejectResultB = reject;
+    });
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') {
+        bundleEndCount += 1;
+        if (bundleEndCount === 1) resolveResultA(event.result);
+        if (bundleEndCount === 2) resolveResultB(event.result);
+      } else if (event.code === 'ERROR') {
+        rejectResultA(event.error);
+        rejectResultB(event.error);
+      }
+    });
+
+    resultA = await resultAPromise;
+    await editFile(input, 'console.log(2)');
+    resultB = await resultBPromise;
+
+    let resultACloseSettled = false;
+    const resultAClose = resultA.close();
+    void resultAClose.then(
+      () => {
+        resultACloseSettled = true;
+      },
+      () => {
+        resultACloseSettled = true;
+      },
+    );
+
+    await ancestorCloseAcknowledged;
+    let resultBCloseSettled = false;
+    const resultBClose = resultB.close();
+    void resultBClose.then(
+      () => {
+        resultBCloseSettled = true;
+      },
+      () => {
+        resultBCloseSettled = true;
+      },
+    );
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(resultACloseSettled).toBe(false);
+    expect(resultBCloseSettled).toBe(false);
+
+    releaseNestedCloseBundle();
+    await Promise.all([resultAClose, resultBClose]);
+    await Promise.all([resultA.close(), resultB.close(), watcher.close()]);
+
+    expect(completedHooks).toEqual(['B', 'A']);
+    expect(closeBundleFn).toHaveBeenCalledTimes(2);
+  },
+);
+
+test.concurrent(
   'watcher close aggregates native lifecycle and close listener failures',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {
@@ -530,14 +1138,17 @@ test.concurrent(
       }
     });
 
+    const closeWatcherError = new TypeError('native closeWatcher failure');
+    const closeBundleError = new RangeError('native closeBundle failure');
+    const closeListenerError = new Error('JavaScript close listener failure');
     const closeWatcherFn = vi.fn(() => {
-      throw new Error('native closeWatcher failure');
+      throw closeWatcherError;
     });
     const closeBundleFn = vi.fn(() => {
-      throw new Error('native closeBundle failure');
+      throw closeBundleError;
     });
     const closeListenerFn = vi.fn(() => {
-      throw new Error('JavaScript close listener failure');
+      throw closeListenerError;
     });
     const watcher = watch({
       input,
@@ -563,10 +1174,7 @@ test.concurrent(
     expect(firstResult.reason).toBe(concurrentResult.reason);
     expect(firstResult.reason).toBeInstanceOf(AggregateError);
     const aggregate = firstResult.reason as AggregateError;
-    expect(aggregate.errors).toHaveLength(2);
-    expect(aggregate.errors[0].message).toContain('native closeWatcher failure');
-    expect(aggregate.errors[0].message).toContain('native closeBundle failure');
-    expect(aggregate.errors[1].message).toContain('JavaScript close listener failure');
+    expect(aggregate.errors).toEqual([closeWatcherError, closeBundleError, closeListenerError]);
     expect(closeWatcherFn).toHaveBeenCalledTimes(1);
     expect(closeBundleFn).toHaveBeenCalledTimes(1);
     expect(closeListenerFn).toHaveBeenCalledTimes(1);
@@ -576,6 +1184,230 @@ test.concurrent(
     expect(closeWatcherFn).toHaveBeenCalledTimes(1);
     expect(closeBundleFn).toHaveBeenCalledTimes(1);
     expect(closeListenerFn).toHaveBeenCalledTimes(1);
+  },
+);
+
+test.concurrent(
+  'watcher close reports superseded and current result failures once each',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-close-retained-error-aggregation',
+      retryCount,
+    );
+    const closeError = new Error('shared closeBundle failure');
+    const closeBundleFn = vi.fn(() => {
+      throw closeError;
+    });
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [{ name: 'retained-close-error-aggregation', closeBundle: closeBundleFn }],
+    });
+    onTestFinished(async () => {
+      await watcher.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await waitBuildFinished(watcher);
+    await editFile(input, 'console.log(2)');
+    await waitBuildFinished(watcher);
+
+    const closeResult = await Promise.allSettled([watcher.close()]);
+    expect(closeResult[0].status).toBe('rejected');
+    if (closeResult[0].status !== 'rejected') return;
+    expect(closeResult[0].reason).toBeInstanceOf(AggregateError);
+    const errors = (closeResult[0].reason as AggregateError).errors;
+    expect(errors).toHaveLength(2);
+    expect(errors).toEqual([closeError, closeError]);
+    expect(closeBundleFn).toHaveBeenCalledTimes(2);
+  },
+);
+
+test.concurrent(
+  'watcher close owns the prior result after a hidden rebuild replaces the native handle',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-close-hidden-rebuild-result',
+      retryCount,
+    );
+    const priorResultError = new RangeError('prior emitted result closeBundle failure');
+    let buildCount = 0;
+    let closeBundleCalls = 0;
+    let releaseSecondBuild!: () => void;
+    const secondBuildRelease = new Promise<void>((resolve) => {
+      releaseSecondBuild = resolve;
+    });
+    let markSecondBuildStarted!: () => void;
+    const secondBuildStarted = new Promise<void>((resolve) => {
+      markSecondBuildStarted = resolve;
+    });
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'hidden-rebuild-result-ownership',
+          async buildStart() {
+            const bundleId = ++buildCount;
+            if (bundleId === 2) {
+              markSecondBuildStarted();
+              await secondBuildRelease;
+            }
+          },
+          closeBundle() {
+            closeBundleCalls += 1;
+            if (closeBundleCalls === 2) throw priorResultError;
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      releaseSecondBuild();
+      await watcher.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await waitBuildFinished(watcher);
+    await editFile(input, 'console.log(2)');
+    await secondBuildStarted;
+
+    const closePromise = watcher.close();
+    releaseSecondBuild();
+
+    await expect(closePromise).rejects.toBe(priorResultError);
+    expect(closeBundleCalls).toBe(2);
+  },
+);
+
+test.concurrent(
+  'closing from BUNDLE_START reports the transferred result failure once',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-close-bundle-start-result-handoff',
+      retryCount,
+    );
+    const closeError = new RangeError('BUNDLE_START result handoff failure');
+    const closeBundleFn = vi.fn(() => {
+      throw closeError;
+    });
+    const buildStartFn = vi.fn();
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'bundle-start-result-handoff',
+          buildStart: buildStartFn,
+          closeBundle: closeBundleFn,
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    let bundleStartCount = 0;
+    let closePromise: Promise<void> | undefined;
+    let markCloseStarted!: () => void;
+    const closeStarted = new Promise<void>((resolve) => {
+      markCloseStarted = resolve;
+    });
+    watcher.on('event', (event) => {
+      if (event.code !== 'BUNDLE_START') return;
+      bundleStartCount += 1;
+      if (bundleStartCount === 2) {
+        closePromise = watcher.close();
+        markCloseStarted();
+      }
+    });
+
+    await waitBuildFinished(watcher);
+    await editFile(input, 'console.log(2)');
+    await closeStarted;
+
+    await expect(closePromise).rejects.toBe(closeError);
+    expect(buildStartFn).toHaveBeenCalledTimes(1);
+    expect(closeBundleFn).toHaveBeenCalledTimes(1);
+  },
+);
+
+test.concurrent(
+  'closing from a nested BUNDLE_START microtask reports each native task failure once',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const first = createTestInputAndOutput(
+      'watch-close-bundle-start-nested-microtask-a',
+      retryCount,
+    );
+    const secondOutput = path.join(first.dir, 'second.js');
+    const closeError = new RangeError('nested BUNDLE_START task close failure');
+    const closeBundleFn = vi.fn(() => {
+      throw closeError;
+    });
+    const buildStartFn = vi.fn();
+    const watcher = watch({
+      input: first.input,
+      output: [{ file: first.output }, { file: secondOutput }],
+      plugins: [
+        {
+          name: 'bundle-start-nested-microtask-handoff',
+          buildStart: buildStartFn,
+          closeBundle: closeBundleFn,
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(first.dir, { recursive: true, force: true });
+      }
+    });
+
+    let bundleStartCount = 0;
+    let closePromise: Promise<void> | undefined;
+    let markCloseStarted!: () => void;
+    const closeStarted = new Promise<void>((resolve) => {
+      markCloseStarted = resolve;
+    });
+    watcher.on('event', (event) => {
+      if (event.code !== 'BUNDLE_START') return;
+      bundleStartCount += 1;
+      if (bundleStartCount !== 3) return;
+      queueMicrotask(() => {
+        queueMicrotask(() => {
+          queueMicrotask(() => {
+            closePromise = watcher.close();
+            markCloseStarted();
+          });
+        });
+      });
+    });
+
+    await waitBuildFinished(watcher);
+    await editFile(first.input, 'console.log(2)');
+    await closeStarted;
+
+    const closeResult = await Promise.allSettled([closePromise!]);
+    expect(closeResult[0].status).toBe('rejected');
+    if (closeResult[0].status !== 'rejected') return;
+    expect(closeResult[0].reason).toBeInstanceOf(AggregateError);
+    expect((closeResult[0].reason as AggregateError).errors).toEqual([closeError, closeError]);
+    expect(buildStartFn).toHaveBeenCalledTimes(2);
+    expect(closeBundleFn).toHaveBeenCalledTimes(2);
   },
 );
 
@@ -937,6 +1769,38 @@ test.concurrent(
     });
 
     // test first build event
+    await expect.poll(() => eventFn).toBeCalled();
+  },
+);
+
+test.concurrent(
+  'watch BUNDLE_END resolves relative "file" output with dot segments',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, dir } = createTestInputAndOutput('watch-event-relative-file-output', retryCount);
+    const relativeOutput = './nested/../dist/main.js';
+    const expectedOutput = path.resolve(dir, relativeOutput);
+    const watcher = watch({
+      cwd: dir,
+      input,
+      output: { file: relativeOutput },
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const eventFn = vi.fn();
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') {
+        eventFn();
+        expect(event.output).toEqual([expectedOutput]);
+      }
+    });
+
     await expect.poll(() => eventFn).toBeCalled();
   },
 );
@@ -1371,6 +2235,111 @@ test.concurrent(
 );
 
 test.concurrent(
+  'empty output array falls back to one default output',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, dir } = createTestInputAndOutput('watch-empty-output-array', retryCount);
+    const watcher = watch({
+      input,
+      output: [],
+      watch: { skipWrite: true },
+    });
+    onTestFinished(async () => {
+      await watcher.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    let bundleEndCount = 0;
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') bundleEndCount += 1;
+    });
+
+    await expect.poll(() => bundleEndCount).toBe(1);
+  },
+);
+
+test.concurrent(
+  'multi-output watch runs config hooks once and context hooks per output',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-multi-output-config-hooks',
+      retryCount,
+    );
+    const secondOutput = path.join(dir, 'dist', 'second.js');
+    const optionsFn = vi.fn();
+    const outputOptionsFn = vi.fn();
+    const buildStartFn = vi.fn();
+    const watchChangeFn = vi.fn();
+    const closeWatcherFn = vi.fn();
+    const onInvalidateFn = vi.fn();
+    const watcher = watch({
+      input,
+      output: [{ file: output }, { file: secondOutput }],
+      watch: {
+        buildDelay: 100,
+        onInvalidate(id) {
+          if (id === input) onInvalidateFn();
+        },
+      },
+      plugins: [
+        {
+          name: 'multi-output-config-hooks',
+          options(options) {
+            optionsFn();
+            return options;
+          },
+          outputOptions(options) {
+            outputOptionsFn();
+            return options;
+          },
+          buildStart() {
+            buildStartFn();
+          },
+          watchChange(id) {
+            if (id === input) watchChangeFn();
+          },
+          closeWatcher() {
+            closeWatcherFn();
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    let bundleEndCount = 0;
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') bundleEndCount += 1;
+    });
+
+    await expect.poll(() => bundleEndCount, { timeout: 10_000 }).toBe(2);
+    expect(optionsFn).toHaveBeenCalledOnce();
+    expect(outputOptionsFn).toHaveBeenCalledTimes(2);
+    expect(buildStartFn).toHaveBeenCalledTimes(2);
+
+    await editFile(input, 'console.log(2)');
+    await expect.poll(() => bundleEndCount, { timeout: 10_000 }).toBe(4);
+    expect(optionsFn).toHaveBeenCalledOnce();
+    expect(outputOptionsFn).toHaveBeenCalledTimes(2);
+    expect(buildStartFn).toHaveBeenCalledTimes(4);
+    expect(watchChangeFn).toHaveBeenCalledTimes(2);
+    expect(onInvalidateFn).toHaveBeenCalledOnce();
+
+    await watcher.close();
+    expect(closeWatcherFn).toHaveBeenCalledOnce();
+  },
+);
+
+test.concurrent(
   'watch multiply options',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {
@@ -1417,6 +2386,45 @@ test.concurrent(
     await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(2)');
     // Only the input corresponding bundler is rebuild
     expect(events[0]).toEqual(outputDir);
+  },
+);
+
+test.concurrent(
+  'multiple outputs in one config do not trigger the multiple polling warning',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-multi-output-polling-warning',
+      retryCount,
+    );
+    const secondOutput = path.join(dir, 'dist', 'second.js');
+    const multipleWatcherWarnings = vi.fn();
+    const watcher = watch({
+      input,
+      output: [{ file: output }, { file: secondOutput }],
+      plugins: [
+        {
+          name: 'multi-output-polling-warning',
+          onLog(_level, log) {
+            if (log.code === 'MULTIPLE_WATCHER_OPTION') multipleWatcherWarnings();
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    let bundleEndCount = 0;
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') bundleEndCount += 1;
+    });
+    await expect.poll(() => bundleEndCount).toBe(2);
+    expect(multipleWatcherWarnings).not.toHaveBeenCalled();
   },
 );
 

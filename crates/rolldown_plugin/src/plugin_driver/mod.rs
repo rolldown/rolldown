@@ -33,6 +33,7 @@ use crate::{
 pub type SharedPluginDriver = Arc<PluginDriver>;
 
 pub struct PluginDriver {
+  close_identity: u64,
   plugins: IndexPluginable,
   contexts: IndexPluginContext,
   hook_orders: PluginHookOrders,
@@ -48,6 +49,11 @@ pub struct PluginDriver {
 }
 
 impl PluginDriver {
+  #[doc(hidden)]
+  pub fn close_identity(&self) -> u64 {
+    self.close_identity
+  }
+
   pub fn clear(&self) {
     self.watch_files.clear();
     self.module_infos.clear();

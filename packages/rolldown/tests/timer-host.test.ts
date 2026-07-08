@@ -1,18 +1,13 @@
 import { afterEach, expect, test, vi } from 'vitest';
 
 const callbacks = vi.hoisted(() => ({
-  taskDispatch: undefined as undefined | ((dispatchHigh: number, dispatchLow: number) => void),
   schedule: undefined as undefined | ((id: number, ms: number) => Promise<void>),
   cancel: undefined as undefined | ((id: number) => void),
 }));
 
 vi.mock('../src/binding.cjs', () => ({
-  driveCurrentThreadRuntimeTasks: vi.fn(),
-  registerCurrentThreadTaskHost: vi.fn(
-    (dispatch: (dispatchHigh: number, dispatchLow: number) => void) => {
-      callbacks.taskDispatch = dispatch;
-    },
-  ),
+  getCurrentThreadTaskHostContractVersion: vi.fn(() => 1),
+  registerCurrentThreadTaskHost: vi.fn(),
   registerTimerHost: vi.fn(
     (schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void) => {
       callbacks.schedule = schedule;
@@ -26,14 +21,12 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-test('CurrentThread task host forwards the exact dispatch capability words', async () => {
+test('CurrentThread task host installs the native driver without a JavaScript callback', async () => {
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
   await import('../src/timer-host');
-  const { driveCurrentThreadRuntimeTasks } = await import('../src/binding.cjs');
+  const { registerCurrentThreadTaskHost } = await import('../src/binding.cjs');
 
-  callbacks.taskDispatch?.(0x1234_5678, 0x9abc_def0);
-
-  expect(driveCurrentThreadRuntimeTasks).toHaveBeenCalledWith(0x1234_5678, 0x9abc_def0);
+  expect(registerCurrentThreadTaskHost).toHaveBeenCalledWith();
 });
 
 test('CurrentThread host cancellation clears the JS timeout and resolves its relay', async () => {
@@ -41,7 +34,6 @@ test('CurrentThread host cancellation clears the JS timeout and resolves its rel
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
   await import('../src/timer-host');
 
-  expect(callbacks.taskDispatch).toBeDefined();
   const relay = callbacks.schedule?.(7, 60_000);
   expect(relay).toBeDefined();
   expect(vi.getTimerCount()).toBe(1);

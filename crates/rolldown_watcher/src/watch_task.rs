@@ -1,15 +1,15 @@
 use arcstr::ArcStr;
-use rolldown::{Bundler, BundlerBuilder, BundlerConfig};
+use rolldown::{BundleHandle, Bundler, BundlerBuilder, BundlerConfig};
 use rolldown_common::{
   BundleMode, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
 };
 use rolldown_error::{
-  BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions, ResultExt,
+  BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions,
   filter_out_disabled_diagnostics,
 };
 use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
@@ -69,7 +69,10 @@ impl WatchTask {
 
   /// Run a build and return the outcome for the caller to emit events.
   #[tracing::instrument(level = "debug", skip_all)]
-  pub(crate) async fn build(&mut self, task_index: WatchTaskIdx) -> BuildResult<BuildOutcome> {
+  pub(crate) async fn build(
+    &mut self,
+    task_index: WatchTaskIdx,
+  ) -> Result<BuildOutcome, WatchTaskBuildError> {
     if !self.needs_rebuild {
       return Ok(BuildOutcome::Skipped);
     }
@@ -88,11 +91,6 @@ impl WatchTask {
     let (result, new_watch_files, bundle_handle) = {
       let mut bundler = self.bundler.lock().await;
 
-      // Clear stale plugin driver state from previous build.
-      if let Some(last_bundle_handle) = &bundler.last_bundle_handle {
-        last_bundle_handle.plugin_driver().clear();
-      }
-
       // Always clear resolver cache before each rebuild in watch mode to avoid
       // stale resolution results from modified package.json/tsconfig/export maps.
       bundler.clear_resolver_cache();
@@ -108,26 +106,32 @@ impl WatchTask {
           // (so files are watched even on error — enables recovery when user fixes the issue)
           let watch_files: Vec<ArcStr> =
             bundle.get_watch_files().iter().map(|f| f.clone()).collect();
-          Self::update_watch_files_from(
+          if let Err(diagnostics) = Self::update_watch_files_from(
             fs_watcher_ref,
             watched_files_ref,
             options_ref,
             &watch_files,
-          )?;
-
-          let scan_output = scan_result?;
-
-          // Watcher closed mid-build: signal cancellation to the caller via `None`.
-          if closed.load(Ordering::Relaxed) {
-            return Ok(None);
+          ) {
+            return Ok(WatchBuildStageResult::WatchRegistrationFailed(diagnostics));
           }
 
-          let output = if skip_write {
-            bundle.bundle_generate(scan_output).await?
-          } else {
-            bundle.bundle_write(scan_output).await?
+          let build_result = match scan_result {
+            Ok(scan_output) => {
+              // Watcher closed mid-build: signal cancellation to the caller via `None`.
+              if closed.load(Ordering::Relaxed) {
+                Ok(None)
+              } else {
+                let output = if skip_write {
+                  bundle.bundle_generate(scan_output).await
+                } else {
+                  bundle.bundle_write(scan_output).await
+                };
+                output.map(Some)
+              }
+            }
+            Err(diagnostics) => Err(diagnostics),
           };
-          Ok(Some(output))
+          Ok(WatchBuildStageResult::Build(build_result))
         })
         .await;
 
@@ -142,8 +146,18 @@ impl WatchTask {
       (result, new_watch_files, bundle_handle)
     };
 
+    let result = match result {
+      Ok(WatchBuildStageResult::Build(result)) => result,
+      Ok(WatchBuildStageResult::WatchRegistrationFailed(diagnostics)) => {
+        return Err(WatchTaskBuildError::WatchRegistration { diagnostics, bundle_handle });
+      }
+      Err(diagnostics) => Err(diagnostics),
+    };
+
     // Also register any files discovered during render/write phase
-    self.update_watch_files(&new_watch_files)?;
+    if let Err(diagnostics) = self.update_watch_files(&new_watch_files) {
+      return Err(WatchTaskBuildError::WatchRegistration { diagnostics, bundle_handle });
+    }
 
     #[expect(clippy::cast_possible_truncation)]
     let duration = start_time.elapsed().as_millis() as u32;
@@ -165,7 +179,12 @@ impl WatchTask {
         }
         Ok(BuildOutcome::Success(BundleEndEventData {
           task_index,
-          output: self.options.cwd.join(&self.options.out_dir).to_string_lossy().into_owned(),
+          output: resolve_output_path(
+            &self.options.cwd,
+            self.options.file.as_deref().unwrap_or(&self.options.out_dir),
+          )
+          .to_string_lossy()
+          .into_owned(),
           duration,
           bundle_handle,
         }))
@@ -265,6 +284,8 @@ impl WatchTask {
   ) -> BuildResult<()> {
     let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
     let mut watcher_paths = fs_watcher.paths_mut();
+    let mut pending_watch_files = Vec::new();
+    let mut errors = Vec::new();
 
     for file in files {
       let file_str = file.as_str();
@@ -286,18 +307,26 @@ impl WatchTask {
         match watcher_paths.add(path, RecursiveMode::NonRecursive) {
           Ok(()) => {
             tracing::debug!(name = "notify watch", path = ?path);
-            watched_files.insert(file.clone());
+            pending_watch_files.push(file.clone());
           }
-          Err(e) => {
-            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?e);
-          }
+          Err(error) => errors.extend(error.into_vec()),
         }
       }
     }
 
-    watcher_paths.commit().map_err_to_unhandleable()?;
+    // Opening a notify paths transaction can pause event delivery until commit.
+    // Always finalize it, including after add failures. See
+    // internal-docs/watch-mode/implementation.md.
+    match watcher_paths.commit() {
+      Ok(()) => {
+        for file in pending_watch_files {
+          watched_files.insert(file);
+        }
+      }
+      Err(error) => errors.extend(error.into_vec()),
+    }
 
-    Ok(())
+    if errors.is_empty() { Ok(()) } else { Err(BatchedBuildDiagnostic::new(errors)) }
   }
 
   /// Mark this task as needing rebuild if the changed file is in our watch list.
@@ -322,15 +351,18 @@ impl WatchTask {
 
   /// Call watch_change plugin hook
   #[tracing::instrument(level = "debug", skip(self))]
-  pub(crate) async fn call_watch_change(&self, path: &str, kind: WatcherChangeKind) {
+  pub(crate) async fn call_watch_change(
+    &self,
+    path: &str,
+    kind: WatcherChangeKind,
+  ) -> anyhow::Result<()> {
     let bundler = self.bundler.lock().await;
     if let Some(plugin_driver) =
       bundler.last_bundle_handle.as_ref().map(rolldown::BundleHandle::plugin_driver)
     {
-      let _ = plugin_driver.watch_change(path, kind).await.map_err(|e| {
-        tracing::error!("watch_change plugin hook error: {e:?}");
-      });
+      plugin_driver.watch_change(path, kind).await?;
     }
+    Ok(())
   }
 
   /// Call close_watcher plugin hooks
@@ -338,6 +370,11 @@ impl WatchTask {
   pub(crate) async fn call_hook_close_watcher(&self) -> BuildResult<()> {
     let mut bundler = self.bundler.lock().await;
     bundler.close_watcher().await
+  }
+
+  pub(crate) async fn current_bundle_close_identity(&self) -> Option<u64> {
+    let bundler = self.bundler.lock().await;
+    bundler.last_bundle_handle.as_ref().map(BundleHandle::close_identity)
   }
 
   /// Close the bundler (calls `closeBundle` plugin hook for the last built bundle, if any).
@@ -362,6 +399,30 @@ impl WatchTask {
   }
 }
 
+fn resolve_output_path(cwd: &Path, output: &str) -> PathBuf {
+  let output = Path::new(output);
+  let path = if output.is_absolute() { output.to_path_buf() } else { cwd.join(output) };
+  let absolute_path = if path.is_absolute() {
+    path
+  } else {
+    std::env::current_dir().map_or(path.clone(), |current_dir| current_dir.join(path))
+  };
+
+  let mut normalized = PathBuf::new();
+  for component in absolute_path.components() {
+    match component {
+      Component::CurDir => {}
+      Component::ParentDir => {
+        normalized.pop();
+      }
+      Component::Prefix(_) | Component::RootDir | Component::Normal(_) => {
+        normalized.push(component.as_os_str());
+      }
+    }
+  }
+  normalized
+}
+
 /// Outcome of a build attempt
 pub enum BuildOutcome {
   /// Build was skipped (no rebuild needed)
@@ -372,4 +433,336 @@ pub enum BuildOutcome {
   Error(WatchErrorEventData),
   /// `watcher.close()` was called during the build; output was discarded.
   Closed,
+}
+
+enum WatchBuildStageResult<T> {
+  Build(T),
+  WatchRegistrationFailed(BatchedBuildDiagnostic),
+}
+
+pub enum WatchTaskBuildError {
+  WatchRegistration { diagnostics: BatchedBuildDiagnostic, bundle_handle: BundleHandle },
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use rolldown_fs_watcher::{FsEventHandler, FsWatcher, FsWatcherConfig, PathsMut};
+  use std::{
+    fs,
+    path::{Path, PathBuf},
+    sync::{
+      Mutex,
+      atomic::{AtomicBool, AtomicUsize, Ordering},
+    },
+  };
+
+  static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
+
+  struct TestDir(PathBuf);
+
+  impl TestDir {
+    fn new() -> Self {
+      let path = std::env::temp_dir().join(format!(
+        "rolldown-watch-registration-{}-{}",
+        std::process::id(),
+        NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed)
+      ));
+      fs::create_dir_all(&path).expect("create test directory");
+      Self(path)
+    }
+  }
+
+  impl Drop for TestDir {
+    fn drop(&mut self) {
+      let _ = fs::remove_dir_all(&self.0);
+    }
+  }
+
+  struct CommitFailingWatcher {
+    commit_attempts: Arc<AtomicUsize>,
+  }
+
+  struct CommitFailingPaths {
+    commit_attempts: Arc<AtomicUsize>,
+    pending: Vec<PathBuf>,
+  }
+
+  impl PathsMut for CommitFailingPaths {
+    fn add(&mut self, path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
+      self.pending.push(path.to_path_buf());
+      Ok(())
+    }
+
+    fn remove(&mut self, _path: &Path) -> BuildResult<()> {
+      Ok(())
+    }
+
+    fn commit(self: Box<Self>) -> BuildResult<()> {
+      if self.commit_attempts.fetch_add(1, Ordering::SeqCst) == 0 {
+        return Err(anyhow::anyhow!("intentional watcher commit failure").into());
+      }
+      Ok(())
+    }
+  }
+
+  impl FsWatcher for CommitFailingWatcher {
+    fn new<F: FsEventHandler>(_event_handler: F) -> BuildResult<Self>
+    where
+      Self: Sized,
+    {
+      unreachable!("test constructs the watcher directly")
+    }
+
+    fn with_config<F: FsEventHandler>(
+      _event_handler: F,
+      _config: FsWatcherConfig,
+    ) -> BuildResult<Self>
+    where
+      Self: Sized,
+    {
+      unreachable!("test constructs the watcher directly")
+    }
+
+    fn watch(&mut self, _path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
+      unreachable!("test uses the batch path API")
+    }
+
+    fn unwatch(&mut self, _path: &Path) -> BuildResult<()> {
+      unreachable!("test never removes paths")
+    }
+
+    fn paths_mut<'me>(&'me mut self) -> Box<dyn PathsMut + 'me> {
+      Box::new(CommitFailingPaths {
+        commit_attempts: Arc::clone(&self.commit_attempts),
+        pending: Vec::new(),
+      })
+    }
+  }
+
+  struct AddFailingWatcher {
+    fail_commit: bool,
+    add_attempts: Arc<Mutex<Vec<PathBuf>>>,
+    commit_attempts: Arc<AtomicUsize>,
+    event_delivery_paused: Arc<AtomicBool>,
+  }
+
+  struct AddFailingPaths {
+    fail_commit: bool,
+    add_attempts: Arc<Mutex<Vec<PathBuf>>>,
+    commit_attempts: Arc<AtomicUsize>,
+    event_delivery_paused: Arc<AtomicBool>,
+  }
+
+  struct AddFailingWatcherFixture {
+    watcher: std::sync::Mutex<DynFsWatcher>,
+    add_attempts: Arc<Mutex<Vec<PathBuf>>>,
+    commit_attempts: Arc<AtomicUsize>,
+    event_delivery_paused: Arc<AtomicBool>,
+  }
+
+  impl PathsMut for AddFailingPaths {
+    fn add(&mut self, path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
+      self.add_attempts.lock().expect("add attempts lock").push(path.to_path_buf());
+      if path.ends_with("fail.js") {
+        return Err(anyhow::anyhow!("intentional watcher add failure").into());
+      }
+      Ok(())
+    }
+
+    fn remove(&mut self, _path: &Path) -> BuildResult<()> {
+      Ok(())
+    }
+
+    fn commit(self: Box<Self>) -> BuildResult<()> {
+      self.commit_attempts.fetch_add(1, Ordering::SeqCst);
+      self.event_delivery_paused.store(false, Ordering::SeqCst);
+      if self.fail_commit {
+        return Err(anyhow::anyhow!("intentional watcher commit failure").into());
+      }
+      Ok(())
+    }
+  }
+
+  impl FsWatcher for AddFailingWatcher {
+    fn new<F: FsEventHandler>(_event_handler: F) -> BuildResult<Self>
+    where
+      Self: Sized,
+    {
+      unreachable!("test constructs the watcher directly")
+    }
+
+    fn with_config<F: FsEventHandler>(
+      _event_handler: F,
+      _config: FsWatcherConfig,
+    ) -> BuildResult<Self>
+    where
+      Self: Sized,
+    {
+      unreachable!("test constructs the watcher directly")
+    }
+
+    fn watch(&mut self, _path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
+      unreachable!("test uses the batch path API")
+    }
+
+    fn unwatch(&mut self, _path: &Path) -> BuildResult<()> {
+      unreachable!("test never removes paths")
+    }
+
+    fn paths_mut<'me>(&'me mut self) -> Box<dyn PathsMut + 'me> {
+      assert!(
+        !self.event_delivery_paused.swap(true, Ordering::SeqCst),
+        "the preceding paths transaction must have restarted event delivery"
+      );
+      Box::new(AddFailingPaths {
+        fail_commit: self.fail_commit,
+        add_attempts: Arc::clone(&self.add_attempts),
+        commit_attempts: Arc::clone(&self.commit_attempts),
+        event_delivery_paused: Arc::clone(&self.event_delivery_paused),
+      })
+    }
+  }
+
+  fn create_watch_files(test_dir: &TestDir, names: &[&str]) -> Vec<ArcStr> {
+    names
+      .iter()
+      .map(|name| {
+        let file = test_dir.0.join(name);
+        fs::write(&file, "export const value = 1;").expect("write input");
+        ArcStr::from(fs::canonicalize(file).expect("canonicalize input").to_string_lossy().as_ref())
+      })
+      .collect()
+  }
+
+  fn create_add_failing_watcher(fail_commit: bool) -> AddFailingWatcherFixture {
+    let add_attempts = Arc::new(Mutex::new(Vec::new()));
+    let commit_attempts = Arc::new(AtomicUsize::new(0));
+    let event_delivery_paused = Arc::new(AtomicBool::new(false));
+    let watcher: DynFsWatcher = Box::new(AddFailingWatcher {
+      fail_commit,
+      add_attempts: Arc::clone(&add_attempts),
+      commit_attempts: Arc::clone(&commit_attempts),
+      event_delivery_paused: Arc::clone(&event_delivery_paused),
+    });
+    AddFailingWatcherFixture {
+      watcher: std::sync::Mutex::new(watcher),
+      add_attempts,
+      commit_attempts,
+      event_delivery_paused,
+    }
+  }
+
+  #[test]
+  fn failed_watch_add_commits_attempts_later_paths_and_publishes_successes() {
+    let test_dir = TestDir::new();
+    let watch_files = create_watch_files(&test_dir, &["before.js", "fail.js", "after.js"]);
+    let options = NormalizedBundlerOptions { cwd: test_dir.0.clone(), ..Default::default() };
+    let AddFailingWatcherFixture { watcher, add_attempts, commit_attempts, event_delivery_paused } =
+      create_add_failing_watcher(false);
+    let watched_files = FxDashSet::default();
+
+    let error =
+      WatchTask::update_watch_files_from(&watcher, &watched_files, &options, &watch_files)
+        .expect_err("the failed watcher addition must be reported");
+
+    assert!(error.to_string().contains("intentional watcher add failure"));
+    assert_eq!(error.len(), 1);
+    assert_eq!(
+      *add_attempts.lock().expect("add attempts lock"),
+      watch_files.iter().map(|file| PathBuf::from(file.as_str())).collect::<Vec<_>>(),
+      "an add failure must not skip later paths"
+    );
+    assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
+    assert!(
+      !event_delivery_paused.load(Ordering::SeqCst),
+      "commit must restart event delivery after an add failure"
+    );
+    assert!(watched_files.contains(watch_files[0].as_str()));
+    assert!(!watched_files.contains(watch_files[1].as_str()));
+    assert!(watched_files.contains(watch_files[2].as_str()));
+  }
+
+  #[test]
+  fn watch_add_and_commit_failures_are_aggregated_without_publication() {
+    let test_dir = TestDir::new();
+    let watch_files = create_watch_files(&test_dir, &["success.js", "fail.js"]);
+    let options = NormalizedBundlerOptions { cwd: test_dir.0.clone(), ..Default::default() };
+    let AddFailingWatcherFixture { watcher, add_attempts, commit_attempts, event_delivery_paused } =
+      create_add_failing_watcher(true);
+    let watched_files = FxDashSet::default();
+
+    let error =
+      WatchTask::update_watch_files_from(&watcher, &watched_files, &options, &watch_files)
+        .expect_err("add and commit failures must both be reported");
+    let message = error.to_string();
+
+    assert!(message.contains("intentional watcher add failure"));
+    assert!(message.contains("intentional watcher commit failure"));
+    assert_eq!(error.len(), 2);
+    assert_eq!(add_attempts.lock().expect("add attempts lock").len(), watch_files.len());
+    assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
+    assert!(
+      !event_delivery_paused.load(Ordering::SeqCst),
+      "the fake backend must observe transaction finalization"
+    );
+    assert!(!watched_files.contains(watch_files[0].as_str()));
+    assert!(!watched_files.contains(watch_files[1].as_str()));
+  }
+
+  #[test]
+  fn failed_watch_commit_is_not_published_and_is_retried() {
+    let test_dir = TestDir::new();
+    let file = test_dir.0.join("input.js");
+    fs::write(&file, "export const value = 1;").expect("write input");
+    let file = fs::canonicalize(file).expect("canonicalize input");
+    let watch_file = ArcStr::from(file.to_string_lossy().as_ref());
+    let options = NormalizedBundlerOptions {
+      cwd: file.parent().expect("input has parent").to_path_buf(),
+      ..Default::default()
+    };
+    let commit_attempts = Arc::new(AtomicUsize::new(0));
+    let watcher: DynFsWatcher =
+      Box::new(CommitFailingWatcher { commit_attempts: Arc::clone(&commit_attempts) });
+    let watcher = std::sync::Mutex::new(watcher);
+    let watched_files = FxDashSet::default();
+
+    let first = WatchTask::update_watch_files_from(
+      &watcher,
+      &watched_files,
+      &options,
+      std::slice::from_ref(&watch_file),
+    );
+    assert!(first.is_err());
+    assert!(!watched_files.contains(watch_file.as_str()));
+    assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
+
+    WatchTask::update_watch_files_from(
+      &watcher,
+      &watched_files,
+      &options,
+      std::slice::from_ref(&watch_file),
+    )
+    .expect("second watcher commit should retry and succeed");
+    assert!(watched_files.contains(watch_file.as_str()));
+    assert_eq!(commit_attempts.load(Ordering::SeqCst), 2);
+
+    WatchTask::update_watch_files_from(
+      &watcher,
+      &watched_files,
+      &options,
+      std::slice::from_ref(&watch_file),
+    )
+    .expect("empty watcher batch should still commit");
+    assert_eq!(commit_attempts.load(Ordering::SeqCst), 3);
+  }
+
+  #[test]
+  fn relative_output_path_is_resolved_and_normalized() {
+    let cwd = std::env::current_dir().expect("current directory");
+    assert_eq!(resolve_output_path(&cwd, "./nested/../dist/out.js"), cwd.join("dist/out.js"));
+
+    let absolute = cwd.join("absolute.js");
+    assert_eq!(resolve_output_path(&cwd, absolute.to_string_lossy().as_ref()), absolute);
+  }
 }

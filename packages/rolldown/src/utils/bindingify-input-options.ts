@@ -21,6 +21,7 @@ import type { OutputOptions } from '../options/output-options';
 import type { RolldownPlugin } from '../plugin';
 import { bindingifyPlugin } from '../plugin/bindingify-plugin';
 import type { PluginContextData } from '../plugin/plugin-context-data';
+import type { CloseCallbackScope } from './close-callback-scope';
 import { arraify } from './misc';
 import { normalizedStringOrRegex } from './normalize-string-or-regex';
 import {
@@ -37,6 +38,8 @@ export function bindingifyInputOptions(
   onLog: LogHandler,
   logLevel: LogLevelOption,
   watchMode: boolean,
+  closeCallbackScope?: CloseCallbackScope,
+  configWatchHooks: boolean = watchMode,
 ): BindingInputOptions {
   const plugins = rawPlugins.map((plugin) => {
     if ('_parallel' in plugin) {
@@ -59,6 +62,8 @@ export function bindingifyInputOptions(
       onLog,
       logLevel,
       watchMode,
+      closeCallbackScope,
+      configWatchHooks,
     );
   });
 
@@ -85,7 +90,7 @@ export function bindingifyInputOptions(
     experimental: bindingifyExperimental(inputOptions.experimental),
     profilerNames: outputOptions.generatedCode?.profilerNames,
     transform: normalizedTransform.oxcTransformOptions,
-    watch: bindingifyWatch(inputOptions.watch),
+    watch: bindingifyWatch(inputOptions.watch, configWatchHooks),
     dropLabels: normalizedTransform.dropLabels,
     keepNames: outputOptions.keepNames,
     checks: inputOptions.checks,
@@ -288,7 +293,10 @@ function bindingifyInput(input: InputOptions['input']): BindingInputOptions['inp
   });
 }
 
-function bindingifyWatch(watch: InputOptions['watch']): BindingInputOptions['watch'] {
+function bindingifyWatch(
+  watch: InputOptions['watch'],
+  configWatchHooks: boolean,
+): BindingInputOptions['watch'] {
   if (watch) {
     if (watch.notify) {
       console.warn('The "watch.notify" option is deprecated. Please use "watch.watcher" instead.');
@@ -306,7 +314,7 @@ function bindingifyWatch(watch: InputOptions['watch']): BindingInputOptions['wat
       debounceTickRate: watcher.debounceTickRate,
       include: normalizedStringOrRegex(watch.include),
       exclude: normalizedStringOrRegex(watch.exclude),
-      onInvalidate: (...args) => watch.onInvalidate?.(...args),
+      onInvalidate: configWatchHooks ? (...args) => watch.onInvalidate?.(...args) : undefined,
     };
   }
 }

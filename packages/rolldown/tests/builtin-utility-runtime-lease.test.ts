@@ -53,7 +53,11 @@ const binding = vi.hoisted(() => {
 vi.mock('../src/binding.cjs', () => binding);
 
 // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
-import { BuiltinPlugin, makeBuiltinPluginCallable } from '../src/builtin-plugin/utils';
+import {
+  bindingifyManifestPlugin,
+  BuiltinPlugin,
+  makeBuiltinPluginCallable,
+} from '../src/builtin-plugin/utils';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -104,4 +108,24 @@ test('callable builtin async hooks release the outer runtime lease after native 
   await expect(operation).rejects.toBe(error);
   expect(binding.hook).toHaveBeenCalledOnce();
   expect(binding.release).toHaveBeenCalledOnce();
+});
+
+test('manifest legacy callback retains the supplied options as its receiver', () => {
+  const pluginOptions = {
+    root: '/project',
+    isOutputOptionsForLegacyChunks(outputOptions) {
+      expect(this).toBe(pluginOptions);
+      expect(outputOptions).toBe(normalizedOutputOptions);
+      return true;
+    },
+  };
+  const normalizedOutputOptions = {};
+  const bindingOptions = bindingifyManifestPlugin(
+    new BuiltinPlugin('builtin:vite-manifest', pluginOptions),
+    {
+      getOutputOptions: vi.fn(() => normalizedOutputOptions),
+    },
+  ).options;
+
+  expect(bindingOptions.isLegacy({})).toBe(true);
 });

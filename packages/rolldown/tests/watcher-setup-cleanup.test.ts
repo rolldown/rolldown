@@ -4,8 +4,12 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   acquireRuntimeLease: vi.fn(),
+  bindingClose: vi.fn(),
+  bindingCallback: undefined as unknown,
   bindingConstructionError: undefined as unknown,
   bindingConstructions: 0,
+  bindingRun: vi.fn(),
+  bindingWaitForClose: vi.fn(),
   callOptionsHook: vi.fn(async (option) => option),
   createBundlerOptions: vi.fn(),
   runtimeCapabilities: {
@@ -24,9 +28,22 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../src/binding.cjs', () => ({
   BindingWatcher: class {
-    constructor() {
+    constructor(_options, callback) {
       mocks.bindingConstructions += 1;
       if (mocks.bindingConstructionError) throw mocks.bindingConstructionError;
+      mocks.bindingCallback = callback;
+    }
+
+    close() {
+      return mocks.bindingClose();
+    }
+
+    run() {
+      return mocks.bindingRun();
+    }
+
+    waitForClose() {
+      return mocks.bindingWaitForClose();
     }
   },
   getRuntimeCapabilities: () => mocks.runtimeCapabilities,
@@ -38,10 +55,31 @@ vi.mock('../src/plugin/plugin-driver', () => ({
   },
 }));
 
-vi.mock('../src/runtime-lifecycle', () => ({
-  acquireRuntimeLease: mocks.acquireRuntimeLease,
-  CloseCoordinator: class {},
-}));
+vi.mock('../src/runtime-lifecycle', () => {
+  const throwCloseErrors = (errors, aggregateMessage) => {
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
+      throw new AggregateError(errors, aggregateMessage, { cause: errors[0] });
+    }
+  };
+  return {
+    acquireRuntimeLease: mocks.acquireRuntimeLease,
+    CloseCoordinator: class {
+      constructor(aggregateMessage) {
+        this.aggregateMessage = aggregateMessage;
+      }
+
+      close(attempt) {
+        return (this.closePromise ??= Promise.resolve().then(async () => {
+          const { errors, retryable } = await attempt();
+          if (retryable) this.closePromise = undefined;
+          throwCloseErrors(errors, this.aggregateMessage);
+        }));
+      }
+    },
+    throwCloseErrors,
+  };
+});
 
 vi.mock('../src/utils/create-bundler-option', () => ({
   createBundlerOptions: mocks.createBundlerOptions,
@@ -61,8 +99,15 @@ const PUBLIC_SETUP_TIMEOUT = 2_000;
 
 beforeEach(() => {
   mocks.acquireRuntimeLease.mockReset();
+  mocks.bindingClose.mockReset().mockResolvedValue({
+    errors: [],
+    nativeOwnedCloseIdentities: [],
+  });
+  mocks.bindingCallback = undefined;
   mocks.bindingConstructionError = undefined;
   mocks.bindingConstructions = 0;
+  mocks.bindingRun.mockReset().mockResolvedValue(undefined);
+  mocks.bindingWaitForClose.mockReset().mockResolvedValue(undefined);
   mocks.callOptionsHook.mockClear();
   mocks.createBundlerOptions.mockReset();
   Object.assign(mocks.runtimeCapabilities, {
@@ -73,6 +118,43 @@ beforeEach(() => {
     wasi: false,
     watchSupported: true,
   });
+});
+
+test('watcher event dispatch uses a stable listener snapshot', async () => {
+  const emitter = new WatcherEmitter();
+  const calls: string[] = [];
+  const lateListener = vi.fn(() => {
+    calls.push('late');
+  });
+  const removedListener = vi.fn(() => {
+    calls.push('removed');
+  });
+  emitter.on('event', () => {
+    calls.push('first');
+    emitter.off('event', removedListener);
+    emitter.on('event', lateListener);
+  });
+  emitter.on('event', removedListener);
+
+  await emitter.emit('event', { code: 'START' });
+  expect(calls).toEqual(['first', 'removed']);
+  expect(lateListener).not.toHaveBeenCalled();
+
+  calls.length = 0;
+  await emitter.emit('event', { code: 'END' });
+  expect(calls).toEqual(['first', 'late']);
+});
+
+test('terminal close clears listeners added after an empty close snapshot', async () => {
+  const emitter = new WatcherEmitter();
+  const lateListener = vi.fn();
+
+  const closeDispatch = emitter.emitClose(Promise.resolve());
+  emitter.on('close', lateListener);
+  await closeDispatch;
+  await emitter.emit('close');
+
+  expect(lateListener).not.toHaveBeenCalled();
 });
 
 test('public watch reports unsupported runtimes without entering setup', async () => {
@@ -199,11 +281,12 @@ test('partial watcher option setup retries cleanup from fulfilled and rejected o
     .mockResolvedValueOnce(createBundlerOption(fulfilledStopWorkers))
     .mockRejectedValueOnce(rejectedOptionError);
 
-  const error = await createWatcher(new WatcherEmitter(), [{ output: {} }, { output: {} }]).catch(
+  const error = await createWatcher(new WatcherEmitter(), { output: [{}, {}] }).catch(
     (error: unknown) => error,
   );
 
   expect(error).toBeInstanceOf(AggregateError);
+  expect(mocks.callOptionsHook).toHaveBeenCalledOnce();
   expect(fulfilledStopWorkers).toHaveBeenCalledTimes(2);
   expect(rejectedStopWorkers).toHaveBeenCalledTimes(2);
   expect(getRetryableCleanup(error)).toBeUndefined();
@@ -240,6 +323,102 @@ test('watcher snapshots output array elements before starting option setup', asy
     createWatcher(new WatcherEmitter(), [{ output: {} }, { output: outputs }]),
   ).rejects.toBe(outputGetterError);
 
+  expect(mocks.callOptionsHook).not.toHaveBeenCalled();
+  expect(mocks.createBundlerOptions).not.toHaveBeenCalled();
+  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
+  expect(mocks.bindingConstructions).toBe(0);
+});
+
+test('watcher runs options once per enabled config and delegates config hooks to its first output', async () => {
+  const disabledOutputError = new Error('disabled output should not be read');
+  const disabled = {
+    watch: false,
+    get output(): never {
+      throw disabledOutputError;
+    },
+  };
+  const firstOutputs = [{ file: 'first-a.js' }, { file: 'first-b.js' }];
+  const secondOutputs = [{ file: 'second-a.js' }, { file: 'second-b.js' }];
+  const first = { output: firstOutputs };
+  const second = { output: secondOutputs };
+  const processedFirst = { ...first, processed: 'first' };
+  const processedSecond = { ...second, processed: 'second' };
+  let activeOptionsHooks = 0;
+  let maxActiveOptionsHooks = 0;
+  mocks.callOptionsHook.mockImplementation(async (option) => {
+    activeOptionsHooks += 1;
+    maxActiveOptionsHooks = Math.max(maxActiveOptionsHooks, activeOptionsHooks);
+    await Promise.resolve();
+    activeOptionsHooks -= 1;
+    return option === first ? processedFirst : processedSecond;
+  });
+  mocks.createBundlerOptions.mockImplementation(async (inputOptions) =>
+    createBundlerOption(undefined, inputOptions),
+  );
+  const release = vi.fn();
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+
+  const emitter = new WatcherEmitter();
+  await createWatcher(emitter, [disabled, first, second]);
+
+  expect(mocks.callOptionsHook.mock.calls.map(([option]) => option)).toEqual([first, second]);
+  expect(maxActiveOptionsHooks).toBe(2);
+  const firstCalls = mocks.createBundlerOptions.mock.calls.filter(
+    ([inputOptions]) => inputOptions === processedFirst,
+  );
+  const secondCalls = mocks.createBundlerOptions.mock.calls.filter(
+    ([inputOptions]) => inputOptions === processedSecond,
+  );
+  expect(
+    firstCalls.map(([, output, watchMode, , configWatchHooks]) => [
+      output,
+      watchMode,
+      configWatchHooks,
+    ]),
+  ).toEqual([
+    [firstOutputs[0], true, true],
+    [firstOutputs[1], true, false],
+  ]);
+  expect(
+    secondCalls.map(([, output, watchMode, , configWatchHooks]) => [
+      output,
+      watchMode,
+      configWatchHooks,
+    ]),
+  ).toEqual([
+    [secondOutputs[0], true, true],
+    [secondOutputs[1], true, false],
+  ]);
+
+  await emitter.close();
+  expect(release).toHaveBeenCalledOnce();
+});
+
+test('all-disabled watcher setup reports an asynchronous configuration error and remains closable', async () => {
+  const disabledOutputError = new Error('disabled output should not be read');
+  const watcher = watch({
+    watch: false,
+    get output(): never {
+      throw disabledOutputError;
+    },
+  });
+  const events: string[] = [];
+  let reportedError: Error | undefined;
+  watcher.on('event', (event) => {
+    events.push(event.code);
+    if (event.code === 'ERROR') reportedError = event.error;
+  });
+  watcher.on('close', () => {
+    events.push('CLOSE');
+  });
+
+  await withTimeout(watcher.close(), 'all-disabled watcher close');
+
+  expect(events).toEqual(['ERROR', 'END', 'CLOSE']);
+  expect(reportedError).toBeInstanceOf(TypeError);
+  expect(reportedError?.message).toBe(
+    'watch() requires at least one configuration with watch enabled',
+  );
   expect(mocks.callOptionsHook).not.toHaveBeenCalled();
   expect(mocks.createBundlerOptions).not.toHaveBeenCalled();
   expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
@@ -322,6 +501,109 @@ test('watcher construction retries worker cleanup and runtime release', async ()
   expect(stopWorkers).toHaveBeenCalledTimes(2);
   expect(release).toHaveBeenCalledTimes(2);
   expect(getRetryableCleanup(error)).toBeUndefined();
+});
+
+test('asynchronous native close rejection does not skip remaining watcher cleanup', async () => {
+  const nativeCloseError = new Error('native watcher close rejected');
+  const closeListenerError = new Error('close listener failed');
+  const retainedResultClose = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingClose.mockImplementation(async () => {
+    await Promise.resolve();
+    throw nativeCloseError;
+  });
+  const emitter = new WatcherEmitter();
+  const closeListener = vi.fn(() => {
+    throw closeListenerError;
+  });
+  emitter.on('close', closeListener);
+  await createWatcher(emitter, { output: {} });
+  await mocks.bindingCallback({
+    bundleEndData: () => ({
+      closeIdentity: 'retained-current',
+      duration: 0,
+      output: 'out.js',
+      result: { close: retainedResultClose },
+      taskIndex: 0,
+    }),
+    bundleEventKind: () => 'BUNDLE_END',
+    eventKind: () => 'event',
+  });
+
+  const error = await emitter.close().catch((error: unknown) => error);
+
+  expect(error).toBeInstanceOf(AggregateError);
+  expect((error as AggregateError).errors).toEqual([nativeCloseError, closeListenerError]);
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(retainedResultClose).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(closeListener).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+});
+
+test('waitForClose transport rejection enters cleanup and is replayed by close', async () => {
+  const waitForCloseError = new Error('waitForClose transport rejected');
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingWaitForClose.mockRejectedValue(waitForCloseError);
+  const emitter = new WatcherEmitter();
+  const closeEvent = new Promise<void>((resolve) => {
+    emitter.on('close', resolve);
+  });
+  await createWatcher(emitter, { output: {} });
+
+  await withTimeout(closeEvent, 'waitForClose rejection cleanup');
+  await expect(emitter.close()).rejects.toBe(waitForCloseError);
+
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+});
+
+test('watch result close memoizes a synchronous native throw', async () => {
+  const closeError = new Error('result close threw synchronously');
+  const resultClose = vi.fn(() => {
+    throw closeError;
+  });
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(undefined));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  const emitter = new WatcherEmitter();
+  let result: { close(): Promise<void> } | undefined;
+  emitter.on('event', (event) => {
+    if (event.code === 'BUNDLE_END') result = event.result;
+  });
+  await createWatcher(emitter, { output: {} });
+  await mocks.bindingCallback({
+    bundleEndData: () => ({
+      closeIdentity: 'sync-close',
+      duration: 0,
+      output: 'out.js',
+      result: { close: resultClose },
+      taskIndex: 0,
+    }),
+    bundleEventKind: () => 'BUNDLE_END',
+    eventKind: () => 'event',
+  });
+
+  const firstClose = result!.close();
+  const secondClose = result!.close();
+  const closeResults = await Promise.allSettled([firstClose, secondClose]);
+
+  expect(secondClose).toBe(firstClose);
+  expect(closeResults).toEqual([
+    { status: 'rejected', reason: closeError },
+    { status: 'rejected', reason: closeError },
+  ]);
+  expect(resultClose).toHaveBeenCalledOnce();
+
+  await emitter.close();
+  expect(release).toHaveBeenCalledOnce();
 });
 
 test('watcher setup keeps persistent cleanup retryable without hiding the setup error', async () => {

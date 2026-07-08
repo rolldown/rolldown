@@ -53,9 +53,11 @@ permanent native-image retention only after every module export and the
 per-environment support machinery initialize successfully. It pins the image
 with `GetModuleHandleExW(PIN | FROM_ADDRESS)` on Windows or a validated leaked
 `dlopen` reference on supported Unix; unsupported native loaders abort rather
-than return with callable unmapped code. A failed module load still rolls back
-without retention. The backend object is reused across zero-environment
-shutdown/start cycles and its `Drop` is not guaranteed to run, so
+than return with callable unmapped code. A failure before exports or
+per-environment support can expose native callbacks rolls back without
+retention. Later initialization failures conservatively retain the image when
+native values may already have escaped. The backend object is reused across
+zero-environment shutdown/start cycles and its `Drop` is not guaranteed to run, so
 `AsyncRuntime::shutdown` must still release and quiesce all active resources.
 The `unsafe impl AsyncRuntime` comment in
 `crates/rolldown_binding/src/async_runtime.rs` records both halves of this
@@ -133,9 +135,16 @@ binary.
   embedding, a wake requests a fresh host turn before polling: futures such as
   `futures::Shared` invoke outer wakers while holding internal locks, so polling
   inline from the scheduler callback can re-enter the same future and
-  self-deadlock. The Node binding registers one weak threadsafe-function-backed
-  task driver per environment; an accepted dispatch is coalesced until the host
-  calls `drive_current_thread_tasks`. This registration is also present in the
+  self-deadlock. The Node binding registers one weak native
+  threadsafe-function-backed task driver per environment. It creates the
+  threadsafe function with a null JavaScript function and a custom native
+  `call_js_cb`, so the event loop still supplies a fresh turn while delivery
+  capabilities never enter JavaScript. The executor publishes one exact
+  internal dispatch capability, and the registry gives each live host a
+  distinct opaque delivery capability for that registration and attempt. The
+  first responsive delivery resolves to and consumes the internal capability;
+  delayed, unregistered, or retired delivery capabilities fail lookup before
+  executor admission. This registration is also present in the
   browser build because fresh-turn polling is a future/scheduler requirement,
   independent of Node timers. Wakes are enqueue-only even when no host is
   registered. After publishing a runnable, the queue walks the generation's
@@ -155,28 +164,80 @@ binary.
   stop wins over queue draining and stored self-wake permits. A nonzero pending
   dispatch coalesces later wakes before they allocate another process-global
   identity; callers that race after both observing zero still resolve through
-  the exact-capability compare-exchange. Every accepted host dispatch carries a
-  globally unique, nonzero capability.
+  the exact-capability compare-exchange. Every host delivery also carries a
+  globally unique, nonzero capability, separate from the internal dispatch.
+  Each registry entry retains at most one queued/in-flight delivery and one
+  latest pending internal capability. Repeated broadcasts to a blocked host
+  replace that pending value instead of adding threadsafe-function queue
+  entries. Native callback completion or failure frees the physical slot and
+  submits at most the latest pending capability if another host has not already
+  serviced it. Completion does not invoke the host driver directly; it asks the
+  executor to republish the current capability so the follow-up owns the normal
+  generation-scoped dispatch-call role and shutdown can serialize or reject it.
+  The registry increments a per-dispatch publication count before liveness
+  probing or invoking any host and decrements it only after the complete
+  broadcast. A synchronously completed accepted failure therefore remains
+  recorded while later provisional hosts are still deciding. The final
+  publication returns `Unavailable` only when no attempt or reservation was
+  accepted, and `Failed` when all accepted references retired without service.
+  Rejection, unregister, and liveness sweep return terminal failures for any
+  other coalesced dispatch they retire, so a host cannot strand a newer
+  executor capability while rejecting its current physical call. A concurrent
+  re-publication of an already-cancelling dispatch also returns `Failed`, never
+  `Unavailable`, so it cannot clear the executor capability ahead of recovery.
   Dispatch publication and host-turn admission are serialized by the
   scheduler-idle mutex. Admission rechecks generation stop while holding that
   mutex, then consumes the pending capability and publishes the draining role
   before releasing it, so a stale stopped-generation callback cannot claim a
   turn and a wake cannot observe the intermediate zero-capability state and
   publish a duplicate host turn.
-  The controller atomically consumes that exact capability and claims the
-  executor's RAII host-turn role while holding the lifecycle mutex; shutdown
-  cannot transition from that generation's `Running` state without either
-  preceding admission or observing the claimed role. If the JavaScript
-  scheduler throws before it can queue the fresh turn,
-  `cancel_current_thread_task_dispatch` clears only the matching capability. It
-  never polls from the failing callback. Instead it enqueues at most one exact
-  replacement notification through the host driver. Successful drive or host
-  replacement clears that recovery capability. If the replacement is also
-  cancelled, or no live host accepts it, the executor temporarily rejects
-  scheduler publications and cancels the affected runnable and blocking queues
-  under the generation's existing contained-drop rules. This settles the
-  original operation without an unrelated wake and then reopens the executor
-  for a later independent dispatch chain. Every invocation of the host
+  The controller claims the exact delivery, atomically consumes its mapped
+  internal capability, and claims the executor's RAII host-turn role while
+  holding the lifecycle mutex; shutdown cannot transition from that
+  generation's `Running` state without either preceding admission or observing
+  the claimed role. The native `call_js_cb` calls
+  `drive_current_thread_tasks`, which returns `true` only after that exact claim
+  and admission have completed, then acknowledges only that confirmed result.
+  An env-null teardown callback or stale delivery reports failure and releases
+  its payload without touching JavaScript.
+
+  `registerCurrentThreadTaskHost()` is a zero-argument internal contract. Its
+  generated TypeScript signature uses `dispatch?: never`, and the Rust boundary
+  rejects any supplied value synchronously before creating or invoking a
+  callback. The binding does not export `driveCurrentThreadRuntimeTasks` or
+  `cancelCurrentThreadRuntimeTaskDispatch`. Asynchronous host returns are
+  therefore impossible: no user callback runs, so no Promise/thenable,
+  constructor getter, species lookup, or rejection-observation mechanism is
+  part of delivery.
+  `getCurrentThreadTaskHostContractVersion()` exposes the native ABI version for
+  this contract in every runtime profile. `timer-host.ts` validates the expected
+  version before invoking either task-host or timer-host registration. A binding
+  from the prior callback protocol lacks this export and therefore fails with a
+  package/binding mismatch before its callback-accepting function can run. A
+  legacy binding that exposes none of the async-runtime host exports remains a
+  no-op for compatibility.
+
+  The native threadsafe function has maximum queue size one and is unreferenced,
+  so it neither exceeds the registry's physical single-flight slot nor keeps a
+  worker event loop alive. Its finalizer owns a weak reference to host state.
+  Environment cleanup marks the host closing and unregisters it but lets
+  Node-API own threadsafe-function destruction; explicit registration rollback
+  or a non-closing sweep aborts the function. The custom callback always
+  releases a queued delivery payload, including when Node invokes it with a
+  null environment during teardown. Finalization, cleanup, and sweep are
+  idempotent and cannot unregister a replacement generation.
+
+  A failure removes only that host attempt. If
+  another live delivery or coalesced pending slot still references the internal
+  dispatch, recovery is suppressed. The last unserviced failure marks the
+  dispatch cancelling before releasing the registry lock, preventing a racing
+  registration from attaching to the failed capability, then enqueues at most
+  one exact replacement notification. If every attempt for the replacement
+  also fails, the executor temporarily rejects scheduler publications and
+  cancels the affected runnable and blocking queues under the generation's
+  existing contained-drop rules. This settles the original operation without
+  an unrelated wake and then reopens the executor for a later independent
+  dispatch chain. Every invocation of the host
   dispatcher owns a generation-scoped scheduler role from before the callback
   starts until it returns. This covers initial queue publication, recovery,
   host replacement, and bounded-turn continuation even when shutdown cancels
@@ -199,6 +260,7 @@ binary.
   is released; release also wakes explicit drivers, and a host turn may claim a
   serviceable released lane. Threadless builds never have a foreign concurrent
   driver, so their uncontended and same-stack paths remain fully inline.
+
 - `MultiThreadExecutor` schedules bounded queue-drain jobs on a custom Rayon
   pool. The same pool is inherited by nested `par_iter` calls. Rayon worker
   start hooks classify every nested worker for cooperative `block_on`; a
@@ -285,15 +347,14 @@ binary.
   dependency first at that boundary, including an owner-lane transfer while the
   ordinary cap is saturated, then falls back to normal blocking admission.
   After the cooperative LIFO budget is exhausted, one shared-FIFO pop is
-  mandatory even if the next awaited-future poll refills the local slot. The
-  timer timekeeper uses a sticky
-  runnable-only scheduler role, including through nested `block_on`; the nested
-  cooperative loop fires due timers before every runnable turn, so a permanently
-  hot stream cannot suspend the outer timekeeper loop and starve the timer heap.
-  A stalled blocking closure cannot stop timer service either. Parked-driver
-  registration records whether a parker may consume blocking work; blocking
-  submissions and blocking exit compensation skip the runnable-only
-  timekeeper. Exit compensation treats runnable and blocking residue as
+  mandatory even if the next awaited-future poll refills the local slot. One
+  dedicated non-Rayon timer thread owns deadline waiting for the generation. It
+  executes no runnable or blocking work, so long-lived timers preserve every
+  configured Rayon worker and a stalled blocking closure cannot stop timer
+  service. Cooperative drivers still bound their own parks by the earliest
+  timer and may race the dedicated thread to remove a due heap entry; the heap
+  mutex gives exactly one side the waker. Exit compensation treats runnable and
+  blocking residue as
   independent obligations: it first hands runnable work to an available driver,
   then, while the generation remains running, a completing blocking-capable
   driver consumes one admitted blocking job itself even when runnable work was
@@ -354,7 +415,9 @@ binary.
   dependency notification, and the arbitrary dependency waker is invoked behind
   a separate containment boundary so two hostile callbacks cannot double-panic.
 - MultiThread shutdown waits in three stages: accepted work retirement,
-  drainer/timekeeper exit, then joined native worker termination. The final
+  drainer and dedicated-timekeeper exit, then joined Rayon-worker termination.
+  The timer thread is marked with a separate lifecycle identity, joined before
+  restart, and never classified as a cooperative pool worker. The final Rayon
   join barrier includes worker TLS destructors, which run after Rayon's exit
   hook. `ON_POOL_WORKER` remains set until OS-thread TLS teardown completes, so
   lifecycle reentry from a retiring worker's TLS destructor is recognized as
@@ -391,7 +454,10 @@ binary.
   an operation may therefore still report a live gauge; lifecycle quiescence or
   polling for guard retirement is required before asserting zero. A reset
   generation is part of the deadlock-detector fingerprint, preventing repeated
-  counter values across a reset from being mistaken for no progress.
+  counter values across a reset from being mistaken for no progress. The N-API
+  surface exports counters as JavaScript numbers through the full exact integer
+  range (`Number.MAX_SAFE_INTEGER`) instead of saturating at `u32::MAX`; values
+  beyond that range clamp at the last exactly representable integer.
 - Deadline arithmetic is checked. A configured park duration too large to add
   to `Instant::now()` becomes an unbounded but wakeable condvar wait, and an
   overflowing CurrentThread host-timer grace keeps that timer live. This makes
@@ -537,61 +603,132 @@ panic payload is still being destroyed.
 
 `rolldown_utils::time::sleep_until` routes watcher debounce timers to Tokio on
 the default build and to the shared runtime otherwise. `MultiThreadExecutor`
-uses an executor-owned timer heap and timekeeper role. `CurrentThreadExecutor`
+uses an executor-owned timer heap and one lazily created, lifecycle-managed
+non-Rayon timekeeper thread. An unpolled sleep creates no thread; the first heap
+registration starts it before inserting the timer entry or queue node. A
+thread-creation failure therefore leaves `Sleep::registered` false with no
+retained heap waker, and the same sleep may retry without duplicate state. The
+thread waits only on the heap's private parker, never runs scheduler queues, and
+is joined before the generation can restart. `ensure_started` observes heap
+closure before waiting for the handle mutex, recognizes its own timekeeper
+thread id, and removes a finished handle before joining it outside that mutex.
+TLS teardown can therefore re-enter timer startup without joining itself or
+blocking another caller behind a join held under the handle lock.
+The deadline queue is an indexed binary min-heap. Each timer id maps to its
+current node, so cancellation removes arbitrary non-earliest deadlines in
+`O(log n)` instead of accumulating lazy tombstones and paying one unbounded
+cleanup pass when a distant earliest timer finally expires.
+An arbitrary timer waker may own and release the final direct executor
+reference from that timekeeper thread. Heap closure still makes the service
+loop exit, but this self-release path detaches its own join handle instead of
+attempting to join the current thread.
+`CurrentThreadExecutor`
 uses the host `TimerDriver` registered by `packages/rolldown/src/timer-host.ts`,
 which delegates to paired `setTimeout`/`clearTimeout` callbacks in each
-importing environment. The Rust relay records whether the JS schedule callback
-has returned before sending cancellation, preventing cancel from overtaking
-timeout creation. Cancellation clears the timeout and resolves the schedule
-Promise so the detached relay task retires immediately. A host-provided
-`clearTimeout` is allowed to throw, but that exception is contained inside the
-JavaScript cancel callback because it crosses N-API through a non-catching
-TSFN. The schedule Promise is still resolved in `finally`, so a host cleanup
-failure cannot escape as a fatal exception or strand the Rust relay during
-shutdown. Each CurrentThread generation also retains the armed host wakers;
-shutdown closes that registry, marks every sleep fired, wakes active `block_on`
-calls, and makes later polls resolve while their host-side timers are
-cancelled.
+importing environment. Every sleep arms the same timer identity and absolute
+deadline on every live driver. The first responsive host wakes the sleep; its
+completion cancels all losing arms. A live but CPU-starved environment can
+therefore delay only its own redundant arm. Every polled sleep also publishes
+one stable, coalescing repoll signal in its `TimerDriverRegistry`. Driver
+registration publishes the new driver first, snapshots those signals, releases
+all registry locks, and then wakes them. A concurrently first-polled sleep
+therefore either appears in that snapshot or observes the new driver in its
+subsequent all-live selection. Re-polling preserves the existing timer id and
+absolute deadline, refreshes old arms, adds the new arm, and keeps one pending
+entry until completion or cancellation closes the signal and cancels every
+losing driver. Registration work is linear in the number of pending sleeps and
+coalesces repeated wake requests; no driver callback, arbitrary task waker, or
+waker destructor runs under the driver or signal registry locks.
+Each accepted timer registration owns a
+`HostTimerRelay` and its reserved relay id. The relay moves atomically from
+waiting-for-arm to armed, cancelled-before-arm, or cancel-sent. Cancellation
+before the schedule TSFN runs leaves a cancelled-before-arm tombstone instead
+of sending `clearTimeout` too early. Delivery of the schedule callback is the
+arm boundary regardless of its result: JavaScript may create the timeout and
+then throw or return an invalid non-Promise value. Delivery consumes any
+pre-arm tombstone, and every delivered error queues cancellation before the
+error is published to the relay task or the pending timer is removed and
+woken. Promise rejection follows the same fail-closed ordering. If the relay
+task has already dropped its one-shot receiver when delivery arrives, the
+sender also cancels the potentially armed timeout. The atomic relay state makes
+these competing cancellation paths exact-once, including explicit sleep
+cancellation and host eviction.
+
+The relay id remains reserved while any pending entry, queued schedule
+delivery, relay task, or queued cancellation payload can still refer to it.
+This prevents a late schedule or cancellation callback from aliasing a newer
+timer after id wraparound. Cancellation clears the timeout and resolves the
+schedule Promise so the detached relay task retires immediately. A
+host-provided `clearTimeout` is allowed to throw, but that exception is
+contained inside the JavaScript cancel callback because it crosses N-API
+through a non-catching TSFN. The schedule Promise is still resolved in
+`finally`, so a host cleanup failure cannot escape as a fatal exception or
+strand the Rust relay during shutdown. If runtime shutdown rejects a newly
+created detached relay task before submission, registration removes and wakes
+the pending timer before dropping the rejected future and releasing its relay
+id. A re-entrant poll therefore cannot observe a stranded entry or reuse the id
+while the rejected relay is still observable. Each CurrentThread generation
+also retains the armed host wakers; shutdown closes that registry, marks every
+sleep fired, wakes active `block_on` calls, and makes later polls resolve while
+their host-side timers are cancelled.
 MultiThread timer wakes, including shutdown drain-fire, are individually
 wrapped with `catch_unwind`; a user-supplied `RawWaker` cannot unwind the
-timekeeper or strand shutdown. Replaced and cancelled heap wakers are moved out
-under the heap mutex, then destroyed with panic containment after the lock is
-released, so a waker destructor may safely re-enter timer cancellation.
+timekeeper or strand shutdown. Owned wake delivery uses `wake_by_ref`, then
+drops the waker under a separate containment boundary, so a wake panic and a
+destructor panic cannot double-panic in one consuming call. Replaced and
+cancelled heap wakers are moved out under the heap mutex, then destroyed with
+panic containment after the lock is released, so a waker destructor may safely
+re-enter timer cancellation.
 CurrentThread host-driver wakes have the same containment, including env
 cleanup eviction and panic-payload destruction, so a custom `RawWaker` cannot
 unwind through the NAPI cleanup hook or prevent later pending timers from being
 drained. Relay failures evict or wake their affected timers before emitting
 best-effort diagnostics, and diagnostic formatting/output is independently
 panic-contained, so a closed stderr or hostile formatter cannot strand a
-sleep. Timer-driver liveness callbacks and sweep hooks are also panic-contained,
-matching the runnable-host registry: a panicking liveness probe is treated as a
-dead driver and selection falls back to another live host. Timer-driver
-callbacks and driver destruction run without the registry mutex held;
-selection probes a snapshot and retries if
-concurrent registry mutation makes it stale.
+timer-host registry. Timer-driver liveness callbacks and sweep hooks are
+also panic-contained: a panicking liveness probe is treated as a dead driver
+while the stable live snapshot remains armed. Timer-driver callbacks and driver
+destruction run without the registry mutex held; selection probes a snapshot
+and retries if concurrent registry mutation makes it stale.
 
-CurrentThread runnable-host registration follows the same newest-live-driver
-model. Driver liveness, dispatch, and sweep callbacks run outside the registry
-mutex and are panic-contained. If every environment temporarily disappears,
-runnables remain queued for the next registration, an explicit hostless drive,
-or shutdown cancellation; wake callers never poll inline. A newly registered
-host supersedes any pending dispatch because an accepted weak
-threadsafe-function call may have been discarded when its previous environment
-died; duplicate host callbacks are harmless because the executor serializes
-queue draining. Dispatches carry a globally unique, non-wrapping `u64`
-capability as an exact high/low `u32` pair, avoiding both JavaScript number
-precision loss and a higher minimum N-API version. The exported drive callback
-must present that same capability; the controller consumes it from the current
-executor and claims the drain role while still holding the lifecycle mutex.
-This linearizes host-turn admission with `Running -> Stopping`.
+CurrentThread runnable-host registration uses the same all-live race. Driver
+liveness, dispatch, and sweep callbacks run outside the registry mutex and are
+panic-contained. One internal dispatch is represented by one distinct delivery
+per host, and the first responsive callback atomically consumes the mapped
+internal capability. If every environment temporarily disappears, runnables
+remain queued for the next registration, an explicit hostless drive, or
+shutdown cancellation; wake callers never poll inline. A newly registered host
+joins the existing dispatch through a fresh delivery instead of superseding
+attempts already accepted by other hosts.
+
+Both internal dispatches and host deliveries use globally unique, non-wrapping
+`u64` identities. The opaque delivery remains in the native threadsafe-function
+payload. Its custom callback presents that delivery to the registry, which
+verifies its registration and attempt, maps it to the internal dispatch, and
+lets the controller consume the internal capability while still holding the
+lifecycle mutex. This linearizes host-turn admission with
+`Running -> Stopping`. Successful admission marks the internal dispatch
+serviced and clears matching coalesced pending slots on losing hosts. Their
+already queued physical callbacks remain single-flight and return as stale
+no-ops.
+
+Unregister removes the host's in-flight and pending registry references. A
+still-accepted removed reference is recorded as a failure and starts recovery
+only when no other accepting reference for that dispatch remains. A
+re-registration receives a new host id and every delivery receives a new
+attempt id, so late drive, acknowledgement, or failure calls cannot mutate the
+replacement entry. Shutdown clears all pending and per-dispatch bookkeeping but
+retains each physical in-flight slot until its native callback completes or its
+host unregisters; restarted work coalesces behind that slot rather than
+creating a second queued callback.
 If installing an environment cleanup hook fails, registration is rolled back
 immediately so no driver survives without a teardown owner.
 Shutdown closes the queue before dropping pending runnables, so cancellation
 retires generation guards without waiting for an unadmitted host callback. A
-callback admitted before shutdown keeps the scheduler role set until it
+native callback admitted before shutdown keeps the scheduler role set until it
 retires, so shutdown waits even if host execution is delayed after admission.
-A stale callback from an older generation, or a superseded callback from the
-same generation, is a no-op and never clears or drains replacement dispatch
+A stale native callback from an older generation, or a superseded callback from
+the same generation, is a no-op and never clears or drains replacement dispatch
 state.
 
 Replayable bundle/dev/watch close state retains the original error chain rather
@@ -658,6 +795,21 @@ semantics. Nested `then` accessors are read exactly once under the callback
 scope. A non-function result settles as a plain value, a function is invoked
 under the same scope, and a thrown getter value is preserved as the rejection
 reason.
+
+Watch build results refine that callback scope with an opaque plugin-driver
+identity. Each pending close awaited by a close callback records a scoped
+dependency edge. Before awaiting another result, Rolldown checks whether the
+new edge would complete a cycle, so an A -> B -> A chain receives an immediate
+acknowledgement even though N-API may enter B's `closeBundle` callback through a
+fresh async context. Acyclic closes continue to await and replay their native
+terminal outcome. Active async-context ancestors still handle nested
+same-result calls directly. Browser builds retain active watch close identities,
+reference-counted per scope, until each callback result settles. A same-result
+close after an async suspension therefore remains reentrant without granting
+that privilege to another result. Browser hosts still cannot distinguish an
+unrelated same-result caller during that active hook window; such a caller
+receives the acknowledgement, while calls after the hook settles receive the
+memoized terminal result normally.
 
 Native watch mode is supported on both runtime flavors. Public `dev()` checks
 `devSupported` before reading callbacks, running plugin hooks, creating workers,

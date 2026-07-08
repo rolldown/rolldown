@@ -11,10 +11,17 @@ use super::types::{
   coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
   ensure_latest_bundle_output_return::EnsureLatestBundleOutputReturn,
 };
+use rolldown_dev_common::types::DevCallbackError;
 use rolldown_error::BuildResult;
+
+pub type WatchRegistrationErrorObserverId = u64;
 
 // GetBuildStatus message
 pub type GetStateSender = oneshot::Sender<CoordinatorStateSnapshot>;
+
+pub type BeginWatchRegistrationErrorObservationSender =
+  oneshot::Sender<WatchRegistrationErrorObserverId>;
+pub type FinishWatchRegistrationErrorObservationSender = oneshot::Sender<Option<DevCallbackError>>;
 
 // ScheduleBuild message
 #[cfg(feature = "testing")]

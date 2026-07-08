@@ -7,6 +7,296 @@ import { expect, test } from 'vitest';
 import { CloseCallbackScope } from '../src/utils/close-callback-scope';
 import { normalizePluginOption } from '../src/utils/normalize-plugin-option';
 
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])('%s close identities only acknowledge the matching callback', async (_, loadScope) => {
+  const Scope = await loadScope();
+  const scope = new Scope();
+  const matchingClose = new Promise<void>(() => {});
+  const differentError = new Error('different close failed');
+  let rejectDifferentClose!: (error: unknown) => void;
+  const differentClose = new Promise<void>((_, reject) => {
+    rejectDifferentClose = reject;
+  });
+
+  const wrappedCallback = scope.wrapCallbacks(() => [
+    scope.selectClosePromise(matchingClose, 'matching'),
+    scope.selectClosePromise(differentClose, 'different'),
+  ]);
+  const [selectedMatchingClose, selectedDifferentClose] = await scope.runWithCloseIdentity(
+    'matching',
+    async () => {
+      await Promise.resolve();
+      return wrappedCallback();
+    },
+  );
+
+  expect(selectedMatchingClose).not.toBe(matchingClose);
+  await expect(selectedMatchingClose).resolves.toBeUndefined();
+  expect(selectedDifferentClose).toBeInstanceOf(Promise);
+
+  rejectDifferentClose(differentError);
+  await expect(selectedDifferentClose).rejects.toBe(differentError);
+});
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])('%s identity-less closes remain scoped to their owner', async (_, loadScope) => {
+  const Scope = await loadScope();
+  const scopeA = new Scope();
+  const scopeB = new Scope();
+  const closeError = new Error('different scope close failed');
+  let rejectClose!: (error: unknown) => void;
+  const closePromise = new Promise<void>((_, reject) => {
+    rejectClose = reject;
+  });
+  let selectedClose!: Promise<void>;
+
+  scopeA.run(() => {
+    selectedClose = scopeB.selectClosePromise(closePromise);
+  });
+
+  expect(selectedClose).toBe(closePromise);
+  rejectClose(closeError);
+  await expect(selectedClose).rejects.toBe(closeError);
+});
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])('%s nested close identities acknowledge an active ancestor', async (_, loadScope) => {
+  const Scope = await loadScope();
+  const scope = new Scope();
+  const ancestorClose = new Promise<void>(() => {});
+  const unrelatedError = new Error('unrelated close failed');
+  let rejectUnrelatedClose!: (error: unknown) => void;
+  const unrelatedClose = new Promise<void>((_, reject) => {
+    rejectUnrelatedClose = reject;
+  });
+  let selectedAncestorClose!: Promise<void>;
+  let selectedUnrelatedClose!: Promise<void>;
+
+  await scope.runWithCloseIdentity('ancestor', async () => {
+    await Promise.resolve();
+    await scope.runWithCloseIdentity('nested', async () => {
+      await Promise.resolve();
+      selectedAncestorClose = scope.selectClosePromise(ancestorClose, 'ancestor');
+      selectedUnrelatedClose = scope.selectClosePromise(unrelatedClose, 'unrelated');
+    });
+  });
+
+  expect(selectedAncestorClose).not.toBe(ancestorClose);
+  await expect(selectedAncestorClose).resolves.toBeUndefined();
+  expect(selectedUnrelatedClose).toBeInstanceOf(Promise);
+
+  rejectUnrelatedClose(unrelatedError);
+  await expect(selectedUnrelatedClose).rejects.toBe(unrelatedError);
+});
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])(
+  '%s close dependencies detect a cycle across separate callback contexts',
+  async (_, loadScope) => {
+    const Scope = await loadScope();
+    const scope = new Scope();
+    let resolveCloseB!: () => void;
+    const closeB = new Promise<void>((resolve) => {
+      resolveCloseB = resolve;
+    });
+    const closeA = new Promise<void>(() => {});
+    let markAWaitingForB!: () => void;
+    const aWaitingForB = new Promise<void>((resolve) => {
+      markAWaitingForB = resolve;
+    });
+    let selectedB!: Promise<void>;
+
+    const callbackA = scope.runWithCloseIdentity('A', async () => {
+      selectedB = scope.selectClosePromise(closeB, 'B');
+      markAWaitingForB();
+      await selectedB;
+    });
+    await aWaitingForB;
+
+    let selectedA!: Promise<void>;
+    await scope.runWithCloseIdentity('B', async () => {
+      selectedA = scope.selectClosePromise(closeA, 'A');
+      await selectedA;
+      resolveCloseB();
+    });
+    await callbackA;
+
+    expect(selectedB).toBeInstanceOf(Promise);
+    expect(selectedA).not.toBe(closeA);
+    await expect(selectedA).resolves.toBeUndefined();
+  },
+);
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])('%s close dependencies detect a cycle across separate scopes', async (_, loadScope) => {
+  const Scope = await loadScope();
+  const scopeA = new Scope();
+  const scopeB = new Scope();
+  let resolveCloseB!: () => void;
+  const closeB = new Promise<void>((resolve) => {
+    resolveCloseB = resolve;
+  });
+  const closeA = new Promise<void>(() => {});
+  let markAWaitingForB!: () => void;
+  const aWaitingForB = new Promise<void>((resolve) => {
+    markAWaitingForB = resolve;
+  });
+
+  const callbackA = scopeA.runWithCloseIdentity('cross-scope-A', async () => {
+    markAWaitingForB();
+    await scopeB.selectClosePromise(closeB, 'cross-scope-B');
+  });
+  await aWaitingForB;
+
+  let selectedA!: Promise<void>;
+  await scopeB.runWithCloseIdentity('cross-scope-B', async () => {
+    selectedA = scopeA.selectClosePromise(closeA, 'cross-scope-A');
+    await selectedA;
+    resolveCloseB();
+  });
+  await callbackA;
+
+  expect(selectedA).not.toBe(closeA);
+  await expect(selectedA).resolves.toBeUndefined();
+});
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])('%s close dependencies expire with their source invocation', async (_, loadScope) => {
+  const Scope = await loadScope();
+  const scopeA = new Scope();
+  const scopeB = new Scope();
+  const closeA = new Promise<void>(() => {});
+  const closeB = new Promise<void>(() => {});
+
+  await scopeA.runWithCloseIdentity('expired-source-A', async () => {
+    scopeB.selectClosePromise(closeB, 'expired-source-B');
+  });
+
+  let selectedA!: Promise<void>;
+  scopeB.runWithCloseIdentity('expired-source-B', () => {
+    selectedA = scopeA.selectClosePromise(closeA, 'expired-source-A');
+  });
+
+  expect(selectedA).toBeInstanceOf(Promise);
+});
+
+test('fire-and-forget closes do not create dependency-cycle acknowledgements', async () => {
+  const scope = new CloseCallbackScope();
+  const closeAError = new Error('source close failed');
+  let rejectCloseA!: (error: unknown) => void;
+  const closeA = new Promise<void>((_, reject) => {
+    rejectCloseA = reject;
+  });
+  const closeB = new Promise<void>(() => {});
+  let releaseCallbackA!: () => void;
+  const callbackAGate = new Promise<void>((resolve) => {
+    releaseCallbackA = resolve;
+  });
+  let markCallbackAStarted!: () => void;
+  const callbackAStarted = new Promise<void>((resolve) => {
+    markCallbackAStarted = resolve;
+  });
+
+  const callbackA = scope.runWithCloseIdentity('fire-and-forget-A', async () => {
+    void scope.selectClosePromise(closeB, 'fire-and-forget-B');
+    markCallbackAStarted();
+    await callbackAGate;
+  });
+  await callbackAStarted;
+
+  let selectedA!: Promise<void>;
+  const callbackB = scope.runWithCloseIdentity('fire-and-forget-B', async () => {
+    selectedA = scope.selectClosePromise(closeA, 'fire-and-forget-A');
+    await selectedA;
+  });
+  rejectCloseA(closeAError);
+  await expect(callbackB).rejects.toBe(closeAError);
+  await expect(selectedA).rejects.toBe(closeAError);
+
+  releaseCallbackA();
+  await callbackA;
+});
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])(
+  '%s dependency-aware close promises are stable native Promise instances',
+  async (_, loadScope) => {
+    const Scope = await loadScope();
+    const scope = new Scope();
+    const closePromise = Promise.resolve();
+    const first = scope.selectClosePromise(closePromise, 'stable-close');
+    const second = scope.selectClosePromise(closePromise, 'stable-close');
+
+    expect(first).toBe(second);
+    expect(first).toBeInstanceOf(Promise);
+    await first.finally(() => {});
+  },
+);
+
+test('browser close identities remain active until every matching callback settles', async () => {
+  const BrowserCloseCallbackScope = await loadBrowserCloseCallbackScope();
+  const scope = new BrowserCloseCallbackScope();
+  const fullClose = new Promise<void>(() => {});
+  let releaseFirst!: () => void;
+  const firstGate = new Promise<void>((resolve) => {
+    releaseFirst = resolve;
+  });
+  let releaseSecond!: () => void;
+  const secondGate = new Promise<void>((resolve) => {
+    releaseSecond = resolve;
+  });
+  let markFirstStarted!: () => void;
+  const firstStarted = new Promise<void>((resolve) => {
+    markFirstStarted = resolve;
+  });
+  let markSecondStarted!: () => void;
+  const secondStarted = new Promise<void>((resolve) => {
+    markSecondStarted = resolve;
+  });
+
+  const firstCallback = scope.runWithCloseIdentity('matching', async () => {
+    await Promise.resolve();
+    markFirstStarted();
+    await firstGate;
+  });
+  const secondCallback = scope.runWithCloseIdentity('matching', async () => {
+    await Promise.resolve();
+    markSecondStarted();
+    await secondGate;
+  });
+  await Promise.all([firstStarted, secondStarted]);
+
+  const whileBothActive = scope.selectClosePromise(fullClose, 'matching');
+  expect(whileBothActive).not.toBe(fullClose);
+  await expect(whileBothActive).resolves.toBeUndefined();
+
+  releaseFirst();
+  await firstCallback;
+  const whileSecondActive = scope.selectClosePromise(fullClose, 'matching');
+  expect(whileSecondActive).not.toBe(fullClose);
+  await expect(whileSecondActive).resolves.toBeUndefined();
+
+  releaseSecond();
+  await secondCallback;
+  const afterCallbacks = scope.selectClosePromise(fullClose, 'matching');
+  expect(afterCallbacks).toBe(scope.selectClosePromise(fullClose, 'matching'));
+  expect(afterCallbacks).toBeInstanceOf(Promise);
+});
+
 test('reentrant close privilege expires when the callback settles', async () => {
   const scope = new CloseCallbackScope();
   let resolveClose!: () => void;

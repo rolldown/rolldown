@@ -82,15 +82,18 @@ export function bindingifyManifestPlugin(
   plugin: BuiltinPlugin,
   pluginContextData: PluginContextData,
 ): BindingBuiltinPlugin {
-  const { isOutputOptionsForLegacyChunks, ...options } =
-    plugin._options as ViteManifestPluginConfig;
+  const pluginOptions = plugin._options as ViteManifestPluginConfig;
+  const { isOutputOptionsForLegacyChunks, ...options } = pluginOptions;
   return {
     __name: plugin.name,
     options: {
       ...options,
       isLegacy: isOutputOptionsForLegacyChunks
         ? (opts) => {
-            return isOutputOptionsForLegacyChunks(pluginContextData.getOutputOptions(opts));
+            return isOutputOptionsForLegacyChunks.call(
+              pluginOptions,
+              pluginContextData.getOutputOptions(opts),
+            );
           }
         : undefined,
     } as BindingViteManifestPluginConfig,

@@ -15,6 +15,7 @@ export type WorkerData = {
   registryId: number;
   pluginInfos: ParallelPluginInfo[];
   threadNumber: number;
+  watchMode: boolean;
 };
 
 type ParallelPluginInfo = {
@@ -87,7 +88,10 @@ export async function terminateWorkersWithRetry<T extends TerminableWorker>(
   return { errors, remainingWorkers };
 }
 
-export async function initializeParallelPlugins(plugins: RolldownPlugin[]): Promise<
+export async function initializeParallelPlugins(
+  plugins: RolldownPlugin[],
+  watchMode: boolean = false,
+): Promise<
   | {
       registry: ParallelJsPluginRegistry;
       stopWorkers: () => Promise<void>;
@@ -118,7 +122,7 @@ export async function initializeParallelPlugins(plugins: RolldownPlugin[]): Prom
   const stopWorkers = await initializeWorkerPool<SupervisedWorker>(
     count,
     async (threadNumber, registerWorker) => {
-      await initializeWorker(registryId, pluginInfos, threadNumber, registerWorker);
+      await initializeWorker(registryId, pluginInfos, threadNumber, watchMode, registerWorker);
     },
   );
 
@@ -187,6 +191,7 @@ async function initializeWorker(
   registryId: number,
   pluginInfos: ParallelPluginInfo[],
   threadNumber: number,
+  watchMode: boolean,
   registerWorker: (worker: SupervisedWorker) => void,
 ) {
   const urlString = import.meta.resolve('#parallel-plugin-worker');
@@ -194,6 +199,7 @@ async function initializeWorker(
     registryId,
     pluginInfos,
     threadNumber,
+    watchMode,
   };
 
   const worker = new Worker(new URL(urlString), {

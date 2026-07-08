@@ -11,8 +11,12 @@ import type { OutputOptions } from '../../options/output-options';
 import { assertParallelPluginOptionsSupported } from '../../plugin/parallel-plugin';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
-import { CloseCallbackScope } from '../../utils/close-callback-scope';
-import { normalizeBindingResult, unwrapBindingResult } from '../../utils/error';
+import { CloseCallbackScope, createCloseIdentity } from '../../utils/close-callback-scope';
+import {
+  normalizeBindingResult,
+  normalizeBindingResultErrors,
+  unwrapBindingResult,
+} from '../../utils/error';
 import {
   createCleanupFailureError,
   hasRetryableCleanupOwnership,
@@ -28,6 +32,7 @@ import {
   CloseCoordinator,
   type CloseAttemptResult,
   type RuntimeLease,
+  throwCloseErrors,
 } from '../../runtime-lifecycle';
 import { assertRuntimeFeature } from '../../runtime-support';
 import type { DevOptions } from './dev-options';
@@ -36,8 +41,9 @@ export class DevEngine {
   #inner: BindingDevEngine;
   #runtimeLease: RuntimeLease;
   #stopWorkers: (() => Promise<void>) | undefined;
-  #nativeClosePromise: Promise<void> | undefined;
+  #nativeCloseErrorsPromise: Promise<unknown[]> | undefined;
   #closeCallbackScope: CloseCallbackScope;
+  #closeIdentity: string;
   #closeCoordinator = new CloseCoordinator(
     'Dev engine native close, parallel-plugin worker shutdown, or runtime release failed',
   );
@@ -56,7 +62,8 @@ export class DevEngine {
     assertRuntimeFeature('dev');
     assertParallelPluginOptionsSupported(inputOptions.plugins, outputOptions.plugins);
     inputOptions = await PluginDriver.callOptionsHook(inputOptions);
-    const closeCallbackScope = new CloseCallbackScope();
+    const closeIdentity = createCloseIdentity('dev-engine');
+    const closeCallbackScope = new CloseCallbackScope(closeIdentity);
     const options = await createBundlerOptions(
       inputOptions,
       outputOptions,
@@ -90,7 +97,13 @@ export class DevEngine {
 
     try {
       const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
-      return new DevEngine(inner, runtimeLease, options.stopWorkers, closeCallbackScope);
+      return new DevEngine(
+        inner,
+        runtimeLease,
+        options.stopWorkers,
+        closeCallbackScope,
+        closeIdentity,
+      );
     } catch (error) {
       return throwDevSetupErrorAfterCleanup(
         error,
@@ -106,15 +119,20 @@ export class DevEngine {
     runtimeLease: RuntimeLease,
     stopWorkers: (() => Promise<void>) | undefined,
     closeCallbackScope: CloseCallbackScope,
+    closeIdentity: string,
   ) {
     this.#inner = inner;
     this.#runtimeLease = runtimeLease;
     this.#stopWorkers = stopWorkers;
     this.#closeCallbackScope = closeCallbackScope;
+    this.#closeIdentity = closeIdentity;
   }
 
   async run(): Promise<void> {
-    await this.#runOperation(() => this.#inner.run());
+    unwrapDevEngineBindingResult(
+      await this.#runOperation(() => this.#inner.run()),
+      'Failed to run dev engine',
+    );
   }
 
   async ensureCurrentBuildFinish(): Promise<void> {
@@ -124,11 +142,15 @@ export class DevEngine {
     if (this.#cachedBuildFinishPromise) {
       return this.#cachedBuildFinishPromise;
     }
-    const promise = this.#runOperation(() => this.#inner.ensureCurrentBuildFinish()).finally(() => {
-      if (this.#cachedBuildFinishPromise === promise) {
-        this.#cachedBuildFinishPromise = null;
-      }
-    });
+    const promise = this.#runOperation(() => this.#inner.ensureCurrentBuildFinish())
+      .then((result) =>
+        unwrapDevEngineBindingResult(result, 'Failed to ensure current build finish'),
+      )
+      .finally(() => {
+        if (this.#cachedBuildFinishPromise === promise) {
+          this.#cachedBuildFinishPromise = null;
+        }
+      });
     this.#cachedBuildFinishPromise = promise;
     return promise;
   }
@@ -174,21 +196,19 @@ export class DevEngine {
     }
     return this.#closeCallbackScope.selectClosePromise(
       this.#closeCoordinator.close(() => this.#close()),
+      this.#closeIdentity,
     );
   }
 
   async #close(): Promise<CloseAttemptResult> {
     const errors: unknown[] = [];
     let retryable = false;
-    this.#nativeClosePromise ??= (async () => this.#inner.close())();
-    try {
-      // Native close waits for any active build and its closeBundle hooks.
-      // Parallel-plugin workers must remain alive until that phase settles.
-      await this.#nativeClosePromise;
-    } catch (error) {
-      errors.push(error);
-    }
     await this.#operationsDrainedPromise;
+    this.#nativeCloseErrorsPromise ??= (async () =>
+      normalizeBindingResultErrors(await this.#inner.close()))().catch((error: unknown) => [error]);
+    // Native close waits for closeBundle and coordinator shutdown. Keep
+    // parallel-plugin workers alive until every native diagnostic is captured.
+    errors.push(...(await this.#nativeCloseErrorsPromise));
 
     const stopWorkers = this.#stopWorkers;
     try {
@@ -223,7 +243,10 @@ export class DevEngine {
    * @returns The compiled JavaScript code as a string (HMR patch format)
    */
   async compileEntry(moduleId: string, clientId: string): Promise<string> {
-    return this.#runOperation(() => this.#inner.compileEntry(moduleId, clientId));
+    return unwrapDevEngineBindingResult(
+      await this.#runOperation(() => this.#inner.compileEntry(moduleId, clientId)),
+      'Failed to compile lazy entry',
+    );
   }
 
   #assertOpen(): void {
@@ -245,6 +268,11 @@ export class DevEngine {
       }
     }
   }
+}
+
+function unwrapDevEngineBindingResult<T>(result: BindingResult<T>, aggregateMessage: string): T {
+  throwCloseErrors(normalizeBindingResultErrors(result), aggregateMessage);
+  return result as T;
 }
 
 function createBindingDevOptions(devOptions: DevOptions): BindingDevOptions {

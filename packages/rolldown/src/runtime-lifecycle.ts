@@ -13,6 +13,13 @@ export interface CloseAttemptResult {
   retryable: boolean;
 }
 
+export function throwCloseErrors(errors: unknown[], aggregateMessage: string): void {
+  if (errors.length === 1) throw errors[0];
+  if (errors.length > 1) {
+    throw new AggregateError(errors, aggregateMessage, { cause: errors[0] });
+  }
+}
+
 /**
  * Coalesce concurrent close calls and replay terminal results. Attempts with
  * retryable cleanup failures are cleared after settlement so a later close
@@ -35,10 +42,7 @@ export class CloseCoordinator {
     if (retryable) {
       this.#closePromise = undefined;
     }
-    if (errors.length === 1) throw errors[0];
-    if (errors.length > 1) {
-      throw new AggregateError(errors, this.#aggregateMessage, { cause: errors[0] });
-    }
+    throwCloseErrors(errors, this.#aggregateMessage);
   }
 }
 

@@ -28,8 +28,9 @@ import type { LogLevelOption } from '../log/logging';
 import { error, logPluginError } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
+import type { CloseCallbackScope } from '../utils/close-callback-scope';
 import { bindingifyCloseWatcher, bindingifyWatchChange } from './bindingify-watch-hooks';
-import { extractHookUsage } from './generated/hook-usage';
+import { extractHookUsage, HookUsageKind } from './generated/hook-usage';
 import type { Plugin, RolldownPlugin } from './index';
 import type { PluginContextData } from './plugin-context-data';
 
@@ -41,6 +42,8 @@ export interface BindingifyPluginArgs {
   onLog: LogHandler;
   logLevel: LogLevelOption;
   watchMode: boolean;
+  closeCallbackScope?: CloseCallbackScope;
+  configWatchHooks: boolean;
   normalizedOutputPlugins: RolldownPlugin[];
 }
 
@@ -54,6 +57,8 @@ export function bindingifyPlugin(
   onLog: LogHandler,
   logLevel: LogLevelOption,
   watchMode: boolean,
+  closeCallbackScope?: CloseCallbackScope,
+  configWatchHooks: boolean = true,
 ): BindingPluginOptions {
   const args: BindingifyPluginArgs = {
     plugin,
@@ -63,6 +68,8 @@ export function bindingifyPlugin(
     onLog,
     logLevel,
     watchMode,
+    closeCallbackScope,
+    configWatchHooks,
     normalizedOutputPlugins,
   };
 
@@ -117,8 +124,13 @@ export function bindingifyPlugin(
 
   const { plugin: watchChange, meta: watchChangeMeta } = bindingifyWatchChange(args);
 
-  const { plugin: closeWatcher, meta: closeWatcherMeta } = bindingifyCloseWatcher(args);
+  const { plugin: closeWatcher, meta: closeWatcherMeta } = configWatchHooks
+    ? bindingifyCloseWatcher(args)
+    : {};
   let hookUsage = extractHookUsage(plugin).inner();
+  if (!configWatchHooks) {
+    hookUsage &= ~HookUsageKind.closeWatcher;
+  }
   const result: BindingPluginOptions = {
     // The plugin name already normalized at `normalizePlugins`, see `packages/rolldown/src/utils/normalize-plugin-option.ts`
     name: plugin.name!,

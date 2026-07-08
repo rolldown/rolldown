@@ -57,6 +57,7 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<Bundl
     const result = await bundle.write({
       dir: outputDir,
       format: isEsm ? 'esm' : 'cjs',
+      codeSplitting: false,
       sourcemap: 'inline',
       // respect the original file extension, mts -> mjs, cts -> cjs
       // mts should be generate mjs, it avoid add `type: module` at package.json

@@ -15,7 +15,7 @@ import { PluginContextData } from './plugin/plugin-context-data';
 import type { WorkerData } from './utils/initialize-parallel-plugins';
 
 const controlPort = parentPort!;
-const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
+const { registryId, pluginInfos, threadNumber, watchMode } = workerData as WorkerData;
 // Plugin callbacks are weak TSFNs and therefore do not keep this worker env
 // alive. The owner explicitly terminates workers through `stopWorkers()`;
 // retain the control port until that lifecycle boundary. The owner also keeps
@@ -45,8 +45,7 @@ controlPort.ref();
             [],
             () => {},
             'info' as const,
-            // TODO: support this.meta.watchMode
-            false,
+            watchMode,
           ),
         };
       }),

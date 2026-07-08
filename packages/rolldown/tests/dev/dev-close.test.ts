@@ -228,6 +228,69 @@ test.skipIf(isSingleThread)(
 );
 
 test.skipIf(isSingleThread)(
+  'close preserves callback and closeBundle failures',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-close-errors-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const input = path.join(dir, 'main.js');
+    fs.writeFileSync(input, 'console.log(1)');
+    const callbackError = new TypeError('dev output callback failure');
+    const closeError = new RangeError('dev closeBundle failure');
+    let closeBundleCalls = 0;
+
+    const engine = await dev(
+      {
+        input,
+        experimental: { devMode: true },
+        plugins: [
+          {
+            name: 'multiple-dev-close-failures',
+            closeBundle() {
+              closeBundleCalls += 1;
+              throw closeError;
+            },
+          },
+        ],
+      },
+      { dir: path.join(dir, 'dist') },
+      {
+        onOutput() {
+          throw callbackError;
+        },
+      },
+    );
+
+    onTestFinished(async () => {
+      await engine.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const runError = await engine.run().catch((error: unknown) => error);
+    expect(runError).toBe(callbackError);
+
+    const [firstCloseError, concurrentCloseError] = await Promise.all([
+      engine.close().catch((error: unknown) => error),
+      engine.close().catch((error: unknown) => error),
+    ]);
+    expect(firstCloseError).toBe(concurrentCloseError);
+    expect(firstCloseError).toBeInstanceOf(AggregateError);
+    const closeErrors = (firstCloseError as AggregateError).errors;
+    expect(closeErrors).toHaveLength(2);
+    expect(closeErrors.filter((error) => error === callbackError)).toHaveLength(1);
+    expect(closeErrors.filter((error) => error === closeError)).toHaveLength(1);
+    expect(closeBundleCalls).toBe(1);
+
+    const replayedCloseError = await engine.close().catch((error: unknown) => error);
+    expect(replayedCloseError).toBe(firstCloseError);
+    expect(closeBundleCalls).toBe(1);
+  },
+);
+
+test.skipIf(isSingleThread)(
   'close waits for an active parallel-plugin build before terminating workers',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

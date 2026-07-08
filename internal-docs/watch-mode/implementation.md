@@ -17,6 +17,16 @@ function watch(input: WatchOptions | WatchOptions[]): RolldownWatcher;
 
 - Accepts a single config or an array of configs.
 - Each config may have multiple `output` entries. Internally, **each output creates a separate bundler** (a `WatchTask`).
+- An omitted output and an explicit empty `output: []` both normalize to one
+  default output, matching Rollup.
+- Config-scoped setup and teardown stay singular for in-process plugins despite
+  those per-output bundlers: `options`, `closeWatcher`, and
+  `watch.onInvalidate` run once per input config. The first output task owns
+  those watch lifecycle callbacks; follower output tasks omit them. Build,
+  output, and `watchChange` hooks still run in each output task because their
+  plugin contexts are not shared. Parallel plugins still own one worker pool
+  per output task, so each pool receives its own `closeWatcher` before worker
+  termination.
 - Returns a `RolldownWatcher` immediately. The first build is deferred to a zero-delay host timer so the caller can attach event listeners first in Node.js and browsers. `WatcherEmitter.close()` is bound through a deferred handler, so a close in the same creation tick waits for asynchronous option/plugin setup instead of becoming a no-op.
 
 ```typescript
@@ -53,7 +63,10 @@ type RolldownWatcherEvent =
 Event listeners are normally **awaited** before proceeding — blocking semantics matching Rollup.
 The coordinator may stop waiting for an `event`, `change`, or `restart` listener only when a close
 request wins the close-aware dispatch race described below. The JavaScript callback itself keeps
-running, and `watcher.close()` still waits for the complete close sequence.
+running, and `watcher.close()` still waits for the complete close sequence. If an awaited listener
+rejects before close wins, the coordinator fails closed: it records the original callback error,
+runs the normal watcher cleanup sequence, and replays that terminal failure from every current or
+later `watcher.close()` call.
 
 ### Rust API
 
@@ -67,12 +80,35 @@ Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates
 
 ### Known Divergences from Rollup
 
-| Aspect               | Rollup                     | Rolldown               | Reason                                                              |
-| -------------------- | -------------------------- | ---------------------- | ------------------------------------------------------------------- |
-| Bundler per output   | One build, multiple writes | One bundler per output | Architecture constraint — Rolldown's bundler owns the full pipeline |
-| `buildStart` calls   | Once per config            | Once per output        | Consequence of one-bundler-per-output                               |
-| Module graph sharing | Shared across outputs      | Separate per output    | May change in the future                                            |
-| `restart` event      | Per config change          | Per rebuild cycle      | Rolldown emits `restart` once per rebuild cycle                     |
+| Aspect                                       | Rollup                            | Rolldown                             | Reason                                                                                      |
+| -------------------------------------------- | --------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Bundler per output                           | One build, multiple writes        | One bundler per output               | Architecture constraint — Rolldown's bundler owns the full pipeline                         |
+| `options` hook lifecycle                     | Once per config build/rebuild     | Once during watcher setup            | Native watch tasks retain materialized binding options and plugin workers across rebuilds   |
+| `outputOptions` hook lifecycle               | Once per output per build/rebuild | Once per output during watcher setup | Output options are normalized before constructing each persistent native bundler            |
+| `buildStart` calls                           | Once per config                   | Once per output                      | Consequence of one-bundler-per-output                                                       |
+| `watchChange` calls                          | Once per config                   | Once per output                      | Each output task owns a distinct live plugin context                                        |
+| `onInvalidate` for follower-only watch files | Once per config                   | Not currently emitted                | The first output owns the config callback; native output tasks do not yet share a watch set |
+| Parallel `closeWatcher` calls                | Once per config                   | Once per output                      | Each output task owns a separate worker pool                                                |
+| Module graph sharing                         | Shared across outputs             | Separate per output                  | May change in the future                                                                    |
+| `restart` event                              | Per config change                 | Per rebuild cycle                    | Rolldown emits `restart` once per rebuild cycle                                             |
+
+Rollup recreates a graph from the task's merged config for every build, so its
+`options` hooks can replace plugins and other input options on every rebuild,
+and each subsequent write reruns `outputOptions`. Rolldown creates persistent
+native bundlers and parallel-plugin worker pools during asynchronous watcher
+setup. Re-running those hooks would require a rebuild-time NAPI reconfiguration
+protocol that atomically replaces native options, plugin drivers, worker pools,
+and close ownership; invoking the hooks alone would expose values the active
+bundler does not use.
+
+For multiple outputs, in-process `onInvalidate` is attached only to the first
+output task to avoid duplicate callbacks for files shared by every output.
+Because each native task currently owns an independent file watcher and there
+is no config-group event identity, attaching the callback to every task cannot
+reliably distinguish one shared filesystem event from separate invalidations.
+As a result, a file watched only by a follower output does not currently invoke
+the config callback. Correct parity requires grouping output tasks behind one
+config-level watch set/event stream rather than timing-based deduplication.
 
 ## Architecture
 
@@ -98,11 +134,13 @@ Data flow:
                          └── await_handler_or_close()
                                ├── handler.on_*().await ──→ Consumer (NAPI/Rust)
                                └── close_notify ─────────→ stop the callback wait and run handle_close()
+                   └── registration failure → close hidden attempt → delayed bounded task retry
+                                               └── exhaustion → handle_close() with replayable error
 ```
 
 **Ownership rules:**
 
-- `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access.
+- `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access. `publish_close()` sets the atomic flag, notification, and actor message without spawning; N-API calls it synchronously before returning the close promise so a JavaScript listener cannot return into a new build before close is visible. The async `close()` future enters through the selected runtime, starts a not-yet-running coordinator, and awaits its shared result.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
 - Each `WatchTask` owns its `DynFsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
 - Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
@@ -145,10 +183,16 @@ rolldown_watcher/
 Idle ──(FsEvent)──→ Debouncing
 Debouncing ──(more FsEvents)──→ Debouncing (extend deadline, coalesce changes)
 Debouncing ──(timeout)──→ run rebuild sequence → drain buffered → Idle or Debouncing
+Task build ──(watch registration failure)──→ delayed retry (25ms, 100ms, 250ms)
+Delayed retry ──(success)──→ finish the same public build event cycle
+Delayed retry ──(exhausted)──→ Closing with replayable registration error
 Any ──(Close)──→ Closing → Closed
 ```
 
 **No explicit Building state.** The coordinator's event loop blocks during build (it `await`s). Fs events buffer in the mpsc channel. After build, `drain_buffered_events()` via `try_recv()` picks them up.
+Registration backoff is likewise a coordinator sub-phase rather than a `WatcherState` variant. It
+continues to receive file-change and close messages while waiting, but the retry deadline is fixed
+so incoming changes cannot turn a bounded recovery into an indefinite wait.
 
 ```rust
 enum WatcherState {
@@ -249,7 +293,21 @@ File change detected by per-task FsWatcher
               1. bundle.scan_modules() → discover module graph
               2. bundle.get_watch_files() → register FS watches (before render, before checking scan result for error recovery)
               3. bundle.bundle_write() or bundle.bundle_generate() (if skip_write)
+            - each full build owns independent plugin-driver and emitted-file
+              state; a retained earlier result stays valid until its own close
             - update_watch_files() again with any render-phase files
+              - every candidate addition is attempted and every `paths_mut()`
+                transaction is committed, including after an individual add
+                fails or when every path is already registered; the macOS
+                FSEvents backend stops delivery when the transaction opens and
+                restarts on commit
+              - successfully added paths are published only after commit
+                succeeds; add and commit diagnostics are aggregated
+            - if either registration operation fails, close the unreported
+              bundle attempt and retry the task after 25ms, 100ms, then 250ms
+              without emitting another `BUNDLE_START`
+            - after the third retry fails, stop the coordinator and replay the
+              registration failure through `watcher.close()`
          c. handler.on_event(BUNDLE_END or ERROR)
       6. handler.on_event(END)
       7. drain_buffered_events() → process events that arrived during build
@@ -274,7 +332,7 @@ WatchCoordinator::run()
       4. handler.on_close() (awaited; a panic is recorded)
       5. State → Closed
       6. coordinator future completes with the aggregated native result
-         - event-loop panic and cleanup failures share one stable result
+         - event-loop callback/plugin failures, panics, and cleanup failures share one stable result
          → close() callers resolve/reject identically
          → wait_for_close() callers resolve as a liveness signal
 
@@ -293,21 +351,90 @@ meaning of a resolved close promise.
 
 The JavaScript wrapper has two memoized phases. `nativeClosePromise` awaits
 `BindingWatcher.close()` and therefore all Rust hooks/coordinator cleanup.
-Regardless of native failure, the outer `closePromise` then awaits every
-parallel-plugin worker termination and dispatches `close` listeners
-sequentially. Native, worker, and listener failures are aggregated after all
-phases have been attempted (a single failure is rethrown unchanged). The native
+The binding returns a structured result containing both the native close
+failures and the opaque close identities of every bundle handle owned by the
+coordinator. Rust keeps each close failure separately,
+including every diagnostic in a batched failure, and the binding converts each
+entry independently. Native JavaScript exceptions retain their original object
+identity on supported native N-API hosts. The TypeScript wrapper flattens those
+entries into the same outer close coordinator as retained-result, worker,
+listener, and runtime-release failures, so one stable terminal `AggregateError`
+contains every attempted shutdown phase instead of collapsing all native
+failures into one child error.
+Regardless of native failure, the outer `closePromise` then closes every
+superseded `BUNDLE_END` / `ERROR` result, awaits every parallel-plugin worker
+termination, and dispatches a stable snapshot of `close` listeners concurrently.
+Close dispatch awaits every listener with all-settled semantics, aggregates all
+listener failures, and clears the complete listener map both before dispatch
+and after it settles so listeners added during terminal dispatch cannot survive
+shutdown. Each event carries
+its internal watch-task index: JavaScript keeps one native-owned current result
+per task and moves only the preceding result into its retained-close registry.
+Native result closing is therefore the current-result backstop, while the
+JavaScript registry ensures every older retained result also runs `closeBundle`
+while its workers are alive without reporting a current-result failure twice.
+There is a host-microtask window after the `BUNDLE_START` adapter commits a
+provisional result transfer but before Rust resumes and constructs the
+replacement bundle. Native close identities are the ownership authority for
+that window: JavaScript excludes any matching superseded entry from its drain,
+because the coordinator has already attempted that exact handle.
+An explicitly closed result unregisters itself as soon as its full native close
+fulfills, so long-running watchers do not retain successful historical bundle
+handles. Failed results stay registered until watcher shutdown can surface
+their terminal error. Terminal watcher shutdown accounts for every superseded
+result independently even when multiple hooks reuse the same JavaScript error
+object, then clears both current and superseded registries before worker and
+listener teardown so the public emitter does not retain closed bundle handles.
+Native, result, worker, and listener failures are aggregated after all phases
+have been attempted (a single failure is rethrown unchanged). The native
 `close` event callback merely starts/observes this outer lifecycle and returns
 immediately, so the Rust coordinator never waits on a listener that waits on
 itself. On Node.js, `AsyncLocalStorage` identifies close-listener continuations:
-a reentrant `watcher.close()` returns the already-settled native phase, while
-outside callers receive the outer promise and therefore observe listener
-completion or rejection. Browser hosts do not expose an equivalent async
-context. There, the emitter keeps the native-phase fallback active for the
-entire close-listener promise so calls after an `await` cannot self-deadlock.
-Calls started before listener dispatch still hold the outer promise, but an
-unrelated same-watcher call made while the listener is active is
-indistinguishable and receives the native phase.
+a reentrant `watcher.close()` returns the already-settled native phase. Close
+listener invocations link to their async-context parent, and lookup walks active
+ancestors, so mutually closing watcher listeners A -> B -> A acknowledge A
+without changing unrelated callers. Outside callers receive the outer promise
+and therefore observe listener completion or rejection. Browser hosts do not
+expose an equivalent async context. There, each emitter keeps its native-phase
+fallback active for the entire close-listener promise so calls after an `await`
+cannot self-deadlock, including mutually closing watchers. Calls started before
+listener dispatch still hold the outer promise, but an unrelated same-watcher
+call made while the listener is active is indistinguishable and receives the
+native phase.
+
+`BUNDLE_END` and `ERROR` results adapt their `close()` method through the same
+`CloseCallbackScope` used to wrap plugin callbacks. The underlying
+`BindingWatcherBundler.close()` is always invoked, preserving `BundleHandle`'s
+shared terminal future. Full rebuilds never pre-clear the preceding result:
+each build has independent clearable emitted-file state, so an older result's
+plugin context remains usable and its eventual close cannot invalidate a newer
+build. The internal `BUNDLE_START` payload carries its watch-task index; before
+the public event is emitted, the TypeScript adapter moves that task's current
+result into a provisional pending-build slot. If the public listener finishes,
+the result becomes superseded before native bundle construction starts. If the
+listener rejects or starts watcher close, the provisional transfer is canceled
+synchronously because native still owns that handle. The binding publishes the
+native close request before returning the close promise, so the coordinator sees
+close before it can continue from `BUNDLE_START` into bundle construction. Once
+bundle construction has replaced the handle, native closes the hidden
+replacement and JavaScript closes the previously emitted result. Each plugin
+driver has an opaque close identity exposed only through the internal binding
+context and native event payload; the public watch result remains close-only.
+If `closeBundle` re-enters a result backed by that same driver anywhere in the
+active async-context invocation chain, the hook receives an immediate
+acknowledgement so it can return. Awaiting another result records a process-wide
+dependency edge; an edge that would complete a nested A -> B -> A cycle is
+acknowledged even when results belong to different watchers and N-API entered
+the nested hook through a fresh async context. Each edge belongs to the source
+callback invocation and is removed when either that invocation or the target
+close settles, so fire-and-forget closes cannot create stale cycle evidence.
+Other cross-result closes await and replay their own terminal result, including
+the original JavaScript error object. Node async context distinguishes external
+same-result callers, so concurrent and later callers retain the full-result
+behavior. Browser hosts retain each active identity until the hook promise
+settles, allowing reentry after `await`; an unrelated same-result call during
+that window is indistinguishable and receives the acknowledgement, while later
+calls replay the full terminal result.
 
 Asynchronous setup failures (for example an `options` hook rejection) are
 reported as `ERROR` with `result: null`, followed by `END`, matching Rollup's
@@ -342,6 +469,9 @@ Build errors do **not** stop the watcher. On error, `event('ERROR')` is emitted 
 ## Plugin Hooks
 
 All watch-related hooks are **blocking** — the coordinator awaits their completion. This matches Rollup.
+`watchChange` is also fail-closed: a rejected hook stops the rebuild sequence, enters the normal
+cleanup path, and becomes part of the replayable watcher close result instead of being logged and
+discarded.
 
 | Hook                         | When                           | Purpose                                                |
 | ---------------------------- | ------------------------------ | ------------------------------------------------------ |
@@ -364,6 +494,19 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
 - Files are watched **non-recursively** (individual file watches).
 - Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
+- Opening a path transaction may pause event delivery until commit. Every eligible candidate is
+  attempted and every transaction is committed, including when an individual `PathsMut::add`
+  fails or the batch is empty. If commit succeeds, only paths whose additions succeeded enter
+  `watched_files`; if commit fails, none of the staged paths are published. Add and commit
+  diagnostics are aggregated when both occur.
+- Any add or commit failure aborts that build attempt; neither is logged and skipped. The
+  coordinator closes the unreported bundle handle and retries the whole task with
+  25ms/100ms/250ms backoff inside the same public `BUNDLE_START` cycle. Close remains interruptible
+  during backoff. Exhaustion fails closed and the registration diagnostics become part of the
+  stable result replayed by every `watcher.close()`.
+- `BUNDLE_END.output` follows Rollup's `path.resolve(output.file || output.dir)` behavior. Relative
+  paths are resolved against the normalized bundler `cwd`, and `.` / `..` components are removed
+  lexically without requiring the output path to exist.
 
 ### Split-Phase Build for Watch Mode
 
@@ -414,16 +557,18 @@ The single extension point for consumers. NAPI implements it to bridge to JS; Ru
 
 ```rust
 pub trait WatcherEventHandler: Send + Sync {
-    fn on_event(&self, event: WatchEvent) -> impl Future<Output = ()> + Send;
-    fn on_change(&self, path: &str, kind: WatcherChangeKind) -> impl Future<Output = ()> + Send;
-    fn on_restart(&self) -> impl Future<Output = ()> + Send;
-    fn on_close(&self) -> impl Future<Output = ()> + Send;
+    fn on_event(&self, event: WatchEvent) -> impl Future<Output = anyhow::Result<()>> + Send;
+    fn on_change(&self, path: &str, kind: WatcherChangeKind) -> impl Future<Output = anyhow::Result<()>> + Send;
+    fn on_restart(&self) -> impl Future<Output = anyhow::Result<()>> + Send;
+    fn on_close(&self) -> impl Future<Output = anyhow::Result<()>> + Send;
 }
 ```
 
 All methods are awaited during normal operation, ensuring Rollup-compatible sequential semantics.
 The `on_event`, `on_change`, and `on_restart` waits are close-aware so an awaited listener can close
-its own watcher without deadlocking. `on_close` remains fully awaited as part of the close sequence.
+its own watcher without deadlocking. An error returned before close wins terminates the event loop
+and is aggregated into its replayable close result. `on_close` remains fully awaited as part of the
+close sequence, and its returned error is aggregated with earlier lifecycle failures.
 
 ## NAPI Bridge
 
@@ -437,19 +582,23 @@ struct NapiWatcherEventHandler {
 }
 
 impl WatcherEventHandler for NapiWatcherEventHandler {
-    async fn on_event(&self, event: WatchEvent) {
+    async fn on_event(&self, event: WatchEvent) -> anyhow::Result<()> {
         let binding_event = BindingWatcherEvent::from_watch_event(event);
-        self.listener.await_call(FnArgs { data: (binding_event,) }).await;
+        self.listener.await_call(FnArgs { data: (binding_event,) }).await?;
+        Ok(())
     }
     // same pattern for on_change (from_change), on_restart, on_close
 }
 ```
 
-`BindingWatcherEvent` wraps an internal enum (`BundleEvent | Change | Restart | Close`) with NAPI-exposed accessor methods (`eventKind()`, `bundleEventKind()`, `bundleEndData()`, etc.) for JS consumption.
+`BindingWatcherEvent` wraps an internal enum (`BundleEvent | Change | Restart | Close`) with NAPI-exposed accessor methods (`eventKind()`, `bundleEventKind()`, `bundleStartData()`, `bundleEndData()`, etc.) for JS consumption. `BUNDLE_START` carries the internal watch-task index used for result ownership transfer. Bundle result payloads carry the same task index and plugin-driver close identity beside the close-only `BindingWatcherBundler`; the TypeScript adapter consumes all internal metadata before emitting the public event.
 
 ### Event Loop Keepalive
 
 `ThreadsafeFunction` uses `Weak = true` (unref'd), so it doesn't prevent Node.js from exiting. The coordinator is a `Shared<Future>` carrying the terminal native close result. `Watcher::close()` replays that result, while `Watcher::wait_for_close()` deliberately discards it and resolves when the coordinator finishes. The NAPI binding exposes the latter as `waitForClose()` — the pending JS Promise keeps the event loop alive without creating an unhandled rejection. This replaces the old `setInterval(() => {}, 1e9)` hack.
+The TypeScript runner still awaits that completion-only promise: an unexpected
+N-API transport rejection is recorded as a watcher run failure and enters the
+normal fail-closed cleanup path instead of becoming an unhandled rejection.
 
 ```
 constructor(options, listener)  // creates Watcher with handler, ready to run
@@ -461,11 +610,29 @@ close() → inner.close()         // sends Close msg, awaits shared future
 
 ### Binding as Thin Wrapper
 
-`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking, no logic beyond type conversion. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher.
+`BindingWatcher` owns no independent lifecycle state. It converts the flattened
+output configs into native configs, applies the maximum `buildDelay`, selects
+the first config with explicit watcher-backend settings for the shared native
+watcher, and creates the `NapiWatcherEventHandler`. `run()` and
+`waitForClose()` delegate directly. `close()` publishes close synchronously,
+then returns a structured result containing every native close failure and the
+close identities owned by the native coordinator.
 
 ### Event Emitter
 
-`WatcherEmitter` uses a simple `Map<string, Function[]>` for listener storage (on/off). Async `emit()` dispatches handlers sequentially (`for...of` + `await`) so side effects from earlier handlers (e.g. `result.close()` triggering `closeBundle`) are visible to later handlers. It also owns a deferred close-handler Promise so `close()` is valid before `createWatcher()` finishes asynchronous plugin setup. The bound `Watcher` remains the authority for native/full-phase memoization. Close-listener reentrancy uses `AsyncLocalStorage` on Node.js and a per-emitter active-listener fallback in browser builds; the browser fallback intentionally prioritizes no deadlock over distinguishing unrelated calls during the listener promise. No external dependency is needed.
+`WatcherEmitter` uses a simple `Map<string, Function[]>` for listener storage
+(on/off). Every dispatch snapshots the applicable listener array before calling
+user code, so listeners added or removed during an event affect only later
+events. Normal async `emit()` remains sequential (`for...of` + `await`) so side
+effects from earlier handlers (e.g. `result.close()` triggering `closeBundle`)
+are visible to later handlers. Terminal `emitClose()` uses the all-settled
+behavior described above. The emitter also owns a deferred close-handler
+Promise so `close()` is valid before `createWatcher()` finishes asynchronous
+plugin setup. The bound `Watcher` remains the authority for native/full-phase
+memoization. Close-listener reentrancy uses `AsyncLocalStorage` on Node.js and a
+per-emitter active-listener fallback in browser builds; the browser fallback
+intentionally prioritizes no deadlock over distinguishing unrelated calls
+during the listener promise. No external dependency is needed.
 
 Setup failures are reported as `ERROR` then `END` before an external same-tick
 `close()` can finish. Errors from another JavaScript realm retain their original
@@ -512,6 +679,13 @@ interface WatcherOptions {
   clearScreen?: boolean; // Clear screen on rebuild. Default: true
 }
 ```
+
+Across enabled input configs, the native coordinator uses the largest
+`buildDelay`, as Rollup does. Backend/polling settings configure one shared
+native watcher, so the first config that explicitly provides such settings is
+authoritative. The multiple-watcher-option warning counts input configs, not
+their expanded output tasks; multiple outputs from one config therefore do not
+produce a false warning.
 
 Environment variables set during watch mode:
 

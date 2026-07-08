@@ -31,6 +31,7 @@ pub type SharedNativePluginContext = Arc<NativePluginContextImpl>;
 #[derive(Debug)]
 pub struct NativePluginContextImpl {
   pub(crate) plugin_name: Cow<'static, str>,
+  pub(crate) close_identity: u64,
   pub(crate) skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
   pub(crate) plugin_idx: PluginIdx,
   pub(crate) resolver: Arc<Resolver>,
@@ -50,6 +51,11 @@ pub struct NativePluginContextImpl {
 }
 
 impl NativePluginContextImpl {
+  #[doc(hidden)]
+  pub fn close_identity(&self) -> u64 {
+    self.close_identity
+  }
+
   pub async fn load(
     &self,
     specifier: &str,

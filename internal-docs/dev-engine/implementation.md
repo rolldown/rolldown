@@ -113,6 +113,8 @@ pub enum CoordinatorMsg {
   },
   ScheduleBuildIfStale { reply: … },         // ask coordinator to drain its queue
   GetState { reply: … },                     // snapshot of coordinator state
+  BeginWatchRegistrationErrorObservation { reply: … },
+  FinishWatchRegistrationErrorObservation { observer_id, reply: … },
   EnsureLatestBundleOutput { reply: … },     // "I need a fresh full bundle"
   TriggerFullBuild,                           // unconditional full build (fire-and-forget)
   GetWatchedFiles { reply: … },              // list of watched paths
@@ -123,17 +125,19 @@ pub enum CoordinatorMsg {
 
 Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
 
-| Message                    | Handler                                                  |
-| -------------------------- | -------------------------------------------------------- |
-| `WatchEvent`               | `handle_watch_event` → `handle_file_changes`             |
-| `BundleCompleted`          | `handle_bundle_completed`                                |
-| `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result             |
-| `GetState`                 | `create_state_snapshot`, reply                           |
-| `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply                     |
-| `TriggerFullBuild`         | `trigger_full_build` (no reply)                          |
-| `GetWatchedFiles`          | reply with the `watched_files` set                       |
-| `ModuleChanged`            | queue a `Rebuild`, schedule                              |
-| `Close`                    | await running task, close final bundle, reply, then exit |
+| Message                                   | Handler                                                  |
+| ----------------------------------------- | -------------------------------------------------------- |
+| `WatchEvent`                              | `handle_watch_event` → `handle_file_changes`             |
+| `BundleCompleted`                         | `handle_bundle_completed`                                |
+| `ScheduleBuildIfStale`                    | `schedule_build_if_stale`, reply with result             |
+| `GetState`                                | `create_state_snapshot`, reply                           |
+| `BeginWatchRegistrationErrorObservation`  | register a lifecycle waiter                              |
+| `FinishWatchRegistrationErrorObservation` | acknowledge and return attached failures                 |
+| `EnsureLatestBundleOutput`                | `ensure_latest_bundle_output`, reply                     |
+| `TriggerFullBuild`                        | `trigger_full_build` (no reply)                          |
+| `GetWatchedFiles`                         | reply with the `watched_files` set                       |
+| `ModuleChanged`                           | queue a `Rebuild`, schedule                              |
+| `Close`                                   | await running task, close final bundle, reply, then exit |
 
 The producers:
 
@@ -143,9 +147,10 @@ The producers:
 - A finishing **`BundlingTask`** sends `BundleCompleted` from its
   `run()` (`bundling_task.rs:75-80`).
 - The **`DevEngine`** sends `ScheduleBuildIfStale`, `GetState`,
-  `EnsureLatestBundleOutput`, `GetWatchedFiles`, `ModuleChanged`,
-  `Close` on behalf of its public API callers (the dev server, HTTP
-  middleware, lazy-compilation endpoint, etc.).
+  both watch-registration observation messages,
+  `EnsureLatestBundleOutput`, `GetWatchedFiles`, `ModuleChanged`, and
+  `Close` on behalf of its public API callers (the dev server, HTTP middleware,
+  lazy-compilation endpoint, etc.).
 
 ---
 
@@ -795,7 +800,31 @@ the coordinator is either `InProgress` (build still running —
 `ensure_latest_bundle_output` waits for it) or `Idle` (build finished —
 output is fresh). This works because `update_watch_paths()` runs even
 after a failed build (`handle_bundle_completed`, §11), so files that
-were already parsed are watched.
+were already parsed are watched. Creating a watcher path transaction can pause
+event delivery on backends such as macOS FSEvents until the transaction is
+committed. The coordinator therefore records individual `add` failures,
+continues staging the remaining paths, and always calls `commit`. If commit
+succeeds, only paths whose `add` succeeded are published to the coordinator's
+`watched_files` set; if commit fails, none of the staged paths are published.
+Add and commit failures are aggregated when both occur.
+
+Watch-registration failures use explicit lifecycle observers rather than one
+permanent error slot. `wait_for_ongoing_bundle` and
+`ensure_latest_bundle_output` register an observer before waiting; each failed
+path publication creates an event attached to every observer active at that
+point. The next publication attempt supersedes that failure occurrence,
+regardless of whether the retry succeeds or reports a new failure. Queued
+observers remain attached to every occurrence they overlapped, while callers
+that start later attach only to the current unresolved failure. Once an
+observer has acknowledged a superseded event, later callers do not attach to
+it; the event is removed after the already-attached observers finish. If a
+failure is superseded before any observer sees it, the first concurrently
+registered observer set receives it and acknowledgement then removes it. This
+preserves every in-flight waiter's failures without letting historical retry
+failures poison all future page-access ensures. Close registers its own
+observer before draining the final task, so an unresolved or never-observed
+registration failure still joins `closeBundle` failures. Every unpublished
+candidate remains eligible for retry.
 
 **Edge case: recovery from a missing-import failure.** If the initial
 build failed because of a missing import, the missing file was never
@@ -934,6 +963,13 @@ directly. Once `run()` has spawned the actor, terminal bundler cleanup belongs
 to the coordinator so accepting a close request establishes one ordering point
 for quiescence, final-handle selection, and error delivery.
 
+When close waits for an active build, that task queues `BundleCompleted` before
+its future resolves. The coordinator cannot process the queued message while
+the close handler owns the actor loop, so close performs the completion path's
+final watch-path publication itself after the task settles and before
+`Bundler::close()`. A publication failure joins any earlier registration
+failure, callback rejection, and `closeBundle` failure in the terminal result.
+
 `DevEngine::close()` sets `is_closed` before starting cleanup so new API work is
 rejected immediately. Cleanup itself is a separate shared future: concurrent
 callers wait for the same coordinated shutdown, and later callers replay its
@@ -943,25 +979,62 @@ exits without replying, `DevEngine` awaits that exit and falls back to
 `Bundler::close()`. A fallback hook failure is aggregated with the coordinator
 transport failure so cleanup is still attempted without hiding either cause.
 
+`BindingDevEngine` adds an admission barrier around every asynchronous N-API
+operation. Close marks that binding lifecycle as closing, rejects new
+operations, waits for all accepted operations to drop their guards, and only
+then invokes native `DevEngine::close()`. The TypeScript owner applies the same
+ordering before calling `BindingDevEngine.close()`. The two barriers protect
+both direct binding consumers and the public TypeScript API. In particular,
+`run()` can finish its post-callback `GetState` request before the coordinator
+starts terminal `closeBundle`; a hook may therefore await the `run()` promise
+without creating `run -> GetState -> coordinator close -> closeBundle -> run`.
+
+The binding also counts its owned `on_output`, `on_hmr_updates`, and
+`on_additional_assets` callback promises. A raw `BindingDevEngine.close()` call
+while one of those callbacks is active starts one background close executor and
+returns a successful acknowledgement instead of waiting on the operation guard
+that owns the callback. The callback can then return, the guard drains, and the
+executor performs coordinated native close. Concurrent callback-context close
+calls receive the same acknowledgement; the first close after no owned callback
+is active waits for, or replays, the terminal result. Because N-API exposes no
+portable way to identify which JavaScript async continuation invoked a method,
+an unrelated raw close racing an active callback also receives the
+acknowledgement and must call close again to observe terminal diagnostics. The
+public TypeScript owner does not hit this conservative branch because its own
+operation barrier waits for callbacks before invoking native close. If N-API
+cannot schedule the close executor, the binding rolls back only the
+`close_started` latch so a later raw close can retry transport setup while the
+engine remains closed to new operations.
+
 ### TypeScript parallel-plugin ownership
 
 `packages/rolldown/src/api/dev/dev-engine.ts` owns the `stopWorkers` closure
-returned by option normalization. `DevEngine.close()` is memoized and awaits
-the native `BindingDevEngine.close()` phase first; native close waits for an
-active build, `closeBundle`, and coordinator shutdown. Parallel workers are
-terminated only afterward, including when native close rejects. Constructor
-failure also terminates workers that were already initialized. Runtime-lease
-acquisition and binding-construction failures combine worker shutdown with
-lease release under one retryable setup-cleanup owner. A transient cleanup
-failure is retried immediately; if cleanup still fails, ownership remains in
-the shared pending-cleanup registry so a later option initialization can
-recover it instead of abandoning workers or a lease. The shared registry is
-implemented in platform-neutral `utils/retryable-cleanup.ts` so browser builds
-do not retain the Node-specific parallel-worker startup module. User-controlled
-`DevOptions` getters are materialized under the same setup-cleanup boundary.
-Top-level callback, rebuild-strategy, and watch getters are each read once, and
-a getter failure after parallel-worker startup terminates those workers before
-the creation promise rejects.
+returned by option normalization. `DevEngine.close()` is memoized, drains its
+accepted JavaScript operations, and then awaits the native
+`BindingDevEngine.close()` phase; native close waits for `closeBundle` and
+coordinator shutdown. Parallel workers are terminated only afterward,
+including when native close reports errors. Constructor failure also
+terminates workers that were already initialized. Runtime-lease acquisition
+and binding-construction failures combine worker shutdown with lease release
+under one retryable setup-cleanup owner. A transient cleanup failure is retried
+immediately; if cleanup still fails, ownership remains in the shared
+pending-cleanup registry so a later option initialization can recover it
+instead of abandoning workers or a lease. The shared registry is implemented
+in platform-neutral `utils/retryable-cleanup.ts` so browser builds do not retain
+the Node-specific parallel-worker startup module. User-controlled `DevOptions`
+getters are materialized under the same setup-cleanup boundary. Top-level
+callback, rebuild-strategy, and watch getters are each read once, and a getter
+failure after parallel-worker startup terminates those workers before the
+creation promise rejects.
+
+Every JavaScript `DevEngine` also owns a process-unique close identity. Its
+wrapped plugin and dev callbacks use that identity by default, and `close()`
+selects its terminal promise through the shared `CloseCallbackScope` dependency
+graph. A callback on engine A that awaits `B.close()` records A -> B; if a
+callback on B then awaits `A.close()`, the second edge is acknowledged instead
+of deadlocking both native coordinators. Dependency edges are owned by the
+source callback invocation and are removed when that invocation returns, even
+when it started the target close without awaiting it.
 
 `ensureCurrentBuildFinish()` and `removeClient()` are intentional exceptions to
 the normal post-close rejection rule. Vite can leave an initial-build poll or a
@@ -1065,14 +1138,18 @@ static distinction. Code that needs to react differently must inspect
 
 ### 16b. The two delivery channels
 
-**Throw (synchronous API)** — public napi methods that take a single caller
-and return a single result use `BindingResult<T> = Either<BindingErrors, T>`
-on the boundary, and the JS wrapper calls `unwrapBindingResult` to either
-return the success value or throw a `BundleError`.
+**Promise/result API** — public napi methods that take a single caller and
+return a single result use `BindingResult<T> = Either<BindingErrors, T>` on the
+boundary. Build-oriented methods use `unwrapBindingResult` to either return the
+success value or throw a `BundleError`. Lifecycle-oriented dev methods
+normalize the individual binding errors, throw the original JavaScript error
+for a singleton, and throw one `AggregateError` for multiple diagnostics. This
+keeps callback and hook identities observable without nesting one native
+aggregate inside another JavaScript aggregate.
 
-Used by: `invalidate`, `ensureLatestBuildOutput`, `getBundleState`,
-`waitForOngoingBundle`. The thrown error reaches whichever audience called
-the method:
+Used by: `invalidate`, `ensureLatestBuildOutput`, `run`,
+`ensureCurrentBuildFinish`, `compileEntry`, and `close`. The thrown error
+reaches whichever audience called the method:
 
 - `invalidate` is typically called by the binding consumer's HMR layer in
   response to an end-user HMR client message. The thrown error is observed
@@ -1208,6 +1285,16 @@ Three stops:
    `BundleError` aggregating the individual `BindingError`s.
    `normalizeBindingResult(container)` returns `T | Error` without throwing,
    used by callbacks that don't have a useful `throw` semantic.
+
+For dev lifecycle operations, `BindingDevEngine` converts every diagnostic in
+the `BatchedBuildDiagnostic` independently instead of rejecting the N-API
+promise with the first embedded JavaScript error. The TypeScript dev owner uses
+`normalizeBindingResultErrors` and the shared close-error aggregation rule:
+zero errors returns the value, one rethrows that exact error object, and
+multiple errors produce one `AggregateError`. Native close errors are retained
+as a flat list and join worker-shutdown or runtime-release failures in the same
+outer aggregate. Concurrent and later `close()` calls observe the memoized
+terminal error object.
 
 ### 16f. Conventions
 

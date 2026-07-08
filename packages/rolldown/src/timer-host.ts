@@ -17,32 +17,45 @@ import * as binding from './binding.cjs';
 // have setTimeout too). Registration is safe and required from every thread:
 // - native addon: the process-global driver REGISTRY (rolldown_utils
 //   `TimerDriverRegistry`) takes one registration per importing env, and the
-//   newest LIVE registrant serves each timer. A registrant dies with its env
-//   (worker exit) and is evicted -- env-cleanup hook plus dead-callback
-//   detection on the Rust side -- so a worker that imported the binding
-//   first and then exited can never shadow the main thread's timers with a
-//   dead callback; in-flight sleeps re-arm on the next live registrant.
+//   same timer is raced across every LIVE registrant. A registrant dies with
+//   its env (worker exit) and is evicted -- env-cleanup hook plus dead-callback
+//   detection on the Rust side -- so a worker that imported the binding first
+//   and then exited can never shadow the main thread's timers with a dead
+//   callback. A newly registered host also re-polls every existing sleep, so
+//   it joins timers already stranded behind a live but starved event loop.
 //   Without this per-env registration, a worker that imports the binding
 //   first (e.g. the parallel-plugin machinery) would be left driverless and
 //   a CurrentThread sleep would panic there.
 // - wasm artifacts: each worker instantiates its own wasm instance with its
 //   own driver registry, so each thread MUST register its own driver.
-const { driveCurrentThreadRuntimeTasks, registerCurrentThreadTaskHost, registerTimerHost } =
-  binding as Record<PropertyKey, unknown>;
+const CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION = 1;
+const {
+  getCurrentThreadTaskHostContractVersion,
+  registerCurrentThreadTaskHost,
+  registerTimerHost,
+} = binding as Record<PropertyKey, unknown>;
 const hostFunctions = {
-  driveCurrentThreadRuntimeTasks,
   registerCurrentThreadTaskHost,
   registerTimerHost,
 };
 const hostFunctionEntries = Object.entries(hostFunctions);
-const legacyHostContract = hostFunctionEntries.every(([, value]) => value === undefined);
+const legacyHostContract =
+  getCurrentThreadTaskHostContractVersion === undefined &&
+  hostFunctionEntries.every(([, value]) => value === undefined);
 const completeHostContract = hostFunctionEntries.every(([, value]) => typeof value === 'function');
-type CurrentThreadTaskDispatch = (dispatchHigh: number, dispatchLow: number) => void;
 
-if (!legacyHostContract && !completeHostContract) {
+if (
+  !legacyHostContract &&
+  (!completeHostContract || typeof getCurrentThreadTaskHostContractVersion !== 'function')
+) {
   const invalidExports = hostFunctionEntries
     .filter(([, value]) => typeof value !== 'function')
     .map(([name]) => name)
+    .concat(
+      typeof getCurrentThreadTaskHostContractVersion === 'function'
+        ? []
+        : ['getCurrentThreadTaskHostContractVersion'],
+    )
     .join(', ');
   throw new TypeError(
     `The loaded Rolldown binding exposes an incomplete async-runtime host contract. ` +
@@ -52,9 +65,16 @@ if (!legacyHostContract && !completeHostContract) {
 }
 
 if (completeHostContract) {
-  (registerCurrentThreadTaskHost as (dispatch: CurrentThreadTaskDispatch) => void)(
-    driveCurrentThreadRuntimeTasks as CurrentThreadTaskDispatch,
-  );
+  const actualVersion = (getCurrentThreadTaskHostContractVersion as () => unknown)();
+  if (actualVersion !== CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION) {
+    throw new TypeError(
+      `The loaded Rolldown binding uses async-runtime task-host contract version ` +
+        `${String(actualVersion)}, but this JavaScript package requires version ` +
+        `${CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION}. Reinstall Rolldown so the JavaScript ` +
+        `package and binding versions match.`,
+    );
+  }
+  (registerCurrentThreadTaskHost as () => void)();
 }
 
 if (

@@ -1,4 +1,7 @@
-use std::sync::{Arc, Weak};
+use std::sync::{
+  Arc, Weak,
+  atomic::{AtomicU64, Ordering},
+};
 
 use arcstr::ArcStr;
 use dashmap::DashMap;
@@ -19,6 +22,14 @@ use crate::{
 };
 use rolldown_error::EventKindSwitcher;
 
+static NEXT_CLOSE_IDENTITY: AtomicU64 = AtomicU64::new(1);
+
+fn next_close_identity() -> u64 {
+  NEXT_CLOSE_IDENTITY
+    .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |identity| identity.checked_add(1))
+    .expect("PluginDriver close identity space exhausted")
+}
+
 pub struct PluginDriverFactory {
   plugins: Vec<SharedPluginable>,
   resolver: Arc<Resolver>,
@@ -38,6 +49,7 @@ impl PluginDriverFactory {
     module_infos: SharedModuleInfoDashMap,
     transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   ) -> Arc<crate::plugin_driver::PluginDriver> {
+    let close_identity = next_close_identity();
     let watch_files = Arc::new(FxDashSet::default());
     let meta = Arc::new(PluginContextMeta::default());
     let tx = Arc::new(std::sync::Mutex::new(None));
@@ -77,6 +89,7 @@ impl PluginDriverFactory {
 
         index_contexts.push(PluginContext::Native(Arc::new(NativePluginContextImpl {
           plugin_name,
+          close_identity,
           skipped_resolve_calls: vec![],
           plugin_idx,
           plugin_driver: Weak::clone(plugin_driver),
@@ -94,6 +107,7 @@ impl PluginDriverFactory {
       });
 
       crate::plugin_driver::PluginDriver {
+        close_identity,
         hook_orders: PluginHookOrders::new(&index_plugins, &plugin_usage_vec),
         plugins: index_plugins,
         contexts: index_contexts,

@@ -41,7 +41,6 @@ const binding = vi.hoisted(() => {
       release: () => releaseAsyncRuntime(),
     })),
     collapseSourcemaps: vi.fn(),
-    driveCurrentThreadRuntimeTasks: vi.fn(),
     enhancedTransform: vi.fn(() => defer('transform')),
     enhancedTransformSync: vi.fn(),
     getRuntimeCapabilities: vi.fn(() => ({
@@ -56,6 +55,7 @@ const binding = vi.hoisted(() => {
       wasi: binding.target !== 'native',
       watchSupported: binding.target === 'native',
     })),
+    getCurrentThreadTaskHostContractVersion: vi.fn(() => 1),
     isolatedDeclaration: vi.fn(() => defer('isolatedDeclaration')),
     isolatedDeclarationSync: vi.fn(),
     minify: vi.fn(() => defer('minify')),

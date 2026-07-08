@@ -134,6 +134,61 @@ test('bundle.close() can be awaited from active JS callbacks', { timeout: 5_000 
   expect(completedCallbacks).toEqual(['buildStart', 'banner', 'closeBundle']);
 });
 
+test('a callback awaits and preserves an unrelated bundle close failure', async () => {
+  const closeError = new Error('unrelated bundle close failed');
+  let markCloseStarted!: () => void;
+  const closeStarted = new Promise<void>((resolve) => {
+    markCloseStarted = resolve;
+  });
+  let releaseClose!: () => void;
+  const closeRelease = new Promise<void>((resolve) => {
+    releaseClose = resolve;
+  });
+  const bundleB = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'unrelated-close-target',
+        async closeBundle() {
+          markCloseStarted();
+          await closeRelease;
+          throw closeError;
+        },
+      },
+    ],
+  });
+  const bundleA = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'unrelated-close-source',
+        async closeBundle() {
+          await bundleB.close();
+        },
+      },
+    ],
+  });
+
+  try {
+    await Promise.all([bundleA.generate(), bundleB.generate()]);
+    let closeSettled = false;
+    const closeA = bundleA.close().finally(() => {
+      closeSettled = true;
+    });
+    await closeStarted;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(closeSettled).toBe(false);
+
+    releaseClose();
+    await expect(closeA).rejects.toBe(closeError);
+  } finally {
+    releaseClose();
+    await Promise.allSettled([bundleA.close(), bundleB.close()]);
+  }
+});
+
 test('concurrent outputs retain and terminate every parallel worker pool', async () => {
   const originalTerminate = Object.getOwnPropertyDescriptor(Worker.prototype, 'terminate')!
     .value as (this: Worker) => Promise<number>;

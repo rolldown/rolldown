@@ -24,7 +24,7 @@ test('browser builds register the CurrentThread fresh-turn task host', async () 
     // Paired with the Rust Shared-wake regression: browser builds must retain
     // the host turn that prevents a scheduler wake from polling inline.
     expect(code).toContain('registerCurrentThreadTaskHost');
-    expect(code).toContain('driveCurrentThreadRuntimeTasks');
+    expect(code).not.toContain('driveCurrentThreadRuntimeTasks');
 
     // Browser timer support remains a separate capability decision.
     expect(code).not.toContain('registerTimerHost(');

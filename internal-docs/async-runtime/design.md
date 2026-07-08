@@ -91,9 +91,13 @@ The existing Tokio runtime remains the default and is selected by the
    normal blocking cap is saturated; unrelated FIFO work cannot displace the
    dependency the driver is awaiting. Exhausting the LIFO budget forces one
    shared-FIFO turn even if polling the awaited future immediately refills the
-   local slot. The timer timekeeper drains runnables only; that role remains
-   runnable-only through nested `block_on`, fires due timers before each nested
-   runnable turn, and never enters a potentially unbounded blocking closure.
+   local slot. Timer deadlines are serviced by one lifecycle-managed non-Rayon
+   thread per MultiThread generation. That thread executes no runnable or
+   blocking user work, so an armed timer cannot reduce the configured Rayon
+   capacity or become an unreported CPU worker. The first timer poll starts the
+   service thread before publishing its heap entry, so an OS-thread creation
+   failure cannot leave an unreachable waker in a generation with no
+   timekeeper.
 
 5. **Wakeups are batched.** A future wake enqueues a runnable. At most one
    bounded drain loop per worker is submitted to Rayon, and each loop processes
@@ -157,33 +161,69 @@ The existing Tokio runtime remains the default and is selected by the
    panic plus a panicking future destructor from aborting an unwind-enabled
    native process.
    CurrentThread host turns and host-dispatch publications are
-   generation-scoped scheduler work until their complete callback returns.
+   generation-scoped scheduler work until their complete native callback
+   returns.
    This includes every `Runnable::run`, detached task-output destruction, and
    every initial, recovery, host-replacement, or bounded-turn continuation
    dispatch call. Shutdown and restart therefore cannot overlap a host callback
    from the old generation, even if queue cancellation retires the accepted
    task that originally requested that callback.
-   Every queued host callback carries a globally unique, nonzero dispatch
-   capability. Callback admission atomically consumes that exact capability
+   Every executor dispatch owns one globally unique, nonzero internal
+   capability. The registry races it across live hosts through distinct,
+   globally unique delivery capabilities scoped to one host registration and
+   one attempt. Admission first resolves that exact delivery back to the still
+   live internal capability, then atomically consumes the internal capability
    and claims the executor's scheduler role while the controller lifecycle
-   mutex still proves its generation is `Running`.
+   mutex still proves its generation is `Running`. A delayed callback from an
+   unregistered host, an older attempt, or a serviced dispatch cannot resolve
+   and is a no-op.
+   Each host has one physical delivery slot plus one coalesced latest-pending
+   internal capability. A blocked event loop therefore retains at most one
+   queued/in-flight threadsafe-function callback while responsive hosts keep
+   advancing; completion or failure schedules at most the latest still-needed
+   replacement.
+   A publication remains provisional until every host call in that broadcast
+   has returned. Synchronous queue rejection and unregister/sweep retirement
+   are retained behind that barrier, so the final result distinguishes a
+   broadcast that nobody accepted from one whose accepting attempts all
+   failed. Removing the last accepted in-flight or coalesced reference reports
+   that exact dispatch failure even when another dispatch was reserved while
+   the physical callback was still running.
    Stable scheduler identities fail closed before `u64` reuse. Generation,
    executor, blocking-job/owner/reservation, host-registration, and timer
    identities participate in stale-handle rejection or indexed lookup, so
    wrapping any of them would turn an impossible exhaustion event into an ABA
    authorization bug.
-   If the JavaScript host cannot queue the requested fresh turn, it cancels
-   only that accepted dispatch capability. Cancellation never polls inline
-   from the failing callback. It may enqueue one exact replacement host
-   notification; if that replacement also cannot create a fresh turn, the
-   executor cancels the coalesced queued work under the normal generation and
-   panic-containment boundaries. This bounds scheduler failure without
-   requiring an unrelated later wake, while future submissions can start a
-   new dispatch chain.
-   Shutdown therefore either transitions first and rejects the callback, or
-   observes the claimed role and waits for it. A delayed callback from an older
-   generation, or a superseded callback from the same generation, is a no-op
-   and cannot drain replacement work.
+   Delivery acknowledgement and failure are tracked per host attempt and
+   internal dispatch. One host failure cannot invalidate another host's
+   accepted or delayed attempt. Only the last unserviced accepting attempt may
+   begin recovery, and that transition closes the old dispatch to newly
+   registering hosts before requesting one exact replacement. If every attempt
+   for that replacement also fails, the executor cancels the coalesced queued
+   work under the normal generation and panic-containment boundaries. This
+   bounds scheduler failure without requiring an unrelated later wake, while
+   future submissions can start a new dispatch chain.
+   The task-host boundary is native-only. Each environment registers a weak
+   Node-API threadsafe function whose JavaScript function is null and whose
+   custom native callback receives the exact delivery payload on a fresh event
+   loop turn. That callback calls `drive_current_thread_tasks` and acknowledges
+   only a confirmed exact claim. No delivery token or claim result crosses
+   JavaScript, and the binding exports no drive/cancel capability functions.
+   `registerCurrentThreadTaskHost()` accepts no arguments; direct binding misuse
+   with a callback fails synchronously before the callback can run, create a
+   Promise, or expose a thenable return. Promise constructors, `then` methods,
+   species, and rejection observation are therefore outside the scheduler host
+   contract rather than mutable authorities it must defend.
+   The JavaScript package checks an explicit native task-host contract version
+   before invoking either host registration. A preceding callback-accepting
+   binding has no version export and fails as a package/binding mismatch before
+   JavaScript can call its incompatible registration boundary.
+   Shutdown therefore either transitions first and rejects the native turn, or
+   observes the claimed role and waits for it. Shutdown retires coalesced
+   pending deliveries while retaining the one physical in-flight slot until its
+   native callback or host registration retires. A delayed callback from an
+   older generation, registration, or attempt is a no-op and cannot drain
+   replacement work.
    Scheduler-owned blocking execution retains the active generation through
    result delivery and caught panic-payload destruction, including exact
    owner-lane lending. Payload destructors therefore cannot re-enter a newer
@@ -200,8 +240,10 @@ The existing Tokio runtime remains the default and is selected by the
    async-runtime builds therefore deliberately retain the addon image. After a
    module that registered a custom backend exports successfully, napi-rs pins
    its native image permanently. This guarantee is independent of Tokio being
-   enabled and independent of runtime-generation cleanup; failed module loads
-   still roll back without retention.
+   enabled and independent of runtime-generation cleanup. Failures before any
+   native callback or handle can escape roll back without retention; failures
+   after exports or environment support may have exposed native values retain
+   the image conservatively.
    User-owned destructors and timer wakers are isolated during shutdown. Caught
    panic payloads are dropped under a second unwind boundary; only the nested
    payload produced by a hostile payload destructor is quarantined, so normal
@@ -245,6 +287,9 @@ The existing Tokio runtime remains the default and is selected by the
    Handle retirement precedes dependency notification, and the buffered result
    destructor and arbitrary dependency waker have separate unwind boundaries,
    preventing a hostile pair from becoming a double panic.
+   Contained owned-waker delivery borrows with `wake_by_ref`, then destroys the
+   waker under a second boundary; a wake panic and a `RawWaker` destructor panic
+   therefore cannot combine while one consuming `Waker::wake` frame unwinds.
    Normal dependency `set`, `clear`, and conditional-clear notifications use
    that same central panic boundary after committing their state transition.
    Waiter clone, replacement, wake, retirement, and final destruction are also

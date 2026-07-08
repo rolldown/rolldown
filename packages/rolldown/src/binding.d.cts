@@ -1509,10 +1509,14 @@ export declare class BindingAsyncRuntimeLease {
 export declare class BindingBundleEndEventData {
   output: string
   duration: number
+  get taskIndex(): number
+  get closeIdentity(): string
   get result(): BindingWatcherBundler
 }
 
 export declare class BindingBundleErrorEventData {
+  get taskIndex(): number
+  get closeIdentity(): string
   get result(): BindingWatcherBundler
   get error(): Array<BindingError>
 }
@@ -1525,6 +1529,10 @@ export declare class BindingBundler {
   close(): Promise<undefined>
   get closed(): boolean
   getWatchFiles(): Array<string>
+}
+
+export declare class BindingBundleStartEventData {
+  taskIndex: number
 }
 
 export declare class BindingCallableBuiltinPlugin {
@@ -1563,15 +1571,15 @@ export declare class BindingDecodedMap {
 
 export declare class BindingDevEngine {
   constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
-  run(): Promise<void>
-  ensureCurrentBuildFinish(): Promise<void>
+  run(): Promise<BindingResult<undefined>>
+  ensureCurrentBuildFinish(): Promise<BindingResult<undefined>>
   getBundleState(): Promise<BindingBundleState>
   ensureLatestBuildOutput(): Promise<BindingResult<undefined>>
   triggerFullBuild(): void
   invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<BindingResult<Array<BindingClientHmrUpdate>>>
   registerModules(clientId: string, modules: Array<string>): Promise<void>
   removeClient(clientId: string): Promise<void>
-  close(): Promise<void>
+  close(): Promise<BindingResult<undefined>>
   /**
    * Compile a lazy entry module and return HMR-style patch code.
    *
@@ -1579,7 +1587,7 @@ export declare class BindingDevEngine {
    * The module was previously stubbed with a proxy, and now we need to compile the
    * actual module and its dependencies.
    */
-  compileEntry(moduleId: string, clientId: string): Promise<string>
+  compileEntry(moduleId: string, clientId: string): Promise<BindingResult<string>>
 }
 
 export declare class BindingLoadPluginContext {
@@ -1758,6 +1766,7 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
+  closeIdentity(): string
   load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
@@ -1828,7 +1837,7 @@ export declare class BindingWatcher {
    * The Node.js layer relies on the pending Promise to keep the process from exiting.
    */
   waitForClose(): Promise<void>
-  close(): Promise<void>
+  close(): Promise<BindingWatcherCloseResult>
 }
 
 /**
@@ -1847,6 +1856,7 @@ export declare class BindingWatcherChangeData {
 export declare class BindingWatcherEvent {
   eventKind(): string
   bundleEventKind(): string
+  bundleStartData(): BindingBundleStartEventData
   bundleEndData(): BindingBundleEndEventData
   bundleErrorData(): BindingBundleErrorEventData
   watchChangeData(): BindingWatcherChangeData
@@ -3030,6 +3040,11 @@ export interface BindingViteTransformPluginConfig {
   yarnPnp?: boolean
 }
 
+export interface BindingWatcherCloseResult {
+  errors: Array<BindingError>
+  nativeOwnedCloseIdentities: Array<string>
+}
+
 export interface BindingWatchOption {
   skipWrite?: boolean
   include?: Array<BindingStringOrRegex>
@@ -3044,14 +3059,6 @@ export interface BindingWatchOption {
   onInvalidate?: ((id: string) => void) | undefined
 }
 
-/**
- * Cancel an accepted CurrentThread task-host dispatch that failed before its
- * JavaScript scheduler could queue a fresh turn.
- *
- * A no-op on the default `tokio-runtime` build.
- */
-export declare function cancelCurrentThreadRuntimeTaskDispatch(dispatchHigh: number, dispatchLow: number): void
-
 export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
 
 /**
@@ -3062,14 +3069,6 @@ export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcema
  * `async-runtime` build honors it.
  */
 export declare function configureAsyncRuntime(options: BindingRuntimeOptions): void
-
-/**
- * Poll queued CurrentThread runnables from a callback dispatched by
- * `registerCurrentThreadTaskHost`.
- *
- * A no-op on the default `tokio-runtime` build.
- */
-export declare function driveCurrentThreadRuntimeTasks(dispatchHigh: number, dispatchLow: number): void
 
 export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
 
@@ -3114,6 +3113,12 @@ export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
  * On the default `tokio-runtime` build every counter is zero.
  */
 export declare function getAsyncRuntimeMetrics(): BindingRuntimeMetrics
+
+/**
+ * Return the native CurrentThread task-host ABI expected by the JavaScript
+ * package before it invokes either async-runtime host registration.
+ */
+export declare function getCurrentThreadTaskHostContractVersion(): number
 
 /**
  * Report the loaded binding's runtime capabilities (see
@@ -3184,12 +3189,13 @@ export interface PreRenderedChunk {
 }
 
 /**
- * Install the host-turn callback used to poll CurrentThread runnables without
- * re-entering arbitrary future waker locks. Called once per importing env.
+ * Install a native-owned host turn used to poll CurrentThread runnables
+ * without re-entering arbitrary future waker locks. Called once per importing
+ * environment. JavaScript callbacks are rejected synchronously.
  *
  * A no-op on the default `tokio-runtime` build.
  */
-export declare function registerCurrentThreadTaskHost(dispatch: (dispatchHigh: number, dispatchLow: number) => void): void
+export declare function registerCurrentThreadTaskHost(dispatch?: never): void
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
@@ -3198,8 +3204,8 @@ export declare function registerPlugins(id: number, plugins: Array<BindingPlugin
  * CurrentThread timers (watch-mode debounce). Called at import by every
  * binding-loading JS entry with paired setTimeout/clearTimeout callbacks; each
  * importing env (main thread and workers alike) registers its own host, and
- * the newest live one serves. A no-op on the default `tokio-runtime` build
- * (tokio owns its timer wheel).
+ * every live host receives each timer. A no-op on the default `tokio-runtime`
+ * build (tokio owns its timer wheel).
  */
 export declare function registerTimerHost(schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): void
 

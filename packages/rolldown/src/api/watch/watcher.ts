@@ -1,7 +1,12 @@
-import { type BindingWatcherEvent, BindingWatcher } from '../../binding.cjs';
+import {
+  type BindingWatcherBundler,
+  type BindingWatcherEvent,
+  BindingWatcher,
+} from '../../binding.cjs';
 import { LOG_LEVEL_WARN } from '../../log/logging';
 import { logMultipleWatcherOption } from '../../log/logs';
-import { aggregateBindingErrorsIntoJsError } from '../../utils/error';
+import type { CloseCallbackScope } from '../../utils/close-callback-scope';
+import { aggregateBindingErrorsIntoJsError, normalizeBindingError } from '../../utils/error';
 import type { WatchOptions } from '../../options/watch-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import {
@@ -9,6 +14,7 @@ import {
   CloseCoordinator,
   type CloseAttemptResult,
   type RuntimeLease,
+  throwCloseErrors,
 } from '../../runtime-lifecycle';
 import {
   type BundlerOptionWithStopWorker,
@@ -26,31 +32,181 @@ import {
 import { arraify } from '../../utils/misc';
 import type { WatcherEmitter } from './watch-emitter';
 
+interface WatchResultClose {
+  close: () => Promise<void>;
+  closeIdentity: string;
+}
+
+export class WatchResultCloseRegistry {
+  #current = new Map<number, WatchResultClose>();
+  #pendingBuild = new Map<number, WatchResultClose>();
+  #superseded = new Set<WatchResultClose>();
+  #terminalOutcomes: Promise<PromiseSettledResult<void>[]> | undefined;
+
+  register(taskIndex: number, closeIdentity: string, close: () => Promise<void>): () => void {
+    const resultClose = { close, closeIdentity };
+    const currentClose = this.#current.get(taskIndex);
+    if (currentClose) {
+      this.#superseded.add(currentClose);
+    }
+    this.#current.set(taskIndex, resultClose);
+    let registered = true;
+    return () => {
+      if (!registered) return;
+      registered = false;
+      if (this.#current.get(taskIndex) === resultClose) {
+        this.#current.delete(taskIndex);
+      }
+      if (this.#pendingBuild.get(taskIndex) === resultClose) {
+        this.#pendingBuild.delete(taskIndex);
+      }
+      this.#superseded.delete(resultClose);
+    };
+  }
+
+  beginTaskBuild(taskIndex: number): (buildWillStart: boolean) => void {
+    const currentClose = this.#current.get(taskIndex);
+    if (!currentClose) return () => {};
+    this.#current.delete(taskIndex);
+    this.#pendingBuild.set(taskIndex, currentClose);
+    let active = true;
+    return (buildWillStart) => {
+      if (!active) return;
+      active = false;
+      if (this.#pendingBuild.get(taskIndex) !== currentClose) return;
+      this.#pendingBuild.delete(taskIndex);
+      if (buildWillStart) {
+        this.#superseded.add(currentClose);
+      } else {
+        this.#current.set(taskIndex, currentClose);
+      }
+    };
+  }
+
+  cancelPendingBuilds(): void {
+    for (const [taskIndex, close] of this.#pendingBuild) {
+      this.#current.set(taskIndex, close);
+    }
+    this.#pendingBuild.clear();
+  }
+
+  drain(
+    nativeOwnedCloseIdentities: ReadonlySet<string> = new Set(),
+    includeCurrentAndPending = false,
+  ): Promise<PromiseSettledResult<void>[]> {
+    if (!this.#terminalOutcomes) {
+      const registeredCloses = new Set(this.#superseded);
+      if (includeCurrentAndPending) {
+        for (const close of this.#current.values()) registeredCloses.add(close);
+        for (const close of this.#pendingBuild.values()) registeredCloses.add(close);
+      }
+      const closes = [...registeredCloses].filter(
+        ({ closeIdentity }) => !nativeOwnedCloseIdentities.has(closeIdentity),
+      );
+      this.clear();
+      // Publish the terminal promise before invoking user callbacks so
+      // concurrent drain observers cannot start the closures twice.
+      this.#terminalOutcomes = Promise.resolve().then(() =>
+        Promise.allSettled(closes.map(async ({ close }) => close())),
+      );
+    }
+    return this.#terminalOutcomes;
+  }
+
+  clear(): void {
+    this.#current.clear();
+    this.#pendingBuild.clear();
+    this.#superseded.clear();
+  }
+}
+
+// See internal-docs/watch-mode/implementation.md for the reentrant close cycle.
+function wrapWatchResultClose(
+  result: BindingWatcherBundler,
+  taskIndex: number,
+  closeIdentity: string,
+  closeCallbackScope: CloseCallbackScope,
+  registerClose: (
+    taskIndex: number,
+    closeIdentity: string,
+    close: () => Promise<void>,
+  ) => () => void,
+): BindingWatcherBundler {
+  const close = result.close.bind(result);
+  let closePromise: Promise<void> | undefined;
+  let unregisterClose = () => {};
+  const wrappedClose = () => {
+    if (!closePromise) {
+      try {
+        closePromise = close();
+      } catch (error) {
+        closePromise = Promise.reject(error);
+      }
+      void closePromise.then(unregisterClose, () => {});
+    }
+    return closeCallbackScope.selectClosePromise(closePromise, closeIdentity);
+  };
+  unregisterClose = registerClose(taskIndex, closeIdentity, wrappedClose);
+  Object.defineProperty(result, 'close', {
+    configurable: true,
+    value: wrappedClose,
+    writable: true,
+  });
+  return result;
+}
+
 function createEventCallback(
   emitter: WatcherEmitter,
   onNativeClose: () => void,
+  registerResultClose: (
+    taskIndex: number,
+    closeIdentity: string,
+    close: () => Promise<void>,
+  ) => () => void,
+  beginTaskBuild: (taskIndex: number) => (buildWillStart: boolean) => void,
 ): (event: BindingWatcherEvent) => Promise<void> {
   return async (event: BindingWatcherEvent) => {
     switch (event.eventKind()) {
       case 'event': {
         const code = event.bundleEventKind();
         if (code === 'BUNDLE_END') {
-          const { duration, output, result } = event.bundleEndData();
+          const { closeIdentity, duration, output, result, taskIndex } = event.bundleEndData();
           await emitter.emit('event', {
             code: 'BUNDLE_END',
             duration,
             output: [output],
-            result,
+            result: wrapWatchResultClose(
+              result,
+              taskIndex,
+              closeIdentity,
+              emitter.closeCallbackScope,
+              registerResultClose,
+            ),
           });
         } else if (code === 'ERROR') {
           const data = event.bundleErrorData();
           await emitter.emit('event', {
             code: 'ERROR',
             error: aggregateBindingErrorsIntoJsError(data.error),
-            result: data.result,
+            result: wrapWatchResultClose(
+              data.result,
+              data.taskIndex,
+              data.closeIdentity,
+              emitter.closeCallbackScope,
+              registerResultClose,
+            ),
           });
+        } else if (code === 'BUNDLE_START') {
+          const finishTaskBuildStart = beginTaskBuild(event.bundleStartData().taskIndex);
+          try {
+            await emitter.emit('event', { code: 'BUNDLE_START' });
+          } catch (error) {
+            finishTaskBuildStart(false);
+            throw error;
+          }
+          finishTaskBuildStart(true);
         } else {
-          await emitter.emit('event', { code: code as 'START' | 'BUNDLE_START' | 'END' });
+          await emitter.emit('event', { code: code as 'START' | 'END' });
         }
         break;
       }
@@ -84,8 +240,16 @@ class Watcher {
   stopWorkers: ((() => Promise<void>) | undefined)[];
   scheduledRun: ReturnType<typeof setTimeout> | undefined;
   runFailure: unknown;
+  nativeCloseResultPromise:
+    | Promise<{
+        errors: unknown[];
+        nativeCloseReturned: boolean;
+        nativeOwnedCloseIdentities: string[];
+      }>
+    | undefined;
   nativeClosePromise: Promise<void> | undefined;
   closeEventPromise: Promise<void> | undefined;
+  resultCloses = new WatchResultCloseRegistry();
   closeCoordinator = new CloseCoordinator(
     'Watcher native close, parallel-plugin worker shutdown, close listener, or runtime release failed',
   );
@@ -120,6 +284,10 @@ class Watcher {
   }
 
   close(): Promise<void> {
+    // Native bundle construction starts only after the BUNDLE_START callback
+    // returns. A close from that callback keeps the previous result native-owned.
+    this.resultCloses.cancelPendingBuilds();
+    this.startNativeClose();
     return this.closeCoordinator.close(() => this.closeLifecycle());
   }
 
@@ -128,6 +296,18 @@ class Watcher {
     // the coordinator exits independently). Preserve the memoized rejection
     // for a later `close()` call while avoiding an unhandled rejection.
     void this.close().catch(() => {});
+  }
+
+  registerResultClose(
+    taskIndex: number,
+    closeIdentity: string,
+    close: () => Promise<void>,
+  ): () => void {
+    return this.resultCloses.register(taskIndex, closeIdentity, close);
+  }
+
+  beginTaskBuild(taskIndex: number): (buildWillStart: boolean) => void {
+    return this.resultCloses.beginTaskBuild(taskIndex);
   }
 
   private async closeLifecycle(): Promise<CloseAttemptResult> {
@@ -165,18 +345,28 @@ class Watcher {
     this.closed = true;
     const errors: unknown[] = this.runFailure === undefined ? [] : [this.runFailure];
     this.cancelScheduledRun(errors);
-    this.nativeClosePromise ??= (async () => this.inner.close())();
+    this.startNativeClose();
+    const nativeCloseResult = await this.nativeCloseResultPromise!;
+    errors.push(...nativeCloseResult.errors);
 
-    let retryable = false;
-    try {
-      await this.nativeClosePromise;
-    } catch (error) {
-      errors.push(error);
+    // A structured native shutdown owns each task's current bundle handle, so
+    // normally only superseded handles close here. If close transport fails,
+    // ownership is unknown and current/pending handles are also closed
+    // best-effort through their idempotent BundleHandle lifecycle.
+    const resultCloseOutcomes = await this.resultCloses.drain(
+      new Set(nativeCloseResult.nativeOwnedCloseIdentities),
+      !nativeCloseResult.nativeCloseReturned,
+    );
+    for (const outcome of resultCloseOutcomes) {
+      if (outcome.status === 'rejected') {
+        errors.push(outcome.reason);
+      }
     }
 
     const stopWorkers = this.stopWorkers;
     const workerResults = await Promise.allSettled(stopWorkers.map(async (stop) => stop?.()));
     this.stopWorkers = stopWorkers.filter((_, index) => workerResults[index].status === 'rejected');
+    let retryable = false;
     for (const result of workerResults) {
       if (result.status === 'rejected') {
         errors.push(result.reason);
@@ -185,6 +375,40 @@ class Watcher {
     }
 
     return { errors, retryable };
+  }
+
+  private startNativeClose(): void {
+    if (!this.nativeCloseResultPromise) {
+      try {
+        this.nativeCloseResultPromise = this.inner
+          .close()
+          .then((result) => ({
+            errors: result.errors.map(normalizeBindingError),
+            nativeCloseReturned: true,
+            nativeOwnedCloseIdentities: result.nativeOwnedCloseIdentities,
+          }))
+          .catch((error: unknown) => ({
+            errors: [error],
+            nativeCloseReturned: false,
+            nativeOwnedCloseIdentities: [],
+          }));
+      } catch (error) {
+        this.nativeCloseResultPromise = Promise.resolve({
+          errors: [error],
+          nativeCloseReturned: false,
+          nativeOwnedCloseIdentities: [],
+        });
+      }
+    }
+    if (!this.nativeClosePromise) {
+      this.nativeClosePromise = this.nativeCloseResultPromise.then(({ errors }) => {
+        throwCloseErrors(errors, 'Watcher native close failed');
+      });
+      // The public close path consumes the flattened errors. This derived
+      // rejection exists only for reentrant close listeners and may settle
+      // before listener dispatch begins.
+      void this.nativeClosePromise.catch(() => {});
+    }
   }
 
   private cancelScheduledRun(errors: unknown[]): void {
@@ -199,13 +423,16 @@ class Watcher {
   }
 
   private async dispatchCloseEvent(): Promise<void> {
-    await this.emitter.emitClose(this.nativeClosePromise ?? Promise.resolve());
+    this.startNativeClose();
+    await this.emitter.emitClose(this.nativeClosePromise!);
   }
 
   private async run(): Promise<void> {
     await this.inner.run();
-    // No `.await`: Create pending Promise to keep Node.js event loop alive
-    this.inner.waitForClose();
+    // The pending native promise keeps Node.js alive. Await it so an unexpected
+    // N-API transport rejection enters the normal fail-closed cleanup path
+    // instead of becoming an unhandled rejection.
+    await this.inner.waitForClose();
   }
 }
 
@@ -215,33 +442,49 @@ export async function createWatcher(
 ): Promise<void> {
   const options = arraify(input);
   const closeCallbackScope = emitter.closeCallbackScope;
-  // Snapshot every getter before starting options hooks or parallel workers.
-  // A later throwing getter must not abandon setup already running for an
-  // earlier watch configuration.
-  const optionsWithOutputs = materializePresentValues(options).map((option) => ({
-    option,
-    outputs: materializePresentValues(arraify(option.output || {})),
-  }));
-  const bundlerOptionResults = await Promise.allSettled(
-    optionsWithOutputs
-      .map(({ option, outputs }) =>
-        outputs.map(async (output) => {
-          const inputOptions = await closeCallbackScope.run(() =>
-            PluginDriver.callOptionsHook(option, true),
-          );
-          return createBundlerOptions(inputOptions, output, true, closeCallbackScope);
-        }),
-      )
-      .flat(),
+  // Snapshot config entries and relevant watch/output getters before starting
+  // options hooks or parallel workers. A later throwing getter must not
+  // abandon setup already running for an earlier watch configuration.
+  const enabledOptions = materializePresentValues(options).filter(
+    (option) => option.watch !== false,
+  );
+  if (enabledOptions.length === 0) {
+    throw new TypeError('watch() requires at least one configuration with watch enabled');
+  }
+  const optionsWithOutputs = enabledOptions.map((option) => {
+    const outputs = materializePresentValues(arraify(option.output || {}));
+    return { option, outputs: outputs.length === 0 ? [{}] : outputs };
+  });
+  const configSetupResults = await Promise.allSettled(
+    optionsWithOutputs.map(async ({ option, outputs }) => {
+      const inputOptions = await closeCallbackScope.run(() =>
+        PluginDriver.callOptionsHook(option, true),
+      );
+      return Promise.allSettled(
+        outputs.map((output, outputIndex) =>
+          createBundlerOptions(inputOptions, output, true, closeCallbackScope, outputIndex === 0),
+        ),
+      );
+    }),
   );
   const bundlerOptions: BundlerOptionWithStopWorker[] = [];
+  const bundlerOptionsByConfig: BundlerOptionWithStopWorker[][] = [];
   const setupErrors: unknown[] = [];
-  for (const result of bundlerOptionResults) {
-    if (result.status === 'fulfilled') {
-      bundlerOptions.push(result.value);
-    } else {
-      setupErrors.push(result.reason);
+  for (const configResult of configSetupResults) {
+    if (configResult.status === 'rejected') {
+      setupErrors.push(configResult.reason);
+      continue;
     }
+    const configBundlerOptions: BundlerOptionWithStopWorker[] = [];
+    for (const outputResult of configResult.value) {
+      if (outputResult.status === 'fulfilled') {
+        bundlerOptions.push(outputResult.value);
+        configBundlerOptions.push(outputResult.value);
+      } else {
+        setupErrors.push(outputResult.reason);
+      }
+    }
+    bundlerOptionsByConfig.push(configBundlerOptions);
   }
   const workerCleanups = collectParallelPluginCleanups(bundlerOptions, setupErrors);
   if (setupErrors.length > 0) {
@@ -254,7 +497,7 @@ export async function createWatcher(
   }
 
   try {
-    warnMultiplePollingOptions(bundlerOptions);
+    warnMultiplePollingOptions(bundlerOptionsByConfig);
   } catch (error) {
     return throwWatcherSetupErrorAfterCleanup(
       error,
@@ -276,7 +519,15 @@ export async function createWatcher(
   }
 
   let onNativeClose = () => {};
-  const callback = createEventCallback(emitter, () => onNativeClose());
+  let registerResultClose =
+    (_taskIndex: number, _closeIdentity: string, _close: () => Promise<void>) => () => {};
+  let beginTaskBuild = (_taskIndex: number) => (_buildWillStart: boolean) => {};
+  const callback = createEventCallback(
+    emitter,
+    () => onNativeClose(),
+    (taskIndex, closeIdentity, close) => registerResultClose(taskIndex, closeIdentity, close),
+    (taskIndex) => beginTaskBuild(taskIndex),
+  );
   let bindingWatcher: BindingWatcher;
   try {
     bindingWatcher = new BindingWatcher(
@@ -299,6 +550,9 @@ export async function createWatcher(
   );
   try {
     onNativeClose = () => watcher.onNativeClose();
+    registerResultClose = (taskIndex, closeIdentity, close) =>
+      watcher.registerResultClose(taskIndex, closeIdentity, close);
+    beginTaskBuild = (taskIndex) => watcher.beginTaskBuild(taskIndex);
     watcher.start();
     emitter.bindClose(() => watcher.close());
   } catch (error) {
@@ -418,9 +672,11 @@ function materializePresentValues<T>(values: T[]): T[] {
   return snapshot;
 }
 
-function warnMultiplePollingOptions(bundlerOptions: BundlerOptionWithStopWorker[]) {
+function warnMultiplePollingOptions(bundlerOptionsByConfig: BundlerOptionWithStopWorker[][]) {
   let found = false;
-  for (const option of bundlerOptions) {
+  for (const bundlerOptions of bundlerOptionsByConfig) {
+    const option = bundlerOptions[0];
+    if (!option) continue;
     const watch = option.inputOptions.watch;
     const watcher =
       watch && typeof watch === 'object' ? (watch.watcher ?? watch.notify) : undefined;

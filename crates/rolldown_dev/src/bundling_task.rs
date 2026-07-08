@@ -216,7 +216,10 @@ impl BundlingTask {
     let additional_assets = if succeeded {
       if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
         let mut output = BundleOutput::default();
-        bundler.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
+        bundler
+          .file_emitter()
+          .expect("a successful HMR update requires an installed bundle handle")
+          .add_additional_files(&mut output.assets, &mut output.warnings);
         if output.assets.is_empty() {
           None
         } else {

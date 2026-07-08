@@ -112,6 +112,11 @@ impl BundleHandle {
     &self.plugin_driver
   }
 
+  #[doc(hidden)]
+  pub fn close_identity(&self) -> u64 {
+    self.plugin_driver.close_identity()
+  }
+
   /// Close this bundle handle, calling the `closeBundle` plugin hook.
   pub async fn close(&self) -> anyhow::Result<()> {
     let close_future = {
@@ -146,7 +151,7 @@ impl BundleHandle {
 mod tests {
   use super::*;
   use crate::{BundleFactory, BundleFactoryOptions};
-  use rolldown_common::BundleMode;
+  use rolldown_common::{BundleMode, EmittedPrebuiltChunk};
   use rolldown_plugin::{HookCloseBundleArgs, HookNoopReturn, HookUsage, Plugin, PluginContext};
   use std::{
     borrow::Cow,
@@ -357,5 +362,48 @@ mod tests {
     assert_eq!(late_error.to_string(), first_error.to_string());
     assert_eq!(calls.load(Ordering::SeqCst), 1);
     assert_eq!(payload_drops.load(Ordering::SeqCst), 1);
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn closing_retained_full_build_does_not_clear_a_newer_full_build() {
+    let mut factory = BundleFactory::new(BundleFactoryOptions {
+      disable_tracing_setup: true,
+      ..Default::default()
+    })
+    .expect("create bundle factory");
+    let first = factory.create_bundle(BundleMode::FullBuild, None).expect("create first bundle");
+    let first_handle = first.context();
+    let second = factory.create_bundle(BundleMode::FullBuild, None).expect("create second bundle");
+    let second_handle = second.context();
+
+    assert!(
+      !Arc::ptr_eq(
+        &first_handle.plugin_driver().file_emitter,
+        &second_handle.plugin_driver().file_emitter
+      ),
+      "independent full builds must not share clearable file-emitter state"
+    );
+    let reference_id =
+      second_handle.plugin_driver().file_emitter.emit_prebuilt_chunk(EmittedPrebuiltChunk {
+        file_name: "newer-build.js".into(),
+        name: None,
+        code: String::new(),
+        exports: Vec::new(),
+        map: None,
+        sourcemap_filename: None,
+        facade_module_id: None,
+        is_entry: false,
+        is_dynamic_entry: false,
+      });
+
+    first_handle.close().await.expect("retained first build must close");
+    assert_eq!(
+      second_handle
+        .plugin_driver()
+        .file_emitter
+        .get_file_name(&reference_id)
+        .expect("closing an older build must not clear the newer build"),
+      "newer-build.js"
+    );
   }
 }

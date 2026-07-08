@@ -57,6 +57,11 @@ describe('loadConfig bundle cleanup', () => {
     });
 
     await expect(loadConfig(fixture)).resolves.toStrictEqual({ input: './entry.js' });
+    expect(write).toHaveBeenCalledWith(
+      expect.objectContaining({
+        codeSplitting: false,
+      }),
+    );
     expect(close).toHaveBeenCalledOnce();
     expect(path.dirname(generatedOutputDir!)).toBe(path.dirname(fixture));
     await expect(access(generatedOutputDir!)).rejects.toMatchObject({ code: 'ENOENT' });

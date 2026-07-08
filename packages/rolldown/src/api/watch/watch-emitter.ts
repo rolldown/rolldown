@@ -1,7 +1,6 @@
-import type { BindingWatcherBundler } from '../../binding.cjs';
 import type { MaybePromise } from '../../types/utils';
 import { createAsyncContext } from '../../utils/async-context';
-import { CloseCallbackScope } from '../../utils/close-callback-scope';
+import { CloseCallbackScope, createCloseIdentity } from '../../utils/close-callback-scope';
 import {
   getRetryableCleanup,
   hasRetryableCleanupOwnership,
@@ -15,13 +14,15 @@ type WatcherEvent = 'close' | 'event' | 'restart' | 'change';
 
 type ChangeEvent = 'create' | 'update' | 'delete';
 
-// TODO: find a way use `RolldownBuild` instead of `Bundler`.
-type RolldownWatchBuild = BindingWatcherBundler;
+interface RolldownWatchBuild {
+  close(): Promise<void>;
+}
 
 interface ReentrantCloseInvocation {
   active: boolean;
   emitter: WatcherEmitter;
   onReentrantClose?: () => void;
+  parent?: ReentrantCloseInvocation;
   reentrantClosePromise: Promise<void>;
 }
 
@@ -105,8 +106,9 @@ export interface RolldownWatcher {
 }
 
 export class WatcherEmitter implements RolldownWatcher {
+  private readonly closeIdentity = createCloseIdentity('watcher');
   /** @internal Scope shared by setup and native callbacks that may request close. */
-  readonly closeCallbackScope: CloseCallbackScope = new CloseCallbackScope();
+  readonly closeCallbackScope: CloseCallbackScope = new CloseCallbackScope(this.closeIdentity);
   private listeners = new Map<WatcherEvent, Array<(...parameters: any[]) => MaybePromise<void>>>();
   private closeHandlerPromise: Promise<() => Promise<void>>;
   private resolveCloseHandler!: (handler: () => Promise<void>) => void;
@@ -146,7 +148,7 @@ export class WatcherEmitter implements RolldownWatcher {
   /** Async emit — sequential dispatch so side effects from earlier handlers
    *  (e.g. `event.result.close()` triggering `closeBundle`) are visible to later handlers. */
   async emit(event: WatcherEvent, ...args: any[]): Promise<void> {
-    const handlers = this.listeners.get(event);
+    const handlers = this.listeners.get(event)?.slice();
     if (handlers?.length) {
       for (const h of handlers) {
         await h(...args);
@@ -156,19 +158,40 @@ export class WatcherEmitter implements RolldownWatcher {
 
   /** @internal Dispatch close listeners with a reentrant close result. */
   async emitClose(reentrantClosePromise: Promise<void>): Promise<void> {
-    const handlers = this.listeners.get('close');
-    if (!handlers?.length) return;
-
-    const invocation: ReentrantCloseInvocation = {
-      active: true,
-      emitter: this,
-      reentrantClosePromise,
-    };
-    await this.runWithCloseInvocation(invocation, async () => {
-      for (const handler of handlers) {
-        await handler();
+    const handlers = this.listeners.get('close')?.slice();
+    this.listeners.clear();
+    try {
+      if (!handlers?.length) {
+        // Rollup awaits Promise.all([]) before its terminal removeAllListeners().
+        // Keep the second clear in a later microtask so listeners added after
+        // close dispatch starts cannot survive the terminal lifecycle.
+        await Promise.resolve();
+        return;
       }
-    });
+
+      const invocation: ReentrantCloseInvocation = {
+        active: true,
+        emitter: this,
+        parent: this.getCurrentCloseInvocation(),
+        reentrantClosePromise,
+      };
+      await this.runWithCloseInvocation(invocation, async () => {
+        const outcomes = await Promise.allSettled(handlers.map(async (handler) => handler()));
+        const errors = outcomes.flatMap((outcome) =>
+          outcome.status === 'rejected' ? [outcome.reason] : [],
+        );
+        if (errors.length === 1) throw errors[0];
+        if (errors.length > 1) {
+          throw new AggregateError(errors, 'Watcher close listeners failed', {
+            cause: errors[0],
+          });
+        }
+      });
+    } finally {
+      // Match Rollup's terminal listener cleanup, including listeners added
+      // while close dispatch was active.
+      this.listeners.clear();
+    }
   }
 
   private async emitWithCloseInvocation(
@@ -176,7 +199,7 @@ export class WatcherEmitter implements RolldownWatcher {
     invocation: ReentrantCloseInvocation,
     ...args: any[]
   ): Promise<void> {
-    const handlers = this.listeners.get(event);
+    const handlers = this.listeners.get(event)?.slice();
     if (!handlers?.length) return;
     await this.runWithCloseInvocation(invocation, async () => {
       for (const handler of handlers) {
@@ -259,14 +282,25 @@ export class WatcherEmitter implements RolldownWatcher {
     // `watch()` returns before createWatcher finishes asynchronous plugin
     // setup. A same-tick close waits for that setup and then enters the same
     // memoized native lifecycle instead of becoming a no-op.
-    return this.closeCallbackScope.selectClosePromise(this.invokeCloseHandler());
+    return this.closeCallbackScope.selectClosePromise(
+      this.invokeCloseHandler(),
+      this.closeIdentity,
+    );
   }
 
   private getReentrantClosePromise(): Promise<void> | undefined {
-    const invocation = closeListenerContext?.getStore() ?? this.browserCloseListenerInvocation;
-    if (invocation?.emitter !== this || !invocation.active) return undefined;
-    invocation.onReentrantClose?.();
-    return invocation.reentrantClosePromise;
+    let invocation = this.getCurrentCloseInvocation();
+    while (invocation) {
+      if (invocation.emitter === this && invocation.active) {
+        invocation.onReentrantClose?.();
+        return invocation.reentrantClosePromise;
+      }
+      invocation = invocation.parent;
+    }
+  }
+
+  private getCurrentCloseInvocation(): ReentrantCloseInvocation | undefined {
+    return closeListenerContext?.getStore() ?? this.browserCloseListenerInvocation;
   }
 
   private invokeCloseHandler(): Promise<void> {
@@ -302,6 +336,7 @@ export class WatcherEmitter implements RolldownWatcher {
       onReentrantClose: () => {
         void this.invokeCloseHandler().catch(() => {});
       },
+      parent: this.getCurrentCloseInvocation(),
       reentrantClosePromise: Promise.resolve(),
     };
     const reportPromise = (async () => {

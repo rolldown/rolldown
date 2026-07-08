@@ -1,6 +1,7 @@
 use super::Bundler;
 use crate::SharedOptions;
 use arcstr::ArcStr;
+use rolldown_common::SharedFileEmitter;
 use rolldown_utils::dashmap::FxDashSet;
 use std::sync::{Arc, LazyLock};
 
@@ -23,5 +24,9 @@ impl Bundler {
     } else {
       &EMPTY_SET
     }
+  }
+
+  pub fn file_emitter(&self) -> Option<&SharedFileEmitter> {
+    self.last_bundle_handle.as_ref().map(|handle| &handle.plugin_driver.file_emitter)
   }
 }

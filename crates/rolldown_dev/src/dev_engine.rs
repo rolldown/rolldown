@@ -8,6 +8,7 @@ use futures::{FutureExt, future::Shared};
 use rolldown_common::ClientHmrUpdate;
 #[cfg(feature = "testing")]
 use rolldown_common::WatcherChangeKind;
+use rolldown_dev_common::types::DevCallbackError;
 use rolldown_error::{BatchedBuildDiagnostic, BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
 use rolldown_utils::futures::spawn;
@@ -22,7 +23,7 @@ use crate::{
   bundle_coordinator::BundleCoordinator,
   dev_context::{DevContext, PinBoxSendStaticFuture, dev_callback_result_to_build_result},
   normalize_dev_options,
-  type_aliases::CoordinatorSender,
+  type_aliases::{CoordinatorSender, WatchRegistrationErrorObserverId},
   types::{
     coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
     error_stage::ErrorStage,
@@ -165,6 +166,14 @@ impl DevEngine {
       return Ok(());
     }
 
+    let observer_id = self.begin_watch_registration_error_observation().await?;
+    let operation_result = self.wait_for_ongoing_bundle_inner().await;
+    let watch_registration_result =
+      self.finish_watch_registration_error_observation(observer_id).await;
+    Self::merge_build_results(operation_result, watch_registration_result)
+  }
+
+  async fn wait_for_ongoing_bundle_inner(&self) -> BuildResult<()> {
     let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
     if let Err(err) = self.coordinator_sender.send(CoordinatorMsg::GetState { reply: reply_sender })
     {
@@ -184,12 +193,12 @@ impl DevEngine {
     };
 
     if let Some(bundling_future) = status.running_future {
-      dev_callback_result_to_build_result(bundling_future.await)?;
+      dev_callback_result_to_build_result(bundling_future.await)
     } else if let Some(error) = status.last_callback_error {
-      dev_callback_result_to_build_result(Err(error))?;
+      dev_callback_result_to_build_result(Err(error))
+    } else {
+      Ok(())
     }
-
-    Ok(())
   }
 
   pub async fn get_bundle_state(&self) -> BuildResult<BundleState> {
@@ -202,6 +211,14 @@ impl DevEngine {
   pub async fn ensure_latest_bundle_output(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
+    let observer_id = self.begin_watch_registration_error_observation().await?;
+    let operation_result = self.ensure_latest_bundle_output_inner().await;
+    let watch_registration_result =
+      self.finish_watch_registration_error_observation(observer_id).await;
+    Self::merge_build_results(operation_result, watch_registration_result)
+  }
+
+  async fn ensure_latest_bundle_output_inner(&self) -> BuildResult<()> {
     let mut loop_count = 0u32;
     loop {
       loop_count += 1;
@@ -232,7 +249,8 @@ impl DevEngine {
       // Wait for the build if one is running or was scheduled
       if let Some(ret) = received {
         // Either a build is ongoing, or a new build was scheduled - wait for it to complete
-        dev_callback_result_to_build_result(ret.future.await)?;
+        let callback_result = dev_callback_result_to_build_result(ret.future.await);
+        callback_result?;
         if ret.is_ensure_latest_bundle_output_future {
           break;
         }
@@ -242,11 +260,7 @@ impl DevEngine {
     }
 
     let status = self.get_coordinator_state_snapshot().await?;
-    if let Some(error) = status.last_callback_error {
-      dev_callback_result_to_build_result(Err(error))?;
-    }
-
-    Ok(())
+    Self::retained_error_to_build_result(status.last_callback_error)
   }
 
   pub fn trigger_full_build(&self) -> BuildResult<()> {
@@ -347,7 +361,10 @@ impl DevEngine {
       // can register/serve them before the client requests them.
       if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
         let mut output = BundleOutput::default();
-        bundler.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
+        bundler
+          .file_emitter()
+          .expect("successful lazy compilation requires an installed bundle handle")
+          .add_additional_files(&mut output.assets, &mut output.warnings);
         if output.assets.is_empty() {
           None
         } else {
@@ -482,6 +499,10 @@ impl DevEngine {
     }
   }
 
+  fn retained_error_to_build_result(error: Option<DevCallbackError>) -> BuildResult<()> {
+    error.map_or_else(|| Ok(()), |error| dev_callback_result_to_build_result(Err(error)))
+  }
+
   async fn close_bundler_after_coordinator_error(
     bundler: Arc<Mutex<Bundler>>,
     coordinator_error: BatchedBuildDiagnostic,
@@ -523,6 +544,44 @@ impl DevEngine {
       .map_err_to_unhandleable()
       .context("DevEngine: coordinator closed before responding to GetState")
       .map_err(Into::into)
+  }
+
+  async fn begin_watch_registration_error_observation(
+    &self,
+  ) -> BuildResult<WatchRegistrationErrorObserverId> {
+    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    self
+      .coordinator_sender
+      .send(CoordinatorMsg::BeginWatchRegistrationErrorObservation { reply: reply_sender })
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to begin watch-registration error observation")?;
+
+    reply_receiver
+      .await
+      .map_err_to_unhandleable()
+      .context("DevEngine: coordinator closed before registering watch-error observer")
+      .map_err(Into::into)
+  }
+
+  async fn finish_watch_registration_error_observation(
+    &self,
+    observer_id: WatchRegistrationErrorObserverId,
+  ) -> BuildResult<()> {
+    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    self
+      .coordinator_sender
+      .send(CoordinatorMsg::FinishWatchRegistrationErrorObservation {
+        observer_id,
+        reply: reply_sender,
+      })
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to finish watch-registration error observation")?;
+
+    let error = reply_receiver
+      .await
+      .map_err_to_unhandleable()
+      .context("DevEngine: coordinator closed before acknowledging watch-registration errors")?;
+    Self::retained_error_to_build_result(error)
   }
 
   #[cfg(feature = "testing")]

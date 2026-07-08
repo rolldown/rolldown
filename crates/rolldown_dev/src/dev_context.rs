@@ -164,10 +164,43 @@ impl std::error::Error for RetainedDevCallbackError {
   }
 }
 
+#[derive(Debug)]
+pub struct RetainedDevCallbackErrors(Vec<DevCallbackError>);
+
+impl RetainedDevCallbackErrors {
+  pub fn into_error(errors: Vec<DevCallbackError>) -> DevCallbackError {
+    Arc::new(Self(errors))
+  }
+}
+
+impl std::fmt::Display for RetainedDevCallbackErrors {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    self.0.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join("\n").fmt(f)
+  }
+}
+
+impl std::error::Error for RetainedDevCallbackErrors {
+  fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    self.0.first().map(|error| error.as_ref() as &dyn std::error::Error)
+  }
+}
+
 pub fn dev_callback_result_to_build_result(result: DevCallbackResult) -> BuildResult<()> {
-  result.map_err(|error| {
-    BatchedBuildDiagnostic::from(anyhow::Error::new(RetainedDevCallbackError(error)))
-  })
+  result.map_err(|error| BatchedBuildDiagnostic::new(dev_callback_error_to_diagnostics(error)))
+}
+
+fn dev_callback_error_to_diagnostics(
+  error: DevCallbackError,
+) -> Vec<rolldown_error::BuildDiagnostic> {
+  if let Some(errors) = error.as_ref().downcast_ref::<RetainedDevCallbackErrors>() {
+    return errors
+      .0
+      .iter()
+      .flat_map(|error| dev_callback_error_to_diagnostics(Arc::clone(error)))
+      .collect();
+  }
+
+  BatchedBuildDiagnostic::from(anyhow::Error::new(RetainedDevCallbackError(error))).into_vec()
 }
 
 pub struct DevContext {

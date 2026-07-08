@@ -23,6 +23,11 @@ pub struct BindingPluginContext {
 
 #[napi]
 impl BindingPluginContext {
+  #[napi]
+  pub fn close_identity(&self) -> String {
+    self.inner.close_identity().to_string()
+  }
+
   #[napi(
     ts_args_type = "specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string"
   )]

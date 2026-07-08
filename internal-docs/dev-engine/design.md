@@ -108,13 +108,29 @@ violation in rolldown_dev itself (§16g).
 ### 5. Quiesce before terminal cleanup
 
 Closing publishes the engine's closed state immediately so new work is
-rejected, then asks the coordinator to drain the active HMR/rebuild task.
-That task may install a replacement bundle handle, so only the coordinator
-can identify and close the final handle after the task settles. Its
-`closeBundle` hooks finish while parallel-plugin workers are still alive;
-worker shutdown follows native close. Concurrent and later `close()` callers
-share and replay the same terminal success or failure instead of returning
-before cleanup completes or retrying a partially consumed hook chain.
+rejected. The JavaScript and binding owners then drain public operations before
+asking the coordinator to close. This ordering lets an active `run()` finish
+its final state request before the coordinator enters `closeBundle`; otherwise
+a hook that awaits that `run()` can form a cycle. Reentrant callback close
+remains possible because the close-identity dependency graph acknowledges the
+callback's close request, lets the callback and operation guard return, and
+keeps the full terminal result for an external or later caller.
+The raw N-API owner provides the same two-phase behavior when one of its own
+dev callbacks is active: the callback receives a close acknowledgement, native
+cleanup continues after accepted operations drain, and the next non-callback
+close caller receives the terminal result. This is intentionally conservative
+for direct binding consumers because N-API cannot distinguish an async callback
+continuation from unrelated JavaScript while that callback promise is pending.
+
+The coordinator separately drains the active HMR/rebuild task. That task may
+install a replacement bundle handle, so only the coordinator can identify and
+close the final handle after the task settles. Its `closeBundle` hooks finish
+while parallel-plugin workers are still alive; worker shutdown follows native
+close. Concurrent and later `close()` callers share and replay the same
+terminal success or failure instead of returning before cleanup completes or
+retrying a partially consumed hook chain. All terminal diagnostics cross N-API
+individually, preserving JavaScript error identities, and the JavaScript owner
+aggregates them exactly once.
 
 ## Unresolved Questions
 

@@ -33,6 +33,8 @@ export async function createBundlerOptions(
   outputOptions: OutputOptions,
   watchMode: boolean,
   closeCallbackScope?: CloseCallbackScope,
+  // See internal-docs/watch-mode/implementation.md.
+  configWatchHooks: boolean = watchMode,
 ): Promise<BundlerOptionWithStopWorker> {
   assertParallelPluginOptionsSupported(inputOptions.plugins, outputOptions.plugins);
   const inputPlugins = await normalizePluginOption(inputOptions.plugins, closeCallbackScope);
@@ -80,7 +82,7 @@ export async function createBundlerOptions(
       }
       parallelPluginInitResult = undefined;
     } else {
-      parallelPluginInitResult = await initializeParallelPlugins(plugins);
+      parallelPluginInitResult = await initializeParallelPlugins(plugins, watchMode);
     }
   } catch (error) {
     if (!isCleanupFailureError(error)) throw error;
@@ -115,6 +117,8 @@ export async function createBundlerOptions(
       onLog,
       logLevel,
       watchMode,
+      closeCallbackScope,
+      configWatchHooks,
     );
 
     // Convert `OutputOptions` to `BindingOutputOptions`

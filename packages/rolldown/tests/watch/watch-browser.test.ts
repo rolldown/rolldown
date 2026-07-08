@@ -24,6 +24,7 @@ browserTest(
               cancellation: Record<string, number | boolean>;
               cleanup: Record<string, number>;
               lifecycle: Record<string, number | boolean>;
+              transport: Record<string, number | boolean>;
               unsupported: Record<string, number | string | boolean | undefined>;
             }>;
           }
@@ -53,6 +54,12 @@ browserTest(
         nativeCloseCalls: 1,
         runCalls: 0,
         stopWorkerCalls: 3,
+      });
+      expect(result.transport).toEqual({
+        closeRejectedWithNativeError: true,
+        leaseReleaseCalls: 1,
+        nativeCloseCalls: 1,
+        stopWorkerCalls: 1,
       });
       expect(result.unsupported).toEqual({
         bindingConstructions: 0,
@@ -155,7 +162,11 @@ async function buildBrowserWatcherHarness(): Promise<string> {
           async close() {
             globalThis.__watchHarness.nativeCloseCalls += 1;
             await Promise.resolve();
+            if (globalThis.__watchHarness.nativeCloseError) {
+              throw globalThis.__watchHarness.nativeCloseError;
+            }
             await this.callback({ eventKind: () => 'close' });
+            return { errors: [], nativeOwnedCloseIdentities: [] };
           }
         }
         export function getRuntimeCapabilities() {
@@ -184,15 +195,19 @@ async function buildBrowserWatcherHarness(): Promise<string> {
             this.message = message;
           }
           close(attempt) {
-            return (this.promise ??= this.run(attempt));
+            return (this.promise ??= Promise.resolve().then(() => this.run(attempt)));
           }
           async run(attempt) {
             const result = await attempt();
             if (result.retryable) this.promise = undefined;
-            if (result.errors.length === 1) throw result.errors[0];
-            if (result.errors.length > 1) {
-              throw new AggregateError(result.errors, this.message);
-            }
+            throwCloseErrors(result.errors, this.message);
+          }
+        }
+
+        export function throwCloseErrors(errors, message) {
+          if (errors.length === 1) throw errors[0];
+          if (errors.length > 1) {
+            throw new AggregateError(errors, message, { cause: errors[0] });
           }
         }
 
@@ -249,7 +264,13 @@ async function buildBrowserWatcherHarness(): Promise<string> {
     ],
     ['logging', `export const LOG_LEVEL_WARN = 'warn';`],
     ['logs', `export function logMultipleWatcherOption() { return {}; }`],
-    ['error', `export function aggregateBindingErrorsIntoJsError(error) { return error; }`],
+    [
+      'error',
+      `
+        export function aggregateBindingErrorsIntoJsError(error) { return error; }
+        export function normalizeBindingError(error) { return error; }
+      `,
+    ],
     ['misc', `export function arraify(value) { return Array.isArray(value) ? value : [value]; }`],
     ['async-hooks', `export class AsyncLocalStorage {}`],
   ]);
@@ -597,6 +618,7 @@ function browserHarnessEntry(
         leaseReleaseError: new Error('lease release failed'),
         leaseReleaseFailures: 0,
         nativeCloseCalls: 0,
+        nativeCloseError: undefined,
         optionsHookCalls: 0,
         runCalls: 0,
         stopWorkerCalls: 0,
@@ -718,6 +740,21 @@ function browserHarnessEntry(
       await cleanupEmitter.failSetup(cleanupSetupError);
       await cleanupEmitter.close();
 
+      const transportHarness = resetHarness();
+      const transportEmitter = new WatcherEmitter();
+      await createWatcher(transportEmitter, { output: {} });
+      const nativeCloseError = new Error('native close transport failed');
+      transportHarness.nativeCloseError = nativeCloseError;
+      const transportResult = await Promise.allSettled([transportEmitter.close()]);
+      const transport = {
+        closeRejectedWithNativeError:
+          transportResult[0].status === 'rejected' &&
+          transportResult[0].reason === nativeCloseError,
+        leaseReleaseCalls: transportHarness.leaseReleaseCalls,
+        nativeCloseCalls: transportHarness.nativeCloseCalls,
+        stopWorkerCalls: transportHarness.stopWorkerCalls,
+      };
+
       const unsupportedHarness = resetHarness();
       unsupportedHarness.watchSupported = false;
       const unsupportedWatcher = watch({ output: {} });
@@ -776,6 +813,7 @@ function browserHarnessEntry(
           stopWorkerCalls: cleanupHarness.stopWorkerCalls,
         },
         lifecycle,
+        transport,
         unsupported: {
           bindingConstructions: unsupportedHarness.bindingConstructed,
           closeOvertookEnd,

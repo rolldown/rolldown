@@ -5,8 +5,9 @@ use futures::future::try_join_all;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
-  ChunkIdx, ChunkKind, InstantiationKind, OutputExports, PackageJson, PathsOutputOption,
-  PreliminarySourcemapFilename, RUNTIME_HELPER_NAMES, UsedSymbolRefs, UsedSymbolRefsBuilder,
+  ChunkIdx, ChunkKind, InstantiationKind, ModuleIdx, OutputExports, PackageJson, PathsOutputOption,
+  PostChunkOptimizationOperation, PreliminarySourcemapFilename, RUNTIME_HELPER_NAMES,
+  UsedSymbolRefs, UsedSymbolRefsBuilder,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -18,7 +19,7 @@ use rolldown_utils::{
   dashmap::FxDashMap, hash_placeholder::HashPlaceholderGenerator, index_vec_ext::IndexVecExt as _,
   indexmap::FxIndexSet, rayon::ParallelIterator as _,
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
 use tracing::debug_span;
 
@@ -144,7 +145,7 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
     let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs).await?;
 
-    let finalize_chunk_plan::FinalizedChunkPlan { analysis: order_analysis, order_state } =
+    let finalize_chunk_plan::FinalizedChunkPlan { analysis: order_analysis, mut order_state } =
       self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs)?;
 
     // `apply_order_wraps` may include newly-created wrapper/runtime symbols. Seal only after it
@@ -154,7 +155,7 @@ impl<'a> GenerateStage<'a> {
     self.compute_retained_export_symbols(&used_symbol_refs);
 
     let mut ast_table = std::mem::take(&mut self.ast_table);
-    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph, &order_state);
+    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph, &mut order_state);
 
     self.compute_cross_chunk_links(&mut chunk_graph, &used_symbol_refs, &order_state);
 
@@ -183,6 +184,8 @@ impl<'a> GenerateStage<'a> {
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
+    let rendered_modules =
+      order_state.has_import_overlays().then(|| rendered_module_set(&chunk_graph));
     let symbols = &self.link_output.symbol_db;
     let runtime = &self.link_output.runtime;
     let order_live_symbols = order_state.live_symbols(
@@ -190,6 +193,11 @@ impl<'a> GenerateStage<'a> {
       |helper| {
         let index = helper.bits().trailing_zeros() as usize;
         runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index])
+      },
+      |importer_idx| {
+        rendered_modules
+          .as_ref()
+          .is_some_and(|rendered_modules| rendered_modules.contains(&importer_idx))
       },
     );
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
@@ -597,4 +605,16 @@ impl<'a> GenerateStage<'a> {
       trace_action!(action::PackageGraphReady { action: "PackageGraphReady", packages });
     }
   }
+}
+
+fn rendered_module_set(chunk_graph: &ChunkGraph) -> FxHashSet<ModuleIdx> {
+  chunk_graph
+    .chunk_table
+    .iter_enumerated()
+    .filter(|(chunk_idx, _)| {
+      chunk_graph.post_chunk_optimization_operations.get(chunk_idx)
+        != Some(&PostChunkOptimizationOperation::Removed)
+    })
+    .flat_map(|(_, chunk)| chunk.modules.iter().copied())
+    .collect()
 }

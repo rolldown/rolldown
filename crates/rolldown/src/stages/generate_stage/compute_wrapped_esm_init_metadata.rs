@@ -15,18 +15,22 @@ use crate::{
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
-use super::{GenerateStage, order_wrap_state::OrderWrapState};
+use super::{
+  GenerateStage,
+  order_wrap_state::{EsmInitOrigin, OrderWrapState},
+};
 
 impl GenerateStage<'_> {
-  /// Pre-finalization pass computing, for every included wrapped (`WrapKind::Esm`) module, the
-  /// init-call facts the module finalizers consume when emitting `init_*()` calls:
+  /// Pre-finalization pass computing, for every included ESM init target, the init-call facts the
+  /// module finalizers consume when emitting `init_*()` calls. Interop wrapper facts remain in
+  /// [`LinkingMetadata`]; execution-order wrapper facts are stored in [`OrderWrapState`]:
   ///
-  /// - [`LinkingMetadata::init_is_noop`]: the module's `__esm` closure body is empty — every
+  /// - `init_is_noop`: the module's `__esm` closure body is empty — every
   ///   top-level statement is a hoisted function declaration (lifted out of the closure) or a
   ///   source-less export clause — so call sites can be marked `@__PURE__` and the default
   ///   `dce-only` minifier drops them (and, once the wrapper is unreferenced, the wrapper
   ///   declaration / runtime helper too).
-  /// - [`LinkingMetadata::transitive_esm_init_targets`]: per non-included top-level import or
+  /// - `transitive_init_targets`: per non-included top-level import or
   ///   re-export statement, the wrapped-ESM modules whose `init_*()` calls must be emitted in the
   ///   statement's place. Re-exports keep the legacy forwarding behavior; an order-wrapped ordinary
   ///   import keeps an obligation only when it was live before lowering.
@@ -41,7 +45,7 @@ impl GenerateStage<'_> {
     &mut self,
     ast_table: &IndexEcmaAst,
     chunk_graph: &ChunkGraph,
-    _order_state: &OrderWrapState,
+    order_state: &mut OrderWrapState,
   ) {
     // Classify in parallel (read-only); the cheap write-back stays sequential.
     let keep_names = self.options.keep_names;
@@ -49,12 +53,14 @@ impl GenerateStage<'_> {
     let modules = &self.link_output.module_table.modules;
     let stmt_infos_vec = &self.link_output.stmt_infos;
     let module_to_chunk = &chunk_graph.module_to_chunk;
+    let order_state_view = &*order_state;
     let results = metas
       .par_iter_enumerated()
       .filter_map(|(module_idx, meta)| {
-        if !meta.is_included || !matches!(meta.wrap_kind(), WrapKind::Esm) {
+        if !meta.is_included {
           return None;
         }
+        let init_target = order_state_view.esm_init_target(module_idx, meta)?;
         let is_noop = init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
         let targets_by_stmt = modules[module_idx]
           .as_normal()
@@ -71,20 +77,34 @@ impl GenerateStage<'_> {
                 chunk_graph,
                 module_to_chunk,
                 chunk_idx,
-                order_wrap: meta.hoist_esm_wrapper,
+                order_wrap: matches!(init_target.origin, EsmInitOrigin::ExecutionOrder)
+                  || meta.hoist_esm_wrapper,
                 execution_dependencies: &meta.execution_dependencies,
+                order_state: order_state_view,
               },
             )
           })
           .unwrap_or_default();
-        (is_noop || !targets_by_stmt.is_empty()).then_some((module_idx, is_noop, targets_by_stmt))
+        (is_noop || !targets_by_stmt.is_empty()).then_some((
+          module_idx,
+          init_target.origin,
+          is_noop,
+          targets_by_stmt,
+        ))
       })
       .collect::<Vec<_>>();
 
-    for (module_idx, is_noop, targets_by_stmt) in results {
-      let meta = &mut self.link_output.metas[module_idx];
-      meta.init_is_noop = is_noop;
-      meta.transitive_esm_init_targets = targets_by_stmt;
+    for (module_idx, origin, is_noop, targets_by_stmt) in results {
+      match origin {
+        EsmInitOrigin::Interop => {
+          let meta = &mut self.link_output.metas[module_idx];
+          meta.init_is_noop = is_noop;
+          meta.transitive_esm_init_targets = targets_by_stmt;
+        }
+        EsmInitOrigin::ExecutionOrder => {
+          order_state.set_order_init_metadata(module_idx, is_noop, targets_by_stmt);
+        }
+      }
     }
   }
 }
@@ -97,6 +117,7 @@ struct EsmInitTargetContext<'a> {
   chunk_idx: ChunkIdx,
   order_wrap: bool,
   execution_dependencies: &'a rolldown_utils::indexmap::FxIndexSet<ModuleIdx>,
+  order_state: &'a OrderWrapState,
 }
 
 /// Whether calling the module's `init_*()` is a no-op because nothing lands inside its `__esm`
@@ -192,6 +213,7 @@ fn transitive_esm_init_targets(
           ctx.modules,
           ctx.metas,
           ctx.chunk_graph,
+          ctx.order_state,
           root,
           &mut visited,
           &mut targets,
@@ -255,6 +277,7 @@ fn collect_order_wrap_esm_init_targets(
   modules: &IndexModules,
   metas: &LinkingMetadataVec,
   chunk_graph: &ChunkGraph,
+  order_state: &OrderWrapState,
   root: ModuleIdx,
   visited: &mut FxHashSet<ModuleIdx>,
   targets: &mut Vec<ModuleIdx>,
@@ -271,8 +294,9 @@ fn collect_order_wrap_esm_init_targets(
     // Only collect modules whose wrapper is declared (i.e. the module is included in the output)
     // and assigned to a chunk. Cross-chunk wrapper imports are registered after this pass.
     if importee_linking_info.is_included
-      && esm_wrapper_stmt_is_included_in_live_chunk(
+      && esm_init_target_is_included_in_live_chunk(
         importee_linking_info,
+        order_state,
         importee.idx,
         chunk_graph,
       )
@@ -300,13 +324,34 @@ fn collect_order_wrap_esm_init_targets(
   }
 }
 
-fn esm_wrapper_stmt_is_included_in_live_chunk(
+fn esm_init_target_is_included_in_live_chunk(
   meta: &LinkingMetadata,
+  order_state: &OrderWrapState,
   module_idx: ModuleIdx,
   chunk_graph: &ChunkGraph,
 ) -> bool {
-  meta.wrapper_stmt_info.is_some_and(|stmt_info_idx| meta.stmt_info_included.has_bit(stmt_info_idx))
-    && module_has_live_chunk(chunk_graph, module_idx)
+  let Some(target) = order_state.esm_init_target(module_idx, meta) else {
+    return false;
+  };
+  match target.origin {
+    EsmInitOrigin::Interop => {
+      meta
+        .wrapper_stmt_info
+        .is_some_and(|stmt_info_idx| meta.stmt_info_included.has_bit(stmt_info_idx))
+        && module_has_live_chunk(chunk_graph, module_idx)
+    }
+    EsmInitOrigin::ExecutionOrder => {
+      if let Some(chunk_idx) = order_state.order_wrapper_chunk(module_idx) {
+        module_has_live_chunk(chunk_graph, module_idx)
+          && chunk_graph.module_to_chunk[module_idx] == Some(chunk_idx)
+      } else {
+        meta
+          .wrapper_stmt_info
+          .is_some_and(|stmt_info_idx| meta.stmt_info_included.has_bit(stmt_info_idx))
+          && module_has_live_chunk(chunk_graph, module_idx)
+      }
+    }
+  }
 }
 
 fn module_has_live_chunk(chunk_graph: &ChunkGraph, module_idx: ModuleIdx) -> bool {

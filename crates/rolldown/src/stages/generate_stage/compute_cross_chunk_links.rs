@@ -10,8 +10,8 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder,
-  WrapKind,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, RuntimeHelper, SymbolRef, UsedSymbolRefs,
+  UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -219,6 +219,8 @@ impl GenerateStage<'_> {
       index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()];
     let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
+    let rendered_modules =
+      order_state.has_import_overlays().then(|| super::rendered_module_set(chunk_graph));
     let symbols = &self.link_output.symbol_db;
     let runtime = &self.link_output.runtime;
     let order_live_symbols = order_state.live_symbols(
@@ -226,6 +228,11 @@ impl GenerateStage<'_> {
       |helper| {
         let index = helper.bits().trailing_zeros() as usize;
         runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index])
+      },
+      |importer_idx| {
+        rendered_modules
+          .as_ref()
+          .is_some_and(|rendered_modules| rendered_modules.contains(&importer_idx))
       },
     );
 
@@ -384,6 +391,12 @@ impl GenerateStage<'_> {
             depended_symbols,
             module.idx,
           );
+          self.add_order_import_overlay_depended_symbols(
+            chunk_graph,
+            order_state,
+            depended_symbols,
+            module.idx,
+          );
         });
 
         if let Some(entry_id) = &chunk.entry_module_idx() {
@@ -523,7 +536,8 @@ impl GenerateStage<'_> {
     depended_symbols: &mut FxIndexSet<SymbolRef>,
     module_idx: ModuleIdx,
   ) {
-    for targets in self.link_output.metas[module_idx].transitive_esm_init_targets.values() {
+    let meta = &self.link_output.metas[module_idx];
+    for targets in order_state.transitive_init_targets(module_idx, meta).values() {
       for &target_idx in targets {
         let meta = &self.link_output.metas[target_idx];
         if esm_init_target_is_included_in_live_chunk(meta, order_state, target_idx, chunk_graph)
@@ -531,6 +545,36 @@ impl GenerateStage<'_> {
         {
           depended_symbols.insert(target.wrapper_ref);
         }
+      }
+    }
+  }
+
+  fn add_order_import_overlay_depended_symbols(
+    &self,
+    chunk_graph: &ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    depended_symbols: &mut FxIndexSet<SymbolRef>,
+    importer_idx: ModuleIdx,
+  ) {
+    for (_, overlay) in order_state.import_overlays_for_importer(importer_idx) {
+      debug_assert!(
+        !overlay.reexports_dynamic_exports
+          || (overlay.runtime_helpers.contains(RuntimeHelper::ReExport)
+            && overlay.requires_importer_namespace
+            && overlay.requires_importee_namespace)
+      );
+      for referenced in &overlay.referenced_symbols {
+        self.add_depended_symbol_with_wrapped_esm_init(
+          chunk_graph,
+          order_state,
+          depended_symbols,
+          self.link_output.symbol_db.canonical_ref_resolving_namespace(*referenced),
+        );
+      }
+      for helper in overlay.runtime_helpers {
+        let index = helper.bits().trailing_zeros() as usize;
+        depended_symbols
+          .insert(self.link_output.runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index]));
       }
     }
   }
@@ -1056,7 +1100,14 @@ fn esm_init_target_is_included_in_live_chunk(
     super::order_wrap_state::EsmInitOrigin::Interop => meta
       .wrapper_stmt_info
       .is_some_and(|stmt_info_idx| meta.stmt_info_included.has_bit(stmt_info_idx)),
-    super::order_wrap_state::EsmInitOrigin::ExecutionOrder => true,
+    super::order_wrap_state::EsmInitOrigin::ExecutionOrder => {
+      order_state
+        .order_wrapper_chunk(module_idx)
+        .is_some_and(|chunk_idx| chunk_graph.module_to_chunk[module_idx] == Some(chunk_idx))
+        || meta
+          .wrapper_stmt_info
+          .is_some_and(|stmt_info_idx| meta.stmt_info_included.has_bit(stmt_info_idx))
+    }
   };
   declaration_is_live && module_has_live_chunk(chunk_graph, module_idx)
 }

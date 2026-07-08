@@ -57,7 +57,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
     ast: &'me mut EcmaAst,
     ast_scope: &'me AstScopes,
   ) -> FinalizerMutableFields {
-    debug_assert!(self.order_wrap_state.is_empty());
+    debug_assert!(self.order_wrap_state.synthetic_wrapper_declarations_are_empty());
     ast.program.with_mut(move |fields| {
       let (oxc_program, alloc) = (fields.program, fields.allocator);
 

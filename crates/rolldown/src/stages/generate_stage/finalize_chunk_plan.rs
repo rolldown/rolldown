@@ -39,21 +39,21 @@ impl GenerateStage<'_> {
     // The order analysis reuses cross-chunk linking logic, which reads finalized namespace and
     // external-export facts. Prepare those inputs on the provisional topology first.
     self.find_entry_level_external_module(chunk_graph);
-    self.finalized_module_namespace_ref_usage();
+    let mut order_state = OrderWrapState::default();
+    self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
 
     let order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs);
-    let order_state = OrderWrapState::default();
     if let Some(analysis) = &order_analysis
       && !analysis.plan.is_empty()
     {
-      self.apply_order_wraps(chunk_graph, &analysis.plan, used_symbol_refs);
+      self.apply_order_wraps(chunk_graph, &analysis.plan, used_symbol_refs, &mut order_state);
       #[cfg(debug_assertions)]
       self.assert_order_wrap_plan_applied(chunk_graph, &analysis.plan);
 
       // Applying the plan can replace or restore entry facades and extend namespace inclusion.
       // Recompute topology-derived facts on the graph that will actually be rendered.
       self.find_entry_level_external_module(chunk_graph);
-      self.finalized_module_namespace_ref_usage();
+      self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
     }
 
     let rendered_chunk_count = chunk_graph
@@ -63,8 +63,6 @@ impl GenerateStage<'_> {
     if rendered_chunk_count > 1 {
       validate_options_for_multi_chunk_output(self.options)?;
     }
-
-    debug_assert!(order_state.is_empty());
 
     let analysis =
       if strict_execution_order_trace_requested(self.options.devtools) && trace_action_enabled!() {

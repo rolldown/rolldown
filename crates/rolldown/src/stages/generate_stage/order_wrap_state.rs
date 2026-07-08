@@ -1,5 +1,9 @@
 use oxc_index::IndexVec;
-use rolldown_common::{ChunkIdx, ModuleIdx, RuntimeHelper, SymbolRef, TaggedSymbolRef, WrapKind};
+use rolldown_common::{
+  ChunkIdx, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx, RuntimeHelper, StmtInfoIdx,
+  SymbolRef, TaggedSymbolRef, WrapKind,
+};
+use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 oxc_index::define_index_type! {
@@ -11,11 +15,26 @@ pub(crate) struct OrderWrapState {
   modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
   synthetic_statements: IndexVec<OrderSyntheticStmtIdx, OrderSyntheticStmt>,
   synthetic_statements_by_chunk: FxHashMap<ChunkIdx, Vec<OrderSyntheticStmtIdx>>,
+  import_overlays: FxHashMap<OrderImportKey, OrderImportOverlay>,
+  import_overlays_by_importer: FxHashMap<ModuleIdx, Vec<OrderImportKey>>,
+  namespace_requirements: FxHashMap<SymbolRef, FxIndexSet<ModuleIdx>>,
 }
 
 impl OrderWrapState {
+  #[cfg(test)]
   pub(crate) fn is_empty(&self) -> bool {
-    self.modules.is_empty() && self.synthetic_statements.is_empty()
+    self.modules.is_empty()
+      && self.synthetic_statements.is_empty()
+      && self.import_overlays.is_empty()
+      && self.namespace_requirements.is_empty()
+  }
+
+  pub(crate) fn synthetic_wrapper_declarations_are_empty(&self) -> bool {
+    self.synthetic_statements.is_empty()
+  }
+
+  pub(crate) fn has_import_overlays(&self) -> bool {
+    !self.import_overlays.is_empty()
   }
 
   pub(crate) fn esm_init_target(
@@ -23,6 +42,17 @@ impl OrderWrapState {
     module_idx: ModuleIdx,
     meta: &crate::types::linking_metadata::LinkingMetadata,
   ) -> Option<EsmInitTarget> {
+    if meta.hoist_esm_wrapper
+      && let Some(module) = self.modules.get(&module_idx)
+    {
+      return Some(EsmInitTarget {
+        wrapper_ref: module.wrapper_ref,
+        init_is_noop: module.init_is_noop,
+        tla_tainted: meta.is_tla_or_contains_tla_dependency,
+        origin: EsmInitOrigin::ExecutionOrder,
+      });
+    }
+
     if matches!(meta.wrap_kind(), WrapKind::Esm) {
       return meta.wrapper_ref.map(|wrapper_ref| EsmInitTarget {
         wrapper_ref,
@@ -38,6 +68,28 @@ impl OrderWrapState {
       tla_tainted: meta.is_tla_or_contains_tla_dependency,
       origin: EsmInitOrigin::ExecutionOrder,
     })
+  }
+
+  pub(crate) fn record_legacy_order_wrapper(
+    &mut self,
+    module_idx: ModuleIdx,
+    wrapper_ref: SymbolRef,
+  ) {
+    assert!(
+      self
+        .modules
+        .insert(
+          module_idx,
+          OrderWrappedModule {
+            wrapper_ref,
+            wrapper_statement: None,
+            init_is_noop: false,
+            transitive_init_targets: FxHashMap::default(),
+          },
+        )
+        .is_none(),
+      "duplicate order-wrapped module",
+    );
   }
 
   #[cfg(test)]
@@ -79,6 +131,7 @@ impl OrderWrapState {
     &self,
     mut canonicalize: impl FnMut(SymbolRef) -> SymbolRef,
     mut resolve_runtime_helper: impl FnMut(RuntimeHelper) -> SymbolRef,
+    overlay_is_live: impl Fn(ModuleIdx) -> bool,
   ) -> FxHashSet<SymbolRef> {
     let mut live_symbols = FxHashSet::default();
     for stmt in &self.synthetic_statements {
@@ -92,20 +145,114 @@ impl OrderWrapState {
         live_symbols.insert(canonicalize(resolve_runtime_helper(helper)));
       }
     }
+    for (key, overlay) in &self.import_overlays {
+      if !overlay_is_live(key.importer) {
+        continue;
+      }
+      for referenced in &overlay.referenced_symbols {
+        live_symbols.insert(canonicalize(*referenced));
+      }
+      for helper in overlay.runtime_helpers {
+        live_symbols.insert(canonicalize(resolve_runtime_helper(helper)));
+      }
+    }
     live_symbols
+  }
+
+  pub(crate) fn insert_import_overlay(
+    &mut self,
+    key: OrderImportKey,
+    overlay: OrderImportOverlay,
+    importer_namespace_ref: SymbolRef,
+    importee_namespace_ref: SymbolRef,
+  ) {
+    if overlay.requires_importer_namespace {
+      self.namespace_requirements.entry(importer_namespace_ref).or_default().insert(key.importer);
+    }
+    if overlay.requires_importee_namespace {
+      self.namespace_requirements.entry(importee_namespace_ref).or_default().insert(key.importer);
+    }
+    assert!(self.import_overlays.insert(key, overlay).is_none(), "duplicate order import overlay");
+    self.import_overlays_by_importer.entry(key.importer).or_default().push(key);
+  }
+
+  pub(crate) fn import_overlay(&self, key: OrderImportKey) -> Option<&OrderImportOverlay> {
+    self.import_overlays.get(&key)
+  }
+
+  pub(crate) fn import_overlays_for_importer(
+    &self,
+    importer_idx: ModuleIdx,
+  ) -> impl Iterator<Item = (OrderImportKey, &OrderImportOverlay)> {
+    self
+      .import_overlays_by_importer
+      .get(&importer_idx)
+      .into_iter()
+      .flatten()
+      .filter_map(|key| self.import_overlay(*key).map(|overlay| (*key, overlay)))
+  }
+
+  pub(crate) fn requires_namespace(
+    &self,
+    symbol_ref: SymbolRef,
+    importer_is_live: impl Fn(ModuleIdx) -> bool,
+  ) -> bool {
+    self
+      .namespace_requirements
+      .get(&symbol_ref)
+      .is_some_and(|importers| importers.iter().copied().any(importer_is_live))
+  }
+
+  pub(crate) fn set_order_init_metadata(
+    &mut self,
+    module_idx: ModuleIdx,
+    init_is_noop: bool,
+    transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
+  ) {
+    let module = self.modules.get_mut(&module_idx).expect("order-wrapped module should exist");
+    module.init_is_noop = init_is_noop;
+    module.transitive_init_targets = transitive_init_targets;
+  }
+
+  pub(crate) fn transitive_init_targets<'a>(
+    &'a self,
+    module_idx: ModuleIdx,
+    meta: &'a crate::types::linking_metadata::LinkingMetadata,
+  ) -> &'a FxHashMap<StmtInfoIdx, Vec<ModuleIdx>> {
+    if self
+      .esm_init_target(module_idx, meta)
+      .is_some_and(|target| matches!(target.origin, EsmInitOrigin::ExecutionOrder))
+    {
+      if let Some(module) = self.modules.get(&module_idx) {
+        return &module.transitive_init_targets;
+      }
+    }
+    &meta.transitive_esm_init_targets
+  }
+
+  pub(crate) fn order_wrapper_chunk(&self, module_idx: ModuleIdx) -> Option<ChunkIdx> {
+    let module = self.modules.get(&module_idx)?;
+    self.synthetic_statements.get(module.wrapper_statement?).and_then(|stmt| stmt.chunk)
   }
 }
 
 #[derive(Debug)]
 pub(crate) struct OrderWrappedModule {
   pub(crate) wrapper_ref: SymbolRef,
+  pub(crate) wrapper_statement: Option<OrderSyntheticStmtIdx>,
   pub(crate) init_is_noop: bool,
+  pub(crate) transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }
 
 impl OrderWrappedModule {
   #[cfg(test)]
   fn new(wrapper_ref: SymbolRef) -> Self {
-    Self { wrapper_ref, init_is_noop: false }
+    Self {
+      wrapper_ref,
+      wrapper_statement: None,
+      init_is_noop: false,
+      transitive_init_targets: FxHashMap::default(),
+    }
   }
 }
 
@@ -132,12 +279,102 @@ pub(crate) struct OrderSyntheticStmt {
   pub(crate) chunk: Option<ChunkIdx>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(crate) struct OrderImportKey {
+  pub(crate) importer: ModuleIdx,
+  pub(crate) statement: StmtInfoIdx,
+  pub(crate) record: ImportRecordIdx,
+}
+
+#[derive(Debug)]
+pub(crate) struct OrderImportOverlay {
+  pub(crate) referenced_symbols: Vec<SymbolRef>,
+  pub(crate) runtime_helpers: RuntimeHelper,
+  pub(crate) requires_importer_namespace: bool,
+  pub(crate) requires_importee_namespace: bool,
+  pub(crate) reexports_dynamic_exports: bool,
+}
+
+impl OrderImportOverlay {
+  #[expect(clippy::too_many_arguments)]
+  pub(crate) fn from_import_record(
+    kind: ImportKind,
+    meta: ImportRecordMeta,
+    wrapper_ref: SymbolRef,
+    importer_namespace_ref: SymbolRef,
+    importee_namespace_ref: SymbolRef,
+    importee_has_dynamic_exports: bool,
+    active_execution_dependency: bool,
+    code_splitting_disabled: bool,
+  ) -> Option<Self> {
+    let is_reexport =
+      meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly);
+    if !active_execution_dependency && !is_reexport {
+      return None;
+    }
+
+    let mut overlay = Self {
+      referenced_symbols: vec![],
+      runtime_helpers: RuntimeHelper::default(),
+      requires_importer_namespace: false,
+      requires_importee_namespace: false,
+      reexports_dynamic_exports: false,
+    };
+    let mut reference = |symbol_ref| {
+      if !overlay.referenced_symbols.contains(&symbol_ref) {
+        overlay.referenced_symbols.push(symbol_ref);
+      }
+    };
+
+    match kind {
+      ImportKind::Import => {
+        reference(wrapper_ref);
+        if meta.contains(ImportRecordMeta::IsExportStar) && importee_has_dynamic_exports {
+          reference(importer_namespace_ref);
+          reference(importee_namespace_ref);
+          overlay.runtime_helpers.insert(RuntimeHelper::ReExport);
+          overlay.requires_importer_namespace = true;
+          overlay.requires_importee_namespace = true;
+          overlay.reexports_dynamic_exports = true;
+        }
+      }
+      ImportKind::Require => {
+        reference(wrapper_ref);
+        reference(importee_namespace_ref);
+        overlay.requires_importee_namespace = true;
+        if !meta.contains(ImportRecordMeta::IsRequireUnused) {
+          overlay.runtime_helpers.insert(RuntimeHelper::ToCommonJs);
+        }
+      }
+      ImportKind::DynamicImport if code_splitting_disabled => {
+        reference(wrapper_ref);
+        reference(importee_namespace_ref);
+        overlay.requires_importee_namespace = true;
+      }
+      ImportKind::DynamicImport
+      | ImportKind::AtImport
+      | ImportKind::UrlImport
+      | ImportKind::NewUrl
+      | ImportKind::HotAccept => return None,
+    }
+
+    Some(overlay)
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use oxc::semantic::SymbolId;
-  use rolldown_common::{ChunkIdx, ModuleIdx, RuntimeHelper, SymbolRef, TaggedSymbolRef, WrapKind};
+  use rolldown_common::{
+    ChunkIdx, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx, RuntimeHelper, StmtInfoIdx,
+    SymbolRef, TaggedSymbolRef, WrapKind,
+  };
+  use rustc_hash::FxHashMap;
 
-  use super::{EsmInitOrigin, OrderSyntheticStmt, OrderWrapState, OrderWrappedModule};
+  use super::{
+    EsmInitOrigin, OrderImportKey, OrderImportOverlay, OrderSyntheticStmt, OrderWrapState,
+    OrderWrappedModule,
+  };
   use crate::types::linking_metadata::LinkingMetadata;
 
   #[test]
@@ -177,6 +414,33 @@ mod tests {
   }
 
   #[test]
+  fn legacy_order_bridge_uses_order_origin_and_metadata_owner() {
+    let module_idx = ModuleIdx::new(7);
+    let target_idx = ModuleIdx::new(8);
+    let wrapper_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
+    let stmt_idx = StmtInfoIdx::new(2);
+    let mut meta = LinkingMetadata::default();
+    meta.sync_wrap_kind(WrapKind::Esm);
+    meta.wrapper_ref = Some(wrapper_ref);
+    meta.hoist_esm_wrapper = true;
+    let mut state = OrderWrapState::default();
+    state.modules.insert(module_idx, OrderWrappedModule::new(wrapper_ref));
+    state.set_order_init_metadata(
+      module_idx,
+      true,
+      FxHashMap::from_iter([(stmt_idx, vec![target_idx])]),
+    );
+
+    let target = state.esm_init_target(module_idx, &meta).unwrap();
+
+    assert_eq!(target.origin, EsmInitOrigin::ExecutionOrder);
+    assert!(target.init_is_noop);
+    assert_eq!(state.transitive_init_targets(module_idx, &meta)[&stmt_idx], [target_idx]);
+    assert!(!meta.init_is_noop);
+    assert!(meta.transitive_esm_init_targets.is_empty());
+  }
+
+  #[test]
   fn order_target_is_visible_when_interop_kind_is_none() {
     let module_idx = ModuleIdx::new(7);
     let wrapper_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
@@ -191,6 +455,28 @@ mod tests {
     assert_eq!(target.wrapper_ref, wrapper_ref);
     assert!(!target.init_is_noop);
     assert!(target.tla_tainted);
+  }
+
+  #[test]
+  fn order_init_metadata_is_owned_by_order_state() {
+    let module_idx = ModuleIdx::new(7);
+    let target_idx = ModuleIdx::new(8);
+    let wrapper_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
+    let stmt_idx = StmtInfoIdx::new(2);
+    let meta = LinkingMetadata::default();
+    let mut state = OrderWrapState::default();
+    state.modules.insert(module_idx, OrderWrappedModule::new(wrapper_ref));
+
+    state.set_order_init_metadata(
+      module_idx,
+      true,
+      FxHashMap::from_iter([(stmt_idx, vec![target_idx])]),
+    );
+
+    assert!(state.esm_init_target(module_idx, &meta).unwrap().init_is_noop);
+    assert_eq!(state.transitive_init_targets(module_idx, &meta)[&stmt_idx], [target_idx]);
+    assert!(!meta.init_is_noop);
+    assert!(meta.transitive_esm_init_targets.is_empty());
   }
 
   #[test]
@@ -217,6 +503,7 @@ mod tests {
         assert_eq!(helper, RuntimeHelper::EsmMin);
         runtime_ref
       },
+      |_| true,
     );
     assert_eq!(stmt.owner, module_idx);
     assert_eq!(stmt.chunk, Some(chunk_idx));
@@ -257,6 +544,7 @@ mod tests {
     let live_symbols = state.live_symbols(
       |symbol_ref| if symbol_ref == alias_ref { canonical_ref } else { symbol_ref },
       |_| unreachable!(),
+      |_| true,
     );
 
     assert!(live_symbols.contains(&canonical_ref));
@@ -282,8 +570,173 @@ mod tests {
         assert_eq!(helper, RuntimeHelper::ReExport);
         runtime_ref
       },
+      |_| true,
     );
 
     assert!(live_symbols.contains(&runtime_ref));
+  }
+
+  #[test]
+  fn inactive_order_import_has_no_overlay() {
+    let module_idx = ModuleIdx::new(7);
+    let wrapper_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
+    let importer_namespace_ref = SymbolRef::from((module_idx, SymbolId::from_usize(1)));
+    let importee_namespace_ref = SymbolRef::from((module_idx, SymbolId::from_usize(2)));
+
+    let overlay = OrderImportOverlay::from_import_record(
+      ImportKind::Import,
+      ImportRecordMeta::empty(),
+      wrapper_ref,
+      importer_namespace_ref,
+      importee_namespace_ref,
+      false,
+      false,
+      false,
+    );
+
+    assert!(overlay.is_none());
+  }
+
+  #[test]
+  fn active_order_import_references_only_wrapper() {
+    let module_idx = ModuleIdx::new(7);
+    let wrapper_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
+    let importer_namespace_ref = SymbolRef::from((module_idx, SymbolId::from_usize(1)));
+    let importee_namespace_ref = SymbolRef::from((module_idx, SymbolId::from_usize(2)));
+
+    let overlay = OrderImportOverlay::from_import_record(
+      ImportKind::Import,
+      ImportRecordMeta::empty(),
+      wrapper_ref,
+      importer_namespace_ref,
+      importee_namespace_ref,
+      false,
+      true,
+      false,
+    )
+    .expect("active import should have an overlay");
+
+    assert_eq!(overlay.referenced_symbols, [wrapper_ref]);
+    assert!(overlay.runtime_helpers.is_empty());
+    assert!(!overlay.requires_importer_namespace);
+    assert!(!overlay.requires_importee_namespace);
+  }
+
+  #[test]
+  fn export_star_overlay_records_namespaces_and_reexport_helper() {
+    let module_idx = ModuleIdx::new(7);
+    let wrapper_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
+    let importer_namespace_ref = SymbolRef::from((module_idx, SymbolId::from_usize(1)));
+    let importee_namespace_ref = SymbolRef::from((module_idx, SymbolId::from_usize(2)));
+
+    let overlay = OrderImportOverlay::from_import_record(
+      ImportKind::Import,
+      ImportRecordMeta::IsExportStar,
+      wrapper_ref,
+      importer_namespace_ref,
+      importee_namespace_ref,
+      true,
+      false,
+      false,
+    )
+    .expect("retained re-export should have an overlay");
+
+    assert_eq!(
+      overlay.referenced_symbols,
+      [wrapper_ref, importer_namespace_ref, importee_namespace_ref]
+    );
+    assert!(overlay.runtime_helpers.contains(RuntimeHelper::ReExport));
+    assert!(overlay.requires_importer_namespace);
+    assert!(overlay.requires_importee_namespace);
+    assert!(overlay.reexports_dynamic_exports);
+  }
+
+  #[test]
+  fn require_overlay_records_namespace_and_commonjs_helper() {
+    let module_idx = ModuleIdx::new(7);
+    let wrapper_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
+    let importer_namespace_ref = SymbolRef::from((module_idx, SymbolId::from_usize(1)));
+    let importee_namespace_ref = SymbolRef::from((module_idx, SymbolId::from_usize(2)));
+
+    let overlay = OrderImportOverlay::from_import_record(
+      ImportKind::Require,
+      ImportRecordMeta::empty(),
+      wrapper_ref,
+      importer_namespace_ref,
+      importee_namespace_ref,
+      false,
+      true,
+      false,
+    )
+    .expect("active require should have an overlay");
+
+    assert_eq!(overlay.referenced_symbols, [wrapper_ref, importee_namespace_ref]);
+    assert!(overlay.runtime_helpers.contains(RuntimeHelper::ToCommonJs));
+    assert!(!overlay.requires_importer_namespace);
+    assert!(overlay.requires_importee_namespace);
+  }
+
+  #[test]
+  fn inserted_overlay_is_keyed_and_records_namespace_requirements() {
+    let importer_idx = ModuleIdx::new(7);
+    let importee_idx = ModuleIdx::new(8);
+    let wrapper_ref = SymbolRef::from((importee_idx, SymbolId::from_usize(0)));
+    let importer_namespace_ref = SymbolRef::from((importer_idx, SymbolId::from_usize(0)));
+    let importee_namespace_ref = SymbolRef::from((importee_idx, SymbolId::from_usize(1)));
+    let key = OrderImportKey {
+      importer: importer_idx,
+      statement: StmtInfoIdx::new(2),
+      record: ImportRecordIdx::new(3),
+    };
+    let overlay = OrderImportOverlay::from_import_record(
+      ImportKind::Import,
+      ImportRecordMeta::IsExportStar,
+      wrapper_ref,
+      importer_namespace_ref,
+      importee_namespace_ref,
+      true,
+      false,
+      false,
+    )
+    .unwrap();
+    let mut state = OrderWrapState::default();
+
+    state.insert_import_overlay(key, overlay, importer_namespace_ref, importee_namespace_ref);
+
+    assert!(state.import_overlay(key).is_some());
+    assert!(state.requires_namespace(importer_namespace_ref, |_| true));
+    assert!(state.requires_namespace(importee_namespace_ref, |_| true));
+    assert!(!state.requires_namespace(importee_namespace_ref, |_| false));
+  }
+
+  #[test]
+  fn overlay_symbols_are_live_only_when_importer_is_rendered() {
+    let importer_idx = ModuleIdx::new(7);
+    let importee_idx = ModuleIdx::new(8);
+    let wrapper_ref = SymbolRef::from((importee_idx, SymbolId::from_usize(0)));
+    let importer_namespace_ref = SymbolRef::from((importer_idx, SymbolId::from_usize(0)));
+    let importee_namespace_ref = SymbolRef::from((importee_idx, SymbolId::from_usize(1)));
+    let key = OrderImportKey {
+      importer: importer_idx,
+      statement: StmtInfoIdx::new(2),
+      record: ImportRecordIdx::new(3),
+    };
+    let overlay = OrderImportOverlay::from_import_record(
+      ImportKind::Import,
+      ImportRecordMeta::empty(),
+      wrapper_ref,
+      importer_namespace_ref,
+      importee_namespace_ref,
+      false,
+      true,
+      false,
+    )
+    .unwrap();
+    let mut state = OrderWrapState::default();
+    state.insert_import_overlay(key, overlay, importer_namespace_ref, importee_namespace_ref);
+
+    let live_symbols = state.live_symbols(|symbol_ref| symbol_ref, |_| unreachable!(), |_| false);
+
+    assert!(!live_symbols.contains(&wrapper_ref));
   }
 }

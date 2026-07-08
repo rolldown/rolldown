@@ -1384,9 +1384,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       NONE,
                       oxc::allocator::Vec::new_in(&self.ast_factory),
                       false,
-                      // No-op `init_*()` (empty ESM closure) is pure; `init_is_noop` is only
-                      // set for `WrapKind::Esm`, so a `require_*()` here is never marked pure.
-                      importee_linking_info.init_is_noop,
+                      self
+                        .ctx
+                        .order_wrap_state
+                        .esm_init_target(importee.idx, importee_linking_info)
+                        .is_some_and(|target| target.init_is_noop),
                       &self.ast_factory,
                     ))
                   };
@@ -1597,7 +1599,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           // stage's `compute_wrapped_esm_init_metadata`; emitting the calls (with the
           // module-wide dedup below) is all that happens here.
           let linking_info = self.ctx.linking_info;
-          if let Some(targets) = linking_info.transitive_esm_init_targets.get(&stmt_info_idx) {
+          if let Some(targets) = self
+            .ctx
+            .order_wrap_state
+            .transitive_init_targets(self.ctx.idx, linking_info)
+            .get(&stmt_info_idx)
+          {
             for &importee_idx in targets {
               if self.generated_init_esm_importee_ids.insert(importee_idx) {
                 let init_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, false);

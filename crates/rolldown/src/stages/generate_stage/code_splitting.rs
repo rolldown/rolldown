@@ -530,7 +530,11 @@ impl GenerateStage<'_> {
   ///    indirect external module re-exports optimization.
   /// 3. **All other cases**: Remove the namespace object
   ///
-  pub fn finalized_module_namespace_ref_usage(&mut self) {
+  pub fn finalized_module_namespace_ref_usage(
+    &mut self,
+    chunk_graph: &ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+  ) {
     let to_eliminate = self
       .link_output
       .module_table
@@ -545,8 +549,17 @@ impl GenerateStage<'_> {
         // exist regardless of the module's exports_kind (e.g. empty modules have
         // ExportsKind::None but still need their namespace declaration when exported
         // cross-chunk).
-        let is_namespace_referenced = if module_namespace_included_reason
-          .contains(ModuleNamespaceIncludedReason::SimulateFacadeChunk)
+        let order_requires_namespace =
+          order_state.requires_namespace(m.namespace_object_ref, |importer_idx| {
+            chunk_graph.module_to_chunk[importer_idx].is_some_and(|chunk_idx| {
+              chunk_graph.post_chunk_optimization_operations.get(&chunk_idx)
+                != Some(&PostChunkOptimizationOperation::Removed)
+                && chunk_graph.chunk_table[chunk_idx].modules.contains(&importer_idx)
+            })
+          });
+        let is_namespace_referenced = if order_requires_namespace
+          || module_namespace_included_reason
+            .contains(ModuleNamespaceIncludedReason::SimulateFacadeChunk)
         {
           true
         } else if matches!(m.exports_kind, ExportsKind::Esm) {

@@ -206,7 +206,9 @@ impl GenerateStage<'_> {
               ));
             }
           }
-        } else if let Some(targets) = importer_meta.transitive_esm_init_targets.get(&stmt_idx) {
+        } else if let Some(targets) =
+          order_state.transitive_init_targets(importer_idx, importer_meta).get(&stmt_idx)
+        {
           for &importee_idx in targets {
             if !rendered_modules.contains(&importee_idx)
               || !recorded_targets.insert(("transitive-init-target", importee_idx))

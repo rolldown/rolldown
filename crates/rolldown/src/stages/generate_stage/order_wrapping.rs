@@ -20,6 +20,7 @@ use super::{
   GenerateStage,
   chunk_ext::{ChunkCreationReason, ChunkDebugExt},
   order_analysis::OrderWrapPlan,
+  order_wrap_state::{OrderImportKey, OrderImportOverlay, OrderWrapState},
 };
 
 impl GenerateStage<'_> {
@@ -28,6 +29,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     plan: &OrderWrapPlan,
     used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    order_state: &mut OrderWrapState,
   ) {
     if plan.is_empty() {
       return;
@@ -53,12 +55,18 @@ impl GenerateStage<'_> {
         &self.link_output.runtime,
         self.options,
       );
+      order_state.record_legacy_order_wrapper(
+        module_idx,
+        self.link_output.metas[module_idx]
+          .wrapper_ref
+          .expect("legacy order wrapper should have a wrapper ref"),
+      );
       self.ensure_order_wrap_stmt_inclusion_capacity(module_idx);
       runtime_helpers.insert(self.esm_runtime_helper());
       self.add_order_wrap_entry_reference(module_idx);
     }
 
-    runtime_helpers |= self.reregister_order_wrap_imports(plan);
+    runtime_helpers |= self.reregister_order_wrap_imports(plan, order_state);
     self.include_order_wrap_symbols(plan, runtime_helpers, used_symbol_refs);
     self.place_order_wrap_modules(chunk_graph, plan);
     self.create_order_wrap_entry_facades(chunk_graph, plan);
@@ -94,7 +102,11 @@ impl GenerateStage<'_> {
     self.link_output.metas[module_idx].stmt_info_included = included;
   }
 
-  fn reregister_order_wrap_imports(&mut self, plan: &OrderWrapPlan) -> RuntimeHelper {
+  fn reregister_order_wrap_imports(
+    &mut self,
+    plan: &OrderWrapPlan,
+    order_state: &mut OrderWrapState,
+  ) -> RuntimeHelper {
     let mut runtime_helpers = RuntimeHelper::default();
     let module_indices = self
       .link_output
@@ -128,8 +140,12 @@ impl GenerateStage<'_> {
 
       for (stmt_info_idx, rec_ids) in affected_stmts {
         for rec_idx in rec_ids {
-          runtime_helpers |=
-            self.reregister_order_wrap_import_record(importer_idx, stmt_info_idx, rec_idx);
+          runtime_helpers |= self.reregister_order_wrap_import_record(
+            importer_idx,
+            stmt_info_idx,
+            rec_idx,
+            order_state,
+          );
         }
       }
     }
@@ -142,6 +158,7 @@ impl GenerateStage<'_> {
     importer_idx: ModuleIdx,
     stmt_info_idx: StmtInfoIdx,
     rec_idx: ImportRecordIdx,
+    order_state: &mut OrderWrapState,
   ) -> RuntimeHelper {
     let Some(importer) = self.link_output.module_table[importer_idx].as_normal() else {
       return RuntimeHelper::default();
@@ -164,7 +181,30 @@ impl GenerateStage<'_> {
     let importer_namespace_ref = importer.namespace_object_ref;
     let importee_has_dynamic_exports = self.link_output.metas[importee_idx].has_dynamic_exports;
     let importee_has_side_effects = importee.side_effects.has_side_effects();
+    let overlay = OrderImportOverlay::from_import_record(
+      rec.kind,
+      rec.meta,
+      wrapper_ref,
+      importer_namespace_ref,
+      importee_namespace_ref,
+      importee_has_dynamic_exports,
+      true,
+      self.options.code_splitting.is_disabled(),
+    );
+    let overlay_runtime_helpers =
+      overlay.as_ref().map_or_else(RuntimeHelper::default, |overlay| overlay.runtime_helpers);
+    if let Some(overlay) = overlay {
+      order_state.insert_import_overlay(
+        OrderImportKey { importer: importer_idx, statement: stmt_info_idx, record: rec_idx },
+        overlay,
+        importer_namespace_ref,
+        importee_namespace_ref,
+      );
+    }
 
+    // TODO(strict-execution-order): Delete this compatibility write once finalization consumes
+    // overlays. The lowering API must then borrow statements and linking metadata immutably so
+    // generate-stage order lowering cannot reopen user-code liveness.
     let stmt_info = self.link_output.stmt_infos[importer_idx].get_mut(stmt_info_idx);
     match rec.kind {
       ImportKind::Import => {
@@ -199,7 +239,8 @@ impl GenerateStage<'_> {
       | ImportKind::HotAccept => {}
     }
 
-    runtime_helpers
+    debug_assert_eq!(runtime_helpers, overlay_runtime_helpers);
+    overlay_runtime_helpers
   }
 
   fn include_order_wrap_symbols(

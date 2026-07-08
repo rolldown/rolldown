@@ -132,11 +132,6 @@ bitflags! {
         const ReExportDynamicExports = 1 << 2;
         /// Statement contains non-static dynamic import like `import(foo)` or `import('a' + 'b')`
         const NonStaticDynamicImport = 1 << 3;
-        /// Evaluating this statement is sensitive to its relative execution order.
-        ///
-        /// This is intentionally separate from `StmtEvalFlags`, which only controls tree-shaking
-        /// liveness.
-        const ExecutionOrderSensitive = 1 << 4;
     }
 }
 

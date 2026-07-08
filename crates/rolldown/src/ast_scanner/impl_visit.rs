@@ -92,11 +92,14 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       // Tree-shaking side effects / global reads / pure annotations come from the analyzer.
       // Top-level reads of imported bindings are detected by a separate uniform walk so the
       // signal is complete by construction (no per-expression-form gaps).
-      let is_execution_order_sensitive = stmt_eval_facts.is_order_sensitive()
-        || TopLevelImportReadDetector::detect(&self.result.symbol_ref_db.ast_scopes, stmt);
-      if is_execution_order_sensitive {
-        self.current_stmt_info.meta.insert(StmtInfoMeta::ExecutionOrderSensitive);
+      let has_top_level_import_read =
+        self.result.ecma_view_meta.contains(EcmaViewMeta::TopLevelImportRead)
+          || TopLevelImportReadDetector::detect(&self.result.symbol_ref_db.ast_scopes, stmt);
+      if stmt_eval_facts.is_order_sensitive() || has_top_level_import_read {
         self.result.ecma_view_meta.insert(EcmaViewMeta::ExecutionOrderSensitive);
+      }
+      if has_top_level_import_read {
+        self.result.ecma_view_meta.insert(EcmaViewMeta::TopLevelImportRead);
       }
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }

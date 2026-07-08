@@ -54,19 +54,20 @@ pub fn render_wrapped_entry_chunk(
       };
     }
 
-    if let Some(target) = ctx.order_wrap_state.esm_init_target(entry_id, entry_meta) {
-      let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
-        target.wrapper_ref,
-        ctx.chunk_idx,
-        &ctx.chunk.canonical_names,
-      );
-      if target.tla_tainted {
-        Some(concat_string!("await ", wrapper_ref_name, "();"))
-      } else {
-        Some(concat_string!(wrapper_ref_name, "();"))
+    match ctx.esm_init_target(entry_id) {
+      Some(target) => {
+        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
+          target.wrapper_ref,
+          ctx.chunk_idx,
+          &ctx.chunk.canonical_names,
+        );
+        if target.tla_tainted {
+          Some(concat_string!("await ", wrapper_ref_name, "();"))
+        } else {
+          Some(concat_string!(wrapper_ref_name, "();"))
+        }
       }
-    } else {
-      None
+      None => None,
     }
   } else {
     None

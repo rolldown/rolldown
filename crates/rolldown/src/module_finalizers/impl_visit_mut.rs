@@ -12,14 +12,14 @@ use oxc::{
   span::{SPAN, Span},
 };
 use oxc_str::CompactStr;
-use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind, WrapKind};
+use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
   EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions, ExpressionExt,
   JsxExt, JsxMemberExpressionObjectExt,
 };
 
-use crate::module_finalizers::{KeepNameId, TraverseState};
+use crate::module_finalizers::{KeepNameId, ModuleWrapperMode, TraverseState};
 
 use super::ScopeHoistingFinalizer;
 
@@ -106,15 +106,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       program.body.splice(last_import_stmt_idx..last_import_stmt_idx, hmr_header);
     }
 
-    // check if we need to add wrapper
-    let included_wrap_kind = self
-      .ctx
-      .linking_info
-      .wrapper_stmt_info
-      .is_some_and(|idx| self.ctx.linking_info.stmt_info_included.has_bit(idx))
-      .then_some(self.ctx.linking_info.wrap_kind());
-
-    self.needs_hosted_top_level_binding = matches!(included_wrap_kind, Some(WrapKind::Esm));
+    let wrapper_mode = self.ctx.wrapper_mode();
+    self.needs_hosted_top_level_binding = matches!(
+      wrapper_mode,
+      ModuleWrapperMode::InteropEsm(_) | ModuleWrapperMode::ExecutionOrder(_)
+    );
 
     // the order should be
     // 1. module namespace object declaration
@@ -151,9 +147,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.insert_keep_name_statements(&mut program.body);
     self.keep_name_statement_to_insert.clear();
 
-    match included_wrap_kind {
-      Some(WrapKind::Cjs) => {
-        let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
+    match wrapper_mode {
+      ModuleWrapperMode::InteropCjs(wrapper_ref) => {
+        let wrap_ref_name = self.canonical_name_for(wrapper_ref);
         let commonjs_ref = if self.ctx.options.profiler_names {
           self.canonical_ref_for_runtime("__commonJS")
         } else {
@@ -175,7 +171,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.ctx.linking_info.is_tla_or_contains_tla_dependency,
         ));
       }
-      Some(WrapKind::Esm) => {
+      ModuleWrapperMode::InteropEsm(target) | ModuleWrapperMode::ExecutionOrder(target) => {
         let is_concatenated_wrapped_module = !matches!(
           self.ctx.linking_info.concatenated_wrapped_module_kind,
           ConcatenateWrappedModuleKind::None
@@ -274,7 +270,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.canonical_ref_for_runtime("__esmMin")
         };
         let (esm_ref_expr, _) = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
-        let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
+        let wrap_ref_name = self.canonical_name_for(target.wrapper_ref);
 
         if matches!(
           self.ctx.linking_info.concatenated_wrapped_module_kind,
@@ -305,15 +301,14 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           } else {
             EsmWrapperBodyKind::Sync
           },
-          decl_kind: if self.ctx.linking_info.hoist_esm_wrapper {
+          decl_kind: if matches!(wrapper_mode, ModuleWrapperMode::ExecutionOrder(_)) {
             EsmWrapperDeclKind::HoistedFunction
           } else {
             EsmWrapperDeclKind::Var
           },
         }));
       }
-      Some(WrapKind::None) => {}
-      None => {
+      ModuleWrapperMode::None => {
         program.body.splice(0..0, declaration_of_module_namespace_object);
       }
     }

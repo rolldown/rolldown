@@ -63,7 +63,7 @@ impl GenerateStage<'_> {
       );
       self.ensure_order_wrap_stmt_inclusion_capacity(module_idx);
       runtime_helpers.insert(self.esm_runtime_helper());
-      self.add_order_wrap_entry_reference(module_idx);
+      self.add_order_wrap_entry_reference(module_idx, order_state);
     }
 
     runtime_helpers |= self.reregister_order_wrap_imports(plan, order_state);
@@ -76,17 +76,22 @@ impl GenerateStage<'_> {
     self.renumber_live_chunks(chunk_graph);
   }
 
-  fn add_order_wrap_entry_reference(&mut self, module_idx: ModuleIdx) {
+  fn add_order_wrap_entry_reference(
+    &mut self,
+    module_idx: ModuleIdx,
+    order_state: &OrderWrapState,
+  ) {
     if !self.link_output.entries.contains_key(&module_idx) {
       return;
     }
-    let Some(wrapper_ref) = self.link_output.metas[module_idx].wrapper_ref else {
+    let Some(target) = order_state.esm_init_target(module_idx, &self.link_output.metas[module_idx])
+    else {
       return;
     };
     let referenced =
       &mut self.link_output.metas[module_idx].referenced_symbols_by_entry_point_chunk;
-    if !referenced.iter().any(|(symbol_ref, _)| *symbol_ref == wrapper_ref) {
-      referenced.push((wrapper_ref, false));
+    if !referenced.iter().any(|(symbol_ref, _)| *symbol_ref == target.wrapper_ref) {
+      referenced.push((target.wrapper_ref, false));
     }
   }
 
@@ -126,12 +131,16 @@ impl GenerateStage<'_> {
             .iter()
             .copied()
             .filter(|rec_idx| {
-              self.link_output.module_table[importer_idx]
-                .as_normal()
-                .and_then(|importer| importer.import_records[*rec_idx].resolved_module)
-                .is_some_and(|importee_idx| {
-                  plan.contains(&importee_idx) && execution_dependencies.contains(&importee_idx)
+              self.link_output.module_table[importer_idx].as_normal().is_some_and(|importer| {
+                let rec = &importer.import_records[*rec_idx];
+                rec.resolved_module.is_some_and(|importee_idx| {
+                  plan.contains(&importee_idx)
+                    && (execution_dependencies.contains(&importee_idx)
+                      || rec.meta.intersects(
+                        ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly,
+                      ))
                 })
+              })
             })
             .collect_vec();
           (!rec_ids.is_empty()).then_some((stmt_info_idx, rec_ids))
@@ -181,6 +190,10 @@ impl GenerateStage<'_> {
     let importer_namespace_ref = importer.namespace_object_ref;
     let importee_has_dynamic_exports = self.link_output.metas[importee_idx].has_dynamic_exports;
     let importee_has_side_effects = importee.side_effects.has_side_effects();
+    let active_execution_dependency =
+      self.link_output.metas[importer_idx].execution_dependencies.contains(&importee_idx);
+    let legacy_statement_is_included =
+      self.link_output.metas[importer_idx].stmt_info_included.has_bit(stmt_info_idx);
     let overlay = OrderImportOverlay::from_import_record(
       rec.kind,
       rec.meta,
@@ -188,7 +201,7 @@ impl GenerateStage<'_> {
       importer_namespace_ref,
       importee_namespace_ref,
       importee_has_dynamic_exports,
-      true,
+      active_execution_dependency,
       self.options.code_splitting.is_disabled(),
     );
     let overlay_runtime_helpers =
@@ -200,6 +213,9 @@ impl GenerateStage<'_> {
         importer_namespace_ref,
         importee_namespace_ref,
       );
+    }
+    if !legacy_statement_is_included {
+      return overlay_runtime_helpers;
     }
 
     // TODO(strict-execution-order): Delete this compatibility write once finalization consumes

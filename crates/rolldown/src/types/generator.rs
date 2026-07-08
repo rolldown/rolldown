@@ -1,8 +1,8 @@
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, OutputExports,
-  PathsOutputOption, SymbolRef, UsedSymbolRefs,
+  Chunk, ChunkIdx, InstantiatedChunk, ModuleIdx, ModuleRenderOutput, NormalizedBundlerOptions,
+  OutputExports, PathsOutputOption, SymbolRef, UsedSymbolRefs,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
@@ -11,7 +11,10 @@ use rustc_hash::FxHashMap;
 
 use crate::{
   chunk_graph::ChunkGraph,
-  stages::{generate_stage::order_wrap_state::OrderWrapState, link_stage::LinkStageOutput},
+  stages::{
+    generate_stage::order_wrap_state::{EsmInitTarget, OrderWrapState},
+    link_stage::LinkStageOutput,
+  },
 };
 
 pub struct GenerateContext<'a> {
@@ -39,6 +42,10 @@ pub struct GenerateContext<'a> {
 }
 
 impl GenerateContext<'_> {
+  pub fn esm_init_target(&self, module_idx: ModuleIdx) -> Option<EsmInitTarget> {
+    self.order_wrap_state.esm_init_target(module_idx, &self.link_output.metas[module_idx])
+  }
+
   /// A `SymbolRef` might be identifier or a property access. This function will return correct string pattern for the symbol.
   pub fn finalized_string_pattern_for_symbol_ref(
     &self,

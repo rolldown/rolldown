@@ -28,6 +28,7 @@ use rolldown_ecmascript_utils::{
 mod finalizer_context;
 mod impl_visit_mut;
 mod wrapped_esm_init_targets;
+use finalizer_context::ModuleWrapperMode;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use oxc_str::{CompactStr, Ident};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
@@ -1615,6 +1616,43 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 ));
               }
             }
+          }
+          let overlay_records = self
+            .ctx
+            .order_wrap_state
+            .import_overlays_for_statement(self.ctx.idx, stmt_info_idx)
+            .map(|(key, overlay)| (key.record, overlay.reexports_dynamic_exports))
+            .collect::<Vec<_>>();
+          for (rec_idx, reexports_dynamic_exports) in overlay_records {
+            if let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx) {
+              program.body.push(init_stmt);
+            }
+            if !reexports_dynamic_exports {
+              continue;
+            }
+            let Some(importee_idx) = self.ctx.module.import_records[rec_idx].resolved_module else {
+              continue;
+            };
+            let Some(importee) = self.ctx.modules[importee_idx].as_normal() else {
+              continue;
+            };
+            let (importer_namespace_ref, _) = self.finalized_expr_for_symbol_ref(
+              self.ctx.module.namespace_object_ref,
+              false,
+              false,
+            );
+            let (importee_namespace_ref, _) =
+              self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
+            let call_expr = self.ast_factory.make_re_export_call(
+              self.finalized_expr_for_runtime_symbol("__reExport"),
+              importer_namespace_ref,
+              importee_namespace_ref,
+            );
+            program.body.push(ast::Statement::new_expression_statement(
+              top_stmt.span(),
+              Expression::CallExpression(call_expr.into_in(self.alloc)),
+              &self.ast_factory,
+            ));
           }
           return;
         }

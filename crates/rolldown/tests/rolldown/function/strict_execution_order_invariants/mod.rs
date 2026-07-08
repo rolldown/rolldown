@@ -92,6 +92,28 @@ async fn strict_execution_order_does_not_change_hazard_free_output() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn order_wrapper_entry_uses_explicit_prologue() {
+  let fixture_dir = format!("{FIXTURE_ROOT}/../experimental/strict_execution_order/issue_4782");
+  let output = bundle_fixture(
+    &fixture_dir,
+    vec![InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }],
+    true,
+  )
+  .await;
+
+  // `main.js` is a plain ESM entry, so its immutable interop wrap kind is `None`.
+  let entry_chunk = output.get("main.js").expect("main entry facade should be emitted");
+  assert!(
+    entry_chunk.contains("init_main();"),
+    "the order-wrapped entry facade must explicitly trigger its init target:\n{entry_chunk}",
+  );
+  assert!(
+    output.values().any(|code| code.contains("function init_main()")),
+    "the entry implementation should contain the hoisted execution-order wrapper",
+  );
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn dynamic_entry_does_not_static_import_side_effectful_runtime_host() {
   let output = bundle_fixture(
     &format!("{FIXTURE_ROOT}/runtime_inert"),

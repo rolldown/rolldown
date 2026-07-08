@@ -5,7 +5,7 @@ use rolldown_common::{
 use rustc_hash::FxHashSet;
 
 use crate::{
-  stages::generate_stage::order_wrap_state::OrderWrapState,
+  stages::generate_stage::order_wrap_state::{EsmInitOrigin, OrderWrapState},
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
@@ -129,9 +129,11 @@ fn add_wrapped_esm_init_target_for_symbol(
   let Some(module) = ctx.modules[canonical_ref.owner].as_normal() else {
     return;
   };
-  if module.namespace_object_ref != canonical_ref
-    || meta.is_included
-    || !ctx.importer_meta.hoist_esm_wrapper
+  let importer_is_order_wrapped = ctx
+    .order_wrap_state
+    .esm_init_target(ctx.importer.idx, ctx.importer_meta)
+    .is_some_and(|target| matches!(target.origin, EsmInitOrigin::ExecutionOrder));
+  if module.namespace_object_ref != canonical_ref || meta.is_included || !importer_is_order_wrapped
   {
     return;
   }

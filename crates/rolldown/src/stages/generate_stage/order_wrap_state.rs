@@ -17,6 +17,7 @@ pub(crate) struct OrderWrapState {
   synthetic_statements_by_chunk: FxHashMap<ChunkIdx, Vec<OrderSyntheticStmtIdx>>,
   import_overlays: FxHashMap<OrderImportKey, OrderImportOverlay>,
   import_overlays_by_importer: FxHashMap<ModuleIdx, Vec<OrderImportKey>>,
+  import_overlays_by_statement: FxHashMap<(ModuleIdx, StmtInfoIdx), Vec<OrderImportKey>>,
   namespace_requirements: FxHashMap<SymbolRef, FxIndexSet<ModuleIdx>>,
 }
 
@@ -29,10 +30,6 @@ impl OrderWrapState {
       && self.namespace_requirements.is_empty()
   }
 
-  pub(crate) fn synthetic_wrapper_declarations_are_empty(&self) -> bool {
-    self.synthetic_statements.is_empty()
-  }
-
   pub(crate) fn has_import_overlays(&self) -> bool {
     !self.import_overlays.is_empty()
   }
@@ -42,9 +39,16 @@ impl OrderWrapState {
     module_idx: ModuleIdx,
     meta: &crate::types::linking_metadata::LinkingMetadata,
   ) -> Option<EsmInitTarget> {
-    if meta.hoist_esm_wrapper
-      && let Some(module) = self.modules.get(&module_idx)
-    {
+    if matches!(meta.original_wrap_kind(), WrapKind::Esm) {
+      return meta.wrapper_ref.map(|wrapper_ref| EsmInitTarget {
+        wrapper_ref,
+        init_is_noop: meta.init_is_noop,
+        tla_tainted: meta.is_tla_or_contains_tla_dependency,
+        origin: EsmInitOrigin::Interop,
+      });
+    }
+
+    if let Some(module) = self.modules.get(&module_idx) {
       return Some(EsmInitTarget {
         wrapper_ref: module.wrapper_ref,
         init_is_noop: module.init_is_noop,
@@ -62,12 +66,7 @@ impl OrderWrapState {
       });
     }
 
-    self.modules.get(&module_idx).map(|module| EsmInitTarget {
-      wrapper_ref: module.wrapper_ref,
-      init_is_noop: module.init_is_noop,
-      tla_tainted: meta.is_tla_or_contains_tla_dependency,
-      origin: EsmInitOrigin::ExecutionOrder,
-    })
+    None
   }
 
   pub(crate) fn record_legacy_order_wrapper(
@@ -174,6 +173,7 @@ impl OrderWrapState {
     }
     assert!(self.import_overlays.insert(key, overlay).is_none(), "duplicate order import overlay");
     self.import_overlays_by_importer.entry(key.importer).or_default().push(key);
+    self.import_overlays_by_statement.entry((key.importer, key.statement)).or_default().push(key);
   }
 
   pub(crate) fn import_overlay(&self, key: OrderImportKey) -> Option<&OrderImportOverlay> {
@@ -187,6 +187,19 @@ impl OrderWrapState {
     self
       .import_overlays_by_importer
       .get(&importer_idx)
+      .into_iter()
+      .flatten()
+      .filter_map(|key| self.import_overlay(*key).map(|overlay| (*key, overlay)))
+  }
+
+  pub(crate) fn import_overlays_for_statement(
+    &self,
+    importer_idx: ModuleIdx,
+    statement: StmtInfoIdx,
+  ) -> impl Iterator<Item = (OrderImportKey, &OrderImportOverlay)> {
+    self
+      .import_overlays_by_statement
+      .get(&(importer_idx, statement))
       .into_iter()
       .flatten()
       .filter_map(|key| self.import_overlay(*key).map(|overlay| (*key, overlay)))
@@ -420,9 +433,8 @@ mod tests {
     let wrapper_ref = SymbolRef::from((module_idx, SymbolId::from_usize(0)));
     let stmt_idx = StmtInfoIdx::new(2);
     let mut meta = LinkingMetadata::default();
-    meta.sync_wrap_kind(WrapKind::Esm);
+    meta.override_wrap_kind(WrapKind::Esm);
     meta.wrapper_ref = Some(wrapper_ref);
-    meta.hoist_esm_wrapper = true;
     let mut state = OrderWrapState::default();
     state.modules.insert(module_idx, OrderWrappedModule::new(wrapper_ref));
     state.set_order_init_metadata(
@@ -704,6 +716,7 @@ mod tests {
     state.insert_import_overlay(key, overlay, importer_namespace_ref, importee_namespace_ref);
 
     assert!(state.import_overlay(key).is_some());
+    assert_eq!(state.import_overlays_for_statement(importer_idx, key.statement).count(), 1);
     assert!(state.requires_namespace(importer_namespace_ref, |_| true));
     assert!(state.requires_namespace(importee_namespace_ref, |_| true));
     assert!(!state.requires_namespace(importee_namespace_ref, |_| false));

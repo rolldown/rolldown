@@ -2,6 +2,7 @@ use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
   ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts,
   RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb,
+  WrapKind,
 };
 
 pub type FinalizerMutableFields = (
@@ -19,7 +20,10 @@ use crate::{
   SharedOptions,
   chunk_graph::ChunkGraph,
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
-  stages::{generate_stage::order_wrap_state::OrderWrapState, link_stage::SafelyMergeCjsNsInfo},
+  stages::{
+    generate_stage::order_wrap_state::{EsmInitOrigin, EsmInitTarget, OrderWrapState},
+    link_stage::SafelyMergeCjsNsInfo,
+  },
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
@@ -50,14 +54,53 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub has_enum_inlining: bool,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub(super) enum ModuleWrapperMode {
+  None,
+  InteropCjs(SymbolRef),
+  InteropEsm(EsmInitTarget),
+  ExecutionOrder(EsmInitTarget),
+}
+
 impl<'me> ScopeHoistingFinalizerContext<'me> {
+  pub(super) fn wrapper_mode(&self) -> ModuleWrapperMode {
+    let legacy_wrapper_is_included = self
+      .linking_info
+      .wrapper_stmt_info
+      .is_some_and(|stmt_idx| self.linking_info.stmt_info_included.has_bit(stmt_idx));
+
+    if matches!(self.linking_info.wrap_kind(), WrapKind::Cjs) && legacy_wrapper_is_included {
+      return ModuleWrapperMode::InteropCjs(
+        self.linking_info.wrapper_ref.expect("included CJS wrapper should have a symbol"),
+      );
+    }
+
+    let Some(target) = self.order_wrap_state.esm_init_target(self.idx, self.linking_info) else {
+      return ModuleWrapperMode::None;
+    };
+    let declaration_is_included = match target.origin {
+      EsmInitOrigin::Interop => legacy_wrapper_is_included,
+      EsmInitOrigin::ExecutionOrder => {
+        self.order_wrap_state.order_wrapper_chunk(self.idx) == Some(self.chunk_idx)
+          || legacy_wrapper_is_included
+      }
+    };
+    if !declaration_is_included {
+      return ModuleWrapperMode::None;
+    }
+
+    match target.origin {
+      EsmInitOrigin::Interop => ModuleWrapperMode::InteropEsm(target),
+      EsmInitOrigin::ExecutionOrder => ModuleWrapperMode::ExecutionOrder(target),
+    }
+  }
+
   #[tracing::instrument(level = "trace", skip_all)]
   pub fn finalize_normal_module(
     self,
     ast: &'me mut EcmaAst,
     ast_scope: &'me AstScopes,
   ) -> FinalizerMutableFields {
-    debug_assert!(self.order_wrap_state.synthetic_wrapper_declarations_are_empty());
     ast.program.with_mut(move |fields| {
       let (oxc_program, alloc) = (fields.program, fields.allocator);
 

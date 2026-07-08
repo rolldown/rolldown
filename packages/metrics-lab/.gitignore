@@ -1,0 +1,3 @@
+# Generated demo app (recreate with `node harness.mjs gen`) and measurement state.
+app/
+state/

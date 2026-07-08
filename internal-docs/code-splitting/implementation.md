@@ -1,5 +1,7 @@
 # Code Splitting
 
+The rationale and target architecture are documented in [design.md](./design.md). This file describes the current implementation; the target `OrderWrapState` migration is not complete while generate-stage lowering still overrides `WrapKind`.
+
 ## Summary
 
 Code splitting determines which modules go into which output chunks. Rolldown uses a BitSet-based reachability model — the same fundamental approach as esbuild and Rollup. Each entry point gets a bit position, modules are marked with the set of entries that can reach them, and modules with identical reachability patterns are grouped into the same chunk.

@@ -94,6 +94,19 @@ impl<'name> Renamer<'name> {
     db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
   }
 
+  /// Force a symbol to a specific name and reserve that name so no other symbol
+  /// in this chunk can take it. Used by `experimental.minChunkSize` to give a
+  /// duplicated leaf symbol the same globally-pinned name in every chunk it is
+  /// copied into. Must be called before the normal deconfliction pass so the
+  /// reservation wins over author symbols (including entry-module symbols, which
+  /// otherwise take their original name only when it is not already in the
+  /// reserved `used_canonical_names` set).
+  pub fn pin_name(&mut self, symbol_ref: SymbolRef, name: CompactStr) {
+    let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
+    self.reserve(name.clone());
+    self.canonical_names.insert(canonical_ref, name);
+  }
+
   /// Check if a candidate name is available for a top-level symbol without causing
   /// unintended variable capture in nested scopes.
   ///

@@ -1,0 +1,15 @@
+{
+  "_comment": "minChunkSize duplicates small side-effect-free leaf chunks into every importer. Lazy-init transfer must not prepend chunk-specific CJS init code into such duplicated leaves, because the rendered module is shared by all copied instances.",
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      }
+    ],
+    "experimental": {
+      "minChunkSize": 10000
+    }
+  },
+  "snapshotOutputStats": true
+}

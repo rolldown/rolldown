@@ -3,6 +3,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
+## carrier.js
+
+```js
+import { n as init_pure_carrier, t as import_pure_cjs } from "./pure-carrier.js";
+init_pure_carrier();
+var snapshot = import_pure_cjs.snapshot;
+export { snapshot };
+
+```
+
 ## cjs.js
 
 ```js
@@ -124,6 +134,7 @@ init_unused();
 ## unused2.js
 
 ```js
+import "./pure-carrier.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
 //#region unused.js
 function init_unused() {

@@ -71,7 +71,7 @@ impl GenerateStage<'_> {
                 module_to_chunk,
                 chunk_idx,
                 order_wrap: meta.hoist_esm_wrapper,
-                load_dependencies: &meta.load_dependencies,
+                execution_dependencies: &meta.execution_dependencies,
               },
             )
           })
@@ -95,7 +95,7 @@ struct EsmInitTargetContext<'a> {
   module_to_chunk: &'a IndexVec<ModuleIdx, Option<ChunkIdx>>,
   chunk_idx: ChunkIdx,
   order_wrap: bool,
-  load_dependencies: &'a rolldown_utils::indexmap::FxIndexSet<ModuleIdx>,
+  execution_dependencies: &'a rolldown_utils::indexmap::FxIndexSet<ModuleIdx>,
 }
 
 /// Whether calling the module's `init_*()` is a no-op because nothing lands inside its `__esm`
@@ -181,7 +181,7 @@ fn transitive_esm_init_targets(
       let is_reexport =
         rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly);
       let Some(root) = rec.resolved_module else { continue };
-      let was_live_order_wrap_import = ctx.order_wrap && ctx.load_dependencies.contains(&root);
+      let was_live_order_wrap_import = ctx.order_wrap && ctx.execution_dependencies.contains(&root);
       if !is_reexport && !was_live_order_wrap_import {
         continue;
       }

@@ -85,6 +85,12 @@ pub struct LinkingMetadata {
   /// its subtree) into its chunk group (#8920). Populated by `patch_module_dependencies`; with
   /// tree-shaking disabled it equals [`Self::dependencies`].
   pub load_dependencies: FxIndexSet<ModuleIdx>,
+  /// Dependencies whose module evaluation is required by this module's retained code.
+  ///
+  /// Unlike [`Self::load_dependencies`], this excludes side-effect-free entry targets kept only
+  /// for chunk placement. Generate-stage order lowering consumes this set as the frozen execution
+  /// obligation decided by linking and tree shaking.
+  pub execution_dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.
   pub resolved_member_expr_refs: MemberExprRefResolutionMap,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
@@ -123,8 +129,8 @@ pub struct LinkingMetadata {
   /// For each non-included top-level import/re-export statement of an included `WrapKind::Esm`
   /// module: the ordered wrapped-ESM modules whose `init_*()` calls must be emitted in its place to
   /// preserve execution order. Order wrappers may retain ordinary-import obligations only for
-  /// targets already present in [`Self::load_dependencies`]. Non-order wrappers keep the legacy
-  /// re-export-only collection.
+  /// targets already present in [`Self::execution_dependencies`]. Non-order wrappers keep the
+  /// legacy re-export-only collection.
   /// Computed by [`crate::stages::generate_stage`]'s `compute_wrapped_esm_init_metadata`; consumed
   /// by the module finalizer.
   pub transitive_esm_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,

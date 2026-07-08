@@ -464,7 +464,7 @@ impl GenerateStage<'_> {
     module.import_records.iter().any(|rec| {
       rec.kind == ImportKind::Import
         && rec.resolved_module.is_some_and(|importee_idx| {
-          current.contains(&importee_idx) && meta.load_dependencies.contains(&importee_idx)
+          current.contains(&importee_idx) && meta.execution_dependencies.contains(&importee_idx)
         })
     })
   }

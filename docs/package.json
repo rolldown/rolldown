@@ -25,6 +25,6 @@
     "vitepress-plugin-group-icons": "^1.7.5",
     "vitepress-plugin-llms": "^1.13.1",
     "vitepress-plugin-og": "^0.0.5",
-    "void": "^0.10.0"
+    "void": "^0.10.8"
   }
 }

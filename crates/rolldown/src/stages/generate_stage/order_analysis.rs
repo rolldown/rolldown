@@ -103,7 +103,15 @@ impl GenerateStage<'_> {
 
       let expected_order = self.expected_order_for_root(root);
       let actual_order = self.actual_order_for_root(root, root_chunk, chunk_graph, &import_edges);
-      let at_risk = self.at_risk_modules(&expected_order, &actual_order);
+      // Within a static chunk cycle the evaluation order depends on which chunk the runtime
+      // enters first, and lowering itself moves that entry point (facades, wrapper imports).
+      // The prediction also cannot see `var`-form interop wrapper definitions that a body in
+      // another cycle chunk calls. Bail out to wrapping everything eligible under this root.
+      let at_risk = if reaches_chunk_cycle(root_chunk, &import_edges) {
+        expected_order.iter().copied().filter(|idx| self.is_order_wrap_eligible(*idx)).collect()
+      } else {
+        self.at_risk_modules(&expected_order, &actual_order)
+      };
       all_at_risk.extend(at_risk.iter().copied());
       roots.push(RootOrderAnalysis { root, expected_order, actual_order, at_risk });
     }
@@ -112,16 +120,6 @@ impl GenerateStage<'_> {
     let analysis = OrderAnalysis { roots, plan };
     analysis.log_summary(self);
     Some(analysis)
-  }
-
-  #[cfg(test)]
-  #[expect(dead_code)]
-  fn analyze_execution_order_for_test(
-    &mut self,
-    chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
-  ) -> Option<OrderAnalysis> {
-    self.analyze_execution_order(chunk_graph, used_symbol_refs)
   }
 
   fn expected_order_for_root(&self, root: ModuleIdx) -> Vec<ModuleIdx> {
@@ -203,7 +201,7 @@ impl GenerateStage<'_> {
       &mut module_states,
       &mut order,
     );
-    if !self.link_output.metas[root].original_wrap_kind().is_none() {
+    if !self.link_output.metas[root].wrap_kind().is_none() {
       self.execute_actual_module(root, &mut module_states, &mut order);
     }
 
@@ -240,7 +238,7 @@ impl GenerateStage<'_> {
     }
 
     for &module_idx in &chunk_graph.chunk_table[chunk_idx].modules {
-      if self.link_output.metas[module_idx].original_wrap_kind().is_none() {
+      if self.link_output.metas[module_idx].wrap_kind().is_none() {
         self.execute_actual_module(module_idx, module_states, order);
       }
     }
@@ -271,7 +269,7 @@ impl GenerateStage<'_> {
         continue;
       }
       let Some(importee_idx) = rec.resolved_module else { continue };
-      if self.link_output.metas[importee_idx].original_wrap_kind().is_none() {
+      if self.link_output.metas[importee_idx].wrap_kind().is_none() {
         continue;
       }
       self.execute_actual_module(importee_idx, module_states, order);
@@ -598,10 +596,7 @@ impl GenerateStage<'_> {
             rec.kind == ImportKind::Import
               && rec.resolved_module.is_some_and(|importee_idx| {
                 self.link_output.module_table[importee_idx].as_normal().is_some_and(|_| {
-                  !matches!(
-                    self.link_output.metas[importee_idx].original_wrap_kind(),
-                    WrapKind::None
-                  )
+                  !matches!(self.link_output.metas[importee_idx].wrap_kind(), WrapKind::None)
                 })
               })
           })
@@ -631,8 +626,34 @@ impl GenerateStage<'_> {
       return false;
     };
     matches!(module.exports_kind, ExportsKind::Esm | ExportsKind::None)
-      && matches!(self.link_output.metas[module_idx].original_wrap_kind(), WrapKind::None)
+      && matches!(self.link_output.metas[module_idx].wrap_kind(), WrapKind::None)
   }
+}
+
+/// Whether any static chunk cycle is reachable from `root_chunk` over the predicted edges.
+fn reaches_chunk_cycle(
+  root_chunk: ChunkIdx,
+  import_edges: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
+) -> bool {
+  let mut states = index_vec![VisitState::Unvisited; import_edges.len()];
+  let mut stack = vec![(root_chunk, import_edges[root_chunk].iter())];
+  states[root_chunk] = VisitState::Visiting;
+  while let Some((chunk_idx, edges)) = stack.last_mut() {
+    let Some(&importee_chunk) = edges.next() else {
+      states[*chunk_idx] = VisitState::Done;
+      stack.pop();
+      continue;
+    };
+    match states[importee_chunk] {
+      VisitState::Visiting => return true,
+      VisitState::Done => {}
+      VisitState::Unvisited => {
+        states[importee_chunk] = VisitState::Visiting;
+        stack.push((importee_chunk, import_edges[importee_chunk].iter()));
+      }
+    }
+  }
+  false
 }
 
 fn premature_sensitive_modules(

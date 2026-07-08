@@ -1,3 +1,3 @@
-import { snapshot } from 'pure-carrier';
+import { read } from './reader.js';
 
-console.log(snapshot);
+console.log(read());

@@ -32,7 +32,7 @@ init_main();
 ## main2.js
 
 ```js
-import { n as init_pure_carrier, t as import_pure_cjs } from "./pure-carrier.js";
+import { n as read, t as init_reader } from "./reader.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
 //#region e.js
 globalThis.__strict_order_value = "ready";
@@ -41,8 +41,8 @@ console.log("E");
 //#region main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
-		init_pure_carrier();
-		console.log(`MAIN:${import_pure_cjs.snapshot}`);
+		init_reader();
+		console.log(`MAIN:${read()}`);
 	})))();
 }
 //#endregion
@@ -80,6 +80,25 @@ export { require_pure_cjs as t };
 
 ```
 
+## reader.js
+
+```js
+import { n as init_pure_carrier, t as import_pure_cjs } from "./pure-carrier.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region reader.js
+function read() {
+	return import_pure_cjs.snapshot;
+}
+function init_reader() {
+	return (init_reader = __esmMin((() => {
+		init_pure_carrier();
+	})))();
+}
+//#endregion
+export { read as n, init_reader as t };
+
+```
+
 ## rolldown-runtime.js
 
 ```js
@@ -109,13 +128,13 @@ init_second();
 ## second2.js
 
 ```js
-import { n as init_pure_carrier, t as import_pure_cjs } from "./pure-carrier.js";
+import { n as read, t as init_reader } from "./reader.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
 //#region second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
-		init_pure_carrier();
-		console.log(import_pure_cjs.snapshot);
+		init_reader();
+		console.log(read());
 	})))();
 }
 //#endregion
@@ -134,7 +153,6 @@ init_unused();
 ## unused2.js
 
 ```js
-import "./pure-carrier.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
 //#region unused.js
 function init_unused() {

@@ -461,12 +461,39 @@ impl GenerateStage<'_> {
       return false;
     };
     let meta = &self.link_output.metas[module_idx];
+    if !meta.execution_dependencies.iter().any(|dependency| current.contains(dependency)) {
+      return false;
+    }
     module.import_records.iter().any(|rec| {
       rec.kind == ImportKind::Import
-        && rec.resolved_module.is_some_and(|importee_idx| {
-          current.contains(&importee_idx) && meta.execution_dependencies.contains(&importee_idx)
-        })
+        && rec
+          .resolved_module
+          .is_some_and(|importee_idx| self.static_import_reaches_member(importee_idx, current))
     })
+  }
+
+  fn static_import_reaches_member(&self, root: ModuleIdx, current: &FxHashSet<ModuleIdx>) -> bool {
+    let mut visited = FxHashSet::default();
+    let mut stack = vec![root];
+    while let Some(module_idx) = stack.pop() {
+      if !visited.insert(module_idx) {
+        continue;
+      }
+      if current.contains(&module_idx) {
+        return true;
+      }
+      let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+        continue;
+      };
+      stack.extend(
+        module
+          .import_records
+          .iter()
+          .filter(|rec| rec.kind == ImportKind::Import)
+          .filter_map(|rec| rec.resolved_module),
+      );
+    }
+    false
   }
 
   fn top_level_reads_wrapped_export(

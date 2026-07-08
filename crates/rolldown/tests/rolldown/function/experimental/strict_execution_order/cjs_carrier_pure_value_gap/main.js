@@ -1,4 +1,4 @@
 import './e.js';
-import { snapshot } from 'pure-carrier';
+import { read } from './reader.js';
 
-console.log(`MAIN:${snapshot}`);
+console.log(`MAIN:${read()}`);

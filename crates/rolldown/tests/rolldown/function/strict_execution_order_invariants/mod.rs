@@ -12,7 +12,9 @@ const FIXTURE_ROOT: &str =
   concat!(env!("CARGO_MANIFEST_DIR"), "/tests/rolldown/function/strict_execution_order_invariants");
 
 #[derive(Debug)]
-struct EmitTarget;
+struct EmitTarget {
+  names: &'static [&'static str],
+}
 
 impl Plugin for EmitTarget {
   fn name(&self) -> Cow<'static, str> {
@@ -24,12 +26,14 @@ impl Plugin for EmitTarget {
     ctx: &PluginContext,
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> Result<(), anyhow::Error> {
-    ctx.emit_chunk(EmittedChunk {
-      name: Some("target".into()),
-      id: "./target.js".to_string(),
-      preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
-      ..Default::default()
-    })?;
+    for &name in self.names {
+      ctx.emit_chunk(EmittedChunk {
+        name: Some(name.into()),
+        id: "./target.js".to_string(),
+        preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
+        ..Default::default()
+      })?;
+    }
     Ok(())
   }
 
@@ -91,7 +95,10 @@ async fn bundle(strict_execution_order: bool) -> BTreeMap<String, String> {
   .await
 }
 
-async fn bundle_emitted_target(fixture_name: &str) -> BTreeMap<String, String> {
+async fn bundle_emitted_target(
+  fixture_name: &str,
+  names: &'static [&'static str],
+) -> BTreeMap<String, String> {
   let fixture_dir = format!("{FIXTURE_ROOT}/{fixture_name}");
   let mut bundler = Bundler::with_plugins(
     BundlerOptions {
@@ -116,7 +123,7 @@ async fn bundle_emitted_target(fixture_name: &str) -> BTreeMap<String, String> {
       })),
       ..Default::default()
     },
-    vec![Arc::new(EmitTarget)],
+    vec![Arc::new(EmitTarget { names })],
   )
   .expect("failed to create bundler");
 
@@ -315,7 +322,7 @@ async fn restored_dynamic_facade_keeps_dependency_chunk_inert() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn emitted_dynamic_entry_keeps_order_wrapper_facade() {
-  let output = bundle_emitted_target("emitted_dynamic_entry").await;
+  let output = bundle_emitted_target("emitted_dynamic_entry", &["target"]).await;
   let host = output.get("host.js").expect("host entry should be emitted");
   assert!(
     host.contains("import(\"./chunks/target.js\")"),
@@ -330,12 +337,25 @@ async fn emitted_dynamic_entry_keeps_order_wrapper_facade() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn emitted_entry_keeps_order_wrapper_facade() {
-  let output = bundle_emitted_target("emitted_entry").await;
+  let output = bundle_emitted_target("emitted_entry", &["target"]).await;
   let target = output.get("chunks/target.js").expect("target facade should be restored");
   assert!(
     target.contains("init_target();"),
     "target facade should trigger initialization:\n{target}"
   );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn duplicate_emitted_entries_keep_order_wrapper_facades() {
+  let output = bundle_emitted_target("emitted_entry", &["target-a", "target-b"]).await;
+  for name in ["target-a", "target-b"] {
+    let target =
+      output.get(&format!("chunks/{name}.js")).expect("each emitted facade should be restored");
+    assert!(
+      target.contains("init_target();"),
+      "{name} facade should trigger initialization:\n{target}"
+    );
+  }
 }
 
 #[tokio::test(flavor = "multi_thread")]

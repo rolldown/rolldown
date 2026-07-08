@@ -255,8 +255,10 @@ impl GenerateStage<'_> {
       .collect_vec();
 
     for entry_module_idx in entries_to_restore {
-      let Some(facade_chunk_idx) =
-        chunk_graph.chunk_table.iter_enumerated().find_map(|(chunk_idx, chunk)| match chunk.kind {
+      let facade_chunk_indices = chunk_graph
+        .chunk_table
+        .iter_enumerated()
+        .filter_map(|(chunk_idx, chunk)| match chunk.kind {
           ChunkKind::EntryPoint { meta, module, .. }
             if module == entry_module_idx
               && chunk.modules.is_empty()
@@ -273,7 +275,8 @@ impl GenerateStage<'_> {
           }
           ChunkKind::EntryPoint { .. } | ChunkKind::Common => None,
         })
-      else {
+        .collect_vec();
+      let Some(&facade_chunk_idx) = facade_chunk_indices.first() else {
         continue;
       };
 
@@ -293,7 +296,9 @@ impl GenerateStage<'_> {
         }
       }
 
-      chunk_graph.post_chunk_optimization_operations.remove(&facade_chunk_idx);
+      for facade_chunk_idx in facade_chunk_indices {
+        chunk_graph.post_chunk_optimization_operations.remove(&facade_chunk_idx);
+      }
     }
   }
 

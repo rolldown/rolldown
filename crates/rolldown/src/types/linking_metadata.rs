@@ -39,10 +39,8 @@ pub struct LinkingMetadata {
   /// `wrapper_ref` is the `require_cjs` identifier in above example.
   pub wrapper_ref: Option<SymbolRef>,
   pub wrapper_stmt_info: Option<StmtInfoIdx>,
-  /// The wrap kind decided from module semantics before any generate-stage order wrapping.
-  /// The `wrap_kind` used for linking and code generation.
-  /// Intent to make those two fields private, so that we could ensure they are mutated in a more
-  /// safe way.
+  /// The interop wrap kind decided from module semantics during linking. Generate-stage order
+  /// wrapping never changes it; the only writer is `set_wrap_kind`.
   wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<CompactStr, ResolvedExport>,

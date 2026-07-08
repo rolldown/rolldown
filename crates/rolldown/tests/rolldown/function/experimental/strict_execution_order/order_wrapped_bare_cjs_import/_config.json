@@ -6,12 +6,12 @@
       "groups": [
         {
           "name": "group-0",
-          "test": "(main\\.js|y\\.js)$",
+          "test": "(main\\.js|c3\\.cjs)$",
           "includeDependenciesRecursively": false
         },
         {
-          "name": "group-l",
-          "test": "(leafhost\\.js|m6\\.js)$",
+          "name": "group-1",
+          "test": "(m1\\.js|m2\\.js|c4\\.cjs)$",
           "includeDependenciesRecursively": false
         }
       ]

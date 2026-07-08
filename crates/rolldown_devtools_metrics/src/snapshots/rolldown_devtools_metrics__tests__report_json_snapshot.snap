@@ -1,0 +1,247 @@
+---
+source: crates/rolldown_devtools_metrics/src/tests.rs
+expression: "serde_json::to_string_pretty(&report).unwrap()"
+---
+{
+  "schemaVersion": 1,
+  "session": {
+    "cwd": "/app",
+    "platform": "node",
+    "format": "esm",
+    "inputCount": 2,
+    "pluginCount": 1,
+    "buildIndex": 1
+  },
+  "metrics": {
+    "build.generate_ms": 40.0,
+    "build.scan_ms": 60.0,
+    "build.total_ms": 100.0,
+    "chunks.duplicated_module_count": 0,
+    "modules.count": 6,
+    "modules.external_count": 1,
+    "modules.shared_across_entries_count": 3,
+    "output.asset_count": 5,
+    "output.chunk_count": 4,
+    "output.css_bytes": 400,
+    "output.entry_count": 3,
+    "output.js_bytes": 5300,
+    "output.max_initial_load_bytes": 4000,
+    "output.other_bytes": 0,
+    "output.total_bytes": 5700,
+    "packages.count": 3,
+    "packages.direct_count": 1,
+    "packages.duplicate_version_count": 1,
+    "packages.transitive_count": 2,
+    "plugins.hook_call_count": 5,
+    "plugins.hook_noop_call_count": 3,
+    "plugins.hook_time_ms": 11.0
+  },
+  "entries": [
+    {
+      "entry": "src/a.ts",
+      "chunk": "dist/a.js",
+      "chunkBytes": 1000,
+      "initialLoadBytes": 4000,
+      "staticImports": [
+        "dist/shared.js"
+      ],
+      "dynamicImports": []
+    },
+    {
+      "entry": "src/b.ts",
+      "chunk": "dist/b.js",
+      "chunkBytes": 800,
+      "initialLoadBytes": 3800,
+      "staticImports": [
+        "dist/shared.js"
+      ],
+      "dynamicImports": [
+        "dist/lazy.js"
+      ]
+    },
+    {
+      "entry": "src/lazy.ts",
+      "chunk": "dist/lazy.js",
+      "chunkBytes": 500,
+      "initialLoadBytes": 500,
+      "staticImports": [],
+      "dynamicImports": []
+    }
+  ],
+  "chunks": {
+    "count": 4,
+    "reasons": {
+      "common": 1,
+      "dynamic-entry": 1,
+      "entry": 2
+    },
+    "largest": [
+      {
+        "file": "dist/shared.js",
+        "bytes": 3000,
+        "isEntry": false,
+        "reason": "common",
+        "moduleCount": 2
+      },
+      {
+        "file": "dist/a.js",
+        "bytes": 1000,
+        "isEntry": true,
+        "reason": "entry",
+        "moduleCount": 1
+      },
+      {
+        "file": "dist/b.js",
+        "bytes": 800,
+        "isEntry": true,
+        "reason": "entry",
+        "moduleCount": 1
+      },
+      {
+        "file": "dist/lazy.js",
+        "bytes": 500,
+        "isEntry": true,
+        "reason": "dynamic-entry",
+        "moduleCount": 1
+      }
+    ],
+    "duplicatedModuleCount": 0,
+    "duplicatedModules": []
+  },
+  "assets": [
+    {
+      "file": "dist/shared.js",
+      "bytes": 3000
+    },
+    {
+      "file": "dist/a.js",
+      "bytes": 1000
+    },
+    {
+      "file": "dist/b.js",
+      "bytes": 800
+    },
+    {
+      "file": "dist/lazy.js",
+      "bytes": 500
+    },
+    {
+      "file": "dist/style.css",
+      "bytes": 400
+    }
+  ],
+  "modules": {
+    "count": 6,
+    "externalCount": 1,
+    "importKinds": {
+      "dynamic-import": 1,
+      "import-statement": 4
+    },
+    "mostImported": [
+      {
+        "module": "src/shared.ts",
+        "importers": 2
+      }
+    ],
+    "entryPointCount": 3,
+    "sharedAcrossEntriesCount": 3,
+    "sharedAcrossEntries": [
+      {
+        "module": "ext",
+        "entries": 2
+      },
+      {
+        "module": "src/lazy.ts",
+        "entries": 2
+      },
+      {
+        "module": "src/shared.ts",
+        "entries": 2
+      }
+    ]
+  },
+  "packages": {
+    "count": 3,
+    "directCount": 1,
+    "transitiveCount": 2,
+    "largest": [
+      {
+        "name": "foo",
+        "version": "1.0.0",
+        "bytes": 1200,
+        "moduleCount": 1,
+        "dependencyType": "direct",
+        "used": true
+      },
+      {
+        "name": "foo",
+        "version": "2.0.0",
+        "bytes": 300,
+        "moduleCount": 0,
+        "dependencyType": "transitive",
+        "used": true
+      },
+      {
+        "name": "bar",
+        "version": "1.0.0",
+        "bytes": 50,
+        "moduleCount": 0,
+        "dependencyType": "transitive",
+        "used": false
+      }
+    ],
+    "duplicateVersionCount": 1,
+    "duplicateVersions": [
+      {
+        "name": "foo",
+        "versions": [
+          {
+            "version": "1.0.0",
+            "bytes": 1200
+          },
+          {
+            "version": "2.0.0",
+            "bytes": 300
+          }
+        ]
+      }
+    ]
+  },
+  "plugins": [
+    {
+      "name": "test-plugin",
+      "calls": 5,
+      "ms": 11.0,
+      "noopCalls": 3,
+      "hooks": {
+        "load": {
+          "calls": 1,
+          "ms": 1.0,
+          "noopCalls": 1
+        },
+        "resolveId": {
+          "calls": 2,
+          "ms": 3.0,
+          "noopCalls": 1
+        },
+        "transform": {
+          "calls": 2,
+          "ms": 7.0,
+          "noopCalls": 1
+        }
+      }
+    }
+  ],
+  "transformHotspots": [
+    {
+      "module": "src/a.ts",
+      "calls": 1,
+      "ms": 5.0
+    },
+    {
+      "module": "src/b.ts",
+      "calls": 1,
+      "ms": 2.0
+    }
+  ]
+}

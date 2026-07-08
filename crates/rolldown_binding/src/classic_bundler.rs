@@ -176,8 +176,8 @@ impl ClassicBundler {
       // Update the `session` with the actual session span
       self.session = rolldown_devtools::Session::new(Arc::clone(&self.session_id), session_span);
 
-      // Metrics mode: aggregate the event stream in-memory and emit a markdown report instead
-      // of the JSON-lines log. Registered before the build emits any events.
+      // Metrics mode: aggregate the event stream in-memory and emit an agent-readable report
+      // instead of the JSON-lines log. Registered before the build emits any events.
       if let Some(devtools) = &options.devtools {
         if devtools.mode.as_deref() == Some("metrics") {
           let config = rolldown_devtools::MetricsConfig::new(

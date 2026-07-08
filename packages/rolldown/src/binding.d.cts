@@ -2032,7 +2032,8 @@ export interface BindingDevtoolsOptions {
   sessionId?: string
   /**
    * `"full"` (default): write JSON-lines devtools logs. `"metrics"`: aggregate the same
-   * event stream in-memory and emit an agent-readable markdown report instead.
+   * event stream in-memory and emit an agent-readable report (`metrics.json` + markdown)
+   * instead.
    */
   mode?: 'full' | 'metrics'
   /** Metrics mode: output directory, relative to cwd (default: "node_modules/.rolldown/metrics"). */

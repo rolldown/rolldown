@@ -768,8 +768,10 @@ export interface InputOptions {
    * `@rolldown/debug` after `await bundle.close()` resolves.
    *
    * In `'metrics'` mode, Rolldown aggregates the same internal event stream in-memory and
-   * writes a small, agent-readable markdown report (progressive `entry.md` + on-demand
-   * detail files) under `metricsDir` instead of the multi-GB `logs.json`.
+   * writes a small, agent-readable report under `metricsDir` instead of the multi-GB
+   * `logs.json`: a canonical `metrics.json` (schema-versioned, with a build-over-build
+   * `delta`), progressive markdown views (`entry.md` + on-demand detail files), one
+   * `history.jsonl` line per build, and an `AGENTS.md` describing the directory contract.
    *
    * @experimental
    */
@@ -778,7 +780,7 @@ export interface InputOptions {
     /**
      * `'full'` (default): write JSON-lines devtools logs.
      * `'metrics'`: aggregate the same event stream in-memory and emit an agent-readable
-     * markdown report instead.
+     * report (`metrics.json` + markdown views + `history.jsonl`) instead.
      */
     mode?: 'full' | 'metrics';
     /** Metrics mode: output directory, relative to cwd (default `node_modules/.rolldown/metrics`). */

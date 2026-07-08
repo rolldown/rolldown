@@ -681,7 +681,7 @@ const InputOptionsSchema = v.strictObject({
         mode: v.pipe(
           v.optional(v.union([v.literal('full'), v.literal('metrics')])),
           v.description(
-            "'full' (default): write JSON-lines devtools logs. 'metrics': aggregate the same event stream in-memory and emit an agent-readable markdown report instead.",
+            "'full' (default): write JSON-lines devtools logs. 'metrics': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.",
           ),
         ),
         metricsDir: v.pipe(

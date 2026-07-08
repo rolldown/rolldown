@@ -1,14 +1,28 @@
 //! In-memory aggregation of Rolldown's devtools event stream into a small, agent-readable
 //! metrics report.
 //!
-//! This is the "option C" sink for build metrics: instead of writing the multi-GB JSON-lines
+//! This is the metrics sink for build data: instead of (or alongside) the multi-GB JSON-lines
 //! devtools log, the writer thread folds the exact same `trace_action!` events (module graph,
-//! chunk graph, package graph, assets, per-hook calls) into bounded top-N aggregates here, then
-//! renders a progressive markdown directory (`entry.md` + on-demand detail files) at session
-//! close. It never retains the large `content` payloads carried by load/transform/renderChunk
-//! events — only counts, sizes, graph structure, and (approximate) timing.
+//! chunk graph, package graph, assets, per-hook calls) into bounded top-N aggregates, then
+//! renders at session close:
+//!
+//! - `metrics.json` — the canonical, schema-versioned, machine-readable report. Every other
+//!   file is a view of this model, so the JSON and markdown can never drift.
+//! - `entry.md` + on-demand detail markdown files — progressive disclosure for agents/humans.
+//! - `delta.md` / `metrics.json#delta` — build-over-build comparison via `.state.json`.
+//! - `history.jsonl` — one flat summary line per build, appended across builds/sessions.
+//! - `AGENTS.md` — self-describing contract for agents that discover the directory.
+//!
+//! It never retains the large `content` payloads carried by load/transform/renderChunk events —
+//! only counts, sizes, graph structure, and timing. Durations are exact: they are computed from
+//! `Instant`s captured at event-emit time on the build thread (not at fold time on the writer
+//! thread), so writer-queue latency does not skew them.
 
 mod render;
+mod report;
+
+#[cfg(test)]
+mod tests;
 
 use std::time::Instant;
 
@@ -18,7 +32,7 @@ use serde::Deserialize;
 /// Configuration for a metrics session, supplied when the session is opened.
 #[derive(Debug, Clone)]
 pub struct MetricsConfig {
-  /// Output directory for the markdown report, relative to cwd (or absolute).
+  /// Output directory for the report, relative to cwd (or absolute).
   pub dir: String,
   /// Upper bound for every "top-N" list so output stays small regardless of app size.
   pub top_n: usize,
@@ -74,13 +88,22 @@ pub(crate) struct AssetAgg {
 pub(crate) struct HookStat {
   pub(crate) count: usize,
   pub(crate) micros: u64,
+  /// Calls that did no work: `resolveId`/`load`/`renderChunk` returned nothing, or `transform`
+  /// returned nothing / the code unchanged. A high no-op share on a hot hook is the primary
+  /// "this plugin should declare a hook filter" signal (span-level equivalent: PR #10154's
+  /// `result_kind`).
+  pub(crate) noop_calls: usize,
 }
 
 struct PendingCall {
   plugin: String,
   hook: &'static str,
+  /// Emit-time instant of the `*CallStart` event.
   start: Instant,
   module_id: Option<String>,
+  /// `(len, fxhash)` of the transform Start `content`, so the End can detect "returned the
+  /// code unchanged" without retaining the source text.
+  content_fingerprint: Option<(usize, u64)>,
 }
 
 /// Accumulates one session's devtools events into bounded aggregates.
@@ -94,9 +117,15 @@ pub struct MetricsAggregator {
   format: Option<String>,
   input_count: usize,
   plugin_count: usize,
+  /// 1-based index of the current build within the session (watch mode reuses a session).
+  build_index: usize,
 
-  // build timing (writer-side, approximate)
+  // build timing (from emit-time instants)
   build_start: Option<Instant>,
+  /// First `BuildEnd` after `build_start`: the scan stage emits its own `BuildEnd` before the
+  /// generate stage runs, so this marks the scan/generate boundary.
+  scan_end: Option<Instant>,
+  /// Last `BuildEnd`: the bundle emits the final one after assets are rendered.
   build_end: Option<Instant>,
 
   // modules
@@ -104,13 +133,13 @@ pub struct MetricsAggregator {
   external_count: usize,
   import_kind_hist: FxHashMap<String, usize>,
   most_imported: Vec<(String, usize)>,
-  /// module id -> imported module ids (static + dynamic). For reachable-from-N-entries (#3).
+  /// module id -> imported module ids (static + dynamic). For reachable-from-N-entries.
   module_imports: FxHashMap<String, Vec<String>>,
 
-  // chunks (reason histogram is computed at render time over non-empty chunks)
+  // chunks (reason histogram is computed at report time over non-empty chunks)
   chunks: FxHashMap<u32, ChunkAgg>,
   /// module id -> chunk ids it is bundled into. Only populated when there is >1 chunk (else no
-  /// duplication is possible). For cross-chunk duplication (#2).
+  /// duplication is possible). For cross-chunk duplication.
   module_chunks: FxHashMap<String, Vec<u32>>,
 
   // packages
@@ -118,7 +147,7 @@ pub struct MetricsAggregator {
   package_transitive: usize,
   packages: Vec<PackageAgg>,
   /// package name -> [(version, rendered size)] across ALL packages (pre top-N). For duplicate
-  /// version detection (#6).
+  /// version detection.
   package_versions: FxHashMap<String, Vec<(String, u64)>>,
 
   // assets / sizes
@@ -144,39 +173,57 @@ impl MetricsAggregator {
   }
 
   /// Fold one resolved devtools action (a JSON object that already has `session_id`/`build_id`
-  /// injected) into the aggregates. Unknown actions are ignored.
-  pub fn fold(&mut self, value: &serde_json::Value) {
+  /// injected) into the aggregates. `at` is the emit-time instant of the event. Unknown actions
+  /// are ignored.
+  pub fn fold(&mut self, value: &serde_json::Value, at: Instant) {
     let Some(action) = value.get("action").and_then(serde_json::Value::as_str) else {
       return;
     };
     match action {
       "SessionMeta" => self.fold_session_meta(value),
-      "BuildStart" => self.on_build_start(),
-      "BuildEnd" => self.build_end = Some(Instant::now()),
+      "BuildStart" => self.on_build_start(at),
+      "BuildEnd" => {
+        if self.scan_end.is_none() {
+          self.scan_end = Some(at);
+        }
+        self.build_end = Some(at);
+      }
       "ModuleGraphReady" => self.fold_module_graph(value),
       "ChunkGraphReady" => self.fold_chunk_graph(value),
       "PackageGraphReady" => self.fold_package_graph(value),
       "AssetsReady" => self.fold_assets(value),
-      "HookResolveIdCallStart" => self.hook_start(value, "resolveId"),
-      "HookLoadCallStart" => self.hook_start(value, "load"),
-      "HookTransformCallStart" => self.hook_start(value, "transform"),
-      "HookRenderChunkStart" => self.hook_start(value, "renderChunk"),
-      "HookResolveIdCallEnd" | "HookLoadCallEnd" | "HookTransformCallEnd"
-      | "HookRenderChunkEnd" => self.hook_end(value),
+      "HookResolveIdCallStart" => self.hook_start(value, "resolveId", at),
+      "HookLoadCallStart" => self.hook_start(value, "load", at),
+      "HookTransformCallStart" => self.hook_start(value, "transform", at),
+      "HookRenderChunkStart" => self.hook_start(value, "renderChunk", at),
+      "HookResolveIdCallEnd"
+      | "HookLoadCallEnd"
+      | "HookTransformCallEnd"
+      | "HookRenderChunkEnd" => self.hook_end(value, at),
       _ => {}
     }
   }
 
-  fn on_build_start(&mut self) {
+  fn on_build_start(&mut self, at: Instant) {
+    // A completed build is about to be discarded (rebuild in the same session): persist its
+    // summary line first so history.jsonl records every build, not just the last one.
+    if self.build_end.is_some() {
+      self.append_history();
+    }
+    // The bundle emits `BuildStart` twice back-to-back (bundle entry + scan stage); only count
+    // a new build when the previous one completed (or this is the first).
+    let is_new_build = self.build_end.is_some() || self.build_start.is_none();
+
     // Reset per-build aggregates so the report reflects the most recent build, while keeping
-    // session meta. Multiple builds in one session (e.g. `bundle.write()` twice) overwrite.
+    // session meta.
     let config = std::mem::take(&mut self.config);
-    let (cwd, platform, format, input_count, plugin_count) = (
+    let (cwd, platform, format, input_count, plugin_count, build_index) = (
       self.cwd.take(),
       self.platform.take(),
       self.format.take(),
       self.input_count,
       self.plugin_count,
+      self.build_index,
     );
     *self = Self::new(config);
     self.cwd = cwd;
@@ -184,7 +231,8 @@ impl MetricsAggregator {
     self.format = format;
     self.input_count = input_count;
     self.plugin_count = plugin_count;
-    self.build_start = Some(Instant::now());
+    self.build_index = if is_new_build { build_index + 1 } else { build_index };
+    self.build_start = Some(at);
   }
 
   fn fold_session_meta(&mut self, value: &serde_json::Value) {
@@ -223,7 +271,7 @@ impl MetricsAggregator {
       if importer_count >= 2 {
         imported.push((module.id.clone(), importer_count));
       }
-      // Import adjacency for reachable-from-N-entries (#3).
+      // Import adjacency for reachable-from-N-entries.
       if !deps.is_empty() {
         self.module_imports.insert(module.id, deps);
       }
@@ -288,7 +336,7 @@ impl MetricsAggregator {
       }
       let name = package.name.unwrap_or_else(|| "<unknown>".to_string());
       let size = u64::from(package.size);
-      // Track every (version, size) per name to flag duplicate versions later (#6).
+      // Track every (version, size) per name to flag duplicate versions later.
       self
         .package_versions
         .entry(name.clone())
@@ -344,40 +392,77 @@ impl MetricsAggregator {
     self.assets = list;
   }
 
-  fn hook_start(&mut self, value: &serde_json::Value, hook: &'static str) {
-    let (Some(call_id), Some(plugin)) = (str_field(value, "call_id"), str_field(value, "plugin_name"))
+  fn hook_start(&mut self, value: &serde_json::Value, hook: &'static str, at: Instant) {
+    let (Some(call_id), Some(plugin)) =
+      (str_field(value, "call_id"), str_field(value, "plugin_name"))
     else {
       return;
     };
+    // Only transform needs the input fingerprint (its End always carries `Some(content)`, so
+    // "no-op" means "output == input" rather than "returned nothing").
+    let content_fingerprint = if hook == "transform" { content_fingerprint(value) } else { None };
     self.pending.insert(
       call_id,
-      PendingCall { plugin, hook, start: Instant::now(), module_id: str_field(value, "module_id") },
+      PendingCall {
+        plugin,
+        hook,
+        start: at,
+        module_id: str_field(value, "module_id"),
+        content_fingerprint,
+      },
     );
   }
 
-  fn hook_end(&mut self, value: &serde_json::Value) {
+  fn hook_end(&mut self, value: &serde_json::Value, at: Instant) {
     let Some(call_id) = str_field(value, "call_id") else {
       return;
     };
     let Some(call) = self.pending.remove(&call_id) else {
       return;
     };
-    let micros = u64::try_from(call.start.elapsed().as_micros()).unwrap_or(u64::MAX);
+    let micros = u64::try_from(at.duration_since(call.start).as_micros()).unwrap_or(u64::MAX);
+    let is_noop = match call.hook {
+      // These hooks emit `resolved_id`/`content: None` when they returned nothing.
+      "resolveId" => field_is_null(value, "resolved_id"),
+      "load" | "renderChunk" => field_is_null(value, "content"),
+      // Transform's End carries the (possibly unchanged) code either way; no-op means the
+      // output fingerprint matches the input's.
+      "transform" => match (call.content_fingerprint, content_fingerprint(value)) {
+        (Some(input), Some(output)) => input == output,
+        _ => field_is_null(value, "content"),
+      },
+      _ => false,
+    };
     let stat = self.hook_calls.entry((call.plugin, call.hook)).or_default();
     stat.count += 1;
     stat.micros += micros;
-    if call.hook == "transform" {
-      if let Some(module_id) = call.module_id {
-        let entry = self.module_transform.entry(module_id).or_default();
-        entry.count += 1;
-        entry.micros += micros;
-      }
+    stat.noop_calls += usize::from(is_noop);
+    if call.hook == "transform"
+      && let Some(module_id) = call.module_id
+    {
+      let entry = self.module_transform.entry(module_id).or_default();
+      entry.count += 1;
+      entry.micros += micros;
     }
   }
 }
 
 fn str_field(value: &serde_json::Value, key: &str) -> Option<String> {
   value.get(key).and_then(serde_json::Value::as_str).map(ToString::to_string)
+}
+
+fn field_is_null(value: &serde_json::Value, key: &str) -> bool {
+  value.get(key).is_none_or(serde_json::Value::is_null)
+}
+
+/// `(len, fxhash)` of the action's `content` string — enough to detect "same content" without
+/// retaining source text in memory.
+fn content_fingerprint(value: &serde_json::Value) -> Option<(usize, u64)> {
+  use std::hash::Hasher as _;
+  let content = value.get("content")?.as_str()?;
+  let mut hasher = rustc_hash::FxHasher::default();
+  hasher.write(content.as_bytes());
+  Some((content.len(), hasher.finish()))
 }
 
 // --- minimal deserialize mirrors (serde ignores the action/build_id/session_id/content fields) ---

@@ -3,7 +3,8 @@
 pub struct BindingDevtoolsOptions {
   pub session_id: Option<String>,
   /// `"full"` (default): write JSON-lines devtools logs. `"metrics"`: aggregate the same
-  /// event stream in-memory and emit an agent-readable markdown report instead.
+  /// event stream in-memory and emit an agent-readable report (`metrics.json` + markdown)
+  /// instead.
   #[napi(ts_type = "'full' | 'metrics'")]
   pub mode: Option<String>,
   /// Metrics mode: output directory, relative to cwd (default: "node_modules/.rolldown/metrics").

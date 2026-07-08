@@ -7,7 +7,7 @@ use std::{
     mpsc::{Sender, channel},
   },
   thread,
-  time::{SystemTime, UNIX_EPOCH},
+  time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
 use rolldown_devtools_metrics::{MetricsAggregator, MetricsConfig};
@@ -17,15 +17,18 @@ use serde::ser::{SerializeMap, Serializer as _};
 /// Commands sent to the background devtools log-writer thread.
 pub enum LogCommand {
   /// Emit one event. Carries a fully resolved action payload plus the
-  /// session/filename the producer has already decided on.
-  Write { session_id: String, filename: Arc<str>, action_value: serde_json::Value },
+  /// session/filename the producer has already decided on. `at` is captured at
+  /// emit time on the build thread, so duration metrics derived from event pairs
+  /// are not skewed by writer-queue latency.
+  Write { session_id: String, filename: Arc<str>, action_value: serde_json::Value, at: Instant },
   /// Flush and close every file associated with this session. When `ack` is
   /// `Some`, the writer signals it once all files for this session have been
   /// flushed to the OS, so callers can establish a happens-before relationship
   /// between "build finished" and "log file is readable".
   CloseSession { session_id: String, ack: Option<Sender<()>> },
   /// Mark a session as metrics-mode: subsequent `Write`s are folded into an in-memory
-  /// aggregator (no log file) and a markdown report is rendered on `CloseSession`.
+  /// aggregator (no JSON-lines log for this session) and a metrics report is rendered on
+  /// `CloseSession`.
   OpenMetricsSession { session_id: String, config: MetricsConfig },
 }
 
@@ -81,10 +84,10 @@ struct WriterState {
 impl WriterState {
   fn handle(&mut self, cmd: LogCommand) {
     match cmd {
-      LogCommand::Write { session_id, filename, action_value } => {
+      LogCommand::Write { session_id, filename, action_value, at } => {
         // Metrics-mode sessions aggregate in-memory and never touch disk.
         if let Some(aggregator) = self.metrics.get_mut(&session_id) {
-          aggregator.fold(&action_value);
+          aggregator.fold(&action_value, at);
           return;
         }
         if self.dir_ensured.insert(session_id.clone()) {
@@ -108,7 +111,7 @@ impl WriterState {
         self.metrics.insert(session_id, MetricsAggregator::new(config));
       }
       LogCommand::CloseSession { session_id, ack } => {
-        // Metrics mode: render the markdown report before acking, so the report is on disk
+        // Metrics mode: render the report before acking, so the report is on disk
         // by the time `bundle.close()` resolves (same contract as the log-file path).
         if let Some(aggregator) = self.metrics.remove(&session_id) {
           let _ = aggregator.render();

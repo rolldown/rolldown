@@ -13,9 +13,10 @@ pub struct DevtoolsOptions {
   pub session_id: Option<String>,
   /// `"full"` (default): write JSON-lines devtools logs to disk.
   /// `"metrics"`: aggregate the same event stream in-memory and emit an agent-readable
-  /// markdown report instead (no multi-GB `logs.json`).
+  /// report (`metrics.json` + markdown views + per-build `history.jsonl`) instead of the
+  /// multi-GB `logs.json`.
   pub mode: Option<String>,
-  /// Metrics mode: directory the markdown report is written to, relative to cwd
+  /// Metrics mode: directory the report is written to, relative to cwd
   /// (default: `node_modules/.rolldown/metrics`).
   pub metrics_dir: Option<String>,
   /// Metrics mode: upper bound for every "top-N" list, so output stays small regardless of

@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_devtools_metrics/src/tests.rs
+expression: "render::render_graph(&report)"
+---
+# Entry Points & Chunk Graph
+
+3 entry points, 4 non-empty chunks.
+
+### Entry: `src/a.ts`
+
+- **Output chunk**: `dist/a.js` (1000 B)
+- **Initial load**: 3.9 kB (this chunk + its transitive static-import chunks)
+- **Static imports**: `dist/shared.js`
+
+### Entry: `src/b.ts`
+
+- **Output chunk**: `dist/b.js` (800 B)
+- **Initial load**: 3.7 kB (this chunk + its transitive static-import chunks)
+- **Static imports**: `dist/shared.js`
+- **Dynamic imports**: `dist/lazy.js`
+
+### Entry: `src/lazy.ts`
+
+- **Output chunk**: `dist/lazy.js` (500 B)
+- **Initial load**: 500 B (this chunk + its transitive static-import chunks)
+- **Static imports**: none

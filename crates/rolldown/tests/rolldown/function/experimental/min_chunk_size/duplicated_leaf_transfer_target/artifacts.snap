@@ -1,0 +1,56 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//#region entry.js
+const routes = [import("./route-a.js"), import("./route-b.js")];
+//#endregion
+export { routes };
+
+```
+
+## route-a.js
+
+```js
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+//#endregion
+//#region feature.cjs
+var require_feature = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.feature = "feature";
+}));
+//#endregion
+//#region leaf.js
+function getLeaf() {
+	return "leaf";
+}
+require_feature();
+const value = `feature:${getLeaf()}`;
+//#endregion
+export { value };
+
+```
+
+## route-b.js
+
+```js
+//#region leaf.js
+function getLeaf() {
+	return "leaf";
+}
+//#endregion
+//#region route-b.js
+const value = getLeaf();
+//#endregion
+export { value };
+
+```
+
+# Output Stats
+
+- entry.js, is_entry true, is_dynamic_entry false, exports ["routes"]
+- route-a.js, is_entry false, is_dynamic_entry true, exports ["value"]
+- route-b.js, is_entry false, is_dynamic_entry true, exports ["value"]

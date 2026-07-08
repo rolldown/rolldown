@@ -282,7 +282,7 @@ impl GenerateStage<'_> {
         continue;
       };
       for rec in &normal.import_records {
-        if rec.kind != ImportKind::Import {
+        if !matches!(rec.kind, ImportKind::Import | ImportKind::Require) {
           continue;
         }
         let Some(importee) = rec.resolved_module else {

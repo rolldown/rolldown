@@ -273,6 +273,10 @@ impl GenerateStage<'_> {
       // guaranteed.
       return;
     }
+    // Transferred init statements are rendered into module-level mutations later. Duplicated
+    // minChunkSize leaves are rendered once and reused by multiple chunks, so they cannot carry
+    // chunk-specific prepends.
+    let duplicated_leaf_modules = chunk_graph.duplicated_leaf_modules.clone();
     chunk_graph.chunk_table.iter_mut().for_each(|chunk| {
       // Determine DFS roots based on chunk kind.
       // For entry chunks, the root is the entry module.
@@ -399,6 +403,11 @@ impl GenerateStage<'_> {
       for (module_idx, (importer_idx, rec_idx)) in module_init_position {
         match self.link_output.metas[module_idx].original_wrap_kind() {
           WrapKind::None => {
+            // Keep the init at its original importer; otherwise one chunk's transfer would leak
+            // into every copied instance of this leaf.
+            if duplicated_leaf_modules.contains(&module_idx) {
+              continue;
+            }
             if let Some(deps_length) =
               none_wrapped_module_to_wrapped_dependency_length.get(&module_idx)
             {

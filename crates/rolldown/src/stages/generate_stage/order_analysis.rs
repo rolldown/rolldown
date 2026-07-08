@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  ChunkIdx, EcmaViewMeta, ExportsKind, ImportKind, ImportRecordIdx, Module, ModuleIdx,
-  StmtEvalFlags, SymbolOrMemberExprRef, SymbolRef, UsedSymbolRefsBuilder, WrapKind,
+  ChunkIdx, EcmaViewMeta, ExportsKind, ImportKind, ImportRecordIdx, Module, ModuleIdx, StmtInfo,
+  StmtInfoMeta, SymbolOrMemberExprRef, SymbolRef, UsedSymbolRefsBuilder, WrapKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -470,10 +470,11 @@ impl GenerateStage<'_> {
     module_idx: ModuleIdx,
     current: &FxHashSet<ModuleIdx>,
   ) -> bool {
+    let meta = &self.link_output.metas[module_idx];
     let stmt_infos = &self.link_output.stmt_infos[module_idx];
-    stmt_infos.iter_enumerated_without_namespace_stmt().any(|(_, stmt_info)| {
-      (stmt_info.eval_flags.contains(StmtEvalFlags::ImportBindingRead)
-        || stmt_info.eval_flags.has_side_effect_for_tree_shaking())
+    stmt_infos.iter_enumerated_without_namespace_stmt().any(|(stmt_info_idx, stmt_info)| {
+      meta.stmt_info_included.has_bit(stmt_info_idx)
+        && stmt_is_execution_order_sensitive(stmt_info)
         && stmt_info.referenced_symbols.iter().any(|reference_ref| {
           self.reference_touches_wrapped_export(module_idx, reference_ref, current)
         })
@@ -543,12 +544,7 @@ impl GenerateStage<'_> {
       && self.link_output.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt().any(
         |(stmt_info_idx, stmt_info)| {
           meta.stmt_info_included.has_bit(stmt_info_idx)
-            && stmt_info.eval_flags.intersects(
-              StmtEvalFlags::UnknownSideEffect
-                | StmtEvalFlags::GlobalVarAccess
-                | StmtEvalFlags::PureAnnotation
-                | StmtEvalFlags::ImportBindingRead,
-            )
+            && stmt_is_execution_order_sensitive(stmt_info)
         },
       );
 
@@ -643,6 +639,10 @@ fn premature_sensitive_modules(
   }
 
   premature_modules
+}
+
+fn stmt_is_execution_order_sensitive(stmt_info: &StmtInfo) -> bool {
+  stmt_info.meta.contains(StmtInfoMeta::ExecutionOrderSensitive)
 }
 
 fn record_order_wrap_closure_reasons(
@@ -750,5 +750,14 @@ mod tests {
         OrderWrapReason::TopLevelReader,
       ]
     );
+  }
+
+  #[test]
+  fn execution_order_sensitivity_is_independent_from_tree_shaking_flags() {
+    let mut stmt_info = rolldown_common::StmtInfo::default();
+    stmt_info.meta.insert(rolldown_common::StmtInfoMeta::ExecutionOrderSensitive);
+
+    assert!(stmt_is_execution_order_sensitive(&stmt_info));
+    assert!(!stmt_info.eval_flags.has_side_effect_for_tree_shaking());
   }
 }

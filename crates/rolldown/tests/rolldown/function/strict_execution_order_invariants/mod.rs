@@ -91,6 +91,48 @@ async fn bundle(strict_execution_order: bool) -> BTreeMap<String, String> {
   .await
 }
 
+async fn bundle_emitted_target(fixture_name: &str) -> BTreeMap<String, String> {
+  let fixture_dir = format!("{FIXTURE_ROOT}/{fixture_name}");
+  let mut bundler = Bundler::with_plugins(
+    BundlerOptions {
+      input: Some(vec![InputItem {
+        name: Some("host".to_string()),
+        import: "./host.js".to_string(),
+      }]),
+      cwd: Some(fixture_dir.into()),
+      format: Some(OutputFormat::Esm),
+      entry_filenames: Some("[name].js".to_string().into()),
+      chunk_filenames: Some("chunks/[name].js".to_string().into()),
+      strict_execution_order: Some(true),
+      code_splitting: Some(CodeSplittingMode::Advanced(ManualCodeSplittingOptions {
+        groups: Some(vec![MatchGroup {
+          name: MatchGroupName::Static("group".to_string()),
+          test: Some(MatchGroupTest::Regex(
+            HybridRegex::new(r"(target|dep-a|dep-b)\.").expect("regex should be valid"),
+          )),
+          ..Default::default()
+        }]),
+        ..Default::default()
+      })),
+      ..Default::default()
+    },
+    vec![Arc::new(EmitTarget)],
+  )
+  .expect("failed to create bundler");
+
+  bundler
+    .generate()
+    .await
+    .expect("build should succeed")
+    .assets
+    .into_iter()
+    .filter_map(|output| match output {
+      Output::Chunk(chunk) => Some((chunk.filename.to_string(), chunk.code.clone())),
+      Output::Asset(_) => None,
+    })
+    .collect()
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn strict_off_interop_esm_wrapper_keeps_legacy_shape() {
   let output = bundle_fixture_with_options(
@@ -273,51 +315,22 @@ async fn restored_dynamic_facade_keeps_dependency_chunk_inert() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn emitted_dynamic_entry_keeps_order_wrapper_facade() {
-  let fixture_dir = format!("{FIXTURE_ROOT}/emitted_dynamic_entry");
-  let mut bundler = Bundler::with_plugins(
-    BundlerOptions {
-      input: Some(vec![InputItem {
-        name: Some("host".to_string()),
-        import: "./host.js".to_string(),
-      }]),
-      cwd: Some(fixture_dir.into()),
-      format: Some(OutputFormat::Esm),
-      entry_filenames: Some("[name].js".to_string().into()),
-      chunk_filenames: Some("chunks/[name].js".to_string().into()),
-      strict_execution_order: Some(true),
-      code_splitting: Some(CodeSplittingMode::Advanced(ManualCodeSplittingOptions {
-        groups: Some(vec![MatchGroup {
-          name: MatchGroupName::Static("group".to_string()),
-          test: Some(MatchGroupTest::Regex(
-            HybridRegex::new(r"(target|dep-a|dep-b)\.").expect("regex should be valid"),
-          )),
-          ..Default::default()
-        }]),
-        ..Default::default()
-      })),
-      ..Default::default()
-    },
-    vec![Arc::new(EmitTarget)],
-  )
-  .expect("failed to create bundler");
-
-  let output = bundler
-    .generate()
-    .await
-    .expect("build should succeed")
-    .assets
-    .into_iter()
-    .filter_map(|output| match output {
-      Output::Chunk(chunk) => Some((chunk.filename.to_string(), chunk.code.clone())),
-      Output::Asset(_) => None,
-    })
-    .collect::<BTreeMap<_, _>>();
-
+  let output = bundle_emitted_target("emitted_dynamic_entry").await;
   let host = output.get("host.js").expect("host entry should be emitted");
   assert!(
     host.contains("import(\"./chunks/target.js\")"),
     "the dynamic import should target the restored facade:\n{host}",
   );
+  let target = output.get("chunks/target.js").expect("target facade should be restored");
+  assert!(
+    target.contains("init_target();"),
+    "target facade should trigger initialization:\n{target}"
+  );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn emitted_entry_keeps_order_wrapper_facade() {
+  let output = bundle_emitted_target("emitted_entry").await;
   let target = output.get("chunks/target.js").expect("target facade should be restored");
   assert!(
     target.contains("init_target();"),

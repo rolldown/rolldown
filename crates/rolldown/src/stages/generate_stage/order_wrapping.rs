@@ -74,7 +74,7 @@ impl GenerateStage<'_> {
     );
     self.place_order_wrap_modules(chunk_graph, plan, order_state);
     self.create_strict_execution_order_entry_facades(chunk_graph, Some(plan));
-    self.restore_order_wrap_dynamic_entry_facades(chunk_graph, plan);
+    self.restore_order_wrap_entry_facades(chunk_graph, plan);
     self.ensure_runtime_module_for_order_wraps(chunk_graph);
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
     self.renumber_live_chunks(chunk_graph);
@@ -243,28 +243,24 @@ impl GenerateStage<'_> {
     changed
   }
 
-  fn restore_order_wrap_dynamic_entry_facades(
-    &self,
-    chunk_graph: &mut ChunkGraph,
-    plan: &OrderWrapPlan,
-  ) {
+  fn restore_order_wrap_entry_facades(&self, chunk_graph: &mut ChunkGraph, plan: &OrderWrapPlan) {
     if self.options.code_splitting.is_disabled() {
       return;
     }
 
-    let dynamic_entries_to_restore = plan
+    let entries_to_restore = plan
       .modules()
       .filter(|module_idx| self.link_output.entries.contains_key(module_idx))
       .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
       .collect_vec();
 
-    for entry_module_idx in dynamic_entries_to_restore {
+    for entry_module_idx in entries_to_restore {
       let Some(facade_chunk_idx) =
         chunk_graph.chunk_table.iter_enumerated().find_map(|(chunk_idx, chunk)| match chunk.kind {
           ChunkKind::EntryPoint { meta, module, .. }
             if module == entry_module_idx
               && chunk.modules.is_empty()
-              && meta.contains(ChunkMeta::DynamicImported)
+              && meta.intersects(ChunkMeta::DynamicImported | ChunkMeta::EmittedChunk)
               && matches!(
                 chunk_graph.post_chunk_optimization_operations.get(&chunk_idx),
                 Some(

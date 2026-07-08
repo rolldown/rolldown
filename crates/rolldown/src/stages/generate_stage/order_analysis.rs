@@ -104,15 +104,16 @@ impl GenerateStage<'_> {
 
       let expected_order = self.expected_order_for_root(root);
       let actual_order = self.actual_order_for_root(root, root_chunk, chunk_graph, &import_edges);
+      let mut at_risk = self.at_risk_modules(&expected_order, &actual_order);
       // Within a static chunk cycle the evaluation order depends on which chunk the runtime
       // enters first, and lowering itself moves that entry point (facades, wrapper imports).
       // The prediction also cannot see `var`-form interop wrapper definitions that a body in
-      // another cycle chunk calls. Bail out to wrapping everything eligible under this root.
-      let at_risk = if reaches_chunk_cycle(root_chunk, &import_edges) {
-        expected_order.iter().copied().filter(|idx| self.is_order_wrap_eligible(*idx)).collect()
-      } else {
-        self.at_risk_modules(&expected_order, &actual_order)
-      };
+      // another cycle chunk calls. Additionally wrap everything eligible under such a root;
+      // the normal seeds stay, since phantoms are visible only to the expected/actual diff.
+      if reaches_chunk_cycle(root_chunk, &import_edges) {
+        at_risk
+          .extend(expected_order.iter().copied().filter(|idx| self.is_order_wrap_eligible(*idx)));
+      }
       all_at_risk.extend(at_risk.iter().copied());
       roots.push(RootOrderAnalysis { root, expected_order, actual_order, at_risk });
     }

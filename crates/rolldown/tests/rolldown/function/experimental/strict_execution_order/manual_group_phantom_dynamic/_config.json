@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "strictExecutionOrder": true,
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "group-0",
+          "test": "(main\\.js|m4\\.js|m6\\.js)$",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    }
+  }
+}

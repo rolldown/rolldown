@@ -1,0 +1,91 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## b.js
+
+```js
+import { r as init_m4 } from "./group-0.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_m4();
+		globalThis.__loadM6 = () => import("./m6.js");
+		console.log("B");
+	})))();
+}
+//#endregion
+export { init_b as t };
+
+```
+
+## group-0.js
+
+```js
+import { t as init_b } from "./b.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region m4.js
+function init_m4() {
+	return (init_m4 = __esmMin((() => {
+		console.log("M4");
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_b();
+		console.log("A");
+	})))();
+}
+function init_m6() {
+	return (init_m6 = __esmMin((() => {
+		console.log("M6");
+	})))();
+}
+//#endregion
+export { init_main as n, init_m4 as r, init_m6 as t };
+
+```
+
+## m6.js
+
+```js
+import { t as init_m6 } from "./group-0.js";
+init_m6();
+
+```
+
+## main.js
+
+```js
+import { n as init_main } from "./group-0.js";
+import "./b.js";
+init_main();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```

@@ -546,21 +546,21 @@ impl GenerateStage<'_> {
 
     let has_intrinsic_effect = module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive);
 
-    has_intrinsic_effect || self.eagerly_triggers_interop_side_effect(module_idx)
+    has_intrinsic_effect || self.eagerly_triggers_interop_module(module_idx)
   }
 
-  /// A top-level `import` of an interop-wrapped importee (a CJS module, or an ESM module reached via
-  /// `require`) lowers to an eager `require_*()` / `__toESM(require_*())` call inside *this* module's
-  /// own body. When that importee has side effects, this module's body carries them at eval time,
-  /// even though its own statements look inert (e.g. a bare `import './cjs'` pass-through).
+  /// An included top-level `import` of an interop-wrapped importee (a CJS module, or an ESM module
+  /// reached via `require`) lowers to an eager `require_*()` / `__toESM(require_*())` call inside
+  /// *this* module's own body. The trigger is order-sensitive even when tree shaking classifies the
+  /// importee as side-effect-free: a retained import can still compute an observed export value.
   ///
   /// The interop wrapper controls *how* the importee is represented, not *when* it runs: its trigger
   /// stays inline in the importer's chunk body, so code splitting can displace it. The importee
   /// itself is not order-wrap-eligible (it is already interop-wrapped), so the only way to defer its
   /// trigger is to order-wrap the carrier hosting it. Marking the carrier order-sensitive lets the
   /// existing premature / suffix / importer closure decide that wrap; without it the carrier is
-  /// invisible and a displaced CJS side effect goes unwrapped (silent misorder under strict order).
-  fn eagerly_triggers_interop_side_effect(&self, module_idx: ModuleIdx) -> bool {
+  /// invisible and a displaced interop evaluation goes unwrapped.
+  fn eagerly_triggers_interop_module(&self, module_idx: ModuleIdx) -> bool {
     let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
       return false;
     };
@@ -577,11 +577,11 @@ impl GenerateStage<'_> {
             // inside a function body is call-time and must not be treated as a top-level trigger.
             rec.kind == ImportKind::Import
               && rec.resolved_module.is_some_and(|importee_idx| {
-                self.link_output.module_table[importee_idx].as_normal().is_some_and(|importee| {
+                self.link_output.module_table[importee_idx].as_normal().is_some_and(|_| {
                   !matches!(
                     self.link_output.metas[importee_idx].original_wrap_kind(),
                     WrapKind::None
-                  ) && importee.side_effects.has_side_effects()
+                  )
                 })
               })
           })

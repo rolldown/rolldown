@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "second", "import": "./second.js" }
+    ],
+    "strictExecutionOrder": true
+  },
+  "hiddenRuntimeModule": false
+}

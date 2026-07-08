@@ -12,7 +12,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use super::{
   GenerateStage,
   chunk_ext::{ChunkCreationReason, ChunkDebugExt},
-  order_analysis::OrderWrapPlan,
+  order_analysis::{OrderAnalysis, OrderWrapPlan},
   order_wrap_state::{OrderImportKey, OrderImportOverlay, OrderWrapState},
 };
 
@@ -39,15 +39,24 @@ struct FrozenReexportUsage {
 }
 
 impl GenerateStage<'_> {
+  /// Returns whether the chunk topology changed.
   pub(super) fn apply_order_wraps(
     &mut self,
     chunk_graph: &mut ChunkGraph,
-    plan: &OrderWrapPlan,
+    analysis: &OrderAnalysis,
     used_symbol_refs: &UsedSymbolRefsBuilder,
     order_state: &mut OrderWrapState,
-  ) {
+  ) -> bool {
+    let plan = &analysis.plan;
     if plan.is_empty() {
-      return;
+      // Entry-trigger facades are needed even with an empty plan: a pure interop graph can
+      // still share one entry's chunk with another entry.
+      if !self.create_order_wrap_entry_facades(chunk_graph, analysis) {
+        return false;
+      }
+      chunk_graph.sort_chunk_modules(self.link_output, self.options);
+      self.renumber_live_chunks(chunk_graph);
+      return true;
     }
 
     let runtime_helper = self.esm_runtime_helper();
@@ -73,11 +82,12 @@ impl GenerateStage<'_> {
       &self.link_output.symbol_db,
     );
     self.place_order_wrap_modules(chunk_graph, plan, order_state);
-    self.create_order_wrap_entry_facades(chunk_graph, plan);
+    self.create_order_wrap_entry_facades(chunk_graph, analysis);
     self.restore_order_wrap_dynamic_entry_facades(chunk_graph, plan);
     self.ensure_runtime_module_for_order_wraps(chunk_graph);
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
     self.renumber_live_chunks(chunk_graph);
+    true
   }
 
   fn place_order_wrap_modules(
@@ -101,33 +111,41 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn create_order_wrap_entry_facades(&self, chunk_graph: &mut ChunkGraph, plan: &OrderWrapPlan) {
+  fn create_order_wrap_entry_facades(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    analysis: &OrderAnalysis,
+  ) -> bool {
     if self.options.code_splitting.is_disabled() {
-      return;
+      return false;
     }
+    let plan = &analysis.plan;
 
     let mut entries_to_split = plan
       .modules()
       .filter(|module_idx| self.link_output.entries.contains_key(module_idx))
       .collect_vec();
-    for module_idx in plan.modules() {
-      let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
-        continue;
-      };
-      entries_to_split.extend(module.import_records.iter().filter_map(|rec| {
-        if rec.kind != ImportKind::Import {
-          return None;
-        }
-        let importee_idx = rec.resolved_module?;
-        (self.link_output.entries.contains_key(&importee_idx)
-          && self.link_output.metas[module_idx].execution_dependencies.contains(&importee_idx)
-          && matches!(self.link_output.metas[importee_idx].wrap_kind(), WrapKind::Cjs))
-        .then_some(importee_idx)
-      }));
+    // An inline entry trigger fires whenever its chunk is evaluated. When another chunk imports
+    // the entry chunk (for shared symbols or side effects), that trigger would run the entry's
+    // whole program during the importer's load, ahead of the importer's own expected order. Any
+    // trigger-hosting (interop-wrapped) entry whose chunk has an incoming predicted edge moves
+    // its trigger to a facade.
+    let mut imported_chunks = FxHashSet::default();
+    for (chunk_idx, importee_chunks) in analysis.import_edges.iter_enumerated() {
+      imported_chunks
+        .extend(importee_chunks.iter().copied().filter(|importee| *importee != chunk_idx));
     }
+    entries_to_split.extend(self.link_output.entries.keys().copied().filter(|entry_module_idx| {
+      !matches!(self.link_output.metas[*entry_module_idx].wrap_kind(), WrapKind::None)
+        && chunk_graph
+          .entry_module_to_entry_chunk
+          .get(entry_module_idx)
+          .is_some_and(|entry_chunk_idx| imported_chunks.contains(entry_chunk_idx))
+    }));
     entries_to_split.sort_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order());
     entries_to_split.dedup();
 
+    let mut created = false;
     for entry_module_idx in entries_to_split {
       let Some(entry_chunk_idx) =
         chunk_graph.entry_module_to_entry_chunk.get(&entry_module_idx).copied()
@@ -193,7 +211,9 @@ impl GenerateStage<'_> {
       if let Some(reference_ids) = chunk_graph.chunk_idx_to_reference_ids.remove(&entry_chunk_idx) {
         chunk_graph.chunk_idx_to_reference_ids.insert(facade_chunk_idx, reference_ids);
       }
+      created = true;
     }
+    created
   }
 
   fn restore_order_wrap_dynamic_entry_facades(

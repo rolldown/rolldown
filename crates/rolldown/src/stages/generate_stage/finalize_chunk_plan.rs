@@ -36,9 +36,8 @@ impl GenerateStage<'_> {
 
     let order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs);
     if let Some(analysis) = &order_analysis
-      && !analysis.plan.is_empty()
+      && self.apply_order_wraps(chunk_graph, analysis, used_symbol_refs, &mut order_state)
     {
-      self.apply_order_wraps(chunk_graph, &analysis.plan, used_symbol_refs, &mut order_state);
       #[cfg(debug_assertions)]
       self.assert_order_wrap_plan_applied(chunk_graph, &analysis.plan, &order_state);
 

@@ -14,6 +14,7 @@ use super::GenerateStage;
 pub(super) struct OrderAnalysis {
   roots: Vec<RootOrderAnalysis>,
   pub(super) plan: OrderWrapPlan,
+  pub(super) import_edges: IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -117,7 +118,7 @@ impl GenerateStage<'_> {
     }
 
     let plan = self.build_order_wrap_plan(all_at_risk, &roots);
-    let analysis = OrderAnalysis { roots, plan };
+    let analysis = OrderAnalysis { roots, plan, import_edges };
     analysis.log_summary(self);
     Some(analysis)
   }

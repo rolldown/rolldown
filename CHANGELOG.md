@@ -1,4 +1,110 @@
 
+## [1.1.5] - 2026-07-08
+
+### 🚀 Features
+
+- detect top-level import-binding reads as execution-order sensitive (#10180) by @hyf0
+- sourcemap_filenames: add a sourcemapFileNames option (#9271) by @V1OL3TF0X
+- binding: record plugin hook result kind in tracing spans (#10154) by @IWANABETHATGUY
+- linking: skip side-effect-free modules in per-entry reachability (#10111) by @IWANABETHATGUY
+- improve error message for unresolved virtual imports (#10156) by @sapphi-red
+- add descriptive metadata to plugin API (#10106) by @sapphi-red
+- add `--configLoader=native` option (#10118) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- improve invalid annotation warnings (#10185) by @hyf0
+- keep deduplicated asset filenames stable once they can be observed (#10191) by @shulaoda
+- sourcemap_filenames: use public option name in pattern errors (#10188) by @IWANABETHATGUY
+- sourcemap_filenames: hash prepared sourcemap content (#10178) by @hyf0
+- tree-shake unused circular declarators exported via export list (#10166) by @IWANABETHATGUY
+- dev: don't panic when an HMR rebuild hits an unresolved import (#10162) by @shulaoda
+- propagate errors from output.globals function (#9880) by @shulaoda
+- dev: revert cache mutations when a partial scan fails (#10110) by @shulaoda
+- dev: update importer relationships of cached modules in incremental build (#10107) by @shulaoda
+- hmr: fall back to full reload when a changed module is not registered as executed (#10132) by @shulaoda
+- chunk-optimizer: follow entry facade edges in runtime placement cycle check (#10101) by @hyf0
+- dev: ignore watcher events after close (#10113) by @hyf0
+- emit async wrapper for TLA modules under onDemandWrapping (#10086) by @IWANABETHATGUY
+- gate sideEffects:false modules' side effects on body demand (#10080) by @IWANABETHATGUY
+- rolldown_plugin_vite_resolve: return empty object for `browser: false` mapped modules (#10082) by @sapphi-red
+- reset the word-boundary state on newline in Hires::Boundary sourcemaps (#10025) by @shulaoda
+- trim an emptied chunk's outro/intro instead of skipping past it (#10029) by @shulaoda
+- test each edited chunk's own start against indent exclude ranges (#10026) by @shulaoda
+- preserve sourcemap mappings for indented lines when a CJS module shares the chunk (#10074) by @hyf0
+
+### 🚜 Refactor
+
+- separate tree-shaking side effects from execution order sensitivity (#10168) by @hyf0
+- type construct_vite_preload_call to take an ObjectPattern (#10135) by @shulaoda
+- treeshake: single-source the own-export classification shared with the lazy-barrel loader (#10098) by @IWANABETHATGUY
+- dev: reuse Vite's bundledDev server (#10081) by @h-a-n-a
+- clippy: ban std HashMap/HashSet in favour of FxHashMap/FxHashSet (#10108) by @Boshen
+- treeshake: make body demand a second module bit instead of a stmt multimap (#10097) by @IWANABETHATGUY
+- seal used_symbol_refs by construction after its last writer (#10091) by @hyf0
+- treeshake: replace inclusion mutual recursion with a worklist engine (#10096) by @IWANABETHATGUY
+- treeshake: split include_statements.rs into focused modules (#10095) by @IWANABETHATGUY
+- drop redundant is_user_defined filter on partitioned entries (#10050) by @shulaoda
+- project the retained export interface out of used_symbol_refs (#10089) by @hyf0
+- track used external symbols separately from used_symbol_refs (#10088) by @hyf0
+- make module namespace inclusion an explicit linking metadata field (#10087) by @hyf0
+- rename statement evaluation metadata (#10078) by @hyf0
+
+### 📚 Documentation
+
+- virtual modules user-facing id convention (#10155) by @sapphi-red
+- cli: clarify disabling boolean/object flags like codeSplitting (#10153) by @IWANABETHATGUY
+- chore: remove Vite+ alpha banner (#10105) by @mdong1909
+- write down the used_symbol_refs contract (#10090) by @hyf0
+- dev/lazy: update design and implementation (#10079) by @h-a-n-a
+
+### ⚡ Performance
+
+- ast_scanner: stop order-sensitivity checks once a module is flagged (#10190) by @IWANABETHATGUY
+- return impl ExactSizeIterator from slice-backed accessors (#10133) by @Boshen
+- binding: box dev and watcher napi futures (#10103) by @Boshen
+
+### 🧪 Testing
+
+- move string_wizard replace unit tests to the JS magic-string suite (#10176) by @IWANABETHATGUY
+- dev: assert incremental scan state matches a fresh full build after each HMR step (#10115) by @shulaoda
+- dev: restore runtime assertions of delete_file_not_used_anymore (#10112) by @shulaoda
+- dev: fix flaky dev server tests in CI (#10152) by @h-a-n-a
+- add regression test for #10099 (lazyBarrel drops default-import binding but keeps its property reads) (#10109) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deploy website to Void via GitHub OIDC (#10192) by @Boshen
+- deps: update oxc to 0.139.0 (#10161) by @shulaoda
+- deps: update test262 submodule for tests (#10160) by @rolldown-guard[bot]
+- rolldown_plugin_utils: remove dead asset-url and css scaffolding (#10131) by @shulaoda
+- deps: revert vite-plus to v0.2.1 (#10148) by @shulaoda
+- deps: update github actions (#10141) by @renovate[bot]
+- deps: update dependency rust to v1.96.1 (#10145) by @renovate[bot]
+- deps: update npm packages (#10142) by @renovate[bot]
+- deps: update rust crates (#10143) by @renovate[bot]
+- deps: update napi to v3.10.3 (#10121) by @renovate[bot]
+- rolldown_utils: remove unused time module (#10138) by @shulaoda
+- remove dead CopyModulePlugin::is_active method (#10129) by @shulaoda
+- remove dead LazyCompilationContext::is_lazy_module method (#10128) by @shulaoda
+- remove dead BuildDiagnostic::downcast_ref method (#10127) by @shulaoda
+- deps: update dependency vite-plus to v0.2.2 (#10084) by @renovate[bot]
+- deps: update rust crate oxc_sourcemap to v8.1.0 (#10122) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.48.0 (#10124) by @renovate[bot]
+- enable more clippy restriction lints (#10114) by @Boshen
+- deps: update rust dependencies (#10100) by @Boshen
+- deps: update oxc resolver to v11.23.0 (#10083) by @renovate[bot]
+
+### ◀️ Revert
+
+- Revert "chore(deps): revert vite-plus to v0.2.1" (#10157) by @h-a-n-a
+- "fix(hmr): fall back to full reload when a changed module is not registered as executed (#10132)" (#10151) by @shulaoda
+
+### ❤️ New Contributors
+
+* @V1OL3TF0X made their first contribution in [#9271](https://github.com/rolldown/rolldown/pull/9271)
+
+
 ## [1.1.4] - 2026-07-01
 
 ### 🚀 Features

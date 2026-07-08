@@ -108,6 +108,7 @@ mod finalize_modules;
 mod manual_code_splitting;
 mod minify_chunks;
 mod order_analysis;
+pub(crate) mod order_wrap_state;
 mod order_wrapping;
 mod post_banner_footer;
 mod render_chunk_to_assets;
@@ -145,7 +146,8 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
     let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs).await?;
 
-    let order_analysis = self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs)?;
+    let finalize_chunk_plan::FinalizedChunkPlan { analysis: order_analysis, order_state } =
+      self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs)?;
 
     // `apply_order_wraps` may include newly-created wrapper/runtime symbols. Seal only after it
     // has had the last chance to extend the set.
@@ -154,9 +156,9 @@ impl<'a> GenerateStage<'a> {
     self.compute_retained_export_symbols(&used_symbol_refs);
 
     let mut ast_table = std::mem::take(&mut self.ast_table);
-    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph);
+    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph, &order_state);
 
-    self.compute_cross_chunk_links(&mut chunk_graph, &used_symbol_refs);
+    self.compute_cross_chunk_links(&mut chunk_graph, &used_symbol_refs, &order_state);
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);
 
@@ -165,11 +167,16 @@ impl<'a> GenerateStage<'a> {
     // See internal-docs/devtools/implementation.md for devtools action lifecycle.
     // Move the retained analysis into the synchronous trace call so it is dropped before any
     // later output-hook awaits or rendering work.
-    self.trace_action_strict_execution_order_plan_ready(&chunk_graph, order_analysis);
+    self.trace_action_strict_execution_order_plan_ready(&chunk_graph, &order_state, order_analysis);
     self.trace_action_chunks_infos(&chunk_graph);
 
     let mut warnings = vec![];
-    self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings, &used_symbol_refs)?;
+    self.compute_chunk_output_exports(
+      &mut chunk_graph,
+      &mut warnings,
+      &used_symbol_refs,
+      &order_state,
+    )?;
     if !warnings.is_empty() {
       self.link_output.warnings.extend(warnings);
     }
@@ -201,9 +208,9 @@ impl<'a> GenerateStage<'a> {
       self.resolved_paths = Some(paths.resolve_all(ids).await);
     }
 
-    self.finalize_modules(&mut chunk_graph, &mut ast_table);
+    self.finalize_modules(&mut chunk_graph, &mut ast_table, &order_state);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
-    self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs).await
+    self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await
   }
 
   /// Notices:
@@ -403,6 +410,7 @@ impl<'a> GenerateStage<'a> {
     chunk_graph: &mut ChunkGraph,
     warnings: &mut Vec<BuildDiagnostic>,
     used_symbol_refs: &UsedSymbolRefs,
+    order_state: &order_wrap_state::OrderWrapState,
   ) -> BuildResult<()> {
     // Collect all the chunk data we need first
     let mut chunk_export_data = Vec::new();
@@ -422,6 +430,7 @@ impl<'a> GenerateStage<'a> {
           options: self.options,
           link_output: self.link_output,
           used_symbol_refs,
+          order_wrap_state: order_state,
           chunk_graph,
           plugin_driver: self.plugin_driver,
           module_id_to_codegen_ret: Vec::new(),

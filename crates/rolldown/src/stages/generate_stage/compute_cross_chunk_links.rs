@@ -59,6 +59,7 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     used_symbol_refs: &UsedSymbolRefs,
+    _order_state: &super::order_wrap_state::OrderWrapState,
   ) {
     let CrossChunkLinkState {
       index_chunk_exported_symbols,

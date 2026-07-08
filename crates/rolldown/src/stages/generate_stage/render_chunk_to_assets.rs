@@ -44,6 +44,7 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     ast_table: IndexEcmaAst,
     used_symbol_refs: &UsedSymbolRefs,
+    order_state: &super::order_wrap_state::OrderWrapState,
   ) -> BuildResult<BundleOutput> {
     let mut errors = std::mem::take(&mut self.link_output.errors);
     let mut warnings = std::mem::take(&mut self.link_output.warnings);
@@ -52,7 +53,14 @@ impl GenerateStage<'_> {
     // releasing the per-module bumpalo arenas before `minify_chunks` and
     // `finalize_assets` allocate.
     let (mut instantiated_chunks, index_chunk_to_instances) = self
-      .instantiate_chunks(chunk_graph, ast_table, &mut errors, &mut warnings, used_symbol_refs)
+      .instantiate_chunks(
+        chunk_graph,
+        ast_table,
+        &mut errors,
+        &mut warnings,
+        used_symbol_refs,
+        order_state,
+      )
       .await?;
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
@@ -149,6 +157,7 @@ impl GenerateStage<'_> {
     errors: &mut Vec<BuildDiagnostic>,
     warnings: &mut Vec<BuildDiagnostic>,
     used_symbol_refs: &UsedSymbolRefs,
+    order_state: &super::order_wrap_state::OrderWrapState,
   ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstances)> {
     let mut index_chunk_to_instances: IndexChunkToInstances =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
@@ -190,6 +199,7 @@ impl GenerateStage<'_> {
               options: self.options,
               link_output: self.link_output,
               used_symbol_refs,
+              order_wrap_state: order_state,
               chunk_graph,
               plugin_driver: self.plugin_driver,
               module_id_to_codegen_ret,

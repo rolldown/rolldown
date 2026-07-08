@@ -19,7 +19,7 @@ use crate::{
   SharedOptions,
   chunk_graph::ChunkGraph,
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
-  stages::link_stage::SafelyMergeCjsNsInfo,
+  stages::{generate_stage::order_wrap_state::OrderWrapState, link_stage::SafelyMergeCjsNsInfo},
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
@@ -34,6 +34,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub modules: &'me IndexModules,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
+  pub order_wrap_state: &'me OrderWrapState,
   pub symbol_db: &'me SymbolRefDb,
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,
@@ -56,6 +57,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
     ast: &'me mut EcmaAst,
     ast_scope: &'me AstScopes,
   ) -> FinalizerMutableFields {
+    debug_assert!(self.order_wrap_state.is_empty());
     ast.program.with_mut(move |fields| {
       let (oxc_program, alloc) = (fields.program, fields.allocator);
 

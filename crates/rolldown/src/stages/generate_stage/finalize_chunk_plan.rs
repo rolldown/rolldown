@@ -15,7 +15,13 @@ use super::GenerateStage;
 use super::order_analysis::OrderAnalysis;
 #[cfg(debug_assertions)]
 use super::order_analysis::OrderWrapPlan;
+use super::order_wrap_state::OrderWrapState;
 use super::strict_execution_order_trace::strict_execution_order_trace_requested;
+
+pub(super) struct FinalizedChunkPlan {
+  pub(super) analysis: Option<OrderAnalysis>,
+  pub(super) order_state: OrderWrapState,
+}
 
 impl GenerateStage<'_> {
   /// Finalize topology-changing generate-stage decisions before deriving output metadata.
@@ -29,13 +35,14 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     used_symbol_refs: &mut UsedSymbolRefsBuilder,
-  ) -> BuildResult<Option<OrderAnalysis>> {
+  ) -> BuildResult<FinalizedChunkPlan> {
     // The order analysis reuses cross-chunk linking logic, which reads finalized namespace and
     // external-export facts. Prepare those inputs on the provisional topology first.
     self.find_entry_level_external_module(chunk_graph);
     self.finalized_module_namespace_ref_usage();
 
     let order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs);
+    let order_state = OrderWrapState::default();
     if let Some(analysis) = &order_analysis
       && !analysis.plan.is_empty()
     {
@@ -57,11 +64,15 @@ impl GenerateStage<'_> {
       validate_options_for_multi_chunk_output(self.options)?;
     }
 
-    if strict_execution_order_trace_requested(self.options.devtools) && trace_action_enabled!() {
-      Ok(order_analysis)
-    } else {
-      Ok(None)
-    }
+    debug_assert!(order_state.is_empty());
+
+    let analysis =
+      if strict_execution_order_trace_requested(self.options.devtools) && trace_action_enabled!() {
+        order_analysis
+      } else {
+        None
+      };
+    Ok(FinalizedChunkPlan { analysis, order_state })
   }
 
   #[cfg(debug_assertions)]
@@ -93,7 +104,6 @@ impl GenerateStage<'_> {
         }
       }
     }
-
     let runtime_idx = self.link_output.runtime.id();
     if self.link_output.metas[runtime_idx].is_included {
       debug_assert!(chunk_graph.module_to_chunk[runtime_idx].is_some_and(|chunk_idx| {

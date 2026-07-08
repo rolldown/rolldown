@@ -15,7 +15,7 @@ use crate::{
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
-use super::GenerateStage;
+use super::{GenerateStage, order_wrap_state::OrderWrapState};
 
 impl GenerateStage<'_> {
   /// Pre-finalization pass computing, for every included wrapped (`WrapKind::Esm`) module, the
@@ -41,6 +41,7 @@ impl GenerateStage<'_> {
     &mut self,
     ast_table: &IndexEcmaAst,
     chunk_graph: &ChunkGraph,
+    _order_state: &OrderWrapState,
   ) {
     // Classify in parallel (read-only); the cheap write-back stays sequential.
     let keep_names = self.options.keep_names;

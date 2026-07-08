@@ -24,6 +24,7 @@ impl GenerateStage<'_> {
   pub(super) fn trace_action_strict_execution_order_plan_ready(
     &self,
     chunk_graph: &ChunkGraph,
+    _order_state: &super::order_wrap_state::OrderWrapState,
     analysis: Option<OrderAnalysis>,
   ) {
     let Some(analysis) = analysis else { return };

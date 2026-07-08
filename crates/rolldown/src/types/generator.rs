@@ -9,7 +9,10 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{ecmascript::property_access_str, indexmap::FxIndexMap};
 use rustc_hash::FxHashMap;
 
-use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
+use crate::{
+  chunk_graph::ChunkGraph,
+  stages::{generate_stage::order_wrap_state::OrderWrapState, link_stage::LinkStageOutput},
+};
 
 pub struct GenerateContext<'a> {
   pub chunk_idx: ChunkIdx,
@@ -18,6 +21,7 @@ pub struct GenerateContext<'a> {
   pub link_output: &'a LinkStageOutput,
   /// Sealed record of inclusion-fixpoint liveness; see [`UsedSymbolRefs`].
   pub used_symbol_refs: &'a UsedSymbolRefs,
+  pub order_wrap_state: &'a OrderWrapState,
   pub chunk_graph: &'a ChunkGraph,
   pub plugin_driver: &'a SharedPluginDriver,
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,

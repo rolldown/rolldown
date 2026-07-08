@@ -20,6 +20,7 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     ast_table: &mut IndexEcmaAst,
+    order_state: &super::order_wrap_state::OrderWrapState,
   ) {
     let has_enum_inlining = self.link_output.has_enum_inlining;
 
@@ -49,6 +50,7 @@ impl GenerateStage<'_> {
             stmt_infos: &self.link_output.stmt_infos[idx],
             modules: &self.link_output.module_table.modules,
             linking_infos: &self.link_output.metas,
+            order_wrap_state: order_state,
             runtime: &self.link_output.runtime,
             options: self.options,
             file_emitter: &self.plugin_driver.file_emitter,

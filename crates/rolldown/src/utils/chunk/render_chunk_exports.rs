@@ -19,6 +19,7 @@ pub fn render_wrapped_entry_chunk(
   ctx: &GenerateContext<'_>,
   export_mode: Option<&OutputExports>,
 ) -> Option<String> {
+  debug_assert!(ctx.order_wrap_state.is_empty());
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
     match entry_meta.wrap_kind() {

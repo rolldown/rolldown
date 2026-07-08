@@ -13,6 +13,7 @@ use crate::{
 use super::{
   GenerateStage,
   order_analysis::{OrderAnalysis, OrderWrapReason},
+  order_wrap_state::EsmInitOrigin,
 };
 
 const STRICT_EXECUTION_ORDER_TRACE_ENV: &str = "ROLLDOWN_STRICT_ORDER_TRACE";
@@ -84,10 +85,35 @@ impl GenerateStage<'_> {
       .filter_map(|(module_idx, module)| {
         let Module::Normal(_) = module else { return None };
         let meta = &self.link_output.metas[module_idx];
+        let init_target = order_state.esm_init_target(module_idx, meta);
+        let order_wrapped =
+          init_target.is_some_and(|target| matches!(target.origin, EsmInitOrigin::ExecutionOrder));
+        let wrapper_origin = if matches!(meta.original_wrap_kind(), WrapKind::Cjs) {
+          "interop-cjs"
+        } else {
+          init_target.map_or("none", |target| match target.origin {
+            EsmInitOrigin::Interop => "interop-esm",
+            EsmInitOrigin::ExecutionOrder => "execution-order",
+          })
+        };
+        let entry_trigger = if chunk_graph.entry_module_to_entry_chunk.contains_key(&module_idx) {
+          if matches!(meta.original_wrap_kind(), WrapKind::Cjs) {
+            "cjs-require"
+          } else {
+            init_target.map_or("none", |target| match target.origin {
+              EsmInitOrigin::Interop => "interop-init",
+              EsmInitOrigin::ExecutionOrder => "order-init",
+            })
+          }
+        } else {
+          "none"
+        };
         meta.is_included.then(|| action::StrictExecutionOrderModule {
           module_id: module.id().to_string(),
-          original_wrap_kind: wrap_kind_name(meta.original_wrap_kind()),
-          final_wrap_kind: wrap_kind_name(meta.wrap_kind()),
+          interop_wrap_kind: wrap_kind_name(meta.original_wrap_kind()),
+          order_wrapped,
+          wrapper_origin,
+          entry_trigger,
           final_chunk_id: chunk_graph.module_to_chunk[module_idx]
             .filter(|&chunk_idx| is_rendered_chunk(chunk_graph, chunk_idx))
             .map(ChunkIdx::raw),
@@ -97,7 +123,7 @@ impl GenerateStage<'_> {
             .copied()
             .filter(|&chunk_idx| is_rendered_chunk(chunk_graph, chunk_idx))
             .map(ChunkIdx::raw),
-          wrapper_included: self.wrapper_is_included(module_idx),
+          wrapper_included: self.wrapper_is_included(module_idx, chunk_graph, order_state),
           tla_tainted: meta.is_tla_or_contains_tla_dependency,
         })
       })
@@ -135,7 +161,7 @@ impl GenerateStage<'_> {
 
     trace_action!(action::StrictExecutionOrderPlanReady {
       action: "StrictExecutionOrderPlanReady",
-      version: 1,
+      version: 2,
       roots,
       plan_modules,
       included_modules,
@@ -246,9 +272,29 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn wrapper_is_included(&self, module_idx: ModuleIdx) -> bool {
+  fn wrapper_is_included(
+    &self,
+    module_idx: ModuleIdx,
+    chunk_graph: &ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+  ) -> bool {
     let meta = &self.link_output.metas[module_idx];
-    meta.wrapper_stmt_info.is_some_and(|stmt_idx| meta.stmt_info_included.has_bit(stmt_idx))
+    if matches!(meta.original_wrap_kind(), WrapKind::Cjs) {
+      return meta
+        .wrapper_stmt_info
+        .is_some_and(|stmt_idx| meta.stmt_info_included.has_bit(stmt_idx));
+    }
+    let Some(target) = order_state.esm_init_target(module_idx, meta) else {
+      return false;
+    };
+    match target.origin {
+      EsmInitOrigin::Interop => {
+        meta.wrapper_stmt_info.is_some_and(|stmt_idx| meta.stmt_info_included.has_bit(stmt_idx))
+      }
+      EsmInitOrigin::ExecutionOrder => order_state
+        .order_wrapper_chunk(module_idx)
+        .is_some_and(|chunk_idx| is_rendered_chunk(chunk_graph, chunk_idx)),
+    }
   }
 
   fn wrapper_is_reachable_from_module_chunk(

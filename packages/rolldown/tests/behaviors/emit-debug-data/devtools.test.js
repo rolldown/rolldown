@@ -313,7 +313,7 @@ test('emit the strict execution order plan after final topology is available', a
 
   const action = logs.find((event) => event.action === 'StrictExecutionOrderPlanReady');
   expect(action).toBeDefined();
-  expect(action.version).toBe(1);
+  expect(action.version).toBe(2);
   expect(logs.indexOf(action)).toBeLessThan(
     logs.findIndex((event) => event.action === 'HookRenderChunkStart'),
   );
@@ -351,14 +351,16 @@ test('emit the strict execution order plan after final topology is available', a
   );
   expect(pModule).toEqual(
     expect.objectContaining({
-      original_wrap_kind: 'none',
-      final_wrap_kind: 'esm',
+      interop_wrap_kind: 'none',
+      order_wrapped: true,
+      wrapper_origin: 'execution-order',
       wrapper_included: true,
       tla_tainted: true,
     }),
   );
   expect(mainModule.final_chunk_id).not.toBeNull();
   expect(mainModule.entry_chunk_id).not.toBeNull();
+  expect(mainModule.entry_trigger).toBe('order-init');
 
   const chunksById = new Map(action.rendered_chunks.map((chunk) => [chunk.chunk_id, chunk]));
   const mainEntryChunk = chunksById.get(mainModule.entry_chunk_id);
@@ -433,12 +435,16 @@ test('emit the strict execution order plan after final topology is available', a
   expect(includedForwardingBarrel).toEqual(
     expect.objectContaining({
       final_chunk_id: mainModule.final_chunk_id,
-      final_wrap_kind: 'none',
+      interop_wrap_kind: 'none',
+      order_wrapped: false,
+      wrapper_origin: 'none',
     }),
   );
   expect(interopOwner).toEqual(
     expect.objectContaining({
-      final_wrap_kind: 'esm',
+      interop_wrap_kind: 'esm',
+      order_wrapped: false,
+      wrapper_origin: 'interop-esm',
       wrapper_included: true,
     }),
   );
@@ -500,7 +506,7 @@ test('emit an empty strict execution order plan when analysis ran without a haza
   expect(action).toEqual(
     expect.objectContaining({
       action: 'StrictExecutionOrderPlanReady',
-      version: 1,
+      version: 2,
       plan_modules: [],
     }),
   );

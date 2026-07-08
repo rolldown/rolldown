@@ -3,7 +3,7 @@
 pub struct StrictExecutionOrderPlanReady {
   #[ts(type = "'StrictExecutionOrderPlanReady'")]
   pub action: &'static str,
-  #[ts(type = "1")]
+  #[ts(type = "2")]
   pub version: u32,
   pub roots: Vec<StrictExecutionOrderRoot>,
   pub plan_modules: Vec<StrictExecutionOrderPlanModule>,
@@ -36,9 +36,12 @@ pub struct StrictExecutionOrderPlanModule {
 pub struct StrictExecutionOrderModule {
   pub module_id: String,
   #[ts(type = "'none' | 'cjs' | 'esm'")]
-  pub original_wrap_kind: &'static str,
-  #[ts(type = "'none' | 'cjs' | 'esm'")]
-  pub final_wrap_kind: &'static str,
+  pub interop_wrap_kind: &'static str,
+  pub order_wrapped: bool,
+  #[ts(type = "'none' | 'interop-cjs' | 'interop-esm' | 'execution-order'")]
+  pub wrapper_origin: &'static str,
+  #[ts(type = "'none' | 'cjs-require' | 'interop-init' | 'order-init'")]
+  pub entry_trigger: &'static str,
   pub final_chunk_id: Option<u32>,
   pub entry_chunk_id: Option<u32>,
   pub wrapper_included: bool,

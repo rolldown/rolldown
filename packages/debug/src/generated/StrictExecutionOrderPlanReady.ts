@@ -5,4 +5,4 @@ import type { StrictExecutionOrderModule } from "./StrictExecutionOrderModule";
 import type { StrictExecutionOrderPlanModule } from "./StrictExecutionOrderPlanModule";
 import type { StrictExecutionOrderRoot } from "./StrictExecutionOrderRoot";
 
-export type StrictExecutionOrderPlanReady = { action: 'StrictExecutionOrderPlanReady', version: 1, roots: Array<StrictExecutionOrderRoot>, plan_modules: Array<StrictExecutionOrderPlanModule>, included_modules: Array<StrictExecutionOrderModule>, rendered_chunks: Array<StrictExecutionOrderChunk>, init_obligations: Array<StrictExecutionOrderInitObligation>, };
+export type StrictExecutionOrderPlanReady = { action: 'StrictExecutionOrderPlanReady', version: 2, roots: Array<StrictExecutionOrderRoot>, plan_modules: Array<StrictExecutionOrderPlanModule>, included_modules: Array<StrictExecutionOrderModule>, rendered_chunks: Array<StrictExecutionOrderChunk>, init_obligations: Array<StrictExecutionOrderInitObligation>, };

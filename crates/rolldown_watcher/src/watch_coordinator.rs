@@ -50,6 +50,22 @@ enum HandlerDispatchResult {
   Failed(anyhow::Error),
 }
 
+enum DebounceWaitResult {
+  Message(Option<WatcherMsg>),
+  Timeout,
+}
+
+async fn wait_for_debounce_input(
+  rx: &mut mpsc::UnboundedReceiver<WatcherMsg>,
+  timeout: impl Future<Output = ()>,
+) -> DebounceWaitResult {
+  tokio::select! {
+    biased;
+    message = rx.recv() => DebounceWaitResult::Message(message),
+    () = timeout => DebounceWaitResult::Timeout,
+  }
+}
+
 impl CoordinatorCloseFailure {
   fn from_build_error(context: &str, error: BatchedBuildDiagnostic) -> Vec<Self> {
     let diagnostics = error.into_vec();
@@ -242,8 +258,11 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
           // tokio's semantics, so the deadline-extension loop is unchanged.
           let timeout = rolldown_utils::time::sleep_until(*deadline);
 
-          tokio::select! {
-            () = timeout => {
+          // A queued file change observed at the deadline must extend the
+          // debounce window instead of producing an avoidable intermediate build.
+          // See internal-docs/watch-mode/implementation.md.
+          match wait_for_debounce_input(&mut self.rx, timeout).await {
+            DebounceWaitResult::Timeout => {
               let (new_state, changes) = mem::take(&mut self.state).on_debounce_timeout();
               self.state = new_state;
 
@@ -253,14 +272,12 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
                 }
               }
             }
-            msg = self.rx.recv() => {
-              match msg {
-                Some(WatcherMsg::FileChanges { task_index, changes }) => {
-                  self.process_file_changes(task_index, changes).await;
-                }
-                Some(WatcherMsg::Close) | None => return,
+            DebounceWaitResult::Message(message) => match message {
+              Some(WatcherMsg::FileChanges { task_index, changes }) => {
+                self.process_file_changes(task_index, changes).await;
               }
-            }
+              Some(WatcherMsg::Close) | None => return,
+            },
           }
         }
         WatcherState::Closing | WatcherState::Closed => {
@@ -920,6 +937,20 @@ mod tests {
       .expect("coordinator should close successfully");
     assert_eq!(close_bundle_calls.load(Ordering::SeqCst), 2);
     assert_eq!(close_calls.load(Ordering::SeqCst), 1);
+  }
+
+  #[tokio::test]
+  async fn queued_change_wins_when_debounce_timeout_is_already_ready() {
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    tx.send(WatcherMsg::FileChanges {
+      task_index: WatchTaskIdx::from_usize(0),
+      changes: vec![FileChangeEvent::new("main.js".to_string(), WatcherChangeKind::Update)],
+    })
+    .expect("queue file change");
+
+    let result = wait_for_debounce_input(&mut rx, std::future::ready(())).await;
+
+    assert!(matches!(result, DebounceWaitResult::Message(Some(WatcherMsg::FileChanges { .. }))));
   }
 
   #[tokio::test(flavor = "multi_thread")]

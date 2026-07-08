@@ -237,6 +237,9 @@ The `WatcherState::Debouncing` state does the same thing with `tokio::select!` a
 - File change → `Idle` becomes `Debouncing { changes, deadline }`
 - More changes → deadline resets, changes accumulate with kind consolidation per path
 - Deadline fires → if changes are non-empty, passed to `run_build_sequence()`; if empty (all cancelled out by kind consolidation), silently return to Idle
+- If a queued file-change message and the deadline are both ready, the coordinator
+  consumes the message first and extends the deadline. This prevents polling
+  jitter at the debounce boundary from producing an avoidable intermediate build.
 
 #### Kind Consolidation
 

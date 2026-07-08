@@ -257,9 +257,13 @@ binary.
   lexically ambient owner frame claims and runs exactly that job without
   incrementing the active-lane metric. It cannot consume an unrelated queued
   sibling. Ordinary queued work is serviced FIFO only after the physical lane
-  is released; release also wakes explicit drivers, and a host turn may claim a
-  serviceable released lane. Threadless builds never have a foreign concurrent
-  driver, so their uncontended and same-stack paths remain fully inline.
+  is released; release also wakes explicit drivers. Outside an admitted host
+  turn, the releasing caller drains the FIFO to preserve hostless progress.
+  Inside an admitted host turn, release returns to the bounded host-turn driver
+  instead, so queued blocking work cannot bypass the 64-unit yield budget; a
+  later host turn continues any residue. Threadless builds never have a foreign
+  concurrent driver, so their uncontended and same-stack paths remain fully
+  inline.
 
 - `MultiThreadExecutor` schedules bounded queue-drain jobs on a custom Rayon
   pool. The same pool is inherited by nested `par_iter` calls. Rayon worker

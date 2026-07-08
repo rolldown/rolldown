@@ -2271,7 +2271,10 @@ impl CurrentThreadExecutor {
     .map(|output| ContainedTaskOutput::new(output, self.generation));
     drop(blocking);
     #[cfg(not(target_family = "wasm"))]
-    if owns_lane {
+    if owns_lane && !self.draining.load(Ordering::Acquire) {
+      // An admitted host turn already owns a bounded queue driver. Let its
+      // outer loop service the released FIFO so blocking work cannot bypass
+      // the host-turn budget and monopolize the JavaScript event loop.
       self.service_queued_blocking_work();
     }
     JoinHandle(JoinHandleInner::Ready(Some(result)))
@@ -7742,6 +7745,7 @@ mod tests {
   use super::*;
 
   static CURRENT_THREAD_ADMISSION_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
+  static CURRENT_THREAD_BLOCKING_BUDGET_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
   static CURRENT_THREAD_BUDGET_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
   static CURRENT_THREAD_STOPPED_HOST_DISPATCHES: AtomicUsize = AtomicUsize::new(0);
 
@@ -7902,6 +7906,13 @@ mod tests {
 
   fn count_current_thread_budget_host_dispatch(_dispatch: u64) -> CurrentThreadHostDispatchResult {
     CURRENT_THREAD_BUDGET_HOST_DISPATCHES.fetch_add(1, Ordering::SeqCst);
+    CurrentThreadHostDispatchResult::Accepted
+  }
+
+  fn count_current_thread_blocking_budget_host_dispatch(
+    _dispatch: u64,
+  ) -> CurrentThreadHostDispatchResult {
+    CURRENT_THREAD_BLOCKING_BUDGET_HOST_DISPATCHES.fetch_add(1, Ordering::SeqCst);
     CurrentThreadHostDispatchResult::Accepted
   }
 
@@ -8674,6 +8685,103 @@ mod tests {
 
     executor.drive_host_turn();
     futures::executor::block_on(task);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_host_turn_yields_after_inline_blocking_releases_queued_fifo() {
+    const QUEUED_BLOCKING_JOBS: usize = CurrentThreadExecutor::HOST_TURN_RUNNABLE_BUDGET + 1;
+
+    CURRENT_THREAD_BLOCKING_BUDGET_HOST_DISPATCHES.store(0, Ordering::SeqCst);
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      count_current_thread_blocking_budget_host_dispatch,
+    ));
+    let work = GenerationWork::new();
+    let observed = Arc::new(Mutex::new(Vec::new()));
+
+    let task_executor = Arc::clone(&executor);
+    let wake_executor = Arc::clone(&executor);
+    let producer_executor = Arc::clone(&executor);
+    let producer_work = Arc::clone(&work);
+    let producer_observed = Arc::clone(&observed);
+    let outer_registration =
+      work.try_register_work().expect("the outer blocking job must be accepted");
+    let (runnable, task) = async_task::spawn(
+      async move {
+        let queued = task_executor
+          .schedule_blocking(
+            move || {
+              std::thread::spawn(move || {
+                (0..QUEUED_BLOCKING_JOBS)
+                  .map(|index| {
+                    let registration = producer_work
+                      .try_register_work()
+                      .expect("queued blocking work must be accepted");
+                    let observed = Arc::clone(&producer_observed);
+                    producer_executor.schedule_blocking(
+                      move || {
+                        observed
+                          .lock()
+                          .unwrap_or_else(std::sync::PoisonError::into_inner)
+                          .push(index);
+                      },
+                      registration,
+                    )
+                  })
+                  .collect::<Vec<_>>()
+              })
+              .join()
+              .expect("the blocking producer must finish")
+            },
+            outer_registration,
+          )
+          .await
+          .expect("the inline blocking job must finish");
+        for handle in queued {
+          handle.await.expect("queued blocking work must finish");
+        }
+      },
+      move |runnable| wake_executor.schedule(runnable),
+    );
+
+    executor.schedule(runnable);
+    executor.drive_host_turn();
+
+    let first_turn = observed.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
+    assert!(!first_turn.is_empty(), "the first host turn must service queued blocking work");
+    assert!(
+      first_turn.len() < QUEUED_BLOCKING_JOBS,
+      "inline lane release must not drain the entire blocking FIFO in one host turn"
+    );
+    assert_eq!(first_turn, (0..first_turn.len()).collect::<Vec<_>>());
+    assert_eq!(
+      CURRENT_THREAD_BLOCKING_BUDGET_HOST_DISPATCHES.load(Ordering::SeqCst),
+      2,
+      "remaining blocking work must continue through a fresh host turn"
+    );
+
+    let mut continuation_turns = 0;
+    while observed.lock().unwrap_or_else(std::sync::PoisonError::into_inner).len()
+      < QUEUED_BLOCKING_JOBS
+    {
+      continuation_turns += 1;
+      assert!(
+        continuation_turns <= QUEUED_BLOCKING_JOBS,
+        "queued blocking work failed to make bounded host-turn progress"
+      );
+      executor.drive_host_turn();
+    }
+    executor.drive_host_turn();
+    futures::executor::block_on(task);
+
+    assert_eq!(
+      *observed.lock().unwrap_or_else(std::sync::PoisonError::into_inner),
+      (0..QUEUED_BLOCKING_JOBS).collect::<Vec<_>>(),
+      "blocking jobs must preserve FIFO order across host turns"
+    );
     assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
   }
 

@@ -303,18 +303,11 @@ impl GenerateStage<'_> {
       }
     }
 
-    // `symmetric_difference` intentionally covers BOTH directions.
-    // `actual ∖ expected` is the true phantom (runs under a root the source never reaches).
-    // `expected ∖ actual` is NOT always empty either, and the reason is a mismatch between two
-    // notions of "side effect": actual-order reachability is built from tree-shaking side effects
-    // (`add_side_effect_imports_for_module` skips importees whose `side_effects().has_side_effects()`
-    // is false), while sensitivity here uses the ordering notion. A module that is order-sensitive
-    // but tree-shaking-side-effect-free — e.g. a `/*#__PURE__*/` call that actually writes a global
-    // — therefore gets no bare side-effect chunk edge, so it is unreachable in the predicted actual
-    // order under a root that imports it only for that (tree-shaking-absent) side effect, yet it is
-    // in `expected`. Catching it here over-wraps it; it then runs correctly via the init chain.
-    // See `strip_plain_chunk_imports` (common.js writes globalThis.value under a pure annotation;
-    // "missing" under page-b, wrapped, runs via init_common).
+    // Both directions matter: `actual ∖ expected` is the phantom (runs under a root the source
+    // never reaches), and `expected ∖ actual` catches order-sensitive modules that tree shaking
+    // considers side-effect-free (e.g. a `/*#__PURE__*/` call writing a global), which get no
+    // side-effect chunk edge and vanish from the predicted order. Wrapping the latter is a safe
+    // over-approximation; see `strip_plain_chunk_imports`.
     for module_idx in premature_sensitive_modules(&expected_sensitive_order, &actual_positions) {
       if self.is_order_wrap_eligible(module_idx) {
         at_risk.insert(module_idx);
@@ -356,7 +349,7 @@ impl GenerateStage<'_> {
 
       for module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal) {
         if !source_reachable.contains(&module.idx)
-          || !self.is_order_wrap_closure_eligible(module.idx)
+          || !self.is_order_wrap_eligible(module.idx)
           || plan.contains(&module.idx)
         {
           continue;
@@ -409,7 +402,7 @@ impl GenerateStage<'_> {
       // module, every later eager sensitive module for that root must move behind the same init
       // boundary.
       for module_idx in expected_sensitive_order[first_wrapped_idx..].iter().copied() {
-        if self.is_order_wrap_closure_eligible(module_idx) {
+        if self.is_order_wrap_eligible(module_idx) {
           changed |= plan.insert(module_idx, OrderWrapReason::SensitiveSuffix);
         }
       }
@@ -607,17 +600,6 @@ impl GenerateStage<'_> {
   }
 
   fn is_order_wrap_eligible(&self, module_idx: ModuleIdx) -> bool {
-    if module_idx == self.link_output.runtime.id() {
-      return false;
-    }
-    if self.link_output.module_table[module_idx].as_normal().is_none() {
-      return false;
-    }
-    self.link_output.metas[module_idx].is_included
-      && self.is_order_wrap_closure_eligible(module_idx)
-  }
-
-  fn is_order_wrap_closure_eligible(&self, module_idx: ModuleIdx) -> bool {
     if module_idx == self.link_output.runtime.id() {
       return false;
     }

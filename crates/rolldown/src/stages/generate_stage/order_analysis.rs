@@ -10,6 +10,12 @@ use crate::chunk_graph::ChunkGraph;
 
 use super::GenerateStage;
 
+#[derive(Debug)]
+pub(super) struct OrderAnalysis {
+  pub(super) plan: OrderWrapPlan,
+  pub(super) import_edges: IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
+}
+
 #[derive(Debug, Default)]
 pub(super) struct OrderWrapPlan {
   modules: FxHashSet<ModuleIdx>,
@@ -46,12 +52,19 @@ enum VisitState {
   Done,
 }
 
+struct ActualOrderTraversal {
+  chunk_states: IndexVec<ChunkIdx, VisitState>,
+  module_states: IndexVec<ModuleIdx, VisitState>,
+  order: Vec<ModuleIdx>,
+  trigger_hosts: FxHashMap<ModuleIdx, ModuleIdx>,
+}
+
 impl GenerateStage<'_> {
   pub(super) fn analyze_execution_order(
     &mut self,
     chunk_graph: &ChunkGraph,
     used_symbol_refs: &UsedSymbolRefsBuilder,
-  ) -> Option<OrderWrapPlan> {
+  ) -> Option<OrderAnalysis> {
     if !self.options.is_strict_execution_order_enabled() {
       return None;
     }
@@ -69,13 +82,21 @@ impl GenerateStage<'_> {
       };
 
       let expected_order = self.expected_order_for_root(root);
-      let actual_order = self.actual_order_for_root(root, root_chunk, chunk_graph, &import_edges);
-      let at_risk = self.at_risk_modules(&expected_order, &actual_order);
+      let (actual_order, trigger_hosts) =
+        self.actual_order_for_root(root, root_chunk, chunk_graph, &import_edges);
+      let mut at_risk = self.at_risk_modules(&expected_order, &actual_order, &trigger_hosts);
+      // Lowering can change the entry edge into a static chunk cycle, so wrap every eligible
+      // source module under a root that reaches one.
+      if reaches_chunk_cycle(root_chunk, &import_edges) {
+        at_risk
+          .extend(expected_order.iter().copied().filter(|idx| self.is_order_wrap_eligible(*idx)));
+      }
       all_at_risk.extend(at_risk.iter().copied());
       roots.push(RootOrderAnalysis { root, expected_order });
     }
 
-    Some(self.build_order_wrap_plan(all_at_risk, &roots, chunk_graph, &import_edges))
+    let plan = self.build_order_wrap_plan(all_at_risk, &roots, chunk_graph, &import_edges);
+    Some(OrderAnalysis { plan, import_edges })
   }
 
   fn expected_order_for_root(&self, root: ModuleIdx) -> Vec<ModuleIdx> {
@@ -137,31 +158,31 @@ impl GenerateStage<'_> {
     order
   }
 
+  /// Returns the predicted evaluation order and, for every interop-wrapped module, the eager
+  /// module whose top-level walk first reaches it (the host of its first-reach trigger).
   fn actual_order_for_root(
     &self,
     root: ModuleIdx,
     root_chunk: ChunkIdx,
     chunk_graph: &ChunkGraph,
     import_edges: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
-  ) -> Vec<ModuleIdx> {
-    let mut chunk_states = index_vec![VisitState::Unvisited; chunk_graph.chunk_table.len()];
-    let mut module_states =
-      index_vec![VisitState::Unvisited; self.link_output.module_table.modules.len()];
-    let mut order = Vec::new();
+  ) -> (Vec<ModuleIdx>, FxHashMap<ModuleIdx, ModuleIdx>) {
+    let mut traversal = ActualOrderTraversal {
+      chunk_states: index_vec![VisitState::Unvisited; chunk_graph.chunk_table.len()],
+      module_states: index_vec![
+        VisitState::Unvisited;
+        self.link_output.module_table.modules.len()
+      ],
+      order: Vec::new(),
+      trigger_hosts: FxHashMap::default(),
+    };
 
-    self.visit_actual_chunk(
-      root_chunk,
-      chunk_graph,
-      import_edges,
-      &mut chunk_states,
-      &mut module_states,
-      &mut order,
-    );
+    self.visit_actual_chunk(root_chunk, chunk_graph, import_edges, &mut traversal);
     if !self.link_output.metas[root].wrap_kind().is_none() {
-      self.execute_actual_module(root, &mut module_states, &mut order);
+      self.execute_actual_module(root, root, &mut traversal);
     }
 
-    order
+    (traversal.order, traversal.trigger_hosts)
   }
 
   fn visit_actual_chunk(
@@ -169,46 +190,37 @@ impl GenerateStage<'_> {
     chunk_idx: ChunkIdx,
     chunk_graph: &ChunkGraph,
     import_edges: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
-    chunk_states: &mut IndexVec<ChunkIdx, VisitState>,
-    module_states: &mut IndexVec<ModuleIdx, VisitState>,
-    order: &mut Vec<ModuleIdx>,
+    traversal: &mut ActualOrderTraversal,
   ) {
-    match chunk_states[chunk_idx] {
+    match traversal.chunk_states[chunk_idx] {
       VisitState::Done | VisitState::Visiting => return,
       VisitState::Unvisited => {}
     }
-    chunk_states[chunk_idx] = VisitState::Visiting;
+    traversal.chunk_states[chunk_idx] = VisitState::Visiting;
 
     let mut imports = import_edges[chunk_idx].iter().copied().collect_vec();
     imports
       .sort_unstable_by_key(|importee_chunk| chunk_graph.chunk_table[*importee_chunk].exec_order);
     for importee_chunk in imports {
-      self.visit_actual_chunk(
-        importee_chunk,
-        chunk_graph,
-        import_edges,
-        chunk_states,
-        module_states,
-        order,
-      );
+      self.visit_actual_chunk(importee_chunk, chunk_graph, import_edges, traversal);
     }
 
     for &module_idx in &chunk_graph.chunk_table[chunk_idx].modules {
       if self.link_output.metas[module_idx].wrap_kind().is_none() {
-        self.execute_actual_module(module_idx, module_states, order);
+        self.execute_actual_module(module_idx, module_idx, traversal);
       }
     }
 
-    chunk_states[chunk_idx] = VisitState::Done;
+    traversal.chunk_states[chunk_idx] = VisitState::Done;
   }
 
   fn execute_actual_module(
     &self,
     module_idx: ModuleIdx,
-    module_states: &mut IndexVec<ModuleIdx, VisitState>,
-    order: &mut Vec<ModuleIdx>,
+    host: ModuleIdx,
+    traversal: &mut ActualOrderTraversal,
   ) {
-    match module_states[module_idx] {
+    match traversal.module_states[module_idx] {
       VisitState::Done | VisitState::Visiting => return,
       VisitState::Unvisited => {}
     }
@@ -219,7 +231,7 @@ impl GenerateStage<'_> {
       return;
     }
 
-    module_states[module_idx] = VisitState::Visiting;
+    traversal.module_states[module_idx] = VisitState::Visiting;
     for rec in &module.import_records {
       if !matches!(rec.kind, ImportKind::Import | ImportKind::Require) {
         continue;
@@ -228,16 +240,20 @@ impl GenerateStage<'_> {
       if self.link_output.metas[importee_idx].wrap_kind().is_none() {
         continue;
       }
-      self.execute_actual_module(importee_idx, module_states, order);
+      self.execute_actual_module(importee_idx, host, traversal);
     }
-    module_states[module_idx] = VisitState::Done;
-    order.push(module_idx);
+    traversal.module_states[module_idx] = VisitState::Done;
+    if module_idx != host {
+      traversal.trigger_hosts.insert(module_idx, host);
+    }
+    traversal.order.push(module_idx);
   }
 
   fn at_risk_modules(
     &self,
     expected_order: &[ModuleIdx],
     actual_order: &[ModuleIdx],
+    trigger_hosts: &FxHashMap<ModuleIdx, ModuleIdx>,
   ) -> FxHashSet<ModuleIdx> {
     let expected_sensitive_order = self.sensitive_order(expected_order);
     let actual_sensitive_order = self.sensitive_order(actual_order);
@@ -250,19 +266,26 @@ impl GenerateStage<'_> {
       .map(|(position, module_idx)| (module_idx, position))
       .collect::<FxHashMap<_, _>>();
     let mut at_risk = FxHashSet::default();
-
-    for module_idx in expected_sensitive_set.symmetric_difference(&actual_sensitive_set) {
-      if self.is_order_wrap_eligible(*module_idx) {
-        at_risk.insert(*module_idx);
-      }
-    }
-
-    // Keep both sides: tree-shaking reachability can omit an order-sensitive module that still
-    // executes through a synthetic init chain. See `strip_plain_chunk_imports`.
-    for module_idx in premature_sensitive_modules(&expected_sensitive_order, &actual_positions) {
+    // An interop-wrapped at-risk module cannot be delayed itself; delaying the eager module
+    // that hosts its first-reach trigger is the only lever, so the signal transfers there.
+    let flag = |module_idx: ModuleIdx, at_risk: &mut FxHashSet<ModuleIdx>| {
       if self.is_order_wrap_eligible(module_idx) {
         at_risk.insert(module_idx);
+      } else if let Some(&host) = trigger_hosts.get(&module_idx)
+        && self.is_order_wrap_eligible(host)
+      {
+        at_risk.insert(host);
       }
+    };
+
+    for module_idx in expected_sensitive_set.symmetric_difference(&actual_sensitive_set) {
+      flag(*module_idx, &mut at_risk);
+    }
+
+    // Keep both difference directions: phantoms and tree-shaking-omitted sensitive modules.
+    // See `strip_plain_chunk_imports`.
+    for module_idx in premature_sensitive_modules(&expected_sensitive_order, &actual_positions) {
+      flag(module_idx, &mut at_risk);
     }
 
     at_risk
@@ -303,7 +326,7 @@ impl GenerateStage<'_> {
 
       for module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal) {
         if !source_reachable.contains(&module.idx)
-          || !self.is_order_wrap_closure_eligible(module.idx)
+          || !self.is_order_wrap_eligible(module.idx)
           || plan.contains(&module.idx)
         {
           continue;
@@ -350,8 +373,7 @@ impl GenerateStage<'_> {
       }
       for chunk_idx in cycle {
         for &module_idx in &chunk_graph.chunk_table[chunk_idx].modules {
-          if self.is_order_sensitive(module_idx) && self.is_order_wrap_closure_eligible(module_idx)
-          {
+          if self.is_order_sensitive(module_idx) && self.is_order_wrap_eligible(module_idx) {
             changed |= plan.insert(module_idx);
           }
         }
@@ -380,7 +402,7 @@ impl GenerateStage<'_> {
       // module, every later eager sensitive module for that root must move behind the same init
       // boundary.
       for module_idx in expected_sensitive_order[first_wrapped_idx..].iter().copied() {
-        if self.is_order_wrap_closure_eligible(module_idx) {
+        if self.is_order_wrap_eligible(module_idx) {
           changed |= plan.insert(module_idx);
         }
       }
@@ -572,17 +594,6 @@ impl GenerateStage<'_> {
     if module_idx == self.link_output.runtime.id() {
       return false;
     }
-    if self.link_output.module_table[module_idx].as_normal().is_none() {
-      return false;
-    }
-    self.link_output.metas[module_idx].is_included
-      && self.is_order_wrap_closure_eligible(module_idx)
-  }
-
-  fn is_order_wrap_closure_eligible(&self, module_idx: ModuleIdx) -> bool {
-    if module_idx == self.link_output.runtime.id() {
-      return false;
-    }
     if !self.link_output.metas[module_idx].is_included {
       return false;
     }
@@ -592,6 +603,32 @@ impl GenerateStage<'_> {
     matches!(module.exports_kind, ExportsKind::Esm | ExportsKind::None)
       && matches!(self.link_output.metas[module_idx].wrap_kind(), WrapKind::None)
   }
+}
+
+/// Whether any static chunk cycle is reachable from `root_chunk` over the predicted edges.
+fn reaches_chunk_cycle(
+  root_chunk: ChunkIdx,
+  import_edges: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
+) -> bool {
+  let mut states = index_vec![VisitState::Unvisited; import_edges.len()];
+  let mut stack = vec![(root_chunk, import_edges[root_chunk].iter())];
+  states[root_chunk] = VisitState::Visiting;
+  while let Some((chunk_idx, edges)) = stack.last_mut() {
+    let Some(&importee_chunk) = edges.next() else {
+      states[*chunk_idx] = VisitState::Done;
+      stack.pop();
+      continue;
+    };
+    match states[importee_chunk] {
+      VisitState::Visiting => return true,
+      VisitState::Done => {}
+      VisitState::Unvisited => {
+        states[importee_chunk] = VisitState::Visiting;
+        stack.push((importee_chunk, import_edges[importee_chunk].iter()));
+      }
+    }
+  }
+  false
 }
 
 fn premature_sensitive_modules(

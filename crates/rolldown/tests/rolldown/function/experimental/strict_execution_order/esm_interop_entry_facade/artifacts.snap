@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as init_e } from "./e2.js";
+//#region a.js
+init_e();
+console.log("A");
+//#endregion
+
+```
+
+## b.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+import { n as init_e } from "./e2.js";
+//#region b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin((() => {
+	init_e();
+	console.log("B");
+}));
+//#endregion
+export default require_b();
+
+```
+
+## e.js
+
+```js
+import { n as init_e, r as v } from "./e2.js";
+init_e();
+export { v };
+
+```
+
+## e2.js
+
+```js
+import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
+//#region e.js
+var e_exports = /* @__PURE__ */ __exportAll({ v: () => "v" });
+var v;
+var init_e = __esmMin((() => {
+	v = "v";
+	console.log("E");
+}));
+//#endregion
+export { init_e as n, v as r, e_exports as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```

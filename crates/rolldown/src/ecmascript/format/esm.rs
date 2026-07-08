@@ -71,11 +71,8 @@ pub fn render_esm<'code>(
           // - If several records re-export the same external with *different* attributes (a
           //   pathological, conflicting input), the first in the entry's breadth-first export-star
           //   traversal wins.
-          let with_clause = find_entry_level_external_import_attribute(
-            &ctx.link_output.module_table,
-            entry_module.idx,
-            importee_idx,
-          );
+          let with_clause =
+            find_entry_level_external_import_attribute(ctx, entry_module.idx, importee_idx);
           // An absent attribute is just an empty suffix, so both cases collapse to a
           // single `append_source` (same shape `create_import_declaration` uses below).
           source_joiner.append_source(concat_string!(
@@ -112,11 +109,28 @@ pub fn render_esm<'code>(
   source_joiner
 }
 
-fn find_entry_level_external_import_attribute(
-  module_table: &ModuleTable,
+fn find_entry_level_external_import_attribute<'a>(
+  ctx: &'a GenerateContext<'_>,
   entry_module_idx: ModuleIdx,
   external_module_idx: ModuleIdx,
-) -> Option<&ImportAttribute> {
+) -> Option<&'a ImportAttribute> {
+  let module_table = &ctx.link_output.module_table;
+  // Order-wrap entry facades render entry-level re-exports while the owning record lives in
+  // another chunk, so strict follows the export-star chain from the entry. Flag-off keeps
+  // main's same-chunk scan so its output stays byte-identical.
+  if !ctx.options.is_strict_execution_order_enabled() {
+    return ctx.chunk.modules.iter().find_map(|module_idx| {
+      let module = module_table[*module_idx].as_normal()?;
+      module.import_records.iter_enumerated().find_map(|(rec_idx, rec)| {
+        (rec.resolved_module == Some(external_module_idx)
+          && rec.meta.contains(ImportRecordMeta::IsExportStar)
+          && rec.meta.contains(ImportRecordMeta::EntryLevelExternal))
+        .then(|| module.import_attribute_map.get(&rec_idx))
+        .flatten()
+      })
+    });
+  }
+
   let mut queue = VecDeque::from([entry_module_idx]);
   let mut visited = FxHashSet::default();
 

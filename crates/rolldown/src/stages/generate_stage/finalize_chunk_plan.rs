@@ -28,23 +28,12 @@ impl GenerateStage<'_> {
     let mut order_state = OrderWrapState::default();
     self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
 
-    let order_plan = self.analyze_execution_order(chunk_graph, used_symbol_refs);
-    let topology_changed = if let Some(plan) = &order_plan
-      && !plan.is_empty()
+    let order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs);
+    if let Some(analysis) = &order_analysis
+      && self.apply_order_wraps(chunk_graph, analysis, used_symbol_refs, &mut order_state)
     {
-      self.apply_order_wraps(chunk_graph, plan, used_symbol_refs, &mut order_state);
       #[cfg(debug_assertions)]
-      self.assert_order_wrap_plan_applied(chunk_graph, plan, &order_state);
-      true
-    } else if self.create_strict_execution_order_entry_facades(chunk_graph, None) {
-      chunk_graph.sort_chunk_modules(self.link_output, self.options);
-      self.renumber_live_chunks(chunk_graph);
-      true
-    } else {
-      false
-    };
-
-    if topology_changed {
+      self.assert_order_wrap_plan_applied(chunk_graph, &analysis.plan, &order_state);
       self.find_entry_level_external_module(chunk_graph);
       self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
     }

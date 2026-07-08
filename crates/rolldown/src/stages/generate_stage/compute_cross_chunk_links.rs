@@ -180,6 +180,7 @@ impl GenerateStage<'_> {
     }
   }
 
+  /// Compute provisional links for order analysis. Runtime symbol placement is cleared if moved.
   pub(super) fn predicted_static_import_edges(
     &mut self,
     chunk_graph: &ChunkGraph,
@@ -929,7 +930,11 @@ impl GenerateStage<'_> {
           add_side_effect_imports_for_module(module_idx);
         }
 
-        if let ChunkKind::EntryPoint { module: entry_module_idx, .. } = &chunk.kind
+        // An order-wrap entry facade hosts no modules, but its prologue init call must still
+        // run after the entry's side-effectful dependencies. Strict-gated to keep the flag-off
+        // facade output identical to main.
+        if self.options.is_strict_execution_order_enabled()
+          && let ChunkKind::EntryPoint { module: entry_module_idx, .. } = &chunk.kind
           && !chunk.modules.contains(entry_module_idx)
         {
           add_side_effect_imports_for_module(*entry_module_idx);

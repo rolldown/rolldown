@@ -122,16 +122,12 @@ impl OrderWrapState {
       });
     }
 
-    if let Some(module) = self.modules.get(&module_idx) {
-      return Some(EsmInitTarget {
-        wrapper_ref: module.wrapper_ref,
-        init_is_noop: module.init_is_noop,
-        tla_tainted: meta.is_tla_or_contains_tla_dependency,
-        origin: EsmInitOrigin::ExecutionOrder,
-      });
-    }
-
-    None
+    self.modules.get(&module_idx).map(|module| EsmInitTarget {
+      wrapper_ref: module.wrapper_ref,
+      init_is_noop: module.init_is_noop,
+      tla_tainted: meta.is_tla_or_contains_tla_dependency,
+      origin: EsmInitOrigin::ExecutionOrder,
+    })
   }
 
   pub(crate) fn insert_order_wrapper(

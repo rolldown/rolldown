@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## e0.js
 
 ```js
-//#region m0.js
-globalThis.logs.push("m0");
-//#endregion
+import { t as init_m0 } from "./m0.js";
+init_m0();
 
 ```
 
@@ -24,12 +23,13 @@ init_m1();
 ## g.js
 
 ```js
-import "./e0.js";
+import { t as init_m0 } from "./m0.js";
 import { t as init_m3 } from "./m3.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region m2.js
 function init_m2() {
 	return (init_m2 = __esmMin((() => {
+		init_m0();
 		init_m3();
 		globalThis.logs.push("m2");
 	})))();
@@ -44,6 +44,21 @@ function init_m1() {
 }
 //#endregion
 export { init_m2 as n, init_m1 as t };
+
+```
+
+## m0.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region m0.js
+function init_m0() {
+	return (init_m0 = __esmMin((() => {
+		globalThis.logs.push("m0");
+	})))();
+}
+//#endregion
+export { init_m0 as t };
 
 ```
 

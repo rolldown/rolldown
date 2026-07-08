@@ -37,8 +37,12 @@ import {
 import { assertRuntimeFeature } from '../../runtime-support';
 import type { DevOptions } from './dev-options';
 
+type BindingDevEngineWithTerminalClose = BindingDevEngine & {
+  closeTerminal(): Promise<BindingResult<void>>;
+};
+
 export class DevEngine {
-  #inner: BindingDevEngine;
+  #inner: BindingDevEngineWithTerminalClose;
   #runtimeLease: RuntimeLease;
   #stopWorkers: (() => Promise<void>) | undefined;
   #nativeCloseErrorsPromise: Promise<unknown[]> | undefined;
@@ -96,7 +100,10 @@ export class DevEngine {
     }
 
     try {
-      const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
+      const inner = new BindingDevEngine(
+        options.bundlerOptions,
+        bindingDevOptions,
+      ) as BindingDevEngineWithTerminalClose;
       return new DevEngine(
         inner,
         runtimeLease,
@@ -115,7 +122,7 @@ export class DevEngine {
   }
 
   private constructor(
-    inner: BindingDevEngine,
+    inner: BindingDevEngineWithTerminalClose,
     runtimeLease: RuntimeLease,
     stopWorkers: (() => Promise<void>) | undefined,
     closeCallbackScope: CloseCallbackScope,
@@ -205,7 +212,9 @@ export class DevEngine {
     let retryable = false;
     await this.#operationsDrainedPromise;
     this.#nativeCloseErrorsPromise ??= (async () =>
-      normalizeBindingResultErrors(await this.#inner.close()))().catch((error: unknown) => [error]);
+      normalizeBindingResultErrors(await this.#inner.closeTerminal()))().catch((error: unknown) => [
+      error,
+    ]);
     // Native close waits for closeBundle and coordinator shutdown. Keep
     // parallel-plugin workers alive until every native diagnostic is captured.
     errors.push(...(await this.#nativeCloseErrorsPromise));

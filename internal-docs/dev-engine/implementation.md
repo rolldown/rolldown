@@ -1000,19 +1000,23 @@ is active waits for, or replays, the terminal result. Because N-API exposes no
 portable way to identify which JavaScript async continuation invoked a method,
 an unrelated raw close racing an active callback also receives the
 acknowledgement and must call close again to observe terminal diagnostics. The
-public TypeScript owner does not hit this conservative branch because its own
-operation barrier waits for callbacks before invoking native close. If N-API
-cannot schedule the close executor, the binding rolls back only the
-`close_started` latch so a later raw close can retry transport setup while the
-engine remains closed to new operations.
+public TypeScript owner uses the binding's internal terminal-close entry point,
+which never acknowledges callback activity. Its dependency-aware close promise
+still acknowledges a close awaited from inside a callback, allowing that
+callback to return while the underlying terminal close continues. Unrelated
+public callers await the terminal result, including late callback and
+`closeBundle` diagnostics, before worker or runtime cleanup. If N-API cannot
+schedule the close executor, the binding rolls back only the `close_started`
+latch so a later close can retry transport setup while the engine remains
+closed to new operations.
 
 ### TypeScript parallel-plugin ownership
 
 `packages/rolldown/src/api/dev/dev-engine.ts` owns the `stopWorkers` closure
 returned by option normalization. `DevEngine.close()` is memoized, drains its
 accepted JavaScript operations, and then awaits the native
-`BindingDevEngine.close()` phase; native close waits for `closeBundle` and
-coordinator shutdown. Parallel workers are terminated only afterward,
+terminal-close phase; native close waits for active dev callbacks,
+`closeBundle`, and coordinator shutdown. Parallel workers are terminated only afterward,
 including when native close reports errors. Constructor failure also
 terminates workers that were already initialized. Runtime-lease acquisition
 and binding-construction failures combine worker shutdown with lease release

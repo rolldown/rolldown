@@ -103,12 +103,23 @@ impl BindingDevEngineLifecycle {
   }
 
   fn begin_close(&self) -> BeginBindingDevEngineClose {
+    self.begin_close_with_callback_acknowledgement(true)
+  }
+
+  fn begin_terminal_close(&self) -> BeginBindingDevEngineClose {
+    self.begin_close_with_callback_acknowledgement(false)
+  }
+
+  fn begin_close_with_callback_acknowledgement(
+    &self,
+    allow_callback_acknowledgement: bool,
+  ) -> BeginBindingDevEngineClose {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     if let Some(outcome) = state.close_outcome.clone() {
       return BeginBindingDevEngineClose::Finished(outcome);
     }
     state.closing = true;
-    let acknowledge = state.active_callbacks > 0;
+    let acknowledge = allow_callback_acknowledgement && state.active_callbacks > 0;
     if state.close_started {
       if acknowledge {
         return BeginBindingDevEngineClose::Acknowledge;
@@ -186,6 +197,38 @@ async fn execute_binding_dev_engine_close(
   let outcome = inner.close().await;
   lifecycle.finish_close(outcome.clone());
   outcome
+}
+
+fn spawn_terminal_binding_dev_engine_close(
+  env: &Env,
+  inner: Arc<rolldown_dev::DevEngine>,
+  lifecycle: Arc<BindingDevEngineLifecycle>,
+  cwd: Arc<Path>,
+  operations_drained: Option<oneshot::Receiver<()>>,
+) -> napi::Result<PromiseRaw<'_, BindingResult<()>>> {
+  let close_lifecycle = Arc::clone(&lifecycle);
+  let close = spawn_boxed_future(env, async move {
+    let outcome =
+      execute_binding_dev_engine_close(inner, close_lifecycle, operations_drained).await;
+    Ok(dev_engine_close_binding_result(outcome, cwd.as_ref()))
+  });
+  if close.is_err() {
+    lifecycle.abort_close_start();
+  }
+  close
+}
+
+fn wait_for_terminal_binding_dev_engine_close(
+  env: &Env,
+  cwd: Arc<Path>,
+  close_finished: oneshot::Receiver<BindingDevEngineCloseOutcome>,
+) -> napi::Result<PromiseRaw<'_, BindingResult<()>>> {
+  spawn_boxed_future(env, async move {
+    let outcome = close_finished.await.map_err(|_| {
+      napi::Error::from_reason("Dev engine close task ended without publishing its result")
+    })?;
+    Ok(dev_engine_close_binding_result(outcome, cwd.as_ref()))
+  })
 }
 
 #[napi]
@@ -549,27 +592,44 @@ impl BindingDevEngine {
         }
       }
       BeginBindingDevEngineClose::Start { operations_drained, acknowledge: false } => {
-        let inner = Arc::clone(&self.inner);
-        let close_lifecycle = Arc::clone(&self.lifecycle);
-        let cwd = Arc::clone(&self.cwd);
-        let close = spawn_boxed_future(env, async move {
-          let outcome =
-            execute_binding_dev_engine_close(inner, close_lifecycle, operations_drained).await;
-          Ok(dev_engine_close_binding_result(outcome, cwd.as_ref()))
-        });
-        if close.is_err() {
-          self.lifecycle.abort_close_start();
-        }
-        close
+        spawn_terminal_binding_dev_engine_close(
+          env,
+          Arc::clone(&self.inner),
+          Arc::clone(&self.lifecycle),
+          Arc::clone(&self.cwd),
+          operations_drained,
+        )
       }
       BeginBindingDevEngineClose::Wait(close_finished) => {
-        let cwd = Arc::clone(&self.cwd);
-        spawn_boxed_future(env, async move {
-          let outcome = close_finished.await.map_err(|_| {
-            napi::Error::from_reason("Dev engine close task ended without publishing its result")
-          })?;
-          Ok(dev_engine_close_binding_result(outcome, cwd.as_ref()))
-        })
+        wait_for_terminal_binding_dev_engine_close(env, Arc::clone(&self.cwd), close_finished)
+      }
+    }
+  }
+
+  #[napi(skip_typescript)]
+  pub fn close_terminal<'env>(
+    &self,
+    env: &'env Env,
+  ) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
+    match self.lifecycle.begin_terminal_close() {
+      BeginBindingDevEngineClose::Finished(outcome) => {
+        PromiseRaw::resolve(env, dev_engine_close_binding_result(outcome, self.cwd.as_ref()))
+      }
+      BeginBindingDevEngineClose::Start { operations_drained, acknowledge: false } => {
+        spawn_terminal_binding_dev_engine_close(
+          env,
+          Arc::clone(&self.inner),
+          Arc::clone(&self.lifecycle),
+          Arc::clone(&self.cwd),
+          operations_drained,
+        )
+      }
+      BeginBindingDevEngineClose::Wait(close_finished) => {
+        wait_for_terminal_binding_dev_engine_close(env, Arc::clone(&self.cwd), close_finished)
+      }
+      BeginBindingDevEngineClose::Acknowledge
+      | BeginBindingDevEngineClose::Start { acknowledge: true, .. } => {
+        unreachable!("terminal close never acknowledges an active callback")
       }
     }
   }
@@ -679,11 +739,12 @@ mod tests {
       panic!("callback close should start background cleanup and return an acknowledgement");
     };
     assert!(matches!(lifecycle.begin_close(), BeginBindingDevEngineClose::Acknowledge));
+    let BeginBindingDevEngineClose::Wait(mut terminal_close) = lifecycle.begin_terminal_close()
+    else {
+      panic!("terminal close should wait even while the callback is active");
+    };
 
     drop(callback);
-    let BeginBindingDevEngineClose::Wait(mut terminal_close) = lifecycle.begin_close() else {
-      panic!("non-callback close should wait for the terminal outcome");
-    };
     drop(operation);
     assert_eq!(operations_drained.try_recv().expect("barrier should resolve"), Some(()));
 
@@ -693,6 +754,31 @@ mod tests {
       Some(Ok(()))
     ));
     assert!(matches!(lifecycle.begin_close(), BeginBindingDevEngineClose::Finished(Ok(()))));
+  }
+
+  #[test]
+  fn lifecycle_terminal_close_started_during_callback_never_acknowledges() {
+    let lifecycle = Arc::new(BindingDevEngineLifecycle::new());
+    let operation = lifecycle.begin_operation().expect("engine should start open");
+    let callback = lifecycle.begin_callback();
+
+    let BeginBindingDevEngineClose::Start {
+      operations_drained: Some(mut operations_drained),
+      acknowledge: false,
+    } = lifecycle.begin_terminal_close()
+    else {
+      panic!("terminal close should start without acknowledging the callback");
+    };
+    assert!(matches!(lifecycle.begin_close(), BeginBindingDevEngineClose::Acknowledge));
+
+    drop(callback);
+    drop(operation);
+    assert_eq!(operations_drained.try_recv().expect("barrier should resolve"), Some(()));
+    lifecycle.finish_close(Ok(()));
+    assert!(matches!(
+      lifecycle.begin_terminal_close(),
+      BeginBindingDevEngineClose::Finished(Ok(()))
+    ));
   }
 
   #[test]

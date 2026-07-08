@@ -163,6 +163,80 @@ test.skipIf(isSingleThread)(
 );
 
 test.skipIf(isSingleThread)(
+  'close waits for a watcher callback and replays a late closeBundle failure',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const { dir, input, outputDir } = createFixture('dev-close-drains-watcher-callback');
+    const closeError = new TypeError('closeBundle failed after watcher callback');
+    let callbackStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      callbackStarted = resolve;
+    });
+    let releaseCallback!: () => void;
+    const callbackGate = new Promise<void>((resolve) => {
+      releaseCallback = resolve;
+    });
+    let callbackCompleted = false;
+    let closeBundleCalls = 0;
+
+    let engine!: DevEngine;
+    engine = await dev(
+      {
+        input,
+        experimental: { devMode: true },
+        plugins: [
+          {
+            name: 'late-watcher-close-failure',
+            closeBundle() {
+              closeBundleCalls += 1;
+              throw closeError;
+            },
+          },
+        ],
+      },
+      { dir: outputDir },
+      {
+        async onHmrUpdates() {
+          callbackStarted();
+          await callbackGate;
+          await engine.close();
+          callbackCompleted = true;
+        },
+      },
+    );
+    onTestFinished(async () => {
+      releaseCallback();
+      await engine.close().catch(() => {});
+      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    await engine.run();
+    await editFile(input, 'console.log(2)');
+    await started;
+
+    const closePromise = engine.close();
+    let closeSettled = false;
+    void closePromise.then(
+      () => {
+        closeSettled = true;
+      },
+      () => {
+        closeSettled = true;
+      },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(closeSettled).toBe(false);
+    expect(closeBundleCalls).toBe(0);
+
+    releaseCallback();
+    await expect(settleWithin(closePromise, 'watcher callback close')).rejects.toBe(closeError);
+    expect(callbackCompleted).toBe(true);
+    expect(closeBundleCalls).toBe(1);
+    await expect(engine.close()).rejects.toBe(closeError);
+  },
+);
+
+test.skipIf(isSingleThread)(
   'run propagates a synchronous onOutput throw',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

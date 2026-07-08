@@ -2001,11 +2001,22 @@ test.concurrent(
   async ({ task, expect, onTestFinished }) => {
     const retryCount = task.result?.retryCount ?? 0;
     const { input, output, dir } = createTestInputAndOutput('watch-buildDelay', retryCount);
+    const buildDelay = 500;
+    let resolveFirstInvalidation!: () => void;
+    const firstInvalidation = new Promise<void>((resolve) => {
+      resolveFirstInvalidation = resolve;
+    });
+    const onInvalidateFn = vi.fn(resolveFirstInvalidation);
     const watcher = watch({
       input,
       output: { file: output },
       watch: {
-        buildDelay: 50,
+        buildDelay,
+        onInvalidate: onInvalidateFn,
+        watcher: {
+          pollInterval: 10,
+          compareContentsForPolling: true,
+        },
       },
     });
     onTestFinished(async () => {
@@ -2019,15 +2030,15 @@ test.concurrent(
     const restartFn = vi.fn();
     watcher.on('restart', restartFn);
 
-    // Sleep to ensure mtime crosses second boundary from initial creation
-    await sleep(1000);
+    const rebuildFinished = waitBuildFinished(watcher);
     fs.writeFileSync(input, 'console.log(4)');
-    await sleep(20);
+    await firstInvalidation;
     fs.writeFileSync(input, 'console.log(5)');
 
-    // sleep 200ms to wait the build finished, if the buildDelay is working, the restartFn should be called once
-    await sleep(200);
-    await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(5)');
+    await expect.poll(() => onInvalidateFn).toHaveBeenCalledTimes(2);
+    await rebuildFinished;
+    await sleep(buildDelay + 50);
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(5)');
     expect(restartFn).toBeCalledTimes(1);
   },
 );

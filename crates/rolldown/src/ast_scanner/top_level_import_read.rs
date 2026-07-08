@@ -274,6 +274,16 @@ mod test {
   }
 
   #[test]
+  fn default_export_value_is_a_read() {
+    assert_eq!(detect("import { a } from './a'; export default a;"), vec![false, true]);
+  }
+
+  #[test]
+  fn instance_field_initializers_are_conservatively_flagged() {
+    assert_eq!(detect("import { x } from './state'; export class C { f = x; }"), vec![false, true]);
+  }
+
+  #[test]
   fn class_definition_time_reads_are_flagged() {
     // Static field initializers run at class-definition (module-eval) time.
     assert_eq!(

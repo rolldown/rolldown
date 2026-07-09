@@ -296,7 +296,11 @@ fn native_close_error_object(env: &Env, error: NativeError) -> napi::Result<Obje
 fn close_binding_errors(error: &ClassicBundlerCloseError) -> Vec<BindingError> {
   let mut errors = Vec::new();
   for failure in error.failures() {
-    append_close_failure_binding_errors(&mut errors, failure, error.cwd());
+    append_close_failure_binding_errors(
+      &mut errors,
+      failure,
+      failure.cwd().unwrap_or_else(|| error.cwd()),
+    );
   }
   errors
 }
@@ -515,6 +519,35 @@ mod tests {
 
     assert_eq!(errors.len(), 2);
     assert!(errors.into_iter().all(|error| matches!(error, BindingError::NativeError(_))));
+  }
+
+  #[test]
+  fn retained_close_failure_uses_its_originating_output_cwd() {
+    let root = std::env::temp_dir().join("rolldown-close-cwd");
+    let originating_cwd = root.join("first");
+    let latest_cwd = root.join("latest");
+    let missing_entry = originating_cwd.join("src/missing.js");
+    let failure = ClassicBundlerCloseFailure::from_error(
+      "closeBundle failed",
+      anyhow::Error::new(BuildDiagnostic::unresolved_entry(&missing_entry, None)),
+    )
+    .with_cwd(originating_cwd);
+    let error = ClassicBundlerCloseError::new(latest_cwd, vec![failure]);
+
+    let binding_errors = close_binding_errors(&error);
+    let [BindingError::NativeError(error)] = binding_errors.as_slice() else {
+      panic!("the retained build diagnostic must remain a native binding error");
+    };
+    assert!(
+      error.message.contains("src/missing.js"),
+      "the diagnostic should be rendered relative to its originating cwd: {}",
+      error.message
+    );
+    assert!(
+      !error.message.contains("../first/"),
+      "the latest output cwd must not be used for an older failure: {}",
+      error.message
+    );
   }
 
   #[test]

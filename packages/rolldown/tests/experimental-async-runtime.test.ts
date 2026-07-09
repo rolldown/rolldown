@@ -118,7 +118,7 @@ describe('experimental async runtime API', () => {
       const result = JSON.parse(child.stdout.trim().split('\n').at(-1)!);
       expect(result).toMatchObject({
         flavor: 'CurrentThread',
-        invalidConfigurationsRejected: 10,
+        invalidConfigurationsRejected: 12,
         scanSettled: true,
         buildSettled: true,
       });
@@ -132,7 +132,7 @@ describe('experimental async runtime API', () => {
     // Shared native builds report the configured flavor, while every shared
     // WebAssembly build is CurrentThread-only.
     if (isDefaultBuild) {
-      expect(config.flavor).toBe('MultiThread');
+      expect(config.flavor).toBe(capabilities.flavor);
     } else if (capabilities.wasi) {
       expect(config).toMatchObject({
         flavor: 'CurrentThread',

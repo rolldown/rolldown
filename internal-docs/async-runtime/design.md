@@ -29,7 +29,8 @@ The existing Tokio runtime remains the default and is selected by the
 3. **Blocking I/O cannot consume every execution lane.** Blocking jobs are
    queued alongside runnable futures, but multi-thread validation reserves one
    worker from blocking admission. MultiThread first clamps the requested count
-   to `rayon::max_num_threads()`, has a truthful minimum of two configured and
+   to Rolldown's 256-worker production ceiling and
+   `rayon::max_num_threads()`, has a truthful minimum of two configured and
    physical workers, and limits the blocking cap to `worker_threads - 1`. No
    hidden reserve worker exists. Blocking task
    start/completion metrics include exact-dependency work run through a nested
@@ -123,6 +124,10 @@ The existing Tokio runtime remains the default and is selected by the
    mutex, so concurrent calls serialize against the latest committed options
    instead of overwriting disjoint fields from stale snapshots. A rejected
    candidate leaves the prior configuration unchanged.
+   Native `ROLLDOWN_*` worker counts clamp to 256 and native Tokio blocking
+   counts clamp to 512 before runtime construction. Explicit JavaScript options
+   above 256 reject atomically. The native Tokio builder also checks the
+   combined worker/blocking capacity before entering Tokio's internal addition.
    Every native shared-runtime package entry installs both CurrentThread host
    bridges before that window can be used. Host installation is independent of
    the import-time flavor, so a legal synchronous `MultiThread -> CurrentThread`
@@ -390,10 +395,12 @@ The existing Tokio runtime remains the default and is selected by the
    panic, shutdown cancellation, or rejected submission becomes exactly one
    build diagnostic and completion accounting cannot hang.
 
-9. **The compatibility path does not change.** Builds without
-   `async-runtime` retain napi-rs's Tokio executor and Rolldown's previous
-   behavior. Manual runtime lifecycle exports remain successful no-ops on
-   native and threadless-WASI artifacts, matching their historical contract.
+9. **The supported compatibility path does not change.** Native and
+   `wasm32-wasip1-threads` builds without `async-runtime` retain napi-rs's
+   Tokio executor and Rolldown's previous behavior. Threadless
+   `wasm32-wasip1` rejects the Tokio-only feature combination at compile time:
+   napi-rs can construct a current-thread runtime there but rejects every
+   built-in async submission, so such an artifact cannot run Rolldown.
 
 ## Background
 

@@ -357,7 +357,8 @@ binary.
 - A second FIFO holds blocking closures. `active_blocking` limits how many
   Rayon workers may block at once. Validation reserves one worker from
   blocking admission. MultiThread promotes a requested worker count of one to
-  two, clamps it to `rayon::max_num_threads()`, and only then derives
+  two, clamps it to the 256-worker production ceiling and
+  `rayon::max_num_threads()`, and only then derives
   `max_blocking_tasks <= worker_threads - 1`. The Rayon pool creates exactly
   that validated count; configuration and metrics therefore report physically
   realizable workers, with no hidden reserve. Blocking start/completion counters
@@ -607,6 +608,22 @@ critical section. Omitted fields are preserved, concurrent calls apply in lock
 order without stale-snapshot overwrites, and validation failure commits
 nothing.
 
+Native `ROLLDOWN_*` worker counts clamp to 256 before either backend can
+construct physical workers. Native Tokio's separate blocking-thread limit
+clamps to 512, and module initialization checks the combined count before Tokio
+performs its internal addition. The JavaScript configuration boundary rejects
+`workerThreads` or `maxBlockingTasks` above 256; it does not silently clamp an
+out-of-range explicit value into the accepted range. Accepted values still
+undergo normal topology validation: CurrentThread becomes `(1, 1)`, MultiThread
+promotes one worker to two, applies Rayon's platform cap, and limits blocking
+admission to `worker_threads - 1`. The core shared-runtime validation repeats
+the worker ceiling so direct Rust callers cannot bypass the resource bound.
+Native defaults also take the smaller of physical and process-available CPU
+counts before applying backend scaling, so container CPU limits do not inherit
+the host's full physical topology. Threaded WASI uses the generated emnapi
+loader's separate `NAPI_RS_ASYNC_WORK_POOL_SIZE`/`UV_THREADPOOL_SIZE` pipeline
+and its 1024-worker cap.
+
 The CLI parses and applies `--environment` before importing the timer host or
 any binding-backed command module. Runtime environment variables supplied by
 that flag are therefore visible to the binding's module-initialization
@@ -668,6 +685,17 @@ build `configureAsyncRuntime` throws a feature-disabled error (built without
 the `async-runtime` feature), `getAsyncRuntimeConfig` reports values derived
 from the environment variables and built-in defaults, and
 `getAsyncRuntimeMetrics` always returns zeroed counters.
+
+Tokio resolution distinguishes all three target families so the pure table
+remains exhaustive and unit-testable. Native uses the bounded Rolldown-built
+multi-thread runtime. `wasm32-wasip1-threads` mirrors the generated loader's
+emnapi pool. The table models threadless `wasm32-wasip1` as napi-rs's single
+current-thread lane, but `lib.rs` rejects that Tokio-only feature combination
+at compile time because napi-rs rejects every built-in async task there.
+Threadless artifacts must enable `async-runtime`. The minimal profile is
+`--no-default-features --features async-runtime`; leaving default features
+enabled and adding `--features async-runtime` is also supported because the
+shared backend takes precedence over `tokio-runtime`. CI compiles both profiles.
 
 The dedicated native async-runtime test build also enables
 `runtime-submission-failure-test`. Its raw-binding-only stop/start probes shut
@@ -853,17 +881,51 @@ timer-host registry. Timer-driver liveness callbacks and sweep hooks are
 also panic-contained: a panicking liveness probe is treated as a dead driver
 while the stable live snapshot remains armed. Timer-driver callbacks and driver
 destruction run without the registry mutex held; selection probes a snapshot
-and retries if concurrent registry mutation makes it stale.
+and retries if concurrent registry mutation makes it stale. A reentrant
+liveness probe can unregister multiple later drivers and leave the probe
+snapshot as their final owner, so each snapshot reference is destroyed behind
+its own panic boundary after the registry lock is released. The live result
+uses the same contained snapshot ownership, so capability checks,
+newest-driver selection, and other consumers cannot aggregate-drop multiple
+final driver references after concurrent unregister.
+Each CurrentThread sleep records cancellation ownership for the complete live
+driver snapshot before invoking any driver's `register` callback. Existing arms
+remain in place throughout re-selection, and every new arm enters the owned set
+before the first callback runs. An earlier driver may therefore unregister a
+later driver and unwind without making that later driver's snapshot reference
+its final owner. Snapshot references are also destroyed independently behind
+panic containment. A waker-clone or register unwind cannot orphan a previously
+armed or partially registered host timer, or double-panic through an unrelated
+driver destructor. Completion, stale-driver retirement, and `Sleep` drop
+isolate every driver's `cancel` callback and final destruction independently;
+one hostile driver cannot skip cancellation of later arms or double-panic an
+outer unwind. First-poll repoll and registry wakers are both cloned before
+either is published. If the second clone unwinds, the first clone is destroyed
+behind a separate containment boundary before the original panic resumes.
+Every waker passed to an arbitrary timer-driver `register` callback is an
+`Arc<Wake>` proxy. Proxy clone never clones the hostile underlying `RawWaker`;
+proxy wake and wake-by-reference invoke the underlying wake-by-reference behind
+containment, and final proxy destruction drops the underlying waker behind a
+separate boundary. A register callback can therefore unwind before retaining
+its argument without combining that unwind with a hostile waker destructor.
 
 CurrentThread runnable-host registration uses the same all-live race. Driver
 liveness, dispatch, and sweep callbacks run outside the registry mutex and are
-panic-contained. One internal dispatch is represented by one distinct delivery
-per host, and the first responsive callback atomically consumes the mapped
-internal capability. If every environment temporarily disappears, runnables
-remain queued for the next registration, an explicit hostless drive, or
-shutdown cancellation; wake callers never poll inline. A newly registered host
-joins the existing dispatch through a fresh delivery instead of superseding
-attempts already accepted by other hosts.
+panic-contained. Its liveness-probe snapshot likewise destroys each driver
+reference independently: reentrant removal of multiple hosts cannot combine
+their final destructors into a process-aborting unwind. Live selection and each
+planned delivery retain drivers through contained owners. Delivery identities
+are planned under the registry mutex, then paired newest-first with those
+owners after unlock; normal completion, rejection, callback reentry, and
+unwind therefore destroy every driver reference independently without running
+a driver destructor under the registry mutex. One internal dispatch is
+represented by one distinct delivery per host, and the first responsive
+callback atomically consumes the mapped internal capability. If every
+environment temporarily disappears, runnables remain queued for the next
+registration, an explicit hostless drive, or shutdown cancellation; wake
+callers never poll inline. A newly registered host joins the existing dispatch
+through a fresh delivery instead of superseding attempts already accepted by
+other hosts.
 
 Both internal dispatches and host deliveries use globally unique, non-wrapping
 `u64` identities. The opaque delivery remains in the native threadsafe-function

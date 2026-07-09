@@ -35,7 +35,7 @@ pub struct Bundle<Fs: FileSystem + Clone + 'static = OsFileSystem> {
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) cache: ScanStageCache,
   pub(crate) bundle_span: tracing::Span,
-  pub(crate) close_state: Arc<BundleCloseState>,
+  pub(super) close_state: Arc<BundleCloseState>,
   pub(crate) defer_close_on_error: bool,
 }
 

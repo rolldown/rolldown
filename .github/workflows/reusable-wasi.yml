@@ -50,6 +50,32 @@ jobs:
             EMNAPI_LINK_DIR="$emnapi_package_dir/lib/wasm32-wasip1" \
             cargo check -p rolldown_binding --target wasm32-wasip1 \
               --no-default-features --features async-runtime --locked
+          RUSTC="$(rustup which rustc)" \
+            EMNAPI_LINK_DIR="$emnapi_package_dir/lib/wasm32-wasip1" \
+            cargo check -p rolldown_binding --target wasm32-wasip1 \
+              --features async-runtime --locked
+
+      - name: Reject Tokio runtime on threadless WASI
+        run: |
+          emnapi_package_dir="$(
+            cd packages/rolldown
+            node - <<'NODE'
+          const { createRequire } = require('node:module')
+          const { dirname } = require('node:path')
+          const cliRequire = createRequire(require.resolve('@napi-rs/cli/package.json'))
+          console.log(dirname(cliRequire.resolve('emnapi/package.json')))
+          NODE
+          )"
+          if output="$(
+            RUSTC="$(rustup which rustc)" \
+              EMNAPI_LINK_DIR="$emnapi_package_dir/lib/wasm32-wasip1" \
+              cargo check -p rolldown_binding --target wasm32-wasip1 --locked 2>&1
+          )"; then
+            echo "Expected the Tokio/threadless-WASI build to be rejected"
+            exit 1
+          fi
+          printf '%s\n' "$output"
+          grep -F "wasm32-wasip1 requires Rolldown's \`async-runtime\` feature" <<<"$output"
 
       - name: Check shared runtime on threaded WASI
         run: |

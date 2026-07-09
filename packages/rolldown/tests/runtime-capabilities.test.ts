@@ -35,6 +35,7 @@ function inFreshProcess(script: string, env: Record<string, string | undefined> 
     cwd: testsDir,
     env: { ...process.env, ...env },
     encoding: 'utf8',
+    timeout: 30_000,
   });
   const lines = stdout.trim().split('\n');
   return JSON.parse(lines[lines.length - 1]);
@@ -42,6 +43,7 @@ function inFreshProcess(script: string, env: Record<string, string | undefined> 
 
 describe('getRuntimeCapabilities', () => {
   const caps = getRuntimeCapabilities();
+  const timersExpected = !(caps.backend === 'tokio' && caps.target === 'wasi');
 
   test('reports a coherent capability set for the loaded artifact', () => {
     expect(['tokio', 'shared']).toContain(caps.backend);
@@ -247,10 +249,10 @@ describe('getRuntimeCapabilities', () => {
   });
 
   test('a timer facility is available once any public entry has loaded', () => {
-    // tokio builds own a timer wheel; the shared MultiThread flavor owns a
-    // timer heap; the shared CurrentThread flavor delegates to the host
-    // driver registered at import by every binding-loading entry.
-    expect(caps.timers).toBe(true);
+    // Native/threaded-WASI Tokio builds own a timer wheel; the shared
+    // MultiThread flavor owns a timer heap; shared CurrentThread delegates to
+    // the host driver. Threadless-WASI Tokio has no host-independent progress.
+    expect(caps.timers).toBe(timersExpected);
   });
 
   test('the report is a stable snapshot, not an env re-read', () => {
@@ -285,7 +287,7 @@ describe('getRuntimeCapabilities', () => {
       const { getRuntimeCapabilities } = await import('rolldown/experimental');
       console.log(JSON.stringify(getRuntimeCapabilities()));
     `);
-    expect(fresh.timers).toBe(true);
+    expect(fresh.timers).toBe(timersExpected);
     expect(fresh.watchSupported).toBe(!caps.wasi);
     // Same artifact, same lane env => the flavor this process sees.
     expect(fresh.flavor).toBe(caps.flavor);
@@ -346,6 +348,26 @@ describe('getRuntimeCapabilities', () => {
     },
   );
 
+  test.runIf(caps.target === 'native')(
+    'oversized thread environment values are bounded before addon import',
+    () => {
+      const workerThreads = caps.backend === 'tokio' ? '1' : '1000000';
+      const report = inFreshProcess(
+        `
+          const { getAsyncRuntimeConfig } = await import('rolldown/experimental');
+          console.log(JSON.stringify(getAsyncRuntimeConfig()));
+        `,
+        {
+          ROLLDOWN_MAX_BLOCKING_THREADS: '1000000',
+          ROLLDOWN_RUNTIME: 'multi',
+          ROLLDOWN_WORKER_THREADS: workerThreads,
+        },
+      );
+      expect(report.workerThreads).toBe(caps.backend === 'tokio' ? 1 : 256);
+      expect(report.maxBlockingTasks).toBe(caps.backend === 'tokio' ? 512 : 255);
+    },
+  );
+
   // Codex round-2 finding regression: the contract must hold inside Node
   // worker_threads too -- timer-host registration carries NO isMainThread
   // guard (the parallel-plugin machinery loads the binding in workers). A
@@ -373,10 +395,10 @@ describe('getRuntimeCapabilities', () => {
       const { getRuntimeCapabilities } = await import('rolldown/experimental');
       console.log(JSON.stringify({ workerCaps, mainCaps: getRuntimeCapabilities() }));
     `);
-    expect(result.workerCaps.timers).toBe(true);
+    expect(result.workerCaps.timers).toBe(timersExpected);
     expect(result.workerCaps.watchSupported).toBe(!caps.wasi);
     expect(result.workerCaps.flavor).toBe(caps.flavor);
-    expect(result.mainCaps.timers).toBe(true);
+    expect(result.mainCaps.timers).toBe(timersExpected);
   });
 
   // Codex round-3 finding regression: a worker that imports the binding FIRST

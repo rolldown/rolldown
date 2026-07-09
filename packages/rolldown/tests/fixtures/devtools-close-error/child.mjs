@@ -4,7 +4,11 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { rolldown } from 'rolldown';
-import { BindingBundler, BindingLogLevel } from '../../../src/binding.cjs';
+import * as binding from '../../../src/binding.cjs';
+import { installCurrentThreadTaskHost } from '../install-current-thread-task-host.mjs';
+
+const { BindingBundler, BindingLogLevel } = binding;
+const uninstallCurrentThreadTaskHost = installCurrentThreadTaskHost(binding);
 
 const cwd = mkdtempSync(path.join(tmpdir(), 'rolldown-devtools-close-'));
 const closeError = Object.assign(new RangeError('devtools closeBundle identity'), {
@@ -126,6 +130,7 @@ try {
     }),
   );
 } finally {
+  uninstallCurrentThreadTaskHost();
   process.chdir(tmpdir());
   rmSync(cwd, { force: true, recursive: true });
 }

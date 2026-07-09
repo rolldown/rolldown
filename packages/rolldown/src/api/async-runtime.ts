@@ -19,14 +19,19 @@ export type AsyncRuntimeFlavor = 'CurrentThread' | 'MultiThread';
  * workers and reserves one worker from blocking admission. `CurrentThread`
  * always has one execution lane. Every shared-runtime WebAssembly build is
  * `CurrentThread` only and normalizes both thread-count fields to one.
+ * MultiThread promotes one worker to two, applies the platform worker cap,
+ * and limits blocking admission to `workerThreads - 1`.
+ * Without overrides, native shared builds start from the smaller of physical
+ * and process-available CPU counts. Native Tokio reports 1.5 times that count
+ * (rounded down) with four blocking threads.
  *
  * @experimental
  */
 export interface AsyncRuntimeOptions {
   flavor?: AsyncRuntimeFlavor;
-  /** Positive integer worker count, no greater than `2^32 - 1`. */
+  /** Positive integer worker count, no greater than 256. */
   workerThreads?: number;
-  /** Positive integer blocking-task limit, no greater than `2^32 - 1`. */
+  /** Positive integer blocking-task limit, no greater than 256. */
   maxBlockingTasks?: number;
 }
 
@@ -85,6 +90,10 @@ export interface AsyncRuntimeMetrics extends AsyncRuntimeConfig {
  * - `ROLLDOWN_RUNTIME=single|current-thread|multi|multi-thread`
  * - `ROLLDOWN_WORKER_THREADS`
  * - `ROLLDOWN_MAX_BLOCKING_THREADS`
+ *
+ * Native `ROLLDOWN_*` worker counts are capped at 256. Native Tokio
+ * blocking-thread counts are capped at 512. Explicit options above their
+ * documented limits throw instead of being silently truncated.
  *
  * @experimental
  */

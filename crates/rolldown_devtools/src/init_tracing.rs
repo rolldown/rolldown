@@ -194,7 +194,6 @@ struct DebugTracerLease {
 }
 
 impl DebugTracer {
-  #[must_use]
   pub fn init(session_id: Arc<str>, cwd: &Path) -> Result<Self, DevtoolsTracingInitError> {
     ensure_tracing_subscriber(TracingSubscriberCapabilities::DEVTOOLS, || {
       Dispatch::new(

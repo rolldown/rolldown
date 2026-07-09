@@ -3,10 +3,13 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+import { installCurrentThreadTaskHost } from '../install-current-thread-task-host.mjs';
+
 delete process.env.RD_LOG;
 delete process.env.RD_LOG_OUTPUT;
-const { BindingBundler, BindingLogLevel, initTraceSubscriber } =
-  await import('../../../src/binding.cjs');
+const binding = await import('../../../src/binding.cjs');
+const { BindingBundler, BindingLogLevel, initTraceSubscriber } = binding;
+const uninstallCurrentThreadTaskHost = installCurrentThreadTaskHost(binding);
 
 const root = mkdtempSync(path.join(tmpdir(), 'rolldown-devtools-first-'));
 writeFileSync(path.join(root, 'main.js'), 'export const value = 1;\n');
@@ -33,5 +36,6 @@ try {
 
   console.log(JSON.stringify({ devtoolsFirst: true, rdLogRejected: true }));
 } finally {
+  uninstallCurrentThreadTaskHost();
   rmSync(root, { force: true, recursive: true });
 }

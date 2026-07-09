@@ -31,7 +31,9 @@ after the first runtime generation starts.
 | Custom WebAssembly binding built with `async-runtime` | Shared  | `CurrentThread` on both WASI targets |
 
 Use `getRuntimeCapabilities()` instead of inferring the backend or target from
-environment variables.
+environment variables. Threadless `wasm32-wasip1` must use `async-runtime`;
+the binding rejects the unusable Tokio/threadless feature combination at
+compile time because napi-rs cannot execute built-in async tasks there.
 
 ## Environment
 
@@ -42,11 +44,23 @@ The binding reads these variables once during module initialization:
 - `ROLLDOWN_MAX_BLOCKING_THREADS`
 - `ROLLDOWN_PARK_DEADLINE_MS`
 
-These configure the shared backend. On WebAssembly, the shared backend ignores
-the multi-thread request and reports one `CurrentThread` execution lane.
-`configureAsyncRuntime()` can override the configurable values before first
-use, subject to the same target restrictions. Later environment changes have
-no effect.
+`ROLLDOWN_RUNTIME` and `ROLLDOWN_PARK_DEADLINE_MS` configure only the shared
+backend. The thread-count variables also configure native Tokio. Native
+`ROLLDOWN_*` worker counts are capped at 256; native Tokio blocking threads are
+capped at 512. Explicit `configureAsyncRuntime()` thread values above 256 throw
+instead of being silently clamped. Valid shared-runtime values still undergo
+topology normalization: CurrentThread becomes `(1, 1)`, MultiThread promotes
+one worker to two, applies the platform worker cap, and limits blocking
+admission to one less than the effective worker count. On WebAssembly, the
+shared backend ignores the multi-thread request and reports one `CurrentThread`
+execution lane. Later environment changes have no effect.
+
+Without thread-count overrides, native Tokio uses
+`floor(min(physical CPUs, process-available CPUs) * 3 / 2)` workers and four
+blocking threads. The native shared backend starts from
+`min(physical CPUs, process-available CPUs)`, promotes MultiThread to at least
+two workers, and admits at most `workerThreads - 1` blocking tasks. Both
+defaults remain subject to the production and platform caps above.
 
 The published Node threaded-WASI loader instead sizes Tokio's emnapi work pool
 from `NAPI_RS_ASYNC_WORK_POOL_SIZE`, falling back to `UV_THREADPOOL_SIZE` and

@@ -1,5 +1,20 @@
 // We keep some standalone utilities here
 
+/// Maximum number of physical workers a Rolldown-owned async runtime may create.
+pub const MAX_ASYNC_RUNTIME_WORKER_THREADS: usize = 256;
+
+/// Platform-realizable worker ceiling after applying Rolldown's production cap.
+#[cfg(not(target_family = "wasm"))]
+pub fn max_async_runtime_worker_threads() -> usize {
+  MAX_ASYNC_RUNTIME_WORKER_THREADS.min(::rayon::max_num_threads())
+}
+
+/// WebAssembly builds use the current-thread executor.
+#[cfg(target_family = "wasm")]
+pub const fn max_async_runtime_worker_threads() -> usize {
+  1
+}
+
 #[cfg(feature = "async-runtime")]
 pub mod async_runtime;
 pub mod base64;

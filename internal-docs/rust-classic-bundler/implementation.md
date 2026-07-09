@@ -69,7 +69,13 @@ The tracked phase waits for those operations, runs `closeBundle`, and publishes
 its outcome before releasing admission. New output entry is rejected until that
 phase finishes, so the active count cannot briefly reach zero and admit another
 operation while `closeBundle` is about to run. An explicit `close()` racing the
-failure waits for the tracked phase and observes the same error argument.
+failure waits for the tracked phase and observes the same error argument. If
+the shared scheduler rejects the detached submission or cancels accepted work
+during shutdown, the task's drop guard retains its operation barrier, handle,
+and memoized close state without an `Arc` cycle. The next failure-close waiter
+or explicit close drives that job directly before admission can reopen, so a
+superseded handle cannot lose its terminal hook or restart a partially polled
+hook.
 Render/output failures do not reserve this phase, matching Rollup: they run
 `renderError` and leave `closeBundle` to the later explicit bundle close.
 
@@ -81,7 +87,9 @@ already closed that handle, final close suppresses the memoized hook failure
 instead of appending it twice. This retains failures from older outputs after a
 newer successful output replaces `last_bundle_handle`, preserves repeated
 JavaScript exception identities as distinct failures, and prevents the latest
-hook from being invoked twice when explicit close races a failed output.
+hook from being invoked twice when explicit close races a failed output. Each
+retained hook failure also carries its originating output cwd; binding
+diagnostics are never re-rendered against a newer output's cwd.
 
 There is no persistent state between builds. No `ScanStageCache`, no shared resolver, no reused factory.
 

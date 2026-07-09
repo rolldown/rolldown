@@ -17,6 +17,8 @@ use napi::bindgen_prelude::{FnArgs, Promise, Unknown};
 use napi::threadsafe_function::ThreadsafeFunctionCallMode;
 use napi_derive::napi;
 #[cfg(feature = "async-runtime")]
+use rolldown_utils::MAX_ASYNC_RUNTIME_WORKER_THREADS;
+#[cfg(feature = "async-runtime")]
 use rolldown_utils::async_runtime::{
   CurrentThreadTaskDelivery, CurrentThreadTaskDriver, CurrentThreadTaskDriverId, RuntimeFlavor,
   RuntimeMetricsSnapshot, RuntimeOptions, RuntimeOptionsPatch, TimerDriver, TimerDriverId, TimerId,
@@ -26,6 +28,7 @@ use rolldown_utils::async_runtime::{
   reset_metrics, shutdown, start, try_spawn_blocking, try_spawn_detached,
   unregister_current_thread_task_driver, unregister_timer_driver,
 };
+use rolldown_utils::max_async_runtime_worker_threads;
 
 #[cfg(feature = "async-runtime")]
 use crate::types::js_callback::InvalidReturnValue;
@@ -97,9 +100,9 @@ impl From<RuntimeFlavor> for BindingRuntimeFlavor {
 #[napi(object)]
 pub struct BindingRuntimeOptions {
   pub flavor: Option<BindingRuntimeFlavor>,
-  /// Positive integer worker count. Values above `u32::MAX` are rejected.
+  /// Positive integer worker count. Values above 256 are rejected.
   pub worker_threads: Option<f64>,
-  /// Positive integer blocking-task limit. Values above `u32::MAX` are rejected.
+  /// Positive integer blocking-task limit. Values above 256 are rejected.
   pub max_blocking_tasks: Option<f64>,
 }
 
@@ -110,33 +113,46 @@ impl TryFrom<BindingRuntimeOptions> for RuntimeOptionsPatch {
   fn try_from(value: BindingRuntimeOptions) -> Result<Self, Self::Error> {
     Ok(Self {
       flavor: value.flavor.map(Into::into),
-      worker_threads: validate_binding_thread_count("workerThreads", value.worker_threads)?,
+      worker_threads: validate_binding_thread_count(
+        "workerThreads",
+        value.worker_threads,
+        MAX_ASYNC_RUNTIME_WORKER_THREADS,
+      )?,
       max_blocking_tasks: validate_binding_thread_count(
         "maxBlockingTasks",
         value.max_blocking_tasks,
+        MAX_ASYNC_RUNTIME_WORKER_THREADS,
       )?,
     })
   }
 }
 
 #[cfg(feature = "async-runtime")]
-fn validate_binding_thread_count(field: &str, value: Option<f64>) -> napi::Result<Option<usize>> {
+fn validate_binding_thread_count(
+  field: &str,
+  value: Option<f64>,
+  maximum: usize,
+) -> napi::Result<Option<usize>> {
   value
     .map(|count| {
-      if !count.is_finite() || count < 1.0 || count.fract() != 0.0 || count > f64::from(u32::MAX) {
+      #[expect(
+        clippy::cast_precision_loss,
+        reason = "the small production thread limit is exactly representable as f64"
+      )]
+      let maximum_as_f64 = maximum as f64;
+      if !count.is_finite() || count < 1.0 || count.fract() != 0.0 || count > maximum_as_f64 {
         return Err(napi::Error::from_reason(format!(
-          "`{field}` must be a positive integer no greater than {}",
-          u32::MAX
+          "`{field}` must be a positive integer no greater than {maximum}"
         )));
       }
 
       #[expect(
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
-        reason = "the finite positive integer was range-checked against u32::MAX"
+        reason = "the finite positive integer was range-checked against the usize-backed limit"
       )]
-      let count = count as u32;
-      Ok(usize::try_from(count).expect("u32 thread counts must fit usize"))
+      let count = count as usize;
+      Ok(count)
     })
     .transpose()
 }
@@ -269,13 +285,16 @@ pub fn get_async_runtime_config() -> BindingRuntimeConfig {
 // export -- reads that same snapshot, so a later `process.env` mutation can
 // never make what we report diverge from the runtime that was actually built.
 //
-// The per-backend DEFAULTS are preserved exactly as measured:
+// The per-backend defaults are preserved within explicit production bounds:
 // - tokio-native keeps `physical * 3 / 2` workers and the dedicated
-//   4-thread blocking pool (the PR #6270 world);
+//   4-thread blocking pool (the PR #6270 world), capped at 256 workers;
 // - the shared runtime keeps `max(physical, 2)` workers and reserves one
-//   execution lane from blocking admission;
+//   execution lane from blocking admission, capped at 256 workers;
 // - the threaded-WASI tokio artifact keeps mirroring the napi-rs loader's
 //   async work pool size;
+// - the pure resolver models threadless-WASI Tokio as its current-thread
+//   executor with no worker pool, although lib.rs rejects that unusable build
+//   combination before an artifact can be produced;
 // - the shared wasm artifact reports the CurrentThread executor's one physical
 //   execution lane (no env worker override, as before).
 
@@ -428,6 +447,14 @@ fn resolve_runtime_flavor(
   }
 }
 
+fn native_default_parallelism(physical: usize, available: usize) -> usize {
+  physical.min(available).max(1)
+}
+
+fn detected_native_parallelism() -> usize {
+  native_default_parallelism(num_cpus::get_physical(), num_cpus::get())
+}
+
 fn clamp_shared_blocking_tasks(
   flavor: ResolvedRuntimeFlavor,
   worker_threads: usize,
@@ -456,7 +483,7 @@ fn wasm_async_work_pool_size(
   use crate::env_config::resolve_thread_count;
   let selected =
     napi_async_work_pool_size_env.or(uv_threadpool_size_env).map(|value| value.trim().to_string());
-  resolve_thread_count(selected, 4).min(EMNAPI_ASYNC_WORK_POOL_SIZE_MAX)
+  resolve_thread_count(selected, 4, EMNAPI_ASYNC_WORK_POOL_SIZE_MAX)
 }
 
 /// The pure per-(backend, target) resolution table. Parameterized on the
@@ -467,19 +494,23 @@ fn resolve_runtime_config_for(
   target: ResolvedRuntimeTarget,
   env: &RuntimeEnv,
 ) -> ResolvedRuntimeConfig {
-  use crate::env_config::resolve_thread_count;
-  let native = matches!(target, ResolvedRuntimeTarget::Native);
+  use crate::env_config::{MAX_TOKIO_BLOCKING_THREADS, resolve_thread_count};
   match backend {
-    ResolvedRuntimeBackend::Tokio => {
-      if native {
+    ResolvedRuntimeBackend::Tokio => match target {
+      ResolvedRuntimeTarget::Native => {
         // The PR #6270 world: rolldown puts a lot of blocking work on the
         // worker threads rather than the blocking pool, so worker threads are
         // scaled up (physical * 3 / 2) while the blocking pool is pinned to a
         // dedicated 4 (tokio's own default of 512 is far too high for the few
         // genuinely `blocking` tasks rolldown spawns).
-        let worker_threads =
-          resolve_thread_count(env.worker_threads.clone(), num_cpus::get_physical() * 3 / 2);
-        let max_blocking_tasks = resolve_thread_count(env.max_blocking_threads.clone(), 4);
+        let default_worker_threads = detected_native_parallelism().saturating_mul(3) / 2;
+        let worker_threads = resolve_thread_count(
+          env.worker_threads.clone(),
+          default_worker_threads,
+          max_async_runtime_worker_threads(),
+        );
+        let max_blocking_tasks =
+          resolve_thread_count(env.max_blocking_threads.clone(), 4, MAX_TOKIO_BLOCKING_THREADS);
         ResolvedRuntimeConfig {
           backend,
           target,
@@ -490,7 +521,8 @@ fn resolve_runtime_config_for(
           // `ROLLDOWN_PARK_DEADLINE_MS` stay silently ignored, as before.
           park_deadline_ms: None,
         }
-      } else {
+      }
+      ResolvedRuntimeTarget::WasiThreads => {
         // Threaded-WASI tokio artifact: no Rust-built runtime exists (lib.rs
         // `init`'s native arm is cfg'd out); the napi-rs WASI loader sizes
         // one async work pool that carries both the worker and the blocking
@@ -508,8 +540,20 @@ fn resolve_runtime_config_for(
           park_deadline_ms: None,
         }
       }
-    }
+      ResolvedRuntimeTarget::Wasi => ResolvedRuntimeConfig {
+        // Keep the pure resolution table exhaustive and unit-testable even
+        // though lib.rs rejects this build combination: napi-rs creates a
+        // current-thread runtime but rejects every built-in async submission.
+        backend,
+        target,
+        flavor: ResolvedRuntimeFlavor::CurrentThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        park_deadline_ms: None,
+      },
+    },
     ResolvedRuntimeBackend::Shared => {
+      let native = matches!(target, ResolvedRuntimeTarget::Native);
       let default_flavor = if native {
         ResolvedRuntimeFlavor::MultiThread
       } else {
@@ -523,7 +567,11 @@ fn resolve_runtime_config_for(
       // `ROLLDOWN_RUNTIME=multi` leaked in from a native process environment.
       let flavor = if native { requested_flavor } else { ResolvedRuntimeFlavor::CurrentThread };
       let requested_worker_threads = if native {
-        resolve_thread_count(env.worker_threads.clone(), num_cpus::get_physical())
+        resolve_thread_count(
+          env.worker_threads.clone(),
+          detected_native_parallelism(),
+          max_async_runtime_worker_threads(),
+        )
       } else {
         // `RuntimeOptions::default()` parity: the env worker override has
         // never applied on wasm (`register_async_runtime`'s override block
@@ -536,7 +584,7 @@ fn resolve_runtime_config_for(
         ResolvedRuntimeFlavor::MultiThread => requested_worker_threads.max(2),
       };
       let requested_blocking_tasks =
-        resolve_thread_count(env.max_blocking_threads.clone(), worker_threads);
+        resolve_thread_count(env.max_blocking_threads.clone(), worker_threads, worker_threads);
       let max_blocking_tasks =
         clamp_shared_blocking_tasks(flavor, worker_threads, requested_blocking_tasks);
       ResolvedRuntimeConfig {
@@ -1953,16 +2001,14 @@ pub struct BindingRuntimeCapabilities {
   /// Work is scheduled across multiple threads (`flavor === 'MultiThread'`).
   pub threads: bool,
   /// A timer facility backs `sleep_until` (the watch-mode debounce). This is
-  /// LIVE HOST-REGISTRATION STATE, the one live field: always true on tokio
-  /// builds (tokio owns a timer wheel) and on the shared MultiThread flavor
-  /// (executor-owned timer heap); on the shared CurrentThread flavor timers
-  /// are delegated to the host event loop, so this reads true while a LIVE
-  /// `registerTimerHost` registrant exists. Every public package entry that
-  /// loads the binding registers a host driver per importing env at import,
-  /// so through any supported entry the answer is true; a registrant whose
-  /// env died (an exited worker) is evicted and does NOT count. Only a raw
-  /// binding loaded outside the supported entries can observe false (a
-  /// CurrentThread `sleep_until` would panic at that point).
+  /// true on native/threaded-WASI Tokio builds and on the shared MultiThread
+  /// flavor. On the shared CurrentThread flavor timers are delegated to the
+  /// host event loop, so this reads true while a LIVE `registerTimerHost`
+  /// registrant exists. Every public package entry that loads the binding
+  /// registers a host driver per importing env at import, so through any
+  /// supported entry the answer is true; a registrant whose env died (an
+  /// exited worker) is evicted and does NOT count. Only a raw shared binding
+  /// loaded outside the supported entries can observe false.
   pub timers: bool,
   /// Binding dev mode is supported by THIS RUNTIME: true when native work can
   /// progress on a MultiThread executor, false on CurrentThread where
@@ -2017,9 +2063,12 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
   };
   #[cfg(not(feature = "async-runtime"))]
   let (flavor, timers) = {
-    // tokio owns a timer wheel on every tokio-runtime artifact (the native
-    // build and the napi-built runtime on threaded WASI alike).
-    (BindingRuntimeFlavor::from(resolved.flavor), true)
+    // Native and threaded-WASI Tokio builds own a usable timer facility.
+    // Threadless WASI cannot make host-independent timer progress.
+    (
+      BindingRuntimeFlavor::from(resolved.flavor),
+      !matches!(resolved.target, ResolvedRuntimeTarget::Wasi),
+    )
   };
 
   let threads = matches!(flavor, BindingRuntimeFlavor::MultiThread);
@@ -2046,11 +2095,13 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
 // `OnceLock` initializer of `resolved_runtime_config`.
 #[cfg(test)]
 mod tests {
+  use rolldown_utils::max_async_runtime_worker_threads;
+
   use super::{
     BindingHostRegistration, EMNAPI_ASYNC_WORK_POOL_SIZE_MAX, ResolvedRuntimeBackend,
     ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RuntimeEnv,
-    get_current_thread_task_host_contract_version, parse_park_deadline_ms,
-    resolve_runtime_config_for, wasm_async_work_pool_size,
+    get_current_thread_task_host_contract_version, native_default_parallelism,
+    parse_park_deadline_ms, resolve_runtime_config_for, wasm_async_work_pool_size,
   };
   #[cfg(feature = "async-runtime")]
   use super::{
@@ -2277,7 +2328,7 @@ mod tests {
   fn binding_runtime_options_reject_unsafe_thread_counts() {
     use rolldown_utils::async_runtime::RuntimeOptionsPatch;
 
-    for value in [-1.0, 0.0, 1.5, f64::NAN, f64::INFINITY, f64::from(u32::MAX) + 1.0] {
+    for value in [-1.0, 0.0, 1.5, f64::NAN, f64::INFINITY, 257.0, f64::from(u32::MAX) + 1.0] {
       let error = RuntimeOptionsPatch::try_from(BindingRuntimeOptions {
         flavor: None,
         worker_threads: Some(value),
@@ -2291,17 +2342,19 @@ mod tests {
       );
     }
 
-    let error = RuntimeOptionsPatch::try_from(BindingRuntimeOptions {
-      flavor: None,
-      worker_threads: None,
-      max_blocking_tasks: Some(-1.0),
-    })
-    .expect_err("invalid blocking task counts must be rejected");
-    assert!(
-      error.reason.contains("`maxBlockingTasks` must be a positive integer"),
-      "unexpected validation error: {}",
-      error.reason
-    );
+    for value in [-1.0, 257.0] {
+      let error = RuntimeOptionsPatch::try_from(BindingRuntimeOptions {
+        flavor: None,
+        worker_threads: None,
+        max_blocking_tasks: Some(value),
+      })
+      .expect_err("invalid blocking task counts must be rejected");
+      assert!(
+        error.reason.contains("`maxBlockingTasks` must be a positive integer"),
+        "unexpected validation error: {}",
+        error.reason
+      );
+    }
   }
 
   #[cfg(feature = "async-runtime")]
@@ -3029,8 +3082,9 @@ mod tests {
     assert_eq!(resolved.flavor, ResolvedRuntimeFlavor::MultiThread);
     assert_eq!(
       resolved.worker_threads,
-      num_cpus::get_physical() * 3 / 2,
-      "tokio-native scales workers to physical * 3 / 2"
+      (native_default_parallelism(num_cpus::get_physical(), num_cpus::get()).saturating_mul(3) / 2)
+        .min(max_async_runtime_worker_threads()),
+      "tokio-native scales workers to physical * 3 / 2 within the production ceiling"
     );
     assert_eq!(resolved.max_blocking_tasks, 4, "tokio-native keeps the dedicated 4-thread pool");
     assert_eq!(resolved.park_deadline_ms, None);
@@ -3065,8 +3119,48 @@ mod tests {
         ..RuntimeEnv::default()
       },
     );
-    assert_eq!(fallback.worker_threads, num_cpus::get_physical() * 3 / 2);
+    assert_eq!(
+      fallback.worker_threads,
+      (native_default_parallelism(num_cpus::get_physical(), num_cpus::get()).saturating_mul(3) / 2)
+        .min(max_async_runtime_worker_threads())
+    );
     assert_eq!(fallback.max_blocking_tasks, 4);
+  }
+
+  #[test]
+  fn native_thread_env_overrides_clamp_to_production_limits() {
+    let tokio = resolve(
+      ResolvedRuntimeBackend::Tokio,
+      ResolvedRuntimeTarget::Native,
+      &RuntimeEnv {
+        worker_threads: Some("1000000".to_string()),
+        max_blocking_threads: Some("1000000".to_string()),
+        ..RuntimeEnv::default()
+      },
+    );
+    assert_eq!(tokio.worker_threads, max_async_runtime_worker_threads());
+    assert_eq!(tokio.max_blocking_tasks, crate::env_config::MAX_TOKIO_BLOCKING_THREADS);
+    assert_eq!(
+      tokio.worker_threads.checked_add(tokio.max_blocking_tasks),
+      Some(max_async_runtime_worker_threads() + crate::env_config::MAX_TOKIO_BLOCKING_THREADS),
+      "bounded Tokio thread counts must not overflow"
+    );
+
+    let shared = resolve(
+      ResolvedRuntimeBackend::Shared,
+      ResolvedRuntimeTarget::Native,
+      &RuntimeEnv {
+        worker_threads: Some("1000000".to_string()),
+        max_blocking_threads: Some("1000000".to_string()),
+        ..RuntimeEnv::default()
+      },
+    );
+    assert_eq!(shared.worker_threads, max_async_runtime_worker_threads());
+    assert_eq!(
+      shared.max_blocking_tasks,
+      max_async_runtime_worker_threads() - 1,
+      "the shared cap must still reserve one runnable lane"
+    );
   }
 
   #[test]
@@ -3093,6 +3187,33 @@ mod tests {
       (6, 6),
       "one loader pool carries both the worker and the blocking work"
     );
+  }
+
+  #[test]
+  fn native_defaults_respect_host_and_container_parallelism() {
+    assert_eq!(native_default_parallelism(128, 2), 2);
+    assert_eq!(native_default_parallelism(8, 16), 8);
+    assert_eq!(native_default_parallelism(1, 1), 1);
+    assert_eq!(native_default_parallelism(0, 0), 1);
+  }
+
+  #[test]
+  fn tokio_threadless_wasi_reports_current_thread_without_a_worker_pool() {
+    let resolved = resolve(
+      ResolvedRuntimeBackend::Tokio,
+      ResolvedRuntimeTarget::Wasi,
+      &RuntimeEnv {
+        worker_threads: Some("99".to_string()),
+        max_blocking_threads: Some("98".to_string()),
+        napi_async_work_pool_size: Some("97".to_string()),
+        uv_threadpool_size: Some("96".to_string()),
+        ..RuntimeEnv::default()
+      },
+    );
+    assert_eq!(resolved.backend, ResolvedRuntimeBackend::Tokio);
+    assert_eq!(resolved.target, ResolvedRuntimeTarget::Wasi);
+    assert_eq!(resolved.flavor, ResolvedRuntimeFlavor::CurrentThread);
+    assert_eq!((resolved.worker_threads, resolved.max_blocking_tasks), (1, 1));
   }
 
   #[test]
@@ -3133,7 +3254,12 @@ mod tests {
   fn shared_native_defaults_reserve_one_runnable_lane() {
     let resolved = resolve(ResolvedRuntimeBackend::Shared, ResolvedRuntimeTarget::Native, &env());
     assert_eq!(resolved.flavor, ResolvedRuntimeFlavor::MultiThread);
-    assert_eq!(resolved.worker_threads, num_cpus::get_physical());
+    assert_eq!(
+      resolved.worker_threads,
+      native_default_parallelism(num_cpus::get_physical(), num_cpus::get())
+        .min(max_async_runtime_worker_threads())
+        .max(2)
+    );
     assert_eq!(
       resolved.max_blocking_tasks,
       resolved.worker_threads.saturating_sub(1).max(1),

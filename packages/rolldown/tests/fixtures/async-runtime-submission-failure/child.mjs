@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { installCurrentThreadTaskHost } from '../install-current-thread-task-host.mjs';
+
 const require = createRequire(import.meta.url);
 const bindingDir = fileURLToPath(new URL('../../../dist/', import.meta.url));
 const bindingFiles = readdirSync(bindingDir).filter(
@@ -16,6 +18,7 @@ const stopRuntime = binding.__rolldownTestStopAsyncRuntime;
 const startRuntime = binding.__rolldownTestStartAsyncRuntime;
 assert.equal(typeof stopRuntime, 'function');
 assert.equal(typeof startRuntime, 'function');
+const uninstallCurrentThreadTaskHost = installCurrentThreadTaskHost(binding);
 
 const CLOSE_BUNDLE = 1 << 13;
 const root = mkdtempSync(path.join(tmpdir(), 'rolldown-submission-failure-'));
@@ -84,5 +87,6 @@ try {
     startRuntime();
   } catch {}
   await bundler.closeTerminal().catch(() => {});
+  uninstallCurrentThreadTaskHost();
   rmSync(root, { force: true, recursive: true });
 }

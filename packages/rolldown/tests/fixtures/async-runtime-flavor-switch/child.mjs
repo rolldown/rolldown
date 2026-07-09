@@ -14,11 +14,13 @@ const invalidOptions = [
   ['workerThreads', 1.5],
   ['workerThreads', Number.NaN],
   ['workerThreads', Number.POSITIVE_INFINITY],
+  ['workerThreads', 257],
   ['workerThreads', 2 ** 32],
   ['maxBlockingTasks', 0],
   ['maxBlockingTasks', 1.5],
   ['maxBlockingTasks', Number.NaN],
   ['maxBlockingTasks', Number.POSITIVE_INFINITY],
+  ['maxBlockingTasks', 257],
   ['maxBlockingTasks', 2 ** 32],
 ];
 for (const [field, value] of invalidOptions) {
@@ -31,7 +33,7 @@ for (const [field, value] of invalidOptions) {
       }),
     (error) =>
       error instanceof Error &&
-      error.message.includes(`\`${field}\` must be a positive integer no greater than 4294967295`),
+      error.message.includes(`\`${field}\` must be a positive integer no greater than 256`),
   );
   assert.deepEqual(
     getAsyncRuntimeConfig(),

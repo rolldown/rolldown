@@ -2756,16 +2756,14 @@ export interface BindingRuntimeCapabilities {
   threads: boolean
   /**
    * A timer facility backs `sleep_until` (the watch-mode debounce). This is
-   * LIVE HOST-REGISTRATION STATE, the one live field: always true on tokio
-   * builds (tokio owns a timer wheel) and on the shared MultiThread flavor
-   * (executor-owned timer heap); on the shared CurrentThread flavor timers
-   * are delegated to the host event loop, so this reads true while a LIVE
-   * `registerTimerHost` registrant exists. Every public package entry that
-   * loads the binding registers a host driver per importing env at import,
-   * so through any supported entry the answer is true; a registrant whose
-   * env died (an exited worker) is evicted and does NOT count. Only a raw
-   * binding loaded outside the supported entries can observe false (a
-   * CurrentThread `sleep_until` would panic at that point).
+   * true on native/threaded-WASI Tokio builds and on the shared MultiThread
+   * flavor. On the shared CurrentThread flavor timers are delegated to the
+   * host event loop, so this reads true while a LIVE `registerTimerHost`
+   * registrant exists. Every public package entry that loads the binding
+   * registers a host driver per importing env at import, so through any
+   * supported entry the answer is true; a registrant whose env died (an
+   * exited worker) is evicted and does NOT count. Only a raw shared binding
+   * loaded outside the supported entries can observe false.
    */
   timers: boolean
   /**
@@ -2823,9 +2821,9 @@ export interface BindingRuntimeMetrics {
 
 export interface BindingRuntimeOptions {
   flavor?: BindingRuntimeFlavor
-  /** Positive integer worker count. Values above `u32::MAX` are rejected. */
+  /** Positive integer worker count. Values above 256 are rejected. */
   workerThreads?: number
-  /** Positive integer blocking-task limit. Values above `u32::MAX` are rejected. */
+  /** Positive integer blocking-task limit. Values above 256 are rejected. */
   maxBlockingTasks?: number
 }
 

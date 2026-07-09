@@ -23,6 +23,17 @@ compile_error!(
   "rolldown_binding requires at least one async runtime feature: enable `tokio-runtime` or `async-runtime`"
 );
 
+#[cfg(all(
+  target_family = "wasm",
+  target_os = "wasi",
+  not(rolldown_wasi_threads),
+  feature = "tokio-runtime",
+  not(feature = "async-runtime")
+))]
+compile_error!(
+  "wasm32-wasip1 requires Rolldown's `async-runtime` feature; built-in Tokio async tasks require wasm32-wasip1-threads"
+);
+
 use napi_derive::napi;
 
 pub mod async_runtime;
@@ -1229,6 +1240,10 @@ fn init() {
     // blocking pool instead of tokio's 512) live in the resolver's
     // per-(backend, target) table; see async_runtime.rs.
     let resolved = crate::async_runtime::resolved_runtime_config();
+    resolved
+      .worker_threads
+      .checked_add(resolved.max_blocking_tasks)
+      .expect("Resolved Tokio worker and blocking thread limits must not overflow");
     let mut builder = tokio::runtime::Builder::new_multi_thread();
 
     let rt = builder

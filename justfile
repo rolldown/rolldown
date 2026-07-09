@@ -130,6 +130,7 @@ test-vite: # We don't use `test-node-vite` because it's not expected to run in `
 test-async-runtime-binding:
   cargo test -p rolldown_binding --no-default-features --features async-runtime --lib async_runtime::tests::
   cargo test -p rolldown_binding --no-default-features --features async-runtime --lib async_runtime_lease::tests::
+  cargo test -p rolldown_binding --no-default-features --features async-runtime --lib classic_bundler::tests::
 
 # Run the shared-runtime Rust and Node.js test matrix.
 [unix]

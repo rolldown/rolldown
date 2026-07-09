@@ -19,6 +19,7 @@ use std::{
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use crate::MAX_ASYNC_RUNTIME_WORKER_THREADS;
 #[cfg(test)]
 use async_task::Task;
 use async_task::{FallibleTask, Runnable};
@@ -29,8 +30,10 @@ use futures::{
 
 #[cfg(not(target_family = "wasm"))]
 use futures::channel::oneshot;
+#[cfg(all(test, not(target_family = "wasm")))]
+use rayon::max_num_threads;
 #[cfg(not(target_family = "wasm"))]
-use rayon::{ThreadPool, ThreadPoolBuilder, max_num_threads};
+use rayon::{ThreadPool, ThreadPoolBuilder};
 
 /// Stable scheduler identities are equality capabilities. Exhaustion must fail
 /// before reuse can authorize a stale handle or collide in an indexed queue.
@@ -96,7 +99,9 @@ impl RuntimeOptionsPatch {
 
 impl Default for RuntimeOptions {
   fn default() -> Self {
-    let worker_threads = std::thread::available_parallelism().map_or(1, usize::from);
+    let worker_threads = std::thread::available_parallelism()
+      .map_or(1, usize::from)
+      .min(MAX_ASYNC_RUNTIME_WORKER_THREADS);
     Self {
       flavor: if cfg!(target_family = "wasm") {
         RuntimeFlavor::CurrentThread
@@ -116,7 +121,7 @@ impl RuntimeOptions {
     #[cfg(target_family = "wasm")]
     let rayon_max_threads = None;
     #[cfg(not(target_family = "wasm"))]
-    let rayon_max_threads = Some(max_num_threads());
+    let rayon_max_threads = Some(crate::max_async_runtime_worker_threads());
     self.validate_with_rayon_max_threads(rayon_max_threads)
   }
 
@@ -148,9 +153,11 @@ impl RuntimeOptions {
       // lane available for runnable futures and timer service even when every
       // admitted blocking job is stalled. MultiThread therefore has a truthful
       // minimum of two physical/configured workers rather than a hidden reserve.
-      // Apply Rayon's platform cap before deriving the blocking allowance so a
-      // silently reduced physical pool cannot consume that reserved lane.
-      self.worker_threads = self.worker_threads.max(2).min(rayon_max_threads);
+      // Apply both Rolldown's production ceiling and Rayon's platform cap
+      // before deriving the blocking allowance, so a silently reduced physical
+      // pool cannot consume that reserved lane.
+      self.worker_threads =
+        self.worker_threads.clamp(2, MAX_ASYNC_RUNTIME_WORKER_THREADS).min(rayon_max_threads);
       let blocking_capacity = self.worker_threads - 1;
       self.max_blocking_tasks = self.max_blocking_tasks.min(blocking_capacity);
     }
@@ -392,6 +399,94 @@ fn catch_unwind_contained<T>(function: impl FnOnce() -> T) -> Option<T> {
       None
     }
   }
+}
+
+struct ContainedArc<T: ?Sized> {
+  value: Option<Arc<T>>,
+}
+
+impl<T: ?Sized> ContainedArc<T> {
+  fn new(value: Arc<T>) -> Self {
+    Self { value: Some(value) }
+  }
+
+  fn get(&self) -> &T {
+    self.value.as_deref().expect("the contained Arc must remain owned")
+  }
+
+  #[cfg(test)]
+  fn into_inner(mut self) -> Arc<T> {
+    self.value.take().expect("the contained Arc must remain owned")
+  }
+}
+
+impl<T: ?Sized> Drop for ContainedArc<T> {
+  fn drop(&mut self) {
+    if let Some(value) = self.value.take() {
+      let _ = catch_unwind_contained(|| drop(value));
+    }
+  }
+}
+
+struct ContainedArcSnapshot<I: Copy, T: ?Sized> {
+  values: Vec<(I, Arc<T>)>,
+}
+
+impl<I: Copy, T: ?Sized> ContainedArcSnapshot<I, T> {
+  fn new(values: Vec<(I, Arc<T>)>) -> Self {
+    Self { values }
+  }
+
+  fn as_slice(&self) -> &[(I, Arc<T>)] {
+    &self.values
+  }
+
+  fn len(&self) -> usize {
+    self.values.len()
+  }
+
+  fn is_empty(&self) -> bool {
+    self.values.is_empty()
+  }
+
+  fn pop(&mut self) -> Option<(I, ContainedArc<T>)> {
+    self.values.pop().map(|(id, value)| (id, ContainedArc::new(value)))
+  }
+}
+
+impl<I: Copy, T: ?Sized> Drop for ContainedArcSnapshot<I, T> {
+  fn drop(&mut self) {
+    while let Some((_, value)) = self.values.pop() {
+      let _ = catch_unwind_contained(|| drop(value));
+    }
+  }
+}
+
+struct PanicContainedWaker {
+  waker: ManuallyDrop<Waker>,
+}
+
+impl std::task::Wake for PanicContainedWaker {
+  fn wake(self: Arc<Self>) {
+    let _ = catch_unwind_contained(|| self.waker.wake_by_ref());
+  }
+
+  fn wake_by_ref(self: &Arc<Self>) {
+    let _ = catch_unwind_contained(|| self.waker.wake_by_ref());
+  }
+}
+
+impl Drop for PanicContainedWaker {
+  fn drop(&mut self) {
+    let _ = catch_unwind_contained(|| {
+      // SAFETY: this is the sole destruction path for the underlying waker.
+      unsafe { ManuallyDrop::drop(&mut self.waker) };
+    });
+  }
+}
+
+fn panic_contained_waker(waker: Waker) -> Waker {
+  Waker::from(Arc::new(PanicContainedWaker { waker: ManuallyDrop::new(waker) }))
 }
 
 fn wake_waker_contained(waker: Waker) {
@@ -1785,6 +1880,7 @@ struct GenerationStopPublicationGuard<'a> {
 }
 
 impl GenerationStopPublicationGuard<'_> {
+  #[cfg(not(target_family = "wasm"))]
   fn is_stopping(&self) -> bool {
     self.stop.is_stopping()
   }
@@ -5552,6 +5648,9 @@ pub trait CurrentThreadTaskDriver: Send + Sync + 'static {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CurrentThreadTaskDriverId(u64);
 
+type CurrentThreadTaskDriverSnapshot =
+  ContainedArcSnapshot<CurrentThreadTaskDriverId, dyn CurrentThreadTaskDriver>;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CurrentThreadTaskDelivery {
   driver: CurrentThreadTaskDriverId,
@@ -5617,7 +5716,7 @@ struct CurrentThreadTaskDriverRegistryState {
 }
 
 struct CurrentThreadTaskDriverSelection {
-  live: Vec<(CurrentThreadTaskDriverId, Arc<dyn CurrentThreadTaskDriver>)>,
+  live: CurrentThreadTaskDriverSnapshot,
   failed_dispatches: Vec<CurrentThreadTaskDispatchFailure>,
 }
 
@@ -5696,13 +5795,13 @@ impl CurrentThreadTaskDriverRegistry {
   fn live(&self) -> CurrentThreadTaskDriverSelection {
     let mut failed_dispatches = Vec::new();
     loop {
-      let snapshot: Vec<(CurrentThreadTaskDriverId, Arc<dyn CurrentThreadTaskDriver>)> = {
+      let snapshot = CurrentThreadTaskDriverSnapshot::new({
         let state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         state.entries.iter().map(|entry| (entry.id, Arc::clone(&entry.driver))).collect()
-      };
+      });
       let mut dead_ids = FxHashSet::default();
       let mut live_ids = Vec::new();
-      for (id, driver) in &snapshot {
+      for (id, driver) in snapshot.as_slice() {
         if catch_unwind_contained(|| driver.is_live()).unwrap_or(false) {
           live_ids.push(*id);
         } else {
@@ -5730,10 +5829,12 @@ impl CurrentThreadTaskDriverRegistry {
         } else {
           state.entries.iter().map(|entry| (entry.id, Arc::clone(&entry.driver))).collect()
         };
-        (live, swept, retry)
+        (CurrentThreadTaskDriverSnapshot::new(live), swept, retry)
       };
 
-      let _ = catch_unwind_contained(|| drop(snapshot));
+      // A reentrant probe can unregister multiple snapshot-only drivers.
+      // See internal-docs/async-runtime/implementation.md.
+      drop(snapshot);
       for entry in swept {
         let _ = catch_unwind_contained(|| entry.driver.on_swept());
         let _ = catch_unwind_contained(|| drop(entry));
@@ -5746,7 +5847,8 @@ impl CurrentThreadTaskDriverRegistry {
 
   #[cfg(test)]
   fn current(&self) -> Option<(CurrentThreadTaskDriverId, Arc<dyn CurrentThreadTaskDriver>)> {
-    self.live().live.pop()
+    let mut live = self.live().live;
+    live.pop().map(|(id, driver)| (id, driver.into_inner()))
   }
 
   fn next_delivery(
@@ -5784,8 +5886,8 @@ impl CurrentThreadTaskDriverRegistry {
       CurrentThreadTaskDispatchPublicationGuard { registry: self, dispatch: Some(dispatch) }
     };
 
-    let CurrentThreadTaskDriverSelection { live, mut failed_dispatches } = self.live();
-    let deliveries = {
+    let CurrentThreadTaskDriverSelection { mut live, mut failed_dispatches } = self.live();
+    let planned_deliveries = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       let Some(dispatch_state) = state.dispatches.get(&dispatch) else {
         return CurrentThreadTaskDispatchCompletion {
@@ -5800,7 +5902,7 @@ impl CurrentThreadTaskDriverRegistry {
         // entry. If ID allocation unwinds, the publication guard can retire
         // the barrier without leaving an undispatched physical slot occupied.
         let mut reserved_deliveries = Vec::with_capacity(live.len());
-        for (id, _) in live.iter().rev() {
+        for (id, _) in live.as_slice().iter().rev() {
           let Some(entry) = state.entries.iter().find(|entry| entry.id == *id) else {
             continue;
           };
@@ -5809,11 +5911,11 @@ impl CurrentThreadTaskDriverRegistry {
           }
         }
         let mut reserved_deliveries = reserved_deliveries.into_iter();
-        let mut deliveries = Vec::with_capacity(live.len());
+        let mut planned_deliveries = Vec::with_capacity(live.len());
         let mut retired = Vec::with_capacity(live.len());
         let mut accepted_reservation = false;
-        for (id, driver) in live.into_iter().rev() {
-          let Some(entry) = state.entries.iter_mut().find(|entry| entry.id == id) else {
+        for (id, _) in live.as_slice().iter().rev() {
+          let Some(entry) = state.entries.iter_mut().find(|entry| entry.id == *id) else {
             continue;
           };
           if let Some(delivery) = &entry.delivery
@@ -5838,7 +5940,7 @@ impl CurrentThreadTaskDriverRegistry {
           entry.delivery =
             Some(CurrentThreadTaskDeliveryState { delivery, claimed: false, accepted });
           accepted_reservation |= accepted;
-          deliveries.push((id, driver, delivery));
+          planned_deliveries.push((*id, delivery));
         }
         let all_reserved_deliveries_installed = reserved_deliveries.next().is_none();
         debug_assert!(
@@ -5855,12 +5957,35 @@ impl CurrentThreadTaskDriverRegistry {
         for dispatch in retired.into_iter().flatten() {
           Self::retire_unreferenced_dispatch(&mut state, Some(dispatch));
         }
-        deliveries
+        planned_deliveries
       }
     };
 
+    // Pair newest-first delivery plans with contained driver owners after
+    // releasing the registry lock. Normal, rejection, and unwind cleanup can
+    // then destroy every selected driver independently without re-entering the
+    // registry under its mutex.
+    let mut deliveries = Vec::with_capacity(planned_deliveries.len());
+    let mut planned_deliveries = planned_deliveries.into_iter();
+    let mut next_delivery = planned_deliveries.next();
+    while let Some((id, driver)) = live.pop() {
+      let Some((planned_id, delivery)) = next_delivery else {
+        break;
+      };
+      if planned_id == id {
+        deliveries.push((id, driver, delivery));
+        next_delivery = planned_deliveries.next();
+      } else {
+        next_delivery = Some((planned_id, delivery));
+      }
+    }
+    debug_assert!(
+      next_delivery.is_none() && planned_deliveries.len() == 0,
+      "every planned CurrentThread delivery must retain its selected driver"
+    );
+
     for (id, driver, delivery) in deliveries {
-      if catch_unwind_contained(|| driver.dispatch(delivery)).unwrap_or(false) {
+      if catch_unwind_contained(|| driver.get().dispatch(delivery)).unwrap_or(false) {
         self.accept_delivery(id, delivery);
       } else {
         let (entry, failures) = self.reject_delivery(id, delivery);
@@ -6259,6 +6384,8 @@ pub trait TimerDriver: Send + Sync + 'static {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TimerDriverId(u64);
 
+type HostTimerDriverSnapshot = ContainedArcSnapshot<TimerDriverId, dyn TimerDriver>;
+
 /// Host timer drivers keyed by registration order. A driver is owned by a host
 /// context that can die independently
 /// of the process -- the Node binding registers one driver per importing napi
@@ -6337,15 +6464,15 @@ impl TimerDriverRegistry {
   /// therefore probes a snapshot, removes dead entries under the lock, then
   /// runs hooks after release. A concurrent registration/unregistration can
   /// stale the snapshot, in which case selection retries.
-  fn live(&self) -> Vec<(TimerDriverId, Arc<dyn TimerDriver>)> {
+  fn live(&self) -> HostTimerDriverSnapshot {
     loop {
-      let snapshot: Vec<(u64, Arc<dyn TimerDriver>)> = {
+      let snapshot = ContainedArcSnapshot::<u64, dyn TimerDriver>::new({
         let entries = self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         entries.iter().map(|(id, driver)| (*id, Arc::clone(driver))).collect()
-      };
+      });
       let mut dead_ids = Vec::new();
       let mut live_ids = Vec::new();
-      for (id, driver) in &snapshot {
+      for (id, driver) in snapshot.as_slice() {
         if catch_unwind_contained(|| driver.is_live()).unwrap_or(false) {
           live_ids.push(*id);
         } else {
@@ -6370,10 +6497,12 @@ impl TimerDriverRegistry {
         } else {
           entries.iter().map(|(id, driver)| (TimerDriverId(*id), Arc::clone(driver))).collect()
         };
-        (live, swept, retry)
+        (HostTimerDriverSnapshot::new(live), swept, retry)
       };
 
-      let _ = catch_unwind_contained(|| drop(snapshot));
+      // A reentrant probe can unregister multiple snapshot-only drivers.
+      // See internal-docs/async-runtime/implementation.md.
+      drop(snapshot);
       for driver in swept {
         let _ = catch_unwind_contained(|| driver.on_swept());
         let _ = catch_unwind_contained(|| drop(driver));
@@ -6386,7 +6515,8 @@ impl TimerDriverRegistry {
 
   #[cfg(test)]
   fn current(&self) -> Option<(TimerDriverId, Arc<dyn TimerDriver>)> {
-    self.live().pop()
+    let mut live = self.live();
+    live.pop().map(|(id, driver)| (id, driver.into_inner()))
   }
 
   /// Whether a LIVE driver is currently registered (dead-only counts as no).
@@ -6467,8 +6597,7 @@ struct HostTimerRepollState {
 }
 
 impl HostTimerRepoll {
-  fn register(&self, waker: &Waker) {
-    let waker = waker.clone();
+  fn register(&self, waker: Waker) {
     let (replaced, wake) = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       if state.closed {
@@ -7239,6 +7368,17 @@ struct HostSleep {
   pending: Option<HostTimerPendingGuard>,
 }
 
+fn cancel_host_timer_driver(id: TimerId, driver: Arc<dyn TimerDriver>) {
+  let _ = catch_unwind_contained(|| driver.cancel(id));
+  let _ = catch_unwind_contained(|| drop(driver));
+}
+
+fn cancel_host_timer_drivers(id: TimerId, armed: &mut Vec<(TimerDriverId, Arc<dyn TimerDriver>)>) {
+  for (_, driver) in armed.drain(..) {
+    cancel_host_timer_driver(id, driver);
+  }
+}
+
 impl Future for Sleep {
   type Output = ();
 
@@ -7277,24 +7417,32 @@ impl Future for Sleep {
       }
       SleepInner::Host(host) => {
         if host.fired.load(Ordering::SeqCst) || Instant::now() >= deadline {
-          for (_, driver) in host.armed.drain(..) {
-            driver.cancel(host.id);
-          }
+          cancel_host_timer_drivers(host.id, &mut host.armed);
           host.pending.take();
           return Poll::Ready(());
         }
-        host.repoll.register(cx.waker());
+        // Clone both wakers before publishing either one. If the second clone
+        // unwinds, destroy the first clone behind its own panic boundary before
+        // resuming the original panic, so a hostile RawWaker destructor cannot
+        // turn clone failure into a process-aborting double panic.
+        let repoll_waker = cx.waker().clone();
+        let registry_waker = match catch_unwind(AssertUnwindSafe(|| cx.waker().clone())) {
+          Ok(waker) => waker,
+          Err(payload) => {
+            let _ = catch_unwind_contained(|| drop(repoll_waker));
+            resume_unwind(payload);
+          }
+        };
+        host.repoll.register(repoll_waker);
         if !host.registry.register(
           host.id,
           deadline,
-          cx.waker().clone(),
+          registry_waker,
           &host.fired,
           &host.drivers,
           &host.repoll,
         ) {
-          for (_, driver) in host.armed.drain(..) {
-            driver.cancel(host.id);
-          }
+          cancel_host_timer_drivers(host.id, &mut host.armed);
           if host.pending.take().is_none() {
             host.repoll.close();
           }
@@ -7321,31 +7469,50 @@ impl Future for Sleep {
         // event loop, so no single host may own the only timer arm.
         let current = host.drivers.live();
         assert!(
-          !current.is_empty(),
+          !current.as_slice().is_empty(),
           "CurrentThread runtime lost every live timer driver mid-sleep: the host contexts \
            that registered timer drivers (via \
            `rolldown_utils::async_runtime::register_timer_driver`; the Node binding registers \
            one per importing env through `registerTimerHost`) have all been torn down, so this \
            `sleep_until` can never be woken."
         );
-        let mut previously_armed = std::mem::take(&mut host.armed);
-        let mut next_armed = Vec::with_capacity(current.len());
-        for (current_id, current_driver) in current {
-          if let Some(index) =
-            previously_armed.iter().position(|(armed_id, _)| *armed_id == current_id)
-          {
-            let (_, armed_driver) = previously_armed.swap_remove(index);
-            armed_driver.register(host.id, deadline, cx.waker().clone());
-            next_armed.push((current_id, armed_driver));
-          } else {
-            current_driver.register(host.id, deadline, cx.waker().clone());
-            next_armed.push((current_id, current_driver));
+        // Publish cancellation ownership for the complete live snapshot before
+        // invoking any arbitrary callback. An earlier driver may unregister a
+        // later one and then unwind; both the Sleep and the contained snapshot
+        // must still own that later driver while the original panic propagates.
+        // See internal-docs/async-runtime/implementation.md.
+        let missing = current
+          .as_slice()
+          .iter()
+          .filter(|(current_id, _)| !host.armed.iter().any(|(armed_id, _)| armed_id == current_id))
+          .count();
+        host.armed.reserve(missing);
+        for (current_id, current_driver) in current.as_slice() {
+          if !host.armed.iter().any(|(armed_id, _)| armed_id == current_id) {
+            host.armed.push((*current_id, Arc::clone(current_driver)));
           }
         }
-        for (_, old_driver) in previously_armed {
-          old_driver.cancel(host.id);
+        for (current_id, _) in current.as_slice() {
+          let (_, armed_driver) = host
+            .armed
+            .iter()
+            .find(|(armed_id, _)| armed_id == current_id)
+            .expect("every live timer driver must have cancellation ownership before callbacks");
+          armed_driver.register(host.id, deadline, panic_contained_waker(cx.waker().clone()));
         }
-        host.armed = next_armed;
+        let mut armed_index = 0;
+        while armed_index < host.armed.len() {
+          if current
+            .as_slice()
+            .iter()
+            .any(|(current_id, _)| *current_id == host.armed[armed_index].0)
+          {
+            armed_index += 1;
+          } else {
+            let (_, old_driver) = host.armed.swap_remove(armed_index);
+            cancel_host_timer_driver(host.id, old_driver);
+          }
+        }
         Poll::Pending
       }
     }
@@ -7364,9 +7531,10 @@ impl Drop for Sleep {
         }
       }
       SleepInner::Host(host) => {
-        for (_, driver) in host.armed.drain(..) {
-          driver.cancel(host.id);
-        }
+        // Close directly as an unwind backstop even when first-poll setup
+        // failed before `pending` could install its normal cleanup guard.
+        host.repoll.close();
+        cancel_host_timer_drivers(host.id, &mut host.armed);
         // `pending` (if still held) drops here and retires the wake-token.
       }
     }
@@ -11404,6 +11572,71 @@ mod tests {
     }
   }
 
+  struct ReentrantMultiUnregisterCurrentThreadTaskDriver {
+    registry: std::sync::Weak<CurrentThreadTaskDriverRegistry>,
+    registrations: Mutex<Vec<CurrentThreadTaskDriverId>>,
+  }
+
+  impl CurrentThreadTaskDriver for ReentrantMultiUnregisterCurrentThreadTaskDriver {
+    fn dispatch(&self, _delivery: CurrentThreadTaskDelivery) -> bool {
+      true
+    }
+
+    fn is_live(&self) -> bool {
+      if let Some(registry) = self.registry.upgrade() {
+        for registration in self.registrations.lock().unwrap().iter().copied() {
+          let completion = registry.unregister(registration);
+          assert!(completion.failed_dispatches.is_empty());
+          assert!(!completion.redispatch);
+        }
+      }
+      false
+    }
+  }
+
+  struct ReentrantDispatchMultiUnregisterCurrentThreadTaskDriver {
+    registry: std::sync::Weak<CurrentThreadTaskDriverRegistry>,
+    registrations: Mutex<Vec<CurrentThreadTaskDriverId>>,
+    drops: Arc<AtomicUsize>,
+  }
+
+  impl CurrentThreadTaskDriver for ReentrantDispatchMultiUnregisterCurrentThreadTaskDriver {
+    fn dispatch(&self, _delivery: CurrentThreadTaskDelivery) -> bool {
+      if let Some(registry) = self.registry.upgrade() {
+        for registration in self.registrations.lock().unwrap().iter().copied() {
+          let completion = registry.unregister(registration);
+          assert!(completion.failed_dispatches.is_empty());
+          assert!(!completion.redispatch);
+        }
+      }
+      true
+    }
+  }
+
+  impl Drop for ReentrantDispatchMultiUnregisterCurrentThreadTaskDriver {
+    fn drop(&mut self) {
+      self.drops.fetch_add(1, Ordering::SeqCst);
+      panic!("intentional reentrant CurrentThread task-driver destructor panic");
+    }
+  }
+
+  struct PanickingDropCurrentThreadTaskDriver {
+    drops: Arc<AtomicUsize>,
+  }
+
+  impl CurrentThreadTaskDriver for PanickingDropCurrentThreadTaskDriver {
+    fn dispatch(&self, _delivery: CurrentThreadTaskDelivery) -> bool {
+      true
+    }
+  }
+
+  impl Drop for PanickingDropCurrentThreadTaskDriver {
+    fn drop(&mut self) {
+      self.drops.fetch_add(1, Ordering::SeqCst);
+      panic!("intentional CurrentThread task-driver destructor panic");
+    }
+  }
+
   struct ReentrantCurrentThreadTaskDriverDrop {
     registry: std::sync::Weak<CurrentThreadTaskDriverRegistry>,
     fallback: CurrentThreadTaskDriverId,
@@ -12030,6 +12263,134 @@ mod tests {
     drop_rx.recv_timeout(Duration::from_secs(1)).expect("driver destructor re-entry deadlocked");
     drop_thread.join().unwrap();
     assert!(registry.current().is_none(), "the destructor must unregister the fallback");
+  }
+
+  #[test]
+  fn current_thread_task_driver_registry_snapshot_contains_each_driver_drop() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_TASK_DRIVER_SNAPSHOT_DROP_PANIC_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      let registry = Arc::new(CurrentThreadTaskDriverRegistry::default());
+      let fallback = Arc::new(TestCurrentThreadTaskDriver {
+        behavior: TestCurrentThreadTaskDriverBehavior::Healthy,
+        dispatched: AtomicBool::new(false),
+      });
+      let fallback_id =
+        registry.register(Arc::clone(&fallback) as Arc<dyn CurrentThreadTaskDriver>);
+      let reentrant = Arc::new(ReentrantMultiUnregisterCurrentThreadTaskDriver {
+        registry: Arc::downgrade(&registry),
+        registrations: Mutex::new(Vec::new()),
+      });
+      registry.register(Arc::clone(&reentrant) as Arc<dyn CurrentThreadTaskDriver>);
+
+      let first_drops = Arc::new(AtomicUsize::new(0));
+      let first =
+        Arc::new(PanickingDropCurrentThreadTaskDriver { drops: Arc::clone(&first_drops) });
+      let first_id = registry.register(Arc::clone(&first) as Arc<dyn CurrentThreadTaskDriver>);
+      drop(first);
+
+      let second_drops = Arc::new(AtomicUsize::new(0));
+      let second =
+        Arc::new(PanickingDropCurrentThreadTaskDriver { drops: Arc::clone(&second_drops) });
+      let second_id = registry.register(Arc::clone(&second) as Arc<dyn CurrentThreadTaskDriver>);
+      drop(second);
+      *reentrant.registrations.lock().unwrap() = vec![first_id, second_id];
+
+      assert_eq!(
+        registry.current().map(|(id, _)| id),
+        Some(fallback_id),
+        "selection must retry after reentrant removals and preserve the healthy fallback"
+      );
+      assert_eq!(first_drops.load(Ordering::SeqCst), 1);
+      assert_eq!(second_drops.load(Ordering::SeqCst), 1);
+      let state = registry.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert_eq!(state.entries.len(), 1);
+      assert_eq!(state.entries[0].id, fallback_id);
+      assert!(state.dispatches.is_empty());
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg(
+        "async_runtime::tests::current_thread_task_driver_registry_snapshot_contains_each_driver_drop",
+      )
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the hostile task-driver snapshot subprocess test must start");
+    assert!(
+      output.status.success(),
+      "reentrant liveness removal must not combine task-driver destructor panics; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[test]
+  fn current_thread_task_driver_dispatch_contains_each_delivery_driver_drop() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_TASK_DRIVER_DELIVERY_DROP_PANIC_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      let registry = Arc::new(CurrentThreadTaskDriverRegistry::default());
+
+      let first_drops = Arc::new(AtomicUsize::new(0));
+      let first =
+        Arc::new(PanickingDropCurrentThreadTaskDriver { drops: Arc::clone(&first_drops) });
+      let first_id = registry.register(Arc::clone(&first) as Arc<dyn CurrentThreadTaskDriver>);
+      drop(first);
+
+      let second_drops = Arc::new(AtomicUsize::new(0));
+      let second =
+        Arc::new(PanickingDropCurrentThreadTaskDriver { drops: Arc::clone(&second_drops) });
+      let second_id = registry.register(Arc::clone(&second) as Arc<dyn CurrentThreadTaskDriver>);
+      drop(second);
+
+      let reentrant_drops = Arc::new(AtomicUsize::new(0));
+      let reentrant = Arc::new(ReentrantDispatchMultiUnregisterCurrentThreadTaskDriver {
+        registry: Arc::downgrade(&registry),
+        registrations: Mutex::new(Vec::new()),
+        drops: Arc::clone(&reentrant_drops),
+      });
+      let reentrant_id =
+        registry.register(Arc::clone(&reentrant) as Arc<dyn CurrentThreadTaskDriver>);
+      *reentrant.registrations.lock().unwrap() = vec![reentrant_id, second_id, first_id];
+      drop(reentrant);
+
+      let dispatch = 59;
+      let failure = current_thread_dispatch_failure(dispatch, 0);
+      assert_eq!(
+        registry.dispatch(dispatch),
+        CurrentThreadHostDispatchResult::Failed(failure),
+        "reentrant removal of every provisional host must report accepted delivery failure"
+      );
+      assert_eq!(reentrant_drops.load(Ordering::SeqCst), 1);
+      assert_eq!(first_drops.load(Ordering::SeqCst), 1);
+      assert_eq!(second_drops.load(Ordering::SeqCst), 1);
+      registry.finish_cancellation(failure);
+      let state = registry.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert!(state.entries.is_empty());
+      assert!(state.dispatches.is_empty());
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg(
+        "async_runtime::tests::current_thread_task_driver_dispatch_contains_each_delivery_driver_drop",
+      )
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the hostile task-driver delivery subprocess test must start");
+    assert!(
+      output.status.success(),
+      "reentrant dispatch removal must not combine delivery-driver destructor panics; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
   }
 
   #[test]
@@ -17267,7 +17628,7 @@ mod tests {
 
   #[cfg(not(target_family = "wasm"))]
   #[test]
-  fn validate_applies_rayon_worker_cap_before_blocking_reserve_and_reporting() {
+  fn validate_applies_worker_caps_before_blocking_reserve_and_reporting() {
     let simulated_32_bit = RuntimeOptions {
       flavor: RuntimeFlavor::MultiThread,
       worker_threads: 256,
@@ -17282,8 +17643,9 @@ mod tests {
 
     let rayon_max_threads = max_num_threads();
     let requested_threads = rayon_max_threads
+      .max(MAX_ASYNC_RUNTIME_WORKER_THREADS)
       .checked_add(1)
-      .expect("Rayon's supported worker count must leave room for an oversized request");
+      .expect("supported worker counts must leave room for an oversized request");
     let controller = RuntimeController::new();
     controller
       .configure(RuntimeOptions {
@@ -17293,13 +17655,14 @@ mod tests {
         thread_name_prefix: "rd8-rayon-cap".to_string(),
         park_deadline: None,
       })
-      .expect("an oversized request must clamp to Rayon's physical maximum");
+      .expect("an oversized request must clamp to the production worker ceiling");
 
     let reported = controller.options();
-    assert_eq!(reported.worker_threads, rayon_max_threads);
+    let expected_workers = rayon_max_threads.min(MAX_ASYNC_RUNTIME_WORKER_THREADS);
+    assert_eq!(reported.worker_threads, expected_workers);
     assert_eq!(
       reported.max_blocking_tasks,
-      rayon_max_threads - 1,
+      expected_workers - 1,
       "the blocking cap must reserve a lane from the physically realizable worker count"
     );
   }
@@ -21568,6 +21931,53 @@ mod tests {
     wake_waker_contained(Waker::from(Arc::new(PanicWakeAndDrop)));
   }
 
+  struct TestHostileRawWakerState {
+    clones: AtomicUsize,
+    drop_panics: AtomicUsize,
+    panic_on_clone: Option<usize>,
+  }
+
+  struct TestHostileRawWakerToken {
+    state: Arc<TestHostileRawWakerState>,
+    panic_on_drop: bool,
+  }
+
+  unsafe fn clone_test_hostile_waker(data: *const ()) -> std::task::RawWaker {
+    let token = unsafe { &*data.cast::<TestHostileRawWakerToken>() };
+    let clone = token.state.clones.fetch_add(1, Ordering::SeqCst) + 1;
+    assert_ne!(token.state.panic_on_clone, Some(clone), "intentional RawWaker clone panic");
+    let clone =
+      Box::new(TestHostileRawWakerToken { state: Arc::clone(&token.state), panic_on_drop: true });
+    std::task::RawWaker::new(Box::into_raw(clone).cast(), &TEST_HOSTILE_RAW_WAKER_VTABLE)
+  }
+
+  unsafe fn wake_test_hostile_waker(data: *const ()) {
+    unsafe { drop_test_hostile_waker(data) };
+  }
+
+  unsafe fn wake_test_hostile_waker_by_ref(_data: *const ()) {}
+
+  unsafe fn drop_test_hostile_waker(data: *const ()) {
+    let token = unsafe { Box::from_raw(data.cast_mut().cast::<TestHostileRawWakerToken>()) };
+    if token.panic_on_drop {
+      token.state.drop_panics.fetch_add(1, Ordering::SeqCst);
+      panic!("intentional cloned RawWaker destructor panic");
+    }
+  }
+
+  static TEST_HOSTILE_RAW_WAKER_VTABLE: std::task::RawWakerVTable = std::task::RawWakerVTable::new(
+    clone_test_hostile_waker,
+    wake_test_hostile_waker,
+    wake_test_hostile_waker_by_ref,
+    drop_test_hostile_waker,
+  );
+
+  fn test_hostile_waker(state: Arc<TestHostileRawWakerState>) -> Waker {
+    let token = Box::new(TestHostileRawWakerToken { state, panic_on_drop: false });
+    let raw = std::task::RawWaker::new(Box::into_raw(token).cast(), &TEST_HOSTILE_RAW_WAKER_VTABLE);
+    unsafe { Waker::from_raw(raw) }
+  }
+
   /// Waker that only counts. For polling a raw `Sleep` without an executor.
   struct CountingWake(AtomicUsize);
   impl std::task::Wake for CountingWake {
@@ -21694,6 +22104,88 @@ mod tests {
     }
   }
 
+  struct PanickingRegisterTimerDriver {
+    registers: AtomicUsize,
+    cancels: Mutex<Vec<TimerId>>,
+    pending: Mutex<FxHashMap<TimerId, Waker>>,
+  }
+
+  impl PanickingRegisterTimerDriver {
+    fn new() -> Arc<Self> {
+      Arc::new(Self {
+        registers: AtomicUsize::new(0),
+        cancels: Mutex::new(Vec::new()),
+        pending: Mutex::new(FxHashMap::default()),
+      })
+    }
+  }
+
+  impl TimerDriver for PanickingRegisterTimerDriver {
+    fn register(&self, id: TimerId, _deadline: Instant, waker: Waker) {
+      self.registers.fetch_add(1, Ordering::SeqCst);
+      self.pending.lock().unwrap().insert(id, waker);
+      panic!("intentional timer-driver register panic after arming");
+    }
+
+    fn cancel(&self, id: TimerId) {
+      self.cancels.lock().unwrap().push(id);
+      self.pending.lock().unwrap().remove(&id);
+    }
+  }
+
+  struct PanicBeforeRetainingTimerDriver {
+    registers: AtomicUsize,
+  }
+
+  impl TimerDriver for PanicBeforeRetainingTimerDriver {
+    fn register(&self, _id: TimerId, _deadline: Instant, _waker: Waker) {
+      self.registers.fetch_add(1, Ordering::SeqCst);
+      panic!("intentional timer-driver register panic before retaining its waker");
+    }
+
+    fn cancel(&self, _id: TimerId) {}
+  }
+
+  struct PanickingCancelDropTimerDriver {
+    cancels: Arc<AtomicUsize>,
+    drops: Arc<AtomicUsize>,
+  }
+
+  impl TimerDriver for PanickingCancelDropTimerDriver {
+    fn register(&self, _id: TimerId, _deadline: Instant, _waker: Waker) {}
+
+    fn cancel(&self, _id: TimerId) {
+      self.cancels.fetch_add(1, Ordering::SeqCst);
+      panic!("intentional timer-driver cancel panic");
+    }
+  }
+
+  impl Drop for PanickingCancelDropTimerDriver {
+    fn drop(&mut self) {
+      self.drops.fetch_add(1, Ordering::SeqCst);
+      panic!("intentional timer-driver destructor panic");
+    }
+  }
+
+  struct UnregisterLaterThenPanicTimerDriver {
+    registry: Weak<TimerDriverRegistry>,
+    later: Mutex<Option<TimerDriverId>>,
+    registers: AtomicUsize,
+  }
+
+  impl TimerDriver for UnregisterLaterThenPanicTimerDriver {
+    fn register(&self, _id: TimerId, _deadline: Instant, _waker: Waker) {
+      self.registers.fetch_add(1, Ordering::SeqCst);
+      let later = *self.later.lock().unwrap();
+      if let (Some(registry), Some(later)) = (self.registry.upgrade(), later) {
+        registry.unregister(later);
+      }
+      panic!("intentional earlier timer-driver panic after unregistering a later driver");
+    }
+
+    fn cancel(&self, _id: TimerId) {}
+  }
+
   struct ReentrantLivenessDriver {
     registry: std::sync::Weak<TimerDriverRegistry>,
     registration: Mutex<Option<TimerDriverId>>,
@@ -21708,6 +22200,26 @@ mod tests {
       let registration = *self.registration.lock().unwrap();
       if let (Some(registry), Some(id)) = (self.registry.upgrade(), registration) {
         registry.unregister(id);
+      }
+      false
+    }
+  }
+
+  struct ReentrantMultiUnregisterTimerDriver {
+    registry: std::sync::Weak<TimerDriverRegistry>,
+    registrations: Mutex<Vec<TimerDriverId>>,
+  }
+
+  impl TimerDriver for ReentrantMultiUnregisterTimerDriver {
+    fn register(&self, _id: TimerId, _deadline: Instant, _waker: Waker) {}
+
+    fn cancel(&self, _id: TimerId) {}
+
+    fn is_live(&self) -> bool {
+      if let Some(registry) = self.registry.upgrade() {
+        for registration in self.registrations.lock().unwrap().iter().copied() {
+          registry.unregister(registration);
+        }
       }
       false
     }
@@ -22889,6 +23401,424 @@ mod tests {
     drop_rx.recv_timeout(Duration::from_secs(1)).expect("driver destructor re-entry deadlocked");
     drop_thread.join().unwrap();
     assert!(registry.current().is_none(), "the destructor must be able to unregister the fallback");
+  }
+
+  #[test]
+  fn timer_driver_registry_snapshot_contains_each_driver_drop() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_TIMER_DRIVER_SNAPSHOT_DROP_PANIC_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      let registry = Arc::new(TimerDriverRegistry::default());
+      let fallback = ManualStubDriver::new();
+      let fallback_id = registry.register(Arc::clone(&fallback) as Arc<dyn TimerDriver>);
+      let reentrant = Arc::new(ReentrantMultiUnregisterTimerDriver {
+        registry: Arc::downgrade(&registry),
+        registrations: Mutex::new(Vec::new()),
+      });
+      registry.register(Arc::clone(&reentrant) as Arc<dyn TimerDriver>);
+
+      let first_cancels = Arc::new(AtomicUsize::new(0));
+      let first_drops = Arc::new(AtomicUsize::new(0));
+      let first = Arc::new(PanickingCancelDropTimerDriver {
+        cancels: Arc::clone(&first_cancels),
+        drops: Arc::clone(&first_drops),
+      });
+      let first_id = registry.register(Arc::clone(&first) as Arc<dyn TimerDriver>);
+      drop(first);
+
+      let second_cancels = Arc::new(AtomicUsize::new(0));
+      let second_drops = Arc::new(AtomicUsize::new(0));
+      let second = Arc::new(PanickingCancelDropTimerDriver {
+        cancels: Arc::clone(&second_cancels),
+        drops: Arc::clone(&second_drops),
+      });
+      let second_id = registry.register(Arc::clone(&second) as Arc<dyn TimerDriver>);
+      drop(second);
+      *reentrant.registrations.lock().unwrap() = vec![first_id, second_id];
+
+      assert_eq!(
+        registry.current().map(|(id, _)| id),
+        Some(fallback_id),
+        "selection must retry after reentrant removals and preserve the healthy fallback"
+      );
+      assert_eq!(first_cancels.load(Ordering::SeqCst), 0);
+      assert_eq!(second_cancels.load(Ordering::SeqCst), 0);
+      assert_eq!(first_drops.load(Ordering::SeqCst), 1);
+      assert_eq!(second_drops.load(Ordering::SeqCst), 1);
+      assert_eq!(
+        registry.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner).len(),
+        1
+      );
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::timer_driver_registry_snapshot_contains_each_driver_drop")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the hostile timer-driver snapshot subprocess test must start");
+    assert!(
+      output.status.success(),
+      "reentrant liveness removal must not combine timer-driver destructor panics; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[test]
+  fn timer_driver_registry_live_result_contains_each_driver_drop() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_TIMER_DRIVER_LIVE_DROP_PANIC_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      let registry = TimerDriverRegistry::default();
+
+      let first_cancels = Arc::new(AtomicUsize::new(0));
+      let first_drops = Arc::new(AtomicUsize::new(0));
+      let first = Arc::new(PanickingCancelDropTimerDriver {
+        cancels: Arc::clone(&first_cancels),
+        drops: Arc::clone(&first_drops),
+      });
+      let first_id = registry.register(Arc::clone(&first) as Arc<dyn TimerDriver>);
+      drop(first);
+
+      let second_cancels = Arc::new(AtomicUsize::new(0));
+      let second_drops = Arc::new(AtomicUsize::new(0));
+      let second = Arc::new(PanickingCancelDropTimerDriver {
+        cancels: Arc::clone(&second_cancels),
+        drops: Arc::clone(&second_drops),
+      });
+      let second_id = registry.register(Arc::clone(&second) as Arc<dyn TimerDriver>);
+      drop(second);
+
+      let live = registry.live();
+      assert_eq!(live.len(), 2);
+      registry.unregister(first_id);
+      registry.unregister(second_id);
+      drop(live);
+
+      assert_eq!(first_cancels.load(Ordering::SeqCst), 0);
+      assert_eq!(second_cancels.load(Ordering::SeqCst), 0);
+      assert_eq!(first_drops.load(Ordering::SeqCst), 1);
+      assert_eq!(second_drops.load(Ordering::SeqCst), 1);
+      assert!(
+        registry.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty()
+      );
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::timer_driver_registry_live_result_contains_each_driver_drop")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the hostile live timer-driver snapshot subprocess test must start");
+    assert!(
+      output.status.success(),
+      "a returned live snapshot must not combine final timer-driver destructor panics; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[test]
+  fn host_sleep_register_unwind_preserves_every_possible_arm_for_cancellation() {
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
+    let backend =
+      RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
+    let healthy = ManualStubDriver::new();
+    let registry = registry_with(Arc::clone(&healthy) as Arc<dyn TimerDriver>);
+    let deadline = Instant::now() + Duration::from_mins(1);
+    let mut sleep = make_sleep(&backend, &registry, deadline);
+    let mut cx = Context::from_waker(Waker::noop());
+
+    assert!(Pin::new(&mut sleep).poll(&mut cx).is_pending());
+    let timer_id = healthy.registers.lock().unwrap()[0].0;
+
+    let panicking = PanickingRegisterTimerDriver::new();
+    registry.register(Arc::clone(&panicking) as Arc<dyn TimerDriver>);
+    let result = catch_unwind(AssertUnwindSafe(|| {
+      let _ = Pin::new(&mut sleep).poll(&mut cx);
+    }));
+    assert!(result.is_err(), "the hostile register panic must retain its normal propagation");
+    assert_eq!(
+      healthy.registers.lock().unwrap().len(),
+      2,
+      "the previously armed driver must have completed its refresh before the later panic"
+    );
+    assert_eq!(panicking.registers.load(Ordering::SeqCst), 1);
+    assert!(
+      panicking.pending.lock().unwrap().contains_key(&timer_id),
+      "the hostile driver must model an arm committed before it panics"
+    );
+
+    drop(sleep);
+    assert_eq!(
+      healthy.cancels.lock().unwrap().as_slice(),
+      &[timer_id],
+      "unwind must preserve cancellation ownership for the previously armed driver"
+    );
+    assert_eq!(
+      panicking.cancels.lock().unwrap().as_slice(),
+      &[timer_id],
+      "unwind must preserve cancellation ownership for the driver that armed and then panicked"
+    );
+    assert!(panicking.pending.lock().unwrap().is_empty());
+    assert_eq!(registry.pending_len(), 0);
+    assert!(!executor.host_timers.has_pending());
+  }
+
+  #[test]
+  fn host_sleep_register_unwind_contains_later_unregistered_driver_drop() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_HOST_TIMER_SNAPSHOT_DROP_PANIC_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
+      let backend =
+        RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
+      let registry = Arc::new(TimerDriverRegistry::default());
+      let earlier = Arc::new(UnregisterLaterThenPanicTimerDriver {
+        registry: Arc::downgrade(&registry),
+        later: Mutex::new(None),
+        registers: AtomicUsize::new(0),
+      });
+      registry.register(Arc::clone(&earlier) as Arc<dyn TimerDriver>);
+
+      let later_cancels = Arc::new(AtomicUsize::new(0));
+      let later_drops = Arc::new(AtomicUsize::new(0));
+      let later = Arc::new(PanickingCancelDropTimerDriver {
+        cancels: Arc::clone(&later_cancels),
+        drops: Arc::clone(&later_drops),
+      });
+      let later_id = registry.register(Arc::clone(&later) as Arc<dyn TimerDriver>);
+      *earlier.later.lock().unwrap() = Some(later_id);
+      drop(later);
+
+      let mut sleep = make_sleep(&backend, &registry, Instant::now() + Duration::from_mins(1));
+      let mut cx = Context::from_waker(Waker::noop());
+      let result = catch_unwind(AssertUnwindSafe(|| {
+        let _ = Pin::new(&mut sleep).poll(&mut cx);
+      }));
+
+      assert!(result.is_err(), "the earlier driver's register panic must still propagate");
+      assert_eq!(earlier.registers.load(Ordering::SeqCst), 1);
+      assert_eq!(
+        later_drops.load(Ordering::SeqCst),
+        0,
+        "the complete live snapshot must enter Sleep cancellation ownership before callbacks"
+      );
+
+      drop(sleep);
+      assert_eq!(
+        later_cancels.load(Ordering::SeqCst),
+        1,
+        "the later driver must remain owned for cancellation despite its registry removal"
+      );
+      assert_eq!(
+        later_drops.load(Ordering::SeqCst),
+        1,
+        "the later driver's final destructor must run once behind containment"
+      );
+      assert_eq!(registry.pending_len(), 0);
+      assert!(!executor.host_timers.has_pending());
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg(
+        "async_runtime::tests::host_sleep_register_unwind_contains_later_unregistered_driver_drop",
+      )
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the hostile host timer snapshot subprocess test must start");
+    assert!(
+      output.status.success(),
+      "an earlier register panic must not combine with a later unregistered driver's destructor panic; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[test]
+  fn host_sleep_cancel_contains_each_callback_and_driver_drop_independently() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_HOST_TIMER_CANCEL_DROP_PANIC_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
+      let backend =
+        RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
+      let cancels = Arc::new(AtomicUsize::new(0));
+      let drops = Arc::new(AtomicUsize::new(0));
+      let hostile = Arc::new(PanickingCancelDropTimerDriver {
+        cancels: Arc::clone(&cancels),
+        drops: Arc::clone(&drops),
+      });
+      let healthy = ManualStubDriver::new();
+      let registry = Arc::new(TimerDriverRegistry::default());
+      let hostile_id = registry.register(Arc::clone(&hostile) as Arc<dyn TimerDriver>);
+      registry.register(Arc::clone(&healthy) as Arc<dyn TimerDriver>);
+      let mut sleep = make_sleep(&backend, &registry, Instant::now() + Duration::from_mins(1));
+      let mut cx = Context::from_waker(Waker::noop());
+
+      assert!(Pin::new(&mut sleep).poll(&mut cx).is_pending());
+      let timer_id = healthy.registers.lock().unwrap()[0].0;
+
+      // Leave the Sleep's arm as the hostile driver's final Arc, so cleanup must
+      // independently contain both its cancel panic and its destructor panic.
+      registry.unregister(hostile_id);
+      drop(hostile);
+      drop(sleep);
+      assert_eq!(cancels.load(Ordering::SeqCst), 1);
+      assert_eq!(drops.load(Ordering::SeqCst), 1);
+      assert_eq!(
+        healthy.cancels.lock().unwrap().as_slice(),
+        &[timer_id],
+        "one hostile cancellation must not skip later armed drivers"
+      );
+      assert_eq!(registry.pending_len(), 0);
+      assert!(!executor.host_timers.has_pending());
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg(
+        "async_runtime::tests::host_sleep_cancel_contains_each_callback_and_driver_drop_independently",
+      )
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the hostile timer-driver cancellation subprocess test must start");
+    assert!(
+      output.status.success(),
+      "host timer cancellation and driver destruction must not double-panic or skip later arms; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[test]
+  fn host_sleep_first_poll_clone_and_drop_panics_do_not_double_panic() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_HOST_TIMER_WAKER_CLONE_DROP_PANIC_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
+      let backend =
+        RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
+      let driver = ManualStubDriver::new();
+      let registry = registry_with(Arc::clone(&driver) as Arc<dyn TimerDriver>);
+      let state = Arc::new(TestHostileRawWakerState {
+        clones: AtomicUsize::new(0),
+        drop_panics: AtomicUsize::new(0),
+        panic_on_clone: Some(2),
+      });
+
+      let result = catch_unwind(AssertUnwindSafe(|| {
+        let mut sleep = make_sleep(&backend, &registry, Instant::now() + Duration::from_mins(1));
+        let waker = test_hostile_waker(Arc::clone(&state));
+        let mut cx = Context::from_waker(&waker);
+        let _ = Pin::new(&mut sleep).poll(&mut cx);
+      }));
+      assert!(result.is_err(), "the original RawWaker clone panic must still propagate");
+      assert_eq!(state.clones.load(Ordering::SeqCst), 2);
+      assert_eq!(
+        state.drop_panics.load(Ordering::SeqCst),
+        1,
+        "the first clone must be destroyed once behind a contained boundary"
+      );
+      assert!(driver.registers.lock().unwrap().is_empty());
+      assert_eq!(registry.pending_len(), 0);
+      assert!(!executor.host_timers.has_pending());
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::host_sleep_first_poll_clone_and_drop_panics_do_not_double_panic")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the hostile RawWaker subprocess test must start");
+    assert!(
+      output.status.success(),
+      "host timer first-poll cleanup must not abort after clone and destructor panics; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[test]
+  fn host_sleep_register_unwind_contains_unretained_waker_drop() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_HOST_TIMER_REGISTER_WAKER_DROP_PANIC_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
+      let backend =
+        RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
+      let driver = Arc::new(PanicBeforeRetainingTimerDriver { registers: AtomicUsize::new(0) });
+      let registry = registry_with(Arc::clone(&driver) as Arc<dyn TimerDriver>);
+      let state = Arc::new(TestHostileRawWakerState {
+        clones: AtomicUsize::new(0),
+        drop_panics: AtomicUsize::new(0),
+        panic_on_clone: None,
+      });
+      let mut sleep = make_sleep(&backend, &registry, Instant::now() + Duration::from_mins(1));
+      let waker = test_hostile_waker(Arc::clone(&state));
+      let mut cx = Context::from_waker(&waker);
+
+      let result = catch_unwind(AssertUnwindSafe(|| {
+        let _ = Pin::new(&mut sleep).poll(&mut cx);
+      }));
+      assert!(result.is_err(), "the timer-driver register panic must still propagate");
+      assert_eq!(driver.registers.load(Ordering::SeqCst), 1);
+      assert_eq!(state.clones.load(Ordering::SeqCst), 3);
+      assert_eq!(
+        state.drop_panics.load(Ordering::SeqCst),
+        1,
+        "the unretained register argument must be destroyed once behind the proxy boundary"
+      );
+      assert_eq!(registry.pending_len(), 1);
+      assert!(executor.host_timers.has_pending());
+
+      drop(sleep);
+      assert_eq!(
+        state.drop_panics.load(Ordering::SeqCst),
+        3,
+        "repoll and registry wakers must retain their existing contained cleanup"
+      );
+      assert_eq!(registry.pending_len(), 0);
+      assert!(!executor.host_timers.has_pending());
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::host_sleep_register_unwind_contains_unretained_waker_drop")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the hostile register-waker subprocess test must start");
+    assert!(
+      output.status.success(),
+      "timer-driver register unwind must not double-panic through its unretained waker; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
   }
 
   #[test]

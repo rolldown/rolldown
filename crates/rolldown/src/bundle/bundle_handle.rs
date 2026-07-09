@@ -17,11 +17,15 @@ type CloseFuture = Shared<BoxFuture<'static, CloseResult>>;
 struct BundleCloseInner {
   close_future: Option<CloseFuture>,
   close_on_error: bool,
+  #[expect(
+    clippy::rc_buffer,
+    reason = "the caller recovers the original non-Clone diagnostics after the shared close future"
+  )]
   pending_errors: Option<Arc<Vec<BuildDiagnostic>>>,
 }
 
 #[derive(Default)]
-pub(crate) struct BundleCloseState {
+pub(super) struct BundleCloseState {
   inner: Mutex<BundleCloseInner>,
   resources_cleared: Mutex<bool>,
 }
@@ -97,13 +101,13 @@ fn discard_panic_payload(payload: Box<dyn Any + Send>) {
 /// let output = bundle.write().await?; // Bundle consumed here
 /// // Can still access data via handle:
 /// let watch_files = handle.watch_files();
-/// handle.plugin_driver().close_bundle().await?;
+/// handle.close().await?;
 /// ```
 #[derive(Clone)]
 pub struct BundleHandle {
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) plugin_driver: SharedPluginDriver,
-  pub(crate) close_state: Arc<BundleCloseState>,
+  pub(super) close_state: Arc<BundleCloseState>,
 }
 
 impl BundleHandle {
@@ -145,6 +149,10 @@ impl BundleHandle {
   }
 
   #[doc(hidden)]
+  #[expect(
+    clippy::rc_buffer,
+    reason = "the caller retains and later recovers the original non-Clone diagnostics"
+  )]
   pub fn prepare_close_with_errors(&self, errors: Arc<Vec<BuildDiagnostic>>) {
     let mut state =
       self.close_state.inner.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
@@ -157,7 +165,7 @@ impl BundleHandle {
   pub async fn close(&self) -> anyhow::Result<()> {
     let result = self.close_with_errors(None).await;
     let mut resources_cleared =
-      self.close_state.resources_cleared.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+      self.close_state.resources_cleared.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     if !*resources_cleared {
       self.plugin_driver.clear();
       *resources_cleared = true;
@@ -165,7 +173,11 @@ impl BundleHandle {
     result
   }
 
-  pub async fn close_with_errors(
+  #[expect(
+    clippy::rc_buffer,
+    reason = "the caller retains and later recovers the original non-Clone diagnostics"
+  )]
+  pub(crate) async fn close_with_errors(
     &self,
     errors: Option<Arc<Vec<BuildDiagnostic>>>,
   ) -> anyhow::Result<()> {
@@ -186,7 +198,7 @@ impl BundleHandle {
           let plugin_driver = Arc::clone(&self.plugin_driver);
           let options = Arc::clone(&self.options);
           async move {
-            let result = match AssertUnwindSafe(async {
+            match AssertUnwindSafe(async {
               let args = errors
                 .as_ref()
                 .map(|errors| HookCloseBundleArgs { errors: errors.as_ref(), cwd: &options.cwd });
@@ -201,8 +213,7 @@ impl BundleHandle {
                 discard_panic_payload(payload);
                 Err(Arc::new(anyhow::anyhow!("closeBundle hook panicked: {message}")))
               }
-            };
-            result
+            }
           }
           .boxed()
           .shared()
@@ -264,14 +275,14 @@ mod tests {
   }
 
   #[derive(Debug)]
-  struct FailingBuildStartRecordingClosePlugin {
+  struct FailingBuildStartAndClosePlugin {
     close_calls: Arc<AtomicUsize>,
     close_error_counts: Arc<Mutex<Vec<usize>>>,
   }
 
-  impl Plugin for FailingBuildStartRecordingClosePlugin {
+  impl Plugin for FailingBuildStartAndClosePlugin {
     fn name(&self) -> Cow<'static, str> {
-      "failing-build-start-recording-close".into()
+      "failing-build-start-and-close".into()
     }
 
     fn register_hook_usage(&self) -> HookUsage {
@@ -297,7 +308,7 @@ mod tests {
         .lock()
         .expect("close error counts lock poisoned")
         .push(args.map_or(0, |args| args.errors.len()));
-      Ok(())
+      Err(anyhow::anyhow!("injected closeBundle failure"))
     }
   }
 
@@ -414,6 +425,10 @@ mod tests {
   }
 
   #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+  #[expect(
+    clippy::await_holding_lock,
+    reason = "the test deliberately blocks resource clearing while observing concurrent close tasks"
+  )]
   async fn concurrent_close_waits_for_serialized_resource_clear_completion() {
     let mut factory = BundleFactory::new(BundleFactoryOptions {
       disable_tracing_setup: true,
@@ -432,15 +447,9 @@ mod tests {
     let second = tokio::spawn(async move { second_handle.close().await });
 
     let close_hook = loop {
-      if let Some(close_hook) = handle
-        .close_state
-        .inner
-        .lock()
-        .expect("close future lock poisoned")
-        .close_future
-        .as_ref()
-        .cloned()
-      {
+      let close_hook =
+        handle.close_state.inner.lock().expect("close future lock poisoned").close_future.clone();
+      if let Some(close_hook) = close_hook {
         break close_hook;
       }
       tokio::task::yield_now().await;
@@ -521,11 +530,11 @@ mod tests {
   }
 
   #[tokio::test(flavor = "multi_thread")]
-  async fn failed_scan_closes_once_with_diagnostics_and_late_close_replays_completion() {
+  async fn failed_scan_keeps_build_diagnostics_and_replays_close_failure_once() {
     let close_calls = Arc::new(AtomicUsize::new(0));
     let close_error_counts = Arc::new(Mutex::new(Vec::new()));
     let mut factory = BundleFactory::new(BundleFactoryOptions {
-      plugins: vec![Arc::new(FailingBuildStartRecordingClosePlugin {
+      plugins: vec![Arc::new(FailingBuildStartAndClosePlugin {
         close_calls: Arc::clone(&close_calls),
         close_error_counts: Arc::clone(&close_error_counts),
       })],
@@ -539,6 +548,7 @@ mod tests {
 
     let errors = bundle.scan().await.expect_err("scan should fail in buildStart");
     assert_eq!(errors.len(), 1);
+    assert!(errors[0].to_string().contains("injected buildStart failure"));
     assert_eq!(close_calls.load(Ordering::SeqCst), 1);
     assert_eq!(
       close_error_counts.lock().expect("close error counts lock poisoned").as_slice(),
@@ -549,9 +559,21 @@ mod tests {
       "failed builds must retain watch files until the owning close"
     );
 
-    handle.close().await.expect("late close should replay successful completion");
+    let first_close_error =
+      handle.close().await.expect_err("late close should replay the retained close failure");
+    assert!(first_close_error.to_string().contains("injected closeBundle failure"));
     assert_eq!(close_calls.load(Ordering::SeqCst), 1);
     assert!(handle.watch_files().is_empty());
+
+    handle.watch_files().insert("after-clear.js".into());
+    let second_close_error =
+      handle.close().await.expect_err("repeated close should replay the retained close failure");
+    assert_eq!(second_close_error.to_string(), first_close_error.to_string());
+    assert_eq!(close_calls.load(Ordering::SeqCst), 1);
+    assert!(
+      handle.watch_files().contains("after-clear.js"),
+      "resources must be cleared exactly once"
+    );
   }
 
   #[tokio::test(flavor = "multi_thread")]

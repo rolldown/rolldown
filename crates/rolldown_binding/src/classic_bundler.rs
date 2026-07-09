@@ -59,17 +59,21 @@
 /// - Both `ClassicBundler` and core `Bundler` benefit from `Bundle` improvements
 /// - The codebase maintains clear separation of concerns, preventing the wrong mental model that caused bugs previously
 /// - Development is more maintainable as changes are made at the appropriate abstraction level
+use crate::utils::{DetachedFutureSpawn, try_spawn_detached_future};
 use rolldown::{Bundle, BundleFactory, BundleFactoryOptions, BundleHandle, BundlerOptions};
 use rolldown_common::BundleMode;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::__inner::SharedPluginable;
-use rolldown_utils::futures::{spawn_blocking, spawn_detached};
+use rolldown_utils::futures::spawn_blocking;
 use std::{
   any::Any,
+  collections::VecDeque,
   fmt,
   panic::{AssertUnwindSafe, catch_unwind},
   path::PathBuf,
+  pin::Pin,
   sync::{Arc, Mutex as StdMutex},
+  task::{Context, Poll},
 };
 
 use futures::{
@@ -87,7 +91,8 @@ struct ClassicBundlerLifecycleState {
   operations_drained: Vec<oneshot::Sender<()>>,
   terminal_closes: usize,
   failure_closes: usize,
-  failure_closes_drained: Vec<oneshot::Sender<()>>,
+  failure_close_waiters: Vec<oneshot::Sender<()>>,
+  pending_failure_closes: VecDeque<ClassicBundlerPendingFailureClose>,
   failure_close_outcomes: Vec<ClassicBundlerFailureCloseOutcome>,
 }
 
@@ -101,6 +106,92 @@ struct ClassicBundlerFailureCloseOutcome {
   failures: Vec<ClassicBundlerCloseFailure>,
 }
 
+struct ClassicBundlerPendingFailureClose {
+  operations_drained: Option<oneshot::Receiver<()>>,
+  debug_tracer: Option<rolldown_devtools::DebugTracer>,
+  handle: BundleHandle,
+  close_identity: u64,
+}
+
+// Keep recoverable ownership outside the polled close future so scheduler
+// cancellation can republish it. See internal-docs/rust-classic-bundler/implementation.md.
+struct ClassicBundlerFailureCloseTask {
+  lifecycle: Arc<ClassicBundlerLifecycle>,
+  terminal_close: Option<ClassicBundlerTerminalCloseGuard>,
+  handle: BundleHandle,
+  close_identity: u64,
+  execution: Option<BoxFuture<'static, Vec<ClassicBundlerCloseFailure>>>,
+  completed: bool,
+}
+
+impl ClassicBundlerFailureCloseTask {
+  fn new(
+    terminal_close: ClassicBundlerTerminalCloseGuard,
+    handle: BundleHandle,
+    close_identity: u64,
+  ) -> Self {
+    let lifecycle = Arc::clone(&terminal_close.lifecycle);
+    Self {
+      lifecycle,
+      terminal_close: Some(terminal_close),
+      handle,
+      close_identity,
+      execution: None,
+      completed: false,
+    }
+  }
+}
+
+impl Future for ClassicBundlerFailureCloseTask {
+  type Output = ();
+
+  fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+    let this = &mut *self;
+    {
+      let terminal_close =
+        this.terminal_close.as_mut().expect("incomplete close task must retain its terminal guard");
+      if let Some(operations_drained) = terminal_close.operations_drained.as_mut() {
+        if Pin::new(operations_drained).poll(cx).is_pending() {
+          return Poll::Pending;
+        }
+        terminal_close.operations_drained = None;
+      }
+    }
+    if this.execution.is_none() {
+      this.execution =
+        Some(run_failure_close(Arc::clone(&this.lifecycle), this.handle.clone()).boxed());
+    }
+    let Poll::Ready(failures) =
+      this.execution.as_mut().expect("close execution initialized above").as_mut().poll(cx)
+    else {
+      return Poll::Pending;
+    };
+    this
+      .terminal_close
+      .as_ref()
+      .expect("completed close task must retain its terminal guard")
+      .record_failure_close_outcome(ClassicBundlerFailureCloseOutcome {
+        close_identity: this.close_identity,
+        failures,
+      });
+    this.completed = true;
+    Poll::Ready(())
+  }
+}
+
+impl Drop for ClassicBundlerFailureCloseTask {
+  fn drop(&mut self) {
+    if self.completed {
+      return;
+    }
+    let Some(terminal_close) = self.terminal_close.take() else {
+      return;
+    };
+    let pending = terminal_close.into_pending(self.handle.clone(), self.close_identity);
+    self.lifecycle.retain_pending_failure_close(pending);
+  }
+}
+
 impl ClassicBundlerLifecycle {
   fn new() -> Self {
     Self {
@@ -109,7 +200,8 @@ impl ClassicBundlerLifecycle {
         operations_drained: Vec::new(),
         terminal_closes: 0,
         failure_closes: 0,
-        failure_closes_drained: Vec::new(),
+        failure_close_waiters: Vec::new(),
+        pending_failure_closes: VecDeque::new(),
         failure_close_outcomes: Vec::new(),
       }),
       terminal_close: AsyncMutex::new(()),
@@ -140,17 +232,34 @@ impl ClassicBundlerLifecycle {
       lifecycle: Arc::clone(self),
       operations_drained,
       failure_triggered: false,
-      _debug_tracer: debug_tracer,
+      debug_tracer,
+      armed: true,
     }
   }
 
-  async fn wait_for_failure_closes(&self) {
-    let failure_closes_drained = {
-      let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      failure_close_waiter(&mut state)
-    };
-    if let Some(failure_closes_drained) = failure_closes_drained {
-      let _ = failure_closes_drained.await;
+  fn retain_pending_failure_close(&self, pending: ClassicBundlerPendingFailureClose) {
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    state.pending_failure_closes.push_back(pending);
+    notify_failure_close_waiters(&mut state);
+  }
+
+  async fn wait_for_failure_closes(self: &Arc<Self>) {
+    loop {
+      let (pending, waiter) = {
+        let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        if let Some(pending) = state.pending_failure_closes.pop_front() {
+          (Some(pending), None)
+        } else if state.failure_closes == 0 {
+          return;
+        } else {
+          (None, Some(failure_close_waiter(&mut state)))
+        }
+      };
+      if let Some(pending) = pending {
+        execute_pending_failure_close(Arc::clone(self), pending).await;
+      } else if let Some(waiter) = waiter {
+        let _ = waiter.await;
+      }
     }
   }
 
@@ -168,6 +277,10 @@ pub(crate) struct ClassicBundlerOperationGuard {
 }
 
 impl ClassicBundlerOperationGuard {
+  #[expect(
+    clippy::rc_buffer,
+    reason = "the binding retains the original non-Clone diagnostics while failure close borrows them"
+  )]
   pub(crate) async fn close_after_operation(
     self,
     handle: BundleHandle,
@@ -180,14 +293,18 @@ impl ClassicBundlerOperationGuard {
     let terminal_close = self.into_terminal_close();
     let close_identity = handle.close_identity();
     if terminal_close.operations_drained.is_none() {
-      execute_failure_close(terminal_close, handle, close_identity).await;
+      ClassicBundlerFailureCloseTask::new(terminal_close, handle, close_identity).await;
       return;
     }
     // See internal-docs/rust-classic-bundler/implementation.md.
     // A contended failed binding promise must settle before the unrelated
     // operations drain, while this tracked task keeps admission closed and
     // publishes its terminal outcome for the final close.
-    spawn_detached(execute_failure_close(terminal_close, handle, close_identity));
+    submit_failure_close(ClassicBundlerFailureCloseTask::new(
+      terminal_close,
+      handle,
+      close_identity,
+    ));
   }
 
   fn into_terminal_close(mut self) -> ClassicBundlerTerminalCloseGuard {
@@ -211,21 +328,32 @@ impl ClassicBundlerOperationGuard {
       lifecycle,
       operations_drained,
       failure_triggered: true,
-      _debug_tracer: self.debug_tracer.take(),
+      debug_tracer: self.debug_tracer.take(),
+      armed: true,
     }
   }
 }
 
-async fn execute_failure_close(
-  mut terminal_close: ClassicBundlerTerminalCloseGuard,
-  handle: BundleHandle,
-  close_identity: u64,
+fn submit_failure_close(task: ClassicBundlerFailureCloseTask) {
+  if let DetachedFutureSpawn::Rejected(task) = try_spawn_detached_future(task) {
+    drop(task);
+  }
+}
+
+async fn execute_pending_failure_close(
+  lifecycle: Arc<ClassicBundlerLifecycle>,
+  pending: ClassicBundlerPendingFailureClose,
 ) {
-  terminal_close.wait_for_operations().await;
-  let _terminal_close = terminal_close.lifecycle.terminal_close.lock().await;
-  let failures = close_bundle_failures(Some(handle)).await;
-  terminal_close
-    .record_failure_close_outcome(ClassicBundlerFailureCloseOutcome { close_identity, failures });
+  let (terminal_close, handle, close_identity) = pending.into_execution(lifecycle);
+  ClassicBundlerFailureCloseTask::new(terminal_close, handle, close_identity).await;
+}
+
+async fn run_failure_close(
+  lifecycle: Arc<ClassicBundlerLifecycle>,
+  handle: BundleHandle,
+) -> Vec<ClassicBundlerCloseFailure> {
+  let _terminal_close = lifecycle.terminal_close.lock().await;
+  close_bundle_failures(Some(handle)).await
 }
 
 impl Drop for ClassicBundlerOperationGuard {
@@ -246,7 +374,8 @@ struct ClassicBundlerTerminalCloseGuard {
   lifecycle: Arc<ClassicBundlerLifecycle>,
   operations_drained: Option<oneshot::Receiver<()>>,
   failure_triggered: bool,
-  _debug_tracer: Option<rolldown_devtools::DebugTracer>,
+  debug_tracer: Option<rolldown_devtools::DebugTracer>,
+  armed: bool,
 }
 
 impl ClassicBundlerTerminalCloseGuard {
@@ -261,10 +390,28 @@ impl ClassicBundlerTerminalCloseGuard {
     let mut state = self.lifecycle.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     state.failure_close_outcomes.push(outcome);
   }
+
+  fn into_pending(
+    mut self,
+    handle: BundleHandle,
+    close_identity: u64,
+  ) -> ClassicBundlerPendingFailureClose {
+    debug_assert!(self.failure_triggered);
+    self.armed = false;
+    ClassicBundlerPendingFailureClose {
+      operations_drained: self.operations_drained.take(),
+      debug_tracer: self.debug_tracer.take(),
+      handle,
+      close_identity,
+    }
+  }
 }
 
 impl Drop for ClassicBundlerTerminalCloseGuard {
   fn drop(&mut self) {
+    if !self.armed {
+      return;
+    }
     let mut state = self.lifecycle.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     debug_assert!(state.terminal_closes > 0);
     state.terminal_closes -= 1;
@@ -272,9 +419,28 @@ impl Drop for ClassicBundlerTerminalCloseGuard {
       debug_assert!(state.failure_closes > 0);
       state.failure_closes -= 1;
       if state.failure_closes == 0 {
-        notify_failure_closes_drained(&mut state);
+        notify_failure_close_waiters(&mut state);
       }
     }
+  }
+}
+
+impl ClassicBundlerPendingFailureClose {
+  fn into_execution(
+    self,
+    lifecycle: Arc<ClassicBundlerLifecycle>,
+  ) -> (ClassicBundlerTerminalCloseGuard, BundleHandle, u64) {
+    (
+      ClassicBundlerTerminalCloseGuard {
+        lifecycle,
+        operations_drained: self.operations_drained,
+        failure_triggered: true,
+        debug_tracer: self.debug_tracer,
+        armed: true,
+      },
+      self.handle,
+      self.close_identity,
+    )
   }
 }
 
@@ -293,18 +459,16 @@ fn notify_operations_drained(state: &mut ClassicBundlerLifecycleState) {
   }
 }
 
-fn failure_close_waiter(state: &mut ClassicBundlerLifecycleState) -> Option<oneshot::Receiver<()>> {
-  if state.failure_closes == 0 {
-    return None;
-  }
+fn failure_close_waiter(state: &mut ClassicBundlerLifecycleState) -> oneshot::Receiver<()> {
+  debug_assert!(state.failure_closes > 0);
   let (sender, receiver) = oneshot::channel();
-  state.failure_closes_drained.push(sender);
-  Some(receiver)
+  state.failure_close_waiters.push(sender);
+  receiver
 }
 
-fn notify_failure_closes_drained(state: &mut ClassicBundlerLifecycleState) {
-  for failure_closes_drained in std::mem::take(&mut state.failure_closes_drained) {
-    let _ = failure_closes_drained.send(());
+fn notify_failure_close_waiters(state: &mut ClassicBundlerLifecycleState) {
+  for waiter in std::mem::take(&mut state.failure_close_waiters) {
+    let _ = waiter.send(());
   }
 }
 
@@ -347,6 +511,7 @@ impl std::error::Error for ClassicBundlerCloseError {}
 
 #[derive(Debug)]
 pub(crate) struct ClassicBundlerCloseFailure {
+  cwd: Option<PathBuf>,
   message: Arc<str>,
   source: Option<Arc<anyhow::Error>>,
 }
@@ -364,11 +529,20 @@ impl ClassicBundlerCloseFailure {
         message
       }
     };
-    Self { message, source: Some(Arc::new(error)) }
+    Self { cwd: None, message, source: Some(Arc::new(error)) }
   }
 
   pub(crate) fn from_message(message: impl Into<Arc<str>>) -> Self {
-    Self { message: message.into(), source: None }
+    Self { cwd: None, message: message.into(), source: None }
+  }
+
+  pub(crate) fn with_cwd(mut self, cwd: PathBuf) -> Self {
+    self.cwd = Some(cwd);
+    self
+  }
+
+  pub(crate) fn cwd(&self) -> Option<&std::path::Path> {
+    self.cwd.as_deref()
   }
 
   pub(crate) fn message(&self) -> &str {
@@ -408,14 +582,16 @@ async fn close_bundle_failures(
   let Some(handle) = last_bundle_handle else {
     return Vec::new();
   };
+  let cwd = handle.options().cwd.clone();
 
-  match AssertUnwindSafe(handle.close()).catch_unwind().await {
+  let failures = match AssertUnwindSafe(handle.close()).catch_unwind().await {
     Ok(Ok(())) => Vec::new(),
     Ok(Err(error)) => {
       vec![ClassicBundlerCloseFailure::from_error("closeBundle failed", error)]
     }
     Err(payload) => vec![panic_failure("closeBundle cleanup panicked", payload)],
-  }
+  };
+  failures.into_iter().map(|failure| failure.with_cwd(cwd.clone())).collect()
 }
 
 async fn devtools_flush_failures(
@@ -635,14 +811,45 @@ impl ClassicBundler {
 #[cfg(test)]
 mod tests {
   use std::{
+    borrow::Cow,
     error::Error,
     sync::atomic::{AtomicUsize, Ordering},
     task::Poll,
   };
 
   use futures::{future::join, pin_mut, poll};
+  use rolldown_plugin::{HookCloseBundleArgs, HookNoopReturn, HookUsage, Plugin, PluginContext};
 
   use super::*;
+
+  #[derive(Debug)]
+  struct GatedClosePlugin {
+    calls: Arc<AtomicUsize>,
+    release: StdMutex<Option<oneshot::Receiver<()>>>,
+  }
+
+  impl Plugin for GatedClosePlugin {
+    fn name(&self) -> Cow<'static, str> {
+      "gated-close".into()
+    }
+
+    fn register_hook_usage(&self) -> HookUsage {
+      HookUsage::CloseBundle
+    }
+
+    async fn close_bundle(
+      &self,
+      _ctx: &PluginContext,
+      _args: Option<&HookCloseBundleArgs<'_>>,
+    ) -> HookNoopReturn {
+      self.calls.fetch_add(1, Ordering::SeqCst);
+      let release = self.release.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take();
+      if let Some(release) = release {
+        let _ = release.await;
+      }
+      Ok(())
+    }
+  }
 
   #[derive(Debug)]
   struct PanickingDisplayError;
@@ -761,6 +968,100 @@ mod tests {
       lifecycle.begin_operation(None).is_some(),
       "operation admission must resume after failure close finishes"
     );
+  }
+
+  #[test]
+  fn cancelled_failure_close_task_is_retained_until_a_waiter_can_drive_it() {
+    futures::executor::block_on(async {
+      let lifecycle = Arc::new(ClassicBundlerLifecycle::new());
+      let failed_operation = lifecycle.begin_operation(None).expect("failed operation");
+      let unrelated_operation = lifecycle.begin_operation(None).expect("unrelated operation");
+      let terminal_close = failed_operation.into_terminal_close();
+      assert!(terminal_close.operations_drained.is_some());
+
+      let mut factory = BundleFactory::new(BundleFactoryOptions {
+        disable_tracing_setup: true,
+        ..Default::default()
+      })
+      .expect("create bundle factory");
+      let bundle = factory.create_bundle(BundleMode::FullBuild, None).expect("create bundle");
+      let handle = bundle.context();
+      handle.watch_files().insert("retained-after-cancellation.js".into());
+      let close_identity = handle.close_identity();
+
+      {
+        let task =
+          ClassicBundlerFailureCloseTask::new(terminal_close, handle.clone(), close_identity);
+        pin_mut!(task);
+        assert!(matches!(poll!(task.as_mut()), Poll::Pending));
+      }
+
+      assert!(
+        lifecycle.begin_operation(None).is_none(),
+        "the retained close must keep operation admission closed"
+      );
+      assert!(handle.watch_files().contains("retained-after-cancellation.js"));
+
+      drop(unrelated_operation);
+      lifecycle.wait_for_failure_closes().await;
+
+      assert!(
+        handle.watch_files().is_empty(),
+        "the retained close must eventually clear resources"
+      );
+      let outcomes = lifecycle.take_failure_close_outcomes();
+      assert_eq!(outcomes.len(), 1);
+      assert_eq!(outcomes[0].close_identity, close_identity);
+      assert!(outcomes[0].failures.is_empty());
+      drop(lifecycle.begin_operation(None).expect("admission must reopen after retained close"));
+    });
+  }
+
+  #[test]
+  fn cancelled_in_progress_failure_close_resumes_the_memoized_hook() {
+    futures::executor::block_on(async {
+      let lifecycle = Arc::new(ClassicBundlerLifecycle::new());
+      let failed_operation = lifecycle.begin_operation(None).expect("failed operation");
+      let terminal_close = failed_operation.into_terminal_close();
+      assert!(terminal_close.operations_drained.is_none());
+
+      let calls = Arc::new(AtomicUsize::new(0));
+      let (release, released) = oneshot::channel();
+      let mut factory = BundleFactory::new(BundleFactoryOptions {
+        plugins: vec![Arc::new(GatedClosePlugin {
+          calls: Arc::clone(&calls),
+          release: StdMutex::new(Some(released)),
+        })],
+        disable_tracing_setup: true,
+        ..Default::default()
+      })
+      .expect("create bundle factory");
+      let bundle = factory.create_bundle(BundleMode::FullBuild, None).expect("create bundle");
+      let handle = bundle.context();
+      handle.watch_files().insert("retained-in-progress.js".into());
+      let close_identity = handle.close_identity();
+
+      {
+        let task =
+          ClassicBundlerFailureCloseTask::new(terminal_close, handle.clone(), close_identity);
+        pin_mut!(task);
+        assert!(matches!(poll!(task.as_mut()), Poll::Pending));
+      }
+
+      assert_eq!(calls.load(Ordering::SeqCst), 1);
+      assert!(lifecycle.begin_operation(None).is_none());
+      assert!(handle.watch_files().contains("retained-in-progress.js"));
+
+      release.send(()).expect("release close hook");
+      lifecycle.wait_for_failure_closes().await;
+
+      assert_eq!(calls.load(Ordering::SeqCst), 1, "the memoized hook must not restart");
+      assert!(handle.watch_files().is_empty());
+      let outcomes = lifecycle.take_failure_close_outcomes();
+      assert_eq!(outcomes.len(), 1);
+      assert_eq!(outcomes[0].close_identity, close_identity);
+      assert!(outcomes[0].failures.is_empty());
+    });
   }
 
   #[test]

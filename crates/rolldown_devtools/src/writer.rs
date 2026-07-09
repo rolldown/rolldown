@@ -967,13 +967,9 @@ mod tests {
     let owner = session_key(&cwd, "session");
     let session = owner.logical_session().clone();
     let filename = session.log_filename(false);
-    let backend =
-      LazyLock::new(|| WriterBackend::Synchronous(Mutex::new(WriterState::default())));
+    let backend = LazyLock::new(|| WriterBackend::Synchronous(Mutex::new(WriterState::default())));
 
-    send_best_effort_to(
-      &backend,
-      LogCommand::RegisterSessionOwner { session: owner.clone() },
-    );
+    send_best_effort_to(&backend, LogCommand::RegisterSessionOwner { session: owner.clone() });
     send_best_effort_to(
       &backend,
       LogCommand::Write {

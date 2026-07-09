@@ -16,12 +16,50 @@ use rolldown_error::BuildResult;
 
 pub type WatchRegistrationErrorObserverId = u64;
 
+#[derive(Debug)]
+pub struct WatchRegistrationErrorObservation {
+  observer_id: Option<WatchRegistrationErrorObserverId>,
+  coordinator_sender: CoordinatorSender,
+}
+
+impl WatchRegistrationErrorObservation {
+  pub(crate) fn new(
+    observer_id: WatchRegistrationErrorObserverId,
+    coordinator_sender: CoordinatorSender,
+  ) -> Self {
+    Self { observer_id: Some(observer_id), coordinator_sender }
+  }
+
+  pub(crate) fn observer_id(&self) -> WatchRegistrationErrorObserverId {
+    self.observer_id.expect("watch-registration observation must be active")
+  }
+
+  pub(crate) fn coordinator_sender(&self) -> &CoordinatorSender {
+    &self.coordinator_sender
+  }
+
+  pub(crate) fn disarm(&mut self) -> WatchRegistrationErrorObserverId {
+    self.observer_id.take().expect("watch-registration observation must be active")
+  }
+}
+
+impl Drop for WatchRegistrationErrorObservation {
+  fn drop(&mut self) {
+    let Some(observer_id) = self.observer_id.take() else {
+      return;
+    };
+    let _ = self
+      .coordinator_sender
+      .send(CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id });
+  }
+}
+
 // GetBuildStatus message
 pub type GetStateSender = oneshot::Sender<CoordinatorStateSnapshot>;
 
 pub type BeginWatchRegistrationErrorObservationSender =
-  oneshot::Sender<WatchRegistrationErrorObserverId>;
-pub type FinishWatchRegistrationErrorObservationSender = oneshot::Sender<Option<DevCallbackError>>;
+  oneshot::Sender<WatchRegistrationErrorObservation>;
+pub type PreviewWatchRegistrationErrorsSender = oneshot::Sender<Option<DevCallbackError>>;
 
 // ScheduleBuild message
 #[cfg(feature = "testing")]

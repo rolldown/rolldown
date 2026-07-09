@@ -23,7 +23,7 @@ use crate::{
   bundle_coordinator::BundleCoordinator,
   dev_context::{DevContext, PinBoxSendStaticFuture, dev_callback_result_to_build_result},
   normalize_dev_options,
-  type_aliases::{CoordinatorSender, WatchRegistrationErrorObserverId},
+  type_aliases::{CoordinatorSender, WatchRegistrationErrorObservation},
   types::{
     coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
     error_stage::ErrorStage,
@@ -72,49 +72,31 @@ impl CoordinatorState {
   }
 }
 
-// See internal-docs/dev-engine/implementation.md for the observation lifecycle.
-struct WatchRegistrationErrorObservation {
-  observer_id: Option<WatchRegistrationErrorObserverId>,
-  coordinator_sender: CoordinatorSender,
-}
-
 impl WatchRegistrationErrorObservation {
-  fn new(
-    observer_id: WatchRegistrationErrorObserverId,
-    coordinator_sender: CoordinatorSender,
-  ) -> Self {
-    Self { observer_id: Some(observer_id), coordinator_sender }
-  }
-
   async fn finish(mut self) -> BuildResult<()> {
-    let observer_id =
-      self.observer_id.take().expect("watch-registration observation must be active");
+    let observer_id = self.observer_id();
     let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
     self
-      .coordinator_sender
-      .send(CoordinatorMsg::FinishWatchRegistrationErrorObservation {
-        observer_id,
-        reply: reply_sender,
-      })
+      .coordinator_sender()
+      .send(CoordinatorMsg::PreviewWatchRegistrationErrors { observer_id, reply: reply_sender })
       .map_err_to_unhandleable()
-      .context("DevEngine: failed to finish watch-registration error observation")?;
+      .context("DevEngine: failed to preview watch-registration errors")?;
 
     let error = reply_receiver
       .await
       .map_err_to_unhandleable()
-      .context("DevEngine: coordinator closed before acknowledging watch-registration errors")?;
-    DevEngine::retained_error_to_build_result(error)
-  }
-}
-
-impl Drop for WatchRegistrationErrorObservation {
-  fn drop(&mut self) {
-    let Some(observer_id) = self.observer_id.take() else {
-      return;
-    };
-    let _ = self
-      .coordinator_sender
-      .send(CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id });
+      .context("DevEngine: coordinator closed before previewing watch-registration errors")?;
+    let preview_result = DevEngine::retained_error_to_build_result(error);
+    let acknowledgement_result = self
+      .coordinator_sender()
+      .send(CoordinatorMsg::AcknowledgeWatchRegistrationErrors { observer_id })
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to acknowledge previewed watch-registration errors")
+      .map_err(BatchedBuildDiagnostic::from);
+    if acknowledgement_result.is_ok() {
+      self.disarm();
+    }
+    DevEngine::merge_build_results(preview_result, acknowledgement_result)
   }
 }
 
@@ -630,12 +612,11 @@ impl DevEngine {
       .map_err_to_unhandleable()
       .context("DevEngine: failed to begin watch-registration error observation")?;
 
-    let observer_id = reply_receiver
+    reply_receiver
       .await
       .map_err_to_unhandleable()
       .context("DevEngine: coordinator closed before registering watch-error observer")
-      .map_err(BatchedBuildDiagnostic::from)?;
-    Ok(WatchRegistrationErrorObservation::new(observer_id, self.coordinator_sender.clone()))
+      .map_err(BatchedBuildDiagnostic::from)
   }
 
   #[cfg(feature = "testing")]

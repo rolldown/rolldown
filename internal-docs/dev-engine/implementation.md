@@ -117,7 +117,8 @@ pub enum CoordinatorMsg {
   ScheduleBuildIfStale { reply: … },         // ask coordinator to drain its queue
   GetState { reply: … },                     // snapshot of coordinator state
   BeginWatchRegistrationErrorObservation { reply: … },
-  FinishWatchRegistrationErrorObservation { observer_id, reply: … },
+  PreviewWatchRegistrationErrors { observer_id, reply: … },
+  AcknowledgeWatchRegistrationErrors { observer_id },
   CancelWatchRegistrationErrorObservation { observer_id },
   EnsureLatestBundleOutput { reply: … },     // "I need a fresh full bundle"
   TriggerFullBuild,                           // unconditional full build (fire-and-forget)
@@ -135,9 +136,10 @@ Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
 | `BundleCompleted`                         | `handle_bundle_completed`                                |
 | `ScheduleBuildIfStale`                    | `schedule_build_if_stale`, reply with result             |
 | `GetState`                                | `create_state_snapshot`, reply                           |
-| `BeginWatchRegistrationErrorObservation`  | register a lifecycle waiter                              |
-| `FinishWatchRegistrationErrorObservation` | acknowledge and return attached failures                 |
-| `CancelWatchRegistrationErrorObservation` | detach a dropped lifecycle waiter                         |
+| `BeginWatchRegistrationErrorObservation`  | register and return an owned lifecycle waiter            |
+| `PreviewWatchRegistrationErrors`          | freeze the waiter and return attached failures           |
+| `AcknowledgeWatchRegistrationErrors`      | consume the frozen failures after reply delivery         |
+| `CancelWatchRegistrationErrorObservation` | detach a dropped waiter without consuming failures       |
 | `EnsureLatestBundleOutput`                | `ensure_latest_bundle_output`, reply                     |
 | `TriggerFullBuild`                        | `trigger_full_build` (no reply)                          |
 | `GetWatchedFiles`                         | reply with the `watched_files` set                       |
@@ -815,9 +817,11 @@ Add and commit failures are aggregated when both occur.
 
 Watch-registration failures use explicit lifecycle observers rather than one
 permanent error slot. `wait_for_ongoing_bundle` and
-`ensure_latest_bundle_output` register an RAII-owned observer before waiting;
-each failed path publication creates an event attached to every observer active at that
-point. The next publication attempt supersedes that failure occurrence,
+`ensure_latest_bundle_output` register an RAII-owned observer before waiting.
+The coordinator sends ownership itself in the begin reply, so dropping a reply
+that was already buffered still runs the token destructor and queues
+cancellation. Each failed path publication creates an event attached to every
+observer active at that point. The next publication attempt supersedes that failure occurrence,
 regardless of whether the retry succeeds or reports a new failure. Queued
 observers remain attached to every occurrence they overlapped, while callers
 that start later attach only to the current unresolved failure. Once an
@@ -829,12 +833,16 @@ preserves every in-flight waiter's failures without letting historical retry
 failures poison all future page-access ensures. Close registers its own
 observer before draining the final task, so an unresolved or never-observed
 registration failure still joins `closeBundle` failures. Every unpublished
-candidate remains eligible for retry. Finishing disarms the RAII owner before
-the coordinator acknowledgement wait. Dropping it earlier sends a nonblocking
-cancel message that removes the ID from both the active set and every pending
-event. If cancellation wins before the begin reply is received, the
-coordinator detects the dropped reply and never leaves the newly allocated ID
-active.
+candidate remains eligible for retry.
+
+Finishing is a three-step protocol. `Preview` first moves the observer out of
+the active set, freezing the exact failure set before it replies. The caller
+then sends `Acknowledge` only after receiving that reply; acknowledgement marks
+and removes only the frozen failures. Until then the RAII token remains armed,
+and dropping either the operation or a buffered preview reply sends
+`Cancel`, which removes the observer without marking any failure observed.
+This prevents both leaked begin observers and diagnostics consumed by an
+undelivered finish reply.
 
 **Edge case: recovery from a missing-import failure.** If the initial
 build failed because of a missing import, the missing file was never

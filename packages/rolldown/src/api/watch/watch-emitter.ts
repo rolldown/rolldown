@@ -321,6 +321,14 @@ export class WatcherEmitter implements RolldownWatcher {
     this.resolveCloseHandler(handler);
   }
 
+  /** @internal Wait for setup terminal events and return any listener failure. */
+  async setupFailureReportErrors(): Promise<unknown[]> {
+    if (this.setupFailureReportCompletion) {
+      await this.setupFailureReportCompletion;
+    }
+    return this.setupFailureReportFailure ? [this.setupFailureReportFailure.error] : [];
+  }
+
   /** @internal Surface setup failures through the normal watcher event API. */
   failSetup(error: unknown): Promise<void> {
     let resolveReportCompletion!: () => void;

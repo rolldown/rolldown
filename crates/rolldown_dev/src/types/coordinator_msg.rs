@@ -3,7 +3,7 @@ use rolldown_fs_watcher::FsEventResult;
 
 use crate::type_aliases::{
   BeginWatchRegistrationErrorObservationSender, CloseSender, EnsureLatestBundleOutputSender,
-  FinishWatchRegistrationErrorObservationSender, GetStateSender, WatchRegistrationErrorObserverId,
+  GetStateSender, PreviewWatchRegistrationErrorsSender, WatchRegistrationErrorObserverId,
 };
 #[cfg(feature = "testing")]
 use crate::type_aliases::{GetWatchedFilesSender, ScheduleBuildIfStaleSender};
@@ -33,9 +33,12 @@ pub enum CoordinatorMsg {
   BeginWatchRegistrationErrorObservation {
     reply: BeginWatchRegistrationErrorObservationSender,
   },
-  FinishWatchRegistrationErrorObservation {
+  PreviewWatchRegistrationErrors {
     observer_id: WatchRegistrationErrorObserverId,
-    reply: FinishWatchRegistrationErrorObservationSender,
+    reply: PreviewWatchRegistrationErrorsSender,
+  },
+  AcknowledgeWatchRegistrationErrors {
+    observer_id: WatchRegistrationErrorObserverId,
   },
   CancelWatchRegistrationErrorObservation {
     observer_id: WatchRegistrationErrorObserverId,

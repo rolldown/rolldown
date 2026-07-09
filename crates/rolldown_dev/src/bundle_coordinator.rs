@@ -28,6 +28,7 @@ use crate::{
   },
   type_aliases::{
     BeginWatchRegistrationErrorObservationSender, CoordinatorReceiver, CoordinatorSender,
+    PreviewWatchRegistrationErrorsSender, WatchRegistrationErrorObservation,
     WatchRegistrationErrorObserverId,
   },
   types::{
@@ -64,6 +65,7 @@ pub struct BundleCoordinator {
   current_bundling_future: Option<BundlingFuture>,
   last_callback_error: Option<DevCallbackError>,
   active_watch_registration_error_observers: FxHashSet<WatchRegistrationErrorObserverId>,
+  previewed_watch_registration_error_observers: FxHashSet<WatchRegistrationErrorObserverId>,
   watch_registration_errors: VecDeque<WatchRegistrationErrorEvent>,
   next_watch_registration_error_observer_id: WatchRegistrationErrorObserverId,
 }
@@ -90,6 +92,7 @@ impl BundleCoordinator {
       current_bundling_future: None,
       last_callback_error: None,
       active_watch_registration_error_observers: FxHashSet::default(),
+      previewed_watch_registration_error_observers: FxHashSet::default(),
       watch_registration_errors: VecDeque::new(),
       next_watch_registration_error_observer_id: 1,
     }
@@ -146,9 +149,11 @@ impl BundleCoordinator {
         CoordinatorMsg::BeginWatchRegistrationErrorObservation { reply } => {
           self.begin_watch_registration_error_observation_with_reply(reply);
         }
-        CoordinatorMsg::FinishWatchRegistrationErrorObservation { observer_id, reply } => {
-          let error = self.finish_watch_registration_error_observation(observer_id);
-          let _ = reply.send(error);
+        CoordinatorMsg::PreviewWatchRegistrationErrors { observer_id, reply } => {
+          self.preview_watch_registration_errors_with_reply(observer_id, reply);
+        }
+        CoordinatorMsg::AcknowledgeWatchRegistrationErrors { observer_id } => {
+          self.acknowledge_watch_registration_errors(observer_id);
         }
         CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id } => {
           self.cancel_watch_registration_error_observation(observer_id);
@@ -606,7 +611,9 @@ impl BundleCoordinator {
       let observer_id = self.next_watch_registration_error_observer_id;
       self.next_watch_registration_error_observer_id =
         self.next_watch_registration_error_observer_id.wrapping_add(1).max(1);
-      if self.active_watch_registration_error_observers.insert(observer_id) {
+      if !self.previewed_watch_registration_error_observers.contains(&observer_id)
+        && self.active_watch_registration_error_observers.insert(observer_id)
+      {
         break observer_id;
       }
     };
@@ -629,25 +636,66 @@ impl BundleCoordinator {
     }
 
     let observer_id = self.begin_watch_registration_error_observation();
-    if let Err(observer_id) = reply.send(observer_id) {
+    let observation =
+      WatchRegistrationErrorObservation::new(observer_id, self.ctx.coordinator_tx.clone());
+    if let Err(mut observation) = reply.send(observation) {
+      let observer_id = observation.disarm();
       self.cancel_watch_registration_error_observation(observer_id);
     }
+  }
+
+  fn preview_watch_registration_errors_with_reply(
+    &mut self,
+    observer_id: WatchRegistrationErrorObserverId,
+    reply: PreviewWatchRegistrationErrorsSender,
+  ) {
+    let error = self.preview_watch_registration_errors(observer_id);
+    if reply.send(error).is_err() {
+      self.cancel_watch_registration_error_observation(observer_id);
+    }
+  }
+
+  fn preview_watch_registration_errors(
+    &mut self,
+    observer_id: WatchRegistrationErrorObserverId,
+  ) -> Option<DevCallbackError> {
+    if !self.active_watch_registration_error_observers.remove(&observer_id) {
+      return None;
+    }
+    let inserted = self.previewed_watch_registration_error_observers.insert(observer_id);
+    debug_assert!(inserted, "an active observer cannot already be previewed");
+    Self::merge_dev_callback_errors(
+      self
+        .watch_registration_errors
+        .iter()
+        .filter(|error| error.pending_observers.contains(&observer_id))
+        .map(|error| Arc::clone(&error.error))
+        .collect(),
+    )
+  }
+
+  fn acknowledge_watch_registration_errors(
+    &mut self,
+    observer_id: WatchRegistrationErrorObserverId,
+  ) {
+    if !self.previewed_watch_registration_error_observers.remove(&observer_id) {
+      return;
+    }
+    for error in &mut self.watch_registration_errors {
+      if error.pending_observers.remove(&observer_id) {
+        error.observed = true;
+      }
+    }
+    self.prune_acknowledged_watch_registration_errors();
   }
 
   fn finish_watch_registration_error_observation(
     &mut self,
     observer_id: WatchRegistrationErrorObserverId,
   ) -> Option<DevCallbackError> {
-    self.active_watch_registration_error_observers.remove(&observer_id);
-    let mut observed_errors = Vec::new();
-    for error in &mut self.watch_registration_errors {
-      if error.pending_observers.remove(&observer_id) {
-        error.observed = true;
-        observed_errors.push(Arc::clone(&error.error));
-      }
-    }
-    self.prune_acknowledged_watch_registration_errors();
-    Self::merge_dev_callback_errors(observed_errors)
+    let error = self.preview_watch_registration_errors(observer_id);
+    self.acknowledge_watch_registration_errors(observer_id);
+    error
   }
 
   fn cancel_watch_registration_error_observation(
@@ -655,6 +703,7 @@ impl BundleCoordinator {
     observer_id: WatchRegistrationErrorObserverId,
   ) {
     self.active_watch_registration_error_observers.remove(&observer_id);
+    self.previewed_watch_registration_error_observers.remove(&observer_id);
     for error in &mut self.watch_registration_errors {
       error.pending_observers.remove(&observer_id);
     }
@@ -976,6 +1025,83 @@ mod tests {
     coordinator.begin_watch_registration_error_observation_with_reply(reply);
 
     assert!(coordinator.active_watch_registration_error_observers.is_empty());
+  }
+
+  #[test]
+  fn buffered_begin_reply_drop_cancels_watch_error_observer() {
+    let mut coordinator = create_observation_test_coordinator();
+    let (reply, receiver) = oneshot::channel();
+
+    coordinator.begin_watch_registration_error_observation_with_reply(reply);
+    assert_eq!(coordinator.active_watch_registration_error_observers.len(), 1);
+
+    drop(receiver);
+    let cancel = coordinator.rx.try_recv().expect("dropping the buffered token must cancel it");
+    let CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id } = cancel else {
+      panic!("dropping the buffered token must enqueue observer cancellation");
+    };
+    coordinator.cancel_watch_registration_error_observation(observer_id);
+
+    assert!(coordinator.active_watch_registration_error_observers.is_empty());
+    assert!(coordinator.previewed_watch_registration_error_observers.is_empty());
+  }
+
+  #[test]
+  fn dropped_preview_reply_does_not_consume_watch_registration_errors() {
+    let mut coordinator = create_observation_test_coordinator();
+    let observer_id = coordinator.begin_watch_registration_error_observation();
+    let observation =
+      WatchRegistrationErrorObservation::new(observer_id, coordinator.ctx.coordinator_tx.clone());
+    coordinator.retain_watch_registration_result(Err(anyhow::anyhow!("previewed failure").into()));
+    let (reply, receiver) = oneshot::channel();
+
+    coordinator.preview_watch_registration_errors_with_reply(observer_id, reply);
+    assert!(
+      coordinator.previewed_watch_registration_error_observers.contains(&observer_id),
+      "preview must freeze the observer before replying"
+    );
+    drop(receiver);
+    drop(observation);
+    let cancel = coordinator.rx.try_recv().expect("dropping the observation must cancel it");
+    let CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id } = cancel else {
+      panic!("dropping the observation must enqueue observer cancellation");
+    };
+    coordinator.cancel_watch_registration_error_observation(observer_id);
+    coordinator.retain_watch_registration_result(Ok(()));
+
+    let replacement = coordinator.begin_watch_registration_error_observation();
+    let error = coordinator
+      .finish_watch_registration_error_observation(replacement)
+      .expect("a dropped preview reply must leave the diagnostic for a later observer");
+    assert!(error.to_string().contains("previewed failure"));
+    assert!(coordinator.watch_registration_errors.is_empty());
+  }
+
+  #[test]
+  fn acknowledgement_consumes_only_the_frozen_preview() {
+    let mut coordinator = create_observation_test_coordinator();
+    let observer_id = coordinator.begin_watch_registration_error_observation();
+    coordinator.retain_watch_registration_result(Err(anyhow::anyhow!("first failure").into()));
+
+    let preview = coordinator
+      .preview_watch_registration_errors(observer_id)
+      .expect("the active observer must preview its first failure");
+    assert!(preview.to_string().contains("first failure"));
+    coordinator.retain_watch_registration_result(Err(anyhow::anyhow!("second failure").into()));
+    assert!(
+      !coordinator.watch_registration_errors[1].pending_observers.contains(&observer_id),
+      "failures published after preview must not enter its acknowledgement set"
+    );
+
+    coordinator.acknowledge_watch_registration_errors(observer_id);
+    let later = coordinator.begin_watch_registration_error_observation();
+    let error = coordinator
+      .finish_watch_registration_error_observation(later)
+      .expect("a later observer must receive the post-preview failure");
+    let error = dev_callback_result_to_build_result(Err(error))
+      .expect_err("the post-preview failure must remain a diagnostic");
+    assert_eq!(error.len(), 1);
+    assert!(error.to_string().contains("second failure"));
   }
 
   #[test]

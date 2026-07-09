@@ -640,6 +640,10 @@ test('watcher run rejection fails closed without waiting for a missing coordinat
   mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.bindingRun.mockRejectedValue(runError);
   const emitter = new WatcherEmitter();
+  const events: Array<{ code: string; error?: unknown; result?: unknown }> = [];
+  emitter.on('event', (event) => {
+    events.push(event);
+  });
   const closeEvent = new Promise<void>((resolve) => {
     emitter.on('close', resolve);
   });
@@ -650,6 +654,48 @@ test('watcher run rejection fails closed without waiting for a missing coordinat
 
   expect(mocks.bindingRun).toHaveBeenCalledOnce();
   expect(mocks.bindingWaitForClose).not.toHaveBeenCalled();
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+  expect(events).toEqual([{ code: 'ERROR', error: runError, result: null }, { code: 'END' }]);
+});
+
+test('watcher run rejection replays setup listener failure through every close', async () => {
+  const runError = new Error('watcher coordinator submission rejected');
+  const errorListenerFailure = new Error('watcher run ERROR listener failed');
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const release = vi.fn();
+  const reported = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingRun.mockRejectedValue(runError);
+  const emitter = new WatcherEmitter();
+  const events: string[] = [];
+  emitter.on('event', (event) => {
+    events.push(event.code);
+    if (event.code === 'ERROR') throw errorListenerFailure;
+  });
+  const closeEvent = new Promise<void>((resolve) => {
+    emitter.on('close', resolve);
+  });
+  await createWatcher(emitter, { output: {} });
+
+  await withTimeout(closeEvent, 'watcher run rejection listener cleanup');
+  const results = await Promise.allSettled([emitter.close(), emitter.close()]);
+  expect(results[0].status).toBe('rejected');
+  expect(results[1].status).toBe('rejected');
+  if (results[0].status !== 'rejected' || results[1].status !== 'rejected') {
+    throw new Error('watcher run rejection close unexpectedly resolved');
+  }
+  const closeError = results[0].reason as AggregateError;
+  expect(closeError).toBeInstanceOf(AggregateError);
+  expect(closeError.errors).toEqual([runError, errorListenerFailure]);
+  expect(results[1].reason).toBe(closeError);
+  expect(events).toEqual(['ERROR', 'END']);
+  expect(reported).toHaveBeenCalledWith(
+    'watcher setup error listener failed',
+    errorListenerFailure,
+  );
   expect(mocks.bindingClose).toHaveBeenCalledOnce();
   expect(stopWorkers).toHaveBeenCalledOnce();
   expect(release).toHaveBeenCalledOnce();

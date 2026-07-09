@@ -243,7 +243,7 @@ class Watcher {
   runtimeLease: RuntimeLease;
   stopWorkers: ((() => Promise<void>) | undefined)[];
   scheduledRun: ReturnType<typeof setTimeout> | undefined;
-  runFailure: unknown;
+  runFailures: unknown[] = [];
   nativeCloseResultPromise:
     | Promise<{
         errors: unknown[];
@@ -279,7 +279,7 @@ class Watcher {
       this.scheduledRun = undefined;
       if (this.closed) return;
       void this.run().catch((error) => {
-        this.runFailure ??= error;
+        this.runFailures.push(error);
         // Preserve the failure for a later public close while ensuring the
         // native watcher, workers, and runtime lease are not abandoned.
         void this.close().catch(() => {});
@@ -353,7 +353,10 @@ class Watcher {
 
   private async closeOwnedResources(): Promise<WatcherCloseAttemptResult> {
     this.closed = true;
-    const errors: unknown[] = this.runFailure === undefined ? [] : [this.runFailure];
+    const errors: unknown[] = [
+      ...this.runFailures,
+      ...(await this.emitter.setupFailureReportErrors()),
+    ];
     this.cancelScheduledRun(errors);
     this.startNativeClose();
     const nativeCloseResultPromise = this.nativeCloseResultPromise!;
@@ -449,7 +452,14 @@ class Watcher {
   }
 
   private async run(): Promise<void> {
-    await this.inner.run();
+    try {
+      await this.inner.run();
+    } catch (error) {
+      void this.emitter
+        .failSetup(error)
+        .catch((reportError) => console.error('watcher setup error listener failed', reportError));
+      throw error;
+    }
     // The pending native promise keeps Node.js alive. Await it so an unexpected
     // N-API transport rejection enters the normal fail-closed cleanup path
     // instead of becoming an unhandled rejection.

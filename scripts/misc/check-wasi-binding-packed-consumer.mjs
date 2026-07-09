@@ -29,6 +29,9 @@ const rootPackageDir = path.join(repoRoot, 'packages/rolldown');
 const browserPackageDir = path.join(repoRoot, 'packages/browser');
 const napiCli = path.join(rootPackageDir, 'node_modules/@napi-rs/cli/dist/cli.js');
 const typescriptCli = createRequire(import.meta.url).resolve('typescript/bin/tsc');
+const rootPackageManifest = JSON.parse(
+  await readFile(path.join(rootPackageDir, 'package.json'), 'utf8'),
+);
 const publicTypesVersion = JSON.parse(
   await readFile(path.join(rootPackageDir, 'node_modules/@oxc-project/types/package.json'), 'utf8'),
 ).version;
@@ -1941,7 +1944,12 @@ async function exerciseRootPackageLayouts(consumerDir, packageManager, packedFla
         `exercise-root-${flavor}.mjs`,
         rootPackageExerciseSource,
         [],
-        { env: { NAPI_RS_FORCE_WASI: 'error' } },
+        {
+          env: {
+            NAPI_RS_ENFORCE_VERSION_CHECK: '1',
+            NAPI_RS_FORCE_WASI: 'error',
+          },
+        },
       );
       assertRootPackageExercise(rootResult.stdout, flavor);
 
@@ -1971,6 +1979,11 @@ try {
   const packedFlavors = new Map();
   for (const flavor of flavors) {
     const manifest = JSON.parse(await readFile(path.join(flavor.dir, 'package.json'), 'utf8'));
+    assert.equal(
+      manifest.version,
+      rootPackageManifest.version,
+      `${manifest.name} must be generated after the root release version is determined`,
+    );
     assert.deepEqual(
       manifest.files,
       flavor.files,
@@ -2170,10 +2183,15 @@ try {
   for (const notice of Object.keys(requiredNotices)) {
     await copyFile(path.join(repoRoot, notice), path.join(stagedBrowserDir, notice));
   }
-  const browserTarball = await pack(stagedBrowserDir, packDir);
   const browserManifest = JSON.parse(
     await readFile(path.join(stagedBrowserDir, 'package.json'), 'utf8'),
   );
+  assert.equal(
+    browserManifest.version,
+    rootPackageManifest.version,
+    '@rolldown/browser must use the root release version before packing',
+  );
+  const browserTarball = await pack(stagedBrowserDir, packDir);
   const browserConsumer = path.join(tempDir, 'browser-consumer');
   await mkdir(browserConsumer);
   await writeFile(

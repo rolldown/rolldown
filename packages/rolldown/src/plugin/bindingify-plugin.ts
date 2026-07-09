@@ -213,12 +213,14 @@ function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
         try {
           return await handler(...args);
         } catch (e: any) {
-          return error(
-            logPluginError(e, plugin.name, {
-              hook: hookName,
-              id: hookName === 'transform' ? args[2] : undefined,
-            }),
-          );
+          const pluginError = logPluginError(e, plugin.name, {
+            hook: hookName,
+            id: hookName === 'transform' ? args[2] : undefined,
+          });
+          if (hookName === 'closeBundle') {
+            throw pluginError;
+          }
+          return error(pluginError);
         }
       };
     }

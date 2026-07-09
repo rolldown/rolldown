@@ -764,12 +764,18 @@ export interface InputOptions {
    * Devtools integration options.
    *
    * When enabled, Rolldown writes JSON-lines devtools output under
-   * `node_modules/.rolldown/{session_id}/`. Consumers can parse the output with
-   * `@rolldown/debug` after `await bundle.close()` resolves.
+   * `<cwd>/node_modules/.rolldown/{safe_session_component}/`. The raw session
+   * ID remains in events, while unsafe, empty, Unicode, reserved, and very long
+   * IDs are encoded for the directory name. Consumers can parse the output
+   * with `@rolldown/debug` after `await bundle.close()` resolves successfully.
    *
    * @experimental
    */
   devtools?: {
+    /**
+     * Overrides the session ID stored in events. The output directory uses a
+     * portable encoded component when this value is not a safe file name.
+     */
     sessionId?: string;
   };
   /**

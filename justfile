@@ -107,6 +107,8 @@ test-vite: # We don't use `test-node-vite` because it's not expected to run in `
 # flavors of the shared async runtime. Requires
 # `just build-rolldown-async-runtime` first.
 #
+# The binding test recipe is the CI home for async-runtime unit tests in
+# `rolldown_binding`, which the workspace-wide `test-rust` recipe excludes.
 # The single-thread (`ROLLDOWN_RUNTIME=single`) lane arms the runtime's OWN
 # deadlock detection instead of the old external GNU-timeout watchdog: when
 # the CurrentThread executor's block_on-over-JS hazard fires (a `block_on`
@@ -124,11 +126,18 @@ test-vite: # We don't use `test-node-vite` because it's not expected to run in `
 # of tokio's reactor. Dev-engine (`dev-watch.test.ts`) tests are skipped on
 # the single flavor inside the test file (BindingDevEngine is out of scope
 # for CurrentThread), not here.
+# Run async-runtime unit tests in the N-API binding.
+test-async-runtime-binding:
+  cargo test -p rolldown_binding --no-default-features --features async-runtime --lib async_runtime::tests::
+  cargo test -p rolldown_binding --no-default-features --features async-runtime --lib async_runtime_lease::tests::
+
+# Run the shared-runtime Rust and Node.js test matrix.
 [unix]
 test-async-runtime:
   #!/usr/bin/env bash
   set -euo pipefail
   cargo test -p rolldown_utils --features async-runtime
+  just test-async-runtime-binding
   ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:main
   ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:watcher
   vp run --filter rolldown-tests test:main
@@ -231,13 +240,14 @@ build-rolldown-wasi:
 
 # Build `rolldown` and its native `.node` binding with the shared async
 # runtime (`--no-default-features --features
-# async-runtime,runtime-waker-teardown-test`) instead of tokio. The second
-# feature exposes only the worker teardown regression probe, which changes the
-# generated native loader and declarations. Restore those test-profile
-# artifacts plus the generated WASI loaders so the recipe leaves a clean tree;
-# public declaration docs are intentionally identical across runtime profiles.
+# async-runtime,runtime-waker-teardown-test,runtime-submission-failure-test`)
+# instead of tokio. The test features expose only lifecycle regression probes,
+# which change the generated native loader and declarations. Restore those
+# test-profile artifacts plus the generated WASI loaders so the recipe leaves a
+# clean tree; public declaration docs are intentionally identical across
+# runtime profiles.
 build-rolldown-async-runtime:
-  vp run --filter rolldown build-binding --no-default-features --features async-runtime,runtime-waker-teardown-test
+  vp run --filter rolldown build-binding --no-default-features --features async-runtime,runtime-waker-teardown-test,runtime-submission-failure-test
   vp run --filter rolldown build-js-glue
   git checkout -- packages/rolldown/src/binding.cjs packages/rolldown/src/binding.d.cts packages/rolldown/src/rolldown-binding.wasi.cjs packages/rolldown/src/rolldown-binding.wasi-browser.js
 

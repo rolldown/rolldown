@@ -57,8 +57,11 @@ browserTest(
       });
       expect(result.transport).toEqual({
         closeRejectedWithNativeError: true,
+        leaseReleaseCallsAfterFailure: 0,
         leaseReleaseCalls: 1,
-        nativeCloseCalls: 1,
+        nativeCloseCalls: 2,
+        retryResolved: true,
+        stopWorkerCallsAfterFailure: 0,
         stopWorkerCalls: 1,
       });
       expect(result.unsupported).toEqual({
@@ -293,7 +296,9 @@ async function buildBrowserWatcherHarness(): Promise<string> {
           }
           if (id === '../../utils/close-callback-scope') return closeCallbackScopePath;
           if (id === '../../binding.cjs') return '\0binding';
-          if (id === '../../runtime-lifecycle') return '\0runtime-lifecycle';
+          if (id === '../../runtime-lifecycle' || id === '../runtime-lifecycle') {
+            return '\0runtime-lifecycle';
+          }
           if (id === '../../utils/create-bundler-option') return '\0create-bundler-option';
           if (id === '../../utils/retryable-cleanup') return retryableCleanupPath;
           if (id === '../../plugin/plugin-driver') return '\0plugin-driver';
@@ -373,6 +378,9 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
           async close() {
             this.closed = true;
           }
+          async closeTerminal() {
+            this.closed = true;
+          }
           getWatchFiles() {
             return [];
           }
@@ -410,6 +418,15 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
             if (result.errors.length > 1) {
               throw new AggregateError(result.errors, this.message);
             }
+          }
+        }
+        export function getCloseTerminalErrors() {
+          return [];
+        }
+        export function throwCloseErrors(errors, message) {
+          if (errors.length === 1) throw errors[0];
+          if (errors.length > 1) {
+            throw new AggregateError(errors, message, { cause: errors[0] });
           }
         }
         export async function acquireRuntimeLease() {
@@ -502,9 +519,14 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
     [
       'retryable-cleanup',
       `
+        export function attachRetryableCleanup() {}
         export function createCleanupFailureError(error) {
           return error;
         }
+        export function excludeDeliveredErrors(errors) {
+          return errors;
+        }
+        export function getRetryableCleanup() {}
         export function isCleanupFailureError() {
           return false;
         }
@@ -515,10 +537,21 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
           throw error;
         }
         export function trackRetryableCleanupOwnership() {}
+        export async function waitForRetryableCleanupTurn() {}
       `,
     ],
     ['validator', `export function validateOption() {}`],
-    ['error', `export function unwrapBindingResult(value) { return value; }`],
+    [
+      'error',
+      `
+        export function normalizeBindingResultErrors(result) {
+          return result?.isBindingErrors ? result.errors : [];
+        }
+        export function unwrapBindingResult(value) {
+          return value;
+        }
+      `,
+    ],
     ['rolldown-output-impl', `export class RolldownOutputImpl {}`],
     ['async-hooks', `export class AsyncLocalStorage {}`],
     ['node-url', `export function pathToFileURL(value) { return { href: String(value) }; }`],
@@ -540,7 +573,9 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
           if (id === '../../binding.cjs' || id === '../binding.cjs' || id === './binding.cjs') {
             return '\0binding';
           }
-          if (id === '../../runtime-lifecycle') return '\0runtime-lifecycle';
+          if (id === '../../runtime-lifecycle' || id === '../runtime-lifecycle') {
+            return '\0runtime-lifecycle';
+          }
           if (id === '../runtime-support') return runtimeSupportPath;
           if (id === '../../utils/async-context' || id === './async-context') {
             return asyncContextPath;
@@ -746,12 +781,19 @@ function browserHarnessEntry(
       const nativeCloseError = new Error('native close transport failed');
       transportHarness.nativeCloseError = nativeCloseError;
       const transportResult = await Promise.allSettled([transportEmitter.close()]);
+      const leaseReleaseCallsAfterFailure = transportHarness.leaseReleaseCalls;
+      const stopWorkerCallsAfterFailure = transportHarness.stopWorkerCalls;
+      transportHarness.nativeCloseError = undefined;
+      const retryResult = await Promise.allSettled([transportEmitter.close()]);
       const transport = {
         closeRejectedWithNativeError:
           transportResult[0].status === 'rejected' &&
           transportResult[0].reason === nativeCloseError,
+        leaseReleaseCallsAfterFailure,
         leaseReleaseCalls: transportHarness.leaseReleaseCalls,
         nativeCloseCalls: transportHarness.nativeCloseCalls,
+        retryResolved: retryResult[0].status === 'fulfilled',
+        stopWorkerCallsAfterFailure,
         stopWorkerCalls: transportHarness.stopWorkerCalls,
       };
 

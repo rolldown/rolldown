@@ -297,6 +297,36 @@ test('browser close identities remain active until every matching callback settl
   expect(afterCallbacks).toBeInstanceOf(Promise);
 });
 
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])(
+  '%s default close identity remains active through a nested async close callback',
+  async (_, loadScope) => {
+    const Scope = await loadScope();
+    const scope = new Scope('build-owner');
+    const fullClose = new Promise<void>(() => {});
+    let activeAfterSuspension = false;
+    let selectedClose!: Promise<void>;
+
+    const wrappedCloseCallback = scope.wrapCallbacks(async () => {
+      await scope.runWithCloseIdentity('native-output', async () => {
+        await Promise.resolve();
+        activeAfterSuspension = scope.hasActiveCallback();
+        selectedClose = scope.selectClosePromise(fullClose, 'build-owner');
+        await selectedClose;
+      });
+    });
+
+    await wrappedCloseCallback();
+
+    expect(activeAfterSuspension).toBe(true);
+    expect(selectedClose).not.toBe(fullClose);
+    await expect(selectedClose).resolves.toBeUndefined();
+    expect(scope.hasActiveCallback()).toBe(false);
+  },
+);
+
 test('reentrant close privilege expires when the callback settles', async () => {
   const scope = new CloseCallbackScope();
   let resolveClose!: () => void;

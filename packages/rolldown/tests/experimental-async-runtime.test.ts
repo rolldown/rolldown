@@ -1,7 +1,11 @@
+import { spawnSync } from 'node:child_process';
+import nodePath from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { rolldown } from 'rolldown';
 import {
-  type BindingRuntimeConfig,
-  type BindingRuntimeMetrics,
+  type AsyncRuntimeConfig,
+  type AsyncRuntimeMetrics,
   configureAsyncRuntime,
   getAsyncRuntimeConfig,
   getAsyncRuntimeMetrics,
@@ -31,12 +35,20 @@ const FEATURE_DISABLED = 'built without the `async-runtime` feature';
 
 // The build flavor comes from the artifact's own capability report; no
 // configure-probe against the error message. `true` => default tokio build.
-const isDefaultBuild = !getRuntimeCapabilities().asyncRuntimeBuild;
+const capabilities = getRuntimeCapabilities();
+const isDefaultBuild = !capabilities.asyncRuntimeBuild;
+const testsDir = fileURLToPath(new URL('.', import.meta.url));
+const flavorSwitchChildPath = nodePath.join(
+  testsDir,
+  'fixtures',
+  'async-runtime-flavor-switch',
+  'child.mjs',
+);
 
 // The non-config, non-flavor metrics fields: the pure runtime counters that
 // must all be zero on the default build (and that rise after work on an
 // async-runtime build).
-type NumericMetricField = Exclude<keyof BindingRuntimeMetrics, 'flavor'>;
+type NumericMetricField = Exclude<keyof AsyncRuntimeMetrics, 'flavor'>;
 
 const COUNTER_FIELDS: NumericMetricField[] = [
   'tasksSpawned',
@@ -86,14 +98,47 @@ describe('experimental async runtime API', () => {
     expect(() => configureAsyncRuntime({ workerThreads: 2 })).toThrow(FEATURE_DISABLED);
   });
 
+  test.runIf(capabilities.asyncRuntimeBuild && !capabilities.wasi)(
+    'native pre-first-use configuration rejects unsafe numbers atomically and retains hosts across a flavor switch',
+    { timeout: 30_000 },
+    () => {
+      const child = spawnSync(process.execPath, [flavorSwitchChildPath], {
+        cwd: testsDir,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          ROLLDOWN_RUNTIME: 'multi',
+        },
+        timeout: 25_000,
+      });
+
+      expect(child.error).toBeUndefined();
+      expect(child.signal).toBeNull();
+      expect(child.status, child.stderr || child.stdout).toBe(0);
+      const result = JSON.parse(child.stdout.trim().split('\n').at(-1)!);
+      expect(result).toMatchObject({
+        flavor: 'CurrentThread',
+        invalidConfigurationsRejected: 10,
+        scanSettled: true,
+        buildSettled: true,
+      });
+    },
+  );
+
   test('getAsyncRuntimeConfig returns the build flavor with positive thread counts', () => {
-    const config: BindingRuntimeConfig = getAsyncRuntimeConfig();
+    const config: AsyncRuntimeConfig = getAsyncRuntimeConfig();
     // `BindingRuntimeFlavor` is a napi string_enum; its runtime representation
-    // is 'MultiThread' or 'CurrentThread'. See async_runtime.rs. The default
-    // `tokio-runtime` build always snapshots 'MultiThread'; an `async-runtime`
-    // build reports whichever executor ROLLDOWN_RUNTIME selected.
+    // is 'MultiThread' or 'CurrentThread'. Tokio builds report MultiThread.
+    // Shared native builds report the configured flavor, while every shared
+    // WebAssembly build is CurrentThread-only.
     if (isDefaultBuild) {
       expect(config.flavor).toBe('MultiThread');
+    } else if (capabilities.wasi) {
+      expect(config).toMatchObject({
+        flavor: 'CurrentThread',
+        maxBlockingTasks: 1,
+        workerThreads: 1,
+      });
     } else {
       expect(['MultiThread', 'CurrentThread']).toContain(config.flavor);
     }
@@ -110,7 +155,7 @@ describe('experimental async runtime API', () => {
     if (!isDefaultBuild) {
       return;
     }
-    const metrics: BindingRuntimeMetrics = getAsyncRuntimeMetrics();
+    const metrics: AsyncRuntimeMetrics = getAsyncRuntimeMetrics();
     // Flavor/thread fields mirror the config (non-zero); only the counters are 0.
     expect(metrics.flavor).toBe('MultiThread');
     for (const field of COUNTER_FIELDS) {

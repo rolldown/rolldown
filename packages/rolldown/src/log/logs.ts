@@ -54,34 +54,35 @@ export function logNoFileSystemInBrowser(method: string): RolldownLog {
   };
 }
 
-export function logPluginError(
-  error: Omit<RolldownLog, 'code'> & { code?: unknown },
+export function logPluginError<T>(
+  error: T,
   plugin: string,
   { hook, id }: { hook?: string; id?: string } = {},
-): RolldownLog {
+): T {
+  const pluginError = error as Omit<RolldownLog, 'code'> & { code?: unknown };
   try {
-    const code = error.code;
+    const code = pluginError.code;
     if (
-      !error.pluginCode &&
+      !pluginError.pluginCode &&
       code != null &&
       (typeof code !== 'string' || !code.startsWith('PLUGIN_'))
     ) {
-      error.pluginCode = code;
+      pluginError.pluginCode = code;
     }
-    error.code = PLUGIN_ERROR;
-    error.plugin = plugin;
+    pluginError.code = PLUGIN_ERROR;
+    pluginError.plugin = plugin;
     if (hook) {
-      error.hook = hook;
+      pluginError.hook = hook;
     }
     if (id) {
-      error.id = id;
+      pluginError.id = id;
     }
     // eslint-disable-next-line no-unused-vars
   } catch (_) {
     // Ignore error, maybe the error can't be assigned.
   } finally {
     // eslint-disable-next-line no-unsafe-finally
-    return error as RolldownLog;
+    return error;
   }
 }
 

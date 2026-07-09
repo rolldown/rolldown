@@ -34,6 +34,7 @@ impl Bundler {
       plugins,
       session: None,
       disable_tracing_setup: true,
+      defer_close_on_error: false,
     })?;
 
     Ok(Self {

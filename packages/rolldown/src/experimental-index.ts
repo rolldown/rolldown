@@ -9,9 +9,10 @@ export { DevEngine } from './api/dev/dev-engine';
 export type { DevOptions, DevWatchOptions } from './api/dev/dev-options';
 export { freeExternalMemory, scan } from './api/experimental';
 export {
-  type BindingClientHmrUpdate,
-  BindingRebuildStrategy,
-  type BindingRuntimeCapabilities,
+  type AsyncRuntimeConfig,
+  type AsyncRuntimeFlavor,
+  type AsyncRuntimeMetrics,
+  type AsyncRuntimeOptions,
   type BindingRuntimeConfig,
   type BindingRuntimeFlavor,
   type BindingRuntimeMetrics,
@@ -19,11 +20,16 @@ export {
   configureAsyncRuntime,
   getAsyncRuntimeConfig,
   getAsyncRuntimeMetrics,
+  resetAsyncRuntimeMetrics,
+} from './api/async-runtime';
+export {
+  type BindingClientHmrUpdate,
+  BindingRebuildStrategy,
+  type BindingRuntimeCapabilities,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,
   type NapiResolveOptions as ResolveOptions,
   type ResolveResult,
-  resetAsyncRuntimeMetrics,
 } from './binding.cjs';
 export { isolatedDeclaration, isolatedDeclarationSync } from './utils/isolated-declaration';
 export { moduleRunnerTransform } from './utils/module-runner-transform';

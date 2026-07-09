@@ -478,6 +478,9 @@ thread_local! {
     const { std::cell::RefCell::new(None) };
   static DEPENDENCY_PREDICATE_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
     const { std::cell::RefCell::new(None) };
+  static BEFORE_OWNED_BLOCKING_QUEUE_CLAIM_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
   static WORKER_TLS_DROP_PROBE: std::cell::RefCell<Option<WorkerTlsDropProbe>> =
     const { std::cell::RefCell::new(None) };
 }
@@ -581,6 +584,15 @@ fn run_current_thread_dispatch_returned_test_hook() {
 #[cfg(all(test, not(target_family = "wasm")))]
 fn run_dependency_predicate_test_hook() {
   if let Some(hook) = DEPENDENCY_PREDICATE_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_before_owned_blocking_queue_claim_test_hook() {
+  if let Some(hook) =
+    BEFORE_OWNED_BLOCKING_QUEUE_CLAIM_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
     hook();
   }
 }
@@ -1699,12 +1711,26 @@ impl<F> Drop for ContainedFuture<F> {
 #[derive(Default)]
 struct GenerationStop {
   stopping: AtomicBool,
+  publication: Mutex<()>,
   parkers: Mutex<Vec<Weak<DriverParker>>>,
 }
 
 impl GenerationStop {
   fn is_stopping(&self) -> bool {
     self.stopping.load(Ordering::Acquire)
+  }
+
+  fn publication_guard(&self) -> GenerationStopPublicationGuard<'_> {
+    #[cfg(all(test, not(target_family = "wasm")))]
+    run_before_generation_stop_publication_lock_test_hook();
+    GenerationStopPublicationGuard {
+      stop: self,
+      _publication: self.publication.lock().unwrap_or_else(std::sync::PoisonError::into_inner),
+    }
+  }
+
+  fn publish_stopping(&self) {
+    self.publication_guard().publish_stopping();
   }
 
   fn register(self: &Arc<Self>, parker: &Arc<DriverParker>) -> GenerationStopGuard {
@@ -1740,7 +1766,7 @@ impl GenerationStop {
   }
 
   fn begin_shutdown(&self) {
-    self.stopping.store(true, Ordering::Release);
+    self.publish_stopping();
     let parkers = {
       let mut registered = self.parkers.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       let parkers = registered.iter().filter_map(Weak::upgrade).collect::<Vec<_>>();
@@ -1750,6 +1776,21 @@ impl GenerationStop {
     for parker in parkers {
       parker.unpark();
     }
+  }
+}
+
+struct GenerationStopPublicationGuard<'a> {
+  stop: &'a GenerationStop,
+  _publication: std::sync::MutexGuard<'a, ()>,
+}
+
+impl GenerationStopPublicationGuard<'_> {
+  fn is_stopping(&self) -> bool {
+    self.stop.is_stopping()
+  }
+
+  fn publish_stopping(&self) {
+    self.stop.stopping.store(true, Ordering::Release);
   }
 }
 
@@ -3649,6 +3690,10 @@ struct MultiThreadExecutor {
   // configured via `RuntimeOptions::park_deadline` (the embedder resolves
   // `PARK_DEADLINE_ENV` into it).
   park_deadline: Option<Duration>,
+  // Shared with the timer heap because firing removes the timer before invoking
+  // its waker. The admission remains active until that wake has published any
+  // resulting runnable, so a final verdict cannot observe both sources empty.
+  deadlock_state: Arc<MultiThreadDeadlockState>,
   // Runtime-owned timer heap plus its dedicated non-Rayon service thread.
   // Cooperative parks also fire due timers after timer-bounded waits.
   timers: TimerHeap,
@@ -3680,7 +3725,13 @@ impl MultiThreadExecutor {
   ) -> Result<Self, RuntimeConfigError> {
     let id = next_unique_id(&NEXT_RUNTIME_EXECUTOR_ID, "async runtime executor id space exhausted");
     let thread_name_prefix = options.thread_name_prefix.clone();
-    let timers = TimerHeap::new(generation, id, format!("{thread_name_prefix}-timer"));
+    let deadlock_state = Arc::new(MultiThreadDeadlockState::new(options.park_deadline.is_some()));
+    let timers = TimerHeap::new(
+      generation,
+      id,
+      format!("{thread_name_prefix}-timer"),
+      Arc::clone(&deadlock_state),
+    );
     // Production options are validated before construction, so this exact
     // physical count is also the configured/reported count. Direct executor
     // unit tests may still construct a one-thread topology intentionally.
@@ -3748,12 +3799,38 @@ impl MultiThreadExecutor {
       max_drainers: pool_threads,
       max_blocking: options.max_blocking_tasks,
       park_deadline: options.park_deadline,
+      deadlock_state,
       timers,
       metrics,
     })
   }
 
+  fn begin_deadlock_admission(&self) -> Option<MultiThreadDeadlockAdmissionGuard> {
+    self.deadlock_state.begin_admission()
+  }
+
+  fn try_begin_deadlock_verdict(&self) -> Option<MultiThreadDeadlockVerdictGuard> {
+    self.deadlock_state.try_begin_verdict()
+  }
+
+  fn wake_one_owner_dependency(&self, owner: BlockingOwnerToken) -> bool {
+    // See internal-docs/async-runtime/implementation.md.
+    let _publication = self.deadlock_state.owner_handoff_publication_guard();
+    self.parked_drivers.wake_one_owner_dependency(owner)
+  }
+
+  fn release_owner_lane_and_wake(&self, reservation: OwnerLaneReservation<'_>) -> bool {
+    let owner = reservation.owner;
+    // Keep release and its targeted handoff in one detector-visible critical
+    // section. Unwind drops the mutex after the lane is already available, so
+    // a later verdict rechecks that availability even if selection panicked.
+    let _publication = self.deadlock_state.owner_handoff_publication_guard();
+    drop(reservation);
+    self.parked_drivers.wake_one_owner_dependency(owner)
+  }
+
   fn schedule(self: &Arc<Self>, runnable: Runnable) {
+    let mut admission = self.begin_deadlock_admission();
     // Fires for BOTH the slot and the FIFO path: a slot-resident runnable is
     // still "queued" until popped (`runnable_started` balances it either way).
     self.metrics.runnable_scheduled();
@@ -3784,6 +3861,9 @@ impl MultiThreadExecutor {
       match LIFO_SLOT.with(std::cell::Cell::take) {
         None => {
           LIFO_SLOT.with(|slot| slot.set(Some((self.id, runnable))));
+          if let Some(admission) = admission.as_mut() {
+            admission.mark_published();
+          }
           return;
         }
         // Same-executor occupant: the NEWEST runnable takes the slot (it is
@@ -3792,6 +3872,9 @@ impl MultiThreadExecutor {
         Some((id, displaced)) if id == self.id => {
           LIFO_SLOT.with(|slot| slot.set(Some((self.id, runnable))));
           self.push_to_queue_and_wake(displaced);
+          if let Some(admission) = admission.as_mut() {
+            admission.mark_published();
+          }
           return;
         }
         // Foreign-executor occupant (defensive: requires a thread acting as a
@@ -3806,6 +3889,9 @@ impl MultiThreadExecutor {
       }
     }
     self.push_to_queue_and_wake(runnable);
+    if let Some(admission) = admission.as_mut() {
+      admission.mark_published();
+    }
   }
 
   /// Shared-FIFO tail of [`Self::schedule`]: push, then wake (also used for
@@ -3852,6 +3938,7 @@ impl MultiThreadExecutor {
     F: FnOnce() -> Result<T, JoinError> + Send + 'static,
     T: Send + 'static,
   {
+    let mut admission = self.begin_deadlock_admission();
     let (sender, receiver) = oneshot::channel();
     let generation = self.generation;
     let dependency = BlockingDependency {
@@ -3889,6 +3976,9 @@ impl MultiThreadExecutor {
     } else {
       // Wake a blocking-capable cooperative driver, or arm a normal drainer.
       self.wake_for_blocking_work();
+      if let Some(admission) = admission.as_mut() {
+        admission.mark_published();
+      }
     }
     JoinHandle(JoinHandleInner::Blocking { receiver, dependency })
   }
@@ -3963,8 +4053,12 @@ impl MultiThreadExecutor {
   /// unwind via `LifoSlotFlushGuard` -- a runnable stranded in a thread-local
   /// slot while its thread leaves executor code is a silently lost task.
   fn flush_lifo_slot(self: &Arc<Self>) {
+    let mut admission = self.begin_deadlock_admission();
     if let Some(runnable) = self.pop_lifo_slot() {
       self.push_to_queue_and_wake(runnable);
+      if let Some(admission) = admission.as_mut() {
+        admission.mark_published();
+      }
     }
   }
 
@@ -4145,12 +4239,19 @@ impl MultiThreadExecutor {
     else {
       return OwnedBlockingOutcome::OwnerBusy(owner);
     };
+    #[cfg(test)]
+    run_before_owned_blocking_queue_claim_test_hook();
     let job = {
       let mut queue = self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      // Shutdown publishes stop before waiting on this queue mutex. Recheck both
+      // admission states before consuming the dependency so a shutdown that
+      // reached this claim first leaves the job queued for cancellation.
+      if queue.closed || self.stop.is_stopping() {
+        None
       // Claim while holding the queue lock. A concurrent clear/switch that
       // wins first makes this fail; once the claim succeeds, no stale snapshot
       // can authorize removal of the old job.
-      if dependency.try_claim(&current) {
+      } else if dependency.try_claim(&current) {
         queue.remove(current.publication.dependency.job)
       } else {
         None
@@ -4170,10 +4271,9 @@ impl MultiThreadExecutor {
     } else {
       false
     };
-    drop(reservation);
     // Every reservation release can make another exact dependency serviceable,
     // including failed-claim and already-removed-job exits.
-    self.parked_drivers.wake_one_owner_dependency(owner);
+    self.release_owner_lane_and_wake(reservation);
     OwnedBlockingOutcome::ReservationReleased { owner, ran }
   }
 
@@ -4192,23 +4292,23 @@ impl MultiThreadExecutor {
   ) -> Option<bool> {
     let handoff_owner = parker.take_owner_handoff()?;
     if !can_run_blocking {
-      self.parked_drivers.wake_one_owner_dependency(handoff_owner);
+      self.wake_one_owner_dependency(handoff_owner);
       return Some(false);
     }
     match self.run_owned_blocking_over_cap(dependency) {
       OwnedBlockingOutcome::Ineligible => {
-        self.parked_drivers.wake_one_owner_dependency(handoff_owner);
+        self.wake_one_owner_dependency(handoff_owner);
         Some(false)
       }
       OwnedBlockingOutcome::OwnerBusy(owner) => {
         if owner != handoff_owner {
-          self.parked_drivers.wake_one_owner_dependency(handoff_owner);
+          self.wake_one_owner_dependency(handoff_owner);
         }
         Some(false)
       }
       OwnedBlockingOutcome::ReservationReleased { owner, ran } => {
         if owner != handoff_owner {
-          self.parked_drivers.wake_one_owner_dependency(handoff_owner);
+          self.wake_one_owner_dependency(handoff_owner);
         }
         Some(ran)
       }
@@ -4217,7 +4317,7 @@ impl MultiThreadExecutor {
 
   fn forward_owner_handoff(&self, parker: &DriverParker) {
     if let Some(owner) = parker.take_owner_handoff() {
-      self.parked_drivers.wake_one_owner_dependency(owner);
+      self.wake_one_owner_dependency(owner);
     }
   }
 
@@ -4229,6 +4329,16 @@ impl MultiThreadExecutor {
     };
     self.active_blocking_owners.is_available(ambient_owner)
       && dependency.has_live_owner_dependency(ambient_owner, OwnerDependencyMode::Available)
+  }
+
+  fn has_exact_owner_work_for_role(
+    &self,
+    parker: &DriverParker,
+    dependency: &TaskDependency,
+    can_run_blocking: bool,
+  ) -> bool {
+    parker.has_owner_handoff()
+      || (can_run_blocking && self.owner_dependency_lane_available(dependency))
   }
 
   /// Cooperative `block_on` for a re-entrant call from a pool worker. Instead
@@ -4387,6 +4497,7 @@ impl MultiThreadExecutor {
           // FULL deadline window passes with zero executor progress. The
           // foreign-thread whole-build park in `block_on`'s else-branch is
           // exempt by design.
+          let deadlock_publications = self.deadlock_state.publications();
           match park_with_deadline(&parker, deadline, &self.metrics) {
             DeadlineParkOutcome::Woken => {}
             DeadlineParkOutcome::Expired(armed) => {
@@ -4450,7 +4561,59 @@ impl MultiThreadExecutor {
               if self.next_timer_deadline().is_some() {
                 continue;
               }
-              std::panic::panic_any(BlockOnDeadlock::multi_thread_cooperative(deadline));
+              // Test-only seam for a cross-thread scheduler admission after
+              // every legacy final check and before the synchronized verdict.
+              #[cfg(test)]
+              run_deadline_final_verdict_test_hook();
+              let Some(verdict) = self.try_begin_deadlock_verdict() else {
+                continue;
+              };
+              #[cfg(test)]
+              run_deadline_gated_verdict_test_hook();
+              // Lock order is verdict gate -> stop publication -> exact-owner
+              // publication. The controller takes lifecycle -> stop
+              // publication and never acquires the verdict gate or exact-owner
+              // publication while retaining either lock.
+              let stop_publication = self.stop.publication_guard();
+              #[cfg(test)]
+              run_deadline_synchronized_stop_test_hook();
+              if stop_publication.is_stopping() {
+                return BlockOnOutcome::Stopped;
+              }
+              let owner_handoff_publication = self
+                .deadlock_state
+                .owner_handoff_publication_guard()
+                .expect("a deadline verdict requires exact-owner publication");
+              #[cfg(test)]
+              run_deadline_exact_owner_verdict_test_hook(&parker);
+              // The closed gate excludes later publications. Any admission
+              // that began earlier either remains counted (so gate acquisition
+              // failed above) or completed before this recheck and advanced
+              // the publication epoch. The stop-publication guard also keeps
+              // the lifecycle in Running if this verdict linearized first. The
+              // exact-owner publication guard similarly orders reservation
+              // release and targeted handoff with the final predicates below.
+              if self.has_exact_owner_work_for_role(
+                &parker,
+                &dependency.dependency,
+                can_run_blocking,
+              ) || parker.consume_permit()
+                || self.has_queued_work_for_role(can_run_blocking)
+                || self.deadlock_state.publications() != deadlock_publications
+                || self.metrics.progress_fingerprint() != armed
+                || self.next_timer_deadline().is_some()
+              {
+                continue;
+              }
+              let diagnostic = BlockOnDeadlock::multi_thread_cooperative(deadline);
+              // Panic hooks run before unwind. Release every synchronization
+              // guard first so a hook that submits work, releases an owner
+              // lane, or starts shutdown cannot wait for the panic that invokes
+              // it to unwind.
+              drop(owner_handoff_publication);
+              drop(stop_publication);
+              drop(verdict);
+              std::panic::panic_any(diagnostic);
             }
           }
         }
@@ -4533,6 +4696,110 @@ impl MultiThreadExecutor {
         return queue.pop_front();
       }
     }
+  }
+}
+
+#[cfg(not(target_family = "wasm"))]
+struct MultiThreadDeadlockState {
+  enabled: bool,
+  verdict_closed: AtomicBool,
+  admissions: AtomicUsize,
+  publications: AtomicU64,
+  owner_handoff_publication: Mutex<()>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl MultiThreadDeadlockState {
+  fn new(enabled: bool) -> Self {
+    Self {
+      enabled,
+      verdict_closed: AtomicBool::new(false),
+      admissions: AtomicUsize::new(0),
+      publications: AtomicU64::new(0),
+      owner_handoff_publication: Mutex::new(()),
+    }
+  }
+
+  fn begin_admission(self: &Arc<Self>) -> Option<MultiThreadDeadlockAdmissionGuard> {
+    if !self.enabled {
+      return None;
+    }
+    loop {
+      while self.verdict_closed.load(Ordering::SeqCst) {
+        #[cfg(test)]
+        run_deadlock_closed_gate_admission_test_hook();
+        std::hint::spin_loop();
+      }
+      self.admissions.fetch_add(1, Ordering::SeqCst);
+      if !self.verdict_closed.load(Ordering::SeqCst) {
+        return Some(MultiThreadDeadlockAdmissionGuard {
+          state: Arc::clone(self),
+          published: false,
+        });
+      }
+      self.admissions.fetch_sub(1, Ordering::SeqCst);
+    }
+  }
+
+  fn try_begin_verdict(self: &Arc<Self>) -> Option<MultiThreadDeadlockVerdictGuard> {
+    debug_assert!(self.enabled, "a deadline verdict requires an enabled admission state");
+    if self
+      .verdict_closed
+      .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+      .is_err()
+    {
+      return None;
+    }
+    if self.admissions.load(Ordering::SeqCst) != 0 {
+      self.verdict_closed.store(false, Ordering::SeqCst);
+      return None;
+    }
+    Some(MultiThreadDeadlockVerdictGuard(Arc::clone(self)))
+  }
+
+  fn publications(&self) -> u64 {
+    self.publications.load(Ordering::SeqCst)
+  }
+
+  fn owner_handoff_publication_guard(&self) -> Option<std::sync::MutexGuard<'_, ()>> {
+    self.enabled.then(|| {
+      self.owner_handoff_publication.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    })
+  }
+}
+
+#[cfg(not(target_family = "wasm"))]
+struct MultiThreadDeadlockAdmissionGuard {
+  state: Arc<MultiThreadDeadlockState>,
+  published: bool,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl MultiThreadDeadlockAdmissionGuard {
+  fn mark_published(&mut self) {
+    self.published = true;
+  }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Drop for MultiThreadDeadlockAdmissionGuard {
+  fn drop(&mut self) {
+    if self.published {
+      self.state.publications.fetch_add(1, Ordering::SeqCst);
+    }
+    // Publication and every scheduler-state write above must precede the final
+    // admission decrement observed by a closed verdict gate.
+    self.state.admissions.fetch_sub(1, Ordering::SeqCst);
+  }
+}
+
+#[cfg(not(target_family = "wasm"))]
+struct MultiThreadDeadlockVerdictGuard(Arc<MultiThreadDeadlockState>);
+
+#[cfg(not(target_family = "wasm"))]
+impl Drop for MultiThreadDeadlockVerdictGuard {
+  fn drop(&mut self) {
+    self.0.verdict_closed.store(false, Ordering::SeqCst);
   }
 }
 
@@ -4635,6 +4902,11 @@ impl DriverParker {
       return None;
     }
     self.owner_handoff.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take()
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  fn has_owner_handoff(&self) -> bool {
+    self.owner_handoff_pending.load(Ordering::Acquire)
   }
 
   /// Grant the wake permit. Wakes the driver if it is sleeping; otherwise the
@@ -4867,6 +5139,129 @@ thread_local! {
 #[cfg(all(test, not(target_family = "wasm")))]
 fn run_deadline_verdict_test_hook() {
   if let Some(hook) = DEADLINE_VERDICT_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
+// Final test-only injection seam: fired after every permit/queue/fingerprint/
+// timer check from the legacy verdict and immediately before the synchronized
+// admission gate closes. A separate OS thread can complete a publication here
+// to prove the final verdict recheck has a real cross-thread ordering edge.
+#[cfg(all(test, not(target_family = "wasm")))]
+thread_local! {
+  static DEADLINE_FINAL_VERDICT_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_deadline_final_verdict_test_hook() {
+  if let Some(hook) = DEADLINE_FINAL_VERDICT_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
+// Fired after the synchronized verdict gate has closed and before the verdict
+// takes the stop-publication mutex for its final rechecks. A test can pause
+// here while shutdown publishes generation stop and its abort wake reaches the
+// closed admission gate.
+#[cfg(all(test, not(target_family = "wasm")))]
+thread_local! {
+  static DEADLINE_GATED_VERDICT_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_deadline_gated_verdict_test_hook() {
+  if let Some(hook) = DEADLINE_GATED_VERDICT_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
+// Fired after the final verdict has acquired the stop-publication mutex. A
+// shutdown test can retain that guard while another thread reaches the
+// lifecycle -> stop-publication lock edge.
+#[cfg(all(test, not(target_family = "wasm")))]
+thread_local! {
+  static DEADLINE_SYNCHRONIZED_STOP_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_deadline_synchronized_stop_test_hook() {
+  if let Some(hook) = DEADLINE_SYNCHRONIZED_STOP_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
+// Fired after the final verdict owns exact-owner publication and before it
+// checks handoff/lane predicates. Tests can remove unrelated saving predicates
+// while retaining the synchronized owner state under examination.
+#[cfg(all(test, not(target_family = "wasm")))]
+type DeadlineExactOwnerVerdictTestHook = Box<dyn FnOnce(&DriverParker)>;
+
+#[cfg(all(test, not(target_family = "wasm")))]
+thread_local! {
+  static DEADLINE_EXACT_OWNER_VERDICT_TEST_HOOK:
+    std::cell::RefCell<Option<DeadlineExactOwnerVerdictTestHook>> =
+      const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_deadline_exact_owner_verdict_test_hook(parker: &DriverParker) {
+  if let Some(hook) = DEADLINE_EXACT_OWNER_VERDICT_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook(parker);
+  }
+}
+
+// Fired immediately before a test thread takes the stop-publication mutex.
+// Installed only on the shutdown thread, this proves the controller still
+// holds the lifecycle in Running while waiting for a verdict-owned guard.
+#[cfg(all(test, not(target_family = "wasm")))]
+thread_local! {
+  static BEFORE_GENERATION_STOP_PUBLICATION_LOCK_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_before_generation_stop_publication_lock_test_hook() {
+  if let Some(hook) =
+    BEFORE_GENERATION_STOP_PUBLICATION_LOCK_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
+    hook();
+  }
+}
+
+// Fired on an admission thread after it observes a closed verdict gate. The
+// hook is thread-local so a shutdown test can prove that an abort wake reached
+// this exact wait without affecting unrelated scheduler threads.
+#[cfg(all(test, not(target_family = "wasm")))]
+thread_local! {
+  static DEADLOCK_CLOSED_GATE_ADMISSION_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_deadlock_closed_gate_admission_test_hook() {
+  if let Some(hook) = DEADLOCK_CLOSED_GATE_ADMISSION_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
+    hook();
+  }
+}
+
+// Timer registration enters the shared verdict admission before this seam.
+// Tests can pause there to prove the timer remains an announced publication
+// until its heap entry becomes visible.
+#[cfg(all(test, not(target_family = "wasm")))]
+thread_local! {
+  static TIMER_REGISTRATION_ADMISSION_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_timer_registration_admission_test_hook() {
+  if let Some(hook) = TIMER_REGISTRATION_ADMISSION_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
     hook();
   }
 }
@@ -6276,6 +6671,7 @@ struct TimerHeap {
   inner: Arc<Mutex<TimerHeapInner>>,
   parker: Arc<DriverParker>,
   thread: Mutex<Option<std::thread::JoinHandle<()>>>,
+  deadlock_state: Arc<MultiThreadDeadlockState>,
   #[cfg(test)]
   fail_next_start: AtomicBool,
   generation: u64,
@@ -6421,11 +6817,17 @@ impl TimerHeapInner {
 
 #[cfg(not(target_family = "wasm"))]
 impl TimerHeap {
-  fn new(generation: u64, executor_id: u64, thread_name: String) -> Self {
+  fn new(
+    generation: u64,
+    executor_id: u64,
+    thread_name: String,
+    deadlock_state: Arc<MultiThreadDeadlockState>,
+  ) -> Self {
     Self {
       inner: Arc::new(Mutex::new(TimerHeapInner::default())),
       parker: Arc::new(DriverParker::default()),
       thread: Mutex::new(None),
+      deadlock_state,
       #[cfg(test)]
       fail_next_start: AtomicBool::new(false),
       generation,
@@ -6461,6 +6863,7 @@ impl TimerHeap {
 
             let inner = Arc::clone(&self.inner);
             let parker = Arc::clone(&self.parker);
+            let deadlock_state = Arc::clone(&self.deadlock_state);
             let generation = self.generation;
             let executor_id = self.executor_id;
             let handle = std::thread::Builder::new()
@@ -6470,7 +6873,7 @@ impl TimerHeap {
                 // `ON_POOL_WORKER`, this marker never authorizes scheduler driving.
                 ON_TIMER_THREAD.with(|current| current.set(Some(executor_id)));
                 let _generation = RuntimeGenerationGuard::enter(generation);
-                timer_timekeeper_main(&inner, &parker);
+                timer_timekeeper_main(&inner, &parker, &deadlock_state);
               })
               .map_err(|error| {
                 RuntimeConfigError(format!("failed to create runtime timer thread: {error}"))
@@ -6531,18 +6934,33 @@ impl TimerHeap {
 #[cfg(not(target_family = "wasm"))]
 impl Drop for TimerHeap {
   fn drop(&mut self) {
+    let mut admission = self.deadlock_state.begin_admission();
     let wakers = self.close();
+    if !wakers.is_empty()
+      && let Some(admission) = admission.as_mut()
+    {
+      admission.mark_published();
+    }
     self.parker.unpark();
     for waker in wakers {
       wake_waker_contained(waker);
     }
+    drop(admission);
     self.join();
   }
 }
 
 #[cfg(not(target_family = "wasm"))]
-fn timer_timekeeper_main(inner: &Mutex<TimerHeapInner>, parker: &Arc<DriverParker>) {
+fn timer_timekeeper_main(
+  inner: &Mutex<TimerHeapInner>,
+  parker: &Arc<DriverParker>,
+  deadlock_state: &Arc<MultiThreadDeadlockState>,
+) {
   loop {
+    // Acquire before touching the heap. If a verdict has already closed the
+    // gate, a due timer remains visible until the verdict's final timer recheck
+    // causes that guard to reopen.
+    let mut admission = deadlock_state.begin_admission();
     let (due, deadline) = {
       let mut inner = inner.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       if inner.closed {
@@ -6567,11 +6985,17 @@ fn timer_timekeeper_main(inner: &Mutex<TimerHeapInner>, parker: &Arc<DriverParke
     };
 
     if !due.is_empty() {
+      if let Some(admission) = admission.as_mut() {
+        admission.mark_published();
+      }
       for waker in due {
         wake_waker_contained(waker);
       }
       continue;
     }
+    // Never retain an admission while sleeping: it protects only the
+    // remove-then-wake publication window.
+    drop(admission);
 
     match deadline {
       Some(deadline) => {
@@ -6599,6 +7023,9 @@ impl MultiThreadExecutor {
     waker: Waker,
     fired: &Arc<AtomicBool>,
   ) {
+    let mut admission = self.begin_deadlock_admission();
+    #[cfg(test)]
+    run_timer_registration_admission_test_hook();
     // Establish the service thread before publishing the entry. If thread
     // creation fails, `Sleep::poll` unwinds with `registered == false` and no
     // heap state exists for Drop to miss.
@@ -6606,21 +7033,24 @@ impl MultiThreadExecutor {
       let _ = catch_unwind_contained(|| drop(waker));
       panic!("{error}");
     }
-    let (became_earliest, discarded_waker) = {
+    let (became_earliest, published, discarded_waker) = {
       let mut inner = self.timers.inner.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       if inner.closed || fired.load(Ordering::SeqCst) {
         fired.store(true, Ordering::SeqCst);
-        (false, Some(waker))
+        (false, false, Some(waker))
       } else if let Some(entry) = inner.entries.get_mut(&id) {
         // Re-poll of a still-armed sleep: refresh the waker, nothing else.
-        (false, Some(std::mem::replace(&mut entry.waker, waker)))
+        (false, false, Some(std::mem::replace(&mut entry.waker, waker)))
       } else {
         let previous = inner.next_deadline();
         inner.entries.insert(id, HeapTimerEntry { waker, fired: Arc::clone(fired) });
         inner.queue.push(deadline, id);
-        (previous.is_none_or(|previous| deadline < previous), None)
+        (previous.is_none_or(|previous| deadline < previous), true, None)
       }
     };
+    if published && let Some(admission) = admission.as_mut() {
+      admission.mark_published();
+    }
     if let Some(waker) = discarded_waker {
       // RawWaker destruction is user code and may re-enter timer cancellation.
       // Keep it outside the heap mutex and contain hostile destructors.
@@ -6668,6 +7098,7 @@ impl MultiThreadExecutor {
   /// nest inside the heap lock). Firing sets each sleep's `fired` flag under
   /// the lock, before the wake, so the woken poll observes it.
   fn fire_due_timers(&self) {
+    let mut admission = self.begin_deadlock_admission();
     let due: Vec<Waker> = {
       let mut inner = self.timers.inner.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       let now = Instant::now();
@@ -6684,6 +7115,11 @@ impl MultiThreadExecutor {
       }
       due
     };
+    if !due.is_empty()
+      && let Some(admission) = admission.as_mut()
+    {
+      admission.mark_published();
+    }
     for waker in due {
       // Wakers may originate outside this executor. Isolate user RawWaker
       // implementations so a panic cannot unwind the dedicated timekeeper.
@@ -6705,7 +7141,13 @@ impl MultiThreadExecutor {
   /// scheduled through the normal path, so a coordinator awaiting a debounce
   /// completes its close sequence instead of parking forever.
   fn shutdown_timers(&self) {
+    let mut admission = self.begin_deadlock_admission();
     let wakers = self.timers.close();
+    if !wakers.is_empty()
+      && let Some(admission) = admission.as_mut()
+    {
+      admission.mark_published();
+    }
     for waker in wakers {
       // A user-provided RawWaker may panic. Shutdown is a lifecycle
       // transition, so one hostile wake must not leave the controller stuck
@@ -6717,15 +7159,17 @@ impl MultiThreadExecutor {
 
   fn begin_shutdown(&self) {
     let _generation = RuntimeGenerationGuard::enter(self.generation);
+    // Publish stop before taking the blocking queue. The final deadlock verdict
+    // holds stop publication while rechecking that queue, so queue -> stop
+    // would invert its lock order. A concurrent taker either claims while stop
+    // is still false or observes stop after this publication.
+    self.stop.begin_shutdown();
     let queued = {
       let mut queue = self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      // The blocking FIFO mutex is the admission/stop linearization point.
-      // `take_blocking` either claims a job before this critical section, or it
-      // observes the closed/stopping state after stop becomes visible.
+      // The blocking FIFO mutex closes queue admission. `take_blocking` either
+      // claimed a job before stop publication or observes stop/closure.
       queue.closed = true;
-      let queued = queue.take_all();
-      self.stop.begin_shutdown();
-      queued
+      queue.take_all()
     };
     // Captured values belong to user code and may panic in Drop. Retire each
     // rejected closure independently so one destructor cannot strand the
@@ -7133,6 +7577,14 @@ impl RuntimeBackend {
       RuntimeExecutor::CurrentThread(executor) => executor.block_on(future),
       #[cfg(not(target_family = "wasm"))]
       RuntimeExecutor::MultiThread(executor) => executor.block_on(future),
+    }
+  }
+
+  fn generation_stop(&self) -> Arc<GenerationStop> {
+    match &self.executor {
+      RuntimeExecutor::CurrentThread(executor) => Arc::clone(&executor.stop),
+      #[cfg(not(target_family = "wasm"))]
+      RuntimeExecutor::MultiThread(executor) => Arc::clone(&executor.stop),
     }
   }
 
@@ -7827,11 +8279,22 @@ impl RuntimeController {
               ));
             }
             let identity = backend.stop_identity();
+            let stop = backend.generation_stop();
+            // Lock order is lifecycle -> stop publication. Publish before
+            // mutating the lifecycle so a gated verdict that acquired the
+            // publication mutex first wins while this state remains Running;
+            // otherwise the verdict must observe the published stop.
+            let stop_publication = stop.publication_guard();
+            stop_publication.publish_stopping();
             let RuntimeLifecycle::Running(backend) =
               std::mem::replace(&mut state.lifecycle, RuntimeLifecycle::Stopping(identity))
             else {
               unreachable!();
             };
+            // Release before aborting tasks or running any user destruction.
+            // Neither path may retain the publication mutex across scheduler
+            // admission, lifecycle reentry, or a panic boundary.
+            drop(stop_publication);
             break backend;
           }
           RuntimeLifecycle::Stopping(identity) => {
@@ -14431,6 +14894,73 @@ mod tests {
 
   #[cfg(not(target_family = "wasm"))]
   #[test]
+  fn exact_owner_lending_does_not_start_blocking_after_stop() {
+    use std::sync::mpsc;
+
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 1,
+      thread_name_prefix: "stopped-exact-owner".to_string(),
+      park_deadline: None,
+    };
+    let executor =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    let ran = Arc::new(AtomicBool::new(false));
+    let (claim_entered_tx, claim_entered_rx) = mpsc::channel();
+    let (release_claim_tx, release_claim_rx) = mpsc::channel();
+    let owner_executor = Arc::clone(&executor);
+    let child_ran = Arc::clone(&ran);
+    let owner = executor.schedule_blocking(move || {
+      BEFORE_OWNED_BLOCKING_QUEUE_CLAIM_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          claim_entered_tx.send(()).unwrap();
+          release_claim_rx.recv().unwrap();
+        }));
+      });
+      let child = owner_executor.schedule_blocking(move || {
+        child_ran.store(true, Ordering::SeqCst);
+      });
+      let mut future = std::pin::pin!(async move {
+        let _ = child.await;
+      });
+      owner_executor.block_on(future.as_mut())
+    });
+
+    claim_entered_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the cooperative driver must pause before the exact-owner queue claim");
+    assert_eq!(
+      executor.blocking_queue.lock().unwrap().jobs.len(),
+      1,
+      "the exact dependency must remain queued before stop publication"
+    );
+
+    // Pin the reported race: the cooperative driver already passed its loop's
+    // stop check, then shutdown publishes stop before the exact queue claim.
+    executor.stop.begin_shutdown();
+    release_claim_tx.send(()).unwrap();
+
+    assert_eq!(
+      futures::executor::block_on(owner).unwrap(),
+      BlockOnOutcome::Stopped,
+      "the cooperative driver must stop instead of executing its queued dependency"
+    );
+    assert!(!ran.load(Ordering::SeqCst), "exact-owner lending started blocking work after stop");
+    assert_eq!(
+      executor.blocking_queue.lock().unwrap().jobs.len(),
+      1,
+      "the stopped exact-owner claim must leave the queued job for shutdown cancellation"
+    );
+
+    executor.begin_shutdown();
+    executor.wait_until_scheduler_idle();
+    assert!(executor.blocking_queue.lock().unwrap().is_empty());
+    assert!(!ran.load(Ordering::SeqCst));
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
   fn exact_owner_lending_attempts_scale_linearly_with_topology() {
     const DEPENDENCY_COUNT: usize = 1024;
 
@@ -19831,6 +20361,26 @@ mod tests {
     }
   }
 
+  #[cfg(not(target_family = "wasm"))]
+  struct ReadyAfterOwnerLanePublication {
+    dependency: BlockingDependency,
+    ready: Arc<AtomicBool>,
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  impl Future for ReadyAfterOwnerLanePublication {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+      if self.ready.load(Ordering::SeqCst) {
+        Poll::Ready(())
+      } else {
+        record_blocking_dependency(self.dependency);
+        Poll::Pending
+      }
+    }
+  }
+
   #[test]
   fn current_thread_threadless_park_with_no_pending_wake_panics_with_typed_diagnostic() {
     // Shape (1): on a threadless build a CT park decision with an empty queue
@@ -20338,6 +20888,653 @@ mod tests {
     }
   }
 
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_cross_thread_publication_epoch_at_final_verdict_prevents_deadlock() {
+    // Publish only through the deadlock-admission protocol after every legacy
+    // final check. No runnable, blocking job, permit, timer, or metrics
+    // fingerprint changes, so only the synchronized publication epoch can
+    // prevent the false verdict. The future observes a separate test flag on
+    // its next poll; that flag is deliberately not a scheduler wake source.
+    use std::sync::mpsc;
+
+    struct ReadyAfterPublication(Arc<AtomicBool>);
+
+    impl Future for ReadyAfterPublication {
+      type Output = ();
+
+      fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+        if self.0.load(Ordering::SeqCst) { Poll::Ready(()) } else { Poll::Pending }
+      }
+    }
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "final-verdict-publication".to_string(),
+        park_deadline: Some(Duration::from_millis(40)),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+      let ready = Arc::new(AtomicBool::new(false));
+      let baseline_fingerprint = executor.metrics.progress_fingerprint();
+      let baseline_publications = executor.deadlock_state.publications();
+      let (hook_saw_tx, hook_saw_rx) = mpsc::channel::<(u64, bool, bool, bool, bool, usize)>();
+      let hook_exec = Arc::clone(&executor);
+      let hook_ready = Arc::clone(&ready);
+      DEADLINE_FINAL_VERDICT_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          let publication_executor = Arc::clone(&hook_exec);
+          std::thread::spawn(move || {
+            let mut admission = publication_executor
+              .begin_deadlock_admission()
+              .expect("the deadline detector must enable admission accounting");
+            hook_ready.store(true, Ordering::SeqCst);
+            admission.mark_published();
+          })
+          .join()
+          .unwrap();
+          hook_saw_tx
+            .send((
+              hook_exec.deadlock_state.publications(),
+              !hook_exec.has_queued_runnable(),
+              hook_exec
+                .blocking_queue
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .is_empty(),
+              hook_exec.next_timer_deadline().is_none(),
+              hook_exec.metrics.progress_fingerprint() == baseline_fingerprint,
+              hook_exec.parked_drivers.count.load(Ordering::SeqCst),
+            ))
+            .unwrap();
+        }));
+      });
+
+      let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+      let mut future = std::pin::pin!(ReadyAfterPublication(ready));
+      assert_eq!(
+        executor.block_on(future.as_mut()),
+        BlockOnOutcome::Completed,
+        "the publication epoch must veto the first verdict and permit the next poll"
+      );
+      let (
+        publications,
+        runnable_queue_empty,
+        blocking_queue_empty,
+        timer_heap_empty,
+        fingerprint_unchanged,
+        parked_drivers,
+      ) = hook_saw_rx.recv().expect("the final-verdict hook must have fired");
+      assert_eq!(
+        publications,
+        baseline_publications.checked_add(1).expect("test publication epoch must not overflow"),
+        "the cross-thread admission must publish exactly one epoch"
+      );
+      assert!(runnable_queue_empty, "the publication test must not queue a runnable");
+      assert!(blocking_queue_empty, "the publication test must not queue blocking work");
+      assert!(timer_heap_empty, "the publication test must not register a timer");
+      assert!(
+        fingerprint_unchanged,
+        "ordinary metrics progress must not veto the publication-only verdict"
+      );
+      assert_eq!(
+        parked_drivers, 0,
+        "the publication must land after the cooperative parker was deregistered"
+      );
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "a publication-only cross-thread admission was not observed by the final verdict ({error})"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_selected_owner_handoff_before_unpark_vetoes_gated_deadlock() {
+    // The exact owner lane is saturated and reserved while the cooperative
+    // driver parks. At expiry, release selects that driver and publishes its
+    // handoff, then pauses before unpark. The driver reaches the gated verdict
+    // with no queue, timer, metric, or ordinary publication change. The
+    // exact-owner publication boundary must serialize the final check. The
+    // hook then consumes the ordinary permit and renews the lane reservation,
+    // leaving only the pending-handoff predicate to veto the false deadlock.
+    use std::sync::mpsc;
+
+    let executor =
+      multi_thread_executor(1, Some(Duration::from_millis(40)), "deadline-selected-handoff");
+    let owner = executor.fresh_owner_token();
+    executor.active_blocking_owners.register(owner);
+    executor.active_blocking.store(executor.max_blocking, Ordering::SeqCst);
+
+    let ready = Arc::new(AtomicBool::new(false));
+    let (reservation_ready_tx, reservation_ready_rx) = mpsc::channel();
+    let (release_reservation_tx, release_reservation_rx) = mpsc::channel();
+    let (selected_tx, selected_rx) = mpsc::channel();
+    let (allow_unpark_tx, allow_unpark_rx) = mpsc::channel();
+    let (released_tx, released_rx) = mpsc::channel();
+    let (renewed_tx, renewed_rx) = mpsc::channel();
+    let release_executor = Arc::clone(&executor);
+    let renewal_executor = Arc::clone(&executor);
+    let release_ready = Arc::clone(&ready);
+    let releaser = std::thread::spawn(move || {
+      let reservation =
+        OwnerLaneReservation::try_acquire(&release_executor.active_blocking_owners, owner)
+          .expect("the synthetic exact-owner lane must start reserved");
+      reservation_ready_tx.send(()).unwrap();
+      OWNER_HANDOFF_SELECTED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          selected_tx.send(()).unwrap();
+          allow_unpark_rx.recv().unwrap();
+          let renewed = renewal_executor
+            .active_blocking_owners
+            .reserve(owner)
+            .expect("the released exact-owner lane must be reservable before unpark");
+          release_ready.store(true, Ordering::SeqCst);
+          renewed_tx.send(renewed).unwrap();
+        }));
+      });
+      release_reservation_rx.recv().unwrap();
+      released_tx.send(release_executor.release_owner_lane_and_wake(reservation)).unwrap();
+    });
+    reservation_ready_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the exact-owner reservation must be established before the park");
+
+    let baseline_fingerprint = executor.metrics.progress_fingerprint();
+    let baseline_publications = executor.deadlock_state.publications();
+    let expiry_executor = Arc::clone(&executor);
+    DEADLINE_EXPIRY_TEST_HOOK.with(|slot| {
+      *slot.borrow_mut() = Some(Box::new(move || {
+        release_reservation_tx.send(()).unwrap();
+        selected_rx
+          .recv_timeout(Duration::from_secs(2))
+          .expect("reservation release must select the still-registered exact-owner driver");
+        assert_eq!(
+          expiry_executor.parked_drivers.count.load(Ordering::SeqCst),
+          0,
+          "handoff selection must remove the driver before pausing ahead of unpark"
+        );
+      }));
+    });
+
+    let verdict_executor = Arc::clone(&executor);
+    let verdict_ready = Arc::clone(&ready);
+    DEADLINE_SYNCHRONIZED_STOP_TEST_HOOK.with(|slot| {
+      *slot.borrow_mut() = Some(Box::new(move || {
+        assert!(
+          verdict_executor.active_blocking_owners.is_available(owner),
+          "reservation release must publish lane availability before handoff selection"
+        );
+        assert!(!verdict_executor.has_queued_runnable());
+        assert!(
+          verdict_executor
+            .blocking_queue
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .is_empty()
+        );
+        assert!(verdict_executor.next_timer_deadline().is_none());
+        assert!(
+          verdict_executor.metrics.progress_fingerprint() == baseline_fingerprint,
+          "ordinary metrics progress must not save the selected-handoff verdict"
+        );
+        assert_eq!(verdict_executor.deadlock_state.publications(), baseline_publications);
+        assert!(
+          !verdict_ready.load(Ordering::SeqCst),
+          "the selected handoff must still be paused before unpark at the gated verdict"
+        );
+        allow_unpark_tx.send(()).unwrap();
+      }));
+    });
+    let exact_owner_executor = Arc::clone(&executor);
+    DEADLINE_EXACT_OWNER_VERDICT_TEST_HOOK.with(|slot| {
+      *slot.borrow_mut() = Some(Box::new(move |parker| {
+        assert!(
+          parker.consume_permit(),
+          "the selected handoff must unpark before exact-owner final predicates run"
+        );
+        assert!(
+          parker.has_owner_handoff(),
+          "consuming the ordinary permit must leave the exact-owner handoff pending"
+        );
+        assert!(
+          !exact_owner_executor.active_blocking_owners.is_available(owner),
+          "the renewed reservation must prevent lane availability from saving the verdict"
+        );
+      }));
+    });
+
+    {
+      let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+      let _owner = BlockingOwnerGuard::enter(Some(owner));
+      let mut future = std::pin::pin!(ReadyAfterOwnerLanePublication {
+        dependency: BlockingDependency { job: BlockingJobId(u64::MAX - 80), owner: Some(owner) },
+        ready: Arc::clone(&ready),
+      });
+      assert_eq!(executor.block_on(future.as_mut()), BlockOnOutcome::Completed);
+    }
+    assert!(
+      released_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the selected handoff publication must finish"),
+      "reservation release must have selected the cooperative driver"
+    );
+    let renewed = renewed_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the selected handoff must renew the owner reservation before unpark");
+    releaser.join().unwrap();
+
+    executor.active_blocking_owners.release(owner, renewed);
+    executor.active_blocking.store(0, Ordering::SeqCst);
+    executor.active_blocking_owners.unregister(owner);
+    executor.begin_shutdown();
+    executor.wait_until_scheduler_idle();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_owner_release_after_parker_deregistration_vetoes_gated_deadlock() {
+    // Release begins only after the deadline path has deregistered its parker
+    // and completed every legacy final check. No targeted wake or ordinary
+    // scheduler publication can save the verdict; the synchronized exact-owner
+    // availability predicate must observe the released lane.
+    use std::sync::mpsc;
+
+    let executor =
+      multi_thread_executor(1, Some(Duration::from_millis(40)), "deadline-owner-no-parker");
+    let owner = executor.fresh_owner_token();
+    executor.active_blocking_owners.register(owner);
+    executor.active_blocking.store(executor.max_blocking, Ordering::SeqCst);
+
+    let ready = Arc::new(AtomicBool::new(false));
+    let (reservation_ready_tx, reservation_ready_rx) = mpsc::channel();
+    let (release_reservation_tx, release_reservation_rx) = mpsc::channel();
+    let (released_tx, released_rx) = mpsc::channel();
+    let release_executor = Arc::clone(&executor);
+    let release_ready = Arc::clone(&ready);
+    let releaser = std::thread::spawn(move || {
+      let reservation =
+        OwnerLaneReservation::try_acquire(&release_executor.active_blocking_owners, owner)
+          .expect("the synthetic exact-owner lane must start reserved");
+      reservation_ready_tx.send(()).unwrap();
+      release_reservation_rx.recv().unwrap();
+      let woke = release_executor.release_owner_lane_and_wake(reservation);
+      release_ready.store(true, Ordering::SeqCst);
+      released_tx.send(woke).unwrap();
+    });
+    reservation_ready_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the exact-owner reservation must be established before the park");
+
+    let baseline_fingerprint = executor.metrics.progress_fingerprint();
+    let baseline_publications = executor.deadlock_state.publications();
+    let verdict_executor = Arc::clone(&executor);
+    DEADLINE_FINAL_VERDICT_TEST_HOOK.with(|slot| {
+      *slot.borrow_mut() = Some(Box::new(move || {
+        assert_eq!(
+          verdict_executor.parked_drivers.count.load(Ordering::SeqCst),
+          0,
+          "the release must begin only after deadline deregistration"
+        );
+        release_reservation_tx.send(()).unwrap();
+        assert!(
+          !released_rx
+            .recv_timeout(Duration::from_secs(2))
+            .expect("the no-parker owner release must finish"),
+          "no registered parker may receive the released owner lane"
+        );
+        assert!(verdict_executor.active_blocking_owners.is_available(owner));
+        assert!(!verdict_executor.has_queued_runnable());
+        assert!(
+          verdict_executor
+            .blocking_queue
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .is_empty()
+        );
+        assert!(verdict_executor.next_timer_deadline().is_none());
+        assert!(
+          verdict_executor.metrics.progress_fingerprint() == baseline_fingerprint,
+          "ordinary metrics progress must not save the no-parker release verdict"
+        );
+        assert_eq!(verdict_executor.deadlock_state.publications(), baseline_publications);
+      }));
+    });
+
+    {
+      let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+      let _owner = BlockingOwnerGuard::enter(Some(owner));
+      let mut future = std::pin::pin!(ReadyAfterOwnerLanePublication {
+        dependency: BlockingDependency { job: BlockingJobId(u64::MAX - 81), owner: Some(owner) },
+        ready: Arc::clone(&ready),
+      });
+      assert_eq!(executor.block_on(future.as_mut()), BlockOnOutcome::Completed);
+    }
+    releaser.join().unwrap();
+
+    executor.active_blocking.store(0, Ordering::SeqCst);
+    executor.active_blocking_owners.unregister(owner);
+    executor.begin_shutdown();
+    executor.wait_until_scheduler_idle();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_shutdown_stop_precedes_abort_wake_at_gated_deadlock_verdict() {
+    // Pin the shutdown race after the final verdict gate has closed:
+    //   1. an accepted task is pending, so shutdown abort must wake it;
+    //   2. a cooperative block_on reaches its deadline and pauses while
+    //      holding the closed verdict gate;
+    //   3. shutdown publishes generation stop, transitions
+    //      Running -> Stopping, then its abort wake blocks entering scheduler
+    //      admission behind that gate;
+    //   4. the gated final verdict must observe stop and return Stopped,
+    //      reopening the gate so the abort wake and shutdown can finish.
+    //
+    // Before stop was published by the controller transition, step 3 blocked
+    // inside abort before executor shutdown could set it. The driver then saw
+    // empty queues and emitted a false BlockOnDeadlock.
+    use std::sync::mpsc;
+
+    let controller = Arc::new(RuntimeController::new());
+    controller
+      .configure(RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "shutdown-gated-verdict".to_string(),
+        park_deadline: Some(Duration::from_millis(40)),
+      })
+      .expect("the shutdown race test configuration must be accepted");
+
+    let backend = controller.backend();
+    let RuntimeExecutor::MultiThread(executor) = &backend.executor else {
+      panic!("the configured backend must be MultiThread");
+    };
+    let executor_id = executor.id;
+    let weak_executor = Arc::downgrade(executor);
+    drop(backend);
+
+    let (task_polled_tx, task_polled_rx) = mpsc::channel();
+    let task = controller
+      .try_spawn(async move {
+        task_polled_tx.send(()).unwrap();
+        std::future::pending::<()>().await;
+      })
+      .unwrap_or_else(|_| panic!("the pending task must be accepted before shutdown"));
+    task_polled_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the accepted task must publish an abortable pending waker");
+
+    let (gate_closed_tx, gate_closed_rx) = mpsc::channel();
+    let (release_verdict_tx, release_verdict_rx) = mpsc::channel();
+    let (driver_result_tx, driver_result_rx) = mpsc::channel();
+    let driver_controller = Arc::clone(&controller);
+    let driver = std::thread::spawn(move || {
+      DEADLINE_GATED_VERDICT_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          gate_closed_tx.send(()).unwrap();
+          release_verdict_rx.recv().unwrap();
+        }));
+      });
+
+      let _on_pool = OnPoolWorkerGuard::enter(executor_id);
+      let mut pending = std::pin::pin!(NeverReady);
+      let result = catch_unwind(AssertUnwindSafe(|| driver_controller.block_on(pending.as_mut())));
+      let result = match result {
+        Ok(outcome) => Ok(outcome),
+        Err(payload) => {
+          let was_deadlock = payload.downcast_ref::<BlockOnDeadlock>().is_some();
+          discard_panic_payload(payload);
+          Err(was_deadlock)
+        }
+      };
+      driver_result_tx.send(result).unwrap();
+    });
+
+    gate_closed_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the cooperative driver must pause with the verdict gate closed");
+
+    let (abort_blocked_tx, abort_blocked_rx) = mpsc::channel();
+    let (shutdown_result_tx, shutdown_result_rx) = mpsc::channel();
+    let shutdown_controller = Arc::clone(&controller);
+    let shutdown = std::thread::spawn(move || {
+      DEADLOCK_CLOSED_GATE_ADMISSION_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          abort_blocked_tx.send(()).unwrap();
+        }));
+      });
+      shutdown_result_tx.send(shutdown_controller.shutdown()).unwrap();
+    });
+
+    abort_blocked_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the accepted task's abort wake must reach the closed verdict gate");
+    let lifecycle_is_stopping = {
+      let state = controller.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      matches!(&state.lifecycle, RuntimeLifecycle::Stopping(_))
+    };
+    let stop_was_published = weak_executor
+      .upgrade()
+      .is_some_and(|executor| executor.stop.publication_guard().is_stopping());
+
+    release_verdict_tx.send(()).unwrap();
+
+    let driver_result = driver_result_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the gated driver must resolve after observing shutdown");
+    let shutdown_result = shutdown_result_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("shutdown must finish after the verdict gate reopens");
+    driver.join().unwrap();
+    shutdown.join().unwrap();
+
+    assert!(lifecycle_is_stopping, "the abort wake must occur after Running -> Stopping");
+    assert!(
+      stop_was_published,
+      "generation stop must be visible before shutdown invokes accepted-task aborts"
+    );
+    assert_eq!(
+      driver_result,
+      Ok(BlockOnOutcome::Stopped),
+      "shutdown must not be reported as a gated BlockOnDeadlock"
+    );
+    shutdown_result.unwrap();
+    assert!(
+      futures::executor::block_on(task).is_err(),
+      "the accepted pending task must resolve as cancelled"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_gated_verdict_linearizes_before_shutdown_publication() {
+    // Complement the publication-wins race above. The verdict owns both its
+    // admission gate and the stop-publication mutex before shutdown starts.
+    // Shutdown reaches the lifecycle -> publication edge but cannot mutate
+    // Running -> Stopping until the verdict finishes its synchronized checks.
+    use std::sync::mpsc;
+
+    let controller = Arc::new(RuntimeController::new());
+    controller
+      .configure(RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "verdict-before-shutdown".to_string(),
+        park_deadline: Some(Duration::from_millis(40)),
+      })
+      .expect("the verdict-first test configuration must be accepted");
+
+    let backend = controller.backend();
+    let RuntimeExecutor::MultiThread(executor) = &backend.executor else {
+      panic!("the configured backend must be MultiThread");
+    };
+    let executor_id = executor.id;
+    drop(backend);
+
+    let (verdict_locked_tx, verdict_locked_rx) = mpsc::channel();
+    let (release_verdict_tx, release_verdict_rx) = mpsc::channel();
+    let (driver_result_tx, driver_result_rx) = mpsc::channel();
+    let driver_controller = Arc::clone(&controller);
+    let driver = std::thread::spawn(move || {
+      DEADLINE_SYNCHRONIZED_STOP_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          verdict_locked_tx.send(()).unwrap();
+          release_verdict_rx.recv().unwrap();
+        }));
+      });
+
+      let _on_pool = OnPoolWorkerGuard::enter(executor_id);
+      let mut pending = std::pin::pin!(NeverReady);
+      let result = catch_unwind(AssertUnwindSafe(|| driver_controller.block_on(pending.as_mut())));
+      let result = match result {
+        Ok(outcome) => Ok(outcome),
+        Err(payload) => {
+          let was_deadlock = payload.downcast_ref::<BlockOnDeadlock>().is_some();
+          discard_panic_payload(payload);
+          Err(was_deadlock)
+        }
+      };
+      driver_result_tx.send(result).unwrap();
+    });
+
+    verdict_locked_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the verdict must hold the synchronized stop-publication guard");
+
+    let (shutdown_waiting_tx, shutdown_waiting_rx) = mpsc::channel();
+    let (shutdown_result_tx, shutdown_result_rx) = mpsc::channel();
+    let shutdown_controller = Arc::clone(&controller);
+    let shutdown = std::thread::spawn(move || {
+      BEFORE_GENERATION_STOP_PUBLICATION_LOCK_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          shutdown_waiting_tx.send(()).unwrap();
+        }));
+      });
+      shutdown_result_tx.send(shutdown_controller.shutdown()).unwrap();
+    });
+
+    shutdown_waiting_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("shutdown must reach the lifecycle-to-publication lock edge");
+    let early_shutdown = shutdown_result_rx.recv_timeout(Duration::from_millis(100)).ok();
+    let shutdown_was_blocked = early_shutdown.is_none();
+    release_verdict_tx.send(()).unwrap();
+
+    let driver_result = driver_result_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the verdict-first driver must finish after release");
+    let shutdown_result = early_shutdown.unwrap_or_else(|| {
+      shutdown_result_rx
+        .recv_timeout(Duration::from_secs(5))
+        .expect("shutdown must finish after the verdict releases publication")
+    });
+    driver.join().unwrap();
+    shutdown.join().unwrap();
+
+    assert!(
+      shutdown_was_blocked,
+      "shutdown must not mutate and retire the Running lifecycle while the verdict owns publication"
+    );
+    assert_eq!(
+      driver_result,
+      Err(true),
+      "a verdict that linearizes before shutdown must retain the typed deadlock"
+    );
+    shutdown_result.unwrap();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_deadlock_panic_hook_can_submit_scheduler_work() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_DEADLOCK_PANIC_HOOK_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      let executor =
+        multi_thread_executor(1, Some(Duration::from_millis(40)), "deadlock-panic-hook");
+      // Keep the synthetic cooperative driver from arming a Rayon drainer. The
+      // hook only needs to prove that scheduler admission returns.
+      executor.active_drainers.store(executor.max_drainers, Ordering::SeqCst);
+
+      let hook_returned = Arc::new(AtomicBool::new(false));
+      let hook_flag = Arc::clone(&hook_returned);
+      let hook_executor = Arc::clone(&executor);
+      let previous_hook = std::panic::take_hook();
+      std::panic::set_hook(Box::new(move |_| {
+        let handle = hook_executor.schedule_blocking(|| ());
+        drop(handle);
+        hook_flag.store(true, Ordering::SeqCst);
+      }));
+
+      let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+      let result = catch_unwind(AssertUnwindSafe(|| {
+        let mut pending = std::pin::pin!(std::future::pending::<()>());
+        executor.block_on(pending.as_mut());
+      }));
+      std::panic::set_hook(previous_hook);
+
+      let payload = result.expect_err("the synthetic cooperative park must reach its deadline");
+      assert!(
+        payload.downcast_ref::<BlockOnDeadlock>().is_some(),
+        "the deadline must retain its structured diagnostic"
+      );
+      assert!(
+        hook_returned.load(Ordering::SeqCst),
+        "the panic hook's scheduler submission must return before unwind"
+      );
+
+      executor.active_drainers.store(0, Ordering::SeqCst);
+      executor.begin_shutdown();
+      executor.wait_until_scheduler_idle();
+      return;
+    }
+
+    let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::multi_thread_deadlock_panic_hook_can_submit_scheduler_work")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .stdout(std::process::Stdio::piped())
+      .stderr(std::process::Stdio::piped())
+      .spawn()
+      .expect("the panic-hook subprocess must start");
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let status = loop {
+      if let Some(status) = child.try_wait().expect("the subprocess status must be readable") {
+        break status;
+      }
+      if Instant::now() >= deadline {
+        let _ = child.kill();
+        let output = child.wait_with_output().expect("the timed-out subprocess must be reaped");
+        panic!(
+          "a panic-hook scheduler submission deadlocked the verdict gate\nstdout={}\nstderr={}",
+          String::from_utf8_lossy(&output.stdout),
+          String::from_utf8_lossy(&output.stderr)
+        );
+      }
+      std::thread::sleep(Duration::from_millis(10));
+    };
+    let output = child.wait_with_output().expect("the completed subprocess output must be read");
+    assert!(
+      status.success(),
+      "the panic-hook admission subprocess failed; status={:?}\nstdout={}\nstderr={}",
+      status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
   // The PARK_DEADLINE_ENV parse (unset/zero/garbage => disabled) moved to
   // rolldown_binding's single env-resolution pipeline together with the read
   // itself; its tests live there (async_runtime.rs resolver tests).
@@ -20578,6 +21775,197 @@ mod tests {
       &Arc::new(TimerDriverRegistry::default()),
       deadline,
     )
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_timer_registration_holds_deadlock_admission_until_heap_publication() {
+    use std::sync::mpsc;
+
+    let executor =
+      multi_thread_executor(1, Some(Duration::from_secs(1)), "timer-registration-admission");
+    let (entered_tx, entered_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let registration_executor = Arc::clone(&executor);
+    let registration = std::thread::spawn(move || {
+      TIMER_REGISTRATION_ADMISSION_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          entered_tx.send(()).unwrap();
+          release_rx.recv().unwrap();
+        }));
+      });
+      registration_executor.register_timer(
+        1,
+        Instant::now() + Duration::from_mins(1),
+        futures::task::noop_waker(),
+        &Arc::new(AtomicBool::new(false)),
+      );
+    });
+
+    entered_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("timer registration must pause after entering verdict admission");
+    let verdict = executor.try_begin_deadlock_verdict();
+    let admission_blocked_verdict = verdict.is_none();
+    drop(verdict);
+    release_tx.send(()).unwrap();
+    registration.join().unwrap();
+
+    assert!(
+      admission_blocked_verdict,
+      "a timer registration must remain announced until its heap entry is visible"
+    );
+    assert!(
+      executor.next_timer_deadline().is_some(),
+      "the admitted registration must publish its timer after release"
+    );
+    executor.begin_shutdown();
+    executor.wait_until_scheduler_idle();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[derive(Clone, Copy, Debug)]
+  enum TimerFireAdmissionPath {
+    Timekeeper,
+    Cooperative,
+    Shutdown,
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  struct ScheduleAfterTimerWakeRelease {
+    executor: Arc<MultiThreadExecutor>,
+    runnable: Mutex<Option<Runnable>>,
+    entered: std::sync::mpsc::Sender<()>,
+    release: Mutex<std::sync::mpsc::Receiver<()>>,
+    scheduled: std::sync::mpsc::Sender<()>,
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  impl ScheduleAfterTimerWakeRelease {
+    fn publish(&self) {
+      self.entered.send(()).unwrap();
+      self.release.lock().unwrap_or_else(std::sync::PoisonError::into_inner).recv().unwrap();
+      let runnable = self.runnable.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take();
+      if let Some(runnable) = runnable {
+        self.executor.schedule(runnable);
+      }
+      self.scheduled.send(()).unwrap();
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  impl std::task::Wake for ScheduleAfterTimerWakeRelease {
+    fn wake(self: Arc<Self>) {
+      self.publish();
+    }
+
+    fn wake_by_ref(self: &Arc<Self>) {
+      self.publish();
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  fn insert_timer_for_fire_admission_test(
+    executor: &MultiThreadExecutor,
+    id: TimerId,
+    deadline: Instant,
+    waker: Waker,
+    fired: Arc<AtomicBool>,
+  ) {
+    let mut inner = executor.timers.inner.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    inner.entries.insert(id, HeapTimerEntry { waker, fired });
+    inner.queue.push(deadline, id);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  fn assert_timer_fire_path_holds_deadlock_admission(path: TimerFireAdmissionPath) {
+    use std::sync::mpsc;
+
+    let executor = multi_thread_executor(1, Some(Duration::from_secs(1)), "timer-fire-admission");
+    let (runnable, task) = async_task::spawn(async {}, |_| {});
+    task.detach();
+    let (entered_tx, entered_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let (scheduled_tx, scheduled_rx) = mpsc::channel();
+    let fired = Arc::new(AtomicBool::new(false));
+    let waker = Waker::from(Arc::new(ScheduleAfterTimerWakeRelease {
+      executor: Arc::clone(&executor),
+      runnable: Mutex::new(Some(runnable)),
+      entered: entered_tx,
+      release: Mutex::new(release_rx),
+      scheduled: scheduled_tx,
+    }));
+
+    let fire_thread = match path {
+      TimerFireAdmissionPath::Timekeeper => {
+        executor.register_timer(1, Instant::now() + Duration::from_millis(20), waker, &fired);
+        None
+      }
+      TimerFireAdmissionPath::Cooperative => {
+        insert_timer_for_fire_admission_test(
+          &executor,
+          1,
+          Instant::now(),
+          waker,
+          Arc::clone(&fired),
+        );
+        let fire_executor = Arc::clone(&executor);
+        Some(std::thread::spawn(move || fire_executor.fire_due_timers()))
+      }
+      TimerFireAdmissionPath::Shutdown => {
+        insert_timer_for_fire_admission_test(
+          &executor,
+          1,
+          Instant::now() + Duration::from_mins(1),
+          waker,
+          Arc::clone(&fired),
+        );
+        let fire_executor = Arc::clone(&executor);
+        Some(std::thread::spawn(move || fire_executor.shutdown_timers()))
+      }
+    };
+
+    entered_rx
+      .recv_timeout(Duration::from_secs(2))
+      .unwrap_or_else(|error| panic!("{path:?} timer waker was not invoked: {error}"));
+    assert!(
+      executor.next_timer_deadline().is_none(),
+      "{path:?} must exercise the remove-before-wake window"
+    );
+    assert!(
+      executor.deadlock_state.admissions.load(Ordering::SeqCst) != 0,
+      "{path:?} must retain admission while its waker is publishing"
+    );
+    let verdict = executor.try_begin_deadlock_verdict();
+    let admission_blocked_verdict = verdict.is_none();
+    drop(verdict);
+
+    release_tx.send(()).unwrap();
+    scheduled_rx
+      .recv_timeout(Duration::from_secs(2))
+      .unwrap_or_else(|error| panic!("{path:?} timer wake did not publish its runnable: {error}"));
+    if let Some(fire_thread) = fire_thread {
+      fire_thread.join().unwrap();
+    }
+    assert!(
+      admission_blocked_verdict,
+      "{path:?} allowed a final verdict while the timer was invisible and its wake unpublished"
+    );
+
+    executor.begin_shutdown();
+    executor.wait_until_scheduler_idle();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_timer_fire_paths_hold_deadlock_admission_through_wake_publication() {
+    for path in [
+      TimerFireAdmissionPath::Timekeeper,
+      TimerFireAdmissionPath::Cooperative,
+      TimerFireAdmissionPath::Shutdown,
+    ] {
+      assert_timer_fire_path_holds_deadlock_admission(path);
+    }
   }
 
   #[cfg(not(target_family = "wasm"))]

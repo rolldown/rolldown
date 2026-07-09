@@ -1,27 +1,29 @@
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { parentPort, workerData } from 'node:worker_threads';
 
+import { getRuntimeCapabilities } from 'rolldown/experimental';
+
 const require = createRequire(import.meta.url);
 const binding = require(workerData.bindingPath);
-const capabilities = binding.getRuntimeCapabilities();
+const capabilities = getRuntimeCapabilities();
 const probe = binding.__rolldownTestRetainSchedulerWaker;
-const registerTaskHost = binding.registerCurrentThreadTaskHost;
 
 if (typeof probe !== 'function') {
   parentPort.postMessage({
     type: 'unsupported',
     error: 'The async-runtime binding was built without the worker teardown regression probe',
   });
-} else if (capabilities.flavor === 'CurrentThread' && typeof registerTaskHost !== 'function') {
-  parentPort.postMessage({
-    type: 'unsupported',
-    error: 'The async-runtime binding does not expose the CurrentThread task-host contract',
-  });
 } else {
-  if (capabilities.flavor === 'CurrentThread') {
-    registerTaskHost();
-  }
+  const armingKeepalive = setInterval(() => {
+    if (existsSync(workerData.paths.armed)) {
+      clearInterval(armingKeepalive);
+    }
+  }, 5);
   probe(workerData.paths.armed, workerData.paths.release, workerData.paths.completed);
-  parentPort.postMessage({ type: 'started', backend: capabilities.backend });
-  setInterval(() => {}, 1_000);
+  parentPort.postMessage({
+    type: 'started',
+    backend: capabilities.backend,
+    flavor: capabilities.flavor,
+  });
 }

@@ -4,7 +4,7 @@ import nodePath from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
-const bindingDir = fileURLToPath(new URL('../../../src/', import.meta.url));
+const bindingDir = fileURLToPath(new URL('../../../dist/', import.meta.url));
 const bindingFiles = readdirSync(bindingDir).filter(
   (name) => name.startsWith('rolldown-binding.') && name.endsWith('.node'),
 );
@@ -26,6 +26,16 @@ try {
       paths,
     },
   });
+  const workerExit = new Promise((resolve, reject) => {
+    worker.once('error', reject);
+    worker.once('exit', (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`Worker exited with code ${code}`));
+      }
+    });
+  });
   const started = await new Promise((resolve, reject) => {
     worker.once('message', resolve);
     worker.once('error', reject);
@@ -35,7 +45,7 @@ try {
   }
 
   await waitForFile(paths.armed, paths.completed, 'scheduler waker publication');
-  await worker.terminate();
+  await workerExit;
   const workerExitedBeforeRelease = true;
 
   writeFileSync(paths.release, 'release');
@@ -48,6 +58,7 @@ try {
   console.log(
     JSON.stringify({
       backend: started.backend,
+      flavor: started.flavor,
       completed,
       workerExitedBeforeRelease,
     }),

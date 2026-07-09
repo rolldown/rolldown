@@ -2359,6 +2359,11 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
+export interface BindingHostRegistration {
+  high: number
+  low: number
+}
+
 export interface BindingIndentOptions {
   exclude?: Array<Array<number>> | Array<number>
 }
@@ -2818,7 +2823,9 @@ export interface BindingRuntimeMetrics {
 
 export interface BindingRuntimeOptions {
   flavor?: BindingRuntimeFlavor
+  /** Positive integer worker count. Values above `u32::MAX` are rejected. */
   workerThreads?: number
+  /** Positive integer blocking-task limit. Values above `u32::MAX` are rejected. */
   maxBlockingTasks?: number
 }
 
@@ -3116,7 +3123,8 @@ export declare function getAsyncRuntimeMetrics(): BindingRuntimeMetrics
 
 /**
  * Return the native CurrentThread task-host ABI expected by the JavaScript
- * package before it invokes either async-runtime host registration.
+ * package before it invokes either async-runtime host registration. Version 2
+ * is the zero-argument native host with an exact disposable registration.
  */
 export declare function getCurrentThreadTaskHostContractVersion(): number
 
@@ -3195,7 +3203,7 @@ export interface PreRenderedChunk {
  *
  * A no-op on the default `tokio-runtime` build.
  */
-export declare function registerCurrentThreadTaskHost(dispatch?: never): void
+export declare function registerCurrentThreadTaskHost(dispatch?: never): BindingHostRegistration
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
@@ -3207,7 +3215,7 @@ export declare function registerPlugins(id: number, plugins: Array<BindingPlugin
  * every live host receives each timer. A no-op on the default `tokio-runtime`
  * build (tokio owns its timer wheel).
  */
-export declare function registerTimerHost(schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): void
+export declare function registerTimerHost(schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): BindingHostRegistration
 
 /**
  * Reset cumulative async runtime event counters to zero.
@@ -3236,6 +3244,23 @@ export declare function shutdownAsyncRuntime(): void
  * lifecycle; this compatibility API remains a no-op on those artifacts.
  */
 export declare function startAsyncRuntime(): void
+
+/**
+ * Evict exactly one native host installed by `registerCurrentThreadTaskHost`.
+ * Managed workerd disposal uses this before environment cleanup so a later
+ * throwing cleanup hook cannot leave the process-global driver selected.
+ *
+ * A no-op on the default `tokio-runtime` build.
+ */
+export declare function unregisterCurrentThreadTaskHost(registrationHigh: number, registrationLow: number): void
+
+/**
+ * Evict exactly one callback installed by `registerTimerHost`.
+ * Pending sleeps are woken so they can reselect another live environment.
+ *
+ * A no-op on the default `tokio-runtime` build.
+ */
+export declare function unregisterTimerHost(registrationHigh: number, registrationLow: number): void
 
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean

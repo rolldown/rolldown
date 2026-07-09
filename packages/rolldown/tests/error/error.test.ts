@@ -1,6 +1,14 @@
 import type { Plugin } from 'rolldown';
-import { rolldown } from 'rolldown';
+import { build, rolldown } from 'rolldown';
 import { describe, expect, test, vi } from 'vitest';
+
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
 
 async function buildWithPlugin(plugin: Plugin) {
   try {
@@ -96,6 +104,103 @@ describe('Plugin closeBundle hook', async () => {
     expect(receivedError!.message).toContain('load error');
   });
 
+  test('failed scan closes exactly once with the original diagnostic context', async () => {
+    const loadError = new TypeError('retained load failure');
+    let receivedError: Error | undefined;
+    const closeBundleFn = vi.fn((error?: Error) => {
+      receivedError = error;
+    });
+    const bundle = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: 'failed-scan-close-context',
+          load() {
+            throw loadError;
+          },
+          closeBundle: closeBundleFn,
+        },
+      ],
+    });
+
+    const buildError = await bundle.generate().catch((error: unknown) => error);
+
+    expect((buildError as { errors: unknown[] }).errors).toEqual([loadError]);
+    expect((receivedError as unknown as { errors: unknown[] }).errors).toEqual([loadError]);
+    expect(closeBundleFn).toHaveBeenCalledOnce();
+    await expect(bundle.close()).resolves.toBeUndefined();
+    expect(closeBundleFn).toHaveBeenCalledOnce();
+  });
+
+  test('buildEnd-only failure closes once with the buildEnd diagnostic', async () => {
+    const buildEndError = new RangeError('retained buildEnd failure');
+    let receivedError: Error | undefined;
+    const closeBundleFn = vi.fn((error?: Error) => {
+      receivedError = error;
+    });
+    const bundle = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: 'build-end-only-close-context',
+          buildEnd() {
+            throw buildEndError;
+          },
+          closeBundle: closeBundleFn,
+        },
+      ],
+    });
+
+    const buildError = await bundle.generate().catch((error: unknown) => error);
+
+    expect((buildError as { errors: unknown[] }).errors).toEqual([buildEndError]);
+    expect((receivedError as unknown as { errors: unknown[] }).errors).toEqual([buildEndError]);
+    expect(closeBundleFn).toHaveBeenCalledOnce();
+    await expect(bundle.close()).resolves.toBeUndefined();
+    expect(closeBundleFn).toHaveBeenCalledOnce();
+  });
+
+  test('build and buildEnd failures are both delivered to closeBundle once', async () => {
+    const loadError = new TypeError('retained compound load failure');
+    const buildEndError = new RangeError('retained compound buildEnd failure');
+    let receivedBuildEndError: Error | undefined;
+    let receivedCloseError: Error | undefined;
+    const closeBundleFn = vi.fn((error?: Error) => {
+      receivedCloseError = error;
+    });
+    const bundle = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: 'compound-build-close-context',
+          load() {
+            throw loadError;
+          },
+          buildEnd(error) {
+            receivedBuildEndError = error;
+            throw buildEndError;
+          },
+          closeBundle: closeBundleFn,
+        },
+      ],
+    });
+
+    const buildError = await bundle.generate().catch((error: unknown) => error);
+
+    expect((receivedBuildEndError as unknown as { errors: unknown[] }).errors).toEqual([loadError]);
+    expect((buildError as { errors: unknown[] }).errors).toEqual([loadError, buildEndError]);
+    expect((receivedCloseError as unknown as { errors: unknown[] }).errors).toEqual([
+      loadError,
+      buildEndError,
+    ]);
+    expect(closeBundleFn).toHaveBeenCalledOnce();
+    await expect(bundle.close()).resolves.toBeUndefined();
+    expect(closeBundleFn).toHaveBeenCalledOnce();
+  });
+
   test('call closeBundle hook without error argument when build succeeds', async () => {
     let receivedError: Error | undefined = new Error('should be cleared');
     const build = await rolldown({
@@ -132,6 +237,85 @@ describe('Plugin closeBundle hook', async () => {
     await build.generate();
     await build.close();
     expect(closeBundleFn).toHaveBeenCalledTimes(1);
+  });
+
+  test('concurrent and late close replay the original closeBundle error', async () => {
+    const entered = deferred();
+    const release = deferred();
+    const closeError = Object.assign(new RangeError('retained closeBundle failure'), {
+      marker: 'original-close-error',
+    });
+    const closeBundleFn = vi.fn(async () => {
+      entered.resolve();
+      await release.promise;
+      throw closeError;
+    });
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [{ name: 'retained-close-error', closeBundle: closeBundleFn }],
+    });
+    await build.generate();
+
+    const first = build.close();
+    await entered.promise;
+    const concurrent = build.close();
+    expect(concurrent).toBe(first);
+    release.resolve();
+
+    await expect(first).rejects.toBe(closeError);
+    await expect(concurrent).rejects.toBe(closeError);
+    const late = build.close();
+    expect(late).toBe(first);
+    await expect(late).rejects.toBe(closeError);
+    expect(closeBundleFn).toHaveBeenCalledOnce();
+  });
+
+  test.each<[string, () => unknown]>([
+    ['string', () => 'close string failure'],
+    ['number', () => 404],
+    ['null', () => null],
+    ['plain object', () => ({ marker: 'close object failure' })],
+  ])('preserves a %s closeBundle throw through close and build aggregation', async (_, value) => {
+    const closeValue = value();
+    const closeBundleFn = vi.fn(() => {
+      throw closeValue;
+    });
+    const bundle = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [{ name: 'non-error-close-identity', closeBundle: closeBundleFn }],
+    });
+    await bundle.generate();
+
+    const firstClose = bundle.close();
+    await expect(firstClose).rejects.toBe(closeValue);
+    expect(bundle.close()).toBe(firstClose);
+    await expect(bundle.close()).rejects.toBe(closeValue);
+    expect(closeBundleFn).toHaveBeenCalledOnce();
+
+    const buildError = new Error('primary build failure');
+    const aggregatedCloseBundleFn = vi.fn(() => {
+      throw closeValue;
+    });
+    const aggregate = await build({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      write: false,
+      plugins: [
+        {
+          name: 'non-error-close-aggregation',
+          load() {
+            throw buildError;
+          },
+          closeBundle: aggregatedCloseBundleFn,
+        },
+      ],
+    }).catch((error: unknown) => error);
+
+    expect(aggregate).toBeInstanceOf(AggregateError);
+    expect((aggregate as AggregateError).errors[1]).toBe(closeValue);
+    expect(aggregatedCloseBundleFn).toHaveBeenCalledOnce();
   });
 
   test('should error at generate if bundle already closed', async () => {

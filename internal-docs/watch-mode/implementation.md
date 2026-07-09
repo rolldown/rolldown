@@ -358,15 +358,21 @@ The binding returns a structured result containing both the native close
 failures and the opaque close identities of every bundle handle owned by the
 coordinator. Rust keeps each close failure separately,
 including every diagnostic in a batched failure, and the binding converts each
-entry independently. Native JavaScript exceptions retain their original object
-identity on supported native N-API hosts. The TypeScript wrapper flattens those
+entry independently. JavaScript exceptions retain their original object
+identity on supported N-API hosts. The TypeScript wrapper flattens those
 entries into the same outer close coordinator as retained-result, worker,
 listener, and runtime-release failures, so one stable terminal `AggregateError`
 contains every attempted shutdown phase instead of collapsing all native
 failures into one child error.
-Regardless of native failure, the outer `closePromise` then closes every
-superseded `BUNDLE_END` / `ERROR` result, awaits every parallel-plugin worker
-termination, and dispatches a stable snapshot of `close` listeners concurrently.
+Structured native failures are terminal results, so the outer `closePromise`
+continues by closing every superseded `BUNDLE_END` / `ERROR` result, awaiting
+every parallel-plugin worker termination, and dispatching a stable snapshot of
+`close` listeners concurrently. A rejected N-API close promise is different:
+the binding may already have published native close without delivering its
+shared result. JavaScript clears only the transport promise, retains result
+handles, workers, listeners, and the runtime lease, and retries the idempotent
+native close on the next public close attempt. Teardown continues only after a
+structured result establishes native ownership.
 Close dispatch awaits every listener with all-settled semantics, aggregates all
 listener failures, and clears the complete listener map both before dispatch
 and after it settles so listeners added during terminal dispatch cannot survive

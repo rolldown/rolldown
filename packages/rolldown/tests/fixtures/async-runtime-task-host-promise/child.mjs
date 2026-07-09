@@ -1,16 +1,25 @@
 import { createRequire } from 'node:module';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import nodePath from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const bindingPath = process.env.ROLLDOWN_TEST_BINDING_PATH ?? '../../../src/binding.cjs';
-const binding = require(bindingPath);
+const bindingDir = fileURLToPath(new URL('../../../src/', import.meta.url));
+const bindingFiles = readdirSync(bindingDir).filter(
+  (name) => name.startsWith('rolldown-binding.') && name.endsWith('.node'),
+);
+if (bindingFiles.length !== 1) {
+  throw new Error(`Expected one native Rolldown binding, found ${bindingFiles.join(', ')}`);
+}
+const binding = require(nodePath.join(bindingDir, bindingFiles[0]));
 const {
   __rolldownTestRetainSchedulerWaker,
+  getCurrentThreadTaskHostContractVersion,
   getRuntimeCapabilities,
   registerCurrentThreadTaskHost,
   shutdownAsyncRuntime,
+  unregisterCurrentThreadTaskHost,
 } = binding;
 const capabilities = getRuntimeCapabilities();
 const NativePromise = globalThis.Promise;
@@ -54,8 +63,22 @@ if (
 ) {
   throw new Error('CurrentThread task delivery capabilities must remain native-owned');
 }
+const taskHostContractVersion = getCurrentThreadTaskHostContractVersion();
+if (taskHostContractVersion !== 2) {
+  throw new Error(`Unexpected task-host contract version: ${taskHostContractVersion}`);
+}
 
-registerCurrentThreadTaskHost();
+const taskHostRegistration = registerCurrentThreadTaskHost();
+if (
+  !Number.isInteger(taskHostRegistration?.high) ||
+  taskHostRegistration.high < 0 ||
+  taskHostRegistration.high > 0xffff_ffff ||
+  !Number.isInteger(taskHostRegistration?.low) ||
+  taskHostRegistration.low < 0 ||
+  taskHostRegistration.low > 0xffff_ffff
+) {
+  throw new Error('registerCurrentThreadTaskHost returned an invalid registration');
+}
 
 if (typeof __rolldownTestRetainSchedulerWaker !== 'function') {
   throw new Error('The async-runtime binding was built without the scheduler-waker test probe');
@@ -91,6 +114,7 @@ try {
     constructorGetterCalls,
     flavor: capabilities.flavor,
     registrationError,
+    taskHostContractVersion,
     unhandled,
   };
   console.log(JSON.stringify(result));
@@ -104,8 +128,12 @@ try {
   }
 } finally {
   try {
-    shutdownAsyncRuntime();
+    unregisterCurrentThreadTaskHost(taskHostRegistration.high, taskHostRegistration.low);
   } finally {
-    rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 10 });
+    try {
+      shutdownAsyncRuntime();
+    } finally {
+      rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 10 });
+    }
   }
 }

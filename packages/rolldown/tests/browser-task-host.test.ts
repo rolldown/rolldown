@@ -3,7 +3,7 @@ import nodePath from 'node:path';
 import { rolldown } from 'rolldown';
 import { expect, test } from 'vitest';
 
-test('browser builds register the CurrentThread fresh-turn task host', async () => {
+test('browser builds register the ABI-v2 CurrentThread task host', async () => {
   const bundle = await rolldown({
     input: nodePath.resolve(import.meta.dirname, '../src/timer-host.ts'),
     external: [/binding\.cjs$/],
@@ -21,10 +21,10 @@ test('browser builds register the CurrentThread fresh-turn task host', async () 
       .map((item) => item.code)
       .join('\n');
 
-    // Paired with the Rust Shared-wake regression: browser builds must retain
-    // the host turn that prevents a scheduler wake from polling inline.
+    expect(code).toContain('getCurrentThreadTaskHostContractVersion');
     expect(code).toContain('registerCurrentThreadTaskHost');
     expect(code).not.toContain('driveCurrentThreadRuntimeTasks');
+    expect(code).not.toContain('cancelCurrentThreadRuntimeTaskDispatch');
 
     // Browser timer support remains a separate capability decision.
     expect(code).not.toContain('registerTimerHost(');

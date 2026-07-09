@@ -21,6 +21,7 @@ doctest = false
 test = false
 
 [dependencies]
+rolldown_devtools = { workspace = true }
 tracing = { workspace = true, features = ["valuable"] }
 tracing-chrome = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, default-features = false, features = ["fmt", "ansi"] }

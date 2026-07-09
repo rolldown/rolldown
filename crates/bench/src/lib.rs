@@ -158,6 +158,7 @@ pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
     plugins: vec![],
     session: None,
     disable_tracing_setup: true,
+    defer_close_on_error: false,
   })
   .expect("Failed to create bundle factory");
   BenchContext { factory, mem_fs, cwd, platform, tsconfig, raw_resolve }

@@ -1026,7 +1026,10 @@ returned by option normalization. `DevEngine.close()` is memoized, drains its
 accepted JavaScript operations, and then awaits the native
 terminal-close phase; native close waits for active dev callbacks,
 `closeBundle`, and coordinator shutdown. Parallel workers are terminated only afterward,
-including when native close reports errors. Constructor failure also
+including when native close reports terminal diagnostics. If the terminal-close
+promise rejects before delivering that structured result, TypeScript clears
+only the native close single-flight promise and retains both workers and the
+runtime lease for the next `close()` attempt. Constructor failure also
 terminates workers that were already initialized. Runtime-lease acquisition
 and binding-construction failures combine worker shutdown with lease release
 under one retryable setup-cleanup owner. A transient cleanup failure is retried

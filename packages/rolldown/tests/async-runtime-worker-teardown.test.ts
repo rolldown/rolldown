@@ -10,7 +10,7 @@ const testsDir = fileURLToPath(new URL('.', import.meta.url));
 const childPath = nodePath.join(testsDir, 'fixtures', 'async-runtime-worker-teardown', 'child.mjs');
 const requireSharedRuntime = process.env.ROLLDOWN_TEST_REQUIRE_SHARED_ASYNC_RUNTIME === '1';
 
-test.runIf(caps.backend === 'shared' || requireSharedRuntime)(
+test.runIf(!caps.wasi && (caps.backend === 'shared' || requireSharedRuntime))(
   'a scheduler waker remains callable after its sole worker environment exits',
   { timeout: 30_000 },
   () => {
@@ -19,7 +19,10 @@ test.runIf(caps.backend === 'shared' || requireSharedRuntime)(
     const child = spawnSync(process.execPath, [childPath], {
       cwd: testsDir,
       encoding: 'utf8',
-      env: { ...process.env },
+      env: {
+        ...process.env,
+        ROLLDOWN_RUNTIME: 'single',
+      },
       timeout: 25_000,
     });
 
@@ -29,6 +32,7 @@ test.runIf(caps.backend === 'shared' || requireSharedRuntime)(
     const result = JSON.parse(child.stdout.trim().split('\n').at(-1)!);
     expect(result).toMatchObject({
       backend: 'shared',
+      flavor: 'CurrentThread',
       completed: 'completed',
       workerExitedBeforeRelease: true,
     });

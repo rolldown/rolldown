@@ -1738,8 +1738,9 @@ test.concurrent(
       }
     });
 
-    // build error call once + result.close() call once
-    await expect.poll(() => closeBundleFn).toBeCalledTimes(2);
+    // The failed build runs closeBundle before emitting ERROR; result.close()
+    // replays that completed close and releases the retained build resources.
+    await expect.poll(() => closeBundleFn).toBeCalledTimes(1);
   },
 );
 

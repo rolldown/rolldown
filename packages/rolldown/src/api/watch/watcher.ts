@@ -37,6 +37,10 @@ interface WatchResultClose {
   closeIdentity: string;
 }
 
+interface WatcherCloseAttemptResult extends CloseAttemptResult {
+  nativeCloseReturned: boolean;
+}
+
 export class WatchResultCloseRegistry {
   #current = new Map<number, WatchResultClose>();
   #pendingBuild = new Map<number, WatchResultClose>();
@@ -312,6 +316,9 @@ class Watcher {
 
   private async closeLifecycle(): Promise<CloseAttemptResult> {
     const result = await this.closeOwnedResources();
+    if (!result.nativeCloseReturned) {
+      return result;
+    }
 
     try {
       this.closeEventPromise ??= this.dispatchCloseEvent();
@@ -332,6 +339,9 @@ class Watcher {
 
   async cleanupAfterSetupFailure(): Promise<CloseAttemptResult> {
     const result = await this.closeOwnedResources();
+    if (!result.nativeCloseReturned) {
+      return result;
+    }
     try {
       this.runtimeLease.release();
     } catch (error) {
@@ -341,21 +351,26 @@ class Watcher {
     return result;
   }
 
-  private async closeOwnedResources(): Promise<CloseAttemptResult> {
+  private async closeOwnedResources(): Promise<WatcherCloseAttemptResult> {
     this.closed = true;
     const errors: unknown[] = this.runFailure === undefined ? [] : [this.runFailure];
     this.cancelScheduledRun(errors);
     this.startNativeClose();
-    const nativeCloseResult = await this.nativeCloseResultPromise!;
+    const nativeCloseResultPromise = this.nativeCloseResultPromise!;
+    const nativeCloseResult = await nativeCloseResultPromise;
     errors.push(...nativeCloseResult.errors);
+    if (!nativeCloseResult.nativeCloseReturned) {
+      if (this.nativeCloseResultPromise === nativeCloseResultPromise) {
+        this.nativeCloseResultPromise = undefined;
+        this.nativeClosePromise = undefined;
+      }
+      return { errors, nativeCloseReturned: false, retryable: true };
+    }
 
     // A structured native shutdown owns each task's current bundle handle, so
-    // normally only superseded handles close here. If close transport fails,
-    // ownership is unknown and current/pending handles are also closed
-    // best-effort through their idempotent BundleHandle lifecycle.
+    // only superseded handles close here.
     const resultCloseOutcomes = await this.resultCloses.drain(
       new Set(nativeCloseResult.nativeOwnedCloseIdentities),
-      !nativeCloseResult.nativeCloseReturned,
     );
     for (const outcome of resultCloseOutcomes) {
       if (outcome.status === 'rejected') {
@@ -374,13 +389,18 @@ class Watcher {
       }
     }
 
-    return { errors, retryable };
+    return { errors, nativeCloseReturned: true, retryable };
   }
 
   private startNativeClose(): void {
     if (!this.nativeCloseResultPromise) {
+      let nativeCloseResultPromise: Promise<{
+        errors: unknown[];
+        nativeCloseReturned: boolean;
+        nativeOwnedCloseIdentities: string[];
+      }>;
       try {
-        this.nativeCloseResultPromise = this.inner
+        nativeCloseResultPromise = this.inner
           .close()
           .then((result) => ({
             errors: result.errors.map(normalizeBindingError),
@@ -393,12 +413,13 @@ class Watcher {
             nativeOwnedCloseIdentities: [],
           }));
       } catch (error) {
-        this.nativeCloseResultPromise = Promise.resolve({
+        nativeCloseResultPromise = Promise.resolve({
           errors: [error],
           nativeCloseReturned: false,
           nativeOwnedCloseIdentities: [],
         });
       }
+      this.nativeCloseResultPromise = nativeCloseResultPromise;
     }
     if (!this.nativeClosePromise) {
       this.nativeClosePromise = this.nativeCloseResultPromise.then(({ errors }) => {

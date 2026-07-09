@@ -30,7 +30,6 @@
 mod devtools_formatter;
 mod devtools_layer;
 mod init_tracing;
-mod static_data;
 mod trace_action_macro;
 mod type_alias;
 mod types;
@@ -40,7 +39,15 @@ mod writer;
 pub use rolldown_devtools_action as action;
 
 pub use {
-  init_tracing::{DebugTracer, Session},
+  devtools_formatter::DevtoolsFormatter,
+  devtools_layer::DevtoolsLayer,
+  init_tracing::{
+    DebugTracer, DevtoolsFilter, DevtoolsTracingInitError, Session, TracingSubscriberCapabilities,
+    ensure_tracing_subscriber,
+  },
   utils::{generate_build_id, generate_session_id},
-  writer::flush_session,
+  writer::{
+    DevtoolsSessionKey, DevtoolsWriterError, DevtoolsWriterFailure, DevtoolsWriterOperation,
+    DevtoolsWriterResult, flush_session,
+  },
 };

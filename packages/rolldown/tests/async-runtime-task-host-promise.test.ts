@@ -14,7 +14,11 @@ const childPath = nodePath.join(
   'child.mjs',
 );
 
-test.runIf(capabilities.backend === 'shared' && capabilities.flavor === 'CurrentThread')(
+test.runIf(
+  !capabilities.wasi &&
+    capabilities.backend === 'shared' &&
+    capabilities.flavor === 'CurrentThread',
+)(
   'task-host registration rejects a poisoned-Promise callback without invoking it',
   { timeout: 30_000 },
   () => {
@@ -35,6 +39,7 @@ test.runIf(capabilities.backend === 'shared' && capabilities.flavor === 'Current
       constructorGetterCalls: 0,
       flavor: 'CurrentThread',
       registrationError: 'registerCurrentThreadTaskHost does not accept a JavaScript callback',
+      taskHostContractVersion: 2,
       unhandled: [],
     });
   },

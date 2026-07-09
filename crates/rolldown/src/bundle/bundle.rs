@@ -1,4 +1,4 @@
-use crate::bundle::bundle_handle::BundleHandle;
+use crate::bundle::bundle_handle::{BundleCloseState, BundleHandle};
 
 use super::super::{
   SharedOptions, SharedResolver,
@@ -15,11 +15,9 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
+use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_plugin::{
-  HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
-};
+use rolldown_plugin::{HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
 use rolldown_utils::dashmap::FxDashSet;
 use std::{path::Path, sync::Arc};
 use sugar_path::SugarPath;
@@ -37,6 +35,8 @@ pub struct Bundle<Fs: FileSystem + Clone + 'static = OsFileSystem> {
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) cache: ScanStageCache,
   pub(crate) bundle_span: tracing::Span,
+  pub(crate) close_state: Arc<BundleCloseState>,
+  pub(crate) defer_close_on_error: bool,
 }
 
 impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
@@ -120,21 +120,17 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       Ok(v) => v,
       Err(errs) => {
         debug_assert!(errs.iter().all(|e| e.severity() == Severity::Error));
-        self
-          .plugin_driver
-          .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
-          .await?;
-        self
-          .plugin_driver
-          .close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd }))
-          .await?;
-        return Err(errs);
+        return Err(self.finish_failed_scan(errs.into_vec()).await.into());
       }
     };
 
-    let scan_stage_output = self
+    let scan_stage_output = match self
       .normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode)
-      .await?;
+      .await
+    {
+      Ok(output) => output,
+      Err(errs) => return Err(self.finish_failed_scan(errs.into_vec()).await.into()),
+    };
 
     // Make sure the cache is reset if incremental build is not enabled.
     if !self.options.experimental.is_incremental_build_enabled() {
@@ -142,9 +138,41 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
 
     Self::trace_action_module_graph_ready(&scan_stage_output);
-    self.plugin_driver.build_end(None).await?;
+    if let Err(error) = self.plugin_driver.build_end(None).await {
+      let errors = BatchedBuildDiagnostic::from(error).into_vec();
+      return Err(self.finish_errors(errors).await.into());
+    }
     trace_action!(action::BuildEnd { action: "BuildEnd" });
     Ok(scan_stage_output)
+  }
+
+  async fn finish_failed_scan(&self, mut errors: Vec<BuildDiagnostic>) -> Vec<BuildDiagnostic> {
+    if let Err(error) = self
+      .plugin_driver
+      .build_end(Some(&HookBuildEndArgs { errors: &errors, cwd: &self.options.cwd }))
+      .await
+    {
+      errors.extend(BatchedBuildDiagnostic::from(error).into_vec());
+    }
+    self.finish_errors(errors).await
+  }
+
+  async fn finish_errors(&self, errors: Vec<BuildDiagnostic>) -> Vec<BuildDiagnostic> {
+    if self.defer_close_on_error {
+      self.context().mark_close_on_error();
+      errors
+    } else {
+      self.close_with_errors(errors).await
+    }
+  }
+
+  async fn close_with_errors(&self, errors: Vec<BuildDiagnostic>) -> Vec<BuildDiagnostic> {
+    let errors = Arc::new(errors);
+    let _ = self.context().close_with_errors(Some(Arc::clone(&errors))).await;
+    match Arc::try_unwrap(errors) {
+      Ok(errors) => errors,
+      Err(_) => unreachable!("completed closeBundle future retained its diagnostic context"),
+    }
   }
 
   #[inline]
@@ -160,7 +188,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     BundleHandle {
       options: Arc::clone(&self.options),
       plugin_driver: Arc::clone(&self.plugin_driver),
-      close_future: Arc::default(),
+      close_state: Arc::clone(&self.close_state),
     }
   }
 

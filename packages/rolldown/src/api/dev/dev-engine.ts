@@ -211,13 +211,18 @@ export class DevEngine {
     const errors: unknown[] = [];
     let retryable = false;
     await this.#operationsDrainedPromise;
-    this.#nativeCloseErrorsPromise ??= (async () =>
-      normalizeBindingResultErrors(await this.#inner.closeTerminal()))().catch((error: unknown) => [
-      error,
-    ]);
+    const nativeCloseErrorsPromise = (this.#nativeCloseErrorsPromise ??= (async () =>
+      normalizeBindingResultErrors(await this.#inner.closeTerminal()))());
     // Native close waits for closeBundle and coordinator shutdown. Keep
     // parallel-plugin workers alive until every native diagnostic is captured.
-    errors.push(...(await this.#nativeCloseErrorsPromise));
+    try {
+      errors.push(...(await nativeCloseErrorsPromise));
+    } catch (error) {
+      if (this.#nativeCloseErrorsPromise === nativeCloseErrorsPromise) {
+        this.#nativeCloseErrorsPromise = undefined;
+      }
+      return { errors: [error], retryable: true };
+    }
 
     const stopWorkers = this.#stopWorkers;
     try {

@@ -672,3 +672,5 @@ module.exports.resetAsyncRuntimeMetrics = nativeBinding.resetAsyncRuntimeMetrics
 module.exports.resolveTsconfig = nativeBinding.resolveTsconfig
 module.exports.shutdownAsyncRuntime = nativeBinding.shutdownAsyncRuntime
 module.exports.startAsyncRuntime = nativeBinding.startAsyncRuntime
+module.exports.unregisterCurrentThreadTaskHost = nativeBinding.unregisterCurrentThreadTaskHost
+module.exports.unregisterTimerHost = nativeBinding.unregisterTimerHost

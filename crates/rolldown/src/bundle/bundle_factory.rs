@@ -30,6 +30,7 @@ pub struct BundleFactoryOptions {
   pub plugins: Vec<SharedPluginable>,
   pub session: Option<rolldown_devtools::Session>,
   pub disable_tracing_setup: bool,
+  pub defer_close_on_error: bool,
 }
 
 pub struct BundleFactory {
@@ -43,6 +44,7 @@ pub struct BundleFactory {
   pub session: rolldown_devtools::Session,
   pub(crate) _log_guard: Option<Box<dyn Any + Send>>,
   pub last_bundle_handle: Option<BundleHandle>,
+  defer_close_on_error: bool,
 
   // Used to share module info across multiple plugin drivers for incremental builds
   module_infos_for_incremental_build: SharedModuleInfoDashMap,
@@ -83,6 +85,7 @@ impl BundleFactory {
       session,
       bundle_id_seed: 0,
       last_bundle_handle: None,
+      defer_close_on_error: opts.defer_close_on_error,
       module_infos_for_incremental_build: Arc::default(),
       transform_dependencies_for_incremental_build: Arc::default(),
       lazy_compilation_context: inner_plugins_result.lazy_compilation_context,
@@ -191,6 +194,8 @@ impl BundleFactory {
       warnings: std::mem::take(&mut self.warnings),
       bundle_span,
       cache,
+      close_state: Arc::default(),
+      defer_close_on_error: self.defer_close_on_error,
     };
     self.last_bundle_handle = Some(bundle.context());
     bundle

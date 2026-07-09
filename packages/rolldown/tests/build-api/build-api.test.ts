@@ -74,6 +74,141 @@ test('concurrent outputs are not serialized for their full build futures', async
   await bundle.close();
 });
 
+test(
+  'public outputs retry admission and retain an older failure-triggered closeBundle failure',
+  { timeout: 5_000 },
+  async () => {
+    const buildError = new Error('first output build failure');
+    const olderCloseError = new TypeError('first output closeBundle failure');
+    const latestCloseError = new RangeError('latest output closeBundle failure');
+    let buildCalls = 0;
+    let closeCalls = 0;
+    let markOlderCloseStarted!: () => void;
+    const olderCloseStarted = new Promise<void>((resolve) => {
+      markOlderCloseStarted = resolve;
+    });
+    let releaseOlderClose!: () => void;
+    const olderCloseRelease = new Promise<void>((resolve) => {
+      releaseOlderClose = resolve;
+    });
+    const bundle = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: 'failure-close-admission-retry',
+          buildStart() {
+            buildCalls += 1;
+            if (buildCalls === 1) {
+              throw buildError;
+            }
+          },
+          async closeBundle() {
+            closeCalls += 1;
+            if (closeCalls === 1) {
+              markOlderCloseStarted();
+              await olderCloseRelease;
+              throw olderCloseError;
+            }
+            throw latestCloseError;
+          },
+        },
+      ],
+    });
+
+    try {
+      const failedOutput = bundle.generate();
+      await olderCloseStarted;
+
+      let laterOutputSettled = false;
+      const laterOutput = bundle.generate().finally(() => {
+        laterOutputSettled = true;
+      });
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(laterOutputSettled).toBe(false);
+
+      releaseOlderClose();
+      await expect(failedOutput).rejects.toMatchObject({
+        errors: [buildError],
+      });
+      await expect(laterOutput).resolves.toBeDefined();
+
+      const closeError = await bundle.close().catch((error: unknown) => error);
+      expect(closeError).toBeInstanceOf(AggregateError);
+      expect((closeError as AggregateError).errors).toEqual([olderCloseError, latestCloseError]);
+      expect(closeCalls).toBe(2);
+    } finally {
+      releaseOlderClose();
+      await bundle.close().catch(() => {});
+    }
+  },
+);
+
+test.each(['generate', 'write'] as const)(
+  'closeBundle nested %s rejects without waiting for its failed output',
+  { timeout: 10_000 },
+  async (operationName) => {
+    const buildError = new Error(`${operationName} source output failure`);
+    let buildCalls = 0;
+    let closeCalls = 0;
+    let nestedError: unknown;
+    let markNestedAttemptFinished!: () => void;
+    const nestedAttemptFinished = new Promise<void>((resolve) => {
+      markNestedAttemptFinished = resolve;
+    });
+    let bundle!: Awaited<ReturnType<typeof rolldown>>;
+    bundle = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: `close-bundle-nested-${operationName}`,
+          buildStart() {
+            buildCalls += 1;
+            if (buildCalls === 1) {
+              throw buildError;
+            }
+          },
+          async closeBundle() {
+            closeCalls += 1;
+            if (closeCalls !== 1) return;
+            const nestedOutput =
+              operationName === 'write'
+                ? bundle.write({ dir: path.join(import.meta.dirname, 'dist', operationName) })
+                : bundle.generate();
+            nestedError = await nestedOutput.then(
+              () => new Error(`nested ${operationName} unexpectedly succeeded`),
+              (error: unknown) => error,
+            );
+            markNestedAttemptFinished();
+          },
+        },
+      ],
+    });
+
+    try {
+      await expect(
+        settleWithin(bundle.generate(), `${operationName} failed output`),
+      ).rejects.toMatchObject({
+        errors: [buildError],
+      });
+      await settleWithin(nestedAttemptFinished, `closeBundle nested ${operationName} rejection`);
+      expect(nestedError).toBeInstanceOf(Error);
+      expect((nestedError as Error).message).toContain(
+        'Cannot start a new output while closeBundle is still running for a failed output.',
+      );
+
+      await expect(
+        settleWithin(bundle.generate(), `${operationName} output after failure close`),
+      ).resolves.toBeDefined();
+      await settleWithin(bundle.close(), `${operationName} bundle close`);
+      expect(closeCalls).toBe(2);
+    } finally {
+      await bundle.close().catch(() => {});
+    }
+  },
+);
+
 test('close waits for output setup and native build entry', { timeout: 5_000 }, async () => {
   let releaseOutputSetup!: () => void;
   const delayedOutputPlugin = new Promise<{ name: string }>((resolve) => {
@@ -656,3 +791,16 @@ test('plugins are accessible in buildStart hook', async () => {
   expect(names).toContain('plugin-b');
   expect(names).not.toContain('plugin-c');
 });
+
+function settleWithin<T>(promise: Promise<T>, operation: string): Promise<T> {
+  const timeoutMs = 5_000;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${operation} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}

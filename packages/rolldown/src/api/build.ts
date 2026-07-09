@@ -2,13 +2,22 @@ import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import { assertParallelPluginOptionsSupported } from '../plugin/parallel-plugin';
 import type { RolldownOutput } from '../types/rolldown-output';
+import { getCloseTerminalErrors, throwCloseErrors } from '../runtime-lifecycle';
 import {
+  attachRetryableCleanup,
   createCleanupFailureError,
-  runRetryableCleanup,
+  excludeDeliveredErrors,
+  getRetryableCleanup,
+  retryCleanupFromError,
   trackRetryableCleanupOwnership,
+  waitForRetryableCleanupTurn,
 } from '../utils/retryable-cleanup';
 import { rolldown } from './rolldown';
-import { hasRetryableBuildCleanup, type RolldownBuild } from './rolldown/rolldown-build';
+import {
+  hasRetryableBuildCleanup,
+  retryRolldownBuildCleanup,
+  type RolldownBuild,
+} from './rolldown/rolldown-build';
 
 /**
  * The options for {@linkcode build} function.
@@ -98,9 +107,12 @@ async function build(
     }
 
     if (buildFailed && closeFailed) {
-      throw new AggregateError([buildError, closeError], 'Build and cleanup both failed', {
-        cause: buildError,
-      });
+      throw createCleanupFailureError(
+        buildError,
+        closeError,
+        getRetryableCleanup(closeError),
+        'Build and cleanup both failed',
+      );
     }
     if (buildFailed) {
       throw buildError;
@@ -113,24 +125,71 @@ async function build(
 }
 
 async function closeBuild(build: RolldownBuild): Promise<void> {
-  const cleanup = () => build.close();
-  trackRetryableCleanupOwnership(cleanup, () => hasRetryableBuildCleanup(build));
-
-  try {
-    await cleanup();
-  } catch (error) {
-    if (!hasRetryableBuildCleanup(build)) throw error;
+  const deliveredTerminalErrors: unknown[] = [];
+  const cleanup = async () => {
+    let terminalErrors: unknown[];
     try {
-      await runRetryableCleanup(cleanup);
-    } catch (retryError) {
-      if (!hasRetryableBuildCleanup(build)) throw retryError;
-      throw createCleanupFailureError(
-        error,
-        retryError,
-        cleanup,
-        'Build cleanup and retry both failed',
+      terminalErrors = await retryRolldownBuildCleanup(build);
+    } catch (error) {
+      const newlyDeliveredTerminalErrors = excludeDeliveredErrors(
+        getCloseTerminalErrors(error),
+        deliveredTerminalErrors,
+      );
+      deliveredTerminalErrors.push(...newlyDeliveredTerminalErrors);
+      if (newlyDeliveredTerminalErrors.length === 0) throw error;
+      throw new AggregateError(
+        [...newlyDeliveredTerminalErrors, error],
+        'Build cleanup retry delivered terminal diagnostics and cleanup failures',
+        { cause: newlyDeliveredTerminalErrors[0] },
       );
     }
+    const newlyDeliveredTerminalErrors = excludeDeliveredErrors(
+      terminalErrors,
+      deliveredTerminalErrors,
+    );
+    deliveredTerminalErrors.push(...newlyDeliveredTerminalErrors);
+    throwCloseErrors(newlyDeliveredTerminalErrors, 'Build close failed');
+  };
+  trackRetryableCleanupOwnership(cleanup, () => hasRetryableBuildCleanup(build), {
+    recoverAbandoned: false,
+  });
+
+  try {
+    await build.close();
+  } catch (error) {
+    if (!hasRetryableBuildCleanup(build)) throw error;
+    const initialTerminalErrors = [...getCloseTerminalErrors(error)];
+    deliveredTerminalErrors.push(...initialTerminalErrors);
+    const retryableError =
+      error instanceof Error
+        ? error
+        : new AggregateError([error], 'Build cleanup failed with a non-Error value');
+    attachRetryableCleanup(retryableError, cleanup);
+
+    let retryError: unknown;
+    try {
+      await retryCleanupFromError(retryableError, 'Build cleanup and retry both failed');
+    } catch (caughtError) {
+      retryError = caughtError;
+    }
+    if (!getRetryableCleanup(retryError) && !hasRetryableBuildCleanup(build)) {
+      throwCloseErrors(deliveredTerminalErrors, 'Build close failed');
+      return;
+    }
+    if (!getRetryableCleanup(retryError)) throw retryError;
+
+    await waitForRetryableCleanupTurn();
+    let finalRetryError: unknown;
+    try {
+      await retryCleanupFromError(retryError, 'Build cleanup and final retry both failed');
+    } catch (caughtError) {
+      finalRetryError = caughtError;
+    }
+    if (!getRetryableCleanup(finalRetryError) && !hasRetryableBuildCleanup(build)) {
+      throwCloseErrors(deliveredTerminalErrors, 'Build close failed');
+      return;
+    }
+    throw finalRetryError;
   }
 }
 

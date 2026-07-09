@@ -11,13 +11,63 @@ export type { RuntimeLease } from './runtime-lease-manager';
 export interface CloseAttemptResult {
   errors: unknown[];
   retryable: boolean;
+  terminalErrors?: unknown[];
 }
 
-export function throwCloseErrors(errors: unknown[], aggregateMessage: string): void {
-  if (errors.length === 1) throw errors[0];
-  if (errors.length > 1) {
-    throw new AggregateError(errors, aggregateMessage, { cause: errors[0] });
+interface CloseErrorDetails {
+  ownedCleanupErrors: unknown[];
+  terminalErrors: unknown[];
+}
+
+const closeErrorDetails = new WeakMap<object, CloseErrorDetails>();
+
+export function throwCloseErrors(
+  errors: unknown[],
+  aggregateMessage: string,
+  terminalErrors?: unknown[],
+): void {
+  if (errors.length === 1) {
+    recordCloseErrorDetails(errors[0], errors, terminalErrors);
+    throw errors[0];
   }
+  if (errors.length > 1) {
+    const aggregate = new AggregateError(errors, aggregateMessage, { cause: errors[0] });
+    recordCloseErrorDetails(aggregate, errors, terminalErrors);
+    throw aggregate;
+  }
+}
+
+/** @internal Retrieve terminal diagnostics carried by a close failure. */
+export function getCloseTerminalErrors(error: unknown): readonly unknown[] {
+  return typeof error === 'object' && error !== null
+    ? (closeErrorDetails.get(error)?.terminalErrors ?? [])
+    : [];
+}
+
+function recordCloseErrorDetails(
+  error: unknown,
+  errors: unknown[],
+  terminalErrors: unknown[] | undefined,
+): void {
+  if (!terminalErrors || typeof error !== 'object' || error === null) return;
+  const terminalCounts = new Map<unknown, number>();
+  for (const terminalError of terminalErrors) {
+    terminalCounts.set(terminalError, (terminalCounts.get(terminalError) ?? 0) + 1);
+  }
+  const ownedCleanupErrors = errors.filter((candidate) => {
+    const remaining = terminalCounts.get(candidate) ?? 0;
+    if (remaining === 0) return true;
+    if (remaining === 1) {
+      terminalCounts.delete(candidate);
+    } else {
+      terminalCounts.set(candidate, remaining - 1);
+    }
+    return false;
+  });
+  closeErrorDetails.set(error, {
+    ownedCleanupErrors,
+    terminalErrors: [...terminalErrors],
+  });
 }
 
 /**
@@ -37,12 +87,29 @@ export class CloseCoordinator {
     return (this.#closePromise ??= Promise.resolve().then(() => this.#run(attempt)));
   }
 
+  /**
+   * @internal Retry the shared close attempt while projecting out replayed
+   * terminal diagnostics. The caller receives those diagnostics separately.
+   */
+  async retryOwnedCleanup(attempt: () => Promise<CloseAttemptResult>): Promise<unknown[]> {
+    try {
+      await this.close(attempt);
+      return [];
+    } catch (error) {
+      const details =
+        typeof error === 'object' && error !== null ? closeErrorDetails.get(error) : undefined;
+      if (!details) throw error;
+      throwCloseErrors(details.ownedCleanupErrors, this.#aggregateMessage, details.terminalErrors);
+      return [...details.terminalErrors];
+    }
+  }
+
   async #run(attempt: () => Promise<CloseAttemptResult>): Promise<void> {
-    const { errors, retryable } = await attempt();
+    const { errors, retryable, terminalErrors = [] } = await attempt();
     if (retryable) {
       this.#closePromise = undefined;
     }
-    throwCloseErrors(errors, this.#aggregateMessage);
+    throwCloseErrors(errors, this.#aggregateMessage, terminalErrors);
   }
 }
 

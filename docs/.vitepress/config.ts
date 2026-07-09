@@ -65,6 +65,10 @@ const sidebarForApi: DefaultTheme.SidebarItem[] = [
     items: [
       { text: 'Bundler API', link: '/apis/bundler-api.md' },
       {
+        text: 'Experimental Async Runtime',
+        link: '/apis/experimental-async-runtime.md',
+      },
+      {
         text: 'Plugin API',
         link: '/apis/plugin-api.md',
         items: [

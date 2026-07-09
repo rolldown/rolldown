@@ -119,6 +119,10 @@ export class CloseCallbackScope {
     return this.#run(closeIdentity, callback);
   }
 
+  hasActiveCallback(): boolean {
+    return this.#isActive(this.#defaultCloseIdentity);
+  }
+
   #run<T>(closeIdentity: string | undefined, callback: () => T): T {
     const invocation: CloseCallbackInvocation = {
       active: true,

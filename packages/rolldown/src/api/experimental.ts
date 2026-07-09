@@ -1,22 +1,28 @@
-import { BindingBundler } from '../binding.cjs';
+import { BindingBundler, type BindingResult } from '../binding.cjs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import { assertParallelPluginOptionsSupported } from '../plugin/parallel-plugin';
 import { PluginDriver } from '../plugin/plugin-driver';
 import { acquireRuntimeLease, type RuntimeLease } from '../runtime-lifecycle';
 import { createBundlerOptions } from '../utils/create-bundler-option';
-import { unwrapBindingResult } from '../utils/error';
+import { normalizeBindingResultErrors, unwrapBindingResult } from '../utils/error';
 import {
   attachRetryableCleanup,
   createCleanupFailureError,
+  excludeDeliveredErrors,
   getRetryableCleanup,
   isCleanupFailureError,
   retryCleanupFromError,
   trackRetryableCleanupOwnership,
+  waitForRetryableCleanupTurn,
 } from '../utils/retryable-cleanup';
 import { validateOption } from '../utils/validator';
 
 export { freeExternalMemory } from '../types/external-memory-handle';
+
+type BindingBundlerWithTerminalClose = BindingBundler & {
+  closeTerminal(): Promise<BindingResult<void>>;
+};
 
 /**
  * This is an experimental API. Its behavior may change in the future.
@@ -54,21 +60,13 @@ export const scan = async (
 
   let stopWorkers = ret.stopWorkers;
   let runtimeLease: RuntimeLease | undefined;
-  let bundler: BindingBundler | undefined;
-  let nativeClosePromise: Promise<void> | undefined;
-  let cleanupAttempt: Promise<void> | undefined;
-  const hasRetryableCleanup = () => stopWorkers !== undefined || runtimeLease !== undefined;
-  const cleanup = (): Promise<void> =>
-    (cleanupAttempt ??= (async () => {
+  let bundler: BindingBundlerWithTerminalClose | undefined;
+  let nativeClosePromise: Promise<Error[]> | undefined;
+  const deliveredTerminalErrors: unknown[] = [];
+  let resourceCleanupAttempt: Promise<unknown[]> | undefined;
+  const releaseResources = (): Promise<unknown[]> =>
+    (resourceCleanupAttempt ??= (async () => {
       const errors: unknown[] = [];
-      if (bundler) {
-        nativeClosePromise ??= (async () => bundler!.close())();
-        try {
-          await nativeClosePromise;
-        } catch (error) {
-          errors.push(error);
-        }
-      }
       const ownedStopWorkers = stopWorkers;
       try {
         await ownedStopWorkers?.();
@@ -84,33 +82,85 @@ export const scan = async (
       } catch (error) {
         errors.push(error);
       }
+      return errors;
+    })().finally(() => {
+      resourceCleanupAttempt = undefined;
+    }));
+  const throwCleanupErrors = (
+    errors: unknown[],
+    cleanup: () => Promise<void>,
+    hasOwnership: () => boolean,
+  ): never => {
+    const cleanupError =
+      errors.length === 1
+        ? errors[0]
+        : new AggregateError(
+            errors,
+            'Scan native close, parallel-plugin worker shutdown, or runtime release failed',
+          );
+    if (hasOwnership()) {
+      const retryableError =
+        cleanupError instanceof Error
+          ? cleanupError
+          : new AggregateError([cleanupError], 'Scan cleanup failed with a non-Error value');
+      attachRetryableCleanup(retryableError, cleanup);
+      throw retryableError;
+    }
+    throw cleanupError;
+  };
+
+  let setupCleanupAttempt: Promise<void> | undefined;
+  const hasSetupCleanup = () => stopWorkers !== undefined || runtimeLease !== undefined;
+  const cleanupSetup = (): Promise<void> =>
+    (setupCleanupAttempt ??= (async () => {
+      const errors = await releaseResources();
       if (errors.length > 0) {
-        const cleanupError =
-          errors.length === 1
-            ? errors[0]
-            : new AggregateError(
-                errors,
-                'Scan native close, parallel-plugin worker shutdown, or runtime release failed',
-              );
-        if (hasRetryableCleanup()) {
-          const retryableError =
-            cleanupError instanceof Error
-              ? cleanupError
-              : new AggregateError([cleanupError], 'Scan cleanup failed with a non-Error value');
-          attachRetryableCleanup(retryableError, cleanup);
-          throw retryableError;
-        }
-        throw cleanupError;
+        throwCleanupErrors(errors, cleanupSetup, hasSetupCleanup);
       }
     })().finally(() => {
-      cleanupAttempt = undefined;
+      setupCleanupAttempt = undefined;
     }));
-  trackRetryableCleanupOwnership(cleanup, hasRetryableCleanup);
+  trackRetryableCleanupOwnership(cleanupSetup, hasSetupCleanup);
+
+  let scanCleanupAttempt: Promise<void> | undefined;
+  const hasScanCleanup = () =>
+    bundler !== undefined || stopWorkers !== undefined || runtimeLease !== undefined;
+  const cleanupScan = (): Promise<void> =>
+    (scanCleanupAttempt ??= (async () => {
+      const errors: unknown[] = [];
+      if (bundler) {
+        nativeClosePromise ??= (async () =>
+          normalizeBindingResultErrors(await bundler!.closeTerminal()))();
+        try {
+          const terminalErrors = excludeDeliveredErrors(
+            await nativeClosePromise,
+            deliveredTerminalErrors,
+          );
+          deliveredTerminalErrors.push(...terminalErrors);
+          errors.push(...terminalErrors);
+          bundler = undefined;
+        } catch (error) {
+          nativeClosePromise = undefined;
+          throwCleanupErrors([error], cleanupScan, hasScanCleanup);
+        }
+      }
+      errors.push(...(await releaseResources()));
+      if (errors.length > 0) {
+        throwCleanupErrors(errors, cleanupScan, hasScanCleanup);
+      }
+    })().finally(() => {
+      scanCleanupAttempt = undefined;
+    }));
+  trackRetryableCleanupOwnership(cleanupScan, hasScanCleanup, {
+    recoverAbandoned: false,
+  });
 
   const throwAfterCleanupWithRetry = async (
     error: unknown,
+    cleanup: () => Promise<void>,
     message: string,
     retryMessage: string,
+    awaitFinalRetry = false,
   ): Promise<never> => {
     try {
       await cleanup();
@@ -121,17 +171,29 @@ export const scan = async (
         getRetryableCleanup(cleanupError),
         message,
       );
-      return retryCleanupFromError(setupError, retryMessage);
+      if (!awaitFinalRetry) {
+        return retryCleanupFromError(setupError, retryMessage);
+      }
+      let retryError: unknown;
+      try {
+        await retryCleanupFromError(setupError, retryMessage);
+      } catch (error) {
+        retryError = error;
+      }
+      if (!getRetryableCleanup(retryError)) throw retryError;
+      await waitForRetryableCleanupTurn();
+      return retryCleanupFromError(retryError, `${retryMessage} after final retry`);
     }
     throw error;
   };
 
   try {
     runtimeLease = await acquireRuntimeLease();
-    bundler = new BindingBundler();
+    bundler = new BindingBundler() as BindingBundlerWithTerminalClose;
   } catch (error) {
     return throwAfterCleanupWithRetry(
       error,
+      cleanupSetup,
       'Scan setup and cleanup failed',
       'Scan setup and retry cleanup both failed',
     );
@@ -143,14 +205,24 @@ export const scan = async (
   } catch (error) {
     return throwAfterCleanupWithRetry(
       error,
+      cleanupScan,
       'Scan and cleanup both failed',
       'Scan and retry cleanup both failed',
+      true,
     );
   }
 
   try {
-    await cleanup();
+    await cleanupScan();
   } catch (error) {
-    return retryCleanupFromError(error, 'Scan cleanup retry failed');
+    let retryError: unknown;
+    try {
+      await retryCleanupFromError(error, 'Scan cleanup retry failed');
+    } catch (caughtError) {
+      retryError = caughtError;
+    }
+    if (!getRetryableCleanup(retryError)) throw retryError;
+    await waitForRetryableCleanupTurn();
+    return retryCleanupFromError(retryError, 'Scan cleanup final retry failed');
   }
 };

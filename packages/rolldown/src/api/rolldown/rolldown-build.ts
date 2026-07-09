@@ -1,4 +1,4 @@
-import { BindingBundler } from '../../binding.cjs';
+import { BindingBundler, type BindingResult } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import {
@@ -10,8 +10,8 @@ import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
 import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
-import { CloseCallbackScope } from '../../utils/close-callback-scope';
-import { unwrapBindingResult } from '../../utils/error';
+import { CloseCallbackScope, createCloseIdentity } from '../../utils/close-callback-scope';
+import { normalizeBindingResultErrors, unwrapBindingResult } from '../../utils/error';
 import { validateOption } from '../../utils/validator';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { rolldown } from './index';
@@ -28,9 +28,18 @@ interface BuildOperation {
 }
 
 interface BuildCleanupOwnership {
+  retryCleanup: () => Promise<unknown[]>;
   runtimeLeaseReleased: boolean;
   workerOwners: Set<BuildOperation>;
 }
+
+type BindingBundlerWithTerminalClose = BindingBundler & {
+  closeTerminal(): Promise<BindingResult<void>>;
+  waitForFailureClose(): Promise<void>;
+};
+
+const FAILURE_CLOSE_ADMISSION_ERROR =
+  'Cannot start a new output while closeBundle is still running for a failed output.';
 
 const buildCleanupOwnership = new WeakMap<RolldownBuild, BuildCleanupOwnership>();
 
@@ -42,6 +51,13 @@ export function hasRetryableBuildCleanup(build: RolldownBuild): boolean {
   );
 }
 
+/** @internal Retry only resource ownership retained by a failed bundle close. */
+export function retryRolldownBuildCleanup(build: RolldownBuild): Promise<unknown[]> {
+  const ownership = buildCleanupOwnership.get(build);
+  if (!ownership) return Promise.resolve([]);
+  return ownership.retryCleanup();
+}
+
 /**
  * The bundle object returned by {@linkcode rolldown} function.
  *
@@ -49,15 +65,16 @@ export function hasRetryableBuildCleanup(build: RolldownBuild): boolean {
  */
 export class RolldownBuild {
   #inputOptions: InputOptions;
-  #bundler: BindingBundler;
+  #bundler: BindingBundlerWithTerminalClose;
   #runtimeLease: RuntimeLease;
   #activeBuilds = new Set<Promise<RolldownOutput>>();
   #workerOwners = new Set<BuildOperation>();
   #latestBuildOperation: BuildOperation | undefined;
   #nativeEntryQueue: Promise<void> = Promise.resolve();
-  #nativeClosePromise: Promise<void> | undefined;
+  #nativeClosePromise: Promise<Error[]> | undefined;
   #closeRequested = false;
-  #closeCallbackScope = new CloseCallbackScope();
+  #closeIdentity = createCloseIdentity('rolldown-build');
+  #closeCallbackScope = new CloseCallbackScope(this.#closeIdentity);
   #closeCoordinator = new CloseCoordinator(
     'Bundle native close, parallel-plugin worker shutdown, or runtime release failed',
   );
@@ -67,11 +84,12 @@ export class RolldownBuild {
     this.#inputOptions = inputOptions;
     this.#runtimeLease = runtimeLease;
     buildCleanupOwnership.set(this, {
+      retryCleanup: () => this.#closeCoordinator.retryOwnedCleanup(() => this.#close()),
       runtimeLeaseReleased: false,
       workerOwners: this.#workerOwners,
     });
     try {
-      this.#bundler = new BindingBundler();
+      this.#bundler = new BindingBundler() as BindingBundlerWithTerminalClose;
     } catch (error) {
       try {
         this.#runtimeLease.release();
@@ -146,11 +164,13 @@ export class RolldownBuild {
     this.#closeRequested = true;
     return this.#closeCallbackScope.selectClosePromise(
       this.#closeCoordinator.close(() => this.#close()),
+      this.#closeIdentity,
     );
   }
 
   async #close(): Promise<CloseAttemptResult> {
     const errors: unknown[] = [];
+    const terminalErrors: unknown[] = [];
     let retryable = false;
     await Promise.allSettled(this.#activeBuilds);
 
@@ -165,11 +185,16 @@ export class RolldownBuild {
       }
     }
 
-    this.#nativeClosePromise ??= (async () => this.#bundler.close())();
+    this.#nativeClosePromise ??= (async () =>
+      normalizeBindingResultErrors(await this.#bundler.closeTerminal()))();
     try {
-      await this.#nativeClosePromise;
+      terminalErrors.push(...(await this.#nativeClosePromise));
+      errors.push(...terminalErrors);
     } catch (error) {
+      this.#nativeClosePromise = undefined;
       errors.push(error);
+      retryable = true;
+      return { errors, retryable, terminalErrors };
     }
 
     if (latestWorkerOwner && this.#workerOwners.has(latestWorkerOwner)) {
@@ -192,7 +217,7 @@ export class RolldownBuild {
       }
     }
 
-    return { errors, retryable };
+    return { errors, retryable, terminalErrors };
   }
 
   /** @hidden documented in close method */
@@ -306,9 +331,26 @@ export class RolldownBuild {
   }> {
     const entry = this.#nativeEntryQueue.then(async () => {
       const previous = this.#latestBuildOperation;
-      const nativePromise = isWrite
-        ? this.#bundler.write(bundlerOptions)
-        : this.#bundler.generate(bundlerOptions);
+      let nativePromise: ReturnType<BindingBundler['generate']>;
+      for (;;) {
+        try {
+          nativePromise = isWrite
+            ? this.#bundler.write(bundlerOptions)
+            : this.#bundler.generate(bundlerOptions);
+          break;
+        } catch (error) {
+          if (!isFailureCloseAdmissionError(error)) {
+            throw error;
+          }
+          // This callback may be the operation that the failure-triggered
+          // close is waiting to release. Waiting for that close here would
+          // create a direct dependency cycle.
+          if (this.#closeCallbackScope.hasActiveCallback()) {
+            throw error;
+          }
+          await this.#bundler.waitForFailureClose();
+        }
+      }
       // Binding construction errors throw before this point. Only publish the
       // operation after Rust has installed its BundleHandle.
       this.#latestBuildOperation = operation;
@@ -349,6 +391,10 @@ export class RolldownBuild {
     owner.stopWorkers = undefined;
     this.#workerOwners.delete(owner);
   }
+}
+
+function isFailureCloseAdmissionError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes(FAILURE_CLOSE_ADMISSION_ERROR);
 }
 
 function _assert() {

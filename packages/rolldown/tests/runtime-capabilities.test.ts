@@ -64,6 +64,20 @@ describe('getRuntimeCapabilities', () => {
     // artifact, independent of timer-host registration state.
     expect(caps.watchSupported).toBe(!caps.wasi);
     expect(caps.devSupported).toBe(caps.threads);
+
+    if (caps.backend === 'shared' && caps.wasi) {
+      expect(caps.flavor).toBe('CurrentThread');
+      expect(caps.threads).toBe(false);
+      expect(getAsyncRuntimeConfig()).toMatchObject({
+        flavor: 'CurrentThread',
+        maxBlockingTasks: 1,
+        workerThreads: 1,
+      });
+    }
+    if (caps.backend === 'tokio' && caps.target === 'wasi-threads') {
+      expect(caps.flavor).toBe('MultiThread');
+      expect(caps.threads).toBe(true);
+    }
   });
 
   test('reports complete public workflow support', () => {
@@ -301,6 +315,37 @@ describe('getRuntimeCapabilities', () => {
     expect(mutated).toEqual(control);
   });
 
+  test.runIf(caps.backend === 'tokio' && caps.target === 'wasi-threads')(
+    'threaded-WASI reports emnapi pool normalization from the generated loader',
+    () => {
+      const report = inFreshProcess(
+        `
+          const { getAsyncRuntimeConfig, getRuntimeCapabilities } =
+            await import('rolldown/experimental');
+          console.log(JSON.stringify({
+            capabilities: getRuntimeCapabilities(),
+            config: getAsyncRuntimeConfig(),
+          }));
+        `,
+        { NAPI_RS_ASYNC_WORK_POOL_SIZE: '2048' },
+      );
+      expect(report).toMatchObject({
+        capabilities: {
+          asyncRuntimeBuild: false,
+          backend: 'tokio',
+          flavor: 'MultiThread',
+          target: 'wasi-threads',
+          threads: true,
+        },
+        config: {
+          flavor: 'MultiThread',
+          maxBlockingTasks: 1024,
+          workerThreads: 1024,
+        },
+      });
+    },
+  );
+
   // Codex round-2 finding regression: the contract must hold inside Node
   // worker_threads too -- timer-host registration carries NO isMainThread
   // guard (the parallel-plugin machinery loads the binding in workers). A
@@ -492,8 +537,9 @@ describe('getRuntimeCapabilities', () => {
           graphText += readFileSync(chunkPath, 'utf8');
         }
       }
-      expect(graphText).toContain('globalThis.setTimeout');
-      expect(graphText).toContain('globalThis.clearTimeout');
+      expect(graphText).toContain('Reflect.get(globalThis, "setTimeout"');
+      expect(graphText).toContain('Reflect.get(globalThis, "clearTimeout"');
+      expect(graphText).toContain('Reflect.apply(timer.clearTimeoutHost');
       expect(graphText).toContain('timer.resolve()');
 
       // BEHAVIORAL: the real entry must actually run as a worker under this

@@ -1,14 +1,19 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createBuildCommand, NapiCli } from '@napi-rs/cli';
-import { globSync } from 'glob';
 
 import {
+  beginBuildArtifactTransaction,
+  BINDING_BUILD_ARTIFACT_SELECTION,
+} from './build-binding-artifacts';
+import {
+  assertAsyncRuntimeHostExports,
   patchNativeBindingLoader,
   patchWasiBindingLoader,
+  patchWasiNodeAsyncWorkPoolSize,
   resolveWasiBindingTarget,
 } from './binding-loader-codegen';
 
@@ -37,32 +42,43 @@ const napiArgs = {
 
 console.info('args:', napiArgs);
 
+const artifactTransaction = beginBuildArtifactTransaction(
+  join(__dirname, 'src'),
+  BINDING_BUILD_ARTIFACT_SELECTION,
+);
 try {
   const { task } = await napiCli.build(napiArgs);
   await task;
   patchBindingTargetMetadata(argsOptions.target);
   patchWasiNodeWorkerExecArgv();
+  patchWasiNodeAsyncWorkPoolConfig();
+  validateAsyncRuntimeHostExports();
   if (argsOptions.target === WASI_THREADS_TARGET) {
     validateWasiReactorArtifacts();
   }
+  artifactTransaction.commit();
 } catch (error) {
-  // remove previous build artifacts
   console.error(error);
-  globSync('src/rolldown-binding.*.node', {
-    absolute: true,
-    cwd: __dirname,
-  }).forEach((file) => {
-    rmSync(file, { force: true, recursive: true });
-  });
-
-  globSync('./src/rolldown-binding.*.wasm', {
-    absolute: true,
-    cwd: __dirname,
-  }).forEach((file) => {
-    rmSync(file, { recursive: true, force: true });
-  });
+  try {
+    artifactTransaction.rollback();
+  } catch (rollbackError) {
+    console.error(rollbackError);
+  }
 
   process.exit(1);
+}
+
+function validateAsyncRuntimeHostExports(): void {
+  const sourceDir = join(__dirname, 'src');
+  assertAsyncRuntimeHostExports(readFileSync(join(sourceDir, 'binding.cjs'), 'utf8'), 'commonjs');
+  assertAsyncRuntimeHostExports(
+    readFileSync(join(sourceDir, 'rolldown-binding.wasi.cjs'), 'utf8'),
+    'commonjs',
+  );
+  assertAsyncRuntimeHostExports(
+    readFileSync(join(sourceDir, 'rolldown-binding.wasi-browser.js'), 'utf8'),
+    'esm',
+  );
 }
 
 function configureWasiRustc(target: unknown): void {
@@ -185,4 +201,9 @@ function __sanitizeFileWorkerExecArgv(execArgv) {
     })`,
   );
   writeFileSync(bindingPath, patched);
+}
+
+function patchWasiNodeAsyncWorkPoolConfig(): void {
+  const bindingPath = join(__dirname, 'src', 'rolldown-binding.wasi.cjs');
+  writeFileSync(bindingPath, patchWasiNodeAsyncWorkPoolSize(readFileSync(bindingPath, 'utf8')));
 }

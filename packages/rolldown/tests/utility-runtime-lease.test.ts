@@ -55,7 +55,7 @@ const binding = vi.hoisted(() => {
       wasi: binding.target !== 'native',
       watchSupported: binding.target === 'native',
     })),
-    getCurrentThreadTaskHostContractVersion: vi.fn(() => 1),
+    getCurrentThreadTaskHostContractVersion: vi.fn(() => 2),
     isolatedDeclaration: vi.fn(() => defer('isolatedDeclaration')),
     isolatedDeclarationSync: vi.fn(),
     minify: vi.fn(() => defer('minify')),
@@ -64,12 +64,14 @@ const binding = vi.hoisted(() => {
     parse: vi.fn(() => defer('parse')),
     parseSync: vi.fn(),
     pendingCount: (name: string) => pending.get(name)?.length ?? 0,
-    registerCurrentThreadTaskHost: vi.fn(),
-    registerTimerHost: vi.fn(),
+    registerCurrentThreadTaskHost: vi.fn(() => ({ high: 0, low: 1 })),
+    registerTimerHost: vi.fn(() => ({ high: 0, low: 2 })),
     reject: (name: string, error: unknown) => settle(name, (deferred) => deferred.reject(error)),
     releaseAsyncRuntime,
     resolve: (name: string, value: unknown) => settle(name, (deferred) => deferred.resolve(value)),
     ResolverFactory,
+    unregisterCurrentThreadTaskHost: vi.fn(),
+    unregisterTimerHost: vi.fn(),
   };
   return result;
 });

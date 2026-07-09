@@ -503,7 +503,7 @@ test('watcher construction retries worker cleanup and runtime release', async ()
   expect(getRetryableCleanup(error)).toBeUndefined();
 });
 
-test('asynchronous native close rejection does not skip remaining watcher cleanup', async () => {
+test('asynchronous native close rejection retains ownership until a structured retry', async () => {
   const nativeCloseError = new Error('native watcher close rejected');
   const closeListenerError = new Error('close listener failed');
   const retainedResultClose = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
@@ -511,10 +511,15 @@ test('asynchronous native close rejection does not skip remaining watcher cleanu
   const release = vi.fn();
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
   mocks.acquireRuntimeLease.mockResolvedValue({ release });
-  mocks.bindingClose.mockImplementation(async () => {
-    await Promise.resolve();
-    throw nativeCloseError;
-  });
+  mocks.bindingClose
+    .mockImplementationOnce(async () => {
+      await Promise.resolve();
+      throw nativeCloseError;
+    })
+    .mockResolvedValueOnce({
+      errors: [],
+      nativeOwnedCloseIdentities: ['retained-current'],
+    });
   const emitter = new WatcherEmitter();
   const closeListener = vi.fn(() => {
     throw closeListenerError;
@@ -533,14 +538,64 @@ test('asynchronous native close rejection does not skip remaining watcher cleanu
     eventKind: () => 'event',
   });
 
-  const error = await emitter.close().catch((error: unknown) => error);
+  await expect(emitter.close()).rejects.toBe(nativeCloseError);
 
-  expect(error).toBeInstanceOf(AggregateError);
-  expect((error as AggregateError).errors).toEqual([nativeCloseError, closeListenerError]);
   expect(mocks.bindingClose).toHaveBeenCalledOnce();
-  expect(retainedResultClose).toHaveBeenCalledOnce();
+  expect(retainedResultClose).not.toHaveBeenCalled();
+  expect(stopWorkers).not.toHaveBeenCalled();
+  expect(closeListener).not.toHaveBeenCalled();
+  expect(release).not.toHaveBeenCalled();
+
+  await expect(emitter.close()).rejects.toBe(closeListenerError);
+
+  expect(mocks.bindingClose).toHaveBeenCalledTimes(2);
+  expect(retainedResultClose).not.toHaveBeenCalled();
   expect(stopWorkers).toHaveBeenCalledOnce();
   expect(closeListener).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+});
+
+test('synchronous native close rejection retains ownership until a structured retry', async () => {
+  const nativeCloseError = new Error('native watcher close threw');
+  const retainedResultClose = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingClose
+    .mockImplementationOnce(() => {
+      throw nativeCloseError;
+    })
+    .mockResolvedValueOnce({
+      errors: [],
+      nativeOwnedCloseIdentities: ['retained-current'],
+    });
+  const emitter = new WatcherEmitter();
+  await createWatcher(emitter, { output: {} });
+  await mocks.bindingCallback({
+    bundleEndData: () => ({
+      closeIdentity: 'retained-current',
+      duration: 0,
+      output: 'out.js',
+      result: { close: retainedResultClose },
+      taskIndex: 0,
+    }),
+    bundleEventKind: () => 'BUNDLE_END',
+    eventKind: () => 'event',
+  });
+
+  await expect(emitter.close()).rejects.toBe(nativeCloseError);
+
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(retainedResultClose).not.toHaveBeenCalled();
+  expect(stopWorkers).not.toHaveBeenCalled();
+  expect(release).not.toHaveBeenCalled();
+
+  await expect(emitter.close()).resolves.toBeUndefined();
+
+  expect(mocks.bindingClose).toHaveBeenCalledTimes(2);
+  expect(retainedResultClose).not.toHaveBeenCalled();
+  expect(stopWorkers).toHaveBeenCalledOnce();
   expect(release).toHaveBeenCalledOnce();
 });
 

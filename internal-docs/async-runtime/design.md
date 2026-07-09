@@ -123,6 +123,11 @@ The existing Tokio runtime remains the default and is selected by the
    mutex, so concurrent calls serialize against the latest committed options
    instead of overwriting disjoint fields from stale snapshots. A rejected
    candidate leaves the prior configuration unchanged.
+   Every native shared-runtime package entry installs both CurrentThread host
+   bridges before that window can be used. Host installation is independent of
+   the import-time flavor, so a legal synchronous `MultiThread -> CurrentThread`
+   update cannot leave a module-cached environment without runnable or timer
+   delivery. Tokio builds skip those bridges.
 
 7. **Lifecycle transitions linearize with submission and generations do not
    overlap.** Backend acquisition, explicit start, and shutdown share one
@@ -138,6 +143,14 @@ The existing Tokio runtime remains the default and is selected by the
    Concurrent `start` waits for that quiescence. Calling `start` or `shutdown`
    from work in the generation being retired returns an error instead of
    self-deadlocking.
+   The controller takes the generation's stop-publication mutex while holding
+   the lifecycle mutex, publishes stop, and only then changes `Running` to
+   `Stopping`. The MultiThread final verdict takes the same publication mutex
+   after closing its admission gate. If the verdict wins that mutex, the
+   lifecycle remains `Running` until its final checks complete; if shutdown
+   wins, the verdict must observe stop. The controller releases publication
+   before aborting accepted tasks, so an abort wake blocked behind the verdict
+   gate cannot form a cycle.
    Shutdown closes and drain-fires timers, wakes every runtime-owned `block_on`
    parker, and scopes queued/rejected destruction to the retiring generation.
    Rejected convenience submissions hold the lifecycle transition until their
@@ -258,6 +271,13 @@ The existing Tokio runtime remains the default and is selected by the
    before invoking either host registration. A preceding callback-accepting
    binding has no version export and fails as a package/binding mismatch before
    JavaScript can call its incompatible registration boundary.
+   The TSFN's raw slot is also its one initial Node-API acquisition. Normal
+   environment cleanup takes and releases that capability exactly once before
+   Node's own TSFN cleanup runs. An explicit rollback takes it with abort mode;
+   a `napi_call_threadsafe_function()` result of `napi_closing` takes it without
+   another API call because Node has already decremented that acquisition and
+   invalidated the pointer. Finalization only invalidates a still-visible slot
+   and never re-enters Node from its own finalizer.
    Shutdown therefore either transitions first and rejects the native turn, or
    observes the claimed role and waits for it. Shutdown retires coalesced
    pending deliveries while retaining the one physical in-flight slot until its
@@ -297,6 +317,33 @@ The existing Tokio runtime remains the default and is selected by the
    wakeable, and the same rule keeps an armed host-timer wait live, instead of
    allowing oversized environment configuration to panic or self-deadlock the
    scheduler.
+   A MultiThread deadline verdict is also an admission linearization point.
+   Only when the opt-in detector is enabled, runnable publication, blocking
+   publication, LIFO-slot flushing, timer registration, and every timer firing
+   path announce an active admission and advance a publication epoch. Timer
+   firing retains admission from heap removal through waker invocation, so the
+   verdict cannot observe both the timer and its resulting runnable as absent.
+   The final verdict closes that gate, rejects a verdict while an earlier
+   admission remains active, then takes the stop-publication mutex and rechecks
+   queues, permits, timers, progress, the publication epoch, and generation
+   stop while later admissions are excluded. Exact-owner reservation release
+   and every targeted handoff/forwarding path use a second detector-only
+   publication mutex. Release takes it before making the owner lane available
+   and retains it through handoff selection and unpark. The final verdict takes
+   it after stop publication, then rechecks both a pending handoff on its parker
+   and exact-owner lane availability. Thus a release either follows a completed
+   verdict or is necessarily visible to its final predicates, including when no
+   parker remained registered to receive the handoff.
+   Lock ordering is lifecycle mutex then stop publication for shutdown, and
+   verdict gate then stop publication then exact-owner publication for
+   detection. Exact-owner publication precedes existing owner, dependency,
+   parked-driver, and parker locks; no reverse path retains one of those locks
+   while acquiring publication. Direct executor shutdown publishes stop before
+   closing the blocking queue, matching the verdict's stop-before-queue order.
+   All verdict guards reopen before `panic_any`, because panic hooks may
+   synchronously submit diagnostic, cleanup, owner-release, or lifecycle work.
+   The default detector-disabled runtime retains only predictable option
+   branches and performs no admission atomics or publication locking.
    Threaded-WASI JavaScript ownership follows the same rule across host realms:
    every public async operation receives a native RAII token, and a restart
    waits off the JavaScript thread for the previous Tokio generation to retire.

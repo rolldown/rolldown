@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { cpSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
 const [rolldownApi, experimentalApi] = await withTimeout(
@@ -11,7 +12,8 @@ const [rolldownApi, experimentalApi] = await withTimeout(
   'the threaded-WASI package did not finish loading',
 );
 const { build, rolldown, watch } = rolldownApi;
-const { defineParallelPlugin, dev, getRuntimeCapabilities, scan } = experimentalApi;
+const { defineParallelPlugin, dev, getAsyncRuntimeConfig, getRuntimeCapabilities, scan } =
+  experimentalApi;
 
 const require = createRequire(import.meta.url);
 const packageDir = path.dirname(require.resolve('rolldown/package.json'));
@@ -20,21 +22,95 @@ const bindingPath = path.join(distDir, 'rolldown-binding.wasi.cjs');
 const binding = require(bindingPath);
 const completed = [];
 
+const runtimeCapabilities = getRuntimeCapabilities();
+const runtimeConfig = getAsyncRuntimeConfig();
+
 assert.equal(
-  getRuntimeCapabilities().target,
+  runtimeCapabilities.target,
   'wasi-threads',
   'the WASI lifecycle suite must run against the threaded-WASI artifact',
 );
 assert.equal(
-  getRuntimeCapabilities().devSupported,
+  runtimeCapabilities.backend,
+  'tokio',
+  'the published threaded-WASI artifact must use the shipped Tokio backend',
+);
+assert.equal(
+  runtimeCapabilities.asyncRuntimeBuild,
+  false,
+  'the published threaded-WASI artifact must not claim the custom shared backend',
+);
+assert.equal(
+  runtimeCapabilities.flavor,
+  'MultiThread',
+  'the published Tokio threaded-WASI artifact must report its emnapi worker pool',
+);
+assert.equal(
+  runtimeCapabilities.devSupported,
   true,
-  'threaded WASI must preserve MultiThread dev support',
+  'the published Tokio threaded-WASI artifact must preserve dev support',
 );
 assert.equal(
   typeof binding.acquireAsyncRuntime,
   'function',
   'the generated threaded-WASI binding must export acquireAsyncRuntime',
 );
+assert.deepEqual(
+  runtimeConfig,
+  {
+    flavor: 'MultiThread',
+    maxBlockingTasks: 4,
+    workerThreads: 4,
+  },
+  'the published threaded-WASI artifact must report the generated loader default pool',
+);
+
+const poolCapProbe = spawnSync(
+  process.execPath,
+  [
+    '--input-type=module',
+    '-e',
+    `
+      const { getAsyncRuntimeConfig, getRuntimeCapabilities } =
+        await import('rolldown/experimental');
+      console.log(JSON.stringify({
+        capabilities: getRuntimeCapabilities(),
+        config: getAsyncRuntimeConfig(),
+      }));
+      process.exit(0);
+    `,
+  ],
+  {
+    cwd: path.dirname(fileURLToPath(import.meta.url)),
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      NAPI_RS_ASYNC_WORK_POOL_SIZE: '2048',
+    },
+    timeout: 60_000,
+  },
+);
+assert.equal(poolCapProbe.error, undefined, poolCapProbe.stderr);
+assert.equal(poolCapProbe.status, 0, poolCapProbe.stderr || poolCapProbe.stdout);
+assert.deepEqual(JSON.parse(poolCapProbe.stdout.trim().split('\n').at(-1)), {
+  capabilities: {
+    asyncRuntimeBuild: false,
+    backend: 'tokio',
+    blockOnJsThreadSafe: false,
+    devSupported: true,
+    flavor: 'MultiThread',
+    target: 'wasi-threads',
+    threads: true,
+    timers: true,
+    wasi: true,
+    watchSupported: false,
+  },
+  config: {
+    flavor: 'MultiThread',
+    maxBlockingTasks: 1024,
+    workerThreads: 1024,
+  },
+});
 
 await check('watch fails before setup and remains closable', async () => {
   let optionsHookCalls = 0;

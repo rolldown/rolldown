@@ -3,6 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   acquireRuntimeLease: vi.fn(),
+  bindingCloseTerminal: vi.fn(),
   bindingConstructionError: undefined as unknown,
   bindingConstructions: 0,
   callOptionsHook: vi.fn(async (option) => option),
@@ -28,6 +29,10 @@ vi.mock('../src/binding.cjs', () => ({
       mocks.bindingConstructions += 1;
       if (mocks.bindingConstructionError) throw mocks.bindingConstructionError;
     }
+
+    closeTerminal() {
+      return mocks.bindingCloseTerminal();
+    }
   },
   BindingRebuildStrategy: {
     Always: 'always',
@@ -43,10 +48,31 @@ vi.mock('../src/plugin/plugin-driver', () => ({
   },
 }));
 
-vi.mock('../src/runtime-lifecycle', () => ({
-  acquireRuntimeLease: mocks.acquireRuntimeLease,
-  CloseCoordinator: class {},
-}));
+vi.mock('../src/runtime-lifecycle', () => {
+  const throwCloseErrors = (errors, aggregateMessage) => {
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
+      throw new AggregateError(errors, aggregateMessage, { cause: errors[0] });
+    }
+  };
+  return {
+    acquireRuntimeLease: mocks.acquireRuntimeLease,
+    CloseCoordinator: class {
+      constructor(aggregateMessage) {
+        this.aggregateMessage = aggregateMessage;
+      }
+
+      close(attempt) {
+        return (this.closePromise ??= Promise.resolve().then(async () => {
+          const { errors, retryable } = await attempt();
+          if (retryable) this.closePromise = undefined;
+          throwCloseErrors(errors, this.aggregateMessage);
+        }));
+      }
+    },
+    throwCloseErrors,
+  };
+});
 
 vi.mock('../src/utils/create-bundler-option', () => ({
   createBundlerOptions: mocks.createBundlerOptions,
@@ -61,6 +87,7 @@ import {
 
 beforeEach(() => {
   mocks.acquireRuntimeLease.mockReset();
+  mocks.bindingCloseTerminal.mockReset().mockResolvedValue(undefined);
   mocks.bindingConstructionError = undefined;
   mocks.bindingConstructions = 0;
   mocks.callOptionsHook.mockClear();
@@ -278,6 +305,45 @@ test('dev setup keeps persistent cleanup retryable without hiding the setup erro
   expect(stopWorkers).toHaveBeenCalledTimes(3);
   expect(release).toHaveBeenCalledTimes(3);
   expect(hasRetryableCleanupOwnership(cleanup!)).toBe(false);
+});
+
+test('dev close retries a transport rejection without releasing owned resources', async () => {
+  const transportError = new Error('dev close transport rejected');
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingCloseTerminal.mockRejectedValueOnce(transportError).mockResolvedValue(undefined);
+  const engine = await DevEngine.create({});
+
+  await expect(engine.close()).rejects.toBe(transportError);
+  expect(mocks.bindingCloseTerminal).toHaveBeenCalledOnce();
+  expect(stopWorkers).not.toHaveBeenCalled();
+  expect(release).not.toHaveBeenCalled();
+
+  await expect(engine.close()).resolves.toBeUndefined();
+  expect(mocks.bindingCloseTerminal).toHaveBeenCalledTimes(2);
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+});
+
+test('dev close memoizes resolved terminal diagnostics after releasing owned resources', async () => {
+  const terminalError = new Error('dev close terminal diagnostic');
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingCloseTerminal.mockResolvedValue({
+    errors: [{ type: 'JsError', field0: terminalError }],
+    isBindingErrors: true,
+  });
+  const engine = await DevEngine.create({});
+
+  await expect(engine.close()).rejects.toBe(terminalError);
+  await expect(engine.close()).rejects.toBe(terminalError);
+  expect(mocks.bindingCloseTerminal).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
 });
 
 function createBundlerOption(stopWorkers: () => Promise<void>) {

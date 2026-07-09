@@ -15,7 +15,12 @@ async function runWithWatchdog() {
     throw new Error('ROLLDOWN_WASI_LIFECYCLE_TIMEOUT_MS must be a positive number');
   }
 
+  const childEnv = { ...process.env };
+  delete childEnv.NAPI_RS_ASYNC_WORK_POOL_SIZE;
+  delete childEnv.UV_THREADPOOL_SIZE;
+
   const child = spawn(process.execPath, [fileURLToPath(import.meta.url), childFlag], {
+    env: childEnv,
     stdio: 'inherit',
   });
   let timedOut = false;

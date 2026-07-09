@@ -9017,9 +9017,7 @@ impl RuntimeController {
         #[cfg(not(target_family = "wasm"))]
         RuntimeExecutor::MultiThread(_) => return None,
       };
-      let Some(host_turn) = executor.try_admit_host_turn(dispatch) else {
-        return None;
-      };
+      let host_turn = executor.try_admit_host_turn(dispatch)?;
       if mark_serviced {
         CURRENT_THREAD_TASK_DRIVERS.mark_serviced(dispatch);
       }

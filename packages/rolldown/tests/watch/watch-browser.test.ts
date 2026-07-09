@@ -808,14 +808,15 @@ function browserHarnessEntry(
     });
 
     globalThis.runBrowserWatcherProviderRetryTest = (createStorage) => withTimeout(async () => {
-      const emitter = new WatcherEmitter();
       let listenerCalls = 0;
-      emitter.on('close', async () => {
+      const listener = async () => {
         listenerCalls += 1;
         await Promise.resolve();
-      });
+      };
 
-      await emitter.emitClose(Promise.resolve());
+      const unavailableEmitter = new WatcherEmitter();
+      unavailableEmitter.on('close', listener);
+      await unavailableEmitter.emitClose(Promise.resolve());
 
       let storageCreations = 0;
       configureAsyncContext({
@@ -824,7 +825,9 @@ function browserHarnessEntry(
           return createStorage();
         },
       });
-      await emitter.emitClose(Promise.resolve());
+      const configuredEmitter = new WatcherEmitter();
+      configuredEmitter.on('close', listener);
+      await configuredEmitter.emitClose(Promise.resolve());
 
       return {
         listenerCalls,

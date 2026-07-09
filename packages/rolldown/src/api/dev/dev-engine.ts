@@ -215,7 +215,7 @@ export class DevEngine {
   }
 
   close(): Promise<void> {
-    if (this.#isActiveDevCallback()) {
+    if (!this.#isClosing && this.#isActiveDevCallback()) {
       return Promise.reject(
         new Error('Cannot close a dev engine from one of its active JavaScript callbacks'),
       );

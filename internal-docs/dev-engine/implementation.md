@@ -1105,9 +1105,11 @@ The three JavaScript dev callbacks run inside an engine-specific async context
 that remains active through their returned promise. Calling and awaiting
 `close()` from one of those callbacks would otherwise deadlock because native
 work awaits the callback while close waits for the admitted operation.
-`DevEngine.close()` rejects that same-engine reentrant call before changing
-lifecycle state. Calls from outside the callback continue to wait for normal
-quiescence, and descendants may close after the callback has settled.
+`DevEngine.close()` rejects a same-engine callback that would initiate close
+before changing lifecycle state. If an external caller already initiated close,
+the callback instead receives the dependency-aware acknowledgement and can
+return while that external caller continues to await normal quiescence and
+terminal diagnostics. Descendants may close after the callback has settled.
 
 ---
 

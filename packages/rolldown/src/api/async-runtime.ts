@@ -90,6 +90,7 @@ export interface AsyncRuntimeMetrics extends AsyncRuntimeConfig {
  * - `ROLLDOWN_RUNTIME=single|current-thread|multi|multi-thread`
  * - `ROLLDOWN_WORKER_THREADS`
  * - `ROLLDOWN_MAX_BLOCKING_THREADS`
+ * - `ROLLDOWN_PARK_DEADLINE_MS`
  *
  * Native `ROLLDOWN_*` worker counts are capped at 256. Native Tokio
  * blocking-thread counts are capped at 512. Explicit options above their

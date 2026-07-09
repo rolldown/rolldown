@@ -1581,7 +1581,12 @@ path before cleanup. Stale-lock reclaimers serialize with unique Lamport bakery
 candidates: each publishes an immutable owner and ticket, waits for every live
 chooser and lower ticket, and removes only its own candidate. A crashed
 reclaimer therefore leaves an owner-specific path that a successor can remove
-without renaming or deleting any successor-owned lock.
+without renaming or deleting any successor-owned lock. Canonical owners and
+reclaim candidates also record a best-effort OS process-incarnation identity.
+Reclamation requires a positively observed incarnation mismatch before treating
+a reused live PID as stale. Only identities of the same recognized format are
+comparable; unavailable, unknown, or cross-format identities retain the
+conservative PID-only behavior.
 
 emnapi 1.11.2 already includes the separate bound-`setImmediate` fix from
 emnapi#221.

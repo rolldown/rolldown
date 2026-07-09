@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import {
   copyFile,
@@ -17,6 +18,7 @@ import {
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 
 import { NapiCli } from '@napi-rs/cli';
 import { parse } from 'acorn';
@@ -37,8 +39,13 @@ const transactionStateVersion = 1;
 const transactionLockTimeoutMs = 60_000;
 const incompleteLockGracePeriodMs = 5_000;
 const transactionLockPollMs = 20;
+const processIncarnationProbeTimeoutMs = 5_000;
+const processIncarnationMatchCacheMs = 1_000;
 const maximumTransactionReplacements = 64;
+const execFileAsync = promisify(execFile);
 const napiCli = new NapiCli();
+const processIncarnationMatchCache = new Map();
+let currentProcessIncarnationPromise;
 
 async function assertEmbeddedRuntimeNotices(repoRoot, runtimeFsBundle) {
   const code = await readFile(runtimeFsBundle, 'utf8');
@@ -298,10 +305,12 @@ async function acquireStageWasiPackageLock(
 ) {
   const lockPath = path.join(transactionRoot, transactionLockName);
   const ownerPath = path.join(lockPath, 'owner.json');
+  const processIncarnation = await getCurrentProcessIncarnation();
   const deadline = Date.now() + transactionLockTimeoutMs;
 
   while (true) {
     const token = randomUUID();
+    const expectedOwner = createStageWasiPackageLockOwner(token, processIncarnation);
     const candidateLockPath = path.join(
       transactionRoot,
       `${transactionLockCandidatePrefix}${process.pid}.${token}`,
@@ -311,12 +320,7 @@ async function acquireStageWasiPackageLock(
     try {
       await mkdir(candidateLockPath);
       await afterLockCandidateCreate?.(candidateLockPath);
-      await writeJsonAtomic(candidateOwnerPath, {
-        version: 1,
-        createdAt: Date.now(),
-        pid: process.pid,
-        token,
-      });
+      await writeJsonAtomic(candidateOwnerPath, expectedOwner);
       await beforeLockPublish?.();
       publishingLockCandidate = true;
       await rename(candidateLockPath, lockPath);
@@ -361,7 +365,7 @@ async function acquireStageWasiPackageLock(
 
     return async () => {
       const owner = await readJsonIfExists(ownerPath);
-      if (!owner || owner.token !== token || owner.pid !== process.pid) {
+      if (!sameStageWasiPackageLockOwner(owner, expectedOwner)) {
         throw new Error(`Lost ownership of the WASI package transaction lock at ${lockPath}`);
       }
       const retiredPath = stageWasiPackageLockRetiredPath(transactionRoot);
@@ -413,7 +417,7 @@ async function reclaimStaleStageWasiPackageLock(
   }
 
   const observedOwner = await readLockOwnerIfExists(ownerPath);
-  if (!stageWasiPackageLockIsStale(lockStats, observedOwner)) return false;
+  if (!(await stageWasiPackageLockIsStale(lockStats, observedOwner))) return false;
   await afterStaleLockObserved?.({ owner: observedOwner });
 
   const releaseReclaimGuard = await acquireStageWasiPackageReclaimGuard(transactionRoot, {
@@ -429,7 +433,7 @@ async function reclaimStaleStageWasiPackageLock(
     }
     const currentOwner = await readLockOwnerIfExists(ownerPath);
     if (!sameStageWasiPackageLockOwner(currentOwner, observedOwner)) return false;
-    if (!stageWasiPackageLockIsStale(currentStats, currentOwner)) return false;
+    if (!(await stageWasiPackageLockIsStale(currentStats, currentOwner))) return false;
 
     retiredPath = stageWasiPackageLockRetiredPath(path.dirname(lockPath));
     try {
@@ -463,7 +467,7 @@ async function reclaimStaleStageWasiPackageLockCandidates(transactionRoot) {
       const candidatePid = parseStageWasiPackageLockCandidatePid(entry);
       if (candidatePid !== undefined && processExists(candidatePid)) continue;
     }
-    if (!stageWasiPackageLockIsStale(candidateStats, owner)) continue;
+    if (!(await stageWasiPackageLockIsStale(candidateStats, owner))) continue;
 
     const retiredPath = stageWasiPackageLockRetiredPath(transactionRoot);
     try {
@@ -496,6 +500,16 @@ function stageWasiPackageLockRetiredPath(transactionRoot) {
   );
 }
 
+function createStageWasiPackageLockOwner(token, incarnation) {
+  return {
+    version: 1,
+    createdAt: Date.now(),
+    pid: process.pid,
+    token,
+    ...(incarnation === undefined ? {} : { incarnation }),
+  };
+}
+
 function stageWasiPackageLockOwnerIsValid(owner) {
   return Boolean(
     owner &&
@@ -504,13 +518,17 @@ function stageWasiPackageLockOwnerIsValid(owner) {
     owner.createdAt > 0 &&
     Number.isSafeInteger(owner.pid) &&
     owner.pid > 0 &&
-    typeof owner.token === 'string',
+    typeof owner.token === 'string' &&
+    (owner.incarnation === undefined ||
+      (typeof owner.incarnation === 'string' &&
+        owner.incarnation.length > 0 &&
+        owner.incarnation.length <= 512)),
   );
 }
 
-function stageWasiPackageLockIsStale(lockStats, owner) {
+async function stageWasiPackageLockIsStale(lockStats, owner) {
   return stageWasiPackageLockOwnerIsValid(owner)
-    ? !processExists(owner.pid)
+    ? !(await stageWasiPackageLockOwnerIsLive(owner))
     : Date.now() - lockStats.mtimeMs >= incompleteLockGracePeriodMs;
 }
 
@@ -527,7 +545,8 @@ function sameStageWasiPackageLockOwner(first, second) {
     first.version === second.version &&
     first.createdAt === second.createdAt &&
     first.pid === second.pid &&
-    first.token === second.token
+    first.token === second.token &&
+    first.incarnation === second.incarnation
   );
 }
 
@@ -544,16 +563,12 @@ export async function acquireStageWasiPackageReclaimGuard(
   } = {},
 ) {
   const token = randomUUID();
+  const processIncarnation = await getCurrentProcessIncarnation();
   const candidateName = `${transactionReclaimCandidatePrefix}${process.pid}.${token}`;
   const candidatePath = path.join(transactionRoot, candidateName);
   const ownerPath = path.join(candidatePath, 'owner.json');
   const ticketPath = path.join(candidatePath, transactionReclaimTicketName);
-  const owner = {
-    version: 1,
-    createdAt: Date.now(),
-    pid: process.pid,
-    token,
-  };
+  const owner = createStageWasiPackageLockOwner(token, processIncarnation);
   const deadline = Date.now() + transactionLockTimeoutMs;
   let ticket;
 
@@ -639,8 +654,10 @@ async function readStageWasiPackageReclaimCandidates(transactionRoot) {
       stageWasiPackageLockOwnerIsValid(owner) &&
       owner.pid === identity.pid &&
       owner.token === identity.token;
-    const candidatePid = ownerIsValid ? owner.pid : identity.pid;
-    if (!processExists(candidatePid)) {
+    const candidateIsLive = ownerIsValid
+      ? await stageWasiPackageLockOwnerIsLive(owner)
+      : processExists(identity.pid);
+    if (!candidateIsLive) {
       await rm(candidatePath, { force: true, recursive: true });
       continue;
     }
@@ -978,6 +995,145 @@ async function writeJsonAtomic(destination, value) {
     renamed = true;
   } finally {
     if (created && !renamed) await rm(temporary, { force: true });
+  }
+}
+
+async function stageWasiPackageLockOwnerIsLive(owner) {
+  if (!processExists(owner.pid)) return false;
+  if (owner.incarnation === undefined) return true;
+  const expectedFormat = processIncarnationFormat(owner.incarnation);
+  if (expectedFormat === undefined) return true;
+
+  const cacheKey = `${owner.pid}\0${owner.incarnation}`;
+  const cached = processIncarnationMatchCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return (await cached.promise) ?? true;
+  }
+
+  const entry = {
+    expiresAt: Number.POSITIVE_INFINITY,
+    promise: processIncarnationMatches(owner.pid, owner.incarnation, expectedFormat),
+  };
+  processIncarnationMatchCache.set(cacheKey, entry);
+  const matches = await entry.promise;
+  if (processIncarnationMatchCache.get(cacheKey) === entry) {
+    if (matches === true) {
+      entry.expiresAt = Date.now() + processIncarnationMatchCacheMs;
+    } else {
+      processIncarnationMatchCache.delete(cacheKey);
+    }
+  }
+  return matches ?? true;
+}
+
+async function processIncarnationMatches(pid, expected, expectedFormat) {
+  const incarnation =
+    pid === process.pid ? await getCurrentProcessIncarnation() : await readProcessIncarnation(pid);
+  if (incarnation === undefined || processIncarnationFormat(incarnation) !== expectedFormat) {
+    return undefined;
+  }
+  return incarnation === expected;
+}
+
+function processIncarnationFormat(incarnation) {
+  if (
+    /^linux:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:\d+$/i.test(incarnation)
+  ) {
+    return 'linux';
+  }
+  if (/^win32:\d+$/.test(incarnation)) return 'win32';
+  if (
+    /^posix:(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[1-9]|[12]\d|3[01]) \d{2}:\d{2}:\d{2} \d{4}$/.test(
+      incarnation,
+    )
+  ) {
+    return 'posix';
+  }
+  return undefined;
+}
+
+async function getCurrentProcessIncarnation() {
+  const pending = (currentProcessIncarnationPromise ??= readProcessIncarnation(process.pid));
+  const incarnation = await pending;
+  if (incarnation === undefined && currentProcessIncarnationPromise === pending) {
+    currentProcessIncarnationPromise = undefined;
+  }
+  return incarnation;
+}
+
+async function readProcessIncarnation(pid) {
+  if (process.platform === 'linux') {
+    return readLinuxProcessIncarnation(pid);
+  }
+  if (process.platform === 'win32') {
+    return readWindowsProcessIncarnation(pid);
+  }
+  return readPosixProcessIncarnation(pid);
+}
+
+async function readLinuxProcessIncarnation(pid) {
+  try {
+    const [stat, bootIdText] = await Promise.all([
+      readFile(`/proc/${pid}/stat`, 'utf8'),
+      readFile('/proc/sys/kernel/random/boot_id', 'utf8'),
+    ]);
+    const commandEnd = stat.lastIndexOf(')');
+    if (commandEnd === -1) return undefined;
+    const fields = stat
+      .slice(commandEnd + 1)
+      .trim()
+      .split(/\s+/);
+    const startTime = fields[19];
+    const bootId = bootIdText.trim();
+    if (!/^\d+$/.test(startTime) || bootId.length === 0 || /\s/.test(bootId)) return undefined;
+    return `linux:${bootId}:${startTime}`;
+  } catch {
+    return undefined;
+  }
+}
+
+async function readWindowsProcessIncarnation(pid) {
+  try {
+    const { stdout } = await execFileAsync(
+      windowsPowerShellExecutable(),
+      [
+        '-NoLogo',
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `$target = Get-Process -Id ${pid} -ErrorAction Stop; [Console]::Out.Write($target.StartTime.ToUniversalTime().Ticks)`,
+      ],
+      {
+        encoding: 'utf8',
+        timeout: processIncarnationProbeTimeoutMs,
+        windowsHide: true,
+      },
+    );
+    const startTime = stdout.trim();
+    return /^\d+$/.test(startTime) ? `win32:${startTime}` : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function windowsPowerShellExecutable() {
+  const systemRoot = process.env.SystemRoot;
+  return typeof systemRoot === 'string' && systemRoot.length > 0
+    ? path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+    : 'powershell.exe';
+}
+
+async function readPosixProcessIncarnation(pid) {
+  try {
+    const { stdout } = await execFileAsync('ps', ['-p', String(pid), '-o', 'lstart='], {
+      encoding: 'utf8',
+      env: { ...process.env, LC_ALL: 'C', TZ: 'UTC0' },
+      timeout: processIncarnationProbeTimeoutMs,
+    });
+    const startTime = stdout.trim().replace(/\s+/g, ' ');
+    return startTime.length > 0 ? `posix:${startTime}` : undefined;
+  } catch {
+    return undefined;
   }
 }
 

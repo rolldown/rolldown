@@ -328,6 +328,33 @@ async function assertTransactionStateRemoved(packageRoot) {
   );
 }
 
+async function readCurrentProcessLockOwner(packageRoot) {
+  let owner;
+  await withStageWasiPackageLock(packageRoot, async () => {
+    owner = JSON.parse(
+      await readFile(path.join(packageRoot, '.stage-wasi-packages.lock/owner.json'), 'utf8'),
+    );
+  });
+  assert.equal(typeof owner.incarnation, 'string');
+  assert.notEqual(owner.incarnation.length, 0);
+  return owner;
+}
+
+function differentComparableIncarnation(incarnation) {
+  assert.match(incarnation, /\d$/);
+  return `${incarnation.slice(0, -1)}${incarnation.endsWith('0') ? '1' : '0'}`;
+}
+
+async function assertResolvesPromptly(promise, removeBlocker) {
+  const outcome = await Promise.race([
+    promise.then(() => 'resolved'),
+    delay(2_000, 'timed-out', { ref: false }),
+  ]);
+  if (outcome === 'timed-out') await removeBlocker();
+  await promise;
+  assert.equal(outcome, 'resolved');
+}
+
 function spawnTransaction(replacements, pause) {
   const child = spawn(
     process.execPath,
@@ -807,6 +834,37 @@ test('package lock publishes a complete owner before contenders can acquire it',
   }
 });
 
+test('package lock reclaims a live reused PID with a different incarnation promptly', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-reused-canonical-pid-'));
+  const packageRoot = path.join(root, 'npm');
+  const lockPath = path.join(packageRoot, '.stage-wasi-packages.lock');
+
+  try {
+    const currentOwner = await readCurrentProcessLockOwner(packageRoot);
+    await mkdir(lockPath);
+    await writeFile(
+      path.join(lockPath, 'owner.json'),
+      `${JSON.stringify({
+        ...currentOwner,
+        createdAt: Date.now(),
+        token: 'reused-canonical-pid',
+        incarnation: differentComparableIncarnation(currentOwner.incarnation),
+      })}\n`,
+    );
+
+    let operationRan = false;
+    const recovery = withStageWasiPackageLock(packageRoot, () => {
+      operationRan = true;
+    });
+    await assertResolvesPromptly(recovery, () => rm(lockPath, { force: true, recursive: true }));
+
+    assert.equal(operationRan, true);
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
 test('stale lock takeover cannot retire a successor after a delayed observation', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-stale-lock-cas-'));
   const packageRoot = path.join(root, 'npm');
@@ -1022,6 +1080,110 @@ test('reclaim guard orders equal-ticket contenders across processes', async () =
         await abruptlyTerminateChild(run);
       }
     }
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('reclaim guard removes a live reused PID candidate with a different incarnation promptly', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-reused-reclaim-pid-'));
+  const packageRoot = path.join(root, 'npm');
+  const staleToken = 'reused-reclaim-pid';
+  const staleCandidatePath = path.join(
+    packageRoot,
+    `.stage-wasi-packages.lock.reclaim.${process.pid}.${staleToken}`,
+  );
+  let release;
+
+  try {
+    const currentOwner = await readCurrentProcessLockOwner(packageRoot);
+    await mkdir(staleCandidatePath);
+    await Promise.all([
+      writeFile(
+        path.join(staleCandidatePath, 'owner.json'),
+        `${JSON.stringify({
+          ...currentOwner,
+          createdAt: Date.now(),
+          token: staleToken,
+          incarnation: differentComparableIncarnation(currentOwner.incarnation),
+        })}\n`,
+      ),
+      writeFile(
+        path.join(staleCandidatePath, 'ticket.json'),
+        `${JSON.stringify({ ticket: 1, version: 1 })}\n`,
+      ),
+    ]);
+
+    let publishedOwner;
+    const acquisition = acquireStageWasiPackageReclaimGuard(packageRoot, {
+      async afterReclaimGuardTicketPublish(candidatePath) {
+        publishedOwner = JSON.parse(await readFile(path.join(candidatePath, 'owner.json'), 'utf8'));
+      },
+    }).then((acquiredRelease) => {
+      release = acquiredRelease;
+    });
+    await assertResolvesPromptly(acquisition, () =>
+      rm(staleCandidatePath, { force: true, recursive: true }),
+    );
+
+    assert.equal(publishedOwner.incarnation, currentOwner.incarnation);
+    await assertMissing(staleCandidatePath);
+    await release();
+    release = undefined;
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    if (release) await release().catch(() => {});
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('reclaim guard preserves a live PID candidate with an unknown incarnation format', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-unknown-reclaim-incarnation-'));
+  const packageRoot = path.join(root, 'npm');
+  const staleToken = 'unknown-reclaim-incarnation';
+  const staleCandidatePath = path.join(
+    packageRoot,
+    `.stage-wasi-packages.lock.reclaim.${process.pid}.${staleToken}`,
+  );
+  let acquisition;
+  let release;
+
+  try {
+    const currentOwner = await readCurrentProcessLockOwner(packageRoot);
+    await mkdir(staleCandidatePath);
+    await Promise.all([
+      writeFile(
+        path.join(staleCandidatePath, 'owner.json'),
+        `${JSON.stringify({
+          ...currentOwner,
+          createdAt: Date.now(),
+          token: staleToken,
+          incarnation: `future-v2:${currentOwner.incarnation}`,
+        })}\n`,
+      ),
+      writeFile(
+        path.join(staleCandidatePath, 'ticket.json'),
+        `${JSON.stringify({ ticket: 1, version: 1 })}\n`,
+      ),
+    ]);
+
+    let acquired = false;
+    acquisition = acquireStageWasiPackageReclaimGuard(packageRoot).then((acquiredRelease) => {
+      acquired = true;
+      release = acquiredRelease;
+    });
+    await delay(100);
+    assert.equal(acquired, false);
+    await access(staleCandidatePath);
+
+    await rm(staleCandidatePath, { force: true, recursive: true });
+    await acquisition;
+    await release();
+    release = undefined;
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    await rm(staleCandidatePath, { force: true, recursive: true });
+    await Promise.allSettled([Promise.resolve(acquisition)]);
+    if (release) await release().catch(() => {});
     await rm(root, { force: true, recursive: true });
   }
 });

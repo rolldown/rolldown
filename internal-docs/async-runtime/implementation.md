@@ -1192,15 +1192,16 @@ module-count hooks or lifecycle locks.
 The WASI CI lane runs `packages/rolldown/tests/wasi-runtime-lifecycle.mjs`
 against the generated threaded artifact. It covers overlapping public owners,
 restart after the final release, repeated immediate token reacquisition while
-Tokio's previous generation retires, main-realm reacquisition racing non-last
-worker-environment cleanup, cancellation of a worker environment whose
-acquisition is blocked behind retirement, operation and
-binding-construction failures, worker realms, a real dev-engine
-run/close/restart, fail-closed watch and parallel-plugin capability detection,
-and duplicate JavaScript package copies that resolve one shared binding. The
-watch case verifies `ERROR`/`END`, repeated close, and that plugin option hooks
-never run. Parallel JavaScript plugins are rejected by both the public factory
-and option consumption on WASI because the Rust binding does not consume their
+Tokio's previous generation retires, cancellation of a worker environment
+whose acquisition is blocked behind retirement, operation and
+binding-construction failures, worker realms, a real dev-engine run/close/restart,
+fail-closed watch and parallel-plugin capability detection, and duplicate
+JavaScript package copies that resolve one shared binding. A user-created Node
+worker loads a separate Wasm memory, so it cannot cover the same-image
+non-last-environment transition and is not claimed as that regression. The watch
+case verifies `ERROR`/`END`, repeated close, and that plugin option hooks never
+run. Parallel JavaScript plugins are rejected by both the public factory and
+option consumption on WASI because the Rust binding does not consume their
 worker registry on wasm targets.
 The consumption guard covers descriptors created directly or by an older
 package copy and runs before plugin promise assimilation, options hooks,

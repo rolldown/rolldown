@@ -2,7 +2,7 @@
 
 ## Summary
 
-A guiding methodology for structuring bundler-internal pipelines (stage-level dataflow) as passes with a compile-time ownership contract: each pass declares what it reads, owns, seals, and hands onward, and the borrow checker enforces the declaration. This doc defines the contract; there is no implementation.md yet — the first flow that adopts the contract adds it.
+A guiding methodology for structuring bundler-internal pipelines (stage-level dataflow) as passes with a compile-time ownership discipline: each pass is a plain typed function that declares what it reads, owns, seals, and hands onward, and ordinary Rust — by-value parameters, the driver's `let`-chain, distinct draft/frozen artifact types — enforces the declaration. This doc defines the discipline; there is no implementation.md yet — the first flow that adopts it adds one.
 
 ## Ground rules (read this first)
 
@@ -19,119 +19,103 @@ A guiding methodology for structuring bundler-internal pipelines (stage-level da
   - what it takes ownership of
   - what it seals forever
   - what it hands onward, still mutable
-- The borrow checker enforces the declaration — not comments, not runtime panics.
-- The pipeline is a plain function (the driver); its `let`-chain is the pipeline diagram.
-- Wrong order does not compile: a step cannot name inputs that do not exist yet.
-- Sealed cannot be mutated: the `&mut` cannot be written.
+- Enforcement comes from ordinary Rust, not from a framework:
+  - the driver's `let`-chain encodes order — a step cannot name inputs that do not exist yet
+  - distinct draft/frozen artifact types encode sealing — the frozen type simply has no mutators
+  - by-value parameters encode "to modify is to own and hand back"
+- There is deliberately no shared `Pass` trait yet — see [Deferred: a shared Pass trait](#deferred-a-shared-pass-trait).
 
 ## What it looks like
 
-The whole mechanism is one trait, one marker trait, and one wrapper function:
+A pass is a plain async function with a disciplined signature:
 
 ```rust
-pub trait Pass {
-  type InputRead<'a>: Copy;         // shared borrows only; Copy makes `&mut` unrepresentable here
-  type InputOwned;                  // data taken over (to modify = to own and hand back); `()` if none
-  type OutputRead: SealedArtifact;  // minted here, frozen from here on
-  type OutputOwned;                 // still-mutable data handed to a later pass
-
-  async fn run(self, cx: &mut PassCtx, read: Self::InputRead<'_>, owned: Self::InputOwned)
-    -> BuildResult<(Self::OutputRead, Self::OutputOwned)>;
-}
-
-/// Marker for frozen types: no `&mut` accessors, no interior mutability.
-/// Each `impl SealedArtifact for X` is a reviewed authorization.
-pub trait SealedArtifact {}
+pub async fn optimize_chunks(
+  cx: &mut PassCtx,                  // the single sanctioned `&mut`: write-only sinks
+  read: OptimizeChunksInput<'_>,     // shared borrows only
+  graph: DraftChunkGraph,            // owned: the data this pass reshapes
+) -> BuildResult<DraftChunkGraph>    // handed back, still mutable
 ```
 
-- `self` carries the pass's configuration; `run` consumes it — a pass is single-shot.
-- `PassCtx` is the **single sanctioned `&mut`**: write-only sinks (diagnostics now, devtools trace later). It never contains pipeline data; passes may write it but never read it.
-- Slot conventions: empty slot = `()`; a single artifact = the bare type; multiple = a named per-pass struct (`XxxPassInputRead { .. }`, derives `Copy`).
-- Driver rules: every `OutputOwned` is consumed by exactly one later `InputOwned` (or explicitly dropped). **Seal order follows reference direction**: seal an artifact only when everything its keys/indices point into is already sealed.
+Conventions:
+
+- Read parameters are shared borrows. One or two stay plain parameters; more become a named per-pass struct (`XxxInput<'a>`, all-`&` fields), which doubles as the pass's greppable dependency manifest.
+- To modify is to own: mutable working data is taken by value and handed back, never `&mut`.
+- Sealing is a type transition (`DraftChunkGraph → ChunkGraph`): the frozen type exposes no mutators and holds no interior mutability. **Immutability lives in the artifact type's API — nothing else grants it.**
+- `PassCtx` is the single sanctioned `&mut`: write-only sinks (diagnostics now, devtools trace later). It never contains pipeline data; passes may write it but never read it.
+- Driver rules: every still-mutable output is consumed by exactly one later pass (or explicitly dropped). **Seal order follows reference direction**: seal an artifact only when everything its keys/indices point into is already sealed.
+
+The freeze boundary proven in-tree today is `UsedSymbolRefsBuilder::seal()` in the generate stage: source liveness becomes read-only while chunk layout stays mutable — freeze lines are per-artifact, not global:
+
+```text
+UsedSymbolRefsBuilder ──(mutated through chunk generation)──► seal() ──► UsedSymbolRefs (frozen)
+                                                (chunk graph stays mutable past this point)
+```
+
+What a fully adopted flow could look like — **hypothetical**: today's `GenerateStage` does not have this boundary (its graph keeps being mutated by link derivation, wrapping, naming, and finalization well past chunk optimization). Sealing the chunk graph itself is left to the first flow that adopts this methodology:
 
 ```text
 ()  ──Split──►  Draft  ──Optimize──►  Draft  ──Seal──►  ChunkGraph (frozen)
                                                              │
                                  ┌──────── &ChunkGraph ──────┤
                                  ▼                           ▼
-                            ComputeLinks                AssignNames     ← disjoint slots ⇒ parallel (see Why)
+                            ComputeLinks                AssignNames
                                  │                           │
                             Links (sealed)             Names (sealed)
 ```
 
 ## Example
 
-Three passes, three roles — the slots mirror what each pass does to the data:
+Three passes, three roles — the signatures mirror what each pass does to the data (names are illustrative; `DraftChunkGraph`, `ChunkNames` etc. do not exist today):
 
 ```rust
 // 1) Reshape: chunk merging restructures the graph itself, so it owns the graph.
-pub struct OptimizeChunks;
-
 #[derive(Clone, Copy)]
-pub struct OptimizeChunksInputRead<'a> {
+pub struct OptimizeChunksInput<'a> {
   pub modules: &'a ModuleTable,
   pub metas: &'a IndexVec<ModuleIdx, LinkingMetadata>,
 }
 
-impl Pass for OptimizeChunks {
-  type InputRead<'a> = OptimizeChunksInputRead<'a>;
-  type InputOwned    = DraftChunkGraph;   // it merges chunks and moves modules
-  type OutputRead    = ();
-  type OutputOwned   = DraftChunkGraph;   // handed back, still mutable
-
-  async fn run(self, _cx: &mut PassCtx, read: Self::InputRead<'_>, mut graph: Self::InputOwned)
-    -> BuildResult<((), Self::OutputOwned)> {
-    // we own `graph`: mutate freely, internal `par_iter_mut` is fine
-    Ok(((), graph))
-  }
+pub async fn optimize_chunks(
+  cx: &mut PassCtx,
+  read: OptimizeChunksInput<'_>,
+  mut graph: DraftChunkGraph,
+) -> BuildResult<DraftChunkGraph> {
+  // we own `graph`: mutate freely, internal `par_iter_mut` is fine
+  Ok(graph)
 }
 
 // 2) Seal: the freeze transition is itself a pass; compaction happens here.
-pub struct SealChunkGraph;
-
-impl Pass for SealChunkGraph {
-  type InputRead<'a> = ();
-  type InputOwned    = DraftChunkGraph;
-  type OutputRead    = ChunkGraph;        // `impl SealedArtifact for ChunkGraph` lives next to the type
-  type OutputOwned   = ();
-  // ...
+//    Immutability comes from `ChunkGraph`'s API: it exposes no mutators.
+pub fn seal_chunk_graph(graph: DraftChunkGraph) -> ChunkGraph {
+  /* compact, re-index, freeze */
 }
 
 // 3) Derive: the most common shape — owns nothing, reads sealed data, mints a new sealed artifact.
-pub struct AssignNames;
-
-#[derive(Clone, Copy)]
-pub struct AssignNamesInputRead<'a> {
-  pub graph: &'a ChunkGraph,
-  pub options: &'a NormalizedBundlerOptions,
-}
-
-impl Pass for AssignNames {
-  type InputRead<'a> = AssignNamesInputRead<'a>;
-  type InputOwned    = ();
-  type OutputRead    = ChunkNames;        // e.g. IndexVec<ChunkIdx, ..>, sealed at birth
-  type OutputOwned   = ();
-  // ...
-}
+pub async fn assign_names(
+  cx: &mut PassCtx,
+  graph: &ChunkGraph,
+  options: &NormalizedBundlerOptions,
+) -> BuildResult<ChunkNames>
 ```
 
-The driver is a typed `let`-chain (deliberately **not** `Vec<Box<dyn Pass>>` — heterogeneous signatures are the point):
+The driver is a typed `let`-chain; the chain is the pipeline diagram:
 
 ```rust
-let ((), graph) = run_pass(OptimizeChunks, &mut cx, optimize_reads, graph).await?;
-let (graph, ()) = run_pass(SealChunkGraph, &mut cx, (), graph).await?;
-let (names, ()) = run_pass(AssignNames, &mut cx, names_reads, ()).await?;
+let graph = optimize_chunks(&mut cx, optimize_input, graph).await?;
+let graph = seal_chunk_graph(graph);
+let names = assign_names(&mut cx, &graph, &options).await?;
 ```
 
-Needing to own more than you reshape is the signal that an artifact should be split out — not a reason to widen the slot.
+Needing to own more than you reshape is the signal that an artifact should be split out — not a reason to widen a parameter.
 
 ## Why
 
 Wrong order is a compile error, not a comment:
 
 ```rust
-let (canon, ()) = run_pass(Deconflict, &mut cx, DeconflictInputRead { names: &names, .. }, ()).await?;
-let (names, ()) = run_pass(AssignNames, &mut cx, names_reads, ()).await?;
+let canon = deconflict(&mut cx, DeconflictInput { names: &names, /* .. */ }).await?;
+let names = assign_names(&mut cx, &graph, &options).await?;
 // error[E0425]: cannot find value `names` in this scope
 ```
 
@@ -143,38 +127,46 @@ graph.add_chunk(chunk);
 // (mutators exist only on DraftChunkGraph)
 ```
 
-### Parallelism is provable from signatures alone
+### Parallelism: signatures expose the candidates, the compiler checks the join
 
-Two passes may run concurrently exactly when their `InputOwned`s are disjoint and neither reads the other's output — both facts sit in the slot types, so "is this join safe?" is answered by signatures, not by auditing bodies:
+Two passes are concurrency candidates exactly when their owned inputs are disjoint and neither reads the other's output — both facts sit in the signatures. What each layer actually guarantees:
+
+- **Signatures** expose the candidates: disjoint owned data, no artifact dependency between the two.
+- **The borrow checker (plus `Send`/`Sync`)** proves the join is free of data races — an unsound join (shared owned data, missing artifact) fails to compile.
+- **Semantic independence is not proven; it is a stated discipline**: no interior mutability in pipeline data, no globals, no order-dependent external calls (plugin hooks, I/O) inside candidate passes, and effects only through per-branch `PassCtx` sinks that the driver merges in a fixed order. Under those rules — and only under them — a compiling join is also deterministic.
 
 ```rust
-// ComputeLinks : InputRead = (&ChunkGraph, &SymbolRefDb), InputOwned = ()
-// AssignNames  : InputRead = (&ChunkGraph, &Options),     InputOwned = ()
+// compute_links: reads (&ChunkGraph, &SymbolRefDb), owns nothing
+// assign_names : reads (&ChunkGraph, &Options),     owns nothing
 let (links, names) = try_join!(
-  run_pass(ComputeLinks, &mut cx_a, (&graph, &symbols), ()),
-  run_pass(AssignNames,  &mut cx_b, (&graph, &options), ()),
+  compute_links(&mut cx_a, &graph, &symbols),
+  assign_names(&mut cx_b, &graph, &options),
 )?;
-// sinks are write-only, so each branch gets its own; the driver merges them in branch order (deterministic)
 ```
-
-If a join is unsound (shared owned data, or a missing artifact), it does not race — it fails to compile. The pipeline's parallelization opportunities are enumerable by reading the driver.
 
 ### Other benefits
 
 The dependency graph is greppable — impact analysis without reading bodies:
 
 ```console
-$ rg 'symbol_db: &' -g '*.rs'                 # every pass that reads the symbol table
-$ rg 'type InputOwned    = DraftChunkGraph'   # every pass that ever owns the graph
+$ rg 'symbol_db: &' -g '*.rs'          # every pass that reads the symbol table
+$ rg 'graph: DraftChunkGraph'          # every pass that ever owns the draft graph
 ```
 
-Each pass is unit-testable by construction: its `InputRead` struct is the exact, minimal fixture spec — no need to build whole stage outputs to test one pass.
+Each pass is unit-testable by construction: its read parameters (or `XxxInput` struct) are the exact, minimal fixture spec — no need to build whole stage outputs to test one pass.
 
-Diagnostics carry provenance for free: `run_pass` stamps the emitting pass's name (via `type_name`) on every warning.
+## Deferred: a shared Pass trait
+
+An earlier draft packaged the four slots as a trait (`type InputRead<'a>: Copy` / `InputOwned` / `OutputRead: SealedArtifact` / `OutputOwned`, plus `async fn run(self, cx, read, owned)`). It is deliberately **not** part of the contract yet:
+
+- Every property in [Why](#why) already comes from plain signatures, the `let`-chain, and distinct draft/frozen types — the trait adds GATs and `()`/tuple ceremony without adding enforcement.
+- What it would buy is uniformity: one `run_pass` wrapper as the single home for tracing spans and diagnostics provenance, and a pinned signature shape (the `Copy` bound on reads mechanically rejects `&mut`). What it cannot do: encode pass order, freeze outputs, or make dependencies exhaustive — `self` could still smuggle pipeline state unless separately restricted.
+- A `SealedArtifact` marker likewise enforces nothing: Rust only checks that an impl exists. If ever introduced, it is a **reviewed inventory** of frozen types — the immutability itself always lives in each artifact type's API.
+- Adoption trigger: several adopted flows showing repetition that ordinary functions cannot express. Until then, plain functions.
 
 ## Future directions
 
-- Driver-level `try_join!` of provably-parallel passes, once profiling shows a win worth taking.
+- Driver-level `try_join!` of parallel-candidate passes, once profiling shows a win worth taking.
 - Incremental cache friendliness: explicit inputs are natural dependency keys, sealed artifacts are natural snapshot/hash units, and a pass is a natural recompute unit. To be honest: the contract was **not** designed with incremental builds as a premise, and nothing in it depends on that — it simply does not stand in the way.
 
 ## Related

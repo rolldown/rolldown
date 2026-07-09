@@ -18,6 +18,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
+import { NapiCli } from '@napi-rs/cli';
 import { parse } from 'acorn';
 
 const defaultRepoRoot = fileURLToPath(new URL('../../', import.meta.url));
@@ -25,6 +26,10 @@ const coreRuntimePackages = ['@emnapi/core', '@emnapi/runtime', '@napi-rs/wasm-r
 const runtimePackages = [...coreRuntimePackages, 'buffer'];
 const notices = ['LICENSE', 'THIRD-PARTY-LICENSE'];
 const transactionLockName = '.stage-wasi-packages.lock';
+const transactionLockCandidatePrefix = `${transactionLockName}.candidate.`;
+const transactionLockRetiredPrefix = `${transactionLockName}.retired.`;
+const transactionReclaimCandidatePrefix = `${transactionLockName}.reclaim.`;
+const transactionReclaimTicketName = 'ticket.json';
 const transactionJournalName = '.stage-wasi-packages.transaction';
 const transactionStateName = 'state.json';
 const stagingDirectoryPrefix = '.stage-wasi-packages-';
@@ -33,6 +38,7 @@ const transactionLockTimeoutMs = 60_000;
 const incompleteLockGracePeriodMs = 5_000;
 const transactionLockPollMs = 20;
 const maximumTransactionReplacements = 64;
+const napiCli = new NapiCli();
 
 async function assertEmbeddedRuntimeNotices(repoRoot, runtimeFsBundle) {
   const code = await readFile(runtimeFsBundle, 'utf8');
@@ -222,12 +228,39 @@ async function replaceDirectoriesTransactionallyUnlocked(
   await removeTransactionJournal(transactionRoot);
 }
 
-async function withStageWasiPackageLock(transactionRoot, operation) {
+export async function withStageWasiPackageLock(
+  transactionRoot,
+  operation,
+  {
+    afterLockPublishFailure,
+    afterLockCandidateCreate,
+    afterLockRetire,
+    afterReclaimGuardCandidateCreate,
+    afterReclaimGuardTicketPublish,
+    afterStaleLockRetire,
+    afterStaleLockObserved,
+    beforeLockPublish,
+  } = {},
+) {
+  await mkdir(transactionRoot, { recursive: true });
+  await assertDirectory(transactionRoot, 'WASI package transaction root');
   const canonicalRoot = await realpath(transactionRoot);
-  const release = await acquireStageWasiPackageLock(canonicalRoot);
+  const release = await acquireStageWasiPackageLock(canonicalRoot, {
+    afterLockPublishFailure,
+    afterLockCandidateCreate,
+    afterLockRetire,
+    afterReclaimGuardCandidateCreate,
+    afterReclaimGuardTicketPublish,
+    afterStaleLockRetire,
+    afterStaleLockObserved,
+    beforeLockPublish,
+  });
   let operationError;
   let result;
   try {
+    await removeRetiredStageWasiPackageLocks(canonicalRoot);
+    await reclaimStaleStageWasiPackageLockCandidates(canonicalRoot);
+    await reclaimDeadStageWasiPackageReclaimCandidates(canonicalRoot);
     await recoverInterruptedDirectoryTransaction(canonicalRoot);
     result = await operation(canonicalRoot);
   } catch (error) {
@@ -250,17 +283,75 @@ async function withStageWasiPackageLock(transactionRoot, operation) {
   return result;
 }
 
-async function acquireStageWasiPackageLock(transactionRoot) {
+async function acquireStageWasiPackageLock(
+  transactionRoot,
+  {
+    afterLockPublishFailure,
+    afterLockCandidateCreate,
+    afterLockRetire,
+    afterReclaimGuardCandidateCreate,
+    afterReclaimGuardTicketPublish,
+    afterStaleLockRetire,
+    afterStaleLockObserved,
+    beforeLockPublish,
+  } = {},
+) {
   const lockPath = path.join(transactionRoot, transactionLockName);
   const ownerPath = path.join(lockPath, 'owner.json');
   const deadline = Date.now() + transactionLockTimeoutMs;
 
   while (true) {
+    const token = randomUUID();
+    const candidateLockPath = path.join(
+      transactionRoot,
+      `${transactionLockCandidatePrefix}${process.pid}.${token}`,
+    );
+    const candidateOwnerPath = path.join(candidateLockPath, 'owner.json');
+    let publishingLockCandidate = false;
     try {
-      await mkdir(lockPath);
+      await mkdir(candidateLockPath);
+      await afterLockCandidateCreate?.(candidateLockPath);
+      await writeJsonAtomic(candidateOwnerPath, {
+        version: 1,
+        createdAt: Date.now(),
+        pid: process.pid,
+        token,
+      });
+      await beforeLockPublish?.();
+      publishingLockCandidate = true;
+      await rename(candidateLockPath, lockPath);
     } catch (error) {
-      if (!isNodeError(error) || error.code !== 'EEXIST') throw error;
-      if (await reclaimStaleStageWasiPackageLock(lockPath, ownerPath)) continue;
+      await rm(candidateLockPath, { force: true, recursive: true });
+      if (publishingLockCandidate) {
+        await afterLockPublishFailure?.({ error, lockPath });
+      }
+      if (isNodeError(error) && error.code === 'ENOENT') {
+        await assertDirectory(transactionRoot, 'WASI package transaction root');
+        if (Date.now() >= deadline) {
+          throw new Error(
+            `Timed out publishing a WASI package transaction lock candidate in ${transactionRoot}`,
+          );
+        }
+        await delay(transactionLockPollMs);
+        continue;
+      }
+      if (!isLockAlreadyExistsError(error)) throw error;
+      if (error.code === 'EPERM' && !publishingLockCandidate) throw error;
+      if (publishingLockCandidate && error.code === 'EPERM' && !(await lstatIfExists(lockPath))) {
+        if (Date.now() >= deadline) throw error;
+        await delay(transactionLockPollMs);
+        continue;
+      }
+      if (
+        await reclaimStaleStageWasiPackageLock(lockPath, ownerPath, transactionRoot, {
+          afterReclaimGuardCandidateCreate,
+          afterReclaimGuardTicketPublish,
+          afterStaleLockRetire,
+          afterStaleLockObserved,
+        })
+      ) {
+        continue;
+      }
       if (Date.now() >= deadline) {
         throw new Error(`Timed out waiting for the WASI package transaction lock at ${lockPath}`);
       }
@@ -268,59 +359,329 @@ async function acquireStageWasiPackageLock(transactionRoot) {
       continue;
     }
 
-    const token = randomUUID();
-    try {
-      await writeJsonAtomic(ownerPath, {
-        version: 1,
-        createdAt: Date.now(),
-        pid: process.pid,
-        token,
-      });
-    } catch (error) {
-      await rm(lockPath, { force: true, recursive: true });
-      throw error;
-    }
-
     return async () => {
       const owner = await readJsonIfExists(ownerPath);
       if (!owner || owner.token !== token || owner.pid !== process.pid) {
         throw new Error(`Lost ownership of the WASI package transaction lock at ${lockPath}`);
       }
-      await rm(lockPath, { force: true, recursive: true });
+      const retiredPath = stageWasiPackageLockRetiredPath(transactionRoot);
+      await rename(lockPath, retiredPath);
+      let retireHookError;
+      try {
+        await afterLockRetire?.(retiredPath);
+      } catch (error) {
+        retireHookError = error;
+      }
+      try {
+        await rm(retiredPath, { force: true, recursive: true });
+      } catch (cleanupError) {
+        if (retireHookError) {
+          throw new AggregateError(
+            [retireHookError, cleanupError],
+            `WASI package transaction lock retirement failed at ${retiredPath}`,
+          );
+        }
+        throw cleanupError;
+      }
+      if (retireHookError) throw retireHookError;
     };
   }
 }
 
-async function reclaimStaleStageWasiPackageLock(lockPath, ownerPath) {
+function isLockAlreadyExistsError(error) {
+  return (
+    isNodeError(error) &&
+    (error.code === 'EEXIST' || error.code === 'ENOTEMPTY' || error.code === 'EPERM')
+  );
+}
+
+async function reclaimStaleStageWasiPackageLock(
+  lockPath,
+  ownerPath,
+  transactionRoot,
+  {
+    afterReclaimGuardCandidateCreate,
+    afterReclaimGuardTicketPublish,
+    afterStaleLockRetire,
+    afterStaleLockObserved,
+  } = {},
+) {
   const lockStats = await lstatIfExists(lockPath);
   if (!lockStats) return true;
   if (!lockStats.isDirectory()) {
     throw new Error(`WASI package transaction lock is not a directory: ${lockPath}`);
   }
 
-  const owner = await readLockOwnerIfExists(ownerPath);
-  const validOwner =
+  const observedOwner = await readLockOwnerIfExists(ownerPath);
+  if (!stageWasiPackageLockIsStale(lockStats, observedOwner)) return false;
+  await afterStaleLockObserved?.({ owner: observedOwner });
+
+  const releaseReclaimGuard = await acquireStageWasiPackageReclaimGuard(transactionRoot, {
+    afterReclaimGuardCandidateCreate,
+    afterReclaimGuardTicketPublish,
+  });
+  let retiredPath;
+  try {
+    const currentStats = await lstatIfExists(lockPath);
+    if (!currentStats) return true;
+    if (!currentStats.isDirectory()) {
+      throw new Error(`WASI package transaction lock is not a directory: ${lockPath}`);
+    }
+    const currentOwner = await readLockOwnerIfExists(ownerPath);
+    if (!sameStageWasiPackageLockOwner(currentOwner, observedOwner)) return false;
+    if (!stageWasiPackageLockIsStale(currentStats, currentOwner)) return false;
+
+    retiredPath = stageWasiPackageLockRetiredPath(path.dirname(lockPath));
+    try {
+      await rename(lockPath, retiredPath);
+    } catch (error) {
+      if (isNodeError(error) && error.code === 'ENOENT') return true;
+      return false;
+    }
+    await afterStaleLockRetire?.(retiredPath);
+  } finally {
+    await releaseReclaimGuard();
+  }
+  if (retiredPath) await rm(retiredPath, { force: true, recursive: true });
+  return true;
+}
+
+async function reclaimStaleStageWasiPackageLockCandidates(transactionRoot) {
+  for (const entry of await readdir(transactionRoot)) {
+    if (!entry.startsWith(transactionLockCandidatePrefix)) continue;
+    const candidateLockPath = path.join(transactionRoot, entry);
+    const candidateStats = await lstatIfExists(candidateLockPath);
+    if (!candidateStats) continue;
+    if (!candidateStats.isDirectory()) {
+      throw new Error(
+        `WASI package transaction lock candidate is not a directory: ${candidateLockPath}`,
+      );
+    }
+
+    const owner = await readLockOwnerIfExists(path.join(candidateLockPath, 'owner.json'));
+    if (!stageWasiPackageLockOwnerIsValid(owner)) {
+      const candidatePid = parseStageWasiPackageLockCandidatePid(entry);
+      if (candidatePid !== undefined && processExists(candidatePid)) continue;
+    }
+    if (!stageWasiPackageLockIsStale(candidateStats, owner)) continue;
+
+    const retiredPath = stageWasiPackageLockRetiredPath(transactionRoot);
+    try {
+      await rename(candidateLockPath, retiredPath);
+    } catch (error) {
+      if (isNodeError(error) && error.code === 'ENOENT') continue;
+      throw error;
+    }
+    await rm(retiredPath, { force: true, recursive: true });
+  }
+}
+
+async function removeRetiredStageWasiPackageLocks(transactionRoot) {
+  for (const entry of await readdir(transactionRoot)) {
+    if (!entry.startsWith(transactionLockRetiredPrefix)) continue;
+    const retiredPath = path.join(transactionRoot, entry);
+    const retiredStats = await lstatIfExists(retiredPath);
+    if (!retiredStats) continue;
+    if (!retiredStats.isDirectory()) {
+      throw new Error(`Retired WASI package transaction lock is not a directory: ${retiredPath}`);
+    }
+    await rm(retiredPath, { force: true, recursive: true });
+  }
+}
+
+function stageWasiPackageLockRetiredPath(transactionRoot) {
+  return path.join(
+    transactionRoot,
+    `${transactionLockRetiredPrefix}${process.pid}.${randomUUID()}`,
+  );
+}
+
+function stageWasiPackageLockOwnerIsValid(owner) {
+  return Boolean(
     owner &&
     owner.version === 1 &&
     Number.isSafeInteger(owner.createdAt) &&
     owner.createdAt > 0 &&
     Number.isSafeInteger(owner.pid) &&
     owner.pid > 0 &&
-    typeof owner.token === 'string';
-  const stale = validOwner
+    typeof owner.token === 'string',
+  );
+}
+
+function stageWasiPackageLockIsStale(lockStats, owner) {
+  return stageWasiPackageLockOwnerIsValid(owner)
     ? !processExists(owner.pid)
     : Date.now() - lockStats.mtimeMs >= incompleteLockGracePeriodMs;
-  if (!stale) return false;
+}
 
-  const stalePath = `${lockPath}.stale.${randomUUID()}`;
+function parseStageWasiPackageLockCandidatePid(entry) {
+  const pidText = entry.slice(transactionLockCandidatePrefix.length).split('.', 1)[0];
+  if (!/^[1-9]\d*$/.test(pidText)) return undefined;
+  const pid = Number(pidText);
+  return Number.isSafeInteger(pid) ? pid : undefined;
+}
+
+function sameStageWasiPackageLockOwner(first, second) {
+  if (!first || !second) return first === second;
+  return (
+    first.version === second.version &&
+    first.createdAt === second.createdAt &&
+    first.pid === second.pid &&
+    first.token === second.token
+  );
+}
+
+// Stale-lock reclaimers use unique Lamport bakery candidates, so crash cleanup
+// never mutates a path that a successor can own. See
+// internal-docs/async-runtime/implementation.md.
+export async function acquireStageWasiPackageReclaimGuard(
+  transactionRoot,
+  {
+    afterReclaimGuardCandidateCreate,
+    afterReclaimGuardTicketPublish,
+    beforeReclaimGuardAdmission,
+    beforeReclaimGuardTicketPublish,
+  } = {},
+) {
+  const token = randomUUID();
+  const candidateName = `${transactionReclaimCandidatePrefix}${process.pid}.${token}`;
+  const candidatePath = path.join(transactionRoot, candidateName);
+  const ownerPath = path.join(candidatePath, 'owner.json');
+  const ticketPath = path.join(candidatePath, transactionReclaimTicketName);
+  const owner = {
+    version: 1,
+    createdAt: Date.now(),
+    pid: process.pid,
+    token,
+  };
+  const deadline = Date.now() + transactionLockTimeoutMs;
+  let ticket;
+
   try {
-    await rename(lockPath, stalePath);
+    await mkdir(candidatePath);
+    await afterReclaimGuardCandidateCreate?.(candidatePath);
+    await writeJsonAtomic(ownerPath, owner);
+
+    const choosingCandidates = await readStageWasiPackageReclaimCandidates(transactionRoot);
+    const maximumTicket = choosingCandidates.reduce(
+      (maximum, candidate) => Math.max(maximum, candidate.ticket ?? 0),
+      0,
+    );
+    if (maximumTicket >= Number.MAX_SAFE_INTEGER) {
+      throw new Error('WASI package reclaim-guard ticket space is exhausted');
+    }
+    ticket = maximumTicket + 1;
+    await beforeReclaimGuardTicketPublish?.({ candidatePath, ticket });
+    await writeJsonAtomic(ticketPath, { ticket, version: 1 });
+    await afterReclaimGuardTicketPublish?.(candidatePath);
+
+    while (true) {
+      const candidates = await readStageWasiPackageReclaimCandidates(transactionRoot);
+      const ownCandidate = candidates.find((candidate) => candidate.name === candidateName);
+      if (
+        !ownCandidate ||
+        !sameStageWasiPackageLockOwner(ownCandidate.owner, owner) ||
+        ownCandidate.ticket !== ticket
+      ) {
+        throw new Error(`Lost ownership of the WASI package reclaim guard at ${candidatePath}`);
+      }
+
+      const blocked = candidates.some(
+        (candidate) =>
+          candidate.name !== candidateName &&
+          (candidate.ticket === undefined ||
+            candidate.ticket < ticket ||
+            (candidate.ticket === ticket && candidate.name < candidateName)),
+      );
+      if (!blocked) {
+        await beforeReclaimGuardAdmission?.({ candidatePath, ticket });
+        break;
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(`Timed out waiting for the WASI package reclaim guard at ${candidatePath}`);
+      }
+      await delay(transactionLockPollMs);
+    }
   } catch (error) {
-    if (isNodeError(error) && error.code === 'ENOENT') return true;
-    return false;
+    await rm(candidatePath, { force: true, recursive: true });
+    throw error;
   }
-  await rm(stalePath, { force: true, recursive: true });
-  return true;
+
+  return async () => {
+    const [currentOwner, currentTicket] = await Promise.all([
+      readLockOwnerIfExists(ownerPath),
+      readStageWasiPackageReclaimTicket(ticketPath),
+    ]);
+    if (!sameStageWasiPackageLockOwner(currentOwner, owner) || currentTicket !== ticket) {
+      throw new Error(`Lost ownership of the WASI package reclaim guard at ${candidatePath}`);
+    }
+    await rm(candidatePath, { force: true, recursive: true });
+  };
+}
+
+async function readStageWasiPackageReclaimCandidates(transactionRoot) {
+  const candidates = [];
+  for (const entry of await readdir(transactionRoot)) {
+    if (!entry.startsWith(transactionReclaimCandidatePrefix)) continue;
+    const identity = parseStageWasiPackageReclaimCandidate(entry);
+    if (!identity) {
+      throw new Error(`Invalid WASI package reclaim-guard candidate name: ${entry}`);
+    }
+    const candidatePath = path.join(transactionRoot, entry);
+    const stats = await lstatIfExists(candidatePath);
+    if (!stats) continue;
+    if (!stats.isDirectory()) {
+      throw new Error(`WASI package reclaim-guard candidate is not a directory: ${candidatePath}`);
+    }
+
+    const owner = await readLockOwnerIfExists(path.join(candidatePath, 'owner.json'));
+    const ownerIsValid =
+      stageWasiPackageLockOwnerIsValid(owner) &&
+      owner.pid === identity.pid &&
+      owner.token === identity.token;
+    const candidatePid = ownerIsValid ? owner.pid : identity.pid;
+    if (!processExists(candidatePid)) {
+      await rm(candidatePath, { force: true, recursive: true });
+      continue;
+    }
+    if (!ownerIsValid) {
+      candidates.push({ name: entry, owner: undefined, ticket: undefined });
+      continue;
+    }
+
+    candidates.push({
+      name: entry,
+      owner,
+      ticket: await readStageWasiPackageReclaimTicket(
+        path.join(candidatePath, transactionReclaimTicketName),
+      ),
+    });
+  }
+  return candidates;
+}
+
+async function reclaimDeadStageWasiPackageReclaimCandidates(transactionRoot) {
+  await readStageWasiPackageReclaimCandidates(transactionRoot);
+}
+
+function parseStageWasiPackageReclaimCandidate(entry) {
+  const identity = entry.slice(transactionReclaimCandidatePrefix.length);
+  const separator = identity.indexOf('.');
+  if (separator === -1) return undefined;
+  const pidText = identity.slice(0, separator);
+  const token = identity.slice(separator + 1);
+  if (!/^[1-9]\d*$/.test(pidText) || token.length === 0) return undefined;
+  const pid = Number(pidText);
+  return Number.isSafeInteger(pid) ? { pid, token } : undefined;
+}
+
+async function readStageWasiPackageReclaimTicket(candidate) {
+  const value = await readJsonIfExists(candidate);
+  if (value === undefined) return undefined;
+  if (value?.version !== 1 || !Number.isSafeInteger(value.ticket) || value.ticket <= 0) {
+    throw new Error(`Invalid WASI package reclaim-guard ticket: ${candidate}`);
+  }
+  return value.ticket;
 }
 
 async function recoverInterruptedDirectoryTransaction(transactionRoot) {
@@ -561,6 +922,11 @@ async function assertDirectory(candidate, label) {
   if (!stats.isDirectory()) throw new Error(`${label} is not a directory: ${candidate}`);
 }
 
+async function assertRegularFile(candidate, label) {
+  const stats = await lstat(candidate);
+  if (!stats.isFile()) throw new Error(`${label} is not a regular file: ${candidate}`);
+}
+
 function assertOptionalDirectory(stats, candidate, label) {
   if (stats && !stats.isDirectory()) throw new Error(`${label} is not a directory: ${candidate}`);
 }
@@ -630,6 +996,7 @@ function isNodeError(error) {
 
 export async function stageWasiPackages({ repoRoot = defaultRepoRoot, transactionHook } = {}) {
   const packageRoot = path.join(repoRoot, 'packages/rolldown/npm');
+  const rolldownRoot = path.join(repoRoot, 'packages/rolldown');
   const publicTypeDependencies = {
     '@oxc-project/types': JSON.parse(
       await readFile(
@@ -647,6 +1014,7 @@ export async function stageWasiPackages({ repoRoot = defaultRepoRoot, transactio
       label: 'threaded',
       generatedRuntimePackages: coreRuntimePackages,
       declaration: path.join(repoRoot, 'packages/rolldown/src/rolldown-binding.wasi.d.cts'),
+      wasm: path.join(repoRoot, 'packages/rolldown/src/rolldown-binding.wasm32-wasi.wasm'),
       sourceDir: path.join(repoRoot, 'packages/rolldown/artifacts/threaded-wasi-loaders'),
       packageName: 'wasm32-wasi',
       exactSourceSet: true,
@@ -670,6 +1038,7 @@ export async function stageWasiPackages({ repoRoot = defaultRepoRoot, transactio
       label: 'threadless',
       generatedRuntimePackages: runtimePackages,
       declaration: path.join(repoRoot, 'packages/rolldown/src/rolldown-binding.wasip1.d.cts'),
+      wasm: path.join(repoRoot, 'packages/rolldown/src/rolldown-binding.wasm32-wasip1.wasm'),
       sourceDir: path.join(repoRoot, 'packages/browser/dist'),
       packageName: 'wasm32-wasip1',
       exactSourceSet: false,
@@ -699,6 +1068,11 @@ export async function stageWasiPackages({ repoRoot = defaultRepoRoot, transactio
 
   await withStageWasiPackageLock(packageRoot, async (canonicalPackageRoot) => {
     await removeOrphanedStagingDirectories(canonicalPackageRoot);
+    await ensureWasiPackageDirectories({
+      packageNames: flavors.map(({ packageName }) => packageName),
+      packageRoot: canonicalPackageRoot,
+      rolldownRoot,
+    });
     const stagingRoot = await mkdtemp(path.join(canonicalPackageRoot, stagingDirectoryPrefix));
     try {
       for (const flavor of flavors) {
@@ -706,6 +1080,7 @@ export async function stageWasiPackages({ repoRoot = defaultRepoRoot, transactio
           label,
           generatedRuntimePackages,
           declaration,
+          wasm,
           sourceDir,
           packageName,
           exactSourceSet,
@@ -716,7 +1091,11 @@ export async function stageWasiPackages({ repoRoot = defaultRepoRoot, transactio
         const stagedPackageDir = path.join(stagingRoot, label);
         flavor.packageDir = packageDir;
         flavor.stagedPackageDir = stagedPackageDir;
-        await cp(packageDir, stagedPackageDir, { recursive: true });
+        await copyWasiPackageForStaging({
+          packageDir,
+          stagedPackageDir,
+          wasm,
+        });
 
         const loaderNames = loaders.map(({ name }) => name).sort();
         if (exactSourceSet) {
@@ -844,6 +1223,82 @@ export async function stageWasiPackages({ repoRoot = defaultRepoRoot, transactio
       .map(({ packageName }) => path.relative(repoRoot, path.join(packageRoot, packageName)))
       .join(' and ')}`,
   );
+}
+
+export async function ensureWasiPackageDirectories({
+  packageNames,
+  packageRoot,
+  rolldownRoot,
+  createNpmDirs = (npmDir) =>
+    napiCli.createNpmDirs({
+      cwd: rolldownRoot,
+      npmDir,
+      packageJsonPath: 'package.json',
+    }),
+}) {
+  const packageStats = await Promise.all(
+    packageNames.map((packageName) => lstatIfExists(path.join(packageRoot, packageName))),
+  );
+  for (const [index, stats] of packageStats.entries()) {
+    assertOptionalDirectory(
+      stats,
+      path.join(packageRoot, packageNames[index]),
+      'Generated WASI package',
+    );
+  }
+
+  const missingPackageNames = packageNames.filter((_, index) => !packageStats[index]);
+  if (missingPackageNames.length === 0) return;
+
+  const bootstrapRoot = await mkdtemp(
+    path.join(packageRoot, `${stagingDirectoryPrefix}bootstrap-`),
+  );
+  try {
+    await createNpmDirs(bootstrapRoot);
+    for (const packageName of missingPackageNames) {
+      const generatedPackage = path.join(bootstrapRoot, packageName);
+      await assertDirectory(generatedPackage, 'Generated WASI package');
+      await rename(generatedPackage, path.join(packageRoot, packageName));
+    }
+  } finally {
+    await rm(bootstrapRoot, { force: true, recursive: true });
+  }
+}
+
+export async function copyWasiPackageForStaging({ packageDir, stagedPackageDir, wasm }) {
+  await cp(packageDir, stagedPackageDir, { recursive: true });
+  await assertStagedPackageTree(stagedPackageDir);
+
+  const stagedWasm = path.join(stagedPackageDir, path.basename(wasm));
+  const stagedWasmStats = await lstatIfExists(stagedWasm);
+  if (stagedWasmStats && !stagedWasmStats.isFile()) {
+    throw new Error(`Staged WASI binary is not a regular file: ${stagedWasm}`);
+  }
+  if (!stagedWasmStats) await copyFile(wasm, stagedWasm);
+}
+
+async function assertStagedPackageTree(stagedPackageDir) {
+  await assertDirectory(stagedPackageDir, 'Staged WASI package');
+  const pending = [stagedPackageDir];
+  while (pending.length > 0) {
+    const directory = pending.pop();
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const candidate = path.join(directory, entry.name);
+      const stats = await lstat(candidate);
+      if (stats.isSymbolicLink()) {
+        throw new Error(`Staged WASI package entry must not be a symlink: ${candidate}`);
+      }
+      if (stats.isDirectory()) {
+        pending.push(candidate);
+      } else if (!stats.isFile()) {
+        throw new Error(`Staged WASI package entry is not a regular file: ${candidate}`);
+      }
+    }
+  }
+  await Promise.all([
+    assertRegularFile(path.join(stagedPackageDir, 'package.json'), 'Staged WASI package manifest'),
+    assertRegularFile(path.join(stagedPackageDir, 'README.md'), 'Staged WASI package README'),
+  ]);
 }
 
 async function removeOrphanedStagingDirectories(packageRoot) {

@@ -226,6 +226,9 @@ jobs:
           version: '0.2.1'
           cache: true
 
+      - name: Test package transaction recovery
+        run: just test-package-transactions
+
       # Build the real addon with the test-only scheduler-waker probe. The
       # focused worker test is the unload-safety proof; a cdylib-only build
       # cannot exercise Node's environment cleanup or native image unloading.

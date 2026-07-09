@@ -1570,6 +1570,19 @@ import fail validation. For the threadless package, staging publishes the standa
 raw deferred loader. The root keeps both optional packages for historical
 threaded fallback compatibility; its generated `rolldown/workerd` facade
 therefore forwards to the same managed factory.
+
+Staging also owns package-directory recovery. A clean checkout bootstraps only
+the missing napi-generated WASI package skeletons in an isolated directory,
+while release staging preserves an already downloaded package-local Wasm binary
+when the source-tree binary is unavailable. Package replacement is serialized,
+journaled, and rolled back as one transaction. The canonical filesystem lock is
+published only after its owner record is complete and is retired to a unique
+path before cleanup. Stale-lock reclaimers serialize with unique Lamport bakery
+candidates: each publishes an immutable owner and ticket, waits for every live
+chooser and lower ticket, and removes only its own candidate. A crashed
+reclaimer therefore leaves an owner-specific path that a successor can remove
+without renaming or deleting any successor-owned lock.
+
 emnapi 1.11.2 already includes the separate bound-`setImmediate` fix from
 emnapi#221.
 

@@ -1,12 +1,29 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { access, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import {
+  access,
+  mkdtemp,
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  symlink,
+  utimes,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
 
-import { replaceDirectoriesTransactionally } from './stage-wasi-packages.mjs';
+import {
+  acquireStageWasiPackageReclaimGuard,
+  copyWasiPackageForStaging,
+  ensureWasiPackageDirectories,
+  replaceDirectoriesTransactionally,
+  withStageWasiPackageLock,
+} from './stage-wasi-packages.mjs';
 
 const transactionModuleUrl = new URL('./stage-wasi-packages.mjs', import.meta.url).href;
 const transactionChildSource = `
@@ -38,10 +55,253 @@ try {
   process.disconnect();
 }
 `;
+const lockCandidateChildSource = `
+const [moduleUrl, packageRoot] = process.argv.slice(1);
+const { withStageWasiPackageLock } = await import(moduleUrl);
+
+try {
+  await withStageWasiPackageLock(
+    packageRoot,
+    () => {
+      throw new Error('Paused lock candidate unexpectedly acquired the canonical lock');
+    },
+    {
+      beforeLockPublish() {
+        process.send({ type: 'paused' });
+        return new Promise(() => {});
+      },
+    },
+  );
+} catch (error) {
+  console.error(error?.stack ?? error);
+  process.exitCode = 1;
+  process.disconnect();
+}
+`;
+const incompleteLockCandidateChildSource = `
+const [moduleUrl, packageRoot] = process.argv.slice(1);
+const { withStageWasiPackageLock } = await import(moduleUrl);
+
+function waitForParent(type) {
+  return new Promise((resolve, reject) => {
+    function onMessage(message) {
+      if (message?.type !== type) return;
+      cleanup();
+      resolve();
+    }
+    function onDisconnect() {
+      cleanup();
+      reject(new Error('Parent disconnected'));
+    }
+    function cleanup() {
+      process.off('message', onMessage);
+      process.off('disconnect', onDisconnect);
+    }
+    process.on('message', onMessage);
+    process.on('disconnect', onDisconnect);
+  });
+}
+
+let paused = false;
+try {
+  await withStageWasiPackageLock(
+    packageRoot,
+    async () => {
+      process.send({ type: 'entered' });
+      await waitForParent('release');
+    },
+    {
+      async afterLockCandidateCreate(candidateLockPath) {
+        if (paused) return;
+        paused = true;
+        process.send({ type: 'candidate-created', candidateLockPath });
+        await waitForParent('continue');
+      },
+    },
+  );
+  process.send({ type: 'done' });
+  process.disconnect();
+} catch (error) {
+  console.error(error?.stack ?? error);
+  process.exitCode = 1;
+  process.disconnect();
+}
+`;
+const canonicalLockOwnerChildSource = `
+const [moduleUrl, packageRoot] = process.argv.slice(1);
+const { withStageWasiPackageLock } = await import(moduleUrl);
+
+try {
+  await withStageWasiPackageLock(packageRoot, async () => {
+    process.send({ type: 'entered' });
+    await new Promise(() => {});
+  });
+} catch (error) {
+  console.error(error?.stack ?? error);
+  process.exitCode = 1;
+  process.disconnect();
+}
+`;
+const reclaimGuardOwnerChildSource = `
+const [moduleUrl, packageRoot] = process.argv.slice(1);
+const { withStageWasiPackageLock } = await import(moduleUrl);
+
+try {
+  await withStageWasiPackageLock(
+    packageRoot,
+    () => {
+      throw new Error('Paused reclaim-guard owner unexpectedly acquired the canonical lock');
+    },
+    {
+      afterReclaimGuardTicketPublish(candidatePath) {
+        process.send({ type: 'paused', candidatePath });
+        return new Promise(() => {});
+      },
+    },
+  );
+} catch (error) {
+  console.error(error?.stack ?? error);
+  process.exitCode = 1;
+  process.disconnect();
+}
+`;
+const reclaimGuardTieChildSource = `
+const [moduleUrl, packageRoot] = process.argv.slice(1);
+const { acquireStageWasiPackageReclaimGuard } = await import(moduleUrl);
+
+function waitForParent(type) {
+  return new Promise((resolve, reject) => {
+    function onMessage(message) {
+      if (message?.type !== type) return;
+      cleanup();
+      resolve();
+    }
+    function onDisconnect() {
+      cleanup();
+      reject(new Error('Parent disconnected'));
+    }
+    function cleanup() {
+      process.off('message', onMessage);
+      process.off('disconnect', onDisconnect);
+    }
+    process.on('message', onMessage);
+    process.on('disconnect', onDisconnect);
+  });
+}
+
+try {
+  const release = await acquireStageWasiPackageReclaimGuard(packageRoot, {
+    async beforeReclaimGuardTicketPublish({ candidatePath, ticket }) {
+      process.send({ type: 'ticket-ready', candidatePath, ticket });
+      await waitForParent('publish');
+    },
+  });
+  process.send({ type: 'entered' });
+  await waitForParent('release');
+  await release();
+  process.send({ type: 'done' });
+  process.disconnect();
+} catch (error) {
+  console.error(error?.stack ?? error);
+  process.exitCode = 1;
+  process.disconnect();
+}
+`;
+const reclaimGuardPhaseChildSource = `
+const [moduleUrl, packageRoot, phase] = process.argv.slice(1);
+const { acquireStageWasiPackageReclaimGuard } = await import(moduleUrl);
+
+function waitForParent(type) {
+  return new Promise((resolve, reject) => {
+    function onMessage(message) {
+      if (message?.type !== type) return;
+      cleanup();
+      resolve();
+    }
+    function onDisconnect() {
+      cleanup();
+      reject(new Error('Parent disconnected'));
+    }
+    function cleanup() {
+      process.off('message', onMessage);
+      process.off('disconnect', onDisconnect);
+    }
+    process.on('message', onMessage);
+    process.on('disconnect', onDisconnect);
+  });
+}
+
+async function pause(candidatePath) {
+  process.send({ type: 'paused', candidatePath, phase });
+  await waitForParent('continue');
+}
+
+let ownCandidatePath;
+try {
+  const release = await acquireStageWasiPackageReclaimGuard(packageRoot, {
+    async afterReclaimGuardCandidateCreate(candidatePath) {
+      ownCandidatePath = candidatePath;
+      if (phase === 'candidate') await pause(candidatePath);
+    },
+    async afterReclaimGuardTicketPublish(candidatePath) {
+      if (phase === 'ticket') await pause(candidatePath);
+    },
+    async beforeReclaimGuardAdmission({ candidatePath }) {
+      if (phase === 'admission') await pause(candidatePath);
+    },
+    async beforeReclaimGuardTicketPublish({ candidatePath }) {
+      if (phase === 'owner') await pause(candidatePath);
+    },
+  });
+  if (phase === 'holding') {
+    await pause(ownCandidatePath);
+  }
+  process.send({ type: 'entered' });
+  await waitForParent('release');
+  await release();
+  process.send({ type: 'done' });
+  process.disconnect();
+} catch (error) {
+  console.error(error?.stack ?? error);
+  process.exitCode = 1;
+  process.disconnect();
+}
+`;
+const staleLockRetireChildSource = `
+const [moduleUrl, packageRoot] = process.argv.slice(1);
+const { withStageWasiPackageLock } = await import(moduleUrl);
+
+try {
+  await withStageWasiPackageLock(
+    packageRoot,
+    () => {
+      throw new Error('Interrupted stale-lock reclaimer unexpectedly entered the operation');
+    },
+    {
+      afterStaleLockRetire(retiredPath) {
+        process.send({ type: 'paused', retiredPath });
+        return new Promise(() => {});
+      },
+    },
+  );
+} catch (error) {
+  console.error(error?.stack ?? error);
+  process.exitCode = 1;
+  process.disconnect();
+}
+`;
 
 async function writeMarker(directory, marker) {
   await mkdir(directory, { recursive: true });
   await writeFile(path.join(directory, 'marker.txt'), marker);
+}
+
+async function writePackageSkeleton(directory) {
+  await mkdir(directory, { recursive: true });
+  await Promise.all([
+    writeFile(path.join(directory, 'package.json'), '{}\n'),
+    writeFile(path.join(directory, 'README.md'), 'package fixture\n'),
+  ]);
 }
 
 async function readMarker(directory) {
@@ -57,6 +317,15 @@ async function assertTransactionStateRemoved(packageRoot) {
     assertMissing(path.join(packageRoot, '.stage-wasi-packages.lock')),
     assertMissing(path.join(packageRoot, '.stage-wasi-packages.transaction')),
   ]);
+  assert.deepEqual(
+    (await readdir(packageRoot)).filter(
+      (entry) =>
+        entry.startsWith('.stage-wasi-packages.lock.candidate.') ||
+        entry.startsWith('.stage-wasi-packages.lock.reclaim.') ||
+        entry.startsWith('.stage-wasi-packages.lock.retired.'),
+    ),
+    [],
+  );
 }
 
 function spawnTransaction(replacements, pause) {
@@ -69,6 +338,169 @@ function spawnTransaction(replacements, pause) {
       transactionModuleUrl,
       JSON.stringify(replacements),
       JSON.stringify(pause ?? null),
+    ],
+    { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] },
+  );
+  let stderr = '';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
+  const exit = new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', (code, signal) => resolve({ code, signal }));
+  });
+  return { child, exit, stderr: () => stderr };
+}
+
+function spawnPausedLockCandidate(packageRoot) {
+  const child = spawn(
+    process.execPath,
+    ['--input-type=module', '--eval', lockCandidateChildSource, transactionModuleUrl, packageRoot],
+    { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] },
+  );
+  let stderr = '';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
+  const exit = new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', (code, signal) => resolve({ code, signal }));
+  });
+  return { child, exit, stderr: () => stderr };
+}
+
+function spawnIncompleteLockCandidate(packageRoot) {
+  const child = spawn(
+    process.execPath,
+    [
+      '--input-type=module',
+      '--eval',
+      incompleteLockCandidateChildSource,
+      transactionModuleUrl,
+      packageRoot,
+    ],
+    { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] },
+  );
+  let stderr = '';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
+  const exit = new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', (code, signal) => resolve({ code, signal }));
+  });
+  return { child, exit, stderr: () => stderr };
+}
+
+function spawnCanonicalLockOwner(packageRoot) {
+  const child = spawn(
+    process.execPath,
+    [
+      '--input-type=module',
+      '--eval',
+      canonicalLockOwnerChildSource,
+      transactionModuleUrl,
+      packageRoot,
+    ],
+    { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] },
+  );
+  let stderr = '';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
+  const exit = new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', (code, signal) => resolve({ code, signal }));
+  });
+  return { child, exit, stderr: () => stderr };
+}
+
+function spawnReclaimGuardOwner(packageRoot) {
+  const child = spawn(
+    process.execPath,
+    [
+      '--input-type=module',
+      '--eval',
+      reclaimGuardOwnerChildSource,
+      transactionModuleUrl,
+      packageRoot,
+    ],
+    { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] },
+  );
+  let stderr = '';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
+  const exit = new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', (code, signal) => resolve({ code, signal }));
+  });
+  return { child, exit, stderr: () => stderr };
+}
+
+function spawnReclaimGuardTieContender(packageRoot) {
+  const child = spawn(
+    process.execPath,
+    [
+      '--input-type=module',
+      '--eval',
+      reclaimGuardTieChildSource,
+      transactionModuleUrl,
+      packageRoot,
+    ],
+    { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] },
+  );
+  let stderr = '';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
+  const exit = new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', (code, signal) => resolve({ code, signal }));
+  });
+  return { child, exit, stderr: () => stderr };
+}
+
+function spawnReclaimGuardPhase(packageRoot, phase) {
+  const child = spawn(
+    process.execPath,
+    [
+      '--input-type=module',
+      '--eval',
+      reclaimGuardPhaseChildSource,
+      transactionModuleUrl,
+      packageRoot,
+      phase,
+    ],
+    { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] },
+  );
+  let stderr = '';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
+  const exit = new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', (code, signal) => resolve({ code, signal }));
+  });
+  return { child, exit, stderr: () => stderr };
+}
+
+function spawnStaleLockRetireOwner(packageRoot) {
+  const child = spawn(
+    process.execPath,
+    [
+      '--input-type=module',
+      '--eval',
+      staleLockRetireChildSource,
+      transactionModuleUrl,
+      packageRoot,
     ],
     { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] },
   );
@@ -108,6 +540,16 @@ async function assertChildSucceeded(run) {
   const { code, signal } = await run.exit;
   assert.equal(signal, null, run.stderr());
   assert.equal(code, 0, run.stderr());
+}
+
+async function abruptlyTerminateChild(run) {
+  assert.equal(run.child.kill(), true, `Failed to terminate child process:\n${run.stderr()}`);
+  const result = await run.exit;
+  assert.ok(
+    result.code !== 0 || result.signal !== null,
+    `Abruptly terminated child exited successfully:\n${run.stderr()}`,
+  );
+  return result;
 }
 
 async function createTransactionFixture(prefix) {
@@ -209,70 +651,981 @@ test('directory transactions serialize concurrent processes', async () => {
   } finally {
     for (const run of [first, second]) {
       if (run && run.child.exitCode === null && run.child.signalCode === null) {
-        run.child.kill('SIGKILL');
-        await run.exit;
+        await abruptlyTerminateChild(run);
       }
     }
     await rm(root, { force: true, recursive: true });
   }
 });
 
+test('package lock creates and serializes a missing transaction root', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-missing-root-'));
+  const packageRoot = path.join(root, 'npm');
+  let enterFirst;
+  let releaseFirst;
+  const firstEntered = new Promise((resolve) => {
+    enterFirst = resolve;
+  });
+  const firstMayFinish = new Promise((resolve) => {
+    releaseFirst = resolve;
+  });
+  let secondEntered = false;
+
+  try {
+    const first = withStageWasiPackageLock(packageRoot, async () => {
+      enterFirst();
+      await firstMayFinish;
+    });
+    await firstEntered;
+
+    const second = withStageWasiPackageLock(packageRoot, () => {
+      secondEntered = true;
+    });
+    await delay(100);
+    assert.equal(secondEntered, false);
+
+    releaseFirst();
+    await Promise.all([first, second]);
+
+    await access(packageRoot);
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    releaseFirst?.();
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
 test(
-  'directory transaction recovers a SIGKILLed owner before the next commit',
-  { skip: process.platform === 'win32' },
+  'package lock retries Windows EPERM when the canonical lock retires before inspection',
+  { skip: process.platform !== 'win32' },
   async () => {
-    const { root, packageRoot, destinations } =
-      await createTransactionFixture('stage-wasi-sigkill-');
+    const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-windows-eperm-race-'));
+    const packageRoot = path.join(root, 'npm');
+    let publishAttempts = 0;
+    let publishFailures = 0;
+
     try {
-      const interruptedReplacements = await createStagedReplacements(
-        packageRoot,
-        destinations,
-        'interrupted-staged',
-        ['interrupted-threaded', 'interrupted-threadless'],
-      );
-      const retryReplacements = await createStagedReplacements(
-        packageRoot,
-        destinations,
-        'retry-staged',
-        ['retry-threaded', 'retry-threadless'],
-      );
-
-      const interrupted = spawnTransaction(interruptedReplacements, {
-        phase: 'backup',
-        index: 0,
+      await withStageWasiPackageLock(packageRoot, () => {}, {
+        async beforeLockPublish() {
+          publishAttempts++;
+          if (publishAttempts === 1) {
+            await mkdir(path.join(packageRoot, '.stage-wasi-packages.lock'));
+          }
+        },
+        async afterLockPublishFailure({ error, lockPath }) {
+          publishFailures++;
+          assert.equal(error.code, 'EPERM');
+          await rm(lockPath, { recursive: true });
+        },
       });
-      await waitForMessage(interrupted.child, 'paused');
-      interrupted.child.kill('SIGKILL');
-      const { code, signal } = await interrupted.exit;
-      assert.equal(code, null);
-      assert.equal(signal, 'SIGKILL');
 
-      await assertMissing(destinations[0]);
-      await Promise.all([
-        access(path.join(packageRoot, '.stage-wasi-packages.lock')),
-        access(path.join(packageRoot, '.stage-wasi-packages.transaction')),
-      ]);
-
-      await assert.rejects(
-        replaceDirectoriesTransactionally(retryReplacements, {
-          afterOperation(phase, index) {
-            if (phase === 'install' && index === 0) {
-              throw new Error('injected retry failure');
-            }
-          },
-        }),
-        /injected retry failure/,
-      );
-
-      assert.equal(await readMarker(destinations[0]), 'old-threaded');
-      assert.equal(await readMarker(destinations[1]), 'old-threadless');
-      assert.equal(await readMarker(interruptedReplacements[0].staged), 'interrupted-threaded');
-      assert.equal(await readMarker(interruptedReplacements[1].staged), 'interrupted-threadless');
-      assert.equal(await readMarker(retryReplacements[0].staged), 'retry-threaded');
-      assert.equal(await readMarker(retryReplacements[1].staged), 'retry-threadless');
+      assert.equal(publishAttempts, 2);
+      assert.equal(publishFailures, 1);
       await assertTransactionStateRemoved(packageRoot);
     } finally {
       await rm(root, { force: true, recursive: true });
     }
   },
 );
+
+test('package lock publishes a complete owner before contenders can acquire it', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-lock-publish-'));
+  const packageRoot = path.join(root, 'npm');
+  let pauseFirstPublish;
+  let resumeFirstPublish;
+  const firstPublishPaused = new Promise((resolve) => {
+    pauseFirstPublish = resolve;
+  });
+  const firstMayPublish = new Promise((resolve) => {
+    resumeFirstPublish = resolve;
+  });
+  let releaseSecond;
+  const secondMayFinish = new Promise((resolve) => {
+    releaseSecond = resolve;
+  });
+  let firstPublishAttempt = true;
+  let firstEntered = false;
+  let activeOwners = 0;
+  let maximumActiveOwners = 0;
+  let first;
+  let second;
+
+  try {
+    first = withStageWasiPackageLock(
+      packageRoot,
+      () => {
+        firstEntered = true;
+        activeOwners++;
+        maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
+        activeOwners--;
+      },
+      {
+        async beforeLockPublish() {
+          if (!firstPublishAttempt) return;
+          firstPublishAttempt = false;
+          pauseFirstPublish();
+          await firstMayPublish;
+        },
+      },
+    );
+    await firstPublishPaused;
+
+    let notifySecondEntered;
+    const secondEntered = new Promise((resolve) => {
+      notifySecondEntered = resolve;
+    });
+    second = withStageWasiPackageLock(packageRoot, async () => {
+      activeOwners++;
+      maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
+      notifySecondEntered();
+      await secondMayFinish;
+      activeOwners--;
+    });
+    await secondEntered;
+
+    resumeFirstPublish();
+    await delay(100);
+    assert.equal(firstEntered, false);
+    assert.equal(maximumActiveOwners, 1);
+
+    releaseSecond();
+    await Promise.all([first, second]);
+    assert.equal(firstEntered, true);
+    assert.equal(maximumActiveOwners, 1);
+    await assertTransactionStateRemoved(packageRoot);
+    assert.deepEqual(
+      (await readdir(packageRoot)).filter((entry) =>
+        entry.startsWith('.stage-wasi-packages.lock.candidate.'),
+      ),
+      [],
+    );
+  } finally {
+    resumeFirstPublish?.();
+    releaseSecond?.();
+    await Promise.allSettled([Promise.resolve(first), Promise.resolve(second)]);
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('stale lock takeover cannot retire a successor after a delayed observation', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-stale-lock-cas-'));
+  const packageRoot = path.join(root, 'npm');
+  const staleOwner = spawnCanonicalLockOwner(packageRoot);
+  let notifyFirstObserved;
+  const firstObserved = new Promise((resolve) => {
+    notifyFirstObserved = resolve;
+  });
+  let resumeFirstReclaimer;
+  const firstMayReclaim = new Promise((resolve) => {
+    resumeFirstReclaimer = resolve;
+  });
+  let firstObservation = true;
+  let firstEntered = false;
+  let notifySecondEntered;
+  const secondEntered = new Promise((resolve) => {
+    notifySecondEntered = resolve;
+  });
+  let releaseSecond;
+  const secondMayFinish = new Promise((resolve) => {
+    releaseSecond = resolve;
+  });
+  let activeOwners = 0;
+  let maximumActiveOwners = 0;
+  let first;
+  let second;
+
+  try {
+    await waitForMessage(staleOwner.child, 'entered');
+    await abruptlyTerminateChild(staleOwner);
+
+    first = withStageWasiPackageLock(
+      packageRoot,
+      () => {
+        firstEntered = true;
+        activeOwners++;
+        maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
+        activeOwners--;
+      },
+      {
+        async afterStaleLockObserved() {
+          if (!firstObservation) return;
+          firstObservation = false;
+          notifyFirstObserved();
+          await firstMayReclaim;
+        },
+      },
+    );
+    await firstObserved;
+
+    second = withStageWasiPackageLock(packageRoot, async () => {
+      activeOwners++;
+      maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
+      notifySecondEntered();
+      await secondMayFinish;
+      activeOwners--;
+    });
+    await secondEntered;
+
+    resumeFirstReclaimer();
+    await delay(100);
+    assert.equal(firstEntered, false);
+    assert.equal(maximumActiveOwners, 1);
+    await access(path.join(packageRoot, '.stage-wasi-packages.lock/owner.json'));
+
+    releaseSecond();
+    await Promise.all([first, second]);
+    assert.equal(firstEntered, true);
+    assert.equal(maximumActiveOwners, 1);
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    resumeFirstReclaimer?.();
+    releaseSecond?.();
+    if (staleOwner.child.exitCode === null && staleOwner.child.signalCode === null) {
+      await abruptlyTerminateChild(staleOwner);
+    }
+    await Promise.allSettled([Promise.resolve(first), Promise.resolve(second)]);
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('stale reclaim guard waits for a live chooser before applying ticket order', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-live-reclaim-chooser-'));
+  const packageRoot = path.join(root, 'npm');
+  const staleOwner = spawnCanonicalLockOwner(packageRoot);
+  let notifyFirstChoosing;
+  const firstChoosing = new Promise((resolve) => {
+    notifyFirstChoosing = resolve;
+  });
+  let resumeFirstChoosing;
+  const firstMayChoose = new Promise((resolve) => {
+    resumeFirstChoosing = resolve;
+  });
+  let notifySecondEntered;
+  const secondEntered = new Promise((resolve) => {
+    notifySecondEntered = resolve;
+  });
+  let releaseSecond;
+  const secondMayFinish = new Promise((resolve) => {
+    releaseSecond = resolve;
+  });
+  let firstEntered = false;
+  let secondHasEntered = false;
+  let activeOwners = 0;
+  let maximumActiveOwners = 0;
+  let first;
+  let second;
+
+  try {
+    await waitForMessage(staleOwner.child, 'entered');
+    await abruptlyTerminateChild(staleOwner);
+
+    first = withStageWasiPackageLock(
+      packageRoot,
+      () => {
+        firstEntered = true;
+        activeOwners++;
+        maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
+        activeOwners--;
+      },
+      {
+        async afterReclaimGuardCandidateCreate(candidatePath) {
+          notifyFirstChoosing(candidatePath);
+          await firstMayChoose;
+        },
+      },
+    );
+    const firstCandidatePath = await firstChoosing;
+    await assertMissing(path.join(firstCandidatePath, 'owner.json'));
+
+    second = withStageWasiPackageLock(packageRoot, async () => {
+      secondHasEntered = true;
+      activeOwners++;
+      maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
+      notifySecondEntered();
+      await secondMayFinish;
+      activeOwners--;
+    });
+    await delay(100);
+    assert.equal(firstEntered, false);
+    assert.equal(secondHasEntered, false);
+
+    resumeFirstChoosing();
+    await secondEntered;
+    assert.equal(firstEntered, false);
+    assert.equal(maximumActiveOwners, 1);
+
+    releaseSecond();
+    await Promise.all([first, second]);
+    assert.equal(firstEntered, true);
+    assert.equal(maximumActiveOwners, 1);
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    resumeFirstChoosing?.();
+    releaseSecond?.();
+    if (staleOwner.child.exitCode === null && staleOwner.child.signalCode === null) {
+      await abruptlyTerminateChild(staleOwner);
+    }
+    await Promise.allSettled([Promise.resolve(first), Promise.resolve(second)]);
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('reclaim guard orders equal-ticket contenders across processes', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-reclaim-ticket-tie-'));
+  const packageRoot = path.join(root, 'npm');
+  await mkdir(packageRoot);
+  const first = spawnReclaimGuardTieContender(packageRoot);
+  let second;
+
+  try {
+    const firstReady = await waitForMessage(first.child, 'ticket-ready');
+    second = spawnReclaimGuardTieContender(packageRoot);
+    const secondReady = await waitForMessage(second.child, 'ticket-ready');
+    assert.equal(firstReady.ticket, 1);
+    assert.equal(secondReady.ticket, 1);
+
+    const contenders = [
+      { ready: firstReady, run: first },
+      { ready: secondReady, run: second },
+    ].sort((left, right) =>
+      path.basename(left.ready.candidatePath) < path.basename(right.ready.candidatePath) ? -1 : 1,
+    );
+    const [winner, loser] = contenders;
+    let loserEntered = false;
+    const winnerEntered = waitForMessage(winner.run.child, 'entered');
+    const loserEnteredMessage = waitForMessage(loser.run.child, 'entered').then((message) => {
+      loserEntered = true;
+      return message;
+    });
+
+    first.child.send({ type: 'publish' });
+    second.child.send({ type: 'publish' });
+    await winnerEntered;
+    await delay(100);
+    assert.equal(loserEntered, false);
+
+    const winnerDone = waitForMessage(winner.run.child, 'done');
+    winner.run.child.send({ type: 'release' });
+    await winnerDone;
+    await assertChildSucceeded(winner.run);
+
+    await loserEnteredMessage;
+    const loserDone = waitForMessage(loser.run.child, 'done');
+    loser.run.child.send({ type: 'release' });
+    await loserDone;
+    await assertChildSucceeded(loser.run);
+
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    for (const run of [first, second]) {
+      if (run && run.child.exitCode === null && run.child.signalCode === null) {
+        await abruptlyTerminateChild(run);
+      }
+    }
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('reclaim guard recovers crashes at every publication phase', async (t) => {
+  for (const phase of ['candidate', 'owner', 'ticket', 'holding']) {
+    await t.test(phase, async () => {
+      const root = await mkdtemp(path.join(tmpdir(), `stage-wasi-reclaim-${phase}-`));
+      const packageRoot = path.join(root, 'npm');
+      await mkdir(packageRoot);
+      const interrupted = spawnReclaimGuardPhase(packageRoot, phase);
+
+      try {
+        const { candidatePath } = await waitForMessage(interrupted.child, 'paused');
+        await access(candidatePath);
+        await abruptlyTerminateChild(interrupted);
+
+        const release = await acquireStageWasiPackageReclaimGuard(packageRoot);
+        await release();
+
+        await assertMissing(candidatePath);
+        await assertTransactionStateRemoved(packageRoot);
+      } finally {
+        if (interrupted.child.exitCode === null && interrupted.child.signalCode === null) {
+          await abruptlyTerminateChild(interrupted);
+        }
+        await rm(root, { force: true, recursive: true });
+      }
+    });
+  }
+});
+
+test('reclaim guard makes a post-enumeration entrant wait for the admitted owner', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-reclaim-late-entrant-'));
+  const packageRoot = path.join(root, 'npm');
+  await mkdir(packageRoot);
+  const first = spawnReclaimGuardPhase(packageRoot, 'admission');
+  let releaseSecond;
+  let second;
+
+  try {
+    await waitForMessage(first.child, 'paused');
+    let secondEntered = false;
+    second = acquireStageWasiPackageReclaimGuard(packageRoot).then((release) => {
+      secondEntered = true;
+      releaseSecond = release;
+    });
+    await delay(100);
+    assert.equal(secondEntered, false);
+
+    const firstEntered = waitForMessage(first.child, 'entered');
+    first.child.send({ type: 'continue' });
+    await firstEntered;
+    await delay(100);
+    assert.equal(secondEntered, false);
+
+    const firstDone = waitForMessage(first.child, 'done');
+    first.child.send({ type: 'release' });
+    await firstDone;
+    await assertChildSucceeded(first);
+
+    await second;
+    assert.equal(secondEntered, true);
+    const release = releaseSecond;
+    releaseSecond = undefined;
+    await release();
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    if (first.child.exitCode === null && first.child.signalCode === null) {
+      await abruptlyTerminateChild(first);
+    }
+    await Promise.allSettled([Promise.resolve(second)]);
+    if (releaseSecond) await releaseSecond().catch(() => {});
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('stale reclaim guard recovers an abruptly terminated owner without residue', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-stale-reclaim-guard-'));
+  const packageRoot = path.join(root, 'npm');
+  const staleOwner = spawnCanonicalLockOwner(packageRoot);
+  let reclaimGuardOwner;
+
+  try {
+    await waitForMessage(staleOwner.child, 'entered');
+    await abruptlyTerminateChild(staleOwner);
+
+    reclaimGuardOwner = spawnReclaimGuardOwner(packageRoot);
+    const { candidatePath } = await waitForMessage(reclaimGuardOwner.child, 'paused');
+    assert.match(
+      path.basename(candidatePath),
+      new RegExp(`^\\.stage-wasi-packages\\.lock\\.reclaim\\.${reclaimGuardOwner.child.pid}\\.`),
+    );
+    await Promise.all([
+      access(path.join(candidatePath, 'owner.json')),
+      access(path.join(candidatePath, 'ticket.json')),
+    ]);
+    await abruptlyTerminateChild(reclaimGuardOwner);
+
+    let operationRan = false;
+    await withStageWasiPackageLock(packageRoot, () => {
+      operationRan = true;
+    });
+
+    assert.equal(operationRan, true);
+    await assertTransactionStateRemoved(packageRoot);
+    await assertMissing(candidatePath);
+  } finally {
+    if (staleOwner.child.exitCode === null && staleOwner.child.signalCode === null) {
+      await abruptlyTerminateChild(staleOwner);
+    }
+    if (
+      reclaimGuardOwner &&
+      reclaimGuardOwner.child.exitCode === null &&
+      reclaimGuardOwner.child.signalCode === null
+    ) {
+      await abruptlyTerminateChild(reclaimGuardOwner);
+    }
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('package lock recovers a crash after stale canonical retirement', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-stale-retire-crash-'));
+  const packageRoot = path.join(root, 'npm');
+  const staleOwner = spawnCanonicalLockOwner(packageRoot);
+  let interrupted;
+
+  try {
+    await waitForMessage(staleOwner.child, 'entered');
+    await abruptlyTerminateChild(staleOwner);
+
+    interrupted = spawnStaleLockRetireOwner(packageRoot);
+    const { retiredPath } = await waitForMessage(interrupted.child, 'paused');
+    await access(retiredPath);
+    await assertMissing(path.join(packageRoot, '.stage-wasi-packages.lock'));
+    await abruptlyTerminateChild(interrupted);
+
+    let operationRan = false;
+    await withStageWasiPackageLock(packageRoot, () => {
+      operationRan = true;
+    });
+
+    assert.equal(operationRan, true);
+    await assertMissing(retiredPath);
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    if (staleOwner.child.exitCode === null && staleOwner.child.signalCode === null) {
+      await abruptlyTerminateChild(staleOwner);
+    }
+    if (
+      interrupted &&
+      interrupted.child.exitCode === null &&
+      interrupted.child.signalCode === null
+    ) {
+      await abruptlyTerminateChild(interrupted);
+    }
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('retired lock cleanup cannot remove a successor canonical lock', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-lock-retire-race-'));
+  const packageRoot = path.join(root, 'npm');
+  let notifyFirstRetired;
+  const firstRetired = new Promise((resolve) => {
+    notifyFirstRetired = resolve;
+  });
+  let resumeFirstCleanup;
+  const firstMayCleanup = new Promise((resolve) => {
+    resumeFirstCleanup = resolve;
+  });
+  let notifySecondEntered;
+  const secondEntered = new Promise((resolve) => {
+    notifySecondEntered = resolve;
+  });
+  let releaseSecond;
+  const secondMayFinish = new Promise((resolve) => {
+    releaseSecond = resolve;
+  });
+  let activeOwners = 0;
+  let maximumActiveOwners = 0;
+  let secondFinished = false;
+  let first;
+  let second;
+
+  try {
+    first = withStageWasiPackageLock(
+      packageRoot,
+      () => {
+        activeOwners++;
+        maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
+        activeOwners--;
+      },
+      {
+        async afterLockRetire(retiredPath) {
+          notifyFirstRetired(retiredPath);
+          await firstMayCleanup;
+        },
+      },
+    );
+    const retiredPath = await firstRetired;
+    await access(retiredPath);
+    await assertMissing(path.join(packageRoot, '.stage-wasi-packages.lock'));
+
+    second = withStageWasiPackageLock(packageRoot, async () => {
+      activeOwners++;
+      maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
+      notifySecondEntered();
+      await secondMayFinish;
+      activeOwners--;
+    });
+    void second.then(
+      () => {
+        secondFinished = true;
+      },
+      () => {},
+    );
+    await secondEntered;
+    await assertMissing(retiredPath);
+
+    resumeFirstCleanup();
+    await first;
+    await access(path.join(packageRoot, '.stage-wasi-packages.lock/owner.json'));
+    assert.equal(secondFinished, false);
+    assert.equal(maximumActiveOwners, 1);
+
+    releaseSecond();
+    await second;
+    await assertTransactionStateRemoved(packageRoot);
+    assert.deepEqual(
+      (await readdir(packageRoot)).filter((entry) =>
+        entry.startsWith('.stage-wasi-packages.lock.retired.'),
+      ),
+      [],
+    );
+  } finally {
+    resumeFirstCleanup?.();
+    releaseSecond?.();
+    await Promise.allSettled([Promise.resolve(first), Promise.resolve(second)]);
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('package lock removes abandoned retired directories while holding canonical ownership', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-retired-cleanup-'));
+  const packageRoot = path.join(root, 'npm');
+  const retiredPath = path.join(packageRoot, '.stage-wasi-packages.lock.retired.abandoned-fixture');
+  await writeMarker(retiredPath, 'abandoned');
+
+  try {
+    await withStageWasiPackageLock(packageRoot, async () => {
+      await assertMissing(retiredPath);
+    });
+    await assertTransactionStateRemoved(packageRoot);
+    assert.deepEqual(
+      (await readdir(packageRoot)).filter((entry) =>
+        entry.startsWith('.stage-wasi-packages.lock.retired.'),
+      ),
+      [],
+    );
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('package lock preserves an aged incomplete candidate owned by a live process', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-live-incomplete-lock-'));
+  const packageRoot = path.join(root, 'npm');
+  const candidate = spawnIncompleteLockCandidate(packageRoot);
+  let activeOwners = 0;
+  let maximumActiveOwners = 0;
+
+  try {
+    const { candidateLockPath } = await waitForMessage(candidate.child, 'candidate-created');
+    assert.match(
+      path.basename(candidateLockPath),
+      new RegExp(`^\\.stage-wasi-packages\\.lock\\.candidate\\.${candidate.child.pid}\\.`),
+    );
+    await assertMissing(path.join(candidateLockPath, 'owner.json'));
+    const oldTime = new Date(Date.now() - 10_000);
+    await utimes(candidateLockPath, oldTime, oldTime);
+
+    await withStageWasiPackageLock(packageRoot, async () => {
+      activeOwners++;
+      maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
+      await access(candidateLockPath);
+      activeOwners--;
+    });
+    await access(candidateLockPath);
+
+    const childEntered = waitForMessage(candidate.child, 'entered');
+    candidate.child.send({ type: 'continue' });
+    await childEntered;
+    activeOwners++;
+    maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
+
+    const childDone = waitForMessage(candidate.child, 'done');
+    candidate.child.send({ type: 'release' });
+    await childDone;
+    activeOwners--;
+    await assertChildSucceeded(candidate);
+
+    assert.equal(maximumActiveOwners, 1);
+    await assertTransactionStateRemoved(packageRoot);
+    assert.deepEqual(
+      (await readdir(packageRoot)).filter((entry) =>
+        entry.startsWith('.stage-wasi-packages.lock.candidate.'),
+      ),
+      [],
+    );
+  } finally {
+    if (candidate.child.exitCode === null && candidate.child.signalCode === null) {
+      await abruptlyTerminateChild(candidate);
+    }
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('package lock retries if its candidate disappears before owner initialization', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-missing-lock-candidate-'));
+  const packageRoot = path.join(root, 'npm');
+  let attempts = 0;
+
+  try {
+    await withStageWasiPackageLock(packageRoot, () => {}, {
+      async afterLockCandidateCreate(candidateLockPath) {
+        attempts++;
+        if (attempts === 1) {
+          await rm(candidateLockPath, { force: true, recursive: true });
+        }
+      },
+    });
+
+    assert.equal(attempts, 2);
+    await assertTransactionStateRemoved(packageRoot);
+    assert.deepEqual(
+      (await readdir(packageRoot)).filter((entry) =>
+        entry.startsWith('.stage-wasi-packages.lock.candidate.'),
+      ),
+      [],
+    );
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('package lock reclaims an abruptly terminated candidate before retry', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-lock-candidate-terminated-'));
+  const packageRoot = path.join(root, 'npm');
+  const interrupted = spawnPausedLockCandidate(packageRoot);
+
+  try {
+    await waitForMessage(interrupted.child, 'paused');
+    const candidateNames = (await readdir(packageRoot)).filter((entry) =>
+      entry.startsWith('.stage-wasi-packages.lock.candidate.'),
+    );
+    assert.equal(candidateNames.length, 1);
+    const owner = JSON.parse(
+      await readFile(path.join(packageRoot, candidateNames[0], 'owner.json'), 'utf8'),
+    );
+    assert.equal(owner.pid, interrupted.child.pid);
+
+    await abruptlyTerminateChild(interrupted);
+
+    await withStageWasiPackageLock(packageRoot, async () => {
+      assert.deepEqual(
+        (await readdir(packageRoot)).filter((entry) =>
+          entry.startsWith('.stage-wasi-packages.lock.candidate.'),
+        ),
+        [],
+      );
+    });
+
+    await assertTransactionStateRemoved(packageRoot);
+    assert.deepEqual(
+      (await readdir(packageRoot)).filter((entry) =>
+        entry.startsWith('.stage-wasi-packages.lock.candidate.'),
+      ),
+      [],
+    );
+  } finally {
+    if (interrupted.child.exitCode === null && interrupted.child.signalCode === null) {
+      await abruptlyTerminateChild(interrupted);
+    }
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test(
+  'package lock rejects a transaction-root symlink',
+  { skip: process.platform === 'win32' },
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-root-symlink-'));
+    const target = path.join(root, 'target');
+    const packageRoot = path.join(root, 'npm');
+    await mkdir(target);
+    await symlink(target, packageRoot, 'dir');
+
+    try {
+      await assert.rejects(
+        withStageWasiPackageLock(packageRoot, () => {
+          assert.fail('symlinked transaction root must not run the operation');
+        }),
+        /WASI package transaction root is not a directory/,
+      );
+      await assertMissing(path.join(target, '.stage-wasi-packages.lock'));
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  },
+);
+
+test('package bootstrap creates only missing WASI package directories', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-bootstrap-'));
+  const packageRoot = path.join(root, 'npm');
+  const existingPackage = path.join(packageRoot, 'wasm32-wasi');
+  const missingPackage = path.join(packageRoot, 'wasm32-wasip1');
+  await writeMarker(existingPackage, 'existing');
+
+  try {
+    await ensureWasiPackageDirectories({
+      packageNames: ['wasm32-wasi', 'wasm32-wasip1'],
+      packageRoot,
+      rolldownRoot: root,
+      async createNpmDirs(bootstrapRoot) {
+        await Promise.all([
+          writeMarker(path.join(bootstrapRoot, 'wasm32-wasi'), 'generated-threaded'),
+          writeMarker(path.join(bootstrapRoot, 'wasm32-wasip1'), 'generated-threadless'),
+        ]);
+      },
+    });
+
+    assert.equal(await readMarker(existingPackage), 'existing');
+    assert.equal(await readMarker(missingPackage), 'generated-threadless');
+    assert.deepEqual((await readdir(packageRoot)).sort(), ['wasm32-wasi', 'wasm32-wasip1']);
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('package bootstrap uses the real NapiCli generator without leaving transaction residue', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-real-bootstrap-'));
+  const packageRoot = path.join(root, 'npm');
+  const rolldownRoot = fileURLToPath(new URL('../../packages/rolldown/', import.meta.url));
+  const originalFetch = globalThis.fetch;
+  const originalRegistry = process.env.npm_config_registry;
+  const fetchRequests = [];
+  await mkdir(packageRoot);
+
+  process.env.npm_config_registry = 'https://registry.example.invalid/';
+  globalThis.fetch = async (input) => {
+    fetchRequests.push(String(input));
+    return new Response(JSON.stringify({ 'dist-tags': { latest: '9.9.9' } }), {
+      headers: { 'content-type': 'application/json' },
+      status: 200,
+    });
+  };
+
+  try {
+    await ensureWasiPackageDirectories({
+      packageNames: ['wasm32-wasi', 'wasm32-wasip1'],
+      packageRoot,
+      rolldownRoot,
+    });
+
+    const threadedManifest = JSON.parse(
+      await readFile(path.join(packageRoot, 'wasm32-wasi/package.json'), 'utf8'),
+    );
+    const threadlessManifest = JSON.parse(
+      await readFile(path.join(packageRoot, 'wasm32-wasip1/package.json'), 'utf8'),
+    );
+    assert.equal(threadedManifest.name, '@rolldown/binding-wasm32-wasi');
+    assert.equal(threadlessManifest.name, '@rolldown/binding-wasm32-wasip1');
+    assert.equal(threadedManifest.dependencies['@napi-rs/wasm-runtime'], '^9.9.9');
+    assert.equal(threadlessManifest.dependencies['@napi-rs/wasm-runtime'], '^9.9.9');
+    assert.deepEqual(fetchRequests, ['https://registry.example.invalid/@napi-rs/wasm-runtime']);
+    assert.deepEqual((await readdir(packageRoot)).sort(), ['wasm32-wasi', 'wasm32-wasip1']);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalRegistry === undefined) {
+      delete process.env.npm_config_registry;
+    } else {
+      process.env.npm_config_registry = originalRegistry;
+    }
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('staging preserves artifact Wasm and repairs an existing skeleton without Wasm', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-wasm-source-'));
+  const artifactPackage = path.join(root, 'artifact-package');
+  const artifactStage = path.join(root, 'artifact-stage');
+  const bootstrapPackage = path.join(root, 'bootstrap-package');
+  const bootstrapStage = path.join(root, 'bootstrap-stage');
+  const missingSrcWasm = path.join(root, 'missing-src', 'binding.wasm');
+  const srcWasm = path.join(root, 'src', 'binding.wasm');
+  await Promise.all([
+    writePackageSkeleton(artifactPackage),
+    writePackageSkeleton(bootstrapPackage),
+    mkdir(path.dirname(srcWasm)),
+  ]);
+  await Promise.all([
+    writeFile(path.join(artifactPackage, 'binding.wasm'), 'artifact-wasm'),
+    writeFile(srcWasm, 'src-wasm'),
+  ]);
+
+  try {
+    await copyWasiPackageForStaging({
+      packageDir: artifactPackage,
+      stagedPackageDir: artifactStage,
+      wasm: missingSrcWasm,
+    });
+    await copyWasiPackageForStaging({
+      packageDir: bootstrapPackage,
+      stagedPackageDir: bootstrapStage,
+      wasm: srcWasm,
+    });
+
+    assert.equal(await readFile(path.join(artifactStage, 'binding.wasm'), 'utf8'), 'artifact-wasm');
+    assert.equal(await readFile(path.join(bootstrapStage, 'binding.wasm'), 'utf8'), 'src-wasm');
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test(
+  'staging rejects package symlinks without modifying their external target',
+  { skip: process.platform === 'win32' },
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-package-symlink-'));
+    const packageDir = path.join(root, 'package');
+    const stagedPackageDir = path.join(root, 'staged');
+    const externalManifest = path.join(root, 'external-package.json');
+    const wasm = path.join(root, 'binding.wasm');
+    await mkdir(packageDir);
+    await Promise.all([
+      writeFile(path.join(packageDir, 'README.md'), 'package fixture\n'),
+      writeFile(externalManifest, 'external sentinel\n'),
+      writeFile(wasm, 'src-wasm'),
+    ]);
+    await symlink(externalManifest, path.join(packageDir, 'package.json'));
+
+    try {
+      await assert.rejects(
+        copyWasiPackageForStaging({ packageDir, stagedPackageDir, wasm }),
+        /Staged WASI package entry must not be a symlink/,
+      );
+      assert.equal(await readFile(externalManifest, 'utf8'), 'external sentinel\n');
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  },
+);
+
+test('directory transaction recovers an abruptly terminated owner before the next commit', async () => {
+  const { root, packageRoot, destinations } =
+    await createTransactionFixture('stage-wasi-terminated-');
+  try {
+    const interruptedReplacements = await createStagedReplacements(
+      packageRoot,
+      destinations,
+      'interrupted-staged',
+      ['interrupted-threaded', 'interrupted-threadless'],
+    );
+    const retryReplacements = await createStagedReplacements(
+      packageRoot,
+      destinations,
+      'retry-staged',
+      ['retry-threaded', 'retry-threadless'],
+    );
+
+    const interrupted = spawnTransaction(interruptedReplacements, {
+      phase: 'backup',
+      index: 0,
+    });
+    await waitForMessage(interrupted.child, 'paused');
+    await abruptlyTerminateChild(interrupted);
+
+    await assertMissing(destinations[0]);
+    await Promise.all([
+      access(path.join(packageRoot, '.stage-wasi-packages.lock')),
+      access(path.join(packageRoot, '.stage-wasi-packages.transaction')),
+    ]);
+
+    await assert.rejects(
+      replaceDirectoriesTransactionally(retryReplacements, {
+        afterOperation(phase, index) {
+          if (phase === 'install' && index === 0) {
+            throw new Error('injected retry failure');
+          }
+        },
+      }),
+      /injected retry failure/,
+    );
+
+    assert.equal(await readMarker(destinations[0]), 'old-threaded');
+    assert.equal(await readMarker(destinations[1]), 'old-threadless');
+    assert.equal(await readMarker(interruptedReplacements[0].staged), 'interrupted-threaded');
+    assert.equal(await readMarker(interruptedReplacements[1].staged), 'interrupted-threadless');
+    assert.equal(await readMarker(retryReplacements[0].staged), 'retry-threaded');
+    assert.equal(await readMarker(retryReplacements[1].staged), 'retry-threadless');
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});

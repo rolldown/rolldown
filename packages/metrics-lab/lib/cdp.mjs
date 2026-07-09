@@ -136,6 +136,10 @@ export async function openPage(cdp, { throttle, injectScript } = {}) {
   await send('Runtime.enable');
   await send('Network.enable');
   await send('Network.setCacheDisabled', { cacheDisabled: true });
+  // PWAs install a service worker on the first run; without this, later runs are
+  // served from SW cache (setCacheDisabled does not cover it) and measure faster
+  // than a cold visitor ever would.
+  await send('Network.setBypassServiceWorker', { bypass: true }).catch(() => {});
   if (throttle) {
     await send('Network.emulateNetworkConditions', {
       offline: false,

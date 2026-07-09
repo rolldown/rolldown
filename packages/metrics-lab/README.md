@@ -1,5 +1,23 @@
 # metrics-lab — browser-loading perf harness for agent loops
 
+## Install / run
+
+Zero runtime dependencies (raw CDP over Node ≥22's built-in WebSocket + a system
+Chrome/Edge), so it works three ways:
+
+- **In this repo**: `node packages/metrics-lab/harness.mjs …` from anywhere.
+- **As a dependency**: `npm i -D <tarball or @rolldown/metrics-lab>` → `npx metrics-lab scan --app .`
+  (the `bin` shim replaces any `node node_modules/…` path-typing). When installed,
+  state lives in the consumer project at `.metrics-lab/` (add it to your
+  `.gitignore`), never inside `node_modules`; override with `METRICS_LAB_STATE`.
+- **Via a linked rolldown checkout**: if your project has
+  `"rolldown": "link:<checkout>/packages/rolldown"`, the rolldown package's
+  `rolldown-metrics` bin launches this harness from the sibling package —
+  `npx rolldown-metrics scan --app .` with nothing else installed. State goes to
+  your project's `.metrics-lab/`; on a registry-installed rolldown the launcher
+  explains that the lab isn't bundled and points at `@rolldown/metrics-lab`.
+- **Once published**: `npx @rolldown/metrics-lab scan --app .` with no install step.
+
 Prototype of the metrics plan's **Phase 3b (lab runner)** and **3c (code coverage)**:
 the measurement and mutation primitives an agent needs to run a
 "measure → find unused-at-paint code → lazy-load it → re-measure → accept or revert"
@@ -16,6 +34,8 @@ every build also refreshes the build-side report under `state/rolldown-metrics/`
 
 | Command | One loop step |
 |---|---|
+| `node harness.mjs scan --app <appDir>` | **The whole iteration in one browser session**: N timed runs + coverage + boot profile + the fused verdict. First scan of a target auto-pins the baseline; `--pin` re-pins after a kept change. The target is remembered — afterwards run everything bare, from any cwd. Per-target state dirs keep baselines/history from mixing across apps. |
+| `node harness.mjs target [<appDir>] [--demo]` | Show / set / clear the remembered target. |
 | `node harness.mjs gen [--force]` | Generate the demo app (deterministic; `--force` resets defers). |
 | `node harness.mjs build` | Build `app/` → `app/dist/` + build metrics report. |
 | `node harness.mjs measure [--runs 5] [--label X] [--no-throttle]` | N throttled runs (1 warmup discarded) → `state/runtime-metrics.json` with medians, guard, `delta`/`baselineDelta` — plus a **render gap** flag (paint gated on post-load work, gating fetches named) and a **pre-paint CPU** flag (long tasks before first paint). |

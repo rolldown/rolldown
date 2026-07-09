@@ -18,7 +18,8 @@
     "directory": "packages/rolldown"
   },
   "bin": {
-    "rolldown": "./bin/cli.mjs"
+    "rolldown": "./bin/cli.mjs",
+    "rolldown-metrics": "./bin/metrics-lab.mjs"
   },
   "files": [
     "bin",

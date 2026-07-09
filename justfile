@@ -259,15 +259,16 @@ build-rolldown-wasi:
 # generated text artifact byte-for-byte while building that test binary, then
 # build the package glue from the restored production sources.
 build-rolldown-async-runtime:
-  cd packages/rolldown && ./node_modules/.bin/oxnode ./generate-workerd-loader.ts --preserve-generated-sources -- ./node_modules/.bin/oxnode ./build-binding.ts --no-default-features --features async-runtime,runtime-waker-teardown-test,runtime-submission-failure-test
+  vp exec --filter rolldown -- ./node_modules/.bin/oxnode ./generate-workerd-loader.ts --preserve-generated-sources -- ./node_modules/.bin/oxnode ./build-binding.ts --no-default-features --features async-runtime,runtime-waker-teardown-test,runtime-submission-failure-test
   vp run --filter rolldown build-js-glue
 
 # Build `rolldown` with the non-threaded `.wasm` binding
 # (`rolldown-binding.wasm32-wasip1.wasm` + `rolldown-binding.wasip1.*`
 # loaders; the dist is wired to the single-thread flavor).
+[env('TARGET', 'rolldown-wasi-single')]
 build-rolldown-wasi-single:
-  cd packages/rolldown && ./node_modules/.bin/oxnode ./build-binding.ts --target wasm32-wasip1 --no-default-features --features async-runtime
-  cd packages/rolldown && TARGET='rolldown-wasi-single' node --enable-source-maps --import @oxc-node/core/register -C dev ./build.ts
+  vp run --filter rolldown build-binding:wasi-single
+  vp run --filter rolldown build-node
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
 build-rolldown-release:

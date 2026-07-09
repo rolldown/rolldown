@@ -7,12 +7,15 @@ use std::{
   panic::{AssertUnwindSafe, catch_unwind},
   path::{Component, Path, PathBuf},
   sync::{
-    Arc, LazyLock, Mutex,
+    Arc, LazyLock,
     atomic::{AtomicU64, Ordering},
     mpsc::{Receiver, Sender, channel},
   },
   time::{SystemTime, UNIX_EPOCH},
 };
+
+#[cfg(any(test, all(target_family = "wasm", not(rolldown_wasi_threads))))]
+use std::sync::Mutex;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::ser::{SerializeMap, Serializer as _};
@@ -181,6 +184,7 @@ pub enum LogCommand {
 enum WriterBackend {
   #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
   Ready(Sender<LogCommand>),
+  #[cfg(any(test, all(target_family = "wasm", not(rolldown_wasi_threads))))]
   Synchronous(Mutex<WriterState>),
   #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
   Failed(DevtoolsWriterFailure),
@@ -237,6 +241,7 @@ where
     WriterBackend::Ready(sender) => {
       let _ = sender.send(cmd);
     }
+    #[cfg(any(test, all(target_family = "wasm", not(rolldown_wasi_threads))))]
     WriterBackend::Synchronous(state) => {
       if let Ok(mut state) = state.lock() {
         state.handle(cmd);
@@ -277,6 +282,7 @@ where
         )
       })
     }
+    #[cfg(any(test, all(target_family = "wasm", not(rolldown_wasi_threads))))]
     WriterBackend::Synchronous(state) => {
       let mut state = state.lock().map_err(|_| {
         DevtoolsWriterFailure::message(

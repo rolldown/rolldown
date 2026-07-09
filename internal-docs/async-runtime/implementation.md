@@ -677,8 +677,10 @@ The handwritten public facade lives in
 `packages/rolldown/src/api/async-runtime.ts`. It exposes `AsyncRuntime*` names,
 documents initialization ordering, artifact support, metrics reset semantics,
 and WASI restrictions, and keeps deprecated `BindingRuntime*` type aliases for
-compatibility. The generated N-API declarations remain an internal transport
-detail.
+compatibility. Each facade function validates that its generated binding export
+is callable and reports `ERR_ROLLDOWN_BINDING_MISMATCH` when a stale optional
+binding is loaded, instead of leaking an unhelpful `is not a function` error.
+The generated N-API declarations remain an internal transport detail.
 
 This API is feature-gated. `configureAsyncRuntime`, `getAsyncRuntimeConfig`, and
 `getAsyncRuntimeMetrics` are exported on every build, but only the

@@ -4,6 +4,16 @@ import {
   getAsyncRuntimeMetrics as getBindingAsyncRuntimeMetrics,
   resetAsyncRuntimeMetrics as resetBindingAsyncRuntimeMetrics,
 } from '../binding.cjs';
+import { BindingMismatchError } from '../utils/binding-mismatch-error';
+
+function assertAsyncRuntimeBindingExport(exportName: string, value: unknown): void {
+  if (typeof value !== 'function') {
+    throw new BindingMismatchError(
+      `The loaded Rolldown binding does not expose ${exportName}() as a function. ` +
+        'Reinstall Rolldown so the JavaScript package and binding versions match.',
+    );
+  }
+}
 
 /**
  * Executor used by a Rolldown binding built with the shared async runtime.
@@ -99,6 +109,7 @@ export interface AsyncRuntimeMetrics extends AsyncRuntimeConfig {
  * @experimental
  */
 export function configureAsyncRuntime(options: AsyncRuntimeOptions): void {
+  assertAsyncRuntimeBindingExport('configureAsyncRuntime', configureBindingAsyncRuntime);
   configureBindingAsyncRuntime(options);
 }
 
@@ -113,6 +124,7 @@ export function configureAsyncRuntime(options: AsyncRuntimeOptions): void {
  * @experimental
  */
 export function getAsyncRuntimeConfig(): AsyncRuntimeConfig {
+  assertAsyncRuntimeBindingExport('getAsyncRuntimeConfig', getBindingAsyncRuntimeConfig);
   return getBindingAsyncRuntimeConfig();
 }
 
@@ -122,6 +134,7 @@ export function getAsyncRuntimeConfig(): AsyncRuntimeConfig {
  * @experimental
  */
 export function getAsyncRuntimeMetrics(): AsyncRuntimeMetrics {
+  assertAsyncRuntimeBindingExport('getAsyncRuntimeMetrics', getBindingAsyncRuntimeMetrics);
   return getBindingAsyncRuntimeMetrics();
 }
 
@@ -134,6 +147,7 @@ export function getAsyncRuntimeMetrics(): AsyncRuntimeMetrics {
  * @experimental
  */
 export function resetAsyncRuntimeMetrics(): void {
+  assertAsyncRuntimeBindingExport('resetAsyncRuntimeMetrics', resetBindingAsyncRuntimeMetrics);
   resetBindingAsyncRuntimeMetrics();
 }
 

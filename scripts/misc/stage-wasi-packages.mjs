@@ -51,6 +51,7 @@ const transactionStateMaximumBytes = 1024 * 1024;
 const transactionLockTimeoutMs = 60_000;
 const transactionLockPollMs = 20;
 const transactionLockCleanupMaxRetries = 5;
+const transactionLockCleanupTimeoutMs = 5_000;
 const processIncarnationProbeTimeoutMs = 5_000;
 const processIncarnationMatchCacheMs = 1_000;
 const maximumTransactionReplacements = 64;
@@ -654,13 +655,28 @@ async function removeRetiredStageWasiPackageLocks(transactionRoot) {
 
 async function removeRetiredStageWasiPackageLock(retiredPath) {
   // Retired names are unique and never become canonical again, so bounded
-  // retries cannot remove a successor-owned lock.
-  await rm(retiredPath, {
-    force: true,
-    maxRetries: transactionLockCleanupMaxRetries,
-    recursive: true,
-    retryDelay: transactionLockPollMs,
-  });
+  // retries cannot remove a successor-owned lock. Use an explicit loop because
+  // overlapping recursive removals can surface a transient Windows EPERM after
+  // Node's built-in rm retries have already stopped.
+  const deadline = Date.now() + transactionLockCleanupTimeoutMs;
+  let retry = 0;
+  while (true) {
+    try {
+      await rm(retiredPath, { force: true, recursive: true });
+      return;
+    } catch (error) {
+      if (
+        process.platform !== 'win32' ||
+        !isNodeError(error) ||
+        !['EACCES', 'EBUSY', 'ENOTEMPTY', 'EPERM'].includes(error.code)
+      ) {
+        throw error;
+      }
+      if (Date.now() >= deadline) throw error;
+      retry++;
+      await delay(Math.min(transactionLockPollMs * retry, 200));
+    }
+  }
 }
 
 async function retireStageWasiPackageReclaimPath(

@@ -1101,7 +1101,7 @@ test(
           releaseBlocker = await holdWindowsFileWithoutDeleteSharing(
             path.join(retiredPath, 'owner.json'),
           );
-          scheduledRelease = delay(80).then(() => releaseBlocker());
+          scheduledRelease = delay(500).then(() => releaseBlocker());
         },
       });
       await scheduledRelease;
@@ -1173,7 +1173,7 @@ test(
           releaseBlocker = await holdWindowsFileWithoutDeleteSharing(
             path.join(retiredPath, 'owner.json'),
           );
-          scheduledRelease = delay(80).then(() => releaseBlocker());
+          scheduledRelease = delay(500).then(() => releaseBlocker());
         },
       });
       await releaseGuard();
@@ -1618,7 +1618,7 @@ test('stale lock takeover cannot retire a successor after a delayed observation'
 test('stale reclaim guard waits for a live chooser before applying ticket order', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-live-reclaim-chooser-'));
   const packageRoot = path.join(root, 'npm');
-  const staleOwner = spawnCanonicalLockOwner(packageRoot);
+  await mkdir(packageRoot);
   let notifyFirstChoosing;
   const firstChoosing = new Promise((resolve) => {
     notifyFirstChoosing = resolve;
@@ -1627,40 +1627,33 @@ test('stale reclaim guard waits for a live chooser before applying ticket order'
   const firstMayChoose = new Promise((resolve) => {
     resumeFirstChoosing = resolve;
   });
-  let notifySecondEntered;
-  const secondEntered = new Promise((resolve) => {
-    notifySecondEntered = resolve;
+  let notifyFirstTicketPublished;
+  const firstTicketPublished = new Promise((resolve) => {
+    notifyFirstTicketPublished = resolve;
   });
-  let releaseSecond;
-  const secondMayFinish = new Promise((resolve) => {
-    releaseSecond = resolve;
+  let notifySecondTicketPublished;
+  const secondTicketPublished = new Promise((resolve) => {
+    notifySecondTicketPublished = resolve;
   });
-  let firstEntered = false;
-  let secondHasEntered = false;
-  let activeOwners = 0;
-  let maximumActiveOwners = 0;
+  let firstAcquired = false;
   let first;
   let second;
+  let releaseFirst;
+  let releaseSecond;
 
   try {
-    await waitForMessage(staleOwner.child, 'entered');
-    await abruptlyTerminateChild(staleOwner);
-
-    first = withStageWasiPackageLock(
-      packageRoot,
-      () => {
-        firstEntered = true;
-        activeOwners++;
-        maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
-        activeOwners--;
+    first = acquireStageWasiPackageReclaimGuard(packageRoot, {
+      async afterReclaimGuardCandidateCreate(candidatePath) {
+        notifyFirstChoosing(candidatePath);
+        await firstMayChoose;
       },
-      {
-        async afterReclaimGuardCandidateCreate(candidatePath) {
-          notifyFirstChoosing(candidatePath);
-          await firstMayChoose;
-        },
+      afterReclaimGuardTicketPublish() {
+        notifyFirstTicketPublished();
       },
-    );
+    }).then((release) => {
+      firstAcquired = true;
+      return release;
+    });
     const firstCandidatePath = await firstChoosing;
     const firstCandidateOwner = JSON.parse(
       await readFile(path.join(firstCandidatePath, 'owner.json'), 'utf8'),
@@ -1670,34 +1663,37 @@ test('stale reclaim guard waits for a live chooser before applying ticket order'
     const oldTime = new Date(Date.now() - 10_000);
     await utimes(firstCandidatePath, oldTime, oldTime);
 
-    second = withStageWasiPackageLock(packageRoot, async () => {
-      secondHasEntered = true;
-      activeOwners++;
-      maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
-      notifySecondEntered();
-      await secondMayFinish;
-      activeOwners--;
+    second = acquireStageWasiPackageReclaimGuard(packageRoot, {
+      afterReclaimGuardTicketPublish() {
+        notifySecondTicketPublished();
+      },
+      beforeReclaimGuardTicketPublish({ ticket }) {
+        assert.equal(ticket, 1);
+      },
     });
-    await delay(100);
-    assert.equal(firstEntered, false);
-    assert.equal(secondHasEntered, false);
+    await secondTicketPublished;
+    assert.equal(firstAcquired, false);
 
     resumeFirstChoosing();
-    await secondEntered;
-    assert.equal(firstEntered, false);
-    assert.equal(maximumActiveOwners, 1);
+    await firstTicketPublished;
+    assert.deepEqual(
+      JSON.parse(await readFile(path.join(firstCandidatePath, 'ticket.json'), 'utf8')),
+      { ticket: 2, version: 1 },
+    );
 
-    releaseSecond();
-    await Promise.all([first, second]);
-    assert.equal(firstEntered, true);
-    assert.equal(maximumActiveOwners, 1);
+    releaseSecond = await second;
+    assert.equal(firstAcquired, false);
+    await releaseSecond();
+    releaseSecond = undefined;
+
+    releaseFirst = await first;
+    await releaseFirst();
+    releaseFirst = undefined;
     await assertTransactionStateRemoved(packageRoot);
   } finally {
     resumeFirstChoosing?.();
-    releaseSecond?.();
-    if (staleOwner.child.exitCode === null && staleOwner.child.signalCode === null) {
-      await abruptlyTerminateChild(staleOwner);
-    }
+    await releaseSecond?.();
+    await releaseFirst?.();
     await Promise.allSettled([Promise.resolve(first), Promise.resolve(second)]);
     await rm(root, { force: true, recursive: true });
   }

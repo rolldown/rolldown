@@ -489,6 +489,52 @@ fn panic_contained_waker(waker: Waker) -> Waker {
   Waker::from(Arc::new(PanicContainedWaker { waker: ManuallyDrop::new(waker) }))
 }
 
+struct PanicContainedWakerSource {
+  waker: ManuallyDrop<Waker>,
+}
+
+impl PanicContainedWakerSource {
+  fn new(waker: Waker) -> Self {
+    Self { waker: ManuallyDrop::new(waker) }
+  }
+
+  fn as_waker(&self) -> &Waker {
+    &self.waker
+  }
+}
+
+impl Drop for PanicContainedWakerSource {
+  fn drop(&mut self) {
+    let _ = catch_unwind_contained(|| {
+      // SAFETY: this is the sole destruction path for the source waker.
+      unsafe { ManuallyDrop::drop(&mut self.waker) };
+    });
+  }
+}
+
+struct PanicContainedWakerCache {
+  source: PanicContainedWakerSource,
+  contained: Waker,
+}
+
+impl PanicContainedWakerCache {
+  fn new(waker: &Waker) -> Self {
+    let source = PanicContainedWakerSource::new(waker.clone());
+    let contained = panic_contained_waker(source.as_waker().clone());
+    Self { source, contained }
+  }
+
+  fn update(&mut self, waker: &Waker) {
+    if !self.source.as_waker().will_wake(waker) {
+      *self = Self::new(waker);
+    }
+  }
+
+  fn contained(&self) -> &Waker {
+    &self.contained
+  }
+}
+
 fn wake_waker_contained(waker: Waker) {
   // `Waker::wake` consumes the waker, so a panicking wake followed by a
   // panicking RawWaker destructor would double-panic before the outer catch
@@ -1474,6 +1520,7 @@ fn clear_propagated_blocking_dependencies(publications: &[DependencyPublication]
 enum JoinHandleInner<T> {
   Task {
     task: FallibleTask<Result<ContainedTaskOutput<T>, JoinError>>,
+    awaiter: Option<PanicContainedWakerCache>,
     #[cfg(not(target_family = "wasm"))]
     dependency: Arc<TaskDependency>,
   },
@@ -1495,6 +1542,7 @@ impl<T> JoinHandle<T> {
     match inner {
       JoinHandleInner::Task {
         task,
+        awaiter: _,
         #[cfg(not(target_family = "wasm"))]
         dependency,
       } => {
@@ -1548,17 +1596,30 @@ impl<T> Future for JoinHandle<T> {
     match &mut self.get_mut().0 {
       JoinHandleInner::Task {
         task,
+        awaiter: awaiter_slot,
         #[cfg(not(target_family = "wasm"))]
         dependency,
       } => {
-        let poll = Pin::new(task).poll(cx);
+        let awaiter = match awaiter_slot {
+          Some(awaiter) => {
+            awaiter.update(cx.waker());
+            awaiter
+          }
+          None => awaiter_slot.insert(PanicContainedWakerCache::new(cx.waker())),
+        };
+        let contained_waker = awaiter.contained();
+        let mut contained_cx = Context::from_waker(contained_waker);
+        let poll = Pin::new(task).poll(&mut contained_cx);
         #[cfg(not(target_family = "wasm"))]
         if poll.is_pending() {
-          for current_dependency in dependency.register_waiter_and_get(cx.waker()) {
+          for current_dependency in dependency.register_waiter_and_get(contained_waker) {
             propagate_blocking_dependency(current_dependency);
           }
         } else {
           dependency.clear_waiter();
+        }
+        if poll.is_ready() {
+          *awaiter_slot = None;
         }
         match poll {
           Poll::Ready(Some(result)) => Poll::Ready(result.map(ContainedTaskOutput::into_inner)),
@@ -1641,10 +1702,26 @@ struct RuntimeMetrics {
   reset_lock: Mutex<()>,
 }
 
+#[cfg(test)]
+thread_local! {
+  static RUNTIME_METRICS_HIGH_WATER_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(test)]
+fn run_runtime_metrics_high_water_test_hook() {
+  if let Some(hook) = RUNTIME_METRICS_HIGH_WATER_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
 impl RuntimeMetrics {
   fn runnable_scheduled(&self) {
     self.runnable_schedules.fetch_add(1, Ordering::Relaxed);
     let queued = self.queued_runnables.fetch_add(1, Ordering::Relaxed) + 1;
+    #[cfg(test)]
+    run_runtime_metrics_high_water_test_hook();
     self.max_queued_runnables.fetch_max(queued, Ordering::Relaxed);
   }
 
@@ -1652,8 +1729,15 @@ impl RuntimeMetrics {
     self.queued_runnables.fetch_sub(1, Ordering::Relaxed);
     self.runnable_polls.fetch_add(1, Ordering::Relaxed);
     let active = self.active_runnables.fetch_add(1, Ordering::Relaxed) + 1;
+    #[cfg(test)]
+    run_runtime_metrics_high_water_test_hook();
     self.max_active_runnables.fetch_max(active, Ordering::Relaxed);
     ActiveRunnableGuard { metrics: self }
+  }
+
+  #[cfg(any(not(target_family = "wasm"), test))]
+  fn runnable_cancelled(&self) {
+    self.queued_runnables.fetch_sub(1, Ordering::Relaxed);
   }
 
   /// Enqueue-time twin of [`Self::runnable_scheduled`] for blocking work:
@@ -1668,9 +1752,38 @@ impl RuntimeMetrics {
     self.blocking_tasks_started.fetch_add(1, Ordering::Relaxed);
     if count_active_lane {
       let active = self.active_blocking_tasks.fetch_add(1, Ordering::Relaxed) + 1;
+      #[cfg(test)]
+      run_runtime_metrics_high_water_test_hook();
       self.max_active_blocking_tasks.fetch_max(active, Ordering::Relaxed);
     }
     BlockingTaskGuard { metrics: Arc::clone(self), count_active_lane }
+  }
+
+  fn snapshot(&self, options: &RuntimeOptions) -> RuntimeMetricsSnapshot {
+    let queued_runnables = self.queued_runnables.load(Ordering::Relaxed);
+    let active_runnables = self.active_runnables.load(Ordering::Relaxed);
+    let active_blocking_tasks = self.active_blocking_tasks.load(Ordering::Relaxed);
+    RuntimeMetricsSnapshot {
+      flavor: options.flavor,
+      worker_threads: options.worker_threads,
+      max_blocking_tasks: options.max_blocking_tasks,
+      tasks_spawned: self.tasks_spawned.load(Ordering::Relaxed),
+      tasks_completed: self.tasks_completed.load(Ordering::Relaxed),
+      tasks_panicked: self.tasks_panicked.load(Ordering::Relaxed),
+      runnable_schedules: self.runnable_schedules.load(Ordering::Relaxed),
+      runnable_polls: self.runnable_polls.load(Ordering::Relaxed),
+      queued_runnables,
+      max_queued_runnables: self.max_queued_runnables.load(Ordering::Relaxed).max(queued_runnables),
+      active_runnables,
+      max_active_runnables: self.max_active_runnables.load(Ordering::Relaxed).max(active_runnables),
+      blocking_tasks_started: self.blocking_tasks_started.load(Ordering::Relaxed),
+      blocking_tasks_completed: self.blocking_tasks_completed.load(Ordering::Relaxed),
+      active_blocking_tasks,
+      max_active_blocking_tasks: self
+        .max_active_blocking_tasks
+        .load(Ordering::Relaxed)
+        .max(active_blocking_tasks),
+    }
   }
 
   /// Coarse liveness fingerprint for deadline-based deadlock detection (wake
@@ -1850,6 +1963,10 @@ impl GenerationStop {
   fn publication_guard(&self) -> GenerationStopPublicationGuard<'_> {
     #[cfg(all(test, not(target_family = "wasm")))]
     run_before_generation_stop_publication_lock_test_hook();
+    self.runnable_claim_guard()
+  }
+
+  fn runnable_claim_guard(&self) -> GenerationStopPublicationGuard<'_> {
     GenerationStopPublicationGuard {
       stop: self,
       _publication: self.publication.lock().unwrap_or_else(std::sync::PoisonError::into_inner),
@@ -2120,6 +2237,13 @@ impl<F> Drop for RegisteredBlockingFunction<F> {
 fn run_runnable(metrics: &RuntimeMetrics, runnable: Runnable) {
   let _active = metrics.runnable_started();
   let _ = catch_unwind_contained(|| runnable.run());
+}
+
+#[cfg(not(target_family = "wasm"))]
+enum RunnableClaim {
+  Empty,
+  Run(Runnable),
+  Cancel(Runnable),
 }
 
 static NEXT_RUNTIME_EXECUTOR_ID: AtomicU64 = AtomicU64::new(1);
@@ -4339,38 +4463,83 @@ impl MultiThreadExecutor {
     let _ = catch_unwind_contained(|| runnable.run());
   }
 
+  fn cancel_runnable(
+    &self,
+    runnable: Runnable,
+    admission: Option<MultiThreadDeadlockAdmissionGuard>,
+  ) {
+    self.metrics.runnable_cancelled();
+    // Cancellation accounting closes the dequeue gap just as start accounting
+    // does for a runnable that will be polled.
+    drop(admission);
+    let _generation = RuntimeGenerationGuard::enter(self.generation);
+    let _ = catch_unwind_contained(|| drop(runnable));
+  }
+
+  fn finish_runnable_claim(
+    self: &Arc<Self>,
+    claim: RunnableClaim,
+    admission: Option<MultiThreadDeadlockAdmissionGuard>,
+  ) -> bool {
+    match claim {
+      RunnableClaim::Empty => {
+        drop(admission);
+        false
+      }
+      RunnableClaim::Run(runnable) => {
+        #[cfg(test)]
+        run_multi_thread_work_claimed_test_hook();
+        self.run_runnable(runnable, admission);
+        true
+      }
+      RunnableClaim::Cancel(runnable) => {
+        #[cfg(test)]
+        run_multi_thread_work_claimed_test_hook();
+        self.cancel_runnable(runnable, admission);
+        true
+      }
+    }
+  }
+
+  fn runnable_claim(stopping: bool, runnable: Option<Runnable>) -> RunnableClaim {
+    match runnable {
+      Some(runnable) if stopping => RunnableClaim::Cancel(runnable),
+      Some(runnable) => RunnableClaim::Run(runnable),
+      None => RunnableClaim::Empty,
+    }
+  }
+
+  fn claim_fifo_runnable(&self) -> RunnableClaim {
+    let stop_publication = self.stop.runnable_claim_guard();
+    let runnable = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
+    let stopping = stop_publication.is_stopping();
+    drop(stop_publication);
+    Self::runnable_claim(stopping, runnable)
+  }
+
+  fn claim_runnable(&self) -> RunnableClaim {
+    let stop_publication = self.stop.runnable_claim_guard();
+    let runnable = self
+      .pop_lifo_slot()
+      .or_else(|| self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front());
+    let stopping = stop_publication.is_stopping();
+    drop(stop_publication);
+    Self::runnable_claim(stopping, runnable)
+  }
+
   fn run_one_fifo_runnable(self: &Arc<Self>) -> bool {
     let admission = self.begin_deadlock_admission();
-    let runnable = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
-    if let Some(runnable) = runnable {
-      #[cfg(test)]
-      run_multi_thread_work_claimed_test_hook();
-      self.run_runnable(runnable, admission);
-      return true;
-    }
-    false
+    let claim = self.claim_fifo_runnable();
+    self.finish_runnable_claim(claim, admission)
   }
 
   /// Run one runnable, preferring this worker's LIFO slot over the shared FIFO.
   fn run_one_runnable(self: &Arc<Self>) -> bool {
     let admission = self.begin_deadlock_admission();
-    if let Some(runnable) = self.pop_lifo_slot() {
-      // Same owner-clear as the FIFO branch below (RD-1 (B)): the slot must
-      // not smuggle an owner frame's over-cap privilege into the runnables it
-      // carries any more than the shared FIFO does.
-      #[cfg(test)]
-      run_multi_thread_work_claimed_test_hook();
-      self.run_runnable(runnable, admission);
-      return true;
-    }
-    let runnable = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
-    if let Some(runnable) = runnable {
-      #[cfg(test)]
-      run_multi_thread_work_claimed_test_hook();
-      self.run_runnable(runnable, admission);
-      return true;
-    }
-    false
+    // Same owner-clear as the FIFO-only path (RD-1 (B)): a runnable from the
+    // slot must not smuggle an owner frame's over-cap privilege.
+    let claim = self.claim_runnable();
+    self.finish_runnable_claim(claim, admission)
   }
 
   fn run_one_blocking(self: &Arc<Self>) -> bool {
@@ -8274,6 +8443,8 @@ thread_local! {
     std::cell::RefCell<Option<Box<dyn FnOnce()>>> = const { std::cell::RefCell::new(None) };
   static BEFORE_INITIAL_START_WAIT_TEST_HOOK:
     std::cell::RefCell<Option<Box<dyn FnOnce()>>> = const { std::cell::RefCell::new(None) };
+  static AFTER_GENERATION_STOP_PUBLICATION_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> = const { std::cell::RefCell::new(None) };
   static FAIL_NEXT_RUNTIME_BACKEND_CREATION:
     std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
@@ -8315,6 +8486,15 @@ fn run_after_current_thread_host_admission_test_hook() {
 #[cfg(test)]
 fn run_before_initial_start_wait_test_hook() {
   if let Some(hook) = BEFORE_INITIAL_START_WAIT_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
+#[cfg(test)]
+fn run_after_generation_stop_publication_test_hook() {
+  if let Some(hook) =
+    AFTER_GENERATION_STOP_PUBLICATION_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
     hook();
   }
 }
@@ -8936,6 +9116,8 @@ impl RuntimeController {
       }
     };
 
+    #[cfg(test)]
+    run_after_generation_stop_publication_test_hook();
     backend.begin_shutdown();
     backend.wait_until_idle();
 
@@ -9031,6 +9213,7 @@ where
   backend.schedule(runnable);
   JoinHandle(JoinHandleInner::Task {
     task: task.fallible(),
+    awaiter: None,
     #[cfg(not(target_family = "wasm"))]
     dependency,
   })
@@ -9185,24 +9368,7 @@ pub fn reset_metrics() {
 
 pub fn metrics() -> RuntimeMetricsSnapshot {
   let options = RUNTIME.options();
-  RuntimeMetricsSnapshot {
-    flavor: options.flavor,
-    worker_threads: options.worker_threads,
-    max_blocking_tasks: options.max_blocking_tasks,
-    tasks_spawned: RUNTIME.metrics.tasks_spawned.load(Ordering::Relaxed),
-    tasks_completed: RUNTIME.metrics.tasks_completed.load(Ordering::Relaxed),
-    tasks_panicked: RUNTIME.metrics.tasks_panicked.load(Ordering::Relaxed),
-    runnable_schedules: RUNTIME.metrics.runnable_schedules.load(Ordering::Relaxed),
-    runnable_polls: RUNTIME.metrics.runnable_polls.load(Ordering::Relaxed),
-    queued_runnables: RUNTIME.metrics.queued_runnables.load(Ordering::Relaxed),
-    max_queued_runnables: RUNTIME.metrics.max_queued_runnables.load(Ordering::Relaxed),
-    active_runnables: RUNTIME.metrics.active_runnables.load(Ordering::Relaxed),
-    max_active_runnables: RUNTIME.metrics.max_active_runnables.load(Ordering::Relaxed),
-    blocking_tasks_started: RUNTIME.metrics.blocking_tasks_started.load(Ordering::Relaxed),
-    blocking_tasks_completed: RUNTIME.metrics.blocking_tasks_completed.load(Ordering::Relaxed),
-    active_blocking_tasks: RUNTIME.metrics.active_blocking_tasks.load(Ordering::Relaxed),
-    max_active_blocking_tasks: RUNTIME.metrics.max_active_blocking_tasks.load(Ordering::Relaxed),
-  }
+  RUNTIME.metrics.snapshot(&options)
 }
 
 #[cfg(test)]
@@ -9273,6 +9439,38 @@ mod tests {
       }
       Poll::Pending
     }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  struct PanickingJoinAwaiter {
+    wakes: Arc<AtomicUsize>,
+    drops: Arc<AtomicUsize>,
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  impl std::task::Wake for PanickingJoinAwaiter {
+    fn wake(self: Arc<Self>) {
+      self.wakes.fetch_add(1, Ordering::SeqCst);
+      panic!("intentional JoinHandle awaiter wake panic");
+    }
+
+    fn wake_by_ref(self: &Arc<Self>) {
+      self.wakes.fetch_add(1, Ordering::SeqCst);
+      panic!("intentional JoinHandle awaiter wake-by-ref panic");
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  impl Drop for PanickingJoinAwaiter {
+    fn drop(&mut self) {
+      self.drops.fetch_add(1, Ordering::SeqCst);
+      panic!("intentional JoinHandle awaiter destructor panic");
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  fn panicking_join_awaiter_waker(wakes: Arc<AtomicUsize>, drops: Arc<AtomicUsize>) -> Waker {
+    Waker::from(Arc::new(PanickingJoinAwaiter { wakes, drops }))
   }
 
   #[cfg(not(target_family = "wasm"))]
@@ -13012,12 +13210,109 @@ mod tests {
     );
     let handle = JoinHandle(JoinHandleInner::Task {
       task: task.fallible(),
+      awaiter: None,
       dependency: Arc::new(TaskDependency::default()),
     });
 
     drop(handle);
     runnable.run();
     assert!(completed.load(Ordering::SeqCst));
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn join_handle_completion_contains_panicking_awaiter_wake_and_drop() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_JOIN_HANDLE_COMPLETION_PANIC_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      let wakes = Arc::new(AtomicUsize::new(0));
+      let drops = Arc::new(AtomicUsize::new(0));
+      let (runnable, task) = async_task::spawn(
+        async { Ok::<ContainedTaskOutput<()>, JoinError>(ContainedTaskOutput::new((), u64::MAX)) },
+        |_| {},
+      );
+      let mut handle = JoinHandle(JoinHandleInner::Task {
+        task: task.fallible(),
+        awaiter: None,
+        dependency: Arc::new(TaskDependency::default()),
+      });
+      let waker = panicking_join_awaiter_waker(Arc::clone(&wakes), Arc::clone(&drops));
+      {
+        let mut cx = Context::from_waker(&waker);
+        assert!(Pin::new(&mut handle).poll(&mut cx).is_pending());
+      }
+      drop(waker);
+
+      runnable.run();
+
+      let waker = futures::task::noop_waker();
+      let mut cx = Context::from_waker(&waker);
+      assert!(matches!(Pin::new(&mut handle).poll(&mut cx), Poll::Ready(Ok(()))));
+      assert_eq!(
+        drops.load(Ordering::SeqCst),
+        1,
+        "a completed handle must not retain the caller's awaiter"
+      );
+      drop(handle);
+      assert!(wakes.load(Ordering::SeqCst) >= 1);
+      assert_eq!(drops.load(Ordering::SeqCst), 1);
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::join_handle_completion_contains_panicking_awaiter_wake_and_drop")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the JoinHandle completion awaiter subprocess must start");
+    assert!(
+      output.status.success(),
+      "a panicking JoinHandle completion awaiter must not abort the process; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn join_handle_shutdown_contains_panicking_awaiter_wake_and_drop() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_JOIN_HANDLE_SHUTDOWN_PANIC_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      let controller = multi_thread_controller("join-awaiter-shutdown", 2, 1);
+      let wakes = Arc::new(AtomicUsize::new(0));
+      let drops = Arc::new(AtomicUsize::new(0));
+      let mut handle = controller.spawn(std::future::pending::<()>());
+      let waker = panicking_join_awaiter_waker(Arc::clone(&wakes), Arc::clone(&drops));
+      {
+        let mut cx = Context::from_waker(&waker);
+        assert!(Pin::new(&mut handle).poll(&mut cx).is_pending());
+      }
+      drop(waker);
+
+      controller.shutdown().expect("shutdown must survive the hostile awaiter");
+      drop(handle);
+      assert!(wakes.load(Ordering::SeqCst) >= 1);
+      assert_eq!(drops.load(Ordering::SeqCst), 1);
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::join_handle_shutdown_contains_panicking_awaiter_wake_and_drop")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the JoinHandle shutdown awaiter subprocess must start");
+    assert!(
+      output.status.success(),
+      "a panicking JoinHandle shutdown awaiter must not abort the process; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
   }
 
   #[cfg(not(target_family = "wasm"))]
@@ -16976,6 +17271,7 @@ mod tests {
     );
     drop(JoinHandle(JoinHandleInner::Task {
       task: task.fallible(),
+      awaiter: None,
       dependency: Arc::clone(&dependency),
     }));
     assert!(
@@ -17028,8 +17324,11 @@ mod tests {
       futures::future::pending::<Result<ContainedTaskOutput<()>, JoinError>>(),
       |_| {},
     );
-    let mut handle =
-      JoinHandle(JoinHandleInner::Task { task: task.fallible(), dependency: Arc::clone(&child) });
+    let mut handle = JoinHandle(JoinHandleInner::Task {
+      task: task.fallible(),
+      awaiter: None,
+      dependency: Arc::clone(&child),
+    });
     let waker = futures::task::noop_waker();
     let mut cx = Context::from_waker(&waker);
     assert!(Pin::new(&mut handle).poll(&mut cx).is_pending());
@@ -20612,6 +20911,135 @@ mod tests {
 
   #[cfg(not(target_family = "wasm"))]
   #[test]
+  fn multi_thread_fifo_claim_after_stop_publication_cancels_without_polling() {
+    use std::sync::mpsc;
+
+    let controller = multi_thread_controller("stopped-fifo-claim", 2, 1);
+    let backend = controller.backend();
+    let executor = match &backend.executor {
+      RuntimeExecutor::MultiThread(executor) => Arc::clone(executor),
+      RuntimeExecutor::CurrentThread(_) => unreachable!(),
+    };
+    let release_workers = Arc::new((Mutex::new(false), Condvar::new()));
+    let (worker_ready_tx, worker_ready_rx) = mpsc::channel();
+    for _ in 0..2 {
+      let worker_ready_tx = worker_ready_tx.clone();
+      let release_workers = Arc::clone(&release_workers);
+      executor.pool.spawn(move || {
+        worker_ready_tx.send(()).unwrap();
+        let (released, changed) = &*release_workers;
+        let mut released = released.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        while !*released {
+          released = changed.wait(released).unwrap_or_else(std::sync::PoisonError::into_inner);
+        }
+      });
+    }
+    drop(worker_ready_tx);
+    for _ in 0..2 {
+      worker_ready_rx
+        .recv_timeout(Duration::from_secs(5))
+        .expect("both workers must be occupied before the FIFO runnable is submitted");
+    }
+    drop(executor);
+    drop(backend);
+
+    let polls = Arc::new(AtomicUsize::new(0));
+    let handle = controller.spawn(StopPollProbe { polls: Arc::clone(&polls), first_poll: None });
+    wait_until("the FIFO runnable to be queued", || {
+      controller.metrics.queued_runnables.load(Ordering::SeqCst) == 1
+    });
+
+    let observed_queue = Arc::new(Mutex::new(None));
+    let hook_observed_queue = Arc::clone(&observed_queue);
+    let hook_metrics = Arc::clone(&controller.metrics);
+    AFTER_GENERATION_STOP_PUBLICATION_TEST_HOOK.with(|slot| {
+      *slot.borrow_mut() = Some(Box::new(move || {
+        let (released, changed) = &*release_workers;
+        *released.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = true;
+        changed.notify_all();
+        wait_until("the stopped FIFO runnable claim", || {
+          hook_metrics.queued_runnables.load(Ordering::SeqCst) == 0
+        });
+        *hook_observed_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner) =
+          Some(hook_metrics.queued_runnables.load(Ordering::SeqCst));
+      }));
+    });
+
+    controller.shutdown().expect("shutdown must cancel the stopped FIFO claim");
+    assert_eq!(polls.load(Ordering::SeqCst), 0);
+    assert_eq!(*observed_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner), Some(0));
+    assert_eq!(controller.metrics.queued_runnables.load(Ordering::SeqCst), 0);
+    drop(handle);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_lifo_claim_after_stop_publication_cancels_without_polling() {
+    use std::sync::mpsc;
+
+    let controller = multi_thread_controller("stopped-lifo-claim", 2, 1);
+    let backend = controller.backend();
+    let executor = match &backend.executor {
+      RuntimeExecutor::MultiThread(executor) => Arc::clone(executor),
+      RuntimeExecutor::CurrentThread(_) => unreachable!(),
+    };
+    let polls = Arc::new(AtomicUsize::new(0));
+    let scheduler = Arc::downgrade(&executor);
+    let (runnable, task) = async_task::spawn(
+      StopPollProbe { polls: Arc::clone(&polls), first_poll: None },
+      move |runnable| {
+        if let Some(executor) = scheduler.upgrade() {
+          executor.schedule(runnable);
+        }
+      },
+    );
+    let (slot_ready_tx, slot_ready_rx) = mpsc::channel();
+    let (release_slot_tx, release_slot_rx) = mpsc::channel();
+    let (claim_done_tx, claim_done_rx) = mpsc::channel();
+    let worker_executor = Arc::clone(&executor);
+    let worker_metrics = Arc::clone(&controller.metrics);
+    executor.pool.spawn(move || {
+      let _driver = OnPoolWorkerGuard::enter(worker_executor.id);
+      worker_executor.schedule(runnable);
+      slot_ready_tx.send(()).unwrap();
+      release_slot_rx.recv().unwrap();
+      let claimed = worker_executor.run_one_runnable();
+      claim_done_tx
+        .send((claimed, worker_metrics.queued_runnables.load(Ordering::SeqCst)))
+        .unwrap();
+    });
+    slot_ready_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("the worker must publish the LIFO runnable before shutdown");
+    assert_eq!(controller.metrics.queued_runnables.load(Ordering::SeqCst), 1);
+    drop(executor);
+    drop(backend);
+
+    let observed_claim = Arc::new(Mutex::new(None));
+    let hook_observed_claim = Arc::clone(&observed_claim);
+    AFTER_GENERATION_STOP_PUBLICATION_TEST_HOOK.with(|slot| {
+      *slot.borrow_mut() = Some(Box::new(move || {
+        release_slot_tx.send(()).unwrap();
+        let result = claim_done_rx
+          .recv_timeout(Duration::from_secs(5))
+          .expect("the stopped LIFO runnable claim must complete before abort");
+        *hook_observed_claim.lock().unwrap_or_else(std::sync::PoisonError::into_inner) =
+          Some(result);
+      }));
+    });
+
+    controller.shutdown().expect("shutdown must cancel the stopped LIFO claim");
+    assert_eq!(polls.load(Ordering::SeqCst), 0);
+    assert_eq!(
+      *observed_claim.lock().unwrap_or_else(std::sync::PoisonError::into_inner),
+      Some((true, 0))
+    );
+    assert_eq!(controller.metrics.queued_runnables.load(Ordering::SeqCst), 0);
+    drop(task);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
   fn current_thread_shutdown_publishes_stop_before_queued_destructor_cleanup() {
     use std::sync::mpsc;
 
@@ -21887,6 +22315,7 @@ mod tests {
       let result: Result<(), JoinError> =
         futures::executor::block_on(JoinHandle(JoinHandleInner::Task {
           task: task.fallible(),
+          awaiter: None,
           dependency: Arc::new(TaskDependency::default()),
         }));
       let _ = done_tx.send(result);
@@ -21969,6 +22398,78 @@ mod tests {
       "a live blocking guard completed after reset without unsigned underflow"
     );
     assert_eq!(metrics.blocking_tasks_completed.load(Ordering::Relaxed), 1);
+  }
+
+  #[test]
+  fn runtime_metrics_snapshot_clamps_high_water_marks_to_loaded_live_gauges() {
+    use std::sync::mpsc;
+
+    fn pause_next_high_water_update(entered: mpsc::Sender<()>, release: mpsc::Receiver<()>) {
+      RUNTIME_METRICS_HIGH_WATER_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          entered.send(()).unwrap();
+          release.recv().unwrap();
+        }));
+      });
+    }
+
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::CurrentThread,
+      worker_threads: 1,
+      max_blocking_tasks: 1,
+      thread_name_prefix: "metrics-snapshot".to_string(),
+      park_deadline: None,
+    };
+
+    let queued_metrics = Arc::new(RuntimeMetrics::default());
+    let (queued_entered_tx, queued_entered_rx) = mpsc::channel();
+    let (queued_release_tx, queued_release_rx) = mpsc::channel();
+    let queued_writer_metrics = Arc::clone(&queued_metrics);
+    let queued_writer = std::thread::spawn(move || {
+      pause_next_high_water_update(queued_entered_tx, queued_release_rx);
+      queued_writer_metrics.runnable_scheduled();
+    });
+    queued_entered_rx.recv().unwrap();
+    assert_eq!(queued_metrics.max_queued_runnables.load(Ordering::Relaxed), 0);
+    let snapshot = queued_metrics.snapshot(&options);
+    assert_eq!(snapshot.queued_runnables, 1);
+    assert_eq!(snapshot.max_queued_runnables, 1);
+    queued_release_tx.send(()).unwrap();
+    queued_writer.join().unwrap();
+    queued_metrics.runnable_cancelled();
+
+    let active_metrics = Arc::new(RuntimeMetrics::default());
+    active_metrics.queued_runnables.store(1, Ordering::Relaxed);
+    let (active_entered_tx, active_entered_rx) = mpsc::channel();
+    let (active_release_tx, active_release_rx) = mpsc::channel();
+    let active_writer_metrics = Arc::clone(&active_metrics);
+    let active_writer = std::thread::spawn(move || {
+      pause_next_high_water_update(active_entered_tx, active_release_rx);
+      let _active = active_writer_metrics.runnable_started();
+    });
+    active_entered_rx.recv().unwrap();
+    assert_eq!(active_metrics.max_active_runnables.load(Ordering::Relaxed), 0);
+    let snapshot = active_metrics.snapshot(&options);
+    assert_eq!(snapshot.active_runnables, 1);
+    assert_eq!(snapshot.max_active_runnables, 1);
+    active_release_tx.send(()).unwrap();
+    active_writer.join().unwrap();
+
+    let blocking_metrics = Arc::new(RuntimeMetrics::default());
+    let (blocking_entered_tx, blocking_entered_rx) = mpsc::channel();
+    let (blocking_release_tx, blocking_release_rx) = mpsc::channel();
+    let blocking_writer_metrics = Arc::clone(&blocking_metrics);
+    let blocking_writer = std::thread::spawn(move || {
+      pause_next_high_water_update(blocking_entered_tx, blocking_release_rx);
+      let _active = blocking_writer_metrics.blocking_started(true);
+    });
+    blocking_entered_rx.recv().unwrap();
+    assert_eq!(blocking_metrics.max_active_blocking_tasks.load(Ordering::Relaxed), 0);
+    let snapshot = blocking_metrics.snapshot(&options);
+    assert_eq!(snapshot.active_blocking_tasks, 1);
+    assert_eq!(snapshot.max_active_blocking_tasks, 1);
+    blocking_release_tx.send(()).unwrap();
+    blocking_writer.join().unwrap();
   }
 
   #[test]

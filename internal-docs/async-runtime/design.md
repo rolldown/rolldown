@@ -157,6 +157,12 @@ The existing Tokio runtime remains the default and is selected by the
    wins, the verdict must observe stop. The controller releases publication
    before aborting accepted tasks, so an abort wake blocked behind the verdict
    gate cannot form a cycle.
+   MultiThread FIFO and worker-local LIFO claims take that same publication
+   mutex as their dequeue linearization point. A claim that observes stop
+   dequeues and destroys the runnable behind the generation's containment
+   boundary without polling user code or incrementing active/poll metrics; a
+   pre-stop claim releases the mutex before its user poll. Queue-depth
+   accounting retires exactly once on either path.
    Shutdown closes and drain-fires timers, wakes every runtime-owned `block_on`
    parker, and scopes queued/rejected destruction to the retiring generation.
    Rejected convenience submissions hold the lifecycle transition until their
@@ -391,6 +397,11 @@ The existing Tokio runtime remains the default and is selected by the
    Handle retirement precedes dependency notification, and the buffered result
    destructor and arbitrary dependency waker have separate unwind boundaries,
    preventing a hostile pair from becoming a double panic.
+   Polling an async-task `FallibleTask` and registering its propagated
+   dependency waiter use one cached panic-contained proxy for the caller's
+   waker. The proxy preserves normal wake delivery and stable `will_wake`
+   identity while preventing async-task's abort-on-panic awaiter boundary from
+   observing a hostile wake or waker destructor.
    Contained owned-waker delivery borrows with `wake_by_ref`, then destroys the
    waker under a second boundary; a wake panic and a `RawWaker` destructor panic
    therefore cannot combine while one consuming `Waker::wake` frame unwinds.

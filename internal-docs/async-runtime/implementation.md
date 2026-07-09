@@ -492,6 +492,11 @@ binary.
   blocking FIFO mutex, then closes and drains the queue. Normal and compensation
   admission recheck stop and closure under that mutex, so either a job claim
   linearizes before stop or the job is cancelled.
+  Runnable claims use the same stop-publication mutex for both the shared FIFO
+  and the worker-local LIFO slot. They release it before running or destroying
+  the claimed value. A claim that observes stop performs a generation-scoped,
+  panic-contained runnable drop instead of `Runnable::run`, and decrements the
+  queued gauge without publishing a poll or active-runnable sample.
   Exact owner lending is performed by the cooperative driver that already owns
   the live dependency lineage. When normal blocking admission is saturated, one
   idle pass checks that dependency, reserves its exact active owner frame, and
@@ -577,6 +582,11 @@ binary.
 - `JoinHandle` normalizes async-task, blocking-job, and immediate results and
   detaches async tasks on drop to match Tokio. Scheduler shutdown instead
   aborts accepted async tasks and resolves retained handles with `JoinError`.
+  Async-task awaiter registration is given a cached panic-contained proxy,
+  never the caller's waker directly. The same proxy is registered for blocking
+  dependency propagation, remains stable while the caller's `Waker::will_wake`
+  identity is unchanged, and contains both wake and final source-waker
+  destruction before either can reach async-task's abort-on-panic boundary.
   Successful values remain generation-tagged until polling transfers ownership
   to the caller. Dropping a blocking or immediate handle is panic-contained
   because its receiver/result may already own a completed user value whose
@@ -625,7 +635,11 @@ binary.
   polling for guard retirement is required before asserting zero for gauges;
   post-reset event counters describe events published after the reset point. A
   reset generation is part of the deadlock-detector fingerprint, preventing
-  repeated counter values across a reset from being mistaken for no progress. The N-API
+  repeated counter values across a reset from being mistaken for no progress.
+  Snapshot construction clamps each loaded lifetime high-water value to at
+  least its corresponding loaded live gauge. This preserves the public
+  high-water invariant during the small writer window between incrementing a
+  live gauge and publishing its atomic maximum. The N-API
   surface exports counters as JavaScript numbers through the full exact integer
   range (`Number.MAX_SAFE_INTEGER`) instead of saturating at `u32::MAX`; values
   beyond that range clamp at the last exactly representable integer.

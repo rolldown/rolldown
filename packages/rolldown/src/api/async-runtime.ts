@@ -62,7 +62,8 @@ export interface AsyncRuntimeConfig {
  * Event counters are cumulative until {@link resetAsyncRuntimeMetrics} is
  * called. Active fields are live gauges. Maximum fields are lifetime
  * high-water marks and are not cleared while live work may still publish
- * updates.
+ * updates. Each maximum is at least its corresponding live gauge in the same
+ * snapshot.
  *
  * All counters are zero on a binding built with the default Tokio backend.
  *

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import {
   access,
   mkdtemp,
@@ -8,6 +8,7 @@ import {
   readdir,
   rename,
   rm,
+  stat,
   symlink,
   utimes,
   writeFile,
@@ -17,6 +18,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 
 import {
   acquireStageWasiPackageReclaimGuard,
@@ -27,6 +29,7 @@ import {
 } from './stage-wasi-packages.mjs';
 
 const transactionModuleUrl = new URL('./stage-wasi-packages.mjs', import.meta.url).href;
+const execFileAsync = promisify(execFile);
 const transactionChildSource = `
 const [moduleUrl, replacementsJson, pauseJson] = process.argv.slice(1);
 const { replaceDirectoriesTransactionally } = await import(moduleUrl);
@@ -112,10 +115,10 @@ try {
       await waitForParent('release');
     },
     {
-      async afterLockCandidateCreate(candidateLockPath) {
+      async afterLockCandidatePreparationCreate(preparationPath) {
         if (paused) return;
         paused = true;
-        process.send({ type: 'candidate-created', candidateLockPath });
+        process.send({ type: 'preparation-created', preparationPath });
         await waitForParent('continue');
       },
     },
@@ -335,6 +338,10 @@ async function assertMissing(candidate) {
   await assert.rejects(access(candidate), { code: 'ENOENT' });
 }
 
+async function createFifo(candidate) {
+  await execFileAsync('mkfifo', [candidate]);
+}
+
 async function assertTransactionStateRemoved(packageRoot) {
   await Promise.all([
     assertMissing(path.join(packageRoot, '.stage-wasi-packages.lock')),
@@ -344,6 +351,7 @@ async function assertTransactionStateRemoved(packageRoot) {
     (await readdir(packageRoot)).filter(
       (entry) =>
         entry.startsWith('.stage-wasi-packages.lock.candidate.') ||
+        entry.startsWith('.stage-wasi-packages.lock.candidate-preparing.') ||
         entry.startsWith('.stage-wasi-packages.lock.reclaim.') ||
         entry.startsWith('.stage-wasi-packages.lock.reclaim-preparing.') ||
         entry.startsWith('.stage-wasi-packages.lock.retired.'),
@@ -367,6 +375,14 @@ async function readCurrentProcessLockOwner(packageRoot) {
 function differentComparableIncarnation(incarnation) {
   assert.match(incarnation, /\d$/);
   return `${incarnation.slice(0, -1)}${incarnation.endsWith('0') ? '1' : '0'}`;
+}
+
+function differentIdentityComponent(component) {
+  return `${component}-different`;
+}
+
+function permissionMode(stats) {
+  return stats.mode & 0o777;
 }
 
 async function assertResolvesPromptly(promise, removeBlocker) {
@@ -745,6 +761,60 @@ test('directory transaction restores every package after failures at each commit
   }
 });
 
+test('directory transaction recovers crashes after every durable protocol boundary', async (t) => {
+  for (const { committed, index, phase } of [
+    { committed: false, index: -1, phase: 'journal-root' },
+    { committed: false, index: -1, phase: 'backup-root' },
+    { committed: false, index: -1, phase: 'journal' },
+    { committed: false, index: 0, phase: 'backup' },
+    { committed: false, index: 0, phase: 'install' },
+    { committed: false, index: 1, phase: 'backup' },
+    { committed: false, index: 1, phase: 'install' },
+    { committed: true, index: -1, phase: 'commit' },
+    { committed: true, index: -1, phase: 'cleanup-backups' },
+    { committed: true, index: -1, phase: 'cleanup-state' },
+    { committed: true, index: -1, phase: 'cleanup-journal' },
+  ]) {
+    await t.test(`${phase} ${index}`, async () => {
+      const { root, packageRoot, destinations } = await createTransactionFixture(
+        'stage-wasi-durable-crash-',
+      );
+      const replacements = await createStagedReplacements(packageRoot, destinations, 'staged', [
+        'new-threaded',
+        'new-threadless',
+      ]);
+      const interrupted = spawnTransaction(replacements, { index, phase });
+
+      try {
+        await waitForMessage(interrupted.child, 'paused');
+        await abruptlyTerminateChild(interrupted);
+        await withStageWasiPackageLock(packageRoot, () => {});
+
+        assert.equal(
+          await readMarker(destinations[0]),
+          committed ? 'new-threaded' : 'old-threaded',
+        );
+        assert.equal(
+          await readMarker(destinations[1]),
+          committed ? 'new-threadless' : 'old-threadless',
+        );
+        if (committed) {
+          await Promise.all(replacements.map(({ staged }) => assertMissing(staged)));
+        } else {
+          assert.equal(await readMarker(replacements[0].staged), 'new-threaded');
+          assert.equal(await readMarker(replacements[1].staged), 'new-threadless');
+        }
+        await assertTransactionStateRemoved(packageRoot);
+      } finally {
+        if (interrupted.child.exitCode === null && interrupted.child.signalCode === null) {
+          await abruptlyTerminateChild(interrupted);
+        }
+        await rm(root, { force: true, recursive: true });
+      }
+    });
+  }
+});
+
 test('directory transactions serialize concurrent processes', async () => {
   const { root, packageRoot, destinations } =
     await createTransactionFixture('stage-wasi-concurrent-');
@@ -825,6 +895,75 @@ test('package lock creates and serializes a missing transaction root', async () 
     await rm(root, { force: true, recursive: true });
   }
 });
+
+test(
+  'transaction metadata uses explicit cooperative Unix permissions',
+  { skip: process.platform === 'win32' },
+  async () => {
+    const { root, packageRoot, destinations } =
+      await createTransactionFixture('stage-wasi-permissions-');
+    const replacements = await createStagedReplacements(packageRoot, destinations, 'staged', [
+      'new-threaded',
+      'new-threadless',
+    ]);
+    let inspectedJournal = false;
+
+    try {
+      await replaceDirectoriesTransactionally(replacements, {
+        async afterOperation(phase) {
+          if (phase !== 'journal') return;
+          inspectedJournal = true;
+          const journalRoot = path.join(packageRoot, '.stage-wasi-packages.transaction');
+          const [lock, owner, journal, backups, state] = await Promise.all([
+            stat(path.join(packageRoot, '.stage-wasi-packages.lock')),
+            stat(path.join(packageRoot, '.stage-wasi-packages.lock/owner.json')),
+            stat(journalRoot),
+            stat(path.join(journalRoot, 'backups')),
+            stat(path.join(journalRoot, 'state.json')),
+          ]);
+          assert.equal(permissionMode(lock), 0o775);
+          assert.equal(permissionMode(owner), 0o644);
+          assert.equal(permissionMode(journal), 0o775);
+          assert.equal(permissionMode(backups), 0o775);
+          assert.equal(permissionMode(state), 0o644);
+        },
+      });
+
+      assert.equal(inspectedJournal, true);
+      await assertTransactionStateRemoved(packageRoot);
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  },
+);
+
+test(
+  'Darwin lock identity uses IOPlatformUUID and kern.bootsessionuuid',
+  { skip: process.platform !== 'darwin' },
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-darwin-identity-'));
+    const packageRoot = path.join(root, 'npm');
+
+    try {
+      const owner = await readCurrentProcessLockOwner(packageRoot);
+      const [{ stdout: ioreg }, { stdout: bootSessionUuid }] = await Promise.all([
+        execFileAsync('/usr/sbin/ioreg', ['-rd1', '-c', 'IOPlatformExpertDevice'], {
+          encoding: 'utf8',
+        }),
+        execFileAsync('/usr/sbin/sysctl', ['-n', 'kern.bootsessionuuid'], {
+          encoding: 'utf8',
+        }),
+      ]);
+      const platformUuid = ioreg.match(/"IOPlatformUUID"\s*=\s*"([0-9a-f-]{36})"/i)?.[1];
+      assert.ok(platformUuid);
+      assert.equal(owner.machineId, `darwin-machine:${platformUuid.toLowerCase()}`);
+      assert.equal(owner.bootId, `darwin-boot:${bootSessionUuid.trim().toLowerCase()}`);
+      await assertTransactionStateRemoved(packageRoot);
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  },
+);
 
 test(
   'package lock retries Windows EPERM when the canonical lock retires before inspection',
@@ -1081,6 +1220,78 @@ test('package lock preserves its publication error when candidate cleanup also f
   }
 });
 
+test('package lock aggregates operation and release failures with the operation as cause', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-lock-release-error-cause-'));
+  const packageRoot = path.join(root, 'npm');
+  const operationError = new Error('primary package operation failure');
+  const releaseError = new Error('transaction lock release failure');
+
+  try {
+    await assert.rejects(
+      withStageWasiPackageLock(
+        packageRoot,
+        () => {
+          throw operationError;
+        },
+        {
+          afterLockRetire() {
+            throw releaseError;
+          },
+        },
+      ),
+      (error) => {
+        assert.ok(error instanceof AggregateError);
+        assert.deepEqual(error.errors, [operationError, releaseError]);
+        assert.equal(error.cause, operationError);
+        return true;
+      },
+    );
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('package lock preserves falsy operation and retirement-hook failures', async (t) => {
+  for (const { label, options, operation } of [
+    {
+      label: 'operation',
+      operation: () => {
+        throw undefined;
+      },
+      options: {},
+    },
+    {
+      label: 'retirement hook',
+      operation: () => {},
+      options: {
+        afterLockRetire() {
+          throw undefined;
+        },
+      },
+    },
+  ]) {
+    await t.test(label, async () => {
+      const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-falsy-error-'));
+      const packageRoot = path.join(root, 'npm');
+      let rejected = false;
+
+      try {
+        try {
+          await withStageWasiPackageLock(packageRoot, operation, options);
+        } catch (error) {
+          rejected = true;
+          assert.equal(error, undefined);
+        }
+        assert.equal(rejected, true);
+        await assertTransactionStateRemoved(packageRoot);
+      } finally {
+        await rm(root, { force: true, recursive: true });
+      }
+    });
+  }
+});
+
 test('package lock publishes a complete owner before contenders can acquire it', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-lock-publish-'));
   const packageRoot = path.join(root, 'npm');
@@ -1160,6 +1371,59 @@ test('package lock publishes a complete owner before contenders can acquire it',
   }
 });
 
+test('package lock rejects a canonical legacy v1 owner without reclaiming it', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-legacy-canonical-owner-'));
+  const packageRoot = path.join(root, 'npm');
+  const lockPath = path.join(packageRoot, '.stage-wasi-packages.lock');
+  const legacyOwner = {
+    version: 1,
+    createdAt: Date.now(),
+    pid: 2_147_483_647,
+    token: 'legacy-canonical-owner',
+  };
+
+  try {
+    await mkdir(lockPath, { recursive: true });
+    await writeFile(path.join(lockPath, 'owner.json'), `${JSON.stringify(legacyOwner)}\n`);
+    let operationRan = false;
+    let staleOwnerObserved = false;
+    const settled = withStageWasiPackageLock(
+      packageRoot,
+      () => {
+        operationRan = true;
+      },
+      {
+        afterStaleLockObserved() {
+          staleOwnerObserved = true;
+        },
+      },
+    ).then(
+      () => ({ status: 'fulfilled' }),
+      (error) => ({ error, status: 'rejected' }),
+    );
+    const outcome = await Promise.race([
+      settled,
+      delay(2_000, { status: 'timed-out' }, { ref: false }),
+    ]);
+    if (outcome.status === 'timed-out') {
+      await rm(lockPath, { force: true, recursive: true });
+      await settled;
+    }
+
+    assert.equal(outcome.status, 'rejected');
+    assert.match(outcome.error.message, /Unsupported legacy WASI package transaction lock owner/);
+    assert.equal(operationRan, false);
+    assert.equal(staleOwnerObserved, false);
+    assert.deepEqual(
+      JSON.parse(await readFile(path.join(lockPath, 'owner.json'), 'utf8')),
+      legacyOwner,
+    );
+    assert.deepEqual(await readdir(packageRoot), ['.stage-wasi-packages.lock']);
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
 test('package lock reclaims a live reused PID with a different incarnation promptly', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-reused-canonical-pid-'));
   const packageRoot = path.join(root, 'npm');
@@ -1175,6 +1439,85 @@ test('package lock reclaims a live reused PID with a different incarnation promp
         createdAt: Date.now(),
         token: 'reused-canonical-pid',
         incarnation: differentComparableIncarnation(currentOwner.incarnation),
+      })}\n`,
+    );
+
+    let operationRan = false;
+    const recovery = withStageWasiPackageLock(packageRoot, () => {
+      operationRan = true;
+    });
+    await assertResolvesPromptly(recovery, () => rm(lockPath, { force: true, recursive: true }));
+
+    assert.equal(operationRan, true);
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('package lock fails closed for owners from another machine or PID namespace', async (t) => {
+  for (const field of ['machineId', 'pidNamespaceId']) {
+    await t.test(field, async () => {
+      const root = await mkdtemp(path.join(tmpdir(), `stage-wasi-non-local-${field}-`));
+      const packageRoot = path.join(root, 'npm');
+      const lockPath = path.join(packageRoot, '.stage-wasi-packages.lock');
+      let acquisition;
+
+      try {
+        const currentOwner = await readCurrentProcessLockOwner(packageRoot);
+        await mkdir(lockPath);
+        await writeFile(
+          path.join(lockPath, 'owner.json'),
+          `${JSON.stringify({
+            ...currentOwner,
+            createdAt: Date.now(),
+            [field]: differentIdentityComponent(currentOwner[field]),
+            token: `non-local-${field}`,
+          })}\n`,
+        );
+
+        let operationRan = false;
+        acquisition = withStageWasiPackageLock(packageRoot, () => {
+          operationRan = true;
+        });
+        await delay(100);
+        assert.equal(operationRan, false);
+        await access(lockPath);
+
+        const retiredPath = `${lockPath}.test-retired`;
+        await rename(lockPath, retiredPath);
+        await rm(retiredPath, { force: true, recursive: true });
+        await acquisition;
+        assert.equal(operationRan, true);
+        await assertTransactionStateRemoved(packageRoot);
+      } finally {
+        await rm(lockPath, { force: true, recursive: true });
+        await Promise.allSettled([Promise.resolve(acquisition)]);
+        await rm(root, { force: true, recursive: true });
+      }
+    });
+  }
+});
+
+test('package lock reclaims an owner from a previous boot on the same machine', async (t) => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-previous-boot-'));
+  const packageRoot = path.join(root, 'npm');
+  const lockPath = path.join(packageRoot, '.stage-wasi-packages.lock');
+
+  try {
+    const currentOwner = await readCurrentProcessLockOwner(packageRoot);
+    if (currentOwner.bootId === 'unavailable') {
+      t.skip('Boot identity is unavailable on this platform');
+      return;
+    }
+    await mkdir(lockPath);
+    await writeFile(
+      path.join(lockPath, 'owner.json'),
+      `${JSON.stringify({
+        ...currentOwner,
+        bootId: differentIdentityComponent(currentOwner.bootId),
+        createdAt: Date.now(),
+        token: 'previous-boot',
       })}\n`,
     );
 
@@ -1430,10 +1773,12 @@ test('reclaim guard proceeds when its process-incarnation probe is unavailable',
     });
 
     const preparationPath = await preparationCreated;
-    assert.ok(
-      path
-        .basename(preparationPath)
-        .startsWith(`.stage-wasi-packages.lock.reclaim-preparing.v1.${process.pid}.uncomparable.`),
+    assert.match(
+      path.basename(preparationPath),
+      new RegExp(
+        `^\\.stage-wasi-packages\\.lock\\.reclaim-preparing\\.v2\\.${process.pid}\\.` +
+          String.raw`[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{22}\.unavailable\.`,
+      ),
     );
 
     secondRelease = await acquireStageWasiPackageReclaimGuard(packageRoot);
@@ -1444,7 +1789,7 @@ test('reclaim guard proceeds when its process-incarnation probe is unavailable',
     resumeFirstPreparation();
     await first;
     assert.equal(publishedOwner.pid, process.pid);
-    assert.equal('incarnation' in publishedOwner, false);
+    assert.equal(publishedOwner.incarnation, 'unavailable');
     await firstRelease();
     firstRelease = undefined;
 
@@ -1515,7 +1860,7 @@ test('reclaim guard orders equal-ticket contenders across processes', async () =
   }
 });
 
-test('reclaim guard removes a legacy ownerless candidate after PID reuse promptly', async () => {
+test('reclaim guard preserves a legacy ownerless candidate until explicit cleanup', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-legacy-reclaim-pid-'));
   const packageRoot = path.join(root, 'npm');
   const unpublishedCandidatePath = path.join(packageRoot, '.legacy-ownerless-reclaim');
@@ -1533,13 +1878,17 @@ test('reclaim guard removes a legacy ownerless candidate after PID reuse promptl
     );
     await rename(unpublishedCandidatePath, legacyCandidatePath);
 
+    let acquired = false;
     const acquisition = acquireStageWasiPackageReclaimGuard(packageRoot).then((acquiredRelease) => {
+      acquired = true;
       release = acquiredRelease;
     });
-    await assertResolvesPromptly(acquisition, () =>
-      rm(legacyCandidatePath, { force: true, recursive: true }),
-    );
+    await delay(100);
+    assert.equal(acquired, false);
+    await access(legacyCandidatePath);
 
+    await rm(legacyCandidatePath, { force: true, recursive: true });
+    await acquisition;
     await assertMissing(legacyCandidatePath);
     await release();
     release = undefined;
@@ -1605,7 +1954,7 @@ test('reclaim guard removes a live reused PID candidate with a different incarna
   }
 });
 
-test('reclaim guard removes an ownerless preparation with a reused live PID', async () => {
+test('reclaim guard preserves a legacy ownerless preparation with unknown scope', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-reused-reclaim-preparation-pid-'));
   const packageRoot = path.join(root, 'npm');
   let release;
@@ -1621,7 +1970,8 @@ test('reclaim guard removes an ownerless preparation with a reused live PID', as
     await mkdir(preparationPath, { recursive: true });
 
     release = await acquireStageWasiPackageReclaimGuard(packageRoot);
-    await assertMissing(preparationPath);
+    await access(preparationPath);
+    await rm(preparationPath, { force: true, recursive: true });
     await release();
     release = undefined;
     await assertTransactionStateRemoved(packageRoot);
@@ -1656,6 +2006,42 @@ test('reclaim guard preserves its primary error when candidate cleanup also fail
         return true;
       },
     );
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('reclaim guard rejects malformed ticket metadata without removing the owner', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-hostile-ticket-'));
+  const packageRoot = path.join(root, 'npm');
+  const token = 'hostile-ticket';
+  const candidatePath = path.join(
+    packageRoot,
+    `.stage-wasi-packages.lock.reclaim.${process.pid}.${token}`,
+  );
+
+  try {
+    const currentOwner = await readCurrentProcessLockOwner(packageRoot);
+    await mkdir(candidatePath);
+    await Promise.all([
+      writeFile(
+        path.join(candidatePath, 'owner.json'),
+        `${JSON.stringify({
+          ...currentOwner,
+          createdAt: Date.now(),
+          token,
+        })}\n`,
+      ),
+      writeFile(path.join(candidatePath, 'ticket.json'), '{'),
+    ]);
+
+    await assert.rejects(
+      acquireStageWasiPackageReclaimGuard(packageRoot),
+      /WASI package reclaim-guard ticket contains invalid JSON/,
+    );
+    await access(candidatePath);
+    await rm(candidatePath, { force: true, recursive: true });
     await assertTransactionStateRemoved(packageRoot);
   } finally {
     await rm(root, { force: true, recursive: true });
@@ -1981,7 +2367,7 @@ test('package lock removes abandoned retired directories while holding canonical
   }
 });
 
-test('package lock preserves an aged incomplete candidate owned by a live process', async () => {
+test('package lock preserves an aged incomplete preparation owned by a live process', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-live-incomplete-lock-'));
   const packageRoot = path.join(root, 'npm');
   const candidate = spawnIncompleteLockCandidate(packageRoot);
@@ -1989,22 +2375,25 @@ test('package lock preserves an aged incomplete candidate owned by a live proces
   let maximumActiveOwners = 0;
 
   try {
-    const { candidateLockPath } = await waitForMessage(candidate.child, 'candidate-created');
+    const { preparationPath } = await waitForMessage(candidate.child, 'preparation-created');
     assert.match(
-      path.basename(candidateLockPath),
-      new RegExp(`^\\.stage-wasi-packages\\.lock\\.candidate\\.${candidate.child.pid}\\.`),
+      path.basename(preparationPath),
+      new RegExp(
+        `^\\.stage-wasi-packages\\.lock\\.candidate-preparing\\.v2\\.${candidate.child.pid}\\.` +
+          String.raw`(?:unavailable|[A-Za-z0-9_-]{22})\.(?:unavailable|[A-Za-z0-9_-]{22})\.(?:unavailable|[A-Za-z0-9_-]{22})\.(?:unavailable|[A-Za-z0-9_-]{22})\.`,
+      ),
     );
-    await assertMissing(path.join(candidateLockPath, 'owner.json'));
+    await assertMissing(path.join(preparationPath, 'owner.json'));
     const oldTime = new Date(Date.now() - 10_000);
-    await utimes(candidateLockPath, oldTime, oldTime);
+    await utimes(preparationPath, oldTime, oldTime);
 
     await withStageWasiPackageLock(packageRoot, async () => {
       activeOwners++;
       maximumActiveOwners = Math.max(maximumActiveOwners, activeOwners);
-      await access(candidateLockPath);
+      await access(preparationPath);
       activeOwners--;
     });
-    await access(candidateLockPath);
+    await access(preparationPath);
 
     const childEntered = waitForMessage(candidate.child, 'entered');
     candidate.child.send({ type: 'continue' });
@@ -2034,17 +2423,46 @@ test('package lock preserves an aged incomplete candidate owned by a live proces
   }
 });
 
-test('package lock retries if its candidate disappears before owner initialization', async () => {
+test('package lock reclaims a terminated preparation before owner initialization', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-lock-preparation-terminated-'));
+  const packageRoot = path.join(root, 'npm');
+  const interrupted = spawnIncompleteLockCandidate(packageRoot);
+
+  try {
+    const { preparationPath } = await waitForMessage(interrupted.child, 'preparation-created');
+    await assertMissing(path.join(preparationPath, 'owner.json'));
+    await abruptlyTerminateChild(interrupted);
+
+    await withStageWasiPackageLock(packageRoot, async () => {
+      await assertMissing(preparationPath);
+      assert.deepEqual(
+        (await readdir(packageRoot)).filter((entry) =>
+          entry.startsWith('.stage-wasi-packages.lock.candidate-preparing.'),
+        ),
+        [],
+      );
+    });
+
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    if (interrupted.child.exitCode === null && interrupted.child.signalCode === null) {
+      await abruptlyTerminateChild(interrupted);
+    }
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('package lock retries if its preparation disappears before owner initialization', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-missing-lock-candidate-'));
   const packageRoot = path.join(root, 'npm');
   let attempts = 0;
 
   try {
     await withStageWasiPackageLock(packageRoot, () => {}, {
-      async afterLockCandidateCreate(candidateLockPath) {
+      async afterLockCandidatePreparationCreate(preparationPath) {
         attempts++;
         if (attempts === 1) {
-          await rm(candidateLockPath, { force: true, recursive: true });
+          await rm(preparationPath, { force: true, recursive: true });
         }
       },
     });
@@ -2127,6 +2545,162 @@ test(
     }
   },
 );
+
+test('package lock rejects missing, malformed, special, oversized, and symlinked owners', async (t) => {
+  for (const fixture of [
+    {
+      name: 'missing',
+      pattern: /WASI package lock owner is missing/,
+      setup() {},
+    },
+    {
+      name: 'malformed',
+      pattern: /WASI package lock owner contains invalid JSON/,
+      setup(ownerPath) {
+        return writeFile(ownerPath, '{');
+      },
+    },
+    {
+      name: 'invalid-schema',
+      pattern: /Invalid WASI package lock owner/,
+      setup(ownerPath) {
+        return writeFile(ownerPath, '{}\n');
+      },
+    },
+    {
+      name: 'directory',
+      pattern: /WASI package lock owner is not a regular file/,
+      setup(ownerPath) {
+        return mkdir(ownerPath);
+      },
+    },
+    {
+      name: 'fifo',
+      pattern: /WASI package lock owner is not a regular file/,
+      setup(ownerPath) {
+        return createFifo(ownerPath);
+      },
+      skip: process.platform === 'win32',
+    },
+    {
+      name: 'oversized',
+      pattern: /WASI package lock owner exceeds 16384 bytes/,
+      setup(ownerPath) {
+        return writeFile(ownerPath, ' '.repeat(16_385));
+      },
+    },
+    {
+      name: 'symlink',
+      pattern: /WASI package lock owner is not a regular file/,
+      async setup(ownerPath, root, currentOwner) {
+        const externalOwner = path.join(root, 'external-owner.json');
+        await writeFile(externalOwner, `${JSON.stringify(currentOwner)}\n`);
+        await symlink(externalOwner, ownerPath);
+      },
+      skip: process.platform === 'win32',
+    },
+  ]) {
+    await t.test(fixture.name, { skip: fixture.skip }, async () => {
+      const root = await mkdtemp(path.join(tmpdir(), `stage-wasi-hostile-owner-${fixture.name}-`));
+      const packageRoot = path.join(root, 'npm');
+      const lockPath = path.join(packageRoot, '.stage-wasi-packages.lock');
+      const ownerPath = path.join(lockPath, 'owner.json');
+
+      try {
+        const currentOwner = await readCurrentProcessLockOwner(packageRoot);
+        await mkdir(lockPath);
+        await fixture.setup(ownerPath, root, currentOwner);
+        let operationRan = false;
+        await assert.rejects(
+          withStageWasiPackageLock(packageRoot, () => {
+            operationRan = true;
+          }),
+          fixture.pattern,
+        );
+
+        assert.equal(operationRan, false);
+        await access(lockPath);
+        assert.deepEqual(
+          (await readdir(packageRoot)).filter((entry) =>
+            entry.startsWith('.stage-wasi-packages.lock.candidate.'),
+          ),
+          [],
+        );
+      } finally {
+        await rm(root, { force: true, recursive: true });
+      }
+    });
+  }
+});
+
+test('transaction recovery rejects malformed, special, oversized, and symlinked state', async (t) => {
+  for (const fixture of [
+    {
+      name: 'malformed',
+      pattern: /WASI package transaction state contains invalid JSON/,
+      setup(statePath) {
+        return writeFile(statePath, '{');
+      },
+    },
+    {
+      name: 'directory',
+      pattern: /WASI package transaction state is not a regular file/,
+      setup(statePath) {
+        return mkdir(statePath);
+      },
+    },
+    {
+      name: 'fifo',
+      pattern: /WASI package transaction state is not a regular file/,
+      setup(statePath) {
+        return createFifo(statePath);
+      },
+      skip: process.platform === 'win32',
+    },
+    {
+      name: 'oversized',
+      pattern: /WASI package transaction state exceeds 1048576 bytes/,
+      setup(statePath) {
+        return writeFile(statePath, ' '.repeat(1_048_577));
+      },
+    },
+    {
+      name: 'symlink',
+      pattern: /WASI package transaction state is not a regular file/,
+      async setup(statePath, root) {
+        const externalState = path.join(root, 'external-state.json');
+        await writeFile(externalState, '{}\n');
+        await symlink(externalState, statePath);
+      },
+      skip: process.platform === 'win32',
+    },
+  ]) {
+    await t.test(fixture.name, { skip: fixture.skip }, async () => {
+      const root = await mkdtemp(path.join(tmpdir(), `stage-wasi-hostile-state-${fixture.name}-`));
+      const packageRoot = path.join(root, 'npm');
+      const journalRoot = path.join(packageRoot, '.stage-wasi-packages.transaction');
+      const statePath = path.join(journalRoot, 'state.json');
+
+      try {
+        await mkdir(path.join(journalRoot, 'backups'), { recursive: true });
+        await fixture.setup(statePath, root);
+        let operationRan = false;
+        await assert.rejects(
+          withStageWasiPackageLock(packageRoot, () => {
+            operationRan = true;
+          }),
+          fixture.pattern,
+        );
+
+        assert.equal(operationRan, false);
+        await access(journalRoot);
+        await assertMissing(path.join(packageRoot, '.stage-wasi-packages.lock'));
+      } finally {
+        await rm(root, { force: true, recursive: true });
+      }
+    });
+  }
+});
 
 test('package bootstrap creates only missing WASI package directories', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-bootstrap-'));

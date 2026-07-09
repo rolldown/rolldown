@@ -1575,37 +1575,62 @@ Staging also owns package-directory recovery. A clean checkout bootstraps only
 the missing napi-generated WASI package skeletons in an isolated directory,
 while release staging preserves an already downloaded package-local Wasm binary
 when the source-tree binary is unavailable. Package replacement is serialized,
-journaled, and rolled back as one transaction. The canonical filesystem lock is
-published only after its owner record is complete and is retired to a unique
-path before bounded cleanup retries. Canonical retirement retries transient
-Windows sharing violations while rereading and exactly matching the complete
-owner before every rename attempt, so a delayed retry cannot retire a
-successor-owned canonical path. Stale-lock reclaimers serialize with unique
-Lamport bakery candidates: each prepares its immutable owner outside the bakery
-namespace under a versioned path containing its PID and either a recognized OS
-process incarnation or an explicit uncomparable marker, atomically publishes the
-complete chooser, publishes its ticket, and waits for every live chooser and
-lower ticket. An ownerless preparation is removed only after its PID is dead or
-its encoded incarnation positively mismatches the live process, so a stalled
-creator is not aged out by wall-clock time. An uncomparable live-PID preparation
-is retained conservatively, but remains outside the bakery and therefore does
-not block another reclaimer. Transient process-incarnation probe failure does
-not prevent complete owner publication. Legacy ownerless chooser directories
-are migrated only when their stable creation timestamp positively predates the
-conservative lower bound of the current live PID incarnation. Linux boot time
-and POSIX process start probes have whole-second precision, so cleanup may wait
-until that ordering can be proved; unavailable, equal, or otherwise incomparable
-evidence remains blocking. A valid owner is always checked again before that
-migration retires the legacy chooser.
+journaled, and rolled back as one transaction. Journal creation, each backup and
+install rename, commit publication, and journal cleanup have explicit file and
+parent-directory fsync barriers. Recovery distinguishes incomplete,
+active, and committed journals at every durable boundary. Metadata files are
+bounded regular-file reads opened without following symlinks or blocking on
+special files; Unix metadata uses `0644` and shared transaction directories use
+`0775`.
+
+The canonical filesystem lock is prepared under a unique
+`candidate-preparing.v2` path containing its PID and encoded execution-identity
+fingerprint. Its owner record is written and fsynced there before an atomic
+rename publishes a complete ordinary candidate; a second atomic rename
+publishes that candidate as the canonical lock. The transaction root is fsynced
+after both publication renames. A crash before owner publication therefore
+leaves identity-scoped preparation state that another canonical owner can
+remove after proving the preparing process is dead, while a live or non-local
+preparation remains untouched.
+
+Canonical retirement renames the exact owner to a unique path and fsyncs the
+transaction root before bounded cleanup retries. It retries transient Windows
+sharing violations while rereading and exactly matching the complete owner
+before every rename attempt, so a delayed retry cannot retire a successor-owned
+canonical path. Version 2 owners record machine, boot, PID-namespace, PID, and
+process-incarnation identity. Darwin uses `IOPlatformUUID` for machine scope and
+`kern.bootsessionuuid` for the immutable boot-session identity; `kern.uuid` is a
+kernel-image identity and is not used. Reclamation is allowed only for the same
+machine and namespace after proving a previous boot, dead PID, or comparable
+incarnation mismatch; non-local or unavailable identity fails closed without a
+wall-clock lease. A canonical version 1 owner lacks enough scope for safe
+automatic classification, so acquisition rejects it immediately as unsupported
+legacy state and leaves it untouched for explicit operator resolution instead
+of timing out or reclaiming it.
+
+Stale-lock reclaimers serialize with unique Lamport bakery candidates: each
+prepares its immutable owner outside the bakery namespace under a versioned
+path containing its PID and encoded execution-identity fingerprint, atomically
+publishes the complete chooser, publishes its ticket, and waits for every live
+chooser and lower ticket. An ownerless preparation is removed only after its
+scope and process death can be established, so a stalled creator is not aged
+out by wall-clock time. An unavailable live-PID preparation is retained
+conservatively, but remains outside the bakery and therefore does not block
+another reclaimer. Transient process-incarnation probe failure does not prevent
+complete owner publication. Legacy ownerless chooser directories and complete
+version 1 chooser owners do not carry machine or namespace scope. They remain
+blocking until explicit cleanup because local PID or timestamp evidence cannot
+prove that a process on another host sharing the transaction root is dead.
 
 Every reclaim preparation or candidate is released by atomically renaming its
 exact UUID-scoped path to a fresh retired name with bounded Windows sharing-
-violation retries, then applying bounded deletion retries. Failed canonical-lock
-publication candidates use the same retirement protocol. A crashed reclaimer
-therefore leaves an owner-specific path that a successor can remove without
-renaming or deleting successor-owned state. If publication or reclaim work and
-its retirement both fail, the operation error remains first and is retained as
-the aggregate `cause`; retirement hooks cannot suppress the deletion attempt.
+violation retries, fsyncing the transaction root, then applying bounded deletion
+retries. Failed canonical-lock preparations and publication candidates use the
+same retirement protocol. A crashed reclaimer therefore leaves an owner-specific
+path that a successor can remove without renaming or deleting successor-owned
+state. If publication or reclaim work and its retirement both fail, the
+operation error remains first and is retained as the aggregate `cause`;
+retirement hooks cannot suppress the deletion attempt.
 Canonical owners and reclaim candidates also record a best-effort OS process-
 incarnation identity. Reclamation requires a positively observed incarnation
 mismatch before treating a reused live PID as stale. Only identities of the same

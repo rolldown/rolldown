@@ -131,36 +131,38 @@ mod async_runtime_lease {
     pub fn acquire_lease(
       &self,
       is_cancelled: impl Fn() -> bool,
-      recover_shutdown: impl FnMut() -> napi::Result<()>,
+      shutdown: impl FnMut() -> napi::Result<()>,
       start: impl FnOnce() -> napi::Result<()>,
     ) -> napi::Result<()> {
-      self.acquire(OwnerKind::Lease, &is_cancelled, || !is_cancelled(), recover_shutdown, start)
+      self.acquire(OwnerKind::Lease, &is_cancelled, || !is_cancelled(), shutdown, start)
     }
 
     pub fn acquire_lease_with_commit(
       &self,
       is_cancelled: impl Fn() -> bool,
       try_commit: impl Fn() -> bool,
-      recover_shutdown: impl FnMut() -> napi::Result<()>,
+      shutdown: impl FnMut() -> napi::Result<()>,
       start: impl FnOnce() -> napi::Result<()>,
     ) -> napi::Result<()> {
-      self.acquire(OwnerKind::Lease, is_cancelled, try_commit, recover_shutdown, start)
+      self.acquire(OwnerKind::Lease, is_cancelled, try_commit, shutdown, start)
     }
 
     pub fn acquire_manual(
       &self,
-      recover_shutdown: impl FnMut() -> napi::Result<()>,
+      shutdown: impl FnMut() -> napi::Result<()>,
       start: impl FnOnce() -> napi::Result<()>,
     ) -> napi::Result<()> {
-      self.acquire(OwnerKind::Manual, || false, || true, recover_shutdown, start)
+      self.acquire(OwnerKind::Manual, || false, || true, shutdown, start)
     }
 
+    // One acquisition may shut down both an abandoned generation and a
+    // successfully restarted generation whose lease commit was cancelled.
     fn acquire(
       &self,
       owner_kind: OwnerKind,
       is_cancelled: impl Fn() -> bool,
       try_commit: impl Fn() -> bool,
-      mut recover_shutdown: impl FnMut() -> napi::Result<()>,
+      mut shutdown: impl FnMut() -> napi::Result<()>,
       start: impl FnOnce() -> napi::Result<()>,
     ) -> napi::Result<()> {
       // One acquisition may first recover an abandoned shutdown and then need
@@ -206,7 +208,7 @@ mod async_runtime_lease {
         drop(state);
 
         let result = if recovering_shutdown {
-          catch_unwind(AssertUnwindSafe(&mut recover_shutdown))
+          catch_unwind(AssertUnwindSafe(&mut shutdown))
         } else {
           catch_unwind(AssertUnwindSafe(
             start.take().expect("runtime start closure is used at most once"),
@@ -242,7 +244,7 @@ mod async_runtime_lease {
           state.lifecycle = Lifecycle::Stopping;
           drop(state);
 
-          let rollback_result = catch_unwind(AssertUnwindSafe(&mut recover_shutdown));
+          let rollback_result = catch_unwind(AssertUnwindSafe(&mut shutdown));
           let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
           match &rollback_result {
             Ok(Ok(())) => {
@@ -765,6 +767,78 @@ mod async_runtime_lease {
       assert_eq!(manager.owner_counts(), (1, 0));
       assert!(!manager.has_abandoned_lease_owner());
       manager.release_lease(|| Ok(())).unwrap();
+    }
+
+    #[test]
+    fn cancelled_restart_after_finalizer_failure_rolls_back_and_remains_reusable() {
+      const PENDING: u8 = 0;
+      const CANCELLED: u8 = 1;
+      const COMMITTED: u8 = 2;
+
+      let manager = Manager::new();
+      manager.acquire_lease(|| false, || unreachable!(), || Ok(())).unwrap();
+      manager.release_lease_from_finalizer(|| {
+        Err(napi::Error::from_reason("finalizer shutdown failed"))
+      });
+      assert_eq!(manager.owner_counts(), (1, 0));
+      assert!(manager.has_abandoned_lease_owner());
+
+      let cancellation = AtomicU8::new(PENDING);
+      let shutdown_calls = AtomicUsize::new(0);
+      let start_calls = AtomicUsize::new(0);
+      let acquisition = catch_unwind(AssertUnwindSafe(|| {
+        manager.acquire_lease_with_commit(
+          || cancellation.load(Ordering::SeqCst) == CANCELLED,
+          || {
+            cancellation
+              .compare_exchange(PENDING, COMMITTED, Ordering::SeqCst, Ordering::SeqCst)
+              .is_ok()
+          },
+          || {
+            match shutdown_calls.fetch_add(1, Ordering::SeqCst) {
+              0 => {
+                assert_eq!(manager.owner_counts(), (1, 0));
+                assert!(manager.has_abandoned_lease_owner());
+              }
+              1 => {
+                assert_eq!(manager.owner_counts(), (0, 0));
+                assert!(!manager.has_abandoned_lease_owner());
+              }
+              call => panic!("unexpected shutdown call {call}"),
+            }
+            Ok(())
+          },
+          || {
+            assert_eq!(manager.owner_counts(), (0, 0));
+            start_calls.fetch_add(1, Ordering::SeqCst);
+            cancellation.store(CANCELLED, Ordering::SeqCst);
+            Ok(())
+          },
+        )
+      }));
+
+      let error = acquisition.expect("cancelled restart rollback must not panic").unwrap_err();
+      assert_eq!(error.status, napi::Status::Cancelled);
+      assert_eq!(shutdown_calls.load(Ordering::SeqCst), 2);
+      assert_eq!(start_calls.load(Ordering::SeqCst), 1);
+      assert_eq!(manager.owner_counts(), (0, 0));
+      assert!(!manager.has_abandoned_lease_owner());
+
+      manager
+        .acquire_lease(
+          || false,
+          || unreachable!("successful rollback must leave no recovery state"),
+          || {
+            start_calls.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+          },
+        )
+        .unwrap();
+      assert_eq!(start_calls.load(Ordering::SeqCst), 2);
+      assert_eq!(manager.owner_counts(), (1, 0));
+
+      manager.release_lease(|| Ok(())).unwrap();
+      assert_eq!(manager.owner_counts(), (0, 0));
     }
 
     #[test]

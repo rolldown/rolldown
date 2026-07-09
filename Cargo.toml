@@ -2,15 +2,6 @@
 members = ["./crates/*", "tasks/*"]
 resolver = "3"
 
-# json-escape-simd's upstream portable fallback corrupts JSON string escaping on
-# big-endian targets (s390x). Until the fix lands in a crates.io release, patch to
-# the fixed fork; this covers both rolldown's direct use and oxc_sourcemap's
-# transitive use (both require `json-escape-simd = "3"`, satisfied by 3.1.0).
-# See rolldown-s390x-big-endian-analysis.md. TODO: drop this once the fix is
-# published to crates.io and bump the version instead.
-[patch.crates-io]
-json-escape-simd = { git = "https://github.com/satyamg1620/json-escape-simd", rev = "8d1fefb4" }
-
 [workspace.package]
 edition = "2024"
 homepage = "https://rolldown.rs/"
@@ -204,7 +195,8 @@ infer = { version = "0.19.0", default-features = false }
 insta = "1.48.0"
 itertools = "0.15.0"
 itoa = "1.0.18"
-json-escape-simd = "3"
+# 3.1.1 is the first release with the big-endian (s390x) escaping fix; 3.1.0 is buggy.
+json-escape-simd = "3.1.1"
 json-strip-comments = "3"
 jsonschema = { version = "0.46.10", default-features = false }
 memchr = "2.8.2"

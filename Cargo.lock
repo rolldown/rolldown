@@ -1075,8 +1075,9 @@ dependencies = [
 
 [[package]]
 name = "json-escape-simd"
-version = "3.1.0"
-source = "git+https://github.com/satyamg1620/json-escape-simd?rev=8d1fefb4#8d1fefb4911feb190b5b24090fce8b415c723e98"
+version = "3.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c22a2041e3874a055a4eb03ea2395aaccdefa84ce75b31d542d72a741c3c6ad3"
 
 [[package]]
 name = "json-strip-comments"

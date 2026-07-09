@@ -131,7 +131,7 @@ describe('getRuntimeCapabilities', () => {
       dynamicImportVarsResolver: true,
       importGlobResolver: true,
       parallelPlugins: !caps.wasi,
-      pluginErrorMetadata: !caps.wasi,
+      pluginErrorMetadata: true,
       symlinks: !caps.wasi,
       threadlessWasi: caps.target === 'wasi' && !caps.threads,
       workerd: false,
@@ -141,6 +141,57 @@ describe('getRuntimeCapabilities', () => {
       enumerable: true,
       value: false,
     });
+  });
+
+  test('preserves structured plugin error metadata', async () => {
+    const cause = Object.assign(new RangeError('nested plugin cause'), {
+      nestedMarker: 17,
+    });
+    const original = Object.assign(new TypeError('plugin metadata failure'), {
+      cause,
+      code: 'USER_PLUGIN_CODE',
+      customMarker: 'retained',
+    });
+    const bundle = await rolldown({
+      input: 'entry',
+      plugins: [
+        {
+          name: 'runtime-metadata-probe',
+          resolveId(id) {
+            if (id === 'entry') return '\0entry';
+          },
+          load(id) {
+            if (id === '\0entry') return 'export default 1';
+          },
+          transform(_code, id) {
+            if (id === '\0entry') throw original;
+          },
+        },
+      ],
+    });
+
+    try {
+      const failure = await bundle.generate().catch((error: unknown) => error);
+      const [pluginError] = (failure as { errors?: unknown[] }).errors ?? [];
+      expect(pluginError).toBe(original);
+      expect(pluginError).toMatchObject({
+        code: 'PLUGIN_ERROR',
+        pluginCode: 'USER_PLUGIN_CODE',
+        plugin: 'runtime-metadata-probe',
+        hook: 'transform',
+        id: '\0entry',
+        customMarker: 'retained',
+      });
+      expect(original.stack).toContain('plugin metadata failure');
+      expect(original.cause).toBe(cause);
+      expect(original.cause).toMatchObject({
+        name: 'RangeError',
+        message: 'nested plugin cause',
+        nestedMarker: 17,
+      });
+    } finally {
+      await bundle.close();
+    }
   });
 
   test('JS-backed dynamic import resolvers build through the async callback bridge', async () => {

@@ -37,6 +37,10 @@ runtime report.
 | Symbolic-link traversal                         | Yes                | Yes                   | No                    | No                                  |
 | Managed deferred workerd loader                 | No                 | No                    | No                    | Through a public `./workerd` facade |
 
+In both WASI flavors, plugin hook failures retain the original JavaScript
+error's stack and custom properties, Rolldown's applicable `code`, `plugin`,
+`hook`, and `id` metadata, and nested cause chains.
+
 Unsupported public workflows throw
 `ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE` before entering the binding. This
 prevents configurations that cannot make progress from hanging.

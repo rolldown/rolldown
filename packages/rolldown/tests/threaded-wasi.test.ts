@@ -19,6 +19,7 @@ test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
       watchSupported: false,
     });
     const support = getRuntimeSupport();
+    expect(support.pluginErrorMetadata).toBe(true);
     expect(support.threadlessWasi).toBe(false);
     expect(support.workerd).toBe(false);
 
@@ -68,6 +69,60 @@ test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
       releaseLoad();
       await first.close();
       await second.close();
+    }
+  },
+);
+
+test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
+  'preserves structured plugin errors across the threaded worker boundary',
+  async () => {
+    const cause = Object.assign(new RangeError('threaded nested cause'), {
+      nestedMarker: 23,
+    });
+    const original = Object.assign(new TypeError('threaded plugin metadata failure'), {
+      cause,
+      code: 'THREADED_USER_CODE',
+      customMarker: 'threaded-retained',
+    });
+    const bundle = await rolldown({
+      input: 'entry',
+      plugins: [
+        {
+          name: 'threaded-runtime-metadata-probe',
+          resolveId(id) {
+            if (id === 'entry') return '\0entry';
+          },
+          load(id) {
+            if (id === '\0entry') return 'export default 1';
+          },
+          transform(_code, id) {
+            if (id === '\0entry') throw original;
+          },
+        },
+      ],
+    });
+
+    try {
+      const failure = await bundle.generate().catch((error: unknown) => error);
+      const [pluginError] = (failure as { errors?: unknown[] }).errors ?? [];
+      expect(pluginError).toBe(original);
+      expect(pluginError).toMatchObject({
+        code: 'PLUGIN_ERROR',
+        pluginCode: 'THREADED_USER_CODE',
+        plugin: 'threaded-runtime-metadata-probe',
+        hook: 'transform',
+        id: '\0entry',
+        customMarker: 'threaded-retained',
+      });
+      expect(original.stack).toContain('threaded plugin metadata failure');
+      expect(original.cause).toBe(cause);
+      expect(original.cause).toMatchObject({
+        name: 'RangeError',
+        message: 'threaded nested cause',
+        nestedMarker: 23,
+      });
+    } finally {
+      await bundle.close();
     }
   },
 );

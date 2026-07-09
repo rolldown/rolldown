@@ -876,6 +876,15 @@ artifact therefore fails before the next asynchronous setup boundary, worker
 registry, runtime lease, or binding construction. Ordinary object plugins do
 not trigger that gate.
 
+Structured plugin errors are supported on every artifact, including both WASI
+flavors and the managed browser/workerd facade. N-API errors retain the original
+JavaScript exception reference while Rolldown adds `code`, `pluginCode`,
+`plugin`, `hook`, and applicable `id` metadata. The same object, stack, own
+properties, and nested `cause` chain must survive replayable Rust lifecycle
+state and worker/host boundaries. Native, threaded-WASI, threadless-WASI, and
+packed-browser tests exercise this contract; `pluginErrorMetadata` is therefore
+a universal public-support invariant rather than a target capability.
+
 ### Routed work
 
 `rolldown_utils::futures` is the compatibility facade. The following work is

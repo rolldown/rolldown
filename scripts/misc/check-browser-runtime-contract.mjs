@@ -56,7 +56,7 @@ try {
     dynamicImportVarsResolver: true,
     importGlobResolver: true,
     parallelPlugins: false,
-    pluginErrorMetadata: false,
+    pluginErrorMetadata: true,
     symlinks: false,
     threadlessWasi: true,
     workerd: true,
@@ -108,6 +108,36 @@ try {
       source: 'custom',
       supported: true,
     });
+
+    const metadataCause = Object.assign(new RangeError('browser nested cause'), {
+      nestedMarker: 31,
+    });
+    const originalMetadataError = Object.assign(new TypeError('browser plugin metadata failure'), {
+      cause: metadataCause,
+      code: 'BROWSER_USER_CODE',
+      customMarker: 'browser-retained',
+    });
+    const metadataBundle = await createVirtualBundle(browserApi, {
+      transform(_code, id) {
+        if (id === 'virtual:entry') throw originalMetadataError;
+      },
+    });
+    try {
+      const failure = await metadataBundle.generate().catch((error) => error);
+      const [pluginError] = failure?.errors ?? [];
+      assert.equal(pluginError, originalMetadataError);
+      assert.equal(pluginError.code, 'PLUGIN_ERROR');
+      assert.equal(pluginError.pluginCode, 'BROWSER_USER_CODE');
+      assert.equal(pluginError.plugin, 'browser-async-context-contract');
+      assert.equal(pluginError.hook, 'transform');
+      assert.equal(pluginError.id, 'virtual:entry');
+      assert.equal(pluginError.customMarker, 'browser-retained');
+      assert.match(pluginError.stack, /browser plugin metadata failure/);
+      assert.equal(pluginError.cause, metadataCause);
+      assert.equal(pluginError.cause.nestedMarker, 31);
+    } finally {
+      await metadataBundle.close();
+    }
 
     for (const operation of ['generate', 'write', 'close']) {
       let bundle;

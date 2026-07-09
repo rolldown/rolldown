@@ -411,7 +411,7 @@ function assertRootPackageExercise(stdout, flavor) {
       dynamicImportVarsResolver: true,
       importGlobResolver: true,
       parallelPlugins: false,
-      pluginErrorMetadata: false,
+      pluginErrorMetadata: true,
       symlinks: false,
       threadlessWasi: threadless,
       workerd: false,
@@ -443,7 +443,7 @@ function assertBrowserPackageExercise(stdout) {
       dynamicImportVarsResolver: true,
       importGlobResolver: true,
       parallelPlugins: false,
-      pluginErrorMetadata: false,
+      pluginErrorMetadata: true,
       symlinks: false,
       threadlessWasi: true,
       workerd: true,
@@ -465,6 +465,7 @@ function assertBrowserPackageChromiumExercise(result) {
       callbackCalls: result.callbackCalls,
       initialSupport: result.initialSupport,
       outputs: result.outputs,
+      pluginError: result.pluginError,
       providerStoreAfterAwait: result.providerStoreAfterAwait,
       reentrantError: result.reentrantError,
       support: result.support,
@@ -481,6 +482,18 @@ function assertBrowserPackageChromiumExercise(result) {
         supported: false,
       },
       outputs: 1,
+      pluginError: {
+        causeIdentity: true,
+        code: 'PLUGIN_ERROR',
+        customMarker: 'browser-retained',
+        hook: 'transform',
+        id: 'virtual:metadata',
+        identity: true,
+        nestedMarker: 37,
+        plugin: 'packed-browser-metadata',
+        pluginCode: 'BROWSER_USER_CODE',
+        stackRetained: true,
+      },
       providerStoreAfterAwait: 'propagated',
       reentrantError:
         "Cannot call bundle.generate() or bundle.write() from one of the same bundle's active JavaScript callbacks",
@@ -1202,6 +1215,55 @@ async function exerciseBrowserPackageRoot(packageDir) {
           'const answer: number = 42;',
         );
 
+        const metadataCause = Object.assign(new RangeError('browser nested cause'), {
+          nestedMarker: 37,
+        });
+        const originalMetadataError = Object.assign(
+          new TypeError('browser plugin metadata failure'),
+          {
+            cause: metadataCause,
+            code: 'BROWSER_USER_CODE',
+            customMarker: 'browser-retained',
+          },
+        );
+        const metadataBundle = await browserApi.rolldown({
+          cwd: '/',
+          input: 'virtual:metadata',
+          plugins: [
+            {
+              name: 'packed-browser-metadata',
+              resolveId(id) {
+                if (id === 'virtual:metadata') return id;
+              },
+              load(id) {
+                if (id === 'virtual:metadata') return 'export default 1';
+              },
+              transform(_code, id) {
+                if (id === 'virtual:metadata') throw originalMetadataError;
+              },
+            },
+          ],
+        });
+        let pluginError;
+        try {
+          const failure = await metadataBundle.generate().catch((error) => error);
+          const [error] = failure?.errors ?? [];
+          pluginError = {
+            causeIdentity: error?.cause === metadataCause,
+            code: error?.code,
+            customMarker: error?.customMarker,
+            hook: error?.hook,
+            id: error?.id,
+            identity: error === originalMetadataError,
+            nestedMarker: error?.cause?.nestedMarker,
+            plugin: error?.plugin,
+            pluginCode: error?.pluginCode,
+            stackRetained: /browser plugin metadata failure/.test(error?.stack ?? ''),
+          };
+        } finally {
+          await metadataBundle.close();
+        }
+
         let outputs;
         try {
           const buildResult = await callbackBundle.generate();
@@ -1215,6 +1277,7 @@ async function exerciseBrowserPackageRoot(packageDir) {
           callbackCalls,
           initialSupport,
           outputs,
+          pluginError,
           providerStoreAfterAwait,
           reentrantError: reentrantError?.message,
           storageCreations,

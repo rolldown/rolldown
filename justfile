@@ -75,6 +75,10 @@ test-update-node:
 test-rust:
   cargo test --workspace --exclude rolldown_binding
 
+# Run package replacement rollback regressions without building artifacts.
+test-package-transactions:
+  vp run --filter '@rolldown-internal/scripts' test:package-transactions
+
 # Run Node.js tests for Rolldown.
 test-node-rolldown *args="": build-rolldown
   just t-node-rolldown {{ args }}

@@ -32,6 +32,9 @@ jobs:
           version: '0.2.1'
           cache: true
 
+      - name: Test package transaction rollback
+        run: just test-package-transactions
+
       - name: Add WASI targets
         run: rustup target add wasm32-wasip1 wasm32-wasip1-threads
 

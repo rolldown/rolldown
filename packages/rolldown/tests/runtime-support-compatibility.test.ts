@@ -20,6 +20,7 @@ import {
   assertRuntimeFeature,
   getRuntimeCapabilitiesCompat,
   getRuntimeSupport,
+  UnsupportedRuntimeFeatureError,
 } from '../src/runtime-support';
 
 test('older capability reports derive dev support from scheduler threads', () => {
@@ -41,4 +42,33 @@ test('older capability reports derive dev support from scheduler threads', () =>
   expect(() => assertRuntimeFeature('dev')).not.toThrow();
   expect(() => assertRuntimeFeature('watch')).not.toThrow();
   expect(() => assertRuntimeFeature('parallelPlugins')).not.toThrow();
+});
+
+test('unsupported-feature errors remain coherent when constructed for an available feature', () => {
+  const error = new UnsupportedRuntimeFeatureError('pluginErrorMetadata', {
+    asyncRuntimeBuild: true,
+    backend: 'shared',
+    blockOnJsThreadSafe: false,
+    devSupported: false,
+    flavor: 'CurrentThread',
+    target: 'wasi',
+    threads: false,
+    timers: true,
+    wasi: true,
+    watchSupported: false,
+  });
+
+  expect(error).toMatchObject({
+    code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
+    feature: 'pluginErrorMetadata',
+    runtime: {
+      flavor: 'CurrentThread',
+      target: 'wasi',
+    },
+  });
+  expect(error.message).toBe(
+    "structured plugin error metadata is supported by Rolldown's CurrentThread runtime on the wasi target. " +
+      'UnsupportedRuntimeFeatureError was constructed for an available feature.',
+  );
+  expect(error.message).not.toContain('not supported');
 });

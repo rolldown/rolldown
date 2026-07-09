@@ -68,10 +68,13 @@ export class UnsupportedRuntimeFeatureError extends Error {
   ) {
     runtime = normalizeRuntimeCapabilities(runtime);
     const verb = feature === 'parallelPlugins' ? 'are' : 'is';
-    super(
-      `${FEATURE_NAMES[feature]} ${verb} not supported by Rolldown's ${runtime.flavor} runtime ` +
-        `on the ${runtime.target} target. ${FEATURE_ALTERNATIVES[feature]}`,
-    );
+    const runtimeDescription = `Rolldown's ${runtime.flavor} runtime on the ${runtime.target} target`;
+    const message = getRuntimeSupport(runtime)[feature]
+      ? `${FEATURE_NAMES[feature]} ${verb} supported by ${runtimeDescription}. ` +
+        `UnsupportedRuntimeFeatureError was constructed for an available feature.`
+      : `${FEATURE_NAMES[feature]} ${verb} not supported by ${runtimeDescription}. ` +
+        FEATURE_ALTERNATIVES[feature];
+    super(message);
     this.name = 'UnsupportedRuntimeFeatureError';
     this.feature = feature;
     this.runtime = runtime;

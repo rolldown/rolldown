@@ -877,13 +877,28 @@ registry, runtime lease, or binding construction. Ordinary object plugins do
 not trigger that gate.
 
 Structured plugin errors are supported on every artifact, including both WASI
-flavors and the managed browser/workerd facade. N-API errors retain the original
+flavors and the managed browser package. N-API errors retain the original
 JavaScript exception reference while Rolldown adds `code`, `pluginCode`,
 `plugin`, `hook`, and applicable `id` metadata. The same object, stack, own
 properties, and nested `cause` chain must survive replayable Rust lifecycle
-state and worker/host boundaries. Native, threaded-WASI, threadless-WASI, and
-packed-browser tests exercise this contract; `pluginErrorMetadata` is therefore
-a universal public-support invariant rather than a target capability.
+state and worker/host boundaries. Native, threaded-WASI, threadless-WASI,
+browser-build, and packed-browser tests exercise this contract;
+`pluginErrorMetadata` is therefore a universal public-support invariant rather
+than a target capability.
+
+This invariant depends on the workspace's napi-rs pin
+`7b439d0bdd09dec142cc66dfb6a004942caa7212` in `Cargo.toml`. Synchronous
+threadsafe-function exceptions use
+`Error::capture_unknown_with_status_and_diagnostics`, and Promise rejections use
+`Error::from_unknown_without_coercion`; both retain the exact JavaScript value
+through an owning-environment `napi_ref`. Rolldown's
+`downcast_napi_error_diagnostics` and `BindingError::from_napi_error` preserve
+that reference with `try_clone`, napi-rs `JsError::into_value` reuses it on the
+owning JavaScript thread, and `normalizeBindingError` returns the resulting
+`field0` object directly. None of those capture paths is target-gated. Updating
+the napi-rs revision requires rerunning the threaded, threadless, browser-build,
+and packed-browser metadata regressions before retaining the universal support
+claim.
 
 ### Routed work
 

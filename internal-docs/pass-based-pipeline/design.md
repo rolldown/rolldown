@@ -30,9 +30,9 @@ A guiding methodology for structuring bundler-internal pipelines (stage-level da
 The whole mechanism is one trait, one marker trait, and one wrapper function:
 
 ```rust
-/// The supertrait bounds are load-bearing: `Copy + 'static` means a pass value
-/// can only be lifetime-free switches (bools, enums, numbers, `&'static str`,
-/// `fn` pointers) — all runtime data must enter through the declared slots.
+/// A pass type is a **name**, not a value: `run_pass` compile-time-asserts it is
+/// zero-sized, and the bounds keep it lifetime-free. All runtime data — including
+/// configuration — enters through the declared slots.
 pub trait Pass: Copy + 'static {
   type InputRead<'a>: Copy;         // shared borrows only; Copy makes `&mut` unrepresentable here
   type InputOwned;                  // data taken over (to modify = to own and hand back); `()` if none
@@ -47,12 +47,19 @@ pub trait Pass: Copy + 'static {
 /// in review. The immutability itself lives in the artifact type's API (no
 /// mutators, no interior mutability); Rust only checks that the impl exists.
 pub trait SealedArtifact {}
+
+pub async fn run_pass<P: Pass>(pass: P, cx: &mut PassCtx, read: P::InputRead<'_>, owned: P::InputOwned)
+  -> BuildResult<(P::OutputRead, P::OutputOwned)> {
+  const { assert!(size_of::<P>() == 0, "a pass is a name — state lives in run() locals or in the slots") };
+  // tracing span + diagnostics provenance live here, once, for every pass
+  pass.run(cx, read, owned).await
+}
 ```
 
 Conventions:
 
 - The passes module carries `#![forbid(unsafe_code)]`, which closes the raw-pointer residual of the two `Pass` bounds.
-- `self` carries only switch-like configuration (the bounds enforce this); `run` consumes it — a pass is single-shot.
+- `self` carries **nothing**: every pass is a zero-sized name token (`const`-asserted in `run_pass`), kept only so call sites read as `run_pass(OptimizeChunks, ..)`. Configuration is runtime data and enters through `InputRead` like everything else.
 - Slot types: empty = `()`; a single artifact = the bare type; multiple = a named per-pass struct (`XxxPassInputRead { .. }`, derives `Copy`), which doubles as the pass's greppable dependency manifest.
 - `PassCtx` is the single sanctioned `&mut`: write-only sinks (diagnostics now, devtools trace later). It never contains pipeline data; passes may write it but never read it. `run_pass` (the wrapper) owns tracing spans and stamps every diagnostic with the emitting pass's name.
 - Driver rules: every `OutputOwned` is consumed by exactly one later `InputOwned` (or explicitly dropped). **Seal order follows reference direction**: seal an artifact only when everything its keys/indices point into is already sealed.
@@ -190,12 +197,12 @@ Uniform machinery: `run_pass` is the single home for tracing spans and diagnosti
 
 ## Enforcement
 
-The goal is **not** to make illegal states unrepresentable — it is to make them impossible to write _quietly_. Pass-internal state is legitimate and has three legal homes: locals inside `run` (unrestricted); driver-built values lent through `InputRead`; artifacts moving through the owned slots. What has no home is state that crosses passes without appearing in any signature. The gates below force exactly that case into the open, where review can catch it — under a shared `&mut` world it was invisible by construction.
+The goal is **not** to make illegal states unrepresentable — it is to make them impossible to write _quietly_. State has exactly three legal homes: locals inside `run` (unrestricted); driver-built values lent through `InputRead`; artifacts moving through the owned slots. There is no fourth place — a pass type itself is zero-sized, so "pass-internal state" is not a category that exists. What therefore has no home is state that crosses passes without appearing in any signature. The gates below force exactly that case into the open, where review can catch it — under a shared `&mut` world it was invisible by construction.
 
 What the compiler pins:
 
 - reads cannot be `&mut` — `InputRead<'a>: Copy` (`&mut` is never `Copy`)
-- a pass value cannot carry pipeline state — `Pass: Copy + 'static` (owned artifacts are not `Copy`; borrowed runtime data is not `'static`)
+- a pass value cannot carry anything at all — `run_pass` `const`-asserts `size_of::<P>() == 0`; `Pass: Copy + 'static` additionally rules out lifetime-carrying zero-sized tricks
 - no escape through raw pointers — `#![forbid(unsafe_code)]` on the passes module
 - pass order — `let`-chain scoping; sealing — frozen types expose no mutators; ownership transfer — moves
 

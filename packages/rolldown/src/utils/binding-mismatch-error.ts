@@ -5,7 +5,7 @@ export interface BindingMismatchTaggedError extends Error {
 }
 
 export class BindingMismatchError extends TypeError implements BindingMismatchTaggedError {
-  readonly code = BINDING_MISMATCH_CODE;
+  readonly code: typeof BINDING_MISMATCH_CODE = BINDING_MISMATCH_CODE;
 }
 
 export function isBindingMismatchError(error: unknown): error is BindingMismatchTaggedError {

@@ -5,7 +5,7 @@ import { viteDynamicImportVarsPlugin, viteImportGlobPlugin } from 'rolldown/expe
 import { expect, test } from 'vitest';
 
 test.skipIf(isSingleThread)(
-  'class-instance builtin callbacks can await bundle.close()',
+  'class-instance builtin callbacks reject bundle.close() without deadlocking',
   { timeout: 5_000 },
   async ({ onTestFinished }) => {
     const fixtureDir = path.join(
@@ -16,12 +16,12 @@ test.skipIf(isSingleThread)(
 
     class DynamicImportVarsConfig {
       resolverCalls = 0;
-      resolverCompleted = false;
+      resolverRejectedClose = false;
 
       async resolver(id: string): Promise<string> {
         this.resolverCalls += 1;
-        await bundle.close();
-        this.resolverCompleted = true;
+        await expect(bundle.close()).rejects.toThrow(/active JavaScript callbacks/);
+        this.resolverRejectedClose = true;
         return id.replace('@', path.join(fixtureDir, 'dir/a'));
       }
     }
@@ -37,6 +37,6 @@ test.skipIf(isSingleThread)(
     await bundle.close();
 
     expect(config.resolverCalls).toBeGreaterThan(0);
-    expect(config.resolverCompleted).toBe(true);
+    expect(config.resolverRejectedClose).toBe(true);
   },
 );

@@ -86,8 +86,11 @@ test.each([
   ],
 ])('%s rejects descriptors before plugin promises or setup', async (_name, invoke) => {
   Object.assign(mocks.runtimeCapabilities, {
+    asyncRuntimeBuild: true,
+    backend: 'shared',
     target: 'wasi-threads',
     wasi: true,
+    watchSupported: false,
   });
 
   await expect(invoke()).rejects.toMatchObject({
@@ -111,8 +114,11 @@ test('rolldown does not enter native construction when runtime acquisition fails
 
 test('rolldown rejects descriptors returned by the options hook before runtime setup', async () => {
   Object.assign(mocks.runtimeCapabilities, {
+    asyncRuntimeBuild: true,
+    backend: 'shared',
     target: 'wasi-threads',
     wasi: true,
+    watchSupported: false,
   });
   mocks.callOptionsHook.mockResolvedValueOnce({
     plugins: [createParallelDescriptor()],

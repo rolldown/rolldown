@@ -58,6 +58,7 @@ catalog:
   '@types/node': 24.10.3
   '@types/semver': ^7.5.8
   '@types/serve-static': ^2.0.0
+  buffer: ^6.0.3
   '@types/strip-comments': ^2.0.4
   '@types/ws': ^8.18.0
   acorn: ^8.17.0
@@ -82,6 +83,7 @@ catalog:
   glob: ^13.0.0
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
+  miniflare: ^4.20260611.0
   mocha: ^11.7.5
   oxc-minify: '=0.139.0'
   oxc-parser: '=0.139.0'
@@ -111,6 +113,7 @@ catalog:
   vue: ^3.5.35
   web-tree-sitter: ^0.26.0
   ws: ^8.20.1
+  wrangler: ^4.100.0
   zx: ^8.1.2
 
 shellEmulator: true
@@ -143,4 +146,22 @@ minimumReleaseAgeExclude:
   - void
 
 patchedDependencies:
+  # TEMP: emnapi#220 fixes unshared-memory writes after reentrant callbacks.
+  # The WASI loaders bundle this patched runtime so published consumers do not
+  # need to reproduce the workspace patch. Remove after an upstream release.
   '@emnapi/core@1.11.2': patches/@emnapi__core@1.11.2.patch
+  # TEMP: the shared-memory part of emnapi#220 refreshes a stale worker-local
+  # buffer before writing the wasi-threads thread-spawn result. This is bundled
+  # into the produced loaders alongside @emnapi/core.
+  '@emnapi/wasi-threads@1.2.2': patches/@emnapi__wasi-threads@1.2.2.patch
+  # TEMP: vendors napi-rs#3353 (wasm32-wasip1 single-thread support incl. the
+  # deferred workerd-safe loader) with per-flavor WASI artifact naming: the
+  # threaded flavor keeps the legacy `wasm32-wasi` names, the single-thread
+  # flavor gets its own `wasm32-wasip1` / `wasip1` names, and non-wasi builds
+  # regenerate EVERY declared flavor's loader set deterministically — see
+  # internal-docs/async-runtime/implementation.md. Regenerated from the
+  # napi-rs commit `7b439d0bdd09dec142cc66dfb6a004942caa7212` (dist rebuild of
+  # dist/index.cjs + dist/index.js + dist/cli.js — cli.js is the standalone
+  # bundle behind the `napi` bin used by the publish workflows). Remove once
+  # @napi-rs/cli ships it upstream.
+  '@napi-rs/cli@3.7.2': patches/@napi-rs__cli@3.7.2.patch

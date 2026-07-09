@@ -1,5 +1,5 @@
 import type { MaybePromise } from '../../types/utils';
-import { createAsyncContext } from '../../utils/async-context';
+import { type AsyncContext, createAsyncContext } from '../../utils/async-context';
 import { CloseCallbackScope, createCloseIdentity } from '../../utils/close-callback-scope';
 import {
   getRetryableCleanup,
@@ -26,7 +26,7 @@ interface ReentrantCloseInvocation {
   reentrantClosePromise: Promise<void>;
 }
 
-const closeListenerContext = createAsyncContext<ReentrantCloseInvocation>();
+let closeListenerContext: AsyncContext<ReentrantCloseInvocation> | undefined;
 
 /**
  * - `START`: the watcher is (re)starting
@@ -215,6 +215,7 @@ export class WatcherEmitter implements RolldownWatcher {
   ): Promise<void> {
     invocation.active = true;
     try {
+      const closeListenerContext = getCloseListenerContext();
       if (closeListenerContext) {
         await closeListenerContext.run(invocation, dispatch);
       } else {
@@ -380,6 +381,10 @@ export class WatcherEmitter implements RolldownWatcher {
     });
     return reportPromise;
   }
+}
+
+function getCloseListenerContext(): AsyncContext<ReentrantCloseInvocation> | undefined {
+  return (closeListenerContext ??= createAsyncContext<ReentrantCloseInvocation>());
 }
 
 function normalizeSetupError(error: unknown): Error {

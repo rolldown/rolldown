@@ -1,9 +1,11 @@
 // @ts-nocheck This focused unit test intentionally reaches package source outside the test rootDir.
+import { AsyncLocalStorage } from 'node:async_hooks';
 import path from 'node:path';
 import { rollup } from 'rollup';
 import * as ts from 'typescript';
 import { expect, test } from 'vitest';
 
+import type { configureAsyncContext } from '../src/utils/async-context';
 import { CloseCallbackScope } from '../src/utils/close-callback-scope';
 import { normalizePluginOption } from '../src/utils/normalize-plugin-option';
 
@@ -470,6 +472,33 @@ test('browser callback-return thenables can await reentrant close without leakin
   expect(escapedCloses).toEqual([fullClose, fullClose]);
 });
 
+test('browser callback-free normalization leaves the close context configurable', async () => {
+  const browserModule = await buildBrowserCloseCallbackModule();
+  const scope = new browserModule.CloseCallbackScope();
+  await expect(normalizePluginOption(undefined, scope)).resolves.toEqual([]);
+
+  let storageCreations = 0;
+  browserModule.configureAsyncContext({
+    createStorage() {
+      storageCreations += 1;
+      return new AsyncLocalStorage<unknown>();
+    },
+  });
+  expect(storageCreations).toBe(0);
+
+  const fullClose = new Promise<void>(() => {});
+  let callbackClose: Promise<void> | undefined;
+  await scope.run(async () => {
+    await Promise.resolve();
+    callbackClose = scope.selectClosePromise(fullClose);
+  });
+
+  expect(storageCreations).toBe(1);
+  expect(callbackClose).toBeDefined();
+  expect(callbackClose).not.toBe(fullClose);
+  await expect(callbackClose).resolves.toBeUndefined();
+});
+
 test.each([
   ['native', async () => CloseCallbackScope],
   ['browser', loadBrowserCloseCallbackScope],
@@ -584,6 +613,103 @@ test.each([
 test.each([
   ['native', async () => CloseCallbackScope],
   ['browser', loadBrowserCloseCallbackScope],
+])('%s callback-return then methods preserve deferred invocation timing', async (_, loadScope) => {
+  const Scope = await loadScope();
+  const scope = new Scope();
+  const events: string[] = [];
+  const thenable = {
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies Promise-like invocation timing
+    then(resolve: (value: string) => void) {
+      events.push('then');
+      resolve('settled');
+    },
+  };
+
+  const result = scope.run(() => {
+    events.push('callback');
+    return thenable;
+  }) as unknown as Promise<string>;
+  events.push('after-run');
+
+  expect(events).toEqual(['callback', 'after-run']);
+  await expect(result).resolves.toBe('settled');
+  expect(events).toEqual(['callback', 'after-run', 'then']);
+});
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])('%s callback-return then method throws become promise rejections', async (_, loadScope) => {
+  const Scope = await loadScope();
+  const scope = new Scope();
+  const thenError = new Error('then failed');
+  const thenable = {
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies Promise-like rejection behavior
+    then() {
+      throw thenError;
+    },
+  };
+
+  let result: Promise<unknown> | undefined;
+  expect(() => {
+    result = scope.run(() => thenable) as unknown as Promise<unknown>;
+  }).not.toThrow();
+  await expect(result).rejects.toBe(thenError);
+});
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+])('%s callback-return thenables can request reentrant close', async (_, loadScope) => {
+  const Scope = await loadScope();
+  const scope = new Scope();
+  const fullClose = new Promise<void>(() => {});
+  let reentrantClose: Promise<void> | undefined;
+  const thenable = {
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies callback-result assimilation
+    then(resolve: (value: string) => void) {
+      reentrantClose = scope.selectClosePromise(fullClose);
+      resolve('settled');
+    },
+  };
+
+  await expect(scope.run(() => thenable) as unknown as Promise<string>).resolves.toBe('settled');
+  expect(reentrantClose).toBeDefined();
+  expect(reentrantClose).not.toBe(fullClose);
+  await expect(reentrantClose).resolves.toBeUndefined();
+});
+
+test('browser callback-return thenables do not grant close privilege to later microtasks', async () => {
+  const BrowserCloseCallbackScope = await loadBrowserCloseCallbackScope();
+  const scope = new BrowserCloseCallbackScope();
+  const fullClose = new Promise<void>(() => {});
+  let synchronousClose: Promise<void> | undefined;
+  let microtaskClose: Promise<void> | undefined;
+  let resolveMicrotask!: () => void;
+  const microtaskRan = new Promise<void>((resolve) => {
+    resolveMicrotask = resolve;
+  });
+  const thenable = {
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies browser privilege lifetime
+    then(resolve: (value: string) => void) {
+      synchronousClose = scope.selectClosePromise(fullClose);
+      queueMicrotask(() => {
+        microtaskClose = scope.selectClosePromise(fullClose);
+        resolveMicrotask();
+      });
+      resolve('settled');
+    },
+  };
+
+  await expect(scope.run(() => thenable) as unknown as Promise<string>).resolves.toBe('settled');
+  await microtaskRan;
+  expect(synchronousClose).not.toBe(fullClose);
+  expect(microtaskClose).toBe(fullClose);
+});
+
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
 ])('%s callback-return thenables reject self-resolution cycles', async (_, loadScope) => {
   const Scope = await loadScope();
   const scope = new Scope();
@@ -623,16 +749,26 @@ test.each([
   ['native', async () => CloseCallbackScope],
   ['browser', loadBrowserCloseCallbackScope],
 ])(
-  '%s callback-return thenables resolve nested accessors returning undefined',
+  '%s callback-return thenables resolve nested accessors returning undefined by identity',
   async (_, loadScope) => {
     const Scope = await loadScope();
     const scope = new Scope();
-    // oxlint-disable-next-line unicorn/no-thenable -- verifies nested accessor assimilation
-    const nested = Object.defineProperty({}, 'then', {
-      get() {
+    let getterCalls = 0;
+    class NestedTerminal {
+      #marker = 'terminal';
+
+      // oxlint-disable-next-line unicorn/no-thenable -- verifies accessor-backed non-thenable identity
+      get then() {
+        getterCalls += 1;
         return undefined;
-      },
-    });
+      }
+
+      marker(): string {
+        return this.#marker;
+      }
+    }
+    const nested = new NestedTerminal();
+    const identities = new WeakMap([[nested, 'nested']]);
     const outer = {
       // oxlint-disable-next-line unicorn/no-thenable -- verifies nested accessor assimilation
       then(resolve: (value: typeof nested) => void) {
@@ -641,6 +777,9 @@ test.each([
     };
 
     await expect(scope.run(() => outer) as unknown as Promise<unknown>).resolves.toBe(nested);
+    expect(getterCalls).toBeGreaterThan(0);
+    expect(nested.marker()).toBe('terminal');
+    expect(identities.get(nested)).toBe('nested');
   },
 );
 
@@ -822,26 +961,50 @@ test('plugin array flattening preserves depth-first left-to-right accessor order
 });
 
 let browserCloseCallbackScopePromise: Promise<typeof CloseCallbackScope> | undefined;
+let browserCloseCallbackModuleIndex = 0;
+
+interface BrowserCloseCallbackModule {
+  CloseCallbackScope: typeof CloseCallbackScope;
+  configureAsyncContext: typeof configureAsyncContext;
+}
 
 function loadBrowserCloseCallbackScope(): Promise<typeof CloseCallbackScope> {
   return (browserCloseCallbackScopePromise ??= buildBrowserCloseCallbackScope());
 }
 
 async function buildBrowserCloseCallbackScope(): Promise<typeof CloseCallbackScope> {
+  return (await buildBrowserCloseCallbackModule()).CloseCallbackScope;
+}
+
+async function buildBrowserCloseCallbackModule(): Promise<BrowserCloseCallbackModule> {
+  const entryId = '\0browser-close-callback-scope-entry';
   const scopePath = path.resolve(import.meta.dirname, '../src/utils/close-callback-scope.ts');
   const asyncContextPath = path.resolve(import.meta.dirname, '../src/utils/async-context.ts');
+  const prototypeChainPath = path.resolve(import.meta.dirname, '../src/utils/prototype-chain.ts');
   const bundle = await rollup({
-    input: scopePath,
+    input: entryId,
     plugins: [
       {
         name: 'browser-close-callback-scope',
         resolveId(id, importer) {
+          if (id === entryId) return entryId;
+          if (importer === entryId && id === 'close-callback-scope') return scopePath;
+          if (importer === entryId && id === 'async-context') return asyncContextPath;
           if (id === 'node:async_hooks') return '\0async-hooks';
           if (importer === scopePath && id === './async-context') {
             return asyncContextPath;
           }
+          if (importer === asyncContextPath && id === './prototype-chain') {
+            return prototypeChainPath;
+          }
         },
         load(id) {
+          if (id === entryId) {
+            return [
+              "export { CloseCallbackScope } from 'close-callback-scope';",
+              "export { configureAsyncContext } from 'async-context';",
+            ].join('\n');
+          }
           if (id === '\0async-hooks') {
             return 'export class AsyncLocalStorage {}';
           }
@@ -866,10 +1029,9 @@ async function buildBrowserCloseCallbackScope(): Promise<typeof CloseCallbackSco
   try {
     const output = await bundle.generate({ format: 'esm' });
     const code = output.output.find((item) => item.type === 'chunk')!.code;
-    const module = await import(
-      `data:text/javascript;base64,${Buffer.from(code).toString('base64')}`
-    );
-    return module.CloseCallbackScope;
+    return (await import(
+      `data:text/javascript;base64,${Buffer.from(code).toString('base64')}#browser-close-callback-scope-${browserCloseCallbackModuleIndex++}`
+    )) as BrowserCloseCallbackModule;
   } finally {
     await bundle.close();
   }

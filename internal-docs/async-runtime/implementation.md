@@ -5,8 +5,9 @@
 ## Summary
 
 The `async-runtime` Cargo feature installs a Rolldown scheduler into napi-rs,
-and routes Rolldown task creation through `rolldown_utils::futures`. The
-`tokio-runtime` feature remains the default.
+routes Rolldown task creation through `rolldown_utils::futures`, and builds the
+browser artifact for `wasm32-wasip1`. The `tokio-runtime` feature remains the
+default.
 
 ## Components
 
@@ -705,7 +706,11 @@ Configuration must happen before the first async binding call.
 committed options, validates the complete candidate, and commits it in one
 critical section. Omitted fields are preserved, concurrent calls apply in lock
 order without stale-snapshot overwrites, and validation failure commits
-nothing.
+nothing. The N-API boundary accepts thread counts as JavaScript numbers but
+rejects non-finite, fractional, non-positive, and greater-than-256
+values before converting them to the scheduler's `usize` configuration. This
+prevents Node-API's unsigned numeric coercion from turning malformed input into
+a large worker pool.
 
 Native `ROLLDOWN_*` worker counts clamp to 256 before either backend can
 construct physical workers. Native Tokio's separate blocking-thread limit
@@ -851,17 +856,25 @@ explicit values are independent workflow capabilities and are preserved.
 Binding export, reporter, loader-target, and report-field getter failures
 preserve their original `cause` under the same mismatch identity. This prevents
 malformed threaded-WASI reports from silently taking the native no-lease path
-while still allowing stacked host integrations to declare richer or narrower
-workflow support without changing the low-level scheduler contract.
-Parallel-plugin descriptor consumption has an additional
+or enabling unsupported worker-backed features. Import-time task and timer host
+registration uses this same compatibility normalizer, so legacy public-entry
+imports receive the same target-aware defaults and malformed reports fail
+before either host can be registered. Stacked host integrations can still
+declare richer or narrower workflow support without changing the low-level
+scheduler contract. Parallel-plugin descriptor consumption has an additional
 synchronous preflight at the public build, rolldown, scan, and dev boundaries
 and at `createBundlerOptions`. The latter repeats the preflight immediately
 after synchronous `outputOptions` hooks, before normalizing hook-injected
-plugins. Each pass recursively inspects already-materialized plugin arrays
-without assimilating neighboring thenables, so a fabricated or older-package
-descriptor on an unsupported artifact fails before the next asynchronous setup
-boundary, worker registry, runtime lease, or binding construction. Ordinary
-object plugins do not trigger that gate.
+plugins. Each pass recursively inspects only already-materialized own data
+properties of plugin arrays without assimilating neighboring thenables,
+executing accessors, or using indexed proxy `get` operations. Proxy metadata
+reflection (`ownKeys` and `getOwnPropertyDescriptor`) may still run; failures
+are contained and the value is deferred to normal plugin materialization.
+Accessor-produced values are likewise checked by the post-normalization
+capability guard. A fabricated or older-package descriptor on an unsupported
+artifact therefore fails before the next asynchronous setup boundary, worker
+registry, runtime lease, or binding construction. Ordinary object plugins do
+not trigger that gate.
 
 ### Routed work
 
@@ -918,6 +931,12 @@ therefore neither kill the worker nor discard queued jobs whose pending counts
 would otherwise remain registered forever. The pending count is retired only
 after both boundaries complete, so the next build cannot begin while a caught
 panic payload is still being destroyed.
+
+The Vite dynamic-import-vars and import-glob plugins do not synchronously bridge
+JavaScript-backed resolver futures. They collect owned resolver inputs in a
+first parse, drop the non-`Send` OXC AST, await resolution, then reparse and
+apply rewrites in the same source order. Repeated glob occurrences remain
+distinct resolver calls.
 
 ### Timers and native watch mode
 
@@ -1119,6 +1138,10 @@ host unregisters; restarted work coalesces behind that slot rather than
 creating a second queued callback.
 If installing an environment cleanup hook fails, registration is rolled back
 immediately so no driver survives without a teardown owner.
+Each task and timer registration also receives a non-reusable `u64` capability
+returned to JavaScript as exact high/low `u32` words. Private unregister
+exports resolve that capability to the original host and run its normal
+idempotent eviction path; they cannot evict a newer environment's registration.
 Shutdown closes the queue before dropping pending runnables, so cancellation
 retires generation guards without waiting for an unadmitted host callback. A
 native callback admitted before shutdown keeps the scheduler role set until it
@@ -1204,29 +1227,29 @@ Watch close-listener reentrancy is scoped through `AsyncLocalStorage`: the
 listener's own `close()` receives the completed native phase, while unrelated
 callers continue awaiting the full close lifecycle and observe its
 listener/runtime result.
-`RolldownBuild` and `DevEngine` apply the same owner-scoped rule to every
-normalized callback passed into their native objects. A close requested from a
-plugin hook, output callback, log callback, or dev callback starts the normal
-memoized close lifecycle but returns an immediate acknowledgement to that
-callback, allowing native work to release the callback before close waits for
-quiescence. External and later close callers still receive the full cleanup
-result, including replayed terminal errors and retryable ownership. Node uses
-`AsyncLocalStorage` to distinguish the exact async callback. Each context also
-carries an active invocation bit that is cleared when the callback settles, so
-timers or promises created by that callback cannot retain reentrant-close
-privilege after native code has stopped awaiting it. Browser builds have no
-async context API. They retain an owner identity until every callback result for
-that owner settles, so a build or dev callback may request close, or reject a
-failure-close admission cycle, after an async suspension. This cannot
-distinguish an unrelated same-owner caller while a callback is active; that
-caller may receive the immediate close acknowledgement or admission rejection
-instead of the full result. Different owners remain isolated, and later callers
-observe the memoized cleanup result after the active callbacks settle. Plugin
-normalization extends this scope to user-defined thenables: reading and
-synchronously invoking each `then` method is performed inside
-`CloseCallbackScope`, as are synchronous `outputOptions` hooks. A thenable that
-requests close before returning therefore receives the same acknowledgement
-instead of deadlocking normalization against native close.
+`RolldownBuild` applies the owner-scoped acknowledgement only where its public
+lifecycle permits reentrant close, currently `closeBundle`; other active build
+callbacks reject `close()` before starting the lifecycle. `DevEngine` likewise
+rejects same-engine callback reentrancy as documented in
+`internal-docs/dev-engine/implementation.md`. For close-capable callback and
+watch paths, the callback's close starts the normal memoized lifecycle but
+returns an immediate acknowledgement, allowing native work to release the
+callback before close waits for quiescence. External and later close callers
+still receive the full cleanup result, including replayed terminal errors and
+retryable ownership. Node uses `AsyncLocalStorage`; browser builds use a
+configured provider or native `AsyncContext.Variable` when available. Each
+context also carries an active invocation bit that is cleared when the callback
+settles, so timers or promises created by that callback cannot retain
+reentrant-close privilege after native code has stopped awaiting it. Browser
+hosts without async-context support fall back to granting the acknowledgement
+only to the exact callback invocation synchronously on the stack. Unrelated
+close callers always await full cleanup and observe its failure; under that
+fallback a browser callback must request close before its first async
+suspension. Plugin normalization extends this scope to
+user-defined thenables: reading and synchronously invoking each `then` method is
+performed inside `CloseCallbackScope`, as are synchronous `outputOptions`
+hooks. A thenable that requests close before returning therefore receives the
+same acknowledgement instead of deadlocking normalization against native close.
 Each resolution is first boxed in an opaque non-thenable value. Nested thenables
 are therefore processed by a later explicit flatten pass under a fresh scope,
 instead of being recursively assimilated by the native Promise after the
@@ -1238,15 +1261,22 @@ with a `TypeError` while the same thenable may still appear in independent
 plugin-array branches. Array flattening uses the same path-local ancestry rule,
 so malformed circular plugin arrays reject without recursive stack overflow
 while shared arrays in independent branches remain valid. Callback-return
-thenables likewise capture their `then` method once before deferred
-assimilation, box each nested resolution, and retain path-local ancestry.
-Self-resolving and mutually recursive callback results therefore reject
+thenables likewise capture their initial `then` method before deferred
+assimilation. Their resolving functions inspect each nested value synchronously,
+while nested method invocation remains a later Promise job. Path-local ancestry
+and the final promise returned to the caller are both cycle-checked, so
+self-resolution, mutual recursion, and resolution with the public promise reject
 instead of monopolizing the microtask queue. A data-property thenable may remove
 or replace its own `then` before resolving itself, matching native Promise
-semantics. Nested `then` accessors are read exactly once under the callback
-scope. A non-function result settles as a plain value, a function is invoked
-under the same scope, and a thrown getter value is preserved as the rejection
-reason.
+semantics. Nested accessor-backed values are inspected without proxying: a
+non-function fulfills with the original identity, a callable getter result is
+assimilated under the active callback scope, and a throwing getter preserves
+its original error. Native Promise adoption may observe a non-function accessor
+again, but private fields and `WeakMap` identity remain intact.
+The captured method is invoked from a deferred Promise turn under the exact
+active invocation, so a synchronous throw rejects the callback result instead
+of escaping. Browser scope remains limited to that synchronous call; microtasks
+scheduled by a custom `then` do not inherit close privilege.
 
 Watch build results refine that callback scope with an opaque plugin-driver
 identity. Each pending close awaited by a close callback records a scoped
@@ -1271,7 +1301,15 @@ creates its emitter first, checks `watchSupported` before calling
 observe `ERROR` followed by `END`, and `close()` remains usable without any
 worker, lease, or native watcher having been created. WASI watch remains
 unsupported because entering the native initial build can park the JavaScript
-host thread before debounce timers are involved.
+host thread before debounce timers are involved. The public
+`getRuntimeSupport()` report and `ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE`
+errors are the workflow-level contract layered over the lower-level binding
+capabilities. Its `threadlessWasi` field is deliberately an artifact
+compatibility marker rather than a managed-workerd availability claim:
+`@rolldown/browser/workerd` is a package-entry contract. Build-time
+`import.meta.workerdPackageApi` distinguishes that package from the standalone
+threadless `rolldown` artifact, so the enumerable `workerd` field remains a
+truthful workflow-level report.
 
 ### Threaded WASI runtime ownership
 
@@ -1416,6 +1454,13 @@ finding a materialized descriptor elsewhere in the graph. A parent-process
 watchdog runs the suite in a child process so a synchronous WASI loader stall
 cannot consume the entire CI job without a bounded failure.
 
+Parallel JavaScript plugins are a native-only workflow. The wasm binding
+compiles out the cross-environment parallel plugin registry, so
+`defineParallelPlugin()` rejects with
+`ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE` on both WASI flavors instead of
+spawning workers whose hooks cannot be registered. `getRuntimeSupport()`
+reports this through `parallelPlugins`.
+
 Parallel-plugin workers are supervised from construction through shutdown, not
 only until their bootstrap message. Delayed worker `error` events and
 unexpected exits are retained as close failures instead of becoming uncaught
@@ -1445,25 +1490,366 @@ cannot abandon those workers.
 ### Non-threaded WASI
 
 The current-thread executor is the runtime half of the non-threaded
-`wasm32-wasip1` build. Packaging, generated loaders, and the emnapi
-memory-growth backport are handled in the dependent browser/WASI change.
-That managed workerd entry must register both the runnable task host and timer
-host for every independently created instance, including callers of the root
-instance factory rather than only the package convenience wrapper. Its task
-host clears `pending` if `setTimeout` or another host scheduler throws
-synchronously, allowing a later runtime wake to retry dispatch. If
-initialization fails and context destruction also fails, object errors retain
-cleanup through `cause`; primitive primary failures are combined with cleanup
-errors in an aggregate so the unrecoverable cleanup failure is not hidden.
+`wasm32-wasip1` build. The browser build uses:
 
-The dependent browser/WASI change will publish the two flavors as distinct
-artifact sets:
+```text
+wasm32-wasip1
+--no-default-features
+--features async-runtime
+```
+
+The napi-rs CLI changes from napi-rs#3353 link `libemnapi-basic.a`, emit
+unshared `WebAssembly.Memory`, set `asyncWorkPoolSize: 0`, and omit Worker
+imports and factories. `packages/rolldown` keeps the threaded WASI scripts and
+adds `build-binding:wasi-single`; browser-package scripts select the
+single-thread variant. Until those napi-rs CLI changes are published, the
+single-thread build loads the pnpm-patched CLI source from the installed
+package; other build variants use the normal package entry.
+
+Each WASI flavor has its own artifact names end to end (napi CLI
+`parseTriple`: non-threaded `wasm32-wasipX` triples get their own
+`platformArchABI`, threaded flavors keep the legacy `wasm32-wasi` name for
+back-compat):
+
+| Artifact                  | threaded (`wasm32-wasip1-threads`)                  | single-thread (`wasm32-wasip1`)                         |
+| ------------------------- | --------------------------------------------------- | ------------------------------------------------------- |
+| wasm                      | `rolldown-binding.wasm32-wasi.wasm`                 | `rolldown-binding.wasm32-wasip1.wasm`                   |
+| node loader               | `rolldown-binding.wasi.cjs`                         | `rolldown-binding.wasip1.cjs`                           |
+| browser loader            | `rolldown-binding.wasi-browser.js`                  | `rolldown-binding.wasip1-browser.js`                    |
+| deferred (workerd) loader | —                                                   | `rolldown-binding.wasip1-deferred.js`                   |
+| worker scripts            | `wasi-worker.mjs`, `wasi-worker-browser.mjs`        | —                                                       |
+| npm dir / package         | `npm/wasm32-wasi` → `@rolldown/binding-wasm32-wasi` | `npm/wasm32-wasip1` → `@rolldown/binding-wasm32-wasip1` |
+
+Unshared memory growth detaches the previous JavaScript `ArrayBuffer`. The
+emnapi fix in emnapi#220 refreshes TSFN atomic views after event-loop turns and
+refreshes NAPI result DataViews after reentrant JavaScript calls. Rolldown
+applies the equivalent workaround through
+`patches/@emnapi__core@1.11.2.patch`. The browser package build bundles that
+patched emnapi/wasm runtime into the published `workerd.mjs` and
+`workerd.browser.mjs` entries. It aliases the deferred loader's bare `buffer`
+import to the npm polyfill and bundles that implementation too; packed
+validation rejects any remaining `buffer`, `node:buffer`, emnapi, or wasm
+runtime import. Managed workerd consumers therefore do not depend on Node
+compatibility flags or pnpm's workspace-only `patchedDependencies` behavior.
+The same build
+emits the threadless CJS/browser/deferred loaders plus a dedicated release
+artifact containing the threaded CJS/browser/Node-worker/browser-worker graph.
+`scripts/misc/stage-wasi-packages.mjs` installs those bundles into both WASI
+binding packages, copies each package's declaration from the matching generated
+profile, and removes its now-vendored `buffer`/emnapi/wasm-runtime dependency
+closure. The patched pre-publish validator accepts either that fully
+self-contained staged form or the complete generated external dependency set;
+partial dependency sets and staged loaders with a remaining direct Buffer
+import fail validation. For the threadless package, staging publishes the standalone managed
+`workerd.browser.mjs` bundle at the generated `./workerd` target instead of the
+raw deferred loader. The root keeps both optional packages for historical
+threaded fallback compatibility; its generated `rolldown/workerd` facade
+therefore forwards to the same managed factory.
+emnapi 1.11.2 already includes the separate bound-`setImmediate` fix from
+emnapi#221.
+
+The managed workerd entry must register both the runnable task host and timer
+host for every independently created instance, including callers of the root
+instance factory rather than only the package convenience wrapper. Task-host
+contract v2 is native-owned: JavaScript calls
+`registerCurrentThreadTaskHost()` without arguments, validates the returned
+nonzero high/low registration capability, and retains an exact disposer that
+calls `unregisterCurrentThreadTaskHost()`. Runnable delivery capabilities,
+fresh-turn scheduling, and failed-delivery recovery remain entirely inside
+Rust and the native threadsafe-function callback. If initialization fails and
+context destruction also fails, object errors with an available `cause` retain
+cleanup there. Primitive errors, hostile objects, and errors whose `cause` is
+already occupied preserve the primary synchronous failure and surface a later
+asynchronous cleanup failure on a microtask. Synchronous rollback failures are
+combined with cleanup errors in an aggregate so the unrecoverable cleanup
+failure is not hidden.
+Direct managed-call results whose accessor-backed `then` reads as a
+non-function are returned synchronously after that single read. Nested managed
+results use the same explicit settlement rules as callback results: a
+non-function fulfills with the original identity, a callable getter result is
+assimilated while the managed operation remains active, and a throwing getter
+preserves its original error. Cycle checks include both the path of assimilated
+thenables and the public promise returned to the caller. No identity-breaking
+proxy is introduced.
+
+The two WASI flavors have distinct artifact sets:
 
 - threaded `wasm32-wasip1-threads`: `rolldown-binding.wasm32-wasi.wasm`,
   `.wasi.cjs`, `.wasi-browser.js`, and worker scripts
 - single-thread `wasm32-wasip1`: `rolldown-binding.wasm32-wasip1.wasm`,
   `.wasip1.cjs`, `.wasip1-browser.js`, and `.wasip1-deferred.js`, without
   worker scripts
+
+`packages/rolldown/build-binding.ts` snapshots the exact generated binding
+surface before invoking napi-rs, including the root `browser.js` facade. A
+failure in Rolldown's post-build patching, validation, or loader generation
+restores every overwritten generated file and removes only files created by
+that invocation. The root facade is managed explicitly rather than by a broad
+JavaScript-file pattern, so unrelated sources remain outside the transaction.
+
+`packages/rolldown/generate-workerd-loader.ts` deterministically hardens the
+generated deferred loader after every napi build. The same generation pass
+post-processes the napi-rs CJS and browser loaders for `wasm32-wasip1`,
+registering the v2 native CurrentThread runnable host and the JavaScript timer
+host before exposing the binding. The task-host bootstrap validates contract
+version 2 and the exact returned registration, captures that capability for
+cleanup, and never exposes JavaScript drive or cancellation functions. The CJS
+bootstrap remains inside napi-rs's isolated-context initialization guard, so
+registration failure unregisters any installed host, destroys the emnapi
+context, and preserves cleanup diagnostics before the module load fails. The
+transform uses explicit generated-block markers, is idempotent, validates all
+loader anchors before writing any output, and fails when the expected napi-rs
+shape changes; committed loaders must therefore be regenerated rather than
+edited. The binding wrapper bypasses napi-rs's feature-blind declaration cache
+for both dedicated WASI targets and native `async-runtime` builds, and preserves
+the inactive WASI flavor declaration around every build. Default and threaded
+builds update `rolldown-binding.wasi.d.cts`; async-runtime builds update
+`rolldown-binding.wasip1.d.cts`. Bypassing the cache removes its default-feature
+entry, so the next native build regenerates that entry instead of reusing
+async-runtime metadata. Build ordering therefore cannot copy one flavor's
+cfg-specific comments into the other declaration. The deferred loader's
+`instantiate` export aliases its managed `createInstance` factory; no published
+workerd entry returns raw binding exports or host controls.
+The deferred declaration imports `rolldown-binding.wasip1.cjs`, which resolves
+to `rolldown-binding.wasip1.d.cts` instead of the generic native declaration, so
+its `exports` type follows the exact target feature set. Packed validation
+compares the live binding export names against the bundled workerd declaration.
+Public package entries do not register a second WASI task or timer host after
+loading those generated artifacts; doing so would replace the generated
+per-environment drivers. Native CurrentThread entries still install one
+package-side v2 task host per environment. Its unreferenced native threadsafe
+function supplies the fresh event-loop turn and environment cleanup retires the
+registration; no JavaScript runnable callback or dispatch token exists. If
+package-side timer-host setup fails after task-host registration, initialization
+unregisters that exact task-host capability before propagating the failure.
+The canonical `@rolldown/browser/workerd` package entry, the staged
+threadless optional-package facade, and the generated `rolldown/workerd`
+facade expose `createInstance` and its compatibility alias `instantiate`.
+Both names register the CurrentThread timer host and the v2 #9977 native
+runnable task host, expose per-instance memory diagnostics, and return an
+idempotently disposable handle. Successful disposal unregisters the exact
+task-host capability and synchronously clears and resolves every pending
+JavaScript timer relay, so a destroyed N-API context cannot remain retained
+until a long host deadline expires. Runnable drains are deferred through the
+native host's fresh threadsafe-function turn; polling inline from a waker could
+re-enter a future that still holds its waker lock. Exact delivery identity,
+stale callback rejection, bounded replacement, and failure acknowledgement stay
+inside the registry and executor described above rather than crossing the
+JavaScript facade.
+Timer cancellation contains host `clearTimeout` failures at the JavaScript
+boundary and still resolves the Rust relay, because the callback enters through
+a non-catching threadsafe function.
+All package, managed, and generated timer hosts split delays above
+`2_147_483_647` milliseconds into host-safe chunks. Initial or chained
+`setTimeout` failures reject the relay; duplicate IDs, cancellation, and
+managed disposal clear the active host timeout when possible and settle the
+retired relay even when `clearTimeout` throws.
+Each invocation owns independent N-API state, emnapi context, and
+unshared memory. Callers must first close all binding objects so napi-rs can
+complete task cancellation before environment teardown. Managed disposal then
+explicitly unregisters both exact Rust hosts before asking emnapi to destroy
+the context. This ordering does not depend on emnapi's LIFO cleanup queue
+continuing after a throwing hook. It attempts both timer-host and task-host
+cleanup even if one fails; successfully released hosts are forgotten, failed
+host disposers remain retryable through a later `dispose()` call, and context
+destruction does not begin until every host is evicted. Multiple host failures
+are reported together.
+If host registration fails before a handle can be returned, failed host
+disposers are retried once immediately and persistent failures are aggregated
+with the registration error.
+The generated managed factory registers task and timer hosts against the raw
+binding before constructing the public facade, removes all host-control
+exports, and never publishes a raw-binding accessor. Package facades only
+re-export that managed factory. The facade mediates binding objects nested in
+plain records and arrays, inherited callbacks on class-based input records,
+and binding objects delivered through caller callbacks, so retaining a plugin
+context, output, event, constructor, prototype, bound constructor, or method
+cannot call into a destroyed N-API environment. Constructors, prototypes, and
+binding objects expose synchronized shadow targets for normal reflection,
+expandos, derived constructors, and object-integrity operations without
+retaining the raw N-API target after disposal. Facade construction registers the
+full superclass prototype ancestry for both constructor canonicalization and
+binding-object detection. A non-exported base constructor therefore cannot leak
+inherited static methods around operation accounting, and close-bearing objects
+returned by inherited factories enter the same disposal barrier as instances of
+exported constructors. Their retained wrappers and methods reject after
+disposal.
+The imported Buffer constructor is injected into emnapi. Before classifying an
+input as a record, the public facade uses the realm-neutral
+`ArrayBuffer.isView` check plus captured intrinsic `ArrayBuffer` and
+`SharedArrayBuffer` byte-length getters. Native or duplicate-bundle Buffer
+values, typed-array subclasses, and foreign-realm or subclassed buffers
+therefore retain strict identity even when workerd has no global `Buffer`.
+Close-bearing binding objects increment a disposal barrier until `close()`
+settles successfully, a rejected close reports `closed === true`, or their
+wrapper is collected. The rejected-close rule distinguishes terminal cleanup
+diagnostics, such as `BindingBundler.closeBundle` failures, from retryable
+transport or teardown failures that leave `closed === false`. Wrapper
+invalidation uses weak holder references plus `FinalizationRegistry`; repeated
+builds therefore do not retain every raw target for the full managed-instance
+lifetime. Each barrier token records the original raw `close` function. Only a
+call to that exact function can release the token, and object/prototype proxies
+reject assignment, definition, or deletion of `close`, so replacing it with a
+no-op cannot bypass disposal.
+Managed caller-provided memories are claimed once for the lifetime of the
+memory object before emnapi instantiation begins. Failed initialization keeps
+the claim because emnapi or Wasm import setup may already have mutated the
+memory; only inputs rejected before memory validation leave it reusable.
+For an extensible memory, an opaque monotonic claim operation is pinned directly
+on that memory as a non-configurable symbol property. This survives buffer
+replacement and prototype changes. A non-extensible memory cannot change its
+prototype, so the operation instead uses its immediate prototype as the stable
+host. Duplicate loaders, including loaders evaluated in distinct JavaScript
+realms, use the global symbol registry and therefore still coordinate when they
+share one memory object. Every claim invokes the discovered operation twice and
+accepts only the `true`, then `false` transition; duplicates must remain
+`false`, and non-monotonic or malformed preinstalled functions fail closed.
+Prototype traversal is bounded and cycle-checked before either host is
+accepted. Same-realm code that runs before every loader can preinstall a
+semantically equivalent monotonic operation and is outside this lifecycle
+coordination boundary; descriptor immutability prevents replacement after the
+first legitimate installation.
+Managed disposal commits the disposed state only after emnapi context
+destruction succeeds. A thrown cleanup hook leaves the context and handle
+available for a later retry. emnapi marks the context as stopping before it
+drains cleanup hooks, so a thrown hook may leave partial teardown behind; the
+pre-destroy explicit host eviction ensures the retryable handle cannot retain a
+selected task or timer host. Context setup retries transient
+`beforeExit` listener removal and listener-limit restoration failures before
+aborting. It tracks listener occurrence counts rather than identities alone, so
+an emnapi listener that reuses an existing function object is still removed
+without removing the caller's prior occurrence. Eager Node loaders hand
+successful context ownership from `beforeExit` to `exit` transactionally: they
+register the replacement first, clear registration state only after physical
+listener removal succeeds, and roll back a newly registered replacement if the
+old owner cannot be removed. Failed bootstrap destruction, including an
+asynchronous rejection, retains or rearms a cleanup listener so the context is
+not abandoned. The supplied module promise is resolved and validated before a
+managed context is created, so a pending or rejected module cannot retain
+context state.
+When best-effort initialization cleanup still fails, the loader always throws
+an `AggregateError` that retains the primary error as `cause` and includes both
+the primary and cleanup diagnostics; it never relies on a possibly stateful or
+hostile `cause` accessor to retain cleanup information.
+This ordering must remain aligned with napi-rs#3352's environment lifecycle as
+that upstream API evolves.
+
+The threadless loaders start with 1024 WebAssembly pages (64 MiB), replacing
+their inherited use of the threaded-WASI value of 16384 pages (1 GiB).
+`napi.wasm.initialMemory` remains 16384 for the existing threaded flavor;
+Rolldown's `threadlessInitialMemory` setting is applied only to generated
+`wasip1` loaders by the deterministic post-generator. The generated threadless
+module currently declares an imported-memory minimum of 1021 pages. When that
+ignored build artifact is present, generation fails if the configured floor
+drops below its binary contract or if the configured maximum exceeds its import
+maximum. Bounds always fail above memory32. Native builds also run the
+post-generator from clean checkouts, so they skip binary inspection when no
+threadless Wasm has been built. The three-page margin rounds the current
+structural minimum to 64 MiB while allowing normal unshared-memory growth up to
+the existing maximum. The focused unit and packed-consumer gates repeat a
+256-module graph three times, require the declared 64 MiB floor, and fail if
+the representative build crosses 128 MiB. The threadless static check derives
+the live import minimum through WebAssembly instantiation rather than trusting
+generated source, so the actual threadless build remains fail closed. These are
+local address-space regression gates; production committed-memory validation
+still requires Workers platform telemetry.
+
+Threaded-WASI runtime ownership is managed by
+`packages/rolldown/src/runtime-lifecycle.ts`. Every public object asynchronously
+acquires an independent native token through `acquireAsyncRuntime()` and
+releases that token exactly once. The binding waits for a retiring Tokio
+generation before granting a replacement token, so immediate close-and-restart
+does not race shutdown. Native and threadless builds receive no-op leases.
+Package copies in the same JavaScript realm share acquisition ordering and
+failed-release recovery through a realm-global weak registry keyed by the
+loaded binding's `acquireAsyncRuntime` function identity. Legacy threaded-WASI
+bindings that only expose the implicit `startAsyncRuntime` /
+`shutdownAsyncRuntime` protocol fail closed because that ownership cannot be
+coordinated safely across JavaScript realms.
+Build and dev objects memoize their close sequence so concurrent or repeated
+callers observe the same teardown result and cannot release a lease twice.
+Failed releases remain individually owned by their lease state. A later
+acquisition retries every abandoned failed release before starting a new
+owner, so multiple shutdown failures cannot overwrite each other and leak a
+native owner.
+Watch close uses the same single-flight contract and attempts every
+parallel-plugin worker teardown plus binding close before reporting cleanup
+errors. Its public close function is installed before asynchronous watcher
+setup, so same-tick close waits for initialization, prevents the deferred run,
+and emits the close event exactly once.
+
+The browser package declares explicit `workerd` export conditions for the
+managed loader and compiled Wasm module. The stable compiled-module specifier
+ends in `.wasm` so Wrangler classifies the import before package export
+resolution. Wrangler consumers must apply a `CompiledWasm` module rule; the
+public guide includes the minimal rule. The package-root browser and default
+loaders are post-bundled with their emnapi/wasm runtime dependencies, as are
+the managed workerd entries. Release assembly reuses those hardened loader
+bundles for both standalone WASI binding flavors, including both threaded
+worker entry points. Published browser, standalone-flavor, and root-facade
+consumers therefore do not depend on the repository's pnpm patches or resolve
+registry emnapi at runtime.
+
+### Committed WASI loaders and codegen checks
+
+`packages/rolldown/src` commits BOTH flavors' loader sets side by side under
+their per-flavor names (plus `browser.js`, which re-exports the single-thread
+binding package — the browser story). Because the names are distinct, the old
+name-collision guard lattice (restore steps in the justfile, the
+`rolldown-binding.wasi.cjs` arm of the ci.yml drift allowlist, the wasi
+build-order coupling in the WASI workflow) is gone:
+
+- The vendored CLI patch (`patches/@napi-rs__cli@3.7.2.patch`) is a dist
+  rebuild of the napi-rs fork branch (napi-rs#3353 + per-flavor naming): a
+  build whose target is NOT wasi regenerates EVERY declared wasi flavor's
+  loader set, each with `hasThreads` derived from its own triple, so loader
+  regeneration is deterministic and byte-identical to the committed copies on
+  every host and under every build variant. A wasi build regenerates only the
+  flavor being built. No restore steps are needed; CI's "Check no diff" in
+  `reusable-native-build.yml` has full coverage of all committed loaders.
+- The Node Validation job in `ci.yml` still asserts a drift allowlist after
+  `just build-browser`, but the allowlist is down to `binding.d.cts`
+  (feature-gated doc-comment drift only).
+- The threadless-ness of the single-thread loaders is guarded by
+  `scripts/misc/check-wasi-threadless.mjs` in the WASI workflow (it inspects
+  the committed/regenerated `rolldown-binding.wasip1.*` loaders); a wrong
+  `hasThreads` resolution now additionally misnames the output, so imports
+  fail loudly instead of silently swapping flavors.
+- Immediately after the threaded build, the WASI workflow runs the dedicated
+  `test:wasi-threaded` Node profile against the still-wired threaded dist. The
+  profile executes concurrent builds and verifies runtime lease ownership without
+  collecting managed-workerd tests that require the threadless Wasm file or
+  child-process `--input-type` probes that file-based worker entrypoints cannot
+  inherit.
+- `scripts/misc/check-workerd-memory.mjs` repeatedly creates concurrent
+  managed instances, verifies memory isolation and idempotent disposal, and
+  emits local RSS/address-space samples. Production committed-memory
+  validation still requires Workers DevTools and platform metrics.
+- `scripts/misc/check-wasi-binding-packed-consumer.mjs` imports the published
+  threadless package root through both its CJS and browser conditions, executes
+  an async binding build, and requires the generated task/timer bootstrap to
+  report `timers: true`. Its managed-workerd pass also checks runtime export
+  names against the bundled declaration and repeats the representative memory
+  lifecycle described above.
+
+`napi artifacts` routes each flavor's wasm + generated loaders into its own npm
+dir (`npm/wasm32-wasi`, `npm/wasm32-wasip1`) by exact-name match. Release
+assembly then overwrites the threadless flavor's three runtime-bearing loaders
+and the threaded flavor's CJS/browser/two-worker graph with bundled outputs,
+then validates both packed packages outside the workspace. The packed
+consumers assert the exact threaded and threadless capability reports as well
+as executing builds, so stale or cross-wired Wasm artifacts fail even when
+their loader graph still initializes. The threaded browser package is served
+with COOP/COEP isolation and exercised in Chromium; the check observes actual
+Worker construction and script fetch, a shared WebAssembly memory and Wasm
+fetch, a completed build, and successful binding close without worker/page
+errors. The publish-stage browser and root packages are assembled with their
+downloaded `dist` directories. The root package is installed under pnpm and
+npm, then executed through `rolldown` and `rolldown/experimental` with the
+threaded and threadless optional packages isolated into separate layouts. Its
+managed workerd facade is also executed in the threadless layout. This prevents
+committed raw loader copies, notice-only packages, fake root facades, or
+workspace-only pnpm patches from defining a published WASI runtime.
 
 ## Metrics And Baseline
 

@@ -1,6 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
 const binding = vi.hoisted(() => ({
+  __rolldownBindingTarget: 'native',
   exportErrors: new Map<string, unknown>(),
   getRuntimeCapabilities: undefined as undefined | ReturnType<typeof vi.fn>,
   getCurrentThreadTaskHostContractVersion: undefined as undefined | (() => unknown),

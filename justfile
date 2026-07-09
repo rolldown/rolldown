@@ -228,6 +228,14 @@ build-rolldown-binding:
   vp run --filter rolldown build-binding
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding.
+#
+# The committed WASI loader sets are per-flavor (distinct names): the threaded
+# flavor owns `rolldown-binding.wasi.*` + the worker scripts, the single-thread
+# flavor owns `rolldown-binding.wasip1.*`. Non-wasi builds regenerate BOTH
+# flavors' loaders deterministically from the wasi targets declared in the napi
+# config, byte-identical to the committed copies, so native builds leave a
+# clean tree without any restore step. See
+# internal-docs/async-runtime/implementation.md.
 build-rolldown:
   vp run --filter rolldown build-native:debug
 
@@ -242,15 +250,20 @@ build-rolldown-wasi:
 # Build `rolldown` and its native `.node` binding with the shared async
 # runtime (`--no-default-features --features
 # async-runtime,runtime-waker-teardown-test,runtime-submission-failure-test`)
-# instead of tokio. The test features expose only lifecycle regression probes,
-# which change the generated native loader and declarations. Restore those
-# test-profile artifacts plus the generated WASI loaders so the recipe leaves a
-# clean tree; public declaration docs are intentionally identical across
-# runtime profiles.
+# instead of tokio. The test features expose only lifecycle regression probes.
+# Preserve every
+# generated text artifact byte-for-byte while building that test binary, then
+# build the package glue from the restored production sources.
 build-rolldown-async-runtime:
-  vp run --filter rolldown build-binding --no-default-features --features async-runtime,runtime-waker-teardown-test,runtime-submission-failure-test
+  cd packages/rolldown && ./node_modules/.bin/oxnode ./generate-workerd-loader.ts --preserve-generated-sources -- ./node_modules/.bin/oxnode ./build-binding.ts --no-default-features --features async-runtime,runtime-waker-teardown-test,runtime-submission-failure-test
   vp run --filter rolldown build-js-glue
-  git checkout -- packages/rolldown/src/binding.cjs packages/rolldown/src/binding.d.cts packages/rolldown/src/rolldown-binding.wasi.cjs packages/rolldown/src/rolldown-binding.wasi-browser.js
+
+# Build `rolldown` with the non-threaded `.wasm` binding
+# (`rolldown-binding.wasm32-wasip1.wasm` + `rolldown-binding.wasip1.*`
+# loaders; the dist is wired to the single-thread flavor).
+build-rolldown-wasi-single:
+  cd packages/rolldown && ./node_modules/.bin/oxnode ./build-binding.ts --target wasm32-wasip1 --no-default-features --features async-runtime
+  cd packages/rolldown && TARGET='rolldown-wasi-single' node --enable-source-maps --import @oxc-node/core/register -C dev ./build.ts
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
 build-rolldown-release:

@@ -10,6 +10,10 @@ import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import { assertParallelPluginOptionsSupported } from '../../plugin/parallel-plugin';
 import { PluginDriver } from '../../plugin/plugin-driver';
+import {
+  createRequiredAsyncContext,
+  trackAsyncCallbackSettlement,
+} from '../../utils/async-context';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { CloseCallbackScope, createCloseIdentity } from '../../utils/close-callback-scope';
 import {
@@ -41,9 +45,21 @@ type BindingDevEngineWithTerminalClose = BindingDevEngine & {
   closeTerminal(): Promise<BindingResult<void>>;
 };
 
+interface DevCallbackOwner {}
+
+interface DevCallbackInvocation {
+  active: boolean;
+  owner: DevCallbackOwner;
+  parent: DevCallbackInvocation | undefined;
+}
+
+// See internal-docs/async-context/implementation.md.
+const devCallbackContext = createRequiredAsyncContext<DevCallbackInvocation>();
+
 export class DevEngine {
   #inner: BindingDevEngineWithTerminalClose;
   #runtimeLease: RuntimeLease;
+  #callbackOwner: DevCallbackOwner;
   #stopWorkers: (() => Promise<void>) | undefined;
   #nativeCloseErrorsPromise: Promise<unknown[]> | undefined;
   #closeCallbackScope: CloseCallbackScope;
@@ -74,10 +90,13 @@ export class DevEngine {
       false,
       closeCallbackScope,
     );
+    const callbackOwner = {};
 
     let bindingDevOptions: BindingDevOptions;
     try {
-      bindingDevOptions = closeCallbackScope.wrapCallbacks(createBindingDevOptions(devOptions));
+      bindingDevOptions = closeCallbackScope.wrapCallbacks(
+        createBindingDevOptions(devOptions, callbackOwner),
+      );
     } catch (error) {
       return throwDevSetupErrorAfterCleanup(
         error,
@@ -107,6 +126,7 @@ export class DevEngine {
       return new DevEngine(
         inner,
         runtimeLease,
+        callbackOwner,
         options.stopWorkers,
         closeCallbackScope,
         closeIdentity,
@@ -124,12 +144,14 @@ export class DevEngine {
   private constructor(
     inner: BindingDevEngineWithTerminalClose,
     runtimeLease: RuntimeLease,
+    callbackOwner: DevCallbackOwner,
     stopWorkers: (() => Promise<void>) | undefined,
     closeCallbackScope: CloseCallbackScope,
     closeIdentity: string,
   ) {
     this.#inner = inner;
     this.#runtimeLease = runtimeLease;
+    this.#callbackOwner = callbackOwner;
     this.#stopWorkers = stopWorkers;
     this.#closeCallbackScope = closeCallbackScope;
     this.#closeIdentity = closeIdentity;
@@ -193,6 +215,11 @@ export class DevEngine {
   }
 
   close(): Promise<void> {
+    if (this.#isActiveDevCallback()) {
+      return Promise.reject(
+        new Error('Cannot close a dev engine from one of its active JavaScript callbacks'),
+      );
+    }
     if (!this.#isClosing) {
       this.#isClosing = true;
       if (this.#activeOperations > 0) {
@@ -269,6 +296,15 @@ export class DevEngine {
     }
   }
 
+  #isActiveDevCallback(): boolean {
+    let invocation = devCallbackContext.getStore();
+    while (invocation) {
+      if (invocation.owner === this.#callbackOwner && invocation.active) return true;
+      invocation = invocation.parent;
+    }
+    return false;
+  }
+
   async #runOperation<T>(operation: () => Promise<T>): Promise<T> {
     this.#assertOpen();
     this.#activeOperations += 1;
@@ -289,19 +325,24 @@ function unwrapDevEngineBindingResult<T>(result: BindingResult<T>, aggregateMess
   return result as T;
 }
 
-function createBindingDevOptions(devOptions: DevOptions): BindingDevOptions {
+function createBindingDevOptions(
+  devOptions: DevOptions,
+  callbackOwner: DevCallbackOwner,
+): BindingDevOptions {
   const userOnHmrUpdates = devOptions.onHmrUpdates;
   const bindingOnHmrUpdates: BindingDevOptions['onHmrUpdates'] = userOnHmrUpdates
     ? function (rawResult: BindingResult<[BindingClientHmrUpdate[], string[]]>) {
         const result = normalizeBindingResult(rawResult);
         if (result instanceof Error) {
-          return userOnHmrUpdates(result);
+          return runDevCallback(callbackOwner, () => userOnHmrUpdates(result));
         }
         const [updates, changedFiles] = result;
-        return userOnHmrUpdates({
-          updates,
-          changedFiles,
-        });
+        return runDevCallback(callbackOwner, () =>
+          userOnHmrUpdates({
+            updates,
+            changedFiles,
+          }),
+        );
       }
     : undefined;
 
@@ -310,16 +351,18 @@ function createBindingDevOptions(devOptions: DevOptions): BindingDevOptions {
     ? function (rawResult) {
         const result = normalizeBindingResult(rawResult);
         if (result instanceof Error) {
-          return userOnOutput(result);
+          return runDevCallback(callbackOwner, () => userOnOutput(result));
         }
-        return userOnOutput(transformToRollupOutput(result));
+        return runDevCallback(callbackOwner, () => userOnOutput(transformToRollupOutput(result)));
       }
     : undefined;
 
   const userOnAdditionalAssets = devOptions.onAdditionalAssets;
   const bindingOnAdditionalAssets: BindingDevOptions['onAdditionalAssets'] = userOnAdditionalAssets
     ? function (output) {
-        return userOnAdditionalAssets(transformToRollupOutput(output));
+        return runDevCallback(callbackOwner, () =>
+          userOnAdditionalAssets(transformToRollupOutput(output)),
+        );
       }
     : undefined;
   const rebuildStrategy = devOptions.rebuildStrategy;
@@ -382,6 +425,26 @@ function formatInvalidRebuildStrategy(strategy: unknown): string {
       return '<object>';
   }
   return '<unknown>';
+}
+
+function runDevCallback<T>(owner: DevCallbackOwner, callback: () => T): T {
+  const invocation: DevCallbackInvocation = {
+    active: true,
+    owner,
+    parent: devCallbackContext.getStore(),
+  };
+  const deactivate = () => {
+    invocation.active = false;
+  };
+
+  return devCallbackContext.run(invocation, () => {
+    try {
+      return trackAsyncCallbackSettlement(callback(), deactivate);
+    } catch (error) {
+      deactivate();
+      throw error;
+    }
+  });
 }
 
 function createDevSetupCleanup(

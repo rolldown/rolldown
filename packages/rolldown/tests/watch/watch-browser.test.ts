@@ -1,4 +1,6 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import path from 'node:path';
+import { runInNewContext } from 'node:vm';
 
 import { chromium } from 'playwright-chromium';
 import { rollup } from 'rollup';
@@ -82,6 +84,69 @@ browserTest(
   },
 );
 
+browserTest(
+  'browser watcher selects an async context configured after import',
+  { timeout: TEST_TIMEOUT },
+  async () => {
+    const code = await buildBrowserWatcherHarness();
+    const sandbox = {
+      clearTimeout,
+      queueMicrotask,
+      setTimeout,
+    } as {
+      clearTimeout: typeof clearTimeout;
+      queueMicrotask: typeof queueMicrotask;
+      runBrowserWatcherLateProviderTest(createStorage: () => AsyncLocalStorage<unknown>): Promise<{
+        reentrantCloseSettled: boolean;
+        storageCreations: number;
+        storageCreationsAfterConstruction: number;
+        storageCreationsBeforeClose: number;
+      }>;
+      setTimeout: typeof setTimeout;
+    };
+    runInNewContext(code, sandbox);
+    const result = structuredClone(
+      await sandbox.runBrowserWatcherLateProviderTest(() => new AsyncLocalStorage<unknown>()),
+    );
+
+    expect(result).toEqual({
+      reentrantCloseSettled: true,
+      storageCreations: 2,
+      storageCreationsAfterConstruction: 0,
+      storageCreationsBeforeClose: 1,
+    });
+  },
+);
+
+browserTest(
+  'browser watcher retries async context selection after an unavailable dispatch',
+  { timeout: TEST_TIMEOUT },
+  async () => {
+    const code = await buildBrowserWatcherHarness();
+    const sandbox = {
+      clearTimeout,
+      queueMicrotask,
+      setTimeout,
+    } as {
+      clearTimeout: typeof clearTimeout;
+      queueMicrotask: typeof queueMicrotask;
+      runBrowserWatcherProviderRetryTest(createStorage: () => AsyncLocalStorage<unknown>): Promise<{
+        listenerCalls: number;
+        storageCreations: number;
+      }>;
+      setTimeout: typeof setTimeout;
+    };
+    runInNewContext(code, sandbox);
+
+    await expect(
+      sandbox.runBrowserWatcherProviderRetryTest(() => new AsyncLocalStorage<unknown>()),
+    ).resolves.toEqual({
+      listenerCalls: 2,
+      storageCreations: 1,
+    });
+  },
+);
+
 browserTest('browser parallel plugin capability and preflight contract', async () => {
   const code = await buildBrowserParallelPluginHarness();
   const browser = await chromium.launch({ headless: true });
@@ -143,6 +208,10 @@ async function buildBrowserWatcherHarness(): Promise<string> {
     '../../src/utils/binding-mismatch-error.ts',
   );
   const asyncContextPath = path.resolve(import.meta.dirname, '../../src/utils/async-context.ts');
+  const prototypeChainPath = path.resolve(
+    import.meta.dirname,
+    '../../src/utils/prototype-chain.ts',
+  );
   const closeCallbackScopePath = path.resolve(
     import.meta.dirname,
     '../../src/utils/close-callback-scope.ts',
@@ -299,6 +368,9 @@ async function buildBrowserWatcherHarness(): Promise<string> {
           if (id === '../../utils/async-context' || id === './async-context') {
             return asyncContextPath;
           }
+          if (importer === asyncContextPath && id === './prototype-chain') {
+            return prototypeChainPath;
+          }
           if (id === '../../utils/close-callback-scope') return closeCallbackScopePath;
           if (id === '../../binding.cjs') return '\0binding';
           if (id === '../../runtime-lifecycle' || id === '../runtime-lifecycle') {
@@ -314,7 +386,7 @@ async function buildBrowserWatcherHarness(): Promise<string> {
         },
         load(id) {
           if (id === '\0browser-watcher-harness') {
-            return browserHarnessEntry(watchIndexPath, watcherPath, emitterPath);
+            return browserHarnessEntry(watchIndexPath, watcherPath, emitterPath, asyncContextPath);
           }
           return virtualModules.get(id.slice(1));
         },
@@ -361,12 +433,20 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
     import.meta.dirname,
     '../../src/plugin/parallel-plugin.ts',
   );
+  const parallelPluginInfoPath = path.resolve(
+    import.meta.dirname,
+    '../../src/utils/parallel-plugin.ts',
+  );
   const runtimeSupportPath = path.resolve(import.meta.dirname, '../../src/runtime-support.ts');
   const bindingMismatchErrorPath = path.resolve(
     import.meta.dirname,
     '../../src/utils/binding-mismatch-error.ts',
   );
   const asyncContextPath = path.resolve(import.meta.dirname, '../../src/utils/async-context.ts');
+  const prototypeChainPath = path.resolve(
+    import.meta.dirname,
+    '../../src/utils/prototype-chain.ts',
+  );
   const closeCallbackScopePath = path.resolve(
     import.meta.dirname,
     '../../src/utils/close-callback-scope.ts',
@@ -511,7 +591,7 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
       `
         export function bindingifyInputOptions() {
           globalThis.__parallelPluginHarness.bindingifyCalls += 1;
-          return {};
+          return { plugins: [] };
         }
       `,
     ],
@@ -590,6 +670,12 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
           if (id === '../../utils/async-context' || id === './async-context') {
             return asyncContextPath;
           }
+          if (
+            (importer === asyncContextPath || importer === createBundlerOptionPath) &&
+            id === './prototype-chain'
+          ) {
+            return prototypeChainPath;
+          }
           if (id === '../../utils/close-callback-scope') return closeCallbackScopePath;
           if (id === '../../plugin/plugin-driver' || id === '../plugin/plugin-driver') {
             return '\0plugin-driver';
@@ -603,6 +689,9 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
           if (id === '../plugin/plugin-context-data') return '\0plugin-context-data';
           if (id === '../plugin/parallel-plugin' || id === '../../plugin/parallel-plugin') {
             return parallelPluginPath;
+          }
+          if (id === '../utils/parallel-plugin' || id === './parallel-plugin') {
+            return parallelPluginInfoPath;
           }
           if (id === './bindingify-input-options') return '\0bindingify-input-options';
           if (id === './bindingify-output-options') return '\0bindingify-output-options';
@@ -650,11 +739,13 @@ function browserHarnessEntry(
   watchIndexPath: string,
   watcherPath: string,
   emitterPath: string,
+  asyncContextPath: string,
 ): string {
   return `
     import { watch } from ${JSON.stringify(watchIndexPath)};
     import { createWatcher } from ${JSON.stringify(watcherPath)};
     import { WatcherEmitter } from ${JSON.stringify(emitterPath)};
+    import { configureAsyncContext } from ${JSON.stringify(asyncContextPath)};
 
     function resetHarness() {
       globalThis.__watchHarness = {
@@ -686,6 +777,60 @@ function browserHarnessEntry(
         }),
       ]);
     }
+
+    globalThis.runBrowserWatcherLateProviderTest = (createStorage) => withTimeout(async () => {
+      const harness = resetHarness();
+      let storageCreations = 0;
+      configureAsyncContext({
+        createStorage() {
+          storageCreations += 1;
+          return createStorage();
+        },
+      });
+
+      const emitter = new WatcherEmitter();
+      const storageCreationsAfterConstruction = storageCreations;
+      await createWatcher(emitter, { output: {} });
+      const storageCreationsBeforeClose = storageCreations;
+      let reentrantClose;
+      emitter.on('close', async () => {
+        await Promise.resolve();
+        reentrantClose = emitter.close();
+      });
+      await emitter.close();
+      await reentrantClose;
+      return {
+        reentrantCloseSettled: true,
+        storageCreations,
+        storageCreationsAfterConstruction,
+        storageCreationsBeforeClose,
+      };
+    });
+
+    globalThis.runBrowserWatcherProviderRetryTest = (createStorage) => withTimeout(async () => {
+      const emitter = new WatcherEmitter();
+      let listenerCalls = 0;
+      emitter.on('close', async () => {
+        listenerCalls += 1;
+        await Promise.resolve();
+      });
+
+      await emitter.emitClose(Promise.resolve());
+
+      let storageCreations = 0;
+      configureAsyncContext({
+        createStorage() {
+          storageCreations += 1;
+          return createStorage();
+        },
+      });
+      await emitter.emitClose(Promise.resolve());
+
+      return {
+        listenerCalls,
+        storageCreations,
+      };
+    });
 
     globalThis.runBrowserWatcherTests = () => withTimeout(async () => {
       const lifecycleHarness = resetHarness();

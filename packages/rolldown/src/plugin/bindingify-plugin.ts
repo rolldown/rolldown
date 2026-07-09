@@ -28,6 +28,7 @@ import type { LogLevelOption } from '../log/logging';
 import { error, logPluginError } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
+import type { TypeAssert } from '../types/assert';
 import type { CloseCallbackScope } from '../utils/close-callback-scope';
 import { bindingifyCloseWatcher, bindingifyWatchChange } from './bindingify-watch-hooks';
 import { extractHookUsage, HookUsageKind } from './generated/hook-usage';
@@ -45,7 +46,41 @@ export interface BindingifyPluginArgs {
   closeCallbackScope?: CloseCallbackScope;
   configWatchHooks: boolean;
   normalizedOutputPlugins: RolldownPlugin[];
+  runBuildCallback?: BuildCallbackRunner;
 }
+
+export type BuildCallbackRunner = <T>(callback: () => T, callbackName?: string) => T;
+
+type BindingPluginCallbackName = {
+  [K in keyof BindingPluginOptions]-?: NonNullable<BindingPluginOptions[K]> extends (
+    ...args: any[]
+  ) => any
+    ? K
+    : never;
+}[keyof BindingPluginOptions];
+
+const BUILD_CALLBACK_HOOK_NAMES = [
+  'buildStart',
+  'resolveId',
+  'resolveDynamicImport',
+  'buildEnd',
+  'transform',
+  'moduleParsed',
+  'load',
+  'renderChunk',
+  'augmentChunkHash',
+  'renderStart',
+  'renderError',
+  'generateBundle',
+  'writeBundle',
+  'closeBundle',
+  'banner',
+  'footer',
+  'intro',
+  'outro',
+  'watchChange',
+  'closeWatcher',
+] as const satisfies readonly BindingPluginCallbackName[];
 
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function bindingifyPlugin(
@@ -59,6 +94,7 @@ export function bindingifyPlugin(
   watchMode: boolean,
   closeCallbackScope?: CloseCallbackScope,
   configWatchHooks: boolean = true,
+  runBuildCallback?: BuildCallbackRunner,
 ): BindingPluginOptions {
   const args: BindingifyPluginArgs = {
     plugin,
@@ -71,6 +107,7 @@ export function bindingifyPlugin(
     closeCallbackScope,
     configWatchHooks,
     normalizedOutputPlugins,
+    runBuildCallback,
   };
 
   const { plugin: buildStart, meta: buildStartMeta } = bindingifyBuildStart(args);
@@ -181,49 +218,42 @@ export function bindingifyPlugin(
     closeWatcherMeta,
     hookUsage,
   };
-  return wrapHandlers(result);
+  return wrapHandlers(result, runBuildCallback);
 }
 
-function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
-  for (const hookName of [
-    'buildStart',
-    'resolveId',
-    'resolveDynamicImport',
-    'buildEnd',
-    'transform',
-    'moduleParsed',
-    'load',
-    'renderChunk',
-    'augmentChunkHash',
-    'renderStart',
-    'renderError',
-    'generateBundle',
-    'writeBundle',
-    'closeBundle',
-    'banner',
-    'footer',
-    'intro',
-    'outro',
-    'watchChange',
-    'closeWatcher',
-  ] as const) {
+function wrapHandlers(
+  plugin: BindingPluginOptions,
+  runBuildCallback: BuildCallbackRunner | undefined,
+): BindingPluginOptions {
+  for (const hookName of BUILD_CALLBACK_HOOK_NAMES) {
     const handler = plugin[hookName] as any;
     if (handler) {
-      plugin[hookName] = async (...args: any[]) => {
-        try {
-          return await handler(...args);
-        } catch (e: any) {
-          const pluginError = logPluginError(e, plugin.name, {
-            hook: hookName,
-            id: hookName === 'transform' ? args[2] : undefined,
-          });
-          if (hookName === 'closeBundle') {
-            throw pluginError;
+      plugin[hookName] = (...args: any[]) => {
+        const invoke = async () => {
+          try {
+            return await handler(...args);
+          } catch (e: any) {
+            const pluginError = logPluginError(e, plugin.name, {
+              hook: hookName,
+              id: hookName === 'transform' ? args[2] : undefined,
+            });
+            if (hookName === 'closeBundle') {
+              throw pluginError;
+            }
+            return error(pluginError);
           }
-          return error(pluginError);
-        }
+        };
+        return runBuildCallback ? runBuildCallback(invoke, hookName) : invoke();
       };
     }
   }
   return plugin;
+}
+
+function _assertCallbackInventory() {
+  type MissingCallbacks = Exclude<
+    BindingPluginCallbackName,
+    (typeof BUILD_CALLBACK_HOOK_NAMES)[number]
+  >;
+  type _ = TypeAssert<[MissingCallbacks] extends [never] ? true : false>;
 }

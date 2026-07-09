@@ -2,13 +2,12 @@ import { spawnSync } from 'node:child_process';
 import nodePath from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { isSingleThread, isWasiTest } from '@tests/runtime-flavor';
 import { expect, test } from 'vitest';
 
 const testsDir = fileURLToPath(new URL('.', import.meta.url));
 const childPath = nodePath.join(testsDir, 'fixtures', 'devtools-close-error', 'child.mjs');
 
-test.skipIf(isWasiTest && isSingleThread)(
+test(
   'close preserves closeBundle identity alongside a devtools writer failure',
   { timeout: 30_000 },
   () => {

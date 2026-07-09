@@ -23,6 +23,80 @@ async function buildWithPlugin(plugin: Plugin) {
   }
 }
 
+function delay(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+test('awaits async renderStart hook completion', async () => {
+  const entered = deferred();
+  const release = deferred();
+  const calls: string[] = [];
+  const build = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'async-render-start',
+        async renderStart() {
+          calls.push('renderStart:start');
+          entered.resolve();
+          await release.promise;
+          calls.push('renderStart:end');
+        },
+        generateBundle() {
+          calls.push('generateBundle');
+        },
+      },
+    ],
+  });
+
+  try {
+    let settled = false;
+    const generation = build.generate().then(
+      (output) => ({ output }),
+      (error: unknown) => ({ error }),
+    );
+    void generation.finally(() => {
+      settled = true;
+    });
+
+    await entered.promise;
+    await delay(20);
+    const settledBeforeRelease = settled;
+    release.resolve();
+
+    const result = await generation;
+    expect(settledBeforeRelease).toBe(false);
+    expect(result).toHaveProperty('output');
+    expect(calls).toEqual(['renderStart:start', 'renderStart:end', 'generateBundle']);
+  } finally {
+    release.resolve();
+    await build.close();
+  }
+});
+
+test('propagates async renderStart hook rejection', async () => {
+  const build = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'async-render-start-rejection',
+        async renderStart() {
+          await Promise.resolve();
+          throw new Error('async renderStart rejection');
+        },
+      },
+    ],
+  });
+
+  try {
+    await expect(build.generate()).rejects.toThrow('async renderStart rejection');
+  } finally {
+    await build.close();
+  }
+});
+
 test('Plugin renderError hook', async () => {
   const renderErrorFn = vi.fn();
   const renderChunkFn = vi.fn();
@@ -39,6 +113,80 @@ test('Plugin renderError hook', async () => {
   });
   expect(error!.message).toContain('renderStart error');
   expect(renderErrorFn).toHaveBeenCalledTimes(1);
+});
+
+test('awaits async renderError hook completion', async () => {
+  const entered = deferred();
+  const release = deferred();
+  let completed = false;
+  const build = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'async-render-error',
+        renderStart() {
+          throw new Error('renderStart failure');
+        },
+        async renderError(error) {
+          expect(error.message).toContain('renderStart failure');
+          entered.resolve();
+          await release.promise;
+          completed = true;
+        },
+      },
+    ],
+  });
+
+  try {
+    let settled = false;
+    const generation = build.generate().then(
+      (output) => ({ output }),
+      (error: unknown) => ({ error }),
+    );
+    void generation.finally(() => {
+      settled = true;
+    });
+
+    await entered.promise;
+    await delay(20);
+    const settledBeforeRelease = settled;
+    release.resolve();
+
+    const result = await generation;
+    expect(settledBeforeRelease).toBe(false);
+    expect(completed).toBe(true);
+    expect(result).toHaveProperty('error');
+    expect((result as { error: Error }).error.message).toContain('renderStart failure');
+  } finally {
+    release.resolve();
+    await build.close();
+  }
+});
+
+test('propagates async renderError hook rejection', async () => {
+  const build = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'async-render-error-rejection',
+        renderStart() {
+          throw new Error('renderStart failure');
+        },
+        async renderError() {
+          await Promise.resolve();
+          throw new Error('async renderError rejection');
+        },
+      },
+    ],
+  });
+
+  try {
+    await expect(build.generate()).rejects.toThrow('async renderError rejection');
+  } finally {
+    await build.close();
+  }
 });
 
 describe('Plugin buildEnd hook', async () => {
@@ -329,7 +477,7 @@ describe('Plugin closeBundle hook', async () => {
     } catch (error: any) {
       expect(error.message).toMatchInlineSnapshot(
         `
-        "[ALREADY_CLOSED] Bundle is already closed, no more calls to "generate" or "write" are allowed.
+        "[ALREADY_CLOSED] Cannot call bundle.generate() or bundle.write() after bundle.close() has started.
         "
       `,
       );

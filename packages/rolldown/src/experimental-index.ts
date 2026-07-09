@@ -36,8 +36,17 @@ export { moduleRunnerTransform } from './utils/module-runner-transform';
 export { ResolverFactory } from './utils/resolver-factory';
 export { resolveTsconfig } from './utils/resolve-tsconfig';
 export {
+  AsyncContextUnavailableError,
+  configureAsyncContext,
+  getAsyncContextSupport,
+  type AsyncContextProvider,
+  type AsyncContextStorage,
+  type AsyncContextSupport,
+} from './utils/async-context';
+export {
   getRuntimeCapabilitiesCompat as getRuntimeCapabilities,
   getRuntimeSupport,
+  type RuntimeFeature,
   type RuntimeSupport,
   UnsupportedRuntimeFeatureError,
 } from './runtime-support';

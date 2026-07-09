@@ -55,7 +55,7 @@ Each line is a self-contained JSON object with an `action` discriminator field. 
 
 ### Read-after-close contract
 
-`meta.json` and `logs.json` are only guaranteed to be complete and readable **after `await bundle.close()` resolves successfully**. Events flow through a channel to a background writer thread and file output is buffered via `BufWriter`, so reading the files immediately after `generate()`/`write()` may return empty or truncated content. `bundle.close()` sends a per-owner `CloseSession` command with an ack channel and awaits the writer result, establishing the happens-before edge consumers depend on. Commands are processed serially in submission order, so the close result covers every earlier write command for that logical session.
+`meta.json` and `logs.json` are only guaranteed to be complete and readable **after `await bundle.close()` resolves successfully**. Native and threaded-WASI events flow through a channel to a background writer thread; genuine threadless WASI processes the same commands synchronously behind a mutex because it cannot create OS threads. Both backends buffer file output via `BufWriter`, so reading the files immediately after `generate()`/`write()` may return empty or truncated content. `bundle.close()` sends a per-owner `CloseSession` command with an ack channel and awaits the writer result, establishing the happens-before edge consumers depend on. Commands are processed serially in submission order, so the close result covers every earlier write command for that logical session.
 
 The writer retains directory creation, file open, event serialization/write, and flush failures per logical session and clones each distinct failure into every active owner's queue. A newly overlapping owner inherits already-retained failures. Repeated failures for the same operation/path are coalesced to the first diagnostic while the writer still retries the I/O, preventing one broken directory from creating an unbounded close aggregate. Every owner close flushes the shared files and returns only that owner's queue. Shared files, dictionaries, and retained failures remain available until the final owner closes; duplicate authoritative/fallback closes are no-ops. Consequently, one same-root/same-ID bundler cannot consume another's state or diagnostics.
 
@@ -105,7 +105,7 @@ filesystem directory uses a bounded encoded component.
 - **`DebugTracer`** — Acquires the serialized process-global subscriber result, registers one writer owner, and increments the active-tracer count used by both devtools layer filters. Its `DevtoolsSessionKey` combines the logical canonical-root/raw-ID pair with a unique owner ID. Clones share one `Arc` lease, so only the final clone sends the best-effort no-ack close fallback and decrements the active count. Each admitted native operation guard retains a clone, preventing N-API object finalization from closing the owner while that operation can still emit events. The authoritative flush path clones the same owner key into `ClassicBundler::close()`, passes it to `rolldown_devtools::flush_session(...)`, and awaits the structured result before resolving.
 - **`Session`** — Holds a session `id` (e.g. `sid_0_1710000000000`) and a parent `tracing::Span`. All build spans are children of the session span. A `Session::dummy()` is used when devtools is disabled (no-op span).
 - **`DevtoolsLayer`** — A `tracing_subscriber::Layer` that extracts `CONTEXT_*` prefixed fields from spans and stores them as `ContextData` in span extensions.
-- **`DevtoolsFormatter`** — A `FormatEvent` impl that parses `devtoolsAction`-tagged events, injects context variables, consumes the output root carried by the session span, encodes the session directory component, and enqueues the resolved action for the background writer.
+- **`DevtoolsFormatter`** — A `FormatEvent` impl that parses `devtoolsAction`-tagged events, injects context variables, consumes the output root carried by the session span, encodes the session directory component, and submits the resolved action to the selected writer backend.
 
 ### Tracing Mechanism
 
@@ -203,7 +203,10 @@ Run: `pnpm --filter @rolldown/debug run gen-action-types`
 
 ## Static Data Management
 
-The process-global background writer thread owns one `WriterState`:
+The process-global writer backend owns one `WriterState`. Native and
+`wasm32-wasip1-threads` builds use a channel plus one background writer thread.
+The genuine threadless `wasm32-wasip1` build stores the same state behind an
+inline mutex and processes commands synchronously:
 
 - `files` — one buffered file handle and `StringRef` dictionary per output path
 - `files_by_session` — files belonging to each logical session
@@ -218,7 +221,7 @@ close commands carry the public key, which adds a unique owner ID. Reusing an
 ID in different cwd values cannot merge state, while same-root/same-ID owners
 intentionally append to the same files without sharing close ownership.
 
-The writer serializes access to this state, so write, register, and close commands cannot interleave inside a file operation. Writes with no active owner are ignored, preventing late events from reopening a finalized session. `CloseSession` flushes the addressed logical session, unregisters exactly one owner, and only removes shared state for the final owner. The ack returns `Result<(), DevtoolsWriterError>` containing that owner's retained failures. When the process-global channel disconnects, the writer flushes and clears any remaining state best-effort.
+Each backend serializes access to this state, so write, register, and close commands cannot interleave inside a file operation. Writes with no active owner are ignored, preventing late events from reopening a finalized session. `CloseSession` flushes the addressed logical session, unregisters exactly one owner, and only removes shared state for the final owner. The ack returns `Result<(), DevtoolsWriterError>` containing that owner's retained failures. When the threaded backend's process-global channel disconnects, the writer flushes and clears any remaining state best-effort.
 
 ## Consumer Side
 

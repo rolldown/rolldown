@@ -6,8 +6,23 @@ import { BindingMismatchError } from './utils/binding-mismatch-error';
 export interface RuntimeSupport {
   dev: boolean;
   watch: boolean;
+  dynamicImportVarsResolver: boolean;
+  importGlobResolver: boolean;
   parallelPlugins: boolean;
-  viteDynamicImportVarsResolver: boolean;
+  pluginErrorMetadata: boolean;
+  symlinks: boolean;
+  /**
+   * Whether the loaded binding is the threadless WASI flavor required by
+   * managed workerd loaders. This does not assert that the current package
+   * exposes `@rolldown/browser/workerd`.
+   */
+  threadlessWasi: boolean;
+  /**
+   * Whether the loaded package exposes its managed workerd entry for this
+   * binding. This is true for the threadless `@rolldown/browser` package, not
+   * for a standalone threadless binding loaded through another package.
+   */
+  workerd: boolean;
 }
 
 export type RuntimeFeature = keyof RuntimeSupport;
@@ -21,15 +36,25 @@ const RUNTIME_TARGETS = ['native', 'wasi', 'wasi-threads'] as const;
 const FEATURE_NAMES: Record<RuntimeFeature, string> = {
   dev: 'dev()',
   watch: 'watch()',
-  parallelPlugins: 'Parallel JavaScript plugins',
-  viteDynamicImportVarsResolver: "viteDynamicImportVarsPlugin()'s resolver option",
+  dynamicImportVarsResolver: 'viteDynamicImportVarsPlugin({ resolver })',
+  importGlobResolver: 'viteImportGlobPlugin() package and subpath resolution',
+  parallelPlugins: 'parallel JavaScript plugins',
+  pluginErrorMetadata: 'structured plugin error metadata',
+  symlinks: 'symbolic-link traversal',
+  threadlessWasi: 'threadless WASI compatibility',
+  workerd: 'the managed workerd loader',
 };
 
 const FEATURE_ALTERNATIVES: Record<RuntimeFeature, string> = {
   dev: 'Use a MultiThread runtime.',
   watch: 'Use one-shot builds on WASI or run watch mode with a native binding.',
+  dynamicImportVarsResolver: 'Use a native binding.',
+  importGlobResolver: 'Use a native binding.',
   parallelPlugins: 'Use a native binding.',
-  viteDynamicImportVarsResolver: 'Use a MultiThread runtime or omit the resolver option.',
+  pluginErrorMetadata: 'Use a native binding.',
+  symlinks: 'Use a native binding.',
+  threadlessWasi: 'Use the threadless WASI artifact.',
+  workerd: 'Use @rolldown/browser/workerd with the threadless WASI artifact.',
 };
 
 export class UnsupportedRuntimeFeatureError extends Error {
@@ -63,11 +88,17 @@ export function getRuntimeSupport(
   runtime: BindingRuntimeCapabilities = getRuntimeCapabilitiesCompat(),
 ): RuntimeSupport {
   runtime = normalizeRuntimeCapabilities(runtime);
+  const threadlessWasi = runtime.target === 'wasi' && !runtime.threads;
   return {
     dev: runtime.devSupported,
     watch: runtime.watchSupported,
+    dynamicImportVarsResolver: true,
+    importGlobResolver: true,
     parallelPlugins: !runtime.wasi,
-    viteDynamicImportVarsResolver: runtime.threads,
+    pluginErrorMetadata: !runtime.wasi,
+    symlinks: !runtime.wasi,
+    threadlessWasi,
+    workerd: threadlessWasi && import.meta.workerdPackageApi === true,
   };
 }
 
@@ -163,6 +194,12 @@ function normalizeRuntimeCapabilities(
   }
   if (wasi !== (target !== 'native')) {
     throw new BindingRuntimeContractError('wasi does not agree with the reported target');
+  }
+  if (devSupported !== threads) {
+    throw new BindingRuntimeContractError('devSupported does not agree with threads');
+  }
+  if (watchSupported !== !wasi) {
+    throw new BindingRuntimeContractError('watchSupported does not agree with wasi');
   }
   if (loadedTarget && loadedTarget !== target) {
     throw new BindingRuntimeContractError(

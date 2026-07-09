@@ -1,8 +1,8 @@
 diff --git a/dist/emnapi-core.cjs.js b/dist/emnapi-core.cjs.js
-index 822495213a92dcb7efc1a9322f72fcd9a65b2d96..06424655a57079879f190f7ec61fa2c43746545f 100644
+index 822495213a92dcb7efc1a9322f72fcd9a65b2d96..b56d19d24e404cc34c24953dcba3c8c2d325e6bb 100644
 --- a/dist/emnapi-core.cjs.js
 +++ b/dist/emnapi-core.cjs.js
-@@ -1440,12 +1440,11 @@ function createNapiModule(options) {
+@@ -1440,12 +1440,20 @@ function createNapiModule(options) {
                  var has_more = true;
                  var iterations_left = 1000;
                  var dispatchStateAddress = func + emnapiTSFN.offset.dispatch_state;
@@ -10,14 +10,24 @@ index 822495213a92dcb7efc1a9322f72fcd9a65b2d96..06424655a57079879f190f7ec61fa2c4
                  var index = dispatchStateAddress >>> 2;
                  while (has_more && --iterations_left !== 0) {
 -                    Atomics.store(ui32a, index, 1);
-+                    Atomics.store(new Uint32Array(emnapiTSFN.ensureBufferFor(dispatchStateAddress + 4)), index, 1);
-                     has_more = emnapiTSFN.dispatchOne(func);
+-                    has_more = emnapiTSFN.dispatchOne(func);
 -                    if (Atomics.exchange(ui32a, index, 0) !== 1) {
++                    Atomics.store(new Uint32Array(emnapiTSFN.ensureBufferFor(dispatchStateAddress + 4)), index, 1);
++                    try {
++                        has_more = emnapiTSFN.dispatchOne(func);
++                    }
++                    catch (err) {
++                        if (emnapiTSFN._liveSet.has(func)) {
++                            Atomics.exchange(new Uint32Array(emnapiTSFN.ensureBufferFor(dispatchStateAddress + 4)), index, 0);
++                            emnapiTSFN.send(func);
++                        }
++                        throw err;
++                    }
 +                    if (Atomics.exchange(new Uint32Array(emnapiTSFN.ensureBufferFor(dispatchStateAddress + 4)), index, 0) !== 1) {
                          has_more = true;
                      }
                  }
-@@ -1456,21 +1455,22 @@ function createNapiModule(options) {
+@@ -1456,32 +1464,33 @@ function createNapiModule(options) {
              enqueue: function (func) {
                  var pending = func + emnapiTSFN.offset.async_pending;
                  var scheduled = func + emnapiTSFN.offset.async_u_fd;
@@ -39,13 +49,18 @@ index 822495213a92dcb7efc1a9322f72fcd9a65b2d96..06424655a57079879f190f7ec61fa2c4
                          return;
                      }
                      emnapiCtx.feature.setImmediate(function () {
++                        if (!emnapiTSFN._liveSet.has(func)) {
++                            return;
++                        }
                          try {
 -                            if (Atomics.exchange(i32a, pending >>> 2, 0) === 0) {
+-                                return;
+-                            }
+-                            if (!emnapiTSFN._liveSet.has(func)) {
 +                            if (Atomics.exchange(state(), pending >>> 2, 0) === 0) {
                                  return;
                              }
-                             if (!emnapiTSFN._liveSet.has(func)) {
-@@ -1480,8 +1480,8 @@ function createNapiModule(options) {
+                             emnapiTSFN.dispatch(func);
                          }
                          finally {
                              if (emnapiTSFN._liveSet.has(func)) {
@@ -56,7 +71,16 @@ index 822495213a92dcb7efc1a9322f72fcd9a65b2d96..06424655a57079879f190f7ec61fa2c4
                                      emnapiTSFN.enqueue(func);
                                  }
                              }
-@@ -5677,7 +5677,7 @@ function createNapiModule(options) {
+@@ -2942,7 +2951,7 @@ function createNapiModule(options) {
+                 if (data) {
+                     data >>>= 0;
+                     var p = emnapiExternalMemory.getViewPointer(v, true).address;
+-                    HEAP_DATA_VIEW.setUint32(data, p, true);
++                    new DataView(wasmMemory.buffer).setUint32(data, p, true);
+                 }
+                 if (arraybuffer) {
+                     arraybuffer >>>= 0;
+@@ -5677,7 +5686,7 @@ function createNapiModule(options) {
                  var ret = v8func.apply(v8recv, args);
                  if (result) {
                      v = envObject.ensureHandleId(ret);
@@ -65,7 +89,7 @@ index 822495213a92dcb7efc1a9322f72fcd9a65b2d96..06424655a57079879f190f7ec61fa2c4
                  }
                  return envObject.clearLastError();
              }
-@@ -5736,7 +5736,7 @@ function createNapiModule(options) {
+@@ -5736,7 +5745,7 @@ function createNapiModule(options) {
                  }
                  if (result) {
                      v = envObject.ensureHandleId(ret);
@@ -75,10 +99,10 @@ index 822495213a92dcb7efc1a9322f72fcd9a65b2d96..06424655a57079879f190f7ec61fa2c4
                  return envObject.getReturnStatus();
              }
 diff --git a/dist/emnapi-core.esm-bundler.js b/dist/emnapi-core.esm-bundler.js
-index fbefd04e7b555b7185593601d05615196571ffe4..ae44a8dad6894fc2ebc36b7c307f57f86de575b1 100644
+index fbefd04e7b555b7185593601d05615196571ffe4..2221cd93c3c34e00847d8c9a82388978b4babbda 100644
 --- a/dist/emnapi-core.esm-bundler.js
 +++ b/dist/emnapi-core.esm-bundler.js
-@@ -1646,12 +1646,11 @@ function createNapiModule(options) {
+@@ -1646,12 +1646,20 @@ function createNapiModule(options) {
                  var has_more = true;
                  var iterations_left = 1000;
                  var dispatchStateAddress = func + emnapiTSFN.offset.dispatch_state;
@@ -86,14 +110,24 @@ index fbefd04e7b555b7185593601d05615196571ffe4..ae44a8dad6894fc2ebc36b7c307f57f8
                  var index = dispatchStateAddress >>> 2;
                  while (has_more && --iterations_left !== 0) {
 -                    Atomics.store(ui32a, index, 1);
-+                    Atomics.store(new Uint32Array(emnapiTSFN.ensureBufferFor(dispatchStateAddress + 4)), index, 1);
-                     has_more = emnapiTSFN.dispatchOne(func);
+-                    has_more = emnapiTSFN.dispatchOne(func);
 -                    if (Atomics.exchange(ui32a, index, 0) !== 1) {
++                    Atomics.store(new Uint32Array(emnapiTSFN.ensureBufferFor(dispatchStateAddress + 4)), index, 1);
++                    try {
++                        has_more = emnapiTSFN.dispatchOne(func);
++                    }
++                    catch (err) {
++                        if (emnapiTSFN._liveSet.has(func)) {
++                            Atomics.exchange(new Uint32Array(emnapiTSFN.ensureBufferFor(dispatchStateAddress + 4)), index, 0);
++                            emnapiTSFN.send(func);
++                        }
++                        throw err;
++                    }
 +                    if (Atomics.exchange(new Uint32Array(emnapiTSFN.ensureBufferFor(dispatchStateAddress + 4)), index, 0) !== 1) {
                          has_more = true;
                      }
                  }
-@@ -1666,8 +1665,9 @@ function createNapiModule(options) {
+@@ -1666,8 +1674,9 @@ function createNapiModule(options) {
                  // `scheduled` prevents queueing the same main-thread drain chain more than
                  // once while a previous wakeup is still in flight.
                  var scheduled = func + emnapiTSFN.offset.async_u_fd;
@@ -105,7 +139,7 @@ index fbefd04e7b555b7185593601d05615196571ffe4..ae44a8dad6894fc2ebc36b7c307f57f8
                      return;
                  }
                  // Match uv_async_send-style coalescing in JS: the first turn represents
-@@ -1678,15 +1678,15 @@ function createNapiModule(options) {
+@@ -1678,20 +1687,18 @@ function createNapiModule(options) {
                      if (!emnapiTSFN._liveSet.has(func)) {
                          return;
                      }
@@ -116,15 +150,23 @@ index fbefd04e7b555b7185593601d05615196571ffe4..ae44a8dad6894fc2ebc36b7c307f57f8
                          return;
                      }
                      emnapiCtx.feature.setImmediate(function () {
++                        if (!emnapiTSFN._liveSet.has(func)) {
++                            return;
++                        }
                          try {
                              // Consume the coalesced wakeup once, then let dispatch() observe any
                              // queue mutations through dispatch_state like the C implementation.
 -                            if (Atomics.exchange(i32a, pending >>> 2, 0) === 0) {
+-                                return;
+-                            }
+-                            // After destroy(), the func address is freed.  Skip dispatch
+-                            // to avoid use-after-free (JS-side lifecycle check).
+-                            if (!emnapiTSFN._liveSet.has(func)) {
 +                            if (Atomics.exchange(state(), pending >>> 2, 0) === 0) {
                                  return;
                              }
-                             // After destroy(), the func address is freed.  Skip dispatch
-@@ -1700,8 +1700,8 @@ function createNapiModule(options) {
+                             emnapiTSFN.dispatch(func);
+@@ -1700,8 +1707,8 @@ function createNapiModule(options) {
                              // Allow a later wakeup to schedule a new drain chain. If another
                              // worker-thread send raced with this drain, enqueue one more turn.
                              if (emnapiTSFN._liveSet.has(func)) {
@@ -135,7 +177,16 @@ index fbefd04e7b555b7185593601d05615196571ffe4..ae44a8dad6894fc2ebc36b7c307f57f8
                                      emnapiTSFN.enqueue(func);
                                  }
                              }
-@@ -6396,7 +6396,7 @@ function createNapiModule(options) {
+@@ -3274,7 +3281,7 @@ function createNapiModule(options) {
+                     data >>>= 0;
+                     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                     var p = emnapiExternalMemory.getViewPointer(v, true).address;
+-                    HEAP_DATA_VIEW.setUint32(data, p, true);
++                    new DataView(wasmMemory.buffer).setUint32(data, p, true);
+                 }
+                 if (arraybuffer) {
+                     arraybuffer >>>= 0;
+@@ -6396,7 +6403,7 @@ function createNapiModule(options) {
                  var ret = v8func.apply(v8recv, args);
                  if (result) {
                      v = envObject.ensureHandleId(ret);
@@ -144,7 +195,7 @@ index fbefd04e7b555b7185593601d05615196571ffe4..ae44a8dad6894fc2ebc36b7c307f57f8
                  }
                  return envObject.clearLastError();
              }
-@@ -6458,7 +6458,7 @@ function createNapiModule(options) {
+@@ -6458,7 +6465,7 @@ function createNapiModule(options) {
                  }
                  if (result) {
                      v = envObject.ensureHandleId(ret);
@@ -154,10 +205,10 @@ index fbefd04e7b555b7185593601d05615196571ffe4..ae44a8dad6894fc2ebc36b7c307f57f8
                  return envObject.getReturnStatus();
              }
 diff --git a/dist/emnapi-core.mjs b/dist/emnapi-core.mjs
-index 76ea12034ef6880cdd9481b9282fa4a65cfdf369..ac4d9e1724723447ac82964d037bf442a565207b 100644
+index 76ea12034ef6880cdd9481b9282fa4a65cfdf369..3806977ba5f94b3ddad0ca35cb2cdd71ced35386 100644
 --- a/dist/emnapi-core.mjs
 +++ b/dist/emnapi-core.mjs
-@@ -1441,12 +1441,11 @@ function createNapiModule(options) {
+@@ -1441,12 +1441,20 @@ function createNapiModule(options) {
                  var has_more = true;
                  var iterations_left = 1000;
                  var dispatchStateAddress = func + emnapiTSFN.offset.dispatch_state;
@@ -165,14 +216,24 @@ index 76ea12034ef6880cdd9481b9282fa4a65cfdf369..ac4d9e1724723447ac82964d037bf442
                  var index = dispatchStateAddress >>> 2;
                  while (has_more && --iterations_left !== 0) {
 -                    Atomics.store(ui32a, index, 1);
-+                    Atomics.store(new Uint32Array(emnapiTSFN.ensureBufferFor(dispatchStateAddress + 4)), index, 1);
-                     has_more = emnapiTSFN.dispatchOne(func);
+-                    has_more = emnapiTSFN.dispatchOne(func);
 -                    if (Atomics.exchange(ui32a, index, 0) !== 1) {
++                    Atomics.store(new Uint32Array(emnapiTSFN.ensureBufferFor(dispatchStateAddress + 4)), index, 1);
++                    try {
++                        has_more = emnapiTSFN.dispatchOne(func);
++                    }
++                    catch (err) {
++                        if (emnapiTSFN._liveSet.has(func)) {
++                            Atomics.exchange(new Uint32Array(emnapiTSFN.ensureBufferFor(dispatchStateAddress + 4)), index, 0);
++                            emnapiTSFN.send(func);
++                        }
++                        throw err;
++                    }
 +                    if (Atomics.exchange(new Uint32Array(emnapiTSFN.ensureBufferFor(dispatchStateAddress + 4)), index, 0) !== 1) {
                          has_more = true;
                      }
                  }
-@@ -1457,21 +1456,22 @@ function createNapiModule(options) {
+@@ -1457,32 +1465,33 @@ function createNapiModule(options) {
              enqueue: function (func) {
                  var pending = func + emnapiTSFN.offset.async_pending;
                  var scheduled = func + emnapiTSFN.offset.async_u_fd;
@@ -194,13 +255,18 @@ index 76ea12034ef6880cdd9481b9282fa4a65cfdf369..ac4d9e1724723447ac82964d037bf442
                          return;
                      }
                      emnapiCtx.feature.setImmediate(function () {
++                        if (!emnapiTSFN._liveSet.has(func)) {
++                            return;
++                        }
                          try {
 -                            if (Atomics.exchange(i32a, pending >>> 2, 0) === 0) {
+-                                return;
+-                            }
+-                            if (!emnapiTSFN._liveSet.has(func)) {
 +                            if (Atomics.exchange(state(), pending >>> 2, 0) === 0) {
                                  return;
                              }
-                             if (!emnapiTSFN._liveSet.has(func)) {
-@@ -1481,8 +1481,8 @@ function createNapiModule(options) {
+                             emnapiTSFN.dispatch(func);
                          }
                          finally {
                              if (emnapiTSFN._liveSet.has(func)) {
@@ -211,7 +277,16 @@ index 76ea12034ef6880cdd9481b9282fa4a65cfdf369..ac4d9e1724723447ac82964d037bf442
                                      emnapiTSFN.enqueue(func);
                                  }
                              }
-@@ -5678,7 +5678,7 @@ function createNapiModule(options) {
+@@ -2943,7 +2952,7 @@ function createNapiModule(options) {
+                 if (data) {
+                     data >>>= 0;
+                     var p = emnapiExternalMemory.getViewPointer(v, true).address;
+-                    HEAP_DATA_VIEW.setUint32(data, p, true);
++                    new DataView(wasmMemory.buffer).setUint32(data, p, true);
+                 }
+                 if (arraybuffer) {
+                     arraybuffer >>>= 0;
+@@ -5678,7 +5687,7 @@ function createNapiModule(options) {
                  var ret = v8func.apply(v8recv, args);
                  if (result) {
                      v = envObject.ensureHandleId(ret);
@@ -220,7 +295,7 @@ index 76ea12034ef6880cdd9481b9282fa4a65cfdf369..ac4d9e1724723447ac82964d037bf442
                  }
                  return envObject.clearLastError();
              }
-@@ -5737,7 +5737,7 @@ function createNapiModule(options) {
+@@ -5737,7 +5746,7 @@ function createNapiModule(options) {
                  }
                  if (result) {
                      v = envObject.ensureHandleId(ret);

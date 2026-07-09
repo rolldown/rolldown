@@ -7,7 +7,7 @@ use std::{
   panic::{AssertUnwindSafe, catch_unwind},
   path::{Component, Path, PathBuf},
   sync::{
-    Arc, LazyLock,
+    Arc, LazyLock, Mutex,
     atomic::{AtomicU64, Ordering},
     mpsc::{Receiver, Sender, channel},
   },
@@ -179,26 +179,36 @@ pub enum LogCommand {
 }
 
 enum WriterBackend {
+  #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
   Ready(Sender<LogCommand>),
+  Synchronous(Mutex<WriterState>),
+  #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
   Failed(DevtoolsWriterFailure),
 }
 
 impl WriterBackend {
   fn start() -> Self {
-    let (tx, rx) = channel::<LogCommand>();
-    match std::thread::Builder::new().name("rolldown-devtools-writer".into()).spawn(move || {
-      let mut state = WriterState::default();
-      while let Ok(cmd) = rx.recv() {
-        state.handle(cmd);
+    #[cfg(all(target_family = "wasm", not(rolldown_wasi_threads)))]
+    {
+      Self::Synchronous(Mutex::new(WriterState::default()))
+    }
+    #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
+    {
+      let (tx, rx) = channel::<LogCommand>();
+      match std::thread::Builder::new().name("rolldown-devtools-writer".into()).spawn(move || {
+        let mut state = WriterState::default();
+        while let Ok(cmd) = rx.recv() {
+          state.handle(cmd);
+        }
+        state.flush_all();
+      }) {
+        Ok(_) => Self::Ready(tx),
+        Err(error) => Self::Failed(DevtoolsWriterFailure::new(
+          DevtoolsWriterOperation::StartWriter,
+          "rolldown-devtools-writer".into(),
+          error,
+        )),
       }
-      state.flush_all();
-    }) {
-      Ok(_) => Self::Ready(tx),
-      Err(error) => Self::Failed(DevtoolsWriterFailure::new(
-        DevtoolsWriterOperation::StartWriter,
-        "rolldown-devtools-writer".into(),
-        error,
-      )),
     }
   }
 }
@@ -223,9 +233,16 @@ where
   F: FnOnce() -> WriterBackend,
 {
   if let Err(payload) = catch_unwind(AssertUnwindSafe(|| match &**backend {
+    #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
     WriterBackend::Ready(sender) => {
       let _ = sender.send(cmd);
     }
+    WriterBackend::Synchronous(state) => {
+      if let Ok(mut state) = state.lock() {
+        state.handle(cmd);
+      }
+    }
+    #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
     WriterBackend::Failed(_) => {}
   })) {
     discard_panic_payload(payload);
@@ -250,6 +267,7 @@ where
   let (ack, rx) = channel();
   let fallback_ack = ack.clone();
   let result = catch_unwind(AssertUnwindSafe(|| match &**backend {
+    #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
     WriterBackend::Ready(sender) => {
       sender.send(LogCommand::CloseSession { session, ack: Some(ack) }).map_err(|_| {
         DevtoolsWriterFailure::message(
@@ -259,6 +277,18 @@ where
         )
       })
     }
+    WriterBackend::Synchronous(state) => {
+      let mut state = state.lock().map_err(|_| {
+        DevtoolsWriterFailure::message(
+          DevtoolsWriterOperation::AccessWriter,
+          "rolldown-devtools-writer".into(),
+          "synchronous writer state was poisoned",
+        )
+      })?;
+      state.handle(LogCommand::CloseSession { session, ack: Some(ack) });
+      Ok(())
+    }
+    #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
     WriterBackend::Failed(failure) => Err(failure.clone()),
   }));
 
@@ -672,6 +702,7 @@ impl<W: Write> WriterState<W> {
     }
   }
 
+  #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
   fn flush_all(&mut self) {
     let mut owners =
       self.owners_by_session.values().flat_map(FxHashSet::iter).cloned().collect::<Vec<_>>();
@@ -927,6 +958,42 @@ mod tests {
       .expect("receive immediate startup failure")
       .expect_err("startup should fail");
     assert_eq!(error.failures()[0].operation(), DevtoolsWriterOperation::StartWriter);
+  }
+
+  #[test]
+  fn synchronous_backend_serializes_writes_and_acknowledges_flush_inline() {
+    let cwd = temp_path("synchronous-backend");
+    fs::create_dir_all(&cwd).expect("create cwd");
+    let owner = session_key(&cwd, "session");
+    let session = owner.logical_session().clone();
+    let filename = session.log_filename(false);
+    let backend =
+      LazyLock::new(|| WriterBackend::Synchronous(Mutex::new(WriterState::default())));
+
+    send_best_effort_to(
+      &backend,
+      LogCommand::RegisterSessionOwner { session: owner.clone() },
+    );
+    send_best_effort_to(
+      &backend,
+      LogCommand::Write {
+        session,
+        filename: Arc::clone(&filename),
+        action_value: serde_json::json!({ "action": "BuildStart" }),
+      },
+    );
+
+    flush_session_with_backend(owner, &backend)
+      .recv()
+      .expect("receive inline flush result")
+      .expect("flush synchronous writer");
+    let events = fs::read_to_string(filename.as_ref()).expect("read flushed log");
+    assert_eq!(
+      serde_json::from_str::<serde_json::Value>(events.trim()).expect("valid JSON")["action"],
+      "BuildStart"
+    );
+
+    fs::remove_dir_all(cwd).expect("remove cwd");
   }
 
   #[test]

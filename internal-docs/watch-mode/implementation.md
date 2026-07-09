@@ -399,16 +399,17 @@ have been attempted (a single failure is rethrown unchanged). The native
 `close` event callback merely starts/observes this outer lifecycle and returns
 immediately, so the Rust coordinator never waits on a listener that waits on
 itself. On Node.js, `AsyncLocalStorage` identifies close-listener continuations:
-a reentrant `watcher.close()` returns the already-settled native phase. Close
-listener invocations link to their async-context parent, and lookup walks active
-ancestors, so mutually closing watcher listeners A -> B -> A acknowledge A
-without changing unrelated callers. Outside callers receive the outer promise
-and therefore observe listener completion or rejection. Browser hosts do not
-expose an equivalent async context. There, each emitter keeps its native-phase
+browser hosts use a configured provider or native `AsyncContext.Variable` when
+available. A reentrant `watcher.close()` returns the already-settled native
+phase. Close listener invocations link to their async-context parent, and lookup
+walks active ancestors, so mutually closing watcher listeners A -> B -> A
+acknowledge A without changing unrelated callers. Outside callers receive the
+outer promise and therefore observe listener completion or rejection. When
+browser async context is unavailable, each emitter keeps its native-phase
 fallback active for the entire close-listener promise so calls after an `await`
 cannot self-deadlock, including mutually closing watchers. Calls started before
 listener dispatch still hold the outer promise, but an unrelated same-watcher
-call made while the listener is active is indistinguishable and receives the
+call made while the fallback is active is indistinguishable and receives the
 native phase.
 
 `BUNDLE_END` and `ERROR` results adapt their `close()` method through the same
@@ -441,9 +442,10 @@ Other cross-result closes await and replay their own terminal result, including
 the original JavaScript error object. Node async context distinguishes external
 same-result callers, so concurrent and later callers retain the full-result
 behavior. Browser hosts retain each active identity until the hook promise
-settles, allowing reentry after `await`; an unrelated same-result call during
-that window is indistinguishable and receives the acknowledgement, while later
-calls replay the full terminal result.
+settles, allowing reentry after `await`. Capable browser async-context providers
+distinguish unrelated same-result callers. Without one, an unrelated
+same-result call during that window is indistinguishable and receives the
+acknowledgement, while later calls replay the full terminal result.
 
 Asynchronous setup failures (for example an `options` hook rejection) are
 reported as `ERROR` with `result: null`, followed by `END`, matching Rollup's
@@ -454,11 +456,12 @@ on completion of the terminal report and therefore cannot resolve or dispatch
 `ERROR` or `END` listener starts that same lifecycle but receives a reentrant
 nonblocking result, breaking the listener/report self-wait. Close listeners run
 only after terminal reporting, so they may await an `END` observation without
-forming the inverse wait cycle. Node uses async context to identify those
-listener continuations; browser hosts use the same scoped fallback as normal
-close-listener reentrancy. A rejected `ERROR` or `END` listener is retained as
-part of the terminal setup-close result, so every concurrent or later external
-`close()` call replays the same listener failure instead of only logging it.
+forming the inverse wait cycle. Node and configured/native browser providers use
+async context to identify those listener continuations; unavailable browser
+hosts use the same scoped fallback as normal close-listener reentrancy. A
+rejected `ERROR` or `END` listener is retained as part of the terminal
+setup-close result, so every concurrent or later external `close()` call
+replays the same listener failure instead of only logging it.
 
 Setup also uses all-settled option initialization and terminates workers from
 every successfully initialized output if another output or native watcher
@@ -668,9 +671,10 @@ behavior described above. The emitter also owns a deferred close-handler
 Promise so `close()` is valid before `createWatcher()` finishes asynchronous
 plugin setup. The bound `Watcher` remains the authority for native/full-phase
 memoization. Close-listener reentrancy uses `AsyncLocalStorage` on Node.js and a
-per-emitter active-listener fallback in browser builds; the browser fallback
-intentionally prioritizes no deadlock over distinguishing unrelated calls
-during the listener promise. No external dependency is needed.
+configured or native async context in capable browser hosts. Browser hosts
+without a provider use a per-emitter active-listener fallback that intentionally
+prioritizes no deadlock over distinguishing unrelated calls during the listener
+promise.
 
 Setup failures are reported as `ERROR` then `END` before an external same-tick
 `close()` can finish. Errors from another JavaScript realm retain their original

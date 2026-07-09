@@ -317,20 +317,25 @@ test.skipIf(isSingleThread)(
 );
 
 test.skipIf(isSingleThread)(
-  'close can be awaited inside onOutput',
+  'run rejects a self-resolving onOutput thenable and close still settles',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
-    const { dir, input, outputDir } = createFixture('dev-reentrant-output-close');
-    let callbackCompleted = false;
-    let engine!: DevEngine;
-    engine = await dev(
+    const { dir, input, outputDir } = createFixture('dev-cyclic-output');
+    interface CyclicThenable {
+      then(resolve: (value: CyclicThenable) => void): void;
+    }
+    const cyclicThenable: CyclicThenable = {
+      // oxlint-disable-next-line unicorn/no-thenable -- verifies cycle-safe callback settlement
+      then(resolve) {
+        resolve(cyclicThenable);
+      },
+    };
+    const engine = await dev(
       { input, experimental: { devMode: true } },
       { dir: outputDir },
       {
-        async onOutput(result) {
-          if (result instanceof Error) throw result;
-          await engine.close();
-          callbackCompleted = true;
+        onOutput() {
+          return cyclicThenable as unknown as Promise<void>;
         },
       },
     );
@@ -339,10 +344,9 @@ test.skipIf(isSingleThread)(
       if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
     });
 
-    const runResult = await Promise.allSettled([engine.run()]);
-    await engine.close();
-    expect(callbackCompleted).toBe(true);
-    expect(runResult).toHaveLength(1);
+    const cycleError = new TypeError('Thenable cycle detected while settling a callback result');
+    await expect(engine.run()).rejects.toThrow(cycleError);
+    await expect(engine.close()).rejects.toThrow(cycleError);
   },
 );
 

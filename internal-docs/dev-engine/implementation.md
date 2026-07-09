@@ -1101,6 +1101,14 @@ it, and repeats the sequence after runtime restart. CurrentThread remains
 rejected before plugin callbacks, option setup, runtime leasing, or native
 construction.
 
+The three JavaScript dev callbacks run inside an engine-specific async context
+that remains active through their returned promise. Calling and awaiting
+`close()` from one of those callbacks would otherwise deadlock because native
+work awaits the callback while close waits for the admitted operation.
+`DevEngine.close()` rejects that same-engine reentrant call before changing
+lifecycle state. Calls from outside the callback continue to wait for normal
+quiescence, and descendants may close after the callback has settled.
+
 ---
 
 ## 16. Error handling
@@ -1298,6 +1306,10 @@ Current methods that take the exception:
   semantically correct. The doc comment on the method spells this out.
 - `BindingDevEngine::ensure_current_build_finish` (the napi wrapper used
   by `DevEngine.ensureCurrentBuildFinish` in JS) — same shape, PR #9564.
+- `DevEngine.removeClient` in the TypeScript API — websocket disconnect
+  notification is idempotent, and once close has started the client is already
+  being discarded with the engine. Returning without entering the binding
+  avoids an unhandled rejection during normal server shutdown.
 
 Every other lifecycle error path should surface. When adding a new method,
 **default to surfacing**; only take the exception when there's an

@@ -10,6 +10,7 @@ import {
   trackRetryableCleanupOwnership,
   type RetryableCleanup,
 } from './retryable-cleanup';
+import { getParallelPluginInfo } from './parallel-plugin';
 
 export type ParallelPluginWorkerData = {
   registryId: number;
@@ -149,8 +150,9 @@ export async function initializeParallelPlugins(
 
   const pluginInfos: ParallelPluginInfo[] = [];
   for (const [index, plugin] of plugins.entries()) {
-    if ('_parallel' in plugin) {
-      const { fileUrl, options } = plugin._parallel;
+    const parallel = getParallelPluginInfo(plugin);
+    if (parallel) {
+      const { fileUrl, options } = parallel;
       pluginInfos.push({ index, fileUrl, options });
     }
   }

@@ -28,7 +28,7 @@ export function bindingifyRenderStart(
 
   return {
     plugin: async (ctx, opts) => {
-      handler.call(
+      await handler.call(
         new PluginContextImpl(
           args.outputOptions,
           ctx,
@@ -202,7 +202,7 @@ export function bindingifyRenderError(
 
   return {
     plugin: async (ctx, err) => {
-      handler.call(
+      await handler.call(
         new PluginContextImpl(
           args.outputOptions,
           ctx,

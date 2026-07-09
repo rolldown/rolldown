@@ -18,8 +18,8 @@ import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
 import type { AttachDebugOptions, DevModeOptions, InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
-import type { RolldownPlugin } from '../plugin';
-import { bindingifyPlugin } from '../plugin/bindingify-plugin';
+import type { Plugin, RolldownPlugin } from '../plugin';
+import { bindingifyPlugin, type BuildCallbackRunner } from '../plugin/bindingify-plugin';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import type { CloseCallbackScope } from './close-callback-scope';
 import { arraify } from './misc';
@@ -28,6 +28,7 @@ import {
   type NormalizedTransformOptions,
   normalizeTransformOptions,
 } from './normalize-transform-options';
+import { getParallelPluginInfo } from './parallel-plugin';
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
@@ -40,21 +41,22 @@ export function bindingifyInputOptions(
   watchMode: boolean,
   closeCallbackScope?: CloseCallbackScope,
   configWatchHooks: boolean = watchMode,
+  runBuildCallback?: BuildCallbackRunner,
 ): BindingInputOptions {
   const plugins = rawPlugins.map((plugin) => {
-    if ('_parallel' in plugin) {
+    if (getParallelPluginInfo(plugin)) {
       return undefined;
     }
     if (plugin instanceof BuiltinPlugin) {
       switch (plugin.name) {
         case 'builtin:vite-manifest':
-          return bindingifyManifestPlugin(plugin, pluginContextData);
+          return bindingifyManifestPlugin(plugin, pluginContextData, runBuildCallback);
         default:
-          return bindingifyBuiltInPlugin(plugin);
+          return bindingifyBuiltInPlugin(plugin, runBuildCallback);
       }
     }
     return bindingifyPlugin(
-      plugin,
+      plugin as Plugin,
       inputOptions,
       outputOptions,
       pluginContextData,
@@ -64,6 +66,7 @@ export function bindingifyInputOptions(
       watchMode,
       closeCallbackScope,
       configWatchHooks,
+      runBuildCallback,
     );
   });
 
@@ -73,8 +76,8 @@ export function bindingifyInputOptions(
   return {
     input: bindingifyInput(inputOptions.input),
     plugins,
-    cwd: inputOptions.cwd ?? process.cwd(),
-    external: bindingifyExternal(inputOptions.external),
+    cwd: inputOptions.cwd ?? (import.meta.browserBuild ? '/' : process.cwd()),
+    external: bindingifyExternal(inputOptions.external, runBuildCallback),
     resolve: bindingifyResolve(inputOptions.resolve),
     platform: inputOptions.platform,
     shimMissingExports: inputOptions.shimMissingExports,
@@ -83,7 +86,7 @@ export function bindingifyInputOptions(
     // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
     // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
     // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in Rust side), to represent `false | NormalizedTreeshakingOptions`
-    treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake),
+    treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake, runBuildCallback),
     moduleTypes: inputOptions.moduleTypes,
     define: normalizedTransform.define,
     inject: bindingifyInject(normalizedTransform.inject),
@@ -144,12 +147,16 @@ function bindingifyAttachDebugInfo(
   }
 }
 
-function bindingifyExternal(external: InputOptions['external']): BindingInputOptions['external'] {
+function bindingifyExternal(
+  external: InputOptions['external'],
+  runBuildCallback?: BuildCallbackRunner,
+): BindingInputOptions['external'] {
   if (external) {
     if (typeof external === 'function') {
       return (id, importer, isResolved) => {
         if (id.startsWith('\0')) return false;
-        return external(id, importer, isResolved) ?? false;
+        const invoke = () => external(id, importer, isResolved);
+        return (runBuildCallback ? runBuildCallback(invoke) : invoke()) ?? false;
       };
     }
     return arraify(external);
@@ -321,6 +328,7 @@ function bindingifyWatch(
 
 function bindingifyTreeshakeOptions(
   config: InputOptions['treeshake'],
+  runBuildCallback?: BuildCallbackRunner,
 ): BindingInputOptions['treeshake'] {
   if (config === false) {
     return undefined;
@@ -366,10 +374,21 @@ function bindingifyTreeshakeOptions(
       { external: false, sideEffects: true },
     ];
   } else {
-    normalizedConfig.moduleSideEffects = config.moduleSideEffects;
+    normalizedConfig.moduleSideEffects =
+      typeof config.moduleSideEffects === 'function'
+        ? wrapBuildCallback(config.moduleSideEffects, runBuildCallback)
+        : config.moduleSideEffects;
   }
 
   return normalizedConfig;
+}
+
+function wrapBuildCallback<Args extends unknown[], Result>(
+  callback: (...args: Args) => Result,
+  runBuildCallback?: BuildCallbackRunner,
+): (...args: Args) => Result {
+  if (!runBuildCallback) return callback;
+  return (...args) => runBuildCallback(() => callback(...args));
 }
 
 function bindingifyMakeAbsoluteExternalsRelative(

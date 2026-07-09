@@ -44,6 +44,12 @@ const flavorSwitchChildPath = nodePath.join(
   'async-runtime-flavor-switch',
   'child.mjs',
 );
+const configValidationChildPath = nodePath.join(
+  testsDir,
+  'fixtures',
+  'async-runtime-config-validation',
+  'child.mjs',
+);
 
 // The non-config, non-flavor metrics fields: the pure runtime counters that
 // must all be zero on the default build (and that rise after work on an
@@ -76,11 +82,11 @@ const RESETTABLE_EVENT_FIELDS: NumericMetricField[] = [
   'blockingTasksCompleted',
 ];
 
-const HIGH_WATER_FIELDS: NumericMetricField[] = [
+const HIGH_WATER_FIELDS = [
   'maxQueuedRunnables',
   'maxActiveRunnables',
   'maxActiveBlockingTasks',
-];
+] as const satisfies readonly NumericMetricField[];
 
 const LIVE_GAUGE_HIGH_WATER_FIELDS = [
   ['queuedRunnables', 'maxQueuedRunnables'],
@@ -122,6 +128,31 @@ describe('experimental async runtime API', () => {
         scanSettled: true,
         buildSettled: true,
       });
+    },
+  );
+
+  test.runIf(!isDefaultBuild)(
+    'configureAsyncRuntime rejects malformed thread counts before scheduler setup',
+    { timeout: 30_000 },
+    () => {
+      const child = spawnSync(process.execPath, [configValidationChildPath], {
+        cwd: testsDir,
+        encoding: 'utf8',
+        env: { ...process.env },
+        timeout: 25_000,
+      });
+
+      expect(child.error).toBeUndefined();
+      expect(child.signal).toBeNull();
+      expect(child.status, child.stderr || child.stdout).toBe(0);
+      const result = JSON.parse(child.stdout.trim().split('\n').at(-1)!);
+      expect(result.workerErrors).toHaveLength(6);
+      for (const message of result.workerErrors) {
+        expect(message).toContain('`workerThreads` must be a positive integer');
+      }
+      expect(result.blockingError).toContain('`maxBlockingTasks` must be a positive integer');
+      expect(result.config.workerThreads).toBeGreaterThan(0);
+      expect(result.config.maxBlockingTasks).toBe(1);
     },
   );
 

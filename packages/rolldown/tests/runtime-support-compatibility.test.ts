@@ -29,9 +29,14 @@ test('older capability reports derive dev support from scheduler threads', () =>
   });
   expect(getRuntimeSupport()).toEqual({
     dev: true,
+    dynamicImportVarsResolver: true,
+    importGlobResolver: true,
     parallelPlugins: true,
-    viteDynamicImportVarsResolver: true,
+    pluginErrorMetadata: true,
+    symlinks: true,
+    threadlessWasi: false,
     watch: true,
+    workerd: false,
   });
   expect(() => assertRuntimeFeature('dev')).not.toThrow();
   expect(() => assertRuntimeFeature('watch')).not.toThrow();

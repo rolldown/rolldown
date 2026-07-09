@@ -23,6 +23,7 @@ function reserveRegistration(low: number) {
 }
 
 vi.mock('../src/binding.cjs', () => ({
+  __rolldownBindingTarget: 'native',
   getRuntimeCapabilities: vi.fn(() => ({
     asyncRuntimeBuild: bindingState.asyncRuntimeBuild,
     backend: bindingState.backend,

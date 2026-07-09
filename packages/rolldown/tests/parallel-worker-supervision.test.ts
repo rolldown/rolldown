@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import nodePath from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { expect, test } from 'vitest';
+import { isWasiTest } from '@tests/runtime-flavor';
 
 const testsDir = fileURLToPath(new URL('.', import.meta.url));
 const childPath = nodePath.join(testsDir, 'fixtures', 'parallel-worker-supervision', 'child.mjs');
@@ -36,7 +37,7 @@ const preloadSpoofPath = nodePath.join(
   'preload-spoof.mjs',
 );
 
-test(
+test.skipIf(isWasiTest)(
   'parallel workers keep a one-shot process alive through delayed bootstrap',
   {
     timeout: 30_000,
@@ -56,29 +57,33 @@ test(
   },
 );
 
-test('parallel file workers discard inherited string-input execArgv', { timeout: 30_000 }, () => {
-  const child = spawnSync(
-    process.execPath,
-    [
-      '--input-type=module',
-      '--eval',
-      `import(${JSON.stringify(pathToFileURL(bootstrapChildPath).href)})`,
-    ],
-    {
-      cwd: testsDir,
-      encoding: 'utf8',
-      env: { ...process.env },
-      timeout: 25_000,
-    },
-  );
+test.skipIf(isWasiTest)(
+  'parallel file workers discard inherited string-input execArgv',
+  { timeout: 30_000 },
+  () => {
+    const child = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '--eval',
+        `import(${JSON.stringify(pathToFileURL(bootstrapChildPath).href)})`,
+      ],
+      {
+        cwd: testsDir,
+        encoding: 'utf8',
+        env: { ...process.env },
+        timeout: 25_000,
+      },
+    );
 
-  expect(child.error).toBeUndefined();
-  expect(child.signal).toBeNull();
-  expect(child.status, child.stderr || child.stdout).toBe(0);
-  expect(child.stdout).toContain('parallel worker bootstrap completed');
-});
+    expect(child.error).toBeUndefined();
+    expect(child.signal).toBeNull();
+    expect(child.status, child.stderr || child.stdout).toBe(0);
+    expect(child.stdout).toContain('parallel worker bootstrap completed');
+  },
+);
 
-test.each([
+test.skipIf(isWasiTest).each([
   [[], 'parallel worker non-cloneable failure reported'],
   [['--disrupt-reporting'], 'parallel worker reporting capability isolated'],
 ])(
@@ -103,7 +108,7 @@ test.each([
   },
 );
 
-test(
+test.skipIf(isWasiTest)(
   'a failed parallel bootstrap terminates a sibling whose initializer never settles',
   { timeout: 30_000 },
   () => {
@@ -121,7 +126,7 @@ test(
   },
 );
 
-test.each([
+test.skipIf(isWasiTest).each([
   {
     args: ['--import', preloadSpoofPath, preloadSpoofChildPath],
     env: {},
@@ -152,7 +157,7 @@ test.each([
   },
 );
 
-test.each([
+test.skipIf(isWasiTest).each([
   ['error', 'delayed parallel-plugin worker fault'],
   ['exit', 'Parallel-plugin worker exited unexpectedly (exit code 23)'],
 ])(

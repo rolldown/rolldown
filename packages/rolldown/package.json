@@ -102,6 +102,8 @@
     "build-binding:profile": "pnpm build-binding --profile profile --features chrome-tracing",
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
+    "build-binding:wasi-single": "pnpm build-binding --target wasm32-wasip1 --no-default-features --features async-runtime",
+    "build-binding:wasi-single:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1 --no-default-features --features async-runtime",
     "# Scrips for node #": "_",
     "build-node": "node --enable-source-maps --import @oxc-node/core/register -C dev ./build.ts",
     "build-types-check": "tsc -p ./tsconfig.check.json",
@@ -112,8 +114,10 @@
     "build-native:memory-profile": "pnpm run build-binding:profile --features default_global_allocator && pnpm run build-js-glue",
     "build-wasi:debug": "TARGET='rolldown-wasi' pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
     "build-wasi:release": "TARGET='rolldown-wasi' pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
-    "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi|node)$/'",
-    "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi:release|node)$/'",
+    "build-wasi-single:debug": "oxnode ./build-binding.ts --target wasm32-wasip1 --no-default-features --features async-runtime && TARGET='rolldown-wasi-single' node --enable-source-maps --import @oxc-node/core/register -C dev ./build.ts",
+    "build-wasi-single:release": "oxnode ./build-binding.ts --profile release-wasi --target wasm32-wasip1 --no-default-features --features async-runtime && TARGET='rolldown-wasi-single' node --enable-source-maps --import @oxc-node/core/register -C dev ./build.ts",
+    "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi-single|node)$/'",
+    "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi-single:release|node)$/'",
     "# Scrips for docs #": "_",
     "prepublishOnly": "napi pre-publish -t npm --no-gh-release ${NAPI_DRY_RUN:+--dry-run}",
     "publint": "publint ."
@@ -130,6 +134,7 @@
     "@oxc-node/cli": "catalog:",
     "@rollup/plugin-json": "catalog:",
     "buble": "catalog:",
+    "buffer": "catalog:",
     "cac": "catalog:",
     "consola": "catalog:",
     "execa": "catalog:",
@@ -148,7 +153,7 @@
   },
   "napi": {
     "binaryName": "rolldown-binding",
-    "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\nexport type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T\n\n",
+    "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\nexport type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T\nexport type BindingErrorsOr<T> = BindingResult<T>\n\n",
     "packageName": "@rolldown/binding",
     "targets": [
       "x86_64-apple-darwin",
@@ -164,14 +169,18 @@
       "aarch64-pc-windows-msvc",
       "aarch64-linux-android",
       "wasm32-wasip1-threads",
+      "wasm32-wasip1",
       "s390x-unknown-linux-gnu",
       "powerpc64le-unknown-linux-gnu"
     ],
     "wasm": {
       "initialMemory": 16384,
+      "threadlessInitialMemory": 1024,
+      "maximumMemory": 65536,
       "browser": {
         "fs": true,
         "asyncInit": true,
+        "buffer": true,
         "errorEvent": true
       }
     }

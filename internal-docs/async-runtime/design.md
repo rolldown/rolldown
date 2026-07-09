@@ -465,17 +465,31 @@ Tokio, Tokio-blocking, Rayon, and ad-hoc thread-pool tuning problems.
 - The runtime layer normalizes an inherited `ROLLDOWN_RUNTIME=multi` override
   to `CurrentThread` before WebAssembly module initialization because the shared
   scheduler has no WebAssembly MultiThread executor.
-
-## Dependent WASI Packaging
-
-The dependent browser/WASI change owns the distinct artifact and publication
-layout. It will retain the threaded build's `wasi` loader/wasm names and worker
-scripts, while the single-thread build will use `wasip1` names, include the
-deferred workerd loader, and ship no worker scripts. Every managed workerd
-instance factory must install both CurrentThread task and timer hosts before
-returning. A synchronous host-turn scheduling failure must clear its coalescing
-state so a later dispatch can retry, and initialization cleanup failures must
-remain visible even when the primary thrown value is a primitive.
+- Threaded and single-thread WASI builds use distinct artifact names. The
+  threaded build retains the `wasi` loader/wasm names and worker scripts; the
+  single-thread build uses `wasip1` names, includes the deferred workerd loader,
+  and ships no worker scripts. Shared WebAssembly artifacts normalize an
+  inherited `ROLLDOWN_RUNTIME=multi` override to `CurrentThread` before module
+  initialization because the shared scheduler has no WebAssembly MultiThread
+  executor.
+- Threaded-WASI public objects own independent native runtime leases. Concurrent
+  acquisitions retain separate owners, only the final release shuts down the
+  runtime, and restart waits for the previous generation to retire. Closing one
+  build cannot stop another live build, and every lease releases at most once.
+- The canonical workerd entry is `@rolldown/browser/workerd`. Release staging
+  also routes `rolldown/workerd` and the threadless optional package's
+  `./workerd` facade through the same managed factory. They create independent
+  instances with explicit disposal and lifecycle diagnostics; generated
+  binary-name deep imports are compatibility details.
+- Managed workerd entries are self-contained and do not require Node
+  compatibility flags. They bundle the npm Buffer implementation used by
+  emnapi, preserve Buffer values across the public facade, and reject malformed
+  or non-monotonic cross-bundle memory-claim protocols. Same-realm code that
+  runs before every loader remains outside this lifecycle coordination trust
+  boundary.
+- `getRuntimeSupport().threadlessWasi` reports only the binding compatibility
+  required by that entry. The separate `workerd` field is true only in an
+  `@rolldown/browser` build that exposes the managed package entry.
 
 ## Related
 

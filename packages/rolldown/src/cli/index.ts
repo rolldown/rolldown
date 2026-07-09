@@ -30,7 +30,7 @@ async function main() {
 
   // Binding-backed modules snapshot runtime environment variables during
   // module initialization, so load them only after applying --environment.
-  await import('../timer-host');
+  await import('./timer-host-entry');
   const [{ bundleWithCliOptions, bundleWithConfig }, { showHelp }] = await Promise.all([
     import('./commands/bundle'),
     import('./commands/help'),

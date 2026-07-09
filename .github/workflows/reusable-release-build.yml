@@ -74,6 +74,11 @@ jobs:
             build: |
               vp run --filter rolldown build-binding:wasi:release
 
+          - os: ubuntu-latest
+            target: wasm32-wasip1
+            build: |
+              vp run --filter rolldown build-binding:wasi-single:release
+
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
@@ -231,7 +236,7 @@ jobs:
           save-cache: false
 
       - name: Add WASI target
-        run: rustup target add wasm32-wasip1-threads
+        run: rustup target add wasm32-wasip1-threads wasm32-wasip1
 
       - uses: voidzero-dev/setup-vp@35171c92dd08b67d5a9d3f2a4327800e58396f2a # v1.13.0
         with:
@@ -252,6 +257,21 @@ jobs:
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
         run: vp run --filter "@rolldown/browser" build:release
 
+      # Publish-path guard: the browser dist ships the single-thread WASI set
+      # and the stable `@rolldown/browser/workerd` managed entry. A dropped
+      # raw loader or wasm artifact must fail HERE, not after publish.
+      - name: Assert `@rolldown/browser` WASI dist file set
+        run: node scripts/misc/check-wasi-dist-files.mjs single packages/browser/dist
+
+      - name: Assert browser CurrentThread timer registration
+        run: node scripts/misc/check-browser-runtime-contract.mjs packages/browser/dist
+
+      - name: Test packed browser package in Wrangler and Miniflare
+        run: node scripts/misc/check-workerd-packed-consumer.mjs
+
+      - name: Exercise published workerd entry lifecycle and memory canary
+        run: node --expose-gc scripts/misc/check-workerd-memory.mjs --loader=packages/browser/dist/workerd.mjs --wasm=packages/browser/dist/rolldown-binding.wasm32-wasip1.wasm --max-rss-growth-mb=128
+
       - name: Upload `@rolldown/browser` Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -259,6 +279,14 @@ jobs:
           name: browser-artifact
           path: |
             packages/browser/dist/**
+
+      - name: Upload bundled threaded WASI loaders
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          if-no-files-found: error
+          name: threaded-wasi-loader-artifact
+          path: |
+            packages/rolldown/artifacts/threaded-wasi-loaders/**
 
   build-rolldown-debug:
     strategy:

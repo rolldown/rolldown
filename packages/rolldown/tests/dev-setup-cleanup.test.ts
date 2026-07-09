@@ -105,8 +105,11 @@ beforeEach(() => {
 
 test('dev rejects descriptors before plugin promises or setup on threaded WASI', async () => {
   Object.assign(mocks.runtimeCapabilities, {
+    asyncRuntimeBuild: true,
+    backend: 'shared',
     target: 'wasi-threads',
     wasi: true,
+    watchSupported: false,
   });
 
   await expect(

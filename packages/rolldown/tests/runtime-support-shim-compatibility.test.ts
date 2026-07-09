@@ -16,8 +16,13 @@ test('bindings without a capability reporter preserve legacy native feature supp
   });
   expect(getRuntimeSupport()).toEqual({
     dev: true,
+    dynamicImportVarsResolver: true,
+    importGlobResolver: true,
     parallelPlugins: true,
-    viteDynamicImportVarsResolver: true,
+    pluginErrorMetadata: true,
+    symlinks: true,
+    threadlessWasi: false,
     watch: true,
+    workerd: false,
   });
 });

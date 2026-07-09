@@ -36,6 +36,7 @@ const binding = vi.hoisted(() => {
 
   const releaseAsyncRuntime = vi.fn();
   const result = {
+    __rolldownBindingTarget: 'native',
     target: 'native',
     acquireAsyncRuntime: vi.fn(async () => ({
       release: () => releaseAsyncRuntime(),
@@ -84,6 +85,7 @@ vi.mock('oxc-parser/src-js/wrap.js', () => ({
 }));
 
 test('public promise utilities lease only threaded-WASI runtime operations', async () => {
+  binding.__rolldownBindingTarget = 'native';
   binding.target = 'native';
   vi.resetModules();
 
@@ -101,6 +103,7 @@ test('public promise utilities lease only threaded-WASI runtime operations', asy
   expect(binding.acquireAsyncRuntime).not.toHaveBeenCalled();
   expect(binding.releaseAsyncRuntime).not.toHaveBeenCalled();
 
+  binding.__rolldownBindingTarget = 'wasi-threads';
   binding.target = 'wasi-threads';
   vi.resetModules();
 

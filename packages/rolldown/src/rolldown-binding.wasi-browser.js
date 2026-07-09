@@ -4,7 +4,7 @@ import {
   WASI as __WASI,
 } from '@napi-rs/wasm-runtime'
 import { createContext as __emnapiCreateContext } from '@emnapi/runtime'
-import { memfs } from '@napi-rs/wasm-runtime/fs'
+import { memfs, Buffer } from '@napi-rs/wasm-runtime/fs'
 
 
 export const { fs: __fs, vol: __volume } = memfs()
@@ -18,31 +18,15 @@ const __wasi = new __WASI({
 })
 
 const __wasmUrl = new URL('./rolldown-binding.wasm32-wasi.wasm', import.meta.url).href
-const __emnapiContext = __emnapiCreateContext()
-
-let __emnapiContextDestroyWrapped = false
-let __emnapiWasmEnvCleanupPrepared = false
-
-function __wrapEmnapiContextDestroy(instance) {
-  if (__emnapiContextDestroyWrapped) {
-    return
-  }
-  // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
-  const __destroyEmnapiContext = __emnapiContext.destroy
-  __emnapiContext.destroy = function() {
-    if (!__emnapiWasmEnvCleanupPrepared) {
-      const __prepareWasmEnvCleanup =
-        instance.exports.napi_prepare_wasm_env_cleanup
-      if (typeof __prepareWasmEnvCleanup === 'function') {
-        __prepareWasmEnvCleanup()
-      }
-      __emnapiWasmEnvCleanupPrepared = true
-    }
-    return Reflect.apply(__destroyEmnapiContext, this, arguments)
-  }
-  __emnapiContextDestroyWrapped = true
+const __wasmResponse = await globalThis.fetch(__wasmUrl)
+if (!__wasmResponse.ok) {
+  throw new Error(
+    'Failed to fetch WASI module ' + __wasmUrl + ': ' +
+      __wasmResponse.status + ' ' +
+      (__wasmResponse.statusText || 'Unknown Status'),
+  )
 }
-
+const __wasmFile = await __wasmResponse.arrayBuffer()
 
 const __sharedMemory = new WebAssembly.Memory({
   initial: 16384,
@@ -50,48 +34,90 @@ const __sharedMemory = new WebAssembly.Memory({
   shared: true,
 })
 
-const __wasmFile = await fetch(__wasmUrl).then((res) => res.arrayBuffer())
+const __emnapiContext = __emnapiCreateContext()
 
-const {
-  instance: __napiInstance,
-  module: __wasiModule,
-  napiModule: __napiModule,
-} = await __emnapiInstantiateNapiModule(__wasmFile, {
-  context: __emnapiContext,
-  asyncWorkPoolSize: 4,
-  wasi: __wasi,
-  onCreateWorker() {
-    const worker = new Worker(new URL('./wasi-worker-browser.mjs', import.meta.url), {
-      type: 'module',
-    })
-    worker.addEventListener('message', __wasmCreateOnMessageForFsProxy(__fs))
-
-    worker.addEventListener('message', (event) => {
-      if (event.data && typeof event.data === 'object' && event.data.type === 'error') {
-        window.dispatchEvent(new CustomEvent('napi-rs-worker-error', { detail: event.data }))
-      }
-    })
-
-    return worker
-  },
-  overwriteImports(importObject) {
-    importObject.env = {
-      ...importObject.env,
-      ...importObject.napi,
-      ...importObject.emnapi,
-      memory: __sharedMemory,
+function __createInitializationCleanupError(__error, __cleanupError) {
+  let __message = 'WASI module initialization failed'
+  try {
+    if (__error && typeof __error.message === 'string') {
+      __message = __error.message
     }
-    return importObject
-  },
-  beforeInit({ instance }) {
-    __wrapEmnapiContextDestroy(instance)
-    for (const name of Object.keys(instance.exports)) {
-      if (name.startsWith('__napi_register__')) {
-        instance.exports[name]()
+  } catch {}
+  const __errors = [__error, __cleanupError]
+  const __AggregateError = globalThis.AggregateError
+  const __combinedError =
+    typeof __AggregateError === 'function'
+      ? new __AggregateError(__errors, __message)
+      : new Error(__message)
+  if (!('errors' in __combinedError)) {
+    __combinedError.errors = __errors
+  }
+  __combinedError.cause = __error
+  return __combinedError
+}
+
+let __napiInstance
+let __wasiModule
+let __napiModule
+
+try {
+  __emnapiContext.feature.Buffer = Buffer
+
+  ;({
+    instance: __napiInstance,
+    module: __wasiModule,
+    napiModule: __napiModule,
+  } = await __emnapiInstantiateNapiModule(__wasmFile, {
+    context: __emnapiContext,
+    asyncWorkPoolSize: 4,
+    wasi: __wasi,
+    onCreateWorker() {
+      const worker = new Worker(new URL('./wasi-worker-browser.mjs', import.meta.url), {
+        type: 'module',
+      })
+      worker.addEventListener('message', __wasmCreateOnMessageForFsProxy(__fs))
+
+      worker.addEventListener('message', (event) => {
+        if (event.data && typeof event.data === 'object' && event.data.type === 'error') {
+          const __CustomEvent = globalThis.CustomEvent
+          if (
+            typeof globalThis.dispatchEvent === 'function' &&
+            typeof __CustomEvent === 'function'
+          ) {
+            globalThis.dispatchEvent(
+              new __CustomEvent('napi-rs-worker-error', { detail: event.data }),
+            )
+          }
+        }
+      })
+
+      return worker
+    },
+    overwriteImports(importObject) {
+      importObject.env = {
+        ...importObject.env,
+        ...importObject.napi,
+        ...importObject.emnapi,
+        memory: __sharedMemory,
       }
-    }
-  },
-})
+      return importObject
+    },
+    beforeInit({ instance }) {
+      for (const name of Object.keys(instance.exports)) {
+        if (name.startsWith('__napi_register__')) {
+          instance.exports[name]()
+        }
+      }
+    },
+  }))
+} catch (__error) {
+  try {
+    await Promise.resolve(__emnapiContext.destroy())
+  } catch (__cleanupError) {
+    throw __createInitializationCleanupError(__error, __cleanupError)
+  }
+  throw __error
+}
 export default __napiModule.exports
 export const __rolldownBindingTarget = 'wasi-threads'
 export const LegalCommentsMode = __napiModule.exports.LegalCommentsMode

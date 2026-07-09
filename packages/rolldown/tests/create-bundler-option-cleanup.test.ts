@@ -92,8 +92,11 @@ test('post-worker option access failures terminate the initialized worker pool',
 
 test('outputOptions rejects an injected descriptor before assimilating a preceding thenable', async () => {
   Object.assign(mocks.runtimeCapabilities, {
+    asyncRuntimeBuild: true,
+    backend: 'shared',
     target: 'wasi-threads',
     wasi: true,
+    watchSupported: false,
   });
   let pluginPromiseThenCalls = 0;
   const optionPromise = createBundlerOptions(
@@ -135,6 +138,45 @@ test('outputOptions rejects an injected descriptor before assimilating a precedi
     feature: 'parallelPlugins',
   });
   expect(pluginPromiseThenCalls).toBe(0);
+  expect(mocks.initializeParallelPlugins).not.toHaveBeenCalled();
+  expect(mocks.bindingifyInputOptions).not.toHaveBeenCalled();
+});
+
+test.each([
+  [
+    'same-identity cycle',
+    () => {
+      let options: object;
+      options = new Proxy(
+        {},
+        {
+          getPrototypeOf() {
+            return options;
+          },
+        },
+      );
+      return options;
+    },
+    /Prototype cycle detected while inspecting callback options/,
+  ],
+  [
+    'fresh-proxy chain',
+    () => {
+      const createOptions = (): object =>
+        new Proxy(
+          {},
+          {
+            getPrototypeOf() {
+              return createOptions();
+            },
+          },
+        );
+      return createOptions();
+    },
+    /Prototype chain exceeded 256 objects while inspecting callback options/,
+  ],
+])('rejects a non-terminating input option prototype %s', async (_, createOptions, expected) => {
+  await expect(createBundlerOptions(createOptions(), {}, false)).rejects.toThrow(expected);
   expect(mocks.initializeParallelPlugins).not.toHaveBeenCalled();
   expect(mocks.bindingifyInputOptions).not.toHaveBeenCalled();
 });

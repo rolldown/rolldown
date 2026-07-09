@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use napi::{
   Env,
-  bindgen_prelude::{BufferSlice, JsObjectValue, Object},
+  bindgen_prelude::{JsObjectValue, Object, Uint8ArraySlice},
 };
 use napi_derive::napi;
 
@@ -81,7 +81,7 @@ impl BindingOutputAsset {
         source.set_named_property("inner", env.create_string(value)?)?;
       }
       rolldown_common::StrOrBytes::Bytes(value) => {
-        source.set_named_property("inner", BufferSlice::copy_from(env, value)?)?;
+        source.set_named_property("inner", Uint8ArraySlice::from_data(env, value.as_slice())?)?;
       }
     }
     Ok(source)

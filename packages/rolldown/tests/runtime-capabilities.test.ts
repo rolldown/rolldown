@@ -8,12 +8,14 @@ import { createParallelPluginWorkerBootstrap } from '../src/utils/initialize-par
 // Ensures the timer host is registered before `timers` is asserted: importing
 // the rolldown entry runs `setup.ts` -> `timer-host.ts` -> `registerTimerHost`
 // (the same side effect every public binding-loading entry now carries).
-import { watch } from 'rolldown';
+import { rolldown, watch } from 'rolldown';
 import {
   dev,
+  defineParallelPlugin,
   getAsyncRuntimeConfig,
   getRuntimeCapabilities,
   getRuntimeSupport,
+  viteDynamicImportVarsPlugin,
 } from 'rolldown/experimental';
 import { describe, expect, test } from 'vitest';
 
@@ -26,7 +28,6 @@ import { describe, expect, test } from 'vitest';
 // capability shifts the lane's pass/skip counts immediately.
 
 const testsDir = fileURLToPath(new URL('.', import.meta.url));
-const bindingEntry = new URL('../src/binding.cjs', import.meta.url).href;
 const retainedTokioFactoryWorker = `
   (async () => {
     const { parentPort } = await import('node:worker_threads');
@@ -123,140 +124,52 @@ describe('getRuntimeCapabilities', () => {
   });
 
   test('reports complete public workflow support', () => {
-    expect(getRuntimeSupport()).toEqual({
+    const support = getRuntimeSupport();
+    expect(support).toEqual({
       dev: caps.devSupported,
       watch: caps.watchSupported,
+      dynamicImportVarsResolver: true,
+      importGlobResolver: true,
       parallelPlugins: !caps.wasi,
-      viteDynamicImportVarsResolver: caps.threads,
+      pluginErrorMetadata: !caps.wasi,
+      symlinks: !caps.wasi,
+      threadlessWasi: caps.target === 'wasi' && !caps.threads,
+      workerd: false,
+    });
+    expect(Object.keys(support)).toContain('workerd');
+    expect(Object.getOwnPropertyDescriptor(support, 'workerd')).toMatchObject({
+      enumerable: true,
+      value: false,
     });
   });
 
-  test.runIf(caps.asyncRuntimeBuild)(
-    'vite dynamic import vars rejects a JS resolver before CurrentThread can block on its TSFN',
-    { timeout: 10_000 },
-    () => {
-      const env: NodeJS.ProcessEnv = { ...process.env, ROLLDOWN_RUNTIME: 'single' };
-      delete env.ROLLDOWN_PARK_DEADLINE_MS;
-      const child = spawnSync(
-        process.execPath,
-        [
-          '--input-type=module',
-          '-e',
-          `
-            import { build } from 'rolldown';
-            import {
-              UnsupportedRuntimeFeatureError,
-              getRuntimeCapabilities,
-              viteDynamicImportVarsPlugin,
-            } from 'rolldown/experimental';
+  test('JS-backed dynamic import resolvers build through the async callback bridge', async () => {
+    const fixtureDir = nodePath.join(
+      import.meta.dirname,
+      'fixtures/builtin-plugin/dynamic-import-vars/vite',
+    );
+    let resolverCalls = 0;
+    const bundle = await rolldown({
+      input: nodePath.join(fixtureDir, 'main.js'),
+      plugins: [
+        viteDynamicImportVarsPlugin({
+          async resolver(id) {
+            resolverCalls += 1;
+            return id
+              .replace('@', nodePath.join(fixtureDir, 'mods'))
+              .replace('#', nodePath.resolve(fixtureDir, '../../'));
+          },
+        }),
+      ],
+    });
 
-            let buildHookCalls = 0;
-            let resolverCalls = 0;
-            let error;
-            let errorBeforeHostTurn = false;
-            let microtaskRan = false;
-            queueMicrotask(() => {
-              microtaskRan = true;
-            });
-
-            try {
-              const dynamicImportVars = viteDynamicImportVarsPlugin({
-                resolver(id) {
-                  resolverCalls += 1;
-                  return id.replace('@', './resolved');
-                },
-              });
-              await build({
-                input: 'virtual:entry',
-                plugins: [
-                  {
-                    name: 'virtual-entry',
-                    resolveId(id) {
-                      buildHookCalls += 1;
-                      if (id === 'virtual:entry') return '\\0virtual:entry';
-                    },
-                    load(id) {
-                      buildHookCalls += 1;
-                      if (id === '\\0virtual:entry') {
-                        return 'export const load = (name) => import(\`@/\${name}.js\`);';
-                      }
-                    },
-                  },
-                  dynamicImportVars,
-                ],
-                write: false,
-              });
-            } catch (caught) {
-              error = caught;
-              errorBeforeHostTurn = !microtaskRan;
-            }
-
-            const resolverFree = viteDynamicImportVarsPlugin({});
-            const runtime = getRuntimeCapabilities();
-            let bindingBackstopCode = null;
-            let bindingBackstopRejected = false;
-            if (runtime.target === 'native') {
-              const bindingModule = await import(${JSON.stringify(bindingEntry)});
-              const binding = bindingModule.default ?? bindingModule;
-              try {
-                new binding.BindingCallableBuiltinPlugin({
-                  __name: 'builtin:vite-dynamic-import-vars',
-                  options: {
-                    resolver() {
-                      return undefined;
-                    },
-                  },
-                });
-              } catch (caught) {
-                bindingBackstopCode = caught?.code;
-                bindingBackstopRejected = true;
-              }
-            }
-            console.log(JSON.stringify({
-              bindingBackstopCode,
-              bindingBackstopRejected,
-              buildHookCalls,
-              errorBeforeHostTurn,
-              errorCode: error?.code,
-              errorFeature: error?.feature,
-              errorName: error?.name,
-              errorRuntimeFlavor: error?.runtime?.flavor,
-              errorRuntimeTarget: error?.runtime?.target,
-              isTypedError: error instanceof UnsupportedRuntimeFeatureError,
-              resolverCalls,
-              resolverFreeName: resolverFree.name,
-              runtimeFlavor: runtime.flavor,
-            }));
-          `,
-        ],
-        {
-          cwd: testsDir,
-          encoding: 'utf8',
-          env,
-          timeout: 5_000,
-        },
-      );
-
-      expect(child.error, child.stderr).toBeUndefined();
-      expect(child.status, child.stderr).toBe(0);
-      const lines = child.stdout.trim().split('\n');
-      expect(JSON.parse(lines[lines.length - 1])).toEqual({
-        bindingBackstopCode: caps.target === 'native' ? 'WouldDeadlock' : null,
-        bindingBackstopRejected: caps.target === 'native',
-        buildHookCalls: 0,
-        errorBeforeHostTurn: true,
-        errorCode: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
-        errorFeature: 'viteDynamicImportVarsResolver',
-        errorName: 'UnsupportedRuntimeFeatureError',
-        errorRuntimeFlavor: 'CurrentThread',
-        errorRuntimeTarget: caps.target,
-        isTypedError: true,
-        resolverCalls: 0,
-        resolverFreeName: 'builtin:vite-dynamic-import-vars',
-        runtimeFlavor: 'CurrentThread',
-      });
-    },
-  );
+    try {
+      await expect(bundle.generate()).resolves.toBeDefined();
+      expect(resolverCalls).toBeGreaterThan(0);
+    } finally {
+      await bundle.close();
+    }
+  });
 
   test.runIf(caps.flavor === 'CurrentThread')('dev fails before entering the binding', async () => {
     await expect(dev({ input: 'entry.js' })).rejects.toMatchObject({
@@ -288,6 +201,14 @@ describe('getRuntimeCapabilities', () => {
     });
   });
 
+  test.runIf(caps.wasi)('parallel plugins fail before spawning workers on WASI', () => {
+    expect(() => defineParallelPlugin('file:///parallel-plugin.mjs')).toThrowError(
+      expect.objectContaining({
+        code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
+        feature: 'parallelPlugins',
+      }),
+    );
+  });
   test('a timer facility is available once any public entry has loaded', () => {
     // Native/threaded-WASI Tokio builds own a timer wheel; the shared
     // MultiThread flavor owns a timer heap; shared CurrentThread delegates to
@@ -1177,9 +1098,9 @@ describe('getRuntimeCapabilities', () => {
       // exactly the form the timer-host import takes on the wasi dist) must
       // contain the registration call. Top-level chunk code executes on
       // import, so presence in the graph IS registration in the worker's
-      // env. The paired host bridge must include both timeout creation and
-      // cancellation; resolving the relay after clearTimeout lets Rust retire
-      // the detached schedule task immediately.
+      // env. The paired, receiver-bound host bridge must include both timeout
+      // creation and cancellation; resolving the relay after clearTimeout lets
+      // Rust retire the detached schedule task immediately.
       const entryText = readFileSync(parallelWorkerEntry, 'utf8');
       let graphText = entryText;
       for (const match of entryText.matchAll(/(?:from\s+|import\s+)["'](\.\/[^"']+)["']/g)) {
@@ -1191,6 +1112,11 @@ describe('getRuntimeCapabilities', () => {
       expect(graphText).toContain('Reflect.get(globalThis, "setTimeout"');
       expect(graphText).toContain('Reflect.get(globalThis, "clearTimeout"');
       expect(graphText).toContain('Reflect.apply(timer.clearTimeoutHost');
+      expect(graphText).toContain('getCurrentThreadTaskHostContractVersion');
+      expect(graphText).toContain('registerCurrentThreadTaskHost');
+      expect(graphText).toContain('registerTimerHost');
+      expect(graphText).not.toContain('driveCurrentThreadRuntimeTasks');
+      expect(graphText).not.toContain('cancelCurrentThreadRuntimeTaskDispatch');
       expect(graphText).toContain('timer.resolve()');
 
       // BEHAVIORAL: the real entry must actually run as a worker under this

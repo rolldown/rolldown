@@ -19,8 +19,8 @@ export const isSingleThread: boolean = !capabilities.threads;
 
 // True when the loaded binding is a WebAssembly/WASI artifact ('wasi' or
 // 'wasi-threads' target) -- distinguishes "wasm binding" from "native binding
-// in single-thread mode". Gates the wasm-boundary-specific skips (error DX,
-// watch, symlinks); no CI env var involved, the artifact identifies itself.
+// in single-thread mode". Gates wasm-boundary-specific skips (watch and
+// symlink traversal); no CI env var is involved, the artifact identifies itself.
 export const isWasiTest: boolean = capabilities.wasi;
 
 // True when the binding was compiled with `--features async-runtime` (either

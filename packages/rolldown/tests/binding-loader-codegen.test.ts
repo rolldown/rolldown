@@ -37,6 +37,9 @@ const __emnapiOptions = {
 const __workerOptions = {
   env: process.env,
 }
+const __fallbackWorkerOptions = {
+  env: process.env,
+}
 `;
 const generatedWasiNodeLoader = readFileSync(
   fileURLToPath(new URL('../src/rolldown-binding.wasi.cjs', import.meta.url)),
@@ -132,10 +135,11 @@ describe('WASI async work pool normalization', () => {
       'process',
       `${patched}
 return {
-  pool: __emnapiOptions.asyncWorkPoolSize,
-  wasiEnv: __wasiOptions.env,
-  workerEnv: __workerOptions.env,
-}`,
+	  pool: __emnapiOptions.asyncWorkPoolSize,
+	  wasiEnv: __wasiOptions.env,
+	  workerEnv: __workerOptions.env,
+	  fallbackWorkerEnv: __fallbackWorkerOptions.env,
+	}`,
     )(process);
 
     expect(result).toEqual({
@@ -146,6 +150,11 @@ return {
         UNRELATED: 'preserved',
       },
       workerEnv: {
+        NAPI_RS_ASYNC_WORK_POOL_SIZE: String(EMNAPI_ASYNC_WORK_POOL_SIZE_MAX),
+        UV_THREADPOOL_SIZE: '2',
+        UNRELATED: 'preserved',
+      },
+      fallbackWorkerEnv: {
         NAPI_RS_ASYNC_WORK_POOL_SIZE: String(EMNAPI_ASYNC_WORK_POOL_SIZE_MAX),
         UV_THREADPOOL_SIZE: '2',
         UNRELATED: 'preserved',

@@ -1,0 +1,10 @@
+# The committed wasip1 loaders are raw napi-cli generator output. The
+# browser-build drift check in .github/workflows/ci.yml requires them to be
+# byte-identical to freshly regenerated output, so no formatter may touch them.
+# vp (Oxfmt) auto-exempts the legacy-named threaded loaders
+# (rolldown-binding.wasi.cjs etc.) by deriving their names from
+# packages/rolldown/package.json's napi config, but it does not know the
+# wasip1 naming scheme yet, so these three must be ignored explicitly.
+packages/rolldown/src/rolldown-binding.wasip1.cjs
+packages/rolldown/src/rolldown-binding.wasip1-browser.js
+packages/rolldown/src/rolldown-binding.wasip1-deferred.js

@@ -32,6 +32,43 @@ pub struct DynamicImportVarsVisit<'ast, 'b> {
   pub magic_string: Option<MagicString<'b>>,
 }
 
+pub struct DynamicImportResolveVisit<'ast, 'a> {
+  pub comments: &'a oxc::allocator::Vec<'ast, Comment>,
+  pub current_comment: usize,
+  pub async_imports: Vec<String>,
+}
+
+impl<'ast> Visit<'ast> for DynamicImportResolveVisit<'ast, '_> {
+  fn visit_expression(&mut self, expr: &Expression<'ast>) {
+    if let Expression::ImportExpression(import_expr) = expr
+      && let Expression::TemplateLiteral(source) = &import_expr.source
+    {
+      if self.current_comment < self.comments.len() {
+        for comment in &self.comments[self.current_comment..] {
+          if comment.attached_to > source.span.start {
+            break;
+          }
+          self.current_comment += 1;
+          if comment.attached_to == source.span.start && comment.is_vite() {
+            return;
+          }
+        }
+      }
+      if !source.is_no_substitution_template()
+        && let Ok(glob) = template_literal_to_glob(source)
+        && memchr::memchr(b'*', glob.as_bytes()).is_some()
+        && !should_ignore(&glob)
+        && glob.as_bytes()[0] != b'.'
+        && glob.as_bytes()[0] != b'/'
+      {
+        self.async_imports.push(glob.into_owned());
+      }
+      return;
+    }
+    walk::walk_expression(self, expr);
+  }
+}
+
 impl<'ast> Visit<'ast> for DynamicImportVarsVisit<'ast, '_> {
   fn visit_expression(&mut self, expr: &Expression<'ast>) {
     if self.rewrite_variable_dynamic_import(expr, None) {

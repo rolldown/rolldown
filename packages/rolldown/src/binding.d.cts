@@ -3,6 +3,7 @@ type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
 export type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
+export type BindingErrorsOr<T> = BindingResult<T>
 
 export interface CodegenOptions {
   /**

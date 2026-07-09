@@ -400,10 +400,54 @@ jobs:
           path: packages/rolldown/dist
 
       - name: Add WASI target
-        run: rustup target add wasm32-wasip1-threads
+        run: rustup target add wasm32-wasip1-threads wasm32-wasip1
 
       - name: Build @rolldown/browser
         run: just build-browser
+
+      - name: Assert browser CurrentThread timer registration
+        run: node scripts/misc/check-browser-runtime-contract.mjs packages/browser/dist
+
+      - name: Test packed browser package in Wrangler and Miniflare
+        run: node scripts/misc/check-workerd-packed-consumer.mjs
+
+      # `just build-browser` runs the single-thread (wasm32-wasip1) binding
+      # build. WASI loader regeneration is per-flavor with distinct file names
+      # (rolldown-binding.wasip1.* for this build) and byte-identical to the
+      # committed copies, so the only expected drift is binding.d.cts
+      # (feature-gated doc-comment drift). Assert that ONLY that allowlisted
+      # file changed — any other packages/rolldown/src drift is unexpected
+      # browser-build codegen drift and must fail here instead of being
+      # silently restored — then restore it so the `git diff --exit-code`
+      # below keeps guarding the @rolldown/debug (and other) generated code.
+      # Threadless-ness of the single-thread loaders is separately guarded by
+      # scripts/misc/check-wasi-threadless.mjs in the WASI workflow.
+      # See internal-docs/async-runtime/implementation.md.
+      - name: Assert browser-build drift allowlist and restore expected regen
+        run: |
+          set -euo pipefail
+          changed=()
+          while IFS= read -r file; do
+            changed+=("$file")
+          done < <(git diff --name-only -- packages/rolldown/src)
+          unexpected=()
+          for file in "${changed[@]}"; do
+            case "$file" in
+              packages/rolldown/src/binding.d.cts) ;;
+              *) unexpected+=("$file") ;;
+            esac
+          done
+          if (( ${#unexpected[@]} > 0 )); then
+            echo "::error::Unexpected packages/rolldown/src drift from 'just build-browser' (not in the allowlist):" >&2
+            printf ' - %s\n' "${unexpected[@]}" >&2
+            git --no-pager diff -- "${unexpected[@]}"
+            exit 1
+          fi
+          if (( ${#changed[@]} > 0 )); then
+            echo "Restoring expected browser-build regeneration:"
+            printf ' - %s\n' "${changed[@]}"
+            git checkout -- "${changed[@]}"
+          fi
 
       - name: Build @rolldown/debug
         run: just build-rolldown-debug

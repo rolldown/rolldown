@@ -11,7 +11,6 @@ import type {
   BindingViteResolvePluginConfig,
 } from '../binding.cjs';
 import type { StringOrRegExp } from '../types/utils';
-import { assertRuntimeFeature } from '../runtime-support';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
 
@@ -30,9 +29,6 @@ type DynamicImportVarsPluginConfig = Omit<
 };
 
 export function viteDynamicImportVarsPlugin(config?: DynamicImportVarsPluginConfig): BuiltinPlugin {
-  if (config?.resolver) {
-    assertRuntimeFeature('viteDynamicImportVarsResolver');
-  }
   if (config) {
     config.include = normalizedStringOrRegex(config.include);
     config.exclude = normalizedStringOrRegex(config.exclude);

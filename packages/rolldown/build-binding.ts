@@ -16,11 +16,16 @@ import {
   patchWasiBindingLoader,
   patchWasiNodeAsyncWorkPoolSize,
   patchWasiNodeWorkerExecArgv,
-  resolveWasiBindingTarget,
 } from './binding-loader-codegen';
+import {
+  generateWorkerdLoader,
+  isAsyncRuntimeDeclarationBuild,
+  preserveInactiveWasiDeclaration,
+} from './generate-workerd-loader';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WASI_THREADS_TARGET = 'wasm32-wasip1-threads';
+const WASI_SINGLE_TARGET = 'wasm32-wasip1';
 const WASI_BINARY_NAME = 'rolldown-binding.wasm32-wasi';
 
 const args = process.argv.slice(2);
@@ -39,6 +44,14 @@ const napiArgs = {
   package: 'rolldown_binding',
   jsBinding: 'binding.cjs',
   dts: 'binding.d.cts',
+  // napi-rs keys this cache only by crate path and CLI version, so it can
+  // retain declarations after their Rust binding metadata changes. Dedicated
+  // WASI builds and native async-runtime builds must regenerate their exact
+  // declaration surface instead of reusing that feature-blind cache.
+  dtsCache:
+    argsOptions.target !== WASI_THREADS_TARGET &&
+    argsOptions.target !== WASI_SINGLE_TARGET &&
+    !isAsyncRuntimeDeclarationBuild(argsOptions),
   constEnum: false,
 };
 
@@ -49,16 +62,23 @@ const artifactTransaction = beginBuildArtifactTransaction(
   BINDING_BUILD_ARTIFACT_SELECTION,
 );
 try {
-  const { task } = await napiCli.build(napiArgs);
-  await task;
-  patchBindingTargetMetadata(argsOptions.target);
+  const restoreInactiveWasiDeclaration = preserveInactiveWasiDeclaration(argsOptions);
+  try {
+    const { task } = await napiCli.build(napiArgs);
+    await task;
+  } finally {
+    restoreInactiveWasiDeclaration();
+  }
+  patchBindingTargetMetadata();
   patchWasiBindingContextLifecycles();
   patchWasiNodeWorkerExecArgvConfig();
   patchWasiNodeAsyncWorkPoolConfig();
   validateAsyncRuntimeHostExports();
+  patchWasiBrowserContextDestroyAwait();
   if (argsOptions.target === WASI_THREADS_TARGET) {
     validateWasiReactorArtifacts();
   }
+  generateWorkerdLoader();
   artifactTransaction.commit();
 } catch (error) {
   console.error(error);
@@ -73,19 +93,22 @@ try {
 
 function validateAsyncRuntimeHostExports(): void {
   const sourceDir = join(__dirname, 'src');
-  assertAsyncRuntimeHostExports(readFileSync(join(sourceDir, 'binding.cjs'), 'utf8'), 'commonjs');
-  assertAsyncRuntimeHostExports(
-    readFileSync(join(sourceDir, 'rolldown-binding.wasi.cjs'), 'utf8'),
-    'commonjs',
-  );
-  assertAsyncRuntimeHostExports(
-    readFileSync(join(sourceDir, 'rolldown-binding.wasi-browser.js'), 'utf8'),
-    'esm',
-  );
+  const loaders = [
+    ['binding.cjs', 'commonjs'],
+    ['rolldown-binding.wasi.cjs', 'commonjs'],
+    ['rolldown-binding.wasi-browser.js', 'esm'],
+    ['rolldown-binding.wasip1.cjs', 'commonjs'],
+    ['rolldown-binding.wasip1-browser.js', 'esm'],
+  ] as const;
+  for (const [name, format] of loaders) {
+    const loaderPath = join(sourceDir, name);
+    if (!existsSync(loaderPath)) continue;
+    assertAsyncRuntimeHostExports(readFileSync(loaderPath, 'utf8'), format);
+  }
 }
 
 function configureWasiRustc(target: unknown): void {
-  if (target !== WASI_THREADS_TARGET) return;
+  if (target !== WASI_THREADS_TARGET && target !== WASI_SINGLE_TARGET) return;
 
   // See internal-docs/async-runtime/implementation.md.
   const rustcPath = resolveRustcPath();
@@ -133,20 +156,34 @@ function validateWasiReactorArtifacts(): void {
   }
 }
 
-function patchBindingTargetMetadata(target: unknown): void {
+function patchBindingTargetMetadata(): void {
   const sourceDir = join(__dirname, 'src');
   const nativeBindingPath = join(sourceDir, 'binding.cjs');
-  const wasiTarget = resolveWasiBindingTarget(target);
-  const wasiBindingPaths = [
-    join(sourceDir, 'rolldown-binding.wasi.cjs'),
-    join(sourceDir, 'rolldown-binding.wasi-browser.js'),
+  const wasiBindings = [
+    {
+      path: join(sourceDir, 'rolldown-binding.wasi.cjs'),
+      target: 'wasi-threads' as const,
+    },
+    {
+      path: join(sourceDir, 'rolldown-binding.wasi-browser.js'),
+      target: 'wasi-threads' as const,
+    },
+    {
+      path: join(sourceDir, 'rolldown-binding.wasip1.cjs'),
+      target: 'wasi' as const,
+    },
+    {
+      path: join(sourceDir, 'rolldown-binding.wasip1-browser.js'),
+      target: 'wasi' as const,
+    },
   ];
 
   writeFileSync(
     nativeBindingPath,
     patchNativeBindingLoader(readFileSync(nativeBindingPath, 'utf8')),
   );
-  for (const bindingPath of wasiBindingPaths) {
+  for (const { path: bindingPath, target: wasiTarget } of wasiBindings) {
+    if (!existsSync(bindingPath)) continue;
     writeFileSync(
       bindingPath,
       patchWasiBindingLoader(readFileSync(bindingPath, 'utf8'), wasiTarget),
@@ -159,7 +196,10 @@ function patchWasiBindingContextLifecycles(): void {
   for (const bindingPath of [
     join(sourceDir, 'rolldown-binding.wasi.cjs'),
     join(sourceDir, 'rolldown-binding.wasi-browser.js'),
+    join(sourceDir, 'rolldown-binding.wasip1.cjs'),
+    join(sourceDir, 'rolldown-binding.wasip1-browser.js'),
   ]) {
+    if (!existsSync(bindingPath)) continue;
     writeFileSync(bindingPath, patchWasiBindingContextLifecycle(readFileSync(bindingPath, 'utf8')));
   }
 }
@@ -172,4 +212,20 @@ function patchWasiNodeWorkerExecArgvConfig(): void {
 function patchWasiNodeAsyncWorkPoolConfig(): void {
   const bindingPath = join(__dirname, 'src', 'rolldown-binding.wasi.cjs');
   writeFileSync(bindingPath, patchWasiNodeAsyncWorkPoolSize(readFileSync(bindingPath, 'utf8')));
+}
+
+function patchWasiBrowserContextDestroyAwait(): void {
+  const bindingPath = join(__dirname, 'src', 'rolldown-binding.wasi-browser.js');
+  const source = readFileSync(bindingPath, 'utf8');
+  const generatedAwait = 'await __emnapiContext.destroy()';
+  const normalizedAwait = 'await Promise.resolve(__emnapiContext.destroy())';
+  const generatedAwaitCount = source.split(generatedAwait).length - 1;
+  const normalizedAwaitCount = source.split(normalizedAwait).length - 1;
+  if (generatedAwaitCount === 0 && normalizedAwaitCount === 1) {
+    return;
+  }
+  if (generatedAwaitCount !== 1 || normalizedAwaitCount !== 0) {
+    throw new Error(`Unexpected NAPI-RS WASI browser cleanup template in ${bindingPath}`);
+  }
+  writeFileSync(bindingPath, source.replace(generatedAwait, normalizedAwait));
 }

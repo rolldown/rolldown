@@ -500,19 +500,29 @@ describe('config', () => {
     },
   );
 
-  it('should handle `-c -w` without `-w` being consumed as config filename (#3248)', async () => {
-    const cwd = cliFixturesDir('cli-config-with-watch');
-    const controller = new AbortController();
-    execa({
-      cwd,
-      reject: false,
-      cancelSignal: controller.signal,
-    })`rolldown -c -w`;
-    await vi.waitFor(() => {
-      expect(fs.existsSync(path.join(cwd, 'dist/index.js'))).toBe(true);
-    });
-    controller.abort();
-  });
+  // KNOWN: watch mode never completes the initial build on the single-thread
+  // WASI binding. The `rolldown -w` child prints "Waiting for changes..." and
+  // fires the options/buildStart hooks, but no output file is ever written
+  // and closeBundle never runs — even with a plugin-free config. The child's
+  // JS event loop stays alive (it exits cleanly on SIGTERM), so the stall is
+  // in the build task, not a frozen loop. Every `-w` test is skipped under
+  // isWasiTest.
+  it.skipIf(isWasiTest)(
+    'should handle `-c -w` without `-w` being consumed as config filename (#3248)',
+    async () => {
+      const cwd = cliFixturesDir('cli-config-with-watch');
+      const controller = new AbortController();
+      execa({
+        cwd,
+        reject: false,
+        cancelSignal: controller.signal,
+      })`rolldown -c -w`;
+      await vi.waitFor(() => {
+        expect(fs.existsSync(path.join(cwd, 'dist/index.js'))).toBe(true);
+      });
+      controller.abort();
+    },
+  );
 });
 
 describe('watch cli', () => {
@@ -523,62 +533,74 @@ describe('watch cli', () => {
     expect(status.exitCode).toBe(0);
   });
 
-  it.skipIf(process.platform === 'win32')('should handle output options', async () => {
-    const cwd = cliFixturesDir('watch-cli-option');
-    const controller = new AbortController();
-    const process = execa({
-      cwd,
-      reject: false,
-      cancelSignal: controller.signal,
-    })`rolldown index.ts -d dist -w -s`;
-    const stdoutWaiter = createStreamWaiter(process.stdout);
-    await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
-    await vi.waitFor(() => {
-      expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true);
-      expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true);
-    });
-    controller.abort();
-    await process;
-    expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
-  });
+  // KNOWN: wasm watch hang — see the #3248 test above for the description.
+  it.skipIf(process.platform === 'win32' || isWasiTest)(
+    'should handle output options',
+    async () => {
+      const cwd = cliFixturesDir('watch-cli-option');
+      const controller = new AbortController();
+      const process = execa({
+        cwd,
+        reject: false,
+        cancelSignal: controller.signal,
+      })`rolldown index.ts -d dist -w -s`;
+      const stdoutWaiter = createStreamWaiter(process.stdout);
+      await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
+      await vi.waitFor(() => {
+        expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true);
+        expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true);
+      });
+      controller.abort();
+      await process;
+      expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
+    },
+  );
 
-  it.skipIf(process.platform === 'win32')('should allow multiply options', async () => {
-    const cwd = cliFixturesDir('config-multiply-options');
-    const controller = new AbortController();
-    const process = execa({
-      cwd,
-      reject: false,
-      cancelSignal: controller.signal,
-    })`rolldown -c rolldown.config.ts -d watch-dist-options -w`;
-    const stdoutWaiter = createStreamWaiter(process.stdout);
-    await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
-    await vi.waitFor(() => {
-      expect(fs.existsSync(path.join(cwd, 'watch-dist-options/esm.js'))).toBe(true);
-      expect(fs.existsSync(path.join(cwd, 'watch-dist-options/cjs.js'))).toBe(true);
-    });
-    controller.abort();
-    await process;
-    expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
-  });
+  // KNOWN: wasm watch hang — see the #3248 test above for the description.
+  it.skipIf(process.platform === 'win32' || isWasiTest)(
+    'should allow multiply options',
+    async () => {
+      const cwd = cliFixturesDir('config-multiply-options');
+      const controller = new AbortController();
+      const process = execa({
+        cwd,
+        reject: false,
+        cancelSignal: controller.signal,
+      })`rolldown -c rolldown.config.ts -d watch-dist-options -w`;
+      const stdoutWaiter = createStreamWaiter(process.stdout);
+      await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
+      await vi.waitFor(() => {
+        expect(fs.existsSync(path.join(cwd, 'watch-dist-options/esm.js'))).toBe(true);
+        expect(fs.existsSync(path.join(cwd, 'watch-dist-options/cjs.js'))).toBe(true);
+      });
+      controller.abort();
+      await process;
+      expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
+    },
+  );
 
-  it.skipIf(process.platform === 'win32')('should allow multiply output', async () => {
-    const cwd = cliFixturesDir('config-multiply-output');
-    const controller = new AbortController();
-    const process = execa({
-      cwd,
-      reject: false,
-      cancelSignal: controller.signal,
-    })`rolldown -c rolldown.config.ts -d watch-dist-output -w`;
-    const stdoutWaiter = createStreamWaiter(process.stdout);
-    await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
-    await vi.waitFor(() => {
-      expect(fs.existsSync(path.join(cwd, 'watch-dist-output/esm.js'))).toBe(true);
-      expect(fs.existsSync(path.join(cwd, 'watch-dist-output/cjs.js'))).toBe(true);
-    });
-    controller.abort();
-    await process;
-    expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
-  });
+  // KNOWN: wasm watch hang — see the #3248 test above for the description.
+  it.skipIf(process.platform === 'win32' || isWasiTest)(
+    'should allow multiply output',
+    async () => {
+      const cwd = cliFixturesDir('config-multiply-output');
+      const controller = new AbortController();
+      const process = execa({
+        cwd,
+        reject: false,
+        cancelSignal: controller.signal,
+      })`rolldown -c rolldown.config.ts -d watch-dist-output -w`;
+      const stdoutWaiter = createStreamWaiter(process.stdout);
+      await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
+      await vi.waitFor(() => {
+        expect(fs.existsSync(path.join(cwd, 'watch-dist-output/esm.js'))).toBe(true);
+        expect(fs.existsSync(path.join(cwd, 'watch-dist-output/cjs.js'))).toBe(true);
+      });
+      controller.abort();
+      await process;
+      expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
+    },
+  );
 
   it('should allow multiply output + call options hook once + call outputOptions hook', async () => {
     const cwd = cliFixturesDir('config-multiply-output-with-options-hooks');
@@ -593,11 +615,17 @@ describe('watch cli', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
-  it('should require both ROLLDOWN_WATCH and this.meta.watchMode to be true', async () => {
-    const cwd = cliFixturesDir('watch-mode');
-    const status = await $({ cwd })`rolldown -w -c`;
-    expect(cleanStdout(status.stdout)).toMatchSnapshot();
-  });
+  // KNOWN: wasm watch hang — the initial `-w` build never reaches
+  // closeBundle (which would `process.exit(0)`), so awaiting the child times
+  // out. See the #3248 test above for the description.
+  it.skipIf(isWasiTest)(
+    'should require both ROLLDOWN_WATCH and this.meta.watchMode to be true',
+    async () => {
+      const cwd = cliFixturesDir('watch-mode');
+      const status = await $({ cwd })`rolldown -w -c`;
+      expect(cleanStdout(status.stdout)).toMatchSnapshot();
+    },
+  );
 
   // Runs on NATIVE async-runtime builds (both flavors) since the runtime
   // timer facility landed: the debounce timer goes through

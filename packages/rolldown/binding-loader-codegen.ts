@@ -97,14 +97,17 @@ export function patchNativeBindingLoader(source: string): string {
     1,
     'native binding declaration',
   );
-  source = replaceExactly(
-    source,
+  const wasiBindingAssignmentCount = source.split(WASI_BINDING_ASSIGNMENT).length - 1;
+  if (wasiBindingAssignmentCount < 2 || wasiBindingAssignmentCount % 2 !== 0) {
+    throw new Error(
+      `Unexpected NAPI-RS loader template for WASI binding assignments: expected a positive pair count, found ${wasiBindingAssignmentCount}`,
+    );
+  }
+  source = source.replaceAll(
     WASI_BINDING_ASSIGNMENT,
     `${WASI_BINDING_ASSIGNMENT}
       loadedBindingTarget =
         wasiBinding.${LOADED_BINDING_TARGET_EXPORT} === 'wasi' ? 'wasi' : 'wasi-threads'`,
-    2,
-    'WASI binding assignment',
   );
   return replaceExactly(
     source,
@@ -423,7 +426,7 @@ const __rolldownWasiEnv = {
     source,
     WASI_NODE_ENV_ASSIGNMENT,
     'env: __rolldownWasiEnv,',
-    2,
+    3,
     'WASI runtime and worker environments',
   );
 }

@@ -2,6 +2,10 @@ import { BindingBundler, type BindingResult } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import {
+  createRequiredAsyncContext,
+  trackAsyncCallbackSettlement,
+} from '../../utils/async-context';
+import {
   CloseCoordinator,
   type CloseAttemptResult,
   type RuntimeLease,
@@ -58,6 +62,16 @@ export function retryRolldownBuildCleanup(build: RolldownBuild): Promise<unknown
   if (!ownership) return Promise.resolve([]);
   return ownership.retryCleanup();
 }
+
+interface BuildCallbackInvocation {
+  active: boolean;
+  build: RolldownBuild;
+  callbackName: string;
+  parent: BuildCallbackInvocation | undefined;
+}
+
+// See internal-docs/async-context/implementation.md.
+const buildCallContext = createRequiredAsyncContext<BuildCallbackInvocation>();
 
 /**
  * The bundle object returned by {@linkcode rolldown} function.
@@ -162,6 +176,12 @@ export class RolldownBuild {
    * ```
    */
   close(): Promise<void> {
+    const activeCallback = this.#activeBuildCallback();
+    if (activeCallback && activeCallback.callbackName !== 'closeBundle') {
+      return Promise.reject(
+        new Error('Cannot close a bundle from one of its active JavaScript callbacks'),
+      );
+    }
     this.#closeRequested = true;
     return this.#closeCallbackScope.selectClosePromise(
       this.#closeCoordinator.close(() => this.#close()),
@@ -241,7 +261,14 @@ export class RolldownBuild {
     if (this.#closeRequested) {
       return Promise.reject(
         new Error(
-          '[ALREADY_CLOSED] Bundle is already closed, no more calls to "generate" or "write" are allowed.\n',
+          '[ALREADY_CLOSED] Cannot call bundle.generate() or bundle.write() after bundle.close() has started.\n',
+        ),
+      );
+    }
+    if (this.#activeBuildCallback()) {
+      return Promise.reject(
+        new Error(
+          "Cannot call bundle.generate() or bundle.write() from one of the same bundle's active JavaScript callbacks",
         ),
       );
     }
@@ -257,11 +284,15 @@ export class RolldownBuild {
 
   async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
+    const initiatingInvocation = buildCallContext.getStore();
     const option = await createBundlerOptions(
       this.#inputOptions,
       outputOptions,
       false,
       this.#closeCallbackScope,
+      false,
+      (callback, callbackName) =>
+        this.#runBuildCallback(initiatingInvocation, callback, callbackName),
     );
     const operation: BuildOperation = {
       settled: false,
@@ -429,6 +460,39 @@ export class RolldownBuild {
         cause: errors[0],
       });
     }
+  }
+
+  #activeBuildCallback(): BuildCallbackInvocation | undefined {
+    let invocation = buildCallContext.getStore();
+    while (invocation) {
+      if (invocation.build === this && invocation.active) return invocation;
+      invocation = invocation.parent;
+    }
+  }
+
+  #runBuildCallback<T>(
+    initiatingInvocation: BuildCallbackInvocation | undefined,
+    callback: () => T,
+    callbackName = 'JavaScript callback',
+  ): T {
+    const invocation: BuildCallbackInvocation = {
+      active: true,
+      build: this,
+      callbackName,
+      parent: buildCallContext.getStore() ?? initiatingInvocation,
+    };
+    const deactivate = () => {
+      invocation.active = false;
+    };
+
+    return buildCallContext.run(invocation, () => {
+      try {
+        return trackAsyncCallbackSettlement(this.#closeCallbackScope.run(callback), deactivate);
+      } catch (error) {
+        deactivate();
+        throw error;
+      }
+    });
   }
 }
 

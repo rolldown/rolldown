@@ -56,6 +56,9 @@ Prebuilt binaries are distributed for the following platforms (grouped by [Node.
   - Android arm64 (`aarch64-linux-android`)
   - Wasm + Wasi (`wasm32-wasip1-threads`)
 
+See [WASI and workerd support](/guide/wasi) for the runtime support matrix,
+threadless package API, and production memory-validation requirements.
+
 If you are using a platform that a prebuilt binary is not distributed, you have the following options:
 
 - Use the Wasm build

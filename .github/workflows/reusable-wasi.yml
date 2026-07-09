@@ -93,17 +93,72 @@ jobs:
             cargo check -p rolldown_binding --target wasm32-wasip1-threads \
               --no-default-features --features async-runtime --locked
 
-      - name: Build Rolldown with WASI Binding
+      # The two WASI flavors have distinct artifact names
+      # (rolldown-binding.wasm32-wasi.wasm + .wasi.* loaders for threaded,
+      # rolldown-binding.wasm32-wasip1.wasm + .wasip1.* loaders for
+      # single-thread), so the builds co-exist in packages/rolldown/src.
+      # Each build wires packages/rolldown/dist to its OWN flavor's loaders,
+      # so every flavor's tests run right after its build: the threaded
+      # smoke/stability tests genuinely exercise the threaded artifacts
+      # (previously the single build overwrote them before any test ran,
+      # leaving threaded WASI compile-checked only).
+      - name: Build Rolldown with threaded WASI binding
         run: just build-rolldown-wasi
 
-      - name: Stability Test
+      # Run the dedicated Node profile while dist still points at the threaded
+      # loader/Wasm pair. This profile is intentionally separate from
+      # `test:main`: managed-workerd tests require the threadless Wasm file,
+      # and Node's `--input-type` child-process probes are invalid when
+      # inherited by file-based napi-rs worker entrypoints.
+      - name: Node Test (threaded WASI)
+        run: vp run --filter rolldown-tests test:wasi-threaded
+
+      # Assert the dist ships the COMPLETE threaded artifact set (a dropped
+      # entry in copy-addon-plugin.ts otherwise publishes silently without it).
+      - name: Assert threaded WASI dist file set
+        run: node scripts/misc/check-wasi-dist-files.mjs threaded
+
+      - name: Stability Test (threaded WASI)
         run: vp run --filter rolldown-tests test:stability
 
       - name: Threaded WASI Runtime Lifecycle Test
         run: vp run --filter rolldown-tests test:wasi-runtime-lifecycle
 
-      # `@example/typescript` is excluded because its config enables `devtools`, which currently
-      # panics under WASI when the writer tries to open its log file (crates/rolldown_devtools/src/writer.rs).
+      - name: Build Rolldown with non-threaded WASI binding
+        run: just build-rolldown-wasi-single
+
+      # Same completeness guard for the single-thread set — this is the one
+      # that ships the workerd `wasip1-deferred` loader.
+      - name: Assert single-thread WASI dist file set
+        run: node scripts/misc/check-wasi-dist-files.mjs single
+
+      # Guard that the single-thread loaders are threadless end-to-end (no
+      # Worker creation, no shared memory, asyncWorkPoolSize: 0). Mirrors the
+      # napi-rs upstream guard for rolldown's own loaders.
+      - name: Assert single-thread WASI loaders are threadless
+        run: node scripts/misc/check-wasi-threadless.mjs
+
+      - name: Exercise concurrent workerd instance lifecycle and memory canary
+        run: node --expose-gc scripts/misc/check-workerd-memory.mjs --max-rss-growth-mb=128
+
+      # dev/*.test.ts files import this workspace package at module scope, so
+      # collection fails without its dist/ even though the dev tests themselves
+      # are skipped on this lane.
+      - name: Build `@rolldown/test-dev-server`
+        run: vp run --filter '@rolldown/test-dev-server' build
+
+      # Full node suite against the single-thread WASI binding (the dist is
+      # wired to the wasip1 loaders by `build-rolldown-wasi-single`). No lane
+      # env vars: the artifact self-identifies through
+      # `getRuntimeCapabilities()` -- it reports the CurrentThread flavor (all
+      # `isSingleThread` skips apply) and the wasi target (all wasm-boundary
+      # `isWasiTest` skips apply); see tests/src/runtime-flavor.ts.
+      - name: Node Test (single-thread WASI)
+        run: vp run --filter rolldown-tests test:main
+
+      # `@example/typescript` is shared by the basic TypeScript, chunk-import-map, and watch
+      # examples. It remains excluded because the watch example is unsupported on WASI; the
+      # devtools-enabled basic example is covered by the full Node profile above.
       # `@example/native-magic-string` is excluded because it depends on a native-only addon.
       - name: Build Examples
         run: vp run --filter '@example/*' --filter '!@example/native-magic-string' --filter '!@example/typescript' build

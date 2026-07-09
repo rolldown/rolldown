@@ -180,6 +180,201 @@ test.skipIf(isSingleThread)(
 );
 
 test.skipIf(isSingleThread)(
+  'close waits for an admitted compileEntry callback before closeBundle',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-compile-close-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const input = path.join(dir, 'main.js');
+    const lazyInput = path.join(dir, 'lazy.js');
+    fs.writeFileSync(input, "export const load = () => import('./lazy.js');");
+    fs.writeFileSync(lazyInput, 'export const value = 1;');
+
+    let callbackStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      callbackStarted = resolve;
+    });
+    let releaseCallback!: () => void;
+    const callbackGate = new Promise<void>((resolve) => {
+      releaseCallback = resolve;
+    });
+    let closeBundleCalls = 0;
+
+    const engine = await dev(
+      {
+        input,
+        experimental: { devMode: { lazy: true } },
+        plugins: [
+          {
+            name: 'emit-lazy-asset',
+            transform(_code, id) {
+              if (id === lazyInput) {
+                this.emitFile({
+                  type: 'asset',
+                  fileName: 'lazy-asset.txt',
+                  source: 'lazy asset',
+                });
+              }
+            },
+            closeBundle() {
+              closeBundleCalls += 1;
+            },
+          },
+        ],
+      },
+      { dir: path.join(dir, 'dist') },
+      {
+        async onAdditionalAssets() {
+          callbackStarted();
+          await callbackGate;
+        },
+      },
+    );
+
+    onTestFinished(async () => {
+      releaseCallback();
+      await engine.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    const compilePromise = engine.compileEntry(`${lazyInput}?rolldown-lazy=1`, 'client');
+    await started;
+    expect(closeBundleCalls).toBe(0);
+
+    const closePromise = engine.close();
+    await expect(engine.removeClient('client')).resolves.toBeUndefined();
+    for (let turn = 0; turn < 20; turn += 1) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+    expect(closeBundleCalls).toBe(0);
+
+    releaseCallback();
+    await expect(compilePromise).resolves.toEqual(expect.any(String));
+    await expect(closePromise).resolves.toBeUndefined();
+    expect(closeBundleCalls).toBe(1);
+  },
+);
+
+test.skipIf(isSingleThread)(
+  'close rejects when awaited inside onOutput without starting shutdown',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-output-close-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const input = path.join(dir, 'main.js');
+    fs.writeFileSync(input, 'console.log(1)');
+
+    let closeBundleCalls = 0;
+    let callbackCloseError: unknown;
+    let engine!: DevEngine;
+    engine = await dev(
+      {
+        input,
+        experimental: { devMode: true },
+        plugins: [
+          {
+            name: 'track-close',
+            closeBundle() {
+              closeBundleCalls += 1;
+            },
+          },
+        ],
+      },
+      { dir: path.join(dir, 'dist') },
+      {
+        async onOutput() {
+          await Promise.resolve();
+          callbackCloseError = await engine.close().catch((error: unknown) => error);
+        },
+      },
+    );
+
+    onTestFinished(async () => {
+      await engine.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await expect(engine.run()).resolves.toBeUndefined();
+    expect(callbackCloseError).toBeInstanceOf(Error);
+    expect((callbackCloseError as Error).message).toBe(
+      'Cannot close a dev engine from one of its active JavaScript callbacks',
+    );
+    expect(closeBundleCalls).toBe(0);
+
+    await expect(engine.close()).resolves.toBeUndefined();
+    expect(closeBundleCalls).toBe(1);
+  },
+);
+
+test.skipIf(isSingleThread)(
+  'close rejects when awaited inside onAdditionalAssets without blocking compileEntry',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-assets-close-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const input = path.join(dir, 'main.js');
+    const lazyInput = path.join(dir, 'lazy.js');
+    fs.writeFileSync(input, "export const load = () => import('./lazy.js');");
+    fs.writeFileSync(lazyInput, 'export const value = 1;');
+
+    let callbackCloseError: unknown;
+    let engine!: DevEngine;
+    engine = await dev(
+      {
+        input,
+        experimental: { devMode: { lazy: true } },
+        plugins: [
+          {
+            name: 'emit-lazy-asset',
+            transform(_code, id) {
+              if (id === lazyInput) {
+                this.emitFile({
+                  type: 'asset',
+                  fileName: 'lazy-asset.txt',
+                  source: 'lazy asset',
+                });
+              }
+            },
+          },
+        ],
+      },
+      { dir: path.join(dir, 'dist') },
+      {
+        async onAdditionalAssets() {
+          await Promise.resolve();
+          callbackCloseError = await engine.close().catch((error: unknown) => error);
+        },
+      },
+    );
+
+    onTestFinished(async () => {
+      await engine.close().catch(() => {});
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect(engine.compileEntry(`${lazyInput}?rolldown-lazy=1`, 'client')).resolves.toEqual(
+      expect.any(String),
+    );
+    expect(callbackCloseError).toBeInstanceOf(Error);
+    expect((callbackCloseError as Error).message).toBe(
+      'Cannot close a dev engine from one of its active JavaScript callbacks',
+    );
+    await expect(engine.close()).resolves.toBeUndefined();
+  },
+);
+
+test.skipIf(isSingleThread)(
   'close preserves the terminal closeBundle failure',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

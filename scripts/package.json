@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check-workerd-packed-consumer": "node ./misc/check-workerd-packed-consumer.mjs",
+    "check-wasi-binding-packed-consumer": "node ./misc/check-wasi-binding-packed-consumer.mjs",
     "setup-bench": "oxnode ./misc/setup-benchmark-input/index.js",
     "gen-esbuild-tests": "oxnode ./src/esbuild-tests/gen-tests.ts",
     "esbuild-snap-diff": "oxnode ./src/esbuild-tests/snap-diff/index.ts"
@@ -31,6 +33,8 @@
     "diff": "catalog:",
     "estree-toolkit": "catalog:",
     "micromatch": "catalog:",
-    "web-tree-sitter": "catalog:"
+    "miniflare": "catalog:",
+    "web-tree-sitter": "catalog:",
+    "wrangler": "catalog:"
   }
 }

@@ -633,6 +633,42 @@ test.concurrent(
 );
 
 test.concurrent(
+  'detached close-listener descendants use the settled close result',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-close-listener-detached-caller',
+      retryCount,
+    );
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const listenerError = new Error('close listener failed');
+    const watcher = watch({ input, output: { file: output } });
+    let releaseDetachedClose!: () => void;
+    const detachedCloseRelease = new Promise<void>((resolve) => {
+      releaseDetachedClose = resolve;
+    });
+    let detachedClose: Promise<void> | undefined;
+    watcher.on('close', async () => {
+      detachedClose = (async () => {
+        await detachedCloseRelease;
+        await watcher.close();
+      })();
+      throw listenerError;
+    });
+
+    await expect(watcher.close()).rejects.toBe(listenerError);
+    releaseDetachedClose();
+    await expect(detachedClose).rejects.toBe(listenerError);
+  },
+);
+
+test.concurrent(
   'bundle result close waits for one terminal hook result and replays failures',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {

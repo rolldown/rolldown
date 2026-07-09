@@ -74,8 +74,11 @@ beforeEach(() => {
 
 test('scan rejects output descriptors before input promises, hooks, or setup', async () => {
   Object.assign(mocks.runtimeCapabilities, {
+    asyncRuntimeBuild: true,
+    backend: 'shared',
     target: 'wasi-threads',
     wasi: true,
+    watchSupported: false,
   });
   let outputOptionsHookCalls = 0;
 

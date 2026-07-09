@@ -967,9 +967,10 @@ mod async_runtime_acquisition {
   use std::{
     collections::HashMap,
     sync::{
-      Arc, LazyLock, Mutex, Weak,
+      Arc, Condvar, LazyLock, Mutex, Weak,
       atomic::{AtomicBool, AtomicU8, Ordering},
     },
+    time::Duration,
   };
 
   use napi::bindgen_prelude::{
@@ -984,15 +985,22 @@ mod async_runtime_acquisition {
   pub struct AcquisitionCancellation {
     state: AtomicU8,
     waiter: Mutex<Option<TokioRuntimeRetirementWaiter>>,
+    transition_retry: Condvar,
   }
 
   impl AcquisitionCancellation {
     const PENDING: u8 = 0;
     const CANCELLED: u8 = 1;
     const COMMITTED: u8 = 2;
+    const INITIAL_TRANSITION_RETRY_DELAY: Duration = Duration::from_millis(1);
+    const MAX_TRANSITION_RETRY_DELAY: Duration = Duration::from_millis(16);
 
     fn new() -> Self {
-      Self { state: AtomicU8::new(Self::PENDING), waiter: Mutex::new(None) }
+      Self {
+        state: AtomicU8::new(Self::PENDING),
+        waiter: Mutex::new(None),
+        transition_retry: Condvar::new(),
+      }
     }
 
     pub fn is_cancelled(&self) -> bool {
@@ -1014,15 +1022,17 @@ mod async_runtime_acquisition {
       {
         return;
       }
-      if let Some(waiter) =
-        self.waiter.lock().unwrap_or_else(std::sync::PoisonError::into_inner).as_ref()
-      {
+      let waiter = self.waiter.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      if let Some(waiter) = waiter.as_ref() {
         waiter.cancel();
       }
+      drop(waiter);
+      self.transition_retry.notify_all();
       ASYNC_RUNTIME_LEASES.notify_waiters();
     }
 
     fn wait_for_retirement(&self) -> napi::Result<()> {
+      let mut transition_retry_delay = Self::INITIAL_TRANSITION_RETRY_DELAY;
       loop {
         if self.is_cancelled() {
           return Err(napi::Error::new(
@@ -1049,7 +1059,26 @@ mod async_runtime_acquisition {
         }
         match try_start_async_runtime() {
           Ok(()) => return Ok(()),
-          Err(error) if error.status == napi::Status::WouldDeadlock => {}
+          Err(error) if error.status == napi::Status::WouldDeadlock => {
+            // A non-last environment cleanup publishes a short napi lifecycle
+            // transition without creating a Tokio retirement generation. The
+            // waiter above is therefore already ready; bound and cancel this
+            // retry instead of hot-spinning an emnapi async-work thread.
+            let waiter = self.waiter.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+            if self.is_cancelled() {
+              return Err(napi::Error::new(
+                napi::Status::Cancelled,
+                "Async runtime acquisition was cancelled",
+              ));
+            }
+            let (waiter, _) = self
+              .transition_retry
+              .wait_timeout(waiter, transition_retry_delay)
+              .unwrap_or_else(std::sync::PoisonError::into_inner);
+            drop(waiter);
+            transition_retry_delay =
+              transition_retry_delay.saturating_mul(2).min(Self::MAX_TRANSITION_RETRY_DELAY);
+          }
           Err(error) => return Err(error),
         }
       }

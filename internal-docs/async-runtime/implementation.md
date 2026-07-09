@@ -1109,9 +1109,14 @@ variable off the JavaScript thread. A fresh waiter is used if another lifecycle
 transition creates a newer retirement before start linearizes. The waiter
 reports retirement-worker creation or runtime-drop failures as terminal errors
 instead of waiting forever, and rejects waiting from the generation that is
-retiring. The binding installs one cancellation hub per N-API environment.
-Environment teardown cancels that environment's pending waiters and wakes tasks
-blocked behind another native transition; it never cancels retirement itself.
+retiring. A non-last environment cleanup briefly publishes a napi lifecycle
+transition without creating a Tokio retirement generation. If explicit start
+meets that transition, the binding retries through a cancellable exponential
+condition-variable backoff capped at 16ms instead of hot-spinning an emnapi
+async-work thread. The binding installs one cancellation hub per N-API
+environment. Environment teardown cancels that environment's pending waiters
+and wakes both retirement and transition-backoff waits; it never cancels
+retirement itself.
 
 The task returns the native lease token as its output rather than resolving a
 bare `Promise<void>`. Ownership therefore remains in Rust across async-work
@@ -1187,8 +1192,9 @@ module-count hooks or lifecycle locks.
 The WASI CI lane runs `packages/rolldown/tests/wasi-runtime-lifecycle.mjs`
 against the generated threaded artifact. It covers overlapping public owners,
 restart after the final release, repeated immediate token reacquisition while
-Tokio's previous generation retires, cancellation of a worker environment whose
-acquisition is blocked behind that retirement, operation and
+Tokio's previous generation retires, main-realm reacquisition racing non-last
+worker-environment cleanup, cancellation of a worker environment whose
+acquisition is blocked behind retirement, operation and
 binding-construction failures, worker realms, a real dev-engine
 run/close/restart, fail-closed watch and parallel-plugin capability detection,
 and duplicate JavaScript package copies that resolve one shared binding. The

@@ -173,6 +173,47 @@ await check('immediate token reacquisition waits for Tokio retirement', async ()
   await generateAndClose('restart-after-retirement-stress');
 });
 
+await check('main-realm reacquisition races non-last worker cleanup', async () => {
+  for (let iteration = 0; iteration < 24; iteration += 1) {
+    const worker = new Worker(
+      `
+        const { parentPort } = require('node:worker_threads');
+        require(${JSON.stringify(bindingPath)});
+        parentPort.postMessage({ type: 'ready' });
+        parentPort.once('message', (message) => {
+          if (message !== 'exit') return;
+          parentPort.postMessage({ type: 'exiting' });
+          parentPort.close();
+        });
+      `,
+      { eval: true },
+    );
+
+    let lease;
+    try {
+      assert.equal((await waitForWorkerMessage(worker)).type, 'ready');
+      const workerExit = waitForWorkerExit(worker);
+      worker.postMessage('exit');
+      assert.equal((await waitForWorkerMessage(worker)).type, 'exiting');
+      lease = await withTimeout(
+        binding.acquireAsyncRuntime(),
+        30_000,
+        `main realm could not acquire while worker ${iteration} retired`,
+      );
+      assert.equal(
+        await workerExit,
+        0,
+        `worker ${iteration} did not finish non-last environment cleanup`,
+      );
+    } finally {
+      lease?.release();
+      await worker.terminate();
+    }
+  }
+
+  await generateAndClose('restart-after-non-last-worker-cleanup');
+});
+
 await check(
   'environment teardown cancels a runtime acquisition blocked by retirement',
   async () => {

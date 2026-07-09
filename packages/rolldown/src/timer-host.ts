@@ -1,5 +1,10 @@
 import * as binding from './binding.cjs';
 import { getRuntimeCapabilitiesCompat } from './runtime-support';
+import {
+  BindingMismatchError,
+  isBindingMismatchError,
+  markBindingMismatchError,
+} from './utils/binding-mismatch-error';
 
 type HostRegistration = readonly [high: number, low: number];
 type TimerHandle = ReturnType<typeof setTimeout>;
@@ -41,7 +46,7 @@ function readHostRegistration(
     low > 0xffff_ffff ||
     (high === 0 && low === 0)
   ) {
-    throw new TypeError(
+    throw new BindingMismatchError(
       `The loaded Rolldown binding returned an invalid CurrentThread ${hostLabel} ` +
         `registration for contract version ${contractVersion}.`,
       readError === undefined ? undefined : { cause: readError },
@@ -141,11 +146,12 @@ function reportTimerCancellationError(error: unknown): void {
 //   own driver registry, so each thread MUST register its own driver.
 const capabilityBinding = binding as Record<PropertyKey, unknown>;
 const runtimeCapabilityGetter = capabilityBinding.getRuntimeCapabilities;
+const hasRuntimeCapabilityReporter = runtimeCapabilityGetter !== undefined;
 // Shared native environments install both hosts proactively. The runtime stays
 // lazy, so a synchronous pre-first-use configure call may legally switch an
 // import-time MultiThread profile to CurrentThread after this module is cached.
 const currentThreadHostsSupported =
-  typeof runtimeCapabilityGetter !== 'function' || getRuntimeCapabilitiesCompat().asyncRuntimeBuild;
+  !hasRuntimeCapabilityReporter || getRuntimeCapabilitiesCompat().asyncRuntimeBuild;
 
 if (currentThreadHostsSupported) {
   const CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION = 2;
@@ -164,6 +170,7 @@ if (currentThreadHostsSupported) {
   };
   const hostFunctionEntries = Object.entries(hostFunctions);
   const legacyHostContract =
+    !hasRuntimeCapabilityReporter &&
     getCurrentThreadTaskHostContractVersion === undefined &&
     hostFunctionEntries.every(([, value]) => value === undefined);
   const completeHostContract = hostFunctionEntries.every(
@@ -184,7 +191,7 @@ if (currentThreadHostsSupported) {
           : ['getCurrentThreadTaskHostContractVersion'],
       )
       .join(', ');
-    throw new TypeError(
+    throw new BindingMismatchError(
       `The loaded Rolldown binding exposes an incomplete async-runtime host contract. ` +
         `Missing or invalid exports: ${invalidExports}. Reinstall Rolldown so the JavaScript ` +
         `package and binding versions match.`,
@@ -194,7 +201,7 @@ if (currentThreadHostsSupported) {
   if (completeHostContract) {
     const actualVersion = (getCurrentThreadTaskHostContractVersion as () => unknown)();
     if (actualVersion !== CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION) {
-      throw new TypeError(
+      throw new BindingMismatchError(
         `The loaded Rolldown binding uses async-runtime task-host contract version ` +
           `${String(actualVersion)}, but this JavaScript package requires version ` +
           `${CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION}. Reinstall Rolldown so the JavaScript ` +
@@ -378,11 +385,12 @@ if (currentThreadHostsSupported) {
       }
     }
     if (cleanupErrors.length > 0) {
-      throw new AggregateError(
+      const aggregate = new AggregateError(
         [error, ...cleanupErrors],
         'Rolldown host setup failed and registration rollback did not complete',
         { cause: error },
       );
+      throw isBindingMismatchError(error) ? markBindingMismatchError(aggregate) : aggregate;
     }
     throw error;
   }

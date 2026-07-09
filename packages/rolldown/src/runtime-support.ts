@@ -1,5 +1,6 @@
 import * as binding from './binding.cjs';
 import type { BindingRuntimeCapabilities } from './binding.cjs';
+import { BindingMismatchError } from './utils/binding-mismatch-error';
 
 // See internal-docs/async-runtime/implementation.md.
 export interface RuntimeSupport {
@@ -13,7 +14,6 @@ export type RuntimeFeature = keyof RuntimeSupport;
 type BindingRuntimeTarget = BindingRuntimeCapabilities['target'];
 
 const LOADED_BINDING_TARGET_EXPORT = '__rolldownBindingTarget';
-const BINDING_MISMATCH_CODE = 'ERR_ROLLDOWN_BINDING_MISMATCH';
 const RUNTIME_BACKENDS = ['tokio', 'shared'] as const;
 const RUNTIME_FLAVORS = ['CurrentThread', 'MultiThread'] as const;
 const RUNTIME_TARGETS = ['native', 'wasi', 'wasi-threads'] as const;
@@ -86,8 +86,13 @@ export function assertRuntimeFeature(feature: RuntimeFeature): void {
  */
 export function getRuntimeCapabilitiesCompat(): BindingRuntimeCapabilities {
   const getRuntimeCapabilities = (binding as Record<PropertyKey, unknown>).getRuntimeCapabilities;
-  if (typeof getRuntimeCapabilities !== 'function') {
+  if (getRuntimeCapabilities === undefined) {
     return getLegacyRuntimeCapabilities();
+  }
+  if (typeof getRuntimeCapabilities !== 'function') {
+    throw new BindingRuntimeContractError(
+      'getRuntimeCapabilities must be a function when the export is present',
+    );
   }
   return normalizeRuntimeCapabilities(
     (getRuntimeCapabilities as (this: void) => unknown)(),
@@ -208,9 +213,7 @@ function readEnumCapability<const T extends readonly string[]>(
   throw new BindingRuntimeContractError(`${key} is not a recognized value`);
 }
 
-class BindingRuntimeContractError extends TypeError {
-  readonly code = BINDING_MISMATCH_CODE;
-
+class BindingRuntimeContractError extends BindingMismatchError {
   constructor(detail: string) {
     super(
       `The loaded Rolldown binding returned an incompatible runtime capability contract: ` +

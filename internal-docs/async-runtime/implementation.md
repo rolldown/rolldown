@@ -280,8 +280,10 @@ binary.
   package validates the expected version. A binding from the prior callback
   protocol lacks the capability reporter and version export, so it still fails
   with a package/binding mismatch before its callback-accepting function can run.
-  A legacy binding that exposes none of the async-runtime host exports remains a
-  no-op for compatibility.
+  A truly legacy binding that exposes neither the capability reporter nor any
+  async-runtime host export remains a no-op for compatibility. Once a reporter
+  identifies a shared-runtime build, a missing host contract fails closed with
+  `ERR_ROLLDOWN_BINDING_MISMATCH`.
 
   The native threadsafe function has maximum queue size one and is unreferenced,
   so it neither exceeds the registry's physical single-flight slot nor keeps a
@@ -1146,7 +1148,8 @@ owner. Modern native-token bindings can safely fall back to independent local
 managers because every acquisition receives a distinct native token.
 A threaded-WASI binding that exposes neither protocol fails acquisition with a
 package/binding version-mismatch diagnostic instead of entering native work
-without an owner.
+without an owner. Both this missing-protocol path and the rejected legacy
+implicit-owner path carry `ERR_ROLLDOWN_BINDING_MISMATCH`.
 Each acquired value is validated for a callable `release()` method, captured
 once with its original receiver, before JavaScript records lease ownership.
 Malformed package/binding combinations therefore fail with

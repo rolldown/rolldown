@@ -100,9 +100,12 @@ test('CurrentThread task host rejects a malformed v2 registration', async () => 
   vi.mocked(binding.registerCurrentThreadTaskHost).mockReturnValueOnce(undefined as never);
 
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
-  await expect(import('../src/timer-host')).rejects.toThrow(
-    /invalid CurrentThread task-host registration for contract version 2/,
-  );
+  await expect(import('../src/timer-host')).rejects.toMatchObject({
+    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    message: expect.stringMatching(
+      /invalid CurrentThread task-host registration for contract version 2/,
+    ),
+  });
   expect(binding.registerTimerHost).not.toHaveBeenCalled();
 });
 
@@ -111,9 +114,12 @@ test('CurrentThread task host rejects the reserved zero registration', async () 
   vi.mocked(binding.registerCurrentThreadTaskHost).mockReturnValueOnce({ high: 0, low: 0 });
 
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
-  await expect(import('../src/timer-host')).rejects.toThrow(
-    /invalid CurrentThread task-host registration for contract version 2/,
-  );
+  await expect(import('../src/timer-host')).rejects.toMatchObject({
+    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    message: expect.stringMatching(
+      /invalid CurrentThread task-host registration for contract version 2/,
+    ),
+  });
   expect(binding.registerTimerHost).not.toHaveBeenCalled();
 });
 
@@ -154,9 +160,12 @@ test('CurrentThread timer host rejects a malformed v2 registration', async () =>
   vi.mocked(binding.registerTimerHost).mockReturnValueOnce(undefined as never);
 
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
-  await expect(import('../src/timer-host')).rejects.toThrow(
-    /invalid CurrentThread timer-host registration for contract version 2/,
-  );
+  await expect(import('../src/timer-host')).rejects.toMatchObject({
+    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    message: expect.stringMatching(
+      /invalid CurrentThread timer-host registration for contract version 2/,
+    ),
+  });
   expect(binding.unregisterCurrentThreadTaskHost).toHaveBeenCalledWith(0, 1);
   expect(binding.unregisterTimerHost).not.toHaveBeenCalled();
 });
@@ -166,9 +175,12 @@ test('CurrentThread timer host rejects the reserved zero registration', async ()
   vi.mocked(binding.registerTimerHost).mockReturnValueOnce({ high: 0, low: 0 });
 
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
-  await expect(import('../src/timer-host')).rejects.toThrow(
-    /invalid CurrentThread timer-host registration for contract version 2/,
-  );
+  await expect(import('../src/timer-host')).rejects.toMatchObject({
+    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    message: expect.stringMatching(
+      /invalid CurrentThread timer-host registration for contract version 2/,
+    ),
+  });
   expect(binding.unregisterCurrentThreadTaskHost).toHaveBeenCalledWith(0, 1);
   expect(binding.unregisterTimerHost).not.toHaveBeenCalled();
 });

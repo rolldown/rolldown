@@ -5,6 +5,7 @@ import {
   WasiRuntimeLeaseManager,
 } from './runtime-lease-manager';
 import { getRuntimeCapabilitiesCompat } from './runtime-support';
+import { BindingMismatchError } from './utils/binding-mismatch-error';
 
 export type { RuntimeLease } from './runtime-lease-manager';
 
@@ -157,7 +158,7 @@ function createRuntimeLeaseManager():
   if (typeof startAsyncRuntime === 'function' && typeof shutdownAsyncRuntime === 'function') {
     return {
       async acquire() {
-        throw new TypeError(
+        throw new BindingMismatchError(
           'The loaded threaded-WASI binding uses the legacy implicit runtime-owner protocol, ' +
             'which cannot be coordinated safely across JavaScript realms. Upgrade Rolldown to ' +
             'a binding that exposes acquireAsyncRuntime().',
@@ -168,7 +169,7 @@ function createRuntimeLeaseManager():
 
   return {
     async acquire() {
-      throw new TypeError(
+      throw new BindingMismatchError(
         'The loaded threaded-WASI binding does not expose acquireAsyncRuntime() or the legacy ' +
           'startAsyncRuntime()/shutdownAsyncRuntime() lifecycle API. Reinstall Rolldown so the ' +
           'JavaScript package and binding versions match.',

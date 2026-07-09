@@ -2,6 +2,7 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
 const binding = vi.hoisted(() => ({
+  capabilityGetter: undefined as unknown,
   loadedTarget: 'wasi-threads',
   report: {
     asyncRuntimeBuild: false,
@@ -21,13 +22,16 @@ vi.mock('../src/binding.cjs', () => ({
   get __rolldownBindingTarget() {
     return binding.loadedTarget;
   },
-  getRuntimeCapabilities: () => binding.report,
+  get getRuntimeCapabilities() {
+    return binding.capabilityGetter;
+  },
 }));
 
 // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
 import { getRuntimeCapabilitiesCompat } from '../src/runtime-support';
 
 beforeEach(() => {
+  binding.capabilityGetter = () => binding.report;
   binding.loadedTarget = 'wasi-threads';
   binding.report = {
     asyncRuntimeBuild: false,
@@ -41,6 +45,17 @@ beforeEach(() => {
     wasi: true,
     watchSupported: false,
   };
+});
+
+test('a present capability reporter export must be callable', () => {
+  binding.capabilityGetter = null;
+
+  expect(() => getRuntimeCapabilitiesCompat()).toThrow(
+    expect.objectContaining({
+      code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+      message: expect.stringContaining('getRuntimeCapabilities must be a function'),
+    }),
+  );
 });
 
 test('capability reports must include every non-legacy field', () => {

@@ -1,3 +1,5 @@
+import { BindingMismatchError } from './utils/binding-mismatch-error';
+
 export interface RuntimeLease {
   release(): void;
 }
@@ -174,7 +176,12 @@ function validateNativeRuntimeLease(value: unknown): RuntimeLease {
   if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
     throw new BindingRuntimeLeaseContractError();
   }
-  const release = Reflect.get(value, 'release');
+  let release: unknown;
+  try {
+    release = Reflect.get(value, 'release');
+  } catch (error) {
+    throw new BindingRuntimeLeaseContractError(error);
+  }
   if (typeof release !== 'function') {
     throw new BindingRuntimeLeaseContractError();
   }
@@ -183,13 +190,12 @@ function validateNativeRuntimeLease(value: unknown): RuntimeLease {
   };
 }
 
-class BindingRuntimeLeaseContractError extends TypeError {
-  readonly code = 'ERR_ROLLDOWN_BINDING_MISMATCH';
-
-  constructor() {
+class BindingRuntimeLeaseContractError extends BindingMismatchError {
+  constructor(cause?: unknown) {
     super(
       'The loaded Rolldown binding returned an incompatible async runtime lease without a ' +
         'release() method. Reinstall Rolldown so the JavaScript package and binding versions match.',
+      cause === undefined ? undefined : { cause },
     );
     this.name = 'BindingRuntimeContractError';
   }

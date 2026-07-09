@@ -290,6 +290,26 @@ describe('WasiRuntimeLeaseManager', () => {
     },
   );
 
+  test('wraps a throwing native lease release accessor as a binding mismatch', async () => {
+    const accessorError = new Error('release accessor failed');
+    const nativeLease = Object.defineProperty({}, 'release', {
+      get() {
+        throw accessorError;
+      },
+    });
+    const manager = new WasiRuntimeLeaseManager({
+      enabled: true,
+      acquire: vi.fn().mockResolvedValue(nativeLease),
+    });
+
+    await expect(manager.acquire()).rejects.toMatchObject({
+      cause: accessorError,
+      code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+      message: expect.stringContaining('runtime lease without a release() method'),
+    });
+    expect(manager.activeLeases).toBe(0);
+  });
+
   test('captures the native lease release method once with its original receiver', async () => {
     let releaseReads = 0;
     let releaseReceiver: unknown;

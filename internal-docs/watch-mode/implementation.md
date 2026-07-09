@@ -642,6 +642,13 @@ close identities owned by the native coordinator.
 
 The coordinator distinguishes a public `close()` from cleanup started
 automatically after `run()` rejects or native `CLOSE` arrives. If an automatic
+attempt's native close transport rejects before structured cleanup begins, and
+no public caller joined that attempt, the watcher retries it once on the next
+host turn. This bounded retry covers transient N-API submission failures
+without creating an unbounded event-loop keepalive; a persistent failure
+remains owned by the normal explicit `close()` retry path. A public caller that
+joins the first attempt observes that failure directly and suppresses the
+automatic retry. If an automatic
 attempt encounters a retryable worker termination failure, its internally
 discarded promise retains that diagnostic separately from worker ownership. A
 later public close retries only the still-owned workers and replays the

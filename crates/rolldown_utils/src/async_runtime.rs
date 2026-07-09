@@ -464,20 +464,24 @@ impl<I: Copy, T: ?Sized> Drop for ContainedArcSnapshot<I, T> {
 
 struct PanicContainedWaker {
   waker: ManuallyDrop<Waker>,
+  generation: Option<u64>,
 }
 
 impl std::task::Wake for PanicContainedWaker {
   fn wake(self: Arc<Self>) {
+    let _generation = RuntimeGenerationGuard::enter_optional(self.generation);
     let _ = catch_unwind_contained(|| self.waker.wake_by_ref());
   }
 
   fn wake_by_ref(self: &Arc<Self>) {
+    let _generation = RuntimeGenerationGuard::enter_optional(self.generation);
     let _ = catch_unwind_contained(|| self.waker.wake_by_ref());
   }
 }
 
 impl Drop for PanicContainedWaker {
   fn drop(&mut self) {
+    let _generation = RuntimeGenerationGuard::enter_optional(self.generation);
     let _ = catch_unwind_contained(|| {
       // SAFETY: this is the sole destruction path for the underlying waker.
       unsafe { ManuallyDrop::drop(&mut self.waker) };
@@ -486,16 +490,20 @@ impl Drop for PanicContainedWaker {
 }
 
 fn panic_contained_waker(waker: Waker) -> Waker {
-  Waker::from(Arc::new(PanicContainedWaker { waker: ManuallyDrop::new(waker) }))
+  Waker::from(Arc::new(PanicContainedWaker {
+    waker: ManuallyDrop::new(waker),
+    generation: active_runtime_generation(),
+  }))
 }
 
 struct PanicContainedWakerSource {
   waker: ManuallyDrop<Waker>,
+  generation: Option<u64>,
 }
 
 impl PanicContainedWakerSource {
   fn new(waker: Waker) -> Self {
-    Self { waker: ManuallyDrop::new(waker) }
+    Self { waker: ManuallyDrop::new(waker), generation: active_runtime_generation() }
   }
 
   fn as_waker(&self) -> &Waker {
@@ -505,6 +513,7 @@ impl PanicContainedWakerSource {
 
 impl Drop for PanicContainedWakerSource {
   fn drop(&mut self) {
+    let _generation = RuntimeGenerationGuard::enter_optional(self.generation);
     let _ = catch_unwind_contained(|| {
       // SAFETY: this is the sole destruction path for the source waker.
       unsafe { ManuallyDrop::drop(&mut self.waker) };
@@ -519,13 +528,19 @@ struct PanicContainedWakerCache {
 
 impl PanicContainedWakerCache {
   fn new(waker: &Waker) -> Self {
+    let generation = active_runtime_generation();
+    let _generation = RuntimeGenerationGuard::enter_optional(generation);
     let source = PanicContainedWakerSource::new(waker.clone());
     let contained = panic_contained_waker(source.as_waker().clone());
     Self { source, contained }
   }
 
   fn update(&mut self, waker: &Waker) {
-    if !self.source.as_waker().will_wake(waker) {
+    let will_wake = {
+      let _generation = RuntimeGenerationGuard::enter_optional(self.source.generation);
+      self.source.as_waker().will_wake(waker)
+    };
+    if !will_wake {
       *self = Self::new(waker);
     }
   }
@@ -1914,7 +1929,11 @@ struct RuntimeGenerationGuard {
 
 impl RuntimeGenerationGuard {
   fn enter(generation: u64) -> Self {
-    Self { previous: ACTIVE_RUNTIME_GENERATION.with(|current| current.replace(Some(generation))) }
+    Self::enter_optional(Some(generation))
+  }
+
+  fn enter_optional(generation: Option<u64>) -> Self {
+    Self { previous: ACTIVE_RUNTIME_GENERATION.with(|current| current.replace(generation)) }
   }
 }
 
@@ -9526,6 +9545,85 @@ mod tests {
   }
 
   #[cfg(not(target_family = "wasm"))]
+  #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+  enum JoinAwaiterWakerEventKind {
+    Clone,
+    Wake,
+    WakeByRef,
+    Drop,
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  struct JoinAwaiterWakerState {
+    events: Mutex<Vec<(JoinAwaiterWakerEventKind, Option<u64>)>>,
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  impl JoinAwaiterWakerState {
+    fn record(&self, kind: JoinAwaiterWakerEventKind) {
+      self
+        .events
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .push((kind, active_runtime_generation()));
+    }
+
+    fn clear(&self) {
+      self.events.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clear();
+    }
+
+    fn snapshot(&self) -> Vec<(JoinAwaiterWakerEventKind, Option<u64>)> {
+      self.events.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone()
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  struct JoinAwaiterWakerToken {
+    state: Arc<JoinAwaiterWakerState>,
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  unsafe fn clone_join_awaiter_waker(data: *const ()) -> std::task::RawWaker {
+    let token = unsafe { &*data.cast::<JoinAwaiterWakerToken>() };
+    token.state.record(JoinAwaiterWakerEventKind::Clone);
+    let clone = Box::new(JoinAwaiterWakerToken { state: Arc::clone(&token.state) });
+    std::task::RawWaker::new(Box::into_raw(clone).cast(), &JOIN_AWAITER_WAKER_VTABLE)
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  unsafe fn wake_join_awaiter_waker(data: *const ()) {
+    let token = unsafe { Box::from_raw(data.cast_mut().cast::<JoinAwaiterWakerToken>()) };
+    token.state.record(JoinAwaiterWakerEventKind::Wake);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  unsafe fn wake_join_awaiter_waker_by_ref(data: *const ()) {
+    let token = unsafe { &*data.cast::<JoinAwaiterWakerToken>() };
+    token.state.record(JoinAwaiterWakerEventKind::WakeByRef);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  unsafe fn drop_join_awaiter_waker(data: *const ()) {
+    let token = unsafe { Box::from_raw(data.cast_mut().cast::<JoinAwaiterWakerToken>()) };
+    token.state.record(JoinAwaiterWakerEventKind::Drop);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  static JOIN_AWAITER_WAKER_VTABLE: std::task::RawWakerVTable = std::task::RawWakerVTable::new(
+    clone_join_awaiter_waker,
+    wake_join_awaiter_waker,
+    wake_join_awaiter_waker_by_ref,
+    drop_join_awaiter_waker,
+  );
+
+  #[cfg(not(target_family = "wasm"))]
+  fn join_awaiter_waker(state: Arc<JoinAwaiterWakerState>) -> Waker {
+    let token = Box::new(JoinAwaiterWakerToken { state });
+    let raw = std::task::RawWaker::new(Box::into_raw(token).cast(), &JOIN_AWAITER_WAKER_VTABLE);
+    unsafe { Waker::from_raw(raw) }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
   fn wait_for_generation_parker_to_sleep(stop: &GenerationStop) {
     wait_until("the block_on driver to sleep", || {
       stop
@@ -13365,6 +13463,94 @@ mod tests {
       String::from_utf8_lossy(&output.stdout),
       String::from_utf8_lossy(&output.stderr)
     );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn join_handle_awaiter_completion_retains_its_registered_generation_after_restart() {
+    let controller = multi_thread_controller("join-awaiter-completion-generation", 2, 1);
+    let mut handle = controller.spawn(std::future::pending::<()>());
+    let old_generation = controller.backend().generation();
+    let state = Arc::new(JoinAwaiterWakerState { events: Mutex::new(Vec::new()) });
+    let waker = {
+      let _generation = RuntimeGenerationGuard::enter(old_generation);
+      join_awaiter_waker(Arc::clone(&state))
+    };
+    {
+      let _generation = RuntimeGenerationGuard::enter(old_generation);
+      let mut cx = Context::from_waker(&waker);
+      assert!(Pin::new(&mut handle).poll(&mut cx).is_pending());
+    }
+    {
+      let _generation = RuntimeGenerationGuard::enter(old_generation);
+      drop(waker);
+    }
+
+    controller.shutdown().expect("the first generation must stop");
+    controller.start().expect("the runtime must restart");
+    let new_generation = controller.backend().generation();
+    assert_ne!(new_generation, old_generation);
+    state.clear();
+
+    let replacement = futures::task::noop_waker();
+    {
+      let _generation = RuntimeGenerationGuard::enter(new_generation);
+      let mut cx = Context::from_waker(&replacement);
+      assert!(matches!(Pin::new(&mut handle).poll(&mut cx), Poll::Ready(Err(_))));
+    }
+
+    let events = state.snapshot();
+    assert!(!events.is_empty(), "completion must retire the registered awaiter waker");
+    assert!(
+      events.iter().all(|(kind, generation)| {
+        *kind == JoinAwaiterWakerEventKind::Drop && *generation == Some(old_generation)
+      }),
+      "old-generation awaiter retirement escaped its generation: {events:?}"
+    );
+    controller.shutdown().expect("the replacement generation must stop");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn dropping_join_handle_retains_awaiter_generation_after_restart() {
+    let controller = multi_thread_controller("join-awaiter-drop-generation", 2, 1);
+    let mut handle = controller.spawn(std::future::pending::<()>());
+    let old_generation = controller.backend().generation();
+    let state = Arc::new(JoinAwaiterWakerState { events: Mutex::new(Vec::new()) });
+    let waker = {
+      let _generation = RuntimeGenerationGuard::enter(old_generation);
+      join_awaiter_waker(Arc::clone(&state))
+    };
+    {
+      let _generation = RuntimeGenerationGuard::enter(old_generation);
+      let mut cx = Context::from_waker(&waker);
+      assert!(Pin::new(&mut handle).poll(&mut cx).is_pending());
+    }
+    {
+      let _generation = RuntimeGenerationGuard::enter(old_generation);
+      drop(waker);
+    }
+
+    controller.shutdown().expect("the first generation must stop");
+    controller.start().expect("the runtime must restart");
+    let new_generation = controller.backend().generation();
+    assert_ne!(new_generation, old_generation);
+    state.clear();
+
+    {
+      let _generation = RuntimeGenerationGuard::enter(new_generation);
+      drop(handle);
+    }
+
+    let events = state.snapshot();
+    assert!(!events.is_empty(), "handle drop must retire the registered awaiter waker");
+    assert!(
+      events.iter().all(|(kind, generation)| {
+        *kind == JoinAwaiterWakerEventKind::Drop && *generation == Some(old_generation)
+      }),
+      "old-generation awaiter destruction escaped its generation: {events:?}"
+    );
+    controller.shutdown().expect("the replacement generation must stop");
   }
 
   #[cfg(not(target_family = "wasm"))]

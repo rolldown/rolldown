@@ -857,7 +857,10 @@ When the build finishes — success or failure — the output is as
 current as it can be. The loop breaks, `run()` returns. If the runtime rejects
 the coordinator submission while stopped, `run()` returns that lifecycle
 error and restores the exact boxed coordinator future; a later call after
-runtime restart retries the same coordinator.
+runtime restart retries the same coordinator. Coordinator submission is
+single-flight, but the initial-output wait is per caller: concurrent `run()`
+calls that observe an already-running coordinator still wait for the same
+initial build instead of returning before output callbacks finish.
 
 **Manual retry via `triggerFullBuild`.** A separate, fire-and-forget
 operation for callers that explicitly want to force a new build

@@ -893,6 +893,36 @@ test('same-turn waitForClose and native close rejections keep deterministic orde
   expect(release).toHaveBeenCalledOnce();
 });
 
+test('automatic close retries a native transport rejection before public close', async () => {
+  const waitForCloseError = new Error('waitForClose transport rejected');
+  const nativeCloseError = new Error('automatic native close rejected');
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const releaseFinished = createDeferred<void>();
+  const release = vi.fn(() => releaseFinished.resolve());
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingWaitForClose.mockRejectedValue(waitForCloseError);
+  mocks.bindingClose.mockRejectedValueOnce(nativeCloseError).mockResolvedValueOnce({
+    errors: [],
+    nativeOwnedCloseIdentities: [],
+  });
+  const emitter = new WatcherEmitter();
+  const closeEvent = new Promise<void>((resolve) => {
+    emitter.on('close', resolve);
+  });
+  await createWatcher(emitter, { output: {} });
+
+  await withTimeout(closeEvent, 'automatic native close retry');
+  await withTimeout(releaseFinished.promise, 'automatic native close cleanup');
+
+  expect(mocks.bindingRun).toHaveBeenCalledOnce();
+  expect(mocks.bindingWaitForClose).toHaveBeenCalledOnce();
+  expect(mocks.bindingClose).toHaveBeenCalledTimes(2);
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+  await expect(emitter.close()).rejects.toBe(waitForCloseError);
+});
+
 test('automatic native close preserves an undelivered worker fault through cleanup retry', async () => {
   const workerFault = new Error('delayed parallel-plugin worker fault');
   const waitForCloseStarted = createDeferred<void>();

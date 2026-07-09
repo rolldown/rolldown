@@ -28,6 +28,7 @@ import {
   runRetryableCleanup,
   trackRetryableCleanupOwnership,
   type RetryableCleanup,
+  waitForRetryableCleanupTurn,
 } from '../../utils/retryable-cleanup';
 import { arraify } from '../../utils/misc';
 import type { WatcherEmitter } from './watch-emitter';
@@ -42,7 +43,9 @@ interface WatcherCloseAttemptResult extends CloseAttemptResult {
 }
 
 interface WatcherCloseAttemptContext {
+  automaticNativeCloseRetryScheduled: boolean;
   publiclyObserved: boolean;
+  retryNativeCloseAutomatically: boolean;
 }
 
 interface RetainedWorkerDiagnostic {
@@ -266,6 +269,7 @@ class Watcher {
   resultCloses = new WatchResultCloseRegistry();
   // See internal-docs/watch-mode/implementation.md.
   private closeAttemptContexts = new WeakMap<Promise<void>, WatcherCloseAttemptContext>();
+  private automaticNativeCloseRetryAttempted = false;
   private retainedWorkerDiagnostics: RetainedWorkerDiagnostic[] = [];
   closeCoordinator = new CloseCoordinator(
     'Watcher native close, parallel-plugin worker shutdown, close listener, or runtime release failed',
@@ -320,7 +324,26 @@ class Watcher {
   }
 
   private closeAutomatically(): void {
-    void this.requestClose(false).catch(() => {});
+    const closePromise = this.requestClose(false);
+    const context = this.closeAttemptContexts.get(closePromise)!;
+    void closePromise
+      .catch(async () => {
+        if (
+          context.publiclyObserved ||
+          !context.retryNativeCloseAutomatically ||
+          context.automaticNativeCloseRetryScheduled ||
+          this.automaticNativeCloseRetryAttempted
+        ) {
+          return;
+        }
+        context.automaticNativeCloseRetryScheduled = true;
+        this.automaticNativeCloseRetryAttempted = true;
+        await waitForRetryableCleanupTurn();
+        if (!context.publiclyObserved) {
+          this.closeAutomatically();
+        }
+      })
+      .catch(() => {});
   }
 
   private requestClose(publiclyObserved: boolean): Promise<void> {
@@ -328,7 +351,11 @@ class Watcher {
     // returns. A close from that callback keeps the previous result native-owned.
     this.resultCloses.cancelPendingBuilds();
     this.startNativeClose();
-    const attemptContext: WatcherCloseAttemptContext = { publiclyObserved };
+    const attemptContext: WatcherCloseAttemptContext = {
+      automaticNativeCloseRetryScheduled: false,
+      publiclyObserved,
+      retryNativeCloseAutomatically: false,
+    };
     const closePromise = this.closeCoordinator.close(() => this.closeLifecycle(attemptContext));
     const activeAttemptContext = this.closeAttemptContexts.get(closePromise);
     if (activeAttemptContext) {
@@ -344,6 +371,7 @@ class Watcher {
   private markCloseAttemptPubliclyObserved(context: WatcherCloseAttemptContext): void {
     if (context.publiclyObserved) return;
     context.publiclyObserved = true;
+    context.retryNativeCloseAutomatically = false;
     this.retainedWorkerDiagnostics = this.retainedWorkerDiagnostics.filter(
       (diagnostic) => diagnostic.attempt !== context,
     );
@@ -372,6 +400,7 @@ class Watcher {
   private async closeLifecycle(context: WatcherCloseAttemptContext): Promise<CloseAttemptResult> {
     const result = await this.closeOwnedResources(context);
     if (!result.nativeCloseReturned) {
+      context.retryNativeCloseAutomatically = !context.publiclyObserved;
       return result;
     }
 

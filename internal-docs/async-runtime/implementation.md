@@ -611,6 +611,12 @@ does not add a second source allocation.
   dependency propagation, remains stable while the caller's `Waker::will_wake`
   identity is unchanged, and contains both wake and final source-waker
   destruction before either can reach async-task's abort-on-panic boundary.
+  Each cached source snapshots the runtime generation active when that caller
+  waker is registered, including an explicit no-generation state. Cloning,
+  identity comparison, wake, cache replacement, completion cleanup, and handle
+  destruction restore that snapshot, so a retained first-generation handle
+  cannot run an old `RawWaker` destructor while a replacement generation is
+  active.
   Successful values remain generation-tagged until polling transfers ownership
   to the caller. Dropping a blocking or immediate handle is panic-contained
   because its receiver/result may already own a completed user value whose

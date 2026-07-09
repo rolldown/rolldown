@@ -175,11 +175,6 @@ impl DevEngine {
   pub async fn run(&self) -> BuildResult<()> {
     let mut coordinator_state = self.coordinator_state.lock().await;
 
-    if coordinator_state.coordinator.is_none() {
-      // The coordinator is already running.
-      return Ok(());
-    }
-
     let start_result = coordinator_state.try_start(|coordinator| match try_spawn(coordinator) {
       Ok(join_handle) => {
         let coordinator_handle = Box::pin(async move {

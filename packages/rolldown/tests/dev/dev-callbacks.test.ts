@@ -99,6 +99,66 @@ test.skipIf(isSingleThread)(
 );
 
 test.skipIf(isSingleThread)(
+  'concurrent run calls both await the initial output callback',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const { dir, input, outputDir } = createFixture('dev-concurrent-run');
+    let callbackStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      callbackStarted = resolve;
+    });
+    let releaseCallback!: () => void;
+    const callbackGate = new Promise<void>((resolve) => {
+      releaseCallback = resolve;
+    });
+
+    const engine = await dev(
+      { input, experimental: { devMode: true } },
+      { dir: outputDir },
+      {
+        onOutput() {
+          callbackStarted();
+          return callbackGate;
+        },
+      },
+    );
+    onTestFinished(async () => {
+      releaseCallback();
+      await engine.close().catch(() => {});
+      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    const firstRun = engine.run();
+    await started;
+    const secondRun = engine.run();
+    let firstSettled = false;
+    let secondSettled = false;
+    void firstRun.then(
+      () => {
+        firstSettled = true;
+      },
+      () => {
+        firstSettled = true;
+      },
+    );
+    void secondRun.then(
+      () => {
+        secondSettled = true;
+      },
+      () => {
+        secondSettled = true;
+      },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(firstSettled).toBe(false);
+    expect(secondSettled).toBe(false);
+
+    releaseCallback();
+    await settleWithin(Promise.all([firstRun, secondRun]), 'concurrent run calls');
+  },
+);
+
+test.skipIf(isSingleThread)(
   'close drains a rejecting run before closeBundle awaits it',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

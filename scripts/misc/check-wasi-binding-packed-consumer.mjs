@@ -2191,10 +2191,9 @@ try {
       2,
     )}\n`,
   );
-  await runPnpm(
-    ['--pm-on-fail=ignore', 'install', '--ignore-scripts', '--config.node-linker=isolated'],
-    { cwd: browserConsumer },
-  );
+  await runPnpm(['--pm-on-fail=ignore', 'install', '--config.node-linker=isolated'], {
+    cwd: browserConsumer,
+  });
   assertNoRegistryRuntimePackages(
     await readFile(path.join(browserConsumer, 'pnpm-lock.yaml'), 'utf8'),
     'browser pnpm consumer',

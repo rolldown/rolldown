@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema-jsonc.json",
-  "ignoreBinaries": ["only-allow", "rustup"],
+  "ignoreBinaries": ["rustup"],
   "ignoreWorkspaces": ["examples/**"], // no rolldown plugin yet
   "workspaces": {
     ".": {

@@ -1,3 +1,4 @@
+// napi-rs-artifact-metadata:{"version":2,"rootEntry":"binding.cjs","exports":["LegalCommentsMode","minify","minifySync","Severity","ParseResult","ExportExportNameKind","ExportImportNameKind","ExportLocalNameKind","ImportNameKind","parse","parseSync","rawTransferSupported","ResolverFactory","EnforceExtension","ModuleType","sync","HelperMode","isolatedDeclaration","isolatedDeclarationSync","moduleRunnerTransform","moduleRunnerTransformSync","transform","transformSync","BindingAsyncRuntimeLease","BindingBundleEndEventData","BindingBundleErrorEventData","BindingBundler","BindingBundleStartEventData","BindingCallableBuiltinPlugin","BindingChunkingContext","BindingDecodedMap","BindingDevEngine","BindingLoadPluginContext","BindingMagicString","BindingModuleInfo","BindingNormalizedOptions","BindingOutputAsset","BindingOutputChunk","BindingPluginContext","BindingRenderedChunk","BindingRenderedChunkMeta","BindingRenderedModule","BindingSourceMap","BindingTransformPluginContext","BindingWatcher","BindingWatcherBundler","BindingWatcherChangeData","BindingWatcherEvent","ParallelJsPluginRegistry","TraceSubscriberGuard","TsconfigCache","acquireAsyncRuntime","BindingAttachDebugInfo","BindingBuiltinPluginName","BindingChunkModuleOrderBy","BindingErrorStage","BindingLogLevel","BindingPluginOrder","BindingPropertyReadSideEffects","BindingPropertyWriteSideEffects","BindingRebuildStrategy","BindingRuntimeFlavor","collapseSourcemaps","configureAsyncRuntime","enhancedTransform","enhancedTransformSync","FilterTokenKind","getAsyncRuntimeConfig","getAsyncRuntimeMetrics","getCurrentThreadTaskHostContractVersion","getRuntimeCapabilities","initTraceSubscriber","registerCurrentThreadTaskHost","registerPlugins","registerTimerHost","resetAsyncRuntimeMetrics","resolveTsconfig","shutdownAsyncRuntime","startAsyncRuntime","unregisterCurrentThreadTaskHost","unregisterTimerHost"],"managedRootEntries":["browser.js","binding.cjs","rolldown-binding.wasm","rolldown-binding.debug.wasm"]}
 /* eslint-disable */
 /* prettier-ignore */
 
@@ -14,7 +15,7 @@ const {
 } = require('@napi-rs/wasm-runtime')
 const { createContext: __emnapiCreateContext } = require('@emnapi/runtime')
 
-function __getWasiWorkerExecArgv() {
+function __getWorkerExecArgv() {
   const __workerExecArgv = []
   for (let __index = 0; __index < process.execArgv.length; __index += 1) {
     const __arg = process.execArgv[__index]
@@ -40,65 +41,37 @@ function __getWasiWorkerExecArgv() {
   return __workerExecArgv
 }
 
-function __isInvalidWasiWorkerExecArgv(errorMessage, argument) {
-  const __equalsIndex = argument.indexOf('=')
-  const __argumentName =
-    __equalsIndex === -1 ? argument : argument.slice(0, __equalsIndex)
-  return (
-    errorMessage.includes(': ' + __argumentName + ',') ||
-    errorMessage.includes(': ' + __argumentName + '=') ||
-    errorMessage.endsWith(': ' + __argumentName) ||
-    errorMessage.includes(', ' + __argumentName + ',') ||
-    errorMessage.includes(', ' + __argumentName + '=') ||
-    errorMessage.endsWith(', ' + __argumentName)
-  )
-}
-
-function __removeInvalidWasiWorkerExecArgv(execArgv, error) {
-  if (typeof error.message !== 'string') {
-    return
-  }
-  const __workerExecArgv = []
-  let __removed = false
-  for (let __index = 0; __index < execArgv.length; __index += 1) {
-    const __arg = execArgv[__index]
-    if (
-      __arg.startsWith('-') &&
-      __isInvalidWasiWorkerExecArgv(error.message, __arg)
-    ) {
-      __removed = true
-      if (
-        !__arg.includes('=') &&
-        __index + 1 < execArgv.length &&
-        !execArgv[__index + 1].startsWith('-')
-      ) {
-        __index += 1
-      }
-      continue
-    }
-    __workerExecArgv.push(__arg)
-  }
-  return __removed ? __workerExecArgv : undefined
-}
-
 function __createWasiWorker(filename) {
-  let __workerExecArgv = __getWasiWorkerExecArgv()
-  while (true) {
+  try {
+    return new Worker(filename, {
+      env: __rolldownWasiEnv,
+      execArgv: __getWorkerExecArgv(),
+    })
+  } catch (error) {
+    if (!error || error.code !== 'ERR_WORKER_INVALID_EXEC_ARGV') {
+      throw error
+    }
+  }
+  return new Worker(filename, {
+    env: __rolldownWasiEnv,
+    execArgv: [],
+  })
+}
+
+const __wasiInitializationWorkers = new Set()
+
+function __terminateWasiInitializationWorkers(__error) {
+  for (const __worker of __wasiInitializationWorkers) {
+    __wasiInitializationWorkers.delete(__worker)
     try {
-      return new Worker(filename, {
-        env: __rolldownWasiEnv,
-        execArgv: __workerExecArgv,
-      })
-    } catch (error) {
-      if (!error || error.code !== 'ERR_WORKER_INVALID_EXEC_ARGV') {
-        throw error
+      const __termination = __worker.terminate()
+      if (__termination && typeof __termination.then === 'function') {
+        void Promise.resolve(__termination).catch((__cleanupError) => {
+          __attachCleanupError(__error, __cleanupError)
+        })
       }
-      const __nextWorkerExecArgv =
-        __removeInvalidWasiWorkerExecArgv(__workerExecArgv, error)
-      if (!__nextWorkerExecArgv) {
-        throw error
-      }
-      __workerExecArgv = __nextWorkerExecArgv
+    } catch (__cleanupError) {
+      __attachCleanupError(__error, __cleanupError)
     }
   }
 }
@@ -132,57 +105,428 @@ const __wasi = new __nodeWASI({
   }
 })
 
-const __emnapiContext = __emnapiCreateContext()
-
-let __emnapiContextDestroyWrapped = false
-let __emnapiWasmEnvCleanupPrepared = false
-
-function __wrapEmnapiContextDestroy(instance) {
-  if (__emnapiContextDestroyWrapped) {
+function __captureEmnapiAutoDestroyListener() {
+  if (
+    typeof process.prependListener !== 'function' ||
+    typeof process.removeListener !== 'function'
+  ) {
     return
   }
-  // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
-  const __destroyEmnapiContext = __emnapiContext.destroy
-  __emnapiContext.destroy = function() {
-    if (!__emnapiWasmEnvCleanupPrepared) {
-      const __prepareWasmEnvCleanup =
-        instance.exports.napi_prepare_wasm_env_cleanup
-      if (typeof __prepareWasmEnvCleanup === 'function') {
-        __prepareWasmEnvCleanup()
-      }
-      __emnapiWasmEnvCleanupPrepared = true
+  let __autoDestroyListener
+  const __captureListener = (__event, __listener) => {
+    if (__event === 'beforeExit' && __autoDestroyListener === undefined) {
+      __autoDestroyListener = __listener
     }
-    return Reflect.apply(__destroyEmnapiContext, this, arguments)
   }
-  __emnapiContextDestroyWrapped = true
-}
-
-const __sharedMemory = new WebAssembly.Memory({
-  initial: 16384,
-  maximum: 65536,
-  shared: true,
-})
-
-let __wasmFilePath = __nodePath.join(__dirname, 'rolldown-binding.wasm32-wasi.wasm')
-const __wasmDebugFilePath = __nodePath.join(__dirname, 'rolldown-binding.wasm32-wasi.debug.wasm')
-
-if (__nodeFs.existsSync(__wasmDebugFilePath)) {
-  __wasmFilePath = __wasmDebugFilePath
-} else if (!__nodeFs.existsSync(__wasmFilePath)) {
   try {
-    __wasmFilePath = require.resolve('@rolldown/binding-wasm32-wasi/rolldown-binding.wasm32-wasi.wasm')
+    // Run before existing newListener hooks so a hook that registers its own
+    // beforeExit listener cannot be mistaken for emnapi's registration.
+    process.prependListener('newListener', __captureListener)
   } catch {
-    throw new Error('Cannot find rolldown-binding.wasm32-wasi.wasm file, and @rolldown/binding-wasm32-wasi package is not installed.')
+    return
+  }
+  return () => {
+    try {
+      process.removeListener('newListener', __captureListener)
+    } catch {}
+    if (__autoDestroyListener !== undefined) {
+      try {
+        process.removeListener('beforeExit', __autoDestroyListener)
+      } catch {}
+    }
   }
 }
 
-const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule } = __emnapiInstantiateNapiModuleSync(__nodeFs.readFileSync(__wasmFilePath), {
-  context: __emnapiContext,
+const __finishAutoDestroyCapture = __captureEmnapiAutoDestroyListener()
+let __emnapiContext
+let __emnapiContextDestroyed = false
+let __emnapiContextDestroying = false
+let __emnapiContextDestroyPromise
+let __emnapiContextRegisteredForBeforeExit = false
+let __emnapiContextRegisteredForExit = false
+let __emnapiContextBeforeExitRegistrationRetryCount = 0
+let __emnapiContextBeforeExitRegistrationRetryScheduled = false
+let __contextInitializationError
+let __contextInitializationFailed = false
+try {
+  __emnapiContext = __emnapiCreateContext({ autoDestroy: false })
+  // emnapi <= 1.11 ignores autoDestroy. suppressDestroy() is the public
+  // contract that keeps this context alive until our explicit cleanup runs.
+  __emnapiContext.suppressDestroy()
+} catch (error) {
+  __contextInitializationError = error
+  __contextInitializationFailed = true
+} finally {
+  // Remove only the exact legacy callback captured above. suppressDestroy()
+  // remains the safety net if listener removal is unavailable or fails.
+  __finishAutoDestroyCapture?.()
+}
+
+function __destroyEmnapiContext() {
+  if (__emnapiContextDestroyed) {
+    return
+  }
+  if (__emnapiContextDestroyPromise) {
+    return __emnapiContextDestroyPromise
+  }
+  if (__emnapiContextDestroying) {
+    return
+  }
+  __emnapiContextDestroying = true
+  let __result
+  try {
+    __result = __emnapiContext.destroy()
+  } catch (error) {
+    __emnapiContextDestroying = false
+    throw error
+  }
+  let __then
+  try {
+    if (
+      __result !== null &&
+      (typeof __result === 'object' || typeof __result === 'function')
+    ) {
+      __then = __result.then
+    }
+  } catch (error) {
+    __emnapiContextDestroying = false
+    throw error
+  }
+  if (typeof __then === 'function') {
+    let __resolveResult
+    let __rejectResult
+    const __resultPromise = new Promise((resolve, reject) => {
+      __resolveResult = resolve
+      __rejectResult = reject
+    })
+    const __promise = __resultPromise.then(
+      (value) => {
+        __emnapiContextDestroying = false
+        __emnapiContextDestroyed = true
+        __emnapiContextDestroyPromise = undefined
+        return value
+      },
+      (error) => {
+        __emnapiContextDestroying = false
+        __emnapiContextDestroyPromise = undefined
+        throw error
+      },
+    )
+    __emnapiContextDestroyPromise = __promise
+    try {
+      Reflect.apply(__then, __result, [__resolveResult, __rejectResult])
+    } catch (error) {
+      __rejectResult(error)
+    }
+    return __promise
+  }
+  __emnapiContextDestroying = false
+  __emnapiContextDestroyed = true
+}
+
+function __removeEmnapiContextBeforeExitListener() {
+  if (__emnapiContextRegisteredForBeforeExit) {
+    process.removeListener('beforeExit', __destroyEmnapiContextBeforeExit)
+    __emnapiContextRegisteredForBeforeExit = false
+  }
+}
+
+function __removeEmnapiContextAtExitListener() {
+  if (__emnapiContextRegisteredForExit) {
+    process.removeListener('exit', __destroyEmnapiContextAtExit)
+    __emnapiContextRegisteredForExit = false
+  }
+}
+
+function __removeEmnapiContextCleanupListeners() {
+  const __errors = []
+  try {
+    __removeEmnapiContextBeforeExitListener()
+  } catch (__error) {
+    __errors.push(__error)
+  }
+  try {
+    __removeEmnapiContextAtExitListener()
+  } catch (__error) {
+    __errors.push(__error)
+  }
+  if (__errors.length === 0) {
+    __emnapiContextBeforeExitRegistrationRetryCount = 0
+    return
+  }
+  if (__errors.length === 1) {
+    throw __errors[0]
+  }
+  throw new AggregateError(
+    __errors,
+    'emnapi context cleanup listener removal failed',
+  )
+}
+
+function __scheduleEmnapiContextBeforeExitRegistration() {
+  if (
+    __emnapiContextDestroyed ||
+    __emnapiContextRegisteredForBeforeExit ||
+    __emnapiContextBeforeExitRegistrationRetryScheduled ||
+    __emnapiContextBeforeExitRegistrationRetryCount >= 3
+  ) {
+    return
+  }
+  __emnapiContextBeforeExitRegistrationRetryScheduled = true
+  __emnapiContextBeforeExitRegistrationRetryCount++
+  queueMicrotask(() => {
+    __emnapiContextBeforeExitRegistrationRetryScheduled = false
+    if (
+      __emnapiContextDestroyed ||
+      __emnapiContextRegisteredForBeforeExit
+    ) {
+      return
+    }
+    try {
+      __registerEmnapiContextBeforeExit()
+    } catch {}
+  })
+}
+
+function __registerEmnapiContextBeforeExit() {
+  if (!__emnapiContextRegisteredForBeforeExit) {
+    try {
+      process.once('beforeExit', __destroyEmnapiContextBeforeExit)
+    } catch (error) {
+      __scheduleEmnapiContextBeforeExitRegistration()
+      throw error
+    }
+    __emnapiContextRegisteredForBeforeExit = true
+    __emnapiContextBeforeExitRegistrationRetryCount = 0
+  }
+}
+
+function __registerEmnapiContextAtExit() {
+  if (!__emnapiContextRegisteredForExit) {
+    process.once('exit', __destroyEmnapiContextAtExit)
+    __emnapiContextRegisteredForExit = true
+  }
+}
+
+function __retainEmnapiContextCleanupListener() {
+  if (
+    __emnapiContextDestroyed ||
+    __emnapiContextRegisteredForBeforeExit ||
+    __emnapiContextRegisteredForExit
+  ) {
+    return
+  }
+  __registerEmnapiContextBeforeExit()
+}
+
+function __handoffEmnapiContextCleanupToExit() {
+  const __exitWasRegistered = __emnapiContextRegisteredForExit
+  __registerEmnapiContextAtExit()
+  try {
+    __removeEmnapiContextBeforeExitListener()
+  } catch (__error) {
+    if (!__exitWasRegistered) {
+      try {
+        __removeEmnapiContextAtExitListener()
+      } catch (__rollbackError) {
+        throw new AggregateError(
+          [__error, __rollbackError],
+          'emnapi context cleanup listener handoff failed',
+          { cause: __error },
+        )
+      }
+    }
+    throw __error
+  }
+}
+
+function __destroyEmnapiContextBeforeExit() {
+  __emnapiContextRegisteredForBeforeExit = false
+  let __result
+  try {
+    __result = __destroyEmnapiContext()
+  } catch (error) {
+    try {
+      __registerEmnapiContextBeforeExit()
+    } catch {}
+    queueMicrotask(() => {
+      throw error
+    })
+    return
+  }
+  if (__result) {
+    void __result.then(
+      () => {
+        __removeEmnapiContextCleanupListeners()
+      },
+      (error) => {
+        try {
+          __registerEmnapiContextBeforeExit()
+        } catch {}
+        queueMicrotask(() => {
+          throw error
+        })
+      },
+    )
+  } else {
+    __removeEmnapiContextCleanupListeners()
+  }
+}
+
+function __destroyEmnapiContextAtExit() {
+  __emnapiContextRegisteredForExit = false
+  try {
+    const __result = __destroyEmnapiContext()
+    if (__result) {
+      void __result.catch(() => {})
+    }
+  } catch {}
+}
+
+function __attachCleanupError(__error, __cleanupError) {
+  try {
+    if (
+      __error &&
+      (typeof __error === 'object' || typeof __error === 'function')
+    ) {
+      if (__error.cause === undefined) {
+        __error.cause = __cleanupError
+        return __error.cause === __cleanupError
+      }
+      return __error.cause === __cleanupError
+    }
+  } catch {}
+  return false
+}
+
+function __preserveCleanupError(__error, __cleanupError) {
+  if (!__attachCleanupError(__error, __cleanupError)) {
+    queueMicrotask(() => {
+      throw __cleanupError
+    })
+  }
+}
+
+if (__contextInitializationFailed) {
+  let __registrationError
+  let __registrationFailed = false
+  if (__emnapiContext !== undefined) {
+    try {
+      __registerEmnapiContextBeforeExit()
+    } catch (error) {
+      __preserveCleanupError(__contextInitializationError, error)
+      __registrationError = error
+      __registrationFailed = true
+    }
+    let __cleanupResult
+    let __cleanupFailed = false
+    try {
+      __cleanupResult = __destroyEmnapiContext()
+    } catch (error) {
+      __cleanupFailed = true
+      __preserveCleanupError(
+        __registrationFailed
+          ? __registrationError
+          : __contextInitializationError,
+        error,
+      )
+      try {
+        __retainEmnapiContextCleanupListener()
+      } catch (__listenerError) {
+        __preserveCleanupError(
+          __contextInitializationError,
+          __listenerError,
+        )
+      }
+    }
+    if (__cleanupResult) {
+      void __cleanupResult.then(
+        () => {
+          try {
+            __removeEmnapiContextCleanupListeners()
+          } catch (__cleanupError) {
+            __preserveCleanupError(
+              __contextInitializationError,
+              __cleanupError,
+            )
+          }
+        },
+        (error) => {
+          __preserveCleanupError(
+            __registrationFailed
+              ? __registrationError
+              : __contextInitializationError,
+            error,
+          )
+          try {
+            __retainEmnapiContextCleanupListener()
+          } catch (__listenerError) {
+            __preserveCleanupError(
+              __contextInitializationError,
+              __listenerError,
+            )
+          }
+        },
+      )
+    } else if (!__cleanupFailed) {
+      try {
+        __removeEmnapiContextCleanupListeners()
+      } catch (__cleanupError) {
+        __preserveCleanupError(
+          __contextInitializationError,
+          __cleanupError,
+        )
+      }
+    }
+  }
+  throw __contextInitializationError
+}
+
+let __sharedMemory
+let __napiInstance
+let __wasiModule
+let __napiModule
+
+try {
+  __registerEmnapiContextBeforeExit()
+
+  __sharedMemory = new WebAssembly.Memory({
+    initial: 16384,
+    maximum: 65536,
+    shared: true,
+  })
+
+  let __wasmFilePath = __nodePath.join(__dirname, 'rolldown-binding.wasm32-wasi.wasm')
+  const __wasmDebugFilePath = __nodePath.join(__dirname, 'rolldown-binding.wasm32-wasi.debug.wasm')
+
+  if (__nodeFs.existsSync(__wasmDebugFilePath)) {
+    __wasmFilePath = __wasmDebugFilePath
+  } else if (!__nodeFs.existsSync(__wasmFilePath)) {
+    const __wasiPackageEntry = require.resolve('@rolldown/binding-wasm32-wasi')
+    const __packagedWasmFilePath = __nodePath.join(
+    __nodePath.dirname(__wasiPackageEntry),
+    'rolldown-binding.wasm32-wasi.wasm',
+    )
+    if (!__nodeFs.existsSync(__packagedWasmFilePath)) {
+      throw new Error(
+        '@rolldown/binding-wasm32-wasi is installed but is missing rolldown-binding.wasm32-wasi.wasm.',
+      )
+    }
+    __wasmFilePath = __packagedWasmFilePath
+  }
+
+  ;({
+    instance: __napiInstance,
+    module: __wasiModule,
+    napiModule: __napiModule,
+  } = __emnapiInstantiateNapiModuleSync(__nodeFs.readFileSync(__wasmFilePath), {
+    context: __emnapiContext,
   asyncWorkPoolSize: __rolldownAsyncWorkPoolSize,
   reuseWorker: true,
-  wasi: __wasi,
+    wasi: __wasi,
   onCreateWorker() {
     const worker = __createWasiWorker(__nodePath.join(__dirname, 'wasi-worker.mjs'))
+    __wasiInitializationWorkers.add(worker)
     worker.onmessage = ({ data }) => {
       __wasmCreateOnMessageForFsProxy(__nodeFs)(data)
     }
@@ -211,24 +555,79 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
     }
     return worker
   },
-  overwriteImports(importObject) {
-    importObject.env = {
-      ...importObject.env,
-      ...importObject.napi,
-      ...importObject.emnapi,
-      memory: __sharedMemory,
+    overwriteImports(importObject) {
+      importObject.env = {
+        ...importObject.env,
+        ...importObject.napi,
+        ...importObject.emnapi,
+        memory: __sharedMemory,
+      }
+      return importObject
+    },
+    beforeInit({ instance }) {
+      for (const name of Object.keys(instance.exports)) {
+        if (name.startsWith('__napi_register__')) {
+          instance.exports[name]()
+        }
+      }
+    },
+  }))
+  // CommonJS can retain these eager exports in its module cache across any
+  // number of beforeExit work-resumption cycles. Node provides no terminal
+  // beforeExit signal, so a successfully initialized context must remain live
+  // until exit. Context.destroy() is synchronous in emnapi's public contract,
+  // so terminal cleanup hooks still get a best-effort invocation. A
+  // nonconforming thenable cannot be awaited from exit, but is marked handled.
+  __handoffEmnapiContextCleanupToExit()
+  __wasiInitializationWorkers.clear()
+} catch (__error) {
+  let __cleanupResult
+  let __cleanupFailed = false
+  try {
+    // Context cleanup must quiesce runtime-owned work before threaded loaders
+    // terminate their emnapi workers.
+    __cleanupResult = __destroyEmnapiContext()
+  } catch (__cleanupError) {
+    __cleanupFailed = true
+    __preserveCleanupError(__error, __cleanupError)
+    try {
+      __retainEmnapiContextCleanupListener()
+    } catch (__listenerError) {
+      __preserveCleanupError(__error, __listenerError)
     }
-    return importObject
-  },
-  beforeInit({ instance }) {
-    __wrapEmnapiContextDestroy(instance)
-    for (const name of Object.keys(instance.exports)) {
-      if (name.startsWith('__napi_register__')) {
-        instance.exports[name]()
+  }
+  if (__cleanupResult) {
+    void __cleanupResult.then(
+      () => {
+        __terminateWasiInitializationWorkers(__error)
+        try {
+          __removeEmnapiContextCleanupListeners()
+        } catch (__cleanupError) {
+          __preserveCleanupError(__error, __cleanupError)
+        }
+      },
+      (__cleanupError) => {
+        __preserveCleanupError(__error, __cleanupError)
+        __terminateWasiInitializationWorkers(__error)
+        try {
+          __retainEmnapiContextCleanupListener()
+        } catch (__listenerError) {
+          __preserveCleanupError(__error, __listenerError)
+        }
+      },
+    )
+  } else {
+    __terminateWasiInitializationWorkers(__error)
+    if (!__cleanupFailed) {
+      try {
+        __removeEmnapiContextCleanupListeners()
+      } catch (__cleanupError) {
+        __preserveCleanupError(__error, __cleanupError)
       }
     }
-  },
-})
+  }
+  throw __error
+}
 module.exports = __napiModule.exports
 module.exports.__rolldownBindingTarget = 'wasi-threads'
 module.exports.LegalCommentsMode = __napiModule.exports.LegalCommentsMode

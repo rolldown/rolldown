@@ -18,6 +18,8 @@ const wranglerPackageDir = path.dirname(
 );
 const wranglerBin = path.join(wranglerPackageDir, 'bin/wrangler.js');
 const compatibilityDate = '2026-06-01';
+const pnpm10Version = '10.28.1';
+const pnpm11Version = '11.9.0';
 const tempDir = await mkdtemp(path.join(tmpdir(), 'rolldown-workerd-consumer-'));
 const bundledRuntimePackages = [
   '@emnapi/core',
@@ -42,6 +44,39 @@ async function run(command, args, options = {}) {
 
 function fileDependency(fromDir, tarball) {
   return `file:${path.relative(fromDir, tarball).split(path.sep).join('/')}`;
+}
+
+async function assertInstallableWithPnpm(tarball, version) {
+  const consumerDir = path.join(tempDir, `install-pnpm-${version}`);
+  await mkdir(consumerDir, { recursive: true });
+  await writeFile(
+    path.join(consumerDir, 'package.json'),
+    `${JSON.stringify(
+      {
+        name: `rolldown-browser-install-pnpm-${version}`,
+        private: true,
+        packageManager: `pnpm@${version}`,
+        dependencies: {
+          '@rolldown/browser': fileDependency(consumerDir, tarball),
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  await run(
+    'corepack',
+    [`pnpm@${version}`, 'install', '--prefer-offline', '--config.node-linker=isolated'],
+    { cwd: consumerDir },
+  );
+  const manifest = JSON.parse(
+    await readFile(path.join(consumerDir, 'node_modules/@rolldown/browser/package.json'), 'utf8'),
+  );
+  assert.equal(
+    manifest.scripts?.preinstall,
+    undefined,
+    `Published @rolldown/browser must not enforce a package manager under pnpm ${version}`,
+  );
 }
 
 function findBareRuntimeImports(code, sourceType) {
@@ -150,7 +185,7 @@ try {
         name: 'rolldown-workerd-packed-consumer',
         private: true,
         type: 'module',
-        packageManager: 'pnpm@11.9.0',
+        packageManager: `pnpm@${pnpm11Version}`,
         dependencies: {
           '@rolldown/browser': fileDependency(consumerDir, tarball),
           buffer: '6.0.3',
@@ -263,11 +298,21 @@ export default {
 `,
   );
 
-  await run('pnpm', ['install', '--prefer-offline', '--ignore-scripts'], { cwd: consumerDir });
+  await assertInstallableWithPnpm(tarball, pnpm10Version);
+  await run(
+    'corepack',
+    [`pnpm@${pnpm11Version}`, 'install', '--prefer-offline', '--config.node-linker=isolated'],
+    { cwd: consumerDir },
+  );
 
   const installedBrowserDir = path.join(consumerDir, 'node_modules/@rolldown/browser');
   const installedManifest = JSON.parse(
     await readFile(path.join(installedBrowserDir, 'package.json'), 'utf8'),
+  );
+  assert.equal(
+    installedManifest.scripts?.preinstall,
+    undefined,
+    'Published @rolldown/browser must not enforce the repository package manager',
   );
   assert.equal(
     installedManifest.exports?.['.']?.types,

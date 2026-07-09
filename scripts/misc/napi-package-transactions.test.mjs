@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { NapiCli } from '../../packages/rolldown/node_modules/@napi-rs/cli/dist/index.js';
+import { NapiCli } from '@napi-rs/cli';
 
 const binaryName = 'transaction-binding';
 const napi = new NapiCli();

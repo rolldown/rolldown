@@ -7,8 +7,9 @@ import { expect, test } from 'vitest';
 
 const testsDir = fileURLToPath(new URL('.', import.meta.url));
 const childPath = path.join(testsDir, 'fixtures', 'async-runtime-submission-failure', 'child.mjs');
+const capabilities = getRuntimeCapabilities();
 
-test.skipIf(!getRuntimeCapabilities().asyncRuntimeBuild)(
+test.skipIf(!capabilities.asyncRuntimeBuild || capabilities.wasi)(
   'real N-API close submission rejection is retryable',
   { timeout: 30_000 },
   () => {

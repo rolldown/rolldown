@@ -259,7 +259,7 @@ build-rolldown-wasi:
 # generated text artifact byte-for-byte while building that test binary, then
 # build the package glue from the restored production sources.
 build-rolldown-async-runtime:
-  vp exec --filter rolldown -- ./node_modules/.bin/oxnode ./generate-workerd-loader.ts --preserve-generated-sources -- ./node_modules/.bin/oxnode ./build-binding.ts --no-default-features --features async-runtime,runtime-waker-teardown-test,runtime-submission-failure-test
+  vp exec --filter rolldown -- oxnode ./generate-workerd-loader.ts --preserve-generated-sources -- node --import @oxc-node/core/register ./build-binding.ts --no-default-features --features async-runtime,runtime-waker-teardown-test,runtime-submission-failure-test
   vp run --filter rolldown build-js-glue
 
 # Build `rolldown` with the non-threaded `.wasm` binding

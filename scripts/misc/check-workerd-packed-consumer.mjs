@@ -173,7 +173,7 @@ try {
   await mkdir(packDir, { recursive: true });
   await mkdir(sourceDir, { recursive: true });
 
-  await run('pnpm', ['pack', '--pack-destination', packDir], { cwd: browserPackageDir });
+  await run('vp', ['pm', 'pack', '--pack-destination', packDir], { cwd: browserPackageDir });
   const tarballs = (await readdir(packDir)).filter((entry) => entry.endsWith('.tgz'));
   assert.equal(tarballs.length, 1, `Expected one browser-package tarball, found ${tarballs}`);
   const tarball = path.join(packDir, tarballs[0]);

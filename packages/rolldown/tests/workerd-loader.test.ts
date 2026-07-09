@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { Buffer as NodeBuffer } from 'node:buffer';
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -30,6 +31,7 @@ import { describe, expect, test, vi } from 'vitest';
 const { createInstance, getWorkerdRuntimeStats, instantiate, WORKERD_WASM_MEMORY } = workerd;
 
 const wasmPath = new URL('../src/rolldown-binding.wasm32-wasip1.wasm', import.meta.url);
+const wasiTest = test.runIf(existsSync(wasmPath));
 const deferredLoaderPath = new URL('../src/rolldown-binding.wasip1-deferred.js', import.meta.url);
 const cjsLoaderPath = new URL('../src/rolldown-binding.wasip1.cjs', import.meta.url);
 const browserLoaderPath = new URL('../src/rolldown-binding.wasip1-browser.js', import.meta.url);
@@ -1400,7 +1402,7 @@ function __retainEmnapiContextCleanupListener() {`,
     }
   });
 
-  test(
+  wasiTest(
     'owns independent concurrent instances with idempotent disposal',
     { timeout: 60_000 },
     async () => {
@@ -3129,7 +3131,7 @@ console.log('proxy prototype chain rejected')
     expect(() => new BoundBundler()).toThrow('This workerd Rolldown instance has been disposed');
   });
 
-  test(
+  wasiTest(
     'uses a replaced writable production constructor prototype for new instances',
     { timeout: 30_000 },
     async () => {
@@ -3335,7 +3337,7 @@ console.log('managed binding wrappers collected')
     second.dispose();
   });
 
-  test(
+  wasiTest(
     'lets an active build settle before requiring its bundler to close for disposal',
     { timeout: 30_000 },
     async () => {
@@ -3391,7 +3393,7 @@ console.log('managed binding wrappers collected')
     },
   );
 
-  test.each([
+  wasiTest.each([
     {
       name: 'own then',
       pluginSource: `({
@@ -3502,7 +3504,7 @@ console.log('input record context invalidated')
     },
   );
 
-  test(
+  wasiTest(
     'mediates inherited class plugin hooks after real workerd disposal',
     { timeout: 30_000 },
     () => {
@@ -3580,7 +3582,7 @@ console.log('class plugin context invalidated')
     },
   );
 
-  test(
+  wasiTest(
     'keeps the measured 64 MiB initial floor through repeated representative builds',
     { timeout: 60_000 },
     async () => {
@@ -3641,7 +3643,7 @@ console.log('class plugin context invalidated')
     },
   );
 
-  test('keeps the 64 MiB floor above the Wasm env.memory import minimum', async () => {
+  wasiTest('keeps the 64 MiB floor above the Wasm env.memory import minimum', async () => {
     const module = await WebAssembly.compile(await readFile(wasmPath));
     const imports = WebAssembly.Module.imports(module);
     const importObject: WebAssembly.Imports = {};
@@ -3687,7 +3689,7 @@ console.log('class plugin context invalidated')
     expect(process.rawListeners('beforeExit')).toHaveLength(beforeListeners);
   });
 
-  test('rejects shared memory from the current or another JavaScript realm', async () => {
+  wasiTest('rejects shared memory from the current or another JavaScript realm', async () => {
     const module = await WebAssembly.compile(await readFile(wasmPath));
     const sharedMemory = new WebAssembly.Memory({
       initial: 1,
@@ -3707,47 +3709,50 @@ console.log('class plugin context invalidated')
     );
   });
 
-  test('uses an intrinsic memory-buffer brand check instead of Symbol.toStringTag', async () => {
-    const module = await WebAssembly.compile(await readFile(wasmPath));
-    const unsharedMemory = new WebAssembly.Memory({
-      initial: WORKERD_WASM_MEMORY.initialPages,
-      maximum: WORKERD_WASM_MEMORY.maximumPages,
-    });
-    const sharedMemory = new WebAssembly.Memory({
-      initial: 1,
-      maximum: 1,
-      shared: true,
-    });
-    Object.defineProperty(unsharedMemory.buffer, Symbol.toStringTag, {
-      configurable: true,
-      value: 'SharedArrayBuffer',
-    });
-    const sharedBufferPrototype = Object.getPrototypeOf(sharedMemory.buffer) as object;
-    const originalSharedTag = Object.getOwnPropertyDescriptor(
-      sharedBufferPrototype,
-      Symbol.toStringTag,
-    );
-    Object.defineProperty(sharedBufferPrototype, Symbol.toStringTag, {
-      configurable: true,
-      value: 'ArrayBuffer',
-    });
-
-    try {
-      const instance = await instantiate(module, { memory: unsharedMemory });
-      instance.dispose();
-      await expect(instantiate(module, { memory: sharedMemory })).rejects.toThrow(
-        /requires an unshared WebAssembly\.Memory/,
+  wasiTest(
+    'uses an intrinsic memory-buffer brand check instead of Symbol.toStringTag',
+    async () => {
+      const module = await WebAssembly.compile(await readFile(wasmPath));
+      const unsharedMemory = new WebAssembly.Memory({
+        initial: WORKERD_WASM_MEMORY.initialPages,
+        maximum: WORKERD_WASM_MEMORY.maximumPages,
+      });
+      const sharedMemory = new WebAssembly.Memory({
+        initial: 1,
+        maximum: 1,
+        shared: true,
+      });
+      Object.defineProperty(unsharedMemory.buffer, Symbol.toStringTag, {
+        configurable: true,
+        value: 'SharedArrayBuffer',
+      });
+      const sharedBufferPrototype = Object.getPrototypeOf(sharedMemory.buffer) as object;
+      const originalSharedTag = Object.getOwnPropertyDescriptor(
+        sharedBufferPrototype,
+        Symbol.toStringTag,
       );
-    } finally {
-      if (originalSharedTag) {
-        Object.defineProperty(sharedBufferPrototype, Symbol.toStringTag, originalSharedTag);
-      } else {
-        Reflect.deleteProperty(sharedBufferPrototype, Symbol.toStringTag);
-      }
-    }
-  });
+      Object.defineProperty(sharedBufferPrototype, Symbol.toStringTag, {
+        configurable: true,
+        value: 'ArrayBuffer',
+      });
 
-  test('rejects concurrent and sequential reuse of caller-provided memory', async () => {
+      try {
+        const instance = await instantiate(module, { memory: unsharedMemory });
+        instance.dispose();
+        await expect(instantiate(module, { memory: sharedMemory })).rejects.toThrow(
+          /requires an unshared WebAssembly\.Memory/,
+        );
+      } finally {
+        if (originalSharedTag) {
+          Object.defineProperty(sharedBufferPrototype, Symbol.toStringTag, originalSharedTag);
+        } else {
+          Reflect.deleteProperty(sharedBufferPrototype, Symbol.toStringTag);
+        }
+      }
+    },
+  );
+
+  wasiTest('rejects concurrent and sequential reuse of caller-provided memory', async () => {
     const module = await WebAssembly.compile(await readFile(wasmPath));
     const memory = new WebAssembly.Memory({
       initial: WORKERD_WASM_MEMORY.initialPages,
@@ -4335,7 +4340,7 @@ console.log('memory proxy prototype chain rejected')
     );
   });
 
-  test('does not consume caller memory when module validation fails', async () => {
+  wasiTest('does not consume caller memory when module validation fails', async () => {
     const module = await WebAssembly.compile(await readFile(wasmPath));
     const memory = new WebAssembly.Memory({
       initial: WORKERD_WASM_MEMORY.initialPages,
@@ -4350,7 +4355,7 @@ console.log('memory proxy prototype chain rejected')
     instance.dispose();
   });
 
-  test('keeps caller memory consumed after initialization fails', async () => {
+  wasiTest('keeps caller memory consumed after initialization fails', async () => {
     const incompatibleModule = await WebAssembly.compile(
       new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]),
     );
@@ -4371,7 +4376,7 @@ console.log('memory proxy prototype chain rejected')
     expect(process.rawListeners('beforeExit')).toHaveLength(beforeListeners);
   });
 
-  test('accepts Buffer asset inputs without a Buffer global', async () => {
+  wasiTest('accepts Buffer asset inputs without a Buffer global', async () => {
     const module = await WebAssembly.compile(await readFile(wasmPath));
     vi.stubGlobal('Buffer', undefined);
 
@@ -4428,7 +4433,7 @@ console.log('memory proxy prototype chain rejected')
     }
   });
 
-  test('does not retain Node beforeExit listeners after managed disposal', async () => {
+  wasiTest('does not retain Node beforeExit listeners after managed disposal', async () => {
     const module = await WebAssembly.compile(await readFile(wasmPath));
     const before = process.rawListeners('beforeExit').length;
 
@@ -4440,7 +4445,7 @@ console.log('memory proxy prototype chain rejected')
     expect(process.rawListeners('beforeExit')).toHaveLength(before);
   });
 
-  test('skips deferred emnapi TSFN drains after managed disposal', { timeout: 30_000 }, () => {
+  wasiTest('skips deferred emnapi TSFN drains after managed disposal', { timeout: 30_000 }, () => {
     const require = createRequire(import.meta.url);
     const wasmRuntimeUrl = pathToFileURL(require.resolve('@napi-rs/wasm-runtime')).href;
     const emnapiRuntimeUrl = pathToFileURL(require.resolve('@emnapi/runtime')).href;
@@ -4565,7 +4570,7 @@ try {
     expect(child.stdout).toContain('deferred TSFN drain skipped after managed disposal');
   });
 
-  test('does not claim timer support when the host has no setTimeout', async () => {
+  wasiTest('does not claim timer support when the host has no setTimeout', async () => {
     const module = await WebAssembly.compile(await readFile(wasmPath));
     vi.stubGlobal('setTimeout', undefined);
 
@@ -4581,7 +4586,7 @@ try {
     }
   });
 
-  test('does not claim timer support when the host cannot cancel timeouts', async () => {
+  wasiTest('does not claim timer support when the host cannot cancel timeouts', async () => {
     const module = await WebAssembly.compile(await readFile(wasmPath));
     vi.stubGlobal('clearTimeout', undefined);
 

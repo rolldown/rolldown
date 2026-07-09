@@ -16,10 +16,13 @@ const loaderCancellationChildPath = nodePath.join(
 );
 const requireSharedRuntime = process.env.ROLLDOWN_TEST_REQUIRE_SHARED_ASYNC_RUNTIME === '1';
 
-test.runIf(!caps.wasi && (caps.backend === 'shared' || requireSharedRuntime))(
-  'a scheduler waker remains callable after its sole worker environment exits',
+test.runIf(!caps.wasi && (caps.backend === 'shared' || requireSharedRuntime)).each([
+  { runtime: 'single', flavor: 'CurrentThread' },
+  { runtime: 'multi', flavor: 'MultiThread' },
+] as const)(
+  'a $flavor scheduler waker remains callable after its sole worker environment exits',
   { timeout: 30_000 },
-  () => {
+  ({ runtime, flavor }) => {
     expect(caps.backend).toBe('shared');
 
     const child = spawnSync(process.execPath, [childPath], {
@@ -27,7 +30,7 @@ test.runIf(!caps.wasi && (caps.backend === 'shared' || requireSharedRuntime))(
       encoding: 'utf8',
       env: {
         ...process.env,
-        ROLLDOWN_RUNTIME: 'single',
+        ROLLDOWN_RUNTIME: runtime,
       },
       timeout: 25_000,
     });
@@ -38,7 +41,7 @@ test.runIf(!caps.wasi && (caps.backend === 'shared' || requireSharedRuntime))(
     const result = JSON.parse(child.stdout.trim().split('\n').at(-1)!);
     expect(result).toMatchObject({
       backend: 'shared',
-      flavor: 'CurrentThread',
+      flavor,
       completed: 'completed',
       workerExitedBeforeRelease: true,
     });

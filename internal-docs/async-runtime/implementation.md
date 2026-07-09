@@ -646,10 +646,11 @@ does not add a second source allocation.
   task poll, blocking closure, or Rayon worker of the generation being stopped
   returns an error rather than waiting on itself. Queued blocking closures are
   dropped one at a time behind
-  `catch_unwind`; a submission that races queue closure is rejected and dropped
-  with the same isolation outside the queue lock and under the retiring
-  generation identity. Convenience APIs that own a rejected future/closure
-  register its contained destruction while holding the lifecycle lock;
+  `catch_unwind`; a submission accepted before queue closure but cancelled when
+  closure wins the post-admission race is dropped with the same isolation
+  outside the queue lock and under the retiring generation identity.
+  Convenience APIs that retain ownership after an immediate rejection register
+  contained destruction while holding the lifecycle lock;
   shutdown/restart cannot finish the transition until those registrations
   retire. Public `block_on` performs both the driver call and destruction of its
   erased future inside the same registered generation scope. A failed scope
@@ -887,7 +888,7 @@ browser-build, and packed-browser tests exercise this contract;
 than a target capability.
 
 This invariant depends on the workspace's napi-rs pin
-`7b439d0bdd09dec142cc66dfb6a004942caa7212` in `Cargo.toml`. Synchronous
+`ae5196b5c1be97363834e29582ca4aadd4a3ab0f` in `Cargo.toml`. Synchronous
 threadsafe-function exceptions use
 `Error::capture_unknown_with_status_and_diagnostics`, and Promise rejections use
 `Error::from_unknown_without_coercion`; both retain the exact JavaScript value

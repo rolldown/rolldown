@@ -190,7 +190,7 @@ Uniform machinery: `run_pass` is the single home for tracing spans and diagnosti
 
 ## Enforcement
 
-The goal is **not** to make illegal states unrepresentable — it is to make them impossible to write *quietly*. Pass-internal state is legitimate and has three legal homes: locals inside `run` (unrestricted); driver-built values lent through `InputRead`; artifacts moving through the owned slots. What has no home is state that crosses passes without appearing in any signature. The gates below force exactly that case into the open, where review can catch it — under a shared `&mut` world it was invisible by construction.
+The goal is **not** to make illegal states unrepresentable — it is to make them impossible to write _quietly_. Pass-internal state is legitimate and has three legal homes: locals inside `run` (unrestricted); driver-built values lent through `InputRead`; artifacts moving through the owned slots. What has no home is state that crosses passes without appearing in any signature. The gates below force exactly that case into the open, where review can catch it — under a shared `&mut` world it was invisible by construction.
 
 What the compiler pins:
 

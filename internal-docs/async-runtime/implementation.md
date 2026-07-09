@@ -33,12 +33,18 @@ to use Rolldown's scheduler or bounded blocking lane.
 
 Promise resolution, panic rejection, and cancellation handles remain owned by
 napi-rs. `AsyncRuntime::spawn` transfers an opaque `AsyncRuntimeTask` and
-Rolldown returns it untouched when the controller is stopped. The optional
-`AsyncRuntime::spawn_blocking` hook follows the same ownership rule for its
-closure. Accepted tasks and closures retain napi-rs's cancel-on-drop guards.
+Rolldown returns it untouched with an `AsyncRuntimeRejection` carrying the
+controller's exact admission diagnostic when the controller is stopped or
+backend construction fails. The optional `AsyncRuntime::spawn_blocking` hook
+follows the same ownership and diagnostic rule for its closure. Accepted tasks
+and closures retain napi-rs's cancel-on-drop guards.
 Generated-task submission and custom runtime lifecycle operations delegate to
 the registered implementation; `start` and `shutdown` report failures through
-`napi::Result`. `AsyncRuntime` is an unsafe implementation contract because
+`napi::Result`. The borrowed `AsyncRuntime::block_on` hook delegates to
+Rolldown's fallible driver and returns its admission or interrupted-drive
+diagnostic through `napi::Result`; napi-rs then preserves it in
+`try_block_on_custom_runtime` instead of replacing it with a generic runtime
+failure. `AsyncRuntime` is an unsafe implementation contract because
 Node may unload an addon image immediately after environment cleanup:
 `shutdown` must leave no backend-owned thread, task, closure, destructor, or
 callback able to execute addon code after it returns. Rolldown closes
@@ -65,6 +71,13 @@ contract. Rolldown's pinned napi-rs revision must include that retention
 implementation before this code can ship; the unsafe-trait change deliberately
 makes an older revision fail to compile instead of producing an unpinned
 binary.
+
+The integration currently pins the coordinated v3-manifest compatibility
+revision `44162a484581aba2374db7c3fd3b303bd353df37` for `napi`,
+`napi-derive`, and `napi-derive-backend`. `BindingMagicString` uses concrete
+`MagicString<'static>` storage backed by `Cow::Owned`, so the public N-API
+class cannot borrow a constructor call frame and moving the input `String`
+does not add a second source allocation.
 
 ### Rolldown scheduler
 
@@ -132,8 +145,11 @@ binary.
   unwound. The public fallible `try_spawn` API returns
   `(RuntimeConfigError, future)` when admission fails. Lifecycle owners use it
   when consuming a one-shot coordinator future so shutdown races can restore
-  and retry that exact future after `start`; the convenience `spawn` API keeps
-  its immediate failed-handle behavior for callers that do not need recovery.
+  and retry that exact future after `start`. `try_spawn_blocking` returns
+  `(RuntimeConfigError, closure)` under the same rule. The convenience `spawn`
+  and `spawn_blocking` APIs contain destruction of rejected work and return an
+  immediate failed handle carrying the same error text for callers that do not
+  need recovery.
 - The owned Rust `block_on` helper acquires its generation work scope before
   moving the input future into the driver. Acquisition failure registers
   rejected destruction under the controller lifecycle mutex, then destroys the
@@ -141,8 +157,12 @@ binary.
   convenience spawn rejection. Successful driving wraps the future in
   `ContainedFuture`, so cancellation, an early stop, or a poll panic cannot
   combine with a panicking future destructor and abort the native process.
-  The borrowed NAPI backend hook remains covered independently by napi-rs's
-  synchronous runtime-use gate and `SafeDrop` wrapper.
+  The borrowed `try_block_on_dyn` helper returns admission failure without
+  polling and reports a concurrent stop after the driver releases the future;
+  the caller retains the same pinned value and may retry it after `start`.
+  The NAPI backend hook maps that error directly into `napi::Result` and remains
+  covered independently by napi-rs's synchronous runtime-use gate and
+  `SafeDrop` wrapper.
 - `CurrentThreadExecutor` uses a reentrancy-safe FIFO runnable queue. In a host
   embedding, a wake requests a fresh host turn before polling: futures such as
   `futures::Shared` invoke outer wakers while holding internal locks, so polling
@@ -832,7 +852,12 @@ task. Normal completion still arrives through `ModuleLoaderMsg`; a task panic
 is caught inside that task, while scheduler cancellation or rejected submission
 drops the same supervised future. Each failure path emits exactly one
 `BuildErrors`, which retires the loader's `remaining` count instead of leaving
-the build pending forever.
+the build pending forever. Detached normal- and external-module tasks tolerate
+their message receiver disappearing while they await JavaScript hooks: worker
+environment teardown owns cancellation, so a late completion or hook error
+must retire quietly instead of panicking on a closed loader channel. The real
+worker fixture holds both callback kinds, terminates the environment, forces a
+full scheduler stop/restart, and verifies that the main realm can build again.
 
 ### Deferred destruction
 
@@ -1066,12 +1091,21 @@ Binding close methods return terminal hook and devtools failures as structured
 results; a rejected N-API promise is reserved for retryable transport/runtime
 failure. TypeScript close coordinators memoize terminal native and listener
 results but clear the outer single-flight promise after a transport rejection
-or retryable worker/runtime-release failure. Bundle, scan, and dev cleanup
+or retryable worker/runtime-release failure. Watcher runner outcomes are
+observed immediately and record settled errors inside their original
+fulfillment/rejection continuation, so a same-turn native-close rejection
+cannot overtake diagnostic publication. A successful native close awaits a
+still-pending runner before releasing owned resources. Bundle, scan, and dev cleanup
 retain the latest workers and runtime lease until native close has delivered a
 terminal result. Close attempts identify terminal diagnostics separately from
 owned cleanup failures. Internal bounded retries project out already-delivered
 terminal diagnostics and retry only retained workers or runtime leases; public
-late close calls still replay the memoized terminal result. The single-flight
+late close calls still replay the memoized terminal result. Watcher cleanup
+also tags automatic close attempts: a worker fault discarded by internal
+cleanup is retained as an undelivered terminal diagnostic, then replayed by the
+first later public attempt while only the still-owned worker is retried. A
+public call that joins the automatic attempt receives the fault there and
+prevents a duplicate replay on its cleanup retry. The single-flight
 promise is published through a deferred microtask
 before the cleanup attempt is invoked, so a synchronously reentrant `close()`
 observes and returns the original promise instead of starting a second attempt.
@@ -1082,8 +1116,12 @@ observing any result because each production initializer constructs and
 registers its worker synchronously before awaiting bootstrap. The first
 bootstrap rejection then requests cleanup of every registered sibling
 immediately; it does not wait for another bootstrap Promise that may never
-settle. Immediate sibling failures are still collected in thread order, and
-later rejections remain observed while physical worker termination completes.
+settle. Each supervisor attaches a rejection observer when its bootstrap
+Promise is created, before any caller can delay `waitForBootstrap()`, so an
+immediate worker `error` or `exit` cannot become a process-level unhandled
+rejection. Immediate sibling failures are still collected in thread order,
+and later rejections remain observed while physical worker termination
+completes.
 Terminating a still-bootstrapping supervised worker rejects its bootstrap wait
 immediately, so the cancelled initializer releases its retained async frame
 even when the worker's exit event arrives in the stopping phase. Physical
@@ -1339,8 +1377,10 @@ clears that logical owner. Bootstrap pools invoke every initializer before
 observing the first rejection, and each production initializer registers its
 worker synchronously before awaiting bootstrap. Cleanup therefore owns every
 constructed sibling without waiting for a startup Promise that may never
-settle. Readiness and terminal bootstrap messages travel over a transferred
-`MessagePort`, isolated from inherited preload and loader messages on
+settle. The bootstrap Promise has an observer from construction, so an early
+worker `error` or `exit` remains replayable without passing through Node's
+unhandled-rejection machinery. Readiness and terminal bootstrap messages
+travel over a transferred `MessagePort`, isolated from inherited preload and loader messages on
 `parentPort`; those private messages and worker exit release the
 physical-termination barrier because each proves native-addon registration has
 finished. Bootstrap failures are normalized to a cloneable

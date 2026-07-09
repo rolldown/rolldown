@@ -169,8 +169,12 @@ The existing Tokio runtime remains the default and is selected by the
    contained destructor finishes, including when construction of the first
    backend failed. The fallible `try_spawn` path is intentionally different:
    it returns the rejected future untouched and transfers retry or destruction
-   responsibility back to the caller. One-shot lifecycle owners retain that
-   future across the stopped interval and resubmit it after `start`.
+   responsibility back to the caller. `try_spawn_blocking` follows the same
+   contract for closures and preserves the exact backend diagnostic. One-shot
+   lifecycle owners retain that work across the stopped interval and resubmit
+   it after `start`. The convenience `spawn` and `spawn_blocking` helpers
+   instead destroy rejected work behind the lifecycle containment boundary and
+   return an already-failed join handle; admission failure does not panic.
    Initial and already-stopped shutdown first enter an explicit
    zero-backend stopping state; concurrent start and configuration remain
    closed until the initiating shutdown publishes its final stopped state.
@@ -188,7 +192,10 @@ The existing Tokio runtime remains the default and is selected by the
    shutdown, and restart cannot overlap that destructor. The driven future is
    also held behind the scheduler's contained-drop wrapper, preventing a poll
    panic plus a panicking future destructor from aborting an unwind-enabled
-   native process.
+   native process. The borrowed `try_block_on_dyn` path never owns its input:
+   admission failure returns before polling, and an interrupted drive returns
+   the stop diagnostic after releasing every backend reference so the caller
+   may retry the same pinned future after restart.
    CurrentThread host turns and host-dispatch publications are
    generation-scoped scheduler work until their complete native callback
    returns.

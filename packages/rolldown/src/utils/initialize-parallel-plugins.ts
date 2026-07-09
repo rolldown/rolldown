@@ -19,7 +19,7 @@ export type ParallelPluginWorkerData = {
   watchMode: boolean;
 };
 
-export type WorkerData = ParallelPluginWorkerData & {
+type WorkerData = ParallelPluginWorkerData & {
   controlPort: MessagePort;
 };
 
@@ -652,6 +652,9 @@ class WorkerSupervisor implements SupervisedWorker {
       this.#resolveBootstrap = resolve;
       this.#rejectBootstrap = reject;
     });
+    // Observe early worker failure before waitForBootstrap() is requested.
+    // See internal-docs/async-runtime/implementation.md.
+    void this.#bootstrapPromise.catch(() => {});
     this.#readinessPromise = new Promise<void>((resolve, reject) => {
       this.#resolveReadiness = resolve;
       this.#rejectReadiness = reject;

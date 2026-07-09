@@ -610,6 +610,13 @@ impl WatcherEventHandler for NapiWatcherEventHandler {
 The TypeScript runner still awaits that completion-only promise: an unexpected
 N-API transport rejection is recorded as a watcher run failure and enters the
 normal fail-closed cleanup path instead of becoming an unhandled rejection.
+The `run()` / `waitForClose()` outcome is observed from creation and stores its
+settled diagnostics in the same fulfillment or rejection continuation. A
+native close failure in the same microtask turn therefore cannot overtake the
+bookkeeping and omit the transport error. A successful native close waits for
+any still-pending runner outcome before releasing workers or the runtime lease;
+a retryable native transport failure reports only already-settled runner
+diagnostics and lets the next close attempt await the rest.
 
 ```
 constructor(options, listener)  // creates Watcher with handler, ready to run
@@ -632,6 +639,15 @@ an explicit retry. Tokio builds perform the same checked call inside the N-API
 runtime context they require. `close()` publishes close synchronously,
 then returns a structured result containing every native close failure and the
 close identities owned by the native coordinator.
+
+The coordinator distinguishes a public `close()` from cleanup started
+automatically after `run()` rejects or native `CLOSE` arrives. If an automatic
+attempt encounters a retryable worker termination failure, its internally
+discarded promise retains that diagnostic separately from worker ownership. A
+later public close retries only the still-owned workers and replays the
+previously undelivered fault. If a public caller joins the automatic attempt
+before it settles, that promise delivers the fault directly and the later
+cleanup retry does not replay it a second time.
 
 ### Event Emitter
 

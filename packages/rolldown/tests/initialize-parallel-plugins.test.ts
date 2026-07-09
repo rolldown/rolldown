@@ -248,6 +248,48 @@ describe('parallel plugin worker cleanup', () => {
     expect(worker.listenerCount('exit')).toBe(0);
   });
 
+  test.each(['error', 'exit'] as const)(
+    'handles an early worker %s before bootstrap is observed',
+    async (event) => {
+      const worker = new TestWorker();
+      const workerError = new Error('worker failed before bootstrap observation');
+      const supervisedWorker = superviseTestWorker(worker);
+      const unhandledRejections: unknown[] = [];
+      const onUnhandledRejection = (reason: unknown) => {
+        unhandledRejections.push(reason);
+      };
+      process.on('unhandledRejection', onUnhandledRejection);
+
+      try {
+        if (event === 'error') {
+          worker.emit('error', workerError);
+        } else {
+          worker.emit('exit', 17);
+        }
+        await new Promise<void>((resolve) => setImmediate(resolve));
+
+        const bootstrap = supervisedWorker.waitForBootstrap();
+        const failure = await bootstrap.catch((error: unknown) => error);
+
+        expect(unhandledRejections).toEqual([]);
+        expect(supervisedWorker.waitForBootstrap()).toBe(bootstrap);
+        if (event === 'error') {
+          expect(failure).toBe(workerError);
+          worker.emit('exit', 1);
+          await expect(supervisedWorker.terminate()).resolves.toBe(1);
+        } else {
+          expect(failure).toBeInstanceOf(Error);
+          expect((failure as Error).message).toBe(
+            'Parallel-plugin worker exited before initialization completed (exit code 17)',
+          );
+          await expect(supervisedWorker.terminate()).resolves.toBe(17);
+        }
+      } finally {
+        process.off('unhandledRejection', onUnhandledRejection);
+      }
+    },
+  );
+
   test('ignores unauthenticated bootstrap messages', async () => {
     const worker = new TestWorker();
     const supervisedWorker = superviseTestWorker(worker);

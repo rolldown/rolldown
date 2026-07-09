@@ -63,6 +63,10 @@ try {
     submissionError = error;
   }
   assert.ok(submissionError instanceof Error);
+  assert.equal(
+    submissionError.message,
+    'the async runtime is stopped; call start before submitting work',
+  );
   assert.equal(closeBundleCalls, 0);
 
   startRuntime();

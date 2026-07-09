@@ -41,6 +41,15 @@ interface WatcherCloseAttemptResult extends CloseAttemptResult {
   nativeCloseReturned: boolean;
 }
 
+interface WatcherCloseAttemptContext {
+  publiclyObserved: boolean;
+}
+
+interface RetainedWorkerDiagnostic {
+  attempt: WatcherCloseAttemptContext;
+  error: unknown;
+}
+
 export class WatchResultCloseRegistry {
   #current = new Map<number, WatchResultClose>();
   #pendingBuild = new Map<number, WatchResultClose>();
@@ -243,7 +252,8 @@ class Watcher {
   runtimeLease: RuntimeLease;
   stopWorkers: ((() => Promise<void>) | undefined)[];
   scheduledRun: ReturnType<typeof setTimeout> | undefined;
-  runFailures: unknown[] = [];
+  runOutcomePromise: Promise<unknown[]> | undefined;
+  settledRunOutcomeErrors: unknown[] | undefined;
   nativeCloseResultPromise:
     | Promise<{
         errors: unknown[];
@@ -254,6 +264,9 @@ class Watcher {
   nativeClosePromise: Promise<void> | undefined;
   closeEventPromise: Promise<void> | undefined;
   resultCloses = new WatchResultCloseRegistry();
+  // See internal-docs/watch-mode/implementation.md.
+  private closeAttemptContexts = new WeakMap<Promise<void>, WatcherCloseAttemptContext>();
+  private retainedWorkerDiagnostics: RetainedWorkerDiagnostic[] = [];
   closeCoordinator = new CloseCoordinator(
     'Watcher native close, parallel-plugin worker shutdown, close listener, or runtime release failed',
   );
@@ -278,28 +291,70 @@ class Watcher {
     this.scheduledRun = globalThis.setTimeout(() => {
       this.scheduledRun = undefined;
       if (this.closed) return;
-      void this.run().catch((error) => {
-        this.runFailures.push(error);
+      const runOutcomePromise = Promise.resolve()
+        .then(() => this.run())
+        .then<unknown[], unknown[]>(
+          () => {
+            const errors: unknown[] = [];
+            this.settledRunOutcomeErrors = errors;
+            return errors;
+          },
+          (error) => {
+            const errors = [error];
+            this.settledRunOutcomeErrors = errors;
+            return errors;
+          },
+        );
+      this.runOutcomePromise = runOutcomePromise;
+      void runOutcomePromise.then((errors) => {
+        if (errors.length === 0) return;
         // Preserve the failure for a later public close while ensuring the
         // native watcher, workers, and runtime lease are not abandoned.
-        void this.close().catch(() => {});
+        this.closeAutomatically();
       });
     }, 0);
   }
 
   close(): Promise<void> {
+    return this.requestClose(true);
+  }
+
+  private closeAutomatically(): void {
+    void this.requestClose(false).catch(() => {});
+  }
+
+  private requestClose(publiclyObserved: boolean): Promise<void> {
     // Native bundle construction starts only after the BUNDLE_START callback
     // returns. A close from that callback keeps the previous result native-owned.
     this.resultCloses.cancelPendingBuilds();
     this.startNativeClose();
-    return this.closeCoordinator.close(() => this.closeLifecycle());
+    const attemptContext: WatcherCloseAttemptContext = { publiclyObserved };
+    const closePromise = this.closeCoordinator.close(() => this.closeLifecycle(attemptContext));
+    const activeAttemptContext = this.closeAttemptContexts.get(closePromise);
+    if (activeAttemptContext) {
+      if (publiclyObserved) {
+        this.markCloseAttemptPubliclyObserved(activeAttemptContext);
+      }
+    } else {
+      this.closeAttemptContexts.set(closePromise, attemptContext);
+    }
+    return closePromise;
+  }
+
+  private markCloseAttemptPubliclyObserved(context: WatcherCloseAttemptContext): void {
+    if (context.publiclyObserved) return;
+    context.publiclyObserved = true;
+    this.retainedWorkerDiagnostics = this.retainedWorkerDiagnostics.filter(
+      (diagnostic) => diagnostic.attempt !== context,
+    );
   }
 
   onNativeClose(): void {
     // Native close can be observed without a public caller (for example if
-    // the coordinator exits independently). Preserve the memoized rejection
-    // for a later `close()` call while avoiding an unhandled rejection.
-    void this.close().catch(() => {});
+    // the coordinator exits independently). Preserve undelivered worker
+    // diagnostics for a later `close()` call while avoiding an unhandled
+    // rejection.
+    this.closeAutomatically();
   }
 
   registerResultClose(
@@ -314,8 +369,8 @@ class Watcher {
     return this.resultCloses.beginTaskBuild(taskIndex);
   }
 
-  private async closeLifecycle(): Promise<CloseAttemptResult> {
-    const result = await this.closeOwnedResources();
+  private async closeLifecycle(context: WatcherCloseAttemptContext): Promise<CloseAttemptResult> {
+    const result = await this.closeOwnedResources(context);
     if (!result.nativeCloseReturned) {
       return result;
     }
@@ -334,6 +389,10 @@ class Watcher {
       result.retryable = true;
     }
 
+    const terminalErrors = this.retainedWorkerDiagnostics.map(({ error }) => error);
+    if (terminalErrors.length > 0) {
+      result.terminalErrors = terminalErrors;
+    }
     return result;
   }
 
@@ -351,24 +410,32 @@ class Watcher {
     return result;
   }
 
-  private async closeOwnedResources(): Promise<WatcherCloseAttemptResult> {
+  private async closeOwnedResources(
+    context?: WatcherCloseAttemptContext,
+  ): Promise<WatcherCloseAttemptResult> {
     this.closed = true;
-    const errors: unknown[] = [
-      ...this.runFailures,
-      ...(await this.emitter.setupFailureReportErrors()),
-    ];
+    const errors: unknown[] = [];
     this.cancelScheduledRun(errors);
     this.startNativeClose();
     const nativeCloseResultPromise = this.nativeCloseResultPromise!;
     const nativeCloseResult = await nativeCloseResultPromise;
-    errors.push(...nativeCloseResult.errors);
     if (!nativeCloseResult.nativeCloseReturned) {
+      if (this.settledRunOutcomeErrors) {
+        errors.push(...this.settledRunOutcomeErrors);
+      }
+      errors.push(...nativeCloseResult.errors);
       if (this.nativeCloseResultPromise === nativeCloseResultPromise) {
         this.nativeCloseResultPromise = undefined;
         this.nativeClosePromise = undefined;
       }
       return { errors, nativeCloseReturned: false, retryable: true };
     }
+
+    if (this.runOutcomePromise) {
+      errors.push(...(this.settledRunOutcomeErrors ?? (await this.runOutcomePromise)));
+    }
+    errors.push(...(await this.emitter.setupFailureReportErrors()));
+    errors.push(...nativeCloseResult.errors);
 
     // A structured native shutdown owns each task's current bundle handle, so
     // only superseded handles close here.
@@ -381,15 +448,23 @@ class Watcher {
       }
     }
 
+    errors.push(...this.retainedWorkerDiagnostics.map(({ error }) => error));
     const stopWorkers = this.stopWorkers;
     const workerResults = await Promise.allSettled(stopWorkers.map(async (stop) => stop?.()));
     this.stopWorkers = stopWorkers.filter((_, index) => workerResults[index].status === 'rejected');
     let retryable = false;
+    const workerErrors: unknown[] = [];
     for (const result of workerResults) {
       if (result.status === 'rejected') {
         errors.push(result.reason);
+        workerErrors.push(result.reason);
         retryable = true;
       }
+    }
+    if (context && !context.publiclyObserved) {
+      this.retainedWorkerDiagnostics.push(
+        ...workerErrors.map((error) => ({ attempt: context, error })),
+      );
     }
 
     return { errors, nativeCloseReturned: true, retryable };

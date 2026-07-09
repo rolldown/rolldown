@@ -8764,7 +8764,10 @@ impl RuntimeController {
     }
   }
 
-  fn try_spawn_blocking_tracked<F, T>(&self, function: F) -> Result<JoinHandle<T>, (F, Option<u64>)>
+  fn try_spawn_blocking_tracked<F, T>(
+    &self,
+    function: F,
+  ) -> Result<JoinHandle<T>, (RuntimeConfigError, F, Option<u64>)>
   where
     F: FnOnce() -> T + Send + 'static,
     T: Send + 'static,
@@ -8774,13 +8777,22 @@ impl RuntimeController {
 
     let (backend, registration) = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      let Ok(backend) = self.backend_locked(&mut state) else {
-        let generation = Self::begin_rejected_drop(&mut state);
-        return Err((function, generation));
+      let backend = match self.backend_locked(&mut state) {
+        Ok(backend) => backend,
+        Err(error) => {
+          let generation = Self::begin_rejected_drop(&mut state);
+          return Err((error, function, generation));
+        }
       };
       let Some(registration) = backend.work.try_register_work() else {
         let generation = Self::begin_rejected_drop(&mut state);
-        return Err((function, generation));
+        return Err((
+          RuntimeConfigError(
+            "the async runtime is stopped; call start before submitting work".to_string(),
+          ),
+          function,
+          generation,
+        ));
       };
       (backend, registration)
     };
@@ -8789,16 +8801,16 @@ impl RuntimeController {
     Ok(backend.spawn_registered_blocking(function, registration, &self.metrics))
   }
 
-  fn try_spawn_blocking<F, T>(&self, function: F) -> Result<JoinHandle<T>, F>
+  fn try_spawn_blocking<F, T>(&self, function: F) -> Result<JoinHandle<T>, (RuntimeConfigError, F)>
   where
     F: FnOnce() -> T + Send + 'static,
     T: Send + 'static,
   {
     match self.try_spawn_blocking_tracked(function) {
       Ok(handle) => Ok(handle),
-      Err((function, _generation)) => {
+      Err((error, function, _generation)) => {
         drop(RejectedSubmissionGuard { controller: self });
-        Err(function)
+        Err((error, function))
       }
     }
   }
@@ -8810,20 +8822,19 @@ impl RuntimeController {
   {
     match self.try_spawn_blocking_tracked(function) {
       Ok(handle) => handle,
-      Err((function, generation)) => {
+      Err((error, function, generation)) => {
         let _rejection = RejectedSubmissionGuard { controller: self };
         let _drop_context = RejectedSubmissionDropContext::enter();
         let _generation = generation.map(RuntimeGenerationGuard::enter);
         let _ = catch_unwind_contained(|| drop(function));
-        JoinHandle(JoinHandleInner::Ready(Some(Err(JoinError {
-          message: "the async runtime is stopped; call start before submitting work".to_string(),
-        }))))
+        JoinHandle(JoinHandleInner::Ready(Some(Err(JoinError { message: error.to_string() }))))
       }
     }
   }
 
+  #[cfg(test)]
   fn block_on(&self, future: Pin<&mut dyn Future<Output = ()>>) -> BlockOnOutcome {
-    self.with_block_on_backend(|backend| backend.block_on(future))
+    self.try_block_on(future).unwrap_or_else(|error| panic!("{error}"))
   }
 
   fn try_block_on_scope(
@@ -8849,17 +8860,20 @@ impl RuntimeController {
     Ok((backend, registration))
   }
 
-  fn with_block_on_backend<T>(&self, function: impl FnOnce(&RuntimeBackend) -> T) -> T {
+  fn try_block_on(
+    &self,
+    future: Pin<&mut dyn Future<Output = ()>>,
+  ) -> Result<BlockOnOutcome, RuntimeConfigError> {
     let (backend, registration) = match self.try_block_on_scope() {
       Ok(scope) => scope,
       Err((error, _generation)) => {
         drop(RejectedSubmissionGuard { controller: self });
-        panic!("{error}");
+        return Err(error);
       }
     };
     let _registration = registration;
     let _generation = RuntimeGenerationGuard::enter(backend.generation());
-    function(&backend)
+    Ok(backend.block_on(future))
   }
 
   fn start(&self) -> Result<(), RuntimeConfigError> {
@@ -9277,7 +9291,11 @@ where
   RUNTIME.spawn_blocking(function)
 }
 
-pub fn try_spawn_blocking<F, T>(function: F) -> Result<JoinHandle<T>, F>
+/// Submit blocking work without consuming it when the runtime is not accepting work.
+///
+/// Lifecycle owners can retain the returned closure and retry it after [`start`]
+/// completes a runtime restart.
+pub fn try_spawn_blocking<F, T>(function: F) -> Result<JoinHandle<T>, (RuntimeConfigError, F)>
 where
   F: FnOnce() -> T + Send + 'static,
   T: Send + 'static,
@@ -9319,11 +9337,19 @@ pub fn block_on<F: Future>(future: F) -> F::Output {
 }
 
 pub fn block_on_dyn(future: Pin<&mut dyn Future<Output = ()>>) {
-  assert_eq!(
-    RUNTIME.block_on(future),
-    BlockOnOutcome::Completed,
-    "the async runtime stopped before block_on completed its future"
-  );
+  try_block_on_dyn(future).unwrap_or_else(|error| panic!("{error}"));
+}
+
+/// Drive a borrowed future without consuming it when admission or shutdown fails.
+pub fn try_block_on_dyn(
+  future: Pin<&mut dyn Future<Output = ()>>,
+) -> Result<(), RuntimeConfigError> {
+  match RUNTIME.try_block_on(future)? {
+    BlockOnOutcome::Completed => Ok(()),
+    BlockOnOutcome::Stopped => Err(RuntimeConfigError(
+      "the async runtime stopped before block_on completed its future".to_string(),
+    )),
+  }
 }
 
 pub fn start() -> Result<(), RuntimeConfigError> {
@@ -19574,6 +19600,171 @@ mod tests {
   }
 
   #[test]
+  fn blocking_backend_creation_failure_preserves_diagnostic() {
+    let controller = current_thread_controller("blocking-backend-creation-failure");
+    let ran = Arc::new(AtomicBool::new(false));
+    let work_ran = Arc::clone(&ran);
+
+    FAIL_NEXT_RUNTIME_BACKEND_CREATION.with(|fail| fail.set(true));
+    let Err((error, work)) = controller.try_spawn_blocking(move || {
+      work_ran.store(true, Ordering::SeqCst);
+      17usize
+    }) else {
+      panic!("the injected backend creation failure must reject blocking work");
+    };
+    assert_eq!(error.to_string(), "injected async runtime backend creation failure");
+    assert!(!ran.load(Ordering::SeqCst), "rejected blocking work must not run");
+    assert_eq!(work(), 17, "the rejected blocking closure must remain usable");
+    assert!(ran.load(Ordering::SeqCst));
+
+    FAIL_NEXT_RUNTIME_BACKEND_CREATION.with(|fail| fail.set(true));
+    let error = futures::executor::block_on(controller.spawn_blocking(|| 23usize))
+      .expect_err("infallible blocking submission must return a failed join handle");
+    assert_eq!(error.to_string(), "injected async runtime backend creation failure");
+
+    let handle = controller
+      .try_spawn_blocking(|| 31usize)
+      .unwrap_or_else(|_| panic!("a later blocking backend creation retry must succeed"));
+    assert_eq!(futures::executor::block_on(handle).unwrap(), 31);
+    controller.shutdown().unwrap();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn try_block_on_dyn_rejects_stopped_runtime_without_polling() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_TRY_BLOCK_ON_DYN_STOPPED_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      struct PollProbe {
+        polls: Arc<AtomicUsize>,
+      }
+
+      impl Future for PollProbe {
+        type Output = ();
+
+        fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+          self.polls.fetch_add(1, Ordering::SeqCst);
+          Poll::Ready(())
+        }
+      }
+
+      shutdown().expect("the isolated runtime must stop before block_on admission");
+      let polls = Arc::new(AtomicUsize::new(0));
+      let mut future = std::pin::pin!(PollProbe { polls: Arc::clone(&polls) });
+      let error = try_block_on_dyn(future.as_mut())
+        .expect_err("the stopped runtime must reject the borrowed future");
+      assert_eq!(
+        error.to_string(),
+        "the async runtime is stopped; call start before submitting work"
+      );
+      assert_eq!(polls.load(Ordering::SeqCst), 0, "rejected block_on must not poll its future");
+
+      start().expect("the isolated runtime must restart");
+      try_block_on_dyn(future.as_mut()).expect("restart must accept the same borrowed future");
+      assert_eq!(polls.load(Ordering::SeqCst), 1);
+      shutdown().expect("the restarted isolated runtime must stop");
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::try_block_on_dyn_rejects_stopped_runtime_without_polling")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the stopped block_on subprocess must start");
+    assert!(
+      output.status.success(),
+      "stopped try_block_on_dyn must preserve the unpolled future; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn try_block_on_dyn_reports_concurrent_shutdown() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_TRY_BLOCK_ON_DYN_SHUTDOWN_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      use std::sync::mpsc;
+
+      struct PendingProbe {
+        entered: Option<mpsc::Sender<()>>,
+        complete: Arc<AtomicBool>,
+      }
+
+      impl Future for PendingProbe {
+        type Output = ();
+
+        fn poll(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+          if let Some(entered) = self.entered.take() {
+            entered.send(()).unwrap();
+          }
+          if self.complete.load(Ordering::SeqCst) { Poll::Ready(()) } else { Poll::Pending }
+        }
+      }
+
+      configure(RuntimeOptions {
+        flavor: RuntimeFlavor::CurrentThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "try-block-on-dyn-shutdown".to_string(),
+        park_deadline: None,
+      })
+      .expect("the isolated runtime must accept CurrentThread configuration");
+      start().expect("the isolated runtime must start");
+
+      let (entered_tx, entered_rx) = mpsc::channel();
+      let (error_tx, error_rx) = mpsc::channel();
+      let (retry_tx, retry_rx) = mpsc::channel();
+      let complete = Arc::new(AtomicBool::new(false));
+      let future_complete = Arc::clone(&complete);
+      let runner = std::thread::spawn(move || {
+        let mut future =
+          std::pin::pin!(PendingProbe { entered: Some(entered_tx), complete: future_complete });
+        let error = try_block_on_dyn(future.as_mut())
+          .expect_err("concurrent shutdown must interrupt the borrowed future")
+          .to_string();
+        error_tx.send(error).unwrap();
+        retry_rx.recv().unwrap();
+        try_block_on_dyn(future.as_mut())
+          .expect("restart must accept the same interrupted borrowed future");
+      });
+      entered_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the borrowed future must be polled before shutdown");
+      shutdown().expect("shutdown must wait for the active block_on scope to retire");
+      assert_eq!(
+        error_rx.recv_timeout(Duration::from_secs(2)).unwrap(),
+        "the async runtime stopped before block_on completed its future"
+      );
+      start().expect("the isolated runtime must restart after the interrupted drive");
+      complete.store(true, Ordering::SeqCst);
+      retry_tx.send(()).unwrap();
+      runner.join().unwrap();
+      shutdown().expect("the retried isolated runtime must stop");
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::try_block_on_dyn_reports_concurrent_shutdown")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the concurrent block_on shutdown subprocess must start");
+    assert!(
+      output.status.success(),
+      "try_block_on_dyn must return the shutdown diagnostic; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[test]
   fn initial_lifecycle_start_preserves_lazy_configuration() {
     let controller = RuntimeController::new();
     controller.start().expect("initial lifecycle start must succeed");
@@ -20152,12 +20343,16 @@ mod tests {
 
     let blocking_ran = Arc::new(AtomicBool::new(false));
     let blocking_ran_task = Arc::clone(&blocking_ran);
-    let Err(rejected_work) = controller.try_spawn_blocking(move || {
+    let Err((blocking_error, rejected_work)) = controller.try_spawn_blocking(move || {
       blocking_ran_task.store(true, Ordering::SeqCst);
       7
     }) else {
       panic!("shutdown must reject blocking work");
     };
+    assert_eq!(
+      blocking_error.to_string(),
+      "the async runtime is stopped; call start before submitting work"
+    );
     assert!(!blocking_ran.load(Ordering::SeqCst), "rejected blocking work must not run");
     assert_eq!(rejected_work(), 7, "the original closure must remain usable");
 

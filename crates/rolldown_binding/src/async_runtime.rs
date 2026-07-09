@@ -11,7 +11,9 @@
 use std::{future::Future, pin::Pin, ptr};
 
 #[cfg(feature = "async-runtime")]
-use napi::bindgen_prelude::{AsyncRuntime, AsyncRuntimeTask, register_async_runtime};
+use napi::bindgen_prelude::{
+  AsyncRuntime, AsyncRuntimeRejection, AsyncRuntimeTask, register_async_runtime,
+};
 use napi::bindgen_prelude::{FnArgs, Promise, Unknown};
 #[cfg(feature = "async-runtime")]
 use napi::threadsafe_function::ThreadsafeFunctionCallMode;
@@ -22,11 +24,11 @@ use rolldown_utils::MAX_ASYNC_RUNTIME_WORKER_THREADS;
 use rolldown_utils::async_runtime::{
   CurrentThreadTaskDelivery, CurrentThreadTaskDriver, CurrentThreadTaskDriverId, RuntimeFlavor,
   RuntimeMetricsSnapshot, RuntimeOptions, RuntimeOptionsPatch, TimerDriver, TimerDriverId, TimerId,
-  acknowledge_current_thread_task_delivery, block_on_dyn, configure, configure_partial,
-  configured_options, drive_current_thread_tasks, fail_current_thread_task_delivery, metrics,
+  acknowledge_current_thread_task_delivery, configure, configure_partial, configured_options,
+  drive_current_thread_tasks, fail_current_thread_task_delivery, metrics,
   register_current_thread_task_driver, register_timer_driver, request_current_thread_task_drain,
-  reset_metrics, shutdown, start, try_spawn_blocking, try_spawn_detached,
-  unregister_current_thread_task_driver, unregister_timer_driver,
+  reset_metrics, shutdown, start, try_block_on_dyn, try_spawn, try_spawn_blocking,
+  try_spawn_detached, unregister_current_thread_task_driver, unregister_timer_driver,
 };
 use rolldown_utils::max_async_runtime_worker_threads;
 
@@ -44,21 +46,40 @@ struct RolldownAsyncRuntime;
 // retains the native image after a module that registered this backend exports
 // successfully, so externally cloned wakers cannot call into unmapped code.
 unsafe impl AsyncRuntime for RolldownAsyncRuntime {
-  fn spawn(&self, task: AsyncRuntimeTask) -> std::result::Result<(), AsyncRuntimeTask> {
-    try_spawn_detached(task)
+  fn spawn(
+    &self,
+    task: AsyncRuntimeTask,
+  ) -> std::result::Result<(), AsyncRuntimeRejection<AsyncRuntimeTask>> {
+    match try_spawn(task) {
+      Ok(handle) => {
+        handle.detach();
+        Ok(())
+      }
+      Err((error, task)) => {
+        Err(AsyncRuntimeRejection::new(task, napi::Error::from_reason(error.to_string())))
+      }
+    }
   }
 
-  fn block_on(&self, future: Pin<&mut dyn Future<Output = ()>>) {
-    block_on_dyn(future);
+  fn block_on(&self, future: Pin<&mut dyn Future<Output = ()>>) -> napi::Result<()> {
+    try_block_on_dyn(future).map_err(|error| napi::Error::from_reason(error.to_string()))
   }
 
   fn spawn_blocking(
     &self,
     work: Box<dyn FnOnce() + Send + 'static>,
-  ) -> std::result::Result<(), Box<dyn FnOnce() + Send + 'static>> {
+  ) -> std::result::Result<(), AsyncRuntimeRejection<Box<dyn FnOnce() + Send + 'static>>> {
     // Route blocking work submitted through this SPI to the same bounded lane
     // as Rolldown's facade. See internal-docs/async-runtime/implementation.md.
-    try_spawn_blocking(work).map(rolldown_utils::async_runtime::JoinHandle::detach)
+    match try_spawn_blocking(work) {
+      Ok(handle) => {
+        handle.detach();
+        Ok(())
+      }
+      Err((error, work)) => {
+        Err(AsyncRuntimeRejection::new(work, napi::Error::from_reason(error.to_string())))
+      }
+    }
   }
 
   fn start(&self) -> napi::Result<()> {
@@ -3357,32 +3378,49 @@ mod tests {
 
     napi::bindgen_prelude::AsyncRuntime::shutdown(&RolldownAsyncRuntime)
       .expect("the adapter runtime must shut down");
+    let block_on_ran = Arc::new(AtomicBool::new(false));
+    let block_on_ran_future = Arc::clone(&block_on_ran);
+    let mut block_on_future = std::pin::pin!(async move {
+      block_on_ran_future.store(true, Ordering::SeqCst);
+    });
+    let block_on_error = napi::bindgen_prelude::AsyncRuntime::block_on(
+      &RolldownAsyncRuntime,
+      block_on_future.as_mut(),
+    )
+    .expect_err("the adapter must reject block_on while stopped");
+    assert_eq!(
+      block_on_error.reason,
+      "the async runtime is stopped; call start before submitting work"
+    );
+    assert!(!block_on_ran.load(Ordering::SeqCst), "rejected block_on must not poll its future");
+
     let rejected_ran = Arc::new(AtomicBool::new(false));
     let rejected_ran_work = Arc::clone(&rejected_ran);
+    let (rejected_retry_tx, rejected_retry_rx) = mpsc::channel();
     let rejected = napi::bindgen_prelude::AsyncRuntime::spawn_blocking(
       &RolldownAsyncRuntime,
       Box::new(move || {
         rejected_ran_work.store(true, Ordering::SeqCst);
+        rejected_retry_tx.send(()).expect("test receiver must still be listening");
       }),
     )
     .expect_err("the adapter must reject work while stopped");
     assert!(!rejected_ran.load(Ordering::SeqCst));
-    rejected();
-    assert!(rejected_ran.load(Ordering::SeqCst), "rejected work must be returned intact");
+    let (rejected, error) = rejected.into_parts();
+    assert_eq!(error.reason, "the async runtime is stopped; call start before submitting work");
 
     napi::bindgen_prelude::AsyncRuntime::start(&RolldownAsyncRuntime)
       .expect("the adapter runtime must restart");
-    let (second_tx, second_rx) = mpsc::channel();
-    napi::bindgen_prelude::AsyncRuntime::spawn_blocking(
-      &RolldownAsyncRuntime,
-      Box::new(move || {
-        second_tx.send(()).expect("test receiver must still be listening");
-      }),
-    )
-    .unwrap_or_else(|_| panic!("the restarted runtime must accept napi work"));
-    second_rx
+    napi::bindgen_prelude::AsyncRuntime::block_on(&RolldownAsyncRuntime, block_on_future.as_mut())
+      .expect("the restarted adapter runtime must accept the retained future");
+    assert!(block_on_ran.load(Ordering::SeqCst));
+
+    napi::bindgen_prelude::AsyncRuntime::spawn_blocking(&RolldownAsyncRuntime, rejected)
+      .unwrap_or_else(|_| panic!("the restarted runtime must accept the retained napi work"));
+    rejected_retry_rx
       .recv_timeout(Duration::from_secs(5))
-      .expect("the restarted runtime must execute accepted napi work");
+      .expect("the restarted runtime must execute the retained napi work");
+    assert!(rejected_ran.load(Ordering::SeqCst), "rejected work must be returned intact");
     assert!(
       rolldown_utils::async_runtime::metrics().blocking_tasks_started >= 2,
       "both accepted adapter submissions should reach the shared blocking scheduler"

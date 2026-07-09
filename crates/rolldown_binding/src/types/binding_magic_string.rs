@@ -12,6 +12,14 @@ use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions, UpdateOpt
 
 use super::js_regex::JsRegExp;
 
+/// Concrete class storage with no borrow from the N-API call frame.
+///
+/// The alias keeps the lifetime out of the `#[napi]` field syntax while fixing
+/// it to `'static`; the constructor below satisfies that bound by moving its
+/// `String` into `Cow::Owned`.
+/// See internal-docs/async-runtime/implementation.md.
+type BindingMagicStringStorage = MagicString<'static>;
+
 /// Internal representation preserving the original JS format (flat `[start, end]` vs nested
 /// `[[start, end], ...]`) so the getter returns the same shape the user passed in.
 #[derive(Clone)]
@@ -386,8 +394,8 @@ impl BindingDecodedMap {
 }
 
 #[napi]
-pub struct BindingMagicString<'a> {
-  pub(crate) inner: MagicString<'a>,
+pub struct BindingMagicString {
+  pub(crate) inner: BindingMagicStringStorage,
   utf16_to_byte_mapper: Utf16ToByteMapper,
   pub(crate) offset: i64,
   indent_exclusion_ranges: Option<IndentExclusionRanges>,
@@ -395,7 +403,7 @@ pub struct BindingMagicString<'a> {
 }
 
 #[napi]
-impl BindingMagicString<'_> {
+impl BindingMagicString {
   #[napi(constructor)]
   pub fn new(source: String, options: Option<BindingMagicStringOptions>) -> Self {
     let utf16_to_byte_mapper = Utf16ToByteMapper::new(&source);
@@ -406,7 +414,7 @@ impl BindingMagicString<'_> {
     let ignore_list = opts.ignore_list.unwrap_or(false);
     let magic_string_options = MagicStringOptions { filename: opts.filename, ignore_list };
     Self {
-      inner: MagicString::with_options(source, magic_string_options),
+      inner: BindingMagicStringStorage::with_options(Cow::Owned(source), magic_string_options),
       utf16_to_byte_mapper,
       offset,
       indent_exclusion_ranges,
@@ -1275,4 +1283,19 @@ fn apply_replacement_regress(
 ) -> String {
   let group_count = 1 + m.captures.len();
   apply_replacement(replacement, matched, group_count, |n| m.group(n).map(|range| &source[range]))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn constructor_moves_source_into_owned_magic_string_without_reallocating() {
+    let source = String::from("const answer = 42;");
+    let source_ptr = source.as_ptr();
+
+    let magic_string = BindingMagicString::new(source, None);
+
+    assert_eq!(magic_string.inner.source().as_ptr(), source_ptr);
+  }
 }

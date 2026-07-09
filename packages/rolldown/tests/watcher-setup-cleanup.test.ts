@@ -701,6 +701,64 @@ test('watcher run rejection replays setup listener failure through every close',
   expect(release).toHaveBeenCalledOnce();
 });
 
+test('external close waits for a deferred watcher run rejection before cleanup', async () => {
+  const runError = new Error('deferred watcher coordinator submission rejected');
+  const runStarted = createDeferred<void>();
+  const runResult = createDeferred<void>();
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingRun.mockImplementation(() => {
+    runStarted.resolve();
+    return runResult.promise;
+  });
+  const emitter = new WatcherEmitter();
+  const events: string[] = [];
+  emitter.on('event', (event) => {
+    events.push(event.code);
+  });
+  emitter.on('close', () => {
+    events.push('CLOSE');
+  });
+  await createWatcher(emitter, { output: {} });
+  await withTimeout(runStarted.promise, 'deferred watcher run start');
+
+  let closeSettled = false;
+  const firstClose = emitter.close();
+  void firstClose.then(
+    () => {
+      closeSettled = true;
+    },
+    () => {
+      closeSettled = true;
+    },
+  );
+  const concurrentClose = emitter.close();
+  await Promise.resolve();
+  expect(closeSettled).toBe(false);
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(stopWorkers).not.toHaveBeenCalled();
+  expect(release).not.toHaveBeenCalled();
+
+  runResult.reject(runError);
+  const results = await withTimeout(
+    Promise.allSettled([firstClose, concurrentClose]),
+    'deferred watcher run rejection cleanup',
+  );
+  expect(results).toEqual([
+    { status: 'rejected', reason: runError },
+    { status: 'rejected', reason: runError },
+  ]);
+  await expect(withTimeout(emitter.close(), 'deferred watcher run replay')).rejects.toBe(runError);
+  expect(events).toEqual(['ERROR', 'END', 'CLOSE']);
+  expect(mocks.bindingRun).toHaveBeenCalledOnce();
+  expect(mocks.bindingWaitForClose).not.toHaveBeenCalled();
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+});
+
 test('waitForClose transport rejection enters cleanup and is replayed by close', async () => {
   const waitForCloseError = new Error('waitForClose transport rejected');
   const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
@@ -720,6 +778,214 @@ test('waitForClose transport rejection enters cleanup and is replayed by close',
   expect(mocks.bindingClose).toHaveBeenCalledOnce();
   expect(stopWorkers).toHaveBeenCalledOnce();
   expect(release).toHaveBeenCalledOnce();
+});
+
+test('external close waits for a deferred waitForClose rejection before cleanup', async () => {
+  const waitForCloseError = new Error('deferred waitForClose transport rejected');
+  const waitForCloseStarted = createDeferred<void>();
+  const waitForCloseResult = createDeferred<void>();
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingWaitForClose.mockImplementation(() => {
+    waitForCloseStarted.resolve();
+    return waitForCloseResult.promise;
+  });
+  const emitter = new WatcherEmitter();
+  const closeListener = vi.fn();
+  emitter.on('close', closeListener);
+  await createWatcher(emitter, { output: {} });
+  await withTimeout(waitForCloseStarted.promise, 'deferred waitForClose start');
+
+  let closeSettled = false;
+  const firstClose = emitter.close();
+  void firstClose.then(
+    () => {
+      closeSettled = true;
+    },
+    () => {
+      closeSettled = true;
+    },
+  );
+  const concurrentClose = emitter.close();
+  await Promise.resolve();
+  expect(closeSettled).toBe(false);
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(stopWorkers).not.toHaveBeenCalled();
+  expect(closeListener).not.toHaveBeenCalled();
+  expect(release).not.toHaveBeenCalled();
+
+  waitForCloseResult.reject(waitForCloseError);
+  const results = await withTimeout(
+    Promise.allSettled([firstClose, concurrentClose]),
+    'deferred waitForClose rejection cleanup',
+  );
+  expect(results).toEqual([
+    { status: 'rejected', reason: waitForCloseError },
+    { status: 'rejected', reason: waitForCloseError },
+  ]);
+  await expect(withTimeout(emitter.close(), 'deferred waitForClose rejection replay')).rejects.toBe(
+    waitForCloseError,
+  );
+  expect(mocks.bindingRun).toHaveBeenCalledOnce();
+  expect(mocks.bindingWaitForClose).toHaveBeenCalledOnce();
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(closeListener).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+});
+
+test('same-turn waitForClose and native close rejections keep deterministic ordering', async () => {
+  const waitForCloseError = new Error('deferred waitForClose transport rejected');
+  const nativeCloseError = new Error('native watcher close rejected');
+  const waitForCloseStarted = createDeferred<void>();
+  const waitForCloseResult = createDeferred<void>();
+  const nativeCloseStarted = createDeferred<void>();
+  const firstNativeCloseResult = createDeferred<never>();
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingWaitForClose.mockImplementation(() => {
+    waitForCloseStarted.resolve();
+    return waitForCloseResult.promise;
+  });
+  mocks.bindingClose
+    .mockImplementationOnce(() => {
+      nativeCloseStarted.resolve();
+      return firstNativeCloseResult.promise;
+    })
+    .mockResolvedValueOnce({
+      errors: [],
+      nativeOwnedCloseIdentities: [],
+    });
+  const emitter = new WatcherEmitter();
+  const closeListener = vi.fn();
+  emitter.on('close', closeListener);
+  await createWatcher(emitter, { output: {} });
+  await withTimeout(waitForCloseStarted.promise, 'deferred waitForClose start');
+
+  const firstClose = emitter.close();
+  await withTimeout(nativeCloseStarted.promise, 'first native close start');
+  waitForCloseResult.reject(waitForCloseError);
+  firstNativeCloseResult.reject(nativeCloseError);
+
+  const firstError = await withTimeout(
+    firstClose.catch((error: unknown) => error),
+    'combined waitForClose and native close rejection',
+  );
+  expect(firstError).toBeInstanceOf(AggregateError);
+  expect((firstError as AggregateError).errors).toEqual([waitForCloseError, nativeCloseError]);
+  expect((firstError as AggregateError).cause).toBe(waitForCloseError);
+  expect(stopWorkers).not.toHaveBeenCalled();
+  expect(closeListener).not.toHaveBeenCalled();
+  expect(release).not.toHaveBeenCalled();
+
+  await expect(withTimeout(emitter.close(), 'native close cleanup retry')).rejects.toBe(
+    waitForCloseError,
+  );
+  expect(mocks.bindingRun).toHaveBeenCalledOnce();
+  expect(mocks.bindingWaitForClose).toHaveBeenCalledOnce();
+  expect(mocks.bindingClose).toHaveBeenCalledTimes(2);
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(closeListener).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+});
+
+test('automatic native close preserves an undelivered worker fault through cleanup retry', async () => {
+  const workerFault = new Error('delayed parallel-plugin worker fault');
+  const waitForCloseStarted = createDeferred<void>();
+  const firstRelease = createDeferred<void>();
+  const stopWorkers = vi
+    .fn<() => Promise<void>>()
+    .mockRejectedValueOnce(workerFault)
+    .mockResolvedValue(undefined);
+  let releaseCount = 0;
+  const release = vi.fn(() => {
+    releaseCount += 1;
+    if (releaseCount === 1) firstRelease.resolve();
+  });
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingWaitForClose.mockImplementation(() => {
+    waitForCloseStarted.resolve();
+    return Promise.resolve();
+  });
+  const emitter = new WatcherEmitter();
+  const closeListener = vi.fn();
+  emitter.on('close', closeListener);
+  await createWatcher(emitter, { output: {} });
+  await withTimeout(waitForCloseStarted.promise, 'automatic close watcher run');
+
+  await mocks.bindingCallback({
+    eventKind: () => 'close',
+  });
+  await withTimeout(firstRelease.promise, 'automatic close cleanup');
+  await Promise.resolve();
+
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(closeListener).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+
+  await expect(withTimeout(emitter.close(), 'public worker cleanup retry')).rejects.toBe(
+    workerFault,
+  );
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledTimes(2);
+  expect(closeListener).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledTimes(2);
+
+  await expect(withTimeout(emitter.close(), 'worker fault replay')).rejects.toBe(workerFault);
+  expect(stopWorkers).toHaveBeenCalledTimes(2);
+  expect(closeListener).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledTimes(2);
+});
+
+test('public close joining automatic cleanup does not replay its delivered worker fault', async () => {
+  const workerFault = new Error('delayed parallel-plugin worker fault');
+  const waitForCloseStarted = createDeferred<void>();
+  const closeListenerStarted = createDeferred<void>();
+  const finishCloseListener = createDeferred<void>();
+  const stopWorkers = vi
+    .fn<() => Promise<void>>()
+    .mockRejectedValueOnce(workerFault)
+    .mockResolvedValue(undefined);
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingWaitForClose.mockImplementation(() => {
+    waitForCloseStarted.resolve();
+    return Promise.resolve();
+  });
+  const emitter = new WatcherEmitter();
+  const closeListener = vi.fn(async () => {
+    closeListenerStarted.resolve();
+    await finishCloseListener.promise;
+  });
+  emitter.on('close', closeListener);
+  await createWatcher(emitter, { output: {} });
+  await withTimeout(waitForCloseStarted.promise, 'automatic close watcher run');
+
+  await mocks.bindingCallback({
+    eventKind: () => 'close',
+  });
+  await withTimeout(closeListenerStarted.promise, 'automatic close listener');
+  expect(stopWorkers).toHaveBeenCalledOnce();
+
+  const joinedClose = emitter.close();
+  finishCloseListener.resolve();
+  await expect(withTimeout(joinedClose, 'joined automatic close')).rejects.toBe(workerFault);
+  expect(closeListener).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+
+  await expect(withTimeout(emitter.close(), 'delivered worker cleanup retry')).resolves.toBe(
+    undefined,
+  );
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledTimes(2);
+  expect(closeListener).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledTimes(2);
 });
 
 test('watch result close memoizes a synchronous native throw', async () => {
@@ -900,6 +1166,16 @@ function createBundlerOption(stopWorkers: () => Promise<void>, inputOptions = {}
     onLog,
     stopWorkers,
   };
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, reject, resolve };
 }
 
 function withTimeout<T>(promise: Promise<T>, operation: string): Promise<T> {

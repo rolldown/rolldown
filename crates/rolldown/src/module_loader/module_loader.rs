@@ -1255,6 +1255,12 @@ mod tests {
       match message {
         ModuleLoaderMsg::BuildErrors(errors) => {
           assert_eq!(errors.len(), 1);
+          assert!(
+            errors[0]
+              .to_string()
+              .contains("module loader task panicked before reporting completion"),
+            "the task must be polled far enough to observe the panic, not merely rejected"
+          );
           remaining -= 1;
         }
         _ => panic!("module task panic must be converted to BuildErrors"),

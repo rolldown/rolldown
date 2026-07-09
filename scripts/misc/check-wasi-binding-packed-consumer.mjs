@@ -2406,6 +2406,11 @@ try {
     await readFile(path.join(rootConsumer, 'pnpm-lock.yaml'), 'utf8'),
     'root pnpm consumer',
   );
+  const installedRootDir = await realpath(path.join(rootConsumer, 'node_modules', 'rolldown'));
+  const installedRootManifest = JSON.parse(
+    await readFile(path.join(installedRootDir, 'package.json'), 'utf8'),
+  );
+  await assertPackedNotices(installedRootDir, installedRootManifest, installedRootManifest.name);
   for (const flavor of packedFlavors.values()) {
     assert.equal(
       existsSync(path.join(rootConsumer, 'node_modules', flavor.name)),

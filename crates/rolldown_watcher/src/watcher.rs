@@ -530,6 +530,7 @@ mod tests {
     watcher.run();
     end.notified().await;
     let close_bundle_calls_before_shutdown = close_bundle_calls.load(Ordering::SeqCst);
+    assert_eq!(close_bundle_calls_before_shutdown, 2);
 
     let (first, concurrent) = tokio::join!(watcher.close(), watcher.close());
     let first_error = first.expect_err("close should fail");
@@ -556,7 +557,7 @@ mod tests {
     assert!(failures[3].message().starts_with("watch task 1 closeBundle failed:"));
     assert!(failures[3].message().contains("second close failure closeBundle"));
     assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 2);
-    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown + 2);
+    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown);
     assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
 
     let second_error = watcher.close().await.expect_err("later close should replay the failure");
@@ -567,7 +568,7 @@ mod tests {
     assert!(Arc::ptr_eq(first_coordinator_error, second_coordinator_error));
     assert_eq!(second_error.to_string(), first_message);
     assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 2);
-    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown + 2);
+    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown);
     assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
   }
 
@@ -603,6 +604,7 @@ mod tests {
     watcher.run();
     end.notified().await;
     let close_bundle_calls_before_shutdown = close_bundle_calls.load(Ordering::SeqCst);
+    assert_eq!(close_bundle_calls_before_shutdown, 2);
 
     let first_error = watcher.close().await.expect_err("close should report contained panics");
     let first_message = first_error.to_string();
@@ -622,7 +624,7 @@ mod tests {
     assert!(first_message.contains("watch close event handler failed"));
     assert!(first_message.contains("intentional close event panic"));
     assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 2);
-    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown + 2);
+    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown);
     assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
 
     let replayed = watcher.close().await.expect_err("later close should replay the panic result");
@@ -631,7 +633,7 @@ mod tests {
     assert!(Arc::ptr_eq(coordinator_error, replayed_coordinator_error));
     assert_eq!(replayed.to_string(), first_message);
     assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 2);
-    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown + 2);
+    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_shutdown);
     assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
   }
 
@@ -674,15 +676,15 @@ mod tests {
     assert_eq!(panic_payload_drops.load(Ordering::SeqCst), 1);
     assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 1);
     let close_bundle_calls_before_panic = close_bundle_calls_before_panic.load(Ordering::SeqCst);
-    assert_ne!(close_bundle_calls_before_panic, usize::MAX);
-    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_panic + 1);
+    assert_eq!(close_bundle_calls_before_panic, 1);
+    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_panic);
     assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
 
     let replayed = watcher.close().await.expect_err("later close should replay the panic result");
     assert_eq!(replayed.to_string(), first_message);
     assert_eq!(panic_payload_drops.load(Ordering::SeqCst), 1);
     assert_eq!(close_watcher_calls.load(Ordering::SeqCst), 1);
-    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_panic + 1);
+    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), close_bundle_calls_before_panic);
     assert_eq!(handler_close_calls.load(Ordering::SeqCst), 1);
   }
 

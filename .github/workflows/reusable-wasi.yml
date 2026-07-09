@@ -141,6 +141,18 @@ jobs:
       - name: Assert single-thread WASI loaders are threadless
         run: node scripts/misc/check-wasi-threadless.mjs
 
+      # The single-thread binding already exists from the previous step.
+      # Build only the browser package glue to produce packages/browser/dist
+      # and the bundled threaded loader artifact without recompiling WASI.
+      - name: Build `@rolldown/browser` artifacts
+        run: vp run --filter '@rolldown/browser' build-node
+
+      - name: Stage self-contained WASI packages
+        run: node scripts/misc/stage-wasi-packages.mjs
+
+      - name: Check staged WASI binding dependencies
+        run: node scripts/misc/check-wasi-binding-deps.mjs
+
       - name: Exercise concurrent workerd instance lifecycle and memory canary
         run: node --expose-gc scripts/misc/check-workerd-memory.mjs --max-rss-growth-mb=128
 

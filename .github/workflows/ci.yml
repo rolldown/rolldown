@@ -57,6 +57,7 @@ jobs:
               - *rust-changes
               - 'packages/**'
               - 'examples/**'
+              - 'patches/**'
               - 'scripts/**'
               - 'rollup'
       - name: Show outputs

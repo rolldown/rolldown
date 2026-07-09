@@ -10,7 +10,7 @@ const childPath = path.join(testsDir, 'fixtures', 'async-runtime-submission-fail
 const capabilities = getRuntimeCapabilities();
 
 test.skipIf(!capabilities.asyncRuntimeBuild || capabilities.wasi)(
-  'real N-API close submission rejection is retryable',
+  'real N-API lifecycle submissions reject and retry without duplicate watcher starts',
   { timeout: 30_000 },
   () => {
     const child = spawnSync(process.execPath, [childPath], {
@@ -27,6 +27,9 @@ test.skipIf(!capabilities.asyncRuntimeBuild || capabilities.wasi)(
       closeBundleCalls: 1,
       replayedTerminalError: true,
       submissionRejected: true,
+      watcherBuildEnds: 1,
+      watcherBuildStarts: 1,
+      watcherRunRejected: true,
     });
   },
 );

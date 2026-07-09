@@ -27,6 +27,7 @@ writeFileSync(path.join(root, 'main.js'), 'export const value = 1;\n');
 const terminalError = new TypeError('terminal closeBundle failure after submission retry');
 let closeBundleCalls = 0;
 const bundler = new binding.BindingBundler();
+let watcher;
 const options = {
   inputOptions: {
     cwd: root,
@@ -75,17 +76,85 @@ try {
   assert.equal(replay.errors[0].field0, terminalError);
   assert.equal(closeBundleCalls, 1);
 
+  let resolveWatcherEnd;
+  const watcherEnd = new Promise((resolve) => {
+    resolveWatcherEnd = resolve;
+  });
+  let watcherBuildStarts = 0;
+  let watcherBuildEnds = 0;
+  watcher = new binding.BindingWatcher(
+    [
+      {
+        inputOptions: {
+          ...options.inputOptions,
+          plugins: [],
+        },
+        outputOptions: {
+          dir: path.join(root, 'watch-dist'),
+          plugins: [],
+        },
+      },
+    ],
+    (event) => {
+      if (event.eventKind() !== 'event') return;
+      const kind = event.bundleEventKind();
+      if (kind === 'BUNDLE_START') {
+        watcherBuildStarts += 1;
+      } else if (kind === 'BUNDLE_END') {
+        watcherBuildEnds += 1;
+      } else if (kind === 'END') {
+        resolveWatcherEnd();
+      }
+    },
+  );
+
+  stopRuntime();
+  let firstRun;
+  assert.doesNotThrow(() => {
+    firstRun = watcher.run();
+  });
+  assert.equal(typeof firstRun?.then, 'function');
+  await assert.rejects(firstRun, /Watcher coordinator task submission failed:/);
+  assert.equal(watcherBuildStarts, 0);
+  assert.equal(watcherBuildEnds, 0);
+
+  startRuntime();
+  await watcher.run();
+  await watcher.run();
+  let watcherEndTimeout;
+  try {
+    await Promise.race([
+      watcherEnd,
+      new Promise((_, reject) => {
+        watcherEndTimeout = setTimeout(
+          () => reject(new Error('retried watcher did not finish its initial build')),
+          10_000,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(watcherEndTimeout);
+  }
+  assert.equal(watcherBuildStarts, 1);
+  assert.equal(watcherBuildEnds, 1);
+  const watcherClose = await watcher.close();
+  assert.deepEqual(watcherClose.errors, []);
+
   console.log(
     JSON.stringify({
       closeBundleCalls,
       replayedTerminalError: replay.errors[0].field0 === terminalError,
       submissionRejected: true,
+      watcherBuildEnds,
+      watcherBuildStarts,
+      watcherRunRejected: true,
     }),
   );
 } finally {
   try {
     startRuntime();
   } catch {}
+  await watcher?.close().catch(() => {});
   await bundler.closeTerminal().catch(() => {});
   uninstallCurrentThreadTaskHost();
   rmSync(root, { force: true, recursive: true });

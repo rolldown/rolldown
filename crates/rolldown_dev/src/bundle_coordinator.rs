@@ -26,7 +26,10 @@ use crate::{
     BundlingFuture, RetainedDevCallbackErrors, SharedDevContext,
     dev_callback_result_to_build_result,
   },
-  type_aliases::{CoordinatorReceiver, CoordinatorSender, WatchRegistrationErrorObserverId},
+  type_aliases::{
+    BeginWatchRegistrationErrorObservationSender, CoordinatorReceiver, CoordinatorSender,
+    WatchRegistrationErrorObserverId,
+  },
   types::{
     coordinator_msg::CoordinatorMsg, coordinator_state::CoordinatorState,
     coordinator_state_snapshot::CoordinatorStateSnapshot,
@@ -141,12 +144,14 @@ impl BundleCoordinator {
           let _ = reply.send(status);
         }
         CoordinatorMsg::BeginWatchRegistrationErrorObservation { reply } => {
-          let observer_id = self.begin_watch_registration_error_observation();
-          let _ = reply.send(observer_id);
+          self.begin_watch_registration_error_observation_with_reply(reply);
         }
         CoordinatorMsg::FinishWatchRegistrationErrorObservation { observer_id, reply } => {
           let error = self.finish_watch_registration_error_observation(observer_id);
           let _ = reply.send(error);
+        }
+        CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id } => {
+          self.cancel_watch_registration_error_observation(observer_id);
         }
         CoordinatorMsg::EnsureLatestBundleOutput { reply } => {
           let result = self.ensure_latest_bundle_output().await;
@@ -615,6 +620,20 @@ impl BundleCoordinator {
     observer_id
   }
 
+  fn begin_watch_registration_error_observation_with_reply(
+    &mut self,
+    reply: BeginWatchRegistrationErrorObservationSender,
+  ) {
+    if reply.is_closed() {
+      return;
+    }
+
+    let observer_id = self.begin_watch_registration_error_observation();
+    if let Err(observer_id) = reply.send(observer_id) {
+      self.cancel_watch_registration_error_observation(observer_id);
+    }
+  }
+
   fn finish_watch_registration_error_observation(
     &mut self,
     observer_id: WatchRegistrationErrorObserverId,
@@ -629,6 +648,17 @@ impl BundleCoordinator {
     }
     self.prune_acknowledged_watch_registration_errors();
     Self::merge_dev_callback_errors(observed_errors)
+  }
+
+  fn cancel_watch_registration_error_observation(
+    &mut self,
+    observer_id: WatchRegistrationErrorObserverId,
+  ) {
+    self.active_watch_registration_error_observers.remove(&observer_id);
+    for error in &mut self.watch_registration_errors {
+      error.pending_observers.remove(&observer_id);
+    }
+    self.prune_acknowledged_watch_registration_errors();
   }
 
   fn prune_acknowledged_watch_registration_errors(&mut self) {
@@ -723,14 +753,14 @@ mod tests {
     DevOptions, DevWatchOptions, SharedClients, dev_context::DevContext, normalize_dev_options,
   };
   use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions};
-  use rolldown_fs_watcher::{FsEventHandler, FsWatcher, FsWatcherConfig, PathsMut};
+  use rolldown_fs_watcher::{FsEventHandler, FsWatcher, FsWatcherConfig, NoopFsWatcher, PathsMut};
   use std::{
     fs,
     path::{Path, PathBuf},
     sync::atomic::{AtomicUsize, Ordering},
   };
   use tokio::{
-    sync::{Notify, mpsc::unbounded_channel},
+    sync::{Notify, mpsc::unbounded_channel, oneshot},
     time::{Duration, timeout},
   };
 
@@ -755,6 +785,22 @@ mod tests {
     fn drop(&mut self) {
       let _ = fs::remove_dir_all(&self.0);
     }
+  }
+
+  fn create_observation_test_coordinator() -> BundleCoordinator {
+    let bundler = Bundler::new(BundlerOptions::default()).expect("create test bundler");
+    let (coordinator_tx, coordinator_rx) = unbounded_channel();
+    let ctx = Arc::new(DevContext {
+      options: normalize_dev_options(DevOptions::default()),
+      coordinator_tx,
+      clients: SharedClients::default(),
+    });
+    BundleCoordinator::new(
+      Arc::new(Mutex::new(bundler)),
+      ctx,
+      coordinator_rx,
+      Box::new(NoopFsWatcher),
+    )
   }
 
   struct CommitFailingWatcher {
@@ -919,6 +965,56 @@ mod tests {
     assert!(watched_files.contains(successful_before.as_str()));
     assert!(!watched_files.contains(failed.as_str()));
     assert!(watched_files.contains(successful_after.as_str()));
+  }
+
+  #[test]
+  fn dropped_begin_reply_does_not_register_watch_error_observer() {
+    let mut coordinator = create_observation_test_coordinator();
+    let (reply, receiver) = oneshot::channel();
+    drop(receiver);
+
+    coordinator.begin_watch_registration_error_observation_with_reply(reply);
+
+    assert!(coordinator.active_watch_registration_error_observers.is_empty());
+  }
+
+  #[test]
+  fn cancelled_watch_error_observer_is_removed_from_current_and_later_events() {
+    let mut coordinator = create_observation_test_coordinator();
+    let observer_id = coordinator.begin_watch_registration_error_observation();
+    coordinator.retain_watch_registration_result(Err(
+      anyhow::anyhow!("failure while the observer was waiting").into(),
+    ));
+    assert!(coordinator.watch_registration_errors[0].pending_observers.contains(&observer_id));
+
+    coordinator.cancel_watch_registration_error_observation(observer_id);
+    assert!(!coordinator.active_watch_registration_error_observers.contains(&observer_id));
+    assert!(
+      coordinator
+        .watch_registration_errors
+        .iter()
+        .all(|error| !error.pending_observers.contains(&observer_id))
+    );
+
+    coordinator.retain_watch_registration_result(Err(anyhow::anyhow!("later failure").into()));
+    assert!(
+      coordinator
+        .watch_registration_errors
+        .iter()
+        .all(|error| !error.pending_observers.contains(&observer_id))
+    );
+    assert!(
+      coordinator.finish_watch_registration_error_observation(observer_id).is_none(),
+      "a cancelled observer must not receive later failures"
+    );
+
+    let replacement_observer = coordinator.begin_watch_registration_error_observation();
+    let error = coordinator
+      .finish_watch_registration_error_observation(replacement_observer)
+      .expect("a later observer must still receive retained registration failures");
+    let message = error.to_string();
+    assert!(message.contains("failure while the observer was waiting"));
+    assert!(message.contains("later failure"));
   }
 
   #[test]

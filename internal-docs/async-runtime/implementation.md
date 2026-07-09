@@ -129,7 +129,11 @@ binary.
   result delivery and caught
   panic-payload destruction. This covers normal FIFO service and exact
   owner-lane lending in both executors, after an inner function wrapper has
-  unwound.
+  unwound. The public fallible `try_spawn` API returns
+  `(RuntimeConfigError, future)` when admission fails. Lifecycle owners use it
+  when consuming a one-shot coordinator future so shutdown races can restore
+  and retry that exact future after `start`; the convenience `spawn` API keeps
+  its immediate failed-handle behavior for callers that do not need recovery.
 - The owned Rust `block_on` helper acquires its generation work scope before
   moving the input future into the driver. Acquisition failure registers
   rejected destruction under the controller lifecycle mutex, then destroys the
@@ -766,8 +770,10 @@ shared backend takes precedence over `tokio-runtime`. CI compiles both profiles.
 The dedicated native async-runtime test build also enables
 `runtime-submission-failure-test`. Its raw-binding-only stop/start probes shut
 down the real scheduler so one `Env::spawn_future` submission rejects before a
-retry executes the already-memoized close future. These exports are absent from
-production artifacts.
+retry executes the already-memoized close future. The same fixture verifies
+that `BindingWatcher.run()` returns a rejected Promise while stopped, retains
+its coordinator, and starts it exactly once after restart. These exports are
+absent from production artifacts.
 
 `getRuntimeCapabilities()` also exposes stable public-workflow gates.
 `devSupported` follows the effective runtime flavor and is false on

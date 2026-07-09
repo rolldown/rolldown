@@ -9243,6 +9243,18 @@ where
   RUNTIME.spawn(future)
 }
 
+/// Submit a future without consuming it when the runtime is not accepting work.
+///
+/// Lifecycle owners can retain the returned future and retry it after
+/// [`start`] completes a runtime restart.
+pub fn try_spawn<F, T>(future: F) -> Result<JoinHandle<T>, (RuntimeConfigError, F)>
+where
+  F: Future<Output = T> + Send + 'static,
+  T: Send + 'static,
+{
+  RUNTIME.try_spawn(future)
+}
+
 pub fn try_spawn_detached<F>(future: F) -> Result<(), F>
 where
   F: Future<Output = ()> + Send + 'static,
@@ -20159,6 +20171,36 @@ mod tests {
 
     let state = controller.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     assert!(matches!(&state.lifecycle, RuntimeLifecycle::Stopped));
+  }
+
+  #[test]
+  fn rejected_future_can_be_resubmitted_after_restart() {
+    let controller = current_thread_controller("lifecycle-retry-future");
+    controller.start().expect("runtime must start");
+    drop(controller.backend());
+    controller.shutdown().expect("runtime must stop");
+
+    let runs = Arc::new(AtomicUsize::new(0));
+    let runs_task = Arc::clone(&runs);
+    let future = async move {
+      runs_task.fetch_add(1, Ordering::SeqCst);
+      23
+    };
+    let Err((error, future)) = controller.try_spawn(future) else {
+      panic!("stopped runtime must reject the future");
+    };
+    assert!(error.to_string().contains("runtime is stopped"));
+    assert_eq!(runs.load(Ordering::SeqCst), 0);
+
+    controller.start().expect("runtime must restart");
+    let handle = controller
+      .try_spawn(future)
+      .unwrap_or_else(|_| panic!("restart must accept retained future"));
+    let dispatch = controller_current_thread_dispatch(&controller);
+    controller.drive_current_thread_dispatch(dispatch, false);
+    assert_eq!(futures::executor::block_on(handle).expect("retained future must complete"), 23);
+    assert_eq!(runs.load(Ordering::SeqCst), 1);
+    controller.shutdown().expect("replacement runtime must stop");
   }
 
   #[test]

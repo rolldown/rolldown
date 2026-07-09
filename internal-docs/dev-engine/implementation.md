@@ -80,9 +80,12 @@ pub struct DevContext {
 
 ### Threading model
 
-- The `BundleCoordinator` runs in **one** dedicated tokio task
-  (`DevEngine::run` does `tokio::spawn(coordinator.run())`,
-  `dev_engine.rs:115`). Its `run()` is a single `while let Some(msg) =
+- The `BundleCoordinator` runs in **one** task on the selected runtime.
+  `DevEngine` stores its boxed, not-yet-started future until fallible runtime
+  submission succeeds. A submission rejected during runtime shutdown returns
+  that same future to the state slot, so `run()` can retry it after restart
+  instead of permanently consuming the coordinator. Its `run()` is a single
+  `while let Some(msg) =
 self.rx.recv().await` loop, so all coordinator state mutation is
   serialized — there is no lock on `CoordinatorState`, the message loop
   _is_ the lock.
@@ -115,6 +118,7 @@ pub enum CoordinatorMsg {
   GetState { reply: … },                     // snapshot of coordinator state
   BeginWatchRegistrationErrorObservation { reply: … },
   FinishWatchRegistrationErrorObservation { observer_id, reply: … },
+  CancelWatchRegistrationErrorObservation { observer_id },
   EnsureLatestBundleOutput { reply: … },     // "I need a fresh full bundle"
   TriggerFullBuild,                           // unconditional full build (fire-and-forget)
   GetWatchedFiles { reply: … },              // list of watched paths
@@ -133,6 +137,7 @@ Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
 | `GetState`                                | `create_state_snapshot`, reply                           |
 | `BeginWatchRegistrationErrorObservation`  | register a lifecycle waiter                              |
 | `FinishWatchRegistrationErrorObservation` | acknowledge and return attached failures                 |
+| `CancelWatchRegistrationErrorObservation` | detach a dropped lifecycle waiter                         |
 | `EnsureLatestBundleOutput`                | `ensure_latest_bundle_output`, reply                     |
 | `TriggerFullBuild`                        | `trigger_full_build` (no reply)                          |
 | `GetWatchedFiles`                         | reply with the `watched_files` set                       |
@@ -147,7 +152,7 @@ The producers:
 - A finishing **`BundlingTask`** sends `BundleCompleted` from its
   `run()` (`bundling_task.rs:75-80`).
 - The **`DevEngine`** sends `ScheduleBuildIfStale`, `GetState`,
-  both watch-registration observation messages,
+  the watch-registration observation lifecycle messages,
   `EnsureLatestBundleOutput`, `GetWatchedFiles`, `ModuleChanged`, and
   `Close` on behalf of its public API callers (the dev server, HTTP middleware,
   lazy-compilation endpoint, etc.).
@@ -810,8 +815,8 @@ Add and commit failures are aggregated when both occur.
 
 Watch-registration failures use explicit lifecycle observers rather than one
 permanent error slot. `wait_for_ongoing_bundle` and
-`ensure_latest_bundle_output` register an observer before waiting; each failed
-path publication creates an event attached to every observer active at that
+`ensure_latest_bundle_output` register an RAII-owned observer before waiting;
+each failed path publication creates an event attached to every observer active at that
 point. The next publication attempt supersedes that failure occurrence,
 regardless of whether the retry succeeds or reports a new failure. Queued
 observers remain attached to every occurrence they overlapped, while callers
@@ -824,7 +829,12 @@ preserves every in-flight waiter's failures without letting historical retry
 failures poison all future page-access ensures. Close registers its own
 observer before draining the final task, so an unresolved or never-observed
 registration failure still joins `closeBundle` failures. Every unpublished
-candidate remains eligible for retry.
+candidate remains eligible for retry. Finishing disarms the RAII owner before
+the coordinator acknowledgement wait. Dropping it earlier sends a nonblocking
+cancel message that removes the ID from both the active set and every pending
+event. If cancellation wins before the begin reply is received, the
+coordinator detects the dropped reply and never leaves the newly allocated ID
+active.
 
 **Edge case: recovery from a missing-import failure.** If the initial
 build failed because of a missing import, the missing file was never
@@ -836,7 +846,10 @@ case, `triggerFullBuild` (below) is needed to force a rebuild.
 `ensure_latest_bundle_output` to wait for the first `FullBuild`. The
 coordinator is in `FullBuildInProgress` and returns the running future.
 When the build finishes — success or failure — the output is as
-current as it can be. The loop breaks, `run()` returns.
+current as it can be. The loop breaks, `run()` returns. If the runtime rejects
+the coordinator submission while stopped, `run()` returns that lifecycle
+error and restores the exact boxed coordinator future; a later call after
+runtime restart retries the same coordinator.
 
 **Manual retry via `triggerFullBuild`.** A separate, fire-and-forget
 operation for callers that explicitly want to force a new build

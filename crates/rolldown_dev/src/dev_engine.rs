@@ -11,7 +11,7 @@ use rolldown_common::WatcherChangeKind;
 use rolldown_dev_common::types::DevCallbackError;
 use rolldown_error::{BatchedBuildDiagnostic, BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
-use rolldown_utils::futures::spawn;
+use rolldown_utils::futures::try_spawn;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
 use tokio::sync::{Mutex, mpsc::unbounded_channel};
@@ -33,6 +33,7 @@ use crate::{
 type DevEngineCloseResult = Result<(), Arc<BatchedBuildDiagnostic>>;
 type DevEngineCloseFuture = Shared<PinBoxSendStaticFuture<DevEngineCloseResult>>;
 type CoordinatorTaskResult = Result<(), Arc<str>>;
+type PendingCoordinatorFuture = PinBoxSendStaticFuture<()>;
 type CoordinatorTaskFuture = Shared<PinBoxSendStaticFuture<CoordinatorTaskResult>>;
 
 #[cfg(feature = "testing")]
@@ -43,8 +44,78 @@ use rolldown_utils::indexmap::FxIndexMap;
 use std::path::PathBuf;
 
 pub struct CoordinatorState {
-  coordinator: Option<BundleCoordinator>,
+  coordinator: Option<PendingCoordinatorFuture>,
   handle: Option<CoordinatorTaskFuture>,
+}
+
+impl CoordinatorState {
+  fn try_start<E>(
+    &mut self,
+    start: impl FnOnce(
+      PendingCoordinatorFuture,
+    ) -> Result<CoordinatorTaskFuture, (E, PendingCoordinatorFuture)>,
+  ) -> Result<(), E> {
+    let Some(coordinator) = self.coordinator.take() else {
+      return Ok(());
+    };
+
+    match start(coordinator) {
+      Ok(handle) => {
+        self.handle = Some(handle);
+        Ok(())
+      }
+      Err((error, coordinator)) => {
+        self.coordinator = Some(coordinator);
+        Err(error)
+      }
+    }
+  }
+}
+
+// See internal-docs/dev-engine/implementation.md for the observation lifecycle.
+struct WatchRegistrationErrorObservation {
+  observer_id: Option<WatchRegistrationErrorObserverId>,
+  coordinator_sender: CoordinatorSender,
+}
+
+impl WatchRegistrationErrorObservation {
+  fn new(
+    observer_id: WatchRegistrationErrorObserverId,
+    coordinator_sender: CoordinatorSender,
+  ) -> Self {
+    Self { observer_id: Some(observer_id), coordinator_sender }
+  }
+
+  async fn finish(mut self) -> BuildResult<()> {
+    let observer_id =
+      self.observer_id.take().expect("watch-registration observation must be active");
+    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    self
+      .coordinator_sender
+      .send(CoordinatorMsg::FinishWatchRegistrationErrorObservation {
+        observer_id,
+        reply: reply_sender,
+      })
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to finish watch-registration error observation")?;
+
+    let error = reply_receiver
+      .await
+      .map_err_to_unhandleable()
+      .context("DevEngine: coordinator closed before acknowledging watch-registration errors")?;
+    DevEngine::retained_error_to_build_result(error)
+  }
+}
+
+impl Drop for WatchRegistrationErrorObservation {
+  fn drop(&mut self) {
+    let Some(observer_id) = self.observer_id.take() else {
+      return;
+    };
+    let _ = self
+      .coordinator_sender
+      .send(CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id });
+  }
 }
 
 pub struct DevEngine {
@@ -102,6 +173,7 @@ impl DevEngine {
 
     let coordinator =
       BundleCoordinator::new(Arc::clone(&bundler), Arc::clone(&ctx), coordinator_rx, watcher);
+    let coordinator = Box::pin(coordinator.run()) as PendingCoordinatorFuture;
 
     Ok(Self {
       coordinator_sender: coordinator_tx,
@@ -126,15 +198,19 @@ impl DevEngine {
       return Ok(());
     }
 
-    // Spawn the coordinator
-    if let Some(coordinator) = coordinator_state.coordinator.take() {
-      let join_handle = spawn(coordinator.run());
-      let coordinator_handle = Box::pin(async move {
-        join_handle
-          .await
-          .map_err(|error| Arc::<str>::from(format!("DevEngine coordinator task failed: {error}")))
-      }) as PinBoxSendStaticFuture<CoordinatorTaskResult>;
-      coordinator_state.handle = Some(coordinator_handle.shared());
+    let start_result = coordinator_state.try_start(|coordinator| match try_spawn(coordinator) {
+      Ok(join_handle) => {
+        let coordinator_handle = Box::pin(async move {
+          join_handle.await.map_err(|error| {
+            Arc::<str>::from(format!("DevEngine coordinator task failed: {error}"))
+          })
+        }) as PinBoxSendStaticFuture<CoordinatorTaskResult>;
+        Ok(coordinator_handle.shared())
+      }
+      Err((error, coordinator)) => Err((error, coordinator)),
+    });
+    if let Err(error) = start_result {
+      return Err(anyhow::anyhow!("DevEngine coordinator task submission failed: {error}").into());
     }
     drop(coordinator_state);
 
@@ -166,10 +242,9 @@ impl DevEngine {
       return Ok(());
     }
 
-    let observer_id = self.begin_watch_registration_error_observation().await?;
+    let observation = self.begin_watch_registration_error_observation().await?;
     let operation_result = self.wait_for_ongoing_bundle_inner().await;
-    let watch_registration_result =
-      self.finish_watch_registration_error_observation(observer_id).await;
+    let watch_registration_result = observation.finish().await;
     Self::merge_build_results(operation_result, watch_registration_result)
   }
 
@@ -211,10 +286,9 @@ impl DevEngine {
   pub async fn ensure_latest_bundle_output(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
-    let observer_id = self.begin_watch_registration_error_observation().await?;
+    let observation = self.begin_watch_registration_error_observation().await?;
     let operation_result = self.ensure_latest_bundle_output_inner().await;
-    let watch_registration_result =
-      self.finish_watch_registration_error_observation(observer_id).await;
+    let watch_registration_result = observation.finish().await;
     Self::merge_build_results(operation_result, watch_registration_result)
   }
 
@@ -548,7 +622,7 @@ impl DevEngine {
 
   async fn begin_watch_registration_error_observation(
     &self,
-  ) -> BuildResult<WatchRegistrationErrorObserverId> {
+  ) -> BuildResult<WatchRegistrationErrorObservation> {
     let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
     self
       .coordinator_sender
@@ -556,32 +630,12 @@ impl DevEngine {
       .map_err_to_unhandleable()
       .context("DevEngine: failed to begin watch-registration error observation")?;
 
-    reply_receiver
+    let observer_id = reply_receiver
       .await
       .map_err_to_unhandleable()
       .context("DevEngine: coordinator closed before registering watch-error observer")
-      .map_err(Into::into)
-  }
-
-  async fn finish_watch_registration_error_observation(
-    &self,
-    observer_id: WatchRegistrationErrorObserverId,
-  ) -> BuildResult<()> {
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-    self
-      .coordinator_sender
-      .send(CoordinatorMsg::FinishWatchRegistrationErrorObservation {
-        observer_id,
-        reply: reply_sender,
-      })
-      .map_err_to_unhandleable()
-      .context("DevEngine: failed to finish watch-registration error observation")?;
-
-    let error = reply_receiver
-      .await
-      .map_err_to_unhandleable()
-      .context("DevEngine: coordinator closed before acknowledging watch-registration errors")?;
-    Self::retained_error_to_build_result(error)
+      .map_err(BatchedBuildDiagnostic::from)?;
+    Ok(WatchRegistrationErrorObservation::new(observer_id, self.coordinator_sender.clone()))
   }
 
   #[cfg(feature = "testing")]
@@ -688,5 +742,61 @@ impl From<CoordinatorStateSnapshot> for BundleState {
       last_error_stage: snapshot.last_error_stage,
       has_stale_output: snapshot.has_stale_output,
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::{
+    convert::Infallible,
+    sync::atomic::{AtomicUsize, Ordering},
+  };
+
+  #[tokio::test]
+  async fn rejected_coordinator_submission_is_retryable_after_runtime_restart() {
+    let runs = Arc::new(AtomicUsize::new(0));
+    let runs_task = Arc::clone(&runs);
+    let coordinator: PendingCoordinatorFuture = Box::pin(async move {
+      runs_task.fetch_add(1, Ordering::SeqCst);
+    });
+    let mut state = CoordinatorState { coordinator: Some(coordinator), handle: None };
+
+    let error = state.try_start(|coordinator| Err(("runtime stopped", coordinator))).unwrap_err();
+    assert_eq!(error, "runtime stopped");
+    assert!(state.coordinator.is_some());
+    assert!(state.handle.is_none());
+    assert_eq!(runs.load(Ordering::SeqCst), 0);
+
+    state
+      .try_start::<Infallible>(|coordinator| {
+        let handle = Box::pin(async move {
+          coordinator.await;
+          Ok(())
+        }) as PinBoxSendStaticFuture<CoordinatorTaskResult>;
+        Ok(handle.shared())
+      })
+      .expect("a restarted runtime must accept the retained coordinator");
+    state
+      .handle
+      .clone()
+      .expect("accepted coordinator must publish its handle")
+      .await
+      .expect("retained coordinator must complete");
+    assert!(state.coordinator.is_none());
+    assert_eq!(runs.load(Ordering::SeqCst), 1);
+  }
+
+  #[test]
+  fn dropped_watch_registration_observation_requests_cancellation() {
+    let (coordinator_sender, mut coordinator_receiver) = unbounded_channel::<CoordinatorMsg>();
+    let observation = WatchRegistrationErrorObservation::new(17, coordinator_sender);
+
+    drop(observation);
+
+    assert!(matches!(
+      coordinator_receiver.try_recv(),
+      Ok(CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id: 17 })
+    ));
   }
 }

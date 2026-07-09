@@ -12,4 +12,4 @@ pub use event::{BundleEndEventData, BundleStartEventData, WatchErrorEventData, W
 pub use file_change_event::FileChangeEvent;
 pub use handler::WatcherEventHandler;
 pub use watch_coordinator::{CoordinatorCloseError, CoordinatorCloseFailure};
-pub use watcher::{Watcher, WatcherConfig};
+pub use watcher::{Watcher, WatcherConfig, WatcherStartError};

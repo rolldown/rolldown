@@ -167,7 +167,11 @@ The existing Tokio runtime remains the default and is selected by the
    parker, and scopes queued/rejected destruction to the retiring generation.
    Rejected convenience submissions hold the lifecycle transition until their
    contained destructor finishes, including when construction of the first
-   backend failed. Initial and already-stopped shutdown first enter an explicit
+   backend failed. The fallible `try_spawn` path is intentionally different:
+   it returns the rejected future untouched and transfers retry or destruction
+   responsibility back to the caller. One-shot lifecycle owners retain that
+   future across the stopped interval and resubmit it after `start`.
+   Initial and already-stopped shutdown first enter an explicit
    zero-backend stopping state; concurrent start and configuration remain
    closed until the initiating shutdown publishes its final stopped state.
    Reentrant start or shutdown from the destructor fails instead of waiting on

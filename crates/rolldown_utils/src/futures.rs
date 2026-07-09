@@ -1,10 +1,12 @@
 use futures::Future;
 
 #[cfg(feature = "async-runtime")]
-pub use crate::async_runtime::{JoinError, JoinHandle};
+pub use crate::async_runtime::{JoinError, JoinHandle, RuntimeConfigError as SpawnError};
 
 #[cfg(not(feature = "async-runtime"))]
 pub type JoinHandle<T> = tokio::task::JoinHandle<T>;
+#[cfg(not(feature = "async-runtime"))]
+pub type SpawnError = std::convert::Infallible;
 
 #[inline]
 pub fn spawn<F>(future: F) -> JoinHandle<F::Output>
@@ -19,6 +21,29 @@ where
   #[cfg(not(feature = "async-runtime"))]
   {
     tokio::spawn(future)
+  }
+}
+
+#[inline]
+#[cfg_attr(
+  not(feature = "async-runtime"),
+  expect(
+    clippy::unnecessary_wraps,
+    reason = "the Tokio and shared-runtime spawn facades must expose one feature-stable signature"
+  )
+)]
+pub fn try_spawn<F>(future: F) -> Result<JoinHandle<F::Output>, (SpawnError, F)>
+where
+  F: Future + Send + 'static,
+  F::Output: Send + 'static,
+{
+  #[cfg(feature = "async-runtime")]
+  {
+    crate::async_runtime::try_spawn(future)
+  }
+  #[cfg(not(feature = "async-runtime"))]
+  {
+    Ok(tokio::spawn(future))
   }
 }
 

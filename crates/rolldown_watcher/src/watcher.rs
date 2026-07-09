@@ -10,7 +10,7 @@ use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::FsWatcherConfig;
-use rolldown_utils::futures::spawn;
+use rolldown_utils::futures::try_spawn;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
@@ -62,7 +62,33 @@ impl WatcherConfig {
   }
 }
 
-type CoordinatorFuture = Shared<Pin<Box<dyn Future<Output = CoordinatorCloseResult> + Send>>>;
+/// Returned when the selected async runtime rejects watcher coordinator
+/// submission before the coordinator starts.
+#[derive(Debug)]
+pub struct WatcherStartError {
+  source: Box<dyn std::error::Error + Send + Sync>,
+}
+
+impl WatcherStartError {
+  fn new(error: impl std::error::Error + Send + Sync + 'static) -> Self {
+    Self { source: Box::new(error) }
+  }
+}
+
+impl fmt::Display for WatcherStartError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "Watcher coordinator task submission failed: {}", self.source)
+  }
+}
+
+impl std::error::Error for WatcherStartError {
+  fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    Some(self.source.as_ref())
+  }
+}
+
+type PendingCoordinatorFuture = Pin<Box<dyn Future<Output = CoordinatorCloseResult> + Send>>;
+type CoordinatorFuture = Shared<PendingCoordinatorFuture>;
 
 #[derive(Debug)]
 struct SharedCoordinatorCloseError(Arc<CoordinatorCloseError>);
@@ -81,9 +107,34 @@ impl std::error::Error for SharedCoordinatorCloseError {
 
 struct CoordinatorState {
   /// The coordinator future, before `run()` is called.
-  coordinator: Option<Pin<Box<dyn Future<Output = CoordinatorCloseResult> + Send>>>,
+  coordinator: Option<PendingCoordinatorFuture>,
   /// The spawned handle, after `run()` is called. Shared so multiple callers can await.
   handle: Option<CoordinatorFuture>,
+}
+
+impl CoordinatorState {
+  // See internal-docs/watch-mode/implementation.md for retry ownership.
+  fn try_start<E>(
+    &mut self,
+    start: impl FnOnce(
+      PendingCoordinatorFuture,
+    ) -> Result<CoordinatorFuture, (E, PendingCoordinatorFuture)>,
+  ) -> Result<(), E> {
+    let Some(coordinator) = self.coordinator.take() else {
+      return Ok(());
+    };
+
+    match start(coordinator) {
+      Ok(handle) => {
+        self.handle = Some(handle);
+        Ok(())
+      }
+      Err((error, coordinator)) => {
+        self.coordinator = Some(coordinator);
+        Err(error)
+      }
+    }
+  }
 }
 
 /// The main watcher that manages multiple bundlers.
@@ -134,13 +185,12 @@ impl Watcher {
     })
   }
 
-  /// Spawn the coordinator. Can only be called once.
-  pub fn run(&self) {
-    let mut state = self.coordinator_state.lock().unwrap();
-    if let Some(coordinator) = state.coordinator.take() {
-      let join_handle = spawn(coordinator);
-      let handle: Pin<Box<dyn Future<Output = CoordinatorCloseResult> + Send>> =
-        Box::pin(async move {
+  /// Spawn the coordinator. Accepted and completed starts are idempotent; a
+  /// runtime-rejected start retains the coordinator for a later retry.
+  pub fn run(&self) -> Result<(), WatcherStartError> {
+    self.start_coordinator(|coordinator| match try_spawn(coordinator) {
+      Ok(join_handle) => {
+        let handle: PendingCoordinatorFuture = Box::pin(async move {
           match join_handle.await {
             Ok(result) => result,
             Err(error) => Err(Arc::new(CoordinatorCloseError::from_message(format!(
@@ -148,8 +198,20 @@ impl Watcher {
             )))),
           }
         });
-      state.handle = Some(handle.shared());
-    }
+        Ok(handle.shared())
+      }
+      Err((error, coordinator)) => Err((error, coordinator)),
+    })
+  }
+
+  fn start_coordinator<E: std::error::Error + Send + Sync + 'static>(
+    &self,
+    start: impl FnOnce(
+      PendingCoordinatorFuture,
+    ) -> Result<CoordinatorFuture, (E, PendingCoordinatorFuture)>,
+  ) -> Result<(), WatcherStartError> {
+    let result = self.coordinator_state.lock().unwrap().try_start(start);
+    result.map_err(WatcherStartError::new)
   }
 
   /// Gives consumers a reliable way to await the watcher's completion.
@@ -180,7 +242,7 @@ impl Watcher {
     // a pool worker could enter the initial build between `run()` and the
     // close signal, making same-tick close nondeterministically start a bundle.
     self.publish_close();
-    self.run();
+    self.run().map_err(anyhow::Error::new)?;
     let handle = self.coordinator_state.lock().unwrap().handle.clone();
     match handle {
       Some(handle) => {
@@ -227,6 +289,7 @@ mod tests {
   use rolldown_common::WatcherChangeKind;
   use std::{
     borrow::Cow,
+    convert::Infallible,
     fs,
     panic::panic_any,
     path::PathBuf,
@@ -502,6 +565,69 @@ mod tests {
     assert_eq!(fs_config.poll_interval, 250);
   }
 
+  #[tokio::test]
+  async fn rejected_coordinator_submission_is_retryable_after_runtime_restart() {
+    let runs = Arc::new(AtomicUsize::new(0));
+    let runs_task = Arc::clone(&runs);
+    let coordinator: PendingCoordinatorFuture = Box::pin(async move {
+      runs_task.fetch_add(1, Ordering::SeqCst);
+      Ok(())
+    });
+    let (tx, _rx) = mpsc::unbounded_channel();
+    let watcher = Watcher {
+      coordinator_state: std::sync::Mutex::new(CoordinatorState {
+        coordinator: Some(coordinator),
+        handle: None,
+      }),
+      tx,
+      closed: Arc::new(AtomicBool::new(false)),
+      close_notify: Arc::new(Notify::new()),
+      native_owned_close_identities: Arc::new(std::sync::Mutex::new(Vec::new())),
+    };
+
+    let error = watcher
+      .start_coordinator(|coordinator| Err((std::io::Error::other("runtime stopped"), coordinator)))
+      .expect_err("the first run must reject while the runtime is stopped");
+    assert_eq!(error.to_string(), "Watcher coordinator task submission failed: runtime stopped");
+    assert_eq!(
+      std::error::Error::source(&error).map(std::string::ToString::to_string).as_deref(),
+      Some("runtime stopped")
+    );
+    {
+      let state = watcher.coordinator_state.lock().unwrap();
+      assert!(state.coordinator.is_some());
+      assert!(state.handle.is_none());
+    }
+    assert_eq!(runs.load(Ordering::SeqCst), 0);
+
+    let accepted_submissions = Arc::new(AtomicUsize::new(0));
+    let accepted_submissions_task = Arc::clone(&accepted_submissions);
+    watcher
+      .start_coordinator::<Infallible>(|coordinator| {
+        accepted_submissions_task.fetch_add(1, Ordering::SeqCst);
+        Ok(coordinator.shared())
+      })
+      .expect("a restarted runtime must accept the retained coordinator");
+    watcher
+      .start_coordinator::<Infallible>(|coordinator| {
+        accepted_submissions.fetch_add(1, Ordering::SeqCst);
+        Ok(coordinator.shared())
+      })
+      .expect("an accepted start must be idempotent");
+    let handle = watcher
+      .coordinator_state
+      .lock()
+      .unwrap()
+      .handle
+      .clone()
+      .expect("accepted coordinator must publish its handle");
+    handle.await.expect("retained coordinator must complete");
+    let state = watcher.coordinator_state.lock().unwrap();
+    assert!(state.coordinator.is_none());
+    assert_eq!(accepted_submissions.load(Ordering::SeqCst), 1);
+    assert_eq!(runs.load(Ordering::SeqCst), 1);
+  }
+
   #[tokio::test(flavor = "multi_thread")]
   async fn close_aggregates_hook_errors_and_replays_them_to_later_callers() {
     let close_watcher_calls = Arc::new(AtomicUsize::new(0));
@@ -527,7 +653,7 @@ mod tests {
       &WatcherConfig::default(),
     )
     .expect("create watcher");
-    watcher.run();
+    watcher.run().expect("start watcher");
     end.notified().await;
     let close_bundle_calls_before_shutdown = close_bundle_calls.load(Ordering::SeqCst);
     assert_eq!(close_bundle_calls_before_shutdown, 2);
@@ -601,7 +727,7 @@ mod tests {
       &WatcherConfig::default(),
     )
     .expect("create watcher");
-    watcher.run();
+    watcher.run().expect("start watcher");
     end.notified().await;
     let close_bundle_calls_before_shutdown = close_bundle_calls.load(Ordering::SeqCst);
     assert_eq!(close_bundle_calls_before_shutdown, 2);
@@ -662,7 +788,7 @@ mod tests {
       &WatcherConfig::default(),
     )
     .expect("create watcher");
-    watcher.run();
+    watcher.run().expect("start watcher");
     watcher.wait_for_close().await;
 
     let first_error = watcher.close().await.expect_err("event panic should fail watcher close");
@@ -697,7 +823,7 @@ mod tests {
       &WatcherConfig::default(),
     )
     .expect("create watcher");
-    watcher.run();
+    watcher.run().expect("start watcher");
     watcher.wait_for_close().await;
 
     let first_error = watcher.close().await.expect_err("event listener failure should fail close");
@@ -739,7 +865,7 @@ mod tests {
       &WatcherConfig::default(),
     )
     .expect("create watcher");
-    watcher.run();
+    watcher.run().expect("start watcher");
     tokio::time::timeout(Duration::from_secs(10), end.notified())
       .await
       .expect("initial build should finish");

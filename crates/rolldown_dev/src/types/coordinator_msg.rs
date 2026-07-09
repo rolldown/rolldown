@@ -37,6 +37,9 @@ pub enum CoordinatorMsg {
     observer_id: WatchRegistrationErrorObserverId,
     reply: FinishWatchRegistrationErrorObservationSender,
   },
+  CancelWatchRegistrationErrorObservation {
+    observer_id: WatchRegistrationErrorObserverId,
+  },
   EnsureLatestBundleOutput {
     reply: EnsureLatestBundleOutputSender,
   },

@@ -72,11 +72,11 @@ later `watcher.close()` call.
 
 ```rust
 let watcher = Watcher::new(configs, handler, &watcher_config)?;
-watcher.run();       // spawns the coordinator (non-blocking)
+watcher.run()?;      // submits the coordinator (non-blocking)
 watcher.close().await?;  // sends Close, awaits completion
 ```
 
-Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` spawns it on the selected runtime. `close()` first publishes the shared close signal, then calls the idempotent `run()`, sends a fire-and-forget `Close` message, and awaits the shared completion future. The future carries a cloneable terminal close result, so concurrent and later `close()` callers observe the same success or failure. Publishing close before a not-yet-started coordinator prevents a creation-tick close from racing into the initial build. `wait_for_close()` is intentionally completion-only: it keeps Node alive but does not surface the close error through an otherwise ignored promise.
+Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` submits it on the selected runtime and returns `Result<(), WatcherStartError>`. Submission is fallible: if shutdown rejects the task, the exact boxed coordinator future is restored to the not-yet-started state and the typed error is returned, so a call after runtime restart can retry it instead of silently creating a watcher with no coordinator. `close()` first publishes the shared close signal, then performs the same fallible start and awaits the shared completion future; a rejected close-time submission is surfaced instead of reporting a false successful close. The future carries a cloneable terminal close result, so concurrent and later `close()` callers observe the same success or failure. Publishing close before a not-yet-started coordinator prevents a creation-tick close from racing into the initial build. `wait_for_close()` is intentionally completion-only: it keeps Node alive but does not surface the close error through an otherwise ignored promise.
 
 ### Known Divergences from Rollup
 
@@ -140,7 +140,7 @@ Data flow:
 
 **Ownership rules:**
 
-- `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access. `publish_close()` sets the atomic flag, notification, and actor message without spawning; N-API calls it synchronously before returning the close promise so a JavaScript listener cannot return into a new build before close is visible. The async `close()` future enters through the selected runtime, starts a not-yet-running coordinator, and awaits its shared result.
+- `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access. The state retains the boxed coordinator future until runtime submission succeeds, and restores it on rejection. `publish_close()` sets the atomic flag, notification, and actor message without spawning; N-API calls it synchronously before returning the close promise so a JavaScript listener cannot return into a new build before close is visible. The async `close()` future enters through the selected runtime, starts a not-yet-running coordinator, and awaits its shared result.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
 - Each `WatchTask` owns its `DynFsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
 - Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
@@ -613,7 +613,7 @@ normal fail-closed cleanup path instead of becoming an unhandled rejection.
 
 ```
 constructor(options, listener)  // creates Watcher with handler, ready to run
-run()   → inner.run()           // spawns coordinator (non-blocking)
+run()   → inner.run()           // submits or rejects; never silently succeeds
         → inner.waitForClose()  // pending Promise keeps Node alive
 close() → inner.close()         // sends Close msg, awaits shared future
                                 // waitForClose() resolves, event loop free to exit
@@ -625,7 +625,11 @@ close() → inner.close()         // sends Close msg, awaits shared future
 output configs into native configs, applies the maximum `buildDelay`, selects
 the first config with explicit watcher-backend settings for the shared native
 watcher, and creates the `NapiWatcherEventHandler`. `run()` and
-`waitForClose()` delegate directly. `close()` publishes close synchronously,
+`waitForClose()` delegate directly. Shared-runtime builds attempt `run()`
+before entering a N-API future, allowing a stopped scheduler to return an
+already-rejected JavaScript Promise while retaining the native coordinator for
+an explicit retry. Tokio builds perform the same checked call inside the N-API
+runtime context they require. `close()` publishes close synchronously,
 then returns a structured result containing every native close failure and the
 close identities owned by the native coordinator.
 

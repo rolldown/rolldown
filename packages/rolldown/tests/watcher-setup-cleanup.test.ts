@@ -632,6 +632,29 @@ test('synchronous native close rejection retains ownership until a structured re
   expect(release).toHaveBeenCalledOnce();
 });
 
+test('watcher run rejection fails closed without waiting for a missing coordinator handle', async () => {
+  const runError = new Error('watcher coordinator submission rejected');
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+  mocks.bindingRun.mockRejectedValue(runError);
+  const emitter = new WatcherEmitter();
+  const closeEvent = new Promise<void>((resolve) => {
+    emitter.on('close', resolve);
+  });
+  await createWatcher(emitter, { output: {} });
+
+  await withTimeout(closeEvent, 'watcher run rejection cleanup');
+  await expect(emitter.close()).rejects.toBe(runError);
+
+  expect(mocks.bindingRun).toHaveBeenCalledOnce();
+  expect(mocks.bindingWaitForClose).not.toHaveBeenCalled();
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+});
+
 test('waitForClose transport rejection enters cleanup and is replayed by close', async () => {
   const waitForCloseError = new Error('waitForClose transport rejected');
   const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);

@@ -57,6 +57,9 @@ jobs:
           name: rolldown-native-${{ inputs.os }}
           path: packages/rolldown/dist
 
+      - name: Stage and verify native Rolldown binding
+        run: node scripts/misc/stage-native-binding-for-node-tests.mjs
+
       - name: Build `@rolldown/test-dev-server`
         run: vp run --filter '@rolldown/test-dev-server' build
 

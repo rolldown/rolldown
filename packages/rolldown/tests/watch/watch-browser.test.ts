@@ -138,6 +138,10 @@ async function buildBrowserWatcherHarness(): Promise<string> {
   const watcherPath = path.resolve(import.meta.dirname, '../../src/api/watch/watcher.ts');
   const emitterPath = path.resolve(import.meta.dirname, '../../src/api/watch/watch-emitter.ts');
   const runtimeSupportPath = path.resolve(import.meta.dirname, '../../src/runtime-support.ts');
+  const bindingMismatchErrorPath = path.resolve(
+    import.meta.dirname,
+    '../../src/utils/binding-mismatch-error.ts',
+  );
   const asyncContextPath = path.resolve(import.meta.dirname, '../../src/utils/async-context.ts');
   const closeCallbackScopePath = path.resolve(
     import.meta.dirname,
@@ -290,6 +294,7 @@ async function buildBrowserWatcherHarness(): Promise<string> {
           if (id === './watcher') return watcherPath;
           if (id === './watch-emitter') return emitterPath;
           if (id === '../../runtime-support') return runtimeSupportPath;
+          if (id === './utils/binding-mismatch-error') return bindingMismatchErrorPath;
           if (id === './binding.cjs') return '\0binding';
           if (id === '../../utils/async-context' || id === './async-context') {
             return asyncContextPath;
@@ -357,6 +362,10 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
     '../../src/plugin/parallel-plugin.ts',
   );
   const runtimeSupportPath = path.resolve(import.meta.dirname, '../../src/runtime-support.ts');
+  const bindingMismatchErrorPath = path.resolve(
+    import.meta.dirname,
+    '../../src/utils/binding-mismatch-error.ts',
+  );
   const asyncContextPath = path.resolve(import.meta.dirname, '../../src/utils/async-context.ts');
   const closeCallbackScopePath = path.resolve(
     import.meta.dirname,
@@ -577,6 +586,7 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
             return '\0runtime-lifecycle';
           }
           if (id === '../runtime-support') return runtimeSupportPath;
+          if (id === './utils/binding-mismatch-error') return bindingMismatchErrorPath;
           if (id === '../../utils/async-context' || id === './async-context') {
             return asyncContextPath;
           }

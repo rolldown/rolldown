@@ -626,6 +626,9 @@ thread_local! {
   static MULTI_THREAD_WORK_CLAIMED_TEST_HOOK:
     std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
       const { std::cell::RefCell::new(None) };
+  static MULTI_THREAD_WORK_STARTED_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
   static DEPENDENCY_PREDICATE_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
     const { std::cell::RefCell::new(None) };
   static BEFORE_OWNED_BLOCKING_QUEUE_CLAIM_TEST_HOOK:
@@ -750,6 +753,13 @@ fn run_current_thread_runnable_claim_test_hook() {
 #[cfg(all(test, not(target_family = "wasm")))]
 fn run_multi_thread_work_claimed_test_hook() {
   if let Some(hook) = MULTI_THREAD_WORK_CLAIMED_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_multi_thread_work_started_test_hook() {
+  if let Some(hook) = MULTI_THREAD_WORK_STARTED_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
     hook();
   }
 }
@@ -3137,14 +3147,14 @@ impl CurrentThreadExecutor {
     } else {
       self.try_admit_host_turn(dispatch)
     };
-    if let Some(host_turn) = host_turn {
+    if let Some(mut host_turn) = host_turn {
       host_turn.drive();
     }
   }
 
   #[cfg(test)]
   fn drive_host_turn_for_dispatch(self: &Arc<Self>, dispatch: u64) {
-    if let Some(host_turn) = self.try_admit_host_turn(dispatch) {
+    if let Some(mut host_turn) = self.try_admit_host_turn(dispatch) {
       host_turn.drive();
     }
   }
@@ -4456,6 +4466,8 @@ impl MultiThreadExecutor {
     // closure must not borrow its over-cap privilege.
     let _non_owner = BlockingOwnerGuard::enter(None);
     let _active = self.metrics.runnable_started();
+    #[cfg(test)]
+    run_multi_thread_work_started_test_hook();
     // The queue/slot removal is invisible to the deadline verdict until start
     // accounting advances. Keep the detector gate open across exactly that gap,
     // but never across a user poll.
@@ -4547,6 +4559,8 @@ impl MultiThreadExecutor {
       let _generation = RuntimeGenerationGuard::enter(self.generation);
       {
         let _task = self.metrics.blocking_started(true);
+        #[cfg(test)]
+        run_multi_thread_work_started_test_hook();
         // Publish start before the dequeue admission retires. The detector can
         // then observe either the queued job, the active admission, or progress.
         drop(admission);
@@ -4671,6 +4685,8 @@ impl MultiThreadExecutor {
       let _generation = RuntimeGenerationGuard::enter(self.generation);
       {
         let _task = self.metrics.blocking_started(false);
+        #[cfg(test)]
+        run_multi_thread_work_started_test_hook();
         // The exact job is no longer visible in the indexed FIFO. Publish its
         // start before allowing a deadline verdict to close the admission gate.
         drop(admission);
@@ -11112,7 +11128,7 @@ mod tests {
       CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS.claim_delivery(delivery.capability()),
       Some(replacement_dispatch)
     );
-    let host_turn = executor
+    let mut host_turn = executor
       .try_admit_host_turn(replacement_dispatch)
       .expect("the retried replacement delivery must be admitted");
     CURRENT_THREAD_AUTHORITATIVE_PANIC_TASK_DRIVERS.mark_serviced(replacement_dispatch);
@@ -11503,7 +11519,7 @@ mod tests {
         .claim_delivery(delivery.capability()),
       Some(replacement_dispatch)
     );
-    let host_turn = executor
+    let mut host_turn = executor
       .try_admit_host_turn(replacement_dispatch)
       .expect("the rearmed replacement delivery must be admitted");
     CURRENT_THREAD_REPLACEMENT_FAILED_REPUBLISH_TASK_DRIVERS.mark_serviced(replacement_dispatch);
@@ -11624,7 +11640,7 @@ mod tests {
       CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS.claim_delivery(healthy_delivery.capability()),
       Some(dispatch)
     );
-    let host_turn =
+    let mut host_turn =
       executor.try_admit_host_turn(dispatch).expect("the current-epoch delivery must be admitted");
     CURRENT_THREAD_STALE_FAILURE_TASK_DRIVERS.mark_serviced(dispatch);
     host_turn.drive();
@@ -11752,7 +11768,7 @@ mod tests {
       CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS.claim_delivery(later_delivery.capability()),
       Some(later_dispatch)
     );
-    let host_turn = executor
+    let mut host_turn = executor
       .try_admit_host_turn(later_dispatch)
       .expect("the later exact delivery must be admitted");
     CURRENT_THREAD_LATE_REGISTRATION_TASK_DRIVERS.mark_serviced(later_dispatch);
@@ -11860,7 +11876,7 @@ mod tests {
       CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS.claim_delivery(delivery.capability()),
       Some(replacement_dispatch)
     );
-    let host_turn = executor
+    let mut host_turn = executor
       .try_admit_host_turn(replacement_dispatch)
       .expect("the retried replacement delivery must be admitted");
     CURRENT_THREAD_NESTED_UNWIND_TASK_DRIVERS.mark_serviced(replacement_dispatch);
@@ -13631,17 +13647,27 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   fn run_claim_with_deadlock_gate_assertion<T: Send + 'static>(
     executor: &Arc<MultiThreadExecutor>,
+    start_counter: &AtomicU64,
     claim: impl FnOnce() -> T + Send + 'static,
   ) -> T {
     use std::sync::mpsc;
 
     let (claimed_tx, claimed_rx) = mpsc::channel();
-    let (release_tx, release_rx) = mpsc::channel();
+    let (release_claim_tx, release_claim_rx) = mpsc::channel();
+    let (started_tx, started_rx) = mpsc::channel();
+    let (release_start_tx, release_start_rx) = mpsc::channel();
+    let starts_before = start_counter.load(Ordering::SeqCst);
     let worker = std::thread::spawn(move || {
       MULTI_THREAD_WORK_CLAIMED_TEST_HOOK.with(|slot| {
         *slot.borrow_mut() = Some(Box::new(move || {
           claimed_tx.send(()).unwrap();
-          release_rx.recv().unwrap();
+          release_claim_rx.recv().unwrap();
+        }));
+      });
+      MULTI_THREAD_WORK_STARTED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          started_tx.send(()).unwrap();
+          release_start_rx.recv().unwrap();
         }));
       });
       claim()
@@ -13652,9 +13678,20 @@ mod tests {
 
     let admission_active = executor.deadlock_state.admissions.load(Ordering::SeqCst) != 0;
     let verdict = executor.try_begin_deadlock_verdict();
-    let verdict_rejected = verdict.is_none();
+    let claim_verdict_rejected = verdict.is_none();
     drop(verdict);
-    release_tx.send(()).unwrap();
+    release_claim_tx.send(()).unwrap();
+
+    started_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the scheduler claim must pause after publishing its start");
+    let admission_active_after_start =
+      executor.deadlock_state.admissions.load(Ordering::SeqCst) != 0;
+    let start_published = start_counter.load(Ordering::SeqCst) > starts_before;
+    let verdict = executor.try_begin_deadlock_verdict();
+    let start_verdict_rejected = verdict.is_none();
+    drop(verdict);
+    release_start_tx.send(()).unwrap();
     let output = worker.join().unwrap();
 
     assert!(
@@ -13662,8 +13699,17 @@ mod tests {
       "removing scheduler work must retain a detector admission until start accounting"
     );
     assert!(
-      verdict_rejected,
+      claim_verdict_rejected,
       "a deadline verdict must not close while removed work has not published its start"
+    );
+    assert!(start_published, "work start accounting must publish before admission retires");
+    assert!(
+      admission_active_after_start,
+      "the detector admission must remain active until after start accounting"
+    );
+    assert!(
+      start_verdict_rejected,
+      "a deadline verdict must not close between start accounting and admission retirement"
     );
     output
   }
@@ -13685,12 +13731,50 @@ mod tests {
     executor.metrics.runnable_scheduled();
     executor.queue.lock().unwrap().push_back(fifo);
     let fifo_executor = Arc::clone(&executor);
-    assert!(run_claim_with_deadlock_gate_assertion(&executor, move || {
-      let _driver = OnPoolWorkerGuard::enter(fifo_executor.id);
-      fifo_executor.run_one_fifo_runnable()
-    }));
+    assert!(run_claim_with_deadlock_gate_assertion(
+      &executor,
+      &executor.metrics.runnable_polls,
+      move || {
+        let _driver = OnPoolWorkerGuard::enter(fifo_executor.id);
+        fifo_executor.run_one_fifo_runnable()
+      }
+    ));
     futures::executor::block_on(fifo_task);
     assert!(fifo_ran.load(Ordering::SeqCst));
+
+    let fifo_order = Arc::new(Mutex::new(Vec::new()));
+    let mut fifo_tasks = Vec::new();
+    for name in ["first", "second"] {
+      let task_order = Arc::clone(&fifo_order);
+      let (runnable, task) = async_task::spawn(
+        async move {
+          task_order.lock().unwrap().push(name);
+        },
+        |_| {},
+      );
+      executor.metrics.runnable_scheduled();
+      executor.queue.lock().unwrap().push_back(runnable);
+      fifo_tasks.push(task);
+    }
+    for _ in 0..2 {
+      let fifo_executor = Arc::clone(&executor);
+      assert!(run_claim_with_deadlock_gate_assertion(
+        &executor,
+        &executor.metrics.runnable_polls,
+        move || {
+          let _driver = OnPoolWorkerGuard::enter(fifo_executor.id);
+          fifo_executor.run_one_runnable()
+        }
+      ));
+    }
+    for task in fifo_tasks {
+      futures::executor::block_on(task);
+    }
+    assert_eq!(
+      *fifo_order.lock().unwrap(),
+      ["first", "second"],
+      "the detector-enabled normal fallback must preserve FIFO order"
+    );
 
     let lifo_ran = Arc::new(AtomicBool::new(false));
     let lifo_task_ran = Arc::clone(&lifo_ran);
@@ -13702,13 +13786,17 @@ mod tests {
     );
     executor.metrics.runnable_scheduled();
     let lifo_executor = Arc::clone(&executor);
-    assert!(run_claim_with_deadlock_gate_assertion(&executor, move || {
-      let _driver = OnPoolWorkerGuard::enter(lifo_executor.id);
-      LIFO_SLOT.with(|slot| {
-        assert!(slot.replace(Some((lifo_executor.id, lifo))).is_none());
-      });
-      lifo_executor.run_one_runnable()
-    }));
+    assert!(run_claim_with_deadlock_gate_assertion(
+      &executor,
+      &executor.metrics.runnable_polls,
+      move || {
+        let _driver = OnPoolWorkerGuard::enter(lifo_executor.id);
+        LIFO_SLOT.with(|slot| {
+          assert!(slot.replace(Some((lifo_executor.id, lifo))).is_none());
+        });
+        lifo_executor.run_one_runnable()
+      }
+    ));
     futures::executor::block_on(lifo_task);
     assert!(lifo_ran.load(Ordering::SeqCst));
 
@@ -13732,10 +13820,14 @@ mod tests {
       }),
     });
     let fifo_executor = Arc::clone(&executor);
-    assert!(run_claim_with_deadlock_gate_assertion(&executor, move || {
-      let _driver = OnPoolWorkerGuard::enter(fifo_executor.id);
-      fifo_executor.run_one_blocking()
-    }));
+    assert!(run_claim_with_deadlock_gate_assertion(
+      &executor,
+      &executor.metrics.blocking_tasks_started,
+      move || {
+        let _driver = OnPoolWorkerGuard::enter(fifo_executor.id);
+        fifo_executor.run_one_blocking()
+      }
+    ));
     assert!(fifo_ran.load(Ordering::SeqCst));
 
     let owner = executor.fresh_owner_token();
@@ -13753,11 +13845,15 @@ mod tests {
     let dependency = Arc::new(TaskDependency::new(executor.generation, Some(owner)));
     dependency.set_owned(BlockingDependency { job: exact_job, owner: Some(owner) });
     let exact_executor = Arc::clone(&executor);
-    assert!(run_claim_with_deadlock_gate_assertion(&executor, move || {
-      let _driver = OnPoolWorkerGuard::enter(exact_executor.id);
-      let _owner = BlockingOwnerGuard::enter(Some(owner));
-      exact_executor.try_owned_blocking_over_cap(&dependency)
-    }));
+    assert!(run_claim_with_deadlock_gate_assertion(
+      &executor,
+      &executor.metrics.blocking_tasks_started,
+      move || {
+        let _driver = OnPoolWorkerGuard::enter(exact_executor.id);
+        let _owner = BlockingOwnerGuard::enter(Some(owner));
+        exact_executor.try_owned_blocking_over_cap(&dependency)
+      }
+    ));
     assert!(exact_ran.load(Ordering::SeqCst));
 
     drop(active_owner);

@@ -259,6 +259,39 @@ test('unsupported watcher close cannot overtake terminal reporting or deadlock r
   ]);
 });
 
+test('setup terminal listener failures are replayed by concurrent and later close calls', async () => {
+  const setupError = new Error('watcher setup failed');
+  const errorListenerFailure = new Error('ERROR listener failed');
+  const endListenerFailure = new Error('END listener failed');
+  const reported = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  mocks.createBundlerOptions.mockRejectedValue(setupError);
+
+  const watcher = watch({ output: {} });
+  watcher.on('event', (event) => {
+    if (event.code === 'ERROR') throw errorListenerFailure;
+    if (event.code === 'END') throw endListenerFailure;
+  });
+
+  const closeResults = await withTimeout(
+    Promise.allSettled([watcher.close(), watcher.close()]),
+    'concurrent setup failure close replay',
+  );
+  expect(closeResults[0].status).toBe('rejected');
+  expect(closeResults[1].status).toBe('rejected');
+  if (closeResults[0].status !== 'rejected' || closeResults[1].status !== 'rejected') {
+    throw new Error('setup failure close calls unexpectedly resolved');
+  }
+
+  const terminalError = closeResults[0].reason as AggregateError;
+  expect(terminalError).toBeInstanceOf(AggregateError);
+  expect(terminalError.errors).toEqual([errorListenerFailure, endListenerFailure]);
+  expect(closeResults[1].reason).toBe(terminalError);
+  await expect(withTimeout(watcher.close(), 'later setup failure close replay')).rejects.toBe(
+    terminalError,
+  );
+  expect(reported).toHaveBeenCalledWith('watcher setup error listener failed', terminalError);
+});
+
 test('partial watcher option setup retries cleanup from fulfilled and rejected options', async () => {
   const optionSetupError = new Error('option setup failed');
   const priorCleanupError = new Error('failed option cleanup failed');

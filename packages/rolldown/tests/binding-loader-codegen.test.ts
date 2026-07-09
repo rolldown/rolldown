@@ -197,7 +197,7 @@ describe('async-runtime host export contract', () => {
         'commonjs',
       ),
     ).toThrow(
-      'getCurrentThreadTaskHostContractVersion, registerCurrentThreadTaskHost, unregisterCurrentThreadTaskHost, unregisterTimerHost',
+      'getCurrentThreadTaskHostContractVersion, isCurrentThreadHostRegistrationActive, registerCurrentThreadTaskHost, reserveCurrentThreadHostRegistration, unregisterCurrentThreadTaskHost, unregisterTimerHost',
     );
   });
 });

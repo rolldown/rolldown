@@ -18,6 +18,7 @@ const {
   getCurrentThreadTaskHostContractVersion,
   getRuntimeCapabilities,
   registerCurrentThreadTaskHost,
+  reserveCurrentThreadHostRegistration,
   shutdownAsyncRuntime,
   unregisterCurrentThreadTaskHost,
 } = binding;
@@ -45,10 +46,20 @@ const hostileCallback = () => {
 };
 
 let registrationError;
+const rejectedTaskHostRegistration = reserveCurrentThreadHostRegistration();
 try {
-  registerCurrentThreadTaskHost(hostileCallback);
+  registerCurrentThreadTaskHost(
+    rejectedTaskHostRegistration.high,
+    rejectedTaskHostRegistration.low,
+    hostileCallback,
+  );
 } catch (error) {
   registrationError = error instanceof Error ? error.message : String(error);
+} finally {
+  unregisterCurrentThreadTaskHost(
+    rejectedTaskHostRegistration.high,
+    rejectedTaskHostRegistration.low,
+  );
 }
 
 if (registrationError !== 'registerCurrentThreadTaskHost does not accept a JavaScript callback') {
@@ -64,11 +75,11 @@ if (
   throw new Error('CurrentThread task delivery capabilities must remain native-owned');
 }
 const taskHostContractVersion = getCurrentThreadTaskHostContractVersion();
-if (taskHostContractVersion !== 2) {
+if (taskHostContractVersion !== 4) {
   throw new Error(`Unexpected task-host contract version: ${taskHostContractVersion}`);
 }
 
-const taskHostRegistration = registerCurrentThreadTaskHost();
+const taskHostRegistration = reserveCurrentThreadHostRegistration();
 if (
   !Number.isInteger(taskHostRegistration?.high) ||
   taskHostRegistration.high < 0 ||
@@ -77,8 +88,9 @@ if (
   taskHostRegistration.low < 0 ||
   taskHostRegistration.low > 0xffff_ffff
 ) {
-  throw new Error('registerCurrentThreadTaskHost returned an invalid registration');
+  throw new Error('reserveCurrentThreadHostRegistration returned an invalid registration');
 }
+registerCurrentThreadTaskHost(taskHostRegistration.high, taskHostRegistration.low);
 
 if (typeof __rolldownTestRetainSchedulerWaker !== 'function') {
   throw new Error('The async-runtime binding was built without the scheduler-waker test probe');

@@ -20,7 +20,7 @@ try {
   }
   console.log(
     disruptReporting
-      ? 'parallel worker reporting failure terminated'
+      ? 'parallel worker reporting capability isolated'
       : 'parallel worker non-cloneable failure reported',
   );
 } finally {

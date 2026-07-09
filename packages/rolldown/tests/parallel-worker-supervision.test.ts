@@ -17,6 +17,24 @@ const noncloneableBootstrapChildPath = nodePath.join(
   'parallel-worker-bootstrap',
   'noncloneable-child.mjs',
 );
+const hangingBootstrapChildPath = nodePath.join(
+  testsDir,
+  'fixtures',
+  'parallel-worker-bootstrap',
+  'hanging-child.mjs',
+);
+const preloadSpoofChildPath = nodePath.join(
+  testsDir,
+  'fixtures',
+  'parallel-worker-bootstrap',
+  'preload-spoof-child.mjs',
+);
+const preloadSpoofPath = nodePath.join(
+  testsDir,
+  'fixtures',
+  'parallel-worker-bootstrap',
+  'preload-spoof.mjs',
+);
 
 test(
   'parallel workers keep a one-shot process alive through delayed bootstrap',
@@ -62,7 +80,7 @@ test('parallel file workers discard inherited string-input execArgv', { timeout:
 
 test.each([
   [[], 'parallel worker non-cloneable failure reported'],
-  [['--disrupt-reporting'], 'parallel worker reporting failure terminated'],
+  [['--disrupt-reporting'], 'parallel worker reporting capability isolated'],
 ])(
   'parallel bootstrap failure cannot hang when rejection handling warns (%j)',
   { timeout: 30_000 },
@@ -82,6 +100,55 @@ test.each([
     expect(child.signal).toBeNull();
     expect(child.status, child.stderr || child.stdout).toBe(0);
     expect(child.stdout).toContain(expectedOutput);
+  },
+);
+
+test(
+  'a failed parallel bootstrap terminates a sibling whose initializer never settles',
+  { timeout: 30_000 },
+  () => {
+    const child = spawnSync(process.execPath, [hangingBootstrapChildPath], {
+      cwd: testsDir,
+      encoding: 'utf8',
+      env: { ...process.env },
+      timeout: 25_000,
+    });
+
+    expect(child.error).toBeUndefined();
+    expect(child.signal).toBeNull();
+    expect(child.status, child.stderr || child.stdout).toBe(0);
+    expect(child.stdout).toContain('hanging parallel worker terminated');
+  },
+);
+
+test.each([
+  {
+    args: ['--import', preloadSpoofPath, preloadSpoofChildPath],
+    env: {},
+    source: 'execArgv',
+  },
+  {
+    args: [preloadSpoofChildPath],
+    env: {
+      NODE_OPTIONS: `--import=${pathToFileURL(preloadSpoofPath).href}`,
+    },
+    source: 'NODE_OPTIONS',
+  },
+])(
+  'inherited $source preload injection is stripped from parallel workers',
+  { timeout: 30_000 },
+  ({ args, env }) => {
+    const child = spawnSync(process.execPath, args, {
+      cwd: testsDir,
+      encoding: 'utf8',
+      env: { ...process.env, ...env },
+      timeout: 25_000,
+    });
+
+    expect(child.error).toBeUndefined();
+    expect(child.signal).toBeNull();
+    expect(child.status, child.stderr || child.stdout).toBe(0);
+    expect(child.stdout).toContain('parallel worker preload injection stripped');
   },
 );
 

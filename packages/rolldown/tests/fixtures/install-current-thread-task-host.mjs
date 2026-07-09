@@ -4,13 +4,13 @@ export function installCurrentThreadTaskHost(binding) {
   }
 
   const contractVersion = binding.getCurrentThreadTaskHostContractVersion();
-  if (contractVersion !== 2) {
+  if (contractVersion !== 4) {
     throw new TypeError(
-      `Expected CurrentThread task-host contract version 2, received ${String(contractVersion)}`,
+      `Expected CurrentThread task-host contract version 4, received ${String(contractVersion)}`,
     );
   }
 
-  const registration = binding.registerCurrentThreadTaskHost();
+  const registration = binding.reserveCurrentThreadHostRegistration();
   if (
     registration === null ||
     typeof registration !== 'object' ||
@@ -18,7 +18,14 @@ export function installCurrentThreadTaskHost(binding) {
     !Number.isInteger(registration.low) ||
     (registration.high === 0 && registration.low === 0)
   ) {
-    throw new TypeError('The raw binding returned an invalid CurrentThread task-host registration');
+    throw new TypeError('The raw binding returned an invalid CurrentThread task-host reservation');
+  }
+
+  try {
+    binding.registerCurrentThreadTaskHost(registration.high, registration.low);
+  } catch (error) {
+    binding.unregisterCurrentThreadTaskHost(registration.high, registration.low);
+    throw error;
   }
 
   return () => {

@@ -88,17 +88,18 @@ The existing Tokio runtime remains the default and is selected by the
 4. **Work classes receive bounded service.** Runnable locality remains the
    normal priority, but a continuously hot runnable stream yields to the
    blocking FIFO after a fixed quantum. A `block_on` driver gives its live exact
-   blocking dependency first claim on that forced turn, including when the
-   normal blocking cap is saturated; unrelated FIFO work cannot displace the
-   dependency the driver is awaiting. Exhausting the LIFO budget forces one
-   shared-FIFO turn even if polling the awaited future immediately refills the
-   local slot. Timer deadlines are serviced by one lifecycle-managed non-Rayon
-   thread per MultiThread generation. That thread executes no runnable or
-   blocking user work, so an armed timer cannot reduce the configured Rayon
-   capacity or become an unreported CPU worker. The first timer poll starts the
-   service thread before publishing its heap entry, so an OS-thread creation
-   failure cannot leave an unreachable waker in a generation with no
-   timekeeper.
+   blocking dependency first claim on that forced turn and whenever runnable
+   priority finds no runnable, including when the normal blocking cap is
+   saturated. An unrelated FIFO closure therefore cannot consume the last
+   ordinary slot and synchronously wait for the exact dependency the driver
+   still needs. Exhausting the LIFO budget forces one shared-FIFO turn even if
+   polling the awaited future immediately refills the local slot. Timer
+   deadlines are serviced by one lifecycle-managed non-Rayon thread per
+   MultiThread generation. That thread executes no runnable or blocking user
+   work, so an armed timer cannot reduce the configured Rayon capacity or become
+   an unreported CPU worker. The first timer poll starts the service thread
+   before publishing its heap entry, so an OS-thread creation failure cannot
+   leave an unreachable waker in a generation with no timekeeper.
 
 5. **Wakeups are batched.** A future wake enqueues a runnable. At most one
    bounded drain loop per worker is submitted to Rayon, and each loop processes
@@ -264,17 +265,24 @@ The existing Tokio runtime remains the default and is selected by the
    The task-host boundary is native-only. Each environment registers a weak
    Node-API threadsafe function whose JavaScript function is null and whose
    custom native callback receives the exact delivery payload on a fresh event
-   loop turn. That callback calls `drive_current_thread_tasks` and acknowledges
-   only a confirmed exact claim. No delivery token or claim result crosses
+   loop turn. That callback calls `drive_current_thread_tasks`, retains its
+   opaque non-sendable callback lease through exact delivery
+   acknowledgement/failure and payload destruction, and only then lets the
+   generation-scoped host turn retire. No delivery token or claim result crosses
    JavaScript, and the binding exports no drive/cancel capability functions.
-   `registerCurrentThreadTaskHost()` accepts no arguments; direct binding misuse
-   with a callback fails synchronously before the callback can run, create a
-   Promise, or expose a thenable return. Promise constructors, `then` methods,
-   species, and rejection observation are therefore outside the scheduler host
-   contract rather than mutable authorities it must defend.
+   JavaScript first reserves and validates an exact registration capability,
+   then passes its two words to `registerCurrentThreadTaskHost()`. Direct binding
+   misuse with an additional callback fails synchronously before the callback
+   can run, create a Promise, or expose a thenable return. Promise constructors,
+   `then` methods, species, and rejection observation are therefore outside the
+   scheduler host contract rather than mutable authorities it must defend.
    The JavaScript package checks an explicit native task-host contract version
-   before invoking either host registration. A preceding callback-accepting
-   binding has no version export and fails as a package/binding mismatch before
+   before invoking either host registration. Contract version 4 reserves and
+   validates the exact disposal capability before installation can perform
+   native side effects; registration consumes it and returns no capability that
+   hostile result conversion could hide. Either unregister operation also
+   releases an unconsumed reservation. A preceding callback-accepting binding
+   has no version export and fails as a package/binding mismatch before
    JavaScript can call its incompatible registration boundary.
    The TSFN's raw slot is also its one initial Node-API acquisition. Normal
    environment cleanup takes and releases that capability exactly once before
@@ -328,6 +336,10 @@ The existing Tokio runtime remains the default and is selected by the
    path announce an active admission and advance a publication epoch. Timer
    firing retains admission from heap removal through waker invocation, so the
    verdict cannot observe both the timer and its resulting runnable as absent.
+   FIFO and LIFO runnable claims and ordinary or exact blocking claims retain an
+   admission from removal through runnable/blocking start accounting. A verdict
+   therefore observes the queued work, an active transition, or the resulting
+   progress counter instead of an empty queue between dequeue and execution.
    The final verdict closes that gate, rejects a verdict while an earlier
    admission remains active, then takes the stop-publication mutex and rechecks
    queues, permits, timers, progress, the publication epoch, and generation

@@ -150,6 +150,11 @@ binary.
   capabilities never enter JavaScript. The executor publishes one exact
   internal dispatch capability, and the registry gives each live host a
   distinct opaque delivery capability for that registration and attempt. The
+  registry stores hosts in a keyed linked order, indexes each live delivery
+  capability directly, and keeps an exact reference count on each internal
+  dispatch. Broadcast planning, acknowledgement, failure, and completion are
+  therefore linear in the number of hosts without losing registration-order
+  fallback or stale-generation rejection. The
   first responsive delivery resolves to and consumes the internal capability;
   delayed, unregistered, or retired delivery capabilities fail lookup before
   executor admission. This registration is also present in the
@@ -167,13 +172,19 @@ binary.
   force a blocking turn after 16 consecutive runnable polls. For `block_on`,
   every exact blocking dependency published by the awaited future during one
   poll remains eligible, with one bounded claim attempt taking priority over
-  ordinary FIFO work on that turn. Every explicit driver checks generation stop
-  before each user poll, so a shutdown wake cannot cause one final poll before
-  stop wins over queue draining and stored self-wake permits. A nonzero pending
-  dispatch coalesces later wakes before they allocate another process-global
-  identity; callers that race after both observing zero still resolve through
-  the exact-capability compare-exchange. Every host delivery also carries a
-  globally unique, nonzero capability, separate from the internal dispatch.
+  ordinary FIFO work on that turn. Every runnable claim takes the scheduler
+  mutex and then the generation stop-publication mutex before checking stop,
+  terminal dispatch cancellation, and the queue. Shutdown publication and
+  terminal cancellation therefore either follow a completed claim or prevent
+  it, including for a host turn admitted before the publication; both guards are
+  released before `Runnable::run`. Every explicit driver also checks generation
+  stop before polling its own input future, so a shutdown wake cannot cause one
+  final poll before stop wins over queue draining and stored self-wake permits.
+  A nonzero pending dispatch coalesces later wakes before they allocate another
+  process-global identity; callers that race after both observing zero still
+  resolve through the exact-capability compare-exchange. Every host delivery
+  also carries a globally unique, nonzero capability, separate from the internal
+  dispatch.
   Each registry entry retains at most one queued/in-flight delivery and one
   latest pending internal capability. Repeated broadcasts to a blocked host
   replace that pending value instead of adding threadsafe-function queue
@@ -257,15 +268,26 @@ binary.
   holding the lifecycle mutex; shutdown cannot transition from that
   generation's `Running` state without either preceding admission or observing
   the claimed role. The native `call_js_cb` calls
-  `drive_current_thread_tasks`, which returns `true` only after that exact claim
-  and admission have completed, then acknowledges only that confirmed result.
-  An env-null teardown callback or stale delivery reports failure and releases
-  its payload without touching JavaScript.
+  `drive_current_thread_tasks`, which returns an opaque callback lease only
+  after that exact claim and admission have completed. The callback
+  acknowledges or fails the delivery, destroys its queued payload, and only
+  then drops the lease so shutdown and restart cannot overlap the tail of an
+  old-generation callback. An env-null teardown callback or stale delivery
+  reports failure and releases its payload without touching JavaScript.
 
-  `registerCurrentThreadTaskHost()` is a zero-argument internal contract. Its
-  generated TypeScript signature uses `dispatch?: never`, and the Rust boundary
-  rejects any supplied value synchronously before creating or invoking a
-  callback. The binding does not export `driveCurrentThreadRuntimeTasks` or
+  `reserveCurrentThreadHostRegistration()` allocates a nonzero split `u64`
+  capability without installing a host. The package validates both words
+  before passing them to exactly one task- or timer-host registration.
+  Registration atomically consumes the reservation and returns `void`, so
+  malformed result conversion cannot hide the only rollback authority after
+  native side effects. Either unregister function removes an unconsumed
+  reservation as well as its matching installed host. A consumed capability
+  cannot be reused for another host.
+  `registerCurrentThreadTaskHost()` accepts the reserved high/low words plus an
+  optional `dispatch?: never` misuse sentinel. The Rust boundary rejects a
+  supplied callback synchronously before consuming the reservation or creating
+  or invoking a callback. The binding does not export
+  `driveCurrentThreadRuntimeTasks` or
   `cancelCurrentThreadRuntimeTaskDispatch`. Asynchronous host returns are
   therefore impossible: no user callback runs, so no Promise/thenable,
   constructor getter, species lookup, or rejection-observation mechanism is
@@ -277,13 +299,19 @@ binary.
   MultiThread profile, because the still-lazy runtime may be synchronously
   configured to CurrentThread after the side-effect module is cached. Tokio
   builds skip host installation. Before invoking either registration, the
-  package validates the expected version. A binding from the prior callback
-  protocol lacks the capability reporter and version export, so it still fails
-  with a package/binding mismatch before its callback-accepting function can run.
+  package validates contract version 4 and the complete reservation,
+  registration, liveness, and disposal surface. A binding from the prior
+  callback protocol lacks the capability reporter and version export, so it
+  still fails with a package/binding mismatch before its callback-accepting
+  function can run.
   A truly legacy binding that exposes neither the capability reporter nor any
   async-runtime host export remains a no-op for compatibility. Once a reporter
   identifies a shared-runtime build, a missing host contract fails closed with
-  `ERR_ROLLDOWN_BINDING_MISMATCH`.
+  `ERR_ROLLDOWN_BINDING_MISMATCH`. The package also keeps an environment-local
+  weak installation registry keyed by the concrete task-host registration
+  function. Re-evaluating a generated or cache-busted `timer-host` chunk backed
+  by the same binding therefore reuses its task and timer hosts, while another
+  native image or WASI instance still receives independent registrations.
 
   The native threadsafe function has maximum queue size one and is unreferenced,
   so it neither exceeds the registry's physical single-flight slot nor keeps a
@@ -334,17 +362,24 @@ binary.
   CurrentThread exposes one physical blocking lane. Uncontended closures and
   same-frame nested calls execute inline. On native builds, contention from a
   different driver creates a stable indexed blocking job and returns its
-  `JoinHandle` instead of sleeping inside the task poll. Each native
-  CurrentThread `block_on` frame publishes the same dependency context used by
-  MultiThread: if its awaited async lineage reaches that queued job, the
-  lexically ambient owner frame claims and runs exactly that job without
-  incrementing the active-lane metric. It cannot consume an unrelated queued
-  sibling. Ordinary queued work is serviced FIFO only after the physical lane
-  is released; release also wakes explicit drivers. Outside an admitted host
-  turn, the releasing caller drains the FIFO to preserve hostless progress.
-  Inside an admitted host turn, release returns to the bounded host-turn driver
-  instead, so queued blocking work cannot bypass the 64-unit yield budget; a
-  later host turn continues any residue. Threadless builds never have a foreign
+  `JoinHandle` instead of sleeping inside the task poll. Every CurrentThread
+  blocking submission and queued-lane claim rechecks generation stop while
+  holding the blocking-admission mutex. Because shutdown publishes stop before
+  taking that mutex, a closure either claims or queues for the lane before stop
+  publication, or is rejected without executing. Terminal host-dispatch
+  cancellation publishes its cancellation flag before taking the same mutex;
+  FIFO and exact-owner claims recheck that flag under the lock so cancellation
+  cannot race a queued closure into execution. Each native CurrentThread
+  `block_on` frame publishes the same dependency context used by MultiThread: if
+  its awaited async lineage reaches that queued job, the lexically ambient owner
+  frame claims and runs exactly that job without incrementing the active-lane
+  metric. It cannot consume an unrelated queued sibling. Ordinary queued work
+  is serviced FIFO only after the physical lane is released; release also wakes
+  explicit drivers. Outside an admitted host turn, the releasing caller drains
+  the FIFO to preserve hostless progress. Inside an admitted host turn, release
+  returns to the bounded host-turn driver instead, so queued blocking work
+  cannot bypass the 64-unit yield budget; a later host turn continues any
+  residue. Threadless builds never have a foreign
   concurrent driver, so their uncontended and same-stack paths remain fully
   inline.
 
@@ -433,7 +468,11 @@ binary.
 - Drain and cooperative loops force a blocking turn after 16 consecutive
   runnable polls. A cooperative `block_on` attempts its live exact owner
   dependency first at that boundary, including an owner-lane transfer while the
-  ordinary cap is saturated, then falls back to normal blocking admission.
+  ordinary cap is saturated, then falls back to normal blocking admission. On
+  every other cooperative turn, runnable work keeps priority, but if none is
+  available the same exact dependency is attempted before ordinary blocking
+  FIFO admission. This prevents an unrelated closure from consuming the last
+  ordinary slot and waiting synchronously for the still-queued dependency.
   After the cooperative LIFO budget is exhausted, one shared-FIFO pop is
   mandatory even if the next awaited-future poll refills the local slot. One
   dedicated non-Rayon timer thread owns deadline waiting for the generation. It
@@ -501,12 +540,16 @@ binary.
   from the relaxed metrics fingerprint. Runnable scheduling, blocking
   scheduling, a LIFO-slot flush, timer registration, and timer firing enter a
   sequentially consistent active admission before changing scheduler-visible
-  state. Timer firing keeps that admission from heap removal through waker
-  invocation, including dedicated-timekeeper, cooperative, shutdown, and heap
-  drop paths. A timer blocked behind a closed verdict gate therefore remains
-  visible in the heap, while a removed timer cannot become invisible before its
-  wake publishes replacement work. Successful publication advances a monotonic
-  epoch before the active count retires. After all legacy
+  state. Runnable claims from the shared FIFO or worker-local LIFO slot and
+  ordinary or exact blocking claims likewise acquire admission before removal
+  and retain it until `runnable_started` or `blocking_started` advances the
+  progress fingerprint. Timer firing keeps admission from heap removal through
+  waker invocation, including dedicated-timekeeper, cooperative, shutdown, and
+  heap drop paths. A timer blocked behind a closed verdict gate therefore
+  remains visible in the heap, while removed work cannot become invisible
+  before its replacement wake or start accounting is published. Successful
+  publication advances a monotonic epoch before the active count retires. After
+  all legacy
   permit/queue/fingerprint/timer checks, the final verdict closes an atomic gate.
   If an earlier admission is active, the verdict reopens the gate and retries.
   Otherwise later admissions wait while the driver takes the stop-publication
@@ -613,18 +656,23 @@ nothing.
 Native `ROLLDOWN_*` worker counts clamp to 256 before either backend can
 construct physical workers. Native Tokio's separate blocking-thread limit
 clamps to 512, and module initialization checks the combined count before Tokio
-performs its internal addition. The JavaScript configuration boundary rejects
-`workerThreads` or `maxBlockingTasks` above 256; it does not silently clamp an
-out-of-range explicit value into the accepted range. Accepted values still
-undergo normal topology validation: CurrentThread becomes `(1, 1)`, MultiThread
-promotes one worker to two, applies Rayon's platform cap, and limits blocking
-admission to `worker_threads - 1`. The core shared-runtime validation repeats
-the worker ceiling so direct Rust callers cannot bypass the resource bound.
-Native defaults also take the smaller of physical and process-available CPU
-counts before applying backend scaling, so container CPU limits do not inherit
-the host's full physical topology. Threaded WASI uses the generated emnapi
-loader's separate `NAPI_RS_ASYNC_WORK_POOL_SIZE`/`UV_THREADPOOL_SIZE` pipeline
-and its 1024-worker cap.
+performs its internal addition. Native Tokio module initialization registers a
+napi-rs custom-runtime factory that captures the process-wide resolved snapshot;
+every environment load and explicit lifecycle restart therefore rebuilds Tokio
+with the same worker and blocking limits reported by diagnostics. The
+environment is not re-read on reload. The JavaScript configuration boundary
+rejects `workerThreads` or `maxBlockingTasks` above 256; it does not silently
+clamp an out-of-range explicit value into the accepted range. Accepted values
+still undergo normal topology validation: CurrentThread becomes `(1, 1)`,
+MultiThread promotes one worker to two, applies Rayon's platform cap, and
+limits blocking admission to `worker_threads - 1`. The core shared-runtime
+validation repeats the worker ceiling so direct Rust callers cannot bypass the
+resource bound. Native defaults also take the smaller of physical and
+process-available CPU counts before applying backend scaling, so container CPU
+limits do not inherit the host's full physical topology. Threaded WASI uses the
+generated emnapi loader's separate
+`NAPI_RS_ASYNC_WORK_POOL_SIZE`/`UV_THREADPOOL_SIZE` pipeline and its 1024-worker
+cap.
 
 The CLI parses and applies `--environment` before importing the timer host or
 any binding-backed command module. Runtime environment variables supplied by
@@ -819,7 +867,17 @@ which delegates to paired `setTimeout`/`clearTimeout` callbacks in each
 importing environment. Every sleep arms the same timer identity and absolute
 deadline on every live driver. The first responsive host wakes the sleep; its
 completion cancels all losing arms. A live but CPU-starved environment can
-therefore delay only its own redundant arm. Every polled sleep also publishes
+therefore delay only its own redundant arm. Each sleep keys cancellation
+ownership by driver registration and reconciles it against a keyed live set,
+keeping re-poll work linear while preserving environment eviction and
+per-driver contained cancellation. The timer-driver registry likewise stores
+registrations in an id-keyed map with a linked oldest-to-newest order. Explicit
+environment cleanup and the idempotent unregister performed by a swept host use
+expected constant-time lookups, while stable live selection performs several
+linear traversals and still invokes liveness, sweep, and destructor callbacks
+outside its lock. Dropping a populated local registry likewise destroys each
+remaining driver behind an independent panic boundary. Every
+polled sleep also publishes
 one stable, coalescing repoll signal in its `TimerDriverRegistry`. Driver
 registration publishes the new driver first, snapshots those signals, releases
 all registry locks, and then wakes them. A concurrently first-polled sleep
@@ -829,7 +887,11 @@ absolute deadline, refreshes old arms, adds the new arm, and keeps one pending
 entry until completion or cancellation closes the signal and cancels every
 losing driver. Registration work is linear in the number of pending sleeps and
 coalesces repeated wake requests; no driver callback, arbitrary task waker, or
-waker destructor runs under the driver or signal registry locks.
+waker destructor runs under the driver or signal registry locks. The binding
+also invokes this core registration without holding its exact-registration
+mutex. It publishes the returned id and JavaScript-facing lookup atomically
+against eviction afterward, or unregisters the id if a synchronous repoll
+already found the new host dead.
 Each accepted timer registration owns a
 `HostTimerRelay` and its reserved relay id. The relay moves atomically from
 waiting-for-arm to armed, cancelled-before-arm, or cancel-sent. Cancellation
@@ -856,9 +918,14 @@ the handle's captured `Symbol.dispose`/`close` methods. If those also fail, it
 unrefs the handle so even the maximum Node timeout cannot retain the process;
 the stale callback is a no-op because its active identity was already removed.
 Recovered and fail-safe cancellation errors are reported as structured errors
-without escaping the non-catching cancellation TSFN. If no cancellation or
-unref mechanism succeeds, the schedule Promise rejects so Rust's bounded live
-host failure policy receives the diagnostic instead of stranding the relay.
+without escaping the cancellation callback. The JavaScript callback has an
+outer containment boundary that rejects the schedule Promise on an unexpected
+diagnostic-path failure, and the binding submits cancellation through napi-rs's
+catching return-value TSFN variant so even a directly registered callback throw
+becomes a Rust diagnostic instead of `napi_fatal_exception`. If no cancellation
+or unref mechanism succeeds, the schedule Promise rejects so Rust's bounded
+live host failure policy receives the diagnostic instead of stranding the
+relay.
 If runtime shutdown rejects a newly
 created detached relay task before submission, registration removes and wakes
 the pending timer before dropping the rejected future and releasing its relay
@@ -906,6 +973,13 @@ one hostile driver cannot skip cancellation of later arms or double-panic an
 outer unwind. First-poll repoll and registry wakers are both cloned before
 either is published. If the second clone unwinds, the first clone is destroyed
 behind a separate containment boundary before the original panic resumes.
+The binding rechecks host liveness while holding the pending-relay map mutex.
+Eviction publishes the dead latch before taking that same mutex to drain, so a
+stale driver snapshot either inserts before the drain and is woken by it, or is
+rejected after the drain without publishing a stranded relay. Bulk eviction
+also retires each relay through its own contained cancellation and wake
+boundaries, and the environment cleanup hook contains the complete eviction, so
+one hostile cancellation cannot skip later timers or unwind through N-API.
 Every waker passed to an arbitrary timer-driver `register` callback is an
 `Arc<Wake>` proxy. Proxy clone never clones the hostile underlying `RawWaker`;
 proxy wake and wake-by-reference invoke the underlying wake-by-reference behind
@@ -983,7 +1057,26 @@ before the cleanup attempt is invoked, so a synchronously reentrant `close()`
 observes and returns the original promise instead of starting a second attempt.
 Worker stop closures retain only workers whose termination rejected,
 so a later close retries unfinished cleanup without terminating successful
-workers again. `RolldownBuild` keeps the latest operation's worker pool alive
+workers again. Parallel-plugin pool startup invokes every initializer before
+observing any result because each production initializer constructs and
+registers its worker synchronously before awaiting bootstrap. The first
+bootstrap rejection then requests cleanup of every registered sibling
+immediately; it does not wait for another bootstrap Promise that may never
+settle. Immediate sibling failures are still collected in thread order, and
+later rejections remain observed while physical worker termination completes.
+Terminating a still-bootstrapping supervised worker rejects its bootstrap wait
+immediately, so the cancelled initializer releases its retained async frame
+even when the worker's exit event arrives in the stopping phase. Physical
+`Worker.terminate()` waits on a pool barrier: every constructed worker must
+emit an intermediate readiness message over a transferred bootstrap
+`MessagePort` after its static binding imports and before plugin initialization,
+or exit. The private channel keeps inherited `--import` and loader traffic on
+`parentPort` from forging readiness or a terminal bootstrap result. Failed
+bootstraps remain referenced until that barrier and physical cleanup complete.
+This prevents one worker's cleanup from interrupting napi-rs module
+registration in a sibling while preserving termination of a plugin initializer
+that never settles.
+`RolldownBuild` keeps the latest operation's worker pool alive
 when its native build promise rejects because that operation's native
 `BundleHandle` still owns `closeBundle`; superseded pools may terminate once a
 new native handle has synchronously replaced them. The convenience `build()`
@@ -1222,17 +1315,23 @@ unexpected exits are retained as close failures instead of becoming uncaught
 parent-process events. A supervisor that has already exited does not physically
 terminate again, but rejects one cleanup attempt with its retained fault so the
 existing retryable-cleanup protocol preserves ownership; the next attempt
-clears that logical owner. Bootstrap pools await every startup attempt before
-taking their cleanup snapshot, so a late-registering sibling cannot escape
-termination after another sibling fails. Bootstrap failures are normalized to
-a cloneable `ParallelPluginBootstrapError` before crossing `postMessage`. If
-the control-port send itself fails, the worker closes/unrefs that port and
-throws the cloneable diagnostic from a microtask, ensuring the supervisor sees
-an `error` or terminal exit even when unhandled promise rejections are
-configured to warn instead of terminating the worker. Once a pool is
-initialized, every remaining option-access, warning, binding-conversion, and
-callback-wrapping step runs inside the same cleanup boundary so a synchronous
-setup failure cannot abandon those workers.
+clears that logical owner. Bootstrap pools invoke every initializer before
+observing the first rejection, and each production initializer registers its
+worker synchronously before awaiting bootstrap. Cleanup therefore owns every
+constructed sibling without waiting for a startup Promise that may never
+settle. Readiness and terminal bootstrap messages travel over a transferred
+`MessagePort`, isolated from inherited preload and loader messages on
+`parentPort`; those private messages and worker exit release the
+physical-termination barrier because each proves native-addon registration has
+finished. Bootstrap failures are normalized to a cloneable
+`ParallelPluginBootstrapError` before crossing `postMessage`. If the
+control-port send itself fails, the worker closes/unrefs that port and throws
+the cloneable diagnostic from a microtask, ensuring the supervisor sees an
+`error` or terminal exit even when unhandled promise rejections are configured
+to warn instead of terminating the worker. Once a pool is initialized, every
+remaining option-access, warning, binding-conversion, and callback-wrapping
+step runs inside the same cleanup boundary so a synchronous setup failure
+cannot abandon those workers.
 
 ### Non-threaded WASI
 

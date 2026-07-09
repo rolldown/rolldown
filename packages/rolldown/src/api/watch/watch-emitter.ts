@@ -115,6 +115,7 @@ export class WatcherEmitter implements RolldownWatcher {
   private closeHandler: (() => Promise<void>) | undefined;
   private browserCloseListenerInvocation: ReentrantCloseInvocation | undefined;
   private setupFailureReportCompletion: Promise<void> | undefined;
+  private setupFailureReportFailure: { error: unknown } | undefined;
 
   constructor() {
     this.closeHandlerPromise = new Promise((resolve) => {
@@ -241,6 +242,9 @@ export class WatcherEmitter implements RolldownWatcher {
       if (!closePromise) {
         closePromise = (async () => {
           const errors: unknown[] = [];
+          if (this.setupFailureReportFailure) {
+            errors.push(this.setupFailureReportFailure.error);
+          }
           let retryable = false;
           try {
             if (cleanup && hasRetryableCleanupOwnership(cleanup)) {
@@ -361,7 +365,11 @@ export class WatcherEmitter implements RolldownWatcher {
           cause: errors[0],
         });
       }
-    })().finally(resolveReportCompletion);
+    })();
+    void reportPromise.then(resolveReportCompletion, (reportError: unknown) => {
+      this.setupFailureReportFailure = { error: reportError };
+      resolveReportCompletion();
+    });
     return reportPromise;
   }
 }

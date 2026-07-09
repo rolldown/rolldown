@@ -1334,29 +1334,29 @@ fn init() {
     not(feature = "async-runtime")
   ))]
   {
-    use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
-    // Build the tokio runtime from the SAME resolved snapshot the diagnostics
-    // reporter (`get_async_runtime_config`) and `get_runtime_capabilities`
-    // serve -- the single config-resolution pipeline -- so the reported
-    // config always matches the runtime actually built here. The measured
-    // defaults (worker threads at physical * 3 / 2, a dedicated 4-thread
-    // blocking pool instead of tokio's 512) live in the resolver's
-    // per-(backend, target) table; see async_runtime.rs.
+    use napi::{bindgen_prelude::create_custom_tokio_runtime_factory, tokio};
+    // Build every tokio generation from the SAME resolved snapshot the
+    // diagnostics reporter (`get_async_runtime_config`) and
+    // `get_runtime_capabilities` serve. The retained factory preserves these
+    // limits across environment teardown/reload and explicit lifecycle
+    // restart. The measured defaults (worker threads at physical * 3 / 2, a
+    // dedicated 4-thread blocking pool instead of tokio's 512) live in the
+    // resolver's per-(backend, target) table; see async_runtime.rs.
     let resolved = crate::async_runtime::resolved_runtime_config();
     resolved
       .worker_threads
       .checked_add(resolved.max_blocking_tasks)
       .expect("Resolved Tokio worker and blocking thread limits must not overflow");
-    let mut builder = tokio::runtime::Builder::new_multi_thread();
-
-    let rt = builder
-      .max_blocking_threads(resolved.max_blocking_tasks)
-      .worker_threads(resolved.worker_threads)
-      .thread_name("rolldown-worker")
-      .enable_all()
-      .build()
-      .expect("Failed to create tokio runtime");
-    create_custom_tokio_runtime(rt);
+    let worker_threads = resolved.worker_threads;
+    let max_blocking_tasks = resolved.max_blocking_tasks;
+    create_custom_tokio_runtime_factory(move || {
+      tokio::runtime::Builder::new_multi_thread()
+        .max_blocking_threads(max_blocking_tasks)
+        .worker_threads(worker_threads)
+        .thread_name("rolldown-worker")
+        .enable_all()
+        .build()
+    });
   }
 
   #[cfg(not(feature = "disable_panic_hook"))]

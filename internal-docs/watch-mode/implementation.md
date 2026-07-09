@@ -456,7 +456,9 @@ nonblocking result, breaking the listener/report self-wait. Close listeners run
 only after terminal reporting, so they may await an `END` observation without
 forming the inverse wait cycle. Node uses async context to identify those
 listener continuations; browser hosts use the same scoped fallback as normal
-close-listener reentrancy.
+close-listener reentrancy. A rejected `ERROR` or `END` listener is retained as
+part of the terminal setup-close result, so every concurrent or later external
+`close()` call replays the same listener failure instead of only logging it.
 
 Setup also uses all-settled option initialization and terminates workers from
 every successfully initialized output if another output or native watcher

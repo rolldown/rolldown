@@ -39,7 +39,7 @@ test.runIf(
       constructorGetterCalls: 0,
       flavor: 'CurrentThread',
       registrationError: 'registerCurrentThreadTaskHost does not accept a JavaScript callback',
-      taskHostContractVersion: 2,
+      taskHostContractVersion: 4,
       unhandled: [],
     });
   },

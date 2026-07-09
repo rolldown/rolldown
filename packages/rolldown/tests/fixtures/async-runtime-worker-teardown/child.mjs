@@ -49,8 +49,10 @@ try {
   const workerExitedBeforeRelease = true;
 
   writeFileSync(paths.release, 'release');
-  await waitForFile(paths.completed, undefined, 'post-teardown scheduler waker completion');
-  const completed = readFileSync(paths.completed, 'utf8');
+  const completed = await waitForFileContents(
+    paths.completed,
+    'post-teardown scheduler waker completion',
+  );
   if (completed !== 'completed') {
     throw new Error(completed);
   }
@@ -72,6 +74,22 @@ async function waitForFile(path, failurePath, label) {
   while (!existsSync(path)) {
     if (failurePath && existsSync(failurePath)) {
       throw new Error(readFileSync(failurePath, 'utf8'));
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out waiting for ${label}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
+async function waitForFileContents(path, label) {
+  const deadline = Date.now() + 10_000;
+  while (true) {
+    if (existsSync(path)) {
+      const contents = readFileSync(path, 'utf8');
+      if (contents.length > 0) {
+        return contents;
+      }
     }
     if (Date.now() >= deadline) {
       throw new Error(`Timed out waiting for ${label}`);

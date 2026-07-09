@@ -606,10 +606,9 @@ fn resolve_runtime_config_for(
 /// sizes its async work pool -- so a later env mutation can never make the
 /// report diverge from the runtime/pool that already exists, regardless of
 /// whether the host's WASI shim snapshots or live-reads its environment.
-/// (Electron-reload scope note, unchanged from the previous snapshot: if a
-/// host tears the napi env down and recreates it in-process, napi-rs rebuilds
-/// its runtime with its own defaults and this snapshot is not refreshed --
-/// the fields are diagnostics-only.)
+/// Native Tokio registers a retained runtime factory that rebuilds every napi
+/// lifecycle generation from this snapshot, so environment reload and explicit
+/// restart preserve the reported worker and blocking limits.
 pub fn resolved_runtime_config() -> &'static ResolvedRuntimeConfig {
   static RESOLVED_RUNTIME_CONFIG: std::sync::OnceLock<ResolvedRuntimeConfig> =
     std::sync::OnceLock::new();
@@ -700,7 +699,6 @@ pub struct BindingHostRegistration {
 }
 
 impl BindingHostRegistration {
-  #[cfg(any(feature = "async-runtime", test))]
   fn from_id(id: u64) -> Self {
     Self {
       high: (id >> 32) as u32,
@@ -709,24 +707,20 @@ impl BindingHostRegistration {
     }
   }
 
-  #[cfg(any(feature = "async-runtime", test))]
   fn id(high: u32, low: u32) -> u64 {
     (u64::from(high) << 32) | u64::from(low)
   }
-
-  #[cfg(not(feature = "async-runtime"))]
-  fn inactive() -> Self {
-    Self { high: 0, low: 0 }
-  }
 }
 
-#[cfg(feature = "async-runtime")]
 static NEXT_HOST_REGISTRATION_ID: std::sync::atomic::AtomicU64 =
   std::sync::atomic::AtomicU64::new(1);
 
-#[cfg(feature = "async-runtime")]
+static RESERVED_HOST_REGISTRATIONS: std::sync::LazyLock<
+  std::sync::Mutex<rustc_hash::FxHashSet<u64>>,
+> = std::sync::LazyLock::new(|| std::sync::Mutex::new(rustc_hash::FxHashSet::default()));
+
 fn reserve_host_registration_id() -> napi::Result<u64> {
-  NEXT_HOST_REGISTRATION_ID
+  let id = NEXT_HOST_REGISTRATION_ID
     .fetch_update(
       std::sync::atomic::Ordering::SeqCst,
       std::sync::atomic::Ordering::SeqCst,
@@ -737,7 +731,37 @@ fn reserve_host_registration_id() -> napi::Result<u64> {
         napi::Status::GenericFailure,
         "JavaScript host registration id space exhausted",
       )
-    })
+    })?;
+  RESERVED_HOST_REGISTRATIONS.lock().unwrap_or_else(std::sync::PoisonError::into_inner).insert(id);
+  Ok(id)
+}
+
+fn claim_host_registration_id(registration_high: u32, registration_low: u32) -> napi::Result<u64> {
+  let id = BindingHostRegistration::id(registration_high, registration_low);
+  if RESERVED_HOST_REGISTRATIONS
+    .lock()
+    .unwrap_or_else(std::sync::PoisonError::into_inner)
+    .remove(&id)
+  {
+    Ok(id)
+  } else {
+    Err(napi::Error::new(
+      napi::Status::InvalidArg,
+      "CurrentThread host registration was not reserved or was already consumed",
+    ))
+  }
+}
+
+fn release_host_registration_id(id: u64) {
+  RESERVED_HOST_REGISTRATIONS.lock().unwrap_or_else(std::sync::PoisonError::into_inner).remove(&id);
+}
+
+#[napi]
+/// Reserve an exact CurrentThread host registration capability before either
+/// task or timer installation performs side effects. The JavaScript package
+/// validates the returned words and passes them back to one registration call.
+pub fn reserve_current_thread_host_registration() -> napi::Result<BindingHostRegistration> {
+  reserve_host_registration_id().map(BindingHostRegistration::from_id)
 }
 
 #[cfg(feature = "async-runtime")]
@@ -763,6 +787,32 @@ fn contain_current_thread_task_host_unwind<T>(operation: impl FnOnce() -> T) -> 
       }
       None
     }
+  }
+}
+
+#[cfg(all(feature = "async-runtime", test))]
+thread_local! {
+  static NATIVE_TASK_HOST_AFTER_DRIVE_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
+  static NATIVE_TASK_HOST_AFTER_PAYLOAD_DROP_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(all(feature = "async-runtime", test))]
+fn run_native_task_host_after_drive_test_hook() {
+  if let Some(hook) = NATIVE_TASK_HOST_AFTER_DRIVE_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
+#[cfg(all(feature = "async-runtime", test))]
+fn run_native_task_host_after_payload_drop_test_hook() {
+  if let Some(hook) =
+    NATIVE_TASK_HOST_AFTER_PAYLOAD_DROP_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
+    hook();
   }
 }
 
@@ -796,12 +846,22 @@ unsafe extern "C" fn call_native_current_thread_task_host(
     return;
   }
 
-  let delivery = *unsafe { Box::<CurrentThreadTaskDelivery>::from_raw(data.cast()) };
-  let claimed = !env.is_null()
-    && contain_current_thread_task_host_unwind(|| {
-      drive_current_thread_tasks(delivery.capability())
+  let payload = unsafe { Box::<NativeCurrentThreadTaskHostPayload>::from_raw(data.cast()) };
+  let delivery = payload.delivery;
+  let callback_lease = if env.is_null() {
+    None
+  } else {
+    contain_current_thread_task_host_unwind(|| {
+      let lease = drive_current_thread_tasks(delivery.capability());
+      #[cfg(test)]
+      if lease.is_some() {
+        run_native_task_host_after_drive_test_hook();
+      }
+      lease
     })
-    .unwrap_or(false);
+    .flatten()
+  };
+  let claimed = callback_lease.is_some();
   let completed = contain_current_thread_task_host_unwind(|| {
     if claimed {
       acknowledge_current_thread_task_delivery(delivery);
@@ -813,6 +873,45 @@ unsafe extern "C" fn call_native_current_thread_task_host(
     let _ = contain_current_thread_task_host_unwind(|| {
       fail_current_thread_task_delivery(delivery);
     });
+  }
+  let _ = contain_current_thread_task_host_unwind(|| drop(payload));
+  #[cfg(test)]
+  run_native_task_host_after_payload_drop_test_hook();
+  let _ = contain_current_thread_task_host_unwind(|| drop(callback_lease));
+}
+
+#[cfg(feature = "async-runtime")]
+struct NativeCurrentThreadTaskHostPayload {
+  delivery: CurrentThreadTaskDelivery,
+  #[cfg(test)]
+  drop_observer: Option<std::sync::Arc<std::sync::atomic::AtomicUsize>>,
+}
+
+#[cfg(feature = "async-runtime")]
+impl NativeCurrentThreadTaskHostPayload {
+  fn new(delivery: CurrentThreadTaskDelivery) -> Self {
+    Self {
+      delivery,
+      #[cfg(test)]
+      drop_observer: None,
+    }
+  }
+
+  #[cfg(test)]
+  fn with_drop_observer(
+    delivery: CurrentThreadTaskDelivery,
+    drop_observer: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+  ) -> Self {
+    Self { delivery, drop_observer: Some(drop_observer) }
+  }
+}
+
+#[cfg(all(feature = "async-runtime", test))]
+impl Drop for NativeCurrentThreadTaskHostPayload {
+  fn drop(&mut self) {
+    if let Some(observer) = &self.drop_observer {
+      observer.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    }
   }
 }
 
@@ -952,7 +1051,8 @@ impl NativeCurrentThreadTaskHostInner {
   }
 
   fn dispatch(&self, delivery: CurrentThreadTaskDelivery) -> bool {
-    let data: *mut std::ffi::c_void = Box::into_raw(Box::new(delivery)).cast();
+    let data: *mut std::ffi::c_void =
+      Box::into_raw(Box::new(NativeCurrentThreadTaskHostPayload::new(delivery))).cast();
     let Some(status) =
       self.call_threadsafe_function_with(data, |threadsafe_function, data| unsafe {
         napi::sys::napi_call_threadsafe_function(
@@ -963,13 +1063,13 @@ impl NativeCurrentThreadTaskHostInner {
       })
     else {
       unsafe {
-        drop(Box::<CurrentThreadTaskDelivery>::from_raw(data.cast()));
+        drop(Box::<NativeCurrentThreadTaskHostPayload>::from_raw(data.cast()));
       }
       return false;
     };
     if status != napi::sys::Status::napi_ok {
       unsafe {
-        drop(Box::<CurrentThreadTaskDelivery>::from_raw(data.cast()));
+        drop(Box::<NativeCurrentThreadTaskHostPayload>::from_raw(data.cast()));
       }
       return false;
     }
@@ -1078,14 +1178,43 @@ fn reject_current_thread_task_host_callback(dispatch: Option<Unknown<'_>>) -> na
   }
 }
 
-const CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION: u32 = 2;
+const CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION: u32 = 4;
 
 #[napi]
 /// Return the native CurrentThread task-host ABI expected by the JavaScript
-/// package before it invokes either async-runtime host registration. Version 2
-/// is the zero-argument native host with an exact disposable registration.
+/// package before it invokes either async-runtime host registration. Version 4
+/// reserves and validates an exact registration capability before host
+/// installation performs side effects.
 pub fn get_current_thread_task_host_contract_version() -> u32 {
   CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION
+}
+
+#[cfg(feature = "async-runtime")]
+#[napi]
+/// Return whether one exact CurrentThread task- or timer-host registration is
+/// still live. The JavaScript package revalidates its process-global marker on
+/// every module evaluation so native eviction cannot leave a stale installed
+/// bit that permanently suppresses replacement registration.
+pub fn is_current_thread_host_registration_active(
+  registration_high: u32,
+  registration_low: u32,
+) -> bool {
+  let id = BindingHostRegistration::id(registration_high, registration_low);
+  registered_current_thread_task_host(id).is_some_and(|inner| inner.is_live())
+    || registered_timer_host(id).is_some_and(|inner| inner.is_live())
+}
+
+#[cfg(not(feature = "async-runtime"))]
+#[napi]
+/// Return whether one exact CurrentThread host registration is still live.
+///
+/// The default Tokio build has no CurrentThread host registrations.
+pub fn is_current_thread_host_registration_active(
+  registration_high: u32,
+  registration_low: u32,
+) -> bool {
+  let _ = (registration_high, registration_low);
+  false
 }
 
 #[cfg(feature = "async-runtime")]
@@ -1103,7 +1232,36 @@ fn install_cleanup_hook_or_rollback<T>(
 }
 
 #[cfg(feature = "async-runtime")]
-#[napi(ts_args_type = "dispatch?: never")]
+fn install_host_driver_registration<T>(
+  dead: &std::sync::atomic::AtomicBool,
+  registration: &std::sync::Mutex<Option<T>>,
+  install: impl FnOnce() -> T,
+  publish: impl FnOnce(),
+  rollback: impl FnOnce(T),
+) -> bool {
+  // `install` may synchronously wake arbitrary task wakers. Keep it outside
+  // the exact-registration mutex so a reentrant liveness sweep can evict this
+  // host instead of deadlocking on the half-published registration.
+  let mut installed = Some(install());
+  {
+    let mut slot = registration.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if !dead.load(std::sync::atomic::Ordering::SeqCst) {
+      *slot = installed.take();
+      // Publication is serialized with eviction by `registration`. This
+      // callback must only update binding-owned indexes.
+      publish();
+    }
+  }
+  if let Some(installed) = installed {
+    rollback(installed);
+    false
+  } else {
+    true
+  }
+}
+
+#[cfg(feature = "async-runtime")]
+#[napi(ts_args_type = "registrationHigh: number, registrationLow: number, dispatch?: never")]
 /// Install a native-owned host turn used to poll CurrentThread runnables
 /// without re-entering arbitrary future waker locks. Called once per importing
 /// environment. JavaScript callbacks are rejected synchronously.
@@ -1111,10 +1269,12 @@ fn install_cleanup_hook_or_rollback<T>(
 /// A no-op on the default `tokio-runtime` build.
 pub fn register_current_thread_task_host(
   env: &napi::Env,
+  registration_high: u32,
+  registration_low: u32,
   dispatch: Option<Unknown<'_>>,
-) -> napi::Result<BindingHostRegistration> {
+) -> napi::Result<()> {
   reject_current_thread_task_host_callback(dispatch)?;
-  let host_registration = reserve_host_registration_id()?;
+  let host_registration = claim_host_registration_id(registration_high, registration_low)?;
   let inner = NativeCurrentThreadTaskHostInner::new(env, host_registration)?;
   {
     let mut slot = inner.registration.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
@@ -1137,21 +1297,24 @@ pub fn register_current_thread_task_host(
     },
     || inner.rollback(),
   )?;
-  Ok(BindingHostRegistration::from_id(host_registration))
+  Ok(())
 }
 
 #[cfg(not(feature = "async-runtime"))]
-#[napi(ts_args_type = "dispatch?: never")]
+#[napi(ts_args_type = "registrationHigh: number, registrationLow: number, dispatch?: never")]
 /// Install a native-owned host turn used to poll CurrentThread runnables
 /// without re-entering arbitrary future waker locks. Called once per importing
 /// environment. JavaScript callbacks are rejected synchronously.
 ///
 /// A no-op on the default `tokio-runtime` build.
 pub fn register_current_thread_task_host(
+  registration_high: u32,
+  registration_low: u32,
   dispatch: Option<Unknown<'_>>,
-) -> napi::Result<BindingHostRegistration> {
+) -> napi::Result<()> {
   reject_current_thread_task_host_callback(dispatch)?;
-  Ok(BindingHostRegistration::inactive())
+  claim_host_registration_id(registration_high, registration_low)?;
+  Ok(())
 }
 
 #[cfg(feature = "async-runtime")]
@@ -1163,6 +1326,7 @@ pub fn register_current_thread_task_host(
 /// A no-op on the default `tokio-runtime` build.
 pub fn unregister_current_thread_task_host(registration_high: u32, registration_low: u32) {
   let id = BindingHostRegistration::id(registration_high, registration_low);
+  release_host_registration_id(id);
   if let Some(inner) = registered_current_thread_task_host(id) {
     inner.rollback();
   }
@@ -1176,7 +1340,7 @@ pub fn unregister_current_thread_task_host(registration_high: u32, registration_
 ///
 /// A no-op on the default `tokio-runtime` build.
 pub fn unregister_current_thread_task_host(registration_high: u32, registration_low: u32) {
-  let _ = (registration_high, registration_low);
+  release_host_registration_id(BindingHostRegistration::id(registration_high, registration_low));
 }
 
 /// Host timer driver for the shared runtime's CurrentThread flavor (timer
@@ -1290,8 +1454,10 @@ struct JsTimerHostInner {
   /// Exact JavaScript-facing capability used to unregister this host before
   /// emnapi starts running fallible environment cleanup hooks.
   host_registration: u64,
-  /// This host's registration in the global driver registry, taken (exactly
-  /// once) by `evict`.
+  /// This host's registration in the global driver registry. Installation and
+  /// eviction use this mutex as their publication boundary, but the core
+  /// registration call itself runs outside it because that call may wake
+  /// arbitrary task wakers.
   registration: std::sync::Mutex<Option<TimerDriverId>>,
   /// Consecutive non-lifetime relay failures (see
   /// [`HOST_TIMER_MAX_TRANSIENT_FAILURES`]); reset on success.
@@ -1315,9 +1481,19 @@ fn registered_timer_host(id: u64) -> Option<std::sync::Arc<JsTimerHostInner>> {
 
 #[cfg(feature = "async-runtime")]
 struct PendingHostTimer {
+  cancellation: Option<futures::channel::oneshot::Sender<()>>,
   relay_id: u32,
   waker: std::task::Waker,
   schedule_state: RelayScheduleState,
+}
+
+#[cfg(feature = "async-runtime")]
+impl PendingHostTimer {
+  fn signal_native_cancellation(&mut self) {
+    if let Some(sender) = self.cancellation.take() {
+      let _ = sender.send(());
+    }
+  }
 }
 
 #[cfg(feature = "async-runtime")]
@@ -1375,11 +1551,37 @@ impl<T: PendingRelayState> Drop for PendingRelayDropGuard<T> {
 #[cfg(feature = "async-runtime")]
 enum PendingHostTimerRegistration {
   Refreshed(std::task::Waker),
-  Armed(u32),
+  Armed { relay_id: u32, cancellation: futures::channel::oneshot::Receiver<()> },
   Exhausted(std::task::Waker),
 }
 
 #[cfg(feature = "async-runtime")]
+fn register_pending_host_timer_locked(
+  pending: &mut rustc_hash::FxHashMap<TimerId, PendingHostTimer>,
+  relay_ids: &RelayIdAllocator,
+  id: TimerId,
+  waker: std::task::Waker,
+) -> PendingHostTimerRegistration {
+  if let Some(slot) = pending.get_mut(&id) {
+    return PendingHostTimerRegistration::Refreshed(std::mem::replace(&mut slot.waker, waker));
+  }
+  let Ok(relay_id) = relay_ids.reserve() else {
+    return PendingHostTimerRegistration::Exhausted(waker);
+  };
+  let (cancellation_sender, cancellation) = futures::channel::oneshot::channel();
+  pending.insert(
+    id,
+    PendingHostTimer {
+      cancellation: Some(cancellation_sender),
+      relay_id,
+      waker,
+      schedule_state: RelayScheduleState::AwaitingCallback,
+    },
+  );
+  PendingHostTimerRegistration::Armed { relay_id, cancellation }
+}
+
+#[cfg(all(feature = "async-runtime", test))]
 fn register_pending_host_timer(
   pending: &std::sync::Mutex<rustc_hash::FxHashMap<TimerId, PendingHostTimer>>,
   relay_ids: &RelayIdAllocator,
@@ -1387,17 +1589,22 @@ fn register_pending_host_timer(
   waker: std::task::Waker,
 ) -> PendingHostTimerRegistration {
   let mut pending = pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-  if let Some(slot) = pending.get_mut(&id) {
-    return PendingHostTimerRegistration::Refreshed(std::mem::replace(&mut slot.waker, waker));
+  register_pending_host_timer_locked(&mut pending, relay_ids, id, waker)
+}
+
+#[cfg(feature = "async-runtime")]
+fn register_pending_host_timer_if_live(
+  pending: &std::sync::Mutex<rustc_hash::FxHashMap<TimerId, PendingHostTimer>>,
+  relay_ids: &RelayIdAllocator,
+  id: TimerId,
+  waker: std::task::Waker,
+  is_live: impl FnOnce() -> bool,
+) -> Result<PendingHostTimerRegistration, std::task::Waker> {
+  let mut pending = pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+  if !is_live() {
+    return Err(waker);
   }
-  let Ok(relay_id) = relay_ids.reserve() else {
-    return PendingHostTimerRegistration::Exhausted(waker);
-  };
-  pending.insert(
-    id,
-    PendingHostTimer { relay_id, waker, schedule_state: RelayScheduleState::AwaitingCallback },
-  );
-  PendingHostTimerRegistration::Armed(relay_id)
+  Ok(register_pending_host_timer_locked(&mut pending, relay_ids, id, waker))
 }
 
 #[cfg(feature = "async-runtime")]
@@ -1438,12 +1645,26 @@ fn run_host_timer_cleanup_safely(cleanup: impl FnOnce()) {
 #[cfg(feature = "async-runtime")]
 fn retire_pending_relay<T: PendingRelayState>(
   state: &std::sync::Arc<T>,
-  pending: PendingHostTimer,
+  mut pending: PendingHostTimer,
 ) {
+  // The detached relay must stop depending on JavaScript before cancellation
+  // crosses the fallible TSFN boundary. A queue rejection or callback throw can
+  // then affect diagnostics only, never relay retirement or runtime shutdown.
+  pending.signal_native_cancellation();
   if pending.schedule_state == RelayScheduleState::CallbackComplete {
     run_host_timer_cleanup_safely(|| state.cancel_relay(pending.relay_id));
   }
   wake_host_timer_safely(pending.waker);
+}
+
+#[cfg(feature = "async-runtime")]
+fn retire_pending_relays<T: PendingRelayState>(
+  state: &std::sync::Arc<T>,
+  pending: rustc_hash::FxHashMap<TimerId, PendingHostTimer>,
+) {
+  for (_, pending) in pending {
+    retire_pending_relay(state, pending);
+  }
 }
 
 #[cfg(feature = "async-runtime")]
@@ -1515,8 +1736,17 @@ impl JsTimerHostInner {
     self.pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
   }
 
-  fn register_pending(&self, id: TimerId, waker: std::task::Waker) -> PendingHostTimerRegistration {
-    register_pending_host_timer(&self.pending, &self.relay_ids, id, waker)
+  fn register_pending(
+    &self,
+    id: TimerId,
+    waker: std::task::Waker,
+  ) -> Result<PendingHostTimerRegistration, std::task::Waker> {
+    // Eviction publishes `dead` before taking this same pending-map mutex to
+    // drain. Registration therefore either enters the map before that drain,
+    // or observes the dead/aborted host afterward and returns its waker intact.
+    register_pending_host_timer_if_live(&self.pending, &self.relay_ids, id, waker, || {
+      self.is_live()
+    })
   }
 
   /// Can this host still deliver wakes? The `aborted` probe reads the
@@ -1529,9 +1759,40 @@ impl JsTimerHostInner {
   }
 
   fn cancel_relay(&self, relay_id: u32) {
-    let _ = self
-      .cancel_callback
-      .call(FnArgs { data: (relay_id,) }, ThreadsafeFunctionCallMode::NonBlocking);
+    let status = self.cancel_callback.call_with_return_value(
+      FnArgs { data: (relay_id,) },
+      ThreadsafeFunctionCallMode::NonBlocking,
+      move |result, _| {
+        let error = match result {
+          Ok(napi::Either::A(())) => return Ok(()),
+          Ok(napi::Either::B(invalid)) => napi::Error::new(
+            napi::Status::InvalidArg,
+            format!(
+              "The timer cancellation callback returned `{}`, but expected `undefined`.",
+              invalid.value_type.to_string().to_ascii_lowercase()
+            ),
+          ),
+          Err(error) => error,
+        };
+        recover_host_timer_failure(
+          || {},
+          format_args!(
+            "rolldown: host timer cancellation callback failed for relay {relay_id}: {error}"
+          ),
+        );
+        Ok(())
+      },
+    );
+    if status != napi::Status::Ok {
+      let error = napi::Error::new(status, "Threadsafe timer cancellation callback call failed");
+      recover_host_timer_failure(
+        || {},
+        format_args!(
+          "rolldown: host timer cancellation callback could not be queued for relay {relay_id}: \
+           {error}"
+        ),
+      );
+    }
   }
 
   fn mark_relay_callback_complete(&self, id: TimerId, relay_id: u32) -> bool {
@@ -1584,24 +1845,19 @@ impl JsTimerHostInner {
   /// live registrant left the re-poll fails LOUD in `rolldown_utils`).
   /// Idempotent -- the cleanup hook, the `is_live` race path, and the
   /// relay-failure backstop may all reach it.
-  fn evict(&self) {
+  fn evict(self: &std::sync::Arc<Self>) {
     self.dead.store(true, std::sync::atomic::Ordering::SeqCst);
+    let registration =
+      self.registration.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take();
     JS_TIMER_HOSTS
       .lock()
       .unwrap_or_else(std::sync::PoisonError::into_inner)
       .remove(&self.host_registration);
-    let registration =
-      self.registration.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take();
     if let Some(id) = registration {
       unregister_timer_driver(id);
     }
     let pending = take_pending_host_timers(&self.pending);
-    for (_, pending) in pending {
-      if pending.schedule_state == RelayScheduleState::CallbackComplete {
-        self.cancel_relay(pending.relay_id);
-      }
-      wake_host_timer_safely(pending.waker);
-    }
+    retire_pending_relays(self, pending);
   }
 }
 
@@ -1631,15 +1887,22 @@ impl TimerDriver for JsTimerHost {
       wake_host_timer_safely(waker);
       return;
     }
-    let relay_id = match self.inner.register_pending(id, waker) {
-      PendingHostTimerRegistration::Refreshed(replaced_waker) => {
+    let (relay_id, cancellation) = match self.inner.register_pending(id, waker) {
+      Err(waker) => {
+        self.inner.evict();
+        wake_host_timer_safely(waker);
+        return;
+      }
+      Ok(PendingHostTimerRegistration::Refreshed(replaced_waker)) => {
         // A custom RawWaker destructor may re-enter timer code. `register_pending`
         // returns the old waker so its destructor runs after `pending` unlocks.
         drop_host_timer_waker_safely(replaced_waker);
         return;
       }
-      PendingHostTimerRegistration::Armed(relay_id) => relay_id,
-      PendingHostTimerRegistration::Exhausted(waker) => {
+      Ok(PendingHostTimerRegistration::Armed { relay_id, cancellation }) => {
+        (relay_id, cancellation)
+      }
+      Ok(PendingHostTimerRegistration::Exhausted(waker)) => {
         recover_host_timer_failure(
           || {
             self.inner.evict();
@@ -1657,9 +1920,20 @@ impl TimerDriver for JsTimerHost {
     let relay_drop_guard = PendingRelayDropGuard::new(std::sync::Arc::clone(&inner), id, relay_id);
     let submission = try_spawn_detached(async move {
       let mut relay_drop_guard = relay_drop_guard;
-      let result = match inner.invoke_schedule_callback(id, relay_id, ms).await {
-        Ok(promise) => promise.await,
-        Err(error) => Err(error),
+      let schedule = async {
+        match inner.invoke_schedule_callback(id, relay_id, ms).await {
+          Ok(promise) => promise.await,
+          Err(error) => Err(error),
+        }
+      };
+      futures::pin_mut!(cancellation);
+      futures::pin_mut!(schedule);
+      let result = match futures::future::select(cancellation, schedule).await {
+        futures::future::Either::Left((_cancelled, _schedule)) => {
+          relay_drop_guard.disarm();
+          return;
+        }
+        futures::future::Either::Right((result, _cancellation)) => result,
       };
       match result {
         Ok(()) => {
@@ -1735,7 +2009,8 @@ impl TimerDriver for JsTimerHost {
 
   fn cancel(&self, id: TimerId) {
     let pending = self.inner.lock_pending().remove(&id);
-    if let Some(pending) = pending {
+    if let Some(mut pending) = pending {
+      pending.signal_native_cancellation();
       if pending.schedule_state == RelayScheduleState::CallbackComplete {
         self.inner.cancel_relay(pending.relay_id);
       }
@@ -1759,7 +2034,7 @@ impl TimerDriver for JsTimerHost {
 
 #[cfg(feature = "async-runtime")]
 #[napi(
-  ts_args_type = "schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void"
+  ts_args_type = "registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void"
 )]
 /// Install the host timer callback backing the shared async runtime's
 /// CurrentThread timers (watch-mode debounce). Called at import by every
@@ -1769,10 +2044,12 @@ impl TimerDriver for JsTimerHost {
 /// build (tokio owns its timer wheel).
 pub fn register_timer_host(
   env: &napi::Env,
+  registration_high: u32,
+  registration_low: u32,
   schedule: JsCallback<FnArgs<(u32, f64)>, Promise<()>>,
   cancel: JsCallback<FnArgs<(u32,)>, ()>,
-) -> napi::Result<BindingHostRegistration> {
-  let host_registration = reserve_host_registration_id()?;
+) -> napi::Result<()> {
+  let host_registration = claim_host_registration_id(registration_high, registration_low)?;
   let inner = std::sync::Arc::new(JsTimerHostInner {
     callback: schedule,
     cancel_callback: cancel,
@@ -1783,19 +2060,27 @@ pub fn register_timer_host(
     registration: std::sync::Mutex::default(),
     transient_failures: std::sync::atomic::AtomicU32::new(0),
   });
-  {
-    // Hold the registration slot across the registry insert so a
-    // concurrently running `evict` (impossible this early in practice, but
-    // free to order correctly) can never observe the id half-stored.
-    let mut slot = inner.registration.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    *slot = Some(register_timer_driver(std::sync::Arc::new(JsTimerHost {
-      inner: std::sync::Arc::clone(&inner),
-    })));
+  if !install_host_driver_registration(
+    &inner.dead,
+    &inner.registration,
+    || {
+      register_timer_driver(std::sync::Arc::new(JsTimerHost {
+        inner: std::sync::Arc::clone(&inner),
+      }))
+    },
+    || {
+      JS_TIMER_HOSTS
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .insert(host_registration, std::sync::Arc::downgrade(&inner));
+    },
+    unregister_timer_driver,
+  ) {
+    return Err(napi::Error::new(
+      napi::Status::GenericFailure,
+      "The CurrentThread timer host was evicted during registration",
+    ));
   }
-  JS_TIMER_HOSTS
-    .lock()
-    .unwrap_or_else(std::sync::PoisonError::into_inner)
-    .insert(host_registration, std::sync::Arc::downgrade(&inner));
   // Proactive eviction at env teardown (worker exit): the primary lifetime
   // mechanism; the `aborted` probe and the relay-failure path in the driver
   // are the backstops for anything the hook cannot reach in time.
@@ -1803,17 +2088,17 @@ pub fn register_timer_host(
   install_cleanup_hook_or_rollback(
     || {
       env.add_env_cleanup_hook(hook_inner, |inner| {
-        inner.evict();
+        run_host_timer_cleanup_safely(|| inner.evict());
       })
     },
-    || inner.evict(),
+    || run_host_timer_cleanup_safely(|| inner.evict()),
   )?;
-  Ok(BindingHostRegistration::from_id(host_registration))
+  Ok(())
 }
 
 #[cfg(not(feature = "async-runtime"))]
 #[napi(
-  ts_args_type = "schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void"
+  ts_args_type = "registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void"
 )]
 /// Install the host timer callback backing the shared async runtime's
 /// CurrentThread timers (watch-mode debounce). Called at import by every
@@ -1822,11 +2107,14 @@ pub fn register_timer_host(
 /// every live host receives each timer. A no-op on the default `tokio-runtime`
 /// build (tokio owns its timer wheel).
 pub fn register_timer_host(
+  registration_high: u32,
+  registration_low: u32,
   schedule: JsCallback<FnArgs<(u32, f64)>, Promise<()>>,
   cancel: JsCallback<FnArgs<(u32,)>, ()>,
-) -> BindingHostRegistration {
+) -> napi::Result<()> {
   let _ = (schedule, cancel);
-  BindingHostRegistration::inactive()
+  claim_host_registration_id(registration_high, registration_low)?;
+  Ok(())
 }
 
 #[cfg(feature = "async-runtime")]
@@ -1837,6 +2125,7 @@ pub fn register_timer_host(
 /// A no-op on the default `tokio-runtime` build.
 pub fn unregister_timer_host(registration_high: u32, registration_low: u32) {
   let id = BindingHostRegistration::id(registration_high, registration_low);
+  release_host_registration_id(id);
   if let Some(inner) = registered_timer_host(id) {
     inner.evict();
   }
@@ -1849,7 +2138,7 @@ pub fn unregister_timer_host(registration_high: u32, registration_low: u32) {
 ///
 /// A no-op on the default `tokio-runtime` build.
 pub fn unregister_timer_host(registration_high: u32, registration_low: u32) {
-  let _ = (registration_high, registration_low);
+  release_host_registration_id(BindingHostRegistration::id(registration_high, registration_low));
 }
 
 #[cfg(feature = "async-runtime")]
@@ -2099,18 +2388,22 @@ mod tests {
 
   use super::{
     BindingHostRegistration, EMNAPI_ASYNC_WORK_POOL_SIZE_MAX, ResolvedRuntimeBackend,
-    ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RuntimeEnv,
+    ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RuntimeEnv, claim_host_registration_id,
     get_current_thread_task_host_contract_version, native_default_parallelism,
-    parse_park_deadline_ms, resolve_runtime_config_for, wasm_async_work_pool_size,
+    parse_park_deadline_ms, reserve_current_thread_host_registration, resolve_runtime_config_for,
+    unregister_current_thread_task_host, wasm_async_work_pool_size,
   };
   #[cfg(feature = "async-runtime")]
   use super::{
     BindingRuntimeFlavor, BindingRuntimeOptions, MAX_SAFE_JS_INTEGER,
-    NativeCurrentThreadTaskHostInner, PendingHostTimer, PendingHostTimerRegistration,
-    PendingRelayDropGuard, PendingRelayState, RelayIdAllocator, RelayScheduleState,
-    RolldownAsyncRuntime, complete_relay_schedule_callback, install_cleanup_hook_or_rollback,
-    recover_host_timer_failure, register_pending_host_timer, retire_pending_relay, safe_js_number,
-    take_pending_host_timers, wake_host_timer_safely,
+    NATIVE_TASK_HOST_AFTER_DRIVE_TEST_HOOK, NATIVE_TASK_HOST_AFTER_PAYLOAD_DROP_TEST_HOOK,
+    NativeCurrentThreadTaskHostInner, NativeCurrentThreadTaskHostPayload, PendingHostTimer,
+    PendingHostTimerRegistration, PendingRelayDropGuard, PendingRelayState, RelayIdAllocator,
+    RelayScheduleState, RolldownAsyncRuntime, call_native_current_thread_task_host,
+    complete_relay_schedule_callback, install_cleanup_hook_or_rollback,
+    install_host_driver_registration, recover_host_timer_failure, register_pending_host_timer,
+    register_pending_host_timer_if_live, retire_pending_relay, retire_pending_relays,
+    safe_js_number, take_pending_host_timers, wake_host_timer_safely,
   };
 
   #[cfg(feature = "async-runtime")]
@@ -2179,7 +2472,7 @@ mod tests {
       .pending
       .lock()
       .unwrap_or_else(std::sync::PoisonError::into_inner)
-      .insert(id, PendingHostTimer { relay_id, waker, schedule_state });
+      .insert(id, PendingHostTimer { cancellation: None, relay_id, waker, schedule_state });
     assert!(replaced.is_none(), "the test timer id must be vacant");
     (relay_id, PendingRelayDropGuard::new(std::sync::Arc::clone(state), id, relay_id))
   }
@@ -2221,7 +2514,29 @@ mod tests {
 
   #[test]
   fn current_thread_task_host_contract_version_is_stable() {
-    assert_eq!(get_current_thread_task_host_contract_version(), 2);
+    assert_eq!(get_current_thread_task_host_contract_version(), 4);
+  }
+
+  #[test]
+  fn host_registration_reservations_are_exact_and_single_use() {
+    let claimed = reserve_current_thread_host_registration().unwrap();
+    let claimed_id = BindingHostRegistration::id(claimed.high, claimed.low);
+    assert_eq!(
+      claim_host_registration_id(claimed.high, claimed.low).unwrap(),
+      claimed_id,
+      "the exact reserved capability must be claimable once"
+    );
+    assert!(
+      claim_host_registration_id(claimed.high, claimed.low).is_err(),
+      "a consumed registration capability must not be reusable"
+    );
+
+    let released = reserve_current_thread_host_registration().unwrap();
+    unregister_current_thread_task_host(released.high, released.low);
+    assert!(
+      claim_host_registration_id(released.high, released.low).is_err(),
+      "unregister must release a reservation before installation"
+    );
   }
 
   #[cfg(feature = "async-runtime")]
@@ -2394,7 +2709,7 @@ mod tests {
     let exhausted_waker = match register_pending_host_timer(&pending, &allocator, 1, waker.clone())
     {
       PendingHostTimerRegistration::Exhausted(waker) => waker,
-      PendingHostTimerRegistration::Refreshed(_) | PendingHostTimerRegistration::Armed(_) => {
+      PendingHostTimerRegistration::Refreshed(_) | PendingHostTimerRegistration::Armed { .. } => {
         panic!("an exhausted allocator must reject a new pending timer")
       }
     };
@@ -2488,6 +2803,7 @@ mod tests {
       .insert(
         2,
         PendingHostTimer {
+          cancellation: None,
           relay_id: replacement_relay_id,
           waker: futures::task::noop_waker(),
           schedule_state: RelayScheduleState::CallbackComplete,
@@ -2643,6 +2959,78 @@ mod tests {
 
   #[cfg(feature = "async-runtime")]
   #[test]
+  fn relay_native_cancellation_settles_before_fallible_host_cancellation() {
+    use futures::FutureExt as _;
+
+    let state = std::sync::Arc::new(TestPendingRelayState::default());
+    state.panic_on_cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+    let registration =
+      register_pending_host_timer(&state.pending, &state.relay_ids, 1, futures::task::noop_waker());
+    let cancellation = match registration {
+      PendingHostTimerRegistration::Armed { cancellation, .. } => cancellation,
+      PendingHostTimerRegistration::Refreshed(_) | PendingHostTimerRegistration::Exhausted(_) => {
+        panic!("the first timer registration must reserve a native cancellation relay")
+      }
+    };
+    let mut pending = state
+      .pending
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner)
+      .remove(&1)
+      .expect("the registered timer must remain pending");
+    pending.schedule_state = RelayScheduleState::CallbackComplete;
+
+    retire_pending_relay(&state, pending);
+
+    assert!(
+      matches!(cancellation.now_or_never(), Some(Ok(()))),
+      "native relay retirement must publish before the contained host cancellation panic"
+    );
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn relay_bulk_eviction_contains_each_cancel_panic_and_wakes_every_timer() {
+    struct CountingWake(std::sync::Arc<std::sync::atomic::AtomicUsize>);
+
+    impl std::task::Wake for CountingWake {
+      fn wake(self: std::sync::Arc<Self>) {
+        self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+      }
+    }
+
+    let state = std::sync::Arc::new(TestPendingRelayState::default());
+    state.panic_on_cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+    let wakes = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let pending = rustc_hash::FxHashMap::from_iter([7, 8].map(|relay_id| {
+      (
+        u64::from(relay_id),
+        PendingHostTimer {
+          cancellation: None,
+          relay_id,
+          waker: std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(
+            &wakes,
+          )))),
+          schedule_state: RelayScheduleState::CallbackComplete,
+        },
+      )
+    }));
+
+    retire_pending_relays(&state, pending);
+
+    let mut cancelled =
+      state.cancelled_relays.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
+    cancelled.sort_unstable();
+    assert_eq!(cancelled, [7, 8]);
+    assert_eq!(
+      wakes.load(std::sync::atomic::Ordering::SeqCst),
+      2,
+      "one panicking cancellation must not suppress any later pending timer wake"
+    );
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
   fn failed_relay_retirement_cancels_only_after_the_schedule_callback_returns() {
     struct CountingWake(std::sync::Arc<std::sync::atomic::AtomicUsize>);
 
@@ -2657,6 +3045,7 @@ mod tests {
     retire_pending_relay(
       &state,
       PendingHostTimer {
+        cancellation: None,
         relay_id: 7,
         waker: std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(
           &wakes,
@@ -2667,6 +3056,7 @@ mod tests {
     retire_pending_relay(
       &state,
       PendingHostTimer {
+        cancellation: None,
         relay_id: 8,
         waker: std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(
           &wakes,
@@ -2796,13 +3186,13 @@ mod tests {
     }));
     assert!(matches!(
       register_pending_host_timer(&pending, &relay_ids, 1, old_waker),
-      PendingHostTimerRegistration::Armed(_)
+      PendingHostTimerRegistration::Armed { .. }
     ));
 
     let replaced_waker =
       match register_pending_host_timer(&pending, &relay_ids, 1, futures::task::noop_waker()) {
         PendingHostTimerRegistration::Refreshed(waker) => waker,
-        PendingHostTimerRegistration::Armed(_) => {
+        PendingHostTimerRegistration::Armed { .. } => {
           panic!("a re-poll must refresh the existing timer")
         }
         PendingHostTimerRegistration::Exhausted(_) => {
@@ -2823,7 +3213,7 @@ mod tests {
     }));
     assert!(matches!(
       register_pending_host_timer(&pending, &relay_ids, 2, evicted_waker),
-      PendingHostTimerRegistration::Armed(_)
+      PendingHostTimerRegistration::Armed { .. }
     ));
     let evicted = take_pending_host_timers(&pending);
     assert!(
@@ -2832,6 +3222,44 @@ mod tests {
     );
     drop(evicted);
     assert!(evicted_waker_dropped.load(std::sync::atomic::Ordering::SeqCst));
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn host_timer_eviction_prevents_pending_registration_after_its_drain() {
+    let pending = std::sync::Arc::new(std::sync::Mutex::new(rustc_hash::FxHashMap::default()));
+    let relay_ids = std::sync::Arc::new(RelayIdAllocator::default());
+    let dead = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let mut pending_guard = pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let (started_tx, started_rx) = std::sync::mpsc::sync_channel(1);
+    let registration_pending = std::sync::Arc::clone(&pending);
+    let registration_relay_ids = std::sync::Arc::clone(&relay_ids);
+    let registration_dead = std::sync::Arc::clone(&dead);
+    let registration = std::thread::spawn(move || {
+      started_tx.send(()).unwrap();
+      register_pending_host_timer_if_live(
+        &registration_pending,
+        &registration_relay_ids,
+        1,
+        futures::task::noop_waker(),
+        || !registration_dead.load(std::sync::atomic::Ordering::SeqCst),
+      )
+    });
+
+    started_rx.recv().unwrap();
+    dead.store(true, std::sync::atomic::Ordering::SeqCst);
+    let drained = std::mem::take(&mut *pending_guard);
+    drop(pending_guard);
+    drop(drained);
+
+    assert!(
+      registration.join().unwrap().is_err(),
+      "registration arriving after death publication and the pending drain must be rejected"
+    );
+    assert!(
+      pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty(),
+      "a stale selected driver must not publish a new pending arm after eviction drained the map"
+    );
   }
 
   #[cfg(feature = "async-runtime")]
@@ -2852,6 +3280,44 @@ mod tests {
 
     assert!(result.is_err());
     assert_eq!(rollback_calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn host_driver_installation_allows_reentrant_eviction_before_publication() {
+    let dead = std::sync::atomic::AtomicBool::new(false);
+    let registration = std::sync::Mutex::new(None);
+    let published = std::sync::atomic::AtomicBool::new(false);
+    let rolled_back = std::sync::atomic::AtomicUsize::new(0);
+
+    let installed = install_host_driver_registration(
+      &dead,
+      &registration,
+      || {
+        dead.store(true, std::sync::atomic::Ordering::SeqCst);
+        let removed = registration
+          .try_lock()
+          .expect("the arbitrary installation callback must run outside the registration mutex")
+          .take();
+        assert!(removed.is_none(), "reentrant eviction must see no half-published registration");
+        17_u64
+      },
+      || {
+        published.store(true, std::sync::atomic::Ordering::SeqCst);
+      },
+      |id| {
+        assert_eq!(id, 17);
+        let guard =
+          registration.try_lock().expect("rollback must run outside the registration mutex");
+        drop(guard);
+        rolled_back.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+      },
+    );
+
+    assert!(!installed, "reentrant eviction must reject the exported registration");
+    assert!(!published.load(std::sync::atomic::Ordering::SeqCst));
+    assert_eq!(rolled_back.load(std::sync::atomic::Ordering::SeqCst), 1);
+    assert!(registration.lock().unwrap().is_none());
   }
 
   fn resolve(
@@ -2925,6 +3391,305 @@ mod tests {
 
   #[cfg(all(feature = "async-runtime", not(target_family = "wasm")))]
   #[test]
+  fn native_task_host_null_env_retires_payload_and_recovers_exact_delivery() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_NATIVE_TASK_HOST_NULL_ENV_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      use std::sync::{Arc, mpsc};
+      use std::time::Duration;
+
+      use rolldown_utils::async_runtime::{
+        CurrentThreadTaskDelivery, CurrentThreadTaskDriver, RuntimeFlavor, RuntimeOptions,
+        configure, register_current_thread_task_driver, shutdown, spawn_detached, start,
+        unregister_current_thread_task_driver,
+      };
+
+      struct RecordingTaskDriver {
+        dispatches: mpsc::Sender<CurrentThreadTaskDelivery>,
+      }
+
+      impl CurrentThreadTaskDriver for RecordingTaskDriver {
+        fn dispatch(&self, delivery: CurrentThreadTaskDelivery) -> bool {
+          self.dispatches.send(delivery).is_ok()
+        }
+      }
+
+      configure(RuntimeOptions {
+        flavor: RuntimeFlavor::CurrentThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        ..RuntimeOptions::default()
+      })
+      .expect("the isolated runtime must accept CurrentThread configuration");
+      start().expect("the isolated CurrentThread runtime must start");
+
+      let (dispatch_tx, dispatch_rx) = mpsc::channel();
+      let driver_id = register_current_thread_task_driver(Arc::new(RecordingTaskDriver {
+        dispatches: dispatch_tx,
+      }));
+      let (completed_tx, completed_rx) = mpsc::channel();
+      spawn_detached(async move {
+        completed_tx.send(()).expect("the completion observer must remain live");
+      });
+
+      let payload_drops = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+      let first_delivery = dispatch_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the queued task must publish its first host delivery");
+      let first_payload =
+        Box::into_raw(Box::new(NativeCurrentThreadTaskHostPayload::with_drop_observer(
+          first_delivery,
+          Arc::clone(&payload_drops),
+        )))
+        .cast();
+      unsafe {
+        call_native_current_thread_task_host(
+          std::ptr::null_mut(),
+          std::ptr::null_mut(),
+          std::ptr::null_mut(),
+          first_payload,
+        );
+      }
+      assert_eq!(
+        payload_drops.load(std::sync::atomic::Ordering::SeqCst),
+        1,
+        "the null-env callback must destroy its queued payload exactly once"
+      );
+
+      let replacement_delivery = dispatch_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the exact failed delivery must publish one replacement");
+      assert_ne!(
+        replacement_delivery, first_delivery,
+        "recovery must use a fresh registration-scoped delivery capability"
+      );
+      let replacement_payload =
+        Box::into_raw(Box::new(NativeCurrentThreadTaskHostPayload::with_drop_observer(
+          replacement_delivery,
+          Arc::clone(&payload_drops),
+        )))
+        .cast();
+      let fake_env = std::ptr::NonNull::<std::ffi::c_void>::dangling().as_ptr().cast();
+      unsafe {
+        call_native_current_thread_task_host(
+          fake_env,
+          std::ptr::null_mut(),
+          std::ptr::null_mut(),
+          replacement_payload,
+        );
+      }
+
+      completed_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the replacement host delivery must run the queued task");
+      assert_eq!(
+        payload_drops.load(std::sync::atomic::Ordering::SeqCst),
+        2,
+        "successful recovery must also destroy its queued payload exactly once"
+      );
+      assert!(
+        matches!(dispatch_rx.try_recv(), Err(mpsc::TryRecvError::Empty)),
+        "successful replacement acknowledgement must not publish another delivery"
+      );
+
+      unregister_current_thread_task_driver(driver_id);
+      shutdown().expect("the isolated CurrentThread runtime must shut down cleanly");
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg(
+        "async_runtime::tests::native_task_host_null_env_retires_payload_and_recovers_exact_delivery",
+      )
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the null-env task-host subprocess must start");
+    assert!(
+      output.status.success(),
+      "the null-env task-host regression failed; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[cfg(all(feature = "async-runtime", not(target_family = "wasm")))]
+  #[test]
+  fn native_task_host_callback_lease_covers_ack_payload_and_restart() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_NATIVE_TASK_HOST_CALLBACK_LEASE_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      use std::sync::{Arc, mpsc};
+      use std::time::{Duration, Instant};
+
+      use rolldown_utils::async_runtime::{
+        CurrentThreadTaskDelivery, CurrentThreadTaskDriver, RuntimeFlavor, RuntimeOptions,
+        configure, register_current_thread_task_driver, shutdown, spawn_detached, start,
+        try_spawn_detached, unregister_current_thread_task_driver,
+      };
+
+      struct RecordingTaskDriver {
+        dispatches: mpsc::Sender<CurrentThreadTaskDelivery>,
+      }
+
+      impl CurrentThreadTaskDriver for RecordingTaskDriver {
+        fn dispatch(&self, delivery: CurrentThreadTaskDelivery) -> bool {
+          self.dispatches.send(delivery).is_ok()
+        }
+      }
+
+      configure(RuntimeOptions {
+        flavor: RuntimeFlavor::CurrentThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        ..RuntimeOptions::default()
+      })
+      .expect("the isolated runtime must accept CurrentThread configuration");
+      start().expect("the isolated CurrentThread runtime must start");
+
+      let (dispatch_tx, dispatch_rx) = mpsc::channel();
+      let driver_id = register_current_thread_task_driver(Arc::new(RecordingTaskDriver {
+        dispatches: dispatch_tx,
+      }));
+      let (task_completed_tx, task_completed_rx) = mpsc::channel();
+      spawn_detached(async move {
+        task_completed_tx.send(()).expect("the task completion observer must remain live");
+      });
+      let delivery = dispatch_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the queued task must publish one native host delivery");
+
+      let payload_drops = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+      let payload = Box::into_raw(Box::new(NativeCurrentThreadTaskHostPayload::with_drop_observer(
+        delivery,
+        Arc::clone(&payload_drops),
+      )))
+      .cast::<std::ffi::c_void>() as usize;
+      let (after_drive_tx, after_drive_rx) = mpsc::channel();
+      let (release_after_drive_tx, release_after_drive_rx) = mpsc::channel();
+      let (after_payload_tx, after_payload_rx) = mpsc::channel();
+      let (release_after_payload_tx, release_after_payload_rx) = mpsc::channel();
+      let callback = std::thread::spawn(move || {
+        NATIVE_TASK_HOST_AFTER_DRIVE_TEST_HOOK.with(|slot| {
+          *slot.borrow_mut() = Some(Box::new(move || {
+            after_drive_tx.send(()).unwrap();
+            release_after_drive_rx.recv().unwrap();
+          }));
+        });
+        NATIVE_TASK_HOST_AFTER_PAYLOAD_DROP_TEST_HOOK.with(|slot| {
+          *slot.borrow_mut() = Some(Box::new(move || {
+            after_payload_tx.send(()).unwrap();
+            release_after_payload_rx.recv().unwrap();
+          }));
+        });
+        let fake_env = std::ptr::NonNull::<std::ffi::c_void>::dangling().as_ptr().cast();
+        unsafe {
+          call_native_current_thread_task_host(
+            fake_env,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            payload as *mut std::ffi::c_void,
+          );
+        }
+      });
+
+      after_drive_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the native callback must pause after driving the host turn");
+      task_completed_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the host turn must run the queued task before acknowledgement");
+
+      let (shutdown_tx, shutdown_rx) = mpsc::channel();
+      let shutdown_thread = std::thread::spawn(move || {
+        shutdown_tx.send(shutdown()).unwrap();
+      });
+      let stopping_deadline = Instant::now() + Duration::from_secs(2);
+      loop {
+        match try_spawn_detached(async {}) {
+          Ok(()) => {
+            assert!(
+              Instant::now() < stopping_deadline,
+              "shutdown did not publish the stopping lifecycle"
+            );
+            std::thread::yield_now();
+          }
+          Err(future) => {
+            drop(future);
+            break;
+          }
+        }
+      }
+      assert!(
+        shutdown_rx.recv_timeout(Duration::from_millis(200)).is_err(),
+        "shutdown must wait after drive until delivery acknowledgement and payload destruction"
+      );
+
+      let (restart_tx, restart_rx) = mpsc::channel();
+      let restart_thread = std::thread::spawn(move || {
+        start().expect("the runtime must restart after the old callback retires");
+        restart_tx.send(()).unwrap();
+      });
+      assert!(
+        restart_rx.recv_timeout(Duration::from_millis(200)).is_err(),
+        "restart must not overlap the old callback before acknowledgement"
+      );
+
+      release_after_drive_tx.send(()).unwrap();
+      after_payload_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the callback must pause after acknowledging and destroying its payload");
+      assert_eq!(
+        payload_drops.load(std::sync::atomic::Ordering::SeqCst),
+        1,
+        "the acknowledged callback must destroy its payload before releasing the lease"
+      );
+      assert!(
+        shutdown_rx.recv_timeout(Duration::from_millis(200)).is_err(),
+        "shutdown must remain blocked after acknowledgement and payload destruction"
+      );
+      assert!(
+        restart_rx.recv_timeout(Duration::from_millis(200)).is_err(),
+        "restart must remain blocked until the callback lease retires"
+      );
+
+      release_after_payload_tx.send(()).unwrap();
+      callback.join().unwrap();
+      shutdown_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("shutdown must finish after the callback lease retires")
+        .unwrap();
+      restart_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("restart must finish after old-generation shutdown");
+      shutdown_thread.join().unwrap();
+      restart_thread.join().unwrap();
+
+      unregister_current_thread_task_driver(driver_id);
+      shutdown().expect("the replacement CurrentThread runtime must shut down cleanly");
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::native_task_host_callback_lease_covers_ack_payload_and_restart")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the native task-host callback lease subprocess must start");
+    assert!(
+      output.status.success(),
+      "the native task-host callback lease regression failed; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[cfg(all(feature = "async-runtime", not(target_family = "wasm")))]
+  #[test]
   fn timer_relay_terminal_drop_at_host_turn_budget_settles_without_later_work() {
     const CHILD_ENV: &str = "ROLLDOWN_TEST_TIMER_RELAY_TERMINAL_DROP_CHILD";
     const HOST_TURN_RUNNABLE_BUDGET: usize = 64;
@@ -2990,8 +3755,10 @@ mod tests {
         "all 64 initial runnables must coalesce behind one host turn"
       );
 
-      assert!(drive_current_thread_tasks(first_dispatch.capability()));
+      let callback_lease = drive_current_thread_tasks(first_dispatch.capability())
+        .expect("the exact host delivery must be admitted");
       acknowledge_current_thread_task_delivery(first_dispatch);
+      drop(callback_lease);
       assert_eq!(
         metrics().runnable_polls,
         HOST_TURN_RUNNABLE_BUDGET as u64,

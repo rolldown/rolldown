@@ -571,6 +571,15 @@ thread_local! {
     const { std::cell::RefCell::new(None) };
   static CURRENT_THREAD_DISPATCH_RETURNED_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
     const { std::cell::RefCell::new(None) };
+  static CURRENT_THREAD_BLOCKING_CLAIM_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
+  static CURRENT_THREAD_RUNNABLE_CLAIM_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
+  static MULTI_THREAD_WORK_CLAIMED_TEST_HOOK:
+    std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+      const { std::cell::RefCell::new(None) };
   static DEPENDENCY_PREDICATE_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
     const { std::cell::RefCell::new(None) };
   static BEFORE_OWNED_BLOCKING_QUEUE_CLAIM_TEST_HOOK:
@@ -672,6 +681,29 @@ fn run_current_thread_dispatch_returned_test_hook() {
   if let Some(hook) =
     CURRENT_THREAD_DISPATCH_RETURNED_TEST_HOOK.with(|slot| slot.borrow_mut().take())
   {
+    hook();
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_current_thread_blocking_claim_test_hook() {
+  if let Some(hook) = CURRENT_THREAD_BLOCKING_CLAIM_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
+    hook();
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_current_thread_runnable_claim_test_hook() {
+  if let Some(hook) = CURRENT_THREAD_RUNNABLE_CLAIM_TEST_HOOK.with(|slot| slot.borrow_mut().take())
+  {
+    hook();
+  }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_multi_thread_work_claimed_test_hook() {
+  if let Some(hook) = MULTI_THREAD_WORK_CLAIMED_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
     hook();
   }
 }
@@ -1880,7 +1912,6 @@ struct GenerationStopPublicationGuard<'a> {
 }
 
 impl GenerationStopPublicationGuard<'_> {
-  #[cfg(not(target_family = "wasm"))]
   fn is_stopping(&self) -> bool {
     self.stop.is_stopping()
   }
@@ -2204,9 +2235,9 @@ struct CurrentThreadHostTurn {
 }
 
 impl CurrentThreadHostTurn {
-  fn drive(mut self) {
+  fn drive(&mut self) {
     let executor = Arc::clone(&self.executor);
-    executor.drive_admitted_host_turn(&mut self);
+    executor.drive_admitted_host_turn(self);
   }
 
   fn release_draining(&mut self) {
@@ -2233,6 +2264,24 @@ impl Drop for CurrentThreadHostTurn {
       .checked_sub(1)
       .expect("CurrentThread active host-turn count underflow");
     self.executor.scheduler_idle.notify_all();
+  }
+}
+
+/// Retains one admitted CurrentThread host callback in its runtime generation.
+///
+/// The host must keep this opaque lease alive until its native callback has
+/// acknowledged or failed the delivery and destroyed every callback-owned
+/// payload. The `Rc` marker prevents moving a TLS generation guard to another
+/// thread before it restores the callback thread's prior runtime identity.
+#[must_use = "the host callback lease must outlive delivery completion and callback payloads"]
+pub struct CurrentThreadTaskCallbackLease {
+  _host_turn: CurrentThreadHostTurn,
+  _not_send: std::marker::PhantomData<std::rc::Rc<()>>,
+}
+
+impl CurrentThreadTaskCallbackLease {
+  fn new(host_turn: CurrentThreadHostTurn) -> Self {
+    Self { _host_turn: host_turn, _not_send: std::marker::PhantomData }
   }
 }
 
@@ -2473,7 +2522,15 @@ impl CurrentThreadExecutor {
     {
       let mut state =
         self.blocking_admission.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      if state.closed || self.cancelling_failed_dispatch.load(Ordering::Acquire) {
+      #[cfg(all(test, not(target_family = "wasm")))]
+      run_current_thread_blocking_claim_test_hook();
+      // Shutdown publishes generation stop before taking this mutex. Recheck
+      // it while admission is serialized so work cannot claim or queue for the
+      // CurrentThread lane after stop publication.
+      if self.stop.is_stopping()
+        || state.closed
+        || self.cancelling_failed_dispatch.load(Ordering::Acquire)
+      {
         rejected = true;
       } else if ambient_owner.is_some() && state.owner == ambient_owner {
         run_owner = ambient_owner;
@@ -2563,7 +2620,13 @@ impl CurrentThreadExecutor {
     let (job, owner) = {
       let mut state =
         self.blocking_admission.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      if state.closed || state.owner.is_some() {
+      #[cfg(all(test, not(target_family = "wasm")))]
+      run_current_thread_blocking_claim_test_hook();
+      if self.stop.is_stopping()
+        || state.closed
+        || self.cancelling_failed_dispatch.load(Ordering::Acquire)
+        || state.owner.is_some()
+      {
         return None;
       }
       let job = state.queue.pop_front()?;
@@ -2613,7 +2676,13 @@ impl CurrentThreadExecutor {
     let job = {
       let mut state =
         self.blocking_admission.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      if state.owner != Some(ambient_owner) {
+      #[cfg(all(test, not(target_family = "wasm")))]
+      run_current_thread_blocking_claim_test_hook();
+      if self.stop.is_stopping()
+        || state.closed
+        || self.cancelling_failed_dispatch.load(Ordering::Acquire)
+        || state.owner != Some(ambient_owner)
+      {
         return false;
       }
       if dependency.try_claim(&current) {
@@ -3202,9 +3271,30 @@ impl CurrentThreadExecutor {
     }
   }
 
+  fn take_runnable(&self) -> Option<Runnable> {
+    // Terminal dispatch cancellation publishes while holding `scheduler_idle_lock`;
+    // generation shutdown publishes while holding `stop.publication`. Claiming
+    // under both locks gives each publication one exact ordering edge with the
+    // runnable queue. The guards are released before polling user code.
+    let scheduler =
+      self.scheduler_idle_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    #[cfg(all(test, not(target_family = "wasm")))]
+    run_current_thread_runnable_claim_test_hook();
+    let stop_publication = self.stop.publication_guard();
+    if stop_publication.is_stopping() || self.cancelling_failed_dispatch.load(Ordering::Acquire) {
+      return None;
+    }
+    let runnable = {
+      let mut queue = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      if queue.closed { None } else { queue.runnables.pop_front() }
+    };
+    drop(stop_publication);
+    drop(scheduler);
+    runnable
+  }
+
   fn drain_one(&self) -> bool {
-    let runnable =
-      self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).runnables.pop_front();
+    let runnable = self.take_runnable();
     if let Some(runnable) = runnable {
       #[cfg(not(target_family = "wasm"))]
       let _non_owner = BlockingOwnerGuard::enter(None);
@@ -3631,9 +3721,12 @@ impl Drop for OwnerLaneReservation<'_> {
 // JoinHandle and propagated through async JoinHandle dependencies, allowing a
 // saturated owner to run exactly the job its nested block_on awaits.
 #[cfg(not(target_family = "wasm"))]
+type BlockingClosure = Box<dyn FnOnce() + Send + 'static>;
+
+#[cfg(not(target_family = "wasm"))]
 struct QueuedBlocking {
   id: BlockingJobId,
-  run: Box<dyn FnOnce() + Send + 'static>,
+  run: BlockingClosure,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -4230,17 +4323,29 @@ impl MultiThreadExecutor {
     }
   }
 
-  fn run_runnable(self: &Arc<Self>, runnable: Runnable) {
+  fn run_runnable(
+    self: &Arc<Self>,
+    runnable: Runnable,
+    admission: Option<MultiThreadDeadlockAdmissionGuard>,
+  ) {
     // Ownership is lexical to a blocking closure. A runnable driven from that
     // closure must not borrow its over-cap privilege.
     let _non_owner = BlockingOwnerGuard::enter(None);
-    run_runnable(&self.metrics, runnable);
+    let _active = self.metrics.runnable_started();
+    // The queue/slot removal is invisible to the deadline verdict until start
+    // accounting advances. Keep the detector gate open across exactly that gap,
+    // but never across a user poll.
+    drop(admission);
+    let _ = catch_unwind_contained(|| runnable.run());
   }
 
   fn run_one_fifo_runnable(self: &Arc<Self>) -> bool {
+    let admission = self.begin_deadlock_admission();
     let runnable = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
     if let Some(runnable) = runnable {
-      self.run_runnable(runnable);
+      #[cfg(test)]
+      run_multi_thread_work_claimed_test_hook();
+      self.run_runnable(runnable, admission);
       return true;
     }
     false
@@ -4248,21 +4353,34 @@ impl MultiThreadExecutor {
 
   /// Run one runnable, preferring this worker's LIFO slot over the shared FIFO.
   fn run_one_runnable(self: &Arc<Self>) -> bool {
+    let admission = self.begin_deadlock_admission();
     if let Some(runnable) = self.pop_lifo_slot() {
       // Same owner-clear as the FIFO branch below (RD-1 (B)): the slot must
       // not smuggle an owner frame's over-cap privilege into the runnables it
       // carries any more than the shared FIFO does.
-      self.run_runnable(runnable);
+      #[cfg(test)]
+      run_multi_thread_work_claimed_test_hook();
+      self.run_runnable(runnable, admission);
       return true;
     }
-    self.run_one_fifo_runnable()
+    let runnable = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
+    if let Some(runnable) = runnable {
+      #[cfg(test)]
+      run_multi_thread_work_claimed_test_hook();
+      self.run_runnable(runnable, admission);
+      return true;
+    }
+    false
   }
 
   fn run_one_blocking(self: &Arc<Self>) -> bool {
-    if let Some(blocking) = self.take_blocking() {
+    if let Some((blocking, admission)) = self.take_blocking() {
       let _generation = RuntimeGenerationGuard::enter(self.generation);
       {
         let _task = self.metrics.blocking_started(true);
+        // Publish start before the dequeue admission retires. The detector can
+        // then observe either the queued job, the active admission, or progress.
+        drop(admission);
         let owner = self.fresh_owner_token();
         let _active_owner = ActiveBlockingOwnerGuard::enter(&self.active_blocking_owners, owner);
         let _owner = BlockingOwnerGuard::enter(Some(owner));
@@ -4282,14 +4400,38 @@ impl MultiThreadExecutor {
   /// priority, but a continuously hot runnable stream must yield one quantum
   /// to the blocking FIFO.
   fn run_one_fair(self: &Arc<Self>, runnable_streak: &mut usize) -> bool {
+    self.run_one_fair_with_exact(runnable_streak, None)
+  }
+
+  /// Cooperative variant of [`Self::run_one_fair`]. Once runnable priority has
+  /// been satisfied, a live exact dependency must claim its owner's lane before
+  /// unrelated FIFO blocking work can consume the last ordinary slot.
+  fn run_one_fair_with_exact(
+    self: &Arc<Self>,
+    runnable_streak: &mut usize,
+    exact_dependency: Option<&TaskDependency>,
+  ) -> bool {
+    let mut exact_attempted = false;
     if *runnable_streak >= Self::RUNNABLE_FAIRNESS_QUANTUM {
       *runnable_streak = 0;
+      if let Some(dependency) = exact_dependency {
+        exact_attempted = true;
+        if self.try_owned_blocking_over_cap(dependency) {
+          return true;
+        }
+      }
       if self.run_one_blocking() {
         return true;
       }
     }
     if self.run_one_runnable() {
       *runnable_streak += 1;
+      return true;
+    }
+    if !exact_attempted
+      && exact_dependency.is_some_and(|dependency| self.try_owned_blocking_over_cap(dependency))
+    {
+      *runnable_streak = 0;
       return true;
     }
     if self.run_one_blocking() {
@@ -4329,6 +4471,7 @@ impl MultiThreadExecutor {
     let Some(current) = dependency.select_for_owner(ambient_owner) else {
       return OwnedBlockingOutcome::Ineligible;
     };
+    let admission = self.begin_deadlock_admission();
     let owner =
       current.publication.dependency.owner.expect("selected dependency must carry its owner");
     let Some(reservation) = OwnerLaneReservation::try_acquire(&self.active_blocking_owners, owner)
@@ -4354,9 +4497,14 @@ impl MultiThreadExecutor {
       }
     };
     let ran = if let Some(job) = job {
+      #[cfg(test)]
+      run_multi_thread_work_claimed_test_hook();
       let _generation = RuntimeGenerationGuard::enter(self.generation);
       {
         let _task = self.metrics.blocking_started(false);
+        // The exact job is no longer visible in the indexed FIFO. Publish its
+        // start before allowing a deadline verdict to close the admission gate.
+        drop(admission);
         let nested_owner = self.fresh_owner_token();
         let _active_owner =
           ActiveBlockingOwnerGuard::enter(&self.active_blocking_owners, nested_owner);
@@ -4365,6 +4513,7 @@ impl MultiThreadExecutor {
       }
       true
     } else {
+      drop(admission);
       false
     };
     // Every reservation release can make another exact dependency serviceable,
@@ -4493,13 +4642,6 @@ impl MultiThreadExecutor {
       {
         continue;
       }
-      if can_run_blocking
-        && runnable_streak >= Self::RUNNABLE_FAIRNESS_QUANTUM
-        && self.try_owned_blocking_over_cap(&dependency.dependency)
-      {
-        runnable_streak = 0;
-        continue;
-      }
       if force_fifo {
         force_fifo = false;
         if self.run_one_fifo_runnable() {
@@ -4509,7 +4651,7 @@ impl MultiThreadExecutor {
         }
       }
       let ran_work = if can_run_blocking {
-        self.run_one_fair(&mut runnable_streak)
+        self.run_one_fair_with_exact(&mut runnable_streak, Some(&dependency.dependency))
       } else if self.run_one_runnable() {
         runnable_streak += 1;
         true
@@ -4531,15 +4673,6 @@ impl MultiThreadExecutor {
       }
       runnable_streak = 0;
       work_streak = 0;
-      // Only a worker that owns a counted blocking frame OF THIS EXECUTOR may run
-      // a queued blocking job over the cap, and only the exact job reached
-      // through the future it awaits. A plain runnable driver owns no frame; a
-      // stale token from another executor fails the `executor_id` check -- both
-      // respect `max_blocking` and park/drive instead of starting extra blocking
-      // work (RD-1 (B)).
-      if can_run_blocking && self.try_owned_blocking_over_cap(&dependency.dependency) {
-        continue;
-      }
       // MANDATORY pre-park flush (wake-path §8.3). Defensive on every
       // currently reachable path: `run_one` above popped the slot and no user
       // code ran since -- but parking with a stranded slot runnable would
@@ -4774,7 +4907,8 @@ impl MultiThreadExecutor {
   /// Pop the next queued blocking job FIFO within the cap. Any blocking-capable
   /// driver may run any job within `max_blocking`; only the over-cap escape is
   /// restricted to an exact dependency id.
-  fn take_blocking(&self) -> Option<Box<dyn FnOnce() + Send + 'static>> {
+  fn take_blocking(&self) -> Option<(BlockingClosure, Option<MultiThreadDeadlockAdmissionGuard>)> {
+    let admission = self.begin_deadlock_admission();
     loop {
       let active = self.active_blocking.load(Ordering::Acquire);
       if active >= self.max_blocking {
@@ -4789,7 +4923,11 @@ impl MultiThreadExecutor {
         .compare_exchange_weak(active, active + 1, Ordering::AcqRel, Ordering::Relaxed)
         .is_ok()
       {
-        return queue.pop_front();
+        let blocking = queue.pop_front().expect("a non-empty blocking queue must have a FIFO head");
+        drop(queue);
+        #[cfg(test)]
+        run_multi_thread_work_claimed_test_hook();
+        return Some((blocking, admission));
       }
     }
   }
@@ -5672,10 +5810,11 @@ struct CurrentThreadTaskDeliveryState {
 }
 
 struct CurrentThreadTaskDriverEntry {
-  id: CurrentThreadTaskDriverId,
   driver: Arc<dyn CurrentThreadTaskDriver>,
   delivery: Option<CurrentThreadTaskDeliveryState>,
   pending: Option<u64>,
+  previous: Option<CurrentThreadTaskDriverId>,
+  next: Option<CurrentThreadTaskDriverId>,
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
@@ -5691,6 +5830,7 @@ struct CurrentThreadDispatchState {
   phase: CurrentThreadDispatchPhase,
   epoch: u64,
   publications: usize,
+  references: usize,
   accepted: bool,
   accepted_failure: bool,
 }
@@ -5711,8 +5851,101 @@ impl CurrentThreadDispatchState {
 
 #[derive(Default)]
 struct CurrentThreadTaskDriverRegistryState {
-  entries: Vec<CurrentThreadTaskDriverEntry>,
+  entries: FxHashMap<CurrentThreadTaskDriverId, CurrentThreadTaskDriverEntry>,
+  oldest: Option<CurrentThreadTaskDriverId>,
+  newest: Option<CurrentThreadTaskDriverId>,
+  delivery_drivers: FxHashMap<u64, CurrentThreadTaskDriverId>,
   dispatches: FxHashMap<u64, CurrentThreadDispatchState>,
+}
+
+impl CurrentThreadTaskDriverRegistryState {
+  fn insert_driver(
+    &mut self,
+    id: CurrentThreadTaskDriverId,
+    driver: Arc<dyn CurrentThreadTaskDriver>,
+  ) {
+    let previous = self.newest;
+    let replaced = self.entries.insert(
+      id,
+      CurrentThreadTaskDriverEntry { driver, delivery: None, pending: None, previous, next: None },
+    );
+    assert!(replaced.is_none(), "CurrentThread task driver id must be unique");
+    if let Some(previous) = previous {
+      self
+        .entries
+        .get_mut(&previous)
+        .expect("the newest CurrentThread task driver must remain registered")
+        .next = Some(id);
+    } else {
+      self.oldest = Some(id);
+    }
+    self.newest = Some(id);
+  }
+
+  fn remove_driver(
+    &mut self,
+    id: CurrentThreadTaskDriverId,
+  ) -> Option<CurrentThreadTaskDriverEntry> {
+    let entry = self.entries.remove(&id)?;
+    if let Some(previous) = entry.previous {
+      self
+        .entries
+        .get_mut(&previous)
+        .expect("the previous CurrentThread task driver must remain registered")
+        .next = entry.next;
+    } else {
+      self.oldest = entry.next;
+    }
+    if let Some(next) = entry.next {
+      self
+        .entries
+        .get_mut(&next)
+        .expect("the next CurrentThread task driver must remain registered")
+        .previous = entry.previous;
+    } else {
+      self.newest = entry.previous;
+    }
+    if let Some(delivery) = &entry.delivery {
+      let indexed = self.delivery_drivers.remove(&delivery.delivery.capability);
+      debug_assert_eq!(indexed, Some(id), "delivery capability index must match its driver");
+    }
+    Some(entry)
+  }
+
+  fn ordered_snapshot(&self) -> Vec<(CurrentThreadTaskDriverId, Arc<dyn CurrentThreadTaskDriver>)> {
+    let mut snapshot = Vec::with_capacity(self.entries.len());
+    let mut current = self.oldest;
+    while let Some(id) = current {
+      let entry =
+        self.entries.get(&id).expect("CurrentThread task driver order must reference a live entry");
+      snapshot.push((id, Arc::clone(&entry.driver)));
+      current = entry.next;
+    }
+    debug_assert_eq!(
+      snapshot.len(),
+      self.entries.len(),
+      "CurrentThread task driver order must contain every entry exactly once"
+    );
+    snapshot
+  }
+
+  fn ordered_ids_match(&self, expected: &[CurrentThreadTaskDriverId]) -> bool {
+    if self.entries.len() != expected.len() {
+      return false;
+    }
+    let mut current = self.oldest;
+    for expected in expected {
+      if current != Some(*expected) {
+        return false;
+      }
+      current = self
+        .entries
+        .get(expected)
+        .expect("CurrentThread task driver order must reference a live entry")
+        .next;
+    }
+    current.is_none()
+  }
 }
 
 struct CurrentThreadTaskDriverSelection {
@@ -5765,23 +5998,14 @@ impl CurrentThreadTaskDriverRegistry {
   fn register(&self, driver: Arc<dyn CurrentThreadTaskDriver>) -> CurrentThreadTaskDriverId {
     let id = next_unique_id(&self.next_id, "CurrentThread task driver id space exhausted");
     let id = CurrentThreadTaskDriverId(id);
-    self
-      .state
-      .lock()
-      .unwrap_or_else(std::sync::PoisonError::into_inner)
-      .entries
-      .push(CurrentThreadTaskDriverEntry { id, driver, delivery: None, pending: None });
+    self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).insert_driver(id, driver);
     id
   }
 
   fn unregister(&self, id: CurrentThreadTaskDriverId) -> CurrentThreadTaskDeliveryCompletion {
     let (removed, failed_dispatches) = {
       let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      let removed = state
-        .entries
-        .iter()
-        .position(|entry| entry.id == id)
-        .map(|index| state.entries.remove(index));
+      let removed = state.remove_driver(id);
       let mut failed_dispatches = Vec::new();
       if let Some(entry) = &removed {
         Self::finish_entry_references(&mut state, entry, &mut failed_dispatches);
@@ -5797,7 +6021,7 @@ impl CurrentThreadTaskDriverRegistry {
     loop {
       let snapshot = CurrentThreadTaskDriverSnapshot::new({
         let state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-        state.entries.iter().map(|entry| (entry.id, Arc::clone(&entry.driver))).collect()
+        state.ordered_snapshot()
       });
       let mut dead_ids = FxHashSet::default();
       let mut live_ids = Vec::new();
@@ -5812,23 +6036,25 @@ impl CurrentThreadTaskDriverRegistry {
       let (live, swept, retry) = {
         let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let mut swept = Vec::new();
-        let mut index = 0;
-        while index < state.entries.len() {
-          if dead_ids.contains(&state.entries[index].id) {
-            swept.push(state.entries.remove(index));
-          } else {
-            index += 1;
+        let mut current = state.oldest;
+        while let Some(id) = current {
+          let next = state
+            .entries
+            .get(&id)
+            .expect("CurrentThread task driver order must reference a live entry")
+            .next;
+          if dead_ids.contains(&id)
+            && let Some(entry) = state.remove_driver(id)
+          {
+            swept.push(entry);
           }
+          current = next;
         }
         for entry in &swept {
           Self::finish_entry_references(&mut state, entry, &mut failed_dispatches);
         }
-        let retry = state.entries.iter().map(|entry| entry.id).ne(live_ids.iter().copied());
-        let live = if retry {
-          Vec::new()
-        } else {
-          state.entries.iter().map(|entry| (entry.id, Arc::clone(&entry.driver))).collect()
-        };
+        let retry = !state.ordered_ids_match(&live_ids);
+        let live = if retry { Vec::new() } else { state.ordered_snapshot() };
         (CurrentThreadTaskDriverSnapshot::new(live), swept, retry)
       };
 
@@ -5861,6 +6087,27 @@ impl CurrentThreadTaskDriverRegistry {
         .checked_add(1)
         .expect("CurrentThread task delivery id space exhausted");
     CurrentThreadTaskDelivery { driver, capability, dispatch }
+  }
+
+  fn add_dispatch_reference(state: &mut CurrentThreadTaskDriverRegistryState, dispatch: u64) {
+    let dispatch_state = state
+      .dispatches
+      .get_mut(&dispatch)
+      .expect("a referenced CurrentThread dispatch must remain registered");
+    dispatch_state.references = dispatch_state
+      .references
+      .checked_add(1)
+      .expect("CurrentThread dispatch reference count exhausted");
+  }
+
+  fn remove_dispatch_reference(state: &mut CurrentThreadTaskDriverRegistryState, dispatch: u64) {
+    let Some(dispatch_state) = state.dispatches.get_mut(&dispatch) else {
+      return;
+    };
+    dispatch_state.references = dispatch_state
+      .references
+      .checked_sub(1)
+      .expect("CurrentThread dispatch reference count underflow");
   }
 
   fn dispatch_with_completion(&self, dispatch: u64) -> CurrentThreadTaskDispatchCompletion {
@@ -5903,19 +6150,20 @@ impl CurrentThreadTaskDriverRegistry {
         // the barrier without leaving an undispatched physical slot occupied.
         let mut reserved_deliveries = Vec::with_capacity(live.len());
         for (id, _) in live.as_slice().iter().rev() {
-          let Some(entry) = state.entries.iter().find(|entry| entry.id == *id) else {
+          let Some(entry) = state.entries.get(id) else {
             continue;
           };
           if entry.delivery.is_none() {
             reserved_deliveries.push(self.next_delivery(*id, dispatch));
           }
         }
+        state.delivery_drivers.reserve(reserved_deliveries.len());
         let mut reserved_deliveries = reserved_deliveries.into_iter();
         let mut planned_deliveries = Vec::with_capacity(live.len());
         let mut retired = Vec::with_capacity(live.len());
         let mut accepted_reservation = false;
         for (id, _) in live.as_slice().iter().rev() {
-          let Some(entry) = state.entries.iter_mut().find(|entry| entry.id == *id) else {
+          let Some(entry) = state.entries.get(id) else {
             continue;
           };
           if let Some(delivery) = &entry.delivery
@@ -5925,20 +6173,50 @@ impl CurrentThreadTaskDriverRegistry {
             continue;
           }
           if entry.delivery.is_some() {
-            retired.push(entry.pending.replace(dispatch));
+            let previous = state
+              .entries
+              .get_mut(id)
+              .expect("the CurrentThread task driver must remain registered")
+              .pending
+              .replace(dispatch);
+            if previous != Some(dispatch) {
+              if let Some(previous) = previous {
+                Self::remove_dispatch_reference(&mut state, previous);
+              }
+              Self::add_dispatch_reference(&mut state, dispatch);
+            }
+            retired.push(previous);
             accepted_reservation = true;
             continue;
           }
           let delivery = reserved_deliveries
             .next()
             .expect("every available CurrentThread host must have a reserved delivery");
-          let pending = entry.pending.take();
+          let pending = state
+            .entries
+            .get_mut(id)
+            .expect("the CurrentThread task driver must remain registered")
+            .pending
+            .take();
           let accepted = pending == Some(dispatch);
           if !accepted && pending.is_some() {
             retired.push(pending);
           }
-          entry.delivery =
-            Some(CurrentThreadTaskDeliveryState { delivery, claimed: false, accepted });
+          match pending {
+            Some(pending) if pending == dispatch => {}
+            Some(pending) => {
+              Self::remove_dispatch_reference(&mut state, pending);
+              Self::add_dispatch_reference(&mut state, dispatch);
+            }
+            None => Self::add_dispatch_reference(&mut state, dispatch),
+          }
+          let indexed = state.delivery_drivers.insert(delivery.capability, *id);
+          assert!(indexed.is_none(), "CurrentThread delivery capability must be unique");
+          state
+            .entries
+            .get_mut(id)
+            .expect("the CurrentThread task driver must remain registered")
+            .delivery = Some(CurrentThreadTaskDeliveryState { delivery, claimed: false, accepted });
           accepted_reservation |= accepted;
           planned_deliveries.push((*id, delivery));
         }
@@ -6012,11 +6290,17 @@ impl CurrentThreadTaskDriverRegistry {
 
   fn accept_delivery(&self, id: CurrentThreadTaskDriverId, delivery: CurrentThreadTaskDelivery) {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    let entry = state.entries.iter_mut().find(|entry| {
-      entry.id == id && entry.delivery.as_ref().is_some_and(|current| current.delivery == delivery)
-    });
-    let delivery_remains = if let Some(entry) = entry {
-      entry.delivery.as_mut().expect("the matching delivery must remain installed").accepted = true;
+    let delivery_remains = if state.entries.get(&id).is_some_and(|entry| {
+      entry.delivery.as_ref().is_some_and(|current| current.delivery == delivery)
+    }) {
+      state
+        .entries
+        .get_mut(&id)
+        .expect("the matching CurrentThread task driver must remain registered")
+        .delivery
+        .as_mut()
+        .expect("the matching delivery must remain installed")
+        .accepted = true;
       true
     } else {
       // A callback may complete or unregister synchronously before
@@ -6037,12 +6321,14 @@ impl CurrentThreadTaskDriverRegistry {
     delivery: CurrentThreadTaskDelivery,
   ) -> (Option<CurrentThreadTaskDriverEntry>, Vec<CurrentThreadTaskDispatchFailure>) {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    let Some(index) = state.entries.iter().position(|entry| {
-      entry.id == id && entry.delivery.as_ref().is_some_and(|current| current.delivery == delivery)
-    }) else {
+    if !state.entries.get(&id).is_some_and(|entry| {
+      entry.delivery.as_ref().is_some_and(|current| current.delivery == delivery)
+    }) {
       return (None, Vec::new());
-    };
-    let entry = state.entries.remove(index);
+    }
+    let entry = state
+      .remove_driver(id)
+      .expect("the matching CurrentThread task driver must remain registered");
     let mut failures = Vec::new();
     Self::finish_entry_references(&mut state, &entry, &mut failures);
     (Some(entry), failures)
@@ -6054,20 +6340,35 @@ impl CurrentThreadTaskDriverRegistry {
     failed: bool,
   ) -> CurrentThreadTaskDeliveryCompletion {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    let Some(index) = state.entries.iter().position(|entry| {
-      entry.id == delivery.driver
-        && entry.delivery.as_ref().is_some_and(|current| current.delivery == delivery)
-    }) else {
+    if !state.entries.get(&delivery.driver).is_some_and(|entry| {
+      entry.delivery.as_ref().is_some_and(|current| current.delivery == delivery)
+    }) {
       return CurrentThreadTaskDeliveryCompletion::default();
-    };
-    let current =
-      state.entries[index].delivery.take().expect("the matching delivery must remain installed");
-    let redispatch = state.entries[index].pending.is_some_and(|dispatch| {
-      state
-        .dispatches
-        .get(&dispatch)
-        .is_some_and(|state| !state.is_serviced() && !state.is_cancelling())
-    });
+    }
+    let current = state
+      .entries
+      .get_mut(&delivery.driver)
+      .expect("the matching CurrentThread task driver must remain registered")
+      .delivery
+      .take()
+      .expect("the matching delivery must remain installed");
+    let indexed = state.delivery_drivers.remove(&delivery.capability);
+    debug_assert_eq!(
+      indexed,
+      Some(delivery.driver),
+      "delivery capability index must match its driver"
+    );
+    let redispatch = state
+      .entries
+      .get(&delivery.driver)
+      .expect("the matching CurrentThread task driver must remain registered")
+      .pending
+      .is_some_and(|dispatch| {
+        state
+          .dispatches
+          .get(&dispatch)
+          .is_some_and(|state| !state.is_serviced() && !state.is_cancelling())
+      });
     let mut failed_dispatches = Vec::new();
     // Callback completion proves only that JavaScript ran. A success return is
     // authoritative only after `drive_current_thread_tasks` claimed this exact
@@ -6085,18 +6386,19 @@ impl CurrentThreadTaskDriverRegistry {
 
   fn claim_delivery(&self, capability: u64) -> Option<u64> {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    let (entry_index, delivery) = state.entries.iter().enumerate().find_map(|(index, entry)| {
-      let delivery = entry.delivery.as_ref()?;
-      (delivery.delivery.capability == capability).then_some((index, delivery.delivery))
-    })?;
+    let driver = *state.delivery_drivers.get(&capability)?;
+    let delivery = state.entries.get(&driver)?.delivery.as_ref()?.delivery;
+    if delivery.capability != capability {
+      return None;
+    }
     let dispatch_state = state.dispatches.get(&delivery.dispatch)?;
     if dispatch_state.is_serviced()
       || dispatch_state.is_cancelling()
-      || state.entries[entry_index].delivery.as_ref()?.claimed
+      || state.entries.get(&driver)?.delivery.as_ref()?.claimed
     {
       return None;
     }
-    let current = state.entries[entry_index].delivery.as_mut()?;
+    let current = state.entries.get_mut(&driver)?.delivery.as_mut()?;
     current.claimed = true;
     current.accepted = true;
     state.dispatches.get_mut(&delivery.dispatch)?.accepted = true;
@@ -6109,24 +6411,36 @@ impl CurrentThreadTaskDriverRegistry {
       return;
     };
     dispatch_state.phase = CurrentThreadDispatchPhase::Serviced;
-    for entry in &mut state.entries {
+    let mut removed_references = 0usize;
+    for entry in state.entries.values_mut() {
       if entry.pending == Some(dispatch) {
         entry.pending = None;
+        removed_references = removed_references
+          .checked_add(1)
+          .expect("CurrentThread dispatch reference count exhausted");
       }
     }
+    let dispatch_state = state
+      .dispatches
+      .get_mut(&dispatch)
+      .expect("the serviced CurrentThread dispatch must remain registered");
+    dispatch_state.references = dispatch_state
+      .references
+      .checked_sub(removed_references)
+      .expect("CurrentThread dispatch reference count underflow");
     Self::retire_unreferenced_dispatch(&mut state, Some(dispatch));
   }
 
   fn fail_delivery(&self, capability: u64) -> CurrentThreadTaskDeliveryCompletion {
     let delivery = {
       let state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      state.entries.iter().find_map(|entry| {
-        entry
-          .delivery
-          .as_ref()
-          .map(|delivery| delivery.delivery)
-          .filter(|delivery| delivery.capability == capability)
-      })
+      state
+        .delivery_drivers
+        .get(&capability)
+        .and_then(|driver| state.entries.get(driver))
+        .and_then(|entry| entry.delivery.as_ref())
+        .map(|delivery| delivery.delivery)
+        .filter(|delivery| delivery.capability == capability)
     };
     delivery.map_or_else(CurrentThreadTaskDeliveryCompletion::default, |delivery| {
       self.finish_delivery(delivery, true)
@@ -6140,15 +6454,19 @@ impl CurrentThreadTaskDriverRegistry {
     failed: bool,
     failures: &mut Vec<CurrentThreadTaskDispatchFailure>,
   ) {
-    let publications = {
+    let (publications, references) = {
       let Some(dispatch_state) = state.dispatches.get_mut(&dispatch) else {
         return;
       };
+      dispatch_state.references = dispatch_state
+        .references
+        .checked_sub(1)
+        .expect("CurrentThread dispatch reference count underflow");
       dispatch_state.accepted |= accepted;
       dispatch_state.accepted_failure |= accepted && failed;
-      dispatch_state.publications
+      (dispatch_state.publications, dispatch_state.references)
     };
-    if Self::has_dispatch_reference(state, dispatch) || publications != 0 {
+    if references != 0 || publications != 0 {
       return;
     }
     let Some(dispatch_state) = state.dispatches.get_mut(&dispatch) else {
@@ -6286,10 +6604,7 @@ impl CurrentThreadTaskDriverRegistry {
   }
 
   fn has_dispatch_reference(state: &CurrentThreadTaskDriverRegistryState, dispatch: u64) -> bool {
-    state.entries.iter().any(|entry| {
-      entry.pending == Some(dispatch)
-        || entry.delivery.as_ref().is_some_and(|delivery| delivery.delivery.dispatch == dispatch)
-    })
+    state.dispatches.get(&dispatch).is_some_and(|dispatch_state| dispatch_state.references != 0)
   }
 
   fn finish_cancellation(&self, failure: CurrentThreadTaskDispatchFailure) {
@@ -6304,7 +6619,7 @@ impl CurrentThreadTaskDriverRegistry {
   fn retire_for_shutdown(&self) {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     state.dispatches.clear();
-    for entry in &mut state.entries {
+    for entry in state.entries.values_mut() {
       entry.pending = None;
     }
   }
@@ -6381,10 +6696,92 @@ pub trait TimerDriver: Send + Sync + 'static {
 /// Handle to one registration in a [`TimerDriverRegistry`], returned by
 /// [`TimerDriverRegistry::register`] and consumed by
 /// [`TimerDriverRegistry::unregister`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TimerDriverId(u64);
 
 type HostTimerDriverSnapshot = ContainedArcSnapshot<TimerDriverId, dyn TimerDriver>;
+
+struct TimerDriverEntry {
+  driver: Arc<dyn TimerDriver>,
+  previous: Option<TimerDriverId>,
+  next: Option<TimerDriverId>,
+}
+
+#[derive(Default)]
+struct TimerDriverRegistryState {
+  entries: FxHashMap<TimerDriverId, TimerDriverEntry>,
+  oldest: Option<TimerDriverId>,
+  newest: Option<TimerDriverId>,
+}
+
+impl TimerDriverRegistryState {
+  fn insert_driver(&mut self, id: TimerDriverId, driver: Arc<dyn TimerDriver>) {
+    let previous = self.newest;
+    let replaced = self.entries.insert(id, TimerDriverEntry { driver, previous, next: None });
+    assert!(replaced.is_none(), "timer driver id must be unique");
+    if let Some(previous) = previous {
+      self
+        .entries
+        .get_mut(&previous)
+        .expect("the newest timer driver must remain registered")
+        .next = Some(id);
+    } else {
+      self.oldest = Some(id);
+    }
+    self.newest = Some(id);
+  }
+
+  fn remove_driver(&mut self, id: TimerDriverId) -> Option<TimerDriverEntry> {
+    let entry = self.entries.remove(&id)?;
+    if let Some(previous) = entry.previous {
+      self
+        .entries
+        .get_mut(&previous)
+        .expect("the previous timer driver must remain registered")
+        .next = entry.next;
+    } else {
+      self.oldest = entry.next;
+    }
+    if let Some(next) = entry.next {
+      self.entries.get_mut(&next).expect("the next timer driver must remain registered").previous =
+        entry.previous;
+    } else {
+      self.newest = entry.previous;
+    }
+    Some(entry)
+  }
+
+  fn ordered_snapshot(&self) -> Vec<(TimerDriverId, Arc<dyn TimerDriver>)> {
+    let mut snapshot = Vec::with_capacity(self.entries.len());
+    let mut current = self.oldest;
+    while let Some(id) = current {
+      let entry = self.entries.get(&id).expect("timer driver order must reference a live entry");
+      snapshot.push((id, Arc::clone(&entry.driver)));
+      current = entry.next;
+    }
+    debug_assert_eq!(
+      snapshot.len(),
+      self.entries.len(),
+      "timer driver order must contain every entry exactly once"
+    );
+    snapshot
+  }
+
+  fn ordered_ids_match(&self, expected: &[TimerDriverId]) -> bool {
+    if self.entries.len() != expected.len() {
+      return false;
+    }
+    let mut current = self.oldest;
+    for expected in expected {
+      if current != Some(*expected) {
+        return false;
+      }
+      current =
+        self.entries.get(expected).expect("timer driver order must reference a live entry").next;
+    }
+    current.is_none()
+  }
+}
 
 /// Host timer drivers keyed by registration order. A driver is owned by a host
 /// context that can die independently
@@ -6405,8 +6802,10 @@ type HostTimerDriverSnapshot = ContainedArcSnapshot<TimerDriverId, dyn TimerDriv
 /// [`register_timer_driver`]/[`unregister_timer_driver`]/[`has_live_timer_driver`].
 #[derive(Default)]
 pub struct TimerDriverRegistry {
-  /// Registration-ordered `(id, driver)` pairs.
-  entries: Mutex<Vec<(u64, Arc<dyn TimerDriver>)>>,
+  /// Keyed lookup with a linked registration order. Exact unregister and a
+  /// swept binding host's idempotent unregister are expected O(1), while
+  /// snapshots keep deterministic oldest-to-newest fallback order.
+  state: Mutex<TimerDriverRegistryState>,
   /// Stable repoll signals for every currently polled host sleep. A newly
   /// registered driver snapshots these after publishing itself, then wakes
   /// them outside both registry locks so each sleep re-arms the same timer id
@@ -6415,11 +6814,24 @@ pub struct TimerDriverRegistry {
   next_id: AtomicU64,
 }
 
+impl Drop for TimerDriverRegistry {
+  fn drop(&mut self) {
+    let state = self.state.get_mut().unwrap_or_else(std::sync::PoisonError::into_inner);
+    state.oldest = None;
+    state.newest = None;
+    let entries = std::mem::take(&mut state.entries);
+    for (_, entry) in entries {
+      let _ = catch_unwind_contained(|| drop(entry));
+    }
+  }
+}
+
 impl TimerDriverRegistry {
   /// Add `driver` as the newest registrant and return its handle.
   pub fn register(&self, driver: Arc<dyn TimerDriver>) -> TimerDriverId {
     let id = next_unique_id(&self.next_id, "timer driver id space exhausted");
-    self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push((id, driver));
+    let id = TimerDriverId(id);
+    self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).insert_driver(id, driver);
     // Publish the driver before snapshotting pending sleeps. A sleep publishes
     // its repoll signal before selecting live drivers. Therefore either this
     // snapshot sees the sleep, or that sleep's subsequent selection sees this
@@ -6440,15 +6852,13 @@ impl TimerDriverRegistry {
     for repoll in pending {
       repoll.wake();
     }
-    TimerDriverId(id)
+    id
   }
 
   /// Drop the registration behind `id` (no-op when already swept/removed).
   pub fn unregister(&self, id: TimerDriverId) {
-    let removed = {
-      let mut entries = self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      entries.iter().position(|(entry_id, _)| *entry_id == id.0).map(|index| entries.remove(index))
-    };
+    let removed =
+      self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).remove_driver(id);
     // A driver's destructor may re-enter this registry. Keep it outside the
     // entries lock just like is_live/on_swept callbacks.
     let _ = catch_unwind_contained(|| drop(removed));
@@ -6466,46 +6876,45 @@ impl TimerDriverRegistry {
   /// stale the snapshot, in which case selection retries.
   fn live(&self) -> HostTimerDriverSnapshot {
     loop {
-      let snapshot = ContainedArcSnapshot::<u64, dyn TimerDriver>::new({
-        let entries = self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-        entries.iter().map(|(id, driver)| (*id, Arc::clone(driver))).collect()
+      let snapshot = HostTimerDriverSnapshot::new({
+        let state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        state.ordered_snapshot()
       });
-      let mut dead_ids = Vec::new();
+      let mut dead_ids = FxHashSet::default();
       let mut live_ids = Vec::new();
       for (id, driver) in snapshot.as_slice() {
         if catch_unwind_contained(|| driver.is_live()).unwrap_or(false) {
           live_ids.push(*id);
         } else {
-          dead_ids.push(*id);
+          dead_ids.insert(*id);
         }
       }
 
       let (live, swept, retry) = {
-        let mut entries = self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let mut swept = Vec::new();
-        entries.retain(|(id, driver)| {
-          if dead_ids.contains(id) {
-            swept.push(Arc::clone(driver));
-            false
-          } else {
-            true
+        let mut current = state.oldest;
+        while let Some(id) = current {
+          let next =
+            state.entries.get(&id).expect("timer driver order must reference a live entry").next;
+          if dead_ids.contains(&id)
+            && let Some(entry) = state.remove_driver(id)
+          {
+            swept.push(entry);
           }
-        });
-        let retry = entries.iter().map(|(id, _)| *id).ne(live_ids.iter().copied());
-        let live = if retry {
-          Vec::new()
-        } else {
-          entries.iter().map(|(id, driver)| (TimerDriverId(*id), Arc::clone(driver))).collect()
-        };
+          current = next;
+        }
+        let retry = !state.ordered_ids_match(&live_ids);
+        let live = if retry { Vec::new() } else { state.ordered_snapshot() };
         (HostTimerDriverSnapshot::new(live), swept, retry)
       };
 
       // A reentrant probe can unregister multiple snapshot-only drivers.
       // See internal-docs/async-runtime/implementation.md.
       drop(snapshot);
-      for driver in swept {
-        let _ = catch_unwind_contained(|| driver.on_swept());
-        let _ = catch_unwind_contained(|| drop(driver));
+      for entry in swept {
+        let _ = catch_unwind_contained(|| entry.driver.on_swept());
+        let _ = catch_unwind_contained(|| drop(entry));
       }
       if !retry {
         return live;
@@ -7352,7 +7761,7 @@ struct HostSleep {
   /// Drivers this sleep last armed on. The first responsive fire wakes the
   /// sleep; completion cancels every losing arm, including pre-delivery arms
   /// whose binding relay retains a cancellation tombstone.
-  armed: Vec<(TimerDriverId, Arc<dyn TimerDriver>)>,
+  armed: FxHashMap<TimerDriverId, Arc<dyn TimerDriver>>,
   /// The executor's registry, held so the FIRST poll can arm the wake-token
   /// at the same moment `driver.register` arms the host timer.
   registry: Arc<HostTimerRegistry>,
@@ -7373,8 +7782,11 @@ fn cancel_host_timer_driver(id: TimerId, driver: Arc<dyn TimerDriver>) {
   let _ = catch_unwind_contained(|| drop(driver));
 }
 
-fn cancel_host_timer_drivers(id: TimerId, armed: &mut Vec<(TimerDriverId, Arc<dyn TimerDriver>)>) {
-  for (_, driver) in armed.drain(..) {
+fn cancel_host_timer_drivers(
+  id: TimerId,
+  armed: &mut FxHashMap<TimerDriverId, Arc<dyn TimerDriver>>,
+) {
+  for (_, driver) in armed.drain() {
     cancel_host_timer_driver(id, driver);
   }
 }
@@ -7484,34 +7896,31 @@ impl Future for Sleep {
         let missing = current
           .as_slice()
           .iter()
-          .filter(|(current_id, _)| !host.armed.iter().any(|(armed_id, _)| armed_id == current_id))
+          .filter(|(current_id, _)| !host.armed.contains_key(current_id))
           .count();
         host.armed.reserve(missing);
         for (current_id, current_driver) in current.as_slice() {
-          if !host.armed.iter().any(|(armed_id, _)| armed_id == current_id) {
-            host.armed.push((*current_id, Arc::clone(current_driver)));
-          }
+          host.armed.entry(*current_id).or_insert_with(|| Arc::clone(current_driver));
         }
         for (current_id, _) in current.as_slice() {
-          let (_, armed_driver) = host
+          let armed_driver = host
             .armed
-            .iter()
-            .find(|(armed_id, _)| armed_id == current_id)
+            .get(current_id)
             .expect("every live timer driver must have cancellation ownership before callbacks");
           armed_driver.register(host.id, deadline, panic_contained_waker(cx.waker().clone()));
         }
-        let mut armed_index = 0;
-        while armed_index < host.armed.len() {
-          if current
-            .as_slice()
-            .iter()
-            .any(|(current_id, _)| *current_id == host.armed[armed_index].0)
-          {
-            armed_index += 1;
-          } else {
-            let (_, old_driver) = host.armed.swap_remove(armed_index);
-            cancel_host_timer_driver(host.id, old_driver);
-          }
+        let current_ids =
+          current.as_slice().iter().map(|(current_id, _)| *current_id).collect::<FxHashSet<_>>();
+        let retired = host
+          .armed
+          .keys()
+          .filter(|armed_id| !current_ids.contains(armed_id))
+          .copied()
+          .collect::<Vec<_>>();
+        for retired in retired {
+          let old_driver =
+            host.armed.remove(&retired).expect("the retired timer driver must remain armed");
+          cancel_host_timer_driver(host.id, old_driver);
         }
         Poll::Pending
       }
@@ -7595,7 +8004,7 @@ fn make_sleep(
         inner: SleepInner::Host(HostSleep {
           id,
           drivers: Arc::clone(host_drivers),
-          armed: Vec::new(),
+          armed: FxHashMap::default(),
           registry: Arc::clone(&executor.host_timers),
           fired: Arc::new(AtomicBool::new(false)),
           repoll: Arc::new(HostTimerRepoll::default()),
@@ -8378,26 +8787,28 @@ impl RuntimeController {
     executor.cancel_host_dispatch_for_test(dispatch);
   }
 
-  fn drive_current_thread_tasks(&self, delivery: u64) -> bool {
-    let Some(dispatch) = CURRENT_THREAD_TASK_DRIVERS.claim_delivery(delivery) else {
-      return false;
-    };
-    self.drive_current_thread_dispatch(dispatch, true)
+  fn drive_current_thread_tasks(&self, delivery: u64) -> Option<CurrentThreadTaskCallbackLease> {
+    let dispatch = CURRENT_THREAD_TASK_DRIVERS.claim_delivery(delivery)?;
+    self.drive_current_thread_dispatch_with_lease(dispatch, true)
   }
 
-  fn drive_current_thread_dispatch(&self, dispatch: u64, mark_serviced: bool) -> bool {
-    let host_turn = {
+  fn drive_current_thread_dispatch_with_lease(
+    &self,
+    dispatch: u64,
+    mark_serviced: bool,
+  ) -> Option<CurrentThreadTaskCallbackLease> {
+    let mut host_turn = {
       let state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       let RuntimeLifecycle::Running(backend) = &state.lifecycle else {
-        return false;
+        return None;
       };
       let executor = match &backend.executor {
         RuntimeExecutor::CurrentThread(executor) => executor,
         #[cfg(not(target_family = "wasm"))]
-        RuntimeExecutor::MultiThread(_) => return false,
+        RuntimeExecutor::MultiThread(_) => return None,
       };
       let Some(host_turn) = executor.try_admit_host_turn(dispatch) else {
-        return false;
+        return None;
       };
       if mark_serviced {
         CURRENT_THREAD_TASK_DRIVERS.mark_serviced(dispatch);
@@ -8407,7 +8818,12 @@ impl RuntimeController {
     #[cfg(test)]
     run_after_current_thread_host_admission_test_hook();
     host_turn.drive();
-    true
+    Some(CurrentThreadTaskCallbackLease::new(host_turn))
+  }
+
+  #[cfg(test)]
+  fn drive_current_thread_dispatch(&self, dispatch: u64, mark_serviced: bool) -> bool {
+    self.drive_current_thread_dispatch_with_lease(dispatch, mark_serviced).is_some()
   }
 
   fn shutdown(&self) -> Result<(), RuntimeConfigError> {
@@ -8755,10 +9171,11 @@ pub fn cancel_current_thread_task_dispatch(delivery: u64) {
 ///
 /// Embedders normally call this from their [`CurrentThreadTaskDriver`]
 /// implementation with the opaque [`CurrentThreadTaskDelivery::capability`].
-/// Returns `true` only when this exact delivery was claimed, admitted, and
-/// driven. It returns `false` for stale/unregistered deliveries, before backend
-/// creation, and on MultiThread.
-pub fn drive_current_thread_tasks(delivery: u64) -> bool {
+/// Returns a callback lease only when this exact delivery was claimed, admitted,
+/// and driven. It returns `None` for stale/unregistered deliveries, before
+/// backend creation, and on MultiThread. The host must retain the lease through
+/// delivery acknowledgement/failure and callback payload destruction.
+pub fn drive_current_thread_tasks(delivery: u64) -> Option<CurrentThreadTaskCallbackLease> {
   RUNTIME.drive_current_thread_tasks(delivery)
 }
 
@@ -9195,6 +9612,128 @@ mod tests {
       1,
       "a shutdown wake must be checked before the next CurrentThread user poll"
     );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_admitted_host_turn_does_not_poll_after_stop_publication() {
+    use std::sync::mpsc;
+
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      accept_current_thread_host_dispatch,
+    ));
+    let polls = Arc::new(AtomicUsize::new(0));
+    let task_polls = Arc::clone(&polls);
+    let (runnable, task) = async_task::spawn(
+      async move {
+        task_polls.fetch_add(1, Ordering::SeqCst);
+      },
+      |_| {},
+    );
+    executor.schedule(runnable);
+    let dispatch = current_thread_dispatch(&executor);
+
+    let (claim_locked_tx, claim_locked_rx) = mpsc::channel();
+    let (release_claim_tx, release_claim_rx) = mpsc::channel();
+    let driver_executor = Arc::clone(&executor);
+    let driver = std::thread::spawn(move || {
+      CURRENT_THREAD_RUNNABLE_CLAIM_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          claim_locked_tx.send(()).unwrap();
+          release_claim_rx.recv().unwrap();
+        }));
+      });
+      driver_executor.drive_host_turn_for_dispatch(dispatch);
+    });
+    claim_locked_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the admitted host turn must pause before its runnable claim");
+
+    executor.stop.publish_stopping();
+    release_claim_tx.send(()).unwrap();
+    driver.join().unwrap();
+
+    assert_eq!(
+      polls.load(Ordering::SeqCst),
+      0,
+      "stop publication must outrank a later runnable claim by an already-admitted host turn"
+    );
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 1);
+
+    executor.begin_shutdown();
+    assert!(
+      futures::executor::block_on(task.fallible()).is_none(),
+      "shutdown must cancel the runnable rejected by the stopped claim"
+    );
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_terminal_dispatch_cancellation_outranks_runnable_claim() {
+    use std::sync::mpsc;
+
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_task_dispatch(
+      Arc::clone(&metrics),
+      accept_current_thread_host_dispatch,
+    ));
+    let polls = Arc::new(AtomicUsize::new(0));
+    let task_polls = Arc::clone(&polls);
+    let (runnable, task) = async_task::spawn(
+      async move {
+        task_polls.fetch_add(1, Ordering::SeqCst);
+      },
+      |_| {},
+    );
+    executor.schedule(runnable);
+
+    let queue = executor.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let (cancellation_published_tx, cancellation_published_rx) = mpsc::channel();
+    let (cancellation_done_tx, cancellation_done_rx) = mpsc::channel();
+    let cancelling_executor = Arc::clone(&executor);
+    let cancellation = std::thread::spawn(move || {
+      let scheduler = cancelling_executor
+        .scheduler_idle_lock
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+      let cancelling = cancelling_executor
+        .begin_failed_dispatch_cancellation()
+        .expect("the test must publish terminal dispatch cancellation");
+      drop(scheduler);
+      cancellation_published_tx.send(()).unwrap();
+      cancelling_executor.cancel_work_after_host_dispatch_failure_claimed(cancelling);
+      cancellation_done_tx.send(()).unwrap();
+    });
+    cancellation_published_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("terminal dispatch cancellation must publish before queue draining");
+
+    let claimant_executor = Arc::clone(&executor);
+    let claimant = std::thread::spawn(move || claimant_executor.drain_one());
+    assert!(
+      !claimant.join().unwrap(),
+      "a runnable claim after terminal cancellation publication must be rejected"
+    );
+    assert_eq!(polls.load(Ordering::SeqCst), 0);
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 1);
+    assert!(
+      matches!(cancellation_done_rx.try_recv(), Err(mpsc::TryRecvError::Empty)),
+      "terminal cancellation must still be waiting to drain the queued runnable"
+    );
+
+    drop(queue);
+    cancellation_done_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("terminal cancellation must drain the rejected runnable");
+    cancellation.join().unwrap();
+    assert!(
+      futures::executor::block_on(task.fallible()).is_none(),
+      "terminal cancellation must cancel the runnable it prevented from starting"
+    );
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
   }
 
   #[cfg(not(target_family = "wasm"))]
@@ -11728,7 +12267,7 @@ mod tests {
         "unwind cleanup must release the exact registry publication barrier"
       );
       assert!(
-        state.entries.iter().all(|entry| entry.delivery.is_none() && entry.pending.is_none()),
+        state.entries.values().all(|entry| entry.delivery.is_none() && entry.pending.is_none()),
         "failed transactional reservation must leave every physical host slot clean"
       );
     }
@@ -11762,7 +12301,9 @@ mod tests {
         .is_empty()
     );
     let state = registry.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    assert!(state.entries.iter().all(|entry| entry.delivery.is_none() && entry.pending.is_none()));
+    assert!(
+      state.entries.values().all(|entry| entry.delivery.is_none() && entry.pending.is_none())
+    );
   }
 
   #[test]
@@ -11856,6 +12397,70 @@ mod tests {
     executor.drive_host_turn_for_dispatch(dispatch);
     assert_eq!(polls.load(Ordering::SeqCst), 1);
     futures::executor::block_on(task);
+  }
+
+  #[test]
+  fn current_thread_task_driver_indexes_preserve_large_pool_lifecycle() {
+    const HOSTS: usize = 1_024;
+
+    let registry = CurrentThreadTaskDriverRegistry::default();
+    let mut ids = Vec::with_capacity(HOSTS);
+    let mut drivers = Vec::with_capacity(HOSTS);
+    for _ in 0..HOSTS {
+      let driver = Arc::new(ManualCurrentThreadTaskDriver::default());
+      ids.push(registry.register(Arc::clone(&driver) as Arc<dyn CurrentThreadTaskDriver>));
+      drivers.push(driver);
+    }
+
+    let dispatch = u64::MAX - 300;
+    assert_eq!(registry.dispatch(dispatch), CurrentThreadHostDispatchResult::Accepted);
+    let deliveries = drivers.iter().map(|driver| driver.deliveries()[0]).collect::<Vec<_>>();
+    {
+      let state = registry.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert_eq!(state.delivery_drivers.len(), HOSTS);
+      assert_eq!(state.dispatches.get(&dispatch).map(|state| state.references), Some(HOSTS));
+      assert_eq!(
+        state.ordered_snapshot().iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+        ids,
+        "keyed driver lookup must retain registration order"
+      );
+    }
+
+    for delivery in &deliveries {
+      assert_eq!(registry.claim_delivery(delivery.capability()), Some(dispatch));
+    }
+    registry.mark_serviced(dispatch);
+    for delivery in deliveries {
+      assert!(registry.finish_delivery(delivery, false).failed_dispatches.is_empty());
+    }
+    {
+      let state = registry.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert!(state.delivery_drivers.is_empty());
+      assert!(state.dispatches.is_empty());
+    }
+
+    let removed = ids.iter().copied().step_by(2).collect::<FxHashSet<_>>();
+    for id in &removed {
+      let completion = registry.unregister(*id);
+      assert!(completion.failed_dispatches.is_empty());
+      assert!(!completion.redispatch);
+    }
+    let expected = ids.iter().copied().filter(|id| !removed.contains(id)).collect::<Vec<_>>();
+    let live = registry.live().live;
+    assert_eq!(
+      live.as_slice().iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+      expected,
+      "O(1) removals must preserve the relative order of surviving host registrations"
+    );
+    drop(live);
+
+    for id in expected {
+      registry.unregister(id);
+    }
+    let state = registry.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    assert!(state.entries.is_empty());
+    assert!(state.oldest.is_none());
+    assert!(state.newest.is_none());
   }
 
   #[test]
@@ -12011,7 +12616,7 @@ mod tests {
   fn current_thread_blocked_host_keeps_one_delivery_and_only_the_latest_pending_capability() {
     let registry = CurrentThreadTaskDriverRegistry::default();
     let blocked = Arc::new(ManualCurrentThreadTaskDriver::default());
-    registry.register(Arc::clone(&blocked) as Arc<dyn CurrentThreadTaskDriver>);
+    let blocked_id = registry.register(Arc::clone(&blocked) as Arc<dyn CurrentThreadTaskDriver>);
 
     assert_eq!(registry.dispatch(1), CurrentThreadHostDispatchResult::Accepted);
     let first = blocked.deliveries()[0];
@@ -12025,7 +12630,7 @@ mod tests {
     }
     {
       let state = registry.state.lock().unwrap();
-      let entry = &state.entries[0];
+      let entry = state.entries.get(&blocked_id).expect("the blocked host must remain registered");
       assert_eq!(entry.pending, Some(256));
       assert_eq!(
         state.dispatches.len(),
@@ -12188,9 +12793,10 @@ mod tests {
     {
       let state = registry.state.lock().unwrap();
       assert!(state.dispatches.is_empty());
-      assert_eq!(state.entries[0].pending, None);
+      let entry = state.entries.get(&host_id).expect("the host must remain registered");
+      assert_eq!(entry.pending, None);
       assert!(
-        state.entries[0].delivery.is_some(),
+        entry.delivery.is_some(),
         "the physical callback remains single-flight until it actually retires"
       );
     }
@@ -12305,7 +12911,7 @@ mod tests {
       assert_eq!(second_drops.load(Ordering::SeqCst), 1);
       let state = registry.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       assert_eq!(state.entries.len(), 1);
-      assert_eq!(state.entries[0].id, fallback_id);
+      assert!(state.entries.contains_key(&fallback_id));
       assert!(state.dispatches.is_empty());
       return;
     }
@@ -12725,6 +13331,143 @@ mod tests {
       assert!(std::time::Instant::now() < deadline, "timed out waiting for: {what}");
       std::thread::yield_now();
     }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  fn run_claim_with_deadlock_gate_assertion<T: Send + 'static>(
+    executor: &Arc<MultiThreadExecutor>,
+    claim: impl FnOnce() -> T + Send + 'static,
+  ) -> T {
+    use std::sync::mpsc;
+
+    let (claimed_tx, claimed_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let worker = std::thread::spawn(move || {
+      MULTI_THREAD_WORK_CLAIMED_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          claimed_tx.send(()).unwrap();
+          release_rx.recv().unwrap();
+        }));
+      });
+      claim()
+    });
+    claimed_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the scheduler claim must pause after removing work");
+
+    let admission_active = executor.deadlock_state.admissions.load(Ordering::SeqCst) != 0;
+    let verdict = executor.try_begin_deadlock_verdict();
+    let verdict_rejected = verdict.is_none();
+    drop(verdict);
+    release_tx.send(()).unwrap();
+    let output = worker.join().unwrap();
+
+    assert!(
+      admission_active,
+      "removing scheduler work must retain a detector admission until start accounting"
+    );
+    assert!(
+      verdict_rejected,
+      "a deadline verdict must not close while removed work has not published its start"
+    );
+    output
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_runnable_claims_hold_deadlock_admission_until_start() {
+    let executor =
+      multi_thread_executor(1, Some(Duration::from_secs(1)), "runnable-claim-admission");
+
+    let fifo_ran = Arc::new(AtomicBool::new(false));
+    let fifo_task_ran = Arc::clone(&fifo_ran);
+    let (fifo, fifo_task) = async_task::spawn(
+      async move {
+        fifo_task_ran.store(true, Ordering::SeqCst);
+      },
+      |_| {},
+    );
+    executor.metrics.runnable_scheduled();
+    executor.queue.lock().unwrap().push_back(fifo);
+    let fifo_executor = Arc::clone(&executor);
+    assert!(run_claim_with_deadlock_gate_assertion(&executor, move || {
+      let _driver = OnPoolWorkerGuard::enter(fifo_executor.id);
+      fifo_executor.run_one_fifo_runnable()
+    }));
+    futures::executor::block_on(fifo_task);
+    assert!(fifo_ran.load(Ordering::SeqCst));
+
+    let lifo_ran = Arc::new(AtomicBool::new(false));
+    let lifo_task_ran = Arc::clone(&lifo_ran);
+    let (lifo, lifo_task) = async_task::spawn(
+      async move {
+        lifo_task_ran.store(true, Ordering::SeqCst);
+      },
+      |_| {},
+    );
+    executor.metrics.runnable_scheduled();
+    let lifo_executor = Arc::clone(&executor);
+    assert!(run_claim_with_deadlock_gate_assertion(&executor, move || {
+      let _driver = OnPoolWorkerGuard::enter(lifo_executor.id);
+      LIFO_SLOT.with(|slot| {
+        assert!(slot.replace(Some((lifo_executor.id, lifo))).is_none());
+      });
+      lifo_executor.run_one_runnable()
+    }));
+    futures::executor::block_on(lifo_task);
+    assert!(lifo_ran.load(Ordering::SeqCst));
+
+    executor.begin_shutdown();
+    executor.wait_until_scheduler_idle();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_blocking_claims_hold_deadlock_admission_until_start() {
+    let executor =
+      multi_thread_executor(1, Some(Duration::from_secs(1)), "blocking-claim-admission");
+
+    let fifo_ran = Arc::new(AtomicBool::new(false));
+    let fifo_job_ran = Arc::clone(&fifo_ran);
+    executor.metrics.blocking_scheduled();
+    executor.blocking_queue.lock().unwrap().push(QueuedBlocking {
+      id: BlockingJobId(u64::MAX - 90),
+      run: Box::new(move || {
+        fifo_job_ran.store(true, Ordering::SeqCst);
+      }),
+    });
+    let fifo_executor = Arc::clone(&executor);
+    assert!(run_claim_with_deadlock_gate_assertion(&executor, move || {
+      let _driver = OnPoolWorkerGuard::enter(fifo_executor.id);
+      fifo_executor.run_one_blocking()
+    }));
+    assert!(fifo_ran.load(Ordering::SeqCst));
+
+    let owner = executor.fresh_owner_token();
+    let active_owner = ActiveBlockingOwnerGuard::enter(&executor.active_blocking_owners, owner);
+    let exact_job = BlockingJobId(u64::MAX - 91);
+    let exact_ran = Arc::new(AtomicBool::new(false));
+    let exact_job_ran = Arc::clone(&exact_ran);
+    executor.metrics.blocking_scheduled();
+    executor.blocking_queue.lock().unwrap().push(QueuedBlocking {
+      id: exact_job,
+      run: Box::new(move || {
+        exact_job_ran.store(true, Ordering::SeqCst);
+      }),
+    });
+    let dependency = Arc::new(TaskDependency::new(executor.generation, Some(owner)));
+    dependency.set_owned(BlockingDependency { job: exact_job, owner: Some(owner) });
+    let exact_executor = Arc::clone(&executor);
+    assert!(run_claim_with_deadlock_gate_assertion(&executor, move || {
+      let _driver = OnPoolWorkerGuard::enter(exact_executor.id);
+      let _owner = BlockingOwnerGuard::enter(Some(owner));
+      exact_executor.try_owned_blocking_over_cap(&dependency)
+    }));
+    assert!(exact_ran.load(Ordering::SeqCst));
+
+    drop(active_owner);
+    executor.begin_shutdown();
+    executor.wait_until_scheduler_idle();
   }
 
   #[cfg(not(target_family = "wasm"))]
@@ -14474,6 +15217,151 @@ mod tests {
       exact_before_stop,
       Some(true),
       "a hot local runnable must yield to the exact dependency before it is stopped"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_exact_dependency_precedes_last_slot_fifo_admission() {
+    use std::sync::mpsc;
+
+    struct BlockingPoll {
+      started: Option<mpsc::Sender<()>>,
+      released: Arc<(Mutex<bool>, Condvar)>,
+    }
+
+    impl Future for BlockingPoll {
+      type Output = ();
+
+      fn poll(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+        if let Some(started) = self.started.take() {
+          started.send(()).unwrap();
+        }
+        let (released, changed) = &*self.released;
+        let mut released = released.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        while !*released {
+          released = changed.wait(released).unwrap_or_else(std::sync::PoisonError::into_inner);
+        }
+        Poll::Ready(())
+      }
+    }
+
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 3,
+      max_blocking_tasks: 2,
+      thread_name_prefix: "exact-before-last-slot".to_string(),
+      park_deadline: None,
+    };
+    let executor =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+    let released = Arc::new((Mutex::new(false), Condvar::new()));
+    let (blocker_started_tx, blocker_started_rx) = mpsc::channel();
+    let mut blockers = Vec::new();
+    for _ in 0..2 {
+      let scheduler = Arc::clone(&executor);
+      let blocker_released = Arc::clone(&released);
+      let started = blocker_started_tx.clone();
+      let (runnable, task) = async_task::spawn(
+        BlockingPoll { started: Some(started), released: blocker_released },
+        move |runnable| scheduler.schedule(runnable),
+      );
+      executor.schedule(runnable);
+      blockers.push(task);
+    }
+    drop(blocker_started_tx);
+    for _ in 0..2 {
+      blocker_started_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("two workers must be gated before the owner starts");
+    }
+
+    let dependency_started = Arc::new(AtomicBool::new(false));
+    let owner_executor = Arc::clone(&executor);
+    let owner_dependency_started = Arc::clone(&dependency_started);
+    let (unrelated_observed_tx, unrelated_observed_rx) = mpsc::channel();
+    let dependency_signal = Arc::new((Mutex::new(false), Condvar::new()));
+    let owner_signal = Arc::clone(&dependency_signal);
+    let owner = executor.schedule_blocking(move || {
+      let unrelated_signal = Arc::clone(&owner_signal);
+      let unrelated_started = Arc::clone(&owner_dependency_started);
+      let unrelated = owner_executor.schedule_blocking(move || {
+        let observed = unrelated_started.load(Ordering::SeqCst);
+        unrelated_observed_tx.send(observed).unwrap();
+        let (ready, changed) = &*unrelated_signal;
+        let mut ready = ready.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        while !*ready {
+          ready = changed.wait(ready).unwrap_or_else(std::sync::PoisonError::into_inner);
+        }
+      });
+
+      let exact_signal = Arc::clone(&owner_signal);
+      let exact_started = Arc::clone(&owner_dependency_started);
+      let exact = owner_executor.schedule_blocking(move || {
+        exact_started.store(true, Ordering::SeqCst);
+        let (ready, changed) = &*exact_signal;
+        *ready.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = true;
+        changed.notify_all();
+        41usize
+      });
+
+      let mut output = None;
+      {
+        let mut future = std::pin::pin!(async {
+          output = Some(exact.await.unwrap());
+          unrelated.await.unwrap();
+        });
+        assert_eq!(owner_executor.block_on(future.as_mut()), BlockOnOutcome::Completed);
+      }
+      output.unwrap()
+    });
+
+    let (owner_done_tx, owner_done_rx) = mpsc::channel();
+    let owner_waiter = std::thread::spawn(move || {
+      owner_done_tx.send(futures::executor::block_on(owner)).unwrap();
+    });
+    let (completed_while_gated, owner_result) =
+      match owner_done_rx.recv_timeout(Duration::from_secs(2)) {
+        Ok(result) => (true, result),
+        Err(_) => {
+          // Let a broken implementation recover so the regression fails
+          // deterministically instead of leaving blocked Rayon workers behind.
+          let (released, changed) = &*released;
+          *released.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = true;
+          changed.notify_all();
+          (
+            false,
+            owner_done_rx
+              .recv_timeout(Duration::from_secs(2))
+              .expect("releasing the other workers must let the broken ordering recover"),
+          )
+        }
+      };
+    let unrelated_observed = unrelated_observed_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the unrelated FIFO job must eventually run");
+
+    {
+      let (released, changed) = &*released;
+      *released.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = true;
+      changed.notify_all();
+    }
+    owner_waiter.join().unwrap();
+    for blocker in blockers {
+      futures::executor::block_on(blocker);
+    }
+    executor.begin_shutdown();
+    executor.wait_until_scheduler_idle();
+
+    assert!(
+      completed_while_gated,
+      "the exact dependency must complete while unrelated workers remain gated"
+    );
+    assert_eq!(owner_result.unwrap(), 41);
+    assert!(
+      unrelated_observed,
+      "the exact dependency must signal before unrelated FIFO admission consumes the last slot"
     );
   }
 
@@ -17364,6 +18252,397 @@ mod tests {
       1,
       "cross-driver dependency service must reuse the owner's physical lane"
     );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_blocking_admission_rechecks_stop_under_lock() {
+    use std::sync::mpsc;
+
+    let controller = Arc::new(current_thread_controller("current-thread-blocking-stop-race"));
+    let backend = controller.backend();
+    let RuntimeExecutor::CurrentThread(executor) = &backend.executor else {
+      panic!("configured CurrentThread backend must create a CurrentThread executor");
+    };
+    let executor = Arc::clone(executor);
+    drop(backend);
+
+    let ran = Arc::new(AtomicBool::new(false));
+    let blocking_ran = Arc::clone(&ran);
+    let (admission_locked_tx, admission_locked_rx) = mpsc::channel();
+    let (release_admission_tx, release_admission_rx) = mpsc::channel();
+    let (blocking_result_tx, blocking_result_rx) = mpsc::channel();
+    let submit_controller = Arc::clone(&controller);
+    let submitter = std::thread::spawn(move || {
+      CURRENT_THREAD_BLOCKING_CLAIM_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          admission_locked_tx.send(()).unwrap();
+          release_admission_rx.recv().unwrap();
+        }));
+      });
+      let handle = submit_controller
+        .try_spawn_blocking(move || {
+          blocking_ran.store(true, Ordering::SeqCst);
+        })
+        .unwrap_or_else(|_| {
+          panic!("the submission linearized before shutdown and must be accepted")
+        });
+      blocking_result_tx.send(futures::executor::block_on(handle)).unwrap();
+    });
+    admission_locked_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the blocking submitter must pause while holding the admission lock");
+
+    let (shutdown_result_tx, shutdown_result_rx) = mpsc::channel();
+    let shutdown_controller = Arc::clone(&controller);
+    let shutdown = std::thread::spawn(move || {
+      shutdown_result_tx.send(shutdown_controller.shutdown()).unwrap();
+    });
+    wait_until("CurrentThread shutdown to publish generation stop", || executor.stop.is_stopping());
+    release_admission_tx.send(()).unwrap();
+
+    let blocking_error = blocking_result_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the admitted blocking handle must resolve")
+      .expect_err("stop publication must reject the blocking lane claim");
+    assert_eq!(
+      blocking_error.to_string(),
+      "the async runtime stopped before the blocking task could start"
+    );
+    assert!(!ran.load(Ordering::SeqCst), "blocking work must not start after stop publication");
+    shutdown_result_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("shutdown must finish after the rejected admission retires")
+      .unwrap();
+    submitter.join().unwrap();
+    shutdown.join().unwrap();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_fifo_blocking_claim_rechecks_stop_under_lock() {
+    use std::sync::mpsc;
+
+    let executor = Arc::new(CurrentThreadExecutor::new(Arc::new(RuntimeMetrics::default())));
+    let ran = Arc::new(AtomicBool::new(false));
+    let job_ran = Arc::clone(&ran);
+    {
+      let mut state =
+        executor.blocking_admission.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      state.queue.push(QueuedBlocking {
+        id: BlockingJobId(u64::MAX - 71),
+        run: Box::new(move || {
+          job_ran.store(true, Ordering::SeqCst);
+        }),
+      });
+    }
+
+    let (claim_locked_tx, claim_locked_rx) = mpsc::channel();
+    let (release_claim_tx, release_claim_rx) = mpsc::channel();
+    let (claim_result_tx, claim_result_rx) = mpsc::channel();
+    let claim_executor = Arc::clone(&executor);
+    let claimant = std::thread::spawn(move || {
+      CURRENT_THREAD_BLOCKING_CLAIM_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          claim_locked_tx.send(()).unwrap();
+          release_claim_rx.recv().unwrap();
+        }));
+      });
+      claim_result_tx.send(claim_executor.run_one_blocking()).unwrap();
+    });
+    claim_locked_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the FIFO claimant must pause while holding the admission lock");
+
+    executor.stop.begin_shutdown();
+    release_claim_tx.send(()).unwrap();
+    assert!(
+      !claim_result_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the stopped FIFO claim must finish"),
+      "stop publication must reject the queued FIFO claim"
+    );
+    claimant.join().unwrap();
+    assert!(!ran.load(Ordering::SeqCst), "queued FIFO work must not start after stop publication");
+    assert!(
+      !executor
+        .blocking_admission
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .queue
+        .is_empty(),
+      "the rejected FIFO job must remain queued for shutdown cancellation"
+    );
+
+    executor.close_blocking_admission();
+    assert!(
+      executor
+        .blocking_admission
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .queue
+        .is_empty()
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_fifo_blocking_claim_rechecks_terminal_cancellation_under_lock() {
+    use std::sync::mpsc;
+
+    let executor = Arc::new(CurrentThreadExecutor::new(Arc::new(RuntimeMetrics::default())));
+    let ran = Arc::new(AtomicBool::new(false));
+    let job_ran = Arc::clone(&ran);
+    {
+      let mut state =
+        executor.blocking_admission.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      state.queue.push(QueuedBlocking {
+        id: BlockingJobId(u64::MAX - 73),
+        run: Box::new(move || {
+          job_ran.store(true, Ordering::SeqCst);
+        }),
+      });
+    }
+
+    let (claim_locked_tx, claim_locked_rx) = mpsc::channel();
+    let (release_claim_tx, release_claim_rx) = mpsc::channel();
+    let (claim_result_tx, claim_result_rx) = mpsc::channel();
+    let claim_executor = Arc::clone(&executor);
+    let claimant = std::thread::spawn(move || {
+      CURRENT_THREAD_BLOCKING_CLAIM_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          claim_locked_tx.send(()).unwrap();
+          release_claim_rx.recv().unwrap();
+        }));
+      });
+      claim_result_tx.send(claim_executor.run_one_blocking()).unwrap();
+    });
+    claim_locked_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the FIFO claimant must pause while holding the admission lock");
+
+    let (cancellation_published_tx, cancellation_published_rx) = mpsc::channel();
+    let (cancellation_done_tx, cancellation_done_rx) = mpsc::channel();
+    let cancelling_executor = Arc::clone(&executor);
+    let cancellation = std::thread::spawn(move || {
+      let cancelling = cancelling_executor
+        .begin_failed_dispatch_cancellation()
+        .expect("the test must publish terminal dispatch cancellation");
+      cancellation_published_tx.send(()).unwrap();
+      cancelling_executor.cancel_work_after_host_dispatch_failure_claimed(cancelling);
+      cancellation_done_tx.send(()).unwrap();
+    });
+    cancellation_published_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("terminal dispatch cancellation must publish before queue cancellation");
+    assert!(executor.cancelling_failed_dispatch.load(Ordering::Acquire));
+    assert!(
+      matches!(cancellation_done_rx.try_recv(), Err(mpsc::TryRecvError::Empty)),
+      "terminal cancellation must wait for the blocking-admission lock"
+    );
+
+    release_claim_tx.send(()).unwrap();
+    assert!(
+      !claim_result_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the cancelled FIFO claim must finish"),
+      "terminal cancellation publication must reject the queued FIFO claim"
+    );
+    cancellation_done_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("terminal cancellation must drain the rejected FIFO job");
+    claimant.join().unwrap();
+    cancellation.join().unwrap();
+
+    assert!(!ran.load(Ordering::SeqCst), "terminally cancelled FIFO work must not start");
+    assert!(
+      executor
+        .blocking_admission
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .queue
+        .is_empty(),
+      "terminal cancellation must drain the rejected FIFO job"
+    );
+    assert!(!executor.cancelling_failed_dispatch.load(Ordering::Acquire));
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_owned_blocking_claim_rechecks_stop_under_lock() {
+    use std::sync::mpsc;
+
+    let executor = Arc::new(CurrentThreadExecutor::new(Arc::new(RuntimeMetrics::default())));
+    let owner = executor.fresh_owner_token();
+    let job = BlockingJobId(u64::MAX - 72);
+    let ran = Arc::new(AtomicBool::new(false));
+    let job_ran = Arc::clone(&ran);
+    {
+      let mut state =
+        executor.blocking_admission.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      state.owner = Some(owner);
+      state.queue.push(QueuedBlocking {
+        id: job,
+        run: Box::new(move || {
+          job_ran.store(true, Ordering::SeqCst);
+        }),
+      });
+    }
+    let dependency = Arc::new(TaskDependency::new(u64::MAX, Some(owner)));
+    dependency.set_owned(BlockingDependency { job, owner: Some(owner) });
+
+    let (claim_locked_tx, claim_locked_rx) = mpsc::channel();
+    let (release_claim_tx, release_claim_rx) = mpsc::channel();
+    let (claim_result_tx, claim_result_rx) = mpsc::channel();
+    let claim_executor = Arc::clone(&executor);
+    let claim_dependency = Arc::clone(&dependency);
+    let claimant = std::thread::spawn(move || {
+      let _owner = claim_executor.enter_blocking_owner(owner, false);
+      CURRENT_THREAD_BLOCKING_CLAIM_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          claim_locked_tx.send(()).unwrap();
+          release_claim_rx.recv().unwrap();
+        }));
+      });
+      claim_result_tx.send(claim_executor.try_run_owned_blocking(&claim_dependency)).unwrap();
+    });
+    claim_locked_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the owner claimant must pause while holding the admission lock");
+
+    executor.stop.begin_shutdown();
+    release_claim_tx.send(()).unwrap();
+    assert!(
+      !claim_result_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the stopped owner claim must finish"),
+      "stop publication must reject the exact-owner claim"
+    );
+    claimant.join().unwrap();
+    assert!(
+      !ran.load(Ordering::SeqCst),
+      "queued exact-owner work must not start after stop publication"
+    );
+    assert!(
+      !executor
+        .blocking_admission
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .queue
+        .is_empty(),
+      "the rejected exact-owner job must remain queued for shutdown cancellation"
+    );
+
+    executor
+      .blocking_admission
+      .state
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner)
+      .owner = None;
+    executor.close_blocking_admission();
+    assert!(
+      executor
+        .blocking_admission
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .queue
+        .is_empty()
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_owned_blocking_claim_rechecks_terminal_cancellation_under_lock() {
+    use std::sync::mpsc;
+
+    let executor = Arc::new(CurrentThreadExecutor::new(Arc::new(RuntimeMetrics::default())));
+    let owner = executor.fresh_owner_token();
+    let job = BlockingJobId(u64::MAX - 74);
+    let ran = Arc::new(AtomicBool::new(false));
+    let job_ran = Arc::clone(&ran);
+    {
+      let mut state =
+        executor.blocking_admission.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      state.owner = Some(owner);
+      state.queue.push(QueuedBlocking {
+        id: job,
+        run: Box::new(move || {
+          job_ran.store(true, Ordering::SeqCst);
+        }),
+      });
+    }
+    let dependency = Arc::new(TaskDependency::new(u64::MAX, Some(owner)));
+    dependency.set_owned(BlockingDependency { job, owner: Some(owner) });
+
+    let (claim_locked_tx, claim_locked_rx) = mpsc::channel();
+    let (release_claim_tx, release_claim_rx) = mpsc::channel();
+    let (claim_result_tx, claim_result_rx) = mpsc::channel();
+    let claim_executor = Arc::clone(&executor);
+    let claim_dependency = Arc::clone(&dependency);
+    let claimant = std::thread::spawn(move || {
+      let _owner = claim_executor.enter_blocking_owner(owner, false);
+      CURRENT_THREAD_BLOCKING_CLAIM_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          claim_locked_tx.send(()).unwrap();
+          release_claim_rx.recv().unwrap();
+        }));
+      });
+      claim_result_tx.send(claim_executor.try_run_owned_blocking(&claim_dependency)).unwrap();
+    });
+    claim_locked_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("the owner claimant must pause while holding the admission lock");
+
+    let (cancellation_published_tx, cancellation_published_rx) = mpsc::channel();
+    let (cancellation_done_tx, cancellation_done_rx) = mpsc::channel();
+    let cancelling_executor = Arc::clone(&executor);
+    let cancellation = std::thread::spawn(move || {
+      let cancelling = cancelling_executor
+        .begin_failed_dispatch_cancellation()
+        .expect("the test must publish terminal dispatch cancellation");
+      cancellation_published_tx.send(()).unwrap();
+      cancelling_executor.cancel_work_after_host_dispatch_failure_claimed(cancelling);
+      cancellation_done_tx.send(()).unwrap();
+    });
+    cancellation_published_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("terminal dispatch cancellation must publish before queue cancellation");
+    assert!(executor.cancelling_failed_dispatch.load(Ordering::Acquire));
+    assert!(
+      matches!(cancellation_done_rx.try_recv(), Err(mpsc::TryRecvError::Empty)),
+      "terminal cancellation must wait for the blocking-admission lock"
+    );
+
+    release_claim_tx.send(()).unwrap();
+    assert!(
+      !claim_result_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("the cancelled owner claim must finish"),
+      "terminal cancellation publication must reject the exact-owner claim"
+    );
+    cancellation_done_rx
+      .recv_timeout(Duration::from_secs(2))
+      .expect("terminal cancellation must drain the rejected exact-owner job");
+    claimant.join().unwrap();
+    cancellation.join().unwrap();
+
+    assert!(!ran.load(Ordering::SeqCst), "terminally cancelled exact-owner work must not start");
+    assert!(
+      executor
+        .blocking_admission
+        .state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .queue
+        .is_empty(),
+      "terminal cancellation must drain the rejected exact-owner job"
+    );
+    assert!(!executor.cancelling_failed_dispatch.load(Ordering::Acquire));
   }
 
   #[cfg(not(target_family = "wasm"))]
@@ -22225,6 +23504,43 @@ mod tests {
     }
   }
 
+  struct ReentrantSweepTimerDriver {
+    registry: std::sync::Weak<TimerDriverRegistry>,
+    registration: Mutex<Option<TimerDriverId>>,
+    sweeps: AtomicUsize,
+    removed_before_sweep: AtomicBool,
+  }
+
+  impl TimerDriver for ReentrantSweepTimerDriver {
+    fn register(&self, _id: TimerId, _deadline: Instant, _waker: Waker) {}
+
+    fn cancel(&self, _id: TimerId) {}
+
+    fn is_live(&self) -> bool {
+      false
+    }
+
+    fn on_swept(&self) {
+      self.sweeps.fetch_add(1, Ordering::SeqCst);
+      let registration = self.registration.lock().unwrap().take();
+      if let (Some(registry), Some(registration)) = (self.registry.upgrade(), registration) {
+        let state = registry
+          .state
+          .try_lock()
+          .expect("the sweep callback must run outside the timer-driver registry lock");
+        assert!(
+          !state.entries.contains_key(&registration),
+          "the dead driver must be unlinked before its sweep callback runs"
+        );
+        self.removed_before_sweep.store(true, Ordering::SeqCst);
+        drop(state);
+        // Mirrors JsTimerHostInner::evict: the sweep already removed this
+        // registration, so explicit host cleanup must remain a cheap no-op.
+        registry.unregister(registration);
+      }
+    }
+  }
+
   struct ReentrantDropDriver {
     registry: std::sync::Weak<TimerDriverRegistry>,
     fallback: TimerDriverId,
@@ -23404,6 +24720,87 @@ mod tests {
   }
 
   #[test]
+  fn timer_driver_registry_large_reentrant_sweep_preserves_keyed_order() {
+    const DRIVER_PAIRS: usize = 2_048;
+
+    let registry = Arc::new(TimerDriverRegistry::default());
+    let mut dead = Vec::with_capacity(DRIVER_PAIRS + 1);
+    let mut live = Vec::with_capacity(DRIVER_PAIRS);
+    let mut live_ids = Vec::with_capacity(DRIVER_PAIRS);
+    for _ in 0..DRIVER_PAIRS {
+      let driver = Arc::new(ReentrantSweepTimerDriver {
+        registry: Arc::downgrade(&registry),
+        registration: Mutex::new(None),
+        sweeps: AtomicUsize::new(0),
+        removed_before_sweep: AtomicBool::new(false),
+      });
+      let id = registry.register(Arc::clone(&driver) as Arc<dyn TimerDriver>);
+      *driver.registration.lock().unwrap() = Some(id);
+      dead.push(driver);
+
+      let driver = ManualStubDriver::new();
+      live_ids.push(registry.register(Arc::clone(&driver) as Arc<dyn TimerDriver>));
+      live.push(driver);
+    }
+    let dead_tail = Arc::new(ReentrantSweepTimerDriver {
+      registry: Arc::downgrade(&registry),
+      registration: Mutex::new(None),
+      sweeps: AtomicUsize::new(0),
+      removed_before_sweep: AtomicBool::new(false),
+    });
+    let dead_tail_id = registry.register(Arc::clone(&dead_tail) as Arc<dyn TimerDriver>);
+    *dead_tail.registration.lock().unwrap() = Some(dead_tail_id);
+    dead.push(dead_tail);
+
+    let selection = registry.live();
+    assert_eq!(
+      selection.as_slice().iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+      live_ids,
+      "sweeping every interleaved dead host must retain live registration order"
+    );
+    drop(selection);
+    assert!(
+      dead.iter().all(|driver| {
+        driver.sweeps.load(Ordering::SeqCst) == 1
+          && driver.removed_before_sweep.load(Ordering::SeqCst)
+          && driver.registration.lock().unwrap().is_none()
+      }),
+      "every dead host must be unlinked and run exactly one binding-shaped eviction hook"
+    );
+
+    {
+      let state = registry.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      assert_eq!(state.entries.len(), DRIVER_PAIRS);
+      assert_eq!(state.oldest, live_ids.first().copied());
+      assert_eq!(state.newest, live_ids.last().copied());
+      assert_eq!(
+        state.ordered_snapshot().iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+        live_ids,
+        "keyed removals must preserve the linked order of every live host"
+      );
+    }
+    let second_selection = registry.live();
+    assert_eq!(
+      second_selection.as_slice().iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+      live_ids,
+      "a second selection must retain the same live order"
+    );
+    drop(second_selection);
+    assert!(
+      dead.iter().all(|driver| driver.sweeps.load(Ordering::SeqCst) == 1),
+      "permanently swept hosts must not receive repeated eviction callbacks"
+    );
+    assert_eq!(
+      registry.current().map(|(id, _)| id),
+      live_ids.last().copied(),
+      "newest-live compatibility selection must survive the mass sweep"
+    );
+
+    drop(live);
+    drop(dead);
+  }
+
+  #[test]
   fn timer_driver_registry_snapshot_contains_each_driver_drop() {
     const CHILD_ENV: &str = "ROLLDOWN_TEST_TIMER_DRIVER_SNAPSHOT_DROP_PANIC_CHILD";
 
@@ -23446,7 +24843,7 @@ mod tests {
       assert_eq!(first_drops.load(Ordering::SeqCst), 1);
       assert_eq!(second_drops.load(Ordering::SeqCst), 1);
       assert_eq!(
-        registry.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner).len(),
+        registry.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).entries.len(),
         1
       );
       return;
@@ -23504,7 +24901,7 @@ mod tests {
       assert_eq!(first_drops.load(Ordering::SeqCst), 1);
       assert_eq!(second_drops.load(Ordering::SeqCst), 1);
       assert!(
-        registry.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty()
+        registry.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).entries.is_empty()
       );
       return;
     }
@@ -23523,6 +24920,118 @@ mod tests {
       String::from_utf8_lossy(&output.stdout),
       String::from_utf8_lossy(&output.stderr)
     );
+  }
+
+  #[test]
+  fn timer_driver_registry_drop_contains_each_driver_destructor() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_TIMER_DRIVER_REGISTRY_DROP_PANIC_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      let first_drops = Arc::new(AtomicUsize::new(0));
+      let second_drops = Arc::new(AtomicUsize::new(0));
+      let registry = TimerDriverRegistry::default();
+      let first = Arc::new(PanickingCancelDropTimerDriver {
+        cancels: Arc::new(AtomicUsize::new(0)),
+        drops: Arc::clone(&first_drops),
+      });
+      let second = Arc::new(PanickingCancelDropTimerDriver {
+        cancels: Arc::new(AtomicUsize::new(0)),
+        drops: Arc::clone(&second_drops),
+      });
+      registry.register(Arc::clone(&first) as Arc<dyn TimerDriver>);
+      registry.register(Arc::clone(&second) as Arc<dyn TimerDriver>);
+      drop(first);
+      drop(second);
+
+      drop(registry);
+
+      assert_eq!(first_drops.load(Ordering::SeqCst), 1);
+      assert_eq!(second_drops.load(Ordering::SeqCst), 1);
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg("async_runtime::tests::timer_driver_registry_drop_contains_each_driver_destructor")
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the hostile timer-driver registry drop subprocess test must start");
+    assert!(
+      output.status.success(),
+      "registry drop must contain every driver destructor panic; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
+  }
+
+  #[test]
+  fn host_sleep_reconciles_large_driver_sets_without_duplicate_arms() {
+    const DRIVERS: usize = 512;
+
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
+    let backend =
+      RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(Arc::clone(&executor)));
+    let registry = Arc::new(TimerDriverRegistry::default());
+    let drivers = (0..DRIVERS)
+      .map(|_| {
+        let driver = ManualStubDriver::new();
+        registry.register(Arc::clone(&driver) as Arc<dyn TimerDriver>);
+        driver
+      })
+      .collect::<Vec<_>>();
+    let mut sleep = make_sleep(&backend, &registry, Instant::now() + Duration::from_mins(1));
+    let mut cx = Context::from_waker(Waker::noop());
+
+    assert!(Pin::new(&mut sleep).poll(&mut cx).is_pending());
+    assert!(Pin::new(&mut sleep).poll(&mut cx).is_pending());
+    let timer_id = drivers[0].registers.lock().unwrap()[0].0;
+    match &sleep.inner {
+      SleepInner::Host(host) => assert_eq!(host.armed.len(), DRIVERS),
+      #[cfg(not(target_family = "wasm"))]
+      SleepInner::Heap(_) => panic!("CurrentThread sleep must use host timers"),
+    }
+    for driver in &drivers {
+      assert_eq!(
+        driver.registers.lock().unwrap().len(),
+        2,
+        "a re-poll must refresh each live driver exactly once"
+      );
+    }
+
+    for driver in drivers.iter().step_by(2) {
+      driver.kill();
+    }
+    assert!(Pin::new(&mut sleep).poll(&mut cx).is_pending());
+    match &sleep.inner {
+      SleepInner::Host(host) => assert_eq!(host.armed.len(), DRIVERS / 2),
+      #[cfg(not(target_family = "wasm"))]
+      SleepInner::Heap(_) => panic!("CurrentThread sleep must use host timers"),
+    }
+    for (index, driver) in drivers.iter().enumerate() {
+      let registers = driver.registers.lock().unwrap().len();
+      let cancels = driver.cancels.lock().unwrap().clone();
+      if index % 2 == 0 {
+        assert_eq!(registers, 2);
+        assert_eq!(cancels, vec![timer_id]);
+      } else {
+        assert_eq!(registers, 3);
+        assert!(cancels.is_empty());
+      }
+    }
+
+    drop(sleep);
+    for driver in drivers {
+      assert_eq!(
+        driver.cancels.lock().unwrap().as_slice(),
+        &[timer_id],
+        "every physical arm must be cancelled exactly once"
+      );
+    }
+    assert_eq!(registry.pending_len(), 0);
+    assert!(!executor.host_timers.has_pending());
   }
 
   #[test]

@@ -3,8 +3,10 @@ export const EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT = 4;
 export const EMNAPI_ASYNC_WORK_POOL_SIZE_MAX = 1024;
 export const ASYNC_RUNTIME_HOST_EXPORTS = [
   'getCurrentThreadTaskHostContractVersion',
+  'isCurrentThreadHostRegistrationActive',
   'registerCurrentThreadTaskHost',
   'registerTimerHost',
+  'reserveCurrentThreadHostRegistration',
   'unregisterCurrentThreadTaskHost',
   'unregisterTimerHost',
 ] as const;

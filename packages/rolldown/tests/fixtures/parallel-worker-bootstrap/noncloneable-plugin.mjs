@@ -1,9 +1,13 @@
-import { parentPort } from 'node:worker_threads';
+import { MessagePort, workerData } from 'node:worker_threads';
 import { defineParallelPluginImplementation } from 'rolldown/parallelPlugin';
 
 export default defineParallelPluginImplementation(({ disruptReporting }) => {
   if (disruptReporting) {
-    parentPort.postMessage = () => {
+    if (workerData.controlPort !== undefined) {
+      workerData.controlPort.postMessage({ type: 'success' });
+      throw new Error('parallel bootstrap control port leaked into plugin code');
+    }
+    MessagePort.prototype.postMessage = () => {
       throw new Error('forced bootstrap postMessage failure');
     };
   }

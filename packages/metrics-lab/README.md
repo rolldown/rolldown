@@ -18,8 +18,9 @@ every build also refreshes the build-side report under `state/rolldown-metrics/`
 |---|---|
 | `node harness.mjs gen [--force]` | Generate the demo app (deterministic; `--force` resets defers). |
 | `node harness.mjs build` | Build `app/` → `app/dist/` + build metrics report. |
-| `node harness.mjs measure [--runs 5] [--label X] [--no-throttle]` | N throttled runs (1 warmup discarded) → `state/runtime-metrics.json` with medians, guard, `delta` (vs previous measure) and `baselineDelta` (vs pinned baseline). |
-| `node harness.mjs coverage` | One instrumented run → per-module bytes executed **before first paint** vs **by settle** → `state/coverage.json` + defer candidates. Entry chunk auto-detected from `dist/index.html` (hashed Vite assets work); override with `--entry`. |
+| `node harness.mjs measure [--runs 5] [--label X] [--no-throttle]` | N throttled runs (1 warmup discarded) → `state/runtime-metrics.json` with medians, guard, `delta`/`baselineDelta` — plus a **render gap** flag (paint gated on post-load work, gating fetches named) and a **pre-paint CPU** flag (long tasks before first paint). |
+| `node harness.mjs coverage` | One instrumented run → per-module bytes executed **before first paint** vs **by settle** → `state/coverage.json` + three lead sections: defer candidates, large-modules-executed-at-paint (data evaluates on import — executed ≠ needed), and sibling variant groups (locales/themes). Entry chunk auto-detected from `dist/index.html`; override with `--entry`. |
+| `node harness.mjs profile` | One profiled run → boot CPU by source module, navigation → first paint (`state/profile.json`). The follow-up to a pre-paint CPU flag. |
 | `node harness.mjs baseline` | Pin the last measurement (and the build-side `.state.json`) as the fixed reference for every following `baselineDelta`. |
 | `node harness.mjs defer <feature>` / `undefer <feature>` | Rewrite that feature's marker block in `app/src/main.ts` between static import and post-paint `import()`. Rebuild afterwards. |
 | `node harness.mjs status` | Feature modes, entry size, last/baseline LCP. |

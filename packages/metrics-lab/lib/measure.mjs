@@ -13,7 +13,7 @@ export const DEFAULT_THROTTLE = {
 };
 
 export const OBSERVER_JS = `(() => {
-  const M = (window.__perfMetrics = { fcp: null, lcp: null, cls: 0 });
+  const M = (window.__perfMetrics = { fcp: null, lcp: null, cls: 0, longtasks: [] });
   try {
     new PerformanceObserver((list) => {
       for (const e of list.getEntries()) M.lcp = e.startTime;
@@ -24,6 +24,9 @@ export const OBSERVER_JS = `(() => {
     new PerformanceObserver((list) => {
       for (const e of list.getEntries()) if (!e.hadRecentInput) M.cls += e.value;
     }).observe({ type: 'layout-shift', buffered: true });
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) M.longtasks.push({ start: e.startTime, duration: e.duration });
+    }).observe({ type: 'longtask', buffered: true });
   } catch {}
 })();`;
 
@@ -40,6 +43,13 @@ const COLLECT_JS = `(() => {
     load: nav ? nav.loadEventEnd : null,
     bytes: (nav ? nav.encodedBodySize : 0) + res.reduce((a, r) => a + (r.encodedBodySize || 0), 0),
     jsRequests: res.filter((r) => r.name.endsWith('.js')).length,
+    resources: res.slice(0, 40).map((r) => ({
+      name: r.name.replace(location.origin, ''),
+      type: r.initiatorType,
+      start: Math.round(r.startTime),
+      end: Math.round(r.responseEnd),
+    })),
+    longtasks: (M.longtasks || []).map((t) => ({ start: Math.round(t.start), duration: Math.round(t.duration) })),
     ready: Object.assign({}, window.__ready || {}),
     heroTitle: (() => { const el = document.getElementById('hero-title'); return el ? el.textContent || '' : null; })(),
     heroSubtitle: (() => { const el = document.getElementById('hero-subtitle'); return el ? el.textContent || '' : null; })(),
@@ -95,10 +105,32 @@ export function quantile(values, q) {
 const round1 = (v) => (v == null ? null : Math.round(v * 10) / 10);
 const round3 = (v) => (v == null ? null : Math.round(v * 1000) / 1000);
 
+/** Fetch/XHR requests that completed before first paint — the render-gating suspects. */
+function gatingFetches(samples) {
+  const seen = new Map();
+  for (const sample of samples) {
+    if (typeof sample.fcp !== 'number') continue;
+    for (const resource of sample.resources ?? []) {
+      if (resource.type !== 'fetch' && resource.type !== 'xmlhttprequest') continue;
+      if (resource.end > sample.fcp) continue;
+      seen.set(resource.name, `${resource.name} (${resource.type}, finished ${Math.round(sample.fcp - resource.end)}ms before first paint)`);
+    }
+  }
+  return [...seen.values()];
+}
+
 /** Fold N samples into the flat runtime metric-id map plus the correctness guard. */
 export function summarize(samples, expectedFeatures = []) {
   const nums = (key) => samples.map((s) => s[key]).filter((v) => typeof v === 'number');
   const clsValues = nums('cls');
+  const renderGaps = samples
+    .filter((s) => typeof s.lcp === 'number' && typeof s.load === 'number')
+    .map((s) => s.lcp - s.load);
+  const prepaintLongtask = samples
+    .filter((s) => typeof s.fcp === 'number')
+    .map((s) => (s.longtasks ?? [])
+      .filter((t) => t.start < s.fcp)
+      .reduce((sum, t) => sum + t.duration, 0));
   return {
     runs: samples.length,
     metrics: {
@@ -110,7 +142,13 @@ export function summarize(samples, expectedFeatures = []) {
       'runtime.cls': round3(clsValues.length ? Math.max(...clsValues) : null),
       'runtime.transfer_bytes': Math.round(median(nums('bytes')) ?? 0),
       'runtime.js_request_count': Math.round(median(nums('jsRequests')) ?? 0),
+      // How long after `load` the largest paint landed: a big gap means rendering
+      // is gated on post-load work (an awaited fetch, a lazily fetched chunk, CPU).
+      'runtime.render_gap_ms': round1(median(renderGaps)),
+      // Long-task time before first paint: boot CPU running ahead of render.
+      'runtime.prepaint_longtask_ms': round1(median(prepaintLongtask)),
     },
+    gatingFetches: gatingFetches(samples),
     guard: {
       allFeaturesReady: samples.every(
         (s) => expectedFeatures.every((f) => s.ready && s.ready[f] === true),

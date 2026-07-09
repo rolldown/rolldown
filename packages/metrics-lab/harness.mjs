@@ -28,6 +28,7 @@ import {
   DEFAULT_THROTTLE, deltaSection, summarize, timedRun,
 } from './lib/measure.mjs';
 import { coverageBySource, coverageRun } from './lib/coverage.mjs';
+import { aggregateProfile, profileRun } from './lib/profile.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const APP_DIR = path.join(ROOT, 'app');
@@ -156,6 +157,7 @@ async function cmdMeasure(argv) {
     runs: summary.runs,
     metrics: summary.metrics,
     guard: summary.guard,
+    gatingFetches: summary.gatingFetches,
     delta: prev ? deltaSection(prev.metrics, summary.metrics) : null,
     baselineDelta: baseline ? deltaSection(baseline.metrics, summary.metrics) : null,
     samples: summary.samples,
@@ -193,6 +195,21 @@ function printMeasureSummary(report, baseline) {
     && report.guard.heroRendered !== false // null = no hero probe on this app
     && report.guard.lcpObservedInAllRuns;
   console.log(`guard: ${guardOk ? 'PASS' : `FAIL ${JSON.stringify(report.guard)}`}`);
+
+  // Deep signals: things LCP alone doesn't say, each with the move it suggests.
+  const renderGap = m['runtime.render_gap_ms'];
+  if (typeof renderGap === 'number' && renderGap > 150) {
+    console.log(`render gap: first paint landed ${Math.round(renderGap)}ms AFTER the load event - rendering is gated on post-load work, not on downloading.`);
+    for (const fetchLine of report.gatingFetches ?? []) {
+      console.log(`  completed just before paint: ${fetchLine}`);
+    }
+    console.log('  next: find what the boot path awaits before the first render (a config/data fetch, a locale chunk) and render with bundled defaults instead, applying the fetched result when it arrives.');
+  }
+  const prepaintCpu = m['runtime.prepaint_longtask_ms'];
+  if (typeof prepaintCpu === 'number' && prepaintCpu > 100) {
+    console.log(`pre-paint CPU: ${Math.round(prepaintCpu)}ms of long tasks before first paint.`);
+    console.log('  next: run `node harness.mjs profile --dist <dist>` to see which modules burn that CPU; defer work the first paint does not need. ORDER MATTERS: fix any render gap (above) first - CPU that overlaps a render-blocking fetch is free, so deferring it can measure worse until the fetch is fixed.');
+  }
 
   if (report.baselineDelta?.['runtime.lcp_ms']) {
     const d = report.baselineDelta['runtime.lcp_ms'];
@@ -323,9 +340,89 @@ async function cmdCoverage(argv) {
         + '(follow their import chains from the entry), rebuild, run its functional check, then measure.'
       : '\nnext: defer the top candidate, rebuild, then measure.');
   } else {
-    console.log('\nno defer candidates left at current thresholds - the loop has converged.');
+    console.log('\nno defer candidates at current thresholds - nothing sizeable is parsed-but-unexecuted.');
+  }
+
+  // Executed-at-paint is NOT the same as needed-at-paint: top-level data counts
+  // as "executed" the moment its module is imported. Surface the places where
+  // that inversion typically hides real weight.
+  const LARGE_HOT_BYTES = 8 * 1024;
+  const largeHot = modules.filter((mod) =>
+    mod.totalBytes >= LARGE_HOT_BYTES && mod.paintRatio >= 0.5 && mod.source !== '(unmapped)');
+  if (largeHot.length) {
+    console.log('\nlarge modules fully executed at paint - "executed" does NOT prove the first paint needs their contents (top-level data evaluates on import):');
+    for (const mod of largeHot) {
+      console.log(`  ${mod.source}  (${kb(mod.totalBytes)}, ${(mod.paintRatio * 100).toFixed(0)}% at paint)`);
+    }
+    console.log('next: for each, check how much of it the first render actually reads; split rarely-read parts (full records, long bodies, alternate variants) into a module reached only by dynamic import.');
+  }
+
+  const SIBLING_MIN_FILES = 3;
+  const SIBLING_MIN_BYTES = 6 * 1024;
+  const byDir = new Map();
+  for (const mod of modules) {
+    const slash = mod.source.lastIndexOf('/');
+    if (slash <= 0) continue;
+    const dir = mod.source.slice(0, slash + 1);
+    const group = byDir.get(dir) ?? { files: 0, bytes: 0, paintBytes: 0, sizes: [] };
+    group.files += 1;
+    group.bytes += mod.totalBytes;
+    group.paintBytes += mod.paintBytes;
+    group.sizes.push(mod.totalBytes);
+    byDir.set(dir, group);
+  }
+  // Variant families (locales, themes) are same-shaped: require the sizeable
+  // members to be uniform, or a grab-bag utility directory would trip this.
+  // Tiny members (an index/barrel file) don't count against uniformity.
+  const siblingGroups = [...byDir.entries()].filter(([, group]) => {
+    const sizeable = group.sizes.filter((size) => size >= 1024);
+    return sizeable.length >= SIBLING_MIN_FILES
+      && group.bytes >= SIBLING_MIN_BYTES
+      && group.paintBytes / group.bytes >= 0.5
+      && Math.max(...sizeable) <= Math.min(...sizeable) * 2;
+  });
+  for (const [dir, group] of siblingGroups) {
+    console.log(`\nsibling group ${dir}: ${group.files} modules, ${kb(group.bytes)}, ~${Math.round((group.paintBytes / group.bytes) * 100)}% executed at paint.`);
+    console.log('next: families of same-shaped modules (locales, themes, per-tenant configs) usually need only ONE variant per session - keep the default in the entry and load the active variant with a dynamic import.');
   }
   console.log(`\nfull report: ${COVERAGE_JSON}`);
+}
+
+async function cmdProfile(argv) {
+  const opts = parse(argv, {
+    'no-throttle': { type: 'boolean', default: false },
+    dist: { type: 'string' },
+    entry: { type: 'string' },
+  });
+  const distDir = opts.dist ? path.resolve(opts.dist) : path.join(APP_DIR, 'dist');
+  const entry = opts.entry ?? detectEntry(distDir) ?? 'main.js';
+  if (!opts.entry) console.log(`entry: ${entry} (auto-detected from dist/index.html)`);
+  const entryFile = path.join(distDir, entry);
+  const mapFile = `${entryFile}.map`;
+  if (!fs.existsSync(mapFile)) {
+    throw new Error(`no sourcemap at ${mapFile} - build with sourcemap: true`);
+  }
+  fs.mkdirSync(STATE_DIR, { recursive: true });
+
+  const profile = await withServerAndBrowser(distDir, opts['no-throttle'], ({ origin, cdp, throttle }) =>
+    profileRun(cdp, { origin, throttle }));
+
+  const { rows, totalMs } = aggregateProfile(profile, {
+    code: fs.readFileSync(entryFile, 'utf8'),
+    map: JSON.parse(fs.readFileSync(mapFile, 'utf8')),
+    entryUrlSuffix: `/${entry.replaceAll('\\', '/')}`,
+  });
+  writeJson(path.join(STATE_DIR, 'profile.json'), {
+    schemaVersion: 1, generatedAtMs: Date.now(), entry, totalMs, rows,
+  });
+
+  console.log(`boot CPU by module, navigation -> first paint (${totalMs}ms sampled):\n`);
+  for (const row of rows.slice(0, 20)) {
+    const pct = totalMs > 0 ? `${((row.ms / totalMs) * 100).toFixed(0).padStart(4)}%` : '';
+    console.log(`  ${row.bucket.padEnd(40)} ${String(row.ms).padStart(7)}ms ${pct}`);
+  }
+  console.log('\nnext: work here runs BEFORE the page paints. Defer whatever the first render does not need (idle callback + dynamic import). Fix render-gating fetches first: CPU that overlaps a blocked render is free, so deferring it can measure worse until the fetch is fixed.');
+  console.log(`\nfull report: ${path.join(STATE_DIR, 'profile.json')}`);
 }
 
 async function cmdBaseline() {
@@ -380,19 +477,27 @@ async function cmdHelp() {
   console.log(`browser-loading perf harness - measurement + diagnosis; you drive the loop
 
 commands (this directory):
-  measure --dist <app>/dist --runs 5 --label <name>   throttled runs -> LCP + "vs pinned baseline" verdict
+  measure --dist <app>/dist --runs 5 --label <name>   throttled runs -> LCP, verdict, render-gap + pre-paint CPU flags
   baseline                                            pin the last measurement as the fixed reference
-  coverage --dist <app>/dist                          per-module bytes executed at first paint -> candidates
+  coverage --dist <app>/dist                          bytes executed at paint -> candidates, large-at-paint data, sibling groups
+  profile --dist <app>/dist                           boot CPU by module, navigation -> first paint
   gen | build | defer <f> | undefer <f> | status | serve    demo-app helpers (README.md)
 
 the loop:
   1. build the app; measure --label baseline; baseline (pin BEFORE changing anything)
-  2. coverage: note large modules with ~0% executed at paint
-  3. read the app source; find why the landing page loads them (follow imports from the entry)
-  4. change the app so it stops loading them before paint (never remove features); one change at a time
+  2. read EVERY signal, not just the LCP line:
+     - measure "render gap": rendering is gated on post-load work (usually an awaited
+       fetch - render with bundled defaults instead). FIX THIS CLASS FIRST.
+     - measure "pre-paint CPU" -> run profile: modules burning CPU before paint that
+       the first render may not need (deferring only pays AFTER the render gap is fixed)
+     - coverage sections: defer candidates (parsed, never ran); large modules "executed"
+       at paint (data evaluates on import - executed does NOT mean needed); sibling
+       variant groups (locales/themes: one variant per session, load it dynamically)
+  3. read the app source; find why the landing page pays for each finding
+  4. change the app (never remove features); one change at a time
   5. rebuild; run the app's functional check; measure --label <change>
   6. "improvement beyond noise" + check passes -> keep, re-pin (baseline), commit; otherwise revert + rebuild
-  7. repeat from 2; done when coverage says converged or two attempts in a row were not kept
+  7. repeat from 2; done when the signals are clean or two attempts in a row were not kept
 
 judge only by "vs pinned baseline". full contract: AGENTS.md`);
 }
@@ -404,6 +509,7 @@ const commands = {
   build: cmdBuild,
   measure: cmdMeasure,
   coverage: cmdCoverage,
+  profile: cmdProfile,
   baseline: cmdBaseline,
   defer: (argv) => cmdDefer(argv, 'deferred'),
   undefer: (argv) => cmdDefer(argv, 'baseline'),

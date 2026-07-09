@@ -17,6 +17,11 @@ keep/revert decisions.
   lead (see "reading the signals").
 - `node harness.mjs profile --dist <app>/dist` — boot CPU by source module, from
   navigation to first paint. Use it whenever measure reports pre-paint CPU.
+- `node harness.mjs verdict --dist <app>/dist` — fuses every signal into an
+  OPEN / clear / UNKNOWN checklist, with staleness tracking against the current
+  build. **This is the only "done" that counts**: it refuses to conclude while a
+  lead is open or a signal is missing/stale, and even its all-clear states what
+  the tools cannot see.
 - Demo app only: `gen`, `build`, `defer <feature>`, `undefer <feature>`, `status`,
   `serve` (see README.md).
 
@@ -58,8 +63,10 @@ keep/revert decisions.
    change, re-pin with `baseline`, commit. Anything else → revert the change exactly
    and rebuild. (If a deferral measures worse while a render gap exists, revisit it
    after the gap is fixed.)
-7. Repeat from 2. You are done when the signals are clean, or two attempts in a row
-   were not kept.
+7. Repeat from 2. Declare done ONLY when `node harness.mjs verdict --dist <app>/dist`
+   reports every signal class clear and fresh — never because a single report looks
+   empty. One tool's silence only means that tool sees nothing; verdict checks them
+   all and tells you which signals you haven't gathered yet.
 8. Report: baseline LCP, final LCP, % change, entry size before/after, and one
    sentence per kept change.
 

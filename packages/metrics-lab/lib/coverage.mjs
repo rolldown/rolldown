@@ -203,6 +203,49 @@ export function coverageBySource({ code, map, atPaint, atSettle }) {
   return rows;
 }
 
+// --- lead analyses over per-module coverage rows -------------------------------
+
+export const LARGE_AT_PAINT_MIN_BYTES = 8 * 1024;
+export const SIBLING_MIN_FILES = 3;
+export const SIBLING_MIN_BYTES = 6 * 1024;
+
+/**
+ * Big modules that executed at paint. "Executed" does NOT prove the first paint
+ * needs their contents — top-level data evaluates the moment its module is
+ * imported — so these are verify-need leads, not certainties.
+ */
+export function largeAtPaintModules(modules) {
+  return modules.filter((mod) =>
+    mod.totalBytes >= LARGE_AT_PAINT_MIN_BYTES && mod.paintRatio >= 0.5 && mod.source !== '(unmapped)');
+}
+
+/**
+ * Same-shaped sibling families (locales, themes, per-tenant configs) mostly
+ * executed at paint. Size uniformity over the sizeable members keeps grab-bag
+ * utility directories from tripping this; tiny index/barrel files don't count.
+ */
+export function siblingVariantGroups(modules) {
+  const byDir = new Map();
+  for (const mod of modules) {
+    const slash = mod.source.lastIndexOf('/');
+    if (slash <= 0) continue;
+    const dir = mod.source.slice(0, slash + 1);
+    const group = byDir.get(dir) ?? { dir, files: 0, bytes: 0, paintBytes: 0, sizes: [] };
+    group.files += 1;
+    group.bytes += mod.totalBytes;
+    group.paintBytes += mod.paintBytes;
+    group.sizes.push(mod.totalBytes);
+    byDir.set(dir, group);
+  }
+  return [...byDir.values()].filter((group) => {
+    const sizeable = group.sizes.filter((size) => size >= 1024);
+    return sizeable.length >= SIBLING_MIN_FILES
+      && group.bytes >= SIBLING_MIN_BYTES
+      && group.paintBytes / group.bytes >= 0.5
+      && Math.max(...sizeable) <= Math.min(...sizeable) * 2;
+  });
+}
+
 // --- browser driver ----------------------------------------------------------
 
 /**

@@ -27,7 +27,9 @@ import {
 import {
   DEFAULT_THROTTLE, deltaSection, summarize, timedRun,
 } from './lib/measure.mjs';
-import { coverageBySource, coverageRun } from './lib/coverage.mjs';
+import {
+  coverageBySource, coverageRun, largeAtPaintModules, siblingVariantGroups,
+} from './lib/coverage.mjs';
 import { aggregateProfile, profileRun } from './lib/profile.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -37,6 +39,7 @@ const RUNTIME_METRICS = path.join(STATE_DIR, 'runtime-metrics.json');
 const RUNTIME_STATE = path.join(STATE_DIR, '.state.json');
 const RUNTIME_BASELINE = path.join(STATE_DIR, 'baseline.json');
 const COVERAGE_JSON = path.join(STATE_DIR, 'coverage.json');
+const PROFILE_JSON = path.join(STATE_DIR, 'profile.json');
 const HISTORY = path.join(STATE_DIR, 'history.jsonl');
 const BUILD_METRICS_DIR = path.join(STATE_DIR, 'rolldown-metrics');
 const PROFILE_DIR = path.join(STATE_DIR, 'chrome-profile');
@@ -152,6 +155,8 @@ async function cmdMeasure(argv) {
     schemaVersion: 1,
     generatedAtMs: Date.now(),
     label: opts.label || null,
+    dist: distDir,
+    entry: detectEntry(distDir),
     throttle: opts['no-throttle'] ? null : DEFAULT_THROTTLE,
     deferred: opts.dist ? null : deferredList(),
     runs: summary.runs,
@@ -206,7 +211,7 @@ function printMeasureSummary(report, baseline) {
     console.log('  next: find what the boot path awaits before the first render (a config/data fetch, a locale chunk) and render with bundled defaults instead, applying the fetched result when it arrives.');
   }
   const prepaintCpu = m['runtime.prepaint_longtask_ms'];
-  if (typeof prepaintCpu === 'number' && prepaintCpu > 100) {
+  if (typeof prepaintCpu === 'number' && prepaintCpu > 150) {
     console.log(`pre-paint CPU: ${Math.round(prepaintCpu)}ms of long tasks before first paint.`);
     console.log('  next: run `node harness.mjs profile --dist <dist>` to see which modules burn that CPU; defer work the first paint does not need. ORDER MATTERS: fix any render gap (above) first - CPU that overlaps a render-blocking fetch is free, so deferring it can measure worse until the fetch is fixed.');
   }
@@ -346,9 +351,7 @@ async function cmdCoverage(argv) {
   // Executed-at-paint is NOT the same as needed-at-paint: top-level data counts
   // as "executed" the moment its module is imported. Surface the places where
   // that inversion typically hides real weight.
-  const LARGE_HOT_BYTES = 8 * 1024;
-  const largeHot = modules.filter((mod) =>
-    mod.totalBytes >= LARGE_HOT_BYTES && mod.paintRatio >= 0.5 && mod.source !== '(unmapped)');
+  const largeHot = largeAtPaintModules(modules);
   if (largeHot.length) {
     console.log('\nlarge modules fully executed at paint - "executed" does NOT prove the first paint needs their contents (top-level data evaluates on import):');
     for (const mod of largeHot) {
@@ -357,32 +360,8 @@ async function cmdCoverage(argv) {
     console.log('next: for each, check how much of it the first render actually reads; split rarely-read parts (full records, long bodies, alternate variants) into a module reached only by dynamic import.');
   }
 
-  const SIBLING_MIN_FILES = 3;
-  const SIBLING_MIN_BYTES = 6 * 1024;
-  const byDir = new Map();
-  for (const mod of modules) {
-    const slash = mod.source.lastIndexOf('/');
-    if (slash <= 0) continue;
-    const dir = mod.source.slice(0, slash + 1);
-    const group = byDir.get(dir) ?? { files: 0, bytes: 0, paintBytes: 0, sizes: [] };
-    group.files += 1;
-    group.bytes += mod.totalBytes;
-    group.paintBytes += mod.paintBytes;
-    group.sizes.push(mod.totalBytes);
-    byDir.set(dir, group);
-  }
-  // Variant families (locales, themes) are same-shaped: require the sizeable
-  // members to be uniform, or a grab-bag utility directory would trip this.
-  // Tiny members (an index/barrel file) don't count against uniformity.
-  const siblingGroups = [...byDir.entries()].filter(([, group]) => {
-    const sizeable = group.sizes.filter((size) => size >= 1024);
-    return sizeable.length >= SIBLING_MIN_FILES
-      && group.bytes >= SIBLING_MIN_BYTES
-      && group.paintBytes / group.bytes >= 0.5
-      && Math.max(...sizeable) <= Math.min(...sizeable) * 2;
-  });
-  for (const [dir, group] of siblingGroups) {
-    console.log(`\nsibling group ${dir}: ${group.files} modules, ${kb(group.bytes)}, ~${Math.round((group.paintBytes / group.bytes) * 100)}% executed at paint.`);
+  for (const group of siblingVariantGroups(modules)) {
+    console.log(`\nsibling group ${group.dir}: ${group.files} modules, ${kb(group.bytes)}, ~${Math.round((group.paintBytes / group.bytes) * 100)}% executed at paint.`);
     console.log('next: families of same-shaped modules (locales, themes, per-tenant configs) usually need only ONE variant per session - keep the default in the entry and load the active variant with a dynamic import.');
   }
   console.log(`\nfull report: ${COVERAGE_JSON}`);
@@ -423,6 +402,124 @@ async function cmdProfile(argv) {
   }
   console.log('\nnext: work here runs BEFORE the page paints. Defer whatever the first render does not need (idle callback + dynamic import). Fix render-gating fetches first: CPU that overlaps a blocked render is free, so deferring it can measure worse until the fetch is fixed.');
   console.log(`\nfull report: ${path.join(STATE_DIR, 'profile.json')}`);
+}
+
+// The lesson behind this command: a diagnostic tool's completeness claim is
+// load-bearing — an agent that trusts a premature "converged" stops in front of
+// real wins. `verdict` therefore fuses EVERY signal class, refuses to conclude
+// while any lead is open or any signal is missing/stale, and states the tools'
+// blind-spot boundary even when everything is clear.
+async function cmdVerdict(argv) {
+  const opts = parse(argv, { dist: { type: 'string' } });
+  const distDir = opts.dist ? path.resolve(opts.dist) : path.join(APP_DIR, 'dist');
+  const distFlag = opts.dist ? ` --dist ${opts.dist}` : '';
+  const entry = detectEntry(distDir) ?? 'main.js';
+  const entryFile = path.join(distDir, entry);
+  if (!fs.existsSync(entryFile)) {
+    throw new Error(`no build at ${distDir} - build the app first`);
+  }
+  const builtAtMs = fs.statSync(entryFile).mtimeMs;
+  // A report vouches only for the build it ran against: entry filename must match
+  // (hashed names change with content) and it must postdate the current build.
+  const fresh = (report) => Boolean(report)
+    && (!report.entry || report.entry === entry)
+    && report.generatedAtMs >= builtAtMs;
+
+  const runtime = readJson(RUNTIME_METRICS);
+  const coverage = readJson(COVERAGE_JSON);
+  const profile = readJson(PROFILE_JSON);
+
+  const lines = [];
+  let openCount = 0;
+  let unknownCount = 0;
+  const lead = (state, title, detail, next) => {
+    if (state === 'open') openCount++;
+    if (state === 'unknown') unknownCount++;
+    const tag = state === 'open' ? '[OPEN]   ' : state === 'unknown' ? '[UNKNOWN]' : '[clear]  ';
+    lines.push(`  ${tag} ${title}${detail ? ` - ${detail}` : ''}`);
+    if (next && state !== 'clear') lines.push(`            next: ${next}`);
+  };
+
+  if (!fresh(runtime)) {
+    lead('unknown', 'render gap / pre-paint CPU',
+      runtime ? 'measurement is stale (dist was rebuilt after it)' : 'no measurement yet',
+      `node harness.mjs measure${distFlag} --runs 5 --label <name>`);
+  } else {
+    const gap = runtime.metrics['runtime.render_gap_ms'];
+    if (typeof gap === 'number' && gap > 150) {
+      lead('open', `render gap ${Math.round(gap)}ms`,
+        `paint is gated on post-load work${runtime.gatingFetches?.length ? ` (${runtime.gatingFetches.join('; ')})` : ''}`,
+        'render with bundled defaults and apply fetched results when they arrive - fix this before judging CPU deferrals');
+    } else {
+      lead('clear', 'render gap', gap == null ? 'not measurable' : `paint lands ${Math.round(gap)}ms after load`);
+    }
+
+    const cpu = runtime.metrics['runtime.prepaint_longtask_ms'];
+    if (typeof cpu !== 'number' || cpu <= 150) {
+      lead('clear', 'pre-paint CPU', cpu == null ? 'no long tasks observed' : `${Math.round(cpu)}ms of long tasks before paint (baseline territory)`);
+    } else if (!fresh(profile)) {
+      lead('unknown', `pre-paint CPU ${Math.round(cpu)}ms`,
+        profile ? 'profile is stale (dist was rebuilt after it)' : 'not yet attributed to modules',
+        `node harness.mjs profile${distFlag}`);
+    } else {
+      const appRows = (profile.rows ?? []).filter((row) =>
+        row.bucket.includes('/') && !row.bucket.startsWith('(') && row.ms >= 15);
+      if (appRows.length) {
+        lead('open', `pre-paint CPU ${Math.round(cpu)}ms`,
+          `deferrable app work before paint: ${appRows.slice(0, 3).map((row) => `${row.bucket} ${row.ms}ms`).join(', ')}`,
+          'defer work the first render does not need (idle callback + dynamic import)');
+      } else {
+        lead('clear', `pre-paint CPU ${Math.round(cpu)}ms`,
+          'profile attributes it to baseline parse/engine work, not deferrable app modules');
+      }
+    }
+  }
+
+  if (!fresh(coverage)) {
+    lead('unknown', 'coverage (candidates / large-at-paint / sibling groups)',
+      coverage ? 'coverage report is stale (dist was rebuilt after it)' : 'no coverage run yet',
+      `node harness.mjs coverage${distFlag}`);
+  } else {
+    const candidates = coverage.candidates ?? [];
+    if (candidates.length) {
+      lead('open', `defer candidates (${candidates.length})`,
+        candidates.slice(0, 3).map((c) => `${c.feature ?? c.source} ${kb(c.totalBytes)}`).join(', '),
+        'lazy-load them, rebuild, re-measure');
+    } else {
+      lead('clear', 'defer candidates', 'nothing sizeable is parsed-but-unexecuted');
+    }
+
+    const largeHot = largeAtPaintModules(coverage.modules ?? []);
+    if (largeHot.length) {
+      lead('open', `large modules executed at paint (${largeHot.length})`,
+        largeHot.slice(0, 3).map((m) => `${m.source} ${kb(m.totalBytes)}`).join(', '),
+        'executed does not mean needed - verify how much the first render reads; split rarely-read data behind dynamic import');
+    } else {
+      lead('clear', 'large modules executed at paint', 'none at current thresholds');
+    }
+
+    const groups = siblingVariantGroups(coverage.modules ?? []);
+    if (groups.length) {
+      lead('open', `sibling variant groups (${groups.length})`,
+        groups.map((g) => `${g.dir} ${g.files} modules ${kb(g.bytes)}`).join(', '),
+        'keep the default variant in the entry, load the active one dynamically');
+    } else {
+      lead('clear', 'sibling variant groups', 'none detected');
+    }
+  }
+
+  console.log(`verdict for ${distDir} (entry ${entry})\n`);
+  for (const line of lines) console.log(line);
+  console.log('');
+  if (openCount + unknownCount === 0) {
+    console.log('VERDICT: every signal class is clear and fresh. Nothing further is indicated by these tools.');
+    console.log('Boundary: they do not see image/CSS/font weight, server latency, cache policy, or');
+    console.log('interaction-time cost. Remaining LCP is baseline network + parse + render for what the');
+    console.log('page genuinely needs at first paint.');
+  } else {
+    console.log(`VERDICT: not done - ${openCount} lead(s) OPEN, ${unknownCount} signal(s) UNKNOWN or stale.`);
+    console.log('Work the OPEN items (render gap first), gather the UNKNOWN signals, rebuild, re-measure.');
+  }
 }
 
 async function cmdBaseline() {
@@ -481,6 +578,7 @@ commands (this directory):
   baseline                                            pin the last measurement as the fixed reference
   coverage --dist <app>/dist                          bytes executed at paint -> candidates, large-at-paint data, sibling groups
   profile --dist <app>/dist                           boot CPU by module, navigation -> first paint
+  verdict --dist <app>/dist                           fuse all signals -> OPEN/clear/UNKNOWN checklist; the only "done" that counts
   gen | build | defer <f> | undefer <f> | status | serve    demo-app helpers (README.md)
 
 the loop:
@@ -497,7 +595,8 @@ the loop:
   4. change the app (never remove features); one change at a time
   5. rebuild; run the app's functional check; measure --label <change>
   6. "improvement beyond noise" + check passes -> keep, re-pin (baseline), commit; otherwise revert + rebuild
-  7. repeat from 2; done when the signals are clean or two attempts in a row were not kept
+  7. repeat from 2. Declare done ONLY when the verdict command reports every signal
+     class clear - never because one report looks empty (a tool's silence is not "done")
 
 judge only by "vs pinned baseline". full contract: AGENTS.md`);
 }
@@ -510,6 +609,7 @@ const commands = {
   measure: cmdMeasure,
   coverage: cmdCoverage,
   profile: cmdProfile,
+  verdict: cmdVerdict,
   baseline: cmdBaseline,
   defer: (argv) => cmdDefer(argv, 'deferred'),
   undefer: (argv) => cmdDefer(argv, 'baseline'),

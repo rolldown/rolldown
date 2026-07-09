@@ -613,6 +613,99 @@ test('failed builds keep parallel workers alive through closeBundle', async () =
   expect(Atomics.load(state, 1)).toBe(workerCount);
 });
 
+test(
+  'superseded failed builds close parallel plugins before terminating their workers',
+  { timeout: 10_000 },
+  async () => {
+    const originalTerminate = Object.getOwnPropertyDescriptor(Worker.prototype, 'terminate')!
+      .value as (this: Worker) => Promise<number>;
+    const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
+    const closeCountsAtTermination: number[] = [];
+    const terminateSpy = vi
+      .spyOn(Worker.prototype, 'terminate')
+      .mockImplementation(function (this: Worker) {
+        closeCountsAtTermination.push(Atomics.load(state, 1));
+        return Reflect.apply(originalTerminate, this, []);
+      });
+    const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(
+      path.join(import.meta.dirname, 'parallel-close-plugin.mjs'),
+    );
+    const firstBuildError = new Error('superseded parallel build failed');
+    let buildCalls = 0;
+    let markFirstStarted!: () => void;
+    const firstStarted = new Promise<void>((resolve) => {
+      markFirstStarted = resolve;
+    });
+    let releaseFirst!: () => void;
+    const firstRelease = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let markSecondStarted!: () => void;
+    const secondStarted = new Promise<void>((resolve) => {
+      markSecondStarted = resolve;
+    });
+    let releaseSecond!: () => void;
+    const secondRelease = new Promise<void>((resolve) => {
+      releaseSecond = resolve;
+    });
+    const bundle = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        parallelPlugin({ state }),
+        {
+          name: 'superseded-failure-barrier',
+          async buildStart() {
+            buildCalls += 1;
+            if (buildCalls === 1) {
+              markFirstStarted();
+              await firstRelease;
+              throw firstBuildError;
+            }
+            if (buildCalls === 2) {
+              markSecondStarted();
+              await secondRelease;
+            }
+          },
+        },
+      ],
+    });
+
+    try {
+      const failedOutput = bundle.generate();
+      await firstStarted;
+      const workersPerBuild = Atomics.load(state, 0);
+      expect(workersPerBuild).toBeGreaterThan(0);
+
+      const latestOutput = bundle.generate();
+      await secondStarted;
+      expect(Atomics.load(state, 0)).toBe(workersPerBuild * 2);
+
+      releaseFirst();
+      await expect(
+        settleWithin(failedOutput, 'superseded failed parallel output'),
+      ).rejects.toMatchObject({
+        errors: [firstBuildError],
+      });
+      expect(Atomics.load(state, 1)).toBe(0);
+      expect([...closeCountsAtTermination]).toEqual([]);
+
+      releaseSecond();
+      await settleWithin(latestOutput, 'latest parallel output');
+      await expect.poll(() => closeCountsAtTermination.length).toBe(workersPerBuild);
+      expect(Atomics.load(state, 1)).toBe(workersPerBuild);
+      expect(closeCountsAtTermination.every((closeCount) => closeCount >= workersPerBuild)).toBe(
+        true,
+      );
+    } finally {
+      releaseFirst();
+      releaseSecond();
+      await bundle.close().catch(() => {});
+      terminateSpy.mockRestore();
+    }
+  },
+);
+
 test('bundle construction failures keep the previous parallel worker pool alive', async () => {
   const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
   const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(

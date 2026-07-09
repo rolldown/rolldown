@@ -75,7 +75,13 @@ during shutdown, the task's drop guard retains its operation barrier, handle,
 and memoized close state without an `Arc` cycle. The next failure-close waiter
 or explicit close drives that job directly before admission can reopen, so a
 superseded handle cannot lose its terminal hook or restart a partially polled
-hook.
+hook. The TypeScript `RolldownBuild` also gates retirement of a superseded
+failed output's parallel-worker pool on that failure-close waiter. It starts
+the wait as detached ownership cleanup instead of delaying the failed public
+promise, preserving the nested-output liveness rule above while guaranteeing
+that `ParallelJsPlugin::close_bundle` still has live workers. Worker shutdown
+failures are retained as completed cleanup attempts for the next foreground
+retirement or explicit close to report before a later attempt retries.
 Render/output failures do not reserve this phase, matching Rollup: they run
 `renderError` and leave `closeBundle` to the later explicit bundle close.
 

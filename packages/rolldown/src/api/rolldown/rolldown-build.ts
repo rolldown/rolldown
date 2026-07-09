@@ -22,8 +22,9 @@ import type { BundleError } from '../../utils/error';
 Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose');
 
 interface BuildOperation {
+  failureClosePending?: boolean;
   settled: boolean;
-  stopPromise?: Promise<void>;
+  stopAttempt?: Promise<unknown[]>;
   stopWorkers?: () => Promise<void>;
 }
 
@@ -271,23 +272,35 @@ export class RolldownBuild {
     }
 
     let result: RolldownOutput;
+    let nativeBuildEntered = false;
     let supersededCleanupErrors: unknown[] = [];
     try {
       const nativeBuild = await this.#enterNativeBuild(operation, isWrite, option.bundlerOptions);
+      nativeBuildEntered = true;
       supersededCleanupErrors = nativeBuild.supersededCleanupErrors;
       result = new RolldownOutputImpl(unwrapBindingResult(await nativeBuild.nativePromise));
     } catch (error) {
       const errors: unknown[] = [error];
       operation.settled = true;
       if (this.#latestBuildOperation !== operation) {
-        try {
-          await this.#stopWorkerOwner(operation);
-        } catch (caughtCleanupError) {
-          errors.push(caughtCleanupError);
+        if (nativeBuildEntered) {
+          // A contended native failure settles before its deferred closeBundle
+          // so a nested output can release the operation barrier. Keep that
+          // prompt rejection while retiring this superseded worker pool only
+          // after the native failure-close phase has completed.
+          operation.failureClosePending = true;
+          void this.#startWorkerStop(operation);
+        } else {
+          try {
+            await this.#stopWorkerOwner(operation);
+          } catch (caughtCleanupError) {
+            errors.push(caughtCleanupError);
+          }
         }
       }
       // The latest native BundleHandle still needs its parallel closeBundle
-      // hooks after a rejected build. See internal-docs/async-runtime/implementation.md.
+      // hooks after a rejected build. See
+      // internal-docs/rust-classic-bundler/implementation.md.
       errors.push(...supersededCleanupErrors);
       if (errors.length > 1) {
         throw new AggregateError(
@@ -376,20 +389,46 @@ export class RolldownBuild {
     return entry;
   }
 
-  async #stopWorkerOwner(owner: BuildOperation): Promise<void> {
+  #startWorkerStop(owner: BuildOperation): Promise<unknown[]> {
     const stopWorkers = owner.stopWorkers;
-    if (!stopWorkers) return;
+    if (!stopWorkers) return Promise.resolve([]);
 
-    owner.stopPromise ??= stopWorkers();
-    try {
-      await owner.stopPromise;
-    } catch (error) {
-      owner.stopPromise = undefined;
-      throw error;
+    // A detached retirement cannot reject without a listener. Retain its
+    // failure as data so the next foreground cleanup reports it and can retry.
+    owner.stopAttempt ??= (async () => {
+      try {
+        if (owner.failureClosePending) {
+          await this.#bundler.waitForFailureClose();
+          owner.failureClosePending = false;
+        }
+        await stopWorkers();
+      } catch (error) {
+        return [error];
+      }
+      if (owner.stopWorkers === stopWorkers) {
+        owner.stopAttempt = undefined;
+        owner.stopWorkers = undefined;
+        this.#workerOwners.delete(owner);
+      }
+      return [];
+    })();
+    return owner.stopAttempt;
+  }
+
+  async #stopWorkerOwner(owner: BuildOperation): Promise<void> {
+    const attempt = this.#startWorkerStop(owner);
+    const errors = await attempt;
+    if (errors.length > 0) {
+      if (owner.stopAttempt === attempt) {
+        owner.stopAttempt = undefined;
+      }
+      if (errors.length === 1) {
+        throw errors[0];
+      }
+      throw new AggregateError(errors, 'Parallel-plugin worker shutdown failed', {
+        cause: errors[0],
+      });
     }
-    owner.stopPromise = undefined;
-    owner.stopWorkers = undefined;
-    this.#workerOwners.delete(owner);
   }
 }
 

@@ -49,13 +49,13 @@ impl LinkStage<'_> {
           }
           ImportKind::Require => match importee_kind {
             ExportsKind::Esm => {
-              self.metas[importee_idx].sync_wrap_kind(WrapKind::Esm);
+              self.metas[importee_idx].set_wrap_kind(WrapKind::Esm);
             }
             ExportsKind::CommonJs => {
-              self.metas[importee_idx].sync_wrap_kind(WrapKind::Cjs);
+              self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
             }
             ExportsKind::None => {
-              self.metas[importee_idx].sync_wrap_kind(WrapKind::Cjs);
+              self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
               // A `require`'d module with `ExportsKind::None` is promoted to `ExportsKind::CommonJs`.
               if let Some(m) = self.module_table[importee_idx].as_normal_mut() {
                 m.exports_kind = ExportsKind::CommonJs;
@@ -68,13 +68,13 @@ impl LinkStage<'_> {
               // like a `require()` that returns a promise, so the imported module must be wrapped.
               match importee_kind {
                 ExportsKind::Esm => {
-                  self.metas[importee_idx].sync_wrap_kind(WrapKind::Esm);
+                  self.metas[importee_idx].set_wrap_kind(WrapKind::Esm);
                 }
                 ExportsKind::CommonJs => {
-                  self.metas[importee_idx].sync_wrap_kind(WrapKind::Cjs);
+                  self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
                 }
                 ExportsKind::None => {
-                  self.metas[importee_idx].sync_wrap_kind(WrapKind::Cjs);
+                  self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
                   // A dynamically-imported module with `ExportsKind::None` is promoted to `ExportsKind::CommonJs`
                   // since we wrap it as CJS.
                   if let Some(m) = self.module_table[importee_idx].as_normal_mut() {
@@ -102,7 +102,7 @@ impl LinkStage<'_> {
           || (matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd)
             && importer.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports)))
       {
-        self.metas[importer.idx].sync_wrap_kind(WrapKind::Cjs);
+        self.metas[importer.idx].set_wrap_kind(WrapKind::Cjs);
       }
     }
   }

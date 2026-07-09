@@ -39,7 +39,6 @@ pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  #[expect(clippy::too_many_lines)]
   pub async fn generate_chunks(
     &mut self,
     used_symbol_refs: &mut UsedSymbolRefsBuilder,
@@ -253,19 +252,7 @@ impl GenerateStage<'_> {
     // EntryPoint (is_user_defined: true) < EntryPoint (is_user_defined: false) or Common
     // [order by chunk index]               [order by exec order]
 
-    let sorted_chunk_idx_vec = chunk_graph
-      .chunk_table
-      .iter_enumerated()
-      .sorted_unstable_by_key(|(index, chunk)| match &chunk.kind {
-        ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) => {
-          (0, index.raw())
-        }
-        _ => (1, chunk.exec_order),
-      })
-      .map(|(idx, _)| idx)
-      .collect::<Vec<_>>();
-
-    chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
+    chunk_graph.rebuild_sorted_chunk_idx_vec();
 
     self.find_entry_level_external_module(&mut chunk_graph);
 
@@ -329,7 +316,7 @@ impl GenerateStage<'_> {
         })
         .filter_map(|idx| {
           let module = self.link_output.module_table[idx].as_normal()?;
-          (!self.link_output.metas[module.idx].original_wrap_kind().is_none()).then_some(idx)
+          (!self.link_output.metas[module.idx].wrap_kind().is_none()).then_some(idx)
         })
         .collect::<FxHashSet<_>>();
       let chunk_module_to_exec_order = chunk
@@ -345,7 +332,7 @@ impl GenerateStage<'_> {
       let mut none_wrapped_module_to_wrapped_dependency_length = FxHashMap::default();
       let js_import_order = self.js_import_order(&roots, &chunk_module_to_exec_order);
       for idx in js_import_order {
-        match self.link_output.metas[idx].original_wrap_kind() {
+        match self.link_output.metas[idx].wrap_kind() {
           WrapKind::None => {
             if !wrapped_modules.is_empty() {
               none_wrapped_module_to_wrapped_dependency_length.insert(idx, wrapped_modules.len());
@@ -402,7 +389,7 @@ impl GenerateStage<'_> {
         FxHashMap::default();
       let mut remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>> = FxHashMap::default();
       for (module_idx, (importer_idx, rec_idx)) in module_init_position {
-        match self.link_output.metas[module_idx].original_wrap_kind() {
+        match self.link_output.metas[module_idx].wrap_kind() {
           WrapKind::None => {
             if let Some(deps_length) =
               none_wrapped_module_to_wrapped_dependency_length.get(&module_idx)

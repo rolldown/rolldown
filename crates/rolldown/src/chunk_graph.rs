@@ -2,7 +2,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
   PostChunkOptimizationOperation, RuntimeHelper, SymbolRef,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -58,6 +58,22 @@ impl ChunkGraph {
     let idx = self.chunk_table.push(chunk);
     self.finalized_cjs_ns_map_idx_vec.push(FxHashMap::default());
     idx
+  }
+
+  /// Render order: user-defined entry chunks first (stable by index), everything else by
+  /// execution order.
+  pub fn rebuild_sorted_chunk_idx_vec(&mut self) {
+    self.sorted_chunk_idx_vec = self
+      .chunk_table
+      .iter_enumerated()
+      .sorted_unstable_by_key(|(index, chunk)| match &chunk.kind {
+        ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) => {
+          (0, index.raw())
+        }
+        _ => (1, chunk.exec_order),
+      })
+      .map(|(idx, _)| idx)
+      .collect();
   }
 
   pub fn add_module_to_chunk(

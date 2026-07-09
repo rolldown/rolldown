@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import os from 'node:os';
 import { MessageChannel, type MessagePort, Worker } from 'node:worker_threads';
 import { ParallelJsPluginRegistry } from '../binding.cjs';
@@ -290,12 +289,18 @@ function createWorkerCleanup<T extends TerminableWorker>(initialWorkers: T[]): R
   return stopWorkers;
 }
 
-function createWorkerBootstrapAuthentication(): WorkerBootstrapAuthentication {
+/** @internal Create browser-bundle-safe cryptographic tokens for the worker handshake. */
+export function createWorkerBootstrapAuthentication(): WorkerBootstrapAuthentication {
+  const randomHex = () =>
+    Array.from(globalThis.crypto.getRandomValues(new Uint8Array(24)), (byte) =>
+      byte.toString(16).padStart(2, '0'),
+    ).join('');
+
   return {
-    readyToken: randomBytes(24).toString('hex'),
-    resultToken: randomBytes(24).toString('hex'),
-    session: randomBytes(24).toString('hex'),
-    startToken: randomBytes(24).toString('hex'),
+    readyToken: randomHex(),
+    resultToken: randomHex(),
+    session: randomHex(),
+    startToken: randomHex(),
   };
 }
 

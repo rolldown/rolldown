@@ -2,6 +2,7 @@
 import { EventEmitter } from 'node:events';
 import {
   createParallelPluginWorkerEnv,
+  createWorkerBootstrapAuthentication,
   initializeWorkerPool,
   sanitizeFileWorkerExecArgv,
   superviseWorker,
@@ -55,6 +56,39 @@ function completeBootstrap(worker: TestWorker, supervisedWorker: SupervisedWorke
 }
 
 describe('parallel plugin worker cleanup', () => {
+  test('creates browser-bundle-safe cryptographic bootstrap authentication', () => {
+    let nextByte = 0;
+    const getRandomValues = vi.fn((bytes: Uint8Array) => {
+      for (let index = 0; index < bytes.length; index += 1) {
+        bytes[index] = nextByte;
+        nextByte += 1;
+      }
+      return bytes;
+    });
+    vi.stubGlobal('crypto', { getRandomValues });
+
+    try {
+      expect(createWorkerBootstrapAuthentication()).toEqual({
+        readyToken: Array.from({ length: 24 }, (_, index) =>
+          index.toString(16).padStart(2, '0'),
+        ).join(''),
+        resultToken: Array.from({ length: 24 }, (_, index) =>
+          (index + 24).toString(16).padStart(2, '0'),
+        ).join(''),
+        session: Array.from({ length: 24 }, (_, index) =>
+          (index + 48).toString(16).padStart(2, '0'),
+        ).join(''),
+        startToken: Array.from({ length: 24 }, (_, index) =>
+          (index + 72).toString(16).padStart(2, '0'),
+        ).join(''),
+      });
+      expect(getRandomValues).toHaveBeenCalledTimes(4);
+      expect(getRandomValues.mock.calls.every(([bytes]) => bytes.byteLength === 24)).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   test('sanitizes parent invocation modes and inherited code injection flags', () => {
     expect(
       sanitizeFileWorkerExecArgv([

@@ -6,6 +6,7 @@ import {
   mkdir,
   readFile,
   readdir,
+  rename,
   rm,
   symlink,
   utimes,
@@ -239,6 +240,9 @@ async function pause(candidatePath) {
 let ownCandidatePath;
 try {
   const release = await acquireStageWasiPackageReclaimGuard(packageRoot, {
+    async afterReclaimGuardPreparationCreate(preparationPath) {
+      if (phase === 'preparation') await pause(preparationPath);
+    },
     async afterReclaimGuardCandidateCreate(candidatePath) {
       ownCandidatePath = candidatePath;
       if (phase === 'candidate') await pause(candidatePath);
@@ -290,6 +294,25 @@ try {
   process.disconnect();
 }
 `;
+const idleChildSource = `
+process.send({ type: 'ready' });
+setInterval(() => {}, 1_000);
+`;
+const windowsFileBlockerSource = `
+$stream = [System.IO.File]::Open(
+  $env:ROLLDOWN_TEST_BLOCKED_FILE,
+  [System.IO.FileMode]::Open,
+  [System.IO.FileAccess]::Read,
+  [System.IO.FileShare]::ReadWrite
+)
+try {
+  [Console]::Out.WriteLine('ready')
+  [Console]::Out.Flush()
+  [Console]::In.ReadLine() | Out-Null
+} finally {
+  $stream.Dispose()
+}
+`;
 
 async function writeMarker(directory, marker) {
   await mkdir(directory, { recursive: true });
@@ -322,6 +345,7 @@ async function assertTransactionStateRemoved(packageRoot) {
       (entry) =>
         entry.startsWith('.stage-wasi-packages.lock.candidate.') ||
         entry.startsWith('.stage-wasi-packages.lock.reclaim.') ||
+        entry.startsWith('.stage-wasi-packages.lock.reclaim-preparing.') ||
         entry.startsWith('.stage-wasi-packages.lock.retired.'),
     ),
     [],
@@ -543,6 +567,86 @@ function spawnStaleLockRetireOwner(packageRoot) {
   return { child, exit, stderr: () => stderr };
 }
 
+function spawnIdleChild() {
+  const child = spawn(process.execPath, ['--input-type=module', '--eval', idleChildSource], {
+    stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
+  });
+  let stderr = '';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
+  const exit = new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', (code, signal) => resolve({ code, signal }));
+  });
+  return { child, exit, stderr: () => stderr };
+}
+
+async function holdWindowsFileWithoutDeleteSharing(file) {
+  const systemRoot = process.env.SystemRoot;
+  const powershell =
+    typeof systemRoot === 'string' && systemRoot.length > 0
+      ? path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+      : 'powershell.exe';
+  const child = spawn(
+    powershell,
+    ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', windowsFileBlockerSource],
+    {
+      env: { ...process.env, ROLLDOWN_TEST_BLOCKED_FILE: file },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    },
+  );
+  let stderr = '';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
+  const exit = new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', (code, signal) => resolve({ code, signal }));
+  });
+  await new Promise((resolve, reject) => {
+    let stdout = '';
+    function onData(chunk) {
+      stdout += chunk;
+      if (!stdout.includes('ready')) return;
+      cleanup();
+      resolve();
+    }
+    function onError(error) {
+      cleanup();
+      reject(error);
+    }
+    function onExit(code, signal) {
+      cleanup();
+      reject(
+        new Error(
+          `Windows file blocker exited before acquiring the handle: code=${code}, signal=${signal}\n${stderr}`,
+        ),
+      );
+    }
+    function cleanup() {
+      child.stdout.off('data', onData);
+      child.off('error', onError);
+      child.off('exit', onExit);
+    }
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', onData);
+    child.on('error', onError);
+    child.on('exit', onExit);
+  });
+
+  let release;
+  return () =>
+    (release ??= (async () => {
+      child.stdin.end();
+      const { code, signal } = await exit;
+      assert.equal(signal, null, stderr);
+      assert.equal(code, 0, stderr);
+    })());
+}
+
 function waitForMessage(child, type) {
   return new Promise((resolve, reject) => {
     function onMessage(message) {
@@ -754,6 +858,228 @@ test(
     }
   },
 );
+
+test(
+  'package lock retries Windows EPERM while retiring a failed publication candidate',
+  { skip: process.platform !== 'win32' },
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-windows-candidate-retire-eperm-'));
+    const packageRoot = path.join(root, 'npm');
+    let blockerReleaseStarted = false;
+    let publishAttempts = 0;
+    let publishFailures = 0;
+    let releaseBlocker;
+    let scheduledRelease = Promise.resolve();
+
+    try {
+      await withStageWasiPackageLock(packageRoot, () => {}, {
+        async afterLockCandidateRetire() {
+          assert.equal(blockerReleaseStarted, true);
+        },
+        async afterLockPublishFailure({ error, lockPath }) {
+          publishFailures++;
+          assert.ok(['EEXIST', 'ENOTEMPTY', 'EPERM'].includes(error.code));
+          await rm(lockPath, { recursive: true });
+        },
+        async beforeLockPublish({ candidateLockPath, lockPath }) {
+          publishAttempts++;
+          if (publishAttempts !== 1) return;
+          await mkdir(lockPath);
+          releaseBlocker = await holdWindowsFileWithoutDeleteSharing(
+            path.join(candidateLockPath, 'owner.json'),
+          );
+          scheduledRelease = delay(80).then(async () => {
+            blockerReleaseStarted = true;
+            await releaseBlocker();
+          });
+        },
+      });
+      await scheduledRelease;
+      releaseBlocker = undefined;
+
+      assert.equal(publishAttempts, 2);
+      assert.equal(publishFailures, 1);
+      await assertTransactionStateRemoved(packageRoot);
+    } finally {
+      await releaseBlocker?.();
+      await scheduledRelease;
+      await rm(root, { force: true, recursive: true });
+    }
+  },
+);
+
+test(
+  'package lock retries Windows EPERM before retiring its canonical lock',
+  { skip: process.platform !== 'win32' },
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-windows-canonical-retire-eperm-'));
+    const packageRoot = path.join(root, 'npm');
+    let blockerReleaseStarted = false;
+    let releaseBlocker;
+    let scheduledRelease = Promise.resolve();
+
+    try {
+      await withStageWasiPackageLock(
+        packageRoot,
+        async (canonicalRoot) => {
+          releaseBlocker = await holdWindowsFileWithoutDeleteSharing(
+            path.join(canonicalRoot, '.stage-wasi-packages.lock', 'owner.json'),
+          );
+          scheduledRelease = delay(80).then(async () => {
+            blockerReleaseStarted = true;
+            await releaseBlocker();
+          });
+        },
+        {
+          afterLockRetire() {
+            assert.equal(blockerReleaseStarted, true);
+          },
+        },
+      );
+      await scheduledRelease;
+      releaseBlocker = undefined;
+      await assertTransactionStateRemoved(packageRoot);
+    } finally {
+      await releaseBlocker?.();
+      await scheduledRelease;
+      await rm(root, { force: true, recursive: true });
+    }
+  },
+);
+
+test(
+  'package lock retries Windows EPERM while removing its retired lock',
+  { skip: process.platform !== 'win32' },
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-windows-retired-eperm-'));
+    const packageRoot = path.join(root, 'npm');
+    let releaseBlocker;
+    let scheduledRelease = Promise.resolve();
+
+    try {
+      await withStageWasiPackageLock(packageRoot, () => {}, {
+        async afterLockRetire(retiredPath) {
+          releaseBlocker = await holdWindowsFileWithoutDeleteSharing(
+            path.join(retiredPath, 'owner.json'),
+          );
+          scheduledRelease = delay(80).then(() => releaseBlocker());
+        },
+      });
+      await scheduledRelease;
+      releaseBlocker = undefined;
+      await assertTransactionStateRemoved(packageRoot);
+    } finally {
+      await releaseBlocker?.();
+      await scheduledRelease;
+      await rm(root, { force: true, recursive: true });
+    }
+  },
+);
+
+test(
+  'reclaim guard retries Windows EPERM before retiring its candidate',
+  { skip: process.platform !== 'win32' },
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-windows-reclaim-retire-eperm-'));
+    const packageRoot = path.join(root, 'npm');
+    let blockerReleaseStarted = false;
+    let releaseBlocker;
+    let releaseGuard;
+    let scheduledRelease = Promise.resolve();
+
+    try {
+      await mkdir(packageRoot);
+      releaseGuard = await acquireStageWasiPackageReclaimGuard(packageRoot, {
+        afterReclaimGuardRetire() {
+          assert.equal(blockerReleaseStarted, true);
+        },
+        async beforeReclaimGuardRetire(candidatePath) {
+          releaseBlocker = await holdWindowsFileWithoutDeleteSharing(
+            path.join(candidatePath, 'owner.json'),
+          );
+          scheduledRelease = delay(80).then(async () => {
+            blockerReleaseStarted = true;
+            await releaseBlocker();
+          });
+        },
+      });
+      await releaseGuard();
+      releaseGuard = undefined;
+      await scheduledRelease;
+      releaseBlocker = undefined;
+      await assertTransactionStateRemoved(packageRoot);
+    } finally {
+      await releaseBlocker?.();
+      await scheduledRelease;
+      await releaseGuard?.().catch(() => {});
+      await rm(root, { force: true, recursive: true });
+    }
+  },
+);
+
+test(
+  'reclaim guard retries Windows EPERM while removing its retired candidate',
+  { skip: process.platform !== 'win32' },
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-windows-reclaim-eperm-'));
+    const packageRoot = path.join(root, 'npm');
+    let releaseBlocker;
+    let releaseGuard;
+    let scheduledRelease = Promise.resolve();
+
+    try {
+      await mkdir(packageRoot);
+      releaseGuard = await acquireStageWasiPackageReclaimGuard(packageRoot, {
+        async afterReclaimGuardRetire(retiredPath) {
+          releaseBlocker = await holdWindowsFileWithoutDeleteSharing(
+            path.join(retiredPath, 'owner.json'),
+          );
+          scheduledRelease = delay(80).then(() => releaseBlocker());
+        },
+      });
+      await releaseGuard();
+      releaseGuard = undefined;
+      await scheduledRelease;
+      releaseBlocker = undefined;
+      await assertTransactionStateRemoved(packageRoot);
+    } finally {
+      await releaseBlocker?.();
+      await scheduledRelease;
+      await releaseGuard?.().catch(() => {});
+      await rm(root, { force: true, recursive: true });
+    }
+  },
+);
+
+test('package lock preserves its publication error when candidate cleanup also fails', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-lock-publish-error-precedence-'));
+  const packageRoot = path.join(root, 'npm');
+  const primaryError = new Error('primary lock publication failure');
+  const cleanupError = new Error('lock candidate cleanup failure');
+
+  try {
+    await assert.rejects(
+      withStageWasiPackageLock(packageRoot, () => {}, {
+        afterLockCandidateRetire() {
+          throw cleanupError;
+        },
+        beforeLockPublish() {
+          throw primaryError;
+        },
+      }),
+      (error) => {
+        assert.ok(error instanceof AggregateError);
+        assert.equal(error.errors[0], primaryError);
+        assert.equal(error.errors[1], cleanupError);
+        assert.equal(error.cause, primaryError);
+        return true;
+      },
+    );
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
 
 test('package lock publishes a complete owner before contenders can acquire it', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-lock-publish-'));
@@ -993,7 +1319,13 @@ test('stale reclaim guard waits for a live chooser before applying ticket order'
       },
     );
     const firstCandidatePath = await firstChoosing;
-    await assertMissing(path.join(firstCandidatePath, 'owner.json'));
+    const firstCandidateOwner = JSON.parse(
+      await readFile(path.join(firstCandidatePath, 'owner.json'), 'utf8'),
+    );
+    assert.equal(firstCandidateOwner.pid, process.pid);
+    await assertMissing(path.join(firstCandidatePath, 'ticket.json'));
+    const oldTime = new Date(Date.now() - 10_000);
+    await utimes(firstCandidatePath, oldTime, oldTime);
 
     second = withStageWasiPackageLock(packageRoot, async () => {
       secondHasEntered = true;
@@ -1024,6 +1356,105 @@ test('stale reclaim guard waits for a live chooser before applying ticket order'
       await abruptlyTerminateChild(staleOwner);
     }
     await Promise.allSettled([Promise.resolve(first), Promise.resolve(second)]);
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('reclaim guard preserves a live stalled preparation beyond the old grace period', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-live-reclaim-preparation-'));
+  const packageRoot = path.join(root, 'npm');
+  await mkdir(packageRoot);
+  const first = spawnReclaimGuardPhase(packageRoot, 'preparation');
+  let releaseSecond;
+
+  try {
+    const { candidatePath: preparationPath } = await waitForMessage(first.child, 'paused');
+    const oldTime = new Date(Date.now() - 10_000);
+    await utimes(preparationPath, oldTime, oldTime);
+
+    releaseSecond = await acquireStageWasiPackageReclaimGuard(packageRoot);
+    await access(preparationPath);
+    await releaseSecond();
+    releaseSecond = undefined;
+
+    const firstEntered = waitForMessage(first.child, 'entered');
+    first.child.send({ type: 'continue' });
+    await firstEntered;
+    const firstDone = waitForMessage(first.child, 'done');
+    first.child.send({ type: 'release' });
+    await firstDone;
+    await assertChildSucceeded(first);
+
+    await assertMissing(preparationPath);
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    if (first.child.exitCode === null && first.child.signalCode === null) {
+      await abruptlyTerminateChild(first);
+    }
+    await releaseSecond?.().catch(() => {});
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('reclaim guard proceeds when its process-incarnation probe is unavailable', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-uncomparable-preparation-'));
+  const packageRoot = path.join(root, 'npm');
+  await mkdir(packageRoot);
+  let notifyPreparationCreated;
+  const preparationCreated = new Promise((resolve) => {
+    notifyPreparationCreated = resolve;
+  });
+  let resumeFirstPreparation;
+  const firstMayPublish = new Promise((resolve) => {
+    resumeFirstPreparation = resolve;
+  });
+  let firstRelease;
+  let secondRelease;
+  let publishedOwner;
+  let first;
+
+  try {
+    first = acquireStageWasiPackageReclaimGuard(packageRoot, {
+      async afterReclaimGuardCandidateCreate(candidatePath) {
+        publishedOwner = JSON.parse(await readFile(path.join(candidatePath, 'owner.json'), 'utf8'));
+      },
+      async afterReclaimGuardPreparationCreate(preparationPath) {
+        notifyPreparationCreated(preparationPath);
+        await firstMayPublish;
+      },
+      probeCurrentProcessIncarnation() {
+        return undefined;
+      },
+    }).then((release) => {
+      firstRelease = release;
+    });
+
+    const preparationPath = await preparationCreated;
+    assert.ok(
+      path
+        .basename(preparationPath)
+        .startsWith(`.stage-wasi-packages.lock.reclaim-preparing.v1.${process.pid}.uncomparable.`),
+    );
+
+    secondRelease = await acquireStageWasiPackageReclaimGuard(packageRoot);
+    await access(preparationPath);
+    await secondRelease();
+    secondRelease = undefined;
+
+    resumeFirstPreparation();
+    await first;
+    assert.equal(publishedOwner.pid, process.pid);
+    assert.equal('incarnation' in publishedOwner, false);
+    await firstRelease();
+    firstRelease = undefined;
+
+    await assertMissing(preparationPath);
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    resumeFirstPreparation?.();
+    await Promise.allSettled([Promise.resolve(first)]);
+    await secondRelease?.().catch(() => {});
+    await firstRelease?.().catch(() => {});
     await rm(root, { force: true, recursive: true });
   }
 });
@@ -1084,6 +1515,44 @@ test('reclaim guard orders equal-ticket contenders across processes', async () =
   }
 });
 
+test('reclaim guard removes a legacy ownerless candidate after PID reuse promptly', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-legacy-reclaim-pid-'));
+  const packageRoot = path.join(root, 'npm');
+  const unpublishedCandidatePath = path.join(packageRoot, '.legacy-ownerless-reclaim');
+  let idle;
+  let release;
+
+  try {
+    await mkdir(unpublishedCandidatePath, { recursive: true });
+    await delay(process.platform === 'win32' ? 50 : 1_100);
+    idle = spawnIdleChild();
+    await waitForMessage(idle.child, 'ready');
+    const legacyCandidatePath = path.join(
+      packageRoot,
+      `.stage-wasi-packages.lock.reclaim.${idle.child.pid}.legacy-ownerless`,
+    );
+    await rename(unpublishedCandidatePath, legacyCandidatePath);
+
+    const acquisition = acquireStageWasiPackageReclaimGuard(packageRoot).then((acquiredRelease) => {
+      release = acquiredRelease;
+    });
+    await assertResolvesPromptly(acquisition, () =>
+      rm(legacyCandidatePath, { force: true, recursive: true }),
+    );
+
+    await assertMissing(legacyCandidatePath);
+    await release();
+    release = undefined;
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    if (release) await release().catch(() => {});
+    if (idle && idle.child.exitCode === null && idle.child.signalCode === null) {
+      await abruptlyTerminateChild(idle);
+    }
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
 test('reclaim guard removes a live reused PID candidate with a different incarnation promptly', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-reused-reclaim-pid-'));
   const packageRoot = path.join(root, 'npm');
@@ -1132,6 +1601,63 @@ test('reclaim guard removes a live reused PID candidate with a different incarna
     await assertTransactionStateRemoved(packageRoot);
   } finally {
     if (release) await release().catch(() => {});
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('reclaim guard removes an ownerless preparation with a reused live PID', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-reused-reclaim-preparation-pid-'));
+  const packageRoot = path.join(root, 'npm');
+  let release;
+
+  try {
+    const currentOwner = await readCurrentProcessLockOwner(packageRoot);
+    const staleIncarnation = differentComparableIncarnation(currentOwner.incarnation);
+    const encodedIncarnation = Buffer.from(staleIncarnation, 'utf8').toString('base64url');
+    const preparationPath = path.join(
+      packageRoot,
+      `.stage-wasi-packages.lock.reclaim-preparing.v1.${process.pid}.${encodedIncarnation}.ownerless`,
+    );
+    await mkdir(preparationPath, { recursive: true });
+
+    release = await acquireStageWasiPackageReclaimGuard(packageRoot);
+    await assertMissing(preparationPath);
+    await release();
+    release = undefined;
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
+    if (release) await release().catch(() => {});
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test('reclaim guard preserves its primary error when candidate cleanup also fails', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-reclaim-error-precedence-'));
+  const packageRoot = path.join(root, 'npm');
+  const primaryError = new Error('primary reclaim-guard failure');
+  const cleanupError = new Error('reclaim-guard cleanup failure');
+
+  try {
+    await mkdir(packageRoot);
+    await assert.rejects(
+      acquireStageWasiPackageReclaimGuard(packageRoot, {
+        afterReclaimGuardRetire() {
+          throw cleanupError;
+        },
+        beforeReclaimGuardTicketPublish() {
+          throw primaryError;
+        },
+      }),
+      (error) => {
+        assert.ok(error instanceof AggregateError);
+        assert.equal(error.errors[0], primaryError);
+        assert.equal(error.errors[1], cleanupError);
+        assert.equal(error.cause, primaryError);
+        return true;
+      },
+    );
+    await assertTransactionStateRemoved(packageRoot);
+  } finally {
     await rm(root, { force: true, recursive: true });
   }
 });
@@ -1189,7 +1715,7 @@ test('reclaim guard preserves a live PID candidate with an unknown incarnation f
 });
 
 test('reclaim guard recovers crashes at every publication phase', async (t) => {
-  for (const phase of ['candidate', 'owner', 'ticket', 'holding']) {
+  for (const phase of ['preparation', 'candidate', 'owner', 'ticket', 'holding']) {
     await t.test(phase, async () => {
       const root = await mkdtemp(path.join(tmpdir(), `stage-wasi-reclaim-${phase}-`));
       const packageRoot = path.join(root, 'npm');
@@ -1199,6 +1725,11 @@ test('reclaim guard recovers crashes at every publication phase', async (t) => {
       try {
         const { candidatePath } = await waitForMessage(interrupted.child, 'paused');
         await access(candidatePath);
+        if (phase === 'preparation') {
+          await assertMissing(path.join(candidatePath, 'owner.json'));
+        } else {
+          await access(path.join(candidatePath, 'owner.json'));
+        }
         await abruptlyTerminateChild(interrupted);
 
         const release = await acquireStageWasiPackageReclaimGuard(packageRoot);

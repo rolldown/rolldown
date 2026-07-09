@@ -31,6 +31,9 @@ const transactionLockName = '.stage-wasi-packages.lock';
 const transactionLockCandidatePrefix = `${transactionLockName}.candidate.`;
 const transactionLockRetiredPrefix = `${transactionLockName}.retired.`;
 const transactionReclaimCandidatePrefix = `${transactionLockName}.reclaim.`;
+const transactionReclaimPreparationPrefix = `${transactionLockName}.reclaim-preparing.`;
+const transactionReclaimPreparationVersion = 1;
+const transactionReclaimPreparationUncomparableIdentity = 'uncomparable';
 const transactionReclaimTicketName = 'ticket.json';
 const transactionJournalName = '.stage-wasi-packages.transaction';
 const transactionStateName = 'state.json';
@@ -39,6 +42,7 @@ const transactionStateVersion = 1;
 const transactionLockTimeoutMs = 60_000;
 const incompleteLockGracePeriodMs = 5_000;
 const transactionLockPollMs = 20;
+const transactionLockCleanupMaxRetries = 5;
 const processIncarnationProbeTimeoutMs = 5_000;
 const processIncarnationMatchCacheMs = 1_000;
 const maximumTransactionReplacements = 64;
@@ -46,6 +50,7 @@ const execFileAsync = promisify(execFile);
 const napiCli = new NapiCli();
 const processIncarnationMatchCache = new Map();
 let currentProcessIncarnationPromise;
+let linuxProcessTimeBasePromise;
 
 async function assertEmbeddedRuntimeNotices(repoRoot, runtimeFsBundle) {
   const code = await readFile(runtimeFsBundle, 'utf8');
@@ -241,12 +246,16 @@ export async function withStageWasiPackageLock(
   {
     afterLockPublishFailure,
     afterLockCandidateCreate,
+    afterLockCandidateRetire,
     afterLockRetire,
     afterReclaimGuardCandidateCreate,
+    afterReclaimGuardPreparationCreate,
+    afterReclaimGuardRetire,
     afterReclaimGuardTicketPublish,
     afterStaleLockRetire,
     afterStaleLockObserved,
     beforeLockPublish,
+    beforeReclaimGuardRetire,
   } = {},
 ) {
   await mkdir(transactionRoot, { recursive: true });
@@ -255,19 +264,30 @@ export async function withStageWasiPackageLock(
   const release = await acquireStageWasiPackageLock(canonicalRoot, {
     afterLockPublishFailure,
     afterLockCandidateCreate,
+    afterLockCandidateRetire,
     afterLockRetire,
     afterReclaimGuardCandidateCreate,
+    afterReclaimGuardPreparationCreate,
+    afterReclaimGuardRetire,
     afterReclaimGuardTicketPublish,
     afterStaleLockRetire,
     afterStaleLockObserved,
     beforeLockPublish,
+    beforeReclaimGuardRetire,
   });
   let operationError;
   let result;
   try {
     await removeRetiredStageWasiPackageLocks(canonicalRoot);
     await reclaimStaleStageWasiPackageLockCandidates(canonicalRoot);
-    await reclaimDeadStageWasiPackageReclaimCandidates(canonicalRoot);
+    await reclaimStaleStageWasiPackageReclaimPreparations(canonicalRoot, {
+      afterReclaimGuardRetire,
+      beforeReclaimGuardRetire,
+    });
+    await reclaimDeadStageWasiPackageReclaimCandidates(canonicalRoot, {
+      afterReclaimGuardRetire,
+      beforeReclaimGuardRetire,
+    });
     await recoverInterruptedDirectoryTransaction(canonicalRoot);
     result = await operation(canonicalRoot);
   } catch (error) {
@@ -295,12 +315,16 @@ async function acquireStageWasiPackageLock(
   {
     afterLockPublishFailure,
     afterLockCandidateCreate,
+    afterLockCandidateRetire,
     afterLockRetire,
     afterReclaimGuardCandidateCreate,
+    afterReclaimGuardPreparationCreate,
+    afterReclaimGuardRetire,
     afterReclaimGuardTicketPublish,
     afterStaleLockRetire,
     afterStaleLockObserved,
     beforeLockPublish,
+    beforeReclaimGuardRetire,
   } = {},
 ) {
   const lockPath = path.join(transactionRoot, transactionLockName);
@@ -321,11 +345,21 @@ async function acquireStageWasiPackageLock(
       await mkdir(candidateLockPath);
       await afterLockCandidateCreate?.(candidateLockPath);
       await writeJsonAtomic(candidateOwnerPath, expectedOwner);
-      await beforeLockPublish?.();
+      await beforeLockPublish?.({ candidateLockPath, lockPath });
       publishingLockCandidate = true;
       await rename(candidateLockPath, lockPath);
     } catch (error) {
-      await rm(candidateLockPath, { force: true, recursive: true });
+      try {
+        await retireStageWasiPackageLockCandidate(candidateLockPath, transactionRoot, {
+          afterLockCandidateRetire,
+        });
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          'WASI package transaction lock publication failed and its candidate could not be cleaned up',
+          { cause: error },
+        );
+      }
       if (publishingLockCandidate) {
         await afterLockPublishFailure?.({ error, lockPath });
       }
@@ -349,9 +383,12 @@ async function acquireStageWasiPackageLock(
       if (
         await reclaimStaleStageWasiPackageLock(lockPath, ownerPath, transactionRoot, {
           afterReclaimGuardCandidateCreate,
+          afterReclaimGuardPreparationCreate,
+          afterReclaimGuardRetire,
           afterReclaimGuardTicketPublish,
           afterStaleLockRetire,
           afterStaleLockObserved,
+          beforeReclaimGuardRetire,
         })
       ) {
         continue;
@@ -364,12 +401,18 @@ async function acquireStageWasiPackageLock(
     }
 
     return async () => {
-      const owner = await readJsonIfExists(ownerPath);
-      if (!sameStageWasiPackageLockOwner(owner, expectedOwner)) {
+      const retiredPath = stageWasiPackageLockRetiredPath(transactionRoot);
+      const retired = await renameStageWasiPackagePathWithRetry(lockPath, retiredPath, {
+        async beforeAttempt() {
+          const owner = await readJsonIfExists(ownerPath);
+          if (!sameStageWasiPackageLockOwner(owner, expectedOwner)) {
+            throw new Error(`Lost ownership of the WASI package transaction lock at ${lockPath}`);
+          }
+        },
+      });
+      if (!retired) {
         throw new Error(`Lost ownership of the WASI package transaction lock at ${lockPath}`);
       }
-      const retiredPath = stageWasiPackageLockRetiredPath(transactionRoot);
-      await rename(lockPath, retiredPath);
       let retireHookError;
       try {
         await afterLockRetire?.(retiredPath);
@@ -377,7 +420,7 @@ async function acquireStageWasiPackageLock(
         retireHookError = error;
       }
       try {
-        await rm(retiredPath, { force: true, recursive: true });
+        await removeRetiredStageWasiPackageLock(retiredPath);
       } catch (cleanupError) {
         if (retireHookError) {
           throw new AggregateError(
@@ -405,9 +448,12 @@ async function reclaimStaleStageWasiPackageLock(
   transactionRoot,
   {
     afterReclaimGuardCandidateCreate,
+    afterReclaimGuardPreparationCreate,
+    afterReclaimGuardRetire,
     afterReclaimGuardTicketPublish,
     afterStaleLockRetire,
     afterStaleLockObserved,
+    beforeReclaimGuardRetire,
   } = {},
 ) {
   const lockStats = await lstatIfExists(lockPath);
@@ -422,7 +468,10 @@ async function reclaimStaleStageWasiPackageLock(
 
   const releaseReclaimGuard = await acquireStageWasiPackageReclaimGuard(transactionRoot, {
     afterReclaimGuardCandidateCreate,
+    afterReclaimGuardPreparationCreate,
+    afterReclaimGuardRetire,
     afterReclaimGuardTicketPublish,
+    beforeReclaimGuardRetire,
   });
   let retiredPath;
   try {
@@ -446,7 +495,7 @@ async function reclaimStaleStageWasiPackageLock(
   } finally {
     await releaseReclaimGuard();
   }
-  if (retiredPath) await rm(retiredPath, { force: true, recursive: true });
+  if (retiredPath) await removeRetiredStageWasiPackageLock(retiredPath);
   return true;
 }
 
@@ -469,14 +518,7 @@ async function reclaimStaleStageWasiPackageLockCandidates(transactionRoot) {
     }
     if (!(await stageWasiPackageLockIsStale(candidateStats, owner))) continue;
 
-    const retiredPath = stageWasiPackageLockRetiredPath(transactionRoot);
-    try {
-      await rename(candidateLockPath, retiredPath);
-    } catch (error) {
-      if (isNodeError(error) && error.code === 'ENOENT') continue;
-      throw error;
-    }
-    await rm(retiredPath, { force: true, recursive: true });
+    await retireStageWasiPackageLockCandidate(candidateLockPath, transactionRoot);
   }
 }
 
@@ -489,8 +531,116 @@ async function removeRetiredStageWasiPackageLocks(transactionRoot) {
     if (!retiredStats.isDirectory()) {
       throw new Error(`Retired WASI package transaction lock is not a directory: ${retiredPath}`);
     }
-    await rm(retiredPath, { force: true, recursive: true });
+    await removeRetiredStageWasiPackageLock(retiredPath);
   }
+}
+
+async function removeRetiredStageWasiPackageLock(retiredPath) {
+  // Retired names are unique and never become canonical again, so bounded
+  // retries cannot remove a successor-owned lock.
+  await rm(retiredPath, {
+    force: true,
+    maxRetries: transactionLockCleanupMaxRetries,
+    recursive: true,
+    retryDelay: transactionLockPollMs,
+  });
+}
+
+async function retireStageWasiPackageReclaimPath(
+  reclaimPath,
+  transactionRoot,
+  { afterReclaimGuardRetire, beforeReclaimGuardRetire } = {},
+) {
+  return retireStageWasiPackageOwnedPath(reclaimPath, transactionRoot, {
+    afterRetire: afterReclaimGuardRetire,
+    beforeRetire: beforeReclaimGuardRetire,
+    label: 'WASI package reclaim guard',
+  });
+}
+
+async function retireStageWasiPackageLockCandidate(
+  candidateLockPath,
+  transactionRoot,
+  { afterLockCandidateRetire } = {},
+) {
+  return retireStageWasiPackageOwnedPath(candidateLockPath, transactionRoot, {
+    afterRetire: afterLockCandidateRetire,
+    label: 'WASI package transaction lock candidate',
+  });
+}
+
+async function retireStageWasiPackageOwnedPath(
+  ownedPath,
+  transactionRoot,
+  { afterRetire, beforeRetire, label },
+) {
+  const retirementErrors = [];
+  try {
+    await beforeRetire?.(ownedPath);
+  } catch (error) {
+    retirementErrors.push(error);
+  }
+
+  const retiredPath = stageWasiPackageLockRetiredPath(transactionRoot);
+  let retired;
+  try {
+    retired = await renameStageWasiPackagePathWithRetry(ownedPath, retiredPath);
+  } catch (error) {
+    retirementErrors.push(error);
+    throwStageWasiPackageRetirementErrors(retirementErrors, label, ownedPath);
+  }
+  if (!retired) {
+    throwStageWasiPackageRetirementErrors(retirementErrors, label, ownedPath);
+    return false;
+  }
+
+  try {
+    await afterRetire?.(retiredPath);
+  } catch (error) {
+    retirementErrors.push(error);
+  }
+  try {
+    await removeRetiredStageWasiPackageLock(retiredPath);
+  } catch (error) {
+    retirementErrors.push(error);
+  }
+  throwStageWasiPackageRetirementErrors(retirementErrors, label, retiredPath);
+  return true;
+}
+
+async function renameStageWasiPackagePathWithRetry(
+  sourcePath,
+  retiredPath,
+  { beforeAttempt } = {},
+) {
+  // UUID callers never reuse sourcePath. Canonical callers revalidate their
+  // exact owner before every attempt.
+  for (let retry = 0; ; retry++) {
+    try {
+      await beforeAttempt?.();
+      await rename(sourcePath, retiredPath);
+      return true;
+    } catch (error) {
+      if (isNodeError(error) && error.code === 'ENOENT') return false;
+      if (
+        process.platform !== 'win32' ||
+        !isNodeError(error) ||
+        !['EACCES', 'EBUSY', 'EPERM'].includes(error.code) ||
+        retry >= transactionLockCleanupMaxRetries
+      ) {
+        throw error;
+      }
+      await delay(transactionLockPollMs * (retry + 1));
+    }
+  }
+}
+
+function throwStageWasiPackageRetirementErrors(errors, label, candidate) {
+  if (errors.length === 0) return;
+  if (errors.length === 1) throw errors[0];
+  throw new AggregateError(errors, `${label} retirement failed at ${candidate}`, {
+    cause: errors[0],
+  });
 }
 
 function stageWasiPackageLockRetiredPath(transactionRoot) {
@@ -557,27 +707,55 @@ export async function acquireStageWasiPackageReclaimGuard(
   transactionRoot,
   {
     afterReclaimGuardCandidateCreate,
+    afterReclaimGuardPreparationCreate,
+    afterReclaimGuardRetire,
     afterReclaimGuardTicketPublish,
     beforeReclaimGuardAdmission,
     beforeReclaimGuardTicketPublish,
+    beforeReclaimGuardRetire,
+    probeCurrentProcessIncarnation = getCurrentProcessIncarnation,
   } = {},
 ) {
   const token = randomUUID();
-  const processIncarnation = await getCurrentProcessIncarnation();
+  const probedProcessIncarnation = await probeCurrentProcessIncarnation();
+  const processIncarnation =
+    processIncarnationFormat(probedProcessIncarnation) === undefined
+      ? undefined
+      : probedProcessIncarnation;
   const candidateName = `${transactionReclaimCandidatePrefix}${process.pid}.${token}`;
+  const preparationName = stageWasiPackageReclaimPreparationName(
+    process.pid,
+    processIncarnation,
+    token,
+  );
   const candidatePath = path.join(transactionRoot, candidateName);
+  const preparationPath = path.join(transactionRoot, preparationName);
   const ownerPath = path.join(candidatePath, 'owner.json');
+  const preparationOwnerPath = path.join(preparationPath, 'owner.json');
   const ticketPath = path.join(candidatePath, transactionReclaimTicketName);
   const owner = createStageWasiPackageLockOwner(token, processIncarnation);
   const deadline = Date.now() + transactionLockTimeoutMs;
+  let candidatePublished = false;
   let ticket;
 
   try {
-    await mkdir(candidatePath);
+    await reclaimStaleStageWasiPackageReclaimPreparations(transactionRoot, {
+      afterReclaimGuardRetire,
+      beforeReclaimGuardRetire,
+    });
+    // Keep incomplete owner publication outside the bakery namespace, then
+    // publish the complete chooser with one atomic rename.
+    await mkdir(preparationPath);
+    await afterReclaimGuardPreparationCreate?.(preparationPath);
+    await writeJsonAtomic(preparationOwnerPath, owner);
+    await rename(preparationPath, candidatePath);
+    candidatePublished = true;
     await afterReclaimGuardCandidateCreate?.(candidatePath);
-    await writeJsonAtomic(ownerPath, owner);
 
-    const choosingCandidates = await readStageWasiPackageReclaimCandidates(transactionRoot);
+    const choosingCandidates = await readStageWasiPackageReclaimCandidates(transactionRoot, {
+      afterReclaimGuardRetire,
+      beforeReclaimGuardRetire,
+    });
     const maximumTicket = choosingCandidates.reduce(
       (maximum, candidate) => Math.max(maximum, candidate.ticket ?? 0),
       0,
@@ -591,7 +769,10 @@ export async function acquireStageWasiPackageReclaimGuard(
     await afterReclaimGuardTicketPublish?.(candidatePath);
 
     while (true) {
-      const candidates = await readStageWasiPackageReclaimCandidates(transactionRoot);
+      const candidates = await readStageWasiPackageReclaimCandidates(transactionRoot, {
+        afterReclaimGuardRetire,
+        beforeReclaimGuardRetire,
+      });
       const ownCandidate = candidates.find((candidate) => candidate.name === candidateName);
       if (
         !ownCandidate ||
@@ -618,7 +799,19 @@ export async function acquireStageWasiPackageReclaimGuard(
       await delay(transactionLockPollMs);
     }
   } catch (error) {
-    await rm(candidatePath, { force: true, recursive: true });
+    try {
+      await retireStageWasiPackageReclaimPath(
+        candidatePublished ? candidatePath : preparationPath,
+        transactionRoot,
+        { afterReclaimGuardRetire, beforeReclaimGuardRetire },
+      );
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        `WASI package reclaim-guard acquisition failed and its candidate could not be cleaned up`,
+        { cause: error },
+      );
+    }
     throw error;
   }
 
@@ -630,11 +823,87 @@ export async function acquireStageWasiPackageReclaimGuard(
     if (!sameStageWasiPackageLockOwner(currentOwner, owner) || currentTicket !== ticket) {
       throw new Error(`Lost ownership of the WASI package reclaim guard at ${candidatePath}`);
     }
-    await rm(candidatePath, { force: true, recursive: true });
+    if (
+      !(await retireStageWasiPackageReclaimPath(candidatePath, transactionRoot, {
+        afterReclaimGuardRetire,
+        beforeReclaimGuardRetire,
+      }))
+    ) {
+      throw new Error(`Lost ownership of the WASI package reclaim guard at ${candidatePath}`);
+    }
   };
 }
 
-async function readStageWasiPackageReclaimCandidates(transactionRoot) {
+async function reclaimStaleStageWasiPackageReclaimPreparations(
+  transactionRoot,
+  { afterReclaimGuardRetire, beforeReclaimGuardRetire } = {},
+) {
+  for (const entry of await readdir(transactionRoot)) {
+    if (!entry.startsWith(transactionReclaimPreparationPrefix)) continue;
+    const identity = parseStageWasiPackageReclaimPreparation(entry);
+    if (!identity) {
+      throw new Error(`Invalid WASI package reclaim-guard preparation name: ${entry}`);
+    }
+    const preparationPath = path.join(transactionRoot, entry);
+    const stats = await lstatIfExists(preparationPath);
+    if (!stats) continue;
+    if (!stats.isDirectory()) {
+      throw new Error(
+        `WASI package reclaim-guard preparation is not a directory: ${preparationPath}`,
+      );
+    }
+
+    const owner = await readLockOwnerIfExists(path.join(preparationPath, 'owner.json'));
+    const ownerIsValid =
+      stageWasiPackageLockOwnerIsValid(owner) &&
+      owner.pid === identity.pid &&
+      owner.token === identity.token &&
+      (identity.incarnation === undefined || owner.incarnation === identity.incarnation);
+    if (ownerIsValid) {
+      if (await stageWasiPackageLockOwnerIsLive(owner)) continue;
+    } else if (await stageWasiPackageReclaimPreparationIsLive(identity)) {
+      continue;
+    }
+
+    await retireStageWasiPackageReclaimPath(preparationPath, transactionRoot, {
+      afterReclaimGuardRetire,
+      beforeReclaimGuardRetire,
+    });
+  }
+}
+
+async function stageWasiPackageReclaimPreparationIsLive(identity) {
+  if (!processExists(identity.pid)) return false;
+  if (identity.incarnation === undefined) return true;
+  const expectedFormat = processIncarnationFormat(identity.incarnation);
+  const matches = await processIncarnationMatches(
+    identity.pid,
+    identity.incarnation,
+    expectedFormat,
+  );
+  return matches ?? processExists(identity.pid);
+}
+
+async function legacyOwnerlessStageWasiPackageReclaimCandidateIsStale(stats, pid) {
+  if (!processExists(pid)) return true;
+  const incarnation =
+    pid === process.pid ? await getCurrentProcessIncarnation() : await readProcessIncarnation(pid);
+  if (incarnation === undefined) return !processExists(pid);
+
+  const processStartLowerBoundMs = await processStartLowerBoundMsFromIncarnation(incarnation);
+  const candidateCreationTimeMs =
+    Number.isFinite(stats.birthtimeMs) && stats.birthtimeMs > 0 ? stats.birthtimeMs : stats.mtimeMs;
+  return (
+    Number.isFinite(candidateCreationTimeMs) &&
+    processStartLowerBoundMs !== undefined &&
+    candidateCreationTimeMs < processStartLowerBoundMs
+  );
+}
+
+async function readStageWasiPackageReclaimCandidates(
+  transactionRoot,
+  { afterReclaimGuardRetire, beforeReclaimGuardRetire } = {},
+) {
   const candidates = [];
   for (const entry of await readdir(transactionRoot)) {
     if (!entry.startsWith(transactionReclaimCandidatePrefix)) continue;
@@ -649,40 +918,99 @@ async function readStageWasiPackageReclaimCandidates(transactionRoot) {
       throw new Error(`WASI package reclaim-guard candidate is not a directory: ${candidatePath}`);
     }
 
-    const owner = await readLockOwnerIfExists(path.join(candidatePath, 'owner.json'));
-    const ownerIsValid =
+    let owner = await readLockOwnerIfExists(path.join(candidatePath, 'owner.json'));
+    let ownerIsValid =
       stageWasiPackageLockOwnerIsValid(owner) &&
       owner.pid === identity.pid &&
       owner.token === identity.token;
-    const candidateIsLive = ownerIsValid
-      ? await stageWasiPackageLockOwnerIsLive(owner)
-      : processExists(identity.pid);
-    if (!candidateIsLive) {
-      await rm(candidatePath, { force: true, recursive: true });
+    if (ownerIsValid && (await stageWasiPackageLockOwnerIsLive(owner))) {
+      candidates.push({
+        name: entry,
+        owner,
+        ticket: await readStageWasiPackageReclaimTicket(
+          path.join(candidatePath, transactionReclaimTicketName),
+        ),
+      });
       continue;
     }
-    if (!ownerIsValid) {
+
+    if (
+      !ownerIsValid &&
+      !(await legacyOwnerlessStageWasiPackageReclaimCandidateIsStale(stats, identity.pid))
+    ) {
       candidates.push({ name: entry, owner: undefined, ticket: undefined });
       continue;
     }
 
-    candidates.push({
-      name: entry,
-      owner,
-      ticket: await readStageWasiPackageReclaimTicket(
-        path.join(candidatePath, transactionReclaimTicketName),
-      ),
+    if (!ownerIsValid) {
+      owner = await readLockOwnerIfExists(path.join(candidatePath, 'owner.json'));
+      ownerIsValid =
+        stageWasiPackageLockOwnerIsValid(owner) &&
+        owner.pid === identity.pid &&
+        owner.token === identity.token;
+      if (ownerIsValid && (await stageWasiPackageLockOwnerIsLive(owner))) {
+        candidates.push({
+          name: entry,
+          owner,
+          ticket: await readStageWasiPackageReclaimTicket(
+            path.join(candidatePath, transactionReclaimTicketName),
+          ),
+        });
+        continue;
+      }
+    }
+
+    await retireStageWasiPackageReclaimPath(candidatePath, transactionRoot, {
+      afterReclaimGuardRetire,
+      beforeReclaimGuardRetire,
     });
   }
   return candidates;
 }
 
-async function reclaimDeadStageWasiPackageReclaimCandidates(transactionRoot) {
-  await readStageWasiPackageReclaimCandidates(transactionRoot);
+async function reclaimDeadStageWasiPackageReclaimCandidates(
+  transactionRoot,
+  { afterReclaimGuardRetire, beforeReclaimGuardRetire } = {},
+) {
+  await readStageWasiPackageReclaimCandidates(transactionRoot, {
+    afterReclaimGuardRetire,
+    beforeReclaimGuardRetire,
+  });
 }
 
 function parseStageWasiPackageReclaimCandidate(entry) {
-  const identity = entry.slice(transactionReclaimCandidatePrefix.length);
+  return parseStageWasiPackageReclaimIdentity(entry, transactionReclaimCandidatePrefix);
+}
+
+function parseStageWasiPackageReclaimPreparation(entry) {
+  const identity = entry.slice(transactionReclaimPreparationPrefix.length);
+  const versionPrefix = `v${transactionReclaimPreparationVersion}.`;
+  if (!identity.startsWith(versionPrefix)) {
+    const legacyIdentity = parseStageWasiPackageReclaimIdentity(
+      entry,
+      transactionReclaimPreparationPrefix,
+    );
+    return legacyIdentity ? { ...legacyIdentity, incarnation: undefined } : undefined;
+  }
+
+  const fields = identity.slice(versionPrefix.length).split('.');
+  if (fields.length !== 3) return undefined;
+  const [pidText, encodedIncarnation, token] = fields;
+  if (!/^[1-9]\d*$/.test(pidText) || encodedIncarnation.length === 0 || token.length === 0) {
+    return undefined;
+  }
+  const pid = Number(pidText);
+  if (!Number.isSafeInteger(pid)) return undefined;
+
+  if (encodedIncarnation === transactionReclaimPreparationUncomparableIdentity) {
+    return { incarnation: undefined, pid, token };
+  }
+  const incarnation = decodeStageWasiPackageReclaimPreparationIncarnation(encodedIncarnation);
+  return incarnation === undefined ? undefined : { incarnation, pid, token };
+}
+
+function parseStageWasiPackageReclaimIdentity(entry, prefix) {
+  const identity = entry.slice(prefix.length);
   const separator = identity.indexOf('.');
   if (separator === -1) return undefined;
   const pidText = identity.slice(0, separator);
@@ -690,6 +1018,25 @@ function parseStageWasiPackageReclaimCandidate(entry) {
   if (!/^[1-9]\d*$/.test(pidText) || token.length === 0) return undefined;
   const pid = Number(pidText);
   return Number.isSafeInteger(pid) ? { pid, token } : undefined;
+}
+
+function stageWasiPackageReclaimPreparationName(pid, incarnation, token) {
+  const encodedIncarnation =
+    incarnation === undefined
+      ? transactionReclaimPreparationUncomparableIdentity
+      : Buffer.from(incarnation, 'utf8').toString('base64url');
+  return `${transactionReclaimPreparationPrefix}v${transactionReclaimPreparationVersion}.${pid}.${encodedIncarnation}.${token}`;
+}
+
+function decodeStageWasiPackageReclaimPreparationIncarnation(encodedIncarnation) {
+  try {
+    const incarnationBuffer = Buffer.from(encodedIncarnation, 'base64url');
+    if (incarnationBuffer.toString('base64url') !== encodedIncarnation) return undefined;
+    const incarnation = incarnationBuffer.toString('utf8');
+    return processIncarnationFormat(incarnation) === undefined ? undefined : incarnation;
+  } catch {
+    return undefined;
+  }
 }
 
 async function readStageWasiPackageReclaimTicket(candidate) {
@@ -1050,6 +1397,73 @@ function processIncarnationFormat(incarnation) {
     return 'posix';
   }
   return undefined;
+}
+
+// Linux btime and POSIX lstart have whole-second precision. These conversions
+// intentionally provide lower bounds, so ambiguous legacy candidates remain.
+async function processStartLowerBoundMsFromIncarnation(incarnation) {
+  const format = processIncarnationFormat(incarnation);
+  if (format === 'linux') {
+    const separator = incarnation.lastIndexOf(':');
+    const bootId = incarnation.slice('linux:'.length, separator);
+    const startTicks = incarnation.slice(separator + 1);
+    const timeBase = await getLinuxProcessTimeBase();
+    if (!timeBase || timeBase.bootId !== bootId) return undefined;
+    const elapsedMs = (BigInt(startTicks) * 1_000n) / BigInt(timeBase.clockTicksPerSecond);
+    return timeBase.bootTimeMs + Number(elapsedMs);
+  }
+  if (format === 'win32') {
+    const windowsEpochTicks = 621_355_968_000_000_000n;
+    const startTicks = BigInt(incarnation.slice('win32:'.length));
+    if (startTicks < windowsEpochTicks) return undefined;
+    return Number((startTicks - windowsEpochTicks) / 10_000n);
+  }
+  if (format === 'posix') {
+    const startTimeMs = Date.parse(`${incarnation.slice('posix:'.length)} UTC`);
+    return Number.isFinite(startTimeMs) ? startTimeMs : undefined;
+  }
+  return undefined;
+}
+
+async function getLinuxProcessTimeBase() {
+  const pending = (linuxProcessTimeBasePromise ??= readLinuxProcessTimeBase());
+  const timeBase = await pending;
+  if (timeBase === undefined && linuxProcessTimeBasePromise === pending) {
+    linuxProcessTimeBasePromise = undefined;
+  }
+  return timeBase;
+}
+
+async function readLinuxProcessTimeBase() {
+  try {
+    const [stat, bootIdText, { stdout: clockTicksText }] = await Promise.all([
+      readFile('/proc/stat', 'utf8'),
+      readFile('/proc/sys/kernel/random/boot_id', 'utf8'),
+      execFileAsync('getconf', ['CLK_TCK'], {
+        encoding: 'utf8',
+        timeout: processIncarnationProbeTimeoutMs,
+      }),
+    ]);
+    const bootTime = stat.match(/^btime ([1-9]\d*)$/m)?.[1];
+    const bootId = bootIdText.trim();
+    const clockTicks = clockTicksText.trim();
+    if (
+      bootTime === undefined ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bootId) ||
+      !/^[1-9]\d*$/.test(clockTicks)
+    ) {
+      return undefined;
+    }
+    const clockTicksPerSecond = Number(clockTicks);
+    if (!Number.isSafeInteger(clockTicksPerSecond)) return undefined;
+    return {
+      bootId,
+      bootTimeMs: Number(bootTime) * 1_000,
+      clockTicksPerSecond,
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 async function getCurrentProcessIncarnation() {

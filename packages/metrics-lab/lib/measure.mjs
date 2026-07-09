@@ -34,6 +34,47 @@ const COLLECT_JS = `(() => {
   const nav = performance.getEntriesByType('navigation')[0];
   const res = performance.getEntriesByType('resource');
   const M = window.__perfMetrics || {};
+  // What a resource IS (font/image/script/...), not just who initiated it -
+  // fonts arrive with initiatorType 'css' or 'link', which hides them.
+  const classify = (r) => {
+    if (r.initiatorType === 'fetch') return 'fetch';
+    if (r.initiatorType === 'xmlhttprequest') return 'xhr';
+    const clean = r.name.split('?')[0].split('#')[0].toLowerCase();
+    const ext = clean.slice(clean.lastIndexOf('.') + 1);
+    if (['woff2', 'woff', 'ttf', 'otf', 'eot'].includes(ext)) return 'font';
+    if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'svg', 'ico', 'bmp'].includes(ext)) return 'image';
+    if (['js', 'mjs', 'cjs'].includes(ext)) return 'script';
+    if (ext === 'css') return 'css';
+    if (ext === 'wasm' || ext === 'json') return ext;
+    return r.initiatorType || 'other';
+  };
+  const all = res.map((r) => ({
+    name: r.name.replace(location.origin, ''),
+    type: classify(r),
+    start: Math.round(r.startTime),
+    end: Math.round(r.responseEnd),
+    bytes: r.encodedBodySize || 0,
+  }));
+  // Uncapped per-type totals (+ the pre-first-paint share): real apps load
+  // hundreds of resources, so any capped detail list under-reports by design.
+  const typeAgg = {};
+  for (const r of all) {
+    const a = typeAgg[r.type] || (typeAgg[r.type] = { count: 0, bytes: 0, preFcpCount: 0, preFcpBytes: 0 });
+    a.count += 1;
+    a.bytes += r.bytes;
+    // end 0 = still in flight or failed, not "finished before paint". Bytes stay
+    // 0 for cross-origin responses without Timing-Allow-Origin - count anyway.
+    if (typeof M.fcp === 'number' && r.end > 0 && r.end <= M.fcp) {
+      a.preFcpCount += 1;
+      a.preFcpBytes += r.bytes;
+    }
+  }
+  // Detail list: every fetch/xhr (render-gap suspects are often tiny), then the
+  // largest of everything else - a big resource must never fall off the list.
+  const fetchLike = all.filter((r) => r.type === 'fetch' || r.type === 'xhr').slice(0, 40);
+  const rest = all.filter((r) => r.type !== 'fetch' && r.type !== 'xhr')
+    .sort((a, b) => b.bytes - a.bytes)
+    .slice(0, 60 - fetchLike.length);
   return {
     fcp: M.fcp,
     lcp: M.lcp,
@@ -43,12 +84,8 @@ const COLLECT_JS = `(() => {
     load: nav ? nav.loadEventEnd : null,
     bytes: (nav ? nav.encodedBodySize : 0) + res.reduce((a, r) => a + (r.encodedBodySize || 0), 0),
     jsRequests: res.filter((r) => r.name.endsWith('.js')).length,
-    resources: res.slice(0, 40).map((r) => ({
-      name: r.name.replace(location.origin, ''),
-      type: r.initiatorType,
-      start: Math.round(r.startTime),
-      end: Math.round(r.responseEnd),
-    })),
+    resources: fetchLike.concat(rest),
+    resourceTypes: typeAgg,
     longtasks: (M.longtasks || []).map((t) => ({ start: Math.round(t.start), duration: Math.round(t.duration) })),
     ready: Object.assign({}, window.__ready || {}),
     heroTitle: (() => { const el = document.getElementById('hero-title'); return el ? el.textContent || '' : null; })(),
@@ -111,12 +148,53 @@ function gatingFetches(samples) {
   for (const sample of samples) {
     if (typeof sample.fcp !== 'number') continue;
     for (const resource of sample.resources ?? []) {
-      if (resource.type !== 'fetch' && resource.type !== 'xmlhttprequest') continue;
-      if (resource.end > sample.fcp) continue;
+      if (resource.type !== 'fetch' && resource.type !== 'xhr') continue;
+      if (resource.end <= 0 || resource.end > sample.fcp) continue;
       seen.set(resource.name, `${resource.name} (${resource.type}, finished ${Math.round(sample.fcp - resource.end)}ms before first paint)`);
     }
   }
   return [...seen.values()];
+}
+
+/** Per-type resource totals folded across samples (median per field, missing = 0). */
+function resourceWeight(samples) {
+  const types = new Set();
+  for (const sample of samples) {
+    for (const type of Object.keys(sample.resourceTypes ?? {})) types.add(type);
+  }
+  // preFcp fields are only meaningful in runs where FCP was observed.
+  const painted = samples.filter((s) => typeof s.fcp === 'number');
+  const kb = (bytes) => Math.round(((bytes ?? 0) / 1024) * 10) / 10;
+  const rows = [];
+  for (const type of types) {
+    const field = (pool, name) => median(pool.map((s) => s.resourceTypes?.[type]?.[name] ?? 0)) ?? 0;
+    const row = {
+      type,
+      count: Math.round(field(samples, 'count')),
+      kb: kb(field(samples, 'bytes')),
+      preFcpCount: painted.length ? Math.round(field(painted, 'preFcpCount')) : 0,
+      preFcpKb: painted.length ? kb(field(painted, 'preFcpBytes')) : 0,
+    };
+    if (row.count > 0) rows.push(row);
+  }
+  return rows.sort((a, b) => b.preFcpKb - a.preFcpKb || b.kb - a.kb);
+}
+
+/** "3 font 240KB" — or "3 font" when sizes are hidden (cross-origin without Timing-Allow-Origin). */
+export function weightLabel(row) {
+  const kb = Math.round(row.preFcpKb);
+  return `${row.preFcpCount} ${row.type}${kb >= 1 ? ` ${kb}KB` : ''}`;
+}
+
+/**
+ * Non-fetch resource types heavy enough before first paint to plausibly gate
+ * rendering — the fonts/images a fetch-only render-gap analysis is blind to.
+ */
+export function heavyPrepaintTypes(weightRows) {
+  return (weightRows ?? []).filter((row) => (
+    (row.type === 'font' && (row.preFcpKb >= 50 || row.preFcpCount >= 5))
+    || (row.type === 'image' && row.preFcpKb >= 100)
+  ));
 }
 
 /** Fold N samples into the flat runtime metric-id map plus the correctness guard. */
@@ -149,6 +227,7 @@ export function summarize(samples, expectedFeatures = []) {
       'runtime.prepaint_longtask_ms': round1(median(prepaintLongtask)),
     },
     gatingFetches: gatingFetches(samples),
+    resourceWeight: resourceWeight(samples),
     guard: {
       allFeaturesReady: samples.every(
         (s) => expectedFeatures.every((f) => s.ready && s.ready[f] === true),

@@ -24,10 +24,10 @@ import {
   FEATURES, FEATURE_NAMES, featureModes, generateApp, setFeatureMode,
 } from './lib/gen-app.mjs';
 import {
-  DEFAULT_THROTTLE, deltaSection, summarize, timedRun,
+  DEFAULT_THROTTLE, deltaSection, heavyPrepaintTypes, summarize, timedRun, weightLabel,
 } from './lib/measure.mjs';
 import {
-  coverageBySource, coverageRun, largeAtPaintModules, siblingVariantGroups,
+  attributeChunks, coverageRun, largeAtPaintModules, siblingVariantGroups,
 } from './lib/coverage.mjs';
 import { aggregateProfile, profileRun } from './lib/profile.mjs';
 
@@ -189,6 +189,7 @@ function writeMeasureReport(target, samples, { expectedFeatures, label, throttle
     metrics: summary.metrics,
     guard: summary.guard,
     gatingFetches: summary.gatingFetches,
+    resourceWeight: summary.resourceWeight,
     delta: prev ? deltaSection(prev.metrics, summary.metrics) : null,
     baselineDelta: baseline ? deltaSection(baseline.metrics, summary.metrics) : null,
     samples: summary.samples,
@@ -229,10 +230,24 @@ function printMeasureSummary(report, hadBaseline) {
   const renderGap = m['runtime.render_gap_ms'];
   if (typeof renderGap === 'number' && renderGap > 150) {
     console.log(`render gap: first paint landed ${Math.round(renderGap)}ms AFTER the load event - rendering is gated on post-load work, not on downloading.`);
-    for (const fetchLine of report.gatingFetches ?? []) {
+    const fetches = report.gatingFetches ?? [];
+    for (const fetchLine of fetches) {
       console.log(`  completed just before paint: ${fetchLine}`);
     }
-    console.log('  next: find what the boot path awaits before the first render (a config/data fetch, a locale chunk) and render with bundled defaults instead, applying the fetched result when it arrives.');
+    const prepaint = (report.resourceWeight ?? []).filter((w) => w.preFcpCount > 0);
+    if (prepaint.length) {
+      console.log(`  before first paint: ${prepaint.slice(0, 5).map(weightLabel).join(', ')}`);
+    }
+    const heavy = heavyPrepaintTypes(report.resourceWeight);
+    if (fetches.length) {
+      console.log('  next: find what the boot path awaits before the first render (a config/data fetch, a locale chunk) and render with bundled defaults instead, applying the fetched result when it arrives.');
+    } else if (heavy.some((w) => w.type === 'font')) {
+      console.log('  next: no render-gating fetch - the paint likely waits on fonts. Make first paint depend on at most one (subset) font: preload it, and defer loading/registering the rest until after paint.');
+    } else if (heavy.length) {
+      console.log('  next: no render-gating fetch - heavy images load before first paint. Lazy-load below-the-fold images and shrink the ones the first view needs.');
+    } else {
+      console.log(`  next: no render-gating fetch or heavy pre-paint asset - the gap is post-load CPU or late-executing chunks. Run \`${CLI} profile\` and defer the attributed app work.`);
+    }
   }
   const prepaintCpu = m['runtime.prepaint_longtask_ms'];
   if (typeof prepaintCpu === 'number' && prepaintCpu > 150) {
@@ -279,21 +294,18 @@ function pinBaseline(target) {
 // --- coverage core ----------------------------------------------------------------
 
 function buildCoverageReport(target, cov, entry) {
-  const entryFile = path.join(target.dist, entry);
-  const code = fs.readFileSync(entryFile, 'utf8');
-  const map = JSON.parse(fs.readFileSync(`${entryFile}.map`, 'utf8'));
-  const rows = coverageBySource({ code, map, atPaint: cov.atPaint, atSettle: cov.atSettle });
-
-  const modules = [...rows.entries()]
-    .map(([source, row]) => ({
-      source,
-      totalBytes: row.totalBytes,
-      paintBytes: row.paintBytes,
-      settleBytes: row.settleBytes,
-      paintRatio: row.totalBytes ? row.paintBytes / row.totalBytes : 0,
-      settleRatio: row.totalBytes ? row.settleBytes / row.totalBytes : 0,
-    }))
-    .sort((a, b) => b.totalBytes - a.totalBytes);
+  const { chunks, modules, skipped } = attributeChunks({
+    scripts: cov.scripts,
+    entryName: `/${entry.replaceAll('\\', '/')}`,
+    readChunk: (file) => {
+      const chunkFile = path.join(target.dist, file);
+      if (!fs.existsSync(chunkFile) || !fs.existsSync(`${chunkFile}.map`)) return null;
+      return {
+        code: fs.readFileSync(chunkFile, 'utf8'),
+        map: JSON.parse(fs.readFileSync(`${chunkFile}.map`, 'utf8')),
+      };
+    },
+  });
 
   // Defer candidates. For the demo app these map to feature marker blocks (the
   // seams `defer <name>` can rewrite); otherwise they are advisory per-module.
@@ -314,6 +326,8 @@ function buildCoverageReport(target, cov, entry) {
     schemaVersion: 1,
     generatedAtMs: Date.now(),
     entry,
+    chunks,
+    skippedChunks: skipped,
     deferred: target.isDemo ? deferredList() : null,
     thresholds: { candidateMinBytes: CANDIDATE_MIN_BYTES, candidateMaxPaintRatio: CANDIDATE_MAX_PAINT_RATIO },
     modules,
@@ -325,19 +339,39 @@ function buildCoverageReport(target, cov, entry) {
 
 function printCoverageReport(target, report) {
   const { modules, candidates, entry } = report;
-  console.log(`entry-chunk coverage (${entry}, first paint vs settled):\n`);
+  const chunks = report.chunks ?? [];
+  const extraChunks = chunks.filter((c) => !c.entry);
+  const chunkTag = (mod) => (extraChunks.some((c) => c.file === mod.chunk) ? `  [${mod.chunk}]` : '');
+  console.log(`initial-load coverage (${entry}${extraChunks.length ? ` + ${extraChunks.length} pre-paint chunk(s)` : ''}, first paint vs settled):\n`);
+  for (const c of extraChunks) {
+    console.log(`  chunk ${c.file}  ${kb(c.totalBytes)}  paint ${(c.paintRatio * 100).toFixed(0)}% - fetched AND executed before first paint, so it is critical-path transfer`);
+  }
+  for (const s of report.skippedChunks ?? []) {
+    if (s.reason === 'no-sourcemap') {
+      console.log(`  NOTE: chunk ${s.file} executed before paint but has no sourcemap - its bytes are NOT attributed below`);
+    }
+  }
+  const lazyChunks = (report.skippedChunks ?? []).filter((s) => s.reason === 'post-paint');
+  if (lazyChunks.length) {
+    console.log(`  (${lazyChunks.length} chunk(s) first executed after paint - already deferred, not analyzed: ${lazyChunks.map((s) => s.file).join(', ')})`);
+  }
+  if (extraChunks.length || lazyChunks.length) console.log('');
   const pct = (r) => `${(r * 100).toFixed(1)}%`;
-  for (const mod of modules) {
+  const shown = modules.slice(0, 60);
+  for (const mod of shown) {
     const verdict = mod.paintRatio >= CANDIDATE_MAX_PAINT_RATIO ? 'used-before-paint'
       : mod.settleRatio >= CANDIDATE_MAX_PAINT_RATIO ? 'post-paint-only'
         : 'not-executed-by-settle';
     console.log(`  ${mod.source.padEnd(34)} ${kb(mod.totalBytes).padStart(9)}  `
-      + `paint ${pct(mod.paintRatio).padStart(6)}  settle ${pct(mod.settleRatio).padStart(6)}  ${verdict}`);
+      + `paint ${pct(mod.paintRatio).padStart(6)}  settle ${pct(mod.settleRatio).padStart(6)}  ${verdict}${chunkTag(mod)}`);
+  }
+  if (modules.length > shown.length) {
+    console.log(`  ... +${modules.length - shown.length} more modules (largest shown) - full list in coverage.json`);
   }
   if (candidates.length) {
     console.log(`\ndefer candidates (>=${kb(CANDIDATE_MIN_BYTES)}, <${CANDIDATE_MAX_PAINT_RATIO * 100}% executed at paint), largest first:`);
     for (const c of candidates) {
-      console.log(`  ${c.feature ?? c.source}  (${kb(c.totalBytes)})`
+      console.log(`  ${c.feature ?? c.source}  (${kb(c.totalBytes)}${chunkTag(c) ? `, in ${c.chunk}` : ''})`
         + `${c.feature ? `  -> node harness.mjs defer ${c.feature}` : ''}`);
     }
     console.log(target.isDemo
@@ -355,7 +389,7 @@ function printCoverageReport(target, report) {
   if (largeHot.length) {
     console.log('\nlarge modules fully executed at paint - "executed" does NOT prove the first paint needs their contents (top-level data evaluates on import):');
     for (const mod of largeHot) {
-      console.log(`  ${mod.source}  (${kb(mod.totalBytes)}, ${(mod.paintRatio * 100).toFixed(0)}% at paint)`);
+      console.log(`  ${mod.source}  (${kb(mod.totalBytes)}, ${(mod.paintRatio * 100).toFixed(0)}% at paint${chunkTag(mod) ? `, in ${mod.chunk}` : ''})`);
     }
     console.log('next: for each, check how much of it the first render actually reads; split rarely-read parts (full records, long bodies, alternate variants) into a module reached only by dynamic import.');
   }
@@ -431,9 +465,23 @@ function printVerdict(target) {
   } else {
     const gap = runtime.metrics['runtime.render_gap_ms'];
     if (typeof gap === 'number' && gap > 150) {
-      lead('open', `render gap ${Math.round(gap)}ms`,
-        `paint is gated on post-load work${runtime.gatingFetches?.length ? ` (${runtime.gatingFetches.join('; ')})` : ''}`,
-        'render with bundled defaults and apply fetched results when they arrive - fix this before judging CPU deferrals');
+      const fetches = runtime.gatingFetches ?? [];
+      const heavy = heavyPrepaintTypes(runtime.resourceWeight);
+      if (fetches.length) {
+        lead('open', `render gap ${Math.round(gap)}ms`,
+          `paint is gated on post-load work (${fetches.join('; ')})`,
+          'render with bundled defaults and apply fetched results when they arrive - fix this before judging CPU deferrals');
+      } else if (heavy.length) {
+        lead('open', `render gap ${Math.round(gap)}ms`,
+          `no render-gating fetch; before first paint: ${heavy.map(weightLabel).join(', ')}`,
+          heavy.some((w) => w.type === 'font')
+            ? 'make first paint depend on at most one (subset) font - preload it, defer the rest until after paint - fix this before judging CPU deferrals'
+            : 'lazy-load below-the-fold images and shrink the ones the first view needs - fix this before judging CPU deferrals');
+      } else {
+        lead('open', `render gap ${Math.round(gap)}ms`,
+          'no render-gating fetch or heavy pre-paint asset - the gap is post-load CPU or late-executing chunks',
+          `${CLI} profile  (or scan), then defer the attributed app work - fix this before judging CPU deferrals`);
+      }
     } else {
       lead('clear', 'render gap', gap == null ? 'not measurable' : `paint lands ${Math.round(gap)}ms after load`);
     }
@@ -465,12 +513,19 @@ function printVerdict(target) {
       `${CLI} coverage  (or scan)`);
   } else {
     const candidates = coverage.candidates ?? [];
+    const inChunk = (c) => (coverage.chunks?.some((ch) => !ch.entry && ch.file === c.chunk) ? ` [${c.chunk}]` : '');
     if (candidates.length) {
       lead('open', `defer candidates (${candidates.length})`,
-        candidates.slice(0, 3).map((c) => `${c.feature ?? c.source} ${kb(c.totalBytes)}`).join(', '),
+        candidates.slice(0, 3).map((c) => `${c.feature ?? c.source} ${kb(c.totalBytes)}${inChunk(c)}`).join(', '),
         'lazy-load them, rebuild, re-measure');
     } else {
       lead('clear', 'defer candidates', 'nothing sizeable is parsed-but-unexecuted');
+    }
+    const unattributed = (coverage.skippedChunks ?? []).filter((s) => s.reason === 'no-sourcemap');
+    if (unattributed.length) {
+      lead('unknown', `unattributed pre-paint chunk(s): ${unattributed.map((s) => s.file).join(', ')}`,
+        'executed before first paint but built without a sourcemap - their bytes are invisible to coverage',
+        'rebuild with sourcemaps for these chunks, then re-run coverage');
     }
 
     const largeHot = largeAtPaintModules(coverage.modules ?? []);
@@ -497,8 +552,10 @@ function printVerdict(target) {
   console.log('');
   if (openCount + unknownCount === 0) {
     console.log('VERDICT: every signal class is clear and fresh. Nothing further is indicated by these tools.');
-    console.log('Boundary: they do not see image/CSS/font weight, server latency, cache policy, or');
-    console.log('interaction-time cost. Remaining LCP is baseline network + parse + render for what the');
+    console.log('Boundary: coverage attributes the entry + same-origin pre-paint chunks with sourcemaps;');
+    console.log('cross-origin scripts are unattributed, and non-JS weight (fonts/images/CSS) is counted');
+    console.log('by type but not analyzed further. Server latency, cache policy, and interaction-time');
+    console.log('cost are out of scope. Remaining LCP is baseline network + parse + render for what the');
     console.log('page genuinely needs at first paint.');
   } else {
     console.log(`VERDICT: not done - ${openCount} lead(s) OPEN, ${unknownCount} signal(s) UNKNOWN or stale.`);

@@ -1,5 +1,8 @@
-// First-paint vs settled V8 precise coverage for the entry chunk, attributed to
-// source modules through the chunk's sourcemap (hand-rolled VLQ decode, no deps).
+// First-paint vs settled V8 precise coverage for the INITIAL LOAD — the entry
+// chunk plus every same-origin chunk that executed before first paint (preloaded
+// siblings are critical-path transfer too) — attributed to source modules through
+// each chunk's sourcemap (hand-rolled VLQ decode, no deps). Chunks that first
+// execute after paint are already deferred and are reported, not analyzed.
 //
 // Two snapshots per run (takePreciseCoverage RESETS counters, so the second one
 // covers only the window between the snapshots):
@@ -203,6 +206,64 @@ export function coverageBySource({ code, map, atPaint, atSettle }) {
   return rows;
 }
 
+/**
+ * Attribute the whole initial load: the entry chunk plus every same-origin JS
+ * chunk that executed before first paint. Chunks first executing after paint are
+ * already deferred — reported in `skipped` (reason 'post-paint'), not analyzed.
+ * `readChunk(file)` returns { code, map } or null when no sourcemap exists
+ * (skipped with reason 'no-sourcemap' — never silently).
+ */
+export function attributeChunks({ scripts, entryName, readChunk }) {
+  const chunks = [];
+  const modules = [];
+  const skipped = [];
+  for (const script of scripts) {
+    const isEntry = script.pathname.endsWith(entryName);
+    // Inline scripts surface under the document URL; only .js files are chunks.
+    if (!isEntry && !/\.[mc]?js$/.test(script.pathname)) continue;
+    const file = script.pathname.replace(/^\/+/, '');
+    if (!isEntry && !script.atPaint) {
+      skipped.push({ file, reason: 'post-paint' });
+      continue;
+    }
+    const loaded = readChunk(file);
+    if (!loaded) {
+      skipped.push({ file, reason: 'no-sourcemap' });
+      continue;
+    }
+    const rows = coverageBySource({
+      code: loaded.code,
+      map: loaded.map,
+      atPaint: script.atPaint ?? [],
+      atSettle: script.atSettle ?? [],
+    });
+    const totals = { totalBytes: 0, paintBytes: 0, settleBytes: 0 };
+    for (const [source, row] of rows.entries()) {
+      modules.push({
+        source,
+        chunk: file,
+        totalBytes: row.totalBytes,
+        paintBytes: row.paintBytes,
+        settleBytes: row.settleBytes,
+        paintRatio: row.totalBytes ? row.paintBytes / row.totalBytes : 0,
+        settleRatio: row.totalBytes ? row.settleBytes / row.totalBytes : 0,
+      });
+      totals.totalBytes += row.totalBytes;
+      totals.paintBytes += row.paintBytes;
+      totals.settleBytes += row.settleBytes;
+    }
+    chunks.push({
+      file,
+      entry: isEntry,
+      ...totals,
+      paintRatio: totals.totalBytes ? totals.paintBytes / totals.totalBytes : 0,
+    });
+  }
+  chunks.sort((a, b) => (b.entry ? 1 : 0) - (a.entry ? 1 : 0) || b.totalBytes - a.totalBytes);
+  modules.sort((a, b) => b.totalBytes - a.totalBytes);
+  return { chunks, modules, skipped };
+}
+
 // --- lead analyses over per-module coverage rows -------------------------------
 
 export const LARGE_AT_PAINT_MIN_BYTES = 8 * 1024;
@@ -317,24 +378,31 @@ async function coverageAttempt(cdp, {
     await page.send('Profiler.stopPreciseCoverage').catch(() => {});
 
     // Each take only reports functions executed since the previous take (counters
-    // reset), and V8 omits scripts with no new execution entirely. So the entry
-    // may be legitimately absent from one snapshot: from atSettle when the page
-    // runs nothing after first paint, or from atPaint when static HTML painted
-    // before the entry script executed. Absent from BOTH means the page never ran
-    // the entry at all — that one is an error.
-    const paintFunctions = findEntry(atPaint, entryName);
-    const settleFunctions = findEntry(atSettle, entryName);
-    if (!paintFunctions && !settleFunctions) {
-      const seen = [...new Set([...atPaint.result, ...atSettle.result].map((s) => s.url).filter(Boolean))]
-        .join(', ') || '(none)';
+    // reset), and V8 omits scripts with no new execution entirely. So any script
+    // may be legitimately absent from one snapshot: from atSettle when it runs
+    // nothing after first paint, or from atPaint when it first executed later.
+    // A snapshot a script is absent from contributes null (≠ empty coverage).
+    const byUrl = new Map();
+    const collect = (take, key) => {
+      for (const script of take.result) {
+        if (!script.url || !script.url.startsWith(origin)) continue;
+        const pathname = new URL(script.url).pathname;
+        const rec = byUrl.get(script.url)
+          ?? { url: script.url, pathname, atPaint: null, atSettle: null };
+        rec[key] = (rec[key] ?? []).concat(script.functions);
+        byUrl.set(script.url, rec);
+      }
+    };
+    collect(atPaint, 'atPaint');
+    collect(atSettle, 'atSettle');
+    const scripts = [...byUrl.values()];
+    // The entry absent from BOTH snapshots means the page never ran it — error.
+    if (!scripts.some((script) => script.pathname.endsWith(entryName))) {
+      const seen = scripts.map((script) => script.pathname).join(', ') || '(none)';
       throw new Error(`coverage: entry script ${entryName} not seen (scripts: ${seen})`);
     }
-    return { atPaint: paintFunctions ?? [], atSettle: settleFunctions ?? [] };
+    return { scripts };
   } finally {
     await page.close().catch(() => {});
   }
-}
-
-function findEntry(result, entryName) {
-  return result.result.find((s) => s.url.endsWith(entryName))?.functions ?? null;
 }

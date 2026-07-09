@@ -27,13 +27,20 @@ Individual commands exist too (`measure [--pin]`, `coverage`, `profile`,
 
 1. Build the app. `scan --app <appDir>` — the first scan is your baseline.
 2. Read EVERY signal class in the scan output; each is a lead with a next-step:
-   - **render gap** — paint gated on post-load work (the gating fetches are named).
-     Fix FIRST: render with bundled defaults, apply fetched results when they land.
+   - **render gap** — paint gated on post-load work. The gate is named when the
+     data can name it: a gating fetch/xhr, or heavy pre-paint fonts/images (the
+     per-type "before first paint" weights). Fix FIRST: fetches → render with
+     bundled defaults and apply results when they land; fonts → paint with one
+     preloaded (subset) font, register the rest after paint.
    - **pre-paint CPU by module** — warm-up caches, telemetry, data-module
      evaluation running ahead of paint. Defer what the first render does not need —
      but only judge deferrals AFTER any render gap is fixed (CPU that overlaps a
      blocked render is free, so deferring it can measure worse until then).
    - **defer candidates** — parsed but ~unexecuted at paint: classic lazy-load targets.
+   - **pre-paint sibling chunks** — a non-entry chunk fetched AND executed before
+     first paint is critical-path transfer, even if every import of it is dynamic.
+     Find what runs it at boot (a top-level or render-time `import()`, an eagerly
+     mounted component) and move that trigger to the actual interaction.
    - **large modules executed at paint** — "executed" does NOT mean needed; top-level
      data evaluates on import. Verify how much the first render reads; split the rest
      behind a dynamic import.

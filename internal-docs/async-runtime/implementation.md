@@ -888,7 +888,7 @@ browser-build, and packed-browser tests exercise this contract;
 than a target capability.
 
 This invariant depends on the workspace's napi-rs pin
-`ae5196b5c1be97363834e29582ca4aadd4a3ab0f` in `Cargo.toml`. Synchronous
+`e71f1ac64d104f8090309c888381e5b021449e5e` in `Cargo.toml`. Synchronous
 threadsafe-function exceptions use
 `Error::capture_unknown_with_status_and_diagnostics`, and Promise rejections use
 `Error::from_unknown_without_coercion`; both retain the exact JavaScript value

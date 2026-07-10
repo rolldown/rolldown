@@ -195,7 +195,7 @@ infer = { version = "0.19.0", default-features = false }
 insta = "1.48.0"
 itertools = "0.15.0"
 itoa = "1.0.18"
-json-escape-simd = "3"
+json-escape-simd = "3.1.1"
 json-strip-comments = "3"
 jsonschema = { version = "0.46.10", default-features = false }
 memchr = "2.8.2"

@@ -114,7 +114,7 @@ pub struct OptimizeChunksPass;
 #[derive(Clone, Copy)]
 pub struct OptimizeChunksPassInputRead<'a> {
   pub modules: &'a ModuleTable,
-  pub metas: &'a IndexVec<ModuleIdx, LinkingMetadata>,
+  pub side_effects: &'a ModuleSideEffects,   // one decomposed fact — minted sealed by an earlier pass
 }
 
 impl Pass for OptimizeChunksPass {
@@ -167,6 +167,8 @@ let (names, ()) = run_pass(AssignNamesPass, &mut cx, names_reads, ()).await?;
 `OutputRead = ()` still comes back as `Sealed<()>` — discard it with `_`; a literal `()` pattern does not match it (E0308). The owned side is never wrapped, so `()` patterns are fine there.
 
 Needing to own more than you reshape is the signal that an artifact should be split out — not a reason to widen the slot.
+
+The same rule applies to reads. Entity tables (`ModuleTable`, `SymbolRefDb`) are legitimate inputs; metadata god-structs are not — declaring `&IndexVec<ModuleIdx, LinkingMetadata>` in an `InputRead` would launder today's grab-bag through the contract, and the manifest is only as informative as the granularity of the types it names. A pass declares the specific facts it consumes (`&ModuleSideEffects`, `&WrapKinds`); breaking blobs like `LinkingMetadata` into per-pass artifacts is much of why this contract exists.
 
 ## Why
 

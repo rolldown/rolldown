@@ -72,13 +72,14 @@ impl<T> std::ops::Deref for Sealed<T> {
 Conventions:
 
 - The passes module carries `#![forbid(unsafe_code)]`, which closes the raw-pointer residual of the two `Pass` bounds.
-- `self` carries **nothing**: every pass is a zero-sized name token (`const`-asserted in `run_pass`), kept only so call sites read as `run_pass(OptimizeChunksPass, ..)`. Configuration is runtime data and enters through `InputRead` like everything else.
+- `self` carries **nothing**: every pass is a zero-sized name token (`const`-asserted in `run_pass`), kept only so call sites read as `run_pass(OptimizeChunksPass, ..)`. Configuration is runtime data and enters through `InputRead` like everything else. Caveat: the assert is evaluated at monomorphization — `cargo build` rejects a stateful pass, but `cargo check` and rust-analyzer do not run it.
 - Slot types: empty = `()`; a single artifact = the bare type; multiple = a named per-pass struct (`XxxPassInputRead { .. }`, derives `Copy`), which doubles as the pass's greppable dependency manifest.
-- Naming: a pass type ends in `Pass` (`OptimizeChunksPass`); its input struct is `<PassName>InputRead`. Since passes are zero-sized name tokens, the suffix keeps call sites unambiguous — and `rg 'struct \w+Pass;'` is the complete pass inventory.
+- Impl signatures copy the trait verbatim: write `read: Self::InputRead<'_>` even when the slot is `()` — spelling the parameter as a concrete type drops the method's lifetime binder and fails E0195.
+- Naming: a pass type ends in `Pass` (`OptimizeChunksPass`); its input struct is `<PassName>InputRead`. Since passes are zero-sized name tokens, the suffix keeps call sites unambiguous — and `rg 'struct \w+Pass;'` is the complete pass inventory (it matches unit structs only; a fielded `struct XPass(u64);` evades the grep, and it is the build-time assert that actually rejects it).
 - **The hard guarantee is `Sealed<T>`, and the harness applies it**: `run_pass` wraps every read-side output, so nothing can exit `OutputRead` unfrozen — by construction, not convention. `Sealed<T>` has no mutation path even for an owner, so frozenness survives re-ownership with no ledger discipline needed.
 - **Representation changes are the soft layer**: inside artifacts, prefer `Vec<T> → Box<[T]>`, `String → Box<str>`, `IndexVec<I, T> → IndexBox<I, [T]>`, maps → sorted boxed slices — dropped capacity, fixed lengths (indices cannot dangle by growth or removal), honest types even when viewed without the wrapper. Hygiene and defense-in-depth; correctness does not rest on it. Draft/final type pairs stay where sealing does real work (compaction); `Sealed<T>` alone suffices where it does not.
 - `Arc<T>` is **not** a seal: a unique holder melts it with `Arc::get_mut` / `Arc::try_unwrap` — frozenness would hinge on the runtime reference count, not the type. `Arc` is a sharing mechanism: compose it as `Arc<Sealed<T>>` when a sealed artifact must be shared.
-- `PassCtx` is the single sanctioned `&mut`: write-only sinks (diagnostics now, devtools trace later). It never contains pipeline data; passes may write it but never read it. `run_pass` (the wrapper) owns tracing spans and stamps every diagnostic with the emitting pass's name.
+- `PassCtx` is the single sanctioned `&mut`: write-only sinks (diagnostics now, devtools trace later). It never contains pipeline data; passes may write it but never read it — and make that constructional, not reviewed: write methods take `&mut self`, read/drain methods take `self` by value, so a pass holding only `&mut PassCtx` cannot call them. `run_pass` (the wrapper) owns tracing spans and stamps every diagnostic with the emitting pass's name. One implementation note: `async fn` in a `pub` trait trips the `async_fn_in_trait` lint (callers cannot add `Send` bounds); keep the trait `pub(crate)` or record an explicit `#[allow]`.
 - Driver rules: every `OutputOwned` is consumed by exactly one later `InputOwned` (or explicitly dropped). **Seal order follows reference direction**: seal an artifact only when everything its keys/indices point into is already sealed.
 
 The freeze boundary proven in-tree today is `UsedSymbolRefsBuilder::seal()` in the generate stage: source liveness becomes read-only while chunk layout stays mutable — freeze lines are per-artifact, not global:
@@ -157,10 +158,12 @@ impl Pass for AssignNamesPass {
 The driver is a typed `let`-chain (deliberately **not** `Vec<Box<dyn Pass>>` — heterogeneous signatures are the point):
 
 ```rust
-let ((), graph) = run_pass(OptimizeChunksPass, &mut cx, optimize_reads, graph).await?;
+let (_, graph) = run_pass(OptimizeChunksPass, &mut cx, optimize_reads, graph).await?;
 let (graph, ()) = run_pass(SealChunkGraphPass, &mut cx, (), graph).await?; // graph: Sealed<ChunkGraph>
 let (names, ()) = run_pass(AssignNamesPass, &mut cx, names_reads, ()).await?;
 ```
+
+`OutputRead = ()` still comes back as `Sealed<()>` — discard it with `_`; a literal `()` pattern does not match it (E0308). The owned side is never wrapped, so `()` patterns are fine there.
 
 Needing to own more than you reshape is the signal that an artifact should be split out — not a reason to widen the slot.
 
@@ -178,8 +181,9 @@ Sealed means sealed:
 
 ```rust
 graph.add_chunk(chunk);
-// error[E0599]: no method named `add_chunk` found for struct `ChunkGraph`
-// (mutators exist only on DraftChunkGraph)
+// error[E0599]: no method named `add_chunk` found for struct `Sealed<ChunkGraph>`
+// (method lookup walks through Deref and still finds nothing — mutators exist
+//  only on DraftChunkGraph, and what you hold after sealing is Sealed<ChunkGraph>)
 ```
 
 ### Parallelism: signatures expose the candidates, the compiler checks the join
@@ -193,19 +197,21 @@ Two passes are concurrency candidates exactly when their `InputOwned`s are disjo
 ```rust
 // ComputeLinksPass : InputRead = (&ChunkGraph, &SymbolRefDb), InputOwned = ()
 // AssignNamesPass  : InputRead = (&ChunkGraph, &Options),     InputOwned = ()
-let (links, names) = try_join!(
+let ((links, ()), (names, ())) = try_join!(
   run_pass(ComputeLinksPass, &mut cx_a, (&graph, &symbols), ()),
   run_pass(AssignNamesPass,  &mut cx_b, (&graph, &options), ()),
 )?;
 ```
+
+Realism note: `try_join!` interleaves the two futures within one task — it buys overlap, not multicore speedup for CPU-bound passes, and futures borrowing `&graph` are not `'static`, so they cannot be `tokio::spawn`ed. Real multicore parallelism lives inside passes (rayon) unless the driver grows a scoped-task story.
 
 ### Other benefits
 
 The dependency graph is greppable — impact analysis without reading bodies:
 
 ```console
-$ rg 'symbol_db: &' -g '*.rs'                 # every pass that reads the symbol table
-$ rg 'type InputOwned    = DraftChunkGraph'   # every pass that ever owns the graph
+$ rg 'symbol_db: &' -g '*.rs'           # every pass that reads the symbol table
+$ rg 'InputOwned = DraftChunkGraph'     # every pass that ever owns the graph (rustfmt collapses aligned spaces)
 ```
 
 Each pass is unit-testable by construction: its `InputRead` type is the exact, minimal fixture spec — no need to build whole stage outputs to test one pass.
@@ -227,13 +233,14 @@ What stays review-held (the honest list):
 
 - frozen representations inside artifacts (`Box<[T]>` over `Vec<T>`) — hygiene, not correctness; the hard freeze is `Sealed<T>`, applied by the harness
 - no interior mutability in pipeline data types; no global statics holding pipeline data (the one remaining way to smuggle state past the bounds)
-- `PassCtx` used write-only; artifact granularity (own exactly what you reshape)
+- artifact granularity (own exactly what you reshape); new `PassCtx` methods staying write-only (drain methods take `self` by value, unreachable through `&mut`)
 
 Why a trait at all: uniform pass style — every pass declares the same four slots and is invoked through one wrapper — plus the shape gates above, which plain functions cannot carry (nothing stops an extra `&mut` parameter on a plain function except review). The cost — GATs and `()`/tuple ceremony — is accepted deliberately.
 
 ## Future directions
 
-- Driver-level `try_join!` of parallel-candidate passes, once profiling shows a win worth taking.
+- Driver-level joins of parallel-candidate passes, once profiling shows a win worth taking (see the realism note in Why — plain `try_join!` only interleaves; multicore needs a scoped-task driver or stays inside passes via rayon).
+- When the first flow adopts the contract, pin the compile-error claims (E0308 / E0425 / E0599 / E0277) as `trybuild` compile-fail tests — the doc promises compiler behavior, and tests should hold it.
 - Incremental cache friendliness: explicit inputs are natural dependency keys, sealed artifacts are natural snapshot/hash units, and a pass is a natural recompute unit. To be honest: the contract was **not** designed with incremental builds as a premise, and nothing in it depends on that — it simply does not stand in the way.
 
 ## Related

@@ -19,8 +19,8 @@ impl BuildEvent for InvalidExportOption {
     format!(
       r#""{}" was specified for "output.exports", but entry module "{}" has the following exports: {}."#,
       self.export_mode,
-      &self.entry_module,
-      &self.export_keys.iter().map(|k| format!(r#""{k}""#)).collect::<Vec<_>>().join(", ")
+      self.entry_module,
+      self.export_keys.iter().map(|k| format!(r#""{k}""#)).collect::<Vec<_>>().join(", ")
     )
   }
 }

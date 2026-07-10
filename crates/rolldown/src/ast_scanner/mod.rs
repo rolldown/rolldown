@@ -445,7 +445,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         let symbol_ref: SymbolRef = (self.immutable_ctx.idx, *symbol_id).into();
         let scope_id = self.result.symbol_ref_db.symbol_scope_id(*symbol_id);
         if !scanned_symbols_in_root_scope.remove(&symbol_ref) {
-          return Err(anyhow::format_err!(
+          Err(anyhow::format_err!(
             "Symbol ({name:?}, {symbol_id:?}, {scope_id:?}) is declared in the top-level scope but doesn't get scanned by the scanner",
           ))?;
         }

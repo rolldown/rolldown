@@ -382,7 +382,7 @@ impl Plugin for ViteResolvePlugin {
         if !(matches!(self.external, ResolveOptionsExternal::True)
           || self.external.is_external_explicitly(&id))
         {
-          let mut message = format!("Automatically externalized node built-in module \"{}\"", &id);
+          let mut message = format!("Automatically externalized node built-in module \"{}\"", id);
           if let Some(importer) = args.importer {
             let current_dir =
               env::current_dir().unwrap_or(PathBuf::from(&self.resolve_options.root));

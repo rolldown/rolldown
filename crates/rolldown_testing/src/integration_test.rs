@@ -354,7 +354,7 @@ impl IntegrationTest {
               for hmr_update in client_updates {
                 match &hmr_update.update {
                   rolldown_common::HmrUpdate::Patch(patch) => {
-                    let output_path = format!("{}/{}", &output_dir, &patch.filename);
+                    let output_path = format!("{}/{}", output_dir, patch.filename);
                     fs::write(&output_path, &patch.code).unwrap();
                     patch_chunks.push(format!("./{}", patch.filename));
                   }

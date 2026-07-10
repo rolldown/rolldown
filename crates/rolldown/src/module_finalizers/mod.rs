@@ -27,6 +27,7 @@ use rolldown_ecmascript_utils::{
 
 mod finalizer_context;
 mod impl_visit_mut;
+use finalizer_context::ModuleWrapperMode;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use oxc_str::{CompactStr, Ident};
 use rolldown_utils::ecmascript::is_validate_identifier_name;

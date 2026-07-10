@@ -33,6 +33,30 @@ use rolldown_utils::ecmascript::is_validate_identifier_name;
 #[derive(Clone, Copy)]
 pub struct AstFactory<'ast>(AstBuilder<'ast>);
 
+/// Options for [`AstFactory::make_esm_wrapper_stmt`], grouping the wrapper's binding, body and
+/// call shape so new emission modes can be added without growing the argument list.
+pub struct EsmWrapperStmtOptions<'ast, 'data> {
+  pub binding_name: &'data str,
+  pub esm_fn_expr: Expression<'ast>,
+  pub statements: allocator::Vec<'ast, Statement<'ast>>,
+  /// `Some(stable_id)` wraps the closure in a profiler-named object argument.
+  pub profiler_name: Option<&'data str>,
+  pub call_kind: EsmWrapperCallKind,
+  pub body_kind: EsmWrapperBodyKind,
+}
+
+#[derive(Clone, Copy)]
+pub enum EsmWrapperCallKind {
+  Plain,
+  Pife,
+}
+
+#[derive(Clone, Copy)]
+pub enum EsmWrapperBodyKind {
+  Sync,
+  Async,
+}
+
 impl<'ast> AstFactory<'ast> {
   pub fn new(allocator: &'ast Allocator) -> Self {
     Self(AstBuilder::new(allocator))
@@ -608,17 +632,15 @@ impl<'ast> AstFactory<'ast> {
   }
 
   /// `var <binding_name> = __esm(... () => { <statements> } ...)`
-  #[expect(clippy::too_many_arguments)]
-  pub fn make_esm_wrapper_stmt(
-    &self,
-    binding_name: &str,
-    esm_fn_expr: Expression<'ast>,
-    statements: allocator::Vec<'ast, Statement<'ast>>,
-    profiler_names: bool,
-    use_pife: bool,
-    stable_id: &str,
-    is_async: bool,
-  ) -> Statement<'ast> {
+  pub fn make_esm_wrapper_stmt(&self, options: EsmWrapperStmtOptions<'ast, '_>) -> Statement<'ast> {
+    let EsmWrapperStmtOptions {
+      binding_name,
+      esm_fn_expr,
+      statements,
+      profiler_name,
+      call_kind,
+      body_kind,
+    } = options;
     let params = FormalParameters::new(
       SPAN,
       FormalParameterKind::Signature,
@@ -629,10 +651,18 @@ impl<'ast> AstFactory<'ast> {
     let body = FunctionBody::new(SPAN, oxc::allocator::Vec::new_in(self), statements, self);
     let mut esm_call_expr =
       CallExpression::new(SPAN, esm_fn_expr, NONE, oxc::allocator::Vec::new_in(self), false, self);
-    let mut arrow_expr =
-      ArrowFunctionExpression::boxed(SPAN, false, is_async, NONE, params, NONE, body, self);
-    arrow_expr.pife = use_pife;
-    if profiler_names {
+    let mut arrow_expr = ArrowFunctionExpression::boxed(
+      SPAN,
+      false,
+      matches!(body_kind, EsmWrapperBodyKind::Async),
+      NONE,
+      params,
+      NONE,
+      body,
+      self,
+    );
+    arrow_expr.pife = matches!(call_kind, EsmWrapperCallKind::Pife);
+    if let Some(stable_id) = profiler_name {
       let obj_expr = ObjectExpression::boxed(
         SPAN,
         oxc::allocator::Vec::from_value_in(

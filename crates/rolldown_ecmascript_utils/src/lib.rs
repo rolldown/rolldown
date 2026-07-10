@@ -4,7 +4,7 @@ mod scope;
 mod source_utils;
 
 pub use crate::{
-  ast_factory::AstFactory,
+  ast_factory::{AstFactory, EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperStmtOptions},
   extensions::ast_ext::{
     binding_pattern_ext::BindingPatternExt,
     call_expression_ext::CallExpressionExt,

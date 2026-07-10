@@ -10,6 +10,18 @@ use rolldown_utils::IndexBitSet;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+/// The interop ESM wrapper a wrapped (`WrapKind::Esm`) module exposes: the `init_*()` binding the
+/// finalizer emits its call sites against, plus whether calling it is a no-op.
+///
+/// Extracted so wrapper declaration emission and `init_*()` call sites read the same view of
+/// [`LinkingMetadata`] instead of reaching into the raw fields independently. This keeps a single
+/// place for later strict-execution-order wrapper paths to extend.
+#[derive(Clone, Copy, Debug)]
+pub struct EsmInitTarget {
+  pub(crate) wrapper_ref: SymbolRef,
+  pub(crate) init_is_noop: bool,
+}
+
 /// Module metadata about linking
 #[derive(Debug, Default)]
 #[expect(clippy::struct_excessive_bools)]
@@ -144,6 +156,18 @@ impl LinkingMetadata {
   #[inline]
   pub fn set_wrap_kind(&mut self, wrap_kind: WrapKind) {
     self.wrap_kind = wrap_kind;
+  }
+
+  /// The wrapped-ESM init target of a module, derived from its linking metadata alone: a
+  /// `WrapKind::Esm` module with an allocated wrapper symbol exposes an `init_*()` the finalizer
+  /// emits; anything else has none.
+  pub fn esm_init_target(&self) -> Option<EsmInitTarget> {
+    if !matches!(self.wrap_kind(), WrapKind::Esm) {
+      return None;
+    }
+    self
+      .wrapper_ref
+      .map(|wrapper_ref| EsmInitTarget { wrapper_ref, init_is_noop: self.init_is_noop })
   }
 
   pub fn referenced_canonical_exports_symbols<'b, 'a: 'b>(

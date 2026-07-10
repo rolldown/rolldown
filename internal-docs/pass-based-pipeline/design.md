@@ -2,7 +2,7 @@
 
 ## Summary
 
-A guiding methodology for structuring bundler-internal pipelines (stage-level dataflow) as passes with a compile-time ownership contract: every pass implements one small trait declaring what it reads, owns, seals, and hands onward. Three compiler gates pin the shape; what they cannot pin is a short, explicit review list (see [Enforcement](#enforcement)). This doc defines the contract; there is no implementation.md yet — the first flow that adopts it adds one.
+A guiding methodology for structuring bundler-internal pipelines (stage-level dataflow) as passes with a compile-time ownership contract: every pass implements one small trait declaring what it reads, owns, seals, and hands onward. Compiler gates pin the shape; what they cannot pin is a short, explicit review list (see [Enforcement](#enforcement)). This doc defines the contract; there is no implementation.md yet — the first flow that adopts it adds one.
 
 ## Ground rules (read this first)
 
@@ -21,7 +21,7 @@ A guiding methodology for structuring bundler-internal pipelines (stage-level da
   - what it hands onward, still mutable
 - Enforcement is layered, mostly on ordinary Rust:
   - order: the driver's `let`-chain — a step cannot name inputs that do not exist yet
-  - sealing: distinct draft/frozen artifact types — the frozen one is built from frozen representations (`Box<[T]>`, `IndexBox`), so the mutators do not exist
+  - sealing: `run_pass` wraps every read-side output in `Sealed<T>` — only `&T` ever comes out; frozen representations inside (`Box<[T]>`, `IndexBox`) are the soft second layer
   - ownership: by-value slots — "to modify is to own and hand back"
   - shape: trait bounds — reads cannot be `&mut`, and a pass value cannot carry pipeline state
 
@@ -36,7 +36,7 @@ The whole mechanism is one trait and one wrapper function:
 pub trait Pass: Copy + 'static {
   type InputRead<'a>: Copy;         // shared borrows only; Copy makes `&mut` unrepresentable here
   type InputOwned;                  // data taken over (to modify = to own and hand back); `()` if none
-  type OutputRead;                  // minted here, frozen by representation (see below)
+  type OutputRead;                  // minted here; `run_pass` wraps it in `Sealed<_>` — frozen unconditionally
   type OutputOwned;                 // still-mutable data handed to a later pass
 
   async fn run(self, cx: &mut PassCtx, read: Self::InputRead<'_>, owned: Self::InputOwned)
@@ -44,10 +44,28 @@ pub trait Pass: Copy + 'static {
 }
 
 pub async fn run_pass<P: Pass>(pass: P, cx: &mut PassCtx, read: P::InputRead<'_>, owned: P::InputOwned)
-  -> BuildResult<(P::OutputRead, P::OutputOwned)> {
+  -> BuildResult<(Sealed<P::OutputRead>, P::OutputOwned)> {
   const { assert!(size_of::<P>() == 0, "a pass is a name — state lives in run() locals or in the slots") };
   // tracing span + diagnostics provenance live here, once, for every pass
-  pass.run(cx, read, owned).await
+  let (minted, owned_out) = pass.run(cx, read, owned).await?;
+  Ok((Sealed::new(minted), owned_out)) // the harness seals — there is no unsealed exit
+}
+
+/// The hard freeze: only `&T` ever comes out — no `DerefMut`, no `into_inner`,
+/// private field. No mutation path exists, even for an owner.
+pub struct Sealed<T>(T);
+
+impl<T> Sealed<T> {
+  pub fn new(value: T) -> Self {
+    Self(value)
+  }
+}
+
+impl<T> std::ops::Deref for Sealed<T> {
+  type Target = T;
+  fn deref(&self) -> &T {
+    &self.0
+  }
 }
 ```
 
@@ -57,9 +75,9 @@ Conventions:
 - `self` carries **nothing**: every pass is a zero-sized name token (`const`-asserted in `run_pass`), kept only so call sites read as `run_pass(OptimizeChunksPass, ..)`. Configuration is runtime data and enters through `InputRead` like everything else.
 - Slot types: empty = `()`; a single artifact = the bare type; multiple = a named per-pass struct (`XxxPassInputRead { .. }`, derives `Copy`), which doubles as the pass's greppable dependency manifest.
 - Naming: a pass type ends in `Pass` (`OptimizeChunksPass`); its input struct is `<PassName>InputRead`. Since passes are zero-sized name tokens, the suffix keeps call sites unambiguous — and `rg 'struct \w+Pass;'` is the complete pass inventory.
-- **Sealing is a representation change**, done inside the seal pass: `Vec<T> → Box<[T]>`, `String → Box<str>`, `IndexVec<I, T> → IndexBox<I, [T]>`; maps become sorted boxed slices. Mutation through a borrow becomes unrepresentable — the mutators do not exist, and lengths are fixed, so indices into sealed tables cannot dangle by growth or removal. Sealed structs keep fields private with `&` getters.
-- The universal fallback container is `Sealed<T>`: a newtype that only ever hands out `&T` — no mutation path even for an owner. `Arc<T>` is **not** a seal: a unique holder melts it with `Arc::get_mut` / `Arc::try_unwrap`, and whether it is frozen depends on the runtime reference count, not the type. `Arc` is a sharing mechanism — compose it as `Arc<FrozenThing>` when a sealed artifact must be shared.
-- Guarantee layering, stated honestly: the representation guards every borrow; the driver's lend-only ledger guards re-ownership (an owner of a `Box<[T]>` could still `into_vec()` and reshape); `Sealed<T>` alone closes both, which is why it is the fallback.
+- **The hard guarantee is `Sealed<T>`, and the harness applies it**: `run_pass` wraps every read-side output, so nothing can exit `OutputRead` unfrozen — by construction, not convention. `Sealed<T>` has no mutation path even for an owner, so frozenness survives re-ownership with no ledger discipline needed.
+- **Representation changes are the soft layer**: inside artifacts, prefer `Vec<T> → Box<[T]>`, `String → Box<str>`, `IndexVec<I, T> → IndexBox<I, [T]>`, maps → sorted boxed slices — dropped capacity, fixed lengths (indices cannot dangle by growth or removal), honest types even when viewed without the wrapper. Hygiene and defense-in-depth; correctness does not rest on it. Draft/final type pairs stay where sealing does real work (compaction); `Sealed<T>` alone suffices where it does not.
+- `Arc<T>` is **not** a seal: a unique holder melts it with `Arc::get_mut` / `Arc::try_unwrap` — frozenness would hinge on the runtime reference count, not the type. `Arc` is a sharing mechanism: compose it as `Arc<Sealed<T>>` when a sealed artifact must be shared.
 - `PassCtx` is the single sanctioned `&mut`: write-only sinks (diagnostics now, devtools trace later). It never contains pipeline data; passes may write it but never read it. `run_pass` (the wrapper) owns tracing spans and stamps every diagnostic with the emitting pass's name.
 - Driver rules: every `OutputOwned` is consumed by exactly one later `InputOwned` (or explicitly dropped). **Seal order follows reference direction**: seal an artifact only when everything its keys/indices point into is already sealed.
 
@@ -118,7 +136,7 @@ pub struct SealChunkGraphPass;
 impl Pass for SealChunkGraphPass {
   type InputRead<'a> = ();
   type InputOwned    = DraftChunkGraph;
-  type OutputRead    = ChunkGraph;        // fields are IndexBox / Box<[_]> — mutation is unrepresentable
+  type OutputRead    = ChunkGraph;        // run_pass hands the driver a Sealed<ChunkGraph>
   type OutputOwned   = ();
   // ...
 }
@@ -130,7 +148,7 @@ pub struct AssignNamesPass;
 impl Pass for AssignNamesPass {
   type InputRead<'a> = AssignNamesPassInputRead<'a>;   // { graph: &'a ChunkGraph, options: &'a NormalizedBundlerOptions }
   type InputOwned    = ();
-  type OutputRead    = ChunkNames;        // e.g. IndexBox<ChunkIdx, [ArcStr]>, frozen at birth
+  type OutputRead    = ChunkNames;        // e.g. IndexBox<ChunkIdx, [ArcStr]>; arrives as Sealed<ChunkNames>
   type OutputOwned   = ();
   // ...
 }
@@ -140,7 +158,7 @@ The driver is a typed `let`-chain (deliberately **not** `Vec<Box<dyn Pass>>` —
 
 ```rust
 let ((), graph) = run_pass(OptimizeChunksPass, &mut cx, optimize_reads, graph).await?;
-let (graph, ()) = run_pass(SealChunkGraphPass, &mut cx, (), graph).await?;
+let (graph, ()) = run_pass(SealChunkGraphPass, &mut cx, (), graph).await?; // graph: Sealed<ChunkGraph>
 let (names, ()) = run_pass(AssignNamesPass, &mut cx, names_reads, ()).await?;
 ```
 
@@ -203,11 +221,11 @@ What the compiler pins:
 - reads cannot be `&mut` — `InputRead<'a>: Copy` (`&mut` is never `Copy`)
 - a pass value cannot carry anything at all — `run_pass` `const`-asserts `size_of::<P>() == 0`; `Pass: Copy + 'static` additionally rules out lifetime-carrying zero-sized tricks
 - no escape through raw pointers — `#![forbid(unsafe_code)]` on the passes module
-- pass order — `let`-chain scoping; sealing — frozen representations (the mutators do not exist); ownership transfer — moves
+- pass order — `let`-chain scoping; sealing — applied by `run_pass` itself (`Sealed<T>`: no `DerefMut`, no unwrap); ownership transfer — moves
 
 What stays review-held (the honest list):
 
-- a sealed struct's fields are actually frozen representations — a one-look check on the type definition; the representation is the proof, there is no marker trait to keep honest
+- frozen representations inside artifacts (`Box<[T]>` over `Vec<T>`) — hygiene, not correctness; the hard freeze is `Sealed<T>`, applied by the harness
 - no interior mutability in pipeline data types; no global statics holding pipeline data (the one remaining way to smuggle state past the bounds)
 - `PassCtx` used write-only; artifact granularity (own exactly what you reshape)
 

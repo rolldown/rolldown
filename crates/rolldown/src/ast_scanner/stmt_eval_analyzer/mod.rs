@@ -172,6 +172,23 @@ impl<'a> StmtEvalAnalyzer<'a> {
     Some(namespace_ids.contains(&symbol_id))
   }
 
+  /// `import.meta.url` is a spec-defined side-effect-free property read, and
+  /// `import.meta.ROLLUP_FILE_URL_<referenceId>` is a placeholder the finalizer rewrites into a
+  /// `new URL(...)` expression. Other accesses like `import.meta.hot.accept()` may have side effects.
+  fn is_side_effect_free_import_meta_access(member_expr: &ast::MemberExpression) -> bool {
+    let ast::MemberExpression::StaticMemberExpression(static_expr) = member_expr else {
+      return false;
+    };
+    let Expression::MetaProperty(meta_property) = &static_expr.object else {
+      return false;
+    };
+    if meta_property.meta.name != "import" || meta_property.property.name != "meta" {
+      return false;
+    }
+    let property_name = static_expr.property.name.as_str();
+    property_name == "url" || property_name.starts_with("ROLLUP_FILE_URL_")
+  }
+
   fn analyze_member_expr(&self, member_expr: &ast::MemberExpression) -> StmtEvalFacts {
     if self.is_expr_manual_pure_functions(member_expr.object()) {
       return StmtEvalFacts::default();
@@ -185,14 +202,8 @@ impl<'a> StmtEvalAnalyzer<'a> {
         _ => StmtEvalFacts::default(),
       };
     }
-    // Only `import.meta.url` is a spec-defined side-effect-free property read.
-    // Other accesses like `import.meta.hot.accept()` may have side effects.
-    if let ast::MemberExpression::StaticMemberExpression(static_expr) = member_expr {
-      if matches!(static_expr.object, Expression::MetaProperty(_))
-        && static_expr.property.name == "url"
-      {
-        return StmtEvalFacts::default();
-      }
+    if Self::is_side_effect_free_import_meta_access(member_expr) {
+      return StmtEvalFacts::default();
     }
     let is_global = self.is_member_expr_root_global(member_expr);
     let has_side_effect = member_expr.may_have_side_effects(self);

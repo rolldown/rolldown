@@ -95,12 +95,12 @@ impl LinkStage<'_> {
         Status::WaitForExit(id) => {
           match &mut self.module_table[id] {
             Module::Normal(module) => {
-              debug_assert!(module.exec_order == u32::MAX);
+              debug_assert_eq!(module.exec_order, u32::MAX);
               module.exec_order = next_exec_order;
               sorted_modules.push(id);
             }
             Module::External(module) => {
-              debug_assert!(module.exec_order == u32::MAX);
+              debug_assert_eq!(module.exec_order, u32::MAX);
               module.exec_order = next_exec_order;
             }
           }

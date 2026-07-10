@@ -218,8 +218,8 @@ pub fn create_wrapper(
     //   });
     //
     WrapKind::Cjs => {
-      let wrapper_ref = symbols
-        .create_facade_root_symbol_ref(module.idx, &format!("require_{}", &module.repr_name));
+      let wrapper_ref =
+        symbols.create_facade_root_symbol_ref(module.idx, &format!("require_{}", module.repr_name));
 
       let stmt_info = StmtInfo {
         declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],
@@ -250,7 +250,7 @@ pub fn create_wrapper(
     //
     WrapKind::Esm => {
       let wrapper_ref =
-        symbols.create_facade_root_symbol_ref(module.idx, &format!("init_{}", &module.repr_name));
+        symbols.create_facade_root_symbol_ref(module.idx, &format!("init_{}", module.repr_name));
 
       let stmt_info = StmtInfo {
         declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],

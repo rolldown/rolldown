@@ -1547,11 +1547,11 @@ let remove15 = class {
 
   #[test]
   fn test_extract_first_part_of_member_expr_like() {
-    assert!(extract_first_part_of_member_expr_like_helper("a.b") == "a");
-    assert!(extract_first_part_of_member_expr_like_helper("styled?.div()") == "styled");
-    assert!(extract_first_part_of_member_expr_like_helper("styled()") == "styled");
-    assert!(extract_first_part_of_member_expr_like_helper("styled().div") == "styled");
-    assert!(extract_first_part_of_member_expr_like_helper("styled()()") == "styled");
+    assert_eq!(extract_first_part_of_member_expr_like_helper("a.b"), "a");
+    assert_eq!(extract_first_part_of_member_expr_like_helper("styled?.div()"), "styled");
+    assert_eq!(extract_first_part_of_member_expr_like_helper("styled()"), "styled");
+    assert_eq!(extract_first_part_of_member_expr_like_helper("styled().div"), "styled");
+    assert_eq!(extract_first_part_of_member_expr_like_helper("styled()()"), "styled");
   }
 
   fn extract_first_part_of_member_expr_like_helper(code: &str) -> String {

@@ -63,7 +63,7 @@ impl Plugin for ViteTransformPlugin {
       .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
       .parse();
     if ret.panicked || !ret.diagnostics.is_empty() {
-      return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
+      Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         ret.diagnostics,
         args.code,
         args.id,
@@ -77,7 +77,7 @@ impl Plugin for ViteTransformPlugin {
     let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
     let transformer_return = transformer.build_with_scoping(scoping, &mut program);
     if !transformer_return.diagnostics.is_empty() {
-      return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
+      Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         transformer_return.diagnostics,
         args.code,
         args.id,

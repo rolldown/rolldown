@@ -77,7 +77,7 @@ impl<'a> PathWithGlob<'a> {
     for (i, b) in path.as_bytes().iter().enumerate() {
       if *b == b'/' {
         last_slash = i;
-      } else if [b'\\', b'*', b'?', b'[', b']', b'{', b'}'].contains(b) {
+      } else if b"\\*?[]{}".contains(b) {
         return path.len() - last_slash;
       }
     }

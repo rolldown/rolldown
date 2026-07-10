@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lib.js
+
+```js
+//#region lib.js
+const used = "used";
+const unused = "unused";
+const other = "other";
+//#endregion
+export { other, unused, used };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+let ns = await import("./lib.js");
+ns = { used: "x" };
+const { used } = ns;
+console.log(used);
+//#endregion
+
+```

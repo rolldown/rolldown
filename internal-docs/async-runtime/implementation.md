@@ -789,6 +789,11 @@ and WASI restrictions, and keeps deprecated `BindingRuntime*` type aliases for
 compatibility. Each facade function validates that its generated binding export
 is callable and reports `ERR_ROLLDOWN_BINDING_MISMATCH` when a stale optional
 binding is loaded, instead of leaking an unhelpful `is not a function` error.
+Config and metrics results are normalized too: flavors must be recognized,
+thread counts must be positive safe integers, counters and gauges must be
+nonnegative safe integers, and each high-water mark must cover its live gauge.
+Missing, getter-throwing, or malformed fields fail with the same mismatch
+identity instead of leaking an incompatible native contract into user code.
 The generated N-API declarations remain an internal transport detail.
 
 This API is feature-gated. `configureAsyncRuntime`, `getAsyncRuntimeConfig`, and

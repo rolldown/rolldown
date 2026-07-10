@@ -6,6 +6,23 @@ import {
 } from '../binding.cjs';
 import { BindingMismatchError } from '../utils/binding-mismatch-error';
 
+const ASYNC_RUNTIME_FLAVORS = ['CurrentThread', 'MultiThread'] as const;
+const ASYNC_RUNTIME_METRIC_FIELDS = [
+  'tasksSpawned',
+  'tasksCompleted',
+  'tasksPanicked',
+  'runnableSchedules',
+  'runnablePolls',
+  'queuedRunnables',
+  'maxQueuedRunnables',
+  'activeRunnables',
+  'maxActiveRunnables',
+  'blockingTasksStarted',
+  'blockingTasksCompleted',
+  'activeBlockingTasks',
+  'maxActiveBlockingTasks',
+] as const;
+
 function assertAsyncRuntimeBindingExport(exportName: string, value: unknown): void {
   if (typeof value !== 'function') {
     throw new BindingMismatchError(
@@ -13,6 +30,78 @@ function assertAsyncRuntimeBindingExport(exportName: string, value: unknown): vo
         'Reinstall Rolldown so the JavaScript package and binding versions match.',
     );
   }
+}
+
+class AsyncRuntimeBindingContractError extends BindingMismatchError {
+  constructor(exportName: string, detail: string, cause?: unknown) {
+    super(
+      `The loaded Rolldown binding returned an incompatible ${exportName}() result: ${detail}. ` +
+        'Reinstall Rolldown so the JavaScript package and binding versions match.',
+      cause === undefined ? undefined : { cause },
+    );
+    this.name = 'AsyncRuntimeBindingContractError';
+  }
+}
+
+function readBindingResultObject(exportName: string, value: unknown): Record<PropertyKey, unknown> {
+  if (value === null || typeof value !== 'object') {
+    throw new AsyncRuntimeBindingContractError(exportName, 'the result is not an object');
+  }
+  return value as Record<PropertyKey, unknown>;
+}
+
+function readBindingResultField(
+  exportName: string,
+  result: Record<PropertyKey, unknown>,
+  field: string,
+): unknown {
+  try {
+    return Reflect.get(result, field, result);
+  } catch (error) {
+    throw new AsyncRuntimeBindingContractError(
+      exportName,
+      `the ${field} field could not be read`,
+      error,
+    );
+  }
+}
+
+function readAsyncRuntimeFlavor(
+  exportName: string,
+  result: Record<PropertyKey, unknown>,
+): AsyncRuntimeFlavor {
+  const flavor = readBindingResultField(exportName, result, 'flavor');
+  if (ASYNC_RUNTIME_FLAVORS.some((candidate) => candidate === flavor)) {
+    return flavor as AsyncRuntimeFlavor;
+  }
+  throw new AsyncRuntimeBindingContractError(exportName, 'flavor is not a recognized value');
+}
+
+function readAsyncRuntimeInteger(
+  exportName: string,
+  result: Record<PropertyKey, unknown>,
+  field: string,
+  minimum: number,
+): number {
+  const value = readBindingResultField(exportName, result, field);
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < minimum) {
+    throw new AsyncRuntimeBindingContractError(
+      exportName,
+      `${field} must be a safe integer no less than ${minimum}`,
+    );
+  }
+  return value;
+}
+
+function normalizeAsyncRuntimeConfig(
+  exportName: string,
+  result: Record<PropertyKey, unknown>,
+): AsyncRuntimeConfig {
+  return {
+    flavor: readAsyncRuntimeFlavor(exportName, result),
+    workerThreads: readAsyncRuntimeInteger(exportName, result, 'workerThreads', 1),
+    maxBlockingTasks: readAsyncRuntimeInteger(exportName, result, 'maxBlockingTasks', 1),
+  };
 }
 
 /**
@@ -126,7 +215,11 @@ export function configureAsyncRuntime(options: AsyncRuntimeOptions): void {
  */
 export function getAsyncRuntimeConfig(): AsyncRuntimeConfig {
   assertAsyncRuntimeBindingExport('getAsyncRuntimeConfig', getBindingAsyncRuntimeConfig);
-  return getBindingAsyncRuntimeConfig();
+  const exportName = 'getAsyncRuntimeConfig';
+  return normalizeAsyncRuntimeConfig(
+    exportName,
+    readBindingResultObject(exportName, getBindingAsyncRuntimeConfig()),
+  );
 }
 
 /**
@@ -136,7 +229,30 @@ export function getAsyncRuntimeConfig(): AsyncRuntimeConfig {
  */
 export function getAsyncRuntimeMetrics(): AsyncRuntimeMetrics {
   assertAsyncRuntimeBindingExport('getAsyncRuntimeMetrics', getBindingAsyncRuntimeMetrics);
-  return getBindingAsyncRuntimeMetrics();
+  const exportName = 'getAsyncRuntimeMetrics';
+  const result = readBindingResultObject(exportName, getBindingAsyncRuntimeMetrics());
+  const config = normalizeAsyncRuntimeConfig(exportName, result);
+  const metrics = Object.fromEntries(
+    ASYNC_RUNTIME_METRIC_FIELDS.map((field) => [
+      field,
+      readAsyncRuntimeInteger(exportName, result, field, 0),
+    ]),
+  ) as Pick<AsyncRuntimeMetrics, (typeof ASYNC_RUNTIME_METRIC_FIELDS)[number]>;
+
+  for (const [liveField, maximumField] of [
+    ['queuedRunnables', 'maxQueuedRunnables'],
+    ['activeRunnables', 'maxActiveRunnables'],
+    ['activeBlockingTasks', 'maxActiveBlockingTasks'],
+  ] as const) {
+    if (metrics[maximumField] < metrics[liveField]) {
+      throw new AsyncRuntimeBindingContractError(
+        exportName,
+        `${maximumField} must be no less than ${liveField}`,
+      );
+    }
+  }
+
+  return { ...config, ...metrics };
 }
 
 /**

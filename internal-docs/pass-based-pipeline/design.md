@@ -221,6 +221,8 @@ Each pass is unit-testable by construction: its `InputRead` type is the exact, m
 
 Uniform machinery: `run_pass` is the single home for tracing spans and diagnostics provenance (`type_name::<P>()`), so observability never needs per-pass wiring.
 
+Memory release points become signature facts. An artifact's last reader takes it through `InputOwned` and does not hand it back — `InputOwned = IndexEcmaAst, OutputOwned = ()` declares "the AST arenas die here"; today's generate stage achieves the same by hand (by-value threading of the AST table, with comments explaining the drop timing). Artifacts that are only ever lent get an explicit `drop(x)` in the driver after their last borrower — and dropping too early is a compile error at the next borrow (use of moved value), not a runtime surprise. The seal conversion already frees capacity slack on its own (`Vec → Box<[T]>` discards the headroom); when a drop itself is expensive, hand the dead artifact to a deferred-drop helper — the contract fixes where release happens, not on which thread.
+
 ## Enforcement
 
 The goal is **not** to make illegal states unrepresentable — it is to make them impossible to write _quietly_. State has exactly three legal homes: locals inside `run` (unrestricted); driver-built values lent through `InputRead`; artifacts moving through the owned slots. There is no fourth place — a pass type itself is zero-sized, so "pass-internal state" is not a category that exists. What therefore has no home is state that crosses passes without appearing in any signature. The gates below force exactly that case into the open, where review can catch it — under a shared `&mut` world it was invisible by construction.

@@ -330,10 +330,10 @@ debug = "full"
 strip = "none"
 
 [patch.crates-io]
-# This non-publishable integration revision exposes the reviewed napi-rs#3353
-# implementation under v3 manifests for Rolldown and its Oxc dependencies.
+# This non-publishable integration revision carries napi-rs#3353 head
+# b58b5726 under v3 manifests for Rolldown and its Oxc dependencies.
 # Keep the runtime, derive, and WASI build crates on the same head.
-napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "7895cf96156ad02d58948e44186fbc71c82a4c7a" }
-napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "7895cf96156ad02d58948e44186fbc71c82a4c7a" }
-napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "7895cf96156ad02d58948e44186fbc71c82a4c7a" }
-napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "7895cf96156ad02d58948e44186fbc71c82a4c7a" }
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b44d9ca08b4aad153608a0cfc6fbb076945cad55" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b44d9ca08b4aad153608a0cfc6fbb076945cad55" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b44d9ca08b4aad153608a0cfc6fbb076945cad55" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b44d9ca08b4aad153608a0cfc6fbb076945cad55" }

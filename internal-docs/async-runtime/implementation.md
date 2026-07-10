@@ -74,10 +74,9 @@ makes an older revision fail to compile instead of producing an unpinned
 binary.
 
 The integration currently pins v3-manifest compatibility revision
-`352a1651e4d139e821ba1384bcbd368e315e61b4` for `napi`, `napi-derive`, and
-`napi-derive-backend`. That revision mirrors the exact reviewed napi-rs#3352
-head `fda7568a470c9e7511d9987ca847e443a1bf06c4` while Rolldown's Oxc NAPI
-dependencies still require v3 manifests. `BindingMagicString` uses concrete
+`b44d9ca08b4aad153608a0cfc6fbb076945cad55`, which carries napi-rs#3353
+head `b58b5726b40c6228f8d3a9866b4158fa8eea2a25`, for `napi`,
+`napi-derive`, `napi-derive-backend`, and `napi-build`. `BindingMagicString` uses concrete
 `MagicString<'static>` storage backed by `Cow::Owned`, so the public N-API
 class cannot borrow a constructor call frame and moving the input `String`
 does not add a second source allocation.
@@ -887,8 +886,9 @@ browser-build, and packed-browser tests exercise this contract;
 `pluginErrorMetadata` is therefore a universal public-support invariant rather
 than a target capability.
 
-This invariant depends on the workspace's napi-rs pin
-`e71f1ac64d104f8090309c888381e5b021449e5e` in `Cargo.toml`. Synchronous
+This invariant depends on the workspace's napi-rs compatibility pin
+`b44d9ca08b4aad153608a0cfc6fbb076945cad55` in `Cargo.toml`, derived from
+upstream head `b58b5726b40c6228f8d3a9866b4158fa8eea2a25`. Synchronous
 threadsafe-function exceptions use
 `Error::capture_unknown_with_status_and_diagnostics`, and Promise rejections use
 `Error::from_unknown_without_coercion`; both retain the exact JavaScript value

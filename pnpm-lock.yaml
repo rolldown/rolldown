@@ -251,7 +251,7 @@ overrides:
 patchedDependencies:
   '@emnapi/core@1.11.2': f99db449a9dbd753488df21b82e810d144261dd1920602ed208fdaf538c88c23
   '@emnapi/wasi-threads@1.2.2': 8fb419a28e1aad8dea1aa46c830fc8af7a85897b020a8c6d4e8fd66d7afe702f
-  '@napi-rs/cli@3.7.2': 12349ce6d393bc71a5c81b8738db305e3cd75ca64488f11b70f8d685881c82b8
+  '@napi-rs/cli@3.7.2': 9d29cff7e05c395064e0abf2f232c7941ad88b61616af8ac27ecd48c37b0dfbd
 
 importers:
 
@@ -550,7 +550,7 @@ importers:
         version: 1.11.2
       '@napi-rs/cli':
         specifier: 'catalog:'
-        version: 3.7.2(patch_hash=12349ce6d393bc71a5c81b8738db305e3cd75ca64488f11b70f8d685881c82b8)(@emnapi/core@1.11.2(patch_hash=f99db449a9dbd753488df21b82e810d144261dd1920602ed208fdaf538c88c23))(@emnapi/runtime@1.11.2)(@types/node@24.10.3)(supports-color@8.1.1)
+        version: 3.7.2(patch_hash=9d29cff7e05c395064e0abf2f232c7941ad88b61616af8ac27ecd48c37b0dfbd)(@emnapi/core@1.11.2(patch_hash=f99db449a9dbd753488df21b82e810d144261dd1920602ed208fdaf538c88c23))(@emnapi/runtime@1.11.2)(@types/node@24.10.3)(supports-color@8.1.1)
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
         version: 1.1.6(@emnapi/core@1.11.2(patch_hash=f99db449a9dbd753488df21b82e810d144261dd1920602ed208fdaf538c88c23))(@emnapi/runtime@1.11.2)
@@ -888,7 +888,7 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: 'catalog:'
-        version: 3.7.2(patch_hash=12349ce6d393bc71a5c81b8738db305e3cd75ca64488f11b70f8d685881c82b8)(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.2)(@types/node@24.10.3)
+        version: 3.7.2(patch_hash=9d29cff7e05c395064e0abf2f232c7941ad88b61616af8ac27ecd48c37b0dfbd)(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.2)(@types/node@24.10.3)
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.1.0
@@ -10588,7 +10588,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@napi-rs/cli@3.7.2(patch_hash=12349ce6d393bc71a5c81b8738db305e3cd75ca64488f11b70f8d685881c82b8)(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.2)(@types/node@24.10.3)':
+  '@napi-rs/cli@3.7.2(patch_hash=9d29cff7e05c395064e0abf2f232c7941ad88b61616af8ac27ecd48c37b0dfbd)(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.2)(@types/node@24.10.3)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@24.10.3)
       '@napi-rs/cross-toolchain': 1.0.3(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.2)
@@ -10620,7 +10620,7 @@ snapshots:
       - node-addon-api
       - supports-color
 
-  '@napi-rs/cli@3.7.2(patch_hash=12349ce6d393bc71a5c81b8738db305e3cd75ca64488f11b70f8d685881c82b8)(@emnapi/core@1.11.2(patch_hash=f99db449a9dbd753488df21b82e810d144261dd1920602ed208fdaf538c88c23))(@emnapi/runtime@1.11.2)(@types/node@24.10.3)(supports-color@8.1.1)':
+  '@napi-rs/cli@3.7.2(patch_hash=9d29cff7e05c395064e0abf2f232c7941ad88b61616af8ac27ecd48c37b0dfbd)(@emnapi/core@1.11.2(patch_hash=f99db449a9dbd753488df21b82e810d144261dd1920602ed208fdaf538c88c23))(@emnapi/runtime@1.11.2)(@types/node@24.10.3)(supports-color@8.1.1)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@24.10.3)
       '@napi-rs/cross-toolchain': 1.0.3(@emnapi/core@1.11.2(patch_hash=f99db449a9dbd753488df21b82e810d144261dd1920602ed208fdaf538c88c23))(@emnapi/runtime@1.11.2)(supports-color@8.1.1)

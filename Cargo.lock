@@ -1279,7 +1279,7 @@ dependencies = [
 [[package]]
 name = "napi"
 version = "3.10.3"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=7895cf96156ad02d58948e44186fbc71c82a4c7a#7895cf96156ad02d58948e44186fbc71c82a4c7a"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=b44d9ca08b4aad153608a0cfc6fbb076945cad55#b44d9ca08b4aad153608a0cfc6fbb076945cad55"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1300,12 +1300,12 @@ dependencies = [
 [[package]]
 name = "napi-build"
 version = "2.3.2"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=7895cf96156ad02d58948e44186fbc71c82a4c7a#7895cf96156ad02d58948e44186fbc71c82a4c7a"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=b44d9ca08b4aad153608a0cfc6fbb076945cad55#b44d9ca08b4aad153608a0cfc6fbb076945cad55"
 
 [[package]]
 name = "napi-derive"
 version = "3.5.9"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=7895cf96156ad02d58948e44186fbc71c82a4c7a#7895cf96156ad02d58948e44186fbc71c82a4c7a"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=b44d9ca08b4aad153608a0cfc6fbb076945cad55#b44d9ca08b4aad153608a0cfc6fbb076945cad55"
 dependencies = [
  "convert_case",
  "ctor",
@@ -1318,7 +1318,7 @@ dependencies = [
 [[package]]
 name = "napi-derive-backend"
 version = "5.1.1"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=7895cf96156ad02d58948e44186fbc71c82a4c7a#7895cf96156ad02d58948e44186fbc71c82a4c7a"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=b44d9ca08b4aad153608a0cfc6fbb076945cad55#b44d9ca08b4aad153608a0cfc6fbb076945cad55"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -1330,7 +1330,7 @@ dependencies = [
 [[package]]
 name = "napi-sys"
 version = "3.2.2"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=7895cf96156ad02d58948e44186fbc71c82a4c7a#7895cf96156ad02d58948e44186fbc71c82a4c7a"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=b44d9ca08b4aad153608a0cfc6fbb076945cad55#b44d9ca08b4aad153608a0cfc6fbb076945cad55"
 dependencies = [
  "libloading",
 ]

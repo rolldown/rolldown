@@ -161,7 +161,7 @@ patchedDependencies:
   # flavor gets its own `wasm32-wasip1` / `wasip1` names, and non-wasi builds
   # regenerate EVERY declared flavor's loader set deterministically — see
   # internal-docs/async-runtime/implementation.md. Regenerated from the
-  # napi-rs commit `e71f1ac64d104f8090309c888381e5b021449e5e` (dist rebuild of
+  # napi-rs commit `b58b5726b40c6228f8d3a9866b4158fa8eea2a25` (dist rebuild of
   # dist/index.cjs + dist/index.js + dist/cli.js — cli.js is the standalone
   # bundle behind the `napi` bin used by the publish workflows). Remove once
   # @napi-rs/cli ships it upstream.

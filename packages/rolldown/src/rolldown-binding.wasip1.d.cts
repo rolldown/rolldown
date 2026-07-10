@@ -3122,8 +3122,9 @@ export declare function getAsyncRuntimeMetrics(): BindingRuntimeMetrics
 
 /**
  * Return the native CurrentThread task-host ABI expected by the JavaScript
- * package before it invokes either async-runtime host registration. Version 2
- * is the zero-argument native host with an exact disposable registration.
+ * package before it invokes either async-runtime host registration. Version 4
+ * reserves and validates an exact registration capability before host
+ * installation performs side effects.
  */
 export declare function getCurrentThreadTaskHostContractVersion(): number
 
@@ -3135,6 +3136,14 @@ export declare function getCurrentThreadTaskHostContractVersion(): number
 export declare function getRuntimeCapabilities(): BindingRuntimeCapabilities
 
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
+
+/**
+ * Return whether one exact CurrentThread task- or timer-host registration is
+ * still live. The JavaScript package revalidates its process-global marker on
+ * every module evaluation so native eviction cannot leave a stale installed
+ * bit that permanently suppresses replacement registration.
+ */
+export declare function isCurrentThreadHostRegistrationActive(registrationHigh: number, registrationLow: number): boolean
 
 export interface JsChangedOutputs {
   deleted: Set<string>
@@ -3202,7 +3211,7 @@ export interface PreRenderedChunk {
  *
  * A no-op on the default `tokio-runtime` build.
  */
-export declare function registerCurrentThreadTaskHost(dispatch?: never): BindingHostRegistration
+export declare function registerCurrentThreadTaskHost(registrationHigh: number, registrationLow: number, dispatch?: never): void
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
@@ -3214,7 +3223,14 @@ export declare function registerPlugins(id: number, plugins: Array<BindingPlugin
  * every live host receives each timer. A no-op on the default `tokio-runtime`
  * build (tokio owns its timer wheel).
  */
-export declare function registerTimerHost(schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): BindingHostRegistration
+export declare function registerTimerHost(registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): void
+
+/**
+ * Reserve an exact CurrentThread host registration capability before either
+ * task or timer installation performs side effects. The JavaScript package
+ * validates the returned words and passes them back to one registration call.
+ */
+export declare function reserveCurrentThreadHostRegistration(): BindingHostRegistration
 
 /**
  * Reset cumulative async runtime event counters to zero.

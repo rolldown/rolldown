@@ -12,7 +12,7 @@ const DEFERRED_LOADER_DECLARATION = join(__dirname, 'src/rolldown-binding.wasip1
 const WASM_FILENAME = 'rolldown-binding.wasm32-wasip1.wasm';
 const WASM_PATH = join(__dirname, 'src', WASM_FILENAME);
 const WASM32_MAX_PAGES = 65_536;
-const CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION = 2;
+const CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION = 4;
 const WASI_DECLARATIONS = {
   threaded: join(__dirname, 'src/rolldown-binding.wasi.d.cts'),
   threadless: join(__dirname, 'src/rolldown-binding.wasip1.d.cts'),
@@ -445,8 +445,11 @@ const __sharedArrayBufferByteLengthGetter =
       )
 const __prototypeTraversalLimit = 256
 const __managedPrivateBindingExports = new Set([
+  'getCurrentThreadTaskHostContractVersion',
+  'isCurrentThreadHostRegistrationActive',
   'registerCurrentThreadTaskHost',
   'registerTimerHost',
+  'reserveCurrentThreadHostRegistration',
   'unregisterCurrentThreadTaskHost',
   'unregisterTimerHost',
 ])
@@ -652,16 +655,46 @@ function __readManagedHostRegistration(__registration) {
   return [__high, __low]
 }
 
-function __registerManagedCurrentThreadTaskHost(__binding) {
+function __assertManagedHostRegistrationActive(
+  __binding,
+  __isActive,
+  __registration,
+  __label,
+) {
+  const __active = Reflect.apply(__isActive, __binding, __registration)
+  if (typeof __active !== 'boolean') {
+    throw new TypeError(
+      'The managed workerd binding returned an invalid ' +
+        __label +
+        ' host liveness result',
+    )
+  }
+  if (!__active) {
+    throw new TypeError(
+      'The managed workerd binding returned an inactive ' +
+        __label +
+        ' host registration',
+    )
+  }
+}
+
+function __registerManagedCurrentThreadTaskHost(__binding, __captureDisposer) {
   const __getContractVersion = Reflect.get(
     __binding,
     'getCurrentThreadTaskHostContractVersion',
   )
+  const __isActive = Reflect.get(
+    __binding,
+    'isCurrentThreadHostRegistrationActive',
+  )
   const __register = Reflect.get(__binding, 'registerCurrentThreadTaskHost')
+  const __reserve = Reflect.get(__binding, 'reserveCurrentThreadHostRegistration')
   const __unregister = Reflect.get(__binding, 'unregisterCurrentThreadTaskHost')
   if (
     typeof __getContractVersion !== 'function' ||
+    typeof __isActive !== 'function' ||
     typeof __register !== 'function' ||
+    typeof __reserve !== 'function' ||
     typeof __unregister !== 'function'
   ) {
     throw new TypeError('The managed workerd binding does not support CurrentThread task hosting')
@@ -677,30 +710,62 @@ function __registerManagedCurrentThreadTaskHost(__binding) {
 
   let __disposed = false
   const __registration = __readManagedHostRegistration(
-    Reflect.apply(__register, __binding, []),
+    Reflect.apply(__reserve, __binding, []),
   )
   const __dispose = () => {
     if (__disposed) return
     Reflect.apply(__unregister, __binding, __registration)
     __disposed = true
   }
-  return __dispose
+  __captureDisposer(__dispose)
+  Reflect.apply(__register, __binding, __registration)
+  __assertManagedHostRegistrationActive(
+    __binding,
+    __isActive,
+    __registration,
+    'task',
+  )
 }
 
-function __registerManagedTimerHost(__binding) {
+function __registerManagedTimerHost(__binding, __captureDisposer) {
   const __setTimeoutHost = globalThis.setTimeout?.bind(globalThis)
   const __clearTimeoutHost = globalThis.clearTimeout?.bind(globalThis)
-  if (!__setTimeoutHost || !__clearTimeoutHost) return () => {}
+  if (!__setTimeoutHost || !__clearTimeoutHost) return
 
+  const __getContractVersion = Reflect.get(
+    __binding,
+    'getCurrentThreadTaskHostContractVersion',
+  )
+  const __isActive = Reflect.get(
+    __binding,
+    'isCurrentThreadHostRegistrationActive',
+  )
   const __register = Reflect.get(__binding, 'registerTimerHost')
+  const __reserve = Reflect.get(__binding, 'reserveCurrentThreadHostRegistration')
   const __unregister = Reflect.get(__binding, 'unregisterTimerHost')
-  if (typeof __register !== 'function' || typeof __unregister !== 'function') {
+  if (
+    typeof __getContractVersion !== 'function' ||
+    typeof __isActive !== 'function' ||
+    typeof __register !== 'function' ||
+    typeof __reserve !== 'function' ||
+    typeof __unregister !== 'function'
+  ) {
     throw new TypeError('The managed workerd binding does not support timer hosting')
+  }
+  const __actualVersion = Reflect.apply(__getContractVersion, __binding, [])
+  if (__actualVersion !== ${CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION}) {
+    throw new TypeError(
+      'The managed workerd binding uses CurrentThread task-host contract version ' +
+        String(__actualVersion) +
+        ', but version ${CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION} is required',
+    )
   }
   const __maxHostTimeoutMs = 2_147_483_647
   const __active = new Map()
   let __disposed = false
-  let __registration
+  const __registration = __readManagedHostRegistration(
+    Reflect.apply(__reserve, __binding, []),
+  )
 
   const __armTimer = (__timer, __id) => {
     const __delay = Math.min(__timer.remainingMs, __maxHostTimeoutMs)
@@ -763,10 +828,7 @@ function __registerManagedTimerHost(__binding) {
   }
   const __dispose = () => {
     if (__disposed) return
-    if (__registration) {
-      Reflect.apply(__unregister, __binding, __registration)
-      __registration = undefined
-    }
+    Reflect.apply(__unregister, __binding, __registration)
     __disposed = true
     const __timers = [...__active.values()]
     __active.clear()
@@ -774,16 +836,18 @@ function __registerManagedTimerHost(__binding) {
       __cancelTimer(__timer)
     }
   }
-
-  try {
-    __registration = __readManagedHostRegistration(
-      Reflect.apply(__register, __binding, [__schedule, __cancelTimerById]),
-    )
-  } catch (__error) {
-    __dispose()
-    throw __error
-  }
-  return __dispose
+  __captureDisposer(__dispose)
+  Reflect.apply(__register, __binding, [
+    ...__registration,
+    __schedule,
+    __cancelTimerById,
+  ])
+  __assertManagedHostRegistrationActive(
+    __binding,
+    __isActive,
+    __registration,
+    'timer',
+  )
 }
 
 function __assertManagedBindingUsable(__state) {
@@ -2546,8 +2610,12 @@ export async function createInstance(__wasmInput, __options) {
   }
   let __publicExports
   try {
-    __disposeTaskHost = __registerManagedCurrentThreadTaskHost(__exports)
-    __disposeTimerHost = __registerManagedTimerHost(__exports)
+    __registerManagedCurrentThreadTaskHost(__exports, (__dispose) => {
+      __disposeTaskHost = __dispose
+    })
+    __registerManagedTimerHost(__exports, (__dispose) => {
+      __disposeTimerHost = __dispose
+    })
     for (const __privateExport of __managedPrivateBindingExports) {
       if (
         Reflect.has(__exports, __privateExport) &&
@@ -2693,8 +2761,11 @@ export interface DeferredRuntimeStats {
 
 export type DeferredRolldownBinding = Omit<
   typeof RolldownBinding,
+  | 'getCurrentThreadTaskHostContractVersion'
+  | 'isCurrentThreadHostRegistrationActive'
   | 'registerCurrentThreadTaskHost'
   | 'registerTimerHost'
+  | 'reserveCurrentThreadHostRegistration'
   | 'unregisterCurrentThreadTaskHost'
   | 'unregisterTimerHost'
 >;
@@ -2743,16 +2814,22 @@ function renderCurrentThreadHostBootstrap(captureBrowserRegistrations = false): 
   const __rolldownBinding = __napiModule.exports
   const __getCurrentThreadTaskHostContractVersion =
     __rolldownBinding.getCurrentThreadTaskHostContractVersion
+  const __isCurrentThreadHostRegistrationActive =
+    __rolldownBinding.isCurrentThreadHostRegistrationActive
   const __registerCurrentThreadTaskHost =
     __rolldownBinding.registerCurrentThreadTaskHost
   const __registerTimerHost = __rolldownBinding.registerTimerHost
+  const __reserveCurrentThreadHostRegistration =
+    __rolldownBinding.reserveCurrentThreadHostRegistration
   const __unregisterCurrentThreadTaskHost =
     __rolldownBinding.unregisterCurrentThreadTaskHost
   const __unregisterTimerHost = __rolldownBinding.unregisterTimerHost
   if (
     typeof __getCurrentThreadTaskHostContractVersion !== 'function' ||
+    typeof __isCurrentThreadHostRegistrationActive !== 'function' ||
     typeof __registerCurrentThreadTaskHost !== 'function' ||
     typeof __registerTimerHost !== 'function' ||
+    typeof __reserveCurrentThreadHostRegistration !== 'function' ||
     typeof __unregisterCurrentThreadTaskHost !== 'function' ||
     typeof __unregisterTimerHost !== 'function'
   ) {
@@ -2797,11 +2874,41 @@ function renderCurrentThreadHostBootstrap(captureBrowserRegistrations = false): 
     }
     return { high: __high, low: __low }
   }
+  const __assertHostRegistrationActive = (__registration, __label) => {
+    const __active = Reflect.apply(
+      __isCurrentThreadHostRegistrationActive,
+      __rolldownBinding,
+      [__registration.high, __registration.low],
+    )
+    if (typeof __active !== 'boolean') {
+      throw new TypeError(
+        'The threadless Rolldown binding returned an invalid ' +
+          __label +
+          ' host liveness result',
+      )
+    }
+    if (!__active) {
+      throw new TypeError(
+        'The threadless Rolldown binding returned an inactive ' +
+          __label +
+          ' host registration',
+      )
+    }
+  }
   const __taskHostRegistration = __readHostRegistration(
-    Reflect.apply(__registerCurrentThreadTaskHost, __rolldownBinding, []),
+    Reflect.apply(
+      __reserveCurrentThreadHostRegistration,
+      __rolldownBinding,
+      [],
+    ),
     'task',
   )
 ${captureTaskHostRegistration}
+  Reflect.apply(__registerCurrentThreadTaskHost, __rolldownBinding, [
+    __taskHostRegistration.high,
+    __taskHostRegistration.low,
+  ])
+  __assertHostRegistrationActive(__taskHostRegistration, 'task')
 
   const __setTimeoutHost = globalThis.setTimeout?.bind(globalThis)
   const __clearTimeoutHost = globalThis.clearTimeout?.bind(globalThis)
@@ -2839,10 +2946,20 @@ ${captureTaskHostRegistration}
       }
     }
     const __timerHostRegistration = __readHostRegistration(
-      Reflect.apply(__registerTimerHost, __rolldownBinding, [
-        (__id, __ms) => {
-          const __previous = __activeTimers.get(__id)
-          if (__previous) {
+      Reflect.apply(
+        __reserveCurrentThreadHostRegistration,
+        __rolldownBinding,
+        [],
+      ),
+      'timer',
+    )
+${captureTimerHostRegistration}
+    Reflect.apply(__registerTimerHost, __rolldownBinding, [
+      __timerHostRegistration.high,
+      __timerHostRegistration.low,
+      (__id, __ms) => {
+        const __previous = __activeTimers.get(__id)
+        if (__previous) {
             __activeTimers.delete(__id)
             __cancelTimer(__previous)
           }
@@ -2870,10 +2987,8 @@ ${captureTaskHostRegistration}
           __activeTimers.delete(__id)
           __cancelTimer(__timer)
         },
-      ]),
-      'timer',
-    )
-${captureTimerHostRegistration}
+      ])
+    __assertHostRegistrationActive(__timerHostRegistration, 'timer')
   }
 }
 ${CURRENT_THREAD_HOST_BOOTSTRAP_END}`;
@@ -2904,7 +3019,11 @@ function injectBrowserInitializationGuard(
     if (catchStart < guardEnd || catchStart > exportStart) {
       throw new Error(`Malformed browser initialization cleanup in ${loaderPath}`);
     }
-    return `${source.slice(0, catchStart + 1)}${renderBrowserInitializationCleanup()}
+    const contextDestroyExpression = readInjectedBrowserContextDestroyExpression(
+      source,
+      loaderPath,
+    );
+    return `${source.slice(0, catchStart + 1)}${renderBrowserInitializationCleanup(contextDestroyExpression)}
 ${source.slice(exportStart)}`.replace(/[ \t]+$/gm, '');
   }
 
@@ -2946,7 +3065,7 @@ let __napiModule`;
   }
 
   const generatedCatch = source.slice(catchStart + 1, exportStart).trimEnd();
-  const expectedGeneratedCatch = `} catch (__error) {
+  const legacyGeneratedCatch = `} catch (__error) {
   try {
     await __emnapiContext.destroy()
   } catch (__cleanupError) {
@@ -2954,7 +3073,25 @@ let __napiModule`;
   }
   throw __error
 }`;
-  if (generatedCatch !== expectedGeneratedCatch) {
+  const upstreamGeneratedCatch = `} catch (__error) {
+  const __cleanupErrors = []
+  try {
+    await __destroyEmnapiContext()
+  } catch (__cleanupError) {
+    __cleanupErrors.push(__cleanupError)
+  }
+  if (__cleanupErrors.length > 0) {
+    throw __createInitializationCleanupError(__error, __cleanupErrors)
+  }
+  throw __error
+}`;
+  const contextDestroyExpression =
+    generatedCatch === legacyGeneratedCatch
+      ? '__emnapiContext.destroy()'
+      : generatedCatch === upstreamGeneratedCatch
+        ? '__destroyEmnapiContext()'
+        : undefined;
+  if (contextDestroyExpression === undefined) {
     throw new Error(`Unexpected generated browser initialization cleanup in ${loaderPath}`);
   }
 
@@ -2972,11 +3109,27 @@ ${declarationAnchor}`,
 ${BROWSER_INITIALIZATION_GUARD_START}
 ${tryBody}
 ${BROWSER_INITIALIZATION_GUARD_END}
-${renderBrowserInitializationCleanup()}
+${renderBrowserInitializationCleanup(contextDestroyExpression)}
 ${source.slice(exportStart)}`;
 }
 
-function renderBrowserInitializationCleanup(): string {
+function readInjectedBrowserContextDestroyExpression(
+  source: string,
+  loaderPath: string,
+): '__emnapiContext.destroy()' | '__destroyEmnapiContext()' {
+  const expressions = ['__emnapiContext.destroy()', '__destroyEmnapiContext()'] as const;
+  const matches = expressions.filter(
+    (expression) => source.split(`      () => ${expression},`).length - 1 === 1,
+  );
+  if (matches.length !== 1) {
+    throw new Error(`Malformed browser context cleanup in ${loaderPath}`);
+  }
+  return matches[0];
+}
+
+function renderBrowserInitializationCleanup(
+  contextDestroyExpression: '__emnapiContext.destroy()' | '__destroyEmnapiContext()',
+): string {
   return `} catch (__error) {
   const __cleanupErrors = []
   const __cleanupSync = (__operation, __message) => {
@@ -3023,7 +3176,7 @@ function renderBrowserInitializationCleanup(): string {
   }
   if (__emnapiContext !== undefined) {
     await __cleanup(
-      () => __emnapiContext.destroy(),
+      () => ${contextDestroyExpression},
       'Threadless browser context cleanup failed',
     )
   }

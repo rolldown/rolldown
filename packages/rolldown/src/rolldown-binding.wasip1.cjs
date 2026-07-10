@@ -1,4 +1,4 @@
-// napi-rs-artifact-metadata:{"version":2,"rootEntry":"binding.cjs","exports":["LegalCommentsMode","minify","minifySync","Severity","ParseResult","ExportExportNameKind","ExportImportNameKind","ExportLocalNameKind","ImportNameKind","parse","parseSync","rawTransferSupported","ResolverFactory","EnforceExtension","ModuleType","sync","HelperMode","isolatedDeclaration","isolatedDeclarationSync","moduleRunnerTransform","moduleRunnerTransformSync","transform","transformSync","BindingAsyncRuntimeLease","BindingBundleEndEventData","BindingBundleErrorEventData","BindingBundler","BindingBundleStartEventData","BindingCallableBuiltinPlugin","BindingChunkingContext","BindingDecodedMap","BindingDevEngine","BindingLoadPluginContext","BindingMagicString","BindingModuleInfo","BindingNormalizedOptions","BindingOutputAsset","BindingOutputChunk","BindingPluginContext","BindingRenderedChunk","BindingRenderedChunkMeta","BindingRenderedModule","BindingSourceMap","BindingTransformPluginContext","BindingWatcher","BindingWatcherBundler","BindingWatcherChangeData","BindingWatcherEvent","ParallelJsPluginRegistry","TraceSubscriberGuard","TsconfigCache","acquireAsyncRuntime","BindingAttachDebugInfo","BindingBuiltinPluginName","BindingChunkModuleOrderBy","BindingErrorStage","BindingLogLevel","BindingPluginOrder","BindingPropertyReadSideEffects","BindingPropertyWriteSideEffects","BindingRebuildStrategy","BindingRuntimeFlavor","collapseSourcemaps","configureAsyncRuntime","enhancedTransform","enhancedTransformSync","FilterTokenKind","getAsyncRuntimeConfig","getAsyncRuntimeMetrics","getCurrentThreadTaskHostContractVersion","getRuntimeCapabilities","initTraceSubscriber","registerCurrentThreadTaskHost","registerPlugins","registerTimerHost","resetAsyncRuntimeMetrics","resolveTsconfig","shutdownAsyncRuntime","startAsyncRuntime","unregisterCurrentThreadTaskHost","unregisterTimerHost"],"managedRootEntries":["browser.js","binding.cjs","rolldown-binding.wasm","rolldown-binding.debug.wasm"]}
+// napi-rs-artifact-metadata:{"version":2,"rootEntry":"binding.cjs","exports":["LegalCommentsMode","minify","minifySync","Severity","ParseResult","ExportExportNameKind","ExportImportNameKind","ExportLocalNameKind","ImportNameKind","parse","parseSync","rawTransferSupported","ResolverFactory","EnforceExtension","ModuleType","sync","HelperMode","isolatedDeclaration","isolatedDeclarationSync","moduleRunnerTransform","moduleRunnerTransformSync","transform","transformSync","BindingAsyncRuntimeLease","BindingBundleEndEventData","BindingBundleErrorEventData","BindingBundler","BindingBundleStartEventData","BindingCallableBuiltinPlugin","BindingChunkingContext","BindingDecodedMap","BindingDevEngine","BindingLoadPluginContext","BindingMagicString","BindingModuleInfo","BindingNormalizedOptions","BindingOutputAsset","BindingOutputChunk","BindingPluginContext","BindingRenderedChunk","BindingRenderedChunkMeta","BindingRenderedModule","BindingSourceMap","BindingTransformPluginContext","BindingWatcher","BindingWatcherBundler","BindingWatcherChangeData","BindingWatcherEvent","ParallelJsPluginRegistry","TraceSubscriberGuard","TsconfigCache","acquireAsyncRuntime","BindingAttachDebugInfo","BindingBuiltinPluginName","BindingChunkModuleOrderBy","BindingErrorStage","BindingLogLevel","BindingPluginOrder","BindingPropertyReadSideEffects","BindingPropertyWriteSideEffects","BindingRebuildStrategy","BindingRuntimeFlavor","collapseSourcemaps","configureAsyncRuntime","enhancedTransform","enhancedTransformSync","FilterTokenKind","getAsyncRuntimeConfig","getAsyncRuntimeMetrics","getCurrentThreadTaskHostContractVersion","getRuntimeCapabilities","initTraceSubscriber","isCurrentThreadHostRegistrationActive","registerCurrentThreadTaskHost","registerPlugins","registerTimerHost","reserveCurrentThreadHostRegistration","resetAsyncRuntimeMetrics","resolveTsconfig","shutdownAsyncRuntime","startAsyncRuntime","unregisterCurrentThreadTaskHost","unregisterTimerHost"],"managedRootEntries":["browser.js","binding.cjs","rolldown-binding.wasm","rolldown-binding.debug.wasm"]}
 /* eslint-disable */
 /* prettier-ignore */
 
@@ -58,6 +58,7 @@ function __captureEmnapiAutoDestroyListener() {
 
 const __finishAutoDestroyCapture = __captureEmnapiAutoDestroyListener()
 let __emnapiContext
+let __napiInstance
 let __emnapiContextDestroyed = false
 let __emnapiContextDestroying = false
 let __emnapiContextDestroyPromise
@@ -81,6 +82,8 @@ try {
   __finishAutoDestroyCapture?.()
 }
 
+let __emnapiWasmEnvCleanupPrepared = false
+
 function __destroyEmnapiContext() {
   if (__emnapiContextDestroyed) {
     return
@@ -94,6 +97,14 @@ function __destroyEmnapiContext() {
   __emnapiContextDestroying = true
   let __result
   try {
+    if (!__emnapiWasmEnvCleanupPrepared) {
+      const __prepareWasmEnvCleanup =
+        __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
+      if (typeof __prepareWasmEnvCleanup === 'function') {
+        __prepareWasmEnvCleanup()
+      }
+      __emnapiWasmEnvCleanupPrepared = true
+    }
     __result = __emnapiContext.destroy()
   } catch (error) {
     __emnapiContextDestroying = false
@@ -402,7 +413,6 @@ if (__contextInitializationFailed) {
 }
 
 let __wasmMemory
-let __napiInstance
 let __wasiModule
 let __nodeTaskHostRegistration
 let __nodeTimerHostRegistration
@@ -453,6 +463,7 @@ try {
       return importObject
     },
     beforeInit({ instance }) {
+      __napiInstance = instance
       for (const name of Object.keys(instance.exports)) {
         if (name.startsWith('__napi_register__')) {
           instance.exports[name]()
@@ -790,9 +801,11 @@ module.exports.getAsyncRuntimeMetrics = __napiModule.exports.getAsyncRuntimeMetr
 module.exports.getCurrentThreadTaskHostContractVersion = __napiModule.exports.getCurrentThreadTaskHostContractVersion
 module.exports.getRuntimeCapabilities = __napiModule.exports.getRuntimeCapabilities
 module.exports.initTraceSubscriber = __napiModule.exports.initTraceSubscriber
+module.exports.isCurrentThreadHostRegistrationActive = __napiModule.exports.isCurrentThreadHostRegistrationActive
 module.exports.registerCurrentThreadTaskHost = __napiModule.exports.registerCurrentThreadTaskHost
 module.exports.registerPlugins = __napiModule.exports.registerPlugins
 module.exports.registerTimerHost = __napiModule.exports.registerTimerHost
+module.exports.reserveCurrentThreadHostRegistration = __napiModule.exports.reserveCurrentThreadHostRegistration
 module.exports.resetAsyncRuntimeMetrics = __napiModule.exports.resetAsyncRuntimeMetrics
 module.exports.resolveTsconfig = __napiModule.exports.resolveTsconfig
 module.exports.shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime

@@ -34,14 +34,15 @@ const __wasmMemory = new WebAssembly.Memory({
 
 const __emnapiContext = __emnapiCreateContext()
 
-function __createInitializationCleanupError(__error, __cleanupError) {
+
+function __createInitializationCleanupError(__error, __cleanupErrors) {
   let __message = 'WASI module initialization failed'
   try {
     if (__error && typeof __error.message === 'string') {
       __message = __error.message
     }
   } catch {}
-  const __errors = [__error, __cleanupError]
+  const __errors = [__error, ...__cleanupErrors]
   const __AggregateError = globalThis.AggregateError
   const __combinedError =
     typeof __AggregateError === 'function'
@@ -59,6 +60,20 @@ let __browserTimerHostRegistration
 let __napiInstance
 let __wasiModule
 let __napiModule
+
+let __emnapiWasmEnvCleanupPrepared = false
+
+function __destroyEmnapiContext() {
+  if (!__emnapiWasmEnvCleanupPrepared) {
+    const __prepareWasmEnvCleanup =
+      __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
+    if (typeof __prepareWasmEnvCleanup === 'function') {
+      __prepareWasmEnvCleanup()
+    }
+    __emnapiWasmEnvCleanupPrepared = true
+  }
+  return __emnapiContext.destroy()
+}
 
 try {
 /* ROLLDOWN_BROWSER_INITIALIZATION_GUARD_START */
@@ -82,6 +97,7 @@ try {
       return importObject
     },
     beforeInit({ instance }) {
+      __napiInstance = instance
       for (const name of Object.keys(instance.exports)) {
         if (name.startsWith('__napi_register__')) {
           instance.exports[name]()
@@ -275,7 +291,7 @@ try {
   }
   if (__emnapiContext !== undefined) {
     await __cleanup(
-      () => __emnapiContext.destroy(),
+      () => __destroyEmnapiContext(),
       'Threadless browser context cleanup failed',
     )
   }
@@ -368,9 +384,11 @@ export const getAsyncRuntimeMetrics = __napiModule.exports.getAsyncRuntimeMetric
 export const getCurrentThreadTaskHostContractVersion = __napiModule.exports.getCurrentThreadTaskHostContractVersion
 export const getRuntimeCapabilities = __napiModule.exports.getRuntimeCapabilities
 export const initTraceSubscriber = __napiModule.exports.initTraceSubscriber
+export const isCurrentThreadHostRegistrationActive = __napiModule.exports.isCurrentThreadHostRegistrationActive
 export const registerCurrentThreadTaskHost = __napiModule.exports.registerCurrentThreadTaskHost
 export const registerPlugins = __napiModule.exports.registerPlugins
 export const registerTimerHost = __napiModule.exports.registerTimerHost
+export const reserveCurrentThreadHostRegistration = __napiModule.exports.reserveCurrentThreadHostRegistration
 export const resetAsyncRuntimeMetrics = __napiModule.exports.resetAsyncRuntimeMetrics
 export const resolveTsconfig = __napiModule.exports.resolveTsconfig
 export const shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime

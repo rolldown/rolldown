@@ -1,26 +1,25 @@
-const CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION = 2;
-
-type HostRegistration = {
-  high: number;
-  low: number;
-};
+const CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION = 4;
 
 type TimerHostRegistration = (
-  schedule: (idOrMs: number, ms?: number) => Promise<void>,
+  registrationHigh: number,
+  registrationLow: number,
+  schedule: (id: number, ms: number) => Promise<void>,
   cancel: (id: number) => void,
-) => HostRegistration | undefined;
+) => void;
 
 interface WorkerdTimerBinding {
-  getCurrentThreadTaskHostContractVersion?: () => unknown;
+  getCurrentThreadTaskHostContractVersion: () => unknown;
+  isCurrentThreadHostRegistrationActive: (high: number, low: number) => unknown;
   registerTimerHost: TimerHostRegistration;
-  unregisterTimerHost?: (high: number, low: number) => void;
+  reserveCurrentThreadHostRegistration: () => unknown;
+  unregisterTimerHost: (high: number, low: number) => void;
 }
 
 /**
  * Register the CurrentThread timer bridge for one managed workerd instance.
  *
- * The optional second schedule argument keeps this compatible with the
- * pre-cancellation binding, which invokes the callback as `(ms)`.
+ * The optional second schedule argument remains accepted by the local relay
+ * implementation so its timer behavior can be exercised independently.
  */
 export function registerWorkerdTimerHost(binding: WorkerdTimerBinding): () => void {
   const setTimeoutHost = globalThis.setTimeout?.bind(globalThis);
@@ -31,27 +30,29 @@ export function registerWorkerdTimerHost(binding: WorkerdTimerBinding): () => vo
     binding,
     'getCurrentThreadTaskHostContractVersion',
   );
+  const isCurrentThreadHostRegistrationActive = Reflect.get(
+    binding,
+    'isCurrentThreadHostRegistrationActive',
+  );
+  const reserveCurrentThreadHostRegistration = Reflect.get(
+    binding,
+    'reserveCurrentThreadHostRegistration',
+  );
   const unregisterTimerHost = Reflect.get(binding, 'unregisterTimerHost');
-  const legacyHostContract =
-    getCurrentThreadTaskHostContractVersion === undefined && unregisterTimerHost === undefined;
-  let unregisterTimerHostFunction: ((high: number, low: number) => void) | undefined;
   if (
-    !legacyHostContract &&
-    (typeof getCurrentThreadTaskHostContractVersion !== 'function' ||
-      typeof unregisterTimerHost !== 'function')
+    typeof getCurrentThreadTaskHostContractVersion !== 'function' ||
+    typeof isCurrentThreadHostRegistrationActive !== 'function' ||
+    typeof reserveCurrentThreadHostRegistration !== 'function' ||
+    typeof unregisterTimerHost !== 'function'
   ) {
     throw new TypeError('The managed workerd binding does not support exact timer-host disposal');
   }
-  if (!legacyHostContract) {
-    const getContractVersion = getCurrentThreadTaskHostContractVersion as () => unknown;
-    unregisterTimerHostFunction = unregisterTimerHost as (high: number, low: number) => void;
-    const actualVersion = Reflect.apply(getContractVersion, binding, []);
-    if (actualVersion !== CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION) {
-      throw new TypeError(
-        `The managed workerd binding uses CurrentThread task-host contract version ` +
-          `${String(actualVersion)}, but version ${CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION} is required`,
-      );
-    }
+  const actualVersion = Reflect.apply(getCurrentThreadTaskHostContractVersion, binding, []);
+  if (actualVersion !== CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION) {
+    throw new TypeError(
+      `The managed workerd binding uses CurrentThread task-host contract version ` +
+        `${String(actualVersion)}, but version ${CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION} is required`,
+    );
   }
 
   const MAX_HOST_TIMEOUT_MS = 2_147_483_647;
@@ -164,7 +165,7 @@ export function registerWorkerdTimerHost(binding: WorkerdTimerBinding): () => vo
   const dispose = (): void => {
     if (disposed) return;
     if (registration) {
-      Reflect.apply(unregisterTimerHostFunction!, binding, registration);
+      Reflect.apply(unregisterTimerHost, binding, registration);
       registration = undefined;
     }
     disposed = true;
@@ -177,34 +178,52 @@ export function registerWorkerdTimerHost(binding: WorkerdTimerBinding): () => vo
   };
 
   try {
-    const result: unknown = Reflect.apply(binding.registerTimerHost, binding, [schedule, cancel]);
-    if (!legacyHostContract) {
-      let high: unknown;
-      let low: unknown;
-      try {
-        if (result === null || (typeof result !== 'object' && typeof result !== 'function')) {
-          throw new TypeError();
-        }
-        high = Reflect.get(result, 'high', result);
-        low = Reflect.get(result, 'low', result);
-      } catch {}
-      if (
-        typeof high !== 'number' ||
-        !Number.isInteger(high) ||
-        high < 0 ||
-        high > 0xffff_ffff ||
-        typeof low !== 'number' ||
-        !Number.isInteger(low) ||
-        low < 0 ||
-        low > 0xffff_ffff ||
-        (high === 0 && low === 0)
-      ) {
-        throw new TypeError('The managed workerd binding returned an invalid host registration');
+    const reserved = Reflect.apply(reserveCurrentThreadHostRegistration, binding, []);
+    let high: unknown;
+    let low: unknown;
+    try {
+      if (reserved === null || (typeof reserved !== 'object' && typeof reserved !== 'function')) {
+        throw new TypeError();
       }
-      registration = [high, low];
+      high = Reflect.get(reserved, 'high', reserved);
+      low = Reflect.get(reserved, 'low', reserved);
+    } catch {}
+    if (
+      typeof high !== 'number' ||
+      !Number.isInteger(high) ||
+      high < 0 ||
+      high > 0xffff_ffff ||
+      typeof low !== 'number' ||
+      !Number.isInteger(low) ||
+      low < 0 ||
+      low > 0xffff_ffff ||
+      (high === 0 && low === 0)
+    ) {
+      throw new TypeError('The managed workerd binding returned an invalid host registration');
+    }
+    registration = [high, low];
+    Reflect.apply(binding.registerTimerHost, binding, [...registration, schedule, cancel]);
+    const active = Reflect.apply(isCurrentThreadHostRegistrationActive, binding, registration);
+    if (typeof active !== 'boolean') {
+      throw new TypeError(
+        'The managed workerd binding returned an invalid timer host liveness result',
+      );
+    }
+    if (!active) {
+      throw new TypeError(
+        'The managed workerd binding returned an inactive timer host registration',
+      );
     }
   } catch (error) {
-    dispose();
+    try {
+      dispose();
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        'Managed workerd timer-host setup failed and rollback did not complete',
+        { cause: error },
+      );
+    }
     throw error;
   }
   return dispose;

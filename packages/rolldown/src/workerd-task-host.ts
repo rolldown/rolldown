@@ -1,4 +1,4 @@
-const CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION = 2;
+const CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION = 4;
 
 /** Register and return an exact disposer for one native CurrentThread task host. */
 export function registerWorkerdCurrentThreadTaskHost(binding: object): () => void {
@@ -6,11 +6,21 @@ export function registerWorkerdCurrentThreadTaskHost(binding: object): () => voi
     binding,
     'getCurrentThreadTaskHostContractVersion',
   );
+  const isCurrentThreadHostRegistrationActive = Reflect.get(
+    binding,
+    'isCurrentThreadHostRegistrationActive',
+  );
   const registerCurrentThreadTaskHost = Reflect.get(binding, 'registerCurrentThreadTaskHost');
+  const reserveCurrentThreadHostRegistration = Reflect.get(
+    binding,
+    'reserveCurrentThreadHostRegistration',
+  );
   const unregisterCurrentThreadTaskHost = Reflect.get(binding, 'unregisterCurrentThreadTaskHost');
   if (
     typeof getCurrentThreadTaskHostContractVersion !== 'function' ||
+    typeof isCurrentThreadHostRegistrationActive !== 'function' ||
     typeof registerCurrentThreadTaskHost !== 'function' ||
+    typeof reserveCurrentThreadHostRegistration !== 'function' ||
     typeof unregisterCurrentThreadTaskHost !== 'function'
   ) {
     throw new TypeError('The managed workerd binding does not support CurrentThread task hosting');
@@ -24,7 +34,7 @@ export function registerWorkerdCurrentThreadTaskHost(binding: object): () => voi
     );
   }
 
-  const registration: unknown = Reflect.apply(registerCurrentThreadTaskHost, binding, []);
+  const registration: unknown = Reflect.apply(reserveCurrentThreadHostRegistration, binding, []);
   let high: unknown;
   let low: unknown;
   try {
@@ -51,10 +61,39 @@ export function registerWorkerdCurrentThreadTaskHost(binding: object): () => voi
     throw new TypeError('The managed workerd binding returned an invalid host registration');
   }
 
+  const rollback = (): void => {
+    Reflect.apply(unregisterCurrentThreadTaskHost, binding, [high, low]);
+  };
+  try {
+    Reflect.apply(registerCurrentThreadTaskHost, binding, [high, low]);
+    const active = Reflect.apply(isCurrentThreadHostRegistrationActive, binding, [high, low]);
+    if (typeof active !== 'boolean') {
+      throw new TypeError(
+        'The managed workerd binding returned an invalid task host liveness result',
+      );
+    }
+    if (!active) {
+      throw new TypeError(
+        'The managed workerd binding returned an inactive task host registration',
+      );
+    }
+  } catch (error) {
+    try {
+      rollback();
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        'Managed workerd task-host setup failed and rollback did not complete',
+        { cause: error },
+      );
+    }
+    throw error;
+  }
+
   let disposed = false;
   return () => {
     if (disposed) return;
-    Reflect.apply(unregisterCurrentThreadTaskHost, binding, [high, low]);
+    rollback();
     disposed = true;
   };
 }

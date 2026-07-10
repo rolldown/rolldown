@@ -36,14 +36,42 @@ const __sharedMemory = new WebAssembly.Memory({
 
 const __emnapiContext = __emnapiCreateContext()
 
-function __createInitializationCleanupError(__error, __cleanupError) {
+const __wasiInitializationWorkers = new Set()
+
+async function __terminateWasiInitializationWorkers() {
+  const __terminations = []
+  for (const __worker of __wasiInitializationWorkers) {
+    __wasiInitializationWorkers.delete(__worker)
+    try {
+      __terminations.push(
+        Promise.resolve(__worker.terminate()).then(
+          () => undefined,
+          (__cleanupError) => ({ error: __cleanupError }),
+        ),
+      )
+    } catch (__cleanupError) {
+      __terminations.push(Promise.resolve({ error: __cleanupError }))
+    }
+  }
+  const __terminationResults = await Promise.all(__terminations)
+  const __cleanupErrors = []
+  for (const __terminationResult of __terminationResults) {
+    if (__terminationResult !== undefined) {
+      __cleanupErrors.push(__terminationResult.error)
+    }
+  }
+  return __cleanupErrors
+}
+
+
+function __createInitializationCleanupError(__error, __cleanupErrors) {
   let __message = 'WASI module initialization failed'
   try {
     if (__error && typeof __error.message === 'string') {
       __message = __error.message
     }
   } catch {}
-  const __errors = [__error, __cleanupError]
+  const __errors = [__error, ...__cleanupErrors]
   const __AggregateError = globalThis.AggregateError
   const __combinedError =
     typeof __AggregateError === 'function'
@@ -60,6 +88,20 @@ let __napiInstance
 let __wasiModule
 let __napiModule
 
+let __emnapiWasmEnvCleanupPrepared = false
+
+function __destroyEmnapiContext() {
+  if (!__emnapiWasmEnvCleanupPrepared) {
+    const __prepareWasmEnvCleanup =
+      __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
+    if (typeof __prepareWasmEnvCleanup === 'function') {
+      __prepareWasmEnvCleanup()
+    }
+    __emnapiWasmEnvCleanupPrepared = true
+  }
+  return __emnapiContext.destroy()
+}
+
 try {
   __emnapiContext.feature.Buffer = Buffer
 
@@ -75,6 +117,7 @@ try {
       const worker = new Worker(new URL('./wasi-worker-browser.mjs', import.meta.url), {
         type: 'module',
       })
+      __wasiInitializationWorkers.add(worker)
       worker.addEventListener('message', __wasmCreateOnMessageForFsProxy(__fs))
 
       worker.addEventListener('message', (event) => {
@@ -103,6 +146,7 @@ try {
       return importObject
     },
     beforeInit({ instance }) {
+      __napiInstance = instance
       for (const name of Object.keys(instance.exports)) {
         if (name.startsWith('__napi_register__')) {
           instance.exports[name]()
@@ -110,11 +154,17 @@ try {
       }
     },
   }))
+  __wasiInitializationWorkers.clear()
 } catch (__error) {
+  const __cleanupErrors = []
   try {
-    await Promise.resolve(__emnapiContext.destroy())
+    await Promise.resolve(__destroyEmnapiContext())
   } catch (__cleanupError) {
-    throw __createInitializationCleanupError(__error, __cleanupError)
+    __cleanupErrors.push(__cleanupError)
+  }
+  __cleanupErrors.push(...await __terminateWasiInitializationWorkers())
+  if (__cleanupErrors.length > 0) {
+    throw __createInitializationCleanupError(__error, __cleanupErrors)
   }
   throw __error
 }

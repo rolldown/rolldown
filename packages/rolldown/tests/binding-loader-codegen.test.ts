@@ -9,6 +9,8 @@ import {
   EMNAPI_ASYNC_WORK_POOL_SIZE_MAX,
   LOADED_BINDING_TARGET_EXPORT,
   normalizeEmnapiAsyncWorkPoolSize,
+  patchWasiBrowserContextDestroyAwait,
+  patchWasiBrowserWorkerTerminationAwait,
   patchWasiBindingContextLifecycle,
   patchWasiBindingLoader,
   patchWasiNodeAsyncWorkPoolSize,
@@ -45,6 +47,95 @@ const generatedWasiNodeLoader = readFileSync(
   fileURLToPath(new URL('../src/rolldown-binding.wasi.cjs', import.meta.url)),
   'utf8',
 );
+const upstreamWasiBrowserLifecycle = `import {
+  instantiateNapiModule as __emnapiInstantiateNapiModule,
+} from '@napi-rs/wasm-runtime'
+import { createContext as __emnapiCreateContext } from '@emnapi/runtime'
+
+const __emnapiContext = __emnapiCreateContext()
+
+let __napiInstance
+let __wasiModule
+let __napiModule
+
+function __destroyEmnapiContext() {
+  const __prepareWasmEnvCleanup =
+    __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
+  if (typeof __prepareWasmEnvCleanup === 'function') {
+    __prepareWasmEnvCleanup()
+  }
+  return __emnapiContext.destroy()
+}
+
+try {
+  ;({
+    instance: __napiInstance,
+    module: __wasiModule,
+    napiModule: __napiModule,
+  } = await __emnapiInstantiateNapiModule(__wasmFile, {
+    beforeInit({ instance }) {
+      __napiInstance = instance
+    },
+  }))
+} catch (__error) {
+  const __cleanupErrors = []
+  try {
+    await __destroyEmnapiContext()
+  } catch (__cleanupError) {
+    __cleanupErrors.push(__cleanupError)
+  }
+  if (__cleanupErrors.length > 0) {
+    throw __createInitializationCleanupError(__error, __cleanupErrors)
+  }
+  throw __error
+}
+export default __napiModule.exports
+`;
+const upstreamWasiNodeWorkerHelpers = `function __getWorkerExecArgv() {
+  const __workerExecArgv = []
+  for (let __index = 0; __index < process.execArgv.length; __index += 1) {
+    const __arg = process.execArgv[__index]
+    if (
+      __arg === '--input-type' ||
+      __arg === '--eval' ||
+      __arg === '-e' ||
+      __arg === '--print' ||
+      __arg === '-p'
+    ) {
+      __index += 1
+      continue
+    }
+    if (
+      __arg.startsWith('--input-type=') ||
+      __arg.startsWith('--eval=') ||
+      __arg.startsWith('--print=')
+    ) {
+      continue
+    }
+    __workerExecArgv.push(__arg)
+  }
+  return __workerExecArgv
+}
+
+function __createWasiWorker(filename) {
+  try {
+    return new Worker(filename, {
+      env: process.env,
+      execArgv: __getWorkerExecArgv(),
+    })
+  } catch (error) {
+    if (!error || error.code !== 'ERR_WORKER_INVALID_EXEC_ARGV') {
+      throw error
+    }
+  }
+  return new Worker(filename, {
+    env: process.env,
+    execArgv: [],
+  })
+}
+
+const __rootDir = __nodePath.parse(process.cwd()).root
+`;
 
 describe('WASI binding target metadata', () => {
   test('resolves supported build targets without accepting unknown wasm targets', () => {
@@ -226,12 +317,54 @@ export default __napiModule.exports
     expect(patchWasiBindingContextLifecycle(patched)).toBe(patched);
   });
 
+  test('accepts and hardens the refreshed napi-rs browser lifecycle', () => {
+    const patched = patchWasiBindingContextLifecycle(upstreamWasiBrowserLifecycle);
+
+    expect(patched).toContain('let __emnapiWasmEnvCleanupPrepared = false');
+    expect(patched).toContain('if (!__emnapiWasmEnvCleanupPrepared)');
+    expect(patched).toContain('__napiInstance?.exports?.napi_prepare_wasm_env_cleanup');
+    expect(patched).toContain('__emnapiWasmEnvCleanupPrepared = true');
+    expect(patchWasiBindingContextLifecycle(patched)).toBe(patched);
+  });
+
+  test('rejects a partial refreshed lifecycle instead of falling back to legacy patching', () => {
+    expect(() =>
+      patchWasiBindingContextLifecycle(
+        upstreamWasiBrowserLifecycle.replace('      __napiInstance = instance\n', ''),
+      ),
+    ).toThrow('WASI N-API instance capture');
+  });
+
+  test.each(['__emnapiContext.destroy()', '__destroyEmnapiContext()'])(
+    'normalizes the generated browser cleanup await for %s',
+    (expression) => {
+      const source = `try {}\ncatch (__error) {\n  await ${expression}\n}\n`;
+      const patched = patchWasiBrowserContextDestroyAwait(source);
+      expect(patched).toContain(`await Promise.resolve(${expression})`);
+      expect(patchWasiBrowserContextDestroyAwait(patched)).toBe(patched);
+    },
+  );
+
+  test('normalizes synchronous threaded browser worker termination failures', () => {
+    const source = `try {
+  __terminations.push(Promise.resolve(__worker.terminate()))
+} catch (__cleanupError) {
+  __terminations.push({ error: __cleanupError })
+}
+`;
+    const patched = patchWasiBrowserWorkerTerminationAwait(source);
+
+    expect(patched).toContain('__terminations.push(Promise.resolve({ error: __cleanupError }))');
+    expect(patchWasiBrowserWorkerTerminationAwait(patched)).toBe(patched);
+  });
+
   test('uses a fresh context per evaluation and prepares each context once', () => {
     const contexts: Array<{ destroy(): void }> = [];
     const cleanupEvents: string[] = [];
+    const cleanups: Array<() => void> = [];
 
     for (const id of [1, 2]) {
-      executeGeneratedWasiNodeLoader({
+      const execution = executeGeneratedWasiNodeLoader({
         createContext() {
           const context = {
             destroy() {
@@ -245,21 +378,17 @@ export default __napiModule.exports
           cleanupEvents.push(`prepare:${id}`);
         },
       });
+      cleanups.push(() => execution.cleanup());
     }
 
     expect(contexts[0]).not.toBe(contexts[1]);
-    contexts[0].destroy();
-    contexts[0].destroy();
-    contexts[1].destroy();
-    contexts[1].destroy();
-    expect(cleanupEvents).toEqual([
-      'prepare:1',
-      'destroy:1',
-      'destroy:1',
-      'prepare:2',
-      'destroy:2',
-      'destroy:2',
-    ]);
+    cleanups[0]();
+    cleanups[0]();
+    cleanups[1]();
+    cleanups[1]();
+    expect(cleanupEvents).toEqual(['prepare:1', 'destroy:1', 'prepare:2', 'destroy:2']);
+    expect(generatedWasiNodeLoader).toContain('let __emnapiWasmEnvCleanupPrepared = false');
+    expect(generatedWasiNodeLoader).toContain('function __destroyEmnapiContext()');
     expect(patchWasiBindingContextLifecycle(generatedWasiNodeLoader)).toBe(generatedWasiNodeLoader);
   });
 
@@ -277,7 +406,7 @@ export default __napiModule.exports
       },
     };
 
-    executeGeneratedWasiNodeLoader({
+    const execution = executeGeneratedWasiNodeLoader({
       createContext: () => context,
       prepareCleanup() {
         cleanupEvents.push('prepare');
@@ -288,13 +417,13 @@ export default __napiModule.exports
       },
     });
 
-    expect(() => context.destroy()).toThrow('prepare failed');
+    expect(() => execution.cleanup()).not.toThrow();
     expect(cleanupEvents).toEqual(['prepare']);
-    expect(() => context.destroy()).toThrow('destroy failed');
+    expect(() => execution.cleanup()).not.toThrow();
     expect(cleanupEvents).toEqual(['prepare', 'prepare', 'destroy']);
-    expect(() => context.destroy()).not.toThrow();
-    expect(() => context.destroy()).not.toThrow();
-    expect(cleanupEvents).toEqual(['prepare', 'prepare', 'destroy', 'destroy', 'destroy']);
+    expect(() => execution.cleanup()).not.toThrow();
+    expect(() => execution.cleanup()).not.toThrow();
+    expect(cleanupEvents).toEqual(['prepare', 'prepare', 'destroy', 'destroy']);
   });
 
   test('preserves valid worker arguments while retrying rejected inherited arguments', () => {
@@ -353,6 +482,15 @@ export default __napiModule.exports
     ]);
     expect(patchWasiNodeWorkerExecArgv(generatedWasiNodeLoader)).toBe(generatedWasiNodeLoader);
   });
+
+  test('replaces the refreshed napi-rs all-or-nothing worker fallback', () => {
+    const patched = patchWasiNodeWorkerExecArgv(upstreamWasiNodeWorkerHelpers);
+
+    expect(patched).toContain('function __removeInvalidWasiWorkerExecArgv(execArgv, error)');
+    expect(patched).toContain('let __workerExecArgv = __getWasiWorkerExecArgv()');
+    expect(patched).not.toContain('execArgv: []');
+    expect(patchWasiNodeWorkerExecArgv(patched)).toBe(patched);
+  });
 });
 
 describe('async-runtime host export contract', () => {
@@ -395,7 +533,11 @@ interface GeneratedWasiNodeLoaderOptions {
     onmessage?: (event: { data: unknown }) => void;
     unref(): void;
   };
-  createContext: () => { destroy(): void };
+  createContext: () => {
+    destroy(): void;
+    feature?: Record<string, unknown>;
+    suppressDestroy?: () => void;
+  };
   createWorker?: boolean;
   execArgv?: string[];
   prepareCleanup?: () => void;
@@ -409,8 +551,13 @@ function executeGeneratedWasiNodeLoader({
   createWorker = false,
   execArgv = [],
   prepareCleanup = () => {},
-}: GeneratedWasiNodeLoaderOptions): void {
+}: GeneratedWasiNodeLoaderOptions): { cleanup(): void } {
   const module: { exports: Record<string, unknown> } = { exports: {} };
+  const listeners = {
+    beforeExit: [] as Array<() => void>,
+    exit: [] as Array<() => void>,
+    newListener: [] as Array<(event: string, listener: () => void) => void>,
+  };
   const require = Object.assign(
     (specifier: string) => {
       switch (specifier) {
@@ -455,7 +602,14 @@ function executeGeneratedWasiNodeLoader({
             },
           };
         case '@emnapi/runtime':
-          return { createContext };
+          return {
+            createContext() {
+              const context = createContext();
+              context.feature ??= {};
+              context.suppressDestroy ??= () => {};
+              return context;
+            },
+          };
         default:
           throw new Error(`Unexpected require: ${specifier}`);
       }
@@ -471,8 +625,35 @@ function executeGeneratedWasiNodeLoader({
       cwd: () => '/',
       env: {},
       execArgv,
+      getMaxListeners: () => 10,
+      prependListener(event: keyof typeof listeners, listener: never) {
+        listeners[event].unshift(listener);
+      },
+      once(event: 'beforeExit' | 'exit', listener: () => void) {
+        for (const notify of listeners.newListener) {
+          notify(event, listener);
+        }
+        listeners[event].push(listener);
+      },
+      rawListeners(event: keyof typeof listeners) {
+        return [...listeners[event]];
+      },
+      removeListener(event: keyof typeof listeners, listener: never) {
+        const index = listeners[event].lastIndexOf(listener);
+        if (index >= 0) listeners[event].splice(index, 1);
+      },
+      setMaxListeners() {},
     },
     '/fixture',
     { Memory: class {} },
   );
+  return {
+    cleanup() {
+      const listener = listeners.exit.at(-1) ?? listeners.beforeExit.at(-1);
+      if (!listener) {
+        throw new Error('Generated WASI loader did not retain a context cleanup listener');
+      }
+      listener();
+    },
+  };
 }

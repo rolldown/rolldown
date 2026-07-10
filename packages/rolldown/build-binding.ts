@@ -12,6 +12,8 @@ import {
 import {
   assertAsyncRuntimeHostExports,
   patchNativeBindingLoader,
+  patchWasiBrowserContextDestroyAwait,
+  patchWasiBrowserWorkerTerminationAwait,
   patchWasiBindingContextLifecycle,
   patchWasiBindingLoader,
   patchWasiNodeAsyncWorkPoolSize,
@@ -74,7 +76,7 @@ try {
   patchWasiNodeWorkerExecArgvConfig();
   patchWasiNodeAsyncWorkPoolConfig();
   validateAsyncRuntimeHostExports();
-  patchWasiBrowserContextDestroyAwait();
+  patchWasiBrowserContextDestroyAwaitConfig();
   if (argsOptions.target === WASI_THREADS_TARGET) {
     validateWasiReactorArtifacts();
   }
@@ -214,18 +216,10 @@ function patchWasiNodeAsyncWorkPoolConfig(): void {
   writeFileSync(bindingPath, patchWasiNodeAsyncWorkPoolSize(readFileSync(bindingPath, 'utf8')));
 }
 
-function patchWasiBrowserContextDestroyAwait(): void {
+function patchWasiBrowserContextDestroyAwaitConfig(): void {
   const bindingPath = join(__dirname, 'src', 'rolldown-binding.wasi-browser.js');
-  const source = readFileSync(bindingPath, 'utf8');
-  const generatedAwait = 'await __emnapiContext.destroy()';
-  const normalizedAwait = 'await Promise.resolve(__emnapiContext.destroy())';
-  const generatedAwaitCount = source.split(generatedAwait).length - 1;
-  const normalizedAwaitCount = source.split(normalizedAwait).length - 1;
-  if (generatedAwaitCount === 0 && normalizedAwaitCount === 1) {
-    return;
-  }
-  if (generatedAwaitCount !== 1 || normalizedAwaitCount !== 0) {
-    throw new Error(`Unexpected NAPI-RS WASI browser cleanup template in ${bindingPath}`);
-  }
-  writeFileSync(bindingPath, source.replace(generatedAwait, normalizedAwait));
+  let source = readFileSync(bindingPath, 'utf8');
+  source = patchWasiBrowserContextDestroyAwait(source);
+  source = patchWasiBrowserWorkerTerminationAwait(source);
+  writeFileSync(bindingPath, source);
 }

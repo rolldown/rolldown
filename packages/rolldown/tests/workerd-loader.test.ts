@@ -46,8 +46,11 @@ const browserInitializationGuardEnd = '/* ROLLDOWN_BROWSER_INITIALIZATION_GUARD_
 const nodeInitializationCleanupStart = '/* ROLLDOWN_NODE_INITIALIZATION_CLEANUP_START */';
 const nodeInitializationCleanupEnd = '/* ROLLDOWN_NODE_INITIALIZATION_CLEANUP_END */';
 const privateManagedHostExports = [
+  'getCurrentThreadTaskHostContractVersion',
+  'isCurrentThreadHostRegistrationActive',
   'registerCurrentThreadTaskHost',
   'registerTimerHost',
+  'reserveCurrentThreadHostRegistration',
   'unregisterCurrentThreadTaskHost',
   'unregisterTimerHost',
 ] as const;
@@ -59,31 +62,73 @@ const removedTaskHostExports = [
 let nextMockHostRegistration = 1;
 
 function installMockHostRegistrationControls(binding: Record<PropertyKey, unknown>): void {
-  if (typeof Reflect.get(binding, 'getCurrentThreadTaskHostContractVersion') !== 'function') {
-    Reflect.set(binding, 'getCurrentThreadTaskHostContractVersion', () => 2);
+  const reserve = Reflect.get(binding, 'reserveCurrentThreadHostRegistration');
+  const isActive = Reflect.get(binding, 'isCurrentThreadHostRegistrationActive');
+  if (typeof reserve === 'function' && typeof isActive === 'function') {
+    return;
   }
+  const reserved = new Set<number>();
+  const live = new Set<number>();
+  Reflect.set(binding, 'getCurrentThreadTaskHostContractVersion', () => 4);
+  Reflect.set(binding, 'reserveCurrentThreadHostRegistration', () => {
+    const low = nextMockHostRegistration++;
+    reserved.add(low);
+    return { high: 0, low };
+  });
+  Reflect.set(binding, 'isCurrentThreadHostRegistrationActive', (_high: number, low: number) =>
+    live.has(low),
+  );
   const install = (registerName: string, unregisterName: string) => {
     const register = Reflect.get(binding, registerName);
-    if (
-      typeof register !== 'function' ||
-      typeof Reflect.get(binding, unregisterName) === 'function'
-    ) {
-      return;
-    }
-    const live = new Set<number>();
+    if (typeof register !== 'function') return;
+    const unregister = Reflect.get(binding, unregisterName);
     Reflect.set(binding, registerName, function (this: unknown, ...args: unknown[]) {
-      const result = Reflect.apply(register, this, args);
-      if (result !== undefined) return result;
-      const low = nextMockHostRegistration++;
+      const high = args[0];
+      const low = args[1];
+      if (high !== 0 || typeof low !== 'number' || !reserved.delete(low)) {
+        throw new TypeError('Mock host registration was not reserved');
+      }
+      Reflect.apply(register, this, args.slice(2));
       live.add(low);
-      return { high: 0, low };
     });
     Reflect.set(binding, unregisterName, (_high: number, low: number) => {
+      reserved.delete(low);
       live.delete(low);
+      if (typeof unregister === 'function') {
+        Reflect.apply(unregister, binding, [_high, low]);
+      }
     });
   };
   install('registerCurrentThreadTaskHost', 'unregisterCurrentThreadTaskHost');
   install('registerTimerHost', 'unregisterTimerHost');
+}
+
+function createWorkerdTimerHostBinding(
+  registerTimerHost: (schedule: unknown, cancel: unknown) => void,
+  options: {
+    registration?: { high: number; low: number };
+    unregisterTimerHost?: (high: number, low: number) => void;
+  } = {},
+) {
+  const registration = options.registration ?? { high: 0, low: nextMockHostRegistration++ };
+  let active = false;
+  return {
+    getCurrentThreadTaskHostContractVersion: () => 4,
+    isCurrentThreadHostRegistrationActive: (high: number, low: number) =>
+      active && high === registration.high && low === registration.low,
+    registerTimerHost(high: number, low: number, schedule: unknown, cancel: unknown) {
+      if (high !== registration.high || low !== registration.low) {
+        throw new TypeError('Unexpected timer host registration');
+      }
+      registerTimerHost(schedule, cancel);
+      active = true;
+    },
+    reserveCurrentThreadHostRegistration: () => registration,
+    unregisterTimerHost(high: number, low: number) {
+      options.unregisterTimerHost?.(high, low);
+      active = false;
+    },
+  };
 }
 
 async function readCurrentThreadHostBootstrap(loaderPath: URL): Promise<string> {
@@ -715,8 +760,8 @@ function __retainEmnapiContextCleanupListener() {`,
   test('keeps generated threaded browser context cleanup await lint-safe', async () => {
     const source = await readFile(threadedBrowserLoaderPath, 'utf8');
 
-    expect(source).toContain('await Promise.resolve(__emnapiContext.destroy())');
-    expect(source).not.toContain('await __emnapiContext.destroy()');
+    expect(source).toContain('await Promise.resolve(__destroyEmnapiContext())');
+    expect(source).not.toContain('await __destroyEmnapiContext()');
   });
 
   test('exposes createInstance and instantiate through the same managed host path', () => {
@@ -805,6 +850,7 @@ function __retainEmnapiContextCleanupListener() {`,
   test('retries transient browser host and context cleanup failures', async () => {
     const initializationError = new Error('browser timer host registration failed');
     const registration = { high: 0x1234_5678, low: 0x9abc_def0 };
+    const prepareWasmEnvCleanup = vi.fn();
     const unregisterCurrentThreadTaskHost = vi
       .fn()
       .mockImplementationOnce(() => {
@@ -824,7 +870,11 @@ function __retainEmnapiContextCleanupListener() {`,
           arrayBuffer: async () => new ArrayBuffer(0),
         }),
         instantiateNapiModule: async () => ({
-          instance: {},
+          instance: {
+            exports: {
+              napi_prepare_wasm_env_cleanup: prepareWasmEnvCleanup,
+            },
+          },
           module: {},
           napiModule: {
             exports: {
@@ -854,6 +904,7 @@ function __retainEmnapiContextCleanupListener() {`,
       registration.high,
       registration.low,
     );
+    expect(prepareWasmEnvCleanup).toHaveBeenCalledOnce();
     expect(destroy).toHaveBeenCalledTimes(2);
   });
 
@@ -4603,14 +4654,16 @@ try {
   });
 
   test('rejects a mismatched managed task-host ABI before registration', () => {
-    const registerCurrentThreadTaskHost = vi.fn(() => ({ high: 0, low: 1 }));
+    const registerCurrentThreadTaskHost = vi.fn();
     expect(() =>
       registerWorkerdCurrentThreadTaskHost({
         getCurrentThreadTaskHostContractVersion: () => 1,
+        isCurrentThreadHostRegistrationActive: vi.fn(),
         registerCurrentThreadTaskHost,
+        reserveCurrentThreadHostRegistration: vi.fn(),
         unregisterCurrentThreadTaskHost: vi.fn(),
       }),
-    ).toThrow(/contract version 1.*version 2/);
+    ).toThrow(/contract version 1.*version 4/);
     expect(registerCurrentThreadTaskHost).not.toHaveBeenCalled();
   });
 
@@ -4626,23 +4679,25 @@ try {
     ['overflowing low word', { high: 0, low: 0x1_0000_0000 }],
     ['inactive registration', { high: 0, low: 0 }],
   ])('rejects a managed task host with %s', (_name, registration) => {
-    const registerCurrentThreadTaskHost = vi.fn(() => registration);
+    const registerCurrentThreadTaskHost = vi.fn();
     const unregisterCurrentThreadTaskHost = vi.fn();
     expect(() =>
       registerWorkerdCurrentThreadTaskHost({
-        getCurrentThreadTaskHostContractVersion: () => 2,
+        getCurrentThreadTaskHostContractVersion: () => 4,
+        isCurrentThreadHostRegistrationActive: vi.fn(() => true),
         registerCurrentThreadTaskHost,
+        reserveCurrentThreadHostRegistration: () => registration,
         unregisterCurrentThreadTaskHost,
       }),
     ).toThrow(/invalid host registration/);
-    expect(registerCurrentThreadTaskHost).toHaveBeenCalledWith();
+    expect(registerCurrentThreadTaskHost).not.toHaveBeenCalled();
     expect(unregisterCurrentThreadTaskHost).not.toHaveBeenCalled();
   });
 
   test('unregisters the exact managed task host once and retries a failed unregister', () => {
     const registration = { high: 0x1234_5678, low: 0x9abc_def0 };
     const unregisterError = new Error('task host unregister failed');
-    const registerCurrentThreadTaskHost = vi.fn(() => registration);
+    const registerCurrentThreadTaskHost = vi.fn();
     const unregisterCurrentThreadTaskHost = vi
       .fn()
       .mockImplementationOnce(() => {
@@ -4650,12 +4705,14 @@ try {
       })
       .mockImplementation(() => {});
     const dispose = registerWorkerdCurrentThreadTaskHost({
-      getCurrentThreadTaskHostContractVersion: () => 2,
+      getCurrentThreadTaskHostContractVersion: () => 4,
+      isCurrentThreadHostRegistrationActive: () => true,
       registerCurrentThreadTaskHost,
+      reserveCurrentThreadHostRegistration: () => registration,
       unregisterCurrentThreadTaskHost,
     });
 
-    expect(registerCurrentThreadTaskHost).toHaveBeenCalledWith();
+    expect(registerCurrentThreadTaskHost).toHaveBeenCalledWith(registration.high, registration.low);
     expect(() => dispose()).toThrow(unregisterError);
     expect(() => dispose()).not.toThrow();
     expect(() => dispose()).not.toThrow();
@@ -4672,7 +4729,7 @@ try {
     );
   });
 
-  test('generates equivalent ABI-v2 task hosts for CJS and browser roots', async () => {
+  test('generates equivalent ABI-v4 task hosts for CJS and browser roots', async () => {
     const [cjsBootstrap, browserBootstrap] = await Promise.all([
       readCurrentThreadHostBootstrap(cjsLoaderPath),
       readCurrentThreadHostBootstrap(browserLoaderPath),
@@ -4688,17 +4745,30 @@ try {
     );
 
     for (const bootstrap of [cjsBootstrap, browserBootstrap]) {
-      const registration = { high: 0x1234_5678, low: 0x9abc_def0 };
+      const taskRegistration = { high: 0x1234_5678, low: 0x9abc_def0 };
+      const timerRegistration = { high: 0, low: 2 };
+      const registrations = [taskRegistration, timerRegistration];
+      const live = new Set<number>();
       const binding = {
-        getCurrentThreadTaskHostContractVersion: vi.fn(() => 2),
-        registerCurrentThreadTaskHost: vi.fn(() => registration),
-        registerTimerHost: vi.fn(() => ({ high: 0, low: 2 })),
+        getCurrentThreadTaskHostContractVersion: vi.fn(() => 4),
+        isCurrentThreadHostRegistrationActive: vi.fn((_high: number, low: number) => live.has(low)),
+        registerCurrentThreadTaskHost: vi.fn((_high: number, low: number) => {
+          live.add(low);
+        }),
+        registerTimerHost: vi.fn((_high: number, low: number) => {
+          live.add(low);
+        }),
+        reserveCurrentThreadHostRegistration: vi.fn(() => registrations.shift()),
         unregisterCurrentThreadTaskHost: vi.fn(),
         unregisterTimerHost: vi.fn(),
       };
       runCurrentThreadHostBootstrap(bootstrap, binding);
       expect(binding.getCurrentThreadTaskHostContractVersion).toHaveBeenCalledWith();
-      expect(binding.registerCurrentThreadTaskHost).toHaveBeenCalledWith();
+      expect(binding.reserveCurrentThreadHostRegistration).toHaveBeenCalledTimes(2);
+      expect(binding.registerCurrentThreadTaskHost).toHaveBeenCalledWith(
+        taskRegistration.high,
+        taskRegistration.low,
+      );
       for (const removedExport of removedTaskHostExports) {
         expect(bootstrap).not.toContain(removedExport);
       }
@@ -4707,16 +4777,18 @@ try {
 
   test('rejects a mismatched generated root task-host ABI before registration', async () => {
     const bootstrap = await readCurrentThreadHostBootstrap(cjsLoaderPath);
-    const registerCurrentThreadTaskHost = vi.fn(() => ({ high: 0, low: 1 }));
+    const registerCurrentThreadTaskHost = vi.fn();
     expect(() =>
       runCurrentThreadHostBootstrap(bootstrap, {
         getCurrentThreadTaskHostContractVersion: () => 1,
+        isCurrentThreadHostRegistrationActive: vi.fn(),
         registerCurrentThreadTaskHost,
-        registerTimerHost: vi.fn(() => ({ high: 0, low: 2 })),
+        registerTimerHost: vi.fn(),
+        reserveCurrentThreadHostRegistration: vi.fn(),
         unregisterCurrentThreadTaskHost: vi.fn(),
         unregisterTimerHost: vi.fn(),
       }),
-    ).toThrow(/contract version 1.*version 2/);
+    ).toThrow(/contract version 1.*version 4/);
     expect(registerCurrentThreadTaskHost).not.toHaveBeenCalled();
   });
 
@@ -4728,18 +4800,20 @@ try {
     ['inactive registration', { high: 0, low: 0 }],
   ])('rejects a generated root task host with %s', async (_name, registration) => {
     const bootstrap = await readCurrentThreadHostBootstrap(cjsLoaderPath);
-    const registerCurrentThreadTaskHost = vi.fn(() => registration);
-    const registerTimerHost = vi.fn(() => ({ high: 0, low: 2 }));
+    const registerCurrentThreadTaskHost = vi.fn();
+    const registerTimerHost = vi.fn();
     expect(() =>
       runCurrentThreadHostBootstrap(bootstrap, {
-        getCurrentThreadTaskHostContractVersion: () => 2,
+        getCurrentThreadTaskHostContractVersion: () => 4,
+        isCurrentThreadHostRegistrationActive: vi.fn(() => true),
         registerCurrentThreadTaskHost,
         registerTimerHost,
+        reserveCurrentThreadHostRegistration: () => registration,
         unregisterCurrentThreadTaskHost: vi.fn(),
         unregisterTimerHost: vi.fn(),
       }),
     ).toThrow(/invalid task host registration/);
-    expect(registerCurrentThreadTaskHost).toHaveBeenCalledWith();
+    expect(registerCurrentThreadTaskHost).not.toHaveBeenCalled();
     expect(registerTimerHost).not.toHaveBeenCalled();
   });
 
@@ -5647,7 +5721,7 @@ ${cleanup}`,
     vi.useFakeTimers();
     try {
       const registerTimerHost = vi.fn();
-      const dispose = registerWorkerdTimerHost({ registerTimerHost });
+      const dispose = registerWorkerdTimerHost(createWorkerdTimerHostBinding(registerTimerHost));
       expect(registerTimerHost).toHaveBeenCalledOnce();
 
       const [schedule, cancel] = registerTimerHost.mock.calls[0] as [
@@ -5688,7 +5762,7 @@ ${cleanup}`,
     vi.useFakeTimers();
     try {
       const registerTimerHost = vi.fn();
-      const dispose = registerWorkerdTimerHost({ registerTimerHost });
+      const dispose = registerWorkerdTimerHost(createWorkerdTimerHostBinding(registerTimerHost));
       const [schedule] = registerTimerHost.mock.calls[0] as [
         (idOrMs: number, ms?: number) => Promise<void>,
       ];
@@ -5735,7 +5809,7 @@ ${cleanup}`,
     }) as typeof setTimeout);
     try {
       const registerTimerHost = vi.fn();
-      const dispose = registerWorkerdTimerHost({ registerTimerHost });
+      const dispose = registerWorkerdTimerHost(createWorkerdTimerHostBinding(registerTimerHost));
       const [schedule] = registerTimerHost.mock.calls[0] as unknown as [
         (id: number, ms: number) => Promise<void>,
       ];
@@ -5760,7 +5834,7 @@ ${cleanup}`,
     vi.useFakeTimers();
     try {
       const registerTimerHost = vi.fn();
-      const dispose = registerWorkerdTimerHost({ registerTimerHost });
+      const dispose = registerWorkerdTimerHost(createWorkerdTimerHostBinding(registerTimerHost));
       const [schedule] = registerTimerHost.mock.calls[0] as [
         (idOrMs: number, ms?: number) => Promise<void>,
       ];
@@ -5792,29 +5866,39 @@ ${cleanup}`,
   });
 
   test('rejects the v1 managed timer-host ABI before registration', () => {
-    const registerTimerHost = vi.fn(() => ({ high: 0, low: 1 }));
+    const registerTimerHost = vi.fn();
     expect(() =>
       registerWorkerdTimerHost({
         getCurrentThreadTaskHostContractVersion: () => 1,
+        isCurrentThreadHostRegistrationActive: vi.fn(),
         registerTimerHost,
+        reserveCurrentThreadHostRegistration: vi.fn(),
         unregisterTimerHost: vi.fn(),
       }),
-    ).toThrow(/contract version 1.*version 2/);
+    ).toThrow(/contract version 1.*version 4/);
     expect(registerTimerHost).not.toHaveBeenCalled();
   });
 
-  test('rejects an inactive v2 managed timer-host registration', () => {
-    const registerTimerHost = vi.fn(() => ({ high: 0, low: 0 }));
+  test('rejects and rolls back an inactive v4 managed timer-host registration', () => {
+    const registration = { high: 0, low: 1 };
+    const registerTimerHost = vi.fn();
     const unregisterTimerHost = vi.fn();
     expect(() =>
       registerWorkerdTimerHost({
-        getCurrentThreadTaskHostContractVersion: () => 2,
+        getCurrentThreadTaskHostContractVersion: () => 4,
+        isCurrentThreadHostRegistrationActive: () => false,
         registerTimerHost,
+        reserveCurrentThreadHostRegistration: () => registration,
         unregisterTimerHost,
       }),
-    ).toThrow(/invalid host registration/);
-    expect(registerTimerHost).toHaveBeenCalledWith(expect.any(Function), expect.any(Function));
-    expect(unregisterTimerHost).not.toHaveBeenCalled();
+    ).toThrow(/inactive timer host registration/);
+    expect(registerTimerHost).toHaveBeenCalledWith(
+      registration.high,
+      registration.low,
+      expect.any(Function),
+      expect.any(Function),
+    );
+    expect(unregisterTimerHost).toHaveBeenCalledWith(registration.high, registration.low);
   });
 
   test('retries exact timer-host unregistration before disposing pending relays', async () => {
@@ -5828,12 +5912,13 @@ ${cleanup}`,
           throw unregisterError;
         })
         .mockImplementationOnce(() => {});
-      const registerTimerHost = vi.fn(() => registration);
-      const dispose = registerWorkerdTimerHost({
-        getCurrentThreadTaskHostContractVersion: () => 2,
-        registerTimerHost,
-        unregisterTimerHost,
-      });
+      const registerTimerHost = vi.fn();
+      const dispose = registerWorkerdTimerHost(
+        createWorkerdTimerHostBinding(registerTimerHost, {
+          registration,
+          unregisterTimerHost,
+        }),
+      );
       expect(registerTimerHost).toHaveBeenCalledWith(expect.any(Function), expect.any(Function));
 
       const [schedule] = registerTimerHost.mock.calls[0] as unknown as [
@@ -5866,7 +5951,7 @@ ${cleanup}`,
     });
     try {
       const registerTimerHost = vi.fn();
-      const dispose = registerWorkerdTimerHost({ registerTimerHost });
+      const dispose = registerWorkerdTimerHost(createWorkerdTimerHostBinding(registerTimerHost));
       const [schedule, cancel] = registerTimerHost.mock.calls[0] as [
         (id: number, ms: number) => Promise<void>,
         (id: number) => void,
@@ -5888,17 +5973,28 @@ ${cleanup}`,
     const callbacks = new Map<number, () => void>();
     let schedule: ((id: number, ms: number) => Promise<void>) | undefined;
     let cancel: ((id: number) => void) | undefined;
+    const registrations = [
+      { high: 0, low: 1 },
+      { high: 0, low: 2 },
+    ];
+    const live = new Set<number>();
     const binding = {
-      getCurrentThreadTaskHostContractVersion: () => 2,
-      registerCurrentThreadTaskHost: vi.fn(() => ({ high: 0, low: 1 })),
+      getCurrentThreadTaskHostContractVersion: () => 4,
+      isCurrentThreadHostRegistrationActive: (_high: number, low: number) => live.has(low),
+      registerCurrentThreadTaskHost: vi.fn((_high: number, low: number) => {
+        live.add(low);
+      }),
       registerTimerHost(
+        _high: number,
+        low: number,
         scheduleCallback: (id: number, ms: number) => Promise<void>,
         cancelCallback: (id: number) => void,
       ) {
+        live.add(low);
         schedule = scheduleCallback;
         cancel = cancelCallback;
-        return { high: 0, low: 2 };
       },
+      reserveCurrentThreadHostRegistration: () => registrations.shift(),
       unregisterCurrentThreadTaskHost: vi.fn(),
       unregisterTimerHost: vi.fn(),
     };

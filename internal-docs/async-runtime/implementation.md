@@ -757,15 +757,17 @@ must be absent. Omitting the reactor can leave package import synchronously
 executing malformed startup code, which cannot be interrupted by a JavaScript
 promise timeout.
 
-napi-rs generates the Node threaded-WASI loader. The build script patches that
-generated loader before it is copied into the package. Each Node or browser
-loader evaluation creates an isolated emnapi context instead of reusing the
-realm-global default. The postprocessor imports `createContext` directly from
-the generated binding's existing `@emnapi/runtime` dependency so this also
-works with the published `@napi-rs/wasm-runtime` 1.1.6 facade. Its `destroy()` wrapper calls
-`napi_prepare_wasm_env_cleanup()` once after successful preparation, retries a
-failed preparation, and does not repeat successful preparation when the
-underlying destroy operation is retried. This ordering lets pending N-API
+napi-rs generates the Node and browser WASI loaders. The build script validates
+their complete context lifecycle before either loader is copied into a package.
+Current generators create an isolated emnapi context per evaluation and expose
+one `__destroyEmnapiContext()` helper that prepares the N-API environment before
+destroying it. The postprocessor retains compatibility with the older
+realm-global/default-context template, but fails closed on partial or mixed
+lifecycle shapes. It also records successful
+`napi_prepare_wasm_env_cleanup()` completion so a failed preparation is retried
+while a later retry of the underlying context destruction does not prepare the
+same environment twice. Threadless browser rollback calls the same generated
+helper instead of bypassing N-API preparation. This ordering lets pending N-API
 promises reject before emnapi disables JavaScript callbacks and lets a later
 loader evaluation replace a destroyed context.
 

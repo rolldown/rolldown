@@ -1,4 +1,4 @@
-// napi-rs-artifact-metadata:{"version":2,"rootEntry":"binding.cjs","exports":["LegalCommentsMode","minify","minifySync","Severity","ParseResult","ExportExportNameKind","ExportImportNameKind","ExportLocalNameKind","ImportNameKind","parse","parseSync","rawTransferSupported","ResolverFactory","EnforceExtension","ModuleType","sync","HelperMode","isolatedDeclaration","isolatedDeclarationSync","moduleRunnerTransform","moduleRunnerTransformSync","transform","transformSync","BindingAsyncRuntimeLease","BindingBundleEndEventData","BindingBundleErrorEventData","BindingBundler","BindingBundleStartEventData","BindingCallableBuiltinPlugin","BindingChunkingContext","BindingDecodedMap","BindingDevEngine","BindingLoadPluginContext","BindingMagicString","BindingModuleInfo","BindingNormalizedOptions","BindingOutputAsset","BindingOutputChunk","BindingPluginContext","BindingRenderedChunk","BindingRenderedChunkMeta","BindingRenderedModule","BindingSourceMap","BindingTransformPluginContext","BindingWatcher","BindingWatcherBundler","BindingWatcherChangeData","BindingWatcherEvent","ParallelJsPluginRegistry","TraceSubscriberGuard","TsconfigCache","acquireAsyncRuntime","BindingAttachDebugInfo","BindingBuiltinPluginName","BindingChunkModuleOrderBy","BindingErrorStage","BindingLogLevel","BindingPluginOrder","BindingPropertyReadSideEffects","BindingPropertyWriteSideEffects","BindingRebuildStrategy","BindingRuntimeFlavor","collapseSourcemaps","configureAsyncRuntime","enhancedTransform","enhancedTransformSync","FilterTokenKind","getAsyncRuntimeConfig","getAsyncRuntimeMetrics","getCurrentThreadTaskHostContractVersion","getRuntimeCapabilities","initTraceSubscriber","registerCurrentThreadTaskHost","registerPlugins","registerTimerHost","resetAsyncRuntimeMetrics","resolveTsconfig","shutdownAsyncRuntime","startAsyncRuntime","unregisterCurrentThreadTaskHost","unregisterTimerHost"],"managedRootEntries":["browser.js","binding.cjs","rolldown-binding.wasm","rolldown-binding.debug.wasm"]}
+// napi-rs-artifact-metadata:{"version":2,"rootEntry":"binding.cjs","exports":["LegalCommentsMode","minify","minifySync","Severity","ParseResult","ExportExportNameKind","ExportImportNameKind","ExportLocalNameKind","ImportNameKind","parse","parseSync","rawTransferSupported","ResolverFactory","EnforceExtension","ModuleType","sync","HelperMode","isolatedDeclaration","isolatedDeclarationSync","moduleRunnerTransform","moduleRunnerTransformSync","transform","transformSync","BindingAsyncRuntimeLease","BindingBundleEndEventData","BindingBundleErrorEventData","BindingBundler","BindingBundleStartEventData","BindingCallableBuiltinPlugin","BindingChunkingContext","BindingDecodedMap","BindingDevEngine","BindingLoadPluginContext","BindingMagicString","BindingModuleInfo","BindingNormalizedOptions","BindingOutputAsset","BindingOutputChunk","BindingPluginContext","BindingRenderedChunk","BindingRenderedChunkMeta","BindingRenderedModule","BindingSourceMap","BindingTransformPluginContext","BindingWatcher","BindingWatcherBundler","BindingWatcherChangeData","BindingWatcherEvent","ParallelJsPluginRegistry","TraceSubscriberGuard","TsconfigCache","acquireAsyncRuntime","BindingAttachDebugInfo","BindingBuiltinPluginName","BindingChunkModuleOrderBy","BindingErrorStage","BindingLogLevel","BindingPluginOrder","BindingPropertyReadSideEffects","BindingPropertyWriteSideEffects","BindingRebuildStrategy","BindingRuntimeFlavor","collapseSourcemaps","configureAsyncRuntime","enhancedTransform","enhancedTransformSync","FilterTokenKind","getAsyncRuntimeConfig","getAsyncRuntimeMetrics","getCurrentThreadTaskHostContractVersion","getRuntimeCapabilities","initTraceSubscriber","isCurrentThreadHostRegistrationActive","registerCurrentThreadTaskHost","registerPlugins","registerTimerHost","reserveCurrentThreadHostRegistration","resetAsyncRuntimeMetrics","resolveTsconfig","shutdownAsyncRuntime","startAsyncRuntime","unregisterCurrentThreadTaskHost","unregisterTimerHost"],"managedRootEntries":["browser.js","binding.cjs","rolldown-binding.wasm","rolldown-binding.debug.wasm"]}
 /* eslint-disable */
 /* prettier-ignore */
 
@@ -15,7 +15,7 @@ const {
 } = require('@napi-rs/wasm-runtime')
 const { createContext: __emnapiCreateContext } = require('@emnapi/runtime')
 
-function __getWorkerExecArgv() {
+function __getWasiWorkerExecArgv() {
   const __workerExecArgv = []
   for (let __index = 0; __index < process.execArgv.length; __index += 1) {
     const __arg = process.execArgv[__index]
@@ -41,21 +41,67 @@ function __getWorkerExecArgv() {
   return __workerExecArgv
 }
 
+function __isInvalidWasiWorkerExecArgv(errorMessage, argument) {
+  const __equalsIndex = argument.indexOf('=')
+  const __argumentName =
+    __equalsIndex === -1 ? argument : argument.slice(0, __equalsIndex)
+  return (
+    errorMessage.includes(': ' + __argumentName + ',') ||
+    errorMessage.includes(': ' + __argumentName + '=') ||
+    errorMessage.endsWith(': ' + __argumentName) ||
+    errorMessage.includes(', ' + __argumentName + ',') ||
+    errorMessage.includes(', ' + __argumentName + '=') ||
+    errorMessage.endsWith(', ' + __argumentName)
+  )
+}
+
+function __removeInvalidWasiWorkerExecArgv(execArgv, error) {
+  if (typeof error.message !== 'string') {
+    return
+  }
+  const __workerExecArgv = []
+  let __removed = false
+  for (let __index = 0; __index < execArgv.length; __index += 1) {
+    const __arg = execArgv[__index]
+    if (
+      __arg.startsWith('-') &&
+      __isInvalidWasiWorkerExecArgv(error.message, __arg)
+    ) {
+      __removed = true
+      if (
+        !__arg.includes('=') &&
+        __index + 1 < execArgv.length &&
+        !execArgv[__index + 1].startsWith('-')
+      ) {
+        __index += 1
+      }
+      continue
+    }
+    __workerExecArgv.push(__arg)
+  }
+  return __removed ? __workerExecArgv : undefined
+}
+
 function __createWasiWorker(filename) {
-  try {
-    return new Worker(filename, {
-      env: __rolldownWasiEnv,
-      execArgv: __getWorkerExecArgv(),
-    })
-  } catch (error) {
-    if (!error || error.code !== 'ERR_WORKER_INVALID_EXEC_ARGV') {
-      throw error
+  let __workerExecArgv = __getWasiWorkerExecArgv()
+  while (true) {
+    try {
+      return new Worker(filename, {
+        env: __rolldownWasiEnv,
+        execArgv: __workerExecArgv,
+      })
+    } catch (error) {
+      if (!error || error.code !== 'ERR_WORKER_INVALID_EXEC_ARGV') {
+        throw error
+      }
+      const __nextWorkerExecArgv =
+        __removeInvalidWasiWorkerExecArgv(__workerExecArgv, error)
+      if (!__nextWorkerExecArgv) {
+        throw error
+      }
+      __workerExecArgv = __nextWorkerExecArgv
     }
   }
-  return new Worker(filename, {
-    env: __rolldownWasiEnv,
-    execArgv: [],
-  })
 }
 
 const __wasiInitializationWorkers = new Set()
@@ -139,6 +185,7 @@ function __captureEmnapiAutoDestroyListener() {
 
 const __finishAutoDestroyCapture = __captureEmnapiAutoDestroyListener()
 let __emnapiContext
+let __napiInstance
 let __emnapiContextDestroyed = false
 let __emnapiContextDestroying = false
 let __emnapiContextDestroyPromise
@@ -146,6 +193,7 @@ let __emnapiContextRegisteredForBeforeExit = false
 let __emnapiContextRegisteredForExit = false
 let __emnapiContextBeforeExitRegistrationRetryCount = 0
 let __emnapiContextBeforeExitRegistrationRetryScheduled = false
+let __wasiInitializationError
 let __contextInitializationError
 let __contextInitializationFailed = false
 try {
@@ -162,6 +210,8 @@ try {
   __finishAutoDestroyCapture?.()
 }
 
+let __emnapiWasmEnvCleanupPrepared = false
+
 function __destroyEmnapiContext() {
   if (__emnapiContextDestroyed) {
     return
@@ -175,6 +225,14 @@ function __destroyEmnapiContext() {
   __emnapiContextDestroying = true
   let __result
   try {
+    if (!__emnapiWasmEnvCleanupPrepared) {
+      const __prepareWasmEnvCleanup =
+        __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
+      if (typeof __prepareWasmEnvCleanup === 'function') {
+        __prepareWasmEnvCleanup()
+      }
+      __emnapiWasmEnvCleanupPrepared = true
+    }
     __result = __emnapiContext.destroy()
   } catch (error) {
     __emnapiContextDestroying = false
@@ -204,6 +262,7 @@ function __destroyEmnapiContext() {
         __emnapiContextDestroying = false
         __emnapiContextDestroyed = true
         __emnapiContextDestroyPromise = undefined
+        __terminateWasiInitializationWorkers(__wasiInitializationError)
         return value
       },
       (error) => {
@@ -222,6 +281,7 @@ function __destroyEmnapiContext() {
   }
   __emnapiContextDestroying = false
   __emnapiContextDestroyed = true
+  __terminateWasiInitializationWorkers(__wasiInitializationError)
 }
 
 function __removeEmnapiContextBeforeExitListener() {
@@ -483,7 +543,6 @@ if (__contextInitializationFailed) {
 }
 
 let __sharedMemory
-let __napiInstance
 let __wasiModule
 let __napiModule
 
@@ -565,6 +624,7 @@ try {
       return importObject
     },
     beforeInit({ instance }) {
+      __napiInstance = instance
       for (const name of Object.keys(instance.exports)) {
         if (name.startsWith('__napi_register__')) {
           instance.exports[name]()
@@ -581,6 +641,7 @@ try {
   __handoffEmnapiContextCleanupToExit()
   __wasiInitializationWorkers.clear()
 } catch (__error) {
+  __wasiInitializationError = __error
   let __cleanupResult
   let __cleanupFailed = false
   try {
@@ -599,7 +660,6 @@ try {
   if (__cleanupResult) {
     void __cleanupResult.then(
       () => {
-        __terminateWasiInitializationWorkers(__error)
         try {
           __removeEmnapiContextCleanupListeners()
         } catch (__cleanupError) {
@@ -608,7 +668,6 @@ try {
       },
       (__cleanupError) => {
         __preserveCleanupError(__error, __cleanupError)
-        __terminateWasiInitializationWorkers(__error)
         try {
           __retainEmnapiContextCleanupListener()
         } catch (__listenerError) {
@@ -616,14 +675,11 @@ try {
         }
       },
     )
-  } else {
-    __terminateWasiInitializationWorkers(__error)
-    if (!__cleanupFailed) {
-      try {
-        __removeEmnapiContextCleanupListeners()
-      } catch (__cleanupError) {
-        __preserveCleanupError(__error, __cleanupError)
-      }
+  } else if (!__cleanupFailed) {
+    try {
+      __removeEmnapiContextCleanupListeners()
+    } catch (__cleanupError) {
+      __preserveCleanupError(__error, __cleanupError)
     }
   }
   throw __error

@@ -2728,12 +2728,16 @@ test('package bootstrap creates only missing WASI package directories', async ()
 
 test('package bootstrap uses the real NapiCli generator without leaving transaction residue', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'stage-wasi-real-bootstrap-'));
-  const packageRoot = path.join(root, 'npm');
-  const rolldownRoot = fileURLToPath(new URL('../../packages/rolldown/', import.meta.url));
+  const rolldownRoot = path.join(root, 'rolldown');
+  const packageRoot = path.join(rolldownRoot, 'npm');
+  const sourceManifest = fileURLToPath(
+    new URL('../../packages/rolldown/package.json', import.meta.url),
+  );
   const originalFetch = globalThis.fetch;
   const originalRegistry = process.env.npm_config_registry;
   const fetchRequests = [];
-  await mkdir(packageRoot);
+  await mkdir(packageRoot, { recursive: true });
+  await writeFile(path.join(rolldownRoot, 'package.json'), await readFile(sourceManifest));
 
   process.env.npm_config_registry = 'https://registry.example.invalid/';
   globalThis.fetch = async (input) => {
@@ -2763,6 +2767,7 @@ test('package bootstrap uses the real NapiCli generator without leaving transact
     assert.equal(threadlessManifest.dependencies['@napi-rs/wasm-runtime'], '^9.9.9');
     assert.deepEqual(fetchRequests, ['https://registry.example.invalid/@napi-rs/wasm-runtime']);
     assert.deepEqual((await readdir(packageRoot)).sort(), ['wasm32-wasi', 'wasm32-wasip1']);
+    assert.deepEqual((await readdir(rolldownRoot)).sort(), ['npm', 'package.json']);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalRegistry === undefined) {

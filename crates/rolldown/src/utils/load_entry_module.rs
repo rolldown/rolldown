@@ -44,6 +44,14 @@ pub async fn load_entry_module<Fs: FileSystem>(
         package_json_path: _,
         conditions: _,
       } => Err(BuildDiagnostic::unresolved_entry(id, Some(e))),
+      ResolveError::TsconfigNotFound(ref path) | ResolveError::TsconfigSelfReference(ref path) => {
+        let file_path = path.display().to_string();
+        Err(BuildDiagnostic::tsconfig_error(file_path, e))
+      }
+      ResolveError::TsconfigCircularExtend(ref paths) => {
+        let file_path = paths.paths().first().map(|p| p.display().to_string()).unwrap_or_default();
+        Err(BuildDiagnostic::tsconfig_error(file_path, e))
+      }
       _ => Err(e).map_err_to_unhandleable()?,
     },
   }

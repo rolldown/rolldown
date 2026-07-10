@@ -248,6 +248,7 @@ export interface FunctionPluginHooks {
    *
    * {@include ./docs/plugin-hooks-onlog.md}
    *
+   * @kind sync sequential
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.onLog]: (
@@ -265,6 +266,7 @@ export interface FunctionPluginHooks {
    * the {@linkcode buildStart} hook as that hook has access to the options
    * after the transformations from all `options` hooks have been taken into account.
    *
+   * @kind async sequential
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.options]: (
@@ -284,6 +286,7 @@ export interface FunctionPluginHooks {
    * the {@linkcode renderStart} hook as this hook has access to the output options
    * after the transformations from all `outputOptions` hooks have been taken into account.
    *
+   * @kind sync sequential
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.outputOptions]: (
@@ -296,6 +299,7 @@ export interface FunctionPluginHooks {
    *
    * This is the recommended hook to use when you need access to the options passed to {@linkcode rolldown | rolldown()} as it takes the transformations by all options hooks into account and also contains the right default values for unset options.
    *
+   * @kind async parallel
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.buildStart]: (this: PluginContext, options: NormalizedInputOptions) => void;
@@ -315,6 +319,7 @@ export interface FunctionPluginHooks {
    * Rolldown will continue with the {@linkcode load} and {@linkcode transform} hooks for that
    * module that may override these values and should take precedence if they do so.
    *
+   * @kind async first
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.resolveId]: (
@@ -347,6 +352,7 @@ export interface FunctionPluginHooks {
    * @deprecated
    * This hook exists only for Rollup compatibility. Please use {@linkcode resolveId} instead.
    *
+   * @kind async first
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.resolveDynamicImport]: (
@@ -374,6 +380,7 @@ export interface FunctionPluginHooks {
    *
    * You can use {@linkcode PluginContext.getModuleInfo | this.getModuleInfo()} to find out the previous values of `meta`, `moduleSideEffects` inside this hook.
    *
+   * @kind async first
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.load]: (this: PluginContext, id: string) => MaybePromise<LoadResult>;
@@ -387,6 +394,7 @@ export interface FunctionPluginHooks {
    *
    * {@include ./docs/plugin-hooks-transform.md}
    *
+   * @kind async sequential
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.transform]: (
@@ -410,6 +418,7 @@ export interface FunctionPluginHooks {
    * may be incomplete as additional importers could be discovered later.
    * If you need this information, use the {@linkcode buildEnd} hook.
    *
+   * @kind async parallel
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.moduleParsed]: (this: PluginContext, moduleInfo: ModuleInfo) => void;
@@ -418,6 +427,7 @@ export interface FunctionPluginHooks {
    * Called when Rolldown has finished bundling, but before Output Generation Hooks.
    * If an error occurred during the build, it is passed on to this hook.
    *
+   * @kind async parallel
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.buildEnd]: (
@@ -441,6 +451,7 @@ export interface FunctionPluginHooks {
    * plugins that can be used as output plugins, i.e. plugins that only use generate phase hooks,
    * can get access to them.
    *
+   * @kind async parallel
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.renderStart]: (
@@ -459,6 +470,7 @@ export interface FunctionPluginHooks {
    * That means if you add or remove imports or exports in this hook, you should update
    * {@linkcode RenderedChunk.imports | imports}, {@linkcode RenderedChunk.importedBindings | importedBindings} and/or {@linkcode RenderedChunk.exports | exports} accordingly.
    *
+   * @kind async sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.renderChunk]: (
@@ -484,6 +496,7 @@ export interface FunctionPluginHooks {
    *
    * {@include ./docs/plugin-hooks-augmentchunkhash.md}
    *
+   * @kind sync sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.augmentChunkHash]: (
@@ -499,6 +512,7 @@ export interface FunctionPluginHooks {
    * To get notified when generation completes successfully, use the
    * {@linkcode generateBundle} hook.
    *
+   * @kind async parallel
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.renderError]: (
@@ -516,6 +530,7 @@ export interface FunctionPluginHooks {
    *
    * {@include ./docs/plugin-hooks-generatebundle.md}
    *
+   * @kind async sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.generateBundle]: (
@@ -530,6 +545,7 @@ export interface FunctionPluginHooks {
    * Called only at the end of {@linkcode RolldownBuild.write | bundle.write()} once
    * all files have been written.
    *
+   * @kind async parallel
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.writeBundle]: (
@@ -552,6 +568,7 @@ export interface FunctionPluginHooks {
    * {@linkcode PluginContextMeta.watchMode | this.meta.watchMode} in this hook and perform
    * the necessary cleanup for watch mode in closeWatcher.
    *
+   * @kind async parallel
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.closeBundle]: (
@@ -570,6 +587,7 @@ export interface FunctionPluginHooks {
    *
    * If you need to be notified immediately when a file changed, you can use the {@linkcode WatcherOptions.onInvalidate | watch.onInvalidate} option.
    *
+   * @kind async parallel
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.watchChange]: (
@@ -583,6 +601,7 @@ export interface FunctionPluginHooks {
    *
    * This hook cannot be used by output plugins.
    *
+   * @kind async parallel
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.closeWatcher]: (this: PluginContext) => void;
@@ -638,24 +657,28 @@ interface AddonHooks {
   /**
    * A hook equivalent to {@linkcode OutputOptions.banner | output.banner} option.
    *
+   * @kind async sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.banner]: AddonHook;
   /**
    * A hook equivalent to {@linkcode OutputOptions.footer | output.footer} option.
    *
+   * @kind async sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.footer]: AddonHook;
   /**
    * A hook equivalent to {@linkcode OutputOptions.intro | output.intro} option.
    *
+   * @kind async sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.intro]: AddonHook;
   /**
    * A hook equivalent to {@linkcode OutputOptions.outro | output.outro} option.
    *
+   * @kind async sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.outro]: AddonHook;

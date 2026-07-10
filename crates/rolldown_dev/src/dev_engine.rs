@@ -205,7 +205,7 @@ impl DevEngine {
     let coordinator_state = self.coordinator_state.lock().await;
     if let Some(coordinator_handle) = coordinator_state.handle.clone() {
       if let Err(error) = coordinator_handle.await {
-        return Err(anyhow::anyhow!("{error}"))?;
+        return Err(anyhow::anyhow!("{error}").into());
       }
     }
     Ok(())

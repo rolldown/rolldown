@@ -335,7 +335,12 @@ does not add a second source allocation.
   weak installation registry keyed by the concrete task-host registration
   function. Re-evaluating a generated or cache-busted `timer-host` chunk backed
   by the same binding therefore reuses its task and timer hosts, while another
-  native image or WASI instance still receives independent registrations.
+  native image or WASI instance still receives independent registrations. If
+  the realm-global registry slot is poisoned or cannot be defined, each module
+  instance falls back to a local weak registry. This may install redundant
+  hosts across duplicated chunks, which the native per-environment registry
+  supports, instead of making CurrentThread progress depend on a mutable global
+  property.
 
   The native threadsafe function has maximum queue size one and is unreferenced,
   so it neither exceeds the registry's physical single-flight slot nor keeps a

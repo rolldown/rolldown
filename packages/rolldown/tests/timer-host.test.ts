@@ -159,6 +159,31 @@ test('cache-busted evaluations reuse the same per-binding host registrations', a
   expect(binding.registerTimerHost).toHaveBeenCalledOnce();
 });
 
+test('host installation continues when the realm-global deduplication slot is unavailable', async () => {
+  const realGlobal = globalThis;
+  const spoofedRegistry = new Proxy(new WeakMap(), {});
+  const blockedGlobal = new Proxy(realGlobal, {
+    defineProperty(target, key, descriptor) {
+      if (key === hostInstallationsKey) return false;
+      return Reflect.defineProperty(target, key, descriptor);
+    },
+    get(target, key) {
+      if (key === hostInstallationsKey) return spoofedRegistry;
+      return Reflect.get(target, key, target);
+    },
+  });
+  vi.stubGlobal('globalThis', blockedGlobal);
+
+  // @ts-ignore The query forces an independent production module evaluation.
+  await expect(import('../src/timer-host?blocked-host-cache=one')).resolves.toBeDefined();
+  // @ts-ignore A second module has its own safe fallback cache.
+  await expect(import('../src/timer-host?blocked-host-cache=two')).resolves.toBeDefined();
+  const binding = await import('../src/binding.cjs');
+
+  expect(binding.registerCurrentThreadTaskHost).toHaveBeenCalledTimes(2);
+  expect(binding.registerTimerHost).toHaveBeenCalledTimes(2);
+});
+
 test('cache-busted evaluations replace native-evicted host registrations exactly once', async () => {
   // @ts-ignore The query forces a production module evaluation.
   await import('../src/timer-host?host-eviction=one');

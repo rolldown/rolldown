@@ -33,19 +33,39 @@ const construct = Reflect.construct;
 const CURRENT_THREAD_HOST_INSTALLATIONS = Symbol.for(
   'rolldown.current-thread-host-installations.v4',
 );
+const LOCAL_CURRENT_THREAD_HOST_INSTALLATIONS = new WeakMap<
+  object,
+  CurrentThreadHostInstallation
+>();
 
 // See internal-docs/async-runtime/implementation.md.
 function getCurrentThreadHostInstallations(): WeakMap<object, CurrentThreadHostInstallation> {
-  const existing = Reflect.get(globalThis, CURRENT_THREAD_HOST_INSTALLATIONS, globalThis);
-  if (existing instanceof WeakMap) {
-    return existing as WeakMap<object, CurrentThreadHostInstallation>;
+  try {
+    const existing = Reflect.get(globalThis, CURRENT_THREAD_HOST_INSTALLATIONS, globalThis);
+    WeakMap.prototype.get.call(existing, getCurrentThreadHostInstallations);
+    if (existing !== null && (typeof existing === 'object' || typeof existing === 'function')) {
+      return existing as WeakMap<object, CurrentThreadHostInstallation>;
+    }
+  } catch {
+    // A hostile global accessor must not prevent this environment from
+    // installing the native hosts it needs for CurrentThread progress.
   }
+
   const installations = new WeakMap<object, CurrentThreadHostInstallation>();
-  Object.defineProperty(globalThis, CURRENT_THREAD_HOST_INSTALLATIONS, {
-    configurable: true,
-    value: installations,
-  });
-  return installations;
+  try {
+    if (
+      Reflect.defineProperty(globalThis, CURRENT_THREAD_HOST_INSTALLATIONS, {
+        configurable: true,
+        value: installations,
+      })
+    ) {
+      return installations;
+    }
+  } catch {
+    // Duplicate native host registrations are safe. Fall back to this module
+    // instance's cache when the realm-global deduplication slot is unavailable.
+  }
+  return LOCAL_CURRENT_THREAD_HOST_INSTALLATIONS;
 }
 
 function readHostRegistration(
@@ -296,10 +316,10 @@ if (currentThreadHostsSupported) {
       }
       const hostInstallations = getCurrentThreadHostInstallations();
       const hostIdentity = registerCurrentThreadTaskHost as object;
-      hostInstallation = hostInstallations.get(hostIdentity);
+      hostInstallation = WeakMap.prototype.get.call(hostInstallations, hostIdentity);
       if (!hostInstallation) {
         hostInstallation = {};
-        hostInstallations.set(hostIdentity, hostInstallation);
+        WeakMap.prototype.set.call(hostInstallations, hostIdentity, hostInstallation);
       }
       const storedTaskHostRegistration = hostInstallation.taskHostRegistration;
       if (

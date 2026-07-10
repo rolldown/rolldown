@@ -34,14 +34,14 @@ every build also refreshes the build-side report under `state/rolldown-metrics/`
 
 | Command | One loop step |
 |---|---|
-| `node harness.mjs scan --app <appDir>` | **The whole iteration in one browser session**: N timed runs + coverage + boot profile + the fused verdict. First scan of a target auto-pins the baseline; `--pin` re-pins after a kept change. The target is remembered — afterwards run everything bare, from any cwd. Per-target state dirs keep baselines/history from mixing across apps. |
+| `node harness.mjs scan --app <appDir>` | **The whole iteration in one browser session**: N timed runs + coverage + boot profile + the fused verdict. First scan of a target auto-pins the baseline; `--pin` re-pins after a kept change; `--quick` = 1 run + no profile, a fast mid-iteration probe on slow apps (indicative only — never pinned, and the verdict flags single-run measurements). The target is remembered — afterwards run everything bare, from any cwd. Per-target state dirs keep baselines/history from mixing across apps. |
 | `node harness.mjs target [<appDir>] [--demo]` | Show / set / clear the remembered target. |
 | `node harness.mjs gen [--force]` | Generate the demo app (deterministic; `--force` resets defers). |
 | `node harness.mjs build` | Build `app/` → `app/dist/` + build metrics report. |
 | `node harness.mjs measure [--runs 5] [--label X] [--no-throttle]` | N throttled runs (1 warmup discarded) → `state/runtime-metrics.json` with medians, guard, `delta`/`baselineDelta` — plus a **render gap** flag (paint gated on post-load work; the gate is named: gating fetches, or per-type pre-paint resource weight — fonts/images) and a **pre-paint CPU** flag (long tasks before first paint). |
-| `node harness.mjs coverage` | One instrumented run → per-module bytes executed **before first paint** vs **by settle** → `state/coverage.json` + three lead sections: defer candidates, large-modules-executed-at-paint (data evaluates on import — executed ≠ needed), and sibling variant groups (locales/themes). Covers the **whole initial load**: the entry chunk plus every same-origin chunk that executed before first paint (modules tagged with their chunk; chunks without sourcemaps are called out, post-paint chunks listed as already-deferred). Entry auto-detected from `dist/index.html`; override with `--entry`. |
+| `node harness.mjs coverage` | One instrumented run → per-module bytes executed **before first paint** vs **by settle** → `state/coverage.json` + four lead sections: defer candidates, **cold bytes at paint** (the unified ranking `totalBytes − paintBytes`, coldest first — catches the mid-band a partially-initializing vendor SDK sits in, which neither the <2% nor the ≥50% bucket sees; framework runtimes annotated), large-modules-executed-at-paint (data evaluates on import — executed ≠ needed), and sibling variant groups (locales/themes). Covers the **whole initial load**: the entry chunk plus every same-origin chunk that executed before first paint (modules tagged with their chunk; chunks without sourcemaps are called out, post-paint chunks listed as already-deferred). Entry auto-detected from `dist/index.html`; override with `--entry`. |
 | `node harness.mjs profile` | One profiled run → boot CPU by source module, navigation → first paint (`state/profile.json`). The follow-up to a pre-paint CPU flag. |
-| `node harness.mjs verdict` | Fuses all signals into an OPEN/clear/UNKNOWN lead checklist with staleness tracking. Refuses to say "done" while leads are open or signals are missing/stale; the all-clear states the tools' blind-spot boundary. |
+| `node harness.mjs verdict` | Fuses all signals into an OPEN/clear/UNKNOWN lead checklist with staleness tracking. Refuses to say "done" while leads are open or signals are missing/stale; the all-clear states the tools' blind-spot boundary. While leads are OPEN it also instructs the operator/agent to copy the checklist into their summary and justify any early stop lead-by-lead — a re-pinned baseline records a gain, it does not close the checklist. |
 | `node harness.mjs baseline` | Pin the last measurement (and the build-side `.state.json`) as the fixed reference for every following `baselineDelta`. |
 | `node harness.mjs defer <feature>` / `undefer <feature>` | Rewrite that feature's marker block in `app/src/main.ts` between static import and post-paint `import()`. Rebuild afterwards. |
 | `node harness.mjs status` | Feature modes, entry size, last/baseline LCP. |
@@ -83,7 +83,8 @@ Log the decision trail with `--label`; every measure also appends to
   per-run `samples`, `delta`, `baselineDelta` — same delta/baseline conventions as
   the build-side `metrics.json`.
 - `state/coverage.json` — per-module `totalBytes` / `paintBytes` / `settleBytes`
-  (+ ratios) and the sorted `candidates` list.
+  (+ ratios), the sorted `candidates` list, and `coldAtPaint` (top modules by
+  `totalBytes − paintBytes`, framework runtimes flagged).
 - `state/rolldown-metrics/` — the build-side report (`output.max_initial_load_bytes`
   should drop with every accepted defer while `output.total_bytes` stays flat).
 

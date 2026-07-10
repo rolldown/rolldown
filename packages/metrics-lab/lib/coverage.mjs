@@ -269,6 +269,11 @@ export function attributeChunks({ scripts, entryName, readChunk }) {
 export const LARGE_AT_PAINT_MIN_BYTES = 8 * 1024;
 export const SIBLING_MIN_FILES = 3;
 export const SIBLING_MIN_BYTES = 6 * 1024;
+export const COLD_MIN_BYTES = 12 * 1024;      // per-module floor to appear in the cold list
+export const COLD_OPEN_MIN_BYTES = 25 * 1024; // a non-framework module this cold keeps the lead OPEN
+// Framework runtimes carry real cold bytes (unreached branches) but their import
+// edge can't move — annotate instead of flagging, so agents don't chase them.
+const FRAMEWORK_RE = /node_modules\/(react-dom|react|scheduler|vue|@vue\/[^/]+|svelte)\//;
 
 /**
  * Big modules that executed at paint. "Executed" does NOT prove the first paint
@@ -278,6 +283,27 @@ export const SIBLING_MIN_BYTES = 6 * 1024;
 export function largeAtPaintModules(modules) {
   return modules.filter((mod) =>
     mod.totalBytes >= LARGE_AT_PAINT_MIN_BYTES && mod.paintRatio >= 0.5 && mod.source !== '(unmapped)');
+}
+
+/**
+ * Cold bytes at paint: totalBytes − paintBytes — weight downloaded and parsed
+ * before first paint but not executed by it. This is the unified byte view: the
+ * <2% defer candidates are its extreme, but a vendor SDK that PARTIALLY
+ * initializes at boot (e.g. firestore executing 31%) matches neither the
+ * candidate bucket nor the ≥50% large-at-paint bucket while carrying the most
+ * recoverable weight on the page. (excalidraw A/B 2026-07-10: firestore's
+ * 158KB cold sat exactly in that blind mid-band and decided the eval.)
+ */
+export function coldAtPaintModules(modules, { minBytes = COLD_MIN_BYTES } = {}) {
+  return modules
+    .filter((mod) => mod.source !== '(unmapped)')
+    .map((mod) => ({
+      ...mod,
+      coldBytes: Math.max(0, mod.totalBytes - mod.paintBytes),
+      framework: FRAMEWORK_RE.test(mod.source),
+    }))
+    .filter((mod) => mod.coldBytes >= minBytes)
+    .sort((a, b) => b.coldBytes - a.coldBytes);
 }
 
 /**

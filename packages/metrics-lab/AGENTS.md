@@ -36,6 +36,13 @@ Individual commands exist too (`measure [--pin]`, `coverage`, `profile`,
      evaluation running ahead of paint. Defer what the first render does not need —
      but only judge deferrals AFTER any render gap is fixed (CPU that overlaps a
      blocked render is free, so deferring it can measure worse until then).
+   - **cold bytes at paint** — the unified byte view: weight fetched+parsed before
+     first paint but mostly unread by it, coldest first. Its middle band is the one
+     that hides everywhere else: a vendor SDK executing 10–50% at boot (firestore,
+     an analytics kit) is neither a "candidate" nor "large executed", yet one
+     boot-time init call is dragging the whole package. Defer the CALL, not just
+     the import. Framework runtimes (react-dom) are annotated — their cold bytes
+     rarely move; don't chase them.
    - **defer candidates** — parsed but ~unexecuted at paint: classic lazy-load targets.
    - **pre-paint sibling chunks** — a non-entry chunk fetched AND executed before
      first paint is critical-path transfer, even if every import of it is dynamic.
@@ -49,7 +56,9 @@ Individual commands exist too (`measure [--pin]`, `coverage`, `profile`,
 3. Read the app source and find why the landing page pays for each lead.
 4. Change the app, without removing any feature. One small change at a time — render
    gap first, then data/variant splits, then CPU deferrals.
-5. Rebuild. Run the app's own functional check (it must pass). `scan`.
+5. Rebuild. Run the app's own functional check (it must pass). `scan` — or
+   `scan --quick` (1 run, no profile) as a cheap probe on slow apps; quick results
+   are indicative only, so confirm any accept/revert/pin with a full scan.
 6. "improvement beyond noise" AND the check passes → keep it, `scan --pin` (or
    `baseline`), commit. Anything else → revert the change exactly and rebuild.
    (A deferral that measures worse while a render gap exists is worth retrying
@@ -59,7 +68,13 @@ Individual commands exist too (`measure [--pin]`, `coverage`, `profile`,
    that tool sees nothing; the verdict checks them all and tells you which signals
    you haven't gathered yet.
 8. Report: baseline LCP, final LCP, % change, entry size before/after, and one
-   sentence per kept change.
+   sentence per kept change — **plus the final verdict checklist, copied verbatim.**
+   A re-pinned baseline records a gain; it does NOT close the checklist. If you stop
+   while leads are OPEN, say "stopping with N lead(s) OPEN" and justify each one:
+   a measurement (you tried it, the delta was sub-noise) or a concrete constraint
+   (framework dep, the first paint genuinely needs it, outside your declared scope).
+   Never describe OPEN leads as "confirmed done" — misquoting the verdict is the
+   one way to fail this task even with a good number.
 
 ## Rules
 

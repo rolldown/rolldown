@@ -27,7 +27,8 @@ import {
   DEFAULT_THROTTLE, deltaSection, heavyPrepaintTypes, summarize, timedRun, weightLabel,
 } from './lib/measure.mjs';
 import {
-  attributeChunks, coverageRun, largeAtPaintModules, siblingVariantGroups,
+  COLD_OPEN_MIN_BYTES, attributeChunks, coldAtPaintModules, coverageRun,
+  largeAtPaintModules, siblingVariantGroups,
 } from './lib/coverage.mjs';
 import { aggregateProfile, profileRun } from './lib/profile.mjs';
 
@@ -332,6 +333,7 @@ function buildCoverageReport(target, cov, entry) {
     thresholds: { candidateMinBytes: CANDIDATE_MIN_BYTES, candidateMaxPaintRatio: CANDIDATE_MAX_PAINT_RATIO },
     modules,
     candidates,
+    coldAtPaint: coldAtPaintModules(modules).slice(0, 20),
   };
   writeJson(target.paths.coverage, report);
   return report;
@@ -380,6 +382,23 @@ function printCoverageReport(target, report) {
         + '(follow their import chains from the entry), rebuild, run its functional check, then measure.');
   } else {
     console.log('\nno defer candidates at current thresholds - nothing sizeable is parsed-but-unexecuted.');
+  }
+
+  // The unified byte view: candidates catch the never-ran extreme, but a module
+  // that PARTIALLY executes at boot (vendor SDK init) matches no other bucket
+  // while holding the most recoverable weight. Rank by cold bytes so it can't hide.
+  const cold = report.coldAtPaint ?? coldAtPaintModules(modules);
+  if (cold.length) {
+    const shownCold = cold.slice(0, 12);
+    console.log('\ncold bytes at paint - fetched+parsed before first paint but mostly unread by it, coldest first:');
+    for (const mod of shownCold) {
+      console.log(`  ${kb(mod.coldBytes).padStart(9)} cold  (${kb(mod.totalBytes)} @ ${(mod.paintRatio * 100).toFixed(0)}% at paint)  ${mod.source}`
+        + `${chunkTag(mod) ? `  [${mod.chunk}]` : ''}${mod.framework ? '  (framework runtime - import edge rarely movable)' : ''}`);
+    }
+    if (cold.length > shownCold.length) console.log(`  ... +${cold.length - shownCold.length} more in coverage.json`);
+    console.log('next: for each non-framework module, find the import edge that pulls it in before paint and move');
+    console.log('that edge behind interaction/idle (dynamic import). A middling percentage on a vendor SDK usually');
+    console.log('means one boot-time init call drags the whole package - defer the call, not just the import.');
   }
 
   // Executed-at-paint is NOT the same as needed-at-paint: top-level data counts
@@ -508,7 +527,7 @@ function printVerdict(target) {
   }
 
   if (!fresh(coverage)) {
-    lead('unknown', 'coverage (candidates / large-at-paint / sibling groups)',
+    lead('unknown', 'coverage (cold-at-paint / candidates / large-at-paint / sibling groups)',
       coverage ? 'coverage report is stale (dist was rebuilt after it)' : 'no coverage run yet',
       `${CLI} coverage  (or scan)`);
   } else {
@@ -520,6 +539,17 @@ function printVerdict(target) {
         'lazy-load them, rebuild, re-measure');
     } else {
       lead('clear', 'defer candidates', 'nothing sizeable is parsed-but-unexecuted');
+    }
+
+    const cold = (coverage.coldAtPaint ?? coldAtPaintModules(coverage.modules ?? []))
+      .filter((m) => !m.framework);
+    const coldOpen = cold.filter((m) => m.coldBytes >= COLD_OPEN_MIN_BYTES);
+    if (coldOpen.length) {
+      lead('open', `cold bytes at paint (${coldOpen.length} module(s) >=${kb(COLD_OPEN_MIN_BYTES)} cold)`,
+        coldOpen.slice(0, 4).map((m) => `${m.source} ${kb(m.coldBytes)} cold of ${kb(m.totalBytes)} @ ${(m.paintRatio * 100).toFixed(0)}%${inChunk(m)}`).join(', '),
+        'move their import edges behind interaction/idle; a partially-executed vendor SDK usually hides one boot-time init call - defer the call, not just the import');
+    } else {
+      lead('clear', 'cold bytes at paint', `no non-framework module holds >=${kb(COLD_OPEN_MIN_BYTES)} unread at paint`);
     }
     const unattributed = (coverage.skippedChunks ?? []).filter((s) => s.reason === 'no-sourcemap');
     if (unattributed.length) {
@@ -550,6 +580,10 @@ function printVerdict(target) {
   console.log(`verdict for ${target.dist} (entry ${entry})\n`);
   for (const line of lines) console.log(line);
   console.log('');
+  if (fresh(runtime) && runtime.runs === 1) {
+    console.log('NOTE: the latest measurement used a SINGLE run (quick mode) - its delta is indicative only.');
+    console.log('Confirm any accept/revert decision with a full scan (>=3 runs) before acting on it.\n');
+  }
   if (openCount + unknownCount === 0) {
     console.log('VERDICT: every signal class is clear and fresh. Nothing further is indicated by these tools.');
     console.log('Boundary: coverage attributes the entry + same-origin pre-paint chunks with sourcemaps;');
@@ -560,6 +594,13 @@ function printVerdict(target) {
   } else {
     console.log(`VERDICT: not done - ${openCount} lead(s) OPEN, ${unknownCount} signal(s) UNKNOWN or stale.`);
     console.log('Work the OPEN items (render gap first), gather the UNKNOWN signals, rebuild, re-measure.');
+    console.log('');
+    console.log('Do NOT report this work as finished or "confirmed by the harness" while leads are OPEN -');
+    console.log('a re-pinned baseline records your gain; it does not close the checklist above.');
+    console.log('Copy the checklist verbatim into your final summary. If you stop now, your summary must');
+    console.log(`say "stopping with ${openCount} lead(s) OPEN" and justify each one with a measurement`);
+    console.log('(you tried it and the delta was sub-noise) or a concrete constraint (framework dep,');
+    console.log('the first paint genuinely needs it, outside the declared scope).');
   }
 }
 
@@ -687,7 +728,17 @@ async function cmdScan(argv) {
     features: { type: 'string' },
     entry: { type: 'string' },
     pin: { type: 'boolean', default: false },
+    // One measure run, no profile: a cheap mid-iteration "did my change move
+    // LCP" probe on slow apps (a full 5-run throttled scan costs minutes when
+    // LCP is >10s). Never a basis for accept/revert/pin - verdict says so too.
+    quick: { type: 'boolean', default: false },
   });
+  if (opts.quick && opts.pin) {
+    throw new Error('scan --quick cannot --pin: a 1-run baseline poisons every later delta. Run a full scan to pin.');
+  }
+  if (opts.quick) {
+    opts.runs = '1';
+  }
   const target = resolveTarget(opts);
   const expectedFeatures = expectedFeaturesFor(target, opts);
   const entry = opts.entry ?? detectEntry(target.dist) ?? 'main.js';
@@ -711,6 +762,7 @@ async function cmdScan(argv) {
       entryName: `/${entry.replaceAll('\\', '/')}`,
       settleMs: 2000,
     });
+    if (opts.quick) return { samples, cov, profile: null };
     process.stderr.write('profile run...\n');
     const profile = await profileRun(cdp, { origin, throttle });
     return { samples, cov, profile };
@@ -722,23 +774,29 @@ async function cmdScan(argv) {
     throttle: opts['no-throttle'] ? null : DEFAULT_THROTTLE,
   });
   const coverageReport = buildCoverageReport(target, gathered.cov, entry);
-  const profileReport = buildProfileReport(target, gathered.profile, entry);
+  const profileReport = gathered.profile ? buildProfileReport(target, gathered.profile, entry) : null;
 
   printMeasureSummary(report, hadBaseline);
   console.log('');
   printCoverageReport(target, coverageReport);
   console.log('');
-  printProfileReport(profileReport);
-  console.log('');
+  if (profileReport) {
+    printProfileReport(profileReport);
+    console.log('');
+  }
   printVerdict(target);
 
   if (opts.pin) {
     pinBaseline(target);
   } else if (!hadBaseline) {
-    // First scan of a target IS the baseline: pin it so every later scan
-    // reports a baselineDelta without extra ceremony.
-    pinBaseline(target);
-    console.log('(first scan of this target - pinned as the baseline automatically)');
+    if (opts.quick) {
+      console.log('(no pinned baseline yet, and quick scans are never pinned - run a full scan to establish it)');
+    } else {
+      // First scan of a target IS the baseline: pin it so every later scan
+      // reports a baselineDelta without extra ceremony.
+      pinBaseline(target);
+      console.log('(first scan of this target - pinned as the baseline automatically)');
+    }
   }
   console.log(`\nreports: ${target.paths.dir}`);
 }
@@ -820,6 +878,8 @@ start here (the target is remembered after the first command):
                             First scan of a target auto-pins the baseline.
   scan                      same, against the remembered target
   scan --pin                same, and re-pin the baseline afterwards (after an accepted change)
+  scan --quick              1 run, no profile: a fast mid-iteration probe on slow apps.
+                            Indicative only - accept/revert/pin decisions need a full scan.
   verdict                   fuse the gathered signals -> OPEN/clear/UNKNOWN; the only "done" that counts
 
 individual commands (same target rules):
@@ -832,16 +892,20 @@ individual commands (same target rules):
 the loop:
   1. build the app; scan --app <appDir> (first scan pins the baseline)
   2. read EVERY signal in the scan output: render gap (fix FIRST - render with bundled
-     defaults instead of awaiting fetches), pre-paint CPU by module, defer candidates,
-     large modules "executed" at paint (data evaluates on import - executed is not needed),
-     sibling variant groups (locales/themes: load only the active one)
+     defaults instead of awaiting fetches), pre-paint CPU by module, cold bytes at paint
+     (fetched+parsed before paint but mostly unread - a partially-executed vendor SDK
+     usually hides one boot-time init call), defer candidates, large modules "executed"
+     at paint (data evaluates on import - executed is not needed), sibling variant
+     groups (locales/themes: load only the active one)
   3. read the app source; find why the landing page pays for each finding
   4. change the app (never remove features); one change at a time
-  5. rebuild; run the app's functional check; scan
+  5. rebuild; run the app's functional check; scan (--quick to probe, full scan to decide)
   6. "improvement beyond noise" + check passes -> keep, scan --pin (or baseline), commit;
      otherwise revert + rebuild
   7. repeat. Declare done ONLY when the verdict reports every signal class clear -
-     never because one report looks empty (a tool's silence is not "done")
+     never because one report looks empty (a tool's silence is not "done").
+     Stopping earlier is allowed ONLY with the verdict checklist copied into your
+     summary and every OPEN lead justified (sub-noise measurement or concrete constraint)
 
 judge only by "vs pinned baseline". full contract: AGENTS.md`);
 }

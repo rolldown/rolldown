@@ -113,6 +113,14 @@ impl LinkStage<'_> {
   /// a single namespace binding, reducing code size.
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn determine_safely_merge_cjs_ns(&mut self) {
+    // Merging moves the surviving `require` call to whichever importer statement stays included,
+    // which can shift a CommonJS module's evaluation past later statements. Under strict execution
+    // order that reordering is an observable correctness break that wrapping cannot repair, so we
+    // keep every importer's own call site instead (the CJS wrapper memoizes, so the only cost is a
+    // few extra bytes).
+    if self.options.is_strict_execution_order_enabled() {
+      return;
+    }
     for importer in self.module_table.modules.iter().filter_map(Module::as_normal) {
       for (rec_idx, rec) in importer.import_records.iter_enumerated() {
         if !matches!(rec.kind, ImportKind::Import)

@@ -27,9 +27,10 @@ function test() {
 var import_commonjs;
 __esmMin((() => {
 	//#region lib.js
-	import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
+	require_commonjs();
 	//#endregion
 	//#region main.js
+	import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
 	assert.equal(import_commonjs.createReactElement(), "div");
 	assert.equal(1 .toString(), "1");
 	assert.equal(test().toString(), "1");

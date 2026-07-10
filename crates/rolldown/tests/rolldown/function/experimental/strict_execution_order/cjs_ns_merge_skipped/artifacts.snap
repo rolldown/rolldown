@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.js
+var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	console.log("cjs");
+	module.exports = { value: 1 };
+})))());
+const fromLib = import_cjs.default.value;
+//#endregion
+//#region main.js
+console.log("main", fromLib, import_cjs.default.value);
+//#endregion
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region cjs.cjs
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	console.log("cjs");
+	module.exports = { value: 1 };
+}));
+//#endregion
+//#region lib.js
+var import_cjs$1, fromLib;
+var init_lib = __esmMin((() => {
+	import_cjs$1 = /* @__PURE__ */ __toESM(require_cjs());
+	fromLib = import_cjs$1.default.value;
+}));
+//#endregion
+//#region main.js
+var import_cjs;
+//#endregion
+__esmMin((() => {
+	init_lib();
+	import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+	console.log("main", fromLib, import_cjs.default.value);
+}))();
+
+```

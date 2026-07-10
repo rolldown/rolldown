@@ -21,13 +21,13 @@ A guiding methodology for structuring bundler-internal pipelines (stage-level da
   - what it hands onward, still mutable
 - Enforcement is layered, mostly on ordinary Rust:
   - order: the driver's `let`-chain — a step cannot name inputs that do not exist yet
-  - sealing: distinct draft/frozen artifact types — the frozen type simply has no mutators
+  - sealing: distinct draft/frozen artifact types — the frozen one is built from frozen representations (`Box<[T]>`, `IndexBox`), so the mutators do not exist
   - ownership: by-value slots — "to modify is to own and hand back"
   - shape: trait bounds — reads cannot be `&mut`, and a pass value cannot carry pipeline state
 
 ## What it looks like
 
-The whole mechanism is one trait, one marker trait, and one wrapper function:
+The whole mechanism is one trait and one wrapper function:
 
 ```rust
 /// A pass type is a **name**, not a value: `run_pass` compile-time-asserts it is
@@ -36,17 +36,12 @@ The whole mechanism is one trait, one marker trait, and one wrapper function:
 pub trait Pass: Copy + 'static {
   type InputRead<'a>: Copy;         // shared borrows only; Copy makes `&mut` unrepresentable here
   type InputOwned;                  // data taken over (to modify = to own and hand back); `()` if none
-  type OutputRead: SealedArtifact;  // minted here, frozen from here on
+  type OutputRead;                  // minted here, frozen by representation (see below)
   type OutputOwned;                 // still-mutable data handed to a later pass
 
   async fn run(self, cx: &mut PassCtx, read: Self::InputRead<'_>, owned: Self::InputOwned)
     -> BuildResult<(Self::OutputRead, Self::OutputOwned)>;
 }
-
-/// A reviewed inventory of frozen types — each impl is an authorization, checked
-/// in review. The immutability itself lives in the artifact type's API (no
-/// mutators, no interior mutability); Rust only checks that the impl exists.
-pub trait SealedArtifact {}
 
 pub async fn run_pass<P: Pass>(pass: P, cx: &mut PassCtx, read: P::InputRead<'_>, owned: P::InputOwned)
   -> BuildResult<(P::OutputRead, P::OutputOwned)> {
@@ -59,8 +54,9 @@ pub async fn run_pass<P: Pass>(pass: P, cx: &mut PassCtx, read: P::InputRead<'_>
 Conventions:
 
 - The passes module carries `#![forbid(unsafe_code)]`, which closes the raw-pointer residual of the two `Pass` bounds.
-- `self` carries **nothing**: every pass is a zero-sized name token (`const`-asserted in `run_pass`), kept only so call sites read as `run_pass(OptimizeChunks, ..)`. Configuration is runtime data and enters through `InputRead` like everything else.
+- `self` carries **nothing**: every pass is a zero-sized name token (`const`-asserted in `run_pass`), kept only so call sites read as `run_pass(OptimizeChunksPass, ..)`. Configuration is runtime data and enters through `InputRead` like everything else.
 - Slot types: empty = `()`; a single artifact = the bare type; multiple = a named per-pass struct (`XxxPassInputRead { .. }`, derives `Copy`), which doubles as the pass's greppable dependency manifest.
+- Naming: a pass type ends in `Pass` (`OptimizeChunksPass`); its input struct is `<PassName>InputRead`. Since passes are zero-sized name tokens, the suffix keeps call sites unambiguous — and `rg 'struct \w+Pass;'` is the complete pass inventory.
 - `PassCtx` is the single sanctioned `&mut`: write-only sinks (diagnostics now, devtools trace later). It never contains pipeline data; passes may write it but never read it. `run_pass` (the wrapper) owns tracing spans and stamps every diagnostic with the emitting pass's name.
 - Driver rules: every `OutputOwned` is consumed by exactly one later `InputOwned` (or explicitly dropped). **Seal order follows reference direction**: seal an artifact only when everything its keys/indices point into is already sealed.
 
@@ -78,7 +74,7 @@ What a fully adopted flow could look like — **hypothetical**: today's `Generat
                                                              │
                                  ┌──────── &ChunkGraph ──────┤
                                  ▼                           ▼
-                            ComputeLinks                AssignNames
+                            ComputeLinksPass                AssignNamesPass
                                  │                           │
                             Links (sealed)             Names (sealed)
 ```
@@ -90,16 +86,16 @@ Three passes, three roles — the slots mirror what each pass does to the data (
 ```rust
 // 1) Reshape: chunk merging restructures the graph itself, so it owns the graph.
 #[derive(Clone, Copy)]
-pub struct OptimizeChunks;
+pub struct OptimizeChunksPass;
 
 #[derive(Clone, Copy)]
-pub struct OptimizeChunksInputRead<'a> {
+pub struct OptimizeChunksPassInputRead<'a> {
   pub modules: &'a ModuleTable,
   pub metas: &'a IndexVec<ModuleIdx, LinkingMetadata>,
 }
 
-impl Pass for OptimizeChunks {
-  type InputRead<'a> = OptimizeChunksInputRead<'a>;
+impl Pass for OptimizeChunksPass {
+  type InputRead<'a> = OptimizeChunksPassInputRead<'a>;
   type InputOwned    = DraftChunkGraph;   // it merges chunks and moves modules
   type OutputRead    = ();
   type OutputOwned   = DraftChunkGraph;   // handed back, still mutable
@@ -111,27 +107,27 @@ impl Pass for OptimizeChunks {
   }
 }
 
-// 2) Seal: the freeze transition is itself a pass; compaction happens here.
-//    Immutability comes from `ChunkGraph`'s API: it exposes no mutators.
+// 2) Seal: the freeze transition is itself a pass — compact, then freeze the
+//    representation: IndexVec<ChunkIdx, Chunk> becomes IndexBox<ChunkIdx, [Chunk]>.
 #[derive(Clone, Copy)]
-pub struct SealChunkGraph;
+pub struct SealChunkGraphPass;
 
-impl Pass for SealChunkGraph {
+impl Pass for SealChunkGraphPass {
   type InputRead<'a> = ();
   type InputOwned    = DraftChunkGraph;
-  type OutputRead    = ChunkGraph;        // `impl SealedArtifact for ChunkGraph` lives next to the type
+  type OutputRead    = ChunkGraph;        // fields are IndexBox / Box<[_]> — mutation is unrepresentable
   type OutputOwned   = ();
   // ...
 }
 
 // 3) Derive: the most common shape — owns nothing, reads sealed data, mints a new sealed artifact.
 #[derive(Clone, Copy)]
-pub struct AssignNames;
+pub struct AssignNamesPass;
 
-impl Pass for AssignNames {
-  type InputRead<'a> = AssignNamesInputRead<'a>;   // { graph: &'a ChunkGraph, options: &'a NormalizedBundlerOptions }
+impl Pass for AssignNamesPass {
+  type InputRead<'a> = AssignNamesPassInputRead<'a>;   // { graph: &'a ChunkGraph, options: &'a NormalizedBundlerOptions }
   type InputOwned    = ();
-  type OutputRead    = ChunkNames;        // e.g. IndexVec<ChunkIdx, ..>, sealed at birth
+  type OutputRead    = ChunkNames;        // e.g. IndexBox<ChunkIdx, [ArcStr]>, frozen at birth
   type OutputOwned   = ();
   // ...
 }
@@ -140,9 +136,9 @@ impl Pass for AssignNames {
 The driver is a typed `let`-chain (deliberately **not** `Vec<Box<dyn Pass>>` — heterogeneous signatures are the point):
 
 ```rust
-let ((), graph) = run_pass(OptimizeChunks, &mut cx, optimize_reads, graph).await?;
-let (graph, ()) = run_pass(SealChunkGraph, &mut cx, (), graph).await?;
-let (names, ()) = run_pass(AssignNames, &mut cx, names_reads, ()).await?;
+let ((), graph) = run_pass(OptimizeChunksPass, &mut cx, optimize_reads, graph).await?;
+let (graph, ()) = run_pass(SealChunkGraphPass, &mut cx, (), graph).await?;
+let (names, ()) = run_pass(AssignNamesPass, &mut cx, names_reads, ()).await?;
 ```
 
 Needing to own more than you reshape is the signal that an artifact should be split out — not a reason to widen the slot.
@@ -152,8 +148,8 @@ Needing to own more than you reshape is the signal that an artifact should be sp
 Wrong order is a compile error, not a comment:
 
 ```rust
-let (canon, ()) = run_pass(Deconflict, &mut cx, DeconflictInputRead { names: &names, /* .. */ }, ()).await?;
-let (names, ()) = run_pass(AssignNames, &mut cx, names_reads, ()).await?;
+let (canon, ()) = run_pass(DeconflictPass, &mut cx, DeconflictPassInputRead { names: &names, /* .. */ }, ()).await?;
+let (names, ()) = run_pass(AssignNamesPass, &mut cx, names_reads, ()).await?;
 // error[E0425]: cannot find value `names` in this scope
 ```
 
@@ -174,11 +170,11 @@ Two passes are concurrency candidates exactly when their `InputOwned`s are disjo
 - **Semantic independence is not proven; it is a stated discipline**: no interior mutability in pipeline data, no globals, no order-dependent external calls (plugin hooks, I/O) inside candidate passes, and effects only through per-branch `PassCtx` sinks that the driver merges in a fixed order. Under those rules — and only under them — a compiling join is also deterministic.
 
 ```rust
-// ComputeLinks : InputRead = (&ChunkGraph, &SymbolRefDb), InputOwned = ()
-// AssignNames  : InputRead = (&ChunkGraph, &Options),     InputOwned = ()
+// ComputeLinksPass : InputRead = (&ChunkGraph, &SymbolRefDb), InputOwned = ()
+// AssignNamesPass  : InputRead = (&ChunkGraph, &Options),     InputOwned = ()
 let (links, names) = try_join!(
-  run_pass(ComputeLinks, &mut cx_a, (&graph, &symbols), ()),
-  run_pass(AssignNames,  &mut cx_b, (&graph, &options), ()),
+  run_pass(ComputeLinksPass, &mut cx_a, (&graph, &symbols), ()),
+  run_pass(AssignNamesPass,  &mut cx_b, (&graph, &options), ()),
 )?;
 ```
 
@@ -204,11 +200,11 @@ What the compiler pins:
 - reads cannot be `&mut` — `InputRead<'a>: Copy` (`&mut` is never `Copy`)
 - a pass value cannot carry anything at all — `run_pass` `const`-asserts `size_of::<P>() == 0`; `Pass: Copy + 'static` additionally rules out lifetime-carrying zero-sized tricks
 - no escape through raw pointers — `#![forbid(unsafe_code)]` on the passes module
-- pass order — `let`-chain scoping; sealing — frozen types expose no mutators; ownership transfer — moves
+- pass order — `let`-chain scoping; sealing — frozen representations (the mutators do not exist); ownership transfer — moves
 
 What stays review-held (the honest list):
 
-- immutability of a frozen type lives in its API; `SealedArtifact` is a **reviewed inventory** — Rust only checks that an impl exists
+- a sealed struct's fields are actually frozen representations — a one-look check on the type definition; the representation is the proof, there is no marker trait to keep honest
 - no interior mutability in pipeline data types; no global statics holding pipeline data (the one remaining way to smuggle state past the bounds)
 - `PassCtx` used write-only; artifact granularity (own exactly what you reshape)
 

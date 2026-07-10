@@ -333,6 +333,6 @@ strip = "none"
 # napi-rs#3352 is a coordinated v4 release, while Rolldown's Oxc NAPI
 # dependencies still require v3. This non-publishable integration revision
 # contains the exact reviewed #3352 runtime and derive code under v3 manifests.
-napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "44162a484581aba2374db7c3fd3b303bd353df37" }
-napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "44162a484581aba2374db7c3fd3b303bd353df37" }
-napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "44162a484581aba2374db7c3fd3b303bd353df37" }
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9cd62b6ad6d92d6ebd19d9b5e4fcf4461d687d91" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9cd62b6ad6d92d6ebd19d9b5e4fcf4461d687d91" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9cd62b6ad6d92d6ebd19d9b5e4fcf4461d687d91" }

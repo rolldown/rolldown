@@ -1,9 +1,9 @@
 import {
   createOnMessage as __wasmCreateOnMessageForFsProxy,
-  getDefaultContext as __emnapiGetDefaultContext,
   instantiateNapiModule as __emnapiInstantiateNapiModule,
   WASI as __WASI,
 } from '@napi-rs/wasm-runtime'
+import { createContext as __emnapiCreateContext } from '@emnapi/runtime'
 import { memfs } from '@napi-rs/wasm-runtime/fs'
 
 
@@ -18,7 +18,30 @@ const __wasi = new __WASI({
 })
 
 const __wasmUrl = new URL('./rolldown-binding.wasm32-wasi.wasm', import.meta.url).href
-const __emnapiContext = __emnapiGetDefaultContext()
+const __emnapiContext = __emnapiCreateContext()
+
+let __emnapiContextDestroyWrapped = false
+let __emnapiWasmEnvCleanupPrepared = false
+
+function __wrapEmnapiContextDestroy(instance) {
+  if (__emnapiContextDestroyWrapped) {
+    return
+  }
+  // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
+  const __destroyEmnapiContext = __emnapiContext.destroy
+  __emnapiContext.destroy = function() {
+    if (!__emnapiWasmEnvCleanupPrepared) {
+      const __prepareWasmEnvCleanup =
+        instance.exports.napi_prepare_wasm_env_cleanup
+      if (typeof __prepareWasmEnvCleanup === 'function') {
+        __prepareWasmEnvCleanup()
+      }
+      __emnapiWasmEnvCleanupPrepared = true
+    }
+    return Reflect.apply(__destroyEmnapiContext, this, arguments)
+  }
+  __emnapiContextDestroyWrapped = true
+}
 
 
 const __sharedMemory = new WebAssembly.Memory({
@@ -61,6 +84,7 @@ const {
     return importObject
   },
   beforeInit({ instance }) {
+    __wrapEmnapiContextDestroy(instance)
     for (const name of Object.keys(instance.exports)) {
       if (name.startsWith('__napi_register__')) {
         instance.exports[name]()

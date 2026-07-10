@@ -10,38 +10,97 @@ const { Worker } = require('node:worker_threads')
 
 const {
   createOnMessage: __wasmCreateOnMessageForFsProxy,
-  getDefaultContext: __emnapiGetDefaultContext,
   instantiateNapiModuleSync: __emnapiInstantiateNapiModuleSync,
 } = require('@napi-rs/wasm-runtime')
+const { createContext: __emnapiCreateContext } = require('@emnapi/runtime')
 
-const __fileWorkerContextFlagsWithValue = new Set([
-  '--eval',
-  '-e',
-  '--input-type',
-  '--print',
-  '-p',
-  '--run',
-])
-const __fileWorkerContextFlags = new Set(['--check', '-c', '--interactive', '-i'])
+function __getWasiWorkerExecArgv() {
+  const __workerExecArgv = []
+  for (let __index = 0; __index < process.execArgv.length; __index += 1) {
+    const __arg = process.execArgv[__index]
+    if (
+      __arg === '--input-type' ||
+      __arg === '--eval' ||
+      __arg === '-e' ||
+      __arg === '--print' ||
+      __arg === '-p'
+    ) {
+      __index += 1
+      continue
+    }
+    if (
+      __arg.startsWith('--input-type=') ||
+      __arg.startsWith('--eval=') ||
+      __arg.startsWith('--print=')
+    ) {
+      continue
+    }
+    __workerExecArgv.push(__arg)
+  }
+  return __workerExecArgv
+}
 
-function __sanitizeFileWorkerExecArgv(execArgv) {
-  const sanitized = []
-  for (let index = 0; index < execArgv.length; index += 1) {
-    const argument = execArgv[index]
-    const equalsIndex = argument.indexOf('=')
-    const flag = equalsIndex === -1 ? argument : argument.slice(0, equalsIndex)
-    if (__fileWorkerContextFlagsWithValue.has(flag)) {
-      if (equalsIndex === -1) {
-        index += 1
+function __isInvalidWasiWorkerExecArgv(errorMessage, argument) {
+  const __equalsIndex = argument.indexOf('=')
+  const __argumentName =
+    __equalsIndex === -1 ? argument : argument.slice(0, __equalsIndex)
+  return (
+    errorMessage.includes(': ' + __argumentName + ',') ||
+    errorMessage.includes(': ' + __argumentName + '=') ||
+    errorMessage.endsWith(': ' + __argumentName) ||
+    errorMessage.includes(', ' + __argumentName + ',') ||
+    errorMessage.includes(', ' + __argumentName + '=') ||
+    errorMessage.endsWith(', ' + __argumentName)
+  )
+}
+
+function __removeInvalidWasiWorkerExecArgv(execArgv, error) {
+  if (typeof error.message !== 'string') {
+    return
+  }
+  const __workerExecArgv = []
+  let __removed = false
+  for (let __index = 0; __index < execArgv.length; __index += 1) {
+    const __arg = execArgv[__index]
+    if (
+      __arg.startsWith('-') &&
+      __isInvalidWasiWorkerExecArgv(error.message, __arg)
+    ) {
+      __removed = true
+      if (
+        !__arg.includes('=') &&
+        __index + 1 < execArgv.length &&
+        !execArgv[__index + 1].startsWith('-')
+      ) {
+        __index += 1
       }
       continue
     }
-    if (__fileWorkerContextFlags.has(argument)) {
-      continue
-    }
-    sanitized.push(argument)
+    __workerExecArgv.push(__arg)
   }
-  return sanitized
+  return __removed ? __workerExecArgv : undefined
+}
+
+function __createWasiWorker(filename) {
+  let __workerExecArgv = __getWasiWorkerExecArgv()
+  while (true) {
+    try {
+      return new Worker(filename, {
+        env: __rolldownWasiEnv,
+        execArgv: __workerExecArgv,
+      })
+    } catch (error) {
+      if (!error || error.code !== 'ERR_WORKER_INVALID_EXEC_ARGV') {
+        throw error
+      }
+      const __nextWorkerExecArgv =
+        __removeInvalidWasiWorkerExecArgv(__workerExecArgv, error)
+      if (!__nextWorkerExecArgv) {
+        throw error
+      }
+      __workerExecArgv = __nextWorkerExecArgv
+    }
+  }
 }
 
 function __normalizeRolldownAsyncWorkPoolSize(value) {
@@ -73,7 +132,30 @@ const __wasi = new __nodeWASI({
   }
 })
 
-const __emnapiContext = __emnapiGetDefaultContext()
+const __emnapiContext = __emnapiCreateContext()
+
+let __emnapiContextDestroyWrapped = false
+let __emnapiWasmEnvCleanupPrepared = false
+
+function __wrapEmnapiContextDestroy(instance) {
+  if (__emnapiContextDestroyWrapped) {
+    return
+  }
+  // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
+  const __destroyEmnapiContext = __emnapiContext.destroy
+  __emnapiContext.destroy = function() {
+    if (!__emnapiWasmEnvCleanupPrepared) {
+      const __prepareWasmEnvCleanup =
+        instance.exports.napi_prepare_wasm_env_cleanup
+      if (typeof __prepareWasmEnvCleanup === 'function') {
+        __prepareWasmEnvCleanup()
+      }
+      __emnapiWasmEnvCleanupPrepared = true
+    }
+    return Reflect.apply(__destroyEmnapiContext, this, arguments)
+  }
+  __emnapiContextDestroyWrapped = true
+}
 
 const __sharedMemory = new WebAssembly.Memory({
   initial: 16384,
@@ -100,10 +182,7 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
   reuseWorker: true,
   wasi: __wasi,
   onCreateWorker() {
-    const worker = new Worker(__nodePath.join(__dirname, 'wasi-worker.mjs'), {
-      env: __rolldownWasiEnv,
-      execArgv: __sanitizeFileWorkerExecArgv(process.execArgv),
-    })
+    const worker = __createWasiWorker(__nodePath.join(__dirname, 'wasi-worker.mjs'))
     worker.onmessage = ({ data }) => {
       __wasmCreateOnMessageForFsProxy(__nodeFs)(data)
     }
@@ -142,6 +221,7 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
     return importObject
   },
   beforeInit({ instance }) {
+    __wrapEmnapiContextDestroy(instance)
     for (const name of Object.keys(instance.exports)) {
       if (name.startsWith('__napi_register__')) {
         instance.exports[name]()

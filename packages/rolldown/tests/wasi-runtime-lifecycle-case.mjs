@@ -112,6 +112,50 @@ assert.deepEqual(JSON.parse(poolCapProbe.stdout.trim().split('\n').at(-1)), {
   },
 });
 
+await check('worker loader retries rejected inherited execArgv', () => {
+  const probe = spawnSync(
+    process.execPath,
+    [
+      '--title=rolldown-wasi-worker-probe',
+      '--stack-trace-limit=50',
+      '--trace-warnings',
+      '--input-type=module',
+      '--eval',
+      `
+        const { getRuntimeCapabilities } = await import('rolldown/experimental');
+        console.log(JSON.stringify(getRuntimeCapabilities()));
+      `,
+    ],
+    {
+      cwd: path.dirname(fileURLToPath(import.meta.url)),
+      encoding: 'utf8',
+      env: { ...process.env },
+      timeout: 60_000,
+    },
+  );
+
+  assert.equal(probe.error, undefined, probe.stderr);
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout);
+  assert.equal(JSON.parse(probe.stdout.trim().split('\n').at(-1)).target, 'wasi-threads');
+});
+
+await check('loader cleanup settles pending work and supports same-realm reload', () => {
+  const probe = spawnSync(
+    process.execPath,
+    [fileURLToPath(new URL('./wasi-loader-context-lifecycle.mjs', import.meta.url))],
+    {
+      cwd: path.dirname(fileURLToPath(import.meta.url)),
+      encoding: 'utf8',
+      env: { ...process.env },
+      timeout: 60_000,
+    },
+  );
+
+  assert.equal(probe.error, undefined, probe.stderr);
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout);
+  assert.match(probe.stdout, /WASI loader context cleanup and reload completed/);
+});
+
 await check('watch fails before setup and remains closable', async () => {
   let optionsHookCalls = 0;
   const watcher = watch({

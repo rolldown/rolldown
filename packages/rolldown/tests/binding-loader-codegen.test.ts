@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 
 import {
@@ -7,8 +9,10 @@ import {
   EMNAPI_ASYNC_WORK_POOL_SIZE_MAX,
   LOADED_BINDING_TARGET_EXPORT,
   normalizeEmnapiAsyncWorkPoolSize,
+  patchWasiBindingContextLifecycle,
   patchWasiBindingLoader,
   patchWasiNodeAsyncWorkPoolSize,
+  patchWasiNodeWorkerExecArgv,
   resolveWasiBindingTarget,
 } from '../binding-loader-codegen';
 
@@ -34,6 +38,10 @@ const __workerOptions = {
   env: process.env,
 }
 `;
+const generatedWasiNodeLoader = readFileSync(
+  fileURLToPath(new URL('../src/rolldown-binding.wasi.cjs', import.meta.url)),
+  'utf8',
+);
 
 describe('WASI binding target metadata', () => {
   test('resolves supported build targets without accepting unknown wasm targets', () => {
@@ -170,6 +178,174 @@ return {
   });
 });
 
+describe('generated WASI loader lifecycle', () => {
+  test.each([
+    [
+      'CommonJS',
+      `const {
+  createContext: __emnapiCreateContext,
+} = require('@napi-rs/wasm-runtime')
+const __emnapiContext = __emnapiCreateContext()
+const options = {
+  beforeInit({ instance }) {
+  },
+}
+module.exports = __napiModule.exports
+`,
+      "const { createContext: __emnapiCreateContext } = require('@emnapi/runtime')",
+    ],
+    [
+      'ESM',
+      `import {
+  getDefaultContext as __emnapiGetDefaultContext,
+} from '@napi-rs/wasm-runtime'
+const __emnapiContext = __emnapiGetDefaultContext()
+const options = {
+  beforeInit({ instance }) {
+  },
+}
+export default __napiModule.exports
+`,
+      "import { createContext as __emnapiCreateContext } from '@emnapi/runtime'",
+    ],
+  ])('normalizes the %s context import and lifecycle hooks', (_format, source, expectedImport) => {
+    const patched = patchWasiBindingContextLifecycle(source);
+    expect(patched).toContain(expectedImport);
+    expect(patched).toContain('const __emnapiContext = __emnapiCreateContext()');
+    expect(patched).toContain('function __wrapEmnapiContextDestroy(instance)');
+    expect(patched).toContain('    __wrapEmnapiContextDestroy(instance)');
+    expect(patchWasiBindingContextLifecycle(patched)).toBe(patched);
+  });
+
+  test('uses a fresh context per evaluation and prepares each context once', () => {
+    const contexts: Array<{ destroy(): void }> = [];
+    const cleanupEvents: string[] = [];
+
+    for (const id of [1, 2]) {
+      executeGeneratedWasiNodeLoader({
+        createContext() {
+          const context = {
+            destroy() {
+              cleanupEvents.push(`destroy:${id}`);
+            },
+          };
+          contexts.push(context);
+          return context;
+        },
+        prepareCleanup() {
+          cleanupEvents.push(`prepare:${id}`);
+        },
+      });
+    }
+
+    expect(contexts[0]).not.toBe(contexts[1]);
+    contexts[0].destroy();
+    contexts[0].destroy();
+    contexts[1].destroy();
+    contexts[1].destroy();
+    expect(cleanupEvents).toEqual([
+      'prepare:1',
+      'destroy:1',
+      'destroy:1',
+      'prepare:2',
+      'destroy:2',
+      'destroy:2',
+    ]);
+    expect(patchWasiBindingContextLifecycle(generatedWasiNodeLoader)).toBe(generatedWasiNodeLoader);
+  });
+
+  test('retries failed preparation without repeating successful preparation', () => {
+    const cleanupEvents: string[] = [];
+    let prepareAttempts = 0;
+    let destroyAttempts = 0;
+    const context = {
+      destroy() {
+        cleanupEvents.push('destroy');
+        destroyAttempts += 1;
+        if (destroyAttempts === 1) {
+          throw new Error('destroy failed');
+        }
+      },
+    };
+
+    executeGeneratedWasiNodeLoader({
+      createContext: () => context,
+      prepareCleanup() {
+        cleanupEvents.push('prepare');
+        prepareAttempts += 1;
+        if (prepareAttempts === 1) {
+          throw new Error('prepare failed');
+        }
+      },
+    });
+
+    expect(() => context.destroy()).toThrow('prepare failed');
+    expect(cleanupEvents).toEqual(['prepare']);
+    expect(() => context.destroy()).toThrow('destroy failed');
+    expect(cleanupEvents).toEqual(['prepare', 'prepare', 'destroy']);
+    expect(() => context.destroy()).not.toThrow();
+    expect(() => context.destroy()).not.toThrow();
+    expect(cleanupEvents).toEqual(['prepare', 'prepare', 'destroy', 'destroy', 'destroy']);
+  });
+
+  test('preserves valid worker arguments while retrying rejected inherited arguments', () => {
+    const workerExecArgvAttempts: string[][] = [];
+
+    class Worker {
+      onmessage?: (event: { data: unknown }) => void;
+
+      constructor(_filename: string, options: { execArgv?: string[] }) {
+        const execArgv = options.execArgv ?? [];
+        workerExecArgvAttempts.push(execArgv);
+        if (execArgv.includes('--title') || execArgv.includes('--stack-trace-limit=100')) {
+          throw Object.assign(
+            new Error(
+              'Initiated Worker with invalid execArgv flags: --title, --stack-trace-limit=100',
+            ),
+            { code: 'ERR_WORKER_INVALID_EXEC_ARGV' },
+          );
+        }
+      }
+
+      unref(): void {}
+    }
+
+    executeGeneratedWasiNodeLoader({
+      Worker,
+      createContext: () => ({ destroy() {} }),
+      createWorker: true,
+      execArgv: [
+        '--trace-warnings',
+        '--input-type=module',
+        '--eval',
+        'evaluate()',
+        '-p',
+        'print()',
+        '--title',
+        'test-worker',
+        '--require',
+        './hook.cjs',
+        '--stack-trace-limit=100',
+        '--conditions=worker-test',
+      ],
+    });
+
+    expect(workerExecArgvAttempts).toEqual([
+      [
+        '--trace-warnings',
+        '--title',
+        'test-worker',
+        '--require',
+        './hook.cjs',
+        '--stack-trace-limit=100',
+        '--conditions=worker-test',
+      ],
+      ['--trace-warnings', '--require', './hook.cjs', '--conditions=worker-test'],
+    ]);
+    expect(patchWasiNodeWorkerExecArgv(generatedWasiNodeLoader)).toBe(generatedWasiNodeLoader);
+  });
+});
+
 describe('async-runtime host export contract', () => {
   test.each([
     [
@@ -201,3 +377,93 @@ describe('async-runtime host export contract', () => {
     );
   });
 });
+
+interface GeneratedWasiNodeLoaderOptions {
+  Worker?: new (
+    filename: string,
+    options: { env: Record<string, string>; execArgv?: string[] },
+  ) => {
+    onmessage?: (event: { data: unknown }) => void;
+    unref(): void;
+  };
+  createContext: () => { destroy(): void };
+  createWorker?: boolean;
+  execArgv?: string[];
+  prepareCleanup?: () => void;
+}
+
+function executeGeneratedWasiNodeLoader({
+  Worker = class {
+    unref(): void {}
+  },
+  createContext,
+  createWorker = false,
+  execArgv = [],
+  prepareCleanup = () => {},
+}: GeneratedWasiNodeLoaderOptions): void {
+  const module: { exports: Record<string, unknown> } = { exports: {} };
+  const require = Object.assign(
+    (specifier: string) => {
+      switch (specifier) {
+        case 'node:fs':
+          return {
+            existsSync: (path: string) => path.endsWith('.wasm'),
+            readFileSync: () => new Uint8Array(),
+          };
+        case 'node:path':
+          return {
+            join: (...parts: string[]) => parts.join('/'),
+            parse: () => ({ root: '/' }),
+          };
+        case 'node:wasi':
+          return { WASI: class {} };
+        case 'node:worker_threads':
+          return { Worker };
+        case '@napi-rs/wasm-runtime':
+          return {
+            createOnMessage: () => () => {},
+            instantiateNapiModuleSync(
+              _wasm: Uint8Array,
+              options: {
+                beforeInit(input: { instance: { exports: Record<string, () => void> } }): void;
+                onCreateWorker(): object;
+              },
+            ) {
+              if (createWorker) {
+                options.onCreateWorker();
+              }
+              const instance = {
+                exports: {
+                  napi_prepare_wasm_env_cleanup: prepareCleanup,
+                },
+              };
+              options.beforeInit({ instance });
+              return {
+                instance,
+                module: {},
+                napiModule: { exports: {} },
+              };
+            },
+          };
+        case '@emnapi/runtime':
+          return { createContext };
+        default:
+          throw new Error(`Unexpected require: ${specifier}`);
+      }
+    },
+    { resolve: (specifier: string) => specifier },
+  );
+
+  // oxlint-disable-next-line typescript/no-implied-eval -- execute the generated loader with isolated runtime stubs
+  new Function('require', 'module', 'process', '__dirname', 'WebAssembly', generatedWasiNodeLoader)(
+    require,
+    module,
+    {
+      cwd: () => '/',
+      env: {},
+      execArgv,
+    },
+    '/fixture',
+    { Memory: class {} },
+  );
+}

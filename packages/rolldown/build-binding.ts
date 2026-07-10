@@ -12,8 +12,10 @@ import {
 import {
   assertAsyncRuntimeHostExports,
   patchNativeBindingLoader,
+  patchWasiBindingContextLifecycle,
   patchWasiBindingLoader,
   patchWasiNodeAsyncWorkPoolSize,
+  patchWasiNodeWorkerExecArgv,
   resolveWasiBindingTarget,
 } from './binding-loader-codegen';
 
@@ -50,7 +52,8 @@ try {
   const { task } = await napiCli.build(napiArgs);
   await task;
   patchBindingTargetMetadata(argsOptions.target);
-  patchWasiNodeWorkerExecArgv();
+  patchWasiBindingContextLifecycles();
+  patchWasiNodeWorkerExecArgvConfig();
   patchWasiNodeAsyncWorkPoolConfig();
   validateAsyncRuntimeHostExports();
   if (argsOptions.target === WASI_THREADS_TARGET) {
@@ -151,56 +154,19 @@ function patchBindingTargetMetadata(target: unknown): void {
   }
 }
 
-function patchWasiNodeWorkerExecArgv(): void {
-  const bindingPath = join(__dirname, 'src', 'rolldown-binding.wasi.cjs');
-  const source = readFileSync(bindingPath, 'utf8');
-  const helperAnchor = 'const __rootDir = __nodePath.parse(process.cwd()).root\n';
-  const workerOptions = `    const worker = new Worker(__nodePath.join(__dirname, 'wasi-worker.mjs'), {
-      env: process.env,
-    })`;
-  if (!source.includes(helperAnchor) || !source.includes(workerOptions)) {
-    throw new Error(`Unexpected NAPI-RS WASI loader template in ${bindingPath}`);
+function patchWasiBindingContextLifecycles(): void {
+  const sourceDir = join(__dirname, 'src');
+  for (const bindingPath of [
+    join(sourceDir, 'rolldown-binding.wasi.cjs'),
+    join(sourceDir, 'rolldown-binding.wasi-browser.js'),
+  ]) {
+    writeFileSync(bindingPath, patchWasiBindingContextLifecycle(readFileSync(bindingPath, 'utf8')));
   }
-
-  const sanitizer = `const __fileWorkerContextFlagsWithValue = new Set([
-  '--eval',
-  '-e',
-  '--input-type',
-  '--print',
-  '-p',
-  '--run',
-])
-const __fileWorkerContextFlags = new Set(['--check', '-c', '--interactive', '-i'])
-
-function __sanitizeFileWorkerExecArgv(execArgv) {
-  const sanitized = []
-  for (let index = 0; index < execArgv.length; index += 1) {
-    const argument = execArgv[index]
-    const equalsIndex = argument.indexOf('=')
-    const flag = equalsIndex === -1 ? argument : argument.slice(0, equalsIndex)
-    if (__fileWorkerContextFlagsWithValue.has(flag)) {
-      if (equalsIndex === -1) {
-        index += 1
-      }
-      continue
-    }
-    if (__fileWorkerContextFlags.has(argument)) {
-      continue
-    }
-    sanitized.push(argument)
-  }
-  return sanitized
 }
 
-`;
-  const patched = source.replace(helperAnchor, sanitizer + helperAnchor).replace(
-    workerOptions,
-    `    const worker = new Worker(__nodePath.join(__dirname, 'wasi-worker.mjs'), {
-      env: process.env,
-      execArgv: __sanitizeFileWorkerExecArgv(process.execArgv),
-    })`,
-  );
-  writeFileSync(bindingPath, patched);
+function patchWasiNodeWorkerExecArgvConfig(): void {
+  const bindingPath = join(__dirname, 'src', 'rolldown-binding.wasi.cjs');
+  writeFileSync(bindingPath, patchWasiNodeWorkerExecArgv(readFileSync(bindingPath, 'utf8')));
 }
 
 function patchWasiNodeAsyncWorkPoolConfig(): void {

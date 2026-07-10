@@ -73,7 +73,7 @@ makes an older revision fail to compile instead of producing an unpinned
 binary.
 
 The integration currently pins the coordinated v3-manifest compatibility
-revision `44162a484581aba2374db7c3fd3b303bd353df37` for `napi`,
+revision `9cd62b6ad6d92d6ebd19d9b5e4fcf4461d687d91` for `napi`,
 `napi-derive`, and `napi-derive-backend`. `BindingMagicString` uses concrete
 `MagicString<'static>` storage backed by `Cow::Owned`, so the public N-API
 class cannot borrow a constructor call frame and moving the input `String`
@@ -743,12 +743,24 @@ executing malformed startup code, which cannot be interrupted by a JavaScript
 promise timeout.
 
 napi-rs generates the Node threaded-WASI loader. The build script patches that
-generated loader before it is copied into the package so its file-backed worker
-removes inherited string-input flags such as `--input-type`, `--eval`, and
-`--print` from `process.execArgv`. Those flags describe the parent process's
-input source and can make Node reject `wasi-worker.mjs`; other runtime flags
-remain inherited. The patch deliberately checks the expected napi-rs template
-and fails the build on template drift.
+generated loader before it is copied into the package. Each Node or browser
+loader evaluation creates an isolated emnapi context instead of reusing the
+realm-global default. The postprocessor imports `createContext` directly from
+the generated binding's existing `@emnapi/runtime` dependency so this also
+works with the published `@napi-rs/wasm-runtime` 1.1.6 facade. Its `destroy()` wrapper calls
+`napi_prepare_wasm_env_cleanup()` once after successful preparation, retries a
+failed preparation, and does not repeat successful preparation when the
+underlying destroy operation is retried. This ordering lets pending N-API
+promises reject before emnapi disables JavaScript callbacks and lets a later
+loader evaluation replace a destroyed context.
+
+The Node loader's file-backed worker initially removes inherited string-input
+flags such as `--input-type`, `--eval`, and `--print` from `process.execArgv`.
+If Node rejects additional parent-only flags with
+`ERR_WORKER_INVALID_EXEC_ARGV`, worker construction removes only the arguments
+named by that error and retries. Accepted runtime flags remain inherited. The
+patch deliberately checks the expected napi-rs template and fails the build on
+template drift.
 
 The same generated Node loader is the authority for threaded-WASI async-work
 pool reporting. It normalizes the selected environment value, caps it at 1024,
@@ -1349,7 +1361,9 @@ explained by another live environment retaining the image. The probe adds no
 module-count hooks or lifecycle locks.
 
 The WASI CI lane runs `packages/rolldown/tests/wasi-runtime-lifecycle.mjs`
-against the generated threaded artifact. It covers overlapping public owners,
+against the generated threaded artifact. It covers isolated loader contexts,
+pending-promise settlement during context cleanup, same-realm reload after
+destruction, selective inherited-worker-argument retry, overlapping public owners,
 restart after the final release, repeated immediate token reacquisition while
 Tokio's previous generation retires, cancellation of a worker environment
 whose acquisition is blocked behind retirement, operation and

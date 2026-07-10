@@ -22,8 +22,25 @@ const WASI_BINDING_ASSIGNMENT = 'nativeBinding = wasiBinding';
 const NATIVE_BINDING_EXPORT_ANCHOR = 'module.exports = nativeBinding\n';
 const WASI_CJS_EXPORT_ANCHOR = 'module.exports = __napiModule.exports\n';
 const WASI_ESM_EXPORT_ANCHOR = 'export default __napiModule.exports\n';
+const WASI_CJS_CONTEXT_IMPORT = '  getDefaultContext: __emnapiGetDefaultContext,\n';
+const WASI_ESM_CONTEXT_IMPORT = '  getDefaultContext as __emnapiGetDefaultContext,\n';
+const WASI_CJS_WASM_RUNTIME_CREATE_CONTEXT_IMPORT = '  createContext: __emnapiCreateContext,\n';
+const WASI_ESM_WASM_RUNTIME_CREATE_CONTEXT_IMPORT = '  createContext as __emnapiCreateContext,\n';
+const WASI_CJS_RUNTIME_IMPORT_ANCHOR = "} = require('@napi-rs/wasm-runtime')\n";
+const WASI_ESM_RUNTIME_IMPORT_ANCHOR = "} from '@napi-rs/wasm-runtime'\n";
+const WASI_CJS_CREATE_CONTEXT_IMPORT =
+  "const { createContext: __emnapiCreateContext } = require('@emnapi/runtime')\n";
+const WASI_ESM_CREATE_CONTEXT_IMPORT =
+  "import { createContext as __emnapiCreateContext } from '@emnapi/runtime'\n";
+const WASI_DEFAULT_CONTEXT_CREATION = 'const __emnapiContext = __emnapiGetDefaultContext()\n';
+const WASI_ISOLATED_CONTEXT_CREATION = 'const __emnapiContext = __emnapiCreateContext()\n';
+const WASI_BEFORE_INIT_ANCHOR = '  beforeInit({ instance }) {\n';
+const WASI_CONTEXT_DESTROY_CALL = '    __wrapEmnapiContextDestroy(instance)\n';
 const WASI_NODE_HELPER_ANCHOR = 'const __rootDir = __nodePath.parse(process.cwd()).root\n';
 const WASI_NODE_ENV_ASSIGNMENT = 'env: process.env,';
+const WASI_NODE_WORKER_CONSTRUCTION = `    const worker = new Worker(__nodePath.join(__dirname, 'wasi-worker.mjs'), {
+      env: process.env,
+    })`;
 const WASI_NODE_ASYNC_WORK_POOL_SIZE = `  asyncWorkPoolSize: (function() {
     const threadsSizeFromEnv = Number(process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE)
     // NaN > 0 is false
@@ -137,6 +154,232 @@ export function patchWasiBindingLoader(source: string, target: WasiBindingTarget
   throw new Error('Unexpected NAPI-RS WASI loader template: no module export anchor');
 }
 
+export function patchWasiBindingContextLifecycle(source: string): string {
+  const cjsDirectImportCount = countOccurrences(source, WASI_CJS_CREATE_CONTEXT_IMPORT);
+  const esmDirectImportCount = countOccurrences(source, WASI_ESM_CREATE_CONTEXT_IMPORT);
+  const cjsWasmRuntimeImportCount =
+    countOccurrences(source, WASI_CJS_CONTEXT_IMPORT) +
+    countOccurrences(source, WASI_CJS_WASM_RUNTIME_CREATE_CONTEXT_IMPORT);
+  const esmWasmRuntimeImportCount =
+    countOccurrences(source, WASI_ESM_CONTEXT_IMPORT) +
+    countOccurrences(source, WASI_ESM_WASM_RUNTIME_CREATE_CONTEXT_IMPORT);
+  const directImportCount = cjsDirectImportCount + esmDirectImportCount;
+  const wasmRuntimeImportCount = cjsWasmRuntimeImportCount + esmWasmRuntimeImportCount;
+
+  if (directImportCount > 1 || wasmRuntimeImportCount > 1) {
+    throw new Error(
+      `Unexpected NAPI-RS WASI loader template for context import: expected one anchor, found ${directImportCount + wasmRuntimeImportCount}`,
+    );
+  }
+  if (directImportCount === 1 && wasmRuntimeImportCount !== 0) {
+    throw new Error('Unexpected NAPI-RS WASI loader template: duplicate context imports');
+  }
+  if (directImportCount === 0 && wasmRuntimeImportCount !== 1) {
+    throw new Error(
+      `Unexpected NAPI-RS WASI loader template for context import: expected one anchor, found ${wasmRuntimeImportCount}`,
+    );
+  }
+
+  if (cjsWasmRuntimeImportCount === 1) {
+    source = source
+      .replace(WASI_CJS_CONTEXT_IMPORT, '')
+      .replace(WASI_CJS_WASM_RUNTIME_CREATE_CONTEXT_IMPORT, '');
+    source = replaceExactly(
+      source,
+      WASI_CJS_RUNTIME_IMPORT_ANCHOR,
+      `${WASI_CJS_RUNTIME_IMPORT_ANCHOR}${WASI_CJS_CREATE_CONTEXT_IMPORT}`,
+      1,
+      'WASI CommonJS emnapi context import',
+    );
+  } else if (esmWasmRuntimeImportCount === 1) {
+    source = source
+      .replace(WASI_ESM_CONTEXT_IMPORT, '')
+      .replace(WASI_ESM_WASM_RUNTIME_CREATE_CONTEXT_IMPORT, '');
+    source = replaceExactly(
+      source,
+      WASI_ESM_RUNTIME_IMPORT_ANCHOR,
+      `${WASI_ESM_RUNTIME_IMPORT_ANCHOR}${WASI_ESM_CREATE_CONTEXT_IMPORT}`,
+      1,
+      'WASI ESM emnapi context import',
+    );
+  }
+
+  const contextLifecycle = `${WASI_ISOLATED_CONTEXT_CREATION}
+let __emnapiContextDestroyWrapped = false
+let __emnapiWasmEnvCleanupPrepared = false
+
+function __wrapEmnapiContextDestroy(instance) {
+  if (__emnapiContextDestroyWrapped) {
+    return
+  }
+  // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
+  const __destroyEmnapiContext = __emnapiContext.destroy
+  __emnapiContext.destroy = function() {
+    if (!__emnapiWasmEnvCleanupPrepared) {
+      const __prepareWasmEnvCleanup =
+        instance.exports.napi_prepare_wasm_env_cleanup
+      if (typeof __prepareWasmEnvCleanup === 'function') {
+        __prepareWasmEnvCleanup()
+      }
+      __emnapiWasmEnvCleanupPrepared = true
+    }
+    return Reflect.apply(__destroyEmnapiContext, this, arguments)
+  }
+  __emnapiContextDestroyWrapped = true
+}
+`;
+  if (source.includes(WASI_DEFAULT_CONTEXT_CREATION)) {
+    source = replaceExactly(
+      source,
+      WASI_DEFAULT_CONTEXT_CREATION,
+      contextLifecycle,
+      1,
+      'WASI isolated context creation',
+    );
+  } else if (
+    source.includes(WASI_ISOLATED_CONTEXT_CREATION) &&
+    !source.includes('function __wrapEmnapiContextDestroy(instance)')
+  ) {
+    source = replaceExactly(
+      source,
+      WASI_ISOLATED_CONTEXT_CREATION,
+      contextLifecycle,
+      1,
+      'WASI context destroy wrapper',
+    );
+  } else if (!source.includes('function __wrapEmnapiContextDestroy(instance)')) {
+    throw new Error('Unexpected NAPI-RS WASI loader template: no context creation anchor');
+  }
+
+  const destroyCallCount = countOccurrences(source, WASI_CONTEXT_DESTROY_CALL);
+  if (destroyCallCount === 0) {
+    return replaceExactly(
+      source,
+      WASI_BEFORE_INIT_ANCHOR,
+      `${WASI_BEFORE_INIT_ANCHOR}${WASI_CONTEXT_DESTROY_CALL}`,
+      1,
+      'WASI context destroy preparation',
+    );
+  }
+  if (destroyCallCount !== 1) {
+    throw new Error(
+      `Unexpected NAPI-RS WASI loader template for context destroy preparation: expected one call, found ${destroyCallCount}`,
+    );
+  }
+  return source;
+}
+
+export function patchWasiNodeWorkerExecArgv(source: string): string {
+  if (source.includes('function __createWasiWorker(filename)')) {
+    return source;
+  }
+
+  const workerHelpers = `function __getWasiWorkerExecArgv() {
+  const __workerExecArgv = []
+  for (let __index = 0; __index < process.execArgv.length; __index += 1) {
+    const __arg = process.execArgv[__index]
+    if (
+      __arg === '--input-type' ||
+      __arg === '--eval' ||
+      __arg === '-e' ||
+      __arg === '--print' ||
+      __arg === '-p'
+    ) {
+      __index += 1
+      continue
+    }
+    if (
+      __arg.startsWith('--input-type=') ||
+      __arg.startsWith('--eval=') ||
+      __arg.startsWith('--print=')
+    ) {
+      continue
+    }
+    __workerExecArgv.push(__arg)
+  }
+  return __workerExecArgv
+}
+
+function __isInvalidWasiWorkerExecArgv(errorMessage, argument) {
+  const __equalsIndex = argument.indexOf('=')
+  const __argumentName =
+    __equalsIndex === -1 ? argument : argument.slice(0, __equalsIndex)
+  return (
+    errorMessage.includes(': ' + __argumentName + ',') ||
+    errorMessage.includes(': ' + __argumentName + '=') ||
+    errorMessage.endsWith(': ' + __argumentName) ||
+    errorMessage.includes(', ' + __argumentName + ',') ||
+    errorMessage.includes(', ' + __argumentName + '=') ||
+    errorMessage.endsWith(', ' + __argumentName)
+  )
+}
+
+function __removeInvalidWasiWorkerExecArgv(execArgv, error) {
+  if (typeof error.message !== 'string') {
+    return
+  }
+  const __workerExecArgv = []
+  let __removed = false
+  for (let __index = 0; __index < execArgv.length; __index += 1) {
+    const __arg = execArgv[__index]
+    if (
+      __arg.startsWith('-') &&
+      __isInvalidWasiWorkerExecArgv(error.message, __arg)
+    ) {
+      __removed = true
+      if (
+        !__arg.includes('=') &&
+        __index + 1 < execArgv.length &&
+        !execArgv[__index + 1].startsWith('-')
+      ) {
+        __index += 1
+      }
+      continue
+    }
+    __workerExecArgv.push(__arg)
+  }
+  return __removed ? __workerExecArgv : undefined
+}
+
+function __createWasiWorker(filename) {
+  let __workerExecArgv = __getWasiWorkerExecArgv()
+  while (true) {
+    try {
+      return new Worker(filename, {
+        env: process.env,
+        execArgv: __workerExecArgv,
+      })
+    } catch (error) {
+      if (!error || error.code !== 'ERR_WORKER_INVALID_EXEC_ARGV') {
+        throw error
+      }
+      const __nextWorkerExecArgv =
+        __removeInvalidWasiWorkerExecArgv(__workerExecArgv, error)
+      if (!__nextWorkerExecArgv) {
+        throw error
+      }
+      __workerExecArgv = __nextWorkerExecArgv
+    }
+  }
+}
+
+`;
+  source = replaceExactly(
+    source,
+    WASI_NODE_HELPER_ANCHOR,
+    workerHelpers + WASI_NODE_HELPER_ANCHOR,
+    1,
+    'WASI worker execArgv helpers',
+  );
+  return replaceExactly(
+    source,
+    WASI_NODE_WORKER_CONSTRUCTION,
+    `    const worker = __createWasiWorker(__nodePath.join(__dirname, 'wasi-worker.mjs'))`,
+    1,
+    'WASI worker construction',
+  );
+}
+
 export function patchWasiNodeAsyncWorkPoolSize(source: string): string {
   if (source.includes('const __rolldownAsyncWorkPoolSize =')) {
     return source;
@@ -208,11 +451,15 @@ function replaceExactly(
   expectedCount: number,
   label: string,
 ): string {
-  const count = source.split(search).length - 1;
+  const count = countOccurrences(source, search);
   if (count !== expectedCount) {
     throw new Error(
       `Unexpected NAPI-RS loader template for ${label}: expected ${expectedCount} anchors, found ${count}`,
     );
   }
   return source.replaceAll(search, replacement);
+}
+
+function countOccurrences(source: string, search: string): number {
+  return source.split(search).length - 1;
 }

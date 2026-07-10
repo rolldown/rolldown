@@ -107,6 +107,9 @@ const ignoreTests = [
   "rollup@function@warning-const-reassign: Cannot reassign a variable declared with `const`",
   "rollup@function@namespace-reassign-import-fails: warns for reassignments to namespace exports",
   "rollup@function@namespace-update-import-fails: disallows updates to namespace exports",
+  // ### Rolldown does not support `UNUSED_EXTERNAL_IMPORT` warning
+  "rollup@function@unused-import: warns on unused imports ([#595])",
+  "rollup@function@unused-import-2: warns on unused imports ([#595])",
 
   // ## tests relying on plugins
   "rollup@function@no-treeshake-react: passes when bundling React without tree-shaking", // relies on @rollup/plugin-node-resolve

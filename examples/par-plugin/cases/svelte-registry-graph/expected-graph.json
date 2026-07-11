@@ -511,13 +511,13 @@
     "relativeNodeNextResolutions": 40
   },
   "bareExternalIds": [
-    "$app/environment",
-    "$app/navigation",
-    "$app/state",
     "@hugeicons/svelte",
     "@internationalized/date",
     "@lucide/svelte/icons/square",
     "@tanstack/table-core",
+    "$app/environment",
+    "$app/navigation",
+    "$app/state",
     "bits-ui",
     "clsx",
     "embla-carousel-svelte",
@@ -560,11 +560,11 @@
     "zod"
   ],
   "bareExternalPackages": [
-    "$app",
     "@hugeicons/svelte",
     "@internationalized/date",
     "@lucide/svelte",
     "@tanstack/table-core",
+    "$app",
     "bits-ui",
     "clsx",
     "embla-carousel-svelte",

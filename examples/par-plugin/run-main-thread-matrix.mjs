@@ -1,4 +1,8 @@
 import { spawnSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+
+const outputPath = process.argv[2];
+const startedAt = new Date().toISOString();
 
 const runs = [];
 for (const mode of ['ordinary', 'worker-1']) {
@@ -27,4 +31,19 @@ for (const mode of ['ordinary', 'worker-1']) {
   }
 }
 
-console.log(JSON.stringify({ runs }, null, 2));
+const report = JSON.stringify(
+  {
+    node: process.version,
+    nodeBinary: process.execPath,
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    runs,
+  },
+  null,
+  2,
+);
+
+if (outputPath) {
+  writeFileSync(outputPath, `${report}\n`);
+}
+console.log(report);

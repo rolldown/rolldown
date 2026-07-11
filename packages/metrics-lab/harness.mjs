@@ -133,12 +133,28 @@ function detectEntry(distDir) {
   const indexFile = path.join(distDir, 'index.html');
   if (!fs.existsSync(indexFile)) return null;
   const html = fs.readFileSync(indexFile, 'utf8');
+  const locals = [];
   for (const tag of html.match(/<script\b[^>]*>/g) ?? []) {
-    if (!tag.includes('type="module"')) continue;
     const src = tag.match(/\bsrc="([^"]+)"/)?.[1];
-    if (src && !src.startsWith('http')) return src.replace(/^\.?\//, '');
+    if (!src || src.startsWith('http')) continue;
+    // webpack emits cache-busting queries (main.bundle.js?abc123) - strip them
+    // or every existsSync/readFile on the entry fails.
+    locals.push({ src: src.split('?')[0].replace(/^\.?\//, ''), module: tag.includes('type="module"') });
   }
-  return null;
+  const moduleScript = locals.find((s) => s.module);
+  if (moduleScript) return moduleScript.src;
+  // webpack-style multi-script pages have no type="module": prefer the
+  // main-looking bundle, else the biggest local script on disk (runtime/shim
+  // scripts come first in the HTML and are tiny).
+  const named = locals.find((s) => /(^|[./])(main|index|app)[^/]*\.m?js$/i.test(s.src));
+  if (named) return named.src;
+  let best = null;
+  for (const s of locals) {
+    const file = path.join(distDir, s.src);
+    const size = fs.existsSync(file) ? fs.statSync(file).size : -1;
+    if (size >= 0 && (!best || size > best.size)) best = { ...s, size };
+  }
+  return best?.src ?? locals[0]?.src ?? null;
 }
 
 async function withServerAndBrowser(distDir, throttleOff, fn) {
@@ -160,7 +176,10 @@ async function withServerAndBrowser(distDir, throttleOff, fn) {
 // --- measure core ----------------------------------------------------------------
 
 async function gatherSamples(cdp, origin, { throttle, expectedFeatures, runs, warmup, settleMs }) {
-  const url = `${origin}/index.html`;
+  // Navigate '/' (not '/index.html'): SPA routers treat the literal
+  // /index.html path as an unknown route and render their 404 page - drawDB
+  // showed us a "looking for something?" screen instead of its landing.
+  const url = `${origin}/`;
   for (let i = 0; i < warmup; i++) {
     process.stderr.write(`warmup ${i + 1}/${warmup}...\n`);
     await timedRun(cdp, { url, throttle, expectedFeatures, settleMs });
@@ -191,6 +210,7 @@ function writeMeasureReport(target, samples, { expectedFeatures, label, throttle
     guard: summary.guard,
     gatingFetches: summary.gatingFetches,
     resourceWeight: summary.resourceWeight,
+    renderBlockingGate: summary.renderBlockingGate,
     delta: prev ? deltaSection(prev.metrics, summary.metrics) : null,
     baselineDelta: baseline ? deltaSection(baseline.metrics, summary.metrics) : null,
     samples: summary.samples,
@@ -228,6 +248,16 @@ function printMeasureSummary(report, hadBaseline) {
   console.log(`guard: ${guardOk ? 'PASS' : `FAIL ${JSON.stringify(report.guard)}`}`);
 
   // Deep signals: things LCP alone doesn't say, each with the move it suggests.
+  const gate = report.renderBlockingGate;
+  if (gate?.gating) {
+    console.log(`render-blocking CSS gate: ${gate.count} blocking stylesheet(s), ${gate.kb}KB held ${Math.round(gate.shareOfFcp * 100)}% of the FCP timeline (last finished ${gate.lastEndMs}ms, FCP ${gate.fcpMs}ms).`);
+    for (const w of (gate.worst ?? []).slice(0, 3)) {
+      console.log(`  blocking until ${w.end}ms: ${w.name} (${kb(w.bytes)})`);
+    }
+    console.log('  next: nothing paints until these finish - inline the small critical CSS, load the rest');
+    console.log('  non-blocking (preload + media swap), and split styles only later routes need. Fix this');
+    console.log('  and any render-gating fetch before judging CPU/JS deferrals.');
+  }
   const renderGap = m['runtime.render_gap_ms'];
   if (typeof renderGap === 'number' && renderGap > 150) {
     console.log(`render gap: first paint landed ${Math.round(renderGap)}ms AFTER the load event - rendering is gated on post-load work, not on downloading.`);
@@ -295,9 +325,19 @@ function pinBaseline(target) {
 // --- coverage core ----------------------------------------------------------------
 
 function buildCoverageReport(target, cov, entry) {
+  // Fetch-timing map (decoded pathname -> bytes) for scripts whose download
+  // began before first paint - see attributeChunks' static-prepaint-transfer.
+  const prePaintFetches = new Map();
+  for (const fetch of cov.scriptFetches ?? []) {
+    if (!fetch.prePaint) continue;
+    let file = fetch.pathname;
+    try { file = decodeURIComponent(file); } catch { /* keep raw */ }
+    prePaintFetches.set(file.replace(/^\/+/, ''), fetch.bytes ?? 0);
+  }
   const { chunks, modules, skipped } = attributeChunks({
     scripts: cov.scripts,
     entryName: `/${entry.replaceAll('\\', '/')}`,
+    prePaintFetches,
     readChunk: (file) => {
       const chunkFile = path.join(target.dist, file);
       if (!fs.existsSync(chunkFile) || !fs.existsSync(`${chunkFile}.map`)) return null;
@@ -353,11 +393,25 @@ function printCoverageReport(target, report) {
       console.log(`  NOTE: chunk ${s.file} executed before paint but has no sourcemap - its bytes are NOT attributed below`);
     }
   }
+  const staticPrepaint = (report.skippedChunks ?? [])
+    .filter((s) => s.reason === 'static-prepaint-transfer')
+    .sort((a, b) => (b.bytes ?? 0) - (a.bytes ?? 0));
+  if (staticPrepaint.length) {
+    const totalBytes = staticPrepaint.reduce((sum, s) => sum + (s.bytes ?? 0), 0);
+    console.log(`  STATIC PRE-PAINT TRANSFER: ${staticPrepaint.length} chunk(s), ${kb(totalBytes)} - fetched BEFORE first paint (static tags/preloads)`);
+    console.log('  but executed only after it. Their download competes with the paint for bandwidth. Largest:');
+    for (const s of staticPrepaint.slice(0, 10)) {
+      console.log(`    ${s.file}  ${kb(s.bytes ?? 0)}${s.neverExecuted ? '  (never executed by settle at all)' : ''}`);
+    }
+    if (staticPrepaint.length > 10) console.log(`    ... +${staticPrepaint.length - 10} more in coverage.json`);
+    console.log('  next: load these on demand (dynamic import / drop them from the initial script tags or preloads)');
+    console.log('  so the first paint stops paying for their transfer.');
+  }
   const lazyChunks = (report.skippedChunks ?? []).filter((s) => s.reason === 'post-paint');
   if (lazyChunks.length) {
-    console.log(`  (${lazyChunks.length} chunk(s) first executed after paint - already deferred, not analyzed: ${lazyChunks.map((s) => s.file).join(', ')})`);
+    console.log(`  (${lazyChunks.length} chunk(s) fetched AND first executed after paint - already deferred, not analyzed: ${lazyChunks.map((s) => s.file).join(', ')})`);
   }
-  if (extraChunks.length || lazyChunks.length) console.log('');
+  if (extraChunks.length || lazyChunks.length || staticPrepaint.length) console.log('');
   const pct = (r) => `${(r * 100).toFixed(1)}%`;
   const shown = modules.slice(0, 60);
   for (const mod of shown) {
@@ -482,6 +536,16 @@ function printVerdict(target) {
       runtime ? 'measurement is stale (dist was rebuilt after it)' : 'no measurement yet',
       `${CLI} measure --runs 5 --label <name>  (or scan)`);
   } else {
+    const gate = runtime.renderBlockingGate;
+    if (gate?.gating) {
+      lead('open', `render-blocking CSS gates first paint (${gate.count} stylesheet(s), ${gate.kb}KB)`,
+        `held ${Math.round(gate.shareOfFcp * 100)}% of the FCP timeline (finished ${gate.lastEndMs}ms, FCP ${gate.fcpMs}ms) - nothing painted until it arrived: ${(gate.worst ?? []).slice(0, 2).map((w) => `${w.name} ${kb(w.bytes)}`).join(', ')}`,
+        'inline critical CSS, load the rest non-blocking (preload + media swap), split route-only styles - fix this before judging CPU/JS deferrals');
+    } else {
+      lead('clear', 'render-blocking CSS',
+        gate ? `blocking CSS held only ${Math.round((gate.shareOfFcp ?? 0) * 100)}% of the FCP timeline - not the gate` : 'none observed');
+    }
+
     const gap = runtime.metrics['runtime.render_gap_ms'];
     if (typeof gap === 'number' && gap > 150) {
       const fetches = runtime.gatingFetches ?? [];
@@ -556,6 +620,18 @@ function printVerdict(target) {
       lead('unknown', `unattributed pre-paint chunk(s): ${unattributed.map((s) => s.file).join(', ')}`,
         'executed before first paint but built without a sourcemap - their bytes are invisible to coverage',
         'rebuild with sourcemaps for these chunks, then re-run coverage');
+    }
+
+    const staticPre = (coverage.skippedChunks ?? [])
+      .filter((s) => s.reason === 'static-prepaint-transfer')
+      .sort((a, b) => (b.bytes ?? 0) - (a.bytes ?? 0));
+    const staticPreBytes = staticPre.reduce((sum, s) => sum + (s.bytes ?? 0), 0);
+    if (staticPreBytes >= 100 * 1024) {
+      lead('open', `static pre-paint transfer (${staticPre.length} chunk(s), ${kb(staticPreBytes)})`,
+        `fetched before paint, executed after it - the paint paid for the download: ${staticPre.slice(0, 3).map((s) => `${s.file} ${kb(s.bytes ?? 0)}`).join(', ')}`,
+        'make these load on demand (dynamic import / drop from initial script tags or preloads) - biggest lever when transfer dominates LCP');
+    } else {
+      lead('clear', 'static pre-paint transfer', staticPre.length ? `only ${kb(staticPreBytes)} fetched-but-unused before paint` : 'nothing fetched before paint that the paint does not use');
     }
 
     const largeHot = largeAtPaintModules(coverage.modules ?? []);
@@ -891,12 +967,14 @@ individual commands (same target rules):
 
 the loop:
   1. build the app; scan --app <appDir> (first scan pins the baseline)
-  2. read EVERY signal in the scan output: render gap (fix FIRST - render with bundled
-     defaults instead of awaiting fetches), pre-paint CPU by module, cold bytes at paint
-     (fetched+parsed before paint but mostly unread - a partially-executed vendor SDK
-     usually hides one boot-time init call), defer candidates, large modules "executed"
-     at paint (data evaluates on import - executed is not needed), sibling variant
-     groups (locales/themes: load only the active one)
+  2. read EVERY signal in the scan output: render-blocking CSS gate + render gap (fix
+     these FIRST - inline critical CSS / render with bundled defaults instead of awaiting
+     fetches), pre-paint CPU by module, static pre-paint transfer (fetched before paint,
+     executed after - make it load on demand), cold bytes at paint (fetched+parsed before
+     paint but mostly unread - a partially-executed vendor SDK usually hides one
+     boot-time init call), defer candidates, large modules "executed" at paint (data
+     evaluates on import - executed is not needed), sibling variant groups
+     (locales/themes: load only the active one)
   3. read the app source; find why the landing page pays for each finding
   4. change the app (never remove features); one change at a time
   5. rebuild; run the app's functional check; scan (--quick to probe, full scan to decide)

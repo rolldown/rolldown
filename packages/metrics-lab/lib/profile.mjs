@@ -21,7 +21,8 @@ export async function profileRun(cdp, { origin, throttle, timeoutMs = 60_000 }) 
     await page.send('Profiler.enable');
     await page.send('Profiler.setSamplingInterval', { interval: 200 }); // microseconds
     await page.send('Profiler.start');
-    await page.navigate(`${origin}/index.html`);
+    // '/' not '/index.html': router-strict SPAs 404 on the literal file path.
+    await page.navigate(`${origin}/`);
 
     const deadline = Date.now() + timeoutMs;
     for (;;) {

@@ -69,6 +69,17 @@ const COLLECT_JS = `(() => {
       a.preFcpBytes += r.bytes;
     }
   }
+  // Render-blocking resources gate FCP by spec: nothing paints until the last
+  // blocking stylesheet arrives and parses. Aggregate uncapped (the detail list
+  // is capped) - the JS-side signals can never see this class of gate.
+  const blocking = res.filter((r) => r.renderBlockingStatus === 'blocking');
+  const blockingGate = {
+    count: blocking.length,
+    bytes: blocking.reduce((a, r) => a + (r.encodedBodySize || 0), 0),
+    lastEndMs: Math.round(blocking.reduce((a, r) => Math.max(a, r.responseEnd || 0), 0)),
+    worst: blocking.slice().sort((a, b) => (b.responseEnd || 0) - (a.responseEnd || 0)).slice(0, 4)
+      .map((r) => ({ name: r.name.replace(location.origin, ''), end: Math.round(r.responseEnd || 0), bytes: r.encodedBodySize || 0 })),
+  };
   // Detail list: every fetch/xhr (render-gap suspects are often tiny), then the
   // largest of everything else - a big resource must never fall off the list.
   const fetchLike = all.filter((r) => r.type === 'fetch' || r.type === 'xhr').slice(0, 40);
@@ -76,6 +87,7 @@ const COLLECT_JS = `(() => {
     .sort((a, b) => b.bytes - a.bytes)
     .slice(0, 60 - fetchLike.length);
   return {
+    blockingGate,
     fcp: M.fcp,
     lcp: M.lcp,
     cls: M.cls,
@@ -197,6 +209,36 @@ export function heavyPrepaintTypes(weightRows) {
   ));
 }
 
+/**
+ * FCP cannot precede the last render-blocking stylesheet (spec: nothing paints
+ * until blocking CSS arrives and parses). When that stylesheet occupies a large
+ * share of the FCP timeline, CSS is the paint gate — a class every JS-side
+ * signal is blind to. (jellyfin A/B 2026-07-11: unblocking CSS scored −50.1%
+ * where the JS-lead path got −36.5%; the harness had no CSS signal at all, and
+ * a "finished within 300ms of FCP" rule ALSO missed it — the CSS finished 1s
+ * before FCP yet held 77% of its timeline. Judge by share, not adjacency.)
+ */
+export function renderBlockingGate(samples) {
+  const painted = samples.filter((s) => typeof s.fcp === 'number' && s.blockingGate);
+  if (!painted.length) return null;
+  const count = Math.max(...painted.map((s) => s.blockingGate.count ?? 0));
+  if (!count) return null;
+  const fcpMs = median(painted.map((s) => s.fcp));
+  const lastEndMs = median(painted.map((s) => s.blockingGate.lastEndMs ?? 0));
+  const kb = Math.round((median(painted.map((s) => s.blockingGate.bytes ?? 0)) ?? 0) / 1024);
+  const mid = painted.slice().sort((a, b) => a.fcp - b.fcp)[Math.floor(painted.length / 2)];
+  const shareOfFcp = fcpMs > 0 ? (lastEndMs ?? 0) / fcpMs : 0;
+  return {
+    count,
+    kb,
+    lastEndMs: Math.round(lastEndMs ?? 0),
+    fcpMs: Math.round(fcpMs ?? 0),
+    shareOfFcp: Math.round(shareOfFcp * 100) / 100,
+    gating: shareOfFcp >= 0.4 && kb >= 8,
+    worst: mid.blockingGate.worst ?? [],
+  };
+}
+
 /** Fold N samples into the flat runtime metric-id map plus the correctness guard. */
 export function summarize(samples, expectedFeatures = []) {
   const nums = (key) => samples.map((s) => s[key]).filter((v) => typeof v === 'number');
@@ -228,6 +270,7 @@ export function summarize(samples, expectedFeatures = []) {
     },
     gatingFetches: gatingFetches(samples),
     resourceWeight: resourceWeight(samples),
+    renderBlockingGate: renderBlockingGate(samples),
     guard: {
       allFeaturesReady: samples.every(
         (s) => expectedFeatures.every((f) => s.ready && s.ready[f] === true),

@@ -206,14 +206,26 @@ export function coverageBySource({ code, map, atPaint, atSettle }) {
   return rows;
 }
 
+/** URL pathnames arrive percent-encoded (%40scope), disk files hold the literal
+ * characters — decode before touching the filesystem or names never match. */
+function toFile(pathname) {
+  try {
+    return decodeURIComponent(pathname).replace(/^\/+/, '');
+  } catch {
+    return pathname.replace(/^\/+/, '');
+  }
+}
+
 /**
  * Attribute the whole initial load: the entry chunk plus every same-origin JS
- * chunk that executed before first paint. Chunks first executing after paint are
- * already deferred — reported in `skipped` (reason 'post-paint'), not analyzed.
+ * chunk that executed before first paint. Chunks first executing after paint
+ * are split by their FETCH timing: fetched pre-paint (static tags, preloads) =
+ * reason 'static-prepaint-transfer' with byte cost — the paint paid for their
+ * download; fetched after paint = reason 'post-paint' (genuinely deferred).
  * `readChunk(file)` returns { code, map } or null when no sourcemap exists
  * (skipped with reason 'no-sourcemap' — never silently).
  */
-export function attributeChunks({ scripts, entryName, readChunk }) {
+export function attributeChunks({ scripts, entryName, readChunk, prePaintFetches = new Map() }) {
   const chunks = [];
   const modules = [];
   const skipped = [];
@@ -221,9 +233,13 @@ export function attributeChunks({ scripts, entryName, readChunk }) {
     const isEntry = script.pathname.endsWith(entryName);
     // Inline scripts surface under the document URL; only .js files are chunks.
     if (!isEntry && !/\.[mc]?js$/.test(script.pathname)) continue;
-    const file = script.pathname.replace(/^\/+/, '');
+    const file = toFile(script.pathname);
     if (!isEntry && !script.atPaint) {
-      skipped.push({ file, reason: 'post-paint' });
+      if (prePaintFetches.has(file)) {
+        skipped.push({ file, reason: 'static-prepaint-transfer', bytes: prePaintFetches.get(file) });
+      } else {
+        skipped.push({ file, reason: 'post-paint' });
+      }
       continue;
     }
     const loaded = readChunk(file);
@@ -258,6 +274,14 @@ export function attributeChunks({ scripts, entryName, readChunk }) {
       ...totals,
       paintRatio: totals.totalBytes ? totals.paintBytes / totals.totalBytes : 0,
     });
+  }
+  // Pre-paint-fetched scripts the profiler never saw execute by settle: pure
+  // dead transfer on the paint's critical path (they can't even claim "needed
+  // later this session").
+  const seen = new Set([...chunks.map((c) => c.file), ...skipped.map((s) => s.file)]);
+  for (const [file, bytes] of prePaintFetches) {
+    if (seen.has(file)) continue;
+    skipped.push({ file, reason: 'static-prepaint-transfer', bytes, neverExecuted: true });
   }
   chunks.sort((a, b) => (b.entry ? 1 : 0) - (a.entry ? 1 : 0) || b.totalBytes - a.totalBytes);
   modules.sort((a, b) => b.totalBytes - a.totalBytes);
@@ -367,7 +391,8 @@ async function coverageAttempt(cdp, {
     await page.send('Profiler.enable');
     const armed = await page.send('Profiler.startPreciseCoverage', { callCount: false, detailed: true });
     debug(`armed on blank (v8 timestamp ${armed?.timestamp})`);
-    await page.navigate(`${origin}/index.html`);
+    // '/' not '/index.html': router-strict SPAs 404 on the literal file path.
+    await page.navigate(`${origin}/`);
     debug('navigate(index) resolved');
 
     const deadline = Date.now() + timeoutMs;
@@ -427,7 +452,20 @@ async function coverageAttempt(cdp, {
       const seen = scripts.map((script) => script.pathname).join(', ') || '(none)';
       throw new Error(`coverage: entry script ${entryName} not seen (scripts: ${seen})`);
     }
-    return { scripts };
+    // Resource timing for every same-origin script: a chunk whose EXECUTION is
+    // post-paint is still critical-path cost when its FETCH started before the
+    // paint (static <script> tags, modulepreload) — the download competes with
+    // the paint for bandwidth. Execution timing alone cannot see that.
+    const scriptFetches = JSON.parse(await page.evaluate(`JSON.stringify((() => {
+      const fcp = (window.__perfMetrics || {}).fcp ?? null;
+      return performance.getEntriesByType('resource')
+        .filter((r) => r.name.startsWith(location.origin))
+        .map((r) => ({ pathname: new URL(r.name).pathname, startMs: r.startTime,
+          bytes: r.encodedBodySize || r.transferSize || 0 }))
+        .filter((r) => /\\.[mc]?js$/.test(r.pathname))
+        .map((r) => ({ ...r, prePaint: fcp != null && r.startMs < fcp }));
+    })())`));
+    return { scripts, scriptFetches };
   } finally {
     await page.close().catch(() => {});
   }

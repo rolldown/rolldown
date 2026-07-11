@@ -27,6 +27,13 @@ Individual commands exist too (`measure [--pin]`, `coverage`, `profile`,
 
 1. Build the app. `scan --app <appDir>` — the first scan is your baseline.
 2. Read EVERY signal class in the scan output; each is a lead with a next-step:
+   - **render-blocking CSS gate** — FCP cannot precede the last render-blocking
+     stylesheet; when they land together, CSS is the paint gate and no amount of
+     JS work will move it. Fix FIRST, alongside render gap: inline the small
+     critical CSS, load the rest non-blocking (preload + media swap), split
+     styles only later routes need. (On pages loading many scripts, a plain
+     `media="print"` link gets fetch-deprioritized behind them — pair it with
+     `rel="preload"`.)
    - **render gap** — paint gated on post-load work. The gate is named when the
      data can name it: a gating fetch/xhr, or heavy pre-paint fonts/images (the
      per-type "before first paint" weights). Fix FIRST: fetches → render with
@@ -48,6 +55,11 @@ Individual commands exist too (`measure [--pin]`, `coverage`, `profile`,
      first paint is critical-path transfer, even if every import of it is dynamic.
      Find what runs it at boot (a top-level or render-time `import()`, an eagerly
      mounted component) and move that trigger to the actual interaction.
+   - **static pre-paint transfer** — chunks fetched before first paint (static
+     script tags, modulepreloads) but executed only after it. Execution timing
+     says "deferred"; the download still competed with the paint for bandwidth,
+     and when transfer dominates LCP this is the biggest lever. Load them on
+     demand: dynamic import, or drop them from the initial tags/preloads.
    - **large modules executed at paint** — "executed" does NOT mean needed; top-level
      data evaluates on import. Verify how much the first render reads; split the rest
      behind a dynamic import.

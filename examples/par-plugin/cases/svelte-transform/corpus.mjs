@@ -14,6 +14,7 @@ export const EXPECTED_CORPUS = {
   bytes: 1946145,
   typeScriptFiles: 1314,
   runeFiles: 616,
+  styleTags: 0,
   uniqueContents: 1322,
   aggregateSha256: 'ea584b2189062d5986cb4c15f344bcb42cbee8b7089277ee95d5d7ab9f49b8e8',
 };
@@ -55,6 +56,7 @@ export async function scanSourceCorpus(sourceRoot) {
       sha256: sha256(content),
       typeScript: /<script(?:\s[^>]*)?\slang=["']ts["']/.test(source),
       runes: /\$(?:state|derived|effect|props|bindable|inspect|host)\b/.test(source),
+      styleTags: source.match(/<style(?:\s|>)/g)?.length ?? 0,
     });
   }
 
@@ -82,6 +84,7 @@ export function summarizeEntries(entries) {
     bytes: entries.reduce((total, entry) => total + entry.bytes, 0),
     typeScriptFiles: entries.filter((entry) => entry.typeScript).length,
     runeFiles: entries.filter((entry) => entry.runes).length,
+    styleTags: entries.reduce((total, entry) => total + entry.styleTags, 0),
     uniqueContents: new Set(entries.map((entry) => entry.sha256)).size,
     aggregateSha256: aggregate.digest('hex'),
   };

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFile, realpath } from 'node:fs/promises';
 import nodePath from 'node:path';
-import { performance } from 'node:perf_hooks';
+import { monitorEventLoopDelay, performance } from 'node:perf_hooks';
 import { rolldown } from 'rolldown';
 import { createMetricsBuffer, readMetrics } from '../../svelte-transform-plugin/metrics.js';
 
@@ -11,6 +11,7 @@ const {
   variant,
   componentCount,
   instrumentation,
+  measureEventLoop = false,
   _corpusDirectory: corpusDirectory,
   _entryPath: entryPath,
   _selectedSourceBytes: selectedSourceBytes,
@@ -18,6 +19,9 @@ const {
 } = options;
 if (variant !== 'ordinary' && !/^worker-(?:[1-9]|[1-5]\d|6[0-4])$/.test(variant)) {
   throw new Error(`invalid variant: ${variant}`);
+}
+if (typeof instrumentation !== 'boolean' || typeof measureEventLoop !== 'boolean') {
+  throw new Error('instrumentation and measureEventLoop must be booleans');
 }
 if (!Number.isSafeInteger(componentCount) || componentCount < 1) {
   throw new Error('componentCount must be a positive safe integer');
@@ -50,9 +54,15 @@ const normalize = (value) => {
   return normalized;
 };
 let build;
+let eventLoopMonitor;
 
 try {
   globalThis.gc?.();
+  if (measureEventLoop) {
+    eventLoopMonitor = monitorEventLoopDelay({ resolution: 1 });
+    eventLoopMonitor.enable();
+    await new Promise((resolve) => setImmediate(resolve));
+  }
   const cpuStartedAt = process.cpuUsage();
   const totalStartedAt = performance.now();
   const metricsBuffer = instrumentation ? createMetricsBuffer() : undefined;
@@ -79,6 +89,7 @@ try {
   const generateFinishedAt = performance.now();
   await build.close();
   build = undefined;
+  if (eventLoopMonitor) await new Promise((resolve) => setImmediate(resolve));
   const totalFinishedAt = performance.now();
   const cpu = process.cpuUsage(cpuStartedAt);
 
@@ -136,9 +147,20 @@ try {
       outputCodeHash: codeHash.digest('hex'),
       outputRawMapHash: rawMapHash.digest('hex'),
       outputMapHash: mapHash.digest('hex'),
+      eventLoopDelayMs: eventLoopMonitor
+        ? {
+            min: eventLoopMonitor.min / 1e6,
+            mean: eventLoopMonitor.mean / 1e6,
+            p50: eventLoopMonitor.percentile(50) / 1e6,
+            p95: eventLoopMonitor.percentile(95) / 1e6,
+            p99: eventLoopMonitor.percentile(99) / 1e6,
+            max: eventLoopMonitor.max / 1e6,
+          }
+        : undefined,
       jsMetrics: readMetrics(metricsBuffer),
     }),
   );
 } finally {
+  eventLoopMonitor?.disable();
   await build?.close();
 }

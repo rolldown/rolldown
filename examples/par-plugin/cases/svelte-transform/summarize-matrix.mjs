@@ -26,6 +26,9 @@ for (const [key, runs] of groups) {
     rolldownApiElapsedMs: statistics(runs.map((run) => run.rolldownApiElapsedMs)),
     cpuUserMs: statistics(runs.map((run) => run.cpuUserMs)),
     peakRssBytes: statistics(runs.map((run) => run.peakRssBytes)),
+    eventLoopMeanMs: optionalStatistics(runs.map((run) => run.eventLoopDelayMs?.mean)),
+    eventLoopP99Ms: optionalStatistics(runs.map((run) => run.eventLoopDelayMs?.p99)),
+    eventLoopMaxMs: optionalStatistics(runs.map((run) => run.eventLoopDelayMs?.max)),
     pairedSpeedupVsOrdinary:
       variant === 'ordinary'
         ? statistics(runs.map(() => 1))

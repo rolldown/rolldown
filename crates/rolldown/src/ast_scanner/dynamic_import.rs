@@ -27,7 +27,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // IdentifierReference, but IdentifierReference did not saved the related `SymbolId`
     // Something wrong with semantic analyze
     let symbol_id = reference.symbol_id().expect("should have symbol id");
-    let parent = self.visit_path.last()?;
+    let parent = *self.visit_path.last()?;
     // if the property could be converted as a static property name, e.g.
     // a.b // static
     // a['b'] // static
@@ -40,7 +40,38 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .get(&symbol_id)?;
     let usage = match partial_name {
       Some(name) => DynamicImportExportsUsage::Single(name.into()),
-      None => DynamicImportExportsUsage::Complete,
+      None => match parent {
+        // The binding is destructured in a later statement rather than accessed as a
+        // member, e.g. `import('mod').then(ns => { const { a } = ns })`.
+        // Treat the destructured keys the same as `ns.a` member accesses instead of bailing.
+        AstKind::VariableDeclarator(var_decl)
+          if matches!(&var_decl.id, ast::BindingPattern::ObjectPattern(_)) =>
+        {
+          // A re-exported key (`export const { a } = ns`) must be kept even when it
+          // is never read locally, so detect the enclosing export declaration
+          // (VariableDeclarator -> VariableDeclaration -> Export*) and forward it.
+          let is_exported = self
+            .visit_path
+            .len()
+            .checked_sub(3)
+            .and_then(|idx| self.visit_path.get(idx))
+            .is_some_and(|kind| {
+              matches!(
+                kind,
+                AstKind::ExportDefaultDeclaration(_) | AstKind::ExportNamedDeclaration(_)
+              )
+            });
+          match self.update_dynamic_import_usage_info_from_binding_pattern(
+            &var_decl.id,
+            rec_idx,
+            is_exported,
+          ) {
+            Some(set) => DynamicImportExportsUsage::Partial(set),
+            None => DynamicImportExportsUsage::Complete,
+          }
+        }
+        _ => DynamicImportExportsUsage::Complete,
+      },
     };
     match self.dynamic_import_usage_info.dynamic_import_exports_usage.entry(rec_idx) {
       std::collections::hash_map::Entry::Occupied(mut occ) => occ.get_mut().merge(usage),

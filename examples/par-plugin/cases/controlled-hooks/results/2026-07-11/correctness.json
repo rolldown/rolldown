@@ -1,0 +1,52 @@
+{
+  "node": "v24.18.0",
+  "nodeBinary": "/Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node",
+  "nodeBinarySha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a",
+  "rolldownCommit": "7c4bac5bfb4789143b327dee2cbe6153d8c15cf8",
+  "rolldownWorktreeStatus": "",
+  "nativeBinding": {
+    "path": "/Users/yunfeihe/Documents/github-opensource/.worktrees/rolldown-parallel-js-plugin-resolve-load/packages/rolldown/src/rolldown-binding.darwin-arm64.node",
+    "sha256": "72376e7c924a33f459b3b1a2641bdab94c620fbcb5f810c3c053501e20e8766d",
+    "declaredBuildProfile": "release",
+    "sourceCommit": "c9a41b1b93bdceab0572edb91c8d68bf630f3c4b"
+  },
+  "filterMiss": {
+    "wrapperCalls": 1,
+    "permitAcquiredCalls": 1,
+    "nullResults": 1
+  },
+  "state": {
+    "ordinaryOutputHash": "5c1817024903b91e457f2d39905946e3855e63d2a9493bece4e3478120b550c9",
+    "workerOutputHash": "1160c3f664ea6dba9411071b65e1ef7815beb5ca5662755214370c32b39fd484",
+    "perWorkerCalls": [8, 8, 8, 8]
+  },
+  "reentrant": {
+    "ordinaryAndWorkerTwoHash": "d7e47d6d5015cf6dbcd3e6ee09c9dce8c7ea3ecf2e908473c8f17260d58c9371",
+    "workerOne": "timed out after 2000 ms while holding the only permit"
+  },
+  "errors": {
+    "propagated": ["ordinary resolveId", "worker-1 resolveId", "ordinary load", "worker-1 load"],
+    "attribution": {
+      "resolve-error": {
+        "ordinary": {
+          "pluginLabel": true,
+          "handlerFrame": true
+        },
+        "worker-1": {
+          "pluginLabel": false,
+          "handlerFrame": false
+        }
+      },
+      "load-error": {
+        "ordinary": {
+          "pluginLabel": true,
+          "handlerFrame": true
+        },
+        "worker-1": {
+          "pluginLabel": false,
+          "handlerFrame": false
+        }
+      }
+    }
+  }
+}

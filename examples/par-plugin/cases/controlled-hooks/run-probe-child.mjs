@@ -66,8 +66,8 @@ try {
     .filter((output) => output.type === 'chunk')
     .map((output) => output.code)
     .join('\n');
-  const stateTuples = [...code.matchAll(/\.concat\(\[\[(\d+), (\d+), (\d+)\]\]\)/g)].map((match) =>
-    match.slice(1).map(Number),
+  const stateTuples = [...code.matchAll(/\.concat\(\[\[\s*(\d+),\s*(\d+),\s*(\d+)\s*\]\]\)/g)].map(
+    (match) => match.slice(1).map(Number),
   );
   console.log(
     JSON.stringify({
@@ -76,6 +76,7 @@ try {
       outputBytes: Buffer.byteLength(code),
       outputHash: createHash('sha256').update(code).digest('hex'),
       stateTuples,
+      ...(process.env.CONTROLLED_HOOK_PROBE_PRINT_CODE === '1' ? { code } : {}),
     }),
   );
 } finally {

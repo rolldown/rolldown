@@ -1,9 +1,4 @@
-import {
-  configureAsyncRuntime as configureBindingAsyncRuntime,
-  getAsyncRuntimeConfig as getBindingAsyncRuntimeConfig,
-  getAsyncRuntimeMetrics as getBindingAsyncRuntimeMetrics,
-  resetAsyncRuntimeMetrics as resetBindingAsyncRuntimeMetrics,
-} from '../binding.cjs';
+import * as binding from '../binding.cjs';
 import { BindingMismatchError } from '../utils/binding-mismatch-error';
 
 const ASYNC_RUNTIME_FLAVORS = ['CurrentThread', 'MultiThread'] as const;
@@ -23,21 +18,47 @@ const ASYNC_RUNTIME_METRIC_FIELDS = [
   'maxActiveBlockingTasks',
 ] as const;
 
-function assertAsyncRuntimeBindingExport(exportName: string, value: unknown): void {
+function readAsyncRuntimeBindingExport(exportName: string): (...args: unknown[]) => unknown {
+  let value: unknown;
+  try {
+    value = Reflect.get(binding, exportName);
+  } catch (error) {
+    throw new AsyncRuntimeBindingExportError(exportName, 'the export could not be read', {
+      cause: error,
+    });
+  }
   if (typeof value !== 'function') {
-    throw new BindingMismatchError(
-      `The loaded Rolldown binding does not expose ${exportName}() as a function. ` +
+    throw new AsyncRuntimeBindingExportError(exportName, 'the export is not a function');
+  }
+  return value as (...args: unknown[]) => unknown;
+}
+
+function invokeAsyncRuntimeReporter(exportName: string): unknown {
+  const reporter = readAsyncRuntimeBindingExport(exportName);
+  try {
+    return Reflect.apply(reporter, undefined, []);
+  } catch (error) {
+    throw new AsyncRuntimeBindingContractError(exportName, 'the reporter threw', { cause: error });
+  }
+}
+
+class AsyncRuntimeBindingExportError extends BindingMismatchError {
+  constructor(exportName: string, detail: string, options?: ErrorOptions) {
+    super(
+      `The loaded Rolldown binding does not expose ${exportName}() as a function: ${detail}. ` +
         'Reinstall Rolldown so the JavaScript package and binding versions match.',
+      options,
     );
+    this.name = 'AsyncRuntimeBindingExportError';
   }
 }
 
 class AsyncRuntimeBindingContractError extends BindingMismatchError {
-  constructor(exportName: string, detail: string, cause?: unknown) {
+  constructor(exportName: string, detail: string, options?: ErrorOptions) {
     super(
       `The loaded Rolldown binding returned an incompatible ${exportName}() result: ${detail}. ` +
         'Reinstall Rolldown so the JavaScript package and binding versions match.',
-      cause === undefined ? undefined : { cause },
+      options,
     );
     this.name = 'AsyncRuntimeBindingContractError';
   }
@@ -58,11 +79,9 @@ function readBindingResultField(
   try {
     return Reflect.get(result, field, result);
   } catch (error) {
-    throw new AsyncRuntimeBindingContractError(
-      exportName,
-      `the ${field} field could not be read`,
-      error,
-    );
+    throw new AsyncRuntimeBindingContractError(exportName, `the ${field} field could not be read`, {
+      cause: error,
+    });
   }
 }
 
@@ -97,11 +116,16 @@ function normalizeAsyncRuntimeConfig(
   exportName: string,
   result: Record<PropertyKey, unknown>,
 ): AsyncRuntimeConfig {
-  return {
-    flavor: readAsyncRuntimeFlavor(exportName, result),
-    workerThreads: readAsyncRuntimeInteger(exportName, result, 'workerThreads', 1),
-    maxBlockingTasks: readAsyncRuntimeInteger(exportName, result, 'maxBlockingTasks', 1),
-  };
+  const flavor = readAsyncRuntimeFlavor(exportName, result);
+  const workerThreads = readAsyncRuntimeInteger(exportName, result, 'workerThreads', 1);
+  const maxBlockingTasks = readAsyncRuntimeInteger(exportName, result, 'maxBlockingTasks', 1);
+  if (flavor === 'CurrentThread' && (workerThreads !== 1 || maxBlockingTasks !== 1)) {
+    throw new AsyncRuntimeBindingContractError(
+      exportName,
+      'CurrentThread requires workerThreads and maxBlockingTasks to both equal 1',
+    );
+  }
+  return { flavor, workerThreads, maxBlockingTasks };
 }
 
 /**
@@ -199,8 +223,8 @@ export interface AsyncRuntimeMetrics extends AsyncRuntimeConfig {
  * @experimental
  */
 export function configureAsyncRuntime(options: AsyncRuntimeOptions): void {
-  assertAsyncRuntimeBindingExport('configureAsyncRuntime', configureBindingAsyncRuntime);
-  configureBindingAsyncRuntime(options);
+  const configureBindingAsyncRuntime = readAsyncRuntimeBindingExport('configureAsyncRuntime');
+  Reflect.apply(configureBindingAsyncRuntime, undefined, [options]);
 }
 
 /**
@@ -214,11 +238,10 @@ export function configureAsyncRuntime(options: AsyncRuntimeOptions): void {
  * @experimental
  */
 export function getAsyncRuntimeConfig(): AsyncRuntimeConfig {
-  assertAsyncRuntimeBindingExport('getAsyncRuntimeConfig', getBindingAsyncRuntimeConfig);
   const exportName = 'getAsyncRuntimeConfig';
   return normalizeAsyncRuntimeConfig(
     exportName,
-    readBindingResultObject(exportName, getBindingAsyncRuntimeConfig()),
+    readBindingResultObject(exportName, invokeAsyncRuntimeReporter(exportName)),
   );
 }
 
@@ -228,9 +251,8 @@ export function getAsyncRuntimeConfig(): AsyncRuntimeConfig {
  * @experimental
  */
 export function getAsyncRuntimeMetrics(): AsyncRuntimeMetrics {
-  assertAsyncRuntimeBindingExport('getAsyncRuntimeMetrics', getBindingAsyncRuntimeMetrics);
   const exportName = 'getAsyncRuntimeMetrics';
-  const result = readBindingResultObject(exportName, getBindingAsyncRuntimeMetrics());
+  const result = readBindingResultObject(exportName, invokeAsyncRuntimeReporter(exportName));
   const config = normalizeAsyncRuntimeConfig(exportName, result);
   const metrics = Object.fromEntries(
     ASYNC_RUNTIME_METRIC_FIELDS.map((field) => [
@@ -264,8 +286,8 @@ export function getAsyncRuntimeMetrics(): AsyncRuntimeMetrics {
  * @experimental
  */
 export function resetAsyncRuntimeMetrics(): void {
-  assertAsyncRuntimeBindingExport('resetAsyncRuntimeMetrics', resetBindingAsyncRuntimeMetrics);
-  resetBindingAsyncRuntimeMetrics();
+  const resetBindingAsyncRuntimeMetrics = readAsyncRuntimeBindingExport('resetAsyncRuntimeMetrics');
+  Reflect.apply(resetBindingAsyncRuntimeMetrics, undefined, []);
 }
 
 /** @deprecated Use {@link AsyncRuntimeFlavor}. */

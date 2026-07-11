@@ -177,24 +177,32 @@ describe.runIf(sharedCurrentThreadNative)('async-runtime JavaScript host lifecyc
   );
 
   test(
-    'a throwing timer cancellation callback is contained at the binding boundary',
+    'schedule rejection and cancellation failure share one strike per timer relay',
     { timeout: 50_000 },
     () => {
       const child = runCurrentThreadChild(`
         ${childPrelude}
         const binding = await loadBinding();
-        let resolveCancellation;
-        const cancellationObserved = new Promise((resolve) => {
-          resolveCancellation = resolve;
+        let cancellationCount = 0;
+        let resolveCancellations;
+        const scheduleRejectors = new Map();
+        const cancellationsObserved = new Promise((resolve) => {
+          resolveCancellations = resolve;
         });
         const registration = binding.reserveCurrentThreadHostRegistration();
         binding.registerTimerHost(
           registration.high,
           registration.low,
-          () => new Promise(() => {}),
-          () => {
-            resolveCancellation();
-            throw new Error('intentional timer cancellation failure');
+          (id) => new Promise((_, reject) => {
+            scheduleRejectors.set(id, reject);
+          }),
+          (id) => {
+            cancellationCount += 1;
+            const error = new Error('intentional timer relay failure');
+            scheduleRejectors.get(id)?.(error);
+            scheduleRejectors.delete(id);
+            if (cancellationCount >= 3) resolveCancellations();
+            throw error;
           },
         );
 
@@ -213,10 +221,22 @@ describe.runIf(sharedCurrentThreadNative)('async-runtime JavaScript host lifecyc
         const originalSetTimeout = globalThis.setTimeout;
         try {
           await waitForEnd(watcher, originalSetTimeout);
-          await delay(1100);
-          const secondEnd = waitForEnd(watcher, originalSetTimeout);
-          fs.writeFileSync(input, 'export const value = 2;');
-          await Promise.all([secondEnd, cancellationObserved]);
+          for (let value = 2; value <= 4; value += 1) {
+            await delay(1100);
+            const nextEnd = waitForEnd(watcher, originalSetTimeout);
+            fs.writeFileSync(input, 'export const value = ' + value + ';');
+            await nextEnd;
+          }
+          await cancellationsObserved;
+          const evictionDeadline = Date.now() + 10_000;
+          while (
+            binding.isCurrentThreadHostRegistrationActive(registration.high, registration.low)
+          ) {
+            if (Date.now() >= evictionDeadline) {
+              throw new Error('timer host was not evicted after three cancellation failures');
+            }
+            await new Promise((resolve) => originalSetTimeout(resolve, 10));
+          }
           await watcher.close();
           const stopRuntime = binding.__rolldownTestStopAsyncRuntime;
           const startRuntime = binding.__rolldownTestStartAsyncRuntime;
@@ -226,7 +246,11 @@ describe.runIf(sharedCurrentThreadNative)('async-runtime JavaScript host lifecyc
           stopRuntime();
           startRuntime();
           binding.unregisterTimerHost(registration.high, registration.low);
-          console.log(JSON.stringify({ cancellationObserved: true, runtimeRestarted: true }));
+          console.log(JSON.stringify({
+            cancellationCount,
+            hostEvicted: true,
+            runtimeRestarted: true,
+          }));
         } finally {
           await watcher.close();
           binding.unregisterTimerHost(registration.high, registration.low);
@@ -237,11 +261,15 @@ describe.runIf(sharedCurrentThreadNative)('async-runtime JavaScript host lifecyc
       expect(child.error, child.stderr).toBeUndefined();
       expect(child.status, child.stderr).toBe(0);
       expect(child.stderr).toContain('host timer cancellation callback failed');
+      expect(child.stderr).toContain('this relay failure was already accounted');
+      expect(child.stderr).toContain('3 times in a row');
       const lines = child.stdout.trim().split('\n');
-      expect(JSON.parse(lines[lines.length - 1])).toEqual({
-        cancellationObserved: true,
+      const result = JSON.parse(lines[lines.length - 1]);
+      expect(result).toMatchObject({
+        hostEvicted: true,
         runtimeRestarted: true,
       });
+      expect(result.cancellationCount).toBeGreaterThanOrEqual(3);
     },
   );
 

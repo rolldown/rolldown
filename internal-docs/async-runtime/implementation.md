@@ -72,9 +72,11 @@ implementation before this code can ship; the unsafe-trait change deliberately
 makes an older revision fail to compile instead of producing an unpinned
 binary.
 
-The integration currently pins the coordinated v3-manifest compatibility
-revision `9cd62b6ad6d92d6ebd19d9b5e4fcf4461d687d91` for `napi`,
-`napi-derive`, and `napi-derive-backend`. `BindingMagicString` uses concrete
+The integration currently pins v3-manifest compatibility revision
+`352a1651e4d139e821ba1384bcbd368e315e61b4` for `napi`, `napi-derive`, and
+`napi-derive-backend`. That revision mirrors the exact reviewed napi-rs#3352
+head `fda7568a470c9e7511d9987ca847e443a1bf06c4` while Rolldown's Oxc NAPI
+dependencies still require v3 manifests. `BindingMagicString` uses concrete
 `MagicString<'static>` storage backed by `Cow::Owned`, so the public N-API
 class cannot borrow a constructor call frame and moving the input `String`
 does not add a second source allocation.
@@ -317,8 +319,11 @@ does not add a second source allocation.
   constructor getter, species lookup, or rejection-observation mechanism is
   part of delivery.
   `getCurrentThreadTaskHostContractVersion()` exposes the native ABI version for
-  this contract in every runtime profile. `timer-host.ts` first reads the
-  binding's normalized runtime capabilities. Every native shared-runtime
+  this contract in every runtime profile. `timer-host.ts` reads the capability
+  reporter exactly once through the normalized compatibility boundary before
+  touching the host surface. Reporter and host-export getter failures retain
+  their original `cause` under `ERR_ROLLDOWN_BINDING_MISMATCH`. Every native
+  shared-runtime
   environment installs both hosts proactively, including an import-time
   MultiThread profile, because the still-lazy runtime may be synchronously
   configured to CurrentThread after the side-effect module is cached. Tokio
@@ -791,9 +796,13 @@ is callable and reports `ERR_ROLLDOWN_BINDING_MISMATCH` when a stale optional
 binding is loaded, instead of leaking an unhelpful `is not a function` error.
 Config and metrics results are normalized too: flavors must be recognized,
 thread counts must be positive safe integers, counters and gauges must be
-nonnegative safe integers, and each high-water mark must cover its live gauge.
-Missing, getter-throwing, or malformed fields fail with the same mismatch
-identity instead of leaking an incompatible native contract into user code.
+nonnegative safe integers, `CurrentThread` must report exactly one worker and
+one blocking task, and each high-water mark must cover its live gauge. Binding
+export getters, infallible reporter calls, and result field getters are all
+contained; missing, throwing, or malformed values fail with the same mismatch
+identity and preserve the original failure as an own `cause`, including when
+the binding throws `undefined`, instead of leaking an incompatible native
+contract into user code.
 The generated N-API declarations remain an internal transport detail.
 
 This API is feature-gated. `configureAsyncRuntime`, `getAsyncRuntimeConfig`, and
@@ -836,11 +845,15 @@ and `wasi-threads` to conservative complete capability records instead of
 assuming every legacy artifact is native. Reports with any other missing,
 invalid, or internally inconsistent field fail with
 `ERR_ROLLDOWN_BINDING_MISMATCH`; when loader metadata is available, its target
-must also agree with the reporter. This prevents malformed threaded-WASI
-reports from silently taking the native no-lease path or enabling unsupported
-worker-backed features. The layer is intentionally extensible so stacked host
-integrations can add richer workflow support without changing the low-level
-binding contract. Parallel-plugin descriptor consumption has an additional
+must also agree with the reporter. Missing `devSupported` and `watchSupported`
+fields use the stable `threads` and inverse-`wasi` compatibility defaults, but
+explicit values are independent workflow capabilities and are preserved.
+Binding export, reporter, loader-target, and report-field getter failures
+preserve their original `cause` under the same mismatch identity. This prevents
+malformed threaded-WASI reports from silently taking the native no-lease path
+while still allowing stacked host integrations to declare richer or narrower
+workflow support without changing the low-level scheduler contract.
+Parallel-plugin descriptor consumption has an additional
 synchronous preflight at the public build, rolldown, scan, and dev boundaries
 and at `createBundlerOptions`. The latter repeats the preflight immediately
 after synchronous `outputOptions` hooks, before normalizing hook-injected
@@ -990,15 +1003,21 @@ long-timeout chunks. If the matching `clearTimeout` throws, cancellation tries
 the handle's captured `Symbol.dispose`/`close` methods. If those also fail, it
 unrefs the handle so even the maximum Node timeout cannot retain the process;
 the stale callback is a no-op because its active identity was already removed.
-Recovered and fail-safe cancellation errors are reported as structured errors
-without escaping the cancellation callback. The JavaScript callback has an
-outer containment boundary that rejects the schedule Promise on an unexpected
+Recovered cancellation errors are reported as structured errors without
+escaping the cancellation callback. The JavaScript callback has an outer
+containment boundary that rejects the schedule Promise on an unexpected
 diagnostic-path failure, and the binding submits cancellation through napi-rs's
 catching return-value TSFN variant so even a directly registered callback throw
 becomes a Rust diagnostic instead of `napi_fatal_exception`. If no cancellation
-or unref mechanism succeeds, the schedule Promise rejects so Rust's bounded
-live host failure policy receives the diagnostic instead of stranding the
-relay.
+or unref mechanism succeeds, JavaScript both rejects the abandoned schedule
+Promise and throws through that catching TSFN. The cancellation result and the
+schedule result share one per-relay health record, so whichever reaches Rust
+first consumes exactly one strike and the other becomes diagnostic-only. A
+successful explicit cancellation resets the host's consecutive-failure count;
+schedule-error cleanup and host-eviction cleanup neither add another strike nor
+reset one already recorded. The third consecutive live-host schedule or
+cancellation failure evicts the host, while a closing TSFN or failed liveness
+probe evicts immediately.
 If runtime shutdown rejects a newly
 created detached relay task before submission, registration removes and wakes
 the pending timer before dropping the rejected future and releasing its relay

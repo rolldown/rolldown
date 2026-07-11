@@ -316,12 +316,12 @@ describe('getRuntimeCapabilities', () => {
     }
   });
 
-  // Codex round-1 finding 2 regression: the capability contract must not
-  // depend on import order. A fresh process whose ONLY import is
+  // Import-order invariant: the capability contract must not depend on which
+  // public entry loads first. A fresh process whose ONLY import is
   // `rolldown/experimental` must still see working timers (the entry carries
   // the timer-host side effect itself) and the artifact-static watch flag.
-  // RED before the fix on CurrentThread builds: timers:false and
-  // watchSupported:false for an artifact that fully supports both.
+  // Without that side effect, a CurrentThread artifact reports timers:false
+  // and watchSupported:false despite supporting both.
   test('capabilities do not depend on import order (experimental-only import)', () => {
     const fresh = inFreshProcess(`
       const { getRuntimeCapabilities } = await import('rolldown/experimental');
@@ -333,8 +333,8 @@ describe('getRuntimeCapabilities', () => {
     expect(fresh.flavor).toBe(caps.flavor);
   });
 
-  // Codex round-1 finding 1 regression: the snapshot is pinned at MODULE
-  // LOAD on every artifact (lib.rs `init` resolves it eagerly), so an env
+  // Load-time snapshot invariant: every artifact resolves the runtime config
+  // eagerly in lib.rs `init`, so an env
   // mutation between import and the FIRST query is invisible -- the report
   // must equal a control process that queried immediately. Threaded-WASI
   // note: node:wasi additionally snapshots the WASI env at loader load
@@ -1003,16 +1003,16 @@ describe('getRuntimeCapabilities', () => {
     },
   );
 
-  // Codex round-2 finding regression: the contract must hold inside Node
-  // worker_threads too -- timer-host registration carries NO isMainThread
-  // guard (the parallel-plugin machinery loads the binding in workers). A
+  // Worker-environment invariant: the contract must hold inside Node
+  // worker_threads too. Timer-host registration carries NO isMainThread guard
+  // because the parallel-plugin machinery loads the binding in workers. A
   // fresh process whose FIRST binding import happens inside a worker must see
   // working timers there. The native driver registry takes one registration
   // per importing env and races every timer across all live hosts, so the
   // worker's registration joins rather than clobbers a later main-thread
-  // import. RED before the fix on CurrentThread builds:
-  // the worker reported timers:false (and a CT sleep_until there would have
-  // panicked driverless) while watchSupported was statically true.
+  // import. Without worker-side registration, a CurrentThread worker reports
+  // timers:false and a CT sleep_until there panics driverless even though
+  // watchSupported is statically true.
   test('capabilities hold when a worker thread imports the binding first', () => {
     const result = inFreshProcess(`
       import { Worker } from 'node:worker_threads';
@@ -1035,20 +1035,16 @@ describe('getRuntimeCapabilities', () => {
     expect(result.mainCaps.timers).toBe(timersExpected);
   });
 
-  // Codex round-3 finding regression: a worker that imports the binding FIRST
-  // and then EXITS must not leave timer duty to its dead driver. The weak
+  // Driver-lifetime invariant: a worker that imports the binding FIRST and
+  // then EXITS must not leave timer duty to its dead driver. The weak
   // threadsafe function behind the timer host does not keep the worker's
   // event loop alive, so the worker exits naturally and its env teardown
-  // kills the callback. Under the old first-registration-wins slot the dead
-  // driver shadowed the slot forever; a later main-thread watch debounce
-  // (a REAL CurrentThread sleep -- buildDelay > 0 keeps it off the
-  // already-elapsed fast path) then busy-failed against the corpse. RED
-  // before the fix on the single flavor: 25,654 stderr lines of
-  // "rolldown: host timer callback failed: Closing" during ONE 150ms
-  // debounce window (the rebuild only completed because the wall clock
-  // passed the deadline during the spin). GREEN: the registry evicts the
-  // dead registrant, the debounce arms on the main thread's live driver, and
-  // stderr stays clean.
+  // kills the callback. A first-registration-wins slot would let that dead
+  // driver shadow the live main-thread host; a later main-thread watch
+  // debounce (a REAL CurrentThread sleep -- buildDelay > 0 keeps it off the
+  // already-elapsed fast path) would then busy-fail against the dead callback.
+  // The registry must evict the dead registrant, re-arm on the main thread's
+  // live driver, and keep stderr clean.
   test.skipIf(!caps.watchSupported)(
     'watch debounce timers survive a worker-first registrant that exited',
     { retry: 3, timeout: 60_000 },
@@ -1128,24 +1124,22 @@ describe('getRuntimeCapabilities', () => {
       const result = JSON.parse(lines[lines.length - 1]);
       expect(result.rebuilt).toBe(true);
       expect(result.endCount).toBeGreaterThanOrEqual(2);
-      // The RED signature: a busy retry loop against the dead worker-owned
-      // callback spams this line (25k+ occurrences pre-fix). A healthy
-      // eviction+re-arm never touches the dead driver's relay.
+      // A busy retry loop against the dead worker-owned callback emits this
+      // line repeatedly. Correct eviction and re-arming never touch the dead
+      // driver's relay.
       expect(child.stderr).not.toContain('host timer callback failed');
       expect(child.status).toBe(0);
     },
   );
 
-  // Codex round-4 finding 3 regression: the REAL `#parallel-plugin-worker`
-  // entry is a binding-loading worker entry, so it must carry the timer-host
-  // registration itself (src now imports './timer-host' first). On native the
+  // Worker-entry invariant: the REAL `#parallel-plugin-worker` entry loads the
+  // binding, so it must import './timer-host' first and carry its own timer-host
+  // registration. On native the
   // process-global registry can mask a missing registration (main's driver
   // serves); on the wasm artifacts the registry is per-instance and the
-  // worker would be genuinely driverless. NOTE on RED-ability: in the CURRENT
-  // dist the shared chunk that provides `require_binding` also happens to
-  // carry timer-host's top-level registration call, so the built entry
-  // registered incidentally even before the source fix -- this test pins the
-  // contract against a future chunk split that separates them.
+  // worker would be genuinely driverless. Bundling may place `require_binding`
+  // and timer-host's top-level registration in one shared chunk, so this test
+  // also guards the contract across future chunk splits.
   const rolldownPkgDir = nodePath.dirname(
     createRequire(import.meta.url).resolve('rolldown/package.json'),
   );
@@ -1268,20 +1262,15 @@ describe('getRuntimeCapabilities', () => {
     },
   );
 
-  // Codex round-5 regression: relay eviction must be decided by the
-  // unforgeable Closing status or the liveness probe -- NEVER by error
+  // Relay-eviction invariant: eviction must be decided by the unforgeable
+  // Closing status or the liveness probe -- NEVER by error
   // message. A rejected JS promise coerces to GenericFailure carrying the
   // JS-controlled rejection string, so a LIVE callback rejecting with
   // Error('oneshot canceled') (colliding with napi's env-died-mid-promise
-  // message) used to be misclassified as env death and evicted immediately,
-  // bypassing the 3-strike budget -- on a sole-registrant process that
-  // stranded it driverless. RED against the string-match classifier:
-  // stderr "host timer callback failed (host gone, evicting): GenericFailure,
-  // Error: oneshot canceled" and the live host called exactly ONCE (evicted;
-  // the rebuild only survived via the older entry-registered host). GREEN:
-  // "(1/3 before eviction)" strike, host stays registered, its retry fires
-  // the debounce (called twice). Only meaningful where host timers serve
-  // watch: the shared CurrentThread flavor on a watch-capable artifact.
+  // message) must not be misclassified as env death and evicted immediately.
+  // It consumes one strike from the 3-strike budget, stays registered, and
+  // retries the debounce. Only meaningful where host timers serve watch: the
+  // shared CurrentThread flavor on a watch-capable artifact.
   test.skipIf(caps.flavor !== 'CurrentThread' || !caps.watchSupported)(
     'a live timer host rejecting with a colliding message takes the strike path',
     { retry: 3, timeout: 60_000 },
@@ -1399,8 +1388,7 @@ describe('getRuntimeCapabilities', () => {
       const lines = child.stdout.trim().split('\n');
       const result = JSON.parse(lines[lines.length - 1]);
       expect(result.rebuilt).toBe(true);
-      // The discriminator: the live host survived its strike and was re-armed
-      // (called again); the old classifier evicted it after one call.
+      // The live host must survive its strike and be re-armed.
       expect(result.calls).toBeGreaterThanOrEqual(2);
       expect(child.stderr).toContain('before eviction');
       expect(child.stderr).not.toContain('host gone, evicting');

@@ -622,7 +622,13 @@ test('CurrentThread host rejects its relay when cancellation cannot cancel or un
   await import('../src/timer-host');
 
   const relay = callbacks.schedule?.(15, 2_147_483_647);
-  expect(() => callbacks.cancel?.(15)).not.toThrow();
+  expect(() => callbacks.cancel?.(15)).toThrow(
+    expect.objectContaining({
+      cause: clearError,
+      errors: [clearError, closeError],
+      message: expect.stringContaining('could not be cancelled or unreferenced'),
+    }),
+  );
   await expect(relay).rejects.toMatchObject({
     cause: clearError,
     errors: [clearError, closeError],
@@ -665,7 +671,13 @@ test('CurrentThread host preserves cancellation failures when AggregateError thr
   vi.stubGlobal('AggregateError', ThrowingAggregateError);
 
   const relay = callbacks.schedule?.(16, 2_147_483_647);
-  expect(() => callbacks.cancel?.(16)).not.toThrow();
+  expect(() => callbacks.cancel?.(16)).toThrow(
+    expect.objectContaining({
+      cause: clearError,
+      errors: [clearError, closeError],
+      message: expect.stringContaining('could not be cancelled or unreferenced'),
+    }),
+  );
   await expect(relay).rejects.toMatchObject({
     cause: clearError,
     errors: [clearError, closeError],
@@ -708,7 +720,13 @@ test('CurrentThread host settles cancellation when AggregateError is not constru
   vi.stubGlobal('AggregateError', () => undefined);
 
   const relay = callbacks.schedule?.(17, 2_147_483_647);
-  expect(() => callbacks.cancel?.(17)).not.toThrow();
+  expect(() => callbacks.cancel?.(17)).toThrow(
+    expect.objectContaining({
+      cause: clearError,
+      errors: [clearError, closeError],
+      message: expect.stringContaining('could not be cancelled or unreferenced'),
+    }),
+  );
   await expect(relay).rejects.toMatchObject({
     cause: clearError,
     errors: [clearError, closeError],

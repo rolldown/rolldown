@@ -85,19 +85,37 @@ export function assertRuntimeFeature(feature: RuntimeFeature): void {
  * compatibility defaults. Malformed or mismatched reports fail closed.
  */
 export function getRuntimeCapabilitiesCompat(): BindingRuntimeCapabilities {
-  const getRuntimeCapabilities = (binding as Record<PropertyKey, unknown>).getRuntimeCapabilities;
+  return getRuntimeCapabilityReportCompat().capabilities;
+}
+
+export function getRuntimeCapabilityReportCompat(): {
+  capabilities: BindingRuntimeCapabilities;
+  hasReporter: boolean;
+} {
+  const getRuntimeCapabilities = readBindingExport('getRuntimeCapabilities');
   if (getRuntimeCapabilities === undefined) {
-    return getLegacyRuntimeCapabilities();
+    return {
+      capabilities: getLegacyRuntimeCapabilities(),
+      hasReporter: false,
+    };
   }
   if (typeof getRuntimeCapabilities !== 'function') {
     throw new BindingRuntimeContractError(
       'getRuntimeCapabilities must be a function when the export is present',
     );
   }
-  return normalizeRuntimeCapabilities(
-    (getRuntimeCapabilities as (this: void) => unknown)(),
-    getLoadedBindingTarget(),
-  );
+  let runtime: unknown;
+  try {
+    runtime = Reflect.apply(getRuntimeCapabilities, undefined, []);
+  } catch (error) {
+    throw new BindingRuntimeContractError('getRuntimeCapabilities() threw while reporting', {
+      cause: error,
+    });
+  }
+  return {
+    capabilities: normalizeRuntimeCapabilities(runtime, getLoadedBindingTarget()),
+    hasReporter: true,
+  };
 }
 
 function getLegacyRuntimeCapabilities(): BindingRuntimeCapabilities {
@@ -167,9 +185,8 @@ function normalizeRuntimeCapabilities(
 }
 
 function getLoadedBindingTarget(): BindingRuntimeTarget | undefined {
-  const capabilityBinding = binding as Record<PropertyKey, unknown>;
-  if (!(LOADED_BINDING_TARGET_EXPORT in capabilityBinding)) return;
-  const target = capabilityBinding[LOADED_BINDING_TARGET_EXPORT];
+  const target = readBindingExport(LOADED_BINDING_TARGET_EXPORT);
+  if (target === undefined) return;
   if (RUNTIME_TARGETS.some((candidate) => candidate === target)) {
     return target as BindingRuntimeTarget;
   }
@@ -178,11 +195,33 @@ function getLoadedBindingTarget(): BindingRuntimeTarget | undefined {
   );
 }
 
+function readBindingExport(key: string): unknown {
+  try {
+    if (!Reflect.has(binding, key)) return;
+    return Reflect.get(binding, key);
+  } catch (error) {
+    throw new BindingRuntimeContractError(`the binding export ${key} could not be read`, {
+      cause: error,
+    });
+  }
+}
+
+function readCapabilityField(
+  report: Record<PropertyKey, unknown>,
+  key: keyof BindingRuntimeCapabilities,
+): unknown {
+  try {
+    return Reflect.get(report, key, report);
+  } catch (error) {
+    throw new BindingRuntimeContractError(`${key} could not be read`, { cause: error });
+  }
+}
+
 function readBooleanCapability(
   report: Record<PropertyKey, unknown>,
   key: keyof BindingRuntimeCapabilities,
 ): boolean {
-  const value = report[key];
+  const value = readCapabilityField(report, key);
   if (typeof value !== 'boolean') {
     throw new BindingRuntimeContractError(`${key} must be a boolean`);
   }
@@ -193,7 +232,7 @@ function readOptionalBooleanCapability(
   report: Record<PropertyKey, unknown>,
   key: 'devSupported' | 'watchSupported',
 ): boolean | undefined {
-  const value = report[key];
+  const value = readCapabilityField(report, key);
   if (value === undefined) return;
   if (typeof value !== 'boolean') {
     throw new BindingRuntimeContractError(`${key} must be a boolean when present`);
@@ -206,7 +245,7 @@ function readEnumCapability<const T extends readonly string[]>(
   key: keyof BindingRuntimeCapabilities,
   values: T,
 ): T[number] {
-  const value = report[key];
+  const value = readCapabilityField(report, key);
   if (values.some((candidate) => candidate === value)) {
     return value as T[number];
   }
@@ -214,10 +253,11 @@ function readEnumCapability<const T extends readonly string[]>(
 }
 
 class BindingRuntimeContractError extends BindingMismatchError {
-  constructor(detail: string) {
+  constructor(detail: string, options?: ErrorOptions) {
     super(
       `The loaded Rolldown binding returned an incompatible runtime capability contract: ` +
         `${detail}. Reinstall Rolldown so the JavaScript package and binding versions match.`,
+      options,
     );
     this.name = 'BindingRuntimeContractError';
   }

@@ -332,7 +332,7 @@ strip = "none"
 [patch.crates-io]
 # napi-rs#3352 is a coordinated v4 release, while Rolldown's Oxc NAPI
 # dependencies still require v3. This non-publishable integration revision
-# contains the exact reviewed #3352 runtime and derive code under v3 manifests.
-napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9cd62b6ad6d92d6ebd19d9b5e4fcf4461d687d91" }
-napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9cd62b6ad6d92d6ebd19d9b5e4fcf4461d687d91" }
-napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9cd62b6ad6d92d6ebd19d9b5e4fcf4461d687d91" }
+# mirrors the exact reviewed #3352 head fda7568a under v3 manifests.
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "352a1651e4d139e821ba1384bcbd368e315e61b4" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "352a1651e4d139e821ba1384bcbd368e315e61b4" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "352a1651e4d139e821ba1384bcbd368e315e61b4" }

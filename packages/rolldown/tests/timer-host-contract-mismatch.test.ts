@@ -1,6 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
 const binding = vi.hoisted(() => ({
+  exportErrors: new Map<string, unknown>(),
   getRuntimeCapabilities: undefined as undefined | ReturnType<typeof vi.fn>,
   getCurrentThreadTaskHostContractVersion: undefined as undefined | (() => unknown),
   isCurrentThreadHostRegistrationActive: undefined as undefined | ReturnType<typeof vi.fn>,
@@ -11,11 +12,43 @@ const binding = vi.hoisted(() => ({
   unregisterTimerHost: undefined as undefined | (() => void),
 }));
 
-vi.mock('../src/binding.cjs', () => binding);
+vi.mock('../src/binding.cjs', () => ({
+  get getRuntimeCapabilities() {
+    if (binding.exportErrors.has('getRuntimeCapabilities')) {
+      throw binding.exportErrors.get('getRuntimeCapabilities');
+    }
+    return binding.getRuntimeCapabilities;
+  },
+  get getCurrentThreadTaskHostContractVersion() {
+    if (binding.exportErrors.has('getCurrentThreadTaskHostContractVersion')) {
+      throw binding.exportErrors.get('getCurrentThreadTaskHostContractVersion');
+    }
+    return binding.getCurrentThreadTaskHostContractVersion;
+  },
+  get isCurrentThreadHostRegistrationActive() {
+    return binding.isCurrentThreadHostRegistrationActive;
+  },
+  get registerCurrentThreadTaskHost() {
+    return binding.registerCurrentThreadTaskHost;
+  },
+  get registerTimerHost() {
+    return binding.registerTimerHost;
+  },
+  get reserveCurrentThreadHostRegistration() {
+    return binding.reserveCurrentThreadHostRegistration;
+  },
+  get unregisterCurrentThreadTaskHost() {
+    return binding.unregisterCurrentThreadTaskHost;
+  },
+  get unregisterTimerHost() {
+    return binding.unregisterTimerHost;
+  },
+}));
 
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
+  binding.exportErrors.clear();
   binding.getRuntimeCapabilities = vi.fn(() => ({
     asyncRuntimeBuild: true,
     backend: 'shared',
@@ -45,6 +78,71 @@ test('rejects the previous callback-accepting binding before task-host invocatio
     ),
   });
 
+  expect(binding.registerCurrentThreadTaskHost).not.toHaveBeenCalled();
+  expect(binding.registerTimerHost).not.toHaveBeenCalled();
+});
+
+test('wraps a throwing capability export getter during host installation', async () => {
+  const cause = new Error('capability getter failed');
+  binding.exportErrors.set('getRuntimeCapabilities', cause);
+
+  await expect(import('../src/timer-host')).rejects.toMatchObject({
+    cause,
+    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    message: expect.stringContaining('binding export getRuntimeCapabilities could not be read'),
+  });
+});
+
+test('wraps a throwing async-runtime host export getter', async () => {
+  const cause = new Error('contract getter failed');
+  binding.exportErrors.set('getCurrentThreadTaskHostContractVersion', cause);
+
+  await expect(import('../src/timer-host')).rejects.toMatchObject({
+    cause,
+    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    message: expect.stringContaining(
+      'async-runtime host export getCurrentThreadTaskHostContractVersion could not be read',
+    ),
+  });
+});
+
+test('wraps a throwing async-runtime host contract reporter', async () => {
+  const cause = 'contract reporter failed';
+  binding.getCurrentThreadTaskHostContractVersion = vi.fn(() => {
+    throw cause;
+  });
+  binding.isCurrentThreadHostRegistrationActive = vi.fn(() => true);
+  binding.reserveCurrentThreadHostRegistration = vi.fn(() => ({ high: 0, low: 1 }));
+  binding.unregisterCurrentThreadTaskHost = vi.fn();
+  binding.unregisterTimerHost = vi.fn();
+
+  await expect(import('../src/timer-host')).rejects.toMatchObject({
+    cause,
+    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    message: expect.stringContaining(
+      'async-runtime host export getCurrentThreadTaskHostContractVersion threw while reporting',
+    ),
+  });
+  expect(binding.registerCurrentThreadTaskHost).not.toHaveBeenCalled();
+  expect(binding.registerTimerHost).not.toHaveBeenCalled();
+});
+
+test('rejects a nonnumeric host contract version without coercing it', async () => {
+  const invalidVersion = {
+    [Symbol.toPrimitive]() {
+      throw new Error('contract version coercion must not run');
+    },
+  };
+  binding.getCurrentThreadTaskHostContractVersion = vi.fn(() => invalidVersion);
+  binding.isCurrentThreadHostRegistrationActive = vi.fn(() => true);
+  binding.reserveCurrentThreadHostRegistration = vi.fn(() => ({ high: 0, low: 1 }));
+  binding.unregisterCurrentThreadTaskHost = vi.fn();
+  binding.unregisterTimerHost = vi.fn();
+
+  await expect(import('../src/timer-host')).rejects.toMatchObject({
+    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    message: expect.stringContaining('contract version a value of type object'),
+  });
   expect(binding.registerCurrentThreadTaskHost).not.toHaveBeenCalled();
   expect(binding.registerTimerHost).not.toHaveBeenCalled();
 });

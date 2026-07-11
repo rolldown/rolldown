@@ -1,5 +1,5 @@
 import * as binding from './binding.cjs';
-import { getRuntimeCapabilitiesCompat } from './runtime-support';
+import { getRuntimeCapabilityReportCompat } from './runtime-support';
 import {
   BindingMismatchError,
   isBindingMismatchError,
@@ -75,6 +75,7 @@ function readHostRegistration(
 ): HostRegistration {
   let high: unknown;
   let low: unknown;
+  let readFailed = false;
   let readError: unknown;
   try {
     if (
@@ -86,6 +87,7 @@ function readHostRegistration(
     high = Reflect.get(registration, 'high', registration);
     low = Reflect.get(registration, 'low', registration);
   } catch (error) {
+    readFailed = true;
     readError = error;
   }
   if (
@@ -102,7 +104,7 @@ function readHostRegistration(
     throw new BindingMismatchError(
       `The loaded Rolldown binding returned an invalid CurrentThread ${hostLabel} ` +
         `registration for contract version ${contractVersion}.`,
-      readError === undefined ? undefined : { cause: readError },
+      readFailed ? { cause: readError } : undefined,
     );
   }
   return [high, low];
@@ -115,20 +117,49 @@ function isHostRegistrationActive(
   contractVersion: number,
 ): boolean {
   let active: unknown;
+  let readFailed = false;
   let readError: unknown;
   try {
     active = isRegistrationActive(...registration);
   } catch (error) {
+    readFailed = true;
     readError = error;
   }
   if (typeof active !== 'boolean') {
     throw new BindingMismatchError(
       `The loaded Rolldown binding returned an invalid CurrentThread ${hostLabel} ` +
         `liveness result for contract version ${contractVersion}.`,
-      readError === undefined ? undefined : { cause: readError },
+      readFailed ? { cause: readError } : undefined,
     );
   }
   return active;
+}
+
+function readAsyncRuntimeHostExport(exportName: string): unknown {
+  try {
+    return Reflect.get(binding, exportName);
+  } catch (error) {
+    throw new BindingMismatchError(
+      `The loaded Rolldown binding async-runtime host export ${exportName} could not be read. ` +
+        `Reinstall Rolldown so the JavaScript package and binding versions match.`,
+      { cause: error },
+    );
+  }
+}
+
+function invokeAsyncRuntimeHostReporter(
+  exportName: string,
+  reporter: (...args: never[]) => unknown,
+): unknown {
+  try {
+    return Reflect.apply(reporter, undefined, []);
+  } catch (error) {
+    throw new BindingMismatchError(
+      `The loaded Rolldown binding async-runtime host export ${exportName} threw while reporting. ` +
+        `Reinstall Rolldown so the JavaScript package and binding versions match.`,
+      { cause: error },
+    );
+  }
 }
 
 function captureTimerHandleMethod(
@@ -243,26 +274,31 @@ function createAggregateError(
 //   a CurrentThread sleep would panic there.
 // - wasm artifacts: each worker instantiates its own wasm instance with its
 //   own driver registry, so each thread MUST register its own driver.
-const capabilityBinding = binding as Record<PropertyKey, unknown>;
-const runtimeCapabilityGetter = capabilityBinding.getRuntimeCapabilities;
-const hasRuntimeCapabilityReporter = runtimeCapabilityGetter !== undefined;
+const { capabilities: runtimeCapabilities, hasReporter: hasRuntimeCapabilityReporter } =
+  getRuntimeCapabilityReportCompat();
 // Shared native environments install both hosts proactively. The runtime stays
 // lazy, so a synchronous pre-first-use configure call may legally switch an
 // import-time MultiThread profile to CurrentThread after this module is cached.
 const currentThreadHostsSupported =
-  !hasRuntimeCapabilityReporter || getRuntimeCapabilitiesCompat().asyncRuntimeBuild;
+  !hasRuntimeCapabilityReporter || runtimeCapabilities.asyncRuntimeBuild;
 
 if (currentThreadHostsSupported) {
   const CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION = 4;
-  const {
-    getCurrentThreadTaskHostContractVersion,
-    isCurrentThreadHostRegistrationActive,
-    registerCurrentThreadTaskHost,
-    registerTimerHost,
-    reserveCurrentThreadHostRegistration,
-    unregisterCurrentThreadTaskHost,
-    unregisterTimerHost,
-  } = capabilityBinding;
+  const getCurrentThreadTaskHostContractVersion = readAsyncRuntimeHostExport(
+    'getCurrentThreadTaskHostContractVersion',
+  );
+  const isCurrentThreadHostRegistrationActive = readAsyncRuntimeHostExport(
+    'isCurrentThreadHostRegistrationActive',
+  );
+  const registerCurrentThreadTaskHost = readAsyncRuntimeHostExport('registerCurrentThreadTaskHost');
+  const registerTimerHost = readAsyncRuntimeHostExport('registerTimerHost');
+  const reserveCurrentThreadHostRegistration = readAsyncRuntimeHostExport(
+    'reserveCurrentThreadHostRegistration',
+  );
+  const unregisterCurrentThreadTaskHost = readAsyncRuntimeHostExport(
+    'unregisterCurrentThreadTaskHost',
+  );
+  const unregisterTimerHost = readAsyncRuntimeHostExport('unregisterTimerHost');
   const hostFunctions = {
     isCurrentThreadHostRegistrationActive,
     registerCurrentThreadTaskHost,
@@ -305,11 +341,18 @@ if (currentThreadHostsSupported) {
   let timerHostRegistration: HostRegistration | undefined;
   try {
     if (completeHostContract) {
-      const actualVersion = (getCurrentThreadTaskHostContractVersion as () => unknown)();
+      const actualVersion = invokeAsyncRuntimeHostReporter(
+        'getCurrentThreadTaskHostContractVersion',
+        getCurrentThreadTaskHostContractVersion as () => unknown,
+      );
       if (actualVersion !== CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION) {
+        const actualVersionDescription =
+          typeof actualVersion === 'number'
+            ? String(actualVersion)
+            : `a value of type ${actualVersion === null ? 'null' : typeof actualVersion}`;
         throw new BindingMismatchError(
           `The loaded Rolldown binding uses async-runtime task-host contract version ` +
-            `${String(actualVersion)}, but this JavaScript package requires version ` +
+            `${actualVersionDescription}, but this JavaScript package requires version ` +
             `${CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION}. Reinstall Rolldown so the JavaScript ` +
             `package and binding versions match.`,
         );
@@ -513,15 +556,17 @@ if (currentThreadHostsSupported) {
                     : `Rolldown CurrentThread timer ${id} could not be cancelled or unreferenced.`,
                   clearError,
                 );
-                reportTimerCancellationError(cancellationError);
                 if (unreferenced) {
+                  reportTimerCancellationError(cancellationError);
                   // The callback may still run, but the active identity check makes
                   // it a no-op and unref prevents it from retaining the Node process.
                   timer.resolve();
                 } else {
-                  // Rejecting is the only remaining error channel. Rust treats this
-                  // as a live-host relay failure and applies its bounded strike policy.
+                  // Settle the abandoned schedule Promise for local resource release,
+                  // then throw through napi-rs's catching cancellation TSFN so Rust
+                  // can apply the host's bounded strike policy.
                   timer.reject(cancellationError);
+                  throw cancellationError;
                 }
               }
             } catch (error) {
@@ -536,6 +581,7 @@ if (currentThreadHostsSupported) {
                   reportTimerCancellationError(settlementError);
                 }
               }
+              throw error;
             }
           },
         );

@@ -1364,8 +1364,8 @@ pub fn unregister_current_thread_task_host(registration_high: u32, registration_
   release_host_registration_id(BindingHostRegistration::id(registration_high, registration_low));
 }
 
-/// Host timer driver for the shared runtime's CurrentThread flavor (timer
-/// intel §4(b)): `sleep_until` on the single-thread executor cannot park a
+/// Host timer driver for the shared runtime's CurrentThread flavor:
+/// `sleep_until` on the single-thread executor cannot park a
 /// helper thread (none exists on threadless wasm), so it delegates each timer
 /// to the host event loop through the JS callback registered at import --
 /// `(id, ms) => new Promise((resolve) => setTimeout(resolve, ms))`, paired
@@ -1379,7 +1379,7 @@ pub fn unregister_current_thread_task_host(registration_high: u32, registration_
 /// JS side clears the timeout and resolves its promise, so a dropped sleep
 /// leaves neither a live timeout nor a detached relay task.
 ///
-/// LIFETIME (Codex task-7 round 3): each importing napi env registers its own
+/// LIFETIME: each importing napi env registers its own
 /// host, and a host dies WITH its env -- the weak threadsafe function does
 /// not keep a worker's event loop alive, so a worker that imported the
 /// binding can exit at any time and orphan its host. A dead host must never
@@ -1419,9 +1419,67 @@ impl RelayIdAllocator {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct RelayIdExhausted;
 
+#[cfg(feature = "async-runtime")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+enum RelayCancellationAccounting {
+  HostHealth = 0,
+  CleanupOnly = 1,
+}
+
+#[cfg(feature = "async-runtime")]
+struct HostTimerRelayHealth {
+  cancellation_accounting: std::sync::atomic::AtomicU8,
+  failure_recorded: std::sync::atomic::AtomicBool,
+}
+
+#[cfg(feature = "async-runtime")]
+impl Default for HostTimerRelayHealth {
+  fn default() -> Self {
+    Self {
+      cancellation_accounting: std::sync::atomic::AtomicU8::new(
+        RelayCancellationAccounting::HostHealth as u8,
+      ),
+      failure_recorded: std::sync::atomic::AtomicBool::new(false),
+    }
+  }
+}
+
+#[cfg(feature = "async-runtime")]
+impl HostTimerRelayHealth {
+  fn set_cancellation_accounting(&self, accounting: RelayCancellationAccounting) {
+    self.cancellation_accounting.store(accounting as u8, std::sync::atomic::Ordering::Release);
+  }
+
+  fn cancellation_accounting(&self) -> RelayCancellationAccounting {
+    match self.cancellation_accounting.load(std::sync::atomic::Ordering::Acquire) {
+      value if value == RelayCancellationAccounting::CleanupOnly as u8 => {
+        RelayCancellationAccounting::CleanupOnly
+      }
+      _ => RelayCancellationAccounting::HostHealth,
+    }
+  }
+
+  fn claim_failure(&self) -> bool {
+    self
+      .failure_recorded
+      .compare_exchange(
+        false,
+        true,
+        std::sync::atomic::Ordering::AcqRel,
+        std::sync::atomic::Ordering::Acquire,
+      )
+      .is_ok()
+  }
+
+  fn failure_recorded(&self) -> bool {
+    self.failure_recorded.load(std::sync::atomic::Ordering::Acquire)
+  }
+}
+
 /// Consecutive NON-LIFETIME relay failures tolerated on one live host before
-/// eviction (Codex task-7 round 4, finding 2). A transient failure (a one-off
-/// JS rejection, a queueing hiccup) must not poison a live driver -- on a
+/// eviction. A transient failure (a one-off JS rejection, a queueing hiccup)
+/// must not poison a live driver -- on a
 /// main-only process that would leave NO driver and every later CT sleep
 /// would hit the loud no-driver panic. But a PERSISTENTLY failing live
 /// callback can never fire a timer either, so after this many consecutive
@@ -1434,7 +1492,7 @@ const HOST_TIMER_MAX_TRANSIENT_FAILURES: u32 = 3;
 /// Does this relay error mean the HOST IS GONE (evict immediately), as
 /// opposed to a callback failure on a live host (strike-counted)?
 ///
-/// NO message strings (Codex task-7 round 5): a rejected JS promise is
+/// ERROR CLASSIFICATION: no message strings. A rejected JS promise is
 /// coerced into `GenericFailure` CARRYING THE JS REJECTION STRING (pinned
 /// napi 3.10, error.rs `From<Unknown> for Error`: native coerces the value
 /// to a string, wasm reads `.message` -- both always `GenericFailure`), so
@@ -1447,9 +1505,9 @@ const HOST_TIMER_MAX_TRANSIENT_FAILURES: u32 = 3;
 ///   never produce it -- unforgeable.
 /// - Everything else defers to the LIVENESS PROBE (`is_live` = the dead
 ///   latch + the threadsafe function's own `aborted` flag): the genuine
-///   teardown shapes that used to be string-matched (queue drained at env
-///   teardown, env died before the JS promise settled) all coincide with the
-///   env being torn down, which the probe observes directly.
+///   teardown shapes (queue drained at env teardown, env died before the JS
+///   promise settled) all coincide with the env being torn down, which the
+///   probe observes directly.
 ///
 /// Race walk: env dies between the error and the probe read -> the probe
 /// reads dead -> evict: correct. Env alive at the probe but dying a
@@ -1461,6 +1519,46 @@ const HOST_TIMER_MAX_TRANSIENT_FAILURES: u32 = 3;
 #[cfg(feature = "async-runtime")]
 fn should_evict_for_relay_error(status: napi::Status, host_is_live: bool) -> bool {
   status == napi::Status::Closing || !host_is_live
+}
+
+#[cfg(feature = "async-runtime")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum HostTimerFailureAction {
+  Duplicate,
+  EvictHost,
+  EvictHostAfterStrikes(u32),
+  Retry(u32),
+}
+
+#[cfg(feature = "async-runtime")]
+fn record_host_timer_failure(
+  transient_failures: &std::sync::atomic::AtomicU32,
+  relay_health: &HostTimerRelayHealth,
+  status: napi::Status,
+  host_is_live: bool,
+) -> HostTimerFailureAction {
+  if !relay_health.claim_failure() {
+    return HostTimerFailureAction::Duplicate;
+  }
+  if should_evict_for_relay_error(status, host_is_live) {
+    return HostTimerFailureAction::EvictHost;
+  }
+  let strikes = transient_failures.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+  if strikes >= HOST_TIMER_MAX_TRANSIENT_FAILURES {
+    HostTimerFailureAction::EvictHostAfterStrikes(strikes)
+  } else {
+    HostTimerFailureAction::Retry(strikes)
+  }
+}
+
+#[cfg(feature = "async-runtime")]
+fn reset_host_timer_failures_after_success(
+  transient_failures: &std::sync::atomic::AtomicU32,
+  relay_health: &HostTimerRelayHealth,
+) {
+  if !relay_health.failure_recorded() {
+    transient_failures.store(0, std::sync::atomic::Ordering::SeqCst);
+  }
 }
 
 #[cfg(feature = "async-runtime")]
@@ -1503,6 +1601,7 @@ fn registered_timer_host(id: u64) -> Option<std::sync::Arc<JsTimerHostInner>> {
 #[cfg(feature = "async-runtime")]
 struct PendingHostTimer {
   cancellation: Option<futures::channel::oneshot::Sender<()>>,
+  relay_health: std::sync::Arc<HostTimerRelayHealth>,
   relay_id: u32,
   waker: std::task::Waker,
   schedule_state: RelayScheduleState,
@@ -1526,12 +1625,21 @@ enum RelayScheduleState {
 
 #[cfg(feature = "async-runtime")]
 trait PendingRelayState: Send + Sync + 'static {
-  fn take_pending_relay(&self, id: TimerId, relay_id: u32) -> Option<PendingHostTimer>;
+  fn take_pending_relay(
+    &self,
+    id: TimerId,
+    relay_id: u32,
+    accounting: RelayCancellationAccounting,
+  ) -> Option<PendingHostTimer>;
   /// Record that the JavaScript schedule callback has returned. `true` means
   /// Rust cleanup already removed this exact relay, so cancellation must be
   /// submitted now that it cannot overtake timer creation.
   fn mark_relay_callback_complete(&self, id: TimerId, relay_id: u32) -> bool;
-  fn cancel_relay(&self, relay_id: u32);
+  fn cancel_relay(
+    self: &std::sync::Arc<Self>,
+    relay_id: u32,
+    relay_health: std::sync::Arc<HostTimerRelayHealth>,
+  );
 }
 
 #[cfg(feature = "async-runtime")]
@@ -1559,7 +1667,11 @@ impl<T: PendingRelayState> Drop for PendingRelayDropGuard<T> {
     if !self.cleanup_on_drop {
       return;
     }
-    let Some(pending) = self.state.take_pending_relay(self.id, self.relay_id) else {
+    let Some(pending) = self.state.take_pending_relay(
+      self.id,
+      self.relay_id,
+      RelayCancellationAccounting::HostHealth,
+    ) else {
       return;
     };
     // An awaiting callback owns its exact, never-reused relay id and will
@@ -1572,7 +1684,11 @@ impl<T: PendingRelayState> Drop for PendingRelayDropGuard<T> {
 #[cfg(feature = "async-runtime")]
 enum PendingHostTimerRegistration {
   Refreshed(std::task::Waker),
-  Armed { relay_id: u32, cancellation: futures::channel::oneshot::Receiver<()> },
+  Armed {
+    relay_id: u32,
+    cancellation: futures::channel::oneshot::Receiver<()>,
+    relay_health: std::sync::Arc<HostTimerRelayHealth>,
+  },
   Exhausted(std::task::Waker),
 }
 
@@ -1590,16 +1706,18 @@ fn register_pending_host_timer_locked(
     return PendingHostTimerRegistration::Exhausted(waker);
   };
   let (cancellation_sender, cancellation) = futures::channel::oneshot::channel();
+  let relay_health = std::sync::Arc::new(HostTimerRelayHealth::default());
   pending.insert(
     id,
     PendingHostTimer {
       cancellation: Some(cancellation_sender),
+      relay_health: std::sync::Arc::clone(&relay_health),
       relay_id,
       waker,
       schedule_state: RelayScheduleState::AwaitingCallback,
     },
   );
-  PendingHostTimerRegistration::Armed { relay_id, cancellation }
+  PendingHostTimerRegistration::Armed { relay_id, cancellation, relay_health }
 }
 
 #[cfg(all(feature = "async-runtime", test))]
@@ -1631,8 +1749,12 @@ fn register_pending_host_timer_if_live(
 #[cfg(feature = "async-runtime")]
 fn take_pending_host_timers(
   pending: &std::sync::Mutex<rustc_hash::FxHashMap<TimerId, PendingHostTimer>>,
+  accounting: RelayCancellationAccounting,
 ) -> rustc_hash::FxHashMap<TimerId, PendingHostTimer> {
   let mut pending = pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+  for timer in pending.values() {
+    timer.relay_health.set_cancellation_accounting(accounting);
+  }
   std::mem::take(&mut *pending)
 }
 
@@ -1641,9 +1763,15 @@ fn take_pending_host_timer(
   pending: &std::sync::Mutex<rustc_hash::FxHashMap<TimerId, PendingHostTimer>>,
   id: TimerId,
   relay_id: u32,
+  accounting: RelayCancellationAccounting,
 ) -> Option<PendingHostTimer> {
   let mut pending = pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
   if pending.get(&id).is_some_and(|slot| slot.relay_id == relay_id) {
+    pending
+      .get(&id)
+      .expect("the matching pending relay must remain present")
+      .relay_health
+      .set_cancellation_accounting(accounting);
     pending.remove(&id)
   } else {
     None
@@ -1673,7 +1801,8 @@ fn retire_pending_relay<T: PendingRelayState>(
   // then affect diagnostics only, never relay retirement or runtime shutdown.
   pending.signal_native_cancellation();
   if pending.schedule_state == RelayScheduleState::CallbackComplete {
-    run_host_timer_cleanup_safely(|| state.cancel_relay(pending.relay_id));
+    let relay_health = std::sync::Arc::clone(&pending.relay_health);
+    run_host_timer_cleanup_safely(|| state.cancel_relay(pending.relay_id, relay_health));
   }
   wake_host_timer_safely(pending.waker);
 }
@@ -1693,6 +1822,7 @@ fn complete_relay_schedule_callback<T: PendingRelayState, R>(
   state: &std::sync::Arc<T>,
   id: TimerId,
   relay_id: u32,
+  relay_health: &std::sync::Arc<HostTimerRelayHealth>,
   result: R,
   deliver: impl FnOnce(R),
 ) {
@@ -1702,7 +1832,7 @@ fn complete_relay_schedule_callback<T: PendingRelayState, R>(
   // CallbackComplete, while cleanup that won earlier is completed here.
   run_host_timer_cleanup_safely(|| {
     if state.mark_relay_callback_complete(id, relay_id) {
-      state.cancel_relay(relay_id);
+      state.cancel_relay(relay_id, std::sync::Arc::clone(relay_health));
     }
   });
   run_host_timer_cleanup_safely(|| deliver(result));
@@ -1779,13 +1909,92 @@ impl JsTimerHostInner {
       && !self.cancel_callback.aborted()
   }
 
-  fn cancel_relay(&self, relay_id: u32) {
+  fn handle_cancellation_failure(
+    self: &std::sync::Arc<Self>,
+    relay_id: u32,
+    relay_health: &HostTimerRelayHealth,
+    error: napi::Error,
+    queue_failure: bool,
+  ) {
+    let operation = if queue_failure { "could not be queued" } else { "failed" };
+    if relay_health.cancellation_accounting() == RelayCancellationAccounting::CleanupOnly {
+      recover_host_timer_failure(
+        || {},
+        format_args!(
+          "rolldown: host timer cancellation callback {operation} for relay {relay_id} during \
+           cleanup: {error}"
+        ),
+      );
+      return;
+    }
+
+    match record_host_timer_failure(
+      &self.transient_failures,
+      relay_health,
+      error.status,
+      self.is_live(),
+    ) {
+      HostTimerFailureAction::Duplicate => {
+        recover_host_timer_failure(
+          || {},
+          format_args!(
+            "rolldown: host timer cancellation callback {operation} for relay {relay_id} after \
+             this relay failure was already accounted: {error}"
+          ),
+        );
+      }
+      HostTimerFailureAction::EvictHost => {
+        recover_host_timer_failure(
+          || self.evict(),
+          format_args!(
+            "rolldown: host timer cancellation callback {operation} for relay {relay_id} (host \
+             gone, evicting): {error}"
+          ),
+        );
+      }
+      HostTimerFailureAction::EvictHostAfterStrikes(strikes) => {
+        recover_host_timer_failure(
+          || self.evict(),
+          format_args!(
+            "rolldown: host timer cancellation callback {operation} {strikes} times in a row, \
+             evicting this timer host (relay {relay_id}): {error}"
+          ),
+        );
+      }
+      HostTimerFailureAction::Retry(strikes) => {
+        recover_host_timer_failure(
+          || {},
+          format_args!(
+            "rolldown: host timer cancellation callback {operation} for relay {relay_id} \
+             ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction): {error}"
+          ),
+        );
+      }
+    }
+  }
+
+  fn cancel_relay(
+    self: &std::sync::Arc<Self>,
+    relay_id: u32,
+    relay_health: std::sync::Arc<HostTimerRelayHealth>,
+  ) {
+    let callback_inner = std::sync::Arc::clone(self);
+    let callback_health = std::sync::Arc::clone(&relay_health);
     let status = self.cancel_callback.call_with_return_value(
       FnArgs { data: (relay_id,) },
       ThreadsafeFunctionCallMode::NonBlocking,
       move |result, _| {
         let error = match result {
-          Ok(napi::Either::A(())) => return Ok(()),
+          Ok(napi::Either::A(())) => {
+            if callback_health.cancellation_accounting() == RelayCancellationAccounting::HostHealth
+            {
+              reset_host_timer_failures_after_success(
+                &callback_inner.transient_failures,
+                &callback_health,
+              );
+            }
+            return Ok(());
+          }
           Ok(napi::Either::B(invalid)) => napi::Error::new(
             napi::Status::InvalidArg,
             format!(
@@ -1795,24 +2004,13 @@ impl JsTimerHostInner {
           ),
           Err(error) => error,
         };
-        recover_host_timer_failure(
-          || {},
-          format_args!(
-            "rolldown: host timer cancellation callback failed for relay {relay_id}: {error}"
-          ),
-        );
+        callback_inner.handle_cancellation_failure(relay_id, &callback_health, error, false);
         Ok(())
       },
     );
     if status != napi::Status::Ok {
       let error = napi::Error::new(status, "Threadsafe timer cancellation callback call failed");
-      recover_host_timer_failure(
-        || {},
-        format_args!(
-          "rolldown: host timer cancellation callback could not be queued for relay {relay_id}: \
-           {error}"
-        ),
-      );
+      self.handle_cancellation_failure(relay_id, &relay_health, error, true);
     }
   }
 
@@ -1827,8 +2025,13 @@ impl JsTimerHostInner {
     }
   }
 
-  fn take_pending_relay(&self, id: TimerId, relay_id: u32) -> Option<PendingHostTimer> {
-    take_pending_host_timer(&self.pending, id, relay_id)
+  fn take_pending_relay(
+    &self,
+    id: TimerId,
+    relay_id: u32,
+    accounting: RelayCancellationAccounting,
+  ) -> Option<PendingHostTimer> {
+    take_pending_host_timer(&self.pending, id, relay_id, accounting)
   }
 
   async fn invoke_schedule_callback(
@@ -1836,6 +2039,7 @@ impl JsTimerHostInner {
     id: TimerId,
     relay_id: u32,
     ms: f64,
+    relay_health: std::sync::Arc<HostTimerRelayHealth>,
   ) -> napi::Result<Promise<()>> {
     let (sender, receiver) = futures::channel::oneshot::channel();
     let callback_inner = std::sync::Arc::clone(self);
@@ -1843,9 +2047,16 @@ impl JsTimerHostInner {
       FnArgs { data: (relay_id, ms) },
       ThreadsafeFunctionCallMode::NonBlocking,
       move |result, _| {
-        complete_relay_schedule_callback(&callback_inner, id, relay_id, result, move |result| {
-          let _ = sender.send(normalize_timer_schedule_result(result));
-        });
+        complete_relay_schedule_callback(
+          &callback_inner,
+          id,
+          relay_id,
+          &relay_health,
+          result,
+          move |result| {
+            let _ = sender.send(normalize_timer_schedule_result(result));
+          },
+        );
         Ok(())
       },
     );
@@ -1877,23 +2088,32 @@ impl JsTimerHostInner {
     if let Some(id) = registration {
       unregister_timer_driver(id);
     }
-    let pending = take_pending_host_timers(&self.pending);
+    let pending = take_pending_host_timers(&self.pending, RelayCancellationAccounting::CleanupOnly);
     retire_pending_relays(self, pending);
   }
 }
 
 #[cfg(feature = "async-runtime")]
 impl PendingRelayState for JsTimerHostInner {
-  fn take_pending_relay(&self, id: TimerId, relay_id: u32) -> Option<PendingHostTimer> {
-    JsTimerHostInner::take_pending_relay(self, id, relay_id)
+  fn take_pending_relay(
+    &self,
+    id: TimerId,
+    relay_id: u32,
+    accounting: RelayCancellationAccounting,
+  ) -> Option<PendingHostTimer> {
+    JsTimerHostInner::take_pending_relay(self, id, relay_id, accounting)
   }
 
   fn mark_relay_callback_complete(&self, id: TimerId, relay_id: u32) -> bool {
     JsTimerHostInner::mark_relay_callback_complete(self, id, relay_id)
   }
 
-  fn cancel_relay(&self, relay_id: u32) {
-    JsTimerHostInner::cancel_relay(self, relay_id);
+  fn cancel_relay(
+    self: &std::sync::Arc<Self>,
+    relay_id: u32,
+    relay_health: std::sync::Arc<HostTimerRelayHealth>,
+  ) {
+    JsTimerHostInner::cancel_relay(self, relay_id, relay_health);
   }
 }
 
@@ -1908,7 +2128,7 @@ impl TimerDriver for JsTimerHost {
       wake_host_timer_safely(waker);
       return;
     }
-    let (relay_id, cancellation) = match self.inner.register_pending(id, waker) {
+    let (relay_id, cancellation, relay_health) = match self.inner.register_pending(id, waker) {
       Err(waker) => {
         self.inner.evict();
         wake_host_timer_safely(waker);
@@ -1920,8 +2140,8 @@ impl TimerDriver for JsTimerHost {
         drop_host_timer_waker_safely(replaced_waker);
         return;
       }
-      Ok(PendingHostTimerRegistration::Armed { relay_id, cancellation }) => {
-        (relay_id, cancellation)
+      Ok(PendingHostTimerRegistration::Armed { relay_id, cancellation, relay_health }) => {
+        (relay_id, cancellation, relay_health)
       }
       Ok(PendingHostTimerRegistration::Exhausted(waker)) => {
         recover_host_timer_failure(
@@ -1942,7 +2162,10 @@ impl TimerDriver for JsTimerHost {
     let submission = try_spawn_detached(async move {
       let mut relay_drop_guard = relay_drop_guard;
       let schedule = async {
-        match inner.invoke_schedule_callback(id, relay_id, ms).await {
+        match inner
+          .invoke_schedule_callback(id, relay_id, ms, std::sync::Arc::clone(&relay_health))
+          .await
+        {
           Ok(promise) => promise.await,
           Err(error) => Err(error),
         }
@@ -1958,64 +2181,71 @@ impl TimerDriver for JsTimerHost {
       };
       match result {
         Ok(()) => {
-          inner.transient_failures.store(0, std::sync::atomic::Ordering::SeqCst);
-          if let Some(pending) = inner.take_pending_relay(id, relay_id) {
+          reset_host_timer_failures_after_success(&inner.transient_failures, &relay_health);
+          if let Some(pending) =
+            inner.take_pending_relay(id, relay_id, RelayCancellationAccounting::CleanupOnly)
+          {
             wake_host_timer_safely(pending.waker);
           }
           relay_drop_guard.disarm();
         }
-        // A dead env surfaces here as an error, never a silent hang. The
-        // classification is string-free (see `should_evict_for_relay_error`):
-        // the unforgeable `Closing` status or the liveness probe reading dead
-        // AT THIS MOMENT -- probing after the error keeps the race bounded
-        // (an env dying right after a live probe is caught by the cleanup
-        // hook, the sweep, or the next relay failure). The host is gone:
-        // evict it -- which wakes everything armed here, this sleep included,
-        // so each re-polls onto the next live registrant -- instead of waking
-        // into a busy retry loop against the corpse.
-        Err(error) if should_evict_for_relay_error(error.status, inner.is_live()) => {
-          recover_host_timer_failure(
-            || inner.evict(),
-            format_args!("rolldown: host timer callback failed (host gone, evicting): {error}"),
-          );
-          relay_drop_guard.disarm();
-        }
-        // A failure on a provably LIVE host (a JS throw or rejection --
-        // regardless of what its message says -- or a wrong return type): do
-        // not evict for a transient hiccup; that would strand a main-only
-        // process driverless and turn later CT sleeps into loud no-driver
-        // panics. Wake just this sleep so it re-polls (and re-arms with its
-        // remaining time); a persistently failing callback exhausts the
-        // strike budget and is then evicted.
         Err(error) => {
-          let strikes =
-            inner.transient_failures.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
-          if strikes >= HOST_TIMER_MAX_TRANSIENT_FAILURES {
-            recover_host_timer_failure(
-              || inner.evict(),
-              format_args!(
-                "rolldown: host timer callback failed {strikes} times in a row, evicting this \
-                 timer host: {error}"
-              ),
-            );
-          } else {
-            recover_host_timer_failure(
-              || {
-                if let Some(pending) = inner.take_pending_relay(id, relay_id) {
-                  // The callback may have synchronously armed a timeout before
-                  // throwing, returning the wrong type, or producing a
-                  // rejected Promise. Retire that callback-complete relay
-                  // through the same exact cancellation path as terminal
-                  // runnable destruction. An immediate TSFN submission
-                  // failure remains AwaitingCallback and needs no cancel.
-                  retire_pending_relay(&inner, pending);
-                }
-              },
-              format_args!(
-                "rolldown: host timer callback failed \
-                 ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction): {error}"
-              ),
-            );
+          let action = record_host_timer_failure(
+            &inner.transient_failures,
+            &relay_health,
+            error.status,
+            inner.is_live(),
+          );
+          match action {
+            HostTimerFailureAction::EvictHost => {
+              recover_host_timer_failure(
+                || inner.evict(),
+                format_args!("rolldown: host timer callback failed (host gone, evicting): {error}"),
+              );
+            }
+            HostTimerFailureAction::EvictHostAfterStrikes(strikes) => {
+              recover_host_timer_failure(
+                || inner.evict(),
+                format_args!(
+                  "rolldown: host timer callback failed {strikes} times in a row, evicting this \
+                   timer host: {error}"
+                ),
+              );
+            }
+            HostTimerFailureAction::Retry(strikes) => {
+              recover_host_timer_failure(
+                || {
+                  if let Some(pending) =
+                    inner.take_pending_relay(id, relay_id, RelayCancellationAccounting::CleanupOnly)
+                  {
+                    // The callback may have synchronously armed a timeout before
+                    // throwing, returning the wrong type, or producing a
+                    // rejected Promise. Cleanup cancellation must not add a
+                    // second strike for this same relay failure.
+                    retire_pending_relay(&inner, pending);
+                  }
+                },
+                format_args!(
+                  "rolldown: host timer callback failed \
+                   ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction): {error}"
+                ),
+              );
+            }
+            HostTimerFailureAction::Duplicate => {
+              recover_host_timer_failure(
+                || {
+                  if let Some(pending) =
+                    inner.take_pending_relay(id, relay_id, RelayCancellationAccounting::CleanupOnly)
+                  {
+                    retire_pending_relay(&inner, pending);
+                  }
+                },
+                format_args!(
+                  "rolldown: host timer callback failed after this relay failure was already \
+                   accounted: {error}"
+                ),
+              );
+            }
           }
           relay_drop_guard.disarm();
         }
@@ -2029,11 +2259,18 @@ impl TimerDriver for JsTimerHost {
   }
 
   fn cancel(&self, id: TimerId) {
-    let pending = self.inner.lock_pending().remove(&id);
+    let pending = {
+      let mut pending = self.inner.lock_pending();
+      if let Some(timer) = pending.get(&id) {
+        timer.relay_health.set_cancellation_accounting(RelayCancellationAccounting::HostHealth);
+      }
+      pending.remove(&id)
+    };
     if let Some(mut pending) = pending {
       pending.signal_native_cancellation();
       if pending.schedule_state == RelayScheduleState::CallbackComplete {
-        self.inner.cancel_relay(pending.relay_id);
+        let relay_health = std::sync::Arc::clone(&pending.relay_health);
+        self.inner.cancel_relay(pending.relay_id, relay_health);
       }
       drop_host_timer_waker_safely(pending.waker);
     }
@@ -2047,8 +2284,7 @@ impl TimerDriver for JsTimerHost {
     // The registry's selection sweep noticed this host's death (the
     // `aborted` probe can fire before the env-cleanup hook runs): run the
     // full eviction so every sleep pending here is woken into re-selection
-    // instead of stranded (Codex task-7 round 4, finding 1). Idempotent with
-    // the hook and the relay backstop.
+    // instead of stranded. Idempotent with the hook and the relay backstop.
     self.inner.evict();
   }
 }
@@ -2400,9 +2636,9 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
 
 // Resolver tests are parameterized on (backend, target), so every arm of the
 // defaults table is exercised under BOTH feature profiles and on any host.
-// The snapshot-wins-over-later-env property that the old reporter test pinned
-// is now structural: the environment is read exactly once, inside the
-// `OnceLock` initializer of `resolved_runtime_config`.
+// The runtime snapshot must win over later environment mutations: the
+// environment is read exactly once inside the `OnceLock` initializer of
+// `resolved_runtime_config`.
 #[cfg(test)]
 mod tests {
   use rolldown_utils::max_async_runtime_worker_threads;
@@ -2416,14 +2652,16 @@ mod tests {
   };
   #[cfg(feature = "async-runtime")]
   use super::{
-    BindingRuntimeFlavor, BindingRuntimeOptions, MAX_SAFE_JS_INTEGER,
+    BindingRuntimeFlavor, BindingRuntimeOptions, HOST_TIMER_MAX_TRANSIENT_FAILURES,
+    HostTimerFailureAction, HostTimerRelayHealth, MAX_SAFE_JS_INTEGER,
     NATIVE_TASK_HOST_AFTER_DRIVE_TEST_HOOK, NATIVE_TASK_HOST_AFTER_PAYLOAD_DROP_TEST_HOOK,
     NativeCurrentThreadTaskHostInner, NativeCurrentThreadTaskHostPayload, PendingHostTimer,
-    PendingHostTimerRegistration, PendingRelayDropGuard, PendingRelayState, RelayIdAllocator,
-    RelayScheduleState, RolldownAsyncRuntime, call_native_current_thread_task_host,
-    complete_relay_schedule_callback, install_cleanup_hook_or_rollback,
-    install_host_driver_registration, recover_host_timer_failure, register_pending_host_timer,
-    register_pending_host_timer_if_live, retire_pending_relay, retire_pending_relays,
+    PendingHostTimerRegistration, PendingRelayDropGuard, PendingRelayState,
+    RelayCancellationAccounting, RelayIdAllocator, RelayScheduleState, RolldownAsyncRuntime,
+    call_native_current_thread_task_host, complete_relay_schedule_callback,
+    install_cleanup_hook_or_rollback, install_host_driver_registration, record_host_timer_failure,
+    recover_host_timer_failure, register_pending_host_timer, register_pending_host_timer_if_live,
+    reset_host_timer_failures_after_success, retire_pending_relay, retire_pending_relays,
     safe_js_number, take_pending_host_timers, wake_host_timer_safely,
   };
 
@@ -2444,9 +2682,15 @@ mod tests {
       &self,
       id: rolldown_utils::async_runtime::TimerId,
       relay_id: u32,
+      accounting: RelayCancellationAccounting,
     ) -> Option<PendingHostTimer> {
       let mut pending = self.pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
       if pending.get(&id).is_some_and(|slot| slot.relay_id == relay_id) {
+        pending
+          .get(&id)
+          .expect("the matching test relay must remain present")
+          .relay_health
+          .set_cancellation_accounting(accounting);
         pending.remove(&id)
       } else {
         None
@@ -2468,7 +2712,11 @@ mod tests {
       }
     }
 
-    fn cancel_relay(&self, relay_id: u32) {
+    fn cancel_relay(
+      self: &std::sync::Arc<Self>,
+      relay_id: u32,
+      _relay_health: std::sync::Arc<HostTimerRelayHealth>,
+    ) {
       self
         .cancelled_relays
         .lock()
@@ -2487,15 +2735,21 @@ mod tests {
     id: rolldown_utils::async_runtime::TimerId,
     waker: std::task::Waker,
     schedule_state: RelayScheduleState,
-  ) -> (u32, PendingRelayDropGuard<TestPendingRelayState>) {
+  ) -> (u32, std::sync::Arc<HostTimerRelayHealth>, PendingRelayDropGuard<TestPendingRelayState>) {
     let relay_id = state.relay_ids.reserve().expect("the test relay id must be available");
-    let replaced = state
-      .pending
-      .lock()
-      .unwrap_or_else(std::sync::PoisonError::into_inner)
-      .insert(id, PendingHostTimer { cancellation: None, relay_id, waker, schedule_state });
+    let relay_health = std::sync::Arc::new(HostTimerRelayHealth::default());
+    let replaced = state.pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner).insert(
+      id,
+      PendingHostTimer {
+        cancellation: None,
+        relay_health: std::sync::Arc::clone(&relay_health),
+        relay_id,
+        waker,
+        schedule_state,
+      },
+    );
     assert!(replaced.is_none(), "the test timer id must be vacant");
-    (relay_id, PendingRelayDropGuard::new(std::sync::Arc::clone(state), id, relay_id))
+    (relay_id, relay_health, PendingRelayDropGuard::new(std::sync::Arc::clone(state), id, relay_id))
   }
 
   #[cfg(feature = "async-runtime")]
@@ -2518,7 +2772,7 @@ mod tests {
       self.registered = true;
       let state = std::sync::Arc::clone(&self.state);
       let timer_id = self.timer_id;
-      let (_, relay_drop_guard) =
+      let (_, _, relay_drop_guard) =
         test_pending_relay_guard(&state, timer_id, cx.waker().clone(), self.schedule_state);
       rolldown_utils::async_runtime::spawn_detached(async move {
         let mut relay_drop_guard = relay_drop_guard;
@@ -2782,7 +3036,7 @@ mod tests {
 
     let state = std::sync::Arc::new(TestPendingRelayState::default());
     let wakes = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let (relay_id, guard) = test_pending_relay_guard(
+    let (relay_id, _, guard) = test_pending_relay_guard(
       &state,
       1,
       std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(&wakes)))),
@@ -2803,7 +3057,7 @@ mod tests {
     );
 
     let stale_wakes = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let (stale_relay_id, stale_guard) = test_pending_relay_guard(
+    let (stale_relay_id, _, stale_guard) = test_pending_relay_guard(
       &state,
       2,
       std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(
@@ -2825,6 +3079,7 @@ mod tests {
         2,
         PendingHostTimer {
           cancellation: None,
+          relay_health: std::sync::Arc::new(HostTimerRelayHealth::default()),
           relay_id: replacement_relay_id,
           waker: futures::task::noop_waker(),
           schedule_state: RelayScheduleState::CallbackComplete,
@@ -2850,7 +3105,7 @@ mod tests {
     drop(replacement);
 
     let disarmed_wakes = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let (disarmed_relay_id, mut disarmed_guard) = test_pending_relay_guard(
+    let (disarmed_relay_id, _, mut disarmed_guard) = test_pending_relay_guard(
       &state,
       3,
       std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(
@@ -2889,7 +3144,7 @@ mod tests {
 
     let state = std::sync::Arc::new(TestPendingRelayState::default());
     let wakes = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let (relay_id, guard) = test_pending_relay_guard(
+    let (relay_id, relay_health, guard) = test_pending_relay_guard(
       &state,
       1,
       std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(&wakes)))),
@@ -2898,7 +3153,7 @@ mod tests {
 
     // Model napi-rs after the JavaScript schedule function returned and armed
     // its timeout, but before result delivery can re-poll the Rust relay.
-    complete_relay_schedule_callback(&state, 1, relay_id, guard, drop);
+    complete_relay_schedule_callback(&state, 1, relay_id, &relay_health, guard, drop);
 
     assert!(state.pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty());
     assert_eq!(
@@ -2922,7 +3177,7 @@ mod tests {
 
     let state = std::sync::Arc::new(TestPendingRelayState::default());
     let wakes = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let (relay_id, guard) = test_pending_relay_guard(
+    let (relay_id, relay_health, guard) = test_pending_relay_guard(
       &state,
       1,
       std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(&wakes)))),
@@ -2935,7 +3190,7 @@ mod tests {
       "cancellation must not overtake a schedule callback that has not returned"
     );
 
-    complete_relay_schedule_callback(&state, 1, relay_id, (), drop);
+    complete_relay_schedule_callback(&state, 1, relay_id, &relay_health, (), drop);
     assert_eq!(
       *state.cancelled_relays.lock().unwrap_or_else(std::sync::PoisonError::into_inner),
       [relay_id],
@@ -2958,7 +3213,7 @@ mod tests {
     let state = std::sync::Arc::new(TestPendingRelayState::default());
     state.panic_on_cancel.store(true, std::sync::atomic::Ordering::SeqCst);
     let wakes = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let (relay_id, guard) = test_pending_relay_guard(
+    let (relay_id, _, guard) = test_pending_relay_guard(
       &state,
       1,
       std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(&wakes)))),
@@ -3028,6 +3283,7 @@ mod tests {
         u64::from(relay_id),
         PendingHostTimer {
           cancellation: None,
+          relay_health: std::sync::Arc::new(HostTimerRelayHealth::default()),
           relay_id,
           waker: std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(
             &wakes,
@@ -3067,6 +3323,7 @@ mod tests {
       &state,
       PendingHostTimer {
         cancellation: None,
+        relay_health: std::sync::Arc::new(HostTimerRelayHealth::default()),
         relay_id: 7,
         waker: std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(
           &wakes,
@@ -3078,6 +3335,7 @@ mod tests {
       &state,
       PendingHostTimer {
         cancellation: None,
+        relay_health: std::sync::Arc::new(HostTimerRelayHealth::default()),
         relay_id: 8,
         waker: std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(
           &wakes,
@@ -3236,7 +3494,7 @@ mod tests {
       register_pending_host_timer(&pending, &relay_ids, 2, evicted_waker),
       PendingHostTimerRegistration::Armed { .. }
     ));
-    let evicted = take_pending_host_timers(&pending);
+    let evicted = take_pending_host_timers(&pending, RelayCancellationAccounting::CleanupOnly);
     assert!(
       !evicted_waker_dropped.load(std::sync::atomic::Ordering::SeqCst),
       "bulk eviction must move wakers out instead of dropping under its lock"
@@ -3970,8 +4228,8 @@ mod tests {
 
   #[test]
   fn tokio_wasi_threads_mirrors_the_loader_pool_for_both_fields() {
-    // Finding B lineage: the threaded-WASI arm must size the pool from the
-    // SAME env keys and precedence the napi-rs WASI loader uses.
+    // Loader-pool invariant: the threaded-WASI arm must size the pool from
+    // the SAME env keys and precedence the napi-rs WASI loader uses.
     let resolved = resolve(
       ResolvedRuntimeBackend::Tokio,
       ResolvedRuntimeTarget::WasiThreads,
@@ -4180,8 +4438,8 @@ mod tests {
     }
   }
 
-  /// Codex task-7 rounds 4+5: the relay must evict ONLY on host death, and
-  /// the decision must be STRING-FREE -- a rejected JS promise coerces to
+  /// Relay-eviction invariant: the relay must evict ONLY on host death, and
+  /// the decision must be STRING-FREE. A rejected JS promise coerces to
   /// `GenericFailure` carrying the JS-controlled rejection string (pinned
   /// napi 3.10 error.rs), so message matching is forgeable by a live
   /// callback. The two authorities: the unforgeable `Closing` status, and
@@ -4200,19 +4458,17 @@ mod tests {
     assert!(should_evict_for_relay_error(Status::Closing, true), "Closing overrides a live probe");
     assert!(should_evict_for_relay_error(Status::Closing, false));
 
-    // A DEAD probe evicts regardless of status -- this covers the genuine
-    // teardown shapes that used to be string-matched (queue drained at env
-    // teardown, env died before the JS promise settled): both coincide with
+    // A DEAD probe evicts regardless of status. Queue drain during env
+    // teardown and env death before a JS promise settles both coincide with
     // the env being torn down, which the probe observes directly.
     assert!(should_evict_for_relay_error(Status::GenericFailure, false));
     assert!(should_evict_for_relay_error(Status::PendingException, false));
 
-    // Codex round-5 regression: a LIVE host's failure takes the strike path
-    // no matter what the error says -- including a JS rejection whose
-    // message collides with napi's internal teardown strings. (The RED
-    // JS-level shape: `Promise.reject(new Error('oneshot canceled'))` from a
-    // live callback coerces to GenericFailure + "Error: oneshot canceled"
-    // and used to substring-match the old classifier into evicting.)
+    // A LIVE host's failure takes the strike path no matter what the error
+    // says. A live callback can reject with
+    // `Promise.reject(new Error('oneshot canceled'))`, which coerces to
+    // GenericFailure + "Error: oneshot canceled" and must not be mistaken for
+    // environment teardown.
     assert!(
       !should_evict_for_relay_error(Status::GenericFailure, true),
       "a live host's GenericFailure -- e.g. a forged 'oneshot canceled' rejection -- must strike"
@@ -4228,6 +4484,69 @@ mod tests {
     assert!(
       !should_evict_for_relay_error(Status::QueueFull, true),
       "queue pressure on a live host must strike"
+    );
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn cancellation_failures_share_the_three_strike_budget_without_cleanup_double_counting() {
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    use napi::Status;
+
+    let failures = AtomicU32::new(0);
+    for expected_strikes in 1..HOST_TIMER_MAX_TRANSIENT_FAILURES {
+      let relay_health = HostTimerRelayHealth::default();
+      assert_eq!(
+        record_host_timer_failure(&failures, &relay_health, Status::GenericFailure, true),
+        HostTimerFailureAction::Retry(expected_strikes),
+      );
+      assert_eq!(
+        record_host_timer_failure(&failures, &relay_health, Status::GenericFailure, true),
+        HostTimerFailureAction::Duplicate,
+        "one relay failure must consume at most one strike"
+      );
+    }
+
+    let cleanup_health = HostTimerRelayHealth::default();
+    cleanup_health.set_cancellation_accounting(RelayCancellationAccounting::CleanupOnly);
+    assert_eq!(cleanup_health.cancellation_accounting(), RelayCancellationAccounting::CleanupOnly);
+    assert_eq!(
+      failures.load(Ordering::SeqCst),
+      HOST_TIMER_MAX_TRANSIENT_FAILURES - 1,
+      "schedule-failure and eviction cleanup must not mutate host health"
+    );
+
+    let final_health = HostTimerRelayHealth::default();
+    assert_eq!(
+      record_host_timer_failure(&failures, &final_health, Status::GenericFailure, true),
+      HostTimerFailureAction::EvictHostAfterStrikes(HOST_TIMER_MAX_TRANSIENT_FAILURES),
+    );
+  }
+
+  #[cfg(feature = "async-runtime")]
+  #[test]
+  fn a_same_relay_success_cannot_erase_its_recorded_failure() {
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    use napi::Status;
+
+    let failures = AtomicU32::new(1);
+    let healthy_relay = HostTimerRelayHealth::default();
+    reset_host_timer_failures_after_success(&failures, &healthy_relay);
+    assert_eq!(failures.load(Ordering::SeqCst), 0);
+
+    failures.store(1, Ordering::SeqCst);
+    let failed_relay = HostTimerRelayHealth::default();
+    assert_eq!(
+      record_host_timer_failure(&failures, &failed_relay, Status::GenericFailure, true),
+      HostTimerFailureAction::Retry(2),
+    );
+    reset_host_timer_failures_after_success(&failures, &failed_relay);
+    assert_eq!(
+      failures.load(Ordering::SeqCst),
+      2,
+      "a later success from the same relay must not hide its cancellation failure"
     );
   }
 }

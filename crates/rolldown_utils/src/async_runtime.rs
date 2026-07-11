@@ -55,10 +55,10 @@ pub struct RuntimeOptions {
   pub worker_threads: usize,
   pub max_blocking_tasks: usize,
   pub thread_name_prefix: String,
-  /// Deadline-based `block_on` deadlock detection (wake-path §6(d)): bounds
-  /// how long a runtime-owned park (the CurrentThread `block_on` parker and
+  /// Deadline-based `block_on` deadlock detection: bounds how long a
+  /// runtime-owned park (the CurrentThread `block_on` parker and
   /// MultiThread COOPERATIVE driver parks -- never the foreign/napi
-  /// whole-build park, see §8.5) may sleep with ZERO runtime progress before
+  /// whole-build park) may sleep with ZERO runtime progress before
   /// panicking with the typed [`BlockOnDeadlock`] diagnostic. `None` (the
   /// default) disables deadline detection: a legitimately long park (e.g.
   /// awaiting a slow JS plugin) must never panic a production build. The
@@ -179,7 +179,7 @@ pub const PARK_DEADLINE_ENV: &str = "ROLLDOWN_PARK_DEADLINE_MS";
 /// `block_on`: every wasm build except the threaded WASI target (i.e. the
 /// single-thread `wasm32-wasip1` build and `wasm32-unknown-unknown`). On such
 /// a build a CurrentThread park decision with an empty queue and no pending
-/// wake token is a PROVABLE deadlock (R2). The threaded wasi build
+/// wake token is a PROVABLE deadlock. The threaded wasi build
 /// (`wasm32-wasip1-threads`) has real OS threads, so its parks are not
 /// provably dead and fall under the optional deadline detection instead, like
 /// native builds.
@@ -203,7 +203,7 @@ impl fmt::Display for RuntimeConfigError {
 
 impl std::error::Error for RuntimeConfigError {}
 
-/// Which self-detected `block_on` deadlock class fired (wake-path §6(d)).
+/// Which self-detected `block_on` deadlock class fired.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockOnDeadlockKind {
   /// CurrentThread on a threadless build: the park decision found an empty
@@ -223,13 +223,13 @@ pub enum BlockOnDeadlockKind {
   CurrentThreadDeadline,
   /// MultiThread: a cooperative pool driver's re-entrant `block_on` park
   /// outlived the configured deadline with zero executor progress. The
-  /// foreign/napi whole-build park is exempt by design (§8.5).
+  /// foreign/napi whole-build park is exempt by design.
   MultiThreadCooperativeDeadline,
 }
 
 /// Typed panic payload for a self-detected `block_on` deadlock. Thrown with
 /// `std::panic::panic_any` at the park DECISION (never merely on a `Pending`
-/// return -- a self-waking future is not a deadlock, intel §8.6), so the
+/// return, because a self-waking future is not a deadlock), so the
 /// runtime fails loudly instead of freezing the thread (and, in the
 /// CurrentThread-on-JS-thread case, the whole JS event loop, where not even
 /// test-harness timeouts can fire). When the panic unwinds out of a spawned
@@ -1713,8 +1713,7 @@ struct RuntimeMetrics {
   // `runnable_schedules`. Internal-only (not exported in the public snapshot):
   // it exists so the deadlock detector's progress fingerprint can observe a
   // blocking submission the moment it is made -- `blocking_tasks_started`
-  // only advances once a worker RUNS the job, which may be arbitrarily later
-  // (Codex round-2 finding).
+  // only advances once a worker RUNS the job, which may be arbitrarily later.
   blocking_tasks_scheduled: AtomicU64,
   blocking_tasks_started: AtomicU64,
   blocking_tasks_completed: AtomicU64,
@@ -1767,8 +1766,7 @@ impl RuntimeMetrics {
 
   /// Enqueue-time twin of [`Self::runnable_scheduled`] for blocking work:
   /// called BEFORE the blocking-queue push, so the deadlock detector's
-  /// fingerprint sees a submission even when no worker has started the job
-  /// yet (Codex round-2).
+  /// fingerprint sees a submission even when no worker has started the job.
   fn blocking_scheduled(&self) {
     self.blocking_tasks_scheduled.fetch_add(1, Ordering::Relaxed);
   }
@@ -1818,7 +1816,7 @@ impl RuntimeMetrics {
   /// observing an advance re-arms its deadline instead of firing. Both ENQUEUE
   /// counters (`runnable_schedules`, `blocking_tasks_scheduled`) are included
   /// so a submission is progress the moment it is made -- not only once a
-  /// worker gets to run it (Codex round-2).
+  /// worker gets to run it.
   fn progress_fingerprint(&self) -> ProgressFingerprint {
     loop {
       let reset_generation = self.reset_generation.load(Ordering::SeqCst);
@@ -2318,8 +2316,8 @@ struct CurrentThreadExecutor {
   task_dispatch: fn(u64) -> CurrentThreadHostDispatchResult,
   task_drivers: &'static CurrentThreadTaskDriverRegistry,
   metrics: Arc<RuntimeMetrics>,
-  // Deadlock detection (wake-path §6(d)). `threadless`: no second thread can
-  // EVER deliver a wake to a parked `block_on`, so a park decision with an
+  // Deadlock detection. `threadless`: no second thread can EVER deliver a
+  // wake to a parked `block_on`, so a park decision with an
   // empty queue and no pending wake token is a PROVABLE deadlock (panic
   // immediately, no timing involved). `park_deadline`: on threaded builds,
   // the optional bound for a park with zero runtime progress -- off unless
@@ -2327,7 +2325,7 @@ struct CurrentThreadExecutor {
   // production build.
   threadless: bool,
   park_deadline: Option<Duration>,
-  // HOST-driver timers currently armed on this runtime (timer intel §4(b)).
+  // HOST-driver timers currently armed on this runtime.
   // On the THREADED CT flavor a pending entry is a future wake token -- the
   // host event loop's timer callback -- so the deadline verdict treats a LIVE
   // wait (deadline still in the future) as a legitimate park. On a THREADLESS
@@ -3459,20 +3457,19 @@ impl CurrentThreadExecutor {
   }
 
   /// Drive `future` to completion on this thread, draining queued runnables
-  /// between polls (the old `DriveCurrentThread` wrapper, folded in). This
-  /// loop OWNS its park site (wake-path §6(d)): the future is polled with
+  /// between polls. This loop OWNS its park site: the future is polled with
   /// this frame's own [`DriverParker`] as its waker, so the park DECISION can
   /// inspect the wake token directly instead of handing it to
   /// `futures::executor::block_on`'s opaque parker:
   ///
   ///   * `Pending` + queue empty + wake token pending: a self-waking future
   ///     (the `PendThenReady` shape) -- consume the token and re-poll. NOT a
-  ///     park, NOT a deadlock; intel §8.6 pins panic-at-park-decision, never
-  ///     at Pending-return.
+  ///     park, NOT a deadlock; panic only at the park decision, never at
+  ///     Pending-return.
   ///   * `Pending` + queue empty + NO token, threadless build: PROVABLE
   ///     deadlock -- no other thread exists that could ever deliver the wake
-  ///     (the block_on-awaiting-JS class, R2). Panic immediately with the
-  ///     typed [`BlockOnDeadlock`] diagnostic. A pending HOST timer is no
+  ///     (the block_on-awaiting-JS class). Panic immediately with the typed
+  ///     [`BlockOnDeadlock`] diagnostic. A pending HOST timer is no
   ///     rescue here: its `setTimeout` relay shares this very thread, so it
   ///     can never fire while the park holds it -- it only selects the
   ///     timer-backed variant of the same certain diagnostic.
@@ -3533,7 +3530,7 @@ impl CurrentThreadExecutor {
       if parker.consume_permit() {
         continue;
       }
-      // INTERACTION B (timer facility): on a THREADLESS build even a pending
+      // Threadless timer invariant: on a THREADLESS build even a pending
       // HOST timer is NOT a wake-token source -- the host event loop's
       // `setTimeout` relay can only run on the very thread that is about to
       // park, so it can never fire while `block_on` holds it. EVERY threadless
@@ -3558,14 +3555,14 @@ impl CurrentThreadExecutor {
         Some(deadline) => match park_with_deadline(&parker, deadline, &self.metrics) {
           DeadlineParkOutcome::Woken => {}
           DeadlineParkOutcome::Expired(armed) => {
-            // EXPIRY DECISION (Codex round-1, CT analog -- no registry
-            // here): a wake can land in the instructions after the window
+            // EXPIRY DECISION (CurrentThread has no parked-driver registry):
+            // a wake can land in the instructions after the window
             // closed, and the fingerprint read inside `park_with_deadline`
             // is stale by now. Re-check both before declaring death; a hit
             // means the park was healthy -- continue the loop (re-poll,
             // drain, fresh full window on the next park). A LIVE host-timer
-            // wait (timer facility, interaction A's CT analog) also vetoes,
-            // re-checked LAST -- arming a host timer bumps no progress
+            // wait also vetoes, re-checked LAST -- arming a host timer bumps
+            // no progress
             // counter, so it is invisible to the fingerprint read: waiting
             // out a host timer with zero progress is legitimate, its wake is
             // scheduled on the host loop. `deadline` doubles as the grace
@@ -3622,8 +3619,8 @@ impl CurrentThreadExecutor {
 // Identifies the executor whose Rayon pool owns THIS worker thread (or `None`
 // when not on a pool worker). Used by `MultiThreadExecutor::block_on` to detect
 // a re-entrant (on-pool) call OF THE SAME EXECUTOR and drive the queue
-// cooperatively instead of parking the worker (RD-1). Carrying the executor id
-// (not a bare bool) keeps this marker scoped exactly like
+// cooperatively instead of parking the worker. Carrying the executor id (not a
+// bare bool) keeps this marker scoped exactly like
 // `BlockingOwnerToken.executor_id`: a worker of executor A that re-enters
 // `block_on` on executor B must NOT be treated as B's on-pool driver -- it owns
 // none of B's accounting, so it parks like any foreign-thread caller rather
@@ -3658,7 +3655,7 @@ thread_local! {
     const { std::cell::Cell::new(None) };
 }
 
-// Per-worker LIFO slot (wake-path §6(c), tokio-style): holds at most ONE
+// Per-worker LIFO slot (tokio-style): holds at most ONE
 // runnable that was scheduled FROM this pool worker (typically a task the
 // currently running runnable just woke). It is popped by this same thread's
 // next drain/run_one iteration BEFORE the shared FIFO, so the hot
@@ -3667,7 +3664,7 @@ thread_local! {
 // pattern as `ON_POOL_WORKER` and `BlockingOwnerToken.executor_id` -- so only
 // drain/run_one/flush of the SAME executor may pop it.
 //
-// STRANDING INVARIANT (wake-path §8.3): slot work is invisible to every other
+// STRANDING INVARIANT: slot work is invisible to every other
 // thread (`finish_draining`'s re-check and `wake_one` cannot see it), so the
 // owning thread MUST either run its slot entry or flush it to the shared FIFO
 // before it stops draining -- see the flush calls at `drain`'s returns, the
@@ -3737,14 +3734,14 @@ enum OwnedBlockingOutcome {
   ReservationReleased { owner: BlockingOwnerToken, ran: bool },
 }
 
-// Process-global owner-frame source (B: per-frame isolation of dependency
-// lending). Executor ids use `NEXT_RUNTIME_EXECUTOR_ID` above on every target.
+// Process-global owner-frame source for per-frame dependency-lending
+// isolation. Executor ids use `NEXT_RUNTIME_EXECUTOR_ID` above on every target.
 static NEXT_BLOCKING_FRAME: AtomicU64 = AtomicU64::new(1);
 #[cfg(not(target_family = "wasm"))]
 static NEXT_OWNER_RESERVATION: AtomicU64 = AtomicU64::new(1);
 
 // The owner frame (if any) currently running a counted blocking closure on THIS
-// thread. Replaces the old ambient `OWNS_BLOCKING_SLOT` bool.
+// thread. The exact frame identity scopes any over-cap dependency lending.
 thread_local! {
   static BLOCKING_OWNER: std::cell::Cell<Option<BlockingOwnerToken>> =
     const { std::cell::Cell::new(None) };
@@ -4002,7 +3999,7 @@ struct MultiThreadExecutor {
   generation: u64,
   stop: Arc<GenerationStop>,
   // Stable per-executor id; tags owner tokens so a stale token from a shut-down
-  // executor can never authorize an over-cap escape on a replacement (RD-1 (B)).
+  // executor can never authorize an over-cap escape on a replacement.
   id: u64,
   pool: ThreadPool,
   queue: Mutex<VecDeque<Runnable>>,
@@ -4016,7 +4013,7 @@ struct MultiThreadExecutor {
   // `block_on`, woken ONE at a time when new queue work is scheduled. The pool
   // has a fixed number of OS threads, so a parked worker cannot rely on
   // `ensure_drainer` spawning a replacement (there is no free thread to run
-  // it) -- it must wake and run the work itself (RD-1). Future-wakes do NOT go
+  // it) -- it must wake and run the work itself. Future-wakes do NOT go
   // through this registry: each driver's own `DriverParker` is its awaited
   // future's waker (see the wake-domain note at `DriverParker`).
   parked_drivers: ParkedDrivers,
@@ -4025,10 +4022,10 @@ struct MultiThreadExecutor {
   owner_lending_attempts: AtomicUsize,
   max_drainers: usize,
   max_blocking: usize,
-  // Deadline-based deadlock detection for COOPERATIVE driver parks ONLY
-  // (wake-path §6(d)); the foreign/napi whole-build park in `block_on`'s
-  // else-branch is exempt by design (§8.5) -- it parks for entire builds and
-  // a deadline there would panic healthy production runs. Off unless
+  // Deadline-based deadlock detection for COOPERATIVE driver parks ONLY. The
+  // foreign/napi whole-build park in `block_on`'s else-branch is exempt by
+  // design because it parks for entire builds and a deadline there would
+  // panic healthy production runs. Off unless
   // configured via `RuntimeOptions::park_deadline` (the embedder resolves
   // `PARK_DEADLINE_ENV` into it).
   park_deadline: Option<Duration>,
@@ -4176,7 +4173,7 @@ impl MultiThreadExecutor {
     // Fires for BOTH the slot and the FIFO path: a slot-resident runnable is
     // still "queued" until popped (`runnable_started` balances it either way).
     self.metrics.runnable_scheduled();
-    // LIFO fast path (wake-path §6(c)): a runnable scheduled from a pool
+    // LIFO fast path: a runnable scheduled from a pool
     // worker OF THIS EXECUTOR goes into that worker's slot instead of the
     // shared FIFO -- this thread pops it before its next FIFO look, so no
     // queue mutex, no wake, no drainer spawn.
@@ -4246,10 +4243,10 @@ impl MultiThreadExecutor {
 
   /// Queue-wake tail shared by `schedule` and `schedule_blocking`: wake ONE
   /// parked cooperative driver; when none is parked, fall back to spawning a
-  /// drainer (RD-1). A single wake suffices because the woken driver re-checks
+  /// drainer. A single wake suffices because the woken driver re-checks
   /// every work source in its loop before re-parking, and a wake it absorbs
   /// without consuming is handed on at `cooperative_block_on` exit (miss
-  /// compensation, wake-path §8.2). MUST be called AFTER the work was pushed
+  /// compensation). MUST be called AFTER the work was pushed
   /// under its queue mutex -- see the lost-wakeup argument at
   /// [`ParkedDrivers::wake_one`].
   fn wake_for_new_work(self: &Arc<Self>) {
@@ -4287,8 +4284,8 @@ impl MultiThreadExecutor {
       job: BlockingJobId(next_unique_id(&NEXT_BLOCKING_JOB_ID, "blocking job id space exhausted")),
       owner: BLOCKING_OWNER.with(std::cell::Cell::get).filter(|owner| owner.executor_id == self.id),
     };
-    // Enqueue-time progress signal, BEFORE the queue push/wake (Codex
-    // round-2): the deadlock detector's fingerprint must be able to observe
+    // Enqueue-time progress signal, BEFORE the queue push/wake: the deadlock
+    // detector's fingerprint must be able to observe
     // this submission even while the job merely sits queued -- symmetric with
     // `runnable_scheduled` on the runnable path.
     self.metrics.blocking_scheduled();
@@ -4347,7 +4344,7 @@ impl MultiThreadExecutor {
     // Mark this worker so a re-entrant `block_on` (reached from a polled task)
     // drives the queue cooperatively instead of parking the worker.
     let _on_pool = OnPoolWorkerGuard::enter(self.id);
-    // Unwind backstop (wake-path §8.3): never leave a runnable stranded in
+    // Unwind backstop: never leave a runnable stranded in
     // the LIFO slot. Normal exits flush explicitly BEFORE `finish_draining`
     // below (so its re-check can see the flushed runnable); this guard only
     // covers unwinds, which should be impossible (runnables and blocking
@@ -4359,7 +4356,7 @@ impl MultiThreadExecutor {
       if self.run_one_fair(&mut runnable_streak) {
         continue;
       }
-      // MANDATORY flush before finish_draining (wake-path §8.3). On this path
+      // MANDATORY flush before finish_draining. On this path
       // the slot was observed empty at the top of the iteration and no user
       // code ran since, so the flush is defensive -- kept unconditional so
       // every drain exit upholds the stranding invariant by construction.
@@ -4369,7 +4366,7 @@ impl MultiThreadExecutor {
     }
 
     // Budget exhausted: the last runnable may have scheduled into the slot.
-    // MANDATORY flush (wake-path §8.3) before `finish_draining` so its
+    // MANDATORY flush before `finish_draining` so its
     // re-check sees the runnable on the shared FIFO and re-arms a drainer.
     self.flush_lifo_slot();
     self.finish_draining();
@@ -4389,8 +4386,8 @@ impl MultiThreadExecutor {
   }
 
   /// Move this worker's slot entry (same-executor only) to the shared FIFO,
-  /// with a wake so any worker can pick it up. MANDATORY (wake-path §8.3) on
-  /// every path where this thread stops draining this executor: `drain`'s
+  /// with a wake so any worker can pick it up. MANDATORY on every path where
+  /// this thread stops draining this executor: `drain`'s
   /// returns (BEFORE `finish_draining`), before a cooperative park, and on
   /// unwind via `LifoSlotFlushGuard` -- a runnable stranded in a thread-local
   /// slot while its thread leaves executor code is a silently lost task.
@@ -4406,7 +4403,7 @@ impl MultiThreadExecutor {
 
   /// Mint a fresh owner token for a counted blocking closure entering on this
   /// executor. Each entry gets a unique `frame` so nested owners on the same
-  /// thread can never run each other's queued jobs over the cap (RD-1 (B)).
+  /// thread can never run each other's queued jobs over the cap.
   fn fresh_owner_token(&self) -> BlockingOwnerToken {
     BlockingOwnerToken {
       executor_id: self.id,
@@ -4415,7 +4412,7 @@ impl MultiThreadExecutor {
   }
 
   fn finish_draining(self: &Arc<Self>) {
-    // LIFO-slot invariant (wake-path §8.4): this re-check reads only the
+    // LIFO-slot invariant: this re-check reads only the
     // SHARED queues -- per-worker slots are invisible to it, and that is
     // sound because slot work never needs a foreign observer. A slot entry is
     // always either popped and run by its owning thread (drain / run_one) or
@@ -4567,8 +4564,8 @@ impl MultiThreadExecutor {
   /// Run one runnable, preferring this worker's LIFO slot over the shared FIFO.
   fn run_one_runnable(self: &Arc<Self>) -> bool {
     let admission = self.begin_deadlock_admission();
-    // Same owner-clear as the FIFO-only path (RD-1 (B)): a runnable from the
-    // slot must not smuggle an owner frame's over-cap privilege.
+    // Same owner-clear as the FIFO-only path: a runnable from the slot must
+    // not smuggle an owner frame's over-cap privilege.
     let claim = self.claim_runnable();
     self.finish_runnable_claim(claim, admission)
   }
@@ -4797,7 +4794,7 @@ impl MultiThreadExecutor {
   /// which is woken directly by the awaited future's waker and through the
   /// `parked_drivers` registry by `schedule`/`schedule_blocking`, so a later
   /// wake reaches this worker even when every worker is parked and
-  /// `ensure_drainer` has no free thread to spawn a replacement (RD-1).
+  /// `ensure_drainer` has no free thread to spawn a replacement.
   fn cooperative_block_on(
     self: &Arc<Self>,
     mut future: Pin<&mut dyn Future<Output = ()>>,
@@ -4813,7 +4810,7 @@ impl MultiThreadExecutor {
     let can_run_blocking =
       driver_role.is_none_or(|role| role.executor_id != self.id || role.can_run_blocking);
     let _exit = CooperativeDriverExitGuard { executor: self, parker: &parker, can_run_blocking };
-    // WAKE-DOMAIN SPLIT (wake-path §8.2): the awaited future is polled with
+    // WAKE-DOMAIN SPLIT: the awaited future is polled with
     // THIS driver's own parker as its waker, so a future-wake targets exactly
     // the driver that awaits it -- delivered as a stored permit (skip next
     // park) when this driver is currently running, so it is never lost.
@@ -4825,7 +4822,7 @@ impl MultiThreadExecutor {
     // worker's slot, which `run_one` pops BEFORE the FIFO) would keep this
     // loop inside `run_one` forever and the shared FIFO would never be
     // reached from this thread -- a deadlock on a 1-worker pool when the
-    // awaited future depends on a FIFO task (wake-path §8.7).
+    // awaited future depends on a FIFO task.
     let mut runnable_streak = 0usize;
     let mut work_streak = 0usize;
     let mut force_fifo = false;
@@ -4877,7 +4874,7 @@ impl MultiThreadExecutor {
       }
       runnable_streak = 0;
       work_streak = 0;
-      // MANDATORY pre-park flush (wake-path §8.3). Defensive on every
+      // MANDATORY pre-park flush. Defensive on every
       // currently reachable path: `run_one` above popped the slot and no user
       // code ran since -- but parking with a stranded slot runnable would
       // silently lose that task, so the invariant is upheld unconditionally.
@@ -4899,7 +4896,7 @@ impl MultiThreadExecutor {
       if self.stop.is_stopping() {
         return BlockOnOutcome::Stopped;
       }
-      // TIMER-BOUNDED PARK (timer facility, interaction A): while any heap
+      // TIMER-BOUNDED PARK: while any heap
       // timer is pending, this park is a TIMER WAIT, not a deadlock
       // candidate -- the wall clock is a guaranteed wake source -- so it uses
       // its own bounded primitive instead of `park`/`park_with_deadline` and
@@ -4925,8 +4922,8 @@ impl MultiThreadExecutor {
       match self.park_deadline {
         None => parker.park(),
         Some(deadline) => {
-          // Deadline-bounded cooperative park (wake-path §6(d)) with
-          // PROGRESS-BASED reset (§8.5): a candidate deadlock only when a
+          // Deadline-bounded cooperative park with PROGRESS-BASED reset: a
+          // candidate deadlock only when a
           // FULL deadline window passes with zero executor progress. The
           // foreign-thread whole-build park in `block_on`'s else-branch is
           // exempt by design.
@@ -4936,7 +4933,7 @@ impl MultiThreadExecutor {
             DeadlineParkOutcome::Expired(armed) => {
               #[cfg(test)]
               run_deadline_expiry_test_hook();
-              // EXPIRY DECISION (Codex rounds 1+2). While this parker was
+              // EXPIRY DECISION. While this parker was
               // registered, a racing `wake_one` may have popped it, stored
               // its permit and reported the wake as DELIVERED (so the
               // scheduler spawned no drainer) -- panicking now would swallow
@@ -4957,12 +4954,12 @@ impl MultiThreadExecutor {
               //     fire) is wall-clock-guaranteed, so this park is healthy.
               //     The loop then re-parks TIMER-BOUNDED (see above) and
               //     fires the timer itself if needed;
-              //   * fingerprint: §8.5's premise is ZERO progress, and the
+              //   * fingerprint: the verdict requires ZERO progress, and the
               //     read inside `park_with_deadline` is stale by the time we
               //     get here -- re-read as the LAST step. Both ENQUEUE
-              //     counters are in the fingerprint (`runnable_schedules`,
-              //     and since Codex round-2 `blocking_tasks_scheduled`,
-              //     bumped before the push), so a submission of EITHER kind
+              //     counters are in the fingerprint (`runnable_schedules`
+              //     and `blocking_tasks_scheduled`, both bumped before the
+              //     push), so a submission of EITHER kind
               //     landing after the queue re-check above is still caught
               //     here.
               // Any hit => not a deadlock: continue the cooperative loop
@@ -4976,8 +4973,8 @@ impl MultiThreadExecutor {
               if parker.consume_permit() || self.has_queued_work_for_role(can_run_blocking) {
                 continue;
               }
-              // Test-only seam (Codex round-2 regression): between the
-              // permit/queued-work re-checks and the fingerprint verdict.
+              // Test-only seam between the permit/queued-work re-checks and
+              // the fingerprint verdict.
               #[cfg(test)]
               run_deadline_verdict_test_hook();
               if self.metrics.progress_fingerprint() != armed {
@@ -5265,8 +5262,8 @@ impl Drop for CooperativeDriverExitGuard<'_> {
   }
 }
 
-/// Unwind backstop for `drain` (wake-path §8.3): flushes the worker's LIFO
-/// slot on drop so an unwinding drain can never strand a runnable in the
+/// Unwind backstop for `drain`: flushes the worker's LIFO slot on drop so an
+/// unwinding drain can never strand a runnable in the
 /// thread-local slot of a thread that is about to return to rayon. Normal
 /// drain exits flush explicitly BEFORE `finish_draining`; this drop is then a
 /// no-op (the slot is already empty).
@@ -5281,13 +5278,9 @@ impl Drop for LifoSlotFlushGuard<'_> {
 }
 
 // ---------------------------------------------------------------------------
-// Targeted wake machinery for cooperative re-entrant `block_on` drivers
-// (replaces the old `CoopSignal` generation broadcast).
+// Targeted wake machinery for cooperative re-entrant `block_on` drivers.
 //
-// WAKE-DOMAIN SPLIT (wake-path §8.2 / §6(b)): under the broadcast, ANY notify
-// woke ALL parked drivers, so misdirected wakes were impossible by
-// construction (and the churn was the measured tax). With targeted wakes the
-// two wake sources are split:
+// WAKE-DOMAIN SPLIT: future wakes and queue wakes have different targets:
 //   * FUTURE-WAKES: `cooperative_block_on` polls its future with the driver's
 //     OWN `DriverParker` as the waker, so a future-wake reaches exactly the
 //     driver that awaits it. The permit bit makes a wake delivered while that
@@ -5302,7 +5295,7 @@ impl Drop for LifoSlotFlushGuard<'_> {
 // `futures::executor::block_on`'s own parker and are OUTSIDE this mechanism.
 // The CurrentThread flavor's `block_on` reuses `DriverParker` (one per
 // frame, no registry) so it too OWNS its park site for deadlock detection
-// (wake-path §6(d)); `ParkedDrivers` remains MultiThread-only.
+// while `ParkedDrivers` remains MultiThread-only.
 
 /// No permit; the driver is running (or consumed its last permit).
 const PARKER_EMPTY: usize = 0;
@@ -5350,9 +5343,9 @@ impl DriverParker {
   /// Grant the wake permit. Wakes the driver if it is sleeping; otherwise the
   /// permit is stored and the driver's next [`Self::park`] returns
   /// immediately -- a wake delivered while the driver is running is never
-  /// lost (wake-path §8.2). Multiple grants coalesce into one permit, which
-  /// is safe because a woken driver re-checks every work source in its loop
-  /// before it can park again.
+  /// lost. Multiple grants coalesce into one permit, which is safe because a
+  /// woken driver re-checks every work source in its loop before it can park
+  /// again.
   fn unpark(&self) {
     if self.state.swap(PARKER_NOTIFIED, Ordering::SeqCst) == PARKER_SLEEPING {
       // The sleeper publishes PARKER_SLEEPING while holding `lock` and
@@ -5365,9 +5358,9 @@ impl DriverParker {
   }
 
   /// Consume a stored wake permit if one is present, without ever sleeping.
-  /// This is the park DECISION's token check (wake-path §6(d)): a `true`
-  /// return means a wake is already pending, so the caller must re-poll
-  /// instead of parking (or panicking).
+  /// This is the park DECISION's token check: a `true` return means a wake is
+  /// already pending, so the caller must re-poll instead of parking (or
+  /// panicking).
   fn consume_permit(&self) -> bool {
     self
       .state
@@ -5416,7 +5409,7 @@ impl DriverParker {
   /// (consumed) and `false` when `timeout` elapsed with no permit granted.
   /// A `false` return has retracted the SLEEPING claim and left the parker
   /// EMPTY, so the caller may park again. Used by the deadline-based deadlock
-  /// detection (wake-path §6(d)).
+  /// detection.
   fn park_timeout(&self, timeout: Duration) -> bool {
     if self.consume_permit() {
       return true;
@@ -5507,15 +5500,15 @@ enum DeadlineParkOutcome {
   /// A full deadline window elapsed with zero observed progress. Carries the
   /// fingerprint captured when that window was ARMED so the caller can make
   /// the final expiry DECISION against a fresh read -- expiry alone is NOT a
-  /// verdict: a wake can land in the instructions after the window closes
-  /// (Codex round-1), and for MultiThread a `wake_one` can still pop the
+  /// verdict: a wake can land in the instructions after the window closes,
+  /// and for MultiThread a `wake_one` can still pop the
   /// still-registered parker and count its wake as DELIVERED. Callers must
   /// deregister (MT), then re-check permit / queued work / fingerprint before
   /// panicking.
   Expired(ProgressFingerprint),
 }
 
-/// Deadline-bounded park with PROGRESS-BASED reset (wake-path §6(d), §8.5).
+/// Deadline-bounded park with PROGRESS-BASED reset.
 /// Every time `deadline` elapses without a wake, the runtime's progress
 /// fingerprint is compared against the value captured when the deadline was
 /// ARMED: any advance re-arms the deadline instead of firing, because a
@@ -5542,8 +5535,8 @@ fn park_with_deadline(
   }
 }
 
-// Test-only injection seam for the deadline-expiry race (Codex round-1
-// regression test): fired on the driver thread immediately after
+// Test-only injection seam for the deadline-expiry race: fired on the driver
+// thread immediately after
 // `park_with_deadline` reports `Expired`, while the parker is STILL
 // REGISTERED in `parked_drivers` and before the expiry decision runs -- the
 // exact window in which a racing `wake_one` can pop the parker, store its
@@ -5562,8 +5555,8 @@ fn run_deadline_expiry_test_hook() {
   }
 }
 
-// Second test-only injection seam (Codex round-2 regression test): fired
-// AFTER the expiry decision's permit and queued-work re-checks both came up
+// Second test-only injection seam for the enqueue/verdict race: fired AFTER
+// the expiry decision's permit and queued-work re-checks both came up
 // empty (parker already deregistered) and BEFORE the final fingerprint
 // verdict -- the window in which an enqueue is invisible to every earlier
 // re-check and only its ENQUEUE counter in the fingerprint can prevent a
@@ -5774,7 +5767,7 @@ impl ParkedDrivers {
   /// Wake one parked driver -- most recently parked first, its stack and
   /// caches are the warmest -- returning whether anyone was woken.
   ///
-  /// LOST-WAKEUP ARGUMENT (wake-path §8.1, registry form). A scheduler pushes
+  /// LOST-WAKEUP ARGUMENT. A scheduler pushes
   /// work under a work-queue mutex Q, THEN calls `wake_one`; a parking driver
   /// registers itself (the `count` store above, under the registry mutex),
   /// THEN re-checks the work queues under Q, and only then parks. Order the
@@ -5920,7 +5913,7 @@ impl ParkedDrivers {
 }
 
 // ---------------------------------------------------------------------------
-// Runtime timer facility (timer intel §4): `sleep_until` without a tokio
+// Runtime timer facility: `sleep_until` without a tokio
 // reactor. Two drivers, selected by runtime flavor:
 //
 //   * MultiThread: a runtime-owned binary heap plus one dedicated non-Rayon
@@ -5933,7 +5926,7 @@ impl ParkedDrivers {
 //     driver at import; wasi-single uses the same path). A CT runtime without
 //     a registered driver fails LOUD at `sleep_until` -- never a silent hang.
 //
-// DEADLOCK-DETECTION INTERACTIONS (the Task-4 machinery above):
+// DEADLOCK-DETECTION INTERACTIONS:
 //   * MT: a wait on a pending timer is never a deadlock candidate -- the wall
 //     clock is a guaranteed wake source. Timer waits therefore use their own
 //     primitive (a plain `park_timeout` bounded by the earliest deadline),
@@ -6865,8 +6858,8 @@ pub type TimerId = u64;
 /// Process-global id source for [`Sleep`] futures (both drivers).
 static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(0);
 
-/// Seam for host-delegated timers (timer intel §4(b)): the CurrentThread
-/// flavor cannot park a helper thread on a threadless build, so it delegates
+/// Seam for host-delegated timers: the CurrentThread flavor cannot park a
+/// helper thread on a threadless build, so it delegates
 /// `sleep_until` to the host event loop through this trait. The Node binding
 /// installs a `setTimeout`-based implementation via [`register_timer_driver`]
 /// at import -- one per importing napi env (main thread AND workers).
@@ -6892,8 +6885,8 @@ pub trait TimerDriver: Send + Sync + 'static {
   /// registrant: the `is_live` probe can be the FIRST layer to notice a dying
   /// host (before its env-cleanup hook or any call failure runs), and a
   /// silent `retain` would strand sleeps whose only wake source was the swept
-  /// driver (Codex task-7 round 4, finding 1). Idempotent with the owner's
-  /// other eviction paths. Default no-op for drivers without waker state.
+  /// driver. Idempotent with the owner's other eviction paths. Default no-op
+  /// for drivers without waker state.
   fn on_swept(&self) {}
 }
 
@@ -6993,8 +6986,8 @@ impl TimerDriverRegistryState {
 /// env, and a worker's env teardown kills its driver's threadsafe function. A
 /// single first-wins slot is therefore unsound: a worker that imports the
 /// binding first and then exits would permanently shadow the slot with a dead
-/// driver, and every CT timer armed afterwards would busy-fail against it
-/// (Codex task-7 round 3). Selecting only the newest live driver is also
+/// driver, and every CT timer armed afterwards would busy-fail against it.
+/// Selecting only the newest live driver is also
 /// insufficient: a live worker can be CPU-blocked indefinitely while another
 /// environment remains responsive. The registry therefore keeps all
 /// registrants and returns a stable snapshot of every live driver at each
@@ -7403,7 +7396,7 @@ impl Drop for HostTimerPendingGuard {
   }
 }
 
-/// Runtime-owned timer heap for the MultiThread executor (timer intel §4(a)).
+/// Runtime-owned timer heap for the MultiThread executor.
 ///
 /// The timekeeper is a dedicated lifecycle-managed OS thread. It never enters
 /// Rayon and therefore cannot consume one of the configured CPU workers while
@@ -7877,9 +7870,9 @@ impl MultiThreadExecutor {
     self.parked_drivers.wake_one();
   }
 
-  /// Drain-fire every pending heap timer and poison later registrations
-  /// (timer intel: `shutdown()` with armed timers must not hang a pending
-  /// `close()`). Fired sleeps resolve on their next poll; the woken tasks are
+  /// Drain-fire every pending heap timer and poison later registrations.
+  /// `shutdown()` with armed timers must not hang a pending `close()`. Fired
+  /// sleeps resolve on their next poll; the woken tasks are
   /// scheduled through the normal path, so a coordinator awaiting a debounce
   /// completes its close sequence instead of parking forever.
   fn shutdown_timers(&self) {
@@ -8069,9 +8062,9 @@ impl Future for Sleep {
           // host timer is armed below -- and only then. An unpolled Sleep has
           // no host callback behind it, so counting it at creation would
           // wrongly veto the threaded deadline verdict (`has_live_wait`) and
-          // mislabel the threadless certain diagnostic as timer-backed
-          // (Codex round-1, finding 3; the certain panic itself no longer
-          // consults pending timers for its verdict).
+          // mislabel the threadless certain diagnostic as timer-backed. The
+          // certain panic itself no longer consults pending timers for its
+          // verdict.
           host.drivers.register_pending(host.id, &host.repoll);
           host.pending = Some(HostTimerPendingGuard {
             registry: Arc::clone(&host.registry),
@@ -13589,10 +13582,10 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_block_on_does_not_park_pool_worker() {
-    // Regression for RD-1: a pool-worker task that calls `block_on` on an inner
+    // Pool-worker reentrancy invariant: a task that calls `block_on` on an inner
     // future depending on pool-scheduled blocking work must not park its worker.
-    // With `worker_threads` tasks each parking a worker, the blocking jobs they
-    // await can never be picked up by a drainer -> deadlock under the old code.
+    // If every worker parks this way, no worker remains to pick up the blocking
+    // jobs they await.
     use std::sync::{Barrier, mpsc};
     use std::time::Duration;
 
@@ -13674,7 +13667,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_block_on_from_caller_thread_receives_pool_produced_value() {
-    // RD-10: cross-thread liveness guard for the NON-pool (napi-caller) path of
+    // Cross-thread liveness guard for the NON-pool (napi-caller) path of
     // `MultiThreadExecutor::block_on`. The caller thread is not a pool worker, so
     // `block_on` takes the parking branch (`futures::executor::block_on`) while a
     // SEPARATELY spawned task runs on a pool worker and produces the awaited value.
@@ -13695,8 +13688,7 @@ mod tests {
     // below fails loudly instead of hanging the suite.
     //
     // SCOPE: this is the cross-thread liveness guard only. It does NOT exercise the
-    // caller-is-pool-worker reentrancy case (that is covered by RD-1's own reentrancy
-    // tests).
+    // caller-is-pool-worker case, which has dedicated reentrancy tests.
     use std::sync::mpsc;
     use std::time::Duration;
 
@@ -13775,7 +13767,7 @@ mod tests {
     match done_rx.recv_timeout(Duration::from_secs(10)) {
       Ok(()) => runner.join().unwrap(),
       Err(error) => panic!(
-        "RD-10: non-pool block_on did not receive the pool-produced value ({error}): the cross-thread wake path stalled"
+        "non-pool block_on did not receive the pool-produced value ({error}): the cross-thread wake path stalled"
       ),
     }
   }
@@ -13783,12 +13775,11 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_block_on_wakes_parked_driver_after_workers_park() {
-    // Regression for RD-1 finding (a): a pool-worker task parks in `block_on`
-    // because the work that will wake it has not been scheduled yet. Once every
-    // pool worker is parked this way, a later async wake routes through
-    // `schedule()` -> `ensure_drainer`, which (under the old code) refuses to
-    // spawn a replacement because the parked workers are still counted as active
-    // drainers -> the enqueued runnable never runs -> deadlock.
+    // Parked-driver wake invariant: a pool-worker task may park in `block_on`
+    // before the work that will wake it is scheduled. Once every pool worker
+    // is parked this way, `ensure_drainer` cannot spawn a replacement because
+    // the parked workers are still counted as active drainers. A later
+    // `schedule()` must wake a parked driver directly so the runnable can run.
     use std::sync::{Barrier, mpsc};
     use std::time::Duration;
 
@@ -13848,9 +13839,7 @@ mod tests {
 
     match done_rx.recv_timeout(Duration::from_secs(10)) {
       Ok(()) => runner.join().unwrap(),
-      Err(error) => panic!(
-        "RD-1 (a): parked pool drivers were not woken after a post-park schedule() ({error})"
-      ),
+      Err(error) => panic!("parked pool drivers missed a post-park schedule wake ({error})"),
     }
   }
 
@@ -14086,7 +14075,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn parked_drivers_wake_one_with_no_parked_drivers_skips_the_lock() {
-    // Wake-path (a)/(b): with nothing registered, `wake_one` must return
+    // Empty-registry behavior: with nothing registered, `wake_one` must return
     // `false` WITHOUT touching the registry mutex (the no-waiter fast path --
     // the common case, since queue-wakes fire on every schedule while drivers
     // park only in rare re-entrant `block_on`). Proxy for "did not take the
@@ -14146,7 +14135,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn driver_parker_permit_granted_while_running_is_not_lost() {
-    // Wake-path (b) §8.2: a wake delivered while the driver is RUNNING (not
+    // Stored-permit behavior: a wake delivered while the driver is RUNNING (not
     // parked) must be stored as a permit that makes the next `park` return
     // immediately; multiple such wakes coalesce into ONE permit.
     use std::sync::mpsc;
@@ -14226,10 +14215,9 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn parked_drivers_wake_one_wakes_exactly_one() {
-    // Wake-path (b): 2 parked drivers + 1 wake -> exactly one wakes, the
-    // other stays parked. The old broadcast could not distinguish drivers;
-    // targeted wakes must not degrade into "wake everyone" (that is the
-    // measured churn) nor "wake no one" (lost wakeup).
+    // Single-wake behavior: 2 parked drivers + 1 wake -> exactly one wakes, the
+    // other stays parked. Targeted wakes must neither wake everyone nor lose
+    // the wake.
     use std::sync::mpsc;
     use std::time::Duration;
 
@@ -14694,7 +14682,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_future_wake_targets_its_own_parked_driver() {
-    // Wake-path (b) targeting: a future-wake must reach the driver that
+    // Future-wake targeting invariant: a future-wake must reach the driver that
     // AWAITS that future, not "some parked driver". D1 parks first awaiting
     // rx1; D2 parks after it awaiting rx2. Completing rx1 must wake D1 even
     // though D2 parked more recently -- a future-wake misrouted through the
@@ -14788,15 +14776,13 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_cooperative_exit_hands_absorbed_wake_to_parked_driver() {
-    // Wake-path (b) miss compensation (§8.2): a driver that exits
-    // `cooperative_block_on` (future ready) while queue work remains must hand
-    // the wake on -- it may have absorbed a `wake_one` permit meant for that
-    // work. Topology: the SOLE pool worker is parked as a cooperative driver
-    // (so `ensure_drainer` can spawn nothing and only a wake can reach it); a
-    // runnable is pushed RAW (no wake of its own); the test thread then runs a
-    // ready future through the cooperative branch (the 1793 fake-on-pool
-    // technique). Its exit compensation is the ONLY mechanism left that can
-    // wake the parked worker to drain the runnable.
+    // Miss-compensation invariant: a driver that exits `cooperative_block_on`
+    // with queue work remaining must hand the wake on because it may have
+    // absorbed a `wake_one` permit meant for that work. The SOLE pool worker
+    // is parked as a cooperative driver, a runnable is pushed without a wake,
+    // and the test thread forces a ready future through the cooperative branch.
+    // Exit compensation is the ONLY mechanism left that can wake the parked
+    // worker to drain the runnable.
     use std::sync::mpsc;
     use std::time::Duration;
 
@@ -14986,7 +14972,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn wake_path_wake_one_vs_park_interleaving_loses_no_wakeups() {
-    // Wake-path (a)/(b) stress: N rounds of {producer: publish work,
+    // Targeted-wake stress: N rounds of {producer: publish work,
     // wake_one()} racing {consumer: check work, register, re-check, park} --
     // the exact schedule-vs-park protocol `schedule` and
     // `cooperative_block_on` run. This walks the interleaving at every offset
@@ -15048,7 +15034,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn lifo_slot_same_worker_schedule_runs_before_older_fifo_work() {
-    // Wake-path (c): a runnable scheduled from a pool worker of the SAME
+    // LIFO locality invariant: a runnable scheduled from a pool worker of the SAME
     // executor lands in that worker's LIFO slot (no FIFO push, no wake) and is
     // run by the next drain/run_one iteration BEFORE older shared-FIFO work.
     let options = RuntimeOptions {
@@ -15149,7 +15135,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn lifo_slot_drain_runs_slot_before_older_fifo_work() {
-    // Wake-path (c), `drain` integration: with one worker, task P scheduling
+    // Drain integration: with one worker, task P scheduling
     // child C mid-drain must see C run IMMEDIATELY after P (via the slot),
     // jumping ahead of the older queued T1/T2.
     use std::sync::mpsc;
@@ -15230,7 +15216,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn lifo_slot_displaced_occupant_falls_back_to_fifo() {
-    // Wake-path (c): two same-executor schedules from one worker -- the
+    // Single-slot displacement invariant: two same-executor schedules from one worker -- the
     // NEWEST takes the slot; the displaced occupant must land on the shared
     // FIFO (with a wake), never be dropped. `active_drainers` is saturated so
     // the displacement wake cannot spawn a real drainer racing the manual
@@ -15280,7 +15266,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn lifo_slot_is_executor_scoped() {
-    // Wake-path (c): the slot is tagged with the executor id (mirroring the
+    // Executor-scoping invariant: the slot is tagged with the executor id (mirroring the
     // ON_POOL_WORKER / BlockingOwnerToken scoping). A worker of executor A
     // scheduling onto executor B must bypass the slot (B's FIFO); and with
     // A's runnable IN the slot, B must neither pop nor displace it.
@@ -15350,7 +15336,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn lifo_slot_flushed_on_budget_exhaustion_completes_long_chains() {
-    // Wake-path (c) §8.3: a 200-link chain in which each task schedules the
+    // LIFO chain flush invariant: a 200-link chain in which each task schedules the
     // next FROM the pool worker (every link lands in the slot) crosses
     // multiple RUNNABLE_BUDGET windows. At each exhaustion the slot MUST be
     // flushed to the FIFO before `finish_draining` (so its re-check sees the
@@ -15418,7 +15404,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn lifo_slot_flush_moves_slot_runnable_to_shared_fifo() {
-    // Wake-path (c) §8.3: direct pin for the flush primitive used at drain
+    // Direct flush primitive test: pin the flush behavior used at drain
     // exits, before cooperative parks and by the unwind guard -- a
     // slot-resident runnable moves to the shared FIFO with its task still
     // completable, never dropped. (The pre-park call is defensive: `run_one`
@@ -15464,10 +15450,10 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn lifo_slot_runnable_does_not_inherit_blocking_owner() {
-    // Wake-path (c), extending the RD-1 round-3 owner-clear (the 628 anchor)
-    // to the slot path: a runnable popped from the slot runs with
-    // BLOCKING_OWNER cleared, so it cannot borrow the driving owner frame's
-    // over-cap privilege; the ambient owner is restored afterwards.
+    // Blocking-owner isolation must cover the LIFO slot path: a runnable
+    // popped from the slot runs with BLOCKING_OWNER cleared, so it cannot
+    // borrow the driving owner frame's over-cap privilege; the ambient owner
+    // is restored afterwards.
     let options = RuntimeOptions {
       flavor: RuntimeFlavor::MultiThread,
       worker_threads: 2,
@@ -15481,9 +15467,9 @@ mod tests {
 
     let _on_pool = OnPoolWorkerGuard::enter(executor.id);
 
-    // Install the slot entry from RUNNABLE context (no ambient owner) -- the
-    // only context that may use the slot since the finding-3 fix diverts
-    // schedules issued under an owner frame to the shared FIFO.
+    // Install the slot entry from RUNNABLE context (no ambient owner), the
+    // only context that may use the slot because schedules issued under an
+    // owner frame are diverted to the shared FIFO.
     let observed_slot = Arc::clone(&observed);
     let sched = Arc::clone(&executor);
     let (runnable, task) = async_task::spawn(
@@ -15575,7 +15561,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn lifo_slot_ping_pong_does_not_starve_queued_fifo_task() {
-    // Wake-path (c) streak cap: slot pops share `drain`'s RUNNABLE_BUDGET, so
+    // LIFO streak-cap invariant: slot pops share `drain`'s RUNNABLE_BUDGET, so
     // a hot wake/await pair holds a worker for at most one budget window
     // before the slot is flushed and the FIFO gets its turn. With ONE worker,
     // a third task queued behind an unbounded ping-pong pair must still run;
@@ -15646,7 +15632,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_hot_lifo_pair_does_not_wedge_queued_blocking_job() {
-    // Wake-path §8.7: runnables (slot included) outrank blocking work per
+    // Runnable/blocking fairness invariant: runnables (slot included) outrank blocking work per
     // drain iteration -- unchanged from the FIFO-only drain -- but a hot LIFO
     // pair must not turn that priority into a permanent wedge. The budget
     // flush keeps the drain exiting, `finish_draining` keeps re-checking the
@@ -16037,9 +16023,9 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn cooperative_exit_flushes_slot_work_spawned_by_final_poll() {
-    // Codex round-1 finding 1: the awaited future's FINAL poll (the one that
-    // returns Ready) can schedule same-executor work, which lands in THIS
-    // worker's LIFO slot -- no FIFO push, no wake. The Ready exit of
+    // Final-poll slot-flush invariant: the awaited future's FINAL poll can
+    // schedule same-executor work, which lands in THIS worker's LIFO slot --
+    // no FIFO push, no wake. The Ready exit of
     // `cooperative_block_on` must flush the slot: the caller may wait on that
     // child synchronously (and the enclosing drain frame can be arbitrarily
     // far away -- here it does not exist at all, via the fake on-pool
@@ -16083,8 +16069,8 @@ mod tests {
 
       let (child_tx, child_rx) = mpsc::channel::<u64>();
       {
-        // Fake on-pool marker (1793 technique): the cooperative branch runs on
-        // THIS thread, with NO enclosing drain loop to bail the slot out.
+        // The test-only on-pool marker runs the cooperative branch on THIS
+        // thread, with NO enclosing drain loop to bail the slot out.
         let _on_pool = OnPoolWorkerGuard::enter(executor.id);
         let mut future = std::pin::pin!(SpawnOnReady {
           executor: Arc::clone(&executor),
@@ -16135,7 +16121,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn cooperative_block_on_budget_prevents_slot_chain_starving_fifo() {
-    // Codex round-1 finding 2: `cooperative_block_on`'s loop must mirror
+    // Runnable-budget invariant: `cooperative_block_on`'s loop must mirror
     // `drain`'s RUNNABLE_BUDGET streak cap. `run_one` pops the slot before
     // the FIFO, so a hot chain (every link schedules its successor into the
     // slot) keeps run_one succeeding forever and the FIFO is never reached
@@ -16285,13 +16271,12 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn blocking_closure_spawn_is_not_stranded_in_slot() {
-    // Codex round-1 finding 3: ON_POOL_WORKER spans the whole drain frame,
-    // INCLUDING blocking-closure bodies. A closure that spawns a same-
-    // executor task and then waits for it synchronously would deadlock if the
-    // child were slotted (the slot only drains after the closure returns --
-    // which is what the child was supposed to unblock), even with idle
-    // workers. `schedule` must bypass the slot while BLOCKING_OWNER is set
-    // (straight-line blocking code) and push to the shared FIFO with a wake.
+    // Blocking-closure scheduling invariant: ON_POOL_WORKER spans the whole
+    // drain frame, INCLUDING blocking-closure bodies. A closure that spawns a
+    // same-executor task and then waits for it synchronously would deadlock if
+    // the child were slotted because the slot only drains after the closure
+    // returns. `schedule` must bypass the slot while BLOCKING_OWNER is set and
+    // push to the shared FIFO with a wake.
     use std::sync::mpsc;
     use std::time::Duration;
 
@@ -16359,11 +16344,11 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_nested_spawn_blocking_does_not_deadlock_when_saturated() {
-    // Regression for RD-1 finding (b): a blocking closure re-enters `block_on`
-    // and awaits another `spawn_blocking` while `max_blocking_tasks` is already
-    // saturated by the outer blocking jobs. Under the old code the driver parks
-    // (take_blocking returns None) while still holding its blocking slot, so the
-    // inner job can never run -> deadlock.
+    // Saturated nested-blocking invariant: a blocking closure re-enters
+    // `block_on` and awaits another `spawn_blocking` while
+    // `max_blocking_tasks` is already saturated by the outer blocking jobs.
+    // The driver must not park while still holding its blocking slot, because
+    // the inner job would then have no capacity to run.
     use std::sync::{Barrier, mpsc};
     use std::time::Duration;
 
@@ -16410,7 +16395,7 @@ mod tests {
 
     match done_rx.recv_timeout(Duration::from_secs(10)) {
       Ok(()) => runner.join().unwrap(),
-      Err(error) => panic!("RD-1 (b): nested spawn_blocking deadlocked while saturated ({error})"),
+      Err(error) => panic!("nested spawn_blocking deadlocked at blocking capacity ({error})"),
     }
   }
 
@@ -17767,14 +17752,14 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_block_on_respects_blocking_cap_for_non_owner_driver() {
-    // Regression for RD-1 round-2 finding: a plain pool-worker runnable driver
-    // (one that does NOT own a counted blocking slot) re-entering `block_on`
+    // Non-owner blocking-cap invariant: a plain pool-worker runnable driver
+    // that does NOT own a counted blocking slot and re-enters `block_on`
     // must NOT run queued blocking jobs over `max_blocking_tasks` via the
     // cooperative over-cap fallback. Two holder blocking jobs saturate the cap;
-    // two driver tasks then `block_on(spawn_blocking(..))`. With the buggy
-    // over-cap fallback the drivers run their inner blocking jobs immediately
-    // while the holders still occupy both slots, so peak active blocking >= 3
-    // (> cap 2). The cap must be honored AND everything must still complete.
+    // two driver tasks then `block_on(spawn_blocking(..))`. If a non-owner
+    // driver could use the over-cap fallback, the inner jobs would run while
+    // both holders still occupy slots and push peak active blocking above 2.
+    // The cap must be honored AND everything must still complete.
     use std::sync::{Barrier, mpsc};
     use std::time::Duration;
 
@@ -17834,9 +17819,8 @@ mod tests {
         driver_tasks.push(task);
       }
 
-      // Let the driver tasks reach block_on. Under the buggy over-cap fallback
-      // they run their inner blocking jobs NOW (over cap); under the fix they
-      // park until a holder frees a slot.
+      // Let the driver tasks reach block_on. They must park until a holder
+      // frees a slot instead of running their inner jobs over the cap.
       std::thread::sleep(Duration::from_millis(300));
 
       // Release the holders so the inner jobs can run within the cap.
@@ -17855,7 +17839,7 @@ mod tests {
 
     match done_rx.recv_timeout(Duration::from_secs(10)) {
       Ok(()) => runner.join().unwrap(),
-      Err(error) => panic!("RD-1 cap test deadlocked ({error})"),
+      Err(error) => panic!("non-owner block_on blocking-cap test deadlocked ({error})"),
     }
     let peak = peak_out.lock().unwrap().expect("peak captured");
     assert!(peak <= 2, "peak active blocking tasks {peak} exceeded max_blocking_tasks 2");
@@ -17864,21 +17848,21 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_block_on_runnable_driven_by_owner_respects_cap() {
-    // Regression for RD-1 round-3 finding: a counted blocking OWNER that re-enters
-    // cooperative `block_on` can drive a plain queued runnable via `run_one`. That
-    // runnable must NOT inherit the owner's over-cap blocking privilege. If the
-    // runnable itself re-enters `block_on` awaiting a `spawn_blocking` while the cap
-    // is saturated, the inner job must respect `max_blocking_tasks` (park until a
-    // slot frees), not run over cap by borrowing the owner's blocking-owner token.
+    // Blocking-owner isolation invariant: a counted blocking OWNER that
+    // re-enters cooperative `block_on` can drive a plain queued runnable via
+    // `run_one`. That runnable must NOT inherit the owner's over-cap blocking
+    // privilege. If it re-enters `block_on` awaiting a `spawn_blocking` while
+    // the cap is saturated, the inner job must wait for a slot instead of
+    // borrowing the owner's token.
     //
     // Setup (worker_threads=2, max_blocking=2): owner O (a counted blocking closure)
     // holds slot 1; holder H2 holds slot 2 -> cap saturated. O spawns a plain task R
     // and drives it via cooperative `block_on`. With only 2 workers and 2 active
     // drainers, no replacement drainer can be spawned, so O itself runs R via
-    // `run_one`. R re-enters `block_on` awaiting an inner `spawn_blocking` J. Under
-    // the bug, R inherits O's slot flag and runs J over cap -> peak metric 3 (> 2).
-    // Under the fix, R is a non-owner and parks until H2 frees a slot, so J runs
-    // within the cap -> peak 2. Everything must still complete (no deadlock).
+    // `run_one`. R re-enters `block_on` awaiting an inner `spawn_blocking` J.
+    // R must not inherit O's slot flag: it parks until H2 frees a slot, so J
+    // runs within the cap and the peak remains 2. Everything must still
+    // complete.
     use std::sync::{Barrier, mpsc};
     use std::time::Duration;
 
@@ -17935,10 +17919,10 @@ mod tests {
         1usize
       });
 
-      // Give O time to drive R into its inner `block_on`. Under the bug R already
-      // ran its inner job over cap; under the fix R is parked waiting for a slot.
+      // Give O time to drive R into its inner `block_on`; R must be parked
+      // waiting for a slot.
       std::thread::sleep(Duration::from_millis(300));
-      // Release H2 so the inner job can run within the cap (fix path).
+      // Release H2 so the inner job can run within the cap.
       release.wait();
 
       assert_eq!(futures::executor::block_on(o).unwrap(), 1usize);
@@ -17950,7 +17934,7 @@ mod tests {
 
     match done_rx.recv_timeout(Duration::from_secs(10)) {
       Ok(()) => runner.join().unwrap(),
-      Err(error) => panic!("RD-1 round-3 owner-driven-runnable cap test deadlocked ({error})"),
+      Err(error) => panic!("owner-driven runnable blocking-cap test deadlocked ({error})"),
     }
     let peak = peak_out.lock().unwrap().expect("peak captured");
     assert!(peak <= 2, "peak active blocking tasks {peak} exceeded max_blocking_tasks 2");
@@ -17965,9 +17949,8 @@ mod tests {
     // Setup (worker_threads=2, max_blocking=2): owner O is a counted blocking
     // closure (slot 1); holder H holds slot 2 -> cap saturated. An unrelated job
     // U is queued ahead of O's descendant D. O re-enters `block_on` awaiting D.
-    // The exact dependency must skip U and run D. Because U can only run once a real slot
-    // frees (O completing, after D runs), D STRICTLY precedes U under the fix.
-    // The old front-pop ran U first -> order ["U", "D"], which this asserts away.
+    // The exact dependency must skip U and run D. Because U can only run once
+    // a real slot frees after O completes, D must STRICTLY precede U.
     use std::sync::{Barrier, mpsc};
 
     let (done_tx, done_rx) = mpsc::channel();
@@ -18050,7 +18033,7 @@ mod tests {
 
     match done_rx.recv_timeout(std::time::Duration::from_secs(10)) {
       Ok(()) => runner.join().unwrap(),
-      Err(error) => panic!("RD-1 (B) unrelated-job escape test deadlocked ({error})"),
+      Err(error) => panic!("owner-scoped over-cap escape test deadlocked ({error})"),
     }
     let order = order_read.lock().unwrap().clone();
     assert_eq!(
@@ -18363,8 +18346,8 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_block_on_cooperative_branch_is_executor_scoped() {
-    // Regression for the pool-worker-marker scoping gate: `block_on` may take the
-    // cooperative (queue-driving) branch ONLY for a re-entrant call OF THE SAME
+    // Pool-worker-marker scoping invariant: `block_on` may take the cooperative
+    // (queue-driving) branch ONLY for a re-entrant call OF THE SAME
     // executor whose worker set the marker. A worker of executor A that re-enters
     // `block_on` on executor B must take the PARKING branch instead -- it owns
     // none of B's accounting, so driving B's queue would make it an unaccounted
@@ -19438,7 +19421,7 @@ mod tests {
     controller.shutdown().unwrap();
   }
 
-  // ---- RD-8: validate() gatekeeping + configure() immutability --------------
+  // ---- Runtime option validation and configuration immutability -------------
   // These build `RuntimeOptions`/`RuntimeController` LOCALLY and never touch the
   // global `RUNTIME` singleton, so they stay deterministic and order-independent.
 
@@ -22603,7 +22586,7 @@ mod tests {
     controller.shutdown().unwrap();
   }
 
-  // ---- RD-9: MultiThread blocking cap + RUNNABLE_BUDGET drain + panic->JoinError --
+  // ---- MultiThread blocking cap, drain budget, and panic propagation ---------
   // All three construct a `MultiThreadExecutor`/`RuntimeMetrics` LOCALLY (never the
   // global `RUNTIME`) and run the workload on a child thread guarded by a
   // `recv_timeout`, so a regression that hangs is reported as a failure instead of
@@ -22612,8 +22595,8 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_blocking_active_never_exceeds_max_blocking() {
-    // Regression guard for the `take_blocking` cap check: it refuses to pop/run a
-    // queued blocking job while `active_blocking >= max_blocking`. The guard is
+    // Blocking-cap invariant: `take_blocking` refuses to pop or run a queued
+    // blocking job while `active_blocking >= max_blocking`. The guard is
     // exercised deterministically (no sleeps, no incidental worker overlap):
     //
     //   1. EXACTLY `max_blocking_tasks` HELD holders saturate the cap. Each holder
@@ -22715,7 +22698,7 @@ mod tests {
 
     match done_rx.recv_timeout(Duration::from_secs(10)) {
       Ok(()) => runner.join().unwrap(),
-      Err(error) => panic!("RD-9 blocking-cap test did not complete ({error})"),
+      Err(error) => panic!("blocking-cap test did not complete ({error})"),
     }
     let peak =
       peak_out.lock().unwrap_or_else(std::sync::PoisonError::into_inner).expect("peak captured");
@@ -22790,7 +22773,7 @@ mod tests {
 
     match done_rx.recv_timeout(Duration::from_secs(15)) {
       Ok(()) => runner.join().unwrap(),
-      Err(error) => panic!("RD-9 drain-budget test did not complete ({error})"),
+      Err(error) => panic!("drain-budget test did not complete ({error})"),
     }
   }
 
@@ -22843,7 +22826,7 @@ mod tests {
         runner.join().unwrap();
         result
       }
-      Err(error) => panic!("RD-9 panic->JoinError test did not complete ({error})"),
+      Err(error) => panic!("panic-to-JoinError test did not complete ({error})"),
     };
     let error = result.expect_err("a panicking spawned future must surface as Err(JoinError)");
     assert_eq!(error.to_string(), "x");
@@ -23002,13 +22985,13 @@ mod tests {
     assert_eq!(metrics.tasks_spawned.load(Ordering::Relaxed), 7);
   }
 
-  // ---- Wake-path §6(d): self-detecting block_on deadlocks -------------------
-  // The five shapes pinned by the task-4 brief: (1) a threadless CurrentThread
+  // ---- Self-detecting block_on deadlocks -------------------------------------
+  // Five deadlock-detection shapes are pinned here: (1) a threadless CurrentThread
   // park decision with no pending wake panics with the typed diagnostic; (2) a
   // self-waking future (the PendThenReady shape) must NOT panic -- the panic
-  // lives at the PARK DECISION, not at Pending-return (intel §8.6); (3) an
+  // lives at the PARK DECISION, not at Pending-return; (3) an
   // armed deadline fires on a genuinely dead cooperative MT park; (4) runtime
-  // progress RESETS the deadline instead of firing (intel §8.5); (5) the
+  // progress RESETS the deadline instead of firing; (5) the
   // foreign/napi whole-build park is excluded from the deadline entirely.
 
   /// A future that never completes and never wakes anyone: once its driver
@@ -23054,8 +23037,8 @@ mod tests {
     let (done_tx, done_rx) = mpsc::channel();
     let runner = std::thread::spawn(move || {
       let metrics = Arc::new(RuntimeMetrics::default());
-      // Native stand-in for the threadless wasm build (intel §7(d)); no
-      // deadline -- the certain case is not timing-based.
+      // Native stand-in for the threadless wasm build; no deadline because the
+      // certain case is not timing-based.
       let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, true, None));
 
       let payload = catch_unwind(AssertUnwindSafe(|| {
@@ -23086,8 +23069,8 @@ mod tests {
 
   #[test]
   fn current_thread_threadless_self_waking_pending_future_does_not_panic() {
-    // Shape (2), pinning panic-at-PARK-DECISION (intel §8.6): a future that
-    // returns `Pending` but wakes itself synchronously during the poll leaves
+    // Shape (2), pinning panic-at-PARK-DECISION: a future that returns
+    // `Pending` but wakes itself synchronously during the poll leaves
     // a wake token pending, so the loop must consume the token and re-poll --
     // NOT panic -- even on a threadless build. "Pending returned" alone is
     // never a deadlock.
@@ -23165,8 +23148,8 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn current_thread_native_park_deadline_resets_on_runtime_progress() {
-    // PROGRESS-BASED RESET (intel §8.5), CT side: metrics advancing while
-    // parked means the runtime is alive (e.g. a slow JS plugin with other
+    // PROGRESS-BASED RESET, CT side: metrics advancing while parked means the
+    // runtime is alive (e.g. a slow JS plugin with other
     // work proceeding), so the deadline must re-arm instead of firing.
     // Progress is injected by advancing the very counter the reset reads --
     // the exact seam, isolated from wake delivery (production advances it via
@@ -23211,10 +23194,10 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_cooperative_park_past_deadline_with_no_progress_panics_with_typed_diagnostic() {
-    // Shape (3): the MT deadline lives on the Task-3 DriverParker park inside
-    // `cooperative_block_on`. Drive the cooperative branch directly on this
-    // thread via the fake on-pool marker (the 1793 technique) so the panic is
-    // observable as a typed payload without rayon in between.
+    // Shape (3): the MT deadline applies to the DriverParker inside
+    // `cooperative_block_on`. Run the cooperative branch directly on this
+    // thread with the test-only on-pool marker so the panic is observable as
+    // a typed payload without rayon in between.
     use std::sync::mpsc;
 
     let (done_tx, done_rx) = mpsc::channel();
@@ -23259,8 +23242,8 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_cooperative_park_deadline_resets_on_executor_progress() {
-    // Shape (4), MT side of the progress reset (intel §8.5): a legitimately
-    // slow wake under an armed deadline must NOT fire while the executor's
+    // Shape (4), MT side of the progress reset: a legitimately slow wake under
+    // an armed deadline must NOT fire while the executor's
     // metrics keep advancing. Topology: the sole worker is parked as a
     // cooperative driver (real pool thread, real DriverParker park); the test
     // injects progress ticks across several full deadline windows, then
@@ -23327,7 +23310,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_foreign_block_on_long_park_is_excluded_from_deadline() {
-    // Shape (5), intel §8.5 (binding): the foreign/napi caller thread parks in
+    // Shape (5): the foreign/napi caller thread parks in
     // `futures::executor::block_on` for the ENTIRE build -- the normal
     // production shape. Even with an aggressively short deadline armed and
     // ZERO executor progress for many windows, that park must never fire.
@@ -23381,8 +23364,8 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_wake_delivered_at_deadline_expiry_edge_is_not_reported_as_deadlock() {
-    // Codex round-1 (confirmed race), pinned DETERMINISTICALLY via the
-    // expiry test hook instead of a wall-clock lottery. Interleaving:
+    // Deadline-expiry wake race, pinned DETERMINISTICALLY via the expiry test
+    // hook instead of a wall-clock lottery. Interleaving:
     //   (1) the cooperative park's deadline expires with genuinely zero
     //       progress (nothing else touches the executor before the park);
     //   (2) BEFORE the driver's expiry decision runs -- parker STILL
@@ -23390,13 +23373,11 @@ mod tests {
     //       pops this parker, stores the permit and reports the wake as
     //       DELIVERED (so no drainer is spawned). The wake was counted as
     //       delivered TO US, so the post-deregister permit re-check is the
-    //       first-line catch this test pins (queued-work and, since the
-    //       round-2 fix, the enqueue counter in the fingerprint are the
-    //       further backstops);
-    //   (3) the expiry decision runs. Pre-fix it deregistered and panicked
-    //       `BlockOnDeadlock`, swallowing the delivered wake and killing a
-    //       healthy build; it must instead treat the park as woken, run the
-    //       job (which sends the gate) and complete the awaited future.
+    //       first-line catch; queued work and the enqueue counters in the
+    //       fingerprint are further backstops;
+    //   (3) the expiry decision runs. It must treat the permit as a wake, run
+    //       the job (which sends the gate), and complete the awaited future
+    //       instead of reporting `BlockOnDeadlock`.
     use std::sync::mpsc;
 
     let (done_tx, done_rx) = mpsc::channel();
@@ -23433,8 +23414,8 @@ mod tests {
         }));
       });
 
-      // Fake on-pool marker (1793 technique): the cooperative branch -- and
-      // therefore the thread-local hook -- runs on THIS thread.
+      // The test-only on-pool marker runs the cooperative branch and its
+      // thread-local hook on THIS thread.
       let _on_pool = OnPoolWorkerGuard::enter(executor.id);
       let mut output = None;
       {
@@ -23466,22 +23447,17 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_blocking_enqueue_between_queue_recheck_and_verdict_is_not_reported_as_deadlock() {
-    // Codex round-2 (confirmed asymmetry): `runnable_schedules` is bumped at
-    // ENQUEUE, so a runnable scheduled after the expiry decision's
-    // `has_queued_work()` re-check is still caught by the final fingerprint
-    // read -- but blocking work only advanced counters when a job STARTED, so
-    // a `schedule_blocking` landing in that same window was completely
-    // invisible: queue push done (deliverable work exists), wake gone out to
-    // an EMPTY registry (we are deregistered; `ensure_drainer` is the only
-    // fallback), and the pre-fix verdict panicked `BlockOnDeadlock` anyway.
-    // Deterministic pinning via DEADLINE_VERDICT_TEST_HOOK (fires between the
-    // queued-work re-check and the fingerprint verdict, on the driver thread
-    // itself, so the enqueue is sequenced-before the verdict read):
+    // Enqueue/fingerprint invariant: both runnable and blocking submissions
+    // must advance the progress fingerprint at ENQUEUE. A blocking submission
+    // landing after `has_queued_work()` but before the final fingerprint read
+    // has already pushed deliverable work, while its wake targets an EMPTY
+    // parked-driver registry. Only `blocking_tasks_scheduled` makes that work
+    // visible to the verdict. DEADLINE_VERDICT_TEST_HOOK deterministically
+    // fires in this window on the driver thread:
     //   * `active_drainers` is saturated so `ensure_drainer` cannot start the
     //     job on the real worker -- `blocking_tasks_started` provably cannot
-    //     advance behind our back, and pre-fix the verdict is DETERMINISTICALLY
-    //     blind (panics every run); post-fix only the new enqueue counter
-    //     (`blocking_tasks_scheduled`) can and must save the park.
+    //     advance behind our back;
+    //   * the enqueue counter must therefore save the healthy park.
     use std::sync::mpsc;
 
     let (done_tx, done_rx) = mpsc::channel();
@@ -23515,8 +23491,8 @@ mod tests {
         }));
       });
 
-      // Fake on-pool marker (1793 technique): the cooperative branch -- and
-      // therefore the thread-local hook -- runs on THIS thread.
+      // The test-only on-pool marker runs the cooperative branch and its
+      // thread-local hook on THIS thread.
       let _on_pool = OnPoolWorkerGuard::enter(executor.id);
       let mut output = None;
       {
@@ -24199,8 +24175,8 @@ mod tests {
   // rolldown_binding's single env-resolution pipeline together with the read
   // itself; its tests live there (async_runtime.rs resolver tests).
 
-  // ---- Timer facility (timer intel §4): heap driver + timekeeper (MT), host
-  // delegation (CT), and both deadlock-detection interactions. All tests build
+  // ---- Timer facility: heap driver + timekeeper (MT), host delegation (CT) --
+  // The tests cover both deadlock-detection interactions. All tests build
   // executors LOCALLY (never the global RUNTIME or the process-global host
   // driver) and run hang-prone workloads on a child thread bounded by
   // `recv_timeout`, so a regression fails loudly instead of wedging the suite.
@@ -25428,8 +25404,8 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_shutdown_with_pending_timers_drain_fires() {
-    // Acceptance criterion (timer intel §7.2): `shutdown()` with armed timers
-    // must drain-fire the pending wakers -- a `watcher.close()` awaiting a
+    // Shutdown invariant: `shutdown()` with armed timers must drain-fire the
+    // pending wakers -- a `watcher.close()` awaiting a
     // debounce sleep must complete, not hang. Also pins fire-on-register for
     // a Sleep polled after shutdown.
     use std::sync::mpsc;
@@ -25493,9 +25469,9 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_pending_timer_longer_than_park_deadline_does_not_panic() {
-    // INTERACTION A (MT timekeeper / timer waits vs the Task-4 deadline
-    // detector): ROLLDOWN_PARK_DEADLINE_MS armed SHORTER than the next timer
-    // deadline. The cooperative driver awaiting the sleep sits with ZERO
+    // Timer-wait/deadline invariant: ROLLDOWN_PARK_DEADLINE_MS is armed
+    // SHORTER than the next timer deadline. The cooperative driver awaiting
+    // the sleep sits with ZERO
     // executor progress for several full deadline windows -- a timer wait is
     // a legitimate park (guaranteed wall-clock wake), so it must NOT be
     // declared a BlockOnDeadlock; the timer must still fire. worker_threads=1
@@ -25521,9 +25497,9 @@ mod tests {
       let (runnable, task) = async_task::spawn(body, move |r| sched.schedule(r));
       executor.schedule(runnable);
 
-      // A pre-fix BlockOnDeadlock panic unwinds the task body (swallowed by
-      // run_runnable's catch_unwind), so the task never completes and the
-      // bounded harness below reports the failure.
+      // A spurious BlockOnDeadlock panic would unwind the task body (swallowed
+      // by run_runnable's catch_unwind), so the task would never complete and
+      // the bounded harness below would report the failure.
       futures::executor::block_on(task);
       let _ = done_tx.send(());
     });
@@ -25539,13 +25515,12 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_timer_registered_at_verdict_edge_is_not_reported_as_deadlock() {
-    // INTERACTION A, verdict-race edge (deterministic via the Codex round-2
-    // hook): a timer registered AFTER a deadline park was committed bumps no
-    // progress counter by design, lands after the permit and queued-work
-    // re-checks, and is invisible to the fingerprint -- pre-fix the verdict
-    // panics a healthy park whose wake (the timer fire) is guaranteed. The
-    // heap re-check in the verdict must veto the panic; the driver then
-    // re-parks timer-bounded and the fire's task-wake completes the future.
+    // Timer-registration/verdict race, deterministic via the verdict hook: a
+    // timer registered AFTER a deadline park was committed bumps no progress
+    // counter by design, lands after the permit and queued-work re-checks, and
+    // is invisible to the fingerprint. The heap re-check must recognize that
+    // guaranteed future wake, veto the panic, and let the driver re-park
+    // timer-bounded until the fire's task-wake completes the future.
     use std::sync::mpsc;
 
     // A raw Sleep the hook registers is woken by this waker, which releases
@@ -25565,9 +25540,9 @@ mod tests {
     let (done_tx, done_rx) = mpsc::channel();
     let runner = std::thread::spawn(move || {
       let executor = multi_thread_executor(1, Some(Duration::from_millis(40)), "timer-verdict");
-      // Saturate the drainer accounting like the round-2 test: `wake_one`
-      // fallbacks cannot start a replacement drainer behind our back, so only
-      // the verdict's own heap re-check can save this park.
+      // Saturate drainer accounting so `wake_one` fallbacks cannot start a
+      // replacement drainer behind our back; only the verdict's heap re-check
+      // can save this park.
       executor.active_drainers.store(executor.max_drainers, Ordering::SeqCst);
 
       // Completion condition: the timer registered inside the hook fires and
@@ -25591,8 +25566,8 @@ mod tests {
         }));
       });
 
-      // Fake on-pool marker (1793 technique): the cooperative branch -- and
-      // therefore the thread-local hook -- runs on THIS thread.
+      // The test-only on-pool marker runs the cooperative branch and its
+      // thread-local hook on THIS thread.
       let _on_pool = OnPoolWorkerGuard::enter(executor.id);
       let mut output = None;
       {
@@ -25620,9 +25595,9 @@ mod tests {
 
   #[test]
   fn current_thread_sleep_without_host_driver_fails_loud() {
-    // Brief acceptance: a CT runtime without a registered host driver must
-    // fail LOUD with this exact diagnostic -- never a silent never-firing
-    // debounce, never a misleading certain-deadlock panic later.
+    // Missing-driver invariant: a CT runtime without a registered host driver
+    // must fail LOUD with this exact diagnostic -- never a silent never-firing
+    // debounce or a misleading certain-deadlock panic later.
     let metrics = Arc::new(RuntimeMetrics::default());
     let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
     let backend = RuntimeBackend::from_executor(RuntimeExecutor::CurrentThread(executor));
@@ -26565,8 +26540,8 @@ mod tests {
   #[test]
   fn host_sleep_panics_loud_when_every_driver_dies_mid_flight() {
     // With NO live registrant left mid-flight there is nothing to re-arm on:
-    // the poll must fail LOUD with the typed diagnostic (acceptable per the
-    // round-3 constraints), never park a wake-less sleep silently.
+    // the poll must fail LOUD with the typed diagnostic, never park a wake-less
+    // sleep silently.
     let metrics = Arc::new(RuntimeMetrics::default());
     let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
     let backend =
@@ -26597,13 +26572,12 @@ mod tests {
 
   #[test]
   fn registry_sweep_wakes_sleeps_pending_on_the_swept_driver() {
-    // Codex task-7 round 4, finding 1: the registry's selection sweep can be
-    // the FIRST layer to notice a dead driver (the liveness probe fires
-    // before the owner's env-cleanup hook or any call failure). A retain-only
-    // sweep would silently drop the entry and strand every sleep whose armed
-    // waker lives in the swept driver's pending map. The sweep must invoke
-    // `on_swept` on each removed driver (outside the registry lock) so the
-    // driver wakes its pending sleeps into re-selection.
+    // Sweep-eviction invariant: the registry's selection sweep can be the
+    // FIRST layer to notice a dead driver, before the owner's env-cleanup hook
+    // or any call failure. A retain-only sweep would strand every sleep whose
+    // armed waker lives in the swept driver's pending map. The sweep must call
+    // `on_swept` outside the registry lock so the driver wakes those sleeps
+    // into re-selection.
     let metrics = Arc::new(RuntimeMetrics::default());
     let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
     let backend =
@@ -26744,16 +26718,16 @@ mod tests {
 
   #[test]
   fn current_thread_threadless_park_with_pending_host_timer_is_still_certain_deadlock() {
-    // INTERACTION B (CT certain check vs pending host timers): on a
+    // Threadless pending-timer invariant: on a
     // THREADLESS build a pending host timer is NOT a wake-token source -- the
     // host event loop's `setTimeout` relay can only run on the very thread
     // that is about to park, so it can never fire while `block_on` holds it.
     // The certain check must panic with the typed diagnostic anyway (the
     // timer-backed kind, so the message names the shape), never fall through
     // to the park -- on the real wasip1 target that park is an untyped
-    // "condvar wait not supported" abort. (This test formerly pinned the
-    // opposite: a native helper thread fired the timer and rescued the park,
-    // a concurrency THREADLESS_BUILD's own contract says cannot exist.)
+    // "condvar wait not supported" abort. A native helper thread can fire the
+    // timer in this test harness, but that concurrency cannot exist on the
+    // threadless target and must not rescue the park.
     use std::sync::mpsc;
 
     let (done_tx, done_rx) = mpsc::channel();
@@ -26798,7 +26772,7 @@ mod tests {
 
   #[test]
   fn current_thread_threadless_certain_check_ignores_unpolled_sleep() {
-    // Codex round-1, finding 3: the registry entry only exists once the host
+    // Unpolled-sleep invariant: the registry entry only exists once the host
     // timer is ARMED (first poll runs `driver.register`), never at `Sleep`
     // creation. A created-but-never-polled Sleep has no host callback behind
     // it, and on a parked single thread nothing can ever poll it into
@@ -26844,7 +26818,7 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn current_thread_park_deadline_with_live_host_timer_does_not_panic() {
-    // INTERACTION A, CT analog: deadline armed (30ms) shorter than a pending
+    // CurrentThread timer/deadline invariant: deadline armed (30ms) shorter than a pending
     // host timer (200ms). Waiting out a LIVE host timer with zero progress is
     // legitimate (the wake is scheduled on the host loop); the deadline
     // verdict must not fire. Once the timer fires, the sleep completes.

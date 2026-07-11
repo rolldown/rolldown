@@ -1,0 +1,90 @@
+{
+  "description": "Release-binding primary wall-time matrix. Instrumentation is disabled; totalElapsedMs is the primary duration.",
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "fixed-wide-1",
+      "graphShape": "wide",
+      "moduleCount": 1,
+      "minimumSourceBytes": 256,
+      "workIterations": 0,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-2", "worker-4", "worker-8", "worker-12"],
+      "warmups": 1,
+      "repeats": 7
+    },
+    {
+      "name": "wide-512-work-0",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 0,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-2", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 7
+    },
+    {
+      "name": "wide-512-work-10k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 10000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-2", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 7
+    },
+    {
+      "name": "wide-512-work-50k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 50000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-2", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 7
+    },
+    {
+      "name": "wide-512-work-100k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 100000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-2", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 7
+    },
+    {
+      "name": "wide-512-work-500k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 500000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-2", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 7
+    },
+    {
+      "name": "wide-512-work-2m",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 2000000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-2", "worker-4", "worker-8", "worker-12"],
+      "warmups": 1,
+      "repeats": 7
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "description": "Release-binding explanation matrix. Instrumented durations are not used for speed ratios.",
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "explain-fixed-wide-1",
+      "graphShape": "wide",
+      "moduleCount": 1,
+      "minimumSourceBytes": 256,
+      "workIterations": 0,
+      "resultPaddingBytes": 0,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 3
+    },
+    {
+      "name": "explain-wide-512-work-0",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 0,
+      "resultPaddingBytes": 0,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 3
+    },
+    {
+      "name": "explain-wide-512-work-50k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 50000,
+      "resultPaddingBytes": 0,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 3
+    },
+    {
+      "name": "explain-wide-512-work-100k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 100000,
+      "resultPaddingBytes": 0,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 3
+    },
+    {
+      "name": "explain-wide-512-work-500k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 500000,
+      "resultPaddingBytes": 0,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 3
+    },
+    {
+      "name": "explain-wide-512-work-2m",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 2000000,
+      "resultPaddingBytes": 0,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 3
+    },
+    {
+      "name": "explain-chain-512-work-500k",
+      "graphShape": "chain",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 500000,
+      "resultPaddingBytes": 0,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 3
+    }
+  ]
+}

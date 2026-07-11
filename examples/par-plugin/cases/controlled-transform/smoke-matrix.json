@@ -1,0 +1,26 @@
+{
+  "cases": [
+    {
+      "name": "wide-32-work-100k-iterations",
+      "graphShape": "wide",
+      "moduleCount": 32,
+      "minimumSourceBytes": 128,
+      "workIterations": 100000,
+      "resultPaddingBytes": 0,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4"],
+      "repeats": 1
+    },
+    {
+      "name": "wide-32-work-100k-iterations-uninstrumented",
+      "graphShape": "wide",
+      "moduleCount": 32,
+      "minimumSourceBytes": 128,
+      "workIterations": 100000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-4"],
+      "repeats": 1
+    }
+  ]
+}

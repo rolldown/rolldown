@@ -45,14 +45,23 @@ export async function initializeParallelPlugins(plugins: RolldownPlugin[]): Prom
   return { registry: parallelJsPluginRegistry, stopWorkers };
 }
 
-function initializeWorkers(
+async function initializeWorkers(
   registryId: number,
   count: number,
   pluginInfos: ParallelPluginInfo[],
 ): Promise<Worker[]> {
-  return Promise.all(
+  const results = await Promise.allSettled(
     Array.from({ length: count }, (_, i) => initializeWorker(registryId, pluginInfos, i)),
   );
+  const workers = results.flatMap((result) =>
+    result.status === 'fulfilled' ? [result.value] : [],
+  );
+  const failure = results.find((result) => result.status === 'rejected');
+  if (failure) {
+    await Promise.all(workers.map((worker) => worker.terminate()));
+    throw failure.reason;
+  }
+  return workers;
 }
 
 async function initializeWorker(
@@ -82,7 +91,7 @@ async function initializeWorker(
     });
     return worker;
   } catch (e) {
-    worker?.terminate();
+    await worker?.terminate();
     throw e;
   }
 }

@@ -422,11 +422,13 @@ impl<'a> ActiveTransformCall<'a> {
   }
 
   fn release_permit(&mut self) {
+    // Remove this call from the logical in-flight count before returning the
+    // permit, because a queued call may acquire it immediately during drop.
+    self.metrics.in_flight_current.fetch_sub(1, Ordering::Relaxed);
     drop(self.permit.take());
     let service_ns = duration_ns(self.started_at.elapsed());
     self.metrics.service_ns_total.fetch_add(service_ns, Ordering::Relaxed);
     self.metrics.service_ns_max.fetch_max(service_ns, Ordering::Relaxed);
-    self.metrics.in_flight_current.fetch_sub(1, Ordering::Relaxed);
     self.metrics.outstanding_current.fetch_sub(1, Ordering::Relaxed);
   }
 }

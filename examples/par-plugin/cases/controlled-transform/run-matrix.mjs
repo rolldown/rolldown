@@ -249,7 +249,9 @@ function validateRun(run, rustMetrics, initializationMetrics, terminationMetrics
     throw new Error('Rust metrics recorded an error or cancellation');
   }
   if (rustMetrics.permitInFlight.max > workerCount) {
-    throw new Error('Rust permit concurrency exceeds worker count');
+    throw new Error(
+      `Rust permit concurrency ${rustMetrics.permitInFlight.max} exceeds worker count ${workerCount}`,
+    );
   }
 }
 

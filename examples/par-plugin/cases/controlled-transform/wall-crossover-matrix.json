@@ -1,0 +1,54 @@
+{
+  "description": "Release-binding confirmation inside the 100k-to-500k operation crossover interval from the primary matrix.",
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "crossover-wide-512-work-125k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 125000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-2", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 9
+    },
+    {
+      "name": "crossover-wide-512-work-150k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 150000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-2", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 9
+    },
+    {
+      "name": "crossover-wide-512-work-200k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 200000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-2", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 9
+    },
+    {
+      "name": "crossover-wide-512-work-300k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 300000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-2", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 9
+    }
+  ]
+}

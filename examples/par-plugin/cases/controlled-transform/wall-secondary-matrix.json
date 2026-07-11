@@ -1,0 +1,90 @@
+{
+  "description": "Release-binding graph-width, module-count, and source/result payload axes selected after the primary matrix.",
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "module-count-wide-32-work-500k",
+      "graphShape": "wide",
+      "moduleCount": 32,
+      "minimumSourceBytes": 256,
+      "workIterations": 500000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 5
+    },
+    {
+      "name": "module-count-wide-128-work-500k",
+      "graphShape": "wide",
+      "moduleCount": 128,
+      "minimumSourceBytes": 256,
+      "workIterations": 500000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 5
+    },
+    {
+      "name": "module-count-wide-2048-work-500k",
+      "graphShape": "wide",
+      "moduleCount": 2048,
+      "minimumSourceBytes": 256,
+      "workIterations": 500000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 5
+    },
+    {
+      "name": "graph-chain-512-work-500k",
+      "graphShape": "chain",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 500000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 5
+    },
+    {
+      "name": "payload-small-wide-128",
+      "graphShape": "wide",
+      "moduleCount": 128,
+      "minimumSourceBytes": 256,
+      "workIterations": 100000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 5
+    },
+    {
+      "name": "payload-source-roundtrip-256k-wide-128",
+      "graphShape": "wide",
+      "moduleCount": 128,
+      "minimumSourceBytes": 262144,
+      "workIterations": 100000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 5
+    },
+    {
+      "name": "payload-result-padding-256k-wide-128",
+      "graphShape": "wide",
+      "moduleCount": 128,
+      "minimumSourceBytes": 256,
+      "workIterations": 100000,
+      "resultPaddingBytes": 262144,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 5
+    }
+  ]
+}

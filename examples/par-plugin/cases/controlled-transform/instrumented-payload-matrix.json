@@ -1,0 +1,42 @@
+{
+  "description": "Release-binding explanation runs for the source round-trip and additional result payload axes. Instrumented durations are not speed claims.",
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "explain-payload-small-wide-128",
+      "graphShape": "wide",
+      "moduleCount": 128,
+      "minimumSourceBytes": 256,
+      "workIterations": 100000,
+      "resultPaddingBytes": 0,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4"],
+      "warmups": 1,
+      "repeats": 3
+    },
+    {
+      "name": "explain-payload-source-roundtrip-256k-wide-128",
+      "graphShape": "wide",
+      "moduleCount": 128,
+      "minimumSourceBytes": 262144,
+      "workIterations": 100000,
+      "resultPaddingBytes": 0,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4"],
+      "warmups": 1,
+      "repeats": 3
+    },
+    {
+      "name": "explain-payload-result-padding-256k-wide-128",
+      "graphShape": "wide",
+      "moduleCount": 128,
+      "minimumSourceBytes": 256,
+      "workIterations": 100000,
+      "resultPaddingBytes": 262144,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4"],
+      "warmups": 1,
+      "repeats": 3
+    }
+  ]
+}

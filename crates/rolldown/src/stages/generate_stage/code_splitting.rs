@@ -324,8 +324,7 @@ impl GenerateStage<'_> {
         group.sort_unstable_by_key(|item| {
           (self.link_output.module_table[item.owner].exec_order(), item.symbol)
         });
-        let Some(first_used) = group.iter().position(|item| used_symbol_refs.contains(item))
-        else {
+        let Some(first_used) = group.iter().position(|item| used_symbol_refs.contains(item)) else {
           // No member is a used symbol; an unused canonical would render nothing (mirrors the
           // namespace merger above).
           continue;

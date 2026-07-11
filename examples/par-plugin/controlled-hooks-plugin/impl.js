@@ -119,7 +119,9 @@ export const createControlledHookPlugin = (options, threadNumber = 0) => {
   return {
     name: 'controlled-load',
     load: {
-      filter: { id: { include: [/^\0controlled-load:/] } },
+      filter: {
+        id: { include: [new RegExp(`^${String.fromCharCode(0)}controlled-load:`)] },
+      },
       async handler(id) {
         const startedAt = enterHandler(Buffer.byteLength(id));
         let returnedBytes = 0;

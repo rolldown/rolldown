@@ -58,7 +58,9 @@ export const createProbePlugin = (options, threadNumber = 0) => {
       return {
         name: 'controlled-load-error-probe',
         load: {
-          filter: { id: { include: [/^\0controlled-load-error:/] } },
+          filter: {
+            id: { include: [new RegExp(`^${String.fromCharCode(0)}controlled-load-error:`)] },
+          },
           async handler() {
             throw new Error('controlled load error');
           },

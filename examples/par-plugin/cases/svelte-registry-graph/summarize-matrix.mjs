@@ -100,6 +100,7 @@ const summary = {
   rolldownCommit: report.rolldownCommit,
   rolldownWorktreeStatus: report.rolldownWorktreeStatus,
   nativeBinding: report.nativeBinding,
+  rolldownDistribution: report.rolldownDistribution,
   host: report.host,
   sourceManifest: report.sourceManifest,
   expectedGraph: report.expectedGraph,

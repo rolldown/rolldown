@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import nodePath from 'node:path';
 import { readSourceManifest, verifyGraphCorpus } from './graph-corpus.mjs';
+import { hashRolldownDistribution } from './provenance.mjs';
 
 if (process.version !== 'v24.18.0') {
   throw new Error(`registry graph proof requires Node.js v24.18.0, got ${process.version}`);
@@ -131,6 +132,7 @@ const report = {
     sha256: createHash('sha256').update(bindingContent).digest('hex'),
     sourceCommit: nativeBindingSourceCommit,
   },
+  rolldownDistribution: await hashRolldownDistribution(repositoryRoot),
   manifest,
   expected,
   run,

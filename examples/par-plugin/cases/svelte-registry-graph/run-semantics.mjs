@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os';
 import nodePath from 'node:path';
 import { readSourceManifest, verifyGraphCorpus } from './graph-corpus.mjs';
+import { hashRolldownDistribution } from './provenance.mjs';
 
 if (process.version !== 'v24.18.0') {
   throw new Error(`registry graph semantics requires Node.js v24.18.0, got ${process.version}`);
@@ -113,6 +114,7 @@ const report = {
     sha256: createHash('sha256').update(bindingContent).digest('hex'),
     sourceCommit: nativeBindingSourceCommit,
   },
+  rolldownDistribution: await hashRolldownDistribution(repositoryRoot),
   graphWarnings: {
     ordinary: warningOrdinary.logs,
     worker: warningWorker.logs,

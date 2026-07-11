@@ -4,6 +4,7 @@ import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { cpus, platform, release, totalmem } from 'node:os';
 import nodePath from 'node:path';
 import { readSourceManifest, verifyGraphCorpus } from './graph-corpus.mjs';
+import { hashRolldownDistribution } from './provenance.mjs';
 
 if (process.version !== 'v24.18.0') {
   throw new Error(`registry graph matrix requires Node.js v24.18.0, got ${process.version}`);
@@ -57,6 +58,7 @@ if (bindingNames.length !== 1) throw new Error('expected one local native bindin
 const bindingPath = nodePath.join(bindingDirectory, bindingNames[0]);
 const bindingContent = await readFile(bindingPath);
 const bindingStat = await stat(bindingPath);
+const rolldownDistribution = await hashRolldownDistribution(repositoryRoot);
 const nodeBinaryContent = await readFile(process.execPath);
 const nodeBinaryStat = await stat(process.execPath);
 const runs = [];
@@ -173,6 +175,7 @@ const report = {
     profileVerification:
       'The byte hash pins the artifact; the report cannot infer its Cargo profile.',
   },
+  rolldownDistribution,
   host: {
     platform: platform(),
     release: release(),
@@ -188,6 +191,12 @@ const report = {
 };
 const finalWorktreeStatus = git(['status', '--short']);
 if (finalWorktreeStatus) throw new Error('worktree changed during registry graph matrix');
+if (
+  JSON.stringify(await hashRolldownDistribution(repositoryRoot)) !==
+  JSON.stringify(rolldownDistribution)
+) {
+  throw new Error('Rolldown distribution changed during registry graph matrix');
+}
 const serialized = `${JSON.stringify(report, null, 2)}\n`;
 if (outputPath) {
   await mkdir(nodePath.dirname(nodePath.resolve(outputPath)), { recursive: true });

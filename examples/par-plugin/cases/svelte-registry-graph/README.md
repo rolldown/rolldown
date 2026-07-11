@@ -26,6 +26,8 @@ mise exec node@24.18.0 -- just build-rolldown-release
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./smoke-matrix.json ./.results/smoke.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./wall-matrix.json ./.results/wall.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./summarize-matrix.mjs ./.results/wall.json ./.results/wall-summary.json
+/Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./wall-confirm-matrix.json ./.results/wall-confirm.json
+/Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./summarize-matrix.mjs ./.results/wall-confirm.json ./.results/wall-confirm-summary.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./instrumented-matrix.json ./.results/instrumented.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./summarize-matrix.mjs ./.results/instrumented.json ./.results/instrumented-summary.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./isolation-matrix.json ./.results/isolation.json
@@ -35,4 +37,4 @@ mise exec node@24.18.0 -- just build-rolldown-release
 
 Every sample is a fresh Node.js process and, for parallel variants, a fresh worker pool. `totalElapsedMs` excludes Node startup, top-level Rolldown import, corpus verification, and result hashing. It includes the resolver and adapter setup, ordinary or per-worker Svelte and TypeScript imports, TypeScript adaptation, compilation, Rolldown build/generate/close, and source-map processing. External peak RSS wraps the complete child and also covers result hashing. Instrumented matrices explain initialization, imports, task concurrency, queue/service time, and payload; speed claims use uninstrumented wall samples only.
 
-Formal runners reject a dirty worktree, hash the exact Node executable and native binding, and record fixture HEAD separately from native binding source commit `54fd0e24112505443044a4bba5c41d1f4d9ba2aa`. Commits after that binding source are restricted to `examples/par-plugin/` and its lockfile entry. This branch inherits the research ParallelPlugin runtime repairs; it is not an experiment against unmodified Rolldown main.
+Formal runners reject a dirty worktree, hash the exact Node executable, native binding, and complete generated `packages/rolldown/dist` tree, and record fixture HEAD separately from native binding source commit `54fd0e24112505443044a4bba5c41d1f4d9ba2aa`. The distribution is hashed again after every matrix so regenerated or stale JS cannot change unnoticed during a run. Commits after that binding source are restricted to `examples/par-plugin/` and its lockfile entry. This branch inherits the research ParallelPlugin runtime repairs; it is not an experiment against unmodified Rolldown main.

@@ -20,7 +20,7 @@ Preparation rescans and hashes every source file, compares every entry with `cor
 
 Both adapters call the same `createSvelteTransformPlugin` kernel with `generate: 'client'`, `dev: false`, `css: 'injected'`, and `discloseVersion: false`. The ordinary adapter imports the compiler in the main process. The parallel marker imports only its lightweight marker on the main process; each worker imports Svelte and creates an independent compiler instance.
 
-Every selected component is imported by one generated entry. Dependencies emitted or retained by a compiled component are externalized, so this measures Svelte compilation plus Rolldown's parsing, source-map chaining, module processing, and output generation for the compiled result. It is not a full shadcn-svelte application build. The corpus has no `<style>` tags, and the fixture deliberately omits preprocessing, virtual CSS, function-valued options, cross-hook metadata, and application dependency resolution.
+Every selected component is re-exported by one generated entry so its compiled module body remains in the output. Dependencies emitted or retained by a compiled component are externalized, so this measures Svelte compilation plus Rolldown's parsing, source-map chaining, module processing, and output generation for the compiled result. It is not a full shadcn-svelte application build. The corpus has no `<style>` tags, and the fixture deliberately omits preprocessing, virtual CSS, function-valued options, cross-hook metadata, and application dependency resolution.
 
 Each run generates a bundle source map and requires ordinary and worker variants to have identical raw and normalized code hashes and map hashes. Instrumented matrices additionally validate handler calls, exact input bytes, per-worker distribution, maximum JavaScript handler concurrency, worker factories, Rust wrapper results, filter misses, permits, and lifecycle metrics. Instrumentation is explanatory only; wall-time claims use `instrumentation: false`.
 
@@ -31,6 +31,7 @@ Build the optimized native binding and use only the pinned Node.js binary:
 ```sh
 mise exec node@24.18.0 -- just build-rolldown-release
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./smoke-matrix.json ./.results/smoke.json
+/Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./full-smoke-matrix.json ./.results/full-smoke.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./wall-matrix.json ./.results/wall.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./summarize-matrix.mjs ./.results/wall.json ./.results/wall-summary.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-semantics.mjs ./.results/semantics.json

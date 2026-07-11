@@ -117,7 +117,10 @@ for (const definition of matrix.cases) {
     await writeFile(
       entryPath,
       `${selectedEntries
-        .map((entry) => `import ${JSON.stringify(nodePath.join(corpusDirectory, entry.path))};`)
+        .map(
+          (entry, index) =>
+            `export { default as component_${String(index).padStart(4, '0')} } from ${JSON.stringify(nodePath.join(corpusDirectory, entry.path))};`,
+        )
         .join('\n')}\n`,
     );
     const executionOptions = {

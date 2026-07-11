@@ -1,0 +1,13 @@
+{
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "registry-ui-graph-isolation",
+      "instrumentation": false,
+      "measureEventLoop": true,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 5
+    }
+  ]
+}

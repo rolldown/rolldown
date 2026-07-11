@@ -14,6 +14,7 @@
     "@babel/preset-env": "catalog:",
     "@babel/preset-typescript": "catalog:",
     "rolldown": "workspace:*",
-    "svelte": "5.56.4"
+    "svelte": "5.56.4",
+    "typescript": "catalog:"
   }
 }

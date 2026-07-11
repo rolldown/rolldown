@@ -1,0 +1,19 @@
+{
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "registry-ui-graph-smoke",
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-4"],
+      "warmups": 0,
+      "repeats": 1
+    },
+    {
+      "name": "registry-ui-graph-smoke-instrumented",
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-4"],
+      "warmups": 0,
+      "repeats": 1
+    }
+  ]
+}

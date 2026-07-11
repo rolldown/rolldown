@@ -1,0 +1,12 @@
+{
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "registry-ui-graph-instrumented",
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 3
+    }
+  ]
+}

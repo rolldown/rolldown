@@ -20,9 +20,13 @@ Preparation rescans and hashes every source file, compares every entry with `cor
 
 Both adapters call the same `createSvelteTransformPlugin` kernel with `generate: 'client'`, `dev: false`, `css: 'injected'`, and `discloseVersion: false`. The ordinary adapter imports the compiler in the main process. The parallel marker imports only its lightweight marker on the main process; each worker imports Svelte and creates an independent compiler instance.
 
+Compiler filenames are corpus-relative. No compiler `root` option is used, and the hook returns code and a source map without returning `moduleType`.
+
 Every selected component is re-exported by one generated entry so its compiled module body remains in the output. Dependencies emitted or retained by a compiled component are externalized, so this measures Svelte compilation plus Rolldown's parsing, source-map chaining, module processing, and output generation for the compiled result. It is not a full shadcn-svelte application build. The corpus has no `<style>` tags, and the fixture deliberately omits preprocessing, virtual CSS, function-valued options, cross-hook metadata, and application dependency resolution.
 
 Each run generates a bundle source map and requires ordinary and worker variants to have identical raw and normalized code hashes and map hashes. Instrumented matrices additionally validate handler calls, exact input bytes, per-worker distribution, maximum JavaScript handler concurrency, worker factories, Rust wrapper results, filter misses, permits, and lifecycle metrics. Instrumentation is explanatory only; wall-time claims use `instrumentation: false`.
+
+The full instrumented case observed a maximum of 1,340 entered wrappers waiting for or holding permits, and each configured pool reached its worker limit. This does not mean every wrapper stayed outstanding for the entire build, and summed or average queue wait is not wall time. Event-loop tables report the median of each fresh process's recorded maximum delay unless they explicitly name another histogram field.
 
 ## Commands
 
@@ -35,10 +39,16 @@ mise exec node@24.18.0 -- just build-rolldown-release
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./wall-matrix.json ./.results/wall.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./wall-confirm-matrix.json ./.results/wall-confirm.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./summarize-matrix.mjs ./.results/wall.json ./.results/wall-summary.json
+/Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./summarize-matrix.mjs ./.results/wall-confirm.json ./.results/wall-confirm-summary.json
+/Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./instrumented-matrix.json ./.results/instrumented.json
+/Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./summarize-matrix.mjs ./.results/instrumented.json ./.results/instrumented-summary.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./isolation-matrix.json ./.results/isolation.json
+/Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./summarize-matrix.mjs ./.results/isolation.json ./.results/isolation-summary.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-semantics.mjs ./.results/semantics.json
 ```
 
 Every measured sample is a fresh Node.js process and a fresh worker pool. `totalElapsedMs` starts after process startup, runner imports, and option parsing, immediately before the plugin adapter is imported; it ends after `build.close()`, before output hashing. It includes the ordinary compiler import or parallel marker import, plugin setup, `rolldown()`, `generate()`, and `close()`. The external peak RSS wraps the whole child and therefore also covers output hashing. The runner performs one discarded fresh-process warmup per variant, rotates measured variant order, records CPU and peak RSS, and pins the exact Node binary, Rolldown commit, worktree status, native binding byte hash, host, matrix, corpus, selection summaries, and all raw samples. `bindingProfile: "release"` records the required build command's intended profile; the artifact hash pins the binary but cannot independently prove its Cargo profile.
 
-The semantics probe separately records Svelte warning delivery and compile-error structure for ordinary and worker variants. It does not hide a mismatch: `sameLogs` and `sameStructuredError` are explicit report fields because the current worker-side plugin context may not preserve coordinator logging and diagnostic fields.
+The semantics probe separately records Svelte warning delivery and compile-error structure for ordinary and worker variants. It does not hide a mismatch: the worker error retains a relative filename and line/column position but loses the complete path and plugin/hook attribution present in the ordinary error, while worker warnings are not delivered to the coordinator. `sameLogs` and `sameStructuredError` remain explicit report fields.
+
+This research branch includes the ParallelPlugin runtime repairs inherited from `research/parallel-js-plugin-core-transform`; it is not a fixture-only branch based on unmodified Rolldown main.

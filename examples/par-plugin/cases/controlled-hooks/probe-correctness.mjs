@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import nodePath from 'node:path';
 
 if (process.version !== 'v24.18.0') {
@@ -6,6 +8,22 @@ if (process.version !== 'v24.18.0') {
 }
 
 const childPath = nodePath.join(import.meta.dirname, 'run-probe-child.mjs');
+const repositoryRoot = nodePath.resolve(import.meta.dirname, '../../../..');
+const commit = spawnSync('git', ['-C', repositoryRoot, 'rev-parse', 'HEAD'], { encoding: 'utf8' });
+const worktreeStatus = spawnSync('git', ['-C', repositoryRoot, 'status', '--short'], {
+  encoding: 'utf8',
+});
+if (commit.status !== 0 || worktreeStatus.status !== 0) {
+  throw new Error('failed to inspect correctness-probe provenance');
+}
+if (worktreeStatus.stdout.trim() !== '') {
+  throw new Error(`correctness probes require a clean worktree:\n${worktreeStatus.stdout}`);
+}
+const nativeBindingPath = nodePath.join(
+  repositoryRoot,
+  'packages/rolldown/src',
+  `rolldown-binding.${process.platform}-${process.arch}.node`,
+);
 const run = (variant, mode, timeout = 10000, metrics = false) => {
   const environment = { ...process.env };
   delete environment.ROLLDOWN_PARALLEL_PLUGIN_WORKERS;
@@ -81,13 +99,29 @@ if (workerOneReentrant.error?.code !== 'ETIMEDOUT') {
   );
 }
 
+const errorAttribution = {};
 for (const mode of ['resolve-error', 'load-error']) {
   const marker = mode === 'resolve-error' ? 'controlled resolveId error' : 'controlled load error';
+  const expectedPlugin =
+    mode === 'resolve-error' ? 'controlled-resolve-error-probe' : 'controlled-load-error-probe';
+  errorAttribution[mode] = {};
   for (const variant of ['ordinary', 'worker-1']) {
     const result = run(variant, mode);
     if (result.status === 0 || result.signal || !result.stderr.includes(marker)) {
       throw new Error(`${variant}/${mode} did not propagate the controlled hook error`);
     }
+    errorAttribution[mode][variant] = {
+      pluginLabel: result.stderr.includes(`[plugin ${expectedPlugin}]`),
+      handlerFrame: result.stderr.includes('controlled-hooks-plugin/probe-impl.js'),
+    };
+  }
+  if (
+    !errorAttribution[mode].ordinary.pluginLabel ||
+    !errorAttribution[mode].ordinary.handlerFrame ||
+    errorAttribution[mode]['worker-1'].pluginLabel ||
+    errorAttribution[mode]['worker-1'].handlerFrame
+  ) {
+    throw new Error(`${mode} attribution did not match the observed ordinary/worker distinction`);
   }
 }
 
@@ -95,6 +129,20 @@ console.log(
   JSON.stringify(
     {
       node: process.version,
+      nodeBinary: process.execPath,
+      nodeBinarySha256: createHash('sha256')
+        .update(await readFile(process.execPath))
+        .digest('hex'),
+      rolldownCommit: commit.stdout.trim(),
+      rolldownWorktreeStatus: worktreeStatus.stdout.trim(),
+      nativeBinding: {
+        path: nativeBindingPath,
+        sha256: createHash('sha256')
+          .update(await readFile(nativeBindingPath))
+          .digest('hex'),
+        declaredBuildProfile: 'release',
+        sourceCommit: 'c9a41b1b93bdceab0572edb91c8d68bf630f3c4b',
+      },
       filterMiss: {
         wrapperCalls: filterMetrics.wrapperCalls,
         permitAcquiredCalls: filterMetrics.permitAcquiredCalls,
@@ -109,7 +157,10 @@ console.log(
         ordinaryAndWorkerTwoHash: ordinaryReentrant.outputHash,
         workerOne: 'timed out after 2000 ms while holding the only permit',
       },
-      errors: ['ordinary resolveId', 'worker-1 resolveId', 'ordinary load', 'worker-1 load'],
+      errors: {
+        propagated: ['ordinary resolveId', 'worker-1 resolveId', 'ordinary load', 'worker-1 load'],
+        attribution: errorAttribution,
+      },
     },
     null,
     2,

@@ -1,11 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import nodePath from 'node:path';
 import { generateControlledCorpus } from './corpus.mjs';
 
 const matrixPath = process.argv[2];
 if (!matrixPath) throw new Error('expected a matrix JSON path');
+const outputPath = process.argv[3];
 const matrix = JSON.parse(await readFile(matrixPath, 'utf8'));
 if (!Array.isArray(matrix.cases)) throw new Error('matrix.cases must be an array');
 
@@ -127,21 +128,30 @@ for (const definition of matrix.cases) {
   }
 }
 
-console.log(
-  JSON.stringify(
-    {
-      schema: 1,
+const report = {
+  schema: 1,
+  startedAt,
+  finishedAt: new Date().toISOString(),
+  node: process.version,
+  nodeBinary: process.execPath,
+  matrix,
+  runs,
+};
+const serializedReport = `${JSON.stringify(report, null, 2)}\n`;
+if (outputPath) {
+  await writeFile(outputPath, serializedReport);
+  console.log(
+    JSON.stringify({
+      outputPath,
+      cases: matrix.cases.length,
+      runs: runs.length,
       startedAt,
-      finishedAt: new Date().toISOString(),
-      node: process.version,
-      nodeBinary: process.execPath,
-      matrix,
-      runs,
-    },
-    null,
-    2,
-  ),
-);
+      finishedAt: report.finishedAt,
+    }),
+  );
+} else {
+  process.stdout.write(serializedReport);
+}
 
 function validateRun(run, rustMetrics, initializationMetrics, terminationMetrics, workerCount) {
   if (!run.instrumentation) {

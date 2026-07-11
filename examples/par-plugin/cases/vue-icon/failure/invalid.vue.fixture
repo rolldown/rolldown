@@ -1,0 +1,7 @@
+<script setup lang="ts">
+const broken =
+</script>
+
+<template>
+  <div>{{ broken }}</div>
+</template>

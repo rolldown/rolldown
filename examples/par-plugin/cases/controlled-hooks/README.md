@@ -2,7 +2,7 @@
 
 This fixture measures direct Rolldown builds with ordinary JavaScript plugins and Parallel JS Plugin instances. It does not use Vite.
 
-Each measured child is a fresh Node.js 24.18.0 process. The parent creates one corpus outside the timed child, rotates variants by repeat, validates final output hashes and byte counts, and records the exact Rolldown commit, dirty status, host, Node binary, and native binding SHA-256. Formal wall-time data is collected only after `just build-rolldown-release` and with instrumentation disabled.
+Each measured child is a fresh Node.js 24.18.0 process. The parent creates one corpus outside the timed child, rotates variants by repeat, requires a clean Rolldown worktree, validates final output hashes and byte counts, and records the exact Rolldown commit, host load averages, Node binary and SHA-256, and native binding SHA-256. `parentObservedProcessElapsedMs` covers process launch through output hashing; `totalElapsedMs` excludes Node startup and the top-level Rolldown import but includes plugin import/factory, worker initialization, `rolldown()`, `generate()`, and `close()`. Formal wall-time data is collected only after `just build-rolldown-release` and with instrumentation disabled.
 
 The `resolveId` cases create 512 controlled specifiers. A separate ordinary support loader turns the resolved virtual IDs into code. The `load` cases use a separate ordinary resolver and make the measured plugin return the module code. A wide entry makes all 512 tasks independently ready; the chain variant exposes only one next module at a time.
 

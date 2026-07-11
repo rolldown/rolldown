@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
-import { cpus, platform, release, totalmem, tmpdir } from 'node:os';
+import { cpus, loadavg, platform, release, totalmem, tmpdir } from 'node:os';
 import nodePath from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { generateControlledHookCorpus } from './corpus.mjs';
 
 const EXPECTED_NODE_VERSION = 'v24.18.0';
@@ -26,6 +27,9 @@ const gitStatus = spawnSync('git', ['-C', repositoryRoot, 'status', '--short'], 
   encoding: 'utf8',
 });
 if (gitStatus.status !== 0) throw new Error('failed to inspect the Rolldown worktree');
+if (gitStatus.stdout.trim() !== '') {
+  throw new Error(`controlled hook measurements require a clean worktree:\n${gitStatus.stdout}`);
+}
 const nativeBindingPath = nodePath.join(
   repositoryRoot,
   'packages/rolldown/src',
@@ -36,6 +40,7 @@ const nativeBinding = await inspectNativeBinding(nativeBindingPath);
 const runs = [];
 let sequence = 0;
 const startedAt = new Date().toISOString();
+const loadAverageAtStart = loadavg();
 const execute = (name, caseOptions, variant, index, warmup) => {
   const options = { ...caseOptions, variant };
   const environment = { ...process.env };
@@ -46,6 +51,7 @@ const execute = (name, caseOptions, variant, index, warmup) => {
     environment.ROLLDOWN_PARALLEL_PLUGIN_WORKERS = workerMatch[1];
     if (options.instrumentation) environment.ROLLDOWN_PARALLEL_PLUGIN_METRICS = 'json';
   }
+  const processStartedAt = performance.now();
   const result = spawnSync(
     '/usr/bin/time',
     [
@@ -57,6 +63,7 @@ const execute = (name, caseOptions, variant, index, warmup) => {
     ],
     { encoding: 'utf8', env: environment },
   );
+  const parentObservedProcessElapsedMs = performance.now() - processStartedAt;
   if (result.status !== 0) {
     throw new Error(
       `controlled ${options.hook} child failed with status ${result.status}:\n${result.stderr}`,
@@ -66,6 +73,10 @@ const execute = (name, caseOptions, variant, index, warmup) => {
 
   const peakRssMatch = result.stderr.match(/(\d+)\s+maximum resident set size/);
   if (!peakRssMatch) throw new Error('failed to parse maximum resident set size');
+  const processTimeMatch = result.stderr.match(
+    /^\s*([\d.]+)\s+real\s+([\d.]+)\s+user\s+([\d.]+)\s+sys/m,
+  );
+  if (!processTimeMatch) throw new Error('failed to parse fresh-process time');
   const rustMetricsMatches = [
     ...result.stderr.matchAll(/^\[rolldown-parallel-plugin-metrics\] (\{.*\})$/gm),
   ];
@@ -103,6 +114,10 @@ const execute = (name, caseOptions, variant, index, warmup) => {
     name,
     index,
     sequence: sequence++,
+    parentObservedProcessElapsedMs,
+    processRealMs: Number(processTimeMatch[1]) * 1000,
+    processUserMs: Number(processTimeMatch[2]) * 1000,
+    processSystemMs: Number(processTimeMatch[3]) * 1000,
     peakRssBytes: Number(peakRssMatch[1]),
     ...child,
     rustMetrics,
@@ -156,6 +171,9 @@ const report = {
   finishedAt: new Date().toISOString(),
   node: process.version,
   nodeBinary: process.execPath,
+  nodeBinarySha256: createHash('sha256')
+    .update(await readFile(process.execPath))
+    .digest('hex'),
   rolldownCommit: gitCommit.stdout.trim(),
   rolldownWorktreeStatus: gitStatus.stdout.trim(),
   nativeBinding,
@@ -166,6 +184,8 @@ const report = {
     cpuModel: cpus()[0]?.model,
     logicalCpuCount: cpus().length,
     totalMemoryBytes: totalmem(),
+    loadAverageAtStart,
+    loadAverageAtFinish: loadavg(),
   },
   matrix,
   runs,

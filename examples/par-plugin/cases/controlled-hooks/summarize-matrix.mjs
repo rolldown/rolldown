@@ -22,6 +22,10 @@ for (const [key, runs] of groups) {
     hook: runs[0].hook,
     variant,
     samples: runs.length,
+    parentObservedProcessElapsedMs: statistics(
+      runs.map((run) => run.parentObservedProcessElapsedMs),
+    ),
+    processRealMs: statistics(runs.map((run) => run.processRealMs)),
     totalElapsedMs: statistics(runs.map((run) => run.totalElapsedMs)),
     rolldownApiElapsedMs: statistics(runs.map((run) => run.rolldownApiElapsedMs)),
     cpuUserMs: statistics(runs.map((run) => run.cpuUserMs)),
@@ -86,6 +90,8 @@ const summary = {
   sourceFinishedAt: report.finishedAt,
   sourceEnvironment: {
     node: report.node,
+    nodeBinary: report.nodeBinary,
+    nodeBinarySha256: report.nodeBinarySha256,
     rolldownCommit: report.rolldownCommit,
     nativeBinding: report.nativeBinding,
     host: report.host,

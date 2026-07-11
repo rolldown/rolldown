@@ -97,6 +97,17 @@ async function initializeWorker(
 }
 
 const availableParallelism = () => {
+  // Research-only control for reproducible ParallelPlugin measurements.
+  // This environment variable is not a public API.
+  const configuredCount = process.env.ROLLDOWN_PARALLEL_PLUGIN_WORKERS;
+  if (configuredCount !== undefined) {
+    const count = Number(configuredCount);
+    if (!Number.isSafeInteger(count) || count < 1 || count > 64) {
+      throw new Error('ROLLDOWN_PARALLEL_PLUGIN_WORKERS must be an integer from 1 to 64');
+    }
+    return count;
+  }
+
   let availableParallelism = 1;
   try {
     availableParallelism = os.availableParallelism();

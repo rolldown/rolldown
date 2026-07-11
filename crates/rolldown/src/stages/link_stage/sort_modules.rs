@@ -117,7 +117,7 @@ impl LinkStage<'_> {
           .iter()
           .filter_map(|id| self.module_table[*id].as_normal().map(|module| module.id.to_string()))
           .collect::<Vec<_>>();
-        self.warnings.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());
+        self.diagnostics.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());
       }
     }
 

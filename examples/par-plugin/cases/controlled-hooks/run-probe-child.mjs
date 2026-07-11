@@ -30,10 +30,15 @@ try {
   }
   await writeFile(nodePath.join(corpusDirectory, 'entry.js'), entrySource);
 
+  const stateBuffer =
+    mode === 'state' ? new SharedArrayBuffer(64 * Int32Array.BYTES_PER_ELEMENT) : undefined;
+  const pluginOptions = { mode, stateBuffer };
   const measuredPlugin =
     variant === 'ordinary'
-      ? (await import('../../controlled-hooks-plugin/probe-impl.js')).createProbePlugin({ mode })
-      : (await import('../../controlled-hooks-plugin/probe-index.js')).default({ mode });
+      ? (await import('../../controlled-hooks-plugin/probe-impl.js')).createProbePlugin(
+          pluginOptions,
+        )
+      : (await import('../../controlled-hooks-plugin/probe-index.js')).default(pluginOptions);
   const supportPlugin = {
     name: 'controlled-correctness-probe-support',
     resolveId(specifier) {
@@ -42,8 +47,8 @@ try {
     },
     load(id) {
       if (id.startsWith('\0controlled-state:')) {
-        const [, thread, call, index] = id.split(':');
-        return `globalThis.__stateProbe = (globalThis.__stateProbe || []).concat([[${thread}, ${call}, ${index}]]);\n`;
+        const [, call, index] = id.split(':');
+        return `globalThis.__stateProbe = (globalThis.__stateProbe || []).concat([[${call}, ${index}]]);\n`;
       }
       if (id === '\0controlled-reentrant-result') {
         return 'globalThis.__reentrantProbe = true;\n';
@@ -66,9 +71,11 @@ try {
     .filter((output) => output.type === 'chunk')
     .map((output) => output.code)
     .join('\n');
-  const stateTuples = [...code.matchAll(/\.concat\(\[\[\s*(\d+),\s*(\d+),\s*(\d+)\s*\]\]\)/g)].map(
-    (match) => match.slice(1).map(Number),
+  const stateTuples = [...code.matchAll(/\.concat\(\[\[\s*(\d+),\s*(\d+)\s*\]\]\)/g)].map((match) =>
+    match.slice(1).map(Number),
   );
+  const statePerWorkerCalls = stateBuffer ? [...new Int32Array(stateBuffer)] : [];
+  while (statePerWorkerCalls.at(-1) === 0) statePerWorkerCalls.pop();
   console.log(
     JSON.stringify({
       variant,
@@ -76,6 +83,7 @@ try {
       outputBytes: Buffer.byteLength(code),
       outputHash: createHash('sha256').update(code).digest('hex'),
       stateTuples,
+      statePerWorkerCalls,
       ...(process.env.CONTROLLED_HOOK_PROBE_PRINT_CODE === '1' ? { code } : {}),
     }),
   );

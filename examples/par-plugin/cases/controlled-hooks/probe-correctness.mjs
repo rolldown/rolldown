@@ -50,11 +50,21 @@ const workerState = successful('worker-4', 'state').output;
 if (ordinaryState.stateTuples.length !== 32 || workerState.stateTuples.length !== 32) {
   throw new Error('state probe did not preserve all 32 modules');
 }
-if (new Set(ordinaryState.stateTuples.map(([thread]) => thread)).size !== 1) {
+if (ordinaryState.statePerWorkerCalls.filter(Boolean).length !== 1) {
   throw new Error('ordinary state probe unexpectedly used multiple instances');
 }
-const workerThreads = new Set(workerState.stateTuples.map(([thread]) => thread));
-if (workerThreads.size < 2) throw new Error('worker state probe did not distribute work');
+const ordinaryLocalCounters = ordinaryState.stateTuples.map(([call]) => call);
+if (new Set(ordinaryLocalCounters).size !== 32) {
+  throw new Error('ordinary instance did not produce one unique local counter per call');
+}
+const workerThreads = workerState.statePerWorkerCalls.flatMap((calls, thread) =>
+  calls > 0 ? [thread] : [],
+);
+if (workerThreads.length < 2) throw new Error('worker state probe did not distribute work');
+const workerLocalCounters = workerState.stateTuples.map(([call]) => call);
+if (new Set(workerLocalCounters).size === 32) {
+  throw new Error('worker-local closure counters unexpectedly behaved like one shared counter');
+}
 if (ordinaryState.outputHash === workerState.outputHash) {
   throw new Error('per-instance state did not produce the expected observable semantic difference');
 }
@@ -93,7 +103,7 @@ console.log(
       state: {
         ordinaryOutputHash: ordinaryState.outputHash,
         workerOutputHash: workerState.outputHash,
-        workerThreads: [...workerThreads].sort((a, b) => a - b),
+        perWorkerCalls: workerState.statePerWorkerCalls,
       },
       reentrant: {
         ordinaryAndWorkerTwoHash: ordinaryReentrant.outputHash,

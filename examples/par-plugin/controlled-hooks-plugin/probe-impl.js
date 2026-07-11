@@ -2,6 +2,7 @@ import { defineParallelPluginImplementation } from 'rolldown/parallelPlugin';
 
 export const createProbePlugin = (options, threadNumber = 0) => {
   let instanceCalls = 0;
+  const statePerWorkerCalls = options.stateBuffer ? new Int32Array(options.stateBuffer) : undefined;
 
   switch (options.mode) {
     case 'filter-miss':
@@ -21,8 +22,9 @@ export const createProbePlugin = (options, threadNumber = 0) => {
           filter: { id: { include: [/^controlled-state:/] } },
           handler(specifier) {
             instanceCalls++;
+            if (statePerWorkerCalls) Atomics.add(statePerWorkerCalls, threadNumber, 1);
             const index = Number(specifier.slice('controlled-state:'.length));
-            return `\0controlled-state:${threadNumber}:${instanceCalls}:${index}`;
+            return `\0controlled-state:${instanceCalls}:${index}`;
           },
         },
       };

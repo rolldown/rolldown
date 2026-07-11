@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { cpus, platform, release, totalmem, tmpdir } from 'node:os';
 import nodePath from 'node:path';
 import { generateControlledCorpus } from './corpus.mjs';
 
@@ -9,6 +9,15 @@ if (!matrixPath) throw new Error('expected a matrix JSON path');
 const outputPath = process.argv[3];
 const matrix = JSON.parse(await readFile(matrixPath, 'utf8'));
 if (!Array.isArray(matrix.cases)) throw new Error('matrix.cases must be an array');
+const repositoryRoot = nodePath.resolve(import.meta.dirname, '../../../..');
+const gitCommit = spawnSync('git', ['-C', repositoryRoot, 'rev-parse', 'HEAD'], {
+  encoding: 'utf8',
+});
+if (gitCommit.status !== 0) throw new Error('failed to identify the Rolldown commit');
+const gitStatus = spawnSync('git', ['-C', repositoryRoot, 'status', '--short'], {
+  encoding: 'utf8',
+});
+if (gitStatus.status !== 0) throw new Error('failed to inspect the Rolldown worktree');
 
 const runs = [];
 let sequence = 0;
@@ -129,11 +138,21 @@ for (const definition of matrix.cases) {
 }
 
 const report = {
-  schema: 1,
+  schema: 2,
   startedAt,
   finishedAt: new Date().toISOString(),
   node: process.version,
   nodeBinary: process.execPath,
+  rolldownCommit: gitCommit.stdout.trim(),
+  rolldownWorktreeStatus: gitStatus.stdout.trim(),
+  host: {
+    platform: platform(),
+    release: release(),
+    architecture: process.arch,
+    cpuModel: cpus()[0]?.model,
+    logicalCpuCount: cpus().length,
+    totalMemoryBytes: totalmem(),
+  },
   matrix,
   runs,
 };

@@ -1,0 +1,22 @@
+{
+  "description": "Thirty-round release-binding confirmation for the noisy small negative control and full-corpus worker-count result.",
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "vue-icon-colorful-12-confirm",
+      "entrySet": "colorful",
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-1"],
+      "warmups": 2,
+      "repeats": 30
+    },
+    {
+      "name": "vue-icon-full-166-confirm",
+      "entrySet": "full",
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-2", "worker-4", "worker-8"],
+      "warmups": 2,
+      "repeats": 30
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "cases": [
+    {
+      "name": "small-24",
+      "componentCount": 24,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-2"],
+      "warmups": 0,
+      "repeats": 1
+    },
+    {
+      "name": "small-24-instrumented",
+      "componentCount": 24,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-2"],
+      "warmups": 0,
+      "repeats": 1
+    },
+    {
+      "name": "full-1340",
+      "componentCount": 1340,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-4"],
+      "warmups": 0,
+      "repeats": 1
+    }
+  ]
+}

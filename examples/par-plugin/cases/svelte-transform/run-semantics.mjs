@@ -1,5 +1,6 @@
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import nodePath from 'node:path';
 
@@ -8,6 +9,16 @@ if (process.version !== 'v24.18.0') {
 }
 const outputPath = process.argv[2];
 const repositoryRoot = nodePath.resolve(import.meta.dirname, '../../../..');
+const bindingDirectory = nodePath.join(repositoryRoot, 'packages/rolldown/src');
+const bindingFileNames = (await readdir(bindingDirectory)).filter((name) =>
+  /^rolldown-binding\..+\.node$/.test(name),
+);
+if (bindingFileNames.length !== 1) {
+  throw new Error(`expected one local native binding, got ${bindingFileNames.length}`);
+}
+const bindingPath = nodePath.join(bindingDirectory, bindingFileNames[0]);
+const bindingContent = await readFile(bindingPath);
+const bindingStat = await stat(bindingPath);
 const gitCommit = spawnSync('git', ['-C', repositoryRoot, 'rev-parse', 'HEAD'], {
   encoding: 'utf8',
 });
@@ -73,6 +84,11 @@ const report = {
   svelteVersion: '5.56.4',
   rolldownCommit: gitCommit.stdout.trim(),
   rolldownWorktreeStatus: gitStatus.stdout.trim(),
+  nativeBinding: {
+    path: nodePath.relative(repositoryRoot, bindingPath),
+    bytes: bindingStat.size,
+    sha256: createHash('sha256').update(bindingContent).digest('hex'),
+  },
   warning: {
     ordinary: ordinaryWarning,
     worker: workerWarning,

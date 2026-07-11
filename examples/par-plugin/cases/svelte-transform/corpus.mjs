@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { copyFile, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import nodePath from 'node:path';
 
@@ -166,6 +167,12 @@ export function selectionHash(entries) {
 }
 
 export async function prepareCorpus({ sourceRoot, destination, manifestPath, updateManifest }) {
+  const upstreamHead = spawnSync('git', ['-C', sourceRoot, 'rev-parse', 'HEAD'], {
+    encoding: 'utf8',
+  });
+  if (upstreamHead.status !== 0 || upstreamHead.stdout.trim() !== UPSTREAM_COMMIT) {
+    throw new Error(`source checkout must be exactly ${UPSTREAM_COMMIT}`);
+  }
   const scan = await scanSourceCorpus(sourceRoot);
   assertExpectedCorpus(scan);
   const sourceLicense = await readFile(nodePath.join(sourceRoot, 'LICENSE.md'));

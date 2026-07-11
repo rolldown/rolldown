@@ -33,6 +33,7 @@ mise exec node@24.18.0 -- just build-rolldown-release
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./smoke-matrix.json ./.results/smoke.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./full-smoke-matrix.json ./.results/full-smoke.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./wall-matrix.json ./.results/wall.json
+/Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./wall-confirm-matrix.json ./.results/wall-confirm.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./summarize-matrix.mjs ./.results/wall.json ./.results/wall-summary.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./isolation-matrix.json ./.results/isolation.json
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-semantics.mjs ./.results/semantics.json

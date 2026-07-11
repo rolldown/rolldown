@@ -17,6 +17,8 @@ From this directory, run the committed matrices with the pinned Node.js binary:
 /Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node ./run-matrix.mjs ./instrumented-primary-matrix.json
 ```
 
+The primary, crossover, secondary-axis, and targeted confirmation matrices are separate files so noisy points can be repeated without rerunning the full suite. `wall-heavy-confirm-matrix.json` is the 15-round confirmation for the heavy-work point.
+
 Pass a third argument to write the raw JSON report to a file while printing only a one-line run summary, for example `./run-matrix.mjs ./wall-primary-matrix.json /tmp/wall-primary.json`.
 
 The runner creates each corpus outside the measured child process in a unique temporary directory, performs one discarded fresh-process warmup for every variant, and rotates variant order across measured rounds. Every measured sample is a new Node.js process and, for parallel variants, a newly initialized worker pool.

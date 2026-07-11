@@ -1,0 +1,18 @@
+{
+  "description": "Release-binding confirmation of the noisy heavy controlled transform point. Instrumentation is disabled; totalElapsedMs is the primary duration.",
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "heavy-confirm-wide-512-work-2m",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 2000000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-4", "worker-8", "worker-12"],
+      "warmups": 2,
+      "repeats": 15
+    }
+  ]
+}

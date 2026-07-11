@@ -43,7 +43,11 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
     parentPort!.postMessage({ type: 'success' });
   } catch (error) {
     parentPort!.postMessage({ type: 'error', error });
-  } finally {
     parentPort!.unref();
+    return;
   }
+  // Hold the worker alive so Rust can dispatch plugin hook callbacks through
+  // the thread-safe functions registered during bootstrap. The main thread
+  // terminates the worker explicitly when the build completes.
+  setInterval(() => {}, 1 << 30);
 })();

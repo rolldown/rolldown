@@ -1,4 +1,5 @@
 {
+  "bindingProfile": "release",
   "cases": [
     {
       "name": "small-24-instrumented",

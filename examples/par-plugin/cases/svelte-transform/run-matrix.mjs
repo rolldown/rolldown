@@ -1,5 +1,6 @@
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { cpus, platform, release, totalmem, tmpdir } from 'node:os';
 import nodePath from 'node:path';
 import {
@@ -17,7 +18,20 @@ if (!matrixPath) throw new Error('expected a matrix JSON path');
 const outputPath = process.argv[3];
 const matrix = JSON.parse(await readFile(matrixPath, 'utf8'));
 if (!Array.isArray(matrix.cases)) throw new Error('matrix.cases must be an array');
+if (matrix.bindingProfile !== 'release') {
+  throw new Error('matrix.bindingProfile must be "release"');
+}
 const repositoryRoot = nodePath.resolve(import.meta.dirname, '../../../..');
+const bindingDirectory = nodePath.join(repositoryRoot, 'packages/rolldown/src');
+const bindingFileNames = (await readdir(bindingDirectory)).filter((name) =>
+  /^rolldown-binding\..+\.node$/.test(name),
+);
+if (bindingFileNames.length !== 1) {
+  throw new Error(`expected one local native binding, got ${bindingFileNames.length}`);
+}
+const bindingPath = nodePath.join(bindingDirectory, bindingFileNames[0]);
+const bindingContent = await readFile(bindingPath);
+const bindingStat = await stat(bindingPath);
 const manifestPath = nodePath.join(import.meta.dirname, 'corpus-manifest.json');
 const corpusDirectory = nodePath.join(import.meta.dirname, '.corpus');
 const manifest = await readCorpusManifest(manifestPath);
@@ -33,6 +47,7 @@ const gitStatus = spawnSync('git', ['-C', repositoryRoot, 'status', '--short'], 
 if (gitStatus.status !== 0) throw new Error('failed to inspect the Rolldown worktree');
 
 const runs = [];
+const caseSelections = [];
 let sequence = 0;
 const startedAt = new Date().toISOString();
 const execute = (name, caseOptions, variant, index, warmup) => {
@@ -109,7 +124,20 @@ const execute = (name, caseOptions, variant, index, warmup) => {
 
 for (const definition of matrix.cases) {
   const { name, variants, warmups = 1, repeats = 1, componentCount, ...caseOptions } = definition;
+  if (caseSelections.some((selection) => selection.name === name)) {
+    throw new Error(`duplicate matrix case name: ${name}`);
+  }
   const selectedEntries = selectManifestEntries(manifest, componentCount);
+  caseSelections.push({
+    name,
+    componentCount,
+    selectionHash: selectionHash(selectedEntries),
+    sourceBytes: selectedEntries.reduce((total, entry) => total + entry.bytes, 0),
+    sourceLines: selectedEntries.reduce((total, entry) => total + entry.lines, 0),
+    typeScriptFiles: selectedEntries.filter((entry) => entry.typeScript).length,
+    runeFiles: selectedEntries.filter((entry) => entry.runes).length,
+    uniqueContents: new Set(selectedEntries.map((entry) => entry.sha256)).size,
+  });
   const caseDirectory = await mkdtemp(nodePath.join(tmpdir(), 'rolldown-parallel-svelte-case-'));
   const caseRunStart = runs.length;
   try {
@@ -166,6 +194,14 @@ const report = {
   svelteVersion: '5.56.4',
   rolldownCommit: gitCommit.stdout.trim(),
   rolldownWorktreeStatus: gitStatus.stdout.trim(),
+  nativeBinding: {
+    path: nodePath.relative(repositoryRoot, bindingPath),
+    bytes: bindingStat.size,
+    sha256: createHash('sha256').update(bindingContent).digest('hex'),
+    profileClaim: matrix.bindingProfile,
+    profileVerification:
+      'The byte hash pins the artifact; the report cannot infer its Cargo profile.',
+  },
   corpus: {
     upstream: manifest.upstream,
     selection: manifest.selection,
@@ -180,6 +216,7 @@ const report = {
     totalMemoryBytes: totalmem(),
   },
   matrix,
+  caseSelections,
   runs,
 };
 const serializedReport = `${JSON.stringify(report, null, 2)}\n`;

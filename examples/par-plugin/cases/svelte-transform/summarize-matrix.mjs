@@ -69,8 +69,16 @@ const summary = {
   sourceReport: reportPath,
   sourceStartedAt: report.startedAt,
   sourceFinishedAt: report.finishedAt,
+  node: report.node,
+  nodeBinary: report.nodeBinary,
+  svelteVersion: report.svelteVersion,
+  rolldownCommit: report.rolldownCommit,
+  rolldownWorktreeStatus: report.rolldownWorktreeStatus,
+  nativeBinding: report.nativeBinding,
+  host: report.host,
   corpus: report.corpus,
   matrix: report.matrix,
+  caseSelections: report.caseSelections,
   summaries,
 };
 const serialized = `${JSON.stringify(summary, null, 2)}\n`;

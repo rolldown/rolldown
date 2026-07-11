@@ -1,13 +1,12 @@
 use arcstr::ArcStr;
-use itertools::Itertools;
 use oxc::span::Span;
 use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, EntryPointKind, FlatOptions, ImportKind,
-  ModuleIdx, ModuleTable, PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief,
-  SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
+  ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, FlatOptions, ImportKind, ModuleIdx,
+  ModuleTable, PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief, SymbolRef,
+  SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::Diagnostics;
@@ -145,17 +144,12 @@ impl<'a> LinkStage<'a> {
       FxHashMap::default()
     };
 
-    // We need to preserve the original order of user defined entry points.
-    let mut rest = scan_stage_output
-      .entry_points
-      .extract_if(0.., |item| !matches!(item.kind, EntryPointKind::UserDefined))
-      .collect_vec();
-
-    rest.sort_by_cached_key(|item| {
+    // Canonicalize all entry_points by (kind, id). User-defined entries were
+    // previously left in ModuleIdx allocation order, which is racy under any
+    // plugin that awaits in resolveId (e.g. tsdown DepsPlugin).
+    scan_stage_output.entry_points.sort_by_cached_key(|item| {
       (item.kind, scan_stage_output.module_table.modules[item.idx].id().as_str())
     });
-
-    scan_stage_output.entry_points.extend(rest);
 
     Self {
       sorted_modules: Vec::new(),

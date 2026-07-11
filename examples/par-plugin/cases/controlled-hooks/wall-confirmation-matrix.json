@@ -1,0 +1,37 @@
+{
+  "description": "Independent 15-round confirmation for wide CPU-heavy resolveId and load after the primary load case showed a large within-batch drift. The fixed operation count and variants match the primary matrix.",
+  "bindingProfile": "release",
+  "nativeBindingSourceCommit": "c9a41b1b93bdceab0572edb91c8d68bf630f3c4b",
+  "cases": [
+    {
+      "name": "resolve-wide-512-cpu-500k-confirmation",
+      "hook": "resolveId",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "workIterations": 500000,
+      "syncFsProbes": 0,
+      "asyncDelayMs": 0,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "measureEventLoop": false,
+      "variants": ["ordinary", "worker-1", "worker-2", "worker-4", "worker-8"],
+      "warmups": 2,
+      "repeats": 15
+    },
+    {
+      "name": "load-wide-512-cpu-500k-confirmation",
+      "hook": "load",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "workIterations": 500000,
+      "syncFsProbes": 0,
+      "asyncDelayMs": 0,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "measureEventLoop": false,
+      "variants": ["ordinary", "worker-1", "worker-2", "worker-4", "worker-8"],
+      "warmups": 2,
+      "repeats": 15
+    }
+  ]
+}

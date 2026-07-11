@@ -15,6 +15,8 @@ Instrumented cases report two boundaries:
 
 Instrumentation changes timings and exists only to explain uninstrumented wall results. Summed queue wait across concurrently queued calls is not build wall time.
 
+The isolation matrix uses Node's 1 ms `monitorEventLoopDelay`. After `chdir` and GC, it enables the monitor, waits 25 ms, and resets the histogram. The measured monitor boundary then covers plugin import and factory, worker initialization, `rolldown()`, `generate()`, and `close()`, followed by a 25 ms sampling window. `totalElapsedMs` excludes both sampling windows, and output hashing is outside both the event-loop and total-time boundaries. Every isolation case retains the same cross-variant output hash and byte gates as the wall matrix.
+
 Run a smoke after building the release binding:
 
 ```sh

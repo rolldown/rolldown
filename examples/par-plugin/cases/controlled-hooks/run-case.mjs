@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import nodePath from 'node:path';
-import { performance } from 'node:perf_hooks';
+import { monitorEventLoopDelay, performance } from 'node:perf_hooks';
+import { setTimeout as delay } from 'node:timers/promises';
 import { rolldown } from 'rolldown';
 import { createMetricsBuffer, readMetrics } from '../../controlled-hooks-plugin/metrics.js';
 
@@ -17,6 +18,7 @@ const {
   asyncDelayMs,
   resultPaddingBytes,
   instrumentation,
+  measureEventLoop = false,
   _corpusDirectory: corpusDirectory,
   _entrySourceBytes: entrySourceBytes,
 } = options;
@@ -41,6 +43,7 @@ for (const [name, value, minimum] of [
   }
 }
 if (typeof instrumentation !== 'boolean') throw new Error('instrumentation must be boolean');
+if (typeof measureEventLoop !== 'boolean') throw new Error('measureEventLoop must be boolean');
 if (typeof corpusDirectory !== 'string' || corpusDirectory.length === 0) {
   throw new Error('_corpusDirectory must be a non-empty string');
 }
@@ -72,10 +75,17 @@ const createSupportPlugin = () => {
 };
 
 let build;
+let eventLoopMonitor;
 
 try {
   process.chdir(corpusDirectory);
   globalThis.gc?.();
+  if (measureEventLoop) {
+    eventLoopMonitor = monitorEventLoopDelay({ resolution: 1 });
+    eventLoopMonitor.enable();
+    await delay(25);
+    eventLoopMonitor.reset();
+  }
   const cpuStartedAt = process.cpuUsage();
   const totalStartedAt = performance.now();
   const metricsBuffer = instrumentation ? createMetricsBuffer() : undefined;
@@ -112,6 +122,10 @@ try {
   build = undefined;
   const totalFinishedAt = performance.now();
   const cpu = process.cpuUsage(cpuStartedAt);
+  if (eventLoopMonitor) {
+    await delay(25);
+    eventLoopMonitor.disable();
+  }
 
   const chunks = result.output
     .filter((output) => output.type === 'chunk')
@@ -146,6 +160,7 @@ try {
       asyncDelayMs,
       resultPaddingBytes,
       instrumentation,
+      measureEventLoop,
       expectedMatchingHandlerCalls: moduleCount,
       entrySourceBytes,
       totalElapsedMs: totalFinishedAt - totalStartedAt,
@@ -159,9 +174,20 @@ try {
       outputBytes,
       outputRawHash: rawHash.digest('hex'),
       outputHash: normalizedHash.digest('hex'),
+      eventLoopDelayMs: eventLoopMonitor
+        ? {
+            min: eventLoopMonitor.min / 1e6,
+            mean: eventLoopMonitor.mean / 1e6,
+            p50: eventLoopMonitor.percentile(50) / 1e6,
+            p95: eventLoopMonitor.percentile(95) / 1e6,
+            p99: eventLoopMonitor.percentile(99) / 1e6,
+            max: eventLoopMonitor.max / 1e6,
+          }
+        : undefined,
       jsMetrics: readMetrics(metricsBuffer),
     }),
   );
 } finally {
+  eventLoopMonitor?.disable();
   await build?.close();
 }

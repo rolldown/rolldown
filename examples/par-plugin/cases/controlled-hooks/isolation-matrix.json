@@ -1,0 +1,52 @@
+{
+  "description": "Release main-thread responsiveness matrix. The event-loop monitor starts after chdir and GC, waits 25 ms and resets, then covers plugin import/factory, worker initialization, rolldown(), generate(), and close(). It remains enabled for a trailing 25 ms sampling window; totalElapsedMs excludes both 25 ms sampling windows. Output hashing is outside the monitor and total-time boundaries.",
+  "bindingProfile": "release",
+  "nativeBindingSourceCommit": "c9a41b1b93bdceab0572edb91c8d68bf630f3c4b",
+  "cases": [
+    {
+      "name": "resolve-wide-512-cpu-500k-isolation",
+      "hook": "resolveId",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "workIterations": 500000,
+      "syncFsProbes": 0,
+      "asyncDelayMs": 0,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "measureEventLoop": true,
+      "variants": ["ordinary", "worker-1", "worker-4"],
+      "warmups": 1,
+      "repeats": 5
+    },
+    {
+      "name": "load-wide-512-cpu-500k-isolation",
+      "hook": "load",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "workIterations": 500000,
+      "syncFsProbes": 0,
+      "asyncDelayMs": 0,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "measureEventLoop": true,
+      "variants": ["ordinary", "worker-1", "worker-4"],
+      "warmups": 1,
+      "repeats": 5
+    },
+    {
+      "name": "load-wide-512-async-delay-5ms-isolation",
+      "hook": "load",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "workIterations": 0,
+      "syncFsProbes": 0,
+      "asyncDelayMs": 5,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "measureEventLoop": true,
+      "variants": ["ordinary", "worker-1"],
+      "warmups": 1,
+      "repeats": 5
+    }
+  ]
+}

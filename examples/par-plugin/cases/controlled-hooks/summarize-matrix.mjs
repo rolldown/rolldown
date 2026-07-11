@@ -73,6 +73,9 @@ for (const [key, runs] of groups) {
     maxWrapperOutstanding: optionalStatistics(
       runs.map((run) => run.rustMetrics?.wrapperOutstanding.max),
     ),
+    eventLoopDelayMeanMs: optionalStatistics(runs.map((run) => run.eventLoopDelayMs?.mean)),
+    eventLoopDelayP99Ms: optionalStatistics(runs.map((run) => run.eventLoopDelayMs?.p99)),
+    eventLoopDelayMaxMs: optionalStatistics(runs.map((run) => run.eventLoopDelayMs?.max)),
     poolInitializationMs: optionalStatistics(
       runs.map((run) => run.initializationMetrics?.poolInitializationMs),
     ),

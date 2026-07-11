@@ -215,6 +215,7 @@ async function inspectNativeBinding(path) {
     bytes: metadata.size,
     modifiedAt: metadata.mtime.toISOString(),
     declaredBuildProfile: matrix.bindingProfile,
+    sourceCommit: matrix.nativeBindingSourceCommit ?? gitCommit.stdout.trim(),
   };
 }
 

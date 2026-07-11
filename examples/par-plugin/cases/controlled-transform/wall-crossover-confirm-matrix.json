@@ -1,0 +1,30 @@
+{
+  "description": "Fifteen-round release-binding confirmation for the noisy 125k and 150k operation crossover cells.",
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "crossover-confirm-wide-512-work-125k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 125000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 15
+    },
+    {
+      "name": "crossover-confirm-wide-512-work-150k",
+      "graphShape": "wide",
+      "moduleCount": 512,
+      "minimumSourceBytes": 256,
+      "workIterations": 150000,
+      "resultPaddingBytes": 0,
+      "instrumentation": false,
+      "variants": ["ordinary", "worker-4", "worker-8"],
+      "warmups": 1,
+      "repeats": 15
+    }
+  ]
+}

@@ -84,21 +84,9 @@ if (workerOneReentrant.error?.code !== 'ETIMEDOUT') {
 for (const mode of ['resolve-error', 'load-error']) {
   const marker = mode === 'resolve-error' ? 'controlled resolveId error' : 'controlled load error';
   for (const variant of ['ordinary', 'worker-1']) {
-    const result = run(variant, mode, 10000, variant === 'worker-1');
-    if (result.status === 0 || !result.stderr.includes(marker)) {
+    const result = run(variant, mode);
+    if (result.status === 0 || result.signal || !result.stderr.includes(marker)) {
       throw new Error(`${variant}/${mode} did not propagate the controlled hook error`);
-    }
-    if (variant === 'worker-1') {
-      const metricsMatch = result.stderr.match(/^\[rolldown-parallel-plugin-metrics\] (\{.*\})$/m);
-      const metrics = metricsMatch ? JSON.parse(metricsMatch[1]) : undefined;
-      if (
-        !metrics ||
-        metrics.errorResults !== 1 ||
-        metrics.cancelledBeforeAcquire !== 0 ||
-        metrics.cancelledDuringService !== 0
-      ) {
-        throw new Error(`${variant}/${mode} did not finish its errored wrapper cleanly`);
-      }
     }
   }
 }

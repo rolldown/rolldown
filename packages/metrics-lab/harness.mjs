@@ -295,9 +295,11 @@ function printMeasureSummary(report, hadBaseline) {
     console.log(`vs pinned baseline: LCP ${d.delta > 0 ? '+' : ''}${Math.round(d.delta)}ms `
       + `(${d.pct > 0 ? '+' : ''}${d.pct}%) -> ${call} (noise threshold ${Math.round(threshold)}ms)`);
     if (call === 'improvement beyond noise') {
-      console.log(`next: keep this change - re-pin with \`${CLI} baseline\` (or scan --pin), then commit it`);
+      console.log(`next: keep this change - re-pin with \`${CLI} baseline\` (or scan --pin), then commit it.`);
+      console.log(`Probe your NEXT change with \`${CLI} scan --quick\` (one run, minutes cheaper); run a full scan only to accept/revert or pin.`);
     } else {
-      console.log('next: this attempt did not clearly improve LCP - revert the change and rebuild (then try a different one)');
+      console.log('next: this attempt did not clearly improve LCP - revert the change and rebuild (then try a different one).');
+      console.log(`Probe the next attempt with \`${CLI} scan --quick\` first; confirm keepers with a full scan.`);
     }
   } else if (hadBaseline) {
     console.log('vs pinned baseline: n/a (metric missing)');
@@ -796,7 +798,10 @@ async function cmdProfile(argv) {
 async function cmdScan(argv) {
   const opts = parse(argv, {
     ...TARGET_OPTS,
-    runs: { type: 'string', default: '5' },
+    // 3 runs: the median is stable at 3 and each throttled run costs the app's
+    // full LCP (minutes on slow pages). --runs 5 remains available for noisy
+    // pages; the effect side is regression-gated by the eval ledger.
+    runs: { type: 'string', default: '3' },
     warmup: { type: 'string', default: '1' },
     label: { type: 'string', default: '' },
     settle: { type: 'string', default: '1500' },
@@ -805,9 +810,13 @@ async function cmdScan(argv) {
     entry: { type: 'string' },
     pin: { type: 'boolean', default: false },
     // One measure run, no profile: a cheap mid-iteration "did my change move
-    // LCP" probe on slow apps (a full 5-run throttled scan costs minutes when
-    // LCP is >10s). Never a basis for accept/revert/pin - verdict says so too.
+    // LCP" probe on slow apps (a full throttled scan costs minutes when LCP
+    // is >10s). Never a basis for accept/revert/pin - verdict says so too.
     quick: { type: 'boolean', default: false },
+    // Force the boot-CPU profile leg even when pre-paint CPU is in baseline
+    // territory (it is skipped then - the verdict only ever demands a profile
+    // for pre-paint CPU >150ms, so skipping never leaves an UNKNOWN).
+    profile: { type: 'boolean', default: false },
   });
   if (opts.quick && opts.pin) {
     throw new Error('scan --quick cannot --pin: a 1-run baseline poisons every later delta. Run a full scan to pin.');
@@ -839,6 +848,14 @@ async function cmdScan(argv) {
       settleMs: 2000,
     });
     if (opts.quick) return { samples, cov, profile: null };
+    // The profile only ever matters when pre-paint CPU is above the verdict's
+    // 150ms threshold - skip its navigation otherwise (a scan-time minute on
+    // slow apps). --profile forces it.
+    const prepaintMs = summarize(samples, expectedFeatures).metrics['runtime.prepaint_longtask_ms'];
+    if (!opts.profile && !(typeof prepaintMs === 'number' && prepaintMs > 150)) {
+      process.stderr.write(`profile skipped (pre-paint CPU ${prepaintMs == null ? 'n/a' : `${Math.round(prepaintMs)}ms`} - baseline territory; force with --profile)\n`);
+      return { samples, cov, profile: null };
+    }
     process.stderr.write('profile run...\n');
     const profile = await profileRun(cdp, { origin, throttle });
     return { samples, cov, profile };
@@ -950,8 +967,9 @@ async function cmdHelp() {
   console.log(`browser-loading perf harness - measurement + diagnosis; you drive the loop
 
 start here (the target is remembered after the first command):
-  scan --app <appDir>       N timed runs + coverage + boot profile + verdict, one browser session.
-                            First scan of a target auto-pins the baseline.
+  scan --app <appDir>       3 throttled runs + coverage (+ boot profile when pre-paint
+                            CPU >150ms; force with --profile) + verdict, one browser session.
+                            First scan of a target auto-pins the baseline. --runs 5 for noisy pages.
   scan                      same, against the remembered target
   scan --pin                same, and re-pin the baseline afterwards (after an accepted change)
   scan --quick              1 run, no profile: a fast mid-iteration probe on slow apps.
@@ -985,7 +1003,11 @@ the loop:
      Stopping earlier is allowed ONLY with the verdict checklist copied into your
      summary and every OPEN lead justified (sub-noise measurement or concrete constraint)
 
-judge only by "vs pinned baseline". full contract: AGENTS.md`);
+judge only by "vs pinned baseline".
+full contract: ${path.join(ROOT, 'AGENTS.md')}
+demo-app details: ${path.join(ROOT, 'README.md')}
+(read them at those exact paths - never search the filesystem for them: a
+\`find / -iname ...\` grinds a full CPU core for hours on a large machine)`);
 }
 
 const [command, ...rest] = process.argv.slice(2);

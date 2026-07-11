@@ -29,7 +29,9 @@ use super::JsPlugin;
 pub struct ParallelJsPlugin {
   plugins: Box<[JsPlugin]>,
   worker_manager: Arc<WorkerManager>,
-  transform_metrics: Option<ParallelTransformMetrics>,
+  resolve_id_metrics: Option<ParallelHookMetrics>,
+  load_metrics: Option<ParallelHookMetrics>,
+  transform_metrics: Option<ParallelHookMetrics>,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -40,8 +42,14 @@ impl ParallelJsPlugin {
   ) -> napi::Result<Box<dyn Pluginable>> {
     let plugins =
       plugins.into_iter().map(JsPlugin::new).collect::<napi::Result<Vec<_>>>()?.into_boxed_slice();
-    let transform_metrics = ParallelTransformMetrics::new_if_enabled(&plugins);
-    Ok(Box::new(Self { plugins, worker_manager, transform_metrics }))
+    let (resolve_id_metrics, load_metrics, transform_metrics) = Self::create_metrics(&plugins);
+    Ok(Box::new(Self {
+      plugins,
+      worker_manager,
+      resolve_id_metrics,
+      load_metrics,
+      transform_metrics,
+    }))
   }
 
   pub fn new_shared(
@@ -50,8 +58,31 @@ impl ParallelJsPlugin {
   ) -> napi::Result<Arc<dyn Pluginable>> {
     let plugins =
       plugins.into_iter().map(JsPlugin::new).collect::<napi::Result<Vec<_>>>()?.into_boxed_slice();
-    let transform_metrics = ParallelTransformMetrics::new_if_enabled(&plugins);
-    Ok(Arc::new(Self { plugins, worker_manager, transform_metrics }))
+    let (resolve_id_metrics, load_metrics, transform_metrics) = Self::create_metrics(&plugins);
+    Ok(Arc::new(Self {
+      plugins,
+      worker_manager,
+      resolve_id_metrics,
+      load_metrics,
+      transform_metrics,
+    }))
+  }
+
+  fn create_metrics(
+    plugins: &[JsPlugin],
+  ) -> (Option<ParallelHookMetrics>, Option<ParallelHookMetrics>, Option<ParallelHookMetrics>) {
+    let Some(first) = plugins.first() else { return (None, None, None) };
+    (
+      first
+        .resolve_id
+        .as_ref()
+        .and_then(|_| ParallelHookMetrics::new_if_enabled(plugins, "resolveId")),
+      first.load.as_ref().and_then(|_| ParallelHookMetrics::new_if_enabled(plugins, "load")),
+      first
+        .transform
+        .as_ref()
+        .and_then(|_| ParallelHookMetrics::new_if_enabled(plugins, "transform")),
+    )
   }
 
   fn first_plugin(&self) -> &JsPlugin {
@@ -110,7 +141,19 @@ impl Plugin for ParallelJsPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     if self.first_plugin().resolve_id.is_some() {
-      self.run_single(|plugin| Box::pin(Plugin::resolve_id(plugin, ctx, args))).await
+      if let Some(metrics) = &self.resolve_id_metrics {
+        let input_bytes = args.specifier.len() + args.importer.map_or(0, str::len);
+        let queued_call = QueuedHookCall::new(metrics, input_bytes);
+        let permit = self.worker_manager.acquire().await;
+        let permit_acquired_at = Instant::now();
+        let active_call = queued_call.acquired(permit, permit_acquired_at);
+        let plugin = &self.plugins[active_call.worker_index() as usize];
+        let result = Plugin::resolve_id(plugin, ctx, args).await;
+        active_call.finish(&result, |output| output.id.len());
+        result
+      } else {
+        self.run_single(|plugin| Box::pin(Plugin::resolve_id(plugin, ctx, args))).await
+      }
     } else {
       Ok(None)
     }
@@ -122,7 +165,18 @@ impl Plugin for ParallelJsPlugin {
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     if self.first_plugin().load.is_some() {
-      self.run_single(|plugin| Box::pin(Plugin::load(plugin, ctx, args))).await
+      if let Some(metrics) = &self.load_metrics {
+        let queued_call = QueuedHookCall::new(metrics, args.id.len());
+        let permit = self.worker_manager.acquire().await;
+        let permit_acquired_at = Instant::now();
+        let active_call = queued_call.acquired(permit, permit_acquired_at);
+        let plugin = &self.plugins[active_call.worker_index() as usize];
+        let result = Plugin::load(plugin, ctx, args).await;
+        active_call.finish(&result, |output| output.code.len());
+        result
+      } else {
+        self.run_single(|plugin| Box::pin(Plugin::load(plugin, ctx, args))).await
+      }
     } else {
       Ok(None)
     }
@@ -135,13 +189,13 @@ impl Plugin for ParallelJsPlugin {
   ) -> rolldown_plugin::HookTransformReturn {
     if self.first_plugin().transform.is_some() {
       if let Some(metrics) = &self.transform_metrics {
-        let queued_call = QueuedTransformCall::new(metrics, args.code.len());
+        let queued_call = QueuedHookCall::new(metrics, args.code.len());
         let permit = self.worker_manager.acquire().await;
         let permit_acquired_at = Instant::now();
         let active_call = queued_call.acquired(permit, permit_acquired_at);
         let plugin = &self.plugins[active_call.worker_index() as usize];
         let result = Plugin::transform(plugin, ctx, args).await;
-        active_call.finish(&result);
+        active_call.finish(&result, |output| output.code.as_ref().map_or(0, |code| code.len()));
         result
       } else {
         self.run_single(|plugin| Box::pin(Plugin::transform(plugin, ctx, args))).await
@@ -224,6 +278,12 @@ impl Plugin for ParallelJsPlugin {
 #[cfg(not(target_family = "wasm"))]
 impl Drop for ParallelJsPlugin {
   fn drop(&mut self) {
+    if let Some(metrics) = &self.resolve_id_metrics {
+      metrics.report();
+    }
+    if let Some(metrics) = &self.load_metrics {
+      metrics.report();
+    }
     if let Some(metrics) = &self.transform_metrics {
       metrics.report();
     }
@@ -232,7 +292,8 @@ impl Drop for ParallelJsPlugin {
 
 #[derive(Debug)]
 #[cfg(not(target_family = "wasm"))]
-struct ParallelTransformMetrics {
+struct ParallelHookMetrics {
+  hook: &'static str,
   plugin_name: String,
   worker_count: usize,
   calls: AtomicU64,
@@ -258,13 +319,14 @@ struct ParallelTransformMetrics {
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl ParallelTransformMetrics {
-  fn new_if_enabled(plugins: &[JsPlugin]) -> Option<Self> {
+impl ParallelHookMetrics {
+  fn new_if_enabled(plugins: &[JsPlugin], hook: &'static str) -> Option<Self> {
     if std::env::var("ROLLDOWN_PARALLEL_PLUGIN_METRICS").as_deref() != Ok("json") {
       return None;
     }
 
     Some(Self {
+      hook,
       plugin_name: plugins.first().map_or_else(String::new, |plugin| plugin.name.clone()),
       worker_count: plugins.len(),
       calls: AtomicU64::new(0),
@@ -292,9 +354,10 @@ impl ParallelTransformMetrics {
 
   fn report(&self) {
     let load = |value: &AtomicU64| value.load(Ordering::Relaxed);
-    let report = serde_json::json!({
-      "kind": "rolldown_parallel_plugin_transform_metrics",
+    let mut report = serde_json::json!({
+      "kind": "rolldown_parallel_plugin_hook_metrics",
       "version": 1,
+      "hook": self.hook,
       "plugin": self.plugin_name,
       "workerCount": self.worker_count,
       "wrapperCalls": load(&self.calls),
@@ -320,30 +383,37 @@ impl ParallelTransformMetrics {
         "current": load(&self.in_flight_current),
         "max": load(&self.in_flight_max),
       },
-      "wrapperInputCodeBytes": load(&self.input_code_bytes),
-      "returnedCodeBytes": load(&self.returned_code_bytes),
+      "wrapperInputBytes": load(&self.input_code_bytes),
+      "returnedBytes": load(&self.returned_code_bytes),
       "valueResults": load(&self.value_results),
       "nullResults": load(&self.null_results),
       "errorResults": load(&self.error_results),
       "cancelledBeforeAcquire": load(&self.cancelled_before_acquire),
       "cancelledDuringService": load(&self.cancelled_during_service),
     });
+    if self.hook == "transform" {
+      // Retain the transform-specific aliases so previously collected research
+      // runners continue to validate the generalized metrics implementation.
+      report["kind"] = "rolldown_parallel_plugin_transform_metrics".into();
+      report["wrapperInputCodeBytes"] = load(&self.input_code_bytes).into();
+      report["returnedCodeBytes"] = load(&self.returned_code_bytes).into();
+    }
     eprintln!("[rolldown-parallel-plugin-metrics] {report}");
   }
 }
 
 #[cfg(not(target_family = "wasm"))]
-struct QueuedTransformCall<'a> {
-  metrics: &'a ParallelTransformMetrics,
+struct QueuedHookCall<'a> {
+  metrics: &'a ParallelHookMetrics,
   started_at: Instant,
   acquired: bool,
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl<'a> QueuedTransformCall<'a> {
-  fn new(metrics: &'a ParallelTransformMetrics, input_code_bytes: usize) -> Self {
+impl<'a> QueuedHookCall<'a> {
+  fn new(metrics: &'a ParallelHookMetrics, input_bytes: usize) -> Self {
     metrics.calls.fetch_add(1, Ordering::Relaxed);
-    metrics.input_code_bytes.fetch_add(input_code_bytes as u64, Ordering::Relaxed);
+    metrics.input_code_bytes.fetch_add(input_bytes as u64, Ordering::Relaxed);
     let pending = metrics.pending_current.fetch_add(1, Ordering::Relaxed) + 1;
     metrics.pending_max.fetch_max(pending, Ordering::Relaxed);
     let outstanding = metrics.outstanding_current.fetch_add(1, Ordering::Relaxed) + 1;
@@ -355,19 +425,19 @@ impl<'a> QueuedTransformCall<'a> {
     mut self,
     permit: WorkerSemaphorePermit,
     permit_acquired_at: Instant,
-  ) -> ActiveTransformCall<'a> {
+  ) -> ActiveHookCall<'a> {
     let queue_wait_ns = duration_ns(permit_acquired_at.duration_since(self.started_at));
     self.metrics.queue_wait_ns_total.fetch_add(queue_wait_ns, Ordering::Relaxed);
     self.metrics.queue_wait_ns_max.fetch_max(queue_wait_ns, Ordering::Relaxed);
     self.metrics.pending_current.fetch_sub(1, Ordering::Relaxed);
     self.metrics.acquired_calls.fetch_add(1, Ordering::Relaxed);
     self.acquired = true;
-    ActiveTransformCall::new(self.metrics, permit, permit_acquired_at)
+    ActiveHookCall::new(self.metrics, permit, permit_acquired_at)
   }
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl Drop for QueuedTransformCall<'_> {
+impl Drop for QueuedHookCall<'_> {
   fn drop(&mut self) {
     if !self.acquired {
       self.metrics.pending_current.fetch_sub(1, Ordering::Relaxed);
@@ -378,17 +448,17 @@ impl Drop for QueuedTransformCall<'_> {
 }
 
 #[cfg(not(target_family = "wasm"))]
-struct ActiveTransformCall<'a> {
-  metrics: &'a ParallelTransformMetrics,
+struct ActiveHookCall<'a> {
+  metrics: &'a ParallelHookMetrics,
   permit: Option<WorkerSemaphorePermit>,
   started_at: Instant,
   completed: bool,
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl<'a> ActiveTransformCall<'a> {
+impl<'a> ActiveHookCall<'a> {
   fn new(
-    metrics: &'a ParallelTransformMetrics,
+    metrics: &'a ParallelHookMetrics,
     permit: WorkerSemaphorePermit,
     started_at: Instant,
   ) -> Self {
@@ -398,19 +468,24 @@ impl<'a> ActiveTransformCall<'a> {
   }
 
   fn worker_index(&self) -> u16 {
-    self.permit.as_ref().expect("active transform call must own a worker permit").worker_index()
+    self.permit.as_ref().expect("active hook call must own a worker permit").worker_index()
   }
 
-  fn finish(mut self, result: &rolldown_plugin::HookTransformReturn) {
+  fn finish<T, E>(
+    mut self,
+    result: &Result<Option<T>, E>,
+    returned_bytes: impl FnOnce(&T) -> usize,
+  ) {
     self.release_permit();
     self.completed = true;
     self.metrics.completed_calls.fetch_add(1, Ordering::Relaxed);
     match result {
       Ok(Some(output)) => {
         self.metrics.value_results.fetch_add(1, Ordering::Relaxed);
-        if let Some(code) = &output.code {
-          self.metrics.returned_code_bytes.fetch_add(code.len() as u64, Ordering::Relaxed);
-        }
+        self
+          .metrics
+          .returned_code_bytes
+          .fetch_add(returned_bytes(output) as u64, Ordering::Relaxed);
       }
       Ok(None) => {
         self.metrics.null_results.fetch_add(1, Ordering::Relaxed);
@@ -434,7 +509,7 @@ impl<'a> ActiveTransformCall<'a> {
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl Drop for ActiveTransformCall<'_> {
+impl Drop for ActiveHookCall<'_> {
   fn drop(&mut self) {
     if self.permit.is_some() {
       self.release_permit();

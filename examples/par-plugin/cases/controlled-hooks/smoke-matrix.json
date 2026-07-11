@@ -1,0 +1,34 @@
+{
+  "description": "Fast correctness smoke for controlled resolveId and load hooks",
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "resolve-wide-smoke",
+      "hook": "resolveId",
+      "graphShape": "wide",
+      "moduleCount": 8,
+      "workIterations": 1000,
+      "syncFsProbes": 1,
+      "asyncDelayMs": 0,
+      "resultPaddingBytes": 0,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4"],
+      "warmups": 0,
+      "repeats": 1
+    },
+    {
+      "name": "load-wide-smoke",
+      "hook": "load",
+      "graphShape": "wide",
+      "moduleCount": 8,
+      "workIterations": 1000,
+      "syncFsProbes": 1,
+      "asyncDelayMs": 1,
+      "resultPaddingBytes": 16,
+      "instrumentation": true,
+      "variants": ["ordinary", "worker-1", "worker-4"],
+      "warmups": 0,
+      "repeats": 1
+    }
+  ]
+}

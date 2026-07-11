@@ -248,6 +248,13 @@ impl GenerateStage<'_> {
   /// stays inside the chunk that declares its members, so every chunk keeps rendering its own
   /// `import ... from 'ext'` statement and cross-chunk references keep flowing through the
   /// regular cross-chunk import/export machinery (the constraint behind #3405).
+  ///
+  /// Two kinds of groups are handled:
+  /// - namespace imports (`import * as ns from 'ext'`), collected in
+  ///   `external_import_namespace_merger`;
+  /// - named imports whose local binding is re-exported (`export { a } from 'ext'`), collected in
+  ///   `deferred_external_binding_merges` because `bind_imports_and_exports` cannot merge them
+  ///   eagerly like plain named imports (#3427).
   fn merge_external_import_symbols(
     &mut self,
     chunk_graph: &ChunkGraph,
@@ -277,6 +284,68 @@ impl GenerateStage<'_> {
         // https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=38bb53e79b4f7aaa73ef9d6b4cfb3cc2
         for symbol in &group[idx + 1..] {
           self.link_output.symbol_db.link(**symbol, *group[idx]);
+        }
+      }
+    }
+
+    // Merge re-exported named imports of the same external binding at chunk level.
+    for ((_, imported_name), merge) in &self.link_output.deferred_external_binding_merges {
+      // The eager facade's references all come from the modules holding the plain imports that
+      // were merged into it, so it may be folded into at most one chunk's canonical: the single
+      // chunk containing every included one of those modules. `None` when they span chunks (the
+      // facade must stay a root so each chunk renders its own import of it) or when none is
+      // included (dead facade — nothing worth folding).
+      let facade_fold_chunk = merge.eager_facade.and_then(|_| {
+        merge
+          .eager_import_owners
+          .iter()
+          .filter(|owner| self.link_output.metas[**owner].is_included)
+          .map(|owner| chunk_graph.module_to_chunk[*owner].expect("should have chunk idx"))
+          .all_equal_value()
+          .ok()
+      });
+
+      for (chunk_idx, mut group) in merge
+        .symbols
+        .iter()
+        .filter_map(|item| {
+          let module = self.link_output.module_table[item.owner].as_normal()?;
+          self.link_output.metas[module.idx].is_included.then_some(item)
+        })
+        .into_group_map_by(|item| {
+          chunk_graph.module_to_chunk[item.owner].expect("should have chunk idx")
+        })
+      {
+        if group.len() <= 1 && facade_fold_chunk != Some(chunk_idx) {
+          continue;
+        }
+        // Deterministic canonical pick: `exec_order` is unique per module, and the symbol index
+        // breaks ties between two re-exports of the same binding living in one module.
+        group.sort_unstable_by_key(|item| {
+          (self.link_output.module_table[item.owner].exec_order(), item.symbol)
+        });
+        let Some(first_used) = group.iter().position(|item| used_symbol_refs.contains(item))
+        else {
+          // No member is a used symbol; an unused canonical would render nothing (mirrors the
+          // namespace merger above).
+          continue;
+        };
+        // Prefer a used member whose name matches the imported name, so the merged group renders
+        // as `import { a }` / `export { a }` instead of the aliased `import { a as a$1 }`.
+        let canonical = *group
+          .iter()
+          .copied()
+          .filter(|item| used_symbol_refs.contains(item))
+          .find(|item| item.name(&self.link_output.symbol_db) == imported_name.as_str())
+          .unwrap_or(group[first_used]);
+        for symbol in &group {
+          if **symbol != canonical {
+            self.link_output.symbol_db.link(**symbol, canonical);
+          }
+        }
+        if facade_fold_chunk == Some(chunk_idx) {
+          let facade = merge.eager_facade.expect("fold chunk implies a facade");
+          self.link_output.symbol_db.link(facade, canonical);
         }
       }
     }

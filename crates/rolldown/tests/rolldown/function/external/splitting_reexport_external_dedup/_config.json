@@ -1,0 +1,16 @@
+{
+  "_comment": "Re-exported external bindings are merged per chunk (#3427) without reintroducing the cross-chunk crash of #3405: the shared chunk collapses its duplicate re-exports of `readFileSync` into one import, while the eager facade for the entries' plain imports stays split because its importers live in different chunks.",
+  "config": {
+    "input": [
+      {
+        "name": "entry_a",
+        "import": "entry_a.js"
+      },
+      {
+        "name": "entry_b",
+        "import": "entry_b.js"
+      }
+    ],
+    "external": ["node:fs", "node:assert"]
+  }
+}

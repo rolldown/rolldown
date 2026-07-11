@@ -25,7 +25,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{SharedOptions, types::linking_metadata::LinkingMetadataVec};
 
-use super::LinkStage;
+use super::{DeferredExternalBindingMerge, LinkStage};
 
 #[derive(Clone, Debug)]
 struct ImportTracker {
@@ -165,16 +165,27 @@ impl LinkStage<'_> {
       side_effects_modules: &side_effects_modules,
       normal_symbol_exports_chain_map: &mut normal_symbol_exports_chain_map,
       external_import_namespace_merger: FxHashMap::default(),
+      deferred_external_binding_merges: FxHashMap::default(),
     };
     self.module_table.modules.iter().for_each(|module| {
       binding_ctx.match_imports_with_exports(module.idx());
     });
 
-    self.diagnostics.extend(binding_ctx.diagnostics);
+    // Destructure so the loop below can take `&mut self.symbols` again: keeping `binding_ctx`
+    // alive would keep the `&mut` borrows stored in it (`symbol_db`, `metas`) alive too.
+    let BindImportsAndExportsContext {
+      diagnostics,
+      external_import_binding_merger,
+      external_import_namespace_merger,
+      mut deferred_external_binding_merges,
+      ..
+    } = binding_ctx;
 
-    self.external_import_namespace_merger = binding_ctx.external_import_namespace_merger;
+    self.diagnostics.extend(diagnostics);
 
-    for (module_idx, map) in &binding_ctx.external_import_binding_merger {
+    self.external_import_namespace_merger = external_import_namespace_merger;
+
+    for (module_idx, map) in &external_import_binding_merger {
       // `map` is a `FxHashMap` with randomized iteration order. Facade symbols must be created
       // deterministically, but only an external imported under more than one name has anything to
       // order — so sort by name only in that (rare) case and skip the work otherwise.
@@ -213,8 +224,19 @@ impl LinkStage<'_> {
         for symbol_ref in symbol_set {
           self.symbols.link(*symbol_ref, target_symbol);
         }
+        // If the same binding is also re-exported somewhere, hand the facade to the deferred
+        // chunk-level merge: when all the plain imports merged here land in one chunk, the
+        // facade can be folded into that chunk's canonical re-export symbol too.
+        if let Some(deferred) =
+          deferred_external_binding_merges.get_mut(&(*module_idx, key.clone()))
+        {
+          deferred.eager_facade = Some(target_symbol);
+          deferred.eager_import_owners.extend(symbol_set.iter().map(|symbol_ref| symbol_ref.owner));
+        }
       }
     }
+
+    self.deferred_external_binding_merges = deferred_external_binding_merges;
 
     self.metas.par_iter_mut().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
@@ -849,6 +871,9 @@ struct BindImportsAndExportsContext<'a> {
   pub external_import_binding_merger:
     FxHashMap<ModuleIdx, FxHashMap<CompactStr, IndexSet<SymbolRef>>>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
+  /// See [`DeferredExternalBindingMerge`]. Keyed by `(external module, imported name)`.
+  pub deferred_external_binding_merges:
+    FxHashMap<(ModuleIdx, CompactStr), DeferredExternalBindingMerge>,
   pub side_effects_modules: &'a FxHashSet<ModuleIdx>,
   pub normal_symbol_exports_chain_map: &'a mut FxHashMap<SymbolRef, Vec<SymbolRef>>,
 }
@@ -899,7 +924,19 @@ impl BindImportsAndExportsContext<'_> {
               .or_default()
               .insert(*imported_as_ref);
           }
-          Specifier::Literal(_) => {}
+          // The local binding of this import backs an entry in `resolved_exports`
+          // (e.g. `export { a } from 'ext'`), so other chunks can reach it through internal
+          // import chains and chunk exports. Merging it eagerly would move references across
+          // chunks that have no import statement rendering the merged symbol (#3405), so the
+          // merge is deferred until chunk assignment is known and done per chunk (#3427).
+          Specifier::Literal(ref name) => {
+            self
+              .deferred_external_binding_merges
+              .entry((resolved_module_idx, name.clone()))
+              .or_default()
+              .symbols
+              .insert(*imported_as_ref);
+          }
         }
       }
       matching_ctx.tracker_stack.clear();

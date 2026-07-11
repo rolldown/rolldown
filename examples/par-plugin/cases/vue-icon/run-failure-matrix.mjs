@@ -1,10 +1,11 @@
 import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { cpus, platform, release, totalmem, tmpdir } from 'node:os';
 import nodePath from 'node:path';
 
 const outputPath = process.argv[2];
 const runs = [];
+const repositoryRoot = nodePath.resolve(import.meta.dirname, '../../../..');
 const fixtureDirectory = await mkdtemp(nodePath.join(tmpdir(), 'rolldown-parallel-vue-failure-'));
 try {
   const source = await readFile(nodePath.join(import.meta.dirname, 'failure/invalid.vue.fixture'));
@@ -21,7 +22,14 @@ try {
     if (result.status !== 0) {
       throw new Error(`${variant} failure probe exited ${result.status}:\n${result.stderr}`);
     }
-    runs.push(JSON.parse(result.stdout));
+    runs.push(
+      JSON.parse(
+        JSON.stringify(JSON.parse(result.stdout)).replaceAll(
+          fixtureDirectory,
+          '<vue-failure-fixture>',
+        ),
+      ),
+    );
   }
 } finally {
   await rm(fixtureDirectory, { recursive: true, force: true });
@@ -29,9 +37,25 @@ try {
 const report = {
   node: process.version,
   nodeBinary: process.execPath,
-  startedAt: new Date().toISOString(),
+  rolldownCommit: git(['rev-parse', 'HEAD']),
+  rolldownWorktreeStatus: git(['status', '--short']),
+  host: {
+    platform: platform(),
+    release: release(),
+    architecture: process.arch,
+    cpuModel: cpus()[0]?.model,
+    logicalCpuCount: cpus().length,
+    totalMemoryBytes: totalmem(),
+  },
+  capturedAt: new Date().toISOString(),
   runs,
 };
 const serialized = `${JSON.stringify(report, null, 2)}\n`;
 if (outputPath) await writeFile(outputPath, serialized);
 process.stdout.write(serialized);
+
+function git(args) {
+  const result = spawnSync('git', ['-C', repositoryRoot, ...args], { encoding: 'utf8' });
+  if (result.status !== 0) throw new Error(`git ${args.join(' ')} failed`);
+  return result.stdout.trim();
+}

@@ -8,11 +8,13 @@
     "bench-noop": "hyperfine --warmup 1 --runs 3 'pnpm rolldown -c ./cases/noop-threejs10x/par-noop.rolldown.config.js' 'pnpm rolldown -c ./cases/noop-threejs10x/single-noop.rolldown.config.js'",
     "build": "echo success"
   },
-  "dependencies": {},
   "devDependencies": {
     "@babel/core": "catalog:",
     "@babel/preset-env": "catalog:",
     "@babel/preset-typescript": "catalog:",
-    "rolldown": "workspace:*"
+    "@vue/compiler-sfc": "3.5.39",
+    "rolldown": "workspace:*",
+    "unplugin-vue": "7.2.0",
+    "vue": "3.5.39"
   }
 }

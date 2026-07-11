@@ -1,0 +1,14 @@
+{
+  "description": "Correctness smoke for the full unplugin-vue reference, thin ordinary adapter, and parallel adapter.",
+  "bindingProfile": "release",
+  "cases": [
+    {
+      "name": "vue-icon-full-166-correctness",
+      "entrySet": "full",
+      "instrumentation": false,
+      "variants": ["full-ordinary", "ordinary", "worker-1", "worker-2", "worker-4", "worker-8"],
+      "warmups": 0,
+      "repeats": 1
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 
@@ -442,6 +443,46 @@ export default __napiModule.exports
     expect(() => execution.cleanup()).not.toThrow();
     expect(() => execution.cleanup()).not.toThrow();
     expect(cleanupEvents).toEqual(['prepare', 'prepare', 'destroy', 'destroy']);
+  });
+
+  test('raw context destroy prepares and tears down exactly once with the real emnapi runtime', () => {
+    // Uses the actual pinned @emnapi/runtime Context (resolved from the
+    // rolldown package, exactly what generated loaders load) instead of a
+    // mock: Context.destroy() drains its cleanup queue destructively, so a
+    // second delegation from the loader's exit-time helper must be a no-op.
+    const emnapiRequire = createRequire(
+      fileURLToPath(new URL('../src/rolldown-binding.wasi.cjs', import.meta.url)),
+    );
+    const { createContext } = emnapiRequire('@emnapi/runtime') as {
+      createContext: () => {
+        addCleanupHook(envObject: unknown, fn: (arg: number) => void, arg: number): void;
+        destroy(): void;
+      };
+    };
+    const cleanupEvents: string[] = [];
+    let context: ReturnType<typeof createContext> | undefined;
+    const execution = executeGeneratedWasiNodeLoader({
+      createContext() {
+        context = createContext();
+        context.addCleanupHook(undefined, () => cleanupEvents.push('teardown'), 0);
+        return context;
+      },
+      prepareCleanup() {
+        cleanupEvents.push('prepare');
+      },
+    });
+
+    // An embedder may destroy the emnapi context directly, bypassing the
+    // loader's __destroyEmnapiContext helper. The generated destroy wrapper
+    // must run the wasm-side cleanup preparation before the teardown.
+    context!.destroy();
+    expect(cleanupEvents).toEqual(['prepare', 'teardown']);
+
+    // The loader's own exit-time cleanup afterwards shares the preparation
+    // latch and delegates into emnapi's already-drained cleanup queue:
+    // preparation and teardown each ran exactly once overall.
+    expect(() => execution.cleanup()).not.toThrow();
+    expect(cleanupEvents).toEqual(['prepare', 'teardown']);
   });
 
   test('preserves valid worker arguments while retrying rejected inherited arguments', () => {

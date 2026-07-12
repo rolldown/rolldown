@@ -1590,20 +1590,67 @@ for (const removedExport of [
   assert.equal(removedExport in binding, false)
 }
 assert.equal(binding.getCurrentThreadTaskHostContractVersion(), 4)
+// Contract v4 reserved-token protocol, driven against the packed artifact.
+const assertRegistrationActive = (registration, expected) =>
+  assert.equal(
+    binding.isCurrentThreadHostRegistrationActive(registration.high, registration.low),
+    expected,
+  )
+const assertReservationShape = (registration) => {
+  assert.equal(Number.isInteger(registration.high), true)
+  assert.equal(registration.high >= 0 && registration.high <= 0xffffffff, true)
+  assert.equal(Number.isInteger(registration.low), true)
+  assert.equal(registration.low >= 0 && registration.low <= 0xffffffff, true)
+  assert.equal(registration.high === 0 && registration.low === 0, false)
+}
+const taskReservation = binding.reserveCurrentThreadHostRegistration()
+assertReservationShape(taskReservation)
+assertRegistrationActive(taskReservation, false)
+// A rejected dispatch callback fails before the reservation is consumed...
 assert.throws(
-  () => binding.registerCurrentThreadTaskHost(() => {}),
+  () =>
+    binding.registerCurrentThreadTaskHost(taskReservation.high, taskReservation.low, () => {}),
   /registerCurrentThreadTaskHost does not accept a JavaScript callback/,
 )
-const taskRegistration = binding.registerCurrentThreadTaskHost()
-assert.equal(Number.isInteger(taskRegistration.high), true)
-assert.equal(taskRegistration.high >= 0 && taskRegistration.high <= 0xffffffff, true)
-assert.equal(Number.isInteger(taskRegistration.low), true)
-assert.equal(taskRegistration.low >= 0 && taskRegistration.low <= 0xffffffff, true)
-binding.unregisterCurrentThreadTaskHost(taskRegistration.high, taskRegistration.low)
-const timerRegistration = binding.registerTimerHost(() => Promise.resolve(), () => {})
-assert.equal(Number.isInteger(timerRegistration.high), true)
-assert.equal(Number.isInteger(timerRegistration.low), true)
-binding.unregisterTimerHost(timerRegistration.high, timerRegistration.low)
+assertRegistrationActive(taskReservation, false)
+// ...so the same token still registers, reports live, and unregisters.
+binding.registerCurrentThreadTaskHost(taskReservation.high, taskReservation.low)
+assertRegistrationActive(taskReservation, true)
+// A consumed token cannot be registered a second time.
+assert.throws(
+  () => binding.registerCurrentThreadTaskHost(taskReservation.high, taskReservation.low),
+  /was not reserved or was already consumed/,
+)
+assertRegistrationActive(taskReservation, true)
+binding.unregisterCurrentThreadTaskHost(taskReservation.high, taskReservation.low)
+assertRegistrationActive(taskReservation, false)
+const timerReservation = binding.reserveCurrentThreadHostRegistration()
+assertReservationShape(timerReservation)
+assert.equal(
+  timerReservation.high === taskReservation.high && timerReservation.low === taskReservation.low,
+  false,
+)
+assertRegistrationActive(timerReservation, false)
+// The task token released above stays consumed for timer registration too.
+assert.throws(
+  () =>
+    binding.registerTimerHost(
+      taskReservation.high,
+      taskReservation.low,
+      () => Promise.resolve(),
+      () => {},
+    ),
+  /was not reserved or was already consumed/,
+)
+binding.registerTimerHost(
+  timerReservation.high,
+  timerReservation.low,
+  () => Promise.resolve(),
+  () => {},
+)
+assertRegistrationActive(timerReservation, true)
+binding.unregisterTimerHost(timerReservation.high, timerReservation.low)
+assertRegistrationActive(timerReservation, false)
 const bundler = new binding.BindingBundler()
 try {
   const result = await bundler.generate({
@@ -1672,16 +1719,41 @@ try {
     assert.equal(removedExport in binding.default, false)
   }
   assert.equal(binding.getCurrentThreadTaskHostContractVersion(), 4)
+  // Contract v4 reserved-token protocol against the browser-condition artifact.
+  const taskReservation = binding.reserveCurrentThreadHostRegistration()
+  assert.equal(Number.isInteger(taskReservation.high), true)
+  assert.equal(taskReservation.high >= 0 && taskReservation.high <= 0xffffffff, true)
+  assert.equal(Number.isInteger(taskReservation.low), true)
+  assert.equal(taskReservation.low >= 0 && taskReservation.low <= 0xffffffff, true)
+  assert.equal(taskReservation.high === 0 && taskReservation.low === 0, false)
+  assert.equal(
+    binding.isCurrentThreadHostRegistrationActive(taskReservation.high, taskReservation.low),
+    false,
+  )
+  // A rejected dispatch callback fails before the reservation is consumed.
   assert.throws(
-    () => binding.registerCurrentThreadTaskHost(() => {}),
+    () =>
+      binding.registerCurrentThreadTaskHost(taskReservation.high, taskReservation.low, () => {}),
     /registerCurrentThreadTaskHost does not accept a JavaScript callback/,
   )
-  const taskRegistration = binding.registerCurrentThreadTaskHost()
-  assert.equal(Number.isInteger(taskRegistration.high), true)
-  assert.equal(taskRegistration.high >= 0 && taskRegistration.high <= 0xffffffff, true)
-  assert.equal(Number.isInteger(taskRegistration.low), true)
-  assert.equal(taskRegistration.low >= 0 && taskRegistration.low <= 0xffffffff, true)
-  binding.unregisterCurrentThreadTaskHost(taskRegistration.high, taskRegistration.low)
+  assert.equal(
+    binding.isCurrentThreadHostRegistrationActive(taskReservation.high, taskReservation.low),
+    false,
+  )
+  binding.registerCurrentThreadTaskHost(taskReservation.high, taskReservation.low)
+  assert.equal(
+    binding.isCurrentThreadHostRegistrationActive(taskReservation.high, taskReservation.low),
+    true,
+  )
+  binding.unregisterCurrentThreadTaskHost(taskReservation.high, taskReservation.low)
+  assert.equal(
+    binding.isCurrentThreadHostRegistrationActive(taskReservation.high, taskReservation.low),
+    false,
+  )
+  assert.throws(
+    () => binding.registerCurrentThreadTaskHost(taskReservation.high, taskReservation.low),
+    /was not reserved or was already consumed/,
+  )
   const bundler = new binding.BindingBundler()
   try {
     const result = await bundler.generate({

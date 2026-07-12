@@ -12,8 +12,10 @@ import type {
 } from './utils/initialize-parallel-plugins';
 import {
   captureProcessMetrics,
+  captureWorkerStageResourceSnapshot,
   metricsStage,
   metricsTimestamp,
+  workerStageResourceWindow,
   type MetricsRuntime,
   type WorkerLauncherMetrics,
 } from './utils/parallel-plugin-init-metrics';
@@ -42,9 +44,12 @@ export async function startParallelPluginWorker(launcherContext: LauncherContext
     const workerLocalBeforePluginInitialization = captureWorkerLocalMetrics(metricsRuntime);
     const initializedPlugins = await Promise.all(
       pluginInfos.map(async (pluginInfo) => {
+        const beforeImplementationImport = captureWorkerStageResourceSnapshot(metricsRuntime);
         const importStartedAt = metricsTimestamp();
         const pluginModule = await import(pluginInfo.fileUrl);
         const importFinishedAt = metricsTimestamp();
+        const afterImplementationImportBeforeFactory =
+          captureWorkerStageResourceSnapshot(metricsRuntime);
         const definePluginImpl = pluginModule.default as ReturnType<
           typeof defineParallelPluginImplementation
         >;
@@ -53,6 +58,8 @@ export async function startParallelPluginWorker(launcherContext: LauncherContext
           threadNumber,
         });
         const factoryFinishedAt = metricsTimestamp();
+        const afterFactoryBeforeBindingification =
+          captureWorkerStageResourceSnapshot(metricsRuntime);
         const bindingStartedAt = metricsTimestamp();
         const bindingPlugin = bindingifyPlugin(
           plugin,
@@ -67,6 +74,11 @@ export async function startParallelPluginWorker(launcherContext: LauncherContext
           false,
         );
         const bindingFinishedAt = metricsTimestamp();
+        const afterBindingificationBeforeRegistration =
+          captureWorkerStageResourceSnapshot(metricsRuntime);
+        const implementationImport = metricsStage(importStartedAt, importFinishedAt);
+        const factory = metricsStage(factoryStartedAt, factoryFinishedAt);
+        const bindingification = metricsStage(bindingStartedAt, bindingFinishedAt);
         return {
           registration: { index: pluginInfo.index, plugin: bindingPlugin },
           metrics: {
@@ -83,21 +95,53 @@ export async function startParallelPluginWorker(launcherContext: LauncherContext
               bindingFinishedAt,
             },
             stages: {
-              implementationImport: metricsStage(importStartedAt, importFinishedAt),
-              factory: metricsStage(factoryStartedAt, factoryFinishedAt),
-              bindingifyPlugin: metricsStage(bindingStartedAt, bindingFinishedAt),
+              implementationImport,
+              factory,
+              bindingifyPlugin: bindingification,
+            },
+            resourceBoundaries: {
+              beforeImplementationImport,
+              afterImplementationImportBeforeFactory,
+              afterFactoryBeforeBindingification,
+              afterBindingificationBeforeRegistration,
+            },
+            resourceWindows: {
+              implementationImport: workerStageResourceWindow(
+                implementationImport,
+                'beforeImplementationImport',
+                'afterImplementationImportBeforeFactory',
+                beforeImplementationImport,
+                afterImplementationImportBeforeFactory,
+              ),
+              factory: workerStageResourceWindow(
+                factory,
+                'afterImplementationImportBeforeFactory',
+                'afterFactoryBeforeBindingification',
+                afterImplementationImportBeforeFactory,
+                afterFactoryBeforeBindingification,
+              ),
+              bindingifyPlugin: workerStageResourceWindow(
+                bindingification,
+                'afterFactoryBeforeBindingification',
+                'afterBindingificationBeforeRegistration',
+                afterFactoryBeforeBindingification,
+                afterBindingificationBeforeRegistration,
+              ),
             },
           },
         };
       }),
     );
 
+    const beforeRegistration = captureWorkerStageResourceSnapshot(metricsRuntime);
     const registerStartedAt = metricsTimestamp();
     registerPlugins(
       registryId,
       initializedPlugins.map(({ registration }) => registration),
     );
     const registerFinishedAt = metricsTimestamp();
+    const afterRegistration = captureWorkerStageResourceSnapshot(metricsRuntime);
+    const registrationStage = metricsStage(registerStartedAt, registerFinishedAt);
 
     installMetricsSnapshotListener(metricsRuntime);
     const workerLocalAtReady = captureWorkerLocalMetrics(metricsRuntime);
@@ -135,6 +179,17 @@ export async function startParallelPluginWorker(launcherContext: LauncherContext
         measuredBootstrapMs:
           registerFinishedAt.monotonicMs - launcherMetrics.timeline.launcherEntryAt.monotonicMs,
         registerPluginsMs: registerFinishedAt.monotonicMs - registerStartedAt.monotonicMs,
+        registrationStage,
+        registrationResources: {
+          boundaries: { beforeRegistration, afterRegistration },
+          window: workerStageResourceWindow(
+            registrationStage,
+            'beforeRegistration',
+            'afterRegistration',
+            beforeRegistration,
+            afterRegistration,
+          ),
+        },
         plugins: initializedPlugins.map(({ metrics }) => metrics),
         workerLocalBeforePluginInitialization,
         workerLocalAtReady,
@@ -142,6 +197,8 @@ export async function startParallelPluginWorker(launcherContext: LauncherContext
           'runtimeAndBindingImport is the dynamic import of the compiled worker-runtime graph; that graph statically imports binding.cjs, so JavaScript graph evaluation and native-addon loading cannot be separated without changing production module boundaries',
           'the GC observer starts after the lightweight launcher dynamically imports node:perf_hooks; GC before that observer exists cannot be recovered',
           'process RSS is shared by the main isolate, every worker isolate, native addon state, and runtime threads; it is not worker ownership',
+          'per-stage process CPU and RSS windows include concurrent work in the complete process; only current-worker thread CPU and isolate heap/GC have worker-local scope',
+          'stage resource snapshots synchronously bracket wall timestamps, so their deltas include boundary-capture gaps and are not exact wall-stage CPU or RSS attribution',
         ],
       },
     });
@@ -176,7 +233,8 @@ function captureWorkerLocalMetrics(metricsRuntime: MetricsRuntime) {
     scope: {
       cpuUsage: 'whole process; not this worker',
       threadCpuUsage: 'this Node.js worker thread',
-      memoryUsage: 'whole process; RSS is not this worker',
+      memoryUsage:
+        'RSS is whole process; other process.memoryUsage fields follow worker-thread semantics; RSS is not this worker',
       heapStatistics: 'this worker V8 isolate',
       eventLoopUtilization: 'this worker event loop; this is not CPU time',
       gc: 'GC performance entries observed in this worker after launcher instrumentation started',

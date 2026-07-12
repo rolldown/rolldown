@@ -231,6 +231,7 @@ export async function createBundlerOptions(
       inputOptions,
       onLog,
       stopWorkers: parallelPluginInitResult?.stopWorkers,
+      finalizeParallelPluginMetricsAfterClose: parallelPluginInitResult?.finalizeMetricsAfterClose,
     };
   } catch (e) {
     await parallelPluginInitResult?.stopWorkers();
@@ -251,4 +252,5 @@ export interface BundlerOptionWithStopWorker {
   inputOptions: InputOptions;
   onLog: LogHandler;
   stopWorkers?: () => Promise<void>;
+  finalizeParallelPluginMetricsAfterClose?: () => Promise<void>;
 }

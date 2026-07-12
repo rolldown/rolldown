@@ -41,8 +41,9 @@ export const scan = async (
   }
 
   async function cleanup() {
-    await bundler.close();
     await ret.stopWorkers?.();
+    await bundler.close();
+    await ret.finalizeParallelPluginMetricsAfterClose?.();
     shutdownAsyncRuntime();
     RolldownBuild.asyncRuntimeShutdown = true;
   }

@@ -7,6 +7,7 @@ import {
   validateCreateBundlerOptionsMetrics,
   validateNativePluginRegistrationMetrics,
   validateParallelPluginLifecycleMetrics,
+  validateParallelPluginPostCloseMetrics,
   validateWorkerBootstrapMetrics,
   validateWorkerLauncherMetrics,
 } from '../../packages/rolldown/src/utils/parallel-plugin-init-metrics.ts';
@@ -24,6 +25,7 @@ if (childIndex !== -1) {
   verifyMetricsOffSourceContract();
   verifySyntheticContracts();
   verifyBuiltRuntimeContract();
+  verifyGcUnavailableContract();
   verifyPostCreationCleanupContract();
   process.stdout.write('initialization metrics contract: ok\n');
 }
@@ -202,10 +204,12 @@ function verifyBuiltRuntimeContract() {
       const create = parseRecords(result.stderr, 'rolldown-create-bundler-options-metrics');
       const native = parseRecords(result.stderr, 'rolldown-native-plugin-registration-metrics');
       const lifecycle = parseRecords(result.stderr, 'rolldown-parallel-plugin-init-metrics');
+      const postClose = parseRecords(result.stderr, 'rolldown-parallel-plugin-post-close-metrics');
       if (!metrics) {
         assert.deepEqual(create, []);
         assert.deepEqual(native, []);
         assert.deepEqual(lifecycle, []);
+        assert.deepEqual(postClose, []);
         continue;
       }
       assert.equal(create.length, 1);
@@ -275,11 +279,14 @@ function verifyBuiltRuntimeContract() {
         assert.equal(create[0].pluginCounts.ordinaryJs, 1);
         assert.equal(create[0].pluginCounts.parallelPlaceholders, 0);
         assert.deepEqual(lifecycle, []);
+        assert.deepEqual(postClose, []);
       } else {
         assert.equal(create[0].pluginCounts.ordinaryJs, 0);
         assert.equal(create[0].pluginCounts.parallelPlaceholders, 1);
         assert.equal(lifecycle.length, 2);
+        assert.equal(postClose.length, 1);
         for (const record of lifecycle) validateParallelPluginLifecycleMetrics(record);
+        validateParallelPluginPostCloseMetrics(postClose[0]);
         const initialization = lifecycle.find(
           ({ kind }) => kind === 'rolldown_parallel_plugin_init_metrics',
         );
@@ -291,9 +298,20 @@ function verifyBuiltRuntimeContract() {
           .map(({ pluginIndex }) => pluginIndex);
         assert.equal(initialization.metricsId, create[0].metricsId);
         assert.equal(termination.metricsId, create[0].metricsId);
+        assert.equal(postClose[0].metricsId, create[0].metricsId);
         assert.deepEqual(initialization.parallelPluginIndexes, parallelPluginIndexes);
         assert.deepEqual(termination.parallelPluginIndexes, parallelPluginIndexes);
         assert.equal(initialization.workers.length, 2);
+        assert.deepEqual(
+          postClose[0].processSnapshots.afterTermination,
+          termination.processSnapshots.afterTermination,
+        );
+        assert.deepEqual(postClose[0].parallelPluginIndexes, parallelPluginIndexes);
+        assert.deepEqual(postClose[0].parentGc, {
+          requestedPasses: 2,
+          available: true,
+          executedPasses: 2,
+        });
         for (const worker of initialization.workers) {
           validateWorkerBootstrapMetrics(
             worker.workerBootstrap,
@@ -304,12 +322,18 @@ function verifyBuiltRuntimeContract() {
           validateWorkerLauncherMetrics(worker.workerBootstrap.launcher);
           assert.equal(worker.workerBootstrap.metricsId, create[0].metricsId);
           assert.equal(worker.workerBootstrap.launcher.metricsId, create[0].metricsId);
+          for (const pluginMetrics of worker.workerBootstrap.plugins) {
+            for (const name of ['implementationImport', 'factory', 'bindingifyPlugin']) {
+              assert.ok(pluginMetrics.resourceWindows[name]);
+            }
+          }
         }
         const invalidLifecycle = structuredClone(initialization);
         invalidLifecycle.processSnapshots.allWorkersReady.mainIsolateGc = undefined;
         assert.throws(() => validateParallelPluginLifecycleMetrics(invalidLifecycle), /main GC/);
         const shiftedLifecycleClock = structuredClone(initialization);
         shiftedLifecycleClock.processSnapshots.allWorkersReady.capturedAt.epochMs += 1;
+        shiftedLifecycleClock.processSnapshots.allWorkersReady.captureStartedAt.epochMs += 1;
         assert.throws(
           () => validateParallelPluginLifecycleMetrics(shiftedLifecycleClock),
           /clock origin/,
@@ -354,6 +378,78 @@ function verifyBuiltRuntimeContract() {
         assert.throws(
           () => validateParallelPluginLifecycleMetrics(falselyExactCpu),
           /CPU window diagnostic header/,
+        );
+        const invalidStageCpu = structuredClone(initialization);
+        invalidStageCpu.workers[0].workerBootstrap.plugins[0].resourceWindows.factory.deltas.workerThreadCpuUsageMicros.user += 1;
+        assert.throws(
+          () => validateParallelPluginLifecycleMetrics(invalidStageCpu),
+          /resource deltas are inconsistent/,
+        );
+        const invalidStageOwnership = structuredClone(initialization);
+        invalidStageOwnership.workers[0].workerBootstrap.plugins[0].resourceWindows.factory.scope.processRss =
+          'factory-owned RSS';
+        assert.throws(
+          () => validateParallelPluginLifecycleMetrics(invalidStageOwnership),
+          /ownership limitation is missing/,
+        );
+        const invalidStageBracket = structuredClone(initialization);
+        invalidStageBracket.workers[0].workerBootstrap.plugins[0].resourceBoundaries.beforeImplementationImport.captureFinishedAt =
+          structuredClone(
+            invalidStageBracket.workers[0].workerBootstrap.plugins[0].stages.implementationImport
+              .finishedAt,
+          );
+        assert.throws(
+          () => validateParallelPluginLifecycleMetrics(invalidStageBracket),
+          /do not bracket the wall stage/,
+        );
+        const invalidStageBoundaryReference = structuredClone(initialization);
+        invalidStageBoundaryReference.workers[0].workerBootstrap.plugins[0].resourceWindows.factory.boundaryRefs.before =
+          'beforeImplementationImport';
+        assert.throws(
+          () => validateParallelPluginLifecycleMetrics(invalidStageBoundaryReference),
+          /boundary references are invalid/,
+        );
+        const invalidRegistrationCpu = structuredClone(initialization);
+        invalidRegistrationCpu.workers[0].workerBootstrap.registrationResources.window.deltas.processCpuUsageMicros.system += 1;
+        assert.throws(
+          () => validateParallelPluginLifecycleMetrics(invalidRegistrationCpu),
+          /resource deltas are inconsistent/,
+        );
+        const invalidPostCloseGc = structuredClone(postClose[0]);
+        invalidPostCloseGc.parentGc.executedPasses = 1;
+        assert.throws(
+          () => validateParallelPluginPostCloseMetrics(invalidPostCloseGc),
+          /parent GC record is invalid/,
+        );
+        const invalidPostCloseOrder = structuredClone(postClose[0]);
+        for (const name of ['capturedAt', 'captureStartedAt', 'captureFinishedAt']) {
+          invalidPostCloseOrder.processSnapshots.parentPostGc[name] = structuredClone(
+            invalidPostCloseOrder.processSnapshots.afterTermination.captureStartedAt,
+          );
+          invalidPostCloseOrder.processSnapshots.parentPostGc[name].monotonicMs -= 1;
+          invalidPostCloseOrder.processSnapshots.parentPostGc[name].epochMs -= 1;
+        }
+        assert.throws(
+          () => validateParallelPluginPostCloseMetrics(invalidPostCloseOrder),
+          /snapshots regress/,
+        );
+        const invalidPostCloseRss = structuredClone(postClose[0]);
+        invalidPostCloseRss.rss.parentPostGcRetainedBytes += 1;
+        assert.throws(
+          () => validateParallelPluginPostCloseMetrics(invalidPostCloseRss),
+          /RSS values or scope are inconsistent/,
+        );
+        const invalidPostCloseCpu = structuredClone(postClose[0]);
+        invalidPostCloseCpu.cpuWindow.processCpuDeltaMicros.user += 1;
+        assert.throws(
+          () => validateParallelPluginPostCloseMetrics(invalidPostCloseCpu),
+          /CPU deltas do not match snapshots/,
+        );
+        const falselyExactPostCloseEndpoint = structuredClone(postClose[0]);
+        falselyExactPostCloseEndpoint.cpuWindow.measurementClass = 'exact CPU endpoints';
+        assert.throws(
+          () => validateParallelPluginPostCloseMetrics(falselyExactPostCloseEndpoint),
+          /endpoint or ownership scope is invalid/,
         );
       }
     }
@@ -403,6 +499,31 @@ function verifyPostCreationCleanupContract() {
     assert.equal(output.cleanupFault, fault);
     assert.match(output.error, /injected metrics fault/);
   }
+}
+
+function verifyGcUnavailableContract() {
+  const env = {
+    ...process.env,
+    ROLLDOWN_PARALLEL_PLUGIN_METRICS: 'json',
+    ROLLDOWN_PARALLEL_PLUGIN_WORKERS: '2',
+  };
+  delete env.NODE_OPTIONS;
+  delete env.ROLLDOWN_PARALLEL_PLUGIN_METRICS_FAULT;
+  const result = spawnSync(process.execPath, [import.meta.filename, '--child', 'parallel'], {
+    cwd: nodePath.resolve(import.meta.dirname, '../..'),
+    env,
+    encoding: 'utf8',
+    timeout: 30_000,
+  });
+  assert.equal(result.status, 0, `parallel/metrics/gc-unavailable: ${result.stderr}`);
+  const postClose = parseRecords(result.stderr, 'rolldown-parallel-plugin-post-close-metrics');
+  assert.equal(postClose.length, 1);
+  validateParallelPluginPostCloseMetrics(postClose[0]);
+  assert.deepEqual(postClose[0].parentGc, {
+    requestedPasses: 2,
+    available: false,
+    executedPasses: 0,
+  });
 }
 
 function parseRecords(stderr, prefix) {

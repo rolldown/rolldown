@@ -24,6 +24,7 @@ export class RolldownBuild {
   #inputOptions: InputOptions;
   #bundler: BindingBundler;
   #stopWorkers?: () => Promise<void>;
+  #finalizeParallelPluginMetricsAfterClose?: () => Promise<void>;
 
   /** @internal */
   static asyncRuntimeShutdown = false;
@@ -93,9 +94,11 @@ export class RolldownBuild {
   async close(): Promise<void> {
     await this.#stopWorkers?.();
     await this.#bundler.close();
+    await this.#finalizeParallelPluginMetricsAfterClose?.();
     shutdownAsyncRuntime();
     RolldownBuild.asyncRuntimeShutdown = true;
     this.#stopWorkers = void 0;
+    this.#finalizeParallelPluginMetricsAfterClose = void 0;
   }
 
   /** @hidden documented in close method */
@@ -125,6 +128,8 @@ export class RolldownBuild {
 
     try {
       this.#stopWorkers = option.stopWorkers;
+      this.#finalizeParallelPluginMetricsAfterClose =
+        option.finalizeParallelPluginMetricsAfterClose;
       let output: Awaited<ReturnType<BindingBundler['generate']>>;
       if (isWrite) {
         output = await this.#bundler.write(option.bundlerOptions);

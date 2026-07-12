@@ -1,31 +1,74 @@
-import { spawnSync } from 'node:child_process';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { cpus, platform, release, totalmem } from 'node:os';
 import nodePath from 'node:path';
 import {
   admitFormalHost,
+  admitFormalHostAfterChild,
   assertNoPagingDelta,
   virtualMemoryCounters,
 } from '../vue-scale/host-policy.mjs';
 import { assertLocalExecution, BASELINE_POOL_ENVIRONMENT } from '../vue-scale/provenance.mjs';
+import {
+  captureInitializationHarnessProvenance,
+  inspectAttributionRuntime,
+  verifyCurrentHarnessProvenance,
+} from './provenance.mjs';
+import {
+  flattenInitializationVariants,
+  initializationWorkerSourceSha256,
+  INITIALIZATION_TIMEOUTS,
+  orderInitializationVariants,
+  parseMacOsPeakRss,
+  validateInitializationCase,
+  validateInitializationMatrix,
+  validateModuleInitRecords,
+} from './admission.mjs';
+import { writeArtifactAtomically } from './artifact-io.mjs';
 
 assertLocalExecution();
-const matrixPath = process.argv[2];
-const outputPath = process.argv[3];
+for (const name of [
+  'NODE_COMPILE_CACHE',
+  'NODE_COMPILE_CACHE_PORTABLE',
+  'NODE_DISABLE_COMPILE_CACHE',
+]) {
+  if (typeof process.env[name] === 'string' && process.env[name].trim() !== '') {
+    throw new Error(`runtime initialization matrix rejects inherited ${name}`);
+  }
+}
+const validateOnly = process.argv.includes('--validate-only');
+const positional = process.argv.slice(2).filter((value) => value !== '--validate-only');
+const [matrixPath, outputPath] = positional;
 if (!matrixPath) throw new Error('expected a matrix JSON path');
-const matrix = JSON.parse(await readFile(matrixPath, 'utf8'));
-validateMatrix(matrix);
+const matrix = validateInitializationMatrix(JSON.parse(await readFile(matrixPath, 'utf8')));
+if (validateOnly) {
+  console.log(JSON.stringify({ valid: true, matrixPath, lane: matrix.lane }));
+  process.exit(0);
+}
 
 const formal = matrix.lane === 'formal-attribution';
-const variants = matrix.cases.flatMap((definition) =>
-  definition.workerCounts.map((workerCount) => ({ ...definition, workerCount })),
+const repositoryRoot = nodePath.resolve(import.meta.dirname, '../../../..');
+if (
+  formal &&
+  (!outputPath ||
+    !nodePath
+      .resolve(outputPath)
+      .startsWith(nodePath.join(import.meta.dirname, '.results') + nodePath.sep))
+) {
+  throw new Error('formal initialization raw output must be written below .results');
+}
+const packageRoot = nodePath.resolve(
+  process.env.ROLLDOWN_RESEARCH_PACKAGE_ROOT ?? nodePath.join(repositoryRoot, 'packages/rolldown'),
 );
+const harnessProvenance = await captureInitializationHarnessProvenance({ requireClean: formal });
+const workerSourceSha256 = initializationWorkerSourceSha256(harnessProvenance);
+const runtimeProvenance = await inspectAttributionRuntime(packageRoot, matrix.runtime);
+const variants = flattenInitializationVariants(matrix);
 const runs = [];
 const hostAdmissions = [];
 let sequence = 0;
 for (let block = 0; block < matrix.repeats; block++) {
-  const offset = block % variants.length;
-  const order = [...variants.slice(offset), ...variants.slice(0, offset)];
+  const order = orderInitializationVariants(variants, block);
   for (const variant of order) {
     const admission = formal ? await admitFormalHost() : undefined;
     if (admission)
@@ -35,7 +78,7 @@ for (let block = 0; block < matrix.repeats; block++) {
         workerCount: variant.workerCount,
         ...admission,
       });
-    runs.push({ sequence: sequence++, block, ...execute(variant, admission) });
+    runs.push({ sequence: sequence++, block, ...(await execute(variant, admission)) });
   }
 }
 
@@ -54,23 +97,44 @@ const report = {
     logicalCpuCount: cpus().length,
     totalMemoryBytes: totalmem(),
   },
+  executionEnvironment: {
+    inheritedNodeOptions: null,
+    inheritedNodeCompileCache: null,
+    inheritedNodeCompileCachePortable: null,
+    inheritedNodeDisableCompileCache: null,
+    childNodeEnv: 'production',
+    childPoolEnvironment: BASELINE_POOL_ENVIRONMENT,
+    exposeGcByArgument: true,
+    timeouts: INITIALIZATION_TIMEOUTS,
+    rotation: 'paired-block offset with odd blocks reversed',
+  },
   hostAdmissions,
+  harnessProvenance,
+  runtimeProvenance,
   matrix,
   runs,
 };
+verifyCurrentHarnessProvenance(
+  harnessProvenance,
+  await captureInitializationHarnessProvenance({ requireClean: formal }),
+);
+const finalRuntimeProvenance = await inspectAttributionRuntime(packageRoot, matrix.runtime);
+if (JSON.stringify(finalRuntimeProvenance) !== JSON.stringify(runtimeProvenance)) {
+  throw new Error('initialization attribution runtime changed during the matrix');
+}
 const serialized = `${JSON.stringify(report, null, 2)}\n`;
 if (outputPath) {
-  await mkdir(nodePath.dirname(nodePath.resolve(outputPath)), { recursive: true });
-  await writeFile(outputPath, serialized);
+  await writeArtifactAtomically(outputPath, serialized);
   console.log(JSON.stringify({ outputPath, runs: runs.length, lane: matrix.lane }));
 } else {
   process.stdout.write(serialized);
 }
 
-function execute(variant, admission) {
+async function execute(variant, admission) {
   const environment = {
     ...process.env,
     ...BASELINE_POOL_ENVIRONMENT,
+    NODE_ENV: 'production',
     ROLLDOWN_PARALLEL_PLUGIN_METRICS: 'json',
   };
   const options = {
@@ -88,16 +152,8 @@ function execute(variant, admission) {
   ];
   const beforeVm = formal ? virtualMemoryCounters() : undefined;
   const result = formal
-    ? spawnSync('/usr/bin/time', ['-l', ...childArguments], {
-        encoding: 'utf8',
-        env: environment,
-        maxBuffer: 64 * 1024 * 1024,
-      })
-    : spawnSync(childArguments[0], childArguments.slice(1), {
-        encoding: 'utf8',
-        env: environment,
-        maxBuffer: 64 * 1024 * 1024,
-      });
+    ? await spawnCaptured('/usr/bin/time', ['-l', ...childArguments], environment)
+    : await spawnCaptured(childArguments[0], childArguments.slice(1), environment);
   const afterVm = formal ? virtualMemoryCounters() : undefined;
   if (result.error) {
     throw new Error(
@@ -116,84 +172,91 @@ function execute(variant, admission) {
   ) {
     throw new Error(`${variant.name}/worker-${variant.workerCount} runtime provenance mismatch`);
   }
+  validateInitializationCase(child, options, matrix.runtime, workerSourceSha256);
   const moduleInit = [
     ...result.stderr.matchAll(/^\[rolldown-parallel-plugin-module-init-metrics\] (\{.*\})$/gm),
   ].map((match) => JSON.parse(match[1]));
-  const importsNativeLibrary = variant.parentPreload !== 'none' || variant.mode !== 'empty';
-  const expectedModuleInit = importsNativeLibrary ? 1 : 0;
-  if (moduleInit.length !== expectedModuleInit) {
-    throw new Error(
-      `${variant.name}/worker-${variant.workerCount} expected ${expectedModuleInit} module init records, got ${moduleInit.length}`,
-    );
-  }
-  const ordinals = moduleInit
-    .map((record) => record.invocationOrdinal)
-    .sort((left, right) => left - right);
-  if (ordinals.some((ordinal, index) => ordinal !== index + 1)) {
-    throw new Error(
-      `${variant.name}/worker-${variant.workerCount} module init ordinals are incomplete`,
-    );
-  }
-  if (
-    moduleInit.some(
-      (record) =>
-        record.kind !== 'rolldown_binding_module_init_metrics' ||
-        record.configuredTokioWorkerThreads !== 18 ||
-        record.configuredTokioMaxBlockingThreads !== 4,
-    )
-  ) {
-    throw new Error(`${variant.name}/worker-${variant.workerCount} module init schema mismatch`);
-  }
-  const peakRssMatch = formal
-    ? result.stderr.match(/(\d+)\s+maximum resident set size/)
-    : undefined;
-  if (formal && !peakRssMatch) throw new Error('failed to parse child peak RSS');
+  validateModuleInitRecords(moduleInit, options);
+  const peakRssBytes = parseMacOsPeakRss(result.stderr, { required: formal });
+  const postHostAdmission = formal ? admitFormalHostAfterChild() : undefined;
   return {
     name: variant.name,
     mode: variant.mode,
     parentPreload: variant.parentPreload,
     workerCount: variant.workerCount,
     hostAdmission: admission,
+    postHostAdmission,
     pagingDelta: formal ? assertNoPagingDelta(beforeVm, afterVm) : undefined,
-    peakRssBytes: peakRssMatch ? Number(peakRssMatch[1]) : undefined,
+    peakRssBytes,
     child,
     moduleInit,
   };
 }
 
-function validateMatrix(value) {
-  if (
-    value.schema !== 1 ||
-    !['correctness-smoke', 'formal-attribution'].includes(value.lane) ||
-    value.bindingProfile !== 'release' ||
-    JSON.stringify(value.configuredPools) !==
-      JSON.stringify({ tokio: 18, rayon: 12, blocking: 4 }) ||
-    !Number.isSafeInteger(value.sampleIntervalMs) ||
-    value.sampleIntervalMs < 1 ||
-    value.sampleIntervalMs > 100 ||
-    typeof value.sampleOsThreads !== 'boolean' ||
-    !Number.isSafeInteger(value.repeats) ||
-    value.repeats < 1 ||
-    !/^[0-9a-f]{64}$/.test(value.runtime?.bindingSha256) ||
-    !/^[0-9a-f]{64}$/.test(value.runtime?.packageEntrySha256) ||
-    !Array.isArray(value.cases) ||
-    value.cases.length === 0
-  ) {
-    throw new Error('invalid runtime initialization matrix header or unresolved runtime hash');
-  }
-  for (const definition of value.cases) {
-    if (
-      typeof definition.name !== 'string' ||
-      !['none', 'binding', 'package'].includes(definition.parentPreload) ||
-      !['empty', 'binding', 'package'].includes(definition.mode) ||
-      !Array.isArray(definition.workerCounts) ||
-      definition.workerCounts.length === 0 ||
-      new Set(definition.workerCounts).size !== definition.workerCounts.length ||
-      definition.workerCounts.some(
-        (count) => !Number.isSafeInteger(count) || count < 1 || count > 8,
-      )
-    ) {
-      throw new Error(`invalid runtime initialization case: ${JSON.stringify(definition)}`);
-    }
-  }
+function spawnCaptured(command, arguments_, environment) {
+  const maximumBytes = 64 * 1024 * 1024;
+  return new Promise((resolve) => {
+    const child = spawn(command, arguments_, {
+      detached: true,
+      env: environment,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const stdout = [];
+    const stderr = [];
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
+    let error;
+    let settled = false;
+    const killGroup = () => {
+      try {
+        process.kill(-child.pid, 'SIGKILL');
+      } catch {
+        child.kill('SIGKILL');
+      }
+    };
+    const timer = setTimeout(() => {
+      error = Object.assign(
+        new Error(
+          `initialization child timed out after ${INITIALIZATION_TIMEOUTS.childProcessMs} ms`,
+        ),
+        { code: 'ETIMEDOUT' },
+      );
+      killGroup();
+    }, INITIALIZATION_TIMEOUTS.childProcessMs);
+    const collect = (chunks, chunk, stream) => {
+      const bytes = Buffer.byteLength(chunk);
+      if (stream === 'stdout') stdoutBytes += bytes;
+      else stderrBytes += bytes;
+      if (stdoutBytes > maximumBytes || stderrBytes > maximumBytes) {
+        error = Object.assign(
+          new Error(`initialization child exceeded ${maximumBytes} output bytes`),
+          {
+            code: 'ENOBUFS',
+          },
+        );
+        killGroup();
+        return;
+      }
+      chunks.push(chunk);
+    };
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => collect(stdout, chunk, 'stdout'));
+    child.stderr.on('data', (chunk) => collect(stderr, chunk, 'stderr'));
+    child.once('error', (spawnError) => {
+      error = spawnError;
+    });
+    child.once('close', (status, signal) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({
+        status,
+        signal,
+        stdout: stdout.join(''),
+        stderr: stderr.join(''),
+        error,
+      });
+    });
+  });
 }

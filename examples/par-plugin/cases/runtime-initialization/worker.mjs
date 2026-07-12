@@ -29,16 +29,21 @@ parentPort.postMessage({
   workerIndex: workerData.workerIndex,
   clock: { timeOriginEpochMs: performance.timeOrigin },
   timeline: { entryAt, importStartedAt, importFinishedAt },
+  cpuUsageMicros: process.threadCpuUsage(),
   heapStatistics: getHeapStatistics(),
   eventLoopUtilization: performance.eventLoopUtilization(),
 });
 
 parentPort.on('message', (message) => {
-  if (message === 'snapshot') {
+  if (message === 'snapshot-post-gc') {
+    globalThis.gc?.();
+    globalThis.gc?.();
     parentPort.postMessage({
       type: 'snapshot',
       workerIndex: workerData.workerIndex,
       capturedAt: timestamp(),
+      postGc: typeof globalThis.gc === 'function',
+      cpuUsageMicros: process.threadCpuUsage(),
       heapStatistics: getHeapStatistics(),
       eventLoopUtilization: performance.eventLoopUtilization(),
     });

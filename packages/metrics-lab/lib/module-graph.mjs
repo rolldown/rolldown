@@ -15,11 +15,19 @@ export function moduleGraphCandidates({ reportDir, demoMetricsDir, dist }) {
   }
   if (demoMetricsDir) candidates.push(path.join(demoMetricsDir, 'module-graph.json'));
   if (dist) {
-    const appRoot = path.dirname(dist);
-    candidates.push(
-      path.join(appRoot, '.rolldown', 'metrics', 'module-graph.json'),
-      path.join(appRoot, 'node_modules', '.rolldown', 'metrics', 'module-graph.json'),
-    );
+    // The report lands relative to the BUILD's cwd, which may sit one or more
+    // levels above the dist dir (nested outDirs like build/dist, monorepo app
+    // dirs) - walk up a few levels rather than assuming dist's direct parent.
+    let dir = path.dirname(dist);
+    for (let i = 0; i < 3; i++) {
+      candidates.push(
+        path.join(dir, '.rolldown', 'metrics', 'module-graph.json'),
+        path.join(dir, 'node_modules', '.rolldown', 'metrics', 'module-graph.json'),
+      );
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
   }
   return candidates;
 }

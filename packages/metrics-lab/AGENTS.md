@@ -117,3 +117,9 @@ browser run, and it prices every candidate at once).
 - A faster page that breaks a feature is a failure, not an optimization.
 - Never edit this package, the app's build/check scripts, or any thresholds to move
   the numbers.
+- **The functional check is the contract — never modify it.** If it fails after your
+  change, your change is wrong: fix the app or revert. A check you edited proves
+  nothing.
+- **Never change the app's build layout (outDir, file names) to satisfy this tool.**
+  Aim the tool at the app instead: `--app <appRoot>` resolves dist/build/out
+  automatically, `--dist <builtDir>` aims at any output dir directly.

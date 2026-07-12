@@ -115,15 +115,31 @@ function targetPaths(dist) {
   };
 }
 
+// Resolve --app/<appDir> to an EXISTING build dir, or throw with the fix. A guessed
+// path must never be remembered: a haiku agent once obeyed the fabricated path in
+// our error message and rewired the app's outDir (then "fixed" the functional check).
+function resolveAppDist(appArg) {
+  const app = path.resolve(appArg);
+  const candidates = ['dist', 'build', 'out'].map((dir) => path.join(app, dir));
+  const dist = candidates.find((dir) => fs.existsSync(path.join(dir, 'index.html')))
+    // --app aimed at the built dir itself is a common miss - accept it.
+    ?? (fs.existsSync(path.join(app, 'index.html')) ? app : null);
+  if (!dist) {
+    throw new Error(
+      `no build found under ${app} - tried dist/, build/, out/, and the dir itself (none has an index.html).\n`
+      + 'Build the app first. --app takes the APP ROOT (the dir you build from); if the build output\n'
+      + 'lives somewhere else, pass --dist <builtDir> directly. Never change the app\'s outDir to fit\n'
+      + 'this tool - aim the tool at the build instead.',
+    );
+  }
+  return dist;
+}
+
 function resolveTarget(opts) {
   let dist;
   if (opts.dist) dist = path.resolve(opts.dist);
-  else if (opts.app) {
-    // Real projects disagree on the output dir name; take the first that has a build.
-    const app = path.resolve(opts.app);
-    const candidates = ['dist', 'build', 'out'].map((dir) => path.join(app, dir));
-    dist = candidates.find((dir) => fs.existsSync(path.join(dir, 'index.html'))) ?? candidates[0];
-  } else {
+  else if (opts.app) dist = resolveAppDist(opts.app);
+  else {
     const sticky = readJson(TARGET_FILE);
     dist = sticky?.dist ?? path.join(APP_DIR, 'dist');
   }
@@ -137,6 +153,27 @@ function resolveTarget(opts) {
 function expectedFeaturesFor(target, opts) {
   if (opts.features !== undefined) return opts.features.split(',').filter(Boolean);
   return target.isDemo ? FEATURE_NAMES : [];
+}
+
+// A command that needs the entry must fail with the REAL problem: "no build here"
+// or "could not detect the entry" - never a fabricated default path. The old
+// `?? 'main.js'` fallback produced "no sourcemap at <dist>/main.js.map", which an
+// agent read as a layout instruction and obeyed.
+function requireEntry(target, opts = {}) {
+  if (!fs.existsSync(path.join(target.dist, 'index.html'))) {
+    throw new Error(
+      `no build at ${target.dist} - build the app first.\n`
+      + '(Wrong target? --app <appRoot> resolves dist/build/out; --dist <builtDir> aims directly.)',
+    );
+  }
+  const entry = opts.entry ?? detectEntry(target.dist);
+  if (!entry) {
+    throw new Error(
+      `could not detect the entry script in ${path.join(target.dist, 'index.html')} - `
+      + 'pass --entry <file> (path relative to the build dir).',
+    );
+  }
+  return entry;
 }
 
 /** The entry chunk of a built app, read from its index.html module script. */
@@ -517,11 +554,8 @@ function printProfileReport(report) {
 // blind-spot boundary even when everything is clear.
 
 function printVerdict(target) {
-  const entry = detectEntry(target.dist) ?? 'main.js';
+  const entry = requireEntry(target);
   const entryFile = path.join(target.dist, entry);
-  if (!fs.existsSync(entryFile)) {
-    throw new Error(`no build at ${target.dist} - build the app first`);
-  }
   const builtAtMs = fs.statSync(entryFile).mtimeMs;
   // A report vouches only for the build it ran against: entry filename must match
   // (hashed names change with content) and it must postdate the current build.
@@ -789,10 +823,10 @@ async function cmdCoverage(argv) {
   });
   const target = resolveTarget(opts);
   const expectedFeatures = expectedFeaturesFor(target, opts);
-  const entry = opts.entry ?? detectEntry(target.dist) ?? 'main.js';
+  const entry = requireEntry(target, opts);
   if (!opts.entry) console.log(`entry: ${entry} (auto-detected from dist/index.html)`);
   if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
-    throw new Error(`no sourcemap at ${path.join(target.dist, entry)}.map - build with sourcemap: true`);
+    throw new Error(`entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`);
   }
   const cov = await withServerAndBrowser(target.dist, opts['no-throttle'], ({ origin, cdp, throttle }) =>
     coverageRun(cdp, {
@@ -814,10 +848,10 @@ async function cmdProfile(argv) {
     entry: { type: 'string' },
   });
   const target = resolveTarget(opts);
-  const entry = opts.entry ?? detectEntry(target.dist) ?? 'main.js';
+  const entry = requireEntry(target, opts);
   if (!opts.entry) console.log(`entry: ${entry} (auto-detected from dist/index.html)`);
   if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
-    throw new Error(`no sourcemap at ${path.join(target.dist, entry)}.map - build with sourcemap: true`);
+    throw new Error(`entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`);
   }
   const profile = await withServerAndBrowser(target.dist, opts['no-throttle'], ({ origin, cdp, throttle }) =>
     profileRun(cdp, { origin, throttle }));
@@ -859,9 +893,9 @@ async function cmdScan(argv) {
   }
   const target = resolveTarget(opts);
   const expectedFeatures = expectedFeaturesFor(target, opts);
-  const entry = opts.entry ?? detectEntry(target.dist) ?? 'main.js';
+  const entry = requireEntry(target, opts);
   if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
-    throw new Error(`no sourcemap at ${path.join(target.dist, entry)}.map - build with sourcemap: true`);
+    throw new Error(`entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`);
   }
 
   const gathered = await withServerAndBrowser(target.dist, opts['no-throttle'], async ({ origin, cdp, throttle }) => {
@@ -1122,7 +1156,7 @@ async function cmdTarget(argv) {
     return;
   }
   if (positional[0]) {
-    const dist = path.join(path.resolve(positional[0]), 'dist');
+    const dist = resolveAppDist(positional[0]);
     writeJson(TARGET_FILE, { dist, setAtMs: Date.now() });
     console.log(`target: ${dist}`);
     return;

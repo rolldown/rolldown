@@ -11,9 +11,9 @@ export const EXPECTED_VUE_TOOLCHAIN = {
   unpluginVue: {
     package: 'unplugin-vue',
     version: '7.2.0',
-    files: 24,
-    bytes: 59643,
-    aggregateSha256: '2c7708305661427564c58ecf17d0189e072b670e98845d7d05220e39548a40e1',
+    files: 23,
+    bytes: 56484,
+    aggregateSha256: 'cee68e1da1b239bc371f19ccdb55740b39c1d8c2b191be37537046babb5cf562',
     manifestSha256: 'e5e394d8ace1faccb05048e3c9da899aab57ec39f92dc5ec6ab46ea684690815',
     entrypoint: 'dist/rolldown.mjs',
     entrypointBytes: 400,
@@ -22,9 +22,9 @@ export const EXPECTED_VUE_TOOLCHAIN = {
   compilerSfc: {
     package: '@vue/compiler-sfc',
     version: '3.5.39',
-    files: 7,
-    bytes: 2625197,
-    aggregateSha256: '78778bd14ac76b778a7f3d953a6f2adb903a54a9404631a72e7ab56b594470d7',
+    files: 6,
+    bytes: 2622623,
+    aggregateSha256: '18bb63465a98fed2b2722d0aa6a314dbe4c54c3b1da67adea9e9816d1f94a4ef',
     manifestSha256: '3ebcadb08b31e9207a7c5a2073e4ae33daa94bba601fc1c88634b63c1dba0b73',
     entrypoint: 'dist/compiler-sfc.cjs.js',
     entrypointBytes: 886681,
@@ -83,6 +83,9 @@ async function walk(root, directory, entries) {
   const directoryEntries = await readdir(directory, { withFileTypes: true });
   directoryEntries.sort((left, right) => compareUtf8(left.name, right.name));
   for (const entry of directoryEntries) {
+    // pnpm package-local command shims embed the checkout path. The lockfile,
+    // modules layout, package payload, and actual entrypoint are pinned elsewhere.
+    if (entry.name === 'node_modules') continue;
     const path = nodePath.join(directory, entry.name);
     if (entry.isDirectory()) {
       await walk(root, path, entries);

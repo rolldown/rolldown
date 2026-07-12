@@ -5,13 +5,13 @@
   "measurementClass": "untimed compile admission; not performance evidence",
   "raw": {
     "path": "raw/admission.json",
-    "bytes": 24973,
-    "sha256": "e3bdbfa4d27b0737657f46771c92ba14ab24e18c4da71e5d195d264efaf93173"
+    "bytes": 25158,
+    "sha256": "403247c6b953ffd7fef71a77e4bd06ce00952014a63eff8f449b157b6c850f58"
   },
   "harnessSourceManifest": {
     "files": 56,
-    "bytes": 2758246,
-    "aggregateSha256": "dc449e6c92407a3f877f08d8191ba284b45d7d4684e4f11af7595d57041eb8dc"
+    "bytes": 2803690,
+    "aggregateSha256": "5d31d3f7c34ebce5255faa853c121b7933294055769c74daa69a98a4840a44a5"
   },
   "runtimePin": {
     "kind": "lifecycle-corrected-baseline",
@@ -43,7 +43,7 @@
       "entrypointSha256": "36048750a63359f1b062627946a2ca59d91f729af225f9da09fe84ac4917526b"
     }
   },
-  "fixtureCommit": "6e95f6f749238286987de23d1b4030cb746449a3",
+  "fixtureCommit": "68073d92d9a4d33d313f14228a35a1a15c18f5fa",
   "corpusAggregateSha256": "114f8b7b7e3fa7d13d5f14946acd7a4a42d88957f7ca57da041381cd6eada99c",
   "quasarPreExclusion": {
     "files": 1112,

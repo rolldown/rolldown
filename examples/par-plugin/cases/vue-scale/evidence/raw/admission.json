@@ -32,6 +32,11 @@
       "bytes": 17095091,
       "aggregateSha256": "1efffd0b63483e77cd2854fe716941000ae9548768691d7b5a64dceb011f3c45"
     },
+    "packageEntry": {
+      "path": "packages/rolldown/dist/index.mjs",
+      "bytes": 1642,
+      "sha256": "7e211684a1bbb8460cefdad9007bdc8ef89f30fbbcef5625f2d6453f2129af3e"
+    },
     "configuredPools": {
       "tokio": {
         "environmentVariable": "ROLLDOWN_WORKER_THREADS",
@@ -51,8 +56,8 @@
   "harnessSourceManifest": {
     "algorithm": "SHA-256 over UTF-8-sorted repository-relative path + NUL + kind + NUL + bytes + NUL + content SHA-256 + LF records",
     "files": 56,
-    "bytes": 2758246,
-    "aggregateSha256": "dc449e6c92407a3f877f08d8191ba284b45d7d4684e4f11af7595d57041eb8dc",
+    "bytes": 2803690,
+    "aggregateSha256": "5d31d3f7c34ebce5255faa853c121b7933294055769c74daa69a98a4840a44a5",
     "entries": [
       {
         "path": "examples/par-plugin/cases/vue-scale/.gitignore",
@@ -63,8 +68,8 @@
       {
         "path": "examples/par-plugin/cases/vue-scale/README.md",
         "kind": "file",
-        "bytes": 22889,
-        "sha256": "39dd11fddaa23dd643bf7fd24d9badaee3cbe07ca17bf94e34844e63f817823e"
+        "bytes": 24152,
+        "sha256": "e037818dc1b552267651e544679acee3e272c41e36455a3ae657c8f21328e42d"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/SUPPORT.md",
@@ -87,14 +92,14 @@
       {
         "path": "examples/par-plugin/cases/vue-scale/attribution-contract-smoke-matrix.json",
         "kind": "file",
-        "bytes": 954,
-        "sha256": "f73ef2739a11f787102fea3a8d5a17302b5b1e29a71ccf6900946624a7d73f73"
+        "bytes": 1179,
+        "sha256": "281f08b947945a9a4508b99e68f467ddf604c4d45c104a160814646f2ae85262"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/attribution-validation.mjs",
         "kind": "file",
-        "bytes": 30942,
-        "sha256": "5424c372cd3f3dc968c4be473b8396bab1c87384dbe585be3ad0fe33ea6ad83a"
+        "bytes": 35919,
+        "sha256": "749d2ad417b21a29add46bede78fab2b9d8966dc90dc2aa4d074fcad7ac3a7c9"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/compile-preflight.mjs",
@@ -153,14 +158,14 @@
       {
         "path": "examples/par-plugin/cases/vue-scale/initialization-attribution-validation.mjs",
         "kind": "file",
-        "bytes": 43591,
-        "sha256": "2bbe802a3fec251e30f75ac2542682f57e2c650a947c9bf848c563708cc50a05"
+        "bytes": 61934,
+        "sha256": "8fcc498cbc0f943581d84cebc304780f1f5beee6c11c56e18b0f7b50798b2d02"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/instrumented-matrix.json",
         "kind": "file",
-        "bytes": 4107,
-        "sha256": "80f57bfc79fefa38dc3229262e5ed2612d5082e4b32989e5b6533163367d5a31"
+        "bytes": 4332,
+        "sha256": "39dc4d0301d43183ab58dc7400064fbfa729c65b1f65fdebb47cf7db466a25c3"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/merge-confirmation-reports.mjs",
@@ -177,8 +182,8 @@
       {
         "path": "examples/par-plugin/cases/vue-scale/provenance.mjs",
         "kind": "file",
-        "bytes": 7543,
-        "sha256": "a3b99841980fd804b80e8fd4946a3c566d05dc46c2b24ddc22b5c3deb6cfb336"
+        "bytes": 9941,
+        "sha256": "f22a06822d7e8a625ca686137a0325e9ebf092ff9a1b73a486aef275a91b0dc5"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/register-loader.mjs",
@@ -207,14 +212,14 @@
       {
         "path": "examples/par-plugin/cases/vue-scale/run-case.mjs",
         "kind": "file",
-        "bytes": 11895,
-        "sha256": "f826454d596b2421e69b5e540a1532df825b337a3eea4990772278b1b54679ee"
+        "bytes": 12132,
+        "sha256": "d91acc051a30b4015d49f388261e3e7c3d8a2e7d7ff4e9537fc1549269da0ff6"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/run-matrix.mjs",
         "kind": "file",
-        "bytes": 32579,
-        "sha256": "1b851e7f4895150e95108edbb7417a0d64e5ea9b8921d727f3c0ce0257ccbbf9"
+        "bytes": 33883,
+        "sha256": "590c069b450109c5a4a8996d6a06c7b708e1465cbd96479f25f0ce96d002e2ea"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/smoke-matrix.json",
@@ -225,8 +230,8 @@
       {
         "path": "examples/par-plugin/cases/vue-scale/statistics-policy.mjs",
         "kind": "file",
-        "bytes": 8769,
-        "sha256": "3788b2a0932a6892519c3f2ce275e41fc29976163b01f72d3312006a357411c1"
+        "bytes": 9314,
+        "sha256": "3e0823cb989950f89ff6af31b75d49102f278a8614ccefde27eb788eb0f7424c"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/summarize-matrix.mjs",
@@ -327,8 +332,8 @@
       {
         "path": "examples/par-plugin/cases/vue-scale/verify-attribution-validation.mjs",
         "kind": "file",
-        "bytes": 5559,
-        "sha256": "618c4f0e20e633b4c9c98ea1e53834086fa5a5949524985e1842d094153ff5cf"
+        "bytes": 7472,
+        "sha256": "ff5c975aaf105b4249d25a9ed31037567a59640006b1a9c7fc052bb14e77bcb1"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/verify-formal-evidence.mjs",
@@ -339,14 +344,14 @@
       {
         "path": "examples/par-plugin/cases/vue-scale/verify-initialization-attribution-report.mjs",
         "kind": "file",
-        "bytes": 4505,
-        "sha256": "b4b94a5bbe3c3250bc4301a60a0e3ac0fe269754fdf0ddfafd9457cbba85b60d"
+        "bytes": 18318,
+        "sha256": "27069349295ca75210993ae608752ff6d65c6c4459e08724aacf8e2824053f04"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/verify-statistics-policy.mjs",
         "kind": "file",
-        "bytes": 5201,
-        "sha256": "92dbaeeac1be317f09158fdc6ead59c84d893d185d8a4be4f68955e50eb9a5b0"
+        "bytes": 5402,
+        "sha256": "3ce23cab0eab7806aba471d92db7460bc032cc8a77f833c9829b648c0ad84c9e"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/wall-screen-matrix.json",
@@ -417,7 +422,7 @@
     }
   },
   "fixture": {
-    "commit": "6e95f6f749238286987de23d1b4030cb746449a3",
+    "commit": "68073d92d9a4d33d313f14228a35a1a15c18f5fa",
     "worktreeStatus": ""
   },
   "executionEnvironment": {

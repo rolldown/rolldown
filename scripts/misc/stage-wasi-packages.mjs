@@ -2139,10 +2139,13 @@ export async function stageWasiPackages({ repoRoot = defaultRepoRoot, transactio
             'utf8',
           );
           assert.match(managedWorkerd, /getCurrentThreadTaskHostContractVersion/);
+          assert.match(managedWorkerd, /isCurrentThreadHostRegistrationActive/);
+          assert.match(managedWorkerd, /reserveCurrentThreadHostRegistration/);
           assert.match(managedWorkerd, /registerCurrentThreadTaskHost/);
           assert.match(managedWorkerd, /unregisterCurrentThreadTaskHost/);
-          assert.match(managedWorkerd, /__actualVersion !== 2/);
-          assert.match(managedWorkerd, /Reflect\.apply\(__register, __binding, \[\]\)/);
+          assert.match(managedWorkerd, /__actualVersion !== 4/);
+          assert.match(managedWorkerd, /Reflect\.apply\(__reserve, __binding, \[\]\)/);
+          assert.match(managedWorkerd, /Reflect\.apply\(__register, __binding, __registration\)/);
           assert.match(managedWorkerd, /Reflect\.apply\(__unregister, __binding, __registration\)/);
           assert.doesNotMatch(
             managedWorkerd,

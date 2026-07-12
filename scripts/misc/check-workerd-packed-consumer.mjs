@@ -436,10 +436,13 @@ export default {
     );
     assertHardenedRuntime(workerdBundle, entry);
     assert.match(workerdBundle, /getCurrentThreadTaskHostContractVersion/);
+    assert.match(workerdBundle, /isCurrentThreadHostRegistrationActive/);
+    assert.match(workerdBundle, /reserveCurrentThreadHostRegistration/);
     assert.match(workerdBundle, /registerCurrentThreadTaskHost/);
     assert.match(workerdBundle, /unregisterCurrentThreadTaskHost/);
-    assert.match(workerdBundle, /__actualVersion !== 2/);
-    assert.match(workerdBundle, /Reflect\.apply\(__register, __binding, \[\]\)/);
+    assert.match(workerdBundle, /__actualVersion !== 4/);
+    assert.match(workerdBundle, /Reflect\.apply\(__reserve, __binding, \[\]\)/);
+    assert.match(workerdBundle, /Reflect\.apply\(__register, __binding, __registration\)/);
     assert.match(workerdBundle, /Reflect\.apply\(__unregister, __binding, __registration\)/);
     assert.doesNotMatch(
       workerdBundle,
@@ -465,8 +468,10 @@ export default {
       'getDeferredInstanceBinding',
       'cancelCurrentThreadRuntimeTaskDispatch',
       'driveCurrentThreadRuntimeTasks',
+      'isCurrentThreadHostRegistrationActive',
       'registerCurrentThreadTaskHost',
       'registerTimerHost',
+      'reserveCurrentThreadHostRegistration',
       'unregisterCurrentThreadTaskHost',
       'unregisterTimerHost',
     ]) {
@@ -502,8 +507,10 @@ export default {
     for (const privateExport of [
       'cancelCurrentThreadRuntimeTaskDispatch',
       'driveCurrentThreadRuntimeTasks',
+      'isCurrentThreadHostRegistrationActive',
       'registerCurrentThreadTaskHost',
       'registerTimerHost',
+      'reserveCurrentThreadHostRegistration',
       'unregisterCurrentThreadTaskHost',
       'unregisterTimerHost',
     ]) {

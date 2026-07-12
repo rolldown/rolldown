@@ -384,7 +384,7 @@ function assertThreadlessBindingExercise(stdout) {
   assert.deepEqual(JSON.parse(stdout), {
     outputs: 1,
     capabilities: threadlessCapabilities,
-    taskHostContractVersion: 2,
+    taskHostContractVersion: 4,
   });
 }
 
@@ -395,7 +395,7 @@ function assertThreadlessBrowserBindingExercise(stdout) {
   assert.deepEqual(result, {
     outputs: 1,
     capabilities: threadlessCapabilities,
-    taskHostContractVersion: 2,
+    taskHostContractVersion: 4,
   });
   assert.ok(
     resolved.endsWith('/rolldown-binding.wasip1-browser.js'),
@@ -1589,7 +1589,7 @@ for (const removedExport of [
 ]) {
   assert.equal(removedExport in binding, false)
 }
-assert.equal(binding.getCurrentThreadTaskHostContractVersion(), 2)
+assert.equal(binding.getCurrentThreadTaskHostContractVersion(), 4)
 assert.throws(
   () => binding.registerCurrentThreadTaskHost(() => {}),
   /registerCurrentThreadTaskHost does not accept a JavaScript callback/,
@@ -1671,7 +1671,7 @@ try {
     assert.equal(removedExport in binding, false)
     assert.equal(removedExport in binding.default, false)
   }
-  assert.equal(binding.getCurrentThreadTaskHostContractVersion(), 2)
+  assert.equal(binding.getCurrentThreadTaskHostContractVersion(), 4)
   assert.throws(
     () => binding.registerCurrentThreadTaskHost(() => {}),
     /registerCurrentThreadTaskHost does not accept a JavaScript callback/,

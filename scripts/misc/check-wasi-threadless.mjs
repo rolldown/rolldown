@@ -90,8 +90,10 @@ if (argLoaders.length === 0) {
     'high: number',
     'low: number',
     'getCurrentThreadTaskHostContractVersion(): number',
-    'registerCurrentThreadTaskHost(dispatch?: never): BindingHostRegistration',
-    'registerTimerHost(schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): BindingHostRegistration',
+    'isCurrentThreadHostRegistrationActive(registrationHigh: number, registrationLow: number): boolean',
+    'reserveCurrentThreadHostRegistration(): BindingHostRegistration',
+    'registerCurrentThreadTaskHost(registrationHigh: number, registrationLow: number, dispatch?: never): void',
+    'registerTimerHost(registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): void',
     'unregisterCurrentThreadTaskHost(registrationHigh: number, registrationLow: number): void',
     'unregisterTimerHost(registrationHigh: number, registrationLow: number): void',
   ]) {
@@ -222,12 +224,20 @@ for (const rel of LOADERS) {
         'zero-argument contract-version call',
         /Reflect\.apply\(\s*__getCurrentThreadTaskHostContractVersion,\s*__rolldownBinding,\s*\[\],?\s*\)/,
       ],
-      ['contract version 2 validation', /__taskHostContractVersion !== 2/],
+      ['contract version 4 validation', /__taskHostContractVersion !== 4/],
       [
-        'zero-argument task-host registration',
-        /Reflect\.apply\(__registerCurrentThreadTaskHost, __rolldownBinding, \[\]\)/,
+        'zero-argument host reservation',
+        /Reflect\.apply\(\s*__reserveCurrentThreadHostRegistration,\s*__rolldownBinding,\s*\[\],?\s*\)/,
+      ],
+      [
+        'reserved task-host registration',
+        /Reflect\.apply\(__registerCurrentThreadTaskHost, __rolldownBinding, \[\s*__taskHostRegistration\.high,\s*__taskHostRegistration\.low,?\s*\]\)/,
       ],
       ['task-host registration validation', /__readHostRegistration\([\s\S]*?'task'/],
+      [
+        'task-host liveness validation',
+        /__assertHostRegistrationActive\(__taskHostRegistration, 'task'\)/,
+      ],
       ['timer-host registration', /Reflect\.apply\(__registerTimerHost, __rolldownBinding, \[/],
     ]) {
       if (!pattern.test(source)) {
@@ -239,7 +249,7 @@ for (const rel of LOADERS) {
         /Reflect\.apply\(__binding\.unregisterCurrentThreadTaskHost, __binding, \[\s*__browserTaskHostRegistration\.high,\s*__browserTaskHostRegistration\.low,\s*\]\)/;
       const taskUnregister = source.search(taskUnregisterPattern);
       const contextDestroy = source.search(
-        /__cleanup\(\s*\(\) => __emnapiContext\.destroy\(\),\s*['"]Threadless browser context cleanup failed['"],?\s*\)/,
+        /__cleanup\(\s*\(\) => __destroyEmnapiContext\(\),\s*['"]Threadless browser context cleanup failed['"],?\s*\)/,
       );
       if (taskUnregister === -1) {
         failures.push(
@@ -265,9 +275,10 @@ for (const rel of LOADERS) {
   } else {
     for (const required of [
       'Reflect.apply(__getContractVersion, __binding, [])',
-      '__actualVersion !== 2',
-      'but version 2 is required',
-      'Reflect.apply(__register, __binding, [])',
+      '__actualVersion !== 4',
+      'but version 4 is required',
+      'Reflect.apply(__reserve, __binding, [])',
+      'Reflect.apply(__register, __binding, __registration)',
       'Reflect.apply(__unregister, __binding, __registration)',
     ]) {
       if (!source.includes(required)) {

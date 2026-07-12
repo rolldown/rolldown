@@ -554,9 +554,12 @@ export default __napiModule.exports
     expect(hardened).toContain('const __cleanup = async');
     expect(hardened).toContain('await __cleanup(');
     expect(hardened).toContain('getCurrentThreadTaskHostContractVersion');
-    expect(hardened).toContain('__taskHostContractVersion !== 2');
+    expect(hardened).toContain('__taskHostContractVersion !== 4');
     expect(hardened).toContain(
-      'Reflect.apply(__registerCurrentThreadTaskHost, __rolldownBinding, [])',
+      'Reflect.apply(\n      __reserveCurrentThreadHostRegistration,\n      __rolldownBinding,\n      [],\n    )',
+    );
+    expect(hardened).toContain(
+      'Reflect.apply(__registerCurrentThreadTaskHost, __rolldownBinding, [\n    __taskHostRegistration.high,\n    __taskHostRegistration.low,\n  ])',
     );
     for (const removedExport of removedTaskHostExports) {
       expect(hardened).not.toContain(removedExport);
@@ -878,8 +881,11 @@ function __retainEmnapiContextCleanupListener() {`,
           module: {},
           napiModule: {
             exports: {
-              getCurrentThreadTaskHostContractVersion: () => 2,
-              registerCurrentThreadTaskHost: () => registration,
+              getCurrentThreadTaskHostContractVersion: () => 4,
+              isCurrentThreadHostRegistrationActive: (high: number, low: number) =>
+                high === registration.high && low === registration.low,
+              reserveCurrentThreadHostRegistration: () => registration,
+              registerCurrentThreadTaskHost: () => {},
               registerTimerHost() {
                 throw initializationError;
               },
@@ -919,13 +925,18 @@ function __retainEmnapiContextCleanupListener() {`,
       new Error('browser context cleanup failed twice'),
     ];
     const registration = { high: 0x1234_5678, low: 0x9abc_def0 };
+    const timerRegistration = { high: 0x1234_5678, low: 0x9abc_def1 };
+    const reservations = [registration, timerRegistration];
     const cleanupOrder: string[] = [];
-    const unregisterTimerHost = vi.fn();
+    const unregisterTimerHost = vi.fn((high: number, low: number) => {
+      cleanupOrder.push(`unregister timer ${high}:${low}`);
+    });
     const rawBinding = {
-      getCurrentThreadTaskHostContractVersion: () => 2,
+      getCurrentThreadTaskHostContractVersion: () => 4,
+      isCurrentThreadHostRegistrationActive: () => true,
+      reserveCurrentThreadHostRegistration: () => reservations.shift(),
       registerCurrentThreadTaskHost() {
         cleanupOrder.push('register task');
-        return registration;
       },
       registerTimerHost() {
         cleanupOrder.push('register timer');
@@ -934,7 +945,7 @@ function __retainEmnapiContextCleanupListener() {`,
       unregisterCurrentThreadTaskHost(high: number, low: number) {
         cleanupOrder.push(`unregister task ${high}:${low}`);
         throw unregisterErrors[
-          cleanupOrder.filter((step) => step.startsWith('unregister')).length - 1
+          cleanupOrder.filter((step) => step.startsWith('unregister task')).length - 1
         ];
       },
       unregisterTimerHost,
@@ -969,12 +980,17 @@ function __retainEmnapiContextCleanupListener() {`,
     expect(cleanupOrder).toEqual([
       'register task',
       'register timer',
+      `unregister timer ${timerRegistration.high}:${timerRegistration.low}`,
       `unregister task ${registration.high}:${registration.low}`,
       `unregister task ${registration.high}:${registration.low}`,
       'destroy context',
       'destroy context',
     ]);
-    expect(unregisterTimerHost).not.toHaveBeenCalled();
+    // The reserved timer token is rolled back exactly once even though its
+    // registration threw: v4 reserves the capability before side effects, so
+    // cleanup can always target the exact token.
+    expect(unregisterTimerHost).toHaveBeenCalledTimes(1);
+    expect(unregisterTimerHost).toHaveBeenCalledWith(timerRegistration.high, timerRegistration.low);
     expect(failure).toMatchObject({
       cause: registrationError,
       errors: [
@@ -999,21 +1015,30 @@ function __retainEmnapiContextCleanupListener() {`,
   test('unregisters the exact managed task host when timer registration fails', async () => {
     const registrationError = new Error('timer host registration failed');
     const registration = { high: 0x1234_5678, low: 0x9abc_def0 };
+    const timerRegistration = { high: 0x1234_5678, low: 0x9abc_def1 };
+    const reservations = [registration, timerRegistration];
+    const live = new Set<number>();
     const cleanupOrder: string[] = [];
     const rawBinding = {
-      getCurrentThreadTaskHostContractVersion: () => 2,
-      registerCurrentThreadTaskHost: vi.fn(() => {
+      getCurrentThreadTaskHostContractVersion: () => 4,
+      isCurrentThreadHostRegistrationActive: vi.fn((_high: number, low: number) => live.has(low)),
+      reserveCurrentThreadHostRegistration: vi.fn(() => reservations.shift()),
+      registerCurrentThreadTaskHost: vi.fn((_high: number, low: number) => {
         cleanupOrder.push('register task');
-        return registration;
+        live.add(low);
       }),
       unregisterCurrentThreadTaskHost: vi.fn((high: number, low: number) => {
         cleanupOrder.push(`unregister task ${high}:${low}`);
+        live.delete(low);
       }),
       registerTimerHost: vi.fn(() => {
         cleanupOrder.push('register timer');
         throw registrationError;
       }),
-      unregisterTimerHost: vi.fn(),
+      unregisterTimerHost: vi.fn((high: number, low: number) => {
+        cleanupOrder.push(`unregister timer ${high}:${low}`);
+        live.delete(low);
+      }),
     };
     const context = {
       suppressDestroy() {},
@@ -1035,28 +1060,42 @@ function __retainEmnapiContextCleanupListener() {`,
         maximumMemoryPages: 1,
       }),
     ).rejects.toBe(registrationError);
-    expect(rawBinding.registerCurrentThreadTaskHost).toHaveBeenCalledWith();
+    expect(rawBinding.registerCurrentThreadTaskHost).toHaveBeenCalledWith(
+      registration.high,
+      registration.low,
+    );
     expect(rawBinding.unregisterCurrentThreadTaskHost).toHaveBeenCalledWith(
       registration.high,
       registration.low,
     );
-    expect(rawBinding.unregisterTimerHost).not.toHaveBeenCalled();
+    // The reserved timer token is rolled back even though its registration
+    // threw: v4 reserves the capability before side effects, so cleanup can
+    // always target the exact token.
+    expect(rawBinding.unregisterTimerHost).toHaveBeenCalledWith(
+      timerRegistration.high,
+      timerRegistration.low,
+    );
     expect(cleanupOrder).toEqual([
       'register task',
       'register timer',
+      `unregister timer ${timerRegistration.high}:${timerRegistration.low}`,
       `unregister task ${registration.high}:${registration.low}`,
       'destroy context',
     ]);
   });
 
   test('rejects an inactive managed task-host registration before timer registration', async () => {
+    const registration = { high: 0x1234_5678, low: 0x9abc_def0 };
     const context = {
       suppressDestroy() {},
       destroy: vi.fn(),
     };
     const rawBinding = {
-      getCurrentThreadTaskHostContractVersion: () => 2,
-      registerCurrentThreadTaskHost: vi.fn(() => ({ high: 0, low: 0 })),
+      getCurrentThreadTaskHostContractVersion: () => 4,
+      // The binding accepts the registration but never reports it live.
+      isCurrentThreadHostRegistrationActive: vi.fn(() => false),
+      reserveCurrentThreadHostRegistration: vi.fn(() => registration),
+      registerCurrentThreadTaskHost: vi.fn(),
       unregisterCurrentThreadTaskHost: vi.fn(),
       registerTimerHost: vi.fn(),
       unregisterTimerHost: vi.fn(),
@@ -1074,10 +1113,18 @@ function __retainEmnapiContextCleanupListener() {`,
         initialMemoryPages: 1,
         maximumMemoryPages: 1,
       }),
-    ).rejects.toThrow(/invalid host registration/);
-    expect(rawBinding.registerCurrentThreadTaskHost).toHaveBeenCalledWith();
+    ).rejects.toThrow(/inactive task host registration/);
+    expect(rawBinding.registerCurrentThreadTaskHost).toHaveBeenCalledWith(
+      registration.high,
+      registration.low,
+    );
     expect(rawBinding.registerTimerHost).not.toHaveBeenCalled();
-    expect(rawBinding.unregisterCurrentThreadTaskHost).not.toHaveBeenCalled();
+    // The reserved token is rolled back exactly: the registration performed
+    // side effects even though the liveness revalidation failed.
+    expect(rawBinding.unregisterCurrentThreadTaskHost).toHaveBeenCalledWith(
+      registration.high,
+      registration.low,
+    );
     expect(rawBinding.unregisterTimerHost).not.toHaveBeenCalled();
     expect(context.destroy).toHaveBeenCalledOnce();
   });
@@ -2712,19 +2759,31 @@ class BindingInvoker {
     return this.callback()
   }
 }
+const __liveHosts = new Set()
+let __nextHostRegistration = 1
 const rawBinding = {
   BindingInvoker,
   getCurrentThreadTaskHostContractVersion() {
-    return 2
+    return 4
   },
-  registerCurrentThreadTaskHost() {
-    return { high: 0, low: 1 }
+  isCurrentThreadHostRegistrationActive(_high, low) {
+    return __liveHosts.has(low)
   },
-  unregisterCurrentThreadTaskHost() {},
-  registerTimerHost() {
-    return { high: 0, low: 2 }
+  reserveCurrentThreadHostRegistration() {
+    return { high: 0, low: __nextHostRegistration++ }
   },
-  unregisterTimerHost() {},
+  registerCurrentThreadTaskHost(_high, low) {
+    __liveHosts.add(low)
+  },
+  unregisterCurrentThreadTaskHost(_high, low) {
+    __liveHosts.delete(low)
+  },
+  registerTimerHost(_high, low) {
+    __liveHosts.add(low)
+  },
+  unregisterTimerHost(_high, low) {
+    __liveHosts.delete(low)
+  },
 }
 const context = { feature: {}, suppressDestroy() {}, destroy() {} }
 globalThis[dependencyKey] = {
@@ -2837,19 +2896,31 @@ class BindingInvoker {
     return callback(cycle)
   }
 }
+const __liveHosts = new Set()
+let __nextHostRegistration = 1
 const rawBinding = {
   BindingInvoker,
   getCurrentThreadTaskHostContractVersion() {
-    return 2
+    return 4
   },
-  registerCurrentThreadTaskHost() {
-    return { high: 0, low: 1 }
+  isCurrentThreadHostRegistrationActive(_high, low) {
+    return __liveHosts.has(low)
   },
-  unregisterCurrentThreadTaskHost() {},
-  registerTimerHost() {
-    return { high: 0, low: 2 }
+  reserveCurrentThreadHostRegistration() {
+    return { high: 0, low: __nextHostRegistration++ }
   },
-  unregisterTimerHost() {},
+  registerCurrentThreadTaskHost(_high, low) {
+    __liveHosts.add(low)
+  },
+  unregisterCurrentThreadTaskHost(_high, low) {
+    __liveHosts.delete(low)
+  },
+  registerTimerHost(_high, low) {
+    __liveHosts.add(low)
+  },
+  unregisterTimerHost(_high, low) {
+    __liveHosts.delete(low)
+  },
 }
 const context = { feature: {}, suppressDestroy() {}, destroy() {} }
 globalThis[dependencyKey] = {
@@ -3227,20 +3298,33 @@ class BindingBundler {
   close() {}
 }
 let nextRegistration = 1
-const createRawBinding = () => ({
-  BindingBundler,
-  getCurrentThreadTaskHostContractVersion() {
-    return 2
-  },
-  registerCurrentThreadTaskHost() {
-    return { high: 0, low: nextRegistration++ }
-  },
-  unregisterCurrentThreadTaskHost() {},
-  registerTimerHost() {
-    return { high: 0, low: nextRegistration++ }
-  },
-  unregisterTimerHost() {},
-})
+const createRawBinding = () => {
+  const liveHosts = new Set()
+  return {
+    BindingBundler,
+    getCurrentThreadTaskHostContractVersion() {
+      return 4
+    },
+    isCurrentThreadHostRegistrationActive(_high, low) {
+      return liveHosts.has(low)
+    },
+    reserveCurrentThreadHostRegistration() {
+      return { high: 0, low: nextRegistration++ }
+    },
+    registerCurrentThreadTaskHost(_high, low) {
+      liveHosts.add(low)
+    },
+    unregisterCurrentThreadTaskHost(_high, low) {
+      liveHosts.delete(low)
+    },
+    registerTimerHost(_high, low) {
+      liveHosts.add(low)
+    },
+    unregisterTimerHost(_high, low) {
+      liveHosts.delete(low)
+    },
+  }
+}
 const context = { feature: {}, suppressDestroy() {}, destroy() {} }
 globalThis[dependencyKey] = {
   Buffer,
@@ -4152,28 +4236,27 @@ console.log('memory proxy prototype chain rejected')
       const unregisterCalls: string[] = [];
       const timerRelays = new Map<string, Promise<void>>();
       let nextRegistration = 1;
-      const createRegistration = (hosts: Map<number, Host>, label: string) => {
-        const low = nextRegistration++;
-        hosts.set(low, { label });
-        return { high: 0, low };
-      };
       const createRawBinding = (label: string) => {
         return {
-          getCurrentThreadTaskHostContractVersion: () => 2,
-          registerCurrentThreadTaskHost() {
-            return createRegistration(taskHosts, label);
+          getCurrentThreadTaskHostContractVersion: () => 4,
+          isCurrentThreadHostRegistrationActive: (_high: number, low: number) =>
+            taskHosts.has(low) || timerHosts.has(low),
+          reserveCurrentThreadHostRegistration: () => ({ high: 0, low: nextRegistration++ }),
+          registerCurrentThreadTaskHost(_high: number, low: number) {
+            taskHosts.set(low, { label });
           },
           unregisterCurrentThreadTaskHost(_high: number, low: number) {
             unregisterCalls.push(`task:${label}:${low}`);
             taskHosts.delete(low);
           },
           registerTimerHost(
+            _high: number,
+            low: number,
             schedule: (id: number, ms: number) => Promise<void>,
             _cancel: (id: number) => void,
           ) {
-            const registration = createRegistration(timerHosts, label);
-            timerRelays.set(label, schedule(registration.low, 60_000));
-            return registration;
+            timerHosts.set(low, { label });
+            timerRelays.set(label, schedule(low, 60_000));
           },
           unregisterTimerHost(_high: number, low: number) {
             unregisterCalls.push(`timer:${label}:${low}`);
@@ -4882,6 +4965,8 @@ let __emnapiContextRegisteredForBeforeExit = false
 let __emnapiContextRegisteredForExit = false
 let __emnapiContextBeforeExitRegistrationRetryCount = 0
 let __emnapiContextBeforeExitRegistrationRetryScheduled = false
+let __napiInstance
+let __emnapiWasmEnvCleanupPrepared = false
 ${lifecycle}
 __registerEmnapiContextBeforeExit()
 try {
@@ -4939,6 +5024,8 @@ let __emnapiContextRegisteredForBeforeExit = false
 let __emnapiContextRegisteredForExit = false
 let __emnapiContextBeforeExitRegistrationRetryCount = 0
 let __emnapiContextBeforeExitRegistrationRetryScheduled = false
+let __napiInstance
+let __emnapiWasmEnvCleanupPrepared = false
 ${lifecycle}
 __registerEmnapiContextBeforeExit()
 try {
@@ -4999,6 +5086,8 @@ let __emnapiContextRegisteredForBeforeExit = false
 let __emnapiContextRegisteredForExit = false
 let __emnapiContextBeforeExitRegistrationRetryCount = 0
 let __emnapiContextBeforeExitRegistrationRetryScheduled = false
+let __napiInstance
+let __emnapiWasmEnvCleanupPrepared = false
 ${lifecycle}
 __registerEmnapiContextBeforeExit()
 try {
@@ -5053,6 +5142,8 @@ let __emnapiContextRegisteredForBeforeExit = false
 let __emnapiContextRegisteredForExit = false
 let __emnapiContextBeforeExitRegistrationRetryCount = 0
 let __emnapiContextBeforeExitRegistrationRetryScheduled = false
+let __napiInstance
+let __emnapiWasmEnvCleanupPrepared = false
 ${lifecycle}
 __registerEmnapiContextBeforeExit()
 __registerEmnapiContextAtExit()
@@ -5137,6 +5228,8 @@ let __emnapiContextRegisteredForBeforeExit = false
 let __emnapiContextRegisteredForExit = false
 let __emnapiContextBeforeExitRegistrationRetryCount = 0
 let __emnapiContextBeforeExitRegistrationRetryScheduled = false
+let __napiInstance
+let __emnapiWasmEnvCleanupPrepared = false
 let __nodeTaskHostRegistration
 let __nodeTimerHostRegistration
 ${lifecycle}
@@ -5375,6 +5468,8 @@ let __emnapiContextRegisteredForBeforeExit = false
 let __emnapiContextRegisteredForExit = false
 let __emnapiContextBeforeExitRegistrationRetryCount = 0
 let __emnapiContextBeforeExitRegistrationRetryScheduled = false
+let __napiInstance
+let __emnapiWasmEnvCleanupPrepared = false
 ${lifecycle}
 __registerEmnapiContextBeforeExit()
 try {
@@ -5440,6 +5535,8 @@ let __emnapiContextRegisteredForBeforeExit = false
 let __emnapiContextRegisteredForExit = false
 let __emnapiContextBeforeExitRegistrationRetryCount = 0
 let __emnapiContextBeforeExitRegistrationRetryScheduled = false
+let __napiInstance
+let __emnapiWasmEnvCleanupPrepared = false
 ${lifecycle}
 __registerEmnapiContextBeforeExit()
 try {
@@ -5639,16 +5736,27 @@ ${cleanup}`,
     let failScheduling = false;
     let schedule: ((id: number, ms: number) => Promise<void>) | undefined;
     let cancel: ((id: number) => void) | undefined;
+    const reservations = [
+      { high: 0, low: 1 },
+      { high: 0, low: 2 },
+    ];
+    const live = new Set<number>();
     const binding = {
-      getCurrentThreadTaskHostContractVersion: () => 2,
-      registerCurrentThreadTaskHost: vi.fn(() => ({ high: 0, low: 1 })),
+      getCurrentThreadTaskHostContractVersion: () => 4,
+      isCurrentThreadHostRegistrationActive: (_high: number, low: number) => live.has(low),
+      reserveCurrentThreadHostRegistration: () => reservations.shift(),
+      registerCurrentThreadTaskHost: vi.fn((_high: number, low: number) => {
+        live.add(low);
+      }),
       registerTimerHost(
+        _high: number,
+        low: number,
         scheduleCallback: (id: number, ms: number) => Promise<void>,
         cancelCallback: (id: number) => void,
       ) {
         schedule = scheduleCallback;
         cancel = cancelCallback;
-        return { high: 0, low: 2 };
+        live.add(low);
       },
       unregisterCurrentThreadTaskHost: vi.fn(),
       unregisterTimerHost: vi.fn(),

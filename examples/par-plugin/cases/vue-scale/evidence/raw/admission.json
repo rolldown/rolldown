@@ -1,0 +1,621 @@
+{
+  "schema": 1,
+  "kind": "vue-scale-admission-audit",
+  "measurementClass": "untimed compile admission; not performance evidence",
+  "runtime": {
+    "repositoryCommit": "b144106882fe244b19b738fc0acf3ffa07c7c9f3",
+    "worktreeStatus": "",
+    "packageRoot": "/Users/yunfeihe/Documents/github-opensource/.worktrees/rolldown-parallel-js-plugin-scale-baseline/packages/rolldown",
+    "runtimePin": {
+      "kind": "lifecycle-corrected-baseline",
+      "sourceCommit": "b144106882fe244b19b738fc0acf3ffa07c7c9f3",
+      "nativeBindingSha256": "7b8863bb28aefd2e2eb7409f8be6dae57a252fe4a2688383007be7ea2f847bf7",
+      "distributionSha256": "1efffd0b63483e77cd2854fe716941000ae9548768691d7b5a64dceb011f3c45"
+    },
+    "node": "v24.18.0",
+    "nodeBinary": "/Users/yunfeihe/.local/share/mise/installs/node/24.18.0/bin/node",
+    "nodeArtifact": {
+      "bytes": 120965360,
+      "sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a"
+    },
+    "nativeBinding": {
+      "path": "packages/rolldown/dist/rolldown-binding.darwin-arm64.node",
+      "bytes": 16311136,
+      "sha256": "7b8863bb28aefd2e2eb7409f8be6dae57a252fe4a2688383007be7ea2f847bf7",
+      "sourceCommit": "b144106882fe244b19b738fc0acf3ffa07c7c9f3",
+      "profileClaim": "release",
+      "profileVerification": "The expected byte hash pins the unchanged release artifact; the file does not encode its Cargo profile."
+    },
+    "rolldownDistribution": {
+      "directory": "packages/rolldown/dist",
+      "files": 46,
+      "bytes": 17095091,
+      "aggregateSha256": "1efffd0b63483e77cd2854fe716941000ae9548768691d7b5a64dceb011f3c45"
+    },
+    "configuredPools": {
+      "tokio": {
+        "environmentVariable": "ROLLDOWN_WORKER_THREADS",
+        "configuredCapacity": 18
+      },
+      "rayon": {
+        "environmentVariable": "RAYON_NUM_THREADS",
+        "configuredCapacity": 12
+      },
+      "blocking": {
+        "environmentVariable": "ROLLDOWN_MAX_BLOCKING_THREADS",
+        "configuredCapacity": 4
+      },
+      "interpretation": "Tokio, Rayon, blocking, and JavaScript worker capacities are separate configured limits, not observed active CPU counts, and must not be summed as simultaneous CPU demand."
+    }
+  },
+  "harnessSourceManifest": {
+    "algorithm": "SHA-256 over UTF-8-sorted repository-relative path + NUL + kind + NUL + bytes + NUL + content SHA-256 + LF records",
+    "files": 54,
+    "bytes": 2707476,
+    "aggregateSha256": "5c00f47d912efd823e05b498244eb1b0bea4ed2cf3d1cb3135d485fbdea52e8a",
+    "entries": [
+      {
+        "path": "examples/par-plugin/cases/vue-scale/.gitignore",
+        "kind": "file",
+        "bytes": 83,
+        "sha256": "835bf24d3f489fbf3003fe53339be1dcfd64dd3f092565ae05eea7ee42ff5686"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/README.md",
+        "kind": "file",
+        "bytes": 21740,
+        "sha256": "14947500dcf945c1f822feded7ac8ec09122a75049b086686b25e08f246fcbf2"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/SUPPORT.md",
+        "kind": "file",
+        "bytes": 7619,
+        "sha256": "2b88f5fa94c15759fae01b6e401a211f02c455d2217a46da259afe6bebccd3ef"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/admission-corpus.mjs",
+        "kind": "file",
+        "bytes": 1778,
+        "sha256": "557b1213e9d6af4745230442f7c7e9a9f5b336cfb95d82bc5acec93a142260fa"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/admission-evidence.mjs",
+        "kind": "file",
+        "bytes": 4297,
+        "sha256": "d53e3f148f289637d971235274d85bee57affde25202507a9ccb5a4ffd4ac8b4"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/attribution-contract-smoke-matrix.json",
+        "kind": "file",
+        "bytes": 899,
+        "sha256": "e2f8c8f90e3bb3e5d2e570ccf635d9fcfacf32e472fd0bd9d93993c0c75af695"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/attribution-validation.mjs",
+        "kind": "file",
+        "bytes": 30942,
+        "sha256": "5424c372cd3f3dc968c4be473b8396bab1c87384dbe585be3ad0fe33ea6ad83a"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/compile-preflight.mjs",
+        "kind": "file",
+        "bytes": 14812,
+        "sha256": "40ec687627714303e8adaf75183ca5a79afccc4a32b46a97334e55357741042d"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/corpus-manifest.json",
+        "kind": "file",
+        "bytes": 1853263,
+        "sha256": "6f128e9852a6cd7d532fe8809a0f9159015433dcafa082ea293b39003961aab9"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/corpus.mjs",
+        "kind": "file",
+        "bytes": 33448,
+        "sha256": "a27fd7ec7cb930b55a2162e0364ea660d409a452fdda5cd629f6526aa94591f4"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/correctness-evidence.mjs",
+        "kind": "file",
+        "bytes": 8314,
+        "sha256": "795392c1a0972d5710b89f97413b0e54ddf2b26fac9380516f55ae9520d83f41"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/create-confirm-matrix.mjs",
+        "kind": "file",
+        "bytes": 4138,
+        "sha256": "b63f7a9e19dfc97e4e2ca2f713f7551552a47a5fa416bee4c6dce1628d1f25bf"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/create-correctness-evidence.mjs",
+        "kind": "file",
+        "bytes": 1940,
+        "sha256": "7eceb790bc8ba1061f9fb449195253cfbb73bc2ccb4257cd891b9dbbbd9af0d6"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/evidence-verifier.mjs",
+        "kind": "file",
+        "bytes": 5898,
+        "sha256": "16bd72f5d12e2e9cc747b9c2ca19a12b69c5c3f5e84e3ae49e9e21033da6e6ce"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/harness-provenance.mjs",
+        "kind": "file",
+        "bytes": 2686,
+        "sha256": "05819b19cfaf02b4f8d4c0869b928cea0b93f997e3eda9b7c87ed53016e2688d"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/host-policy.mjs",
+        "kind": "file",
+        "bytes": 6305,
+        "sha256": "7ba1e5d4ce8acd0d3c451ce1e207fd6599562bc0e90ab97cf6b143f694acee53"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/instrumented-matrix.json",
+        "kind": "file",
+        "bytes": 4107,
+        "sha256": "c921da291e5c9784a50b1c5efb7fb43121f8c8457f23153bf6cb9dcd55b7afdd"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/merge-confirmation-reports.mjs",
+        "kind": "file",
+        "bytes": 3242,
+        "sha256": "9020ca1a477cd5a614f9f043773c7d824cf28978785188d1c35ffd943add5754"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/prepare-corpus.mjs",
+        "kind": "file",
+        "bytes": 1660,
+        "sha256": "f8cd1cf4cd620a8ab9b4aeb1c46b3c09df992c98aa26f5725f8b1babf003d860"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/provenance.mjs",
+        "kind": "file",
+        "bytes": 7543,
+        "sha256": "f90d99137b2f6ec5f07c27bf93e623e69d38a1b798950f950f2304ef06ce4327"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/register-loader.mjs",
+        "kind": "file",
+        "bytes": 93,
+        "sha256": "76af66c1c9a056e2d7371a0cf7ca55ddac029cedcfff63b989300fb98e833a2f"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/rolldown-loader.mjs",
+        "kind": "file",
+        "bytes": 722,
+        "sha256": "bed57b29c4a88e7d9734fd4f2d4e007c8bb11c05ac8046fd60e6ed11e4ef0162"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/run-admission-audit.mjs",
+        "kind": "file",
+        "bytes": 6441,
+        "sha256": "3bdb742a0e783fff5b5fc74fa2403e250651c60955cbfbf0e5ef0ed7ebe02a76"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/run-admission-case.mjs",
+        "kind": "file",
+        "bytes": 5076,
+        "sha256": "08ecb878452d0421fa81d1a0239a87e7906119761ee32dac5e83d3f56ebef550"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/run-case.mjs",
+        "kind": "file",
+        "bytes": 11895,
+        "sha256": "f826454d596b2421e69b5e540a1532df825b337a3eea4990772278b1b54679ee"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/run-matrix.mjs",
+        "kind": "file",
+        "bytes": 31149,
+        "sha256": "de392b536c2f88cfdf23be64b09bffa097a92e020b116548da20e442697260ef"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/smoke-matrix.json",
+        "kind": "file",
+        "bytes": 2490,
+        "sha256": "e353a355570ad9ae7a3b082c0750c35578c0ec3d297757f38f33189d15998f05"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/statistics-policy.mjs",
+        "kind": "file",
+        "bytes": 8769,
+        "sha256": "3788b2a0932a6892519c3f2ce275e41fc29976163b01f72d3312006a357411c1"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/summarize-matrix.mjs",
+        "kind": "file",
+        "bytes": 11266,
+        "sha256": "0bff6aad8090036df0b5a3f40b240e43f1078eb05c02956e0b73abf1fdb6c1b2"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/primevue/apps/volt/.nuxt/tsconfig.json",
+        "kind": "file",
+        "bytes": 7837,
+        "sha256": "3156d237f0492a859cc46b69f148aa6de245b6ef9f09ead362877805e3ed450e"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/vuestic-ui/packages/compiler/playground/node_modules/@tsconfig/node20/LICENSE",
+        "kind": "file",
+        "bytes": 1073,
+        "sha256": "646f8936b8ddcd14e13e578ff6857e368780b0d1a4f6066bee89211923a373e2"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/vuestic-ui/packages/compiler/playground/node_modules/@tsconfig/node20/README.md",
+        "kind": "file",
+        "bytes": 692,
+        "sha256": "824b49907292585bdd1b42032086ca402963cb5e6f18af5eb8bcd68a85416e39"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/vuestic-ui/packages/compiler/playground/node_modules/@tsconfig/node20/package.json",
+        "kind": "file",
+        "bytes": 307,
+        "sha256": "2a9e09d1134b45715a1611756b9249224af689e543d864575bea22555bdf7af0"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/vuestic-ui/packages/compiler/playground/node_modules/@tsconfig/node20/tsconfig.json",
+        "kind": "file",
+        "bytes": 291,
+        "sha256": "5260cf0ee9630403fbc907e34d5a3cd3ca4827ecc1c95467ef7a48d6ba9564aa"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/vuestic-ui/packages/compiler/playground/node_modules/@vue/tsconfig/LICENSE",
+        "kind": "file",
+        "bytes": 1080,
+        "sha256": "a8b93ecd961a4cd784843c8606056f4c932493d1154d21cafa438860fabb7d41"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/vuestic-ui/packages/compiler/playground/node_modules/@vue/tsconfig/README.md",
+        "kind": "file",
+        "bytes": 4778,
+        "sha256": "b7b392ee0425207314dc3c07389669719f99049d8d6576c7d851efcf3f4f294d"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/vuestic-ui/packages/compiler/playground/node_modules/@vue/tsconfig/package.json",
+        "kind": "file",
+        "bytes": 603,
+        "sha256": "c34c0c6a49487b7ffd54928211139c6e9e604316fce022ae845a6cb42025b71c"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/vuestic-ui/packages/compiler/playground/node_modules/@vue/tsconfig/tsconfig.dom.json",
+        "kind": "file",
+        "bytes": 683,
+        "sha256": "51c8ca2010cc11a062f0af9bcbe0e40f93d2a09681041ffc803ea6b7cc73fdbf"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/vuestic-ui/packages/compiler/playground/node_modules/@vue/tsconfig/tsconfig.json",
+        "kind": "file",
+        "bytes": 3349,
+        "sha256": "523ea93b8483dbcc6231c88e004ac0ed7fec48c2e39cc8f54bec97a1a29bc3d9"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/vuestic-ui/packages/compiler/playground/node_modules/@vue/tsconfig/tsconfig.lib.json",
+        "kind": "file",
+        "bytes": 109,
+        "sha256": "66bd1efbefac70b1bc33237baeb39096edd43861da504057ec8b45701a40b346"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/vuestic-ui/packages/docs/.nuxt/tsconfig.json",
+        "kind": "file",
+        "bytes": 7553,
+        "sha256": "d93eeb2ef060ddeb7d0c7554a37b0ca925f680b81480feff682addd5cff2ebee"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/support-overlays/vuestic-ui/packages/sandbox/src/.nuxt/tsconfig.json",
+        "kind": "file",
+        "bytes": 3,
+        "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/toolchain-provenance.mjs",
+        "kind": "file",
+        "bytes": 4226,
+        "sha256": "d713f218e85493f9754f9be6d2572cb96d511cb07db247d62cf577da91550fcf"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/verify-admission-evidence.mjs",
+        "kind": "file",
+        "bytes": 1426,
+        "sha256": "cb4846cbd76746ad73aee8986006edd8d9e7e448530569d03ae29608d98d0e19"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/verify-attribution-validation.mjs",
+        "kind": "file",
+        "bytes": 5559,
+        "sha256": "618c4f0e20e633b4c9c98ea1e53834086fa5a5949524985e1842d094153ff5cf"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/verify-formal-evidence.mjs",
+        "kind": "file",
+        "bytes": 1272,
+        "sha256": "7a9bce90ee904c30d76e1115cda7e60566a214dbadfaee644df76d37f1dbbe25"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/verify-statistics-policy.mjs",
+        "kind": "file",
+        "bytes": 5201,
+        "sha256": "92dbaeeac1be317f09158fdc6ead59c84d893d185d8a4be4f68955e50eb9a5b0"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/wall-screen-matrix.json",
+        "kind": "file",
+        "bytes": 4002,
+        "sha256": "88abab94eb3908297fdc61a4e9277031ceb85449736104e4150eea1ef2598ce3"
+      },
+      {
+        "path": "examples/par-plugin/cases/vue-scale/write-additional-confirm-matrix.mjs",
+        "kind": "file",
+        "bytes": 901,
+        "sha256": "26126c86a5b83b1903789889e535e3442c1f0f1dd6ed3ad0b47dfe39868c8e56"
+      },
+      {
+        "path": "examples/par-plugin/package.json",
+        "kind": "file",
+        "bytes": 1033,
+        "sha256": "164755bc240c737a95f9704add2eb64ae4c246195a0d0f2e8f28da68d77c7262"
+      },
+      {
+        "path": "examples/par-plugin/parallel-vue-plugin/impl.js",
+        "kind": "file",
+        "bytes": 5791,
+        "sha256": "7c30524ba7e9eed355ef55d381133271be9bdc6fe3e8f5b525b06ef7f80808b5"
+      },
+      {
+        "path": "examples/par-plugin/parallel-vue-plugin/index.js",
+        "kind": "file",
+        "bytes": 186,
+        "sha256": "ef39534320c3b94c4d9198172e685ef2a71364b583287f4d89616c2877ca04ec"
+      },
+      {
+        "path": "examples/par-plugin/parallel-vue-plugin/metrics.js",
+        "kind": "file",
+        "bytes": 3745,
+        "sha256": "6c35e162306082cb1bdf89cdf82e845e99223f111577a05fd411d4cd7d9be2b6"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "kind": "file",
+        "bytes": 553161,
+        "sha256": "2cc3710e028dd31f108d5ac993aca4205bddf126099b6d474a2321f8c2ba170a"
+      }
+    ]
+  },
+  "vueToolchain": {
+    "unpluginVue": {
+      "package": "unplugin-vue",
+      "version": "7.2.0",
+      "files": 23,
+      "bytes": 56484,
+      "aggregateSha256": "cee68e1da1b239bc371f19ccdb55740b39c1d8c2b191be37537046babb5cf562",
+      "manifestSha256": "e5e394d8ace1faccb05048e3c9da899aab57ec39f92dc5ec6ab46ea684690815",
+      "entrypoint": "dist/rolldown.mjs",
+      "entrypointBytes": 400,
+      "entrypointSha256": "cf2382afdc0bc12df208f49b879cfbc9c350beda4b76c85b95ca8a7e0fc69374"
+    },
+    "compilerSfc": {
+      "package": "@vue/compiler-sfc",
+      "version": "3.5.39",
+      "files": 6,
+      "bytes": 2622623,
+      "aggregateSha256": "18bb63465a98fed2b2722d0aa6a314dbe4c54c3b1da67adea9e9816d1f94a4ef",
+      "manifestSha256": "3ebcadb08b31e9207a7c5a2073e4ae33daa94bba601fc1c88634b63c1dba0b73",
+      "entrypoint": "dist/compiler-sfc.cjs.js",
+      "entrypointBytes": 886681,
+      "entrypointSha256": "36048750a63359f1b062627946a2ca59d91f729af225f9da09fe84ac4917526b"
+    }
+  },
+  "fixture": {
+    "commit": "7ce5d1fcff8d189cea4871bb3d42c673490ca45b",
+    "worktreeStatus": ""
+  },
+  "executionEnvironment": {
+    "inheritedNodeOptions": null,
+    "childNodeOptions": "--import=/Users/yunfeihe/Documents/github-opensource/.worktrees/rolldown-parallel-js-plugin-vue-evidence/examples/par-plugin/cases/vue-scale/register-loader.mjs",
+    "configuredPools": {
+      "ROLLDOWN_WORKER_THREADS": "18",
+      "RAYON_NUM_THREADS": "12",
+      "ROLLDOWN_MAX_BLOCKING_THREADS": "4"
+    }
+  },
+  "corpus": {
+    "compiler": {
+      "package": "@vue/compiler-sfc",
+      "version": "3.5.39"
+    },
+    "repositories": [
+      {
+        "id": "primevue",
+        "repository": "https://github.com/primefaces/primevue.git",
+        "commit": "d4374cb7c1267f35eba7cee5d0a266f50ca8ec84",
+        "license": "MIT",
+        "licensePath": "LICENSE.md",
+        "licenseSha256": "39a2ce8d759cfcb59eccc49b0a417ad5c943f960c1bcdfba4720ca7547029af7",
+        "eligibleSfcCount": 2495,
+        "eligibleSfcBytes": 8511875,
+        "trackedSfcCount": 2615,
+        "parseFailures": 1,
+        "blockExclusions": 21,
+        "externalSourceExclusions": 0,
+        "nonPlainTemplateExclusions": 0,
+        "compileAdmissionPathExclusions": 0,
+        "support": {
+          "files": 4842,
+          "bytes": 30893180,
+          "symlinks": 0,
+          "gitlinks": 0,
+          "aggregateSha256": "9ae0ef9efd81496401e282009b0b4a0f96699cff6e363850de3c1fe294589a06"
+        }
+      },
+      {
+        "id": "element-plus",
+        "repository": "https://github.com/element-plus/element-plus.git",
+        "commit": "85bdf740c1d550f3ca44472262e2a314039eab7d",
+        "license": "MIT",
+        "licensePath": "LICENSE",
+        "licenseSha256": "0790118bb4d66681db1d63181f72ef68e632d632f6db0373ef87cf328561af27",
+        "eligibleSfcCount": 725,
+        "eligibleSfcBytes": 1942309,
+        "trackedSfcCount": 1004,
+        "parseFailures": 0,
+        "blockExclusions": 270,
+        "externalSourceExclusions": 0,
+        "nonPlainTemplateExclusions": 0,
+        "compileAdmissionPathExclusions": 0,
+        "support": {
+          "files": 2695,
+          "bytes": 10262230,
+          "symlinks": 0,
+          "gitlinks": 0,
+          "aggregateSha256": "02701c42251bfdb9e4733eb1fa15a86c3e1144e209b208755770f4dabcb09285"
+        }
+      },
+      {
+        "id": "tdesign-vue-next",
+        "repository": "https://github.com/Tencent/tdesign-vue-next.git",
+        "commit": "dd334e2dc06d8ab48d1b6ebc5e9d4f6de67b16a2",
+        "license": "MIT",
+        "licensePath": "LICENSE",
+        "licenseSha256": "b3dbcb89dcf4a11abf1b70d043795a3da0c458af16fefd2ff315d9ff5875312f",
+        "eligibleSfcCount": 644,
+        "eligibleSfcBytes": 897120,
+        "trackedSfcCount": 840,
+        "parseFailures": 0,
+        "blockExclusions": 194,
+        "externalSourceExclusions": 0,
+        "nonPlainTemplateExclusions": 0,
+        "compileAdmissionPathExclusions": 0,
+        "support": {
+          "files": 2432,
+          "bytes": 19573898,
+          "symlinks": 0,
+          "gitlinks": 1,
+          "aggregateSha256": "562a21512c5ccc44efb8ff1fc4c555a642611ba24969912f337215bc4771f8ae"
+        }
+      },
+      {
+        "id": "vuestic-ui",
+        "repository": "https://github.com/epicmaxco/vuestic-ui.git",
+        "commit": "c5337ed8e7e24ea294221326fe2ca6af8d3b8e1b",
+        "license": "MIT",
+        "licensePath": "LICENSE.MD",
+        "licenseSha256": "c44258bd026d8749142ac1b2cf0309f0b52655b3181c5ee4bfb6bd89103ab370",
+        "eligibleSfcCount": 676,
+        "eligibleSfcBytes": 882094,
+        "trackedSfcCount": 1021,
+        "parseFailures": 1,
+        "blockExclusions": 344,
+        "externalSourceExclusions": 0,
+        "nonPlainTemplateExclusions": 0,
+        "compileAdmissionPathExclusions": 0,
+        "support": {
+          "files": 2771,
+          "bytes": 18508428,
+          "symlinks": 0,
+          "gitlinks": 0,
+          "aggregateSha256": "7c165fff3b07902c5932eceb30af1bca8a4d0af4706aa0b5222d5b830ea9784c"
+        }
+      },
+      {
+        "id": "quasar",
+        "repository": "https://github.com/quasarframework/quasar.git",
+        "commit": "2165ce9f69d84e6169e7ca8a1c51fde105042cb9",
+        "license": "MIT",
+        "licensePath": "LICENSE",
+        "licenseSha256": "830424149e83c3b9caa4243c36e73ac1b024b501fea99f8a22138b86eedc8d47",
+        "eligibleSfcCount": 1110,
+        "eligibleSfcBytes": 2244448,
+        "compileAdmissionExclusions": [
+          "app-vite/playground-ts/src/components/EssentialLink.vue",
+          "app-vite/playground-ts/src/pages/index/(index).vue",
+          "app-vite/playground-ts/src/pages/index/second.vue"
+        ],
+        "trackedSfcCount": 1383,
+        "parseFailures": 0,
+        "blockExclusions": 233,
+        "externalSourceExclusions": 0,
+        "nonPlainTemplateExclusions": 10,
+        "compileAdmissionPathExclusions": 3,
+        "support": {
+          "files": 3759,
+          "bytes": 62665447,
+          "symlinks": 0,
+          "gitlinks": 0,
+          "aggregateSha256": "a4356ae3969a2e6195c21a5ba01fb5163f0b87e88c1d0dadb9d60e2bbcc3d834"
+        }
+      }
+    ],
+    "summary": {
+      "files": 5650,
+      "bytes": 14477846,
+      "scriptSetupFiles": 2505,
+      "ordinaryScriptFiles": 2247,
+      "templateOnlyFiles": 898,
+      "uniqueContents": 5650,
+      "aggregateSha256": "114f8b7b7e3fa7d13d5f14946acd7a4a42d88957f7ca57da041381cd6eada99c"
+    }
+  },
+  "audits": [
+    {
+      "schema": 1,
+      "measurementClass": "untimed compile admission; not performance evidence",
+      "phase": "quasar-pre-exclusion",
+      "selection": {
+        "files": 1112,
+        "bytes": 2245255,
+        "scriptSetupFiles": 711,
+        "ordinaryScriptFiles": 198,
+        "templateOnlyFiles": 203,
+        "uniqueContents": 1112,
+        "aggregateSha256": "49f5089abac134b76c7e9ee6e21db1c073ebcdf85e1cd46d65c3ef82fe36945d",
+        "pathOrderedSha256": "49f5089abac134b76c7e9ee6e21db1c073ebcdf85e1cd46d65c3ef82fe36945d"
+      },
+      "admitted": false,
+      "errorCount": 3,
+      "failures": [
+        {
+          "sourceKey": "quasar/app-vite/playground-ts/src/components/EssentialLink.vue",
+          "code": "TSCONFIG_ERROR",
+          "signature": "TSCONFIG_ERROR: missing dependency of nearest tsconfig",
+          "messageSha256": "82bb111d4423c492620a82a8aa123888fa370d1b5a593a9d66a555cabc2c7b5c"
+        },
+        {
+          "sourceKey": "quasar/app-vite/playground-ts/src/pages/index/(index).vue",
+          "code": "TSCONFIG_ERROR",
+          "signature": "TSCONFIG_ERROR: missing dependency of nearest tsconfig",
+          "messageSha256": "94377407754f1ecb3d4de9bc8f0999a401986c6511b27d397d91bb8a0770ea76"
+        },
+        {
+          "sourceKey": "quasar/app-vite/playground-ts/src/pages/index/second.vue",
+          "code": "TSCONFIG_ERROR",
+          "signature": "TSCONFIG_ERROR: missing dependency of nearest tsconfig",
+          "messageSha256": "57ac1b7f851294ffc1dac1a84938e852c030a2bb4179ab33c33f4eca5e30d488"
+        }
+      ]
+    },
+    {
+      "schema": 1,
+      "measurementClass": "untimed compile admission; not performance evidence",
+      "phase": "final-pool",
+      "selection": {
+        "files": 5650,
+        "bytes": 14477846,
+        "scriptSetupFiles": 2505,
+        "ordinaryScriptFiles": 2247,
+        "templateOnlyFiles": 898,
+        "uniqueContents": 5650,
+        "aggregateSha256": "114f8b7b7e3fa7d13d5f14946acd7a4a42d88957f7ca57da041381cd6eada99c",
+        "pathOrderedSha256": "114f8b7b7e3fa7d13d5f14946acd7a4a42d88957f7ca57da041381cd6eada99c"
+      },
+      "admitted": true,
+      "errorCount": 0,
+      "failures": [],
+      "output": {
+        "chunks": 1,
+        "assets": 1,
+        "exports": 5650,
+        "normalizedCodeSha256": "00de72a82d3c6e3c0f74021250085e3b09bcf5a26534949ce82e272f888d9839",
+        "normalizedMapSha256": "ee44f07ad40921c92a22ff6e067b1036b648341daa4eaea25967ad8c1fe3eb20"
+      }
+    }
+  ]
+}

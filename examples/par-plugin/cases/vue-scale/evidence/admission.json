@@ -1,0 +1,63 @@
+{
+  "schema": 2,
+  "kind": "vue-scale-admission-evidence-pointer",
+  "passed": true,
+  "measurementClass": "untimed compile admission; not performance evidence",
+  "raw": {
+    "path": "raw/admission.json",
+    "bytes": 24477,
+    "sha256": "eebd89f228452d3f4b5b2a2709134647928ede08b35c39cadaf2766d14dac738"
+  },
+  "harnessSourceManifest": {
+    "files": 54,
+    "bytes": 2707476,
+    "aggregateSha256": "5c00f47d912efd823e05b498244eb1b0bea4ed2cf3d1cb3135d485fbdea52e8a"
+  },
+  "runtimePin": {
+    "kind": "lifecycle-corrected-baseline",
+    "sourceCommit": "b144106882fe244b19b738fc0acf3ffa07c7c9f3",
+    "nativeBindingSha256": "7b8863bb28aefd2e2eb7409f8be6dae57a252fe4a2688383007be7ea2f847bf7",
+    "distributionSha256": "1efffd0b63483e77cd2854fe716941000ae9548768691d7b5a64dceb011f3c45"
+  },
+  "vueToolchain": {
+    "unpluginVue": {
+      "package": "unplugin-vue",
+      "version": "7.2.0",
+      "files": 23,
+      "bytes": 56484,
+      "aggregateSha256": "cee68e1da1b239bc371f19ccdb55740b39c1d8c2b191be37537046babb5cf562",
+      "manifestSha256": "e5e394d8ace1faccb05048e3c9da899aab57ec39f92dc5ec6ab46ea684690815",
+      "entrypoint": "dist/rolldown.mjs",
+      "entrypointBytes": 400,
+      "entrypointSha256": "cf2382afdc0bc12df208f49b879cfbc9c350beda4b76c85b95ca8a7e0fc69374"
+    },
+    "compilerSfc": {
+      "package": "@vue/compiler-sfc",
+      "version": "3.5.39",
+      "files": 6,
+      "bytes": 2622623,
+      "aggregateSha256": "18bb63465a98fed2b2722d0aa6a314dbe4c54c3b1da67adea9e9816d1f94a4ef",
+      "manifestSha256": "3ebcadb08b31e9207a7c5a2073e4ae33daa94bba601fc1c88634b63c1dba0b73",
+      "entrypoint": "dist/compiler-sfc.cjs.js",
+      "entrypointBytes": 886681,
+      "entrypointSha256": "36048750a63359f1b062627946a2ca59d91f729af225f9da09fe84ac4917526b"
+    }
+  },
+  "fixtureCommit": "7ce5d1fcff8d189cea4871bb3d42c673490ca45b",
+  "corpusAggregateSha256": "114f8b7b7e3fa7d13d5f14946acd7a4a42d88957f7ca57da041381cd6eada99c",
+  "quasarPreExclusion": {
+    "files": 1112,
+    "errors": 3,
+    "failureIds": [
+      "quasar/app-vite/playground-ts/src/components/EssentialLink.vue",
+      "quasar/app-vite/playground-ts/src/pages/index/(index).vue",
+      "quasar/app-vite/playground-ts/src/pages/index/second.vue"
+    ]
+  },
+  "finalPool": {
+    "files": 5650,
+    "admitted": true,
+    "normalizedCodeSha256": "00de72a82d3c6e3c0f74021250085e3b09bcf5a26534949ce82e272f888d9839",
+    "normalizedMapSha256": "ee44f07ad40921c92a22ff6e067b1036b648341daa4eaea25967ad8c1fe3eb20"
+  }
+}

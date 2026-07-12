@@ -42,7 +42,7 @@ memchr = { workspace = true }
 mime = { workspace = true }
 # The shared scheduler behind the `async-runtime` feature; napi-free with
 # default features off (the napi SPI adapter stays in rolldown_binding).
-napi-async-runtime = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ee4cc89f5cee8bc08a7c77af3d87c7f4a7fd1916", default-features = false, optional = true }
+napi-async-runtime = { version = "0.1.0", git = "https://github.com/napi-rs/napi-rs.git", rev = "ee4cc89f5cee8bc08a7c77af3d87c7f4a7fd1916", default-features = false, optional = true }
 nom = { workspace = true }
 oxc = { workspace = true }
 oxc_index = { workspace = true }

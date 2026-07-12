@@ -168,7 +168,8 @@ async function execute(variant, admission) {
   const child = JSON.parse(result.stdout);
   if (
     child.runtime.bindingSha256 !== matrix.runtime.bindingSha256 ||
-    child.runtime.packageEntrySha256 !== matrix.runtime.packageEntrySha256
+    child.runtime.packageEntrySha256 !== matrix.runtime.packageEntrySha256 ||
+    child.runtime.packageEntryBytes !== matrix.runtime.packageEntryBytes
   ) {
     throw new Error(`${variant.name}/worker-${variant.workerCount} runtime provenance mismatch`);
   }

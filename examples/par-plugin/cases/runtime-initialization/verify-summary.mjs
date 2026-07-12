@@ -28,7 +28,11 @@ import {
 const formalMatrix = JSON.parse(
   await readFile(new URL('./formal-matrix.json', import.meta.url), 'utf8'),
 );
+const smokeMatrix = JSON.parse(
+  await readFile(new URL('./smoke-matrix.json', import.meta.url), 'utf8'),
+);
 assert.equal(validateInitializationMatrix(formalMatrix), formalMatrix);
+assert.equal(validateInitializationMatrix(smokeMatrix), smokeMatrix);
 assert.equal(quantile([1, 2, 3, 4], 0.5), 2.5);
 assert.equal(parseMacOsPeakRss(' 123 maximum resident set size\n', { required: true }), 123);
 assert.throws(() =>
@@ -81,6 +85,8 @@ for (const mutate of [
   (value) => (value.repeats = 9),
   (value) => (value.sampleIntervalMs = 10),
   (value) => (value.sampleOsThreads = true),
+  (value) => (value.runtime.distributionBytes += 1),
+  (value) => (value.runtime.packageEntryBytes += 1),
   (value) => value.cases.pop(),
   (value) => value.cases[0].workerCounts.pop(),
 ]) {
@@ -96,6 +102,8 @@ const summary = summarizeInitializationReport(report, {
 });
 assert.equal(summary.cases.length, 20);
 assert.equal(summary.source.rawArtifact.sha256, 'f'.repeat(64));
+assert.equal(summary.source.distributionBytes, ATTRIBUTION_RUNTIME.distributionBytes);
+assert.equal(summary.source.packageEntryBytes, ATTRIBUTION_RUNTIME.packageEntryBytes);
 assert.equal(summary.contrasts.length, 4);
 assert.equal(summary.contrasts[0].bindingImportOverRetainedRuntime.pairing, 'same rotated block');
 assert.equal(summary.contrasts[0].bindingImportOverRetainedRuntime.samples, 10);
@@ -126,10 +134,13 @@ for (const mutate of [
   (value) => (value.runs[0].child.resources.workerLocalSnapshots = []),
   (value) => (value.runs[0].postHostAdmission.policy.maximumUptimeSeconds = 1),
   (value) => (value.runtimeProvenance.worktree.commit = '0'.repeat(40)),
+  (value) => (value.runtimeProvenance.distribution.bytes += 1),
+  (value) => (value.runtimeProvenance.packageEntry.bytes += 1),
   (value) => (value.runtimeProvenance.node.sha256 = 'bad'),
   (value) => (value.runtimeProvenance.packageEnvironment.projectFiles['package.json'] = 'bad'),
   (value) => value.hostAdmissions.pop(),
   (value) => (value.runs[0].peakRssBytes = 1),
+  (value) => (value.runs[0].child.runtime.packageEntryBytes += 1),
   (value) => (value.runs[0].child.runtime.workerSourceSha256 = '0'.repeat(64)),
   (value) => (value.runs[0].child.timeline.ready[0].clock.timeOriginEpochMs += 1),
   (value) => {
@@ -250,8 +261,14 @@ function createFormalReport() {
       packageRoot: '/runtime/packages/rolldown',
       worktree: { commit: ATTRIBUTION_RUNTIME.sourceCommit, status: '' },
       binding: { sha256: ATTRIBUTION_RUNTIME.bindingSha256 },
-      distribution: { aggregateSha256: ATTRIBUTION_RUNTIME.distributionSha256 },
-      packageEntry: { sha256: ATTRIBUTION_RUNTIME.packageEntrySha256 },
+      distribution: {
+        bytes: ATTRIBUTION_RUNTIME.distributionBytes,
+        aggregateSha256: ATTRIBUTION_RUNTIME.distributionSha256,
+      },
+      packageEntry: {
+        bytes: ATTRIBUTION_RUNTIME.packageEntryBytes,
+        sha256: ATTRIBUTION_RUNTIME.packageEntrySha256,
+      },
       packageEnvironment: structuredClone(ATTRIBUTION_PACKAGE_ENVIRONMENT),
       node: {
         version: 'v24.18.0',
@@ -280,6 +297,7 @@ function child(options) {
       nodeBinary: process.execPath,
       nodeEnv: 'production',
       bindingSha256: ATTRIBUTION_RUNTIME.bindingSha256,
+      packageEntryBytes: ATTRIBUTION_RUNTIME.packageEntryBytes,
       packageEntrySha256: ATTRIBUTION_RUNTIME.packageEntrySha256,
       workerSourceSha256: '4'.repeat(64),
       configuredPools: { tokio: 18, rayon: 12, blocking: 4 },

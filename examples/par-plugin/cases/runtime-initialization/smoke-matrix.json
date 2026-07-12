@@ -8,10 +8,12 @@
   "sampleOsThreads": false,
   "repeats": 1,
   "runtime": {
-    "sourceCommit": "41833e1294e5f80efdf90067fe3766b31b58435d",
-    "bindingSha256": "2db2fd322eb0e0e57f5ff0a618e52ddac7acf64754cfcd90aa36345917cea711",
-    "distributionSha256": "7931dffb49a5e7e0fb7470a7850242d8f50726ced7f4e56792f68012405083c6",
-    "packageEntrySha256": "bbd277a14b695f2ec081a5b25781514b31727069ea1a2dba2f38924bee1fe993"
+    "sourceCommit": "76a971de8ce66e031b7d19637d13742fe4662594",
+    "bindingSha256": "6d6fc6e94b30b7b39b4c6d116b38bbecca2907ecc183c99a25a1a67e1cce1fce",
+    "distributionSha256": "3e4b174ad36807430da1b5b7db3f294a47909962511531b370f421fe00d83fbd",
+    "distributionBytes": 17240063,
+    "packageEntrySha256": "ecbce9a6cfc187db4d2c818d2500f52372b15b66022358f69c8e578c1dcbb2bc",
+    "packageEntryBytes": 1642
   },
   "cases": [
     { "name": "bare-worker", "parentPreload": "none", "mode": "empty", "workerCounts": [1] },

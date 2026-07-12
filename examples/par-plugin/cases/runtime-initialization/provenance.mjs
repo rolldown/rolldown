@@ -5,10 +5,12 @@ import { lstat, readFile, readlink, readdir, realpath, stat } from 'node:fs/prom
 import nodePath from 'node:path';
 
 export const ATTRIBUTION_RUNTIME = Object.freeze({
-  sourceCommit: '41833e1294e5f80efdf90067fe3766b31b58435d',
-  bindingSha256: '2db2fd322eb0e0e57f5ff0a618e52ddac7acf64754cfcd90aa36345917cea711',
-  distributionSha256: '7931dffb49a5e7e0fb7470a7850242d8f50726ced7f4e56792f68012405083c6',
-  packageEntrySha256: 'bbd277a14b695f2ec081a5b25781514b31727069ea1a2dba2f38924bee1fe993',
+  sourceCommit: '76a971de8ce66e031b7d19637d13742fe4662594',
+  bindingSha256: '6d6fc6e94b30b7b39b4c6d116b38bbecca2907ecc183c99a25a1a67e1cce1fce',
+  distributionSha256: '3e4b174ad36807430da1b5b7db3f294a47909962511531b370f421fe00d83fbd',
+  distributionBytes: 17_240_063,
+  packageEntrySha256: 'ecbce9a6cfc187db4d2c818d2500f52372b15b66022358f69c8e578c1dcbb2bc',
+  packageEntryBytes: 1_642,
 });
 
 export const ATTRIBUTION_PACKAGE_ENVIRONMENT = Object.freeze({
@@ -19,7 +21,7 @@ export const ATTRIBUTION_PACKAGE_ENVIRONMENT = Object.freeze({
     'packages/rolldown/package.json':
       '889ad6608781cc1a66ecd094218656d8be76bdade2ccf93971d46288690c6573',
     'node_modules/.modules.yaml':
-      'c46a147036858ea5292f425c6a62bd01dd9a1bf72635697ca3441d2555d371cf',
+      '1538c49b1b7fbe8d08d1c661fb12da398f9698e9a0ee1f3755e0e8814c23ed51',
   }),
   staticExternalPackages: Object.freeze([
     Object.freeze({
@@ -89,9 +91,12 @@ export async function inspectAttributionRuntime(packageRoot, expected = ATTRIBUT
     aggregateSha256: distributionAggregate.digest('hex'),
     entries: distributionEntries,
   };
-  if (distribution.aggregateSha256 !== expected.distributionSha256) {
+  if (
+    distribution.aggregateSha256 !== expected.distributionSha256 ||
+    distribution.bytes !== expected.distributionBytes
+  ) {
     throw new Error(
-      `initialization attribution distribution mismatch: ${distribution.aggregateSha256} != ${expected.distributionSha256}`,
+      `initialization attribution distribution mismatch: ${distribution.aggregateSha256}/${distribution.bytes} != ${expected.distributionSha256}/${expected.distributionBytes}`,
     );
   }
 
@@ -103,14 +108,21 @@ export async function inspectAttributionRuntime(packageRoot, expected = ATTRIBUT
   }
   const bindingPath = nodePath.join(distributionRoot, bindingNames[0]);
   const packageEntryPath = nodePath.join(distributionRoot, 'index.mjs');
-  const [bindingContent, packageEntryContent, bindingStat, nodeContent, nodeStat] =
-    await Promise.all([
-      readFile(bindingPath),
-      readFile(packageEntryPath),
-      stat(bindingPath),
-      readFile(process.execPath),
-      stat(process.execPath),
-    ]);
+  const [
+    bindingContent,
+    packageEntryContent,
+    bindingStat,
+    packageEntryStat,
+    nodeContent,
+    nodeStat,
+  ] = await Promise.all([
+    readFile(bindingPath),
+    readFile(packageEntryPath),
+    stat(bindingPath),
+    stat(packageEntryPath),
+    readFile(process.execPath),
+    stat(process.execPath),
+  ]);
   const bindingSha256 = sha256(bindingContent);
   const packageEntrySha256 = sha256(packageEntryContent);
   if (bindingSha256 !== expected.bindingSha256) {
@@ -118,9 +130,12 @@ export async function inspectAttributionRuntime(packageRoot, expected = ATTRIBUT
       `initialization attribution binding mismatch: ${bindingSha256} != ${expected.bindingSha256}`,
     );
   }
-  if (packageEntrySha256 !== expected.packageEntrySha256) {
+  if (
+    packageEntrySha256 !== expected.packageEntrySha256 ||
+    packageEntryStat.size !== expected.packageEntryBytes
+  ) {
     throw new Error(
-      `initialization attribution package entry mismatch: ${packageEntrySha256} != ${expected.packageEntrySha256}`,
+      `initialization attribution package entry mismatch: ${packageEntrySha256}/${packageEntryStat.size} != ${expected.packageEntrySha256}/${expected.packageEntryBytes}`,
     );
   }
   const packageEnvironment = await capturePackageEnvironment(runtimeRepositoryRoot, packageRoot);
@@ -138,7 +153,11 @@ export async function inspectAttributionRuntime(packageRoot, expected = ATTRIBUT
       sha256: sha256(nodeContent),
     },
     binding: { path: bindingPath, bytes: bindingStat.size, sha256: bindingSha256 },
-    packageEntry: { path: packageEntryPath, sha256: packageEntrySha256 },
+    packageEntry: {
+      path: packageEntryPath,
+      bytes: packageEntryStat.size,
+      sha256: packageEntrySha256,
+    },
     packageEnvironment,
     distribution,
   };

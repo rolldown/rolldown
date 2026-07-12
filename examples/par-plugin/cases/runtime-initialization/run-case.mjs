@@ -202,6 +202,7 @@ const result = {
     bindingPath,
     bindingBytes: bindingStat.size,
     bindingSha256,
+    packageEntryBytes: packageEntry.byteLength,
     packageEntrySha256: sha256(packageEntry),
     workerSourceSha256: sha256(workerSource),
     configuredPools: {

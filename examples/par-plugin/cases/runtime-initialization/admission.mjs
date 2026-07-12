@@ -68,7 +68,9 @@ export function validateInitializationMatrix(value) {
     value.runtime?.sourceCommit !== ATTRIBUTION_RUNTIME.sourceCommit ||
     value.runtime?.bindingSha256 !== ATTRIBUTION_RUNTIME.bindingSha256 ||
     value.runtime?.distributionSha256 !== ATTRIBUTION_RUNTIME.distributionSha256 ||
-    value.runtime?.packageEntrySha256 !== ATTRIBUTION_RUNTIME.packageEntrySha256
+    value.runtime?.distributionBytes !== ATTRIBUTION_RUNTIME.distributionBytes ||
+    value.runtime?.packageEntrySha256 !== ATTRIBUTION_RUNTIME.packageEntrySha256 ||
+    value.runtime?.packageEntryBytes !== ATTRIBUTION_RUNTIME.packageEntryBytes
   ) {
     throw new Error('initialization matrix header differs from the attribution runtime');
   }
@@ -152,6 +154,7 @@ export function validateInitializationCase(
     child.runtime?.nodeEnv !== 'production' ||
     child.runtime?.bindingSha256 !== expectedRuntime.bindingSha256 ||
     child.runtime?.packageEntrySha256 !== expectedRuntime.packageEntrySha256 ||
+    child.runtime?.packageEntryBytes !== expectedRuntime.packageEntryBytes ||
     child.runtime?.workerSourceSha256 !== expectedWorkerSourceSha256 ||
     !same(child.runtime?.configuredPools, { tokio: 18, rayon: 12, blocking: 4 }) ||
     child.runtime?.moduleCompileCache?.enabled !== false
@@ -279,7 +282,9 @@ export function validateFormalInitializationReport(report) {
     report.runtimeProvenance?.binding?.sha256 !== ATTRIBUTION_RUNTIME.bindingSha256 ||
     report.runtimeProvenance?.distribution?.aggregateSha256 !==
       ATTRIBUTION_RUNTIME.distributionSha256 ||
+    report.runtimeProvenance?.distribution?.bytes !== ATTRIBUTION_RUNTIME.distributionBytes ||
     report.runtimeProvenance?.packageEntry?.sha256 !== ATTRIBUTION_RUNTIME.packageEntrySha256 ||
+    report.runtimeProvenance?.packageEntry?.bytes !== ATTRIBUTION_RUNTIME.packageEntryBytes ||
     !same(report.runtimeProvenance?.packageEnvironment, ATTRIBUTION_PACKAGE_ENVIRONMENT) ||
     report.runtimeProvenance?.node?.version !== 'v24.18.0' ||
     report.runtimeProvenance?.node?.path !== process.execPath ||

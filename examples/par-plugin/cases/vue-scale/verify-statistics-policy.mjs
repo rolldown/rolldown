@@ -76,13 +76,19 @@ assert.deepEqual(classifyMonotonicScreen(screens([0.9, 0.95, 1.01, 1.1, 1.2, 1.3
   outcome: 'screen-bracketed-first-positive-direction-change',
   selectedScales: [128, 256, 512, 5000],
 });
-assert.throws(
-  () => classifyMonotonicScreen(screens([0.9, 1.01, 0.99, 1.1, 1.2, 1.3, 1.4, 1.5])),
-  /non-monotonic/,
+assert.deepEqual(
+  classifyMonotonicScreen(screens([0.9, 1.01, 0.99, 1.1, 1.2, 1.3, 1.4, 1.5])),
+  {
+    outcome: 'non-monotonic-screen-requires-repeated-direction-evidence',
+    selectedScales: [32, 128, 256, 5000],
+  },
 );
-assert.throws(
-  () => classifyMonotonicScreen(screens([1.01, 0.99, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6])),
-  /non-monotonic/,
+assert.deepEqual(
+  classifyMonotonicScreen(screens([1.01, 0.99, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6])),
+  {
+    outcome: 'non-monotonic-screen-requires-repeated-direction-evidence',
+    selectedScales: [32, 128, 5000],
+  },
 );
 
 const tieCandidate = (workerCount, median, lower, upper) => ({

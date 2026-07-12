@@ -4,7 +4,9 @@ import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { cpus, platform, release, totalmem } from 'node:os';
 import nodePath from 'node:path';
 import {
+  derivePerWorkerTransformServiceWindows,
   validateBindingModuleInit as validateBindingModuleInitStrict,
+  validateJsHookTimingAggregates,
   validateRustTimeline as validateRustTimelineStrict,
 } from './attribution-validation.mjs';
 import { validateInitializationAttributionBundle } from './initialization-attribution-validation.mjs';
@@ -33,7 +35,12 @@ import { captureHarnessSourceManifest } from './harness-provenance.mjs';
 import { captureVueToolchainProvenance } from './toolchain-provenance.mjs';
 import {
   ATTRIBUTION_DISTRIBUTION_SHA256,
+  ATTRIBUTION_DISTRIBUTION_BYTES,
+  ATTRIBUTION_DISTRIBUTION_FILES,
+  ATTRIBUTION_NATIVE_BINDING_BYTES,
   ATTRIBUTION_NATIVE_BINDING_SHA256,
+  ATTRIBUTION_PACKAGE_ENTRY_BYTES,
+  ATTRIBUTION_PACKAGE_ENTRY_SHA256,
   ATTRIBUTION_SOURCE_COMMIT,
   BASELINE_POOL_ENVIRONMENT,
   EXPECTED_DISTRIBUTION_SHA256,
@@ -295,6 +302,8 @@ const report = {
   executionEnvironment: {
     inheritedNodeOptions: null,
     childNodeOptions: `--import=${nodePath.join(import.meta.dirname, 'register-loader.mjs')}`,
+    childExecArgv: ['--expose-gc'],
+    exposeGcByArgument: true,
   },
   caseSelections,
   runs,
@@ -399,8 +408,15 @@ function execute({ name, caseOptions, variant, index, admission }) {
   const nativeRegistration = [
     ...result.stderr.matchAll(/^\[rolldown-native-plugin-registration-metrics\] (\{.*\})$/gm),
   ].map((match) => JSON.parse(match[1]));
+  const postClose = [
+    ...result.stderr.matchAll(/^\[rolldown-parallel-plugin-post-close-metrics\] (\{.*\})$/gm),
+  ].map((match) => JSON.parse(match[1]));
   const expectedRustMetrics = options.instrumentation && workerMatch ? 1 : 0;
-  if (rustMatches.length !== expectedRustMetrics || lifecycle.length !== expectedRustMetrics * 2) {
+  if (
+    rustMatches.length !== expectedRustMetrics ||
+    lifecycle.length !== expectedRustMetrics * 2 ||
+    postClose.length !== expectedRustMetrics
+  ) {
     throw new Error(`unexpected instrumentation lines for ${name}/${variant}`);
   }
   const expectedModuleInitMetrics = attributionLane && options.instrumentation ? 1 : 0;
@@ -430,6 +446,7 @@ function execute({ name, caseOptions, variant, index, admission }) {
     moduleInit[0],
     createBundlerOptions[0],
     nativeRegistration[0],
+    postClose[0],
     workerMatch ? Number(workerMatch[1]) : 0,
     options,
   );
@@ -457,6 +474,7 @@ function execute({ name, caseOptions, variant, index, admission }) {
     bindingModuleInitMetrics: moduleInit[0],
     createBundlerOptionsMetrics: createBundlerOptions[0],
     nativePluginRegistrationMetrics: nativeRegistration[0],
+    postCloseMetrics: postClose[0],
   };
 }
 
@@ -468,6 +486,7 @@ function validateRun(
   moduleInit,
   createBundlerOptions,
   nativeRegistration,
+  postClose,
   workerCount,
   options,
 ) {
@@ -498,7 +517,8 @@ function validateRun(
       initialization ||
       termination ||
       createBundlerOptions ||
-      nativeRegistration
+      nativeRegistration ||
+      postClose
     ) {
       throw new Error('uninstrumented Vue scale run emitted metrics');
     }
@@ -520,6 +540,7 @@ function validateRun(
   ) {
     throw new Error('JavaScript Vue scale metrics failed validation');
   }
+  validateJsHookTimingAggregates(js, Math.max(1, workerCount));
   const expectedMask = ((1n << BigInt(Math.max(1, workerCount))) - 1n).toString(16);
   if (js.workerMask !== expectedMask) throw new Error('worker factory mask mismatch');
   if (
@@ -559,6 +580,12 @@ function validateRun(
   if (JSON.stringify(timelineCallsByWorker) !== JSON.stringify(js.perWorkerCalls)) {
     throw new Error('Vue transform timeline and per-worker counters disagree');
   }
+  if (attributionLane) {
+    run.attributionServiceWindows = derivePerWorkerTransformServiceWindows(
+      run.transformTimeline.records,
+      Math.max(1, workerCount),
+    );
+  }
   if (attributionLane) validateBindingModuleInitStrict(moduleInit, BASELINE_POOL_ENVIRONMENT);
   else if (moduleInit) throw new Error('non-attribution run emitted binding module-init metrics');
   if (attributionLane) {
@@ -567,6 +594,7 @@ function validateRun(
       nativeRegistration,
       initialization,
       termination,
+      postClose,
       workerCount,
       expectedPluginKinds: [
         ...(options.auditSources ? ['ordinary-js'] : []),
@@ -723,7 +751,12 @@ function validateMatrix(value) {
     pin.kind === 'instrumented-research' &&
     (pin.sourceCommit !== ATTRIBUTION_SOURCE_COMMIT ||
       pin.nativeBindingSha256 !== ATTRIBUTION_NATIVE_BINDING_SHA256 ||
-      pin.distributionSha256 !== ATTRIBUTION_DISTRIBUTION_SHA256)
+      pin.nativeBindingBytes !== ATTRIBUTION_NATIVE_BINDING_BYTES ||
+      pin.distributionSha256 !== ATTRIBUTION_DISTRIBUTION_SHA256 ||
+      pin.distributionFiles !== ATTRIBUTION_DISTRIBUTION_FILES ||
+      pin.distributionBytes !== ATTRIBUTION_DISTRIBUTION_BYTES ||
+      pin.packageEntrySha256 !== ATTRIBUTION_PACKAGE_ENTRY_SHA256 ||
+      pin.packageEntryBytes !== ATTRIBUTION_PACKAGE_ENTRY_BYTES)
   ) {
     throw new Error('instrumented matrix does not match the frozen attribution artifacts');
   }

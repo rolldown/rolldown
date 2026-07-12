@@ -58,10 +58,28 @@ export function classifyMonotonicScreen(screens) {
   }
   const positive = screens.map(({ speedup }) => speedup > 1);
   const firstPositive = positive.indexOf(true);
-  if (firstPositive !== -1 && positive.slice(firstPositive).some((value) => !value)) {
-    throw new Error(
-      'screen direction is non-monotonic; do not infer a crossover from a positive-to-negative reversal',
-    );
+  const firstReversal =
+    firstPositive === -1
+      ? -1
+      : positive.findIndex((value, index) => index > firstPositive && !value);
+  if (firstReversal !== -1) {
+    const firstDirectionIndexes =
+      firstPositive === 0
+        ? [0, Math.min(1, screens.length - 1)]
+        : [firstPositive - 1, firstPositive, Math.min(firstPositive + 1, screens.length - 1)];
+    return {
+      outcome: 'non-monotonic-screen-requires-repeated-direction-evidence',
+      selectedScales: [
+        ...new Set([
+          ...firstDirectionIndexes,
+          Math.max(0, firstReversal - 1),
+          firstReversal,
+          screens.length - 1,
+        ]),
+      ]
+        .sort((left, right) => left - right)
+        .map((index) => screens[index].componentCount),
+    };
   }
   if (firstPositive === 0) {
     return {

@@ -14,11 +14,17 @@ export const LIFECYCLE_BASELINE_NATIVE_BINDING_SHA256 =
   '7b8863bb28aefd2e2eb7409f8be6dae57a252fe4a2688383007be7ea2f847bf7';
 export const LIFECYCLE_BASELINE_DISTRIBUTION_SHA256 =
   '1efffd0b63483e77cd2854fe716941000ae9548768691d7b5a64dceb011f3c45';
-export const ATTRIBUTION_SOURCE_COMMIT = '41833e1294e5f80efdf90067fe3766b31b58435d';
+export const ATTRIBUTION_SOURCE_COMMIT = '76a971de8ce66e031b7d19637d13742fe4662594';
 export const ATTRIBUTION_NATIVE_BINDING_SHA256 =
-  '2db2fd322eb0e0e57f5ff0a618e52ddac7acf64754cfcd90aa36345917cea711';
+  '6d6fc6e94b30b7b39b4c6d116b38bbecca2907ecc183c99a25a1a67e1cce1fce';
+export const ATTRIBUTION_NATIVE_BINDING_BYTES = 16_360_800;
 export const ATTRIBUTION_DISTRIBUTION_SHA256 =
-  '7931dffb49a5e7e0fb7470a7850242d8f50726ced7f4e56792f68012405083c6';
+  '3e4b174ad36807430da1b5b7db3f294a47909962511531b370f421fe00d83fbd';
+export const ATTRIBUTION_DISTRIBUTION_FILES = 49;
+export const ATTRIBUTION_DISTRIBUTION_BYTES = 17_240_063;
+export const ATTRIBUTION_PACKAGE_ENTRY_SHA256 =
+  'ecbce9a6cfc187db4d2c818d2500f52372b15b66022358f69c8e578c1dcbb2bc';
+export const ATTRIBUTION_PACKAGE_ENTRY_BYTES = 1_642;
 export const BASELINE_POOL_ENVIRONMENT = {
   ROLLDOWN_WORKER_THREADS: '18',
   RAYON_NUM_THREADS: '12',
@@ -131,16 +137,43 @@ export async function inspectRuntimeProvenance(
   const bindingContent = await readFile(bindingPath);
   const bindingStat = await stat(bindingPath);
   const bindingSha256 = sha256(bindingContent);
-  if (bindingSha256 !== expectedPin.nativeBindingSha256) {
+  if (
+    bindingSha256 !== expectedPin.nativeBindingSha256 ||
+    (expectedPin.nativeBindingBytes !== undefined &&
+      bindingStat.size !== expectedPin.nativeBindingBytes)
+  ) {
     throw new Error(
-      `native binding hash differs from ${expectedPin.kind} pin ${expectedPin.sourceCommit}: ${bindingSha256}`,
+      `native binding bytes or hash differ from ${expectedPin.kind} pin ${expectedPin.sourceCommit}: ${bindingStat.size}/${bindingSha256}`,
     );
   }
 
   const distribution = await hashRolldownDistribution(packageRoot);
-  if (distribution.aggregateSha256 !== expectedPin.distributionSha256) {
+  if (
+    distribution.aggregateSha256 !== expectedPin.distributionSha256 ||
+    (expectedPin.distributionFiles !== undefined &&
+      distribution.files !== expectedPin.distributionFiles) ||
+    (expectedPin.distributionBytes !== undefined &&
+      distribution.bytes !== expectedPin.distributionBytes)
+  ) {
     throw new Error(
-      `Rolldown distribution hash differs from ${expectedPin.kind} pin ${expectedPin.sourceCommit}: ${distribution.aggregateSha256}`,
+      `Rolldown distribution bytes, files, or hash differ from ${expectedPin.kind} pin ${expectedPin.sourceCommit}: ${distribution.files}/${distribution.bytes}/${distribution.aggregateSha256}`,
+    );
+  }
+  const packageEntryPath = nodePath.join(packageRoot, 'dist/index.mjs');
+  const packageEntryContent = await readFile(packageEntryPath);
+  const packageEntry = {
+    path: 'packages/rolldown/dist/index.mjs',
+    bytes: packageEntryContent.byteLength,
+    sha256: sha256(packageEntryContent),
+  };
+  if (
+    (expectedPin.packageEntrySha256 !== undefined &&
+      packageEntry.sha256 !== expectedPin.packageEntrySha256) ||
+    (expectedPin.packageEntryBytes !== undefined &&
+      packageEntry.bytes !== expectedPin.packageEntryBytes)
+  ) {
+    throw new Error(
+      `Rolldown package entry bytes or hash differ from ${expectedPin.kind} pin ${expectedPin.sourceCommit}: ${packageEntry.bytes}/${packageEntry.sha256}`,
     );
   }
   if (repositoryCommit !== expectedPin.sourceCommit) {
@@ -171,6 +204,7 @@ export async function inspectRuntimeProvenance(
         'The expected byte hash pins the unchanged release artifact; the file does not encode its Cargo profile.',
     },
     rolldownDistribution: distribution,
+    packageEntry,
     configuredPools: {
       tokio: {
         environmentVariable: 'ROLLDOWN_WORKER_THREADS',
@@ -191,12 +225,32 @@ export async function inspectRuntimeProvenance(
 }
 
 export async function assertRuntimeStable(repositoryRoot, packageRoot, initial) {
+  const currentCommit = runGit(repositoryRoot, ['rev-parse', 'HEAD']);
   const currentStatus = runGit(repositoryRoot, ['status', '--short']);
-  if (currentStatus !== initial.worktreeStatus) {
-    throw new Error('worktree changed during Vue scale matrix');
+  if (
+    currentCommit !== initial.repositoryCommit ||
+    currentStatus !== initial.worktreeStatus
+  ) {
+    throw new Error('runtime commit or worktree changed during Vue scale matrix');
   }
   const distribution = await hashRolldownDistribution(packageRoot);
   if (JSON.stringify(distribution) !== JSON.stringify(initial.rolldownDistribution)) {
     throw new Error('Rolldown distribution changed during Vue scale matrix');
+  }
+  const bindingPath = nodePath.join(repositoryRoot, initial.nativeBinding.path);
+  const bindingContent = await readFile(bindingPath);
+  const bindingStat = await stat(bindingPath);
+  if (
+    bindingStat.size !== initial.nativeBinding.bytes ||
+    sha256(bindingContent) !== initial.nativeBinding.sha256
+  ) {
+    throw new Error('Rolldown native binding changed during Vue scale matrix');
+  }
+  const packageEntryContent = await readFile(nodePath.join(packageRoot, 'dist/index.mjs'));
+  if (
+    packageEntryContent.byteLength !== initial.packageEntry.bytes ||
+    sha256(packageEntryContent) !== initial.packageEntry.sha256
+  ) {
+    throw new Error('Rolldown package entry changed during Vue scale matrix');
   }
 }

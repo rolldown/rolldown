@@ -811,6 +811,145 @@ export function validateRustWidthInputs(timeline, completionTimes, serviceSample
   }
 }
 
+export function derivePerWorkerTransformServiceWindows(records, workerCount) {
+  if (
+    !Array.isArray(records) ||
+    !Number.isSafeInteger(workerCount) ||
+    workerCount < 1
+  ) {
+    throw new Error('per-worker transform service inputs are invalid');
+  }
+  const samples = Array.from({ length: workerCount }, () => []);
+  for (const [ordinal, record] of records.entries()) {
+    const startedAt = BigInt(record?.kernelStartedAtNs ?? '-1');
+    const finishedAt = BigInt(record?.kernelFinishedAtNs ?? '-1');
+    const duration = BigInt(record?.kernelDurationNs ?? '-1');
+    if (
+      record?.ordinal !== ordinal ||
+      typeof record.sourceKey !== 'string' ||
+      record.sourceKey.length === 0 ||
+      record.calls !== 1 ||
+      !Number.isSafeInteger(record.workerNumber) ||
+      record.workerNumber < 0 ||
+      record.workerNumber >= workerCount ||
+      startedAt <= 0n ||
+      finishedAt < startedAt ||
+      duration < 0n ||
+      duration > BigInt(Number.MAX_SAFE_INTEGER) ||
+      duration !== finishedAt - startedAt
+    ) {
+      throw new Error(`per-worker transform service record ${ordinal} is invalid`);
+    }
+    samples[record.workerNumber].push({
+      durationNs: Number(duration),
+      ordinal,
+      sourceKey: record.sourceKey,
+      startedAtNs: startedAt,
+    });
+  }
+  for (const workerSamples of samples) {
+    workerSamples.sort((left, right) =>
+      left.startedAtNs < right.startedAtNs
+        ? -1
+        : left.startedAtNs > right.startedAtNs
+          ? 1
+          : left.ordinal - right.ordinal,
+    );
+  }
+  const coldCheckpointCallCounts = [1, 2, 4, 8, 16, 32];
+  return {
+    schema: 1,
+    measurementClass:
+      'descriptive per-worker transform service windows; not wall-performance evidence and not proof of JIT compilation, optimization, or warmup',
+    unit: 'nanoseconds',
+    coldCheckpointCallCounts,
+    steadyWindowCallCount: 256,
+    workers: samples.map((workerRecords, workerNumber) => {
+      const workerSamples = workerRecords.map(({ durationNs }) => durationNs);
+      return {
+        workerNumber,
+        completedCalls: workerSamples.length,
+        coldCheckpoints: coldCheckpointCallCounts.map((callCount) => ({
+          callCount,
+          available: workerSamples.length >= callCount,
+          callAtCheckpoint:
+            workerSamples.length >= callCount
+              ? {
+                  workerCallOrdinal: callCount,
+                  sourceKey: workerRecords[callCount - 1].sourceKey,
+                  sourceOrdinal: workerRecords[callCount - 1].ordinal,
+                  startedAtNs: String(workerRecords[callCount - 1].startedAtNs),
+                  durationNs: workerRecords[callCount - 1].durationNs,
+                }
+              : null,
+          cumulativeFirstN:
+            workerSamples.length >= callCount
+              ? summarizeServiceWindow(workerSamples.slice(0, callCount))
+              : null,
+        })),
+        steadyLast256:
+          workerSamples.length >= 256
+            ? {
+                available: true,
+                definition: 'last-256-worker-local-calls',
+                startWorkerCallOrdinal: workerSamples.length - 255,
+                endWorkerCallOrdinal: workerSamples.length,
+                firstSourceOrdinal: workerRecords.at(-256).ordinal,
+                lastSourceOrdinal: workerRecords.at(-1).ordinal,
+                summary: summarizeServiceWindow(workerSamples.slice(-256)),
+              }
+            : {
+                available: false,
+                definition: 'last-256-worker-local-calls',
+                requiredCalls: 256,
+                observedCalls: workerSamples.length,
+                summary: null,
+              },
+      };
+    }),
+  };
+}
+
+export function validateJsHookTimingAggregates(value, expectedCalls) {
+  for (const [label, calls, total, maximum] of [
+    ['factory', value?.factoryCalls, value?.factoryNsTotal, value?.factoryNsMax],
+    ['buildStart', value?.buildStartCalls, value?.buildStartNsTotal, value?.buildStartNsMax],
+  ]) {
+    if (
+      !Number.isSafeInteger(calls) ||
+      calls < 1 ||
+      (expectedCalls !== undefined && calls !== expectedCalls) ||
+      !Number.isSafeInteger(total) ||
+      !Number.isSafeInteger(maximum) ||
+      total <= 0 ||
+      maximum <= 0 ||
+      maximum > total ||
+      total > calls * maximum ||
+      (calls === 1 && total !== maximum)
+    ) {
+      throw new Error(`JavaScript ${label} timing arithmetic is invalid`);
+    }
+  }
+}
+
+function summarizeServiceWindow(values) {
+  const sorted = [...values].sort((left, right) => left - right);
+  const totalNs = values.reduce((total, value) => total + value, 0);
+  return {
+    calls: values.length,
+    totalNs,
+    meanNs: totalNs / values.length,
+    minNs: sorted[0],
+    p50Ns: nearestRank(sorted, 0.5),
+    p95Ns: nearestRank(sorted, 0.95),
+    maxNs: sorted.at(-1),
+  };
+}
+
+function nearestRank(sorted, percentile) {
+  return sorted[Math.max(0, Math.ceil(sorted.length * percentile) - 1)];
+}
+
 function assertTimestampOrder(values, label) {
   for (const value of values) {
     if (!isTimestamp(value)) throw new Error(`${label} has an invalid timestamp`);

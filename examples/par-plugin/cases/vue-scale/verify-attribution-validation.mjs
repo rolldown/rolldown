@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import {
+  derivePerWorkerTransformServiceWindows,
   validateBindingModuleInit,
   validateCpuAttributionArithmetic,
   validateGc,
+  validateJsHookTimingAggregates,
   validateRustWidthInputs,
 } from './attribution-validation.mjs';
 import { OUTPUT_GOLDEN_FIELDS, PORTABLE_OUTPUT_GOLDEN_FIELDS } from './correctness-evidence.mjs';
@@ -33,6 +35,30 @@ rejects(() =>
     pool,
   ),
 );
+
+const hookTiming = {
+  factoryCalls: 4,
+  factoryNsTotal: 100,
+  factoryNsMax: 40,
+  buildStartCalls: 4,
+  buildStartNsTotal: 80,
+  buildStartNsMax: 30,
+};
+validateJsHookTimingAggregates(hookTiming, 4);
+for (const mutate of [
+  (value) => (value.factoryNsMax = 101),
+  (value) => (value.factoryNsTotal = 161),
+  (value) => (value.factoryNsTotal = 0),
+  (value) => (value.factoryCalls = 3),
+  (value) => (value.buildStartNsMax = Number.NaN),
+  (value) => {
+    value.buildStartCalls = 1;
+    value.buildStartNsTotal = 80;
+    value.buildStartNsMax = 79;
+  },
+]) {
+  rejects(() => validateJsHookTimingAggregates(withMutation(hookTiming, mutate), 4));
+}
 rejects(() =>
   validateBindingModuleInit(
     withMutation(moduleInit, (value) => (value.totalMs = 3)),
@@ -120,6 +146,35 @@ rejects(() =>
     withMutation(timeline, (value) => (value.timeWeightedWidths.pendingWidthNs = 11)),
     [50],
     [[30]],
+  ),
+);
+
+const serviceRecords = Array.from({ length: 600 }, (_, ordinal) => ({
+  ordinal,
+  workerNumber: ordinal % 2,
+  sourceKey: `component-${ordinal}.vue`,
+  calls: 1,
+  kernelStartedAtNs: String(1_000 + (599 - ordinal)),
+  kernelFinishedAtNs: String(1_000 + (599 - ordinal) + 100 + ordinal),
+  kernelDurationNs: String(100 + ordinal),
+}));
+const serviceWindows = derivePerWorkerTransformServiceWindows(serviceRecords, 2);
+assert.match(serviceWindows.measurementClass, /not proof of JIT/);
+assert.deepEqual(serviceWindows.coldCheckpointCallCounts, [1, 2, 4, 8, 16, 32]);
+assert.equal(serviceWindows.workers[0].coldCheckpoints.at(-1).cumulativeFirstN.calls, 32);
+assert.equal(serviceWindows.workers[0].coldCheckpoints[0].callAtCheckpoint.sourceOrdinal, 598);
+assert.equal(serviceWindows.workers[1].steadyLast256.summary.calls, 256);
+assert.equal(serviceWindows.workers[0].completedCalls, 300);
+rejects(() =>
+  derivePerWorkerTransformServiceWindows(
+    withMutation(serviceRecords, (value) => (value[0].workerNumber = 2)),
+    2,
+  ),
+);
+rejects(() =>
+  derivePerWorkerTransformServiceWindows(
+    withMutation(serviceRecords, (value) => (value[0].kernelDurationNs = '1')),
+    2,
   ),
 );
 rejects(() =>

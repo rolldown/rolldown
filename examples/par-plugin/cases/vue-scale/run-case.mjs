@@ -19,6 +19,12 @@ if (process.version !== REQUIRED_NODE_VERSION) {
 
 const options = JSON.parse(process.argv[2] ?? 'null');
 if (!options) throw new Error('expected a JSON case as the first argument');
+if (
+  process.env.ROLLDOWN_PARALLEL_PLUGIN_METRICS === 'json' &&
+  (!process.execArgv.includes('--expose-gc') || typeof globalThis.gc !== 'function')
+) {
+  throw new Error('instrumented Vue attribution requires Node.js --expose-gc');
+}
 const {
   variant,
   componentCount,

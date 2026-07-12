@@ -23,6 +23,14 @@ use std::sync::{
   LazyLock,
   atomic::{AtomicU32, Ordering},
 };
+#[cfg(not(target_family = "wasm"))]
+use std::{
+  sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+  },
+  time::Instant,
+};
 
 use napi_derive::napi;
 
@@ -55,6 +63,9 @@ pub use oxc_resolver_napi;
 
 #[cfg(all(target_family = "wasm", tokio_unstable))]
 pub static ACTIVE_TASK_COUNT: LazyLock<AtomicU32> = LazyLock::new(|| AtomicU32::new(1));
+
+#[cfg(not(target_family = "wasm"))]
+static MODULE_INIT_METRICS_ORDINAL: AtomicU64 = AtomicU64::new(0);
 
 #[napi]
 /// Shutdown the tokio runtime manually.
@@ -90,6 +101,13 @@ fn init() {
   #[cfg(not(target_family = "wasm"))]
   {
     use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
+    let metrics_enabled =
+      std::env::var("ROLLDOWN_PARALLEL_PLUGIN_METRICS").as_deref() == Ok("json");
+    let metrics_ordinal =
+      metrics_enabled.then(|| MODULE_INIT_METRICS_ORDINAL.fetch_add(1, Ordering::Relaxed) + 1);
+    let metrics_started_at = metrics_enabled.then(Instant::now);
+    let started_threads = metrics_enabled.then(|| Arc::new(AtomicU64::new(0)));
+    let stopped_threads = metrics_enabled.then(|| Arc::new(AtomicU64::new(0)));
     let max_blocking_threads = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
       .ok()
       .and_then(|v| v.parse::<usize>().ok())
@@ -105,6 +123,18 @@ fn init() {
       // so we need to increase the worker threads rather than the blocking_threads
       .unwrap_or(num_cpus::get_physical() * 3 / 2);
     let mut builder = tokio::runtime::Builder::new_multi_thread();
+    if let (Some(started_threads), Some(stopped_threads)) =
+      (started_threads.as_ref(), stopped_threads.as_ref())
+    {
+      let started_threads = Arc::clone(started_threads);
+      builder.on_thread_start(move || {
+        started_threads.fetch_add(1, Ordering::Relaxed);
+      });
+      let stopped_threads = Arc::clone(stopped_threads);
+      builder.on_thread_stop(move || {
+        stopped_threads.fetch_add(1, Ordering::Relaxed);
+      });
+    }
 
     let rt = builder
       .max_blocking_threads(max_blocking_threads)
@@ -113,7 +143,36 @@ fn init() {
       .enable_all()
       .build()
       .expect("Failed to create tokio runtime");
+    let runtime_built_at = metrics_started_at.map(|started_at| started_at.elapsed());
+    let threads_started_after_build =
+      started_threads.as_ref().map(|value| value.load(Ordering::Relaxed));
+    let threads_stopped_after_build =
+      stopped_threads.as_ref().map(|value| value.load(Ordering::Relaxed));
     create_custom_tokio_runtime(rt);
+    if let Some(started_at) = metrics_started_at {
+      let completed_at = started_at.elapsed();
+      let report = serde_json::json!({
+        "kind": "rolldown_binding_module_init_metrics",
+        "version": 1,
+        "invocationOrdinal": metrics_ordinal,
+        "configuredTokioWorkerThreads": worker_threads,
+        "configuredTokioMaxBlockingThreads": max_blocking_threads,
+        "runtimeBuildMs": runtime_built_at.map(|duration| duration.as_secs_f64() * 1_000.0),
+        "customRuntimeRegistrationMs": runtime_built_at
+          .map(|runtime_built_at| completed_at.saturating_sub(runtime_built_at).as_secs_f64() * 1_000.0),
+        "totalMs": completed_at.as_secs_f64() * 1_000.0,
+        "threadsStartedAfterBuild": threads_started_after_build,
+        "threadsStoppedAfterBuild": threads_stopped_after_build,
+        "threadsStartedAfterRegistration": started_threads
+          .as_ref()
+          .map(|value| value.load(Ordering::Relaxed)),
+        "threadsStoppedAfterRegistration": stopped_threads
+          .as_ref()
+          .map(|value| value.load(Ordering::Relaxed)),
+        "interpretation": "Per-invocation Tokio callback counts. A later invocation that starts and stops its configured threads during registration constructed a runtime that was not retained by napi's process-global custom runtime slot."
+      });
+      eprintln!("[rolldown-parallel-plugin-module-init-metrics] {report}");
+    }
   }
 
   #[cfg(not(feature = "disable_panic_hook"))]

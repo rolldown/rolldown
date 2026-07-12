@@ -324,7 +324,23 @@ export default __napiModule.exports
     expect(patched).toContain('if (!__emnapiWasmEnvCleanupPrepared)');
     expect(patched).toContain('__napiInstance?.exports?.napi_prepare_wasm_env_cleanup');
     expect(patched).toContain('__emnapiWasmEnvCleanupPrepared = true');
+    // Raw context.destroy() calls must settle pending napi work like
+    // __destroyEmnapiContext() does, so the patch wraps destroy itself.
+    expect(patched).toContain('const __emnapiContextDestroy = __emnapiContext.destroy');
+    expect(patched).toContain('__emnapiContext.destroy = function() {');
+    expect(patched).toContain('Reflect.apply(__emnapiContextDestroy, this, arguments)');
     expect(patchWasiBindingContextLifecycle(patched)).toBe(patched);
+  });
+
+  test('wraps context destroy on an already-guarded refreshed lifecycle', () => {
+    const patched = patchWasiBindingContextLifecycle(upstreamWasiBrowserLifecycle);
+    const withoutWrap = patched.replace(
+      /if \(__emnapiContext !== undefined\) \{[\s\S]*?\n\}\n\n/,
+      '',
+    );
+
+    expect(withoutWrap).not.toBe(patched);
+    expect(patchWasiBindingContextLifecycle(withoutWrap)).toBe(patched);
   });
 
   test('rejects a partial refreshed lifecycle instead of falling back to legacy patching', () => {
@@ -346,15 +362,17 @@ export default __napiModule.exports
   );
 
   test('normalizes synchronous threaded browser worker termination failures', () => {
-    const source = `try {
-  __terminations.push(Promise.resolve(__worker.terminate()))
-} catch (__cleanupError) {
-  __terminations.push({ error: __cleanupError })
-}
+    const source = `    try {
+      __terminations.push(Promise.resolve(__worker.terminate()))
+    } catch (__cleanupError) {
+      __terminations.push({ error: __cleanupError })
+    }
 `;
     const patched = patchWasiBrowserWorkerTerminationAwait(source);
 
-    expect(patched).toContain('__terminations.push(Promise.resolve({ error: __cleanupError }))');
+    expect(patched).toContain(
+      '      __terminations.push(Promise.resolve({ error: __cleanupError }))',
+    );
     expect(patchWasiBrowserWorkerTerminationAwait(patched)).toBe(patched);
   });
 

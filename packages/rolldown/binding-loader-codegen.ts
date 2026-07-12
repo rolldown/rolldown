@@ -40,6 +40,27 @@ const WASI_NODE_CONTEXT_SUPPRESS_DESTROY = '  __emnapiContext.suppressDestroy()\
 const WASI_NAPI_INSTANCE_DECLARATION = 'let __napiInstance\n';
 const WASI_NAPI_INSTANCE_ASSIGNMENT = '      __napiInstance = instance\n';
 const WASI_CONTEXT_DESTROY_HELPER = 'function __destroyEmnapiContext() {\n';
+const WASI_CONTEXT_PREPARE_CLEANUP_FLAG = 'let __emnapiWasmEnvCleanupPrepared = false\n';
+const WASI_CONTEXT_DESTROY_WRAP = `if (__emnapiContext !== undefined) {
+  // A raw destroy call on the emnapi context (bypassing
+  // __destroyEmnapiContext) must still settle pending napi async work: run
+  // the wasm-side cleanup preparation while the environment can still call
+  // into JavaScript, then delegate to the original destroy.
+  // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
+  const __emnapiContextDestroy = __emnapiContext.destroy
+  __emnapiContext.destroy = function() {
+    if (!__emnapiWasmEnvCleanupPrepared) {
+      const __prepareWasmEnvCleanup =
+        __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
+      if (typeof __prepareWasmEnvCleanup === 'function') {
+        __prepareWasmEnvCleanup()
+      }
+      __emnapiWasmEnvCleanupPrepared = true
+    }
+    return Reflect.apply(__emnapiContextDestroy, this, arguments)
+  }
+}
+`;
 const WASI_CONTEXT_PREPARE_CLEANUP = `  const __prepareWasmEnvCleanup =
     __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
   if (typeof __prepareWasmEnvCleanup === 'function') {
@@ -333,35 +354,64 @@ export function patchWasiBindingContextLifecycle(source: string): string {
       nodeContextCount === 1
         ? WASI_NODE_CONTEXT_PREPARE_CLEANUP_GUARD
         : WASI_CONTEXT_PREPARE_CLEANUP_GUARD;
-    const preparationCount = countOccurrences(source, preparation);
-    const guardedPreparationCount = countOccurrences(source, guardedPreparation);
+    // The destroy wrapper embeds its own guarded preparation, so count the
+    // helper's preparation shapes with wrapper occurrences stripped.
+    const destroyWrapCount = countOccurrences(source, WASI_CONTEXT_DESTROY_WRAP);
+    const sourceWithoutDestroyWrap = source.split(WASI_CONTEXT_DESTROY_WRAP).join('');
+    const preparationCount = countOccurrences(sourceWithoutDestroyWrap, preparation);
+    const guardedPreparationCount = countOccurrences(sourceWithoutDestroyWrap, guardedPreparation);
     const preparationFlagCount = countOccurrences(
-      source,
-      'let __emnapiWasmEnvCleanupPrepared = false\n',
+      sourceWithoutDestroyWrap,
+      WASI_CONTEXT_PREPARE_CLEANUP_FLAG,
     );
+    // A raw `__emnapiContext.destroy()` must settle pending napi work exactly
+    // like the loader's own `__destroyEmnapiContext()` does, so the flag
+    // declaration is always followed by the destroy wrapper.
+    const injectDestroyWrap = (input: string): string =>
+      replaceExactly(
+        input,
+        WASI_CONTEXT_PREPARE_CLEANUP_FLAG,
+        `${WASI_CONTEXT_PREPARE_CLEANUP_FLAG}
+${WASI_CONTEXT_DESTROY_WRAP}`,
+        1,
+        'WASI context destroy settlement wrapper',
+      );
     if (preparationCount === 0 && guardedPreparationCount === 1 && preparationFlagCount === 1) {
-      return source;
+      if (destroyWrapCount === 1) {
+        return source;
+      }
+      if (destroyWrapCount !== 0) {
+        throw new Error(
+          `Unexpected NAPI-RS WASI loader template for context destroy settlement: expected one wrapper, found ${destroyWrapCount}`,
+        );
+      }
+      return injectDestroyWrap(source);
     }
-    if (preparationCount !== 1 || guardedPreparationCount !== 0 || preparationFlagCount !== 0) {
+    if (
+      preparationCount !== 1 ||
+      guardedPreparationCount !== 0 ||
+      preparationFlagCount !== 0 ||
+      destroyWrapCount !== 0
+    ) {
       throw new Error('Unexpected NAPI-RS WASI loader template for context cleanup preparation');
     }
 
     source = replaceExactly(
       source,
       WASI_CONTEXT_DESTROY_HELPER,
-      `let __emnapiWasmEnvCleanupPrepared = false
-
+      `${WASI_CONTEXT_PREPARE_CLEANUP_FLAG}
 ${WASI_CONTEXT_DESTROY_HELPER}`,
       1,
       'WASI context cleanup preparation state',
     );
-    return replaceExactly(
+    source = replaceExactly(
       source,
       preparation,
       guardedPreparation,
       1,
       'WASI context cleanup preparation',
     );
+    return injectDestroyWrap(source);
   }
 
   const contextLifecycle = `${WASI_ISOLATED_CONTEXT_CREATION}

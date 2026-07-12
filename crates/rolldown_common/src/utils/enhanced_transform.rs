@@ -283,7 +283,7 @@ pub fn enhanced_transform(
       let found = match result {
         Ok(found) => found,
         Err(err) => {
-          errors.push(BuildDiagnostic::tsconfig_error(filename.to_string(), err));
+          errors.push(BuildDiagnostic::tsconfig_error(err));
           return EnhancedTransformResult::new_for_error(errors, warnings, tsconfig_file_paths);
         }
       };

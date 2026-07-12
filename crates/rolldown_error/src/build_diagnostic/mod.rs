@@ -2,7 +2,7 @@ pub mod constructors;
 pub mod diagnostic;
 pub mod events;
 
-use rustc_hash::FxHashMap;
+use rustc_hash::FxHashSet;
 use std::{
   fmt::Display,
   ops::{Deref, DerefMut},
@@ -304,27 +304,14 @@ impl IntoIterator for Diagnostics {
 ///
 /// Currently consolidates:
 /// - `TsConfigError` diagnostics with the same reason into a single diagnostic
-///   listing all affected files
-pub fn consolidate_diagnostics(diagnostics: Vec<BuildDiagnostic>) -> Vec<BuildDiagnostic> {
-  let mut tsconfig_map = FxHashMap::<String, usize>::default();
-  let mut result: Vec<BuildDiagnostic> = Vec::new();
-  for mut diag in diagnostics {
-    if let Some(tsconfig_err) = diag.downcast_mut::<TsConfigError>() {
-      let reason_key = tsconfig_err.reason.to_string();
-
-      if let Some(&idx) = tsconfig_map.get(&reason_key) {
-        if let Some(existing_tsconfig) = result[idx].downcast_mut::<TsConfigError>() {
-          existing_tsconfig.merge(std::mem::take(&mut tsconfig_err.file_paths));
-        }
-      } else {
-        tsconfig_map.insert(reason_key, result.len());
-        result.push(diag);
-      }
-    } else {
-      result.push(diag);
-    }
-  }
-  result
+pub fn consolidate_diagnostics(mut diagnostics: Vec<BuildDiagnostic>) -> Vec<BuildDiagnostic> {
+  let mut seen_tsconfig_reasons = FxHashSet::<String>::default();
+  diagnostics.retain_mut(|diag| {
+    diag
+      .downcast_mut::<TsConfigError>()
+      .is_none_or(|tsconfig_err| seen_tsconfig_reasons.insert(tsconfig_err.reason.to_string()))
+  });
+  diagnostics
 }
 
 #[cfg(test)]

@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "lane": "attribution-contract-smoke",
+  "description": "Untimed 32-source contract validation for exact binding-module, lifecycle, CPU, heap, ELU, GC, Rust timeline, and JavaScript timeline attribution fields.",
+  "bindingProfile": "release",
+  "runtimePin": {
+    "kind": "instrumented-research",
+    "sourceCommit": "8e35a2249b60b65120a44d1d896eeeed19dc703b",
+    "nativeBindingSha256": "6b7dfa175754ac57650768a68d7a567c5c0635a1bb47d47c5287914594c9795e",
+    "distributionSha256": "68f57be9a8883a4ca6f28b57a9bac6e16907d8c1d079686ab9921b407b132735"
+  },
+  "configuredPools": { "tokio": 18, "rayon": 12, "blocking": 4 },
+  "cases": [
+    {
+      "name": "vue-scale-32-attribution-contract",
+      "componentCount": 32,
+      "variants": ["ordinary", "worker-4"],
+      "repeats": 1,
+      "rotationOffset": 0,
+      "instrumentation": true,
+      "auditSources": true
+    }
+  ]
+}

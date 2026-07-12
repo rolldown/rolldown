@@ -20,8 +20,59 @@ export const COUNTER = {
 export const MAX_WORKERS = 64;
 export const COUNTER_LENGTH = COUNTER.perWorkerCallsStart + MAX_WORKERS;
 
+export const TIMELINE_FIELD = {
+  calls: 0,
+  workerNumber: 1,
+  kernelStartedAtNs: 2,
+  kernelFinishedAtNs: 3,
+};
+export const TIMELINE_STRIDE = 4;
+
 export function createMetricsBuffer() {
   return new SharedArrayBuffer(BigInt64Array.BYTES_PER_ELEMENT * COUNTER_LENGTH);
+}
+
+export function createTransformTimelineBuffer(sourceCount) {
+  if (!Number.isSafeInteger(sourceCount) || sourceCount < 1) {
+    throw new Error('sourceCount must be a positive safe integer');
+  }
+  return new SharedArrayBuffer(BigInt64Array.BYTES_PER_ELEMENT * TIMELINE_STRIDE * sourceCount);
+}
+
+export function readTransformTimeline(buffer, sourceKeys) {
+  if (!buffer) return undefined;
+  if (!Array.isArray(sourceKeys)) throw new Error('sourceKeys must be an array');
+  const values = new BigInt64Array(buffer);
+  if (values.length !== sourceKeys.length * TIMELINE_STRIDE) {
+    throw new Error('Vue transform timeline buffer length mismatch');
+  }
+  return {
+    clock: {
+      source: 'process.hrtime.bigint()',
+      unit: 'nanoseconds',
+      epoch: 'arbitrary monotonic epoch shared by Node.js worker threads in this process',
+      alignment:
+        'run-case clockAnchors bracket the same hrtime clock with Date.now() before plugin setup and after build',
+    },
+    records: sourceKeys.map((sourceKey, ordinal) => {
+      const offset = ordinal * TIMELINE_STRIDE;
+      const calls = Number(Atomics.load(values, offset + TIMELINE_FIELD.calls));
+      const encodedWorkerNumber = Number(
+        Atomics.load(values, offset + TIMELINE_FIELD.workerNumber),
+      );
+      const kernelStartedAtNs = Atomics.load(values, offset + TIMELINE_FIELD.kernelStartedAtNs);
+      const kernelFinishedAtNs = Atomics.load(values, offset + TIMELINE_FIELD.kernelFinishedAtNs);
+      return {
+        ordinal,
+        sourceKey,
+        calls,
+        workerNumber: encodedWorkerNumber - 1,
+        kernelStartedAtNs: kernelStartedAtNs.toString(),
+        kernelFinishedAtNs: kernelFinishedAtNs.toString(),
+        kernelDurationNs: (kernelFinishedAtNs - kernelStartedAtNs).toString(),
+      };
+    }),
+  };
 }
 
 export function readMetrics(buffer) {

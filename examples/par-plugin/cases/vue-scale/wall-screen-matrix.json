@@ -1,0 +1,171 @@
+{
+  "schema": 1,
+  "lane": "wall-screen",
+  "description": "One fresh-process uninstrumented local screen at every frozen scale. This selects confirmation work and does not establish crossover or an optimum.",
+  "bindingProfile": "release",
+  "runtimePin": {
+    "kind": "lifecycle-corrected-baseline",
+    "sourceCommit": "b144106882fe244b19b738fc0acf3ffa07c7c9f3",
+    "nativeBindingSha256": "7b8863bb28aefd2e2eb7409f8be6dae57a252fe4a2688383007be7ea2f847bf7",
+    "distributionSha256": "1efffd0b63483e77cd2854fe716941000ae9548768691d7b5a64dceb011f3c45"
+  },
+  "configuredPools": { "tokio": 18, "rayon": 12, "blocking": 4 },
+  "requiredEvidence": {
+    "admission": "examples/par-plugin/cases/vue-scale/evidence/admission.json",
+    "correctness": "examples/par-plugin/cases/vue-scale/evidence/correctness.json"
+  },
+  "cases": [
+    {
+      "name": "vue-scale-32-screen",
+      "componentCount": 32,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 0,
+      "instrumentation": false,
+      "auditSources": false
+    },
+    {
+      "name": "vue-scale-128-screen",
+      "componentCount": 128,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 1,
+      "instrumentation": false,
+      "auditSources": false
+    },
+    {
+      "name": "vue-scale-256-screen",
+      "componentCount": 256,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 2,
+      "instrumentation": false,
+      "auditSources": false
+    },
+    {
+      "name": "vue-scale-512-screen",
+      "componentCount": 512,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 3,
+      "instrumentation": false,
+      "auditSources": false
+    },
+    {
+      "name": "vue-scale-1024-screen",
+      "componentCount": 1024,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 4,
+      "instrumentation": false,
+      "auditSources": false
+    },
+    {
+      "name": "vue-scale-2048-screen",
+      "componentCount": 2048,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 5,
+      "instrumentation": false,
+      "auditSources": false
+    },
+    {
+      "name": "vue-scale-4096-screen",
+      "componentCount": 4096,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 6,
+      "instrumentation": false,
+      "auditSources": false
+    },
+    {
+      "name": "vue-scale-5000-screen",
+      "componentCount": 5000,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 7,
+      "instrumentation": false,
+      "auditSources": false
+    }
+  ]
+}

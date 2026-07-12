@@ -1,0 +1,5 @@
+.corpus/
+.results/
+!support-overlays/
+!support-overlays/**/
+!support-overlays/**/*

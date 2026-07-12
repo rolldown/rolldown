@@ -1,0 +1,30 @@
+{
+  "schema": 2,
+  "measurementClass": "correctness-only",
+  "runtimeProfile": "lifecycle-corrected-baseline",
+  "goldenFile": "./correctness-goldens.json",
+  "protocolStatus": "reachability-only; not part of the frozen independent-project matrix",
+  "cases": [
+    {
+      "projectId": "tdesign-amendment-candidate",
+      "ordinaryRepeats": 1,
+      "workerVariants": [],
+      "expected": {
+        "ordinary": { "exitCode": 0, "executionStatus": "completed", "admissionStatus": "rejected" }
+      }
+    },
+    {
+      "projectId": "directus-amendment-candidate",
+      "ordinaryRepeats": 2,
+      "workerVariants": ["worker-1", "worker-4"],
+      "expected": {
+        "ordinary": {
+          "exitCode": 0,
+          "executionStatus": "completed",
+          "admissionStatus": "accepted"
+        },
+        "worker": { "exitCode": 0, "executionStatus": "completed", "admissionStatus": "accepted" }
+      }
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "schema": 2,
+  "measurementClass": "correctness-only",
+  "runtimeProfile": "lifecycle-corrected-baseline",
+  "goldenFile": "./correctness-goldens.json",
+  "cases": [
+    {
+      "projectId": "floating-vue",
+      "ordinaryRepeats": 2,
+      "workerVariants": ["worker-1", "worker-4"],
+      "expected": {
+        "ordinary": {
+          "exitCode": 0,
+          "executionStatus": "completed",
+          "admissionStatus": "accepted"
+        },
+        "worker": { "exitCode": 0, "executionStatus": "completed", "admissionStatus": "accepted" }
+      }
+    },
+    {
+      "projectId": "cabinet-icon",
+      "ordinaryRepeats": 2,
+      "workerVariants": ["worker-1", "worker-4"],
+      "expected": {
+        "ordinary": {
+          "exitCode": 0,
+          "executionStatus": "completed",
+          "admissionStatus": "accepted"
+        },
+        "worker": { "exitCode": 0, "executionStatus": "completed", "admissionStatus": "accepted" }
+      }
+    },
+    {
+      "projectId": "primevue",
+      "ordinaryRepeats": 2,
+      "workerVariants": ["worker-1", "worker-4"],
+      "expected": {
+        "ordinary": {
+          "exitCode": 0,
+          "executionStatus": "completed",
+          "admissionStatus": "accepted"
+        },
+        "worker": { "exitCode": 0, "executionStatus": "completed", "admissionStatus": "accepted" }
+      }
+    },
+    {
+      "projectId": "gitlab",
+      "ordinaryRepeats": 1,
+      "workerVariants": [],
+      "expected": {
+        "ordinary": { "exitCode": 0, "executionStatus": "not-run", "admissionStatus": "rejected" }
+      }
+    },
+    {
+      "projectId": "vben",
+      "ordinaryRepeats": 2,
+      "workerVariants": ["worker-1", "worker-4"],
+      "expected": {
+        "ordinary": {
+          "exitCode": 0,
+          "executionStatus": "completed",
+          "admissionStatus": "rejected"
+        },
+        "worker": { "exitCode": 0, "executionStatus": "completed", "admissionStatus": "rejected" }
+      }
+    }
+  ]
+}

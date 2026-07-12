@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "lane": "correctness-smoke",
+  "description": "Untimed maximum-curve admission. Exact source IDs, one transform per source, code, source maps, counters, lifecycle, and deterministic ordinary/worker output are required; this is not performance evidence.",
+  "bindingProfile": "release",
+  "runtimePin": {
+    "kind": "lifecycle-corrected-baseline",
+    "sourceCommit": "b144106882fe244b19b738fc0acf3ffa07c7c9f3",
+    "nativeBindingSha256": "7b8863bb28aefd2e2eb7409f8be6dae57a252fe4a2688383007be7ea2f847bf7",
+    "distributionSha256": "1efffd0b63483e77cd2854fe716941000ae9548768691d7b5a64dceb011f3c45"
+  },
+  "configuredPools": { "tokio": 18, "rayon": 12, "blocking": 4 },
+  "cases": [
+    {
+      "name": "vue-scale-32-golden",
+      "componentCount": 32,
+      "variants": ["ordinary"],
+      "repeats": 1,
+      "rotationOffset": 0,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-128-golden",
+      "componentCount": 128,
+      "variants": ["ordinary"],
+      "repeats": 1,
+      "rotationOffset": 0,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-256-golden",
+      "componentCount": 256,
+      "variants": ["ordinary"],
+      "repeats": 1,
+      "rotationOffset": 0,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-512-golden",
+      "componentCount": 512,
+      "variants": ["ordinary"],
+      "repeats": 1,
+      "rotationOffset": 0,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-1024-golden",
+      "componentCount": 1024,
+      "variants": ["ordinary"],
+      "repeats": 1,
+      "rotationOffset": 0,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-2048-golden",
+      "componentCount": 2048,
+      "variants": ["ordinary"],
+      "repeats": 1,
+      "rotationOffset": 0,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-4096-golden",
+      "componentCount": 4096,
+      "variants": ["ordinary"],
+      "repeats": 1,
+      "rotationOffset": 0,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-full-5000-smoke",
+      "componentCount": 5000,
+      "variants": ["ordinary", "worker-1", "worker-4", "worker-8"],
+      "repeats": 1,
+      "rotationOffset": 0,
+      "instrumentation": true,
+      "auditSources": true
+    }
+  ]
+}

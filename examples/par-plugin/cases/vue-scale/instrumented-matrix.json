@@ -1,0 +1,171 @@
+{
+  "schema": 1,
+  "lane": "instrumented-attribution",
+  "description": "Attribution-only base-scale matrix. Every frozen fixed count is audited once; elapsed values are not wall-performance evidence. Later repeated attribution may narrow to confirmed crossover neighbors and full scale.",
+  "bindingProfile": "release",
+  "runtimePin": {
+    "kind": "instrumented-research",
+    "sourceCommit": "8e35a2249b60b65120a44d1d896eeeed19dc703b",
+    "nativeBindingSha256": "6b7dfa175754ac57650768a68d7a567c5c0635a1bb47d47c5287914594c9795e",
+    "distributionSha256": "68f57be9a8883a4ca6f28b57a9bac6e16907d8c1d079686ab9921b407b132735"
+  },
+  "configuredPools": { "tokio": 18, "rayon": 12, "blocking": 4 },
+  "requiredEvidence": {
+    "admission": "examples/par-plugin/cases/vue-scale/evidence/admission.json",
+    "correctness": "examples/par-plugin/cases/vue-scale/evidence/correctness.json"
+  },
+  "cases": [
+    {
+      "name": "vue-scale-32-instrumented",
+      "componentCount": 32,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 0,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-128-instrumented",
+      "componentCount": 128,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 1,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-256-instrumented",
+      "componentCount": 256,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 2,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-512-instrumented",
+      "componentCount": 512,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 3,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-1024-instrumented",
+      "componentCount": 1024,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 4,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-2048-instrumented",
+      "componentCount": 2048,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 5,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-4096-instrumented",
+      "componentCount": 4096,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 6,
+      "instrumentation": true,
+      "auditSources": true
+    },
+    {
+      "name": "vue-scale-5000-instrumented",
+      "componentCount": 5000,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 7,
+      "instrumentation": true,
+      "auditSources": true
+    }
+  ]
+}

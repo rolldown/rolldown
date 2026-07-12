@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "lane": "independent-vue-wall-screen",
+  "protocol": "scale-crossover-protocol-amendment-4",
+  "node": "v24.18.0",
+  "directRolldown": true,
+  "instrumentation": false,
+  "freshProcessPerVariant": true,
+  "correctnessEvidenceRequired": true,
+  "runtimePin": {
+    "kind": "lifecycle-corrected-baseline",
+    "sourceCommit": "b144106882fe244b19b738fc0acf3ffa07c7c9f3",
+    "nativeBindingSha256": "7b8863bb28aefd2e2eb7409f8be6dae57a252fe4a2688383007be7ea2f847bf7",
+    "distributionSha256": "1efffd0b63483e77cd2854fe716941000ae9548768691d7b5a64dceb011f3c45"
+  },
+  "configuredPools": { "tokio": 18, "rayon": 12, "blocking": 4 },
+  "cases": [
+    {
+      "projectId": "floating-vue",
+      "band": "small",
+      "expectedReachedSfcCount": 4,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 0
+    },
+    {
+      "projectId": "cabinet-icon",
+      "band": "medium",
+      "expectedReachedSfcCount": 166,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 1
+    },
+    {
+      "projectId": "directus-amendment-candidate",
+      "band": "large",
+      "expectedReachedSfcCount": 546,
+      "variants": [
+        "ordinary",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "worker-4",
+        "worker-5",
+        "worker-6",
+        "worker-7",
+        "worker-8"
+      ],
+      "repeats": 1,
+      "rotationOffset": 2
+    }
+  ]
+}

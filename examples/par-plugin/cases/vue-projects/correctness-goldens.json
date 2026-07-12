@@ -1,0 +1,304 @@
+{
+  "schema": 1,
+  "shared": {
+    "measurementClass": "correctness-only",
+    "adapterProvenance": {
+      "kind": "independent Vue adapter toolchain provenance",
+      "node": {
+        "version": "v24.18.0",
+        "bytes": 120965360,
+        "sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a"
+      },
+      "installation": {
+        "files": [
+          {
+            "path": "examples/par-plugin/package.json",
+            "bytes": 1033,
+            "sha256": "164755bc240c737a95f9704add2eb64ae4c246195a0d0f2e8f28da68d77c7262"
+          },
+          {
+            "path": "node_modules/.pnpm/lock.yaml",
+            "bytes": 553161,
+            "sha256": "2cc3710e028dd31f108d5ac993aca4205bddf126099b6d474a2321f8c2ba170a"
+          },
+          {
+            "path": "package.json",
+            "bytes": 1277,
+            "sha256": "a56f43a5c1df0cf52223d60e288a265354889dc01fa7126b9a80a56893b21fc7"
+          },
+          {
+            "path": "pnpm-lock.yaml",
+            "bytes": 553161,
+            "sha256": "2cc3710e028dd31f108d5ac993aca4205bddf126099b6d474a2321f8c2ba170a"
+          },
+          {
+            "path": "pnpm-workspace.yaml",
+            "bytes": 3390,
+            "sha256": "a003e5867870bfdb4bcf76331db32d01ecc1a0153d97ee1703dd401b48cc1540"
+          }
+        ],
+        "manifestSha256": "ba88330c03e9323b6abfea68d484312f37cbabbedd117441ed3b67c8e2e2c522"
+      },
+      "modulesMetadata": {
+        "packageManager": "pnpm@11.9.0",
+        "layoutVersion": 5,
+        "nodeLinker": "isolated",
+        "virtualStoreDir": ".pnpm",
+        "included": {
+          "dependencies": true,
+          "devDependencies": true,
+          "optionalDependencies": true
+        }
+      },
+      "unpluginVue": {
+        "version": "7.2.0",
+        "packageJsonBytes": 2436,
+        "packageJsonSha256": "e5e394d8ace1faccb05048e3c9da899aab57ec39f92dc5ec6ab46ea684690815",
+        "entrypoint": {
+          "path": "dist/rolldown.mjs",
+          "bytes": 400,
+          "sha256": "cf2382afdc0bc12df208f49b879cfbc9c350beda4b76c85b95ca8a7e0fc69374"
+        },
+        "tree": {
+          "files": 23,
+          "bytes": 56484,
+          "sha256": "92cc413985d0b7731e9e3de77d5a30057671065199ca13662cc5bb2578e37a4c"
+        }
+      },
+      "source": {
+        "files": [
+          {
+            "path": "impl.js",
+            "bytes": 5791,
+            "sha256": "7c30524ba7e9eed355ef55d381133271be9bdc6fe3e8f5b525b06ef7f80808b5"
+          },
+          {
+            "path": "index.js",
+            "bytes": 186,
+            "sha256": "ef39534320c3b94c4d9198172e685ef2a71364b583287f4d89616c2877ca04ec"
+          },
+          {
+            "path": "metrics.js",
+            "bytes": 3745,
+            "sha256": "6c35e162306082cb1bdf89cdf82e845e99223f111577a05fd411d4cd7d9be2b6"
+          }
+        ],
+        "manifestSha256": "44e5c6521cd61df04982f7b1eb9315ace528f561a196164345bdd6e1d694dff2"
+      }
+    }
+  },
+  "projects": {
+    "floating-vue": {
+      "executionStatus": "completed",
+      "admissionStatus": "accepted",
+      "transform": {
+        "reachedSfcCount": 4,
+        "sourceBytes": 12715,
+        "transformManifestSha256": "b17a5c182691cbbcf67ca5c821aaa3263f0718d62473a1c563d55bdc8f435b9c",
+        "graphModuleCount": 22,
+        "graphModuleManifestSha256": "fe220f3de020ecdfb7ea31ced00ee2b8191b3347207c5643aa1f2325881383d4"
+      },
+      "output": {
+        "codeSha256": "887ff2df144595dc370fafc17d1ff0b99716ea7a133ac8027996f72ce339397b",
+        "sourceMapSha256": "839759442bf37eedb49eed194a92c7c5f2f49a3f1334c80048d29811ac178dfc"
+      },
+      "capabilityBoundary": {
+        "sourceMapSemanticCorrectness": { "tested": false },
+        "pluginDiagnosticParity": { "tested": false }
+      }
+    },
+    "cabinet-icon": {
+      "executionStatus": "completed",
+      "admissionStatus": "accepted",
+      "transform": {
+        "reachedSfcCount": 166,
+        "sourceBytes": 109122,
+        "transformManifestSha256": "7a600957c1702036c634f8f82994f573275a568f36f17a12f07e374ffcea212c",
+        "graphModuleCount": 170,
+        "graphModuleManifestSha256": "ebae425eb384de68e688ff1670a74551d99cc9659c90f4098a0e8f899ab4e58a"
+      },
+      "output": {
+        "codeSha256": "de6d36419231a9a1fba3d857609600cc61451c25c1c855668e96a4c62b6b5412",
+        "sourceMapSha256": "48ba5d0f1e658d9e3515e0fb9e96bb15f35c879ec8ee264207662c82d05770bc"
+      },
+      "capabilityBoundary": {
+        "sourceMapSemanticCorrectness": { "tested": false },
+        "pluginDiagnosticParity": { "tested": false }
+      }
+    },
+    "primevue": {
+      "executionStatus": "completed",
+      "admissionStatus": "accepted",
+      "transform": {
+        "reachedSfcCount": 275,
+        "sourceBytes": 1717901,
+        "transformManifestSha256": "d90f220e90c56c4c941b62f381e036a69d3af5170c863a0c2e27c6b785326406",
+        "graphModuleCount": 433,
+        "graphModuleManifestSha256": "1ef3104ae262980a32c0cd37bc0c5d825cdcf65c8d7f70fa463a19d6e733841a"
+      },
+      "output": {
+        "codeSha256": "40b685689e2f83e5d59ed31a5ce925abe5019a055868834d26850a2264ddfcbe",
+        "sourceMapSha256": "89e9648fb646e9b74fc8bd6611c9e0609b14a610c3e63e279b3b0a6ac49f06d2"
+      },
+      "capabilityBoundary": {
+        "sourceMapSemanticCorrectness": { "tested": false },
+        "pluginDiagnosticParity": { "tested": false }
+      }
+    },
+    "gitlab": {
+      "executionStatus": "not-run",
+      "admissionStatus": "rejected",
+      "entryProvenance": {
+        "pageEntryCount": 363,
+        "totalEntryCount": 374,
+        "sourcePins": {
+          "webpackConfigSha256": "910e9827cf1e34b8ea53038b5508c1242656e5c2abf4d3d1b598ff713b3116c8",
+          "webpackHelpersSha256": "2bd590893e590146988c65412437c362c133e5d4a0d89d39bd64a15a7bc82551",
+          "entryPointsSha256": "cc5be9aa6b728c5c1eb4c9a2eb1376fb3f7df862bc3203088223a96131544527"
+        }
+      },
+      "compilerContract": {
+        "configuredVersions": {
+          "vue2": "2.7.16",
+          "vueTemplateCompiler": "2.7.16",
+          "vue3Compat": "3.5.34",
+          "vue3CompilerSfc": "3.5.34",
+          "vue2Loader": "15.11.1",
+          "vue3Loader": "npm:vue-loader@17.4.2"
+        },
+        "explicitVue3InfectionEdges": 22,
+        "sourcePins": {
+          "package.json": "58ff42a3400c24e254cf6a6a127ea152d00133d8dc6a9e01c48f6f070517c8f9",
+          "config/webpack.config.js": "910e9827cf1e34b8ea53038b5508c1242656e5c2abf4d3d1b598ff713b3116c8",
+          "config/helpers/vue_version.js": "f1df8eabdfe541200c5e89fee7d07a770fb2619751b634a15563c186175835b4",
+          "config/helpers/vue3_infection_shared.js": "51a7498e0296ce7437b065499c9def97140679814ff648c4ef856b800115588e",
+          "config/helpers/context_aliases_shared.js": "edb7345caa65df77315ebda1dcd4ca832ce8d89d2a3c0a93432deceaf77de091",
+          "config/plugins/webpack_vue3_infection_plugin.js": "673252aa4c0517638a2a9b065da1a7984428a55b7150c4ed3ac39ed60a2b3c83",
+          "config/vue3migration/vue2_compiler.js": "0d44fd628caecee773749a2d199e749a9ba8115998f9f00cde1937b164d0fb96",
+          "config/vue3migration/vue3_sfc_compiler.mjs": "16b810ff15652364d3ed274e849be988589e21557748f3a203d86c4c77e8ae46",
+          "config/vue3migration/vue3_template_compiler.js": "ce3a2181558e47972876265a4e4e77220bf7b384b594839dca2543419b2b7384"
+        }
+      },
+      "rejection": { "code": "GITLAB_DUAL_COMPILER_CONTRACT_UNAVAILABLE" },
+      "capabilityBoundary": {
+        "sourceMapSemanticCorrectness": { "tested": false },
+        "pluginDiagnosticParity": { "tested": false }
+      }
+    },
+    "vben": {
+      "executionStatus": "completed",
+      "admissionStatus": "rejected",
+      "transform": {
+        "reachedSfcCount": 366,
+        "sourceBytes": 1002193,
+        "transformManifestSha256": "5ce593ed91779a742da587e82644c024e494dcc0b0222eaca91b5503a73bde05",
+        "graphModuleCount": 735,
+        "graphModuleManifestSha256": "8507e951fa45a6293174727c568476429d86106fe03579bcff9427db20c37dbd"
+      },
+      "output": {
+        "codeSha256": "13cdd13bf0504b1a0bad9512f6bb6d4cfd75b53512e7ad4d49595656d2e6f566",
+        "sourceMapSha256": "a7a1150374ade8cef049da2b33d7c31674afab8bd0413458ee455e86a222a9c8"
+      },
+      "capabilityBoundary": {
+        "sourceMapSemanticCorrectness": { "tested": false },
+        "pluginDiagnosticParity": { "tested": false }
+      }
+    },
+    "tdesign-amendment-candidate": {
+      "executionStatus": "completed",
+      "admissionStatus": "rejected",
+      "transform": {
+        "reachedSfcCount": 0,
+        "graphModuleCount": 708
+      },
+      "output": {
+        "codeSha256": "5bf10e568b213ea8c212e6fcef01aa8f22230875dfafe8184069928a5f95822e",
+        "sourceMapSha256": "ec6ed4273e76bce045bf3b9bf8e095320c9e47e935ceccd22bfda000755ad05b"
+      },
+      "capabilityBoundary": {
+        "sourceMapSemanticCorrectness": { "tested": false },
+        "pluginDiagnosticParity": { "tested": false }
+      }
+    },
+    "directus-amendment-candidate": {
+      "executionStatus": "completed",
+      "admissionStatus": "accepted",
+      "prepared": {
+        "physicalSfc": {
+          "count": 561,
+          "bytes": 2675339,
+          "manifestSha256": "9c790f915893da23aa1406a6e8744a74a71cea4841a377ac20c5d803947d12a7"
+        },
+        "dependencyPreparation": {
+          "packageManager": "pnpm@10.27.0",
+          "invokedPnpmVersion": "10.27.0",
+          "scriptsEnabled": false,
+          "projectVueVersion": "3.5.24",
+          "install": {
+            "packageManager": "pnpm@10.27.0",
+            "rootLockfileSha256": "aeafd45f0650bd6265ada31e7a530f3a83ae62b7cce1c36eb60f45de9b2b42c1",
+            "installLockfileSha256": "560ff04b812fd10d7b6fa8a627164a4462c755f38fe848b490cf12923e54308a",
+            "modulesMetadataSha256": "80481dd64e389501ddf919b443d6635cafaa0a2d98fe307be1e661735b3117e4",
+            "criticalPackages": [
+              {
+                "path": "app/node_modules/vue/package.json",
+                "version": "3.5.24",
+                "sha256": "8d276c52619ee65010978b5ebb45b09abd8d11ba6b2ea00da3a28eec9d940700"
+              },
+              {
+                "path": "app/node_modules/@vitejs/plugin-vue/package.json",
+                "version": "6.0.1",
+                "sha256": "94f67bc6dc6da5236b313d819aecc703b486afcd720ec9e597bb03f4bc0417e6"
+              }
+            ]
+          }
+        }
+      },
+      "transform": {
+        "reachedSfcCount": 546,
+        "sourceCalls": 546,
+        "resultCalls": 546,
+        "sourceBytes": 2667307,
+        "resultBytes": 3361367,
+        "exactOnce": true,
+        "transformManifestSha256": "f99fd2cfd58ed134612d295f9176a903cc2a861ba05e2b3ef7843ef945a013ef",
+        "reachedSourceManifestSha256": "2fc2f91479509f3ec7e45fcfce527f07e87d840ddaaf1fb20e2fd2e5744176cf",
+        "graphModuleCount": 1966,
+        "graphModuleManifestSha256": "5a189112149b735fa33cc97b900303a873f3e908e87541f90d55aad87eafbabc"
+      },
+      "graph": {
+        "globExpansionManifest": {
+          "count": 6,
+          "expandedFileCount": 126,
+          "sha256": "c0e6bf016a14745680bdc1ac4dcc71ff73a11c0c0248f559752a6bbd73086dcf"
+        },
+        "workspacePackageManifest": {
+          "count": 33,
+          "sha256": "62b3fe65a546773989df2e8fef0b0a3ac360e88af4ed921c66299009de73b168"
+        },
+        "workspaceResolutionManifest": {
+          "count": 480,
+          "calls": 480,
+          "sha256": "5ece9537182b9d3ecb6813c0c3780b732e38cee0942406e5645ee0f2db424612"
+        }
+      },
+      "output": {
+        "codeSha256": "7d39e88ca1f0a8a31cafe898e0a0e7fb7c6a92815aedca4460943618a343dc26",
+        "sourceMapSha256": "007636cd19156e4de84f5f1579559b97501d97e9c6467757f583d810f940882b",
+        "codeBytes": 10092573,
+        "sourceMapBytes": 5709936,
+        "chunkCount": 6,
+        "assetCount": 6,
+        "entryCount": 1,
+        "dynamicEntryCount": 5,
+        "missingSourceMapCount": 0,
+        "totalExports": 47,
+        "fileManifestSha256": "c1c2e426c62554c2e280c5e4c3b1ac8c32a6ba15ee300d323934ff517c9b8648"
+      },
+      "capabilityBoundary": {
+        "sourceMapSemanticCorrectness": { "tested": false },
+        "pluginDiagnosticParity": { "tested": false }
+      }
+    }
+  }
+}

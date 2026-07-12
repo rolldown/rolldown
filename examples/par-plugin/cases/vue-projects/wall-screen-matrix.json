@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "measurementClass": "wall-screen",
+  "runtimeProfile": "lifecycle-corrected-baseline",
+  "hostPolicy": "frozen-scale-crossover-host-policy",
+  "freshProcessPerVariant": true,
+  "discardedProcesses": 0,
+  "variantRotation": "left rotation by project index",
+  "variants": [
+    "ordinary",
+    "worker-1",
+    "worker-2",
+    "worker-3",
+    "worker-4",
+    "worker-5",
+    "worker-6",
+    "worker-7",
+    "worker-8"
+  ],
+  "cases": [
+    { "projectId": "floating-vue", "requiresCorrectnessAdmission": true },
+    { "projectId": "cabinet-icon", "requiresCorrectnessAdmission": true },
+    { "projectId": "primevue", "requiresCorrectnessAdmission": true },
+    { "projectId": "gitlab", "requiresCorrectnessAdmission": true },
+    {
+      "projectId": "vben",
+      "fallbackFor": "gitlab",
+      "requiresCorrectnessAdmission": true
+    }
+  ]
+}

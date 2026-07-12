@@ -1,0 +1,288 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@unhead/vue": [
+        "../../../node_modules/@unhead/vue"
+      ],
+      "@nuxt/devtools": [
+        "../../../node_modules/@nuxt/devtools"
+      ],
+      "@vue/runtime-core": [
+        "../../../node_modules/@vue/runtime-core"
+      ],
+      "@vue/compiler-sfc": [
+        "../../../node_modules/@vue/compiler-sfc"
+      ],
+      "vue-router": [
+        "../../../node_modules/vue-router"
+      ],
+      "vue-router/auto-routes": [
+        "../../../node_modules/vue-router/vue-router-auto-routes"
+      ],
+      "unplugin-vue-router/client": [
+        "../../../node_modules/unplugin-vue-router/client"
+      ],
+      "@nuxt/schema": [
+        "../../../node_modules/@nuxt/schema"
+      ],
+      "nuxt": [
+        "../../../node_modules/nuxt"
+      ],
+      "vite/client": [
+        "../../../node_modules/vite/client"
+      ],
+      "nitropack/types": [
+        "../../../node_modules/nitropack/types"
+      ],
+      "nitropack/runtime": [
+        "../../../node_modules/nitropack/runtime"
+      ],
+      "nitropack": [
+        "../../../node_modules/nitropack"
+      ],
+      "defu": [
+        "../../../node_modules/defu"
+      ],
+      "h3": [
+        "../../../node_modules/h3"
+      ],
+      "consola": [
+        "../../../node_modules/consola"
+      ],
+      "ofetch": [
+        "../../../node_modules/ofetch"
+      ],
+      "crossws": [
+        "../../../node_modules/crossws"
+      ],
+      "~": [
+        ".."
+      ],
+      "~/*": [
+        "../*"
+      ],
+      "@": [
+        ".."
+      ],
+      "@/*": [
+        "../*"
+      ],
+      "~~": [
+        ".."
+      ],
+      "~~/*": [
+        "../*"
+      ],
+      "@@": [
+        ".."
+      ],
+      "@@/*": [
+        "../*"
+      ],
+      "#shared": [
+        "../shared"
+      ],
+      "#shared/*": [
+        "../shared/*"
+      ],
+      "#server": [
+        "../server"
+      ],
+      "#server/*": [
+        "../server/*"
+      ],
+      "#app": [
+        "../../../node_modules/nuxt/dist/app"
+      ],
+      "#app/*": [
+        "../../../node_modules/nuxt/dist/app/*"
+      ],
+      "vue-demi": [
+        "../../../node_modules/nuxt/dist/app/compat/vue-demi"
+      ],
+      "#vuestic-repl-build/js": [
+        "../public/vuestic-out/main"
+      ],
+      "#vuestic-repl-build/style": [
+        "../modules/repl/output/styles.css"
+      ],
+      "@vuestic/ag-grid-theme": [
+        "../../ag-grid-theme/src/styles/index"
+      ],
+      "@vuestic/formkit": [
+        "../../formkit/src/index"
+      ],
+      "@vuestic/vueform": [
+        "../../vueform/src/index"
+      ],
+      "vuestic-ui/styles/typography.css": [
+        "../../ui/src/styles/typography/typography"
+      ],
+      "vuestic-ui/styles/grid": [
+        "../../ui/src/styles/grid/grid"
+      ],
+      "vuestic-ui/styles/grid.css": [
+        "../../ui/src/styles/grid/grid"
+      ],
+      "vuestic-ui/styles/essential.css": [
+        "../../ui/src/styles/essential"
+      ],
+      "vuestic-ui/styles/smart-helpers": [
+        "../../ui/src/styles/smart-helpers/smart-helpers"
+      ],
+      "vuestic-ui/styles/smart-helpers.css": [
+        "../../ui/src/styles/smart-helpers/smart-helpers"
+      ],
+      "vuestic-ui/src": [
+        "../../ui/src"
+      ],
+      "vuestic-ui/src/*": [
+        "../../ui/src/*"
+      ],
+      "vuestic-ui/styles": [
+        "../../ui/src/styles"
+      ],
+      "vuestic-ui/styles/*": [
+        "../../ui/src/styles/*"
+      ],
+      "vuestic-ui/css": [
+        "../../ui/src/styles/index"
+      ],
+      "vuestic-ui/dist/styles/index.css": [
+        "../../ui/src/styles/index"
+      ],
+      "vuestic-ui/package.json": [
+        "../../ui/package"
+      ],
+      "vuestic-ui/web-components": [
+        "../../ui/src/main"
+      ],
+      "vuestic-ui": [
+        "../../ui/src/main"
+      ],
+      "#vuestic-config": [
+        "../vuestic.config"
+      ],
+      "~sitemap": [
+        "../../../node_modules/@funken-studio/sitemap-nuxt-3/dist"
+      ],
+      "~sitemap/*": [
+        "../../../node_modules/@funken-studio/sitemap-nuxt-3/dist/*"
+      ],
+      "#vue-router": [
+        "../../../node_modules/vue-router"
+      ],
+      "#unhead/composables": [
+        "../../../node_modules/nuxt/dist/head/runtime/composables"
+      ],
+      "#imports": [
+        "./imports"
+      ],
+      "#app-manifest": [
+        "./manifest/meta/3b7d0bae-b808-4fea-8ca5-32630e3ab797"
+      ],
+      "#components": [
+        "./components"
+      ],
+      "#build": [
+        "."
+      ],
+      "#build/*": [
+        "./*"
+      ]
+    },
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "ESNext",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+    "allowArbitraryExtensions": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitOverride": true,
+    "module": "preserve",
+    "noEmit": true,
+    "lib": [
+      "ESNext",
+      "dom",
+      "dom.iterable",
+      "webworker"
+    ],
+    "jsx": "preserve",
+    "jsxImportSource": "vue",
+    "types": [],
+    "moduleResolution": "Bundler",
+    "useDefineForClassFields": true,
+    "noImplicitThis": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "./nuxt.d.ts",
+    "../**/*",
+    "../modules/*/runtime/**/*",
+    "../test/nuxt/**/*",
+    "../tests/nuxt/**/*",
+    "../layers/*/app/**/*",
+    "../layers/*/modules/*/runtime/**/*",
+    "../shared/**/*.d.ts",
+    "../modules/*/shared/**/*.d.ts",
+    "../layers/*/shared/**/*.d.ts",
+    "../*.d.ts",
+    "../layers/*/*.d.ts",
+    "../modules/repl/runtime",
+    "../modules/repl/dist/runtime",
+    "../modules/banner/runtime",
+    "../modules/banner/dist/runtime",
+    "../modules/runtime",
+    "../modules/dist/runtime",
+    "../modules/page-config/runtime",
+    "../modules/page-config/dist/runtime",
+    "../modules/markdown/runtime",
+    "../modules/markdown/dist/runtime",
+    "./nuxt.node.d.ts",
+    "../modules/*.*",
+    "../nuxt.config.*",
+    "../.config/nuxt.*",
+    "../layers/*/nuxt.config.*",
+    "../layers/*/.config/nuxt.*",
+    "../layers/*/modules/**/*",
+    "../shared/**/*",
+    "../modules/*/shared/**/*",
+    "../layers/*/shared/**/*",
+    "../../../node_modules/runtime",
+    "../../../node_modules/dist/runtime"
+  ],
+  "exclude": [
+    "../node_modules",
+    "../../../node_modules",
+    "../../../node_modules/nuxt/node_modules",
+    "../../../node_modules/@formkit/nuxt/node_modules",
+    "../../../node_modules/@vueform/nuxt/node_modules",
+    "../../../node_modules/@nuxtjs/google-fonts/node_modules",
+    "../../../node_modules/@nuxtjs/tailwindcss/node_modules",
+    "../../../node_modules/@nuxtjs/color-mode/node_modules",
+    "../../../node_modules/@funken-studio/sitemap-nuxt-3/node_modules",
+    "../../../node_modules/@nuxt/telemetry/node_modules",
+    "../dist",
+    "../.data",
+    "../modules/*/runtime/server/**/*",
+    "../layers/*/server/**/*",
+    "../layers/*/modules/*/runtime/server/**/*",
+    "../../../node_modules/runtime/server",
+    "../../../node_modules/dist/runtime/server",
+    "../modules/repl/runtime/server",
+    "../modules/repl/dist/runtime/server",
+    "../modules/banner/runtime/server",
+    "../modules/banner/dist/runtime/server",
+    "../modules/runtime/server",
+    "../modules/dist/runtime/server",
+    "../modules/page-config/runtime/server",
+    "../modules/page-config/dist/runtime/server",
+    "../modules/markdown/runtime/server",
+    "../modules/markdown/dist/runtime/server"
+  ]
+}

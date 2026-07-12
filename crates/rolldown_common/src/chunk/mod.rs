@@ -58,23 +58,6 @@ pub enum PostChunkOptimizationOperation {
   RemovedWithPreservedExports,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub enum PreliminarySourcemapFilename {
-  #[default]
-  Uninstantiated,
-  Empty,
-  Template(PreliminaryFilename),
-}
-
-impl From<PreliminarySourcemapFilename> for Option<PreliminaryFilename> {
-  fn from(value: PreliminarySourcemapFilename) -> Self {
-    match value {
-      PreliminarySourcemapFilename::Uninstantiated | PreliminarySourcemapFilename::Empty => None,
-      PreliminarySourcemapFilename::Template(preliminary_filename) => Some(preliminary_filename),
-    }
-  }
-}
-
 impl ChunkMeta {
   #[inline]
   pub fn is_pure_user_defined_entry(&self) -> bool {
@@ -93,7 +76,7 @@ pub struct Chunk {
   // emitted chunk corresponding reference_id, used to `PluginContext#getFileName` to search the emitted chunk name
   pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
-  pub preliminary_sourcemap_filename: PreliminarySourcemapFilename,
+  pub preliminary_sourcemap_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, CompactStr>,
   /// For mixed-mode externals: maps external `namespace_ref` to the node-mode binding name.
@@ -252,9 +235,9 @@ impl Chunk {
     chunk_name: &ArcStr,
     hash_placeholder_generator: &mut HashPlaceholderGenerator,
     used_name_counts: &FxDashMap<ArcStr, u32>,
-  ) -> anyhow::Result<PreliminarySourcemapFilename> {
+  ) -> anyhow::Result<Option<PreliminaryFilename>> {
     let Some(sourcemap_filename) = &options.sourcemap_filenames else {
-      return Ok(PreliminarySourcemapFilename::Empty);
+      return Ok(None);
     };
     let sourcemap_filename = sourcemap_filename.call(rollup_pre_rendered_chunk).await?;
 
@@ -286,12 +269,12 @@ impl Chunk {
       .into();
 
     if options.sourcemap.is_none() {
-      return Ok(PreliminarySourcemapFilename::Empty);
+      return Ok(None);
     }
 
     let name = make_unique_name(&filename, used_name_counts);
 
-    Ok(PreliminarySourcemapFilename::Template(PreliminaryFilename::new(name, hash_placeholder)))
+    Ok(Some(PreliminaryFilename::new(name, hash_placeholder)))
   }
 
   fn get_preserve_modules_chunk_name<'a, 'b: 'a>(

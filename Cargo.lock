@@ -1300,7 +1300,7 @@ dependencies = [
 [[package]]
 name = "napi-async-runtime"
 version = "0.1.0"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=ee4cc89f5cee8bc08a7c77af3d87c7f4a7fd1916#ee4cc89f5cee8bc08a7c77af3d87c7f4a7fd1916"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=6d6ad3bb3dec52a3579ca949e93d7689ac523892#6d6ad3bb3dec52a3579ca949e93d7689ac523892"
 dependencies = [
  "async-task",
  "futures",

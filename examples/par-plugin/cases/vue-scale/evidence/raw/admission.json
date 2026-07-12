@@ -51,8 +51,8 @@
   "harnessSourceManifest": {
     "algorithm": "SHA-256 over UTF-8-sorted repository-relative path + NUL + kind + NUL + bytes + NUL + content SHA-256 + LF records",
     "files": 54,
-    "bytes": 2707476,
-    "aggregateSha256": "5c00f47d912efd823e05b498244eb1b0bea4ed2cf3d1cb3135d485fbdea52e8a",
+    "bytes": 2707516,
+    "aggregateSha256": "4ed91a9c4228ce8322e3a1d414c2db28b81476c363105cd75f95a55e0ea878e7",
     "entries": [
       {
         "path": "examples/par-plugin/cases/vue-scale/.gitignore",
@@ -135,8 +135,8 @@
       {
         "path": "examples/par-plugin/cases/vue-scale/evidence-verifier.mjs",
         "kind": "file",
-        "bytes": 5898,
-        "sha256": "16bd72f5d12e2e9cc747b9c2ca19a12b69c5c3f5e84e3ae49e9e21033da6e6ce"
+        "bytes": 5938,
+        "sha256": "b616304c01a535ec3eec38286b6fbd86696cf837533ddbe6f68e104953ae8c5e"
       },
       {
         "path": "examples/par-plugin/cases/vue-scale/harness-provenance.mjs",
@@ -405,7 +405,7 @@
     }
   },
   "fixture": {
-    "commit": "7ce5d1fcff8d189cea4871bb3d42c673490ca45b",
+    "commit": "9ca14b8c393df2df48ea7bd9e8433e875df4bcca",
     "worktreeStatus": ""
   },
   "executionEnvironment": {

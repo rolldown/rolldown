@@ -6,12 +6,12 @@
   "raw": {
     "path": "raw/admission.json",
     "bytes": 24477,
-    "sha256": "eebd89f228452d3f4b5b2a2709134647928ede08b35c39cadaf2766d14dac738"
+    "sha256": "d1868df46e6acf256d0e56ae7f372191afc492f0624f8cc78881af7d972e56be"
   },
   "harnessSourceManifest": {
     "files": 54,
-    "bytes": 2707476,
-    "aggregateSha256": "5c00f47d912efd823e05b498244eb1b0bea4ed2cf3d1cb3135d485fbdea52e8a"
+    "bytes": 2707516,
+    "aggregateSha256": "4ed91a9c4228ce8322e3a1d414c2db28b81476c363105cd75f95a55e0ea878e7"
   },
   "runtimePin": {
     "kind": "lifecycle-corrected-baseline",
@@ -43,7 +43,7 @@
       "entrypointSha256": "36048750a63359f1b062627946a2ca59d91f729af225f9da09fe84ac4917526b"
     }
   },
-  "fixtureCommit": "7ce5d1fcff8d189cea4871bb3d42c673490ca45b",
+  "fixtureCommit": "9ca14b8c393df2df48ea7bd9e8433e875df4bcca",
   "corpusAggregateSha256": "114f8b7b7e3fa7d13d5f14946acd7a4a42d88957f7ca57da041381cd6eada99c",
   "quasarPreExclusion": {
     "files": 1112,

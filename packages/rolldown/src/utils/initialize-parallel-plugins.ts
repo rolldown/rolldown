@@ -430,6 +430,7 @@ const captureProcessSnapshot = (metricsRuntime: MainMetricsRuntime) => ({
     eventLoopUtilization: 'Node.js main event loop only; this is not CPU time',
   },
   processCpuUsageMicros: process.cpuUsage(),
+  mainThreadCpuUsageMicros: process.threadCpuUsage(),
   processResourceUsage: process.resourceUsage(),
   processMemoryUsageBytes: process.memoryUsage(),
   mainIsolateHeapStatistics: metricsRuntime.getHeapStatistics(),
@@ -445,6 +446,10 @@ const calculateCpuAttribution = (
   const processDelta = subtractCpuUsage(
     processEnd.processCpuUsageMicros,
     processStart.processCpuUsageMicros,
+  );
+  const mainThreadDelta = subtractCpuUsage(
+    processEnd.mainThreadCpuUsageMicros,
+    processStart.mainThreadCpuUsageMicros,
   );
   const workerDeltas = workerStarts.map((start, index) => {
     if (!start?.ok) {
@@ -465,16 +470,20 @@ const calculateCpuAttribution = (
     }),
     { user: 0, system: 0 },
   );
+  const processMinusWorkerCpu = subtractCpuUsage(processDelta, measuredWorkerCpu);
+  const residualCpu = subtractCpuUsage(processMinusWorkerCpu, mainThreadDelta);
   return {
     processCpuDeltaMicros: processDelta,
+    mainThreadCpuDeltaMicros: mainThreadDelta,
     measuredWorkerCpuDeltaMicros: measuredWorkerCpu,
     measuredWorkerThreadCpuDeltaMicros: measuredWorkerCpu,
-    residualProcessCpuDeltaMicros: subtractCpuUsage(processDelta, measuredWorkerCpu),
+    processMinusWorkerThreadCpuDeltaMicros: processMinusWorkerCpu,
+    residualProcessCpuDeltaMicros: residualCpu,
     completeWorkerCoverage: workerDeltas.every((delta) => delta !== undefined),
     workerCpuScope:
       'Worker.cpuUsage measures each Node.js worker thread, including V8, garbage collection, runtime, and native work executed on that thread; it excludes helper threads and is not pure plugin JavaScript CPU',
     residualMeaning:
-      'process CPU minus measured Node.js worker-thread CPU; includes the Node.js main thread, Rolldown/Rust/native threads, runtime helper threads, measurement skew, and any unmeasured worker CPU',
+      'process CPU minus measured Node.js main-thread and worker-thread CPU; includes Rolldown/Rust/native threads, runtime helper threads, measurement skew, and any unmeasured worker CPU; it is not Rolldown-only CPU',
   };
 };
 

@@ -3,19 +3,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## _virtual/_rolldown/runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-exports.__exportAll = __exportAll;
-exports.__reExport = __reExport;
-
-```
-
 ## main.js
 
 ```js
-require("./_virtual/_rolldown/runtime.js");
 require("./server.js");
 var external_lib = require("external-lib");
 Object.keys(external_lib).forEach(function(k) {
@@ -32,7 +22,6 @@ Object.keys(external_lib).forEach(function(k) {
 ## server.js
 
 ```js
-require("./_virtual/_rolldown/runtime.js");
 var external_lib = require("external-lib");
 Object.keys(external_lib).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {

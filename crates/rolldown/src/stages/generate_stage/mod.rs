@@ -111,6 +111,7 @@ mod minify_chunks;
 mod on_demand_wrapping;
 mod post_banner_footer;
 mod render_chunk_to_assets;
+mod runtime_module_sweep;
 
 pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
@@ -144,8 +145,9 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
     let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs).await?;
 
-    // The chunk optimizer's re-run of the inclusion pass (inside `generate_chunks`) was the
-    // last writer; sealing consumes the builder, so nothing downstream can mutate the set.
+    // The unused-runtime-module sweep (inside `generate_chunks`, after the chunk optimizer's
+    // re-run of the inclusion pass) was the last writer; sealing consumes the builder, so
+    // nothing downstream can mutate the set.
     let used_symbol_refs = used_symbol_refs.seal();
 
     // Count only live chunks. Chunks merged away during chunk optimization (e.g.
@@ -159,8 +161,6 @@ impl<'a> GenerateStage<'a> {
     if live_chunk_count > 1 {
       validate_options_for_multi_chunk_output(self.options)?;
     }
-
-    self.finalized_module_namespace_ref_usage();
 
     self.compute_retained_export_symbols(&used_symbol_refs);
 

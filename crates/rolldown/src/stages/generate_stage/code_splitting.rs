@@ -165,6 +165,15 @@ impl GenerateStage<'_> {
 
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
 
+    self.find_entry_level_external_module(&mut chunk_graph);
+
+    self.finalized_module_namespace_ref_usage();
+
+    // Runs after the two passes above invalidated the link-time reasons for including the
+    // runtime module, and before chunk exec-order assignment so a dropped runtime chunk is
+    // tombstoned like any other removed chunk.
+    self.sweep_unused_runtime_module(&mut chunk_graph, used_symbol_refs);
+
     chunk_graph
       .chunk_table
       .iter_mut_enumerated()
@@ -227,8 +236,6 @@ impl GenerateStage<'_> {
     // [order by chunk index]               [order by exec order]
 
     chunk_graph.rebuild_sorted_chunk_idx_vec();
-
-    self.find_entry_level_external_module(&mut chunk_graph);
 
     Ok(chunk_graph)
   }

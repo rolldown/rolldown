@@ -5,6 +5,7 @@ import {
   captureAdapterBaseProvenance,
   captureProjectAdapterProvenance,
 } from './adapter-provenance.mjs';
+import { canonicalTransformResult } from './graph-support.mjs';
 import { assertLocalNode } from './projects.mjs';
 import {
   assertExpectedSubset,
@@ -158,5 +159,45 @@ assert.deepEqual(comparableEvidence(checkoutA).entryProvenance.entriesState.watc
   '<project-root>/app/assets/javascripts/pages/projects/index.js',
   '<project-root>/app/assets/javascripts/pages/groups/index.js',
 ]);
+
+const transformedAtA = [
+  'const value = 1;',
+  'import "/tmp/checkout-a/vben/component.vue?vue&type=style&index=0&lang.scss";',
+].join('\n');
+const transformedAtB = [
+  'const value = 1;',
+  'import "/different/checkout-b/vben/component.vue?vue&type=style&index=0&lang.scss";',
+].join('\n');
+const canonicalTransformAtA = canonicalTransformResult(transformedAtA, '/tmp/checkout-a/vben');
+const canonicalTransformAtB = canonicalTransformResult(
+  transformedAtB,
+  '/different/checkout-b/vben',
+);
+assert.deepEqual(canonicalTransformAtA, canonicalTransformAtB);
+assert.notDeepEqual(
+  canonicalTransformAtA,
+  canonicalTransformResult(
+    transformedAtB.replace('const value = 1;', 'const value = 2;'),
+    '/different/checkout-b/vben',
+  ),
+);
+assert.notDeepEqual(
+  canonicalTransformAtA,
+  canonicalTransformResult(
+    transformedAtB.replace('index=0', 'index=1'),
+    '/different/checkout-b/vben',
+  ),
+);
+assert.notDeepEqual(
+  canonicalTransformAtA,
+  canonicalTransformResult(
+    transformedAtB.replace('component.vue', 'nested/other.vue'),
+    '/different/checkout-b/vben',
+  ),
+);
+assert.throws(
+  () => canonicalTransformResult(transformedAtA, 'relative/checkout'),
+  /absolute project root/,
+);
 
 console.log('independent Vue verifier negative tests passed');

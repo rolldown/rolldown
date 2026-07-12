@@ -16,9 +16,9 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx,
-  ImportRecordMeta, InlineConstMode, MemberExprRefResolution, Module, ModuleIdx,
-  ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
-  OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolRef, WrapKind,
+  ImportRecordMeta, InlineConstMode, MemberExprRefResolution, Module, ModuleIdx, ModuleType,
+  NamespaceAlias, NormalModule, OutputExports, OutputFormat, Platform,
+  RenderedConcatenatedModuleParts, Specifier, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -893,12 +893,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let re_export_name = self.canonical_name_for_runtime("__reExport");
           let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
             let rec = &self.ctx.module.import_records[idx];
-            if rec.meta.contains(ImportRecordMeta::EntryLevelExternal)
-              && !self
-                .ctx
-                .linking_info
-                .module_namespace_included_reason
-                .contains(ModuleNamespaceIncludedReason::Unknown)
+            if !self
+              .ctx
+              .linking_info
+              .ns_star_external_re_export_emitted(rec.meta, self.ctx.options.format)
             {
               return vec![];
             }

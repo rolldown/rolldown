@@ -19,7 +19,6 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 require("./_virtual/_rolldown/runtime.js");
 require("./middle.js");
 let zod = require("zod");
-//#endregion
 Object.defineProperty(exports, "object", {
 	enumerable: true,
 	get: function() {

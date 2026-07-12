@@ -687,16 +687,21 @@ impl GenerateStage<'_> {
       vec.sort_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order());
       chunk_graph.chunk_table[chunk_idx].entry_level_external_module_idx = vec;
     }
-    // re propagate `meta.has_dynamic_exports` for affect modules
+    // Re-propagate `meta.has_dynamic_exports` for affected modules: the seeds (modules whose
+    // external star re-exports were just flattened) plus every transitive importer, since any
+    // module whose own star chain passes through a seed derived its flag from the seed's
+    // pre-flattening value. Enqueue importers on first discovery — the seeds themselves are
+    // already members, so testing membership on pop would skip them and never traverse.
     let mut q = invalidated_modules.iter().copied().collect::<VecDeque<_>>();
     while let Some(idx) = q.pop_front() {
-      if !invalidated_modules.insert(idx) {
-        continue;
-      }
       let Module::Normal(module) = &self.link_output.module_table[idx] else {
         continue;
       };
-      q.extend(module.importers_idx.iter());
+      for importer_idx in module.importers_idx.iter().copied() {
+        if invalidated_modules.insert(importer_idx) {
+          q.push_back(importer_idx);
+        }
+      }
     }
 
     if invalidated_modules.is_empty() {

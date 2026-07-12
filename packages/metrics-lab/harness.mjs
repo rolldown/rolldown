@@ -59,8 +59,18 @@ const CLI = process.env.METRICS_LAB_CLI
 const kb = (n) => `${(n / 1024).toFixed(1)}KB`;
 const ms = (v) => (v == null ? 'n/a' : `${Math.round(v)}ms`);
 const readJson = (file) => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null);
+// The state dir self-ignores: agents running `git add -A` in a consumer repo must
+// never commit tool state (a haiku run committed the whole Chrome profile).
+const guardStateDir = () => {
+  const gitignore = path.join(STATE_DIR, '.gitignore');
+  if (!fs.existsSync(gitignore)) {
+    fs.mkdirSync(STATE_DIR, { recursive: true });
+    fs.writeFileSync(gitignore, '*\n');
+  }
+};
 const writeJson = (file, value) => {
   fs.mkdirSync(path.dirname(file), { recursive: true });
+  if (file.startsWith(STATE_DIR)) guardStateDir();
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
 };
 
@@ -722,7 +732,7 @@ async function cmdBuild() {
   if (!fs.existsSync(path.join(APP_DIR, 'src', 'main.ts'))) {
     throw new Error('no app yet - run `node harness.mjs gen` first');
   }
-  fs.mkdirSync(STATE_DIR, { recursive: true });
+  guardStateDir();
   const result = await buildApp({ appDir: APP_DIR, metricsDir: BUILD_METRICS_DIR });
   console.log(`built in ${result.wallMs}ms`);
   console.log(`entry main.js: ${kb(result.entryBytes)}`);

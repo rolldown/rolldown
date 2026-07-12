@@ -1,0 +1,322 @@
+{
+  "schema": 2,
+  "kind": "vue-scale-correctness-evidence-pointer",
+  "passed": true,
+  "measurementClass": "untimed correctness; not performance evidence",
+  "raw": {
+    "path": "raw/correctness.json",
+    "bytes": 9724122,
+    "sha256": "cbda80d249e723fa2ada92b5e43e971a5c3623e4ef40a0474e96f828161c9425"
+  },
+  "harnessSourceManifest": {
+    "files": 54,
+    "bytes": 2707476,
+    "aggregateSha256": "5c00f47d912efd823e05b498244eb1b0bea4ed2cf3d1cb3135d485fbdea52e8a"
+  },
+  "vueToolchain": {
+    "unpluginVue": {
+      "package": "unplugin-vue",
+      "version": "7.2.0",
+      "files": 23,
+      "bytes": 56484,
+      "aggregateSha256": "cee68e1da1b239bc371f19ccdb55740b39c1d8c2b191be37537046babb5cf562",
+      "manifestSha256": "e5e394d8ace1faccb05048e3c9da899aab57ec39f92dc5ec6ab46ea684690815",
+      "entrypoint": "dist/rolldown.mjs",
+      "entrypointBytes": 400,
+      "entrypointSha256": "cf2382afdc0bc12df208f49b879cfbc9c350beda4b76c85b95ca8a7e0fc69374"
+    },
+    "compilerSfc": {
+      "package": "@vue/compiler-sfc",
+      "version": "3.5.39",
+      "files": 6,
+      "bytes": 2622623,
+      "aggregateSha256": "18bb63465a98fed2b2722d0aa6a314dbe4c54c3b1da67adea9e9816d1f94a4ef",
+      "manifestSha256": "3ebcadb08b31e9207a7c5a2073e4ae33daa94bba601fc1c88634b63c1dba0b73",
+      "entrypoint": "dist/compiler-sfc.cjs.js",
+      "entrypointBytes": 886681,
+      "entrypointSha256": "36048750a63359f1b062627946a2ca59d91f729af225f9da09fe84ac4917526b"
+    }
+  },
+  "fixtureCommit": "f432221e057a0714f23e810cdf296499cb4e6e67",
+  "runtimePin": {
+    "kind": "lifecycle-corrected-baseline",
+    "sourceCommit": "b144106882fe244b19b738fc0acf3ffa07c7c9f3",
+    "nativeBindingSha256": "7b8863bb28aefd2e2eb7409f8be6dae57a252fe4a2688383007be7ea2f847bf7",
+    "distributionSha256": "1efffd0b63483e77cd2854fe716941000ae9548768691d7b5a64dceb011f3c45"
+  },
+  "corpusAggregateSha256": "114f8b7b7e3fa7d13d5f14946acd7a4a42d88957f7ca57da041381cd6eada99c",
+  "goldens": {
+    "32": {
+      "selection": {
+        "files": 32,
+        "bytes": 71537,
+        "scriptSetupFiles": 11,
+        "ordinaryScriptFiles": 14,
+        "templateOnlyFiles": 7,
+        "repositories": {
+          "primevue": 13,
+          "element-plus": 3,
+          "tdesign-vue-next": 5,
+          "vuestic-ui": 5,
+          "quasar": 6
+        },
+        "selectionSha256": "542c27dc121c69009a27ebb77a75e2a5b8660b4e2c85ad3949c766af8ca59998"
+      },
+      "input": {
+        "files": 32,
+        "bytes": 71537,
+        "aggregateSha256": "caa1a568b188da656cfd8c6f0a05e6cecc41f78646a1c74b03463c6f470306fb",
+        "exactOnceSha256": "48f9ac48ec1873b4756e5f6a28b2698f69d4f0456bde20b358fe5b1519c3df5d"
+      },
+      "output": {
+        "outputRawCodeHash": "1bd4c9006cce8609e83501b7ecf2cf818a5caf7e76f09355f4dc5bb9ce768c51",
+        "outputCodeHash": "e0a9126583ac5900da3c8e13630ad7948c2b7b445380007aee05dceb7e01e03f",
+        "outputRawMapHash": "9b0c1f1659a4a7874c7827ca910a13df08875c78f2902e1d1053d3d5722955ac",
+        "outputMapHash": "9b0c1f1659a4a7874c7827ca910a13df08875c78f2902e1d1053d3d5722955ac",
+        "outputCodeBytes": 174487,
+        "outputMapBytes": 77631,
+        "outputChunkCount": 1,
+        "outputAssetCount": 1,
+        "totalExports": 32
+      }
+    },
+    "128": {
+      "selection": {
+        "files": 128,
+        "bytes": 285050,
+        "scriptSetupFiles": 49,
+        "ordinaryScriptFiles": 56,
+        "templateOnlyFiles": 23,
+        "repositories": {
+          "primevue": 47,
+          "element-plus": 17,
+          "tdesign-vue-next": 18,
+          "vuestic-ui": 24,
+          "quasar": 22
+        },
+        "selectionSha256": "1a1833a66bd645d2f63886493dc0749ad05de6728549b6bb8af62a1fc7ff3591"
+      },
+      "input": {
+        "files": 128,
+        "bytes": 285050,
+        "aggregateSha256": "44270c6dcfccb90006d574ed751b7aae34b6a049df2ba36082c2f4b7d1969c9e",
+        "exactOnceSha256": "d7ae4ba1387b541f6126b0407fc7f7a6475fe6cbf0d5017cda26ba41e4d9133d"
+      },
+      "output": {
+        "outputRawCodeHash": "1ce7d400f95873fe169cac17395d6678ee99a3f4e3c3eda388398eddc5391ef7",
+        "outputCodeHash": "2d8e0dc2dd55323e81d1ab68bdcb1d9ff9ae6c5bec3fd111b75d9c49b54d55de",
+        "outputRawMapHash": "1b63ead14aff9257d6b768b5864fe9b850a06b0094c53faf9f2c35f82cdbf743",
+        "outputMapHash": "1b63ead14aff9257d6b768b5864fe9b850a06b0094c53faf9f2c35f82cdbf743",
+        "outputCodeBytes": 707712,
+        "outputMapBytes": 308788,
+        "outputChunkCount": 1,
+        "outputAssetCount": 1,
+        "totalExports": 128
+      }
+    },
+    "256": {
+      "selection": {
+        "files": 256,
+        "bytes": 538837,
+        "scriptSetupFiles": 118,
+        "ordinaryScriptFiles": 98,
+        "templateOnlyFiles": 40,
+        "repositories": {
+          "primevue": 98,
+          "element-plus": 40,
+          "tdesign-vue-next": 28,
+          "vuestic-ui": 41,
+          "quasar": 49
+        },
+        "selectionSha256": "0609df9cb9e6153bbd5a19325a7c82d17b4ec52f35c509f99bff94e67411100a"
+      },
+      "input": {
+        "files": 256,
+        "bytes": 538837,
+        "aggregateSha256": "f3c84d7a9f8fa89f5e2b1529d3abc28c8af33d36da403c962d6042d76a6d17ff",
+        "exactOnceSha256": "22b76d9700a1a70dade03cd4e07a0efa5531959786a3e731eec768d0f1e5a09b"
+      },
+      "output": {
+        "outputRawCodeHash": "c44272851a8f2337ba4dd637794e939f157dad111768d7db1633cfddc82e05f4",
+        "outputCodeHash": "230d700cfe84606a40d46d73ca407a508e5f0c21a1912517ef223f54bac43487",
+        "outputRawMapHash": "b4ddfb5dfd227c8c45b629d56d49f194b01648bcf0f6455fe28b9759af24e12f",
+        "outputMapHash": "b4ddfb5dfd227c8c45b629d56d49f194b01648bcf0f6455fe28b9759af24e12f",
+        "outputCodeBytes": 1325304,
+        "outputMapBytes": 583422,
+        "outputChunkCount": 1,
+        "outputAssetCount": 1,
+        "totalExports": 256
+      }
+    },
+    "512": {
+      "selection": {
+        "files": 512,
+        "bytes": 1243504,
+        "scriptSetupFiles": 232,
+        "ordinaryScriptFiles": 200,
+        "templateOnlyFiles": 80,
+        "repositories": {
+          "primevue": 208,
+          "element-plus": 71,
+          "tdesign-vue-next": 61,
+          "vuestic-ui": 66,
+          "quasar": 106
+        },
+        "selectionSha256": "6770cadb2c52ae19ad3776e969d204b9f458be1e26f8e6d28d4a463001274d93"
+      },
+      "input": {
+        "files": 512,
+        "bytes": 1243504,
+        "aggregateSha256": "5e501aa8c052308acba24b2c154d603ba8fb03874735babf57dcff4f82a96448",
+        "exactOnceSha256": "6c3ecd6cbcaeab4b7c42c7f1db77cdf06d1d0a9c7425a152342e89c2710def65"
+      },
+      "output": {
+        "outputRawCodeHash": "9fd57866a61565ec0688e93c202a619de326250deecb6d260568bdb6f73c7194",
+        "outputCodeHash": "5ee528e01d397ca5c20941c8960f10181a1c1e7a5cfc5be64902b7d19d00c1d8",
+        "outputRawMapHash": "3fa0e74f0627eab178addcb5cc5a043278f1add70e0250987a8196dce7ab64ed",
+        "outputMapHash": "3fa0e74f0627eab178addcb5cc5a043278f1add70e0250987a8196dce7ab64ed",
+        "outputCodeBytes": 3019286,
+        "outputMapBytes": 1340348,
+        "outputChunkCount": 1,
+        "outputAssetCount": 1,
+        "totalExports": 512
+      }
+    },
+    "1024": {
+      "selection": {
+        "files": 1024,
+        "bytes": 2461749,
+        "scriptSetupFiles": 464,
+        "ordinaryScriptFiles": 403,
+        "templateOnlyFiles": 157,
+        "repositories": {
+          "primevue": 436,
+          "element-plus": 132,
+          "tdesign-vue-next": 122,
+          "vuestic-ui": 124,
+          "quasar": 210
+        },
+        "selectionSha256": "5d01c401de0e559934961478783dcb36ca9ddaa98fc6bc987a62e81726fe7b34"
+      },
+      "input": {
+        "files": 1024,
+        "bytes": 2461749,
+        "aggregateSha256": "5613599ecd0fe807cc7f46237605d23a4453efd7a807db42ddf72dc0876684cb",
+        "exactOnceSha256": "d2cb878887a88ee6bcbdfdf85c2ca4cc15b4825f226d40eee4f459cd5944ab79"
+      },
+      "output": {
+        "outputRawCodeHash": "8758715f56d1b2f614325d2fb837cff642317dfb34b7683ec4161c07505f327f",
+        "outputCodeHash": "bd03f725416cfc2bdaab6785e247bc857c9957e6e709d408ea4cbf48cfa8afc3",
+        "outputRawMapHash": "c73ce931095bfc1b9244a75441576adda26b25a571050ed82040d6f34bc14ec0",
+        "outputMapHash": "c73ce931095bfc1b9244a75441576adda26b25a571050ed82040d6f34bc14ec0",
+        "outputCodeBytes": 5892180,
+        "outputMapBytes": 2648682,
+        "outputChunkCount": 1,
+        "outputAssetCount": 1,
+        "totalExports": 1024
+      }
+    },
+    "2048": {
+      "selection": {
+        "files": 2048,
+        "bytes": 5512935,
+        "scriptSetupFiles": 895,
+        "ordinaryScriptFiles": 836,
+        "templateOnlyFiles": 317,
+        "repositories": {
+          "primevue": 896,
+          "element-plus": 273,
+          "tdesign-vue-next": 248,
+          "vuestic-ui": 239,
+          "quasar": 392
+        },
+        "selectionSha256": "2483b221836c7f86610095ddab18f9f7ca42e22d857558347f8f8f3cffbcfed9"
+      },
+      "input": {
+        "files": 2048,
+        "bytes": 5512935,
+        "aggregateSha256": "8056f2cb085995f8238b15c7f01cc9779d47fbc115547a665adb5072fb1a402f",
+        "exactOnceSha256": "60428ee4a69f240992480bf247b2347170d03d3f64a016938420531e30bf6f0a"
+      },
+      "output": {
+        "outputRawCodeHash": "fc0fd4d57f138c34083098610718454360f81e58fb8af87524eb22766b2fb8d5",
+        "outputCodeHash": "d404f0a44e28be1cdfb76052e2e76e7a9e30cebb334f7e290ff6a1603ac61952",
+        "outputRawMapHash": "7262a2f36b3edb15124b5d7e4dd4770daa0f13450855032a6dbe0d1bf5e959d3",
+        "outputMapHash": "7262a2f36b3edb15124b5d7e4dd4770daa0f13450855032a6dbe0d1bf5e959d3",
+        "outputCodeBytes": 12911008,
+        "outputMapBytes": 5907610,
+        "outputChunkCount": 1,
+        "outputAssetCount": 1,
+        "totalExports": 2048
+      }
+    },
+    "4096": {
+      "selection": {
+        "files": 4096,
+        "bytes": 10652756,
+        "scriptSetupFiles": 1809,
+        "ordinaryScriptFiles": 1656,
+        "templateOnlyFiles": 631,
+        "repositories": {
+          "primevue": 1817,
+          "element-plus": 526,
+          "tdesign-vue-next": 473,
+          "vuestic-ui": 513,
+          "quasar": 767
+        },
+        "selectionSha256": "ffdfac9f785e570f8db341ce2afc1e66c40db8008e19c953e9bfc41e5829645f"
+      },
+      "input": {
+        "files": 4096,
+        "bytes": 10652756,
+        "aggregateSha256": "9ff0aca34b43e790e3b096914371346dfad53fac3b39d97054bb44cb9fddf715",
+        "exactOnceSha256": "14cb40748a4b038f28fcb72088bcc1a1ba9a742d3e99396d53f02f5510965b92"
+      },
+      "output": {
+        "outputRawCodeHash": "e42c0d6ed65b0163b7fa6e8705105fd2c4916b5702b02fd000aa482b416d3013",
+        "outputCodeHash": "8a53a2013d42ba329afdb22adfd0336c2ebc5a7cfdb30e1dd16035a15201d050",
+        "outputRawMapHash": "1365403d7bd46d21dd79431aa4c873e18cd37164154b94e2cb02c7a68eaadd0c",
+        "outputMapHash": "1365403d7bd46d21dd79431aa4c873e18cd37164154b94e2cb02c7a68eaadd0c",
+        "outputCodeBytes": 25074582,
+        "outputMapBytes": 11428118,
+        "outputChunkCount": 1,
+        "outputAssetCount": 1,
+        "totalExports": 4096
+      }
+    },
+    "5000": {
+      "selection": {
+        "files": 5000,
+        "bytes": 12970626,
+        "scriptSetupFiles": 2208,
+        "ordinaryScriptFiles": 1997,
+        "templateOnlyFiles": 795,
+        "repositories": {
+          "primevue": 2220,
+          "element-plus": 642,
+          "tdesign-vue-next": 563,
+          "vuestic-ui": 608,
+          "quasar": 967
+        },
+        "selectionSha256": "27add878d7150bf40b5efc3540f0e78e029a6d4b076aae8914ba2b2ca7d6e474"
+      },
+      "input": {
+        "files": 5000,
+        "bytes": 12970626,
+        "aggregateSha256": "3f5a8569cd25990d43b322fa227fafeafe9e25db039d224efa3afd7273d71c80",
+        "exactOnceSha256": "84155df2274ba4abdea8b02596627de8983a1d19b74185f13dfde1a092565a7a"
+      },
+      "output": {
+        "outputRawCodeHash": "f15588e614df7886f7da5fb0abec9ec5cbdb80658afad3c7e53734d7618f9d63",
+        "outputCodeHash": "3c75f3f59574b030eefc7f7b4aafdb2f9433d8a16ca3cea22c8d67739f2b53b7",
+        "outputRawMapHash": "c4269cfb0d904ca08411122f4e2dea352f13adbce2f545ed715cb6db94754aa9",
+        "outputMapHash": "c4269cfb0d904ca08411122f4e2dea352f13adbce2f545ed715cb6db94754aa9",
+        "outputCodeBytes": 30700855,
+        "outputMapBytes": 13922359,
+        "outputChunkCount": 1,
+        "outputAssetCount": 1,
+        "totalExports": 5000
+      }
+    }
+  }
+}

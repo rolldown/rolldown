@@ -424,8 +424,8 @@ impl BuildDiagnostic {
     Self::new_inner(SourcemapBroken { plugin_name, id })
   }
 
-  pub fn tsconfig_error(file_path: String, reason: ResolveError) -> Self {
-    Self::new_inner(TsConfigError { file_paths: vec![file_path], reason })
+  pub fn tsconfig_error(reason: ResolveError) -> Self {
+    Self::new_inner(TsConfigError { reason })
   }
 
   pub fn unsupported_tsconfig_option(message: String) -> Self {

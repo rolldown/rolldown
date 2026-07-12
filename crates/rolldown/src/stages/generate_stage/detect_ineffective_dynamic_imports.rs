@@ -30,7 +30,7 @@ impl GenerateStage<'_> {
         });
 
         if has_ineffective {
-          self.link_output.warnings.push(
+          self.link_output.diagnostics.push(
             BuildDiagnostic::ineffective_dynamic_import(
               module.id.to_string(),
               module.ecma_view.importers.iter().map(ToString::to_string).collect(),

@@ -177,7 +177,7 @@ impl<'a> GenerateStage<'a> {
     let mut warnings = vec![];
     self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings, &used_symbol_refs)?;
     if !warnings.is_empty() {
-      self.link_output.warnings.extend(warnings);
+      self.link_output.diagnostics.extend(warnings);
     }
 
     let index_chunk_id_to_name =

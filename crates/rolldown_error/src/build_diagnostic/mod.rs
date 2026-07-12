@@ -214,6 +214,92 @@ impl DerefMut for BatchedBuildDiagnostic {
   }
 }
 
+/// A mixed-severity diagnostic accumulator.
+///
+/// Unlike [`BatchedBuildDiagnostic`] — which is error-only and lives in the
+/// `Result` `Err` channel — `Diagnostics` holds warnings, infos, and errors
+/// together. Severity is read from each element via [`BuildDiagnostic::severity`],
+/// so callers no longer need to thread a separate `errors` and `warnings` `Vec`
+/// side by side.
+///
+/// At a drain checkpoint, [`Diagnostics::partition`] (or [`Diagnostics::into_result`])
+/// splits the error-severity subset back out to feed the `Result` channel.
+#[derive(Debug, Default)]
+pub struct Diagnostics {
+  diagnostics: Vec<BuildDiagnostic>,
+  /// Cached: `true` once any error-severity diagnostic has been stored. Kept in
+  /// sync by every mutator, so [`Diagnostics::has_errors`] is O(1) and
+  /// [`Diagnostics::into_result`] can skip the partition scan on the common
+  /// (no-error) path. A diagnostic's severity is frozen once stored — it is set
+  /// only by the consuming `with_severity*` builders before `push`, and this
+  /// type hands out no `&mut` to its elements — so the flag never goes stale.
+  has_error: bool,
+}
+
+impl Diagnostics {
+  pub fn new() -> Self {
+    Self::default()
+  }
+
+  pub fn push(&mut self, diagnostic: BuildDiagnostic) {
+    self.has_error |= diagnostic.severity() == Severity::Error;
+    self.diagnostics.push(diagnostic);
+  }
+
+  pub fn extend(&mut self, diagnostics: impl IntoIterator<Item = BuildDiagnostic>) {
+    // Route through `push` so `has_error` stays in sync for each element.
+    for diagnostic in diagnostics {
+      self.push(diagnostic);
+    }
+  }
+
+  pub fn is_empty(&self) -> bool {
+    self.diagnostics.is_empty()
+  }
+
+  pub fn has_errors(&self) -> bool {
+    self.has_error
+  }
+
+  /// Splits into `(warnings + infos, errors)`, preserving the relative order
+  /// within each group. Because error- and warning-severity diagnostics were
+  /// never interleaved into a single ordered stream before this type existed,
+  /// merging then re-splitting yields the same two `Vec`s callers used to hold.
+  pub fn partition(self) -> (Vec<BuildDiagnostic>, Vec<BuildDiagnostic>) {
+    self.diagnostics.into_iter().partition(|d| d.severity() != Severity::Error)
+  }
+
+  /// Drain checkpoint: returns `Err(errors)` if any error-severity diagnostic is
+  /// present, otherwise `Ok(warnings + infos)`. Mirrors the existing
+  /// `if !errors.is_empty() { return Err(errors.into()) }` guard.
+  ///
+  /// When no error was ever stored, returns every diagnostic as-is without
+  /// partitioning — the cached `has_error` flag makes this the common fast path.
+  pub fn into_result(self) -> crate::BuildResult<Vec<BuildDiagnostic>> {
+    if !self.has_error {
+      return Ok(self.diagnostics);
+    }
+    let (warnings, errors) = self.partition();
+    if errors.is_empty() { Ok(warnings) } else { Err(errors.into()) }
+  }
+}
+
+impl From<Vec<BuildDiagnostic>> for Diagnostics {
+  fn from(diagnostics: Vec<BuildDiagnostic>) -> Self {
+    let has_error = diagnostics.iter().any(|d| d.severity() == Severity::Error);
+    Self { diagnostics, has_error }
+  }
+}
+
+impl IntoIterator for Diagnostics {
+  type Item = BuildDiagnostic;
+  type IntoIter = std::vec::IntoIter<BuildDiagnostic>;
+
+  fn into_iter(self) -> Self::IntoIter {
+    self.diagnostics.into_iter()
+  }
+}
+
 /// Consolidates diagnostics by merging those that can be grouped together.
 ///
 /// Currently consolidates:

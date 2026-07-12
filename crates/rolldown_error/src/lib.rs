@@ -19,7 +19,7 @@ pub use crate::{
   build_diagnostic::events::require_tla::{ImportChainNote, RequireTla},
   build_diagnostic::events::resolve_error::DiagnosableResolveError,
   build_diagnostic::events::unloadable_dependency::UnloadableDependencyContext,
-  build_diagnostic::{BatchedBuildDiagnostic, BuildDiagnostic, Severity},
+  build_diagnostic::{BatchedBuildDiagnostic, BuildDiagnostic, Diagnostics, Severity},
   generated::event_kind_switcher::EventKindSwitcher,
   types::diagnostic_options::DiagnosticOptions,
   types::event_kind::EventKind,

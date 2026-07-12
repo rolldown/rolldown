@@ -12,7 +12,8 @@ use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{
-  PathBufExt as _, representative_file_name_for_preserve_modules, strip_path_prefix_to_slash,
+  PathBufExt as _, absolutize_path_buf, path_buf_to_slash, relative_path_to_slash,
+  representative_file_name_for_preserve_modules, strip_path_prefix_to_slash,
 };
 use rolldown_utils::{
   dashmap::FxDashMap,
@@ -263,13 +264,13 @@ impl<'a> GenerateStage<'a> {
                     ) {
                       relative_path
                     } else {
-                      p.relative(input_base.as_str()).to_slash_lossy().into_owned()
+                      relative_path_to_slash(&p, input_base.as_str())
                     }
                   } else {
-                    p.relative(input_base.as_str()).to_slash_lossy().into_owned()
+                    relative_path_to_slash(&p, input_base.as_str())
                   }
                 } else {
-                  PathBuf::from(virtual_dirname.as_str()).join(p).to_slash_lossy().into_owned()
+                  path_buf_to_slash(PathBuf::from(virtual_dirname.as_str()).join(p))
                 };
                 // `p` may be an absolute or relative path without extension, depending on the module path.
                 // Now we need to add the extension back when generating the relative chunk name.
@@ -351,6 +352,7 @@ impl<'a> GenerateStage<'a> {
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
 
     let used_name_counts = FxDashMap::default();
+    let output_dir = absolutize_path_buf(self.options.cwd.join(&self.options.out_dir));
 
     for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
       let chunk = &mut chunk_graph.chunk_table[*chunk_id];
@@ -379,12 +381,8 @@ impl<'a> GenerateStage<'a> {
       // if user provided one.
       chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
 
-      chunk.absolute_preliminary_filename = Some(
-        preliminary_filename
-          .absolutize_with(self.options.cwd.join(&self.options.out_dir))
-          .into_owned()
-          .expect_into_string(),
-      );
+      chunk.absolute_preliminary_filename =
+        Some(preliminary_filename.absolutize_with(&output_dir).into_owned().expect_into_string());
       chunk.preliminary_filename = Some(preliminary_filename);
       // Derives its `[chunkhash]` from the just-assigned `preliminary_filename`, so it must run
       // after it.

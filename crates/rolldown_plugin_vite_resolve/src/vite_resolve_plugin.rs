@@ -283,7 +283,7 @@ impl Plugin for ViteResolvePlugin {
           })
           .flatten();
         return Ok(Some(HookResolveIdOutput {
-          id: path.to_slash_lossy().into(),
+          id: ArcStr::from(path.to_slash()),
           package_json_path,
           ..Default::default()
         }));

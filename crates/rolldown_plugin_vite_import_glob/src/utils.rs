@@ -10,6 +10,7 @@ use oxc::ast_visit::{Visit, walk};
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
+use rolldown_std_utils::relative_path_to_slash;
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
 
@@ -335,10 +336,9 @@ impl GlobImportVisit<'_> {
   }
 
   fn relative_path(&self, path: &Path, to: Option<&Path>) -> String {
-    let path = path.relative(to.unwrap_or(self.root));
-    let path = path.to_slash_lossy();
+    let path = relative_path_to_slash(path, to.unwrap_or(self.root));
     if path.starts_with("./") || path.starts_with("../") {
-      path.to_string()
+      path
     } else {
       let prefix = if to.is_none() { "/" } else { "./" };
       format!("{prefix}{path}")

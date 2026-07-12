@@ -165,7 +165,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // 1. Identify changed modules
     let mut changed_modules = FxIndexSet::default();
     for (changed_file_path, event) in changed_file_paths {
-      let changed_file_path = ArcStr::from(changed_file_path.to_slash().unwrap());
+      let changed_file_path = ArcStr::from(changed_file_path.to_slash());
       // Check if the file itself is a module
       if let Some(module_idx) = self.cache.module_idx_by_abs_path.get(&changed_file_path) {
         if *event == WatcherChangeKind::Delete {

@@ -233,7 +233,7 @@ serde_json = "1.0.150"
 serde_yaml = "0.9.34"
 simdutf8 = "0.1.5"
 smallvec = { version = "1.15.2", features = ["union"] }
-sugar_path = { version = "2.0.1", features = ["cached_current_dir"] }
+sugar_path = { version = "3", features = ["cached_current_dir"] }
 supports-color = "3"
 terminal_size = "0.4.4"
 testing_macros = "1.0.1"

@@ -1,4 +1,18 @@
-use std::{borrow::Cow, ffi::OsStr, path::Path};
+//! Path helpers for Rolldown's known-UTF-8 module / filesystem path domain.
+//!
+//! Prefer these over open-coding `sugar_path` compositions. sugar_path 3 returns
+//! `Cow<Path>` from `relative` and makes slash conversion explicit; the patterns
+//! below are the ones we want in call sites so later code does not reintroduce
+//! lossy or double-allocating chains like
+//! `relative(...).to_slash_lossy().into_owned()`.
+
+use std::{
+  borrow::Cow,
+  ffi::OsStr,
+  path::{Path, PathBuf},
+};
+
+use sugar_path::{SugarPath as _, SugarPathBuf as _};
 
 pub trait PathExt {
   fn expect_to_str(&self) -> &str;
@@ -18,15 +32,8 @@ impl PathExt for Path {
   }
 
   fn expect_to_slash(&self) -> String {
-    let path = if std::path::MAIN_SEPARATOR == '/' {
-      self.to_str().map(Cow::Borrowed)
-    } else {
-      self.to_str().map(|s| Cow::Owned(s.replace(std::path::MAIN_SEPARATOR, "/")))
-    };
-
-    path
-      .unwrap_or_else(|| panic!("Failed to convert {:?} to slash str", self.display()))
-      .into_owned()
+    // Strict slash conversion: panics on invalid UTF-8, matching the prior contract.
+    self.to_slash().into_owned()
   }
 
   fn is_in_node_modules(&self) -> bool {
@@ -67,6 +74,78 @@ pub fn representative_file_name_for_preserve_modules(
 
 pub fn strip_path_prefix_to_slash(path: &Path, prefix: &Path) -> Option<String> {
   path.strip_prefix(prefix).ok().map(PathExt::expect_to_slash)
+}
+
+/// Lexical path from `base` to `target` as a `/`-separated UTF-8 string.
+///
+/// Uses sugar_path 3's intended composition for known-UTF-8 Rolldown paths:
+/// `relative` may borrow a clean descendant, then one owned buffer becomes the
+/// final slash `String` via [`SugarPathBuf::into_slash`].
+///
+/// Prefer this over `relative(...).to_slash_lossy().into_owned()` or
+/// `relative(...).as_path().expect_to_slash()`.
+#[inline]
+pub fn relative_path_to_slash(target: impl AsRef<Path>, base: impl AsRef<Path>) -> String {
+  target.as_ref().relative(base).into_owned().into_slash()
+}
+
+/// Like [`relative_path_to_slash`], but formats a JS-style relative specifier:
+/// - equal paths → `"."`
+/// - paths that leave the base (`..`…) → the slash relative as-is
+/// - otherwise → `"./…"`
+///
+/// sugar_path 3 returns an empty path for equal inputs; this helper keeps the
+/// historical Rolldown/Rollup `./` spelling at call sites that emit import
+/// specifiers or chunk-relative asset URLs.
+#[inline]
+pub fn relative_path_as_js_specifier(target: impl AsRef<Path>, base: impl AsRef<Path>) -> String {
+  let relative = target.as_ref().relative(base);
+  if relative.as_os_str().is_empty() {
+    return ".".to_string();
+  }
+  let slash = relative.into_owned().into_slash();
+  // Only true parent segments (`..` / `../…`), not filenames like `..foo`.
+  if slash == ".." || slash.starts_with("../") { slash } else { format!("./{slash}") }
+}
+
+/// Absolute `path` → slash-separated path relative to `cwd` (stable ids / diagnostics).
+///
+/// Non-absolute inputs are returned as `path` with native separators converted via
+/// strict slash conversion when they are valid UTF-8 paths; virtual ids should be
+/// handled by the caller before calling this.
+#[inline]
+pub fn absolute_path_to_relative_slash(path: impl AsRef<Path>, cwd: impl AsRef<Path>) -> String {
+  let path = path.as_ref();
+  if path.is_absolute() { relative_path_to_slash(path, cwd) } else { path.expect_to_slash() }
+}
+
+/// Ensure an owned path is absolute before using it as sugar_path 3's explicit cwd.
+#[inline]
+pub fn absolutize_path_buf(path: PathBuf) -> PathBuf {
+  if path.is_absolute() { path } else { path.absolutize().into_owned() }
+}
+
+/// Consume a `PathBuf` into a `/`-separated UTF-8 string (known-UTF-8 invariant).
+#[inline]
+pub fn path_buf_to_slash(path: PathBuf) -> String {
+  path.into_slash()
+}
+
+#[test]
+fn test_relative_path_helpers() {
+  let workspace = std::env::current_dir().unwrap().join("path-helper-tests");
+  let base = workspace.join("src");
+  let nested = base.join("lib").join("mod.js");
+  assert_eq!(relative_path_to_slash(&nested, &base), "lib/mod.js");
+  assert_eq!(relative_path_as_js_specifier(&nested, &base), "./lib/mod.js");
+  assert_eq!(relative_path_as_js_specifier(&base, &base), ".");
+  assert_eq!(relative_path_as_js_specifier(workspace.join("other"), &base), "../other");
+  // Filename `..foo` is not a parent segment — still needs the `./` prefix.
+  assert_eq!(relative_path_as_js_specifier(base.join("..foo.js"), &base), "./..foo.js");
+  assert_eq!(relative_path_as_js_specifier(base.join(".hidden.js"), &base), "./.hidden.js");
+  assert_eq!(absolute_path_to_relative_slash(&nested, &workspace), "src/lib/mod.js");
+  assert!(absolutize_path_buf(PathBuf::from("path-helper-tests")).is_absolute());
+  assert_eq!(path_buf_to_slash(PathBuf::from("src").join("lib.js")), "src/lib.js");
 }
 
 #[test]

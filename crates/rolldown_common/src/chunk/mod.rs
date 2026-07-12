@@ -17,7 +17,7 @@ pub mod types;
 
 use arcstr::ArcStr;
 use oxc_str::CompactStr;
-use rolldown_std_utils::{PathExt, strip_path_prefix_to_slash};
+use rolldown_std_utils::{path_buf_to_slash, relative_path_to_slash, strip_path_prefix_to_slash};
 use rolldown_utils::{
   BitSet,
   dashmap::FxDashMap,
@@ -160,7 +160,7 @@ impl Chunk {
       .as_path()
       .parent()
       .expect("absolute_preliminary_filename should have a parent directory");
-    target.relative(source_dir).as_path().expect_to_slash()
+    relative_path_to_slash(target, source_dir)
   }
 
   pub async fn filename_template(
@@ -303,11 +303,11 @@ impl Chunk {
           return Cow::Owned(relative_path);
         }
       }
-      p.relative(self.input_base.as_str())
+      relative_path_to_slash(p, self.input_base.as_str())
     } else {
-      PathBuf::from(options.virtual_dirname.as_str()).join(p)
+      path_buf_to_slash(PathBuf::from(options.virtual_dirname.as_str()).join(p))
     };
-    Cow::Owned(p.to_slash_lossy().into_owned())
+    Cow::Owned(p)
   }
 
   pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {

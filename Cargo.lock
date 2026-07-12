@@ -2813,10 +2813,10 @@ dependencies = [
  "memchr",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_std_utils",
  "rolldown_utils",
  "rustc-hash",
  "string_wizard",
- "sugar_path",
  "tokio",
 ]
 
@@ -2827,11 +2827,11 @@ dependencies = [
  "arcstr",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_std_utils",
  "rolldown_utils",
  "rustc-hash",
  "serde",
  "serde_json",
- "sugar_path",
 ]
 
 [[package]]
@@ -2856,10 +2856,10 @@ dependencies = [
  "memchr",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_std_utils",
  "rolldown_utils",
  "rustc-hash",
  "string_wizard",
- "sugar_path",
  "tokio",
 ]
 
@@ -2992,6 +2992,7 @@ dependencies = [
  "oxc",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_std_utils",
  "rolldown_utils",
  "string_wizard",
  "sugar_path",
@@ -3010,6 +3011,7 @@ dependencies = [
  "rolldown_ecmascript_utils",
  "rolldown_plugin",
  "rolldown_plugin_utils",
+ "rolldown_std_utils",
  "rolldown_utils",
  "string_wizard",
  "sugar_path",
@@ -3088,6 +3090,7 @@ dependencies = [
  "rayon",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_std_utils",
  "sugar_path",
  "supports-color",
  "terminal_size",
@@ -3177,6 +3180,7 @@ name = "rolldown_std_utils"
 version = "1.1.5"
 dependencies = [
  "regex",
+ "sugar_path",
 ]
 
 [[package]]
@@ -3583,9 +3587,9 @@ dependencies = [
 
 [[package]]
 name = "sugar_path"
-version = "2.0.1"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36fe837e881ad5c3b60fadeb8e9b0bc5c907c4b7d84b4415a7f0bbc3f9073631"
+checksum = "b75b52e25042df94d848c33b7048a6726e728fa649c561c7510784ed11c1ffd2"
 dependencies = [
  "memchr",
  "smallvec",

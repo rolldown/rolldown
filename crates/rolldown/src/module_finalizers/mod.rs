@@ -30,6 +30,7 @@ mod impl_visit_mut;
 use finalizer_context::ModuleWrapperMode;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use oxc_str::{CompactStr, Ident};
+use rolldown_std_utils::absolutize_path_buf;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -1072,8 +1073,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let Ok(asset_file_name) = self.ctx.file_emitter.get_file_name(reference_id) else {
         return None;
       };
-      let absolute_asset_file_name = asset_file_name
-        .absolutize_with(self.ctx.options.cwd.as_path().join(&self.ctx.options.out_dir));
+      let output_dir =
+        absolutize_path_buf(self.ctx.options.cwd.as_path().join(&self.ctx.options.out_dir));
+      let absolute_asset_file_name = asset_file_name.absolutize_with(output_dir);
       let relative_asset_path = &self.ctx.chunk.relative_path_for(&absolute_asset_file_name);
 
       // new URL({relative_asset_path}, import.meta.url).href

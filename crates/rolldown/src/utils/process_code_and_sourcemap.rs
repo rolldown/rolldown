@@ -5,6 +5,7 @@ use oxc::ast::CommentKind;
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_sourcemap::SourceMap;
+use rolldown_std_utils::relative_path_to_slash;
 use sugar_path::SugarPath;
 use url::Url;
 
@@ -92,10 +93,8 @@ pub async fn prepare_sourcemap(
     map.set_sources(sources);
   } else if cfg!(windows) {
     // Normalize the windows path at final.
-    let sources = map
-      .get_sources()
-      .map(|x| x.as_path().relative(file_dir).to_slash_lossy().to_string())
-      .collect::<Vec<_>>();
+    let sources =
+      map.get_sources().map(|x| relative_path_to_slash(x.as_path(), file_dir)).collect::<Vec<_>>();
     map.set_sources(sources);
   } else {
     map.set_sources(

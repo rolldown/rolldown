@@ -5,13 +5,13 @@
   "measurementClass": "untimed correctness; not performance evidence",
   "raw": {
     "path": "raw/correctness.json",
-    "bytes": 9724122,
-    "sha256": "cbda80d249e723fa2ada92b5e43e971a5c3623e4ef40a0474e96f828161c9425"
+    "bytes": 9721615,
+    "sha256": "7ff75e25eff5ce6c2def411c6b53d83f82292b88a5d61b5a6b6ecfe480e2bbd3"
   },
   "harnessSourceManifest": {
     "files": 54,
-    "bytes": 2707476,
-    "aggregateSha256": "5c00f47d912efd823e05b498244eb1b0bea4ed2cf3d1cb3135d485fbdea52e8a"
+    "bytes": 2707516,
+    "aggregateSha256": "4ed91a9c4228ce8322e3a1d414c2db28b81476c363105cd75f95a55e0ea878e7"
   },
   "vueToolchain": {
     "unpluginVue": {
@@ -37,7 +37,7 @@
       "entrypointSha256": "36048750a63359f1b062627946a2ca59d91f729af225f9da09fe84ac4917526b"
     }
   },
-  "fixtureCommit": "f432221e057a0714f23e810cdf296499cb4e6e67",
+  "fixtureCommit": "0a2ec10cb2cf48de832a0c3bfc52593b242e1af8",
   "runtimePin": {
     "kind": "lifecycle-corrected-baseline",
     "sourceCommit": "b144106882fe244b19b738fc0acf3ffa07c7c9f3",

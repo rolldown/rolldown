@@ -23,12 +23,11 @@ path = "bench/concat_string.rs"
 workspace = true
 
 [features]
-async-runtime = ["dep:async-task"]
+async-runtime = ["dep:napi-async-runtime"]
 
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
-async-task = { workspace = true, optional = true }
 base-encode = { workspace = true }
 base64-simd = { workspace = true }
 cow-utils = { workspace = true }
@@ -41,6 +40,9 @@ infer = { workspace = true }
 itoa = { workspace = true }
 memchr = { workspace = true }
 mime = { workspace = true }
+# The shared scheduler behind the `async-runtime` feature; napi-free with
+# default features off (the napi SPI adapter stays in rolldown_binding).
+napi-async-runtime = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ee4cc89f5cee8bc08a7c77af3d87c7f4a7fd1916", default-features = false, optional = true }
 nom = { workspace = true }
 oxc = { workspace = true }
 oxc_index = { workspace = true }

@@ -83,7 +83,9 @@ does not add a second source allocation.
 
 ### Rolldown scheduler
 
-`crates/rolldown_utils/src/async_runtime.rs` owns the lazy global controller.
+The shared `napi-async-runtime` crate (napi-rs workspace, `crates/async-runtime`;
+consumed as a git dependency and re-exported unchanged as
+`rolldown_utils::async_runtime`) owns the lazy global controller.
 
 - The controller lifecycle is
   `Initial -> Running -> Stopping -> Stopped` for real generations, with a

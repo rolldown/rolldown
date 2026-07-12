@@ -15,8 +15,13 @@ pub const fn max_async_runtime_worker_threads() -> usize {
   1
 }
 
+/// The shared scheduler now lives in the `napi-async-runtime` crate
+/// (napi-rs workspace); this module re-exports its entire API so in-repo
+/// paths like `rolldown_utils::async_runtime::spawn` keep working unchanged.
 #[cfg(feature = "async-runtime")]
-pub mod async_runtime;
+pub mod async_runtime {
+  pub use napi_async_runtime::*;
+}
 pub mod base64;
 mod bitset;
 pub mod dashmap;

@@ -1298,6 +1298,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "napi-async-runtime"
+version = "0.1.0"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=ee4cc89f5cee8bc08a7c77af3d87c7f4a7fd1916#ee4cc89f5cee8bc08a7c77af3d87c7f4a7fd1916"
+dependencies = [
+ "async-task",
+ "futures",
+ "rayon",
+ "rustc-hash",
+]
+
+[[package]]
 name = "napi-build"
 version = "2.3.2"
 source = "git+https://github.com/napi-rs/napi-rs.git?rev=b44d9ca08b4aad153608a0cfc6fbb076945cad55#b44d9ca08b4aad153608a0cfc6fbb076945cad55"
@@ -3234,7 +3245,6 @@ dependencies = [
  "anyhow",
  "arcstr",
  "async-scoped",
- "async-task",
  "base-encode",
  "base64-simd",
  "cow-utils",
@@ -3248,6 +3258,7 @@ dependencies = [
  "itoa",
  "memchr",
  "mime",
+ "napi-async-runtime",
  "nom",
  "oxc",
  "oxc_index",

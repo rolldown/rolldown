@@ -445,10 +445,11 @@ const fn compiled_target() -> ResolvedRuntimeTarget {
 /// Parse a raw `ROLLDOWN_PARK_DEADLINE_MS` value; unset, non-numeric or `0`
 /// disable deadline detection rather than erroring (the same lenient
 /// treatment `env_config::resolve_thread_count` gives the thread counts --
-/// never panic module init over a typo). This is the parse the runtime used
-/// to do itself at executor construction
-/// (`rolldown_utils::async_runtime::PARK_DEADLINE_ENV`); the read AND the
-/// parse now live here, in the single resolver.
+/// never panic module init over a typo). The read AND the parse live here,
+/// in the single resolver: the shared scheduler never reads the environment
+/// itself, and Rolldown deliberately keeps its historical variable name
+/// rather than the shared crate's `PARK_DEADLINE_ENV` convention
+/// (`NAPI_RUNTIME_PARK_DEADLINE_MS`).
 fn parse_park_deadline_ms(raw: Option<String>) -> Option<u64> {
   raw.and_then(|value| value.parse::<u64>().ok()).filter(|&millis| millis != 0)
 }
@@ -2434,7 +2435,9 @@ fn install_async_runtime_backend() {
     // Resolved from `ROLLDOWN_PARK_DEADLINE_MS` by the single resolver; the
     // runtime itself no longer reads the environment at executor construction.
     park_deadline: resolved.park_deadline_ms.map(std::time::Duration::from_millis),
-    ..RuntimeOptions::default()
+    // The shared `napi-async-runtime` crate defaults to its own neutral
+    // prefix; pin Rolldown's historical worker thread names explicitly.
+    thread_name_prefix: "rolldown-runtime".to_string(),
   };
   configure(options).expect("Failed to configure the Rolldown async runtime");
   register_async_runtime(RolldownAsyncRuntime);

@@ -139,7 +139,10 @@ function evidenceSummary(value) {
 }
 
 function gitBuffer(root, arguments_) {
-  const result = spawnSync('git', ['-C', root, ...arguments_], { encoding: 'buffer' });
+  const result = spawnSync('git', ['-C', root, ...arguments_], {
+    encoding: 'buffer',
+    maxBuffer: 64 * 1024 * 1024,
+  });
   if (result.status !== 0) {
     throw new Error(`git ${arguments_.join(' ')} failed while verifying Vue evidence`);
   }

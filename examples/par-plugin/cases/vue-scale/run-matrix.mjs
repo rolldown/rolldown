@@ -412,10 +412,11 @@ function execute({ name, caseOptions, variant, index, admission }) {
     ...result.stderr.matchAll(/^\[rolldown-parallel-plugin-post-close-metrics\] (\{.*\})$/gm),
   ].map((match) => JSON.parse(match[1]));
   const expectedRustMetrics = options.instrumentation && workerMatch ? 1 : 0;
+  const expectedPostCloseMetrics = attributionLane ? expectedRustMetrics : 0;
   if (
     rustMatches.length !== expectedRustMetrics ||
     lifecycle.length !== expectedRustMetrics * 2 ||
-    postClose.length !== expectedRustMetrics
+    postClose.length !== expectedPostCloseMetrics
   ) {
     throw new Error(`unexpected instrumentation lines for ${name}/${variant}`);
   }

@@ -1,9 +1,19 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
+import nodePath from 'node:path';
 import {
   derivePerWorkerTransformServiceWindows,
   validateJsHookTimingAggregates,
 } from './attribution-validation.mjs';
+import {
+  readCorpusManifest,
+  selectManifestEntries,
+  selectionHash,
+  summarizeSelection,
+  summarizeSelectionInput,
+} from './corpus.mjs';
+import { captureHarnessSourceManifest } from './harness-provenance.mjs';
 import { validateInitializationAttributionBundle } from './initialization-attribution-validation.mjs';
 import {
   ATTRIBUTION_DISTRIBUTION_BYTES,
@@ -21,6 +31,7 @@ assertLocalExecution();
 const reportPath = process.argv[2];
 if (!reportPath) throw new Error('expected an attribution contract report path');
 const report = JSON.parse(await readFile(reportPath, 'utf8'));
+const currentContract = await captureCurrentReportContract();
 if (
   report.schema !== 1 ||
   report.matrix?.lane !== 'attribution-contract-smoke' ||
@@ -28,12 +39,27 @@ if (
   !Array.isArray(report.runs) ||
   report.runs.length !== 2 ||
   report.executionEnvironment?.exposeGcByArgument !== true ||
-  JSON.stringify(report.executionEnvironment?.childExecArgv) !==
-    JSON.stringify(['--expose-gc'])
+  JSON.stringify(report.executionEnvironment?.childExecArgv) !== JSON.stringify(['--expose-gc'])
 ) {
   throw new Error('expected one ordinary/worker-4 attribution contract report');
 }
+validateReportEnvelope(report, currentContract);
 validateReportRuntimeProvenance(report);
+
+for (const [mutate, pattern] of [
+  [(value) => value.matrix.cases[0].componentCount++, /matrix differs/],
+  [
+    (value) => (value.harnessSourceManifest.aggregateSha256 = '0'.repeat(64)),
+    /harness manifest differs/,
+  ],
+  [(value) => (value.fixture.commit = '0'.repeat(40)), /fixture provenance differs/],
+  [(value) => (value.caseSelections[0].selectionSha256 = '0'.repeat(64)), /case selections differ/],
+  [(value) => (value.corpus.summary.aggregateSha256 = '0'.repeat(64)), /corpus provenance differs/],
+]) {
+  const copy = structuredClone(report);
+  mutate(copy);
+  assert.throws(() => validateReportEnvelope(copy, currentContract), pattern);
+}
 
 for (const [mutate, pattern] of [
   [(value) => (value.matrix.runtimePin.sourceCommit = '0'.repeat(40)), /runtime pin differs/],
@@ -47,32 +73,32 @@ for (const [mutate, pattern] of [
 ]) {
   const copy = structuredClone(report);
   mutate(copy);
-  assert.throws(
-    () => {
-      validateReportRuntimeProvenance(copy);
-      if (
-        copy.executionEnvironment?.exposeGcByArgument !== true ||
-        JSON.stringify(copy.executionEnvironment?.childExecArgv) !==
-          JSON.stringify(['--expose-gc'])
-      ) {
-        throw new Error('stored attribution launch contract differs');
-      }
-    },
-    pattern,
-  );
+  assert.throws(() => {
+    validateReportRuntimeProvenance(copy);
+    if (
+      copy.executionEnvironment?.exposeGcByArgument !== true ||
+      JSON.stringify(copy.executionEnvironment?.childExecArgv) !== JSON.stringify(['--expose-gc'])
+    ) {
+      throw new Error('stored attribution launch contract differs');
+    }
+  }, pattern);
 }
 
 const ordinary = report.runs.find(({ variant }) => variant === 'ordinary');
 const worker = report.runs.find(({ variant }) => variant === 'worker-4');
 if (!ordinary || !worker) throw new Error('attribution contract report variants differ');
-validate(ordinary);
-validate(worker);
+validate(ordinary, currentContract);
+validate(worker, currentContract);
 
 const negatives = [
   [ordinary, (run) => run.nativePluginRegistrationMetrics.metricsId++, /metricsId differ/],
   [ordinary, (run) => run.jsMetrics.factoryNsTotal++, /factory timing arithmetic/],
   [worker, (run) => run.jsMetrics.factoryCalls--, /factory timing arithmetic/],
-  [worker, (run) => (run.jsMetrics.factoryNsMax = run.jsMetrics.factoryNsTotal + 1), /factory timing arithmetic/],
+  [
+    worker,
+    (run) => (run.jsMetrics.factoryNsMax = run.jsMetrics.factoryNsTotal + 1),
+    /factory timing arithmetic/,
+  ],
   [worker, (run) => (run.jsMetrics.buildStartNsTotal = 0), /buildStart timing arithmetic/],
   [worker, (run) => (run.jsMetrics.buildStartNsTotal = Number.NaN), /buildStart timing arithmetic/],
   [
@@ -138,7 +164,9 @@ const negatives = [
   ],
   [
     worker,
-    (run) => run.initializationMetrics.cpuWindows.outerProcessWindow.captureBounds.start.latestAt.monotonicMs++,
+    (run) =>
+      run.initializationMetrics.cpuWindows.outerProcessWindow.captureBounds.start.latestAt
+        .monotonicMs++,
     /capture bounds|exact process snapshot endpoints|clock origin/,
   ],
   [
@@ -177,9 +205,20 @@ const negatives = [
   ],
   [
     worker,
+    (run) => {
+      run.transformTimeline.records[0].sourceKey = run.transformTimeline.records[1].sourceKey;
+      run.attributionServiceWindows = derivePerWorkerTransformServiceWindows(
+        run.transformTimeline.records,
+        4,
+      );
+    },
+    /source identities differ/,
+  ],
+  [
+    worker,
     (run) =>
-      run.initializationMetrics.workers[0].workerBootstrap.plugins[0].resourceWindows.factory
-        .deltas.processRssBytes++,
+      run.initializationMetrics.workers[0].workerBootstrap.plugins[0].resourceWindows.factory.deltas
+        .processRssBytes++,
     /resource deltas differ/,
   ],
   [
@@ -245,7 +284,7 @@ const negatives = [
 for (const [source, mutate, pattern] of negatives) {
   const copy = structuredClone(source);
   mutate(copy);
-  assert.throws(() => validate(copy), pattern);
+  assert.throws(() => validate(copy, currentContract), pattern);
 }
 
 console.log(`Vue initialization attribution report passed ${negatives.length} negative cases`);
@@ -294,7 +333,7 @@ function validateReportRuntimeProvenance(value) {
   }
 }
 
-function validate(run) {
+function validate(run, contract) {
   const workerCount = run.variant === 'ordinary' ? 0 : Number(run.variant.slice('worker-'.length));
   const effectiveWorkerCount = Math.max(1, workerCount);
   if (
@@ -308,6 +347,7 @@ function validate(run) {
   ) {
     throw new Error('stored raw transform timeline count differs from exact Vue handler coverage');
   }
+  validateRunContract(run, contract);
   validateJsHookTimingAggregates(run.jsMetrics, Math.max(1, workerCount));
   validateInitializationAttributionBundle({
     createBundlerOptions: run.createBundlerOptionsMetrics,
@@ -336,4 +376,125 @@ function validate(run) {
     serviceWindows,
     'stored per-worker transform service windows differ from the raw timeline',
   );
+}
+
+async function captureCurrentReportContract() {
+  const repositoryRoot = nodePath.resolve(import.meta.dirname, '../../../..');
+  const matrix = JSON.parse(
+    await readFile(
+      nodePath.join(import.meta.dirname, 'attribution-contract-smoke-matrix.json'),
+      'utf8',
+    ),
+  );
+  const harnessSourceManifest = await captureHarnessSourceManifest();
+  const fixture = {
+    repositoryRoot,
+    commit: git(repositoryRoot, ['rev-parse', 'HEAD']),
+    worktreeStatus: git(repositoryRoot, ['status', '--short']),
+  };
+  if (fixture.worktreeStatus !== '') {
+    throw new Error('current Vue attribution contract verifier requires a clean fixture worktree');
+  }
+  const manifest = await readCorpusManifest(
+    nodePath.join(import.meta.dirname, 'corpus-manifest.json'),
+  );
+  const corpusDirectory = nodePath.join(import.meta.dirname, '.corpus');
+  const cases = [];
+  for (const definition of matrix.cases) {
+    const entries = selectManifestEntries(manifest, definition.componentCount);
+    const selectedHash = selectionHash(entries);
+    const input = await summarizeSelectionInput(entries, corpusDirectory);
+    cases.push({
+      definition,
+      entries,
+      selection: {
+        name: definition.name,
+        componentCount: definition.componentCount,
+        ...summarizeSelection(entries),
+        input,
+      },
+      selectedHash,
+      input,
+    });
+  }
+  return {
+    matrix,
+    harnessSourceManifest,
+    fixture,
+    corpus: {
+      compiler: manifest.compiler,
+      repositories: manifest.repositories,
+      eligibility: manifest.eligibility,
+      summary: manifest.summary,
+      selections: manifest.selections,
+    },
+    cases,
+  };
+}
+
+function validateReportEnvelope(value, contract) {
+  assertJsonEqual(value.matrix, contract.matrix, 'stored attribution matrix differs');
+  assertJsonEqual(
+    value.harnessSourceManifest,
+    contract.harnessSourceManifest,
+    'stored attribution harness manifest differs',
+  );
+  assertJsonEqual(value.fixture, contract.fixture, 'stored attribution fixture provenance differs');
+  assertJsonEqual(
+    value.caseSelections,
+    contract.cases.map(({ selection }) => selection),
+    'stored attribution case selections differ',
+  );
+  assertJsonEqual(value.corpus, contract.corpus, 'stored attribution corpus provenance differs');
+}
+
+function validateRunContract(run, contract) {
+  const currentCase = contract.cases.find(({ definition }) => definition.name === run.name);
+  if (!currentCase) throw new Error('stored attribution run does not belong to the frozen matrix');
+  const { definition, entries, selectedHash, input } = currentCase;
+  const expectedSourceAudit = {
+    distinctIds: definition.componentCount,
+    calls: definition.componentCount,
+    inputBytes: input.bytes,
+    exactOnceSha256: input.exactOnceSha256,
+    inputAggregateSha256: input.aggregateSha256,
+  };
+  if (
+    run.componentCount !== definition.componentCount ||
+    run.instrumentation !== definition.instrumentation ||
+    run.auditSources !== definition.auditSources ||
+    !definition.variants.includes(run.variant) ||
+    run.selectionHash !== selectedHash ||
+    run.selectedSourceBytes !== input.bytes ||
+    run.expectedMatchingHandlerCalls !== definition.componentCount
+  ) {
+    throw new Error('stored attribution run differs from its frozen matrix case');
+  }
+  assertJsonEqual(run.sourceAudit, expectedSourceAudit, 'stored attribution source audit differs');
+  assertJsonEqual(
+    run.transformTimeline?.clock,
+    {
+      source: 'process.hrtime.bigint()',
+      unit: 'nanoseconds',
+      epoch: 'arbitrary monotonic epoch shared by Node.js worker threads in this process',
+      alignment:
+        'run-case clockAnchors bracket the same hrtime clock with Date.now() before plugin setup and after build',
+    },
+    'stored attribution transform timeline clock differs',
+  );
+  assertJsonEqual(
+    run.transformTimeline.records.map(({ sourceKey }) => sourceKey),
+    entries.map(({ sourceKey }) => sourceKey),
+    'stored attribution transform source identities differ from the frozen selection',
+  );
+}
+
+function assertJsonEqual(actual, expected, message) {
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(message);
+}
+
+function git(root, arguments_) {
+  const result = spawnSync('git', ['-C', root, ...arguments_], { encoding: 'utf8' });
+  if (result.status !== 0) throw new Error(`git ${arguments_.join(' ')} failed`);
+  return result.stdout.trim();
 }

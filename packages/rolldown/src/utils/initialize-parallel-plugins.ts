@@ -146,7 +146,6 @@ async function initializeWorker(
   let worker: Worker | undefined;
   try {
     worker = new Worker(new URL(urlString), { workerData });
-    worker.unref();
     await new Promise<void>((resolve, reject) => {
       worker!.once('message', async (message) => {
         if (message.type === 'error') {
@@ -180,7 +179,6 @@ async function initializeWorkerWithMetrics(
   try {
     const startedAt = performance.now();
     worker = new Worker(new URL(urlString), { workerData });
-    worker.unref();
     const message = await waitForWorker(worker);
     return {
       worker,

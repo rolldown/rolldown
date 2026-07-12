@@ -161,33 +161,7 @@ impl GenerateStage<'_> {
         )
         .await?;
     }
-    // Merge external import namespaces at chunk level.
-    for symbol_set in self.link_output.external_import_namespace_merger.values() {
-      for (_, mut group) in symbol_set
-        .iter()
-        .filter_map(|item| {
-          let module = self.link_output.module_table[item.owner].as_normal()?;
-          self.link_output.metas[module.idx].is_included.then_some(item)
-        })
-        .into_group_map_by(|item| {
-          chunk_graph.module_to_chunk[item.owner].expect("should have chunk idx")
-        })
-      {
-        if group.len() <= 1 {
-          continue;
-        }
-        group.sort_unstable_by_key(|item| self.link_output.module_table[item.owner].exec_order());
-        let Some(idx) = group.iter().position(|item| used_symbol_refs.contains(item)) else {
-          continue;
-        };
-        // In the extreme case, idx would eq to group.len() - 1, which means the first symbol is the only one that is used.
-        // `idx + 1` would eq to len of the group, the iteration is still safe,
-        // https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=38bb53e79b4f7aaa73ef9d6b4cfb3cc2
-        for symbol in &group[idx + 1..] {
-          self.link_output.symbol_db.link(**symbol, *group[idx]);
-        }
-      }
-    }
+    self.merge_external_import_symbols(&chunk_graph, used_symbol_refs);
 
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
 
@@ -257,6 +231,45 @@ impl GenerateStage<'_> {
     self.find_entry_level_external_module(&mut chunk_graph);
 
     Ok(chunk_graph)
+  }
+
+  /// Merge symbols that import the same binding from the same external module, now that chunk
+  /// assignment is known. Merging is strictly per chunk: the canonical symbol of a group always
+  /// stays inside the chunk that declares its members, so every chunk keeps rendering its own
+  /// `import ... from 'ext'` statement and cross-chunk references keep flowing through the
+  /// regular cross-chunk import/export machinery (the constraint behind #3405).
+  fn merge_external_import_symbols(
+    &mut self,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
+  ) {
+    // Merge external import namespaces at chunk level.
+    for symbol_set in self.link_output.external_import_namespace_merger.values() {
+      for (_, mut group) in symbol_set
+        .iter()
+        .filter_map(|item| {
+          let module = self.link_output.module_table[item.owner].as_normal()?;
+          self.link_output.metas[module.idx].is_included.then_some(item)
+        })
+        .into_group_map_by(|item| {
+          chunk_graph.module_to_chunk[item.owner].expect("should have chunk idx")
+        })
+      {
+        if group.len() <= 1 {
+          continue;
+        }
+        group.sort_unstable_by_key(|item| self.link_output.module_table[item.owner].exec_order());
+        let Some(idx) = group.iter().position(|item| used_symbol_refs.contains(item)) else {
+          continue;
+        };
+        // In the extreme case, idx would eq to group.len() - 1, which means the first symbol is the only one that is used.
+        // `idx + 1` would eq to len of the group, the iteration is still safe,
+        // https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=38bb53e79b4f7aaa73ef9d6b4cfb3cc2
+        for symbol in &group[idx + 1..] {
+          self.link_output.symbol_db.link(**symbol, *group[idx]);
+        }
+      }
+    }
   }
 
   pub fn ensure_lazy_module_initialization_order(&self, chunk_graph: &mut ChunkGraph) {

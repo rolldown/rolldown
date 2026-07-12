@@ -17,7 +17,6 @@ export { __exportAll, __reExport };
 import "./_virtual/_rolldown/runtime.js";
 import "./server/index.js";
 export * from "@sentry/node";
-//#endregion
 
 ```
 

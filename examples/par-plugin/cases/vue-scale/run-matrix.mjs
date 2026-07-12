@@ -4,10 +4,10 @@ import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { cpus, platform, release, totalmem } from 'node:os';
 import nodePath from 'node:path';
 import {
-  validateAttributionLifecycle as validateAttributionLifecycleStrict,
   validateBindingModuleInit as validateBindingModuleInitStrict,
   validateRustTimeline as validateRustTimelineStrict,
 } from './attribution-validation.mjs';
+import { validateInitializationAttributionBundle } from './initialization-attribution-validation.mjs';
 import {
   FROZEN_SELECTIONS,
   listUnexpectedPreparedFiles,
@@ -393,6 +393,12 @@ function execute({ name, caseOptions, variant, index, admission }) {
   const moduleInit = [
     ...result.stderr.matchAll(/^\[rolldown-parallel-plugin-module-init-metrics\] (\{.*\})$/gm),
   ].map((match) => JSON.parse(match[1]));
+  const createBundlerOptions = [
+    ...result.stderr.matchAll(/^\[rolldown-create-bundler-options-metrics\] (\{.*\})$/gm),
+  ].map((match) => JSON.parse(match[1]));
+  const nativeRegistration = [
+    ...result.stderr.matchAll(/^\[rolldown-native-plugin-registration-metrics\] (\{.*\})$/gm),
+  ].map((match) => JSON.parse(match[1]));
   const expectedRustMetrics = options.instrumentation && workerMatch ? 1 : 0;
   if (rustMatches.length !== expectedRustMetrics || lifecycle.length !== expectedRustMetrics * 2) {
     throw new Error(`unexpected instrumentation lines for ${name}/${variant}`);
@@ -400,6 +406,13 @@ function execute({ name, caseOptions, variant, index, admission }) {
   const expectedModuleInitMetrics = attributionLane && options.instrumentation ? 1 : 0;
   if (moduleInit.length !== expectedModuleInitMetrics) {
     throw new Error(`unexpected binding module-initialization metrics for ${name}/${variant}`);
+  }
+  const expectedBundlerMetrics = attributionLane && options.instrumentation ? 1 : 0;
+  if (
+    createBundlerOptions.length !== expectedBundlerMetrics ||
+    nativeRegistration.length !== expectedBundlerMetrics
+  ) {
+    throw new Error(`unexpected bundler/native initialization metrics for ${name}/${variant}`);
   }
   const child = JSON.parse(result.stdout);
   const rustMetrics = rustMatches[0] ? JSON.parse(rustMatches[0][1]) : undefined;
@@ -415,6 +428,8 @@ function execute({ name, caseOptions, variant, index, admission }) {
     initializationMetrics,
     terminationMetrics,
     moduleInit[0],
+    createBundlerOptions[0],
+    nativeRegistration[0],
     workerMatch ? Number(workerMatch[1]) : 0,
     options,
   );
@@ -440,10 +455,22 @@ function execute({ name, caseOptions, variant, index, admission }) {
     initializationMetrics,
     terminationMetrics,
     bindingModuleInitMetrics: moduleInit[0],
+    createBundlerOptionsMetrics: createBundlerOptions[0],
+    nativePluginRegistrationMetrics: nativeRegistration[0],
   };
 }
 
-function validateRun(run, rust, initialization, termination, moduleInit, workerCount, options) {
+function validateRun(
+  run,
+  rust,
+  initialization,
+  termination,
+  moduleInit,
+  createBundlerOptions,
+  nativeRegistration,
+  workerCount,
+  options,
+) {
   if (run.totalExports !== run.componentCount) throw new Error('output export count mismatch');
   if (run.outputChunkCount < 1 || run.outputMapBytes < 1) {
     throw new Error('Vue scale output code or source map is missing');
@@ -469,7 +496,9 @@ function validateRun(run, rust, initialization, termination, moduleInit, workerC
       run.transformTimeline ||
       rust ||
       initialization ||
-      termination
+      termination ||
+      createBundlerOptions ||
+      nativeRegistration
     ) {
       throw new Error('uninstrumented Vue scale run emitted metrics');
     }
@@ -532,6 +561,22 @@ function validateRun(run, rust, initialization, termination, moduleInit, workerC
   }
   if (attributionLane) validateBindingModuleInitStrict(moduleInit, BASELINE_POOL_ENVIRONMENT);
   else if (moduleInit) throw new Error('non-attribution run emitted binding module-init metrics');
+  if (attributionLane) {
+    validateInitializationAttributionBundle({
+      createBundlerOptions,
+      nativeRegistration,
+      initialization,
+      termination,
+      workerCount,
+      expectedPluginKinds: [
+        ...(options.auditSources ? ['ordinary-js'] : []),
+        'ordinary-js',
+        workerCount === 0 ? 'ordinary-js' : 'parallel-placeholder',
+      ],
+    });
+  } else if (createBundlerOptions || nativeRegistration) {
+    throw new Error('non-attribution run emitted bundler/native initialization metrics');
+  }
   if (workerCount === 0) {
     if (js.maxHandlerActive !== 1) throw new Error('ordinary handler concurrency is not one');
     return;
@@ -567,7 +612,6 @@ function validateRun(run, rust, initialization, termination, moduleInit, workerC
     throw new Error('Rust Vue scale metrics failed validation');
   }
   if (attributionLane) {
-    validateAttributionLifecycleStrict(initialization, termination, workerCount);
     validateRustTimelineStrict(rust, run, options, workerCount);
   }
 }

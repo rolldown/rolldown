@@ -64,6 +64,28 @@ impl PluginDriver {
     self.module_infos.insert(module_id.as_arc_str().into(), module_info);
   }
 
+  pub fn mark_module_info_as_entry(&self, module_id: &ModuleId) {
+    let Some(module_info) = self.module_infos.get(module_id.as_str()) else {
+      return;
+    };
+    if module_info.is_entry {
+      return;
+    }
+    let updated_module_info = ModuleInfo {
+      code: module_info.code.clone(),
+      id: module_info.id.clone(),
+      is_entry: true,
+      importers: module_info.importers.clone(),
+      dynamic_importers: module_info.dynamic_importers.clone(),
+      imported_ids: module_info.imported_ids.clone(),
+      dynamically_imported_ids: module_info.dynamically_imported_ids.clone(),
+      exports: module_info.exports.clone(),
+      input_format: module_info.input_format,
+    };
+    drop(module_info);
+    self.set_module_info(module_id, Arc::new(updated_module_info));
+  }
+
   pub fn set_context_load_modules_tx(
     &self,
     tx: Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>,

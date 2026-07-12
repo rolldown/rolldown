@@ -1,21 +1,26 @@
 import os from 'node:os';
-import type { performance as NodePerformance } from 'node:perf_hooks';
-import type { getHeapStatistics as getNodeHeapStatistics } from 'node:v8';
 import { Worker } from 'node:worker_threads';
 import { ParallelJsPluginRegistry } from '../binding.cjs';
 import type { RolldownPlugin } from '../plugin';
+import {
+  createMetricsRuntime,
+  metricsTimestamp,
+  parallelPluginMetricsEnabled,
+  validateParallelPluginLifecycleMetrics,
+  validateWorkerBootstrapMetrics,
+  type MetricsRuntime,
+  type MetricsTimestamp,
+} from './parallel-plugin-init-metrics';
+
+export type { MetricsTimestamp } from './parallel-plugin-init-metrics';
 
 export type WorkerData = {
   registryId: number;
   pluginInfos: ParallelPluginInfo[];
   threadNumber: number;
   metricsEnabled?: true;
+  metricsId?: number;
   metricsMainTimeOriginEpochMs?: number;
-};
-
-export type MetricsTimestamp = {
-  monotonicMs: number;
-  epochMs: number;
 };
 
 export type WorkerMetricsSnapshotRequest = {
@@ -73,14 +78,13 @@ type WorkerResourceCapture =
 
 type ProcessSnapshot = ReturnType<typeof captureProcessSnapshot>;
 
-type MainMetricsRuntime = {
-  performance: typeof NodePerformance;
-  getHeapStatistics: typeof getNodeHeapStatistics;
-};
-
 let nextMetricsRequestId = 1;
 
-export async function initializeParallelPlugins(plugins: RolldownPlugin[]): Promise<
+export async function initializeParallelPlugins(
+  plugins: RolldownPlugin[],
+  inheritedMetricsRuntime?: MetricsRuntime,
+  metricsId?: number,
+): Promise<
   | {
       registry: ParallelJsPluginRegistry;
       stopWorkers: () => Promise<void>;
@@ -98,8 +102,13 @@ export async function initializeParallelPlugins(plugins: RolldownPlugin[]): Prom
     return undefined;
   }
 
-  const metricsEnabled = process.env.ROLLDOWN_PARALLEL_PLUGIN_METRICS === 'json';
-  const metricsRuntime = metricsEnabled ? await createMainMetricsRuntime() : undefined;
+  const metricsEnabled = parallelPluginMetricsEnabled();
+  if (metricsEnabled && metricsId === undefined) {
+    throw new Error('parallel plugin initialization metrics identity is missing');
+  }
+  const metricsRuntime = metricsEnabled
+    ? (inheritedMetricsRuntime ?? (await createMetricsRuntime()))
+    : undefined;
   const initializationStartedAt = metricsEnabled ? performance.now() : 0;
   const processBeforeWorkerPool = metricsRuntime
     ? captureProcessSnapshot(metricsRuntime)
@@ -118,47 +127,64 @@ export async function initializeParallelPlugins(plugins: RolldownPlugin[]): Prom
     };
   }
 
-  const initializedWorkers = await initializeWorkersWithMetrics(registryId, count, pluginInfos);
-  const workers = initializedWorkers.map(({ worker }) => worker);
-  const poolInitializationMs = performance.now() - initializationStartedAt;
-  const processWhenAllWorkersReady = captureProcessSnapshot(metricsRuntime!);
-  const resourcesAtPoolReady = await Promise.all(
-    initializedWorkers.map(({ worker }) => captureWorkerResources(worker)),
+  const initializedWorkers = await initializeWorkersWithMetrics(
+    registryId,
+    count,
+    pluginInfos,
+    metricsId!,
   );
-  for (const [index, resources] of resourcesAtPoolReady.entries()) {
-    initializedWorkers[index].resourcesAtPoolReady = resources;
-  }
-  const processAtPoolReady = captureProcessSnapshot(metricsRuntime!);
-  writeMetrics('rolldown_parallel_plugin_init_metrics', {
-    workerCount: count,
-    pluginCount: pluginInfos.length,
-    poolInitializationMs,
-    rssBeforeBytes: processBeforeWorkerPool!.processMemoryUsageBytes.rss,
-    rssAfterBytes: processAtPoolReady.processMemoryUsageBytes.rss,
-    rssScope: 'whole process; the before/after delta is not worker ownership',
-    processSnapshots: {
-      scope: 'whole process; RSS is not attributed to an isolate or worker',
-      beforeWorkerPool: processBeforeWorkerPool,
-      allWorkersReady: processWhenAllWorkersReady,
-      resourceBaselineBeforeBuild: processAtPoolReady,
-    },
-    cpuAttribution: calculateCpuAttribution(
-      processBeforeWorkerPool!,
-      processAtPoolReady,
-      initializedWorkers.map(({ resourcesAtPoolReady }) => resourcesAtPoolReady),
-      undefined,
-    ),
-    workers: initializedWorkers.map(
-      ({ threadNumber, mainTimeline, workerBootstrap, resourcesAtPoolReady }) => ({
-        threadNumber,
-        mainReadyMs:
-          mainTimeline.readyMessageAt.monotonicMs - mainTimeline.constructorStartedAt.monotonicMs,
-        mainTimeline,
-        workerBootstrap,
-        resourcesAtPoolReady,
+  const workers = initializedWorkers.map(({ worker }) => worker);
+  let processWhenAllWorkersReady: ProcessSnapshot;
+  let processAtPoolReady: ProcessSnapshot;
+  try {
+    if (process.env.ROLLDOWN_PARALLEL_PLUGIN_METRICS_FAULT === 'pool-after-worker-creation') {
+      throw new Error('injected metrics fault after parallel plugin worker creation');
+    }
+    const poolInitializationMs = performance.now() - initializationStartedAt;
+    processWhenAllWorkersReady = captureProcessSnapshot(metricsRuntime!);
+    const resourcesAtPoolReady = await Promise.all(
+      initializedWorkers.map(({ worker }) => captureWorkerResources(worker)),
+    );
+    for (const [index, resources] of resourcesAtPoolReady.entries()) {
+      initializedWorkers[index].resourcesAtPoolReady = resources;
+    }
+    processAtPoolReady = captureProcessSnapshot(metricsRuntime!);
+    writeMetrics('rolldown_parallel_plugin_init_metrics', {
+      metricsId,
+      workerCount: count,
+      pluginCount: pluginInfos.length,
+      parallelPluginIndexes: pluginInfos.map(({ index }) => index),
+      poolInitializationMs,
+      rssBeforeBytes: processBeforeWorkerPool!.processMemoryUsageBytes.rss,
+      rssAfterBytes: processAtPoolReady.processMemoryUsageBytes.rss,
+      rssScope: 'whole process; the before/after delta is not worker ownership',
+      processSnapshots: {
+        scope: 'whole process; RSS is not attributed to an isolate or worker',
+        beforeWorkerPool: processBeforeWorkerPool,
+        allWorkersReady: processWhenAllWorkersReady,
+        resourceBaselineBeforeBuild: processAtPoolReady,
+      },
+      cpuWindows: createCpuWindowDiagnostic({
+        phase: 'initialization',
+        outerStart: processBeforeWorkerPool!,
+        outerEnd: processAtPoolReady,
+        workers: initializedWorkers,
       }),
-    ),
-  });
+      workers: initializedWorkers.map(
+        ({ threadNumber, mainTimeline, workerBootstrap, resourcesAtPoolReady }) => ({
+          threadNumber,
+          mainReadyMs:
+            mainTimeline.readyMessageAt.monotonicMs - mainTimeline.constructorStartedAt.monotonicMs,
+          mainTimeline,
+          workerBootstrap,
+          resourcesAtPoolReady,
+        }),
+      ),
+    });
+  } catch (error) {
+    await Promise.all(workers.map((worker) => worker.terminate()));
+    throw error;
+  }
   const stopWorkers = async () => {
     const terminationStartedAt = performance.now();
     const processBeforeWorkerSnapshots = captureProcessSnapshot(metricsRuntime!);
@@ -169,24 +195,31 @@ export async function initializeParallelPlugins(plugins: RolldownPlugin[]): Prom
     await Promise.all(workers.map((worker) => worker.terminate()));
     const processAfterTermination = captureProcessSnapshot(metricsRuntime!);
     writeMetrics('rolldown_parallel_plugin_termination_metrics', {
+      metricsId,
       workerCount: count,
+      pluginCount: pluginInfos.length,
+      parallelPluginIndexes: pluginInfos.map(({ index }) => index),
       poolTerminationMs: performance.now() - terminationStartedAt,
       rssBeforeBytes: processBeforeWorkerSnapshots.processMemoryUsageBytes.rss,
       rssAfterBytes: processAfterTermination.processMemoryUsageBytes.rss,
       rssScope: 'whole process; the before/after delta is not worker ownership',
       processSnapshots: {
         scope: 'whole process; RSS is not attributed to an isolate or worker',
+        allWorkersReady: processWhenAllWorkersReady,
         resourceBaselineBeforeBuild: processAtPoolReady,
         beforeWorkerSnapshots: processBeforeWorkerSnapshots,
         afterWorkerSnapshots: processAfterWorkerSnapshots,
         afterTermination: processAfterTermination,
       },
-      cpuAttribution: calculateCpuAttribution(
-        processAtPoolReady,
-        processAfterWorkerSnapshots,
-        initializedWorkers.map(({ resourcesAtPoolReady }) => resourcesAtPoolReady),
-        beforeTermination.map(({ resources }) => resources),
-      ),
+      cpuWindows: createCpuWindowDiagnostic({
+        phase: 'lifetime-through-pre-termination-snapshot',
+        outerStart: processWhenAllWorkersReady,
+        outerEnd: processAfterWorkerSnapshots,
+        innerStart: processAtPoolReady,
+        innerEnd: processBeforeWorkerSnapshots,
+        workers: initializedWorkers,
+        workerEnds: beforeTermination.map(({ resources }) => resources),
+      }),
       workers: initializedWorkers.map(({ threadNumber, resourcesAtPoolReady }, index) => ({
         threadNumber,
         resourcesAtPoolReady,
@@ -222,10 +255,11 @@ async function initializeWorkersWithMetrics(
   registryId: number,
   count: number,
   pluginInfos: ParallelPluginInfo[],
+  metricsId: number,
 ): Promise<InitializedWorker[]> {
   const results = await Promise.allSettled(
     Array.from({ length: count }, (_, i) =>
-      initializeWorkerWithMetrics(registryId, pluginInfos, i),
+      initializeWorkerWithMetrics(registryId, pluginInfos, i, metricsId),
     ),
   );
   const workers = results.flatMap((result) =>
@@ -266,13 +300,15 @@ async function initializeWorkerWithMetrics(
   registryId: number,
   pluginInfos: ParallelPluginInfo[],
   threadNumber: number,
+  metricsId: number,
 ) {
-  const urlString = import.meta.resolve('#parallel-plugin-worker');
+  const urlString = import.meta.resolve('#parallel-plugin-worker-metrics');
   const workerData: WorkerData = {
     registryId,
     pluginInfos,
     threadNumber,
     metricsEnabled: true,
+    metricsId,
     metricsMainTimeOriginEpochMs: performance.timeOrigin,
   };
 
@@ -283,6 +319,12 @@ async function initializeWorkerWithMetrics(
     const constructorReturnedAt = metricsTimestamp();
     const { onlineAt, message } = await waitForWorkerReady(worker);
     const readyMessageAt = metricsTimestamp();
+    validateWorkerBootstrapMetrics(
+      message.metrics,
+      threadNumber,
+      metricsId,
+      pluginInfos.map(({ index }) => index),
+    );
     return {
       worker,
       threadNumber,
@@ -421,7 +463,7 @@ const requestWorkerLocalMetrics = async (worker: Worker): Promise<unknown> => {
   }
 };
 
-const captureProcessSnapshot = (metricsRuntime: MainMetricsRuntime) => ({
+const captureProcessSnapshot = (metricsRuntime: MetricsRuntime) => ({
   capturedAt: metricsTimestamp(),
   scope: {
     cpuUsage: 'whole process, including JS workers and native threads',
@@ -435,67 +477,119 @@ const captureProcessSnapshot = (metricsRuntime: MainMetricsRuntime) => ({
   processMemoryUsageBytes: process.memoryUsage(),
   mainIsolateHeapStatistics: metricsRuntime.getHeapStatistics(),
   mainEventLoopUtilization: metricsRuntime.performance.eventLoopUtilization(),
+  mainIsolateGc: metricsRuntime.gcMetrics.snapshot(),
 });
 
-const calculateCpuAttribution = (
-  processStart: ProcessSnapshot,
-  processEnd: ProcessSnapshot,
-  workerStarts: Array<WorkerResourceCapture | undefined>,
-  workerEnds: Array<WorkerResourceCapture | undefined> | undefined,
-) => {
-  const processDelta = subtractCpuUsage(
-    processEnd.processCpuUsageMicros,
-    processStart.processCpuUsageMicros,
+const createCpuWindowDiagnostic = ({
+  phase,
+  outerStart,
+  outerEnd,
+  innerStart,
+  innerEnd,
+  workers,
+  workerEnds,
+}: {
+  phase: string;
+  outerStart: ProcessSnapshot;
+  outerEnd: ProcessSnapshot;
+  innerStart?: ProcessSnapshot;
+  innerEnd?: ProcessSnapshot;
+  workers: InitializedWorker[];
+  workerEnds?: Array<WorkerResourceCapture>;
+}) => {
+  const workerSamples = workers.map(
+    ({ threadNumber, mainTimeline, resourcesAtPoolReady }, index) => {
+      if (!resourcesAtPoolReady?.ok) {
+        return { threadNumber, ok: false, error: resourcesAtPoolReady?.error ?? 'missing sample' };
+      }
+      const end = workerEnds?.[index];
+      if (workerEnds && !end?.ok) {
+        return { threadNumber, ok: false, error: end?.error ?? 'missing end sample' };
+      }
+      return {
+        threadNumber,
+        ok: true,
+        measurementClass:
+          workerEnds === undefined
+            ? 'cumulative worker-thread CPU since an unknown point between constructor start and online, read asynchronously during the ready capture interval'
+            : 'worker-thread CPU difference between two asynchronously completed capture intervals',
+        relationToProcessWindows:
+          workerEnds === undefined
+            ? 'the worker CPU interval is contained by the outer process window, but its exact start and read instants are not exposed by Node.js'
+            : 'the worker CPU interval is contained by the outer process window and contains the inner process window; it is neither an exact match for either process window nor exact plugin attribution',
+        startBounds:
+          workerEnds === undefined
+            ? {
+                earliestAt: mainTimeline.constructorStartedAt,
+                latestAt: mainTimeline.onlineAt,
+                meaning: 'Node.js does not expose the exact Worker.cpuUsage counter start instant',
+              }
+            : {
+                earliestAt: resourcesAtPoolReady.snapshot.captureStartedAt,
+                latestAt: resourcesAtPoolReady.snapshot.captureFinishedAt,
+                meaning:
+                  'the first asynchronous Worker.cpuUsage read completes within these bounds',
+              },
+        endBounds: {
+          earliestAt:
+            end?.ok === true
+              ? end.snapshot.captureStartedAt
+              : resourcesAtPoolReady.snapshot.captureStartedAt,
+          latestAt:
+            end?.ok === true
+              ? end.snapshot.captureFinishedAt
+              : resourcesAtPoolReady.snapshot.captureFinishedAt,
+          meaning: 'the asynchronous Worker.cpuUsage read completes within these bounds',
+        },
+        cpuDeltaMicros:
+          end?.ok === true
+            ? subtractCpuUsage(
+                end.snapshot.cpuUsageMicros,
+                resourcesAtPoolReady.snapshot.cpuUsageMicros,
+              )
+            : resourcesAtPoolReady.snapshot.cpuUsageMicros,
+      };
+    },
   );
-  const mainThreadDelta = subtractCpuUsage(
-    processEnd.mainThreadCpuUsageMicros,
-    processStart.mainThreadCpuUsageMicros,
-  );
-  const workerDeltas = workerStarts.map((start, index) => {
-    if (!start?.ok) {
-      return undefined;
-    }
-    if (workerEnds === undefined) {
-      return start.snapshot.cpuUsageMicros;
-    }
-    const end = workerEnds[index];
-    return end?.ok
-      ? subtractCpuUsage(end.snapshot.cpuUsageMicros, start.snapshot.cpuUsageMicros)
-      : undefined;
-  });
-  const measuredWorkerCpu = workerDeltas.reduce<CpuUsageMicros>(
-    (sum, delta) => ({
-      user: sum.user + (delta?.user ?? 0),
-      system: sum.system + (delta?.system ?? 0),
-    }),
+  const observedWorkerCpu = workerSamples.reduce<CpuUsageMicros>(
+    (sum, sample) => {
+      const cpuDelta = sample.cpuDeltaMicros;
+      return {
+        user: sum.user + (cpuDelta?.user ?? 0),
+        system: sum.system + (cpuDelta?.system ?? 0),
+      };
+    },
     { user: 0, system: 0 },
   );
-  const processMinusWorkerCpu = subtractCpuUsage(processDelta, measuredWorkerCpu);
-  const residualCpu = subtractCpuUsage(processMinusWorkerCpu, mainThreadDelta);
   return {
-    processCpuDeltaMicros: processDelta,
-    mainThreadCpuDeltaMicros: mainThreadDelta,
-    measuredWorkerCpuDeltaMicros: measuredWorkerCpu,
-    measuredWorkerThreadCpuDeltaMicros: measuredWorkerCpu,
-    processMinusWorkerThreadCpuDeltaMicros: processMinusWorkerCpu,
-    residualProcessCpuDeltaMicros: residualCpu,
-    completeWorkerCoverage: workerDeltas.every((delta) => delta !== undefined),
-    workerCpuScope:
-      'Worker.cpuUsage measures each Node.js worker thread, including V8, garbage collection, runtime, and native work executed on that thread; it excludes helper threads and is not pure plugin JavaScript CPU',
-    residualMeaning:
-      'process CPU minus measured Node.js main-thread and worker-thread CPU; includes Rolldown/Rust/native threads, runtime helper threads, measurement skew, and any unmeasured worker CPU; it is not Rolldown-only CPU',
+    measurementClass: 'asynchronous-bracketing-diagnostic; not exact CPU attribution',
+    phase,
+    outerProcessWindow: cpuProcessWindow(outerStart, outerEnd),
+    ...(innerStart && innerEnd
+      ? { innerProcessWindow: cpuProcessWindow(innerStart, innerEnd) }
+      : {}),
+    workerSamples,
+    summedObservedWorkerThreadCpuMicros: observedWorkerCpu,
+    completeWorkerCoverage: workerSamples.every(({ ok }) => ok),
+    scope:
+      'process and main-thread deltas share exact process snapshot endpoints; worker CPU reads have different asynchronous endpoints, so they are reported independently and are never subtracted into a claimed Rust/native residual',
   };
 };
+
+const cpuProcessWindow = (start: ProcessSnapshot, end: ProcessSnapshot) => ({
+  startedAt: start.capturedAt,
+  finishedAt: end.capturedAt,
+  processCpuDeltaMicros: subtractCpuUsage(end.processCpuUsageMicros, start.processCpuUsageMicros),
+  mainThreadCpuDeltaMicros: subtractCpuUsage(
+    end.mainThreadCpuUsageMicros,
+    start.mainThreadCpuUsageMicros,
+  ),
+});
 
 const subtractCpuUsage = (end: CpuUsageMicros, start: CpuUsageMicros): CpuUsageMicros => ({
   user: end.user - start.user,
   system: end.system - start.system,
 });
-
-const metricsTimestamp = (): MetricsTimestamp => {
-  const monotonicMs = performance.now();
-  return { monotonicMs, epochMs: performance.timeOrigin + monotonicMs };
-};
 
 const formatMetricsError = (error: unknown) =>
   error instanceof Error ? `${error.name}: ${error.message}` : String(error);
@@ -512,14 +606,6 @@ const withMetricsTimeout = async <T>(promise: Promise<T>, label: string): Promis
   } finally {
     if (timeout) clearTimeout(timeout);
   }
-};
-
-const createMainMetricsRuntime = async (): Promise<MainMetricsRuntime> => {
-  const [{ performance }, { getHeapStatistics }] = await Promise.all([
-    import('node:perf_hooks'),
-    import('node:v8'),
-  ]);
-  return { performance, getHeapStatistics };
 };
 
 const availableParallelism = () => {
@@ -547,7 +633,7 @@ const availableParallelism = () => {
 };
 
 const writeMetrics = (kind: string, fields: Record<string, unknown>) => {
-  process.stderr.write(
-    `[rolldown-parallel-plugin-init-metrics] ${JSON.stringify({ kind, version: 1, ...fields })}\n`,
-  );
+  const report = { kind, version: 1, ...fields };
+  validateParallelPluginLifecycleMetrics(report);
+  process.stderr.write(`[rolldown-parallel-plugin-init-metrics] ${JSON.stringify(report)}\n`);
 };

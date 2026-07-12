@@ -31,7 +31,8 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "imports": {
-    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
+    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs",
+    "#parallel-plugin-worker-metrics": "./dist/parallel-plugin-worker-metrics.mjs"
   },
   "exports": {
     ".": {

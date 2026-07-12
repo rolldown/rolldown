@@ -27,6 +27,11 @@ import {
   type NormalizedTransformOptions,
   normalizeTransformOptions,
 } from './normalize-transform-options';
+import {
+  metricsStage,
+  metricsTimestamp,
+  type PluginBindingMetric,
+} from './parallel-plugin-init-metrics';
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
@@ -37,29 +42,49 @@ export function bindingifyInputOptions(
   onLog: LogHandler,
   logLevel: LogLevelOption,
   watchMode: boolean,
+  pluginBindingMetrics?: PluginBindingMetric[],
 ): BindingInputOptions {
-  const plugins = rawPlugins.map((plugin) => {
+  const plugins = rawPlugins.map((plugin, pluginIndex) => {
+    const startedAt = pluginBindingMetrics ? metricsTimestamp() : undefined;
+    let pluginKind: PluginBindingMetric['pluginKind'];
+    let bindingPlugin: BindingInputOptions['plugins'][number];
     if ('_parallel' in plugin) {
-      return undefined;
-    }
-    if (plugin instanceof BuiltinPlugin) {
+      pluginKind = 'parallel-placeholder';
+      bindingPlugin = undefined;
+    } else if (plugin instanceof BuiltinPlugin) {
+      pluginKind = 'builtin';
       switch (plugin.name) {
         case 'builtin:vite-manifest':
-          return bindingifyManifestPlugin(plugin, pluginContextData);
+          bindingPlugin = bindingifyManifestPlugin(plugin, pluginContextData);
+          break;
         default:
-          return bindingifyBuiltInPlugin(plugin);
+          bindingPlugin = bindingifyBuiltInPlugin(plugin);
       }
+    } else {
+      pluginKind = 'ordinary-js';
+      bindingPlugin = bindingifyPlugin(
+        plugin,
+        inputOptions,
+        outputOptions,
+        pluginContextData,
+        normalizedOutputPlugins,
+        onLog,
+        logLevel,
+        watchMode,
+      );
     }
-    return bindingifyPlugin(
-      plugin,
-      inputOptions,
-      outputOptions,
-      pluginContextData,
-      normalizedOutputPlugins,
-      onLog,
-      logLevel,
-      watchMode,
-    );
+    if (pluginBindingMetrics && startedAt) {
+      pluginBindingMetrics.push({
+        pluginIndex,
+        pluginName:
+          'name' in plugin && typeof plugin.name === 'string'
+            ? plugin.name
+            : `anonymous-${pluginIndex}`,
+        pluginKind,
+        stage: metricsStage(startedAt, metricsTimestamp()),
+      });
+    }
+    return bindingPlugin;
   });
 
   // Normalize transform options to extract define, inject, and oxc transform options

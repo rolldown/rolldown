@@ -8,4 +8,6 @@ pub struct BindingBundlerOptions<'env> {
   pub input_options: BindingInputOptions<'env>,
   pub output_options: BindingOutputOptions<'env>,
   pub parallel_plugins_registry: Option<ParallelJsPluginRegistry>,
+  /// Research-only correlation identifier for initialization attribution.
+  pub metrics_id: Option<u32>,
 }

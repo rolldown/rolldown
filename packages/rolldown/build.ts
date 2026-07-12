@@ -115,6 +115,7 @@ function withShared({
             config: './src/config',
             'parallel-plugin': './src/parallel-plugin',
             'parallel-plugin-worker': './src/parallel-plugin-worker',
+            'parallel-plugin-worker-metrics': './src/parallel-plugin-worker-metrics',
             'filter-index': './src/filter-index',
             'parse-ast-index': './src/parse-ast-index',
             'get-log-filter': './src/get-log-filter',

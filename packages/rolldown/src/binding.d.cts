@@ -1921,6 +1921,8 @@ export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
   outputOptions: BindingOutputOptions
   parallelPluginsRegistry?: ParallelJsPluginRegistry
+  /** Research-only correlation identifier for initialization attribution. */
+  metricsId?: number
 }
 
 export interface BindingBundleState {

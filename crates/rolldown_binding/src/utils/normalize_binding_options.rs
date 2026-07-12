@@ -39,11 +39,41 @@ use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::FxHashMap;
 use std::path::PathBuf;
+#[cfg(not(target_family = "wasm"))]
+use std::time::Instant;
 use url::Url;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::{options::plugin::ParallelJsPlugin, worker_manager::WorkerManager};
 use std::sync::Arc;
+
+#[cfg(not(target_family = "wasm"))]
+pub struct NativePluginMaterializationMetrics {
+  started_at: Option<Instant>,
+  pub duration_ms: f64,
+  pub plugins: Vec<serde_json::Value>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl NativePluginMaterializationMetrics {
+  pub fn new() -> Self {
+    Self { started_at: None, duration_ms: 0.0, plugins: Vec::new() }
+  }
+
+  fn start(&mut self) {
+    self.started_at = Some(Instant::now());
+  }
+
+  fn finish(&mut self) {
+    self.duration_ms = self
+      .started_at
+      .take()
+      .expect("native plugin materialization metrics were started")
+      .elapsed()
+      .as_secs_f64()
+      * 1_000.0;
+  }
+}
 
 fn normalize_generated_code_option(
   value: BindingGeneratedCodeOptions,
@@ -444,6 +474,9 @@ pub fn normalize_binding_options(
     crate::parallel_js_plugin_registry::PluginValues,
   >,
   #[cfg(not(target_family = "wasm"))] worker_manager: Option<WorkerManager>,
+  #[cfg(not(target_family = "wasm"))] mut native_plugin_metrics: Option<
+    &mut NativePluginMaterializationMetrics,
+  >,
 ) -> napi::Result<BundlerConfig> {
   let cwd = PathBuf::from(input_options.cwd);
 
@@ -732,13 +765,31 @@ pub fn normalize_binding_options(
   let worker_manager = worker_manager.map(Arc::new);
 
   #[cfg(not(target_family = "wasm"))]
+  if let Some(metrics) = native_plugin_metrics.as_deref_mut() {
+    metrics.start();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
   let plugins: Vec<SharedPluginable> = input_options
     .plugins
     .into_iter()
     .chain(output_options.plugins)
     .enumerate()
     .map(|(index, plugin)| {
-      plugin.map_or_else(
+      let (kind, name) = match &plugin {
+        None => (
+          "parallel-js",
+          parallel_plugins_map
+            .as_ref()
+            .and_then(|plugins| plugins.get(&index))
+            .and_then(|plugins| plugins.first())
+            .map_or_else(|| format!("parallel-plugin-{index}"), |plugin| plugin.name.clone()),
+        ),
+        Some(Either::A(plugin)) => ("ordinary-js", plugin.name.clone()),
+        Some(Either::B(plugin)) => ("builtin", format!("{:?}", plugin.__name)),
+      };
+      let materialization_started_at = native_plugin_metrics.as_ref().map(|_| Instant::now());
+      let result = plugin.map_or_else(
         || {
           let plugins = parallel_plugins_map
             .as_mut()
@@ -760,9 +811,25 @@ pub fn normalize_binding_options(
             })
           }
         },
-      )
+      );
+      if let (Some(metrics), Some(started_at)) =
+        (native_plugin_metrics.as_deref_mut(), materialization_started_at)
+      {
+        metrics.plugins.push(serde_json::json!({
+          "index": index,
+          "name": name,
+          "kind": kind,
+          "materializationMs": started_at.elapsed().as_secs_f64() * 1_000.0,
+        }));
+      }
+      result
     })
     .collect::<Result<Vec<_>, _>>()?;
+
+  #[cfg(not(target_family = "wasm"))]
+  if let Some(metrics) = native_plugin_metrics {
+    metrics.finish();
+  }
 
   #[cfg(target_family = "wasm")]
   let plugins: Vec<SharedPluginable> = input_options

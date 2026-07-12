@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({
+	default: () => makeValue,
+	named: () => named
+});
+function makeValue() {
+	return "lib-default";
+}
+var named;
+var init_lib = __esmMin((() => {
+	named = "lib-named";
+}));
+//#endregion
+//#region main.js
+var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	var lib_exports$1 = (init_lib(), __toCommonJS(lib_exports));
+	module.exports = lib_exports$1.default() + ":" + lib_exports$1.named;
+}));
+//#endregion
+export default require_main();
+
+```

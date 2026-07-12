@@ -25,10 +25,25 @@ const STYLE_EXTENSIONS = /\.(?:css|scss|sass|less|styl|stylus)$/;
 const ASSET_EXTENSIONS = /\.(?:avif|bmp|eot|gif|ico|jpe?g|otf|pdf|png|svg|ttf|webp|woff2?)$/;
 const TEXT_EXTENSIONS = /\.(?:graphqls?|md|txt)$/;
 const STRUCTURED_TEXT_EXTENSIONS = /\.(?:ya?ml)$/;
+const PROJECT_ROOT_TOKEN = '<project-root>';
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 const byteSort = (left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right));
 const portable = (path) => path.split(nodePath.sep).join('/');
+
+export function canonicalTransformResult(code, root) {
+  if (typeof code !== 'string' || typeof root !== 'string' || root.length === 0) {
+    throw new Error('transform-result canonicalization requires code and an absolute project root');
+  }
+  if (!nodePath.isAbsolute(root)) {
+    throw new Error('transform-result canonicalization requires an absolute project root');
+  }
+  const canonicalCode = code.replaceAll(root, PROJECT_ROOT_TOKEN);
+  return {
+    bytes: Buffer.byteLength(canonicalCode),
+    sha256: sha256(canonicalCode),
+  };
+}
 
 async function pathKind(path) {
   try {
@@ -674,8 +689,7 @@ export function createAuditPlugins(root) {
       else {
         resultById.set(path, {
           calls: 1,
-          bytes: Buffer.byteLength(code),
-          sha256: sha256(code),
+          ...canonicalTransformResult(code, root),
         });
       }
     },
@@ -717,6 +731,8 @@ export function createAuditPlugins(root) {
         exactOnce: paths.every(
           (path) => sourceById.get(path).calls === 1 && resultById.get(path)?.calls === 1,
         ),
+        resultHashNormalization:
+          'bytes and SHA-256 over transform code after exact absolute project root replacement with <project-root>',
         transformManifestSha256: transformHash.digest('hex'),
         reachedSourceManifestSha256: sourceHash.digest('hex'),
         reachedSfcPaths: paths.map((path) => portable(nodePath.relative(root, path))),

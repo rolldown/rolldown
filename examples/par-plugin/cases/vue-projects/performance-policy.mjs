@@ -188,6 +188,9 @@ export function validatePerformanceMatrix(matrix) {
         !Number.isInteger(definition.selectedScreenWorkerCount) ||
         definition.selectedScreenWorkerCount < 1 ||
         definition.selectedScreenWorkerCount > 8 ||
+        !['resource-envelope-eligible', 'no-resource-envelope-worker'].includes(
+          definition.screenSelectionStatus,
+        ) ||
         ![10, 15].includes(definition.repeats) ||
         typeof definition.screenBelowTwoSeconds !== 'boolean' ||
         definition.repeats !== (definition.screenBelowTwoSeconds ? 15 : 10)
@@ -255,10 +258,11 @@ export function createConfirmationMatrixFromScreen(report, screenRawSha256) {
     const eligible = runs.filter(
       (run) => run.variant !== 'ordinary' && resourceEnvelopeEligible(run, ordinary),
     );
-    if (eligible.length === 0) {
-      throw new Error(`screen found no resource-envelope worker for ${frozen.projectId}`);
-    }
-    const best = [...eligible].sort(
+    const allWorkers = runs.filter((run) => run.variant !== 'ordinary');
+    const screenSelectionStatus =
+      eligible.length === 0 ? 'no-resource-envelope-worker' : 'resource-envelope-eligible';
+    const selectionPool = eligible.length === 0 ? allWorkers : eligible;
+    const best = [...selectionPool].sort(
       (left, right) =>
         left.timeRealMs - right.timeRealMs ||
         workerCount(left.variant) - workerCount(right.variant),
@@ -274,6 +278,7 @@ export function createConfirmationMatrixFromScreen(report, screenRawSha256) {
       repeats: belowTwoSeconds ? 15 : 10,
       rotationOffset: index,
       selectedScreenWorkerCount: count,
+      screenSelectionStatus,
       screenBelowTwoSeconds: belowTwoSeconds,
     };
   });
@@ -466,6 +471,13 @@ function summarizeScreens(report) {
       reachedSfcCount: frozen.expectedReachedSfcCount,
       ordinaryTimeRealMs: ordinary.timeRealMs,
       ordinaryParentChildWallMs: ordinary.childWallMs,
+      screenSelectionStatus:
+        eligible.length === 0 ? 'no-resource-envelope-worker' : 'resource-envelope-eligible',
+      selectedScreenWorker:
+        best?.variant ??
+        [...workers].sort(
+          (left, right) => left.timeRealMs - right.timeRealMs || left.workerCount - right.workerCount,
+        )[0]?.variant,
       bestResourceEnvelopeWorker: best?.variant ?? null,
       screenOnly: true,
       workers,
@@ -558,6 +570,8 @@ function summarizeConfirmations(report) {
       projectId: frozen.projectId,
       band: frozen.band,
       reachedSfcCount: frozen.expectedReachedSfcCount,
+      screenSelectionStatus: definition.screenSelectionStatus,
+      selectedScreenWorkerCount: definition.selectedScreenWorkerCount,
       selectedRepeatedWorker: fastest.variant,
       selectedResourceWorker:
         resource.length === 0 ? null : selectWorkerWithTieRule(resource).variant,

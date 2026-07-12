@@ -313,6 +313,7 @@ const confirmation = createConfirmationMatrixFromScreen(screenReport, 'a'.repeat
 validatePerformanceMatrix(confirmation);
 for (const definition of confirmation.cases) {
   assert.equal(definition.selectedScreenWorkerCount, 4);
+  assert.equal(definition.screenSelectionStatus, 'resource-envelope-eligible');
   assert.deepEqual(definition.variants, [
     'ordinary',
     'worker-3',
@@ -321,6 +322,28 @@ for (const definition of confirmation.cases) {
     'worker-8',
   ]);
   assert.equal(definition.repeats, 15);
+}
+const noEligibleConfirmation = createConfirmationMatrixFromScreen(
+  {
+    ...screenReport,
+    runs: runs.map((run) =>
+      run.variant === 'ordinary'
+        ? run
+        : {
+            ...run,
+            totalCpuMs: 1_000,
+            peakRssBytes: 3_000,
+          },
+    ),
+  },
+  'b'.repeat(64),
+);
+for (const definition of noEligibleConfirmation.cases) {
+  assert.equal(definition.screenSelectionStatus, 'no-resource-envelope-worker');
+  assert.equal(definition.selectedScreenWorkerCount, 4);
+  assert.ok(definition.variants.includes('ordinary'));
+  assert.ok(definition.variants.includes('worker-4'));
+  assert.ok(definition.variants.includes('worker-8'));
 }
 for (const [selectedScreenWorkerCount, variants] of [
   [1, ['ordinary', 'worker-1', 'worker-2', 'worker-4', 'worker-8']],
@@ -345,6 +368,16 @@ assert.throws(
     }),
   /best, adjacent, fixed-four, and fixed-eight counts/,
 );
+assert.throws(
+  () =>
+    validatePerformanceMatrix({
+      ...confirmation,
+      cases: confirmation.cases.map((value, index) =>
+        index === 0 ? { ...value, screenSelectionStatus: 'unknown' } : value,
+      ),
+    }),
+  /invalid confirmation provenance/,
+);
 
 const compact = createPerformanceCompactSummary(screenReport, 'raw');
 assert.equal(
@@ -353,6 +386,8 @@ assert.equal(
 );
 assert.equal(compact.classifications.productCrossover.status, 'not-established');
 assert.equal(compact.projectSummaries[0].bestResourceEnvelopeWorker, 'worker-4');
+assert.equal(compact.projectSummaries[0].screenSelectionStatus, 'resource-envelope-eligible');
+assert.equal(compact.projectSummaries[0].selectedScreenWorker, 'worker-4');
 assert.throws(
   () => createPerformanceCompactSummary({ ...screenReport, runs: runs.slice(1) }, 'raw'),
   /run set is incomplete/,

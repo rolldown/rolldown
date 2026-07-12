@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "lane": "correctness-smoke",
+  "description": "Untimed harness admission only; not initialization performance evidence.",
+  "bindingProfile": "release",
+  "configuredPools": { "tokio": 18, "rayon": 12, "blocking": 4 },
+  "sampleIntervalMs": 5,
+  "sampleOsThreads": false,
+  "repeats": 1,
+  "runtime": {
+    "bindingSha256": "6b7dfa175754ac57650768a68d7a567c5c0635a1bb47d47c5287914594c9795e",
+    "packageEntrySha256": "84687562199c15a8b276303afd78f93162c99ee58ffceacf36db9ee09c2df5e1"
+  },
+  "cases": [
+    { "name": "bare-worker", "parentPreload": "none", "mode": "empty", "workerCounts": [1] },
+    {
+      "name": "binding-worker-import",
+      "parentPreload": "binding",
+      "mode": "binding",
+      "workerCounts": [1, 4]
+    },
+    {
+      "name": "package-worker-import",
+      "parentPreload": "package",
+      "mode": "package",
+      "workerCounts": [1]
+    }
+  ]
+}

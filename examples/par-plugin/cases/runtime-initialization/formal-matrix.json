@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "lane": "formal-attribution",
+  "description": "Repeated quiet-host controls for generic Worker, native binding, and complete Rolldown package initialization. Instrumented elapsed values are attribution only.",
+  "bindingProfile": "release",
+  "configuredPools": { "tokio": 18, "rayon": 12, "blocking": 4 },
+  "sampleIntervalMs": 5,
+  "sampleOsThreads": false,
+  "repeats": 10,
+  "runtime": {
+    "bindingSha256": "6b7dfa175754ac57650768a68d7a567c5c0635a1bb47d47c5287914594c9795e",
+    "packageEntrySha256": "84687562199c15a8b276303afd78f93162c99ee58ffceacf36db9ee09c2df5e1"
+  },
+  "cases": [
+    {
+      "name": "bare-worker",
+      "parentPreload": "none",
+      "mode": "empty",
+      "workerCounts": [1, 2, 4, 8]
+    },
+    {
+      "name": "retained-runtime-worker",
+      "parentPreload": "binding",
+      "mode": "empty",
+      "workerCounts": [1, 2, 4, 8]
+    },
+    {
+      "name": "binding-worker-import",
+      "parentPreload": "binding",
+      "mode": "binding",
+      "workerCounts": [1, 2, 4, 8]
+    },
+    {
+      "name": "retained-package-worker",
+      "parentPreload": "package",
+      "mode": "empty",
+      "workerCounts": [1, 2, 4, 8]
+    },
+    {
+      "name": "package-worker-import",
+      "parentPreload": "package",
+      "mode": "package",
+      "workerCounts": [1, 2, 4, 8]
+    }
+  ]
+}

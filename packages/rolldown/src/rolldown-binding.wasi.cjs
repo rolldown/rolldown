@@ -212,6 +212,26 @@ try {
 
 let __emnapiWasmEnvCleanupPrepared = false
 
+if (__emnapiContext !== undefined) {
+  // A raw destroy call on the emnapi context (bypassing
+  // __destroyEmnapiContext) must still settle pending napi async work: run
+  // the wasm-side cleanup preparation while the environment can still call
+  // into JavaScript, then delegate to the original destroy.
+  // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
+  const __emnapiContextDestroy = __emnapiContext.destroy
+  __emnapiContext.destroy = function() {
+    if (!__emnapiWasmEnvCleanupPrepared) {
+      const __prepareWasmEnvCleanup =
+        __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
+      if (typeof __prepareWasmEnvCleanup === 'function') {
+        __prepareWasmEnvCleanup()
+      }
+      __emnapiWasmEnvCleanupPrepared = true
+    }
+    return Reflect.apply(__emnapiContextDestroy, this, arguments)
+  }
+}
+
 function __destroyEmnapiContext() {
   if (__emnapiContextDestroyed) {
     return

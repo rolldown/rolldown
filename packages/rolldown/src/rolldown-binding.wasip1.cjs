@@ -84,6 +84,26 @@ try {
 
 let __emnapiWasmEnvCleanupPrepared = false
 
+if (__emnapiContext !== undefined) {
+  // A raw destroy call on the emnapi context (bypassing
+  // __destroyEmnapiContext) must still settle pending napi async work: run
+  // the wasm-side cleanup preparation while the environment can still call
+  // into JavaScript, then delegate to the original destroy.
+  // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
+  const __emnapiContextDestroy = __emnapiContext.destroy
+  __emnapiContext.destroy = function() {
+    if (!__emnapiWasmEnvCleanupPrepared) {
+      const __prepareWasmEnvCleanup =
+        __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
+      if (typeof __prepareWasmEnvCleanup === 'function') {
+        __prepareWasmEnvCleanup()
+      }
+      __emnapiWasmEnvCleanupPrepared = true
+    }
+    return Reflect.apply(__emnapiContextDestroy, this, arguments)
+  }
+}
+
 function __destroyEmnapiContext() {
   if (__emnapiContextDestroyed) {
     return
@@ -483,16 +503,22 @@ try {
   const __rolldownBinding = __napiModule.exports
   const __getCurrentThreadTaskHostContractVersion =
     __rolldownBinding.getCurrentThreadTaskHostContractVersion
+  const __isCurrentThreadHostRegistrationActive =
+    __rolldownBinding.isCurrentThreadHostRegistrationActive
   const __registerCurrentThreadTaskHost =
     __rolldownBinding.registerCurrentThreadTaskHost
   const __registerTimerHost = __rolldownBinding.registerTimerHost
+  const __reserveCurrentThreadHostRegistration =
+    __rolldownBinding.reserveCurrentThreadHostRegistration
   const __unregisterCurrentThreadTaskHost =
     __rolldownBinding.unregisterCurrentThreadTaskHost
   const __unregisterTimerHost = __rolldownBinding.unregisterTimerHost
   if (
     typeof __getCurrentThreadTaskHostContractVersion !== 'function' ||
+    typeof __isCurrentThreadHostRegistrationActive !== 'function' ||
     typeof __registerCurrentThreadTaskHost !== 'function' ||
     typeof __registerTimerHost !== 'function' ||
+    typeof __reserveCurrentThreadHostRegistration !== 'function' ||
     typeof __unregisterCurrentThreadTaskHost !== 'function' ||
     typeof __unregisterTimerHost !== 'function'
   ) {
@@ -506,11 +532,11 @@ try {
       __rolldownBinding,
       [],
     )
-  if (__taskHostContractVersion !== 2) {
+  if (__taskHostContractVersion !== 4) {
     throw new TypeError(
       'The threadless Rolldown binding uses CurrentThread task-host contract version ' +
         String(__taskHostContractVersion) +
-        ', but version 2 is required',
+        ', but version 4 is required',
     )
   }
   const __readHostRegistration = (__registration, __label) => {
@@ -537,11 +563,41 @@ try {
     }
     return { high: __high, low: __low }
   }
+  const __assertHostRegistrationActive = (__registration, __label) => {
+    const __active = Reflect.apply(
+      __isCurrentThreadHostRegistrationActive,
+      __rolldownBinding,
+      [__registration.high, __registration.low],
+    )
+    if (typeof __active !== 'boolean') {
+      throw new TypeError(
+        'The threadless Rolldown binding returned an invalid ' +
+          __label +
+          ' host liveness result',
+      )
+    }
+    if (!__active) {
+      throw new TypeError(
+        'The threadless Rolldown binding returned an inactive ' +
+          __label +
+          ' host registration',
+      )
+    }
+  }
   const __taskHostRegistration = __readHostRegistration(
-    Reflect.apply(__registerCurrentThreadTaskHost, __rolldownBinding, []),
+    Reflect.apply(
+      __reserveCurrentThreadHostRegistration,
+      __rolldownBinding,
+      [],
+    ),
     'task',
   )
   __nodeTaskHostRegistration = __taskHostRegistration
+  Reflect.apply(__registerCurrentThreadTaskHost, __rolldownBinding, [
+    __taskHostRegistration.high,
+    __taskHostRegistration.low,
+  ])
+  __assertHostRegistrationActive(__taskHostRegistration, 'task')
 
   const __setTimeoutHost = globalThis.setTimeout?.bind(globalThis)
   const __clearTimeoutHost = globalThis.clearTimeout?.bind(globalThis)
@@ -579,10 +635,20 @@ try {
       }
     }
     const __timerHostRegistration = __readHostRegistration(
-      Reflect.apply(__registerTimerHost, __rolldownBinding, [
-        (__id, __ms) => {
-          const __previous = __activeTimers.get(__id)
-          if (__previous) {
+      Reflect.apply(
+        __reserveCurrentThreadHostRegistration,
+        __rolldownBinding,
+        [],
+      ),
+      'timer',
+    )
+    __nodeTimerHostRegistration = __timerHostRegistration
+    Reflect.apply(__registerTimerHost, __rolldownBinding, [
+      __timerHostRegistration.high,
+      __timerHostRegistration.low,
+      (__id, __ms) => {
+        const __previous = __activeTimers.get(__id)
+        if (__previous) {
             __activeTimers.delete(__id)
             __cancelTimer(__previous)
           }
@@ -610,10 +676,8 @@ try {
           __activeTimers.delete(__id)
           __cancelTimer(__timer)
         },
-      ]),
-      'timer',
-    )
-    __nodeTimerHostRegistration = __timerHostRegistration
+      ])
+    __assertHostRegistrationActive(__timerHostRegistration, 'timer')
   }
 }
 /* ROLLDOWN_CURRENT_THREAD_HOST_BOOTSTRAP_END */

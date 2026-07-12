@@ -3138,10 +3138,9 @@ export declare function getRuntimeCapabilities(): BindingRuntimeCapabilities
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
 
 /**
- * Return whether one exact CurrentThread task- or timer-host registration is
- * still live. The JavaScript package revalidates its process-global marker on
- * every module evaluation so native eviction cannot leave a stale installed
- * bit that permanently suppresses replacement registration.
+ * Return whether one exact CurrentThread host registration is still live.
+ *
+ * The default Tokio build has no CurrentThread host registrations.
  */
 export declare function isCurrentThreadHostRegistrationActive(registrationHigh: number, registrationLow: number): boolean
 

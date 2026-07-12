@@ -22,8 +22,11 @@ export interface DeferredRuntimeStats {
 
 export type DeferredRolldownBinding = Omit<
   typeof RolldownBinding,
+  | 'getCurrentThreadTaskHostContractVersion'
+  | 'isCurrentThreadHostRegistrationActive'
   | 'registerCurrentThreadTaskHost'
   | 'registerTimerHost'
+  | 'reserveCurrentThreadHostRegistration'
   | 'unregisterCurrentThreadTaskHost'
   | 'unregisterTimerHost'
 >;

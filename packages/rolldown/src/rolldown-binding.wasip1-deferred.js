@@ -50,8 +50,11 @@ const __sharedArrayBufferByteLengthGetter =
       )
 const __prototypeTraversalLimit = 256
 const __managedPrivateBindingExports = new Set([
+  'getCurrentThreadTaskHostContractVersion',
+  'isCurrentThreadHostRegistrationActive',
   'registerCurrentThreadTaskHost',
   'registerTimerHost',
+  'reserveCurrentThreadHostRegistration',
   'unregisterCurrentThreadTaskHost',
   'unregisterTimerHost',
 ])
@@ -257,55 +260,117 @@ function __readManagedHostRegistration(__registration) {
   return [__high, __low]
 }
 
-function __registerManagedCurrentThreadTaskHost(__binding) {
+function __assertManagedHostRegistrationActive(
+  __binding,
+  __isActive,
+  __registration,
+  __label,
+) {
+  const __active = Reflect.apply(__isActive, __binding, __registration)
+  if (typeof __active !== 'boolean') {
+    throw new TypeError(
+      'The managed workerd binding returned an invalid ' +
+        __label +
+        ' host liveness result',
+    )
+  }
+  if (!__active) {
+    throw new TypeError(
+      'The managed workerd binding returned an inactive ' +
+        __label +
+        ' host registration',
+    )
+  }
+}
+
+function __registerManagedCurrentThreadTaskHost(__binding, __captureDisposer) {
   const __getContractVersion = Reflect.get(
     __binding,
     'getCurrentThreadTaskHostContractVersion',
   )
+  const __isActive = Reflect.get(
+    __binding,
+    'isCurrentThreadHostRegistrationActive',
+  )
   const __register = Reflect.get(__binding, 'registerCurrentThreadTaskHost')
+  const __reserve = Reflect.get(__binding, 'reserveCurrentThreadHostRegistration')
   const __unregister = Reflect.get(__binding, 'unregisterCurrentThreadTaskHost')
   if (
     typeof __getContractVersion !== 'function' ||
+    typeof __isActive !== 'function' ||
     typeof __register !== 'function' ||
+    typeof __reserve !== 'function' ||
     typeof __unregister !== 'function'
   ) {
     throw new TypeError('The managed workerd binding does not support CurrentThread task hosting')
   }
   const __actualVersion = Reflect.apply(__getContractVersion, __binding, [])
-  if (__actualVersion !== 2) {
+  if (__actualVersion !== 4) {
     throw new TypeError(
       'The managed workerd binding uses CurrentThread task-host contract version ' +
         String(__actualVersion) +
-        ', but version 2 is required',
+        ', but version 4 is required',
     )
   }
 
   let __disposed = false
   const __registration = __readManagedHostRegistration(
-    Reflect.apply(__register, __binding, []),
+    Reflect.apply(__reserve, __binding, []),
   )
   const __dispose = () => {
     if (__disposed) return
     Reflect.apply(__unregister, __binding, __registration)
     __disposed = true
   }
-  return __dispose
+  __captureDisposer(__dispose)
+  Reflect.apply(__register, __binding, __registration)
+  __assertManagedHostRegistrationActive(
+    __binding,
+    __isActive,
+    __registration,
+    'task',
+  )
 }
 
-function __registerManagedTimerHost(__binding) {
+function __registerManagedTimerHost(__binding, __captureDisposer) {
   const __setTimeoutHost = globalThis.setTimeout?.bind(globalThis)
   const __clearTimeoutHost = globalThis.clearTimeout?.bind(globalThis)
-  if (!__setTimeoutHost || !__clearTimeoutHost) return () => {}
+  if (!__setTimeoutHost || !__clearTimeoutHost) return
 
+  const __getContractVersion = Reflect.get(
+    __binding,
+    'getCurrentThreadTaskHostContractVersion',
+  )
+  const __isActive = Reflect.get(
+    __binding,
+    'isCurrentThreadHostRegistrationActive',
+  )
   const __register = Reflect.get(__binding, 'registerTimerHost')
+  const __reserve = Reflect.get(__binding, 'reserveCurrentThreadHostRegistration')
   const __unregister = Reflect.get(__binding, 'unregisterTimerHost')
-  if (typeof __register !== 'function' || typeof __unregister !== 'function') {
+  if (
+    typeof __getContractVersion !== 'function' ||
+    typeof __isActive !== 'function' ||
+    typeof __register !== 'function' ||
+    typeof __reserve !== 'function' ||
+    typeof __unregister !== 'function'
+  ) {
     throw new TypeError('The managed workerd binding does not support timer hosting')
+  }
+  const __actualVersion = Reflect.apply(__getContractVersion, __binding, [])
+  if (__actualVersion !== 4) {
+    throw new TypeError(
+      'The managed workerd binding uses CurrentThread task-host contract version ' +
+        String(__actualVersion) +
+        ', but version 4 is required',
+    )
   }
   const __maxHostTimeoutMs = 2_147_483_647
   const __active = new Map()
   let __disposed = false
-  let __registration
+  const __registration = __readManagedHostRegistration(
+    Reflect.apply(__reserve, __binding, []),
+  )
 
   const __armTimer = (__timer, __id) => {
     const __delay = Math.min(__timer.remainingMs, __maxHostTimeoutMs)
@@ -368,10 +433,7 @@ function __registerManagedTimerHost(__binding) {
   }
   const __dispose = () => {
     if (__disposed) return
-    if (__registration) {
-      Reflect.apply(__unregister, __binding, __registration)
-      __registration = undefined
-    }
+    Reflect.apply(__unregister, __binding, __registration)
     __disposed = true
     const __timers = [...__active.values()]
     __active.clear()
@@ -379,16 +441,18 @@ function __registerManagedTimerHost(__binding) {
       __cancelTimer(__timer)
     }
   }
-
-  try {
-    __registration = __readManagedHostRegistration(
-      Reflect.apply(__register, __binding, [__schedule, __cancelTimerById]),
-    )
-  } catch (__error) {
-    __dispose()
-    throw __error
-  }
-  return __dispose
+  __captureDisposer(__dispose)
+  Reflect.apply(__register, __binding, [
+    ...__registration,
+    __schedule,
+    __cancelTimerById,
+  ])
+  __assertManagedHostRegistrationActive(
+    __binding,
+    __isActive,
+    __registration,
+    'timer',
+  )
 }
 
 function __assertManagedBindingUsable(__state) {
@@ -2151,8 +2215,12 @@ export async function createInstance(__wasmInput, __options) {
   }
   let __publicExports
   try {
-    __disposeTaskHost = __registerManagedCurrentThreadTaskHost(__exports)
-    __disposeTimerHost = __registerManagedTimerHost(__exports)
+    __registerManagedCurrentThreadTaskHost(__exports, (__dispose) => {
+      __disposeTaskHost = __dispose
+    })
+    __registerManagedTimerHost(__exports, (__dispose) => {
+      __disposeTimerHost = __dispose
+    })
     for (const __privateExport of __managedPrivateBindingExports) {
       if (
         Reflect.has(__exports, __privateExport) &&

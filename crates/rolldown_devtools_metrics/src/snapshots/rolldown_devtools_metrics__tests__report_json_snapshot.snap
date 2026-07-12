@@ -160,6 +160,30 @@ expression: "serde_json::to_string_pretty(&report).unwrap()"
       }
     ]
   },
+  "graph": {
+    "entryModules": [
+      "src/a.ts",
+      "src/b.ts"
+    ],
+    "staticModuleCount": 5,
+    "staticBytes": 2150,
+    "dynamicOnlyModuleCount": 1,
+    "retainedTop": [
+      {
+        "module": "foo/index.js",
+        "bytes": 1200,
+        "retainedBytes": 1200,
+        "retainedModuleCount": 1,
+        "via": "src/a.ts"
+      },
+      {
+        "module": "src/shared.ts",
+        "bytes": 700,
+        "retainedBytes": 700,
+        "retainedModuleCount": 2
+      }
+    ]
+  },
   "packages": {
     "count": 3,
     "directCount": 1,

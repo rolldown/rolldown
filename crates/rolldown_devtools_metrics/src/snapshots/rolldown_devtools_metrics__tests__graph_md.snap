@@ -24,3 +24,14 @@ expression: "render::render_graph(&report)"
 - **Output chunk**: `dist/lazy.js` (500 B)
 - **Initial load**: 500 B (this chunk + its transitive static-import chunks)
 - **Static imports**: none
+
+## Retained size (dominator tree)
+
+5 modules / 2.1 kB statically reachable from 2 entry points; 1 module already lazy (dynamic-import only).
+
+Deferring the import edge that pulls a module in removes its whole retained subtree from the initial load. `via` names the immediate dominator - the single import chain to cut. Full graph + `what-if` queries: `module-graph.json`.
+
+| Module | Own | Retained | Modules | via |
+| --- | --- | --- | --- | --- |
+| `foo/index.js` | 1.2 kB | **1.2 kB** | 1 | `src/a.ts` |
+| `src/shared.ts` | 700 B | **700 B** | 2 | (entries) |

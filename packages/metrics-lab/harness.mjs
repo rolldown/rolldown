@@ -31,6 +31,7 @@ import {
   largeAtPaintModules, siblingVariantGroups,
 } from './lib/coverage.mjs';
 import { aggregateProfile, profileRun } from './lib/profile.mjs';
+import { loadModuleGraph, moduleGraphCandidates, resolveModule, whatIf } from './lib/module-graph.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const APP_DIR = path.join(ROOT, 'app');
@@ -277,7 +278,7 @@ function printMeasureSummary(report, hadBaseline) {
     } else if (heavy.length) {
       console.log('  next: no render-gating fetch - heavy images load before first paint. Lazy-load below-the-fold images and shrink the ones the first view needs.');
     } else {
-      console.log(`  next: no render-gating fetch or heavy pre-paint asset - the gap is post-load CPU or late-executing chunks. Run \`${CLI} profile\` and defer the attributed app work.`);
+      console.log(`  next: no render-gating fetch or heavy pre-paint asset - the gap is post-load CPU, late-executing chunks, or a hero revealed by an entry animation. Run \`${CLI} profile\` and defer the attributed app work; if the profile shows only framework/baseline work, check whether the LCP element mounts invisible (opacity-0 fade-in wrapper) - LCP counts the first frame it paints VISIBLE, so render the hero visible immediately and animate only decoration.`);
     }
   }
   const prepaintCpu = m['runtime.prepaint_longtask_ms'];
@@ -564,8 +565,8 @@ function printVerdict(target) {
             : 'lazy-load below-the-fold images and shrink the ones the first view needs - fix this before judging CPU deferrals');
       } else {
         lead('open', `render gap ${Math.round(gap)}ms`,
-          'no render-gating fetch or heavy pre-paint asset - the gap is post-load CPU or late-executing chunks',
-          `${CLI} profile  (or scan), then defer the attributed app work - fix this before judging CPU deferrals`);
+          'no render-gating fetch or heavy pre-paint asset - post-load CPU, late-executing chunks, or a hero that mounts invisible',
+          `${CLI} profile  (or scan), then defer the attributed app work. If the profile shows only framework/baseline work, check for an entry animation that mounts the LCP element at opacity 0 (fade-in wrapper): LCP counts the first VISIBLY painted frame - render the hero visible immediately, animate only decoration - fix this before judging CPU deferrals`);
       }
     } else {
       lead('clear', 'render gap', gap == null ? 'not measurable' : `paint lands ${Math.round(gap)}ms after load`);
@@ -653,6 +654,28 @@ function printVerdict(target) {
     } else {
       lead('clear', 'sibling variant groups', 'none detected');
     }
+  }
+
+  // Static retained imports: only exists on rolldown builds - omitted entirely
+  // elsewhere, UNKNOWN (with the one config line that enables it) when the app
+  // detectably builds with rolldown but the graph was never collected.
+  const mg = moduleGraphStatus(target, builtAtMs);
+  if (mg.state === 'present') {
+    const rows = retainedLeadRows(mg.graph);
+    if (rows.length) {
+      const mods = mg.graph.modules;
+      lead('open', `statically retained imports (${rows.length} module(s) >=${kb(GRAPH_RETAINED_OPEN_BYTES)})`,
+        rows.slice(0, 3).map((m) => `${m.id} retains ${kb(m.retainedBytes)}/${m.retainedModuleCount} module(s)${m.idom != null ? ` via ${mods[m.idom].id}` : ''}`).join(', '),
+        `${CLI} what-if <module> prices the deferral (exact modules+bytes freed; --keep a,b holds needed parts eager); make the importer use dynamic import(). Retained is potential, not proof - if the first render genuinely needs it, justify with a measurement or constraint`);
+    } else {
+      lead('clear', 'statically retained imports', `no non-framework module retains >=${kb(GRAPH_RETAINED_OPEN_BYTES)} behind a cuttable static edge`);
+    }
+  } else if (mg.state === 'stale') {
+    lead('unknown', 'static module graph', 'module-graph.json predates the current build - a build without the devtools flag leaves it stale',
+      'keep build.rolldownOptions.devtools = { mode: "metrics" } in the vite config, rebuild, re-scan');
+  } else if (mg.state === 'absent-rolldown') {
+    lead('unknown', 'static module graph', 'not collected - this app builds with rolldown, so one config line enables static split-candidate ranking',
+      `vite >= 8: add build.rolldownOptions.devtools = { mode: "metrics" } to the vite config, rebuild, re-scan - \`${CLI} graph\` then ranks every candidate by the bytes a deferral frees, \`${CLI} what-if\` prices one cut, no browser run needed`);
   }
 
   console.log(`verdict for ${target.dist} (entry ${entry})\n`);
@@ -877,6 +900,7 @@ async function cmdScan(argv) {
     printProfileReport(profileReport);
     console.log('');
   }
+  printGraphSection(target, fs.statSync(path.join(target.dist, entry)).mtimeMs);
   printVerdict(target);
 
   if (opts.pin) {
@@ -897,6 +921,181 @@ async function cmdScan(argv) {
 async function cmdVerdict(argv) {
   const opts = parse(argv, { ...TARGET_OPTS });
   printVerdict(resolveTarget(opts));
+}
+
+// --- module-graph analysis (rolldown devtools metrics builds) ---------------------
+
+// Scan/verdict integration thresholds: a non-framework module retaining >=100KB on
+// the initial load is always worth pricing with what-if; the 30s slack absorbs the
+// moments between the graph write (generate stage) and the dist flush of one build.
+const GRAPH_RETAINED_OPEN_BYTES = 100 * 1024;
+const GRAPH_FRESH_SLACK_MS = 30 * 1000;
+const GRAPH_FRAMEWORK_RE = /^(react-dom|react|scheduler|vue|@vue|svelte|preact)(\/|$)/;
+
+function moduleGraphStatus(target, builtAtMs = null) {
+  const graph = loadModuleGraph(moduleGraphCandidates({
+    demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : null,
+    dist: target.dist,
+  }));
+  if (graph) {
+    const stale = typeof builtAtMs === 'number'
+      && fs.statSync(graph.file).mtimeMs < builtAtMs - GRAPH_FRESH_SLACK_MS;
+    return { state: stale ? 'stale' : 'present', graph };
+  }
+  const rolldownBuilt = target.isDemo || rolldownBuildDetected(path.dirname(target.dist));
+  return { state: rolldownBuilt ? 'absent-rolldown' : 'absent' };
+}
+
+// Evidence that rolldown actually bundles this app - a planted node_modules/rolldown
+// (the link: launcher vehicle) proves nothing. Real evidence: the app declares
+// rolldown as its own dependency, or the vite it resolves is rolldown-powered
+// (vite >= 8, or the rolldown-vite alias). Walks up for hoisted monorepo installs.
+function rolldownBuildDetected(appRoot) {
+  let viteSpec = null;
+  let dir = appRoot;
+  for (let i = 0; i < 4; i++) {
+    const pkg = readJson(path.join(dir, 'package.json'));
+    const deps = { ...pkg?.dependencies, ...pkg?.devDependencies };
+    if (deps.rolldown) return true;
+    if (deps.vite && !viteSpec) viteSpec = deps.vite;
+    const vitePkg = readJson(path.join(dir, 'node_modules', 'vite', 'package.json'));
+    if (vitePkg) {
+      return vitePkg.name === 'rolldown-vite'
+        || Number(String(vitePkg.version ?? '').split('.')[0]) >= 8;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  if (viteSpec) {
+    return /rolldown-vite/.test(viteSpec) || Number((viteSpec.match(/\d+/) ?? [0])[0]) >= 8;
+  }
+  return false;
+}
+
+// Boot roots (a script dominated directly by an HTML entry) are excluded: deferring
+// the module the HTML loads is a blank page, and their children surface in the
+// ranking anyway. Children of a JS entry are ordinary candidates.
+function retainedLeadRows(graph) {
+  const entrySet = new Set(graph.entryModules);
+  const mods = graph.modules;
+  const isHtmlBootChild = (m) => m.idom != null
+    && entrySet.has(mods[m.idom].id) && /\.html?$/i.test(mods[m.idom].id);
+  return mods
+    .filter((m) => m.staticReachable && !entrySet.has(m.id)
+      && m.retainedBytes >= GRAPH_RETAINED_OPEN_BYTES
+      && !isHtmlBootChild(m)
+      && !GRAPH_FRAMEWORK_RE.test(m.id))
+    .sort((a, b) => b.retainedBytes - a.retainedBytes || a.id.localeCompare(b.id));
+}
+
+function printGraphSection(target, builtAtMs = null) {
+  const mg = moduleGraphStatus(target, builtAtMs);
+  if (mg.state === 'absent') return;
+  if (mg.state === 'stale') {
+    console.log('static module graph: STALE (predates the current build) - rebuild with build.rolldownOptions.devtools = { mode: "metrics" } in the vite config\n');
+    return;
+  }
+  if (mg.state === 'absent-rolldown') {
+    console.log(`static module graph: not collected - this app builds with rolldown. vite >= 8: add build.rolldownOptions.devtools = { mode: "metrics" } to the vite config, rebuild, re-scan (unlocks \`${CLI} graph\` / \`${CLI} what-if\`)\n`);
+    return;
+  }
+  const mods = mg.graph.modules;
+  const entrySet = new Set(mg.graph.entryModules);
+  const rows = mods
+    .filter((m) => m.staticReachable && m.retainedBytes > 0 && !entrySet.has(m.id))
+    .sort((a, b) => b.retainedBytes - a.retainedBytes || a.id.localeCompare(b.id))
+    .slice(0, 8);
+  if (!rows.length) return;
+  console.log('statically retained imports (rolldown module graph - what one deferral would free):');
+  for (const mod of rows) {
+    console.log(`  ${kb(mod.retainedBytes).padStart(10)}  ${mod.id}${mod.idom != null ? `  via ${mods[mod.idom].id}` : ''}`);
+  }
+  console.log(`  full ranking: \`${CLI} graph\`; exact modules+bytes for one cut: \`${CLI} what-if <module>\`\n`);
+}
+
+function requireModuleGraph(opts) {
+  const target = resolveTarget(opts);
+  const graph = loadModuleGraph(moduleGraphCandidates({
+    reportDir: opts.report,
+    demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : null,
+    dist: target.dist,
+  }));
+  if (!graph) {
+    throw new Error(
+      'no module-graph.json found - it is written by rolldown devtools metrics builds.\n'
+      + 'vite >= 8: add `build.rolldownOptions.devtools = { mode: "metrics" }` to the vite config\n'
+      + '(report lands in node_modules/.rolldown/metrics), rebuild, then re-run.\n'
+      + 'Or point at an existing report with --report <dir>.',
+    );
+  }
+  return graph;
+}
+
+async function cmdGraph(argv) {
+  const opts = parse(argv, { ...TARGET_OPTS, report: { type: 'string' }, top: { type: 'string', default: '15' } });
+  const graph = requireModuleGraph(opts);
+  const mods = graph.modules;
+  console.log(`module graph: ${graph.file}`);
+  console.log(`entries: ${graph.entryModules.join(', ')}`);
+  const staticMods = mods.filter((m) => m.staticReachable);
+  const staticBytes = staticMods.reduce((sum, m) => sum + m.bytes, 0);
+  const lazyCount = mods.filter((m) => m.dynamicOnly).length;
+  console.log(`initial-load view: ${staticMods.length} modules / ${kb(staticBytes)} statically reachable; ${lazyCount} already lazy (dynamic-import only)\n`);
+  const entrySet = new Set(graph.entryModules);
+  const rows = staticMods
+    .filter((m) => m.retainedBytes > 0 && !entrySet.has(m.id))
+    .sort((a, b) => b.retainedBytes - a.retainedBytes || a.id.localeCompare(b.id))
+    .slice(0, Number(opts.top));
+  console.log('retained size - what deferring each module\'s import edge would remove from the initial load:');
+  for (const mod of rows) {
+    const via = mod.idom != null ? `  via ${mods[mod.idom].id}` : '  (directly under the entries)';
+    console.log(`  ${kb(mod.retainedBytes).padStart(10)}  ${mod.id}  (own ${kb(mod.bytes)}, ${mod.retainedModuleCount} module(s))${via}`);
+  }
+  if (!rows.length) console.log('  (nothing sizeable is uniquely retained - the entries themselves hold the bytes)');
+  console.log(`\nnext: ${CLI} what-if <module>  - the exact modules+bytes that one deferral frees (add --keep a,b to hold some imports eager)`);
+}
+
+async function cmdWhatIf(argv) {
+  const { values: opts, positionals } = parseArgs({
+    args: argv,
+    options: { ...TARGET_OPTS, report: { type: 'string' }, keep: { type: 'string' } },
+    allowPositionals: true,
+  });
+  const query = positionals[0];
+  if (!query) throw new Error(`usage: ${CLI} what-if <module> [--keep a,b] [--report <dir>]`);
+  const graph = requireModuleGraph(opts);
+  const resolve = (q) => {
+    const hit = resolveModule(graph, q);
+    if (!hit) throw new Error(`no module matches '${q}' (ids are project-relative, e.g. src/router.ts)`);
+    if (hit.ambiguous) {
+      throw new Error(`'${q}' is ambiguous:\n  ${hit.ambiguous.join('\n  ')}\nuse a longer suffix.`);
+    }
+    return hit.index;
+  };
+  const target = resolve(query);
+  const keep = (opts.keep ?? '').split(',').filter(Boolean).map(resolve);
+  const result = whatIf(graph, target, keep);
+
+  console.log(`what-if deferred: ${result.target.id}`);
+  if (result.notStaticallyReachable) {
+    console.log(result.alreadyLazy
+      ? 'already lazy: every path to this module crosses a dynamic import - it costs the initial load nothing.'
+      : 'not reachable from the entries at all in this build.');
+    return;
+  }
+  if (result.cutEdges.length) {
+    console.log(`cut ${result.cutEdges.length} static import edge(s), from: ${result.cutEdges.join(', ')}`);
+  }
+  console.log(`removes ${kb(result.removedBytes)} / ${result.removedCount} module(s) from the initial load${keep.length ? ` (keeping ${keep.length} sentry module(s) eager)` : ''}:`);
+  const shown = result.removed.slice(0, 20);
+  for (const mod of shown) {
+    console.log(`  ${kb(mod.bytes).padStart(10)}  ${mod.id}`);
+  }
+  if (result.removed.length > shown.length) {
+    console.log(`  ... +${result.removed.length - shown.length} more`);
+  }
+  console.log(`\nnext: make those importer(s) load it with a dynamic import(), rebuild, run the app's functional check, then \`${CLI} scan\` to confirm the LCP effect.`);
 }
 
 async function cmdBaseline(argv) {
@@ -979,6 +1178,11 @@ start here (the target is remembered after the first command):
 individual commands (same target rules):
   measure [--runs 5] [--label x] [--pin]    timed runs only -> LCP + "vs pinned baseline" verdict
   coverage | profile                        one signal each
+  graph                                     STATIC split candidates ranked by retained size (what
+                                            deferring each module removes from the initial load) -
+                                            needs a rolldown devtools-metrics build (vite >= 8:
+                                            build.rolldownOptions.devtools = { mode: "metrics" })
+  what-if <module> [--keep a,b]             exact modules+bytes one deferral frees; sentries stay eager
   baseline                                  pin the last measurement as the fixed reference
   target [<appDir>] [--demo]                show / set / clear the remembered target
   gen | build | defer <f> | undefer <f> | status | serve    demo-app helpers (README.md)
@@ -987,13 +1191,19 @@ the loop:
   1. build the app; scan --app <appDir> (first scan pins the baseline)
   2. read EVERY signal in the scan output: render-blocking CSS gate + render gap (fix
      these FIRST - inline critical CSS / render with bundled defaults instead of awaiting
-     fetches), pre-paint CPU by module, static pre-paint transfer (fetched before paint,
-     executed after - make it load on demand), cold bytes at paint (fetched+parsed before
-     paint but mostly unread - a partially-executed vendor SDK usually hides one
-     boot-time init call), defer candidates, large modules "executed" at paint (data
-     evaluates on import - executed is not needed), sibling variant groups
-     (locales/themes: load only the active one)
-  3. read the app source; find why the landing page pays for each finding
+     fetches / un-hide a hero that an entry animation mounts at opacity 0: LCP counts
+     the first visibly-painted frame), pre-paint CPU by module, static pre-paint
+     transfer (fetched before paint, executed after - make it load on demand), cold
+     bytes at paint (fetched+parsed before paint but mostly unread - a
+     partially-executed vendor SDK usually hides one boot-time init call), defer
+     candidates, large modules "executed" at paint (data evaluates on import -
+     executed is not needed), sibling variant groups (locales/themes: load only the
+     active one), statically retained imports (rolldown builds: the module graph
+     prices every split candidate - if the verdict says the graph is not collected,
+     enable it, it is one config line)
+  3. read the app source; find why the landing page pays for each finding. On rolldown
+     devtools-metrics builds, \`graph\` + \`what-if <module>\` answer this statically: the
+     exact import chain (via/idom) and the bytes a deferral frees - no chain-tracing by hand
   4. change the app (never remove features); one change at a time
   5. rebuild; run the app's functional check; scan (--quick to probe, full scan to decide)
   6. "improvement beyond noise" + check passes -> keep, scan --pin (or baseline), commit;
@@ -1020,6 +1230,8 @@ const commands = {
   coverage: cmdCoverage,
   profile: cmdProfile,
   verdict: cmdVerdict,
+  graph: cmdGraph,
+  'what-if': cmdWhatIf,
   baseline: cmdBaseline,
   target: cmdTarget,
   defer: (argv) => cmdDefer(argv, 'deferred'),

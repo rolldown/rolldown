@@ -492,6 +492,42 @@ impl<'a> GenerateStage<'a> {
     }
   }
 
+  /// Per-module rendered sizes (post tree-shaking, pre whole-chunk minification), summed across
+  /// every chunk a module was bundled into — the byte weights the metrics sink's dominator-tree
+  /// retained-size analysis attributes over the module graph.
+  fn trace_action_module_rendered(
+    &self,
+    instantiated_chunks: &crate::type_alias::IndexInstantiatedChunks,
+  ) {
+    if trace_action_enabled!() {
+      let mut bytes_by_module: FxHashMap<&str, u64> = FxHashMap::default();
+      for chunk in instantiated_chunks {
+        let InstantiationKind::Ecma(ecma_meta) = &chunk.kind else {
+          continue;
+        };
+        for (module_id, rendered_module) in ecma_meta
+          .rendered_chunk
+          .modules
+          .keys
+          .iter()
+          .zip(ecma_meta.rendered_chunk.modules.values.iter())
+        {
+          *bytes_by_module.entry(module_id.as_str()).or_default() +=
+            rendered_module.rendered_length() as u64;
+        }
+      }
+      let mut modules: Vec<action::ModuleRendered> = bytes_by_module
+        .into_iter()
+        .map(|(id, bytes)| action::ModuleRendered {
+          id: id.to_string(),
+          bytes: u32::try_from(bytes).unwrap_or(u32::MAX),
+        })
+        .collect();
+      modules.sort_unstable_by(|a, b| a.id.cmp(&b.id));
+      trace_action!(action::ModuleRenderedReady { action: "ModuleRenderedReady", modules });
+    }
+  }
+
   fn trace_action_package_graph_ready(
     &self,
     chunk_graph: &ChunkGraph,

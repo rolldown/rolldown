@@ -83,6 +83,10 @@ pub(crate) struct Report {
   pub chunks: ChunksSection,
   pub assets: Vec<AssetRow>,
   pub modules: ModulesSection,
+  /// Dominator-tree retained-size analysis over the static module graph. Present when a
+  /// module graph (and per-module rendered sizes) reached this build's event stream.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub graph: Option<GraphSection>,
   pub packages: PackagesSection,
   pub plugins: Vec<PluginSection>,
   pub transform_hotspots: Vec<TransformHotspot>,
@@ -181,6 +185,37 @@ pub(crate) struct MostImported {
 pub(crate) struct SharedModule {
   pub module: String,
   pub entries: usize,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct GraphSection {
+  /// User-defined entry modules — the roots of the dominator tree.
+  pub entry_modules: Vec<String>,
+  /// Modules reachable from the entries over static edges (= part of some initial load).
+  pub static_module_count: usize,
+  pub static_bytes: u64,
+  /// Modules reachable only across a `dynamic-import` edge (already lazy).
+  pub dynamic_only_module_count: usize,
+  /// Top non-entry modules by retained size: deferring the import edge that pulls the module
+  /// in would remove `retained_bytes` (the whole dominator subtree) from the initial load.
+  pub retained_top: Vec<RetainedRow>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RetainedRow {
+  pub module: String,
+  /// The module's own rendered bytes.
+  pub bytes: u64,
+  /// Own bytes + everything only reachable through it (its dominator subtree).
+  pub retained_bytes: u64,
+  pub retained_module_count: usize,
+  /// The immediate dominator — the module whose import chain is the single way in. Absent
+  /// when the module hangs directly off the entries (an entry itself, or a join point
+  /// shared by several entries).
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub via: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -421,6 +456,7 @@ impl MetricsAggregator {
         .map(|a| AssetRow { file: a.filename.clone(), bytes: a.size })
         .collect(),
       modules: self.modules_section(),
+      graph: self.graph_analysis().map(|analysis| self.graph_section(&analysis)),
       packages: self.packages_section(),
       plugins: self.plugins_section(),
       transform_hotspots: self.transform_hotspots_section(),
@@ -697,6 +733,68 @@ impl MetricsAggregator {
     (total, all)
   }
 
+  /// The user-defined entry modules (dominator roots); async entries excluded, with a
+  /// fallback to any entry chunk for builds that only have async entries.
+  fn user_entry_modules(&self) -> Vec<&str> {
+    let mut entries: Vec<&str> = self
+      .chunks
+      .values()
+      .filter(|c| c.is_user_entry)
+      .filter_map(|c| c.entry_module.as_deref())
+      .collect();
+    if entries.is_empty() {
+      entries = self
+        .chunks
+        .values()
+        .filter(|c| c.is_entry)
+        .filter_map(|c| c.entry_module.as_deref())
+        .collect();
+    }
+    entries.sort_unstable();
+    entries.dedup();
+    entries
+  }
+
+  /// Dominator-tree retained-size analysis over the static module graph. `None` when no
+  /// module graph reached this build (metrics without devtools module events).
+  pub(crate) fn graph_analysis(&self) -> Option<crate::graph::GraphAnalysis> {
+    if self.module_imports.is_empty() {
+      return None;
+    }
+    let entries = self.user_entry_modules();
+    crate::graph::analyze(&self.module_imports, &self.module_bytes, &entries)
+  }
+
+  pub(crate) fn graph_section(&self, analysis: &crate::graph::GraphAnalysis) -> GraphSection {
+    let entry_set: std::collections::BTreeSet<&str> =
+      analysis.entry_modules.iter().map(String::as_str).collect();
+    let mut rows: Vec<&crate::graph::GraphNode> = analysis
+      .nodes
+      .iter()
+      .filter(|node| {
+        node.static_reachable && node.retained_bytes > 0 && !entry_set.contains(node.id.as_str())
+      })
+      .collect();
+    rows.sort_by(|a, b| b.retained_bytes.cmp(&a.retained_bytes).then_with(|| a.id.cmp(&b.id)));
+    rows.truncate(self.config.top_n);
+    GraphSection {
+      entry_modules: analysis.entry_modules.iter().map(|id| self.stabilize(id)).collect(),
+      static_module_count: analysis.static_module_count,
+      static_bytes: analysis.static_bytes,
+      dynamic_only_module_count: analysis.dynamic_only_count,
+      retained_top: rows
+        .into_iter()
+        .map(|node| RetainedRow {
+          module: self.stabilize(&node.id),
+          bytes: node.bytes,
+          retained_bytes: node.retained_bytes,
+          retained_module_count: node.retained_count,
+          via: node.idom.map(|idx| self.stabilize(&analysis.nodes[idx].id)),
+        })
+        .collect(),
+    }
+  }
+
   /// Modules reachable from >1 entry point (the real shared-chunk signal, vs raw import
   /// fan-in). Returns (entry count, total shared, top-N rows of `(module, #entries)`).
   fn reach_from_entries(&self) -> (usize, usize, Vec<(String, usize)>) {
@@ -717,7 +815,7 @@ impl MetricsAggregator {
           continue;
         }
         if let Some(deps) = self.module_imports.get(m) {
-          for dep in deps {
+          for (dep, _) in deps {
             stack.push(dep.as_str());
           }
         }

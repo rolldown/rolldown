@@ -67,6 +67,35 @@ impl MetricsAggregator {
 
     let json = serde_json::to_string_pretty(&report).map_err(std::io::Error::other)?;
     std::fs::write(dir.join("metrics.json"), json)?;
+    // Full module graph with dominator/retained annotations: the machine substrate for
+    // "what-if I deferred this module" queries (agent tooling reads this; the report's
+    // `graph.retainedTop` is its top-N view). Compact JSON - it scales with module count.
+    if let Some(analysis) = self.graph_analysis() {
+      let file = ModuleGraphFile {
+        schema_version: 1,
+        entry_modules: analysis.entry_modules.iter().map(|id| self.stabilize(id)).collect(),
+        note: "imports entries are [targetIndex, isDynamic]; retainedBytes = bytes removed \
+               from the initial load if this module's import edge were deferred (its \
+               dominator subtree); idom = index of the immediate dominator (absent = hangs \
+               directly off the entries).",
+        modules: analysis
+          .nodes
+          .iter()
+          .map(|node| ModuleGraphFileNode {
+            id: self.stabilize(&node.id),
+            bytes: node.bytes,
+            idom: node.idom,
+            static_reachable: node.static_reachable,
+            dynamic_only: node.dynamic_only,
+            retained_bytes: node.retained_bytes,
+            retained_module_count: node.retained_count,
+            imports: node.imports.clone(),
+          })
+          .collect(),
+      };
+      let graph_json = serde_json::to_string(&file).map_err(std::io::Error::other)?;
+      std::fs::write(dir.join("module-graph.json"), graph_json)?;
+    }
     std::fs::write(dir.join("entry.md"), render_entry(&report))?;
     std::fs::write(dir.join("timing.md"), render_timing(&report))?;
     std::fs::write(dir.join("chunks.md"), render_chunks(&report))?;
@@ -86,6 +115,29 @@ impl MetricsAggregator {
     self.append_history();
     Ok(())
   }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ModuleGraphFile {
+  schema_version: u32,
+  note: &'static str,
+  entry_modules: Vec<String>,
+  modules: Vec<ModuleGraphFileNode>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ModuleGraphFileNode {
+  id: String,
+  bytes: u64,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  idom: Option<usize>,
+  static_reachable: bool,
+  dynamic_only: bool,
+  retained_bytes: u64,
+  retained_module_count: usize,
+  imports: Vec<(usize, bool)>,
 }
 
 fn unix_ms_now() -> u64 {
@@ -466,6 +518,37 @@ pub(crate) fn render_graph(report: &Report) -> String {
     }
     out.push('\n');
   }
+  if let Some(graph) = &report.graph {
+    out.push_str("## Retained size (dominator tree)\n\n");
+    writeln!(
+      out,
+      "{} / {} statically reachable from {}; {} already lazy (dynamic-import only).\n",
+      plural(graph.static_module_count, "module"),
+      format_size(graph.static_bytes),
+      plural(graph.entry_modules.len(), "entry point"),
+      plural(graph.dynamic_only_module_count, "module"),
+    )
+    .unwrap();
+    out.push_str(
+      "Deferring the import edge that pulls a module in removes its whole retained subtree \
+       from the initial load. `via` names the immediate dominator - the single import chain \
+       to cut. Full graph + `what-if` queries: `module-graph.json`.\n\n",
+    );
+    out.push_str("| Module | Own | Retained | Modules | via |\n| --- | --- | --- | --- | --- |\n");
+    for row in &graph.retained_top {
+      writeln!(
+        out,
+        "| `{}` | {} | **{}** | {} | {} |",
+        row.module,
+        format_size(row.bytes),
+        format_size(row.retained_bytes),
+        row.retained_module_count,
+        row.via.as_deref().map_or_else(|| "(entries)".to_string(), |v| format!("`{v}`")),
+      )
+      .unwrap();
+    }
+    out.push('\n');
+  }
   out
 }
 
@@ -608,7 +691,8 @@ don't load the whole file into context.
 | `chunks.md` | Output composition: chunk reasons/sizes, largest assets, cross-chunk duplication. |
 | `modules.md` | Module graph: import kinds, most-imported, shared-across-entries. |
 | `packages.md` | Dependency bloat: largest packages, duplicate versions. |
-| `graph.md` | Per-entry chunk graph and initial-load bytes. |
+| `graph.md` | Per-entry chunk graph, initial-load bytes, and the retained-size (dominator) top list. |
+| `module-graph.json` | Full module graph with dominator annotations: per module `bytes`, `retainedBytes` (what deferring its import edge removes from the initial load), `idom` (the single import chain in), `dynamicOnly`, and `imports` edges. The substrate for what-if queries — filter it, never load it whole. |
 | `delta.md` | This build vs the previous one — and vs the pinned baseline, if any. |
 | `history.jsonl` | One JSON line per build: `{schemaVersion, tsMs, build, metrics, entries}`. |
 | `.state.json` | Internal: previous-build snapshot used to compute the next `delta`. |
@@ -637,6 +721,16 @@ otherwise).
 | `plugins.hook_noop_call_count` | Hook calls that did no work (returned nothing, or transform returned the code unchanged). High share ⇒ plugins should declare hook filters; compare across builds to verify a filter change. |
 
 Per-entry numbers live in `metrics.json` → `entries`, joined across builds by `entry`.
+
+## Retained size (`metrics.json` → `graph`, `graph.md`, `module-graph.json`)
+
+`retainedBytes[m]` = bytes that leave the initial load if the import edge pulling `m` in were
+deferred: `m`'s own bytes plus everything reachable ONLY through `m` (its dominator subtree,
+computed over static edges from the user-defined entries). `via` names the immediate
+dominator — the single import chain to cut. Modules marked `dynamicOnly` are already lazy.
+Use the top list to pick split candidates by real payoff instead of tracing import chains
+by hand; confirm the effect after the change via `baselineDelta` on
+`output.max_initial_load_bytes`.
 
 ## Running a config experiment
 

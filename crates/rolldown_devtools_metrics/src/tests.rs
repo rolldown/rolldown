@@ -113,6 +113,19 @@ fn package_graph() -> serde_json::Value {
   })
 }
 
+fn module_rendered() -> serde_json::Value {
+  json!({
+    "action": "ModuleRenderedReady",
+    "modules": [
+      {"id": "/app/src/a.ts", "bytes": 100},
+      {"id": "/app/src/b.ts", "bytes": 150},
+      {"id": "/app/src/shared.ts", "bytes": 700},
+      {"id": "/app/node_modules/foo/index.js", "bytes": 1200},
+      {"id": "/app/src/lazy.ts", "bytes": 500},
+    ],
+  })
+}
+
 fn assets(a_size: u32, b_size: u32) -> serde_json::Value {
   json!({
     "action": "AssetsReady",
@@ -196,6 +209,7 @@ fn fold_build(agg: &mut MetricsAggregator, base: Instant, start_ms: u64, a_size:
   agg.fold(&module_graph(), t(55));
   agg.fold(&json!({"action": "BuildEnd"}), t(60));
   agg.fold(&chunk_graph(), t(70));
+  agg.fold(&module_rendered(), t(72));
   agg.fold(&package_graph(), t(75));
   agg.fold(&assets(a_size, b_size), t(95));
   agg.fold(&json!({"action": "BuildEnd"}), t(100));
@@ -262,6 +276,23 @@ fn report_metrics_and_sections() {
   assert_eq!(report.transform_hotspots[0].ms, 5.0);
   assert_eq!(report.transform_hotspots[1].module, "src/b.ts");
   assert!(report.delta.is_none());
+
+  // Dominator retained sizes: foo is only reachable through a (retained under a); shared is a
+  // join of both entries (hangs off the virtual root); lazy is dynamic-only; ext weighs 0.
+  let graph = report.graph.as_ref().expect("module graph events were folded");
+  assert_eq!(graph.entry_modules, vec!["src/a.ts", "src/b.ts"]);
+  assert_eq!(graph.static_module_count, 5); // a, b, shared, foo, ext
+  assert_eq!(graph.static_bytes, 2150); // 100 + 150 + 700 + 1200 + 0
+  assert_eq!(graph.dynamic_only_module_count, 1); // lazy.ts
+  let rows: Vec<(&str, u64, Option<&str>)> = graph
+    .retained_top
+    .iter()
+    .map(|r| (r.module.as_str(), r.retained_bytes, r.via.as_deref()))
+    .collect();
+  assert_eq!(
+    rows,
+    vec![("foo/index.js", 1200, Some("src/a.ts")), ("src/shared.ts", 700, None)]
+  );
 }
 
 #[test]

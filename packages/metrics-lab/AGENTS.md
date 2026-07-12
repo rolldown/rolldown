@@ -23,6 +23,19 @@ bare — no paths. Each target app keeps its own state (baseline, history, repor
 Individual commands exist too (`measure [--pin]`, `coverage`, `profile`,
 `baseline`, `target [<appDir>] [--demo]`) plus demo-app helpers (README.md).
 
+On rolldown devtools-metrics builds (vite ≥ 8:
+`build.rolldownOptions.devtools = { mode: "metrics" }`) two static queries skip the
+import-chain archaeology entirely: `graph` ranks split candidates by **retained size**
+(the dominator subtree a deferral removes from the initial load, with `via` naming the
+one import chain to cut), and `what-if <module> [--keep a,b]` lists the exact modules
+and bytes one deferral frees — sentries in `--keep` stay eager. Rank candidates
+statically with these, then verify the winner's real LCP effect with `scan`.
+`scan`/`verdict` fold the graph in as the **statically retained imports** signal;
+when the app builds with rolldown but the graph was never collected, the verdict
+reports it UNKNOWN with the one config line that enables it — enable it and rebuild
+rather than justifying the gap: it is the cheapest signal in the whole kit (no
+browser run, and it prices every candidate at once).
+
 ## The optimization loop
 
 1. Build the app. `scan --app <appDir>` — the first scan is your baseline.
@@ -38,7 +51,12 @@ Individual commands exist too (`measure [--pin]`, `coverage`, `profile`,
      data can name it: a gating fetch/xhr, or heavy pre-paint fonts/images (the
      per-type "before first paint" weights). Fix FIRST: fetches → render with
      bundled defaults and apply results when they land; fonts → paint with one
-     preloaded (subset) font, register the rest after paint.
+     preloaded (subset) font, register the rest after paint. When neither the
+     fetches nor the profile explain the gap (profile says framework/baseline
+     work), check whether the LCP element **mounts invisible**: an entry
+     animation or fade-in wrapper that starts the hero at opacity 0 delays LCP
+     until the reveal — LCP counts the first frame the element paints VISIBLE.
+     Render the hero visible immediately and animate only decoration.
    - **pre-paint CPU by module** — warm-up caches, telemetry, data-module
      evaluation running ahead of paint. Defer what the first render does not need —
      but only judge deferrals AFTER any render gap is fixed (CPU that overlaps a
@@ -65,6 +83,10 @@ Individual commands exist too (`measure [--pin]`, `coverage`, `profile`,
      behind a dynamic import.
    - **sibling variant groups** — locales/themes/config families where one variant is
      active per session: keep the default in the entry, load the active one dynamically.
+   - **statically retained imports** (rolldown builds only) — the module graph's
+     dominator view: any non-framework module retaining ≥100KB on the initial load
+     is a priced split candidate; `what-if` shows the exact cut. Retained is
+     potential, not proof — the first render may genuinely need it; if so, say why.
 3. Read the app source and find why the landing page pays for each lead.
 4. Change the app, without removing any feature. One small change at a time — render
    gap first, then data/variant splits, then CPU deferrals.

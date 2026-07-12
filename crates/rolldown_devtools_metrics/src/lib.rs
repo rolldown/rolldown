@@ -18,6 +18,7 @@
 //! `Instant`s captured at event-emit time on the build thread (not at fold time on the writer
 //! thread), so writer-queue latency does not skew them.
 
+mod graph;
 mod render;
 mod report;
 
@@ -64,6 +65,8 @@ pub(crate) struct ChunkAgg {
   pub(crate) name: String,
   pub(crate) reason: String,
   pub(crate) is_entry: bool,
+  /// User-defined entry only (excludes async entries) — these are the dominator-tree roots.
+  pub(crate) is_user_entry: bool,
   pub(crate) entry_module: Option<String>,
   pub(crate) module_count: usize,
   pub(crate) static_imports: Vec<u32>,
@@ -133,8 +136,11 @@ pub struct MetricsAggregator {
   external_count: usize,
   import_kind_hist: FxHashMap<String, usize>,
   most_imported: Vec<(String, usize)>,
-  /// module id -> imported module ids (static + dynamic). For reachable-from-N-entries.
-  module_imports: FxHashMap<String, Vec<String>>,
+  /// module id -> `(imported module id, is_dynamic)` edges. Feeds reachable-from-N-entries
+  /// and the dominator-tree retained-size analysis (which needs the static/dynamic split).
+  module_imports: FxHashMap<String, Vec<(String, bool)>>,
+  /// module id -> rendered bytes (from `ModuleRenderedReady`) — the retained-size weights.
+  module_bytes: FxHashMap<String, u64>,
 
   // chunks (reason histogram is computed at report time over non-empty chunks)
   chunks: FxHashMap<u32, ChunkAgg>,
@@ -189,6 +195,7 @@ impl MetricsAggregator {
         self.build_end = Some(at);
       }
       "ModuleGraphReady" => self.fold_module_graph(value),
+      "ModuleRenderedReady" => self.fold_module_rendered(value),
       "ChunkGraphReady" => self.fold_chunk_graph(value),
       "PackageGraphReady" => self.fold_package_graph(value),
       "AssetsReady" => self.fold_assets(value),
@@ -258,11 +265,12 @@ impl MetricsAggregator {
       if module.is_external {
         self.external_count += 1;
       }
-      let mut deps: Vec<String> = Vec::new();
+      let mut deps: Vec<(String, bool)> = Vec::new();
       if let Some(imports) = module.imports {
         for import in imports {
+          let is_dynamic = import.kind == "dynamic-import";
           *self.import_kind_hist.entry(import.kind).or_default() += 1;
-          deps.push(import.module_id);
+          deps.push((import.module_id, is_dynamic));
         }
       }
       // Only genuinely shared modules (imported by 2+ modules) are "most-imported" / shared-chunk
@@ -280,6 +288,16 @@ impl MetricsAggregator {
     imported.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
     imported.truncate(self.config.top_n);
     self.most_imported = imported;
+  }
+
+  fn fold_module_rendered(&mut self, value: &serde_json::Value) {
+    let Ok(rendered) = serde_json::from_value::<MModuleRendered>(value.clone()) else {
+      return;
+    };
+    self.module_bytes.clear();
+    for module in rendered.modules {
+      self.module_bytes.insert(module.id, u64::from(module.bytes));
+    }
   }
 
   fn fold_chunk_graph(&mut self, value: &serde_json::Value) {
@@ -311,6 +329,7 @@ impl MetricsAggregator {
           name: chunk.name.unwrap_or_else(|| format!("chunk-{}", chunk.chunk_id)),
           reason: chunk.reason,
           is_entry: chunk.is_user_defined_entry || chunk.is_async_entry,
+          is_user_entry: chunk.is_user_defined_entry,
           entry_module: chunk.entry_module,
           module_count: chunk.modules.len(),
           static_imports,
@@ -502,6 +521,18 @@ struct MImport {
   kind: String,
   #[serde(default)]
   module_id: String,
+}
+
+#[derive(Deserialize)]
+struct MModuleRendered {
+  modules: Vec<MRenderedModule>,
+}
+
+#[derive(Deserialize)]
+struct MRenderedModule {
+  id: String,
+  #[serde(default)]
+  bytes: u32,
 }
 
 #[derive(Deserialize)]

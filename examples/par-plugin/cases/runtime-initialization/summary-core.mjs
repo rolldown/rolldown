@@ -184,7 +184,9 @@ export function summarizeInitializationReport(report, { rawArtifact } = {}) {
       runtimeCommit: report.runtimeProvenance.worktree.commit,
       bindingSha256: report.runtimeProvenance.binding.sha256,
       distributionSha256: report.runtimeProvenance.distribution.aggregateSha256,
+      distributionBytes: report.runtimeProvenance.distribution.bytes,
       packageEntrySha256: report.runtimeProvenance.packageEntry.sha256,
+      packageEntryBytes: report.runtimeProvenance.packageEntry.bytes,
       nodeArtifact: {
         version: report.runtimeProvenance.node.version,
         bytes: report.runtimeProvenance.node.bytes,

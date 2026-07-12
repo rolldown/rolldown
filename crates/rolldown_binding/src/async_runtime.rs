@@ -2161,7 +2161,9 @@ impl TimerDriver for JsTimerHost {
     let relay_drop_guard = PendingRelayDropGuard::new(std::sync::Arc::clone(&inner), id, relay_id);
     let submission = try_spawn_detached(async move {
       let mut relay_drop_guard = relay_drop_guard;
+      let schedule_started = std::sync::atomic::AtomicBool::new(false);
       let schedule = async {
+        schedule_started.store(true, std::sync::atomic::Ordering::Release);
         match inner
           .invoke_schedule_callback(id, relay_id, ms, std::sync::Arc::clone(&relay_health))
           .await
@@ -2173,9 +2175,28 @@ impl TimerDriver for JsTimerHost {
       futures::pin_mut!(cancellation);
       futures::pin_mut!(schedule);
       let result = match futures::future::select(cancellation, schedule).await {
-        futures::future::Either::Left((_cancelled, _schedule)) => {
+        futures::future::Either::Left((_cancelled, schedule)) => {
+          // Native cancellation won the race. The pending entry is already
+          // gone (`cancel` removes it before signalling this oneshot), so the
+          // drop guard has nothing left to clean up either way.
           relay_drop_guard.disarm();
-          return;
+          if !schedule_started.load(std::sync::atomic::Ordering::Acquire) {
+            // The schedule callback was never invoked (the cancellation was
+            // already pending at this task's first poll), so there is no host
+            // result to observe -- and invoking the callback now would arm a
+            // JS timer that nothing will ever cancel.
+            return;
+          }
+          // The schedule callback is in flight. Conforming hosts settle the
+          // schedule promise on cancellation (see `cancelTimer` in
+          // workerd-timer-host.ts and the node host in timer-host.ts), and
+          // that settlement shares this relay's health record with the
+          // cancellation callback: whichever failure reaches Rust first
+          // consumes the relay's one strike and the other is reported as
+          // diagnostic-only (`Duplicate`, "already accounted"). Dropping the
+          // schedule future here instead would leave the schedule-side
+          // result unobserved and the shared accounting blind.
+          schedule.await
         }
         futures::future::Either::Right((result, _cancellation)) => result,
       };

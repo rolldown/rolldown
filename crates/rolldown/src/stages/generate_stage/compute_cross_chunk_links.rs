@@ -1,7 +1,8 @@
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
-use crate::module_finalizers::{
-  WrappedEsmInitTargetContext, collect_wrapped_esm_init_targets_for_import_record,
+use crate::esm_init_obligations::{
+  ObligationPurpose, WrappedEsmInitTargetContext,
+  collect_wrapped_esm_init_targets_for_import_record, for_each_init_obligation_record,
 };
 use crate::utils::chunk::conflict_resolver::{ConflictResolver, deconflict_order_key};
 use crate::utils::chunk::normalize_preserve_entry_signature;
@@ -180,9 +181,44 @@ impl GenerateStage<'_> {
         "predicted static chunk import edges diverged for chunk {chunk_idx:?}",
       );
     }
+
+    // Empty entry facades (order-wrap trigger facades and dynamic-entry facades) hold zero modules,
+    // so they export no symbols and nothing can depend on them across a *static* import — their only
+    // inbound edges are dynamic, routed through `entry_module_to_entry_chunk` outside the static SCC
+    // graph. The emergent-cycle projector relies on this to soundly omit facade edges from its
+    // static chunk-SCC search (`post_lowering_import_edges` doc): a facade can never sit inside a
+    // static cycle, so the "entry-facade transitive init imports" edge source is not constructible.
+    // Assert it so a future change that gives a facade static indegree trips here instead of silently
+    // defeating the projection.
+    #[cfg(debug_assertions)]
+    if self.options.is_strict_execution_order_enabled() {
+      let empty_facades = chunk_graph
+        .chunk_table
+        .iter_enumerated()
+        .filter(|(_, chunk)| {
+          matches!(chunk.kind, ChunkKind::EntryPoint { .. }) && chunk.modules.is_empty()
+        })
+        .map(|(idx, _)| idx)
+        .collect::<FxHashSet<_>>();
+      if !empty_facades.is_empty() {
+        for chunk in chunk_graph.chunk_table.iter() {
+          for importee in chunk.imports_from_other_chunks.keys() {
+            debug_assert!(
+              !empty_facades.contains(importee),
+              "an empty entry facade gained a static import edge, defeating the projector's \
+               zero-static-indegree assumption",
+            );
+          }
+        }
+      }
+    }
   }
 
   /// Compute provisional links for order analysis. Runtime symbol placement is cleared if moved.
+  /// Uses an empty order state, so the edges are the *pre-lowering* baseline topology (value and
+  /// side-effect imports, before any wrapping adds `init_*` wrapper imports). The emergent-cycle
+  /// fixpoint layers the plan's `init_*` forwarding edges on top of this baseline
+  /// (`post_lowering_import_edges`).
   pub(super) fn predicted_static_import_edges(
     &mut self,
     chunk_graph: &ChunkGraph,
@@ -632,20 +668,17 @@ impl GenerateStage<'_> {
       order_wrap_state: order_state,
       strict_execution_order: self.options.is_strict_execution_order_enabled(),
     };
-    for (stmt_info_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
-      if !meta.stmt_info_included.has_bit(stmt_info_idx) {
-        continue;
-      }
-      for &rec_idx in &stmt_info.import_records {
-        let rec = &module.import_records[rec_idx];
-        if rec.kind != ImportKind::Import {
-          continue;
-        }
-        if order_state.is_nested_reexport_record(module_idx, rec_idx) {
-          continue;
-        }
-        // Resolve the targets exactly as the finalizer will, but pretend every wrapper is reachable:
-        // we are registering precisely so it becomes reachable.
+    // Enumerate this importer's obligation records through the shared purpose-gated enumerator
+    // (Register contract: included statements, nested records skipped — emission's own gate), then
+    // resolve the targets exactly as the finalizer will, but pretend every wrapper is reachable:
+    // we are registering precisely so it becomes reachable.
+    for_each_init_obligation_record(
+      ObligationPurpose::Register,
+      module,
+      meta,
+      &self.link_output.stmt_infos,
+      order_state,
+      |rec_idx| {
         let targets = collect_wrapped_esm_init_targets_for_import_record(
           &ctx,
           rec_idx,
@@ -667,8 +700,8 @@ impl GenerateStage<'_> {
             depended_symbols.insert(target.wrapper_ref);
           }
         }
-      }
-    }
+      },
+    );
   }
 
   fn add_order_import_overlay_depended_symbols(

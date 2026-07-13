@@ -1,9 +1,8 @@
 use oxc::ast::ast::{Declaration, Statement};
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, IndexModules, Module, ModuleIdx, NormalModule, StmtInfoIdx, StmtInfos,
-  WrapKind,
+  ChunkIdx, ConcatenateWrappedModuleKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
+  IndexModules, Module, ModuleIdx, NormalModule, StmtInfoIdx, StmtInfos, WrapKind,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_utils::{index_vec_ext::IndexVecRefExt, rayon::ParallelIterator as _};
@@ -11,6 +10,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   chunk_graph::ChunkGraph,
+  esm_init_obligations::{collect_order_wrap_esm_init_targets, reexport_record_owns_hop},
   type_alias::IndexEcmaAst,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
@@ -187,24 +187,20 @@ fn transitive_esm_init_targets(
       let is_reexport =
         rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly);
       let Some(root) = rec.resolved_module else { continue };
-      let was_live_order_wrap_import = ctx.order_wrap && ctx.execution_dependencies.contains(&root);
       let overlay = ctx.order_state.import_overlay(OrderImportKey {
         importer: module.idx,
         statement: stmt_idx,
         record: rec_idx,
       });
       if ctx.order_wrap {
-        let retained_reexport = is_reexport && overlay.is_some();
-        // An init-owning barrel forwards its own re-export hops. A re-export record that is not
-        // suppressed as a walk-through interior record ("nested") owns its hop, so the barrel's
-        // `init_*` must forward through it — even when the direct re-export target is side-effect
-        // free (so not a live execution dependency) and no per-symbol overlay was created because
-        // the re-exported bindings are consumed only via the barrel namespace object or resolve
-        // through a deeper level. The traversal below only forwards to wrapped, live targets, so a
-        // genuinely unused pure re-export still forwards to nothing and stays droppable.
-        let owns_reexport_hop =
-          is_reexport && !ctx.order_state.is_nested_reexport_record(module.idx, rec_idx);
-        if !was_live_order_wrap_import && !retained_reexport && !owns_reexport_hop {
+        if !order_wrap_record_forwards(
+          ctx.order_state,
+          ctx.execution_dependencies,
+          module.idx,
+          rec_idx,
+          root,
+          is_reexport,
+        ) {
           continue;
         }
         if stmt_is_included
@@ -251,6 +247,36 @@ fn transitive_esm_init_targets(
   targets_by_stmt
 }
 
+/// Whether an order-wrapped importer's `init_*` must forward through this static-import record.
+///
+/// It forwards on either of two conditions:
+/// - **execution dependency** — the record's target is a live execution dependency of the importer
+///   (a side-effecting module the importer evaluates); or
+/// - **owns a re-export hop** — [`reexport_record_owns_hop`], the shared ownership predicate: the
+///   record is a re-export the importer is not merely a walk-through interior for. An init-owning
+///   barrel forwards its own re-export hops even when the direct target is side-effect free (so not
+///   a live execution dependency) and no per-symbol overlay was created because the bindings are
+///   consumed only via the barrel namespace object or resolve through a deeper level. The traversal
+///   only forwards to wrapped, live targets, so a genuinely unused pure re-export still forwards to
+///   nothing and stays droppable.
+///
+/// A third disjunct — "has an order-import overlay" — was previously ORed in but is redundant: every
+/// re-export record that carries an overlay is either non-nested (so already covered by the
+/// re-export-hop condition) or reaches the plan through a retained path minted only for non-nested
+/// records, and a non-re-export record only carries an overlay when its target is a live execution
+/// dependency. Dropping it leaves the forwarded-target set byte-identical.
+fn order_wrap_record_forwards(
+  order_state: &OrderWrapState,
+  execution_dependencies: &rolldown_utils::indexmap::FxIndexSet<ModuleIdx>,
+  importer_idx: ModuleIdx,
+  rec_idx: ImportRecordIdx,
+  root: ModuleIdx,
+  is_reexport: bool,
+) -> bool {
+  execution_dependencies.contains(&root)
+    || reexport_record_owns_hop(order_state, importer_idx, rec_idx, is_reexport)
+}
+
 fn collect_legacy_esm_init_targets(
   modules: &IndexModules,
   metas: &LinkingMetadataVec,
@@ -279,65 +305,6 @@ fn collect_legacy_esm_init_targets(
         if let Some(sub_importee_idx) = rec.resolved_module {
           stack.push(sub_importee_idx);
         }
-      }
-    }
-  }
-}
-
-/// Follow excluded re-exports through barrels to included wrapped importees.
-#[expect(clippy::too_many_arguments)]
-fn collect_order_wrap_esm_init_targets(
-  modules: &IndexModules,
-  metas: &LinkingMetadataVec,
-  chunk_graph: &ChunkGraph,
-  order_state: &OrderWrapState,
-  importer_chunk_idx: ChunkIdx,
-  root: ModuleIdx,
-  retained_reexport_path: Option<&[(ModuleIdx, ImportRecordIdx)]>,
-  visited: &mut FxHashSet<ModuleIdx>,
-  targets: &mut Vec<ModuleIdx>,
-) {
-  let mut stack = vec![root];
-  while let Some(module_idx) = stack.pop() {
-    let Module::Normal(importee) = &modules[module_idx] else { continue };
-    let importee_linking_info = &metas[importee.idx];
-
-    if !visited.insert(importee.idx) {
-      continue;
-    }
-
-    // Only collect modules whose wrapper is declared (i.e. the module is included in the output)
-    // and assigned to a chunk. Cross-chunk wrapper imports are registered after this pass.
-    if importee_linking_info.is_included
-      && order_state.esm_init_included_in_live_chunk(
-        importee_linking_info,
-        importee.idx,
-        chunk_graph,
-      )
-    {
-      targets.push(importee.idx);
-      continue;
-    }
-
-    if (retained_reexport_path.is_none()
-      && importee_linking_info.is_included
-      && chunk_graph.module_to_chunk[importee.idx] == Some(importer_chunk_idx))
-      || !matches!(importee.exports_kind, ExportsKind::Esm | ExportsKind::None)
-    {
-      continue;
-    }
-
-    // Importee is a non-included barrel module — traverse its static imports to find included
-    // wrapped importees transitively. Preserve recursive DFS order with an explicit LIFO stack:
-    // pushing children in reverse keeps source-order visitation left-to-right.
-    for (rec_idx, rec) in importee.import_records.iter_enumerated().rev() {
-      if retained_reexport_path.is_some_and(|path| !path.contains(&(importee.idx, rec_idx))) {
-        continue;
-      }
-      if rec.kind == ImportKind::Import
-        && let Some(sub_importee_idx) = rec.resolved_module
-      {
-        stack.push(sub_importee_idx);
       }
     }
   }

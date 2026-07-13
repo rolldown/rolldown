@@ -27,7 +27,6 @@ use rolldown_ecmascript_utils::{
 
 mod finalizer_context;
 mod impl_visit_mut;
-mod wrapped_esm_init_targets;
 use finalizer_context::ModuleWrapperMode;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use oxc_str::{CompactStr, Ident};
@@ -36,10 +35,11 @@ use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
-pub use wrapped_esm_init_targets::{
-  WrappedEsmInitTargetContext, collect_wrapped_esm_init_targets_for_import_record,
-};
 
+use crate::esm_init_obligations::{
+  ObligationPurpose, WrappedEsmInitTargetContext,
+  collect_wrapped_esm_init_targets_for_import_record, record_is_init_obligation,
+};
 use crate::utils::external_import_interop::import_record_needs_interop;
 
 mod hmr;
@@ -270,8 +270,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];
     match importee_linking_info.wrap_kind() {
       WrapKind::None => {
-        if !self.ctx.order_wrap_state.is_nested_reexport_record(self.ctx.idx, rec_idx)
-          && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
+        // Emission consumes the shared obligation gate; this transform only runs for *included*
+        // statements (excluded ones take `remove_unused_top_level_stmt`'s early branch).
+        if record_is_init_obligation(
+          ObligationPurpose::Emit,
+          self.ctx.order_wrap_state,
+          self.ctx.idx,
+          rec,
+          rec_idx,
+          true,
+        ) && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
         {
           *stmt = init_stmt;
           return false;
@@ -1717,8 +1725,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             match &self.ctx.modules[module_idx] {
               Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                if !self.ctx.order_wrap_state.is_nested_reexport_record(self.ctx.idx, rec_idx)
-                  && matches!(importee_linking_info.wrap_kind(), WrapKind::None)
+                // Same shared obligation gate as the import-declaration path; the statement is
+                // included by construction here.
+                if record_is_init_obligation(
+                  ObligationPurpose::Emit,
+                  self.ctx.order_wrap_state,
+                  self.ctx.idx,
+                  rec,
+                  rec_idx,
+                  true,
+                ) && matches!(importee_linking_info.wrap_kind(), WrapKind::None)
                   && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
                 {
                   program.body.push(init_stmt);

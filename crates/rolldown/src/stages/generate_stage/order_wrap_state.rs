@@ -152,6 +152,27 @@ impl OrderWrapState {
       runtime_helpers: runtime_helper,
       chunk: None,
     });
+    self.insert_order_wrapped_module(module_idx, wrapper_ref, Some(wrapper_statement));
+  }
+
+  /// Record a plan member as order-wrapped for the emergent-cycle fixpoint probe without minting
+  /// the synthetic `init_*` statement the real lowering renders. Edge projection reads only wrapper
+  /// identity (`esm_init_target`) and chunk placement (`order_wrapper_chunk`), so the probe skips
+  /// the per-round synthetic-statement and runtime-helper payload entirely.
+  pub(crate) fn insert_order_wrapper_probe(
+    &mut self,
+    module_idx: ModuleIdx,
+    wrapper_ref: SymbolRef,
+  ) {
+    self.insert_order_wrapped_module(module_idx, wrapper_ref, None);
+  }
+
+  fn insert_order_wrapped_module(
+    &mut self,
+    module_idx: ModuleIdx,
+    wrapper_ref: SymbolRef,
+    wrapper_statement: Option<OrderSyntheticStmtIdx>,
+  ) {
     assert!(
       self
         .modules
@@ -160,6 +181,7 @@ impl OrderWrapState {
           OrderWrappedModule {
             wrapper_ref,
             wrapper_statement,
+            chunk: None,
             init_is_noop: false,
             transitive_init_targets: FxHashMap::default(),
           },
@@ -188,12 +210,13 @@ impl OrderWrapState {
 
 
   pub(crate) fn assign_order_wrapper_chunk(&mut self, module_idx: ModuleIdx, chunk_idx: ChunkIdx) {
-    let wrapper_statement = self
-      .modules
-      .get(&module_idx)
-      .map(|module| module.wrapper_statement)
-      .expect("order-wrapped module should have a synthetic declaration");
-    self.assign_synthetic_statement_chunk(wrapper_statement, chunk_idx);
+    let module = self.modules.get_mut(&module_idx).expect("order-wrapped module should exist");
+    module.chunk = Some(chunk_idx);
+    // On the real path the wrapper statement carries the same chunk so chunk rendering can find it;
+    // a probe wrapper has no statement and only needs the chunk recorded above.
+    if let Some(wrapper_statement) = module.wrapper_statement {
+      self.assign_synthetic_statement_chunk(wrapper_statement, chunk_idx);
+    }
   }
 
   pub(crate) fn synthetic_statements_for_chunk(
@@ -326,8 +349,7 @@ impl OrderWrapState {
   }
 
   pub(crate) fn order_wrapper_chunk(&self, module_idx: ModuleIdx) -> Option<ChunkIdx> {
-    let module = self.modules.get(&module_idx)?;
-    self.synthetic_statements.get(module.wrapper_statement).and_then(|stmt| stmt.chunk)
+    self.modules.get(&module_idx)?.chunk
   }
 
   /// The target's wrapper declaration survives in the output: its declaring statement (interop)
@@ -380,7 +402,14 @@ impl OrderWrapState {
 #[derive(Debug)]
 pub struct OrderWrappedModule {
   pub(crate) wrapper_ref: SymbolRef,
-  pub(crate) wrapper_statement: OrderSyntheticStmtIdx,
+  /// The rendered `init_*` declaration statement, minted by the real lowering. `None` on a
+  /// discovery-only probe state (the emergent-cycle fixpoint), which records wrapper identity and
+  /// chunk without allocating a synthetic statement it never renders.
+  pub(crate) wrapper_statement: Option<OrderSyntheticStmtIdx>,
+  /// The chunk the wrapper is placed in, tracked here directly so probe states need no synthetic
+  /// statement to answer `order_wrapper_chunk`. Kept in sync with the wrapper statement's chunk on
+  /// the real path.
+  pub(crate) chunk: Option<ChunkIdx>,
   pub(crate) init_is_noop: bool,
   pub(crate) transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }

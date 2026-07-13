@@ -95,7 +95,7 @@ ChunkGraph
 
 Wrap-all (the default strict mode) seeds the plan from the expected orders alone and skips prediction; `experimental.onDemandWrapping` enables the selective analysis. `finalize_chunk_plan` may run two metadata passes. Namespace usage and entry-level external re-exports are first finalized on the provisional graph. They are recomputed when order wrapping or strict entry facades change topology.
 
-Order planning closes over sensitive suffixes, dependent importers/readers, and eligible sensitive modules in any static chunk SCC already touched by the plan.
+Order planning closes over sensitive suffixes, dependent importers/readers, and eligible sensitive modules in any static chunk SCC already touched by the plan. Under `onDemandWrapping` it then runs the emergent-cycle fixpoint in `order_analysis.rs` (`post_lowering_import_edges`): each round projects the plan's post-lowering `init_*` forwarding edges onto the pre-lowering baseline from `predicted_static_import_edges`, wraps every eligible module in a chunk cycle those edges close, and repeats until the at-risk set stops growing (see the design doc for the projected/omitted edge-source inventory). Set `ROLLDOWN_ORDER_DEBUG=1` for a stderr trace of the per-round SCC counts and final wrap delta.
 
 ## Bit Positions and Entry Points
 

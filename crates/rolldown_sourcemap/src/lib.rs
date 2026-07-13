@@ -80,7 +80,7 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
     .collect();
 
   let tokens: Box<[Token]> = last_map
-    .get_source_view_tokens()
+    .get_tokens()
     .filter_map(|token| {
       let unmapped_token =
         || Token::new(token.get_dst_line(), token.get_dst_col(), 0, 0, None, None);
@@ -90,11 +90,13 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
 
       let mut original_token = token;
       for (sourcemap, lookup_table) in &sourcemap_and_lookup_table {
-        let traced = sourcemap.lookup_source_view_token_approx(
-          lookup_table,
-          original_token.get_src_line(),
-          original_token.get_src_col(),
-        )?;
+        let line = original_token.get_src_line();
+        let col = original_token.get_src_col();
+        // Keep strict lookup as the common path. A coarse map may point before the first token on
+        // the same line, so only fall back to that first token on a miss.
+        let traced = sourcemap.lookup_token(lookup_table, line, col).or_else(|| {
+          lookup_table.get(line as usize).and_then(|line_tokens| line_tokens.first()).copied()
+        })?;
         if traced.get_source_id().is_none() {
           return Some(unmapped_token());
         }

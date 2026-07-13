@@ -8,8 +8,8 @@ use oxc::{
   ast::{
     NONE,
     ast::{
-      self, ClassElement, Expression, IdentifierReference, ImportExpression, MemberExpression,
-      NumberBase, Statement, VariableDeclarationKind,
+      self, ClassElement, Expression, IdentifierReference, ImportExpression, NumberBase, Statement,
+      VariableDeclarationKind,
     },
   },
   span::{GetSpan, GetSpanMut, SPAN, Span},
@@ -982,19 +982,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ret
   }
 
-  // Handle `import.meta.xxx` expression
+  // Handle `import.meta.xxx`, `import.meta['xxx']`, `import.meta?.xxx` and `import.meta?.['xxx']`
   pub fn try_rewrite_import_meta_prop_expr(
     &mut self,
-    member_expr: &ast::StaticMemberExpression<'ast>,
+    member_expr: &ast::MemberExpression<'ast>,
   ) -> Option<Expression<'ast>> {
-    if member_expr.object.is_import_meta() {
-      let original_expr_span = member_expr.span;
+    if member_expr.object().is_import_meta() {
+      let original_expr_span = member_expr.span();
       let is_node_cjs = matches!(
         (self.ctx.options.platform, &self.ctx.options.format),
         (Platform::Node, OutputFormat::Cjs)
       );
 
-      let property_name = member_expr.property.name.as_str();
+      let property_name = member_expr.static_property_name()?;
       match property_name {
         // Try to polyfill `import.meta.url`
         "url" => {
@@ -1226,12 +1226,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           )
         })
         .or_else(|| Some(self.ast_factory.make_member_expr_with_void_zero_object(props, span))),
-      _ => {
-        let MemberExpression::StaticMemberExpression(static_member_expr) = member_expr else {
-          return None;
-        };
-        self.try_rewrite_import_meta_prop_expr(static_member_expr)
-      }
+      _ => self.try_rewrite_import_meta_prop_expr(member_expr),
     }
   }
 

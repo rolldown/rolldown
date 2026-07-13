@@ -15,8 +15,8 @@ use oxc_str::CompactStr;
 use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
-  EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperStmtOptions, ExpressionExt, JsxExt,
-  JsxMemberExpressionObjectExt,
+  EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions, ExpressionExt,
+  JsxExt, JsxMemberExpressionObjectExt,
 };
 
 use crate::module_finalizers::{KeepNameId, ModuleWrapperMode, TraverseState};
@@ -106,9 +106,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       program.body.splice(last_import_stmt_idx..last_import_stmt_idx, hmr_header);
     }
 
-    // check if we need to add wrapper
     let wrapper_mode = self.ctx.wrapper_mode();
-    self.needs_hosted_top_level_binding = matches!(wrapper_mode, ModuleWrapperMode::InteropEsm(_));
+    self.needs_hosted_top_level_binding = matches!(
+      wrapper_mode,
+      ModuleWrapperMode::InteropEsm(_) | ModuleWrapperMode::ExecutionOrder(_)
+    );
 
     // the order should be
     // 1. module namespace object declaration
@@ -169,7 +171,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.ctx.linking_info.is_tla_or_contains_tla_dependency,
         ));
       }
-      ModuleWrapperMode::InteropEsm(target) => {
+      ModuleWrapperMode::InteropEsm(target) | ModuleWrapperMode::ExecutionOrder(target) => {
         let is_concatenated_wrapped_module = !matches!(
           self.ctx.linking_info.concatenated_wrapped_module_kind,
           ConcatenateWrappedModuleKind::None
@@ -293,6 +295,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             EsmWrapperBodyKind::Async
           } else {
             EsmWrapperBodyKind::Sync
+          },
+          decl_kind: if matches!(wrapper_mode, ModuleWrapperMode::ExecutionOrder(_)) {
+            EsmWrapperDeclKind::HoistedFunction
+          } else {
+            EsmWrapperDeclKind::Var
           },
         }));
       }

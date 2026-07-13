@@ -1,8 +1,9 @@
 use oxc::ast::ast::{Declaration, Statement};
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ChunkIdx, ConcatenateWrappedModuleKind, ImportRecordMeta, IndexModules, Module, ModuleIdx,
-  NormalModule, StmtInfoIdx, StmtInfos, WrapKind,
+  ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, IndexModules, Module, ModuleIdx, NormalModule, StmtInfoIdx, StmtInfos,
+  WrapKind,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_utils::{index_vec_ext::IndexVecRefExt, rayon::ParallelIterator as _};
@@ -14,73 +15,92 @@ use crate::{
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
-use super::GenerateStage;
+use super::{
+  GenerateStage,
+  order_wrap_state::{EsmInitOrigin, OrderImportKey, OrderWrapState},
+};
 
 impl GenerateStage<'_> {
-  /// Pre-finalization pass computing, for every included wrapped (`WrapKind::Esm`) module, the
-  /// init-call facts the module finalizers consume when emitting `init_*()` calls:
-  ///
-  /// - [`LinkingMetadata::init_is_noop`]: the module's `__esm` closure body is empty — every
-  ///   top-level statement is a hoisted function declaration (lifted out of the closure) or a
-  ///   source-less export clause — so call sites can be marked `@__PURE__` and the default
-  ///   `dce-only` minifier drops them (and, once the wrapper is unreferenced, the wrapper
-  ///   declaration / runtime helper too).
-  /// - [`LinkingMetadata::transitive_esm_init_targets`]: per non-included top-level re-export
-  ///   statement (`export * from`, `export {x} from`, `export * as ns from`), the wrapped-ESM
-  ///   modules whose `init_*()` calls must be emitted in the statement's place, so
-  ///   initialization order is preserved when a barrel's re-exports are tree-shaken while
-  ///   transitive importees stay included.
-  ///
-  /// Must run after chunk assignment (`module_to_chunk`) and `on_demand_wrapping` (final wrap
-  /// kinds), and before [`Self::finalize_modules`]: modules are finalized in parallel, and an
-  /// importer needs its importees' facts while emitting init calls, so neither can be computed
-  /// during finalization itself. The transitive targets cannot be computed in the link stage
-  /// either: which init calls survive depends on chunk assignment — only same-chunk wrappers
-  /// are callable, because cross-chunk wrapper imports are registered only for included
-  /// statements.
+  /// Compute no-op wrappers and excluded-statement init targets after final chunk assignment.
+  /// This must finish before parallel module finalization.
   pub(super) fn compute_wrapped_esm_init_metadata(
     &mut self,
     ast_table: &IndexEcmaAst,
     chunk_graph: &ChunkGraph,
+    order_state: &mut OrderWrapState,
   ) {
     // Classify in parallel (read-only); the cheap write-back stays sequential.
     let keep_names = self.options.keep_names;
+    // Off-strict, lowering never mutates the chunk graph, so the liveness guard cannot fire.
+    let strict = self.options.is_strict_execution_order_enabled();
     let metas = &self.link_output.metas;
     let modules = &self.link_output.module_table.modules;
     let stmt_infos_vec = &self.link_output.stmt_infos;
     let module_to_chunk = &chunk_graph.module_to_chunk;
+    let order_state_view = &*order_state;
     let results = metas
       .par_iter_enumerated()
       .filter_map(|(module_idx, meta)| {
-        if !meta.is_included || !matches!(meta.wrap_kind(), WrapKind::Esm) {
+        if !meta.is_included {
           return None;
         }
+        let init_target = order_state_view.esm_init_target(module_idx, meta)?;
         let is_noop = init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
         let targets_by_stmt = modules[module_idx]
           .as_normal()
           .zip(module_to_chunk[module_idx])
+          .filter(|_| !strict || chunk_graph.module_is_in_live_chunk(module_idx))
           .map(|(module, chunk_idx)| {
             transitive_esm_init_targets(
               module,
               meta,
               &stmt_infos_vec[module_idx],
-              modules,
-              metas,
-              module_to_chunk,
-              chunk_idx,
+              &EsmInitTargetContext {
+                modules,
+                metas,
+                chunk_graph,
+                module_to_chunk,
+                chunk_idx,
+                order_wrap: matches!(init_target.origin, EsmInitOrigin::ExecutionOrder),
+                execution_dependencies: &meta.execution_dependencies,
+                order_state: order_state_view,
+              },
             )
           })
           .unwrap_or_default();
-        (is_noop || !targets_by_stmt.is_empty()).then_some((module_idx, is_noop, targets_by_stmt))
+        (is_noop || !targets_by_stmt.is_empty()).then_some((
+          module_idx,
+          init_target.origin,
+          is_noop,
+          targets_by_stmt,
+        ))
       })
       .collect::<Vec<_>>();
 
-    for (module_idx, is_noop, targets_by_stmt) in results {
-      let meta = &mut self.link_output.metas[module_idx];
-      meta.init_is_noop = is_noop;
-      meta.transitive_esm_init_targets = targets_by_stmt;
+    for (module_idx, origin, is_noop, targets_by_stmt) in results {
+      match origin {
+        EsmInitOrigin::Interop => {
+          let meta = &mut self.link_output.metas[module_idx];
+          meta.init_is_noop = is_noop;
+          meta.transitive_esm_init_targets = targets_by_stmt;
+        }
+        EsmInitOrigin::ExecutionOrder => {
+          order_state.set_order_init_metadata(module_idx, is_noop, targets_by_stmt);
+        }
+      }
     }
   }
+}
+
+struct EsmInitTargetContext<'a> {
+  modules: &'a IndexModules,
+  metas: &'a LinkingMetadataVec,
+  chunk_graph: &'a ChunkGraph,
+  module_to_chunk: &'a IndexVec<ModuleIdx, Option<ChunkIdx>>,
+  chunk_idx: ChunkIdx,
+  order_wrap: bool,
+  execution_dependencies: &'a rolldown_utils::indexmap::FxIndexSet<ModuleIdx>,
+  order_state: &'a OrderWrapState,
 }
 
 /// Whether calling the module's `init_*()` is a no-op because nothing lands inside its `__esm`
@@ -141,16 +161,13 @@ fn contributes_no_closure_body(stmt: &Statement, keep_names: bool) -> bool {
   }
 }
 
-/// For each non-included re-export statement of `module`, the wrapped-ESM modules whose
-/// `init_*()` calls the finalizer must emit in the statement's place.
+/// For each non-included static import/re-export statement of `module`, the wrapped-ESM modules
+/// whose `init_*()` calls the finalizer must emit in the statement's place.
 fn transitive_esm_init_targets(
   module: &NormalModule,
   meta: &LinkingMetadata,
   stmt_infos: &StmtInfos,
-  modules: &IndexModules,
-  metas: &LinkingMetadataVec,
-  module_to_chunk: &IndexVec<ModuleIdx, Option<ChunkIdx>>,
-  chunk_idx: ChunkIdx,
+  ctx: &EsmInitTargetContext<'_>,
 ) -> FxHashMap<StmtInfoIdx, Vec<ModuleIdx>> {
   // Shared across all excluded re-export statements of this importer, so a barrel subtree is
   // traversed at most once and each target is attributed to the first statement that reaches
@@ -158,27 +175,65 @@ fn transitive_esm_init_targets(
   let mut visited = FxHashSet::default();
   let mut targets_by_stmt = FxHashMap::<StmtInfoIdx, Vec<ModuleIdx>>::default();
   for (stmt_idx, stmt_info) in stmt_infos.iter_enumerated_without_namespace_stmt() {
-    if meta.stmt_info_included.has_bit(stmt_idx) {
+    let stmt_is_included = meta.stmt_info_included.has_bit(stmt_idx);
+    if stmt_is_included && !ctx.order_wrap {
       continue;
     }
     for &rec_idx in &stmt_info.import_records {
       let rec = &module.import_records[rec_idx];
-      // `IsExportStar` / `IsReExportOnly` are set by the scanner exactly on the three
-      // re-export statement forms above; plain imports never carry them.
-      if !rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly) {
+      if rec.kind != ImportKind::Import {
         continue;
       }
+      let is_reexport =
+        rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly);
       let Some(root) = rec.resolved_module else { continue };
+      let was_live_order_wrap_import = ctx.order_wrap && ctx.execution_dependencies.contains(&root);
+      let overlay = ctx.order_state.import_overlay(OrderImportKey {
+        importer: module.idx,
+        statement: stmt_idx,
+        record: rec_idx,
+      });
+      if ctx.order_wrap {
+        let retained_reexport = is_reexport && overlay.is_some();
+        if !was_live_order_wrap_import && !retained_reexport {
+          continue;
+        }
+        if stmt_is_included
+          && overlay.is_none_or(|overlay| overlay.retained_reexport_path.is_empty())
+        {
+          continue;
+        }
+      } else if !is_reexport {
+        continue;
+      }
       let mut targets = vec![];
-      collect_transitive_esm_init_targets(
-        modules,
-        metas,
-        module_to_chunk,
-        chunk_idx,
-        root,
-        &mut visited,
-        &mut targets,
-      );
+      if ctx.order_wrap {
+        let retained_reexport_path = overlay
+          .filter(|overlay| !overlay.retained_reexport_path.is_empty())
+          .map(|overlay| overlay.retained_reexport_path.as_slice());
+        let mut retained_path_visited = FxHashSet::default();
+        collect_order_wrap_esm_init_targets(
+          ctx.modules,
+          ctx.metas,
+          ctx.chunk_graph,
+          ctx.order_state,
+          ctx.chunk_idx,
+          root,
+          retained_reexport_path,
+          if retained_reexport_path.is_some() { &mut retained_path_visited } else { &mut visited },
+          &mut targets,
+        );
+      } else {
+        collect_legacy_esm_init_targets(
+          ctx.modules,
+          ctx.metas,
+          ctx.module_to_chunk,
+          ctx.chunk_idx,
+          root,
+          &mut visited,
+          &mut targets,
+        );
+      }
       if !targets.is_empty() {
         targets_by_stmt.entry(stmt_idx).or_default().extend(targets);
       }
@@ -187,10 +242,7 @@ fn transitive_esm_init_targets(
   targets_by_stmt
 }
 
-/// Find the wrapped-ESM modules an excluded re-export statement must still initialize, by
-/// traversing through non-included barrel modules to reach included importees whose wrappers
-/// are available in `chunk_idx`.
-fn collect_transitive_esm_init_targets(
+fn collect_legacy_esm_init_targets(
   modules: &IndexModules,
   metas: &LinkingMetadataVec,
   module_to_chunk: &IndexVec<ModuleIdx, Option<ChunkIdx>>,
@@ -211,19 +263,72 @@ fn collect_transitive_esm_init_targets(
       continue;
     }
 
-    // Only collect modules in the same chunk whose wrapper is declared (i.e. the module is
-    // included in the output).
     if importee_linking_info.is_included && module_to_chunk[importee.idx] == Some(chunk_idx) {
       targets.push(importee.idx);
     } else {
-      // Importee is not included (barrel module) — traverse its import records to find
-      // included importees transitively.
-      // Preserve recursive DFS order with an explicit LIFO stack: pushing children in
-      // reverse keeps source-order visitation left-to-right.
       for rec in importee.import_records.iter().rev() {
         if let Some(sub_importee_idx) = rec.resolved_module {
           stack.push(sub_importee_idx);
         }
+      }
+    }
+  }
+}
+
+/// Follow excluded re-exports through barrels to included wrapped importees.
+#[expect(clippy::too_many_arguments)]
+fn collect_order_wrap_esm_init_targets(
+  modules: &IndexModules,
+  metas: &LinkingMetadataVec,
+  chunk_graph: &ChunkGraph,
+  order_state: &OrderWrapState,
+  importer_chunk_idx: ChunkIdx,
+  root: ModuleIdx,
+  retained_reexport_path: Option<&[(ModuleIdx, ImportRecordIdx)]>,
+  visited: &mut FxHashSet<ModuleIdx>,
+  targets: &mut Vec<ModuleIdx>,
+) {
+  let mut stack = vec![root];
+  while let Some(module_idx) = stack.pop() {
+    let Module::Normal(importee) = &modules[module_idx] else { continue };
+    let importee_linking_info = &metas[importee.idx];
+
+    if !visited.insert(importee.idx) {
+      continue;
+    }
+
+    // Only collect modules whose wrapper is declared (i.e. the module is included in the output)
+    // and assigned to a chunk. Cross-chunk wrapper imports are registered after this pass.
+    if importee_linking_info.is_included
+      && order_state.esm_init_included_in_live_chunk(
+        importee_linking_info,
+        importee.idx,
+        chunk_graph,
+      )
+    {
+      targets.push(importee.idx);
+      continue;
+    }
+
+    if (retained_reexport_path.is_none()
+      && importee_linking_info.is_included
+      && chunk_graph.module_to_chunk[importee.idx] == Some(importer_chunk_idx))
+      || !matches!(importee.exports_kind, ExportsKind::Esm | ExportsKind::None)
+    {
+      continue;
+    }
+
+    // Importee is a non-included barrel module — traverse its static imports to find included
+    // wrapped importees transitively. Preserve recursive DFS order with an explicit LIFO stack:
+    // pushing children in reverse keeps source-order visitation left-to-right.
+    for (rec_idx, rec) in importee.import_records.iter_enumerated().rev() {
+      if retained_reexport_path.is_some_and(|path| !path.contains(&(importee.idx, rec_idx))) {
+        continue;
+      }
+      if rec.kind == ImportKind::Import
+        && let Some(sub_importee_idx) = rec.resolved_module
+      {
+        stack.push(sub_importee_idx);
       }
     }
   }

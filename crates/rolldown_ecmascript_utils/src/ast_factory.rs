@@ -3,15 +3,16 @@ use oxc::{
   ast::{
     AstBuilder, NONE,
     ast::{
-      Argument, ArrowFunctionExpression, AssignmentOperator, AssignmentTarget, BindingIdentifier,
-      BindingPattern, CallExpression, ClassElement, Declaration, ExportDefaultDeclarationKind,
-      ExportSpecifier, Expression, ExpressionStatement, FormalParameter, FormalParameterKind,
-      FormalParameters, FunctionBody, IdentifierName, ImportDeclaration,
-      ImportDeclarationSpecifier, ImportNamespaceSpecifier, ImportOrExportKind, MemberExpression,
-      ModuleDeclaration, ModuleExportName, NumberBase, ObjectExpression, ObjectPropertyKind,
-      ParenthesizedExpression, PropertyKey, PropertyKind, SequenceExpression,
-      SimpleAssignmentTarget, Statement, StaticMemberExpression, StringLiteral,
-      VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
+      Argument, ArrowFunctionExpression, AssignmentExpression, AssignmentOperator,
+      AssignmentTarget, BindingIdentifier, BindingPattern, CallExpression, ClassElement,
+      Declaration, ExportDefaultDeclarationKind, ExportSpecifier, Expression, ExpressionStatement,
+      FormalParameter, FormalParameterKind, FormalParameters, Function, FunctionBody, FunctionType,
+      IdentifierName, IdentifierReference, ImportDeclaration, ImportDeclarationSpecifier,
+      ImportNamespaceSpecifier, ImportOrExportKind, MemberExpression, ModuleDeclaration,
+      ModuleExportName, NumberBase, ObjectExpression, ObjectPropertyKind, ParenthesizedExpression,
+      PropertyKey, PropertyKind, ReturnStatement, SequenceExpression, SimpleAssignmentTarget,
+      Statement, StaticMemberExpression, StringLiteral, VariableDeclaration,
+      VariableDeclarationKind, VariableDeclarator,
     },
     builder::GetAstBuilder,
   },
@@ -33,16 +34,14 @@ use rolldown_utils::ecmascript::is_validate_identifier_name;
 #[derive(Clone, Copy)]
 pub struct AstFactory<'ast>(AstBuilder<'ast>);
 
-/// Options for [`AstFactory::make_esm_wrapper_stmt`], grouping the wrapper's binding, body and
-/// call shape so new emission modes can be added without growing the argument list.
 pub struct EsmWrapperStmtOptions<'ast, 'data> {
   pub binding_name: &'data str,
   pub esm_fn_expr: Expression<'ast>,
   pub statements: allocator::Vec<'ast, Statement<'ast>>,
-  /// `Some(stable_id)` wraps the closure in a profiler-named object argument.
   pub profiler_name: Option<&'data str>,
   pub call_kind: EsmWrapperCallKind,
   pub body_kind: EsmWrapperBodyKind,
+  pub decl_kind: EsmWrapperDeclKind,
 }
 
 #[derive(Clone, Copy)]
@@ -55,6 +54,12 @@ pub enum EsmWrapperCallKind {
 pub enum EsmWrapperBodyKind {
   Sync,
   Async,
+}
+
+#[derive(Clone, Copy)]
+pub enum EsmWrapperDeclKind {
+  Var,
+  HoistedFunction,
 }
 
 impl<'ast> AstFactory<'ast> {
@@ -632,6 +637,8 @@ impl<'ast> AstFactory<'ast> {
   }
 
   /// `var <binding_name> = __esm(... () => { <statements> } ...)`
+  /// or, for order wrappers that must be callable across chunk cycles before assignment:
+  /// `function <binding_name>() { return (<binding_name> = __esm(... () => { <statements> } ...))(); }`
   pub fn make_esm_wrapper_stmt(&self, options: EsmWrapperStmtOptions<'ast, '_>) -> Statement<'ast> {
     let EsmWrapperStmtOptions {
       binding_name,
@@ -640,6 +647,7 @@ impl<'ast> AstFactory<'ast> {
       profiler_name,
       call_kind,
       body_kind,
+      decl_kind,
     } = options;
     let params = FormalParameters::new(
       SPAN,
@@ -689,10 +697,59 @@ impl<'ast> AstFactory<'ast> {
     } else {
       esm_call_expr.arguments.push(Argument::ArrowFunctionExpression(arrow_expr));
     }
-    self.make_var_decl(
-      binding_name,
+    if matches!(decl_kind, EsmWrapperDeclKind::Var) {
+      return self.make_var_decl(
+        binding_name,
+        Expression::CallExpression(esm_call_expr.into_in(self.allocator())),
+      );
+    }
+    let assignment_expr = Expression::AssignmentExpression(AssignmentExpression::boxed(
+      SPAN,
+      AssignmentOperator::Assign,
+      AssignmentTarget::AssignmentTargetIdentifier(IdentifierReference::boxed(
+        SPAN,
+        oxc::ast::ast::Str::from_str_in(binding_name, self),
+        self,
+      )),
       Expression::CallExpression(esm_call_expr.into_in(self.allocator())),
-    )
+      self,
+    ));
+    let call_expr = Expression::new_call_expression(
+      SPAN,
+      assignment_expr,
+      NONE,
+      oxc::allocator::Vec::new_in(self),
+      false,
+      self,
+    );
+    Statement::FunctionDeclaration(Function::boxed(
+      SPAN,
+      FunctionType::FunctionDeclaration,
+      Some(BindingIdentifier::new(SPAN, oxc::ast::ast::Str::from_str_in(binding_name, self), self)),
+      false,
+      false,
+      false,
+      NONE,
+      NONE,
+      FormalParameters::new(
+        SPAN,
+        FormalParameterKind::Signature,
+        oxc::allocator::Vec::new_in(self),
+        NONE,
+        self,
+      ),
+      NONE,
+      Some(FunctionBody::new(
+        SPAN,
+        oxc::allocator::Vec::new_in(self),
+        oxc::allocator::Vec::from_value_in(
+          Statement::ReturnStatement(ReturnStatement::boxed(SPAN, Some(call_expr), self)),
+          self,
+        ),
+        self,
+      )),
+      self,
+    ))
   }
 
   /// `n => n.<property_name>`

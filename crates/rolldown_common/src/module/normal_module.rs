@@ -35,18 +35,13 @@ pub struct NormalModule {
 
 impl NormalModule {
   pub fn star_export_records(&self) -> impl Iterator<Item = (ImportRecordIdx, ModuleIdx)> + '_ {
-    if self.has_star_export() {
-      itertools::Either::Left(self.ecma_view.import_records.iter_enumerated().filter_map(
-        |(rec_idx, rec)| {
-          if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
-            return None;
-          }
-          rec.resolved_module.map(|module_idx| (rec_idx, module_idx))
-        },
-      ))
-    } else {
-      itertools::Either::Right(std::iter::empty())
-    }
+    self.ecma_view.import_records.iter_enumerated().filter_map(|(rec_idx, rec)| {
+      rec
+        .meta
+        .contains(ImportRecordMeta::IsExportStar)
+        .then(|| rec.resolved_module.map(|module_idx| (rec_idx, module_idx)))
+        .flatten()
+    })
   }
 
   pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleIdx> + '_ {

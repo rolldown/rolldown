@@ -6,86 +6,109 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { i as __esmMin, n as init_helper, r as other, t as init_leaf } from "./leaf.js";
+import { t as other } from "./helper.js";
+//#region entry-a.js
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+console.log(other);
 //#endregion
-__esmMin((() => {
-	init_leaf();
-	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
-	console.log(other);
-}))();
 
 ```
 
 ## b.js
 
 ```js
-import { i as __esmMin, n as init_helper, r as other, t as init_leaf } from "./leaf.js";
+import { t as other } from "./helper.js";
+//#region entry-b.js
+console.log(other);
 //#endregion
-__esmMin((() => {
-	init_leaf();
-	console.log(other);
-}))();
 
 ```
 
-## leaf.js
+## helper.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
 //#region helper.js
-var other;
-var init_helper = __esmMin((() => {
-	other = "other";
-}));
+const other = "other";
 //#endregion
-//#region leaf.js
-var init_leaf = __esmMin((() => {
-	init_helper();
-}));
-//#endregion
-export { __esmMin as i, init_helper as n, other as r, init_leaf as t };
+export { other as t };
 
 ```
 
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 
 ### a.js
 
 ```js
-import { n as other, r as __esmMin, t as init_leaf } from "./leaf.js";
-//#endregion
-__esmMin((() => {
-	init_leaf();
-	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
-	console.log(other);
-}))();
+import { t as init_entry_a } from "./entry-a.js";
+init_entry_a();
 
 ```
 
 ### b.js
 
 ```js
-import { n as other, r as __esmMin, t as init_leaf } from "./leaf.js";
-//#endregion
-__esmMin((() => {
-	init_leaf();
-	console.log(other);
-}))();
+import { t as init_entry_b } from "./entry-b.js";
+init_entry_b();
 
 ```
 
-### leaf.js
+### entry-a.js
+
+```js
+import { n as other, t as init_helper } from "./helper.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region entry-a.js
+function init_entry_a() {
+	return (init_entry_a = __esmMin((() => {
+		init_helper();
+		Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+		console.log(other);
+	})))();
+}
+//#endregion
+export { init_entry_a as t };
+
+```
+
+### entry-b.js
+
+```js
+import { n as other, t as init_helper } from "./helper.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region entry-b.js
+function init_entry_b() {
+	return (init_entry_b = __esmMin((() => {
+		init_helper();
+		console.log(other);
+	})))();
+}
+//#endregion
+export { init_entry_b as t };
+
+```
+
+### helper.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region helper.js
+var other;
+function init_helper() {
+	return (init_helper = __esmMin((() => {
+		other = "other";
+	})))();
+}
+//#endregion
+export { other as n, init_helper as t };
+
+```
+
+### rolldown-runtime.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region helper.js
-const other = "other";
-//#endregion
-//#region leaf.js
-var init_leaf = __esmMin((() => {}));
-//#endregion
-export { other as n, __esmMin as r, init_leaf as t };
+export { __esmMin as t };
 
 ```

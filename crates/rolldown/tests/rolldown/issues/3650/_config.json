@@ -13,13 +13,15 @@
           "test": "[\\\\/]second\\.js$|^\\0rolldown/runtime\\.js$"
         }
       ]
+    },
+    "experimental": {
+      "onDemandWrapping": true
     }
   },
   "configVariants": [
     {
-      "_configName": "on-demand",
-      "strictExecutionOrder": true,
-      "onDemandWrapping": true
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
     }
   ]
 }

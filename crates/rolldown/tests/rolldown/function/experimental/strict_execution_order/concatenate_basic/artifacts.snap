@@ -6,11 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-	//#region main.js
-	console.log("main");
-	//#endregion
-}))();
+//#region setup.js
+globalThis.globalValue = "foo";
+//#endregion
+//#region main.js
+console.log("main");
+//#endregion
 
 ```
 
@@ -21,11 +22,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-	//#region main.js
-	console.log("main");
-	//#endregion
-}))();
+//#region setup.js
+globalThis.globalValue = "foo";
+//#endregion
+//#region main.js
+console.log("main");
+//#endregion
 
 ```
 
@@ -36,10 +38,140 @@ source: crates/rolldown_testing/src/integration_test.rs
 ### main.js
 
 ```js
+//#region setup.js
+globalThis.globalValue = "foo";
+//#endregion
+//#region main.js
+console.log("main");
+//#endregion
+
+```
+
+# Variant: profiler-names-wrap-all: [on_demand_wrapping: false] [profiler_names: false]
+
+## Assets
+
+### main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region setup.js
+function init_setup() {
+	return (init_setup = __esmMin((() => {
+		globalThis.globalValue = "foo";
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_setup();
+		console.log("main");
+	})))();
+}
+//#endregion
+export { init_setup as n, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
 // HIDDEN [\0rolldown/runtime.js]
-	//#region main.js
-	console.log("main");
-	//#endregion
-})();
+export { __esmMin as t };
+
+```
+
+# Variant: pife-for-module-wrappers-wrap-all: [on_demand_wrapping: false] [pife_for_module_wrappers: false]
+
+## Assets
+
+### main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region setup.js
+function init_setup() {
+	return (init_setup = __esmMin(() => {
+		globalThis.globalValue = "foo";
+	}))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin(() => {
+		init_setup();
+		console.log("main");
+	}))();
+}
+//#endregion
+export { init_setup as n, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region setup.js
+function init_setup() {
+	return (init_setup = __esmMin((() => {
+		globalThis.globalValue = "foo";
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_setup();
+		console.log("main");
+	})))();
+}
+//#endregion
+export { init_setup as n, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```

@@ -5,8 +5,8 @@
       "strictExecutionOrder": true
     },
     {
-      "_configName": "on-demand",
       "strictExecutionOrder": true,
+      "_configName": "on-demand",
       "onDemandWrapping": true
     }
   ]

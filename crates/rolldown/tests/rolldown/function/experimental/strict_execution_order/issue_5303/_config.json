@@ -1,9 +1,6 @@
 {
   "config": {
     "strictExecutionOrder": true,
-    "experimental": {
-      "onDemandWrapping": true
-    },
     "codeSplitting": {
       "groups": [
         {
@@ -11,6 +8,15 @@
           "test": "foo(?:_\\w+)?\\.js"
         }
       ]
+    },
+    "experimental": {
+      "onDemandWrapping": true
     }
-  }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
 }

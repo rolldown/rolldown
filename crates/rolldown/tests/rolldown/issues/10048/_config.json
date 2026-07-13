@@ -10,14 +10,14 @@
     "format": "esm",
     "strictExecutionOrder": true,
     "experimental": {
-      "lazyBarrel": true
+      "lazyBarrel": true,
+      "onDemandWrapping": true
     }
   },
   "configVariants": [
     {
-      "_configName": "on-demand",
-      "strictExecutionOrder": true,
-      "onDemandWrapping": true
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
     }
   ]
 }

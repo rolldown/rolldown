@@ -6,21 +6,23 @@
         "import": "entry.js"
       }
     ],
-    "strictExecutionOrder": true
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
   },
   "configVariants": [
     {
       "format": "cjs"
     },
     {
-      "_configName": "on-demand",
-      "strictExecutionOrder": true,
-      "onDemandWrapping": true
+      "_configName": "cjs-wrap-all",
+      "format": "cjs",
+      "onDemandWrapping": false
     },
     {
-      "format": "cjs",
-      "strictExecutionOrder": true,
-      "onDemandWrapping": true
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
     }
   ]
 }

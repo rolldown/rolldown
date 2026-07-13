@@ -1,11 +1,15 @@
 {
   "config": {
-    "strictExecutionOrder": true
-  },
-  "configVariants": [
-    {
+    "strictExecutionOrder": true,
+    "experimental": {
       "onDemandWrapping": true
     }
-  ],
-  "snapshot": false
+  },
+  "snapshot": false,
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
 }

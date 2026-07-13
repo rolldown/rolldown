@@ -7,56 +7,79 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
 //#region setup.js
-var init_setup = __esmMin((() => {
-	globalThis.globalValue = "foo";
-}));
+globalThis.globalValue = "foo";
 //#endregion
 //#region foo_inner.js
-var foo_inner_default;
-var init_foo_inner = __esmMin((() => {
-	foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
-}));
+var foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
 //#endregion
 //#region foo.js
-var init_foo = __esmMin((() => {
-	init_foo_inner();
-	assert.strictEqual(foo_inner_default.foo, "foo");
-}));
+assert.strictEqual(foo_inner_default.foo, "foo");
 //#endregion
-__esmMin((() => {
-	init_setup();
-	init_foo();
-	init_foo_inner();
-	assert.equal(foo_inner_default.foo, "foo");
-}))();
+//#region main.js
+assert.equal(foo_inner_default.foo, "foo");
+//#endregion
 
 ```
 
-# Variant: [on_demand_wrapping: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 
 ### main.js
 
 ```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
+//#region setup.js
+function init_setup() {
+	return (init_setup = __esmMin((() => {
+		globalThis.globalValue = "foo";
+	})))();
+}
+//#endregion
+//#region foo_inner.js
 var foo_inner_default;
-__esmMin((() => {
-	//#region setup.js
-	globalThis.globalValue = "foo";
-	//#endregion
-	//#region foo_inner.js
-	foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
-	//#endregion
-	//#region foo.js
-	assert.strictEqual(foo_inner_default.foo, "foo");
-	//#endregion
-	//#region main.js
-	assert.equal(foo_inner_default.foo, "foo");
-	//#endregion
-}))();
+function init_foo_inner() {
+	return (init_foo_inner = __esmMin((() => {
+		foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
+	})))();
+}
+//#endregion
+//#region foo.js
+function init_foo() {
+	return (init_foo = __esmMin((() => {
+		init_foo_inner();
+		assert.strictEqual(foo_inner_default.foo, "foo");
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_setup();
+		init_foo();
+		init_foo_inner();
+		assert.equal(foo_inner_default.foo, "foo");
+	})))();
+}
+//#endregion
+export { init_foo as n, init_setup as r, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```

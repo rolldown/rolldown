@@ -1,10 +1,5 @@
 {
-  "snapshot": false,
   "expectExecuted": false,
-  "expectExecutionFailure": {
-    "reason": "Expected to fail until rolldown#10104 is applied.",
-    "outputContains": ["entry a must preserve JSON re-export attributes"]
-  },
   "config": {
     "input": [
       {
@@ -33,10 +28,6 @@
   "configVariants": [
     {
       "_configName": "wrap-all",
-      "_expectExecutionFailure": {
-        "reason": "Expected to fail until rolldown#10104 is applied.",
-        "outputContains": ["entry a must preserve JSON re-export attributes"]
-      },
       "onDemandWrapping": false
     }
   ]

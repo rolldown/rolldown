@@ -13,21 +13,6 @@ nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should 
 
 ```
 
-# Variant: [strict_execution_order: true]
-
-## Assets
-
-### main.js
-
-```js
-import nodeAssert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
-__esmMin((() => {
-	nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
-}))();
-
-```
-
 # Variant: [on_demand_wrapping: true] [strict_execution_order: true]
 
 ## Assets
@@ -36,9 +21,44 @@ __esmMin((() => {
 
 ```js
 import nodeAssert from "node:assert";
+//#region main.js
+nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
+//#endregion
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import nodeAssert from "node:assert";
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
+	})))();
+}
+//#endregion
+export { init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
 // HIDDEN [\0rolldown/runtime.js]
-__esmMin((() => {
-	nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
-}))();
+export { __esmMin as t };
 
 ```

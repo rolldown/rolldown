@@ -1,5 +1,4 @@
 {
-  "snapshot": false,
   "expectExecuted": false,
   "config": {
     "external": ["external"],

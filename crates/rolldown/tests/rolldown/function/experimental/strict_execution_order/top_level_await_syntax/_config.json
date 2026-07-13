@@ -6,8 +6,16 @@
         "import": "./main.js"
       }
     ],
-    "strictExecutionOrder": true
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
   },
-  "configVariants": [{ "onDemandWrapping": true }],
-  "expectExecuted": false
+  "expectExecuted": false,
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
 }

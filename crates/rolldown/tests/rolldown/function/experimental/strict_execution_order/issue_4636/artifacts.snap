@@ -16,26 +16,33 @@ var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 }));
 //#endregion
 //#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({}), import_foo;
+var main_exports = /* @__PURE__ */ __exportAll({});
+var import_foo = require_foo();
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+nodeAssert.strictEqual(import_foo.value, "foo");
 //#endregion
-__esmMin((() => {
-	import_foo = require_foo();
-	__rolldown_runtime__.createModuleHotContext("main.js");
-	__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-	nodeAssert.strictEqual(import_foo.value, "foo");
-}))();
 
 ```
 
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 
 ### main.js
 
 ```js
+import { t as init_main } from "./main2.js";
+import "./rolldown-runtime.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 import nodeAssert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
 //#region foo.cjs
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("foo.cjs");
@@ -45,12 +52,23 @@ var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({}), import_foo;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		import_foo = require_foo();
+		__rolldown_runtime__.createModuleHotContext("main.js");
+		__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+		nodeAssert.strictEqual(import_foo.value, "foo");
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	import_foo = require_foo();
-	__rolldown_runtime__.createModuleHotContext("main.js");
-	__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-	nodeAssert.strictEqual(import_foo.value, "foo");
-}))();
+export { init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```

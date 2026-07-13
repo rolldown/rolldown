@@ -1,0 +1,337 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## carrier.js
+
+```js
+import { n as init_pure_carrier, t as import_pure_cjs } from "./pure-carrier.js";
+init_pure_carrier();
+var snapshot = import_pure_cjs.snapshot;
+export { snapshot };
+
+```
+
+## cjs.js
+
+```js
+import { t as require_pure_cjs } from "./pure-cjs.js";
+export default require_pure_cjs();
+
+```
+
+## main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+## main2.js
+
+```js
+import { n as read, t as init_reader } from "./reader.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region e.js
+globalThis.__strict_order_value = "ready";
+console.log("E");
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_reader();
+		console.log(`MAIN:${read()}`);
+	})))();
+}
+//#endregion
+export { init_main as t };
+
+```
+
+## pure-carrier.js
+
+```js
+import { t as require_pure_cjs } from "./pure-cjs.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-carrier/index.js
+var import_pure_cjs;
+function init_pure_carrier() {
+	return (init_pure_carrier = __esmMin((() => {
+		import_pure_cjs = require_pure_cjs();
+	})))();
+}
+//#endregion
+export { init_pure_carrier as n, import_pure_cjs as t };
+
+```
+
+## pure-cjs.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-cjs/index.cjs
+var require_pure_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { snapshot: globalThis.__strict_order_value ?? "stale" };
+}));
+//#endregion
+export { require_pure_cjs as t };
+
+```
+
+## reader.js
+
+```js
+import { n as init_pure_carrier, t as import_pure_cjs } from "./pure-carrier.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region reader.js
+function read() {
+	return import_pure_cjs.snapshot;
+}
+function init_reader() {
+	return (init_reader = __esmMin((() => {
+		init_pure_carrier();
+	})))();
+}
+//#endregion
+export { read as n, init_reader as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+//#endregion
+export { __esmMin as n, __commonJSMin as t };
+
+```
+
+## second.js
+
+```js
+import { t as init_second } from "./second2.js";
+init_second();
+
+```
+
+## second2.js
+
+```js
+import { n as read, t as init_reader } from "./reader.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region second.js
+function init_second() {
+	return (init_second = __esmMin((() => {
+		init_reader();
+		console.log(read());
+	})))();
+}
+//#endregion
+export { init_second as t };
+
+```
+
+## unused.js
+
+```js
+import { t as init_unused } from "./unused2.js";
+init_unused();
+
+```
+
+## unused2.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region unused.js
+function init_unused() {
+	return (init_unused = __esmMin((() => {
+		console.log("UNUSED");
+	})))();
+}
+//#endregion
+export { init_unused as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### carrier.js
+
+```js
+import { n as init_pure_carrier, t as import_pure_cjs } from "./pure-carrier.js";
+init_pure_carrier();
+var snapshot = import_pure_cjs.snapshot;
+export { snapshot };
+
+```
+
+### cjs.js
+
+```js
+import { t as require_pure_cjs } from "./pure-cjs.js";
+export default require_pure_cjs();
+
+```
+
+### main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { n as read, t as init_reader } from "./reader.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region e.js
+function init_e() {
+	return (init_e = __esmMin((() => {
+		globalThis.__strict_order_value = "ready";
+		console.log("E");
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_e();
+		init_reader();
+		console.log(`MAIN:${read()}`);
+	})))();
+}
+//#endregion
+export { init_e as n, init_main as t };
+
+```
+
+### pure-carrier.js
+
+```js
+import { t as require_pure_cjs } from "./pure-cjs.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-carrier/index.js
+var import_pure_cjs;
+function init_pure_carrier() {
+	return (init_pure_carrier = __esmMin((() => {
+		import_pure_cjs = require_pure_cjs();
+	})))();
+}
+//#endregion
+export { init_pure_carrier as n, import_pure_cjs as t };
+
+```
+
+### pure-cjs.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-cjs/index.cjs
+var require_pure_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { snapshot: globalThis.__strict_order_value ?? "stale" };
+}));
+//#endregion
+export { require_pure_cjs as t };
+
+```
+
+### reader.js
+
+```js
+import { n as init_pure_carrier, t as import_pure_cjs } from "./pure-carrier.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region reader.js
+function read() {
+	return import_pure_cjs.snapshot;
+}
+function init_reader() {
+	return (init_reader = __esmMin((() => {
+		init_pure_carrier();
+	})))();
+}
+//#endregion
+export { read as n, init_reader as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+//#endregion
+export { __esmMin as n, __commonJSMin as t };
+
+```
+
+### second.js
+
+```js
+import { t as init_second } from "./second2.js";
+init_second();
+
+```
+
+### second2.js
+
+```js
+import { n as read, t as init_reader } from "./reader.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region second.js
+function init_second() {
+	return (init_second = __esmMin((() => {
+		init_reader();
+		console.log(read());
+	})))();
+}
+//#endregion
+export { init_second as t };
+
+```
+
+### unused.js
+
+```js
+import { t as init_unused } from "./unused2.js";
+init_unused();
+
+```
+
+### unused2.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region unused.js
+function init_unused() {
+	return (init_unused = __esmMin((() => {
+		console.log("UNUSED");
+	})))();
+}
+//#endregion
+export { init_unused as t };
+
+```

@@ -1,14 +1,15 @@
 {
   "config": {
-    "external": ["node:assert"]
+    "external": ["node:assert"],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
   },
   "configVariants": [
     {
-      "strictExecutionOrder": true
-    },
-    {
-      "strictExecutionOrder": true,
-      "onDemandWrapping": true
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
     }
   ]
 }

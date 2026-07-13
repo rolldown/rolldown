@@ -1,0 +1,226 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## b.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as init_s } from "./s.js";
+//#region b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin((() => {
+	init_s();
+	console.log("B");
+}));
+//#endregion
+export default require_b();
+
+```
+
+## m3.js
+
+```js
+import { t as init_m3 } from "./m32.js";
+init_m3();
+
+```
+
+## m32.js
+
+```js
+import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region c2.cjs
+var require_c2 = /* @__PURE__ */ __commonJSMin((() => {
+	console.log("C2");
+}));
+//#endregion
+//#region c1.cjs
+var require_c1 = /* @__PURE__ */ __commonJSMin((() => {
+	require_c2();
+	console.log("C1");
+}));
+function init_m3() {
+	return (init_m3 = __esmMin((() => {
+		require_c1();
+		console.log("M3");
+	})))();
+}
+//#endregion
+export { init_m3 as t };
+
+```
+
+## main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+## main2.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+import { t as init_s } from "./s.js";
+import { t as init_m3 } from "./m32.js";
+//#region m1.js
+function init_m1() {
+	return (init_m1 = __esmMin((() => {
+		init_s();
+		init_m3();
+		console.log("M1");
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_m1();
+		console.log("A");
+	})))();
+}
+//#endregion
+export { init_m1 as n, init_main as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```
+
+## s.js
+
+```js
+import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
+//#region s.mjs
+var s_exports = /* @__PURE__ */ __exportAll({});
+var init_s = __esmMin((() => {
+	console.log("S");
+}));
+//#endregion
+export { s_exports as n, init_s as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### b.js
+
+```js
+import { t as require_b } from "./b2.js";
+export default require_b();
+
+```
+
+### b2.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as init_s } from "./s.js";
+//#region b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin((() => {
+	init_s();
+	console.log("B");
+}));
+//#endregion
+export { require_b as t };
+
+```
+
+### m3.js
+
+```js
+import { t as init_m3 } from "./m32.js";
+init_m3();
+
+```
+
+### m32.js
+
+```js
+import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region c2.cjs
+var require_c2 = /* @__PURE__ */ __commonJSMin((() => {
+	console.log("C2");
+}));
+//#endregion
+//#region c1.cjs
+var require_c1 = /* @__PURE__ */ __commonJSMin((() => {
+	require_c2();
+	console.log("C1");
+}));
+function init_m3() {
+	return (init_m3 = __esmMin((() => {
+		require_c1();
+		console.log("M3");
+	})))();
+}
+//#endregion
+export { init_m3 as t };
+
+```
+
+### main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+import { t as init_s } from "./s.js";
+import { t as init_m3 } from "./m32.js";
+//#region m1.js
+function init_m1() {
+	return (init_m1 = __esmMin((() => {
+		init_s();
+		init_m3();
+		console.log("M1");
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_m1();
+		console.log("A");
+	})))();
+}
+//#endregion
+export { init_m1 as n, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```
+
+### s.js
+
+```js
+import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
+//#region s.mjs
+var s_exports = /* @__PURE__ */ __exportAll({});
+var init_s = __esmMin((() => {
+	console.log("S");
+}));
+//#endregion
+export { s_exports as n, init_s as t };
+
+```

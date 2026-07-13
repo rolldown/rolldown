@@ -6,50 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region data.js
-var themes;
-var init_data = __esmMin((() => {
-	themes = {
-		light: {
-			base: "light",
-			appBg: "#ffffff"
-		},
-		dark: {
-			base: "dark",
-			appBg: "#000000"
-		}
-	};
-}));
-//#endregion
-//#region theming.js
-var init_theming = __esmMin((() => {
-	init_data();
-}));
 //#endregion
 //#region entry.js
-function getProjectAnnotations() {
-	return [globalThis.__themes];
-}
-//#endregion
-__esmMin((() => {
-	init_theming();
-	globalThis.__themes = themes;
-}))();
-export { getProjectAnnotations };
-
-```
-
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
-
-## Assets
-
-### entry.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region data.js
-const themes = {
+globalThis.__themes = {
 	light: {
 		base: "light",
 		appBg: "#ffffff"
@@ -59,15 +18,67 @@ const themes = {
 		appBg: "#000000"
 	}
 };
-//#endregion
 function getProjectAnnotations() {
 	return [globalThis.__themes];
 }
-__esmMin((() => {
-	//#region entry.js
-	globalThis.__themes = themes;
-	//#endregion
-}))();
+//#endregion
 export { getProjectAnnotations };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### entry.js
+
+```js
+import { n as init_entry, t as getProjectAnnotations } from "./entry2.js";
+init_entry();
+export { getProjectAnnotations };
+
+```
+
+### entry2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region data.js
+var themes;
+function init_data() {
+	return (init_data = __esmMin((() => {
+		themes = {
+			light: {
+				base: "light",
+				appBg: "#ffffff"
+			},
+			dark: {
+				base: "dark",
+				appBg: "#000000"
+			}
+		};
+	})))();
+}
+//#endregion
+//#region entry.js
+function getProjectAnnotations() {
+	return [globalThis.__themes];
+}
+function init_entry() {
+	return (init_entry = __esmMin((() => {
+		init_data();
+		globalThis.__themes = themes;
+	})))();
+}
+//#endregion
+export { init_entry as n, getProjectAnnotations as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```

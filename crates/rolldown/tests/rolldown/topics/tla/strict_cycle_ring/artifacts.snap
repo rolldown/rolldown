@@ -1,0 +1,89 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region ring-b.js
+globalThis.__ringB = "b";
+//#endregion
+//#region main.js
+const value = await Promise.resolve("a");
+//#endregion
+export { value };
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import { n as value, t as init_main } from "./main2.js";
+await init_main();
+export { value };
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region ring-b.js
+function init_ring_b() {
+	return (init_ring_b = __esmMin((async () => {
+		await init_ring_a();
+		globalThis.__ringB = "b";
+	})))();
+}
+//#endregion
+//#region ring-a.js
+var a;
+function init_ring_a() {
+	return (init_ring_a = __esmMin((async () => {
+		await init_ring_b();
+		a = await Promise.resolve("a");
+	})))();
+}
+//#endregion
+//#region main.js
+var value;
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await init_ring_a();
+		value = a;
+	})))();
+}
+//#endregion
+export { value as n, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+//#region ring-b.js
+globalThis.__ringB = "b";
+//#endregion
+//#region main.js
+const value = await Promise.resolve("a");
+//#endregion
+export { value };
+
+```

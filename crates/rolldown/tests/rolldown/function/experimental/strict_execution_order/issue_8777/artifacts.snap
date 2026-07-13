@@ -6,49 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region components/Foo/fooClasses.js
-function getFooUtilityClass(slot) {
-	return "MuiFoo-" + slot;
-}
-var fooClasses;
-var init_fooClasses = __esmMin((() => {
-	fooClasses = { root: "MuiFoo-root" };
-}));
-//#endregion
-//#region components/Foo/Foo.js
-var Foo;
-var init_Foo$1 = __esmMin((() => {
-	init_fooClasses();
-	Foo = {
-		name: "Foo",
-		root: fooClasses.root
-	};
-}));
-//#endregion
-//#region components/Foo/index.js
-var init_Foo = __esmMin((() => {
-	init_Foo$1();
-	init_fooClasses();
-	init_fooClasses();
-}));
-//#endregion
-__esmMin((() => {
-	init_Foo();
-	init_Foo();
-}))();
-export { Foo, fooClasses, getFooUtilityClass };
-
-```
-
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
-
-## Assets
-
-### main.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
 //#region components/Foo/fooClasses.js
 function getFooUtilityClass(slot) {
 	return "MuiFoo-" + slot;
@@ -56,18 +13,71 @@ function getFooUtilityClass(slot) {
 const fooClasses = { root: "MuiFoo-root" };
 //#endregion
 //#region components/Foo/Foo.js
-var Foo;
-var init_Foo$1 = __esmMin((() => {
-	Foo = {
-		name: "Foo",
-		root: fooClasses.root
-	};
-}));
-__esmMin((() => {
-	//#region components/Foo/index.js
-	init_Foo$1();
-	//#endregion
-}))();
+const Foo = {
+	name: "Foo",
+	root: fooClasses.root
+};
+//#endregion
 export { Foo, fooClasses, getFooUtilityClass };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+import { a as getFooUtilityClass, i as fooClasses, n as Foo, t as init_main } from "./main2.js";
+init_main();
+export { Foo, fooClasses, getFooUtilityClass };
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region components/Foo/fooClasses.js
+function getFooUtilityClass(slot) {
+	return "MuiFoo-" + slot;
+}
+var fooClasses;
+function init_fooClasses() {
+	return (init_fooClasses = __esmMin((() => {
+		fooClasses = { root: "MuiFoo-root" };
+	})))();
+}
+//#endregion
+//#region components/Foo/Foo.js
+var Foo;
+function init_Foo() {
+	return (init_Foo = __esmMin((() => {
+		init_fooClasses();
+		Foo = {
+			name: "Foo",
+			root: fooClasses.root
+		};
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_Foo();
+		init_fooClasses();
+	})))();
+}
+//#endregion
+export { getFooUtilityClass as a, fooClasses as i, Foo as n, init_fooClasses as o, init_Foo as r, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```

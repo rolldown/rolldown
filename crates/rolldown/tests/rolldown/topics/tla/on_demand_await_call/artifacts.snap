@@ -24,38 +24,67 @@ export { value as normalLibValue, value$1 as tlaLibValue };
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { a as value, r as value$1, t as init_main } from "./main2.js";
+await init_main();
+export { value as normalLibValue, value$1 as tlaLibValue };
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region normal-dep.js
 var value$3;
-var init_normal_dep = __esmMin((() => {
-	value$3 = "normal-dep";
-}));
+function init_normal_dep() {
+	return (init_normal_dep = __esmMin((() => {
+		value$3 = "normal-dep";
+	})))();
+}
 //#endregion
 //#region normal-lib.js
-var value;
-var init_normal_lib = __esmMin((() => {
-	init_normal_dep();
-	value = value$3 + "+normal-lib";
-}));
+var value$2;
+function init_normal_lib() {
+	return (init_normal_lib = __esmMin((() => {
+		init_normal_dep();
+		value$2 = value$3 + "+normal-lib";
+	})))();
+}
 //#endregion
 //#region tla-dep.js
-var value$2;
-var init_tla_dep = __esmMin((async () => {
-	value$2 = await Promise.resolve("tla-dep");
-}));
+var value$1;
+function init_tla_dep() {
+	return (init_tla_dep = __esmMin((async () => {
+		value$1 = await Promise.resolve("tla-dep");
+	})))();
+}
 //#endregion
 //#region tla-lib.js
-var value$1;
-var init_tla_lib = __esmMin((async () => {
-	await init_tla_dep();
-	value$1 = value$2 + "+tla-lib";
-}));
+var value;
+function init_tla_lib() {
+	return (init_tla_lib = __esmMin((async () => {
+		await init_tla_dep();
+		value = value$1 + "+tla-lib";
+	})))();
+}
 //#endregion
-await __esmMin((async () => {
-	init_normal_lib();
-	await init_tla_lib();
-}))();
-export { value as normalLibValue, value$1 as tlaLibValue };
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		init_normal_lib();
+		await init_tla_lib();
+	})))();
+}
+//#endregion
+export { value$2 as a, init_normal_lib as i, init_tla_lib as n, value as r, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```
 
@@ -66,27 +95,13 @@ export { value as normalLibValue, value$1 as tlaLibValue };
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+//#endregion
 //#region normal-lib.js
-var value;
-var init_normal_lib = __esmMin((() => {
-	value = "normal-dep+normal-lib";
-}));
+const value = "normal-dep+normal-lib";
 //#endregion
-var value$2, value$1;
-var init_tla_lib = __esmMin((async () => {
-	//#region tla-dep.js
-	value$2 = await Promise.resolve("tla-dep");
-	//#endregion
-	//#region tla-lib.js
-	value$1 = value$2 + "+tla-lib";
-	//#endregion
-}));
+//#region tla-lib.js
+const value$1 = await Promise.resolve("tla-dep") + "+tla-lib";
 //#endregion
-await __esmMin((async () => {
-	init_normal_lib();
-	await init_tla_lib();
-}))();
 export { value as normalLibValue, value$1 as tlaLibValue };
 
 ```

@@ -24,33 +24,61 @@ assert.strictEqual(1, 1);
 
 ```
 
-# Variant: [on_demand_wrapping: true] [strict_execution_order: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 
 ### main.js
 
 ```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ constant: () => 1 });
 var init_lib = __esmMin((() => {}));
+//#endregion
+//#region reexport.js
+function init_reexport() {
+	return (init_reexport = __esmMin((() => {
+		init_lib();
+	})))();
+}
+//#endregion
+//#region log.js
+function init_log() {
+	return (init_log = __esmMin((() => {
+		init_reexport();
+		assert.strictEqual(1, 1);
+	})))();
+}
 //#endregion
 //#region commonjs.cjs
 var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = (init_lib(), __toCommonJS(lib_exports));
 }));
-__esmMin((() => {
-	//#region reexport.js
-	init_lib();
-	//#endregion
-	//#region log.js
-	assert.strictEqual(1, 1);
-	//#endregion
-	//#region main.js
-	require_commonjs();
-	//#endregion
-}))();
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_log();
+		require_commonjs();
+	})))();
+}
+//#endregion
+export { init_log as n, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```

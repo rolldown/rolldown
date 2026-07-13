@@ -7,14 +7,16 @@
       }
     ],
     "strictExecutionOrder": true,
-    "minify": true
+    "minify": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
   },
   "expectExecuted": false,
   "configVariants": [
     {
-      "_configName": "on-demand",
-      "strictExecutionOrder": true,
-      "onDemandWrapping": true
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
     }
   ]
 }

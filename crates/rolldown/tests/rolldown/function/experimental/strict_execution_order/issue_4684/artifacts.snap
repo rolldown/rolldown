@@ -6,96 +6,171 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { n as read, r as __esmMin, t as init_read } from "./main.js";
+import { n as init_read, r as read } from "./main2.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region dynamic.js
+function init_dynamic() {
+	return (init_dynamic = __esmMin((() => {
+		init_read();
+		read();
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_read();
-	read();
-}))();
+export { init_dynamic as t };
+
+```
+
+## dynamic2.js
+
+```js
+import { t as init_dynamic } from "./dynamic.js";
+init_dynamic();
 
 ```
 
 ## main.js
 
 ```js
-import nodeAssert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
-//#region setup.js
-var setup;
-var init_setup = __esmMin((() => {
-	setup = () => {
-		globalThis.foo = "foo";
-	};
-	setup();
-}));
-//#endregion
-//#region read.js
-var foo, read;
-var init_read = __esmMin((() => {
-	foo = globalThis.foo;
-	read = () => {
-		console.log("read", foo);
-	};
-}));
-//#endregion
-__esmMin((() => {
-	init_setup();
-	init_read();
-	setup();
-	read();
-	import("./dynamic.js");
-	nodeAssert.strictEqual(globalThis.foo, "foo");
-}))();
-export { read as n, __esmMin as r, init_read as t };
+import { t as init_main } from "./main2.js";
+init_main();
 
 ```
 
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+## main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import nodeAssert from "node:assert";
+//#region setup.js
+var setup;
+function init_setup() {
+	return (init_setup = __esmMin((() => {
+		setup = () => {
+			globalThis.foo = "foo";
+		};
+		setup();
+	})))();
+}
+//#endregion
+//#region read.js
+var foo, read;
+function init_read() {
+	return (init_read = __esmMin((() => {
+		foo = globalThis.foo;
+		read = () => {
+			console.log("read", foo);
+		};
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_setup();
+		init_read();
+		setup();
+		read();
+		import("./dynamic2.js");
+		nodeAssert.strictEqual(globalThis.foo, "foo");
+	})))();
+}
+//#endregion
+export { init_read as n, read as r, init_main as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 
 ### dynamic.js
 
 ```js
-import { n as read, r as __esmMin, t as init_read } from "./main.js";
+import { n as init_read, r as read } from "./main2.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region dynamic.js
+function init_dynamic() {
+	return (init_dynamic = __esmMin((() => {
+		init_read();
+		read();
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_read();
-	read();
-}))();
+export { init_dynamic as t };
+
+```
+
+### dynamic2.js
+
+```js
+import { t as init_dynamic } from "./dynamic.js";
+init_dynamic();
 
 ```
 
 ### main.js
 
 ```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import nodeAssert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
+//#region setup.js
+var setup;
+function init_setup() {
+	return (init_setup = __esmMin((() => {
+		setup = () => {
+			globalThis.foo = "foo";
+		};
+		setup();
+	})))();
+}
+//#endregion
 //#region read.js
 var foo, read;
-var init_read = __esmMin((() => {
-	foo = globalThis.foo;
-	read = () => {
-		console.log("read", foo);
-	};
-}));
+function init_read() {
+	return (init_read = __esmMin((() => {
+		foo = globalThis.foo;
+		read = () => {
+			console.log("read", foo);
+		};
+	})))();
+}
 //#endregion
-var setup;
-__esmMin((() => {
-	//#region setup.js
-	setup = () => {
-		globalThis.foo = "foo";
-	};
-	setup();
-	//#endregion
-	//#region main.js
-	init_read();
-	setup();
-	read();
-	import("./dynamic.js");
-	nodeAssert.strictEqual(globalThis.foo, "foo");
-	//#endregion
-}))();
-export { read as n, __esmMin as r, init_read as t };
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_setup();
+		init_read();
+		setup();
+		read();
+		import("./dynamic2.js");
+		nodeAssert.strictEqual(globalThis.foo, "foo");
+	})))();
+}
+//#endregion
+export { init_read as n, read as r, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```

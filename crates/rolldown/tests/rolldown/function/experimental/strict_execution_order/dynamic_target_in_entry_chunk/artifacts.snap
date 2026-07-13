@@ -1,0 +1,114 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as require_a } from "./b.js";
+export default require_a();
+
+```
+
+## b.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+//#region a.js
+var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events?.push("a");
+	module.exports = { a: true };
+}));
+//#endregion
+//#region b.js
+var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events?.push("b");
+	module.exports = { b: true };
+}));
+//#endregion
+export { require_a as n, require_b as t };
+
+```
+
+## c.js
+
+```js
+import { t as require_c } from "./c2.js";
+export default require_c();
+
+```
+
+## c2.js
+
+```js
+import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region c.js
+var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports.load = () => import("./b.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
+}));
+//#endregion
+export { require_c as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as n, __commonJSMin as t };
+
+```
+
+# Variant: [on_demand_wrapping: true]
+
+## Assets
+
+### a.js
+
+```js
+import { n as require_a } from "./b.js";
+export default require_a();
+
+```
+
+### b.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+//#region a.js
+var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events?.push("a");
+	module.exports = { a: true };
+}));
+//#endregion
+//#region b.js
+var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events?.push("b");
+	module.exports = { b: true };
+}));
+//#endregion
+export { require_a as n, require_b as t };
+
+```
+
+### c.js
+
+```js
+import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region c.js
+var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports.load = () => import("./b.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
+}));
+//#endregion
+export default require_c();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as n, __commonJSMin as t };
+
+```

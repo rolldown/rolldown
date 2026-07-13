@@ -1,5 +1,4 @@
 {
-  "snapshot": false,
   "config": {
     "external": ["node:path"]
   },

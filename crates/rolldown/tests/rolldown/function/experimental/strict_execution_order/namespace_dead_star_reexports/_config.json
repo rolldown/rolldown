@@ -1,9 +1,4 @@
 {
-  "snapshot": false,
-  "expectExecutionFailure": {
-    "reason": "Expected to fail until rolldown#10104 is applied.",
-    "outputContains": ["dead namespace star must not initialize default-only before page-b"]
-  },
   "config": {
     "external": ["node:assert"],
     "strictExecutionOrder": true
@@ -11,10 +6,6 @@
   "configVariants": [
     {
       "_configName": "on-demand",
-      "_expectExecutionFailure": {
-        "reason": "Expected to fail until rolldown#10104 is applied.",
-        "outputContains": ["dead namespace star must not initialize default-only before page-b"]
-      },
       "onDemandWrapping": true
     }
   ]

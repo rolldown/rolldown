@@ -1,0 +1,128 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] dep-b.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## dep-b.js
+
+```js
+import { n as init_dep_b } from "./main2.js";
+init_dep_b();
+
+```
+
+## main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+## main2.js
+
+```js
+import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region dep-a.js
+var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const sideEffect = {};
+	globalThis.sideEffect = sideEffect;
+	module.exports = sideEffect;
+}));
+function init_dep_b() {
+	return (init_dep_b = __esmMin((() => {
+		sideEffect.touched = true;
+	})))();
+}
+function init_main() {
+	return (init_main = __esmMin((() => {
+		require_dep_a();
+		init_dep_b();
+		import("./dep-b.js");
+	})))();
+}
+//#endregion
+export { init_dep_b as n, init_main as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] dep-b.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+## Assets
+
+### dep-b.js
+
+```js
+import { n as init_dep_b } from "./main2.js";
+init_dep_b();
+
+```
+
+### main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region dep-a.js
+var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const sideEffect = {};
+	globalThis.sideEffect = sideEffect;
+	module.exports = sideEffect;
+}));
+function init_dep_b() {
+	return (init_dep_b = __esmMin((() => {
+		sideEffect.touched = true;
+	})))();
+}
+function init_main() {
+	return (init_main = __esmMin((() => {
+		require_dep_a();
+		init_dep_b();
+		import("./dep-b.js");
+	})))();
+}
+//#endregion
+export { init_dep_b as n, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```

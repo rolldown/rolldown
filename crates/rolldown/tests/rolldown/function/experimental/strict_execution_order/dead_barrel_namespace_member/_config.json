@@ -1,9 +1,4 @@
 {
-  "snapshot": false,
-  "expectExecutionFailure": {
-    "reason": "Expected to fail until rolldown#10104 is applied.",
-    "outputContains": ["namespace member must not initialize its dead re-export before page-b"]
-  },
   "config": {
     "external": ["node:assert"],
     "strictExecutionOrder": true,
@@ -14,10 +9,6 @@
   "configVariants": [
     {
       "_configName": "wrap-all",
-      "_expectExecutionFailure": {
-        "reason": "Expected to fail until rolldown#10104 is applied.",
-        "outputContains": ["namespace member must not initialize its dead re-export before page-b"]
-      },
       "onDemandWrapping": false
     }
   ]

@@ -11,6 +11,16 @@
   "configVariants": [
     {
       "format": "cjs"
+    },
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    },
+    {
+      "format": "cjs",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
     }
   ]
 }

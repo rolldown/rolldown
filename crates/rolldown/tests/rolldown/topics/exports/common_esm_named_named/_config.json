@@ -11,5 +11,12 @@
       ]
     }
   },
-  "_comment": "Tests Common chunk + Esm WrapKind + Named OutputExports + named export access"
+  "_comment": "Tests Common chunk + Esm WrapKind + Named OutputExports + named export access",
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
 }

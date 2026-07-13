@@ -1,0 +1,21 @@
+{
+  "snapshot": false,
+  "config": {
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "pref",
+          "test": "[\\\\/]node_modules[\\\\/]pref-pkg[\\\\/](?:facade|manager)\\.js$"
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "onDemandWrapping": true
+    }
+  ]
+}

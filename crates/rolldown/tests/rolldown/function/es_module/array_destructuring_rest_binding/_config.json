@@ -1,5 +1,12 @@
 {
   "config": {
     "strictExecutionOrder": true
-  }
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
 }

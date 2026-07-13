@@ -8,3 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}};async function t(){console.log(`foo`)}var n=e((()=>{}));await e((async()=>{n(),await t()}))();
 ```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}};async function t(){console.log(`foo`)}await e((async()=>{await t()}))();
+```

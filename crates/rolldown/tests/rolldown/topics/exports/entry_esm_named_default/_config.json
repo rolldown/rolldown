@@ -8,5 +8,12 @@
     "exports": "named",
     "strictExecutionOrder": true
   },
-  "_comment": "Tests Entry + Esm WrapKind + Named OutputExports + default export access"
+  "_comment": "Tests Entry + Esm WrapKind + Named OutputExports + default export access",
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
 }

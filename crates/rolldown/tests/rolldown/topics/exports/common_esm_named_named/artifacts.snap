@@ -51,3 +51,20 @@ Object.defineProperty(exports, "init_shared", {
 });
 
 ```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#endregion
+__esmMin((() => {
+	node_assert.default.strictEqual(42, 42);
+}))();
+
+```

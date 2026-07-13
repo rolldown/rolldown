@@ -1,0 +1,23 @@
+{
+  "snapshot": false,
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
+    "experimental": { "onDemandWrapping": true },
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "a",
+          "test": "[\\\\/]emergent_cycle_partial_forwarder[\\\\/]a[\\\\/]"
+        },
+        {
+          "name": "b",
+          "test": "[\\\\/]emergent_cycle_partial_forwarder[\\\\/]b[\\\\/]"
+        }
+      ]
+    }
+  },
+  "configVariants": [{ "_configName": "wrap-all", "onDemandWrapping": false }]
+}

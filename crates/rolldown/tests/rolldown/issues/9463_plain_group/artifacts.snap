@@ -57,3 +57,60 @@ var init_b = __esmMin((() => {
 export { init_a as n, init_b as t };
 
 ```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] shared.js is dynamically imported by b.js but also statically imported by a.js, dynamic import will not move module into another chunk.
+
+```
+
+## Assets
+
+### a.js
+
+```js
+import { n as init_a } from "./common.js";
+init_a();
+
+```
+
+### b.js
+
+```js
+import { t as init_b } from "./common.js";
+init_b();
+
+```
+
+### common.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region shared.js
+var shared_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+function foo() {
+	(globalThis.sideEffectLog ??= []).push("shared-foo");
+}
+//#endregion
+//#region a.js
+var init_a = __esmMin((() => {
+	(globalThis.sideEffectLog ??= []).push("a");
+	foo();
+}));
+//#endregion
+//#region b.js
+var init_b = __esmMin((() => {
+	(globalThis.sideEffectLog ??= []).push("b");
+	Promise.resolve().then(() => shared_exports).then(({ foo }) => {
+		foo();
+	});
+}));
+//#endregion
+export { init_a as n, init_b as t };
+
+```

@@ -35,3 +35,31 @@ __esmMin((() => {
 }))();
 
 ```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region core/setupWorker.js
+function setupWorker(handler) {
+	return { handler };
+}
+//#endregion
+//#region core/http.js
+function http() {
+	return "http";
+}
+//#endregion
+var worker;
+__esmMin((() => {
+	//#region main.js
+	worker = setupWorker(http());
+	console.log(worker);
+	//#endregion
+}))();
+
+```

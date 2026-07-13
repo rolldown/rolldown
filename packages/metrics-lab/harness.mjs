@@ -282,7 +282,11 @@ function deferredList() {
   return modes ? FEATURE_NAMES.filter((n) => modes[n] === 'deferred') : [];
 }
 
-function printMeasureSummary(report, hadBaseline) {
+// advice:false drops the "next:" coaching paragraphs (scan prints the verdict right
+// after this summary, and every one of them reappears there as the matching lead's
+// next: line - printed twice, they sit in the agent's context for the whole session
+// and get re-read on every later turn). The signal lines and numbers always print.
+function printMeasureSummary(report, hadBaseline, { advice = true } = {}) {
   const m = report.metrics;
   console.log(`\n${report.label ? `[${report.label}] ` : ''}${report.runs} runs`
     + `${report.deferred?.length ? `, deferred: ${report.deferred.join(', ')}` : ''}`);
@@ -302,9 +306,11 @@ function printMeasureSummary(report, hadBaseline) {
     for (const w of (gate.worst ?? []).slice(0, 3)) {
       console.log(`  blocking until ${w.end}ms: ${w.name} (${kb(w.bytes)})`);
     }
-    console.log('  next: nothing paints until these finish - inline the small critical CSS, load the rest');
-    console.log('  non-blocking (preload + media swap), and split styles only later routes need. Fix this');
-    console.log('  and any render-gating fetch before judging CPU/JS deferrals.');
+    if (advice) {
+      console.log('  next: nothing paints until these finish - inline the small critical CSS, load the rest');
+      console.log('  non-blocking (preload + media swap), and split styles only later routes need. Fix this');
+      console.log('  and any render-gating fetch before judging CPU/JS deferrals.');
+    }
   }
   const renderGap = m['runtime.render_gap_ms'];
   if (typeof renderGap === 'number' && renderGap > 150) {
@@ -318,7 +324,9 @@ function printMeasureSummary(report, hadBaseline) {
       console.log(`  before first paint: ${prepaint.slice(0, 5).map(weightLabel).join(', ')}`);
     }
     const heavy = heavyPrepaintTypes(report.resourceWeight);
-    if (fetches.length) {
+    if (!advice) {
+      // verdict names the gap's cause class and the move - no second copy here
+    } else if (fetches.length) {
       console.log('  next: find what the boot path awaits before the first render (a config/data fetch, a locale chunk) and render with bundled defaults instead, applying the fetched result when it arrives.');
     } else if (heavy.some((w) => w.type === 'font')) {
       console.log('  next: no render-gating fetch - the paint likely waits on fonts. Make first paint depend on at most one (subset) font: preload it, and defer loading/registering the rest until after paint.');
@@ -331,7 +339,9 @@ function printMeasureSummary(report, hadBaseline) {
   const prepaintCpu = m['runtime.prepaint_longtask_ms'];
   if (typeof prepaintCpu === 'number' && prepaintCpu > 150) {
     console.log(`pre-paint CPU: ${Math.round(prepaintCpu)}ms of long tasks before first paint.`);
-    console.log(`  next: run \`${CLI} profile\` to see which modules burn that CPU; defer work the first paint does not need. ORDER MATTERS: fix any render gap (above) first - CPU that overlaps a render-blocking fetch is free, so deferring it can measure worse until the fetch is fixed.`);
+    if (advice) {
+      console.log(`  next: run \`${CLI} profile\` to see which modules burn that CPU; defer work the first paint does not need. ORDER MATTERS: fix any render gap (above) first - CPU that overlaps a render-blocking fetch is free, so deferring it can measure worse until the fetch is fixed.`);
+    }
   }
 
   if (report.baselineDelta?.['runtime.lcp_ms']) {
@@ -429,14 +439,24 @@ function buildCoverageReport(target, cov, entry) {
   return report;
 }
 
-function printCoverageReport(target, report) {
+// compact:true is the re-scan view: the actionable sections (chunks, candidates, cold
+// bytes, large-at-paint, sibling groups) stay complete, only the informational module
+// table shrinks - it is the biggest block of a scan and re-printing 60 rows on every
+// iteration multiplies what an agent re-reads each turn for the rest of its session.
+// advice:false drops the "next:" paragraphs for the same reason as printMeasureSummary:
+// scan prints the verdict right after, where every one of them reappears as a lead's
+// next: line. Standalone `coverage` has no verdict following it and keeps them.
+function printCoverageReport(target, report, { compact = false, advice = true } = {}) {
   const { modules, candidates, entry } = report;
   const chunks = report.chunks ?? [];
   const extraChunks = chunks.filter((c) => !c.entry);
   const chunkTag = (mod) => (extraChunks.some((c) => c.file === mod.chunk) ? `  [${mod.chunk}]` : '');
   console.log(`initial-load coverage (${entry}${extraChunks.length ? ` + ${extraChunks.length} pre-paint chunk(s)` : ''}, first paint vs settled):\n`);
-  for (const c of extraChunks) {
-    console.log(`  chunk ${c.file}  ${kb(c.totalBytes)}  paint ${(c.paintRatio * 100).toFixed(0)}% - fetched AND executed before first paint, so it is critical-path transfer`);
+  if (extraChunks.length) {
+    console.log('  pre-paint chunks - fetched AND executed before first paint, so critical-path transfer:');
+    for (const c of extraChunks) {
+      console.log(`    ${c.file}  ${kb(c.totalBytes)}  paint ${(c.paintRatio * 100).toFixed(0)}%`);
+    }
   }
   for (const s of report.skippedChunks ?? []) {
     if (s.reason === 'no-sourcemap') {
@@ -454,8 +474,10 @@ function printCoverageReport(target, report) {
       console.log(`    ${s.file}  ${kb(s.bytes ?? 0)}${s.neverExecuted ? '  (never executed by settle at all)' : ''}`);
     }
     if (staticPrepaint.length > 10) console.log(`    ... +${staticPrepaint.length - 10} more in coverage.json`);
-    console.log('  next: load these on demand (dynamic import / drop them from the initial script tags or preloads)');
-    console.log('  so the first paint stops paying for their transfer.');
+    if (advice) {
+      console.log('  next: load these on demand (dynamic import / drop them from the initial script tags or preloads)');
+      console.log('  so the first paint stops paying for their transfer.');
+    }
   }
   const lazyChunks = (report.skippedChunks ?? []).filter((s) => s.reason === 'post-paint');
   if (lazyChunks.length) {
@@ -463,7 +485,7 @@ function printCoverageReport(target, report) {
   }
   if (extraChunks.length || lazyChunks.length || staticPrepaint.length) console.log('');
   const pct = (r) => `${(r * 100).toFixed(1)}%`;
-  const shown = modules.slice(0, 60);
+  const shown = modules.slice(0, compact ? 15 : 60);
   for (const mod of shown) {
     const verdict = mod.paintRatio >= CANDIDATE_MAX_PAINT_RATIO ? 'used-before-paint'
       : mod.settleRatio >= CANDIDATE_MAX_PAINT_RATIO ? 'post-paint-only'
@@ -472,18 +494,25 @@ function printCoverageReport(target, report) {
       + `paint ${pct(mod.paintRatio).padStart(6)}  settle ${pct(mod.settleRatio).padStart(6)}  ${verdict}${chunkTag(mod)}`);
   }
   if (modules.length > shown.length) {
-    console.log(`  ... +${modules.length - shown.length} more modules (largest shown) - full list in coverage.json`);
+    console.log(`  ... +${modules.length - shown.length} more modules (largest shown) - full list in coverage.json`
+      + (compact ? ', full table with scan --full' : ''));
   }
   if (candidates.length) {
+    const shownCandidates = candidates.slice(0, 12);
     console.log(`\ndefer candidates (>=${kb(CANDIDATE_MIN_BYTES)}, <${CANDIDATE_MAX_PAINT_RATIO * 100}% executed at paint), largest first:`);
-    for (const c of candidates) {
+    for (const c of shownCandidates) {
       console.log(`  ${c.feature ?? c.source}  (${kb(c.totalBytes)}${chunkTag(c) ? `, in ${c.chunk}` : ''})`
         + `${c.feature ? `  -> node harness.mjs defer ${c.feature}` : ''}`);
     }
-    console.log(target.isDemo
-      ? '\nnext: defer the top candidate, rebuild, then measure.'
-      : '\nnext: change the app so the landing page stops loading these before first paint\n'
-        + '(follow their import chains from the entry), rebuild, run its functional check, then measure.');
+    if (candidates.length > shownCandidates.length) {
+      console.log(`  ... +${candidates.length - shownCandidates.length} more in coverage.json`);
+    }
+    if (advice) {
+      console.log(target.isDemo
+        ? '\nnext: defer the top candidate, rebuild, then measure.'
+        : '\nnext: change the app so the landing page stops loading these before first paint\n'
+          + '(follow their import chains from the entry), rebuild, run its functional check, then measure.');
+    }
   } else {
     console.log('\nno defer candidates at current thresholds - nothing sizeable is parsed-but-unexecuted.');
   }
@@ -500,9 +529,11 @@ function printCoverageReport(target, report) {
         + `${chunkTag(mod) ? `  [${mod.chunk}]` : ''}${mod.framework ? '  (framework runtime - import edge rarely movable)' : ''}`);
     }
     if (cold.length > shownCold.length) console.log(`  ... +${cold.length - shownCold.length} more in coverage.json`);
-    console.log('next: for each non-framework module, find the import edge that pulls it in before paint and move');
-    console.log('that edge behind interaction/idle (dynamic import). A middling percentage on a vendor SDK usually');
-    console.log('means one boot-time init call drags the whole package - defer the call, not just the import.');
+    if (advice) {
+      console.log('next: for each non-framework module, find the import edge that pulls it in before paint and move');
+      console.log('that edge behind interaction/idle (dynamic import). A middling percentage on a vendor SDK usually');
+      console.log('means one boot-time init call drags the whole package - defer the call, not just the import.');
+    }
   }
 
   // Executed-at-paint is NOT the same as needed-at-paint: top-level data counts
@@ -514,12 +545,16 @@ function printCoverageReport(target, report) {
     for (const mod of largeHot) {
       console.log(`  ${mod.source}  (${kb(mod.totalBytes)}, ${(mod.paintRatio * 100).toFixed(0)}% at paint${chunkTag(mod) ? `, in ${mod.chunk}` : ''})`);
     }
-    console.log('next: for each, check how much of it the first render actually reads; split rarely-read parts (full records, long bodies, alternate variants) into a module reached only by dynamic import.');
+    if (advice) {
+      console.log('next: for each, check how much of it the first render actually reads; split rarely-read parts (full records, long bodies, alternate variants) into a module reached only by dynamic import.');
+    }
   }
 
   for (const group of siblingVariantGroups(modules)) {
     console.log(`\nsibling group ${group.dir}: ${group.files} modules, ${kb(group.bytes)}, ~${Math.round((group.paintBytes / group.bytes) * 100)}% executed at paint.`);
-    console.log('next: families of same-shaped modules (locales, themes, per-tenant configs) usually need only ONE variant per session - keep the default in the entry and load the active variant with a dynamic import.');
+    if (advice) {
+      console.log('next: families of same-shaped modules (locales, themes, per-tenant configs) usually need only ONE variant per session - keep the default in the entry and load the active variant with a dynamic import.');
+    }
   }
 }
 
@@ -537,13 +572,15 @@ function buildProfileReport(target, profile, entry) {
   return report;
 }
 
-function printProfileReport(report) {
+function printProfileReport(report, { advice = true } = {}) {
   console.log(`boot CPU by module, navigation -> first paint (${report.totalMs}ms sampled):\n`);
   for (const row of report.rows.slice(0, 20)) {
     const pctStr = report.totalMs > 0 ? `${((row.ms / report.totalMs) * 100).toFixed(0).padStart(4)}%` : '';
     console.log(`  ${row.bucket.padEnd(40)} ${String(row.ms).padStart(7)}ms ${pctStr}`);
   }
-  console.log('\nnext: work here runs BEFORE the page paints. Defer whatever the first render does not need (idle callback + dynamic import). Fix render-gating fetches first: CPU that overlaps a blocked render is free, so deferring it can measure worse until the fetch is fixed.');
+  if (advice) {
+    console.log('\nnext: work here runs BEFORE the page paints. Defer whatever the first render does not need (idle callback + dynamic import). Fix render-gating fetches first: CPU that overlaps a blocked render is free, so deferring it can measure worse until the fetch is fixed.');
+  }
 }
 
 // --- verdict core ----------------------------------------------------------------
@@ -884,6 +921,10 @@ async function cmdScan(argv) {
     // territory (it is skipped then - the verdict only ever demands a profile
     // for pre-paint CPU >150ms, so skipping never leaves an UNKNOWN).
     profile: { type: 'boolean', default: false },
+    // Re-scans print the compact coverage view (top 15 module rows instead of
+    // 60 - the actionable sections are never trimmed); --full restores the
+    // whole table. First scan of a target is always full.
+    full: { type: 'boolean', default: false },
   });
   if (opts.quick && opts.pin) {
     throw new Error('scan --quick cannot --pin: a 1-run baseline poisons every later delta. Run a full scan to pin.');
@@ -933,15 +974,20 @@ async function cmdScan(argv) {
     label: opts.label,
     throttle: opts['no-throttle'] ? null : DEFAULT_THROTTLE,
   });
+  // Read before buildCoverageReport overwrites it: an existing coverage report
+  // means this is a re-scan, so the module table prints compact (--full restores it).
+  const isRescan = fs.existsSync(target.paths.coverage);
   const coverageReport = buildCoverageReport(target, gathered.cov, entry);
   const profileReport = gathered.profile ? buildProfileReport(target, gathered.profile, entry) : null;
 
-  printMeasureSummary(report, hadBaseline);
+  // advice:false throughout - the verdict printed below carries every next: line,
+  // so the sections above it report numbers without a second copy of the coaching.
+  printMeasureSummary(report, hadBaseline, { advice: false });
   console.log('');
-  printCoverageReport(target, coverageReport);
+  printCoverageReport(target, coverageReport, { compact: isRescan && !opts.full, advice: false });
   console.log('');
   if (profileReport) {
-    printProfileReport(profileReport);
+    printProfileReport(profileReport, { advice: false });
     console.log('');
   }
   printGraphSection(target, fs.statSync(path.join(target.dist, entry)).mtimeMs);
@@ -1217,6 +1263,9 @@ start here (the target is remembered after the first command):
   scan --pin                same, and re-pin the baseline afterwards (after an accepted change)
   scan --quick              1 run, no profile: a fast mid-iteration probe on slow apps.
                             Indicative only - accept/revert/pin decisions need a full scan.
+  scan --full               re-scans print the compact coverage view (top 15 module rows;
+                            candidates/cold/large/sibling sections always complete) - --full
+                            restores the whole module table
   verdict                   fuse the gathered signals -> OPEN/clear/UNKNOWN; the only "done" that counts
 
 individual commands (same target rules):

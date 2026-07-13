@@ -61,12 +61,12 @@ These are the main places where strict output deliberately accepts extra wrapper
 
 Every site that can run a wrapped module, in one place:
 
-| Trigger                                                      | Lives in                                    | Owner                                                                          |
-| ------------------------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------ |
-| `init_*()` for an order-wrapped importee of a live statement | importer body, statement position           | finalizer via the shared init-target view                                      |
-| `init_*()` / `require_*()` obligations of removed statements | importer body, removed statement's position | `OrderImportOverlay` / transitive init targets                                 |
-| user or dynamic entry activation                             | entry facade prologue                       | `create_order_wrap_entry_facades` / `restore_order_wrap_entry_facades`         |
-| interop `require_*()` of an eager importer                   | importer body (its carrier)                 | flag-off interop machinery, order-analysis carrier rule                        |
+| Trigger                                                      | Lives in                                    | Owner                                                                  |
+| ------------------------------------------------------------ | ------------------------------------------- | ---------------------------------------------------------------------- |
+| `init_*()` for an order-wrapped importee of a live statement | importer body, statement position           | finalizer via the shared init-target view                              |
+| `init_*()` / `require_*()` obligations of removed statements | importer body, removed statement's position | `OrderImportOverlay` / transitive init targets                         |
+| user or dynamic entry activation                             | entry facade prologue                       | `create_order_wrap_entry_facades` / `restore_order_wrap_entry_facades` |
+| interop `require_*()` of an eager importer                   | importer body (its carrier)                 | flag-off interop machinery, order-analysis carrier rule                |
 
 A trigger must never sit inline in a chunk body that other chunks can evaluate as a
 dependency; that is the facade rule's content.

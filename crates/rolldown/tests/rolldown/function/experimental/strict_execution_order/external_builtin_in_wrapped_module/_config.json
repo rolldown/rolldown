@@ -1,0 +1,15 @@
+{
+  "snapshot": false,
+  "config": {
+    "external": ["node:path"]
+  },
+  "configVariants": [
+    {
+      "strictExecutionOrder": true
+    },
+    {
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
+}

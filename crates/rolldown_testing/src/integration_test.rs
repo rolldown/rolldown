@@ -18,7 +18,7 @@ use rolldown::{ChecksOptions, NormalizedBundlerOptions};
 use rolldown_common::Output;
 use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
-use rolldown_testing_config::TestMeta;
+use rolldown_testing_config::{ExpectedExecutionFailure, TestMeta};
 use serde_json::{Map, Value};
 use sugar_path::SugarPath;
 
@@ -50,6 +50,8 @@ pub struct NamedBundlerOptions {
   pub snapshot: Option<bool>,
   // Will be injected into `globalThis.__configName`. If not specified, `TestMeta.config_name` will be used.
   pub config_name: Option<String>,
+  /// The generated output must fail when executed. A successful execution is an XPASS.
+  pub expect_execution_failure: Option<ExpectedExecutionFailure>,
 }
 
 fn default_test_input_item() -> rolldown::InputItem {
@@ -85,7 +87,13 @@ impl IntegrationTest {
   pub async fn run_with_plugins(&self, options: BundlerOptions, plugins: Vec<SharedPluginable>) {
     self
       .run_multiple(
-        vec![NamedBundlerOptions { options, description: None, snapshot: None, config_name: None }],
+        vec![NamedBundlerOptions {
+          options,
+          description: None,
+          snapshot: None,
+          config_name: None,
+          expect_execution_failure: self.test_meta.expect_execution_failure.clone(),
+        }],
         plugins,
       )
       .await;
@@ -384,6 +392,7 @@ impl IntegrationTest {
               &patch_chunks,
               config_name,
               true,
+              named_options.expect_execution_failure.as_ref(),
             );
           } else {
             if self.test_meta.write_to_disk {
@@ -393,6 +402,7 @@ impl IntegrationTest {
                 &patch_chunks,
                 config_name,
                 false,
+                named_options.expect_execution_failure.as_ref(),
               );
             }
             if !self.test_meta.skip_syntax_validation {
@@ -454,6 +464,10 @@ impl IntegrationTest {
           bundler
         }
         Err(errs) => {
+          assert!(
+            named_options.expect_execution_failure.is_none(),
+            "Expected the bundler to be success, but failed to create it: {errs:#?}"
+          );
           // Set cwd and error, then skip this build round
           build_snapshot.cwd = Some(cwd);
           build_snapshot.initial_output = Some(Err(errs));
@@ -502,10 +516,24 @@ impl IntegrationTest {
             .map(Some)
             .unwrap_or(self.test_meta.config_name.as_deref());
           if self.should_execute_output() {
-            Self::execute_output_assets(bundler.options(), &debug_title, &[], config_name, true);
+            Self::execute_output_assets(
+              bundler.options(),
+              &debug_title,
+              &[],
+              config_name,
+              true,
+              named_options.expect_execution_failure.as_ref(),
+            );
           } else {
             if self.test_meta.write_to_disk {
-              Self::execute_output_assets(bundler.options(), &debug_title, &[], config_name, false);
+              Self::execute_output_assets(
+                bundler.options(),
+                &debug_title,
+                &[],
+                config_name,
+                false,
+                named_options.expect_execution_failure.as_ref(),
+              );
             }
             if !self.test_meta.skip_syntax_validation {
               // When not executing output, validate that all JS chunks are syntactically valid
@@ -540,6 +568,39 @@ impl IntegrationTest {
     let hmr_temp_dir_path = test_folder_path.join("hmr-temp");
     let hmr_steps = collect_hmr_edit_files(test_folder_path, &hmr_temp_dir_path);
     let hmr_mode_enabled = !hmr_steps.is_empty();
+
+    for expected_failure in
+      multiple_options.iter().filter_map(|options| options.expect_execution_failure.as_ref())
+    {
+      assert!(
+        !expected_failure.reason.trim().is_empty(),
+        "`expectExecutionFailure.reason` must not be empty or whitespace-only",
+      );
+      assert!(
+        !expected_failure.output_contains.is_empty(),
+        "`expectExecutionFailure.outputContains` must contain at least one matcher",
+      );
+      assert!(
+        expected_failure.output_contains.iter().all(|matcher| !matcher.trim().is_empty()),
+        "`expectExecutionFailure.outputContains` entries must not be empty or whitespace-only",
+      );
+    }
+
+    assert!(
+      !hmr_mode_enabled
+        || multiple_options.iter().all(|options| options.expect_execution_failure.is_none()),
+      "`expectExecutionFailure` is not supported by HMR fixtures",
+    );
+    assert!(
+      !self.test_meta.expect_error
+        || multiple_options.iter().all(|options| options.expect_execution_failure.is_none()),
+      "`expectExecutionFailure` cannot be combined with `expectError`",
+    );
+    assert!(
+      self.test_meta.write_to_disk
+        || multiple_options.iter().all(|options| options.expect_execution_failure.is_none()),
+      "`expectExecutionFailure` requires `writeToDisk: true`",
+    );
 
     // Apply test defaults to all options
     for named_options in &mut multiple_options {
@@ -639,6 +700,7 @@ impl IntegrationTest {
     patch_chunks: &[String],
     config_name: Option<&str>,
     execute_compiled_entries: bool,
+    expected_execution_failure: Option<&ExpectedExecutionFailure>,
   ) {
     let cwd = options.cwd.clone();
     let dist_folder = cwd.join(&options.out_dir);
@@ -685,6 +747,10 @@ impl IntegrationTest {
     if test_script.exists() {
       node_command.arg(test_script);
     } else if !execute_compiled_entries {
+      assert!(
+        expected_execution_failure.is_none(),
+        "`expectExecutionFailure` requires a `_test.mjs`/`_test.cjs` script or executable entries",
+      );
       return;
     } else {
       // make sure to set this: https://github.com/nodejs/node/issues/59374
@@ -731,10 +797,38 @@ impl IntegrationTest {
 
     let output = node_command.output().unwrap();
 
+    if output.status.success() {
+      if let Some(expected_failure) = expected_execution_failure {
+        panic!(
+          "XPASS: generated output was expected to fail execution: {}",
+          expected_failure.reason
+        );
+      }
+      return;
+    }
+
     #[expect(clippy::print_stdout)]
-    if !output.status.success() {
+    {
       let stdout_utf8 = std::str::from_utf8(&output.stdout).unwrap();
       let stderr_utf8 = std::str::from_utf8(&output.stderr).unwrap();
+
+      if let Some(expected_failure) = expected_execution_failure
+        && output.status.code().is_some()
+      {
+        assert!(
+          !expected_failure.output_contains.is_empty(),
+          "`expectExecutionFailure.outputContains` must contain at least one matcher",
+        );
+        let process_output = format!("{stdout_utf8}\n{stderr_utf8}");
+        for expected in &expected_failure.output_contains {
+          assert!(
+            process_output.contains(expected),
+            "execution failed for a different reason than expected ({reason}); missing {expected:?}\nstdout:\n{stdout_utf8}\nstderr:\n{stderr_utf8}",
+            reason = expected_failure.reason,
+          );
+        }
+        return;
+      }
 
       println!(
         "⬇️⬇️ Failed to execute command {test_title} ⬇️⬇️\n{node_command:?}\n⬆️⬆️ end  ⬆️⬆️"

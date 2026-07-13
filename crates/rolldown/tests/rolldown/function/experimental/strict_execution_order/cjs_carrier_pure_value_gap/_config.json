@@ -1,0 +1,46 @@
+{
+  "snapshot": false,
+  "expectExecutionFailure": {
+    "reason": "Expected to fail until rolldown#10104 is applied.",
+    "outputContains": ["MAIN:stale"]
+  },
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "second",
+        "import": "./second.js"
+      },
+      {
+        "name": "cjs",
+        "import": "./node_modules/pure-cjs/index.cjs"
+      },
+      {
+        "name": "carrier",
+        "import": "./node_modules/pure-carrier/index.js"
+      },
+      {
+        "name": "unused",
+        "import": "./unused.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "hiddenRuntimeModule": false,
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "_expectExecutionFailure": {
+        "reason": "Expected to fail until rolldown#10104 is applied.",
+        "outputContains": ["MAIN:stale"]
+      },
+      "onDemandWrapping": false
+    }
+  ]
+}

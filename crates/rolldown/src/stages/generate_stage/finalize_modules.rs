@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rolldown_common::{ConcatenateWrappedModuleKind, PrependRenderedImport};
+use rolldown_common::{ConcatenateWrappedModuleKind, PrependRenderedImport, UsedSymbolRefs};
 use rolldown_error::BuildResult;
 use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _};
 use rustc_hash::FxHashMap;
@@ -19,6 +19,7 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     ast_table: &mut IndexEcmaAst,
+    used_symbol_refs: &UsedSymbolRefs,
     order_state: &super::order_wrap_state::OrderWrapState,
   ) -> BuildResult<()> {
     let has_enum_inlining = self.link_output.has_enum_inlining;
@@ -57,6 +58,7 @@ impl GenerateStage<'_> {
             modules: &self.link_output.module_table.modules,
             linking_infos: &self.link_output.metas,
             order_wrap_state: order_state,
+            used_symbol_refs,
             runtime: &self.link_output.runtime,
             options: self.options,
             file_emitter: &self.plugin_driver.file_emitter,

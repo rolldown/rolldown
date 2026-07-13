@@ -219,7 +219,7 @@ impl<'a> GenerateStage<'a> {
       self.resolved_paths = Some(paths.resolve_all(ids).await);
     }
 
-    self.finalize_modules(&mut chunk_graph, &mut ast_table, &order_state)?;
+    self.finalize_modules(&mut chunk_graph, &mut ast_table, &used_symbol_refs, &order_state)?;
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await
   }

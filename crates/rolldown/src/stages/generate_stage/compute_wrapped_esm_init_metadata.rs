@@ -192,6 +192,12 @@ fn transitive_esm_init_targets(
         statement: stmt_idx,
         record: rec_idx,
       });
+      let namespace_reexport_is_retained = rec.meta.contains(ImportRecordMeta::IsExportStar)
+        && meta.namespace_included
+        && (ctx.metas[root].has_dynamic_exports
+          || meta.star_export_record_by_name.iter().any(|(name, owner)| {
+            *owner == rec_idx && meta.sorted_and_non_ambiguous_resolved_exports.contains_key(name)
+          }));
       if ctx.order_wrap {
         if !order_wrap_record_forwards(
           ctx.order_state,
@@ -200,6 +206,11 @@ fn transitive_esm_init_targets(
           rec_idx,
           root,
           is_reexport,
+          ReexportRetentionEvidence {
+            statement: stmt_is_included,
+            overlay: overlay.is_some(),
+            namespace: namespace_reexport_is_retained,
+          },
         ) {
           continue;
         }
@@ -252,19 +263,30 @@ fn transitive_esm_init_targets(
 /// It forwards on either of two conditions:
 /// - **execution dependency** — the record's target is a live execution dependency of the importer
 ///   (a side-effecting module the importer evaluates); or
-/// - **owns a re-export hop** — [`reexport_record_owns_hop`], the shared ownership predicate: the
-///   record is a re-export the importer is not merely a walk-through interior for. An init-owning
-///   barrel forwards its own re-export hops even when the direct target is side-effect free (so not
-///   a live execution dependency) and no per-symbol overlay was created because the bindings are
-///   consumed only via the barrel namespace object or resolve through a deeper level. The traversal
-///   only forwards to wrapped, live targets, so a genuinely unused pure re-export still forwards to
-///   nothing and stays droppable.
+/// - **owns a retained re-export hop** — [`reexport_record_owns_hop`], the shared ownership
+///   predicate, plus proof that tree-shaking retained the statement, lowering recorded an import
+///   overlay for a consumed path, or the record contributes a non-ambiguous export to the included
+///   namespace (or forwards dynamic exports whose names are not statically enumerable). Merely
+///   wrapping a barrel must not resurrect an excluded pure re-export: wrap-all and on-demand may
+///   select different wrapper sets, but they must preserve the same tree-shaking result.
 ///
-/// A third disjunct — "has an order-import overlay" — was previously ORed in but is redundant: every
-/// re-export record that carries an overlay is either non-nested (so already covered by the
-/// re-export-hop condition) or reaches the plan through a retained path minted only for non-nested
-/// records, and a non-re-export record only carries an overlay when its target is a live execution
-/// dependency. Dropping it leaves the forwarded-target set byte-identical.
+/// The namespace exception is deliberately per-record: `export *` does not forward `default`, a
+/// local export can shadow a star export, and conflicting star exports are absent from the
+/// non-ambiguous namespace. Treating every star from a namespace-included module as retained would
+/// resurrect those dead re-exports.
+#[derive(Clone, Copy)]
+struct ReexportRetentionEvidence {
+  statement: bool,
+  overlay: bool,
+  namespace: bool,
+}
+
+impl ReexportRetentionEvidence {
+  fn any(self) -> bool {
+    self.statement || self.overlay || self.namespace
+  }
+}
+
 fn order_wrap_record_forwards(
   order_state: &OrderWrapState,
   execution_dependencies: &rolldown_utils::indexmap::FxIndexSet<ModuleIdx>,
@@ -272,9 +294,11 @@ fn order_wrap_record_forwards(
   rec_idx: ImportRecordIdx,
   root: ModuleIdx,
   is_reexport: bool,
+  retention: ReexportRetentionEvidence,
 ) -> bool {
   execution_dependencies.contains(&root)
-    || reexport_record_owns_hop(order_state, importer_idx, rec_idx, is_reexport)
+    || (retention.any()
+      && reexport_record_owns_hop(order_state, importer_idx, rec_idx, is_reexport))
 }
 
 fn collect_legacy_esm_init_targets(

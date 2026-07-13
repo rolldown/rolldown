@@ -1,12 +1,17 @@
 use crate::{
-  chunk_graph::ChunkGraph, type_alias::IndexStmtInfos, types::linking_metadata::LinkingMetadataVec,
+  chunk_graph::ChunkGraph,
+  type_alias::{IndexEcmaAst, IndexStmtInfos},
+  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 use itertools::Itertools;
+use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta,
   IndexModules, ModuleIdx, PostChunkOptimizationOperation, RuntimeHelper, StmtInfoIdx, SymbolRef,
   SymbolRefDb, UsedSymbolRefsBuilder, WrapKind,
 };
+use rolldown_ecmascript::EcmaAst;
+use rolldown_ecmascript_utils::StatementExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{
@@ -21,10 +26,55 @@ pub(super) struct OrderLoweringInput<'a> {
   pub(super) modules: &'a IndexModules,
   pub(super) linking: &'a LinkingMetadataVec,
   pub(super) statements: &'a IndexStmtInfos,
+  pub(super) asts: &'a IndexEcmaAst,
+  pub(super) keep_names: bool,
   pub(super) export_chains: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub(super) star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
   pub(super) used_symbols: &'a UsedSymbolRefsBuilder,
+}
+
+/// Whether an execution-order wrapper is only a routing waypoint for re-export initialization.
+///
+/// Unlike `init_is_noop`, this deliberately ignores import/re-export lowering glue: that glue is
+/// consumer-dependent and retained leaf initialization must be routed from the consuming record,
+/// not installed into a shared pure barrel wrapper. Local executable statements, generated missing
+/// export assignments, `keepNames` calls, and unconditional execution dependencies make the
+/// wrapper non-transparent.
+pub(super) fn order_wrapper_is_reexport_transparent(
+  meta: &LinkingMetadata,
+  ast: Option<&EcmaAst>,
+  keep_names: bool,
+) -> bool {
+  matches!(
+    meta.concatenated_wrapped_module_kind,
+    rolldown_common::ConcatenateWrappedModuleKind::None
+  ) && meta.shimmed_missing_exports.is_empty()
+    && meta.execution_dependencies.is_empty()
+    && ast.is_some_and(|ast| {
+      ast.program().body.iter().all(|stmt| statement_has_no_local_wrapper_body(stmt, keep_names))
+    })
+}
+
+fn statement_has_no_local_wrapper_body(stmt: &Statement, keep_names: bool) -> bool {
+  // Static import/re-export statements may lower to init forwarding or namespace glue, but that
+  // work is routed per consumer for transparent wrappers and is not a module-local executable body.
+  if stmt.is_module_declaration_with_source() {
+    return true;
+  }
+  match stmt {
+    Statement::FunctionDeclaration(_) => !keep_names,
+    Statement::ExportDefaultDeclaration(export) => {
+      matches!(export.declaration, ExportDefaultDeclarationKind::FunctionDeclaration(_))
+        && !keep_names
+    }
+    Statement::ExportNamedDeclaration(export) => match &export.declaration {
+      None => true,
+      Some(Declaration::FunctionDeclaration(_)) => !keep_names,
+      Some(_) => false,
+    },
+    _ => false,
+  }
 }
 
 struct OrderLoweringOutput<'a> {
@@ -41,6 +91,10 @@ pub(super) struct FrozenReexportUsage {
 impl FrozenReexportUsage {
   pub(super) fn nested_records(&self) -> &FxHashSet<(ModuleIdx, ImportRecordIdx)> {
     &self.nested_records
+  }
+
+  pub(super) fn consumed_facades(&self) -> &FxHashSet<SymbolRef> {
+    &self.consumed_facades
   }
 }
 
@@ -72,6 +126,8 @@ impl GenerateStage<'_> {
       modules: &self.link_output.module_table.modules,
       linking: &self.link_output.metas,
       statements: &self.link_output.stmt_infos,
+      asts: &self.ast_table,
+      keep_names: self.options.keep_names,
       export_chains: &self.link_output.normal_symbol_exports_chain_map,
       star_reexport_records_by_imported_symbol: &self
         .link_output
@@ -495,6 +551,7 @@ fn lower_order_state(
 ) {
   let reexport_usage = collect_frozen_reexport_usage(input);
   output.state.set_nested_reexport_records(reexport_usage.nested_records.clone());
+  output.state.set_consumed_reexport_facades(reexport_usage.consumed_facades.clone());
   for module_idx in
     input.plan.modules().sorted_unstable_by_key(|idx| input.modules[*idx].exec_order())
   {
@@ -507,6 +564,13 @@ fn lower_order_state(
       .symbols
       .create_facade_root_symbol_ref(module_idx, &format!("init_{}", module.repr_name));
     output.state.insert_order_wrapper(module_idx, wrapper_ref, runtime_helper);
+    if order_wrapper_is_reexport_transparent(
+      &input.linking[module_idx],
+      input.asts[module_idx].as_ref(),
+      input.keep_names,
+    ) {
+      output.state.set_reexport_init_transparent(module_idx);
+    }
   }
 
   // Real lowering runs once per bundle, so it builds its own reverse index here; the fixpoint
@@ -644,11 +708,10 @@ pub(super) fn collect_frozen_reexport_usage(input: &OrderLoweringInput<'_>) -> F
     path.dedup();
     // A record is "nested" only when a wrapped ancestor barrel's traversal walks *through* its
     // importer to reach a deeper wrapped target, so the ancestor already owns that init and the
-    // interior record must stay silent. But that traversal stops at the first wrapped barrel it
-    // meets (`collect_order_wrap_esm_init_targets` pushes it as the target and recurses no
-    // further), delegating the rest of the chain to that barrel's own `init_*`. A record whose
-    // importer is itself an init-wrapped barrel is therefore never walked through — it owns its
-    // own re-export hop — so it must not be suppressed. See issue family #8777 / #8989.
+    // interior record must stay silent. That traversal stops at the first non-transparent wrapped
+    // barrel it meets, delegating the rest of the chain to that barrel's own `init_*`. A
+    // transparent order wrapper remains a waypoint instead: making it own the hop would let an
+    // unrelated consumer of the shared barrel initialize retained leaves too early.
     nested_records.extend(
       path
         .iter()
@@ -661,16 +724,23 @@ pub(super) fn collect_frozen_reexport_usage(input: &OrderLoweringInput<'_>) -> F
   FrozenReexportUsage { root_paths, nested_records, consumed_facades }
 }
 
-/// Whether `module_idx` carries its own ESM init wrapper — an interop `WrapKind::Esm` wrapper or an
-/// order wrapper selected by the plan — so an outer barrel's re-export traversal stops at it and
-/// delegates the remaining chain to its `init_*`.
+/// Whether `module_idx` owns re-export initialization: an interop `WrapKind::Esm` wrapper or a
+/// non-transparent order wrapper selected by the plan. A transparent order wrapper has no local
+/// executable body or unconditional execution dependency, so retained paths cross it and stay
+/// owned by the consuming ancestor instead of becoming shared barrel-wide work.
 ///
 /// Concatenated wrapped modules — which would share their group's init rather than own a standalone
 /// one — are not supported on this branch (order wrapping never marks a module
 /// `ConcatenateWrappedModuleKind::Inner`/`Root`), so no concatenated-kind guard is needed here.
 /// Re-add one if concatenated-wrapper support lands.
 fn module_owns_reexport_init(input: &OrderLoweringInput<'_>, module_idx: ModuleIdx) -> bool {
-  input.plan.contains(&module_idx) || matches!(input.linking[module_idx].wrap_kind(), WrapKind::Esm)
+  matches!(input.linking[module_idx].wrap_kind(), WrapKind::Esm)
+    || (input.plan.contains(&module_idx)
+      && !order_wrapper_is_reexport_transparent(
+        &input.linking[module_idx],
+        input.asts[module_idx].as_ref(),
+        input.keep_names,
+      ))
 }
 
 fn retained_order_reexport_path(

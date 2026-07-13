@@ -14,7 +14,7 @@ The order decision can only be made after provisional chunk placement. Reusing `
 - User module and statement liveness are fixed before order planning starts.
 - Order lowering may add only synthetic wrapper, init, runtime, facade, symbol, and topology state.
 - Finalization and cross-chunk linking consume interop wrappers and order wrappers through an explicit shared read interface.
-- Flag-off builds do not allocate order-wrapper state or create strict-only facades.
+- Flag-off builds leave order-wrapper state empty and create no strict-only facades.
 - The external differential fuzzer remains the semantic verifier. Rolldown does not add a test-only execution model or assertions that merely turn lowering bugs into build failures.
 
 ## Modes
@@ -29,6 +29,10 @@ selective analysis misjudges a shape.
 which starts from predicted evaluation-order hazards and conservatively closes the plan over
 cases where safety requires additional wrappers. Both modes share the plan/lowering/consumer
 pipeline; they differ only in how the plan is seeded.
+
+This difference is one-way: wrap-all may create more inert wrappers, but it must not retain or
+execute more user code. Link-stage statement and binding liveness is final before either plan is
+lowered, so wrap-all and on-demand preserve the same tree-shaking result.
 
 ## Conservative decisions
 
@@ -61,11 +65,29 @@ Every site that can run a wrapped module, in one place:
 | ------------------------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------ |
 | `init_*()` for an order-wrapped importee of a live statement | importer body, statement position           | finalizer via the shared init-target view                                      |
 | `init_*()` / `require_*()` obligations of removed statements | importer body, removed statement's position | `OrderImportOverlay` / transitive init targets                                 |
-| user or dynamic entry activation                             | entry facade prologue                       | `create_order_wrap_entry_facades` / `restore_order_wrap_dynamic_entry_facades` |
+| user or dynamic entry activation                             | entry facade prologue                       | `create_order_wrap_entry_facades` / `restore_order_wrap_entry_facades`         |
 | interop `require_*()` of an eager importer                   | importer body (its carrier)                 | flag-off interop machinery, order-analysis carrier rule                        |
 
 A trigger must never sit inline in a chunk body that other chunks can evaluate as a
 dependency; that is the facade rule's content.
+
+## Tree-shaking parity across strict modes
+
+Late order lowering cannot make an excluded import binding or re-export live. The difficult case
+is a pure re-export barrel selected by wrap-all: its wrapper exists, but making that shared wrapper
+own every downstream `init_*` would initialize leaves used by unrelated consumers. Such a wrapper
+is marked re-export-transparent when it has no local executable body, generated missing-export
+assignment, unconditional execution dependency, or `keepNames` work. Each consumer then routes
+through it only to the leaf bindings that consumer retained.
+
+The routing evidence is consumer-local. Named imports use their local facade's link-stage liveness,
+including facades retained through an export chain. Namespace holders — both `import * as ns` and a
+named import whose value is a namespace — inspect only included statements: statically resolved
+member reads route that member, while opaque uses expand the non-ambiguous namespace. A resolved
+member that the constant-inlining pass will replace is skipped using the same constant metadata and
+inline mode as tree shaking. Module-global leaf or namespace liveness is deliberately insufficient,
+because another importer can make the same canonical symbol live without retaining it for this
+consumer.
 
 ## Audit decisions
 
@@ -136,8 +158,8 @@ standing proof.
 
 Two input classes are outside the ordering promise, yet the emitted code must stay valid and executable:
 
-- **Top-level await.** Order wrapping makes no TLA promise beyond the default build. Mechanically it stays valid: a TLA-tainted module (or one that transitively depends on one) gets an `async` wrapper body, and every emitted `init_*()` call site awaits when the target is tainted (`EsmInitTarget::tla_tainted`), so the taint propagates with the wrappers and `await` never lands in a sync function. Pinned by the executed fixtures under `tests/rolldown/topics/tla/` (both strict modes as config variants, including shared-chunk, cycle-ring, dynamic-root, and entry-also-imported shapes).
-- **External modules.** A static ESM `import` of an external cannot be deferred without changing semantics (it hoists to the top of its chunk and evaluates at chunk load), so an external's side effects can run earlier than source order when its importer is wrapped — for static ESM output this is unfixable by wrapping and matches every other bundler. Emitted code stays valid: external import statements survive at chunk top and wrapped importers reference their bindings from inside closures. Pinned by the executed fixtures `external_builtin_in_wrapped_module` and `entry_external_reexport_facade` (both strict modes).
+- **Top-level await.** Order wrapping makes no TLA promise beyond the default build. Mechanically it stays valid: a TLA-tainted module (or one that transitively depends on one) gets an `async` wrapper body, and every emitted `init_*()` call site awaits when the target is tainted (`EsmInitTarget::tla_tainted`), so the taint propagates with the wrappers and `await` never lands in a sync function.
+- **External modules.** A static ESM `import` of an external cannot be deferred without changing semantics (it hoists to the top of its chunk and evaluates at chunk load), so an external's side effects can run earlier than source order when its importer is wrapped — for static ESM output this is unfixable by wrapping and matches every other bundler. Emitted code stays valid: external import statements survive at chunk top and wrapped importers reference their bindings from inside closures.
 
 ## Rejected Alternatives
 
@@ -168,21 +190,27 @@ Rolldown could independently simulate final execution and reject output when the
 
 ### `OrderWrapState`
 
-Generate-stage finalization creates an optional side table:
+Generate-stage finalization creates a side table that remains empty unless strict lowering records order-owned state:
 
 ```rust
 pub struct OrderWrapState {
   modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
-  synthetic_statements: Vec<OrderSyntheticStmt>,
+  synthetic_statements: IndexVec<OrderSyntheticStmtIdx, OrderSyntheticStmt>,
+  synthetic_statements_by_chunk: FxHashMap<ChunkIdx, Vec<OrderSyntheticStmtIdx>>,
   import_overlays: FxHashMap<OrderImportKey, OrderImportOverlay>,
-  runtime_helpers: RuntimeHelper,
-  entry_facades: FxIndexSet<ModuleIdx>,
-  namespace_requirements: FxIndexSet<SymbolRef>,
+  import_overlays_by_importer: FxHashMap<ModuleIdx, Vec<OrderImportKey>>,
+  import_overlays_by_statement: FxHashMap<(ModuleIdx, StmtInfoIdx), Vec<OrderImportKey>>,
+  namespace_requirements: FxHashMap<SymbolRef, FxIndexSet<ModuleIdx>>,
+  runtime_symbols: FxHashSet<SymbolRef>,
+  nested_reexport_records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
+  consumed_reexport_facades: FxHashSet<SymbolRef>,
 }
 
 pub struct OrderWrappedModule {
   pub wrapper_ref: SymbolRef,
-  pub wrapper_statement: OrderSyntheticStmtIdx,
+  pub wrapper_statement: Option<OrderSyntheticStmtIdx>,
+  pub chunk: Option<ChunkIdx>,
+  pub reexport_init_transparent: bool,
   pub init_is_noop: bool,
   pub transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }
@@ -207,6 +235,7 @@ pub struct OrderImportOverlay {
   pub requires_importer_namespace: bool,
   pub requires_importee_namespace: bool,
   pub reexports_dynamic_exports: bool,
+  pub retained_reexport_path: Vec<(ModuleIdx, ImportRecordIdx)>,
 }
 ```
 
@@ -215,14 +244,15 @@ pub struct OrderImportOverlay {
 - wrapper symbols and init metadata belong to order state, not `LinkingMetadata`;
 - order state does not contain mutable user-statement inclusion;
 - importer-specific references and runtime helpers belong to `import_overlays`, not the original `StmtInfo`;
-- synthetic declarations participate in chunk assignment and deconfliction through an explicit synthetic-statement API;
-- entry-facade and runtime requirements are explicit outputs of lowering;
-- namespace requirements are recorded independently of whether topology changed;
+- synthetic declarations participate in chunk assignment and deconfliction through an explicit synthetic-statement API, with secondary indexes for chunk rendering;
+- entry facades are explicit chunk-graph changes made by the caller after lowering, while required runtime symbols are derived from synthetic statements and import overlays;
+- namespace requirements retain the live importer modules that require each namespace, so a dead overlay cannot keep a namespace alive;
+- nested re-export records and consumed facades preserve the frozen tree-shaking decisions used by re-export init routing;
 - the table stays empty when no wrappers or import overlays are needed.
 
 ### Lowering API boundary
 
-The lowerer receives link data through immutable references. Its mutable output surface contains only the symbol database, chunk graph, and the new order state:
+The lowerer receives link data through immutable references. Its mutable output surface contains only the symbol database and the new order state:
 
 ```rust
 pub struct OrderLoweringInput<'a> {
@@ -230,16 +260,21 @@ pub struct OrderLoweringInput<'a> {
   pub modules: &'a IndexModules,
   pub linking: &'a LinkingMetadataVec,
   pub statements: &'a IndexVec<ModuleIdx, StmtInfos>,
+  pub asts: &'a IndexEcmaAst,
+  pub keep_names: bool,
+  pub export_chains: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  pub star_reexport_records_by_imported_symbol:
+    &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
+  pub used_symbols: &'a UsedSymbolRefsBuilder,
 }
 
 pub struct OrderLoweringOutput<'a> {
   pub symbols: &'a mut SymbolRefDb,
-  pub chunks: &'a mut ChunkGraph,
   pub state: &'a mut OrderWrapState,
 }
 ```
 
-The API does not expose mutable `LinkingMetadata` or `StmtInfos`. Topology-derived link facts are recomputed by separate finalization passes after lowering; the lowerer communicates new namespace and entry requirements through `OrderWrapState`.
+The API does not expose mutable `LinkingMetadata`, `StmtInfos`, or the chunk graph. The surrounding generate-stage pass places the synthetic wrappers, creates any entry facades, and recomputes topology-derived facts after lowering; the lowerer communicates new symbol, namespace, runtime, and re-export-routing requirements through `OrderWrapState`.
 
 ### Shared init-target view
 
@@ -331,6 +366,7 @@ link + tree shaking
 - A planned static chunk SCC includes every eligible order-sensitive module in that SCC.
 - Every ordinary-import init obligation corresponds to a link-stage execution dependency.
 - Every excluded-statement init obligation is either a retained re-export obligation or a synthetic obligation backed by an execution dependency.
+- Wrap-all and on-demand preserve the same link-stage statement and binding liveness; only their wrapper plans may differ.
 - Every order-wrapped entry has an explicit entry trigger.
 - Flag-off builds create no order wrappers or strict-only entry facades.
 

@@ -221,10 +221,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         metas: self.ctx.linking_infos,
         stmt_infos: self.ctx.index_stmt_infos,
         symbol_db: self.ctx.symbol_db,
+        constant_value_map: self.ctx.constant_value_map,
+        inline_const_mode: self.ctx.options.optimization.inline_const.map(|config| config.mode),
         order_wrap_state: self.ctx.order_wrap_state,
         strict_execution_order: self.ctx.options.is_strict_execution_order_enabled(),
       },
       rec_idx,
+      |symbol_ref| self.ctx.used_symbol_refs.contains(&symbol_ref),
       |wrapper_ref| self.wrapper_is_reachable_in_chunk(wrapper_ref),
       |forwarding_module_idx| {
         self.ctx.chunk_graph.module_to_chunk[forwarding_module_idx] == Some(self.ctx.chunk_idx)
@@ -1638,7 +1641,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           {
             for &importee_idx in targets {
               if self.generated_init_esm_importee_ids.insert(importee_idx) {
-                let init_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, false);
+                // An excluded re-export can forward to a TLA-tainted wrapper. The current module
+                // is then TLA-tainted as well, so its async init body must await the forwarded
+                // promise before later statements observe the importee's bindings.
+                let init_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, true);
                 program.body.push(ast::Statement::new_expression_statement(
                   SPAN,
                   init_expr,
@@ -2253,7 +2259,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         WrapKind::None => {
           // Order-wrapped dynamic entries never reach this rewrite: their eliminated facades
-          // are restored in `restore_order_wrap_dynamic_entry_facades`.
+          // are restored in `restore_order_wrap_entry_facades`.
           debug_assert!(
             self
               .ctx

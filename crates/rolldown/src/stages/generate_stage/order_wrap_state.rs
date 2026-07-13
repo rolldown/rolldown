@@ -22,10 +22,10 @@ pub struct OrderWrapState {
   namespace_requirements: FxHashMap<SymbolRef, FxIndexSet<ModuleIdx>>,
   runtime_symbols: FxHashSet<SymbolRef>,
   nested_reexport_records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
+  consumed_reexport_facades: FxHashSet<SymbolRef>,
 }
 
 impl OrderWrapState {
-
   pub(crate) fn has_import_overlays(&self) -> bool {
     !self.import_overlays.is_empty()
   }
@@ -117,6 +117,14 @@ impl OrderWrapState {
     self.nested_reexport_records.contains(&(module_idx, rec_idx))
   }
 
+  pub(crate) fn set_consumed_reexport_facades(&mut self, facades: FxHashSet<SymbolRef>) {
+    self.consumed_reexport_facades = facades;
+  }
+
+  pub(crate) fn is_consumed_reexport_facade(&self, symbol_ref: SymbolRef) -> bool {
+    self.consumed_reexport_facades.contains(&symbol_ref)
+  }
+
   pub(crate) fn esm_init_target(
     &self,
     module_idx: ModuleIdx,
@@ -182,6 +190,7 @@ impl OrderWrapState {
             wrapper_ref,
             wrapper_statement,
             chunk: None,
+            reexport_init_transparent: false,
             init_is_noop: false,
             transitive_init_targets: FxHashMap::default(),
           },
@@ -208,7 +217,6 @@ impl OrderWrapState {
     self.synthetic_statements_by_chunk.entry(chunk_idx).or_default().push(stmt_idx);
   }
 
-
   pub(crate) fn assign_order_wrapper_chunk(&mut self, module_idx: ModuleIdx, chunk_idx: ChunkIdx) {
     let module = self.modules.get_mut(&module_idx).expect("order-wrapped module should exist");
     module.chunk = Some(chunk_idx);
@@ -217,6 +225,22 @@ impl OrderWrapState {
     if let Some(wrapper_statement) = module.wrapper_statement {
       self.assign_synthetic_statement_chunk(wrapper_statement, chunk_idx);
     }
+  }
+
+  /// Mark an execution-order wrapper as a routing waypoint for binding-driven re-export init.
+  /// Its module has no local executable body and no unconditional execution dependency, so a
+  /// consumer may route directly to the wrapped leaf definers it actually consumes instead of
+  /// making this shared barrel wrapper own every retained re-export path.
+  pub(crate) fn set_reexport_init_transparent(&mut self, module_idx: ModuleIdx) {
+    self
+      .modules
+      .get_mut(&module_idx)
+      .expect("order-wrapped module should exist")
+      .reexport_init_transparent = true;
+  }
+
+  pub(crate) fn reexport_init_is_transparent(&self, module_idx: ModuleIdx) -> bool {
+    self.modules.get(&module_idx).is_some_and(|module| module.reexport_init_transparent)
   }
 
   pub(crate) fn synthetic_statements_for_chunk(
@@ -410,6 +434,10 @@ pub struct OrderWrappedModule {
   /// statement to answer `order_wrapper_chunk`. Kept in sync with the wrapper statement's chunk on
   /// the real path.
   pub(crate) chunk: Option<ChunkIdx>,
+  /// This order wrapper has no module-local executable body and no unconditional execution
+  /// dependency. Binding-driven consumers may therefore route through it to the leaf wrappers
+  /// they consume. Side-effect-only imports still call the wrapper directly.
+  pub(crate) reexport_init_transparent: bool,
   pub(crate) init_is_noop: bool,
   pub(crate) transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }

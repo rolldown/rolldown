@@ -41,7 +41,7 @@ struct CrossChunkLinkState {
   order_live_symbols: FxHashSet<SymbolRef>,
 }
 
-trait UsedSymbolRefsView {
+trait UsedSymbolRefsView: Sync {
   fn contains(&self, symbol_ref: &SymbolRef) -> bool;
 }
 
@@ -280,6 +280,7 @@ impl GenerateStage<'_> {
       &mut index_chunk_depended_symbols,
       &mut index_chunk_direct_imports_from_external_modules,
       &mut index_cross_chunk_dynamic_imports,
+      used_symbol_refs,
       order_state,
     );
 
@@ -315,6 +316,7 @@ impl GenerateStage<'_> {
     index_chunk_depended_symbols: &mut IndexChunkDependedSymbols,
     index_chunk_imports_from_external_modules: &mut IndexChunkImportsFromExternalModules,
     index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
+    used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
   ) {
     let symbols = &self.link_output.symbol_db;
@@ -430,6 +432,7 @@ impl GenerateStage<'_> {
           );
           self.add_module_esm_init_depended_symbols(
             chunk_graph,
+            used_symbol_refs,
             order_state,
             depended_symbols,
             module.idx,
@@ -583,6 +586,7 @@ impl GenerateStage<'_> {
   fn add_module_esm_init_depended_symbols(
     &self,
     chunk_graph: &ChunkGraph,
+    used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
     depended_symbols: &mut FxIndexSet<SymbolRef>,
     module_idx: ModuleIdx,
@@ -595,6 +599,7 @@ impl GenerateStage<'_> {
     );
     self.add_included_import_esm_init_depended_symbols(
       chunk_graph,
+      used_symbol_refs,
       order_state,
       depended_symbols,
       module_idx,
@@ -640,6 +645,7 @@ impl GenerateStage<'_> {
   fn add_included_import_esm_init_depended_symbols(
     &self,
     chunk_graph: &ChunkGraph,
+    used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
     depended_symbols: &mut FxIndexSet<SymbolRef>,
     module_idx: ModuleIdx,
@@ -665,6 +671,8 @@ impl GenerateStage<'_> {
       metas: &self.link_output.metas,
       stmt_infos: &self.link_output.stmt_infos,
       symbol_db: &self.link_output.symbol_db,
+      constant_value_map: &self.link_output.global_constant_symbol_map,
+      inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
       order_wrap_state: order_state,
       strict_execution_order: self.options.is_strict_execution_order_enabled(),
     };
@@ -682,6 +690,7 @@ impl GenerateStage<'_> {
         let targets = collect_wrapped_esm_init_targets_for_import_record(
           &ctx,
           rec_idx,
+          |symbol_ref| used_symbol_refs.contains(&symbol_ref),
           |_| true,
           |forwarding_module_idx| {
             chunk_graph.module_to_chunk[forwarding_module_idx] == Some(chunk_idx)

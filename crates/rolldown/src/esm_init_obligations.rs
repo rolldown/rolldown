@@ -34,10 +34,11 @@
 //! justified) on [`ObligationPurpose`] rather than re-derived at call sites.
 
 use rolldown_common::{
-  ChunkIdx, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module,
-  ModuleIdx, NormalModule, ResolvedImportRecord, Specifier, SymbolRef, SymbolRefDb, WrapKind,
+  ChunkIdx, ConstExportMeta, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
+  IndexModules, InlineConstMode, Module, ModuleIdx, NormalModule, ResolvedImportRecord, Specifier,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, WrapKind,
 };
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   chunk_graph::ChunkGraph,
@@ -143,6 +144,8 @@ pub struct WrappedEsmInitTargetContext<'a> {
   pub metas: &'a LinkingMetadataVec,
   pub stmt_infos: &'a IndexStmtInfos,
   pub symbol_db: &'a SymbolRefDb,
+  pub constant_value_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
+  pub inline_const_mode: Option<InlineConstMode>,
   pub order_wrap_state: &'a OrderWrapState,
   /// Strict-gates the forwarder discharge check so flag-off output stays byte-identical to main.
   pub strict_execution_order: bool,
@@ -164,6 +167,7 @@ pub struct WrappedEsmInitTargetContext<'a> {
 pub fn collect_wrapped_esm_init_targets_for_import_record(
   ctx: &WrappedEsmInitTargetContext<'_>,
   rec_idx: ImportRecordIdx,
+  symbol_is_used: impl Fn(SymbolRef) -> bool,
   wrapper_is_reachable: impl Fn(SymbolRef) -> bool,
   forwarding_module_owns_initialization: impl Fn(ModuleIdx) -> bool,
 ) -> Vec<ModuleIdx> {
@@ -171,6 +175,7 @@ pub fn collect_wrapped_esm_init_targets_for_import_record(
   collect_esm_init_targets_for_record(
     ctx,
     rec_idx,
+    &symbol_is_used,
     &wrapper_is_reachable,
     &forwarding_module_owns_initialization,
     &mut visited_forwarders,
@@ -180,6 +185,7 @@ pub fn collect_wrapped_esm_init_targets_for_import_record(
 fn collect_esm_init_targets_for_record(
   ctx: &WrappedEsmInitTargetContext<'_>,
   rec_idx: ImportRecordIdx,
+  symbol_is_used: &impl Fn(SymbolRef) -> bool,
   wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
   forwarding_module_owns_initialization: &impl Fn(ModuleIdx) -> bool,
   visited_forwarders: &mut FxHashSet<ModuleIdx>,
@@ -188,6 +194,10 @@ fn collect_esm_init_targets_for_record(
   let record = &ctx.importer.import_records[rec_idx];
   let Some(importee_idx) = record.resolved_module else { return targets };
   let importee_meta = &ctx.metas[importee_idx];
+  let route_through_transparent_wrapper =
+    ctx.order_wrap_state.reexport_init_is_transparent(importee_idx)
+      && !importee_meta.has_dynamic_exports
+      && record_consumes_static_bindings(ctx.importer, record, rec_idx);
 
   // An eager, unwrapped, included forwarder hosted in the importer's own chunk: it runs before the
   // importer in the shared chunk, so its own `init_*()` emission can be delegated to.
@@ -213,13 +223,16 @@ fn collect_esm_init_targets_for_record(
     ctx.order_wrap_state,
     wrapper_is_reachable,
   ) {
-    targets.push(importee_idx);
-    return targets;
+    if !route_through_transparent_wrapper {
+      targets.push(importee_idx);
+      return targets;
+    }
   }
 
   let mut visited_symbols = FxHashSet::default();
   if record.meta.contains(ImportRecordMeta::IsExportStar) {
-    for resolved_export in importee_meta.resolved_exports.values() {
+    for export_name in importee_meta.sorted_and_non_ambiguous_resolved_exports.keys() {
+      let resolved_export = &importee_meta.resolved_exports[export_name];
       add_wrapped_esm_init_target_for_symbol(
         ctx,
         resolved_export.symbol_ref,
@@ -229,33 +242,48 @@ fn collect_esm_init_targets_for_record(
       );
     }
   } else {
-    for named_import in
-      ctx.importer.named_imports.values().filter(|item| item.record_idx == rec_idx)
+    for (imported_as_ref, named_import) in
+      ctx.importer.named_imports.iter().filter(|(_, item)| item.record_idx == rec_idx)
     {
       match &named_import.imported {
         Specifier::Star => {
-          for resolved_export in importee_meta.resolved_exports.values() {
-            add_wrapped_esm_init_target_for_symbol(
-              ctx,
-              resolved_export.symbol_ref,
-              wrapper_is_reachable,
-              &mut targets,
-              &mut visited_symbols,
-            );
-          }
+          add_wrapped_esm_init_targets_for_namespace_consumer(
+            ctx,
+            *imported_as_ref,
+            importee_meta,
+            symbol_is_used,
+            wrapper_is_reachable,
+            &mut targets,
+            &mut visited_symbols,
+          );
         }
         Specifier::Literal(name) => {
           let symbol_ref = importee_meta
             .resolved_exports
             .get(name)
             .map_or(named_import.imported_as, |resolved_export| resolved_export.symbol_ref);
-          add_wrapped_esm_init_target_for_symbol(
-            ctx,
-            symbol_ref,
-            wrapper_is_reachable,
-            &mut targets,
-            &mut visited_symbols,
-          );
+          // Liveness is importer-local. A named binding can itself hold a namespace object, so a
+          // statically resolved `binding.member` read routes only that member even when the local
+          // facade is absent from UsedSymbolRefs. Filtering by the canonical export would let a
+          // different importer that consumes the same leaf resurrect this dead specifier.
+          let binding_is_opaque = symbol_is_used(*imported_as_ref)
+            || ctx.order_wrap_state.is_consumed_reexport_facade(*imported_as_ref)
+            || add_wrapped_esm_init_targets_for_static_member_reads(
+              ctx,
+              *imported_as_ref,
+              wrapper_is_reachable,
+              &mut targets,
+              &mut visited_symbols,
+            );
+          if binding_is_opaque {
+            add_wrapped_esm_init_target_for_symbol(
+              ctx,
+              symbol_ref,
+              wrapper_is_reachable,
+              &mut targets,
+              &mut visited_symbols,
+            );
+          }
         }
       }
     }
@@ -268,6 +296,7 @@ fn collect_esm_init_targets_for_record(
     let discharged = forwarder_discharged_targets(
       ctx,
       importee_idx,
+      symbol_is_used,
       wrapper_is_reachable,
       forwarding_module_owns_initialization,
       visited_forwarders,
@@ -276,6 +305,115 @@ fn collect_esm_init_targets_for_record(
   }
 
   targets
+}
+
+/// Route a namespace import through only the members this importer actually reads. A statically
+/// resolved `ns.x` reference retains `x`, not every export of the namespace; only an opaque use
+/// such as passing `ns` as a value, computed access, re-export, or `eval` expands the full
+/// non-ambiguous namespace. This is deliberately importer-local: module-global namespace or leaf
+/// liveness can be caused by a different consumer and would reopen tree-shaking for this record.
+/// See `internal-docs/code-splitting/design.md#tree-shaking-parity-across-strict-modes`.
+fn add_wrapped_esm_init_targets_for_namespace_consumer(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  namespace_ref: SymbolRef,
+  importee_meta: &LinkingMetadata,
+  symbol_is_used: &impl Fn(SymbolRef) -> bool,
+  wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
+  targets: &mut Vec<ModuleIdx>,
+  visited_symbols: &mut FxHashSet<SymbolRef>,
+) {
+  let opaque_namespace_use = symbol_is_used(namespace_ref)
+    || add_wrapped_esm_init_targets_for_static_member_reads(
+      ctx,
+      namespace_ref,
+      wrapper_is_reachable,
+      targets,
+      visited_symbols,
+    );
+
+  if opaque_namespace_use {
+    for export_name in importee_meta.sorted_and_non_ambiguous_resolved_exports.keys() {
+      let resolved_export = &importee_meta.resolved_exports[export_name];
+      add_wrapped_esm_init_target_for_symbol(
+        ctx,
+        resolved_export.symbol_ref,
+        wrapper_is_reachable,
+        targets,
+        visited_symbols,
+      );
+    }
+  }
+}
+
+/// Route statically resolved member reads of one local import facade and report whether any use is
+/// opaque, in which case the caller must also initialize the imported binding as a whole.
+fn add_wrapped_esm_init_targets_for_static_member_reads(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  local_ref: SymbolRef,
+  wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
+  targets: &mut Vec<ModuleIdx>,
+  visited_symbols: &mut FxHashSet<SymbolRef>,
+) -> bool {
+  let mut opaque_use = false;
+
+  for (stmt_idx, stmt_info) in ctx.stmt_infos[ctx.importer.idx].iter_enumerated() {
+    if !ctx.importer_meta.stmt_info_included.has_bit(stmt_idx) {
+      continue;
+    }
+    for reference in &stmt_info.referenced_symbols {
+      match reference {
+        SymbolOrMemberExprRef::Symbol(symbol_ref) if *symbol_ref == local_ref => {
+          opaque_use = true;
+        }
+        SymbolOrMemberExprRef::MemberExpr(member_expr) if member_expr.object_ref == local_ref => {
+          match member_expr.resolution(&ctx.importer_meta.resolved_member_expr_refs) {
+            Some(resolution) => {
+              if let Some(symbol_ref) = resolution.resolved
+                && !symbol_is_always_inlined(ctx, symbol_ref)
+              {
+                add_wrapped_esm_init_target_for_symbol(
+                  ctx,
+                  symbol_ref,
+                  wrapper_is_reachable,
+                  targets,
+                  visited_symbols,
+                );
+              }
+            }
+            None => opaque_use = true,
+          }
+        }
+        _ => {}
+      }
+    }
+  }
+  opaque_use
+}
+
+/// Match the inclusion pass's constant bypass for a resolved namespace member. The decision must
+/// be per reference: consulting global symbol liveness alone lets another importer that needs the
+/// same constant make this consumer initialize a module whose value was inlined here.
+fn symbol_is_always_inlined(ctx: &WrappedEsmInitTargetContext<'_>, symbol_ref: SymbolRef) -> bool {
+  let Some(mode) = ctx.inline_const_mode else {
+    return false;
+  };
+  let canonical_ref = ctx.symbol_db.canonical_ref_for(symbol_ref);
+  ctx.constant_value_map.get(&canonical_ref).is_some_and(|meta| {
+    !meta.commonjs_export && (mode != InlineConstMode::Smart || meta.safe_to_inline)
+  })
+}
+
+/// Whether this record has a statically resolvable binding consumer. A side-effect-only import has
+/// no binding path to route and must keep calling a transparent wrapper directly. Dynamic-export
+/// namespaces are filtered by the caller because their runtime re-export glue is not statically
+/// replaceable with canonical leaf targets.
+fn record_consumes_static_bindings(
+  importer: &NormalModule,
+  record: &ResolvedImportRecord,
+  rec_idx: ImportRecordIdx,
+) -> bool {
+  record.meta.contains(ImportRecordMeta::IsExportStar)
+    || importer.named_imports.values().any(|import| import.record_idx == rec_idx)
 }
 
 fn add_wrapped_esm_init_target_for_symbol(
@@ -290,12 +428,15 @@ fn add_wrapped_esm_init_target_for_symbol(
     return;
   }
   let meta = &ctx.metas[canonical_ref.owner];
+  let transparent_order_wrapper =
+    ctx.order_wrap_state.reexport_init_is_transparent(canonical_ref.owner);
   if wrapped_esm_target_is_reachable(
     canonical_ref.owner,
     meta,
     ctx.order_wrap_state,
     wrapper_is_reachable,
-  ) {
+  ) && !transparent_order_wrapper
+  {
     targets.push(canonical_ref.owner);
     return;
   }
@@ -307,12 +448,15 @@ fn add_wrapped_esm_init_target_for_symbol(
     .order_wrap_state
     .esm_init_target(ctx.importer.idx, ctx.importer_meta)
     .is_some_and(|target| matches!(target.origin, EsmInitOrigin::ExecutionOrder));
-  if module.namespace_object_ref != canonical_ref || meta.is_included || !importer_is_order_wrapped
+  if module.namespace_object_ref != canonical_ref
+    || (meta.is_included && !transparent_order_wrapper)
+    || (!transparent_order_wrapper && !importer_is_order_wrapped)
   {
     return;
   }
 
-  for resolved_export in meta.resolved_exports.values() {
+  for export_name in meta.sorted_and_non_ambiguous_resolved_exports.keys() {
+    let resolved_export = &meta.resolved_exports[export_name];
     add_wrapped_esm_init_target_for_symbol(
       ctx,
       resolved_export.symbol_ref,
@@ -390,6 +534,7 @@ fn eager_forwarder_discharges_own_hops(
 fn forwarder_discharged_targets(
   ctx: &WrappedEsmInitTargetContext<'_>,
   forwarder_idx: ModuleIdx,
+  symbol_is_used: &impl Fn(SymbolRef) -> bool,
   wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
   forwarding_module_owns_initialization: &impl Fn(ModuleIdx) -> bool,
   visited_forwarders: &mut FxHashSet<ModuleIdx>,
@@ -409,6 +554,8 @@ fn forwarder_discharged_targets(
     metas: ctx.metas,
     stmt_infos: ctx.stmt_infos,
     symbol_db: ctx.symbol_db,
+    constant_value_map: ctx.constant_value_map,
+    inline_const_mode: ctx.inline_const_mode,
     order_wrap_state: ctx.order_wrap_state,
     strict_execution_order: ctx.strict_execution_order,
   };
@@ -424,6 +571,7 @@ fn forwarder_discharged_targets(
       discharged.extend(collect_esm_init_targets_for_record(
         &forwarder_ctx,
         rec_idx,
+        symbol_is_used,
         wrapper_is_reachable,
         forwarding_module_owns_initialization,
         visited_forwarders,
@@ -467,12 +615,15 @@ pub fn collect_order_wrap_esm_init_targets(
 
     // Only collect modules whose wrapper is declared (i.e. the module is included in the output)
     // and assigned to a chunk. Cross-chunk wrapper imports are registered after this pass.
+    let transparent_retained_waypoint =
+      retained_reexport_path.is_some() && order_state.reexport_init_is_transparent(importee.idx);
     if importee_linking_info.is_included
       && order_state.esm_init_included_in_live_chunk(
         importee_linking_info,
         importee.idx,
         chunk_graph,
       )
+      && !transparent_retained_waypoint
     {
       targets.push(importee.idx);
       continue;

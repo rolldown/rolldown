@@ -2,7 +2,7 @@ use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
   ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts,
   RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb,
-  WrapKind,
+  UsedSymbolRefs, WrapKind,
 };
 
 pub type FinalizerMutableFields = (
@@ -44,6 +44,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub order_wrap_state: &'me OrderWrapState,
+  pub used_symbol_refs: &'me UsedSymbolRefs,
   pub symbol_db: &'me SymbolRefDb,
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,

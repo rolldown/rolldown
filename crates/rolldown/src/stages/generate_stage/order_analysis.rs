@@ -323,8 +323,8 @@ impl GenerateStage<'_> {
         self.project_collector_edges(
           chunk_graph,
           &probe_state,
+          used_symbol_refs,
           module,
-          meta,
           importer_chunk,
           &mut targets,
         );
@@ -439,11 +439,12 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
     probe_state: &super::order_wrap_state::OrderWrapState,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
     module: &NormalModule,
-    meta: &crate::types::linking_metadata::LinkingMetadata,
     importer_chunk: ChunkIdx,
     targets: &mut Vec<ModuleIdx>,
   ) {
+    let meta = &self.link_output.metas[module.idx];
     let ctx = WrappedEsmInitTargetContext {
       importer: module,
       importer_meta: meta,
@@ -451,6 +452,8 @@ impl GenerateStage<'_> {
       metas: &self.link_output.metas,
       stmt_infos: &self.link_output.stmt_infos,
       symbol_db: &self.link_output.symbol_db,
+      constant_value_map: &self.link_output.global_constant_symbol_map,
+      inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
       order_wrap_state: probe_state,
       strict_execution_order: true,
     };
@@ -468,6 +471,7 @@ impl GenerateStage<'_> {
         targets.extend(collect_wrapped_esm_init_targets_for_import_record(
           &ctx,
           rec_idx,
+          |symbol_ref| used_symbol_refs.contains(&symbol_ref),
           |_| true,
           |forwarding_module_idx| {
             chunk_graph.module_to_chunk[forwarding_module_idx] == Some(importer_chunk)
@@ -556,6 +560,13 @@ impl GenerateStage<'_> {
         .expect("order wrap only applies to normal modules")
         .namespace_object_ref;
       probe_state.insert_order_wrapper_probe(module_idx, placeholder_wrapper_ref);
+      if super::order_wrapping::order_wrapper_is_reexport_transparent(
+        &self.link_output.metas[module_idx],
+        self.ast_table[module_idx].as_ref(),
+        self.options.keep_names,
+      ) {
+        probe_state.set_reexport_init_transparent(module_idx);
+      }
       if let Some(chunk_idx) = chunk_graph.module_to_chunk[module_idx] {
         probe_state.assign_order_wrapper_chunk(module_idx, chunk_idx);
       }
@@ -572,6 +583,8 @@ impl GenerateStage<'_> {
       modules: &self.link_output.module_table.modules,
       linking: &self.link_output.metas,
       statements: &self.link_output.stmt_infos,
+      asts: &self.ast_table,
+      keep_names: self.options.keep_names,
       export_chains: &self.link_output.normal_symbol_exports_chain_map,
       star_reexport_records_by_imported_symbol: &self
         .link_output
@@ -580,6 +593,7 @@ impl GenerateStage<'_> {
     };
     let reexport_usage = super::order_wrapping::collect_frozen_reexport_usage(&input);
     probe_state.set_nested_reexport_records(reexport_usage.nested_records().clone());
+    probe_state.set_consumed_reexport_facades(reexport_usage.consumed_facades().clone());
     super::order_wrapping::populate_order_import_overlays(
       &input,
       &reexport_usage,

@@ -17,35 +17,38 @@ pub use crate::source::{Source, SourceMapSource};
 /// Strips the first `lines` destination lines from the sourcemap, decrementing all remaining
 /// destination line numbers accordingly. Used to re-anchor a sourcemap after removing a
 /// prefix (e.g. a shebang line) from the generated code.
+///
+/// Reuses the map's existing allocations: strings are moved, and the token buffer is mutated
+/// in place unless tokens have to be dropped (only when some token maps into the stripped
+/// prefix, which rolldown's own maps never do — prepended text carries no tokens).
 pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, lines: u32) -> SourceMap {
   if lines == 0 {
     return sourcemap;
   }
 
-  let tokens: Box<[Token]> = sourcemap
-    .get_tokens()
-    .filter(|t| t.get_dst_line() >= lines)
-    .map(|token| {
-      Token::new(
-        token.get_dst_line() - lines,
-        token.get_dst_col(),
-        token.get_src_line(),
-        token.get_src_col(),
-        token.get_source_id(),
-        token.get_name_id(),
-      )
-    })
-    .collect();
+  let shift = |token: &Token| {
+    Token::new(
+      token.get_dst_line() - lines,
+      token.get_dst_col(),
+      token.get_src_line(),
+      token.get_src_col(),
+      token.get_source_id(),
+      token.get_name_id(),
+    )
+  };
 
-  SourceMap::new(
-    sourcemap.get_file().map(|f| Cow::Owned(f.to_owned())),
-    sourcemap.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
-    sourcemap.get_source_root().map(|s| Cow::Owned(s.to_owned())),
-    sourcemap.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
-    sourcemap.get_source_contents().map(|c| c.map(|s| Cow::Owned(s.to_owned()))).collect(),
-    tokens,
-    None,
-  )
+  let mut parts = sourcemap.into_parts();
+  if parts.tokens.iter().any(|t| t.get_dst_line() < lines) {
+    parts.tokens = parts.tokens.iter().filter(|t| t.get_dst_line() >= lines).map(shift).collect();
+  } else {
+    for token in &mut parts.tokens {
+      *token = shift(token);
+    }
+  }
+  // The chunk boundaries and VLQ baselines in `token_chunks` describe the pre-shift tokens.
+  parts.token_chunks = None;
+
+  SourceMap::from_parts(parts)
 }
 
 /// Builds an empty sourcemap with no tokens, sources, names, or contents.
@@ -54,11 +57,15 @@ pub fn empty_sourcemap() -> SourceMap {
 }
 
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
-pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
+//
+// Input maps may borrow their strings (e.g. a codegen map borrowing the source it was
+// printed from) — the output is always owned, since it only copies from the first map.
+// This lets callers collapse a freshly generated map without `into_owned`-ing it first.
+pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) -> SourceMap {
   debug_assert!(sourcemap_chain.len() > 1);
   if sourcemap_chain.len() == 1 {
     // If there's only one sourcemap, return it as is.
-    return sourcemap_chain[0].clone();
+    return sourcemap_chain[0].clone().into_owned();
   }
 
   let last_map = sourcemap_chain.last().expect("sourcemap_chain should not be empty");

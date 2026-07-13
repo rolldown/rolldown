@@ -424,9 +424,11 @@ pub fn enhanced_transform(
     })
     .build(&program);
 
-  let output_map = match (input_map, codegen_ret.map.map(oxc_sourcemap::SourceMap::into_owned)) {
+  let output_map = match (input_map, codegen_ret.map) {
+    // The collapse only keeps strings from `im`, so the borrowed codegen map can be
+    // used directly — detaching it first would copy the whole source for nothing.
     (Some(im), Some(om)) => Some(collapse_sourcemaps(&[&im, &om])),
-    (None, map) => map,
+    (None, map) => map.map(oxc_sourcemap::SourceMap::into_owned),
     (Some(_), None) => None,
   };
 

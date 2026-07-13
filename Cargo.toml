@@ -197,7 +197,7 @@ itertools = "0.15.0"
 itoa = "1.0.18"
 json-escape-simd = "3.1.1"
 json-strip-comments = "3"
-jsonschema = { version = "0.46.10", default-features = false }
+jsonschema = { version = "0.47.0", default-features = false }
 memchr = "2.8.2"
 mimalloc-safe = "0.1.64"
 mime = "0.3.17"
@@ -216,7 +216,7 @@ rayon = "1.12.0"
 # Default features drop the `\p{…}` Unicode property tables (gencat/script/age/bool/segment),
 # which no hardcoded pattern uses. `unicode-perl`/`unicode-case` are kept so `\w \d \s \b` and
 # `(?i)` stay Unicode-aware. User patterns needing `\p{…}` fall back to `regress` via `HybridRegex`.
-regex = { version = "1.12.4", default-features = false, features = [
+regex = { version = "1.13.0", default-features = false, features = [
   "std",
   "perf",
   "unicode-perl",

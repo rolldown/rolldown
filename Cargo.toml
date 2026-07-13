@@ -188,7 +188,7 @@ glob = "0.3.3"
 heck = "0.5.0"
 # Pinned to the no-ICU 1.0.0 backend to keep IDNA support turned off.
 # See crates/rolldown_plugin_vite_resolve/Cargo.toml for the full rationale.
-idna_adapter = "=1.2.2"
+idna_adapter = "=1.0.0"
 ignore = "0.4.27"
 indexmap = "2.14.0"
 infer = { version = "0.19.0", default-features = false }
@@ -216,7 +216,7 @@ rayon = "1.12.0"
 # Default features drop the `\p{…}` Unicode property tables (gencat/script/age/bool/segment),
 # which no hardcoded pattern uses. `unicode-perl`/`unicode-case` are kept so `\w \d \s \b` and
 # `(?i)` stay Unicode-aware. User patterns needing `\p{…}` fall back to `regress` via `HybridRegex`.
-regex = { version = "1.12.4", default-features = false, features = [
+regex = { version = "1.13.0", default-features = false, features = [
   "std",
   "perf",
   "unicode-perl",

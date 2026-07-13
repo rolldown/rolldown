@@ -98,6 +98,17 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
   pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
   pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
+  /// Reference ids of `import.meta.ROLLUP_FILE_URL_*` accesses that no emitted file matches.
+  ///
+  /// Deduplicated by reference id, because `try_rewrite_member_expr` runs *twice* on every member
+  /// expression it fails to rewrite: `visit_expression` calls it, and on `None` the arm falls
+  /// through to `walk_expression`, which re-dispatches the very same node into
+  /// `visit_member_expression`, where the identical lookup is attempted again. Pushing
+  /// `BuildDiagnostic`s straight into a `Vec` here would report each unknown reference id twice.
+  ///
+  /// Deduplicating also makes a reference id that is accessed several times report once, matching
+  /// Rollup, which throws on the first access it renders.
+  pub missing_file_reference_ids: FxIndexMap<CompactStr, Span>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -973,7 +984,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   // Handle `import.meta.xxx` expression
   pub fn try_rewrite_import_meta_prop_expr(
-    &self,
+    &mut self,
     member_expr: &ast::StaticMemberExpression<'ast>,
   ) -> Option<Expression<'ast>> {
     if member_expr.object.is_import_meta() {
@@ -1059,16 +1070,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         _ => {}
       }
-      return self.rewrite_rollup_file_url(property_name);
+      return self.rewrite_rollup_file_url(property_name, original_expr_span);
     }
     None
   }
 
-  fn rewrite_rollup_file_url(&self, property_name: &str) -> Option<Expression<'ast>> {
+  fn rewrite_rollup_file_url(
+    &mut self,
+    property_name: &str,
+    original_expr_span: Span,
+  ) -> Option<Expression<'ast>> {
     // rewrite `import.meta.ROLLUP_FILE_URL_<referenceId>`
     if let Some(reference_id) = property_name.strip_prefix("ROLLUP_FILE_URL_") {
       // compute relative path from chunk to asset
       let Ok(asset_file_name) = self.ctx.file_emitter.get_file_name(reference_id) else {
+        // Keep the span of the first access, so the diagnostic can point at the source.
+        self
+          .missing_file_reference_ids
+          .entry(CompactStr::new(reference_id))
+          .or_insert(original_expr_span);
         return None;
       };
       let output_dir =
@@ -1168,7 +1188,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// try rewrite `foo_exports.bar` or `foo_exports['bar']`  to `bar` directly
   /// try rewrite `import.meta`
   fn try_rewrite_member_expr(
-    &self,
+    &mut self,
     member_expr: &ast::MemberExpression<'ast>,
   ) -> Option<Expression<'ast>> {
     let span = member_expr.span();

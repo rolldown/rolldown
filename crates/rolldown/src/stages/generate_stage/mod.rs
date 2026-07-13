@@ -210,7 +210,7 @@ impl<'a> GenerateStage<'a> {
 
     let mut ast_table = std::mem::take(&mut self.ast_table);
     self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph);
-    self.finalize_modules(&mut chunk_graph, &mut ast_table);
+    self.finalize_modules(&mut chunk_graph, &mut ast_table)?;
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs).await
   }

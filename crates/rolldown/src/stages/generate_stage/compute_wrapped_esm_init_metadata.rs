@@ -195,7 +195,16 @@ fn transitive_esm_init_targets(
       });
       if ctx.order_wrap {
         let retained_reexport = is_reexport && overlay.is_some();
-        if !was_live_order_wrap_import && !retained_reexport {
+        // An init-owning barrel forwards its own re-export hops. A re-export record that is not
+        // suppressed as a walk-through interior record ("nested") owns its hop, so the barrel's
+        // `init_*` must forward through it — even when the direct re-export target is side-effect
+        // free (so not a live execution dependency) and no per-symbol overlay was created because
+        // the re-exported bindings are consumed only via the barrel namespace object or resolve
+        // through a deeper level. The traversal below only forwards to wrapped, live targets, so a
+        // genuinely unused pure re-export still forwards to nothing and stays droppable.
+        let owns_reexport_hop =
+          is_reexport && !ctx.order_state.is_nested_reexport_record(module.idx, rec_idx);
+        if !was_live_order_wrap_import && !retained_reexport && !owns_reexport_hop {
           continue;
         }
         if stmt_is_included

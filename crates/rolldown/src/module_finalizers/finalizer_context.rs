@@ -37,6 +37,9 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   /// Statement-info table for the current module, threaded in from the
   /// link-stage side `IndexVec<ModuleIdx, StmtInfos>` (see `LinkStage.stmt_infos`).
   pub stmt_infos: &'me StmtInfos,
+  /// The full per-module statement-info table. Wrapped-ESM init target resolution needs another
+  /// module's statement inclusion to tell whether an eager forwarder discharges its own hops.
+  pub index_stmt_infos: &'me crate::type_alias::IndexStmtInfos,
   pub modules: &'me IndexModules,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,

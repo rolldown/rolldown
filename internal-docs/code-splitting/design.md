@@ -41,8 +41,12 @@ These are the main places where strict output deliberately accepts extra wrapper
   moves that entry point; the prediction also cannot see `var`-form interop wrapper
   definitions that another cycle chunk calls eagerly.
 - **Entry-trigger facades**: an inline entry trigger fires whenever its chunk is evaluated,
-  so an interop-wrapped entry whose chunk another chunk imports moves its trigger to a
-  facade (unconditionally in wrap-all mode, which has no predicted edges).
+  so an interop-wrapped entry whose chunk another chunk loads moves its trigger to a facade
+  (unconditionally in wrap-all mode, which has no predicted edges). "Loads" covers both
+  predicted static imports and cross-chunk dynamic imports of any other module hosted in the
+  entry chunk — e.g. a manual group placing a dynamic target next to an entry, where the
+  `import()` evaluates the entry chunk (a dynamic import of the entry module itself must run
+  its program, so it does not force the split).
 - **CJS namespace merge is skipped under strict** (`determine_safely_merge_cjs_ns`): merging
   moves the surviving require call to whichever statement stays included — an intra-body
   move no wrapping can repair. Per-importer call sites cost bytes; the wrapper memoizes.

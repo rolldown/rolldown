@@ -1,11 +1,12 @@
 use rolldown_common::{
-  ConcatenateWrappedModuleKind, ImportRecordIdx, ImportRecordMeta, IndexModules, ModuleIdx,
-  NormalModule, Specifier, SymbolRef, SymbolRefDb, WrapKind,
+  ConcatenateWrappedModuleKind, ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules,
+  ModuleIdx, NormalModule, Specifier, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rustc_hash::FxHashSet;
 
 use crate::{
   stages::generate_stage::order_wrap_state::{EsmInitOrigin, OrderWrapState},
+  type_alias::IndexStmtInfos,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
@@ -14,12 +15,16 @@ pub struct WrappedEsmInitTargetContext<'a> {
   pub importer_meta: &'a LinkingMetadata,
   pub modules: &'a IndexModules,
   pub metas: &'a LinkingMetadataVec,
+  pub stmt_infos: &'a IndexStmtInfos,
   pub symbol_db: &'a SymbolRefDb,
   pub order_wrap_state: &'a OrderWrapState,
+  /// Strict-gates the forwarder discharge check so flag-off output stays byte-identical to main.
+  pub strict_execution_order: bool,
 }
 
 /// Resolve direct and forwarded ESM init targets for one static import record.
-/// Included same-chunk forwarders own their downstream initialization.
+/// Included same-chunk forwarders own their downstream initialization — provided their own
+/// finalized statements actually discharge it (see [`eager_forwarder_discharges_own_hops`]).
 pub fn collect_wrapped_esm_init_targets_for_import_record(
   ctx: &WrappedEsmInitTargetContext<'_>,
   rec_idx: ImportRecordIdx,
@@ -35,6 +40,8 @@ pub fn collect_wrapped_esm_init_targets_for_import_record(
     && matches!(importee_meta.wrap_kind(), WrapKind::None)
     && importee_meta.is_included
     && forwarding_module_owns_initialization(importee_idx)
+    && (!ctx.strict_execution_order
+      || eager_forwarder_discharges_own_hops(ctx, importee_idx, importee_meta))
   {
     return targets;
   }
@@ -152,4 +159,32 @@ fn wrapped_esm_target_is_reachable(
     .is_some_and(|target| wrapper_is_reachable(target.wrapper_ref))
     && meta.is_included
     && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)
+}
+
+/// Whether an included, unwrapped forwarder really discharges its downstream initialization
+/// through its own finalized statements. Its *included* import statements do — the finalizer
+/// emits their `init_*()` calls at each statement's position — but a static-import statement that
+/// tree-shaking excluded emits nothing there (a pure package barrel's `export * from` hop whose
+/// bindings resolve through it is the canonical case). Delegating to such a forwarder would leave
+/// a wrapped importee's `init_*` with zero call sites and its exports forever `undefined`, so the
+/// importer must instead resolve through the forwarder's exports and own the triggers for the
+/// bindings it actually consumes — the named-import resolution below the early return, which
+/// keeps a legally dead hop silent because only consumed bindings are followed.
+fn eager_forwarder_discharges_own_hops(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  module_idx: ModuleIdx,
+  meta: &LinkingMetadata,
+) -> bool {
+  let Some(module) = ctx.modules[module_idx].as_normal() else {
+    return true;
+  };
+  ctx.stmt_infos[module_idx].iter_enumerated_without_namespace_stmt().all(
+    |(stmt_idx, stmt_info)| {
+      meta.stmt_info_included.has_bit(stmt_idx)
+        || stmt_info
+          .import_records
+          .iter()
+          .all(|rec_idx| module.import_records[*rec_idx].kind != ImportKind::Import)
+    },
+  )
 }

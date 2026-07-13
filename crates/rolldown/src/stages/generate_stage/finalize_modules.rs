@@ -53,6 +53,7 @@ impl GenerateStage<'_> {
             linking_info,
             module,
             stmt_infos: &self.link_output.stmt_infos[idx],
+            index_stmt_infos: &self.link_output.stmt_infos,
             modules: &self.link_output.module_table.modules,
             linking_infos: &self.link_output.metas,
             order_wrap_state: order_state,

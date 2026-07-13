@@ -25,6 +25,7 @@ pub struct OrderWrapState {
 }
 
 impl OrderWrapState {
+
   pub(crate) fn has_import_overlays(&self) -> bool {
     !self.import_overlays.is_empty()
   }
@@ -81,6 +82,24 @@ impl OrderWrapState {
 
   pub(crate) fn has_order_wrapper(&self, module_idx: ModuleIdx) -> bool {
     self.modules.contains_key(&module_idx)
+  }
+
+  /// Whether `symbol_ref` is the wrapper (`init_*`) binding of an execution-order-wrapped module.
+  ///
+  /// Such a wrapper self-rebinds on first call (`function init_x() { return (init_x =
+  /// __esmMin(cb))() }`), so every later caller must observe a *live* view of the binding to run
+  /// the module body exactly once. A value snapshot of the binding taken before the first call
+  /// (e.g. `exports.init_x = init_x`) would freeze the pre-rebind function and re-execute the body
+  /// on every subsequent call. Cross-chunk exports of these wrappers must therefore stay live
+  /// getters.
+  ///
+  /// Interop `WrapKind::Esm` wrappers live in [`LinkingMetadata`], not in this state, and order
+  /// wrappers are only created for `WrapKind::None` modules (see `lower_order_state`), so this
+  /// matches exactly the `EsmInitOrigin::ExecutionOrder` targets and never an interop wrapper.
+  ///
+  /// [`LinkingMetadata`]: crate::types::linking_metadata::LinkingMetadata
+  pub(crate) fn is_execution_order_wrapper_ref(&self, symbol_ref: SymbolRef) -> bool {
+    self.modules.get(&symbol_ref.owner).is_some_and(|module| module.wrapper_ref == symbol_ref)
   }
 
   pub(crate) fn set_nested_reexport_records(
@@ -166,6 +185,7 @@ impl OrderWrapState {
     self.synthetic_statements[stmt_idx].chunk = Some(chunk_idx);
     self.synthetic_statements_by_chunk.entry(chunk_idx).or_default().push(stmt_idx);
   }
+
 
   pub(crate) fn assign_order_wrapper_chunk(&mut self, module_idx: ModuleIdx, chunk_idx: ChunkIdx) {
     let wrapper_statement = self

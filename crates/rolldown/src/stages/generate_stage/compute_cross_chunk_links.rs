@@ -1,5 +1,8 @@
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
+use crate::module_finalizers::{
+  WrappedEsmInitTargetContext, collect_wrapped_esm_init_targets_for_import_record,
+};
 use crate::utils::chunk::conflict_resolver::{ConflictResolver, deconflict_order_key};
 use crate::utils::chunk::normalize_preserve_entry_signature;
 use crate::utils::external_import_interop::external_import_needs_interop;
@@ -179,10 +182,7 @@ impl GenerateStage<'_> {
     }
   }
 
-  /// Runs the real cross-chunk link computation on the provisional graph. It assigns
-  /// `symbol.chunk_idx` as a side effect; that stays valid because lowering keeps every user
-  /// module's chunk index and the one relocated module (the runtime) is cleared explicitly in
-  /// `ensure_runtime_module_for_order_wraps`. The final link run overwrites all of it.
+  /// Compute provisional links for order analysis. Runtime symbol placement is cleared if moved.
   pub(super) fn predicted_static_import_edges(
     &mut self,
     chunk_graph: &ChunkGraph,
@@ -392,13 +392,7 @@ impl GenerateStage<'_> {
               });
             },
           );
-          self.add_transitive_esm_init_depended_symbols(
-            chunk_graph,
-            order_state,
-            depended_symbols,
-            module.idx,
-          );
-          self.add_order_import_overlay_depended_symbols(
+          self.add_module_esm_init_depended_symbols(
             chunk_graph,
             order_state,
             depended_symbols,
@@ -547,6 +541,36 @@ impl GenerateStage<'_> {
     depended_symbols.insert(symbol_ref);
   }
 
+  /// All ESM `init_*` wrappers a module's chunk must reach: its excluded re-export forwards
+  /// (`transitive_init_targets`), its *included* static-import forwards (a wrapped module evaluates
+  /// every module it imports, even cross-chunk), and its order-import overlays.
+  fn add_module_esm_init_depended_symbols(
+    &self,
+    chunk_graph: &ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    depended_symbols: &mut FxIndexSet<SymbolRef>,
+    module_idx: ModuleIdx,
+  ) {
+    self.add_transitive_esm_init_depended_symbols(
+      chunk_graph,
+      order_state,
+      depended_symbols,
+      module_idx,
+    );
+    self.add_included_import_esm_init_depended_symbols(
+      chunk_graph,
+      order_state,
+      depended_symbols,
+      module_idx,
+    );
+    self.add_order_import_overlay_depended_symbols(
+      chunk_graph,
+      order_state,
+      depended_symbols,
+      module_idx,
+    );
+  }
+
   fn add_transitive_esm_init_depended_symbols(
     &self,
     chunk_graph: &ChunkGraph,
@@ -562,6 +586,86 @@ impl GenerateStage<'_> {
           && order_state.init_target_included_in_live_chunk(&target, meta, target_idx, chunk_graph)
         {
           depended_symbols.insert(target.wrapper_ref);
+        }
+      }
+    }
+  }
+
+  /// A wrapped module's `init_*` forwards to the `init_*` of every module it statically imports
+  /// through an *included* import statement (ESM evaluates an imported module when the importer is
+  /// evaluated). The finalizer only emits those `init_*()` calls when the target wrapper is
+  /// reachable in the importer's chunk, so a cross-chunk target — e.g. a package barrel that
+  /// plain-imports and re-exports a side-effect-free component whose value the app consumes directly
+  /// from the component's own chunk — must be registered here or its `init_*` would never be
+  /// imported, leaving it with zero call sites. This mirrors the finalizer's own target resolution
+  /// (`collect_wrapped_esm_init_targets_for_import_record`) so registration and emission stay in
+  /// lockstep; a same-chunk or genuinely-eager target is filtered out by
+  /// `init_target_included_in_live_chunk`.
+  fn add_included_import_esm_init_depended_symbols(
+    &self,
+    chunk_graph: &ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    depended_symbols: &mut FxIndexSet<SymbolRef>,
+    module_idx: ModuleIdx,
+  ) {
+    if !self.options.is_strict_execution_order_enabled() {
+      return;
+    }
+    let meta = &self.link_output.metas[module_idx];
+    // Only modules that carry their own ESM init wrapper forward inits for their imports.
+    if order_state.esm_init_target(module_idx, meta).is_none() {
+      return;
+    }
+    let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+      return;
+    };
+    let Some(chunk_idx) = chunk_graph.module_to_chunk[module_idx] else {
+      return;
+    };
+    let ctx = WrappedEsmInitTargetContext {
+      importer: module,
+      importer_meta: meta,
+      modules: &self.link_output.module_table.modules,
+      metas: &self.link_output.metas,
+      stmt_infos: &self.link_output.stmt_infos,
+      symbol_db: &self.link_output.symbol_db,
+      order_wrap_state: order_state,
+      strict_execution_order: self.options.is_strict_execution_order_enabled(),
+    };
+    for (stmt_info_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
+      if !meta.stmt_info_included.has_bit(stmt_info_idx) {
+        continue;
+      }
+      for &rec_idx in &stmt_info.import_records {
+        let rec = &module.import_records[rec_idx];
+        if rec.kind != ImportKind::Import {
+          continue;
+        }
+        if order_state.is_nested_reexport_record(module_idx, rec_idx) {
+          continue;
+        }
+        // Resolve the targets exactly as the finalizer will, but pretend every wrapper is reachable:
+        // we are registering precisely so it becomes reachable.
+        let targets = collect_wrapped_esm_init_targets_for_import_record(
+          &ctx,
+          rec_idx,
+          |_| true,
+          |forwarding_module_idx| {
+            chunk_graph.module_to_chunk[forwarding_module_idx] == Some(chunk_idx)
+          },
+        );
+        for target_idx in targets {
+          let target_meta = &self.link_output.metas[target_idx];
+          if let Some(target) = order_state.esm_init_target(target_idx, target_meta)
+            && order_state.init_target_included_in_live_chunk(
+              &target,
+              target_meta,
+              target_idx,
+              chunk_graph,
+            )
+          {
+            depended_symbols.insert(target.wrapper_ref);
+          }
         }
       }
     }

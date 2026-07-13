@@ -23,7 +23,7 @@ A guiding methodology for structuring bundler-internal pipelines (stage-level da
   - order: the driver's `let`-chain — a step cannot name inputs that do not exist yet
   - sealing: `run_pass` wraps every read-side output in `Sealed<T>` — only `&T` ever comes out; frozen representations inside (`Box<[T]>`, `IndexBox`) are the soft second layer
   - ownership: by-value slots — "to modify is to own and hand back"
-  - shape: trait bounds — reads cannot be `&mut`, and a pass value cannot carry anything (zero-sized)
+  - shape: trait bounds plus the wrapper assertion — reads cannot be `&mut`, and a pass value has zero runtime size
 
 ## What it looks like
 
@@ -31,8 +31,8 @@ The whole mechanism is one trait and one wrapper function:
 
 ```rust
 /// A pass type is a **name**, not a value: `run_pass` compile-time-asserts it is
-/// zero-sized, and the bounds keep it lifetime-free. All runtime data — including
-/// configuration — enters through the declared slots.
+/// zero-sized, and the declaration rule makes it a non-generic unit struct. All
+/// runtime data — including configuration — enters through the declared slots.
 pub trait Pass: Copy + 'static {
   type InputRead<'a>: Copy;         // shared borrows only; Copy makes `&mut` unrepresentable here
   type InputOwned;                  // data taken over (to modify = to own and hand back); `()` if none
@@ -73,9 +73,9 @@ Conventions:
 
 - The passes module carries `#![forbid(unsafe_code)]`, which closes the raw-pointer residual of the two `Pass` bounds.
 - Module layout is load-bearing: the harness types (`Pass`, `run_pass`, `PassCtx`, `Sealed`) live in their own **leaf** module (or crate), and pass modules are siblings of it, never descendants. Rust privacy is visible to descendant modules — a pass nested under the module that declares `Sealed` can read its private field and unfreeze it (this compiles; a true sibling fails E0616). For the same reason `PassCtx` is not `Default` and its constructor stays private to the driver.
-- `self` carries **nothing**: every pass is a zero-sized name token (`const`-asserted in `run_pass`), kept only so call sites read as `run_pass(OptimizeChunksPass, ..)`. Configuration is runtime data and enters through `InputRead` like everything else. Caveat: the assert is evaluated at monomorphization — `cargo build` rejects a stateful pass, but `cargo check` and rust-analyzer do not run it.
+- `self` carries **no runtime data**: every pass is a zero-sized name token (`const`-asserted in `run_pass`), kept only so call sites read as `run_pass(OptimizeChunksPass, ..)`. Configuration is runtime data and enters through `InputRead` like everything else. Caveat: the inline assertion is checked when the compiler generates code for a reachable concrete `run_pass::<P>` call. A build rejects a non-zero-sized pass, but `cargo check` and rust-analyzer's default check-on-save may not report it, so do not rely on check-only or IDE feedback alone.
 - Slot types: empty = `()`; a single artifact = the bare type; multiple = a named per-pass struct (`XxxPassInputRead { .. }`, derives `Copy`), which doubles as the pass's greppable dependency manifest.
-- Naming: a pass type ends in `Pass` (`OptimizeChunksPass`); its input struct is `<PassName>InputRead`. Since passes are zero-sized name tokens, the suffix keeps call sites unambiguous — and `rg 'struct \w+Pass;'` is the complete pass inventory (it matches unit structs only; a fielded `struct XPass(u64);` evades the grep, and it is the build-time assert that actually rejects it).
+- Naming and declaration: aside from its visibility, every pass token is declared as the non-generic unit struct `struct XxxPass;` (for example, `pub struct OptimizeChunksPass;`); its input struct is `<PassName>InputRead`. Generic, tuple, and braced pass-token declarations are disallowed even when zero-sized; generic logic belongs in helpers, and configuration belongs in the declared slots. Under this rule, `rg 'struct \w+Pass;'` is the complete pass inventory. The size assertion is a separate backstop against non-zero-sized pass values.
 - **Two freezes.** (1) Mutation-freeze: `Sealed<T>`, applied unconditionally by `run_pass` — whose constructor is harness-private, making it also the only minting point — so nothing exits `OutputRead` unfrozen and frozenness survives re-ownership. (2) Domain-freeze: draft/final type pairs with mutators only on the draft side, kept where sealing does real work (compaction, API narrowing) — this is the correctness story, and `UsedSymbolRefsBuilder::seal()` is its in-tree precedent. `Sealed<T>` does not make `T` a good artifact — `Sealed<LinkingMetadata>` would still be a fact bag; the mint rule in Example is what blocks that.
 - **Representation changes are the hygiene layer**: inside artifacts, prefer `Vec<T> → Box<[T]>`, `String → Box<str>`, `IndexVec<I, T> → IndexBox<I, [T]>`, maps → sorted boxed slices — dropped capacity, fixed lengths (indices cannot dangle by growth or removal), honest types even when viewed without the wrapper. Defense-in-depth; correctness does not rest on it. `Sealed<T>` alone suffices where sealing does no real work.
 - `Arc<T>` is **not** a seal: a unique holder melts it with `Arc::get_mut` / `Arc::try_unwrap` — frozenness would hinge on the runtime reference count, not the type. `Arc` is a sharing mechanism: compose it as `Arc<Sealed<T>>` when a sealed artifact must be shared.
@@ -221,17 +221,18 @@ Memory release points become signature facts. An artifact's last reader takes it
 
 ## Enforcement
 
-The goal is **not** to make illegal states unrepresentable — it is to make them impossible to write _quietly_. State has exactly three legal homes: locals inside `run` (unrestricted); driver-built values lent through `InputRead`; artifacts moving through the owned slots. There is no fourth place — a pass type itself is zero-sized, so "pass-internal state" is not a category that exists. What therefore has no home is state that crosses passes without appearing in any signature. The gates below force exactly that case into the open, where review can catch it — under a shared `&mut` world it was invisible by construction.
+The goal is **not** to make illegal states unrepresentable — it is to make them impossible to write _quietly_. Runtime pipeline state has exactly three legal homes: locals inside `run` (unrestricted); driver-built values lent through `InputRead`; artifacts moving through the owned slots. There is no fourth place: `run_pass` requires a pass value to have zero runtime size when the compiler generates code for its concrete call, and the declaration rule forbids fields and generic arguments. A pass therefore cannot store runtime state or encode configuration in its type. What has no home is state that crosses passes without appearing in any signature. The gates below force exactly that case into the open, where review can catch it — under a shared `&mut` world it was invisible by construction.
 
 What the compiler pins:
 
 - reads cannot be `&mut` — `InputRead<'a>: Copy` (`&mut` is never `Copy`)
-- a pass value cannot carry anything at all — `run_pass` `const`-asserts `size_of::<P>() == 0`; `Pass: Copy + 'static` additionally rules out lifetime-carrying zero-sized tricks
+- a pass value has zero runtime size and contains no non-static borrows — `run_pass` `const`-asserts `size_of::<P>() == 0`, and `Pass: Copy + 'static` supplies the value and lifetime bounds; the exact declaration shape is review-held below
 - no escape through raw pointers — `#![forbid(unsafe_code)]` on the passes module
 - pass order — `let`-chain scoping; sealing — applied by `run_pass` itself (`Sealed<T>`: no `DerefMut`, no unwrap, and `Sealed::new` is harness-private, E0624 elsewhere); ownership transfer — moves
 
 What stays review-held (the honest list):
 
+- pass tokens stay non-generic unit structs whose names end in `Pass`, which keeps generic choices out of the token and the inventory grep complete; the size assertion enforces zero runtime size, not source syntax
 - frozen representations inside artifacts (`Box<[T]>` over `Vec<T>`) — hygiene, not correctness; the hard freeze is `Sealed<T>`, applied by the harness
 - no interior mutability in pipeline data types; no global statics holding pipeline data (the one remaining way to smuggle state past the bounds)
 - artifact granularity on both sides: own exactly what you reshape, read specific facts, mint named purpose-specific artifacts (the read and mint rules in Example); new `PassCtx` methods staying write-only (drain methods take `self` by value, unreachable through `&mut`)

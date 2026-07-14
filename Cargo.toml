@@ -332,7 +332,26 @@ strip = "none"
 # This non-publishable integration revision carries napi-rs#3353 head
 # b58b5726 under v3 manifests for Rolldown and its Oxc dependencies.
 # Keep the runtime, derive, and WASI build crates on the same head.
+# (napi-async-runtime is pinned separately to napi-rs#3393 @ 6d6ad3bb in
+# rolldown_utils/Cargo.toml and is consumed napi-free, so the two revs coexist.)
 napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b44d9ca08b4aad153608a0cfc6fbb076945cad55" }
 napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b44d9ca08b4aad153608a0cfc6fbb076945cad55" }
 napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b44d9ca08b4aad153608a0cfc6fbb076945cad55" }
 napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b44d9ca08b4aad153608a0cfc6fbb076945cad55" }
+
+# Redirect Oxc's napi binding crates onto a 0.139.0-based branch that drops the
+# forced `tokio_rt` feature (oxc-project/oxc PR #24475, backported to the
+# published 0.139.0 release commit as branch patch/oxc-0.139.0-no-tokio-rt).
+# Without this, Oxc's *_napi crates force `napi/tokio_rt -> dep:tokio` onto the
+# whole graph via Cargo feature unification, which blocks dropping tokio. Only
+# the monorepo crates Rolldown depends on are patched; oxc_index, oxc_resolver*,
+# and oxc_sourcemap live in their own repos and are intentionally left alone.
+oxc = { git = "https://github.com/oxc-project/oxc.git", rev = "2edc6ab307f8349b795b4bb1b87b16d08e1248b3" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc.git", rev = "2edc6ab307f8349b795b4bb1b87b16d08e1248b3" }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc.git", rev = "2edc6ab307f8349b795b4bb1b87b16d08e1248b3" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "2edc6ab307f8349b795b4bb1b87b16d08e1248b3" }
+oxc_str = { git = "https://github.com/oxc-project/oxc.git", rev = "2edc6ab307f8349b795b4bb1b87b16d08e1248b3" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "2edc6ab307f8349b795b4bb1b87b16d08e1248b3" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "2edc6ab307f8349b795b4bb1b87b16d08e1248b3" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "2edc6ab307f8349b795b4bb1b87b16d08e1248b3" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc.git", rev = "2edc6ab307f8349b795b4bb1b87b16d08e1248b3" }

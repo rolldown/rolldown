@@ -6,12 +6,13 @@ use std::{
 
 use dashmap::Entry;
 use oxc::transformer::{ESFeature, EngineTargets, TransformOptions as OxcTransformOptions};
-use oxc_resolver::{ResolveOptions, Resolver, TsconfigDiscovery, TsconfigOptions};
+use oxc_resolver::ResolverGeneric;
 use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_fs::OsFileSystem;
 use rolldown_utils::dashmap::FxDashMap;
 
 use super::tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig;
-use crate::{BundlerTransformOptions, TsConfig};
+use crate::BundlerTransformOptions;
 
 #[derive(Debug, Default, Clone)]
 pub enum JsxPreset {
@@ -30,26 +31,17 @@ pub struct RawTransformOptions {
   pub base_options: Arc<BundlerTransformOptions>,
   /// Cache key: tsconfig path, or empty PathBuf for files without tsconfig
   pub cache: FxDashMap<PathBuf, Arc<OxcTransformOptions>>,
-  resolver: Arc<Resolver>,
+  /// Derived from the main resolver and shares its cache, so tsconfig
+  /// lookups here and in module resolution stay consistent.
+  resolver: Arc<ResolverGeneric<OsFileSystem>>,
 }
 
 impl RawTransformOptions {
-  pub fn new(base_options: BundlerTransformOptions, tsconfig: TsConfig, yarn_pnp: bool) -> Self {
-    Self {
-      base_options: Arc::new(base_options),
-      cache: FxDashMap::default(),
-      resolver: Arc::new(Resolver::new(ResolveOptions {
-        tsconfig: match tsconfig {
-          TsConfig::Auto(v) => v.then_some(TsconfigDiscovery::Auto),
-          TsConfig::Manual(config_file) => Some(TsconfigDiscovery::Manual(TsconfigOptions {
-            config_file,
-            references: oxc_resolver::TsconfigReferences::Auto,
-          })),
-        },
-        yarn_pnp,
-        ..Default::default()
-      })),
-    }
+  pub fn new(
+    base_options: BundlerTransformOptions,
+    resolver: Arc<ResolverGeneric<OsFileSystem>>,
+  ) -> Self {
+    Self { base_options: Arc::new(base_options), cache: FxDashMap::default(), resolver }
   }
 
   pub fn get_or_create_for_tsconfig(

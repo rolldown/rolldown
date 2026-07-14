@@ -2653,6 +2653,7 @@ dependencies = [
  "oxc_str",
  "rolldown_ecmascript",
  "rolldown_error",
+ "rolldown_fs",
  "rolldown_sourcemap",
  "rolldown_std_utils",
  "rolldown_utils",

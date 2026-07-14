@@ -1,0 +1,12 @@
+{
+  "snapshot": false,
+  "configVariants": [
+    {
+      "strictExecutionOrder": true
+    },
+    {
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
+}

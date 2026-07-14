@@ -1,0 +1,10 @@
+{
+  "snapshot": false,
+  "config": {
+    "file": "/"
+  },
+  "expectExecutionFailure": {
+    "reason": "a runtime expectation must not hide an invalid bundler configuration",
+    "outputContains": ["this process must never run"]
+  }
+}

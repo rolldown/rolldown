@@ -7,6 +7,8 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use std::fmt::Write;
 
+use crate::test_meta::ExpectedExecutionFailure;
+
 #[derive(Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ConfigVariant {
@@ -43,6 +45,10 @@ pub struct ConfigVariant {
   pub snapshot: Option<bool>,
   #[serde(rename = "_configName")]
   pub config_name: Option<String>,
+  /// If set, this configuration must fail while executing its generated output. This is not
+  /// inherited from the base configuration so each variant's known failure stays explicit.
+  #[serde(rename = "_expectExecutionFailure")]
+  pub expect_execution_failure: Option<ExpectedExecutionFailure>,
 }
 
 impl ConfigVariant {

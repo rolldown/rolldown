@@ -1,0 +1,37 @@
+{
+  "snapshot": false,
+  "expectExecutionFailure": {
+    "reason": "Expected to fail until rolldown#10104 is applied.",
+    "outputContains": ["interop trigger host must preserve source execution order"]
+  },
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "m3",
+        "import": "./m3.js"
+      },
+      {
+        "name": "b",
+        "import": "./b.cjs"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "_expectExecutionFailure": {
+        "reason": "Expected to fail until rolldown#10104 is applied.",
+        "outputContains": ["interop trigger host must preserve source execution order"]
+      },
+      "onDemandWrapping": false
+    }
+  ]
+}

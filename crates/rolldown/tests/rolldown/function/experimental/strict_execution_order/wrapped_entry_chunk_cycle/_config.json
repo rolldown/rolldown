@@ -1,0 +1,65 @@
+{
+  "snapshot": false,
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "hub",
+        "import": "./hub.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "dep",
+          "test": "[\\\\/]dep\\.js$"
+        },
+        {
+          "name": "hub",
+          "test": "[\\\\/](?:hub\\.js|interop\\.cjs|shared\\.js)$"
+        }
+      ]
+    },
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "expectExecutionFailure": {
+    "reason": "#9887 / #10104: wrapped entry chunk cycle crashes on main",
+    "outputContains": ["is not a function", "wrapped_entry_chunk_cycle"]
+  },
+  "configVariants": [
+    {
+      "_configName": "cjs",
+      "format": "cjs",
+      "_expectExecutionFailure": {
+        "reason": "#9887 / #10104: wrapped entry chunk cycle crashes on main",
+        "outputContains": ["is not a function", "wrapped_entry_chunk_cycle"]
+      }
+    },
+    {
+      "_configName": "cjs-wrap-all",
+      "format": "cjs",
+      "onDemandWrapping": false,
+      "_expectExecutionFailure": {
+        "reason": "#9887 / #10104: wrapped entry chunk cycle crashes on main",
+        "outputContains": ["is not a function", "wrapped_entry_chunk_cycle"]
+      }
+    },
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false,
+      "_expectExecutionFailure": {
+        "reason": "#9887 / #10104: wrapped entry chunk cycle crashes on main",
+        "outputContains": ["is not a function", "wrapped_entry_chunk_cycle"]
+      }
+    }
+  ],
+  "hiddenRuntimeModule": false
+}

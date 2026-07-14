@@ -809,8 +809,10 @@ mod tests {
     path::{Path, PathBuf},
     sync::atomic::{AtomicUsize, Ordering},
   };
+  use futures::channel::mpsc::unbounded;
+  use futures::channel::oneshot;
   use tokio::{
-    sync::{Notify, mpsc::unbounded_channel, oneshot},
+    sync::Notify,
     time::{Duration, timeout},
   };
 
@@ -839,7 +841,7 @@ mod tests {
 
   fn create_observation_test_coordinator() -> BundleCoordinator {
     let bundler = Bundler::new(BundlerOptions::default()).expect("create test bundler");
-    let (coordinator_tx, coordinator_rx) = unbounded_channel();
+    let (coordinator_tx, coordinator_rx) = unbounded();
     let ctx = Arc::new(DevContext {
       options: normalize_dev_options(DevOptions::default()),
       coordinator_tx,
@@ -1235,7 +1237,7 @@ mod tests {
     let callback_release = Arc::new(Notify::new());
     let callback_error: DevCallbackError =
       Arc::new(std::io::Error::other("intentional queued-build callback failure"));
-    let (coordinator_tx, coordinator_rx) = unbounded_channel();
+    let (coordinator_tx, coordinator_rx) = unbounded();
     let ctx = Arc::new(DevContext {
       options: normalize_dev_options(DevOptions {
         on_output: Some({
@@ -1363,7 +1365,7 @@ mod tests {
 
     let callback_entered = Arc::new(Notify::new());
     let callback_release = Arc::new(Notify::new());
-    let (coordinator_tx, coordinator_rx) = unbounded_channel();
+    let (coordinator_tx, coordinator_rx) = unbounded();
     let ctx = Arc::new(DevContext {
       options: normalize_dev_options(DevOptions {
         on_output: Some({

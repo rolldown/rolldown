@@ -598,19 +598,20 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   /// Uses try_recv to process all pending messages without blocking.
   async fn drain_buffered_events(&mut self) -> bool {
     loop {
-      // `futures`' `try_next()` returns `Result<Option<T>, TryRecvError>`:
-      // `Ok(Some(v))` = buffered message, `Ok(None)` = all senders dropped
-      // (stream terminated), `Err(_)` = currently empty but still open. tokio's
-      // `try_recv()` mapped both its `Disconnected` and `Empty` errors to
-      // `return true`, so `Ok(None)` and `Err(_)` collapse to the same arm here.
-      match self.rx.try_next() {
-        Ok(Some(WatcherMsg::FileChanges { task_index, changes })) => {
+      // `futures`' non-deprecated `try_recv()` mirrors tokio's `try_recv()` shape
+      // exactly: `Ok(msg)` = a buffered message (still drained after close while
+      // any remain), `Err(TryRecvError::Empty)` = empty but open, and
+      // `Err(TryRecvError::Closed)` = closed and fully drained. tokio mapped both
+      // its `Empty` and `Disconnected` errors to `return true`, so the single
+      // `Err(_)` arm preserves the original semantics unchanged.
+      match self.rx.try_recv() {
+        Ok(WatcherMsg::FileChanges { task_index, changes }) => {
           self.process_file_changes(task_index, changes).await;
         }
-        Ok(Some(WatcherMsg::Close)) => {
+        Ok(WatcherMsg::Close) => {
           return false;
         }
-        Ok(None) | Err(_) => return true,
+        Err(_) => return true,
       }
     }
   }
@@ -686,6 +687,12 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  // The coordinator's shared production fields changed type: `close_notify` is now
+  // `Arc<event_listener::Event>` and the channel is `futures::channel::mpsc` (both
+  // reach here via `use super::*`, but are imported explicitly for clarity).
+  // `tokio::sync::Notify` is kept ONLY for the tests' internal end/stop signal.
+  use event_listener::Event;
+  use tokio::sync::Notify;
   use rolldown::{BundlerConfig, BundlerOptions, plugin};
   use rolldown_error::BuildResult;
   use rolldown_fs_watcher::{DynFsWatcher, FsEventHandler, FsWatcher, FsWatcherConfig, PathsMut};
@@ -911,9 +918,9 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn coordinator_retries_scan_registration_failure_without_emitting_error() {
     let test_dir = TestDir::new();
-    let (tx, rx) = mpsc::unbounded_channel();
+    let (tx, rx) = mpsc::unbounded();
     let closed = Arc::new(AtomicBool::new(false));
-    let close_notify = Arc::new(Notify::new());
+    let close_notify = Arc::new(Event::new());
     let close_bundle_calls = Arc::new(AtomicUsize::new(0));
     let RegistrationTestTask { task, commit_attempts, commit_times, .. } =
       create_task(&test_dir, 0, 1, &closed, &close_bundle_calls);
@@ -963,8 +970,8 @@ mod tests {
     );
 
     closed.store(true, Ordering::Relaxed);
-    close_notify.notify_one();
-    tx.send(WatcherMsg::Close).expect("send close");
+    close_notify.notify(usize::MAX);
+    tx.unbounded_send(WatcherMsg::Close).expect("send close");
     tokio::time::timeout(Duration::from_secs(10), handle)
       .await
       .expect("coordinator should close")
@@ -976,8 +983,8 @@ mod tests {
 
   #[tokio::test]
   async fn queued_change_wins_when_debounce_timeout_is_already_ready() {
-    let (tx, mut rx) = mpsc::unbounded_channel();
-    tx.send(WatcherMsg::FileChanges {
+    let (tx, mut rx) = mpsc::unbounded();
+    tx.unbounded_send(WatcherMsg::FileChanges {
       task_index: WatchTaskIdx::from_usize(0),
       changes: vec![FileChangeEvent::new("main.js".to_string(), WatcherChangeKind::Update)],
     })
@@ -991,9 +998,9 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn coordinator_retries_individual_watch_add_failure() {
     let test_dir = TestDir::new();
-    let (tx, rx) = mpsc::unbounded_channel();
+    let (tx, rx) = mpsc::unbounded();
     let closed = Arc::new(AtomicBool::new(false));
-    let close_notify = Arc::new(Notify::new());
+    let close_notify = Arc::new(Event::new());
     let close_bundle_calls = Arc::new(AtomicUsize::new(0));
     let RegistrationTestTask { task, add_attempts, commit_attempts, .. } =
       create_task(&test_dir, 1, 0, &closed, &close_bundle_calls);
@@ -1037,8 +1044,8 @@ mod tests {
     );
 
     closed.store(true, Ordering::Relaxed);
-    close_notify.notify_one();
-    tx.send(WatcherMsg::Close).expect("send close");
+    close_notify.notify(usize::MAX);
+    tx.unbounded_send(WatcherMsg::Close).expect("send close");
     tokio::time::timeout(Duration::from_secs(10), handle)
       .await
       .expect("coordinator should close")
@@ -1051,9 +1058,9 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn coordinator_close_interrupts_registration_backoff() {
     let test_dir = TestDir::new();
-    let (tx, rx) = mpsc::unbounded_channel();
+    let (tx, rx) = mpsc::unbounded();
     let closed = Arc::new(AtomicBool::new(false));
-    let close_notify = Arc::new(Notify::new());
+    let close_notify = Arc::new(Event::new());
     let close_bundle_calls = Arc::new(AtomicUsize::new(0));
     let RegistrationTestTask { task, commit_attempts, .. } =
       create_task(&test_dir, 0, usize::MAX, &closed, &close_bundle_calls);
@@ -1084,8 +1091,8 @@ mod tests {
     .await
     .expect("initial build should reach both registration attempts");
     closed.store(true, Ordering::Relaxed);
-    close_notify.notify_one();
-    tx.send(WatcherMsg::Close).expect("send close");
+    close_notify.notify(usize::MAX);
+    tx.unbounded_send(WatcherMsg::Close).expect("send close");
 
     tokio::time::timeout(Duration::from_secs(10), handle)
       .await
@@ -1101,9 +1108,9 @@ mod tests {
   #[tokio::test(flavor = "multi_thread")]
   async fn coordinator_stops_after_bounded_registration_retries() {
     let test_dir = TestDir::new();
-    let (_tx, rx) = mpsc::unbounded_channel();
+    let (_tx, rx) = mpsc::unbounded();
     let closed = Arc::new(AtomicBool::new(false));
-    let close_notify = Arc::new(Notify::new());
+    let close_notify = Arc::new(Event::new());
     let close_bundle_calls = Arc::new(AtomicUsize::new(0));
     let RegistrationTestTask { task, commit_attempts, .. } =
       create_task(&test_dir, 0, usize::MAX, &closed, &close_bundle_calls);

@@ -766,7 +766,8 @@ mod tests {
 
   #[test]
   fn dropped_watch_registration_observation_requests_cancellation() {
-    let (coordinator_sender, mut coordinator_receiver) = unbounded_channel::<CoordinatorMsg>();
+    let (coordinator_sender, mut coordinator_receiver) =
+      futures::channel::mpsc::unbounded::<CoordinatorMsg>();
     let observation = WatchRegistrationErrorObservation::new(17, coordinator_sender);
 
     drop(observation);

@@ -303,6 +303,9 @@ mod tests {
     },
     time::Duration,
   };
+  // `event_listener::Event` backs the `Watcher::close_notify` production field.
+  // `tokio::sync::Notify` is kept ONLY for the tests' internal `end` signal.
+  use event_listener::Event;
   use tokio::sync::Notify;
 
   static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
@@ -577,7 +580,7 @@ mod tests {
       runs_task.fetch_add(1, Ordering::SeqCst);
       Ok(())
     });
-    let (tx, _rx) = mpsc::unbounded_channel();
+    let (tx, _rx) = mpsc::unbounded();
     let watcher = Watcher {
       coordinator_state: std::sync::Mutex::new(CoordinatorState {
         coordinator: Some(coordinator),
@@ -585,7 +588,7 @@ mod tests {
       }),
       tx,
       closed: Arc::new(AtomicBool::new(false)),
-      close_notify: Arc::new(Notify::new()),
+      close_notify: Arc::new(Event::new()),
       native_owned_close_identities: Arc::new(std::sync::Mutex::new(Vec::new())),
     };
 
@@ -876,7 +879,7 @@ mod tests {
 
     watcher
       .tx
-      .send(WatcherMsg::FileChanges {
+      .unbounded_send(WatcherMsg::FileChanges {
         task_index: WatchTaskIdx::from_usize(0),
         changes: vec![FileChangeEvent::new(
           input.to_string_lossy().into_owned(),

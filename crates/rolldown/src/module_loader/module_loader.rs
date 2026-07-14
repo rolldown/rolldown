@@ -1233,6 +1233,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 mod tests {
   use std::{sync::mpsc, time::Duration};
 
+  use futures::StreamExt;
   use rolldown_common::ModuleLoaderMsg;
 
   use super::{spawn_module_task, supervised_module_task};
@@ -1241,7 +1242,7 @@ mod tests {
   fn panicking_module_task_reports_completion_error() {
     let (done_tx, done_rx) = mpsc::sync_channel(1);
     std::thread::spawn(move || {
-      let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+      let (tx, mut rx) = futures::channel::mpsc::unbounded();
       spawn_module_task(
         async {
           panic!("module task probe");
@@ -1249,7 +1250,7 @@ mod tests {
         tx,
       );
 
-      let message = rolldown_utils::futures::block_on(async { rx.recv().await })
+      let message = rolldown_utils::futures::block_on(async { rx.next().await })
         .expect("supervisor must report a panicking module task");
       let mut remaining = 1;
       match message {
@@ -1277,11 +1278,11 @@ mod tests {
 
   #[test]
   fn cancelled_module_task_reports_exactly_one_completion_error() {
-    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    let (tx, mut rx) = futures::channel::mpsc::unbounded();
     let future = supervised_module_task(std::future::pending(), tx);
     drop(future);
 
-    let message = rolldown_utils::futures::block_on(async { rx.recv().await })
+    let message = rolldown_utils::futures::block_on(async { rx.next().await })
       .expect("dropping an accepted/rejected supervised task must retire loader accounting");
     match message {
       ModuleLoaderMsg::BuildErrors(errors) => assert_eq!(errors.len(), 1),

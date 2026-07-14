@@ -722,13 +722,53 @@ impl GenerateStage<'_> {
 
     let entry_exports = &metas[entry_module_idx].resolved_exports;
 
+    // Collect the modules being merged into a set for fast lookup. A wrapped
+    // module's wrapper ref (`require_xxx` for CJS, `init_xxx` for ESM) is not
+    // part of `resolved_exports` but can become a cross-chunk export when
+    // modules outside the merge set reference it. If that happens, the wrapper
+    // leaks as a public export of the entry chunk.
+    let merge_set: FxHashSet<ModuleIdx> = modules.iter().copied().collect();
+
     modules.iter().all(|&module_idx| {
-      // Skip the entry module itself - it's always safe
-      if module_idx == entry_module_idx || module_table[module_idx].as_normal().is_none() {
+      // Skip non-normal modules
+      if module_table[module_idx].as_normal().is_none() {
         return true;
       }
 
       let module_meta = &metas[module_idx];
+
+      // Wrapped modules (CJS `require_xxx` or ESM `init_xxx`) have a wrapper
+      // ref that is not part of `resolved_exports` but can become a cross-chunk
+      // export when modules in other chunks reference it. This happens when:
+      // - The module is an entry point shared by multiple entries — merging it
+      //   into one entry forces the other entries to import the wrapper
+      //   cross-chunk.
+      // - The module is referenced (statically or dynamically) by modules
+      //   outside the merge set, which will need the wrapper cross-chunk.
+      // In either case, keeping the module in a shared chunk avoids leaking the
+      // wrapper as a public entry export.
+      if matches!(module_meta.wrap_kind(), WrapKind::Cjs | WrapKind::Esm)
+        && module_meta.wrapper_ref.is_some()
+      {
+        // Cheaper check first: a HashMap lookup + len comparison.
+        if self.link_output.entries.get(&module_idx).is_some_and(|eps| eps.len() > 1) {
+          return false;
+        }
+        // More expensive check: iterate importers and do set lookups.
+        let module = module_table[module_idx].as_normal().unwrap();
+        let has_external_importer = module.ecma_view.importers_idx.iter().any(|importer_idx| {
+          !merge_set.contains(importer_idx) && *importer_idx != entry_module_idx
+        });
+        if has_external_importer {
+          return false;
+        }
+      }
+
+      // Skip the entry module itself for the export-matching check below
+      // (its exports are already the entry's exports by definition)
+      if module_idx == entry_module_idx {
+        return true;
+      }
 
       // A module is safe to merge if all its exports are already covered by the entry's exports.
       // This means either:

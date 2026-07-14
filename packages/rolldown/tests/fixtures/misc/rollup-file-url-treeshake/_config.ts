@@ -20,7 +20,11 @@ export default defineTest({
               name: path.basename(id),
               source: fs.readFileSync(id),
             });
-            return `export default import.meta.ROLLUP_FILE_URL_${referenceId};`;
+            return (
+              `import.meta.ROLLUP_FILE_URL_${referenceId}\n` +
+              `import.meta?.['ROLLUP_FILE_URL_${referenceId}']\n` +
+              `export default 0;`
+            );
           }
         },
       },

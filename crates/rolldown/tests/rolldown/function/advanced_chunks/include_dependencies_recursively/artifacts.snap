@@ -42,3 +42,43 @@ var init_foo = __esmMin((() => {
 export { init_foo as n, foo as t };
 
 ```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_foo, t as foo } from "./vendor.js";
+import nodeAssert from "node:assert";
+//#endregion
+__esmMin((() => {
+	init_foo();
+	nodeAssert.strictEqual(foo, "foo bar");
+}))();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### vendor.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region foo.js
+var foo;
+var init_foo = __esmMin((() => {
+	foo = "foo bar";
+}));
+//#endregion
+export { init_foo as n, foo as t };
+
+```

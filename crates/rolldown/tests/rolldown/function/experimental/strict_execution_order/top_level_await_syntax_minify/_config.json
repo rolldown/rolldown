@@ -9,5 +9,12 @@
     "strictExecutionOrder": true,
     "minify": true
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
 }

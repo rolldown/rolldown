@@ -19,6 +19,7 @@ use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
   indexmap::FxIndexSet,
+  node_style_absolute,
   rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _},
 };
 use rustc_hash::FxHashMap;
@@ -231,6 +232,7 @@ impl<'a> GenerateStage<'a> {
       let preserve_modules_root = self.options.preserve_modules_root.clone();
       let input_base = chunk.input_base.clone();
       let virtual_dirname = self.options.virtual_dirname.clone();
+      let cwd = self.options.cwd.clone();
       async move {
         if let Some(name) = &chunk.name {
           let name = sanitize_filename.call(name).await?;
@@ -254,20 +256,28 @@ impl<'a> GenerateStage<'a> {
               // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
               let chunk_name = {
                 let p = PathBuf::from(sanitized_absolute_filename.as_str());
-                let relative_path = if p.is_absolute() {
-                  if let Some(ref preserve_modules_root) = preserve_modules_root {
-                    // See internal-docs/module-id/implementation.md: output paths may normalize separators even
-                    // when module ids keep native separators.
-                    if let Some(relative_path) = strip_path_prefix_to_slash(
-                      absolute_chunk_file_name.as_path(),
-                      preserve_modules_root.as_path(),
-                    ) {
-                      relative_path
-                    } else {
-                      relative_path_to_slash(&p, input_base.as_str())
-                    }
+                // Besides genuinely absolute paths, `node_style_absolute` anchors
+                // a rooted-but-volume-less id (`/favicon`, `\favicon`) to the
+                // cwd volume root (a drive or UNC share): Node and Rollup treat
+                // such ids as absolute, but Rust's
+                // `Path::is_absolute()` reports them as non-absolute on Windows,
+                // and letting them fall into the `virtual_dirname` join below
+                // would discard the prefix and leak the leading slash into
+                // `[name]`.
+                let relative_path = if let Some(abs) = node_style_absolute(&p, &cwd) {
+                  let stripped_by_root =
+                    preserve_modules_root.as_ref().and_then(|preserve_modules_root| {
+                      // See internal-docs/module-id/implementation.md: output paths may normalize separators even
+                      // when module ids keep native separators.
+                      strip_path_prefix_to_slash(
+                        &node_style_absolute(absolute_chunk_file_name.as_path(), &cwd)?,
+                        preserve_modules_root.as_path(),
+                      )
+                    });
+                  if let Some(relative_path) = stripped_by_root {
+                    relative_path
                   } else {
-                    relative_path_to_slash(&p, input_base.as_str())
+                    relative_path_to_slash(abs, input_base.as_str())
                   }
                 } else {
                   path_buf_to_slash(PathBuf::from(virtual_dirname.as_str()).join(p))

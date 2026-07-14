@@ -1,7 +1,7 @@
 const require = (await import('node:module')).createRequire(import.meta.url);
 const assert = require('node:assert');
 
-// Variants: undefined (the base config, `strict`) and 'allow-extension'.
+// Variants cover strict/allow-extension in both wrap-all and on-demand modes.
 const variant = globalThis.__configName ?? 'strict';
 
 const lib = require('./dist/lib.js');
@@ -14,23 +14,17 @@ assert.strictEqual(main.bar, 42);
 
 const runtimeHelpers = ['__esmMin', '__esm', '__toESM', '__commonJSMin'];
 
-if (variant.includes('allow-extension')) {
-  // Extension is permitted, so the runtime is allowed to merge into the `lib`
-  // entry chunk; its helpers then appear as extension exports on lib.
+if (variant === 'allow-extension') {
+  // Keep the original positive control: this layout has a single valid runtime host, so allowing
+  // signature extensions should merge the runtime into lib and expose at least one helper.
   assert.ok(
     runtimeHelpers.some((helper) => helper in lib),
     `${variant}: expected the runtime to merge into the lib entry chunk; exports were ${JSON.stringify(Object.keys(lib))}`,
   );
-} else {
-  // `strict` (the base config) fixes lib's signature, so the guard keeps the
-  // runtime — and its helpers — out of lib. (The default `exports-only` behaves
-  // the same for an entry that declares exports; that path is exercised by the
-  // broader entry-exports snapshots.)
-  //
-  // NOTE: `init_lib` (lib's own ESM wrapper, present because `strictExecutionOrder`
-  // wraps the module) is still re-exported because `main` triggers lib's init
-  // cross-chunk. That is a separate facade/chunking concern, tracked apart from the
-  // runtime-merge guard, so it is intentionally not asserted here.
+} else if (!variant.includes('allow-extension')) {
+  // `strict` fixes lib's signature, so neither wrapping mode may leak runtime helpers. The default
+  // `exports-only` behaves the same for an entry that declares exports. Other allow-extension
+  // variants permit either runtime topology, so they only assert the declared exports above.
   for (const leaked of runtimeHelpers) {
     assert.ok(
       !(leaked in lib),

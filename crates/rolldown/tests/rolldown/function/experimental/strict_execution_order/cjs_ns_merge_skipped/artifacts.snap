@@ -51,3 +51,31 @@ __esmMin((() => {
 }))();
 
 ```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region cjs.cjs
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	console.log("cjs");
+	module.exports = { value: 1 };
+}));
+//#endregion
+var import_cjs$1, fromLib, import_cjs;
+__esmMin((() => {
+	//#region lib.js
+	import_cjs$1 = /* @__PURE__ */ __toESM(require_cjs());
+	fromLib = import_cjs$1.default.value;
+	//#endregion
+	//#region main.js
+	import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+	console.log("main", fromLib, import_cjs.default.value);
+	//#endregion
+}))();
+
+```

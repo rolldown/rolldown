@@ -8,5 +8,12 @@
     "strictExecutionOrder": true,
     "experimental": { "chunkOptimization": true },
     "codeSplitting": { "groups": [{ "name": "common", "entriesAwareMergeThreshold": 10000 }] }
-  }
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
 }

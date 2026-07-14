@@ -1,0 +1,23 @@
+{
+  "snapshot": false,
+  "expectExecutionFailure": {
+    "reason": "Expected to fail until rolldown#10104 is applied.",
+    "outputContains": ["Error: page-a observed undefined"]
+  },
+  "config": {
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "_expectExecutionFailure": {
+        "reason": "Expected to fail until rolldown#10104 is applied.",
+        "outputContains": ["Error: page-a observed undefined"]
+      },
+      "onDemandWrapping": false
+    }
+  ]
+}

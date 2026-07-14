@@ -1,0 +1,37 @@
+{
+  "snapshot": false,
+  "expectExecutionFailure": {
+    "reason": "Expected to fail until rolldown#10104 is applied.",
+    "outputContains": ["loading dynamic target entry must not execute co-located entry a"]
+  },
+  "config": {
+    "input": [
+      {
+        "name": "a",
+        "import": "./a.js"
+      },
+      {
+        "name": "c",
+        "import": "./c.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "group",
+          "test": "[\\\\/](?:a|b)\\.js$"
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "_expectExecutionFailure": {
+        "reason": "Expected to fail until rolldown#10104 is applied.",
+        "outputContains": ["loading dynamic target entry must not execute co-located entry a"]
+      },
+      "onDemandWrapping": true
+    }
+  ]
+}

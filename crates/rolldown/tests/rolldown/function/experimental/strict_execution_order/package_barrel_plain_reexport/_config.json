@@ -1,0 +1,33 @@
+{
+  "snapshot": false,
+  "config": {
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "carbon",
+          "test": "[\\\\/]barrel\\.js$"
+        },
+        {
+          "name": "comp",
+          "test": "[\\\\/](?:checkbox|radio)\\.js$"
+        },
+        {
+          "name": "ca",
+          "test": "[\\\\/]cyc-a\\.js$"
+        },
+        {
+          "name": "cb",
+          "test": "[\\\\/]cyc-b\\.js$"
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "onDemandWrapping": true
+    }
+  ]
+}

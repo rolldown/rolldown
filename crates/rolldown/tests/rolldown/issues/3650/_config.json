@@ -6,13 +6,20 @@
       "groups": [
         {
           "name": "first",
-          "test": "first"
+          "test": "[\\\\/]first\\.js$"
         },
         {
           "name": "second",
-          "test": "second|\\0rolldown/runtime\\.js"
+          "test": "[\\\\/]second\\.js$|^\\0rolldown/runtime\\.js$"
         }
       ]
     }
-  }
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
 }

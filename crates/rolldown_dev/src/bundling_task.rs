@@ -3,7 +3,7 @@ use std::{
   sync::{Arc, atomic::AtomicU32},
 };
 
-use rolldown_common::{ClientHmrInput, ScanMode};
+use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate, ScanMode};
 use rolldown_utils::indexmap::FxIndexMap;
 use tokio::sync::Mutex;
 
@@ -112,6 +112,43 @@ impl BundlingTask {
           }
         }
       }
+    }
+
+    // A tsconfig edit affects every module the tsconfig governs, which HMR
+    // patches and partial scans cannot represent. Clear the caches, tell
+    // clients to fully reload, and fall back to a full rebuild.
+    let changed_tsconfig = {
+      let bundler = self.bundler.lock().await;
+      let changed_tsconfig = self
+        .input
+        .changed_files()
+        .keys()
+        .any(|path| bundler.options().transform_options.is_known_tsconfig(path));
+      if changed_tsconfig {
+        tracing::trace!("[BundlingTask] detects a tsconfig change, upgrading to a full rebuild");
+        bundler.clear_resolver_cache();
+        bundler.clear_transform_tsconfig_cache();
+      }
+      changed_tsconfig
+    };
+    if changed_tsconfig {
+      if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
+        let changed_files = self
+          .input
+          .changed_files()
+          .keys()
+          .map(|path| path.to_string_lossy().to_string())
+          .collect::<Vec<_>>();
+        let updates = (self.dev_context.clients.lock().await)
+          .keys()
+          .map(|client_id| ClientHmrUpdate {
+            client_id: client_id.clone(),
+            update: HmrUpdate::FullReload { reason: "tsconfig change".to_owned() },
+          })
+          .collect();
+        on_hmr_updates(Ok((updates, changed_files)));
+      }
+      self.input = TaskInput::FullBuild;
     }
 
     let mut has_full_reload_update = false;

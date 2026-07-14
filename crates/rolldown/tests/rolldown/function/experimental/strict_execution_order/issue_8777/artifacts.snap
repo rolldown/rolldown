@@ -40,3 +40,34 @@ __esmMin((() => {
 export { Foo, fooClasses, getFooUtilityClass };
 
 ```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region components/Foo/fooClasses.js
+function getFooUtilityClass(slot) {
+	return "MuiFoo-" + slot;
+}
+const fooClasses = { root: "MuiFoo-root" };
+//#endregion
+//#region components/Foo/Foo.js
+var Foo;
+var init_Foo$1 = __esmMin((() => {
+	Foo = {
+		name: "Foo",
+		root: fooClasses.root
+	};
+}));
+__esmMin((() => {
+	//#region components/Foo/index.js
+	init_Foo$1();
+	//#endregion
+}))();
+export { Foo, fooClasses, getFooUtilityClass };
+
+```

@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::VecDeque, path::Path};
+use std::{borrow::Cow, cmp::Ordering, collections::VecDeque, path::Path};
 
 use crate::{
   chunk_graph::ChunkGraph,
@@ -11,15 +11,18 @@ use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTag,
-  ModuleTagBitSet, ModuleTagRegistry, PostChunkOptimizationOperation, PreserveEntrySignatures,
-  RetainedExportSymbols, SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
+  ImportRecordMeta, IndexModules, Module, ModuleId, ModuleIdx, ModuleNamespaceIncludedReason,
+  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, PostChunkOptimizationOperation,
+  PreserveEntrySignatures, RetainedExportSymbols, SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder,
+  WrapKind,
 };
 use rolldown_error::BuildResult;
+use rolldown_std_utils::PathBufExt as _;
 use rolldown_utils::{
   BitSet, IndexBitSet, commondir,
   index_vec_ext::IndexVecRefExt,
   indexmap::FxIndexMap,
+  node_style_absolute,
   rayon::ParallelIterator,
   rustc_hash::{FxHashMapExt, FxHashSetExt},
 };
@@ -731,6 +734,20 @@ impl GenerateStage<'_> {
   // - https://github.com/rollup/rollup/blob/99d4bee3277b96b30e871fb471f6c7ed55f94850/src/Bundle.ts?plain=1#L267-L278
   // - https://github.com/rollup/rollup/blob/99d4bee3277b96b30e871fb471f6c7ed55f94850/src/utils/commondir.ts?plain=1#L4-L24
   pub fn get_common_dir_of_all_modules(&self, modules: &[Module]) -> Option<String> {
+    /// A module id usable for the common-dir computation: an absolute
+    /// filesystem path, with rooted-but-volume-less ids (`/favicon.ico` from a
+    /// plugin) anchored to the cwd volume root (a drive or UNC share). Such ids
+    /// are classified `Bare` on Windows even though Node treats them as
+    /// absolute; leaving them out here would make the input base and the
+    /// preserve-modules chunk names disagree about where the module lives.
+    fn common_dir_input<'a>(id: &'a ModuleId, cwd: &Path) -> Option<Cow<'a, str>> {
+      if id.is_path() {
+        return Some(Cow::Borrowed(id.as_ref()));
+      }
+      let glued = node_style_absolute(Path::new(id.as_str()), cwd)?;
+      Some(Cow::Owned(glued.into_owned().expect_into_string()))
+    }
+
     let mut ret: Option<String> = None;
     let iter = modules.iter().filter_map(|m| match m {
       Module::Normal(item) => {
@@ -740,25 +757,25 @@ impl GenerateStage<'_> {
         if self.options.preserve_modules
           || self.link_output.user_defined_entry_modules.contains(&item.idx)
         {
-          item.id.is_path().then_some(item.id.as_ref())
+          common_dir_input(&item.id, &self.options.cwd)
         } else {
           None
         }
       }
-      Module::External(external_module) => {
-        if self.options.preserve_modules {
-          external_module.id.is_path().then_some(external_module.id.as_ref())
-        } else {
-          None
-        }
-      }
+      // External modules never produce preserved chunks, so they must not
+      // affect preserved chunk names: Rollup's `getIncludedModules` keeps
+      // internal modules only. An absolute external id (e.g. a plugin
+      // resolving `/favicon` with `external: true`) would otherwise drag the
+      // input base up to the filesystem root and nest every real chunk under
+      // the entry's absolute path.
+      Module::External(_) => None,
     });
     let mut modules_count = 0;
     for id in iter {
       if let Some(ref mut ret_id) = ret {
-        *ret_id = commondir::extract_longest_common_path(ret_id.as_str(), id);
+        *ret_id = commondir::extract_longest_common_path(ret_id.as_str(), &id);
       } else {
-        ret = Some(id.to_string());
+        ret = Some(id.into_owned());
       }
       modules_count += 1;
     }

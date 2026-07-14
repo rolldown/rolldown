@@ -358,32 +358,22 @@ pub fn prepare_build_context(
     }
 
     // Create TransformOptions based on tsconfig mode:
-    // - Auto(true)/Manual: Raw mode, resolves tsconfig per file so rebuilds
-    //   can re-read edited tsconfig files
+    // - Manual/Auto(true): Raw mode, resolves the tsconfig per file
     // - Auto(false): Normal mode without tsconfig
     match tsconfig {
-      TsConfig::Manual(path) => Box::new(TransformOptions::new_raw(
-        RawTransformOptions::new(raw_transform_options, TsConfig::Manual(path), yarn_pnp),
+      TsConfig::Manual(_) | TsConfig::Auto(true) => Box::new(TransformOptions::new_raw(
+        RawTransformOptions::new(
+          raw_transform_options,
+          Arc::new(resolver.clone_default_resolver()),
+        ),
         target,
         jsx_preset,
       )),
-      TsConfig::Auto(is_auto) => {
-        Box::new(if is_auto {
-          // Auto mode: Create Raw mode TransformOptions
-          // Each file will find its nearest tsconfig during compilation
-          TransformOptions::new_raw(
-            RawTransformOptions::new(raw_transform_options, TsConfig::Auto(true), yarn_pnp),
-            target,
-            jsx_preset,
-          )
-        } else {
-          TransformOptions::new(
-            merge_transform_options_with_tsconfig(raw_transform_options, None, &mut warnings)?,
-            target,
-            jsx_preset,
-          )
-        })
-      }
+      TsConfig::Auto(false) => Box::new(TransformOptions::new(
+        merge_transform_options_with_tsconfig(raw_transform_options, None, &mut warnings)?,
+        target,
+        jsx_preset,
+      )),
     }
   };
 

@@ -1,0 +1,38 @@
+{
+  "snapshot": false,
+  "expectExecutionFailure": {
+    "reason": "Expected to fail until rolldown#10104 is applied.",
+    "outputContains": ["internal wrapped entry must preserve source execution order"]
+  },
+  "config": {
+    "input": [
+      {
+        "name": "e1",
+        "import": "./e1.cjs"
+      },
+      {
+        "name": "e2",
+        "import": "./e2.cjs"
+      },
+      {
+        "name": "m2",
+        "import": "./m2.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "hiddenRuntimeModule": false,
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "_expectExecutionFailure": {
+        "reason": "Expected to fail until rolldown#10104 is applied.",
+        "outputContains": ["internal wrapped entry must preserve source execution order"]
+      },
+      "onDemandWrapping": false
+    }
+  ]
+}

@@ -429,14 +429,12 @@ impl GenerateStage<'_> {
                 // later in the output — calling it eagerly here would run before
                 // that later wrapper is assigned (circular imports: a↔b).
                 let target_exec_order = chunk_module_to_exec_order[&module_idx];
-                let has_later_wrapped_dep = self.link_output.metas[midx]
-                  .dependencies
-                  .iter()
-                  .any(|dep_idx| {
+                let has_later_wrapped_dep =
+                  self.link_output.metas[midx].dependencies.iter().any(|dep_idx| {
                     matches!(self.link_output.metas[*dep_idx].wrap_kind(), WrapKind::Esm)
-                      && chunk_module_to_exec_order.get(dep_idx).is_some_and(
-                        |&dep_order| dep_order > target_exec_order,
-                      )
+                      && chunk_module_to_exec_order
+                        .get(dep_idx)
+                        .is_some_and(|&dep_order| dep_order > target_exec_order)
                   });
                 if has_later_wrapped_dep {
                   continue;

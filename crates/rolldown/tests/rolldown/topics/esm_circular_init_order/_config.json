@@ -1,0 +1,7 @@
+{
+  "config": {
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  }
+}

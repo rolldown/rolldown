@@ -419,10 +419,26 @@ impl GenerateStage<'_> {
             {
               let transfer_item = pending_transfer
                 .extract_if(0.., |(midx, _, _)| wrapped_modules[0..*deps_length].contains(midx));
-              for (_midx, iidx, ridx) in transfer_item {
+              for (midx, iidx, ridx) in transfer_item {
                 // Should always avoid transfer any initialization from a low execution order module to a high execution order module.
                 if chunk_module_to_exec_order[&iidx] <= chunk_module_to_exec_order[&module_idx] {
                   // If the module is the same, we can skip the transfer.
+                  continue;
+                }
+                // Skip if the wrapper depends on another wrapped module defined
+                // later in the output — calling it eagerly here would run before
+                // that later wrapper is assigned (circular imports: a↔b).
+                let target_exec_order = chunk_module_to_exec_order[&module_idx];
+                let has_later_wrapped_dep = self.link_output.metas[midx]
+                  .dependencies
+                  .iter()
+                  .any(|dep_idx| {
+                    matches!(self.link_output.metas[*dep_idx].wrap_kind(), WrapKind::Esm)
+                      && chunk_module_to_exec_order.get(dep_idx).is_some_and(
+                        |&dep_order| dep_order > target_exec_order,
+                      )
+                  });
+                if has_later_wrapped_dep {
                   continue;
                 }
                 insert_map.entry(module_idx).or_default().push((iidx, ridx));

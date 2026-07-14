@@ -48,6 +48,14 @@ const CHROME_PROFILE_DIR = path.join(STATE_DIR, 'chrome-profile');
 // them; accepting or reverting a change is the loop driver's (agent's) call.
 const NOISE_FLOOR_MS = 30;
 const NOISE_FLOOR_PCT = 2;
+// Sequential early stop: when a scan has a pinned baseline and run 1's LCP
+// delta is at least this many noise thresholds away from it, the remaining
+// runs cannot flip the accept/revert call - they only refine a median nobody
+// needs, at the price of full page loads (minutes on slow apps). Sample count
+// is the SAFE adaptive dimension; the throttle is the objective function and
+// never adapts (zero-throttle hides byte weight and RTT waterfalls - the main
+// fix classes - and can invert decisions near the floor).
+const EARLY_STOP_FACTOR = 5;
 const CANDIDATE_MIN_BYTES = 3 * 1024;
 const CANDIDATE_MAX_PAINT_RATIO = 0.02;
 
@@ -223,11 +231,14 @@ async function withServerAndBrowser(distDir, throttleOff, fn) {
 
 // --- measure core ----------------------------------------------------------------
 
-async function gatherSamples(cdp, origin, { throttle, expectedFeatures, runs, warmup, settleMs }) {
+async function gatherSamples(cdp, origin, { throttle, expectedFeatures, runs, warmup, settleMs, earlyStop = null }) {
   // Navigate '/' (not '/index.html'): SPA routers treat the literal
   // /index.html path as an unknown route and render their 404 page - drawDB
   // showed us a "looking for something?" screen instead of its landing.
   const url = `${origin}/`;
+  // The warmup stays even when early stop is possible: it absorbs the
+  // launch-cold outlier (first navigation after a browser start), which would
+  // otherwise be the single sample the decision rests on.
   for (let i = 0; i < warmup; i++) {
     process.stderr.write(`warmup ${i + 1}/${warmup}...\n`);
     await timedRun(cdp, { url, throttle, expectedFeatures, settleMs });
@@ -237,11 +248,30 @@ async function gatherSamples(cdp, origin, { throttle, expectedFeatures, runs, wa
     const sample = await timedRun(cdp, { url, throttle, expectedFeatures, settleMs });
     samples.push(sample);
     process.stderr.write(`run ${i + 1}/${runs}: LCP ${ms(sample.lcp)}, load ${ms(sample.load)}\n`);
+    // Decide on run 1 ONLY: if it lands ambiguous (within the early-stop band),
+    // later runs disagreeing with it is exactly the near-threshold case that
+    // needs the full median, so no late stopping.
+    if (earlyStop && i === 0 && runs > 1 && typeof sample.lcp === 'number') {
+      const deltaMs = sample.lcp - earlyStop.baselineLcp;
+      if (Math.abs(deltaMs) >= earlyStop.factor * earlyStop.thresholdMs) {
+        process.stderr.write(`early stop after run 1: |dLCP| ${Math.round(Math.abs(deltaMs))}ms >= ${earlyStop.factor}x noise threshold ${Math.round(earlyStop.thresholdMs)}ms\n`);
+        return {
+          samples,
+          earlyStopped: {
+            afterRuns: 1,
+            plannedRuns: runs,
+            deltaMs: Math.round(deltaMs),
+            thresholdMs: Math.round(earlyStop.thresholdMs),
+            factor: earlyStop.factor,
+          },
+        };
+      }
+    }
   }
-  return samples;
+  return { samples, earlyStopped: null };
 }
 
-function writeMeasureReport(target, samples, { expectedFeatures, label, throttle }) {
+function writeMeasureReport(target, samples, { expectedFeatures, label, throttle, earlyStopped = null }) {
   const summary = summarize(samples, expectedFeatures);
   const prev = readJson(target.paths.runtimeState);
   const baseline = readJson(target.paths.runtimeBaseline);
@@ -254,6 +284,7 @@ function writeMeasureReport(target, samples, { expectedFeatures, label, throttle
     throttle,
     deferred: target.isDemo ? deferredList() : null,
     runs: summary.runs,
+    earlyStopped,
     metrics: summary.metrics,
     guard: summary.guard,
     gatingFetches: summary.gatingFetches,
@@ -264,8 +295,10 @@ function writeMeasureReport(target, samples, { expectedFeatures, label, throttle
     samples: summary.samples,
   };
   writeJson(target.paths.runtimeMetrics, report);
+  // runs travels with the state so pinBaseline can refuse single-run pins
+  // (quick probes and early-stopped scans - a 1-run baseline poisons deltas).
   writeJson(target.paths.runtimeState, {
-    schemaVersion: 1, tsMs: report.generatedAtMs, label: report.label, metrics: report.metrics,
+    schemaVersion: 1, tsMs: report.generatedAtMs, label: report.label, runs: report.runs, metrics: report.metrics,
   });
   fs.appendFileSync(target.paths.history, `${JSON.stringify({
     tsMs: report.generatedAtMs,
@@ -290,6 +323,11 @@ function printMeasureSummary(report, hadBaseline, { advice = true } = {}) {
   const m = report.metrics;
   console.log(`\n${report.label ? `[${report.label}] ` : ''}${report.runs} runs`
     + `${report.deferred?.length ? `, deferred: ${report.deferred.join(', ')}` : ''}`);
+  if (report.earlyStopped) {
+    const e = report.earlyStopped;
+    console.log(`early stop after run 1 of ${e.plannedRuns}: |dLCP vs pinned baseline| ${Math.abs(e.deltaMs)}ms >= ${e.factor}x noise threshold ${e.thresholdMs}ms`
+      + ' - the remaining runs cannot flip this call. Decision-grade for accept/revert; pinning still needs a full scan.');
+  }
   console.log(`LCP ${ms(m['runtime.lcp_ms'])} (p75 ${ms(m['runtime.lcp_p75_ms'])}) | `
     + `FCP ${ms(m['runtime.fcp_ms'])} | load ${ms(m['runtime.load_ms'])} | `
     + `CLS ${m['runtime.cls']} | transfer ${kb(m['runtime.transfer_bytes'])} | `
@@ -353,7 +391,9 @@ function printMeasureSummary(report, hadBaseline, { advice = true } = {}) {
     console.log(`vs pinned baseline: LCP ${d.delta > 0 ? '+' : ''}${Math.round(d.delta)}ms `
       + `(${d.pct > 0 ? '+' : ''}${d.pct}%) -> ${call} (noise threshold ${Math.round(threshold)}ms)`);
     if (call === 'improvement beyond noise') {
-      console.log(`next: keep this change - re-pin with \`${CLI} baseline\` (or scan --pin), then commit it.`);
+      console.log(report.earlyStopped
+        ? `next: keep this change - re-pin with \`${CLI} scan --pin\` (pins need full sampling), then commit it.`
+        : `next: keep this change - re-pin with \`${CLI} baseline\` (or scan --pin), then commit it.`);
       console.log(`Probe your NEXT change with \`${CLI} scan --quick\` (one run, minutes cheaper); run a full scan only to accept/revert or pin.`);
     } else {
       console.log('next: this attempt did not clearly improve LCP - revert the change and rebuild (then try a different one).');
@@ -371,6 +411,11 @@ function printMeasureSummary(report, hadBaseline, { advice = true } = {}) {
 function pinBaseline(target) {
   const state = readJson(target.paths.runtimeState);
   if (!state) throw new Error('nothing to pin - measure (or scan) first');
+  // A 1-run median (quick probe or early-stopped scan) poisons every later
+  // delta. scan --pin always runs full sampling - use it.
+  if (state.runs === 1) {
+    throw new Error('refusing to pin a single-run measurement - run a full scan first (scan --pin re-measures with full sampling and then pins)');
+  }
   writeJson(target.paths.runtimeBaseline, state);
   console.log(`baseline pinned (label: ${state.label ?? 'none'}, LCP ${ms(state.metrics['runtime.lcp_ms'])})`);
   if (target.isDemo) {
@@ -762,7 +807,10 @@ function printVerdict(target) {
   console.log(`verdict for ${target.dist} (entry ${entry})\n`);
   for (const line of lines) console.log(line);
   console.log('');
-  if (fresh(runtime) && runtime.runs === 1) {
+  if (fresh(runtime) && runtime.earlyStopped) {
+    console.log(`NOTE: the latest measurement EARLY-STOPPED after run 1 - its LCP delta was >=${runtime.earlyStopped.factor}x the`);
+    console.log('noise threshold, so the accept/revert call is decision-grade. Pinning still needs a full scan (scan --pin).\n');
+  } else if (fresh(runtime) && runtime.runs === 1) {
     console.log('NOTE: the latest measurement used a SINGLE run (quick mode) - its delta is indicative only.');
     console.log('Confirm any accept/revert decision with a full scan (>=3 runs) before acting on it.\n');
   }
@@ -828,21 +876,32 @@ async function cmdMeasure(argv) {
     'no-throttle': { type: 'boolean', default: false },
     features: { type: 'string' },
     pin: { type: 'boolean', default: false },
+    'no-early-stop': { type: 'boolean', default: false },
   });
   const target = resolveTarget(opts);
   const expectedFeatures = expectedFeaturesFor(target, opts);
-  const samples = await withServerAndBrowser(target.dist, opts['no-throttle'], ({ origin, cdp, throttle }) =>
+  const pinnedLcp = readJson(target.paths.runtimeBaseline)?.metrics?.['runtime.lcp_ms'];
+  const earlyStop = (!opts.pin && !opts['no-early-stop'] && typeof pinnedLcp === 'number')
+    ? {
+      baselineLcp: pinnedLcp,
+      thresholdMs: Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * pinnedLcp),
+      factor: EARLY_STOP_FACTOR,
+    }
+    : null;
+  const { samples, earlyStopped } = await withServerAndBrowser(target.dist, opts['no-throttle'], ({ origin, cdp, throttle }) =>
     gatherSamples(cdp, origin, {
       throttle,
       expectedFeatures,
       runs: Number(opts.runs),
       warmup: Number(opts.warmup),
       settleMs: Number(opts.settle),
+      earlyStop,
     }));
   const { report, hadBaseline } = writeMeasureReport(target, samples, {
     expectedFeatures,
     label: opts.label,
     throttle: opts['no-throttle'] ? null : DEFAULT_THROTTLE,
+    earlyStopped,
   });
   printMeasureSummary(report, hadBaseline);
   if (opts.pin) pinBaseline(target);
@@ -925,6 +984,9 @@ async function cmdScan(argv) {
     // 60 - the actionable sections are never trimmed); --full restores the
     // whole table. First scan of a target is always full.
     full: { type: 'boolean', default: false },
+    // Disable the sequential early stop (run 1 decides when its LCP delta vs
+    // the pinned baseline is >=5x the noise threshold; see EARLY_STOP_FACTOR).
+    'no-early-stop': { type: 'boolean', default: false },
   });
   if (opts.quick && opts.pin) {
     throw new Error('scan --quick cannot --pin: a 1-run baseline poisons every later delta. Run a full scan to pin.');
@@ -938,14 +1000,26 @@ async function cmdScan(argv) {
   if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
     throw new Error(`entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`);
   }
+  // Early stop needs a decision context (a pinned baseline) and full-median
+  // exemptions: --pin measurements BECOME the baseline, so they always sample
+  // fully; quick mode is already a single run.
+  const pinnedLcp = readJson(target.paths.runtimeBaseline)?.metrics?.['runtime.lcp_ms'];
+  const earlyStop = (!opts.quick && !opts.pin && !opts['no-early-stop'] && typeof pinnedLcp === 'number')
+    ? {
+      baselineLcp: pinnedLcp,
+      thresholdMs: Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * pinnedLcp),
+      factor: EARLY_STOP_FACTOR,
+    }
+    : null;
 
   const gathered = await withServerAndBrowser(target.dist, opts['no-throttle'], async ({ origin, cdp, throttle }) => {
-    const samples = await gatherSamples(cdp, origin, {
+    const { samples, earlyStopped } = await gatherSamples(cdp, origin, {
       throttle,
       expectedFeatures,
       runs: Number(opts.runs),
       warmup: Number(opts.warmup),
       settleMs: Number(opts.settle),
+      earlyStop,
     });
     process.stderr.write('coverage run...\n');
     const cov = await coverageRun(cdp, {
@@ -955,24 +1029,25 @@ async function cmdScan(argv) {
       entryName: `/${entry.replaceAll('\\', '/')}`,
       settleMs: 2000,
     });
-    if (opts.quick) return { samples, cov, profile: null };
+    if (opts.quick) return { samples, earlyStopped, cov, profile: null };
     // The profile only ever matters when pre-paint CPU is above the verdict's
     // 150ms threshold - skip its navigation otherwise (a scan-time minute on
     // slow apps). --profile forces it.
     const prepaintMs = summarize(samples, expectedFeatures).metrics['runtime.prepaint_longtask_ms'];
     if (!opts.profile && !(typeof prepaintMs === 'number' && prepaintMs > 150)) {
       process.stderr.write(`profile skipped (pre-paint CPU ${prepaintMs == null ? 'n/a' : `${Math.round(prepaintMs)}ms`} - baseline territory; force with --profile)\n`);
-      return { samples, cov, profile: null };
+      return { samples, earlyStopped, cov, profile: null };
     }
     process.stderr.write('profile run...\n');
     const profile = await profileRun(cdp, { origin, throttle });
-    return { samples, cov, profile };
+    return { samples, earlyStopped, cov, profile };
   });
 
   const { report, hadBaseline } = writeMeasureReport(target, gathered.samples, {
     expectedFeatures,
     label: opts.label,
     throttle: opts['no-throttle'] ? null : DEFAULT_THROTTLE,
+    earlyStopped: gathered.earlyStopped,
   });
   // Read before buildCoverageReport overwrites it: an existing coverage report
   // means this is a re-scan, so the module table prints compact (--full restores it).
@@ -1266,6 +1341,9 @@ start here (the target is remembered after the first command):
   scan --full               re-scans print the compact coverage view (top 15 module rows;
                             candidates/cold/large/sibling sections always complete) - --full
                             restores the whole module table
+  scan --no-early-stop      scans with a pinned baseline stop after run 1 when |dLCP| is
+                            >=5x the noise threshold (later runs cannot flip that call;
+                            pins always sample fully) - this flag forces all runs
   verdict                   fuse the gathered signals -> OPEN/clear/UNKNOWN; the only "done" that counts
 
 individual commands (same target rules):

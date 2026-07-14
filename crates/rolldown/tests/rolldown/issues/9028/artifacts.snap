@@ -21,3 +21,15 @@ __esmMin((() => {
 }))();
 
 ```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+}))();
+
+```

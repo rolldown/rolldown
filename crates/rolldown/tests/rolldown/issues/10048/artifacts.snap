@@ -39,3 +39,35 @@ __esmMin((() => {
 export { getProjectAnnotations };
 
 ```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region data.js
+const themes = {
+	light: {
+		base: "light",
+		appBg: "#ffffff"
+	},
+	dark: {
+		base: "dark",
+		appBg: "#000000"
+	}
+};
+//#endregion
+function getProjectAnnotations() {
+	return [globalThis.__themes];
+}
+__esmMin((() => {
+	//#region entry.js
+	globalThis.__themes = themes;
+	//#endregion
+}))();
+export { getProjectAnnotations };
+
+```

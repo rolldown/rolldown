@@ -65,3 +65,39 @@ Object.defineProperty(exports, "__toESM", {
 });
 
 ```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### lib.js
+
+```js
+Object.defineProperties(exports, {
+	__esModule: { value: true },
+	[Symbol.toStringTag]: { value: "Module" }
+});
+//#region lib.js
+var lib_default = { value: 42 };
+const named = "named_value";
+//#endregion
+exports.default = lib_default;
+exports.named = named;
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+const require_lib = require("./lib.js");
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#endregion
+__esmMin((() => {
+	node_assert.default.strictEqual(require_lib.default.value, 42);
+}))();
+exports.lib = require_lib.default;
+
+```

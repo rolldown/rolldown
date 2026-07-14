@@ -11,5 +11,12 @@
     "codeSplitting": {
       "groups": [{ "name": "common", "entriesAware": true, "entriesAwareMergeThreshold": 10000 }]
     }
-  }
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
 }

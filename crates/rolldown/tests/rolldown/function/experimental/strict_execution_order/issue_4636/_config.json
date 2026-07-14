@@ -5,5 +5,12 @@
     "experimental": {
       "devMode": {}
     }
-  }
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
 }

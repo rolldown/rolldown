@@ -4,7 +4,7 @@ use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use futures::{FutureExt, future::join_all};
+use futures::{FutureExt, StreamExt, future::join_all};
 use itertools::Itertools;
 use oxc::semantic::NodeId;
 use oxc::semantic::{ScopeId, Scoping};
@@ -113,7 +113,7 @@ impl VisitState {
 
 pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   pub shared_context: Arc<TaskContext<Fs>>,
-  rx: tokio::sync::mpsc::UnboundedReceiver<ModuleLoaderMsg>,
+  rx: futures::channel::mpsc::UnboundedReceiver<ModuleLoaderMsg>,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
@@ -161,7 +161,7 @@ pub struct ModuleLoaderOutput {
 }
 
 struct ModuleTaskSupervisor {
-  tx: Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>,
+  tx: Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>,
 }
 
 impl ModuleTaskSupervisor {
@@ -170,7 +170,7 @@ impl ModuleTaskSupervisor {
       return;
     };
     let diagnostic = BuildDiagnostic::unhandleable_error(anyhow::anyhow!(message));
-    let _ = tx.send(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
+    let _ = tx.unbounded_send(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
   }
 
   fn disarm(&mut self) {
@@ -186,7 +186,7 @@ impl Drop for ModuleTaskSupervisor {
 
 fn supervised_module_task<F>(
   future: F,
-  tx: tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>,
+  tx: futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>,
 ) -> impl std::future::Future<Output = ()> + Send + 'static
 where
   F: std::future::Future<Output = ()> + Send + 'static,
@@ -200,7 +200,7 @@ where
   }
 }
 
-fn spawn_module_task<F>(future: F, tx: tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>)
+fn spawn_module_task<F>(future: F, tx: futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>)
 where
   F: std::future::Future<Output = ()> + Send + 'static,
 {
@@ -256,7 +256,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // send future would wait on capacity that only the consumer can free, but
     // the consumer may need the JS thread — pinned by `block_on` — to run
     // plugin hooks first. Keeping the channel unbounded removes that edge.
-    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    let (tx, rx) = futures::channel::mpsc::unbounded();
     let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta });
 
     let importers = std::mem::take(&mut cache.importers);
@@ -541,7 +541,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut overrode_preserve_entry_signature_map = FxHashMap::default();
 
     while self.remaining > 0 {
-      let Some(msg) = self.rx.recv().await else {
+      let Some(msg) = self.rx.next().await else {
         break;
       };
       match msg {

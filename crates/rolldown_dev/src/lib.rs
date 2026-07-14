@@ -9,7 +9,7 @@ mod watcher_event_handler;
 use std::sync::Arc;
 
 use rustc_hash::FxHashMap;
-use tokio::sync::Mutex;
+use async_lock::Mutex;
 pub use {
   crate::{
     dev_context::BundlingFuture,

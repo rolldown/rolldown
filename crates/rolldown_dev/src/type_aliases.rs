@@ -1,9 +1,7 @@
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
-use tokio::sync::{
-  mpsc::{UnboundedReceiver, UnboundedSender},
-  oneshot,
-};
+use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
+use futures::channel::oneshot;
 
 #[cfg(feature = "testing")]
 use super::types::schedule_build_return::ScheduleBuildReturn;
@@ -50,7 +48,7 @@ impl Drop for WatchRegistrationErrorObservation {
     };
     let _ = self
       .coordinator_sender
-      .send(CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id });
+      .unbounded_send(CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id });
   }
 }
 

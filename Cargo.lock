@@ -77,6 +77,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 
 [[package]]
+name = "async-broadcast"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "435a87a52755b8f27fcf321ac4f04b2802e337c8c4872923137471ec39c37532"
+dependencies = [
+ "event-listener",
+ "event-listener-strategy",
+ "futures-core",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "async-channel"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -85,6 +97,17 @@ dependencies = [
  "concurrent-queue",
  "event-listener-strategy",
  "futures-core",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "async-lock"
+version = "3.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "290f7f2596bd5b78a9fec8088ccd89180d7f9f55b94b0576823bbbdc72ee8311"
+dependencies = [
+ "event-listener",
+ "event-listener-strategy",
  "pin-project-lite",
 ]
 
@@ -2627,6 +2650,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "fast-glob",
+ "futures",
  "insta",
  "itertools",
  "num-bigint 0.5.1",
@@ -2649,7 +2673,6 @@ dependencies = [
  "smallvec",
  "string_wizard",
  "sugar_path",
- "tokio",
 ]
 
 [[package]]
@@ -2658,6 +2681,7 @@ version = "1.1.5"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-lock",
  "futures",
  "rolldown",
  "rolldown-notify",
@@ -2768,9 +2792,11 @@ version = "1.1.5"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-broadcast",
  "bitflags",
  "dashmap",
  "derive_more",
+ "futures",
  "nodejs-built-in-modules",
  "oxc_index",
  "rolldown_common",
@@ -2786,7 +2812,6 @@ dependencies = [
  "serde_json",
  "string_wizard",
  "sugar_path",
- "tokio",
  "tracing",
  "typedmap",
 ]
@@ -3256,6 +3281,8 @@ version = "1.1.5"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-lock",
+ "event-listener",
  "futures",
  "oxc_index",
  "rolldown",

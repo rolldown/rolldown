@@ -14,7 +14,8 @@ use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatche
 use rolldown_utils::futures::try_spawn;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
-use tokio::sync::{Mutex, mpsc::unbounded_channel};
+use async_lock::Mutex;
+use futures::channel::mpsc::unbounded;
 
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig, NormalizedBundlerOptions};
 
@@ -75,10 +76,10 @@ impl CoordinatorState {
 impl WatchRegistrationErrorObservation {
   async fn finish(mut self) -> BuildResult<()> {
     let observer_id = self.observer_id();
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender()
-      .send(CoordinatorMsg::PreviewWatchRegistrationErrors { observer_id, reply: reply_sender })
+      .unbounded_send(CoordinatorMsg::PreviewWatchRegistrationErrors { observer_id, reply: reply_sender })
       .map_err_to_unhandleable()
       .context("DevEngine: failed to preview watch-registration errors")?;
 
@@ -89,7 +90,7 @@ impl WatchRegistrationErrorObservation {
     let preview_result = DevEngine::retained_error_to_build_result(error);
     let acknowledgement_result = self
       .coordinator_sender()
-      .send(CoordinatorMsg::AcknowledgeWatchRegistrationErrors { observer_id })
+      .unbounded_send(CoordinatorMsg::AcknowledgeWatchRegistrationErrors { observer_id })
       .map_err_to_unhandleable()
       .context("DevEngine: failed to acknowledge previewed watch-registration errors")
       .map_err(BatchedBuildDiagnostic::from);
@@ -126,7 +127,7 @@ impl DevEngine {
 
     let normalized_options = normalize_dev_options(options);
 
-    let (coordinator_tx, coordinator_rx) = unbounded_channel::<CoordinatorMsg>();
+    let (coordinator_tx, coordinator_rx) = unbounded::<CoordinatorMsg>();
 
     let clients = SharedClients::default();
 
@@ -226,8 +227,8 @@ impl DevEngine {
   }
 
   async fn wait_for_ongoing_bundle_inner(&self) -> BuildResult<()> {
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-    if let Err(err) = self.coordinator_sender.send(CoordinatorMsg::GetState { reply: reply_sender })
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
+    if let Err(err) = self.coordinator_sender.unbounded_send(CoordinatorMsg::GetState { reply: reply_sender })
     {
       if self.is_closed() {
         return Ok(());
@@ -285,10 +286,10 @@ impl DevEngine {
         }
         break;
       }
-      let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+      let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
       self
         .coordinator_sender
-        .send(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
+        .unbounded_send(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
         .map_err_to_unhandleable()
         .context("DevEngine: failed to send EnsureLatestBundleOutput to coordinator")?;
 
@@ -319,7 +320,7 @@ impl DevEngine {
 
     self
       .coordinator_sender
-      .send(CoordinatorMsg::TriggerFullBuild)
+      .unbounded_send(CoordinatorMsg::TriggerFullBuild)
       .map_err_to_unhandleable()
       .context("DevEngine: failed to send TriggerFullBuild to coordinator")?;
 
@@ -445,7 +446,7 @@ impl DevEngine {
   /// Notify the coordinator that a module has changed programmatically.
   /// This triggers a rebuild to update the build output.
   fn notify_module_changed(&self, module_id: String) {
-    let _ = self.coordinator_sender.send(CoordinatorMsg::ModuleChanged { module_id });
+    let _ = self.coordinator_sender.unbounded_send(CoordinatorMsg::ModuleChanged { module_id });
   }
 
   pub async fn close(&self) -> Result<(), Arc<BatchedBuildDiagnostic>> {
@@ -493,9 +494,9 @@ impl DevEngine {
       return bundler.close().await;
     };
 
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     let send_result = coordinator_sender
-      .send(CoordinatorMsg::Close { reply: reply_sender })
+      .unbounded_send(CoordinatorMsg::Close { reply: reply_sender })
       .map_err_to_unhandleable()
       .context(
         "DevEngine: failed to send Close message to coordinator - coordinator may have already terminated",
@@ -583,10 +584,10 @@ impl DevEngine {
   }
 
   async fn get_coordinator_state_snapshot(&self) -> BuildResult<CoordinatorStateSnapshot> {
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
-      .send(CoordinatorMsg::GetState { reply: reply_sender })
+      .unbounded_send(CoordinatorMsg::GetState { reply: reply_sender })
       .map_err_to_unhandleable()
       .context("DevEngine: failed to send GetState to coordinator")?;
 
@@ -600,10 +601,10 @@ impl DevEngine {
   async fn begin_watch_registration_error_observation(
     &self,
   ) -> BuildResult<WatchRegistrationErrorObservation> {
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
-      .send(CoordinatorMsg::BeginWatchRegistrationErrorObservation { reply: reply_sender })
+      .unbounded_send(CoordinatorMsg::BeginWatchRegistrationErrorObservation { reply: reply_sender })
       .map_err_to_unhandleable()
       .context("DevEngine: failed to begin watch-registration error observation")?;
 
@@ -644,13 +645,13 @@ impl DevEngine {
     if !events.is_empty() {
       // Send WatchEvent message to coordinator (simulates real file change)
       // The coordinator will automatically schedule a build via handle_file_changes
-      let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(events)));
+      let _ = self.coordinator_sender.unbounded_send(CoordinatorMsg::WatchEvent(Ok(events)));
     }
 
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
     // and get the build future to wait on
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    let _ = self.coordinator_sender.send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
+    let (reply_tx, reply_rx) = futures::channel::oneshot::channel();
+    let _ = self.coordinator_sender.unbounded_send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
 
     // Wait for the build that was triggered by the file change
     if let Ok(Some(ret)) = reply_rx.await {
@@ -667,10 +668,10 @@ impl DevEngine {
   pub async fn get_watched_files(&self) -> BuildResult<FxHashSet<String>> {
     self.create_error_if_closed()?;
 
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
-      .send(CoordinatorMsg::GetWatchedFiles { reply: reply_sender })
+      .unbounded_send(CoordinatorMsg::GetWatchedFiles { reply: reply_sender })
       .map_err_to_unhandleable()
       .context(
         "DevEngine: failed to send GetWatchedFiles to coordinator within get_watched_files",

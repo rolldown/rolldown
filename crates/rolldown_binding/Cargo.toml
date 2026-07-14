@@ -92,9 +92,13 @@ mimalloc-safe = { workspace = true, features = [
 napi-build = { workspace = true }
 
 [features]
-default = ["tokio-runtime"]
+# The custom tokio-free scheduler is the default runtime. The tokio flavor
+# stays reachable only via `--no-default-features --features tokio-runtime`.
+default = ["async-runtime"]
 async-runtime = [
-  "napi/async",
+  # `napi/async-runtime` (= napi4) provides the pluggable async-runtime SPI plus
+  # `AsyncTask`; it deliberately does NOT enable `napi/async` (= tokio_rt), so the
+  # custom flavor no longer drags tokio in through napi.
   "napi/async-runtime",
   "rolldown/async-runtime",
   "rolldown_utils/async-runtime",
@@ -104,4 +108,8 @@ default_global_allocator = []
 disable_panic_hook = []
 runtime-waker-teardown-test = ["async-runtime"]
 runtime-submission-failure-test = ["async-runtime"]
-tokio-runtime = ["napi/async"]
+tokio-runtime = [
+  "napi/async",
+  "rolldown/tokio-runtime",
+  "rolldown_utils/tokio-runtime",
+]

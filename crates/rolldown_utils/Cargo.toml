@@ -23,7 +23,11 @@ path = "bench/concat_string.rs"
 workspace = true
 
 [features]
+# The tokio-free shared scheduler is the default. `tokio-runtime` is the opt-in
+# fallback that restores the tokio spawn/timer facade arms (and pulls tokio in).
+default = ["async-runtime"]
 async-runtime = ["dep:napi-async-runtime"]
+tokio-runtime = ["dep:tokio", "dep:async-scoped"]
 
 [dependencies]
 anyhow = { workspace = true }
@@ -55,14 +59,17 @@ rustc-hash = { workspace = true }
 serde_json = { workspace = true }
 simdutf8 = { workspace = true }
 sugar_path = { workspace = true }
-# `time` backs the `time::sleep_until` facade's default (non-async-runtime)
-# branch; tokio supports it on both wasm targets.
-tokio = { workspace = true, features = ["rt", "time"] }
+# `time` backs the `time::sleep_until` facade's `tokio-runtime` (non-async-runtime)
+# branch; tokio supports it on both wasm targets. Optional: pulled only by the
+# opt-in `tokio-runtime` feature so the default build stays tokio-free.
+tokio = { workspace = true, features = ["rt", "time"], optional = true }
 uuid = { workspace = true, features = ["v4"] }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-async-scoped = { workspace = true, features = ["use-tokio"] }
+# Only the `tokio-runtime` facade arm (block_on_spawn_all) uses async-scoped, so
+# it is optional and pulled by the `tokio-runtime` feature.
+async-scoped = { workspace = true, features = ["use-tokio"], optional = true }
 rayon = { workspace = true }
 
 [dev-dependencies]

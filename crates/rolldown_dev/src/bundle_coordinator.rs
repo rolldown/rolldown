@@ -16,7 +16,8 @@ use rolldown_utils::{
 };
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
-use tokio::sync::Mutex;
+use async_lock::Mutex;
+use futures::StreamExt;
 
 use rolldown::Bundler;
 
@@ -122,7 +123,7 @@ impl BundleCoordinator {
       }
     }
     tracing::trace!("[BundleCoordinator] starts running\n - state: {:?}", self.state);
-    while let Some(msg) = self.rx.recv().await {
+    while let Some(msg) = self.rx.next().await {
       tracing::trace!("[BundleCoordinator] received message\n - message: {msg:#?}");
       match msg {
         CoordinatorMsg::WatchEvent(watch_event) => {
@@ -631,7 +632,7 @@ impl BundleCoordinator {
     &mut self,
     reply: BeginWatchRegistrationErrorObservationSender,
   ) {
-    if reply.is_closed() {
+    if reply.is_canceled() {
       return;
     }
 

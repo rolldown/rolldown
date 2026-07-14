@@ -16,7 +16,8 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use tokio::sync::{Notify, mpsc};
+use event_listener::Event;
+use futures::channel::mpsc;
 
 /// Default debounce duration in milliseconds.
 /// Matches Rollup's default buildDelay of 0ms.
@@ -144,7 +145,7 @@ pub struct Watcher {
   coordinator_state: std::sync::Mutex<CoordinatorState>,
   tx: mpsc::UnboundedSender<WatcherMsg>,
   closed: Arc<AtomicBool>,
-  close_notify: Arc<Notify>,
+  close_notify: Arc<Event>,
   native_owned_close_identities: Arc<std::sync::Mutex<Vec<u64>>>,
 }
 
@@ -156,9 +157,9 @@ impl Watcher {
     handler: H,
     watcher_config: &WatcherConfig,
   ) -> BuildResult<Self> {
-    let (tx, rx) = mpsc::unbounded_channel();
+    let (tx, rx) = mpsc::unbounded();
     let closed = Arc::new(AtomicBool::new(false));
-    let close_notify = Arc::new(Notify::new());
+    let close_notify = Arc::new(Event::new());
     let native_owned_close_identities = Arc::new(std::sync::Mutex::new(Vec::new()));
     let tasks = Self::create_tasks(configs, watcher_config, &tx, &closed)?;
     let coordinator = WatchCoordinator::new(
@@ -232,8 +233,11 @@ impl Watcher {
     }
     // Wake the coordinator even when it is waiting for a user event callback. The mpsc message
     // remains the normal state-machine input when the coordinator is idle or debouncing.
-    self.close_notify.notify_one();
-    let _ = self.tx.send(WatcherMsg::Close);
+    // `event_listener::Event` stores no permit, so this must run after the `closed` flag is set
+    // above: any waiter that created its listener before this call is woken, and a waiter that
+    // created its listener after this call observes `closed == true` and skips waiting.
+    self.close_notify.notify(usize::MAX);
+    let _ = self.tx.unbounded_send(WatcherMsg::Close);
   }
 
   /// Close the watcher and wait for the coordinator to finish.

@@ -82,7 +82,8 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
       // The loader owner may have been cancelled while this detached task was awaiting a hook.
       // See internal-docs/async-runtime/implementation.md.
-      let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
+      let _ =
+        self.ctx.tx.unbounded_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
   }
 
@@ -236,7 +237,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
     // The loader owner may have been cancelled while this detached task was awaiting a hook.
     // See internal-docs/async-runtime/implementation.md.
-    let _ = self.ctx.tx.send(result);
+    let _ = self.ctx.tx.unbounded_send(result);
 
     Ok(())
   }

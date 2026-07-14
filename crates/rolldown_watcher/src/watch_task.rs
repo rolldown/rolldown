@@ -13,7 +13,7 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
-use tokio::sync::Mutex as TokioMutex;
+use async_lock::Mutex as TokioMutex;
 
 use crate::event::{BundleEndEventData, BundleStartEventData, WatchErrorEventData};
 

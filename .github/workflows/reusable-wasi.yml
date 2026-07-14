@@ -72,7 +72,8 @@ jobs:
           if output="$(
             RUSTC="$(rustup which rustc)" \
               EMNAPI_LINK_DIR="$emnapi_package_dir/lib/wasm32-wasip1" \
-              cargo check -p rolldown_binding --target wasm32-wasip1 --locked 2>&1
+              cargo check -p rolldown_binding --target wasm32-wasip1 \
+                --no-default-features --features tokio-runtime --locked 2>&1
           )"; then
             echo "Expected the Tokio/threadless-WASI build to be rejected"
             exit 1

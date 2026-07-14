@@ -17,6 +17,8 @@ workspace = true
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
+async-lock = { workspace = true }
+event-listener = { workspace = true }
 futures = { workspace = true }
 oxc_index = { workspace = true }
 rolldown = { workspace = true, features = ["experimental"] }
@@ -25,10 +27,6 @@ rolldown_error = { workspace = true }
 rolldown_fs_watcher = { workspace = true }
 rolldown-notify = { workspace = true }
 rolldown_utils = { workspace = true }
-# No `time` feature: the debounce timer goes through the
-# `rolldown_utils::time::sleep_until` facade (runtime timer on async-runtime
-# builds, tokio otherwise), never `tokio::time` directly.
-tokio = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing = { workspace = true }
 
 [dev-dependencies]

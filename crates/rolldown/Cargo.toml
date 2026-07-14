@@ -15,6 +15,7 @@ workspace = true
 [features]
 default = ["serde"]
 async-runtime = ["rolldown_utils/async-runtime"]
+tokio-runtime = ["rolldown_utils/tokio-runtime"]
 serde = ["dep:serde", "oxc_index/serde"]
 testing = []
 experimental = []
@@ -65,7 +66,6 @@ serde_json = { workspace = true, features = ["preserve_order"] }
 smallvec = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing = { workspace = true }
 url = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }

@@ -6,7 +6,7 @@ use std::{
 use rolldown_common::{ClientHmrInput, ScanMode};
 use rolldown_dev_common::types::DevCallbackResult;
 use rolldown_utils::indexmap::FxIndexMap;
-use tokio::sync::Mutex;
+use async_lock::Mutex;
 
 use rolldown::Bundler;
 
@@ -86,7 +86,7 @@ impl BundlingTask {
       "[BundlingTask] completed\n - has_generated_bundle_output: {has_generated_bundle_output:?}",
     );
 
-    self.dev_context.coordinator_tx.send(CoordinatorMsg::BundleCompleted {
+    self.dev_context.coordinator_tx.unbounded_send(CoordinatorMsg::BundleCompleted {
       error_stage,
       has_generated_bundle_output,
       callback_error,

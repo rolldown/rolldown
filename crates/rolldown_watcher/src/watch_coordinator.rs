@@ -19,7 +19,9 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tokio::sync::{Notify, mpsc};
+use event_listener::Event;
+use futures::channel::mpsc;
+use futures::{StreamExt, pin_mut, select_biased};
 
 const WATCH_REGISTRATION_RETRY_DELAYS: [Duration; 3] =
   [Duration::from_millis(25), Duration::from_millis(100), Duration::from_millis(250)];
@@ -59,9 +61,15 @@ async fn wait_for_debounce_input(
   rx: &mut mpsc::UnboundedReceiver<WatcherMsg>,
   timeout: impl Future<Output = ()>,
 ) -> DebounceWaitResult {
-  tokio::select! {
-    biased;
-    message = rx.recv() => DebounceWaitResult::Message(message),
+  // `select_biased!` requires each branch future to be `Unpin + FusedFuture`.
+  // `rx.next()` (StreamExt::Next) already is, so it is used inline. The custom
+  // `Sleep` only impls `Future`, so fuse it (for `FusedFuture`) and pin it (for
+  // `Unpin`). The biased order matches tokio's `biased;`: message first, timeout
+  // second, so a queued change at the deadline still extends the debounce window.
+  let timeout = timeout.fuse();
+  pin_mut!(timeout);
+  select_biased! {
+    message = rx.next() => DebounceWaitResult::Message(message),
     () = timeout => DebounceWaitResult::Timeout,
   }
 }
@@ -181,7 +189,7 @@ pub struct WatchCoordinator<H: WatcherEventHandler> {
   debounce_duration: Duration,
   tasks: IndexVec<WatchTaskIdx, WatchTask>,
   closed: Arc<AtomicBool>,
-  close_notify: Arc<Notify>,
+  close_notify: Arc<Event>,
   native_owned_close_identities: Arc<Mutex<Vec<u64>>>,
   close_error: Option<Arc<CoordinatorCloseError>>,
   event_loop_errors: Vec<CoordinatorCloseFailure>,
@@ -194,7 +202,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     tasks: IndexVec<WatchTaskIdx, WatchTask>,
     config: &WatcherConfig,
     closed: Arc<AtomicBool>,
-    close_notify: Arc<Notify>,
+    close_notify: Arc<Event>,
     native_owned_close_identities: Arc<Mutex<Vec<u64>>>,
   ) -> Self {
     Self {
@@ -242,7 +250,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     loop {
       match &self.state {
         WatcherState::Idle => {
-          let msg = self.rx.recv().await;
+          let msg = self.rx.next().await;
           match msg {
             Some(WatcherMsg::FileChanges { task_index, changes }) => {
               self.process_file_changes(task_index, changes).await;
@@ -457,25 +465,37 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     loop {
       let closed = Arc::clone(&self.closed);
       let close_notify = Arc::clone(&self.close_notify);
+      // Listen-before-check idiom for `event_listener::Event`, which (unlike
+      // tokio's `Notify`) stores no permit: create the listener first, then read
+      // `closed`. `publish_close` sets `closed` before `notify`, so a listener
+      // created before that notify is woken, and observing `closed == true` here
+      // means the close already happened and we skip an await that could
+      // otherwise miss the permit-less wake.
       let wait_for_close = async move {
+        let listener = close_notify.listen();
         if !closed.load(Ordering::Relaxed) {
-          close_notify.notified().await;
+          listener.await;
         }
-      };
-      let timeout = rolldown_utils::time::sleep_until(deadline);
+      }
+      .fuse();
+      let timeout = rolldown_utils::time::sleep_until(deadline).fuse();
+      pin_mut!(wait_for_close, timeout);
 
-      tokio::select! {
-        biased;
+      // The biased order matches tokio's `biased;` (close, message, timeout).
+      // The message is extracted from the select and handled *after* the select
+      // block ends, so the `&mut self.rx` borrow held by `rx.next()` is released
+      // before `process_file_changes` reborrows `&mut self`. The close and
+      // timeout arms only `return`, so they need no `self` access.
+      let msg = select_biased! {
         () = wait_for_close => return false,
-        msg = self.rx.recv() => {
-          match msg {
-            Some(WatcherMsg::FileChanges { task_index, changes }) => {
-              self.process_file_changes(task_index, changes).await;
-            }
-            Some(WatcherMsg::Close) | None => return false,
-          }
-        }
+        msg = self.rx.next() => msg,
         () = timeout => return true,
+      };
+      match msg {
+        Some(WatcherMsg::FileChanges { task_index, changes }) => {
+          self.process_file_changes(task_index, changes).await;
+        }
+        Some(WatcherMsg::Close) | None => return false,
       }
     }
   }
@@ -516,14 +536,24 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   where
     F: Future<Output = anyhow::Result<()>>,
   {
+    // Listen-before-check idiom for `event_listener::Event` (no stored permit):
+    // create the listener before reading `closed`. `publish_close` sets `closed`
+    // before `notify`, so a listener created here before the notify is woken, and
+    // observing `closed == true` skips the permit-less await.
     let wait_for_close = async {
+      let listener = self.close_notify.listen();
       if !self.closed.load(Ordering::Relaxed) {
-        self.close_notify.notified().await;
+        listener.await;
       }
-    };
+    }
+    .fuse();
+    // The custom `Sleep` and consumer callbacks only impl `Future`, so fuse the
+    // handler too and pin both for `select_biased!` (needs `Unpin + FusedFuture`).
+    let handler = handler.fuse();
+    pin_mut!(wait_for_close, handler);
 
-    tokio::select! {
-      biased;
+    // Biased order matches tokio's `biased;`: close first, then handler.
+    select_biased! {
       () = wait_for_close => HandlerDispatchResult::CloseRequested,
       result = handler => {
         if self.closed.load(Ordering::Relaxed) {
@@ -568,14 +598,19 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   /// Uses try_recv to process all pending messages without blocking.
   async fn drain_buffered_events(&mut self) -> bool {
     loop {
-      match self.rx.try_recv() {
-        Ok(WatcherMsg::FileChanges { task_index, changes }) => {
+      // `futures`' `try_next()` returns `Result<Option<T>, TryRecvError>`:
+      // `Ok(Some(v))` = buffered message, `Ok(None)` = all senders dropped
+      // (stream terminated), `Err(_)` = currently empty but still open. tokio's
+      // `try_recv()` mapped both its `Disconnected` and `Empty` errors to
+      // `return true`, so `Ok(None)` and `Err(_)` collapse to the same arm here.
+      match self.rx.try_next() {
+        Ok(Some(WatcherMsg::FileChanges { task_index, changes })) => {
           self.process_file_changes(task_index, changes).await;
         }
-        Ok(WatcherMsg::Close) => {
+        Ok(Some(WatcherMsg::Close)) => {
           return false;
         }
-        Err(_) => return true,
+        Ok(None) | Err(_) => return true,
       }
     }
   }

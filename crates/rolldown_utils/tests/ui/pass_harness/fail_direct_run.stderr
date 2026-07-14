@@ -1,0 +1,15 @@
+error[E0061]: this method takes 4 arguments but 3 arguments were supplied
+ --> tests/ui/pass_harness/fail_direct_run.rs:7:20
+  |
+7 |   let _ = EchoPass.run(cx, &1, 2);
+  |                    ^^^ -- argument #1 of type `RunToken<'_, EchoPass>` is missing
+  |
+note: method defined here
+ --> src/pass.rs
+  |
+  |   fn run(
+  |      ^^^
+help: provide the argument
+  |
+7 |   let _ = EchoPass.run(/* RunToken<'_, EchoPass> */, cx, &1, 2);
+  |                        +++++++++++++++++++++++++++++

@@ -1,0 +1,30 @@
+error: lifetime may not live long enough
+  --> tests/ui/pass_harness/fail_leak_token_output_read.rs:22:5
+   |
+15 |   fn run<'run>(
+   |          ---- lifetime `'run` defined here
+...
+22 |     Ok(token.finish(token, ()))
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^ returning this value requires that `'run` must outlive `'static`
+   |
+   = note: requirement occurs because of the type `RunToken<'_, LeakingPass>`, which makes the generic argument `'_` invariant
+   = note: the struct `RunToken<'run, P>` is invariant over the parameter `'run`
+   = help: see <https://doc.rust-lang.org/nomicon/subtyping.html> for more information about variance
+
+error[E0382]: use of moved value: `token`
+  --> tests/ui/pass_harness/fail_leak_token_output_read.rs:22:21
+   |
+17 |     token: RunToken<'run, Self>,
+   |     ----- move occurs because `token` has type `RunToken<'_, LeakingPass>`, which does not implement the `Copy` trait
+...
+22 |     Ok(token.finish(token, ()))
+   |              -------^^^^^-----
+   |              |      |
+   |              |      value used here after move
+   |              `token` moved due to this method call
+   |
+note: `RunToken::<'_, P>::finish` takes ownership of the receiver `self`, which moves `token`
+  --> src/pass.rs
+   |
+   |   pub fn finish<R, O>(self, read: R, owned: O) -> RawPassOutput<R, O> {
+   |                       ^^^^

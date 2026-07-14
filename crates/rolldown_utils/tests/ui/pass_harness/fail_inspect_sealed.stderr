@@ -1,0 +1,5 @@
+error[E0616]: field `0` of struct `Sealed` is private
+ --> tests/ui/pass_harness/fail_inspect_sealed.rs:4:10
+  |
+4 |   sealed.0
+  |          ^ private field

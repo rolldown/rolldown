@@ -1,0 +1,5 @@
+error[E0425]: cannot find value `produced` in this scope
+ --> tests/ui/pass_harness/fail_wrong_order.rs:8:57
+  |
+8 |   let _ = run_infallible_pass(EchoPass, &mut pipeline, &produced, 0);
+  |                                                         ^^^^^^^^ not found in this scope

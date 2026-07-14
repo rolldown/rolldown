@@ -1,0 +1,15 @@
+error[E0423]: cannot initialize a tuple struct which contains private fields
+ --> tests/ui/pass_harness/fail_construct_sealed.rs:4:11
+  |
+4 |   let _ = Sealed(1_u32);
+  |           ^^^^^^
+  |
+note: constructor is not visible here due to private fields
+ --> src/pass.rs
+  |
+  | pub struct Sealed<T>(T);
+  |                      ^ private field
+help: you might have meant to use the `new` associated function
+  |
+4 |   let _ = Sealed::new(1_u32);
+  |                 +++++

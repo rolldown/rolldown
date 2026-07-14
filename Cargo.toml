@@ -241,6 +241,7 @@ tokio = { version = "1.52.3", default-features = false }
 tracing = "0.1.44"
 tracing-chrome = "0.7.2"
 tracing-subscriber = { version = "0.3.23", default-features = false }
+trybuild = "1.0.118"
 ts-rs = "12.0"
 typedmap = "0.6.0"
 url = "2.5.8"

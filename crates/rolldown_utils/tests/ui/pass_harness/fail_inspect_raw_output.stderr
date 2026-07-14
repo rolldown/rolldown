@@ -1,0 +1,5 @@
+error[E0616]: field `read` of struct `RawPassOutput` is private
+  --> tests/ui/pass_harness/fail_inspect_raw_output.rs:23:17
+   |
+23 |     let _ = raw.read;
+   |                 ^^^^ private field

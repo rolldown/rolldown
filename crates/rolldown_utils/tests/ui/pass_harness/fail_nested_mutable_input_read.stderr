@@ -1,0 +1,16 @@
+error[E0277]: the trait bound `MutableReads<'a>: Copy` is not satisfied
+  --> tests/ui/pass_harness/fail_nested_mutable_input_read.rs:13:24
+   |
+13 |   type InputRead<'a> = MutableReads<'a>;
+   |                        ^^^^^^^^^^^^^^^^ unsatisfied trait bound
+   |
+help: the trait `Copy` is not implemented for `MutableReads<'a>`
+  --> tests/ui/pass_harness/fail_nested_mutable_input_read.rs:5:1
+   |
+ 5 | struct MutableReads<'a> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+note: required by a bound in `rolldown_utils::pass::Pass::InputRead`
+  --> src/pass.rs
+   |
+   |   type InputRead<'a>: Copy;
+   |                       ^^^^ required by this bound in `Pass::InputRead`

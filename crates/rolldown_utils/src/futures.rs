@@ -1,11 +1,11 @@
 use futures::Future;
 
-#[cfg(feature = "async-runtime")]
+#[cfg(not(feature = "tokio-runtime"))]
 pub use crate::async_runtime::{JoinError, JoinHandle, RuntimeConfigError as SpawnError};
 
-#[cfg(not(feature = "async-runtime"))]
+#[cfg(feature = "tokio-runtime")]
 pub type JoinHandle<T> = tokio::task::JoinHandle<T>;
-#[cfg(not(feature = "async-runtime"))]
+#[cfg(feature = "tokio-runtime")]
 pub type SpawnError = std::convert::Infallible;
 
 #[inline]
@@ -14,11 +14,11 @@ where
   F: Future + Send + 'static,
   F::Output: Send + 'static,
 {
-  #[cfg(feature = "async-runtime")]
+  #[cfg(not(feature = "tokio-runtime"))]
   {
     crate::async_runtime::spawn(future)
   }
-  #[cfg(not(feature = "async-runtime"))]
+  #[cfg(feature = "tokio-runtime")]
   {
     tokio::spawn(future)
   }
@@ -26,7 +26,7 @@ where
 
 #[inline]
 #[cfg_attr(
-  not(feature = "async-runtime"),
+  feature = "tokio-runtime",
   expect(
     clippy::unnecessary_wraps,
     reason = "the Tokio and shared-runtime spawn facades must expose one feature-stable signature"
@@ -37,11 +37,11 @@ where
   F: Future + Send + 'static,
   F::Output: Send + 'static,
 {
-  #[cfg(feature = "async-runtime")]
+  #[cfg(not(feature = "tokio-runtime"))]
   {
     crate::async_runtime::try_spawn(future)
   }
-  #[cfg(not(feature = "async-runtime"))]
+  #[cfg(feature = "tokio-runtime")]
   {
     Ok(tokio::spawn(future))
   }
@@ -52,11 +52,11 @@ pub fn spawn_detached<F>(future: F)
 where
   F: Future<Output = ()> + Send + 'static,
 {
-  #[cfg(feature = "async-runtime")]
+  #[cfg(not(feature = "tokio-runtime"))]
   {
     crate::async_runtime::spawn_detached(future);
   }
-  #[cfg(not(feature = "async-runtime"))]
+  #[cfg(feature = "tokio-runtime")]
   {
     drop(tokio::spawn(future));
   }
@@ -68,11 +68,11 @@ where
   F: FnOnce() -> Out + Send + 'static,
   Out: Send + 'static,
 {
-  #[cfg(feature = "async-runtime")]
+  #[cfg(not(feature = "tokio-runtime"))]
   {
     crate::async_runtime::spawn_blocking(function)
   }
-  #[cfg(not(feature = "async-runtime"))]
+  #[cfg(feature = "tokio-runtime")]
   {
     tokio::task::spawn_blocking(function)
   }
@@ -81,7 +81,7 @@ where
 /// `async` here is only used to satisfy the wasm shim version of `block_on_spawn_all`.
 /// This function allow you to spawn non-static futures in parallel and wait for all of them to finish.
 #[cfg_attr(
-  all(not(feature = "async-runtime"), not(target_arch = "wasm32")),
+  all(feature = "tokio-runtime", not(target_arch = "wasm32")),
   expect(clippy::unused_async)
 )]
 pub async fn block_on_spawn_all<Iter, Out>(iter: Iter) -> Vec<Out>
@@ -90,12 +90,12 @@ where
   Out: Send + 'static,
   Iter::Item: Future<Output = Out> + Send,
 {
-  #[cfg(any(feature = "async-runtime", target_arch = "wasm32"))]
+  #[cfg(any(not(feature = "tokio-runtime"), target_arch = "wasm32"))]
   {
     use futures::future::join_all;
     join_all(iter).await
   }
-  #[cfg(all(not(feature = "async-runtime"), not(target_arch = "wasm32")))]
+  #[cfg(all(feature = "tokio-runtime", not(target_arch = "wasm32")))]
   {
     use async_scoped::TokioScope;
     let (_ret, collections) =
@@ -116,15 +116,15 @@ async fn _test_block_on_spawn_all_non_static_future() {
 }
 
 pub fn block_on<F: Future>(f: F) -> F::Output {
-  #[cfg(feature = "async-runtime")]
+  #[cfg(not(feature = "tokio-runtime"))]
   {
     crate::async_runtime::block_on(f)
   }
-  #[cfg(all(not(feature = "async-runtime"), target_family = "wasm"))]
+  #[cfg(all(feature = "tokio-runtime", target_family = "wasm"))]
   {
     futures::executor::block_on(f)
   }
-  #[cfg(all(not(feature = "async-runtime"), not(target_family = "wasm")))]
+  #[cfg(all(feature = "tokio-runtime", not(target_family = "wasm")))]
   {
     tokio::task::block_in_place(move || tokio::runtime::Handle::current().block_on(f))
   }

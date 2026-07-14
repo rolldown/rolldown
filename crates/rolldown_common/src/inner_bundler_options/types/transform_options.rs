@@ -9,7 +9,7 @@ use oxc::transformer::{ESFeature, EngineTargets, TransformOptions as OxcTransfor
 use oxc_resolver::ResolverGeneric;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
-use rolldown_utils::dashmap::FxDashMap;
+use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 
 use super::tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig;
 use crate::BundlerTransformOptions;
@@ -34,6 +34,9 @@ pub struct RawTransformOptions {
   /// Derived from the main resolver and shares its cache, so tsconfig
   /// lookups here and in module resolution stay consistent.
   resolver: Arc<ResolverGeneric<OsFileSystem>>,
+  /// Every tsconfig file discovered so far. Survives `clear_cache` so
+  /// watchers can still recognize tsconfig files when routing file changes.
+  known_tsconfig_paths: FxDashSet<PathBuf>,
 }
 
 impl RawTransformOptions {
@@ -41,7 +44,12 @@ impl RawTransformOptions {
     base_options: BundlerTransformOptions,
     resolver: Arc<ResolverGeneric<OsFileSystem>>,
   ) -> Self {
-    Self { base_options: Arc::new(base_options), cache: FxDashMap::default(), resolver }
+    Self {
+      base_options: Arc::new(base_options),
+      cache: FxDashMap::default(),
+      resolver,
+      known_tsconfig_paths: FxDashSet::default(),
+    }
   }
 
   /// Drop the merged transform options so the next build re-merges them.
@@ -155,7 +163,16 @@ impl TransformOptions {
       return None;
     };
     let tsconfig = raw.resolver.find_tsconfig(file_path).ok().flatten()?;
+    raw.known_tsconfig_paths.insert(tsconfig.path.clone());
     Some(tsconfig.path.clone())
+  }
+
+  /// Whether `path` was discovered as a tsconfig file by an earlier build.
+  pub fn is_known_tsconfig(&self, path: &Path) -> bool {
+    match &self.inner {
+      TransformOptionsInner::Normal(_) => false,
+      TransformOptionsInner::Raw(raw) => raw.known_tsconfig_paths.contains(path),
+    }
   }
 
   /// See [RawTransformOptions::clear_cache].

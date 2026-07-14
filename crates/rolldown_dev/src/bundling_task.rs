@@ -114,6 +114,24 @@ impl BundlingTask {
       }
     }
 
+    // A tsconfig edit affects every module the tsconfig governs, which HMR
+    // patches and partial scans cannot represent. Clear the caches and fall
+    // back to a full rebuild.
+    {
+      let bundler = self.bundler.lock().await;
+      let changed_tsconfig = self
+        .input
+        .changed_files()
+        .keys()
+        .any(|path| bundler.options().transform_options.is_known_tsconfig(path));
+      if changed_tsconfig {
+        tracing::trace!("[BundlingTask] detects a tsconfig change, upgrading to a full rebuild");
+        bundler.clear_resolver_cache();
+        bundler.clear_transform_tsconfig_cache();
+        self.input = TaskInput::FullBuild;
+      }
+    }
+
     let mut has_full_reload_update = false;
     if self.input.require_generate_hmr_update() {
       tracing::trace!("[BundlingTask] starts to generate HMR updates");

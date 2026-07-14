@@ -147,6 +147,17 @@ impl TransformOptions {
     }
   }
 
+  /// Find the tsconfig governing `file_path` so callers can watch it.
+  /// Discovery errors are ignored because they surface later in
+  /// `options_for_file`.
+  pub fn discover_tsconfig_file(&self, file_path: &Path) -> Option<PathBuf> {
+    let TransformOptionsInner::Raw(raw) = &self.inner else {
+      return None;
+    };
+    let tsconfig = raw.resolver.find_tsconfig(file_path).ok().flatten()?;
+    Some(tsconfig.path.clone())
+  }
+
   /// See [RawTransformOptions::clear_cache].
   pub fn clear_transform_tsconfig_cache(&self) {
     if let TransformOptionsInner::Raw(raw) = &self.inner {

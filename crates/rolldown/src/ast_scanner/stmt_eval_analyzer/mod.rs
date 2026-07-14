@@ -176,17 +176,15 @@ impl<'a> StmtEvalAnalyzer<'a> {
   /// `import.meta.ROLLUP_FILE_URL_<referenceId>` is a placeholder the finalizer rewrites into a
   /// `new URL(...)` expression. Other accesses like `import.meta.hot.accept()` may have side effects.
   fn is_side_effect_free_import_meta_access(member_expr: &ast::MemberExpression) -> bool {
-    let ast::MemberExpression::StaticMemberExpression(static_expr) = member_expr else {
-      return false;
-    };
-    let Expression::MetaProperty(meta_property) = &static_expr.object else {
+    let Expression::MetaProperty(meta_property) = member_expr.object() else {
       return false;
     };
     if meta_property.meta.name != "import" || meta_property.property.name != "meta" {
       return false;
     }
-    let property_name = static_expr.property.name.as_str();
-    property_name == "url" || property_name.starts_with("ROLLUP_FILE_URL_")
+    member_expr
+      .static_property_name()
+      .is_some_and(|name| name == "url" || name.starts_with("ROLLUP_FILE_URL_"))
   }
 
   fn analyze_member_expr(&self, member_expr: &ast::MemberExpression) -> StmtEvalFacts {
@@ -1008,8 +1006,17 @@ mod test {
     assert!(!has_side_effect_for_tree_shaking("import.meta"));
     assert!(!has_side_effect_for_tree_shaking("const meta = import.meta"));
     assert!(!has_side_effect_for_tree_shaking("import.meta.url"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta?.url"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta['url']"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta?.['url']"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta.ROLLUP_FILE_URL_abc123"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta?.ROLLUP_FILE_URL_abc123"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta['ROLLUP_FILE_URL_abc123']"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta?.['ROLLUP_FILE_URL_abc123']"));
+    assert!(has_side_effect_for_tree_shaking("import.meta[foo()]"));
     // Other import.meta properties are not spec-defined as side-effect-free
     assert!(has_side_effect_for_tree_shaking("import.meta.hot"));
+    assert!(has_side_effect_for_tree_shaking("import.meta['hot']"));
     // Deeper chains may throw (e.g. import.meta.nonExisting is undefined, .foo throws TypeError)
     assert!(has_side_effect_for_tree_shaking("import.meta.nonExisting.foo"));
     assert!(has_side_effect_for_tree_shaking("const { url } = import.meta"));

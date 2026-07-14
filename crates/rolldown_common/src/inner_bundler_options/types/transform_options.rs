@@ -44,6 +44,12 @@ impl RawTransformOptions {
     Self { base_options: Arc::new(base_options), cache: FxDashMap::default(), resolver }
   }
 
+  /// Drop the merged transform options so the next build re-merges them.
+  /// The tsconfig contents live in the cache shared with the main resolver.
+  pub fn clear_cache(&self) {
+    self.cache.clear();
+  }
+
   pub fn get_or_create_for_tsconfig(
     &self,
     tsconfig: Option<&oxc_resolver::TsConfig>,
@@ -138,6 +144,13 @@ impl TransformOptions {
         };
         raw.get_or_create_for_tsconfig(tsconfig.as_deref(), warnings)
       }
+    }
+  }
+
+  /// See [RawTransformOptions::clear_cache].
+  pub fn clear_transform_tsconfig_cache(&self) {
+    if let TransformOptionsInner::Raw(raw) = &self.inner {
+      raw.clear_cache();
     }
   }
 }

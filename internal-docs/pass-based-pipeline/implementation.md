@@ -8,14 +8,14 @@ Phase 0 provides a shared synchronous pass harness in `rolldown_utils`, runtime 
 
 ## Component map
 
-| Component | Location | Responsibility |
-| --- | --- | --- |
-| Public module export | `crates/rolldown_utils/src/lib.rs` | Exposes the shared `pass` module. |
-| Harness | `crates/rolldown_utils/src/pass.rs` | Defines `Pass`, the branded execution token, raw result envelope, sealing wrapper, public result aliases, contexts, and execution entries. |
-| Runtime tests | `crates/rolldown_utils/tests/pass_harness.rs` | Exercises sealed and owned outputs, typed error propagation, and deterministic branch diagnostic merging. |
-| Compile-test driver | `crates/rolldown_utils/tests/pass_harness_ui.rs` | Runs one valid code-generating case and all pass-harness compile-fail cases. |
-| Compile fixtures | `crates/rolldown_utils/tests/ui/pass_harness/` | Pins capability, privacy, lifetime, ownership, ordering, sealing, context, and codegen failures from a consuming crate. |
-| Future link passes | `crates/rolldown/src/stages/link_stage/passes/` | Reserved for the selected adoption; this subtree and its real pass implementations do not exist yet. |
+| Component            | Location                                         | Responsibility                                                                                                                             |
+| -------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Public module export | `crates/rolldown_utils/src/lib.rs`               | Exposes the shared `pass` module.                                                                                                          |
+| Harness              | `crates/rolldown_utils/src/pass.rs`              | Defines `Pass`, the branded execution token, raw result envelope, sealing wrapper, public result aliases, contexts, and execution entries. |
+| Runtime tests        | `crates/rolldown_utils/tests/pass_harness.rs`    | Exercises sealed and owned outputs, typed error propagation, and deterministic branch diagnostic merging.                                  |
+| Compile-test driver  | `crates/rolldown_utils/tests/pass_harness_ui.rs` | Runs one valid code-generating case and all pass-harness compile-fail cases.                                                               |
+| Compile fixtures     | `crates/rolldown_utils/tests/ui/pass_harness/`   | Pins capability, privacy, lifetime, ownership, ordering, sealing, context, and codegen failures from a consuming crate.                    |
+| Future link passes   | `crates/rolldown/src/stages/link_stage/passes/`  | Reserved for the selected adoption; this subtree and its real pass implementations do not exist yet.                                       |
 
 ## Public API and control flow
 
@@ -92,11 +92,11 @@ Neither adapter is a pass. The input adapter performs no traversal, sorting, agg
 
 The output adapter must construct the mutable legacy boundary without weakening `Sealed<T>`:
 
-| Value kind | Pass channel | Driver behavior | Final action |
-| --- | --- | --- | --- |
-| Link-local fact read by later passes | `OutputRead` | Keep `Sealed<T>` and lend `&T` through dereference. | Drop after its last link consumer, or project a compact fact into one legacy field at the adapter. |
-| Domain-final value required by Generate | `OutputOwned` | Keep ownership in a domain-specific final type, lend `&T` to readers, and do not expose general mutation. | Move it once into the legacy output adapter. |
-| Mutable entity table or draft | `OutputOwned` | Move it only into passes that mutate or consume it; unrelated passes receive narrow shared reads. | Move it once into the legacy output tuple or drop it at its declared last use. |
+| Value kind                              | Pass channel  | Driver behavior                                                                                           | Final action                                                                                       |
+| --------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Link-local fact read by later passes    | `OutputRead`  | Keep `Sealed<T>` and lend `&T` through dereference.                                                       | Drop after its last link consumer, or project a compact fact into one legacy field at the adapter. |
+| Domain-final value required by Generate | `OutputOwned` | Keep ownership in a domain-specific final type, lend `&T` to readers, and do not expose general mutation. | Move it once into the legacy output adapter.                                                       |
+| Mutable entity table or draft           | `OutputOwned` | Move it only into passes that mutate or consume it; unrelated passes receive narrow shared reads.         | Move it once into the legacy output tuple or drop it at its declared last use.                     |
 
 There is no `Sealed::into_inner`, no adapter-only general unwrap, and no clone of a large table or map merely to cross the boundary. A value that must be moved into the legacy output stays on the owned channel. Its final domain type may restrict mutators with module privacy, but it is not described as mutation-sealed because Generate eventually receives a mutable legacy representation.
 

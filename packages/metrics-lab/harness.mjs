@@ -27,8 +27,8 @@ import {
   DEFAULT_THROTTLE, deltaSection, heavyPrepaintTypes, summarize, timedRun, weightLabel,
 } from './lib/measure.mjs';
 import {
-  COLD_OPEN_MIN_BYTES, attributeChunks, coldAtPaintModules, coverageRun,
-  largeAtPaintModules, siblingVariantGroups,
+  COLD_OPEN_MIN_BYTES, attributeChunks, buildMachineryAtRuntime, coldAtPaintModules,
+  coverageRun, duplicateLibraryCopies, largeAtPaintModules, siblingVariantGroups,
 } from './lib/coverage.mjs';
 import { aggregateProfile, profileRun } from './lib/profile.mjs';
 import { loadModuleGraph, moduleGraphCandidates, resolveModule, whatIf } from './lib/module-graph.mjs';
@@ -479,6 +479,8 @@ function buildCoverageReport(target, cov, entry) {
     modules,
     candidates,
     coldAtPaint: coldAtPaintModules(modules).slice(0, 20),
+    duplicateCopies: duplicateLibraryCopies(modules),
+    buildMachinery: buildMachineryAtRuntime(modules),
   };
   writeJson(target.paths.coverage, report);
   return report;
@@ -599,6 +601,34 @@ function printCoverageReport(target, report, { compact = false, advice = true } 
     console.log(`\nsibling group ${group.dir}: ${group.files} modules, ${kb(group.bytes)}, ~${Math.round((group.paintBytes / group.bytes) * 100)}% executed at paint.`);
     if (advice) {
       console.log('next: families of same-shaped modules (locales, themes, per-tenant configs) usually need only ONE variant per session - keep the default in the entry and load the active variant with a dynamic import.');
+    }
+  }
+
+  const dups = report.duplicateCopies ?? duplicateLibraryCopies(modules);
+  if (dups.length) {
+    console.log('\nduplicate library copies in the initial load - one package shipped more than once:');
+    for (const dup of dups) {
+      console.log(`  ${dup.pkg}  ${kb(dup.bytes)} total (${dup.kind === 'nested-copies' ? 'two install locations' : 'two build variants'})`);
+      for (const copy of dup.copies) console.log(`    ${copy.where}  ${kb(copy.bytes)}`);
+    }
+    if (advice) {
+      console.log('next: one importer resolves this package differently from the rest (a dependency\'s');
+      console.log('browser/main field, an alias, or a nested version) - find which import pulls the second copy.');
+    }
+  }
+
+  const machinery = report.buildMachinery ?? buildMachineryAtRuntime(modules);
+  if (machinery.length) {
+    console.log('\nbuild-time machinery in the initial load:');
+    for (const m of machinery) {
+      console.log(`  ${m.label}  ${kb(m.bytes)} (${m.note})`);
+      for (const f of m.files) {
+        console.log(`    ${f.source}  ${kb(f.bytes)}${typeof f.paintRatio === 'number' ? ` @ ${(f.paintRatio * 100).toFixed(0)}% at paint` : ''}`);
+      }
+    }
+    if (advice) {
+      console.log('next: if this app really compiles at runtime this is load-bearing - otherwise trace the');
+      console.log('import that drags it in (a CJS require of the package root often resolves to the full build).');
     }
   }
 }
@@ -780,6 +810,24 @@ function printVerdict(target) {
     } else {
       lead('clear', 'sibling variant groups', 'none detected');
     }
+
+    const dups = coverage.duplicateCopies ?? duplicateLibraryCopies(coverage.modules ?? []);
+    if (dups.length) {
+      lead('open', `duplicate library copies (${dups.length} package(s), ${kb(dups.reduce((sum, d) => sum + d.bytes, 0))})`,
+        dups.slice(0, 3).map((d) => `${d.pkg} x${d.copies.length} ${d.kind === 'nested-copies' ? 'install locations' : 'build variants'} (${kb(d.bytes)})`).join(', '),
+        'one importer resolves the package differently (a dependency\'s browser/main field, an alias, a nested version) - trace which import pulls the second copy and make both resolve to one');
+    } else {
+      lead('clear', 'duplicate library copies', 'no package ships twice in the initial load');
+    }
+
+    const machinery = coverage.buildMachinery ?? buildMachineryAtRuntime(coverage.modules ?? []);
+    if (machinery.length) {
+      lead('open', `build-time machinery in the initial load (${machinery.length}, ${kb(machinery.reduce((sum, m) => sum + m.bytes, 0))})`,
+        machinery.slice(0, 3).map((m) => `${m.label} ${kb(m.bytes)}`).join(', '),
+        'load-bearing ONLY if the app genuinely compiles at runtime - verify, then trace the import that drags it in (a CJS require of the package root often resolves to the full build)');
+    } else {
+      lead('clear', 'build-time machinery', 'no known compiler ships in the initial load');
+    }
   }
 
   // Static retained imports: only exists on rolldown builds - omitted entirely
@@ -824,6 +872,10 @@ function printVerdict(target) {
   } else {
     console.log(`VERDICT: not done - ${openCount} lead(s) OPEN, ${unknownCount} signal(s) UNKNOWN or stale.`);
     console.log('Work the OPEN items (render gap first), gather the UNKNOWN signals, rebuild, re-measure.');
+    console.log('Boundary: this list covers what the instruments measure - render gating, bytes, CPU,');
+    console.log('retained imports, duplicate copies. Headroom can also hide where they are blind (build');
+    console.log('and dependency configuration, code the sourcemaps cannot attribute, server behavior);');
+    console.log('working beyond this list is in scope.');
     console.log('');
     console.log('Do NOT report this work as finished or "confirmed by the harness" while leads are OPEN -');
     console.log('a re-pinned baseline records your gain; it does not close the checklist above.');
@@ -870,7 +922,8 @@ async function cmdMeasure(argv) {
   const opts = parse(argv, {
     ...TARGET_OPTS,
     runs: { type: 'string', default: '5' },
-    warmup: { type: 'string', default: '1' },
+    // See cmdScan: two warmups absorb Chrome's first-two-loads cache transient.
+    warmup: { type: 'string', default: '2' },
     label: { type: 'string', default: '' },
     settle: { type: 'string', default: '1500' },
     'no-throttle': { type: 'boolean', default: false },
@@ -965,7 +1018,11 @@ async function cmdScan(argv) {
     // full LCP (minutes on slow pages). --runs 5 remains available for noisy
     // pages; the effect side is regression-gated by the eval ledger.
     runs: { type: 'string', default: '3' },
-    warmup: { type: 'string', default: '1' },
+    // 2 warmups, not 1: Chrome warms some cache layer over the FIRST TWO loads
+    // (it-tools 2026-07-14: with one warmup, back-to-back runs of one build
+    // spread 1.2s bimodally - 5149/3942/4109; with two, 3939/3755/3737/3772).
+    // Measured runs must be same-mode or medians flip run-order lotteries.
+    warmup: { type: 'string', default: '2' },
     label: { type: 'string', default: '' },
     settle: { type: 'string', default: '1500' },
     'no-throttle': { type: 'boolean', default: false },
@@ -1369,7 +1426,8 @@ the loop:
      partially-executed vendor SDK usually hides one boot-time init call), defer
      candidates, large modules "executed" at paint (data evaluates on import -
      executed is not needed), sibling variant groups (locales/themes: load only the
-     active one), statically retained imports (rolldown builds: the module graph
+     active one), duplicate library copies (one package shipped twice - nested
+     installs or a dependency's packaging), statically retained imports (rolldown builds: the module graph
      prices every split candidate - if the verdict says the graph is not collected,
      enable it, it is one config line)
   3. read the app source; find why the landing page pays for each finding. On rolldown

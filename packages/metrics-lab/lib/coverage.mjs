@@ -357,6 +357,131 @@ export function siblingVariantGroups(modules) {
   });
 }
 
+export const DUP_COPY_MIN_BYTES = 20 * 1024; // per copy - below this a dupe is noise
+// Basename tokens that distinguish BUILDS of one library rather than different
+// libraries (vue.esm-bundler vs vue.runtime.esm-bundler). Dialect/feature files
+// (node-sql-parser's mysql.js vs postgres.js) differ by tokens outside this
+// vocabulary and must not be flagged.
+const BUILD_VARIANT_TOKENS = new Set([
+  'runtime', 'esm', 'cjs', 'umd', 'iife', 'bundler', 'browser', 'node', 'prod',
+  'production', 'dev', 'development', 'min', 'full', 'slim', 'global', 'modern', 'legacy',
+]);
+
+/**
+ * One package shipped more than once in the initial load — waste only the
+ * instruments reliably see, in two shapes: (a) the same package resolved from
+ * two node_modules roots (nested version duplicates: excalidraw ships roughjs
+ * both top-level and under mermaid), and (b) two build VARIANTS of one package
+ * co-loaded (it-tools A/B #1: vue-shadow-dom's UMD "browser" build require()d a
+ * second full Vue next to the app's runtime build — found by the CONTROL agent
+ * by hand, which is exactly why this is a signal now). Fact signal: it names
+ * the copies; choosing the repair (alias, dedupe, override) stays with the
+ * loop driver.
+ */
+export function duplicateLibraryCopies(modules) {
+  const byPkg = new Map();
+  for (const mod of modules ?? []) {
+    const src = String(mod.source ?? '').replaceAll('\\', '/');
+    const matches = [...src.matchAll(/node_modules\/((?:@[^/]+\/)?[^/]+)\//g)];
+    if (!matches.length) continue;
+    const last = matches[matches.length - 1];
+    const rootEnd = last.index + last[0].length;
+    const rel = src.slice(rootEnd);
+    const entry = byPkg.get(last[1]) ?? { roots: new Map(), files: [] };
+    const copyRoot = src.slice(0, rootEnd);
+    const root = entry.roots.get(copyRoot) ?? { bytes: 0 };
+    root.bytes += mod.totalBytes ?? 0;
+    entry.roots.set(copyRoot, root);
+    entry.files.push({
+      rel,
+      dir: rel.slice(0, rel.lastIndexOf('/') + 1),
+      base: rel.slice(rel.lastIndexOf('/') + 1),
+      bytes: mod.totalBytes ?? 0,
+      copyRoot,
+    });
+    byPkg.set(last[1], entry);
+  }
+  const findings = [];
+  for (const [pkg, entry] of byPkg) {
+    const heavyRoots = [...entry.roots.entries()].filter(([, r]) => r.bytes >= DUP_COPY_MIN_BYTES);
+    if (heavyRoots.length >= 2) {
+      findings.push({
+        pkg,
+        kind: 'nested-copies',
+        bytes: heavyRoots.reduce((sum, [, r]) => sum + r.bytes, 0),
+        copies: heavyRoots.map(([copyRoot, r]) => ({ where: copyRoot, bytes: r.bytes })),
+      });
+      continue;
+    }
+    // Build variants: two sizeable files in the same package dir whose basenames
+    // differ ONLY by build-variant tokens.
+    const big = entry.files.filter((f) => f.bytes >= DUP_COPY_MIN_BYTES);
+    outer: for (let i = 0; i < big.length; i++) {
+      for (let j = i + 1; j < big.length; j++) {
+        const a = big[i];
+        const b = big[j];
+        if (a.dir !== b.dir || a.copyRoot !== b.copyRoot) continue;
+        const tokens = (f) => new Set(f.base.replace(/\.(m|c)?js$/, '').split(/[.\-_]+/).filter(Boolean));
+        const ta = tokens(a);
+        const tb = tokens(b);
+        const shared = [...ta].filter((t) => tb.has(t));
+        const diff = [...ta].filter((t) => !tb.has(t)).concat([...tb].filter((t) => !ta.has(t)));
+        if (shared.length >= 1 && diff.length >= 1 && diff.every((t) => BUILD_VARIANT_TOKENS.has(t))) {
+          findings.push({
+            pkg,
+            kind: 'build-variants',
+            bytes: a.bytes + b.bytes,
+            copies: [a, b].map((f) => ({ where: f.rel, bytes: f.bytes })),
+          });
+          break outer;
+        }
+      }
+    }
+  }
+  return findings.sort((a, b) => b.bytes - a.bytes);
+}
+
+// Build-time machinery in the initial load: compilers that pre-compiled apps
+// don't need at runtime. The it-tools A/B #1 baseline shipped @vue/compiler-core
+// (50KB, 85% cold - a CJS require('vue') resolves to the FULL build) plus
+// @intlify/message-compiler next to vue-i18n's runtime build; the unaided
+// CONTROL agent found the first by hand, the instruments said nothing. Curated
+// name list = high precision; each entry is a verify-need fact (a live
+// playground genuinely compiles at runtime - the verdict asks, never assumes).
+const BUILD_MACHINERY = [
+  {
+    label: 'vue template compiler',
+    module: /node_modules\/@vue\/compiler-(core|dom|sfc)\//,
+    pairedRuntime: /node_modules\/@vue\/runtime-core\//,
+    note: 'pre-compiled SFC apps need only the runtime - usually a CJS require("vue") or an explicit full-build import drags the compiler in',
+  },
+  {
+    label: 'vue-i18n message compiler',
+    module: /node_modules\/@intlify\/message-compiler\//,
+    pairedRuntime: /node_modules\/vue-i18n\/dist\/vue-i18n\.runtime/,
+    note: 'precompiled messages (unplugin-vue-i18n) need only the runtime build',
+  },
+  { label: 'babel standalone compiler', module: /node_modules\/@babel\/standalone\//, note: 'compiles JS in the browser - almost never needed at first paint' },
+  { label: 'typescript compiler', module: /node_modules\/typescript\/lib\//, note: 'the TypeScript compiler in a browser bundle' },
+  { label: 'sass/less compiler', module: /node_modules\/(sass|less)\/(dist|lib)\//, note: 'style compilation belongs in the build' },
+];
+
+export function buildMachineryAtRuntime(modules) {
+  const findings = [];
+  for (const entry of BUILD_MACHINERY) {
+    const hits = (modules ?? []).filter((mod) => entry.module.test(String(mod.source).replaceAll('\\', '/')));
+    if (!hits.length) continue;
+    if (entry.pairedRuntime && !(modules ?? []).some((mod) => entry.pairedRuntime.test(String(mod.source).replaceAll('\\', '/')))) continue;
+    findings.push({
+      label: entry.label,
+      note: entry.note,
+      bytes: hits.reduce((sum, mod) => sum + (mod.totalBytes ?? 0), 0),
+      files: hits.map((mod) => ({ source: mod.source, bytes: mod.totalBytes ?? 0, paintRatio: mod.paintRatio ?? null })),
+    });
+  }
+  return findings.sort((a, b) => b.bytes - a.bytes);
+}
+
 // --- browser driver ----------------------------------------------------------
 
 /**

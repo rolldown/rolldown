@@ -849,12 +849,16 @@ mod tests {
       options: normalize_dev_options(DevOptions::default()),
       coordinator_tx,
       clients: SharedClients::default(),
+      stamp_table: Arc::new(Mutex::new(rolldown_common::HmrStampTable::default())),
+      pending_payloads: Arc::new(Mutex::new(rustc_hash::FxHashMap::default())),
+      top_level_evaluated: Mutex::new(Arc::new(rustc_hash::FxHashMap::default())),
     });
     BundleCoordinator::new(
       Arc::new(Mutex::new(bundler)),
       ctx,
       coordinator_rx,
       Box::new(NoopFsWatcher),
+      Arc::new(AtomicU32::new(0)),
     )
   }
 
@@ -1263,14 +1267,22 @@ mod tests {
       }),
       coordinator_tx,
       clients: SharedClients::default(),
+      stamp_table: Arc::new(Mutex::new(rolldown_common::HmrStampTable::default())),
+      pending_payloads: Arc::new(Mutex::new(rustc_hash::FxHashMap::default())),
+      top_level_evaluated: Mutex::new(Arc::new(rustc_hash::FxHashMap::default())),
     });
     let commit_attempts = Arc::new(AtomicUsize::new(0));
     let watcher: DynFsWatcher = Box::new(CommitFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       failures_before_success: 2,
     });
-    let mut coordinator =
-      BundleCoordinator::new(Arc::new(Mutex::new(bundler)), ctx, coordinator_rx, watcher);
+    let mut coordinator = BundleCoordinator::new(
+      Arc::new(Mutex::new(bundler)),
+      ctx,
+      coordinator_rx,
+      watcher,
+      Arc::new(AtomicU32::new(0)),
+    );
 
     let first_observer = coordinator.begin_watch_registration_error_observation();
     let second_observer = coordinator.begin_watch_registration_error_observation();
@@ -1389,14 +1401,22 @@ mod tests {
       }),
       coordinator_tx,
       clients: SharedClients::default(),
+      stamp_table: Arc::new(Mutex::new(rolldown_common::HmrStampTable::default())),
+      pending_payloads: Arc::new(Mutex::new(rustc_hash::FxHashMap::default())),
+      top_level_evaluated: Mutex::new(Arc::new(rustc_hash::FxHashMap::default())),
     });
     let commit_attempts = Arc::new(AtomicUsize::new(0));
     let watcher: DynFsWatcher = Box::new(CommitFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       failures_before_success: 1,
     });
-    let mut coordinator =
-      BundleCoordinator::new(Arc::new(Mutex::new(bundler)), ctx, coordinator_rx, watcher);
+    let mut coordinator = BundleCoordinator::new(
+      Arc::new(Mutex::new(bundler)),
+      ctx,
+      coordinator_rx,
+      watcher,
+      Arc::new(AtomicU32::new(0)),
+    );
 
     coordinator.state = CoordinatorState::Idle;
     let mut changed_files = FxIndexMap::default();

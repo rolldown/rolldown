@@ -20,6 +20,7 @@ use super::{
   types::{
     binding_hook_resolve_file_url_args::BindingHookResolveFileUrlArgs,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
+    binding_hot_update_args::BindingHotUpdateArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
     binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
     binding_shared_string::BindingSharedString,
@@ -688,6 +689,29 @@ impl Plugin for JsPlugin {
 
   fn watch_change_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
     self.watch_change_meta.as_ref().map(Into::into)
+  }
+
+  async fn hot_update(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookHotUpdateArgs,
+  ) -> rolldown_plugin::HookHotUpdateReturn {
+    let Some(cb) = &self.hot_update else { return Ok(None) };
+    let binding_args = BindingHotUpdateArgs {
+      kind: args.kind.to_string(),
+      file: args.file.to_string(),
+      modules: args.modules.iter().map(ToString::to_string).collect(),
+    };
+    let result = cb
+      .await_call((ctx.clone().into(), binding_args).into())
+      .instrument(debug_span!("hot_update_hook", plugin_name = self.name))
+      .await
+      .with_context(|| format!("hotUpdate hook threw an error for file={}", args.file))?;
+    Ok(result.map(|modules| modules.into_iter().map(arcstr::ArcStr::from).collect()))
+  }
+
+  fn hot_update_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.hot_update_meta.as_ref().map(Into::into)
   }
 
   async fn close_watcher(

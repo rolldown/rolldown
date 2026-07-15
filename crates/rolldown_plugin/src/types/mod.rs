@@ -4,6 +4,7 @@ pub mod hook_build_end_args;
 pub mod hook_build_start_args;
 pub mod hook_close_bundle_args;
 pub mod hook_generate_bundle_args;
+pub mod hook_hot_update_args;
 pub mod hook_load_args;
 pub mod hook_load_output;
 pub mod hook_render_chunk_args;

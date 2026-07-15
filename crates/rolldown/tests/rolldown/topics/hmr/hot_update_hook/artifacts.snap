@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] dep.js is dynamically imported by entry.js but also statically imported by entry.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["dep.js", "entry.js"],
+	localCount: 2,
+	edges: [[], [0]],
+	dynamicEdges: [[], []]
+});
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+__rolldown_runtime__.createModuleHotContext("dep.js");
+__rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
+//#endregion
+//#region entry.js
+var entry_exports = /* @__PURE__ */ __exportAll({});
+const entry_hot = __rolldown_runtime__.createModuleHotContext("entry.js");
+__rolldown_runtime__.registerModule("entry.js", { exports: entry_exports });
+entry_hot.accept("dep.js", () => {});
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+//#region dep.js
+__rolldown_runtime__.registerFactory("dep.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = 1;
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- dep.js
+
+# HMR Step 1
+
+## Meta
+
+- update type: noop

@@ -5,5 +5,5 @@
 	path = test262
 	url = https://github.com/tc39/test262.git
 [submodule "packages/test-dev-server/vite"]
-	path = packages/test-dev-server/vite
+	path = vite
 	url = https://github.com/vitejs/vite.git

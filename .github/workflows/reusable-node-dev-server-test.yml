@@ -49,7 +49,7 @@ jobs:
       # setup-vite inits the submodule, installs its pinned deps, builds vite,
       # and points its runtime `rolldown` resolution at packages/rolldown.
       - name: Setup Vite submodule (browser-platform backend)
-        run: vp run --filter '@rolldown/test-dev-server' setup-vite
+        run: vp run --filter '@rolldown-internal/scripts' setup-vite
 
       - name: Install Playwright
         run: vp exec playwright install chromium

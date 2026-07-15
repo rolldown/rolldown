@@ -2,12 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { styleText } from 'node:util';
 import { x } from 'tinyexec';
+import { ensureViteCheckout, viteDir } from '../../scripts/src/setup-vite/checkout.js';
 
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
-const ROLLDOWN_REPO_ROOT = path.resolve(import.meta.dirname, '../..');
-// Single source of truth for the vite commit used by tests in this repo:
-// the pin of the `packages/test-dev-server/vite` submodule.
-const VITE_SUBMODULE_PATH = 'packages/test-dev-server/vite';
 const OVERRIDES = [
   `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`,
   `  "@rolldown/pluginutils": ${path.resolve(import.meta.dirname, '../pluginutils')}`
@@ -48,27 +45,16 @@ async function runCmdAndPipeOrExit(title: string, cmdOptions: Parameters<typeof 
 
 fs.rmSync(REPO_PATH, { recursive: true, force: true });
 
-// Read the pinned vite commit from the submodule gitlink. This works without
-// initializing the submodule, so CI does not need a submodule checkout here.
-const pinResult = await x('git', ['rev-parse', `HEAD:${VITE_SUBMODULE_PATH}`], {
-  nodeOptions: { cwd: ROLLDOWN_REPO_ROOT },
-});
-if (pinResult.exitCode !== 0) {
-  console.error(styleText(['red', 'bold'], `Failed to read the vite pin from the ${VITE_SUBMODULE_PATH} submodule.`));
-  process.exit(1);
-}
-const vitePin = pinResult.stdout.trim();
-
+// The tests run on a throwaway LOCAL clone of the shared `vite/` submodule,
+// never on the submodule itself: this suite edits tracked files (pnpm
+// overrides, spec patches) and the submodule must stay pristine. The clone
+// shares objects via hardlinks (no network) and checks out the submodule's
+// current HEAD — the same commit the dev-server tests run on.
+printTitle('# Ensuring the vite submodule checkout...');
+ensureViteCheckout();
 await runCmdAndPipeOrExit(
-  '# Cloning vite repo...',
-  ['git', ['clone', 'https://github.com/vitejs/vite.git', REPO_PATH]],
-);
-
-// The pinned commit must be pushed to vitejs/vite (same requirement as the
-// submodule itself), otherwise this checkout fails.
-await runCmdAndPipeOrExit(
-  `# Checking out pinned vite commit ${vitePin}...`,
-  ['git', ['-c', 'advice.detachedHead=false', 'checkout', vitePin], { nodeOptions: { cwd: REPO_PATH } }],
+  '# Cloning the local vite checkout...',
+  ['git', ['clone', viteDir, REPO_PATH]],
 );
 
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');

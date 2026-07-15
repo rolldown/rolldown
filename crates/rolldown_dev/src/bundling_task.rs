@@ -126,6 +126,12 @@ impl BundlingTask {
         .any(|path| bundler.options().transform_options.is_known_tsconfig(path));
       if changed_tsconfig {
         tracing::trace!("[BundlingTask] detects a tsconfig change, upgrading to a full rebuild");
+      }
+      // A bare full build carries no changed-file list (startup, restart,
+      // failure recovery), so whether a tsconfig changed cannot be answered
+      // there. Clear defensively; full builds are rare and the clears are
+      // cheap.
+      if changed_tsconfig || self.input.requires_full_rebuild() {
         bundler.clear_resolver_cache();
         bundler.clear_transform_tsconfig_cache();
       }

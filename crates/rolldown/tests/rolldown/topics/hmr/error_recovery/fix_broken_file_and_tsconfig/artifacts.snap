@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve './missing' in main.ts
+   ╭─[ main.ts:1:8 ]
+   │
+ 1 │ import './missing';
+   │        ─────┬─────  
+   │             ╰─────── Module not found.
+───╯
+
+```
+
+# HMR Step 0
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.ts
+var main_exports = /* @__PURE__ */ __exportAll({ Foo: () => Foo });
+__rolldown_runtime__.createModuleHotContext("main.ts");
+__rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
+var Foo = class {
+	bar = 1;
+};
+//#endregion
+export { Foo };
+
+```

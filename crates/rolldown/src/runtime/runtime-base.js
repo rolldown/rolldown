@@ -61,7 +61,12 @@ export var __reExport = (target, mod, secondTarget) => (
 export var __toESM = (mod, isNodeMode, target) => (
   (target = mod != null ? __create(__getProtoOf(mod)) : {}),
   __copyProps(
-    isNodeMode || !mod || !mod.__esModule
+    (isNodeMode
+      ? !(mod &&
+          mod[Symbol.toStringTag] === 'Module' &&
+          __getProtoOf(mod) === null &&
+          !Reflect.isExtensible(mod))
+      : !mod || !mod.__esModule)
       ? __defProp(target, 'default', { value: mod, enumerable: true })
       : target,
     mod,

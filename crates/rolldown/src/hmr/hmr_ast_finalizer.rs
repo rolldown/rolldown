@@ -151,42 +151,41 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           self.dependencies.insert(importee_idx);
           let binding_name = self.ensure_static_import_info(importee_idx, rec_id).to_string();
           self.exports.extend(decl.specifiers.iter().map(|specifier| {
-                        self.ast_factory.make_lazy_export_property(
-                          &specifier.exported.name(),
-                          match &specifier.local {
-                            ast::ModuleExportName::IdentifierName(ident) => {
-                              Expression::StaticMemberExpression(
-                                ast::StaticMemberExpression::boxed(
-                                  SPAN,
-                                  self.ast_factory.make_id_ref_expr(SPAN, &binding_name),
-                                  ast::IdentifierName::new(SPAN, ident.name.as_str(), &self.ast_factory),
-                                  false,
-                                  &self.ast_factory,
-                                ),
-                              )
-                            }
-                            ast::ModuleExportName::StringLiteral(str) => {
-                              Expression::ComputedMemberExpression(
-                                ast::ComputedMemberExpression::boxed(
-                                  SPAN,
-                                  self.ast_factory.make_id_ref_expr(SPAN, &binding_name),
-                                  ast::Expression::new_string_literal(
-                                    SPAN, str.value.as_str(), None, &self.ast_factory
-                                  ),
-                                  false,
-                                  &self.ast_factory,
-                                ),
-                              )
-                            }
-                            ast::ModuleExportName::IdentifierReference(_) => {
-                              unreachable!(
-                                "ModuleExportName IdentifierReference is invalid in ExportNamedDeclaration with source"
-                              )
-                            }
-                          },
-                          matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_))
-                        )
-                      }));
+            self.ast_factory.make_lazy_export_property(
+              &specifier.exported.name(),
+              match &specifier.local {
+                ast::ModuleExportName::IdentifierName(ident) => {
+                  Expression::StaticMemberExpression(ast::StaticMemberExpression::boxed(
+                    SPAN,
+                    self.ast_factory.make_id_ref_expr(SPAN, &binding_name),
+                    ast::IdentifierName::new(SPAN, ident.name.as_str(), &self.ast_factory),
+                    false,
+                    &self.ast_factory,
+                  ))
+                }
+                ast::ModuleExportName::StringLiteral(str) => {
+                  Expression::ComputedMemberExpression(ast::ComputedMemberExpression::boxed(
+                    SPAN,
+                    self.ast_factory.make_id_ref_expr(SPAN, &binding_name),
+                    ast::Expression::new_string_literal(
+                      SPAN,
+                      str.value.as_str(),
+                      None,
+                      &self.ast_factory,
+                    ),
+                    false,
+                    &self.ast_factory,
+                  ))
+                }
+                ast::ModuleExportName::IdentifierReference(_) => {
+                  unreachable!(
+                    "ModuleExportName IdentifierReference is invalid in ExportNamedDeclaration with source"
+                  )
+                }
+              },
+              matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_)),
+            )
+          }));
           if let Some(stmt) = self.create_load_exports_call_stmt(importee, &binding_name, decl.span)
           {
             program_body.push(stmt);
@@ -307,8 +306,10 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           program_body.push(stmt);
         }
       }
-      // Typescript module declarations should be pre-processed by rolldown. If they aren't,
-      // it means there's an error. Instead of panicking, we'll just keep the original code.
+      // Every other statement is kept as-is. That's ordinary statements, which need no
+      // rewriting, and also the TypeScript module declarations (`export =`, `export as
+      // namespace`), which rolldown should have pre-processed away already - if one reaches
+      // here something went wrong upstream, and keeping it beats panicking.
       node => {
         program_body.push(node);
       }

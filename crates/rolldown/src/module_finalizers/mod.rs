@@ -1867,11 +1867,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
             return;
           }
-        } else if matches!(top_stmt, ast::Statement::ExportDefaultDeclaration(_)) {
+        } else if let ast::Statement::ExportDefaultDeclaration(default_decl) = top_stmt {
           use ast::ExportDefaultDeclarationKind;
-          let ast::Statement::ExportDefaultDeclaration(default_decl) = top_stmt else {
-            unreachable!()
-          };
           let default_decl_span = default_decl.span;
           match default_decl.unbox().declaration {
             // Special case: when exporting an identifier that's already the default export symbol
@@ -2013,8 +2010,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               decl.kind = VariableDeclarationKind::Var;
             }
           }
-          if matches!(top_stmt, Statement::ClassDeclaration(_)) {
-            let Statement::ClassDeclaration(class_decl) = top_stmt else { unreachable!() };
+          if let Statement::ClassDeclaration(class_decl) = top_stmt {
             top_stmt = match self.get_transformed_class_decl(class_decl) {
               Ok(decl) => Statement::from(decl),
               Err(class_decl) => Statement::ClassDeclaration(class_decl),
@@ -2624,7 +2620,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     };
     let first_decl = var_decl.declarations.first_mut()?;
-    let init = first_decl.init.as_mut()?;
+    // Bail out early if there's no initializer; both arms below rely on it being `Some`.
+    first_decl.init.as_ref()?;
     // For synthesis json module, only last symbol of var stmt is `None`, since it is a generated
     // manually.
     let id = first_decl.id.get_binding_identifier()?.symbol_id.get();
@@ -2638,8 +2635,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           .as_ref()?
           .contains(&symbol_ref)
         {
-          let init_expr = first_decl.init.take().expect("init is checked to be `Some` above");
-          json_module_inlined_prop.insert(id, init_expr);
+          json_module_inlined_prop.insert(id, first_decl.init.take()?);
           *it = ast::Statement::new_empty_statement(SPAN, &self.ast_factory);
         }
       }
@@ -2650,7 +2646,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // export default { foo, bar };
         // ```
         //
-        let Expression::ObjectExpression(obj_expr) = init else {
+        let Some(Expression::ObjectExpression(obj_expr)) = first_decl.init.as_mut() else {
           return None;
         };
 

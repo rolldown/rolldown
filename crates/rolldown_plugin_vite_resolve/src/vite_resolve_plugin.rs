@@ -342,6 +342,38 @@ impl Plugin for ViteResolvePlugin {
     );
     let resolver = self.resolvers.get(additional_options);
 
+    let specifier = normalize_leading_slashes(&id);
+
+    // tsconfig `paths` mapping for `import.meta.glob`.
+    // The specifier is a glob pattern so we need to apply the mapping here,
+    // otherwise the mapping will be ignored as the mapped path does not point at a
+    // real file.
+    if self.resolve_options.tsconfig_paths
+      && args.custom.get(&rolldown_plugin_utils::constants::ViteImportGlob).is_some()
+      && let Some(importer) = args.importer
+    {
+      let mut candidates = resolver.resolve_tsconfig_path_alias(importer, specifier)?;
+      if candidates.len() > 1 {
+        self
+          .warn(
+            ctx,
+            format!(
+              "The glob \"{specifier}\" matches a tsconfig `paths` entry with multiple targets. \
+               Currently, multiple target `paths` is not supported for glob resolution. The first (\"{}\") is used unconditionally.",
+              candidates[0]
+            ),
+          )
+          .await?;
+      }
+      if !candidates.is_empty() {
+        let mapped = candidates.swap_remove(0);
+        self
+          .debug_log(|| format!("[glob-tsconfig-paths] {} -> {}", id.cyan(), mapped.dimmed()))
+          .await?;
+        return Ok(Some(HookResolveIdOutput { id: mapped.into(), ..Default::default() }));
+      }
+    }
+
     if is_bare_import(&id) {
       let external = self.resolve_options.is_build
         && self.environment_consumer == "server"
@@ -459,7 +491,6 @@ impl Plugin for ViteResolvePlugin {
       }
     }
 
-    let specifier = normalize_leading_slashes(&id);
     let resolved = resolver.normalize_oxc_resolver_result(
       specifier,
       args.importer,

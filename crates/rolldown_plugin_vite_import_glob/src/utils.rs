@@ -292,16 +292,14 @@ impl GlobImportVisit<'_> {
       path_posix::join(&[&dir, glob])
     } else {
       let is_sub_imports_pattern = glob.starts_with('#') && glob.contains('*');
+      let mut custom = rolldown_plugin::CustomField::new();
+      custom.insert(ViteImportGlob, ViteImportGlobValue(is_sub_imports_pattern));
       let future = self.ctx.resolve(
         glob,
         Some(self.id),
-        is_sub_imports_pattern.then(|| {
-          let mut custom = rolldown_plugin::CustomField::new();
-          custom.insert(ViteImportGlob, ViteImportGlobValue(true));
-          rolldown_plugin::PluginContextResolveOptions {
-            custom: Arc::new(custom),
-            ..Default::default()
-          }
+        Some(rolldown_plugin::PluginContextResolveOptions {
+          custom: Arc::new(custom),
+          ..Default::default()
         }),
       );
 

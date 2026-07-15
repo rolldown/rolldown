@@ -31,7 +31,7 @@ __esmMin((() => {
 
 ```
 
-# Variant: [format: Cjs]
+# Variant: cjs-wrap-all: [format: Cjs]
 
 ## warnings
 
@@ -94,7 +94,7 @@ __esmMin((() => {
 
 ```
 
-# Variant: [format: Cjs] [on_demand_wrapping: true] [strict_execution_order: true]
+# Variant: cjs-on-demand: [format: Cjs] [on_demand_wrapping: true] [strict_execution_order: true]
 
 ## warnings
 

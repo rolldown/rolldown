@@ -1,5 +1,6 @@
 {
   "snapshot": false,
+  "configName": "on-demand",
   "config": {
     "external": ["external"],
     "strictExecutionOrder": true,

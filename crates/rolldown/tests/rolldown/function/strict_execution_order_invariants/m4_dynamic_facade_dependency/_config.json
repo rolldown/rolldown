@@ -4,6 +4,7 @@
     "reason": "Expected to fail until rolldown#10104 is applied.",
     "outputContains": ["TypeError: init_m29 is not a function"]
   },
+  "configName": "on-demand",
   "config": {
     "input": [{ "name": "e0", "import": "./e0.js" }],
     "preserveEntrySignatures": "allow-extension",

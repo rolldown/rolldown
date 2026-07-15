@@ -20,7 +20,7 @@ console.log("main", fromLib, import_cjs.default.value);
 
 ```
 
-# Variant: [strict_execution_order: true]
+# Variant: wrap-all: [strict_execution_order: true]
 
 ## Assets
 

@@ -14,7 +14,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-# Variant: [profiler_names: false]
+# Variant: profiler-names-disabled-on-demand: [profiler_names: false]
 
 ## Assets
 
@@ -29,7 +29,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-# Variant: [pife_for_module_wrappers: false]
+# Variant: pife-for-module-wrappers-disabled-on-demand: [pife_for_module_wrappers: false]
 
 ## Assets
 

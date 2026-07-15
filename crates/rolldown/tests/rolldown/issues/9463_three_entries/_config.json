@@ -1,5 +1,6 @@
 {
   "_comment": "https://github.com/rolldown/rolldown/issues/9463 — execution isolation must hold with more than two entries: a catch-all entriesAware group merges all three entry modules into one chunk; loading any one entry must run only its own init.",
+  "configName": "wrap-all",
   "config": {
     "input": [
       { "name": "a", "import": "./a.js" },

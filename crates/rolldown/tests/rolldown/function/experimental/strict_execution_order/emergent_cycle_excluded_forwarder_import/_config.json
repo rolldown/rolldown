@@ -1,5 +1,6 @@
 {
   "snapshot": false,
+  "configName": "on-demand",
   "config": {
     "input": [{ "name": "main", "import": "./main.js" }],
     "strictExecutionOrder": true,

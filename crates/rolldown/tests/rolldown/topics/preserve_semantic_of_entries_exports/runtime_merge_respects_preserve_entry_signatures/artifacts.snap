@@ -65,7 +65,7 @@ Object.defineProperty(exports, "__toESM", {
 
 ```
 
-# Variant: allow-extension: [preserve_entry_signatures: AllowExtension]
+# Variant: allow-extension-wrap-all: [preserve_entry_signatures: AllowExtension]
 
 ## Assets
 

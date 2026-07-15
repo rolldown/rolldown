@@ -156,14 +156,10 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
     let mut index_map = FxIndexMap::default();
     let ast_factory = AstFactory::new(fields.allocator);
     let program = fields.program;
-    let Some(stmts) = program.body.first_mut() else { unreachable!() };
-    let expr = match stmts {
-      ast::Statement::ExpressionStatement(stmt) => &mut stmt.expression,
-      _ => {
-        unreachable!()
-      }
+    let Some(ast::Statement::ExpressionStatement(stmt)) = program.body.first() else {
+      unreachable!()
     };
-    if !matches!(expr.without_parentheses(), Expression::ObjectExpression(_)) {
+    if !matches!(stmt.expression.without_parentheses(), Expression::ObjectExpression(_)) {
       return false;
     }
     // Take the single-statement body by value; this leaves `program.body` empty.

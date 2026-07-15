@@ -297,6 +297,21 @@ fn inspect_macro_tokens(tokens: proc_macro2::TokenStream, source: &Path) {
   }
 }
 
+fn is_legacy_css_import_invariant(mac: &syn::Macro, source: &Path) -> bool {
+  if source.file_name().is_none_or(|name| name != "determine_module_formats.rs")
+    || !is_exact_path(&mac.path, &["std", "unreachable"])
+  {
+    return false;
+  }
+  syn::parse2::<syn::LitStr>(mac.tokens.clone()).is_ok_and(|message| {
+    std::matches!(
+      message.value().as_str(),
+      "A Js module would never import a CSS module via `@import`"
+        | "A Js module would never import a CSS module via `url()`"
+    )
+  })
+}
+
 impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
   fn visit_item(&mut self, item: &'ast Item) {
     if let Item::Mod(module) = item
@@ -410,7 +425,8 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
 
   fn visit_stmt_macro(&mut self, statement: &'ast syn::StmtMacro) {
     assert!(
-      is_exact_path(&statement.mac.path, &["std", "debug_assert"]),
+      is_exact_path(&statement.mac.path, &["std", "debug_assert"])
+        || is_legacy_css_import_invariant(&statement.mac, self.source),
       "{}: block-level statement macro `{}` is forbidden because it can generate a hidden pass declaration",
       self.source.display(),
       statement
@@ -427,7 +443,8 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
   fn visit_expr_macro(&mut self, expression: &'ast syn::ExprMacro) {
     assert!(
       is_exact_path(&expression.mac.path, &["std", "matches"])
-        || is_exact_path(&expression.mac.path, &["oxc_index", "index_vec"]),
+        || is_exact_path(&expression.mac.path, &["oxc_index", "index_vec"])
+        || is_legacy_css_import_invariant(&expression.mac, self.source),
       "{}: expression macro `{}` is not in the closed production allowlist",
       self.source.display(),
       expression
@@ -583,4 +600,43 @@ fn inventory_accepts_only_the_exact_wasm_iterator_extension_import() {
   );
   assert!(declarations.is_empty());
   assert!(implementations.is_empty());
+}
+
+#[test]
+fn inventory_accepts_only_the_exact_legacy_css_import_invariants() {
+  for source in [
+    "fn invariant() { std::unreachable!(\"A Js module would never import a CSS module via `@import`\"); }",
+    "fn invariant() { std::unreachable!(\"A Js module would never import a CSS module via `url()`\"); }",
+  ] {
+    let file = syn::parse_file(source).unwrap_or_else(|error| panic!("valid test source: {error}"));
+    let mut declarations = BTreeSet::new();
+    let mut implementations = BTreeSet::new();
+    inspect_items(
+      &file.items,
+      Path::new("determine_module_formats.rs"),
+      &mut declarations,
+      &mut implementations,
+    );
+    assert!(declarations.is_empty());
+    assert!(implementations.is_empty());
+  }
+
+  for source in [
+    "fn invariant() { unreachable!(\"A Js module would never import a CSS module via `@import`\"); }",
+    "fn invariant() { std::unreachable!(\"different invariant\"); }",
+  ] {
+    let file =
+      syn::parse_file(source).unwrap_or_else(|error| panic!("invalid test source: {error}"));
+    let result = std::panic::catch_unwind(|| {
+      let mut declarations = BTreeSet::new();
+      let mut implementations = BTreeSet::new();
+      inspect_items(
+        &file.items,
+        Path::new("determine_module_formats.rs"),
+        &mut declarations,
+        &mut implementations,
+      );
+    });
+    assert!(result.is_err(), "inventory accepted invalid source: {source}");
+  }
 }

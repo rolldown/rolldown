@@ -5,14 +5,22 @@
 mod canonicalize_entries;
 mod collect_external_star_exports;
 mod collect_initial_dependencies;
+mod compute_cjs_namespace_merges;
+mod compute_dynamic_exports;
 mod compute_module_execution_order;
 mod compute_tla;
+mod determine_module_formats;
 mod extract_global_constants;
+mod plan_module_wrapping;
 
 pub(super) use canonicalize_entries::EntryPlanDraft;
+pub(super) use compute_cjs_namespace_merges::ComputeCjsNamespaceMergesInput;
+pub(super) use compute_dynamic_exports::ComputeDynamicExportsInput;
 pub(super) use compute_module_execution_order::ComputeModuleExecutionOrderInput;
 pub(super) use compute_tla::TlaScanFacts;
+pub(super) use determine_module_formats::DetermineModuleFormatsInput;
 pub(super) use extract_global_constants::ConstantExtractionInput;
+pub(super) use plan_module_wrapping::PlanModuleWrappingInput;
 
 #[derive(Clone, Copy)]
 pub(super) struct CanonicalizeEntriesPass;
@@ -24,13 +32,25 @@ pub(super) struct CollectExternalStarExportsPass;
 pub(super) struct CollectInitialDependenciesPass;
 
 #[derive(Clone, Copy)]
+pub(super) struct ComputeCjsNamespaceMergesPass;
+
+#[derive(Clone, Copy)]
+pub(super) struct ComputeDynamicExportsPass;
+
+#[derive(Clone, Copy)]
 pub(super) struct ComputeModuleExecutionOrderPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct ComputeTlaPass;
 
 #[derive(Clone, Copy)]
+pub(super) struct DetermineModuleFormatsPass;
+
+#[derive(Clone, Copy)]
 pub(super) struct ExtractGlobalConstantsPass;
+
+#[derive(Clone, Copy)]
+pub(super) struct PlanModuleWrappingPass;
 
 #[cfg(test)]
 mod inventory;

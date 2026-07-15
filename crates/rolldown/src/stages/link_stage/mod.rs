@@ -27,7 +27,6 @@ use super::scan_stage::NormalizedScanStageOutput;
 mod bind_imports_and_exports;
 mod create_exports_for_ecma_modules;
 mod cross_module_optimization;
-mod determine_module_exports_kind;
 mod generate_lazy_export;
 mod passes;
 mod patch_module_dependencies;
@@ -44,8 +43,10 @@ mod wrapping;
 
 use passes::{
   CanonicalizeEntriesPass, CollectExternalStarExportsPass, CollectInitialDependenciesPass,
-  ComputeModuleExecutionOrderInput, ComputeModuleExecutionOrderPass, ComputeTlaPass,
-  ConstantExtractionInput, ExtractGlobalConstantsPass, TlaScanFacts,
+  ComputeCjsNamespaceMergesInput, ComputeCjsNamespaceMergesPass, ComputeDynamicExportsInput,
+  ComputeDynamicExportsPass, ComputeModuleExecutionOrderInput, ComputeModuleExecutionOrderPass,
+  ComputeTlaPass, ConstantExtractionInput, DetermineModuleFormatsInput, DetermineModuleFormatsPass,
+  ExtractGlobalConstantsPass, PlanModuleWrappingInput, PlanModuleWrappingPass, TlaScanFacts,
 };
 
 /// Information about safely merged CJS namespaces for a module
@@ -178,7 +179,7 @@ impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
     let mut pass_pipeline = PassPipelineCtx::new();
-    {
+    let entry_plan = {
       let (_, (module_table, global_constants)) = run_infallible_pass(
         ExtractGlobalConstantsPass,
         &mut pass_pipeline,
@@ -239,9 +240,9 @@ impl<'a> LinkStage<'a> {
           }
         }
       }
-      self.entries = entry_plan.into_legacy_entries();
       self.sorted_modules = sorted_modules.into_inner();
-    }
+      entry_plan
+    };
     {
       let (tla_facts, ()) = run_infallible_pass(
         ComputeTlaPass,
@@ -254,10 +255,67 @@ impl<'a> LinkStage<'a> {
         self.metas[module_idx].is_tla_or_contains_tla_dependency = true;
       }
     }
+    {
+      let (_, (module_formats, wrapper_seeds)) = run_infallible_pass(
+        DetermineModuleFormatsPass,
+        &mut pass_pipeline,
+        DetermineModuleFormatsInput {
+          module_table: &self.module_table,
+          entry_plan: &entry_plan,
+          output_format: self.options.format,
+          code_splitting_disabled: self.options.code_splitting.is_disabled(),
+        },
+        (),
+      );
+      let (_, cjs_namespace_merges) = run_infallible_pass(
+        ComputeCjsNamespaceMergesPass,
+        &mut pass_pipeline,
+        ComputeCjsNamespaceMergesInput {
+          module_table: &self.module_table,
+          module_formats: &module_formats,
+          strict_execution_order: self.options.is_strict_execution_order_enabled(),
+        },
+        (),
+      );
+      let (dynamic_exports, ()) = run_infallible_pass(
+        ComputeDynamicExportsPass,
+        &mut pass_pipeline,
+        ComputeDynamicExportsInput {
+          module_table: &self.module_table,
+          module_formats: &module_formats,
+        },
+        (),
+      );
+      let (_, wrapper_plan) = run_infallible_pass(
+        PlanModuleWrappingPass,
+        &mut pass_pipeline,
+        PlanModuleWrappingInput {
+          module_table: &self.module_table,
+          module_formats: &module_formats,
+          runtime: self.runtime.id(),
+          strict_execution_order: self.options.is_strict_execution_order_enabled(),
+          on_demand_wrapping: self.options.experimental.is_on_demand_wrapping_enabled(),
+        },
+        wrapper_seeds,
+      );
+      for (module_idx, exports_kind) in module_formats.normal_modules() {
+        if let Some(module) = self.module_table[module_idx].as_normal_mut() {
+          module.exports_kind = exports_kind;
+        }
+      }
+      debug_assert_eq!(dynamic_exports.module_count(), self.metas.len());
+      for module_idx in dynamic_exports.modules() {
+        self.metas[module_idx].has_dynamic_exports = true;
+      }
+      for (module_idx, wrap_kind, required_by_other_module) in wrapper_plan.modules() {
+        self.metas[module_idx].set_wrap_kind(wrap_kind);
+        self.metas[module_idx].required_by_other_module = required_by_other_module;
+      }
+      self.safely_merge_cjs_ns_map = cjs_namespace_merges.into_legacy();
+    }
+    self.entries = entry_plan.into_legacy_entries();
     self.diagnostics.extend(pass_pipeline.into_diagnostics());
-    self.determine_module_exports_kind();
-    self.determine_safely_merge_cjs_ns();
-    self.wrap_modules();
+    self.create_wrapper_declarations();
     self.generate_lazy_export();
     self.determine_side_effects();
     self.bind_imports_and_exports();

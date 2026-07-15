@@ -17,7 +17,7 @@ Asset modules (`ModuleType::Asset`) are handled by a built-in Rust plugin (`roll
 The old built-in `ModuleType::Asset` was in the `has_lazy_export` list. `has_lazy_export` is a linker-stage mechanism that **defers the wrapping decision** until the linker knows how the module is consumed:
 
 - Module source is a raw expression with no `export`/`module.exports`
-- `determine_module_exports_kind` keeps it as `ExportsKind::None` when `import`'d (guarded by `!has_lazy_export()`)
+- `DetermineModuleFormatsPass` keeps it as `ExportsKind::None` when `import`'d (guarded by `!has_lazy_export()`)
 - `require()` can still set it to `ExportsKind::CommonJs`
 - `generate_lazy_export` then wraps accordingly:
   - Only `import`'d → `export default expr` (ESM, zero interop overhead)

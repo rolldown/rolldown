@@ -13,6 +13,10 @@ pub(in crate::stages::link_stage) struct EntryPlanDraft {
 }
 
 impl EntryPlanDraft {
+  pub(in crate::stages::link_stage) fn contains_root(&self, module_idx: ModuleIdx) -> bool {
+    self.entries.contains_key(&module_idx)
+  }
+
   pub(in crate::stages::link_stage) fn roots(
     &self,
   ) -> impl DoubleEndedIterator<Item = ModuleIdx> + '_ {

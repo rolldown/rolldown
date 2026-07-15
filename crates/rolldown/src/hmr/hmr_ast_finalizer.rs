@@ -897,11 +897,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     let load_exports_expr = if importee.meta.has_lazy_export() || is_importee_cjs {
       // Note that HMR finalizer is only able to see scanner-level exports_kind, this means that the result
-      // from `determine_module_exports_kind` is not available here. So we have to use some heuristics to determine
+      // from `DetermineModuleFormatsPass` is not available here. So we have to use some heuristics to determine
       // whether the importee is CommonJS or has lazy export, and handle them in a special way.
       //
       // 1. For the case of `is_importee_cjs`,
-      // the runtime will always have `module.exports`. This is determined in `determine_module_exports_kind`.
+      // the runtime will always have `module.exports`. This is determined in `DetermineModuleFormatsPass`.
       //
       // 2. For the case of `has_lazy_export`,
       // here we're inside `try_rewrite_require`, which means the original code is `require(...)`.
@@ -915,7 +915,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       // So here we know for sure that the importee is using `module.exports` at runtime.
       // So `loadExports(id)` returns the value directly.
       //
-      // This is a way to mimic the same mechanism of `determine_module_exports_kind`.
+      // This is a way to mimic the same mechanism of `DetermineModuleFormatsPass`.
       //
       // TODO(hana): we should think about a more robust way to track the consolidated export type of a module in the future.
       // Listing all the special cases like this is error-prone.

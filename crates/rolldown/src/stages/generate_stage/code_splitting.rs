@@ -483,7 +483,7 @@ impl GenerateStage<'_> {
         .filter_map(|ns| {
           // We must check statement inclusion here (not in linking stage) because
           // `include_statements` runs after the pass that populates
-          // `safely_merge_cjs_ns_map` (`determine_safely_merge_cjs_ns`) and after
+          // `safely_merge_cjs_ns_map` (`ComputeCjsNamespaceMergesPass`) and after
           // `reference_needed_symbols`, which is the last point the map is read.
           // At that point, we don't yet know which statements will be tree-shaken.
           // related context: https://github.com/rolldown/rolldown/blob/dbd0f6de5d44be2327e7532bb6f0a38bc04a1047/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs#L187-L194

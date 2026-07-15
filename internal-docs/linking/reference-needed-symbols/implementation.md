@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`reference_needed_symbols` translates each module's linking decisions into per-statement dependencies. For every import record, given the importer/importee pair plus the `WrapKind` chosen by `wrap_modules`, it records:
+`reference_needed_symbols` translates each module's linking decisions into per-statement dependencies. For every import record, given the importer/importee pair plus the `WrapKind` chosen by `PlanModuleWrappingPass` and projected after wrapper declaration/lazy normalization, it records:
 
 - the `SymbolRef`s the lowered code will reference (`init_foo`, `require_foo`, namespace objects),
 - the runtime helpers each statement depends on (`__toESM`, `__reExport`, `__toCommonJS`, `__name`, `__require`),
@@ -16,7 +16,7 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 ## Pipeline placement
 
 ```
-… wrap_modules → generate_lazy_export → determine_side_effects
+… PlanModuleWrappingPass → wrapper declaration → generate_lazy_export → determine_side_effects
   → bind_imports_and_exports → create_exports_for_ecma_modules
   → reference_needed_symbols   ← this pass
   → cross_module_optimization → include_statements → patch_module_dependencies
@@ -24,7 +24,7 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 
 Position is load-bearing in two directions:
 
-1. **`wrap_kind` and `wrapper_ref` must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`. `wrap_modules` and `generate_lazy_export` populate them.
+1. **`wrap_kind` and `wrapper_ref` must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`. `PlanModuleWrappingPass`, wrapper declaration allocation, and `generate_lazy_export` establish the projected final values.
 2. **`include_statements` must run after.** Tree-shaking traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data this pass writes, wrappers and helpers would be silently dropped from the output.
 
 ## Dispatch
@@ -174,7 +174,7 @@ After this pass:
 1. **Wrapper and namespace `SymbolRef`s are in `referenced_symbols`.** If the lowered form mentions a wrapper call (`init_foo`, `require_foo`) or a namespace object (importer's or importee's `namespace_object_ref`), the corresponding `SymbolRef` is in `stmt_info.referenced_symbols`. Tree-shaking will drop anything not referenced; missing a push here = silently elided wrapper/namespace.
 2. **Runtime helpers live in `depended_runtime_helper`, not `referenced_symbols`.** The lone exception is the external-runtime-`__require` polyfill arm, which pushes the resolved `__require` symbol onto `referenced_symbols` directly. `include_statements` joins this map against statement inclusion and pulls helpers in via `include_runtime_symbol`.
 3. **`side_effect=true` is set whenever the lowered statement must run regardless of who reads it.** Includes `export * from 'cjs'`, `import 'esm-with-side-effects'`, all CJS-external imports under `Cjs/Iife/Umd`, and the dynamic-`__reExport` arms.
-4. **Every CJS namespace import has a stable `import_<repr_name>` name.** Downstream rendering can rely on both `wrapper_ref` (set by `wrap_modules`) and the namespace name (set here) being settled.
+4. **Every CJS namespace import has a stable `import_<repr_name>` name.** Downstream rendering can rely on both `wrapper_ref` (set by wrapper declaration allocation) and the namespace name (set here) being settled.
 
 A bug in any of (1)–(4) typically surfaces as a tree-shaking false-positive (helper or wrapper missing in output) or a de-conflict miss.
 

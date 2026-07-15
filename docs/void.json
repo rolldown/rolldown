@@ -4,39 +4,75 @@
   },
   "routing": {
     "redirects": {
+      "/about": { "to": "/guide/introduction", "status": 301 },
       "/about/": { "to": "/guide/introduction", "status": 301 },
       "/plugins/hook-filters": { "to": "/apis/plugin-api/hook-filters", "status": 301 },
+      "/plugins/hook-filters/": { "to": "/apis/plugin-api/hook-filters", "status": 301 },
       "/guide/plugin-development": { "to": "/apis/plugin-api", "status": 301 },
+      "/guide/plugin-development/": { "to": "/apis/plugin-api", "status": 301 },
+      "/guide/in-depth": { "to": "/in-depth/why-bundlers", "status": 301 },
       "/guide/in-depth/": { "to": "/in-depth/why-bundlers", "status": 301 },
+      "/apis/config-options": { "to": "/reference/", "status": 301 },
       "/apis/config-options/": { "to": "/reference/", "status": 301 },
+      "/options": { "to": "/reference", "status": 301 },
       "/options/": { "to": "/reference", "status": 301 },
       "/apis/plugin-hook-filters": { "to": "/apis/plugin-api/hook-filters", "status": 301 },
+      "/apis/plugin-hook-filters/": { "to": "/apis/plugin-api/hook-filters", "status": 301 },
       "/options/input": { "to": "/reference/InputOptions.input", "status": 301 },
+      "/options/input/": { "to": "/reference/InputOptions.input", "status": 301 },
       "/options/external": { "to": "/reference/InputOptions.external", "status": 301 },
+      "/options/external/": { "to": "/reference/InputOptions.external", "status": 301 },
       "/options/resolve": { "to": "/reference/InputOptions.resolve", "status": 301 },
+      "/options/resolve/": { "to": "/reference/InputOptions.resolve", "status": 301 },
       "/options/cwd": { "to": "/reference/InputOptions.cwd", "status": 301 },
+      "/options/cwd/": { "to": "/reference/InputOptions.cwd", "status": 301 },
       "/options/platform": { "to": "/reference/InputOptions.platform", "status": 301 },
+      "/options/platform/": { "to": "/reference/InputOptions.platform", "status": 301 },
       "/options/shim-missing-exports": {
         "to": "/reference/InputOptions.shimMissingExports",
         "status": 301
       },
+      "/options/shim-missing-exports/": {
+        "to": "/reference/InputOptions.shimMissingExports",
+        "status": 301
+      },
       "/options/treeshake": { "to": "/reference/InputOptions.treeshake", "status": 301 },
+      "/options/treeshake/": { "to": "/reference/InputOptions.treeshake", "status": 301 },
       "/options/log-level": { "to": "/reference/InputOptions.logLevel", "status": 301 },
+      "/options/log-level/": { "to": "/reference/InputOptions.logLevel", "status": 301 },
       "/options/on-log": { "to": "/reference/InputOptions.onLog", "status": 301 },
+      "/options/on-log/": { "to": "/reference/InputOptions.onLog", "status": 301 },
       "/options/onwarn": { "to": "/reference/InputOptions.onwarn", "status": 301 },
+      "/options/onwarn/": { "to": "/reference/InputOptions.onwarn", "status": 301 },
       "/options/module-types": { "to": "/reference/InputOptions.moduleTypes", "status": 301 },
+      "/options/module-types/": { "to": "/reference/InputOptions.moduleTypes", "status": 301 },
       "/options/preserve-entry-signatures": {
         "to": "/reference/InputOptions.preserveEntrySignatures",
         "status": 301
       },
+      "/options/preserve-entry-signatures/": {
+        "to": "/reference/InputOptions.preserveEntrySignatures",
+        "status": 301
+      },
       "/options/optimization": { "to": "/reference/InputOptions.optimization", "status": 301 },
+      "/options/optimization/": { "to": "/reference/InputOptions.optimization", "status": 301 },
       "/options/context": { "to": "/reference/InputOptions.context", "status": 301 },
+      "/options/context/": { "to": "/reference/InputOptions.context", "status": 301 },
       "/options/tsconfig": { "to": "/reference/InputOptions.tsconfig", "status": 301 },
+      "/options/tsconfig/": { "to": "/reference/InputOptions.tsconfig", "status": 301 },
       "/options/checks": { "to": "/reference/InputOptions.checks", "status": 301 },
+      "/options/checks/": { "to": "/reference/InputOptions.checks", "status": 301 },
       "/options/experimental": { "to": "/reference/InputOptions.experimental", "status": 301 },
+      "/options/experimental/": { "to": "/reference/InputOptions.experimental", "status": 301 },
       "/options/output": { "to": "/reference/Interface.OutputOptions", "status": 301 },
+      "/options/output/": { "to": "/reference/Interface.OutputOptions", "status": 301 },
       "/options/output-sourcemap": { "to": "/reference/OutputOptions.sourcemap", "status": 301 },
+      "/options/output-sourcemap/": { "to": "/reference/OutputOptions.sourcemap", "status": 301 },
       "/options/output-generated-code": {
+        "to": "/reference/OutputOptions.generatedCode",
+        "status": 301
+      },
+      "/options/output-generated-code/": {
         "to": "/reference/OutputOptions.generatedCode",
         "status": 301
       },
@@ -44,16 +80,16 @@
         "to": "/reference/OutputOptions.codeSplitting",
         "status": 301
       },
+      "/options/output-advanced-chunks/": {
+        "to": "/reference/OutputOptions.codeSplitting",
+        "status": 301
+      },
       "/in-depth/advanced-chunks": { "to": "/in-depth/manual-code-splitting", "status": 301 },
+      "/in-depth/advanced-chunks/": { "to": "/in-depth/manual-code-splitting", "status": 301 },
       "/in-depth/code-splitting": { "to": "/in-depth/automatic-code-splitting", "status": 301 },
+      "/in-depth/code-splitting/": { "to": "/in-depth/automatic-code-splitting", "status": 301 },
       "/options/output-clean-dir": { "to": "/reference/OutputOptions.cleanDir", "status": 301 },
-      "/llms.md": { "to": "/llms.txt", "status": 301 }
-    },
-    "rewrites": {
-      "/llms-full.md": "/llms-full.txt"
-    },
-    "fallbacks": {
-      "/*.txt": "/:splat.md"
+      "/options/output-clean-dir/": { "to": "/reference/OutputOptions.cleanDir", "status": 301 }
     }
   },
   "inference": {

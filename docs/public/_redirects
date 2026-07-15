@@ -1,0 +1,6 @@
+# Keep the exact LLM routes ahead of the root-level .txt redirect.
+/llms.txt /llms.txt 200!
+/llms-full.txt /llms-full.txt 200!
+/llms-full.md /llms-full.txt 200!
+/llms.md /llms.txt 301
+/:document.txt /:document.md 301

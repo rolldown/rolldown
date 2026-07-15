@@ -99,11 +99,27 @@ impl<'text> MagicString<'text> {
     self.ignore_list
   }
 
-  /// Returns the length of the content within chunks (intro + content + outro per chunk),
-  /// excluding the global intro/outro from `prepend`/`append`.
+  /// Returns the length in UTF-8 bytes of the content within chunks (intro + content + outro
+  /// per chunk), excluding the global intro/outro from `prepend`/`append`.
   /// This aligns with the reference `magic-string` behavior.
+  ///
+  /// Note this counts *bytes*. Callers that need the length JavaScript would report (UTF-16
+  /// code units, as the reference `magic-string` returns) must use [`Self::len_utf16`].
   pub fn len(&self) -> usize {
     self.iter_chunks().flat_map(|c| c.fragments(&self.source)).map(|f| f.len()).sum()
+  }
+
+  /// Returns the length in UTF-16 code units of the content within chunks, excluding the
+  /// global intro/outro — the same range [`Self::len`] covers.
+  ///
+  /// This is what the reference `magic-string` `length()` returns, since JavaScript string
+  /// length is measured in UTF-16 code units.
+  pub fn len_utf16(&self) -> usize {
+    self
+      .iter_chunks()
+      .flat_map(|c| c.fragments(&self.source))
+      .map(|f| f.chars().map(char::len_utf16).sum::<usize>())
+      .sum()
   }
 
   /// Returns `true` if all chunk content (intro + content + outro) is whitespace or empty.
@@ -304,24 +320,27 @@ impl<'text> MagicString<'text> {
     Ok(())
   }
 
+  /// Returns the chunk starting at `text_index`, or `None` if no chunk does — in which case
+  /// the caller sends the content to the global outro.
+  ///
+  /// Do not short-circuit on `text_index == self.source.len()`: for an empty source the sole
+  /// `[0, 0)` chunk both starts *and* ends at 0, so index 0 has a chunk even though it is also
+  /// the end of the source. The map lookup already answers this correctly for both cases, and
+  /// matches the reference `magic-string`, which does a plain `byStart[index]` lookup.
   fn by_start_mut(&mut self, text_index: u32) -> Result<Option<&mut Chunk<'text>>, String> {
-    if text_index as usize == self.source.len() {
-      Ok(None)
-    } else {
-      self.split_at(text_index)?;
-      let idx = self.chunk_by_start.get(&text_index);
-      Ok(idx.map(|idx| &mut self.chunks[*idx]))
-    }
+    self.split_at(text_index)?;
+    let idx = self.chunk_by_start.get(&text_index);
+    Ok(idx.map(|idx| &mut self.chunks[*idx]))
   }
 
+  /// Returns the chunk ending at `text_index`, or `None` if no chunk does — in which case the
+  /// caller sends the content to the global intro.
+  ///
+  /// Do not short-circuit on `text_index == 0`: see [`Self::by_start_mut`].
   fn by_end_mut(&mut self, text_index: u32) -> Result<Option<&mut Chunk<'text>>, String> {
-    if text_index == 0 {
-      Ok(None)
-    } else {
-      self.split_at(text_index)?;
-      let idx = self.chunk_by_end.get(&text_index);
-      Ok(idx.map(|idx| &mut self.chunks[*idx]))
-    }
+    self.split_at(text_index)?;
+    let idx = self.chunk_by_end.get(&text_index);
+    Ok(idx.map(|idx| &mut self.chunks[*idx]))
   }
 }
 

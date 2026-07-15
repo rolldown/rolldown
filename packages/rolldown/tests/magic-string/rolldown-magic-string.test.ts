@@ -15,6 +15,85 @@ import { describe, it } from 'vitest';
  * tests stay in Rust.
  */
 
+describe('length', () => {
+  // `MagicString::len()` sums UTF-8 byte lengths, but JS measures string length in UTF-16
+  // code units. The binding used to return the byte count, so every non-ASCII source
+  // over-reported (`'é'` -> 2, `'🤷'` -> 4). The upstream suite only covers ASCII, where
+  // the two happen to agree, so nothing caught it.
+  it('counts UTF-16 code units, not UTF-8 bytes', () => {
+    assert.strictEqual(new MagicString('abc').length(), 3);
+    assert.strictEqual(new MagicString('é').length(), 1);
+    assert.strictEqual(new MagicString('🤷').length(), 2);
+    assert.strictEqual(new MagicString('中文').length(), 2);
+    assert.strictEqual(new MagicString('abc™def').length(), 7);
+  });
+
+  it('counts UTF-16 code units after edits', () => {
+    const s = new MagicString('abc');
+    s.overwrite(1, 2, '🤷');
+    // 'a' + '🤷' (2 units) + 'c'
+    assert.strictEqual(s.length(), 4);
+    assert.strictEqual(s.length(), s.toString().length);
+  });
+
+  it('excludes global intro/outro, matching magic-string', () => {
+    const s = new MagicString('abc');
+    s.prepend('🤷');
+    s.append('🤷');
+    assert.strictEqual(s.length(), 3);
+  });
+
+  // An empty source still has one `[0, 0)` chunk, and index 0 is both its start and its end —
+  // so a positional insert there belongs *on the chunk* and counts, exactly as it does in
+  // magic-string. `by_start_mut`/`by_end_mut` used to short-circuit on `index == source.len()`
+  // / `index == 0` and push the content to the global intro/outro instead, where `length()`
+  // cannot see it.
+  describe('positional inserts at index 0 on an empty source', () => {
+    for (const method of ['appendLeft', 'appendRight', 'prependLeft', 'prependRight'] as const) {
+      it(`${method}(0, ...) is counted`, () => {
+        const s = new MagicString('');
+        s[method](0, 'é');
+        assert.strictEqual(s.toString(), 'é');
+        assert.strictEqual(s.length(), 1);
+        assert.strictEqual(s.isEmpty(), false);
+      });
+    }
+
+    it('counts UTF-16 code units, not bytes, for the inserted content', () => {
+      const s = new MagicString('');
+      s.appendLeft(0, '🤷');
+      assert.strictEqual(s.length(), 2);
+    });
+
+    // The contrast: `append`/`prepend` are not positional, so they land in the global
+    // intro/outro and stay excluded — on an empty source as anywhere else.
+    for (const method of ['append', 'prepend'] as const) {
+      it(`${method}(...) stays excluded`, () => {
+        const s = new MagicString('');
+        s[method]('é');
+        assert.strictEqual(s.toString(), 'é');
+        assert.strictEqual(s.length(), 0);
+        assert.strictEqual(s.isEmpty(), true);
+      });
+    }
+  });
+
+  // The short-circuits were right for a non-empty source: nothing ends at 0 and nothing starts
+  // at `source.len()`, so those inserts do belong in the global intro/outro. Removing them must
+  // not change that.
+  it('keeps out-of-chunk-range inserts on a non-empty source excluded', () => {
+    const left = new MagicString('abc');
+    left.appendLeft(0, 'X');
+    assert.strictEqual(left.toString(), 'Xabc');
+    assert.strictEqual(left.length(), 3);
+
+    const right = new MagicString('abc');
+    right.appendRight(3, 'X');
+    assert.strictEqual(right.toString(), 'abcX');
+    assert.strictEqual(right.length(), 3);
+  });
+});
+
 describe('offset', () => {
   describe('underflow guard — negative (index + offset) must throw, not panic', () => {
     it('remove() throws when offset causes index underflow', () => {

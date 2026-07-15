@@ -11,6 +11,7 @@ var Base = class {};
 //#endregion
 //#region a.js
 var Keep = class extends Base {};
+(class extends Base {});
 //#endregion
 //#region entry.js
 new Keep();

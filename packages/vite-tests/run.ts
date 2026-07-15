@@ -64,8 +64,17 @@ await runCmdAndPipeOrExit(
   ['git', ['clone', 'https://github.com/vitejs/vite.git', REPO_PATH]],
 );
 
-// The pinned commit must be pushed to vitejs/vite (same requirement as the
-// submodule itself), otherwise this checkout fails.
+// `clone` only brings down branches and their history, so a pin that no branch
+// contains never arrives, and the checkout below fails with `unable to read
+// tree`. That is what happens once the branch the pin was pushed on is
+// force-pushed or deleted. The remote still serves the commit when it is asked
+// for by sha, which is how `git submodule update` recovers the same case for
+// the submodule this pin is read from.
+await runCmdAndPipeOrExit(
+  `# Fetching pinned vite commit ${vitePin}...`,
+  ['git', ['fetch', 'origin', vitePin], { nodeOptions: { cwd: REPO_PATH } }],
+);
+
 await runCmdAndPipeOrExit(
   `# Checking out pinned vite commit ${vitePin}...`,
   ['git', ['-c', 'advice.detachedHead=false', 'checkout', vitePin], { nodeOptions: { cwd: REPO_PATH } }],

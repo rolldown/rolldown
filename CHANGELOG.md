@@ -1,4 +1,92 @@
 
+## [1.2.0] - 2026-07-15
+
+### 🚀 Features
+
+- dev: skip shipping factories for newly imported top-level modules (#10223) by @h-a-n-a
+- dev: per-client ship map for HMR patch sizing (#10208) by @h-a-n-a
+- dev: client-side HMR (#10164) by @h-a-n-a
+- dev: send a full-reload update to clients when a tsconfig changes (#10262) by @shulaoda
+- treat `import.meta['url']` and `import.meta['ROLLUP_FILE_URL_*']` as side-effect free (#10267) by @sapphi-red
+- rewrite `import.meta['url']` (#10251) by @sapphi-red
+- add `FILE_NOT_FOUND` error (#10220) by @sapphi-red
+- treat `import.meta.ROLLUP_FILE_URL_*` as side-effect free (#10217) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- sourcemap: preserve unmapped boundaries during composition (#10254) by @hyfdev
+- `[format]` in `*FileNames` option for ESM format should be `es` instead of `esm` (#10214) by @sapphi-red
+- sourcemap: preserve coarse mappings during composition (#10249) by @hyfdev
+- rolldown_plugin_vite_import_glob: support tsconfig paths with `import.meta.glob` (#10167) by @sapphi-red
+- dev: clear tsconfig caches for bare full builds (#10276) by @shulaoda
+- dev: force a full rebuild when a tsconfig changes (#10261) by @shulaoda
+- treat rooted drive-less module ids as absolute in preserveModules naming (#10235) by @IWANABETHATGUY
+- watch: rebuild when tsconfig files change (#10258) by @shulaoda
+- watch: drop tsconfig-merged transform options on each rebuild (#10257) by @shulaoda
+- incorrect `EMPTY_IMPORT_META` warning for `import.meta.ROLLUP_FILE_URL_*` for CJS output (#10221) by @sapphi-red
+- deconflict: rename CJS locals shadowing wrapped-ESM namespace objects (#9970) by @IWANABETHATGUY
+- rolldown: drop the unused runtime module after entry-level external flattening (#10237) by @IWANABETHATGUY
+- rolldown: re-propagate has_dynamic_exports to transitive star importers (#10239) by @IWANABETHATGUY
+- tree-shaking: tree-shake destructured dynamic import namespace bindings (#10213) by @logaretm
+- s390x: use json-escape-simd 3.1.1 for big-endian JSON escaping fix (#10211) by @satyamg1620
+
+### 🚜 Refactor
+
+- dev: move full-reload to client side (#10207) by @h-a-n-a
+- readability follow-ups to the ReplaceWith migration (#10286) by @IWANABETHATGUY
+- replace take_in-then-write-back with ReplaceWith and by-value moves (#10285) by @Boshen
+- share the main resolver's cache with the transformer's tsconfig lookups (#10205) by @shulaoda
+- rolldown: extract the ns star-external __reExport emission rule into LinkingMetadata (#10238) by @IWANABETHATGUY
+- rolldown: unify link/generate diagnostics into a Diagnostics accumulator (#10234) by @IWANABETHATGUY
+- sourcemap_filenames: drop dead sourcemap-filename plumbing (#10189) by @IWANABETHATGUY
+- extract external import symbol merging into a method (#10224) by @IWANABETHATGUY
+- rolldown: skip CJS namespace merging under strict execution order (#10203) by @hyfdev
+- resolve the manual tsconfig per file instead of once at startup (#10200) by @shulaoda
+- rolldown: route interop ESM init emission through a shared init-target view (#10202) by @hyfdev
+- rolldown: collapse vestigial wrap-kind state and share chunk sort helper (#10201) by @hyfdev
+
+### 📚 Documentation
+
+- show plugin kinds in JSDoc and each hook's description (#10218) by @sapphi-red
+- add an explanation about removing imports from external modules without any messages (#10215) by @sapphi-red
+
+### ⚡ Performance
+
+- sourcemap: owned merge in SourceJoiner::join (4005->5 allocs/chunk) (#10250) by @Boshen
+- avoid redundant sourcemap string copies in collapse and minify paths (#10093) by @Boshen
+
+### 🧪 Testing
+
+- code-splitting: establish strict-order review baselines (#10287) by @hyfdev
+- dev: add hot API test cases (#10181) by @h-a-n-a
+- code-splitting: normalize strict execution order variants (#10277) by @hyfdev
+- code-splitting: harden strict execution order coverage (#10252) by @hyfdev
+- code-splitting: add strict execution order regressions (#10253) by @hyfdev
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update github actions (#10241) by @renovate[bot]
+- deps: update oxc to 0.140.0 (#10274) by @shulaoda
+- update Yunfei's GitHub username (#10275) by @hyfdev
+- deps: update napi (#10260) by @renovate[bot]
+- deps: update test262 submodule for tests (#10266) by @rolldown-guard[bot]
+- deps: update dependency vite-plus to v0.2.4 (#10256) by @renovate[bot]
+- deps: update napi (#10240) by @renovate[bot]
+- deps: update oxc resolver to v11.24.2 (#10245) by @renovate[bot]
+- deps: update rust crates (#10244) by @renovate[bot]
+- disable Renovate updates for idna_adapter (#10248) by @shulaoda
+- deps: update oxc resolver to v11.24.1 (#10232) by @renovate[bot]
+- deps: update rust crate oxc_sourcemap to v8.1.1 (#10233) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to ^0.27.0 (#10206) by @renovate[bot]
+- deps: upgrade sugar_path to v3 (#10230) by @hyfdev
+- add `dist-*` to `.gitignore` in sourcemap-filenames/hash-final-content fixture (#10216) by @sapphi-red
+- deps: update dependency rust to v1.97.0 (#10209) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @satyamg1620 made their first contribution in [#10211](https://github.com/rolldown/rolldown/pull/10211)
+
+
 ## [1.1.5] - 2026-07-08
 
 ### 🚀 Features

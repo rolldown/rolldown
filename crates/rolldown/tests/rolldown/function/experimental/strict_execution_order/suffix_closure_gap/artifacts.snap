@@ -1,0 +1,100 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dyn.js
+
+```js
+import { i as __esmMin, n as init_setup, r as setup, t as init_intermediate } from "./main.js";
+//#endregion
+__esmMin((() => {
+	init_setup();
+	init_intermediate();
+	console.log("dyn", typeof setup);
+}))();
+
+```
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region setup.js
+var setup;
+var init_setup = __esmMin((() => {
+	setup = () => {
+		globalThis.foo = "foo";
+	};
+	setup();
+}));
+//#endregion
+var captured;
+var init_intermediate = __esmMin((() => {
+	//#region reader.js
+	captured = globalThis.foo;
+	console.log("captured", captured);
+	//#endregion
+}));
+//#endregion
+__esmMin((() => {
+	init_setup();
+	init_intermediate();
+	setup();
+	import("./dyn.js");
+}))();
+export { __esmMin as i, init_setup as n, setup as r, init_intermediate as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### dyn.js
+
+```js
+import { i as __esmMin, n as init_setup, r as setup, t as init_intermediate } from "./main.js";
+//#endregion
+__esmMin((() => {
+	init_setup();
+	init_intermediate();
+	console.log("dyn", typeof setup);
+}))();
+
+```
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region setup.js
+var setup;
+var init_setup = __esmMin((() => {
+	setup = () => {
+		globalThis.foo = "foo";
+	};
+	setup();
+}));
+//#endregion
+//#region reader.js
+var captured;
+var init_reader = __esmMin((() => {
+	captured = globalThis.foo;
+	console.log("captured", captured);
+}));
+//#endregion
+//#region intermediate.js
+var init_intermediate = __esmMin((() => {
+	init_reader();
+}));
+//#endregion
+__esmMin((() => {
+	init_setup();
+	init_intermediate();
+	setup();
+	import("./dyn.js");
+}))();
+export { __esmMin as i, init_setup as n, setup as r, init_intermediate as t };
+
+```

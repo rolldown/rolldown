@@ -1,0 +1,155 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] leaf.js is dynamically imported by reader-host.js but also statically imported by reader.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## dynamic-page.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region leaf.js
+var init_leaf = __esmMin((() => {
+	(globalThis.__events ??= []).push("leaf");
+}));
+//#endregion
+//#region definer.js
+function makeValue() {
+	return 5;
+}
+var value;
+var init_definer = __esmMin((() => {
+	(globalThis.__events ??= []).push("definer");
+	value = makeValue();
+}));
+//#endregion
+//#region barrel-inner.js
+var init_barrel_inner = __esmMin((() => {
+	init_definer();
+}));
+//#endregion
+//#region barrel-outer.js
+var init_barrel_outer = __esmMin((() => {
+	init_barrel_inner();
+}));
+//#endregion
+//#region reader.js
+var readerValue;
+var init_reader = __esmMin((() => {
+	init_leaf();
+	init_barrel_outer();
+	(globalThis.__events ??= []).push("reader:" + value);
+	readerValue = value + 100;
+}));
+//#endregion
+//#region reader-host.js
+var init_reader_host = __esmMin((() => {
+	init_reader();
+	(globalThis.__events ??= []).push("reader-host:" + readerValue);
+}));
+//#endregion
+__esmMin((() => {
+	init_reader_host();
+	(globalThis.__events ??= []).push("dynamic-page");
+}))();
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+function loadPage() {
+	return import("./dynamic-page.js");
+}
+//#endregion
+__esmMin((() => {
+	(globalThis.__events ??= []).push("main");
+}))();
+export { loadPage };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] leaf.js is dynamically imported by reader-host.js but also statically imported by reader.js, dynamic import will not move module into another chunk.
+
+```
+
+## Assets
+
+### dynamic-page.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+function makeValue() {
+	return 5;
+}
+var value, readerValue;
+__esmMin((() => {
+	//#region leaf.js
+	(globalThis.__events ??= []).push("leaf");
+	//#endregion
+	//#region definer.js
+	(globalThis.__events ??= []).push("definer");
+	value = makeValue();
+	//#endregion
+	//#region reader.js
+	(globalThis.__events ??= []).push("reader:" + value);
+	readerValue = value + 100;
+	//#endregion
+	//#region reader-host.js
+	(globalThis.__events ??= []).push("reader-host:" + readerValue);
+	//#endregion
+	//#region dynamic-page.js
+	(globalThis.__events ??= []).push("dynamic-page");
+	//#endregion
+}))();
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+function loadPage() {
+	return import("./dynamic-page.js");
+}
+//#endregion
+__esmMin((() => {
+	(globalThis.__events ??= []).push("main");
+}))();
+export { loadPage };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

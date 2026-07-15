@@ -16,5 +16,11 @@
       "onDemandWrapping": true
     }
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
 }

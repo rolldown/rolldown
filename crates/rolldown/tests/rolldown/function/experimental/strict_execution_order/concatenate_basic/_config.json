@@ -1,4 +1,5 @@
 {
+  "_comment": "Covers plain execution-order concatenation of side-effect modules — everything inlines flat, nothing is order-wrapped. It does NOT exercise the concatenated-wrapper (ConcatenateWrappedModuleKind Inner/Root) x order-wrap interaction, which is dormant/unsupported on this branch, so it must not be counted as wrapper coverage.",
   "configName": "on-demand",
   "config": {
     "strictExecutionOrder": true,
@@ -14,6 +15,20 @@
     {
       "_configName": "pife-for-module-wrappers-disabled-on-demand",
       "pifeForModuleWrappers": false
+    },
+    {
+      "_configName": "profiler-names-wrap-all",
+      "profilerNames": false,
+      "onDemandWrapping": false
+    },
+    {
+      "_configName": "pife-for-module-wrappers-wrap-all",
+      "pifeForModuleWrappers": false,
+      "onDemandWrapping": false
+    },
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
     }
   ]
 }

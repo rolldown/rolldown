@@ -19,7 +19,7 @@ __esmMin((() => {
 
 ```
 
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 

@@ -7,14 +7,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import nodeAssert from "node:assert";
-//#endregion
-//#region main.js
-nodeAssert.equal("foo", "foo");
-//#endregion
+// HIDDEN [\0rolldown/runtime.js]
+var value;
+__esmMin((() => {
+	//#region lib-foo.js
+	value = "foo";
+	//#endregion
+	//#region main.js
+	nodeAssert.equal(value, "foo");
+	//#endregion
+}))();
 
 ```
 
-# Variant: wrap-all: [strict_execution_order: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 
@@ -56,27 +62,6 @@ var init_ns_proxy_2 = __esmMin((() => {
 __esmMin((() => {
 	init_ns_proxy_2();
 	nodeAssert.equal(value, "foo");
-}))();
-
-```
-
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
-
-## Assets
-
-### main.js
-
-```js
-import nodeAssert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
-var value;
-__esmMin((() => {
-	//#region lib-foo.js
-	value = "foo";
-	//#endregion
-	//#region main.js
-	nodeAssert.equal(value, "foo");
-	//#endregion
 }))();
 
 ```

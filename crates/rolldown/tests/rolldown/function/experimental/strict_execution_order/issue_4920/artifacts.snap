@@ -25,7 +25,7 @@ export { dep_default as dep };
 
 ```
 
-# Variant: on-demand: [on_demand_wrapping: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 

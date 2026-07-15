@@ -35,25 +35,21 @@ init_c();
 function foo() {
 	(globalThis.sideEffectLog ??= []).push("shared-foo");
 }
-var init_shared = __esmMin((() => {}));
 //#endregion
 //#region a.js
 var init_a = __esmMin((() => {
-	init_shared();
 	(globalThis.sideEffectLog ??= []).push("a");
 	foo();
 }));
 //#endregion
 //#region b.js
 var init_b = __esmMin((() => {
-	init_shared();
 	(globalThis.sideEffectLog ??= []).push("b");
 	foo();
 }));
 //#endregion
 //#region c.js
 var init_c = __esmMin((() => {
-	init_shared();
 	(globalThis.sideEffectLog ??= []).push("c");
 	foo();
 }));
@@ -62,7 +58,7 @@ export { init_b as n, init_a as r, init_c as t };
 
 ```
 
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 
@@ -98,21 +94,25 @@ init_c();
 function foo() {
 	(globalThis.sideEffectLog ??= []).push("shared-foo");
 }
+var init_shared = __esmMin((() => {}));
 //#endregion
 //#region a.js
 var init_a = __esmMin((() => {
+	init_shared();
 	(globalThis.sideEffectLog ??= []).push("a");
 	foo();
 }));
 //#endregion
 //#region b.js
 var init_b = __esmMin((() => {
+	init_shared();
 	(globalThis.sideEffectLog ??= []).push("b");
 	foo();
 }));
 //#endregion
 //#region c.js
 var init_c = __esmMin((() => {
+	init_shared();
 	(globalThis.sideEffectLog ??= []).push("c");
 	foo();
 }));

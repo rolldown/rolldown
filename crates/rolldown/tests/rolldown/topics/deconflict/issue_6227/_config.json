@@ -1,5 +1,5 @@
 {
-  "configName": "wrap-all",
+  "configName": "on-demand",
   "config": {
     "input": [
       {
@@ -7,13 +7,15 @@
         "import": "./main.js"
       }
     ],
-    "strictExecutionOrder": true
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
   },
   "configVariants": [
     {
-      "_configName": "on-demand",
-      "strictExecutionOrder": true,
-      "onDemandWrapping": true
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
     }
   ]
 }

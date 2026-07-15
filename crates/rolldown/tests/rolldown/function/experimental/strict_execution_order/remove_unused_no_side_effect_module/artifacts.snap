@@ -13,7 +13,7 @@ nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should 
 
 ```
 
-# Variant: wrap-all: [strict_execution_order: true]
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
 
 ## Assets
 
@@ -28,7 +28,7 @@ __esmMin((() => {
 
 ```
 
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+# Variant: wrap-all: [strict_execution_order: true]
 
 ## Assets
 

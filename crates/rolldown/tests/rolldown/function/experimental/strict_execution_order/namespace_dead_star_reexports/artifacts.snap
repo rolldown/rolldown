@@ -1,0 +1,189 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#endregion
+await __esmMin((async () => {
+	await import("./page-b.js");
+	await import("./page-a.js");
+}))();
+
+```
+
+## page-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_default_only, n as x, r as default_only_default, t as init_shadowed } from "./shadowed.js";
+import assert from "node:assert";
+//#endregion
+__esmMin((() => {
+	init_default_only();
+	init_shadowed();
+	assert.strictEqual(globalThis.defaultValue, 0);
+	assert.strictEqual(globalThis.shadowedValue, 0);
+	assert.strictEqual(default_only_default, 42);
+	assert.strictEqual(x, 2);
+}))();
+
+```
+
+## page-b.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_default_only, t as init_shadowed } from "./shadowed.js";
+import assert from "node:assert";
+//#region bridge.js
+var bridge_exports = /* @__PURE__ */ __exportAll({ x: () => x });
+function x() {
+	return 1;
+}
+var init_bridge = __esmMin((() => {
+	init_shadowed();
+	init_default_only();
+}));
+//#endregion
+__esmMin((() => {
+	init_bridge();
+	assert.strictEqual(bridge_exports[globalThis.__bridgeKey || "x"](), 1);
+	assert.strictEqual(globalThis.defaultValue, void 0, "dead namespace star must not initialize default-only before page-b");
+	assert.strictEqual(globalThis.shadowedValue, void 0);
+}))();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+## shadowed.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region default-only.js
+function mark$1() {
+	globalThis.defaultValue = typeof globalThis.defaultValue === "number" ? globalThis.defaultValue + 1 : 0;
+	return 42;
+}
+var default_only_default;
+var init_default_only = __esmMin((() => {
+	default_only_default = /* @__PURE__ */ mark$1();
+}));
+//#endregion
+//#region shadowed.js
+function mark() {
+	globalThis.shadowedValue = typeof globalThis.shadowedValue === "number" ? globalThis.shadowedValue + 1 : 0;
+	return 2;
+}
+var x;
+var init_shadowed = __esmMin((() => {
+	x = /* @__PURE__ */ mark();
+}));
+//#endregion
+export { init_default_only as i, x as n, default_only_default as r, init_shadowed as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#endregion
+await __esmMin((async () => {
+	await import("./page-b.js");
+	await import("./page-a.js");
+}))();
+
+```
+
+### page-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_default_only, n as x, r as default_only_default, t as init_shadowed } from "./shadowed.js";
+import assert from "node:assert";
+//#endregion
+__esmMin((() => {
+	init_default_only();
+	init_shadowed();
+	assert.strictEqual(globalThis.defaultValue, 0);
+	assert.strictEqual(globalThis.shadowedValue, 0);
+	assert.strictEqual(default_only_default, 42);
+	assert.strictEqual(x, 2);
+}))();
+
+```
+
+### page-b.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_default_only, t as init_shadowed } from "./shadowed.js";
+import assert from "node:assert";
+var bridge_exports = /* @__PURE__ */ __exportAll({ x: () => x });
+function x() {
+	return 1;
+}
+__esmMin((() => {
+	//#region bridge.js
+	init_shadowed();
+	init_default_only();
+	//#endregion
+	//#region page-b.js
+	assert.strictEqual(bridge_exports[globalThis.__bridgeKey || "x"](), 1);
+	assert.strictEqual(globalThis.defaultValue, void 0, "dead namespace star must not initialize default-only before page-b");
+	assert.strictEqual(globalThis.shadowedValue, void 0);
+	//#endregion
+}))();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+### shadowed.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region default-only.js
+function mark$1() {
+	globalThis.defaultValue = typeof globalThis.defaultValue === "number" ? globalThis.defaultValue + 1 : 0;
+	return 42;
+}
+var default_only_default;
+var init_default_only = __esmMin((() => {
+	default_only_default = /* @__PURE__ */ mark$1();
+}));
+//#endregion
+//#region shadowed.js
+function mark() {
+	globalThis.shadowedValue = typeof globalThis.shadowedValue === "number" ? globalThis.shadowedValue + 1 : 0;
+	return 2;
+}
+var x;
+var init_shadowed = __esmMin((() => {
+	x = /* @__PURE__ */ mark();
+}));
+//#endregion
+export { init_default_only as i, x as n, default_only_default as r, init_shadowed as t };
+
+```

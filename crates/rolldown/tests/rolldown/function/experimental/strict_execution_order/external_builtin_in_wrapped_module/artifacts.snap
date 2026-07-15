@@ -1,0 +1,68 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { sep } from "node:path";
+//#region dep.js
+globalThis.__depRan = true;
+//#endregion
+//#region main.js
+const out = `dep:${sep.length > 0}`;
+//#endregion
+export { out };
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import { sep } from "node:path";
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.js
+var marker;
+var init_dep = __esmMin((() => {
+	globalThis.__depRan = true;
+	marker = `dep:${sep.length > 0}`;
+}));
+//#endregion
+//#region main.js
+var out;
+//#endregion
+__esmMin((() => {
+	init_dep();
+	out = marker;
+}))();
+export { out };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import { sep } from "node:path";
+// HIDDEN [\0rolldown/runtime.js]
+var marker, out;
+__esmMin((() => {
+	//#region dep.js
+	globalThis.__depRan = true;
+	marker = `dep:${sep.length > 0}`;
+	//#endregion
+	//#region main.js
+	out = marker;
+	//#endregion
+}))();
+export { out };
+
+```

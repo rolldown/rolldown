@@ -42,3 +42,53 @@ __esmMin((() => {
 }))();
 
 ```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### dynamic.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dynamic.js
+var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = 1e3;
+	globalThis.a = 1e3;
+}));
+//#endregion
+export default require_dynamic();
+export { __esmMin as n, require_dynamic as t };
+
+```
+
+### main.js
+
+```js
+import { n as __esmMin, t as require_dynamic } from "./dynamic.js";
+import { strictEqual } from "node:assert";
+//#region sideeffects.js
+var init_sideeffects = __esmMin((() => {
+	globalThis.a = 2;
+})), a;
+var init_esm = __esmMin((() => {
+	require_dynamic();
+	init_sideeffects();
+	a = globalThis.a;
+	strictEqual(a, 2);
+}));
+//#endregion
+//#region cjs.js
+function foo() {
+	return 100;
+}
+var init_cjs = __esmMin((() => {
+	init_esm();
+}));
+//#endregion
+__esmMin((() => {
+	init_cjs();
+	console.log(`mod.foo: `, foo);
+}))();
+
+```

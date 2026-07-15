@@ -1,0 +1,78 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { r as __commonJSMin, t as init_s1 } from "./b.js";
+//#region a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin((() => {
+	init_s1();
+	console.log("A");
+}));
+//#endregion
+export default require_a();
+
+```
+
+## b.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region s1.mjs
+var s1_exports = /* @__PURE__ */ __exportAll({});
+var init_s1 = __esmMin((() => {
+	console.log("S");
+}));
+//#endregion
+//#region b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin((() => {
+	init_s1();
+	console.log("B");
+}));
+//#endregion
+export default require_b();
+export { s1_exports as n, __commonJSMin as r, init_s1 as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### a.js
+
+```js
+import { r as __commonJSMin, t as init_s1 } from "./b.js";
+//#region a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin((() => {
+	init_s1();
+	console.log("A");
+}));
+//#endregion
+export default require_a();
+
+```
+
+### b.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region s1.mjs
+var s1_exports = /* @__PURE__ */ __exportAll({});
+var init_s1 = __esmMin((() => {
+	console.log("S");
+}));
+//#endregion
+//#region b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin((() => {
+	init_s1();
+	console.log("B");
+}));
+//#endregion
+export default require_b();
+export { s1_exports as n, __commonJSMin as r, init_s1 as t };
+
+```

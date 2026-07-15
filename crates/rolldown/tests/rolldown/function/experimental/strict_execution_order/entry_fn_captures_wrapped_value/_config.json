@@ -1,5 +1,4 @@
 {
-  "snapshot": false,
   "configName": "wrap-all",
   "config": {
     "strictExecutionOrder": true,

@@ -75,7 +75,7 @@ export { second_exports as n, value as r, init_second as t };
 
 ```
 
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## warnings
 

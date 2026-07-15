@@ -1,0 +1,138 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var targetPromise;
+//#endregion
+__esmMin((() => {
+	globalThis.events = [];
+	targetPromise = import("./dyn.js").then((n) => (n.t(), n.n));
+	console.log("a done");
+}))();
+export { targetPromise };
+
+```
+
+## b.js
+
+```js
+if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_observer } from "./dyn.js";
+//#endregion
+__esmMin((() => {
+	init_observer();
+	console.log("b done");
+}))();
+
+```
+
+## dyn.js
+
+```js
+if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+//#region observer.js
+var init_observer = __esmMin((() => {
+	globalThis.events ??= [];
+	globalThis.events.push("observer:" + Boolean(globalThis.ready));
+	console.log("observer eval", Boolean(globalThis.ready));
+}));
+//#endregion
+//#region target.js
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+var init_target = __esmMin((() => {
+	globalThis.events ??= [];
+	globalThis.events.push("target");
+	globalThis.ready = true;
+	console.log("target eval");
+}));
+//#endregion
+export { target_exports as n, init_observer as r, init_target as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### a.js
+
+```js
+if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var targetPromise;
+//#endregion
+__esmMin((() => {
+	globalThis.events = [];
+	targetPromise = import("./dyn.js").then((n) => (n.t(), n.n));
+	console.log("a done");
+}))();
+export { targetPromise };
+
+```
+
+### b.js
+
+```js
+if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_observer } from "./dyn.js";
+//#endregion
+__esmMin((() => {
+	init_observer();
+	console.log("b done");
+}))();
+
+```
+
+### dyn.js
+
+```js
+if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+//#region observer.js
+var init_observer = __esmMin((() => {
+	globalThis.events ??= [];
+	globalThis.events.push("observer:" + Boolean(globalThis.ready));
+	console.log("observer eval", Boolean(globalThis.ready));
+}));
+//#endregion
+//#region target.js
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+var init_target = __esmMin((() => {
+	globalThis.events ??= [];
+	globalThis.events.push("target");
+	globalThis.ready = true;
+	console.log("target eval");
+}));
+//#endregion
+export { target_exports as n, init_observer as r, init_target as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```

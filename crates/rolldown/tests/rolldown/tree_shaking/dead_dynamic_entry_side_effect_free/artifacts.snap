@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { i as __esmMin, n as init_helper, r as other, t as init_leaf } from "./leaf.js";
+import { n as other, r as __esmMin, t as init_leaf } from "./leaf.js";
 //#endregion
 __esmMin((() => {
 	init_leaf();
@@ -19,7 +19,7 @@ __esmMin((() => {
 ## b.js
 
 ```js
-import { i as __esmMin, n as init_helper, r as other, t as init_leaf } from "./leaf.js";
+import { n as other, r as __esmMin, t as init_leaf } from "./leaf.js";
 //#endregion
 __esmMin((() => {
 	init_leaf();
@@ -29,6 +29,49 @@ __esmMin((() => {
 ```
 
 ## leaf.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region helper.js
+const other = "other";
+//#endregion
+//#region leaf.js
+var init_leaf = __esmMin((() => {}));
+//#endregion
+export { other as n, __esmMin as r, init_leaf as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### a.js
+
+```js
+import { i as __esmMin, n as init_helper, r as other, t as init_leaf } from "./leaf.js";
+//#endregion
+__esmMin((() => {
+	init_leaf();
+	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+	console.log(other);
+}))();
+
+```
+
+### b.js
+
+```js
+import { i as __esmMin, n as init_helper, r as other, t as init_leaf } from "./leaf.js";
+//#endregion
+__esmMin((() => {
+	init_leaf();
+	console.log(other);
+}))();
+
+```
+
+### leaf.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
@@ -44,48 +87,5 @@ var init_leaf = __esmMin((() => {
 }));
 //#endregion
 export { __esmMin as i, init_helper as n, other as r, init_leaf as t };
-
-```
-
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
-
-## Assets
-
-### a.js
-
-```js
-import { n as other, r as __esmMin, t as init_leaf } from "./leaf.js";
-//#endregion
-__esmMin((() => {
-	init_leaf();
-	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
-	console.log(other);
-}))();
-
-```
-
-### b.js
-
-```js
-import { n as other, r as __esmMin, t as init_leaf } from "./leaf.js";
-//#endregion
-__esmMin((() => {
-	init_leaf();
-	console.log(other);
-}))();
-
-```
-
-### leaf.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region helper.js
-const other = "other";
-//#endregion
-//#region leaf.js
-var init_leaf = __esmMin((() => {}));
-//#endregion
-export { other as n, __esmMin as r, init_leaf as t };
 
 ```

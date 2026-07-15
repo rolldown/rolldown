@@ -3,42 +3,26 @@
 //! the fixpoint), and `preserveModules` re-export interface preservation (once,
 //! after convergence).
 
-use rolldown_common::{
-  IndexModules, Module, ModuleIdx, RUNTIME_HELPER_NAMES, RuntimeHelper, RuntimeModuleBrief,
-  SymbolRef,
-};
+use rolldown_common::{IndexModules, ModuleIdx, RuntimeHelper, RuntimeModuleBrief};
 // On wasm targets `rolldown_utils::rayon` shims `par_iter()` to a plain `Iterator`,
 // so `zip_eq` resolves via `Itertools` there and via `IndexedParallelIterator` natively.
+use crate::types::linking_metadata::LinkingMetadataVec;
 #[cfg(target_family = "wasm")]
 use itertools::Itertools as _;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
-use rustc_hash::FxHashSet;
-
-use crate::types::linking_metadata::LinkingMetadataVec;
 
 use super::include_statements::{
-  IncludeContext, ModuleInclusionVec, SymbolIncludeReason, include_module, include_statement,
-  include_symbol, include_symbol_and_check_cjs_bailout,
+  IncludeContext, ModuleInclusionVec, include_cjs_bailout_exports_with_core,
+  include_runtime_symbol_with_core, preserve_reexported_interfaces_with_core,
 };
 
 pub(super) fn include_cjs_bailout_exports(
   context: &mut IncludeContext,
-  metas: &LinkingMetadataVec,
   bailout_modules: impl IntoIterator<Item = ModuleIdx>,
 ) {
-  for idx in bailout_modules {
-    metas[idx].resolved_exports.values().filter(|local| local.came_from_commonjs).for_each(
-      |local| {
-        include_symbol_and_check_cjs_bailout(
-          context,
-          local.symbol_ref,
-          SymbolIncludeReason::Normal,
-        );
-      },
-    );
-  }
+  include_cjs_bailout_exports_with_core(context, bailout_modules);
 }
 
 /// Collects all depended runtime helpers from included modules only.
@@ -69,22 +53,7 @@ pub fn include_runtime_symbol(
   runtime: &RuntimeModuleBrief,
   depended_runtime_helper: RuntimeHelper,
 ) {
-  let runtime_module = &ctx.modules[runtime.id()].as_normal().expect("runtime should be normal");
-
-  if depended_runtime_helper.is_empty() {
-    // No runtime helpers needed, but if the runtime has side effects (e.g. from
-    // a plugin transform), we still need to include it.
-    if runtime_module.side_effects.has_side_effects() {
-      include_module(ctx, runtime_module);
-    }
-    return;
-  }
-
-  for helper in depended_runtime_helper {
-    let index = helper.bits().trailing_zeros() as usize;
-    let name = RUNTIME_HELPER_NAMES[index];
-    include_symbol(ctx, runtime.resolve_symbol(name), SymbolIncludeReason::Normal);
-  }
+  include_runtime_symbol_with_core(ctx, runtime, depended_runtime_helper);
 }
 
 /// if no export is used, and the module has no side effects, the module should not be included
@@ -109,29 +78,5 @@ pub fn include_runtime_symbol(
 /// re-export statements that reference already-retained canonicals, so it introduces no new
 /// reachable values and needs no further convergence.
 pub(super) fn preserve_reexported_interfaces(ctx: &mut IncludeContext) {
-  if !ctx.options.preserve_modules {
-    return;
-  }
-  // Collect every intermediate re-export facade that lies on the export chain of a *used* imported
-  // symbol — these are the facades consumed through their own module.
-  let mut consumed_facades: FxHashSet<SymbolRef> = FxHashSet::default();
-  for (imported_as_ref, reexports) in ctx.normal_symbol_exports_chain_map {
-    if ctx.used_symbol_refs.contains(imported_as_ref) {
-      consumed_facades.extend(reexports.iter().copied());
-    }
-  }
-  for symbol_ref in consumed_facades {
-    let module_idx = symbol_ref.owner;
-    if module_idx == ctx.runtime_idx || !ctx.is_module_included_vec.has_bit(module_idx) {
-      continue;
-    }
-    let Module::Normal(module) = &ctx.modules[module_idx] else {
-      continue;
-    };
-    let declaring_stmts = ctx.stmt_infos[module_idx].declared_stmts_by_symbol(&symbol_ref).to_vec();
-    for stmt_info_id in declaring_stmts {
-      include_statement(ctx, module, stmt_info_id);
-    }
-    include_symbol_and_check_cjs_bailout(ctx, symbol_ref, SymbolIncludeReason::EntryExport);
-  }
+  preserve_reexported_interfaces_with_core(ctx);
 }

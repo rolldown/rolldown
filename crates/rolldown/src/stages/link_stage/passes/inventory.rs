@@ -10,8 +10,16 @@ use syn::{
   visit::{self, Visit},
 };
 
-const FORBIDDEN_CARRIERS: [&str; 5] =
-  ["LinkStage", "LinkStageOutput", "LinkingMetadata", "LinkingMetadataVec", "PassPipelineCtx"];
+const FORBIDDEN_CARRIERS: [&str; 8] = [
+  "LinkStage",
+  "LinkStageOutput",
+  "LinkingMetadata",
+  "LinkingMetadataVec",
+  "PassPipelineCtx",
+  "InclusionCoreContext",
+  "InclusionFacts",
+  "InclusionModuleFacts",
+];
 
 fn rust_sources(root: &Path) -> Vec<PathBuf> {
   let mut pending = vec![root.to_path_buf()];
@@ -803,6 +811,9 @@ fn inventory_rejects_stateful_and_hidden_pass_shapes() {
     "use crate::types::linking_metadata::LinkingMetadata as Metadata;",
     "use crate::types::linking_metadata::LinkingMetadataVec as MetadataVec;",
     "use rolldown_utils::pass::PassPipelineCtx as Context;",
+    "use super::super::tree_shaking::inclusion_core::InclusionCoreContext;",
+    "use super::super::tree_shaking::inclusion_core::InclusionFacts as Facts;",
+    "use super::super::tree_shaking::inclusion_core::InclusionModuleFacts;",
     "pub(super) struct CarrierPass; impl Pass for CarrierPass { type InputRead<'a> = carrier_ty!(); }",
     "fn hide() { std::debug_assert!(std::mem::size_of::<LinkStage<'static>>() > 0); }",
     "fn hide() { std::debug_assert!(std::matches!(true, true)); }",

@@ -1,5 +1,6 @@
 mod dynamic_entries;
 pub mod include_statements;
+mod inclusion_core;
 mod on_demand;
 mod passes;
 

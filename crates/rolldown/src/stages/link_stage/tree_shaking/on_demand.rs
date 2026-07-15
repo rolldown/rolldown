@@ -1,13 +1,31 @@
 //! On-demand (body-demand) inclusion of side-effect statements for user-declared
-//! side-effect-free modules. See [`side_effects_included_on_demand`] for the model.
+//! side-effect-free modules. See [`compute_body_demand_keys`] for the model.
 
 use rolldown_common::{
-  ExportOrigin, ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, StmtInfo, SymbolRef,
-  SymbolRefDb, side_effects::DeterminedSideEffects,
+  ExportsKind, IndexModules, ModuleIdx, SymbolRef, SymbolRefDb, side_effects::DeterminedSideEffects,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{stages::link_stage::LinkStage, type_alias::IndexStmtInfos};
+
+use super::inclusion_core::{InclusionModuleFacts, compute_body_demand_keys_core};
+
+struct LegacyModuleFacts<'a> {
+  modules: &'a IndexModules,
+}
+
+impl InclusionModuleFacts for LegacyModuleFacts<'_> {
+  fn exports_kind(&self, module_idx: ModuleIdx) -> ExportsKind {
+    self.modules[module_idx]
+      .as_normal()
+      .expect("body-demand facts require a normal module")
+      .exports_kind
+  }
+
+  fn side_effects(&self, module_idx: ModuleIdx) -> DeterminedSideEffects {
+    *self.modules[module_idx].side_effects()
+  }
+}
 
 /// Whether side-effectful statements of `module` that reference module-level
 /// symbols are included on demand instead of being swept in unconditionally by
@@ -44,18 +62,8 @@ use crate::{stages::link_stage::LinkStage, type_alias::IndexStmtInfos};
 /// demand, so a dead pure dynamic import can't resurrect a body), modules
 /// using `eval` (it can observe anything), and CommonJS modules (their exports
 /// are side-effect assignments that the demand edges don't model).
-pub(super) fn side_effects_included_on_demand(
-  module: &NormalModule,
-  entry_module_idxs: &FxHashSet<ModuleIdx>,
-) -> bool {
-  matches!(module.side_effects, DeterminedSideEffects::UserDefined(false))
-    && matches!(module.exports_kind, ExportsKind::Esm)
-    && !module.meta.has_eval()
-    && !entry_module_idxs.contains(&module.idx)
-}
-
 /// Build the demand edges for modules whose side-effectful statements are
-/// included on demand (see [`side_effects_included_on_demand`]): body-demand
+/// included on demand: body-demand
 /// key -> the module whose gated side-effect statements it demands.
 ///
 /// A module's body counts as demanded when one of its *own* exports (an export
@@ -76,47 +84,14 @@ pub fn compute_body_demand_keys(
   treeshake_enabled: bool,
   entry_module_idxs: &FxHashSet<ModuleIdx>,
 ) -> FxHashMap<SymbolRef, ModuleIdx> {
-  let mut map: FxHashMap<SymbolRef, ModuleIdx> = FxHashMap::default();
-  if !treeshake_enabled {
-    return map;
-  }
-  for module in modules.iter().filter_map(Module::as_normal) {
-    if !side_effects_included_on_demand(module, entry_module_idxs) {
-      continue;
-    }
-    let has_gated_stmts = stmt_infos[module.idx]
-      .iter_enumerated_without_namespace_stmt()
-      .any(|(_, stmt_info)| is_gated_side_effect_stmt(stmt_info));
-    if !has_gated_stmts {
-      continue;
-    }
-    let body_demand_keys = module
-      .named_exports
-      .values()
-      .filter(|local_export| matches!(module.classify_export(local_export), ExportOrigin::Own))
-      .map(|local_export| symbols.canonical_ref_for(local_export.referenced))
-      .chain(std::iter::once(module.namespace_object_ref));
-    for key in body_demand_keys {
-      let previous = map.insert(key, module.idx);
-      debug_assert!(
-        previous.is_none_or(|prev| prev == module.idx),
-        "a body-demand key must belong to exactly one module"
-      );
-    }
-  }
-  map
-}
-
-/// A statement that joins through body demand rather than the unconditional
-/// sweep of [`super::include_statements::include_module`]: it evaluates side
-/// effects *and* reads module-level bindings (so it can dangle a lazily-deferred
-/// import), and is not an import/re-export statement (those drive wrapper init
-/// calls and side-effect-import inclusion; `ReferenceNeededSymbolsPass` also
-/// pushes wrapper refs onto them, which must not count as user references).
-pub(super) fn is_gated_side_effect_stmt(stmt_info: &StmtInfo) -> bool {
-  stmt_info.eval_flags.has_side_effect_for_tree_shaking()
-    && !stmt_info.referenced_symbols.is_empty()
-    && stmt_info.import_records.is_empty()
+  compute_body_demand_keys_core(
+    &LegacyModuleFacts { modules },
+    modules,
+    stmt_infos,
+    symbols,
+    treeshake_enabled,
+    entry_module_idxs,
+  )
 }
 
 impl LinkStage<'_> {

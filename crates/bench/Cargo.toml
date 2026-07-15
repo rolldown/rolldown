@@ -17,11 +17,20 @@ test = false
 [dependencies]
 criterion2 = { workspace = true, features = ["async_tokio"] }
 ignore = { workspace = true }
+mimalloc-safe = { workspace = true, optional = true }
 rolldown = { workspace = true, features = ["experimental"] }
+rolldown_common = { workspace = true, optional = true }
+rolldown_error = { workspace = true, optional = true }
 rolldown_fs = { workspace = true, features = ["memory"] }
 rolldown_resolver = { workspace = true }
 rolldown_workspace = { workspace = true }
+rustc-hash = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"], optional = true }
+serde_json = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
+tracing = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, features = ["registry"], optional = true }
+xxhash-rust = { workspace = true, features = ["xxh3"], optional = true }
 
 [[bench]]
 harness = false
@@ -29,9 +38,39 @@ name = "bench"
 
 [features]
 codspeed = ["criterion2/codspeed"]
+link-baseline = [
+  "rolldown/testing",
+  "dep:mimalloc-safe",
+  "dep:rolldown_common",
+  "dep:rolldown_error",
+  "dep:rustc-hash",
+  "dep:serde",
+  "dep:serde_json",
+  "dep:tracing",
+  "dep:tracing-subscriber",
+  "dep:xxhash-rust",
+]
+
+[[bin]]
+name = "link-baseline"
+path = "src/bin/link_baseline/main.rs"
+required-features = ["link-baseline"]
+test = false
+bench = false
+
+[[test]]
+name = "link_baseline"
+path = "tests/link_baseline.rs"
+required-features = ["link-baseline"]
+
+[[test]]
+name = "link_trace_global"
+path = "tests/link_trace_global.rs"
+required-features = ["link-baseline"]
 
 [dev-dependencies]
-rustc-hash = { workspace = true }
 mimalloc-safe = { workspace = true }
 oxc = { workspace = true }
+rayon = { workspace = true }
+rustc-hash = { workspace = true }
 rolldown_sourcemap = { workspace = true }

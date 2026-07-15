@@ -232,6 +232,9 @@ setup-test-dev-server-vite:
 bench-rust:
   cargo bench -p bench
 
+build-link-baseline:
+  node ./scripts/misc/build-link-baseline.mjs
+
 bench-node:
   vp --filter bench run bench
 

@@ -135,13 +135,21 @@ dependencies = [
  "ignore",
  "mimalloc-safe",
  "oxc",
+ "rayon",
  "rolldown",
+ "rolldown_common",
+ "rolldown_error",
  "rolldown_fs",
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_workspace",
  "rustc-hash",
+ "serde",
+ "serde_json",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "xxhash-rust",
 ]
 
 [[package]]

@@ -37,6 +37,8 @@ mod generate_lazy_export;
 mod patch_module_dependencies;
 mod reference_needed_symbols;
 mod sort_modules;
+#[cfg(feature = "testing")]
+pub mod testing;
 mod tree_shaking;
 
 pub use tree_shaking::{
@@ -242,31 +244,34 @@ impl<'a> LinkStage<'a> {
 
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
-    (
-      LinkStageOutput {
-        module_table: self.module_table,
-        entries: self.entries,
-        sorted_modules: self.sorted_modules,
-        metas: self.metas,
-        symbol_db: self.symbols,
-        stmt_infos: self.stmt_infos,
-        runtime: self.runtime,
-        diagnostics: self.diagnostics,
-        used_external_symbols: self.used_external_symbols,
-        retained_export_symbols: RetainedExportSymbols::default(),
-        dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
-        safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
-        external_import_namespace_merger: self.external_import_namespace_merger,
-        overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
-        entry_point_to_reference_ids: self.entry_point_to_reference_ids,
-        global_constant_symbol_map: self.global_constant_symbol_map,
-        normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
-        user_defined_entry_modules: self.user_defined_entry_modules,
-        has_enum_inlining: self.has_enum_inlining,
-      },
-      self.ast_table,
-      self.used_symbol_refs,
-    )
+    let output = LinkStageOutput {
+      module_table: self.module_table,
+      entries: self.entries,
+      sorted_modules: self.sorted_modules,
+      metas: self.metas,
+      symbol_db: self.symbols,
+      stmt_infos: self.stmt_infos,
+      runtime: self.runtime,
+      diagnostics: self.diagnostics,
+      used_external_symbols: self.used_external_symbols,
+      retained_export_symbols: RetainedExportSymbols::default(),
+      dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
+      safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
+      external_import_namespace_merger: self.external_import_namespace_merger,
+      overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
+      entry_point_to_reference_ids: self.entry_point_to_reference_ids,
+      global_constant_symbol_map: self.global_constant_symbol_map,
+      normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
+      user_defined_entry_modules: self.user_defined_entry_modules,
+      has_enum_inlining: self.has_enum_inlining,
+    };
+    #[cfg(feature = "testing")]
+    let output = {
+      let mut output = output;
+      testing::observe_link_output(&mut output);
+      output
+    };
+    (output, self.ast_table, self.used_symbol_refs)
   }
 
   /// A helper function used to debug symbol in link process

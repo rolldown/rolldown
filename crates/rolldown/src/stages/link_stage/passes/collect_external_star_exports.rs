@@ -11,6 +11,14 @@ pub(in crate::stages::link_stage) struct ExternalStarExports {
 }
 
 impl ExternalStarExports {
+  pub(in crate::stages::link_stage) fn module_count(&self) -> usize {
+    self.records.len()
+  }
+
+  pub(in crate::stages::link_stage) fn get(&self, module_idx: ModuleIdx) -> &[ImportRecordIdx] {
+    &self.records[module_idx]
+  }
+
   pub(in crate::stages::link_stage) fn into_inner(
     self,
   ) -> IndexVec<ModuleIdx, Vec<ImportRecordIdx>> {

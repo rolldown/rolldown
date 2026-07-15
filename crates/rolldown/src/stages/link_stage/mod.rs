@@ -3,10 +3,9 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, FlatOptions, Module, ModuleIdx,
-  ModuleTable, PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief, SymbolRef,
-  SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, EntryPoint, FlatOptions, Module, ModuleIdx, ModuleTable,
+  PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
+  UsedExternalSymbols, UsedSymbolRefsBuilder, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::{Diagnostics, EventKindSwitcher};
 use rolldown_utils::{
@@ -24,14 +23,12 @@ use crate::{
 
 use super::scan_stage::NormalizedScanStageOutput;
 
-mod create_exports_for_ecma_modules;
 mod cross_module_optimization;
 mod generate_lazy_export;
 pub mod lazy_json_export_initializers;
 mod non_splittable_json_defaults;
 mod passes;
 mod patch_module_dependencies;
-mod reference_needed_symbols;
 #[cfg(feature = "testing")]
 pub mod testing;
 mod tree_shaking;
@@ -46,21 +43,26 @@ use non_splittable_json_defaults::NonSplittableJsonDefaults;
 
 use passes::{
   BindImportsInput, BindImportsOutput, BindImportsOwned, BindImportsPass, CanonicalizeEntriesPass,
-  CjsRoutingFinal, CollectExternalStarExportsPass, CollectInitialDependenciesPass,
-  CollectResolvedExportsPass, ComputeCjsNamespaceMergesInput, ComputeCjsNamespaceMergesPass,
-  ComputeCjsRoutingInput, ComputeCjsRoutingPass, ComputeDynamicExportsInput,
-  ComputeDynamicExportsPass, ComputeModuleExecutionOrderInput, ComputeModuleExecutionOrderPass,
-  ComputeTlaPass, ConstantExtractionInput, CreateWrapperDeclarationsInput,
+  CjsNamespaceMerges, CjsRoutingFinal, CollectEntryExportRootsInput, CollectEntryExportRootsPass,
+  CollectExternalStarExportsPass, CollectInitialDependenciesPass, CollectResolvedExportsPass,
+  ComputeCjsNamespaceMergesInput, ComputeCjsNamespaceMergesPass, ComputeCjsRoutingInput,
+  ComputeCjsRoutingPass, ComputeDynamicExportsInput, ComputeDynamicExportsPass,
+  ComputeModuleExecutionOrderInput, ComputeModuleExecutionOrderPass, ComputeTlaPass,
+  ConstantExtractionInput, CreateSyntheticExportStatementsInput,
+  CreateSyntheticExportStatementsPass, CreateWrapperDeclarationsInput,
   CreateWrapperDeclarationsOutput, CreateWrapperDeclarationsOwned, CreateWrapperDeclarationsPass,
   DetermineModuleFormatsInput, DetermineModuleFormatsPass, DetermineModuleSideEffectsInput,
-  DetermineModuleSideEffectsPass, DynamicExports, EntryPlanDraft, ExtractGlobalConstantsPass,
-  FinalizeResolvedExportsPass, GlobalConstantsDraft, IncludedCommonJsExportSymbols,
-  MemberExprResolutions, ModuleDependenciesDraft, ModuleFormats, ModuleSideEffects, ModuleWrappers,
+  DetermineModuleSideEffectsPass, DynamicExports, EntryExportRoots, EntryPlanDraft,
+  ExternalStarExports, ExtractGlobalConstantsPass, FinalizeResolvedExportsPass,
+  GlobalConstantsDraft, IncludedCommonJsExportSymbols, MemberExprResolutions,
+  ModuleDependenciesDraft, ModuleFormats, ModuleSideEffects, ModuleWrappers,
   NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
   NormalizeLazyExportsPass, PlanModuleWrappingInput, PlanModuleWrappingPass,
-  ResolveMemberExpressionsInput, ResolveMemberExpressionsOutput, ResolveMemberExpressionsOwned,
-  ResolveMemberExpressionsPass, ResolvedExports, ShimmedMissingExports, TlaScanFacts,
-  WrapperDeclaration,
+  ReferenceChunkingOptions, ReferenceImportRecordPatches, ReferenceNeededSymbolsInput,
+  ReferenceNeededSymbolsOutput, ReferenceNeededSymbolsOwned, ReferenceNeededSymbolsPass,
+  ReferenceTreeShakingOptions, ResolveMemberExpressionsInput, ResolveMemberExpressionsOutput,
+  ResolveMemberExpressionsOwned, ResolveMemberExpressionsPass, ResolvedExports,
+  ShimmedMissingExports, StatementRuntimeRequirements, TlaScanFacts, WrapperDeclaration,
 };
 
 /// Information about safely merged CJS namespaces for a module
@@ -109,16 +111,11 @@ pub struct LinkStage<'a> {
   entry_points: Vec<EntryPoint>,
   pub entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
   pub symbols: SymbolRefDb,
-  /// Per-module runtime-helper-dependency map. Detached from `EcmaView` so the
-  /// parallel walk in `reference_needed_symbols` can mutate it through `&mut`
-  /// from a zipped iterator without aliasing tricks.
-  pub depended_runtime_helper: IndexVec<ModuleIdx, Box<DependedRuntimeHelperMap>>,
   /// Per-module statement-info table. Detached from `EcmaView` at `LinkStage::new`
   /// (the field on `EcmaView` is left as an empty placeholder) so the parallel
-  /// walk in `reference_needed_symbols` can mutate it through `&mut` from a
-  /// zipped iterator without aliasing tricks. Threaded through `LinkStageOutput`
-  /// to the generate stage and module finalizers, which used to read
-  /// `module.stmt_infos` directly.
+  /// `ReferenceNeededSymbolsPass` can own and mutate disjoint slots through a
+  /// zipped iterator. Threaded through `LinkStageOutput` to the generate stage
+  /// and module finalizers, which used to read `module.stmt_infos` directly.
   pub stmt_infos: IndexStmtInfos,
   pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleIdx>,
@@ -148,12 +145,6 @@ impl<'a> LinkStage<'a> {
     Self {
       sorted_modules: Vec::new(),
       global_constant_symbol_map: FxHashMap::default(),
-      depended_runtime_helper: scan_stage_output
-        .module_table
-        .modules
-        .iter()
-        .map(|_| Box::default())
-        .collect::<IndexVec<ModuleIdx, _>>(),
       // `stmt_infos` is produced by the scan stage on the side (in
       // `NormalizedScanStageOutput.stmt_infos`) rather than living on each
       // `EcmaView`, so we can move it directly here.
@@ -200,8 +191,10 @@ impl<'a> LinkStage<'a> {
     LazyJsonExportInitializers,
     NonSplittableJsonDefaults,
     ModuleFormats,
+    ModuleWrappers,
     Sealed<DynamicExports>,
     Sealed<ModuleSideEffects>,
+    CjsNamespaceMerges,
   ) {
     let (_, (module_formats, wrapper_seeds)) = run_infallible_pass(
       DetermineModuleFormatsPass,
@@ -308,14 +301,15 @@ impl<'a> LinkStage<'a> {
       (),
     );
     self.project_module_side_effects(&module_side_effects);
-    self.project_representation_results(&module_formats, module_wrappers, &dynamic_exports);
-    self.safely_merge_cjs_ns_map = cjs_namespace_merges.into_legacy();
+    self.project_representation_results(&module_formats, &module_wrappers, &dynamic_exports);
     (
       lazy_json_export_initializers,
       non_splittable_json_defaults,
       module_formats,
+      module_wrappers,
       dynamic_exports,
       module_side_effects,
+      cjs_namespace_merges,
     )
   }
 
@@ -344,7 +338,7 @@ impl<'a> LinkStage<'a> {
   fn project_representation_results(
     &mut self,
     module_formats: &ModuleFormats,
-    module_wrappers: ModuleWrappers,
+    module_wrappers: &ModuleWrappers,
     dynamic_exports: &DynamicExports,
   ) {
     if module_formats.module_count() != self.module_table.modules.len() {
@@ -366,7 +360,7 @@ impl<'a> LinkStage<'a> {
     for module_idx in dynamic_exports.modules() {
       self.metas[module_idx].has_dynamic_exports = true;
     }
-    for (module_idx, declaration, required_by_other_module) in module_wrappers.into_modules() {
+    for (module_idx, declaration, required_by_other_module) in module_wrappers.modules() {
       let meta = &mut self.metas[module_idx];
       meta.required_by_other_module = required_by_other_module;
       match declaration {
@@ -385,19 +379,37 @@ impl<'a> LinkStage<'a> {
     }
   }
 
-  fn project_binding_results(
-    &mut self,
-    shimmed_missing_exports: ShimmedMissingExports,
-    included_commonjs_export_symbols: IncludedCommonJsExportSymbols,
-  ) {
+  fn project_shimmed_missing_exports(&mut self, shimmed_missing_exports: ShimmedMissingExports) {
     let shimmed_missing_exports = shimmed_missing_exports.into_slots();
-    let included_commonjs_export_symbols = included_commonjs_export_symbols.into_slots();
     let module_count = self.module_table.modules.len();
     assert_eq!(
       shimmed_missing_exports.len(),
       module_count,
       "missing-export shim layout must match the module table"
     );
+    assert_eq!(self.metas.len(), module_count, "metadata layout must match the module table");
+    for (module_idx, shimmed) in shimmed_missing_exports.into_iter_enumerated() {
+      match (&self.module_table[module_idx], shimmed) {
+        (Module::Normal(_), Some(shimmed)) => {
+          self.metas[module_idx].shimmed_missing_exports = shimmed;
+        }
+        (Module::External(_), None) => {}
+        (Module::Normal(_), None) => {
+          panic!("normal module {module_idx:?} has no missing-export shim slot")
+        }
+        (Module::External(_), Some(_)) => {
+          panic!("external module {module_idx:?} has a missing-export shim slot")
+        }
+      }
+    }
+  }
+
+  fn project_included_commonjs_export_symbols(
+    &mut self,
+    included_commonjs_export_symbols: IncludedCommonJsExportSymbols,
+  ) {
+    let included_commonjs_export_symbols = included_commonjs_export_symbols.into_slots();
+    let module_count = self.module_table.modules.len();
     assert_eq!(
       included_commonjs_export_symbols.len(),
       module_count,
@@ -405,23 +417,36 @@ impl<'a> LinkStage<'a> {
     );
     assert_eq!(self.metas.len(), module_count, "metadata layout must match the module table");
 
-    for ((module_idx, shimmed), included_commonjs_exports) in
-      shimmed_missing_exports.into_iter_enumerated().zip(included_commonjs_export_symbols)
+    for (module_idx, included_commonjs_exports) in
+      included_commonjs_export_symbols.into_iter_enumerated()
     {
       let meta = &mut self.metas[module_idx];
-      match (&self.module_table[module_idx], shimmed, included_commonjs_exports) {
-        (Module::Normal(_), Some(shimmed), Some(included_commonjs_exports)) => {
-          meta.shimmed_missing_exports = shimmed;
+      match (&self.module_table[module_idx], included_commonjs_exports) {
+        (Module::Normal(_), Some(included_commonjs_exports)) => {
           meta.included_commonjs_export_symbol = included_commonjs_exports;
         }
-        (Module::External(_), None, None) => {}
-        (Module::Normal(_), _, _) => {
-          panic!("normal module {module_idx:?} has incomplete import-binding slots")
+        (Module::External(_), None) => {}
+        (Module::Normal(_), None) => {
+          panic!("normal module {module_idx:?} has no included-CommonJS-export slot")
         }
-        (Module::External(_), _, _) => {
-          panic!("external module {module_idx:?} has normal-only import-binding slots")
+        (Module::External(_), Some(_)) => {
+          panic!("external module {module_idx:?} has an included-CommonJS-export slot")
         }
       }
+    }
+  }
+
+  fn project_entry_export_roots(&mut self, entry_export_roots: EntryExportRoots) {
+    for (module_idx, roots) in entry_export_roots.into_entries() {
+      self.metas[module_idx]
+        .referenced_symbols_by_entry_point_chunk
+        .extend(roots.into_iter().map(|root| (root.symbol_ref, root.came_from_commonjs)));
+    }
+  }
+
+  fn project_external_star_exports(&mut self, external_star_exports: ExternalStarExports) {
+    for (module_idx, record_ids) in external_star_exports.into_inner().into_iter_enumerated() {
+      self.metas[module_idx].star_exports_from_external_modules = record_ids;
     }
   }
 
@@ -522,10 +547,141 @@ impl<'a> LinkStage<'a> {
     }
   }
 
+  fn into_link_stage_output(
+    self,
+    lazy_json_export_initializers: LazyJsonExportInitializers,
+  ) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
+    let output = LinkStageOutput {
+      module_table: self.module_table,
+      entries: self.entries,
+      sorted_modules: self.sorted_modules,
+      metas: self.metas,
+      symbol_db: self.symbols,
+      stmt_infos: self.stmt_infos,
+      runtime: self.runtime,
+      diagnostics: self.diagnostics,
+      used_external_symbols: self.used_external_symbols,
+      retained_export_symbols: RetainedExportSymbols::default(),
+      dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
+      safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
+      external_import_namespace_merger: self.external_import_namespace_merger,
+      overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
+      entry_point_to_reference_ids: self.entry_point_to_reference_ids,
+      global_constant_symbol_map: self.global_constant_symbol_map,
+      normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
+      lazy_json_export_initializers,
+      user_defined_entry_modules: self.user_defined_entry_modules,
+      has_enum_inlining: self.has_enum_inlining,
+    };
+    #[cfg(feature = "testing")]
+    let output = {
+      let mut output = output;
+      testing::observe_link_output(&mut output);
+      output
+    };
+    (output, self.ast_table, self.used_symbol_refs)
+  }
+
+  fn run_collect_entry_export_roots_pass(
+    &self,
+    pass_pipeline: &mut PassPipelineCtx,
+    entry_plan: &EntryPlanDraft,
+    module_wrappers: &ModuleWrappers,
+    resolved_exports: &ResolvedExports,
+  ) -> EntryExportRoots {
+    let (_, entry_export_roots) = run_infallible_pass(
+      CollectEntryExportRootsPass,
+      pass_pipeline,
+      CollectEntryExportRootsInput {
+        module_table: &self.module_table,
+        entry_plan,
+        module_wrappers,
+        resolved_exports,
+        dynamic_import_usage: &self.dynamic_import_exports_usage_map,
+        preserve_signature_overrides: &self.overrode_preserve_entry_signature_map,
+        default_preserve_signature: self.options.preserve_entry_signatures,
+      },
+      (),
+    );
+    entry_export_roots
+  }
+
+  fn run_create_synthetic_export_statements_pass(
+    &mut self,
+    pass_pipeline: &mut PassPipelineCtx,
+    module_formats: &ModuleFormats,
+    resolved_exports: &ResolvedExports,
+    shimmed_missing_exports: &ShimmedMissingExports,
+    external_star_exports: &ExternalStarExports,
+  ) {
+    let (_, stmt_infos) = run_infallible_pass(
+      CreateSyntheticExportStatementsPass,
+      pass_pipeline,
+      CreateSyntheticExportStatementsInput {
+        module_table: &self.module_table,
+        module_formats,
+        resolved_exports,
+        shimmed_missing_exports,
+        external_star_exports,
+        export_all_helper: self.runtime.resolve_symbol("__exportAll"),
+        re_export_helper: self.runtime.resolve_symbol("__reExport"),
+        output_format: self.options.format,
+        generated_code_symbols: self.options.generated_code.symbols,
+      },
+      std::mem::take(&mut self.stmt_infos),
+    );
+    self.stmt_infos = stmt_infos;
+  }
+
+  fn run_reference_needed_symbols_pass(
+    &mut self,
+    pass_pipeline: &mut PassPipelineCtx,
+    module_formats: &ModuleFormats,
+    module_wrappers: &ModuleWrappers,
+    dynamic_exports: &DynamicExports,
+    module_side_effects: &ModuleSideEffects,
+    cjs_namespace_merges: &CjsNamespaceMerges,
+  ) -> (Sealed<StatementRuntimeRequirements>, ReferenceImportRecordPatches) {
+    let runtime_require_ref = (self.options.format.should_call_runtime_require()
+      && self.options.polyfill_require_for_esm_format_with_node_platform())
+    .then(|| self.runtime.resolve_symbol("__require"));
+    let (statement_runtime_requirements, reference_output) = run_infallible_pass(
+      ReferenceNeededSymbolsPass,
+      pass_pipeline,
+      ReferenceNeededSymbolsInput {
+        module_table: &self.module_table,
+        module_formats,
+        module_wrappers,
+        dynamic_exports,
+        module_side_effects,
+        cjs_namespace_merges,
+        runtime_require_ref,
+        output_format: self.options.format,
+        chunking: ReferenceChunkingOptions {
+          dynamic_import_in_cjs: self.options.dynamic_import_in_cjs,
+          code_splitting_disabled: self.options.code_splitting.is_disabled(),
+        },
+        tree_shaking: ReferenceTreeShakingOptions {
+          keep_names: self.options.keep_names,
+          commonjs_treeshake: self.options.treeshake.commonjs(),
+        },
+      },
+      ReferenceNeededSymbolsOwned {
+        symbols: std::mem::take(&mut self.symbols),
+        stmt_infos: std::mem::take(&mut self.stmt_infos),
+      },
+    );
+    let ReferenceNeededSymbolsOutput { symbols, stmt_infos, import_record_patches } =
+      reference_output;
+    self.symbols = symbols;
+    self.stmt_infos = stmt_infos;
+    (statement_runtime_requirements, import_record_patches)
+  }
+
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
     let mut pass_pipeline = PassPipelineCtx::new();
-    let (entry_plan, global_constants, dependencies, execution_orders) = {
+    let (entry_plan, global_constants, dependencies, external_star_exports, execution_orders) = {
       let (_, (module_table, global_constants)) = run_infallible_pass(
         ExtractGlobalConstantsPass,
         &mut pass_pipeline,
@@ -552,9 +708,6 @@ impl<'a> LinkStage<'a> {
         &self.module_table,
         (),
       );
-      for (module_idx, record_ids) in external_star_exports.into_inner().into_iter_enumerated() {
-        self.metas[module_idx].star_exports_from_external_modules = record_ids;
-      }
       let (execution_orders, sorted_modules) = run_infallible_pass(
         ComputeModuleExecutionOrderPass,
         &mut pass_pipeline,
@@ -583,7 +736,7 @@ impl<'a> LinkStage<'a> {
         }
       }
       self.sorted_modules = sorted_modules.into_inner();
-      (entry_plan, global_constants, dependencies, execution_orders)
+      (entry_plan, global_constants, dependencies, external_star_exports, execution_orders)
     };
     {
       let (tla_facts, ()) = run_infallible_pass(
@@ -601,8 +754,10 @@ impl<'a> LinkStage<'a> {
       lazy_json_export_initializers,
       non_splittable_json_defaults,
       module_formats,
+      module_wrappers,
       dynamic_exports,
       module_side_effects,
+      cjs_namespace_merges,
     ) = self.run_representation_and_side_effect_passes(
       &mut pass_pipeline,
       &entry_plan,
@@ -635,7 +790,7 @@ impl<'a> LinkStage<'a> {
       external_namespace_merges,
     } = binding;
     self.symbols = symbols;
-    self.project_binding_results(shimmed_missing_exports, included_commonjs_export_symbols);
+    self.project_included_commonjs_export_symbols(included_commonjs_export_symbols);
     self.external_import_namespace_merger = external_namespace_merges.into_inner();
     drop(execution_orders);
 
@@ -655,7 +810,6 @@ impl<'a> LinkStage<'a> {
       },
       (),
     );
-    drop(module_formats);
     let (_, member_resolution) = run_infallible_pass(
       ResolveMemberExpressionsPass,
       &mut pass_pipeline,
@@ -677,50 +831,52 @@ impl<'a> LinkStage<'a> {
     );
     let ResolveMemberExpressionsOutput { resolutions, cjs_routing, global_constants, dependencies } =
       member_resolution;
-    drop((dynamic_exports, module_side_effects));
+    let entry_export_roots = self.run_collect_entry_export_roots_pass(
+      &mut pass_pipeline,
+      &entry_plan,
+      &module_wrappers,
+      &resolved_exports,
+    );
+    self.run_create_synthetic_export_statements_pass(
+      &mut pass_pipeline,
+      &module_formats,
+      &resolved_exports,
+      &shimmed_missing_exports,
+      &external_star_exports,
+    );
+    let (statement_runtime_requirements, import_record_patches) = self
+      .run_reference_needed_symbols_pass(
+        &mut pass_pipeline,
+        &module_formats,
+        &module_wrappers,
+        &dynamic_exports,
+        &module_side_effects,
+        &cjs_namespace_merges,
+      );
     self.entries = entry_plan.into_legacy_entries();
     self.global_constant_symbol_map = global_constants.into_legacy();
     self.diagnostics.extend(pass_pipeline.into_diagnostics());
     self.normal_symbol_exports_chain_map = normal_export_chains.into_inner();
     self.project_member_resolution_results(dependencies, resolutions, cjs_routing);
     self.project_resolved_exports(resolved_exports);
-    self.create_exports_for_ecma_modules();
-    self.reference_needed_symbols();
+    drop((module_formats, module_wrappers, dynamic_exports, module_side_effects));
     let unreachable_import_expression_node_ids = self.cross_module_optimization();
-    self.include_statements(&unreachable_import_expression_node_ids);
-    self.patch_module_dependencies();
+    self.include_statements(
+      &unreachable_import_expression_node_ids,
+      &statement_runtime_requirements,
+      &entry_export_roots,
+    );
+    drop(statement_runtime_requirements);
+    self.patch_module_dependencies(&entry_export_roots);
+
+    self.project_shimmed_missing_exports(shimmed_missing_exports);
+    self.safely_merge_cjs_ns_map = cjs_namespace_merges.into_legacy();
+    self.project_entry_export_roots(entry_export_roots);
+    self.project_external_star_exports(external_star_exports);
+    import_record_patches.apply(&mut self.module_table);
 
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
-
-    let output = LinkStageOutput {
-      module_table: self.module_table,
-      entries: self.entries,
-      sorted_modules: self.sorted_modules,
-      metas: self.metas,
-      symbol_db: self.symbols,
-      stmt_infos: self.stmt_infos,
-      runtime: self.runtime,
-      diagnostics: self.diagnostics,
-      used_external_symbols: self.used_external_symbols,
-      retained_export_symbols: RetainedExportSymbols::default(),
-      dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
-      safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
-      external_import_namespace_merger: self.external_import_namespace_merger,
-      overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
-      entry_point_to_reference_ids: self.entry_point_to_reference_ids,
-      global_constant_symbol_map: self.global_constant_symbol_map,
-      normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
-      lazy_json_export_initializers,
-      user_defined_entry_modules: self.user_defined_entry_modules,
-      has_enum_inlining: self.has_enum_inlining,
-    };
-    #[cfg(feature = "testing")]
-    let output = {
-      let mut output = output;
-      testing::observe_link_output(&mut output);
-      output
-    };
-    (output, self.ast_table, self.used_symbol_refs)
+    self.into_link_stage_output(lazy_json_export_initializers)
   }
 
   /// A helper function used to debug symbol in link process

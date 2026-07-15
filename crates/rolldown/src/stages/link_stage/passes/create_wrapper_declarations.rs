@@ -70,6 +70,10 @@ pub(in crate::stages::link_stage) struct ModuleWrappers {
 }
 
 impl ModuleWrappers {
+  pub(in crate::stages::link_stage) fn module_count(&self) -> usize {
+    self.slots.len()
+  }
+
   pub(in crate::stages::link_stage) fn wrap_kind(&self, module_idx: ModuleIdx) -> WrapKind {
     match self.slots[module_idx].declaration {
       WrapperDeclaration::None => WrapKind::None,
@@ -78,12 +82,19 @@ impl ModuleWrappers {
     }
   }
 
-  pub(in crate::stages::link_stage) fn into_modules(
-    self,
-  ) -> impl Iterator<Item = (ModuleIdx, WrapperDeclaration, bool)> {
+  pub(in crate::stages::link_stage) fn declaration(
+    &self,
+    module_idx: ModuleIdx,
+  ) -> WrapperDeclaration {
+    self.slots[module_idx].declaration
+  }
+
+  pub(in crate::stages::link_stage) fn modules(
+    &self,
+  ) -> impl Iterator<Item = (ModuleIdx, WrapperDeclaration, bool)> + '_ {
     self
       .slots
-      .into_iter_enumerated()
+      .iter_enumerated()
       .map(|(module_idx, slot)| (module_idx, slot.declaration, slot.required_by_other_module))
   }
 }

@@ -17,10 +17,19 @@ pub(in crate::stages::link_stage) struct ComputeCjsNamespaceMergesInput<'a> {
 }
 
 pub(in crate::stages::link_stage) struct CjsNamespaceMerges {
+  module_count: usize,
   modules: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
 }
 
 impl CjsNamespaceMerges {
+  pub(in crate::stages::link_stage) fn module_count(&self) -> usize {
+    self.module_count
+  }
+
+  pub(in crate::stages::link_stage) fn needs_interop(&self, module_idx: ModuleIdx) -> Option<bool> {
+    self.modules.get(&module_idx).map(|info| info.needs_interop)
+  }
+
   pub(in crate::stages::link_stage) fn identity_owners(
     &self,
   ) -> impl Iterator<Item = ModuleIdx> + '_ {
@@ -34,6 +43,31 @@ impl CjsNamespaceMerges {
     self,
   ) -> FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo> {
     self.modules
+  }
+}
+
+#[cfg(test)]
+pub(super) mod test_support {
+  use rolldown_common::{ModuleIdx, SymbolRef};
+
+  use super::{CjsNamespaceMerges, SafelyMergeCjsNsInfo};
+
+  pub(in crate::stages::link_stage::passes) fn cjs_namespace_merges(
+    module_count: usize,
+    modules: impl IntoIterator<Item = (ModuleIdx, bool)>,
+  ) -> CjsNamespaceMerges {
+    CjsNamespaceMerges {
+      module_count,
+      modules: modules
+        .into_iter()
+        .map(|(module_idx, needs_interop)| {
+          (
+            module_idx,
+            SafelyMergeCjsNsInfo { namespace_refs: Vec::<SymbolRef>::new(), needs_interop },
+          )
+        })
+        .collect(),
+    }
   }
 }
 
@@ -74,7 +108,7 @@ impl Pass for ComputeCjsNamespaceMergesPass {
       }
     }
 
-    Ok(token.finish((), CjsNamespaceMerges { modules }))
+    Ok(token.finish((), CjsNamespaceMerges { module_count: module_table.modules.len(), modules }))
   }
 }
 

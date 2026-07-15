@@ -1,40 +1,54 @@
-# reference_needed_symbols
+# Reference needed symbols
 
 ## Purpose
 
-`reference_needed_symbols` translates each module's linking decisions into per-statement dependencies. For every import record, given the importer/importee pair plus the `WrapKind` chosen by `PlanModuleWrappingPass` and projected after wrapper declaration/lazy normalization, it records:
+`ReferenceNeededSymbolsPass` translates each module's linking decisions into per-statement dependencies. For every import record, given the importer/importee pair plus the final wrapper declaration returned after lazy normalization, it records:
 
 - the `SymbolRef`s the lowered code will reference (`init_foo`, `require_foo`, namespace objects),
 - the runtime helpers each statement depends on (`__toESM`, `__reExport`, `__toCommonJS`, `__name`, `__require`),
 - whether the lowering forces the statement to be side-effecting,
 - a stable `import_<name>` rename for external/CJS namespace bindings.
 
-It writes data; it does not decide what is included. `include_statements` is the next pass and consumes everything written here.
+It owns and returns `SymbolRefDb` and `IndexStmtInfos`; it does not decide what is included. It separately mints sealed `StatementRuntimeRequirements` for `include_statements` and an ordered `ReferenceImportRecordPatches` artifact that delays only `CallRuntimeRequire` metadata mutation until the compatibility adapter.
 
-Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
+Source: `crates/rolldown/src/stages/link_stage/passes/reference_needed_symbols.rs`.
 
 ## Pipeline placement
 
-```
+```text
 … PlanModuleWrappingPass → CreateWrapperDeclarationsPass → NormalizeLazyExportsPass
   → DetermineModuleSideEffectsPass → representation compatibility projection
   → CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass
-  → ComputeCjsRoutingPass → ResolveMemberExpressionsPass → compatibility projections
-  → create_exports_for_ecma_modules
-  → reference_needed_symbols   ← this pass
+  → ComputeCjsRoutingPass → ResolveMemberExpressionsPass
+  → CollectEntryExportRootsPass
+  → CreateSyntheticExportStatementsPass
+  → ReferenceNeededSymbolsPass   ← this pass
   → cross_module_optimization → include_statements → patch_module_dependencies
+  → final compatibility projections and ReferenceImportRecordPatches::apply
 ```
 
-This diagram records the current execution order, not a data dependency at every arrow. `reference_needed_symbols` does not read finalized `ResolvedExports`, CJS routing, or member-expression resolutions. X/J/M finish earlier because M must inspect the pre-synthetic statement graph for JSON object mutation and escape facts, while synthetic export creation must hand the updated statement table to this step.
+This diagram records the current execution order, not a data dependency at every arrow. N does not read finalized `ResolvedExports`, CJS routing, member-expression resolutions, entry roots, shims, or external-star records. M finishes earlier because it must inspect the pre-synthetic statement graph for JSON object mutation and escape facts, while `CreateSyntheticExportStatementsPass` must hand the updated owned statement table to N.
 
 Position is load-bearing in two directions:
 
-1. **Final formats, wrappers, dynamic-export facts, side effects, CJS namespace merges, selected options, and the runtime `__require` reference must already exist.** Every CJS/ESM-wrap arm reads the projected `wrap_kind` and `wrapper_ref`; unwrapped imports read module side effects; dynamic reexports read `has_dynamic_exports`; merged CJS namespace imports read `safely_merge_cjs_ns_map`; and the remaining branches read only the exact output, tree-shaking, code-splitting, interop, keep-names, or require-polyfill options they implement. `NormalizeLazyExportsPass` finalizes formats and wrapper identities, `DetermineModuleSideEffectsPass` finalizes side effects, and the earlier CJS namespace merge pass supplies the retained merge map. The intervening B/X/J/M sequence has completed in the current driver but supplies no resolved-export or member-resolution input to this step.
-2. **`include_statements` must run after.** Tree-shaking traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data this pass writes, wrappers and helpers would be silently dropped from the output.
+1. **Final formats, wrappers, dynamic-export facts, side effects, CJS namespace merges, selected options, and the optional runtime `__require` reference must already exist as typed inputs.** Every CJS/ESM-wrap arm reads `ModuleWrappers`; wrapped ordinary imports read `ModuleSideEffects`; dynamic reexports read `DynamicExports`; merged CJS namespace imports read only `CjsNamespaceMerges::needs_interop`; and the remaining branches read only the exact output, tree-shaking, code-splitting, interop, keep-names, or require-polyfill scalars they implement. N never reads their legacy metadata projections.
+2. **`include_statements` must run after.** Tree-shaking traverses the returned `stmt_info.referenced_symbols` and joins sealed `StatementRuntimeRequirements` against included statements. Without these outputs, wrappers and helpers would be silently dropped from the output.
+
+## Pass contract
+
+| Slot            | Type                              | Purpose                                                                                                                                                    |
+| --------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `InputRead<'a>` | `ReferenceNeededSymbolsInput<'a>` | Borrows only typed module, representation, side-effect, and CJS-merge facts plus the optional runtime ref, output format, and two narrow option manifests. |
+| `InputOwned`    | `ReferenceNeededSymbolsOwned`     | Moves in the unique `SymbolRefDb` and `IndexStmtInfos`; these are the only large mutable domains.                                                          |
+| `OutputRead`    | `StatementRuntimeRequirements`    | Dense per-module statement/helper requirements sealed by the harness and borrowed only by inclusion.                                                       |
+| `OutputOwned`   | `ReferenceNeededSymbolsOutput`    | Returns symbols and statements plus ordered `ReferenceImportRecordPatches`; the driver destructures this one-call envelope immediately.                    |
+| `Error`         | `Infallible`                      | The Link boundary remains infallible; malformed internal layouts are hard invariants rather than recoverable partial results.                              |
+
+Before mutation, N validates every dense length, normal/external slot shape, wrapper shape for externals, owner-local symbol slot, and the embedded `NormalModule::idx == physical ModuleIdx` identity. This preserves the legacy fail-closed behavior and prevents a malformed layout from being partially updated.
 
 ## Dispatch
 
-For each `(importer, stmt_info, rec)` triple this pass dispatches on `rec.kind`, the importee's `WrapKind`, and (for `Import`) whether the record is a re-export-all (`export *`).
+For each `(importer, stmt_info, rec)` triple this pass dispatches on `rec.kind`, the importee's `WrapperDeclaration`, and (for `Import`) whether the record is a re-export-all (`export *`). The headings below use the equivalent `WrapKind` labels for readability.
 
 ### `Module::Normal` importees
 
@@ -170,36 +184,51 @@ For each `(importer, stmt_info, rec)` triple this pass dispatches on `rec.kind`,
 - `NonStaticDynamicImport` → push `__toESM`. For `import(foo)` / `import('a' + 'b')`.
 - `keep_names && KeepNamesType` → push `__name`. The `keepNames` runtime implementation.
 
-When `safely_merge_cjs_ns_map` has an entry for an importee, its `needs_interop` is authoritative for the `Import` / `WrapKind::Cjs` / non-reexport arm — overriding the per-record `import_record_needs_interop` check. The map records cross-importer agreement that several ESM importers can share one `__toESM` call.
+When `CjsNamespaceMerges::needs_interop(importee)` returns `Some`, that bit is authoritative for the `Import` / `WrapKind::Cjs` / non-reexport arm, overriding the per-record `import_record_needs_interop` check. The artifact records cross-importer agreement that several ESM importers can share one `__toESM` call; N cannot read or mutate its namespace-ref vectors.
 
 ## Invariants (the contract for `include_statements`)
 
 After this pass:
 
 1. **Wrapper and namespace `SymbolRef`s are in `referenced_symbols`.** If the lowered form mentions a wrapper call (`init_foo`, `require_foo`) or a namespace object (importer's or importee's `namespace_object_ref`), the corresponding `SymbolRef` is in `stmt_info.referenced_symbols`. Tree-shaking will drop anything not referenced; missing a push here = silently elided wrapper/namespace.
-2. **Runtime helpers live in `depended_runtime_helper`, not `referenced_symbols`.** The lone exception is the external-runtime-`__require` polyfill arm, which pushes the resolved `__require` symbol onto `referenced_symbols` directly. `include_statements` joins this map against statement inclusion and pulls helpers in via `include_runtime_symbol`.
-3. **`side_effect=true` is set whenever the lowered statement must run regardless of who reads it.** Includes `export * from 'cjs'`, `import 'esm-with-side-effects'`, all CJS-external imports under `Cjs/Iife/Umd`, and the dynamic-`__reExport` arms.
+2. **Runtime helpers live in sealed `StatementRuntimeRequirements`, not `referenced_symbols`.** The lone exception is the external-runtime-`__require` polyfill arm, which pushes the resolved `__require` symbol onto `referenced_symbols` directly. `include_statements` joins the sealed per-module map against statement inclusion and pulls helpers in via `include_runtime_symbol`.
+3. **The statement's evaluation flag is set whenever the lowered statement must run regardless of who reads it.** Includes `export * from 'cjs'`, `import 'esm-with-side-effects'`, all CJS-external imports under `Cjs/Iife/Umd`, and the dynamic-`__reExport` arms.
 4. **Every CJS namespace import has a stable `import_<repr_name>` name.** Downstream rendering can rely on both `wrapper_ref` (set by wrapper declaration allocation) and the namespace name (set here) being settled.
 
 A bug in any of (1)–(4) typically surfaces as a tree-shaking false-positive (helper or wrapper missing in output) or a de-conflict miss.
 
 ## Implementation constraints
 
-- **Parallel mutation through raw-pointer casts.** The pass walks modules in parallel via `par_iter()` (which yields `&NormalModule`) but writes to two of the importer's fields, `stmt_infos` and `depended_runtime_helper`. Both are mutated through `addr_of!(...).cast_mut()`. Safety relies on per-module isolation: each closure mutates only the importer it was handed, and all cross-module reads (e.g. `self.module_table[importee_idx]`, `self.metas[..]`) touch other modules' state through `&self`. Don't widen the casts beyond those two fields without rebuilding the safety argument.
-- **Cross-record metadata writes are deferred.** The closure cannot mutate `importer.import_records[rec_id].meta` directly (the iterator gives `&NormalModule`), so the runtime-`__require` polyfill arm collects `(rec_id, ImportRecordMeta::CallRuntimeRequire)` into a per-module `record_meta_pairs` and applies the writes serially after the parallel walk joins. This is the only deferred write; if a future arm needs to mutate other per-record state, route it through the same defer list rather than introducing a second mechanism.
+- **Parallelism uses disjoint owned slots and no unsafe code.** The pass subtree has `#![forbid(unsafe_code)]`. N zips the shared physical `ModuleTable` with mutable owner-local symbol slots, mutable runtime-requirement slots, and mutable statement slots. The indexed zip preserves physical module identity; each closure mutates only the three owned slots at that position and reads all cross-module facts through shared narrow artifacts.
+- **Physical and encounter order remain explicit.** The parallel result is one dense patch batch per physical module. Within a batch, statement order, each statement's import-record order, and repeated records are preserved exactly; no filtering, sorting, or deduplication changes the event transcript.
+- **Cross-record metadata writes are deferred narrowly.** The runtime-`__require` polyfill arm emits only `{ importer, import_record }`. N neither owns nor mutates `ModuleTable`, and `ReferenceImportRecordPatches::apply` can set only `ImportRecordMeta::CallRuntimeRequire`. The driver applies those events after inclusion and dependency finalization at the compatibility boundary. A future mutation requires its own typed patch variant and lifecycle review rather than widening this event.
+- **Symbol database reconstruction preserves global flags.** N temporarily owns the dense owner-local databases for the zipped walk, then rebuilds `SymbolRefDb` and restores `has_module_preserve_jsx` exactly.
+
+## Coverage
+
+Focused tests pin:
+
+- exact physical batch, statement, record, duplicate-event, and late-patch order, including preservation of metadata written before adapter application;
+- every normal-import wrapper branch, dynamic-export reexport branch, side-effect rule, CJS tree-shake gate, and merged-namespace interop override;
+- `Require` and `DynamicImport` behavior across `None`, CJS, and ESM wrappers, with code splitting and output-format switches;
+- external star renaming, CJS-family evaluation/interop, runtime-require polyfill, external dynamic-import conversion, and unresolved-record no-ops;
+- statement-level dummy-require, non-static-dynamic-import, keep-names, and preserved JSX flags; and
+- hard dense statement layout, external symbol-slot shape, and embedded normal-module index failures before mutation.
+
+The exact twenty-one-pass trace pins M before synthetic statement creation and N immediately afterward. The pass-subtree test target also runs the production AST inventory, which keeps unsafe code, broad carriers, hidden pass declarations, and unapproved macros out of this implementation.
 
 ## Notes for editors
 
-- **`safely_merge_cjs_ns_map` overrides per-record interop.** When an entry exists for the importee, `info.needs_interop` is authoritative; a single per-record check would compute the wrong answer for the merged case.
+- **`CjsNamespaceMerges` overrides per-record interop.** When `needs_interop` returns `Some`, that bit is authoritative; a single per-record check would compute the wrong answer for the merged case.
 - **`WrapKind::None` + `is_reexport_all` is intentional.** It exists for the "ESM importer re-exports a CJS-via-ESM intermediate that has dynamic exports" chain. Removing it breaks `__reExport` for indirect CJS reexports.
 - **`commonjs_treeshake` gates the importer namespace-ref push in the `Cjs` reexport arm.** When on, `include_commonjs_export_symbol` handles that path; when off, the namespace ref is pushed unconditionally.
 - **CSS import kinds are `unreachable!` here.** A JS module's `import_records` cannot legally contain `AtImport` / `UrlImport`; the panic is a guard against an upstream classification bug.
 
 ## Related
 
-- [determine-module-exports-kind](../determine-module-exports-kind/implementation.md) — produces `wrap_kind` and `safely_merge_cjs_ns_map`.
-- [module side effects](../module-side-effects/implementation.md) — documents the final side-effect fact projected before this step reads it.
+- [determine-module-exports-kind](../determine-module-exports-kind/implementation.md) — produces final typed formats and wrappers and the retained CJS namespace merge artifact.
+- [module side effects](../module-side-effects/implementation.md) — documents the sealed final side-effect fact read directly by N.
 - [module-execution-order](../module-execution-order/implementation.md) — orthogonal; `exec_order` is what `include_statements` uses to walk modules deterministically.
 - `crates/rolldown/src/stages/link_stage/passes/plan_module_wrapping.rs` and `create_wrapper_declarations.rs` — plan wrapping and allocate paired wrapper symbol/statement identities.
-- `crates/rolldown/src/stages/link_stage/passes/normalize_lazy_exports.rs` — preserves or invalidates wrapper identities atomically with lazy-export normalization, then returns final wrapper state for projection.
-- `crates/rolldown/src/stages/link_stage/tree_shaking/include_statements.rs` — the consumer of `referenced_symbols`, `side_effect`, and `depended_runtime_helper`.
+- `crates/rolldown/src/stages/link_stage/passes/normalize_lazy_exports.rs` — preserves or invalidates wrapper identities atomically with lazy-export normalization, then returns final typed wrapper state.
+- `crates/rolldown/src/stages/link_stage/tree_shaking/include_statements.rs` — the consumer of returned `referenced_symbols`, evaluation flags, and sealed `StatementRuntimeRequirements`.

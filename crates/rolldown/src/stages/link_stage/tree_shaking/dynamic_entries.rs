@@ -12,7 +12,7 @@ use rolldown_common::{
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::stages::link_stage::LinkStage;
+use crate::stages::link_stage::{LinkStage, passes::EntryExportRoots};
 
 use super::include_statements::{
   IncludeContext, StmtInclusionVec, SymbolIncludeReason, include_declaring_statements,
@@ -29,6 +29,7 @@ impl LinkStage<'_> {
     context: &mut IncludeContext,
     unused_record_idxs: &mut Vec<(ModuleIdx, ImportRecordIdx)>,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
+    entry_export_roots: &EntryExportRoots,
   ) -> bool {
     if !cycled_idx.contains(&entry.idx) {
       if let Some(item) = self.is_dynamic_entry_alive(
@@ -47,15 +48,11 @@ impl LinkStage<'_> {
         return true;
       }
     };
-    let meta = &self.metas[entry.idx];
-    meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|(symbol_ref, _came_from_cjs)| {
+    entry_export_roots.get(entry.idx).unwrap_or_default().iter().for_each(|root| {
+      let symbol_ref = root.symbol_ref;
       if let Module::Normal(_) = &context.modules[symbol_ref.owner] {
-        include_declaring_statements(context, symbol_ref);
-        include_symbol_and_check_cjs_bailout(
-          context,
-          *symbol_ref,
-          SymbolIncludeReason::EntryExport,
-        );
+        include_declaring_statements(context, &symbol_ref);
+        include_symbol_and_check_cjs_bailout(context, symbol_ref, SymbolIncludeReason::EntryExport);
       }
     });
     include_module(context, module);

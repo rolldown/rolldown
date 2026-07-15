@@ -318,7 +318,9 @@ fn inspect_macro_tokens(tokens: proc_macro2::TokenStream, source: &Path) {
 }
 
 fn is_legacy_css_import_invariant(mac: &syn::Macro, source: &Path) -> bool {
-  if source.file_name().is_none_or(|name| name != "determine_module_formats.rs")
+  if !["determine_module_formats.rs", "reference_needed_symbols.rs"]
+    .iter()
+    .any(|file| source.file_name().is_some_and(|name| name == *file))
     || !is_exact_path(&mac.path, &["std", "unreachable"])
   {
     return false;
@@ -346,9 +348,42 @@ fn is_bind_imports_macro(mac: &syn::Macro, source: &Path) -> bool {
 }
 
 fn is_layout_invariant_macro(mac: &syn::Macro, source: &Path) -> bool {
-  (source.ends_with(Path::new("passes/compute_cjs_routing.rs"))
+  let existing = (source.ends_with(Path::new("passes/compute_cjs_routing.rs"))
     || source.ends_with(Path::new("passes/resolve_member_expressions.rs")))
-    && is_exact_path(&mac.path, &["std", "assert_eq"])
+    && is_exact_path(&mac.path, &["std", "assert_eq"]);
+  let new_pass = [
+    "passes/collect_entry_export_roots.rs",
+    "passes/create_synthetic_export_statements.rs",
+    "passes/reference_needed_symbols.rs",
+  ]
+  .iter()
+  .any(|path| source.ends_with(Path::new(path)))
+    && (is_exact_path(&mac.path, &["std", "assert"])
+      || is_exact_path(&mac.path, &["std", "assert_eq"]));
+  existing || new_pass
+}
+
+fn is_new_pass_unreachable_invariant(mac: &syn::Macro, source: &Path) -> bool {
+  if !is_exact_path(&mac.path, &["std", "unreachable"]) {
+    return false;
+  }
+  if source.ends_with(Path::new("passes/collect_entry_export_roots.rs")) {
+    return syn::parse2::<syn::LitStr>(mac.tokens.clone()).is_ok_and(|message| {
+      message.value() == "single dynamic-import usage must be merged before Link"
+    });
+  }
+  let expected = if source.ends_with(Path::new("passes/create_synthetic_export_statements.rs")) {
+    &["validated normal modules must have missing-export shim slots"][..]
+  } else if source.ends_with(Path::new("passes/reference_needed_symbols.rs")) {
+    &[
+      "CallRuntimeRequire patches must target normal modules",
+      "validated normal modules must have owner-local symbol databases",
+    ][..]
+  } else {
+    return false;
+  };
+  syn::parse2::<syn::LitStr>(mac.tokens.clone())
+    .is_ok_and(|message| expected.contains(&message.value().as_str()))
 }
 
 impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
@@ -468,6 +503,7 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
       is_exact_path(&statement.mac.path, &["std", "debug_assert"])
         || is_bind_imports_macro(&statement.mac, self.source)
         || is_layout_invariant_macro(&statement.mac, self.source)
+        || is_new_pass_unreachable_invariant(&statement.mac, self.source)
         || is_legacy_css_import_invariant(&statement.mac, self.source),
       "{}: block-level statement macro `{}` is forbidden because it can generate a hidden pass declaration",
       self.source.display(),
@@ -488,6 +524,7 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
         || is_exact_path(&expression.mac.path, &["oxc_index", "index_vec"])
         || is_bind_imports_macro(&expression.mac, self.source)
         || is_layout_invariant_macro(&expression.mac, self.source)
+        || is_new_pass_unreachable_invariant(&expression.mac, self.source)
         || is_legacy_css_import_invariant(&expression.mac, self.source),
       "{}: expression macro `{}` is not in the closed production allowlist",
       self.source.display(),

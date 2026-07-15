@@ -32,6 +32,10 @@ pub(in crate::stages::link_stage) struct ResolvedExports {
 }
 
 impl ResolvedExports {
+  pub(in crate::stages::link_stage) fn has_normal_slot(&self, module_idx: ModuleIdx) -> bool {
+    self.slots.get(module_idx).is_some_and(Option::is_some)
+  }
+
   pub(in crate::stages::link_stage) fn module_count(&self) -> usize {
     self.slots.len()
   }
@@ -70,6 +74,29 @@ impl ResolvedExports {
       .get(module_idx)
       .and_then(Option::as_ref)
       .is_some_and(|exports| exports.sorted_and_non_ambiguous.contains_key(name))
+  }
+
+  pub(in crate::stages::link_stage) fn canonical_exports(
+    &self,
+    module_idx: ModuleIdx,
+    needs_commonjs_export: bool,
+  ) -> impl Iterator<Item = (&CompactStr, &ResolvedExport)> {
+    self.slots.get(module_idx).and_then(Option::as_ref).into_iter().flat_map(move |exports| {
+      exports.sorted_and_non_ambiguous.iter().filter_map(move |(name, came_from_commonjs)| {
+        (needs_commonjs_export || !came_from_commonjs).then_some((name, &exports.resolved[name]))
+      })
+    })
+  }
+
+  pub(in crate::stages::link_stage) fn canonical_exports_is_empty(
+    &self,
+    module_idx: ModuleIdx,
+  ) -> bool {
+    self
+      .slots
+      .get(module_idx)
+      .and_then(Option::as_ref)
+      .is_none_or(|exports| exports.sorted_and_non_ambiguous.is_empty())
   }
 
   pub(in crate::stages::link_stage) fn into_slots(

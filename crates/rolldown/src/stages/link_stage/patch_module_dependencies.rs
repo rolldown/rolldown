@@ -1,12 +1,13 @@
-use rayon::iter::ParallelIterator;
 use rolldown_common::{Module, ModuleIdx, RuntimeHelper};
-use rolldown_utils::{index_vec_ext::IndexVecRefExt, indexmap::FxIndexSet};
+use rolldown_utils::{
+  index_vec_ext::IndexVecRefExt, indexmap::FxIndexSet, rayon::ParallelIterator as _,
+};
 
-use super::LinkStage;
+use super::{LinkStage, passes::EntryExportRoots};
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub(super) fn patch_module_dependencies(&mut self) {
+  pub(super) fn patch_module_dependencies(&mut self, entry_export_roots: &EntryExportRoots) {
     let processed_module_results = self
       .metas
       .par_iter_enumerated()
@@ -16,21 +17,19 @@ impl LinkStage<'_> {
           extended_dependencies.insert(self.runtime.id());
         }
         // Symbols from runtime are referenced by bundler not import statements.
-        meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
-          |(symbol_ref, _came_from_cjs)| {
-            let canonical_ref = self.symbols.canonical_ref_for(*symbol_ref);
-            extended_dependencies.insert(canonical_ref.owner);
-            // An entry export may resolve to a facade binding whose value lives on a CJS
-            // module's namespace (e.g. re-exporting a name that a CJS module only provides
-            // dynamically). Inclusion follows that alias (`follow_cjs_namespace_alias`), so the
-            // aliased module is a real dependency of the entry, same as in the statement walk
-            // below.
-            let symbol = self.symbols.get(canonical_ref);
-            if let Some(ns) = &symbol.namespace_alias {
-              extended_dependencies.insert(ns.namespace_ref.owner);
-            }
-          },
-        );
+        entry_export_roots.get(module_idx).unwrap_or_default().iter().for_each(|root| {
+          let canonical_ref = self.symbols.canonical_ref_for(root.symbol_ref);
+          extended_dependencies.insert(canonical_ref.owner);
+          // An entry export may resolve to a facade binding whose value lives on a CJS
+          // module's namespace (e.g. re-exporting a name that a CJS module only provides
+          // dynamically). Inclusion follows that alias (`follow_cjs_namespace_alias`), so the
+          // aliased module is a real dependency of the entry, same as in the statement walk
+          // below.
+          let symbol = self.symbols.get(canonical_ref);
+          if let Some(ns) = &symbol.namespace_alias {
+            extended_dependencies.insert(ns.namespace_ref.owner);
+          }
+        });
 
         let Module::Normal(_) = &self.module_table[module_idx] else {
           return (module_idx, extended_dependencies, RuntimeHelper::default());

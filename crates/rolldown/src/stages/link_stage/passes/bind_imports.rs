@@ -52,6 +52,17 @@ pub(in crate::stages::link_stage) struct ShimmedMissingExports {
 }
 
 impl ShimmedMissingExports {
+  pub(in crate::stages::link_stage) fn module_count(&self) -> usize {
+    self.slots.len()
+  }
+
+  pub(in crate::stages::link_stage) fn get(
+    &self,
+    module_idx: ModuleIdx,
+  ) -> Option<&FxHashMap<CompactStr, SymbolRef>> {
+    self.slots.get(module_idx).and_then(Option::as_ref)
+  }
+
   pub(in crate::stages::link_stage) fn into_slots(
     self,
   ) -> IndexVec<ModuleIdx, Option<FxHashMap<CompactStr, SymbolRef>>> {
@@ -87,10 +98,13 @@ impl NormalExportChains {
 
 #[cfg(test)]
 pub(super) mod test_support {
+  use oxc_index::IndexVec;
+  use oxc_str::CompactStr;
+  use rolldown_common::ModuleIdx;
   use rolldown_common::SymbolRef;
   use rustc_hash::FxHashMap;
 
-  use super::NormalExportChains;
+  use super::{NormalExportChains, ShimmedMissingExports};
 
   pub(in crate::stages::link_stage::passes) fn empty_normal_export_chains() -> NormalExportChains {
     normal_export_chains([])
@@ -100,6 +114,17 @@ pub(super) mod test_support {
     chains: impl IntoIterator<Item = (SymbolRef, Vec<SymbolRef>)>,
   ) -> NormalExportChains {
     NormalExportChains { chains: FxHashMap::from_iter(chains) }
+  }
+
+  pub(in crate::stages::link_stage::passes) fn shimmed_missing_exports(
+    slots: impl IntoIterator<Item = Option<Vec<(CompactStr, SymbolRef)>>>,
+  ) -> ShimmedMissingExports {
+    ShimmedMissingExports {
+      slots: slots
+        .into_iter()
+        .map(|slot| slot.map(FxHashMap::from_iter))
+        .collect::<IndexVec<ModuleIdx, _>>(),
+    }
   }
 }
 

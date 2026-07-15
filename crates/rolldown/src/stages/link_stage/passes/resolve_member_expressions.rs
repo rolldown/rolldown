@@ -540,15 +540,19 @@ mod tests {
     SymbolRefDbForModule, SymbolRefFlags, side_effects::DeterminedSideEffects,
   };
   use rolldown_utils::pass::{PassPipelineCtx, run_infallible_pass};
+  use rustc_hash::FxHashSet;
 
   use super::super::super::non_splittable_json_defaults::NonSplittableJsonDefaults;
   use super::super::{
-    CollectInitialDependenciesPass, CollectResolvedExportsPass, ComputeCjsRoutingInput,
-    ComputeCjsRoutingPass, ConstantExtractionInput, ExtractGlobalConstantsPass,
-    FinalizeResolvedExportsPass, ResolveMemberExpressionsInput, ResolveMemberExpressionsOutput,
-    ResolveMemberExpressionsOwned, ResolveMemberExpressionsPass,
+    CollectExternalStarExportsPass, CollectInitialDependenciesPass, CollectResolvedExportsPass,
+    ComputeCjsRoutingInput, ComputeCjsRoutingPass, ConstantExtractionInput,
+    CreateSyntheticExportStatementsInput, CreateSyntheticExportStatementsPass,
+    ExtractGlobalConstantsPass, FinalizeResolvedExportsPass, ResolveMemberExpressionsInput,
+    ResolveMemberExpressionsOutput, ResolveMemberExpressionsOwned, ResolveMemberExpressionsPass,
     bind_imports::NormalExportChains,
-    bind_imports::test_support::{empty_normal_export_chains, normal_export_chains},
+    bind_imports::test_support::{
+      empty_normal_export_chains, normal_export_chains, shimmed_missing_exports,
+    },
     compute_dynamic_exports::test_support::dynamic_exports,
     determine_module_formats::test_support::module_formats,
     determine_module_side_effects::test_support::module_side_effects,
@@ -842,6 +846,76 @@ mod tests {
     assert_eq!(split.resolved, Some(splittable_key));
     assert!(split.prop_and_related_span_list.is_empty());
     assert_eq!(split.depended_refs, [splittable_key, splittable_default]);
+  }
+
+  #[test]
+  fn member_resolution_scan_must_precede_synthetic_namespace_references() {
+    let mut modules = module_table(vec![normal_module(0, false, Vec::new())]);
+    modules[module_idx(0)].as_normal_mut().unwrap().module_type = ModuleType::Json;
+    let mut symbols = symbols_for(&modules);
+    let default_export = symbols.create_facade_root_symbol_ref(module_idx(0), "default");
+    let export_all_helper = symbols.create_facade_root_symbol_ref(module_idx(0), "export_all");
+    let re_export_helper = symbols.create_facade_root_symbol_ref(module_idx(0), "re_export");
+    insert_export(&mut modules, 0, "default", default_export, false);
+    let mut pipeline = PassPipelineCtx::new();
+    let (_, resolved_draft) =
+      run_infallible_pass(CollectResolvedExportsPass, &mut pipeline, &modules, ());
+    let (_, resolved_exports) =
+      run_infallible_pass(FinalizeResolvedExportsPass, &mut pipeline, &symbols, resolved_draft);
+    let formats = module_formats(&[Some(ExportsKind::Esm)]);
+    let dynamic_exports = dynamic_exports(1, []);
+    let side_effects = module_side_effects(&[DeterminedSideEffects::Analyzed(false)]);
+    let normal_export_chains = empty_normal_export_chains();
+    let mut statements = empty_stmt_infos(1);
+    let input = ResolveMemberExpressionsInput {
+      module_table: &modules,
+      stmt_infos: &statements,
+      symbols: &symbols,
+      resolved_exports: &resolved_exports,
+      normal_export_chains: &normal_export_chains,
+      module_side_effects: &side_effects,
+      dynamic_exports: &dynamic_exports,
+    };
+    assert!(
+      super::collect_non_splittable_json_defaults(input, &statements[module_idx(0)]).is_empty()
+    );
+
+    let (_, external_stars) =
+      run_infallible_pass(CollectExternalStarExportsPass, &mut pipeline, &modules, ());
+    let shims = shimmed_missing_exports([Some(Vec::new())]);
+    let (_, synthetic_statements) = run_infallible_pass(
+      CreateSyntheticExportStatementsPass,
+      &mut pipeline,
+      CreateSyntheticExportStatementsInput {
+        module_table: &modules,
+        module_formats: &formats,
+        resolved_exports: &resolved_exports,
+        shimmed_missing_exports: &shims,
+        external_star_exports: &external_stars,
+        export_all_helper,
+        re_export_helper,
+        output_format: rolldown_common::OutputFormat::Esm,
+        generated_code_symbols: false,
+      },
+      std::mem::take(&mut statements),
+    );
+    let input_after_synthetic = ResolveMemberExpressionsInput {
+      module_table: &modules,
+      stmt_infos: &synthetic_statements,
+      symbols: &symbols,
+      resolved_exports: &resolved_exports,
+      normal_export_chains: &normal_export_chains,
+      module_side_effects: &side_effects,
+      dynamic_exports: &dynamic_exports,
+    };
+    assert_eq!(
+      super::collect_non_splittable_json_defaults(
+        input_after_synthetic,
+        &synthetic_statements[module_idx(0)]
+      ),
+      FxHashSet::from_iter([default_export])
+    );
+    assert!(pipeline.into_diagnostics().is_empty());
   }
 
   #[test]

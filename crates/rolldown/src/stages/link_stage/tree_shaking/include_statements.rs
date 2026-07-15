@@ -16,10 +16,15 @@ use rolldown_utils::rayon::{
 
 use rolldown_utils::IndexBitSet;
 use rolldown_utils::indexmap::FxIndexMap;
+use rolldown_utils::pass::Sealed;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  stages::link_stage::LinkStage, type_alias::IndexStmtInfos,
+  stages::link_stage::{
+    LinkStage,
+    passes::{EntryExportRoots, StatementRuntimeRequirements},
+  },
+  type_alias::IndexStmtInfos,
   types::linking_metadata::LinkingMetadataVec,
 };
 
@@ -43,8 +48,8 @@ bitflags::bitflags! {
         const Normal = 1;
         const EntryExport = 1 << 1;
         /// See `has_dynamic_exports` in [`crate::types::linking_metadata::LinkingMetadata`]
-        /// 1. https://github.com/rolldown/rolldown/blob/8bc7dca5a09047b6b494e3fa7b6b7564aa465372/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L122-L134
-        /// 2. https://github.com/rolldown/rolldown/blob/8bc7dca5a09047b6b494e3fa7b6b7564aa465372/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L188-L197
+        /// See the normal-import and normal-dynamic-import branches in
+        /// `passes/reference_needed_symbols.rs`.
         const ReExportDynamicExports = 1 << 2;
         /// After transforming a JSON module to an ESM module, a default export is created that
         /// references all top-level properties of the JSON object. This flag tracks whether a
@@ -248,9 +253,11 @@ fn check_cjs_bailout(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn include_statements(
+  pub(in crate::stages::link_stage) fn include_statements(
     &mut self,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
+    statement_runtime_requirements: &Sealed<StatementRuntimeRequirements>,
+    entry_export_roots: &EntryExportRoots,
   ) {
     let mut is_stmt_info_included_vec: StmtInclusionVec = self
       .module_table
@@ -312,19 +319,17 @@ impl LinkStage<'_> {
         }
       };
       context.bailout_cjs_tree_shaking_modules.insert(module.idx);
-      let meta = &self.metas[entry.idx];
-      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
-        |(symbol_ref, _came_from_cjs)| {
-          if let Module::Normal(_) = &context.modules[symbol_ref.owner] {
-            include_declaring_statements(context, symbol_ref);
-            include_symbol_and_check_cjs_bailout(
-              context,
-              *symbol_ref,
-              SymbolIncludeReason::EntryExport,
-            );
-          }
-        },
-      );
+      entry_export_roots.get(entry.idx).unwrap_or_default().iter().for_each(|root| {
+        let symbol_ref = root.symbol_ref;
+        if let Module::Normal(_) = &context.modules[symbol_ref.owner] {
+          include_declaring_statements(context, &symbol_ref);
+          include_symbol_and_check_cjs_bailout(
+            context,
+            symbol_ref,
+            SymbolIncludeReason::EntryExport,
+          );
+        }
+      });
       include_module(context, module);
     });
 
@@ -351,6 +356,7 @@ impl LinkStage<'_> {
           context,
           &mut unused_record_idxs,
           unreachable_import_expression_node_ids,
+          entry_export_roots,
         );
         if included {
           included_dynamic_entry.insert(entry.idx);
@@ -402,7 +408,7 @@ impl LinkStage<'_> {
       .modules
       .par_iter_mut()
       .zip_eq(self.metas.par_iter_mut())
-      .zip_eq(self.depended_runtime_helper.par_iter())
+      .zip_eq(statement_runtime_requirements.slots().par_iter())
       .filter_map(|((m, meta), depended_helper)| {
         m.as_normal_mut().map(|m| (m, meta, depended_helper))
       })

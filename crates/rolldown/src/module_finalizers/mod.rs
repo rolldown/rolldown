@@ -1833,7 +1833,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   ExportsKind::CommonJs => {
                     // If **commonjs** treeshake is enabled, the module_namespace is included on
                     // demand, we should skip generate related `__reExport` statements
-                    // See: https://github.com/rolldown/rolldown/blob/60fc81ada3955ce84b38a5edbb33a169d1f89f15/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L148-L150
+                    // See the normal wrapped-CommonJS export-star branch in
+                    // `stages/link_stage/passes/reference_needed_symbols.rs`.
                     if !self.module_namespace_included {
                       return;
                     }

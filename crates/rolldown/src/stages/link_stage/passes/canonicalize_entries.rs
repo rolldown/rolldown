@@ -13,6 +13,12 @@ pub(in crate::stages::link_stage) struct EntryPlanDraft {
 }
 
 impl EntryPlanDraft {
+  pub(in crate::stages::link_stage) fn entries(
+    &self,
+  ) -> impl Iterator<Item = (ModuleIdx, &[EntryPoint])> + '_ {
+    self.entries.iter().map(|(module_idx, entries)| (*module_idx, entries.as_slice()))
+  }
+
   pub(in crate::stages::link_stage) fn contains_root(&self, module_idx: ModuleIdx) -> bool {
     self.entries.contains_key(&module_idx)
   }

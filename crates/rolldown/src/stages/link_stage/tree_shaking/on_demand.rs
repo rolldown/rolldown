@@ -111,7 +111,7 @@ pub fn compute_body_demand_keys(
 /// sweep of [`super::include_statements::include_module`]: it evaluates side
 /// effects *and* reads module-level bindings (so it can dangle a lazily-deferred
 /// import), and is not an import/re-export statement (those drive wrapper init
-/// calls and side-effect-import inclusion; `reference_needed_symbols` also
+/// calls and side-effect-import inclusion; `ReferenceNeededSymbolsPass` also
 /// pushes wrapper refs onto them, which must not count as user references).
 pub(super) fn is_gated_side_effect_stmt(stmt_info: &StmtInfo) -> bool {
   stmt_info.eval_flags.has_side_effect_for_tree_shaking()

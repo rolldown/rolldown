@@ -9,8 +9,8 @@ use std::{
 use arcstr::ArcStr;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
-  ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput, HmrPatch, HmrUpdate, ImportKind, Module,
-  ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
+  ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput, HmrPatch, HmrStampTable, HmrUpdate,
+  ImportKind, Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_ecmascript_utils::AstFactory;
@@ -80,6 +80,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     &mut self,
     changed_file_paths: &FxIndexMap<String, WatcherChangeKind>,
     clients: &[ClientHmrInput<'_>],
+    stamp_table: &mut HmrStampTable,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     tracing::trace!(
       "[HmrStage] starts computing HMR updates\n - changed_file_paths: {:#?}\n - clients: {:#?}",
@@ -198,11 +199,20 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       new_added_modules
     };
 
-    // 2. Collect the factories to ship. The client's walk may remove modules from its cache and re-run
+    // 2. Stamp the rebuild: `latest[m] = rebuild_seq` for every changed or newly added
+    // module — the versioned ship map's staleness source.
+    let rebuild_seq = stamp_table.begin_rebuild();
+    for module_idx in changed_modules.iter().chain(new_added_modules.iter()) {
+      if let Module::Normal(module) = &self.module_table().modules[*module_idx] {
+        stamp_table.stamp(module.stable_id.as_arc_str(), rebuild_seq);
+      }
+    }
+
+    // 3. Collect the factories to ship. The client's walk may remove modules from its cache and re-run
     // anything up the changed ids' importer chains, and a re-run without a resident
     // factory forces a reload — so the server must ship a SUPERSET of any client's
     // possible update set, over-approximated on static truth (it never sees runtime
-    // acceptance).
+    // acceptance). The ship map below subtracts what each tab already holds.
     let changed_ids = changed_modules
       .iter()
       .filter_map(|module_idx| {
@@ -226,19 +236,50 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         affected.extend(new_added_modules.iter().copied());
         affected.retain(|idx| self.module_table().modules[*idx].is_normal());
 
-        // 3. Every client receives the full affected set. The per-client ship map
-        // (`shipped[C]`) that narrows this to what each tab lacks lands in a
-        // follow-up; until then the patch depends on no per-client input, so render
-        // it once and fan the same payload out (`seq` is stamped per client after
-        // compute).
-        if !clients.is_empty() {
-          let update = self.render_hmr_patch(affected, changed_ids).await?;
-          for client in clients {
-            client_updates.push(ClientHmrUpdate {
-              client_id: client.client_id.to_string(),
-              update: update.clone(),
-            });
+        // Client-invariant per-module data, resolved once instead of per client:
+        // `(idx, stable id, latest stamp)` for every affected module.
+        let affected_with_stamps = affected
+          .iter()
+          .map(|module_idx| {
+            let stable_id = self.module_table().modules[*module_idx].stable_id().as_str();
+            (*module_idx, stable_id, stamp_table.render_time_stamp(stable_id))
+          })
+          .collect::<Vec<_>>();
+
+        // 4. Per client: `need[C] = (affected ∖ shipped[C]) ∪ stale sweep`. The sweep
+        // covers everything the client holds, not just `affected` — a parked factory can
+        // go stale behind a skipped patch in either graph direction. It iterates the
+        // stamp table (modules ever changed this session) rather than `shipped[C]`
+        // (modules ever delivered): only stamped modules can be stale, and `latest`
+        // stays far smaller than a tab's full delivery record.
+        for client in clients {
+          let mut carried = FxIndexSet::default();
+          for (module_idx, stable_id, latest_stamp) in &affected_with_stamps {
+            match client.shipped.get(*stable_id) {
+              None => {
+                carried.insert(*module_idx);
+              }
+              Some(stamp) => {
+                if *latest_stamp > *stamp {
+                  carried.insert(*module_idx);
+                }
+              }
+            }
           }
+          for (stable_id, latest_stamp) in stamp_table.iter_latest() {
+            if client.shipped.get(stable_id.as_str()).is_some_and(|stamp| latest_stamp > *stamp) {
+              if let Some(module_idx) =
+                self.cache.module_idx_by_stable_id.get(stable_id.as_str()).copied()
+              {
+                if self.module_table().modules[module_idx].is_normal() {
+                  carried.insert(module_idx);
+                }
+              }
+            }
+          }
+
+          let update = self.render_hmr_patch(carried, changed_ids.clone(), stamp_table).await?;
+          client_updates.push(ClientHmrUpdate { client_id: client.client_id.to_string(), update });
         }
       }
     }
@@ -280,15 +321,18 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     UpdateSupersetOutcome::Superset(affected)
   }
 
-  /// Compile a lazy entry module and return the compiled chunk.
+  /// Compile a lazy entry module and return compiled code plus the pending-payload
+  /// entry (`carried`) the delivery-time ship-map write consumes.
   ///
-  /// The chunk carries every reachable sync dependency's factory — never filtered by
-  /// execution state. The per-client ship map that narrows this to what each
-  /// tab lacks lands in a follow-up; re-shipped factories are idempotent.
+  /// Factory selection filters the reachable set by the ship-map comparison — absent from
+  /// `shipped[C]` or stale stamp — never by execution state. The ship map itself is
+  /// written only when the serving middleware observes the response complete.
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: &str,
     _client_id: &str,
+    shipped: &FxHashMap<ArcStr, u32>,
+    stamp_table: &HmrStampTable,
   ) -> BuildResult<HmrLazyChunkOutput> {
     tracing::debug!(
       target: "hmr",
@@ -359,10 +403,17 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     let options = Arc::clone(&self.options);
     self.cache.update_defer_sync_data(&options).await?;
 
-    // Collect all reachable sync dependencies. Overlapping lazy compiles re-ship
-    // shared factories — duplicate idempotent bytes, never a missing factory.
+    // Collect all sync dependencies, stopping at modules whose current copy this client
+    // already holds per the ship map. Overlapping concurrent lazy compiles both see an
+    // unmarked ship map and re-ship shared factories — duplicate idempotent bytes, never
+    // a missing factory.
     let mut modules_to_be_updated = FxIndexSet::default();
-    self.collect_sync_dependencies_for_client(entry_module_idx, &mut modules_to_be_updated);
+    self.collect_sync_dependencies_for_client(
+      entry_module_idx,
+      &mut modules_to_be_updated,
+      shipped,
+      stamp_table,
+    );
 
     // Remove external modules - no way to "compile" them
     modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
@@ -506,13 +557,22 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .await?;
     }
 
-    Ok(HmrLazyChunkOutput { code, filename })
+    let carried = modules_to_be_updated
+      .iter()
+      .map(|module_idx| {
+        let stable_id = self.module_table().modules[*module_idx].stable_id();
+        (stable_id.as_arc_str().clone(), stamp_table.render_time_stamp(stable_id.as_str()))
+      })
+      .collect();
+
+    Ok(HmrLazyChunkOutput { code, filename, carried })
   }
 
   async fn render_hmr_patch(
     &self,
     mut carried_modules: FxIndexSet<ModuleIdx>,
     changed_ids: Vec<String>,
+    stamp_table: &HmrStampTable,
   ) -> BuildResult<HmrUpdate> {
     // Note: the carried set might include external modules. There's no way to "update" them, so we need to remove them.
     carried_modules.retain(|idx| self.module_table().modules[*idx].is_normal());
@@ -651,6 +711,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       None
     };
 
+    let carried = carried_modules
+      .iter()
+      .map(|module_idx| {
+        let stable_id = self.module_table().modules[*module_idx].stable_id();
+        (stable_id.as_arc_str().clone(), stamp_table.render_time_stamp(stable_id.as_str()))
+      })
+      .collect();
+
     Ok(HmrUpdate::Patch(HmrPatch {
       code,
       filename,
@@ -660,6 +728,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       // The envelope seq is a delivery-layer concern; the dev engine stamps it onto the
       // patches it actually sends (see `bundling_task`), so this is only a placeholder.
       seq: 0,
+      carried,
     }))
   }
 
@@ -781,6 +850,8 @@ impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
     &self,
     proxy_entry_idx: ModuleIdx,
     result: &mut FxIndexSet<ModuleIdx>,
+    shipped: &FxHashMap<ArcStr, u32>,
+    stamp_table: &HmrStampTable,
   ) {
     let modules = &self.module_table().modules;
     let mut stack = vec![proxy_entry_idx];
@@ -802,6 +873,19 @@ impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
           || (module_idx == proxy_entry_idx && rec.kind == ImportKind::DynamicImport);
 
         if should_follow && let Some(dep_idx) = rec.resolved_module {
+          // A module with N importers hits this edge check N times; the cheap
+          // visited test spares the ship-map string hashing for all but the first.
+          if result.contains(&dep_idx) {
+            continue;
+          }
+          if let Module::Normal(normal_dep) = &modules[dep_idx] {
+            // Skip deps whose current copy this client already holds per the ship map.
+            let stable_id = normal_dep.stable_id.as_str();
+            if shipped.get(stable_id).is_some_and(|stamp| !stamp_table.is_stale(stable_id, *stamp))
+            {
+              continue;
+            }
+          }
           stack.push(dep_idx);
         }
       }

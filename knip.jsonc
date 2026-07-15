@@ -100,6 +100,9 @@
     "packages/test-dev-server/tests/playground/*": {
       "entry": ["dev.config.mjs", "*.js", "__tests__/*.spec.ts"],
     },
+    "packages/test-dev-server/tests/playground/lazy-overlap-dedup": {
+      "entry": ["dev.config.mjs", "*.js", "__tests__/*.spec.ts", "__tests__/serve.ts"],
+    },
     "packages/test-dev-server/tests/playground/hmr-full-bundle-mode": {
       "entry": [
         "dev.config.mjs",

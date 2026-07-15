@@ -5,11 +5,12 @@ use std::sync::{
 
 use anyhow::Context;
 use futures::{FutureExt, future::Shared};
-use rolldown_common::HmrLazyChunkOutput;
 #[cfg(feature = "testing")]
 use rolldown_common::WatcherChangeKind;
+use rolldown_common::{HmrLazyChunkOutput, HmrStampTable};
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
+use rustc_hash::FxHashMap;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
 use tokio::sync::{Mutex, mpsc::unbounded_channel};
@@ -24,7 +25,7 @@ use crate::{
   type_aliases::CoordinatorSender,
   types::{
     coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
-    error_stage::ErrorStage,
+    error_stage::ErrorStage, pending_payload::PendingPayload,
   },
 };
 
@@ -50,8 +51,10 @@ pub struct DevEngine {
   pub clients: SharedClients,
   is_closed: AtomicBool,
   /// The engine's single patch-id counter, shared with the coordinator's bundling
-  /// tasks. Both consumers embed the id in served filenames, so two independent
-  /// counters would let a lazy chunk and a patch collide on one name.
+  /// tasks. Both counters' consumers format filenames as `hmr_patch_{id}.js` /
+  /// `lazy_compile_{id}.js`, and pending-payload entries are keyed by those
+  /// filenames — so two independent counters would let two different payloads
+  /// collide on one key.
   next_hmr_patch_id: Arc<AtomicU32>,
 }
 
@@ -79,6 +82,8 @@ impl DevEngine {
       options: normalized_options,
       coordinator_tx: coordinator_tx.clone(),
       clients: Arc::clone(&clients),
+      stamp_table: Arc::new(Mutex::new(HmrStampTable::default())),
+      pending_payloads: Arc::new(Mutex::new(FxHashMap::default())),
     });
 
     let watcher_config = FsWatcherConfig {
@@ -266,22 +271,34 @@ impl DevEngine {
     Ok(())
   }
 
-  /// Client-connect signal (the clientId hello): creates the per-client session.
-  /// Reconnects arrive as fresh clientIds.
+  /// Client-connect signal (the clientId hello): creates the per-client session with an
+  /// empty ship map. Reconnects arrive as fresh clientIds, which is the ship-map reset.
   pub async fn register_client(&self, client_id: String) {
     self.clients.lock().await.entry(client_id).or_default();
   }
 
-  /// Client-disconnect signal: drops the session.
+  /// Client-disconnect signal: drops the session together with any
+  /// rendered-but-undelivered payloads addressed to it.
   pub async fn remove_client(&self, client_id: &str) {
     self.clients.lock().await.remove(client_id);
+    self.dev_context.pending_payloads.lock().await.retain(|_, p| p.client_id != client_id);
   }
 
   /// Delivery notification from the serving middleware: the response for `filename`
-  /// completed. Currently a no-op — every push ships the full affected factory set.
-  /// The per-client ship map that consumes this signal lands in a follow-up.
-  #[expect(clippy::unused_async, reason = "the ship-map follow-up awaits its state locks here")]
-  pub async fn notify_payload_delivered(&self, _filename: &str) {}
+  /// completed. Max-merges the pending entry's stamps into that client's shipped[C] —
+  /// idempotent, and a late or repeated delivery can never move the record backwards.
+  pub async fn notify_payload_delivered(&self, filename: &str) {
+    let Some(pending) = self.dev_context.pending_payloads.lock().await.remove(filename) else {
+      return;
+    };
+    let mut clients = self.clients.lock().await;
+    let Some(session) = clients.get_mut(&pending.client_id) else {
+      return;
+    };
+    for (id, stamp) in pending.modules {
+      session.shipped.entry(id).and_modify(|e| *e = (*e).max(stamp)).or_insert(stamp);
+    }
+  }
 
   /// Compile a lazy entry module and return compiled code.
   ///
@@ -294,7 +311,7 @@ impl DevEngine {
   /// * `client_id` - The client ID requesting this compilation
   ///
   /// # Returns
-  /// The compiled chunk: its code plus the filename it is served under
+  /// The compiled chunk plus the modules and render-time stamps it carries
   ///
   /// # Panics
   /// - If lazy compilation is not enabled
@@ -308,6 +325,11 @@ impl DevEngine {
     self.create_error_if_closed()?;
     let mut bundler = self.bundler.lock().await;
 
+    // Snapshot the ship map `shipped[C]` for this client so the compile runs without
+    // the clients lock. `ArcStr` keys make the copy refcount bumps, not string copies.
+    let shipped =
+      self.clients.lock().await.get(&client_id).map(|c| c.shipped.clone()).unwrap_or_default();
+
     // Mark the proxy module as fetched BEFORE compilation.
     // This changes the content returned by the lazy compilation plugin's load hook
     // from a stub (fetches via /lazy endpoint) to actual code that imports the real module.
@@ -318,11 +340,34 @@ impl DevEngine {
     // Compile starting from the proxy module.
     // The plugin will return new content (fetched template) that imports the real module,
     // which triggers compilation of the actual module and its dependencies.
-    let result = bundler
-      .compile_lazy_entry(proxy_module_id.clone(), &client_id, Arc::clone(&self.next_hmr_patch_id))
+    let stamp_table = self.dev_context.stamp_table.lock().await;
+    let mut result = bundler
+      .compile_lazy_entry(
+        proxy_module_id.clone(),
+        &client_id,
+        &shipped,
+        &stamp_table,
+        Arc::clone(&self.next_hmr_patch_id),
+      )
       .await;
+    drop(stamp_table);
 
-    if result.is_ok() {
+    if let Ok(output) = &mut result {
+      // Record the rendered chunk as pending: the delivery notification
+      // max-merges its stamps into `shipped[C]` when the serving middleware
+      // sees the response for `output.filename` complete. The binding layer
+      // drops `carried`, so hand it to the pending entry instead of cloning.
+      self
+        .dev_context
+        .insert_pending_payload(
+          output.filename.clone(),
+          PendingPayload {
+            client_id: client_id.clone(),
+            modules: std::mem::take(&mut output.carried),
+          },
+        )
+        .await;
+
       // Deliver assets emitted while compiling the lazy entry (e.g. an image
       // imported by the lazy module) before returning the code, so the consumer
       // can register/serve them before the client requests them.
@@ -457,6 +502,8 @@ impl DevEngine {
   pub async fn create_client_for_testing(&self) {
     let client_session = ClientSession::default();
     // A fixed client ID so HMR steps in tests have a session to compute updates for.
+    // Its ship map starts empty and no delivery is ever marked, so every step ships
+    // the full affected factory set.
     self.clients.lock().await.insert("rolldown-tests".to_string(), client_session);
   }
 

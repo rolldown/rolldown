@@ -3,8 +3,10 @@ use std::{
   sync::{Arc, atomic::AtomicU32},
 };
 
+use arcstr::ArcStr;
 use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate, ScanMode};
 use rolldown_utils::indexmap::FxIndexMap;
+use rustc_hash::FxHashMap;
 use tokio::sync::Mutex;
 
 use rolldown::Bundler;
@@ -12,7 +14,10 @@ use rolldown::Bundler;
 use crate::{
   BundleOutput,
   dev_context::SharedDevContext,
-  types::{coordinator_msg::CoordinatorMsg, error_stage::ErrorStage, task_input::TaskInput},
+  types::{
+    coordinator_msg::CoordinatorMsg, error_stage::ErrorStage, pending_payload::PendingPayload,
+    task_input::TaskInput,
+  },
 };
 
 pub struct BundlingTask {
@@ -203,24 +208,34 @@ impl BundlingTask {
       .collect::<FxIndexMap<_, _>>();
 
     // Read-only per-client inputs for this push. No seq here: it is assigned after compute,
-    // only to the patches we actually deliver (see below). Snapshot the ids and release the
-    // clients lock before the compute await — nothing per-client is read during compute, and
-    // holding it would block connect/disconnect for the whole rebuild.
-    let client_ids: Vec<String> = {
+    // only to the patches we actually deliver (see below). Snapshot the ids and ship maps
+    // and release the clients lock before the compute await — the compute only reads the
+    // snapshot, and a delivery notification landing mid-compute is folded into the next
+    // push either way; holding the lock would block connect/disconnect and delivery
+    // notifications for the whole rebuild.
+    let client_snapshots: Vec<(String, FxHashMap<ArcStr, u32>)> = {
       let client_sessions = self.dev_context.clients.lock().await;
-      client_sessions.keys().cloned().collect()
+      client_sessions
+        .iter()
+        .map(|(client_key, client)| (client_key.clone(), client.shipped.clone()))
+        .collect()
     };
-    let client_inputs: Vec<ClientHmrInput> =
-      client_ids.iter().map(|client_id| ClientHmrInput { client_id: client_id.as_str() }).collect();
+    let client_inputs: Vec<ClientHmrInput> = client_snapshots
+      .iter()
+      .map(|(client_id, shipped)| ClientHmrInput { client_id: client_id.as_str(), shipped })
+      .collect();
 
     // Compute HMR updates for all clients in one call
+    let mut stamp_table = self.dev_context.stamp_table.lock().await;
     let mut hmr_result = bundler
       .compute_hmr_update_for_file_changes(
         &changed_files,
         &client_inputs,
+        &mut stamp_table,
         Arc::clone(&self.next_hmr_patch_id),
       )
       .await;
+    drop(stamp_table);
     drop(client_inputs);
 
     // `seq` is incremented only when the client actually receives an update — i.e. an
@@ -241,11 +256,29 @@ impl BundlingTask {
       }
     }
 
-    // Check if any update is a full reload (only if successful)
-    if let Ok(client_updates) = &hmr_result {
-      for update in client_updates {
-        if update.update.is_full_reload() {
-          *has_full_reload_update = true;
+    // Check if any update is a full reload (only if successful), and record each
+    // rendered patch as pending: the delivery notification max-merges its stamps
+    // into `shipped[C]` when the serving middleware sees the response for
+    // `patch.filename` complete. `carried` is handed over instead of cloned — the
+    // binding layer drops it (it stays server-side), so the pending entry is its
+    // only consumer from here on.
+    if let Ok(client_updates) = &mut hmr_result {
+      for update in client_updates.iter_mut() {
+        match &mut update.update {
+          HmrUpdate::FullReload { .. } => *has_full_reload_update = true,
+          HmrUpdate::Patch(patch) => {
+            self
+              .dev_context
+              .insert_pending_payload(
+                patch.filename.clone(),
+                PendingPayload {
+                  client_id: update.client_id.clone(),
+                  modules: std::mem::take(&mut patch.carried),
+                },
+              )
+              .await;
+          }
+          HmrUpdate::Noop => {}
         }
       }
     }

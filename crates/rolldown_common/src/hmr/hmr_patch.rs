@@ -1,3 +1,5 @@
+use arcstr::ArcStr;
+
 #[derive(Debug, Clone)]
 pub struct HmrPatch {
   pub code: String,
@@ -9,4 +11,8 @@ pub struct HmrPatch {
   pub changed_ids: Vec<String>,
   /// Per-client envelope sequence number.
   pub seq: u32,
+  /// `(stable id, render-time stamp)` for every module this patch carries — the
+  /// pending-payload entry that the delivery-time ship-map write consumes when the
+  /// serving middleware observes the response complete.
+  pub carried: Vec<(ArcStr, u32)>,
 }

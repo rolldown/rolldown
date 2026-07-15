@@ -21,12 +21,15 @@ PlanModuleWrappingPass → CreateWrapperDeclarationsPass           │
                                                                  │
                                                                  ▼
                                             compatibility projection of normal slots
-                                                       ·
-                                                       · current driver order only
-                                                       ·····························> CollectResolvedExportsPass
+                                                                 │
+                                            retained sealed ModuleSideEffects
+                                                                 │
+                         CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass
 ```
 
-`NormalizeLazyExportsPass` is the last operation that can invalidate a wrapper declaration, so side-effect analysis must read `ModuleWrappers`, not the earlier wrapper seed, plan, or declaration draft. `DynamicExports` remains sealed from its producer through this final typed consumer. After side-effect projection, the driver consumes formats and wrappers into the existing module and metadata fields, projects dynamic-export bits, and releases all four compact representation facts. `CollectResolvedExportsPass` then reads only the final module table; it has no data dependency on the side-effect artifact.
+`NormalizeLazyExportsPass` is the last operation that can invalidate a wrapper declaration, so side-effect analysis must read `ModuleWrappers`, not the earlier wrapper seed, plan, or declaration draft. `CollectResolvedExportsPass` then reads only the final module table; it has no data dependency on the side-effect artifact.
+
+The current representation helper projects normal side-effect slots, final formats, dynamic-export bits, and wrapper declarations into legacy fields before resolved-export collection. Later unmigrated readers require those projections, but their early position is transitional rather than a dependency of collection or binding. Projection does not end every typed lifetime: sealed `ModuleSideEffects`, sealed `DynamicExports`, and final `ModuleFormats` remain live through collection and are borrowed by `BindImportsPass`. Binding uses the side-effect artifact when adding reexport-chain dependencies, then the driver drops these three borrowed compact facts after the pass returns. `ModuleWrappers` has no later typed consumer and is consumed by its compatibility projection.
 
 ## Pass contract
 
@@ -38,7 +41,7 @@ PlanModuleWrappingPass → CreateWrapperDeclarationsPass           │
 | `OutputOwned`   | `()`                                  | No mutable domain continues from the pass.                                       |
 | `Error`         | `Infallible`                          | The external link path remains infallible.                                       |
 
-`ModuleSideEffects` exposes only its module count and a read-only `get(ModuleIdx)` operation that copies the small enum value. It has no constructor, iteration-order override, mutable access, clone, or consuming unwrap. The driver walks raw module order, copies only normal-module slots into the unchanged legacy field, and then explicitly drops the sealed artifact. External-module fields are not rewritten, matching the previous method.
+`ModuleSideEffects` exposes only its module count and a read-only `get(ModuleIdx)` operation that copies the small enum value. It has no constructor, iteration-order override, mutable access, clone, or consuming unwrap. The driver walks raw module order and copies only normal-module slots into the unchanged legacy field. External-module fields are not rewritten, matching the previous method. The sealed artifact remains the authoritative typed input for binding and leaves scope only after that last borrower returns.
 
 ## Exact algorithm
 
@@ -80,7 +83,7 @@ Focused tests pin:
 - the exact export-star predicate; and
 - preservation of `UserDefined`, `Analyzed(true)`, and `NoTreeshake` enum variants.
 
-The fourteen-pass production trace test pins this pass after `NormalizeLazyExportsPass` and before `CollectResolvedExportsPass`. Broader link, Node, Rollup compatibility, deterministic-output, WASM, timing, and memory gates remain part of the pass-pipeline validation rather than being duplicated here.
+The sixteen-pass production trace test pins this pass after `NormalizeLazyExportsPass` and before `CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass`. Broader link, Node, Rollup compatibility, deterministic-output, WASM, timing, and memory gates remain part of the pass-pipeline validation rather than being duplicated here.
 
 ## Related
 

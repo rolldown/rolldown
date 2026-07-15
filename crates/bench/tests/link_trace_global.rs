@@ -105,6 +105,8 @@ fn global_collector_reaches_existing_rayon_workers_but_context_does_not() {
     "NormalizeLazyExportsPass",
     "DetermineModuleSideEffectsPass",
     "CollectResolvedExportsPass",
+    "BindImportsPass",
+    "FinalizeResolvedExportsPass",
   ];
   assert_eq!(pass_names.len(), expected.len());
   assert!(pass_names.iter().zip(expected).all(|(pass, suffix)| pass.ends_with(suffix)));

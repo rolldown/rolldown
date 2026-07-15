@@ -14,6 +14,12 @@ pub(in crate::stages::link_stage) struct ModuleDependenciesDraft {
 }
 
 impl ModuleDependenciesDraft {
+  pub(in crate::stages::link_stage) fn from_inner(
+    dependencies: IndexVec<ModuleIdx, FxIndexSet<ModuleIdx>>,
+  ) -> Self {
+    Self { dependencies }
+  }
+
   pub(in crate::stages::link_stage) fn into_inner(
     self,
   ) -> IndexVec<ModuleIdx, FxIndexSet<ModuleIdx>> {

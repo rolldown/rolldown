@@ -40,17 +40,18 @@ pub(in crate::stages::link_stage) struct ModuleFormats {
 }
 
 impl ModuleFormats {
+  pub(in crate::stages::link_stage) fn get(&self, module_idx: ModuleIdx) -> Option<ExportsKind> {
+    self.formats[module_idx]
+  }
+
   pub(in crate::stages::link_stage) fn module_count(&self) -> usize {
     self.formats.len()
   }
 
-  pub(in crate::stages::link_stage) fn into_normal_modules(
-    self,
-  ) -> impl Iterator<Item = (ModuleIdx, ExportsKind)> {
-    self
-      .formats
-      .into_iter_enumerated()
-      .filter_map(|(idx, format)| format.map(|format| (idx, format)))
+  pub(in crate::stages::link_stage) fn normal_modules(
+    &self,
+  ) -> impl Iterator<Item = (ModuleIdx, ExportsKind)> + '_ {
+    self.formats.iter_enumerated().filter_map(|(idx, format)| format.map(|format| (idx, format)))
   }
 }
 

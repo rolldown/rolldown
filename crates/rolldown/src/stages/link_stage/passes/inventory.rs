@@ -1,5 +1,5 @@
 use std::{
-  collections::BTreeSet,
+  collections::{BTreeMap, BTreeSet},
   fs,
   path::{Path, PathBuf},
 };
@@ -312,6 +312,19 @@ fn is_legacy_css_import_invariant(mac: &syn::Macro, source: &Path) -> bool {
   })
 }
 
+fn is_bind_imports_macro(mac: &syn::Macro, source: &Path) -> bool {
+  source.ends_with(Path::new("passes/bind_imports.rs"))
+    && [
+      &["tracing", "trace_span"][..],
+      &["tracing", "trace"][..],
+      &["std", "assert_eq"][..],
+      &["std", "format"][..],
+      &["std", "unreachable"][..],
+    ]
+    .iter()
+    .any(|expected| is_exact_path(&mac.path, expected))
+}
+
 impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
   fn visit_item(&mut self, item: &'ast Item) {
     if let Item::Mod(module) = item
@@ -426,6 +439,7 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
   fn visit_stmt_macro(&mut self, statement: &'ast syn::StmtMacro) {
     assert!(
       is_exact_path(&statement.mac.path, &["std", "debug_assert"])
+        || is_bind_imports_macro(&statement.mac, self.source)
         || is_legacy_css_import_invariant(&statement.mac, self.source),
       "{}: block-level statement macro `{}` is forbidden because it can generate a hidden pass declaration",
       self.source.display(),
@@ -444,6 +458,7 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
     assert!(
       is_exact_path(&expression.mac.path, &["std", "matches"])
         || is_exact_path(&expression.mac.path, &["oxc_index", "index_vec"])
+        || is_bind_imports_macro(&expression.mac, self.source)
         || is_legacy_css_import_invariant(&expression.mac, self.source),
       "{}: expression macro `{}` is not in the closed production allowlist",
       self.source.display(),
@@ -499,6 +514,103 @@ fn inspect_items(
   }
 }
 
+fn use_tree_mentions_link(tree: &UseTree) -> bool {
+  match tree {
+    UseTree::Path(path) => {
+      normalized_ident(&path.ident) == "link" || use_tree_mentions_link(&path.tree)
+    }
+    UseTree::Name(name) => normalized_ident(&name.ident) == "link",
+    UseTree::Rename(rename) => {
+      normalized_ident(&rename.ident) == "link" || normalized_ident(&rename.rename) == "link"
+    }
+    UseTree::Glob(_) => false,
+    UseTree::Group(group) => group.items.iter().any(use_tree_mentions_link),
+  }
+}
+
+fn macro_tokens_mention_link(tokens: proc_macro2::TokenStream) -> bool {
+  let tokens = tokens.into_iter().collect::<Vec<_>>();
+  for (index, token) in tokens.iter().enumerate() {
+    match token {
+      proc_macro2::TokenTree::Group(group) => {
+        if macro_tokens_mention_link(group.stream()) {
+          return true;
+        }
+      }
+      proc_macro2::TokenTree::Ident(ident)
+        if normalized_ident(ident) == "link"
+          && index.checked_sub(1).and_then(|previous| tokens.get(previous)).is_some_and(
+            |previous| {
+              std::matches!(
+                previous,
+                proc_macro2::TokenTree::Punct(punct) if punct.as_char() == '.' || punct.as_char() == ':'
+              )
+            },
+          ) =>
+      {
+        return true;
+      }
+      proc_macro2::TokenTree::Ident(_)
+      | proc_macro2::TokenTree::Punct(_)
+      | proc_macro2::TokenTree::Literal(_) => {}
+    }
+  }
+  false
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+struct ProductionLinkCallVisitor {
+  method_calls: usize,
+  path_references: usize,
+  imports: usize,
+  macro_tokens: usize,
+}
+
+impl<'ast> Visit<'ast> for ProductionLinkCallVisitor {
+  fn visit_item(&mut self, item: &'ast Item) {
+    if let Item::Mod(module) = item
+      && module.attrs.iter().any(|attribute| {
+        let syn::Meta::List(meta) = &attribute.meta else { return false };
+        meta.path.is_ident("cfg") && meta.tokens.to_string() == "test"
+      })
+    {
+      return;
+    }
+    if let Item::Use(item) = item
+      && use_tree_mentions_link(&item.tree)
+    {
+      self.imports += 1;
+    }
+    visit::visit_item(self, item);
+  }
+
+  fn visit_expr_method_call(&mut self, expression: &'ast syn::ExprMethodCall) {
+    if normalized_ident(&expression.method) == "link" {
+      self.method_calls += 1;
+    }
+    visit::visit_expr_method_call(self, expression);
+  }
+
+  fn visit_expr_path(&mut self, expression: &'ast syn::ExprPath) {
+    if expression
+      .path
+      .segments
+      .last()
+      .is_some_and(|segment| normalized_ident(&segment.ident) == "link")
+    {
+      self.path_references += 1;
+    }
+    visit::visit_expr_path(self, expression);
+  }
+
+  fn visit_macro(&mut self, mac: &'ast syn::Macro) {
+    if macro_tokens_mention_link(mac.tokens.clone()) {
+      self.macro_tokens += 1;
+    }
+    visit::visit_macro(self, mac);
+  }
+}
+
 #[test]
 fn link_pass_inventory_is_complete() {
   let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/stages/link_stage/passes");
@@ -520,6 +632,71 @@ fn link_pass_inventory_is_complete() {
     declarations, implementations,
     "every declared link pass must have exactly one visible direct Pass implementation, and every implementation must have a matching unit declaration"
   );
+}
+
+#[test]
+fn link_stage_symbol_links_end_in_bind_imports() {
+  let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/stages/link_stage");
+  let testing_entry = root.join("testing.rs");
+  let mut calls = BTreeMap::new();
+  for source in rust_sources(&root) {
+    // The testing-only benchmark entry invokes `LinkStage::link`; it is not a symbol-database
+    // link and therefore is outside this canonicalization barrier.
+    if source == testing_entry {
+      continue;
+    }
+    let text = fs::read_to_string(&source)
+      .unwrap_or_else(|error| panic!("failed to read {}: {error}", source.display()));
+    let file = syn::parse_file(&text)
+      .unwrap_or_else(|error| panic!("failed to parse {}: {error}", source.display()));
+    let mut visitor = ProductionLinkCallVisitor::default();
+    for item in &file.items {
+      visitor.visit_item(item);
+    }
+    if visitor != ProductionLinkCallVisitor::default() {
+      calls.insert(source, visitor);
+    }
+  }
+
+  assert_eq!(
+    calls,
+    BTreeMap::from([(
+      root.join("passes/bind_imports.rs"),
+      ProductionLinkCallVisitor { method_calls: 3, ..ProductionLinkCallVisitor::default() },
+    )])
+  );
+}
+
+#[test]
+fn symbol_link_inventory_detects_non_method_forms() {
+  for (source, expected_method_calls) in [
+    (
+      "fn bypass(db: &mut SymbolRefDb, from: SymbolRef, to: SymbolRef) { SymbolRefDb::link(db, from, to); }",
+      0,
+    ),
+    (
+      "fn bypass(db: &mut SymbolRefDb, from: SymbolRef, to: SymbolRef) { <SymbolRefDb>::link(db, from, to); }",
+      0,
+    ),
+    ("fn bypass() { let connect = SymbolRefDb::link; connect; }", 0),
+    ("use SymbolRefDb::link as connect; fn bypass() { connect(); }", 0),
+    ("fn bypass() { forward!(symbols.link(from, to)); }", 0),
+    ("fn bypass(db: &mut SymbolRefDb, from: SymbolRef, to: SymbolRef) { db.r#link(from, to); }", 1),
+    (
+      "fn bypass(db: &mut SymbolRefDb, from: SymbolRef, to: SymbolRef) { SymbolRefDb::r#link(db, from, to); }",
+      0,
+    ),
+    ("use SymbolRefDb::r#link as connect; fn bypass() { connect(); }", 0),
+  ] {
+    let file =
+      syn::parse_file(source).unwrap_or_else(|error| panic!("link bypass fixture: {error}"));
+    let mut visitor = ProductionLinkCallVisitor::default();
+    for item in &file.items {
+      visitor.visit_item(item);
+    }
+    assert_ne!(visitor, ProductionLinkCallVisitor::default(), "missed link form: {source}");
+    assert_eq!(visitor.method_calls, expected_method_calls, "wrong method-call count: {source}");
+  }
 }
 
 #[test]
@@ -636,6 +813,54 @@ fn inventory_accepts_only_the_exact_legacy_css_import_invariants() {
         &mut declarations,
         &mut implementations,
       );
+    });
+    assert!(result.is_err(), "inventory accepted invalid source: {source}");
+  }
+}
+
+#[test]
+fn inventory_accepts_only_the_exact_bind_imports_macros() {
+  let valid = syn::parse_file(
+    r#"
+fn observe() {
+  let _span = tracing::trace_span!("binding");
+  tracing::trace!("binding");
+  std::assert_eq!(1, 1);
+  let _message = std::format!("missing {}", "export");
+  std::unreachable!("invariant");
+}
+"#,
+  )
+  .unwrap_or_else(|error| panic!("valid test source: {error}"));
+  let mut declarations = BTreeSet::new();
+  let mut implementations = BTreeSet::new();
+  inspect_items(
+    &valid.items,
+    Path::new("passes/bind_imports.rs"),
+    &mut declarations,
+    &mut implementations,
+  );
+  assert!(declarations.is_empty());
+  assert!(implementations.is_empty());
+
+  for (source, path) in [
+    ("fn observe() { trace!(\"binding\"); }", "passes/bind_imports.rs"),
+    ("fn observe() { other::trace!(\"binding\"); }", "passes/bind_imports.rs"),
+    ("fn observe() { tracing::error!(\"binding\"); }", "passes/bind_imports.rs"),
+    ("fn observe() { assert_eq!(1, 1); }", "passes/bind_imports.rs"),
+    ("fn observe() { tracing::trace!(\"binding\"); }", "passes/other.rs"),
+    ("fn observe() { tracing::trace!(LinkStage); }", "passes/bind_imports.rs"),
+    (
+      "fn observe() { let _ = std::format!(\"{}\", std::matches!(true, true)); }",
+      "passes/bind_imports.rs",
+    ),
+  ] {
+    let file =
+      syn::parse_file(source).unwrap_or_else(|error| panic!("invalid test source: {error}"));
+    let result = std::panic::catch_unwind(|| {
+      let mut declarations = BTreeSet::new();
+      let mut implementations = BTreeSet::new();
+      inspect_items(&file.items, Path::new(path), &mut declarations, &mut implementations);
     });
     assert!(result.is_err(), "inventory accepted invalid source: {source}");
   }

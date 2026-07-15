@@ -11,7 +11,7 @@ use rolldown_common::{
 use rolldown_error::{Diagnostics, EventKindSwitcher};
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
-  pass::{PassPipelineCtx, run_infallible_pass},
+  pass::{PassPipelineCtx, Sealed, run_infallible_pass},
 };
 
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -46,17 +46,19 @@ use lazy_json_export_initializers::LazyJsonExportInitializers;
 use non_splittable_json_defaults::NonSplittableJsonDefaults;
 
 use passes::{
-  CanonicalizeEntriesPass, CollectExternalStarExportsPass, CollectInitialDependenciesPass,
-  CollectResolvedExportsPass, ComputeCjsNamespaceMergesInput, ComputeCjsNamespaceMergesPass,
-  ComputeDynamicExportsInput, ComputeDynamicExportsPass, ComputeModuleExecutionOrderInput,
-  ComputeModuleExecutionOrderPass, ComputeTlaPass, ConstantExtractionInput,
-  CreateWrapperDeclarationsInput, CreateWrapperDeclarationsOutput, CreateWrapperDeclarationsOwned,
-  CreateWrapperDeclarationsPass, DetermineModuleFormatsInput, DetermineModuleFormatsPass,
-  DetermineModuleSideEffectsInput, DetermineModuleSideEffectsPass, DynamicExports, EntryPlanDraft,
-  ExtractGlobalConstantsPass, GlobalConstantsDraft, ModuleFormats, ModuleSideEffects,
-  ModuleWrappers, NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
-  NormalizeLazyExportsPass, PlanModuleWrappingInput, PlanModuleWrappingPass, ResolvedExportsDraft,
-  TlaScanFacts, WrapperDeclaration,
+  BindImportsInput, BindImportsOutput, BindImportsOwned, BindImportsPass, CanonicalizeEntriesPass,
+  CollectExternalStarExportsPass, CollectInitialDependenciesPass, CollectResolvedExportsPass,
+  ComputeCjsNamespaceMergesInput, ComputeCjsNamespaceMergesPass, ComputeDynamicExportsInput,
+  ComputeDynamicExportsPass, ComputeModuleExecutionOrderInput, ComputeModuleExecutionOrderPass,
+  ComputeTlaPass, ConstantExtractionInput, CreateWrapperDeclarationsInput,
+  CreateWrapperDeclarationsOutput, CreateWrapperDeclarationsOwned, CreateWrapperDeclarationsPass,
+  DetermineModuleFormatsInput, DetermineModuleFormatsPass, DetermineModuleSideEffectsInput,
+  DetermineModuleSideEffectsPass, DynamicExports, EntryPlanDraft, ExtractGlobalConstantsPass,
+  FinalizeResolvedExportsPass, GlobalConstantsDraft, IncludedCommonJsExportSymbols,
+  ModuleDependenciesDraft, ModuleFormats, ModuleSideEffects, ModuleWrappers,
+  NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
+  NormalizeLazyExportsPass, PlanModuleWrappingInput, PlanModuleWrappingPass, ResolvedExports,
+  ShimmedMissingExports, TlaScanFacts, WrapperDeclaration,
 };
 
 /// Information about safely merged CJS namespaces for a module
@@ -192,7 +194,13 @@ impl<'a> LinkStage<'a> {
     pass_pipeline: &mut PassPipelineCtx,
     entry_plan: &EntryPlanDraft,
     global_constants: &GlobalConstantsDraft,
-  ) -> (LazyJsonExportInitializers, NonSplittableJsonDefaults) {
+  ) -> (
+    LazyJsonExportInitializers,
+    NonSplittableJsonDefaults,
+    ModuleFormats,
+    Sealed<DynamicExports>,
+    Sealed<ModuleSideEffects>,
+  ) {
     let (_, (module_formats, wrapper_seeds)) = run_infallible_pass(
       DetermineModuleFormatsPass,
       pass_pipeline,
@@ -298,10 +306,15 @@ impl<'a> LinkStage<'a> {
       (),
     );
     self.project_module_side_effects(&module_side_effects);
-    drop(module_side_effects);
-    self.project_representation_results(module_formats, module_wrappers, &dynamic_exports);
+    self.project_representation_results(&module_formats, module_wrappers, &dynamic_exports);
     self.safely_merge_cjs_ns_map = cjs_namespace_merges.into_legacy();
-    (lazy_json_export_initializers, non_splittable_json_defaults)
+    (
+      lazy_json_export_initializers,
+      non_splittable_json_defaults,
+      module_formats,
+      dynamic_exports,
+      module_side_effects,
+    )
   }
 
   fn project_module_side_effects(&mut self, module_side_effects: &ModuleSideEffects) {
@@ -328,7 +341,7 @@ impl<'a> LinkStage<'a> {
 
   fn project_representation_results(
     &mut self,
-    module_formats: ModuleFormats,
+    module_formats: &ModuleFormats,
     module_wrappers: ModuleWrappers,
     dynamic_exports: &DynamicExports,
   ) {
@@ -339,7 +352,7 @@ impl<'a> LinkStage<'a> {
         "module-format layout mismatch"
       );
     }
-    for (module_idx, exports_kind) in module_formats.into_normal_modules() {
+    for (module_idx, exports_kind) in module_formats.normal_modules() {
       match self.module_table.modules.get_mut(module_idx) {
         Some(Module::Normal(module)) => module.exports_kind = exports_kind,
         Some(Module::External(_)) | None => tracing::error!(
@@ -370,34 +383,77 @@ impl<'a> LinkStage<'a> {
     }
   }
 
-  fn project_resolved_exports(&mut self, resolved_exports: ResolvedExportsDraft) {
-    if resolved_exports.module_count() != self.module_table.modules.len()
-      || resolved_exports.module_count() != self.metas.len()
+  fn project_binding_results(
+    &mut self,
+    dependencies: ModuleDependenciesDraft,
+    shimmed_missing_exports: ShimmedMissingExports,
+    included_commonjs_export_symbols: IncludedCommonJsExportSymbols,
+  ) {
+    let dependencies = dependencies.into_inner();
+    let shimmed_missing_exports = shimmed_missing_exports.into_slots();
+    let included_commonjs_export_symbols = included_commonjs_export_symbols.into_slots();
+    let module_count = self.module_table.modules.len();
+    assert_eq!(dependencies.len(), module_count, "dependency layout must match the module table");
+    assert_eq!(
+      shimmed_missing_exports.len(),
+      module_count,
+      "missing-export shim layout must match the module table"
+    );
+    assert_eq!(
+      included_commonjs_export_symbols.len(),
+      module_count,
+      "included CommonJS export layout must match the module table"
+    );
+    assert_eq!(self.metas.len(), module_count, "metadata layout must match the module table");
+
+    for (((module_idx, dependencies), shimmed), included_commonjs_exports) in dependencies
+      .into_iter_enumerated()
+      .zip(shimmed_missing_exports)
+      .zip(included_commonjs_export_symbols)
     {
-      tracing::error!(
-        resolved_exports = resolved_exports.module_count(),
-        modules = self.module_table.modules.len(),
-        metadata = self.metas.len(),
-        "resolved-export layout mismatch"
-      );
+      let meta = &mut self.metas[module_idx];
+      meta.dependencies = dependencies;
+      match (&self.module_table[module_idx], shimmed, included_commonjs_exports) {
+        (Module::Normal(_), Some(shimmed), Some(included_commonjs_exports)) => {
+          meta.shimmed_missing_exports = shimmed;
+          meta.included_commonjs_export_symbol = included_commonjs_exports;
+        }
+        (Module::External(_), None, None) => {}
+        (Module::Normal(_), _, _) => {
+          panic!("normal module {module_idx:?} has incomplete import-binding slots")
+        }
+        (Module::External(_), _, _) => {
+          panic!("external module {module_idx:?} has normal-only import-binding slots")
+        }
+      }
     }
+  }
+
+  fn project_resolved_exports(&mut self, resolved_exports: ResolvedExports) {
+    assert_eq!(
+      resolved_exports.module_count(),
+      self.module_table.modules.len(),
+      "resolved-export layout must match the module table"
+    );
+    assert_eq!(
+      resolved_exports.module_count(),
+      self.metas.len(),
+      "resolved-export layout must match metadata"
+    );
     for (module_idx, exports) in resolved_exports.into_slots().into_iter_enumerated() {
-      match (self.module_table.modules.get(module_idx), self.metas.get_mut(module_idx), exports) {
-        (Some(Module::Normal(_)), Some(meta), Some(exports)) => meta.resolved_exports = exports,
-        (Some(Module::External(_)), Some(_), None) => {}
-        (Some(Module::Normal(_)), Some(_), None) => {
-          tracing::error!(module = module_idx.index(), "normal module has no resolved-export slot");
+      match (&self.module_table[module_idx], &mut self.metas[module_idx], exports) {
+        (Module::Normal(_), meta, Some(exports)) => {
+          let (resolved, sorted_and_non_ambiguous) = exports.into_parts();
+          meta.resolved_exports = resolved;
+          meta.sorted_and_non_ambiguous_resolved_exports = sorted_and_non_ambiguous;
         }
-        (Some(Module::External(_)), Some(_), Some(_)) => {
-          tracing::error!(
-            module = module_idx.index(),
-            "external module has a resolved-export slot"
-          );
+        (Module::External(_), _, None) => {}
+        (Module::Normal(_), _, None) => {
+          panic!("normal module {module_idx:?} has no resolved-export slot")
         }
-        (None, _, _) | (_, None, _) => tracing::error!(
-          module = module_idx.index(),
-          "resolved exports target a missing module or linking metadata"
-        ),
+        (Module::External(_), _, Some(_)) => {
+          panic!("external module {module_idx:?} has a resolved-export slot")
+        }
       }
     }
   }
@@ -405,7 +461,7 @@ impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
     let mut pass_pipeline = PassPipelineCtx::new();
-    let (entry_plan, global_constants) = {
+    let (entry_plan, global_constants, dependencies, execution_orders) = {
       let (_, (module_table, global_constants)) = run_infallible_pass(
         ExtractGlobalConstantsPass,
         &mut pass_pipeline,
@@ -426,9 +482,6 @@ impl<'a> LinkStage<'a> {
         &self.module_table,
         (),
       );
-      for (module_idx, module_dependencies) in dependencies.into_inner().into_iter_enumerated() {
-        self.metas[module_idx].dependencies = module_dependencies;
-      }
       let (_, external_star_exports) = run_infallible_pass(
         CollectExternalStarExportsPass,
         &mut pass_pipeline,
@@ -466,7 +519,7 @@ impl<'a> LinkStage<'a> {
         }
       }
       self.sorted_modules = sorted_modules.into_inner();
-      (entry_plan, global_constants)
+      (entry_plan, global_constants, dependencies, execution_orders)
     };
     {
       let (tla_facts, ()) = run_infallible_pass(
@@ -480,20 +533,68 @@ impl<'a> LinkStage<'a> {
         self.metas[module_idx].is_tla_or_contains_tla_dependency = true;
       }
     }
-    let (lazy_json_export_initializers, non_splittable_json_defaults) = self
-      .run_representation_and_side_effect_passes(
-        &mut pass_pipeline,
-        &entry_plan,
-        &global_constants,
-      );
-    let (_, resolved_exports) =
+    let (
+      lazy_json_export_initializers,
+      non_splittable_json_defaults,
+      module_formats,
+      dynamic_exports,
+      module_side_effects,
+    ) = self.run_representation_and_side_effect_passes(
+      &mut pass_pipeline,
+      &entry_plan,
+      &global_constants,
+    );
+    let (_, resolved_exports_draft) =
       run_infallible_pass(CollectResolvedExportsPass, &mut pass_pipeline, &self.module_table, ());
-    self.project_resolved_exports(resolved_exports);
+
+    let (_, binding) = run_infallible_pass(
+      BindImportsPass,
+      &mut pass_pipeline,
+      BindImportsInput {
+        module_table: &self.module_table,
+        resolved_exports: &resolved_exports_draft,
+        module_formats: &module_formats,
+        dynamic_exports: &dynamic_exports,
+        module_side_effects: &module_side_effects,
+        execution_orders: &execution_orders,
+        output_format: self.options.format,
+        shim_missing_exports: self.options.shim_missing_exports,
+      },
+      BindImportsOwned { symbols: std::mem::take(&mut self.symbols), dependencies },
+    );
+    let BindImportsOutput {
+      symbols,
+      dependencies,
+      shimmed_missing_exports,
+      included_commonjs_export_symbols,
+      normal_export_chains,
+      external_namespace_merges,
+    } = binding;
+    self.symbols = symbols;
+    self.project_binding_results(
+      dependencies,
+      shimmed_missing_exports,
+      included_commonjs_export_symbols,
+    );
+    self.external_import_namespace_merger = external_namespace_merges.into_inner();
+    drop((module_formats, dynamic_exports, module_side_effects, execution_orders));
+
+    let (_, resolved_exports) = run_infallible_pass(
+      FinalizeResolvedExportsPass,
+      &mut pass_pipeline,
+      &self.symbols,
+      resolved_exports_draft,
+    );
     self.entries = entry_plan.into_legacy_entries();
     self.global_constant_symbol_map = global_constants.into_legacy();
     self.diagnostics.extend(pass_pipeline.into_diagnostics());
-    self.bind_imports_and_exports(&non_splittable_json_defaults);
+    self.finish_binding(
+      &resolved_exports,
+      normal_export_chains.into_inner(),
+      &non_splittable_json_defaults,
+    );
     drop(non_splittable_json_defaults);
+    self.project_resolved_exports(resolved_exports);
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
     let unreachable_import_expression_node_ids = self.cross_module_optimization();

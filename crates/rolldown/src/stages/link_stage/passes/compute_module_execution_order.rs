@@ -32,6 +32,10 @@ pub(in crate::stages::link_stage) struct ModuleExecutionOrders {
 }
 
 impl ModuleExecutionOrders {
+  pub(in crate::stages::link_stage) fn get(&self, module_idx: ModuleIdx) -> u32 {
+    self.orders[module_idx]
+  }
+
   pub(in crate::stages::link_stage) fn assigned(
     &self,
   ) -> impl Iterator<Item = (ModuleIdx, u32)> + '_ {

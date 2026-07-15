@@ -24,10 +24,37 @@ impl ResolvedExportsDraft {
     self.slots.len()
   }
 
+  pub(in crate::stages::link_stage) fn get(
+    &self,
+    module_idx: ModuleIdx,
+  ) -> Option<&FxHashMap<CompactStr, ResolvedExport>> {
+    self.slots.get(module_idx).and_then(Option::as_ref)
+  }
+
   pub(in crate::stages::link_stage) fn into_slots(
     self,
-  ) -> IndexVec<ModuleIdx, Option<FxHashMap<CompactStr, ResolvedExport>>> {
-    self.slots
+  ) -> Vec<Option<FxHashMap<CompactStr, ResolvedExport>>> {
+    self.slots.raw
+  }
+}
+
+#[cfg(test)]
+pub(super) mod test_support {
+  use rolldown_common::{ModuleIdx, SymbolRef};
+
+  use super::ResolvedExportsDraft;
+
+  pub(in crate::stages::link_stage::passes) fn set_conflicts(
+    draft: &mut ResolvedExportsDraft,
+    module_idx: ModuleIdx,
+    name: &str,
+    esm: Option<Vec<SymbolRef>>,
+    commonjs: Option<Vec<SymbolRef>>,
+  ) {
+    let export =
+      draft.slots[module_idx].as_mut().expect("normal slot").get_mut(name).expect("fixture export");
+    export.potentially_ambiguous_symbol_refs = esm.map(Box::new);
+    export.cjs_conflicting_symbol_refs = commonjs.map(Box::new);
   }
 }
 

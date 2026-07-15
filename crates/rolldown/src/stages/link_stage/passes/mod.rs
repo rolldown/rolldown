@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+mod bind_imports;
 mod canonicalize_entries;
 mod collect_external_star_exports;
 mod collect_initial_dependencies;
@@ -14,10 +15,16 @@ mod create_wrapper_declarations;
 mod determine_module_formats;
 mod determine_module_side_effects;
 mod extract_global_constants;
+mod finalize_resolved_exports;
 mod normalize_lazy_exports;
 mod plan_module_wrapping;
 
+pub(super) use bind_imports::{
+  BindImportsInput, BindImportsOutput, BindImportsOwned, IncludedCommonJsExportSymbols,
+  ShimmedMissingExports,
+};
 pub(super) use canonicalize_entries::EntryPlanDraft;
+pub(super) use collect_initial_dependencies::ModuleDependenciesDraft;
 pub(super) use collect_resolved_exports::ResolvedExportsDraft;
 pub(super) use compute_cjs_namespace_merges::{CjsNamespaceMerges, ComputeCjsNamespaceMergesInput};
 pub(super) use compute_dynamic_exports::{ComputeDynamicExportsInput, DynamicExports};
@@ -34,10 +41,14 @@ pub(super) use determine_module_side_effects::{
   DetermineModuleSideEffectsInput, ModuleSideEffects,
 };
 pub(super) use extract_global_constants::{ConstantExtractionInput, GlobalConstantsDraft};
+pub(super) use finalize_resolved_exports::ResolvedExports;
 pub(super) use normalize_lazy_exports::{
   NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
 };
 pub(super) use plan_module_wrapping::PlanModuleWrappingInput;
+
+#[derive(Clone, Copy)]
+pub(super) struct BindImportsPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct CanonicalizeEntriesPass;
@@ -74,6 +85,9 @@ pub(super) struct DetermineModuleSideEffectsPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct ExtractGlobalConstantsPass;
+
+#[derive(Clone, Copy)]
+pub(super) struct FinalizeResolvedExportsPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct NormalizeLazyExportsPass;

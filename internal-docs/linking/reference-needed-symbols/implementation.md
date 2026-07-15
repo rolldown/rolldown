@@ -18,15 +18,16 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 ```
 … PlanModuleWrappingPass → CreateWrapperDeclarationsPass → NormalizeLazyExportsPass
   → DetermineModuleSideEffectsPass → representation compatibility projection
-  → CollectResolvedExportsPass → resolved-export compatibility projection
-  → remaining bind_imports_and_exports → create_exports_for_ecma_modules
+  → CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass
+  → legacy member-expression resolution → resolved-export compatibility projection
+  → create_exports_for_ecma_modules
   → reference_needed_symbols   ← this pass
   → cross_module_optimization → include_statements → patch_module_dependencies
 ```
 
 Position is load-bearing in two directions:
 
-1. **`wrap_kind`, `wrapper_ref`, module side effects, and resolved exports must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`, while unwrapped imports read `module.side_effects`; binding also needs the collected export maps before this step can consume its results. `NormalizeLazyExportsPass` finalizes wrapper and local export identities, `DetermineModuleSideEffectsPass` consumes the final wrapper and dynamic-export facts, `CollectResolvedExportsPass` computes the final export-star view, and the compatibility projections write all four domains before binding and this step run.
+1. **`wrap_kind`, `wrapper_ref`, module side effects, and finalized resolved exports must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`, while unwrapped imports read `module.side_effects`. `NormalizeLazyExportsPass` finalizes wrapper and local export identities, and `DetermineModuleSideEffectsPass` consumes the final wrapper and dynamic-export facts. `CollectResolvedExportsPass` creates the raw export-star draft, `BindImportsPass` commits the last Link-stage symbol links while borrowing the retained format, dynamic-export, side-effect, execution-order, and resolved-export facts, and `FinalizeResolvedExportsPass` derives the sorted canonical view. Legacy member-expression resolution reads the final typed artifact, then the driver projects both resolved-export maps before this step runs.
 2. **`include_statements` must run after.** Tree-shaking traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data this pass writes, wrappers and helpers would be silently dropped from the output.
 
 ## Dispatch
@@ -195,7 +196,7 @@ A bug in any of (1)–(4) typically surfaces as a tree-shaking false-positive (h
 ## Related
 
 - [determine-module-exports-kind](../determine-module-exports-kind/implementation.md) — produces `wrap_kind` and `safely_merge_cjs_ns_map`.
-- [resolved exports](../resolved-exports/implementation.md) — produces the export-star maps that binding consumes before reference analysis.
+- [resolved exports](../resolved-exports/implementation.md) — documents raw collection, binding's symbol-link barrier, canonical finalization, and the projection consumed before reference analysis.
 - [module-execution-order](../module-execution-order/implementation.md) — orthogonal; `exec_order` is what `include_statements` uses to walk modules deterministically.
 - `crates/rolldown/src/stages/link_stage/passes/plan_module_wrapping.rs` and `create_wrapper_declarations.rs` — plan wrapping and allocate paired wrapper symbol/statement identities.
 - `crates/rolldown/src/stages/link_stage/passes/normalize_lazy_exports.rs` — preserves or invalidates wrapper identities atomically with lazy-export normalization, then returns final wrapper state for projection.

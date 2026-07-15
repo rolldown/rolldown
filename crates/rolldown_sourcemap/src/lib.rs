@@ -82,24 +82,33 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
   let tokens: Box<[Token]> = last_map
     .get_source_view_tokens()
     .filter_map(|token| {
-      let original_token =
-        sourcemap_and_lookup_table.iter().try_fold(token, |token, (sourcemap, lookup_table)| {
-          sourcemap.lookup_source_view_token(
-            lookup_table,
-            token.get_src_line(),
-            token.get_src_col(),
-          )
-        });
-      original_token.map(|original_token| {
-        Token::new(
-          token.get_dst_line(),
-          token.get_dst_col(),
+      let unmapped_token =
+        || Token::new(token.get_dst_line(), token.get_dst_col(), 0, 0, None, None);
+      if token.get_source_id().is_none() {
+        return Some(unmapped_token());
+      }
+
+      let mut original_token = token;
+      for (sourcemap, lookup_table) in &sourcemap_and_lookup_table {
+        let traced = sourcemap.lookup_source_view_token_approx(
+          lookup_table,
           original_token.get_src_line(),
           original_token.get_src_col(),
-          original_token.get_source_id(),
-          original_token.get_name_id(),
-        )
-      })
+        )?;
+        if traced.get_source_id().is_none() {
+          return Some(unmapped_token());
+        }
+        original_token = traced;
+      }
+
+      Some(Token::new(
+        token.get_dst_line(),
+        token.get_dst_col(),
+        original_token.get_src_line(),
+        original_token.get_src_col(),
+        original_token.get_source_id(),
+        original_token.get_name_id(),
+      ))
     })
     .collect();
 
@@ -192,6 +201,87 @@ fn test_collapse_sourcemaps() {
 (0:30) ");\n" --> (3:15) ");\n"
 "#
   );
+}
+
+#[test]
+fn test_collapse_sourcemaps_clamps_before_first_token_on_a_line() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut detailed_builder = SourceMapBuilder::default();
+  let original_source = detailed_builder.add_source_and_content("original.js", "  target();\n");
+  detailed_builder.add_token(0, 2, 0, 2, Some(original_source), None);
+  let detailed_map = detailed_builder.into_sourcemap().into_owned();
+
+  let mut coarse_builder = SourceMapBuilder::default();
+  let intermediate_source = coarse_builder.add_source_and_content("intermediate.js", "target();\n");
+  coarse_builder.add_token(0, 0, 0, 0, Some(intermediate_source), None);
+  let coarse_map = coarse_builder.into_sourcemap().into_owned();
+
+  let collapsed = collapse_sourcemaps(&[&detailed_map, &coarse_map]);
+  let tokens = collapsed.get_tokens().collect::<Vec<_>>();
+
+  assert_eq!(tokens.len(), 1, "a coarse token before the line's first detailed token must survive");
+  assert_eq!((tokens[0].get_dst_line(), tokens[0].get_dst_col()), (0, 0));
+  assert_eq!((tokens[0].get_src_line(), tokens[0].get_src_col()), (0, 2));
+  assert_eq!(tokens[0].get_source_id(), Some(0));
+  assert_eq!(collapsed.get_sources().collect::<Vec<_>>(), ["original.js"]);
+}
+
+#[test]
+fn test_collapse_sourcemaps_preserves_an_explicitly_unmapped_final_boundary() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut detailed_builder = SourceMapBuilder::default();
+  let original_source = detailed_builder.add_source_and_content("original.js", "mapped unmapped\n");
+  detailed_builder.add_token(0, 0, 0, 0, Some(original_source), None);
+  let detailed_map = detailed_builder.into_sourcemap().into_owned();
+
+  let mut final_builder = SourceMapBuilder::default();
+  let intermediate_source =
+    final_builder.add_source_and_content("intermediate.js", "mapped unmapped\n");
+  final_builder.add_token(0, 0, 0, 0, Some(intermediate_source), None);
+  final_builder.add_token(0, 5, 0, 0, None, None);
+  let final_map = final_builder.into_sourcemap().into_owned();
+
+  let collapsed = collapse_sourcemaps(&[&detailed_map, &final_map]);
+  let lookup_table = collapsed.generate_lookup_table();
+
+  assert_eq!(collapsed.get_tokens().count(), 2);
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 4).unwrap().get_source_id(), Some(0));
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 5).unwrap().get_source_id(), None);
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 9).unwrap().get_source_id(), None);
+}
+
+#[test]
+fn test_collapse_sourcemaps_preserves_an_explicitly_unmapped_intermediate_boundary() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut detailed_builder = SourceMapBuilder::default();
+  let original_source = detailed_builder.add_source_and_content("original.js", "mapped unmapped\n");
+  detailed_builder.add_token(0, 0, 0, 0, Some(original_source), None);
+  let detailed_map = detailed_builder.into_sourcemap().into_owned();
+
+  let mut intermediate_builder = SourceMapBuilder::default();
+  let detailed_source =
+    intermediate_builder.add_source_and_content("detailed.js", "mapped unmapped\n");
+  intermediate_builder.add_token(0, 0, 0, 0, Some(detailed_source), None);
+  intermediate_builder.add_token(0, 5, 0, 0, None, None);
+  let intermediate_map = intermediate_builder.into_sourcemap().into_owned();
+
+  let mut outer_builder = SourceMapBuilder::default();
+  let intermediate_source =
+    outer_builder.add_source_and_content("intermediate.js", "mapped unmapped\n");
+  outer_builder.add_token(0, 0, 0, 0, Some(intermediate_source), None);
+  outer_builder.add_token(0, 5, 0, 5, Some(intermediate_source), None);
+  let outer_map = outer_builder.into_sourcemap().into_owned();
+
+  let collapsed = collapse_sourcemaps(&[&detailed_map, &intermediate_map, &outer_map]);
+  let lookup_table = collapsed.generate_lookup_table();
+
+  assert_eq!(collapsed.get_tokens().count(), 2);
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 4).unwrap().get_source_id(), Some(0));
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 5).unwrap().get_source_id(), None);
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 9).unwrap().get_source_id(), None);
 }
 
 /// Test for https://github.com/rollup/rollup/issues/5955

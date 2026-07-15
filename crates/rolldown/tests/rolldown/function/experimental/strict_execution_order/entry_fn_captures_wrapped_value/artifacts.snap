@@ -1,0 +1,136 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_facade, t as getPref } from "./pref.js";
+//#region first.js
+var init_first = __esmMin((() => {
+	(globalThis.__events ??= []).push("first");
+}));
+//#endregion
+//#region node_modules/pref-pkg/index.js
+function tag(value) {
+	return `tag:${value}`;
+}
+var init_pref_pkg = __esmMin((() => {
+	init_facade();
+}));
+//#endregion
+//#region main.js
+function boot() {
+	return tag(getPref());
+}
+async function initApplication() {
+	return tag(await getPref());
+}
+//#endregion
+__esmMin((() => {
+	init_first();
+	init_pref_pkg();
+	(globalThis.__events ??= []).push("main");
+	globalThis.__result = boot();
+	globalThis.__ready = initApplication();
+}))();
+
+```
+
+## pref.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/pref-pkg/manager.js
+function makePref() {
+	return () => "PREF_OK";
+}
+var init_manager = __esmMin((() => {
+	(globalThis.__events ??= []).push("manager");
+}));
+//#endregion
+//#region node_modules/pref-pkg/facade.js
+var getPref;
+var init_facade = __esmMin((() => {
+	init_manager();
+	getPref = makePref();
+}));
+//#endregion
+export { init_facade as n, getPref as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_facade, t as getPref } from "./pref.js";
+function tag(value) {
+	return `tag:${value}`;
+}
+function boot() {
+	return tag(getPref());
+}
+async function initApplication() {
+	return tag(await getPref());
+}
+__esmMin((() => {
+	//#region first.js
+	(globalThis.__events ??= []).push("first");
+	//#endregion
+	//#region node_modules/pref-pkg/index.js
+	init_facade();
+	//#endregion
+	//#region main.js
+	(globalThis.__events ??= []).push("main");
+	globalThis.__result = boot();
+	globalThis.__ready = initApplication();
+	//#endregion
+}))();
+
+```
+
+### pref.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/pref-pkg/manager.js
+function makePref() {
+	return () => "PREF_OK";
+}
+var init_manager = __esmMin((() => {
+	(globalThis.__events ??= []).push("manager");
+}));
+//#endregion
+//#region node_modules/pref-pkg/facade.js
+var getPref;
+var init_facade = __esmMin((() => {
+	init_manager();
+	getPref = makePref();
+}));
+//#endregion
+export { init_facade as n, getPref as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

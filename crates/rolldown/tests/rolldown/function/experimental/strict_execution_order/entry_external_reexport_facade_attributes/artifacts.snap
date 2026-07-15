@@ -1,0 +1,85 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_reader } from "./reader.js";
+export * from "external" with { type: "json" };
+__esmMin((() => {
+	//#region setup.js
+	globalThis.setupValue = "ready";
+	//#endregion
+	//#region main.js
+	init_reader();
+	//#endregion
+}))();
+
+```
+
+## reader.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region reader.js
+var init_reader = __esmMin((() => {
+	console.log(globalThis.setupValue);
+}));
+//#endregion
+export { init_reader as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_reader } from "./reader.js";
+export * from "external" with { type: "json" };
+//#region setup.js
+var init_setup = __esmMin((() => {
+	globalThis.setupValue = "ready";
+}));
+//#endregion
+__esmMin((() => {
+	init_setup();
+	init_reader();
+}))();
+
+```
+
+### reader.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region reader.js
+var init_reader = __esmMin((() => {
+	console.log(globalThis.setupValue);
+}));
+//#endregion
+export { init_reader as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

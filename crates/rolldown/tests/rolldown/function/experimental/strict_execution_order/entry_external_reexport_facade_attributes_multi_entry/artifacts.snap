@@ -1,0 +1,104 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as init_a } from "./shared.js";
+export * from "external";
+init_a();
+
+```
+
+## b.js
+
+```js
+import { t as init_b } from "./shared.js";
+export * from "external";
+init_b();
+
+```
+
+## shared.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region setup.js
+var init_setup = __esmMin((() => {
+	globalThis.setupValue = "ready";
+}));
+//#endregion
+//#region reader.js
+var init_reader = __esmMin((() => {
+	console.log(globalThis.setupValue);
+}));
+//#endregion
+//#region a.js
+var init_a = __esmMin((() => {
+	init_setup();
+	init_reader();
+}));
+//#endregion
+//#region b.js
+var init_b = __esmMin((() => {
+	init_setup();
+	init_reader();
+}));
+//#endregion
+export { init_a as n, init_b as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### a.js
+
+```js
+import { n as init_a } from "./shared.js";
+export * from "external";
+init_a();
+
+```
+
+### b.js
+
+```js
+import { t as init_b } from "./shared.js";
+export * from "external";
+init_b();
+
+```
+
+### shared.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region setup.js
+var init_setup = __esmMin((() => {
+	globalThis.setupValue = "ready";
+}));
+//#endregion
+//#region reader.js
+var init_reader = __esmMin((() => {
+	console.log(globalThis.setupValue);
+}));
+//#endregion
+//#region a.js
+var init_a = __esmMin((() => {
+	init_setup();
+	init_reader();
+}));
+//#endregion
+//#region b.js
+var init_b = __esmMin((() => {
+	init_setup();
+	init_reader();
+}));
+//#endregion
+export { init_a as n, init_b as t };
+
+```

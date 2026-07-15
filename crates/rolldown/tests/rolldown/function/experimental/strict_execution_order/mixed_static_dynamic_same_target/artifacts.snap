@@ -1,0 +1,75 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] dep-b.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep-a.js
+var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const sideEffect = {};
+	globalThis.sideEffect = sideEffect;
+	module.exports = sideEffect;
+}));
+//#endregion
+var dep_b_exports = /* @__PURE__ */ __exportAll({});
+__esmMin((() => {
+	//#region dep-b.js
+	sideEffect.touched = true;
+	//#endregion
+	//#region main.js
+	require_dep_a();
+	Promise.resolve().then(() => (init_dep_b(), dep_b_exports));
+	//#endregion
+}))();
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] dep-b.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep-a.js
+var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const sideEffect = {};
+	globalThis.sideEffect = sideEffect;
+	module.exports = sideEffect;
+}));
+//#endregion
+//#region dep-b.js
+var dep_b_exports = /* @__PURE__ */ __exportAll({});
+var init_dep_b = __esmMin((() => {
+	sideEffect.touched = true;
+}));
+//#endregion
+__esmMin((() => {
+	require_dep_a();
+	init_dep_b();
+	Promise.resolve().then(() => (init_dep_b(), dep_b_exports));
+}))();
+
+```

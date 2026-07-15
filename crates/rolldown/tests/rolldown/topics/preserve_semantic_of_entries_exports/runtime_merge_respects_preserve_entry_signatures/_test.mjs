@@ -2,7 +2,7 @@ const require = (await import('node:module')).createRequire(import.meta.url);
 const assert = require('node:assert');
 
 // Variants cover strict/allow-extension in both wrap-all and on-demand modes.
-const variant = globalThis.__configName ?? 'strict';
+const variant = globalThis.__configName;
 
 const lib = require('./dist/lib.js');
 assert.strictEqual(lib.foo, 'foo_value');
@@ -14,7 +14,7 @@ assert.strictEqual(main.bar, 42);
 
 const runtimeHelpers = ['__esmMin', '__esm', '__toESM', '__commonJSMin'];
 
-if (variant === 'allow-extension') {
+if (variant === 'allow-extension-wrap-all') {
   // Keep the original positive control: this layout has a single valid runtime host, so allowing
   // signature extensions should merge the runtime into lib and expose at least one helper.
   assert.ok(

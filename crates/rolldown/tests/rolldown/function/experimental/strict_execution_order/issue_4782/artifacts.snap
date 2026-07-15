@@ -13,20 +13,18 @@ var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sideEffect = {};
 	module.exports = sideEffect;
 }));
-//#endregion
-//#region dep-b.js
-var init_dep_b = __esmMin((() => {
-	sideEffect.touched = true;
-}));
-//#endregion
 __esmMin((() => {
+	//#region dep-b.js
+	sideEffect.touched = true;
+	//#endregion
+	//#region main.js
 	require_dep_a();
-	init_dep_b();
+	//#endregion
 }))();
 
 ```
 
-# Variant: [on_demand_wrapping: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 
@@ -40,13 +38,15 @@ var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sideEffect = {};
 	module.exports = sideEffect;
 }));
-__esmMin((() => {
-	//#region dep-b.js
+//#endregion
+//#region dep-b.js
+var init_dep_b = __esmMin((() => {
 	sideEffect.touched = true;
-	//#endregion
-	//#region main.js
+}));
+//#endregion
+__esmMin((() => {
 	require_dep_a();
-	//#endregion
+	init_dep_b();
 }))();
 
 ```

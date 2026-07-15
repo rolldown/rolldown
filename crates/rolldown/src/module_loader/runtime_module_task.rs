@@ -169,6 +169,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         importers: FxIndexSet::default(),
         importers_idx: FxIndexSet::default(),
         dynamic_importers: FxIndexSet::default(),
+        dynamic_importers_idx: FxIndexSet::default(),
         imported_ids: FxIndexSet::default(),
         dynamically_imported_ids: FxIndexSet::default(),
         side_effects: determined_side_effects,

@@ -116,6 +116,8 @@ pub struct EcmaView {
   pub importers_idx: FxIndexSet<ModuleIdx>,
   // the ids of all modules that import this module via dynamic import()
   pub dynamic_importers: FxIndexSet<ModuleId>,
+  // the idx of all modules that import this module via dynamic import()
+  pub dynamic_importers_idx: FxIndexSet<ModuleIdx>,
   // the module ids statically imported by this module
   pub imported_ids: FxIndexSet<ModuleId>,
   // the module ids imported by this module via dynamic import()
@@ -152,12 +154,24 @@ impl EcmaView {
     self.importers.clear();
     self.importers_idx.clear();
     self.dynamic_importers.clear();
+    self.dynamic_importers_idx.clear();
     for record in records {
       if record.kind.is_static() {
         self.importers.insert(record.importer_path.clone());
         self.importers_idx.insert(record.importer_idx);
       } else {
         self.dynamic_importers.insert(record.importer_path.clone());
+        // Only real `import()` edges join the walkable dynamic-importer set; `HotAccept`
+        // and other non-static records are not import edges. Lazy-compilation proxy
+        // importers (`?rolldown-lazy=1`) are an internal artifact — excluding them keeps
+        // the server's superset walk from bubbling through the proxy chain
+        // (`foo -> proxy -> app`), which patch generation is not set up for. Lazy
+        // dynamic-import HMR is a separate follow-up; until then the walk stops at the
+        // lazy entry, and a tab whose own walk crosses the proxy chain reloads itself
+        // via its missing-factory / no-boundary paths, exactly as before.
+        if record.kind.is_dynamic() && !record.importer_path.as_str().contains("?rolldown-lazy=1") {
+          self.dynamic_importers_idx.insert(record.importer_idx);
+        }
       }
     }
   }

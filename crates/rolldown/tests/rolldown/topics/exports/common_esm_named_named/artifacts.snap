@@ -6,6 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#endregion
+__esmMin((() => {
+	node_assert.default.strictEqual(42, 42);
+}))();
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_shared = require("./shared.js");
 let node_assert = require("node:assert");
@@ -18,7 +35,7 @@ require_rolldown_runtime.__esmMin((() => {
 
 ```
 
-## rolldown-runtime.js
+### rolldown-runtime.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
@@ -37,7 +54,7 @@ Object.defineProperty(exports, "__toESM", {
 
 ```
 
-## shared.js
+### shared.js
 
 ```js
 //#region shared.js
@@ -49,22 +66,5 @@ Object.defineProperty(exports, "init_shared", {
 		return init_shared;
 	}
 });
-
-```
-
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
-
-## Assets
-
-### main.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
-//#endregion
-__esmMin((() => {
-	node_assert.default.strictEqual(42, 42);
-}))();
 
 ```

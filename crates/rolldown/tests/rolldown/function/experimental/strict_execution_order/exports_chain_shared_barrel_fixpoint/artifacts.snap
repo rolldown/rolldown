@@ -7,6 +7,37 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+var inner_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+
+var foo;
+var init_inner = __esmMin((() => {
+//#region leaf.js
+	;
+	foo = 1;
+
+//#endregion
+}));
+
+
+var init_main = __esmMin((() => {
+//#region outer.js
+	init_inner();
+
+//#endregion
+}));
+
+init_main();
+export { inner_exports as star };
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
 var init_dep = __esmMin((() => {}));
 
@@ -39,37 +70,6 @@ var init_main = __esmMin((() => {
 }));
 
 //#endregion
-init_main();
-export { inner_exports as star };
-```
-
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
-
-## Assets
-
-### main.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-var inner_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
-
-var foo;
-var init_inner = __esmMin((() => {
-//#region leaf.js
-	;
-	foo = 1;
-
-//#endregion
-}));
-
-
-var init_main = __esmMin((() => {
-//#region outer.js
-	init_inner();
-
-//#endregion
-}));
-
 init_main();
 export { inner_exports as star };
 ```

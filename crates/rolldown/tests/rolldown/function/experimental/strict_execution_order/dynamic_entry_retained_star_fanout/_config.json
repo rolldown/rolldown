@@ -1,9 +1,9 @@
 {
-  "snapshot": false,
   "expectExecutionFailure": {
     "reason": "Expected to fail until rolldown#10104 is applied.",
     "outputContains": ["dynamic retained-star fanout must not initialize common-a before page-b"]
   },
+  "configName": "on-demand",
   "config": {
     "external": ["node:assert"],
     "strictExecutionOrder": true,

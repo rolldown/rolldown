@@ -7,6 +7,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"a.js",
+		"b.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[],
+		[0, 1]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[]
+	]
+});
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => "a" });
 const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
@@ -66,10 +84,57 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 # HMR Step 2
 
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["a.js","b.js","main.js"],localCount:3,edges:[[],[],[0,1]],dynamicEdges:[[],[],[]]});
+//#region a.js
+__rolldown_runtime__.registerFactory("a.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => a });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_a = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = "a-edited";
+		hot_a.accept();
+	} finally {}
+}));
+
+//#endregion
+//#region b.js
+__rolldown_runtime__.registerFactory("b.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ b: () => b });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_b = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const b = "b-fixed";
+	} finally {}
+}));
+
+//#endregion
+//#region main.js
+__rolldown_runtime__.registerFactory("main.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("a.js");
+		__rolldown_runtime__.initModule("b.js");
+		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		var import_a_20 = __rolldown_runtime__.loadExports("a.js");
+		var import_b_21 = __rolldown_runtime__.loadExports("b.js");
+	} finally {}
+}));
+
+//#endregion
+```
+
 ## Meta
 
-- update type: full-reload
-- reason: no hmr boundary found for module `main.js`
+- update type: patch
+
+### Changed Ids
+
+- b.js
+- a.js
 
 ## Build Output
 
@@ -79,6 +144,24 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"a.js",
+		"b.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[],
+		[0, 1]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[]
+	]
+});
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
@@ -105,8 +188,9 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
+__rolldown_runtime__.registerGraph({ids:["a.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
 //#region a.js
-var init_a_0 = __rolldown_runtime__.createEsmInitializer("a.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("a.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => a });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -117,17 +201,15 @@ var init_a_0 = __rolldown_runtime__.createEsmInitializer("a.js", (function(__rol
 }));
 
 //#endregion
-init_a_0()
-__rolldown_runtime__.applyUpdates([['a.js', 'a.js']]);
 ```
 
 ## Meta
 
 - update type: patch
 
-### Hmr Boundaries
+### Changed Ids
 
-- boundary: a.js, accepted_via: a.js
+- a.js
 
 ## Build Output
 
@@ -137,6 +219,24 @@ __rolldown_runtime__.applyUpdates([['a.js', 'a.js']]);
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"a.js",
+		"b.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[],
+		[0, 1]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[]
+	]
+});
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");

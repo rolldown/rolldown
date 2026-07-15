@@ -32,6 +32,7 @@ async function clickAndExpectCaught() {
 describe('lazy-compilation: lazy-init-error (try/catch)', () => {
   test('init error is catchable on first compile and after a refresh', async () => {
     await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
+    await waitForBuildStable();
 
     // 1. Cold: first compile.
     await clickAndExpectCaught();

@@ -142,6 +142,7 @@ pub async fn create_ecma_view(
     importers: FxIndexSet::default(),
     importers_idx: FxIndexSet::default(),
     dynamic_importers: FxIndexSet::default(),
+    dynamic_importers_idx: FxIndexSet::default(),
     imported_ids: FxIndexSet::default(),
     dynamically_imported_ids: FxIndexSet::default(),
     side_effects,

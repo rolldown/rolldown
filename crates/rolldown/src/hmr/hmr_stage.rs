@@ -9,8 +9,8 @@ use std::{
 use arcstr::ArcStr;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
-  ClientHmrInput, ClientHmrUpdate, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, ImportKind,
-  Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
+  ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput, HmrPatch, HmrStampTable, HmrUpdate,
+  ImportKind, Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_ecmascript_utils::AstFactory;
@@ -76,85 +76,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     Self { input }
   }
 
-  /// Compute hmr update caused by `import.meta.hot.invalidate()`.
-  pub async fn compute_update_for_calling_invalidate(
-    &mut self,
-    // The parameter is the stable module ID of the module that called `import.meta.hot.invalidate()`.
-    invalidate_caller: String,
-    first_invalidated_by: Option<String>,
-    client_id: &str,
-    executed_modules: &FxHashSet<String>,
-  ) -> BuildResult<HmrUpdate> {
-    tracing::debug!(
-      target: "hmr",
-      "compute_update_for_calling_invalidate: caller: {:?}, first_invalidated_by: {:?}",
-      invalidate_caller,
-      first_invalidated_by,
-    );
-    // Look up by stable_id (matches what client sends from createModuleHotContext)
-    let Some(module_idx) =
-      self.cache.module_idx_by_stable_id.get(invalidate_caller.as_str()).copied()
-    else {
-      // The client references a module the current graph does not know,
-      // e.g. its bundle predates a failed full build that reset the cache.
-      return Ok(HmrUpdate::FullReload { reason: format!("unknown module `{invalidate_caller}`") });
-    };
-
-    let caller = self.module_table().modules[module_idx].as_normal().unwrap();
-
-    // Use helper to check if module is executed (supports special testing client ID)
-    let temp_client = ClientHmrInput { client_id, executed_modules };
-    if !temp_client.is_module_executed(&caller.stable_id) {
-      // If this module is not registered, we simply ignore it.
-      return Ok(HmrUpdate::Noop);
-    }
-
-    // Only self accepting modules are allowed to call `import.meta.hot.invalidate()`.
-    if !caller.is_hmr_self_accepting_module() {
-      return Ok(HmrUpdate::FullReload {
-        reason: "not self accepting for this invalidation".to_string(),
-      });
-    }
-
-    // Calling `import.meta.hot.invalidate()` means this module can't handle the update and wants to pass it to its importers.
-    // If there are no importers, the update can't be handled at all, which requires a full reload.
-    if caller.importers_idx.is_empty() {
-      return Ok(HmrUpdate::FullReload {
-        reason: format!(
-          "There are no importers to handle `import.meta.hot.invalidate()` called by `{}`",
-          caller.stable_id
-        ),
-      });
-    }
-
-    // Stale modules don't include the caller itself, because the caller's latest content/code has already been executed on the client side.
-    // Since it was already executed, it was able to determine that it couldn't handle the update and needed to call `import.meta.hot.invalidate()`.
-    //
-    // We can safely batch these importers into one update, because we know no file edits have occurred and the HMR boundary relationships
-    // remain unchanged.
-    let mut stale_modules = caller.importers_idx.clone();
-    stale_modules.swap_remove(&caller.idx); // ignore self-imports
-
-    // Workaround: Create a temporary single-client array to call compute_hmr_update
-    let temp_client = ClientHmrInput { client_id, executed_modules };
-
-    let mut results = self
-      .compute_hmr_update(
-        &stale_modules,
-        &FxIndexSet::default(),
-        first_invalidated_by,
-        &[temp_client],
-      )
-      .await?;
-
-    // Extract the single result
-    Ok(results.pop().unwrap().update)
-  }
-
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &FxIndexMap<String, WatcherChangeKind>,
     clients: &[ClientHmrInput<'_>],
+    stamp_table: &mut HmrStampTable,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     tracing::trace!(
       "[HmrStage] starts computing HMR updates\n - changed_file_paths: {:#?}\n - clients: {:#?}",
@@ -207,49 +133,19 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       );
     }
 
-    self.compute_hmr_update(&changed_modules, &changed_modules, None, clients).await
-  }
-
-  async fn compute_hmr_update(
-    &mut self,
-    stale_modules: &FxIndexSet<ModuleIdx>,
-    changed_modules: &FxIndexSet<ModuleIdx>,
-    first_invalidated_by: Option<String>,
-    clients: &[ClientHmrInput<'_>],
-  ) -> BuildResult<Vec<ClientHmrUpdate>> {
     // Files re-queued by an earlier failed scan (`pending_rescans`) get
     // re-fetched and merged by this update as well. Treat them as changed so
     // their recovered content reaches the clients' patches; otherwise only
     // the server-side graph would learn about their edits.
-    let mut stale_modules = stale_modules.clone();
-    let mut changed_modules = changed_modules.clone();
     for resolved_id in &self.cache.pending_rescans {
       if let Some(state) = self.cache.module_id_to_idx.get(&resolved_id.id) {
-        stale_modules.insert(state.idx());
         changed_modules.insert(state.idx());
       }
     }
 
-    // 1. Compute prerequisites for each client
-    let mut clients_prerequisites = Vec::with_capacity(clients.len());
-    for client in clients {
-      let prerequisites =
-        self.compute_out_hmr_prerequisites(&stale_modules, first_invalidated_by.as_deref(), client);
-
-      tracing::trace!(
-        "[HmrStage] computed prerequisites for client {}\n - require_full_reload: {}\n - boundaries: {:#?}",
-        client.client_id,
-        prerequisites.require_full_reload,
-        prerequisites
-          .boundaries
-          .iter()
-          .map(|boundary| self.module_table().modules[boundary.boundary].stable_id())
-          .collect::<Vec<_>>(),
-      );
-      clients_prerequisites.push((client.client_id.to_string(), prerequisites));
-    }
-
-    // 2. Do ONE module refetch and cache merge (if needed)
+    // 1. Do ONE module refetch and cache merge — the update-superset walk (which
+    // selects the factories to ship) runs on the post-rebuild table; boundary
+    // decisions belong to the client's own walk.
     let new_added_modules = if changed_modules.is_empty() {
       FxIndexSet::default()
     } else {
@@ -303,47 +199,155 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       new_added_modules
     };
 
-    // 3. For each client, render their HMR patch or return full reload
-    let mut client_updates = Vec::with_capacity(clients.len());
-    for (client_id, prerequisites) in clients_prerequisites {
-      let update = if prerequisites.require_full_reload {
-        HmrUpdate::FullReload {
-          reason: prerequisites.full_reload_reason.unwrap_or_else(|| "Unknown reason".to_string()),
-        }
-      } else {
-        self.render_hmr_patch_from_prerequisites(prerequisites, &new_added_modules).await?
-      };
+    // 2. Stamp the rebuild: `latest[m] = rebuild_seq` for every changed or newly added
+    // module — the versioned ship map's staleness source.
+    let rebuild_seq = stamp_table.begin_rebuild();
+    for module_idx in changed_modules.iter().chain(new_added_modules.iter()) {
+      if let Module::Normal(module) = &self.module_table().modules[*module_idx] {
+        stamp_table.stamp(module.stable_id.as_arc_str(), rebuild_seq);
+      }
+    }
 
-      client_updates.push(ClientHmrUpdate { client_id, update });
+    // 3. Collect the factories to ship. The client's walk may remove modules from its cache and re-run
+    // anything up the changed ids' importer chains, and a re-run without a resident
+    // factory forces a reload — so the server must ship a SUPERSET of any client's
+    // possible update set, over-approximated on static truth (it never sees runtime
+    // acceptance). The ship map below subtracts what each tab already holds.
+    let changed_ids = changed_modules
+      .iter()
+      .filter_map(|module_idx| {
+        self.module_table().modules[*module_idx]
+          .as_normal()
+          .map(|module| module.stable_id.to_string())
+      })
+      .collect::<Vec<_>>();
+
+    let mut affected = self.collect_client_update_superset(&changed_modules);
+    affected.extend(new_added_modules.iter().copied());
+    affected.retain(|idx| self.module_table().modules[*idx].is_normal());
+
+    // Client-invariant per-module data, resolved once instead of per client:
+    // `(idx, stable id, latest stamp)` for every affected module.
+    let affected_with_stamps = affected
+      .iter()
+      .map(|module_idx| {
+        let stable_id = self.module_table().modules[*module_idx].stable_id().as_str();
+        (*module_idx, stable_id, stamp_table.render_time_stamp(stable_id))
+      })
+      .collect::<Vec<_>>();
+
+    // 4. Per client: `need[C] = (affected ∖ shipped[C]) ∪ stale sweep`. The sweep
+    // covers everything the client holds, not just `affected` — a parked factory can
+    // go stale behind a skipped patch in either graph direction. It iterates the
+    // stamp table (modules ever changed this session) rather than `shipped[C]`
+    // (modules ever delivered): only stamped modules can be stale, and `latest`
+    // stays far smaller than a tab's full delivery record.
+    let mut client_updates = Vec::with_capacity(clients.len());
+    for client in clients {
+      let mut carried = FxIndexSet::default();
+      for (module_idx, stable_id, latest_stamp) in &affected_with_stamps {
+        match client.shipped.get(*stable_id) {
+          None => {
+            carried.insert(*module_idx);
+          }
+          Some(stamp) => {
+            if *latest_stamp > *stamp {
+              carried.insert(*module_idx);
+            }
+          }
+        }
+      }
+      for (stable_id, latest_stamp) in stamp_table.iter_latest() {
+        if client.shipped.get(stable_id.as_str()).is_some_and(|stamp| latest_stamp > *stamp) {
+          if let Some(module_idx) =
+            self.cache.module_idx_by_stable_id.get(stable_id.as_str()).copied()
+          {
+            if self.module_table().modules[module_idx].is_normal() {
+              carried.insert(module_idx);
+            }
+          }
+        }
+      }
+
+      let update = self.render_hmr_patch(carried, changed_ids.clone(), stamp_table).await?;
+      client_updates.push(ClientHmrUpdate { client_id: client.client_id.to_string(), update });
     }
 
     Ok(client_updates)
   }
 
-  /// Compile a lazy entry module and return compiled code.
+  /// Collect the superset of modules any client's walk may re-run for these changes:
+  /// pure reachability over the importer graph (static ∪ dynamic edges), stopping at
+  /// statically self-accepting modules and at accepting importer edges.
+  fn collect_client_update_superset(
+    &self,
+    changed_modules: &FxIndexSet<ModuleIdx>,
+  ) -> FxIndexSet<ModuleIdx> {
+    let mut affected = FxIndexSet::default();
+    let mut stack: Vec<ModuleIdx> = changed_modules.iter().copied().collect();
+    while let Some(module_idx) = stack.pop() {
+      if !affected.insert(module_idx) {
+        // Already walked via another path (also breaks cycles).
+        continue;
+      }
+
+      let Module::Normal(module) = &self.module_table().modules[module_idx] else {
+        // Non-normal modules can't be re-run; they are filtered out of the patch later.
+        continue;
+      };
+
+      if module.is_hmr_self_accepting_module() {
+        tracing::trace!(
+          "[HmrStage] module {} is self-accepting, stop propagation here",
+          module.stable_id,
+        );
+        continue;
+      }
+
+      // Static and dynamic `import()` importers are walked the same way — parity with
+      // Vite (`node.importers`) and webpack (`module.parents`), neither of which
+      // distinguishes the edge kind. Duplicate pushes are fine: the `affected.insert`
+      // check at pop time dedups them.
+      for importer_idx in
+        module.importers_idx.iter().chain(module.dynamic_importers_idx.iter()).copied()
+      {
+        let Module::Normal(importer) = &self.module_table().modules[importer_idx] else {
+          continue;
+        };
+        if importer.can_accept_hmr_dependency_for(&module.id) {
+          // Edge boundary: the accepting importer is not re-run, so it joins no set.
+          continue;
+        }
+        stack.push(importer_idx);
+      }
+    }
+    // Deterministic order keeps snapshots stable: one sort of the final set replaces a
+    // per-node importer sort (an alloc plus O(deg log deg) comparisons per visit).
+    affected.sort_unstable_by(|a, b| {
+      self.module_table().modules[*a].stable_id().cmp(self.module_table().modules[*b].stable_id())
+    });
+    affected
+  }
+
+  /// Compile a lazy entry module and return compiled code plus the pending-payload
+  /// entry (`carried`) the delivery-time ship-map write consumes.
   ///
-  /// This is called when a dynamically imported module is first requested at runtime.
-  /// The module was previously stubbed with a proxy, and now we need to compile the
-  /// actual module and its dependencies.
-  ///
-  /// # Arguments
-  /// * `module_id` - The proxy module ID (e.g., "/path/to/module.js?rolldown-lazy=1")
-  /// * `client_id` - The client ID requesting this compilation
-  /// * `executed_modules` - Set of module IDs already executed on the client
-  ///
-  /// # Returns
-  /// The compiled JavaScript code as a string
-  ///
-  /// # Errors
-  /// - If the module is not found in the cache (should be present from initial build)
-  /// - If the partial scan fails
-  /// - If code generation fails
+  /// A lazy chunk is pure first-evaluation demand: nothing already evaluated ever
+  /// re-runs, so factory selection subtracts BOTH per-client records — the ship map
+  /// (`shipped[C]`, factory resident) and the top-level-evaluated map (exports live from
+  /// entry-chunk execution; `initModule` returns them without a factory). Both are
+  /// server-derived; selection never reads client-reported runtime state. Contrast
+  /// with HMR patches, whose affected set must re-run and therefore subtracts the
+  /// ship map only. The ship map itself is written only when the serving middleware
+  /// observes the response complete.
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: &str,
     _client_id: &str,
-    executed_modules: &FxHashSet<String>,
-  ) -> BuildResult<String> {
+    shipped: &FxHashMap<ArcStr, u32>,
+    evaluated: &FxHashMap<ArcStr, u32>,
+    stamp_table: &HmrStampTable,
+  ) -> BuildResult<HmrLazyChunkOutput> {
     tracing::debug!(
       target: "hmr",
       "compile_lazy_entry: module_id: {:?}",
@@ -413,14 +417,18 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     let options = Arc::clone(&self.options);
     self.cache.update_defer_sync_data(&options).await?;
 
-    // Collect all sync dependencies, stopping at already-executed modules.
-    // This ensures each client gets exactly the modules they need, regardless of what other clients have loaded (session-scoped cache vs client-scoped state).
-    // TODO: Race condition might exist if client sends multiple /lazy requests before reporting executed modules via WebSocket. Client runtime should handle duplicates.
+    // Collect all sync dependencies, stopping at modules whose current copy this client
+    // already holds — factory resident per the ship map, or exports live per the
+    // top-level-evaluated map. Overlapping concurrent lazy compiles both see an
+    // unmarked ship map and re-ship shared factories — duplicate idempotent bytes, never
+    // a missing factory.
     let mut modules_to_be_updated = FxIndexSet::default();
     self.collect_sync_dependencies_for_client(
       entry_module_idx,
       &mut modules_to_be_updated,
-      executed_modules,
+      shipped,
+      evaluated,
+      stamp_table,
     );
 
     // Remove external modules - no way to "compile" them
@@ -429,22 +437,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // Sort for stable output
     modules_to_be_updated
       .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id());
-
-    // Generate init function names
-    let module_idx_to_init_fn_name = modules_to_be_updated
-      .iter()
-      .enumerate()
-      .map(|(index, module_idx)| {
-        let Module::Normal(module) = &self.module_table().modules[*module_idx] else {
-          unreachable!(
-            "External modules should be removed before. But got {:?}",
-            self.module_table().modules[*module_idx].id()
-          );
-        };
-        let prefix = if module.exports_kind.is_commonjs() { "require" } else { "init" };
-        (*module_idx, format!("{}_{}_{}", prefix, module.repr_name, index))
-      })
-      .collect::<FxHashMap<_, _>>();
 
     // Prepare module render inputs
     let index_ecma_ast = self.index_ecma_ast();
@@ -470,6 +462,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
     // Render all modules
     let mut source_joiner = SourceJoiner::default();
+    // Rows first — includes the proxy-id row (proxy → real entry), which replaces the
+    // stub's edgeless row and commits the swap as data.
+    if let Some(prelude) = crate::hmr::module_graph_delta::render_register_graph_source(
+      self.module_table(),
+      modules_to_be_updated.iter().copied(),
+    ) {
+      source_joiner.append_source(prelude);
+    }
     let rendered_sources = module_render_inputs
       .into_par_iter()
       .enumerate()
@@ -498,11 +498,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
             import_bindings: FxHashMap::default(),
             module: affected_module,
             exports: oxc::allocator::Vec::new_in(&fields.allocator),
-            affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
             use_pife_for_module_wrappers,
-            // Lazy chunk: opt the runtime into deduping the module body so two
-            // concurrent lazy bundles for the same module don't double-execute it.
-            dedup_module_initializer: true,
             dependencies: FxIndexSet::default(),
             imports: FxHashSet::default(),
             generated_static_import_infos: FxHashMap::default(),
@@ -547,10 +543,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       source_joiner.append_source_dyn(source);
     }
 
-    // Call the init function for the entry module automatically
-    // This is NOT HMR boundary handling - just executing the lazy-loaded module
-    let entry_init_fn_name = &module_idx_to_init_fn_name[&entry_module_idx];
-    source_joiner.append_source(format!("{entry_init_fn_name}()"));
+    // A lazy chunk is delivery + execute-entry — no walk, no cache removals. The tail is the
+    // one uniform re-execution gate: the stub removed the proxy id from the cache, so this misses the
+    // registry and runs the fetched-template factory.
+    let entry_stable_id = self.module_table().modules[entry_module_idx].stable_id().as_str();
+    source_joiner.append_source(format!(
+      "__rolldown_runtime__.initModule({})",
+      json_escape_simd::escape(entry_stable_id)
+    ));
 
     let (mut code, mut map) = source_joiner.join();
 
@@ -573,45 +573,33 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .await?;
     }
 
-    Ok(code)
+    let carried = modules_to_be_updated
+      .iter()
+      .map(|module_idx| {
+        let stable_id = self.module_table().modules[*module_idx].stable_id();
+        (stable_id.as_arc_str().clone(), stamp_table.render_time_stamp(stable_id.as_str()))
+      })
+      .collect();
+
+    Ok(HmrLazyChunkOutput { code, filename, carried })
   }
 
-  async fn render_hmr_patch_from_prerequisites(
+  async fn render_hmr_patch(
     &self,
-    hmr_prerequisites: HmrPrerequisites,
-    new_added_modules: &FxIndexSet<ModuleIdx>,
+    mut carried_modules: FxIndexSet<ModuleIdx>,
+    changed_ids: Vec<String>,
+    stamp_table: &HmrStampTable,
   ) -> BuildResult<HmrUpdate> {
-    let mut modules_to_be_updated = hmr_prerequisites.modules_to_be_updated;
+    // Note: the carried set might include external modules. There's no way to "update" them, so we need to remove them.
+    carried_modules.retain(|idx| self.module_table().modules[*idx].is_normal());
 
-    // Extend with newly added modules from refetch
-    modules_to_be_updated.extend(new_added_modules.iter().copied());
-    // Note: New added modules might include external modules. There's no way to "update" them, so we need to remove them.
-    modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
-
-    // Sorting `modules_to_be_updated` is not strictly necessary, but it:
+    // Sorting `carried_modules` is not strictly necessary, but it:
     // - Makes the snapshot more stable when we change logic that affects the order of modules.
-    modules_to_be_updated
+    carried_modules
       .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id().as_str());
 
-    let module_idx_to_init_fn_name = modules_to_be_updated
-      .iter()
-      .enumerate()
-      .map(|(index, module_idx)| {
-        let Module::Normal(module) = &self.module_table().modules[*module_idx] else {
-          unreachable!(
-            "External modules should be removed before. But got {:?}",
-            self.module_table().modules[*module_idx].id().as_str()
-          );
-        };
-        let prefix = if module.exports_kind.is_commonjs() { "require" } else { "init" };
-
-        // We use `index` as a part of the function name to avoid name collision without needing to deconflict.
-        (*module_idx, format!("{}_{}_{}", prefix, module.repr_name, index))
-      })
-      .collect::<FxHashMap<_, _>>();
-
     let index_ecma_ast = self.index_ecma_ast();
-    let module_render_inputs = modules_to_be_updated
+    let module_render_inputs = carried_modules
       .iter()
       .copied()
       .map(|affected_module_idx| {
@@ -632,6 +620,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .collect::<Vec<_>>();
 
     let mut source_joiner = SourceJoiner::default();
+    // The graph-rows manifest is the first source of every payload: pure topology the
+    // client-side walk consumes, landing before any factory registers.
+    if let Some(prelude) = crate::hmr::module_graph_delta::render_register_graph_source(
+      self.module_table(),
+      carried_modules.iter().copied(),
+    ) {
+      source_joiner.append_source(prelude);
+    }
     let rendered_sources = module_render_inputs
       .into_par_iter()
       .enumerate()
@@ -660,9 +656,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
             import_bindings: FxHashMap::default(),
             module: affected_module,
             exports: oxc::allocator::Vec::new_in(&fields.allocator),
-            affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
             use_pife_for_module_wrappers,
-            dedup_module_initializer: false,
             dependencies: FxIndexSet::default(),
             imports: FxHashSet::default(),
             generated_static_import_infos: FxHashMap::default(),
@@ -707,25 +701,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       source_joiner.append_source_dyn(source);
     }
 
-    hmr_prerequisites.boundaries.iter().for_each(|boundary| {
-      let init_fn_name = &module_idx_to_init_fn_name[&boundary.accepted_via];
-      source_joiner.append_source(format!("{init_fn_name}()"));
-    });
-
-    // Use stable module IDs for consistent runtime lookup (in render_hmr_patch_from_prerequisites)
-    source_joiner.append_source(format!(
-      "__rolldown_runtime__.applyUpdates([{}]);",
-      hmr_prerequisites
-        .boundaries
-        .iter()
-        .map(|boundary| {
-          let boundary_mod = &self.module_table().modules[boundary.boundary];
-          let accepted_via = &self.module_table().modules[boundary.accepted_via];
-          format!("['{}', '{}']", boundary_mod.stable_id(), accepted_via.stable_id())
-        })
-        .collect::<Vec<_>>()
-        .join(",")
-    ));
+    // No driver tail: the client walks its own graph, removes from its cache, and re-runs from the
+    // factory map. Importing this patch commits rows and factories, nothing more.
 
     let (mut code, mut map) = source_joiner.join();
 
@@ -750,253 +727,25 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       None
     };
 
-    // Use stable module IDs for hmr_boundaries output
+    let carried = carried_modules
+      .iter()
+      .map(|module_idx| {
+        let stable_id = self.module_table().modules[*module_idx].stable_id();
+        (stable_id.as_arc_str().clone(), stamp_table.render_time_stamp(stable_id.as_str()))
+      })
+      .collect();
+
     Ok(HmrUpdate::Patch(HmrPatch {
       code,
       filename,
       sourcemap_filename: sourcemap_asset.as_ref().map(|asset| asset.filename.to_string()),
       sourcemap: sourcemap_asset.map(|asset| asset.source.try_into_string()).transpose()?,
-      hmr_boundaries: hmr_prerequisites
-        .boundaries
-        .into_iter()
-        .map(|boundary| HmrBoundaryOutput {
-          boundary: self.module_table().modules[boundary.boundary].stable_id().as_arc_str().clone(),
-          accepted_via: self.module_table().modules[boundary.accepted_via]
-            .stable_id()
-            .as_arc_str()
-            .clone(),
-        })
-        .collect(),
+      changed_ids,
+      // The envelope seq is a delivery-layer concern; the dev engine stamps it onto the
+      // patches it actually sends (see `bundling_task`), so this is only a placeholder.
+      seq: 0,
+      carried,
     }))
-  }
-
-  fn propagate_update(
-    &self,
-    module_idx: ModuleIdx,
-    hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
-    propagate_stack: &mut Vec<ModuleIdx>,
-    modules_to_be_updated: &mut FxIndexSet<ModuleIdx>,
-    client: &ClientHmrInput,
-  ) -> PropagateUpdateStatus {
-    modules_to_be_updated.insert(module_idx);
-
-    let Module::Normal(module) = &self.module_table().modules[module_idx] else {
-      // We consider reaching external modules as a boundary.
-      return PropagateUpdateStatus::ReachHmrBoundary;
-    };
-
-    if let Some(circular_start_index) = propagate_stack
-      .iter()
-      .enumerate()
-      .find_map(|(index, each_module_idx)| (module_idx == *each_module_idx).then_some(index))
-    {
-      // Jumping into this branch means we have a circular dependency.
-      // X -> Y means X imports Y. and we have
-      // A -> B -> C -> D(edited)
-      // C -> B
-      // When we reach to C again, the stack contains [D, C, B]
-      let cycle_chain = propagate_stack[circular_start_index..]
-        .iter()
-        .copied()
-        .chain(std::iter::once(module_idx))
-        // Note: our traversal is done by reaching `importers`, so the vec order is opposite to the import order.
-        .rev()
-        .collect::<Vec<_>>();
-
-      return PropagateUpdateStatus::Circular(cycle_chain);
-    }
-
-    if module.is_hmr_self_accepting_module() {
-      tracing::trace!(
-        "[HmrStage] module {} is self-accepting, stop propagation here",
-        module.stable_id,
-      );
-      hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: module_idx });
-      return PropagateUpdateStatus::ReachHmrBoundary;
-    } else if module.importers_idx.is_empty() {
-      // This module is not self-accepting and doesn't have any potential importer that might accept its update
-      return PropagateUpdateStatus::NoBoundary(module_idx);
-    }
-
-    let mut importers_idx = module.importers_idx.iter().copied().collect::<Vec<_>>();
-    // FIXME(hyf0): In practice, the order of importers doesn't matter since we're going to traverse all of them.
-    // However, non-deterministic order causes unstable snapshots.
-    importers_idx
-      .sort_unstable_by_key(|importer_idx| self.module_table().modules[*importer_idx].stable_id());
-
-    for importer_idx in importers_idx {
-      let Module::Normal(importer) = &self.module_table().modules[importer_idx] else {
-        continue;
-      };
-
-      if !client.is_module_executed(&importer.stable_id) {
-        tracing::trace!(
-          "[HmrStage] skip importer module since it's not executed\n - importer: {}, importee: {}, client: {}",
-          self.module_table().modules[importer_idx].stable_id(),
-          module.stable_id.as_ref(),
-          client.client_id,
-        );
-        // If this module is not registered, we simply ignore it.
-        continue;
-      }
-
-      if importer.can_accept_hmr_dependency_for(&module.id) {
-        tracing::trace!(
-          "[HmrStage] importer {} can accept update for dependency {}, stop propagation here",
-          importer.stable_id,
-          module.stable_id,
-        );
-        modules_to_be_updated.insert(module_idx);
-        hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
-        continue;
-      }
-
-      propagate_stack.push(module_idx);
-      let status = self.propagate_update(
-        importer_idx,
-        hmr_boundaries,
-        propagate_stack,
-        modules_to_be_updated,
-        client,
-      );
-      propagate_stack.pop();
-      if !status.is_reach_hmr_boundary() {
-        return status;
-      }
-    }
-
-    PropagateUpdateStatus::ReachHmrBoundary
-  }
-
-  fn compute_out_hmr_prerequisites(
-    &self,
-    stale_modules: &FxIndexSet<ModuleIdx>,
-    first_invalidated_by: Option<&str>,
-    client: &ClientHmrInput,
-  ) -> HmrPrerequisites {
-    tracing::trace!(
-      "[HmrStage] starts to compute_out_hmr_prerequisites\n - client_id: {}, stale_modules: {:#?}, first_invalidated_by: {:?}",
-      client.client_id,
-      stale_modules
-        .iter()
-        .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
-        .collect::<Vec<_>>(),
-      first_invalidated_by,
-    );
-
-    let mut hmr_boundaries = FxIndexSet::default();
-    let mut require_full_reload = false;
-    let mut full_reload_reason = None;
-    let mut modules_to_be_updated = FxIndexSet::default();
-
-    for stale_module in stale_modules.iter().copied() {
-      if require_full_reload {
-        break;
-      }
-      let mut boundaries = FxIndexSet::default();
-
-      if !client.is_module_executed(self.module_table().modules[stale_module].stable_id()) {
-        tracing::trace!(
-          "[HmrStage] skip stale module {:?} for client {} since it's not executed",
-          self.module_table().modules[stale_module].stable_id(),
-          client.client_id,
-        );
-        // If this module is not registered, we simply ignore it.
-        continue;
-      }
-      let propagate_update_status = self.propagate_update(
-        stale_module,
-        &mut boundaries,
-        &mut vec![],
-        &mut modules_to_be_updated,
-        client,
-      );
-
-      match propagate_update_status {
-        PropagateUpdateStatus::Circular(cycle_chain) => {
-          tracing::trace!(
-            "[HmrStage] detected {} propagate into a circular import chain\n - chain: {:#?}",
-            self.module_table().modules[stale_module].stable_id(),
-            cycle_chain
-              .iter()
-              .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
-              .collect::<Vec<_>>(),
-          );
-          require_full_reload = true;
-          full_reload_reason = Some(format!(
-            "circular import chain: {}",
-            cycle_chain
-              .iter()
-              .map(|module_idx| self.module_table().modules[*module_idx].stable_id().as_str())
-              .collect::<Vec<_>>()
-              .join(" -> ")
-          ));
-          break;
-        }
-        PropagateUpdateStatus::NoBoundary(idx) => {
-          tracing::trace!(
-            "[HmrStage] detected {} propagate update to {} which has no hmr boundary",
-            self.module_table().modules[stale_module].stable_id(),
-            self.module_table().modules[idx].stable_id(),
-          );
-          require_full_reload = true;
-          let module = &self.module_table().modules[idx];
-          full_reload_reason =
-            Some(format!("no hmr boundary found for module `{}`", module.stable_id()));
-          break;
-        }
-        PropagateUpdateStatus::ReachHmrBoundary => {
-          tracing::trace!(
-            "[HmrStage] detected {} propagate update with hmr boundaries",
-            self.module_table().modules[stale_module].stable_id(),
-          );
-        }
-      }
-
-      // If import.meta.hot.invalidate was already called on that module for the same update,
-      // it means any importer of that module can't hot update. We should fall back to full reload.
-      if let Some(first_invalidated_by) = first_invalidated_by.as_ref() {
-        if boundaries.iter().any(|boundary| {
-          self.module_table().modules[boundary.accepted_via].stable_id().as_str()
-            == *first_invalidated_by
-        }) {
-          require_full_reload = true;
-          full_reload_reason = Some(format!(
-            "update propagated back to `{first_invalidated_by}`, which already called `import.meta.hot.invalidate()`"
-          ));
-          continue;
-        }
-      }
-
-      hmr_boundaries.extend(boundaries);
-    }
-
-    HmrPrerequisites {
-      boundaries: hmr_boundaries,
-      modules_to_be_updated,
-      require_full_reload,
-      full_reload_reason,
-    }
-  }
-}
-
-#[derive(Debug)]
-struct HmrPrerequisites {
-  boundaries: FxIndexSet<HmrBoundary>,
-  modules_to_be_updated: FxIndexSet<ModuleIdx>,
-  require_full_reload: bool,
-  full_reload_reason: Option<String>,
-}
-
-enum PropagateUpdateStatus {
-  Circular(Vec<ModuleIdx>), // The circular dependency chain
-  ReachHmrBoundary,
-  NoBoundary(ModuleIdx),
-}
-
-impl PropagateUpdateStatus {
-  pub fn is_reach_hmr_boundary(&self) -> bool {
-    matches!(self, Self::ReachHmrBoundary)
   }
 }
 
@@ -1010,7 +759,9 @@ impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
     &self,
     proxy_entry_idx: ModuleIdx,
     result: &mut FxIndexSet<ModuleIdx>,
-    executed_modules: &FxHashSet<String>,
+    shipped: &FxHashMap<ArcStr, u32>,
+    evaluated: &FxHashMap<ArcStr, u32>,
+    stamp_table: &HmrStampTable,
   ) {
     let modules = &self.module_table().modules;
     let mut stack = vec![proxy_entry_idx];
@@ -1032,8 +783,21 @@ impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
           || (module_idx == proxy_entry_idx && rec.kind == ImportKind::DynamicImport);
 
         if should_follow && let Some(dep_idx) = rec.resolved_module {
+          // A module with N importers hits this edge check N times; the cheap
+          // visited test spares the ship-map string hashing for all but the first.
+          if result.contains(&dep_idx) {
+            continue;
+          }
           if let Module::Normal(normal_dep) = &modules[dep_idx] {
-            if executed_modules.contains(normal_dep.stable_id.as_str()) {
+            // Skip deps whose current copy this client already holds: factory
+            // resident per the ship map, or exports live per the top-level-evaluated
+            // map (a lazy import never re-runs an evaluated module, so
+            // `initModule` serves it without a factory).
+            let stable_id = normal_dep.stable_id.as_str();
+            let holds_current = |map: &FxHashMap<ArcStr, u32>| {
+              map.get(stable_id).is_some_and(|stamp| !stamp_table.is_stale(stable_id, *stamp))
+            };
+            if holds_current(shipped) || holds_current(evaluated) {
               continue;
             }
           }

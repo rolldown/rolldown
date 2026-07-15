@@ -1,22 +1,35 @@
 {
-  "snapshot": false,
   "expectExecutionFailure": {
     "reason": "Expected to fail until rolldown#10104 is applied.",
     "outputContains": ["the hoisted self-rebinding order wrapper form must be preserved"]
   },
+  "configName": "on-demand",
   "config": {
     "input": [
-      { "name": "e0", "import": "./m0.js" },
-      { "name": "e1", "import": "./m1.js" }
+      {
+        "name": "e0",
+        "import": "./m0.js"
+      },
+      {
+        "name": "e1",
+        "import": "./m1.js"
+      }
     ],
     "format": "cjs",
     "preserveEntrySignatures": "allow-extension",
     "strictExecutionOrder": true,
     "codeSplitting": {
       "includeDependenciesRecursively": false,
-      "groups": [{ "name": "g", "test": "[\\\\/]m[12]\\.js$" }]
+      "groups": [
+        {
+          "name": "g",
+          "test": "[\\\\/]m[12]\\.js$"
+        }
+      ]
     },
-    "experimental": { "onDemandWrapping": true }
+    "experimental": {
+      "onDemandWrapping": true
+    }
   },
   "configVariants": [
     {
@@ -28,7 +41,7 @@
       "onDemandWrapping": false
     },
     {
-      "_configName": "minify",
+      "_configName": "minify-on-demand",
       "_expectExecutionFailure": {
         "reason": "Expected to fail until rolldown#10104 is applied.",
         "outputContains": ["the self-rebinding order wrapper form must survive minification"]

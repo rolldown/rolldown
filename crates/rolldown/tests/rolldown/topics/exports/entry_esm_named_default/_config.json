@@ -1,19 +1,28 @@
 {
+  "configName": "on-demand",
   "config": {
     "input": [
-      { "name": "main", "import": "./main.js" },
-      { "name": "lib", "import": "./lib.js" }
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "lib",
+        "import": "./lib.js"
+      }
     ],
     "format": "cjs",
     "exports": "named",
-    "strictExecutionOrder": true
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
   },
   "_comment": "Tests Entry + Esm WrapKind + Named OutputExports + default export access",
   "configVariants": [
     {
-      "_configName": "on-demand",
-      "strictExecutionOrder": true,
-      "onDemandWrapping": true
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
     }
   ]
 }

@@ -37,17 +37,18 @@ Three is pinned to `7e0a78beb9317e580d7fa4da9b5b12be051c6feb` and loads only tra
 
 ## Canonical environment
 
-| Property     | Value                                                                       |
-| ------------ | --------------------------------------------------------------------------- |
-| Machine      | Intel Core i5-13500H, Linux x86_64                                          |
-| CPU affinity | `0,2,4,6`, one logical CPU from each P-core                                 |
-| CPU governor | `performance` on all four pinned CPUs                                       |
-| Rayon        | `RAYON_NUM_THREADS=4` for time, trace, and RSS; both `1` and `4` for digest |
-| Rust         | `rustc 1.97.0 (2d8144b7880597b6e6d3dfd63a9a9efae3f533d3)`; LLVM 22.1.6      |
-| Cargo        | `cargo 1.97.0 (c980f4866141969fab6254a680546a277789d6f0)`                   |
-| Node         | `v24.12.0`                                                                  |
-| Profile      | Cargo `release`, fat LTO, one codegen unit                                  |
-| Allocator    | `mimalloc`                                                                  |
+| Property      | Value                                                                                         |
+| ------------- | --------------------------------------------------------------------------------------------- |
+| Machine       | Intel Core i5-13500H, Linux x86_64                                                            |
+| CPU affinity  | `0,2,4,6`, one logical CPU from each P-core                                                   |
+| CPU governor  | `performance` on all four pinned CPUs                                                         |
+| Timing policy | Pinned CPUs fixed at 2.6 GHz for each accepted link-time window, then restored to 0.4–4.7 GHz |
+| Rayon         | `RAYON_NUM_THREADS=4` for time, trace, and RSS; both `1` and `4` for digest                   |
+| Rust          | `rustc 1.97.0 (2d8144b7880597b6e6d3dfd63a9a9efae3f533d3)`; LLVM 22.1.6                        |
+| Cargo         | `cargo 1.97.0 (c980f4866141969fab6254a680546a277789d6f0)`                                     |
+| Node          | `v24.12.0`                                                                                    |
+| Profile       | Cargo `release`, fat LTO, one codegen unit                                                    |
+| Allocator     | `mimalloc`                                                                                    |
 
 Canonical reports fail closed unless they record `canonical: true`, `git_dirty: false`, `build_profile: release`, `LC_ALL=C`, `cpus_allowed_list: 0,2,4,6`, `performance` for each pinned CPU, the mode-specific Rayon value, the exact Git HEAD, the exact Rust/Cargo/Node versions above, and the exact manifest. The executable must also contain verified build-time provenance from `just build-link-baseline`: clean build commit and tree, exact rustc and Cargo, release profile, optimization level 3, fat LTO, one codegen unit, stripped symbols, Linux x86_64 host and target, and no extra rustflags. The embedded commit and toolchain must match the runtime checkout and metadata, so an old or differently compiled binary cannot label itself canonical. RSS metadata must be non-empty, must match the current repository HEAD and exact toolchain, and must be captured in the parent process. The host must have no competing build or benchmark on the pinned CPUs. Load average is recorded for diagnosis but is not by itself an idle-host proof. `--development` explicitly produces `canonical: false` output and bypasses machine/profile pins for smoke tests; it is never accepted as Phase 1 evidence.
 
@@ -101,8 +102,25 @@ The formal trace structure capture at `723c52d6f854e6ea065ecf7012d77c523e79f26a`
 
 The immutable pre-migration base is clean commit `723c52d6f854e6ea065ecf7012d77c523e79f26a`, tree `2d42688a9b3fa81b838de5f100a8248d96b08400`. Its schema-v4 runner was built with verified release provenance and the canonical environment above. Raw formal results live under `tmp/link-baseline/phase1/723c52d6f854e6ea065ecf7012d77c523e79f26a/` in the dedicated pinned worktree.
 
+The accepted same-base candidate is clean draft-PR commit `9dc3e0b3fef8e486a13507e8cfd0640b2470b1e0`, tree `4da186be0450e0ebcc39efc686ea8c91fdbf7ef2`. Baseline reports selected after the immutable overhead control live under `tmp/link-baseline/phase1/723c52d6f854e6ea065ecf7012d77c523e79f26a/attempt-24-fixed-2.6ghz-full-matrix/` in the baseline worktree; the immutable overhead report is `attempt-23-fixed-2.6ghz/link-time/overhead-64.json`. Candidate reports, rejected attempts, symmetric preconditioning reports, and the final selection live under `tmp/link-baseline/candidate/9dc3e0b3fef8e486a13507e8cfd0640b2470b1e0/attempt-01-fixed-2.6ghz/` in the candidate worktree. The final comparison is `link-time-comparison.json`, SHA256 `fe838ba90228d60398ce42d93a79e3f777202da1f1b987329880667a94f5c76d`; its selected-report manifest is `link-time-selection.tsv`, SHA256 `2add848a1e92298d5c6e0e054b52924c22efc7a920df17ed51e615abb855b5d8`.
+
+| Workload           | Base median (ns) | Base rMAD | Candidate median (ns) | Candidate rMAD | Change | Allowance | Accepted |
+| ------------------ | ---------------: | --------: | --------------------: | -------------: | -----: | --------: | :------: |
+| `overhead-64`      |          244,642 |    0.674% |               224,020 |         0.873% | -8.43% |     3.00% |   Yes    |
+| `wide-4096`        |        7,312,931 |    0.932% |             7,246,594 |         0.722% | -0.91% |     3.73% |   Yes    |
+| `deep-1024`        |        1,582,628 |    0.816% |             1,572,554 |         0.731% | -0.64% |     3.27% |   Yes    |
+| `scc-256x4`        |        1,097,099 |    0.775% |             1,069,288 |         0.994% | -2.53% |     3.10% |   Yes    |
+| `export-star-1024` |        4,870,298 |    0.784% |             4,870,897 |         0.994% | +0.01% |     3.13% |   Yes    |
+| `cjs-2048`         |        6,222,876 |    0.645% |             6,041,184 |         0.747% | -2.92% |     3.00% |   Yes    |
+| `json-2048`        |       13,192,757 |    0.441% |            12,490,001 |         0.424% | -5.33% |     3.00% |   Yes    |
+| `dynamic-1024`     |        2,035,126 |    0.574% |             2,028,028 |         0.929% | -0.35% |     3.00% |   Yes    |
+| `three-r108`       |        1,958,752 |    0.907% |             1,958,145 |         0.959% | -0.03% |     3.63% |   Yes    |
+| `rome`             |        6,147,839 |    0.578% |             6,250,051 |         0.411% | +1.66% |     3.00% |   Yes    |
+
+All twenty selected distributions have relative MAD at or below 1%, and all ten per-cell allowances pass. The geometric-mean candidate/base ratio is `0.9801203754139894`, a 1.99% improvement against the no-more-than-1% overall regression budget. The fixed-frequency inner and outer traps restored every pinned CPU to the original `performance` governor and 0.4–4.7 GHz limits, and both measurement worktrees remained clean.
+
 The first formal behavior capture ran 440 fresh processes: eleven workloads, twenty with Rayon 1 and twenty with Rayon 4. Nine synthetic/Three workloads have one exact output and diagnostic value. Rome has one output digest, `6df16805cebdc8597ee43bd017785094`, and one exact forty-warning descriptor multiset; only scan completion order varies. The immutable `diagnostic-order` baseline has one exact descriptor multiset and one exact final four-error order; only the two independent cycle warnings exchange positions.
 
 A Phase 3 development capture after execution-order extraction ran forty additional fresh `diagnostic-order` processes, twenty with Rayon 1 and twenty with Rayon 4. All forty emitted the exact A-then-B cycle order and exact four-error suffix. The unique digests are output `0e92238ee947f8b2482be635f01bb348`, pre-Generate `acba561fa5d80d60339b30c8a59d1e13`, final diagnostics `18adbc538dd6f79868238cc43f85bc5f`, and observation `8836305b971a187752d94ee86452be53`. The pre-Generate descriptor multiset and final diagnostic array otherwise match the immutable baseline. A one-process development smoke for every workload also matches the baseline manifests, module counts, output digests, and producer-aware diagnostic contract. This closes the known link-owned cycle-order ambiguity for the candidate; the complete Phase 3 digest corpus is rerun at the committed tree.
 
-Timing, accepted trace duration attribution, process-RSS distributions, and derived Phase 2–5 budgets remain pending an uncontended pinned CPU set. Their absence limits performance acceptance only; it does not invalidate the immutable code base or the completed non-performance capture.
+Bundle-time, accepted trace duration attribution, process-RSS distributions, and the remaining derived Phase 2–5 budgets are still pending an uncontended pinned CPU set. Their absence limits those performance claims only; it does not block code, tests, review, commits, or later link implementation.

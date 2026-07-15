@@ -1,5 +1,9 @@
 {
-  "snapshot": false,
+  "expectExecutionFailure": {
+    "reason": "#9887 / #10104: wrapped entry chunk cycle crashes on main",
+    "outputContains": ["is not a function", "wrapped_entry_chunk_cycle"]
+  },
+  "configName": "on-demand",
   "config": {
     "input": [
       {
@@ -30,35 +34,31 @@
       "onDemandWrapping": true
     }
   },
-  "expectExecutionFailure": {
-    "reason": "#9887 / #10104: wrapped entry chunk cycle crashes on main",
-    "outputContains": ["is not a function", "wrapped_entry_chunk_cycle"]
-  },
   "configVariants": [
     {
-      "_configName": "cjs",
-      "format": "cjs",
+      "_configName": "cjs-on-demand",
       "_expectExecutionFailure": {
         "reason": "#9887 / #10104: wrapped entry chunk cycle crashes on main",
         "outputContains": ["is not a function", "wrapped_entry_chunk_cycle"]
-      }
+      },
+      "format": "cjs"
     },
     {
       "_configName": "cjs-wrap-all",
-      "format": "cjs",
-      "onDemandWrapping": false,
       "_expectExecutionFailure": {
         "reason": "#9887 / #10104: wrapped entry chunk cycle crashes on main",
         "outputContains": ["is not a function", "wrapped_entry_chunk_cycle"]
-      }
+      },
+      "format": "cjs",
+      "onDemandWrapping": false
     },
     {
       "_configName": "wrap-all",
-      "onDemandWrapping": false,
       "_expectExecutionFailure": {
         "reason": "#9887 / #10104: wrapped entry chunk cycle crashes on main",
         "outputContains": ["is not a function", "wrapped_entry_chunk_cycle"]
-      }
+      },
+      "onDemandWrapping": false
     }
   ],
   "hiddenRuntimeModule": false

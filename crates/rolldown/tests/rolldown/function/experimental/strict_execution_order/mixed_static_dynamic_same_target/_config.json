@@ -1,9 +1,9 @@
 {
-  "snapshot": false,
   "expectExecutionFailure": {
     "reason": "Expected to fail until rolldown#10104 is applied.",
     "outputContains": ["ReferenceError: sideEffect is not defined"]
   },
+  "configName": "on-demand",
   "config": {
     "strictExecutionOrder": true,
     "experimental": {

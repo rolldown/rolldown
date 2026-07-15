@@ -1,0 +1,18 @@
+import { baz } from './baz.js';
+
+export const bar = `bar(${baz})`;
+
+(window.__hotStates ??= []).push({
+  id: 'bar',
+  gen: import.meta.hot?.data.gen ?? null,
+  leak: import.meta.hot?.data.leak ?? null,
+});
+
+if (import.meta.hot) {
+  import.meta.hot.data.leak = 'bar-own-write';
+}
+
+import.meta.hot?.dispose((data) => {
+  (window.__disposed ??= []).push('bar');
+  data.gen = (import.meta.hot.data.gen ?? 0) + 1;
+});

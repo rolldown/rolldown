@@ -43,7 +43,7 @@ impl Pass for CollectInitialDependenciesPass {
           .import_records()
           .iter()
           .filter_map(|record| match record.kind {
-            ImportKind::DynamicImport | ImportKind::Require => None,
+            ImportKind::DynamicImport | ImportKind::Require | ImportKind::HotAccept => None,
             _ => record.resolved_module,
           })
           .collect()
@@ -67,7 +67,7 @@ mod tests {
   use super::CollectInitialDependenciesPass;
 
   #[test]
-  fn preserves_record_order_and_excludes_only_dynamic_and_require_edges() {
+  fn preserves_record_order_and_excludes_dynamic_require_and_hot_accept_edges() {
     let modules = module_table(vec![
       normal_module(
         0,
@@ -99,7 +99,7 @@ mod tests {
 
     assert_eq!(
       dependencies[module_idx(0)].iter().copied().collect::<Vec<_>>(),
-      [1, 4, 5, 6, 7].map(module_idx)
+      [1, 4, 5, 6].map(module_idx)
     );
     assert!(dependencies.iter().skip(1).all(FxIndexSet::is_empty));
     assert!(pipeline.into_diagnostics().is_empty());

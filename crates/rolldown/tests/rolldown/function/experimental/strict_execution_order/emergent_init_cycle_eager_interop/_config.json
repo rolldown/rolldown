@@ -1,10 +1,17 @@
 {
-  "snapshot": false,
+  "configName": "on-demand",
   "config": {
-    "input": [{ "name": "main", "import": "./main.js" }],
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
     "strictExecutionOrder": true,
     "preserveEntrySignatures": "allow-extension",
-    "experimental": { "onDemandWrapping": true },
+    "experimental": {
+      "onDemandWrapping": true
+    },
     "codeSplitting": {
       "includeDependenciesRecursively": false,
       "groups": [
@@ -19,5 +26,10 @@
       ]
     }
   },
-  "configVariants": [{ "_configName": "wrap-all", "onDemandWrapping": false }]
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
 }

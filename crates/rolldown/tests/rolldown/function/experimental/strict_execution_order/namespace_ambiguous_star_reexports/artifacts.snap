@@ -1,0 +1,189 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## common-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region common-a.js
+function mark$1() {
+	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
+	return "a";
+}
+var collision$1;
+var init_common_a = __esmMin((() => {
+	collision$1 = /* @__PURE__ */ mark$1();
+}));
+//#endregion
+//#region common-b.js
+function mark() {
+	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
+	return "b";
+}
+var collision;
+var init_common_b = __esmMin((() => {
+	collision = /* @__PURE__ */ mark();
+}));
+//#endregion
+export { init_common_a as i, init_common_b as n, collision$1 as r, collision as t };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#endregion
+await __esmMin((async () => {
+	await import("./page-b.js");
+	await import("./page-a.js");
+}))();
+
+```
+
+## page-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_common_a, n as init_common_b, r as collision, t as collision$1 } from "./common-b.js";
+import assert from "node:assert";
+//#endregion
+__esmMin((() => {
+	init_common_a();
+	init_common_b();
+	assert.strictEqual(globalThis.valueA, 0);
+	assert.strictEqual(globalThis.valueB, 0);
+	assert.strictEqual(collision, "a");
+	assert.strictEqual(collision$1, "b");
+}))();
+
+```
+
+## page-b.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_common_a, n as init_common_b } from "./common-b.js";
+import assert from "node:assert";
+//#region bridge.js
+var bridge_exports = /* @__PURE__ */ __exportAll({ ok: () => ok });
+function ok() {
+	return 1;
+}
+var init_bridge = __esmMin((() => {
+	init_common_a();
+	init_common_b();
+}));
+//#endregion
+__esmMin((() => {
+	init_bridge();
+	assert.strictEqual(bridge_exports[globalThis.__bridgeKey || "ok"](), 1);
+	assert.strictEqual(globalThis.valueA, void 0, "ambiguous namespace re-export must not initialize common-a before page-b");
+	assert.strictEqual(globalThis.valueB, void 0);
+}))();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### common-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region common-a.js
+function mark$1() {
+	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
+	return "a";
+}
+var collision$1;
+var init_common_a = __esmMin((() => {
+	collision$1 = /* @__PURE__ */ mark$1();
+}));
+//#endregion
+//#region common-b.js
+function mark() {
+	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
+	return "b";
+}
+var collision;
+var init_common_b = __esmMin((() => {
+	collision = /* @__PURE__ */ mark();
+}));
+//#endregion
+export { init_common_a as i, init_common_b as n, collision$1 as r, collision as t };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#endregion
+await __esmMin((async () => {
+	await import("./page-b.js");
+	await import("./page-a.js");
+}))();
+
+```
+
+### page-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_common_a, n as init_common_b, r as collision, t as collision$1 } from "./common-b.js";
+import assert from "node:assert";
+//#endregion
+__esmMin((() => {
+	init_common_a();
+	init_common_b();
+	assert.strictEqual(globalThis.valueA, 0);
+	assert.strictEqual(globalThis.valueB, 0);
+	assert.strictEqual(collision, "a");
+	assert.strictEqual(collision$1, "b");
+}))();
+
+```
+
+### page-b.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_common_a, n as init_common_b } from "./common-b.js";
+import assert from "node:assert";
+var bridge_exports = /* @__PURE__ */ __exportAll({ ok: () => ok });
+function ok() {
+	return 1;
+}
+__esmMin((() => {
+	//#region bridge.js
+	init_common_a();
+	init_common_b();
+	//#endregion
+	//#region page-b.js
+	assert.strictEqual(bridge_exports[globalThis.__bridgeKey || "ok"](), 1);
+	assert.strictEqual(globalThis.valueA, void 0, "ambiguous namespace re-export must not initialize common-a before page-b");
+	assert.strictEqual(globalThis.valueB, void 0);
+	//#endregion
+}))();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```

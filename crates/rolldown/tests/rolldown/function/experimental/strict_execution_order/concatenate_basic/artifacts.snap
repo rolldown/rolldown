@@ -14,7 +14,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-# Variant: [profiler_names: false]
+# Variant: profiler-names-disabled-on-demand: [profiler_names: false]
 
 ## Assets
 
@@ -29,7 +29,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-# Variant: [pife_for_module_wrappers: false]
+# Variant: pife-for-module-wrappers-disabled-on-demand: [pife_for_module_wrappers: false]
 
 ## Assets
 
@@ -41,5 +41,65 @@ source: crates/rolldown_testing/src/integration_test.rs
 	console.log("main");
 	//#endregion
 })();
+
+```
+
+# Variant: profiler-names-wrap-all: [on_demand_wrapping: false] [profiler_names: false]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region setup.js
+var init_setup = __esmMin((() => {
+	globalThis.globalValue = "foo";
+}));
+//#endregion
+__esmMin((() => {
+	init_setup();
+	console.log("main");
+}))();
+
+```
+
+# Variant: pife-for-module-wrappers-wrap-all: [on_demand_wrapping: false] [pife_for_module_wrappers: false]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region setup.js
+var init_setup = __esmMin(() => {
+	globalThis.globalValue = "foo";
+});
+//#endregion
+__esmMin(() => {
+	init_setup();
+	console.log("main");
+})();
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region setup.js
+var init_setup = __esmMin((() => {
+	globalThis.globalValue = "foo";
+}));
+//#endregion
+__esmMin((() => {
+	init_setup();
+	console.log("main");
+}))();
 
 ```

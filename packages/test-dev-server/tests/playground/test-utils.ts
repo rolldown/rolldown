@@ -9,9 +9,7 @@ import { expect } from 'vitest';
 import {
   type DevStatus,
   getBuildSeq as getBuildSeqByUrl,
-  getModuleRegistrationSeq as getModuleRegistrationSeqByUrl,
   waitForBuildStable as waitForBuildStableByUrl,
-  waitForModuleRegistration as waitForModuleRegistrationByUrl,
   waitForNextBuild as waitForNextBuildByUrl,
 } from '../src/dev-status';
 import { page, serverUrl, testDir } from './vitest-setup';
@@ -68,6 +66,20 @@ export async function errorOverlayText(): Promise<string> {
   );
 }
 
+// --- Full-reload detection ---------------------------------------------------
+// The standard "no full reload happened" assertion of this suite: plant a marker
+// on `window`, run the update, then check the marker survived.
+
+/** Plant a marker on `window`; any full page reload wipes it. */
+export function plantReloadMarker(): Promise<unknown> {
+  return page.evaluate(() => ((window as unknown as { __marker?: string }).__marker = 'alive'));
+}
+
+/** Read the marker back; `null` means the page reloaded since planting. */
+export function readReloadMarker(): Promise<string | null> {
+  return page.evaluate(() => (window as unknown as { __marker?: string }).__marker ?? null);
+}
+
 // --- `/_dev/status` helpers, defaulting to the current spec's server --------
 
 export function waitForNextBuild(currentBuildSeq: number, timeoutMs?: number): Promise<DevStatus> {
@@ -78,16 +90,6 @@ export function waitForBuildStable(stableMs?: number, timeoutMs?: number): Promi
   return waitForBuildStableByUrl(serverUrl, stableMs, timeoutMs);
 }
 
-export function waitForModuleRegistration(
-  currentSeq: number,
-  timeoutMs?: number,
-): Promise<DevStatus> {
-  return waitForModuleRegistrationByUrl(serverUrl, currentSeq, timeoutMs);
-}
-
-export function getModuleRegistrationSeq(): Promise<number> {
-  return getModuleRegistrationSeqByUrl(serverUrl);
-}
 
 export function getBuildSeq(): Promise<number> {
   return getBuildSeqByUrl(serverUrl);

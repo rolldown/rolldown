@@ -1,4 +1,5 @@
 {
+  "configName": "on-demand",
   "config": {
     "input": [
       {
@@ -6,21 +7,24 @@
         "import": "entry.js"
       }
     ],
-    "strictExecutionOrder": true
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
   },
   "configVariants": [
     {
+      "_configName": "cjs-on-demand",
       "format": "cjs"
     },
     {
-      "_configName": "on-demand",
-      "strictExecutionOrder": true,
-      "onDemandWrapping": true
+      "_configName": "cjs-wrap-all",
+      "format": "cjs",
+      "onDemandWrapping": false
     },
     {
-      "format": "cjs",
-      "strictExecutionOrder": true,
-      "onDemandWrapping": true
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
     }
   ]
 }

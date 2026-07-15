@@ -1,9 +1,9 @@
 {
-  "snapshot": false,
   "expectExecutionFailure": {
     "reason": "Expected to fail until rolldown#10104 is applied.",
     "outputContains": ["interop trigger host must preserve source execution order"]
   },
+  "configName": "on-demand",
   "config": {
     "input": [
       {

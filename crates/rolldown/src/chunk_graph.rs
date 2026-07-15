@@ -60,12 +60,26 @@ impl ChunkGraph {
     idx
   }
 
+  /// Not removed by post-chunk-optimization (order-wrap lowering can remove chunks).
+  pub fn chunk_is_live(&self, chunk_idx: ChunkIdx) -> bool {
+    self.post_chunk_optimization_operations.get(&chunk_idx)
+      != Some(&PostChunkOptimizationOperation::Removed)
+  }
+
+  /// The module is assigned to a live chunk that still contains it.
+  pub fn module_is_in_live_chunk(&self, module_idx: ModuleIdx) -> bool {
+    self.module_to_chunk[module_idx].is_some_and(|chunk_idx| {
+      self.chunk_is_live(chunk_idx) && self.chunk_table[chunk_idx].modules.contains(&module_idx)
+    })
+  }
+
   /// Render order: user-defined entry chunks first (stable by index), everything else by
   /// execution order.
-  pub fn rebuild_sorted_chunk_idx_vec(&mut self) {
+  pub fn rebuild_sorted_chunk_idx_vec(&mut self, only_live: bool) {
     self.sorted_chunk_idx_vec = self
       .chunk_table
       .iter_enumerated()
+      .filter(|(chunk_idx, _)| !only_live || self.chunk_is_live(*chunk_idx))
       .sorted_unstable_by_key(|(index, chunk)| match &chunk.kind {
         ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) => {
           (0, index.raw())

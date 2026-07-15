@@ -6,6 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
+import { n as require_a } from "./b.js";
+export default require_a();
+
+```
+
+## b.js
+
+```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -19,21 +27,28 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { b: true };
 }));
 //#endregion
-export default require_a();
-export { require_b as t };
+export { require_a as n, require_b as t };
 
 ```
 
 ## c.js
 
 ```js
+import { t as require_c } from "./c2.js";
+export default require_c();
+
+```
+
+## c2.js
+
+```js
 import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 //#region c.js
 var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports.load = () => import("./a.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
+	module.exports.load = () => import("./b.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
 }));
 //#endregion
-export default require_c();
+export { require_c as t };
 
 ```
 
@@ -52,6 +67,14 @@ export { __toESM as n, __commonJSMin as t };
 ### a.js
 
 ```js
+import { n as require_a } from "./b.js";
+export default require_a();
+
+```
+
+### b.js
+
+```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -65,8 +88,7 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { b: true };
 }));
 //#endregion
-export default require_a();
-export { require_b as t };
+export { require_a as n, require_b as t };
 
 ```
 
@@ -76,7 +98,7 @@ export { require_b as t };
 import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 //#region c.js
 var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports.load = () => import("./a.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
+	module.exports.load = () => import("./b.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
 }));
 //#endregion
 export default require_c();

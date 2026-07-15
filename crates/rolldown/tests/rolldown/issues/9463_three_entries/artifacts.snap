@@ -30,31 +30,45 @@ init_c();
 ## common~a~b~c.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region shared.js
 function foo() {
 	(globalThis.sideEffectLog ??= []).push("shared-foo");
 }
 //#endregion
 //#region a.js
-var init_a = __esmMin((() => {
-	(globalThis.sideEffectLog ??= []).push("a");
-	foo();
-}));
+function init_a() {
+	return (init_a = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("a");
+		foo();
+	})))();
+}
 //#endregion
 //#region b.js
-var init_b = __esmMin((() => {
-	(globalThis.sideEffectLog ??= []).push("b");
-	foo();
-}));
+function init_b() {
+	return (init_b = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("b");
+		foo();
+	})))();
+}
 //#endregion
 //#region c.js
-var init_c = __esmMin((() => {
-	(globalThis.sideEffectLog ??= []).push("c");
-	foo();
-}));
+function init_c() {
+	return (init_c = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("c");
+		foo();
+	})))();
+}
 //#endregion
 export { init_b as n, init_a as r, init_c as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```
 
@@ -89,34 +103,47 @@ init_c();
 ### common~a~b~c.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region shared.js
 function foo() {
 	(globalThis.sideEffectLog ??= []).push("shared-foo");
 }
-var init_shared = __esmMin((() => {}));
+function init_shared() {
+	return (init_shared = __esmMin((() => {})))();
+}
 //#endregion
 //#region a.js
-var init_a = __esmMin((() => {
-	init_shared();
-	(globalThis.sideEffectLog ??= []).push("a");
-	foo();
-}));
+function init_a() {
+	return (init_a = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("a");
+		foo();
+	})))();
+}
 //#endregion
 //#region b.js
-var init_b = __esmMin((() => {
-	init_shared();
-	(globalThis.sideEffectLog ??= []).push("b");
-	foo();
-}));
+function init_b() {
+	return (init_b = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("b");
+		foo();
+	})))();
+}
 //#endregion
 //#region c.js
-var init_c = __esmMin((() => {
-	init_shared();
-	(globalThis.sideEffectLog ??= []).push("c");
-	foo();
-}));
+function init_c() {
+	return (init_c = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("c");
+		foo();
+	})))();
+}
 //#endregion
 export { init_b as n, init_a as r, init_c as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```

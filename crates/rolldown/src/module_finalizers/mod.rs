@@ -36,6 +36,10 @@ use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
+use crate::esm_init_obligations::{
+  ObligationPurpose, WrappedEsmInitTargetContext,
+  collect_wrapped_esm_init_targets_for_import_record, record_is_init_obligation,
+};
 use crate::utils::external_import_interop::import_record_needs_interop;
 
 mod hmr;
@@ -153,9 +157,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     await_if_tla: bool,
   ) -> ast::Expression<'ast> {
     let importee_linking_info = &self.ctx.linking_infos[importee_idx];
+    let target = self
+      .ctx
+      .order_wrap_state
+      .esm_init_target(importee_idx, importee_linking_info)
+      .expect("wrapped ESM init call should have an init target");
     // `init_foo`
     let (wrapper_ref_expr, _) =
-      self.finalized_expr_for_symbol_ref(importee_linking_info.wrapper_ref.unwrap(), false, false);
+      self.finalized_expr_for_symbol_ref(target.wrapper_ref, false, false);
     // `init_foo()`
     let init_call = ast::Expression::new_call_expression_with_pure(
       call_span,
@@ -163,10 +172,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       NONE,
       oxc::allocator::Vec::new_in(&self.ast_factory),
       false,
-      mark_pure_if_noop && importee_linking_info.init_is_noop,
+      mark_pure_if_noop && target.init_is_noop,
       &self.ast_factory,
     );
-    if await_if_tla && importee_linking_info.is_tla_or_contains_tla_dependency {
+    if await_if_tla && target.tla_tainted {
       // `await init_foo()`
       ast::Expression::AwaitExpression(ast::AwaitExpression::boxed(
         SPAN,
@@ -175,82 +184,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       ))
     } else {
       init_call
-    }
-  }
-
-  fn collect_wrapped_esm_init_modules_for_import_record(
-    &self,
-    rec_idx: ImportRecordIdx,
-  ) -> Vec<ModuleIdx> {
-    // See internal-docs/linking/reference-needed-symbols/implementation.md for why this follows
-    // canonical owners through non-wrapped barrel modules.
-    //
-    // Duplicate owners are tolerated here rather than deduped via a set: the sole caller filters
-    // each owner through `generated_init_esm_importee_ids` (a persistent `FxHashSet`) *before*
-    // building the init call, so a repeat owner is dropped at that check and never re-emits. A
-    // `Vec` push avoids the per-record hashing/allocation of an `FxIndexSet` that the global set
-    // already subsumes.
-    let mut init_modules = Vec::new();
-    let rec = &self.ctx.module.import_records[rec_idx];
-    let Some(importee_idx) = rec.resolved_module else { return init_modules };
-    let importee_linking_info = &self.ctx.linking_infos[importee_idx];
-
-    if rec.meta.contains(ImportRecordMeta::IsExportStar) {
-      for resolved_export in importee_linking_info.resolved_exports.values() {
-        self.add_wrapped_esm_init_module_for_symbol(resolved_export.symbol_ref, &mut init_modules);
-      }
-      return init_modules;
-    }
-
-    for named_import in
-      self.ctx.module.named_imports.values().filter(|item| item.record_idx == rec_idx)
-    {
-      match &named_import.imported {
-        Specifier::Star => {
-          for resolved_export in importee_linking_info.resolved_exports.values() {
-            self.add_wrapped_esm_init_module_for_symbol(
-              resolved_export.symbol_ref,
-              &mut init_modules,
-            );
-          }
-        }
-        Specifier::Literal(name) => {
-          if let Some(resolved_export) = importee_linking_info.resolved_exports.get(name) {
-            self.add_wrapped_esm_init_module_for_symbol(
-              resolved_export.symbol_ref,
-              &mut init_modules,
-            );
-          } else {
-            self
-              .add_wrapped_esm_init_module_for_symbol(named_import.imported_as, &mut init_modules);
-          }
-        }
-      }
-    }
-
-    init_modules
-  }
-
-  fn add_wrapped_esm_init_module_for_symbol(
-    &self,
-    symbol_ref: SymbolRef,
-    init_modules: &mut Vec<ModuleIdx>,
-  ) {
-    let canonical_ref = self.ctx.symbol_db.canonical_ref_resolving_namespace(symbol_ref);
-    let meta = &self.ctx.linking_infos[canonical_ref.owner];
-    if matches!(meta.wrap_kind(), WrapKind::Esm)
-      // Only emit `init_*()` for wrapped owners that tree-shaking actually kept.
-      // A non-wrapped barrel can forward a binding (e.g. via `export { ns }` or
-      // `export *`) from a wrapped ESM module that ends up tree-shaken because the
-      // binding is never read. In that case the owner's `init_*` wrapper statement
-      // was never included, so it has no chunk assignment and emitting a call to it
-      // would reference a function that doesn't exist in the output. This mirrors
-      // the `is_included` guard in `collect_transitive_esm_init_targets`.
-      && meta.is_included
-      && meta.wrapper_ref.is_some_and(|wrapper_ref| self.wrapper_is_reachable_in_chunk(wrapper_ref))
-      && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)
-    {
-      init_modules.push(canonical_ref.owner);
     }
   }
 
@@ -275,34 +208,38 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &mut self,
     rec_idx: ImportRecordIdx,
   ) -> Option<Statement<'ast>> {
-    let rec = &self.ctx.module.import_records[rec_idx];
-    // If the non-wrapped forwarding module is emitted in this chunk, its own
-    // lowered statement already preserves the required init call in execution
-    // order. This fallback is only for barrels that do not execute here.
-    if rec.resolved_module.is_some_and(|importee_idx| {
-      let importee_linking_info = &self.ctx.linking_infos[importee_idx];
-      matches!(importee_linking_info.wrap_kind(), WrapKind::None)
-        && importee_linking_info.is_included
-        && self.ctx.chunk_graph.module_to_chunk[importee_idx] == Some(self.ctx.chunk_idx)
-    }) {
-      return None;
-    }
-
     // `AstFactory` is `Copy`, so copying it out lets the `&mut self` iterator below stay borrowed
     // while we still construct nodes through `factory`. That decouples node construction from the
     // borrow without the throwaway heap `Vec` the previous `.collect()` needed: the common 0/1
     // cases now allocate nothing, and only the rare sequence case allocates — straight in the arena.
     let factory = self.ast_factory;
-    let mut init_exprs = self
-      .collect_wrapped_esm_init_modules_for_import_record(rec_idx)
-      .into_iter()
-      .filter_map(|module_idx| {
-        if !self.generated_init_esm_importee_ids.insert(module_idx) {
-          return None;
-        }
-        // `add_wrapped_esm_init_module_for_symbol` only collects modules with a `wrapper_ref`.
-        Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
-      });
+    let targets = collect_wrapped_esm_init_targets_for_import_record(
+      &WrappedEsmInitTargetContext {
+        importer: self.ctx.module,
+        importer_meta: self.ctx.linking_info,
+        modules: self.ctx.modules,
+        metas: self.ctx.linking_infos,
+        stmt_infos: self.ctx.index_stmt_infos,
+        symbol_db: self.ctx.symbol_db,
+        constant_value_map: self.ctx.constant_value_map,
+        inline_const_mode: self.ctx.options.optimization.inline_const.map(|config| config.mode),
+        order_wrap_state: self.ctx.order_wrap_state,
+        strict_execution_order: self.ctx.options.is_strict_execution_order_enabled(),
+      },
+      rec_idx,
+      |symbol_ref| self.ctx.used_symbol_refs.contains(&symbol_ref),
+      |wrapper_ref| self.wrapper_is_reachable_in_chunk(wrapper_ref),
+      |forwarding_module_idx| {
+        self.ctx.chunk_graph.module_to_chunk[forwarding_module_idx] == Some(self.ctx.chunk_idx)
+      },
+    );
+    let mut init_exprs = targets.into_iter().filter_map(|module_idx| {
+      if !self.generated_init_esm_importee_ids.insert(module_idx) {
+        return None;
+      }
+      // The shared target resolver only collects modules with a reachable `wrapper_ref`.
+      Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
+    });
     // Drive the iterator by hand. Every branch consumes it to exhaustion, so each owner's
     // `generated_init_esm_importee_ids` insert still runs (the global dedup must observe all of
     // them) regardless of how many statements we end up emitting.
@@ -336,7 +273,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];
     match importee_linking_info.wrap_kind() {
       WrapKind::None => {
-        if let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx) {
+        // Emission consumes the shared obligation gate; this transform only runs for *included*
+        // statements (excluded ones take `remove_unused_top_level_stmt`'s early branch).
+        if record_is_init_obligation(
+          ObligationPurpose::Emit,
+          self.ctx.order_wrap_state,
+          self.ctx.idx,
+          rec,
+          rec_idx,
+          true,
+        ) && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
+        {
           *stmt = init_stmt;
           return false;
         }
@@ -1465,9 +1412,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       NONE,
                       oxc::allocator::Vec::new_in(&self.ast_factory),
                       false,
-                      // No-op `init_*()` (empty ESM closure) is pure; `init_is_noop` is only
-                      // set for `WrapKind::Esm`, so a `require_*()` here is never marked pure.
-                      importee_linking_info.init_is_noop,
+                      self
+                        .ctx
+                        .order_wrap_state
+                        .esm_init_target(importee.idx, importee_linking_info)
+                        .is_some_and(|target| target.init_is_noop),
                       &self.ast_factory,
                     ))
                   };
@@ -1669,8 +1618,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
     old_body.into_iter().enumerate().zip(self.ctx.stmt_infos.iter_enumerated().skip(1)).for_each(
-      |((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
-        let is_stmt_included = self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx);
+      |((_top_stmt_idx, mut top_stmt), (stmt_info_idx, stmt_info))| {
+        let is_order_runtime_stmt =
+          self.ctx.order_wrap_state.forces_runtime_stmt(self.ctx.runtime, self.ctx.idx, stmt_info);
+        let is_stmt_included =
+          self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx) || is_order_runtime_stmt;
 
         if !is_stmt_included {
           // For ESM-wrapped modules, excluded re-export statements still need init calls for
@@ -1678,10 +1630,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           // stage's `compute_wrapped_esm_init_metadata`; emitting the calls (with the
           // module-wide dedup below) is all that happens here.
           let linking_info = self.ctx.linking_info;
-          if let Some(targets) = linking_info.transitive_esm_init_targets.get(&stmt_info_idx) {
+          if let Some(targets) = self
+            .ctx
+            .order_wrap_state
+            .transitive_init_targets(self.ctx.idx, linking_info)
+            .get(&stmt_info_idx)
+          {
             for &importee_idx in targets {
               if self.generated_init_esm_importee_ids.insert(importee_idx) {
-                let init_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, false);
+                // An excluded re-export can forward to a TLA-tainted wrapper. The current module
+                // is then TLA-tainted as well, so its async init body must await the forwarded
+                // promise before later statements observe the importee's bindings.
+                let init_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, true);
                 program.body.push(ast::Statement::new_expression_statement(
                   SPAN,
                   init_expr,
@@ -1689,6 +1649,51 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 ));
               }
             }
+          }
+          let overlay_records = self
+            .ctx
+            .order_wrap_state
+            .import_overlays_for_statement(self.ctx.idx, stmt_info_idx)
+            .map(|(key, overlay)| {
+              (
+                key.record,
+                overlay.reexports_dynamic_exports,
+                !overlay.retained_reexport_path.is_empty(),
+              )
+            })
+            .collect::<Vec<_>>();
+          for (rec_idx, reexports_dynamic_exports, has_retained_reexport_path) in overlay_records {
+            if !has_retained_reexport_path
+              && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
+            {
+              program.body.push(init_stmt);
+            }
+            if !reexports_dynamic_exports {
+              continue;
+            }
+            let Some(importee_idx) = self.ctx.module.import_records[rec_idx].resolved_module else {
+              continue;
+            };
+            let Some(importee) = self.ctx.modules[importee_idx].as_normal() else {
+              continue;
+            };
+            let (importer_namespace_ref, _) = self.finalized_expr_for_symbol_ref(
+              self.ctx.module.namespace_object_ref,
+              false,
+              false,
+            );
+            let (importee_namespace_ref, _) =
+              self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
+            let call_expr = self.ast_factory.make_re_export_call(
+              self.finalized_expr_for_runtime_symbol("__reExport"),
+              importer_namespace_ref,
+              importee_namespace_ref,
+            );
+            program.body.push(ast::Statement::new_expression_statement(
+              top_stmt.span(),
+              Expression::CallExpression(call_expr.into_in(self.alloc)),
+              &self.ast_factory,
+            ));
           }
           return;
         }
@@ -1723,7 +1728,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             match &self.ctx.modules[module_idx] {
               Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                if matches!(importee_linking_info.wrap_kind(), WrapKind::None)
+                // Same shared obligation gate as the import-declaration path; the statement is
+                // included by construction here.
+                if record_is_init_obligation(
+                  ObligationPurpose::Emit,
+                  self.ctx.order_wrap_state,
+                  self.ctx.idx,
+                  rec,
+                  rec_idx,
+                  true,
+                ) && matches!(importee_linking_info.wrap_kind(), WrapKind::None)
                   && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
                 {
                   program.body.push(init_stmt);
@@ -1736,16 +1750,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     ConcatenateWrappedModuleKind::Inner
                   )
                 {
-                  // Deliberately not unified with `wrapped_esm_init_call_expr`: this site
-                  // resolves the wrapper via `canonical_name_for` (bare identifier, no
-                  // cross-chunk `require_binding.init_x` form, no `@__PURE__`, no
-                  // `generated_init_esm_importee_ids` dedup); switching it would be a
-                  // behavior change, not a refactor.
-                  let wrapper_ref_name =
-                    self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                  let (wrapper_ref, _) = self.finalized_expr_for_symbol_ref(
+                    importee_linking_info.wrapper_ref.unwrap(),
+                    false,
+                    false,
+                  );
                   let mut init_expr = ast::Expression::new_call_expression(
                     SPAN,
-                    self.ast_factory.make_id_ref_expr(SPAN, wrapper_ref_name),
+                    wrapper_ref,
                     NONE,
                     oxc::allocator::Vec::new_in(&self.ast_factory),
                     false,
@@ -2243,6 +2255,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.ast_factory.make_seq_in_parens(wrapper_call_expr, finalized_namespace)
         }
         WrapKind::None => {
+          // Order-wrapped dynamic entries never reach this rewrite: their eliminated facades
+          // are restored in `restore_order_wrap_entry_facades`.
+          debug_assert!(
+            self
+              .ctx
+              .order_wrap_state
+              .esm_init_target(importee_idx, &self.ctx.linking_infos[importee_idx])
+              .is_none()
+          );
           let (finalized_expr, _) =
             self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
           finalized_expr
@@ -2336,6 +2357,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               }
             }
             WrapKind::None => {
+              debug_assert!(
+                self
+                  .ctx
+                  .order_wrap_state
+                  .esm_init_target(importee_idx, &self.ctx.linking_infos[importee_idx])
+                  .is_none()
+              );
               let call_expr = self.ast_factory.make_then_extract_property(base_expr, name);
               Some(Expression::CallExpression(call_expr))
             }

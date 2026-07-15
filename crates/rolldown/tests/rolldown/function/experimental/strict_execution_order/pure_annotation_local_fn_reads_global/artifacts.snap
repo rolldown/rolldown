@@ -7,22 +7,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
+//#region setup.js
+globalThis.globalValue = "foo";
+//#endregion
+//#region dep.js
 function getGlobalValue() {
 	return globalValue;
 }
-var dep_default;
-__esmMin((() => {
-	//#region setup.js
-	globalThis.globalValue = "foo";
-	//#endregion
-	//#region dep.js
-	dep_default = /*#__PURE__*/ getGlobalValue();
-	//#endregion
-	//#region main.js
-	assert.strictEqual(dep_default, "foo");
-	//#endregion
-}))();
+var dep_default = /*#__PURE__*/ getGlobalValue();
+//#endregion
+//#region main.js
+assert.strictEqual(dep_default, "foo");
+//#endregion
 
 ```
 
@@ -33,26 +29,51 @@ __esmMin((() => {
 ### main.js
 
 ```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
 //#region setup.js
-var init_setup = __esmMin((() => {
-	globalThis.globalValue = "foo";
-}));
+function init_setup() {
+	return (init_setup = __esmMin((() => {
+		globalThis.globalValue = "foo";
+	})))();
+}
 //#endregion
 //#region dep.js
 function getGlobalValue() {
 	return globalValue;
 }
 var dep_default;
-var init_dep = __esmMin((() => {
-	dep_default = /*#__PURE__*/ getGlobalValue();
-}));
+function init_dep() {
+	return (init_dep = __esmMin((() => {
+		dep_default = /*#__PURE__*/ getGlobalValue();
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_setup();
-	init_dep();
-	assert.strictEqual(dep_default, "foo");
-}))();
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_setup();
+		init_dep();
+		assert.strictEqual(dep_default, "foo");
+	})))();
+}
+//#endregion
+export { init_setup as n, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```

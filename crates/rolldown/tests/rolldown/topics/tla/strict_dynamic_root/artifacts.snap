@@ -30,14 +30,25 @@ export { value };
 ### main.js
 
 ```js
+import { n as loaded, t as init_main } from "./main2.js";
+init_main();
+export { loaded };
+
+```
+
+### main2.js
+
+```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region main.js
 var loaded;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		loaded = import("./tla-target2.js").then((mod) => mod.value);
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	loaded = import("./tla-target.js").then((mod) => mod.value);
-}))();
-export { loaded };
+export { loaded as n, init_main as t };
 
 ```
 
@@ -55,10 +66,21 @@ export { __esmMin as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region tla-target.js
 var value;
+function init_tla_target() {
+	return (init_tla_target = __esmMin((async () => {
+		value = await Promise.resolve("tla");
+	})))();
+}
 //#endregion
-await __esmMin((async () => {
-	value = await Promise.resolve("tla");
-}))();
+export { value as n, init_tla_target as t };
+
+```
+
+### tla-target2.js
+
+```js
+import { n as value, t as init_tla_target } from "./tla-target.js";
+await init_tla_target();
 export { value };
 
 ```
@@ -70,35 +92,19 @@ export { value };
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
 //#region main.js
-var loaded;
+const loaded = import("./tla-target.js").then((mod) => mod.value);
 //#endregion
-__esmMin((() => {
-	loaded = import("./tla-target.js").then((mod) => mod.value);
-}))();
 export { loaded };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
 
 ```
 
 ### tla-target.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
 //#region tla-target.js
-var value;
+const value = await Promise.resolve("tla");
 //#endregion
-await __esmMin((async () => {
-	value = await Promise.resolve("tla");
-}))();
 export { value };
 
 ```

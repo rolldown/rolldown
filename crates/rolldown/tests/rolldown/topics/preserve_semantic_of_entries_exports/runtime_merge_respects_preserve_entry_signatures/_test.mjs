@@ -14,7 +14,7 @@ assert.strictEqual(main.bar, 42);
 
 const runtimeHelpers = ['__esmMin', '__esm', '__toESM', '__commonJSMin'];
 
-if (variant === 'allow-extension-wrap-all') {
+if (variant === 'allow-extension-on-demand') {
   // Keep the original positive control: this layout has a single valid runtime host, so allowing
   // signature extensions should merge the runtime into lib and expose at least one helper.
   assert.ok(

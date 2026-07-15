@@ -11,18 +11,6 @@ use rolldown_utils::IndexBitSet;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-/// The interop ESM wrapper a wrapped (`WrapKind::Esm`) module exposes: the `init_*()` binding the
-/// finalizer emits its call sites against, plus whether calling it is a no-op.
-///
-/// Extracted so wrapper declaration emission and `init_*()` call sites read the same view of
-/// [`LinkingMetadata`] instead of reaching into the raw fields independently. This keeps a single
-/// place for later strict-execution-order wrapper paths to extend.
-#[derive(Clone, Copy, Debug)]
-pub struct EsmInitTarget {
-  pub(crate) wrapper_ref: SymbolRef,
-  pub(crate) init_is_noop: bool,
-}
-
 /// Module metadata about linking
 #[derive(Debug, Default)]
 #[expect(clippy::struct_excessive_bools)]
@@ -60,6 +48,8 @@ pub struct LinkingMetadata {
   /// It will be used to generate chunk exports and module namespace binding.
   /// The second element means if the export is came from commonjs module.
   pub sorted_and_non_ambiguous_resolved_exports: FxIndexMap<CompactStr, bool>,
+  /// Direct `export *` record that first contributed each flattened resolved export.
+  pub star_export_record_by_name: FxHashMap<CompactStr, ImportRecordIdx>,
   // If a esm module has export star from commonjs, it will be marked as ESMWithDynamicFallback at linker.
   // The unknown export name will be resolved at runtime.
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
@@ -90,6 +80,8 @@ pub struct LinkingMetadata {
   /// its subtree) into its chunk group (#8920). Populated by `patch_module_dependencies`; with
   /// tree-shaking disabled it equals [`Self::dependencies`].
   pub load_dependencies: FxIndexSet<ModuleIdx>,
+  /// Retained evaluation dependencies, excluding entry targets kept only for placement.
+  pub execution_dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.
   pub resolved_member_expr_refs: MemberExprRefResolutionMap,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
@@ -125,11 +117,8 @@ pub struct LinkingMetadata {
   /// now-unused wrapper). Computed by [`crate::stages::generate_stage`]'s
   /// `compute_wrapped_esm_init_metadata`.
   pub init_is_noop: bool,
-  /// For each non-included top-level re-export statement (`export * from`, `export {x} from`,
-  /// `export * as ns from`) of an included `WrapKind::Esm` module: the ordered wrapped-ESM
-  /// modules whose `init_*()` calls must be emitted in its place to preserve execution order.
-  /// Computed by [`crate::stages::generate_stage`]'s `compute_wrapped_esm_init_metadata`;
-  /// consumed by the module finalizer.
+  /// Wrapped ESM targets emitted at excluded import or re-export statements.
+  /// Ordinary order-wrap imports must already be in [`Self::execution_dependencies`].
   pub transitive_esm_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }
 
@@ -157,18 +146,6 @@ impl LinkingMetadata {
   #[inline]
   pub fn set_wrap_kind(&mut self, wrap_kind: WrapKind) {
     self.wrap_kind = wrap_kind;
-  }
-
-  /// The wrapped-ESM init target of a module, derived from its linking metadata alone: a
-  /// `WrapKind::Esm` module with an allocated wrapper symbol exposes an `init_*()` the finalizer
-  /// emits; anything else has none.
-  pub fn esm_init_target(&self) -> Option<EsmInitTarget> {
-    if !matches!(self.wrap_kind(), WrapKind::Esm) {
-      return None;
-    }
-    self
-      .wrapper_ref
-      .map(|wrapper_ref| EsmInitTarget { wrapper_ref, init_is_noop: self.init_is_noop })
   }
 
   /// Whether the namespace-object declaration will emit a `__reExport(ns, <external>)` call for

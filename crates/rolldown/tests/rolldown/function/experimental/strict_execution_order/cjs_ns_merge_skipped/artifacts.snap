@@ -27,7 +27,15 @@ console.log("main", fromLib, import_cjs.default.value);
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 //#region cjs.cjs
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	console.log("cjs");
@@ -36,19 +44,32 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 //#endregion
 //#region lib.js
 var import_cjs$1, fromLib;
-var init_lib = __esmMin((() => {
-	import_cjs$1 = /* @__PURE__ */ __toESM(require_cjs());
-	fromLib = import_cjs$1.default.value;
-}));
+function init_lib() {
+	return (init_lib = __esmMin((() => {
+		import_cjs$1 = /* @__PURE__ */ __toESM(require_cjs());
+		fromLib = import_cjs$1.default.value;
+	})))();
+}
 //#endregion
 //#region main.js
 var import_cjs;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_lib();
+		import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+		console.log("main", fromLib, import_cjs.default.value);
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_lib();
-	import_cjs = /* @__PURE__ */ __toESM(require_cjs());
-	console.log("main", fromLib, import_cjs.default.value);
-}))();
+export { init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```
 
@@ -65,17 +86,11 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	console.log("cjs");
 	module.exports = { value: 1 };
 }));
+const fromLib = (/* @__PURE__ */ __toESM(require_cjs())).default.value;
 //#endregion
-var import_cjs$1, fromLib, import_cjs;
-__esmMin((() => {
-	//#region lib.js
-	import_cjs$1 = /* @__PURE__ */ __toESM(require_cjs());
-	fromLib = import_cjs$1.default.value;
-	//#endregion
-	//#region main.js
-	import_cjs = /* @__PURE__ */ __toESM(require_cjs());
-	console.log("main", fromLib, import_cjs.default.value);
-	//#endregion
-}))();
+//#region main.js
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+console.log("main", fromLib, import_cjs.default.value);
+//#endregion
 
 ```

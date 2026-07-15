@@ -39,45 +39,89 @@ global.foo.log();
 ### entry1.js
 
 ```js
-import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
+import "./run-dep.js";
+import { t as init_entry1 } from "./entry12.js";
+init_entry1();
+
+```
+
+### entry12.js
+
+```js
+import { t as init_run_dep } from "./run-dep.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region init-dep-1.js
-var init_init_dep_1 = __esmMin((() => {
-	global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
-}));
+function init_init_dep_1() {
+	return (init_init_dep_1 = __esmMin((() => {
+		global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_init_dep_1();
-	init_run_dep();
-}))();
+//#region entry1.js
+function init_entry1() {
+	return (init_entry1 = __esmMin((() => {
+		init_init_dep_1();
+		init_run_dep();
+	})))();
+}
+//#endregion
+export { init_init_dep_1 as n, init_entry1 as t };
 
 ```
 
 ### entry2.js
 
 ```js
-import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
+import "./run-dep.js";
+import { t as init_entry2 } from "./entry22.js";
+init_entry2();
+
+```
+
+### entry22.js
+
+```js
+import { t as init_run_dep } from "./run-dep.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region init-dep-2.js
-var init_init_dep_2 = __esmMin((() => {
-	global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
-}));
+function init_init_dep_2() {
+	return (init_init_dep_2 = __esmMin((() => {
+		global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_init_dep_2();
-	init_run_dep();
-}))();
+//#region entry2.js
+function init_entry2() {
+	return (init_entry2 = __esmMin((() => {
+		init_init_dep_2();
+		init_run_dep();
+	})))();
+}
+//#endregion
+export { init_init_dep_2 as n, init_entry2 as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```
 
 ### run-dep.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region run-dep.js
-var init_run_dep = __esmMin((() => {
-	global.foo.log();
-}));
+function init_run_dep() {
+	return (init_run_dep = __esmMin((() => {
+		global.foo.log();
+	})))();
+}
 //#endregion
-export { __esmMin as n, init_run_dep as t };
+export { init_run_dep as t };
 
 ```
 
@@ -88,42 +132,78 @@ export { __esmMin as n, init_run_dep as t };
 ### entry1.js
 
 ```js
-import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
-__esmMin((() => {
-	//#region init-dep-1.js
-	global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
-	//#endregion
-	//#region entry1.js
-	init_run_dep();
-	//#endregion
-}))();
+import "./run-dep.js";
+import { t as init_entry1 } from "./entry12.js";
+init_entry1();
+
+```
+
+### entry12.js
+
+```js
+import { t as init_run_dep } from "./run-dep.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region init-dep-1.js
+global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
+//#endregion
+//#region entry1.js
+function init_entry1() {
+	return (init_entry1 = __esmMin((() => {
+		init_run_dep();
+	})))();
+}
+//#endregion
+export { init_entry1 as t };
 
 ```
 
 ### entry2.js
 
 ```js
-import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
-__esmMin((() => {
-	//#region init-dep-2.js
-	global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
-	//#endregion
-	//#region entry2.js
-	init_run_dep();
-	//#endregion
-}))();
+import "./run-dep.js";
+import { t as init_entry2 } from "./entry22.js";
+init_entry2();
+
+```
+
+### entry22.js
+
+```js
+import { t as init_run_dep } from "./run-dep.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region init-dep-2.js
+global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
+//#endregion
+//#region entry2.js
+function init_entry2() {
+	return (init_entry2 = __esmMin((() => {
+		init_run_dep();
+	})))();
+}
+//#endregion
+export { init_entry2 as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```
 
 ### run-dep.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region run-dep.js
-var init_run_dep = __esmMin((() => {
-	global.foo.log();
-}));
+function init_run_dep() {
+	return (init_run_dep = __esmMin((() => {
+		global.foo.log();
+	})))();
+}
 //#endregion
-export { __esmMin as n, init_run_dep as t };
+export { init_run_dep as t };
 
 ```

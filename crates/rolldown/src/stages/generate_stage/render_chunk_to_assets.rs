@@ -44,6 +44,7 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     ast_table: IndexEcmaAst,
     used_symbol_refs: &UsedSymbolRefs,
+    order_state: &super::order_wrap_state::OrderWrapState,
   ) -> BuildResult<BundleOutput> {
     // Move the mixed-severity accumulator out of `link_output` so it can be
     // passed by `&mut` to `instantiate_chunks` (which borrows `&self`, and so
@@ -55,8 +56,9 @@ impl GenerateStage<'_> {
     // (the last reader), where it is dropped at scope exit by the compiler —
     // releasing the per-module bumpalo arenas before `minify_chunks` and
     // `finalize_assets` allocate.
-    let (mut instantiated_chunks, index_chunk_to_instances) =
-      self.instantiate_chunks(chunk_graph, ast_table, &mut diagnostics, used_symbol_refs).await?;
+    let (mut instantiated_chunks, index_chunk_to_instances) = self
+      .instantiate_chunks(chunk_graph, ast_table, &mut diagnostics, used_symbol_refs, order_state)
+      .await?;
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
 
@@ -151,6 +153,7 @@ impl GenerateStage<'_> {
     ast_table: IndexEcmaAst,
     diagnostics: &mut Diagnostics,
     used_symbol_refs: &UsedSymbolRefs,
+    order_state: &super::order_wrap_state::OrderWrapState,
   ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstances)> {
     let mut index_chunk_to_instances: IndexChunkToInstances =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
@@ -192,6 +195,7 @@ impl GenerateStage<'_> {
               options: self.options,
               link_output: self.link_output,
               used_symbol_refs,
+              order_wrap_state: order_state,
               chunk_graph,
               plugin_driver: self.plugin_driver,
               module_id_to_codegen_ret,

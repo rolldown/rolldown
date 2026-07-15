@@ -7,6 +7,41 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+//#region lib.js
+const foo = "foo_value";
+const bar = 42;
+//#endregion
+exports.bar = bar;
+exports.foo = foo;
+
+```
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+const require_lib = require("./lib.js");
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#endregion
+__esmMin((() => {
+	node_assert.default.strictEqual(require_lib.foo, "foo_value");
+	node_assert.default.strictEqual(42, 42);
+}))();
+exports.bar = require_lib.bar;
+exports.foo = require_lib.foo;
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### lib.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 //#region lib.js
 var foo, bar;
@@ -27,7 +62,7 @@ Object.defineProperty(exports, "init_lib", {
 
 ```
 
-## main.js
+### main.js
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
@@ -46,7 +81,7 @@ exports.foo = require_lib.foo;
 
 ```
 
-## rolldown-runtime.js
+### rolldown-runtime.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
@@ -62,40 +97,5 @@ Object.defineProperty(exports, "__toESM", {
 		return __toESM;
 	}
 });
-
-```
-
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
-
-## Assets
-
-### lib.js
-
-```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-//#region lib.js
-const foo = "foo_value";
-const bar = 42;
-//#endregion
-exports.bar = bar;
-exports.foo = foo;
-
-```
-
-### main.js
-
-```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-// HIDDEN [\0rolldown/runtime.js]
-const require_lib = require("./lib.js");
-let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
-//#endregion
-__esmMin((() => {
-	node_assert.default.strictEqual(require_lib.foo, "foo_value");
-	node_assert.default.strictEqual(42, 42);
-}))();
-exports.bar = require_lib.bar;
-exports.foo = require_lib.foo;
 
 ```

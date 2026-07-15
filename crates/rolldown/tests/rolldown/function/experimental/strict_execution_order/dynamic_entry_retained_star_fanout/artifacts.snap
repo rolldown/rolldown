@@ -1,0 +1,188 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bridge.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region common-a.js
+function init$1() {
+	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
+}
+var commonA;
+var init_common_a = __esmMin((() => {
+	commonA = /* @__PURE__ */ init$1();
+}));
+//#endregion
+//#region common-b.js
+function init() {
+	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
+}
+var commonB;
+var init_common_b = __esmMin((() => {
+	commonB = /* @__PURE__ */ init();
+}));
+//#endregion
+//#region bridge.js
+function x() {
+	return 1;
+}
+var init_bridge = __esmMin((() => {
+	init_common_a();
+	init_common_b();
+}));
+//#endregion
+export { commonA as a, init_common_b as i, x as n, init_common_a as o, commonB as r, init_bridge as t };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+var pageA;
+//#endregion
+await __esmMin((async () => {
+	await import("./page-b.js");
+	pageA = await import("./page-a.js");
+	console.log(pageA.commonA, pageA.commonB);
+}))();
+
+```
+
+## page-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as commonA, r as commonB, t as init_bridge } from "./bridge.js";
+import assert from "node:assert";
+//#endregion
+__esmMin((() => {
+	init_bridge();
+	assert.strictEqual(globalThis.valueA, 0);
+	assert.strictEqual(globalThis.valueB, 0);
+}))();
+export { commonA, commonB };
+
+```
+
+## page-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as x, t as init_bridge } from "./bridge.js";
+import assert from "node:assert";
+//#endregion
+__esmMin((() => {
+	init_bridge();
+	x();
+	assert.strictEqual(globalThis.valueA, void 0, "dynamic retained-star fanout must not initialize common-a before page-b");
+	assert.strictEqual(globalThis.valueB, void 0);
+}))();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### bridge.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region common-a.js
+function init$1() {
+	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
+}
+var commonA;
+var init_common_a = __esmMin((() => {
+	commonA = /* @__PURE__ */ init$1();
+}));
+//#endregion
+//#region common-b.js
+function init() {
+	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
+}
+var commonB;
+var init_common_b = __esmMin((() => {
+	commonB = /* @__PURE__ */ init();
+}));
+//#endregion
+//#region bridge.js
+function x() {
+	return 1;
+}
+var init_bridge = __esmMin((() => {
+	init_common_a();
+	init_common_b();
+}));
+//#endregion
+export { commonA as a, init_common_b as i, x as n, init_common_a as o, commonB as r, init_bridge as t };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+var pageA;
+//#endregion
+await __esmMin((async () => {
+	await import("./page-b.js");
+	pageA = await import("./page-a.js");
+	console.log(pageA.commonA, pageA.commonB);
+}))();
+
+```
+
+### page-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as commonA, r as commonB, t as init_bridge } from "./bridge.js";
+import assert from "node:assert";
+//#endregion
+__esmMin((() => {
+	init_bridge();
+	assert.strictEqual(globalThis.valueA, 0);
+	assert.strictEqual(globalThis.valueB, 0);
+}))();
+export { commonA, commonB };
+
+```
+
+### page-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as x, t as init_bridge } from "./bridge.js";
+import assert from "node:assert";
+//#endregion
+__esmMin((() => {
+	init_bridge();
+	x();
+	assert.strictEqual(globalThis.valueA, void 0, "dynamic retained-star fanout must not initialize common-a before page-b");
+	assert.strictEqual(globalThis.valueB, void 0);
+}))();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

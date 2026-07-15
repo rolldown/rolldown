@@ -7,6 +7,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+}))();
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var init_lib = __esmMin((() => {}));
 //#endregion
@@ -18,18 +30,6 @@ var init_barrel = __esmMin((() => {
 __esmMin((() => {
 	init_barrel();
 	console.log(42);
-}))();
-
-```
-
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
-
-## Assets
-
-### main.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
 }))();
 
 ```

@@ -1,0 +1,73 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region ring-b.js
+globalThis.__ringB = "b";
+//#endregion
+//#region main.js
+const value = await Promise.resolve("a");
+//#endregion
+export { value };
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region ring-b.js
+var init_ring_b = __esmMin((async () => {
+	await init_ring_a();
+	globalThis.__ringB = "b";
+}));
+//#endregion
+//#region ring-a.js
+var a;
+var init_ring_a = __esmMin((async () => {
+	await init_ring_b();
+	a = await Promise.resolve("a");
+}));
+//#endregion
+//#region main.js
+var value;
+//#endregion
+await __esmMin((async () => {
+	await init_ring_a();
+	value = a;
+}))();
+export { value };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+var a, value;
+await __esmMin((async () => {
+	//#region ring-b.js
+	globalThis.__ringB = "b";
+	//#endregion
+	//#region ring-a.js
+	a = await Promise.resolve("a");
+	//#endregion
+	//#region main.js
+	value = a;
+	//#endregion
+}))();
+export { value };
+
+```

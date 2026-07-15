@@ -29,13 +29,9 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region bar.js
-var init_bar = __esmMin((() => {}));
-//#endregion
 //#region foo.js
 var foo;
 var init_foo = __esmMin((() => {
-	init_bar();
 	foo = "foo bar";
 }));
 //#endregion
@@ -43,7 +39,7 @@ export { init_foo as n, foo as t };
 
 ```
 
-# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 
@@ -73,9 +69,13 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+//#region bar.js
+var init_bar = __esmMin((() => {}));
+//#endregion
 //#region foo.js
 var foo;
 var init_foo = __esmMin((() => {
+	init_bar();
 	foo = "foo bar";
 }));
 //#endregion

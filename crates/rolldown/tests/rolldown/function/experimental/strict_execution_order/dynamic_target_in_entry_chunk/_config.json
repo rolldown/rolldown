@@ -1,5 +1,4 @@
 {
-  "snapshot": false,
   "expectExecutionFailure": {
     "reason": "Expected to fail until rolldown#10104 is applied.",
     "outputContains": ["loading dynamic target entry must not execute co-located entry a"]

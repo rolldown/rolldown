@@ -25,3 +25,34 @@ __esmMin((() => {
 }))();
 
 ```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region setup.js
+var init_setup = __esmMin((() => {
+	globalThis.globalValue = "foo";
+}));
+//#endregion
+//#region dep.js
+function getGlobalValue() {
+	return globalValue;
+}
+var dep_default;
+var init_dep = __esmMin((() => {
+	dep_default = /*#__PURE__*/ getGlobalValue();
+}));
+//#endregion
+__esmMin((() => {
+	init_setup();
+	init_dep();
+	assert.strictEqual(dep_default, "foo");
+}))();
+
+```

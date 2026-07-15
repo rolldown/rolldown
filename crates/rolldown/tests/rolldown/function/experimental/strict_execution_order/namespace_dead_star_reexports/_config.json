@@ -1,5 +1,4 @@
 {
-  "snapshot": false,
   "expectExecutionFailure": {
     "reason": "Expected to fail until rolldown#10104 is applied.",
     "outputContains": ["dead namespace star must not initialize default-only before page-b"]

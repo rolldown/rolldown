@@ -1,0 +1,130 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## e0.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_m13 } from "./gb.js";
+//#region e0.js
+var reg;
+//#endregion
+__esmMin((() => {
+	init_m13();
+	reg = globalThis.__dyn ??= {};
+	reg.dyn2 = () => import("./m29.js");
+}))();
+
+```
+
+## gb.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_m31 } from "./m29.js";
+//#region m13.js
+var init_m13 = __esmMin((() => {
+	console.log("sfx-m13-0");
+}));
+//#endregion
+//#region m29.js
+function cf_m29(x) {
+	return x + 9;
+}
+var init_m29 = __esmMin((() => {
+	init_m31();
+}));
+//#endregion
+export { init_m29 as n, init_m13 as r, cf_m29 as t };
+
+```
+
+## m29.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_m29, t as cf_m29 } from "./gb.js";
+//#region m31.js
+var init_m31 = __esmMin((() => {
+	console.log("sfx-m31-0");
+}));
+//#endregion
+init_m29();
+export { cf_m29, init_m31 as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### e0.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_m13 } from "./gb.js";
+//#region e0.js
+var reg;
+//#endregion
+__esmMin((() => {
+	init_m13();
+	reg = globalThis.__dyn ??= {};
+	reg.dyn2 = () => import("./m29.js");
+}))();
+
+```
+
+### gb.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_m31 } from "./m29.js";
+//#region m13.js
+var init_m13 = __esmMin((() => {
+	console.log("sfx-m13-0");
+}));
+//#endregion
+//#region m29.js
+function cf_m29(x) {
+	return x + 9;
+}
+var init_m29 = __esmMin((() => {
+	init_m31();
+}));
+//#endregion
+export { init_m29 as n, init_m13 as r, cf_m29 as t };
+
+```
+
+### m29.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_m29, t as cf_m29 } from "./gb.js";
+//#region m31.js
+var init_m31 = __esmMin((() => {
+	console.log("sfx-m31-0");
+}));
+//#endregion
+init_m29();
+export { cf_m29, init_m31 as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

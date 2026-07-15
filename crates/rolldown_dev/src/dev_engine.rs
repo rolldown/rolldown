@@ -5,7 +5,7 @@ use std::sync::{
 
 use anyhow::Context;
 use futures::{FutureExt, future::Shared};
-use rolldown_common::ClientHmrUpdate;
+use rolldown_common::HmrLazyChunkOutput;
 #[cfg(feature = "testing")]
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::{BuildResult, ResultExt};
@@ -49,8 +49,10 @@ pub struct DevEngine {
   coordinator_state: Mutex<CoordinatorState>,
   pub clients: SharedClients,
   is_closed: AtomicBool,
-  /// Counter for HMR patch IDs used by invalidate() method
-  next_invalidate_patch_id: Arc<AtomicU32>,
+  /// The engine's single patch-id counter, shared with the coordinator's bundling
+  /// tasks. Both consumers embed the id in served filenames, so two independent
+  /// counters would let a lazy chunk and a patch collide on one name.
+  next_hmr_patch_id: Arc<AtomicU32>,
 }
 
 impl DevEngine {
@@ -68,6 +70,10 @@ impl DevEngine {
     let (coordinator_tx, coordinator_rx) = unbounded_channel::<CoordinatorMsg>();
 
     let clients = SharedClients::default();
+
+    // ONE patch-id counter for the whole engine (bundling tasks AND lazy
+    // compiles) — see the field doc on `next_hmr_patch_id`.
+    let next_hmr_patch_id = Arc::new(AtomicU32::new(0));
 
     let ctx = Arc::new(DevContext {
       options: normalized_options,
@@ -92,8 +98,13 @@ impl DevEngine {
       rolldown_fs_watcher::create_fs_watcher(event_handler, watcher_config)?
     };
 
-    let coordinator =
-      BundleCoordinator::new(Arc::clone(&bundler), Arc::clone(&ctx), coordinator_rx, watcher);
+    let coordinator = BundleCoordinator::new(
+      Arc::clone(&bundler),
+      Arc::clone(&ctx),
+      coordinator_rx,
+      watcher,
+      Arc::clone(&next_hmr_patch_id),
+    );
 
     Ok(Self {
       coordinator_sender: coordinator_tx,
@@ -105,7 +116,7 @@ impl DevEngine {
       }),
       clients,
       is_closed: AtomicBool::new(false),
-      next_invalidate_patch_id: Arc::new(AtomicU32::new(0)),
+      next_hmr_patch_id,
     })
   }
 
@@ -255,32 +266,22 @@ impl DevEngine {
     Ok(())
   }
 
-  pub async fn invalidate(
-    &self,
-    caller: String,
-    first_invalidated_by: Option<String>,
-  ) -> BuildResult<Vec<ClientHmrUpdate>> {
-    self.create_error_if_closed()?;
-    let mut bundler = self.bundler.lock().await;
-
-    // Use bundler directly for invalidation (avoid message roundtrip)
-    let mut updates = Vec::new();
-    let clients = self.clients.lock().await;
-    for (client_key, client) in clients.iter() {
-      let update = bundler
-        .compute_update_for_calling_invalidate(
-          caller.clone(),
-          first_invalidated_by.clone(),
-          client_key,
-          &client.executed_modules,
-          Arc::clone(&self.next_invalidate_patch_id),
-        )
-        .await?;
-      updates.push(ClientHmrUpdate { client_id: client_key.clone(), update });
-    }
-
-    Ok(updates)
+  /// Client-connect signal (the clientId hello): creates the per-client session.
+  /// Reconnects arrive as fresh clientIds.
+  pub async fn register_client(&self, client_id: String) {
+    self.clients.lock().await.entry(client_id).or_default();
   }
+
+  /// Client-disconnect signal: drops the session.
+  pub async fn remove_client(&self, client_id: &str) {
+    self.clients.lock().await.remove(client_id);
+  }
+
+  /// Delivery notification from the serving middleware: the response for `filename`
+  /// completed. Currently a no-op — every push ships the full affected factory set.
+  /// The per-client ship map that consumes this signal lands in a follow-up.
+  #[expect(clippy::unused_async, reason = "the ship-map follow-up awaits its state locks here")]
+  pub async fn notify_payload_delivered(&self, _filename: &str) {}
 
   /// Compile a lazy entry module and return compiled code.
   ///
@@ -293,7 +294,7 @@ impl DevEngine {
   /// * `client_id` - The client ID requesting this compilation
   ///
   /// # Returns
-  /// The compiled JavaScript code as a string
+  /// The compiled chunk: its code plus the filename it is served under
   ///
   /// # Panics
   /// - If lazy compilation is not enabled
@@ -303,18 +304,9 @@ impl DevEngine {
     &self,
     proxy_module_id: String,
     client_id: String,
-  ) -> BuildResult<String> {
+  ) -> BuildResult<HmrLazyChunkOutput> {
     self.create_error_if_closed()?;
     let mut bundler = self.bundler.lock().await;
-
-    // Get executed modules for this client
-    let executed_modules = self
-      .clients
-      .lock()
-      .await
-      .get(&client_id)
-      .map(|c| c.executed_modules.clone())
-      .unwrap_or_default();
 
     // Mark the proxy module as fetched BEFORE compilation.
     // This changes the content returned by the lazy compilation plugin's load hook
@@ -327,12 +319,7 @@ impl DevEngine {
     // The plugin will return new content (fetched template) that imports the real module,
     // which triggers compilation of the actual module and its dependencies.
     let result = bundler
-      .compile_lazy_entry(
-        proxy_module_id.clone(),
-        &client_id,
-        &executed_modules,
-        Arc::clone(&self.next_invalidate_patch_id),
-      )
+      .compile_lazy_entry(proxy_module_id.clone(), &client_id, Arc::clone(&self.next_hmr_patch_id))
       .await;
 
     if result.is_ok() {
@@ -469,8 +456,7 @@ impl DevEngine {
   #[cfg(feature = "testing")]
   pub async fn create_client_for_testing(&self) {
     let client_session = ClientSession::default();
-    // Use special client ID "rolldown-tests" which will be recognized by HMR logic
-    // to always consider modules as executed, without needing to populate the HashSet
+    // A fixed client ID so HMR steps in tests have a session to compute updates for.
     self.clients.lock().await.insert("rolldown-tests".to_string(), client_session);
   }
 

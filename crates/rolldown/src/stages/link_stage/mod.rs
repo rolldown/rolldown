@@ -182,7 +182,9 @@ impl<'a> LinkStage<'a> {
             .filter_map(|rec| match rec.kind {
               // Dynamically imported modules are included automatically by `include_statements`
               // when code splitting is disabled (`codeSplitting: false`).
-              ImportKind::DynamicImport | ImportKind::Require => None,
+              //
+              // HotAccept is an HMR-only edge that should be filtered out here.
+              ImportKind::DynamicImport | ImportKind::Require | ImportKind::HotAccept => None,
               _ => rec.resolved_module,
             })
             .collect();

@@ -43,32 +43,44 @@ if (!nodeFs.existsSync(nodePath.join(localRolldownDir, 'dist', 'index.mjs'))) {
   process.exit(1);
 }
 
-// 1. Init the submodule, or re-sync a checkout that is not on the pinned
-// commit — e.g. after pulling a submodule bump, where the working copy stays
-// on the old commit until `git submodule update` runs. The pinned SHA comes
-// from the superproject index (`git ls-files -s` on the gitlink), which is
-// also what `git submodule update` checks out — so a locally staged bump
-// syncs to the staged commit. (Pathspec is repo-root-relative, so run git
-// from the repo root.)
+// 1. Ensure the submodule has a checkout, then build WHATEVER commit is
+// currently checked out. The script deliberately respects a manually
+// checked-out Vite (e.g. a local branch you are iterating on) rather than
+// forcing it back to the superproject's pinned commit — so you can bump the
+// Vite you test against just by checking it out here, without re-pinning.
+//
+//   - Uninitialized (fresh clone / CI): `git submodule update --init` checks
+//     out the pinned commit from the superproject index. This is the ONLY
+//     case where the script touches the checkout.
+//   - Initialized: leave the checkout exactly as-is. If it differs from the
+//     pin, warn (you may be intentionally on another commit) but build it.
+//     To adopt the pin instead: `git submodule update`. To move the pin to
+//     your checkout: `git add packages/test-dev-server/vite`.
+//
+// (Pathspec is repo-root-relative, so run git from the repo root.)
 const repoRoot = nodePath.dirname(nodePath.dirname(packageDir));
-const pinnedSha = capture('git ls-files -s -- packages/test-dev-server/vite', repoRoot).split(
-  /\s+/,
-)[1];
-const checkedOutSha = nodeFs.existsSync(nodePath.join(viteDir, '.git'))
-  ? capture('git rev-parse HEAD', viteDir)
-  : null;
-if (checkedOutSha !== pinnedSha || !nodeFs.existsSync(nodePath.join(viteDir, 'package.json'))) {
-  if (checkedOutSha !== null && checkedOutSha !== pinnedSha) {
+const isInitialized =
+  nodeFs.existsSync(nodePath.join(viteDir, '.git')) &&
+  nodeFs.existsSync(nodePath.join(viteDir, 'package.json'));
+if (!isInitialized) {
+  // Full (non-shallow) clone: this Vite submodule is developed in-tree, so the
+  // complete history is needed (branching, rebasing, blame, making commits). A
+  // shallow `--depth 1` clone would leave the checkout grafted with no
+  // ancestry — fine for a one-off build, but not for development.
+  run('git submodule update --init packages/test-dev-server/vite', repoRoot);
+} else {
+  const pinnedSha = capture('git ls-files -s -- packages/test-dev-server/vite', repoRoot).split(
+    /\s+/,
+  )[1];
+  const checkedOutSha = capture('git rev-parse HEAD', viteDir);
+  if (checkedOutSha !== pinnedSha) {
     console.log(
-      `[setup-vite] submodule checkout ${checkedOutSha.slice(0, 12)} != pinned ${pinnedSha.slice(0, 12)} — syncing`,
+      `[setup-vite] building the checked-out vite ${checkedOutSha.slice(0, 12)} ` +
+        `(superproject pins ${pinnedSha.slice(0, 12)}) — respecting your checkout. ` +
+        '`git submodule update` to use the pin, or `git add packages/test-dev-server/vite` to move the pin here.',
     );
-  }
-  try {
-    // Shallow: only the pinned commit is needed (GitHub allows SHA-addressed
-    // shallow fetches, saving the full vite history on CI).
-    run('git submodule update --init --depth 1 packages/test-dev-server/vite', repoRoot);
-  } catch {
-    run('git submodule update --init packages/test-dev-server/vite', repoRoot);
+  } else {
+    console.log(`[setup-vite] building the checked-out vite ${checkedOutSha.slice(0, 12)}`);
   }
 }
 

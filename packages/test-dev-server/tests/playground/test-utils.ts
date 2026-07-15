@@ -9,9 +9,7 @@ import { expect } from 'vitest';
 import {
   type DevStatus,
   getBuildSeq as getBuildSeqByUrl,
-  getModuleRegistrationSeq as getModuleRegistrationSeqByUrl,
   waitForBuildStable as waitForBuildStableByUrl,
-  waitForModuleRegistration as waitForModuleRegistrationByUrl,
   waitForNextBuild as waitForNextBuildByUrl,
 } from '../src/dev-status';
 import { page, serverUrl, testDir } from './vitest-setup';
@@ -78,16 +76,6 @@ export function waitForBuildStable(stableMs?: number, timeoutMs?: number): Promi
   return waitForBuildStableByUrl(serverUrl, stableMs, timeoutMs);
 }
 
-export function waitForModuleRegistration(
-  currentSeq: number,
-  timeoutMs?: number,
-): Promise<DevStatus> {
-  return waitForModuleRegistrationByUrl(serverUrl, currentSeq, timeoutMs);
-}
-
-export function getModuleRegistrationSeq(): Promise<number> {
-  return getModuleRegistrationSeqByUrl(serverUrl);
-}
 
 export function getBuildSeq(): Promise<number> {
   return getBuildSeqByUrl(serverUrl);

@@ -7,6 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["main.js"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", {});
+console.log(1);
+//#endregion
 
 ```
 
@@ -25,5 +35,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["main.js"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", {});
+console.log(2);
+//#endregion
 
 ```

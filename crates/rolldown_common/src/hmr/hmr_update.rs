@@ -1,6 +1,6 @@
 use super::hmr_patch::HmrPatch;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum HmrUpdate {
   Patch(HmrPatch),
   FullReload {

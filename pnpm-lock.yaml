@@ -746,61 +746,73 @@ importers:
         specifier: ^1.60.0
         version: 1.61.1
 
-  packages/test-dev-server/tests/fixtures/client-module-execution-status:
-    devDependencies:
-      '@rolldown/test-dev-server':
-        specifier: workspace:*
-        version: link:../../..
-
   packages/test-dev-server/tests/fixtures/defer-sync-scan-data:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*
         version: link:../../..
 
-  packages/test-dev-server/tests/fixtures/edit:
+  packages/test-dev-server/tests/playground/hmr-accept-syntax:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*
         version: link:../../..
 
-  packages/test-dev-server/tests/fixtures/edit-rebuild:
+  packages/test-dev-server/tests/playground/hmr-client-invalidate:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*
         version: link:../../..
 
-  packages/test-dev-server/tests/fixtures/edit-reload:
+  packages/test-dev-server/tests/playground/hmr-dynamic-import-accept-dep:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*
         version: link:../../..
 
-  packages/test-dev-server/tests/fixtures/invalidation:
-    devDependencies:
-      '@rolldown/test-dev-server':
-        specifier: workspace:*
-        version: link:../../..
-
-  packages/test-dev-server/tests/fixtures/load-dependencies:
-    devDependencies:
-      '@rolldown/test-dev-server':
-        specifier: workspace:*
-        version: link:../../..
-
-  packages/test-dev-server/tests/fixtures/multiple-edits:
-    devDependencies:
-      '@rolldown/test-dev-server':
-        specifier: workspace:*
-        version: link:../../..
-
-  packages/test-dev-server/tests/fixtures/transform-dependencies:
+  packages/test-dev-server/tests/playground/hmr-dynamic-import-self-accept:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*
         version: link:../../..
 
   packages/test-dev-server/tests/playground/hmr-full-bundle-mode:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-multiple-edits:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-new-static-dep-unloaded-chunk:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-runtime-acceptance:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-watch-file-load:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-watch-file-transform:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-whole-chain-dispose:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*
@@ -1663,11 +1675,11 @@ packages:
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
-    deprecated: 'Merged into tsx: https://tsx.hirok.io'
+    deprecated: 'Merged into tsx: https://tsx.is'
 
   '@esbuild-kit/esm-loader@2.6.5':
     resolution: {integrity: sha512-FxEMIkJKnodyA1OaCUoEvbYRkoZlLZ4d/eXFu9Fh8CbBBgP5EmZxrfTRyN0qpXZ4vOvqnE5YdRdcrmUUXuU+dA==}
-    deprecated: 'Merged into tsx: https://tsx.hirok.io'
+    deprecated: 'Merged into tsx: https://tsx.is'
 
   '@esbuild/aix-ppc64@0.25.12':
     resolution: {integrity: sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==}

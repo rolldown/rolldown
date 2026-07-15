@@ -155,18 +155,14 @@ impl DevArtifactsSnapshot {
     // Type-specific metadata
     match hmr_update {
       HmrUpdate::Patch(hmr_patch) => {
-        let mut boundaries = SnapshotSection::with_title("Hmr Boundaries");
+        let mut changed_ids = SnapshotSection::with_title("Changed Ids");
         let meta = hmr_patch
-          .hmr_boundaries
+          .changed_ids
           .iter()
-          .map(|boundary| {
-            let boundary_str = boundary.boundary.as_str().replace(cwd_str, "$CWD");
-            let accepted_via_str = boundary.accepted_via.as_str().replace(cwd_str, "$CWD");
-            format!("- boundary: {boundary_str}, accepted_via: {accepted_via_str}")
-          })
+          .map(|changed_id| format!("- {}", changed_id.replace(cwd_str, "$CWD")))
           .collect::<Vec<_>>();
-        boundaries.add_content(&meta.join("\n"));
-        meta_section.add_child(boundaries);
+        changed_ids.add_content(&meta.join("\n"));
+        meta_section.add_child(changed_ids);
       }
       HmrUpdate::FullReload { reason } => {
         let reason = reason.replace(cwd_str, "$CWD");

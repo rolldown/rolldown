@@ -8,6 +8,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"c.js",
+		"b.js",
+		"a.js",
+		"main.js"
+	],
+	localCount: 4,
+	edges: [
+		[1],
+		[0],
+		[1],
+		[2]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[],
+		[]
+	]
+});
 //#region c.js
 var c_exports = /* @__PURE__ */ __exportAll({ c: () => "c" });
 __rolldown_runtime__.createModuleHotContext("c.js");
@@ -50,6 +71,27 @@ assert.strictEqual(a.b.c, "c");
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"c.js",
+		"b.js",
+		"a.js",
+		"main.js"
+	],
+	localCount: 4,
+	edges: [
+		[1],
+		[0],
+		[1],
+		[2]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[],
+		[]
+	]
+});
 //#region c.js
 var c_exports = /* @__PURE__ */ __exportAll({ c: () => "cc" });
 __rolldown_runtime__.createModuleHotContext("c.js");

@@ -1,6 +1,5 @@
-use rustc_hash::FxHashSet;
-
 #[derive(Default)]
 pub struct ClientSession {
-  pub executed_modules: FxHashSet<String>,
+  /// Per-client envelope sequence counter.
+  pub next_seq: u32,
 }

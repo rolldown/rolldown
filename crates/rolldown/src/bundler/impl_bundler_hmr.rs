@@ -5,13 +5,11 @@ use crate::hmr::hmr_stage::{HmrStage, HmrStageInput};
 #[cfg(feature = "experimental")]
 use rolldown_common::WatcherChangeKind;
 #[cfg(feature = "experimental")]
-use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate};
+use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput};
 #[cfg(feature = "experimental")]
 use rolldown_error::BuildResult;
 #[cfg(feature = "experimental")]
 use rolldown_utils::indexmap::FxIndexMap;
-#[cfg(feature = "experimental")]
-use rustc_hash::FxHashSet;
 #[cfg(feature = "experimental")]
 use std::sync::{Arc, atomic::AtomicU32};
 
@@ -44,42 +42,7 @@ impl Bundler {
     hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths, clients).await
   }
 
-  pub async fn compute_update_for_calling_invalidate(
-    &mut self,
-    invalidate_caller: String,
-    first_invalidated_by: Option<String>,
-    client_id: &str,
-    executed_modules: &FxHashSet<String>,
-    next_hmr_patch_id: Arc<AtomicU32>,
-  ) -> BuildResult<HmrUpdate> {
-    // HMR partial scans use the shared rayon pool without passing through
-    // `BundleFactory::build_bundle`; wait for any deferred drops here too.
-    crate::utils::defer_drop::drain();
-
-    let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
-      return Err(anyhow::format_err!(
-        "HMR requires to run at least one bundle before invalidation"
-      ))?;
-    };
-    let mut hmr_stage = HmrStage::new(HmrStageInput {
-      fs: self.bundle_factory.fs.clone(),
-      options: Arc::clone(&self.bundle_factory.options),
-      resolver: Arc::clone(&self.bundle_factory.resolver),
-      plugin_driver: Arc::clone(plugin_driver),
-      cache: &mut self.cache,
-      next_hmr_patch_id,
-    });
-    hmr_stage
-      .compute_update_for_calling_invalidate(
-        invalidate_caller,
-        first_invalidated_by,
-        client_id,
-        executed_modules,
-      )
-      .await
-  }
-
-  /// Compile a lazy entry module and return compiled code.
+  /// Compile a lazy entry module and return the compiled chunk.
   ///
   /// This is called when a dynamically imported module is first requested at runtime.
   /// The module was previously stubbed with a proxy, and now we need to compile the
@@ -88,9 +51,8 @@ impl Bundler {
     &mut self,
     module_id: String,
     client_id: &str,
-    executed_modules: &FxHashSet<String>,
     next_hmr_patch_id: Arc<AtomicU32>,
-  ) -> BuildResult<String> {
+  ) -> BuildResult<HmrLazyChunkOutput> {
     // HMR partial scans use the shared rayon pool without passing through
     // `BundleFactory::build_bundle`; wait for any deferred drops here too.
     crate::utils::defer_drop::drain();
@@ -106,6 +68,6 @@ impl Bundler {
       cache: &mut self.cache,
       next_hmr_patch_id,
     });
-    hmr_stage.compile_lazy_entry(&module_id, client_id, executed_modules).await
+    hmr_stage.compile_lazy_entry(&module_id, client_id).await
   }
 }

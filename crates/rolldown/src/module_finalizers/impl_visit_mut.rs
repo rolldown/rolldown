@@ -509,6 +509,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
 
         let ast::Expression::ChainExpression(chain_expr) = expr else { unreachable!() };
+        // import.meta.hot?.accept()
+        if let ast::ChainElement::CallExpression(call_expr) = &mut chain_expr.expression {
+          self.rewrite_hot_accept_call_deps(call_expr);
+        }
         let chain_span = chain_expr.span;
         if let Some(new_expr) = chain_expr
           .expression

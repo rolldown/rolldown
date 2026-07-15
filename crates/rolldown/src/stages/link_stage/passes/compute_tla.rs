@@ -236,103 +236,14 @@ impl Pass for ComputeTlaPass {
 
 #[cfg(test)]
 mod tests {
-  use oxc::{semantic::SymbolId, span::Span};
-  use oxc_index::IndexVec;
-  use rolldown_common::{
-    EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ExportsKind, HmrInfo, ImportKind, Module,
-    ModuleDefFormat, ModuleId, ModuleIdx, ModuleTable, RawImportRecord, ResolvedId, StableModuleId,
-    SymbolRef, bundler_options::ModuleType, side_effects::DeterminedSideEffects,
-  };
+  use oxc::span::Span;
+  use rolldown_common::{EcmaModuleAstUsage, ImportKind, ModuleIdx, ModuleTable};
   use rolldown_error::BuildDiagnostic;
-  use rolldown_utils::{
-    indexmap::{FxIndexMap, FxIndexSet},
-    pass::{PassPipelineCtx, Sealed, run_infallible_pass},
-  };
-  use rustc_hash::{FxHashMap, FxHashSet};
+  use rolldown_utils::pass::{PassPipelineCtx, Sealed, run_infallible_pass};
+  use rustc_hash::FxHashMap;
 
+  use super::super::test_utils::{module_idx, module_table, normal_module};
   use super::{ComputeTlaPass, TlaFacts, TlaScanFacts};
-
-  type TestImport = (ImportKind, Option<usize>, Span);
-
-  fn module_idx(index: usize) -> ModuleIdx {
-    ModuleIdx::from_usize(index)
-  }
-
-  fn symbol_ref(owner: ModuleIdx) -> SymbolRef {
-    SymbolRef { owner, symbol: SymbolId::new(0) }
-  }
-
-  fn normal_module(index: usize, has_tla: bool, imports: Vec<TestImport>) -> Module {
-    let idx = module_idx(index);
-    let id = ModuleId::new(format!("m{index}.js"));
-    let namespace_ref = symbol_ref(idx);
-    let import_records = imports
-      .into_iter()
-      .map(|(kind, target, importer_span)| {
-        RawImportRecord::new(
-          format!("./m{}.js", target.unwrap_or(usize::MAX)).into(),
-          kind,
-          namespace_ref,
-          importer_span,
-          importer_span,
-          None,
-          None,
-        )
-        .into_resolved(target.map(module_idx))
-      })
-      .collect::<IndexVec<_, _>>();
-    let mut ast_usage = EcmaModuleAstUsage::empty();
-    ast_usage.set(EcmaModuleAstUsage::TopLevelAwait, has_tla);
-
-    Module::normal(rolldown_common::NormalModule {
-      exec_order: u32::MAX,
-      idx,
-      stable_id: StableModuleId::from_module_id(id.clone()),
-      debug_id: id.to_string(),
-      repr_name: format!("m{index}"),
-      module_type: ModuleType::Js,
-      ecma_view: EcmaView {
-        dummy_record_set: FxHashSet::default(),
-        source: " ".repeat(256).into(),
-        def_format: ModuleDefFormat::EsmMjs,
-        namespace_object_ref: namespace_ref,
-        named_imports: FxIndexMap::default(),
-        named_exports: FxHashMap::default(),
-        import_records,
-        imports: FxHashMap::default(),
-        exports_kind: ExportsKind::Esm,
-        default_export_ref: namespace_ref,
-        sourcemap_chain: Vec::new(),
-        importers: FxIndexSet::default(),
-        importers_idx: FxIndexSet::default(),
-        dynamic_importers: FxIndexSet::default(),
-        imported_ids: FxIndexSet::default(),
-        dynamically_imported_ids: FxIndexSet::default(),
-        side_effects: DeterminedSideEffects::Analyzed(false),
-        ast_usage,
-        self_referenced_class_decl_symbol_ids: FxHashSet::default(),
-        hashbang_range: None,
-        directive_range: Vec::new(),
-        meta: EcmaViewMeta::empty(),
-        mutations: Vec::new(),
-        new_url_references: FxHashMap::default(),
-        this_expr_replace_map: FxHashMap::default(),
-        hmr_hot_ref: None,
-        hmr_info: HmrInfo::default(),
-        constant_export_map: FxHashMap::default(),
-        enum_member_value_map: FxHashMap::default(),
-        import_attribute_map: FxHashMap::default(),
-        json_module_none_self_reference_included_symbol: None,
-        cjs_reexport_import_record_ids: Vec::new(),
-      },
-      originative_resolved_id: ResolvedId { id: id.clone(), ..ResolvedId::default() },
-      id,
-    })
-  }
-
-  fn module_table(modules: Vec<Module>) -> ModuleTable {
-    ModuleTable { modules: modules.into_iter().collect() }
-  }
 
   fn scan_facts(table: &ModuleTable) -> TlaScanFacts {
     let mut count = 0;

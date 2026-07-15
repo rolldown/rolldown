@@ -1,21 +1,17 @@
 use arcstr::ArcStr;
-use itertools::Itertools;
 use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, EntryPointKind, FlatOptions, ImportKind,
-  ModuleIdx, ModuleTable, PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief,
-  SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
+  ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, FlatOptions, Module, ModuleIdx,
+  ModuleTable, PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief, SymbolRef,
+  SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
-use rolldown_error::Diagnostics;
-#[cfg(target_family = "wasm")]
-use rolldown_utils::rayon::IteratorExt as _;
+use rolldown_error::{Diagnostics, EventKindSwitcher};
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
   pass::{PassPipelineCtx, run_infallible_pass},
-  rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
 
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -36,7 +32,6 @@ mod generate_lazy_export;
 mod passes;
 mod patch_module_dependencies;
 mod reference_needed_symbols;
-mod sort_modules;
 #[cfg(feature = "testing")]
 pub mod testing;
 mod tree_shaking;
@@ -47,7 +42,11 @@ pub use tree_shaking::{
 };
 mod wrapping;
 
-use passes::{ComputeTlaPass, TlaScanFacts};
+use passes::{
+  CanonicalizeEntriesPass, CollectExternalStarExportsPass, CollectInitialDependenciesPass,
+  ComputeModuleExecutionOrderInput, ComputeModuleExecutionOrderPass, ComputeTlaPass,
+  ConstantExtractionInput, ExtractGlobalConstantsPass, TlaScanFacts,
+};
 
 /// Information about safely merged CJS namespaces for a module
 #[derive(Debug, Default, Clone)]
@@ -90,6 +89,8 @@ pub struct LinkStageOutput {
 #[derive(Debug)]
 pub struct LinkStage<'a> {
   pub module_table: ModuleTable,
+  /// Raw scan entries, consumed by `CanonicalizeEntriesPass` at link entry.
+  entry_points: Vec<EntryPoint>,
   pub entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
   pub symbols: SymbolRefDb,
   /// Per-module runtime-helper-dependency map. Detached from `EcmaView` so the
@@ -128,40 +129,9 @@ pub struct LinkStage<'a> {
 
 impl<'a> LinkStage<'a> {
   pub fn new(mut scan_stage_output: NormalizedScanStageOutput, options: &'a SharedOptions) -> Self {
-    // since constant export is spared in most of time, aggregate them would make searching more efficient
-    let constant_symbol_map = if options.optimization.is_inline_const_enabled() {
-      scan_stage_output
-        .module_table
-        .modules
-        .par_iter_mut()
-        .filter_map(|m| {
-          let m = m.as_normal_mut()?;
-          Some(std::mem::take(&mut m.constant_export_map).into_iter().map(|(symbol_id, v)| {
-            let symbol_ref = SymbolRef { owner: m.idx, symbol: symbol_id };
-            (symbol_ref, v)
-          }))
-        })
-        .flatten_iter()
-        .collect::<FxHashMap<SymbolRef, ConstExportMeta>>()
-    } else {
-      FxHashMap::default()
-    };
-
-    // We need to preserve the original order of user defined entry points.
-    let mut rest = scan_stage_output
-      .entry_points
-      .extract_if(0.., |item| !matches!(item.kind, EntryPointKind::UserDefined))
-      .collect_vec();
-
-    rest.sort_by_cached_key(|item| {
-      (item.kind, scan_stage_output.module_table.modules[item.idx].id().as_str())
-    });
-
-    scan_stage_output.entry_points.extend(rest);
-
     Self {
       sorted_modules: Vec::new(),
-      global_constant_symbol_map: constant_symbol_map,
+      global_constant_symbol_map: FxHashMap::default(),
       depended_runtime_helper: scan_stage_output
         .module_table
         .modules
@@ -176,34 +146,11 @@ impl<'a> LinkStage<'a> {
         .module_table
         .modules
         .iter()
-        .map(|module| {
-          let mut meta = LinkingMetadata::default();
-          meta.dependencies = module
-            .import_records()
-            .iter()
-            .filter_map(|rec| match rec.kind {
-              // Dynamically imported modules are included automatically by `include_statements`
-              // when code splitting is disabled (`codeSplitting: false`).
-              ImportKind::DynamicImport | ImportKind::Require => None,
-              _ => rec.resolved_module,
-            })
-            .collect();
-          meta.star_exports_from_external_modules = module.as_normal().map_or(vec![], |inner| {
-            inner
-              .star_exports_from_external_modules(&scan_stage_output.module_table.modules)
-              .collect()
-          });
-          meta
-        })
+        .map(|_| LinkingMetadata::default())
         .collect::<IndexVec<ModuleIdx, _>>(),
       module_table: scan_stage_output.module_table,
-      entries: {
-        let mut entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>> = FxIndexMap::default();
-        for entry in scan_stage_output.entry_points {
-          entries.entry(entry.idx).or_default().push(entry);
-        }
-        entries
-      },
+      entry_points: scan_stage_output.entry_points,
+      entries: FxIndexMap::default(),
       symbols: scan_stage_output.symbol_ref_db,
       runtime: scan_stage_output.runtime,
       diagnostics: scan_stage_output.warnings.into(),
@@ -230,21 +177,84 @@ impl<'a> LinkStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
-    self.sort_modules();
+    let mut pass_pipeline = PassPipelineCtx::new();
     {
-      let mut pass_pipeline = PassPipelineCtx::new();
+      let (_, (module_table, global_constants)) = run_infallible_pass(
+        ExtractGlobalConstantsPass,
+        &mut pass_pipeline,
+        ConstantExtractionInput { enabled: self.options.optimization.is_inline_const_enabled() },
+        std::mem::take(&mut self.module_table),
+      );
+      self.module_table = module_table;
+      self.global_constant_symbol_map = global_constants.into_legacy();
+
+      let (_, entry_plan) = run_infallible_pass(
+        CanonicalizeEntriesPass,
+        &mut pass_pipeline,
+        &self.module_table,
+        std::mem::take(&mut self.entry_points),
+      );
+      let (_, dependencies) = run_infallible_pass(
+        CollectInitialDependenciesPass,
+        &mut pass_pipeline,
+        &self.module_table,
+        (),
+      );
+      for (module_idx, module_dependencies) in dependencies.into_inner().into_iter_enumerated() {
+        self.metas[module_idx].dependencies = module_dependencies;
+      }
+      let (_, external_star_exports) = run_infallible_pass(
+        CollectExternalStarExportsPass,
+        &mut pass_pipeline,
+        &self.module_table,
+        (),
+      );
+      for (module_idx, record_ids) in external_star_exports.into_inner().into_iter_enumerated() {
+        self.metas[module_idx].star_exports_from_external_modules = record_ids;
+      }
+      let (execution_orders, sorted_modules) = run_infallible_pass(
+        ComputeModuleExecutionOrderPass,
+        &mut pass_pipeline,
+        ComputeModuleExecutionOrderInput {
+          module_table: &self.module_table,
+          entry_plan: &entry_plan,
+          runtime: self.runtime.id(),
+          code_splitting_disabled: self.options.code_splitting.is_disabled(),
+          check_circular_dependencies: self
+            .options
+            .checks
+            .contains(EventKindSwitcher::CircularDependency),
+        },
+        (),
+      );
+      for (module_idx, exec_order) in execution_orders.assigned() {
+        match &mut self.module_table[module_idx] {
+          Module::Normal(module) => {
+            debug_assert_eq!(module.exec_order, u32::MAX);
+            module.exec_order = exec_order;
+          }
+          Module::External(module) => {
+            debug_assert_eq!(module.exec_order, u32::MAX);
+            module.exec_order = exec_order;
+          }
+        }
+      }
+      self.entries = entry_plan.into_legacy_entries();
+      self.sorted_modules = sorted_modules.into_inner();
+    }
+    {
       let (tla_facts, ()) = run_infallible_pass(
         ComputeTlaPass,
         &mut pass_pipeline,
         &self.module_table,
         std::mem::take(&mut self.tla_scan_facts),
       );
-      self.diagnostics.extend(pass_pipeline.into_diagnostics());
       debug_assert_eq!(tla_facts.module_count(), self.metas.len());
       for module_idx in tla_facts.modules() {
         self.metas[module_idx].is_tla_or_contains_tla_dependency = true;
       }
     }
+    self.diagnostics.extend(pass_pipeline.into_diagnostics());
     self.determine_module_exports_kind();
     self.determine_safely_merge_cjs_ns();
     self.wrap_modules();

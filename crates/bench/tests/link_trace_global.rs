@@ -86,7 +86,19 @@ fn global_collector_reaches_existing_rayon_workers_but_context_does_not() {
     .iter()
     .filter(|span| span.target == "rolldown::pass")
     .collect::<Vec<_>>();
-  assert_eq!(pass_spans.len(), 1);
-  assert!(pass_spans[0].pass.as_deref().is_some_and(|pass| pass.ends_with("ComputeTlaPass")));
+  let pass_names = pass_spans
+    .iter()
+    .map(|span| span.pass.as_deref().expect("production pass name"))
+    .collect::<Vec<_>>();
+  let expected = [
+    "ExtractGlobalConstantsPass",
+    "CanonicalizeEntriesPass",
+    "CollectInitialDependenciesPass",
+    "CollectExternalStarExportsPass",
+    "ComputeModuleExecutionOrderPass",
+    "ComputeTlaPass",
+  ];
+  assert_eq!(pass_names.len(), expected.len());
+  assert!(pass_names.iter().zip(expected).all(|(pass, suffix)| pass.ends_with(suffix)));
   assert!(production.detached_passes.is_empty());
 }

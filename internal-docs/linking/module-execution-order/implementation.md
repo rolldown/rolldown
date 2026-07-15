@@ -2,17 +2,17 @@
 
 ## Summary
 
-`sort_modules` produces a deterministic, dependency-respecting execution order over every module in the graph. It runs as the first step of the link stage, assigns each module a monotonically increasing `exec_order: u32`, and writes the resulting module index sequence to `LinkStageOutput::sorted_modules`. Downstream stages (chunk assembly, cross-chunk link computation, render) rely on this order as the canonical "what runs before what" signal — it is the bridge between the resolved graph and every ordering decision the bundler makes.
+`CanonicalizeEntriesPass` and `ComputeModuleExecutionOrderPass` produce a deterministic, dependency-respecting execution order over every reachable module in the graph. The first pass consumes raw scan entries and returns the only owned `EntryPlanDraft`; the second borrows that draft and the module table, returns sealed `ModuleExecutionOrders` plus owned `SortedModules`, and does not mutate either input. The link driver temporarily projects assigned orders into `Module::exec_order` and moves the sorted list into the legacy carrier for downstream stages. Chunk assembly, cross-chunk link computation, and rendering still rely on those legacy fields as the canonical "what runs before what" signal while the migration is in progress.
 
-Source: `crates/rolldown/src/stages/link_stage/sort_modules.rs`.
+Sources: `crates/rolldown/src/stages/link_stage/passes/canonicalize_entries.rs` and `crates/rolldown/src/stages/link_stage/passes/compute_module_execution_order.rs`.
 
 ## Guarantees
 
 The order is defined by a small set of rules, in precedence order:
 
 1. **Runtime module is always first.** `sorted_modules[0] == runtime.id()` is asserted at the end of the pass. Generated helpers (`__commonJS`, `__toESM`, etc.) must be defined before any module that references them.
-2. **User-defined entries execute in declaration order.** The order in which entries appear in `options.input` is preserved. Non-user entries (dynamic-import and emitted entries) are canonicalized earlier, in `LinkStage::new` (`crates/rolldown/src/stages/link_stage/mod.rs:142`), by sorting on `(item.kind, module.id().as_str())`. That sorted suffix is what this pass consumes — `sort_modules` itself does no entry reordering. (The `Module#debug_id` wording in the `sort_modules` source-code doc comment is stale; the authoritative key is the module id string.)
-3. **Dependencies execute before dependents, along acyclic edges.** For any non-back edge `A → B` that `sort_modules` traverses, `B.exec_order < A.exec_order`. Back edges in cycles are the exception: when the algorithm revisits an already-executed ancestor it is skipped (that's where cycle detection fires), so a module on a cycle can receive its `exec_order` before a transitive dependency further along the cycle. Downstream stages must not assume strict topological order across cycles.
+2. **User-defined entries execute in declaration order.** `CanonicalizeEntriesPass` preserves the order from `options.input`. It sorts only the dynamic-import and emitted-entry suffix by `(entry.kind, module.id().as_str())`, then groups entries by first root occurrence without creating a second root representation.
+3. **Dependencies execute before dependents, along acyclic edges.** For any non-back edge `A → B` that the execution-order pass traverses, `orders[B] < orders[A]`. Back edges in cycles are the exception: when the algorithm revisits an already-executed ancestor it is skipped, so a module on a cycle can receive its order before a transitive dependency further along the cycle. Downstream stages must not assume strict topological order across cycles.
 4. **`require(...)` is treated as a static import.** Because ES `import` statements are hoisted, required modules are placed after static imports. Among `require` calls, the first one encountered during AST scan wins — as the doc comment shows, for:
    ```js
    () => require('b');
@@ -21,7 +21,7 @@ The order is defined by a small set of rules, in precedence order:
    ```
    the execution order is `a → b → c`.
 5. **Dynamic imports are skipped by default.** They participate in sorting only when `code_splitting` is disabled (inline dynamic imports mode); otherwise they become separate chunk roots and their subgraphs are walked from their own entry status.
-6. **Order is relative, not global.** `sort_modules` only guarantees that dependencies precede their dependents along traversed edges. It does not claim a canonical topological order across unrelated subtrees — the order is a function of the DFS traversal rooted at entries.
+6. **Order is relative, not global.** The pass only guarantees that dependencies precede their dependents along traversed edges. It does not claim a canonical topological order across unrelated subtrees — the order is a function of the DFS traversal rooted at canonical entries.
 
 ## Algorithm
 
@@ -41,12 +41,11 @@ On its first real visit, a `ModuleIdx` goes through the `ToBeExecuted → WaitFo
 ### Seeding the stack
 
 ```rust
-let mut execution_stack = self
-  .entries
-  .keys()
+let mut execution_stack = entry_plan
+  .roots()
   .rev()
-  .map(|&idx| Status::ToBeExecuted(idx))
-  .chain(iter::once(Status::ToBeExecuted(self.runtime.id())))
+  .map(Status::ToBeExecuted)
+  .chain(iter::once(Status::ToBeExecuted(runtime)))
   .collect();
 ```
 
@@ -60,11 +59,11 @@ On `ToBeExecuted(id)`:
 - Otherwise, `id` is inserted into `executed_ids`, a `WaitForExit(id)` sentinel is pushed, and the module's import records are filtered and pushed in reverse:
   ```rust
   rec.kind.is_static()
-    || (self.options.code_splitting.is_disabled() && rec.kind.is_dynamic())
+    || (code_splitting_disabled && rec.kind.is_dynamic())
   ```
   `.rev()` preserves the source-order of imports after the stack reverses them.
 
-On `WaitForExit(id)`: assign `module.exec_order = next_exec_order`, push onto `sorted_modules` if it's a `Module::Normal`, increment the counter, and remove the stack-index bookkeeping entry. External modules get an `exec_order` but do not appear in `sorted_modules` (only normal modules are emitted by the chunk pipeline).
+On `WaitForExit(id)`: assign `execution_orders[id] = next_exec_order`, push `id` onto the owned sorted list if it is a `Module::Normal`, increment the counter, and remove the stack-index bookkeeping entry. External modules receive an order but do not appear in `SortedModules` because only normal modules are emitted by the chunk pipeline. The pass leaves every legacy `module.exec_order` untouched; the driver is the only temporary compatibility writer.
 
 ### Circular-dependency detection
 
@@ -75,7 +74,7 @@ The key bookkeeping is `stack_indexes_of_executing_id: FxHashMap<ModuleIdx, usiz
 - If `stack_indexes_of_executing_id` still has an entry for `id`, the module is a **back edge** — we're currently in the middle of processing it deeper in the DFS. The cycle is recovered by slicing the stack from that index to the top and collecting every `WaitForExit` variant along the way (those are the modules on the active DFS chain).
 - If `id` is executed but not in the map, it's a **cross edge** — already finished, no cycle.
 
-Cycles are deduplicated via `FxHashSet<Box<[ModuleIdx]>>` and emitted as `BuildDiagnostic::circular_dependency` warnings (not errors) at the end of the pass.
+Cycles are deduplicated via `FxIndexSet<Box<[ModuleIdx]>>` and emitted as `BuildDiagnostic::circular_dependency` warnings (not errors) at the end of the pass. The indexed set preserves first DFS-discovery order. This intentionally removes the old cross-process warning-order variation from iterating an `FxHashSet`; it does not change cycle discovery, path construction, or deduplication.
 
 ### Complexity
 
@@ -96,14 +95,16 @@ Overall work is O(N) real visits plus O(E) dependency pushes-and-skips, so total
 | `ecmascript/ecma_generator.rs`                   | Carries `exec_order` through to render so output module sequences stay deterministic                                           |
 | `stages/link_stage/cross_module_optimization.rs` | Walks `sorted_modules` for deterministic iteration over the graph                                                              |
 
-Because so many later stages key off `exec_order`, any change to the traversal rules here is an observable output change across the entire bundler. That's also why `sort_modules` is the very first step in `LinkStage::link` — it must happen before any stage that reads the field.
+Because so many later stages key off `exec_order`, any change to the traversal rules here is an observable output change across the entire bundler. The typed execution-order chain therefore runs before TLA and all remaining legacy link analyses, and the driver performs its compatibility projection before any legacy reader.
 
 ## Invariants
 
-- `module.exec_order == u32::MAX` before the pass (asserted via `debug_assert!` on assignment). This catches double-sort and bypassed traversal.
+- `module.exec_order == u32::MAX` and `execution_orders[module] == u32::MAX` before each artifact assignment. The pass does not mutate the module table; the driver separately asserts the legacy slot is still `u32::MAX` before projection.
 - `sorted_modules.first() == Some(runtime.id())` (asserted at the end of the pass).
 - A module may appear in `execution_stack` under `Status::WaitForExit` at most once concurrently; `stack_indexes_of_executing_id.contains_key(&id)` is asserted to be false before insertion.
 - `sorted_modules` contains every `Module::Normal` reachable from the entries or runtime. External modules get an `exec_order` but are not pushed into `sorted_modules`.
+- `EntryPlanDraft` has no public constructor or clone path. It is produced once, borrowed by execution ordering, and then consumed into the legacy entries map.
+- `ModuleExecutionOrders` is available only as `Sealed<ModuleExecutionOrders>` and leaves scope immediately after projection; `SortedModules` moves without cloning.
 
 ## Unresolved Questions
 
@@ -113,5 +114,6 @@ Because so many later stages key off `exec_order`, any change to the traversal r
 
 - [code-splitting](../../code-splitting/implementation.md) — consumes `exec_order` for chunk assembly
 - [runtime-helpers](../../runtime-helpers/implementation.md) — the runtime module whose "always first" guarantee this pass provides
-- `crates/rolldown/src/stages/link_stage/sort_modules.rs` — implementation
+- `crates/rolldown/src/stages/link_stage/passes/canonicalize_entries.rs` — entry producer
+- `crates/rolldown/src/stages/link_stage/passes/compute_module_execution_order.rs` — execution-order producer
 - `crates/rolldown/src/stages/link_stage/mod.rs` — `LinkStage::link` pipeline ordering

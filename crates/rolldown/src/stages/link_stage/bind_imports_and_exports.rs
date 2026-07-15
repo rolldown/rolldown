@@ -189,10 +189,10 @@ impl LinkStage<'_> {
           // The default export has no intrinsic name, so we derive one from the local names that
           // import it. `symbol_set` collects them in non-deterministic module-load order, so pick
           // the candidate with the smallest `(exec_order, name)`: `exec_order` is a deterministic
-          // `u32` assigned by `sort_modules` (which runs before this stage), so the chosen name is
-          // stable across builds and the comparison is a cheap integer compare. This also matches
-          // how the sibling `external_import_namespace_merger` is ordered (by `exec_order` in
-          // `code_splitting.rs`).
+          // `u32` assigned by `ComputeModuleExecutionOrderPass` and projected before this stage,
+          // so the chosen name is stable across builds and the comparison is a cheap integer
+          // compare. This also matches how the sibling `external_import_namespace_merger` is
+          // ordered (by `exec_order` in `code_splitting.rs`).
           let key = symbol_set
             .iter()
             .min_by_key(|&&symbol_ref| {

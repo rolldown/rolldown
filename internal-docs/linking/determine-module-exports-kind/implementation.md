@@ -17,8 +17,9 @@ Related code:
 The relevant prefix of `LinkStage::link()` (in `mod.rs`) runs roughly:
 
 ```
-sort_modules
-compute_tla
+CanonicalizeEntriesPass
+ComputeModuleExecutionOrderPass
+ComputeTlaPass
 determine_module_exports_kind   <- this file
 determine_safely_merge_cjs_ns
 wrap_modules

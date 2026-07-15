@@ -530,7 +530,7 @@ async fn pre_generate_diagnostics_preserve_cross_pass_and_local_order() {
       (
         "warning",
         "CIRCULAR_DEPENDENCY",
-        "[CIRCULAR_DEPENDENCY] Circular dependency: cycle_b0.js -> cycle_b1.js -> cycle_b0.js.",
+        "[CIRCULAR_DEPENDENCY] Circular dependency: cycle_a0.js -> cycle_a1.js -> cycle_a0.js.",
         None,
         None,
         None,
@@ -539,7 +539,7 @@ async fn pre_generate_diagnostics_preserve_cross_pass_and_local_order() {
       (
         "warning",
         "CIRCULAR_DEPENDENCY",
-        "[CIRCULAR_DEPENDENCY] Circular dependency: cycle_a0.js -> cycle_a1.js -> cycle_a0.js.",
+        "[CIRCULAR_DEPENDENCY] Circular dependency: cycle_b0.js -> cycle_b1.js -> cycle_b0.js.",
         None,
         None,
         None,

@@ -93,24 +93,41 @@ fn reject_named_non_struct_pass(item: &Item, source: &Path) {
   }
 }
 
+fn normalized_ident(ident: &syn::Ident) -> String {
+  let ident = ident.to_string();
+  ident.strip_prefix("r#").unwrap_or(&ident).to_owned()
+}
+
 fn inspect_use_tree(tree: &UseTree, prefix: &mut Vec<String>, source: &Path) {
   match tree {
     UseTree::Path(path) => {
-      prefix.push(path.ident.to_string());
+      let imported = normalized_ident(&path.ident);
+      assert!(
+        !FORBIDDEN_CARRIERS.contains(&imported.as_str()),
+        "{}: broad carrier `{imported}` must not be supplied through an import path",
+        source.display()
+      );
+      prefix.push(imported);
       inspect_use_tree(&path.tree, prefix, source);
       prefix.pop();
     }
     UseTree::Name(name) => {
-      prefix.push(name.ident.to_string());
+      let imported = normalized_ident(&name.ident);
+      prefix.push(imported.clone());
+      assert!(
+        !FORBIDDEN_CARRIERS.contains(&imported.as_str()),
+        "{}: broad carrier `{imported}` must not be supplied through an import",
+        source.display()
+      );
       assert!(
         !matches!(
-          name.ident.to_string().as_str(),
+          imported.as_str(),
           "Clone" | "Copy" | "Debug" | "Default" | "debug_assert" | "index_vec" | "matches"
         ),
         "{}: guarded derive and macro names must not be supplied through imports",
         source.display()
       );
-      if name.ident == "Pass" {
+      if imported == "Pass" {
         assert_eq!(
           prefix,
           &["rolldown_utils", "pass", "Pass"],
@@ -121,11 +138,17 @@ fn inspect_use_tree(tree: &UseTree, prefix: &mut Vec<String>, source: &Path) {
       prefix.pop();
     }
     UseTree::Rename(rename) => {
-      let original = rename.ident.to_string();
-      let alias = rename.rename.to_string();
+      let original = normalized_ident(&rename.ident);
+      let alias = normalized_ident(&rename.rename);
       assert!(
         original != "Pass" && alias != "Pass",
         "{}: renamed Pass imports are forbidden because they bypass the inventory",
+        source.display()
+      );
+      assert!(
+        !FORBIDDEN_CARRIERS.contains(&original.as_str())
+          && !FORBIDDEN_CARRIERS.contains(&alias.as_str()),
+        "{}: broad carriers must not be supplied through renamed imports (`{original}` as `{alias}`)",
         source.display()
       );
       assert!(
@@ -155,6 +178,27 @@ struct InventoryVisitor<'a> {
   source: &'a Path,
   declarations: &'a mut BTreeSet<String>,
   implementations: &'a mut BTreeSet<String>,
+  allow_wasm_iterator_ext_cfg: bool,
+}
+
+fn is_wasm_iterator_ext_cfg(attribute: &Attribute) -> bool {
+  matches!(
+    &attribute.meta,
+    syn::Meta::List(meta)
+      if meta.path.is_ident("cfg") && meta.tokens.to_string() == "target_family = \"wasm\""
+  )
+}
+
+fn is_wasm_iterator_ext_use(item: &syn::ItemUse) -> bool {
+  let UseTree::Path(root) = &item.tree else { return false };
+  let UseTree::Path(module) = &*root.tree else { return false };
+  let UseTree::Rename(extension) = &*module.tree else { return false };
+  matches!(item.vis, Visibility::Inherited)
+    && item.leading_colon.is_none()
+    && root.ident == "rolldown_utils"
+    && module.ident == "rayon"
+    && extension.ident == "IteratorExt"
+    && extension.rename == "_"
 }
 
 fn inspect_attribute(attribute: &Attribute, source: &Path) {
@@ -220,7 +264,8 @@ fn inspect_file_attributes(attributes: &[Attribute], source: &Path, is_root_modu
 }
 
 fn inspect_macro_tokens(tokens: proc_macro2::TokenStream, source: &Path) {
-  for token in tokens {
+  let tokens = tokens.into_iter().collect::<Vec<_>>();
+  for (index, token) in tokens.iter().enumerate() {
     match token {
       proc_macro2::TokenTree::Group(group) => inspect_macro_tokens(group.stream(), source),
       proc_macro2::TokenTree::Ident(ident) => {
@@ -232,7 +277,16 @@ fn inspect_macro_tokens(tokens: proc_macro2::TokenStream, source: &Path) {
           source.display()
         );
       }
-      proc_macro2::TokenTree::Punct(punct) if punct.as_char() == '!' => {
+      proc_macro2::TokenTree::Punct(punct)
+        if punct.as_char() == '!'
+          && index
+            .checked_sub(1)
+            .and_then(|previous| tokens.get(previous))
+            .is_some_and(|previous| std::matches!(previous, proc_macro2::TokenTree::Ident(_)))
+          && tokens
+            .get(index + 1)
+            .is_some_and(|next| std::matches!(next, proc_macro2::TokenTree::Group(_))) =>
+      {
         panic!(
           "{}: nested macro calls are forbidden inside allowed production macros",
           source.display()
@@ -253,6 +307,15 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
     {
       return;
     }
+
+    let previous_allow_wasm_iterator_ext_cfg = self.allow_wasm_iterator_ext_cfg;
+    self.allow_wasm_iterator_ext_cfg = std::matches!(
+      item,
+      Item::Use(item)
+        if item.attrs.len() == 1
+          && is_wasm_iterator_ext_cfg(&item.attrs[0])
+          && is_wasm_iterator_ext_use(item)
+    );
 
     reject_named_non_struct_pass(item, self.source);
     match item {
@@ -342,6 +405,7 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
     }
 
     visit::visit_item(self, item);
+    self.allow_wasm_iterator_ext_cfg = previous_allow_wasm_iterator_ext_cfg;
   }
 
   fn visit_stmt_macro(&mut self, statement: &'ast syn::StmtMacro) {
@@ -386,6 +450,9 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
   }
 
   fn visit_attribute(&mut self, attribute: &'ast Attribute) {
+    if self.allow_wasm_iterator_ext_cfg && is_wasm_iterator_ext_cfg(attribute) {
+      return;
+    }
     inspect_attribute(attribute, self.source);
   }
 
@@ -408,7 +475,8 @@ fn inspect_items(
   declarations: &mut BTreeSet<String>,
   implementations: &mut BTreeSet<String>,
 ) {
-  let mut visitor = InventoryVisitor { source, declarations, implementations };
+  let mut visitor =
+    InventoryVisitor { source, declarations, implementations, allow_wasm_iterator_ext_cfg: false };
   for item in items {
     visitor.visit_item(item);
   }
@@ -451,9 +519,23 @@ fn inventory_rejects_stateful_and_hidden_pass_shapes() {
     "fn hide() { declare_pass!(); }",
     "use external::debug_assert; fn hide() { debug_assert!(true); }",
     "#[generate_pass] pub(super) struct HiddenPass;",
+    "#[cfg(target_family = \"wasm\")] pub(super) struct HiddenPass;",
+    "#[cfg(target_family = \"wasm32\")] use rolldown_utils::rayon::IteratorExt as _;",
+    "#[cfg(target_family = \"wasm\")] use external::IteratorExt as _;",
+    "#[cfg(target_family = \"wasm\")] pub use rolldown_utils::rayon::IteratorExt as _;",
+    "#[cfg(target_family = \"wasm\")] use ::rolldown_utils::rayon::IteratorExt as _;",
     "#[derive(external::Pass)] pub(super) struct HiddenPass;",
     "use external::Debug; #[derive(Debug)] pub(super) struct HiddenPass;",
     "extern crate external as Debug; #[derive(Debug)] pub(super) struct HiddenPass;",
+    "use super::super::LinkStage as State; pub(super) struct CarrierPass; impl Pass for CarrierPass { type InputRead<'a> = &'a State<'a>; }",
+    "use super::super::LinkStage;",
+    "use super::super::r#LinkStage;",
+    "use super::super::r#LinkStage as State; pub(super) struct CarrierPass; impl Pass for CarrierPass { type InputRead<'a> = &'a State<'a>; }",
+    "use external::State as r#LinkStage;",
+    "use super::super::LinkStageOutput as Output;",
+    "use crate::types::linking_metadata::LinkingMetadata as Metadata;",
+    "use crate::types::linking_metadata::LinkingMetadataVec as MetadataVec;",
+    "use rolldown_utils::pass::PassPipelineCtx as Context;",
     "pub(super) struct CarrierPass; impl Pass for CarrierPass { type InputRead<'a> = carrier_ty!(); }",
     "fn hide() { std::debug_assert!(std::mem::size_of::<LinkStage<'static>>() > 0); }",
     "fn hide() { std::debug_assert!(std::matches!(true, true)); }",
@@ -483,4 +565,22 @@ fn inventory_accepts_the_required_unit_shape() {
   inspect_items(&file.items, Path::new("valid.rs"), &mut declarations, &mut implementations);
   assert_eq!(declarations, BTreeSet::from(["ExamplePass".to_string()]));
   assert_eq!(declarations, implementations);
+}
+
+#[test]
+fn inventory_accepts_only_the_exact_wasm_iterator_extension_import() {
+  let file = syn::parse_file(
+    "#[cfg(target_family = \"wasm\")] use rolldown_utils::rayon::IteratorExt as _;",
+  )
+  .unwrap_or_else(|error| panic!("valid test source: {error}"));
+  let mut declarations = BTreeSet::new();
+  let mut implementations = BTreeSet::new();
+  inspect_items(
+    &file.items,
+    Path::new("valid-wasm-import.rs"),
+    &mut declarations,
+    &mut implementations,
+  );
+  assert!(declarations.is_empty());
+  assert!(implementations.is_empty());
 }

@@ -332,15 +332,16 @@ debug = "full"
 strip = "none"
 
 [patch.crates-io]
-# This non-publishable integration revision carries napi-rs#3353 head
-# b58b5726 under v3 manifests for Rolldown and its Oxc dependencies.
-# Keep the runtime, derive, and WASI build crates on the same head.
-# (napi-async-runtime is pinned separately to napi-rs#3393 @ 6d6ad3bb in
-# rolldown_utils/Cargo.toml and is consumed napi-free, so the two revs coexist.)
-napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b44d9ca08b4aad153608a0cfc6fbb076945cad55" }
-napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b44d9ca08b4aad153608a0cfc6fbb076945cad55" }
-napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b44d9ca08b4aad153608a0cfc6fbb076945cad55" }
-napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b44d9ca08b4aad153608a0cfc6fbb076945cad55" }
+# napi-rs#3393 head (56e32d5c) is the top of the rebased napi stack: it restacks
+# onto the rebased #3353 base whose crates/napi is v3.10.5 (the merged SPI) and
+# additionally relaxes the napi-async-runtime crate to napi v3. One rev therefore
+# covers both the napi core crates here and the napi-async-runtime crate pinned in
+# rolldown_utils/Cargo.toml (consumed napi-free), so the whole napi graph is unified
+# on a single rev.
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "56e32d5c0e83de858e8c173db04d8d94d69a26c0" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "56e32d5c0e83de858e8c173db04d8d94d69a26c0" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "56e32d5c0e83de858e8c173db04d8d94d69a26c0" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "56e32d5c0e83de858e8c173db04d8d94d69a26c0" }
 
 # Redirect Oxc's napi binding crates onto a 0.139.0-based branch that drops the
 # forced `tokio_rt` feature (oxc-project/oxc PR #24475, backported to the

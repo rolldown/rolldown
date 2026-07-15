@@ -7,7 +7,9 @@ use arcstr::ArcStr;
 #[cfg(feature = "experimental")]
 use rolldown_common::WatcherChangeKind;
 #[cfg(feature = "experimental")]
-use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput, HmrStampTable};
+use rolldown_common::{
+  ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput, HmrStampTable, ImportKind, Module,
+};
 #[cfg(feature = "experimental")]
 use rolldown_error::BuildResult;
 #[cfg(feature = "experimental")]
@@ -47,6 +49,56 @@ impl Bundler {
     hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths, clients, stamp_table).await
   }
 
+  /// Compute the top-level-evaluated set of the current snapshot: the modules whose
+  /// evaluation is unconditionally triggered by entry-chunk top-level execution.
+  /// These are the modules reachable from the user-defined entry through
+  /// `ImportKind::Import` edges only — static `import` / `export … from` statements,
+  /// whose init calls the renderer hoists unconditionally into the importer.
+  /// `Require` and dynamic edges are excluded: a `require()` site may be
+  /// conditional, so counting it could mark a module "evaluated" that never ran —
+  /// the one unsafe direction. Missing a module here only costs re-shipped bytes.
+  ///
+  /// Values are the modules' render-time stamps at computation, so consumers
+  /// compare currency with `HmrStampTable::is_stale` exactly like the ship map.
+  ///
+  /// Returns an empty (inert) map when there is no snapshot or when the build has
+  /// several user-defined entries: the server cannot yet tell which entry a given
+  /// client loaded, and a union would mark modules evaluated for clients that
+  /// never loaded them.
+  pub fn compute_top_level_evaluated_modules(
+    &self,
+    stamp_table: &HmrStampTable,
+  ) -> FxHashMap<ArcStr, u32> {
+    let Some(snapshot) = self.cache.snapshot() else {
+      return FxHashMap::default();
+    };
+    if snapshot.user_defined_entry_modules.len() != 1 {
+      return FxHashMap::default();
+    }
+
+    let modules = &snapshot.module_table.modules;
+    let mut evaluated = FxHashMap::default();
+    let mut stack: Vec<_> = snapshot.user_defined_entry_modules.iter().copied().collect();
+    while let Some(module_idx) = stack.pop() {
+      let Module::Normal(module) = &modules[module_idx] else {
+        continue;
+      };
+      let stable_id = module.stable_id.as_arc_str();
+      if evaluated.contains_key(stable_id) {
+        continue;
+      }
+      evaluated.insert(stable_id.clone(), stamp_table.render_time_stamp(stable_id.as_str()));
+      for rec in &module.import_records {
+        if rec.kind == ImportKind::Import
+          && let Some(dep_idx) = rec.resolved_module
+        {
+          stack.push(dep_idx);
+        }
+      }
+    }
+    evaluated
+  }
+
   /// Compile a lazy entry module and return compiled code plus the pending-payload
   /// entry the delivery-time ship-map write consumes.
   ///
@@ -58,6 +110,7 @@ impl Bundler {
     module_id: String,
     client_id: &str,
     shipped: &FxHashMap<ArcStr, u32>,
+    evaluated: &FxHashMap<ArcStr, u32>,
     stamp_table: &HmrStampTable,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<HmrLazyChunkOutput> {
@@ -76,6 +129,6 @@ impl Bundler {
       cache: &mut self.cache,
       next_hmr_patch_id,
     });
-    hmr_stage.compile_lazy_entry(&module_id, client_id, shipped, stamp_table).await
+    hmr_stage.compile_lazy_entry(&module_id, client_id, shipped, evaluated, stamp_table).await
   }
 }

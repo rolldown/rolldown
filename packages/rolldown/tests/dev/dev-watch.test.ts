@@ -211,6 +211,66 @@ test.concurrent(
   },
 );
 
+// An HMR patch's factories are re-evaluation demand: only modules the client may
+// re-run belong in it. When an edit makes a hot module import a module the entry
+// chunk already evaluated at top level, the patch must carry the edited module's
+// factory only — the new import is served by the live exports already registered
+// on the client (`initModule` is registry-gated), never by re-shipping a factory.
+test.concurrent(
+  'HMR patch does not ship factories for a newly imported top-level-evaluated module',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('dev-patch-top-level-evaluated', retryCount, {
+      'main.js': `import './lib.js';\nimport './hot.js';\n`,
+      'lib.js': `export const value = 'lib';\n`,
+      'hot.js': `export const tag = 'hot';\nimport.meta.hot.accept();\n`,
+    });
+
+    const onHmrUpdates = vi.fn();
+    const engine = await dev(
+      {
+        cwd,
+        input: './main.js',
+        experimental: { devMode: true },
+      },
+      { dir: path.join(cwd, 'dist') },
+      { onHmrUpdates },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    // The hello: updates are computed per registered client.
+    await engine.registerClient('registered-client');
+
+    // The edit adds an import of `lib.js`, which the entry chunk already
+    // evaluated at top level (`main.js` imports it statically).
+    await editFile(
+      path.join(cwd, 'hot.js'),
+      `import { value } from './lib.js';\nexport const tag = 'hot-' + value;\nimport.meta.hot.accept();\n`,
+    );
+
+    const findPatch = () =>
+      onHmrUpdates.mock.calls
+        .flatMap(([result]) => (result instanceof Error ? [] : result.updates))
+        .find((u) => u.clientId === 'registered-client' && u.update.type === 'Patch');
+    await expect.poll(findPatch, { timeout: 20_000 }).toBeTruthy();
+
+    const patch = findPatch()!.update as { type: 'Patch'; code: string };
+    // The edited module re-runs, so its factory ships.
+    expect(patch.code).toMatch(/registerFactory\("[^"]*hot\.js"/);
+    // The newly imported module stays live on the client; no factory for it.
+    expect(patch.code).not.toMatch(/registerFactory\("[^"]*lib\.js"/);
+    // The re-run resolves the new import through the registry instead.
+    expect(patch.code).toMatch(/initModule\("[^"]*lib\.js"\)/);
+  },
+);
+
 function createTestInputAndOutput(testLabel: string, retryCount: number) {
   const uniqueId = crypto.randomUUID().slice(0, 8);
   const dirname = `${testLabel}-${uniqueId}-retry${retryCount}`;

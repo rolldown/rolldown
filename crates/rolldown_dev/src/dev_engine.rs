@@ -29,7 +29,6 @@ use crate::{
   },
 };
 
-#[cfg(feature = "testing")]
 use crate::ClientSession;
 #[cfg(feature = "testing")]
 use rolldown_utils::indexmap::FxIndexMap;
@@ -84,6 +83,7 @@ impl DevEngine {
       clients: Arc::clone(&clients),
       stamp_table: Arc::new(Mutex::new(HmrStampTable::default())),
       pending_payloads: Arc::new(Mutex::new(FxHashMap::default())),
+      top_level_evaluated: Mutex::new(Arc::new(FxHashMap::default())),
     });
 
     let watcher_config = FsWatcherConfig {
@@ -272,9 +272,20 @@ impl DevEngine {
   }
 
   /// Client-connect signal (the clientId hello): creates the per-client session with an
-  /// empty ship map. Reconnects arrive as fresh clientIds, which is the ship-map reset.
+  /// empty ship map and the current top-level-evaluated map frozen in. The hello comes from
+  /// the runtime inside the entry chunk, so it doubles as the entry delivery
+  /// notification. (A client that loaded an output older than the latest rebuild
+  /// gets the newer map; the mismatched entries then read as current copies the client
+  /// does not hold — the reload fallback covers that window until the hello carries a
+  /// build id.) Reconnects arrive as fresh clientIds, which is the per-client reset.
   pub async fn register_client(&self, client_id: String) {
-    self.clients.lock().await.entry(client_id).or_default();
+    let top_level_evaluated = Arc::clone(&*self.dev_context.top_level_evaluated.lock().await);
+    self
+      .clients
+      .lock()
+      .await
+      .entry(client_id)
+      .or_insert_with(|| ClientSession { top_level_evaluated, ..ClientSession::default() });
   }
 
   /// Client-disconnect signal: drops the session together with any
@@ -325,10 +336,16 @@ impl DevEngine {
     self.create_error_if_closed()?;
     let mut bundler = self.bundler.lock().await;
 
-    // Snapshot the ship map `shipped[C]` for this client so the compile runs without
-    // the clients lock. `ArcStr` keys make the copy refcount bumps, not string copies.
-    let shipped =
-      self.clients.lock().await.get(&client_id).map(|c| c.shipped.clone()).unwrap_or_default();
+    // Snapshot the ship map `shipped[C]` and the top-level-evaluated map for this client so
+    // the compile runs without the clients lock. `ArcStr` keys make the ship-map copy
+    // refcount bumps, not string copies; the top-level-evaluated map is shared by `Arc`.
+    let (shipped, top_level_evaluated) = self
+      .clients
+      .lock()
+      .await
+      .get(&client_id)
+      .map(|c| (c.shipped.clone(), Arc::clone(&c.top_level_evaluated)))
+      .unwrap_or_default();
 
     // Mark the proxy module as fetched BEFORE compilation.
     // This changes the content returned by the lazy compilation plugin's load hook
@@ -346,6 +363,7 @@ impl DevEngine {
         proxy_module_id.clone(),
         &client_id,
         &shipped,
+        &top_level_evaluated,
         &stamp_table,
         Arc::clone(&self.next_hmr_patch_id),
       )

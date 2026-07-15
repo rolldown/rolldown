@@ -332,14 +332,20 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   /// Compile a lazy entry module and return compiled code plus the pending-payload
   /// entry (`carried`) the delivery-time ship-map write consumes.
   ///
-  /// Factory selection filters the reachable set by the ship-map comparison — absent from
-  /// `shipped[C]` or stale stamp — never by execution state. The ship map itself is
-  /// written only when the serving middleware observes the response complete.
+  /// A lazy chunk is pure first-evaluation demand: nothing already evaluated ever
+  /// re-runs, so factory selection subtracts BOTH per-client records — the ship map
+  /// (`shipped[C]`, factory resident) and the top-level-evaluated map (exports live from
+  /// entry-chunk execution; `initModule` returns them without a factory). Both are
+  /// server-derived; selection never reads client-reported runtime state. Contrast
+  /// with HMR patches, whose affected set must re-run and therefore subtracts the
+  /// ship map only. The ship map itself is written only when the serving middleware
+  /// observes the response complete.
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: &str,
     _client_id: &str,
     shipped: &FxHashMap<ArcStr, u32>,
+    evaluated: &FxHashMap<ArcStr, u32>,
     stamp_table: &HmrStampTable,
   ) -> BuildResult<HmrLazyChunkOutput> {
     tracing::debug!(
@@ -412,7 +418,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     self.cache.update_defer_sync_data(&options).await?;
 
     // Collect all sync dependencies, stopping at modules whose current copy this client
-    // already holds per the ship map. Overlapping concurrent lazy compiles both see an
+    // already holds — factory resident per the ship map, or exports live per the
+    // top-level-evaluated map. Overlapping concurrent lazy compiles both see an
     // unmarked ship map and re-ship shared factories — duplicate idempotent bytes, never
     // a missing factory.
     let mut modules_to_be_updated = FxIndexSet::default();
@@ -420,6 +427,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       entry_module_idx,
       &mut modules_to_be_updated,
       shipped,
+      evaluated,
       stamp_table,
     );
 
@@ -752,6 +760,7 @@ impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
     proxy_entry_idx: ModuleIdx,
     result: &mut FxIndexSet<ModuleIdx>,
     shipped: &FxHashMap<ArcStr, u32>,
+    evaluated: &FxHashMap<ArcStr, u32>,
     stamp_table: &HmrStampTable,
   ) {
     let modules = &self.module_table().modules;
@@ -780,10 +789,15 @@ impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
             continue;
           }
           if let Module::Normal(normal_dep) = &modules[dep_idx] {
-            // Skip deps whose current copy this client already holds per the ship map.
+            // Skip deps whose current copy this client already holds: factory
+            // resident per the ship map, or exports live per the top-level-evaluated
+            // map (a lazy import never re-runs an evaluated module, so
+            // `initModule` serves it without a factory).
             let stable_id = normal_dep.stable_id.as_str();
-            if shipped.get(stable_id).is_some_and(|stamp| !stamp_table.is_stale(stable_id, *stamp))
-            {
+            let holds_current = |map: &FxHashMap<ArcStr, u32>| {
+              map.get(stable_id).is_some_and(|stamp| !stamp_table.is_stale(stable_id, *stamp))
+            };
+            if holds_current(shipped) || holds_current(evaluated) {
               continue;
             }
           }

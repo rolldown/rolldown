@@ -1,5 +1,6 @@
 use std::{future::Future, pin::Pin, sync::Arc};
 
+use arcstr::ArcStr;
 use futures::future::Shared;
 use rolldown_common::HmrStampTable;
 use rustc_hash::FxHashMap;
@@ -32,6 +33,13 @@ pub struct DevContext {
   /// delivery notification consumes an entry when the serving middleware sees
   /// the response for that filename complete.
   pub pending_payloads: Arc<Mutex<FxHashMap<String, PendingPayload>>>,
+  /// Boot-evaluated map of the latest written bundle output: module stable id →
+  /// render stamp of the copy the entry chunk evaluates at top level (computed
+  /// statically — see `Bundler::compute_top_level_evaluated_modules`). Swapped whole
+  /// after every successful rebuild; `register_client` freezes the then-current
+  /// `Arc` into the new session, since a hello can only come from the runtime
+  /// inside a served entry chunk.
+  pub top_level_evaluated: Mutex<Arc<FxHashMap<ArcStr, u32>>>,
 }
 
 impl DevContext {

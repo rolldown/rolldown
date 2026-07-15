@@ -328,6 +328,14 @@ impl BundlingTask {
     if let Err(err) = &build_result {
       tracing::error!("[BundlingTask] rebuild failed: {:?}", err);
       self.rebuild_errored = true;
+    } else {
+      // The output just written is what any newly loading client evaluates; refresh
+      // the top-level-evaluated snapshot new sessions freeze in at hello (`register_client`).
+      let top_level_evaluated = {
+        let stamp_table = self.dev_context.stamp_table.lock().await;
+        bundler.compute_top_level_evaluated_modules(&stamp_table)
+      };
+      *self.dev_context.top_level_evaluated.lock().await = Arc::new(top_level_evaluated);
     }
 
     // Call on_output callback if provided

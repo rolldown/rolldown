@@ -87,12 +87,19 @@ impl NormalExportChains {
 
 #[cfg(test)]
 pub(super) mod test_support {
+  use rolldown_common::SymbolRef;
   use rustc_hash::FxHashMap;
 
   use super::NormalExportChains;
 
   pub(in crate::stages::link_stage::passes) fn empty_normal_export_chains() -> NormalExportChains {
-    NormalExportChains { chains: FxHashMap::default() }
+    normal_export_chains([])
+  }
+
+  pub(in crate::stages::link_stage::passes) fn normal_export_chains(
+    chains: impl IntoIterator<Item = (SymbolRef, Vec<SymbolRef>)>,
+  ) -> NormalExportChains {
+    NormalExportChains { chains: FxHashMap::from_iter(chains) }
   }
 }
 

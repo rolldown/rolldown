@@ -528,12 +528,16 @@ impl Pass for ResolveMemberExpressionsPass {
 
 #[cfg(test)]
 mod tests {
-  use oxc::{semantic::Scoping, span::Span};
+  use oxc::{
+    semantic::{NodeId, Scoping},
+    span::Span,
+  };
   use oxc_index::IndexVec;
   use rolldown_common::{
-    ConstExportMeta, ConstantValue, ExportsKind, ImportKind, ImportRecordIdx, LocalExport, Module,
-    ModuleTable, NamedImport, Specifier, StmtInfos, SymbolRefDb, SymbolRefDbForModule,
-    SymbolRefFlags, side_effects::DeterminedSideEffects,
+    ConstExportMeta, ConstantValue, ExportsKind, ImportKind, ImportRecordIdx, LocalExport,
+    MemberExprObjectReferencedType, MemberExprProp, MemberExprRef, Module, ModuleTable, ModuleType,
+    NamedImport, Specifier, StmtInfo, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+    SymbolRefDbForModule, SymbolRefFlags, side_effects::DeterminedSideEffects,
   };
   use rolldown_utils::pass::{PassPipelineCtx, run_infallible_pass};
 
@@ -541,9 +545,10 @@ mod tests {
   use super::super::{
     CollectInitialDependenciesPass, CollectResolvedExportsPass, ComputeCjsRoutingInput,
     ComputeCjsRoutingPass, ConstantExtractionInput, ExtractGlobalConstantsPass,
-    FinalizeResolvedExportsPass, ResolveMemberExpressionsInput, ResolveMemberExpressionsOwned,
-    ResolveMemberExpressionsPass,
-    bind_imports::test_support::empty_normal_export_chains,
+    FinalizeResolvedExportsPass, ResolveMemberExpressionsInput, ResolveMemberExpressionsOutput,
+    ResolveMemberExpressionsOwned, ResolveMemberExpressionsPass,
+    bind_imports::NormalExportChains,
+    bind_imports::test_support::{empty_normal_export_chains, normal_export_chains},
     compute_dynamic_exports::test_support::dynamic_exports,
     determine_module_formats::test_support::module_formats,
     determine_module_side_effects::test_support::module_side_effects,
@@ -565,6 +570,120 @@ mod tests {
       assert_eq!(namespace_ref, expected);
     }
     symbols
+  }
+
+  fn insert_export(
+    modules: &mut ModuleTable,
+    module: usize,
+    name: &str,
+    symbol_ref: SymbolRef,
+    came_from_commonjs: bool,
+  ) {
+    let span_start = u32::try_from(symbol_ref.symbol.index()).expect("test symbol index fits u32");
+    modules[module_idx(module)].as_normal_mut().expect("normal export owner").named_exports.insert(
+      name.into(),
+      LocalExport {
+        span: Span::new(span_start, span_start + 1),
+        referenced: symbol_ref,
+        came_from_commonjs,
+      },
+    );
+  }
+
+  fn member_expr(
+    node: usize,
+    object_ref: SymbolRef,
+    props: &[&str],
+    object_ref_type: MemberExprObjectReferencedType,
+    is_write: bool,
+  ) -> (NodeId, SymbolOrMemberExprRef) {
+    let node_id = NodeId::new(node);
+    let prop_and_span_list = props
+      .iter()
+      .enumerate()
+      .map(|(index, name)| {
+        let start = u32::try_from(index + 1).expect("test property index fits u32");
+        MemberExprProp { name: (*name).into(), span: Span::new(start, start + 1), optional: false }
+      })
+      .collect();
+    (
+      node_id,
+      SymbolOrMemberExprRef::MemberExpr(MemberExprRef::new(
+        object_ref,
+        prop_and_span_list,
+        node_id,
+        Span::new(0, 100),
+        object_ref_type,
+        None,
+        is_write,
+      )),
+    )
+  }
+
+  fn empty_stmt_infos(module_count: usize) -> IndexVec<rolldown_common::ModuleIdx, StmtInfos> {
+    (0..module_count).map(|_| StmtInfos::new()).collect()
+  }
+
+  fn run_member_resolution(
+    modules: ModuleTable,
+    symbols: &SymbolRefDb,
+    stmt_infos: &IndexVec<rolldown_common::ModuleIdx, StmtInfos>,
+    formats: &[Option<ExportsKind>],
+    side_effects: &[DeterminedSideEffects],
+    normal_export_chains: &NormalExportChains,
+  ) -> ResolveMemberExpressionsOutput {
+    let module_count = modules.modules.len();
+    assert_eq!(stmt_infos.len(), module_count);
+    assert_eq!(formats.len(), module_count);
+    assert_eq!(side_effects.len(), module_count);
+
+    let mut pipeline = PassPipelineCtx::new();
+    let (_, (modules, global_constants)) = run_infallible_pass(
+      ExtractGlobalConstantsPass,
+      &mut pipeline,
+      ConstantExtractionInput { enabled: true },
+      modules,
+    );
+    let (_, dependencies) =
+      run_infallible_pass(CollectInitialDependenciesPass, &mut pipeline, &modules, ());
+    let (_, resolved_draft) =
+      run_infallible_pass(CollectResolvedExportsPass, &mut pipeline, &modules, ());
+    let (_, resolved_exports) =
+      run_infallible_pass(FinalizeResolvedExportsPass, &mut pipeline, symbols, resolved_draft);
+    let formats = module_formats(formats);
+    let dynamic_exports = dynamic_exports(module_count, []);
+    let (_, cjs_routing) = run_infallible_pass(
+      ComputeCjsRoutingPass,
+      &mut pipeline,
+      ComputeCjsRoutingInput {
+        module_table: &modules,
+        module_formats: &formats,
+        dynamic_exports: &dynamic_exports,
+      },
+      (),
+    );
+    let side_effects = module_side_effects(side_effects);
+    let (_, output) = run_infallible_pass(
+      ResolveMemberExpressionsPass,
+      &mut pipeline,
+      ResolveMemberExpressionsInput {
+        module_table: &modules,
+        stmt_infos,
+        symbols,
+        resolved_exports: &resolved_exports,
+        normal_export_chains,
+        module_side_effects: &side_effects,
+        dynamic_exports: &dynamic_exports,
+      },
+      ResolveMemberExpressionsOwned {
+        cjs_routing,
+        non_splittable_json_defaults: NonSplittableJsonDefaults::default(),
+        global_constants,
+        dependencies,
+      },
+    );
+    assert!(pipeline.into_diagnostics().is_empty());
+    output
   }
 
   #[test]
@@ -668,5 +787,227 @@ mod tests {
       [module_idx(1)]
     );
     assert!(pipeline.into_diagnostics().is_empty());
+  }
+
+  #[test]
+  fn graph_wide_json_default_escape_prevents_only_that_default_from_splitting() {
+    let mut modules = module_table(vec![
+      normal_module(0, false, Vec::new()),
+      normal_module(1, false, Vec::new()),
+      normal_module(2, false, Vec::new()),
+      normal_module(3, false, Vec::new()),
+    ]);
+    modules[module_idx(0)].as_normal_mut().expect("first JSON module").module_type =
+      ModuleType::Json;
+    modules[module_idx(3)].as_normal_mut().expect("second JSON module").module_type =
+      ModuleType::Json;
+    let mut symbols = symbols_for(&modules);
+    let escaped_default = symbols.create_facade_root_symbol_ref(module_idx(0), "escaped_default");
+    let escaped_key = symbols.create_facade_root_symbol_ref(module_idx(0), "escaped_key");
+    let splittable_default =
+      symbols.create_facade_root_symbol_ref(module_idx(3), "splittable_default");
+    let splittable_key = symbols.create_facade_root_symbol_ref(module_idx(3), "splittable_key");
+    insert_export(&mut modules, 0, "default", escaped_default, false);
+    insert_export(&mut modules, 0, "key", escaped_key, false);
+    insert_export(&mut modules, 3, "default", splittable_default, false);
+    insert_export(&mut modules, 3, "key", splittable_key, false);
+
+    let mut stmt_infos = empty_stmt_infos(4);
+    stmt_infos[module_idx(1)].add_stmt_info(
+      StmtInfo::default()
+        .with_referenced_symbols(vec![SymbolOrMemberExprRef::Symbol(escaped_default)]),
+    );
+    let (escaped_read, escaped_reference) =
+      member_expr(1, escaped_default, &["key"], MemberExprObjectReferencedType::Default, false);
+    let (splittable_read, splittable_reference) =
+      member_expr(2, splittable_default, &["key"], MemberExprObjectReferencedType::Default, false);
+    stmt_infos[module_idx(2)].add_stmt_info(
+      StmtInfo::default().with_referenced_symbols(vec![escaped_reference, splittable_reference]),
+    );
+
+    let normal_export_chains = empty_normal_export_chains();
+    let output = run_member_resolution(
+      modules,
+      &symbols,
+      &stmt_infos,
+      &[Some(ExportsKind::Esm); 4],
+      &[DeterminedSideEffects::Analyzed(false); 4],
+      &normal_export_chains,
+    );
+
+    let slots = output.resolutions.into_slots();
+    let reader_resolutions = slots[module_idx(2)].as_ref().expect("normal reader slot");
+    assert!(!reader_resolutions.contains_key(&escaped_read));
+    let split = &reader_resolutions[&splittable_read];
+    assert_eq!(split.resolved, Some(splittable_key));
+    assert!(split.prop_and_related_span_list.is_empty());
+    assert_eq!(split.depended_refs, [splittable_key, splittable_default]);
+  }
+
+  #[test]
+  fn cjs_namespace_default_shape_and_static_writes_preserve_legacy_resolution() {
+    let mut modules = module_table(vec![
+      normal_module(0, false, vec![(ImportKind::Import, Some(1), Span::new(1, 2))]),
+      normal_module(1, false, Vec::new()),
+    ]);
+    let mut symbols = symbols_for(&modules);
+    let import_namespace = symbols.create_facade_root_symbol_ref(module_idx(0), "cjs_namespace");
+    modules[module_idx(0)].as_normal_mut().expect("normal importer").import_records
+      [ImportRecordIdx::from_usize(0)]
+    .namespace_ref = import_namespace;
+    let cjs_default = symbols.create_facade_root_symbol_ref(module_idx(1), "cjs_default");
+    let cjs_foo = symbols.create_facade_root_symbol_ref(module_idx(1), "cjs_foo");
+    let cjs_bar = symbols.create_facade_root_symbol_ref(module_idx(1), "cjs_bar");
+    insert_export(&mut modules, 1, "default", cjs_default, true);
+    insert_export(&mut modules, 1, "foo", cjs_foo, true);
+    insert_export(&mut modules, 1, "bar", cjs_bar, true);
+    let cjs_module = modules[module_idx(1)].as_normal_mut().expect("normal CJS module");
+    cjs_module
+      .constant_export_map
+      .insert(cjs_foo.symbol, ConstExportMeta::new(ConstantValue::Number(1.0), true));
+    cjs_module
+      .constant_export_map
+      .insert(cjs_bar.symbol, ConstExportMeta::new(ConstantValue::Number(2.0), true));
+
+    let (double_default, double_default_reference) = member_expr(
+      10,
+      import_namespace,
+      &["default", "default"],
+      MemberExprObjectReferencedType::Namespace,
+      false,
+    );
+    let (default_foo, default_foo_reference) = member_expr(
+      11,
+      import_namespace,
+      &["default", "foo"],
+      MemberExprObjectReferencedType::Namespace,
+      false,
+    );
+    let (foo_write, foo_write_reference) =
+      member_expr(12, import_namespace, &["foo"], MemberExprObjectReferencedType::Namespace, true);
+    let mut stmt_infos = empty_stmt_infos(2);
+    stmt_infos[module_idx(0)].add_stmt_info(StmtInfo::default().with_referenced_symbols(vec![
+      double_default_reference,
+      default_foo_reference,
+      foo_write_reference,
+    ]));
+
+    let normal_export_chains = empty_normal_export_chains();
+    let output = run_member_resolution(
+      modules,
+      &symbols,
+      &stmt_infos,
+      &[Some(ExportsKind::Esm), Some(ExportsKind::CommonJs)],
+      &[DeterminedSideEffects::Analyzed(false); 2],
+      &normal_export_chains,
+    );
+
+    let slots = output.resolutions.into_slots();
+    let importer_resolutions = slots[module_idx(0)].as_ref().expect("normal importer slot");
+    assert!(!importer_resolutions.contains_key(&double_default));
+    let located_foo = &importer_resolutions[&default_foo];
+    assert_eq!(located_foo.target_commonjs_exported_symbol, Some((cjs_foo, false)));
+    assert_eq!(
+      located_foo
+        .prop_and_related_span_list
+        .iter()
+        .map(|prop| prop.name.as_str())
+        .collect::<Vec<_>>(),
+      ["foo"]
+    );
+    assert_eq!(
+      importer_resolutions[&foo_write].target_commonjs_exported_symbol,
+      Some((cjs_foo, false))
+    );
+    let remaining_constants = output.global_constants.into_legacy();
+    assert!(!remaining_constants.contains_key(&cjs_foo));
+    assert!(remaining_constants.contains_key(&cjs_bar));
+    assert_eq!(remaining_constants.len(), 1);
+  }
+
+  #[test]
+  fn normal_export_chains_keep_side_effect_order_and_external_runtime_properties() {
+    let mut modules = module_table(vec![
+      normal_module(0, false, vec![(ImportKind::Import, Some(5), Span::new(1, 2))]),
+      normal_module(1, false, Vec::new()),
+      external_module(2, "external"),
+      normal_module(3, false, Vec::new()),
+      normal_module(4, false, Vec::new()),
+      normal_module(5, false, Vec::new()),
+    ]);
+    let mut symbols = symbols_for(&modules);
+    let chained_export = symbols.create_facade_root_symbol_ref(module_idx(1), "chained_export");
+    let first_module_four =
+      symbols.create_facade_root_symbol_ref(module_idx(4), "first_module_four");
+    let module_three = symbols.create_facade_root_symbol_ref(module_idx(3), "module_three");
+    let second_module_four =
+      symbols.create_facade_root_symbol_ref(module_idx(4), "second_module_four");
+    let namespace =
+      modules[module_idx(1)].as_normal().expect("normal namespace owner").namespace_object_ref;
+    let external_namespace =
+      modules[module_idx(2)].as_external().expect("external module").namespace_ref;
+    insert_export(&mut modules, 1, "chained", chained_export, false);
+    insert_export(&mut modules, 1, "external", external_namespace, false);
+
+    let (chained_read, chained_reference) =
+      member_expr(20, namespace, &["chained"], MemberExprObjectReferencedType::Namespace, false);
+    let (external_read, external_reference) = member_expr(
+      21,
+      namespace,
+      &["external", "tail", "leaf"],
+      MemberExprObjectReferencedType::Namespace,
+      false,
+    );
+    let mut stmt_infos = empty_stmt_infos(6);
+    stmt_infos[module_idx(0)].add_stmt_info(
+      StmtInfo::default().with_referenced_symbols(vec![chained_reference, external_reference]),
+    );
+
+    let normal_export_chains = normal_export_chains([(
+      chained_export,
+      vec![first_module_four, module_three, second_module_four],
+    )]);
+    let output = run_member_resolution(
+      modules,
+      &symbols,
+      &stmt_infos,
+      &[
+        Some(ExportsKind::Esm),
+        Some(ExportsKind::Esm),
+        None,
+        Some(ExportsKind::Esm),
+        Some(ExportsKind::Esm),
+        Some(ExportsKind::Esm),
+      ],
+      &[
+        DeterminedSideEffects::Analyzed(false),
+        DeterminedSideEffects::Analyzed(false),
+        DeterminedSideEffects::Analyzed(false),
+        DeterminedSideEffects::Analyzed(true),
+        DeterminedSideEffects::Analyzed(true),
+        DeterminedSideEffects::Analyzed(false),
+      ],
+      &normal_export_chains,
+    );
+
+    let slots = output.resolutions.into_slots();
+    let reader_resolutions = slots[module_idx(0)].as_ref().expect("normal reader slot");
+    let chained = &reader_resolutions[&chained_read];
+    assert_eq!(chained.resolved, Some(chained_export));
+    assert_eq!(
+      chained.depended_refs,
+      [chained_export, first_module_four, module_three, second_module_four, namespace]
+    );
+    let external = &reader_resolutions[&external_read];
+    assert_eq!(external.resolved, Some(external_namespace));
+    assert_eq!(
+      external.prop_and_related_span_list.iter().map(|prop| prop.name.as_str()).collect::<Vec<_>>(),
+      ["tail", "leaf"]
+    );
+    assert_eq!(external.depended_refs, [external_namespace, namespace]);
+    assert_eq!(
+      output.dependencies.into_inner()[module_idx(0)].iter().copied().collect::<Vec<_>>(),
+      [module_idx(5), module_idx(4), module_idx(3)]
+    );
   }
 }

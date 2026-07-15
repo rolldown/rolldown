@@ -297,7 +297,7 @@ impl ImportMatcher<'_> {
     let (ret, ambiguous_results, tracker) = self.follow_import_chain(effects, ctx, tracker);
     tracing::trace!("ambiguous_results {:#?}", ambiguous_results);
     tracing::trace!("ret {:#?}", ret);
-    let ret = self.classify_ambiguity(ret, &ambiguous_results);
+    let ret = classify_ambiguity(ret, &ambiguous_results);
     self.maybe_shim_missing_export(effects, &tracker, ret)
   }
 
@@ -461,36 +461,6 @@ impl ImportMatcher<'_> {
     }
   }
 
-  fn classify_ambiguity(
-    &self,
-    ret: MatchImportKind,
-    ambiguous_results: &[MatchImportKind],
-  ) -> MatchImportKind {
-    for ambiguous_result in ambiguous_results {
-      if !ambiguous_result.is_equivalent_to(&ret) {
-        if let MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) = ret {
-          return MatchImportKind::Ambiguous {
-            symbol_ref: symbol,
-            potentially_ambiguous_symbol_refs: ambiguous_results
-              .iter()
-              .filter_map(|kind| match *kind {
-                MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => Some(symbol),
-                MatchImportKind::Namespace { namespace_ref }
-                | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
-                MatchImportKind::Cycle
-                | MatchImportKind::Ambiguous { .. }
-                | MatchImportKind::NoMatch => None,
-              })
-              .collect::<Vec<_>>()
-              .into_boxed_slice(),
-          };
-        }
-        std::unreachable!("ambiguous alternatives require a normal primary symbol");
-      }
-    }
-    ret
-  }
-
   fn maybe_shim_missing_export(
     &self,
     effects: &mut RecursiveMatchEffects<'_, '_>,
@@ -522,6 +492,39 @@ impl ImportMatcher<'_> {
 
     ret
   }
+}
+
+fn classify_ambiguity(
+  ret: MatchImportKind,
+  ambiguous_results: &[MatchImportKind],
+) -> MatchImportKind {
+  // Legacy cycle detection returned from `match_import_with_export` before this comparison.
+  if std::matches!(ret, MatchImportKind::Cycle) {
+    return ret;
+  }
+  for ambiguous_result in ambiguous_results {
+    if !ambiguous_result.is_equivalent_to(&ret) {
+      if let MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) = ret {
+        return MatchImportKind::Ambiguous {
+          symbol_ref: symbol,
+          potentially_ambiguous_symbol_refs: ambiguous_results
+            .iter()
+            .filter_map(|kind| match *kind {
+              MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => Some(symbol),
+              MatchImportKind::Namespace { namespace_ref }
+              | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
+              MatchImportKind::Cycle
+              | MatchImportKind::Ambiguous { .. }
+              | MatchImportKind::NoMatch => None,
+            })
+            .collect::<Vec<_>>()
+            .into_boxed_slice(),
+        };
+      }
+      std::unreachable!("ambiguous alternatives require a normal primary symbol");
+    }
+  }
+  ret
 }
 
 fn record_external_groups(
@@ -898,7 +901,10 @@ mod tests {
     create_wrapper_declarations::test_support::module_wrappers,
     test_utils::{entry_point, external_module, module_idx, module_table, normal_module},
   };
-  use super::{BindImportsInput, BindImportsOutput, BindImportsOwned, BindImportsPass};
+  use super::{
+    BindImportsInput, BindImportsOutput, BindImportsOwned, BindImportsPass, MatchImportKind,
+    MatchImportKindNormal, classify_ambiguity,
+  };
 
   fn symbols_for(modules: &ModuleTable) -> SymbolRefDb {
     let mut symbols = SymbolRefDb::new();
@@ -915,6 +921,22 @@ mod tests {
       assert_eq!(namespace_ref, expected_namespace_ref);
     }
     symbols
+  }
+
+  #[test]
+  fn cycle_returns_before_ambiguity_comparison() {
+    let modules = module_table(vec![normal_module(0, false, Vec::new())]);
+    let mut symbols = symbols_for(&modules);
+    let symbol = symbols.create_facade_root_symbol_ref(module_idx(0), "value");
+    let alternatives = [
+      MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports: Vec::new() }),
+      MatchImportKind::Cycle,
+      MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports: Vec::new() }),
+    ];
+
+    let result = classify_ambiguity(MatchImportKind::Cycle, &alternatives);
+
+    assert!(std::matches!(result, MatchImportKind::Cycle));
   }
 
   fn add_named_import(

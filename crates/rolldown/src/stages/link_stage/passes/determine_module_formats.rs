@@ -26,10 +26,31 @@ impl ModuleFormatsDraft {
     self.formats[module_idx]
   }
 
-  pub(in crate::stages::link_stage) fn normal_modules(
-    &self,
-  ) -> impl Iterator<Item = (ModuleIdx, ExportsKind)> + '_ {
-    self.formats.iter_enumerated().filter_map(|(idx, format)| format.map(|format| (idx, format)))
+  pub(in crate::stages::link_stage) fn set(&mut self, module_idx: ModuleIdx, format: ExportsKind) {
+    self.formats[module_idx] = Some(format);
+  }
+
+  pub(super) fn finalize(self) -> ModuleFormats {
+    ModuleFormats { formats: self.formats }
+  }
+}
+
+pub(in crate::stages::link_stage) struct ModuleFormats {
+  formats: IndexVec<ModuleIdx, Option<ExportsKind>>,
+}
+
+impl ModuleFormats {
+  pub(in crate::stages::link_stage) fn module_count(&self) -> usize {
+    self.formats.len()
+  }
+
+  pub(in crate::stages::link_stage) fn into_normal_modules(
+    self,
+  ) -> impl Iterator<Item = (ModuleIdx, ExportsKind)> {
+    self
+      .formats
+      .into_iter_enumerated()
+      .filter_map(|(idx, format)| format.map(|format| (idx, format)))
   }
 }
 

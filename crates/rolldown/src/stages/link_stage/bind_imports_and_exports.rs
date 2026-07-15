@@ -8,8 +8,8 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType,
   MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDb, SymbolRefFlags,
+  OutputFormat, ResolvedExport, Specifier, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef,
+  SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics};
 #[cfg(not(target_family = "wasm"))]
@@ -25,7 +25,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{SharedOptions, types::linking_metadata::LinkingMetadataVec};
 
-use super::LinkStage;
+use super::{LinkStage, non_splittable_json_defaults::NonSplittableJsonDefaults};
 
 #[derive(Clone, Debug)]
 struct ImportTracker {
@@ -122,7 +122,10 @@ impl LinkStage<'_> {
   ///
   /// Unlike import from normal modules, the imported variable deosn't have a place that declared the variable. So we consider `import { a } from 'external'` in `foo.js` as the declaration statement of `a`.
   #[tracing::instrument(level = "debug", skip_all)]
-  pub(super) fn bind_imports_and_exports(&mut self) {
+  pub(super) fn bind_imports_and_exports(
+    &mut self,
+    fallback_non_splittable_json_defaults: &NonSplittableJsonDefaults,
+  ) {
     // Initialize `resolved_exports` to prepare for matching imports with exports
     self.metas.par_iter_mut_enumerated().for_each(|(module_id, meta)| {
       let Module::Normal(module) = &self.module_table[module_id] else {
@@ -239,7 +242,11 @@ impl LinkStage<'_> {
         FxIndexMap::from_iter(sorted_and_non_ambiguous_resolved_exports);
     });
     self.update_cjs_module_meta();
-    self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
+    self.resolve_member_expr_refs(
+      &side_effects_modules,
+      &normal_symbol_exports_chain_map,
+      fallback_non_splittable_json_defaults,
+    );
     self.normal_symbol_exports_chain_map = normal_symbol_exports_chain_map;
   }
 
@@ -403,6 +410,7 @@ impl LinkStage<'_> {
     &mut self,
     side_effects_modules: &FxHashSet<ModuleIdx>,
     normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
+    fallback_non_splittable_json_defaults: &NonSplittableJsonDefaults,
   ) {
     let warnings = append_only_vec::AppendOnlyVec::new();
     // A JSON default object whose `data.key` accesses get rewritten to the statically split
@@ -414,23 +422,28 @@ impl LinkStage<'_> {
     let has_json_module = self.module_table.modules.iter().any(|module| {
       module.as_normal().is_some_and(|module| matches!(module.module_type, ModuleType::Json))
     });
-    let non_splittable_json_defaults: FxHashSet<SymbolRef> = if has_json_module {
-      self
-        .module_table
-        .modules
-        .par_iter()
-        .zip(self.stmt_infos.par_iter())
-        .map(|(module, stmt_infos)| match module {
-          Module::Normal(_) => self.collect_non_splittable_json_defaults(stmt_infos),
-          Module::External(_) => FxHashSet::default(),
-        })
-        .collect::<Vec<_>>()
-        .into_iter()
-        .flatten()
-        .collect()
-    } else {
-      FxHashSet::default()
-    };
+    let mut non_splittable_json_defaults: FxHashSet<SymbolRef> =
+      fallback_non_splittable_json_defaults
+        .iter()
+        .map(|symbol_ref| self.symbols.canonical_ref_for(symbol_ref))
+        .collect();
+    if has_json_module {
+      non_splittable_json_defaults.extend(
+        self
+          .module_table
+          .modules
+          .par_iter()
+          .zip(self.stmt_infos.par_iter())
+          .map(|(module, stmt_infos)| match module {
+            Module::Normal(_) => self.collect_non_splittable_json_defaults(stmt_infos),
+            Module::External(_) => FxHashSet::default(),
+          })
+          .collect::<Vec<_>>()
+          .into_iter()
+          .flatten()
+          .collect::<FxHashSet<_>>(),
+      );
+    }
     let resolved_meta_data = self
       .module_table
       .modules
@@ -763,6 +776,9 @@ impl LinkStage<'_> {
   fn collect_non_splittable_json_defaults(&self, stmt_infos: &StmtInfos) -> FxHashSet<SymbolRef> {
     let mut non_splittable = FxHashSet::default();
     for stmt_info in stmt_infos.iter() {
+      if stmt_info.meta.contains(StmtInfoMeta::LazyJsonExportInitializer) {
+        continue;
+      }
       for reference in &stmt_info.referenced_symbols {
         if let Some(json_default) = self.json_default_made_non_splittable_by(reference) {
           non_splittable.insert(json_default);

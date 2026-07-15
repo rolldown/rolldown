@@ -22,7 +22,9 @@ use crate::{
   SharedOptions,
   chunk_graph::ChunkGraph,
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
-  stages::link_stage::SafelyMergeCjsNsInfo,
+  stages::link_stage::{
+    SafelyMergeCjsNsInfo, lazy_json_export_initializers::LazyJsonModuleExportInitializers,
+  },
   types::linking_metadata::{EsmInitTarget, LinkingMetadata, LinkingMetadataVec},
 };
 
@@ -45,6 +47,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub constant_value_map: &'me FxHashMap<SymbolRef, ConstExportMeta>,
   pub safely_merge_cjs_ns_map: &'me FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub retained_export_symbols: &'me RetainedExportSymbols,
+  pub lazy_json_export_initializers: Option<&'me LazyJsonModuleExportInitializers>,
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   pub resolved_paths: Option<&'me PathsOutputOption>,
   /// True if any module in the bundle has enum member values to inline.

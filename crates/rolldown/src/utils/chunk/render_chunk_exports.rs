@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
+use json_escape_simd::escape;
 use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
@@ -303,10 +304,11 @@ pub fn render_chunk_exports(
 
 #[inline]
 pub fn render_object_define_property(key: &str, value: &str) -> String {
+  let key = escape(key);
   concat_string!(
-    "Object.defineProperty(exports, '",
+    "Object.defineProperty(exports, ",
     key,
-    "', {
+    ", {
   enumerable: true,
   get: function () {
     return ",
@@ -319,10 +321,11 @@ pub fn render_object_define_property(key: &str, value: &str) -> String {
 
 #[inline]
 pub fn render_object_define_property_value(key: &str, value: &str) -> String {
+  let key = escape(key);
   concat_string!(
-    "Object.defineProperty(exports, '",
+    "Object.defineProperty(exports, ",
     key,
-    "', {
+    ", {
   enumerable: true,
   value: ",
     value,
@@ -391,4 +394,18 @@ fn must_keep_live_binding(
   }
 
   true
+}
+
+#[cfg(test)]
+mod tests {
+  use super::{render_object_define_property, render_object_define_property_value};
+
+  #[test]
+  fn define_property_escapes_arbitrary_export_names() {
+    let key = "single'quote\nback\\slash";
+    let expected_prefix = "Object.defineProperty(exports, \"single'quote\\nback\\\\slash\", {";
+
+    assert!(render_object_define_property(key, "value").starts_with(expected_prefix));
+    assert!(render_object_define_property_value(key, "value").starts_with(expected_prefix));
+  }
 }

@@ -16,7 +16,7 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 ## Pipeline placement
 
 ```
-… PlanModuleWrappingPass → wrapper declaration → generate_lazy_export → determine_side_effects
+… PlanModuleWrappingPass → CreateWrapperDeclarationsPass → NormalizeLazyExportsPass → determine_side_effects
   → bind_imports_and_exports → create_exports_for_ecma_modules
   → reference_needed_symbols   ← this pass
   → cross_module_optimization → include_statements → patch_module_dependencies
@@ -24,7 +24,7 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 
 Position is load-bearing in two directions:
 
-1. **`wrap_kind` and `wrapper_ref` must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`. `PlanModuleWrappingPass`, wrapper declaration allocation, and `generate_lazy_export` establish the projected final values.
+1. **`wrap_kind` and `wrapper_ref` must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`. `PlanModuleWrappingPass`, `CreateWrapperDeclarationsPass`, and `NormalizeLazyExportsPass` establish the projected final values before the compatibility adapter writes them to metadata.
 2. **`include_statements` must run after.** Tree-shaking traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data this pass writes, wrappers and helpers would be silently dropped from the output.
 
 ## Dispatch
@@ -194,5 +194,6 @@ A bug in any of (1)–(4) typically surfaces as a tree-shaking false-positive (h
 
 - [determine-module-exports-kind](../determine-module-exports-kind/implementation.md) — produces `wrap_kind` and `safely_merge_cjs_ns_map`.
 - [module-execution-order](../module-execution-order/implementation.md) — orthogonal; `exec_order` is what `include_statements` uses to walk modules deterministically.
-- `crates/rolldown/src/stages/link_stage/wrapping.rs` — populates `wrap_kind` and `wrapper_ref`.
+- `crates/rolldown/src/stages/link_stage/passes/plan_module_wrapping.rs` and `create_wrapper_declarations.rs` — plan wrapping and allocate paired wrapper symbol/statement identities.
+- `crates/rolldown/src/stages/link_stage/passes/normalize_lazy_exports.rs` — preserves or invalidates wrapper identities atomically with lazy-export normalization, then returns final wrapper state for projection.
 - `crates/rolldown/src/stages/link_stage/tree_shaking/include_statements.rs` — the consumer of `referenced_symbols`, `side_effect`, and `depended_runtime_helper`.

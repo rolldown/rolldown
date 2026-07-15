@@ -9,17 +9,28 @@ mod compute_cjs_namespace_merges;
 mod compute_dynamic_exports;
 mod compute_module_execution_order;
 mod compute_tla;
+mod create_wrapper_declarations;
 mod determine_module_formats;
 mod extract_global_constants;
+mod normalize_lazy_exports;
 mod plan_module_wrapping;
 
 pub(super) use canonicalize_entries::EntryPlanDraft;
-pub(super) use compute_cjs_namespace_merges::ComputeCjsNamespaceMergesInput;
-pub(super) use compute_dynamic_exports::ComputeDynamicExportsInput;
+pub(super) use compute_cjs_namespace_merges::{CjsNamespaceMerges, ComputeCjsNamespaceMergesInput};
+pub(super) use compute_dynamic_exports::{ComputeDynamicExportsInput, DynamicExports};
 pub(super) use compute_module_execution_order::ComputeModuleExecutionOrderInput;
 pub(super) use compute_tla::TlaScanFacts;
-pub(super) use determine_module_formats::DetermineModuleFormatsInput;
-pub(super) use extract_global_constants::ConstantExtractionInput;
+pub(super) use create_wrapper_declarations::{
+  CreateWrapperDeclarationsInput, CreateWrapperDeclarationsOutput, CreateWrapperDeclarationsOwned,
+  ModuleWrappers, WrapperDeclaration, WrapperDeclarationsDraft,
+};
+pub(super) use determine_module_formats::{
+  DetermineModuleFormatsInput, ModuleFormats, ModuleFormatsDraft,
+};
+pub(super) use extract_global_constants::{ConstantExtractionInput, GlobalConstantsDraft};
+pub(super) use normalize_lazy_exports::{
+  NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
+};
 pub(super) use plan_module_wrapping::PlanModuleWrappingInput;
 
 #[derive(Clone, Copy)]
@@ -44,10 +55,16 @@ pub(super) struct ComputeModuleExecutionOrderPass;
 pub(super) struct ComputeTlaPass;
 
 #[derive(Clone, Copy)]
+pub(super) struct CreateWrapperDeclarationsPass;
+
+#[derive(Clone, Copy)]
 pub(super) struct DetermineModuleFormatsPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct ExtractGlobalConstantsPass;
+
+#[derive(Clone, Copy)]
+pub(super) struct NormalizeLazyExportsPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct PlanModuleWrappingPass;
@@ -68,9 +85,9 @@ pub(super) mod test_utils {
   use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
   use rustc_hash::{FxHashMap, FxHashSet};
 
-  pub(super) type TestImport = (ImportKind, Option<usize>, Span);
+  pub(in crate::stages::link_stage) type TestImport = (ImportKind, Option<usize>, Span);
 
-  pub(super) fn module_idx(index: usize) -> ModuleIdx {
+  pub(in crate::stages::link_stage) fn module_idx(index: usize) -> ModuleIdx {
     ModuleIdx::from_usize(index)
   }
 
@@ -78,7 +95,11 @@ pub(super) mod test_utils {
     SymbolRef { owner, symbol: SymbolId::new(0) }
   }
 
-  pub(super) fn normal_module(index: usize, has_tla: bool, imports: Vec<TestImport>) -> Module {
+  pub(in crate::stages::link_stage) fn normal_module(
+    index: usize,
+    has_tla: bool,
+    imports: Vec<TestImport>,
+  ) -> Module {
     normal_module_with_id(index, &format!("m{index}.js"), has_tla, imports)
   }
 

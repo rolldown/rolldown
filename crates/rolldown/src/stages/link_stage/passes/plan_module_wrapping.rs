@@ -28,13 +28,8 @@ pub(in crate::stages::link_stage) struct WrapperPlan {
 }
 
 impl WrapperPlan {
-  pub(in crate::stages::link_stage) fn modules(
-    &self,
-  ) -> impl Iterator<Item = (ModuleIdx, WrapKind, bool)> + '_ {
-    self
-      .slots
-      .iter_enumerated()
-      .map(|(idx, slot)| (idx, slot.kind.unwrap_or(WrapKind::None), slot.required_by_other_module))
+  pub(super) fn into_inner(self) -> oxc_index::IndexVec<ModuleIdx, WrapperStateDraftSlot> {
+    self.slots
   }
 }
 
@@ -228,7 +223,11 @@ mod tests {
       seeds,
     );
     assert!(pipeline.into_diagnostics().is_empty());
-    plan.modules().map(|(_, kind, required)| (kind, required)).collect()
+    plan
+      .slots
+      .iter()
+      .map(|slot| (slot.kind.unwrap_or(WrapKind::None), slot.required_by_other_module))
+      .collect()
   }
 
   #[test]

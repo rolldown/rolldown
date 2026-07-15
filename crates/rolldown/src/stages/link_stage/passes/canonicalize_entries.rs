@@ -23,6 +23,16 @@ impl EntryPlanDraft {
     self.entries.keys().copied()
   }
 
+  pub(in crate::stages::link_stage) fn related_identity_owners(
+    &self,
+  ) -> impl Iterator<Item = ModuleIdx> + '_ {
+    self
+      .entries
+      .values()
+      .flatten()
+      .flat_map(|entry| entry.related_stmt_infos.iter().map(|(owner, _, _, _)| *owner))
+  }
+
   pub(in crate::stages::link_stage) fn into_legacy_entries(
     self,
   ) -> FxIndexMap<ModuleIdx, Vec<EntryPoint>> {

@@ -268,6 +268,7 @@ impl PreProcessEcmaAst {
       ast,
       scoping,
       has_lazy_export,
+      lazy_export_payload_stmt_index: None,
       warnings,
       preserve_jsx,
       enum_member_value_map,

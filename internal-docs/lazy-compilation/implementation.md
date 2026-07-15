@@ -93,7 +93,7 @@ The server-side race window still exists (two `/lazy` requests in rapid successi
 
 ### Link-Stage-Synthesized Exports (JSON, text, base64, dataurl)
 
-Modules whose exports are synthesized at link time are **broken inside lazy chunks** (and HMR patches): JSON/text/base64/dataurl modules are scanned as a bare expression statement with `ExportsKind::None`, and the `export default` is materialized only by the link stage's `generate_lazy_export` — which the lazy/HMR render path never runs (it renders pristine scan-time AST clones). The lazy chunk registers them as `registerModule(id, {})`, so importers see **empty exports on first lazy load**; after the background rebuild + a page refresh the full build applies the transform and the same import works. No playground fixture covers this yet.
+Modules whose exports are synthesized at link time are **broken inside lazy chunks** (and HMR patches): JSON/text/base64/dataurl modules are scanned as a bare expression statement with `ExportsKind::None`, and the `export default` is materialized only by `NormalizeLazyExportsPass` — which the lazy/HMR render path never runs (it renders pristine scan-time AST clones). The lazy chunk registers them as `registerModule(id, {})`, so importers see **empty exports on first lazy load**; after the background rebuild + a page refresh the full build applies the transform and the same import works. No playground fixture covers this yet.
 
 ### CSS
 

@@ -15,15 +15,10 @@ pub(in crate::stages::link_stage) struct ComputeDynamicExportsInput<'a> {
 }
 
 pub(in crate::stages::link_stage) struct DynamicExports {
-  module_count: usize,
   modules: IndexBitSet<ModuleIdx>,
 }
 
 impl DynamicExports {
-  pub(in crate::stages::link_stage) fn module_count(&self) -> usize {
-    self.module_count
-  }
-
   pub(in crate::stages::link_stage) fn modules(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
     self.modules.index_of_one()
   }
@@ -97,7 +92,7 @@ impl Pass for ComputeDynamicExportsPass {
       }
     }
 
-    Ok(token.finish(DynamicExports { module_count, modules: dynamic_exports }, ()))
+    Ok(token.finish(DynamicExports { modules: dynamic_exports }, ()))
   }
 }
 
@@ -172,7 +167,6 @@ mod tests {
       (),
     );
 
-    assert_eq!(dynamic_exports.module_count(), modules.modules.len());
     assert_eq!(dynamic_exports.modules().collect::<Vec<_>>(), [0, 1, 2, 3, 4].map(module_idx));
     assert!(pipeline.into_diagnostics().is_empty());
   }

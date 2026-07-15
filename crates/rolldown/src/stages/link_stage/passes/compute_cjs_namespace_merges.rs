@@ -21,6 +21,15 @@ pub(in crate::stages::link_stage) struct CjsNamespaceMerges {
 }
 
 impl CjsNamespaceMerges {
+  pub(in crate::stages::link_stage) fn identity_owners(
+    &self,
+  ) -> impl Iterator<Item = ModuleIdx> + '_ {
+    self
+      .modules
+      .values()
+      .flat_map(|info| info.namespace_refs.iter().map(|symbol_ref| symbol_ref.owner))
+  }
+
   pub(in crate::stages::link_stage) fn into_legacy(
     self,
   ) -> FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo> {

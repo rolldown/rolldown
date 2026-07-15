@@ -28,6 +28,8 @@ mod bind_imports_and_exports;
 mod create_exports_for_ecma_modules;
 mod cross_module_optimization;
 mod generate_lazy_export;
+pub mod lazy_json_export_initializers;
+mod non_splittable_json_defaults;
 mod passes;
 mod patch_module_dependencies;
 mod reference_needed_symbols;
@@ -39,14 +41,21 @@ pub use tree_shaking::{
   IncludeContext, ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec,
   SymbolIncludeReason, compute_body_demand_keys, include_runtime_symbol, include_symbol,
 };
-mod wrapping;
+
+use lazy_json_export_initializers::LazyJsonExportInitializers;
+use non_splittable_json_defaults::NonSplittableJsonDefaults;
 
 use passes::{
   CanonicalizeEntriesPass, CollectExternalStarExportsPass, CollectInitialDependenciesPass,
   ComputeCjsNamespaceMergesInput, ComputeCjsNamespaceMergesPass, ComputeDynamicExportsInput,
   ComputeDynamicExportsPass, ComputeModuleExecutionOrderInput, ComputeModuleExecutionOrderPass,
-  ComputeTlaPass, ConstantExtractionInput, DetermineModuleFormatsInput, DetermineModuleFormatsPass,
-  ExtractGlobalConstantsPass, PlanModuleWrappingInput, PlanModuleWrappingPass, TlaScanFacts,
+  ComputeTlaPass, ConstantExtractionInput, CreateWrapperDeclarationsInput,
+  CreateWrapperDeclarationsOutput, CreateWrapperDeclarationsOwned, CreateWrapperDeclarationsPass,
+  DetermineModuleFormatsInput, DetermineModuleFormatsPass, DynamicExports, EntryPlanDraft,
+  ExtractGlobalConstantsPass, GlobalConstantsDraft, ModuleFormats, ModuleWrappers,
+  NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
+  NormalizeLazyExportsPass, PlanModuleWrappingInput, PlanModuleWrappingPass, TlaScanFacts,
+  WrapperDeclaration,
 };
 
 /// Information about safely merged CJS namespaces for a module
@@ -81,6 +90,7 @@ pub struct LinkStageOutput {
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  pub(crate) lazy_json_export_initializers: LazyJsonExportInitializers,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   /// True if any module has enum member values to inline. Computed once to avoid
   /// repeated full module table scans.
@@ -176,10 +186,159 @@ impl<'a> LinkStage<'a> {
     }
   }
 
+  fn run_representation_passes(
+    &mut self,
+    pass_pipeline: &mut PassPipelineCtx,
+    entry_plan: &EntryPlanDraft,
+    global_constants: &GlobalConstantsDraft,
+  ) -> (LazyJsonExportInitializers, NonSplittableJsonDefaults) {
+    let (_, (module_formats, wrapper_seeds)) = run_infallible_pass(
+      DetermineModuleFormatsPass,
+      pass_pipeline,
+      DetermineModuleFormatsInput {
+        module_table: &self.module_table,
+        entry_plan,
+        output_format: self.options.format,
+        code_splitting_disabled: self.options.code_splitting.is_disabled(),
+      },
+      (),
+    );
+    let (_, cjs_namespace_merges) = run_infallible_pass(
+      ComputeCjsNamespaceMergesPass,
+      pass_pipeline,
+      ComputeCjsNamespaceMergesInput {
+        module_table: &self.module_table,
+        module_formats: &module_formats,
+        strict_execution_order: self.options.is_strict_execution_order_enabled(),
+      },
+      (),
+    );
+    let (dynamic_exports, ()) = run_infallible_pass(
+      ComputeDynamicExportsPass,
+      pass_pipeline,
+      ComputeDynamicExportsInput {
+        module_table: &self.module_table,
+        module_formats: &module_formats,
+      },
+      (),
+    );
+    let (_, wrapper_plan) = run_infallible_pass(
+      PlanModuleWrappingPass,
+      pass_pipeline,
+      PlanModuleWrappingInput {
+        module_table: &self.module_table,
+        module_formats: &module_formats,
+        runtime: self.runtime.id(),
+        strict_execution_order: self.options.is_strict_execution_order_enabled(),
+        on_demand_wrapping: self.options.experimental.is_on_demand_wrapping_enabled(),
+      },
+      wrapper_seeds,
+    );
+    let (commonjs_helper, esm_helper) = if self.options.profiler_names {
+      (self.runtime.resolve_symbol("__commonJS"), self.runtime.resolve_symbol("__esm"))
+    } else {
+      (self.runtime.resolve_symbol("__commonJSMin"), self.runtime.resolve_symbol("__esmMin"))
+    };
+    let (_, wrapper_output) = run_infallible_pass(
+      CreateWrapperDeclarationsPass,
+      pass_pipeline,
+      CreateWrapperDeclarationsInput {
+        module_table: &self.module_table,
+        commonjs_helper,
+        esm_helper,
+      },
+      CreateWrapperDeclarationsOwned {
+        wrapper_plan,
+        symbols: std::mem::take(&mut self.symbols),
+        stmt_infos: std::mem::take(&mut self.stmt_infos),
+      },
+    );
+    let CreateWrapperDeclarationsOutput { wrapper_declarations, symbols, stmt_infos } =
+      wrapper_output;
+    let (_, normalized) = run_infallible_pass(
+      NormalizeLazyExportsPass,
+      pass_pipeline,
+      NormalizeLazyExportsInput {
+        entry_plan,
+        cjs_namespace_merges: &cjs_namespace_merges,
+        global_constants,
+      },
+      NormalizeLazyExportsOwned {
+        module_table: std::mem::take(&mut self.module_table),
+        ast_table: std::mem::take(&mut self.ast_table),
+        stmt_infos,
+        symbols,
+        module_formats,
+        wrapper_declarations,
+      },
+    );
+    let NormalizeLazyExportsOutput {
+      module_table,
+      ast_table,
+      stmt_infos,
+      symbols,
+      module_formats,
+      module_wrappers,
+      lazy_json_export_initializers,
+      non_splittable_json_defaults,
+    } = normalized;
+    self.module_table = module_table;
+    self.ast_table = ast_table;
+    self.stmt_infos = stmt_infos;
+    self.symbols = symbols;
+    self.project_representation_results(module_formats, module_wrappers, &dynamic_exports);
+    self.safely_merge_cjs_ns_map = cjs_namespace_merges.into_legacy();
+    (lazy_json_export_initializers, non_splittable_json_defaults)
+  }
+
+  fn project_representation_results(
+    &mut self,
+    module_formats: ModuleFormats,
+    module_wrappers: ModuleWrappers,
+    dynamic_exports: &DynamicExports,
+  ) {
+    if module_formats.module_count() != self.module_table.modules.len() {
+      tracing::error!(
+        formats = module_formats.module_count(),
+        modules = self.module_table.modules.len(),
+        "module-format layout mismatch"
+      );
+    }
+    for (module_idx, exports_kind) in module_formats.into_normal_modules() {
+      match self.module_table.modules.get_mut(module_idx) {
+        Some(Module::Normal(module)) => module.exports_kind = exports_kind,
+        Some(Module::External(_)) | None => tracing::error!(
+          module = module_idx.index(),
+          "normal module format targets a missing or external module"
+        ),
+      }
+    }
+    for module_idx in dynamic_exports.modules() {
+      self.metas[module_idx].has_dynamic_exports = true;
+    }
+    for (module_idx, declaration, required_by_other_module) in module_wrappers.into_modules() {
+      let meta = &mut self.metas[module_idx];
+      meta.required_by_other_module = required_by_other_module;
+      match declaration {
+        WrapperDeclaration::None => meta.set_wrap_kind(rolldown_common::WrapKind::None),
+        WrapperDeclaration::Cjs { wrapper_ref, wrapper_stmt_info } => {
+          meta.set_wrap_kind(rolldown_common::WrapKind::Cjs);
+          meta.wrapper_ref = Some(wrapper_ref);
+          meta.wrapper_stmt_info = Some(wrapper_stmt_info);
+        }
+        WrapperDeclaration::Esm { wrapper_ref, wrapper_stmt_info } => {
+          meta.set_wrap_kind(rolldown_common::WrapKind::Esm);
+          meta.wrapper_ref = Some(wrapper_ref);
+          meta.wrapper_stmt_info = Some(wrapper_stmt_info);
+        }
+      }
+    }
+  }
+
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
     let mut pass_pipeline = PassPipelineCtx::new();
-    let entry_plan = {
+    let (entry_plan, global_constants) = {
       let (_, (module_table, global_constants)) = run_infallible_pass(
         ExtractGlobalConstantsPass,
         &mut pass_pipeline,
@@ -187,7 +346,6 @@ impl<'a> LinkStage<'a> {
         std::mem::take(&mut self.module_table),
       );
       self.module_table = module_table;
-      self.global_constant_symbol_map = global_constants.into_legacy();
 
       let (_, entry_plan) = run_infallible_pass(
         CanonicalizeEntriesPass,
@@ -241,7 +399,7 @@ impl<'a> LinkStage<'a> {
         }
       }
       self.sorted_modules = sorted_modules.into_inner();
-      entry_plan
+      (entry_plan, global_constants)
     };
     {
       let (tla_facts, ()) = run_infallible_pass(
@@ -255,70 +413,14 @@ impl<'a> LinkStage<'a> {
         self.metas[module_idx].is_tla_or_contains_tla_dependency = true;
       }
     }
-    {
-      let (_, (module_formats, wrapper_seeds)) = run_infallible_pass(
-        DetermineModuleFormatsPass,
-        &mut pass_pipeline,
-        DetermineModuleFormatsInput {
-          module_table: &self.module_table,
-          entry_plan: &entry_plan,
-          output_format: self.options.format,
-          code_splitting_disabled: self.options.code_splitting.is_disabled(),
-        },
-        (),
-      );
-      let (_, cjs_namespace_merges) = run_infallible_pass(
-        ComputeCjsNamespaceMergesPass,
-        &mut pass_pipeline,
-        ComputeCjsNamespaceMergesInput {
-          module_table: &self.module_table,
-          module_formats: &module_formats,
-          strict_execution_order: self.options.is_strict_execution_order_enabled(),
-        },
-        (),
-      );
-      let (dynamic_exports, ()) = run_infallible_pass(
-        ComputeDynamicExportsPass,
-        &mut pass_pipeline,
-        ComputeDynamicExportsInput {
-          module_table: &self.module_table,
-          module_formats: &module_formats,
-        },
-        (),
-      );
-      let (_, wrapper_plan) = run_infallible_pass(
-        PlanModuleWrappingPass,
-        &mut pass_pipeline,
-        PlanModuleWrappingInput {
-          module_table: &self.module_table,
-          module_formats: &module_formats,
-          runtime: self.runtime.id(),
-          strict_execution_order: self.options.is_strict_execution_order_enabled(),
-          on_demand_wrapping: self.options.experimental.is_on_demand_wrapping_enabled(),
-        },
-        wrapper_seeds,
-      );
-      for (module_idx, exports_kind) in module_formats.normal_modules() {
-        if let Some(module) = self.module_table[module_idx].as_normal_mut() {
-          module.exports_kind = exports_kind;
-        }
-      }
-      debug_assert_eq!(dynamic_exports.module_count(), self.metas.len());
-      for module_idx in dynamic_exports.modules() {
-        self.metas[module_idx].has_dynamic_exports = true;
-      }
-      for (module_idx, wrap_kind, required_by_other_module) in wrapper_plan.modules() {
-        self.metas[module_idx].set_wrap_kind(wrap_kind);
-        self.metas[module_idx].required_by_other_module = required_by_other_module;
-      }
-      self.safely_merge_cjs_ns_map = cjs_namespace_merges.into_legacy();
-    }
+    let (lazy_json_export_initializers, non_splittable_json_defaults) =
+      self.run_representation_passes(&mut pass_pipeline, &entry_plan, &global_constants);
     self.entries = entry_plan.into_legacy_entries();
+    self.global_constant_symbol_map = global_constants.into_legacy();
     self.diagnostics.extend(pass_pipeline.into_diagnostics());
-    self.create_wrapper_declarations();
-    self.generate_lazy_export();
     self.determine_side_effects();
-    self.bind_imports_and_exports();
+    self.bind_imports_and_exports(&non_splittable_json_defaults);
+    drop(non_splittable_json_defaults);
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
     let unreachable_import_expression_node_ids = self.cross_module_optimization();
@@ -345,6 +447,7 @@ impl<'a> LinkStage<'a> {
       entry_point_to_reference_ids: self.entry_point_to_reference_ids,
       global_constant_symbol_map: self.global_constant_symbol_map,
       normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
+      lazy_json_export_initializers,
       user_defined_entry_modules: self.user_defined_entry_modules,
       has_enum_inlining: self.has_enum_inlining,
     };

@@ -16,8 +16,8 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx,
-  ImportRecordMeta, InlineConstMode, MemberExprRefResolution, Module, ModuleIdx, ModuleType,
-  NamespaceAlias, NormalModule, OutputExports, OutputFormat, Platform,
+  ImportRecordMeta, InlineConstMode, MemberExprProp, MemberExprRefResolution, Module, ModuleIdx,
+  ModuleType, NamespaceAlias, NormalModule, OutputExports, OutputFormat, Platform,
   RenderedConcatenatedModuleParts, Specifier, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
@@ -1664,6 +1664,40 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
+  fn append_lazy_json_export_initializers(
+    &self,
+    program: &mut ast::Program<'ast>,
+    payload_stmt_info_idx: rolldown_common::StmtInfoIdx,
+  ) {
+    let Some(recipe) = self
+      .ctx
+      .lazy_json_export_initializers
+      .filter(|recipe| recipe.payload_stmt_info_idx() == payload_stmt_info_idx)
+    else {
+      return;
+    };
+    let default_name = self.canonical_name_for(self.ctx.module.default_export_ref);
+    for initializer in recipe.entries() {
+      let binding_ref = initializer.binding_ref();
+      if !self.ctx.linking_info.stmt_info_included.has_bit(initializer.initializer_stmt_info_idx())
+        || !self.ctx.retained_export_symbols.contains(&binding_ref)
+      {
+        continue;
+      }
+      let property = MemberExprProp {
+        name: CompactStr::new(initializer.property_name()),
+        span: SPAN,
+        optional: false,
+      };
+      let init = self.ast_factory.make_member_expr_or_ident_ref(
+        self.ast_factory.make_id_ref_expr(SPAN, default_name),
+        std::slice::from_ref(&property),
+        SPAN,
+      );
+      program.body.push(self.ast_factory.make_var_decl(self.canonical_name_for(binding_ref), init));
+    }
+  }
+
   #[expect(clippy::too_many_lines)]
   fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) -> usize {
     let mut last_import_stmt_idx = None;
@@ -2021,6 +2055,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           }
         }
         program.body.push(top_stmt);
+        self.append_lazy_json_export_initializers(program, stmt_info_idx);
         if is_module_decl {
           last_import_stmt_idx = Some(program.body.len());
         }

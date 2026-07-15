@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use rolldown_common::{ConstExportMeta, ModuleTable, SymbolRef};
+use rolldown_common::{ConstExportMeta, ModuleIdx, ModuleTable, SymbolRef};
 #[cfg(target_family = "wasm")]
 use rolldown_utils::rayon::IteratorExt as _;
 use rolldown_utils::{
@@ -21,6 +21,12 @@ pub(in crate::stages::link_stage) struct GlobalConstantsDraft {
 }
 
 impl GlobalConstantsDraft {
+  pub(in crate::stages::link_stage) fn identity_owners(
+    &self,
+  ) -> impl Iterator<Item = ModuleIdx> + '_ {
+    self.constants.keys().map(|symbol_ref| symbol_ref.owner)
+  }
+
   pub(in crate::stages::link_stage) fn into_legacy(self) -> FxHashMap<SymbolRef, ConstExportMeta> {
     self.constants
   }

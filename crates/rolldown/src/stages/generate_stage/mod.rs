@@ -211,7 +211,10 @@ impl<'a> GenerateStage<'a> {
 
     let mut ast_table = std::mem::take(&mut self.ast_table);
     self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph);
-    self.finalize_modules(&mut chunk_graph, &mut ast_table)?;
+    let lazy_json_export_initializers =
+      std::mem::take(&mut self.link_output.lazy_json_export_initializers);
+    self.finalize_modules(&mut chunk_graph, &mut ast_table, &lazy_json_export_initializers)?;
+    drop(lazy_json_export_initializers);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs).await
   }

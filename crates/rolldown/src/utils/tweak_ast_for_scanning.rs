@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use oxc::allocator::GetAllocator;
-use oxc::allocator::{Allocator, TakeIn};
+use oxc::allocator::{Allocator, ReplaceWith, TakeIn};
 use oxc::ast::NONE;
 use oxc::ast::ast::{self, BindingPattern, Declaration, ImportOrExportKind, Statement};
 use oxc::ast_visit::{VisitMut, walk_mut};
@@ -236,90 +236,83 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
   }
 
   fn visit_expression(&mut self, it: &mut ast::Expression<'ast>) {
-    let to_replaced = match it {
-      // transpose `require(test ? 'a' : 'b')` into `test ? require('a') : require('b')`
-      ast::Expression::CallExpression(expr)
-        if expr.callee.is_specific_id("require") && expr.arguments.len() == 1 =>
-      {
-        let arg = expr.arguments.get_mut(0).unwrap();
-        if let Some(cond_expr) = arg.as_expression_mut().and_then(|item| match item {
-          ast::Expression::ConditionalExpression(cond) => Some(cond),
-          _ => None,
-        }) {
-          let test = cond_expr.test.take_in(&self.ast_factory.allocator());
-          let consequent = cond_expr.consequent.take_in(&self.ast_factory.allocator());
-          let alternative = cond_expr.alternate.take_in(&self.ast_factory.allocator());
-          let new_cond_expr = ast::ConditionalExpression::boxed(
+    // transpose `require(test ? 'a' : 'b')` into `test ? require('a') : require('b')`
+    if matches!(it, ast::Expression::CallExpression(expr)
+    if expr.callee.is_specific_id("require")
+      && expr.arguments.len() == 1
+      && matches!(
+        expr.arguments[0].as_expression(),
+        Some(ast::Expression::ConditionalExpression(_))
+      ))
+    {
+      it.replace_with(|old| {
+        let ast::Expression::CallExpression(call_expr) = old else { unreachable!() };
+        let Some(ast::Argument::ConditionalExpression(cond_expr)) =
+          call_expr.unbox().arguments.into_iter().next()
+        else {
+          unreachable!()
+        };
+        let cond_expr = cond_expr.unbox();
+        ast::Expression::ConditionalExpression(ast::ConditionalExpression::boxed(
+          SPAN,
+          cond_expr.test,
+          ast::Expression::new_call_expression(
             SPAN,
-            test,
-            ast::Expression::new_call_expression(
-              SPAN,
-              ast::Expression::new_identifier(SPAN, "require", &self.ast_factory),
-              NONE,
-              oxc::allocator::Vec::from_value_in(
-                ast::Argument::from(consequent),
-                &self.ast_factory,
-              ),
-              false,
+            ast::Expression::new_identifier(SPAN, "require", &self.ast_factory),
+            NONE,
+            oxc::allocator::Vec::from_value_in(
+              ast::Argument::from(cond_expr.consequent),
               &self.ast_factory,
             ),
-            ast::Expression::new_call_expression(
-              SPAN,
-              ast::Expression::new_identifier(SPAN, "require", &self.ast_factory),
-              NONE,
-              oxc::allocator::Vec::from_value_in(
-                ast::Argument::from(alternative),
-                &self.ast_factory,
-              ),
-              false,
-              &self.ast_factory,
-            ),
+            false,
             &self.ast_factory,
-          );
-
-          Some(ast::Expression::ConditionalExpression(new_cond_expr))
-        } else {
-          None
-        }
-      }
-      // transpose `import(test ? 'a' : 'b')` into `test ? import('a') : import('b')`
-      ast::Expression::ImportExpression(expr) if expr.options.is_none() => {
-        let source = &mut expr.source;
-        match source {
-          ast::Expression::ConditionalExpression(cond_expr) => {
-            let test = cond_expr.test.take_in(&self.ast_factory.allocator());
-            let consequent = cond_expr.consequent.take_in(&self.ast_factory.allocator());
-            let alternative = cond_expr.alternate.take_in(&self.ast_factory.allocator());
-
-            let new_cond_expr = ast::Expression::new_conditional_expression(
-              SPAN,
-              test,
-              ast::Expression::new_import_expression(
-                SPAN,
-                consequent,
-                None,
-                None,
-                &self.ast_factory,
-              ),
-              ast::Expression::new_import_expression(
-                SPAN,
-                alternative,
-                None,
-                None,
-                &self.ast_factory,
-              ),
+          ),
+          ast::Expression::new_call_expression(
+            SPAN,
+            ast::Expression::new_identifier(SPAN, "require", &self.ast_factory),
+            NONE,
+            oxc::allocator::Vec::from_value_in(
+              ast::Argument::from(cond_expr.alternate),
               &self.ast_factory,
-            );
-
-            Some(new_cond_expr)
-          }
-          _ => None,
-        }
-      }
-      _ => None,
-    };
-    if let Some(replaced) = to_replaced {
-      *it = replaced;
+            ),
+            false,
+            &self.ast_factory,
+          ),
+          &self.ast_factory,
+        ))
+      });
+    }
+    // transpose `import(test ? 'a' : 'b')` into `test ? import('a') : import('b')`
+    else if matches!(it, ast::Expression::ImportExpression(expr)
+      if expr.options.is_none()
+        && matches!(expr.source, ast::Expression::ConditionalExpression(_)))
+    {
+      it.replace_with(|old| {
+        let ast::Expression::ImportExpression(import_expr) = old else { unreachable!() };
+        let ast::Expression::ConditionalExpression(cond_expr) = import_expr.unbox().source else {
+          unreachable!()
+        };
+        let cond_expr = cond_expr.unbox();
+        ast::Expression::new_conditional_expression(
+          SPAN,
+          cond_expr.test,
+          ast::Expression::new_import_expression(
+            SPAN,
+            cond_expr.consequent,
+            None,
+            None,
+            &self.ast_factory,
+          ),
+          ast::Expression::new_import_expression(
+            SPAN,
+            cond_expr.alternate,
+            None,
+            None,
+            &self.ast_factory,
+          ),
+          &self.ast_factory,
+        )
+      });
     }
     walk_mut::walk_expression(self, it);
   }

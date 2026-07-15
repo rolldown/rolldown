@@ -43,22 +43,33 @@ generate_chunks()
     │
     ├─ init_entry_point()             Assign bit positions, create entry chunks
     │
-    └─ split_chunks()
-         │
-         ├─ determine_reachable_modules_for_entry()   BFS per entry, set bits on reachable modules
-         │
-         ├─ apply_manual_code_splitting()             User-defined chunk groups (manualChunks)
-         │
-         ├─ Module assignment         Group modules by identical BitSet → chunks
-         │
-         └─ ChunkOptimizer           Merge common chunks into entry chunks, remove empty facades
-              │
-              ▼
-         ChunkGraph                   Final module-to-chunk assignment
+    ├─ split_chunks()
+    │    │
+    │    ├─ determine_reachable_modules_for_entry()   BFS per entry, set bits on reachable modules
+    │    │
+    │    ├─ apply_manual_code_splitting()             User-defined chunk groups (manualChunks)
+    │    │
+    │    ├─ Module assignment         Group modules by identical BitSet → chunks
+    │    │
+    │    ├─ ChunkOptimizer           Merge common chunks into entry chunks, remove empty facades
+    │    └─ try_merge_runtime_chunk() Optionally merge the standalone runtime into a safe host
+    │
+    ├─ find_entry_level_external_module()             Flatten star-to-external chains to chunk-level
+    │                                                 re-exports; re-propagate has_dynamic_exports
+    │
+    ├─ finalized_module_namespace_ref_usage()         Final namespace-object retention decision
+    │
+    ├─ sweep_unused_runtime_module()                  Drop the runtime module when the walk-back
+    │                                                 left zero helper demand (see Runtime Module
+    │                                                 Placement below)
+    │
+    └─ Chunk exec-order assignment    → ChunkGraph    Final module-to-chunk assignment
 
 Post-ChunkGraph processing (in generate()):
 
 ChunkGraph
+    │
+    ├─ used_symbol_refs.seal()                        Freeze liveness; the sweep is the last writer
     │
     ├─ compute_cross_chunk_links()                    Determine cross-chunk imports/exports
     │
@@ -74,6 +85,7 @@ ChunkGraph
 - `crates/rolldown/src/stages/generate_stage/code_splitting.rs` — pipeline orchestration, `generate_chunks()`, `ensure_lazy_module_initialization_order()`
 - `crates/rolldown/src/stages/generate_stage/dynamic_already_loaded.rs` — Rollup-style dynamic import already-loaded atom reduction
 - `crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs` — merge/optimization
+- `crates/rolldown/src/stages/generate_stage/runtime_module_sweep.rs` — post-optimization runtime-demand sweep
 - `crates/rolldown/src/chunk_graph.rs` — output data structure
 - `crates/rolldown_utils/src/bitset.rs` — compact reachability representation
 - `crates/rolldown/src/types/linking_metadata.rs` — `original_wrap_kind()` used for init order analysis
@@ -198,9 +210,21 @@ The merge target must not create a static cycle or force unrelated entry chunks 
 - **Safe target found** → runtime moves into that chunk, and the empty standalone runtime chunk is marked removed.
 - **No safe target** → keep the standalone runtime chunk. Runtime imports that resolve only to externals are ignored for chunk-cycle checks; live internal runtime imports keep the runtime standalone instead.
 
+### Unused-Runtime Sweep (`sweep_unused_runtime_module`)
+
+Tree-shaking includes runtime helpers at link time, before chunks exist, and some of its reasons are pessimistic: a star re-export chain ending at an external module registers `__reExport`/`__exportAll` demand that only chunking can invalidate. `find_entry_level_external_module` performs that walk-back (flattening the chain to chunk-level `export * from '<external>'` statements and re-propagating `has_dynamic_exports` to `false` through transitive star importers), and `finalized_module_namespace_ref_usage` then drops the namespace objects that only served the chain. The finalizer consequently emits no helper call — but the runtime module was already included and placed, so it used to ship as a dead chunk plus bare imports (#9374, #7233).
+
+`sweep_unused_runtime_module` (in `runtime_module_sweep.rs`) closes that gap. It runs at the tail of `generate_chunks()`, strictly after `try_merge_runtime_chunk` and the two walk-back passes above, and before chunk exec-order assignment. It re-derives runtime demand from the same post-walk-back facts the module finalizer renders from, through four channels: per-module `depended_runtime_helper` flags (with `ReExport` discounted unless some included `export * from './normal'` importee still has `has_dynamic_exports` — the exact condition the finalizer checks; CommonJS importees always keep it), the namespace-object channel gated on `namespace_included` (sharing `LinkingMetadata::ns_star_external_re_export_emitted` with the finalizer so the prediction cannot diverge from the emission), runtime-owned symbols referenced by included statements, and `referenced_symbols_by_entry_point_chunk`.
+
+The sweep is **all-or-nothing and conservative**: any remaining demand — or any bail-out condition (tree-shaking disabled, runtime not included, runtime has side effects as in dev/HMR mode) — leaves everything exactly as tree-shaking decided. Only a runtime with zero demand is un-included: its statement/module inclusion is cleared, its symbols are purged from `used_symbol_refs` via `remove_owned_by`, it is removed from its chunk, and a now-empty chunk is tombstoned with `PostChunkOptimizationOperation::Removed`.
+
+**Liveness invariants the sweep relies on.** Stale references to runtime symbols survive the sweep by design — namespace statements that will not render keep their `__exportAll` reference, chunk-level `depended_runtime_helper` bits keep their flags, and `compute_cross_chunk_links` speculatively inserts `__toCommonJS` for CJS-format ESM entries. All of these are filtered against `used_symbol_refs` before becoming imports or exports, so purging the runtime's symbols is what actually severs every cross-chunk edge. Every bare-import emitter tolerates `module_to_chunk == None`, and naming/rendering already skip tombstoned chunks (the same lifecycle the chunk optimizer's removals use). This is why the sweep must be the **last writer** of `used_symbol_refs` — `generate()` seals the builder immediately after `generate_chunks()` returns.
+
+**Regression coverage:** `crates/rolldown/tests/rolldown/issues/9374/` (snapshot-asserted: no runtime chunk for a multi-entry star-to-external chain, `minify: false` so vestigial namespace declarations would also surface); issues `6992`, `7115`, `7233`, `7233_chain` cover the same class under `preserveModules` for both ESM and CJS output.
+
 **Why this shape**
 
-Runtime used to be placed by normal bitset grouping and later peeled out when a cycle was detected. That made every optimizer responsible for understanding runtime-host edge cases. Standalone-first flips the default: the initial layout is always cycle-safe, and the only runtime-specific optimization is a final, optional merge into a proven dominator.
+Runtime used to be placed by normal bitset grouping and later peeled out when a cycle was detected. That made every optimizer responsible for understanding runtime-host edge cases. Standalone-first flips the default: the initial layout is always cycle-safe, and runtime-specific processing is confined to two final passes — the optional merge into a proven dominator above, then the unused-runtime sweep once the entry-level-external walk-back has settled what the finalizer will actually emit.
 
 **Regression coverage**
 

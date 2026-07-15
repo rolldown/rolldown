@@ -1,0 +1,213 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## carrier.js
+
+```js
+import { n as __esmMin, t as require_pure_cjs } from "./cjs.js";
+//#region node_modules/pure-carrier/index.js
+var import_pure_cjs;
+var init_pure_carrier = __esmMin((() => {
+	import_pure_cjs = require_pure_cjs();
+}));
+//#endregion
+init_pure_carrier();
+var snapshot = import_pure_cjs.snapshot;
+export { init_pure_carrier as n, snapshot, import_pure_cjs as t };
+
+```
+
+## cjs.js
+
+```js
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+//#endregion
+//#region node_modules/pure-cjs/index.cjs
+var require_pure_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { snapshot: globalThis.__strict_order_value ?? "stale" };
+}));
+//#endregion
+export default require_pure_cjs();
+export { __esmMin as n, require_pure_cjs as t };
+
+```
+
+## main.js
+
+```js
+import { n as __esmMin } from "./cjs.js";
+import { n as read, t as init_reader } from "./reader.js";
+__esmMin((() => {
+	//#region e.js
+	globalThis.__strict_order_value = "ready";
+	console.log("E");
+	//#endregion
+	//#region main.js
+	init_reader();
+	console.log(`MAIN:${read()}`);
+	//#endregion
+}))();
+
+```
+
+## reader.js
+
+```js
+import { n as __esmMin } from "./cjs.js";
+import { t as import_pure_cjs } from "./carrier.js";
+//#region node_modules/pure-forwarder/index.js
+var init_pure_forwarder = __esmMin((() => {}));
+//#endregion
+//#region reader.js
+function read() {
+	return import_pure_cjs.snapshot;
+}
+var init_reader = __esmMin((() => {
+	init_pure_forwarder();
+}));
+//#endregion
+export { read as n, init_reader as t };
+
+```
+
+## second.js
+
+```js
+import { n as __esmMin } from "./cjs.js";
+import { n as read, t as init_reader } from "./reader.js";
+//#endregion
+__esmMin((() => {
+	init_reader();
+	console.log(read());
+}))();
+
+```
+
+## unused.js
+
+```js
+import { n as __esmMin } from "./cjs.js";
+//#endregion
+__esmMin((() => {
+	console.log("UNUSED");
+}))();
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### carrier.js
+
+```js
+import { n as __esmMin, t as require_pure_cjs } from "./cjs.js";
+//#region node_modules/pure-carrier/index.js
+var import_pure_cjs;
+var init_pure_carrier = __esmMin((() => {
+	import_pure_cjs = require_pure_cjs();
+}));
+//#endregion
+init_pure_carrier();
+var snapshot = import_pure_cjs.snapshot;
+export { init_pure_carrier as n, snapshot, import_pure_cjs as t };
+
+```
+
+### cjs.js
+
+```js
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+//#endregion
+//#region node_modules/pure-cjs/index.cjs
+var require_pure_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { snapshot: globalThis.__strict_order_value ?? "stale" };
+}));
+//#endregion
+export default require_pure_cjs();
+export { __esmMin as n, require_pure_cjs as t };
+
+```
+
+### main.js
+
+```js
+import { n as __esmMin } from "./cjs.js";
+import { n as read, t as init_reader } from "./reader.js";
+//#region e.js
+var init_e = __esmMin((() => {
+	globalThis.__strict_order_value = "ready";
+	console.log("E");
+}));
+//#endregion
+__esmMin((() => {
+	init_e();
+	init_reader();
+	console.log(`MAIN:${read()}`);
+}))();
+
+```
+
+### reader.js
+
+```js
+import { n as __esmMin } from "./cjs.js";
+import { t as import_pure_cjs } from "./carrier.js";
+//#region node_modules/pure-forwarder/index.js
+var init_pure_forwarder = __esmMin((() => {}));
+//#endregion
+//#region reader.js
+function read() {
+	return import_pure_cjs.snapshot;
+}
+var init_reader = __esmMin((() => {
+	init_pure_forwarder();
+}));
+//#endregion
+export { read as n, init_reader as t };
+
+```
+
+### second.js
+
+```js
+import { n as __esmMin } from "./cjs.js";
+import { n as read, t as init_reader } from "./reader.js";
+//#endregion
+__esmMin((() => {
+	init_reader();
+	console.log(read());
+}))();
+
+```
+
+### unused.js
+
+```js
+import { n as __esmMin } from "./cjs.js";
+//#endregion
+__esmMin((() => {
+	console.log("UNUSED");
+}))();
+
+```

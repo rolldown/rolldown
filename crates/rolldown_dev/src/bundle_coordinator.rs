@@ -52,6 +52,8 @@ struct WatchRegistrationErrorEvent {
 pub struct BundleCoordinator {
   bundler: Arc<Mutex<Bundler>>,
   ctx: SharedDevContext,
+  /// The engine-wide patch-id counter (shared with lazy compiles) — see the
+  /// field doc on `DevEngine::next_hmr_patch_id`.
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
   watcher: StdMutex<DynFsWatcher>,
@@ -77,11 +79,12 @@ impl BundleCoordinator {
     ctx: SharedDevContext,
     rx: CoordinatorReceiver,
     watcher: DynFsWatcher,
+    next_hmr_patch_id: Arc<AtomicU32>,
   ) -> Self {
     Self {
       bundler,
       ctx,
-      next_hmr_patch_id: Arc::new(AtomicU32::new(0)),
+      next_hmr_patch_id,
       rx,
       watcher: StdMutex::new(watcher),
       watched_files: FxDashSet::default(),

@@ -13,7 +13,22 @@ nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should 
 
 ```
 
-# Variant: [strict_execution_order: true]
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import nodeAssert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__esmMin((() => {
+	nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
+}))();
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
 
 ## Assets
 

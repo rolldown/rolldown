@@ -20,6 +20,56 @@ __esmMin((() => {
 ```js
 import nodeAssert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+//#region read.js
+var foo, read;
+var init_read = __esmMin((() => {
+	foo = globalThis.foo;
+	read = () => {
+		console.log("read", foo);
+	};
+}));
+//#endregion
+var setup;
+__esmMin((() => {
+	//#region setup.js
+	setup = () => {
+		globalThis.foo = "foo";
+	};
+	setup();
+	//#endregion
+	//#region main.js
+	init_read();
+	setup();
+	read();
+	import("./dynamic.js");
+	nodeAssert.strictEqual(globalThis.foo, "foo");
+	//#endregion
+}))();
+export { read as n, __esmMin as r, init_read as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### dynamic.js
+
+```js
+import { n as read, r as __esmMin, t as init_read } from "./main.js";
+//#endregion
+__esmMin((() => {
+	init_read();
+	read();
+}))();
+
+```
+
+### main.js
+
+```js
+import nodeAssert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
 //#region setup.js
 var setup;
 var init_setup = __esmMin((() => {

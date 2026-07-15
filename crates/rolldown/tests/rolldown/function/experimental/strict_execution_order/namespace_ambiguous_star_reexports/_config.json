@@ -1,0 +1,23 @@
+{
+  "expectExecutionFailure": {
+    "reason": "Expected to fail until rolldown#10104 is applied.",
+    "outputContains": ["ambiguous namespace re-export must not initialize common-a before page-b"]
+  },
+  "configName": "wrap-all",
+  "config": {
+    "external": ["node:assert"],
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "_expectExecutionFailure": {
+        "reason": "Expected to fail until rolldown#10104 is applied.",
+        "outputContains": [
+          "ambiguous namespace re-export must not initialize common-a before page-b"
+        ]
+      },
+      "onDemandWrapping": true
+    }
+  ]
+}

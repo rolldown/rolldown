@@ -1,0 +1,104 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+const loaded = import("./tla-target.js").then((mod) => mod.value);
+//#endregion
+export { loaded };
+
+```
+
+## tla-target.js
+
+```js
+//#region tla-target.js
+const value = await Promise.resolve("tla");
+//#endregion
+export { value };
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+var loaded;
+//#endregion
+__esmMin((() => {
+	loaded = import("./tla-target.js").then((mod) => mod.value);
+}))();
+export { loaded };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### tla-target.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region tla-target.js
+var value;
+//#endregion
+await __esmMin((async () => {
+	value = await Promise.resolve("tla");
+}))();
+export { value };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+var loaded;
+//#endregion
+__esmMin((() => {
+	loaded = import("./tla-target.js").then((mod) => mod.value);
+}))();
+export { loaded };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### tla-target.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region tla-target.js
+var value;
+//#endregion
+await __esmMin((async () => {
+	value = await Promise.resolve("tla");
+}))();
+export { value };
+
+```

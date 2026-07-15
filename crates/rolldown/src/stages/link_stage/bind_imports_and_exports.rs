@@ -11,7 +11,7 @@ use rolldown_common::{
   OutputFormat, ResolvedExport, Specifier, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
   SymbolRefDb, SymbolRefFlags,
 };
-use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
+use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
@@ -160,8 +160,7 @@ impl LinkStage<'_> {
       metas: &mut self.metas,
       symbol_db: &mut self.symbols,
       options: self.options,
-      errors: Vec::default(),
-      warnings: Vec::default(),
+      diagnostics: Diagnostics::new(),
       external_import_binding_merger: FxHashMap::default(),
       side_effects_modules: &side_effects_modules,
       normal_symbol_exports_chain_map: &mut normal_symbol_exports_chain_map,
@@ -171,8 +170,7 @@ impl LinkStage<'_> {
       binding_ctx.match_imports_with_exports(module.idx());
     });
 
-    self.errors.extend(binding_ctx.errors);
-    self.warnings.extend(binding_ctx.warnings);
+    self.diagnostics.extend(binding_ctx.diagnostics);
 
     self.external_import_namespace_merger = binding_ctx.external_import_namespace_merger;
 
@@ -712,7 +710,7 @@ impl LinkStage<'_> {
       .collect::<Vec<_>>();
 
     debug_assert_eq!(self.metas.len(), resolved_meta_data.len());
-    self.warnings.extend(warnings);
+    self.diagnostics.extend(warnings);
     // Remove CJS exported symbols that are written to by importers from the constant map
     // to prevent incorrect inlining of mutated values.
     // First, collect statically-known written symbols gathered during resolution above.
@@ -847,8 +845,7 @@ struct BindImportsAndExportsContext<'a> {
   pub metas: &'a mut LinkingMetadataVec,
   pub symbol_db: &'a mut SymbolRefDb,
   pub options: &'a SharedOptions,
-  pub errors: Vec<BuildDiagnostic>,
-  pub warnings: Vec<BuildDiagnostic>,
+  pub diagnostics: Diagnostics,
   pub external_import_binding_merger:
     FxHashMap<ModuleIdx, FxHashMap<CompactStr, IndexSet<SymbolRef>>>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
@@ -950,7 +947,7 @@ impl BindImportsAndExportsContext<'_> {
             None
           }));
 
-          self.errors.push(BuildDiagnostic::ambiguous_external_namespace(
+          self.diagnostics.push(BuildDiagnostic::ambiguous_external_namespace(
             named_import.imported.to_string(),
             importee,
             AmbiguousExternalNamespaceModule {
@@ -1012,7 +1009,7 @@ impl BindImportsAndExportsContext<'_> {
             named_import.span_imported,
             is_ts_like_importing_ts_like.then(|| format!("If you meant to import a type rather than a value, make sure to add the `type` modifier (e.g. `import {{ type Foo }} from '{}'`).", rec.module_request))
           );
-          self.errors.push(diagnostic);
+          self.diagnostics.push(diagnostic);
         }
       }
     }
@@ -1109,7 +1106,9 @@ impl BindImportsAndExportsContext<'_> {
           let importer_module = &index_modules[tracker.importer];
           let importer_id = importer_module.id().to_string();
           let imported_specifier = tracker.imported.to_string();
-          self.errors.push(BuildDiagnostic::circular_reexport(importer_id, imported_specifier));
+          self
+            .diagnostics
+            .push(BuildDiagnostic::circular_reexport(importer_id, imported_specifier));
           return MatchImportKind::Cycle;
         }
       }

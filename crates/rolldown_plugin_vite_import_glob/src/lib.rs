@@ -129,17 +129,15 @@ impl Plugin for ViteImportGlobPlugin {
         let mut resolved_group = Vec::with_capacity(glob_group.len());
         for glob in glob_group {
           let is_sub_imports_pattern = glob.starts_with('#') && glob.contains('*');
+          let mut custom = rolldown_plugin::CustomField::new();
+          custom.insert(ViteImportGlob, ViteImportGlobValue(is_sub_imports_pattern));
           let resolved = ctx
             .resolve(
               &glob,
               Some(&id),
-              is_sub_imports_pattern.then(|| {
-                let mut custom = rolldown_plugin::CustomField::new();
-                custom.insert(ViteImportGlob, ViteImportGlobValue(true));
-                rolldown_plugin::PluginContextResolveOptions {
-                  custom: Arc::new(custom),
-                  ..Default::default()
-                }
+              Some(rolldown_plugin::PluginContextResolveOptions {
+                custom: Arc::new(custom),
+                ..Default::default()
               }),
             )
             .await

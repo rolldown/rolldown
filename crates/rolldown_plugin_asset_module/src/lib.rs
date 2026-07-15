@@ -11,10 +11,10 @@ use rolldown_plugin::{
   HookRenderChunkReturn, HookTransformOutputMap, HookUsage, Plugin, PluginHookMeta, PluginOrder,
   SharedLoadPluginContext,
 };
+use rolldown_std_utils::relative_path_as_js_specifier;
 use rolldown_utils::{futures::spawn_blocking, url::clean_url};
 use rustc_hash::FxHashSet;
 use string_wizard::{MagicString, SourceMapOptions};
-use sugar_path::SugarPath;
 
 const PREFIX: &str = "__ROLLDOWN_ASSET__#";
 
@@ -210,14 +210,5 @@ impl AssetModulePlugin {
 fn compute_relative_path(chunk_filename: &str, asset_filename: &str) -> String {
   let chunk_dir = Path::new(chunk_filename).parent().unwrap_or(Path::new(""));
 
-  let relative = Path::new(asset_filename).relative(chunk_dir);
-  let relative_str = relative.to_slash_lossy();
-
-  if relative_str.starts_with("..") {
-    relative_str.into_owned()
-  } else if relative_str.is_empty() {
-    ".".to_string()
-  } else {
-    format!("./{relative_str}")
-  }
+  relative_path_as_js_specifier(asset_filename, chunk_dir)
 }

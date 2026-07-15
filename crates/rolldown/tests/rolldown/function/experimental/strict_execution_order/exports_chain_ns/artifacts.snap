@@ -14,7 +14,28 @@ nodeAssert.equal("foo", "foo");
 
 ```
 
-# Variant: [strict_execution_order: true]
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import nodeAssert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+var value;
+__esmMin((() => {
+	//#region lib-foo.js
+	value = "foo";
+	//#endregion
+	//#region main.js
+	nodeAssert.equal(value, "foo");
+	//#endregion
+}))();
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
 
 ## Assets
 

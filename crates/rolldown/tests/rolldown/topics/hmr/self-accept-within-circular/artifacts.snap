@@ -8,13 +8,34 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"c.js",
+		"b.js",
+		"a.js",
+		"main.js"
+	],
+	localCount: 4,
+	edges: [
+		[1],
+		[0],
+		[1],
+		[2]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[],
+		[]
+	]
+});
 //#region c.js
 var c_exports = /* @__PURE__ */ __exportAll({ c: () => "c" });
 const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
 __rolldown_runtime__.registerModule("c.js", { exports: c_exports });
 assert.strictEqual("c", "c");
 c_hot.accept((nextExports) => {
-	assert.strictEqual(nextExports.c, "c");
+	assert.strictEqual(nextExports.c, "cc");
 });
 //#endregion
 //#region b.js
@@ -43,31 +64,31 @@ assert.strictEqual(a.b.c, "c");
 ## Code
 
 ```js
+__rolldown_runtime__.registerGraph({ids:["c.js","b.js"],localCount:1,edges:[[1]],dynamicEdges:[[]]});
 //#region c.js
 import * as import_node_assert_00 from "node:assert";
-var init_c_0 = __rolldown_runtime__.createEsmInitializer("c.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("c.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ c: () => c });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("b.js");
 		const hot_c = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_b_01 = __rolldown_runtime__.loadExports("b.js");
 		const c = "cc";
 		import_node_assert_00.default.strictEqual(c, "cc");
-		hot_c.accept((nextExports) => {
-			import_node_assert_00.default.strictEqual(nextExports.c, "cc");
+		hot_c.accept(() => {
+			import_node_assert_00.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
 }));
 
 //#endregion
-init_c_0()
-__rolldown_runtime__.applyUpdates([['c.js', 'c.js']]);
 ```
 
 ## Meta
 
 - update type: patch
 
-### Hmr Boundaries
+### Changed Ids
 
-- boundary: c.js, accepted_via: c.js
+- c.js

@@ -32,7 +32,7 @@ global.foo.log();
 
 ```
 
-# Variant: strict: [strict_execution_order: true]
+# Variant: wrap-all: [strict_execution_order: true]
 
 ## Assets
 
@@ -64,6 +64,53 @@ var init_init_dep_2 = __esmMin((() => {
 __esmMin((() => {
 	init_init_dep_2();
 	init_run_dep();
+}))();
+
+```
+
+### run-dep.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region run-dep.js
+var init_run_dep = __esmMin((() => {
+	global.foo.log();
+}));
+//#endregion
+export { __esmMin as n, init_run_dep as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### entry1.js
+
+```js
+import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
+__esmMin((() => {
+	//#region init-dep-1.js
+	global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
+	//#endregion
+	//#region entry1.js
+	init_run_dep();
+	//#endregion
+}))();
+
+```
+
+### entry2.js
+
+```js
+import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
+__esmMin((() => {
+	//#region init-dep-2.js
+	global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
+	//#endregion
+	//#region entry2.js
+	init_run_dep();
+	//#endregion
 }))();
 
 ```

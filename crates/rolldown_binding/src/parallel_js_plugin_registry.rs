@@ -54,7 +54,7 @@ impl ParallelJsPluginRegistry {
 }
 
 impl ObjectFinalize for ParallelJsPluginRegistry {
-  fn finalize(&mut self, mut _env: Env) -> napi::Result<()> {
+  fn finalize(self, mut _env: Env) -> napi::Result<()> {
     PLUGINS_MAP.remove(&self.id);
     Ok(())
   }

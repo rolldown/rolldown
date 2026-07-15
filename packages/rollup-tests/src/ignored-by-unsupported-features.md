@@ -99,6 +99,10 @@
 - rollup@function@emit-file@original-file-name: forwards the original file name to other hooks
 - rollup@function@emit-file@original-file-names: forwards the original file name to other hooks
 
+### `import.meta.ROLLUP_FILE_URL_OBJ_*` is not supported
+- rollup@chunking form@resolve-file-url-obj: allows to use ROLLUP_FILE_URL_OBJ to get URL objects directly@generates cjs
+- rollup@chunking form@resolve-file-url-obj: allows to use ROLLUP_FILE_URL_OBJ to get URL objects directly@generates es
+
 ## Options related
 
 ### The `output.format` systemjs is not supported
@@ -417,7 +421,6 @@
  - rollup@function@emit-file@asset-source-missing2: throws when not setting the asset source (`ASSET_SOURCE_MISSING` error is expected, but `PLUGIN_ERROR` is thrown)
  - rollup@function@emit-file@asset-source-missing5: throws when not setting the asset source and accessing the asset URL (`ASSET_SOURCE_MISSING` error is expected, but `PLUGIN_ERROR` is thrown)
  - rollup@function@emit-file@asset-source-missing: throws when not setting the asset source (`ASSET_SOURCE_MISSING` error is expected, but `PLUGIN_ERROR` is thrown)
- - rollup@function@emit-file@invalid-reference-id: throws for invalid reference ids (missing error)
  - rollup@form@cycles-dependency-with-TLA-await-import: throw a warn when a cycle is detected which includes a top-level await import (`CIRCULAR_DEPENDENCY` warning)
  - rollup@function@optional-chaining-namespace: handles optional chaining with namespace (expected `MISSING_EXPORT` warning, but got `IMPORT_IS_UNDEFINED` warning)
  - rollup@function@ast-validations@redeclare-import-var: throws when redeclaring an import with a var (https://github.com/oxc-project/oxc/issues/15961)

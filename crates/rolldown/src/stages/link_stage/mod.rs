@@ -10,7 +10,7 @@ use rolldown_common::{
   SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::Diagnostics;
 #[cfg(target_family = "wasm")]
 use rolldown_utils::rayon::IteratorExt as _;
 use rolldown_utils::{
@@ -64,8 +64,7 @@ pub struct LinkStageOutput {
   /// Per-module statement-info table; see `LinkStage.stmt_infos`.
   pub stmt_infos: IndexStmtInfos,
   pub runtime: RuntimeModuleBrief,
-  pub warnings: Vec<BuildDiagnostic>,
-  pub errors: Vec<BuildDiagnostic>,
+  pub diagnostics: Diagnostics,
   pub used_external_symbols: UsedExternalSymbols,
   /// See [`RetainedExportSymbols`]; empty until the generate stage projects it.
   pub retained_export_symbols: RetainedExportSymbols,
@@ -103,8 +102,7 @@ pub struct LinkStage<'a> {
   pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleIdx>,
   pub metas: LinkingMetadataVec,
-  pub warnings: Vec<BuildDiagnostic>,
-  pub errors: Vec<BuildDiagnostic>,
+  pub diagnostics: Diagnostics,
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
   pub used_symbol_refs: UsedSymbolRefsBuilder,
@@ -184,7 +182,9 @@ impl<'a> LinkStage<'a> {
             .filter_map(|rec| match rec.kind {
               // Dynamically imported modules are included automatically by `include_statements`
               // when code splitting is disabled (`codeSplitting: false`).
-              ImportKind::DynamicImport | ImportKind::Require => None,
+              //
+              // HotAccept is an HMR-only edge that should be filtered out here.
+              ImportKind::DynamicImport | ImportKind::Require | ImportKind::HotAccept => None,
               _ => rec.resolved_module,
             })
             .collect();
@@ -206,8 +206,7 @@ impl<'a> LinkStage<'a> {
       },
       symbols: scan_stage_output.symbol_ref_db,
       runtime: scan_stage_output.runtime,
-      warnings: scan_stage_output.warnings,
-      errors: vec![],
+      diagnostics: scan_stage_output.warnings.into(),
       ast_table: scan_stage_output.index_ecma_ast,
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
@@ -254,8 +253,7 @@ impl<'a> LinkStage<'a> {
         symbol_db: self.symbols,
         stmt_infos: self.stmt_infos,
         runtime: self.runtime,
-        warnings: self.warnings,
-        errors: self.errors,
+        diagnostics: self.diagnostics,
         used_external_symbols: self.used_external_symbols,
         retained_export_symbols: RetainedExportSymbols::default(),
         dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,

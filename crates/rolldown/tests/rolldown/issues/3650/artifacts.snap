@@ -74,3 +74,79 @@ var init_second = __esmMin((() => {
 export { second_exports as n, value as r, init_second as t };
 
 ```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## warnings
+
+### INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+## Assets
+
+### first.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { r as value$1, t as init_second } from "./second.js";
+//#region first.js
+var first_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var value;
+var init_first = __esmMin((() => {
+	init_second();
+	value = "first" + value$1;
+}));
+//#endregion
+export { init_first as n, value as r, first_exports as t };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as second_exports, t as init_second } from "./second.js";
+import { n as init_first, t as first_exports } from "./first.js";
+//#endregion
+__esmMin((() => {
+	init_first();
+	init_second();
+	console.log(first_exports, second_exports);
+}))();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+### second.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_first, r as value$1 } from "./first.js";
+//#region second.js
+var second_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var value;
+var init_second = __esmMin((() => {
+	init_first();
+	value = "second" + value$1;
+}));
+//#endregion
+export { second_exports as n, value as r, init_second as t };
+
+```

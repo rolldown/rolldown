@@ -8,11 +8,13 @@ use rolldown_common::{
 pub type FinalizerMutableFields = (
   FxIndexMap<ImportRecordIdx, String>, // transferred_import_record
   RenderedConcatenatedModuleParts,     // rendered_concatenated_wrapped_module_parts
+  Vec<BuildDiagnostic>,                // errors
 );
 
 use oxc::ast_visit::VisitMut as _;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::AstFactory;
+use rolldown_error::BuildDiagnostic;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -122,9 +124,33 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         transferred_import_record,
         rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
+        missing_file_reference_ids: FxIndexMap::default(),
       };
       finalizer.visit_program(oxc_program);
-      (finalizer.transferred_import_record, finalizer.rendered_concatenated_wrapped_module_parts)
+
+      let missing_file_reference_ids = finalizer.missing_file_reference_ids;
+      let errors = if missing_file_reference_ids.is_empty() {
+        vec![]
+      } else {
+        let module = finalizer.ctx.module;
+        missing_file_reference_ids
+          .into_iter()
+          .map(|(reference_id, span)| {
+            BuildDiagnostic::file_not_found(
+              reference_id.as_str(),
+              module.id.to_string(),
+              module.ecma_view.source.clone(),
+              span,
+            )
+          })
+          .collect()
+      };
+
+      (
+        finalizer.transferred_import_record,
+        finalizer.rendered_concatenated_wrapped_module_parts,
+        errors,
+      )
     })
   }
 }

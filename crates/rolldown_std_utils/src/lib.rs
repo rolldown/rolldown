@@ -8,6 +8,10 @@ mod pretty_type_name;
 pub use crate::{
   option_ext::OptionExt,
   path_buf_ext::PathBufExt,
-  path_ext::{PathExt, representative_file_name_for_preserve_modules, strip_path_prefix_to_slash},
+  path_ext::{
+    PathExt, absolute_path_to_relative_slash, absolutize_path_buf, path_buf_to_slash,
+    relative_path_as_js_specifier, relative_path_to_slash,
+    representative_file_name_for_preserve_modules, strip_path_prefix_to_slash,
+  },
   pretty_type_name::pretty_type_name,
 };

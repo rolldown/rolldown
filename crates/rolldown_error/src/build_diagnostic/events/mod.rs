@@ -25,6 +25,7 @@ pub mod duplicate_shebang;
 pub mod empty_import_meta;
 pub mod eval;
 pub mod external_entry;
+pub mod file_not_found;
 pub mod filename_conflict;
 pub mod filename_outside_output_directory;
 pub mod forbid_const_assign;

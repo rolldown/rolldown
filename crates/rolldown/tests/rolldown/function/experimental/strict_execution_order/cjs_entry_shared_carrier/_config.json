@@ -1,0 +1,43 @@
+{
+  "expectExecutionFailure": {
+    "reason": "Expected to fail until rolldown#10104 is applied.",
+    "outputContains": ["CJS entry carrier must not execute entry B while loading entry A"]
+  },
+  "configName": "on-demand",
+  "config": {
+    "input": [
+      {
+        "name": "a",
+        "import": "./a.cjs"
+      },
+      {
+        "name": "b",
+        "import": "./b.cjs"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "bee",
+          "test": "[\\\\/](?:b\\.cjs|s1\\.mjs)$",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    },
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "_expectExecutionFailure": {
+        "reason": "Expected to fail until rolldown#10104 is applied.",
+        "outputContains": ["CJS entry carrier must not execute entry B while loading entry A"]
+      },
+      "onDemandWrapping": false
+    }
+  ]
+}

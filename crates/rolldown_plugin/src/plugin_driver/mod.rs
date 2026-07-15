@@ -106,7 +106,7 @@ impl PluginDriver {
   }
 
   pub fn add_transform_dependency(&self, module_idx: ModuleIdx, dependency: &str) {
-    let dependency = ArcStr::from(dependency.to_slash().unwrap());
+    let dependency = ArcStr::from(dependency.to_slash());
 
     self
       .transform_dependencies

@@ -22,6 +22,17 @@
       "type": "boolean",
       "default": false
     },
+    "expectExecutionFailure": {
+      "description": "If set, the base configuration must fail while executing its generated output. A successful\nexecution is treated as an unexpected pass so stale markers cannot hide a fix.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExpectedExecutionFailure"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "expectWarning": {
       "description": "If `true`, the fixture are expected to produce warnings. If `false`, the fixture are expected\nto produce no warnings. If not set, no assertion is made on warnings.",
       "type": [
@@ -1983,9 +1994,44 @@
             "string",
             "null"
           ]
+        },
+        "_expectExecutionFailure": {
+          "description": "If set, this configuration must fail while executing its generated output. This is not\ninherited from the base configuration so each variant's known failure stays explicit.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExpectedExecutionFailure"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
+    },
+    "ExpectedExecutionFailure": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "description": "Why this failure is temporarily accepted, normally an issue or PR reference.",
+          "type": "string",
+          "minLength": 1
+        },
+        "outputContains": {
+          "description": "Every string must occur in the spawned process output. This prevents an unrelated runtime\nfailure from satisfying the marker.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "reason",
+        "outputContains"
+      ]
     },
     "ExtendedTests": {
       "description": "Controls which extended test variants are generated.\nCan be `false` to disable all, `true` to enable all (default), or an object to control each individually.",
@@ -2081,12 +2127,7 @@
           "const": "always"
         },
         {
-          "description": "Incremental rebuild will be issued automatically if the hmr updates contains full reload updates.",
-          "type": "string",
-          "const": "auto"
-        },
-        {
-          "description": "Never issue rebuilds after HMR.",
+          "description": "Never issue rebuilds after HMR. The server no longer decides full reloads, so\nthere is no `auto` upgrade anymore; consumers that want fresh bundle output pull\nit explicitly (e.g. `ensure_latest_bundle_output`).",
           "type": "string",
           "const": "never"
         }

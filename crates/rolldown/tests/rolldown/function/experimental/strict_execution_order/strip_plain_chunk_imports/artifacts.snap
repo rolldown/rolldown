@@ -20,6 +20,70 @@ await __esmMin((async () => {
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import nodeAssert from "node:assert";
+function foo() {
+	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
+}
+function render() {
+	console.log(common, _);
+}
+var common, _;
+__esmMin((() => {
+	//#region common.js
+	common = "common";
+	_ = /*#__PURE__*/ foo();
+	//#endregion
+	//#region page-a.js
+	nodeAssert.strictEqual(globalThis.value, 0);
+	//#endregion
+}))();
+export { render };
+
+```
+
+## page-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import nodeAssert from "node:assert";
+//#region page-b.js
+function render() {}
+//#endregion
+__esmMin((() => {
+	nodeAssert.strictEqual(globalThis.value, 0);
+}))();
+export { render };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#endregion
+await __esmMin((async () => {
+	await import("./page-a.js").then(console.log);
+	await import("./page-b.js").then(console.log);
+}))();
+
+```
+
+### page-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import nodeAssert from "node:assert";
 //#region common.js
 function foo() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -43,7 +107,7 @@ export { render };
 
 ```
 
-## page-b.js
+### page-b.js
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
@@ -58,7 +122,7 @@ export { render };
 
 ```
 
-## rolldown-runtime.js
+### rolldown-runtime.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]

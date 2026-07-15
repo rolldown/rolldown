@@ -456,18 +456,86 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
 
 /// Check if a filename would escape the output directory.
 ///
-/// Rejects absolute paths and paths that normalize to a location outside the
-/// output directory (e.g. via `..` traversal).
+/// Rejects paths rooted in POSIX or Windows syntax and relative paths that
+/// normalize outside the output directory or to the directory itself.
 fn is_filename_outside_output_dir(filename: &str) -> bool {
-  if Path::new(filename).is_absolute() {
+  let bytes = filename.as_bytes();
+  let starts_with_path_root = bytes.first().is_some_and(|byte| matches!(*byte, b'/' | b'\\'));
+  let has_windows_drive_prefix =
+    bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':';
+  // Drive-relative paths can escape only on Windows; absolute drive paths are
+  // rejected on every host for cross-platform consistency.
+  let has_disallowed_windows_drive_prefix = has_windows_drive_prefix
+    && (cfg!(windows) || bytes.get(2).is_some_and(|byte| matches!(*byte, b'/' | b'\\')));
+  if starts_with_path_root || has_disallowed_windows_drive_prefix {
     return true;
   }
 
   let normalized = filename.normalize();
-  let normalized = normalized.to_string_lossy();
 
-  normalized == "."
-    || normalized == ".."
-    || normalized.starts_with("../")
-    || normalized.starts_with("..\\")
+  normalized == Path::new(".")
+    || normalized.starts_with(Path::new(".."))
+    // Preserve the existing cross-platform guard for a leading Windows parent.
+    || normalized.to_string_lossy().starts_with("..\\")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::is_filename_outside_output_dir;
+
+  #[test]
+  fn output_filename_cannot_resolve_to_or_escape_output_directory() {
+    for filename in [
+      "",
+      ".",
+      "./",
+      "foo/..",
+      "foo/../",
+      "foo/bar/../..",
+      "..",
+      "../file",
+      "..\\file",
+      "a/../../file",
+      "/file",
+      "\\file",
+      "C:/file",
+      "C:\\file",
+      "c:\\file",
+      "\\\\server\\share\\file",
+      "\\\\?\\C:\\file",
+    ] {
+      assert!(is_filename_outside_output_dir(filename), "expected {filename:?} to be rejected");
+    }
+
+    for filename in [
+      "file.js",
+      "dir/file.js",
+      "dir\\file.js",
+      "./asset.txt",
+      ".\\asset.txt",
+      "foo/",
+      "foo\\",
+      "..file.js",
+      ".hidden",
+      "foo/bar/../baz.js",
+    ] {
+      assert!(!is_filename_outside_output_dir(filename), "expected {filename:?} to be accepted");
+    }
+  }
+
+  #[cfg(windows)]
+  #[test]
+  fn windows_output_filename_cannot_use_drive_relative_or_backslash_traversal() {
+    for filename in [".\\", "C:", "C:file", "c:file", "foo\\..", "a\\..\\..\\file"] {
+      assert!(is_filename_outside_output_dir(filename), "expected {filename:?} to be rejected");
+    }
+  }
+
+  #[cfg(not(windows))]
+  #[test]
+  fn unix_output_filename_keeps_host_native_backslash_and_colon_semantics() {
+    for filename in [".\\", "C:", "C:file", "c:file", "foo\\..", "a\\..\\..\\file"] {
+      assert!(!is_filename_outside_output_dir(filename), "expected {filename:?} to be accepted");
+    }
+  }
 }

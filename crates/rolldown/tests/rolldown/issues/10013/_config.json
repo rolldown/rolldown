@@ -1,17 +1,31 @@
 {
   "_comment": "Regression test for https://github.com/rolldown/rolldown/issues/10013 - two entries both import the re-exported `other` from `leaf`. `other`'s canonical lives in `helper.js`, so it bypasses `leaf` entirely, and `leaf`'s own `value = first(second)` is never used. Under `strictExecutionOrder`, the shared chunk must not keep `leaf`'s dead `value = first(second)` body or its external `dep` import. `dep` remains external for bundling, while the local node_modules package throws if runtime ever reaches it.",
+  "configName": "on-demand",
   "config": {
     "input": [
-      { "name": "a", "import": "./entry-a.js" },
-      { "name": "b", "import": "./entry-b.js" }
+      {
+        "name": "a",
+        "import": "./entry-a.js"
+      },
+      {
+        "name": "b",
+        "import": "./entry-b.js"
+      }
     ],
     "external": ["dep"],
     "strictExecutionOrder": true,
     "experimental": {
-      "lazyBarrel": true
+      "lazyBarrel": true,
+      "onDemandWrapping": true
     },
     "treeshake": {
       "moduleSideEffects": false
     }
-  }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
 }

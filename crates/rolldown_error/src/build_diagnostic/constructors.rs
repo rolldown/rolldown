@@ -51,6 +51,7 @@ use super::events::{
   commonjs_variable_in_esm::{CjsExportSpan, CommonJsVariableInEsm},
   eval::Eval,
   external_entry::ExternalEntry,
+  file_not_found::FileNotFound,
   forbid_const_assign::ForbidConstAssign,
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
@@ -86,6 +87,20 @@ impl BuildDiagnostic {
     Self::new_inner(UnresolvedEntry {
       unresolved_id: unresolved_id.as_ref().to_path_buf(),
       resolve_error,
+    })
+  }
+
+  pub fn file_not_found(
+    reference_id: impl Into<String>,
+    module_id: impl Into<String>,
+    source: ArcStr,
+    span: Span,
+  ) -> Self {
+    Self::new_inner(FileNotFound {
+      reference_id: reference_id.into(),
+      module_id: module_id.into(),
+      source,
+      span,
     })
   }
 
@@ -424,8 +439,8 @@ impl BuildDiagnostic {
     Self::new_inner(SourcemapBroken { plugin_name, id })
   }
 
-  pub fn tsconfig_error(file_path: String, reason: ResolveError) -> Self {
-    Self::new_inner(TsConfigError { file_paths: vec![file_path], reason })
+  pub fn tsconfig_error(reason: ResolveError) -> Self {
+    Self::new_inner(TsConfigError { reason })
   }
 
   pub fn unsupported_tsconfig_option(message: String) -> Self {

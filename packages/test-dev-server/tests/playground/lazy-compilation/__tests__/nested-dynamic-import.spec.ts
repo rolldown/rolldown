@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { page, serverUrl } from '~utils';
+import { page, serverUrl, waitForBuildStable } from '~utils';
 
 // Regression for `hmr_ast_finalizer.rs::try_rewrite_dynamic_import` (the
 // `?rolldown-lazy=1` branch). `outer.js` is itself a lazy chunk and contains
@@ -14,6 +14,7 @@ describe('lazy-nested-dynamic-import', () => {
   // and hide the regression.
   test('lazy chunk can dynamically import another lazy chunk', { retry: 0 }, async () => {
     await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
+    await waitForBuildStable();
     await page.click('#nested-dynamic-import-btn');
     await expect.poll(() => page.textContent('#nested-dynamic-import-status')).toBe('done');
 

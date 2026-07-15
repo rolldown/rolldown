@@ -7,6 +7,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"cjs.js",
+		"esm.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[],
+		[0, 1]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[]
+	]
+});
+//#endregion
 //#region esm.js
 var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("cjs.js");

@@ -2,7 +2,7 @@ use itertools::Itertools;
 use oxc::ast::AstType;
 use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression};
 use oxc::{
-  allocator::{self, IntoIn, TakeIn},
+  allocator::{self, IntoIn, ReplaceWith, TakeIn},
   ast::{
     NONE,
     ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
@@ -404,16 +404,17 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                 // - visit_binding_identifier won't re-rename
                 id.symbol_id.get_mut().take();
 
-                let fn_expr = expr.take_in(&self.alloc);
                 let name_ref = self.canonical_ref_for_runtime("__name");
                 let (finalized_callee, _) =
                   self.finalized_expr_for_symbol_ref(name_ref, false, false);
-                *expr = self.ast_factory.make_keep_name_call(
-                  &original_name,
-                  fn_expr,
-                  finalized_callee,
-                  true,
-                );
+                expr.replace_with(|fn_expr| {
+                  self.ast_factory.make_keep_name_call(
+                    &original_name,
+                    fn_expr,
+                    finalized_callee,
+                    true,
+                  )
+                });
               }
             }
           }
@@ -508,6 +509,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
 
         let ast::Expression::ChainExpression(chain_expr) = expr else { unreachable!() };
+        // import.meta.hot?.accept()
+        if let ast::ChainElement::CallExpression(call_expr) = &mut chain_expr.expression {
+          self.rewrite_hot_accept_call_deps(call_expr);
+        }
         let chain_span = chain_expr.span;
         if let Some(new_expr) = chain_expr
           .expression
@@ -784,16 +789,21 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         ) {
           decl.body.body.insert(0, element);
         }
-        if let Some(new_decl) = self.get_transformed_class_decl(decl) {
-          *it = new_decl;
-          // Clear symbol_id on class expression's id to prevent visit_expression
-          // from inserting a duplicate __name static block during walk
-          if let ast::Declaration::VariableDeclaration(var_decl) = it {
-            if let Some(declarator) = var_decl.declarations.first_mut() {
-              if let Some(ast::Expression::ClassExpression(class_expr)) = &mut declarator.init {
-                if let Some(id) = &mut class_expr.id {
-                  id.symbol_id.get_mut().take();
-                }
+        it.replace_with(|old| {
+          let ast::Declaration::ClassDeclaration(class_box) = old else { unreachable!() };
+          match self.get_transformed_class_decl(class_box) {
+            Ok(new_decl) => new_decl,
+            Err(class_box) => ast::Declaration::ClassDeclaration(class_box),
+          }
+        });
+        // Clear symbol_id on class expression's id to prevent visit_expression
+        // from inserting a duplicate __name static block during walk
+        // (`it` is only a `VariableDeclaration` when the class was transformed above).
+        if let ast::Declaration::VariableDeclaration(var_decl) = it {
+          if let Some(declarator) = var_decl.declarations.first_mut() {
+            if let Some(ast::Expression::ClassExpression(class_expr)) = &mut declarator.init {
+              if let Some(id) = &mut class_expr.id {
+                id.symbol_id.get_mut().take();
               }
             }
           }

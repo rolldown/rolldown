@@ -118,12 +118,7 @@ impl BindingNormalizedOptions {
 
   #[napi(getter, ts_return_type = "'es' | 'cjs' | 'iife' | 'umd'")]
   pub fn format(&self) -> &'static str {
-    match self.inner.format {
-      rolldown::OutputFormat::Esm => "es",
-      rolldown::OutputFormat::Cjs => "cjs",
-      rolldown::OutputFormat::Iife => "iife",
-      rolldown::OutputFormat::Umd => "umd",
-    }
+    self.inner.format.as_str()
   }
 
   #[napi(getter, ts_return_type = "'default' | 'named' | 'none' | 'auto'")]

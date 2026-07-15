@@ -52,3 +52,57 @@ export { node2_exports as n, init_node2 as t };
 export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### node0.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node0.js
+var node_0;
+//#endregion
+__esmMin((() => {
+	globalThis.__acyclic_output_fuzz_0 = 0;
+	import("./node1.js").then((n) => (n.t(), n.n));
+	node_0 = {};
+	node_0.value = 0;
+}))();
+
+```
+
+### node1.js
+
+```js
+import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region node2.js
+var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
+var node_2;
+var init_node2 = __esmMin((() => {
+	globalThis.__acyclic_output_fuzz_2 = 2;
+	import("./node0.js");
+	node_2 = {};
+	node_2.value = 2;
+}));
+//#endregion
+//#region node1.cjs
+var require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+	globalThis.__acyclic_output_fuzz_1 = 1;
+	init_node2();
+	exports.node_1 = 1;
+}));
+//#endregion
+export default require_node1();
+export { node2_exports as n, init_node2 as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```

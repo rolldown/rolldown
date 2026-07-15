@@ -1,0 +1,22 @@
+{
+  "configName": "wrap-all",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "_expectExecutionFailure": {
+        "reason": "#10104: on-demand wrapping still changes a hazard-free build on main",
+        "outputContains": ["on-demand must not wrap a hazard-free graph"]
+      },
+      "onDemandWrapping": true
+    }
+  ]
+}

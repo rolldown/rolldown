@@ -24,7 +24,7 @@ import { getDevWatchOptionsForCi } from './utils/get-dev-watch-options-for-ci.js
  *
  * What this file adds on top of Vite is only the test-harness surface the
  * specs rely on and Vite doesn't provide:
- * - the `/_dev/status` endpoint (`buildSeq` / `moduleRegistrationSeq` /
+ * - the `/_dev/status` endpoint (`buildSeq` /
  *   engine bundle state) used by `waitForBuildStable` and friends,
  * - the `Logger` → Vite `customLogger` adapter so `serverLogs` capture works,
  * - the old `createDevServer` contract that a resolved promise means the
@@ -141,7 +141,6 @@ interface HarnessCounters {
    */
   buildSeq: number;
   /** Bumped per `vite:module-loaded` report from the client runtime. */
-  moduleRegistrationSeq: number;
 }
 
 /**
@@ -249,10 +248,6 @@ function createHarnessPlugin(counters: HarnessCounters): VitePluginLike {
       getBundledDev = () => (clientEnv as any).bundledDev;
       sendFullReload = () => clientEnv.hot.send({ type: 'full-reload', path: '*' });
 
-      clientEnv.hot.on('vite:module-loaded', () => {
-        counters.moduleRegistrationSeq++;
-      });
-
       // WORKAROUND (upstream gap): Vite never clears `lastBuildError` when a
       // recovery arrives as an HMR patch (only `onOutput` clears it), and the
       // client hard-reloads when its first update meets an existing error
@@ -311,7 +306,6 @@ function createHarnessPlugin(counters: HarnessCounters): VitePluginLike {
             lastBuildErrored,
             buildSeq: counters.buildSeq,
             connectedClients: server.ws.clients.size,
-            moduleRegistrationSeq: counters.moduleRegistrationSeq,
           }),
         );
       });
@@ -362,7 +356,14 @@ function toViteConfig(
       // asset specs assert real asset requests. Same setting Vite's own
       // full-bundle-mode playground uses.
       assetsInlineLimit: 0,
-      rollupOptions: build.treeshake !== undefined ? { treeshake: build.treeshake } : {},
+      rollupOptions: {
+        ...(build.treeshake !== undefined ? { treeshake: build.treeshake } : {}),
+        // Forward the fixture's rolldown `experimental` (e.g. `devMode.lazy`) so a
+        // fixture can opt out of lazy compilation. `bundledDev.getRolldownOptions`
+        // builds `{ lazy: true, ...resolvedDevMode, implement }`, spreading the resolved
+        // devMode AFTER the default, so an explicit `lazy: false` here wins.
+        ...(build.experimental !== undefined ? { experimental: build.experimental } : {}),
+      },
     },
   };
 }
@@ -376,7 +377,7 @@ export async function createViteDevServer(
   opts?: { port?: number; logger?: Logger },
 ): Promise<DevServerHandle> {
   const logger = opts?.logger ?? console;
-  const counters: HarnessCounters = { buildSeq: 0, moduleRegistrationSeq: 0 };
+  const counters: HarnessCounters = { buildSeq: 0 };
   const { createServer } = await loadVite();
   const port = opts?.port || (await getFreePort());
 

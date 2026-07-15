@@ -527,52 +527,36 @@ impl BindingDevEngine {
       .map_err(|error| napi::Error::from_reason(format!("Failed to trigger full build: {error:#}")))
   }
 
-  #[napi]
-  pub fn invalidate<'env>(
-    &self,
-    env: &'env Env,
-    caller: String,
-    first_invalidated_by: Option<String>,
-  ) -> napi::Result<PromiseRaw<'env, BindingResult<Vec<BindingClientHmrUpdate>>>> {
-    let Some(operation) = self.lifecycle.begin_operation() else {
-      return PromiseRaw::reject(env, dev_engine_closed_error());
-    };
-    let inner = Arc::clone(&self.inner);
-    let cwd = Arc::clone(&self.cwd);
-    spawn_boxed_future(env, async move {
-      let result = match inner.invalidate(caller, first_invalidated_by).await {
-        Ok(updates) => {
-          let binding_updates =
-            updates.into_iter().map(BindingClientHmrUpdate::from).collect::<Vec<_>>();
-          Ok(Either::B(binding_updates))
-        }
-        Err(errors) => {
-          let binding_errors: Vec<_> = errors
-            .iter()
-            .map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf()))
-            .collect();
-          Ok(Either::A(BindingErrors::new(binding_errors)))
-        }
-      };
-      drop(operation);
-      result
-    })
-  }
-
+  /// Client-connect signal (the clientId hello): creates the per-client session
+  /// with an empty ship map. Reconnects arrive as fresh clientIds.
   #[napi(ts_return_type = "Promise<void>")]
-  pub fn register_modules<'env>(
+  pub fn register_client<'env>(
     &self,
     env: &'env Env,
     client_id: String,
-    modules: Vec<String>,
   ) -> napi::Result<PromiseRaw<'env, ()>> {
     let Some(operation) = self.lifecycle.begin_operation() else {
       return PromiseRaw::reject(env, dev_engine_closed_error());
     };
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
-      inner.clients.lock().await.entry(client_id).or_default().executed_modules.extend(modules);
+      inner.register_client(client_id).await;
       drop(operation);
+      Ok(())
+    })
+  }
+
+  /// Delivery notification from the serving middleware: the response for
+  /// `filename` completed, so record its modules as shipped to that client.
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn notify_payload_delivered<'env>(
+    &self,
+    env: &'env Env,
+    filename: String,
+  ) -> napi::Result<PromiseRaw<'env, ()>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      inner.notify_payload_delivered(&filename).await;
       Ok(())
     })
   }
@@ -588,7 +572,7 @@ impl BindingDevEngine {
     };
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
-      inner.clients.lock().await.remove(&client_id);
+      inner.remove_client(&client_id).await;
       drop(operation);
       Ok(())
     })
@@ -673,21 +657,29 @@ impl BindingDevEngine {
     env: &'env Env,
     module_id: String,
     client_id: String,
-  ) -> napi::Result<PromiseRaw<'env, BindingResult<String>>> {
+  ) -> napi::Result<PromiseRaw<'env, BindingLazyChunkOutput>> {
     let Some(operation) = self.lifecycle.begin_operation() else {
       return PromiseRaw::reject(env, dev_engine_closed_error());
     };
     let inner = Arc::clone(&self.inner);
-    let cwd = Arc::clone(&self.cwd);
     spawn_boxed_future(env, async move {
-      let result = dev_engine_binding_result(
-        inner.compile_lazy_entry(module_id, client_id).await,
-        cwd.as_ref(),
-      );
+      let result = inner
+        .compile_lazy_entry(module_id, client_id)
+        .await
+        .map(|output| BindingLazyChunkOutput { code: output.code, filename: output.filename })
+        .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")));
       drop(operation);
-      Ok(result)
+      result
     })
   }
+}
+
+/// The client-facing slice of a lazy-compile result. The carried modules and
+/// stamps stay server-side as the engine's pending-payload entry.
+#[napi(object)]
+pub struct BindingLazyChunkOutput {
+  pub code: String,
+  pub filename: String,
 }
 
 #[napi(object)]

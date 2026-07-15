@@ -1,0 +1,12 @@
+{
+  "name": "@rolldown/test-hmr-lazy-dynamic-import-accept-dep",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "serve"
+  },
+  "devDependencies": {
+    "@rolldown/test-dev-server": "workspace:*"
+  }
+}

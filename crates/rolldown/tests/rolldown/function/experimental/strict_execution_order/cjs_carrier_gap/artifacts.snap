@@ -1,0 +1,117 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { n as __esmMin, t as init_p } from "./p.js";
+__esmMin((() => {
+	//#region e.js
+	console.log("E");
+	//#endregion
+	//#region main.js
+	init_p();
+	console.log("MAIN");
+	//#endregion
+}))();
+
+```
+
+## p.js
+
+```js
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+//#endregion
+//#region c.js
+var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	console.log("C");
+	module.exports = {};
+}));
+var init_p = __esmMin((() => {
+	require_c();
+}));
+//#endregion
+export { __esmMin as n, init_p as t };
+
+```
+
+## second.js
+
+```js
+import { n as __esmMin, t as init_p } from "./p.js";
+//#endregion
+__esmMin((() => {
+	init_p();
+}))();
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+import { n as __esmMin, t as init_p } from "./p.js";
+//#region e.js
+var init_e = __esmMin((() => {
+	console.log("E");
+}));
+//#endregion
+__esmMin((() => {
+	init_e();
+	init_p();
+	console.log("MAIN");
+}))();
+
+```
+
+### p.js
+
+```js
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+//#endregion
+//#region c.js
+var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	console.log("C");
+	module.exports = {};
+}));
+var init_p = __esmMin((() => {
+	require_c();
+}));
+//#endregion
+export { __esmMin as n, init_p as t };
+
+```
+
+### second.js
+
+```js
+import { n as __esmMin, t as init_p } from "./p.js";
+//#endregion
+__esmMin((() => {
+	init_p();
+}))();
+
+```

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { page, serverUrl } from '~utils';
+import { page, serverUrl, waitForBuildStable } from '~utils';
 
 // Regression for vitejs/vite#22454: with lazy compilation plus
 // `viteAliasPlugin`, `import('@lazy')` got the `?rolldown-lazy=1` suffix
@@ -10,6 +10,7 @@ import { page, serverUrl } from '~utils';
 describe('lazy-aliased-import', () => {
   test('aliased dynamic import resolves named exports (#vite-22454)', { retry: 0 }, async () => {
     await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
+    await waitForBuildStable();
     await page.click('#aliased-import-btn');
     await expect.poll(() => page.textContent('#aliased-import-status')).toBe('done');
 

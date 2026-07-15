@@ -1,0 +1,128 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_a.js
+
+```js
+import { b } from "./entry_b.js";
+
+export * from "external"
+
+//#region entry_a.js
+const a = "a";
+
+//#endregion
+export { a, b };
+```
+
+## entry_b.js
+
+```js
+export * from "external"
+
+//#region entry_b.js
+const b = "b";
+
+//#endregion
+export { b };
+```
+
+# Variant: strict-on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### entry_a.js
+
+```js
+import { n as __exportAll, r as __reExport, t as __esmMin } from "./rolldown-runtime.js";
+import { b, t as init_entry_b } from "./entry_b.js";
+
+export * from "external"
+
+//#region entry_a.js
+var a;
+var init_entry_a = __esmMin((() => {
+	init_entry_b();
+	a = "a";
+}));
+
+//#endregion
+init_entry_a();
+export { a, b };
+```
+
+### entry_b.js
+
+```js
+import { n as __exportAll, r as __reExport, t as __esmMin } from "./rolldown-runtime.js";
+
+export * from "external"
+
+//#region entry_b.js
+var b;
+var init_entry_b = __esmMin((() => {
+	b = "b";
+}));
+
+//#endregion
+init_entry_b();
+export { b, init_entry_b as t };
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __reExport as r, __esmMin as t };
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### entry_a.js
+
+```js
+import { n as __exportAll, r as __reExport, t as __esmMin } from "./rolldown-runtime.js";
+import { b, t as init_entry_b } from "./entry_b.js";
+
+export * from "external"
+
+//#region entry_a.js
+var a;
+var init_entry_a = __esmMin((() => {
+	init_entry_b();
+	a = "a";
+}));
+
+//#endregion
+init_entry_a();
+export { a, b };
+```
+
+### entry_b.js
+
+```js
+import { n as __exportAll, r as __reExport, t as __esmMin } from "./rolldown-runtime.js";
+
+export * from "external"
+
+//#region entry_b.js
+var b;
+var init_entry_b = __esmMin((() => {
+	b = "b";
+}));
+
+//#endregion
+init_entry_b();
+export { b, init_entry_b as t };
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __reExport as r, __esmMin as t };
+```

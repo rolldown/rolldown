@@ -30,6 +30,7 @@
     "vitest": "catalog:"
   },
   "devDependencies": {
+    "@jridgewell/trace-mapping": "catalog:",
     "@rolldown/test-dev-server": "workspace:*",
     "@rolldown/test-side-effects-field": "link:./package-fixtures/test-side-effects-field",
     "@rolldown/test-side-effects-field-glob": "file:./package-fixtures/test-side-effects-field-glob",

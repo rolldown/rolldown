@@ -1,0 +1,212 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## ca.js
+
+```js
+import { t as __esmMin } from "./main.js";
+import { t as init_cyc_b } from "./cb.js";
+//#region cyc-a.js
+var init_cyc_a = __esmMin((() => {
+	init_cyc_b();
+	(globalThis.__events ??= []).push("cyc-a");
+}));
+//#endregion
+export { init_cyc_a as t };
+
+```
+
+## cb.js
+
+```js
+import { t as __esmMin } from "./main.js";
+import { t as init_cyc_a } from "./ca.js";
+//#region cyc-b.js
+var init_cyc_b = __esmMin((() => {
+	init_cyc_a();
+	(globalThis.__events ??= []).push("cyc-b");
+}));
+//#endregion
+export { init_cyc_b as t };
+
+```
+
+## dynamic-page.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./main.js";
+import { t as init_cyc_a } from "./ca.js";
+//#region linear.js
+function makeUnit() {
+	return { value: 7 };
+}
+function scaleLinear() {
+	return unit$1;
+}
+var unit$1;
+var init_linear = __esmMin((() => {
+	unit$1 = /* @__PURE__ */ makeUnit();
+}));
+//#endregion
+//#region pow.js
+function makePow() {
+	return { value: 3 };
+}
+function scalePow() {
+	return unit;
+}
+var unit;
+var init_pow = __esmMin((() => {
+	unit = /* @__PURE__ */ makePow();
+}));
+//#endregion
+//#region scale-barrel.js
+var init_scale_barrel = __esmMin((() => {
+	init_linear();
+	init_pow();
+}));
+//#endregion
+//#region outer-barrel.js
+var outer_barrel_exports = /* @__PURE__ */ __exportAll({
+	scaleLinear: () => scaleLinear,
+	scalePow: () => scalePow
+});
+var init_outer_barrel = __esmMin((() => {
+	init_scale_barrel();
+}));
+//#endregion
+//#region reader.js
+function getScale(name) {
+	const factory = outer_barrel_exports[name];
+	const built = factory();
+	return built ? built.value : "NO_UNIT";
+}
+var init_reader = __esmMin((() => {
+	init_outer_barrel();
+	init_cyc_a();
+	(globalThis.__events ??= []).push("reader");
+}));
+//#endregion
+__esmMin((() => {
+	init_reader();
+	(globalThis.__events ??= []).push("dynamic-page");
+}))();
+export { getScale };
+
+```
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+function loadPage() {
+	return import("./dynamic-page.js");
+}
+//#endregion
+__esmMin((() => {
+	(globalThis.__events ??= []).push("main");
+}))();
+export { loadPage, __exportAll as n, __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### ca.js
+
+```js
+import { t as __esmMin } from "./main.js";
+import { t as init_cyc_b } from "./cb.js";
+//#region cyc-a.js
+var init_cyc_a = __esmMin((() => {
+	init_cyc_b();
+	(globalThis.__events ??= []).push("cyc-a");
+}));
+//#endregion
+export { init_cyc_a as t };
+
+```
+
+### cb.js
+
+```js
+import { t as __esmMin } from "./main.js";
+import { t as init_cyc_a } from "./ca.js";
+//#region cyc-b.js
+var init_cyc_b = __esmMin((() => {
+	init_cyc_a();
+	(globalThis.__events ??= []).push("cyc-b");
+}));
+//#endregion
+export { init_cyc_b as t };
+
+```
+
+### dynamic-page.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./main.js";
+import { t as init_cyc_a } from "./ca.js";
+function makeUnit() {
+	return { value: 7 };
+}
+function scaleLinear() {
+	return unit$1;
+}
+function makePow() {
+	return { value: 3 };
+}
+function scalePow() {
+	return unit;
+}
+var outer_barrel_exports = /* @__PURE__ */ __exportAll({
+	scaleLinear: () => scaleLinear,
+	scalePow: () => scalePow
+});
+function getScale(name) {
+	const factory = outer_barrel_exports[name];
+	const built = factory();
+	return built ? built.value : "NO_UNIT";
+}
+var unit$1, unit;
+var init_reader = __esmMin((() => {
+	//#region linear.js
+	unit$1 = /* @__PURE__ */ makeUnit();
+	//#endregion
+	//#region pow.js
+	unit = /* @__PURE__ */ makePow();
+	//#endregion
+	//#region reader.js
+	init_cyc_a();
+	(globalThis.__events ??= []).push("reader");
+	//#endregion
+}));
+//#endregion
+__esmMin((() => {
+	init_reader();
+	(globalThis.__events ??= []).push("dynamic-page");
+}))();
+export { getScale };
+
+```
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+function loadPage() {
+	return import("./dynamic-page.js");
+}
+//#endregion
+__esmMin((() => {
+	(globalThis.__events ??= []).push("main");
+}))();
+export { loadPage, __exportAll as n, __esmMin as t };
+
+```

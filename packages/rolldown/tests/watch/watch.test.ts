@@ -2961,6 +2961,97 @@ async function waitBuildFinished(watcher: RolldownWatcher, updateFn?: () => void
   });
 }
 
+// https://github.com/rolldown/rolldown/issues/9598
+test.concurrent(
+  'rebuild when tsconfig changes (auto-discovery)',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-tsconfig-auto', retryCount, {
+      'main.ts': 'export class Foo { bar = 1 }',
+      'tsconfig.json': JSON.stringify({
+        compilerOptions: { target: 'ESNext', useDefineForClassFields: false },
+      }),
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    const output = path.join(dir, 'dist', 'main.js');
+
+    const watcher = watch({
+      input: path.join(dir, 'main.ts'),
+      cwd: dir,
+      tsconfig: true,
+      output: { file: output },
+    });
+
+    try {
+      await waitBuildFinished(watcher);
+      // useDefineForClassFields: false compiles the field to a constructor assignment
+      expect(fs.readFileSync(output, 'utf-8')).toContain('this.bar = 1');
+
+      // Changing only the tsconfig must trigger a rebuild that uses the new options
+      await editFile(
+        path.join(dir, 'tsconfig.json'),
+        JSON.stringify({
+          compilerOptions: { target: 'ESNext', useDefineForClassFields: true },
+        }),
+      );
+      // useDefineForClassFields: true keeps the field declaration in the class body
+      await expect.poll(() => fs.readFileSync(output, 'utf-8')).not.toContain('this.bar = 1');
+      expect(fs.readFileSync(output, 'utf-8')).toContain('bar = 1');
+    } finally {
+      await watcher.close();
+    }
+  },
+);
+
+// https://github.com/rolldown/rolldown/issues/9598
+test.concurrent(
+  'rebuild when tsconfig changes (manual path)',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-tsconfig-manual', retryCount, {
+      'main.ts': 'export class Foo { bar = 1 }',
+      'tsconfig.build.json': JSON.stringify({
+        compilerOptions: { target: 'ESNext', useDefineForClassFields: false },
+      }),
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    const output = path.join(dir, 'dist', 'main.js');
+
+    const watcher = watch({
+      input: path.join(dir, 'main.ts'),
+      cwd: dir,
+      tsconfig: './tsconfig.build.json',
+      output: { file: output },
+    });
+
+    try {
+      await waitBuildFinished(watcher);
+      expect(fs.readFileSync(output, 'utf-8')).toContain('this.bar = 1');
+
+      await editFile(
+        path.join(dir, 'tsconfig.build.json'),
+        JSON.stringify({
+          compilerOptions: { target: 'ESNext', useDefineForClassFields: true },
+        }),
+      );
+      await expect.poll(() => fs.readFileSync(output, 'utf-8')).not.toContain('this.bar = 1');
+      expect(fs.readFileSync(output, 'utf-8')).toContain('bar = 1');
+    } finally {
+      await watcher.close();
+    }
+  },
+);
+
 // https://github.com/rolldown/rolldown/issues/8937
 test.concurrent(
   'watcher.close() should cancel an in-progress build',

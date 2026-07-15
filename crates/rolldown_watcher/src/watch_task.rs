@@ -91,9 +91,11 @@ impl WatchTask {
     let (result, new_watch_files, bundle_handle) = {
       let mut bundler = self.bundler.lock().await;
 
-      // Always clear resolver cache before each rebuild in watch mode to avoid
-      // stale resolution results from modified package.json/tsconfig/export maps.
+      // Always clear the resolver and tsconfig caches before each rebuild in
+      // watch mode to avoid stale resolution and transform results from
+      // modified package.json/tsconfig/export maps.
       bundler.clear_resolver_cache();
+      bundler.clear_transform_tsconfig_cache();
 
       // Use with_cached_bundle_experimental to register FS watches between scan and write phases.
       // This ensures changes made during render hooks (e.g. renderStart modifying a file)

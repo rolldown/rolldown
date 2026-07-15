@@ -1,6 +1,6 @@
 // @ts-check
 
-/** @import { DevRuntime, Messenger, DevRuntimeMessage } from './runtime-extra-dev-common.js' */
+/** @import { DevRuntime } from './runtime-extra-dev-common.js' */
 
 /** @type {typeof DevRuntime} */
 // @ts-expect-error -- there's no way to declare a variable by JSDoc
@@ -53,75 +53,17 @@ class ModuleHotContext {
 
 class DefaultDevRuntime extends BaseDevRuntime {
   /**
-   * @param {WebSocket} socket
-   * @param {string} clientId
-   */
-  constructor(socket, clientId) {
-    /** @type {string[]} */
-    const queuedMessages = [];
-    /** @type {Messenger} */
-    const messenger = {
-      send(message) {
-        if (socket.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify(message));
-        } else if (socket.readyState === WebSocket.CLOSED) {
-          // Do nothing
-        } else {
-          queuedMessages.push(JSON.stringify(message));
-        }
-      },
-    };
-    socket.onopen = () => {
-      for (const message of queuedMessages) {
-        socket.send(message);
-      }
-      socket.onopen = null;
-    };
-
-    super(messenger, clientId);
-  }
-
-  /**
    * @type {Map<string, ModuleHotContext>}
    */
   moduleHotContexts = new Map();
-  /**
-   * @type {Map<string, ModuleHotContext>}
-   */
-  moduleHotContextsToBeUpdated = new Map();
   /**
    * @override
    * @param {string} moduleId
    */
   createModuleHotContext(moduleId) {
     const hotContext = new ModuleHotContext(moduleId, this);
-    if (this.moduleHotContexts.has(moduleId)) {
-      this.moduleHotContextsToBeUpdated.set(moduleId, hotContext);
-    } else {
-      this.moduleHotContexts.set(moduleId, hotContext);
-    }
+    this.moduleHotContexts.set(moduleId, hotContext);
     return hotContext;
-  }
-  /**
-   * @override
-   * @param {[string, string][]} boundaries
-   */
-  applyUpdates(boundaries) {
-    // trigger callbacks of accept() correctly
-    for (let [moduleId, acceptedVia] of boundaries) {
-      const hotContext = this.moduleHotContexts.get(moduleId);
-      if (hotContext) {
-        const acceptCallbacks = hotContext.acceptCallbacks;
-        acceptCallbacks.filter((cb) => {
-          cb.fn(this.modules[moduleId].exports);
-        });
-      }
-    }
-    this.moduleHotContextsToBeUpdated.forEach((hotContext, moduleId) => {
-      this.moduleHotContexts.set(moduleId, hotContext);
-    });
-    this.moduleHotContextsToBeUpdated.clear();
-    // swap new contexts
   }
 }
 
@@ -146,7 +88,7 @@ addr.searchParams.set('clientId', clientId);
 const socket = new WebSocket(addr);
 
 (/** @type {any} */ (globalThis)).__rolldown_runtime__ ??=
-  new DefaultDevRuntime(socket, clientId);
+  new DefaultDevRuntime(clientId);
 
 /** @param {MessageEvent} event */
 socket.onmessage = function(event) {

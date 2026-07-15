@@ -17,13 +17,14 @@ pub mod types;
 
 use arcstr::ArcStr;
 use oxc_str::CompactStr;
-use rolldown_std_utils::{PathExt, strip_path_prefix_to_slash};
+use rolldown_std_utils::{path_buf_to_slash, relative_path_to_slash, strip_path_prefix_to_slash};
 use rolldown_utils::{
   BitSet,
   dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
   indexmap::{FxIndexMap, FxIndexSet},
   make_unique_name::make_unique_name,
+  node_style_absolute,
 };
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
@@ -58,23 +59,6 @@ pub enum PostChunkOptimizationOperation {
   RemovedWithPreservedExports,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub enum PreliminarySourcemapFilename {
-  #[default]
-  Uninstantiated,
-  Empty,
-  Template(PreliminaryFilename),
-}
-
-impl From<PreliminarySourcemapFilename> for Option<PreliminaryFilename> {
-  fn from(value: PreliminarySourcemapFilename) -> Self {
-    match value {
-      PreliminarySourcemapFilename::Uninstantiated | PreliminarySourcemapFilename::Empty => None,
-      PreliminarySourcemapFilename::Template(preliminary_filename) => Some(preliminary_filename),
-    }
-  }
-}
-
 impl ChunkMeta {
   #[inline]
   pub fn is_pure_user_defined_entry(&self) -> bool {
@@ -93,7 +77,7 @@ pub struct Chunk {
   // emitted chunk corresponding reference_id, used to `PluginContext#getFileName` to search the emitted chunk name
   pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
-  pub preliminary_sourcemap_filename: PreliminarySourcemapFilename,
+  pub preliminary_sourcemap_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, CompactStr>,
   /// For mixed-mode externals: maps external `namespace_ref` to the node-mode binding name.
@@ -177,7 +161,7 @@ impl Chunk {
       .as_path()
       .parent()
       .expect("absolute_preliminary_filename should have a parent directory");
-    target.relative(source_dir).as_path().expect_to_slash()
+    relative_path_to_slash(target, source_dir)
   }
 
   pub async fn filename_template(
@@ -252,9 +236,9 @@ impl Chunk {
     chunk_name: &ArcStr,
     hash_placeholder_generator: &mut HashPlaceholderGenerator,
     used_name_counts: &FxDashMap<ArcStr, u32>,
-  ) -> anyhow::Result<PreliminarySourcemapFilename> {
+  ) -> anyhow::Result<Option<PreliminaryFilename>> {
     let Some(sourcemap_filename) = &options.sourcemap_filenames else {
-      return Ok(PreliminarySourcemapFilename::Empty);
+      return Ok(None);
     };
     let sourcemap_filename = sourcemap_filename.call(rollup_pre_rendered_chunk).await?;
 
@@ -286,12 +270,12 @@ impl Chunk {
       .into();
 
     if options.sourcemap.is_none() {
-      return Ok(PreliminarySourcemapFilename::Empty);
+      return Ok(None);
     }
 
     let name = make_unique_name(&filename, used_name_counts);
 
-    Ok(PreliminarySourcemapFilename::Template(PreliminaryFilename::new(name, hash_placeholder)))
+    Ok(Some(PreliminaryFilename::new(name, hash_placeholder)))
   }
 
   fn get_preserve_modules_chunk_name<'a, 'b: 'a>(
@@ -310,21 +294,28 @@ impl Chunk {
     }
 
     let p = PathBuf::from(chunk_name);
-    let p = if p.is_absolute() {
+    // Besides genuinely absolute paths, `node_style_absolute` anchors a
+    // rooted-but-volume-less id (`/favicon`, `\favicon`) to the cwd volume
+    // root (a drive or UNC share): Node and Rollup treat such ids as absolute,
+    // but Rust's `Path::is_absolute()`
+    // reports them as non-absolute on Windows, and letting them fall into the
+    // `virtual_dirname` join below would discard the prefix and leak the
+    // leading slash into `[name]`.
+    let p = if let Some(abs) = node_style_absolute(&p, &options.cwd) {
       if let Some(ref preserve_modules_root) = options.preserve_modules_root {
         // See internal-docs/module-id/implementation.md: output paths may normalize separators even when module
         // ids keep native separators.
         if let Some(relative_path) =
-          strip_path_prefix_to_slash(chunk_name.as_path(), preserve_modules_root.as_path())
+          strip_path_prefix_to_slash(&abs, preserve_modules_root.as_path())
         {
           return Cow::Owned(relative_path);
         }
       }
-      p.relative(self.input_base.as_str())
+      relative_path_to_slash(abs, self.input_base.as_str())
     } else {
-      PathBuf::from(options.virtual_dirname.as_str()).join(p)
+      path_buf_to_slash(PathBuf::from(options.virtual_dirname.as_str()).join(p))
     };
-    Cow::Owned(p.to_slash_lossy().into_owned())
+    Cow::Owned(p)
   }
 
   pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {

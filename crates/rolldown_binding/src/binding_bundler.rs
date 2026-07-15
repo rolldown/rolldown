@@ -191,9 +191,9 @@ impl BindingBundler {
         Some(error) => close_rejection_promise(env, &error),
       },
     )?;
-    // SAFETY: `nested` was created in this `env`; only its phantom resolved
-    // type changes because JavaScript promise resolution assimilates it.
-    Ok(unsafe { PromiseRaw::new(env.raw(), nested.raw()) })
+    // `nested` was created in this `env`; only its phantom resolved type changes
+    // because JavaScript promise resolution assimilates it.
+    Ok(PromiseRaw::new(env.raw(), nested.raw()))
   }
 
   #[napi(skip_typescript)]

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_common::{ConcatenateWrappedModuleKind, PrependRenderedImport};
+use rolldown_error::BuildResult;
 use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _};
 use rustc_hash::FxHashMap;
 use tracing::debug_span;
@@ -18,10 +19,10 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     ast_table: &mut IndexEcmaAst,
-  ) {
+  ) -> BuildResult<()> {
     let has_enum_inlining = self.link_output.has_enum_inlining;
 
-    let transfer_parts_rendered_maps = debug_span!("finalize_modules").in_scope(|| {
+    let finalized = debug_span!("finalize_modules").in_scope(|| {
       ast_table
         .par_iter_mut_enumerated()
         .filter(|(idx, _ast)| {
@@ -58,15 +59,40 @@ impl GenerateStage<'_> {
           };
 
           let concatenated_wrapped_module_kind = ctx.linking_info.concatenated_wrapped_module_kind;
-          let (transferred_import_record, rendered_concatenated_wrapped_module_parts) =
-            ctx.finalize_normal_module(ast, ast_scope);
+          let (
+            transferred_import_record,
+            rendered_concatenated_wrapped_module_parts,
+            module_errors,
+          ) = ctx.finalize_normal_module(ast, ast_scope);
 
-          (!transferred_import_record.is_empty()
+          (!module_errors.is_empty()
+            || !transferred_import_record.is_empty()
             || !matches!(concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None))
-          .then_some((idx, transferred_import_record, rendered_concatenated_wrapped_module_parts))
+          .then_some((
+            idx,
+            transferred_import_record,
+            rendered_concatenated_wrapped_module_parts,
+            module_errors,
+          ))
         })
         .collect::<Vec<_>>()
     });
+
+    let mut errors = vec![];
+    let transfer_parts_rendered_maps = finalized
+      .into_iter()
+      .filter_map(|(idx, transferred_import_record, rendered_parts, module_errors)| {
+        if module_errors.is_empty() {
+          return Some((idx, transferred_import_record, rendered_parts));
+        }
+        errors.extend(module_errors);
+        None
+      })
+      .collect::<Vec<_>>();
+
+    if !errors.is_empty() {
+      Err(errors)?;
+    }
 
     let mut normalized_transfer_parts_rendered_maps = FxHashMap::default();
     for (idx, transferred_import_record, rendered_concatenated_module_parts) in
@@ -83,7 +109,7 @@ impl GenerateStage<'_> {
     }
 
     if normalized_transfer_parts_rendered_maps.is_empty() {
-      return;
+      return Ok(());
     }
     for chunk in chunk_graph.chunk_table.iter_mut() {
       for (module_idx, recs) in &chunk.insert_map {
@@ -102,5 +128,7 @@ impl GenerateStage<'_> {
         }
       }
     }
+
+    Ok(())
   }
 }

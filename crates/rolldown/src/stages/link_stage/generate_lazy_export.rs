@@ -1,7 +1,7 @@
 use indexmap::map::Entry;
 use oxc::allocator::GetAllocator;
 use oxc::{
-  allocator::{Allocator, TakeIn},
+  allocator::{ReplaceWith, TakeIn},
   ast::ast::{self, Expression},
   semantic::{SemanticBuilder, Stats},
   span::SPAN,
@@ -109,30 +109,23 @@ fn replace_first_expr_stmt(ecma_ast: &mut EcmaAst, kind: LazyExportWrap) {
   ecma_ast.program.with_mut(|fields| {
     let ast_factory = AstFactory::new(fields.allocator);
     let Some(stmt) = fields.program.body.first_mut() else { unreachable!() };
-    let expr = match stmt {
-      ast::Statement::ExpressionStatement(stmt) => {
-        stmt.expression.take_in(&ast_factory.allocator())
+    stmt.replace_with(|old| {
+      let ast::Statement::ExpressionStatement(expr_stmt) = old else { unreachable!() };
+      let expr = expr_stmt.unbox().expression;
+      match kind {
+        LazyExportWrap::CjsExport => ast_factory.make_module_exports_stmt(expr),
+        LazyExportWrap::EsmDefault => ast_factory.make_export_default_stmt(expr),
       }
-      _ => unreachable!(),
-    };
-    *stmt = match kind {
-      LazyExportWrap::CjsExport => ast_factory.make_module_exports_stmt(expr),
-      LazyExportWrap::EsmDefault => ast_factory.make_export_default_stmt(expr),
-    };
+    });
   });
 }
 
-/// Takes `expr` (leaving a dummy in its place) and returns the owned inner
-/// expression with any wrapping `(...)` parentheses removed.
-fn take_without_parentheses<'ast>(
-  expr: &mut Expression<'ast>,
-  allocator: &'ast Allocator,
-) -> Expression<'ast> {
-  let mut inner_expr = expr.take_in(&allocator);
-  while let Expression::ParenthesizedExpression(mut paren_expr) = inner_expr {
-    inner_expr = paren_expr.expression.take_in(&allocator);
+/// Returns the owned expression with any wrapping `(...)` parentheses removed.
+fn into_without_parentheses(mut expr: Expression<'_>) -> Expression<'_> {
+  while let Expression::ParenthesizedExpression(paren_expr) = expr {
+    expr = paren_expr.unbox().expression;
   }
-  inner_expr
+  expr
 }
 
 fn update_module_default_export_info(
@@ -163,23 +156,23 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
     let mut index_map = FxIndexMap::default();
     let ast_factory = AstFactory::new(fields.allocator);
     let program = fields.program;
-    let Some(stmts) = program.body.first_mut() else { unreachable!() };
-    let expr = match stmts {
-      ast::Statement::ExpressionStatement(stmt) => &mut stmt.expression,
-      _ => {
-        unreachable!()
-      }
+    let Some(ast::Statement::ExpressionStatement(stmt)) = program.body.first() else {
+      unreachable!()
     };
-    if !matches!(expr.without_parentheses(), Expression::ObjectExpression(_)) {
+    if !matches!(stmt.expression.without_parentheses(), Expression::ObjectExpression(_)) {
       return false;
     }
-    let Expression::ObjectExpression(mut obj_expr) =
-      take_without_parentheses(expr, ast_factory.allocator())
+    // Take the single-statement body by value; this leaves `program.body` empty.
+    let Some(ast::Statement::ExpressionStatement(stmt)) =
+      program.body.take_in(&ast_factory.allocator()).into_iter().next()
     else {
       unreachable!();
     };
-    // clean program body, since we already take it and left a dummy expr
-    program.body.clear();
+    let Expression::ObjectExpression(mut obj_expr) =
+      into_without_parentheses(stmt.unbox().expression)
+    else {
+      unreachable!();
+    };
 
     // convert {"a": "b", "c": "d"} to
     // {"a": b, "c": d}

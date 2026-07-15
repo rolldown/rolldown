@@ -285,8 +285,12 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         .as_member_expression_kind()
         .map(|member_expr| {
           let static_name = member_expr.static_property_name().unwrap_or(ast::Str::from(""));
-          let is_special_property =
-            static_name == "url" || static_name == "dirname" || static_name == "filename";
+          // `import.meta.ROLLUP_FILE_URL_*` is rewritten to `new URL(..., import.meta.url).href`,
+          // so it degrades exactly like `import.meta.url` does.
+          let is_special_property = static_name == "url"
+            || static_name == "dirname"
+            || static_name == "filename"
+            || static_name.as_str().starts_with("ROLLUP_FILE_URL_");
           let format = &self.immutable_ctx.options.format;
           !is_special_property || matches!(format, OutputFormat::Iife | OutputFormat::Umd)
         })

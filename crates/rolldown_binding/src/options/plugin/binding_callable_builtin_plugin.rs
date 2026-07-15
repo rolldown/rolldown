@@ -42,7 +42,7 @@ where
 {
   // Public callable hooks are already enclosed by the native-token lease in
   // run-with-runtime-lease.ts. See internal-docs/async-runtime/implementation.md.
-  AsyncBlockBuilder::with(future).build(env)
+  AsyncBlockBuilder::<V, F>::with(future).build(env)
 }
 
 #[napi]
@@ -191,12 +191,14 @@ impl From<BindingHookJsResolveIdOptions> for Arc<CustomField> {
   fn from(value: BindingHookJsResolveIdOptions) -> Self {
     let mut map = CustomField::default();
     map.insert(ResolveIdOptionsScan, value.scan.unwrap_or(false));
-    if let Some(is_sub_imports_pattern) =
-      value.custom.and_then(|v| v.vite_import_glob.and_then(|v| v.is_sub_imports_pattern))
-    {
+    if let Some(vite_plugin_custom) = value.custom {
+      let is_sub_imports_pattern =
+        vite_plugin_custom.vite_import_glob.and_then(|meta| meta.is_sub_imports_pattern);
       map.insert(
         rolldown_plugin_utils::constants::ViteImportGlob,
-        rolldown_plugin_utils::constants::ViteImportGlobValue(is_sub_imports_pattern),
+        rolldown_plugin_utils::constants::ViteImportGlobValue(
+          is_sub_imports_pattern.unwrap_or(false),
+        ),
       );
     }
     Arc::new(map)

@@ -88,9 +88,7 @@ Note: some plugins may internally assume `/` separators when doing string matchi
 
 ### Existing Normalization Utilities
 
-- `PathExt::expect_to_slash()` — Converts `\` to `/` (only on non-Unix platforms). Used in `StableModuleId`, HMR, source maps.
-- `SugarPath::relative()` — Produces relative paths. Used in `StableModuleId`.
-- `stabilize_id()` — Absolute → cwd-relative with forward slashes. Legacy utility, functionality now in `StableModuleId`.
+After sugar_path 3, use `rolldown_std_utils` helpers (`relative_path_to_slash`, `relative_path_as_js_specifier`, …). Style guide: [path-manipulation/style-guide.md](../path-manipulation/style-guide.md).
 
 ## The Core Problem
 

@@ -18,14 +18,15 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 ```
 … PlanModuleWrappingPass → CreateWrapperDeclarationsPass → NormalizeLazyExportsPass
   → DetermineModuleSideEffectsPass → representation compatibility projection
-  → bind_imports_and_exports → create_exports_for_ecma_modules
+  → CollectResolvedExportsPass → resolved-export compatibility projection
+  → remaining bind_imports_and_exports → create_exports_for_ecma_modules
   → reference_needed_symbols   ← this pass
   → cross_module_optimization → include_statements → patch_module_dependencies
 ```
 
 Position is load-bearing in two directions:
 
-1. **`wrap_kind`, `wrapper_ref`, and module side effects must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`, while unwrapped imports read `module.side_effects`. `NormalizeLazyExportsPass` finalizes wrapper identities, `DetermineModuleSideEffectsPass` consumes those final wrapper and dynamic-export facts, and the compatibility projection writes all three domains before binding and this step run.
+1. **`wrap_kind`, `wrapper_ref`, module side effects, and resolved exports must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`, while unwrapped imports read `module.side_effects`; binding also needs the collected export maps before this step can consume its results. `NormalizeLazyExportsPass` finalizes wrapper and local export identities, `DetermineModuleSideEffectsPass` consumes the final wrapper and dynamic-export facts, `CollectResolvedExportsPass` computes the final export-star view, and the compatibility projections write all four domains before binding and this step run.
 2. **`include_statements` must run after.** Tree-shaking traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data this pass writes, wrappers and helpers would be silently dropped from the output.
 
 ## Dispatch
@@ -194,6 +195,7 @@ A bug in any of (1)–(4) typically surfaces as a tree-shaking false-positive (h
 ## Related
 
 - [determine-module-exports-kind](../determine-module-exports-kind/implementation.md) — produces `wrap_kind` and `safely_merge_cjs_ns_map`.
+- [resolved exports](../resolved-exports/implementation.md) — produces the export-star maps that binding consumes before reference analysis.
 - [module-execution-order](../module-execution-order/implementation.md) — orthogonal; `exec_order` is what `include_statements` uses to walk modules deterministically.
 - `crates/rolldown/src/stages/link_stage/passes/plan_module_wrapping.rs` and `create_wrapper_declarations.rs` — plan wrapping and allocate paired wrapper symbol/statement identities.
 - `crates/rolldown/src/stages/link_stage/passes/normalize_lazy_exports.rs` — preserves or invalidates wrapper identities atomically with lazy-export normalization, then returns final wrapper state for projection.

@@ -5,6 +5,7 @@
 mod canonicalize_entries;
 mod collect_external_star_exports;
 mod collect_initial_dependencies;
+mod collect_resolved_exports;
 mod compute_cjs_namespace_merges;
 mod compute_dynamic_exports;
 mod compute_module_execution_order;
@@ -17,6 +18,7 @@ mod normalize_lazy_exports;
 mod plan_module_wrapping;
 
 pub(super) use canonicalize_entries::EntryPlanDraft;
+pub(super) use collect_resolved_exports::ResolvedExportsDraft;
 pub(super) use compute_cjs_namespace_merges::{CjsNamespaceMerges, ComputeCjsNamespaceMergesInput};
 pub(super) use compute_dynamic_exports::{ComputeDynamicExportsInput, DynamicExports};
 pub(super) use compute_module_execution_order::ComputeModuleExecutionOrderInput;
@@ -45,6 +47,9 @@ pub(super) struct CollectExternalStarExportsPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct CollectInitialDependenciesPass;
+
+#[derive(Clone, Copy)]
+pub(super) struct CollectResolvedExportsPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct ComputeCjsNamespaceMergesPass;

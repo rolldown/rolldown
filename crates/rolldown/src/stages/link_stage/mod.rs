@@ -47,16 +47,16 @@ use non_splittable_json_defaults::NonSplittableJsonDefaults;
 
 use passes::{
   CanonicalizeEntriesPass, CollectExternalStarExportsPass, CollectInitialDependenciesPass,
-  ComputeCjsNamespaceMergesInput, ComputeCjsNamespaceMergesPass, ComputeDynamicExportsInput,
-  ComputeDynamicExportsPass, ComputeModuleExecutionOrderInput, ComputeModuleExecutionOrderPass,
-  ComputeTlaPass, ConstantExtractionInput, CreateWrapperDeclarationsInput,
-  CreateWrapperDeclarationsOutput, CreateWrapperDeclarationsOwned, CreateWrapperDeclarationsPass,
-  DetermineModuleFormatsInput, DetermineModuleFormatsPass, DetermineModuleSideEffectsInput,
-  DetermineModuleSideEffectsPass, DynamicExports, EntryPlanDraft, ExtractGlobalConstantsPass,
-  GlobalConstantsDraft, ModuleFormats, ModuleSideEffects, ModuleWrappers,
-  NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
-  NormalizeLazyExportsPass, PlanModuleWrappingInput, PlanModuleWrappingPass, TlaScanFacts,
-  WrapperDeclaration,
+  CollectResolvedExportsPass, ComputeCjsNamespaceMergesInput, ComputeCjsNamespaceMergesPass,
+  ComputeDynamicExportsInput, ComputeDynamicExportsPass, ComputeModuleExecutionOrderInput,
+  ComputeModuleExecutionOrderPass, ComputeTlaPass, ConstantExtractionInput,
+  CreateWrapperDeclarationsInput, CreateWrapperDeclarationsOutput, CreateWrapperDeclarationsOwned,
+  CreateWrapperDeclarationsPass, DetermineModuleFormatsInput, DetermineModuleFormatsPass,
+  DetermineModuleSideEffectsInput, DetermineModuleSideEffectsPass, DynamicExports, EntryPlanDraft,
+  ExtractGlobalConstantsPass, GlobalConstantsDraft, ModuleFormats, ModuleSideEffects,
+  ModuleWrappers, NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
+  NormalizeLazyExportsPass, PlanModuleWrappingInput, PlanModuleWrappingPass, ResolvedExportsDraft,
+  TlaScanFacts, WrapperDeclaration,
 };
 
 /// Information about safely merged CJS namespaces for a module
@@ -370,6 +370,38 @@ impl<'a> LinkStage<'a> {
     }
   }
 
+  fn project_resolved_exports(&mut self, resolved_exports: ResolvedExportsDraft) {
+    if resolved_exports.module_count() != self.module_table.modules.len()
+      || resolved_exports.module_count() != self.metas.len()
+    {
+      tracing::error!(
+        resolved_exports = resolved_exports.module_count(),
+        modules = self.module_table.modules.len(),
+        metadata = self.metas.len(),
+        "resolved-export layout mismatch"
+      );
+    }
+    for (module_idx, exports) in resolved_exports.into_slots().into_iter_enumerated() {
+      match (self.module_table.modules.get(module_idx), self.metas.get_mut(module_idx), exports) {
+        (Some(Module::Normal(_)), Some(meta), Some(exports)) => meta.resolved_exports = exports,
+        (Some(Module::External(_)), Some(_), None) => {}
+        (Some(Module::Normal(_)), Some(_), None) => {
+          tracing::error!(module = module_idx.index(), "normal module has no resolved-export slot");
+        }
+        (Some(Module::External(_)), Some(_), Some(_)) => {
+          tracing::error!(
+            module = module_idx.index(),
+            "external module has a resolved-export slot"
+          );
+        }
+        (None, _, _) | (_, None, _) => tracing::error!(
+          module = module_idx.index(),
+          "resolved exports target a missing module or linking metadata"
+        ),
+      }
+    }
+  }
+
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
     let mut pass_pipeline = PassPipelineCtx::new();
@@ -454,6 +486,9 @@ impl<'a> LinkStage<'a> {
         &entry_plan,
         &global_constants,
       );
+    let (_, resolved_exports) =
+      run_infallible_pass(CollectResolvedExportsPass, &mut pass_pipeline, &self.module_table, ());
+    self.project_resolved_exports(resolved_exports);
     self.entries = entry_plan.into_legacy_entries();
     self.global_constant_symbol_map = global_constants.into_legacy();
     self.diagnostics.extend(pass_pipeline.into_diagnostics());

@@ -8,15 +8,15 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType,
   MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef,
-  SymbolRef, SymbolRefDb, SymbolRefFlags,
+  OutputFormat, Specifier, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  SymbolRefFlags,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
-  index_vec_ext::{IndexVecExt, IndexVecRefExt},
+  index_vec_ext::IndexVecRefExt,
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
@@ -126,30 +126,6 @@ impl LinkStage<'_> {
     &mut self,
     fallback_non_splittable_json_defaults: &NonSplittableJsonDefaults,
   ) {
-    // Initialize `resolved_exports` to prepare for matching imports with exports
-    self.metas.par_iter_mut_enumerated().for_each(|(module_id, meta)| {
-      let Module::Normal(module) = &self.module_table[module_id] else {
-        return;
-      };
-      let mut resolved_exports = module
-        .named_exports
-        .iter()
-        .map(|(name, local)| {
-          (name.clone(), ResolvedExport::new(local.referenced, local.came_from_commonjs))
-        })
-        .collect::<FxHashMap<_, _>>();
-
-      let mut module_stack = vec![];
-      if module.has_star_export() || module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
-        Self::add_exports_for_export_star(
-          &self.module_table.modules,
-          &mut resolved_exports,
-          module_id,
-          &mut module_stack,
-        );
-      }
-      meta.resolved_exports = resolved_exports;
-    });
     let side_effects_modules = self
       .module_table
       .modules
@@ -310,88 +286,6 @@ impl LinkStage<'_> {
       meta.named_import_to_cjs_module = named_import_to_cjs_module;
       meta.import_record_ns_to_cjs_module = import_record_ns_to_cjs_module;
     }
-  }
-
-  fn add_exports_for_export_star(
-    normal_modules: &IndexModules,
-    resolve_exports: &mut FxHashMap<CompactStr, ResolvedExport>,
-    module_idx: ModuleIdx,
-    module_stack: &mut Vec<ModuleIdx>,
-  ) {
-    if module_stack.contains(&module_idx) {
-      return;
-    }
-
-    module_stack.push(module_idx);
-
-    let Module::Normal(module) = &normal_modules[module_idx] else {
-      return;
-    };
-
-    let cjs_reexport_modules: Vec<ModuleIdx> =
-      if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
-        module
-          .ecma_view
-          .cjs_reexport_import_record_ids
-          .iter()
-          .filter_map(|&rec_idx| module.import_records[rec_idx].resolved_module)
-          .collect()
-      } else {
-        vec![]
-      };
-
-    for dep_id in module.star_export_module_ids().chain(cjs_reexport_modules) {
-      let Module::Normal(dep_module) = &normal_modules[dep_id] else {
-        continue;
-      };
-      // if matches!(dep_module.exports_kind, ExportsKind::CommonJs) {
-      //   continue;
-      // }
-
-      for (exported_name, named_export) in &dep_module.named_exports {
-        // ES6 export star statements ignore exports named "default"
-        if exported_name.as_str() == "default" && !named_export.came_from_commonjs {
-          continue;
-        }
-        // This export star is shadowed if any file in the stack has a matching real named export
-        if module_stack
-          .iter()
-          .filter_map(|id| normal_modules[*id].as_normal())
-          .any(|module| module.named_exports.contains_key(exported_name))
-        {
-          continue;
-        }
-        // We have filled `resolve_exports` with `named_exports`. If the export is already exists, it means that the importer
-        // has a named export with the same name. So the export from dep module is shadowed.
-        if let Some(resolved_export) = resolve_exports.get_mut(exported_name) {
-          if named_export.referenced != resolved_export.symbol_ref {
-            if resolved_export.came_from_commonjs || named_export.came_from_commonjs {
-              // CJS conflict: at least one side came from CJS (e.g., conditional re-exports
-              // mixing ESM and CJS targets). Track these separately — they're expected runtime
-              // branches, not static ambiguity errors.
-              resolved_export
-                .cjs_conflicting_symbol_refs
-                .get_or_insert(Box::default())
-                .push(named_export.referenced);
-            } else {
-              resolved_export
-                .potentially_ambiguous_symbol_refs
-                .get_or_insert(Box::default())
-                .push(named_export.referenced);
-            }
-          }
-        } else {
-          resolve_exports.insert(
-            exported_name.clone(),
-            ResolvedExport::new(named_export.referenced, named_export.came_from_commonjs),
-          );
-        }
-      }
-
-      Self::add_exports_for_export_star(normal_modules, resolve_exports, dep_id, module_stack);
-    }
-
-    module_stack.pop();
   }
 
   /// Try to find the final pointed `SymbolRef` of the member expression.

@@ -21,9 +21,12 @@ PlanModuleWrappingPass → CreateWrapperDeclarationsPass           │
                                                                  │
                                                                  ▼
                                             compatibility projection of normal slots
+                                                       ·
+                                                       · current driver order only
+                                                       ·····························> CollectResolvedExportsPass
 ```
 
-`NormalizeLazyExportsPass` is the last operation that can invalidate a wrapper declaration, so side-effect analysis must read `ModuleWrappers`, not the earlier wrapper seed, plan, or declaration draft. `DynamicExports` remains sealed from its producer through this final typed consumer. After side-effect projection, the driver consumes formats and wrappers into the existing module and metadata fields, projects dynamic-export bits, and releases all four compact representation facts.
+`NormalizeLazyExportsPass` is the last operation that can invalidate a wrapper declaration, so side-effect analysis must read `ModuleWrappers`, not the earlier wrapper seed, plan, or declaration draft. `DynamicExports` remains sealed from its producer through this final typed consumer. After side-effect projection, the driver consumes formats and wrappers into the existing module and metadata fields, projects dynamic-export bits, and releases all four compact representation facts. `CollectResolvedExportsPass` then reads only the final module table; it has no data dependency on the side-effect artifact.
 
 ## Pass contract
 
@@ -77,10 +80,11 @@ Focused tests pin:
 - the exact export-star predicate; and
 - preservation of `UserDefined`, `Analyzed(true)`, and `NoTreeshake` enum variants.
 
-The production trace test pins the pass after `NormalizeLazyExportsPass`. Broader link, Node, Rollup compatibility, deterministic-output, WASM, timing, and memory gates remain part of the pass-pipeline validation rather than being duplicated here.
+The fourteen-pass production trace test pins this pass after `NormalizeLazyExportsPass` and before `CollectResolvedExportsPass`. Broader link, Node, Rollup compatibility, deterministic-output, WASM, timing, and memory gates remain part of the pass-pipeline validation rather than being duplicated here.
 
 ## Related
 
 - [Pass-based pipeline implementation](../../pass-based-pipeline/implementation.md)
 - [Determine module formats](../determine-module-exports-kind/implementation.md)
+- [Resolved exports](../resolved-exports/implementation.md)
 - [Reference needed symbols](../reference-needed-symbols/implementation.md)

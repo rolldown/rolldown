@@ -222,103 +222,111 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       })
       .collect::<Vec<_>>();
 
+    let mut affected = self.collect_client_update_superset(&changed_modules);
+    affected.extend(new_added_modules.iter().copied());
+    affected.retain(|idx| self.module_table().modules[*idx].is_normal());
+
+    // Client-invariant per-module data, resolved once instead of per client:
+    // `(idx, stable id, latest stamp)` for every affected module.
+    let affected_with_stamps = affected
+      .iter()
+      .map(|module_idx| {
+        let stable_id = self.module_table().modules[*module_idx].stable_id().as_str();
+        (*module_idx, stable_id, stamp_table.render_time_stamp(stable_id))
+      })
+      .collect::<Vec<_>>();
+
+    // 4. Per client: `need[C] = (affected ∖ shipped[C]) ∪ stale sweep`. The sweep
+    // covers everything the client holds, not just `affected` — a parked factory can
+    // go stale behind a skipped patch in either graph direction. It iterates the
+    // stamp table (modules ever changed this session) rather than `shipped[C]`
+    // (modules ever delivered): only stamped modules can be stale, and `latest`
+    // stays far smaller than a tab's full delivery record.
     let mut client_updates = Vec::with_capacity(clients.len());
-    match self.collect_client_update_superset(&changed_modules) {
-      UpdateSupersetOutcome::FullReload { reason } => {
-        for client in clients {
-          client_updates.push(ClientHmrUpdate {
-            client_id: client.client_id.to_string(),
-            update: HmrUpdate::FullReload { reason: reason.clone() },
-          });
-        }
-      }
-      UpdateSupersetOutcome::Superset(mut affected) => {
-        affected.extend(new_added_modules.iter().copied());
-        affected.retain(|idx| self.module_table().modules[*idx].is_normal());
-
-        // Client-invariant per-module data, resolved once instead of per client:
-        // `(idx, stable id, latest stamp)` for every affected module.
-        let affected_with_stamps = affected
-          .iter()
-          .map(|module_idx| {
-            let stable_id = self.module_table().modules[*module_idx].stable_id().as_str();
-            (*module_idx, stable_id, stamp_table.render_time_stamp(stable_id))
-          })
-          .collect::<Vec<_>>();
-
-        // 4. Per client: `need[C] = (affected ∖ shipped[C]) ∪ stale sweep`. The sweep
-        // covers everything the client holds, not just `affected` — a parked factory can
-        // go stale behind a skipped patch in either graph direction. It iterates the
-        // stamp table (modules ever changed this session) rather than `shipped[C]`
-        // (modules ever delivered): only stamped modules can be stale, and `latest`
-        // stays far smaller than a tab's full delivery record.
-        for client in clients {
-          let mut carried = FxIndexSet::default();
-          for (module_idx, stable_id, latest_stamp) in &affected_with_stamps {
-            match client.shipped.get(*stable_id) {
-              None => {
-                carried.insert(*module_idx);
-              }
-              Some(stamp) => {
-                if *latest_stamp > *stamp {
-                  carried.insert(*module_idx);
-                }
-              }
+    for client in clients {
+      let mut carried = FxIndexSet::default();
+      for (module_idx, stable_id, latest_stamp) in &affected_with_stamps {
+        match client.shipped.get(*stable_id) {
+          None => {
+            carried.insert(*module_idx);
+          }
+          Some(stamp) => {
+            if *latest_stamp > *stamp {
+              carried.insert(*module_idx);
             }
           }
-          for (stable_id, latest_stamp) in stamp_table.iter_latest() {
-            if client.shipped.get(stable_id.as_str()).is_some_and(|stamp| latest_stamp > *stamp) {
-              if let Some(module_idx) =
-                self.cache.module_idx_by_stable_id.get(stable_id.as_str()).copied()
-              {
-                if self.module_table().modules[module_idx].is_normal() {
-                  carried.insert(module_idx);
-                }
-              }
-            }
-          }
-
-          let update = self.render_hmr_patch(carried, changed_ids.clone(), stamp_table).await?;
-          client_updates.push(ClientHmrUpdate { client_id: client.client_id.to_string(), update });
         }
       }
+      for (stable_id, latest_stamp) in stamp_table.iter_latest() {
+        if client.shipped.get(stable_id.as_str()).is_some_and(|stamp| latest_stamp > *stamp) {
+          if let Some(module_idx) =
+            self.cache.module_idx_by_stable_id.get(stable_id.as_str()).copied()
+          {
+            if self.module_table().modules[module_idx].is_normal() {
+              carried.insert(module_idx);
+            }
+          }
+        }
+      }
+
+      let update = self.render_hmr_patch(carried, changed_ids.clone(), stamp_table).await?;
+      client_updates.push(ClientHmrUpdate { client_id: client.client_id.to_string(), update });
     }
 
     Ok(client_updates)
   }
 
-  /// Collect the superset of modules that need to be sent to a client, given the changed modules.
+  /// Collect the superset of modules any client's walk may re-run for these changes:
+  /// pure reachability over the importer graph (static ∪ dynamic edges), stopping at
+  /// statically self-accepting modules and at accepting importer edges.
   fn collect_client_update_superset(
     &self,
     changed_modules: &FxIndexSet<ModuleIdx>,
-  ) -> UpdateSupersetOutcome {
+  ) -> FxIndexSet<ModuleIdx> {
     let mut affected = FxIndexSet::default();
-    for changed in changed_modules.iter().copied() {
-      match self.propagate_update(changed, &mut vec![], &mut affected) {
-        PropagateUpdateStatus::Circular(cycle_chain) => {
-          return UpdateSupersetOutcome::FullReload {
-            reason: format!(
-              "circular import chain: {}",
-              cycle_chain
-                .iter()
-                .map(|module_idx| self.module_table().modules[*module_idx].stable_id().as_str())
-                .collect::<Vec<_>>()
-                .join(" -> ")
-            ),
-          };
+    let mut stack: Vec<ModuleIdx> = changed_modules.iter().copied().collect();
+    while let Some(module_idx) = stack.pop() {
+      if !affected.insert(module_idx) {
+        // Already walked via another path (also breaks cycles).
+        continue;
+      }
+
+      let Module::Normal(module) = &self.module_table().modules[module_idx] else {
+        // Non-normal modules can't be re-run; they are filtered out of the patch later.
+        continue;
+      };
+
+      if module.is_hmr_self_accepting_module() {
+        tracing::trace!(
+          "[HmrStage] module {} is self-accepting, stop propagation here",
+          module.stable_id,
+        );
+        continue;
+      }
+
+      // Static and dynamic `import()` importers are walked the same way — parity with
+      // Vite (`node.importers`) and webpack (`module.parents`), neither of which
+      // distinguishes the edge kind. Duplicate pushes are fine: the `affected.insert`
+      // check at pop time dedups them.
+      for importer_idx in
+        module.importers_idx.iter().chain(module.dynamic_importers_idx.iter()).copied()
+      {
+        let Module::Normal(importer) = &self.module_table().modules[importer_idx] else {
+          continue;
+        };
+        if importer.can_accept_hmr_dependency_for(&module.id) {
+          // Edge boundary: the accepting importer is not re-run, so it joins no set.
+          continue;
         }
-        PropagateUpdateStatus::NoBoundary(idx) => {
-          return UpdateSupersetOutcome::FullReload {
-            reason: format!(
-              "no hmr boundary found for module `{}`",
-              self.module_table().modules[idx].stable_id()
-            ),
-          };
-        }
-        PropagateUpdateStatus::ReachHmrBoundary => {}
+        stack.push(importer_idx);
       }
     }
-    UpdateSupersetOutcome::Superset(affected)
+    // Deterministic order keeps snapshots stable: one sort of the final set replaces a
+    // per-node importer sort (an alloc plus O(deg log deg) comparisons per visit).
+    affected.sort_unstable_by(|a, b| {
+      self.module_table().modules[*a].stable_id().cmp(self.module_table().modules[*b].stable_id())
+    });
+    affected
   }
 
   /// Compile a lazy entry module and return compiled code plus the pending-payload
@@ -730,113 +738,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       seq: 0,
       carried,
     }))
-  }
-
-  fn propagate_update(
-    &self,
-    module_idx: ModuleIdx,
-    propagate_stack: &mut Vec<ModuleIdx>,
-    modules_to_be_updated: &mut FxIndexSet<ModuleIdx>,
-  ) -> PropagateUpdateStatus {
-    modules_to_be_updated.insert(module_idx);
-
-    let Module::Normal(module) = &self.module_table().modules[module_idx] else {
-      // We consider reaching external modules as a boundary.
-      return PropagateUpdateStatus::ReachHmrBoundary;
-    };
-
-    if let Some(circular_start_index) = propagate_stack
-      .iter()
-      .enumerate()
-      .find_map(|(index, each_module_idx)| (module_idx == *each_module_idx).then_some(index))
-    {
-      // Jumping into this branch means we have a circular dependency.
-      // X -> Y means X imports Y. and we have
-      // A -> B -> C -> D(edited)
-      // C -> B
-      // When we reach to C again, the stack contains [D, C, B]
-      let cycle_chain = propagate_stack[circular_start_index..]
-        .iter()
-        .copied()
-        .chain(std::iter::once(module_idx))
-        // Note: our traversal is done by reaching `importers`, so the vec order is opposite to the import order.
-        .rev()
-        .collect::<Vec<_>>();
-
-      return PropagateUpdateStatus::Circular(cycle_chain);
-    }
-
-    if module.is_hmr_self_accepting_module() {
-      tracing::trace!(
-        "[HmrStage] module {} is self-accepting, stop propagation here",
-        module.stable_id,
-      );
-      return PropagateUpdateStatus::ReachHmrBoundary;
-    } else if module.importers_idx.is_empty() && module.dynamic_importers_idx.is_empty() {
-      // This module is not self-accepting and doesn't have any potential importer that might accept its update
-      return PropagateUpdateStatus::NoBoundary(module_idx);
-    }
-
-    // Static and dynamic `import()` importers are walked the same way for boundary
-    // calculation — parity with Vite (`node.importers`) and webpack (`module.parents`),
-    // neither of which distinguishes the edge kind. A module that both statically and
-    // dynamically imports this one is deduped after the sort.
-    let mut importers_idx = module
-      .importers_idx
-      .iter()
-      .chain(module.dynamic_importers_idx.iter())
-      .copied()
-      .collect::<Vec<_>>();
-    // FIXME(hyf0): In practice, the order of importers doesn't matter since we're going to traverse all of them.
-    // However, non-deterministic order causes unstable snapshots.
-    importers_idx
-      .sort_unstable_by_key(|importer_idx| self.module_table().modules[*importer_idx].stable_id());
-    importers_idx.dedup();
-
-    for importer_idx in importers_idx {
-      let Module::Normal(importer) = &self.module_table().modules[importer_idx] else {
-        continue;
-      };
-
-      if importer.can_accept_hmr_dependency_for(&module.id) {
-        tracing::trace!(
-          "[HmrStage] importer {} can accept update for dependency {}, stop propagation here",
-          importer.stable_id,
-          module.stable_id,
-        );
-        // Edge boundary: the accepting importer is not re-run, so it joins no set.
-        continue;
-      }
-
-      propagate_stack.push(module_idx);
-      let status = self.propagate_update(importer_idx, propagate_stack, modules_to_be_updated);
-      propagate_stack.pop();
-      if !status.is_reach_hmr_boundary() {
-        return status;
-      }
-    }
-
-    PropagateUpdateStatus::ReachHmrBoundary
-  }
-}
-
-enum UpdateSupersetOutcome {
-  /// The superset of any client's possible update set
-  Superset(FxIndexSet<ModuleIdx>),
-  FullReload {
-    reason: String,
-  },
-}
-
-enum PropagateUpdateStatus {
-  Circular(Vec<ModuleIdx>), // The circular dependency chain
-  ReachHmrBoundary,
-  NoBoundary(ModuleIdx),
-}
-
-impl PropagateUpdateStatus {
-  pub fn is_reach_hmr_boundary(&self) -> bool {
-    matches!(self, Self::ReachHmrBoundary)
   }
 }
 

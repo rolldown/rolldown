@@ -71,9 +71,7 @@ export class DevEngine {
       rebuildStrategy: devOptions.rebuildStrategy
         ? devOptions.rebuildStrategy === 'always'
           ? BindingRebuildStrategy.Always
-          : devOptions.rebuildStrategy === 'auto'
-            ? BindingRebuildStrategy.Auto
-            : BindingRebuildStrategy.Never
+          : BindingRebuildStrategy.Never
         : undefined,
       watch: devOptions.watch && {
         skipWrite: devOptions.watch.skipWrite,

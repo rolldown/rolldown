@@ -2689,8 +2689,7 @@ export declare enum BindingPropertyWriteSideEffects {
 
 export declare enum BindingRebuildStrategy {
   Always = 0,
-  Auto = 1,
-  Never = 2
+  Never = 1
 }
 
 export interface BindingReplacePluginConfig {

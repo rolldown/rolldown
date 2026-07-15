@@ -1,6 +1,5 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema-jsonc.json",
-  "ignoreBinaries": ["only-allow"],
   "ignoreWorkspaces": ["examples/**"], // no rolldown plugin yet
   "workspaces": {
     ".": {
@@ -10,7 +9,6 @@
         "cjs-module-lexer",
         "playwright-chromium",
         "remove-unused-vars",
-        "rolldown",
       ],
     },
     "crates/rolldown/tests/rolldown/topics/npm_packages": {
@@ -49,9 +47,6 @@
       "ignore": ["src/binding.cjs", "src/rolldown-binding.wasi.cjs", "src/browser.js"],
       "ignoreDependencies": ["@rollup/plugin-json", "buble", "pathe"],
     },
-    "packages/rolldown/npm/wasm32-wasi": {
-      "ignoreDependencies": ["@napi-rs/wasm-runtime"],
-    },
     "packages/rolldown/tests": {
       "entry": ["*/**"],
       "ignore": ["{cli,fixtures,stability}/**"], // lots of unlisted dependencies
@@ -68,7 +63,6 @@
     "packages/rollup-tests": {
       "entry": ["src/**/*.js", "test/**/*.{js,ts}"],
       "ignoreDependencies": [
-        "acorn",
         "acorn-import-assertions",
         "acorn-import-phases",
         "locate-character",

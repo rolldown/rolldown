@@ -162,13 +162,10 @@ impl BundlingTask {
       self.input = TaskInput::FullBuild;
     }
 
-    let mut has_full_reload_update = false;
     if self.input.require_generate_hmr_update() {
       tracing::trace!("[BundlingTask] starts to generate HMR updates");
-      let may_continue = self.generate_hmr_updates(&mut has_full_reload_update).await;
-      tracing::trace!(
-        "[BundlingTask] completed generating HMR updates\n - has_full_reload_update: {has_full_reload_update}"
-      );
+      let may_continue = self.generate_hmr_updates().await;
+      tracing::trace!("[BundlingTask] completed generating HMR updates");
       // Stop only when HMR errored AND no callback was registered to receive
       // the error — preserving the pre-refactor `?` short-circuit. When the
       // consumer was informed via callback, the rebuild still runs.
@@ -177,17 +174,10 @@ impl BundlingTask {
       }
     }
 
-    // If the rebuild strategy is auto and there's a full reload update, we need to rebuild.
-    // Convert Hmr to HmrRebuild if needed
-    if self.dev_context.options.rebuild_strategy.is_auto()
-      && has_full_reload_update
-      && !self.input.requires_rebuild()
-    {
-      tracing::trace!("[BundlingTask] detects full reload HMR update, upgrading to HmrRebuild");
-      if let Some(changed_files) = self.input.changed_files_mut() {
-        self.input = TaskInput::HmrRebuild { changed_files: std::mem::take(changed_files) };
-      }
-    }
+    // No eager rebuild for reload-bound updates: the server no longer decides reloads.
+    // A patch-only task leaves `has_stale_bundle_output` set, so a client that reloads
+    // itself lands on the stale-access regeneration path (fallback page → rebuild →
+    // reload onto fresh output).
 
     if self.input.requires_rebuild() {
       self.has_rebuild_happen = true;
@@ -198,7 +188,7 @@ impl BundlingTask {
   /// Returns `true` if subsequent build stages may continue.
   /// Callers should skip subsequent build stages on `false`.
   #[tracing::instrument(level = "trace", skip(self))]
-  pub async fn generate_hmr_updates(&mut self, has_full_reload_update: &mut bool) -> bool {
+  pub async fn generate_hmr_updates(&mut self) -> bool {
     let mut bundler = self.bundler.lock().await;
     let changed_files = self
       .input
@@ -239,11 +229,11 @@ impl BundlingTask {
     drop(client_inputs);
 
     // `seq` is incremented only when the client actually receives an update — i.e. an
-    // `HmrUpdate::Patch`. A `HmrUpdate::Noop` sends nothing, and a `HmrUpdate::FullReload`
-    // is sent without a seq, so neither advances the counter. The client enforces a strict
-    // `seq === lastSeq + 1`, so consuming a seq without delivering an envelope would leave a
-    // gap and trigger a spurious full reload. A client that disconnected during compute is
-    // simply absent here; its update is dropped unstamped.
+    // `HmrUpdate::Patch`. A `HmrUpdate::Noop` sends nothing, so it never advances the
+    // counter. The client enforces a strict `seq === lastSeq + 1`, so consuming a seq
+    // without delivering an envelope would leave a gap and trigger a spurious full reload.
+    // A client that disconnected during compute is simply absent here; its update is
+    // dropped unstamped.
     if let Ok(client_updates) = &mut hmr_result {
       let mut client_sessions = self.dev_context.clients.lock().await;
       for update in client_updates.iter_mut() {
@@ -256,29 +246,24 @@ impl BundlingTask {
       }
     }
 
-    // Check if any update is a full reload (only if successful), and record each
-    // rendered patch as pending: the delivery notification max-merges its stamps
-    // into `shipped[C]` when the serving middleware sees the response for
-    // `patch.filename` complete. `carried` is handed over instead of cloned — the
-    // binding layer drops it (it stays server-side), so the pending entry is its
-    // only consumer from here on.
+    // Record each rendered patch as pending (only if successful): the delivery
+    // notification max-merges its stamps into `shipped[C]` when the serving
+    // middleware sees the response for `patch.filename` complete. `carried` is
+    // handed over instead of cloned — the binding layer drops it (it stays
+    // server-side), so the pending entry is its only consumer from here on.
     if let Ok(client_updates) = &mut hmr_result {
       for update in client_updates.iter_mut() {
-        match &mut update.update {
-          HmrUpdate::FullReload { .. } => *has_full_reload_update = true,
-          HmrUpdate::Patch(patch) => {
-            self
-              .dev_context
-              .insert_pending_payload(
-                patch.filename.clone(),
-                PendingPayload {
-                  client_id: update.client_id.clone(),
-                  modules: std::mem::take(&mut patch.carried),
-                },
-              )
-              .await;
-          }
-          HmrUpdate::Noop => {}
+        if let HmrUpdate::Patch(patch) = &mut update.update {
+          self
+            .dev_context
+            .insert_pending_payload(
+              patch.filename.clone(),
+              PendingPayload {
+                client_id: update.client_id.clone(),
+                modules: std::mem::take(&mut patch.carried),
+              },
+            )
+            .await;
         }
       }
     }

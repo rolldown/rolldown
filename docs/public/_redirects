@@ -3,4 +3,8 @@
 /llms-full.txt /llms-full.txt 200!
 /llms-full.md /llms-full.txt 200!
 /llms.md /llms.txt 301
-/:document.txt /:document.md 301
+/acknowledgements.txt /acknowledgements.md 301
+/builtin-plugins.txt /builtin-plugins.md 301
+/contribution-guide.txt /contribution-guide.md 301
+/glossary.txt /glossary.md 301
+/reference.txt /reference.md 301

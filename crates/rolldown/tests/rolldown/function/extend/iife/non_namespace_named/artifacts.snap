@@ -12,7 +12,6 @@ class A {
 (function(exports) {
 
 Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
 //#region main.js
 	const a = 1;
 	const b = 2;

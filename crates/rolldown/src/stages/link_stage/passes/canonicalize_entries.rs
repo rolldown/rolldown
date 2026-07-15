@@ -1,6 +1,9 @@
 use std::convert::Infallible;
 
-use rolldown_common::{EntryPoint, EntryPointKind, ModuleIdx, ModuleTable};
+use oxc::semantic::NodeId;
+use rolldown_common::{
+  EntryPoint, EntryPointKind, ImportRecordIdx, ModuleIdx, ModuleTable, StmtInfoIdx,
+};
 use rolldown_utils::{
   indexmap::FxIndexMap,
   pass::{Pass, PassCtx, RawPassOutput, RunToken},
@@ -37,6 +40,19 @@ impl EntryPlanDraft {
       .values()
       .flatten()
       .flat_map(|entry| entry.related_stmt_infos.iter().map(|(owner, _, _, _)| *owner))
+  }
+
+  pub(in crate::stages::link_stage) fn related_dynamic_imports(
+    &self,
+  ) -> impl Iterator<Item = (ModuleIdx, ModuleIdx, ModuleIdx, StmtInfoIdx, NodeId, ImportRecordIdx)> + '_
+  {
+    self.entries.iter().flat_map(|(root, entries)| {
+      entries.iter().flat_map(move |entry| {
+        entry.related_stmt_infos.iter().map(move |(importer, stmt, node, record)| {
+          (*root, entry.idx, *importer, *stmt, *node, *record)
+        })
+      })
+    })
   }
 
   pub(in crate::stages::link_stage) fn into_legacy_entries(

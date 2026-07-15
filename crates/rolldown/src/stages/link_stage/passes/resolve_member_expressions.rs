@@ -53,10 +53,35 @@ impl MemberExprResolutions {
     self.slots.len()
   }
 
+  pub(in crate::stages::link_stage) fn has_normal_slot(&self, module_idx: ModuleIdx) -> bool {
+    self.slots.get(module_idx).is_some_and(Option::is_some)
+  }
+
+  pub(in crate::stages::link_stage) fn get(
+    &self,
+    module_idx: ModuleIdx,
+  ) -> Option<&MemberExprRefResolutionMap> {
+    self.slots.get(module_idx).and_then(Option::as_ref)
+  }
+
   pub(in crate::stages::link_stage) fn into_slots(
     self,
   ) -> IndexVec<ModuleIdx, Option<MemberExprRefResolutionMap>> {
     self.slots
+  }
+}
+
+#[cfg(test)]
+pub(super) mod test_support {
+  use oxc_index::IndexVec;
+  use rolldown_common::{MemberExprRefResolutionMap, ModuleIdx};
+
+  use super::MemberExprResolutions;
+
+  pub(in crate::stages::link_stage::passes) fn member_expr_resolutions(
+    slots: impl IntoIterator<Item = Option<MemberExprRefResolutionMap>>,
+  ) -> MemberExprResolutions {
+    MemberExprResolutions { slots: slots.into_iter().collect::<IndexVec<ModuleIdx, _>>() }
   }
 }
 
@@ -785,7 +810,7 @@ mod tests {
     let final_routes = output.cjs_routing.into_importers();
     assert_eq!(final_routes[&module_idx(0)].get(&namespace_ref), Some(&module_idx(1)));
     assert_eq!(final_routes.len(), 1);
-    assert!(!output.global_constants.into_legacy().contains_key(&cjs_export));
+    assert!(!output.global_constants.finalize().into_legacy().contains_key(&cjs_export));
     assert_eq!(
       output.dependencies.into_inner()[module_idx(0)].iter().copied().collect::<Vec<_>>(),
       [module_idx(1)]
@@ -993,7 +1018,7 @@ mod tests {
       importer_resolutions[&foo_write].target_commonjs_exported_symbol,
       Some((cjs_foo, false))
     );
-    let remaining_constants = output.global_constants.into_legacy();
+    let remaining_constants = output.global_constants.finalize().into_legacy();
     assert!(!remaining_constants.contains_key(&cjs_foo));
     assert!(remaining_constants.contains_key(&cjs_bar));
     assert_eq!(remaining_constants.len(), 1);

@@ -21,18 +21,56 @@ pub(in crate::stages::link_stage) struct GlobalConstantsDraft {
 }
 
 impl GlobalConstantsDraft {
+  pub(in crate::stages::link_stage) fn get(
+    &self,
+    symbol_ref: &SymbolRef,
+  ) -> Option<&ConstExportMeta> {
+    self.constants.get(symbol_ref)
+  }
+
+  pub(in crate::stages::link_stage) fn extend(
+    &mut self,
+    constants: impl IntoIterator<Item = (SymbolRef, ConstExportMeta)>,
+  ) {
+    self.constants.extend(constants);
+  }
+
+  pub(in crate::stages::link_stage) fn finalize(self) -> GlobalConstants {
+    GlobalConstants { constants: self.constants }
+  }
+
   pub(in crate::stages::link_stage) fn identity_owners(
     &self,
   ) -> impl Iterator<Item = ModuleIdx> + '_ {
     self.constants.keys().map(|symbol_ref| symbol_ref.owner)
   }
 
+  pub(in crate::stages::link_stage) fn remove(&mut self, symbol_ref: &SymbolRef) {
+    self.constants.remove(symbol_ref);
+  }
+}
+
+pub(in crate::stages::link_stage) struct GlobalConstants {
+  constants: FxHashMap<SymbolRef, ConstExportMeta>,
+}
+
+impl GlobalConstants {
   pub(in crate::stages::link_stage) fn into_legacy(self) -> FxHashMap<SymbolRef, ConstExportMeta> {
     self.constants
   }
+}
 
-  pub(in crate::stages::link_stage) fn remove(&mut self, symbol_ref: &SymbolRef) {
-    self.constants.remove(symbol_ref);
+#[cfg(test)]
+pub(super) mod test_support {
+  use rolldown_common::{ConstExportMeta, SymbolRef};
+  use rustc_hash::FxHashMap;
+
+  use super::GlobalConstantsDraft;
+
+  pub(in crate::stages::link_stage::passes) fn global_constants(
+    constants: impl IntoIterator<Item = (SymbolRef, ConstExportMeta)>,
+  ) -> GlobalConstantsDraft {
+    GlobalConstantsDraft { constants: constants.into_iter().collect::<FxHashMap<_, _>>() }
   }
 }
 

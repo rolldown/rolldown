@@ -23,7 +23,7 @@ use crate::{
 
 use super::scan_stage::NormalizedScanStageOutput;
 
-mod cross_module_optimization;
+mod cross_module_optimization_runner;
 mod generate_lazy_export;
 pub mod lazy_json_export_initializers;
 mod non_splittable_json_defaults;
@@ -51,18 +51,20 @@ use passes::{
   ConstantExtractionInput, CreateSyntheticExportStatementsInput,
   CreateSyntheticExportStatementsPass, CreateWrapperDeclarationsInput,
   CreateWrapperDeclarationsOutput, CreateWrapperDeclarationsOwned, CreateWrapperDeclarationsPass,
-  DetermineModuleFormatsInput, DetermineModuleFormatsPass, DetermineModuleSideEffectsInput,
-  DetermineModuleSideEffectsPass, DynamicExports, EntryExportRoots, EntryPlanDraft,
-  ExternalStarExports, ExtractGlobalConstantsPass, FinalizeResolvedExportsPass,
-  GlobalConstantsDraft, IncludedCommonJsExportSymbols, MemberExprResolutions,
-  ModuleDependenciesDraft, ModuleFormats, ModuleSideEffects, ModuleWrappers,
-  NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
-  NormalizeLazyExportsPass, PlanModuleWrappingInput, PlanModuleWrappingPass,
-  ReferenceChunkingOptions, ReferenceImportRecordPatches, ReferenceNeededSymbolsInput,
-  ReferenceNeededSymbolsOutput, ReferenceNeededSymbolsOwned, ReferenceNeededSymbolsPass,
-  ReferenceTreeShakingOptions, ResolveMemberExpressionsInput, ResolveMemberExpressionsOutput,
-  ResolveMemberExpressionsOwned, ResolveMemberExpressionsPass, ResolvedExports,
-  ShimmedMissingExports, StatementRuntimeRequirements, TlaScanFacts, WrapperDeclaration,
+  CrossModuleOptimizationInput, CrossModuleOptimizationOutput, CrossModuleOptimizationOwned,
+  CrossModuleOptimizationPass, DetermineModuleFormatsInput, DetermineModuleFormatsPass,
+  DetermineModuleSideEffectsInput, DetermineModuleSideEffectsPass, DynamicExports,
+  EntryExportRoots, EntryPlanDraft, ExternalStarExports, ExtractGlobalConstantsPass,
+  FinalizeResolvedExportsPass, GlobalConstants, GlobalConstantsDraft,
+  IncludedCommonJsExportSymbols, MemberExprResolutions, ModuleDependenciesDraft, ModuleFormats,
+  ModuleSideEffects, ModuleWrappers, NormalizeLazyExportsInput, NormalizeLazyExportsOutput,
+  NormalizeLazyExportsOwned, NormalizeLazyExportsPass, PlanModuleWrappingInput,
+  PlanModuleWrappingPass, ReferenceChunkingOptions, ReferenceImportRecordPatches,
+  ReferenceNeededSymbolsInput, ReferenceNeededSymbolsOutput, ReferenceNeededSymbolsOwned,
+  ReferenceNeededSymbolsPass, ReferenceTreeShakingOptions, ResolveMemberExpressionsInput,
+  ResolveMemberExpressionsOutput, ResolveMemberExpressionsOwned, ResolveMemberExpressionsPass,
+  ResolvedExports, ShimmedMissingExports, SortedModules, StatementRuntimeRequirements,
+  TlaScanFacts, UnreachableDynamicImports, WrapperDeclaration,
 };
 
 /// Information about safely merged CJS namespaces for a module
@@ -678,10 +680,49 @@ impl<'a> LinkStage<'a> {
     (statement_runtime_requirements, import_record_patches)
   }
 
+  fn run_cross_module_optimization_pass(
+    &mut self,
+    pass_pipeline: &mut PassPipelineCtx,
+    sorted_modules: &SortedModules,
+    entry_plan: &EntryPlanDraft,
+    member_expr_resolutions: &MemberExprResolutions,
+    global_constants: GlobalConstantsDraft,
+  ) -> (Sealed<UnreachableDynamicImports>, GlobalConstants) {
+    let (unreachable_dynamic_imports, output) = run_infallible_pass(
+      CrossModuleOptimizationPass,
+      pass_pipeline,
+      CrossModuleOptimizationInput {
+        module_table: &self.module_table,
+        ast_table: &self.ast_table,
+        symbols: &self.symbols,
+        sorted_modules,
+        entry_plan,
+        member_expr_resolutions,
+        flat_options: self.flat_options,
+        options: self.options,
+      },
+      CrossModuleOptimizationOwned {
+        stmt_infos: std::mem::take(&mut self.stmt_infos),
+        global_constants,
+      },
+    );
+    let CrossModuleOptimizationOutput { stmt_infos, global_constants } = output;
+    self.stmt_infos = stmt_infos;
+    (unreachable_dynamic_imports, global_constants)
+  }
+
+  #[expect(clippy::too_many_lines, reason = "the explicit pass order is the typed Link driver")]
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
     let mut pass_pipeline = PassPipelineCtx::new();
-    let (entry_plan, global_constants, dependencies, external_star_exports, execution_orders) = {
+    let (
+      entry_plan,
+      global_constants,
+      dependencies,
+      external_star_exports,
+      execution_orders,
+      sorted_modules,
+    ) = {
       let (_, (module_table, global_constants)) = run_infallible_pass(
         ExtractGlobalConstantsPass,
         &mut pass_pipeline,
@@ -735,8 +776,14 @@ impl<'a> LinkStage<'a> {
           }
         }
       }
-      self.sorted_modules = sorted_modules.into_inner();
-      (entry_plan, global_constants, dependencies, external_star_exports, execution_orders)
+      (
+        entry_plan,
+        global_constants,
+        dependencies,
+        external_star_exports,
+        execution_orders,
+        sorted_modules,
+      )
     };
     {
       let (tla_facts, ()) = run_infallible_pass(
@@ -853,20 +900,27 @@ impl<'a> LinkStage<'a> {
         &module_side_effects,
         &cjs_namespace_merges,
       );
+    drop((module_formats, module_wrappers, dynamic_exports, module_side_effects));
+    let (unreachable_dynamic_imports, global_constants) = self.run_cross_module_optimization_pass(
+      &mut pass_pipeline,
+      &sorted_modules,
+      &entry_plan,
+      &resolutions,
+      global_constants,
+    );
+    self.sorted_modules = sorted_modules.into_inner();
     self.entries = entry_plan.into_legacy_entries();
     self.global_constant_symbol_map = global_constants.into_legacy();
     self.diagnostics.extend(pass_pipeline.into_diagnostics());
     self.normal_symbol_exports_chain_map = normal_export_chains.into_inner();
     self.project_member_resolution_results(dependencies, resolutions, cjs_routing);
     self.project_resolved_exports(resolved_exports);
-    drop((module_formats, module_wrappers, dynamic_exports, module_side_effects));
-    let unreachable_import_expression_node_ids = self.cross_module_optimization();
     self.include_statements(
-      &unreachable_import_expression_node_ids,
+      &unreachable_dynamic_imports,
       &statement_runtime_requirements,
       &entry_export_roots,
     );
-    drop(statement_runtime_requirements);
+    drop((unreachable_dynamic_imports, statement_runtime_requirements));
     self.patch_module_dependencies(&entry_export_roots);
 
     self.project_shimmed_missing_exports(shimmed_missing_exports);

@@ -15,6 +15,7 @@ mod compute_module_execution_order;
 mod compute_tla;
 mod create_synthetic_export_statements;
 mod create_wrapper_declarations;
+mod cross_module_optimization;
 mod determine_module_formats;
 mod determine_module_side_effects;
 mod extract_global_constants;
@@ -36,12 +37,16 @@ pub(super) use collect_resolved_exports::ResolvedExportsDraft;
 pub(super) use compute_cjs_namespace_merges::{CjsNamespaceMerges, ComputeCjsNamespaceMergesInput};
 pub(super) use compute_cjs_routing::{CjsRoutingDraft, CjsRoutingFinal, ComputeCjsRoutingInput};
 pub(super) use compute_dynamic_exports::{ComputeDynamicExportsInput, DynamicExports};
-pub(super) use compute_module_execution_order::ComputeModuleExecutionOrderInput;
+pub(super) use compute_module_execution_order::{ComputeModuleExecutionOrderInput, SortedModules};
 pub(super) use compute_tla::TlaScanFacts;
 pub(super) use create_synthetic_export_statements::CreateSyntheticExportStatementsInput;
 pub(super) use create_wrapper_declarations::{
   CreateWrapperDeclarationsInput, CreateWrapperDeclarationsOutput, CreateWrapperDeclarationsOwned,
   ModuleWrappers, WrapperDeclaration, WrapperDeclarationsDraft,
+};
+pub(super) use cross_module_optimization::{
+  CrossModuleOptimizationInput, CrossModuleOptimizationOutput, CrossModuleOptimizationOwned,
+  UnreachableDynamicImports,
 };
 pub(super) use determine_module_formats::{
   DetermineModuleFormatsInput, ModuleFormats, ModuleFormatsDraft,
@@ -49,7 +54,9 @@ pub(super) use determine_module_formats::{
 pub(super) use determine_module_side_effects::{
   DetermineModuleSideEffectsInput, ModuleSideEffects,
 };
-pub(super) use extract_global_constants::{ConstantExtractionInput, GlobalConstantsDraft};
+pub(super) use extract_global_constants::{
+  ConstantExtractionInput, GlobalConstants, GlobalConstantsDraft,
+};
 pub(super) use finalize_resolved_exports::ResolvedExports;
 pub(super) use normalize_lazy_exports::{
   NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
@@ -97,6 +104,9 @@ pub(super) struct ComputeModuleExecutionOrderPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct ComputeTlaPass;
+
+#[derive(Clone, Copy)]
+pub(super) struct CrossModuleOptimizationPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct CreateSyntheticExportStatementsPass;

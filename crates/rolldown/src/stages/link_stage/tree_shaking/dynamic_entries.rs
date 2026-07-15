@@ -4,7 +4,6 @@
 
 use std::cmp::Reverse;
 
-use oxc::semantic::NodeId;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
@@ -12,7 +11,10 @@ use rolldown_common::{
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::stages::link_stage::{LinkStage, passes::EntryExportRoots};
+use crate::stages::link_stage::{
+  LinkStage,
+  passes::{EntryExportRoots, UnreachableDynamicImports},
+};
 
 use super::include_statements::{
   IncludeContext, StmtInclusionVec, SymbolIncludeReason, include_declaring_statements,
@@ -28,7 +30,7 @@ impl LinkStage<'_> {
     cycled_idx: &FxHashSet<ModuleIdx>,
     context: &mut IncludeContext,
     unused_record_idxs: &mut Vec<(ModuleIdx, ImportRecordIdx)>,
-    unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
+    unreachable_import_expression_node_ids: &UnreachableDynamicImports,
     entry_export_roots: &EntryExportRoots,
   ) -> bool {
     if !cycled_idx.contains(&entry.idx) {
@@ -168,7 +170,7 @@ impl LinkStage<'_> {
     &self,
     entry_point: &EntryPoint,
     is_stmt_included_vec: &StmtInclusionVec,
-    unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
+    unreachable_import_expression_node_ids: &UnreachableDynamicImports,
   ) -> Option<Vec<(ModuleIdx, ImportRecordIdx)>> {
     let mut ret = vec![];
     let is_lived = match entry_point.kind {
@@ -182,7 +184,7 @@ impl LinkStage<'_> {
         // Mark the dynamic entry as lived if at least one statement that create this entry is included
         entry_point.related_stmt_infos.iter().any(
           |(module_idx, stmt_idx, node_id, import_record_idx)| {
-            if unreachable_import_expression_node_ids.contains(&(*module_idx, *node_id)) {
+            if unreachable_import_expression_node_ids.contains(*module_idx, *node_id) {
               return false;
             }
             let module =

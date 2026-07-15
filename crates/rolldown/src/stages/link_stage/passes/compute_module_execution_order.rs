@@ -51,8 +51,24 @@ pub(in crate::stages::link_stage) struct SortedModules {
 }
 
 impl SortedModules {
+  pub(in crate::stages::link_stage) fn as_slice(&self) -> &[ModuleIdx] {
+    &self.modules
+  }
+
   pub(in crate::stages::link_stage) fn into_inner(self) -> Vec<ModuleIdx> {
     self.modules
+  }
+}
+
+#[cfg(test)]
+pub(super) mod test_support {
+  use super::SortedModules;
+  use rolldown_common::ModuleIdx;
+
+  pub(in crate::stages::link_stage::passes) fn sorted_modules(
+    modules: impl IntoIterator<Item = ModuleIdx>,
+  ) -> SortedModules {
+    SortedModules { modules: modules.into_iter().collect() }
   }
 }
 

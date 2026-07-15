@@ -2,7 +2,7 @@
 
 ## Summary
 
-`CanonicalizeEntriesPass` and `ComputeModuleExecutionOrderPass` produce a deterministic, dependency-respecting execution order over every reachable module in the graph. The first pass consumes raw scan entries and returns the only owned `EntryPlanDraft`; the second borrows that draft and the module table, returns sealed `ModuleExecutionOrders` plus owned `SortedModules`, and does not mutate either input. The link driver temporarily projects assigned orders into `Module::exec_order` and moves the sorted list into the legacy carrier for downstream stages. It also retains the sealed typed order table through `BindImportsPass`, which uses it only to choose deterministic facade names for grouped external default imports. Chunk assembly, cross-chunk link computation, and rendering still rely on the legacy fields as the canonical "what runs before what" signal while the migration is in progress.
+`CanonicalizeEntriesPass` and `ComputeModuleExecutionOrderPass` produce a deterministic, dependency-respecting execution order over every reachable module in the graph. The first pass consumes raw scan entries and returns the only owned `EntryPlanDraft`; the second borrows that draft and the module table, returns sealed `ModuleExecutionOrders` plus owned `SortedModules`, and does not mutate either input. The link driver temporarily projects assigned orders into `Module::exec_order`, retains the sealed typed order table through `BindImportsPass`, and retains the owned sorted list through `CrossModuleOptimizationPass` before its one consuming legacy conversion. Chunk assembly, cross-chunk link computation, and rendering still rely on the legacy fields as the canonical "what runs before what" signal while the migration is in progress.
 
 Sources: `crates/rolldown/src/stages/link_stage/passes/canonicalize_entries.rs` and `crates/rolldown/src/stages/link_stage/passes/compute_module_execution_order.rs`.
 
@@ -86,15 +86,15 @@ Overall work is O(N) real visits plus O(E) dependency pushes-and-skips, so total
 
 `exec_order` and `sorted_modules` are consumed in several places:
 
-| Consumer                                         | Use                                                                                                                                          |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `generate_stage/code_splitting.rs`               | Iterates `sorted_modules` to assign modules to chunks; compares `exec_order` to order entry-vs-common chunks deterministically               |
-| `chunk_graph.rs`                                 | Sorts modules within a chunk by `exec_order` (also used as tiebreaker after side-effect-free leaf grouping)                                  |
-| `generate_stage/compute_cross_chunk_links.rs`    | Orders cross-chunk imports for stable output                                                                                                 |
-| `generate_stage/manual_code_splitting.rs`        | Uses exec order as a stable seed for user-defined chunk groupings                                                                            |
-| `ecmascript/ecma_generator.rs`                   | Carries `exec_order` through to render so output module sequences stay deterministic                                                         |
-| `stages/link_stage/cross_module_optimization.rs` | Walks `sorted_modules` for deterministic iteration over the graph                                                                            |
-| `stages/link_stage/passes/bind_imports.rs`       | Reads sealed `ModuleExecutionOrders` to choose the stable minimum `(execution order, symbol name)` for external default-import facade naming |
+| Consumer                                                | Use                                                                                                                                          |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `generate_stage/code_splitting.rs`                      | Iterates `sorted_modules` to assign modules to chunks; compares `exec_order` to order entry-vs-common chunks deterministically               |
+| `chunk_graph.rs`                                        | Sorts modules within a chunk by `exec_order` (also used as tiebreaker after side-effect-free leaf grouping)                                  |
+| `generate_stage/compute_cross_chunk_links.rs`           | Orders cross-chunk imports for stable output                                                                                                 |
+| `generate_stage/manual_code_splitting.rs`               | Uses exec order as a stable seed for user-defined chunk groupings                                                                            |
+| `ecmascript/ecma_generator.rs`                          | Carries `exec_order` through to render so output module sequences stay deterministic                                                         |
+| `stages/link_stage/passes/cross_module_optimization.rs` | Borrows typed `SortedModules` for parallel analysis slots and deterministic serial commit order                                              |
+| `stages/link_stage/passes/bind_imports.rs`              | Reads sealed `ModuleExecutionOrders` to choose the stable minimum `(execution order, symbol name)` for external default-import facade naming |
 
 Because so many later stages key off `exec_order`, any change to the traversal rules here is an observable output change across the entire bundler. The typed execution-order chain therefore runs before TLA and all remaining link analyses, and the driver performs its compatibility projection before any legacy reader. That projection does not consume `ModuleExecutionOrders`; the sealed table remains live until binding returns, then leaves scope before resolved-export finalization.
 
@@ -104,8 +104,8 @@ Because so many later stages key off `exec_order`, any change to the traversal r
 - `sorted_modules.first() == Some(runtime.id())` (asserted at the end of the pass).
 - A module may appear in `execution_stack` under `Status::WaitForExit` at most once concurrently; `stack_indexes_of_executing_id.contains_key(&id)` is asserted to be false before insertion.
 - `sorted_modules` contains every `Module::Normal` reachable from the entries or runtime. External modules get an `exec_order` but are not pushed into `sorted_modules`.
-- `EntryPlanDraft` has no public constructor or clone path. It is produced once, borrowed by execution ordering, and then consumed into the legacy entries map.
-- `ModuleExecutionOrders` is available only as `Sealed<ModuleExecutionOrders>` and remains live through `BindImportsPass`; `SortedModules` moves without cloning into the legacy carrier.
+- `EntryPlanDraft` has no public constructor or clone path. It is produced once, borrowed by execution ordering and later typed passes including P, and then consumed into the legacy entries map after P.
+- `ModuleExecutionOrders` is available only as `Sealed<ModuleExecutionOrders>` and remains live through `BindImportsPass`; `SortedModules` remains owned and typed through P, then moves without cloning into the legacy carrier.
 
 ## Unresolved Questions
 

@@ -23,11 +23,12 @@ Source: `crates/rolldown/src/stages/link_stage/passes/reference_needed_symbols.r
   → CollectEntryExportRootsPass
   → CreateSyntheticExportStatementsPass
   → ReferenceNeededSymbolsPass   ← this pass
-  → cross_module_optimization → include_statements → patch_module_dependencies
+  → CrossModuleOptimizationPass
+  → include_statements → patch_module_dependencies
   → final compatibility projections and ReferenceImportRecordPatches::apply
 ```
 
-This diagram records the current execution order, not a data dependency at every arrow. N does not read finalized `ResolvedExports`, CJS routing, member-expression resolutions, entry roots, shims, or external-star records. M finishes earlier because it must inspect the pre-synthetic statement graph for JSON object mutation and escape facts, while `CreateSyntheticExportStatementsPass` must hand the updated owned statement table to N.
+This diagram records the current execution order, not a data dependency at every arrow. N does not read finalized `ResolvedExports`, CJS routing, member-expression resolutions, entry roots, shims, or external-star records. M finishes earlier because it must inspect the pre-synthetic statement graph for JSON object mutation and escape facts, while `CreateSyntheticExportStatementsPass` must hand the updated owned statement table to N. P then owns N's returned statement table and borrows its returned symbol database, but it does not read formats, wrappers, dynamic exports, side effects, CJS namespace merges, statement runtime requirements, or require patches; N remains the final typed reader of those representation facts.
 
 Position is load-bearing in two directions:
 
@@ -215,7 +216,7 @@ Focused tests pin:
 - statement-level dummy-require, non-static-dynamic-import, keep-names, and preserved JSX flags; and
 - hard dense statement layout, external symbol-slot shape, and embedded normal-module index failures before mutation.
 
-The exact twenty-one-pass trace pins M before synthetic statement creation and N immediately afterward. The pass-subtree test target also runs the production AST inventory, which keeps unsafe code, broad carriers, hidden pass declarations, and unapproved macros out of this implementation.
+The exact twenty-two-pass trace pins M before synthetic statement creation, N immediately afterward, and `CrossModuleOptimizationPass` immediately after N. The pass-subtree test target also runs the production AST inventory, which keeps unsafe code, broad carriers, hidden pass declarations, and unapproved macros out of this implementation.
 
 ## Notes for editors
 

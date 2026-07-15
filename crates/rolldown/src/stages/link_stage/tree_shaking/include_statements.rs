@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, ImportKind, ImportRecordMeta,
@@ -22,7 +21,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   stages::link_stage::{
     LinkStage,
-    passes::{EntryExportRoots, StatementRuntimeRequirements},
+    passes::{EntryExportRoots, StatementRuntimeRequirements, UnreachableDynamicImports},
   },
   type_alias::IndexStmtInfos,
   types::linking_metadata::LinkingMetadataVec,
@@ -255,7 +254,7 @@ impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(in crate::stages::link_stage) fn include_statements(
     &mut self,
-    unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
+    unreachable_import_expression_node_ids: &UnreachableDynamicImports,
     statement_runtime_requirements: &Sealed<StatementRuntimeRequirements>,
     entry_export_roots: &EntryExportRoots,
   ) {

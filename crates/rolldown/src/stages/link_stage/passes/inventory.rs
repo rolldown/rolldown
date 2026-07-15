@@ -354,6 +354,7 @@ fn is_layout_invariant_macro(mac: &syn::Macro, source: &Path) -> bool {
   let new_pass = [
     "passes/collect_entry_export_roots.rs",
     "passes/create_synthetic_export_statements.rs",
+    "passes/cross_module_optimization.rs",
     "passes/reference_needed_symbols.rs",
   ]
   .iter()

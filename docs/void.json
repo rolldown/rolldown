@@ -4,11 +4,10 @@
   },
   "routing": {
     "redirects": {
-      "/about/": { "to": "/guide/", "status": 301 },
-      "/plugins/hook-filters": { "to": "/apis/plugin-hook-filters", "status": 301 },
-      "/guide/plugin-development": { "to": "/plugins/", "status": 301 },
-      "/reference/": { "to": "/apis/", "status": 301 },
-      "/guide/in-depth/": { "to": "/in-depth/", "status": 301 },
+      "/about/": { "to": "/guide/introduction", "status": 301 },
+      "/plugins/hook-filters": { "to": "/apis/plugin-api/hook-filters", "status": 301 },
+      "/guide/plugin-development": { "to": "/apis/plugin-api", "status": 301 },
+      "/guide/in-depth/": { "to": "/in-depth/why-bundlers", "status": 301 },
       "/apis/config-options/": { "to": "/reference/", "status": 301 },
       "/options/": { "to": "/reference", "status": 301 },
       "/apis/plugin-hook-filters": { "to": "/apis/plugin-api/hook-filters", "status": 301 },
@@ -48,13 +47,13 @@
       "/in-depth/advanced-chunks": { "to": "/in-depth/manual-code-splitting", "status": 301 },
       "/in-depth/code-splitting": { "to": "/in-depth/automatic-code-splitting", "status": 301 },
       "/options/output-clean-dir": { "to": "/reference/OutputOptions.cleanDir", "status": 301 },
-      "/*.txt": { "to": "/:splat.md", "status": 301 },
       "/llms.md": { "to": "/llms.txt", "status": 301 }
     },
     "rewrites": {
-      "/llms.txt": "/llms.txt",
-      "/llms-full.md": "/llms-full.txt",
-      "/llms-full.txt": "/llms-full.txt"
+      "/llms-full.md": "/llms-full.txt"
+    },
+    "fallbacks": {
+      "/*.txt": "/:splat.md"
     }
   },
   "inference": {

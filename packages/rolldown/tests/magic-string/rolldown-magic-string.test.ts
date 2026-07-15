@@ -15,6 +15,35 @@ import { describe, it } from 'vitest';
  * tests stay in Rust.
  */
 
+describe('length', () => {
+  // `MagicString::len()` sums UTF-8 byte lengths, but JS measures string length in UTF-16
+  // code units. The binding used to return the byte count, so every non-ASCII source
+  // over-reported (`'é'` -> 2, `'🤷'` -> 4). The upstream suite only covers ASCII, where
+  // the two happen to agree, so nothing caught it.
+  it('counts UTF-16 code units, not UTF-8 bytes', () => {
+    assert.strictEqual(new MagicString('abc').length(), 3);
+    assert.strictEqual(new MagicString('é').length(), 1);
+    assert.strictEqual(new MagicString('🤷').length(), 2);
+    assert.strictEqual(new MagicString('中文').length(), 2);
+    assert.strictEqual(new MagicString('abc™def').length(), 7);
+  });
+
+  it('counts UTF-16 code units after edits', () => {
+    const s = new MagicString('abc');
+    s.overwrite(1, 2, '🤷');
+    // 'a' + '🤷' (2 units) + 'c'
+    assert.strictEqual(s.length(), 4);
+    assert.strictEqual(s.length(), s.toString().length);
+  });
+
+  it('excludes global intro/outro, matching magic-string', () => {
+    const s = new MagicString('abc');
+    s.prepend('🤷');
+    s.append('🤷');
+    assert.strictEqual(s.length(), 3);
+  });
+});
+
 describe('offset', () => {
   describe('underflow guard — negative (index + offset) must throw, not panic', () => {
     it('remove() throws when offset causes index underflow', () => {

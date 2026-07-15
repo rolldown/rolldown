@@ -99,11 +99,27 @@ impl<'text> MagicString<'text> {
     self.ignore_list
   }
 
-  /// Returns the length of the content within chunks (intro + content + outro per chunk),
-  /// excluding the global intro/outro from `prepend`/`append`.
+  /// Returns the length in UTF-8 bytes of the content within chunks (intro + content + outro
+  /// per chunk), excluding the global intro/outro from `prepend`/`append`.
   /// This aligns with the reference `magic-string` behavior.
+  ///
+  /// Note this counts *bytes*. Callers that need the length JavaScript would report (UTF-16
+  /// code units, as the reference `magic-string` returns) must use [`Self::len_utf16`].
   pub fn len(&self) -> usize {
     self.iter_chunks().flat_map(|c| c.fragments(&self.source)).map(|f| f.len()).sum()
+  }
+
+  /// Returns the length in UTF-16 code units of the content within chunks, excluding the
+  /// global intro/outro — the same range [`Self::len`] covers.
+  ///
+  /// This is what the reference `magic-string` `length()` returns, since JavaScript string
+  /// length is measured in UTF-16 code units.
+  pub fn len_utf16(&self) -> usize {
+    self
+      .iter_chunks()
+      .flat_map(|c| c.fragments(&self.source))
+      .map(|f| f.chars().map(char::len_utf16).sum::<usize>())
+      .sum()
   }
 
   /// Returns `true` if all chunk content (intro + content + outro) is whitespace or empty.

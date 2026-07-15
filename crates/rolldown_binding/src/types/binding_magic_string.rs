@@ -745,10 +745,11 @@ impl BindingMagicString<'_> {
 
   #[napi]
   pub fn length(&self) -> u32 {
-    // MagicString::len() returns usize (length of generated output)
+    // JS measures string length in UTF-16 code units, so this must use `len_utf16` rather
+    // than `len`, which counts UTF-8 bytes and over-reports for any non-ASCII source.
     #[expect(clippy::cast_possible_truncation, reason = "files are < 4GB")]
     {
-      self.inner.len() as u32
+      self.inner.len_utf16() as u32
     }
   }
 

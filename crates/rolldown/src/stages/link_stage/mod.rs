@@ -1,6 +1,5 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
-use oxc::span::Span;
 use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
@@ -15,6 +14,7 @@ use rolldown_error::Diagnostics;
 use rolldown_utils::rayon::IteratorExt as _;
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
+  pass::{PassPipelineCtx, run_infallible_pass},
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
 
@@ -29,11 +29,11 @@ use crate::{
 use super::scan_stage::NormalizedScanStageOutput;
 
 mod bind_imports_and_exports;
-mod compute_tla;
 mod create_exports_for_ecma_modules;
 mod cross_module_optimization;
 mod determine_module_exports_kind;
 mod generate_lazy_export;
+mod passes;
 mod patch_module_dependencies;
 mod reference_needed_symbols;
 mod sort_modules;
@@ -46,6 +46,8 @@ pub use tree_shaking::{
   SymbolIncludeReason, compute_body_demand_keys, include_runtime_symbol, include_symbol,
 };
 mod wrapping;
+
+use passes::{ComputeTlaPass, TlaScanFacts};
 
 /// Information about safely merged CJS namespaces for a module
 #[derive(Debug, Default, Clone)]
@@ -118,10 +120,8 @@ pub struct LinkStage<'a> {
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub flat_options: FlatOptions,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
-  pub tla_module_count: usize,
-  /// Centralized map of modules that use top-level `await` → span of the
-  /// first TLA keyword. Populated during the scan stage.
-  pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
+  /// Scan-only TLA inputs. `ComputeTlaPass` consumes these at their only link use.
+  tla_scan_facts: TlaScanFacts,
   /// Computed during `include_statements`, reused when building `LinkStageOutput`.
   pub has_enum_inlining: bool,
 }
@@ -220,8 +220,10 @@ impl<'a> LinkStage<'a> {
       entry_point_to_reference_ids: scan_stage_output.entry_point_to_reference_ids,
       flat_options: scan_stage_output.flat_options,
       user_defined_entry_modules: scan_stage_output.user_defined_entry_modules,
-      tla_module_count: scan_stage_output.tla_module_count,
-      tla_keyword_span_map: scan_stage_output.tla_keyword_span_map,
+      tla_scan_facts: TlaScanFacts::new(
+        scan_stage_output.tla_module_count,
+        scan_stage_output.tla_keyword_span_map,
+      ),
       has_enum_inlining: false,
     }
   }
@@ -229,7 +231,20 @@ impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
     self.sort_modules();
-    self.compute_tla();
+    {
+      let mut pass_pipeline = PassPipelineCtx::new();
+      let (tla_facts, ()) = run_infallible_pass(
+        ComputeTlaPass,
+        &mut pass_pipeline,
+        &self.module_table,
+        std::mem::take(&mut self.tla_scan_facts),
+      );
+      self.diagnostics.extend(pass_pipeline.into_diagnostics());
+      debug_assert_eq!(tla_facts.module_count(), self.metas.len());
+      for module_idx in tla_facts.modules() {
+        self.metas[module_idx].is_tla_or_contains_tla_dependency = true;
+      }
+    }
     self.determine_module_exports_kind();
     self.determine_safely_merge_cjs_ns();
     self.wrap_modules();

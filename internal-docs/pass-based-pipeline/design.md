@@ -2,7 +2,7 @@
 
 ## Summary
 
-A pass-based pipeline makes a stage's dataflow visible in Rust types: each top-level step declares the facts it reads, the working sets it owns, the fact it mints for shared reading, the owned data it hands onward, and its error type. The harness controls execution with a branded capability, seals every read-side output, owns diagnostic provenance, and leaves pass order as an ordinary typed driver. Link is the first maintainer-selected adoption, but no link pass exists yet; the implemented harness and the planned link boundary are described in [implementation.md](./implementation.md).
+A pass-based pipeline makes a stage's dataflow visible in Rust types: each top-level step declares the facts it reads, the working sets it owns, the fact it mints for shared reading, the owned data it hands onward, and its error type. The harness controls execution with a branded capability, seals every read-side output, owns diagnostic provenance, and leaves pass order as an ordinary typed driver. Link is the first maintainer-selected adoption: `ComputeTlaPass` is the first production slice, while the remaining link driver still uses the legacy carrier during migration. The implemented harness, first pass, and unchanged boundary are described in [implementation.md](./implementation.md).
 
 ## Ground rules
 
@@ -146,7 +146,7 @@ Memory release points belong in the driver. The last mutator can consume an owne
 
 Link is the first selected adoption, but its external boundary remains unchanged: `LinkStage::link` stays infallible and returns the existing `(LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder)` tuple. Generate continues mutating that output, so this migration must not claim that the whole link result is immutable.
 
-The eventual link driver has a one-shot input adapter, typed passes, and one legacy output adapter. Neither adapter is a pass, and neither aggregate is allowed back into the pass DAG. The input adapter only moves scan fields, initializes empty values, and seeds diagnostics. The output adapter consumes final link artifacts once and constructs the existing mutable output types.
+The final link driver has a one-shot input adapter, typed passes, and one legacy output adapter. Neither adapter is a pass, and neither aggregate is allowed back into the pass DAG. The input adapter only moves scan fields, initializes empty values, and seeds diagnostics. The output adapter consumes final link artifacts once and constructs the existing mutable output types. During the staged migration, `ComputeTlaPass` already consumes its two scan-only fields through `TlaScanFacts` and immediately projects the sealed compact result into the unchanged legacy metadata; that local projection is removed when the final adapter owns all legacy construction.
 
 Artifacts choose their result channel according to lifetime:
 
@@ -169,13 +169,13 @@ The design uses compiler checks where Rust can express the rule and records the 
 - `Sealed<T>` exposes no `DerefMut`, consuming unwrap, or public field.
 - `PassCtx` exposes writes but no reads or drains.
 - Driver order, moves, borrows, and disjoint owned inputs use ordinary Rust name and ownership checks.
+- The production link pass subtree forbids unsafe code. Its non-vacuous AST inventory requires every `XxxPass` to be one `pub(super)` non-generic unit struct with one direct unqualified `Pass` implementation, rejects aliases and hidden local declarations, limits derives and production macros to a closed built-in allowlist, recursively inspects allowed macro arguments, and rejects the broad link carriers in pass code.
 
 The compile-fail suite pins these claims in the same consuming-crate privacy layout used by future link passes. Its passing case is load-bearing: it makes trybuild perform a code-generating build so the inline non-zero-size assertion is evaluated. `cargo check` and rust-analyzer's usual check-on-save are not enough to enforce that assertion.
 
 ### Source-test and review-held
 
-- Pass declarations are non-generic unit structs whose names end in `Pass`. The zero-size assertion does not enforce source syntax; a non-vacuous source inventory check belongs with the first real link pass.
-- The future link passes subtree carries `#![forbid(unsafe_code)]`. The harness itself already forbids unsafe code, but no link passes subtree exists yet.
+- The source inventory is a repository test rather than a language rule; new syntax forms and deliberate hidden dependency channels still require review and corresponding inventory coverage.
 - Pipeline facts expose no interior mutability through `Cell`, `RefCell`, atomics, locks, or safe shared-mutation methods. `InputRead: Copy` rejects `&mut`; it cannot reject `&Cell<T>` or a shared reference to another interior-mutable API.
 - Passes do not use global mutable state or other hidden channels. The type contract governs declared parameters, not global behavior.
 - Pass slot manifests never name the driver-owned `PassPipelineCtx`; only the harness receives it and derives the temporary `PassCtx`.

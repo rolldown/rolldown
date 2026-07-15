@@ -4,6 +4,10 @@ use std::{
 };
 
 use bench::link_baseline::trace::{LinkTraceLayer, records_link_trace_metadata};
+use bench::link_baseline::{
+  BaselineConfig, BaselineMode, run_baseline_with_trace_layer,
+  workloads::{DEFAULT_SEED, synthetic_workload_with_seed},
+};
 use rayon::ThreadPoolBuilder;
 use tracing_subscriber::{Layer as _, filter::filter_fn, prelude::*};
 
@@ -57,4 +61,32 @@ fn global_collector_reaches_existing_rayon_workers_but_context_does_not() {
     4,
     "the current parent is thread-local and must not be assumed to propagate"
   );
+
+  layer.reset().expect("completed synthetic trace can reset");
+  let workload =
+    synthetic_workload_with_seed("overhead-64", DEFAULT_SEED).expect("baseline workload");
+  let runtime =
+    tokio::runtime::Builder::new_current_thread().enable_all().build().expect("Tokio runtime");
+  let report = runtime
+    .block_on(run_baseline_with_trace_layer(
+      BaselineConfig {
+        mode: BaselineMode::LinkTrace,
+        warmups: 0,
+        samples: 1,
+        iterations_per_sample: 1,
+        canonical: false,
+      },
+      workload,
+      &layer,
+    ))
+    .expect("production link trace");
+  let production = &report.trace_samples[0];
+  let pass_spans = production
+    .direct_children
+    .iter()
+    .filter(|span| span.target == "rolldown::pass")
+    .collect::<Vec<_>>();
+  assert_eq!(pass_spans.len(), 1);
+  assert!(pass_spans[0].pass.as_deref().is_some_and(|pass| pass.ends_with("ComputeTlaPass")));
+  assert!(production.detached_passes.is_empty());
 }

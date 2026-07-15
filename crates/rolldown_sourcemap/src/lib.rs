@@ -82,13 +82,18 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
   let tokens: Box<[Token]> = last_map
     .get_source_view_tokens()
     .filter_map(|token| {
+      token.get_source_id()?;
       let original_token =
         sourcemap_and_lookup_table.iter().try_fold(token, |token, (sourcemap, lookup_table)| {
-          sourcemap.lookup_source_view_token(
+          // A coarse map may point before the first token on the same line. Clamp to that first
+          // token instead of dropping the mapping, matching Rollup's composition behavior.
+          let traced = sourcemap.lookup_source_view_token_approx(
             lookup_table,
             token.get_src_line(),
             token.get_src_col(),
-          )
+          )?;
+          traced.get_source_id()?;
+          Some(traced)
         });
       original_token.map(|original_token| {
         Token::new(
@@ -192,6 +197,30 @@ fn test_collapse_sourcemaps() {
 (0:30) ");\n" --> (3:15) ");\n"
 "#
   );
+}
+
+#[test]
+fn test_collapse_sourcemaps_clamps_before_first_token_on_a_line() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut detailed_builder = SourceMapBuilder::default();
+  let original_source = detailed_builder.add_source_and_content("original.js", "  target();\n");
+  detailed_builder.add_token(0, 2, 0, 2, Some(original_source), None);
+  let detailed_map = detailed_builder.into_sourcemap().into_owned();
+
+  let mut coarse_builder = SourceMapBuilder::default();
+  let intermediate_source = coarse_builder.add_source_and_content("intermediate.js", "target();\n");
+  coarse_builder.add_token(0, 0, 0, 0, Some(intermediate_source), None);
+  let coarse_map = coarse_builder.into_sourcemap().into_owned();
+
+  let collapsed = collapse_sourcemaps(&[&detailed_map, &coarse_map]);
+  let tokens = collapsed.get_tokens().collect::<Vec<_>>();
+
+  assert_eq!(tokens.len(), 1, "a coarse token before the line's first detailed token must survive");
+  assert_eq!((tokens[0].get_dst_line(), tokens[0].get_dst_col()), (0, 0));
+  assert_eq!((tokens[0].get_src_line(), tokens[0].get_src_col()), (0, 2));
+  assert_eq!(tokens[0].get_source_id(), Some(0));
+  assert_eq!(collapsed.get_sources().collect::<Vec<_>>(), ["original.js"]);
 }
 
 /// Test for https://github.com/rollup/rollup/issues/5955

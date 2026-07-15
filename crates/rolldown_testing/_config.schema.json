@@ -2127,12 +2127,7 @@
           "const": "always"
         },
         {
-          "description": "Incremental rebuild will be issued automatically if the hmr updates contains full reload updates.",
-          "type": "string",
-          "const": "auto"
-        },
-        {
-          "description": "Never issue rebuilds after HMR.",
+          "description": "Never issue rebuilds after HMR. The server no longer decides full reloads, so\nthere is no `auto` upgrade anymore; consumers that want fresh bundle output pull\nit explicitly (e.g. `ensure_latest_bundle_output`).",
           "type": "string",
           "const": "never"
         }

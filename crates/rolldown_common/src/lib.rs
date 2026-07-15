@@ -130,8 +130,8 @@ pub use crate::{
   },
   hmr::{
     client_hmr_input::ClientHmrInput, client_hmr_update::ClientHmrUpdate,
-    hmr_boundary::HmrBoundary, hmr_boundary_output::HmrBoundaryOutput, hmr_patch::HmrPatch,
-    hmr_update::HmrUpdate,
+    hmr_boundary::HmrBoundary, hmr_patch::HmrPatch, hmr_stamp_table::HmrStampTable,
+    hmr_update::HmrUpdate, lazy_chunk_output::HmrLazyChunkOutput,
   },
   module::{
     Module,

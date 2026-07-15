@@ -14,7 +14,7 @@ await __esmMin((async () => {
 
 ```
 
-# Variant: [on_demand_wrapping: true]
+# Variant: on-demand: [on_demand_wrapping: true]
 
 ## Assets
 

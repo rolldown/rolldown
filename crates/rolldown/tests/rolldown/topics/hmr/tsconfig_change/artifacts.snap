@@ -7,6 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["main.ts"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
 //#region main.ts
 var main_exports = /* @__PURE__ */ __exportAll({ Foo: () => Foo });
 __rolldown_runtime__.createModuleHotContext("main.ts");
@@ -36,6 +42,12 @@ export { Foo };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["main.ts"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
 //#region main.ts
 var main_exports = /* @__PURE__ */ __exportAll({ Foo: () => Foo });
 __rolldown_runtime__.createModuleHotContext("main.ts");

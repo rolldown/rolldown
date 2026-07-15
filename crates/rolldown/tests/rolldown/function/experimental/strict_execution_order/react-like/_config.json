@@ -1,4 +1,5 @@
 {
+  "configName": "on-demand",
   "config": {
     "resolve": {
       "alias": [["this-is-only-used-for-testing", ["./commonjs.js"]]]

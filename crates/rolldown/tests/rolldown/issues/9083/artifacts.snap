@@ -28,7 +28,7 @@ export { manager };
 
 ```
 
-# Variant: [strict_execution_order: true]
+# Variant: wrap-all: [strict_execution_order: true]
 
 ## Assets
 
@@ -72,7 +72,7 @@ export { manager };
 
 ```
 
-# Variant: [on_demand_wrapping: true] [strict_execution_order: true]
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
 
 ## Assets
 

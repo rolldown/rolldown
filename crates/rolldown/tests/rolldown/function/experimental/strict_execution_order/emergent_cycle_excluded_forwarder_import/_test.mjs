@@ -8,6 +8,8 @@ import assert from 'node:assert';
 // `unused` is not re-exported, so it misses A -> C. Without unifying the projection with the actual
 // transitive-metadata routing, the eager reader's record-position interop trigger runs mid-cycle and
 // reads A's not-yet-assigned `var require_carrier` — `TypeError: require_carrier is not a function`.
+// Following that same transitive-metadata route during projection closes the cycle, so the fixpoint
+// wraps its eligible modules and defers the eager read until `require_carrier` is assigned.
 await import('./dist/main.js');
 
 assert.strictEqual(

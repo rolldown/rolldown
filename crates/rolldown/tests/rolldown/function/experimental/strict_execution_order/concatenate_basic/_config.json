@@ -1,4 +1,5 @@
 {
+  "configName": "on-demand",
   "config": {
     "strictExecutionOrder": true,
     "experimental": {
@@ -7,9 +8,11 @@
   },
   "configVariants": [
     {
+      "_configName": "profiler-names-disabled-on-demand",
       "profilerNames": false
     },
     {
+      "_configName": "pife-for-module-wrappers-disabled-on-demand",
       "pifeForModuleWrappers": false
     }
   ]

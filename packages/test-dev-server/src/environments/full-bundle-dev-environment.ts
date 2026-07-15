@@ -50,9 +50,8 @@ export class FullBundleDevEnvironment {
   #firstOutput = withResolvers<void>();
 
   // Test-only instrumentation (no Vite equivalent); surfaced via the status
-  // middleware so the fixture harness can await builds / module registrations.
+  // middleware so the fixture harness can await builds.
   #buildSeq = 0;
-  #moduleRegistrationSeq = 0;
 
   private constructor(logger: Logger) {
     this.logger = logger;
@@ -96,7 +95,6 @@ export class FullBundleDevEnvironment {
     lastBuildErrored: boolean;
     buildSeq: number;
     connectedClients: number;
-    moduleRegistrationSeq: number;
   }> {
     const bundleState = await this.#devEngine.getBundleState();
     return {
@@ -104,7 +102,6 @@ export class FullBundleDevEnvironment {
       lastBuildErrored: bundleState.lastBuildErrored,
       buildSeq: this.#buildSeq,
       connectedClients: this.#clients.size,
-      moduleRegistrationSeq: this.#moduleRegistrationSeq,
     };
   }
 
@@ -114,6 +111,10 @@ export class FullBundleDevEnvironment {
   connectClient(ws: WebSocket, clientId: string): ClientSession {
     const client = new ClientSession(ws, clientId);
     this.#clients.setupIfNeeded(client);
+    // create the server-side session (fresh `shipped[C]` ship map) used to select the
+    // factories each patch ships to this client; fire-and-forget on purpose — the ack
+    // below does not depend on it
+    void this.#devEngine.registerClient(clientId);
 
     this.#send(ws, { type: 'connected' });
     return client;
@@ -122,30 +123,6 @@ export class FullBundleDevEnvironment {
   async disconnectClient(clientId: string): Promise<void> {
     this.#clients.delete(clientId);
     await this.#devEngine.removeClient(clientId);
-  }
-
-  async registerModules(clientId: string, modules: string[]): Promise<void> {
-    this.logger.info('Registering modules:', modules);
-    await this.#devEngine.registerModules(clientId, modules);
-    this.#moduleRegistrationSeq++;
-  }
-
-  /**
-   * Programmatic `import.meta.hot.invalidate()`. Logs an invalidate-time
-   * build error instead of crashing the connection handler.
-   */
-  async invalidate(moduleId: string, _client: ClientSession): Promise<void> {
-    this.logger.info('Invalidating...');
-    let updates: BindingClientHmrUpdate[];
-    try {
-      updates = await this.#devEngine.invalidate(moduleId);
-    } catch (e) {
-      this.logger.error('Invalidate error:', e);
-      return;
-    }
-    // `invalidate()` never auto-upgrades to a rebuild, so onOutput won't fire;
-    // FullReload updates must trigger regeneration inline.
-    this.#handleHmrUpdates(updates, true);
   }
 
   // --- Dev engine callbacks --------------------------------------------------
@@ -159,17 +136,16 @@ export class FullBundleDevEnvironment {
       return;
     }
     const { updates, changedFiles } = result;
-    const hasFullReload = updates.some((u) => u.update.type === 'FullReload');
     // Skip client-facing work for empty / all-noop batches.
     if (changedFiles.length > 0 && !updates.every((u) => u.update.type === 'Noop')) {
       this.#handleHmrUpdates(updates);
+      // This platform is restart-based: patches carry no applier (there is no
+      // browser walk on the node side), so refresh the on-disk dist and let the
+      // harness restart the artifact. The engine leaves the bundle output stale
+      // after a patch-only task; this is the pull that regenerates it.
+      this.#devEngine.ensureLatestBuildOutput();
     }
-    // Only increment if no FullReload — a FullReload triggers a rebuild which
-    // will call onOutput, so we let onOutput do the increment to avoid
-    // double-counting a single build cycle.
-    if (!hasFullReload) {
-      this.#buildSeq++;
-    }
+    this.#buildSeq++;
   }
 
   #onOutput(result: Error | { output: readonly unknown[] }): void {
@@ -187,7 +163,7 @@ export class FullBundleDevEnvironment {
 
   // --- HMR fan-out -----------------------------------------------------------
 
-  #handleHmrUpdates(updates: BindingClientHmrUpdate[], fromInvalidate = false): void {
+  #handleHmrUpdates(updates: BindingClientHmrUpdate[]): void {
     for (const clientUpdate of updates) {
       const update = clientUpdate.update;
       switch (update.type) {
@@ -200,17 +176,6 @@ export class FullBundleDevEnvironment {
           this.#sendPatch(client.ws, update);
           break;
         }
-        case 'FullReload':
-          if (fromInvalidate) {
-            // An invalidate-driven FullReload does not auto-upgrade to a
-            // rebuild, so onOutput won't fire — regenerate the on-disk output
-            // here. (The artifact process is restarted by the harness; there
-            // is no browser page to reload.)
-            void this.#devEngine.ensureLatestBuildOutput();
-          }
-          // Otherwise the auto-upgraded rebuild lands in onOutput, which
-          // writes the fresh dist.
-          break;
         case 'Noop':
           this.logger.warn(`Client ${clientUpdate.clientId} received noop update`);
           break;

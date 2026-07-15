@@ -4,6 +4,7 @@
     "reason": "Expected to fail until rolldown#10104 is applied.",
     "outputContains": ["MAIN:stale"]
   },
+  "configName": "on-demand",
   "config": {
     "input": [
       {

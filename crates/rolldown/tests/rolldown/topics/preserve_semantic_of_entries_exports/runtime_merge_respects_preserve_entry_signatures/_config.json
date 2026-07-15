@@ -1,5 +1,6 @@
 {
   "_comment": "Two entries where `main` reads `lib`'s exports and independently pulls runtime helpers. The runtime-merge signature guard must respect `preserveEntrySignatures`: `strict` (and the default `exports-only`, since lib declares exports) keeps runtime helpers out of lib's public exports, while `allow-extension` permits but does not require a merge. Both wrapping modes are explicit variants, so auto-generated extended variants are unnecessary.",
+  "configName": "wrap-all",
   "config": {
     "input": [
       { "name": "main", "import": "./main.js" },
@@ -12,7 +13,7 @@
     "preserveEntrySignatures": "strict"
   },
   "configVariants": [
-    { "_configName": "allow-extension", "preserveEntrySignatures": "allow-extension" },
+    { "_configName": "allow-extension-wrap-all", "preserveEntrySignatures": "allow-extension" },
     {
       "_configName": "on-demand",
       "onDemandWrapping": true

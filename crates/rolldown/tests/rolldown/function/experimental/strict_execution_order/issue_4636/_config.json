@@ -1,4 +1,5 @@
 {
+  "configName": "wrap-all",
   "config": {
     "external": ["node:assert"],
     "strictExecutionOrder": true,

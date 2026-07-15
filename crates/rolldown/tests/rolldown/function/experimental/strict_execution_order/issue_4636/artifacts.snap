@@ -8,6 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import nodeAssert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["foo.cjs", "main.js"],
+	localCount: 2,
+	edges: [[], [0]],
+	dynamicEdges: [[], []]
+});
 //#region foo.cjs
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("foo.cjs");
@@ -36,6 +42,12 @@ __esmMin((() => {
 ```js
 import nodeAssert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["foo.cjs", "main.js"],
+	localCount: 2,
+	edges: [[], [0]],
+	dynamicEdges: [[], []]
+});
 //#region foo.cjs
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("foo.cjs");

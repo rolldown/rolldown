@@ -1,5 +1,6 @@
 {
   "_comment": "https://github.com/rolldown/rolldown/issues/9463 - With `strictExecutionOrder`, a `codeSplitting` group (here `entriesAware` + a large `entriesAwareMergeThreshold`) lumps both entry modules and the shared module into one chunk. `chunkOptimization` then folded that chunk into entry `a`, so executing entry `b` (`import \"./a.js\"; init_b()`) eagerly ran `init_a()` and triggered entry `a`'s side effect. Each entry must run only its own `init_*`.",
+  "configName": "wrap-all",
   "config": {
     "input": [
       { "name": "a", "import": "./a.js" },

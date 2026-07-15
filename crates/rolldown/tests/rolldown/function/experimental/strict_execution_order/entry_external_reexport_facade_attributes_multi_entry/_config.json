@@ -5,6 +5,7 @@
     "reason": "Expected to fail until rolldown#10104 is applied.",
     "outputContains": ["entry a must preserve JSON re-export attributes"]
   },
+  "configName": "on-demand",
   "config": {
     "input": [
       {

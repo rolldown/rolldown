@@ -20,7 +20,7 @@ const distDir = join(dirname(fileURLToPath(import.meta.url)), 'dist');
 // Full `minify` mangles the local `init_*` names, so the name-based structural greps below only
 // apply to the unminified configs; under minify, single execution + correct values (section (b))
 // are the load-bearing assertions that the self-rebinding wrapper still runs each body once.
-const isMinified = ['minify', 'minify-wrap-all'].includes(globalThis.__configName);
+const isMinified = ['minify-on-demand', 'minify-wrap-all'].includes(globalThis.__configName);
 
 const combined = readdirSync(distDir)
   .filter((name) => name.endsWith('.js'))

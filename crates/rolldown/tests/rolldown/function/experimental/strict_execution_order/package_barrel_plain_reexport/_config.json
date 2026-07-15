@@ -1,5 +1,6 @@
 {
   "snapshot": false,
+  "configName": "wrap-all",
   "config": {
     "strictExecutionOrder": true,
     "preserveEntrySignatures": "allow-extension",
@@ -27,6 +28,7 @@
   },
   "configVariants": [
     {
+      "_configName": "on-demand",
       "onDemandWrapping": true
     }
   ]

@@ -1,5 +1,6 @@
 {
   "snapshot": false,
+  "configName": "on-demand",
   "config": {
     "input": [
       {
@@ -36,7 +37,7 @@
   },
   "configVariants": [
     {
-      "_configName": "cjs",
+      "_configName": "cjs-on-demand",
       "format": "cjs",
       "_expectExecutionFailure": {
         "reason": "#9887 / #10104: wrapped entry chunk cycle crashes on main",

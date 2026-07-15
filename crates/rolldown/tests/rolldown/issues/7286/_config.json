@@ -1,4 +1,5 @@
 {
+  "configName": "wrap-all",
   "config": {
     "strictExecutionOrder": true
   },

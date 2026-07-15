@@ -1,4 +1,5 @@
 {
+  "configName": "on-demand",
   "config": {
     "strictExecutionOrder": true,
     "experimental": {

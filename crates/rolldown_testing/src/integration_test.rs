@@ -356,7 +356,7 @@ impl IntegrationTest {
           }
 
           // Process HMR updates and patches for execution
-          let mut patch_chunks: Vec<String> = vec![];
+          let mut patch_chunks: Vec<(String, Vec<String>)> = vec![];
           for step_output in &build_snapshot.hmr_steps {
             if let Ok((client_updates, _changed_files)) = &step_output.hmr_updates {
               for hmr_update in client_updates {
@@ -364,7 +364,7 @@ impl IntegrationTest {
                   rolldown_common::HmrUpdate::Patch(patch) => {
                     let output_path = format!("{}/{}", output_dir, patch.filename);
                     fs::write(&output_path, &patch.code).unwrap();
-                    patch_chunks.push(format!("./{}", patch.filename));
+                    patch_chunks.push((format!("./{}", patch.filename), patch.changed_ids.clone()));
                   }
                   rolldown_common::HmrUpdate::FullReload { reason } => {
                     assert!(
@@ -697,7 +697,7 @@ impl IntegrationTest {
   fn execute_output_assets(
     options: &NormalizedBundlerOptions,
     test_title: &str,
-    patch_chunks: &[String],
+    patch_chunks: &[(String, Vec<String>)],
     config_name: Option<&str>,
     execute_compiled_entries: bool,
     expected_execution_failure: Option<&ExpectedExecutionFailure>,
@@ -841,7 +841,7 @@ impl IntegrationTest {
 
   fn generate_globals_injection_for_execute_output(
     config_name: Option<&str>,
-    patch_chunks: &[String],
+    patch_chunks: &[(String, Vec<String>)],
     _options: &NormalizedBundlerOptions,
   ) -> String {
     let mut stmts = vec![];
@@ -851,9 +851,14 @@ impl IntegrationTest {
     }
 
     if !patch_chunks.is_empty() {
+      // Each entry carries the patch file plus the push envelope's changedIds — the
+      // test runtime's walk driver consumes them the way the real client consumes the
+      // `{changedIds, url, seq}` envelope.
       let patch_chunks_array = patch_chunks
         .iter()
-        .map(|chunk| format!("\"{}\"", chunk.replace('"', "\\\"")))
+        .map(|(file, changed_ids)| {
+          serde_json::json!({ "file": file, "changedIds": changed_ids }).to_string()
+        })
         .collect::<Vec<_>>()
         .join(",");
       stmts.push(format!("globalThis.__testPatches = [{patch_chunks_array}];"));
@@ -863,7 +868,7 @@ impl IntegrationTest {
   }
 
   fn generate_post_globals_injection_for_execute_output(
-    patch_chunks: &[String],
+    patch_chunks: &[(String, Vec<String>)],
     dist_folder: &Path,
   ) -> String {
     if patch_chunks.is_empty() {
@@ -878,9 +883,10 @@ import path from 'node:path';
 const dir = '{}';
 setTimeout(async () => {{
   for (const patchChunk of globalThis.__testPatches) {{
-    const file = path.join(dir, patchChunk);
+    const file = path.join(dir, patchChunk.file);
     try {{
       await import(url.pathToFileURL(file));
+      globalThis.__rolldown_runtime__.__testApplyHmr(patchChunk.changedIds);
     }} catch (error) {{
       console.error('Error executing a patch:', error);
       process.exitCode = 1;

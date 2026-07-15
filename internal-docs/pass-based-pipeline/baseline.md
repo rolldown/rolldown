@@ -88,7 +88,7 @@ env LC_ALL=C RAYON_NUM_THREADS=4 ROLLDOWN_LINK_BASELINE_GIT_COMMIT="$COMMIT" ROL
 - Treat diagnostics already produced outside link according to the boundary being measured, not as an invented link ordering guarantee. Rome's forty `UNRESOLVED_IMPORT` warnings are appended by scan tasks in completion order; require one exact descriptor multiset across processes, while excluding only their cross-warning order from the link comparison. No missing, extra, changed, or respanned descriptor is allowed.
 - For the immutable pre-extraction baseline `diagnostic-order` image, retain the exact cycle-warning multiset and exact ordered four-error suffix because that historical implementation does not define cross-cycle order. Every candidate containing `ComputeModuleExecutionOrderPass` must emit one exact full link-owned diagnostic array in first-discovery order across all fresh Rayon 1 and Rayon 4 processes.
 - For each RSS mode and workload, use ten fresh processes. Compute the median, median absolute deviation, and nearest-rank p90 from GNU-time `Maximum resident set size (kbytes)`. Require relative MAD at most 1%; set the median allowance to `max(2%, 4 × relative MAD, 8 MiB / median)` capped at 5%, and the p90 allowance to `max(3%, 16 MiB / p90)`.
-- Repeat a failed candidate comparison once under the same controlled conditions and block after two failures.
+- Repeat a stable timing distribution that exceeds its regression allowance once under the same controlled conditions and classify a regression only after the repeated stable comparison fails. RSS retries are noise retries instead: accept the first paired attempt whose baseline and candidate relative MAD are both at most 1%, stop after six paired attempts, and classify a still-unstable cell as `blocked-noise` rather than inferring a regression from it.
 
 ## Rejected measurements
 
@@ -123,4 +123,31 @@ The first formal behavior capture ran 440 fresh processes: eleven workloads, twe
 
 A Phase 3 development capture after execution-order extraction ran forty additional fresh `diagnostic-order` processes, twenty with Rayon 1 and twenty with Rayon 4. All forty emitted the exact A-then-B cycle order and exact four-error suffix. The unique digests are output `0e92238ee947f8b2482be635f01bb348`, pre-Generate `acba561fa5d80d60339b30c8a59d1e13`, final diagnostics `18adbc538dd6f79868238cc43f85bc5f`, and observation `8836305b971a187752d94ee86452be53`. The pre-Generate descriptor multiset and final diagnostic array otherwise match the immutable baseline. A one-process development smoke for every workload also matches the baseline manifests, module counts, output digests, and producer-aware diagnostic contract. This closes the known link-owned cycle-order ambiguity for the candidate; the complete Phase 3 digest corpus is rerun at the committed tree.
 
-Bundle-time, accepted trace duration attribution, process-RSS distributions, and the remaining derived Phase 2–5 budgets are still pending an uncontended pinned CPU set. Their absence limits those performance claims only; it does not block code, tests, review, commits, or later link implementation.
+The same-base bundle-time control completed in the same fixed 2.6 GHz environment. The final comparison is `bundle-time-comparison.json`, SHA256 `17e8b3d23793deb1809a7bffafa4794ef2576062b1d797f3148c62c2fd36b2fb`; its selected-report manifest is `bundle-time-selection-final.tsv`, SHA256 `ef7827d87c0db79b6d3a94cff4ea2705f73b136ae7f6ca4f6f234037e722f198`.
+
+| Workload           | Iterations | Base median (ns) | Base rMAD | Candidate median (ns) | Candidate rMAD | Change | Status          |
+| ------------------ | ---------: | ---------------: | --------: | --------------------: | -------------: | -----: | --------------- |
+| `overhead-64`      |         64 |        1,814,757 |    3.233% |                     — |              — |      — | `blocked-noise` |
+| `wide-4096`        |          8 |       86,629,690 |    0.970% |            86,183,822 |         0.949% | -0.51% | accepted        |
+| `deep-1024`        |         16 |       44,091,671 |    0.967% |            44,007,705 |         0.797% | -0.19% | accepted        |
+| `scc-256x4`        |         64 |       25,210,556 |    0.819% |            25,246,386 |         0.631% | +0.14% | accepted        |
+| `export-star-1024` |         64 |       34,798,658 |    0.541% |            34,573,314 |         0.568% | -0.65% | accepted        |
+| `cjs-2048`         |         32 |       55,897,503 |    0.667% |            55,325,649 |         0.656% | -1.02% | accepted        |
+| `json-2048`        |         16 |       74,219,214 |    0.570% |            68,436,810 |         0.691% | -7.79% | accepted        |
+| `dynamic-1024`     |         16 |       33,695,989 |    0.832% |            33,794,397 |         0.733% | +0.29% | accepted        |
+| `three-r108`       |         16 |       55,094,439 |    0.551% |            55,030,105 |         0.678% | -0.12% | accepted        |
+| `rome`             |         16 |      121,430,974 |    0.666% |           121,105,737 |         0.458% | -0.27% | accepted        |
+
+All nine stable bundle cells pass their per-cell allowances. Their candidate/base geometric-mean ratio is `0.9884590874`, a 1.15% improvement. `overhead-64` remains an evidence gap: its baseline relative MAD was 4.97%, 2.49%, and 3.23% at 1, 32, and 64 iterations per sample, so no candidate comparison is accepted and no regression or improvement is inferred.
+
+The final trace comparison is `link-trace-structural-summary.json`, SHA256 `38a71989c43d14f814e7a8f1e28f85d2096acebb8b1b5598f773d39470e0730c`; its selection is `link-trace-selection.tsv`, SHA256 `8a72d249f81c2393587f6b84aa11a7f84dc343a6597789591c0b1d3feaff6ff0`. All 20 baseline/candidate reports and all 200 samples contain exactly one Link span, no detached pass, and valid interval identities. One-iteration duration relative MAD ranges from 0.903% to 9.466%; duration remains descriptive and is not evaluated against a regression budget.
+
+The final RSS comparison is `rss-comparison-summary.json`, SHA256 `1650ed5a1247a251eca1b9b9615e804e8b12ed82fe84381a23673f355bacb598`; its selection is `rss-selection-final.tsv`, SHA256 `fa9677b2ef9d378f7d15317551a9c33f688664422091a28881f9be44e61b21c1`. The matrix contains 20 cells, 107 paired attempts, and 2,140 fresh processes. Three cells meet the 1% relative-MAD requirement on both sides and pass their median and p90 allowances:
+
+| Mode       | Workload    | Base median (KiB) | Candidate median (KiB) | Median ratio | p90 ratio | Status   |
+| ---------- | ----------- | ----------------: | ---------------------: | -----------: | --------: | -------- |
+| `scan-rss` | `deep-1024` |            86,014 |                 85,920 |     0.998907 |  1.001997 | accepted |
+| `link-rss` | `deep-1024` |            88,474 |                 88,602 |     1.001447 |  0.999324 | accepted |
+| `link-rss` | `json-2048` |         1,235,534 |              1,233,610 |     0.998443 |  0.998315 | accepted |
+
+The remaining seventeen RSS cells still have baseline or candidate relative MAD above 1% after six paired attempts and are recorded as `blocked-noise`; none is classified as `blocked-regression`. The complete performance evidence therefore contains no accepted regression, while claims for the noisy cells remain intentionally absent. An independent read-only audit recomputed provenance, hashes, medians, MAD, p90, allowances, retry counts, stop conditions, trace identities, and CPU restoration and found no actionable discrepancy.

@@ -19,6 +19,10 @@ pub(in crate::stages::link_stage) struct DynamicExports {
 }
 
 impl DynamicExports {
+  pub(in crate::stages::link_stage) fn contains(&self, module_idx: ModuleIdx) -> bool {
+    self.modules.has_bit(module_idx)
+  }
+
   pub(in crate::stages::link_stage) fn modules(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
     self.modules.index_of_one()
   }
@@ -93,6 +97,25 @@ impl Pass for ComputeDynamicExportsPass {
     }
 
     Ok(token.finish(DynamicExports { modules: dynamic_exports }, ()))
+  }
+}
+
+#[cfg(test)]
+pub(super) mod test_support {
+  use rolldown_common::ModuleIdx;
+  use rolldown_utils::IndexBitSet;
+
+  use super::DynamicExports;
+
+  pub(in crate::stages::link_stage::passes) fn dynamic_exports(
+    module_count: usize,
+    modules: impl IntoIterator<Item = ModuleIdx>,
+  ) -> DynamicExports {
+    let mut dynamic_exports = IndexBitSet::new(module_count);
+    for module_idx in modules {
+      dynamic_exports.set_bit(module_idx);
+    }
+    DynamicExports { modules: dynamic_exports }
   }
 }
 

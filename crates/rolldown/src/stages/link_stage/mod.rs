@@ -51,8 +51,9 @@ use passes::{
   ComputeDynamicExportsPass, ComputeModuleExecutionOrderInput, ComputeModuleExecutionOrderPass,
   ComputeTlaPass, ConstantExtractionInput, CreateWrapperDeclarationsInput,
   CreateWrapperDeclarationsOutput, CreateWrapperDeclarationsOwned, CreateWrapperDeclarationsPass,
-  DetermineModuleFormatsInput, DetermineModuleFormatsPass, DynamicExports, EntryPlanDraft,
-  ExtractGlobalConstantsPass, GlobalConstantsDraft, ModuleFormats, ModuleWrappers,
+  DetermineModuleFormatsInput, DetermineModuleFormatsPass, DetermineModuleSideEffectsInput,
+  DetermineModuleSideEffectsPass, DynamicExports, EntryPlanDraft, ExtractGlobalConstantsPass,
+  GlobalConstantsDraft, ModuleFormats, ModuleSideEffects, ModuleWrappers,
   NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
   NormalizeLazyExportsPass, PlanModuleWrappingInput, PlanModuleWrappingPass, TlaScanFacts,
   WrapperDeclaration,
@@ -186,7 +187,7 @@ impl<'a> LinkStage<'a> {
     }
   }
 
-  fn run_representation_passes(
+  fn run_representation_and_side_effect_passes(
     &mut self,
     pass_pipeline: &mut PassPipelineCtx,
     entry_plan: &EntryPlanDraft,
@@ -286,9 +287,43 @@ impl<'a> LinkStage<'a> {
     self.ast_table = ast_table;
     self.stmt_infos = stmt_infos;
     self.symbols = symbols;
+    let (module_side_effects, ()) = run_infallible_pass(
+      DetermineModuleSideEffectsPass,
+      pass_pipeline,
+      DetermineModuleSideEffectsInput {
+        module_table: &self.module_table,
+        dynamic_exports: &dynamic_exports,
+        module_wrappers: &module_wrappers,
+      },
+      (),
+    );
+    self.project_module_side_effects(&module_side_effects);
+    drop(module_side_effects);
     self.project_representation_results(module_formats, module_wrappers, &dynamic_exports);
     self.safely_merge_cjs_ns_map = cjs_namespace_merges.into_legacy();
     (lazy_json_export_initializers, non_splittable_json_defaults)
+  }
+
+  fn project_module_side_effects(&mut self, module_side_effects: &ModuleSideEffects) {
+    if module_side_effects.module_count() != self.module_table.modules.len() {
+      tracing::error!(
+        side_effects = module_side_effects.module_count(),
+        modules = self.module_table.modules.len(),
+        "module-side-effect layout mismatch"
+      );
+    }
+    for index in 0..module_side_effects.module_count() {
+      let module_idx = ModuleIdx::new(index);
+      let side_effects = module_side_effects.get(module_idx);
+      match self.module_table.modules.get_mut(module_idx) {
+        Some(Module::Normal(module)) => module.side_effects = side_effects,
+        Some(Module::External(_)) => {}
+        None => tracing::error!(
+          module = module_idx.index(),
+          "module-side-effect result targets a missing module"
+        ),
+      }
+    }
   }
 
   fn project_representation_results(
@@ -413,12 +448,15 @@ impl<'a> LinkStage<'a> {
         self.metas[module_idx].is_tla_or_contains_tla_dependency = true;
       }
     }
-    let (lazy_json_export_initializers, non_splittable_json_defaults) =
-      self.run_representation_passes(&mut pass_pipeline, &entry_plan, &global_constants);
+    let (lazy_json_export_initializers, non_splittable_json_defaults) = self
+      .run_representation_and_side_effect_passes(
+        &mut pass_pipeline,
+        &entry_plan,
+        &global_constants,
+      );
     self.entries = entry_plan.into_legacy_entries();
     self.global_constant_symbol_map = global_constants.into_legacy();
     self.diagnostics.extend(pass_pipeline.into_diagnostics());
-    self.determine_side_effects();
     self.bind_imports_and_exports(&non_splittable_json_defaults);
     drop(non_splittable_json_defaults);
     self.create_exports_for_ecma_modules();

@@ -16,7 +16,8 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 ## Pipeline placement
 
 ```
-… PlanModuleWrappingPass → CreateWrapperDeclarationsPass → NormalizeLazyExportsPass → determine_side_effects
+… PlanModuleWrappingPass → CreateWrapperDeclarationsPass → NormalizeLazyExportsPass
+  → DetermineModuleSideEffectsPass → representation compatibility projection
   → bind_imports_and_exports → create_exports_for_ecma_modules
   → reference_needed_symbols   ← this pass
   → cross_module_optimization → include_statements → patch_module_dependencies
@@ -24,7 +25,7 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 
 Position is load-bearing in two directions:
 
-1. **`wrap_kind` and `wrapper_ref` must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`. `PlanModuleWrappingPass`, `CreateWrapperDeclarationsPass`, and `NormalizeLazyExportsPass` establish the projected final values before the compatibility adapter writes them to metadata.
+1. **`wrap_kind`, `wrapper_ref`, and module side effects must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`, while unwrapped imports read `module.side_effects`. `NormalizeLazyExportsPass` finalizes wrapper identities, `DetermineModuleSideEffectsPass` consumes those final wrapper and dynamic-export facts, and the compatibility projection writes all three domains before binding and this step run.
 2. **`include_statements` must run after.** Tree-shaking traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data this pass writes, wrappers and helpers would be silently dropped from the output.
 
 ## Dispatch

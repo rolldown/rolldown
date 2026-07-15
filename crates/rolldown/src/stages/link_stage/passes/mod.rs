@@ -11,6 +11,7 @@ mod compute_module_execution_order;
 mod compute_tla;
 mod create_wrapper_declarations;
 mod determine_module_formats;
+mod determine_module_side_effects;
 mod extract_global_constants;
 mod normalize_lazy_exports;
 mod plan_module_wrapping;
@@ -26,6 +27,9 @@ pub(super) use create_wrapper_declarations::{
 };
 pub(super) use determine_module_formats::{
   DetermineModuleFormatsInput, ModuleFormats, ModuleFormatsDraft,
+};
+pub(super) use determine_module_side_effects::{
+  DetermineModuleSideEffectsInput, ModuleSideEffects,
 };
 pub(super) use extract_global_constants::{ConstantExtractionInput, GlobalConstantsDraft};
 pub(super) use normalize_lazy_exports::{
@@ -59,6 +63,9 @@ pub(super) struct CreateWrapperDeclarationsPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct DetermineModuleFormatsPass;
+
+#[derive(Clone, Copy)]
+pub(super) struct DetermineModuleSideEffectsPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct ExtractGlobalConstantsPass;

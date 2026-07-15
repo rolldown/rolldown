@@ -484,22 +484,27 @@ fn wrapped_esm_target_is_reachable(
 }
 
 /// Whether an included, unwrapped forwarder discharges *all* its downstream initialization through
-/// its own finalized statements — the full-delegation fast path. Its *included* import statements
-/// do — the finalizer emits their `init_*()` calls at each statement's position — but a
+/// its own finalized statements — the full-delegation fast path. Its *included*, non-nested import
+/// statements do — the finalizer emits their `init_*()` calls at each statement's position — but a
 /// static-import statement that tree-shaking excluded emits nothing there (a pure package barrel's
 /// `export * from` hop whose bindings resolve through it is the canonical case). When every
-/// static-import statement is included the forwarder owns every hop, so the caller can delegate
-/// wholesale; when only some are, the caller delegates per obligation (see
+/// static-import record clears the finalizer's own record gate the forwarder owns every hop, so the
+/// caller can delegate wholesale; when only some do, the caller delegates per obligation (see
 /// [`forwarder_discharged_targets`]) rather than re-owning everything.
 ///
-/// OPEN QUESTION (hypothesis, no repro — do not chase without one): this check consults only the
-/// statement *inclusion* bits, while finalization additionally suppresses records marked "nested"
-/// (`module_finalizers::mod` transform-or-remove and the `export *` path). If a directly consumed,
-/// included hop could also be nested — and therefore emitted nowhere despite counting as
-/// discharged here — the caller would wrongly delegate to a silent forwarder. No graph is known to
-/// produce a nested *and* directly-consumed-included hop (nesting marks a record a wrapped ancestor
-/// walks through, which owns the init instead), so this stays a documented invariant to revisit
-/// only if a failing fixture appears.
+/// The record test mirrors Emit's gate ([`record_is_init_obligation`] for
+/// [`ObligationPurpose::Emit`]) exactly: a static-import (`ImportKind::Import`) record discharges
+/// only when its statement is *included* **and** the record is *not* a nested re-export
+/// walk-through. Both conditions are precisely what the finalizer checks before emitting an
+/// `init_*()` for a record, so full delegation can never count a record the finalizer actually
+/// suppresses. A nested-but-included hop emits nothing at the forwarder — a wrapped ancestor's
+/// traversal owns that init instead — yet the inclusion-bit-only predicate this replaced would have
+/// treated it as discharged, delegating wholesale to a silent forwarder and dropping the init
+/// altogether (the #10236 bug class). Any excluded or nested hop now fails this predicate and routes
+/// the caller into the per-obligation partial-delegation path ([`forwarder_discharged_targets`]),
+/// which enumerates through the same Emit gate and owns exactly the hops the forwarder leaves
+/// silent. The direction is strictly conservative: tightening the gate can only keep a redundant
+/// memoized `init_*` call, never drop a needed one.
 fn eager_forwarder_discharges_own_hops(
   ctx: &WrappedEsmInitTargetContext<'_>,
   module_idx: ModuleIdx,
@@ -510,11 +515,11 @@ fn eager_forwarder_discharges_own_hops(
   };
   ctx.stmt_infos[module_idx].iter_enumerated_without_namespace_stmt().all(
     |(stmt_idx, stmt_info)| {
-      meta.stmt_info_included.has_bit(stmt_idx)
-        || stmt_info
-          .import_records
-          .iter()
-          .all(|rec_idx| module.import_records[*rec_idx].kind != ImportKind::Import)
+      stmt_info.import_records.iter().all(|rec_idx| {
+        module.import_records[*rec_idx].kind != ImportKind::Import
+          || (meta.stmt_info_included.has_bit(stmt_idx)
+            && !ctx.order_wrap_state.is_nested_reexport_record(module_idx, *rec_idx))
+      })
     },
   )
 }

@@ -62,7 +62,12 @@ export var __toESM = (mod, isNodeMode, target) => (
   (target = mod != null ? __create(__getProtoOf(mod)) : {}),
   __copyProps(
     // `__esModule` alone is not enough: the module must own a `default` (#10360).
-    isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, 'default')
+    (isNodeMode
+      ? !(mod &&
+          mod[Symbol.toStringTag] === 'Module' &&
+          __getProtoOf(mod) === null &&
+          !Reflect.isExtensible(mod))
+      : !mod || !mod.__esModule || !__hasOwnProp.call(mod, 'default'))
       ? __defProp(target, 'default', { value: mod, enumerable: true })
       : target,
     mod,

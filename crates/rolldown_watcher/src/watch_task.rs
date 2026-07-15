@@ -1,4 +1,5 @@
 use arcstr::ArcStr;
+use async_lock::Mutex as TokioMutex;
 use rolldown::{BundleHandle, Bundler, BundlerBuilder, BundlerConfig};
 use rolldown_common::{
   BundleMode, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
@@ -13,7 +14,6 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
-use async_lock::Mutex as TokioMutex;
 
 use crate::event::{BundleEndEventData, BundleStartEventData, WatchErrorEventData};
 

@@ -8,8 +8,8 @@ mod watcher_event_handler;
 
 use std::sync::Arc;
 
-use rustc_hash::FxHashMap;
 use async_lock::Mutex;
+use rustc_hash::FxHashMap;
 pub use {
   crate::{
     dev_context::BundlingFuture,

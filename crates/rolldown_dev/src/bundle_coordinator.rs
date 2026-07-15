@@ -6,6 +6,8 @@ use std::{
 
 use anyhow::Context;
 use arcstr::ArcStr;
+use async_lock::Mutex;
+use futures::StreamExt;
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_dev_common::types::{DevCallbackError, DevCallbackResult};
@@ -16,8 +18,6 @@ use rolldown_utils::{
 };
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
-use async_lock::Mutex;
-use futures::StreamExt;
 
 use rolldown::Bundler;
 
@@ -805,6 +805,8 @@ mod tests {
   use crate::{
     DevOptions, DevWatchOptions, SharedClients, dev_context::DevContext, normalize_dev_options,
   };
+  use futures::channel::mpsc::unbounded;
+  use futures::channel::oneshot;
   use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions};
   use rolldown_fs_watcher::{FsEventHandler, FsWatcher, FsWatcherConfig, NoopFsWatcher, PathsMut};
   use std::{
@@ -812,8 +814,6 @@ mod tests {
     path::{Path, PathBuf},
     sync::atomic::{AtomicUsize, Ordering},
   };
-  use futures::channel::mpsc::unbounded;
-  use futures::channel::oneshot;
   use tokio::{
     sync::Notify,
     time::{Duration, timeout},

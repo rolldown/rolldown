@@ -5,7 +5,10 @@ use crate::watch_task::{BuildOutcome, WatchTask, WatchTaskBuildError, WatchTaskI
 use crate::watcher::WatcherConfig;
 use crate::watcher_msg::WatcherMsg;
 use crate::watcher_state::WatcherState;
+use event_listener::Event;
 use futures::FutureExt;
+use futures::channel::mpsc;
+use futures::{StreamExt, pin_mut, select_biased};
 use oxc_index::IndexVec;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic};
@@ -19,9 +22,6 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use event_listener::Event;
-use futures::channel::mpsc;
-use futures::{StreamExt, pin_mut, select_biased};
 
 const WATCH_REGISTRATION_RETRY_DELAYS: [Duration; 3] =
   [Duration::from_millis(25), Duration::from_millis(100), Duration::from_millis(250)];
@@ -692,7 +692,6 @@ mod tests {
   // reach here via `use super::*`, but are imported explicitly for clarity).
   // `tokio::sync::Notify` is kept ONLY for the tests' internal end/stop signal.
   use event_listener::Event;
-  use tokio::sync::Notify;
   use rolldown::{BundlerConfig, BundlerOptions, plugin};
   use rolldown_error::BuildResult;
   use rolldown_fs_watcher::{DynFsWatcher, FsEventHandler, FsWatcher, FsWatcherConfig, PathsMut};
@@ -705,6 +704,7 @@ mod tests {
       atomic::{AtomicUsize, Ordering},
     },
   };
+  use tokio::sync::Notify;
 
   static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
 

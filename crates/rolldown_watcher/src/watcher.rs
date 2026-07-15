@@ -4,7 +4,9 @@ use crate::watch_coordinator::{CoordinatorCloseError, CoordinatorCloseResult, Wa
 use crate::watch_task::{WatchTask, WatchTaskIdx};
 use crate::watcher_msg::WatcherMsg;
 use anyhow::Result;
+use event_listener::Event;
 use futures::FutureExt;
+use futures::channel::mpsc;
 use futures::future::Shared;
 use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
@@ -16,8 +18,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use event_listener::Event;
-use futures::channel::mpsc;
 
 /// Default debounce duration in milliseconds.
 /// Matches Rollup's default buildDelay of 0ms.

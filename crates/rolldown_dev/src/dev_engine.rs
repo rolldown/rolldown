@@ -4,6 +4,8 @@ use std::sync::{
 };
 
 use anyhow::Context;
+use async_lock::Mutex;
+use futures::channel::mpsc::unbounded;
 use futures::{FutureExt, future::Shared};
 #[cfg(feature = "testing")]
 use rolldown_common::WatcherChangeKind;
@@ -15,8 +17,6 @@ use rolldown_utils::futures::try_spawn;
 use rustc_hash::FxHashMap;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
-use async_lock::Mutex;
-use futures::channel::mpsc::unbounded;
 
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig, NormalizedBundlerOptions};
 
@@ -79,7 +79,10 @@ impl WatchRegistrationErrorObservation {
     let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender()
-      .unbounded_send(CoordinatorMsg::PreviewWatchRegistrationErrors { observer_id, reply: reply_sender })
+      .unbounded_send(CoordinatorMsg::PreviewWatchRegistrationErrors {
+        observer_id,
+        reply: reply_sender,
+      })
       .map_err_to_unhandleable()
       .context("DevEngine: failed to preview watch-registration errors")?;
 
@@ -244,7 +247,8 @@ impl DevEngine {
 
   async fn wait_for_ongoing_bundle_inner(&self) -> BuildResult<()> {
     let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
-    if let Err(err) = self.coordinator_sender.unbounded_send(CoordinatorMsg::GetState { reply: reply_sender })
+    if let Err(err) =
+      self.coordinator_sender.unbounded_send(CoordinatorMsg::GetState { reply: reply_sender })
     {
       if self.is_closed() {
         return Ok(());
@@ -656,7 +660,9 @@ impl DevEngine {
     let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
-      .unbounded_send(CoordinatorMsg::BeginWatchRegistrationErrorObservation { reply: reply_sender })
+      .unbounded_send(CoordinatorMsg::BeginWatchRegistrationErrorObservation {
+        reply: reply_sender,
+      })
       .map_err_to_unhandleable()
       .context("DevEngine: failed to begin watch-registration error observation")?;
 
@@ -703,7 +709,9 @@ impl DevEngine {
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
     // and get the build future to wait on
     let (reply_tx, reply_rx) = futures::channel::oneshot::channel();
-    let _ = self.coordinator_sender.unbounded_send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
+    let _ = self
+      .coordinator_sender
+      .unbounded_send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
 
     // Wait for the build that was triggered by the file change
     if let Ok(Some(ret)) = reply_rx.await {

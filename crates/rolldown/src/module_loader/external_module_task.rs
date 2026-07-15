@@ -40,8 +40,10 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
     if let Err(errs) = self.run_inner().await {
       // The loader owner may have been cancelled while this detached task was awaiting a hook.
       // See internal-docs/async-runtime/implementation.md.
-      let _ =
-        self.ctx.tx.unbounded_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
+      let _ = self
+        .ctx
+        .tx
+        .unbounded_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
   }
 

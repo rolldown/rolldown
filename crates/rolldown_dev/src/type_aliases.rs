@@ -1,7 +1,7 @@
-#[cfg(feature = "testing")]
-use rustc_hash::FxHashSet;
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
+#[cfg(feature = "testing")]
+use rustc_hash::FxHashSet;
 
 #[cfg(feature = "testing")]
 use super::types::schedule_build_return::ScheduleBuildReturn;

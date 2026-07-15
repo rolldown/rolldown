@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use crate::file_change_event::FileChangeEvent;
 use crate::watch_task::WatchTaskIdx;
 use crate::watcher_msg::WatcherMsg;
-use rolldown_common::WatcherChangeKind;
 use futures::channel::mpsc;
+use rolldown_common::WatcherChangeKind;
 use rolldown_fs_watcher::{FsEventHandler, FsEventResult};
 
 /// Bridge that maps raw notify events to `FileChangeEvent`s and forwards them
@@ -89,8 +89,9 @@ impl FsEventHandler for TaskFsEventHandler {
           .collect();
 
         if !changes.is_empty() {
-          let _ =
-            self.tx.unbounded_send(WatcherMsg::FileChanges { task_index: self.task_index, changes });
+          let _ = self
+            .tx
+            .unbounded_send(WatcherMsg::FileChanges { task_index: self.task_index, changes });
         }
       }
       Err(errors) => {

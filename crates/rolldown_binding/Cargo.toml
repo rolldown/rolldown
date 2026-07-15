@@ -108,8 +108,4 @@ default_global_allocator = []
 disable_panic_hook = []
 runtime-waker-teardown-test = ["async-runtime"]
 runtime-submission-failure-test = ["async-runtime"]
-tokio-runtime = [
-  "napi/async",
-  "rolldown/tokio-runtime",
-  "rolldown_utils/tokio-runtime",
-]
+tokio-runtime = ["napi/async", "rolldown/tokio-runtime", "rolldown_utils/tokio-runtime"]

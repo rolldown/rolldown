@@ -66,6 +66,20 @@ export async function errorOverlayText(): Promise<string> {
   );
 }
 
+// --- Full-reload detection ---------------------------------------------------
+// The standard "no full reload happened" assertion of this suite: plant a marker
+// on `window`, run the update, then check the marker survived.
+
+/** Plant a marker on `window`; any full page reload wipes it. */
+export function plantReloadMarker(): Promise<unknown> {
+  return page.evaluate(() => ((window as unknown as { __marker?: string }).__marker = 'alive'));
+}
+
+/** Read the marker back; `null` means the page reloaded since planting. */
+export function readReloadMarker(): Promise<string | null> {
+  return page.evaluate(() => (window as unknown as { __marker?: string }).__marker ?? null);
+}
+
 // --- `/_dev/status` helpers, defaulting to the current spec's server --------
 
 export function waitForNextBuild(currentBuildSeq: number, timeoutMs?: number): Promise<DevStatus> {

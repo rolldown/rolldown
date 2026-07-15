@@ -758,6 +758,12 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/playground/hmr-accept-exports:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/test-dev-server/tests/playground/hmr-accept-outside-circular:
     devDependencies:
       '@rolldown/test-dev-server':
@@ -770,7 +776,31 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/playground/hmr-before-full-reload:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-circular-accept-outside:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-circular-self-accept:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/test-dev-server/tests/playground/hmr-client-invalidate:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-dispose-data:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*
@@ -800,7 +830,43 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/playground/hmr-hot-events:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-hot-off:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-invalidate-circular:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-lazy-dynamic-import-accept-dep:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-lazy-dynamic-import-self-accept:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/test-dev-server/tests/playground/hmr-multiple-edits:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-nested-dep-accept:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*
@@ -824,7 +890,19 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/playground/hmr-not-loaded-dynamic-import:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/test-dev-server/tests/playground/hmr-patch-dedup:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-prune:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*

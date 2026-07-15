@@ -1,25 +1,11 @@
-error[E0277]: the trait bound `&'a mut u32: Copy` is not satisfied
- --> tests/ui/pass_harness/fail_mutable_input_read.rs:9:24
-  |
-9 |   type InputRead<'a> = &'a mut u32;
-  |                        ^^^^^^^^^^^ the trait `Copy` is not implemented for `&'a mut u32`
-  |
-help: the trait `Copy` is implemented for `u32`
- --> $RUST/core/src/marker.rs
-  |
-  |           $(#[$($meta)*])* impl< $($($bounds)*)? > $Trait for $T {}
-  |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-...
-  | / marker_impls! {
-  | |     #[stable(feature = "rust1", since = "1.0.0")]
-  | |     Copy for
-  | |         usize, u8, u16, u32, u64, u128,
-... |
-  | | }
-  | |_- in this macro invocation
+error[E0277]: the trait bound `&'a mut Payload: Copy` is not satisfied
+  --> tests/ui/pass_harness/fail_mutable_input_read.rs:11:24
+   |
+11 |   type InputRead<'a> = &'a mut Payload;
+   |                        ^^^^^^^^^^^^^^^ the trait `Copy` is not implemented for `&'a mut Payload`
+   |
 note: required by a bound in `rolldown_utils::pass::Pass::InputRead`
- --> src/pass.rs
-  |
-  |   type InputRead<'a>: Copy;
-  |                       ^^^^ required by this bound in `Pass::InputRead`
-  = note: this error originates in the macro `marker_impls` (in Nightly builds, run with -Z macro-backtrace for more info)
+  --> src/pass.rs
+   |
+   |   type InputRead<'a>: Copy;
+   |                       ^^^^ required by this bound in `Pass::InputRead`

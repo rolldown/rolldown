@@ -172,7 +172,10 @@ pub fn run_pass<P: Pass>(
   owned: P::InputOwned,
 ) -> PassResult<P> {
   const {
-    assert!(size_of::<P>() == 0, "a pass is a name; runtime state belongs in declared slots");
+    // The sole valid index is zero, so code generation rejects every pass that
+    // carries runtime state. Direct indexing keeps a violation anchored here
+    // instead of in the standard library's panic implementation.
+    [()][size_of::<P>()];
   }
 
   let pass_name = type_name::<P>();

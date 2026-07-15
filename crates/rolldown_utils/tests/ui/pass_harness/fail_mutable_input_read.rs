@@ -5,8 +5,10 @@ use rolldown_utils::pass::{Pass, PassCtx, RawPassOutput, RunToken};
 #[derive(Clone, Copy)]
 struct MutableReadPass;
 
+struct Payload;
+
 impl Pass for MutableReadPass {
-  type InputRead<'a> = &'a mut u32;
+  type InputRead<'a> = &'a mut Payload;
   type InputOwned = ();
   type OutputRead = ();
   type OutputOwned = ();

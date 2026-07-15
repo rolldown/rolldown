@@ -1,19 +1,14 @@
-error[E0080]: evaluation panicked: a pass is a name; runtime state belongs in declared slots
- --> $RUST/core/src/panic.rs
+error[E0080]: index out of bounds: the length is 1 but the index is 1
+ --> src/pass.rs
   |
-  |         $crate::panicking::panic_fmt($crate::const_format_args!($($t)+));
-  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation of `rolldown_utils::pass::run_pass::<StatefulPass>::{constant#0}` failed here
-  |
- ::: src/pass.rs
-  |
-  |     assert!(size_of::<P>() == 0, "a pass is a name; runtime state belongs in declared slots");
-  |     ----------------------------------------------------------------------------------------- in this macro invocation
+  |     [()][size_of::<P>()];
+  |     ^^^^^^^^^^^^^^^^^^^^ evaluation of `rolldown_utils::pass::run_pass::<StatefulPass>::{constant#0}` failed here
 
 note: erroneous constant encountered
  --> src/pass.rs
   |
   | /   const {
-  | |     assert!(size_of::<P>() == 0, "a pass is a name; runtime state belongs in declared slots");
+... |
   | |   }
   | |___^
 

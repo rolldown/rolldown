@@ -14,6 +14,18 @@ pub(in crate::stages::link_stage) struct ModuleDependenciesDraft {
 }
 
 impl ModuleDependenciesDraft {
+  pub(in crate::stages::link_stage) fn module_count(&self) -> usize {
+    self.dependencies.len()
+  }
+
+  pub(in crate::stages::link_stage) fn extend(
+    &mut self,
+    module_idx: ModuleIdx,
+    dependencies: impl IntoIterator<Item = ModuleIdx>,
+  ) {
+    self.dependencies[module_idx].extend(dependencies);
+  }
+
   pub(in crate::stages::link_stage) fn from_inner(
     dependencies: IndexVec<ModuleIdx, FxIndexSet<ModuleIdx>>,
   ) -> Self {

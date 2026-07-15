@@ -24,7 +24,6 @@ use crate::{
 
 use super::scan_stage::NormalizedScanStageOutput;
 
-mod bind_imports_and_exports;
 mod create_exports_for_ecma_modules;
 mod cross_module_optimization;
 mod generate_lazy_export;
@@ -47,18 +46,21 @@ use non_splittable_json_defaults::NonSplittableJsonDefaults;
 
 use passes::{
   BindImportsInput, BindImportsOutput, BindImportsOwned, BindImportsPass, CanonicalizeEntriesPass,
-  CollectExternalStarExportsPass, CollectInitialDependenciesPass, CollectResolvedExportsPass,
-  ComputeCjsNamespaceMergesInput, ComputeCjsNamespaceMergesPass, ComputeDynamicExportsInput,
+  CjsRoutingFinal, CollectExternalStarExportsPass, CollectInitialDependenciesPass,
+  CollectResolvedExportsPass, ComputeCjsNamespaceMergesInput, ComputeCjsNamespaceMergesPass,
+  ComputeCjsRoutingInput, ComputeCjsRoutingPass, ComputeDynamicExportsInput,
   ComputeDynamicExportsPass, ComputeModuleExecutionOrderInput, ComputeModuleExecutionOrderPass,
   ComputeTlaPass, ConstantExtractionInput, CreateWrapperDeclarationsInput,
   CreateWrapperDeclarationsOutput, CreateWrapperDeclarationsOwned, CreateWrapperDeclarationsPass,
   DetermineModuleFormatsInput, DetermineModuleFormatsPass, DetermineModuleSideEffectsInput,
   DetermineModuleSideEffectsPass, DynamicExports, EntryPlanDraft, ExtractGlobalConstantsPass,
   FinalizeResolvedExportsPass, GlobalConstantsDraft, IncludedCommonJsExportSymbols,
-  ModuleDependenciesDraft, ModuleFormats, ModuleSideEffects, ModuleWrappers,
+  MemberExprResolutions, ModuleDependenciesDraft, ModuleFormats, ModuleSideEffects, ModuleWrappers,
   NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
-  NormalizeLazyExportsPass, PlanModuleWrappingInput, PlanModuleWrappingPass, ResolvedExports,
-  ShimmedMissingExports, TlaScanFacts, WrapperDeclaration,
+  NormalizeLazyExportsPass, PlanModuleWrappingInput, PlanModuleWrappingPass,
+  ResolveMemberExpressionsInput, ResolveMemberExpressionsOutput, ResolveMemberExpressionsOwned,
+  ResolveMemberExpressionsPass, ResolvedExports, ShimmedMissingExports, TlaScanFacts,
+  WrapperDeclaration,
 };
 
 /// Information about safely merged CJS namespaces for a module
@@ -385,15 +387,12 @@ impl<'a> LinkStage<'a> {
 
   fn project_binding_results(
     &mut self,
-    dependencies: ModuleDependenciesDraft,
     shimmed_missing_exports: ShimmedMissingExports,
     included_commonjs_export_symbols: IncludedCommonJsExportSymbols,
   ) {
-    let dependencies = dependencies.into_inner();
     let shimmed_missing_exports = shimmed_missing_exports.into_slots();
     let included_commonjs_export_symbols = included_commonjs_export_symbols.into_slots();
     let module_count = self.module_table.modules.len();
-    assert_eq!(dependencies.len(), module_count, "dependency layout must match the module table");
     assert_eq!(
       shimmed_missing_exports.len(),
       module_count,
@@ -406,13 +405,10 @@ impl<'a> LinkStage<'a> {
     );
     assert_eq!(self.metas.len(), module_count, "metadata layout must match the module table");
 
-    for (((module_idx, dependencies), shimmed), included_commonjs_exports) in dependencies
-      .into_iter_enumerated()
-      .zip(shimmed_missing_exports)
-      .zip(included_commonjs_export_symbols)
+    for ((module_idx, shimmed), included_commonjs_exports) in
+      shimmed_missing_exports.into_iter_enumerated().zip(included_commonjs_export_symbols)
     {
       let meta = &mut self.metas[module_idx];
-      meta.dependencies = dependencies;
       match (&self.module_table[module_idx], shimmed, included_commonjs_exports) {
         (Module::Normal(_), Some(shimmed), Some(included_commonjs_exports)) => {
           meta.shimmed_missing_exports = shimmed;
@@ -426,6 +422,74 @@ impl<'a> LinkStage<'a> {
           panic!("external module {module_idx:?} has normal-only import-binding slots")
         }
       }
+    }
+  }
+
+  fn project_member_resolution_results(
+    &mut self,
+    dependencies: ModuleDependenciesDraft,
+    resolutions: MemberExprResolutions,
+    cjs_routing: CjsRoutingFinal,
+  ) {
+    let dependencies = dependencies.into_inner();
+    let module_count = self.module_table.modules.len();
+    assert_eq!(dependencies.len(), module_count, "dependency layout must match the module table");
+    assert_eq!(
+      resolutions.module_count(),
+      module_count,
+      "member-resolution layout must match the module table"
+    );
+    let resolutions = resolutions.into_slots();
+    assert_eq!(
+      cjs_routing.module_count(),
+      module_count,
+      "CJS-routing layout must match the module table"
+    );
+    assert_eq!(self.metas.len(), module_count, "metadata layout must match the module table");
+
+    for ((module_idx, dependencies), resolution_slot) in
+      dependencies.into_iter_enumerated().zip(resolutions)
+    {
+      let meta = &mut self.metas[module_idx];
+      meta.dependencies = dependencies;
+      match (&self.module_table[module_idx], resolution_slot) {
+        (Module::Normal(_), Some(resolutions)) => {
+          meta.resolved_member_expr_refs = resolutions;
+        }
+        (Module::External(_), None) => {}
+        (Module::Normal(_), None) => {
+          panic!("normal module {module_idx:?} has no member-resolution slot")
+        }
+        (Module::External(_), Some(_)) => {
+          panic!("external module {module_idx:?} has a member-resolution slot")
+        }
+      }
+    }
+
+    for (importer_idx, routes) in cjs_routing.into_importers() {
+      assert!(
+        self
+          .module_table
+          .modules
+          .get(importer_idx)
+          .is_some_and(|module| module.as_normal().is_some()),
+        "CJS routing importer {importer_idx:?} must be an in-range normal module"
+      );
+      for (symbol_ref, importee_idx) in &routes {
+        assert_eq!(
+          symbol_ref.owner, importer_idx,
+          "CJS namespace route must be owned by its importer"
+        );
+        assert!(
+          self
+            .module_table
+            .modules
+            .get(*importee_idx)
+            .is_some_and(|module| module.as_normal().is_some()),
+          "CJS namespace route target {importee_idx:?} must be an in-range normal module"
+        );
+      }
+      self.metas[importer_idx].import_record_ns_to_cjs_module = routes;
     }
   }
 
@@ -571,13 +635,9 @@ impl<'a> LinkStage<'a> {
       external_namespace_merges,
     } = binding;
     self.symbols = symbols;
-    self.project_binding_results(
-      dependencies,
-      shimmed_missing_exports,
-      included_commonjs_export_symbols,
-    );
+    self.project_binding_results(shimmed_missing_exports, included_commonjs_export_symbols);
     self.external_import_namespace_merger = external_namespace_merges.into_inner();
-    drop((module_formats, dynamic_exports, module_side_effects, execution_orders));
+    drop(execution_orders);
 
     let (_, resolved_exports) = run_infallible_pass(
       FinalizeResolvedExportsPass,
@@ -585,15 +645,44 @@ impl<'a> LinkStage<'a> {
       &self.symbols,
       resolved_exports_draft,
     );
+    let (_, cjs_routing) = run_infallible_pass(
+      ComputeCjsRoutingPass,
+      &mut pass_pipeline,
+      ComputeCjsRoutingInput {
+        module_table: &self.module_table,
+        module_formats: &module_formats,
+        dynamic_exports: &dynamic_exports,
+      },
+      (),
+    );
+    drop(module_formats);
+    let (_, member_resolution) = run_infallible_pass(
+      ResolveMemberExpressionsPass,
+      &mut pass_pipeline,
+      ResolveMemberExpressionsInput {
+        module_table: &self.module_table,
+        stmt_infos: &self.stmt_infos,
+        symbols: &self.symbols,
+        resolved_exports: &resolved_exports,
+        normal_export_chains: &normal_export_chains,
+        module_side_effects: &module_side_effects,
+        dynamic_exports: &dynamic_exports,
+      },
+      ResolveMemberExpressionsOwned {
+        cjs_routing,
+        non_splittable_json_defaults,
+        global_constants,
+        dependencies,
+      },
+    );
+    let ResolveMemberExpressionsOutput { resolutions, cjs_routing, global_constants, dependencies } =
+      member_resolution;
+    drop((dynamic_exports, module_side_effects));
     self.entries = entry_plan.into_legacy_entries();
     self.global_constant_symbol_map = global_constants.into_legacy();
     self.diagnostics.extend(pass_pipeline.into_diagnostics());
-    self.finish_binding(
-      &resolved_exports,
-      normal_export_chains.into_inner(),
-      &non_splittable_json_defaults,
-    );
-    drop(non_splittable_json_defaults);
+    self.normal_symbol_exports_chain_map = normal_export_chains.into_inner();
+    self.project_member_resolution_results(dependencies, resolutions, cjs_routing);
     self.project_resolved_exports(resolved_exports);
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();

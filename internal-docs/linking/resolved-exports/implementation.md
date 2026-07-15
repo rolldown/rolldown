@@ -4,7 +4,7 @@
 
 Resolved exports now have an explicit draft-to-final lifecycle. `CollectResolvedExportsPass` computes each normal module's direct and transitive export-star view after lazy-export normalization has finalized local export identities. It reads only `ModuleTable` and returns owned `ResolvedExportsDraft` maps containing raw symbol references, provenance, and conflict vectors. `BindImportsPass` borrows that draft while it commits every Link-stage symbol link. `FinalizeResolvedExportsPass` then consumes the draft, reads the linked `SymbolRefDb`, and produces owned `ResolvedExports` with both the unchanged raw maps and a sorted canonical non-ambiguous view.
 
-The final artifact remains typed through legacy member-expression resolution. Only after that last typed reader finishes does the driver move both maps into `LinkingMetadata` without cloning. An external slot stays `None`, while a normal module with no exports stays `Some(empty)`.
+The final artifact remains typed through `ResolveMemberExpressionsPass`. Only after that last typed reader finishes does the driver move both maps into `LinkingMetadata` without cloning. An external slot stays `None`, while a normal module with no exports stays `Some(empty)`.
 
 Sources: `crates/rolldown/src/stages/link_stage/passes/collect_resolved_exports.rs` and `crates/rolldown/src/stages/link_stage/passes/finalize_resolved_exports.rs`.
 
@@ -21,13 +21,13 @@ ModuleDependenciesDraft + sealed ModuleExecutionOrders + final ModuleFormats
   → final Link-stage SymbolRefDb links
   → FinalizeResolvedExportsPass
   → raw maps + sorted canonical non-ambiguous maps
-  → legacy member-expression resolution
+  → ResolveMemberExpressionsPass
   → checked no-clone compatibility projection
 ```
 
 `NormalizeLazyExportsPass` is the last operation that may rebuild a lazy or JSON module's `named_exports` and owner-local `SymbolRef` identities. Collection before that point could retain invalid symbols or omit exports created by normalization. `DetermineModuleSideEffectsPass` and collection remain semantically independent after normalization, but their current order is visible in the production pass trace.
 
-The driver may project compact representation facts into legacy fields before collection because remaining legacy code still reads them. It does not end the typed lifetimes needed by binding: `ModuleDependenciesDraft`, sealed `ModuleExecutionOrders`, final `ModuleFormats`, sealed `DynamicExports`, sealed `ModuleSideEffects`, and `ResolvedExportsDraft` all remain available until `BindImportsPass` borrows or consumes them. The driver drops the borrowed compact facts only after binding returns.
+The driver may project compact representation facts into legacy fields before collection because remaining legacy code still reads them. It does not end the typed lifetimes needed by binding: `ModuleDependenciesDraft`, sealed `ModuleExecutionOrders`, final `ModuleFormats`, sealed `DynamicExports`, sealed `ModuleSideEffects`, and `ResolvedExportsDraft` all remain available until `BindImportsPass` borrows or consumes them. Execution orders die after B; formats remain through J; dynamic exports and side effects remain through M; the dependency draft moves from B into M.
 
 `BindImportsPass` is the final production code in Link that calls `SymbolRefDb::link`. It is serial and preserves the existing immediate behavior: each named import is recursively matched, its diagnostic, dependency, namespace alias, and symbol link are committed before the next import, and private external binding groups are committed to facade symbols at the end of the same pass. The pass does not yet separate analysis from commit into a pure event plan; that remains future work. `FinalizeResolvedExportsPass` must therefore run after binding, not merely after collection.
 
@@ -78,9 +78,9 @@ Finalization is independent per module and uses the native parallel iterator wit
 
 For every raw export, finalization compares the primary symbol's canonical ref with every entry in `potentially_ambiguous_symbol_refs`. The name is retained when every ESM ambiguity canonicalizes to the primary and excluded when any remains distinct. `cjs_conflicting_symbol_refs` does not participate in this ESM ambiguity test. The raw `ResolvedExport`, including primary provenance and both conflict vectors, is not rewritten.
 
-The retained `(name, came_from_commonjs)` pairs are sorted and collected into `FxIndexMap<CompactStr, bool>`. `ResolvedExports` therefore provides three narrow read operations to legacy member-expression resolution: raw lookup by module and name, raw iteration for CommonJS constant invalidation, and canonical-name membership. It exposes one consuming slot conversion for the checked compatibility projection.
+The retained `(name, came_from_commonjs)` pairs are sorted and collected into `FxIndexMap<CompactStr, bool>`. `ResolvedExports` therefore provides three narrow read operations to `ResolveMemberExpressionsPass`: raw lookup by module and name, raw iteration for CommonJS constant invalidation, and canonical-name membership. It exposes one consuming slot conversion for the checked compatibility projection.
 
-The projection verifies artifact, module-table, and metadata lengths and the normal-versus-external slot shape. It then moves the raw `FxHashMap` into `resolved_exports` and the sorted `FxIndexMap` into `sorted_and_non_ambiguous_resolved_exports`. This happens only after `finish_binding` completes member-expression resolution, so no clone or early legacy read is needed.
+The projection verifies artifact, module-table, and metadata lengths and the normal-versus-external slot shape. It then moves the raw `FxHashMap` into `resolved_exports` and the sorted `FxIndexMap` into `sorted_and_non_ambiguous_resolved_exports`. This happens only after `ResolveMemberExpressionsPass` finishes, so no clone or early legacy read is needed.
 
 ## Coverage
 
@@ -106,7 +106,7 @@ Finalization tests pin:
 - CJS conflicts being ignored by ESM ambiguity classification while every raw field stays unchanged; and
 - every sorted key being present in the paired raw map.
 
-The sixteen-pass production trace pins `CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass` after normalization and side-effect analysis. Broader Rust, Node, Rollup, deterministic digest, WASM, timing, and memory gates remain in the pass-pipeline validation matrix.
+The eighteen-pass production trace pins `CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass → ComputeCjsRoutingPass → ResolveMemberExpressionsPass` after normalization and side-effect analysis. Broader correctness and build gates remain in the pass-pipeline validation matrix; timing and memory are deferred until the final Link structure.
 
 ## Related
 

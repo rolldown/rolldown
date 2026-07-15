@@ -55,6 +55,20 @@ impl ModuleFormats {
   }
 }
 
+#[cfg(test)]
+pub(super) mod test_support {
+  use oxc_index::IndexVec;
+  use rolldown_common::{ExportsKind, ModuleIdx};
+
+  use super::ModuleFormats;
+
+  pub(in crate::stages::link_stage::passes) fn module_formats(
+    formats: &[Option<ExportsKind>],
+  ) -> ModuleFormats {
+    ModuleFormats { formats: formats.iter().copied().collect::<IndexVec<ModuleIdx, _>>() }
+  }
+}
+
 pub(super) struct WrapperStateDraftSlot {
   pub(super) kind: Option<WrapKind>,
   pub(super) required_by_other_module: bool,

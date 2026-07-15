@@ -30,6 +30,10 @@ impl GlobalConstantsDraft {
   pub(in crate::stages::link_stage) fn into_legacy(self) -> FxHashMap<SymbolRef, ConstExportMeta> {
     self.constants
   }
+
+  pub(in crate::stages::link_stage) fn remove(&mut self, symbol_ref: &SymbolRef) {
+    self.constants.remove(symbol_ref);
+  }
 }
 
 impl Pass for ExtractGlobalConstantsPass {

@@ -8,6 +8,7 @@ mod collect_external_star_exports;
 mod collect_initial_dependencies;
 mod collect_resolved_exports;
 mod compute_cjs_namespace_merges;
+mod compute_cjs_routing;
 mod compute_dynamic_exports;
 mod compute_module_execution_order;
 mod compute_tla;
@@ -18,15 +19,17 @@ mod extract_global_constants;
 mod finalize_resolved_exports;
 mod normalize_lazy_exports;
 mod plan_module_wrapping;
+mod resolve_member_expressions;
 
 pub(super) use bind_imports::{
   BindImportsInput, BindImportsOutput, BindImportsOwned, IncludedCommonJsExportSymbols,
-  ShimmedMissingExports,
+  NormalExportChains, ShimmedMissingExports,
 };
 pub(super) use canonicalize_entries::EntryPlanDraft;
 pub(super) use collect_initial_dependencies::ModuleDependenciesDraft;
 pub(super) use collect_resolved_exports::ResolvedExportsDraft;
 pub(super) use compute_cjs_namespace_merges::{CjsNamespaceMerges, ComputeCjsNamespaceMergesInput};
+pub(super) use compute_cjs_routing::{CjsRoutingDraft, CjsRoutingFinal, ComputeCjsRoutingInput};
 pub(super) use compute_dynamic_exports::{ComputeDynamicExportsInput, DynamicExports};
 pub(super) use compute_module_execution_order::ComputeModuleExecutionOrderInput;
 pub(super) use compute_tla::TlaScanFacts;
@@ -46,6 +49,10 @@ pub(super) use normalize_lazy_exports::{
   NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
 };
 pub(super) use plan_module_wrapping::PlanModuleWrappingInput;
+pub(super) use resolve_member_expressions::{
+  MemberExprResolutions, ResolveMemberExpressionsInput, ResolveMemberExpressionsOutput,
+  ResolveMemberExpressionsOwned,
+};
 
 #[derive(Clone, Copy)]
 pub(super) struct BindImportsPass;
@@ -61,6 +68,9 @@ pub(super) struct CollectInitialDependenciesPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct CollectResolvedExportsPass;
+
+#[derive(Clone, Copy)]
+pub(super) struct ComputeCjsRoutingPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct ComputeCjsNamespaceMergesPass;
@@ -94,6 +104,9 @@ pub(super) struct NormalizeLazyExportsPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct PlanModuleWrappingPass;
+
+#[derive(Clone, Copy)]
+pub(super) struct ResolveMemberExpressionsPass;
 
 #[cfg(test)]
 mod inventory;

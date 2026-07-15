@@ -19,15 +19,17 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 … PlanModuleWrappingPass → CreateWrapperDeclarationsPass → NormalizeLazyExportsPass
   → DetermineModuleSideEffectsPass → representation compatibility projection
   → CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass
-  → legacy member-expression resolution → resolved-export compatibility projection
+  → ComputeCjsRoutingPass → ResolveMemberExpressionsPass → compatibility projections
   → create_exports_for_ecma_modules
   → reference_needed_symbols   ← this pass
   → cross_module_optimization → include_statements → patch_module_dependencies
 ```
 
+This diagram records the current execution order, not a data dependency at every arrow. `reference_needed_symbols` does not read finalized `ResolvedExports`, CJS routing, or member-expression resolutions. X/J/M finish earlier because M must inspect the pre-synthetic statement graph for JSON object mutation and escape facts, while synthetic export creation must hand the updated statement table to this step.
+
 Position is load-bearing in two directions:
 
-1. **`wrap_kind`, `wrapper_ref`, module side effects, and finalized resolved exports must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`, while unwrapped imports read `module.side_effects`. `NormalizeLazyExportsPass` finalizes wrapper and local export identities, and `DetermineModuleSideEffectsPass` consumes the final wrapper and dynamic-export facts. `CollectResolvedExportsPass` creates the raw export-star draft, `BindImportsPass` commits the last Link-stage symbol links while borrowing the retained format, dynamic-export, side-effect, execution-order, and resolved-export facts, and `FinalizeResolvedExportsPass` derives the sorted canonical view. Legacy member-expression resolution reads the final typed artifact, then the driver projects both resolved-export maps before this step runs.
+1. **Final formats, wrappers, dynamic-export facts, side effects, CJS namespace merges, selected options, and the runtime `__require` reference must already exist.** Every CJS/ESM-wrap arm reads the projected `wrap_kind` and `wrapper_ref`; unwrapped imports read module side effects; dynamic reexports read `has_dynamic_exports`; merged CJS namespace imports read `safely_merge_cjs_ns_map`; and the remaining branches read only the exact output, tree-shaking, code-splitting, interop, keep-names, or require-polyfill options they implement. `NormalizeLazyExportsPass` finalizes formats and wrapper identities, `DetermineModuleSideEffectsPass` finalizes side effects, and the earlier CJS namespace merge pass supplies the retained merge map. The intervening B/X/J/M sequence has completed in the current driver but supplies no resolved-export or member-resolution input to this step.
 2. **`include_statements` must run after.** Tree-shaking traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data this pass writes, wrappers and helpers would be silently dropped from the output.
 
 ## Dispatch
@@ -196,7 +198,7 @@ A bug in any of (1)–(4) typically surfaces as a tree-shaking false-positive (h
 ## Related
 
 - [determine-module-exports-kind](../determine-module-exports-kind/implementation.md) — produces `wrap_kind` and `safely_merge_cjs_ns_map`.
-- [resolved exports](../resolved-exports/implementation.md) — documents raw collection, binding's symbol-link barrier, canonical finalization, and the projection consumed before reference analysis.
+- [module side effects](../module-side-effects/implementation.md) — documents the final side-effect fact projected before this step reads it.
 - [module-execution-order](../module-execution-order/implementation.md) — orthogonal; `exec_order` is what `include_statements` uses to walk modules deterministically.
 - `crates/rolldown/src/stages/link_stage/passes/plan_module_wrapping.rs` and `create_wrapper_declarations.rs` — plan wrapping and allocate paired wrapper symbol/statement identities.
 - `crates/rolldown/src/stages/link_stage/passes/normalize_lazy_exports.rs` — preserves or invalidates wrapper identities atomically with lazy-export normalization, then returns final wrapper state for projection.

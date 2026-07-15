@@ -95,9 +95,6 @@ pub struct LinkingMetadata {
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub is_tla_or_contains_tla_dependency: bool,
   pub concatenated_wrapped_module_kind: ConcatenateWrappedModuleKind,
-  /// Used to to track a facade binding referenced cjs module
-  /// included reexport symbol from commonjs module
-  pub named_import_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,
   pub import_record_ns_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,
   /// Currently our symbol link system could only link one symbol to another one, but for commonjs
   /// tree shaking, when one symbol was linked it may not only link the namespace ref symbol, and

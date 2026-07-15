@@ -10,7 +10,7 @@ assert.deepStrictEqual(cjs.default, { default: 'default', foo: 'foo' });
 assert.deepStrictEqual(cjs_default, { default: 'default', foo: 'foo' });
 assert.deepStrictEqual(cjs_default_default, { default: 'default', foo: 'foo' });
 
-// Cannot inline ns.default.default for `import * as ns`. See bind_imports_and_exports.
+// Cannot inline ns.default.default for `import * as ns`. See ResolveMemberExpressionsPass.
 assert.deepStrictEqual(cjs.default.default, 'default');
 assert.deepStrictEqual(cjs_default_default.default, 'default');
 

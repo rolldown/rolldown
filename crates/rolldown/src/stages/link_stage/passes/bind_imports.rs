@@ -76,8 +76,23 @@ pub(in crate::stages::link_stage) struct NormalExportChains {
 }
 
 impl NormalExportChains {
+  pub(in crate::stages::link_stage) fn get(&self, symbol_ref: &SymbolRef) -> Option<&[SymbolRef]> {
+    self.chains.get(symbol_ref).map(Vec::as_slice)
+  }
+
   pub(in crate::stages::link_stage) fn into_inner(self) -> FxHashMap<SymbolRef, Vec<SymbolRef>> {
     self.chains
+  }
+}
+
+#[cfg(test)]
+pub(super) mod test_support {
+  use rustc_hash::FxHashMap;
+
+  use super::NormalExportChains;
+
+  pub(in crate::stages::link_stage::passes) fn empty_normal_export_chains() -> NormalExportChains {
+    NormalExportChains { chains: FxHashMap::default() }
   }
 }
 

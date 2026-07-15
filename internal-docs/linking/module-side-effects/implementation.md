@@ -25,11 +25,12 @@ PlanModuleWrappingPass → CreateWrapperDeclarationsPass           │
                                             retained sealed ModuleSideEffects
                                                                  │
                          CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass
+                           → ComputeCjsRoutingPass → ResolveMemberExpressionsPass
 ```
 
-`NormalizeLazyExportsPass` is the last operation that can invalidate a wrapper declaration, so side-effect analysis must read `ModuleWrappers`, not the earlier wrapper seed, plan, or declaration draft. `CollectResolvedExportsPass` then reads only the final module table; it has no data dependency on the side-effect artifact.
+`NormalizeLazyExportsPass` is the last operation that can invalidate a wrapper declaration, so side-effect analysis must read `ModuleWrappers`, not the earlier wrapper seed, plan, or declaration draft. The lower line records execution order: only `BindImportsPass` and `ResolveMemberExpressionsPass` read the retained side-effect artifact; collection, final export resolution, and CJS routing do not depend on it.
 
-The current representation helper projects normal side-effect slots, final formats, dynamic-export bits, and wrapper declarations into legacy fields before resolved-export collection. Later unmigrated readers require those projections, but their early position is transitional rather than a dependency of collection or binding. Projection does not end every typed lifetime: sealed `ModuleSideEffects`, sealed `DynamicExports`, and final `ModuleFormats` remain live through collection and are borrowed by `BindImportsPass`. Binding uses the side-effect artifact when adding reexport-chain dependencies, then the driver drops these three borrowed compact facts after the pass returns. `ModuleWrappers` has no later typed consumer and is consumed by its compatibility projection.
+The current representation helper projects normal side-effect slots, final formats, dynamic-export bits, and wrapper declarations into legacy fields before resolved-export collection. Later unmigrated readers require those projections, but their early position is transitional rather than a dependency of collection or binding. Projection does not end every typed lifetime: sealed `ModuleSideEffects`, sealed `DynamicExports`, and final `ModuleFormats` remain live through collection and are borrowed by `BindImportsPass`. Binding uses side effects when adding reexport-chain dependencies; formats survive through `ComputeCjsRoutingPass`; side effects and dynamic exports survive through `ResolveMemberExpressionsPass`; each artifact dies immediately after its actual last typed consumer. `ModuleWrappers` has no later typed consumer and is consumed by its compatibility projection.
 
 ## Pass contract
 
@@ -41,7 +42,7 @@ The current representation helper projects normal side-effect slots, final forma
 | `OutputOwned`   | `()`                                  | No mutable domain continues from the pass.                                       |
 | `Error`         | `Infallible`                          | The external link path remains infallible.                                       |
 
-`ModuleSideEffects` exposes only its module count and a read-only `get(ModuleIdx)` operation that copies the small enum value. It has no constructor, iteration-order override, mutable access, clone, or consuming unwrap. The driver walks raw module order and copies only normal-module slots into the unchanged legacy field. External-module fields are not rewritten, matching the previous method. The sealed artifact remains the authoritative typed input for binding and leaves scope only after that last borrower returns.
+`ModuleSideEffects` exposes only its module count and a read-only `get(ModuleIdx)` operation that copies the small enum value. It has no constructor, iteration-order override, mutable access, clone, or consuming unwrap. The driver walks raw module order and copies only normal-module slots into the unchanged legacy field. External-module fields are not rewritten, matching the previous method. The sealed artifact remains authoritative through binding and leaves scope only after its final typed reader, `ResolveMemberExpressionsPass`, adds side-effect dependencies from normal export chains.
 
 ## Exact algorithm
 
@@ -83,7 +84,7 @@ Focused tests pin:
 - the exact export-star predicate; and
 - preservation of `UserDefined`, `Analyzed(true)`, and `NoTreeshake` enum variants.
 
-The sixteen-pass production trace test pins this pass after `NormalizeLazyExportsPass` and before `CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass`. Broader link, Node, Rollup compatibility, deterministic-output, WASM, timing, and memory gates remain part of the pass-pipeline validation rather than being duplicated here.
+The eighteen-pass production trace test pins this pass after `NormalizeLazyExportsPass` and before `CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass → ComputeCjsRoutingPass → ResolveMemberExpressionsPass`. Broader correctness and build gates remain part of the pass-pipeline validation rather than being duplicated here; timing and memory wait for the final Link structure.
 
 ## Related
 

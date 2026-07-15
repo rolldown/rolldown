@@ -32,6 +32,20 @@ impl ModuleSideEffects {
   }
 }
 
+#[cfg(test)]
+pub(super) mod test_support {
+  use oxc_index::IndexVec;
+  use rolldown_common::{ModuleIdx, side_effects::DeterminedSideEffects};
+
+  use super::ModuleSideEffects;
+
+  pub(in crate::stages::link_stage::passes) fn module_side_effects(
+    values: &[DeterminedSideEffects],
+  ) -> ModuleSideEffects {
+    ModuleSideEffects { values: values.iter().copied().collect::<IndexVec<ModuleIdx, _>>() }
+  }
+}
+
 #[derive(Debug, Clone, Copy)]
 enum SideEffectCache {
   None,

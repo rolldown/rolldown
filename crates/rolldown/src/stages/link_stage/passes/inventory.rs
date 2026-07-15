@@ -189,6 +189,15 @@ fn is_wasm_iterator_ext_cfg(attribute: &Attribute) -> bool {
   )
 }
 
+fn is_native_indexed_parallel_iterator_cfg(attribute: &Attribute) -> bool {
+  matches!(
+    &attribute.meta,
+    syn::Meta::List(meta)
+      if meta.path.is_ident("cfg")
+        && meta.tokens.to_string() == "not (target_family = \"wasm\")"
+  )
+}
+
 fn is_wasm_iterator_ext_use(item: &syn::ItemUse) -> bool {
   let UseTree::Path(root) = &item.tree else { return false };
   let UseTree::Path(module) = &*root.tree else { return false };
@@ -199,6 +208,17 @@ fn is_wasm_iterator_ext_use(item: &syn::ItemUse) -> bool {
     && module.ident == "rayon"
     && extension.ident == "IteratorExt"
     && extension.rename == "_"
+}
+
+fn is_native_indexed_parallel_iterator_use(item: &syn::ItemUse) -> bool {
+  let UseTree::Path(root) = &item.tree else { return false };
+  let UseTree::Path(module) = &*root.tree else { return false };
+  let UseTree::Name(extension) = &*module.tree else { return false };
+  matches!(item.vis, Visibility::Inherited)
+    && item.leading_colon.is_none()
+    && root.ident == "rolldown_utils"
+    && module.ident == "rayon"
+    && extension.ident == "IndexedParallelIterator"
 }
 
 fn inspect_attribute(attribute: &Attribute, source: &Path) {
@@ -325,6 +345,12 @@ fn is_bind_imports_macro(mac: &syn::Macro, source: &Path) -> bool {
     .any(|expected| is_exact_path(&mac.path, expected))
 }
 
+fn is_layout_invariant_macro(mac: &syn::Macro, source: &Path) -> bool {
+  (source.ends_with(Path::new("passes/compute_cjs_routing.rs"))
+    || source.ends_with(Path::new("passes/resolve_member_expressions.rs")))
+    && is_exact_path(&mac.path, &["std", "assert_eq"])
+}
+
 impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
   fn visit_item(&mut self, item: &'ast Item) {
     if let Item::Mod(module) = item
@@ -341,8 +367,9 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
       item,
       Item::Use(item)
         if item.attrs.len() == 1
-          && is_wasm_iterator_ext_cfg(&item.attrs[0])
-          && is_wasm_iterator_ext_use(item)
+          && ((is_wasm_iterator_ext_cfg(&item.attrs[0]) && is_wasm_iterator_ext_use(item))
+            || (is_native_indexed_parallel_iterator_cfg(&item.attrs[0])
+              && is_native_indexed_parallel_iterator_use(item)))
     );
 
     reject_named_non_struct_pass(item, self.source);
@@ -440,6 +467,7 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
     assert!(
       is_exact_path(&statement.mac.path, &["std", "debug_assert"])
         || is_bind_imports_macro(&statement.mac, self.source)
+        || is_layout_invariant_macro(&statement.mac, self.source)
         || is_legacy_css_import_invariant(&statement.mac, self.source),
       "{}: block-level statement macro `{}` is forbidden because it can generate a hidden pass declaration",
       self.source.display(),
@@ -459,6 +487,7 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
       is_exact_path(&expression.mac.path, &["std", "matches"])
         || is_exact_path(&expression.mac.path, &["oxc_index", "index_vec"])
         || is_bind_imports_macro(&expression.mac, self.source)
+        || is_layout_invariant_macro(&expression.mac, self.source)
         || is_legacy_css_import_invariant(&expression.mac, self.source),
       "{}: expression macro `{}` is not in the closed production allowlist",
       self.source.display(),
@@ -482,7 +511,9 @@ impl<'ast> Visit<'ast> for InventoryVisitor<'_> {
   }
 
   fn visit_attribute(&mut self, attribute: &'ast Attribute) {
-    if self.allow_wasm_iterator_ext_cfg && is_wasm_iterator_ext_cfg(attribute) {
+    if self.allow_wasm_iterator_ext_cfg
+      && (is_wasm_iterator_ext_cfg(attribute) || is_native_indexed_parallel_iterator_cfg(attribute))
+    {
       return;
     }
     inspect_attribute(attribute, self.source);
@@ -718,6 +749,10 @@ fn inventory_rejects_stateful_and_hidden_pass_shapes() {
     "#[cfg(target_family = \"wasm\")] use external::IteratorExt as _;",
     "#[cfg(target_family = \"wasm\")] pub use rolldown_utils::rayon::IteratorExt as _;",
     "#[cfg(target_family = \"wasm\")] use ::rolldown_utils::rayon::IteratorExt as _;",
+    "#[cfg(not(target_family = \"wasm32\"))] use rolldown_utils::rayon::IndexedParallelIterator;",
+    "#[cfg(not(target_family = \"wasm\"))] use external::IndexedParallelIterator;",
+    "#[cfg(not(target_family = \"wasm\"))] pub use rolldown_utils::rayon::IndexedParallelIterator;",
+    "#[cfg(target_family = \"wasm\")] use rolldown_utils::rayon::IndexedParallelIterator;",
     "#[derive(external::Pass)] pub(super) struct HiddenPass;",
     "use external::Debug; #[derive(Debug)] pub(super) struct HiddenPass;",
     "extern crate external as Debug; #[derive(Debug)] pub(super) struct HiddenPass;",
@@ -762,9 +797,10 @@ fn inventory_accepts_the_required_unit_shape() {
 }
 
 #[test]
-fn inventory_accepts_only_the_exact_wasm_iterator_extension_import() {
+fn inventory_accepts_only_the_exact_conditional_parallel_iterator_imports() {
   let file = syn::parse_file(
-    "#[cfg(target_family = \"wasm\")] use rolldown_utils::rayon::IteratorExt as _;",
+    "#[cfg(target_family = \"wasm\")] use rolldown_utils::rayon::IteratorExt as _;\n\
+     #[cfg(not(target_family = \"wasm\"))] use rolldown_utils::rayon::IndexedParallelIterator;",
   )
   .unwrap_or_else(|error| panic!("valid test source: {error}"));
   let mut declarations = BTreeSet::new();

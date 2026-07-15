@@ -5,7 +5,7 @@
 The `@rolldown/test-dev-server` browser suite drives a real Chromium page against
 the rolldown dev engine (HMR, lazy compilation, error overlay). The server is
 **Vite's full bundle mode** (`experimental.bundledDev`), loaded at runtime from
-the vendored submodule at `packages/test-dev-server/vite` with its `rolldown`
+the vendored submodule at `vite/` (repo root) with its `rolldown`
 resolution linked to the workspace's `packages/rolldown` — the harness adds only
 test instrumentation on top (see [The Vite backend](#the-vite-backend)). It runs
 **in-process**: each spec file starts the dev server inside its own vitest worker
@@ -122,7 +122,7 @@ serving. What the harness does own lives in `src/vite-server.ts`:
   from the submodule's built dist (`loadVite()`), with local structural types
   for the API slice the harness touches. Node-platform fixtures and CI jobs
   that never run browser tests work without the submodule; a missing dist
-  fails with a "run `just setup-test-dev-server-vite`" hint.
+  fails with a "run `just setup-vite`" hint.
 - **Test instrumentation** (`createHarnessPlugin`): the `/_dev/status`
   middleware; `buildSeq` counts `buildStart` plus broadcast
   `update`/`full-reload` payloads and deliberately **not** `error` payloads
@@ -146,26 +146,26 @@ serving. What the harness does own lives in `src/vite-server.ts`:
 
 **The submodule stays byte-pristine.** No tracked-file edits, no patches —
 bumping it is a plain pointer update. Everything environment-specific happens
-in untracked files, via `scripts/setup-vite.mjs`
-(`just setup-test-dev-server-vite`, idempotent, `vp`-only):
+in untracked files, via the shared `scripts/src/setup-vite/` script
+(`just setup-vite`, idempotent, `vp`-only; its checkout step is also reused by
+`packages/vite-tests`):
 
-1. init the submodule, or re-sync a checkout that is not on the pinned commit — so re-running after a submodule bump picks up the new commit (shallow fetch, repo-root cwd),
+1. init the submodule if needed; an existing checkout is built exactly as-is — the script never moves it, so after a pin bump run `git submodule update vite` yourself before re-running,
 2. `vp install --frozen-lockfile` (vp delegates to the submodule's pinned
    pnpm; this also resets a previous step-4 swap, so the build always uses
    Vite's own pinned rolldown),
-3. build `packages/vite` by invoking its pinned rolldown CLI directly (vp's
-   workspace scan trips over Vite's intentionally-broken BOM fixture;
-   `build-types` is skipped — the harness has its own types),
+3. build `packages/vite` via its own `build` script (`vp run build`),
 4. swap `vite/packages/vite/node_modules/rolldown` to a symlink at the
    workspace's `packages/rolldown`, so Vite's dist resolves the local binding
    at runtime. Any install inside the submodule resets this — re-run the
    script.
 
-Repo-wide tools ignore `packages/test-dev-server/vite/**` (a `.gitignore`
+Repo-wide tools ignore `vite/**` (a `.gitignore`
 entry covers gitignore-respecting walkers like oxfmt, plus `.typos.toml` and
 `.ls-lint.json` entries) — a repo-wide `vp fmt --write` must never touch
-submodule files. On CI, only the dev-server workflow runs the setup step;
-every other job needs no submodule.
+submodule files. On CI, the submodule is initialized on demand: the dev-server
+workflow via the setup step, the vite-tests jobs via `run.ts` (which clones the
+checkout locally to run Vite's own suite); every other job needs no submodule.
 
 ### Server entry point (`src/`)
 

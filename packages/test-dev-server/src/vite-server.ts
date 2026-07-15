@@ -16,9 +16,9 @@ import { getDevWatchOptionsForCi } from './utils/get-dev-watch-options-for-ci.js
  *
  * In-memory serving, HMR fan-out, the lazy-bundling endpoint, the error
  * overlay, and the fallback spinner all come from Vite itself. The vendored
- * submodule at `packages/test-dev-server/vite` resolves `rolldown` to the
+ * submodule at `vite/` (repo root) resolves `rolldown` to the
  * workspace's `packages/rolldown` via a node_modules symlink swap (see
- * `scripts/setup-vite.mjs`; the submodule itself stays pristine), so running
+ * `just setup-vite`; the submodule itself stays pristine), so running
  * these tests exercises the local rolldown binding through the real Vite
  * integration.
  *
@@ -42,7 +42,7 @@ import { getDevWatchOptionsForCi } from './utils/get-dev-watch-options-for-ci.js
 // vendored submodule stays pristine, so merge the options here instead:
 // Vite's `dev()` helper looks up `DevEngine.create` at call time, and the
 // vendored dist resolves `rolldown` to this same workspace package (see
-// scripts/setup-vite.mjs), so wrapping the static covers Vite's engine too.
+// `just setup-vite`), so wrapping the static covers Vite's engine too.
 // Vite's own options win the merge, keeping its `skipWrite: true`.
 const originalDevEngineCreate = DevEngine.create.bind(DevEngine);
 DevEngine.create = ((...args: Parameters<typeof DevEngine.create>) => {
@@ -106,8 +106,11 @@ const packageRoot = nodePath.resolve(
   nodePath.dirname(nodeUrl.fileURLToPath(import.meta.url)),
   '..',
 );
+// The vendored Vite submodule lives at the repo root: packages/test-dev-server → ../../vite.
 const viteDistEntry = nodePath.join(
   packageRoot,
+  '..',
+  '..',
   'vite',
   'packages',
   'vite',
@@ -121,7 +124,7 @@ async function loadVite(): Promise<{
 }> {
   if (!nodeFs.existsSync(viteDistEntry)) {
     throw new Error(
-      `Vite dist not found at ${viteDistEntry} — the browser platform runs on the vendored Vite submodule. Run \`just setup-test-dev-server-vite\` first.`,
+      `Vite dist not found at ${viteDistEntry} — the browser platform runs on the vendored Vite submodule. Run \`just setup-vite\` first.`,
     );
   }
   return import(nodeUrl.pathToFileURL(viteDistEntry).href) as Promise<{

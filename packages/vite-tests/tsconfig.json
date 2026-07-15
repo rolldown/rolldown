@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["run.ts"],
+  "include": ["run.ts", "../../scripts/src/setup-vite/checkout.ts"],
   "compilerOptions": {
     "composite": true,
     "resolveJsonModule": true,

@@ -194,4 +194,4 @@ nul
 
 # Vendored Vite submodule (test-dev-server browser backend): the gitlink is
 # tracked, but repo tools must not lint/format the submodule contents.
-/packages/test-dev-server/vite/
+/vite/

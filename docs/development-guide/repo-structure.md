@@ -17,7 +17,11 @@ We store all the Node.js packages in this directory.
 - `/rolldown` Node.js package for the project.
 - `/bench` Benchmark programs for Node.js side of the project.
 - `/rollup-tests` Adapter for running rollup tests with rolldown.
-- `/vite-tests` Script to run tests in rolldown-vite repo with local rolldown.
+- `/vite-tests` Script to run Vite's own test suite with local rolldown, on a throwaway clone of the root `/vite` submodule.
+
+# `/vite`
+
+The vendored [vitejs/vite](https://github.com/vitejs/vite) submodule — the single Vite checkout shared by the dev-server test harness (`packages/test-dev-server`) and by `packages/vite-tests`. It must stay pristine: never edit tracked files inside it.
 
 # `/examples`
 

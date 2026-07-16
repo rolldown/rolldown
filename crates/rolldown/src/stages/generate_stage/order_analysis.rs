@@ -1060,7 +1060,7 @@ impl GenerateStage<'_> {
         .is_some_and(|refs| refs.iter().any(|ref_| current.contains(&ref_.owner)))
   }
 
-  fn is_order_sensitive(&self, module_idx: ModuleIdx) -> bool {
+  pub(super) fn is_order_sensitive(&self, module_idx: ModuleIdx) -> bool {
     if module_idx == self.link_output.runtime.id() {
       return false;
     }
@@ -1105,7 +1105,7 @@ impl GenerateStage<'_> {
     )
   }
 
-  fn is_order_wrap_eligible(&self, module_idx: ModuleIdx) -> bool {
+  pub(super) fn is_order_wrap_eligible(&self, module_idx: ModuleIdx) -> bool {
     if module_idx == self.link_output.runtime.id() {
       return false;
     }

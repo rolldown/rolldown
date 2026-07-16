@@ -366,7 +366,7 @@ pub(in crate::stages::link_stage) fn run_tree_shake(
     oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); module_count];
   let mut used_symbol_refs = UsedSymbolRefsBuilder::default();
   let mut used_external_symbols = UsedExternalSymbols::default();
-  let mut entries = entry_plan.into_entries();
+  let entries = entry_plan.into_entries();
   let entry_module_idxs = entries
     .values()
     .flatten()
@@ -404,91 +404,94 @@ pub(in crate::stages::link_stage) fn run_tree_shake(
     dev_mode: input.options.dev_mode,
   };
 
-  let (user_entries, mut dynamic_entries): (Vec<_>, Vec<_>) = std::mem::take(&mut entries)
-    .into_values()
-    .flatten()
-    .partition(|entry| entry.kind.is_user_defined());
-  let mut bailout_modules = FxHashSet::default();
-  let mut inclusion_changed = false;
-  let mut json_non_self_references = FxHashMap::default();
-  let mut body_demand_swept = FxHashSet::default();
-  let mut pending = Vec::<WorkItem>::new();
-  let mut dead_dynamic_imports = Vec::new();
-  let mut included_dynamic_entries = FxHashSet::default();
-  {
-    let mut context = InclusionCoreContext {
-      facts: &facts,
-      modules: &input.module_table.modules,
-      stmt_infos: input.stmt_infos,
-      symbols: input.symbols,
-      is_included_vec: &mut stmt_included,
-      is_module_included_vec: &mut module_included,
-      config,
-      runtime_idx: input.runtime.id(),
-      used_symbol_refs: &mut used_symbol_refs,
-      used_external_symbols: &mut used_external_symbols,
-      bailout_cjs_tree_shaking_modules: &mut bailout_modules,
-      module_inclusion_changed: &mut inclusion_changed,
-      module_namespace_included_reason: &mut phase_one_namespace_reasons,
-      json_module_none_self_reference_included_symbol: &mut json_non_self_references,
-      entry_module_idxs: &entry_module_idxs,
-      body_demand_keys: &body_demand_keys,
-      body_demand_swept: &mut body_demand_swept,
-      pending: &mut pending,
-    };
-    for entry in &user_entries {
-      let Some(module) = input.module_table[entry.idx].as_normal() else {
-        continue;
+  let (retained_entries, json_non_self_references, dead_dynamic_imports) = {
+    let (user_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
+      entries.into_values().flatten().partition(|entry| entry.kind.is_user_defined());
+    let mut bailout_modules = FxHashSet::default();
+    let mut inclusion_changed = false;
+    let mut json_non_self_references = FxHashMap::default();
+    let mut body_demand_swept = FxHashSet::default();
+    let mut pending = Vec::<WorkItem>::new();
+    let mut dead_dynamic_imports = Vec::new();
+    let mut included_dynamic_entries = FxHashSet::default();
+    {
+      let mut context = InclusionCoreContext {
+        facts: &facts,
+        modules: &input.module_table.modules,
+        stmt_infos: input.stmt_infos,
+        symbols: input.symbols,
+        is_included_vec: &mut stmt_included,
+        is_module_included_vec: &mut module_included,
+        config,
+        runtime_idx: input.runtime.id(),
+        used_symbol_refs: &mut used_symbol_refs,
+        used_external_symbols: &mut used_external_symbols,
+        bailout_cjs_tree_shaking_modules: &mut bailout_modules,
+        module_inclusion_changed: &mut inclusion_changed,
+        module_namespace_included_reason: &mut phase_one_namespace_reasons,
+        json_module_none_self_reference_included_symbol: &mut json_non_self_references,
+        entry_module_idxs: &entry_module_idxs,
+        body_demand_keys: &body_demand_keys,
+        body_demand_swept: &mut body_demand_swept,
+        pending: &mut pending,
       };
-      context.bailout_cjs_tree_shaking_modules.insert(module.idx);
-      for root in input.entry_export_roots.get(entry.idx).unwrap_or_default() {
-        if context.modules[root.symbol_ref.owner].as_normal().is_some() {
-          include_declaring_statements(&mut context, &root.symbol_ref);
-          include_symbol_and_check_cjs_bailout(
-            &mut context,
-            root.symbol_ref,
-            super::tree_shaking::SymbolIncludeReason::EntryExport,
-          );
-        }
-      }
-      include_module(&mut context, module);
-    }
-
-    let cycled =
-      sort_dynamic_entries_by_topological_order(&input.module_table.modules, &mut dynamic_entries);
-    loop {
-      *context.module_inclusion_changed = false;
-      let bailout = std::mem::take(context.bailout_cjs_tree_shaking_modules);
-      include_cjs_bailout_exports(&mut context, bailout);
-      for entry in &dynamic_entries {
-        if included_dynamic_entries.contains(&entry.idx) {
+      for entry in &user_entries {
+        let Some(module) = input.module_table[entry.idx].as_normal() else {
           continue;
+        };
+        context.bailout_cjs_tree_shaking_modules.insert(module.idx);
+        for root in input.entry_export_roots.get(entry.idx).unwrap_or_default() {
+          if context.modules[root.symbol_ref.owner].as_normal().is_some() {
+            include_declaring_statements(&mut context, &root.symbol_ref);
+            include_symbol_and_check_cjs_bailout(
+              &mut context,
+              root.symbol_ref,
+              super::tree_shaking::SymbolIncludeReason::EntryExport,
+            );
+          }
         }
-        if process_dynamic_entry(entry, &cycled, input, &mut context, &mut dead_dynamic_imports) {
-          included_dynamic_entries.insert(entry.idx);
-        }
+        include_module(&mut context, module);
       }
-      if !*context.module_inclusion_changed {
-        break;
-      }
-    }
-    preserve_reexported_interfaces(&mut context);
-  }
-  dynamic_entries.retain(|entry| included_dynamic_entries.contains(&entry.idx));
 
-  let retained_entries = RetainedEntries::new(
-    user_entries
-      .into_iter()
-      .chain(if input.options.code_splitting_disabled {
-        itertools::Either::Left(std::iter::empty())
-      } else {
-        itertools::Either::Right(dynamic_entries.into_iter())
-      })
-      .fold(FxIndexMap::default(), |mut entries, entry| {
-        entries.entry(entry.idx).or_default().push(entry);
-        entries
-      }),
-  );
+      let cycled = sort_dynamic_entries_by_topological_order(
+        &input.module_table.modules,
+        &mut dynamic_entries,
+      );
+      loop {
+        *context.module_inclusion_changed = false;
+        let bailout = std::mem::take(context.bailout_cjs_tree_shaking_modules);
+        include_cjs_bailout_exports(&mut context, bailout);
+        for entry in &dynamic_entries {
+          if included_dynamic_entries.contains(&entry.idx) {
+            continue;
+          }
+          if process_dynamic_entry(entry, &cycled, input, &mut context, &mut dead_dynamic_imports) {
+            included_dynamic_entries.insert(entry.idx);
+          }
+        }
+        if !*context.module_inclusion_changed {
+          break;
+        }
+      }
+      preserve_reexported_interfaces(&mut context);
+    }
+    dynamic_entries.retain(|entry| included_dynamic_entries.contains(&entry.idx));
+
+    let retained_entries = RetainedEntries::new(
+      user_entries
+        .into_iter()
+        .chain(if input.options.code_splitting_disabled {
+          itertools::Either::Left(std::iter::empty())
+        } else {
+          itertools::Either::Right(dynamic_entries.into_iter())
+        })
+        .fold(FxIndexMap::default(), |mut entries, entry| {
+          entries.entry(entry.idx).or_default().push(entry);
+          entries
+        }),
+    );
+    (retained_entries, json_non_self_references, dead_dynamic_imports)
+  };
   let runtime_requirements = normalize_runtime_requirements(
     input.module_table,
     input.statement_runtime_requirements,
@@ -498,14 +501,14 @@ pub(in crate::stages::link_stage) fn run_tree_shake(
   let depended_runtime_helpers =
     collect_depended_runtime_helpers(input, &module_included, &runtime_requirements);
 
-  let mut phase_two_bailout = FxHashSet::default();
-  let mut phase_two_changed = false;
-  let mut phase_two_namespace_reasons =
-    oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); module_count];
-  let mut phase_two_json = FxHashMap::default();
-  let mut phase_two_body_demand_swept = FxHashSet::default();
-  let mut phase_two_pending = Vec::new();
   {
+    let mut phase_two_bailout = FxHashSet::default();
+    let mut phase_two_changed = false;
+    let mut phase_two_namespace_reasons =
+      oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); module_count];
+    let mut phase_two_json = FxHashMap::default();
+    let mut phase_two_body_demand_swept = FxHashSet::default();
+    let mut phase_two_pending = Vec::new();
     let mut runtime_context = InclusionCoreContext {
       facts: &facts,
       modules: &input.module_table.modules,

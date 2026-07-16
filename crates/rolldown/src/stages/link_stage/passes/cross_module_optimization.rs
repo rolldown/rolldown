@@ -58,6 +58,18 @@ impl UnreachableDynamicImports {
   }
 }
 
+#[cfg(test)]
+pub(super) mod test_support {
+  use rustc_hash::FxHashSet;
+
+  use super::UnreachableDynamicImports;
+
+  pub(in crate::stages::link_stage::passes) fn empty_unreachable_dynamic_imports()
+  -> UnreachableDynamicImports {
+    UnreachableDynamicImports { nodes: FxHashSet::default() }
+  }
+}
+
 /// One-call ownership envelope. The driver must destructure this immediately; no pass accepts it.
 pub(in crate::stages::link_stage) struct CrossModuleOptimizationOutput {
   pub stmt_infos: IndexStmtInfos,

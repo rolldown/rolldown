@@ -119,9 +119,20 @@ pub(super) mod test_support {
   use oxc_str::CompactStr;
   use rolldown_common::ModuleIdx;
   use rolldown_common::SymbolRef;
-  use rustc_hash::FxHashMap;
+  use rustc_hash::{FxHashMap, FxHashSet};
 
-  use super::{NormalExportChains, ShimmedMissingExports};
+  use super::{IncludedCommonJsExportSymbols, NormalExportChains, ShimmedMissingExports};
+
+  pub(in crate::stages::link_stage::passes) fn included_commonjs_export_symbols(
+    slots: impl IntoIterator<Item = Option<Vec<SymbolRef>>>,
+  ) -> IncludedCommonJsExportSymbols {
+    IncludedCommonJsExportSymbols {
+      slots: slots
+        .into_iter()
+        .map(|slot| slot.map(FxHashSet::from_iter))
+        .collect::<IndexVec<ModuleIdx, _>>(),
+    }
+  }
 
   pub(in crate::stages::link_stage::passes) fn empty_normal_export_chains() -> NormalExportChains {
     normal_export_chains([])

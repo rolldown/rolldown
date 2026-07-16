@@ -8,27 +8,35 @@ impl<'text> MagicString<'text> {
     self
   }
 
-  pub fn prepend_left(&mut self, text_index: u32, content: impl Into<CowStr<'text>>) -> &mut Self {
-    // Note: by_end_mut only errors when splitting an already-edited chunk,
-    // but prepend operations don't require splitting edited chunks in practice.
-    // We use expect here as this is an internal invariant.
-    match self.by_end_mut(text_index).expect("prepend_left: unexpected split error") {
+  /// # Errors
+  /// Returns `Err` if `text_index` falls inside a chunk that has already been edited, since the
+  /// chunk cannot be split there.
+  pub fn prepend_left(
+    &mut self,
+    text_index: u32,
+    content: impl Into<CowStr<'text>>,
+  ) -> Result<&mut Self, String> {
+    match self.by_end_mut(text_index)? {
       Some(chunk) => chunk.prepend_outro(content.into()),
       None => self.prepend_intro(content.into()),
     }
-    self
+    Ok(self)
   }
 
-  pub fn prepend_right(&mut self, text_index: u32, content: impl Into<CowStr<'text>>) -> &mut Self {
-    // Note: by_start_mut only errors when splitting an already-edited chunk,
-    // but prepend operations don't require splitting edited chunks in practice.
-    // We use expect here as this is an internal invariant.
-    match self.by_start_mut(text_index).expect("prepend_right: unexpected split error") {
+  /// # Errors
+  /// Returns `Err` if `text_index` falls inside a chunk that has already been edited, since the
+  /// chunk cannot be split there.
+  pub fn prepend_right(
+    &mut self,
+    text_index: u32,
+    content: impl Into<CowStr<'text>>,
+  ) -> Result<&mut Self, String> {
+    match self.by_start_mut(text_index)? {
       Some(chunk) => {
         chunk.prepend_intro(content.into());
       }
       None => self.prepend_outro(content.into()),
     }
-    self
+    Ok(self)
   }
 }

@@ -155,6 +155,20 @@ impl Utf16ToByteMapper {
     self.get(utf16_offset).map(|e| e.byte_offset)
   }
 
+  /// For a UTF-16 index that lands on a low surrogate — i.e. strictly inside a surrogate
+  /// pair — returns the byte span of the supplementary character containing it.
+  /// Character-boundary indices return `None`.
+  fn surrogate_interior_char_span(&self, utf16_offset: u32) -> Option<(u32, u32)> {
+    let entry = self.get(utf16_offset)?;
+    if !entry.is_low_surrogate() {
+      return None;
+    }
+    // A low surrogate is always preceded by its high surrogate, whose byte offset is the
+    // character's start; the low surrogate's own byte offset is the character's end.
+    let start = self.entries[utf16_offset as usize - 1].byte_offset;
+    Some((start, entry.byte_offset))
+  }
+
   /// Returns the UTF-16 code unit count of the original string.
   /// This matches JavaScript's `String.prototype.length`.
   fn utf16_len(&self) -> i64 {
@@ -579,6 +593,21 @@ impl BindingMagicString<'_> {
     index.saturating_add(self.offset)
   }
 
+  /// A UTF-16 index inside a surrogate pair has no byte equivalent. `magic-string` splits
+  /// the chunk there (into lone surrogates, which UTF-8 cannot hold), so on unedited content
+  /// we round to the character boundary instead — but on an edited chunk `magic-string`
+  /// throws, and rounding would swallow that error and place content at a boundary the
+  /// caller never named. `utf16_index` must already have `self.offset` applied.
+  fn reject_surrogate_split_of_edited_chunk(&self, utf16_index: u32) -> napi::Result<()> {
+    if let Some((start, end)) = self.utf16_to_byte_mapper.surrogate_interior_char_span(utf16_index)
+    {
+      if self.inner.is_range_within_edited_chunk(start, end) {
+        return Err(napi::Error::from_reason("Cannot split a chunk that has already been edited"));
+      }
+    }
+    Ok(())
+  }
+
   #[napi]
   pub fn replace<'s>(
     &'s mut self,
@@ -635,9 +664,11 @@ impl BindingMagicString<'_> {
     content: String,
   ) -> napi::Result<This<'s>> {
     // Match original magic-string: out-of-bound indices fall through to prepend_intro
-    match self.utf16_to_byte_mapper.utf16_to_byte(self.apply_offset_u32(index)?) {
+    let index = self.apply_offset_u32(index)?;
+    self.reject_surrogate_split_of_edited_chunk(index)?;
+    match self.utf16_to_byte_mapper.utf16_to_byte(index) {
       Some(byte_index) => {
-        self.inner.prepend_left(byte_index, content);
+        self.inner.prepend_left(byte_index, content).map_err(napi::Error::from_reason)?;
       }
       None => {
         self.inner.prepend(content);
@@ -654,9 +685,11 @@ impl BindingMagicString<'_> {
     content: String,
   ) -> napi::Result<This<'s>> {
     // Match original magic-string: out-of-bound indices fall through to prepend_outro
-    match self.utf16_to_byte_mapper.utf16_to_byte(self.apply_offset_u32(index)?) {
+    let index = self.apply_offset_u32(index)?;
+    self.reject_surrogate_split_of_edited_chunk(index)?;
+    match self.utf16_to_byte_mapper.utf16_to_byte(index) {
       Some(byte_index) => {
-        self.inner.prepend_right(byte_index, content);
+        self.inner.prepend_right(byte_index, content).map_err(napi::Error::from_reason)?;
       }
       None => {
         self.inner.prepend_outro(content);
@@ -673,9 +706,11 @@ impl BindingMagicString<'_> {
     content: String,
   ) -> napi::Result<This<'s>> {
     // Match original magic-string: out-of-bound indices fall through to append_intro
-    match self.utf16_to_byte_mapper.utf16_to_byte(self.apply_offset_u32(index)?) {
+    let index = self.apply_offset_u32(index)?;
+    self.reject_surrogate_split_of_edited_chunk(index)?;
+    match self.utf16_to_byte_mapper.utf16_to_byte(index) {
       Some(byte_index) => {
-        self.inner.append_left(byte_index, content);
+        self.inner.append_left(byte_index, content).map_err(napi::Error::from_reason)?;
       }
       None => {
         self.inner.append_intro(content);
@@ -692,9 +727,11 @@ impl BindingMagicString<'_> {
     content: String,
   ) -> napi::Result<This<'s>> {
     // Match original magic-string: out-of-bound indices fall through to append_outro
-    match self.utf16_to_byte_mapper.utf16_to_byte(self.apply_offset_u32(index)?) {
+    let index = self.apply_offset_u32(index)?;
+    self.reject_surrogate_split_of_edited_chunk(index)?;
+    match self.utf16_to_byte_mapper.utf16_to_byte(index) {
       Some(byte_index) => {
-        self.inner.append_right(byte_index, content);
+        self.inner.append_right(byte_index, content).map_err(napi::Error::from_reason)?;
       }
       None => {
         self.inner.append(content);
@@ -860,7 +897,7 @@ impl BindingMagicString<'_> {
     this: This<'s>,
     indentor: Option<String>,
     options: Option<BindingIndentOptions>,
-  ) -> This<'s> {
+  ) -> napi::Result<This<'s>> {
     // Per-call exclude takes priority; fall back to constructor's indentExclusionRanges.
     let explicit_exclude = options.and_then(|opts| opts.exclude);
     let exclude_ranges = if let Some(ref e) = explicit_exclude {
@@ -871,11 +908,14 @@ impl BindingMagicString<'_> {
       vec![]
     };
 
-    self.inner.indent_with(string_wizard::IndentOptions {
-      indentor: indentor.as_deref(),
-      exclude: &exclude_ranges,
-    });
-    this
+    self
+      .inner
+      .indent_with(string_wizard::IndentOptions {
+        indentor: indentor.as_deref(),
+        exclude: &exclude_ranges,
+      })
+      .map_err(napi::Error::from_reason)?;
+    Ok(this)
   }
 
   /// Trims whitespace or specified characters from the start and end.

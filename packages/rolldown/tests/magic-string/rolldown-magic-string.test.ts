@@ -125,6 +125,50 @@ describe('hasChanged', () => {
   });
 });
 
+describe('splitting an already-edited chunk', () => {
+  // These four used to abort the process: `append_left`/`append_right`/`prepend_left`/
+  // `prepend_right` called `.expect("unexpected split error")` on the assumption that
+  // appends never split an edited chunk. They do, and a Rust panic across the FFI boundary
+  // takes the whole process down instead of surfacing as a catchable error.
+  // magic-string throws `Cannot split a chunk that has already been edited`.
+  for (const method of ['appendLeft', 'appendRight', 'prependLeft', 'prependRight'] as const) {
+    it(`${method}() throws instead of panicking`, () => {
+      const s = new MagicString('abcdef');
+      s.overwrite(0, 6, 'XYZ');
+      assert.throws(() => s[method](3, '!'), /already been edited/);
+    });
+  }
+
+  it('leaves the instance usable after the error', () => {
+    const s = new MagicString('abcdef');
+    s.overwrite(0, 6, 'XYZ');
+    assert.throws(() => s.appendLeft(3, '!'), /already been edited/);
+    assert.strictEqual(s.toString(), 'XYZ');
+  });
+
+  // A UTF-16 index inside a surrogate pair (index 1 of '🤷') has no byte equivalent, so the
+  // index-to-byte mapper rounds it to the character's end — which is the edited chunk's
+  // *boundary*, silently bypassing the split error above. magic-string splits mid-pair and
+  // throws just the same as at any other interior position.
+  for (const method of ['appendLeft', 'appendRight', 'prependLeft', 'prependRight'] as const) {
+    it(`${method}() throws for a surrogate-pair position inside an edited chunk`, () => {
+      const s = new MagicString('🤷');
+      s.overwrite(0, 2, 'X');
+      assert.throws(() => s[method](1, '!'), /already been edited/);
+    });
+  }
+
+  // Contrast, passes either way by design: on *unedited* content magic-string splits the
+  // pair into lone surrogates, which UTF-8 cannot represent — rounding to the character
+  // boundary is our documented stand-in. Throwing on every surrogate-pair position would
+  // regress inserts magic-string accepts.
+  it('appendLeft() at a surrogate-pair position on unedited content still succeeds', () => {
+    const s = new MagicString('🤷');
+    s.appendLeft(1, '!');
+    assert.strictEqual(s.toString(), '🤷!');
+  });
+});
+
 describe('offset', () => {
   describe('underflow guard — negative (index + offset) must throw, not panic', () => {
     it('remove() throws when offset causes index underflow', () => {

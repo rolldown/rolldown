@@ -19,7 +19,7 @@ impl<'text> MagicStringExt<'text> for MagicString<'text> {
   }
   /// Shortcut for `indent_with(IndentOptions { indent_str: Some(indent_str), ..Default::default() })`
   fn indent_str(&mut self, indent_str: &str) -> &mut Self {
-    self.indent_with(IndentOptions { indentor: Some(indent_str), ..Default::default() })
+    self.indent_with(IndentOptions { indentor: Some(indent_str), ..Default::default() }).unwrap()
   }
 }
 
@@ -55,40 +55,40 @@ mod prepend_append_left_right {
   #[test]
   fn preserves_intended_order() {
     let mut s = MagicString::new("0123456789");
-    s.append_left(5, "A");
+    s.append_left(5, "A").unwrap();
     assert_eq!(s.to_string(), "01234A56789");
-    s.prepend_right(5, "a");
-    s.prepend_right(5, "b");
-    s.append_left(5, "B");
-    s.append_left(5, "C");
-    s.prepend_right(5, "c");
+    s.prepend_right(5, "a").unwrap();
+    s.prepend_right(5, "b").unwrap();
+    s.append_left(5, "B").unwrap();
+    s.append_left(5, "C").unwrap();
+    s.prepend_right(5, "c").unwrap();
 
     assert_eq!(s.to_string(), "01234ABCcba56789");
 
-    s.prepend_left(5, "<");
-    s.prepend_left(5, "{");
+    s.prepend_left(5, "<").unwrap();
+    s.prepend_left(5, "{").unwrap();
     assert_eq!(s.to_string(), "01234{<ABCcba56789");
 
-    s.append_right(5, ">");
-    s.append_right(5, "}");
+    s.append_right(5, ">").unwrap();
+    s.append_right(5, "}").unwrap();
     assert_eq!(s.to_string(), "01234{<ABCcba>}56789");
 
-    s.append_left(5, "(");
-    s.append_left(5, "[");
+    s.append_left(5, "(").unwrap();
+    s.append_left(5, "[").unwrap();
     assert_eq!(s.to_string(), "01234{<ABC([cba>}56789");
 
-    s.prepend_right(5, ")");
-    s.prepend_right(5, "]");
+    s.prepend_right(5, ")").unwrap();
+    s.prepend_right(5, "]").unwrap();
     assert_eq!(s.to_string(), "01234{<ABC([])cba>}56789");
   }
 
   #[test]
   fn preserves_intended_order_at_beginning_of_string() {
     let mut s = MagicString::new("x");
-    s.append_left(0, "1");
-    s.prepend_left(0, "2");
-    s.append_left(0, "3");
-    s.prepend_left(0, "4");
+    s.append_left(0, "1").unwrap();
+    s.prepend_left(0, "2").unwrap();
+    s.append_left(0, "3").unwrap();
+    s.prepend_left(0, "4").unwrap();
 
     assert_eq!(s.to_string(), "4213x");
   }
@@ -96,10 +96,10 @@ mod prepend_append_left_right {
   #[test]
   fn preserves_intended_order_at_end_of_string() {
     let mut s = MagicString::new("x");
-    s.append_right(1, "1");
-    s.prepend_right(1, "2");
-    s.append_right(1, "3");
-    s.prepend_right(1, "4");
+    s.append_right(1, "1").unwrap();
+    s.prepend_right(1, "2").unwrap();
+    s.append_right(1, "3").unwrap();
+    s.prepend_right(1, "4").unwrap();
 
     assert_eq!(s.to_string(), "x4213");
   }
@@ -174,9 +174,11 @@ mod relocate {
   fn ignores_redundant_move() {
     let mut s = MagicString::new("abcdefghijkl");
     s.prepend_right(9, "X")
+      .unwrap()
       .relocate(9, 12, 6)
       .unwrap()
       .append_left(12, "Y")
+      .unwrap()
       // this is redundant – [6,9] is already after [9,12]
       .relocate(6, 9, 12)
       .unwrap();
@@ -250,7 +252,7 @@ mod relocate {
   #[test]
   fn moves_content_inserted_at_end_of_range() {
     let mut s = MagicString::new("abcdefghijkl");
-    s.append_left(6, "X").relocate(3, 6, 9).unwrap();
+    s.append_left(6, "X").unwrap().relocate(3, 6, 9).unwrap();
     assert_eq!(s.to_string(), "abcghidefXjkl");
   }
 }
@@ -263,7 +265,7 @@ mod indent {
   #[test]
   fn should_indent_content_with_a_single_tab_character_by_default() {
     let mut s = MagicString::new("abc\ndef\nghi\njkl");
-    s.indent();
+    s.indent().unwrap();
     assert_eq!(s.to_string(), "\tabc\n\tdef\n\tghi\n\tjkl")
   }
 
@@ -271,29 +273,29 @@ mod indent {
   fn should_indent_content_with_a_single_tab_character_by_default2() {
     let mut s = MagicString::new("");
     s.prepend("abc\ndef\nghi\njkl");
-    s.indent();
+    s.indent().unwrap();
     assert_eq!(s.to_string(), "\tabc\n\tdef\n\tghi\n\tjkl");
     let mut s = MagicString::new("");
     s.prepend("abc\ndef");
     s.append("\nghi\njkl");
-    s.indent();
+    s.indent().unwrap();
     assert_eq!(s.to_string(), "\tabc\n\tdef\n\tghi\n\tjkl")
   }
 
   #[test]
   fn should_indent_content_using_existing_indentation_as_a_guide() {
     let mut s = MagicString::new("abc\n  def\n    ghi\n  jkl");
-    s.indent();
+    s.indent().unwrap();
     assert_eq!(s.to_string(), "  abc\n    def\n      ghi\n    jkl");
 
-    s.indent();
+    s.indent().unwrap();
     assert_eq!(s.to_string(), "    abc\n      def\n        ghi\n      jkl");
   }
 
   #[test]
   fn should_disregard_single_space_indentation_when_auto_indenting() {
     let mut s = MagicString::new("abc\n/**\n *comment\n */");
-    s.indent();
+    s.indent().unwrap();
     assert_eq!(s.to_string(), "\tabc\n\t/**\n\t *comment\n\t */");
   }
 
@@ -316,9 +318,9 @@ mod indent {
   #[test]
   fn should_prevent_excluded_characters_from_being_indented() {
     let mut s = MagicString::new("abc\ndef\nghi\njkl");
-    s.indent_with(IndentOptions { indentor: Some("  "), exclude: &[(7, 15)] });
+    s.indent_with(IndentOptions { indentor: Some("  "), exclude: &[(7, 15)] }).unwrap();
     assert_eq!(s.to_string(), "  abc\n  def\nghi\njkl");
-    s.indent_with(IndentOptions { indentor: Some(">>"), exclude: &[(7, 15)] });
+    s.indent_with(IndentOptions { indentor: Some(">>"), exclude: &[(7, 15)] }).unwrap();
     assert_eq!(s.to_string(), ">>  abc\n>>  def\nghi\njkl");
   }
 
@@ -328,7 +330,7 @@ mod indent {
     let mut s = MagicString::new("AB");
     s.overwrite(0, 1, "x\n");
     s.overwrite(1, 2, "y\n");
-    s.indent_with(IndentOptions { indentor: Some("  "), exclude: &[(0, 1)] });
+    s.indent_with(IndentOptions { indentor: Some("  "), exclude: &[(0, 1)] }).unwrap();
     assert_eq!(s.to_string(), "x\n  y\n");
   }
 
@@ -336,9 +338,9 @@ mod indent {
   fn should_not_add_characters_to_empty_lines() {
     // should indent content using the empty string if specified (i.e. noop)
     let mut s = MagicString::new("\n\nabc\ndef\n\nghi\njkl");
-    s.indent();
+    s.indent().unwrap();
     assert_eq!(s.to_string(), "\n\n\tabc\n\tdef\n\n\tghi\n\tjkl");
-    s.indent();
+    s.indent().unwrap();
     assert_eq!(s.to_string(), "\n\n\t\tabc\n\t\tdef\n\n\t\tghi\n\t\tjkl");
   }
 
@@ -346,9 +348,9 @@ mod indent {
   fn should_not_add_characters_to_empty_lines_even_on_windows() {
     // should indent content using the empty string if specified (i.e. noop)
     let mut s = MagicString::new("\r\n\r\nabc\r\ndef\r\n\r\nghi\r\njkl");
-    s.indent();
+    s.indent().unwrap();
     assert_eq!(s.to_string(), "\r\n\r\n\tabc\r\n\tdef\r\n\r\n\tghi\r\n\tjkl");
-    s.indent();
+    s.indent().unwrap();
     assert_eq!(s.to_string(), "\r\n\r\n\t\tabc\r\n\t\tdef\r\n\r\n\t\tghi\r\n\t\tjkl");
   }
 
@@ -357,7 +359,7 @@ mod indent {
     let mut s = MagicString::new("/* remove this line */\nvar foo = 1;");
     // remove `/* remove this line */\n`
     s.remove(0, 23).unwrap();
-    s.indent();
+    s.indent().unwrap();
     assert_eq!(s.to_string(), "\tvar foo = 1;");
   }
 
@@ -366,14 +368,14 @@ mod indent {
     let mut s = MagicString::new("class Foo extends Bar {}");
     s.overwrite(18, 21, "Baz");
     assert_eq!(s.to_string(), "class Foo extends Baz {}");
-    s.indent();
+    s.indent().unwrap();
     assert_eq!(s.to_string(), "\tclass Foo extends Baz {}");
   }
 
   #[test]
   fn should_ignore_the_end_of_each_exclude_range() {
     let mut s = MagicString::new("012\n456\n89a\nbcd");
-    s.indent_with(IndentOptions { indentor: Some(">"), exclude: &[(0, 3)] });
+    s.indent_with(IndentOptions { indentor: Some(">"), exclude: &[(0, 3)] }).unwrap();
     assert_eq!(s.to_string(), "012\n>456\n>89a\n>bcd");
   }
 }
@@ -434,7 +436,7 @@ mod misc {
     assert!(s.clone().prepend("  ").has_changed());
     assert!(s.clone().overwrite(1, 2, "b").has_changed());
     assert!(s.clone().remove(1, 6).unwrap().has_changed());
-    s.indent();
+    s.indent().unwrap();
     assert!(s.has_changed());
   }
 }
@@ -447,7 +449,7 @@ mod trim {
     // chunk[0,1] is emptied but its outro "X" follows it; the space after is not leading.
     let mut s = MagicString::new("A B");
     s.remove(0, 1).unwrap();
-    s.append_left(1, "X");
+    s.append_left(1, "X").unwrap();
     s.trim_start(None);
     assert_eq!(s.to_string(), "X B");
   }
@@ -457,7 +459,7 @@ mod trim {
     // chunk[2,3] is emptied but its intro "X" precedes it; the space before is not trailing.
     let mut s = MagicString::new("A B");
     s.remove(2, 3).unwrap();
-    s.prepend_right(2, "X");
+    s.prepend_right(2, "X").unwrap();
     s.trim_end(None);
     assert_eq!(s.to_string(), "A X");
   }

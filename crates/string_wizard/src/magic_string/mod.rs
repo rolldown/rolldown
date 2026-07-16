@@ -265,6 +265,15 @@ impl<'text> MagicString<'text> {
     IterChunks { next: Some(self.first_chunk_idx), chunks: &self.chunks }
   }
 
+  /// Returns `true` if the byte range `[start, end)` lies within a single chunk that has
+  /// already been edited. Callers use this for split points that cannot be expressed as a
+  /// byte index (a UTF-16 position inside a surrogate pair): the split would land strictly
+  /// inside the character spanning `[start, end)`, so it hits an edited chunk exactly when
+  /// this returns `true`.
+  pub fn is_range_within_edited_chunk(&self, start: u32, end: u32) -> bool {
+    self.iter_chunks().any(|c| c.start() <= start && end <= c.end() && c.is_edited())
+  }
+
   pub(crate) fn fragments(&'text self) -> impl Iterator<Item = &'text str> {
     let intro = self.intro.iter().map(|s| s.as_ref());
     let outro = self.outro.iter().map(|s| s.as_ref());

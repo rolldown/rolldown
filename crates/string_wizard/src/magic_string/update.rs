@@ -74,7 +74,12 @@ impl<'text> MagicString<'text> {
           return Err("Cannot overwrite across a split point".to_string());
         }
 
-        chunk_idx = next_in_list.unwrap();
+        // Both are `None` when the walk runs off the end of the list without reaching
+        // `end_idx`, i.e. the range is not contiguous in the output — same failure as above.
+        let Some(next_idx) = next_in_list else {
+          return Err("Cannot overwrite across a split point".to_string());
+        };
+        chunk_idx = next_idx;
         // Interior chunks always clear intro/outro (`Default` has `overwrite: true`),
         // matching JS magic-string where `chunk.edit('', false)` passes
         // `contentOnly=undefined` (falsy), so intro/outro are always cleared.

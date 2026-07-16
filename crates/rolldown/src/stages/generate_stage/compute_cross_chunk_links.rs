@@ -515,12 +515,21 @@ impl GenerateStage<'_> {
           } else if let Some(target) = order_state.esm_init_target(entry.idx, entry_meta) {
             depended_symbols.insert(target.wrapper_ref);
           }
-          self.add_transitive_esm_init_depended_symbols(
-            chunk_graph,
-            order_state,
-            depended_symbols,
-            entry.idx,
-          );
+          // Strict-gated: this feeds order-wrapped entries' prologue init imports. Flag-off, legacy
+          // interop `transitive_esm_init_targets` still exist, so for an interop-wrapped entry
+          // rendered behind a facade chunk, with an excluded re-export whose wrapped targets share
+          // the entry's host chunk, an ungated call would give the facade a dead cross-chunk
+          // `init_*` import the pre-#10104 base never emitted. The per-module call in
+          // `add_module_esm_init_depended_symbols` stays ungated — it is provably inert flag-off
+          // (legacy targets are same-chunk-only, and the cross-chunk filter skips them).
+          if self.options.is_strict_execution_order_enabled() {
+            self.add_transitive_esm_init_depended_symbols(
+              chunk_graph,
+              order_state,
+              depended_symbols,
+              entry.idx,
+            );
+          }
 
           if matches!(self.options.format, OutputFormat::Cjs)
             && matches!(entry.exports_kind, ExportsKind::Esm)

@@ -15,5 +15,6 @@ packages/rolldown/tests/stability/**/*.js -linguist-detectable
 *.png -text
 *.jpg -text
 *.bin -text
+*.a -text
 *.md text eol=lf
 patches/*.patch -whitespace

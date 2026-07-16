@@ -2576,6 +2576,8 @@ export interface BindingOutputs {
 
 export interface BindingOverwriteOptions {
   contentOnly?: boolean
+  /** Stores the replaced content in the generated sourcemap's `names` field. */
+  storeName?: boolean
 }
 
 export interface BindingPluginContextResolvedId {
@@ -2812,6 +2814,8 @@ export interface BindingTsconfigResult {
 
 export interface BindingUpdateOptions {
   overwrite?: boolean
+  /** Stores the replaced content in the generated sourcemap's `names` field. */
+  storeName?: boolean
 }
 
 export interface BindingViteAliasPluginAlias {

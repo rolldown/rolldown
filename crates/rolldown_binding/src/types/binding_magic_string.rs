@@ -218,12 +218,16 @@ pub struct BindingMagicStringOptions {
 #[derive(Default)]
 pub struct BindingUpdateOptions {
   pub overwrite: Option<bool>,
+  /// Stores the replaced content in the generated sourcemap's `names` field.
+  pub store_name: Option<bool>,
 }
 
 #[napi(object)]
 #[derive(Default)]
 pub struct BindingOverwriteOptions {
   pub content_only: Option<bool>,
+  /// Stores the replaced content in the generated sourcemap's `names` field.
+  pub store_name: Option<bool>,
 }
 
 #[napi(object)]
@@ -757,14 +761,15 @@ impl BindingMagicString<'_> {
       .utf16_to_byte_mapper
       .utf16_to_byte(self.apply_offset_u32(end)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
-    let content_only = options.and_then(|o| o.content_only).unwrap_or(false);
+    let (content_only, store_name) = options
+      .map_or((false, false), |o| (o.content_only.unwrap_or(false), o.store_name.unwrap_or(false)));
     self
       .inner
       .update_with(
         start_byte,
         end_byte,
         content,
-        string_wizard::UpdateOptions { overwrite: !content_only, keep_original: false },
+        string_wizard::UpdateOptions { overwrite: !content_only, keep_original: store_name },
       )
       .map_err(napi::Error::from_reason)?;
     Ok(this)
@@ -840,14 +845,15 @@ impl BindingMagicString<'_> {
       .utf16_to_byte_mapper
       .utf16_to_byte(self.apply_offset_u32(end)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
-    let overwrite = options.and_then(|o| o.overwrite).unwrap_or(false);
+    let (overwrite, store_name) = options
+      .map_or((false, false), |o| (o.overwrite.unwrap_or(false), o.store_name.unwrap_or(false)));
     self
       .inner
       .update_with(
         start_byte,
         end_byte,
         content,
-        string_wizard::UpdateOptions { overwrite, keep_original: false },
+        string_wizard::UpdateOptions { overwrite, keep_original: store_name },
       )
       .map_err(napi::Error::from_reason)?;
     Ok(this)

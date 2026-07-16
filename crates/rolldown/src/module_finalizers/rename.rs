@@ -4,6 +4,18 @@ use rolldown_ecmascript_utils::ExpressionExt;
 
 use super::ScopeHoistingFinalizer;
 
+fn finalized_reference_expr_mut<'a, 'ast>(
+  expr: &'a mut Expression<'ast>,
+) -> &'a mut Expression<'ast> {
+  match expr {
+    Expression::ParenthesizedExpression(expr) => finalized_reference_expr_mut(&mut expr.expression),
+    Expression::SequenceExpression(expr) => finalized_reference_expr_mut(
+      expr.expressions.last_mut().expect("sequence expression should not be empty"),
+    ),
+    expr => expr,
+  }
+}
+
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   /// return `None` if
   /// - the reference is for a global variable/the reference doesn't have a `SymbolId`
@@ -25,7 +37,10 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
 
     // See https://github.com/oxc-project/oxc/issues/4606
 
-    match &mut expr {
+    // A namespace member used as a callee is wrapped as `(0, namespace.member)` to avoid
+    // binding `this`. Apply the original identifier's span to the member expression inside
+    // that wrapper so codegen can map the generated callee back to the import reference.
+    match finalized_reference_expr_mut(&mut expr) {
       ast::Expression::Identifier(it) => {
         it.span = id_ref.span;
       }

@@ -1,0 +1,14 @@
+{
+  "_comment": "Regression test for a wrapped imported CommonJS callee losing its producer mapping after finalization.",
+  "visualizeSourcemap": true,
+  "expectExecuted": false,
+  "config": {
+    "minify": false
+  },
+  "configVariants": [
+    {
+      "_configName": "minified",
+      "minify": true
+    }
+  ]
+}

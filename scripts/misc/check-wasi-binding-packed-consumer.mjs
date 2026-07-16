@@ -755,9 +755,12 @@ assert.deepEqual(
 );
 
 function assertHardenedEmbeddedRuntime(code, loader) {
+  // emnapi v2 shapes (patches/@emnapi__core@2.0.0-alpha.2.patch): the
+  // reentrant-call result writes re-create their DataView after calling into
+  // JavaScript (napi_call_function + napi_new_instance).
   const callbackResultWrites =
     code.match(
-      /v = envObject\.ensureHandleId\(ret\);\s*new DataView\(wasmMemory\.buffer\)\.setUint32\(result, v, true\)/g,
+      /v = emnapiCtx\.napiValueFromJsValue\(ret\);[^]*?new DataView\(wasmMemory\.buffer\)\.setUint32\(result, v, true\)/g,
     ) ?? [];
   assert.ok(
     callbackResultWrites.length >= 2,

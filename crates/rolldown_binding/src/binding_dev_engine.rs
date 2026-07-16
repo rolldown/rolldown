@@ -657,19 +657,27 @@ impl BindingDevEngine {
     env: &'env Env,
     module_id: String,
     client_id: String,
-  ) -> napi::Result<PromiseRaw<'env, BindingLazyChunkOutput>> {
+  ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingLazyChunkOutput>>> {
     let Some(operation) = self.lifecycle.begin_operation() else {
       return PromiseRaw::reject(env, dev_engine_closed_error());
     };
     let inner = Arc::clone(&self.inner);
+    let cwd = Arc::clone(&self.cwd);
     spawn_boxed_future(env, async move {
-      let result = inner
-        .compile_lazy_entry(module_id, client_id)
-        .await
-        .map(|output| BindingLazyChunkOutput { code: output.code, filename: output.filename })
-        .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")));
+      // Route the result through `dev_engine_binding_result` (like `run` /
+      // `ensure_current_build_finish`) so an `onAdditionalAssets` callback
+      // rejection propagates as the original JS error instead of being
+      // flattened into a `GenericFailure` string. See dev-callbacks.test.ts
+      // "compileEntry awaits onAdditionalAssets and propagates its rejection".
+      let result = dev_engine_binding_result(
+        inner
+          .compile_lazy_entry(module_id, client_id)
+          .await
+          .map(|output| BindingLazyChunkOutput { code: output.code, filename: output.filename }),
+        cwd.as_ref(),
+      );
       drop(operation);
-      result
+      Ok(result)
     })
   }
 }

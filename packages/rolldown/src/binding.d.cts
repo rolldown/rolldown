@@ -1596,7 +1596,7 @@ export declare class BindingDevEngine {
    * The module was previously stubbed with a proxy, and now we need to compile the
    * actual module and its dependencies.
    */
-  compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput>
+  compileEntry(moduleId: string, clientId: string): Promise<BindingResult<BindingLazyChunkOutput>>
 }
 
 export declare class BindingLoadPluginContext {

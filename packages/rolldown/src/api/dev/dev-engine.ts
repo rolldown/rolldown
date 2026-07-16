@@ -292,7 +292,10 @@ export class DevEngine {
    * serving middleware reports via {@link notifyPayloadDelivered}
    */
   async compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput> {
-    return this.#runOperation(() => this.#inner.compileEntry(moduleId, clientId));
+    return unwrapDevEngineBindingResult(
+      await this.#runOperation(() => this.#inner.compileEntry(moduleId, clientId)),
+      'Failed to compile lazy entry',
+    );
   }
 
   #assertOpen(): void {
@@ -400,13 +403,11 @@ function bindingifyRebuildStrategy(
       return undefined;
     case 'always':
       return BindingRebuildStrategy.Always;
-    case 'auto':
-      return BindingRebuildStrategy.Auto;
     case 'never':
       return BindingRebuildStrategy.Never;
     default:
       throw new TypeError(
-        `Invalid dev rebuildStrategy ${formatInvalidRebuildStrategy(strategy)}. Expected "always", "auto", or "never".`,
+        `Invalid dev rebuildStrategy ${formatInvalidRebuildStrategy(strategy)}. Expected "always" or "never".`,
       );
   }
 }

@@ -76,7 +76,9 @@ test.skipIf(isSingleThread)(
 // not be re-shipped to a registered client (whose session froze the top-level-evaluated
 // map at hello). An unregistered client has no session and must still receive the
 // full closure.
-test(
+// Dev mode spawns the BindingDevEngine, which is out of scope for the
+// single-thread (CurrentThread) runtime flavor.
+test.skipIf(isSingleThread)(
   'lazy chunk omits factories for modules the entry chunk evaluated at top level',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

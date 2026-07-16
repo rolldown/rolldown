@@ -332,16 +332,19 @@ debug = "full"
 strip = "none"
 
 [patch.crates-io]
-# napi-rs#3393 head (56e32d5c) is the top of the rebased napi stack: it restacks
-# onto the rebased #3353 base whose crates/napi is v3.10.5 (the merged SPI) and
-# additionally relaxes the napi-async-runtime crate to napi v3. One rev therefore
+# integration/rolldown-non-threaded-wasi-napi3 head (a9c93cd5) merges the rebased
+# napi stack (crates/napi v3.10.5, the merged SPI + #3353/#3393) INTO rolldown's
+# rich async-runtime SPI. rolldown_binding hard-depends on that rich SPI —
+# fallible try_start/try_shutdown_async_runtime, TokioRuntimeRetirementWaiter,
+# primitive-value boxing on promise rejection, and graceful ThreadsafeFunction
+# release on napi_closing — which the pure #3393 head (56e32d5c) dropped. One rev
 # covers both the napi core crates here and the napi-async-runtime crate pinned in
 # rolldown_utils/Cargo.toml (consumed napi-free), so the whole napi graph is unified
 # on a single rev.
-napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "56e32d5c0e83de858e8c173db04d8d94d69a26c0" }
-napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "56e32d5c0e83de858e8c173db04d8d94d69a26c0" }
-napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "56e32d5c0e83de858e8c173db04d8d94d69a26c0" }
-napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "56e32d5c0e83de858e8c173db04d8d94d69a26c0" }
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "a9c93cd5bc4bae7ef3e9edffea0e6e8819c1d7fe" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "a9c93cd5bc4bae7ef3e9edffea0e6e8819c1d7fe" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "a9c93cd5bc4bae7ef3e9edffea0e6e8819c1d7fe" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "a9c93cd5bc4bae7ef3e9edffea0e6e8819c1d7fe" }
 
 # Redirect Oxc's napi binding crates onto a 0.140.0-based branch that drops the
 # forced `tokio_rt` feature (oxc-project/oxc PR #24475, backported to the

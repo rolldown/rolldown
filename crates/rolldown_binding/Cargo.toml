@@ -88,6 +88,15 @@ mimalloc-safe = { workspace = true, features = [
   "v3",
 ] }
 
+# Threaded WASI is the only target where `.cargo/config.toml` sets `--cfg
+# tokio_unstable`, which compiles the `async_runtime_acquisition` lease path.
+# That path drives the built-in Tokio runtime (retirement waiter + shared-runtime
+# start/shutdown), so this target additionally needs napi's `async` (= tokio_rt)
+# feature for `TokioRuntimeRetirementWaiter`. Native and threadless WASI keep the
+# custom tokio-free runtime and never enable this.
+[target.wasm32-wasip1-threads.dependencies]
+napi = { workspace = true, features = ["async"] }
+
 [build-dependencies]
 napi-build = { workspace = true }
 

@@ -36,7 +36,6 @@ vi.mock('../src/binding.cjs', () => ({
   },
   BindingRebuildStrategy: {
     Always: 'always',
-    Auto: 'auto',
     Never: 'never',
   },
   getRuntimeCapabilities: () => mocks.runtimeCapabilities,
@@ -212,7 +211,7 @@ test('dev snapshots top-level setup options once after worker initialization', a
   const devOptions = {
     get rebuildStrategy() {
       rebuildStrategyReads += 1;
-      return 'auto' as const;
+      return 'always' as const;
     },
     get watch() {
       watchReads += 1;
@@ -230,7 +229,7 @@ test('dev rejects invalid rebuild strategies and cleans initialized workers', as
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
 
   await expect(DevEngine.create({}, {}, { rebuildStrategy: 'sometimes' as never })).rejects.toThrow(
-    'Invalid dev rebuildStrategy "sometimes". Expected "always", "auto", or "never".',
+    'Invalid dev rebuildStrategy "sometimes". Expected "always" or "never".',
   );
   expect(stopWorkers).toHaveBeenCalledOnce();
   expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
@@ -241,7 +240,7 @@ test('dev reports non-JSON invalid rebuild strategies without losing cleanup', a
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
 
   await expect(DevEngine.create({}, {}, { rebuildStrategy: 1n as never })).rejects.toThrow(
-    'Invalid dev rebuildStrategy 1n. Expected "always", "auto", or "never".',
+    'Invalid dev rebuildStrategy 1n. Expected "always" or "never".',
   );
   expect(stopWorkers).toHaveBeenCalledOnce();
   expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();

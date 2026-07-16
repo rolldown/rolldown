@@ -358,14 +358,18 @@ function bundleThreadedNodeWorkerRuntime(): Plugin {
     transform: {
       filter: { id: threadedWasiFiles.worker },
       handler(code) {
+        // The emnapi-v2 worker template destructures the TSFN/async-work
+        // plugins alongside the runtime helpers (the wasm links a "basic"
+        // emnapi archive, so every instantiating thread must provide the
+        // JavaScript implementations through these plugins).
         const runtimeRequire =
-          /const\s*\{\s*instantiateNapiModuleSync,\s*MessageHandler,\s*getDefaultContext\s*\}\s*=\s*require\(["']@napi-rs\/wasm-runtime["']\);?/;
+          /const\s*\{\s*instantiateNapiModuleSync,\s*MessageHandler,\s*getDefaultContext,\s*emnapiAsyncWorkPlugin,\s*emnapiTSFNPlugin,?\s*\}\s*=\s*require\(["']@napi-rs\/wasm-runtime["']\);?/;
         if (!runtimeRequire.test(code)) {
           throw new Error('Could not locate the threaded WASI worker runtime require');
         }
         return code.replace(
           runtimeRequire,
-          "import { instantiateNapiModuleSync, MessageHandler, getDefaultContext } from '@napi-rs/wasm-runtime';",
+          "import { instantiateNapiModuleSync, MessageHandler, getDefaultContext, emnapiAsyncWorkPlugin, emnapiTSFNPlugin } from '@napi-rs/wasm-runtime';",
         );
       },
     },

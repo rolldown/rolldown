@@ -149,19 +149,28 @@ assert.deepEqual(
 );
 
 function assertHardenedRuntime(code, entry) {
+  // emnapi v2 shapes (patches/@emnapi__core@2.0.0-alpha.2.patch): the
+  // reentrant-call result writes re-create their DataView after calling into
+  // JavaScript (napi_call_function + napi_new_instance; napi_make_callback
+  // uses `ret.value` and is intentionally not counted here).
   const callbackResultWrites =
     code.match(
-      /v = envObject\.ensureHandleId\(ret\);\s*new DataView\(wasmMemory\.buffer\)\.setUint32\(result, v, true\)/g,
+      /v = emnapiCtx\.napiValueFromJsValue\(ret\);[^]*?new DataView\(wasmMemory\.buffer\)\.setUint32\(result, v, true\)/g,
     ) ?? [];
   assert.ok(
     callbackResultWrites.length >= 2,
     `${entry} does not contain hardened napi_call_function/napi_new_instance result writes`,
   );
+  // TSFN plugin enqueue re-creates its Int32Array view at every use (the v2
+  // plugin replaces the v1 `state()`/`ensureBufferFor` helper with `i32a()`).
   assert.match(
     code,
-    /var state = function\(\) \{\s*return new Int32Array\(emnapiTSFN\.ensureBufferFor\(end\)\);\s*\}/,
+    /const i32a = \(\) => new Int32Array\(emscripten_runtime\.wasmMemory\.buffer\)/,
   );
-  assert.match(code, /Atomics\.exchange\(state\(\), scheduled >>> 2, 1\)/);
+  assert.match(code, /Atomics\.exchange\(i32a\(\), scheduled >>> 2, 1\)/);
+  // The dispatch send-on-throw re-arm and the enqueue liveSet-before-exchange
+  // ordering are part of the same hardened patch set.
+  assert.match(code, /emnapiTSFN\.send\(func\);[^]*?throw err;/);
   assert.ok(code.length > 100_000, `${entry} unexpectedly contains only generated loader glue`);
 }
 

@@ -178,10 +178,19 @@ patchedDependencies:
   '@emnapi/wasi-threads@2.0.0': patches/@emnapi__wasi-threads@2.0.0.patch
   # TEMP: napi-rs at a9c93cd5 ships this same 1.1.6 runtime source with the
   # @emnapi/core/plugins re-exports (emnapiAsyncWorkPlugin / emnapiTSFNPlugin,
-  # required by the emnapi v2 plugin split) and createContext. Verbatim copy of
-  # that repo's runtime.cjs / runtime.js; drop once a v2-ready
-  # @napi-rs/wasm-runtime is published.
+  # required by the emnapi v2 plugin split) and createContext. Copy of that
+  # repo's runtime.cjs / runtime.js, plus a v1-compat default: when a caller
+  # passes no `plugins` option, instantiateNapiModule(Sync) supplies the
+  # async-work/TSFN plugins itself (emnapi v1 always bundled those
+  # implementations, so pre-v2 callers never passed plugins). Drop once a
+  # v2-ready @napi-rs/wasm-runtime is published.
   '@napi-rs/wasm-runtime@1.1.6': patches/@napi-rs__wasm-runtime@1.1.6.patch
+  # TEMP: the v2 runtime is ESM-only ("type": "module", single ESM dist), so
+  # require() yields a frozen module namespace. The generated CJS WASI loaders
+  # and the context-lifecycle test harness share one MUTABLE
+  # require('@emnapi/runtime') exports object (v1 shipped a real CJS entry).
+  # Restores that contract with a CJS facade (index.cjs) + a require condition.
+  '@emnapi/runtime@2.0.0-alpha.2': patches/@emnapi__runtime@2.0.0-alpha.2.patch
   '@napi-rs/cli@3.7.2': patches/@napi-rs__cli@3.7.2.patch
   # TEMP: vendors napi-rs#3353 (wasm32-wasip1 single-thread support incl. the
   # deferred workerd-safe loader) with per-flavor WASI artifact naming plus the

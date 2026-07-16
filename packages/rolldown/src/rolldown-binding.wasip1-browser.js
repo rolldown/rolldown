@@ -99,7 +99,7 @@ function __destroyEmnapiContext() {
 
 try {
 /* ROLLDOWN_BROWSER_INITIALIZATION_GUARD_START */
-  __emnapiContext.features.Buffer = Buffer
+  ;(__emnapiContext.features ?? __emnapiContext.feature).Buffer = Buffer
 
   ;({
     instance: __napiInstance,
@@ -108,7 +108,7 @@ try {
   } = await __emnapiInstantiateNapiModule(__wasmFile, {
     context: __emnapiContext,
     asyncWorkPoolSize: 0,
-    plugins: [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
+    plugins: typeof __emnapiAsyncWorkPlugin === 'undefined' ? [] : [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
     wasi: __wasi,
     overwriteImports(importObject) {
       importObject.env = {

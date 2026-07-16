@@ -1,4 +1,6 @@
 import {
+  emnapiAsyncWorkPlugin as __emnapiAsyncWorkPlugin,
+  emnapiTSFNPlugin as __emnapiTSFNPlugin,
   getDefaultContext as __emnapiGetDefaultContext,
   instantiateNapiModule as __emnapiInstantiateNapiModule,
   WASI as __WASI,
@@ -2001,7 +2003,10 @@ function __createManagedContext() {
       __captureListenerInstalled = true
     }
     __emnapiContext = __emnapiCreateContext({ autoDestroy: false })
-    __emnapiContext.feature.Buffer = Buffer
+    // The emnapi v2 runtime context exposes `features`; the v1 `feature`
+    // name is kept as a fallback for harnesses/mocks that predate the
+    // emnapi v2 migration.
+    ;(__emnapiContext.features ?? __emnapiContext.feature).Buffer = Buffer
     __emnapiContext.suppressDestroy()
   } catch (__error) {
     __setupFailed = true
@@ -2121,6 +2126,15 @@ async function __instantiate(
   const { napiModule: __napiModule } = await __emnapiInstantiateNapiModule(__module, {
     context: __emnapiContext,
     asyncWorkPoolSize: 0,
+    // The wasm links a "basic" emnapi archive (no C async-work /
+    // threadsafe-function implementations), so instantiation must provide
+    // the JavaScript implementations through the emnapi plugins. Harnesses
+    // that replace the import block with injected dependencies leave the
+    // plugin bindings undeclared; passing undefined lets the (patched)
+    // @napi-rs/wasm-runtime instantiateNapiModule default to the real
+    // plugins, matching emnapi v1 semantics where the implementations were
+    // always bundled.
+    plugins: typeof __emnapiAsyncWorkPlugin === 'undefined' ? undefined : [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
     wasi: __wasi,
     overwriteImports(importObject) {
       importObject.env = {

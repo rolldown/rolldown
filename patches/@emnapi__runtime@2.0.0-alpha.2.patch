@@ -1,0 +1,87 @@
+diff --git a/index.cjs b/index.cjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..451610e7312bdfcc049c9f499c821a3f448b6210
+--- /dev/null
++++ b/index.cjs
+@@ -0,0 +1,63 @@
++'use strict'
++// Mutable CommonJS facade over the ESM build. The v1 package shipped a real
++// CJS entry whose exports object was mutable; the generated WASI loaders,
++// @napi-rs/wasm-runtime's runtime.cjs, and rolldown's context-lifecycle test
++// harness all rely on sharing that one mutable exports object (the harness
++// intercepts `createContext` around a fresh loader require). The v2 package
++// is ESM-only, and `require()` of an ES module returns a frozen namespace, so
++// restore the contract here. Each export is re-assigned individually (instead
++// of spreading the namespace into `module.exports`) so cjs-module-lexer can
++// statically detect the named exports -- `import()` of this CJS entry must
++// still expose them as module namespace properties. Module-level state (the
++// default-context memoization) lives inside the ESM module itself, so both
++// entries observe the same runtime state.
++const __emnapiRuntime = require('./dist/emnapi.js')
++module.exports.ArrayStore = __emnapiRuntime.ArrayStore
++module.exports.BaseArrayStore = __emnapiRuntime.BaseArrayStore
++module.exports.Context = __emnapiRuntime.Context
++module.exports.CountIdAllocator = __emnapiRuntime.CountIdAllocator
++module.exports.CountIdReuseAllocator = __emnapiRuntime.CountIdReuseAllocator
++module.exports.Disposable = __emnapiRuntime.Disposable
++module.exports.EmnapiError = __emnapiRuntime.EmnapiError
++module.exports.Env = __emnapiRuntime.Env
++module.exports.External = __emnapiRuntime.External
++module.exports.Finalizer = __emnapiRuntime.Finalizer
++module.exports.FunctionTemplate = __emnapiRuntime.FunctionTemplate
++module.exports.HandleScope = __emnapiRuntime.HandleScope
++module.exports.HandleStore = __emnapiRuntime.HandleStore
++module.exports.Isolate = __emnapiRuntime.Isolate
++module.exports.NAPI_VERSION_EXPERIMENTAL = __emnapiRuntime.NAPI_VERSION_EXPERIMENTAL
++module.exports.NODE_API_DEFAULT_MODULE_API_VERSION = __emnapiRuntime.NODE_API_DEFAULT_MODULE_API_VERSION
++module.exports.NODE_API_SUPPORTED_VERSION_MAX = __emnapiRuntime.NODE_API_SUPPORTED_VERSION_MAX
++module.exports.NODE_API_SUPPORTED_VERSION_MIN = __emnapiRuntime.NODE_API_SUPPORTED_VERSION_MIN
++module.exports.NodeEnv = __emnapiRuntime.NodeEnv
++module.exports.NotSupportBufferError = __emnapiRuntime.NotSupportBufferError
++module.exports.NotSupportWeakRefError = __emnapiRuntime.NotSupportWeakRefError
++module.exports.ObjectTemplate = __emnapiRuntime.ObjectTemplate
++module.exports.Persistent = __emnapiRuntime.Persistent
++module.exports.PersistentStore = __emnapiRuntime.PersistentStore
++module.exports.Private = __emnapiRuntime.Private
++module.exports.RefTracker = __emnapiRuntime.RefTracker
++module.exports.Reference = __emnapiRuntime.Reference
++module.exports.ReferenceOwnership = __emnapiRuntime.ReferenceOwnership
++module.exports.ReferenceWithData = __emnapiRuntime.ReferenceWithData
++module.exports.ReferenceWithFinalizer = __emnapiRuntime.ReferenceWithFinalizer
++module.exports.ScopeStore = __emnapiRuntime.ScopeStore
++module.exports.Signature = __emnapiRuntime.Signature
++module.exports.StrongRef = __emnapiRuntime.StrongRef
++module.exports.Template = __emnapiRuntime.Template
++module.exports.TrackedFinalizer = __emnapiRuntime.TrackedFinalizer
++module.exports.TryCatch = __emnapiRuntime.TryCatch
++module.exports.createContext = __emnapiRuntime.createContext
++module.exports.deletePrivate = __emnapiRuntime.deletePrivate
++module.exports.getDefaultContext = __emnapiRuntime.getDefaultContext
++module.exports.getDylinkMetadata = __emnapiRuntime.getDylinkMetadata
++module.exports.getExternalValue = __emnapiRuntime.getExternalValue
++module.exports.getInternalField = __emnapiRuntime.getInternalField
++module.exports.getPrivate = __emnapiRuntime.getPrivate
++module.exports.hasPrivate = __emnapiRuntime.hasPrivate
++module.exports.isExternal = __emnapiRuntime.isExternal
++module.exports.isReferenceType = __emnapiRuntime.isReferenceType
++module.exports.setInternalField = __emnapiRuntime.setInternalField
++module.exports.setPrivate = __emnapiRuntime.setPrivate
++module.exports.version = __emnapiRuntime.version
+diff --git a/package.json b/package.json
+index 20400c7fa65f5d1403fb431c828f652fd6f98ea7..e0e398f7e742c0bb0007502dd5d04f83b3ea7f5e 100644
+--- a/package.json
++++ b/package.json
+@@ -8,7 +8,12 @@
+   "types": "./dist/emnapi.d.ts",
+   "sideEffects": false,
+   "exports": {
+-    ".": "./dist/emnapi.js",
++    ".": {
++      "types": "./dist/emnapi.d.ts",
++      "import": "./dist/emnapi.js",
++      "require": "./index.cjs",
++      "default": "./dist/emnapi.js"
++    },
+     "./package.json": "./package.json"
+   },
+   "dependencies": {

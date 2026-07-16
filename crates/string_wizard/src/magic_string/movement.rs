@@ -46,6 +46,18 @@ impl MagicString<'_> {
     let old_left_idx = self.chunks[first_idx].prev;
     let old_right_idx = self.chunks[last_idx].next;
 
+    // The moved range occupies both ends of the linked list, so lifting it out would leave no
+    // chunk to re-attach to. Reachable once an earlier move has reordered chunks — after
+    // `relocate(0, 1, 2)` on "abc" the list is B->A->C, so `relocate(1, 3, 0)` asks to move
+    // B..C, which is no longer a contiguous run.
+    //
+    // This has to be caught here, before the rewiring below: that rewiring is not atomic, and
+    // bailing out part-way through leaves a chunk pointing at itself, which makes `to_string`
+    // loop forever.
+    if old_left_idx.is_none() && old_right_idx.is_none() {
+      return Err("Cannot move a range that spans the entire string".to_string());
+    }
+
     let new_right_idx = self.chunk_by_start.get(&to).copied();
 
     // `new_right_idx` is `None` means that the `to` index is at the end of the string.
@@ -77,11 +89,19 @@ impl MagicString<'_> {
 
     if self.chunks[first_idx].prev.is_none() {
       // If the `first_idx` is the first chunk, then we need to update the `first_chunk_idx`.
-      self.first_chunk_idx = self.chunks[last_idx].next.unwrap();
+      // The whole-range check above guarantees a successor exists, so this cannot be `None`
+      // — but returning an error here would corrupt the list, so assert instead of `?`.
+      debug_assert!(self.chunks[last_idx].next.is_some(), "whole-range move should be rejected");
+      if let Some(next_idx) = self.chunks[last_idx].next {
+        self.first_chunk_idx = next_idx;
+      }
     }
     if self.chunks[last_idx].next.is_none() {
       // If the `last_idx` is the last chunk, then we need to update the `last_chunk_idx`.
-      self.last_chunk_idx = self.chunks[first_idx].prev.unwrap();
+      debug_assert!(self.chunks[first_idx].prev.is_some(), "whole-range move should be rejected");
+      if let Some(prev_idx) = self.chunks[first_idx].prev {
+        self.last_chunk_idx = prev_idx;
+      }
       self.chunks[last_idx].next = None;
     }
 

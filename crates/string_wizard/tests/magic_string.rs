@@ -255,6 +255,21 @@ mod relocate {
     s.append_left(6, "X").unwrap().relocate(3, 6, 9).unwrap();
     assert_eq!(s.to_string(), "abcghidefXjkl");
   }
+
+  #[test]
+  fn errors_without_corrupting_the_list_when_the_range_is_not_contiguous() {
+    let mut s = MagicString::new("abc");
+    // Reorders the chunks to B -> A -> C.
+    s.relocate(0, 1, 2).unwrap();
+    assert_eq!(s.to_string(), "bac");
+
+    // [1,3) is B..C, which is no longer a contiguous run, so the move has to be rejected.
+    s.relocate(1, 3, 0).unwrap_err();
+
+    // The rejected move must not have rewired anything: a half-applied move used to leave a
+    // chunk pointing at itself, and this `to_string` would then never return.
+    assert_eq!(s.to_string(), "bac");
+  }
 }
 
 mod indent {

@@ -169,6 +169,19 @@ describe('splitting an already-edited chunk', () => {
   });
 });
 
+describe('move', () => {
+  // A move whose range is no longer contiguous (an earlier move reordered the chunks) has to be
+  // rejected before any pointers are rewired. Bailing out mid-rewire left a chunk pointing at
+  // itself, so the next toString() spun forever.
+  it('rejects a non-contiguous range without corrupting the instance', () => {
+    const s = new MagicString('abc');
+    s.move(0, 1, 2);
+    assert.strictEqual(s.toString(), 'bac');
+    assert.throws(() => s.move(1, 3, 0), /spans the entire string/);
+    assert.strictEqual(s.toString(), 'bac');
+  });
+});
+
 describe('offset', () => {
   describe('underflow guard — negative (index + offset) must throw, not panic', () => {
     it('remove() throws when offset causes index underflow', () => {

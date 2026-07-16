@@ -4,7 +4,7 @@
 
 ## Summary
 
-Phase 0 provides a shared synchronous pass harness in `rolldown_utils`, runtime tests for execution and diagnostic behavior, and consuming-crate compile tests for the ownership contract. Phase 1 adds non-default link baseline hooks and a dedicated runner. Phases 2–4 move initialization, representation, binding, resolution, statement preparation, reference analysis, and cross-module optimization into typed passes. Phase 5 completes the Link cutover with `TreeShakePass`, `FinalizeModuleDependenciesPass`, and a one-shot legacy output adapter. The driver now runs twenty-four narrow passes; no production pass accepts `LinkStage`, legacy metadata, or the shared inclusion-core context, and `LinkStage::new` no longer allocates derived metadata or other pass results. Generate's public inclusion context and the external Link tuple remain unchanged.
+Phase 0 provides a shared synchronous pass harness in `rolldown_utils`, runtime tests for execution and diagnostic behavior, and consuming-crate compile tests for the ownership contract. Phase 1 adds non-default link baseline hooks and a dedicated runner. Phases 2–4 move initialization, representation, binding, resolution, statement preparation, reference analysis, and cross-module optimization into typed passes. Phase 5 completes the Link cutover with `TreeShakePass`, `FinalizeModuleDependenciesPass`, and a one-shot legacy output adapter. The driver now runs twenty-four narrow passes; no production pass accepts `LinkStage`, legacy metadata, or the shared inclusion-core context, and `LinkStage` stores exactly the untouched scan output and options until `.link()` consumes it. Generate's public inclusion context and the external Link tuple remain unchanged.
 
 ## Component map
 
@@ -92,19 +92,19 @@ These tests do not prove the absence of interior mutability, globals, broad arti
 
 The selected adoption is the internals created by `LinkStage::new` and driven by `LinkStage::link`. Its external interface remains unchanged: input is `NormalizedScanStageOutput` plus `SharedOptions`, and `.link()` remains infallible and returns `(LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder)`. Code outside link does not need to understand the pass migration.
 
-`LinkStage` may remain as a one-shot facade that holds only the untouched scan output and options until `.link()` consumes it. It must not remain a persistent cross-pass carrier for derived state. No pass may accept `LinkStage`, `LinkStageOutput`, `LinkingMetadata`, `LinkingMetadataVec`, or a renamed equivalent.
+`LinkStage` is a two-field one-shot facade that holds only the untouched scan output and options until `.link()` consumes it. The first statement of `.link()` destructures the facade completely, and the next statement destructures the scan output into ordinary driver locals. The facade therefore does not survive into the first pass. No pass may accept `LinkStage`, `LinkStageOutput`, `LinkingMetadata`, `LinkingMetadataVec`, or a renamed equivalent.
 
 The production driver has three parts:
 
 ```text
 NormalizedScanStageOutput + SharedOptions
-  └── input adapter: move fields, initialize empty values, seed diagnostics
+  └── input adapter: consume the two-field facade and move every Scan field into a driver local
         └── typed link driver: narrow artifacts and owned entity working sets
               └── legacy output adapter: consume final values once
                     └── existing mutable link output tuple
 ```
 
-Neither adapter is a pass. The input adapter performs no traversal, sorting, aggregation, or link analysis. Passthrough fields remain ordinary driver locals rather than entering the pass DAG. The output adapter is the only place that reconstructs `LinkStageOutput` and legacy `LinkingMetadataVec`.
+Neither adapter is a pass. The input adapter performs no traversal, sorting, aggregation, or link analysis; it only converts warnings into diagnostics and groups the two Scan-owned TLA inputs for their pass. Passthrough fields remain ordinary driver locals rather than entering the pass DAG. The output adapter is the only place that reconstructs `LinkStageOutput` and legacy `LinkingMetadataVec`, and its `finish` boundary lists every remaining Scan-owned final field explicitly instead of accepting the facade or another input bag.
 
 ### Legacy output ownership policy
 
@@ -190,11 +190,11 @@ The adapter applies deferred module mutations in the legacy order: replace each 
 
 The link passes subtree declares `#![forbid(unsafe_code)]`. Each pass token is a non-generic unit struct named `XxxPass`; runtime configuration belongs in its slot manifest. The harness's code-generation size assertion remains a backstop, not a source-shape checker.
 
-The non-vacuous `inventory` test parses every Rust file below the subtree, including local items. It pairs every pass declaration with exactly one unqualified `Pass` implementation; rejects generic, tuple, braced, qualified, renamed, local-hidden, macro-generated, and unmatched shapes; bans glob imports that could hide the trait; and rejects `LinkStage`, `LinkStageOutput`, `LinkingMetadata`, `LinkingMetadataVec`, `PassPipelineCtx`, `InclusionCoreContext`, `InclusionFacts`, and `InclusionModuleFacts` paths in production pass code. Production attributes use a closed allowlist of documentation and the built-in `Clone`, `Copy`, `Debug`, and `Default` derives. Conditional imports are limited to the exact private WASM `IteratorExt as _` shim and the exact private native `IndexedParallelIterator` traits needed to preserve M's and N's legacy zipped indexed iterators; the inventory checks target expression, full path, rename, visibility, and leading-colon shape, and rejection fixtures pin nearby variants. Production macro calls use a closed list of exact standard or dependency paths, including path-scoped layout and hard-invariant assertions for the extracted passes; type macros and nested macro calls are rejected, and every allowed macro argument is recursively scanned for forbidden carrier names. Focused rejection tests pin these cases. This remains a source-test boundary, so review must extend it if Rust syntax or the pass conventions change.
+The non-vacuous `inventory` test parses every Rust file below the subtree, including local items. It pairs every pass declaration with exactly one unqualified `Pass` implementation; rejects generic, tuple, braced, qualified, renamed, local-hidden, macro-generated, and unmatched shapes; bans glob imports that could hide the trait; and rejects `LinkStage`, `LinkStageOutput`, `LinkingMetadata`, `LinkingMetadataVec`, `PassPipelineCtx`, `InclusionCoreContext`, `InclusionFacts`, and `InclusionModuleFacts` paths in production pass code. Separate executable guards require `LinkStage` to have exactly the `scan_stage_output` and `options` fields, require `.link()` to consume both the facade and every Scan field before any driver work, reject later `self` use or extra `LinkStage` methods, and pin the output adapter's explicit final-field and helper signatures. They also reject any exact `LinkStage` path or additional replacement struct in the adapter module. Production attributes use a closed allowlist of documentation and the built-in `Clone`, `Copy`, `Debug`, and `Default` derives. Conditional imports are limited to the exact private WASM `IteratorExt as _` shim and the exact private native `IndexedParallelIterator` traits needed to preserve M's and N's legacy zipped indexed iterators; the inventory checks target expression, full path, rename, visibility, and leading-colon shape, and rejection fixtures pin nearby variants. Production macro calls use a closed list of exact standard or dependency paths, including path-scoped layout and hard-invariant assertions for the extracted passes; type macros and nested macro calls are rejected, and every allowed macro argument is recursively scanned for forbidden carrier names. Focused rejection tests pin these cases. This remains a source-test boundary, so review must extend it if Rust syntax or the pass conventions change.
 
 ## Current production chain
 
-`LinkStage::new` performs only scan-field moves, groups the two scan-only TLA inputs, and stores scalar options. It does not allocate metadata or derived pass results. `LinkStage::link` creates one `PassPipelineCtx` and runs this statically visible serial chain:
+`LinkStage::new` stores `NormalizedScanStageOutput` and the options reference without projecting either one. `LinkStage::link` immediately consumes those two facade fields, destructures every Scan field into a local, converts warnings into diagnostics, groups the two scan-only TLA inputs, creates one `PassPipelineCtx`, and runs this statically visible serial chain:
 
 ```text
 ExtractGlobalConstantsPass

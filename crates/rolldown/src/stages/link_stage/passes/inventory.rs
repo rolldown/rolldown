@@ -591,6 +591,361 @@ fn inspect_items(
   }
 }
 
+fn terminal_type_ident(ty: &Type) -> Option<String> {
+  match ty {
+    Type::Path(path) if path.qself.is_none() => {
+      path.path.segments.last().map(|segment| normalized_ident(&segment.ident))
+    }
+    Type::Reference(reference) => terminal_type_ident(&reference.elem),
+    _ => None,
+  }
+}
+
+fn named_pattern_ident(pat: &syn::Pat) -> Option<String> {
+  let syn::Pat::Ident(ident) = pat else { return None };
+  (ident.by_ref.is_none() && ident.subpat.is_none()).then(|| normalized_ident(&ident.ident))
+}
+
+fn assert_complete_local_destructure(
+  statement: &syn::Stmt,
+  expected_type: &str,
+  expected_fields: &[&str],
+  expected_initializer: &str,
+) {
+  let syn::Stmt::Local(local) = statement else {
+    panic!("the `{expected_type}` consumption must be a local destructure");
+  };
+  let syn::Pat::Struct(pattern) = &local.pat else {
+    panic!("the `{expected_type}` consumption must use a struct pattern");
+  };
+  assert!(
+    is_plain_path(&pattern.path, expected_type),
+    "expected `{expected_type}` destructure, got a different path"
+  );
+  assert!(pattern.rest.is_none(), "`{expected_type}` must be destructured without `..`");
+  let fields = pattern
+    .fields
+    .iter()
+    .map(|field| {
+      assert!(
+        field.colon_token.is_none(),
+        "`{expected_type}` fields must keep their names instead of hiding state behind aliases"
+      );
+      let syn::Member::Named(name) = &field.member else {
+        panic!("`{expected_type}` must use named fields");
+      };
+      assert_eq!(
+        named_pattern_ident(&field.pat).as_deref(),
+        Some(normalized_ident(name).as_str()),
+        "`{expected_type}` field patterns must be plain bindings"
+      );
+      normalized_ident(name)
+    })
+    .collect::<BTreeSet<_>>();
+  assert_eq!(
+    fields,
+    expected_fields.iter().map(|field| (*field).to_owned()).collect::<BTreeSet<_>>(),
+    "`{expected_type}` must be destructured completely"
+  );
+  let initializer = local.init.as_ref().expect("the destructure must have an initializer");
+  let syn::Expr::Path(initializer) = &*initializer.expr else {
+    panic!("the `{expected_type}` initializer must be a plain local");
+  };
+  assert!(
+    is_plain_path(&initializer.path, expected_initializer),
+    "the `{expected_type}` destructure must consume `{expected_initializer}`"
+  );
+}
+
+#[derive(Default)]
+struct SelfValueVisitor {
+  paths: usize,
+}
+
+impl<'ast> Visit<'ast> for SelfValueVisitor {
+  fn visit_expr_path(&mut self, expression: &'ast syn::ExprPath) {
+    if is_plain_path(&expression.path, "self") {
+      self.paths += 1;
+    }
+    visit::visit_expr_path(self, expression);
+  }
+}
+
+#[derive(Default)]
+struct FacadePathVisitor {
+  paths: usize,
+}
+
+impl<'ast> Visit<'ast> for FacadePathVisitor {
+  fn visit_path(&mut self, path: &'ast syn::Path) {
+    self.paths += path
+      .segments
+      .iter()
+      .filter(|segment| normalized_ident(&segment.ident) == "LinkStage")
+      .count();
+    visit::visit_path(self, path);
+  }
+}
+
+#[test]
+fn link_stage_is_a_two_field_one_shot_facade() {
+  let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/stages/link_stage");
+  let source = root.join("mod.rs");
+  let text = fs::read_to_string(&source)
+    .unwrap_or_else(|error| panic!("failed to read {}: {error}", source.display()));
+  let file = syn::parse_file(&text)
+    .unwrap_or_else(|error| panic!("failed to parse {}: {error}", source.display()));
+
+  let top_level_structs = file
+    .items
+    .iter()
+    .filter_map(|item| match item {
+      Item::Struct(item) => Some(normalized_ident(&item.ident)),
+      _ => None,
+    })
+    .collect::<BTreeSet<_>>();
+  assert_eq!(
+    top_level_structs,
+    BTreeSet::from([
+      "LinkStage".to_owned(),
+      "LinkStageOutput".to_owned(),
+      "SafelyMergeCjsNsInfo".to_owned(),
+    ]),
+    "the driver module must not introduce a replacement state carrier"
+  );
+  assert!(
+    file.items.iter().all(|item| !matches!(item, Item::Fn(_))),
+    "driver helpers must be passes with typed slots, not free functions over replacement state"
+  );
+
+  let stage = file
+    .items
+    .iter()
+    .find_map(|item| match item {
+      Item::Struct(item) if item.ident == "LinkStage" => Some(item),
+      _ => None,
+    })
+    .expect("LinkStage declaration");
+  let Fields::Named(stage_fields) = &stage.fields else {
+    panic!("LinkStage must use named fields")
+  };
+  assert_eq!(stage_fields.named.len(), 2, "LinkStage must remain a two-field facade");
+  let stage_field_types = stage_fields
+    .named
+    .iter()
+    .map(|field| {
+      (
+        normalized_ident(field.ident.as_ref().expect("named LinkStage field")),
+        terminal_type_ident(&field.ty).expect("plain LinkStage field type"),
+      )
+    })
+    .collect::<BTreeMap<_, _>>();
+  assert_eq!(
+    stage_field_types,
+    BTreeMap::from([
+      ("options".to_owned(), "SharedOptions".to_owned()),
+      ("scan_stage_output".to_owned(), "NormalizedScanStageOutput".to_owned()),
+    ]),
+    "LinkStage may retain only the untouched Scan output and options"
+  );
+
+  let stage_impls = file
+    .items
+    .iter()
+    .filter_map(|item| match item {
+      Item::Impl(item)
+        if item.trait_.is_none()
+          && terminal_type_ident(&item.self_ty).as_deref() == Some("LinkStage") =>
+      {
+        Some(item)
+      }
+      _ => None,
+    })
+    .collect::<Vec<_>>();
+  assert_eq!(stage_impls.len(), 1, "LinkStage must have one guarded inherent implementation");
+  let stage_impl = stage_impls[0];
+  let methods = stage_impl
+    .items
+    .iter()
+    .filter_map(|item| match item {
+      syn::ImplItem::Fn(method) => Some((normalized_ident(&method.sig.ident), method)),
+      _ => None,
+    })
+    .collect::<BTreeMap<_, _>>();
+  assert_eq!(
+    methods.keys().cloned().collect::<BTreeSet<_>>(),
+    BTreeSet::from(["link".to_owned(), "new".to_owned()]),
+    "LinkStage must not grow driver helpers or stateful methods"
+  );
+  let link = methods["link"];
+  assert!(
+    matches!(link.sig.inputs.first(), Some(syn::FnArg::Receiver(receiver)) if receiver.reference.is_none() && receiver.mutability.is_none()),
+    "LinkStage::link must consume the facade by value"
+  );
+  assert_complete_local_destructure(
+    &link.block.stmts[0],
+    "LinkStage",
+    &["scan_stage_output", "options"],
+    "self",
+  );
+  assert_complete_local_destructure(
+    &link.block.stmts[1],
+    "NormalizedScanStageOutput",
+    &[
+      "module_table",
+      "index_ecma_ast",
+      "stmt_infos",
+      "entry_points",
+      "symbol_ref_db",
+      "runtime",
+      "warnings",
+      "dynamic_import_exports_usage_map",
+      "overrode_preserve_entry_signature_map",
+      "entry_point_to_reference_ids",
+      "flat_options",
+      "user_defined_entry_modules",
+      "tla_module_count",
+      "tla_keyword_span_map",
+    ],
+    "scan_stage_output",
+  );
+  let mut self_values = SelfValueVisitor::default();
+  for statement in &link.block.stmts[1..] {
+    self_values.visit_stmt(statement);
+  }
+  assert_eq!(self_values.paths, 0, "the pass driver must not retain or recover LinkStage");
+}
+
+#[test]
+fn legacy_output_adapter_accepts_only_explicit_final_fields() {
+  let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/stages/link_stage");
+  let source = root.join("legacy_output_adapter.rs");
+  let text = fs::read_to_string(&source)
+    .unwrap_or_else(|error| panic!("failed to read {}: {error}", source.display()));
+  let file = syn::parse_file(&text)
+    .unwrap_or_else(|error| panic!("failed to parse {}: {error}", source.display()));
+
+  let mut facade_paths = FacadePathVisitor::default();
+  facade_paths.visit_file(&file);
+  assert_eq!(facade_paths.paths, 0, "the output adapter must not name the LinkStage facade");
+
+  let top_level_structs = file
+    .items
+    .iter()
+    .filter_map(|item| match item {
+      Item::Struct(item) => Some(normalized_ident(&item.ident)),
+      _ => None,
+    })
+    .collect::<BTreeSet<_>>();
+  assert_eq!(
+    top_level_structs,
+    BTreeSet::from(["LegacyOutputAdapter".to_owned()]),
+    "the adapter module must not introduce an input or stage replacement carrier"
+  );
+
+  let adapter_impls = file
+    .items
+    .iter()
+    .filter_map(|item| match item {
+      Item::Impl(item)
+        if item.trait_.is_none()
+          && terminal_type_ident(&item.self_ty).as_deref() == Some("LegacyOutputAdapter") =>
+      {
+        Some(item)
+      }
+      _ => None,
+    })
+    .collect::<Vec<_>>();
+  assert_eq!(
+    adapter_impls.len(),
+    1,
+    "LegacyOutputAdapter must have one guarded inherent implementation"
+  );
+  let adapter_impl = adapter_impls[0];
+  let methods = adapter_impl
+    .items
+    .iter()
+    .filter_map(|item| match item {
+      syn::ImplItem::Fn(method) => Some(method),
+      _ => None,
+    })
+    .collect::<Vec<_>>();
+  assert_eq!(methods.len(), 1, "the output adapter must expose only finish");
+  let finish = methods[0];
+  assert_eq!(finish.sig.ident, "finish");
+  let parameters = finish
+    .sig
+    .inputs
+    .iter()
+    .filter_map(|argument| match argument {
+      syn::FnArg::Receiver(_) => None,
+      syn::FnArg::Typed(argument) => Some((
+        named_pattern_ident(&argument.pat).expect("plain adapter parameter"),
+        terminal_type_ident(&argument.ty).expect("explicit adapter parameter type"),
+      )),
+    })
+    .collect::<Vec<_>>();
+  assert_eq!(
+    parameters,
+    [
+      ("module_table", "ModuleTable"),
+      ("symbols", "SymbolRefDb"),
+      ("stmt_infos", "IndexStmtInfos"),
+      ("runtime", "RuntimeModuleBrief"),
+      ("diagnostics", "Diagnostics"),
+      ("ast_table", "IndexEcmaAst"),
+      ("dynamic_import_exports_usage_map", "FxHashMap"),
+      ("overrode_preserve_entry_signature_map", "FxHashMap"),
+      ("entry_point_to_reference_ids", "FxHashMap"),
+      ("user_defined_entry_modules", "FxHashSet"),
+    ]
+    .into_iter()
+    .map(|(name, ty)| (name.to_owned(), ty.to_owned()))
+    .collect::<Vec<_>>(),
+    "finish must receive the final Scan-owned fields explicitly instead of a replacement carrier"
+  );
+
+  let helper_signatures = file
+    .items
+    .iter()
+    .filter_map(|item| match item {
+      Item::Fn(item) => Some((
+        normalized_ident(&item.sig.ident),
+        item
+          .sig
+          .inputs
+          .iter()
+          .map(|argument| match argument {
+            syn::FnArg::Receiver(_) => panic!("free adapter helper has a receiver"),
+            syn::FnArg::Typed(argument) => {
+              terminal_type_ident(&argument.ty).expect("explicit adapter helper parameter type")
+            }
+          })
+          .collect::<Vec<_>>(),
+      )),
+      _ => None,
+    })
+    .collect::<BTreeMap<_, _>>();
+  assert_eq!(
+    helper_signatures,
+    BTreeMap::from([
+      (
+        "apply_deferred_module_patches".to_owned(),
+        vec![
+          "ModuleTable".to_owned(),
+          "TreeShakeModulePatches".to_owned(),
+          "ReferenceImportRecordPatches".to_owned(),
+        ],
+      ),
+      (
+        "project_cjs_routing".to_owned(),
+        vec!["ModuleTable".to_owned(), "IndexVec".to_owned(), "CjsRoutingFinal".to_owned()],
+      ),
+    ]),
+    "adapter helpers must keep their explicit narrow signatures"
+  );
+}
+
 fn use_tree_mentions_link(tree: &UseTree) -> bool {
   match tree {
     UseTree::Path(path) => {

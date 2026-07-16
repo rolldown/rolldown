@@ -19,8 +19,8 @@ pub use super::inclusion_core::{
 
 pub struct IncludeContext<'a> {
   pub modules: &'a IndexModules,
-  /// Per-module statement-info table, detached from `EcmaView` and held on
-  /// `LinkStage` for the duration of the link/generate stages.
+  /// Per-module statement-info table, detached from `EcmaView`, moved through
+  /// the Link driver, and retained in `LinkStageOutput` for Generate.
   pub stmt_infos: &'a IndexStmtInfos,
   pub symbols: &'a SymbolRefDb,
   pub is_included_vec: &'a mut StmtInclusionVec,

@@ -1,14 +1,21 @@
+use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Module, ModuleIdx, RetainedExportSymbols, SymbolRef, UsedExternalSymbols, UsedSymbolRefsBuilder,
+  EntryPoint, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures, RetainedExportSymbols,
+  RuntimeModuleBrief, SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
+use rolldown_error::Diagnostics;
 use rolldown_utils::indexmap::FxIndexSet;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{type_alias::IndexEcmaAst, types::linking_metadata::LinkingMetadata};
+use crate::{
+  type_alias::{IndexEcmaAst, IndexStmtInfos},
+  types::linking_metadata::LinkingMetadata,
+};
 
 use super::{
-  LinkStage, LinkStageOutput,
+  LinkStageOutput,
   lazy_json_export_initializers::LazyJsonExportInitializers,
   passes::{
     CjsNamespaceMerges, CjsRoutingFinal, DynamicExports, EntryExportRoots, EnumInliningPresence,
@@ -99,19 +106,32 @@ fn project_cjs_routing(
 }
 
 impl LegacyOutputAdapter<'_> {
+  #[expect(
+    clippy::too_many_arguments,
+    reason = "the facade is already gone, so the boundary lists each final field explicitly"
+  )]
   pub(super) fn finish(
     self,
-    mut stage: LinkStage<'_>,
+    mut module_table: ModuleTable,
+    symbols: SymbolRefDb,
+    stmt_infos: IndexStmtInfos,
+    runtime: RuntimeModuleBrief,
+    diagnostics: Diagnostics,
+    ast_table: IndexEcmaAst,
+    dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+    overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
+    entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
+    user_defined_entry_modules: FxHashSet<ModuleIdx>,
   ) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
-    let module_count = stage.module_table.modules.len();
+    let module_count = module_table.modules.len();
     apply_deferred_module_patches(
-      &mut stage.module_table,
+      &mut module_table,
       self.tree_shake_patches,
       self.reference_patches,
     );
 
     for (module_idx, exec_order) in self.execution_orders.assigned() {
-      match &mut stage.module_table[module_idx] {
+      match &mut module_table[module_idx] {
         Module::Normal(module) => {
           debug_assert_eq!(module.exec_order, u32::MAX);
           module.exec_order = exec_order;
@@ -124,7 +144,7 @@ impl LegacyOutputAdapter<'_> {
     }
     assert_eq!(self.module_formats.module_count(), module_count);
     for (module_idx, format) in self.module_formats.normal_modules() {
-      stage.module_table[module_idx]
+      module_table[module_idx]
         .as_normal_mut()
         .expect("normal module format must target a normal module")
         .exports_kind = format;
@@ -132,13 +152,12 @@ impl LegacyOutputAdapter<'_> {
     assert_eq!(self.module_side_effects.module_count(), module_count);
     for module_idx in 0..module_count {
       let module_idx = ModuleIdx::from_usize(module_idx);
-      if let Some(module) = stage.module_table[module_idx].as_normal_mut() {
+      if let Some(module) = module_table[module_idx].as_normal_mut() {
         module.side_effects = self.module_side_effects.get(module_idx);
       }
     }
 
-    let mut metas = stage
-      .module_table
+    let mut metas = module_table
       .modules
       .iter()
       .map(|_| LinkingMetadata::default())
@@ -174,7 +193,7 @@ impl LegacyOutputAdapter<'_> {
 
     assert_eq!(self.resolved_exports.module_count(), module_count);
     for (module_idx, exports) in self.resolved_exports.into_slots().into_iter_enumerated() {
-      match (&stage.module_table[module_idx], exports) {
+      match (&module_table[module_idx], exports) {
         (Module::Normal(_), Some(exports)) => {
           let (resolved, sorted) = exports.into_parts();
           metas[module_idx].resolved_exports = resolved;
@@ -191,7 +210,7 @@ impl LegacyOutputAdapter<'_> {
     for (module_idx, symbols) in
       self.included_commonjs_export_symbols.into_slots().into_iter_enumerated()
     {
-      match (&stage.module_table[module_idx], symbols) {
+      match (&module_table[module_idx], symbols) {
         (Module::Normal(_), Some(symbols)) => {
           metas[module_idx].included_commonjs_export_symbol = symbols;
         }
@@ -204,12 +223,12 @@ impl LegacyOutputAdapter<'_> {
         }
       }
     }
-    project_cjs_routing(&stage.module_table, &mut metas, self.cjs_routing);
+    project_cjs_routing(&module_table, &mut metas, self.cjs_routing);
     assert_eq!(self.member_expr_resolutions.module_count(), module_count);
     for (module_idx, resolutions) in
       self.member_expr_resolutions.into_slots().into_iter_enumerated()
     {
-      match (&stage.module_table[module_idx], resolutions) {
+      match (&module_table[module_idx], resolutions) {
         (Module::Normal(_), Some(resolutions)) => {
           metas[module_idx].resolved_member_expr_refs = resolutions;
         }
@@ -224,7 +243,7 @@ impl LegacyOutputAdapter<'_> {
     }
     assert_eq!(self.shimmed_missing_exports.module_count(), module_count);
     for (module_idx, shims) in self.shimmed_missing_exports.into_slots().into_iter_enumerated() {
-      match (&stage.module_table[module_idx], shims) {
+      match (&module_table[module_idx], shims) {
         (Module::Normal(_), Some(shims)) => metas[module_idx].shimmed_missing_exports = shims,
         (Module::External(_), None) => {}
         (Module::Normal(_), None) => {
@@ -269,25 +288,25 @@ impl LegacyOutputAdapter<'_> {
 
     tracing::trace!(modules = module_count, "assembled legacy link output");
     let output = LinkStageOutput {
-      module_table: stage.module_table,
+      module_table,
       entries: self.retained_entries.into_inner(),
       sorted_modules: self.sorted_modules.into_inner(),
       metas,
-      symbol_db: stage.symbols,
-      stmt_infos: stage.stmt_infos,
-      runtime: stage.runtime,
-      diagnostics: stage.diagnostics,
+      symbol_db: symbols,
+      stmt_infos,
+      runtime,
+      diagnostics,
       used_external_symbols: self.used_external_symbols,
       retained_export_symbols: RetainedExportSymbols::default(),
-      dynamic_import_exports_usage_map: stage.dynamic_import_exports_usage_map,
+      dynamic_import_exports_usage_map,
       safely_merge_cjs_ns_map: self.cjs_namespace_merges.into_legacy(),
       external_import_namespace_merger: self.external_namespace_merges,
-      overrode_preserve_entry_signature_map: stage.overrode_preserve_entry_signature_map,
-      entry_point_to_reference_ids: stage.entry_point_to_reference_ids,
+      overrode_preserve_entry_signature_map,
+      entry_point_to_reference_ids,
       global_constant_symbol_map: self.global_constants.into_legacy(),
       normal_symbol_exports_chain_map: self.normal_export_chains.into_inner(),
       lazy_json_export_initializers: self.lazy_json_export_initializers,
-      user_defined_entry_modules: stage.user_defined_entry_modules,
+      user_defined_entry_modules,
       has_enum_inlining: self.enum_inlining.get(),
     };
     #[cfg(feature = "testing")]
@@ -296,7 +315,7 @@ impl LegacyOutputAdapter<'_> {
       super::testing::observe_link_output(&mut output);
       output
     };
-    (output, stage.ast_table, self.used_symbol_refs)
+    (output, ast_table, self.used_symbol_refs)
   }
 }
 

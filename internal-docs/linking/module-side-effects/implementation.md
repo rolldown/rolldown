@@ -20,19 +20,17 @@ PlanModuleWrappingPass → CreateWrapperDeclarationsPass           │
                                                     sealed ModuleSideEffects
                                                                  │
                                                                  ▼
-                                            compatibility projection of normal slots
-                                                                 │
-                                            retained sealed ModuleSideEffects
-                                                                 │
                          CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass
                            → ComputeCjsRoutingPass → ResolveMemberExpressionsPass
                            → CollectEntryExportRootsPass → CreateSyntheticExportStatementsPass
                            → ReferenceNeededSymbolsPass → CrossModuleOptimizationPass
+                           → TreeShakePass → FinalizeModuleDependenciesPass
+                           → LegacyOutputAdapter projects normal slots
 ```
 
-`NormalizeLazyExportsPass` is the last operation that can invalidate a wrapper declaration, so side-effect analysis must read `ModuleWrappers`, not the earlier wrapper seed, plan, or declaration draft. The lower line records execution order: `BindImportsPass`, `ResolveMemberExpressionsPass`, and `ReferenceNeededSymbolsPass` read the retained side-effect artifact; collection, final export resolution, CJS routing, entry-root collection, synthetic statement creation, and P do not depend on it.
+`NormalizeLazyExportsPass` is the last operation that can invalidate a wrapper declaration, so side-effect analysis must read `ModuleWrappers`, not the earlier wrapper seed, plan, or declaration draft. The lower line records execution order: `BindImportsPass`, `ResolveMemberExpressionsPass`, `ReferenceNeededSymbolsPass`, `TreeShakePass`, and `FinalizeModuleDependenciesPass` read the retained side-effect artifact; collection, final export resolution, CJS routing, entry-root collection, synthetic statement creation, and P do not depend on it.
 
-The current representation helper projects normal side-effect slots, final formats, dynamic-export bits, and wrapper declarations into legacy fields before resolved-export collection. Later unmigrated readers require those projections, but their early position is transitional rather than a dependency of collection or binding. Projection does not end any typed lifetime needed by the twenty-two-pass chain: sealed `ModuleSideEffects`, sealed `DynamicExports`, final `ModuleFormats`, and final `ModuleWrappers` all remain available through N. Binding uses side effects when adding reexport-chain dependencies; M reads side effects and dynamic exports; entry-root collection reads wrappers; synthetic statement creation reads formats; and N reads all four facts. N is their last semantic reader, and the driver explicitly drops all four before P.
+No representation fact is projected before resolved-export collection or any other pass. Binding uses side effects when adding reexport-chain dependencies; M reads side effects and dynamic exports; entry-root collection reads wrappers; synthetic statement creation reads formats; N reads formats, wrappers, dynamic exports, and side effects; H reads formats, wrappers, and side effects; and G is the final typed side-effect reader. `LegacyOutputAdapter` performs the only projections after G: final formats and side effects into `ModuleTable`, and wrappers and dynamic-export bits into freshly allocated metadata.
 
 ## Pass contract
 
@@ -44,7 +42,7 @@ The current representation helper projects normal side-effect slots, final forma
 | `OutputOwned`   | `()`                                  | No mutable domain continues from the pass.                                       |
 | `Error`         | `Infallible`                          | The external link path remains infallible.                                       |
 
-`ModuleSideEffects` exposes only its module count and a read-only `get(ModuleIdx)` operation that copies the small enum value. It has no constructor, iteration-order override, mutable access, clone, or consuming unwrap. The driver walks raw module order and copies only normal-module slots into the unchanged legacy field. External-module fields are not rewritten, matching the previous method. The sealed artifact remains authoritative through binding and M, then leaves scope only after its final typed reader, `ReferenceNeededSymbolsPass`, derives statement side-effect flags.
+`ModuleSideEffects` exposes only its module count and a read-only `get(ModuleIdx)` operation that copies the small enum value. It has no constructor, iteration-order override, mutable access, clone, or consuming unwrap. The adapter walks raw module order and copies only normal-module slots into the unchanged legacy field. External-module fields are not rewritten, matching the previous method. The sealed artifact remains authoritative through B, M, N, and H, then leaves scope after G, its final typed reader, and the adapter projection.
 
 ## Exact algorithm
 
@@ -86,7 +84,7 @@ Focused tests pin:
 - the exact export-star predicate; and
 - preservation of `UserDefined`, `Analyzed(true)`, and `NoTreeshake` enum variants.
 
-The twenty-two-pass production trace test pins this pass after `NormalizeLazyExportsPass` and before `CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass → ComputeCjsRoutingPass → ResolveMemberExpressionsPass → CollectEntryExportRootsPass → CreateSyntheticExportStatementsPass → ReferenceNeededSymbolsPass → CrossModuleOptimizationPass`. Broader correctness and build gates remain part of the pass-pipeline validation rather than being duplicated here; timing and memory wait for the final Link structure.
+The twenty-four-pass production trace test pins this pass after `NormalizeLazyExportsPass` and before `CollectResolvedExportsPass → BindImportsPass → FinalizeResolvedExportsPass → ComputeCjsRoutingPass → ResolveMemberExpressionsPass → CollectEntryExportRootsPass → CreateSyntheticExportStatementsPass → ReferenceNeededSymbolsPass → CrossModuleOptimizationPass → TreeShakePass → FinalizeModuleDependenciesPass`. Broader correctness and build gates remain part of the pass-pipeline validation rather than being duplicated here; timing and memory are evaluated only on the complete final Link structure.
 
 ## Related
 

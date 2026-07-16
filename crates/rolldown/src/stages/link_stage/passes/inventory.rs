@@ -657,6 +657,39 @@ fn assert_complete_local_destructure(
   );
 }
 
+fn is_rolldown_pass_prefix(prefix: &[String]) -> bool {
+  prefix.len() == 2 && prefix[0] == "rolldown_utils" && prefix[1] == "pass"
+}
+
+fn collect_pass_entry_imports(
+  tree: &UseTree,
+  prefix: &mut Vec<String>,
+  entries: &mut Vec<(String, String)>,
+  globbed: &mut bool,
+) {
+  match tree {
+    UseTree::Path(path) => {
+      prefix.push(normalized_ident(&path.ident));
+      collect_pass_entry_imports(&path.tree, prefix, entries, globbed);
+      prefix.pop();
+    }
+    UseTree::Name(name) if is_rolldown_pass_prefix(prefix) => {
+      let name = normalized_ident(&name.ident);
+      entries.push((name.clone(), name));
+    }
+    UseTree::Rename(rename) if is_rolldown_pass_prefix(prefix) => {
+      entries.push((normalized_ident(&rename.ident), normalized_ident(&rename.rename)));
+    }
+    UseTree::Group(group) => {
+      for item in &group.items {
+        collect_pass_entry_imports(item, prefix, entries, globbed);
+      }
+    }
+    UseTree::Glob(_) if is_rolldown_pass_prefix(prefix) => *globbed = true,
+    UseTree::Name(_) | UseTree::Rename(_) | UseTree::Glob(_) => {}
+  }
+}
+
 #[derive(Default)]
 struct SelfValueVisitor {
   paths: usize,
@@ -668,6 +701,126 @@ impl<'ast> Visit<'ast> for SelfValueVisitor {
       self.paths += 1;
     }
     visit::visit_expr_path(self, expression);
+  }
+}
+
+#[derive(Default)]
+struct InfallibleBoundaryVisitor {
+  try_expressions: usize,
+  unwrap_or_expect_calls: BTreeSet<String>,
+  panic_paths: BTreeSet<String>,
+  error_types: BTreeSet<String>,
+  non_plain_pass_entry_calls: BTreeSet<String>,
+  direct_run_pass_calls: usize,
+  infallible_pass_calls: usize,
+}
+
+impl InfallibleBoundaryVisitor {
+  fn assert_no_error_adapter(&self, boundary: &str) {
+    assert_eq!(self.try_expressions, 0, "{boundary} must not use `?` to adapt an error");
+    assert!(
+      self.unwrap_or_expect_calls.is_empty(),
+      "{boundary} must not adapt an error with {:?}",
+      self.unwrap_or_expect_calls
+    );
+    assert!(
+      self.panic_paths.is_empty(),
+      "{boundary} must not adapt an error through a panic path: {:?}",
+      self.panic_paths
+    );
+    assert!(
+      self.error_types.is_empty(),
+      "{boundary} must not introduce a Result error channel: {:?}",
+      self.error_types
+    );
+    assert!(
+      self.non_plain_pass_entry_calls.is_empty(),
+      "{boundary} must call pass entries by their exact unqualified names: {:?}",
+      self.non_plain_pass_entry_calls
+    );
+  }
+}
+
+impl<'ast> Visit<'ast> for InfallibleBoundaryVisitor {
+  fn visit_expr_try(&mut self, expression: &'ast syn::ExprTry) {
+    self.try_expressions += 1;
+    visit::visit_expr_try(self, expression);
+  }
+
+  fn visit_expr_method_call(&mut self, expression: &'ast syn::ExprMethodCall) {
+    let method = normalized_ident(&expression.method);
+    if matches!(method.as_str(), "unwrap" | "expect") {
+      self.unwrap_or_expect_calls.insert(method);
+    }
+    visit::visit_expr_method_call(self, expression);
+  }
+
+  fn visit_expr_call(&mut self, expression: &'ast syn::ExprCall) {
+    if let syn::Expr::Path(function) = &*expression.func {
+      if let Some(name) =
+        function.path.segments.last().map(|segment| normalized_ident(&segment.ident))
+      {
+        match name.as_str() {
+          "panic" | "panic_any" | "abort" => {
+            self.panic_paths.insert(name);
+          }
+          "run_pass" | "run_infallible_pass" => {
+            if function.qself.is_none() && is_plain_path(&function.path, &name) {
+              if name == "run_pass" {
+                self.direct_run_pass_calls += 1;
+              } else {
+                self.infallible_pass_calls += 1;
+              }
+            } else {
+              self.non_plain_pass_entry_calls.insert(
+                function
+                  .path
+                  .segments
+                  .iter()
+                  .map(|segment| normalized_ident(&segment.ident))
+                  .collect::<Vec<_>>()
+                  .join("::"),
+              );
+            }
+          }
+          _ => {}
+        }
+      }
+    }
+    visit::visit_expr_call(self, expression);
+  }
+
+  fn visit_macro(&mut self, mac: &'ast syn::Macro) {
+    if let Some(name) = mac.path.segments.last().map(|segment| normalized_ident(&segment.ident)) {
+      if matches!(
+        name.as_str(),
+        "panic"
+          | "assert"
+          | "assert_eq"
+          | "assert_ne"
+          | "debug_assert"
+          | "debug_assert_eq"
+          | "debug_assert_ne"
+          | "unreachable"
+          | "todo"
+          | "unimplemented"
+      ) {
+        self.panic_paths.insert(name);
+      }
+    }
+    visit::visit_macro(self, mac);
+  }
+
+  fn visit_path(&mut self, path: &'ast syn::Path) {
+    for segment in &path.segments {
+      match normalized_ident(&segment.ident).as_str() {
+        "Result" | "BuildResult" => {
+          self.error_types.insert(normalized_ident(&segment.ident));
+        }
+        _ => {}
+      }
+    }
+    visit::visit_path(self, path);
   }
 }
 
@@ -695,6 +848,32 @@ fn link_stage_is_a_two_field_one_shot_facade() {
     .unwrap_or_else(|error| panic!("failed to read {}: {error}", source.display()));
   let file = syn::parse_file(&text)
     .unwrap_or_else(|error| panic!("failed to parse {}: {error}", source.display()));
+
+  let mut pass_entry_imports = Vec::new();
+  let mut globbed_pass_entries = false;
+  for item in &file.items {
+    if let Item::Use(item) = item {
+      collect_pass_entry_imports(
+        &item.tree,
+        &mut Vec::new(),
+        &mut pass_entry_imports,
+        &mut globbed_pass_entries,
+      );
+    }
+  }
+  assert!(!globbed_pass_entries, "the Link driver must not glob-import pass entries");
+  let guarded_entries = pass_entry_imports
+    .into_iter()
+    .filter(|(source, local)| {
+      matches!(source.as_str(), "run_pass" | "run_infallible_pass")
+        || matches!(local.as_str(), "run_pass" | "run_infallible_pass")
+    })
+    .collect::<Vec<_>>();
+  assert_eq!(
+    guarded_entries,
+    [("run_infallible_pass".to_owned(), "run_infallible_pass".to_owned())],
+    "the Link driver must import the infallible entry by its exact name and no fallible entry"
+  );
 
   let top_level_structs = file
     .items
@@ -782,6 +961,33 @@ fn link_stage_is_a_two_field_one_shot_facade() {
     matches!(link.sig.inputs.first(), Some(syn::FnArg::Receiver(receiver)) if receiver.reference.is_none() && receiver.mutability.is_none()),
     "LinkStage::link must consume the facade by value"
   );
+  let syn::ReturnType::Type(_, return_type) = &link.sig.output else {
+    panic!("LinkStage::link must keep the existing tuple return type");
+  };
+  let Type::Tuple(return_tuple) = &**return_type else {
+    panic!("LinkStage::link must return the existing tuple directly");
+  };
+  let returned_types = return_tuple
+    .elems
+    .iter()
+    .map(|ty| terminal_type_ident(ty).expect("plain LinkStage::link tuple element"))
+    .collect::<Vec<_>>();
+  assert_eq!(
+    returned_types,
+    ["LinkStageOutput", "IndexEcmaAst", "UsedSymbolRefsBuilder"],
+    "LinkStage::link must preserve its infallible boundary tuple"
+  );
+  let mut infallible_boundary = InfallibleBoundaryVisitor::default();
+  infallible_boundary.visit_block(&link.block);
+  infallible_boundary.assert_no_error_adapter("LinkStage::link");
+  assert_eq!(
+    infallible_boundary.direct_run_pass_calls, 0,
+    "LinkStage::link must execute passes only through `run_infallible_pass`"
+  );
+  assert_eq!(
+    infallible_boundary.infallible_pass_calls, 24,
+    "LinkStage::link must execute every production pass through the exact infallible entry"
+  );
   assert_complete_local_destructure(
     &link.block.stmts[0],
     "LinkStage",
@@ -814,6 +1020,185 @@ fn link_stage_is_a_two_field_one_shot_facade() {
     self_values.visit_stmt(statement);
   }
   assert_eq!(self_values.paths, 0, "the pass driver must not retain or recover LinkStage");
+}
+
+#[test]
+fn infallible_harness_and_bundle_boundary_do_not_adapt_errors() {
+  let crate_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+  let harness_source = crate_root.join("../rolldown_utils/src/pass.rs");
+  let harness_text = fs::read_to_string(&harness_source)
+    .unwrap_or_else(|error| panic!("failed to read {}: {error}", harness_source.display()));
+  let harness_file = syn::parse_file(&harness_text)
+    .unwrap_or_else(|error| panic!("failed to parse {}: {error}", harness_source.display()));
+  let harness = harness_file
+    .items
+    .iter()
+    .find_map(|item| match item {
+      Item::Fn(function) if function.sig.ident == "run_infallible_pass" => Some(function),
+      _ => None,
+    })
+    .expect("run_infallible_pass function");
+  let Some(syn::GenericParam::Type(pass_type)) = harness.sig.generics.params.first() else {
+    panic!("run_infallible_pass must have exactly one pass type parameter");
+  };
+  assert_eq!(harness.sig.generics.params.len(), 1, "the harness must have one type parameter");
+  assert!(harness.sig.generics.where_clause.is_none(), "the harness must not add where bounds");
+  assert_eq!(normalized_ident(&pass_type.ident), "P", "the harness pass parameter must be `P`");
+  assert!(pass_type.default.is_none(), "the harness pass parameter must not have a default");
+  let Some(syn::TypeParamBound::Trait(pass_bound)) = pass_type.bounds.first() else {
+    panic!("run_infallible_pass must have one explicit Pass bound");
+  };
+  assert_eq!(pass_type.bounds.len(), 1, "the pass parameter must have one trait bound");
+  assert!(
+    pass_bound.paren_token.is_none()
+      && matches!(pass_bound.modifier, syn::TraitBoundModifier::None)
+      && pass_bound.lifetimes.is_none()
+      && pass_bound.path.leading_colon.is_none()
+      && pass_bound.path.segments.len() == 1
+      && pass_bound.path.segments[0].ident == "Pass",
+    "run_infallible_pass must use the exact unqualified Pass bound"
+  );
+  let pass_segment = &pass_bound.path.segments[0];
+  let PathArguments::AngleBracketed(pass_arguments) = &pass_segment.arguments else {
+    panic!("run_infallible_pass must bind the Pass error type");
+  };
+  assert!(
+    pass_arguments.args.len() == 1
+      && matches!(
+        pass_arguments.args.first(),
+        Some(syn::GenericArgument::AssocType(binding))
+          if binding.ident == "Error"
+            && binding.generics.is_none()
+            && matches!(&binding.ty, Type::Path(path) if path.qself.is_none() && is_plain_path(&path.path, "Infallible"))
+      ),
+    "run_infallible_pass must require only `Pass<Error = Infallible>`"
+  );
+  let harness_parameters = harness
+    .sig
+    .inputs
+    .iter()
+    .map(|argument| {
+      let syn::FnArg::Typed(argument) = argument else {
+        panic!("run_infallible_pass must be a free function");
+      };
+      (
+        named_pattern_ident(&argument.pat).expect("plain harness parameter"),
+        terminal_type_ident(&argument.ty).expect("plain harness parameter type"),
+      )
+    })
+    .collect::<Vec<_>>();
+  assert_eq!(
+    harness_parameters,
+    [
+      ("pass".to_owned(), "P".to_owned()),
+      ("pipeline".to_owned(), "PassPipelineCtx".to_owned()),
+      ("read".to_owned(), "InputRead".to_owned()),
+      ("owned".to_owned(), "InputOwned".to_owned()),
+    ],
+    "run_infallible_pass must preserve its exact input slots"
+  );
+  let Some(syn::FnArg::Typed(pipeline_parameter)) = harness.sig.inputs.iter().nth(1) else {
+    unreachable!()
+  };
+  assert!(
+    matches!(&*pipeline_parameter.ty, Type::Reference(reference) if reference.mutability.is_some()),
+    "run_infallible_pass must borrow the pipeline context mutably"
+  );
+  assert_eq!(
+    match &harness.sig.output {
+      syn::ReturnType::Type(_, ty) => terminal_type_ident(ty),
+      syn::ReturnType::Default => None,
+    }
+    .as_deref(),
+    Some("PassOutput"),
+    "run_infallible_pass must return the pass output directly"
+  );
+  let mut harness_boundary = InfallibleBoundaryVisitor::default();
+  harness_boundary.visit_block(&harness.block);
+  harness_boundary.assert_no_error_adapter("run_infallible_pass");
+  assert_eq!(
+    harness_boundary.direct_run_pass_calls, 1,
+    "run_infallible_pass must delegate exactly once to the guarded fallible entry"
+  );
+  let [syn::Stmt::Expr(syn::Expr::Match(eliminate), None)] = harness.block.stmts.as_slice() else {
+    panic!("run_infallible_pass must eliminate Infallible in one returned match");
+  };
+  assert!(
+    matches!(
+      &*eliminate.expr,
+      syn::Expr::Call(call)
+        if matches!(&*call.func, syn::Expr::Path(path) if path.qself.is_none() && is_plain_path(&path.path, "run_pass"))
+    ),
+    "run_infallible_pass must exhaustively match the guarded fallible entry directly"
+  );
+  assert_eq!(eliminate.arms.len(), 2, "the guarded result must have exactly Ok and Err arms");
+  let err_arm = eliminate
+    .arms
+    .iter()
+    .find(|arm| {
+      matches!(&arm.pat, syn::Pat::TupleStruct(pattern) if is_plain_path(&pattern.path, "Err"))
+    })
+    .expect("run_infallible_pass Err arm");
+  let syn::Pat::TupleStruct(err_pattern) = &err_arm.pat else { unreachable!() };
+  let Some(syn::Pat::Ident(never_binding)) = err_pattern.elems.first() else {
+    panic!("run_infallible_pass must bind exactly one Infallible value");
+  };
+  assert_eq!(err_pattern.elems.len(), 1, "the Err arm must bind one value");
+  let syn::Expr::Match(never_match) = &*err_arm.body else {
+    panic!("run_infallible_pass must eliminate Infallible with an exhaustive match");
+  };
+  assert!(never_match.arms.is_empty(), "the Infallible match must have no arms");
+  assert!(
+    matches!(&*never_match.expr, syn::Expr::Path(path) if is_plain_path(&path.path, &normalized_ident(&never_binding.ident))),
+    "the empty match must consume the bound Infallible value"
+  );
+
+  let bundle_source = crate_root.join("src/bundle/bundle.rs");
+  let bundle_text = fs::read_to_string(&bundle_source)
+    .unwrap_or_else(|error| panic!("failed to read {}: {error}", bundle_source.display()));
+  let bundle_file = syn::parse_file(&bundle_text)
+    .unwrap_or_else(|error| panic!("failed to parse {}: {error}", bundle_source.display()));
+  let bundle_methods = bundle_file
+    .items
+    .iter()
+    .filter_map(|item| match item {
+      Item::Impl(item) => Some(item),
+      _ => None,
+    })
+    .flat_map(|item| &item.items)
+    .filter_map(|item| match item {
+      syn::ImplItem::Fn(method) if method.sig.ident == "bundle_up" => Some(method),
+      _ => None,
+    })
+    .collect::<Vec<_>>();
+  let [bundle_up] = bundle_methods.as_slice() else {
+    panic!("bundle_up must have exactly one implementation");
+  };
+  let link_boundary = bundle_up
+    .block
+    .stmts
+    .iter()
+    .find_map(|statement| match statement {
+      syn::Stmt::Local(local)
+        if matches!(&local.pat, syn::Pat::Tuple(tuple) if tuple.elems.len() == 3) =>
+      {
+        local.init.as_ref().map(|init| &*init.expr)
+      }
+      _ => None,
+    })
+    .expect("bundle_up Link tuple binding");
+  let syn::Expr::MethodCall(link_call) = link_boundary else {
+    panic!("bundle_up must receive the Link tuple from a direct method call");
+  };
+  assert_eq!(normalized_ident(&link_call.method), "link", "bundle_up must call Link directly");
+  assert!(link_call.args.is_empty(), "LinkStage::link takes no explicit arguments");
+  let syn::Expr::Call(constructor_call) = &*link_call.receiver else {
+    panic!("bundle_up must call `.link()` directly on `LinkStage::new(...)`");
+  };
+  assert!(
+    matches!(&*constructor_call.func, syn::Expr::Path(path) if is_exact_path(&path.path, &["LinkStage", "new"])),
+    "bundle_up must preserve the direct `LinkStage::new(...).link()` boundary"
+  );
 }
 
 #[test]

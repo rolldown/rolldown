@@ -2,7 +2,7 @@
 
 ## Summary
 
-`CanonicalizeEntriesPass` and `ComputeModuleExecutionOrderPass` produce a deterministic, dependency-respecting execution order over every reachable module in the graph. The first pass consumes raw scan entries and returns the only owned `EntryPlanDraft`; the second borrows that draft and the module table, returns sealed `ModuleExecutionOrders` plus owned `SortedModules`, and does not mutate either input. The link driver temporarily projects assigned orders into `Module::exec_order`, retains the sealed typed order table through `BindImportsPass`, and retains the owned sorted list through `CrossModuleOptimizationPass` before its one consuming legacy conversion. Chunk assembly, cross-chunk link computation, and rendering still rely on the legacy fields as the canonical "what runs before what" signal while the migration is in progress.
+`CanonicalizeEntriesPass` and `ComputeModuleExecutionOrderPass` produce a deterministic, dependency-respecting execution order over every reachable module in the graph. The first pass consumes raw scan entries and returns the only owned `EntryPlanDraft`; the second borrows that draft and the module table, returns sealed `ModuleExecutionOrders` plus owned `SortedModules`, and does not mutate either input. `BindImportsPass` reads the sealed order table, `CrossModuleOptimizationPass` reads the owned sorted list, and `LegacyOutputAdapter` performs the only compatibility projection and moves the sorted list into `LinkStageOutput`. Chunk assembly, cross-chunk link computation, and rendering then consume those unchanged legacy boundary fields.
 
 Sources: `crates/rolldown/src/stages/link_stage/passes/canonicalize_entries.rs` and `crates/rolldown/src/stages/link_stage/passes/compute_module_execution_order.rs`.
 
@@ -63,7 +63,7 @@ On `ToBeExecuted(id)`:
   ```
   `.rev()` preserves the source-order of imports after the stack reverses them.
 
-On `WaitForExit(id)`: assign `execution_orders[id] = next_exec_order`, push `id` onto the owned sorted list if it is a `Module::Normal`, increment the counter, and remove the stack-index bookkeeping entry. External modules receive an order but do not appear in `SortedModules` because only normal modules are emitted by the chunk pipeline. The pass leaves every legacy `module.exec_order` untouched; the driver is the only temporary compatibility writer.
+On `WaitForExit(id)`: assign `execution_orders[id] = next_exec_order`, push `id` onto the owned sorted list if it is a `Module::Normal`, increment the counter, and remove the stack-index bookkeeping entry. External modules receive an order but do not appear in `SortedModules` because only normal modules are emitted by the chunk pipeline. The pass leaves every legacy `module.exec_order` untouched; the final adapter is its only compatibility writer.
 
 ### Circular-dependency detection
 
@@ -96,16 +96,16 @@ Overall work is O(N) real visits plus O(E) dependency pushes-and-skips, so total
 | `stages/link_stage/passes/cross_module_optimization.rs` | Borrows typed `SortedModules` for parallel analysis slots and deterministic serial commit order                                              |
 | `stages/link_stage/passes/bind_imports.rs`              | Reads sealed `ModuleExecutionOrders` to choose the stable minimum `(execution order, symbol name)` for external default-import facade naming |
 
-Because so many later stages key off `exec_order`, any change to the traversal rules here is an observable output change across the entire bundler. The typed execution-order chain therefore runs before TLA and all remaining link analyses, and the driver performs its compatibility projection before any legacy reader. That projection does not consume `ModuleExecutionOrders`; the sealed table remains live until binding returns, then leaves scope before resolved-export finalization.
+Because so many later stages key off `exec_order`, any change to the traversal rules here is an observable output change across the entire bundler. The typed execution-order chain therefore runs before TLA and all remaining Link analyses. `ModuleExecutionOrders` remains sealed through its B read and then stays alive for the adapter; the adapter projects assigned non-sentinel slots only after all twenty-four passes, immediately before Generate can read the legacy fields.
 
 ## Invariants
 
-- `module.exec_order == u32::MAX` and `execution_orders[module] == u32::MAX` before each artifact assignment. The pass does not mutate the module table; the driver separately asserts the legacy slot is still `u32::MAX` before projection.
+- `module.exec_order == u32::MAX` and `execution_orders[module] == u32::MAX` before each artifact assignment. The pass does not mutate the module table; the adapter separately asserts the legacy slot is still `u32::MAX` before projection.
 - `sorted_modules.first() == Some(runtime.id())` (asserted at the end of the pass).
 - A module may appear in `execution_stack` under `Status::WaitForExit` at most once concurrently; `stack_indexes_of_executing_id.contains_key(&id)` is asserted to be false before insertion.
 - `sorted_modules` contains every `Module::Normal` reachable from the entries or runtime. External modules get an `exec_order` but are not pushed into `sorted_modules`.
-- `EntryPlanDraft` has no public constructor or clone path. It is produced once, borrowed by execution ordering and later typed passes including P, and then consumed into the legacy entries map after P.
-- `ModuleExecutionOrders` is available only as `Sealed<ModuleExecutionOrders>` and remains live through `BindImportsPass`; `SortedModules` remains owned and typed through P, then moves without cloning into the legacy carrier.
+- `EntryPlanDraft` has no public constructor or clone path. It is produced once, borrowed by execution ordering and later typed passes including P, and then consumed by H into `RetainedEntries`; the adapter moves those retained entries into the legacy entries map.
+- `ModuleExecutionOrders` is available only as `Sealed<ModuleExecutionOrders>` and remains live through `BindImportsPass` and the final adapter projection; `SortedModules` remains owned and typed through P, then stays alive until the adapter moves it without cloning into the legacy boundary.
 
 ## Unresolved Questions
 

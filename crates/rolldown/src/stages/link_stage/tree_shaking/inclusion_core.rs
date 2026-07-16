@@ -47,9 +47,9 @@ pub(in crate::stages::link_stage) trait InclusionModuleFacts {
 
 /// The remaining immutable linking facts read by the inclusion algorithm.
 ///
-/// Each method exposes one semantic query instead of a stage or metadata carrier. The legacy
-/// adapter answers these queries from compatibility data; the Link pass can later answer the same
-/// queries directly from its typed artifacts without changing the algorithm.
+/// Each method exposes one semantic query instead of a stage or metadata carrier. The Generate
+/// compatibility adapter answers these queries from legacy data, while `TreeShakePass` answers
+/// them directly from its typed artifacts without changing the algorithm.
 pub(in crate::stages::link_stage) trait InclusionFacts:
   InclusionModuleFacts
 {
@@ -145,8 +145,8 @@ pub(in crate::stages) enum WorkItem {
 
 /// Compute the body-demand keys from the final module format and side-effect facts.
 ///
-/// The public legacy wrapper delegates here today; the future typed Link path can call the same
-/// core after its explicit artifacts replace the compatibility metadata reads.
+/// The public Generate compatibility wrapper and the typed Link runner both delegate here, so the
+/// two boundaries share this implementation without sharing a metadata carrier.
 pub(in crate::stages::link_stage) fn compute_body_demand_keys_core<F: InclusionModuleFacts>(
   facts: &F,
   modules: &IndexModules,

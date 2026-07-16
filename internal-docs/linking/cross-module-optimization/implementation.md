@@ -2,7 +2,7 @@
 
 ## Summary
 
-`CrossModuleOptimizationPass` is the twenty-second typed Link pass. It runs immediately after `ReferenceNeededSymbolsPass`, owns the statement table and global-constant draft, analyzes normal modules in parallel, commits mutations deterministically in `SortedModules` order, seals the short-lived unreachable-dynamic-import fact, and finalizes the global constants before their compatibility projection.
+`CrossModuleOptimizationPass` is pass 22 of the twenty-four-pass Link pipeline. It runs immediately after `ReferenceNeededSymbolsPass`, owns the statement table and global-constant draft, analyzes normal modules in parallel, commits mutations deterministically in `SortedModules` order, seals the short-lived unreachable-dynamic-import fact, and finalizes the global constants for `TreeShakePass` and the final compatibility adapter.
 
 The extraction preserves the existing optimization algorithm and its compatibility issues. It changes the representation and lifecycle boundary, not the user-visible optimization policy.
 
@@ -21,13 +21,14 @@ ResolveMemberExpressionsPass
   → CreateSyntheticExportStatementsPass
   → ReferenceNeededSymbolsPass
   → CrossModuleOptimizationPass
-  → include_statements
-  → patch_module_dependencies
+  → TreeShakePass
+  → FinalizeModuleDependenciesPass
+  → LegacyOutputAdapter
 ```
 
-N remains the final typed reader of `ModuleFormats`, `ModuleWrappers`, `DynamicExports`, and `ModuleSideEffects`; the driver explicitly drops those artifacts before P. P keeps `EntryPlanDraft`, `SortedModules`, and `MemberExprResolutions` typed past N, borrows the final `SymbolRefDb`, `IndexEcmaAst`, and `ModuleTable`, and takes ownership only of the two domains it can change: `IndexStmtInfos` and `GlobalConstantsDraft`.
+N is the final typed reader of `DynamicExports` and `CjsNamespaceMerges`, but it is not the final reader of formats, wrappers, or side effects. P keeps `EntryPlanDraft`, `SortedModules`, and `MemberExprResolutions` typed past N, borrows the final `SymbolRefDb`, `IndexEcmaAst`, and `ModuleTable`, and takes ownership only of the two domains it can change: `IndexStmtInfos` and `GlobalConstantsDraft`. H later reads final formats, wrappers, exports, routing, constants, and export chains; G is the final reader of side effects, member resolutions, and entry roots.
 
-After P returns, the driver immediately restores the statement table, projects `SortedModules` and `EntryPlanDraft`, converts final `GlobalConstants` into the legacy map, drains the shared `PassPipelineCtx`, and projects member-resolution and resolved-export results. Inclusion borrows the sealed `UnreachableDynamicImports`; it cannot mutate or unwrap that result.
+After P returns, H consumes `EntryPlanDraft` and borrows `GlobalConstants`, sealed `UnreachableDynamicImports`, and the remaining typed inclusion facts. G then consumes the dependency and runtime-helper drafts. Only after G does the driver drain `PassPipelineCtx` and invoke `LegacyOutputAdapter`; the adapter moves `SortedModules`, converts final constants, projects member resolutions and resolved exports, and constructs the legacy output once.
 
 ## Pass Contract
 
@@ -39,7 +40,7 @@ After P returns, the driver immediately restores the statement table, projects `
 | `OutputOwned`   | `CrossModuleOptimizationOutput`    | One-call envelope containing the updated statement table and final `GlobalConstants`; the driver destructures it immediately.                                                         |
 | `Error`         | `Infallible`                       | P emits no diagnostics and preserves Link's infallible boundary.                                                                                                                      |
 
-`GlobalConstantsDraft` has the read and extension operations required during iterative discovery. P consumes it into `GlobalConstants`, whose only operation is the final consuming compatibility conversion. The final type deliberately has no general lookup API until a typed downstream reader needs one.
+`GlobalConstantsDraft` has the read and extension operations required during iterative discovery. P consumes it into `GlobalConstants`, which exposes only the narrow lookup H needs and the final consuming compatibility conversion used by the adapter.
 
 ## Round Schedule
 
@@ -101,7 +102,7 @@ The development partial-rebuild path can also retain stale `related_stmt_infos` 
 
 Focused unit tests pin the pass-count rules, zero-round boundary, immutable same-round constants, later-round named-import filtering, existing CommonJS constants, identifier and namespace-member calls, evaluation-flag replacement, empty versus annotation-only callbacks, unreachable dynamic imports, equivalent duplicate records, rejection of external entry roots, default literal behavior, sealed output, and every active dense-slot and related-import identity check. The production trace pins P immediately after N, and the pass-subtree inventory pins its narrow source shape and forbidden-carrier boundary.
 
-Broader pass, fixture, Clippy, and target checks remain part of the pass-pipeline validation matrix. Timing and RSS measurements wait for the completed Link structure; intermediate performance does not gate this extraction.
+Broader pass, fixture, Clippy, and target checks remain part of the pass-pipeline validation matrix. Timing and RSS are measured only on the complete final Link structure; intermediate structural trees are not performance acceptance candidates.
 
 ## Related
 

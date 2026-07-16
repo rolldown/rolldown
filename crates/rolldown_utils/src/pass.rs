@@ -196,6 +196,11 @@ pub fn run_pass<P: Pass>(
 }
 
 /// Runs a pass whose error type is uninhabited without exposing a `Result`.
+///
+/// `Infallible` describes this control-flow boundary: the harness eliminates
+/// the pass error exhaustively instead of adapting it through an unwrap or
+/// panic. It does not suppress fail-closed invariant checks inside the pass's
+/// own algorithm.
 pub fn run_infallible_pass<P: Pass<Error = Infallible>>(
   pass: P,
   pipeline: &mut PassPipelineCtx,

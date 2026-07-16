@@ -396,8 +396,15 @@ impl<'a> StmtEvalAnalyzer<'a> {
       Expression::BinaryExpression(e) => self.fold_compound(expr, [&e.left, &e.right]),
       Expression::UnaryExpression(e) => self.fold_compound(expr, [&e.argument]),
 
+      // Class expressions: same definition-time order-sensitivity as class declarations (heritage,
+      // computed keys, static initializers, static blocks, decorators). Method/instance bodies are
+      // not evaluated here.
+      Expression::ClassExpression(class) => {
+        self.analyze_class_definition(expr.may_have_side_effects(self), class)
+      }
+
       // Everything else: delegate entirely to Oxc.
-      // Covers literals, function/arrow/class expressions (bodies not evaluated
+      // Covers literals, function/arrow expressions (bodies not evaluated
       // here), await/import/yield (inherently side-effectful), tagged-template
       // (handled like a call by oxc; no `pure` flag), JSX, V8 intrinsics, etc.
       _ => StmtEvalFacts::from_tree_shaking_side_effect(expr.may_have_side_effects(self)),
@@ -459,9 +466,105 @@ impl<'a> StmtEvalAnalyzer<'a> {
     }
   }
 
+  /// Base facts for a `class` declaration/expression, plus its definition-time order-sensitive
+  /// reasons. `has_side_effect` must be the caller's existing whole-class
+  /// `may_have_side_effects` judgment so the tree-shaking channel stays byte-identical to what the
+  /// delegate arms produced before; only when oxc certified the class side-effect-free do we look
+  /// deeper, and then only to grow `order_sensitive_reasons`.
+  fn analyze_class_definition(&self, has_side_effect: bool, class: &ast::Class) -> StmtEvalFacts {
+    let mut facts = StmtEvalFacts::from_tree_shaking_side_effect(has_side_effect);
+    if !has_side_effect {
+      facts.order_sensitive_reasons |= self.collect_class_definition_time_reasons(class);
+    }
+    facts
+  }
+
+  /// Order-sensitive reasons (`GlobalVarAccess` / `PureAnnotation`) from a class's
+  /// *definition-time-evaluated* positions — the expressions JS runs when the `class`
+  /// declaration/expression itself is evaluated, as opposed to at construction or call time:
+  /// class/element decorators, the heritage (`extends`) expression, computed member keys, static
+  /// field/accessor initializers, and static blocks. Instance (non-static) field initializers run
+  /// in the constructor and method/accessor bodies run when invoked, so neither is included.
+  ///
+  /// Callers invoke this only after oxc certified the class side-effect-free, so every position
+  /// here is already free of tree-shaking side effects; `analyze_expr`/`analyze_stmt` are used
+  /// purely to harvest their reasons — this returns reasons only, so any conservative tree-shaking
+  /// flag a child analysis adds is discarded rather than leaking into the tree-shaking channel.
+  fn collect_class_definition_time_reasons(&self, class: &ast::Class) -> StmtOrderSensitiveReasons {
+    let mut reasons = StmtOrderSensitiveReasons::empty();
+
+    // Class decorators and the heritage expression are evaluated when the class is defined.
+    for decorator in &class.decorators {
+      reasons |= self.analyze_expr(&decorator.expression).order_sensitive_reasons;
+    }
+    if let Some(super_class) = &class.super_class {
+      reasons |= self.analyze_expr(super_class).order_sensitive_reasons;
+    }
+
+    for element in &class.body.body {
+      match element {
+        // Static block bodies run at definition time; route each statement through the statement
+        // analyzer to collect its order-sensitive reasons precisely.
+        ast::ClassElement::StaticBlock(block) => {
+          for stmt in &block.body {
+            reasons |= self.analyze_stmt(stmt).order_sensitive_reasons;
+          }
+        }
+        ast::ClassElement::MethodDefinition(method) => {
+          for decorator in &method.decorators {
+            reasons |= self.analyze_expr(&decorator.expression).order_sensitive_reasons;
+          }
+          if method.computed {
+            reasons |= self.analyze_expr(method.key.to_expression()).order_sensitive_reasons;
+          }
+          // Method/getter/setter bodies run when invoked, not at definition time.
+        }
+        ast::ClassElement::PropertyDefinition(prop) => {
+          for decorator in &prop.decorators {
+            reasons |= self.analyze_expr(&decorator.expression).order_sensitive_reasons;
+          }
+          if prop.computed {
+            reasons |= self.analyze_expr(prop.key.to_expression()).order_sensitive_reasons;
+          }
+          // Static initializers run at definition time; instance initializers run in the
+          // constructor, so only static ones are definition-time order-sensitive.
+          if prop.r#static
+            && let Some(value) = &prop.value
+          {
+            reasons |= self.analyze_expr(value).order_sensitive_reasons;
+          }
+        }
+        ast::ClassElement::AccessorProperty(accessor) => {
+          for decorator in &accessor.decorators {
+            reasons |= self.analyze_expr(&decorator.expression).order_sensitive_reasons;
+          }
+          if accessor.computed {
+            reasons |= self.analyze_expr(accessor.key.to_expression()).order_sensitive_reasons;
+          }
+          if accessor.r#static
+            && let Some(value) = &accessor.value
+          {
+            reasons |= self.analyze_expr(value).order_sensitive_reasons;
+          }
+        }
+        // Type-level construct, no runtime evaluation.
+        ast::ClassElement::TSIndexSignature(_) => {}
+      }
+    }
+
+    reasons
+  }
+
   fn analyze_decl(&self, decl: &ast::Declaration) -> StmtEvalFacts {
     match decl {
       ast::Declaration::VariableDeclaration(var_decl) => self.analyze_var_decl(var_decl),
+      // Class definition-time positions (heritage, computed keys, static initializers, static
+      // blocks, decorators) can read a whitelisted global or carry a pure annotation, which makes
+      // the class order-sensitive even when oxc reports no tree-shaking side effect. The delegate
+      // catch-all below drops those reasons.
+      ast::Declaration::ClassDeclaration(class) => {
+        self.analyze_class_definition(decl.may_have_side_effects(self), class)
+      }
       _ => StmtEvalFacts::from_tree_shaking_side_effect(decl.may_have_side_effects(self)),
     }
   }
@@ -521,8 +624,9 @@ impl<'a> StmtEvalAnalyzer<'a> {
             self.analyze_expr(decl.to_expression())
           }
           ast::ExportDefaultDeclarationKind::FunctionDeclaration(_) => StmtEvalFacts::default(),
-          ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
-            StmtEvalFacts::from_tree_shaking_side_effect(decl.may_have_side_effects(self))
+          ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+            // Same definition-time order-sensitivity as a plain class declaration.
+            self.analyze_class_definition(class.may_have_side_effects(self), class)
           }
           ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
             StmtEvalFacts::from_unknown_side_effect()
@@ -1561,6 +1665,75 @@ let remove15 = class {
     ));
     assert!(has_side_effect_for_tree_shaking("function fn() {} class MyClass { @fn method() {} }"));
     assert!(has_side_effect_for_tree_shaking("function fn() {} class MyClass { @fn field }"));
+  }
+
+  // #10104 follow-up: a class's definition-time-evaluated positions (heritage, computed keys,
+  // static field/accessor initializers, static blocks, decorators) that read a whitelisted global
+  // or carry a pure annotation make the class order-sensitive — the same treatment
+  // `var x = Math.max(1, 2)` already gets. The three oxc-delegate arms (class declaration, class
+  // expression, `export default class`) used to drop those reasons. The tree-shaking channel is
+  // untouched: every side-effect-free class here keeps `StmtEvalFlags::empty()`.
+  #[test]
+  fn test_class_definition_time_order_sensitivity() {
+    // Static field initializer reading a whitelisted global -> order-sensitive, and NOT a
+    // tree-shaking side effect (so only the order-sensitive channel grew).
+    assert_eq!(get_stmt_order_sensitivity("class C { static x = Math.max(1, 2) }"), vec![true]);
+    assert_eq!(
+      get_stmt_eval_flags("class C { static x = Math.max(1, 2) }"),
+      vec![StmtEvalFlags::empty()]
+    );
+    // Static field initializer with a pure annotation (mirrors the object-literal case above).
+    assert_eq!(
+      get_stmt_order_sensitivity("class C { static x = /* @__PURE__ */ (() => globalValue)() }"),
+      vec![true]
+    );
+    assert_eq!(
+      get_stmt_eval_flags("class C { static x = /* @__PURE__ */ (() => globalValue)() }"),
+      vec![StmtEvalFlags::empty()]
+    );
+    // Heritage (extends) reading a global.
+    assert_eq!(get_stmt_order_sensitivity("class C extends SomeGlobal {}"), vec![true]);
+    // Computed key evaluating a global read.
+    assert_eq!(get_stmt_order_sensitivity("class C { [Math.max(1, 2)]() {} }"), vec![true]);
+    assert_eq!(
+      get_stmt_eval_flags("class C { [Math.max(1, 2)]() {} }"),
+      vec![StmtEvalFlags::empty()]
+    );
+    // Static block reading a global.
+    assert_eq!(get_stmt_order_sensitivity("class C { static { Math.max(1, 2) } }"), vec![true]);
+    // Class expression and `export default class` route through the same machinery.
+    assert_eq!(
+      get_stmt_order_sensitivity("const C = class { static x = Math.max(1, 2) }"),
+      vec![true]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("export default class { static x = Math.max(1, 2) }"),
+      vec![true]
+    );
+    assert_eq!(
+      get_stmt_eval_flags("export default class { static x = Math.max(1, 2) }"),
+      vec![StmtEvalFlags::empty()]
+    );
+  }
+
+  // Positions that run at construction/call time — not class definition time — stay
+  // order-insensitive, so on-demand wrapping is not needlessly triggered.
+  #[test]
+  fn test_class_non_definition_time_stays_order_insensitive() {
+    assert_eq!(get_stmt_order_sensitivity("class C {}"), vec![false]);
+    // Instance (non-static) field initializer runs in the constructor.
+    assert_eq!(get_stmt_order_sensitivity("class C { x = Math.max(1, 2) }"), vec![false]);
+    assert_eq!(get_stmt_eval_flags("class C { x = Math.max(1, 2) }"), vec![StmtEvalFlags::empty()]);
+    assert_eq!(get_stmt_order_sensitivity("const C = class { x = Math.max(1, 2) }"), vec![false]);
+    assert_eq!(
+      get_stmt_order_sensitivity("export default class { x = Math.max(1, 2) }"),
+      vec![false]
+    );
+    // Method body runs when invoked, not at definition time.
+    assert_eq!(
+      get_stmt_order_sensitivity("class C { m() { return Math.max(1, 2) } }"),
+      vec![false]
+    );
   }
 
   #[test]

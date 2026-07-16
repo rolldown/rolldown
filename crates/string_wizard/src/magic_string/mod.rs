@@ -122,6 +122,14 @@ impl<'text> MagicString<'text> {
       .sum()
   }
 
+  /// Returns the length in UTF-8 bytes of the whole generated output, including the global
+  /// intro/outro. Equivalent to `self.to_string().len()` without the allocation.
+  fn output_len(&self) -> usize {
+    self.intro.iter().map(|f| f.len()).sum::<usize>()
+      + self.len()
+      + self.outro.iter().map(|f| f.len()).sum::<usize>()
+  }
+
   /// Returns `true` if all chunk content (intro + content + outro) is whitespace or empty.
   /// This aligns with the reference `magic-string` behavior where `isEmpty()` uses `.trim()`.
   pub fn is_empty(&self) -> bool {
@@ -129,8 +137,13 @@ impl<'text> MagicString<'text> {
   }
 
   /// Indicates if the string has been changed.
+  ///
+  /// The length check is only a fast path for "definitely changed", so it has to measure the
+  /// same span as the string comparison below it: the whole output, global intro/outro
+  /// included. Comparing against [`Self::len`] instead would report a change for edits that
+  /// cancel out, e.g. `remove(0, 1)` followed by `prepend("a")`.
   pub fn has_changed(&self) -> bool {
-    self.source.len() != self.len() || self.source.as_ref() != self.to_string()
+    self.output_len() != self.source.len() || self.source.as_ref() != self.to_string()
   }
 
   /// Returns the last character of the generated string, or `None` if empty.

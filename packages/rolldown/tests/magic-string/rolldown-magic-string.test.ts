@@ -94,6 +94,37 @@ describe('length', () => {
   });
 });
 
+// One case per branch of `has_changed`'s two-clause condition. The `is true` cases are not
+// redundant with the bug case: this change *removes* a fast path, and a suite that only pinned
+// the `false` result would accept a `has_changed()` that always returns false.
+describe('hasChanged', () => {
+  // The fast path compared `source.len()` against `len()`, but `len()` excludes the global
+  // intro/outro that `to_string()` includes, so edits that cancel out reported a change.
+  // Here the lengths match and the strings match: no change.
+  it('is false when edits cancel out to the original string', () => {
+    const s = new MagicString('abc');
+    s.remove(0, 1);
+    s.prepend('a');
+    assert.strictEqual(s.toString(), 'abc');
+    assert.strictEqual(s.hasChanged(), false);
+  });
+
+  // Lengths match, so the fast path defers to the string comparison, which differs.
+  it('is true for a real change', () => {
+    const s = new MagicString('abc');
+    s.overwrite(0, 3, 'XYZ');
+    assert.strictEqual(s.hasChanged(), true);
+  });
+
+  // The only case where the fast path itself fires: the global intro makes the output longer
+  // than the source, which the old `len()` comparison could not see.
+  it('is true when only the global intro changed', () => {
+    const s = new MagicString('abc');
+    s.prepend('x');
+    assert.strictEqual(s.hasChanged(), true);
+  });
+});
+
 describe('offset', () => {
   describe('underflow guard — negative (index + offset) must throw, not panic', () => {
     it('remove() throws when offset causes index underflow', () => {

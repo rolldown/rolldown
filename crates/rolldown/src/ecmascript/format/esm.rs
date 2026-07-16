@@ -230,7 +230,9 @@ fn render_chunk_content<'code>(
     // into `make_esm_wrapper_stmt` for the non-concatenated wrapper.
     let is_async = ctx.link_output.metas[group.entry].is_tla_or_contains_tla_dependency;
 
-    source_joiner.append_source(hoisted_fns);
+    if !hoisted_fns.is_empty() {
+      source_joiner.append_source(hoisted_fns);
+    }
     if !hoisted_vars.is_empty() {
       source_joiner.append_source(concat_string!("var ", hoisted_vars, ";"));
     }

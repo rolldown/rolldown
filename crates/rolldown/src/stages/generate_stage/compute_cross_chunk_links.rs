@@ -212,6 +212,53 @@ impl GenerateStage<'_> {
         }
       }
     }
+
+    // Final-topology soundness assert for the emergent-cycle projector. Under strict execution
+    // order the projector must order-wrap every module that needs deferral when its chunk sits in a
+    // static chunk cycle, so the runtime `init_*` forwarding it emits can never reach an
+    // uninitialized wrapper. That soundness rests on the projector mirroring the linker's three
+    // registration paths; the review noted one consumption disjunct
+    // (`referenced_symbols_by_entry_point_chunk`) with no projection counterpart. A future
+    // projection hole would otherwise surface only as a fuzzer-caught `init_* is not a function`
+    // runtime crash. Re-run Tarjan over the *final* cross-chunk import graph and assert the exact
+    // obligation `close_cyclic_chunk_members` discharges — every module hosted in a nontrivial SCC
+    // that is both order-sensitive AND order-wrap-eligible is in the plan — turning any such hole
+    // into a deterministic debug/CI build failure. The obligation is deliberately not raw
+    // `is_order_wrap_eligible`: a side-effect-free, import-free eligible leaf (e.g.
+    // `export const x = 1`) is never wrapped by the projector, yet can be co-hosted in a chunk that
+    // lands in a cycle because of its *siblings'* cross-chunk imports, and leaving it unwrapped is
+    // correct. This is a structural invariant like the facade assert above, not the internal
+    // semantic verifier `design.md` rejects.
+    #[cfg(debug_assertions)]
+    if self.options.is_strict_execution_order_enabled() {
+      let mut graph = petgraph::prelude::DiGraphMap::<ChunkIdx, ()>::new();
+      for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+        graph.add_node(chunk_idx);
+        for &importee_idx in chunk.imports_from_other_chunks.keys() {
+          graph.add_edge(chunk_idx, importee_idx, ());
+        }
+      }
+      for scc in petgraph::algo::tarjan_scc(&graph) {
+        // Nontrivial = a real cycle: two-plus chunks, or a single chunk with a self-edge. Trivial
+        // singletons cannot host an init cycle, so they carry no wrapping obligation.
+        let is_nontrivial = scc.len() >= 2
+          || chunk_graph.chunk_table[scc[0]].imports_from_other_chunks.contains_key(&scc[0]);
+        if !is_nontrivial {
+          continue;
+        }
+        for &chunk_idx in &scc {
+          for &module_idx in &chunk_graph.chunk_table[chunk_idx].modules {
+            debug_assert!(
+              !(self.is_order_sensitive(module_idx) && self.is_order_wrap_eligible(module_idx))
+                || order_state.has_order_wrapper(module_idx),
+              "order-sensitive, order-wrap-eligible module {module_idx:?} hosted in chunk \
+               {chunk_idx:?} sits in a nontrivial static chunk SCC but was not order-wrapped by the \
+               plan — the emergent-cycle projector under-projected this cycle",
+            );
+          }
+        }
+      }
+    }
   }
 
   /// Compute provisional links for order analysis. Runtime symbol placement is cleared if moved.

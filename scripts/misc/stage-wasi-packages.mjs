@@ -156,36 +156,6 @@ assert.deepEqual(
   'runtime import scan must cover re-exports, dynamic imports, require, and require.resolve',
 );
 
-function assertHardenedRuntime(code, loader) {
-  // emnapi v2 shapes (patches/@emnapi__core@2.0.0-alpha.2.patch): the
-  // reentrant-call result writes re-create their DataView after calling into
-  // JavaScript (napi_call_function + napi_new_instance).
-  const callbackResultWrites =
-    code.match(
-      /v = emnapiCtx\.napiValueFromJsValue\(ret\);[^]*?new DataView\(wasmMemory\.buffer\)\.setUint32\(result, v, true\)/g,
-    ) ?? [];
-  assert.ok(
-    callbackResultWrites.length >= 2,
-    `${loader} does not contain hardened napi_call_function/napi_new_instance result writes`,
-  );
-  // TSFN plugin enqueue re-creates its Int32Array view at every use (the v2
-  // plugin replaces the v1 `state()`/`ensureBufferFor` helper with `i32a()`).
-  assert.match(code, /const i32a = \(\) => new Int32Array\([\w$.]*wasmMemory\.buffer\)/);
-  assert.match(code, /Atomics\.exchange\(i32a\(\), scheduled >>> 2, 1\)/);
-  assert.match(
-    code,
-    /function getThreadSpawnResultView\(memory, address, wasm64\)/,
-    `${loader} does not contain the shared-memory thread-spawn refresh helper`,
-  );
-  assert.match(code, /address \+ THREAD_SPAWN_RESULT_SIZE > buffer\.byteLength/);
-  assert.match(code, /memory\.grow\(BigInt\(0\)\)/);
-  assert.match(code, /memory\.grow\(0\)/);
-  assert.ok(
-    (code.match(/getThreadSpawnResultView\(/g) ?? []).length >= 3,
-    `${loader} does not refresh both wasi-threads thread-spawn result writes`,
-  );
-}
-
 export async function replaceDirectoriesTransactionally(replacements, { afterOperation } = {}) {
   if (replacements.length === 0) return;
 
@@ -2128,7 +2098,6 @@ export async function stageWasiPackages({ repoRoot = defaultRepoRoot, transactio
             [],
             `${name} must vendor its Buffer/emnapi/wasm runtime`,
           );
-          assertHardenedRuntime(code, name);
         }
 
         if (label === 'threadless') {

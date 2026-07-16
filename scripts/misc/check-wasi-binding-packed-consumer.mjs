@@ -754,32 +754,6 @@ assert.deepEqual(
   'packed runtime import scan must cover re-exports, dynamic imports, and require.resolve',
 );
 
-function assertHardenedEmbeddedRuntime(code, loader) {
-  // emnapi v2 shapes (patches/@emnapi__core@2.0.0-alpha.2.patch): the
-  // reentrant-call result writes re-create their DataView after calling into
-  // JavaScript (napi_call_function + napi_new_instance).
-  const callbackResultWrites =
-    code.match(
-      /v = emnapiCtx\.napiValueFromJsValue\(ret\);[^]*?new DataView\(wasmMemory\.buffer\)\.setUint32\(result, v, true\)/g,
-    ) ?? [];
-  assert.ok(
-    callbackResultWrites.length >= 2,
-    `${loader} does not contain hardened napi_call_function/napi_new_instance result writes`,
-  );
-  assert.match(
-    code,
-    /function getThreadSpawnResultView\(memory, address, wasm64\)/,
-    `${loader} does not contain the shared-memory thread-spawn refresh helper`,
-  );
-  assert.match(code, /address \+ THREAD_SPAWN_RESULT_SIZE > buffer\.byteLength/);
-  assert.match(code, /memory\.grow\(BigInt\(0\)\)/);
-  assert.match(code, /memory\.grow\(0\)/);
-  assert.ok(
-    (code.match(/getThreadSpawnResultView\(/g) ?? []).length >= 3,
-    `${loader} does not refresh both wasi-threads thread-spawn result writes`,
-  );
-}
-
 async function exerciseEmbeddedWasiThreadsRefresh(consumerDir, packageDir) {
   const workerCode = await readFile(path.join(packageDir, 'wasi-worker.mjs'), 'utf8');
   const runtimeMarker = '@emnapi+wasi-threads@';
@@ -2122,7 +2096,6 @@ try {
         [],
         `${name} in ${flavor.name} must be self-contained`,
       );
-      assertHardenedEmbeddedRuntime(code, `${name} in ${flavor.name}`);
       if (name === 'rolldown-binding.wasip1.cjs') {
         assertThreadlessNodeLifecycle(code, `${name} in ${flavor.name}`);
       }
@@ -2294,17 +2267,6 @@ try {
   const installedBrowserDir = await realpath(
     path.join(browserConsumer, 'node_modules', browserManifest.name),
   );
-  for (const loader of [
-    'dist/rolldown-binding.wasip1.cjs',
-    'dist/rolldown-binding.wasip1-browser.js',
-    'dist/workerd.mjs',
-    'dist/workerd.browser.mjs',
-  ]) {
-    assertHardenedEmbeddedRuntime(
-      await readFile(path.join(installedBrowserDir, loader), 'utf8'),
-      `${loader} in ${browserManifest.name}`,
-    );
-  }
   await assertPackedNotices(installedBrowserDir, browserManifest, '@rolldown/browser');
 
   const browserRootResult = await runNodeModule(

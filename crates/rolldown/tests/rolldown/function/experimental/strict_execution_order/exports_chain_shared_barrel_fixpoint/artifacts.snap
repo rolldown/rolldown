@@ -18,7 +18,6 @@ var init_inner = __esmMin((() => {
 //#endregion
 }));
 
-
 var init_main = __esmMin((() => {
 //#region outer.js
 	init_inner();

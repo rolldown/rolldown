@@ -74,6 +74,14 @@ impl ModuleWrappers {
     self.slots.len()
   }
 
+  pub(in crate::stages::link_stage) fn get(
+    &self,
+    module_idx: ModuleIdx,
+  ) -> (WrapperDeclaration, bool) {
+    let slot = &self.slots[module_idx];
+    (slot.declaration, slot.required_by_other_module)
+  }
+
   pub(in crate::stages::link_stage) fn wrap_kind(&self, module_idx: ModuleIdx) -> WrapKind {
     match self.slots[module_idx].declaration {
       WrapperDeclaration::None => WrapKind::None,
@@ -97,15 +105,6 @@ impl ModuleWrappers {
       WrapperDeclaration::Esm { wrapper_ref, .. } => Some(wrapper_ref),
       WrapperDeclaration::None | WrapperDeclaration::Cjs { .. } => None,
     }
-  }
-
-  pub(in crate::stages::link_stage) fn modules(
-    &self,
-  ) -> impl Iterator<Item = (ModuleIdx, WrapperDeclaration, bool)> + '_ {
-    self
-      .slots
-      .iter_enumerated()
-      .map(|(module_idx, slot)| (module_idx, slot.declaration, slot.required_by_other_module))
   }
 }
 

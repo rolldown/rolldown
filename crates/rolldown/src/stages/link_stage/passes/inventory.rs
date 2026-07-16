@@ -840,6 +840,40 @@ impl<'ast> Visit<'ast> for FacadePathVisitor {
   }
 }
 
+#[derive(Default)]
+struct LegacyAdapterAssemblyVisitor {
+  metadata_defaults: usize,
+  metadata_pushes: usize,
+  multizip_calls: usize,
+  physical_mutable_module_iterations: usize,
+}
+
+impl<'ast> Visit<'ast> for LegacyAdapterAssemblyVisitor {
+  fn visit_expr_call(&mut self, expression: &'ast syn::ExprCall) {
+    if let syn::Expr::Path(function) = &*expression.func {
+      if is_exact_path(&function.path, &["LinkingMetadata", "default"]) {
+        self.metadata_defaults += 1;
+      } else if is_plain_path(&function.path, "multizip") {
+        self.multizip_calls += 1;
+      }
+    }
+    visit::visit_expr_call(self, expression);
+  }
+
+  fn visit_expr_method_call(&mut self, expression: &'ast syn::ExprMethodCall) {
+    let method = normalized_ident(&expression.method);
+    if method == "push"
+      && matches!(&*expression.receiver, syn::Expr::Path(path) if is_plain_path(&path.path, "metas"))
+      && matches!(expression.args.first(), Some(syn::Expr::Path(path)) if is_plain_path(&path.path, "meta"))
+    {
+      self.metadata_pushes += 1;
+    } else if method == "iter_mut_enumerated" {
+      self.physical_mutable_module_iterations += 1;
+    }
+    visit::visit_expr_method_call(self, expression);
+  }
+}
+
 #[test]
 fn link_stage_is_a_two_field_one_shot_facade() {
   let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/stages/link_stage");
@@ -1258,6 +1292,77 @@ fn legacy_output_adapter_accepts_only_explicit_final_fields() {
   assert_eq!(methods.len(), 1, "the output adapter must expose only finish");
   let finish = methods[0];
   assert_eq!(finish.sig.ident, "finish");
+  let Some(syn::Stmt::Local(first_statement)) = finish.block.stmts.first() else {
+    panic!("finish must start by destructuring LegacyOutputAdapter");
+  };
+  assert!(
+    matches!(
+      (&first_statement.pat, first_statement.init.as_ref().map(|init| &*init.expr)),
+      (
+        syn::Pat::Struct(pattern),
+        Some(syn::Expr::Path(value)),
+      ) if is_plain_path(&pattern.path, "LegacyOutputAdapter")
+        && is_plain_path(&value.path, "self")
+    ),
+    "finish must immediately destructure LegacyOutputAdapter instead of retaining a carrier"
+  );
+
+  let deferred_patch_index = finish
+    .block
+    .stmts
+    .iter()
+    .position(|statement| {
+      matches!(
+        statement,
+        syn::Stmt::Expr(syn::Expr::Call(call), _)
+          if matches!(&*call.func, syn::Expr::Path(function) if is_plain_path(&function.path, "apply_deferred_module_patches"))
+      )
+    })
+    .expect("finish must apply deferred patches");
+  let assembly_index = finish
+    .block
+    .stmts
+    .iter()
+    .position(|statement| {
+      matches!(
+        statement,
+        syn::Stmt::Expr(syn::Expr::ForLoop(loop_expression), _)
+          if matches!(&*loop_expression.expr, syn::Expr::Call(call) if matches!(&*call.func, syn::Expr::Path(function) if is_plain_path(&function.path, "multizip")))
+      )
+    })
+    .expect("finish must have one multizip assembly loop");
+  let validation_loops = finish.block.stmts[..deferred_patch_index]
+    .iter()
+    .filter(|statement| matches!(statement, syn::Stmt::Expr(syn::Expr::ForLoop(_), _)))
+    .count();
+  assert_eq!(
+    validation_loops, 2,
+    "finish must validate dense counts and normal/external slot shapes before any output write"
+  );
+  assert!(
+    deferred_patch_index < assembly_index,
+    "finish must preserve deferred patch application before physical output assembly"
+  );
+
+  let mut assembly = LegacyAdapterAssemblyVisitor::default();
+  assembly.visit_block(&finish.block);
+  assert_eq!(
+    assembly.metadata_defaults, 1,
+    "finish must have one metadata default expression inside physical assembly"
+  );
+  assert_eq!(
+    assembly.metadata_pushes, 1,
+    "finish must push each freshly assembled metadata slot instead of preallocating defaults"
+  );
+  assert_eq!(
+    assembly.multizip_calls, 1,
+    "finish must consume dense final slots through one physical assembly zip"
+  );
+  assert_eq!(
+    assembly.physical_mutable_module_iterations, 1,
+    "finish must mutate module fields in exactly one physical module traversal"
+  );
+
   let parameters = finish
     .sig
     .inputs

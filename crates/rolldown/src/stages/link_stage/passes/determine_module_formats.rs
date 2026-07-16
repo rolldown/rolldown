@@ -47,12 +47,6 @@ impl ModuleFormats {
   pub(in crate::stages::link_stage) fn module_count(&self) -> usize {
     self.formats.len()
   }
-
-  pub(in crate::stages::link_stage) fn normal_modules(
-    &self,
-  ) -> impl Iterator<Item = (ModuleIdx, ExportsKind)> + '_ {
-    self.formats.iter_enumerated().filter_map(|(idx, format)| format.map(|format| (idx, format)))
-  }
 }
 
 #[cfg(test)]

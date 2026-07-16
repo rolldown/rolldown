@@ -1,4 +1,5 @@
 use arcstr::ArcStr;
+use itertools::multizip;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPoint, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures, RetainedExportSymbols,
@@ -108,7 +109,8 @@ fn project_cjs_routing(
 impl LegacyOutputAdapter<'_> {
   #[expect(
     clippy::too_many_arguments,
-    reason = "the facade is already gone, so the boundary lists each final field explicitly"
+    clippy::too_many_lines,
+    reason = "the one-shot boundary lists every final field and keeps dense validation plus physical assembly visible in one place"
   )]
   pub(super) fn finish(
     self,
@@ -123,56 +125,181 @@ impl LegacyOutputAdapter<'_> {
     entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
     user_defined_entry_modules: FxHashSet<ModuleIdx>,
   ) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
+    let LegacyOutputAdapter {
+      execution_orders,
+      tla_facts,
+      module_formats,
+      module_wrappers,
+      dynamic_exports,
+      module_side_effects,
+      resolved_exports,
+      included_commonjs_export_symbols,
+      cjs_routing,
+      member_expr_resolutions,
+      shimmed_missing_exports,
+      entry_export_roots,
+      external_star_exports,
+      inclusion,
+      finalized_dependencies,
+      retained_entries,
+      sorted_modules,
+      cjs_namespace_merges,
+      external_namespace_merges,
+      global_constants,
+      normal_export_chains,
+      tree_shake_patches,
+      reference_patches,
+      used_symbol_refs,
+      used_external_symbols,
+      enum_inlining,
+      lazy_json_export_initializers,
+    } = self;
     let module_count = module_table.modules.len();
-    apply_deferred_module_patches(
-      &mut module_table,
-      self.tree_shake_patches,
-      self.reference_patches,
-    );
 
-    for (module_idx, exec_order) in self.execution_orders.assigned() {
-      match &mut module_table[module_idx] {
+    let resolved_export_slots = resolved_exports.into_slots();
+    let included_commonjs_export_symbol_slots = included_commonjs_export_symbols.into_slots();
+    let member_expr_resolution_slots = member_expr_resolutions.into_slots();
+    let shimmed_missing_export_slots = shimmed_missing_exports.into_slots();
+    let external_star_export_slots = external_star_exports.into_inner();
+    let (stmt_included_slots, module_included, namespace_reason_slots) = inclusion.into_parts();
+    let (
+      dependency_slots,
+      load_dependency_slots,
+      runtime_requirement_slots,
+      side_effectful_runtime_dependencies,
+    ) = finalized_dependencies.into_parts();
+
+    for (domain, actual) in [
+      ("AST", ast_table.len()),
+      ("statement", stmt_infos.len()),
+      ("symbol", symbols.inner().len()),
+      ("execution-order", execution_orders.module_count()),
+      ("TLA", tla_facts.module_count()),
+      ("format", module_formats.module_count()),
+      ("wrapper", module_wrappers.module_count()),
+      ("dynamic-export", dynamic_exports.module_count()),
+      ("side-effect", module_side_effects.module_count()),
+      ("resolved-export", resolved_export_slots.len()),
+      ("included-CommonJS-export", included_commonjs_export_symbol_slots.len()),
+      ("CJS-routing", cjs_routing.module_count()),
+      ("member-resolution", member_expr_resolution_slots.len()),
+      ("missing-export shim", shimmed_missing_export_slots.len()),
+      ("external-star export", external_star_export_slots.len()),
+      ("statement-inclusion", stmt_included_slots.len()),
+      ("namespace-reason", namespace_reason_slots.len()),
+      ("dependency", dependency_slots.len()),
+      ("load-dependency", load_dependency_slots.len()),
+      ("runtime-requirement", runtime_requirement_slots.len()),
+    ] {
+      assert_eq!(actual, module_count, "{domain} layout must match modules at the Link boundary");
+    }
+
+    for (module_idx, module) in module_table.modules.iter_enumerated() {
+      let valid = match module {
         Module::Normal(module) => {
-          debug_assert_eq!(module.exec_order, u32::MAX);
-          module.exec_order = exec_order;
+          module.idx == module_idx
+            && ast_table[module_idx].is_some()
+            && symbols.inner()[module_idx].is_some()
+            && module_formats.get(module_idx).is_some()
+            && resolved_export_slots[module_idx].is_some()
+            && included_commonjs_export_symbol_slots[module_idx].is_some()
+            && member_expr_resolution_slots[module_idx].is_some()
+            && shimmed_missing_export_slots[module_idx].is_some()
         }
         Module::External(module) => {
-          debug_assert_eq!(module.exec_order, u32::MAX);
-          module.exec_order = exec_order;
+          module.idx == module_idx
+            && ast_table[module_idx].is_none()
+            && symbols.inner()[module_idx].is_some()
+            && module_formats.get(module_idx).is_none()
+            && std::matches!(
+              module_wrappers.declaration(module_idx),
+              super::passes::WrapperDeclaration::None
+            )
+            && resolved_export_slots[module_idx].is_none()
+            && included_commonjs_export_symbol_slots[module_idx].is_none()
+            && member_expr_resolution_slots[module_idx].is_none()
+            && shimmed_missing_export_slots[module_idx].is_none()
+            && external_star_export_slots[module_idx].is_empty()
         }
-      }
-    }
-    assert_eq!(self.module_formats.module_count(), module_count);
-    for (module_idx, format) in self.module_formats.normal_modules() {
-      module_table[module_idx]
-        .as_normal_mut()
-        .expect("normal module format must target a normal module")
-        .exports_kind = format;
-    }
-    assert_eq!(self.module_side_effects.module_count(), module_count);
-    for module_idx in 0..module_count {
-      let module_idx = ModuleIdx::from_usize(module_idx);
-      if let Some(module) = module_table[module_idx].as_normal_mut() {
-        module.side_effects = self.module_side_effects.get(module_idx);
-      }
+      };
+      assert!(valid, "legacy output slot shape must match module {module_idx:?}");
     }
 
-    let mut metas = module_table
-      .modules
-      .iter()
-      .map(|_| LinkingMetadata::default())
-      .collect::<IndexVec<ModuleIdx, _>>();
-    assert_eq!(self.tla_facts.module_count(), module_count);
-    for module_idx in self.tla_facts.modules() {
-      metas[module_idx].is_tla_or_contains_tla_dependency = true;
-    }
-    assert_eq!(self.dynamic_exports.module_count(), module_count);
-    for module_idx in self.dynamic_exports.modules() {
-      metas[module_idx].has_dynamic_exports = true;
-    }
-    assert_eq!(self.module_wrappers.module_count(), module_count);
-    for (module_idx, declaration, required_by_other_module) in self.module_wrappers.modules() {
-      let meta = &mut metas[module_idx];
+    apply_deferred_module_patches(&mut module_table, tree_shake_patches, reference_patches);
+
+    let mut metas = IndexVec::with_capacity(module_count);
+    for (
+      (module_idx, module),
+      resolved_exports,
+      included_commonjs_export_symbols,
+      member_expr_resolutions,
+      shimmed_missing_exports,
+      external_star_exports,
+      stmt_included,
+      namespace_reason,
+      dependencies,
+      load_dependencies,
+      runtime_requirements,
+    ) in multizip((
+      module_table.modules.iter_mut_enumerated(),
+      resolved_export_slots,
+      included_commonjs_export_symbol_slots,
+      member_expr_resolution_slots,
+      shimmed_missing_export_slots,
+      external_star_export_slots,
+      stmt_included_slots,
+      namespace_reason_slots,
+      dependency_slots,
+      load_dependency_slots,
+      runtime_requirement_slots,
+    )) {
+      let mut meta = LinkingMetadata::default();
+      let exec_order = execution_orders.get(module_idx);
+
+      match module {
+        Module::Normal(module) => {
+          if exec_order != u32::MAX {
+            debug_assert_eq!(module.exec_order, u32::MAX);
+            module.exec_order = exec_order;
+          }
+          let Some(format) = module_formats.get(module_idx) else {
+            std::unreachable!("validated normal modules must have format slots");
+          };
+          module.exports_kind = format;
+          module.side_effects = module_side_effects.get(module_idx);
+
+          let Some(resolved_exports) = resolved_exports else {
+            std::unreachable!("validated normal modules must have resolved-export slots");
+          };
+          let (resolved, sorted) = resolved_exports.into_parts();
+          meta.resolved_exports = resolved;
+          meta.sorted_and_non_ambiguous_resolved_exports = sorted;
+          let Some(included_commonjs_export_symbols) = included_commonjs_export_symbols else {
+            std::unreachable!("validated normal modules must have included-CommonJS-export slots");
+          };
+          meta.included_commonjs_export_symbol = included_commonjs_export_symbols;
+          let Some(member_expr_resolutions) = member_expr_resolutions else {
+            std::unreachable!("validated normal modules must have member-resolution slots");
+          };
+          meta.resolved_member_expr_refs = member_expr_resolutions;
+          let Some(shimmed_missing_exports) = shimmed_missing_exports else {
+            std::unreachable!("validated normal modules must have missing-export shim slots");
+          };
+          meta.shimmed_missing_exports = shimmed_missing_exports;
+        }
+        Module::External(module) => {
+          if exec_order != u32::MAX {
+            debug_assert_eq!(module.exec_order, u32::MAX);
+            module.exec_order = exec_order;
+          }
+          debug_assert!(resolved_exports.is_none());
+          debug_assert!(included_commonjs_export_symbols.is_none());
+          debug_assert!(member_expr_resolutions.is_none());
+          debug_assert!(shimmed_missing_exports.is_none());
+        }
+      }
+
+      let (declaration, required_by_other_module) = module_wrappers.get(module_idx);
       meta.required_by_other_module = required_by_other_module;
       match declaration {
         super::passes::WrapperDeclaration::None => {
@@ -189,125 +316,52 @@ impl LegacyOutputAdapter<'_> {
           meta.wrapper_stmt_info = Some(wrapper_stmt_info);
         }
       }
+      meta.star_exports_from_external_modules = external_star_exports;
+      meta.stmt_info_included = stmt_included;
+      meta.is_included = module_included.has_bit(module_idx);
+      meta.module_namespace_included_reason = namespace_reason;
+      meta.dependencies = dependencies;
+      meta.load_dependencies = load_dependencies;
+      meta.depended_runtime_helper = runtime_requirements;
+      meta.has_side_effectful_runtime_dep = side_effectful_runtime_dependencies.has_bit(module_idx);
+      metas.push(meta);
     }
 
-    assert_eq!(self.resolved_exports.module_count(), module_count);
-    for (module_idx, exports) in self.resolved_exports.into_slots().into_iter_enumerated() {
-      match (&module_table[module_idx], exports) {
-        (Module::Normal(_), Some(exports)) => {
-          let (resolved, sorted) = exports.into_parts();
-          metas[module_idx].resolved_exports = resolved;
-          metas[module_idx].sorted_and_non_ambiguous_resolved_exports = sorted;
-        }
-        (Module::External(_), None) => {}
-        (Module::Normal(_), None) => panic!("normal module {module_idx:?} has no export slot"),
-        (Module::External(_), Some(_)) => {
-          panic!("external module {module_idx:?} has an export slot")
-        }
-      }
+    for module_idx in tla_facts.modules() {
+      metas[module_idx].is_tla_or_contains_tla_dependency = true;
     }
-    assert_eq!(self.included_commonjs_export_symbols.module_count(), module_count);
-    for (module_idx, symbols) in
-      self.included_commonjs_export_symbols.into_slots().into_iter_enumerated()
-    {
-      match (&module_table[module_idx], symbols) {
-        (Module::Normal(_), Some(symbols)) => {
-          metas[module_idx].included_commonjs_export_symbol = symbols;
-        }
-        (Module::External(_), None) => {}
-        (Module::Normal(_), None) => {
-          panic!("normal module {module_idx:?} has no included-CommonJS-export slot")
-        }
-        (Module::External(_), Some(_)) => {
-          panic!("external module {module_idx:?} has an included-CommonJS-export slot")
-        }
-      }
+    for module_idx in dynamic_exports.modules() {
+      metas[module_idx].has_dynamic_exports = true;
     }
-    project_cjs_routing(&module_table, &mut metas, self.cjs_routing);
-    assert_eq!(self.member_expr_resolutions.module_count(), module_count);
-    for (module_idx, resolutions) in
-      self.member_expr_resolutions.into_slots().into_iter_enumerated()
-    {
-      match (&module_table[module_idx], resolutions) {
-        (Module::Normal(_), Some(resolutions)) => {
-          metas[module_idx].resolved_member_expr_refs = resolutions;
-        }
-        (Module::External(_), None) => {}
-        (Module::Normal(_), None) => {
-          panic!("normal module {module_idx:?} has no member-resolution slot")
-        }
-        (Module::External(_), Some(_)) => {
-          panic!("external module {module_idx:?} has a member-resolution slot")
-        }
-      }
-    }
-    assert_eq!(self.shimmed_missing_exports.module_count(), module_count);
-    for (module_idx, shims) in self.shimmed_missing_exports.into_slots().into_iter_enumerated() {
-      match (&module_table[module_idx], shims) {
-        (Module::Normal(_), Some(shims)) => metas[module_idx].shimmed_missing_exports = shims,
-        (Module::External(_), None) => {}
-        (Module::Normal(_), None) => {
-          panic!("normal module {module_idx:?} has no missing-export shim slot")
-        }
-        (Module::External(_), Some(_)) => {
-          panic!("external module {module_idx:?} has a missing-export shim slot")
-        }
-      }
-    }
-    for (module_idx, roots) in self.entry_export_roots.into_entries() {
+    project_cjs_routing(&module_table, &mut metas, cjs_routing);
+    for (module_idx, roots) in entry_export_roots.into_entries() {
       metas[module_idx]
         .referenced_symbols_by_entry_point_chunk
         .extend(roots.into_iter().map(|root| (root.symbol_ref, root.came_from_commonjs)));
-    }
-    assert_eq!(self.external_star_exports.module_count(), module_count);
-    for (module_idx, records) in self.external_star_exports.into_inner().into_iter_enumerated() {
-      metas[module_idx].star_exports_from_external_modules = records;
-    }
-
-    let (stmt_included, module_included, namespace_reasons) = self.inclusion.into_parts();
-    assert_eq!(stmt_included.len(), module_count);
-    assert_eq!(namespace_reasons.len(), module_count);
-    for (module_idx, stmt_included) in stmt_included.into_iter_enumerated() {
-      metas[module_idx].stmt_info_included = stmt_included;
-      metas[module_idx].is_included = module_included.has_bit(module_idx);
-      metas[module_idx].module_namespace_included_reason = namespace_reasons[module_idx];
-    }
-    let (dependencies, load_dependencies, runtime_requirements, side_effectful_runtime) =
-      self.finalized_dependencies.into_parts();
-    assert_eq!(dependencies.len(), module_count);
-    assert_eq!(load_dependencies.len(), module_count);
-    assert_eq!(runtime_requirements.len(), module_count);
-    for (((module_idx, dependencies), load_dependencies), runtime_requirements) in
-      dependencies.into_iter_enumerated().zip(load_dependencies).zip(runtime_requirements)
-    {
-      metas[module_idx].dependencies = dependencies;
-      metas[module_idx].load_dependencies = load_dependencies;
-      metas[module_idx].depended_runtime_helper = runtime_requirements;
-      metas[module_idx].has_side_effectful_runtime_dep = side_effectful_runtime.has_bit(module_idx);
     }
 
     tracing::trace!(modules = module_count, "assembled legacy link output");
     let output = LinkStageOutput {
       module_table,
-      entries: self.retained_entries.into_inner(),
-      sorted_modules: self.sorted_modules.into_inner(),
+      entries: retained_entries.into_inner(),
+      sorted_modules: sorted_modules.into_inner(),
       metas,
       symbol_db: symbols,
       stmt_infos,
       runtime,
       diagnostics,
-      used_external_symbols: self.used_external_symbols,
+      used_external_symbols,
       retained_export_symbols: RetainedExportSymbols::default(),
       dynamic_import_exports_usage_map,
-      safely_merge_cjs_ns_map: self.cjs_namespace_merges.into_legacy(),
-      external_import_namespace_merger: self.external_namespace_merges,
+      safely_merge_cjs_ns_map: cjs_namespace_merges.into_legacy(),
+      external_import_namespace_merger: external_namespace_merges,
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
-      global_constant_symbol_map: self.global_constants.into_legacy(),
-      normal_symbol_exports_chain_map: self.normal_export_chains.into_inner(),
-      lazy_json_export_initializers: self.lazy_json_export_initializers,
+      global_constant_symbol_map: global_constants.into_legacy(),
+      normal_symbol_exports_chain_map: normal_export_chains.into_inner(),
+      lazy_json_export_initializers,
       user_defined_entry_modules,
-      has_enum_inlining: self.enum_inlining.get(),
+      has_enum_inlining: enum_inlining.get(),
     };
     #[cfg(feature = "testing")]
     let output = {
@@ -315,7 +369,7 @@ impl LegacyOutputAdapter<'_> {
       super::testing::observe_link_output(&mut output);
       output
     };
-    (output, ast_table, self.used_symbol_refs)
+    (output, ast_table, used_symbol_refs)
   }
 }
 

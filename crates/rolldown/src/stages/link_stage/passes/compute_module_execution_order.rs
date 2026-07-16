@@ -32,17 +32,12 @@ pub(in crate::stages::link_stage) struct ModuleExecutionOrders {
 }
 
 impl ModuleExecutionOrders {
-  pub(in crate::stages::link_stage) fn get(&self, module_idx: ModuleIdx) -> u32 {
-    self.orders[module_idx]
+  pub(in crate::stages::link_stage) fn module_count(&self) -> usize {
+    self.orders.len()
   }
 
-  pub(in crate::stages::link_stage) fn assigned(
-    &self,
-  ) -> impl Iterator<Item = (ModuleIdx, u32)> + '_ {
-    self
-      .orders
-      .iter_enumerated()
-      .filter_map(|(idx, order)| (*order != u32::MAX).then_some((idx, *order)))
+  pub(in crate::stages::link_stage) fn get(&self, module_idx: ModuleIdx) -> u32 {
+    self.orders[module_idx]
   }
 }
 
@@ -343,7 +338,11 @@ mod tests {
       ]
     );
     assert_eq!(
-      orders.assigned().collect::<Vec<_>>(),
+      orders
+        .orders
+        .iter_enumerated()
+        .filter_map(|(idx, order)| (*order != u32::MAX).then_some((idx, *order)))
+        .collect::<Vec<_>>(),
       vec![
         (module_idx(0), 0),
         (module_idx(1), 4),

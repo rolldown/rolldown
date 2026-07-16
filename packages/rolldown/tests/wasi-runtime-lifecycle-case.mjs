@@ -495,10 +495,10 @@ await check('a worker realm acquires, uses, and releases its own runtime lease',
           plugins: [{
             name: 'worker-runtime',
             resolveId(source) {
-              if (source === id) return '\\\\0' + source;
+              if (source === id) return '\\0' + source;
             },
             load(source) {
-              if (source === '\\\\0' + id) return 'export const workerRuntime = true;';
+              if (source === '\\0' + id) return 'export const workerRuntime = true;';
             },
           }],
         });

@@ -11,6 +11,8 @@ const { Worker } = require('node:worker_threads')
 
 const {
   createOnMessage: __wasmCreateOnMessageForFsProxy,
+  emnapiAsyncWorkPlugin: __emnapiAsyncWorkPlugin,
+  emnapiTSFNPlugin: __emnapiTSFNPlugin,
   instantiateNapiModuleSync: __emnapiInstantiateNapiModuleSync,
 } = require('@napi-rs/wasm-runtime')
 const { createContext: __emnapiCreateContext } = require('@emnapi/runtime')
@@ -602,6 +604,7 @@ try {
     context: __emnapiContext,
   asyncWorkPoolSize: __rolldownAsyncWorkPoolSize,
   reuseWorker: true,
+    plugins: [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
     wasi: __wasi,
   onCreateWorker() {
     const worker = __createWasiWorker(__nodePath.join(__dirname, 'wasi-worker.mjs'))

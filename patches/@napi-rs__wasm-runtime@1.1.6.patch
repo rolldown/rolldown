@@ -1,0 +1,67 @@
+diff --git a/runtime.cjs b/runtime.cjs
+index a22e62a..3e40f24 100644
+--- a/runtime.cjs
++++ b/runtime.cjs
+@@ -1,11 +1,33 @@
+-const { MessageHandler, instantiateNapiModuleSync, instantiateNapiModule } = require('@emnapi/core')
+-const { getDefaultContext } = require('@emnapi/runtime')
++const {
++  MessageHandler,
++  instantiateNapiModuleSync,
++  instantiateNapiModule,
++} = require('@emnapi/core')
++// Single-threaded (non-shared-memory) WASI builds link an emnapi archive
++// without the C async-work and threadsafe-function implementations (they are
++// unconditional `napi_generic_failure` stubs without threads), so the
++// generated loaders provide the JavaScript implementations through these
++// plugins instead. Raw `instantiateNapiModule(Sync)` callers instantiating a
++// single-threaded napi-rs wasm must pass them too:
++// `plugins: [emnapiAsyncWorkPlugin, emnapiTSFNPlugin]` — without them
++// instantiation fails with a LinkError naming the missing import. Threaded
++// (shared-memory) builds link the C implementations and need no plugins;
++// this mirrors the upstream @emnapi/core v2 plugin split (v1 bundled these
++// implementations in the core runtime).
++const {
++  asyncWork: emnapiAsyncWorkPlugin,
++  tsfn: emnapiTSFNPlugin,
++} = require('@emnapi/core/plugins')
++const { createContext, getDefaultContext } = require('@emnapi/runtime')
+ const { WASI } = require('@tybys/wasm-util')
+ 
+ const { createFsProxy, createOnMessage } = require('./dist/fs-proxy.cjs')
+ 
+ module.exports = {
+   MessageHandler,
++  createContext,
++  emnapiAsyncWorkPlugin,
++  emnapiTSFNPlugin,
+   instantiateNapiModule,
+   instantiateNapiModuleSync,
+   getDefaultContext,
+diff --git a/runtime.js b/runtime.js
+index abbe9e2..aeed817 100644
+--- a/runtime.js
++++ b/runtime.js
+@@ -3,6 +3,21 @@ export {
+   instantiateNapiModule,
+   MessageHandler,
+ } from '@emnapi/core'
+-export { getDefaultContext } from '@emnapi/runtime'
++// Single-threaded (non-shared-memory) WASI builds link an emnapi archive
++// without the C async-work and threadsafe-function implementations (they are
++// unconditional `napi_generic_failure` stubs without threads), so the
++// generated loaders provide the JavaScript implementations through these
++// plugins instead. Raw `instantiateNapiModule(Sync)` callers instantiating a
++// single-threaded napi-rs wasm must pass them too:
++// `plugins: [emnapiAsyncWorkPlugin, emnapiTSFNPlugin]` — without them
++// instantiation fails with a LinkError naming the missing import. Threaded
++// (shared-memory) builds link the C implementations and need no plugins;
++// this mirrors the upstream @emnapi/core v2 plugin split (v1 bundled these
++// implementations in the core runtime).
++export {
++  asyncWork as emnapiAsyncWorkPlugin,
++  tsfn as emnapiTSFNPlugin,
++} from '@emnapi/core/plugins'
++export { createContext, getDefaultContext } from '@emnapi/runtime'
+ export * from '@tybys/wasm-util'
+ export { createOnMessage, createFsProxy } from './fs-proxy.js'

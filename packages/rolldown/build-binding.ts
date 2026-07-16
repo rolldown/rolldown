@@ -37,6 +37,7 @@ const buildCommand = createBuildCommand(args);
 
 const argsOptions = buildCommand.getOptions();
 configureWasiRustc(argsOptions.target);
+ensureVendoredEmnapiArchives(argsOptions.target);
 
 const napiArgs = {
   ...argsOptions,
@@ -107,6 +108,19 @@ function validateAsyncRuntimeHostExports(): void {
     if (!existsSync(loaderPath)) continue;
     assertAsyncRuntimeHostExports(readFileSync(loaderPath, 'utf8'), format);
   }
+}
+
+function ensureVendoredEmnapiArchives(target: unknown): void {
+  if (target !== WASI_THREADS_TARGET && target !== WASI_SINGLE_TARGET) return;
+
+  // The emnapi v2 archives napi-build's --export flags require are overlaid
+  // onto the installed emnapi package (the published 2.0.0-alpha.2 misses the
+  // non-threaded wasm32-wasip1 archive entirely). The overlay also runs from
+  // the root postinstall; re-running here covers installs that skipped
+  // lifecycle scripts. See vendor/emnapi/README.md.
+  execFileSync(process.execPath, [join(__dirname, '..', '..', 'vendor', 'emnapi', 'install.mjs')], {
+    stdio: 'inherit',
+  });
 }
 
 function configureWasiRustc(target: unknown): void {

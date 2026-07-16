@@ -9,6 +9,8 @@ const __nodePath = require('node:path')
 const { WASI: __nodeWASI } = require('node:wasi')
 
 const {
+  emnapiAsyncWorkPlugin: __emnapiAsyncWorkPlugin,
+  emnapiTSFNPlugin: __emnapiTSFNPlugin,
   instantiateNapiModuleSync: __emnapiInstantiateNapiModuleSync,
 } = require('@napi-rs/wasm-runtime')
 const { createContext: __emnapiCreateContext } = require('@emnapi/runtime')
@@ -472,6 +474,7 @@ try {
   } = __emnapiInstantiateNapiModuleSync(__nodeFs.readFileSync(__wasmFilePath), {
     context: __emnapiContext,
   asyncWorkPoolSize: 0,
+    plugins: [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
     wasi: __wasi,
     overwriteImports(importObject) {
       importObject.env = {

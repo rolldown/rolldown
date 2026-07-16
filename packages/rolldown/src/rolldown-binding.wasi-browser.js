@@ -1,4 +1,6 @@
 import {
+  emnapiAsyncWorkPlugin as __emnapiAsyncWorkPlugin,
+  emnapiTSFNPlugin as __emnapiTSFNPlugin,
   createOnMessage as __wasmCreateOnMessageForFsProxy,
   instantiateNapiModule as __emnapiInstantiateNapiModule,
   WASI as __WASI,
@@ -123,7 +125,7 @@ function __destroyEmnapiContext() {
 }
 
 try {
-  __emnapiContext.feature.Buffer = Buffer
+  __emnapiContext.features.Buffer = Buffer
 
   ;({
     instance: __napiInstance,
@@ -132,6 +134,7 @@ try {
   } = await __emnapiInstantiateNapiModule(__wasmFile, {
     context: __emnapiContext,
     asyncWorkPoolSize: 4,
+    plugins: [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
     wasi: __wasi,
     onCreateWorker() {
       const worker = new Worker(new URL('./wasi-worker-browser.mjs', import.meta.url), {

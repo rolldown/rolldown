@@ -1,4 +1,6 @@
 import {
+  emnapiAsyncWorkPlugin as __emnapiAsyncWorkPlugin,
+  emnapiTSFNPlugin as __emnapiTSFNPlugin,
   instantiateNapiModule as __emnapiInstantiateNapiModule,
   WASI as __WASI,
 } from '@napi-rs/wasm-runtime'
@@ -97,7 +99,7 @@ function __destroyEmnapiContext() {
 
 try {
 /* ROLLDOWN_BROWSER_INITIALIZATION_GUARD_START */
-  __emnapiContext.feature.Buffer = Buffer
+  __emnapiContext.features.Buffer = Buffer
 
   ;({
     instance: __napiInstance,
@@ -106,6 +108,7 @@ try {
   } = await __emnapiInstantiateNapiModule(__wasmFile, {
     context: __emnapiContext,
     asyncWorkPoolSize: 0,
+    plugins: [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
     wasi: __wasi,
     overwriteImports(importObject) {
       importObject.env = {

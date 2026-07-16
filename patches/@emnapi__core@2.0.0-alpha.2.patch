@@ -1,0 +1,235 @@
+diff --git a/dist/emnapi-core.js b/dist/emnapi-core.js
+index 3a0da48a675fe41ac8b9cc39cf27272b38f60970..3e7a6739dace1aa5ac20dfb13f60e4cc370c2df3 100644
+--- a/dist/emnapi-core.js
++++ b/dist/emnapi-core.js
+@@ -1472,15 +1472,18 @@ function createNapiModule (options) {
+         if (!(jsValue instanceof ArrayBuffer) && !emnapiExternalMemory.isSharedArrayBuffer(jsValue)) {
+             return envObject.setLastError(1 /* napi_status.napi_invalid_arg */);
+         }
+-        var HEAP_DATA_VIEW = new DataView(wasmMemory.buffer);
++        // getArrayBufferPointer() below may malloc into wasm memory; growing a
++        // non-shared memory detaches the previous buffer, so the view must be
++        // re-created at each use.
++        var HEAP_DATA_VIEW = () => new DataView(wasmMemory.buffer);
+         if (data) {
+             data >>>= 0;
+             const p = emnapiExternalMemory.getArrayBufferPointer(jsValue, true).address;
+-            HEAP_DATA_VIEW.setUint32(data, p, true);
++            HEAP_DATA_VIEW().setUint32(data, p, true);
+         }
+         if (byte_length) {
+             byte_length >>>= 0;
+-            HEAP_DATA_VIEW.setUint32(byte_length, jsValue.byteLength, true);
++            HEAP_DATA_VIEW().setUint32(byte_length, jsValue.byteLength, true);
+         }
+         return envObject.clearLastError();
+     }
+@@ -1580,7 +1583,10 @@ function createNapiModule (options) {
+             return envObject.setLastError(1 /* napi_status.napi_invalid_arg */);
+         }
+         let v = jsValue;
+-        var HEAP_DATA_VIEW = new DataView(wasmMemory.buffer);
++        // getViewPointer()/getOrUpdateMemoryView() below may malloc into wasm
++        // memory; growing a non-shared memory detaches the previous buffer, so
++        // the view must be re-created at each use.
++        var HEAP_DATA_VIEW = () => new DataView(wasmMemory.buffer);
+         if (type) {
+             type >>>= 0;
+             let t;
+@@ -1623,28 +1629,28 @@ function createNapiModule (options) {
+             else {
+                 return envObject.setLastError(9 /* napi_status.napi_generic_failure */);
+             }
+-            HEAP_DATA_VIEW.setInt32(type, t, true);
++            HEAP_DATA_VIEW().setInt32(type, t, true);
+         }
+         v = emnapiExternalMemory.getOrUpdateMemoryView(v);
+         if (length) {
+             length >>>= 0;
+-            HEAP_DATA_VIEW.setUint32(length, v.length, true);
++            HEAP_DATA_VIEW().setUint32(length, v.length, true);
+         }
+         if (data || arraybuffer) {
+             if (data) {
+                 data >>>= 0;
+                 const p = emnapiExternalMemory.getViewPointer(v, true).address;
+-                HEAP_DATA_VIEW.setUint32(data, p, true);
++                HEAP_DATA_VIEW().setUint32(data, p, true);
+             }
+             if (arraybuffer) {
+                 arraybuffer >>>= 0;
+                 const ab = emnapiCtx.napiValueFromJsValue(v.buffer);
+-                HEAP_DATA_VIEW.setUint32(arraybuffer, ab, true);
++                HEAP_DATA_VIEW().setUint32(arraybuffer, ab, true);
+             }
+         }
+         if (byte_offset) {
+             byte_offset >>>= 0;
+-            HEAP_DATA_VIEW.setUint32(byte_offset, v.byteOffset, true);
++            HEAP_DATA_VIEW().setUint32(byte_offset, v.byteOffset, true);
+         }
+         return envObject.clearLastError();
+     }
+@@ -1685,26 +1691,29 @@ function createNapiModule (options) {
+             return envObject.setLastError(1 /* napi_status.napi_invalid_arg */);
+         }
+         const v = emnapiExternalMemory.getOrUpdateMemoryView(jsValue);
+-        var HEAP_DATA_VIEW = new DataView(wasmMemory.buffer);
++        // getViewPointer() below may malloc into wasm memory; growing a
++        // non-shared memory detaches the previous buffer, so the view must be
++        // re-created at each use.
++        var HEAP_DATA_VIEW = () => new DataView(wasmMemory.buffer);
+         if (byte_length) {
+             byte_length >>>= 0;
+-            HEAP_DATA_VIEW.setUint32(byte_length, v.byteLength, true);
++            HEAP_DATA_VIEW().setUint32(byte_length, v.byteLength, true);
+         }
+         if (data || arraybuffer) {
+             if (data) {
+                 data >>>= 0;
+                 const p = emnapiExternalMemory.getViewPointer(v, true).address;
+-                HEAP_DATA_VIEW.setUint32(data, p, true);
++                HEAP_DATA_VIEW().setUint32(data, p, true);
+             }
+             if (arraybuffer) {
+                 arraybuffer >>>= 0;
+                 const ab = emnapiCtx.napiValueFromJsValue(v.buffer);
+-                HEAP_DATA_VIEW.setUint32(arraybuffer, ab, true);
++                HEAP_DATA_VIEW().setUint32(arraybuffer, ab, true);
+             }
+         }
+         if (byte_offset) {
+             byte_offset >>>= 0;
+-            HEAP_DATA_VIEW.setUint32(byte_offset, v.byteOffset, true);
++            HEAP_DATA_VIEW().setUint32(byte_offset, v.byteOffset, true);
+         }
+         return envObject.clearLastError();
+     }
+@@ -4662,7 +4671,10 @@ function createNapiModule (options) {
+             const ret = v8func.apply(v8recv, args);
+             if (result) {
+                 v = emnapiCtx.napiValueFromJsValue(ret);
+-                HEAP_DATA_VIEW.setUint32(result, v, true);
++                // The call into JS above may have grown wasm memory; growing a
++                // non-shared memory detaches the buffer captured by
++                // HEAP_DATA_VIEW, so the result write needs a fresh view.
++                new DataView(wasmMemory.buffer).setUint32(result, v, true);
+             }
+             return envObject.clearLastError();
+         }
+@@ -4723,7 +4735,10 @@ function createNapiModule (options) {
+             }
+             if (result) {
+                 v = emnapiCtx.napiValueFromJsValue(ret);
+-                HEAP_DATA_VIEW.setUint32(result, v, true);
++                // The constructor call above may have grown wasm memory; growing
++                // a non-shared memory detaches the buffer captured by
++                // HEAP_DATA_VIEW, so the result write needs a fresh view.
++                new DataView(wasmMemory.buffer).setUint32(result, v, true);
+             }
+             return (0 /* napi_status.napi_ok */);
+         }
+@@ -5195,7 +5210,11 @@ function createNapiModule (options) {
+             if (result) {
+                 result >>>= 0;
+                 v = emnapiCtx.napiValueFromJsValue(ret.value);
+-                HEAP_DATA_VIEW.setUint32(result, v, true);
++                // The makeCallback call into JS above may have grown wasm
++                // memory; growing a non-shared memory detaches the buffer
++                // captured by HEAP_DATA_VIEW, so the result write needs a
++                // fresh view.
++                new DataView(wasmMemory.buffer).setUint32(result, v, true);
+             }
+             return (0 /* napi_status.napi_ok */);
+         }
+diff --git a/dist/plugins/threadsafe-function.js b/dist/plugins/threadsafe-function.js
+index 657918774e65ae838c34bc5517cdbe239eff8b53..27ccf9ffd8bc79e5515f18f3a8f708fcf11afe78 100644
+--- a/dist/plugins/threadsafe-function.js
++++ b/dist/plugins/threadsafe-function.js
+@@ -641,12 +641,27 @@ function threadsafeFunction (emnapiPluginCtx) {
+         dispatch(func) {
+             let has_more = true;
+             let iterations_left = 1000;
+-            const ui32a = new Uint32Array(emscripten_runtime.wasmMemory.buffer);
++            // Growing a non-shared wasm memory detaches the previous buffer, and
++            // dispatchOne() calls into the module, so the view must be re-created
++            // on every iteration.
++            const ui32a = () => new Uint32Array(emscripten_runtime.wasmMemory.buffer);
+             const index = (func + emnapiTSFN.offset.dispatch_state) >>> 2;
+             while (has_more && --iterations_left !== 0) {
+-                Atomics.store(ui32a, index, 1);
+-                has_more = emnapiTSFN.dispatchOne(func);
+-                if (Atomics.exchange(ui32a, index, 0) !== 1) {
++                Atomics.store(ui32a(), index, 1);
++                try {
++                    has_more = emnapiTSFN.dispatchOne(func);
++                }
++                catch (err) {
++                    // A throwing callback must not leave dispatch_state marked as
++                    // dispatching, or every later send() would be swallowed. Re-arm
++                    // the state and schedule another drain before rethrowing.
++                    if (emnapiTSFN._liveSet.has(func)) {
++                        Atomics.exchange(ui32a(), index, 0);
++                        emnapiTSFN.send(func);
++                    }
++                    throw err;
++                }
++                if (Atomics.exchange(ui32a(), index, 0) !== 1) {
+                     has_more = true;
+                 }
+             }
+@@ -661,8 +676,11 @@ function threadsafeFunction (emnapiPluginCtx) {
+             // `scheduled` prevents queueing the same main-thread drain chain more than
+             // once while a previous wakeup is still in flight.
+             const scheduled = func + emnapiTSFN.offset.async_u_fd;
+-            const i32a = new Int32Array(emscripten_runtime.wasmMemory.buffer);
+-            if (Atomics.exchange(i32a, scheduled >>> 2, 1) !== 0) {
++            // Growing a non-shared wasm memory detaches the previous buffer, so the
++            // view must be re-created at every use: the turns below run after
++            // arbitrary module code.
++            const i32a = () => new Int32Array(emscripten_runtime.wasmMemory.buffer);
++            if (Atomics.exchange(i32a(), scheduled >>> 2, 1) !== 0) {
+                 return;
+             }
+             // Match uv_async_send-style coalescing in JS: the first turn represents
+@@ -673,20 +691,21 @@ function threadsafeFunction (emnapiPluginCtx) {
+                 if (!emnapiTSFN._liveSet.has(func)) {
+                     return;
+                 }
+-                if (Atomics.load(i32a, pending >>> 2) === 0) {
+-                    Atomics.store(i32a, scheduled >>> 2, 0);
++                if (Atomics.load(i32a(), pending >>> 2) === 0) {
++                    Atomics.store(i32a(), scheduled >>> 2, 0);
+                     return;
+                 }
+                 emnapiCtx.features.setImmediate(() => {
++                    // After destroy(), the func address is freed.  Skip the atomics
++                    // on that address entirely to avoid use-after-free (JS-side
++                    // lifecycle check must run before touching the state words).
++                    if (!emnapiTSFN._liveSet.has(func)) {
++                        return;
++                    }
+                     try {
+                         // Consume the coalesced wakeup once, then let dispatch() observe any
+                         // queue mutations through dispatch_state like the C implementation.
+-                        if (Atomics.exchange(i32a, pending >>> 2, 0) === 0) {
+-                            return;
+-                        }
+-                        // After destroy(), the func address is freed.  Skip dispatch
+-                        // to avoid use-after-free (JS-side lifecycle check).
+-                        if (!emnapiTSFN._liveSet.has(func)) {
++                        if (Atomics.exchange(i32a(), pending >>> 2, 0) === 0) {
+                             return;
+                         }
+                         emnapiTSFN.dispatch(func);
+@@ -695,8 +714,8 @@ function threadsafeFunction (emnapiPluginCtx) {
+                         // Allow a later wakeup to schedule a new drain chain. If another
+                         // worker-thread send raced with this drain, enqueue one more turn.
+                         if (emnapiTSFN._liveSet.has(func)) {
+-                            Atomics.store(i32a, scheduled >>> 2, 0);
+-                            if (Atomics.load(i32a, pending >>> 2) !== 0) {
++                            Atomics.store(i32a(), scheduled >>> 2, 0);
++                            if (Atomics.load(i32a(), pending >>> 2) !== 0) {
+                                 emnapiTSFN.enqueue(func);
+                             }
+                         }

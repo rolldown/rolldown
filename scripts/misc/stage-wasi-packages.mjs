@@ -518,7 +518,23 @@ async function reclaimStaleStageWasiPackageLock(
     throw new Error(`WASI package transaction lock is not a directory: ${lockPath}`);
   }
 
-  const observedOwner = await readStageWasiPackageLockOwner(ownerPath, { required: true });
+  // The holder releases the lock by renaming the directory away, so the owner
+  // read can race a release that happened right after the directory check
+  // above. Locks are published fully formed (prepared with owner.json, then
+  // renamed into place), so a missing owner means either that race — the
+  // directory is gone on a second look — or the genuinely corrupt ownerless
+  // directory, which persists through a poll interval and must fail loudly.
+  let observedOwner = await readStageWasiPackageLockOwner(ownerPath);
+  if (observedOwner === undefined) {
+    if (!(await lstatIfExists(lockPath))) return true;
+    await delay(transactionLockPollMs);
+    if (!(await lstatIfExists(lockPath))) return true;
+    observedOwner = await readStageWasiPackageLockOwner(ownerPath);
+    if (observedOwner === undefined) {
+      if (!(await lstatIfExists(lockPath))) return true;
+      throw new Error(`WASI package lock owner is missing: ${ownerPath}`);
+    }
+  }
   assertSupportedCanonicalStageWasiPackageLockOwner(observedOwner, ownerPath);
   if (!(await stageWasiPackageLockIsStale(observedOwner))) return false;
   await afterStaleLockObserved?.({ owner: observedOwner });
@@ -537,7 +553,14 @@ async function reclaimStaleStageWasiPackageLock(
     if (!currentStats.isDirectory()) {
       throw new Error(`WASI package transaction lock is not a directory: ${lockPath}`);
     }
-    const currentOwner = await readStageWasiPackageLockOwner(ownerPath, { required: true });
+    // Same release race as the unguarded read above: the reclaim guard keeps
+    // other reclaimers out, but the live holder can still retire its own lock
+    // underneath us. A vanished directory is a completed release; a changed
+    // or unreadable owner means the stale lock we observed is gone.
+    const currentOwner = await readStageWasiPackageLockOwner(ownerPath);
+    if (currentOwner === undefined) {
+      return !(await lstatIfExists(lockPath));
+    }
     if (!sameStageWasiPackageLockOwner(currentOwner, observedOwner)) return false;
     if (!(await stageWasiPackageLockIsStale(currentOwner))) return false;
 

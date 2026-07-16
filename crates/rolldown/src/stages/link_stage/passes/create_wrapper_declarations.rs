@@ -89,6 +89,16 @@ impl ModuleWrappers {
     self.slots[module_idx].declaration
   }
 
+  pub(in crate::stages::link_stage) fn esm_wrapper_ref(
+    &self,
+    module_idx: ModuleIdx,
+  ) -> Option<SymbolRef> {
+    match self.slots[module_idx].declaration {
+      WrapperDeclaration::Esm { wrapper_ref, .. } => Some(wrapper_ref),
+      WrapperDeclaration::None | WrapperDeclaration::Cjs { .. } => None,
+    }
+  }
+
   pub(in crate::stages::link_stage) fn modules(
     &self,
   ) -> impl Iterator<Item = (ModuleIdx, WrapperDeclaration, bool)> + '_ {

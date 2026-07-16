@@ -55,7 +55,7 @@ impl EntryPlanDraft {
     })
   }
 
-  pub(in crate::stages::link_stage) fn into_legacy_entries(
+  pub(in crate::stages::link_stage) fn into_entries(
     self,
   ) -> FxIndexMap<ModuleIdx, Vec<EntryPoint>> {
     self.entries
@@ -127,7 +127,7 @@ mod tests {
 
     let expected = [1, 2, 4, 3, 6, 5].map(module_idx);
     assert_eq!(entry_plan.roots().collect::<Vec<_>>(), expected);
-    let entries = entry_plan.into_legacy_entries();
+    let entries = entry_plan.into_entries();
     assert_eq!(entries.keys().copied().collect::<Vec<ModuleIdx>>(), expected);
     assert_eq!(entries.get(&module_idx(4)).expect("grouped dynamic entry").len(), 2);
     assert!(pipeline.into_diagnostics().is_empty());

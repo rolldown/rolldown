@@ -18,6 +18,13 @@ impl ModuleDependenciesDraft {
     self.dependencies.len()
   }
 
+  pub(in crate::stages::link_stage) fn iter(
+    &self,
+    module_idx: ModuleIdx,
+  ) -> impl Iterator<Item = ModuleIdx> + '_ {
+    self.dependencies[module_idx].iter().copied()
+  }
+
   pub(in crate::stages::link_stage) fn extend(
     &mut self,
     module_idx: ModuleIdx,

@@ -52,6 +52,20 @@ impl EntryExportRoots {
   }
 }
 
+#[cfg(test)]
+pub(super) mod test_support {
+  use rolldown_common::ModuleIdx;
+  use rolldown_utils::indexmap::FxIndexMap;
+
+  use super::{EntryExportRoot, EntryExportRoots};
+
+  pub(in crate::stages::link_stage::passes) fn entry_export_roots(
+    roots: impl IntoIterator<Item = (ModuleIdx, Vec<EntryExportRoot>)>,
+  ) -> EntryExportRoots {
+    EntryExportRoots { roots: FxIndexMap::from_iter(roots) }
+  }
+}
+
 impl Pass for CollectEntryExportRootsPass {
   type InputRead<'a> = CollectEntryExportRootsInput<'a>;
   type InputOwned = ();

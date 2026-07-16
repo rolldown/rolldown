@@ -96,6 +96,45 @@ impl ReferenceImportRecordPatches {
   }
 }
 
+#[cfg(test)]
+pub(super) mod test_support {
+  use oxc_index::IndexVec;
+  use rolldown_common::{
+    DependedRuntimeHelperMap, ImportRecordIdx, ModuleIdx, RuntimeHelper, StmtInfoIdx,
+  };
+
+  use super::{
+    CallRuntimeRequirePatch, ModuleImportRecordPatches, ReferenceImportRecordPatches,
+    StatementRuntimeRequirements,
+  };
+
+  pub(in crate::stages::link_stage::passes) fn reference_import_record_patches(
+    module_count: usize,
+    events: impl IntoIterator<Item = (ModuleIdx, ImportRecordIdx)>,
+  ) -> ReferenceImportRecordPatches {
+    let mut modules = (0..module_count)
+      .map(|_| ModuleImportRecordPatches { events: Vec::new() })
+      .collect::<Vec<_>>();
+    for (importer, import_record) in events {
+      modules[importer.index()].events.push(CallRuntimeRequirePatch { importer, import_record });
+    }
+    ReferenceImportRecordPatches { modules }
+  }
+
+  pub(in crate::stages::link_stage::passes) fn statement_runtime_requirements(
+    module_count: usize,
+    requirements: impl IntoIterator<Item = (ModuleIdx, RuntimeHelper, StmtInfoIdx)>,
+  ) -> StatementRuntimeRequirements {
+    let mut slots = (0..module_count)
+      .map(|_| Box::new(DependedRuntimeHelperMap::default()))
+      .collect::<IndexVec<ModuleIdx, _>>();
+    for (module_idx, helper, stmt_info_idx) in requirements {
+      slots[module_idx].push(helper, stmt_info_idx);
+    }
+    StatementRuntimeRequirements { slots }
+  }
+}
+
 /// One-call ownership envelope. The driver must destructure this immediately; no pass accepts it.
 pub(in crate::stages::link_stage) struct ReferenceNeededSymbolsOutput {
   pub symbols: SymbolRefDb,

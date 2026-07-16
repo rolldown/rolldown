@@ -1,11 +1,10 @@
 use arcstr::ArcStr;
-use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  ConstExportMeta, EntryPoint, FlatOptions, Module, ModuleIdx, ModuleTable,
-  PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
-  UsedExternalSymbols, UsedSymbolRefsBuilder, dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, EntryPoint, FlatOptions, ModuleIdx, ModuleTable, PreserveEntrySignatures,
+  RetainedExportSymbols, RuntimeModuleBrief, SymbolRef, SymbolRefDb, UsedExternalSymbols,
+  UsedSymbolRefsBuilder, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::{Diagnostics, EventKindSwitcher};
 use rolldown_utils::{
@@ -18,19 +17,21 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   SharedOptions,
   type_alias::{IndexEcmaAst, IndexStmtInfos},
-  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+  types::linking_metadata::LinkingMetadataVec,
 };
 
 use super::scan_stage::NormalizedScanStageOutput;
 
 mod cross_module_optimization_runner;
+mod finalize_module_dependencies_runner;
 mod generate_lazy_export;
 pub mod lazy_json_export_initializers;
+mod legacy_output_adapter;
 mod non_splittable_json_defaults;
 mod passes;
-mod patch_module_dependencies;
 #[cfg(feature = "testing")]
 pub mod testing;
+mod tree_shake_runner;
 mod tree_shaking;
 
 pub use tree_shaking::{
@@ -39,11 +40,12 @@ pub use tree_shaking::{
 };
 
 use lazy_json_export_initializers::LazyJsonExportInitializers;
+use legacy_output_adapter::LegacyOutputAdapter;
 use non_splittable_json_defaults::NonSplittableJsonDefaults;
 
 use passes::{
   BindImportsInput, BindImportsOutput, BindImportsOwned, BindImportsPass, CanonicalizeEntriesPass,
-  CjsNamespaceMerges, CjsRoutingFinal, CollectEntryExportRootsInput, CollectEntryExportRootsPass,
+  CjsNamespaceMerges, CollectEntryExportRootsInput, CollectEntryExportRootsPass,
   CollectExternalStarExportsPass, CollectInitialDependenciesPass, CollectResolvedExportsPass,
   ComputeCjsNamespaceMergesInput, ComputeCjsNamespaceMergesPass, ComputeCjsRoutingInput,
   ComputeCjsRoutingPass, ComputeDynamicExportsInput, ComputeDynamicExportsPass,
@@ -55,16 +57,17 @@ use passes::{
   CrossModuleOptimizationPass, DetermineModuleFormatsInput, DetermineModuleFormatsPass,
   DetermineModuleSideEffectsInput, DetermineModuleSideEffectsPass, DynamicExports,
   EntryExportRoots, EntryPlanDraft, ExternalStarExports, ExtractGlobalConstantsPass,
-  FinalizeResolvedExportsPass, GlobalConstants, GlobalConstantsDraft,
-  IncludedCommonJsExportSymbols, MemberExprResolutions, ModuleDependenciesDraft, ModuleFormats,
-  ModuleSideEffects, ModuleWrappers, NormalizeLazyExportsInput, NormalizeLazyExportsOutput,
-  NormalizeLazyExportsOwned, NormalizeLazyExportsPass, PlanModuleWrappingInput,
-  PlanModuleWrappingPass, ReferenceChunkingOptions, ReferenceImportRecordPatches,
-  ReferenceNeededSymbolsInput, ReferenceNeededSymbolsOutput, ReferenceNeededSymbolsOwned,
-  ReferenceNeededSymbolsPass, ReferenceTreeShakingOptions, ResolveMemberExpressionsInput,
-  ResolveMemberExpressionsOutput, ResolveMemberExpressionsOwned, ResolveMemberExpressionsPass,
-  ResolvedExports, ShimmedMissingExports, SortedModules, StatementRuntimeRequirements,
-  TlaScanFacts, UnreachableDynamicImports, WrapperDeclaration,
+  FinalizeModuleDependenciesInput, FinalizeModuleDependenciesOwned, FinalizeModuleDependenciesPass,
+  FinalizeResolvedExportsPass, GlobalConstants, GlobalConstantsDraft, MemberExprResolutions,
+  ModuleFormats, ModuleSideEffects, ModuleWrappers, NormalizeLazyExportsInput,
+  NormalizeLazyExportsOutput, NormalizeLazyExportsOwned, NormalizeLazyExportsPass,
+  PlanModuleWrappingInput, PlanModuleWrappingPass, ReferenceChunkingOptions,
+  ReferenceImportRecordPatches, ReferenceNeededSymbolsInput, ReferenceNeededSymbolsOutput,
+  ReferenceNeededSymbolsOwned, ReferenceNeededSymbolsPass, ReferenceTreeShakingOptions,
+  ResolveMemberExpressionsInput, ResolveMemberExpressionsOutput, ResolveMemberExpressionsOwned,
+  ResolveMemberExpressionsPass, ResolvedExports, ShimmedMissingExports, SortedModules,
+  StatementRuntimeRequirements, TlaScanFacts, TreeShakeInclusionPolicy, TreeShakeInput,
+  TreeShakeOptions, TreeShakeOutput, TreeShakeOwned, TreeShakePass, UnreachableDynamicImports,
 };
 
 /// Information about safely merged CJS namespaces for a module
@@ -111,7 +114,6 @@ pub struct LinkStage<'a> {
   pub module_table: ModuleTable,
   /// Raw scan entries, consumed by `CanonicalizeEntriesPass` at link entry.
   entry_points: Vec<EntryPoint>,
-  pub entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
   pub symbols: SymbolRefDb,
   /// Per-module statement-info table. Detached from `EcmaView` at `LinkStage::new`
   /// (the field on `EcmaView` is left as an empty placeholder) so the parallel
@@ -120,57 +122,33 @@ pub struct LinkStage<'a> {
   /// and module finalizers, which used to read `module.stmt_infos` directly.
   pub stmt_infos: IndexStmtInfos,
   pub runtime: RuntimeModuleBrief,
-  pub sorted_modules: Vec<ModuleIdx>,
-  pub metas: LinkingMetadataVec,
   pub diagnostics: Diagnostics,
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
-  pub used_symbol_refs: UsedSymbolRefsBuilder,
-  pub used_external_symbols: UsedExternalSymbols,
-  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
-  pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
-  pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
-  pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub flat_options: FlatOptions,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   /// Scan-only TLA inputs. `ComputeTlaPass` consumes these at their only link use.
   tla_scan_facts: TlaScanFacts,
-  /// Computed during `include_statements`, reused when building `LinkStageOutput`.
-  pub has_enum_inlining: bool,
 }
 
 impl<'a> LinkStage<'a> {
   pub fn new(mut scan_stage_output: NormalizedScanStageOutput, options: &'a SharedOptions) -> Self {
     Self {
-      sorted_modules: Vec::new(),
-      global_constant_symbol_map: FxHashMap::default(),
       // `stmt_infos` is produced by the scan stage on the side (in
       // `NormalizedScanStageOutput.stmt_infos`) rather than living on each
       // `EcmaView`, so we can move it directly here.
       stmt_infos: std::mem::take(&mut scan_stage_output.stmt_infos),
-      metas: scan_stage_output
-        .module_table
-        .modules
-        .iter()
-        .map(|_| LinkingMetadata::default())
-        .collect::<IndexVec<ModuleIdx, _>>(),
       module_table: scan_stage_output.module_table,
       entry_points: scan_stage_output.entry_points,
-      entries: FxIndexMap::default(),
       symbols: scan_stage_output.symbol_ref_db,
       runtime: scan_stage_output.runtime,
       diagnostics: scan_stage_output.warnings.into(),
       ast_table: scan_stage_output.index_ecma_ast,
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
-      used_symbol_refs: UsedSymbolRefsBuilder::default(),
-      used_external_symbols: UsedExternalSymbols::default(),
-      safely_merge_cjs_ns_map: FxHashMap::default(),
-      normal_symbol_exports_chain_map: FxHashMap::default(),
-      external_import_namespace_merger: FxHashMap::default(),
       overrode_preserve_entry_signature_map: scan_stage_output
         .overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: scan_stage_output.entry_point_to_reference_ids,
@@ -180,7 +158,6 @@ impl<'a> LinkStage<'a> {
         scan_stage_output.tla_module_count,
         scan_stage_output.tla_keyword_span_map,
       ),
-      has_enum_inlining: false,
     }
   }
 
@@ -302,8 +279,6 @@ impl<'a> LinkStage<'a> {
       },
       (),
     );
-    self.project_module_side_effects(&module_side_effects);
-    self.project_representation_results(&module_formats, &module_wrappers, &dynamic_exports);
     (
       lazy_json_export_initializers,
       non_splittable_json_defaults,
@@ -313,275 +288,6 @@ impl<'a> LinkStage<'a> {
       module_side_effects,
       cjs_namespace_merges,
     )
-  }
-
-  fn project_module_side_effects(&mut self, module_side_effects: &ModuleSideEffects) {
-    if module_side_effects.module_count() != self.module_table.modules.len() {
-      tracing::error!(
-        side_effects = module_side_effects.module_count(),
-        modules = self.module_table.modules.len(),
-        "module-side-effect layout mismatch"
-      );
-    }
-    for index in 0..module_side_effects.module_count() {
-      let module_idx = ModuleIdx::new(index);
-      let side_effects = module_side_effects.get(module_idx);
-      match self.module_table.modules.get_mut(module_idx) {
-        Some(Module::Normal(module)) => module.side_effects = side_effects,
-        Some(Module::External(_)) => {}
-        None => tracing::error!(
-          module = module_idx.index(),
-          "module-side-effect result targets a missing module"
-        ),
-      }
-    }
-  }
-
-  fn project_representation_results(
-    &mut self,
-    module_formats: &ModuleFormats,
-    module_wrappers: &ModuleWrappers,
-    dynamic_exports: &DynamicExports,
-  ) {
-    if module_formats.module_count() != self.module_table.modules.len() {
-      tracing::error!(
-        formats = module_formats.module_count(),
-        modules = self.module_table.modules.len(),
-        "module-format layout mismatch"
-      );
-    }
-    for (module_idx, exports_kind) in module_formats.normal_modules() {
-      match self.module_table.modules.get_mut(module_idx) {
-        Some(Module::Normal(module)) => module.exports_kind = exports_kind,
-        Some(Module::External(_)) | None => tracing::error!(
-          module = module_idx.index(),
-          "normal module format targets a missing or external module"
-        ),
-      }
-    }
-    for module_idx in dynamic_exports.modules() {
-      self.metas[module_idx].has_dynamic_exports = true;
-    }
-    for (module_idx, declaration, required_by_other_module) in module_wrappers.modules() {
-      let meta = &mut self.metas[module_idx];
-      meta.required_by_other_module = required_by_other_module;
-      match declaration {
-        WrapperDeclaration::None => meta.set_wrap_kind(rolldown_common::WrapKind::None),
-        WrapperDeclaration::Cjs { wrapper_ref, wrapper_stmt_info } => {
-          meta.set_wrap_kind(rolldown_common::WrapKind::Cjs);
-          meta.wrapper_ref = Some(wrapper_ref);
-          meta.wrapper_stmt_info = Some(wrapper_stmt_info);
-        }
-        WrapperDeclaration::Esm { wrapper_ref, wrapper_stmt_info } => {
-          meta.set_wrap_kind(rolldown_common::WrapKind::Esm);
-          meta.wrapper_ref = Some(wrapper_ref);
-          meta.wrapper_stmt_info = Some(wrapper_stmt_info);
-        }
-      }
-    }
-  }
-
-  fn project_shimmed_missing_exports(&mut self, shimmed_missing_exports: ShimmedMissingExports) {
-    let shimmed_missing_exports = shimmed_missing_exports.into_slots();
-    let module_count = self.module_table.modules.len();
-    assert_eq!(
-      shimmed_missing_exports.len(),
-      module_count,
-      "missing-export shim layout must match the module table"
-    );
-    assert_eq!(self.metas.len(), module_count, "metadata layout must match the module table");
-    for (module_idx, shimmed) in shimmed_missing_exports.into_iter_enumerated() {
-      match (&self.module_table[module_idx], shimmed) {
-        (Module::Normal(_), Some(shimmed)) => {
-          self.metas[module_idx].shimmed_missing_exports = shimmed;
-        }
-        (Module::External(_), None) => {}
-        (Module::Normal(_), None) => {
-          panic!("normal module {module_idx:?} has no missing-export shim slot")
-        }
-        (Module::External(_), Some(_)) => {
-          panic!("external module {module_idx:?} has a missing-export shim slot")
-        }
-      }
-    }
-  }
-
-  fn project_included_commonjs_export_symbols(
-    &mut self,
-    included_commonjs_export_symbols: IncludedCommonJsExportSymbols,
-  ) {
-    let included_commonjs_export_symbols = included_commonjs_export_symbols.into_slots();
-    let module_count = self.module_table.modules.len();
-    assert_eq!(
-      included_commonjs_export_symbols.len(),
-      module_count,
-      "included CommonJS export layout must match the module table"
-    );
-    assert_eq!(self.metas.len(), module_count, "metadata layout must match the module table");
-
-    for (module_idx, included_commonjs_exports) in
-      included_commonjs_export_symbols.into_iter_enumerated()
-    {
-      let meta = &mut self.metas[module_idx];
-      match (&self.module_table[module_idx], included_commonjs_exports) {
-        (Module::Normal(_), Some(included_commonjs_exports)) => {
-          meta.included_commonjs_export_symbol = included_commonjs_exports;
-        }
-        (Module::External(_), None) => {}
-        (Module::Normal(_), None) => {
-          panic!("normal module {module_idx:?} has no included-CommonJS-export slot")
-        }
-        (Module::External(_), Some(_)) => {
-          panic!("external module {module_idx:?} has an included-CommonJS-export slot")
-        }
-      }
-    }
-  }
-
-  fn project_entry_export_roots(&mut self, entry_export_roots: EntryExportRoots) {
-    for (module_idx, roots) in entry_export_roots.into_entries() {
-      self.metas[module_idx]
-        .referenced_symbols_by_entry_point_chunk
-        .extend(roots.into_iter().map(|root| (root.symbol_ref, root.came_from_commonjs)));
-    }
-  }
-
-  fn project_external_star_exports(&mut self, external_star_exports: ExternalStarExports) {
-    for (module_idx, record_ids) in external_star_exports.into_inner().into_iter_enumerated() {
-      self.metas[module_idx].star_exports_from_external_modules = record_ids;
-    }
-  }
-
-  fn project_member_resolution_results(
-    &mut self,
-    dependencies: ModuleDependenciesDraft,
-    resolutions: MemberExprResolutions,
-    cjs_routing: CjsRoutingFinal,
-  ) {
-    let dependencies = dependencies.into_inner();
-    let module_count = self.module_table.modules.len();
-    assert_eq!(dependencies.len(), module_count, "dependency layout must match the module table");
-    assert_eq!(
-      resolutions.module_count(),
-      module_count,
-      "member-resolution layout must match the module table"
-    );
-    let resolutions = resolutions.into_slots();
-    assert_eq!(
-      cjs_routing.module_count(),
-      module_count,
-      "CJS-routing layout must match the module table"
-    );
-    assert_eq!(self.metas.len(), module_count, "metadata layout must match the module table");
-
-    for ((module_idx, dependencies), resolution_slot) in
-      dependencies.into_iter_enumerated().zip(resolutions)
-    {
-      let meta = &mut self.metas[module_idx];
-      meta.dependencies = dependencies;
-      match (&self.module_table[module_idx], resolution_slot) {
-        (Module::Normal(_), Some(resolutions)) => {
-          meta.resolved_member_expr_refs = resolutions;
-        }
-        (Module::External(_), None) => {}
-        (Module::Normal(_), None) => {
-          panic!("normal module {module_idx:?} has no member-resolution slot")
-        }
-        (Module::External(_), Some(_)) => {
-          panic!("external module {module_idx:?} has a member-resolution slot")
-        }
-      }
-    }
-
-    for (importer_idx, routes) in cjs_routing.into_importers() {
-      assert!(
-        self
-          .module_table
-          .modules
-          .get(importer_idx)
-          .is_some_and(|module| module.as_normal().is_some()),
-        "CJS routing importer {importer_idx:?} must be an in-range normal module"
-      );
-      for (symbol_ref, importee_idx) in &routes {
-        assert_eq!(
-          symbol_ref.owner, importer_idx,
-          "CJS namespace route must be owned by its importer"
-        );
-        assert!(
-          self
-            .module_table
-            .modules
-            .get(*importee_idx)
-            .is_some_and(|module| module.as_normal().is_some()),
-          "CJS namespace route target {importee_idx:?} must be an in-range normal module"
-        );
-      }
-      self.metas[importer_idx].import_record_ns_to_cjs_module = routes;
-    }
-  }
-
-  fn project_resolved_exports(&mut self, resolved_exports: ResolvedExports) {
-    assert_eq!(
-      resolved_exports.module_count(),
-      self.module_table.modules.len(),
-      "resolved-export layout must match the module table"
-    );
-    assert_eq!(
-      resolved_exports.module_count(),
-      self.metas.len(),
-      "resolved-export layout must match metadata"
-    );
-    for (module_idx, exports) in resolved_exports.into_slots().into_iter_enumerated() {
-      match (&self.module_table[module_idx], &mut self.metas[module_idx], exports) {
-        (Module::Normal(_), meta, Some(exports)) => {
-          let (resolved, sorted_and_non_ambiguous) = exports.into_parts();
-          meta.resolved_exports = resolved;
-          meta.sorted_and_non_ambiguous_resolved_exports = sorted_and_non_ambiguous;
-        }
-        (Module::External(_), _, None) => {}
-        (Module::Normal(_), _, None) => {
-          panic!("normal module {module_idx:?} has no resolved-export slot")
-        }
-        (Module::External(_), _, Some(_)) => {
-          panic!("external module {module_idx:?} has a resolved-export slot")
-        }
-      }
-    }
-  }
-
-  fn into_link_stage_output(
-    self,
-    lazy_json_export_initializers: LazyJsonExportInitializers,
-  ) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
-    let output = LinkStageOutput {
-      module_table: self.module_table,
-      entries: self.entries,
-      sorted_modules: self.sorted_modules,
-      metas: self.metas,
-      symbol_db: self.symbols,
-      stmt_infos: self.stmt_infos,
-      runtime: self.runtime,
-      diagnostics: self.diagnostics,
-      used_external_symbols: self.used_external_symbols,
-      retained_export_symbols: RetainedExportSymbols::default(),
-      dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
-      safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
-      external_import_namespace_merger: self.external_import_namespace_merger,
-      overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
-      entry_point_to_reference_ids: self.entry_point_to_reference_ids,
-      global_constant_symbol_map: self.global_constant_symbol_map,
-      normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
-      lazy_json_export_initializers,
-      user_defined_entry_modules: self.user_defined_entry_modules,
-      has_enum_inlining: self.has_enum_inlining,
-    };
-    #[cfg(feature = "testing")]
-    let output = {
-      let mut output = output;
-      testing::observe_link_output(&mut output);
-      output
-    };
-    (output, self.ast_table, self.used_symbol_refs)
   }
 
   fn run_collect_entry_export_roots_pass(
@@ -764,18 +470,6 @@ impl<'a> LinkStage<'a> {
         },
         (),
       );
-      for (module_idx, exec_order) in execution_orders.assigned() {
-        match &mut self.module_table[module_idx] {
-          Module::Normal(module) => {
-            debug_assert_eq!(module.exec_order, u32::MAX);
-            module.exec_order = exec_order;
-          }
-          Module::External(module) => {
-            debug_assert_eq!(module.exec_order, u32::MAX);
-            module.exec_order = exec_order;
-          }
-        }
-      }
       (
         entry_plan,
         global_constants,
@@ -785,18 +479,12 @@ impl<'a> LinkStage<'a> {
         sorted_modules,
       )
     };
-    {
-      let (tla_facts, ()) = run_infallible_pass(
-        ComputeTlaPass,
-        &mut pass_pipeline,
-        &self.module_table,
-        std::mem::take(&mut self.tla_scan_facts),
-      );
-      debug_assert_eq!(tla_facts.module_count(), self.metas.len());
-      for module_idx in tla_facts.modules() {
-        self.metas[module_idx].is_tla_or_contains_tla_dependency = true;
-      }
-    }
+    let (tla_facts, ()) = run_infallible_pass(
+      ComputeTlaPass,
+      &mut pass_pipeline,
+      &self.module_table,
+      std::mem::take(&mut self.tla_scan_facts),
+    );
     let (
       lazy_json_export_initializers,
       non_splittable_json_defaults,
@@ -837,9 +525,6 @@ impl<'a> LinkStage<'a> {
       external_namespace_merges,
     } = binding;
     self.symbols = symbols;
-    self.project_included_commonjs_export_symbols(included_commonjs_export_symbols);
-    self.external_import_namespace_merger = external_namespace_merges.into_inner();
-    drop(execution_orders);
 
     let (_, resolved_exports) = run_infallible_pass(
       FinalizeResolvedExportsPass,
@@ -900,7 +585,6 @@ impl<'a> LinkStage<'a> {
         &module_side_effects,
         &cjs_namespace_merges,
       );
-    drop((module_formats, module_wrappers, dynamic_exports, module_side_effects));
     let (unreachable_dynamic_imports, global_constants) = self.run_cross_module_optimization_pass(
       &mut pass_pipeline,
       &sorted_modules,
@@ -908,29 +592,101 @@ impl<'a> LinkStage<'a> {
       &resolutions,
       global_constants,
     );
-    self.sorted_modules = sorted_modules.into_inner();
-    self.entries = entry_plan.into_legacy_entries();
-    self.global_constant_symbol_map = global_constants.into_legacy();
-    self.diagnostics.extend(pass_pipeline.into_diagnostics());
-    self.normal_symbol_exports_chain_map = normal_export_chains.into_inner();
-    self.project_member_resolution_results(dependencies, resolutions, cjs_routing);
-    self.project_resolved_exports(resolved_exports);
-    self.include_statements(
-      &unreachable_dynamic_imports,
-      &statement_runtime_requirements,
-      &entry_export_roots,
+    let (_, tree_shake_output) = run_infallible_pass(
+      TreeShakePass,
+      &mut pass_pipeline,
+      TreeShakeInput {
+        module_table: &self.module_table,
+        stmt_infos: &self.stmt_infos,
+        symbols: &self.symbols,
+        runtime: &self.runtime,
+        module_formats: &module_formats,
+        module_wrappers: &module_wrappers,
+        resolved_exports: &resolved_exports,
+        cjs_routing: &cjs_routing,
+        dependencies: &dependencies,
+        member_expr_resolutions: &resolutions,
+        module_side_effects: &module_side_effects,
+        global_constants: &global_constants,
+        entry_export_roots: &entry_export_roots,
+        normal_export_chains: &normal_export_chains,
+        included_commonjs_export_symbols: &included_commonjs_export_symbols,
+        dynamic_import_usage: &self.dynamic_import_exports_usage_map,
+        statement_runtime_requirements: &statement_runtime_requirements,
+        unreachable_dynamic_imports: &unreachable_dynamic_imports,
+        options: TreeShakeOptions {
+          inclusion: TreeShakeInclusionPolicy {
+            tree_shaking_enabled: self.options.treeshake.is_some(),
+            commonjs_tree_shaking: self.options.treeshake.commonjs(),
+            property_write_side_effects: self.options.treeshake.property_write_side_effects(),
+            inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
+          },
+          preserve_modules: self.options.preserve_modules,
+          dev_mode: self.options.is_dev_mode_enabled(),
+          code_splitting_disabled: self.options.code_splitting.is_disabled(),
+        },
+      },
+      TreeShakeOwned { entry_plan },
     );
+    let TreeShakeOutput {
+      retained_entries,
+      inclusion,
+      runtime_requirements,
+      used_symbol_refs,
+      used_external_symbols,
+      module_patches,
+      enum_inlining,
+    } = tree_shake_output;
     drop((unreachable_dynamic_imports, statement_runtime_requirements));
-    self.patch_module_dependencies(&entry_export_roots);
+    let (_, finalized_dependencies) = run_infallible_pass(
+      FinalizeModuleDependenciesPass,
+      &mut pass_pipeline,
+      FinalizeModuleDependenciesInput {
+        module_table: &self.module_table,
+        stmt_infos: &self.stmt_infos,
+        symbols: &self.symbols,
+        inclusion: &inclusion,
+        member_expr_resolutions: &resolutions,
+        module_side_effects: &module_side_effects,
+        retained_entries: &retained_entries,
+        entry_export_roots: &entry_export_roots,
+        runtime_idx: self.runtime.id(),
+        tree_shaking_enabled: self.options.treeshake.is_some(),
+      },
+      FinalizeModuleDependenciesOwned { dependencies, runtime_requirements },
+    );
+    self.diagnostics.extend(pass_pipeline.into_diagnostics());
 
-    self.project_shimmed_missing_exports(shimmed_missing_exports);
-    self.safely_merge_cjs_ns_map = cjs_namespace_merges.into_legacy();
-    self.project_entry_export_roots(entry_export_roots);
-    self.project_external_star_exports(external_star_exports);
-    import_record_patches.apply(&mut self.module_table);
-
-    tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
-    self.into_link_stage_output(lazy_json_export_initializers)
+    LegacyOutputAdapter {
+      execution_orders: &execution_orders,
+      tla_facts: &tla_facts,
+      module_formats,
+      module_wrappers,
+      dynamic_exports: &dynamic_exports,
+      module_side_effects: &module_side_effects,
+      resolved_exports,
+      included_commonjs_export_symbols,
+      cjs_routing,
+      member_expr_resolutions: resolutions,
+      shimmed_missing_exports,
+      entry_export_roots,
+      external_star_exports,
+      inclusion,
+      finalized_dependencies,
+      retained_entries,
+      sorted_modules,
+      cjs_namespace_merges,
+      external_namespace_merges: external_namespace_merges.into_inner(),
+      global_constants,
+      normal_export_chains,
+      tree_shake_patches: module_patches,
+      reference_patches: import_record_patches,
+      used_symbol_refs,
+      used_external_symbols,
+      enum_inlining,
+      lazy_json_export_initializers,
+    }
+    .finish(self)
   }
 
   /// A helper function used to debug symbol in link process

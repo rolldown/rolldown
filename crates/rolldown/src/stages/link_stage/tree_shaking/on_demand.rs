@@ -6,7 +6,7 @@ use rolldown_common::{
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{stages::link_stage::LinkStage, type_alias::IndexStmtInfos};
+use crate::type_alias::IndexStmtInfos;
 
 use super::inclusion_core::{InclusionModuleFacts, compute_body_demand_keys_core};
 
@@ -29,7 +29,7 @@ impl InclusionModuleFacts for LegacyModuleFacts<'_> {
 
 /// Whether side-effectful statements of `module` that reference module-level
 /// symbols are included on demand instead of being swept in unconditionally by
-/// [`super::include_statements::include_module`].
+/// the shared inclusion core's module-inclusion operation.
 ///
 /// A module the user declared side-effect free (`"sideEffects": false` in
 /// package.json, `treeshake.moduleSideEffects: false`) must not have such
@@ -92,21 +92,4 @@ pub fn compute_body_demand_keys(
     treeshake_enabled,
     entry_module_idxs,
   )
-}
-
-impl LinkStage<'_> {
-  /// User-defined (and emitted) entries — exempt from on-demand side-effect
-  /// gating: they are the requested program. A dynamic entry participates like
-  /// any module: an observed namespace or used export is body demand, while a
-  /// dead pure dynamic import must not resurrect the body its removal already
-  /// models as an empty namespace.
-  pub(super) fn user_defined_entry_module_idxs(&self) -> FxHashSet<ModuleIdx> {
-    self
-      .entries
-      .values()
-      .flatten()
-      .filter(|entry| entry.kind.is_user_defined())
-      .map(|entry| entry.idx)
-      .collect()
-  }
 }

@@ -55,6 +55,13 @@ pub(in crate::stages::link_stage) struct GlobalConstants {
 }
 
 impl GlobalConstants {
+  pub(in crate::stages::link_stage) fn get(
+    &self,
+    symbol_ref: &SymbolRef,
+  ) -> Option<&ConstExportMeta> {
+    self.constants.get(symbol_ref)
+  }
+
   pub(in crate::stages::link_stage) fn into_legacy(self) -> FxHashMap<SymbolRef, ConstExportMeta> {
     self.constants
   }

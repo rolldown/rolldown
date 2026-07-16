@@ -1,46 +1,16 @@
-#[cfg(target_family = "wasm")]
-use itertools::Itertools as _;
-use oxc_index::IndexVec;
 use rolldown_common::{
-  ConstExportMeta, ImportRecordMeta, IndexModules, MemberExprRef, MemberExprRefResolution, Module,
-  ModuleIdx, ModuleNamespaceIncludedReason, NormalModule, NormalizedBundlerOptions,
-  RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
+  ConstExportMeta, IndexModules, MemberExprRef, MemberExprRefResolution, ModuleIdx,
+  NormalizedBundlerOptions, RuntimeHelper, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
   UsedExternalSymbols, UsedSymbolRefsBuilder, WrapKind,
 };
-#[cfg(not(target_family = "wasm"))]
-use rolldown_utils::rayon::IndexedParallelIterator;
-use rolldown_utils::rayon::{
-  IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
-};
-
-use rolldown_utils::pass::Sealed;
-use rolldown_utils::{IndexBitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{
-  stages::link_stage::{
-    LinkStage,
-    passes::{EntryExportRoots, StatementRuntimeRequirements, UnreachableDynamicImports},
-  },
-  type_alias::IndexStmtInfos,
-  types::linking_metadata::LinkingMetadataVec,
-};
+use crate::{type_alias::IndexStmtInfos, types::linking_metadata::LinkingMetadataVec};
 
-use super::{
-  inclusion_core::{
-    InclusionConfig, InclusionCoreContext, InclusionFacts, InclusionModuleFacts, TreeShakingConfig,
-    WorkItem, include_cjs_bailout_exports as include_cjs_bailout_exports_core,
-    include_declaring_statements as include_declaring_statements_core,
-    include_module as include_module_core, include_runtime_symbol as include_runtime_symbol_core,
-    include_symbol as include_symbol_core,
-    include_symbol_and_check_cjs_bailout as include_symbol_and_check_cjs_bailout_core,
-    preserve_reexported_interfaces as preserve_reexported_interfaces_core,
-  },
-  on_demand::compute_body_demand_keys,
-  passes::{
-    collect_depended_runtime_helpers, include_cjs_bailout_exports, include_runtime_symbol,
-    preserve_reexported_interfaces,
-  },
+use super::inclusion_core::{
+  InclusionConfig, InclusionCoreContext, InclusionFacts, InclusionModuleFacts, TreeShakingConfig,
+  WorkItem, include_runtime_symbol as include_runtime_symbol_core,
+  include_symbol as include_symbol_core,
 };
 
 pub use super::inclusion_core::{
@@ -93,52 +63,6 @@ pub struct IncludeContext<'a> {
   /// `chunk_optimizer` constructs `IncludeContext` with a struct literal; nothing outside this
   /// module should touch it.
   pub(in crate::stages) pending: Vec<WorkItem>,
-}
-
-impl<'a> IncludeContext<'a> {
-  #[expect(clippy::too_many_arguments)]
-  pub fn new(
-    modules: &'a IndexModules,
-    stmt_infos: &'a IndexStmtInfos,
-    symbols: &'a SymbolRefDb,
-    is_included_vec: &'a mut StmtInclusionVec,
-    is_module_included_vec: &'a mut ModuleInclusionVec,
-    runtime_idx: ModuleIdx,
-    metas: &'a LinkingMetadataVec,
-    used_symbol_refs: &'a mut UsedSymbolRefsBuilder,
-    used_external_symbols: &'a mut UsedExternalSymbols,
-    constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
-    options: &'a NormalizedBundlerOptions,
-    normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
-    module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
-    entry_module_idxs: &'a FxHashSet<ModuleIdx>,
-    body_demand_keys: &'a FxHashMap<SymbolRef, ModuleIdx>,
-  ) -> Self {
-    Self {
-      modules,
-      stmt_infos,
-      symbols,
-      is_included_vec,
-      is_module_included_vec,
-      tree_shaking: options.treeshake.is_some(),
-      inline_const_smart: options.optimization.is_inline_const_smart_mode(),
-      runtime_idx,
-      metas,
-      used_symbol_refs,
-      used_external_symbols,
-      constant_symbol_map,
-      options,
-      normal_symbol_exports_chain_map,
-      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
-      module_inclusion_changed: false,
-      module_namespace_included_reason,
-      json_module_none_self_reference_included_symbol: FxHashMap::default(),
-      entry_module_idxs,
-      body_demand_keys,
-      body_demand_swept: FxHashSet::default(),
-      pending: Vec::new(),
-    }
-  }
 }
 
 struct LegacyInclusionFacts<'a> {
@@ -270,24 +194,6 @@ impl IncludeContext<'_> {
   }
 }
 
-pub(super) fn include_symbol_and_check_cjs_bailout(
-  ctx: &mut IncludeContext,
-  symbol_ref: SymbolRef,
-  include_reason: SymbolIncludeReason,
-) {
-  ctx.with_core(|core| {
-    include_symbol_and_check_cjs_bailout_core(core, symbol_ref, include_reason);
-  });
-}
-
-pub(super) fn include_declaring_statements(ctx: &mut IncludeContext, symbol_ref: &SymbolRef) {
-  ctx.with_core(|core| include_declaring_statements_core(core, symbol_ref));
-}
-
-pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
-  ctx.with_core(|core| include_module_core(core, module));
-}
-
 pub fn include_symbol(
   ctx: &mut IncludeContext,
   symbol_ref: SymbolRef,
@@ -296,264 +202,12 @@ pub fn include_symbol(
   ctx.with_core(|core| include_symbol_core(core, symbol_ref, include_reason));
 }
 
-pub(super) fn include_cjs_bailout_exports_with_core(
-  ctx: &mut IncludeContext,
-  bailout_modules: impl IntoIterator<Item = ModuleIdx>,
-) {
-  ctx.with_core(|core| include_cjs_bailout_exports_core(core, bailout_modules));
-}
-
 pub(super) fn include_runtime_symbol_with_core(
   ctx: &mut IncludeContext,
   runtime: &RuntimeModuleBrief,
   depended_runtime_helper: RuntimeHelper,
 ) {
   ctx.with_core(|core| include_runtime_symbol_core(core, runtime, depended_runtime_helper));
-}
-
-fn preserve_reexported_interfaces_legacy_core(
-  core: &mut InclusionCoreContext<'_, LegacyInclusionFacts<'_>>,
-) {
-  preserve_reexported_interfaces_core(core);
-}
-
-pub(super) fn preserve_reexported_interfaces_with_core(ctx: &mut IncludeContext) {
-  ctx.with_core(preserve_reexported_interfaces_legacy_core);
-}
-
-impl LinkStage<'_> {
-  #[tracing::instrument(level = "debug", skip_all)]
-  pub(in crate::stages::link_stage) fn include_statements(
-    &mut self,
-    unreachable_import_expression_node_ids: &UnreachableDynamicImports,
-    statement_runtime_requirements: &Sealed<StatementRuntimeRequirements>,
-    entry_export_roots: &EntryExportRoots,
-  ) {
-    let mut is_stmt_info_included_vec: StmtInclusionVec = self
-      .module_table
-      .modules
-      .iter()
-      .zip(self.stmt_infos.iter())
-      .map(|(m, stmt_infos)| {
-        m.as_normal().map_or(IndexBitSet::default(), |_| IndexBitSet::new(stmt_infos.len()))
-      })
-      .collect::<IndexVec<ModuleIdx, _>>();
-    let mut used_symbol_refs = UsedSymbolRefsBuilder::default();
-    let mut used_external_symbols = UsedExternalSymbols::default();
-    let mut is_module_included_vec: ModuleInclusionVec =
-      IndexBitSet::new(self.module_table.modules.len());
-    let mut module_namespace_included_reason: ModuleNamespaceReasonVec =
-      oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); self.module_table.len()];
-    self.has_enum_inlining = self
-      .module_table
-      .modules
-      .iter()
-      .any(|m| m.as_normal().is_some_and(|n| !n.ecma_view.enum_member_value_map.is_empty()));
-    let entry_module_idxs = self.user_defined_entry_module_idxs();
-    let body_demand_keys = compute_body_demand_keys(
-      &self.module_table.modules,
-      &self.stmt_infos,
-      &self.symbols,
-      self.options.treeshake.is_some(),
-      &entry_module_idxs,
-    );
-    let context = &mut IncludeContext::new(
-      &self.module_table.modules,
-      &self.stmt_infos,
-      &self.symbols,
-      &mut is_stmt_info_included_vec,
-      &mut is_module_included_vec,
-      self.runtime.id(),
-      &self.metas,
-      &mut used_symbol_refs,
-      &mut used_external_symbols,
-      &self.global_constant_symbol_map,
-      self.options,
-      &self.normal_symbol_exports_chain_map,
-      &mut module_namespace_included_reason,
-      &entry_module_idxs,
-      &body_demand_keys,
-    );
-
-    let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
-      std::mem::take(&mut self.entries)
-        .into_values()
-        .flatten()
-        .partition(|item| item.kind.is_user_defined());
-    user_defined_entries.iter().for_each(|entry| {
-      let module = match &self.module_table[entry.idx] {
-        Module::Normal(module) => module,
-        Module::External(_module) => {
-          // Case: import('external').
-          return;
-        }
-      };
-      context.bailout_cjs_tree_shaking_modules.insert(module.idx);
-      entry_export_roots.get(entry.idx).unwrap_or_default().iter().for_each(|root| {
-        let symbol_ref = root.symbol_ref;
-        if let Module::Normal(_) = &context.modules[symbol_ref.owner] {
-          include_declaring_statements(context, &symbol_ref);
-          include_symbol_and_check_cjs_bailout(
-            context,
-            symbol_ref,
-            SymbolIncludeReason::EntryExport,
-          );
-        }
-      });
-      include_module(context, module);
-    });
-
-    let mut unused_record_idxs = vec![];
-    let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
-    let mut included_dynamic_entry = FxHashSet::default();
-    loop {
-      context.module_inclusion_changed = false;
-
-      // It could be safely take since it is no more used.
-      // We extract bailout_modules first to avoid borrowing conflict:
-      // passing `context` requires a mutable borrow, which conflicts with
-      // borrowing `context.bailout_cjs_tree_shaking_modules` inside the call.
-      let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
-      include_cjs_bailout_exports(context, bailout_modules);
-
-      dynamic_entries.iter().for_each(|entry| {
-        if included_dynamic_entry.contains(&entry.idx) {
-          return;
-        }
-        let included = self.process_and_retain_dynamic_entry(
-          entry,
-          &cycled_idx,
-          context,
-          &mut unused_record_idxs,
-          unreachable_import_expression_node_ids,
-          entry_export_roots,
-        );
-        if included {
-          included_dynamic_entry.insert(entry.idx);
-        }
-      });
-
-      if !context.module_inclusion_changed {
-        break;
-      }
-    }
-
-    // Under `preserveModules`, preserve each module's re-exports whose canonical value survived
-    // tree-shaking, so every emitted file mirrors its source's export interface (issue #9122).
-    preserve_reexported_interfaces(context);
-
-    dynamic_entries.retain(|entry| included_dynamic_entry.contains(&entry.idx));
-
-    // update entries with lived only.
-    self.entries = {
-      let mut entries = FxIndexMap::default();
-      for entry in
-        user_defined_entries.into_iter().chain(if self.options.code_splitting.is_disabled() {
-          itertools::Either::Left(std::iter::empty())
-        } else {
-          itertools::Either::Right(dynamic_entries.into_iter())
-        })
-      {
-        entries.entry(entry.idx).or_insert_with(Vec::new).push(entry);
-      }
-      entries
-    };
-
-    // Setting the json module none self reference included symbol map
-    for (mi, set) in std::mem::take(&mut context.json_module_none_self_reference_included_symbol) {
-      let module = self.module_table[mi].as_normal_mut().expect("should be a normal module");
-      _ = module.ecma_view.json_module_none_self_reference_included_symbol.insert(Box::new(set));
-    }
-
-    // mark those dynamic import records as dead, in case we could eliminate them later in ast
-    // visitor.
-    for (mi, record_idx) in unused_record_idxs {
-      let module = self.module_table[mi].as_normal_mut().expect("should be a normal module");
-      let rec = &mut module.import_records[record_idx];
-      rec.meta.insert(ImportRecordMeta::DeadDynamicImport);
-    }
-
-    self
-      .module_table
-      .modules
-      .par_iter_mut()
-      .zip_eq(self.metas.par_iter_mut())
-      .zip_eq(statement_runtime_requirements.slots().par_iter())
-      .filter_map(|((m, meta), depended_helper)| {
-        m.as_normal_mut().map(|m| (m, meta, depended_helper))
-      })
-      .for_each(|(module, meta, depended_helper)| {
-        let idx = module.idx;
-        let mut normalized_runtime_helper = RuntimeHelper::default();
-        for (helper, stmt_info_idxs) in depended_helper.iter() {
-          if stmt_info_idxs.is_empty() {
-            continue;
-          }
-          let any_included = stmt_info_idxs
-            .iter()
-            .any(|stmt_info_idx| is_stmt_info_included_vec[module.idx].has_bit(*stmt_info_idx));
-          // We also need to process the runtime helper of an eliminated module so that we
-          // can propagate it to its importers later.
-          normalized_runtime_helper.set(
-            helper,
-            any_included
-              || (module.id != RUNTIME_MODULE_ID && !is_module_included_vec.has_bit(idx)),
-          );
-        }
-        meta.depended_runtime_helper = normalized_runtime_helper;
-        meta.module_namespace_included_reason = module_namespace_included_reason[module.idx];
-      });
-
-    let depended_runtime_helper = collect_depended_runtime_helpers(
-      &self.module_table.modules,
-      &self.metas,
-      &is_module_included_vec,
-    );
-    let context = &mut IncludeContext::new(
-      &self.module_table.modules,
-      &self.stmt_infos,
-      &self.symbols,
-      &mut is_stmt_info_included_vec,
-      &mut is_module_included_vec,
-      self.runtime.id(),
-      &self.metas,
-      &mut used_symbol_refs,
-      &mut used_external_symbols,
-      &self.global_constant_symbol_map,
-      self.options,
-      &self.normal_symbol_exports_chain_map,
-      &mut module_namespace_included_reason,
-      &entry_module_idxs,
-      &body_demand_keys,
-    );
-    include_runtime_symbol(context, &self.runtime, depended_runtime_helper);
-
-    self.used_symbol_refs = used_symbol_refs;
-    self.used_external_symbols = used_external_symbols;
-    // Store the final statement inclusion results back to metas.
-    is_stmt_info_included_vec.into_iter_enumerated().for_each(|(module_idx, stmt_included_vec)| {
-      self.metas[module_idx].stmt_info_included = stmt_included_vec;
-    });
-    // Store the final module inclusion results back to metas.
-    for (module_idx, meta) in self.metas.iter_mut_enumerated() {
-      meta.is_included = is_module_included_vec.has_bit(module_idx);
-    }
-
-    tracing::trace!(
-      "included statements {:#?}",
-      self
-        .module_table
-        .modules
-        .iter()
-        .filter_map(Module::as_normal)
-        .map(|m| m.to_debug_normal_module_for_tree_shaking(
-          &self.stmt_infos[m.idx],
-          self.metas[m.idx].is_included,
-          &self.metas[m.idx].stmt_info_included
-        ))
-        .collect::<Vec<_>>()
-    );
-  }
 }
 
 #[cfg(test)]
@@ -669,9 +323,5 @@ mod tests {
       SymbolRef,
       SymbolIncludeReason,
     ) = include_symbol;
-    let _: for<'ctx, 'borrow, 'module> fn(
-      &'borrow mut IncludeContext<'ctx>,
-      &'module NormalModule,
-    ) = include_module;
   }
 }

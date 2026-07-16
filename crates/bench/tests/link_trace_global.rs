@@ -113,6 +113,8 @@ fn global_collector_reaches_existing_rayon_workers_but_context_does_not() {
     "CreateSyntheticExportStatementsPass",
     "ReferenceNeededSymbolsPass",
     "CrossModuleOptimizationPass",
+    "TreeShakePass",
+    "FinalizeModuleDependenciesPass",
   ];
   assert_eq!(pass_names.len(), expected.len());
   assert!(pass_names.iter().zip(expected).all(|(pass, suffix)| pass.ends_with(suffix)));

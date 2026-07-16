@@ -19,11 +19,13 @@ mod cross_module_optimization;
 mod determine_module_formats;
 mod determine_module_side_effects;
 mod extract_global_constants;
+mod finalize_module_dependencies;
 mod finalize_resolved_exports;
 mod normalize_lazy_exports;
 mod plan_module_wrapping;
 mod reference_needed_symbols;
 mod resolve_member_expressions;
+mod tree_shake;
 
 pub(super) use bind_imports::{
   BindImportsInput, BindImportsOutput, BindImportsOwned, IncludedCommonJsExportSymbols,
@@ -37,8 +39,10 @@ pub(super) use collect_resolved_exports::ResolvedExportsDraft;
 pub(super) use compute_cjs_namespace_merges::{CjsNamespaceMerges, ComputeCjsNamespaceMergesInput};
 pub(super) use compute_cjs_routing::{CjsRoutingDraft, CjsRoutingFinal, ComputeCjsRoutingInput};
 pub(super) use compute_dynamic_exports::{ComputeDynamicExportsInput, DynamicExports};
-pub(super) use compute_module_execution_order::{ComputeModuleExecutionOrderInput, SortedModules};
-pub(super) use compute_tla::TlaScanFacts;
+pub(super) use compute_module_execution_order::{
+  ComputeModuleExecutionOrderInput, ModuleExecutionOrders, SortedModules,
+};
+pub(super) use compute_tla::{TlaFacts, TlaScanFacts};
 pub(super) use create_synthetic_export_statements::CreateSyntheticExportStatementsInput;
 pub(super) use create_wrapper_declarations::{
   CreateWrapperDeclarationsInput, CreateWrapperDeclarationsOutput, CreateWrapperDeclarationsOwned,
@@ -57,6 +61,9 @@ pub(super) use determine_module_side_effects::{
 pub(super) use extract_global_constants::{
   ConstantExtractionInput, GlobalConstants, GlobalConstantsDraft,
 };
+pub(super) use finalize_module_dependencies::{
+  FinalizeModuleDependenciesInput, FinalizeModuleDependenciesOwned, FinalizedModuleDependencies,
+};
 pub(super) use finalize_resolved_exports::ResolvedExports;
 pub(super) use normalize_lazy_exports::{
   NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
@@ -70,6 +77,11 @@ pub(super) use reference_needed_symbols::{
 pub(super) use resolve_member_expressions::{
   MemberExprResolutions, ResolveMemberExpressionsInput, ResolveMemberExpressionsOutput,
   ResolveMemberExpressionsOwned,
+};
+pub(super) use tree_shake::{
+  EnumInliningPresence, InclusionResults, ModuleRuntimeRequirementsDraft, RetainedEntries,
+  TreeShakeInclusionPolicy, TreeShakeInput, TreeShakeModulePatches, TreeShakeOptions,
+  TreeShakeOutput, TreeShakeOwned,
 };
 
 #[derive(Clone, Copy)]
@@ -127,6 +139,9 @@ pub(super) struct ExtractGlobalConstantsPass;
 pub(super) struct FinalizeResolvedExportsPass;
 
 #[derive(Clone, Copy)]
+pub(super) struct FinalizeModuleDependenciesPass;
+
+#[derive(Clone, Copy)]
 pub(super) struct NormalizeLazyExportsPass;
 
 #[derive(Clone, Copy)]
@@ -137,6 +152,9 @@ pub(super) struct ReferenceNeededSymbolsPass;
 
 #[derive(Clone, Copy)]
 pub(super) struct ResolveMemberExpressionsPass;
+
+#[derive(Clone, Copy)]
+pub(super) struct TreeShakePass;
 
 #[cfg(test)]
 mod inventory;
@@ -172,7 +190,7 @@ pub(super) mod test_utils {
     normal_module_with_id(index, &format!("m{index}.js"), has_tla, imports)
   }
 
-  pub(super) fn normal_module_with_id(
+  pub(in crate::stages::link_stage) fn normal_module_with_id(
     index: usize,
     id: &str,
     has_tla: bool,
@@ -246,7 +264,7 @@ pub(super) mod test_utils {
     })
   }
 
-  pub(super) fn external_module(index: usize, id: &str) -> Module {
+  pub(in crate::stages::link_stage) fn external_module(index: usize, id: &str) -> Module {
     let idx = module_idx(index);
     Module::external(ExternalModule::new(
       idx,
@@ -259,11 +277,14 @@ pub(super) mod test_utils {
     ))
   }
 
-  pub(super) fn module_table(modules: Vec<Module>) -> ModuleTable {
+  pub(in crate::stages::link_stage) fn module_table(modules: Vec<Module>) -> ModuleTable {
     ModuleTable { modules: modules.into_iter().collect() }
   }
 
-  pub(super) fn entry_point(index: usize, kind: EntryPointKind) -> EntryPoint {
+  pub(in crate::stages::link_stage) fn entry_point(
+    index: usize,
+    kind: EntryPointKind,
+  ) -> EntryPoint {
     EntryPoint {
       name: None,
       idx: module_idx(index),
@@ -271,5 +292,34 @@ pub(super) mod test_utils {
       file_name: None,
       related_stmt_infos: Vec::new(),
     }
+  }
+
+  pub(in crate::stages::link_stage) fn reference_import_record_patches(
+    module_count: usize,
+    events: impl IntoIterator<Item = (ModuleIdx, rolldown_common::ImportRecordIdx)>,
+  ) -> super::ReferenceImportRecordPatches {
+    super::reference_needed_symbols::test_support::reference_import_record_patches(
+      module_count,
+      events,
+    )
+  }
+
+  pub(in crate::stages::link_stage) fn cjs_routing_final(
+    module_count: usize,
+    routes: impl IntoIterator<Item = (ModuleIdx, SymbolRef, ModuleIdx)>,
+  ) -> super::CjsRoutingFinal {
+    super::compute_cjs_routing::test_support::cjs_routing_final(module_count, routes)
+  }
+
+  pub(in crate::stages::link_stage) fn statement_runtime_requirements(
+    module_count: usize,
+    requirements: impl IntoIterator<
+      Item = (ModuleIdx, rolldown_common::RuntimeHelper, rolldown_common::StmtInfoIdx),
+    >,
+  ) -> super::StatementRuntimeRequirements {
+    super::reference_needed_symbols::test_support::statement_runtime_requirements(
+      module_count,
+      requirements,
+    )
   }
 }

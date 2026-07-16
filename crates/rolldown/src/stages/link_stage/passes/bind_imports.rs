@@ -75,6 +75,17 @@ pub(in crate::stages::link_stage) struct IncludedCommonJsExportSymbols {
 }
 
 impl IncludedCommonJsExportSymbols {
+  pub(in crate::stages::link_stage) fn module_count(&self) -> usize {
+    self.slots.len()
+  }
+
+  pub(in crate::stages::link_stage) fn iter(
+    &self,
+    module_idx: ModuleIdx,
+  ) -> impl Iterator<Item = SymbolRef> + '_ {
+    self.slots.get(module_idx).and_then(Option::as_ref).into_iter().flatten().copied()
+  }
+
   pub(in crate::stages::link_stage) fn into_slots(
     self,
   ) -> IndexVec<ModuleIdx, Option<FxHashSet<SymbolRef>>> {
@@ -89,6 +100,12 @@ pub(in crate::stages::link_stage) struct NormalExportChains {
 impl NormalExportChains {
   pub(in crate::stages::link_stage) fn get(&self, symbol_ref: &SymbolRef) -> Option<&[SymbolRef]> {
     self.chains.get(symbol_ref).map(Vec::as_slice)
+  }
+
+  pub(in crate::stages::link_stage) fn iter(
+    &self,
+  ) -> impl Iterator<Item = (SymbolRef, &[SymbolRef])> + '_ {
+    self.chains.iter().map(|(symbol_ref, chain)| (*symbol_ref, chain.as_slice()))
   }
 
   pub(in crate::stages::link_stage) fn into_inner(self) -> FxHashMap<SymbolRef, Vec<SymbolRef>> {

@@ -95,10 +95,37 @@ impl CjsRoutingFinal {
     self.module_count
   }
 
+  pub(in crate::stages::link_stage) fn namespace_target(
+    &self,
+    importer: ModuleIdx,
+    symbol_ref: SymbolRef,
+  ) -> Option<ModuleIdx> {
+    self.importers.get(&importer).and_then(|routes| routes.get(&symbol_ref)).copied()
+  }
+
   pub(in crate::stages::link_stage) fn into_importers(
     self,
   ) -> FxHashMap<ModuleIdx, FxHashMap<SymbolRef, ModuleIdx>> {
     self.importers
+  }
+}
+
+#[cfg(test)]
+pub(super) mod test_support {
+  use rolldown_common::{ModuleIdx, SymbolRef};
+  use rustc_hash::FxHashMap;
+
+  use super::CjsRoutingFinal;
+
+  pub(in crate::stages::link_stage::passes) fn cjs_routing_final(
+    module_count: usize,
+    routes: impl IntoIterator<Item = (ModuleIdx, SymbolRef, ModuleIdx)>,
+  ) -> CjsRoutingFinal {
+    let mut importers = FxHashMap::<ModuleIdx, FxHashMap<SymbolRef, ModuleIdx>>::default();
+    for (importer, symbol_ref, importee) in routes {
+      importers.entry(importer).or_default().insert(symbol_ref, importee);
+    }
+    CjsRoutingFinal { module_count, importers }
   }
 }
 

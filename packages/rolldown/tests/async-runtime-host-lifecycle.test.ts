@@ -1,11 +1,20 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { getRuntimeCapabilities } from 'rolldown/experimental';
+import * as bindingModule from '../src/binding.cjs';
 import { describe, expect, test } from 'vitest';
 
 const testsDir = fileURLToPath(new URL('.', import.meta.url));
 const caps = getRuntimeCapabilities();
 const sharedCurrentThreadNative = caps.asyncRuntimeBuild && caps.target === 'native';
+// Only the "schedule rejection..." case drives the scheduler lifecycle test
+// probes (`__rolldownTestStart/StopAsyncRuntime`), which just the probe-enabled
+// binding exports (Native Async Runtime CI job). The other two cases run on the
+// regular binding, so gate per-test rather than on the whole describe block.
+const asyncRuntimeProbes = bindingModule as unknown as Record<string, unknown>;
+const hasSchedulerLifecycleProbes =
+  typeof asyncRuntimeProbes.__rolldownTestStartAsyncRuntime === 'function' &&
+  typeof asyncRuntimeProbes.__rolldownTestStopAsyncRuntime === 'function';
 
 function runCurrentThreadChild(script: string) {
   return spawnSync(process.execPath, ['--input-type=module', '-e', script], {
@@ -176,7 +185,7 @@ describe.runIf(sharedCurrentThreadNative)('async-runtime JavaScript host lifecyc
     },
   );
 
-  test(
+  test.skipIf(!hasSchedulerLifecycleProbes)(
     'schedule rejection and cancellation failure share one strike per timer relay',
     { timeout: 50_000 },
     () => {

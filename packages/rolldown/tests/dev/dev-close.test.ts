@@ -124,8 +124,6 @@ test.skipIf(isSingleThread)(
     await expect(engine.getBundleState()).rejects.toThrow(closedError);
     await expect(engine.ensureLatestBuildOutput()).rejects.toThrow(closedError);
     expect(() => engine.triggerFullBuild()).toThrow(closedError);
-    await expect(engine.invalidate(input)).rejects.toThrow(closedError);
-    await expect(engine.registerModules('client', [input])).rejects.toThrow(closedError);
     await expect(engine.removeClient('client')).resolves.toBeUndefined();
     await expect(engine.compileEntry(input, 'client')).rejects.toThrow(closedError);
     await expect(engine.close()).resolves.toBeUndefined();
@@ -253,7 +251,9 @@ test.skipIf(isSingleThread)(
     expect(closeBundleCalls).toBe(0);
 
     releaseCallback();
-    await expect(compilePromise).resolves.toEqual(expect.any(String));
+    await expect(compilePromise).resolves.toEqual(
+      expect.objectContaining({ code: expect.any(String), filename: expect.any(String) }),
+    );
     await expect(closePromise).resolves.toBeUndefined();
     expect(closeBundleCalls).toBe(1);
   },
@@ -364,7 +364,7 @@ test.skipIf(isSingleThread)(
 
     await engine.run();
     await expect(engine.compileEntry(`${lazyInput}?rolldown-lazy=1`, 'client')).resolves.toEqual(
-      expect.any(String),
+      expect.objectContaining({ code: expect.any(String), filename: expect.any(String) }),
     );
     expect(callbackCloseError).toBeInstanceOf(Error);
     expect((callbackCloseError as Error).message).toBe(

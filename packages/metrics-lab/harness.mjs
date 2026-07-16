@@ -24,7 +24,7 @@ import {
   FEATURES, FEATURE_NAMES, featureModes, generateApp, setFeatureMode,
 } from './lib/gen-app.mjs';
 import {
-  DEFAULT_THROTTLE, deltaSection, heavyPrepaintTypes, summarize, timedRun, weightLabel,
+  DEFAULT_THROTTLE, deltaSection, heavyPrepaintTypes, scaleThrottle, summarize, timedRun, weightLabel,
 } from './lib/measure.mjs';
 import {
   COLD_OPEN_MIN_BYTES, attributeChunks, coldAtPaintModules, coverageRun,
@@ -56,6 +56,17 @@ const NOISE_FLOOR_PCT = 2;
 // never adapts (zero-throttle hides byte weight and RTT waterfalls - the main
 // fix classes - and can invert decisions near the floor).
 const EARLY_STOP_FACTOR = 5;
+// Per-target throttle calibration: the ONE throttle dimension that may vary is
+// network bandwidth, in named discrete steps, chosen once per target and PINNED
+// (it is part of the measurement's identity - agents, re-scans, and the eval
+// referee must all inherit the same value; delete throttle-profile.json or pass
+// --net-scale to change it, which invalidates the pinned baseline). First scan
+// walks the ladder until the baseline LCP fits under the ceiling: apps in the
+// normal band stay at x1 Lighthouse realism; only pathologically heavy ones
+// (drawdb: 20s = mostly transfer WAIT) scale up so every navigation stops
+// costing half a minute. RTT and CPU pressure never change.
+const CALIBRATE_LADDER = [1, 2, 4, 8];
+const CALIBRATE_CEILING_MS = 8000;
 const CANDIDATE_MIN_BYTES = 3 * 1024;
 const CANDIDATE_MAX_PAINT_RATIO = 0.02;
 
@@ -120,6 +131,7 @@ function targetPaths(dist) {
     coverage: path.join(dir, 'coverage.json'),
     profile: path.join(dir, 'profile.json'),
     history: path.join(dir, 'history.jsonl'),
+    throttleProfile: path.join(dir, 'throttle-profile.json'),
   };
 }
 
@@ -213,7 +225,59 @@ function detectEntry(distDir) {
   return best?.src ?? locals[0]?.src ?? null;
 }
 
-async function withServerAndBrowser(distDir, throttleOff, fn) {
+/**
+ * Resolve the target's PINNED throttle profile, calibrating on first use: walk
+ * the net-scale ladder (one probe navigation per step) until the baseline LCP
+ * fits under the ceiling, then pin the winning scale. Explicit --net-scale
+ * pins without probing. Pinned means pinned: every later scan/measure/coverage/
+ * profile - and the eval referee - inherits this value until the profile file
+ * is deleted or explicitly overridden.
+ */
+async function ensureThrottleProfile(target, { origin, cdp, netScaleFlag = null }) {
+  const existing = readJson(target.paths.throttleProfile);
+  if (netScaleFlag != null) {
+    const netScale = Number(netScaleFlag);
+    if (!CALIBRATE_LADDER.includes(netScale)) {
+      throw new Error(`--net-scale must be one of ${CALIBRATE_LADDER.join('/')} (named, reproducible steps only)`);
+    }
+    if (existing?.netScale !== netScale) {
+      writeJson(target.paths.throttleProfile, {
+        schemaVersion: 1, netScale, source: 'flag', pinnedAtMs: Date.now(),
+      });
+      console.log(`throttle profile pinned by flag: net x${netScale}${existing ? ` (was x${existing.netScale} - the pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`);
+    }
+    return readJson(target.paths.throttleProfile);
+  }
+  if (existing) return existing;
+  const probes = [];
+  let chosen = 1;
+  for (const netScale of CALIBRATE_LADDER) {
+    const sample = await timedRun(cdp, {
+      url: `${origin}/`, throttle: scaleThrottle(DEFAULT_THROTTLE, netScale), settleMs: 1000,
+    });
+    const lcpMs = typeof sample.lcp === 'number' ? Math.round(sample.lcp) : null;
+    probes.push({ netScale, lcpMs });
+    process.stderr.write(`calibrate net x${netScale}: LCP ${ms(sample.lcp)}\n`);
+    if (lcpMs == null) break; // measurement failed - stay at the safest default
+    chosen = netScale;
+    if (lcpMs <= CALIBRATE_CEILING_MS) break;
+  }
+  const profile = {
+    schemaVersion: 1,
+    netScale: probes.some((p) => p.lcpMs != null) ? chosen : 1,
+    source: 'calibration',
+    ceilingMs: CALIBRATE_CEILING_MS,
+    probes,
+    pinnedAtMs: Date.now(),
+  };
+  writeJson(target.paths.throttleProfile, profile);
+  console.log(`throttle profile pinned: net x${profile.netScale} (${probes.map((p) => `x${p.netScale}=${p.lcpMs == null ? 'n/a' : `${p.lcpMs}ms`}`).join(', ')}; ceiling ${CALIBRATE_CEILING_MS}ms)`);
+  console.log('this scale is part of the measurement identity - every later scan and the scoring legs use it.');
+  return profile;
+}
+
+async function withServerAndBrowser(target, throttleOff, fn, { netScaleFlag = null } = {}) {
+  const distDir = target.dist;
   if (!fs.existsSync(path.join(distDir, 'index.html'))) {
     throw new Error(`no build at ${distDir} - build the app first`);
   }
@@ -221,7 +285,11 @@ async function withServerAndBrowser(distDir, throttleOff, fn) {
   const browser = await launchBrowser({ profileDir: CHROME_PROFILE_DIR });
   cleanups.push(server.close, browser.close);
   try {
-    const throttle = throttleOff ? null : DEFAULT_THROTTLE;
+    let throttle = null;
+    if (!throttleOff) {
+      const profile = await ensureThrottleProfile(target, { origin: server.origin, cdp: browser.cdp, netScaleFlag });
+      throttle = scaleThrottle(DEFAULT_THROTTLE, profile.netScale);
+    }
     return await fn({ origin: server.origin, cdp: browser.cdp, throttle });
   } finally {
     await browser.close().catch(() => {});
@@ -275,6 +343,11 @@ function writeMeasureReport(target, samples, { expectedFeatures, label, throttle
   const summary = summarize(samples, expectedFeatures);
   const prev = readJson(target.paths.runtimeState);
   const baseline = readJson(target.paths.runtimeBaseline);
+  // Deltas are only meaningful between measurements taken under the SAME pinned
+  // net scale - the scale is part of the measurement's identity. A mismatch
+  // suppresses the comparison and says so, instead of printing a wrong number.
+  const currScale = throttle ? (throttle.netScale ?? 1) : null;
+  const sameScale = (state) => state && currScale != null && (state.netScale ?? 1) === currScale;
   const report = {
     schemaVersion: 1,
     generatedAtMs: Date.now(),
@@ -290,15 +363,19 @@ function writeMeasureReport(target, samples, { expectedFeatures, label, throttle
     gatingFetches: summary.gatingFetches,
     resourceWeight: summary.resourceWeight,
     renderBlockingGate: summary.renderBlockingGate,
-    delta: prev ? deltaSection(prev.metrics, summary.metrics) : null,
-    baselineDelta: baseline ? deltaSection(baseline.metrics, summary.metrics) : null,
+    delta: sameScale(prev) ? deltaSection(prev.metrics, summary.metrics) : null,
+    baselineDelta: sameScale(baseline) ? deltaSection(baseline.metrics, summary.metrics) : null,
+    baselineScaleMismatch: (baseline && currScale != null && !sameScale(baseline))
+      ? { pinned: baseline.netScale ?? 1, current: currScale }
+      : null,
     samples: summary.samples,
   };
   writeJson(target.paths.runtimeMetrics, report);
   // runs travels with the state so pinBaseline can refuse single-run pins
-  // (quick probes and early-stopped scans - a 1-run baseline poisons deltas).
+  // (quick probes and early-stopped scans - a 1-run baseline poisons deltas);
+  // netScale travels so future measurements refuse cross-scale comparisons.
   writeJson(target.paths.runtimeState, {
-    schemaVersion: 1, tsMs: report.generatedAtMs, label: report.label, runs: report.runs, metrics: report.metrics,
+    schemaVersion: 1, tsMs: report.generatedAtMs, label: report.label, runs: report.runs, netScale: currScale ?? undefined, metrics: report.metrics,
   });
   fs.appendFileSync(target.paths.history, `${JSON.stringify({
     tsMs: report.generatedAtMs,
@@ -331,7 +408,13 @@ function printMeasureSummary(report, hadBaseline, { advice = true } = {}) {
   console.log(`LCP ${ms(m['runtime.lcp_ms'])} (p75 ${ms(m['runtime.lcp_p75_ms'])}) | `
     + `FCP ${ms(m['runtime.fcp_ms'])} | load ${ms(m['runtime.load_ms'])} | `
     + `CLS ${m['runtime.cls']} | transfer ${kb(m['runtime.transfer_bytes'])} | `
-    + `${m['runtime.js_request_count']} js requests`);
+    + `${m['runtime.js_request_count']} js requests`
+    + `${(report.throttle?.netScale ?? 1) !== 1 ? ` | net x${report.throttle.netScale} (pinned)` : ''}`);
+  if (report.baselineScaleMismatch) {
+    const mm = report.baselineScaleMismatch;
+    console.log(`vs pinned baseline: INCOMPARABLE - the baseline was pinned under net x${mm.pinned}, this measurement ran under net x${mm.current}.`);
+    console.log('next: re-pin under the current profile (scan --pin) before judging any change.');
+  }
   const guardOk = report.guard.allFeaturesReady
     && report.guard.heroRendered !== false // null = no hero probe on this app
     && report.guard.lcpObservedInAllRuns;
@@ -877,30 +960,40 @@ async function cmdMeasure(argv) {
     features: { type: 'string' },
     pin: { type: 'boolean', default: false },
     'no-early-stop': { type: 'boolean', default: false },
+    'net-scale': { type: 'string' },
   });
   const target = resolveTarget(opts);
   const expectedFeatures = expectedFeaturesFor(target, opts);
-  const pinnedLcp = readJson(target.paths.runtimeBaseline)?.metrics?.['runtime.lcp_ms'];
-  const earlyStop = (!opts.pin && !opts['no-early-stop'] && typeof pinnedLcp === 'number')
+  const baselineState = readJson(target.paths.runtimeBaseline);
+  const pinnedLcp = baselineState?.metrics?.['runtime.lcp_ms'];
+  // The early stop compares run 1 against the pinned baseline - only valid when
+  // both were measured under the SAME pinned net scale.
+  const expectedScale = opts['net-scale'] != null
+    ? Number(opts['net-scale'])
+    : readJson(target.paths.throttleProfile)?.netScale ?? null;
+  const scaleMatches = expectedScale != null && (baselineState?.netScale ?? 1) === expectedScale;
+  const earlyStop = (!opts.pin && !opts['no-early-stop'] && typeof pinnedLcp === 'number' && scaleMatches)
     ? {
       baselineLcp: pinnedLcp,
       thresholdMs: Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * pinnedLcp),
       factor: EARLY_STOP_FACTOR,
     }
     : null;
-  const { samples, earlyStopped } = await withServerAndBrowser(target.dist, opts['no-throttle'], ({ origin, cdp, throttle }) =>
-    gatherSamples(cdp, origin, {
+  const { samples, earlyStopped, throttle: usedThrottle } = await withServerAndBrowser(target, opts['no-throttle'], async ({ origin, cdp, throttle }) => ({
+    ...await gatherSamples(cdp, origin, {
       throttle,
       expectedFeatures,
       runs: Number(opts.runs),
       warmup: Number(opts.warmup),
       settleMs: Number(opts.settle),
       earlyStop,
-    }));
+    }),
+    throttle,
+  }), { netScaleFlag: opts['net-scale'] ?? null });
   const { report, hadBaseline } = writeMeasureReport(target, samples, {
     expectedFeatures,
     label: opts.label,
-    throttle: opts['no-throttle'] ? null : DEFAULT_THROTTLE,
+    throttle: usedThrottle,
     earlyStopped,
   });
   printMeasureSummary(report, hadBaseline);
@@ -924,7 +1017,7 @@ async function cmdCoverage(argv) {
   if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
     throw new Error(`entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`);
   }
-  const cov = await withServerAndBrowser(target.dist, opts['no-throttle'], ({ origin, cdp, throttle }) =>
+  const cov = await withServerAndBrowser(target, opts['no-throttle'], ({ origin, cdp, throttle }) =>
     coverageRun(cdp, {
       origin,
       throttle,
@@ -949,7 +1042,7 @@ async function cmdProfile(argv) {
   if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
     throw new Error(`entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`);
   }
-  const profile = await withServerAndBrowser(target.dist, opts['no-throttle'], ({ origin, cdp, throttle }) =>
+  const profile = await withServerAndBrowser(target, opts['no-throttle'], ({ origin, cdp, throttle }) =>
     profileRun(cdp, { origin, throttle }));
   const report = buildProfileReport(target, profile, entry);
   printProfileReport(report);
@@ -987,6 +1080,9 @@ async function cmdScan(argv) {
     // Disable the sequential early stop (run 1 decides when its LCP delta vs
     // the pinned baseline is >=5x the noise threshold; see EARLY_STOP_FACTOR).
     'no-early-stop': { type: 'boolean', default: false },
+    // Pin the target's net-scale explicitly (one of 1/2/4/8) instead of the
+    // calibrated value. Changing it makes the pinned baseline incomparable.
+    'net-scale': { type: 'string' },
   });
   if (opts.quick && opts.pin) {
     throw new Error('scan --quick cannot --pin: a 1-run baseline poisons every later delta. Run a full scan to pin.');
@@ -1000,11 +1096,17 @@ async function cmdScan(argv) {
   if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
     throw new Error(`entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`);
   }
-  // Early stop needs a decision context (a pinned baseline) and full-median
-  // exemptions: --pin measurements BECOME the baseline, so they always sample
-  // fully; quick mode is already a single run.
-  const pinnedLcp = readJson(target.paths.runtimeBaseline)?.metrics?.['runtime.lcp_ms'];
-  const earlyStop = (!opts.quick && !opts.pin && !opts['no-early-stop'] && typeof pinnedLcp === 'number')
+  // Early stop needs a decision context (a pinned baseline measured under the
+  // SAME pinned net scale) and full-median exemptions: --pin measurements
+  // BECOME the baseline, so they always sample fully; quick mode is already a
+  // single run.
+  const baselineState = readJson(target.paths.runtimeBaseline);
+  const pinnedLcp = baselineState?.metrics?.['runtime.lcp_ms'];
+  const expectedScale = opts['net-scale'] != null
+    ? Number(opts['net-scale'])
+    : readJson(target.paths.throttleProfile)?.netScale ?? null;
+  const scaleMatches = expectedScale != null && (baselineState?.netScale ?? 1) === expectedScale;
+  const earlyStop = (!opts.quick && !opts.pin && !opts['no-early-stop'] && typeof pinnedLcp === 'number' && scaleMatches)
     ? {
       baselineLcp: pinnedLcp,
       thresholdMs: Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * pinnedLcp),
@@ -1012,7 +1114,7 @@ async function cmdScan(argv) {
     }
     : null;
 
-  const gathered = await withServerAndBrowser(target.dist, opts['no-throttle'], async ({ origin, cdp, throttle }) => {
+  const gathered = await withServerAndBrowser(target, opts['no-throttle'], async ({ origin, cdp, throttle }) => {
     const { samples, earlyStopped } = await gatherSamples(cdp, origin, {
       throttle,
       expectedFeatures,
@@ -1029,24 +1131,24 @@ async function cmdScan(argv) {
       entryName: `/${entry.replaceAll('\\', '/')}`,
       settleMs: 2000,
     });
-    if (opts.quick) return { samples, earlyStopped, cov, profile: null };
+    if (opts.quick) return { samples, earlyStopped, cov, profile: null, throttle };
     // The profile only ever matters when pre-paint CPU is above the verdict's
     // 150ms threshold - skip its navigation otherwise (a scan-time minute on
     // slow apps). --profile forces it.
     const prepaintMs = summarize(samples, expectedFeatures).metrics['runtime.prepaint_longtask_ms'];
     if (!opts.profile && !(typeof prepaintMs === 'number' && prepaintMs > 150)) {
       process.stderr.write(`profile skipped (pre-paint CPU ${prepaintMs == null ? 'n/a' : `${Math.round(prepaintMs)}ms`} - baseline territory; force with --profile)\n`);
-      return { samples, earlyStopped, cov, profile: null };
+      return { samples, earlyStopped, cov, profile: null, throttle };
     }
     process.stderr.write('profile run...\n');
     const profile = await profileRun(cdp, { origin, throttle });
-    return { samples, earlyStopped, cov, profile };
-  });
+    return { samples, earlyStopped, cov, profile, throttle };
+  }, { netScaleFlag: opts['net-scale'] ?? null });
 
   const { report, hadBaseline } = writeMeasureReport(target, gathered.samples, {
     expectedFeatures,
     label: opts.label,
-    throttle: opts['no-throttle'] ? null : DEFAULT_THROTTLE,
+    throttle: gathered.throttle,
     earlyStopped: gathered.earlyStopped,
   });
   // Read before buildCoverageReport overwrites it: an existing coverage report
@@ -1269,8 +1371,8 @@ async function cmdBaseline(argv) {
 }
 
 async function cmdTarget(argv) {
-  const opts = parse(argv, { demo: { type: 'boolean', default: false } });
-  const positional = argv.filter((a) => !a.startsWith('--'));
+  const opts = parse(argv, { demo: { type: 'boolean', default: false }, 'net-scale': { type: 'string' } });
+  const positional = argv.filter((a) => !a.startsWith('--') && a !== opts['net-scale']);
   if (opts.demo) {
     fs.rmSync(TARGET_FILE, { force: true });
     console.log('target cleared - commands now default to the demo app');
@@ -1280,10 +1382,23 @@ async function cmdTarget(argv) {
     const dist = resolveAppDist(positional[0]);
     writeJson(TARGET_FILE, { dist, setAtMs: Date.now() });
     console.log(`target: ${dist}`);
-    return;
+  } else {
+    const sticky = readJson(TARGET_FILE);
+    console.log(sticky?.dist ? `target: ${sticky.dist}` : 'no target set - commands default to the demo app (set one: node harness.mjs target <appDir>)');
+    if (!sticky?.dist && !opts['net-scale']) return;
   }
-  const sticky = readJson(TARGET_FILE);
-  console.log(sticky?.dist ? `target: ${sticky.dist}` : 'no target set - commands default to the demo app (set one: node harness.mjs target <appDir>)');
+  // Pin the net-scale without a probe run - the operator (or eval prep) declares
+  // it; every later scan/measure and the scoring legs inherit it.
+  if (opts['net-scale'] != null) {
+    const netScale = Number(opts['net-scale']);
+    if (!CALIBRATE_LADDER.includes(netScale)) {
+      throw new Error(`--net-scale must be one of ${CALIBRATE_LADDER.join('/')} (named, reproducible steps only)`);
+    }
+    const target = resolveTarget({});
+    const existing = readJson(target.paths.throttleProfile);
+    writeJson(target.paths.throttleProfile, { schemaVersion: 1, netScale, source: 'target-cmd', pinnedAtMs: Date.now() });
+    console.log(`throttle profile pinned: net x${netScale}${existing && existing.netScale !== netScale ? ` (was x${existing.netScale} - any pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`);
+  }
 }
 
 async function cmdDefer(argv, mode) {
@@ -1344,6 +1459,12 @@ start here (the target is remembered after the first command):
   scan --no-early-stop      scans with a pinned baseline stop after run 1 when |dLCP| is
                             >=5x the noise threshold (later runs cannot flip that call;
                             pins always sample fully) - this flag forces all runs
+  scan --net-scale <1|2|4|8>  pin the target's network-bandwidth scale explicitly.
+                            First scan CALIBRATES it automatically (walks x1->x8 until
+                            baseline LCP fits under 8s - only pathologically heavy apps
+                            leave x1; RTT and 4x CPU never change) and PINS it: the scale
+                            is part of the measurement identity for the whole session.
+                            Changing it makes the pinned baseline incomparable (re-pin).
   verdict                   fuse the gathered signals -> OPEN/clear/UNKNOWN; the only "done" that counts
 
 individual commands (same target rules):
@@ -1356,6 +1477,7 @@ individual commands (same target rules):
   what-if <module> [--keep a,b]             exact modules+bytes one deferral frees; sentries stay eager
   baseline                                  pin the last measurement as the fixed reference
   target [<appDir>] [--demo]                show / set / clear the remembered target
+         [--net-scale <1|2|4|8>]            ...and/or pin its throttle net-scale without probing
   gen | build | defer <f> | undefer <f> | status | serve    demo-app helpers (README.md)
 
 the loop:

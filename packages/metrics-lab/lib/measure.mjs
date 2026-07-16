@@ -12,6 +12,27 @@ export const DEFAULT_THROTTLE = {
   cpuRate: 4,
 };
 
+/**
+ * Bandwidth-only scaling of a throttle shape, for pathologically heavy apps
+ * (a 3MB entry costs 15s of pure transfer wait per navigation at 1x). RTT and
+ * CPU pressure stay Lighthouse-real - waterfalls and boot CPU keep their
+ * weight; only the transfer WAIT shortens. Percentage deltas of transfer-bound
+ * fixes are scale-invariant (half the bytes = half the transfer time at any
+ * bandwidth, and the noise floor is 2% of the baseline), so decisions survive.
+ * The scale is CALIBRATED ONCE per target and pinned - it is part of the
+ * measurement's identity, never adapted mid-session.
+ */
+export function scaleThrottle(base, netScale = 1) {
+  if (!base) return base;
+  if (!netScale || netScale === 1) return { ...base, netScale: 1 };
+  return {
+    ...base,
+    downloadBps: base.downloadBps * netScale,
+    uploadBps: base.uploadBps * netScale,
+    netScale,
+  };
+}
+
 export const OBSERVER_JS = `(() => {
   const M = (window.__perfMetrics = { fcp: null, lcp: null, cls: 0, longtasks: [] });
   try {

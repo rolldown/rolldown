@@ -1,5 +1,4 @@
 use arcstr::ArcStr;
-use itertools::multizip;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPoint, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures, RetainedExportSymbols,
@@ -227,20 +226,7 @@ impl LegacyOutputAdapter<'_> {
 
     apply_deferred_module_patches(&mut module_table, tree_shake_patches, reference_patches);
 
-    let mut metas = IndexVec::with_capacity(module_count);
-    for (
-      (module_idx, module),
-      resolved_exports,
-      included_commonjs_export_symbols,
-      member_expr_resolutions,
-      shimmed_missing_exports,
-      external_star_exports,
-      stmt_included,
-      namespace_reason,
-      dependencies,
-      load_dependencies,
-      runtime_requirements,
-    ) in multizip((
+    let mut metas = itertools::izip!(
       module_table.modules.iter_mut_enumerated(),
       resolved_export_slots,
       included_commonjs_export_symbol_slots,
@@ -252,80 +238,99 @@ impl LegacyOutputAdapter<'_> {
       dependency_slots,
       load_dependency_slots,
       runtime_requirement_slots,
-    )) {
-      let mut meta = LinkingMetadata::default();
-      let exec_order = execution_orders.get(module_idx);
+    )
+    .map(
+      |(
+        (module_idx, module),
+        resolved_exports,
+        included_commonjs_export_symbols,
+        member_expr_resolutions,
+        shimmed_missing_exports,
+        external_star_exports,
+        stmt_included,
+        namespace_reason,
+        dependencies,
+        load_dependencies,
+        runtime_requirements,
+      )| {
+        let mut meta = LinkingMetadata::default();
+        let exec_order = execution_orders.get(module_idx);
 
-      match module {
-        Module::Normal(module) => {
-          if exec_order != u32::MAX {
-            debug_assert_eq!(module.exec_order, u32::MAX);
-            module.exec_order = exec_order;
+        match module {
+          Module::Normal(module) => {
+            if exec_order != u32::MAX {
+              debug_assert_eq!(module.exec_order, u32::MAX);
+              module.exec_order = exec_order;
+            }
+            let Some(format) = module_formats.get(module_idx) else {
+              std::unreachable!("validated normal modules must have format slots");
+            };
+            module.exports_kind = format;
+            module.side_effects = module_side_effects.get(module_idx);
+
+            let Some(resolved_exports) = resolved_exports else {
+              std::unreachable!("validated normal modules must have resolved-export slots");
+            };
+            let (resolved, sorted) = resolved_exports.into_parts();
+            meta.resolved_exports = resolved;
+            meta.sorted_and_non_ambiguous_resolved_exports = sorted;
+            let Some(included_commonjs_export_symbols) = included_commonjs_export_symbols else {
+              std::unreachable!(
+                "validated normal modules must have included-CommonJS-export slots"
+              );
+            };
+            meta.included_commonjs_export_symbol = included_commonjs_export_symbols;
+            let Some(member_expr_resolutions) = member_expr_resolutions else {
+              std::unreachable!("validated normal modules must have member-resolution slots");
+            };
+            meta.resolved_member_expr_refs = member_expr_resolutions;
+            let Some(shimmed_missing_exports) = shimmed_missing_exports else {
+              std::unreachable!("validated normal modules must have missing-export shim slots");
+            };
+            meta.shimmed_missing_exports = shimmed_missing_exports;
           }
-          let Some(format) = module_formats.get(module_idx) else {
-            std::unreachable!("validated normal modules must have format slots");
-          };
-          module.exports_kind = format;
-          module.side_effects = module_side_effects.get(module_idx);
-
-          let Some(resolved_exports) = resolved_exports else {
-            std::unreachable!("validated normal modules must have resolved-export slots");
-          };
-          let (resolved, sorted) = resolved_exports.into_parts();
-          meta.resolved_exports = resolved;
-          meta.sorted_and_non_ambiguous_resolved_exports = sorted;
-          let Some(included_commonjs_export_symbols) = included_commonjs_export_symbols else {
-            std::unreachable!("validated normal modules must have included-CommonJS-export slots");
-          };
-          meta.included_commonjs_export_symbol = included_commonjs_export_symbols;
-          let Some(member_expr_resolutions) = member_expr_resolutions else {
-            std::unreachable!("validated normal modules must have member-resolution slots");
-          };
-          meta.resolved_member_expr_refs = member_expr_resolutions;
-          let Some(shimmed_missing_exports) = shimmed_missing_exports else {
-            std::unreachable!("validated normal modules must have missing-export shim slots");
-          };
-          meta.shimmed_missing_exports = shimmed_missing_exports;
-        }
-        Module::External(module) => {
-          if exec_order != u32::MAX {
-            debug_assert_eq!(module.exec_order, u32::MAX);
-            module.exec_order = exec_order;
+          Module::External(module) => {
+            if exec_order != u32::MAX {
+              debug_assert_eq!(module.exec_order, u32::MAX);
+              module.exec_order = exec_order;
+            }
+            debug_assert!(resolved_exports.is_none());
+            debug_assert!(included_commonjs_export_symbols.is_none());
+            debug_assert!(member_expr_resolutions.is_none());
+            debug_assert!(shimmed_missing_exports.is_none());
           }
-          debug_assert!(resolved_exports.is_none());
-          debug_assert!(included_commonjs_export_symbols.is_none());
-          debug_assert!(member_expr_resolutions.is_none());
-          debug_assert!(shimmed_missing_exports.is_none());
         }
-      }
 
-      let (declaration, required_by_other_module) = module_wrappers.get(module_idx);
-      meta.required_by_other_module = required_by_other_module;
-      match declaration {
-        super::passes::WrapperDeclaration::None => {
-          meta.set_wrap_kind(rolldown_common::WrapKind::None);
+        let (declaration, required_by_other_module) = module_wrappers.get(module_idx);
+        meta.required_by_other_module = required_by_other_module;
+        match declaration {
+          super::passes::WrapperDeclaration::None => {
+            meta.set_wrap_kind(rolldown_common::WrapKind::None);
+          }
+          super::passes::WrapperDeclaration::Cjs { wrapper_ref, wrapper_stmt_info } => {
+            meta.set_wrap_kind(rolldown_common::WrapKind::Cjs);
+            meta.wrapper_ref = Some(wrapper_ref);
+            meta.wrapper_stmt_info = Some(wrapper_stmt_info);
+          }
+          super::passes::WrapperDeclaration::Esm { wrapper_ref, wrapper_stmt_info } => {
+            meta.set_wrap_kind(rolldown_common::WrapKind::Esm);
+            meta.wrapper_ref = Some(wrapper_ref);
+            meta.wrapper_stmt_info = Some(wrapper_stmt_info);
+          }
         }
-        super::passes::WrapperDeclaration::Cjs { wrapper_ref, wrapper_stmt_info } => {
-          meta.set_wrap_kind(rolldown_common::WrapKind::Cjs);
-          meta.wrapper_ref = Some(wrapper_ref);
-          meta.wrapper_stmt_info = Some(wrapper_stmt_info);
-        }
-        super::passes::WrapperDeclaration::Esm { wrapper_ref, wrapper_stmt_info } => {
-          meta.set_wrap_kind(rolldown_common::WrapKind::Esm);
-          meta.wrapper_ref = Some(wrapper_ref);
-          meta.wrapper_stmt_info = Some(wrapper_stmt_info);
-        }
-      }
-      meta.star_exports_from_external_modules = external_star_exports;
-      meta.stmt_info_included = stmt_included;
-      meta.is_included = module_included.has_bit(module_idx);
-      meta.module_namespace_included_reason = namespace_reason;
-      meta.dependencies = dependencies;
-      meta.load_dependencies = load_dependencies;
-      meta.depended_runtime_helper = runtime_requirements;
-      meta.has_side_effectful_runtime_dep = side_effectful_runtime_dependencies.has_bit(module_idx);
-      metas.push(meta);
-    }
+        meta.star_exports_from_external_modules = external_star_exports;
+        meta.stmt_info_included = stmt_included;
+        meta.is_included = module_included.has_bit(module_idx);
+        meta.module_namespace_included_reason = namespace_reason;
+        meta.dependencies = dependencies;
+        meta.load_dependencies = load_dependencies;
+        meta.depended_runtime_helper = runtime_requirements;
+        meta.has_side_effectful_runtime_dep =
+          side_effectful_runtime_dependencies.has_bit(module_idx);
+        meta
+      },
+    )
+    .collect::<IndexVec<ModuleIdx, LinkingMetadata>>();
 
     for module_idx in tla_facts.modules() {
       metas[module_idx].is_tla_or_contains_tla_dependency = true;
@@ -335,9 +340,7 @@ impl LegacyOutputAdapter<'_> {
     }
     project_cjs_routing(&module_table, &mut metas, cjs_routing);
     for (module_idx, roots) in entry_export_roots.into_entries() {
-      metas[module_idx]
-        .referenced_symbols_by_entry_point_chunk
-        .extend(roots.into_iter().map(|root| (root.symbol_ref, root.came_from_commonjs)));
+      metas[module_idx].referenced_symbols_by_entry_point_chunk = roots;
     }
 
     tracing::trace!(modules = module_count, "assembled legacy link output");

@@ -50,8 +50,8 @@ fn analyze_module(
   if !owned.runtime_requirements.get(module_idx).is_empty() {
     extended_dependencies.insert(input.runtime_idx);
   }
-  for root in input.entry_export_roots.get(module_idx).unwrap_or_default() {
-    let canonical_ref = input.symbols.canonical_ref_for(root.symbol_ref);
+  for &(symbol_ref, _) in input.entry_export_roots.get(module_idx).unwrap_or_default() {
+    let canonical_ref = input.symbols.canonical_ref_for(symbol_ref);
     extended_dependencies.insert(canonical_ref.owner);
     if let Some(alias) = &input.symbols.get(canonical_ref).namespace_alias {
       extended_dependencies.insert(alias.namespace_ref.owner);

@@ -27,11 +27,8 @@ pub(in crate::stages::link_stage) struct CollectEntryExportRootsInput<'a> {
   pub default_preserve_signature: PreserveEntrySignatures,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub(in crate::stages::link_stage) struct EntryExportRoot {
-  pub symbol_ref: SymbolRef,
-  pub came_from_commonjs: bool,
-}
+/// An ordered `(symbol_ref, came_from_commonjs)` entry-chunk root.
+pub(in crate::stages::link_stage) type EntryExportRoot = (SymbolRef, bool);
 
 pub(in crate::stages::link_stage) struct EntryExportRoots {
   roots: FxIndexMap<ModuleIdx, Vec<EntryExportRoot>>,
@@ -128,7 +125,7 @@ impl Pass for CollectEntryExportRootsPass {
         WrapperDeclaration::None => {}
         WrapperDeclaration::Cjs { wrapper_ref, .. }
         | WrapperDeclaration::Esm { wrapper_ref, .. } => {
-          module_roots.push(EntryExportRoot { symbol_ref: wrapper_ref, came_from_commonjs: false });
+          module_roots.push((wrapper_ref, false));
         }
       }
 
@@ -155,10 +152,7 @@ impl Pass for CollectEntryExportRootsPass {
             .filter(|(name, _)| {
               partial_used_exports.is_none_or(|exports| exports.contains(name.as_str()))
             })
-            .map(|(_, export)| EntryExportRoot {
-              symbol_ref: export.symbol_ref,
-              came_from_commonjs: export.came_from_commonjs,
-            }),
+            .map(|(_, export)| (export.symbol_ref, export.came_from_commonjs)),
         );
       }
 
@@ -292,38 +286,35 @@ mod tests {
 
     let first = roots.get(module_idx(0)).expect("wrapped entry root");
     assert_eq!(first.len(), 3);
+    assert_eq!(first[0].0, modules[module_idx(0)].as_normal().unwrap().namespace_object_ref);
+    assert!(!first[0].1);
     assert_eq!(
-      first[0].symbol_ref,
-      modules[module_idx(0)].as_normal().unwrap().namespace_object_ref
-    );
-    assert!(!first[0].came_from_commonjs);
-    assert_eq!(
-      first[1..].iter().map(|root| root.symbol_ref).collect::<Vec<_>>(),
+      first[1..].iter().map(|(symbol_ref, _)| *symbol_ref).collect::<Vec<_>>(),
       [exports[0].unwrap().0, exports[0].unwrap().1]
     );
     let first_of_multiple = roots.get(module_idx(1)).expect("grouped user entry");
     assert_eq!(first_of_multiple.len(), 2);
     assert_eq!(
-      first_of_multiple.iter().map(|root| root.symbol_ref).collect::<Vec<_>>(),
+      first_of_multiple.iter().map(|(symbol_ref, _)| *symbol_ref).collect::<Vec<_>>(),
       [exports[1].unwrap().0, exports[1].unwrap().1]
     );
     let imported = roots.get(module_idx(2)).expect("dynamically imported emitted entry");
     assert_eq!(
-      imported.iter().map(|root| root.symbol_ref).collect::<Vec<_>>(),
+      imported.iter().map(|(symbol_ref, _)| *symbol_ref).collect::<Vec<_>>(),
       [exports[2].unwrap().0, exports[2].unwrap().1]
     );
     assert!(roots.get(module_idx(4)).is_none());
     let partial = roots.get(module_idx(5)).expect("partially used dynamic entry");
     assert_eq!(partial.len(), 1);
-    assert_eq!(partial[0].symbol_ref, exports[5].unwrap().1);
-    assert!(partial[0].came_from_commonjs);
+    assert_eq!(partial[0].0, exports[5].unwrap().1);
+    assert!(partial[0].1);
     for module_index in [6, 7] {
       assert_eq!(
         roots
           .get(module_idx(module_index))
           .expect("complete dynamic entry")
           .iter()
-          .map(|root| root.symbol_ref)
+          .map(|(symbol_ref, _)| *symbol_ref)
           .collect::<Vec<_>>(),
         [exports[module_index].unwrap().0, exports[module_index].unwrap().1]
       );

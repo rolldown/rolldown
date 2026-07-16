@@ -69,7 +69,7 @@ pub struct LinkingMetadata {
 
   // Entry chunks need to generate code that doesn't belong to any module. This is the list of symbols are referenced by the
   // generated code. Tree-shaking will cares about these symbols to make sure they are not removed.
-  // The second element means if the symbol is a facade symbol.
+  // The second element records whether the reference came from a CommonJS export.
   pub referenced_symbols_by_entry_point_chunk: Vec<(SymbolRef, bool)>,
 
   /// The dependencies of the module. It means if you want include this module, you need to include these dependencies too.

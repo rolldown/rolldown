@@ -842,18 +842,50 @@ impl<'ast> Visit<'ast> for FacadePathVisitor {
 
 #[derive(Default)]
 struct LegacyAdapterAssemblyVisitor {
+  correct_dependencies_assignments: usize,
+  correct_load_dependencies_assignments: usize,
+  dependencies_assignments: usize,
+  load_dependencies_assignments: usize,
   metadata_defaults: usize,
   metadata_pushes: usize,
   multizip_calls: usize,
-  physical_mutable_module_iterations: usize,
 }
 
 impl<'ast> Visit<'ast> for LegacyAdapterAssemblyVisitor {
+  fn visit_expr_assign(&mut self, expression: &'ast syn::ExprAssign) {
+    if let syn::Expr::Field(field) = &*expression.left
+      && matches!(&*field.base, syn::Expr::Path(path) if is_plain_path(&path.path, "meta"))
+      && let syn::Member::Named(member) = &field.member
+    {
+      match normalized_ident(member).as_str() {
+        "dependencies" => {
+          self.dependencies_assignments += 1;
+          self.correct_dependencies_assignments += usize::from(
+            matches!(&*expression.right, syn::Expr::Path(path) if is_plain_path(&path.path, "dependencies")),
+          );
+        }
+        "load_dependencies" => {
+          self.load_dependencies_assignments += 1;
+          self.correct_load_dependencies_assignments += usize::from(
+            matches!(&*expression.right, syn::Expr::Path(path) if is_plain_path(&path.path, "load_dependencies")),
+          );
+        }
+        _ => {}
+      }
+    }
+    visit::visit_expr_assign(self, expression);
+  }
+
   fn visit_expr_call(&mut self, expression: &'ast syn::ExprCall) {
     if let syn::Expr::Path(function) = &*expression.func {
       if is_exact_path(&function.path, &["LinkingMetadata", "default"]) {
         self.metadata_defaults += 1;
-      } else if is_plain_path(&function.path, "multizip") {
+      } else if function
+        .path
+        .segments
+        .last()
+        .is_some_and(|segment| normalized_ident(&segment.ident) == "multizip")
+      {
         self.multizip_calls += 1;
       }
     }
@@ -861,14 +893,10 @@ impl<'ast> Visit<'ast> for LegacyAdapterAssemblyVisitor {
   }
 
   fn visit_expr_method_call(&mut self, expression: &'ast syn::ExprMethodCall) {
-    let method = normalized_ident(&expression.method);
-    if method == "push"
+    if normalized_ident(&expression.method) == "push"
       && matches!(&*expression.receiver, syn::Expr::Path(path) if is_plain_path(&path.path, "metas"))
-      && matches!(expression.args.first(), Some(syn::Expr::Path(path)) if is_plain_path(&path.path, "meta"))
     {
       self.metadata_pushes += 1;
-    } else if method == "iter_mut_enumerated" {
-      self.physical_mutable_module_iterations += 1;
     }
     visit::visit_expr_method_call(self, expression);
   }
@@ -1235,6 +1263,131 @@ fn infallible_harness_and_bundle_boundary_do_not_adapt_errors() {
   );
 }
 
+fn is_physical_module_iteration(expression: &syn::Expr, method: &str) -> bool {
+  matches!(
+    expression,
+    syn::Expr::MethodCall(call)
+      if normalized_ident(&call.method) == method
+        && call.args.is_empty()
+        && call.turbofish.is_none()
+        && matches!(
+          &*call.receiver,
+          syn::Expr::Field(field)
+            if matches!(&field.member, syn::Member::Named(member) if normalized_ident(member) == "modules")
+              && matches!(&*field.base, syn::Expr::Path(path) if is_plain_path(&path.path, "module_table"))
+        )
+  )
+}
+
+fn assert_adapter_entry_root_move(finish: &syn::ImplItemFn) {
+  let entry_root_loop = finish
+    .block
+    .stmts
+    .iter()
+    .find_map(|statement| {
+      let syn::Stmt::Expr(syn::Expr::ForLoop(loop_expression), _) = statement else {
+        return None;
+      };
+      matches!(
+        &*loop_expression.expr,
+        syn::Expr::MethodCall(call)
+          if normalized_ident(&call.method) == "into_entries"
+            && matches!(&*call.receiver, syn::Expr::Path(path) if is_plain_path(&path.path, "entry_export_roots"))
+      )
+      .then_some(loop_expression)
+    })
+    .expect("finish must consume entry roots");
+  assert!(
+    matches!(
+      &*entry_root_loop.pat,
+      syn::Pat::Tuple(pattern)
+        if pattern.elems.len() == 2
+          && matches!(&pattern.elems[0], syn::Pat::Ident(ident) if normalized_ident(&ident.ident) == "module_idx")
+          && matches!(&pattern.elems[1], syn::Pat::Ident(ident) if normalized_ident(&ident.ident) == "roots")
+    ),
+    "entry-root projection must bind exactly module_idx and roots"
+  );
+  assert_eq!(
+    entry_root_loop.body.stmts.len(),
+    1,
+    "entry-root projection must contain only the direct move"
+  );
+  let direct_entry_root_move = matches!(
+    &entry_root_loop.body.stmts[0],
+    syn::Stmt::Expr(syn::Expr::Assign(assignment), _)
+      if matches!(
+        (&*assignment.left, &*assignment.right),
+        (syn::Expr::Field(field), syn::Expr::Path(roots))
+          if matches!(&field.member, syn::Member::Named(member) if normalized_ident(member) == "referenced_symbols_by_entry_point_chunk")
+            && matches!(&*field.base, syn::Expr::Index(index)
+              if matches!(&*index.expr, syn::Expr::Path(metas) if is_plain_path(&metas.path, "metas"))
+                && matches!(&*index.index, syn::Expr::Path(module_idx) if is_plain_path(&module_idx.path, "module_idx")))
+            && is_plain_path(&roots.path, "roots")
+      )
+  );
+  assert!(direct_entry_root_move, "entry-root projection must directly move roots into metadata");
+}
+
+fn assert_adapter_direct_collect(local: &syn::Local) {
+  let Some(init) = &local.init else {
+    panic!("metadata assembly must initialize metas");
+  };
+  let syn::Expr::MethodCall(collect) = &*init.expr else {
+    panic!("metadata assembly must end in a direct collect call");
+  };
+  assert_eq!(normalized_ident(&collect.method), "collect");
+  let collect_target =
+    collect.turbofish.as_ref().and_then(|arguments| arguments.args.first()).and_then(|argument| {
+      match argument {
+        syn::GenericArgument::Type(ty) => terminal_type_ident(ty),
+        _ => None,
+      }
+    });
+  assert_eq!(collect_target.as_deref(), Some("IndexVec"));
+  let syn::Expr::MethodCall(map) = &*collect.receiver else {
+    panic!("metadata collection must directly consume the assembly map");
+  };
+  assert_eq!(normalized_ident(&map.method), "map");
+  assert!(
+    map.args.len() == 1 && matches!(map.args.first(), Some(syn::Expr::Closure(_))),
+    "metadata map must contain exactly one closure"
+  );
+  let syn::Expr::Macro(izip) = &*map.receiver else {
+    panic!("metadata map must directly consume itertools::izip!");
+  };
+  assert!(
+    is_exact_path(&izip.mac.path, &["itertools", "izip"]),
+    "metadata assembly must use itertools::izip!"
+  );
+  let arguments = izip
+    .mac
+    .parse_body_with(Punctuated::<syn::Expr, Token![,]>::parse_terminated)
+    .expect("metadata izip arguments must parse")
+    .into_iter()
+    .collect::<Vec<_>>();
+  let expected = [
+    "resolved_export_slots",
+    "included_commonjs_export_symbol_slots",
+    "member_expr_resolution_slots",
+    "shimmed_missing_export_slots",
+    "external_star_export_slots",
+    "stmt_included_slots",
+    "namespace_reason_slots",
+    "dependency_slots",
+    "load_dependency_slots",
+    "runtime_requirement_slots",
+  ];
+  assert!(
+    arguments.len() == 11
+      && is_physical_module_iteration(&arguments[0], "iter_mut_enumerated")
+      && arguments[1..]
+        .iter()
+        .zip(expected)
+        .all(|(argument, expected)| matches!(argument, syn::Expr::Path(path) if is_plain_path(&path.path, expected))),
+    "metadata izip must preserve the exact physical assembly inputs"
+  );
+}
+
 #[test]
 fn legacy_output_adapter_accepts_only_explicit_final_fields() {
   let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/stages/link_stage");
@@ -1319,18 +1472,20 @@ fn legacy_output_adapter_accepts_only_explicit_final_fields() {
       )
     })
     .expect("finish must apply deferred patches");
-  let assembly_index = finish
+  let (assembly_index, assembly_local) = finish
     .block
     .stmts
     .iter()
-    .position(|statement| {
+    .enumerate()
+    .find_map(|(index, statement)| {
+      let syn::Stmt::Local(local) = statement else { return None };
       matches!(
-        statement,
-        syn::Stmt::Expr(syn::Expr::ForLoop(loop_expression), _)
-          if matches!(&*loop_expression.expr, syn::Expr::Call(call) if matches!(&*call.func, syn::Expr::Path(function) if is_plain_path(&function.path, "multizip")))
+        &local.pat,
+        syn::Pat::Ident(ident) if normalized_ident(&ident.ident) == "metas"
       )
+      .then_some((index, local))
     })
-    .expect("finish must have one multizip assembly loop");
+    .expect("finish must bind one collected metadata IndexVec");
   let validation_loops = finish.block.stmts[..deferred_patch_index]
     .iter()
     .filter(|statement| matches!(statement, syn::Stmt::Expr(syn::Expr::ForLoop(_), _)))
@@ -1343,6 +1498,8 @@ fn legacy_output_adapter_accepts_only_explicit_final_fields() {
     deferred_patch_index < assembly_index,
     "finish must preserve deferred patch application before physical output assembly"
   );
+  assert_adapter_direct_collect(assembly_local);
+  assert_adapter_entry_root_move(finish);
 
   let mut assembly = LegacyAdapterAssemblyVisitor::default();
   assembly.visit_block(&finish.block);
@@ -1351,16 +1508,19 @@ fn legacy_output_adapter_accepts_only_explicit_final_fields() {
     "finish must have one metadata default expression inside physical assembly"
   );
   assert_eq!(
-    assembly.metadata_pushes, 1,
-    "finish must push each freshly assembled metadata slot instead of preallocating defaults"
+    assembly.metadata_pushes, 0,
+    "finish must collect freshly assembled metadata instead of pushing it"
+  );
+  assert_eq!(assembly.multizip_calls, 0, "finish must not restore the multizip assembly loop");
+  assert_eq!(
+    (assembly.dependencies_assignments, assembly.correct_dependencies_assignments),
+    (1, 1),
+    "metadata assembly must move the final dependency set into dependencies exactly once"
   );
   assert_eq!(
-    assembly.multizip_calls, 1,
-    "finish must consume dense final slots through one physical assembly zip"
-  );
-  assert_eq!(
-    assembly.physical_mutable_module_iterations, 1,
-    "finish must mutate module fields in exactly one physical module traversal"
+    (assembly.load_dependencies_assignments, assembly.correct_load_dependencies_assignments,),
+    (1, 1),
+    "metadata assembly must move the final load-dependency set into load_dependencies exactly once"
   );
 
   let parameters = finish
@@ -1433,6 +1593,64 @@ fn legacy_output_adapter_accepts_only_explicit_final_fields() {
       ),
     ]),
     "adapter helpers must keep their explicit narrow signatures"
+  );
+}
+
+fn require_entry_export_root_pair(
+  root: super::collect_entry_export_roots::EntryExportRoot,
+) -> (rolldown_common::SymbolRef, bool) {
+  root
+}
+
+const _: fn(
+  super::collect_entry_export_roots::EntryExportRoot,
+) -> (rolldown_common::SymbolRef, bool) = require_entry_export_root_pair;
+
+#[test]
+fn entry_export_roots_keep_direct_legacy_storage() {
+  let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/stages/link_stage/passes");
+  let source = root.join("collect_entry_export_roots.rs");
+  let text = fs::read_to_string(&source)
+    .unwrap_or_else(|error| panic!("failed to read {}: {error}", source.display()));
+  let file = syn::parse_file(&text)
+    .unwrap_or_else(|error| panic!("failed to parse {}: {error}", source.display()));
+
+  let into_entries = file
+    .items
+    .iter()
+    .filter_map(|item| match item {
+      Item::Impl(item)
+        if item.trait_.is_none()
+          && terminal_type_ident(&item.self_ty).as_deref() == Some("EntryExportRoots") =>
+      {
+        Some(item)
+      }
+      _ => None,
+    })
+    .flat_map(|implementation| &implementation.items)
+    .filter_map(|item| match item {
+      syn::ImplItem::Fn(method) if method.sig.ident == "into_entries" => Some(method),
+      _ => None,
+    })
+    .collect::<Vec<_>>();
+  let [into_entries] = into_entries.as_slice() else {
+    panic!("EntryExportRoots must have exactly one into_entries method");
+  };
+  let [syn::Stmt::Expr(syn::Expr::MethodCall(call), None)] = into_entries.block.stmts.as_slice()
+  else {
+    panic!("EntryExportRoots::into_entries must directly return self.roots.into_iter()");
+  };
+  assert_eq!(normalized_ident(&call.method), "into_iter");
+  assert!(call.args.is_empty(), "the direct into_iter call must not receive arguments");
+  assert!(call.turbofish.is_none(), "the direct into_iter call must not change item types");
+  assert!(
+    matches!(
+      &*call.receiver,
+      syn::Expr::Field(field)
+        if matches!(&field.member, syn::Member::Named(member) if normalized_ident(member) == "roots")
+          && matches!(&*field.base, syn::Expr::Path(path) if is_plain_path(&path.path, "self"))
+    ),
+    "EntryExportRoots::into_entries must move the stored roots without conversion"
   );
 }
 

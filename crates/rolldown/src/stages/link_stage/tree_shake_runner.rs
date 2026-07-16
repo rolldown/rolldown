@@ -280,12 +280,12 @@ fn process_dynamic_entry(
   let Some(module) = input.module_table[entry.idx].as_normal() else {
     return true;
   };
-  for root in input.entry_export_roots.get(entry.idx).unwrap_or_default() {
-    if context.modules[root.symbol_ref.owner].as_normal().is_some() {
-      include_declaring_statements(context, &root.symbol_ref);
+  for &(symbol_ref, _) in input.entry_export_roots.get(entry.idx).unwrap_or_default() {
+    if context.modules[symbol_ref.owner].as_normal().is_some() {
+      include_declaring_statements(context, &symbol_ref);
       include_symbol_and_check_cjs_bailout(
         context,
-        root.symbol_ref,
+        symbol_ref,
         super::tree_shaking::SymbolIncludeReason::EntryExport,
       );
     }
@@ -440,12 +440,12 @@ pub(in crate::stages::link_stage) fn run_tree_shake(
           continue;
         };
         context.bailout_cjs_tree_shaking_modules.insert(module.idx);
-        for root in input.entry_export_roots.get(entry.idx).unwrap_or_default() {
-          if context.modules[root.symbol_ref.owner].as_normal().is_some() {
-            include_declaring_statements(&mut context, &root.symbol_ref);
+        for &(symbol_ref, _) in input.entry_export_roots.get(entry.idx).unwrap_or_default() {
+          if context.modules[symbol_ref.owner].as_normal().is_some() {
+            include_declaring_statements(&mut context, &symbol_ref);
             include_symbol_and_check_cjs_bailout(
               &mut context,
-              root.symbol_ref,
+              symbol_ref,
               super::tree_shaking::SymbolIncludeReason::EntryExport,
             );
           }

@@ -96,7 +96,7 @@ if (buildMeta.target === 'browser-pkg') {
   for (const config of configs) {
     await build(config);
   }
-  generateRuntimeTypes();
+  generateRuntimeEntry();
 })();
 
 function withShared({
@@ -233,14 +233,27 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   };
 }
 
-function generateRuntimeTypes() {
+function generateRuntimeEntry() {
   const inputFile = nodePath.resolve(
     __dirname,
     '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js',
   );
-  const outputFile = nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-types.d.ts');
+  const defaultInputFile = nodePath.resolve(
+    __dirname,
+    '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-default.js',
+  );
+  const outputFile = nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime.d.ts');
 
   console.log(styleText('green', '[build:done]'), 'Generating dts from', inputFile);
+
+  fs.copyFileSync(
+    inputFile,
+    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime.mjs'),
+  );
+  fs.copyFileSync(
+    defaultInputFile,
+    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-default-runtime.mjs'),
+  );
 
   const jsCode = fs.readFileSync(inputFile, 'utf-8');
   const result = ts.transpileDeclaration(jsCode, {
@@ -254,6 +267,10 @@ function generateRuntimeTypes() {
 
   if (result && result.outputText) {
     fs.writeFileSync(outputFile, result.outputText, 'utf-8');
+    fs.copyFileSync(
+      outputFile,
+      nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-types.d.ts'),
+    );
   } else {
     throw new Error('Failed to generate d.ts from runtime-extra-dev.js');
   }

@@ -667,7 +667,12 @@ impl IntegrationTest {
     if let Some(experimental) = &mut options.experimental {
       if let Some(dev_mode) = &mut experimental.dev_mode {
         if dev_mode.implement.is_none() {
-          dev_mode.implement = Some(include_str!("./hmr-runtime.js").to_owned());
+          dev_mode.implement = Some(format!(
+            "{}\n{}",
+            include_str!("../../rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js"),
+            include_str!("./hmr-runtime.js")
+          ));
+          dev_mode.skip_common_runtime_injection = Some(true);
         }
       }
     }

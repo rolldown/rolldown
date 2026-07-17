@@ -28,6 +28,7 @@ import {
   normalizeTransformOptions,
 } from './normalize-transform-options';
 import { getParallelPluginInfo } from './parallel-plugin';
+import { getDefaultDevRuntime } from './default-dev-runtime';
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
@@ -119,9 +120,16 @@ export function bindingifyInputOptions(
 function bindingifyDevMode(devMode?: DevModeOptions): BindingExperimentalOptions['devMode'] {
   if (devMode) {
     if (typeof devMode === 'boolean') {
-      return devMode ? {} : undefined;
+      return devMode
+        ? { implement: getDefaultDevRuntime(), skipCommonRuntimeInjection: true }
+        : undefined;
     }
-    return devMode;
+    const usesDefaultRuntime = devMode.implement == null;
+    return {
+      ...devMode,
+      implement: devMode.implement ?? getDefaultDevRuntime(devMode.host, devMode.port),
+      skipCommonRuntimeInjection: usesDefaultRuntime ? true : devMode.skipCommonRuntimeInjection,
+    };
   }
 }
 

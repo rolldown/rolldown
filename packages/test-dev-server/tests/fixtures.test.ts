@@ -186,9 +186,12 @@ async function runArtifactProcess(artifactPath: string, tmpProjectPath: string, 
   id++;
 
   const initOkFilePath = nodePath.join(tmpProjectPath, `ok-init-${thisId}`);
+  const webSocketUrl = import.meta.resolve('ws');
   const injectCode = encodeURIComponent(
     `
     import __nodeFs__ from 'node:fs';
+    import { WebSocket as __WebSocket__ } from ${JSON.stringify(webSocketUrl)};
+    globalThis.WebSocket = __WebSocket__;
     __nodeFs__.writeFileSync('ok-init-${thisId}', '');
   `.trim(),
   );

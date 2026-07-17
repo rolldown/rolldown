@@ -43,68 +43,77 @@ impl GenerateStage<'_> {
 
     let out_dir = self.options.cwd.as_path().join(&self.options.out_dir);
 
-    for module in &self.link_output.module_table.modules {
-      let Some(module) = module.as_normal() else { continue };
-      if !self.link_output.metas[module.idx].is_included
-        || module.ecma_view.rolldown_file_url_references.is_empty()
-      {
+    // Traverse the pre-sorted chunks and their modules so `resolveFileUrl` calls
+    // do not depend on module discovery order.
+    for chunk_idx in &chunk_graph.sorted_chunk_idx_vec {
+      let chunk = &chunk_graph.chunk_table[*chunk_idx];
+      if chunk.modules.is_empty() {
         continue;
       }
-      let Some(chunk_idx) = chunk_graph.module_to_chunk[module.idx] else { continue };
-      let chunk = &chunk_graph.chunk_table[chunk_idx];
       let chunk_id = chunk
         .preliminary_filename
         .as_ref()
         .expect("chunk should have a preliminary filename by now")
         .as_str();
 
-      for RolldownFileUrlReference { node_id, span, stmt_info_idx, reference_id } in
-        &module.ecma_view.rolldown_file_url_references
-      {
-        if !self.link_output.metas[module.idx].stmt_info_included.has_bit(*stmt_info_idx) {
+      for module_idx in &chunk.modules {
+        let Some(module) = self.link_output.module_table[*module_idx].as_normal() else {
+          continue;
+        };
+        if !self.link_output.metas[module.idx].is_included
+          || module.ecma_view.rolldown_file_url_references.is_empty()
+        {
           continue;
         }
-        // Unknown reference ids are handled in the rewrite
-        let Ok(file_name) = self.plugin_driver.file_emitter.get_file_name(reference_id) else {
-          continue;
-        };
 
-        let output = if has_hook {
-          let absolute = file_name.as_path().absolutize_with(&out_dir);
-          let relative_path = chunk.relative_path_for(&absolute);
-
-          let args = HookResolveFileUrlArgs {
-            chunk_id,
-            file_name: &file_name,
-            format: self.options.format,
-            module_id: module.id.as_str(),
-            reference_id,
-            relative_path: &relative_path,
+        for RolldownFileUrlReference { node_id, span, stmt_info_idx, reference_id } in
+          &module.ecma_view.rolldown_file_url_references
+        {
+          if !self.link_output.metas[module.idx].stmt_info_included.has_bit(*stmt_info_idx) {
+            continue;
+          }
+          // Unknown reference ids are handled in the rewrite
+          let Ok(file_name) = self.plugin_driver.file_emitter.get_file_name(reference_id) else {
+            continue;
           };
-          self.plugin_driver.resolve_file_url(&args).await?
-        } else {
-          None
-        };
 
-        match output {
-          Some(output) => {
-            resolved.insert((module.idx, *node_id), output);
+          let output = if has_hook {
+            let absolute = file_name.as_path().absolutize_with(&out_dir);
+            let relative_path = chunk.relative_path_for(&absolute);
+
+            let args = HookResolveFileUrlArgs {
+              chunk_id,
+              file_name: &file_name,
+              format: self.options.format,
+              module_id: module.id.as_str(),
+              reference_id,
+              relative_path: &relative_path,
+            };
+            self.plugin_driver.resolve_file_url(&args).await?
+          } else {
+            None
+          };
+
+          match output {
+            Some(output) => {
+              resolved.insert((module.idx, *node_id), output);
+            }
+            // No hook replacement: the default `new URL(..., import.meta.url).href` rewrite is
+            // used, whose `import.meta.url` becomes `{}.url` in `iife`/`umd`.
+            None if format_needs_warning => {
+              warnings.push(
+                BuildDiagnostic::empty_import_meta(
+                  module.id.to_string(),
+                  module.ecma_view.source.clone(),
+                  *span,
+                  self.options.format.as_str().into(),
+                  EmptyImportMetaKind::RolldownFileUrl,
+                )
+                .with_severity_warning(),
+              );
+            }
+            None => {}
           }
-          // No hook replacement: the default `new URL(..., import.meta.url).href` rewrite is
-          // used, whose `import.meta.url` becomes `{}.url` in `iife`/`umd`.
-          None if format_needs_warning => {
-            warnings.push(
-              BuildDiagnostic::empty_import_meta(
-                module.id.to_string(),
-                module.ecma_view.source.clone(),
-                *span,
-                self.options.format.as_str().into(),
-                EmptyImportMetaKind::RolldownFileUrl,
-              )
-              .with_severity_warning(),
-            );
-          }
-          None => {}
         }
       }
     }

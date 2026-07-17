@@ -39,9 +39,6 @@ pub struct RolldownFileUrlReference {
   /// Cross-pass identity of the member expression; the key the module finalizer
   /// looks the replacement up by (see internal-docs/ast-mutation/implementation.md).
   pub node_id: NodeId,
-  /// Span of the whole member expression, as a source location for the iife/umd
-  /// empty-`import.meta` warning.
-  pub span: Span,
   /// The enclosing top-level statement, so occurrences whose statement is
   /// tree-shaken away can be skipped when invoking the `resolveFileUrl` hook.
   pub stmt_info_idx: StmtInfoIdx,

@@ -269,6 +269,12 @@ impl Diagnostics {
     self.diagnostics.into_iter().partition(|d| d.severity() != Severity::Error)
   }
 
+  /// Extracts all error-severity diagnostics, leaving the rest in `self`.
+  pub fn extract_errors(&mut self) -> Vec<BuildDiagnostic> {
+    self.has_error = false;
+    self.diagnostics.extract_if(0.., |d| d.severity() == Severity::Error).collect()
+  }
+
   /// Drain checkpoint: returns `Err(errors)` if any error-severity diagnostic is
   /// present, otherwise `Ok(warnings + infos)`. Mirrors the existing
   /// `if !errors.is_empty() { return Err(errors.into()) }` guard.

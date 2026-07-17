@@ -220,11 +220,7 @@ impl<'a> GenerateStage<'a> {
       self.resolved_paths = Some(paths.resolve_all(ids).await);
     }
 
-    let (resolved_file_urls, empty_import_meta_warnings) =
-      self.resolve_file_urls(&chunk_graph).await?;
-    if !empty_import_meta_warnings.is_empty() {
-      self.link_output.diagnostics.extend(empty_import_meta_warnings);
-    }
+    let resolved_file_urls = self.resolve_file_urls(&chunk_graph).await?;
     self.finalize_modules(
       &mut chunk_graph,
       &mut ast_table,

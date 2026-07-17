@@ -18,6 +18,7 @@ use rolldown_ecmascript_utils::{
   EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions, ExpressionExt,
   JsxExt, JsxMemberExpressionObjectExt,
 };
+use rolldown_error::EmptyImportMetaKind;
 
 use crate::module_finalizers::{KeepNameId, ModuleWrapperMode, TraverseState};
 
@@ -495,6 +496,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           && meta.meta.name == "import"
           && meta.property.name == "meta"
         {
+          self.record_surviving_import_meta(meta.span, EmptyImportMetaKind::Plain);
           *expr = ast::Expression::new_object_expression(
             SPAN,
             oxc::allocator::Vec::new_in(&self.ast_factory),

@@ -5,7 +5,7 @@ use arcstr::ArcStr;
 use oxc::span::Span;
 
 /// What produced the empty `import.meta` a warning is being raised about.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum EmptyImportMetaKind {
   /// A bare `import.meta` (or a member access other than `url`) the user wrote.
   Plain,

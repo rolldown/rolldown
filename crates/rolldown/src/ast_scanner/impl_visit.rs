@@ -20,7 +20,7 @@ use rolldown_common::{
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
-use rolldown_error::{BuildDiagnostic, EmptyImportMetaKind};
+use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
 
 use crate::{ast_scanner::cjs_export_analyzer::CommonJsAstType, utils};
@@ -301,55 +301,12 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     {
       self.result.rolldown_file_url_references.push(RolldownFileUrlReference {
         node_id: it.node_id(),
-        span: it.span(),
         stmt_info_idx: self.current_stmt_idx,
         reference_id: CompactStr::from(reference_id),
       });
     }
     walk::walk_member_expression(self, it);
   }
-
-  fn visit_meta_property(&mut self, it: &ast::MetaProperty<'ast>) {
-    if self.immutable_ctx.flat_options.keep_esm_import_export_syntax() {
-      walk::walk_meta_property(self, it);
-      return;
-    }
-    if let Some(parent) = self.visit_path.last() {
-      let should_warn = parent
-        .as_member_expression_kind()
-        .map(|member_expr| {
-          let static_name = member_expr.static_property_name().unwrap_or(ast::Str::from(""));
-          // `import.meta.ROLLDOWN_FILE_URL_*` is deferred to the `resolveFileUrl` hook as it can configure the output
-          if utils::file_url::starts_with_file_url_prefix(static_name.as_str()) {
-            return false;
-          }
-
-          let is_special_property =
-            static_name == "url" || static_name == "dirname" || static_name == "filename";
-          let format = &self.immutable_ctx.options.format;
-          !is_special_property || matches!(format, OutputFormat::Iife | OutputFormat::Umd)
-        })
-        // Here we need to set it to `true` to emit warnings when leaving `import.meta` alone along with the logic head of this.
-        .unwrap_or(true);
-
-      if should_warn && it.meta.name == "import" && it.property.name == "meta" {
-        let is_import_meta_url = parent.as_member_expression_kind().is_some_and(|member_expr| {
-          member_expr.static_property_name().is_some_and(|static_name| static_name == "url")
-        });
-        self.result.warnings.push(
-          BuildDiagnostic::empty_import_meta(
-            self.immutable_ctx.id.to_string(),
-            self.immutable_ctx.source.clone(),
-            it.span(),
-            self.immutable_ctx.options.format.as_str().into(),
-            if is_import_meta_url { EmptyImportMetaKind::Url } else { EmptyImportMetaKind::Plain },
-          )
-          .with_severity_warning(),
-        );
-      }
-    }
-  }
-
   fn visit_this_expression(&mut self, it: &ast::ThisExpression) {
     if !self.is_this_nested() {
       self.top_level_this_expr_set.insert(it.node_id());

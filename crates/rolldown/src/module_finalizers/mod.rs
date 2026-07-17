@@ -22,6 +22,7 @@ use rolldown_ecmascript_utils::{
   AstFactory, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
   parse_injected_expression,
 };
+use rolldown_error::EmptyImportMetaKind;
 use std::borrow::Cow;
 
 mod finalizer_context;
@@ -117,6 +118,13 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   /// Collected here because the finalizer is sync and rayon-parallel; `finalize_modules`
   /// turns these into plugin-attributed build errors once the parallel pass is done.
   pub resolve_file_url_errors: Vec<(Cow<'static, str>, String)>,
+  /// Spans of the `import.meta` accesses this finalizer could not rewrite away, and so replaced
+  /// with an empty object.
+  ///
+  /// Keyed by span, because an `import.meta.<prop>` that fails to rewrite is reached twice: once
+  /// as the member expression (which knows the property) and once as the bare `import.meta`
+  /// object it walks into. The first insert wins, so the property-aware one is kept.
+  pub surviving_import_meta_spans: FxIndexMap<Span, EmptyImportMetaKind>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -938,16 +946,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<Expression<'ast>> {
     if member_expr.object().is_import_meta() {
       let original_expr_span = member_expr.span();
-      let is_node_cjs = matches!(
-        (self.ctx.options.platform, &self.ctx.options.format),
-        (Platform::Node, OutputFormat::Cjs)
-      );
+      let can_polyfill_import_meta_url = self.can_polyfill_import_meta_url();
 
       let property_name = member_expr.static_property_name()?;
       match property_name {
         // Try to polyfill `import.meta.url`
         "url" => {
-          let new_expr = if is_node_cjs {
+          let new_expr = if can_polyfill_import_meta_url {
             // Replace it with `require('url').pathToFileURL(__filename).href`
 
             // require('url')
@@ -1006,6 +1011,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           } else {
             // If we don't support polyfill `import.meta.url` in this platform and format, we just keep it as it is
             // so users may handle it in their own way.
+            if !self.ctx.options.format.keep_esm_import_export_syntax() {
+              // Claim the span before walking reaches the bare `import.meta`, so the warning knows
+              // this is an `import.meta.url`
+              self.record_surviving_import_meta(
+                member_expr.object().span(),
+                EmptyImportMetaKind::Url,
+              );
+            }
             None
           };
           return new_expr;
@@ -1013,7 +1026,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         "dirname" | "filename" => {
           let name =
             oxc::ast::ast::Str::from_str_in(&format!("__{property_name}"), &self.ast_factory);
-          return is_node_cjs.then_some(ast::Expression::Identifier(
+          return can_polyfill_import_meta_url.then_some(ast::Expression::Identifier(
             ast::IdentifierReference::boxed(SPAN, name, &self.ast_factory),
           ));
         }
@@ -1026,6 +1039,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       );
     }
     None
+  }
+
+  fn can_polyfill_import_meta_url(&self) -> bool {
+    matches!(
+      (self.ctx.options.platform, &self.ctx.options.format),
+      (Platform::Node, OutputFormat::Cjs)
+    )
+  }
+
+  /// Remember an `import.meta` that no rewrite could get rid of, so it is left to be replaced with
+  /// an empty object. Callers are responsible for only reaching this on a non-esm output, which
+  /// keeps `import.meta` as-is rather than replacing it.
+  pub fn record_surviving_import_meta(&mut self, span: Span, kind: EmptyImportMetaKind) {
+    self.surviving_import_meta_spans.entry(span).or_insert(kind);
   }
 
   fn rewrite_rolldown_file_url(
@@ -1044,7 +1071,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // The only place this code is parsed. The driver deliberately hands it over
         // unparsed, along with the plugin that produced it.
         match parse_injected_expression(self.alloc, &resolved.code) {
-          Ok(expr) => return Some(expr),
+          Ok(mut expr) => {
+            let mut rewriter = ResolveFileUrlHookResultSpanRewriter(original_expr_span);
+            oxc::ast_visit::VisitMut::visit_expression(&mut rewriter, &mut expr);
+            return Some(expr);
+          }
           Err(diagnostics) => {
             self.resolve_file_url_errors.push((
               resolved.plugin_name.clone(),
@@ -1073,6 +1104,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let absolute_asset_file_name = asset_file_name.absolutize_with(output_dir);
       let relative_asset_path = &self.ctx.chunk.relative_path_for(&absolute_asset_file_name);
 
+      if !self.ctx.options.format.keep_esm_import_export_syntax()
+        && !self.can_polyfill_import_meta_url()
+      {
+        // Record the origin before walking the generated `import.meta.url`. The generic URL
+        // handler reaches the same span later, and first-insert-wins preserves this richer kind.
+        self.record_surviving_import_meta(original_expr_span, EmptyImportMetaKind::RolldownFileUrl);
+      }
+
       // new URL({relative_asset_path}, import.meta.url).href
       // TODO: needs import.meta.url polyfill for non esm
       let new_expr = ast::Expression::StaticMemberExpression(ast::StaticMemberExpression::boxed(
@@ -1092,7 +1131,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               ast::Argument::StaticMemberExpression(ast::StaticMemberExpression::boxed(
                 SPAN,
                 ast::Expression::new_meta_property(
-                  SPAN,
+                  // Carry the source span, so that if this generated `import.meta.url` cannot be
+                  // polyfilled either, the diagnostic points at the `import.meta.ROLLDOWN_FILE_URL_*`
+                  // the user actually wrote.
+                  original_expr_span,
                   ast::IdentifierName::new(SPAN, "import", &self.ast_factory),
                   ast::IdentifierName::new(SPAN, "meta", &self.ast_factory),
                   &self.ast_factory,
@@ -2731,5 +2773,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
 
     Some(())
+  }
+}
+
+struct ResolveFileUrlHookResultSpanRewriter(Span);
+
+impl oxc::ast_visit::VisitMut<'_> for ResolveFileUrlHookResultSpanRewriter {
+  fn visit_span(&mut self, span: &mut Span) {
+    *span = self.0;
   }
 }

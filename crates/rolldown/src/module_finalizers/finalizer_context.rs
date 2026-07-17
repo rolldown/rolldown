@@ -8,7 +8,7 @@ use rolldown_common::{
 pub type FinalizerMutableFields = (
   FxIndexMap<ImportRecordIdx, String>, // transferred_import_record
   RenderedConcatenatedModuleParts,     // rendered_concatenated_wrapped_module_parts
-  Vec<BuildDiagnostic>,                // errors
+  Vec<BuildDiagnostic>,                // diagnostics
 );
 
 use oxc::ast_visit::VisitMut as _;
@@ -147,26 +147,40 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
         missing_file_reference_ids: FxIndexMap::default(),
         resolve_file_url_errors: Vec::new(),
+        surviving_import_meta_spans: FxIndexMap::default(),
       };
       finalizer.visit_program(oxc_program);
 
-      let missing_file_reference_ids = finalizer.missing_file_reference_ids;
-      let mut errors: Vec<BuildDiagnostic> = if missing_file_reference_ids.is_empty() {
-        vec![]
-      } else {
+      let mut diagnostics = {
         let module = finalizer.ctx.module;
-        missing_file_reference_ids
-          .into_iter()
-          .map(|(reference_id, span)| {
-            BuildDiagnostic::file_not_found(
-              reference_id.as_str(),
+        finalizer
+          .surviving_import_meta_spans
+          .iter()
+          .map(|(span, kind)| {
+            BuildDiagnostic::empty_import_meta(
               module.id.to_string(),
               module.ecma_view.source.clone(),
-              span,
+              *span,
+              finalizer.ctx.options.format.as_str().into(),
+              *kind,
             )
+            .with_severity_warning()
           })
-          .collect()
+          .collect::<Vec<_>>()
       };
+
+      let missing_file_reference_ids = finalizer.missing_file_reference_ids;
+      if !missing_file_reference_ids.is_empty() {
+        let module = finalizer.ctx.module;
+        diagnostics.extend(missing_file_reference_ids.into_iter().map(|(reference_id, span)| {
+          BuildDiagnostic::file_not_found(
+            reference_id.as_str(),
+            module.id.to_string(),
+            module.ecma_view.source.clone(),
+            span,
+          )
+        }));
+      }
 
       let mut resolve_file_url_errors = finalizer.resolve_file_url_errors;
       if !resolve_file_url_errors.is_empty() {
@@ -175,7 +189,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         resolve_file_url_errors.sort_unstable();
         resolve_file_url_errors.dedup();
         // Attribute each failure to its plugin, so the user sees `[plugin foo] ...`
-        errors.extend(resolve_file_url_errors.into_iter().map(|(plugin_name, message)| {
+        diagnostics.extend(resolve_file_url_errors.into_iter().map(|(plugin_name, message)| {
           BuildDiagnostic::plugin_error(CausedPlugin::new(plugin_name), anyhow::anyhow!(message))
         }));
       }
@@ -183,7 +197,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
       (
         finalizer.transferred_import_record,
         finalizer.rendered_concatenated_wrapped_module_parts,
-        errors,
+        diagnostics,
       )
     })
   }

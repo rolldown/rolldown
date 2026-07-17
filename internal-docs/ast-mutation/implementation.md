@@ -44,7 +44,7 @@ The main cross-pass side tables keyed by `NodeId` are:
 - `EcmaView::imports` - import declarations, export-from declarations, dynamic `import()` expressions, and recognized `require()` call expressions.
 - `EcmaView::dummy_record_set` - `require` identifier references that need the runtime helper rewrite.
 - `EcmaView::new_url_references` - `new URL('...', import.meta.url)` nodes mapped to asset import records.
-- `EcmaView::rolldown_file_url_references` and the generate stage's `ResolvedFileUrls` - `import.meta.ROLLDOWN_FILE_URL_<referenceId>` member expressions recorded at scan; `resolveFileUrl` hook results are keyed by `(ModuleIdx, NodeId)` for the finalizer's rewrite (the record keeps a `Span` purely as the warning location).
+- `EcmaView::rolldown_file_url_references` and the generate stage's `ResolvedFileUrls` - `import.meta.ROLLDOWN_FILE_URL_<referenceId>` member expressions recorded at scan; `resolveFileUrl` hook results are keyed by `(ModuleIdx, NodeId)` for the finalizer's rewrite.
 - `EcmaView::this_expr_replace_map` - top-level `this` expressions that should become `exports` or `undefined`.
 - `MemberExprRef::node_id` and `LinkingMetadata::resolved_member_expr_refs` - namespace/member-expression resolution from scan through link to finalization.
 - `DynamicImportExprInfo::node_id` records the dynamic `import()` node within its own module; `EntryPoint::related_stmt_infos` then carries `(ModuleIdx, …, NodeId, …)` tuples so a dynamic-import entry can be traced back across the module graph.

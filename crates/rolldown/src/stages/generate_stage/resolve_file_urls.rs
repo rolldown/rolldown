@@ -1,6 +1,5 @@
 use oxc::semantic::NodeId;
-use rolldown_common::{ModuleIdx, OutputFormat, RolldownFileUrlReference};
-use rolldown_error::{BuildDiagnostic, EmptyImportMetaKind};
+use rolldown_common::{ModuleIdx, RolldownFileUrlReference};
 use rolldown_plugin::{HookResolveFileUrlArgs, HookResolveFileUrlOutput};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
@@ -27,18 +26,12 @@ impl GenerateStage<'_> {
   pub(super) async fn resolve_file_urls(
     &self,
     chunk_graph: &ChunkGraph,
-  ) -> anyhow::Result<(ResolvedFileUrls, Vec<BuildDiagnostic>)> {
+  ) -> anyhow::Result<ResolvedFileUrls> {
     let mut resolved = FxHashMap::default();
-    let mut warnings = Vec::new();
 
     let has_hook = !self.plugin_driver.order_by_resolve_file_url_meta.is_empty();
-    // Only `iife`/`umd` leave `import.meta.url` unpolyfilled, so only they can end up with
-    // an empty `import.meta` from the default rewrite.
-    let format_needs_warning =
-      matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd);
-
-    if !has_hook && !format_needs_warning {
-      return Ok((resolved, warnings));
+    if !has_hook {
+      return Ok(resolved);
     }
 
     let out_dir = self.options.cwd.as_path().join(&self.options.out_dir);
@@ -66,7 +59,7 @@ impl GenerateStage<'_> {
           continue;
         }
 
-        for RolldownFileUrlReference { node_id, span, stmt_info_idx, reference_id } in
+        for RolldownFileUrlReference { node_id, stmt_info_idx, reference_id } in
           &module.ecma_view.rolldown_file_url_references
         {
           if !self.link_output.metas[module.idx].stmt_info_included.has_bit(*stmt_info_idx) {
@@ -94,30 +87,13 @@ impl GenerateStage<'_> {
             None
           };
 
-          match output {
-            Some(output) => {
-              resolved.insert((module.idx, *node_id), output);
-            }
-            // No hook replacement: the default `new URL(..., import.meta.url).href` rewrite is
-            // used, whose `import.meta.url` becomes `{}.url` in `iife`/`umd`.
-            None if format_needs_warning => {
-              warnings.push(
-                BuildDiagnostic::empty_import_meta(
-                  module.id.to_string(),
-                  module.ecma_view.source.clone(),
-                  *span,
-                  self.options.format.as_str().into(),
-                  EmptyImportMetaKind::RolldownFileUrl,
-                )
-                .with_severity_warning(),
-              );
-            }
-            None => {}
+          if let Some(output) = output {
+            resolved.insert((module.idx, *node_id), output);
           }
         }
       }
     }
 
-    Ok((resolved, warnings))
+    Ok(resolved)
   }
 }

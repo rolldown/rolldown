@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_common::{ConcatenateWrappedModuleKind, PrependRenderedImport, UsedSymbolRefs};
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildResult, Severity};
 use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _};
 use rustc_hash::FxHashMap;
 use tracing::debug_span;
@@ -75,21 +75,21 @@ impl GenerateStage<'_> {
           let (
             transferred_import_record,
             rendered_concatenated_wrapped_module_parts,
-            module_errors,
+            module_diagnostics,
           ) = ctx.finalize_normal_module(ast, ast_scope);
 
           let payload = (!transferred_import_record.is_empty()
             || !matches!(concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None))
           .then_some((idx, transferred_import_record, rendered_concatenated_wrapped_module_parts));
-          Some((payload, module_errors))
+          Some((payload, module_diagnostics))
         })
         .collect::<Vec<_>>()
     });
 
     let mut normalized_transfer_parts_rendered_maps = FxHashMap::default();
-    let mut errors = vec![];
-    for (payload, module_errors) in finalized {
-      errors.extend(module_errors);
+    let mut diagnostics = vec![];
+    for (payload, module_diagnostics) in finalized {
+      diagnostics.extend(module_diagnostics);
       let Some((idx, transferred_import_record, rendered_concatenated_module_parts)) = payload
       else {
         continue;
@@ -104,7 +104,10 @@ impl GenerateStage<'_> {
         .insert(idx, rendered_concatenated_module_parts);
     }
 
-    if !errors.is_empty() {
+    let has_error = diagnostics.iter().any(|diagnostic| diagnostic.severity() == Severity::Error);
+    self.link_output.diagnostics.extend(diagnostics);
+    if has_error {
+      let errors = self.link_output.diagnostics.extract_errors();
       Err(errors)?;
     }
 

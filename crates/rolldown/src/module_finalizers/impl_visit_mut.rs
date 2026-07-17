@@ -4,8 +4,8 @@ use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression};
 use oxc::{
   allocator::{self, IntoIn, ReplaceWith, TakeIn},
   ast::{
-    NONE,
     ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
+    builder::NONE,
     match_member_expression,
   },
   ast_visit::{VisitMut, walk_mut},
@@ -227,24 +227,24 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
 
         if !is_concatenated_wrapped_module && !self.top_level_var_bindings.is_empty() {
-          let ast_factory = self.ast_factory;
+          let ast_factory = &self.ast_factory;
           let decorations = self.top_level_var_bindings.iter().map(|var_name| {
             ast::VariableDeclarator::new(
               SPAN,
               ast::VariableDeclarationKind::Var,
-              ast::BindingPattern::new_binding_identifier(SPAN, *var_name, &ast_factory),
+              ast::BindingPattern::new_binding_identifier(SPAN, *var_name, ast_factory),
               NONE,
               None,
               false,
-              &ast_factory,
+              ast_factory,
             )
           });
           program.body.push(Statement::VariableDeclaration(ast::VariableDeclaration::boxed(
             SPAN,
             ast::VariableDeclarationKind::Var,
-            oxc::allocator::Vec::from_iter_in(decorations, &ast_factory),
+            oxc::allocator::Vec::from_iter_in(decorations, ast_factory),
             false,
-            &ast_factory,
+            ast_factory,
           )));
         }
 

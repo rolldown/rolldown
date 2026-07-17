@@ -5,6 +5,7 @@ use oxc::diagnostics::OxcDiagnostic;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use oxc_resolver::ResolveError;
 
+use crate::EmptyImportMetaKind;
 use crate::types::event_kind::EventKind;
 use crate::utils::ByteLocator;
 
@@ -254,14 +255,14 @@ impl BuildDiagnostic {
     source: ArcStr,
     span: Span,
     format: ArcStr,
-    is_import_meta_url: bool,
+    kind: EmptyImportMetaKind,
   ) -> Self {
     Self::new_inner(super::events::empty_import_meta::EmptyImportMeta {
       filename,
       source,
       span,
       format,
-      is_import_meta_url,
+      kind,
     })
   }
 

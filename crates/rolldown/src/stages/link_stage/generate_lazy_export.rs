@@ -678,6 +678,7 @@ fn has_pristine_json_identity_tables(module: &NormalModule) -> bool {
     && module.constant_export_map.is_empty()
     && module.dummy_record_set.is_empty()
     && module.new_url_references.is_empty()
+    && module.rolldown_file_url_references.is_empty()
     && module.this_expr_replace_map.is_empty()
     && module.import_attribute_map.is_empty()
     && module.json_module_none_self_reference_included_symbol.is_none()
@@ -731,10 +732,15 @@ fn has_pristine_json_expression(expression: &Expression<'_>) -> bool {
 
 #[cfg(test)]
 mod tests {
-  use oxc::{allocator::CloneIn, ast::ast, semantic::Scoping, span::SourceType};
+  use oxc::{
+    allocator::CloneIn,
+    ast::ast,
+    semantic::{NodeId, Scoping},
+    span::{SPAN, SourceType},
+  };
   use rolldown_common::{
-    LocalExport, Module, StmtInfo, StmtInfoMeta, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-    SymbolRefDbForModule, TaggedSymbolRef, json_value_to_ecma_ast,
+    LocalExport, Module, RolldownFileUrlReference, StmtInfo, StmtInfoMeta, SymbolOrMemberExprRef,
+    SymbolRef, SymbolRefDb, SymbolRefDbForModule, TaggedSymbolRef, json_value_to_ecma_ast,
   };
   use rolldown_ecmascript::EcmaCompiler;
 
@@ -799,6 +805,15 @@ mod tests {
     );
     assert!(!can_rebuild_json_object(normal, &ast, &stmt_infos, &symbols, wrapper));
     normal.named_exports.clear();
+
+    normal.rolldown_file_url_references.push(RolldownFileUrlReference {
+      node_id: NodeId::new(0),
+      span: SPAN,
+      stmt_info_idx: FIRST_TOP_LEVEL_STMT_IDX,
+      reference_id: "asset".into(),
+    });
+    assert!(!can_rebuild_json_object(normal, &ast, &stmt_infos, &symbols, wrapper));
+    normal.rolldown_file_url_references.clear();
 
     stmt_infos.infos[FIRST_TOP_LEVEL_STMT_IDX].eval_flags = true.into();
     assert!(!can_rebuild_json_object(normal, &ast, &stmt_infos, &symbols, wrapper));

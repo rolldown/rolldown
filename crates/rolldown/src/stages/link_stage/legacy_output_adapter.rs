@@ -366,12 +366,6 @@ impl LegacyOutputAdapter<'_> {
       user_defined_entry_modules,
       has_enum_inlining: enum_inlining.get(),
     };
-    #[cfg(feature = "testing")]
-    let output = {
-      let mut output = output;
-      super::testing::observe_link_output(&mut output);
-      output
-    };
     (output, ast_table, used_symbol_refs)
   }
 }

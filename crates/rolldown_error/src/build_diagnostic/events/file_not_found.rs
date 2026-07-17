@@ -13,7 +13,7 @@ pub struct FileNotFound {
   pub reference_id: String,
   pub module_id: String,
   pub source: ArcStr,
-  /// Span of the `import.meta.ROLLUP_FILE_URL_<referenceId>` access within the module source.
+  /// Span of the `import.meta.ROLLDOWN_FILE_URL_<referenceId>` access within the module source.
   pub span: Span,
 }
 

@@ -169,6 +169,97 @@ describe('splitting an already-edited chunk', () => {
   });
 });
 
+describe('move', () => {
+  // A move whose range is no longer contiguous (an earlier move reordered the chunks) has to be
+  // rejected before any pointers are rewired. Bailing out mid-rewire left a chunk pointing at
+  // itself, so the next toString() spun forever.
+  it('rejects a non-contiguous range without corrupting the instance', () => {
+    const s = new MagicString('abc');
+    s.move(0, 1, 2);
+    assert.strictEqual(s.toString(), 'bac');
+    assert.throws(() => s.move(1, 3, 0), /spans the entire string/);
+    assert.strictEqual(s.toString(), 'bac');
+  });
+});
+
+describe('storeName', () => {
+  // string_wizard supports `keep_original` end-to-end, but the binding hardcoded it to
+  // `false`, so `generateMap().names` was always empty regardless of the option.
+  // The basic overwrite case lives in the vendored suite ('should recover original names',
+  // MagicString.test.ts); these cover only what that test does not reach.
+
+  // `update` has its own napi options struct (`BindingUpdateOptions`) — a missing
+  // `store_name` field there is invisible to every overwrite-based test.
+  it('update({ storeName: true }) records the original name', () => {
+    const s = new MagicString('var foo = 1;');
+    s.update(4, 7, 'bar', { storeName: true });
+    assert.deepStrictEqual(s.generateMap({}).names, ['foo']);
+  });
+
+  // These two pass either way by design: an implementation with no storeName support at all
+  // satisfies them trivially. They pin the flag-gating — an implementation that stored every
+  // replaced range unconditionally would pass every positive test in this block. Omitted and
+  // explicit `false` are distinct deserialization branches (`None` vs `Some(false)`).
+  it('names stay empty when storeName is omitted', () => {
+    const s = new MagicString('var foo = 1;');
+    s.overwrite(4, 7, 'bar');
+    assert.deepStrictEqual(s.generateMap({}).names, []);
+  });
+
+  it('names stay empty when storeName is false', () => {
+    const s = new MagicString('var foo = 1;');
+    s.overwrite(4, 7, 'bar', { storeName: false });
+    assert.deepStrictEqual(s.generateMap({}).names, []);
+  });
+
+  it('contentOnly and storeName are independent', () => {
+    const s = new MagicString('var foo = 1;');
+    s.appendLeft(4, '/*x*/');
+    s.overwrite(4, 7, 'bar', { storeName: true, contentOnly: true });
+    assert.deepStrictEqual(s.generateMap({}).names, ['foo']);
+    // contentOnly preserves the surrounding intro/outro
+    assert.strictEqual(s.toString(), 'var /*x*/bar = 1;');
+  });
+
+  // The name recorded is the whole replaced range, independent of chunk boundaries. When an
+  // earlier edit has already split that range, the start chunk covers only part of it — using
+  // the chunk's own span stored 'f' instead of 'foo', and pointed the mapping at that wrong
+  // name. magic-string keys `storedNames` off `original.slice(start, end)`.
+  it('records the whole range when an earlier appendLeft split it', () => {
+    const s = new MagicString('var foo = 1;');
+    s.appendLeft(5, 'X');
+    s.overwrite(4, 7, 'bar', { storeName: true });
+    assert.deepStrictEqual(s.generateMap({}).names, ['foo']);
+  });
+
+  // A range split across chunks leaves the name in `names` with no mapping referencing it —
+  // matching magic-string, whose per-mapping lookup is `names.indexOf(chunk.original)` and so
+  // misses once the chunk is narrower than the range.
+  it('a split range leaves the mapping unnamed, like magic-string', () => {
+    const split = new MagicString('var foo = 1;');
+    split.appendLeft(5, 'X');
+    split.overwrite(4, 7, 'bar', { storeName: true });
+    assert.deepStrictEqual(split.generateDecodedMap({}).mappings, [
+      [
+        [0, 0, 0, 0],
+        [4, 0, 0, 4],
+        [7, 0, 0, 7],
+      ],
+    ]);
+
+    // Unsplit, the chunk spans the whole range, so the mapping does carry the name.
+    const whole = new MagicString('var foo = 1;');
+    whole.overwrite(4, 7, 'bar', { storeName: true });
+    assert.deepStrictEqual(whole.generateDecodedMap({}).mappings, [
+      [
+        [0, 0, 0, 0],
+        [4, 0, 0, 4, 0],
+        [7, 0, 0, 7],
+      ],
+    ]);
+  });
+});
+
 describe('offset', () => {
   describe('underflow guard — negative (index + offset) must throw, not panic', () => {
     it('remove() throws when offset causes index underflow', () => {

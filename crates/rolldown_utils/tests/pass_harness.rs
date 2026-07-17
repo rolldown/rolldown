@@ -195,18 +195,14 @@ fn fallible_pass_preserves_its_typed_error() {
 }
 
 #[test]
-fn branch_append_preserves_declared_diagnostic_order() {
+fn serial_pipeline_preserves_diagnostic_order_and_provenance() {
   let recording = RecordingLayer::default();
   let subscriber = tracing_subscriber::registry().with(recording.clone());
   let messages = tracing::subscriber::with_default(subscriber, || {
-    let mut first = PassPipelineCtx::new();
-    let mut second = PassPipelineCtx::new();
     let mut pipeline = PassPipelineCtx::new();
 
-    let _ = run_infallible_pass(EmitPass, &mut first, "first", 0);
-    let _ = run_infallible_pass(SecondEmitPass, &mut second, "second", ());
-    pipeline.append(first);
-    pipeline.append(second);
+    let _ = run_infallible_pass(EmitPass, &mut pipeline, "first", 0);
+    let _ = run_infallible_pass(SecondEmitPass, &mut pipeline, "second", ());
 
     pipeline
       .into_diagnostics()

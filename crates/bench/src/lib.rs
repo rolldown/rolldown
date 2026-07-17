@@ -10,9 +10,6 @@ use rolldown_fs::MemoryFileSystem;
 use rolldown_resolver::Resolver;
 use rolldown_workspace::root_dir;
 
-#[cfg(feature = "link-baseline")]
-pub mod link_baseline;
-
 pub fn bench_preset(name: &str, bench_dir: &str, entry: &str) -> BundlerOptions {
   let dir = root_dir().join(bench_dir);
   BundlerOptions {
@@ -141,18 +138,6 @@ pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
     .clone()
     .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
   let mem_fs = preload_into_memory_fs(&cwd);
-  create_bench_context_with_memory_fs(options, mem_fs)
-}
-
-/// Create a benchmark context from an already populated in-memory filesystem.
-pub fn create_bench_context_with_memory_fs(
-  options: &BundlerOptions,
-  mem_fs: MemoryFileSystem,
-) -> BenchContext {
-  let cwd = options
-    .cwd
-    .clone()
-    .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
   // Mirror the normalization in prepare_build_context: derive platform from format,
   // and add default condition_names for Browser/Node.
   let format = options.format.unwrap_or(rolldown::OutputFormat::Esm);

@@ -1,10 +1,11 @@
 use oxc::{
   ast::{
-    AstBuilder, AstKind,
+    AstKind,
     ast::{
       BindingIdentifier, BindingPattern, Declaration, ExportDefaultDeclaration,
       ExportDefaultDeclarationKind, ExportNamedDeclaration, Expression,
     },
+    builder::AstBuilder,
   },
   ast_visit::{Visit, walk},
   semantic::{NodeId, SymbolId},

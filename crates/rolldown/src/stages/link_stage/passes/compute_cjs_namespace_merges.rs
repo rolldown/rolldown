@@ -1,13 +1,31 @@
 use std::convert::Infallible;
 
-use rolldown_common::{ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx, ModuleTable};
+use rolldown_common::{
+  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
+  ResolvedImportRecord,
+};
 use rolldown_utils::pass::{Pass, PassCtx, RawPassOutput, RunToken};
 use rustc_hash::FxHashMap;
 
-use crate::utils::external_import_interop::import_record_needs_interop;
+use crate::utils::external_import_interop::{import_record_needs_interop, specifier_needs_interop};
 
 use super::{ComputeCjsNamespaceMergesPass, determine_module_formats::ModuleFormatsDraft};
 use crate::stages::link_stage::SafelyMergeCjsNsInfo;
+
+// Preserve the old early-exit behavior for small importers, then switch to one named-import sweep
+// before repeated per-record scans can multiply the work.
+const DIRECT_INTEROP_SCAN_LIMIT: usize = 4;
+
+fn eligible_cjs_importee(
+  record: &ResolvedImportRecord,
+  module_formats: &ModuleFormatsDraft,
+) -> Option<ModuleIdx> {
+  if record.kind != ImportKind::Import || record.meta.contains(ImportRecordMeta::IsExportStar) {
+    return None;
+  }
+  let importee_idx = record.resolved_module?;
+  (module_formats.get(importee_idx) == Some(ExportsKind::CommonJs)).then_some(importee_idx)
+}
 
 #[derive(Clone, Copy)]
 pub(in crate::stages::link_stage) struct ComputeCjsNamespaceMergesInput<'a> {
@@ -90,20 +108,47 @@ impl Pass for ComputeCjsNamespaceMergesPass {
     let mut modules = FxHashMap::<ModuleIdx, SafelyMergeCjsNsInfo>::default();
     if !strict_execution_order {
       for importer in module_table.modules.iter().filter_map(Module::as_normal) {
+        let mut direct_interop_records = [None::<ImportRecordIdx>; DIRECT_INTEROP_SCAN_LIMIT];
+        let mut eligible_record_count = 0_usize;
+        let mut needs_interop_scan = false;
         for (record_idx, record) in importer.import_records.iter_enumerated() {
-          if record.kind != ImportKind::Import
-            || record.meta.contains(ImportRecordMeta::IsExportStar)
-          {
-            continue;
+          let Some(importee_idx) = eligible_cjs_importee(record, module_formats) else { continue };
+          if eligible_record_count < DIRECT_INTEROP_SCAN_LIMIT {
+            direct_interop_records[eligible_record_count] = Some(record_idx);
           }
-          let Some(importee_idx) = record.resolved_module else { continue };
-          if module_formats.get(importee_idx) != Some(ExportsKind::CommonJs) {
-            continue;
-          }
+          eligible_record_count += 1;
 
           let info = modules.entry(importee_idx).or_default();
+          needs_interop_scan |= !info.needs_interop;
           info.namespace_refs.push(record.namespace_ref);
-          info.needs_interop |= import_record_needs_interop(importer, record_idx);
+        }
+        if eligible_record_count == 0 || !needs_interop_scan {
+          continue;
+        }
+        if eligible_record_count <= DIRECT_INTEROP_SCAN_LIMIT {
+          for record_idx in direct_interop_records.into_iter().flatten() {
+            if !import_record_needs_interop(importer, record_idx) {
+              continue;
+            }
+            let record = &importer.import_records[record_idx];
+            let Some(importee_idx) = eligible_cjs_importee(record, module_formats) else {
+              continue;
+            };
+            if let Some(info) = modules.get_mut(&importee_idx) {
+              info.needs_interop = true;
+            }
+          }
+          continue;
+        }
+
+        for import in
+          importer.named_imports.values().filter(|import| specifier_needs_interop(&import.imported))
+        {
+          let Some(record) = importer.import_records.get(import.record_idx) else { continue };
+          let Some(importee_idx) = eligible_cjs_importee(record, module_formats) else { continue };
+          if let Some(info) = modules.get_mut(&importee_idx) {
+            info.needs_interop = true;
+          }
         }
       }
     }
@@ -216,6 +261,100 @@ mod tests {
     let info = merges.get(&module_idx(2)).expect("CommonJS merge group");
     assert_eq!(info.namespace_refs, vec![first_ref, second_ref]);
     assert!(info.needs_interop);
+  }
+
+  #[test]
+  fn keeps_interop_record_and_importer_local() {
+    let mut modules = module_table(vec![
+      normal_module(
+        0,
+        false,
+        vec![
+          (ImportKind::Import, Some(2), Span::new(1, 2)),
+          (ImportKind::Import, Some(2), Span::new(3, 4)),
+          (ImportKind::Import, Some(3), Span::new(5, 6)),
+          (ImportKind::Import, Some(3), Span::new(7, 8)),
+          (ImportKind::Import, Some(3), Span::new(9, 10)),
+          (ImportKind::Import, Some(3), Span::new(11, 12)),
+        ],
+      ),
+      normal_module(1, false, vec![(ImportKind::Import, Some(2), Span::new(13, 14))]),
+      normal_module(2, false, Vec::new()),
+      normal_module(3, false, Vec::new()),
+    ]);
+    for module_idx in [module_idx(2), module_idx(3)] {
+      modules[module_idx].as_normal_mut().expect("normal module").exports_kind =
+        ExportsKind::CommonJs;
+    }
+
+    let named_ref = SymbolRef { owner: module_idx(0), symbol: SymbolId::new(1) };
+    let excluded_default_ref = SymbolRef { owner: module_idx(0), symbol: SymbolId::new(2) };
+    let invalid_default_ref = SymbolRef { owner: module_idx(0), symbol: SymbolId::new(3) };
+    let default_ref = SymbolRef { owner: module_idx(0), symbol: SymbolId::new(4) };
+    let importer = modules[module_idx(0)].as_normal_mut().expect("normal importer");
+    importer.import_records[ImportRecordIdx::from_usize(0)].namespace_ref = named_ref;
+    importer.import_records[ImportRecordIdx::from_usize(1)].namespace_ref = excluded_default_ref;
+    importer.import_records[ImportRecordIdx::from_usize(2)].namespace_ref = default_ref;
+    importer.import_records[ImportRecordIdx::from_usize(1)]
+      .meta
+      .insert(ImportRecordMeta::IsExportStar);
+    importer.named_imports.insert(
+      named_ref,
+      NamedImport {
+        imported: Specifier::Literal("named".into()),
+        span_imported: Span::new(1, 2),
+        imported_as: named_ref,
+        record_idx: ImportRecordIdx::from_usize(0),
+      },
+    );
+    importer.named_imports.insert(
+      excluded_default_ref,
+      NamedImport {
+        imported: Specifier::Literal("default".into()),
+        span_imported: Span::new(3, 4),
+        imported_as: excluded_default_ref,
+        record_idx: ImportRecordIdx::from_usize(1),
+      },
+    );
+    importer.named_imports.insert(
+      invalid_default_ref,
+      NamedImport {
+        imported: Specifier::Literal("default".into()),
+        span_imported: Span::new(5, 6),
+        imported_as: invalid_default_ref,
+        record_idx: ImportRecordIdx::from_usize(99),
+      },
+    );
+    importer.named_imports.insert(
+      default_ref,
+      NamedImport {
+        imported: Specifier::Literal("default".into()),
+        span_imported: Span::new(5, 6),
+        imported_as: default_ref,
+        record_idx: ImportRecordIdx::from_usize(2),
+      },
+    );
+    let second_named_ref = SymbolRef { owner: module_idx(1), symbol: SymbolId::new(1) };
+    let importer = modules[module_idx(1)].as_normal_mut().expect("normal importer");
+    importer.import_records[ImportRecordIdx::from_usize(0)].namespace_ref = second_named_ref;
+    importer.named_imports.insert(
+      second_named_ref,
+      NamedImport {
+        imported: Specifier::Literal("named".into()),
+        span_imported: Span::new(13, 14),
+        imported_as: second_named_ref,
+        record_idx: ImportRecordIdx::from_usize(0),
+      },
+    );
+
+    let merges = compute(&modules, false);
+    let named_only = merges.get(&module_idx(2)).expect("named-only CommonJS merge group");
+    assert_eq!(named_only.namespace_refs, vec![named_ref, second_named_ref]);
+    assert!(!named_only.needs_interop);
+    let default = merges.get(&module_idx(3)).expect("default CommonJS merge group");
+    assert_eq!(default.namespace_refs.len(), 4);
+    assert_eq!(default.namespace_refs.first(), Some(&default_ref));
+    assert!(default.needs_interop);
   }
 
   #[test]

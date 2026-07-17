@@ -221,6 +221,12 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
+      # `just setup-vite` is the only entry point that touches `vite/`;
+      # run.ts only clones the prepared checkout.
+      - name: Setup Vite checkout
+        if: ${{ needs.changes.outputs.node-changes == 'true' }}
+        run: vp run --filter '@rolldown-internal/scripts' setup-vite
+
       - name: Run Vite Tests
         if: ${{ needs.changes.outputs.node-changes == 'true' }}
         run: vp run --filter vite-tests test
@@ -259,6 +265,12 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      # `just setup-vite` is the only entry point that touches `vite/`;
+      # run.ts only clones the prepared checkout.
+      - name: Setup Vite checkout
+        if: ${{ needs.changes.outputs.node-changes == 'true' }}
+        run: vp run --filter '@rolldown-internal/scripts' setup-vite
 
       - name: Run Vite Tests
         if: ${{ needs.changes.outputs.node-changes == 'true' }}

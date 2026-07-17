@@ -2,11 +2,11 @@ use oxc::allocator::GetAllocator;
 use oxc::{
   allocator::CloneIn as _,
   ast::{
-    NONE,
     ast::{
       BindingPattern, Expression, ImportDeclarationSpecifier, ImportOrExportKind,
       ModuleDeclaration, ModuleExportName, Statement, StringLiteral, VariableDeclaration,
     },
+    builder::NONE,
   },
   ast_visit::{VisitMut, walk_mut},
   semantic::ScopeFlags,

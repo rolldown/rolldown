@@ -37,12 +37,3 @@ pub use rolldown_plugin as plugin;
 
 #[cfg(feature = "testing")]
 pub use crate::utils::determine_minify_internal_exports_default;
-
-/// Non-default hooks for repository tests and benchmark tools.
-#[cfg(feature = "testing")]
-#[doc(hidden)]
-pub mod testing {
-  pub use crate::stages::link_stage::testing::{
-    LinkBaselineSample, run_generate_with_link_baseline_observer, run_link_baseline_once,
-  };
-}

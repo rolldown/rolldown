@@ -51,6 +51,13 @@ impl<'text> MagicString<'text> {
     self.split_at(start)?;
     self.split_at(end)?;
 
+    // Record the *whole* replaced range, not the start chunk's span: `start..end` may cross a
+    // boundary left by an earlier split, in which case the start chunk only covers part of it.
+    // Matches magic-string, which stores `original.slice(start, end)` here.
+    if opts.keep_original {
+      self.store_name(start, end);
+    }
+
     let start_idx = self.chunk_by_start.get(&start).copied().unwrap();
     let end_idx = self.chunk_by_end.get(&end).copied().unwrap();
 

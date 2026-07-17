@@ -2,13 +2,13 @@ use oxc::allocator::GetAllocator;
 use oxc::{
   allocator::{CloneIn as _, TakeIn as _},
   ast::{
-    NONE,
     ast::{
       Argument, ArrowFunctionExpression, AwaitExpression, BindingPattern, BindingProperty,
       Declaration, Expression, FormalParameterKind, FormalParameters, FunctionBody,
       MemberExpression, ObjectPattern, PropertyKey, ReturnStatement, Statement,
       StaticMemberExpression, VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
     },
+    builder::NONE,
   },
   ast_visit::walk_mut::walk_arguments,
   semantic::ScopeFlags,

@@ -41,6 +41,12 @@ pub struct MagicString<'s> {
   chunk_by_end: FxHashMap<u32, ChunkIdx>,
   guessed_indentor: OnceLock<String>,
 
+  /// Original text of every range replaced with `keep_original`, mapped to its position in the
+  /// generated sourcemap's `names`. Mirrors `magic-string`'s `storedNames`: the name recorded
+  /// is the *whole* requested range, independent of how that range happens to be split into
+  /// chunks, so a range that spans a split boundary still stores its full original text.
+  stored_names: FxHashMap<String, u32>,
+
   // This is used to speed up the search for the chunk that contains a given index.
   last_searched_chunk_idx: ChunkIdx,
 }
@@ -78,6 +84,7 @@ impl<'text> MagicString<'text> {
       filename: options.filename,
       ignore_list: options.ignore_list,
       guessed_indentor: OnceLock::default(),
+      stored_names: FxHashMap::default(),
       last_searched_chunk_idx: initial_chunk_idx,
     };
 
@@ -259,6 +266,25 @@ impl<'text> MagicString<'text> {
 
   pub fn append_intro(&mut self, content: impl Into<CowStr<'text>>) {
     self.intro.push_back(content.into());
+  }
+
+  /// Records `source[start..end)` as a sourcemap name, keeping first-insertion order.
+  /// See [`Self::stored_names`].
+  pub(super) fn store_name(&mut self, start: u32, end: u32) {
+    let original = &self.source[start as usize..end as usize];
+    if !self.stored_names.contains_key(original) {
+      #[expect(clippy::cast_possible_truncation, reason = "a source has < u32::MAX edits")]
+      let next_id = self.stored_names.len() as u32;
+      self.stored_names.insert(original.to_string(), next_id);
+    }
+  }
+
+  /// Stored names in `names`-array order, paired with their index.
+  pub(super) fn stored_names_ordered(&self) -> Vec<(&str, u32)> {
+    let mut ordered: Vec<(&str, u32)> =
+      self.stored_names.iter().map(|(name, &id)| (name.as_str(), id)).collect();
+    ordered.sort_unstable_by_key(|&(_, id)| id);
+    ordered
   }
 
   fn iter_chunks(&self) -> impl Iterator<Item = &Chunk<'_>> {

@@ -3,11 +3,11 @@ use std::borrow::Cow;
 use oxc::{
   allocator::CloneIn,
   ast::{
-    NONE,
     ast::{
       Declaration, Expression, ImportOrExportKind, ModuleDeclaration, ParenthesizedExpression,
       Statement, StringLiteral,
     },
+    builder::NONE,
   },
   span::{GetSpan, SPAN, SourceType},
 };

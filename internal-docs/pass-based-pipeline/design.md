@@ -117,9 +117,7 @@ The resolved-export pair is a concrete boundary case. `CollectResolvedExportsPas
 
 ### Context and diagnostics
 
-`PassPipelineCtx` belongs to the serial driver or to one parallel branch. `run_pass` derives a temporary `PassCtx` for one invocation and records the concrete pass type in the tracing span and on each diagnostic emission. A pass receives only `&mut PassCtx`; its public surface has `push` and `extend`, with no constructor, getters, drain method, `Default`, or access to pipeline data.
-
-Parallel branches each own a `PassPipelineCtx`. The driver appends completed branch contexts in declared pass order, preserving both each branch's internal diagnostic order and the pipeline's deterministic order. `into_diagnostics` consumes the context, emits provenance to tracing, and returns the ordinary diagnostics collection expected by existing stages.
+`PassPipelineCtx` belongs to the serial driver. `run_pass` derives a temporary `PassCtx` for one invocation and records the concrete pass type in the tracing span and on each diagnostic emission. A pass receives only `&mut PassCtx`; its public surface has `push` and `extend`, with no constructor, getters, drain method, `Default`, or access to pipeline data. `into_diagnostics` consumes the context, emits provenance to tracing, and returns the ordinary diagnostics collection expected by existing stages.
 
 `PassCtx` is the only sanctioned shared mutable parameter in a pass signature. Adding pipeline state or read access to it would recreate the hidden dependency channel this design removes.
 
@@ -204,9 +202,9 @@ The compile-fail suite pins these claims in the same consuming-crate privacy lay
 
 ## Parallelism
 
-The signatures make candidates visible: two passes can overlap when their owned inputs are disjoint and neither consumes the other's output. The borrow checker rejects shared ownership mistakes, but the driver still gives each branch a separate `PassPipelineCtx` and merges diagnostics in declared order.
+The signatures make candidates visible: two passes could overlap when their owned inputs are disjoint and neither consumes the other's output. The borrow checker rejects shared ownership mistakes, but it does not prove that scheduling overhead, internal Rayon work, diagnostics, tracing, and other side effects preserve behavior or improve end-to-end bundling.
 
-Pass-internal data parallelism remains the default for independent per-module work. `CollectResolvedExportsPass`, for example, runs physical roots in parallel but keeps each path-dependent DFS serial. `FinalizeModuleDependenciesPass` performs immutable per-module analysis in parallel and then commits in physical module order, so parallel execution cannot expose a same-pass write to another module's analysis. Driver-level `rayon::join` is appropriate only after state separation makes the dependency graph honest and repeated link-only measurements show a benefit. Plugin calls, I/O, globals, shared diagnostics, and order-dependent commits do not belong in concurrent branches.
+Pass-internal data parallelism remains the default for independent per-module work. `CollectResolvedExportsPass`, for example, runs physical roots in parallel but keeps each path-dependent DFS serial. `FinalizeModuleDependenciesPass` performs immutable per-module analysis in parallel and then commits in physical module order, so parallel execution cannot expose a same-pass write to another module's analysis. All driver-level concurrency was removed. In the final official Criterion `bundle` comparison, the remaining pre-normalization region showed no confirmed gain in three cases and a confirmed regression in one. The production driver and diagnostic context are serial. A future driver-level join must be introduced with its own proven semantics and official end-to-end benchmark benefit; no dormant branch-merging API is retained. Plugin calls, I/O, globals, shared diagnostics, and order-dependent commits do not belong in concurrent branches.
 
 The contract is synchronous because link work is CPU-bound. Awaiting plugin hooks and user callbacks stay at driver boundaries. An `AsyncPass` variant is deferred until a selected flow genuinely needs to suspend inside a pass.
 

@@ -1,16 +1,13 @@
 use bitflags::bitflags;
 use oxc::allocator::GetAllocator;
 use oxc::ast::ast::ObjectPropertyKind;
-use oxc::ast::builder::GetAstBuilder;
-use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
+use oxc::ast::builder::{GetAstBuilder, NONE};
+use oxc::semantic::{NodeId, ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, CloneIn, Dummy, IntoIn, ReplaceWith, TakeIn},
-  ast::{
-    NONE,
-    ast::{
-      self, ClassElement, Expression, IdentifierReference, ImportExpression, NumberBase, Statement,
-      VariableDeclarationKind,
-    },
+  ast::ast::{
+    self, ClassElement, Expression, IdentifierReference, ImportExpression, NumberBase, Statement,
+    VariableDeclarationKind,
   },
   span::{GetSpan, GetSpanMut, SPAN, Span},
 };
@@ -23,7 +20,9 @@ use rolldown_common::{
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
   AstFactory, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
+  parse_injected_expression,
 };
+use std::borrow::Cow;
 
 mod finalizer_context;
 mod impl_visit_mut;
@@ -36,6 +35,7 @@ use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
+use crate::utils;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
 mod hmr;
@@ -98,7 +98,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
   pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
   pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
-  /// Reference ids of `import.meta.ROLLUP_FILE_URL_*` accesses that no emitted file matches.
+  /// Reference ids of `import.meta.ROLLDOWN_FILE_URL_*` accesses that no emitted file matches.
   ///
   /// Deduplicated by reference id, because `try_rewrite_member_expr` runs *twice* on every member
   /// expression it fails to rewrite: `visit_expression` calls it, and on `None` the arm falls
@@ -109,6 +109,10 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   /// Deduplicating also makes a reference id that is accessed several times report once, matching
   /// Rollup, which throws on the first access it renders.
   pub missing_file_reference_ids: FxIndexMap<CompactStr, Span>,
+  /// Code returned by `resolveFileUrl` that failed to parse, as `(plugin name, message)`.
+  /// Collected here because the finalizer is sync and rayon-parallel; `finalize_modules`
+  /// turns these into plugin-attributed build errors once the parallel pass is done.
+  pub resolve_file_url_errors: Vec<(Cow<'static, str>, String)>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -288,11 +292,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
 
-    // `AstFactory` is `Copy`, so copying it out lets the `&mut self` iterator below stay borrowed
-    // while we still construct nodes through `factory`. That decouples node construction from the
-    // borrow without the throwaway heap `Vec` the previous `.collect()` needed: the common 0/1
-    // cases now allocate nothing, and only the rare sequence case allocates — straight in the arena.
-    let factory = self.ast_factory;
+    // A fresh `AstFactory` (a free wrapper over the arena reference) lets the `&mut self` iterator
+    // below stay borrowed while we still construct nodes through `factory`. That decouples node
+    // construction from the borrow without the throwaway heap `Vec` the previous `.collect()`
+    // needed: the common 0/1 cases now allocate nothing, and only the rare sequence case
+    // allocates — straight in the arena.
+    let factory = AstFactory::new(self.alloc);
     let mut init_exprs = self
       .collect_wrapped_esm_init_modules_for_import_record(rec_idx)
       .into_iter()
@@ -469,7 +474,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         || (self.state.contains(TraverseState::SmartInlineConst) || meta.safe_to_inline)
       {
         return (
-          meta.value.to_expression(*self.ast_factory.builder()),
+          meta.value.to_expression(self.ast_factory.builder()),
           FinalizedExprProcessHint::empty(),
         );
       }
@@ -654,7 +659,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
     Some((
-      constant_meta.value.to_expression(*self.ast_factory.builder()),
+      constant_meta.value.to_expression(self.ast_factory.builder()),
       FinalizedExprProcessHint::empty(),
     ))
   }
@@ -758,7 +763,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let symbol_name = canonical_ref.name(self.ctx.symbol_db);
     let member_map = module.ecma_view.enum_member_value_map.get(symbol_name)?;
     let meta = member_map.get(property_name)?;
-    Some(meta.value.to_expression(*self.ast_factory.builder()))
+    Some(meta.value.to_expression(self.ast_factory.builder()))
   }
 
   fn var_declaration_to_expr_seq_and_bindings(
@@ -1002,7 +1007,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let require_call = ast::CallExpression::boxed(
               SPAN,
               ast::Expression::new_identifier(SPAN, "require", &self.ast_factory),
-              oxc::ast::NONE,
+              NONE,
               oxc::allocator::Vec::from_value_in(
                 ast::Argument::StringLiteral(ast::StringLiteral::boxed(
                   SPAN,
@@ -1029,7 +1034,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let require_path_to_file_url_call = ast::CallExpression::boxed(
               SPAN,
               ast::Expression::StaticMemberExpression(require_path_to_file_url),
-              oxc::ast::NONE,
+              NONE,
               oxc::allocator::Vec::from_value_in(
                 ast::Argument::Identifier(ast::IdentifierReference::boxed(
                   SPAN,
@@ -1067,18 +1072,46 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         _ => {}
       }
-      return self.rewrite_rollup_file_url(property_name, original_expr_span);
+      return self.rewrite_rolldown_file_url(
+        property_name,
+        original_expr_span,
+        member_expr.node_id(),
+      );
     }
     None
   }
 
-  fn rewrite_rollup_file_url(
+  fn rewrite_rolldown_file_url(
     &mut self,
     property_name: &str,
     original_expr_span: Span,
+    node_id: NodeId,
   ) -> Option<Expression<'ast>> {
-    // rewrite `import.meta.ROLLUP_FILE_URL_<referenceId>`
-    if let Some(reference_id) = property_name.strip_prefix("ROLLUP_FILE_URL_") {
+    // rewrite `import.meta.ROLLDOWN_FILE_URL_<referenceId>`
+    if let Some(reference_id) = utils::file_url::strip_file_url_prefix(property_name) {
+      // A plugin's `resolveFileUrl` result wins over the default. Copy the `&'me`
+      // reference out of `ctx` first, so the lookup does not borrow `self` and the
+      // error path below can borrow it mutably.
+      let resolved_file_urls = self.ctx.resolved_file_urls;
+      if let Some(resolved) = resolved_file_urls.get(&(self.ctx.idx, node_id)) {
+        // The only place this code is parsed. The driver deliberately hands it over
+        // unparsed, along with the plugin that produced it.
+        match parse_injected_expression(self.alloc, &resolved.code) {
+          Ok(expr) => return Some(expr),
+          Err(diagnostics) => {
+            self.resolve_file_url_errors.push((
+              resolved.plugin_name.clone(),
+              format!(
+                "The `resolveFileUrl` hook returned code that is not a valid expression for referenceId={reference_id}: {}
+{diagnostics}",
+                resolved.code
+              ),
+            ));
+            return None;
+          }
+        }
+      }
+
       // compute relative path from chunk to asset
       let Ok(asset_file_name) = self.ctx.file_emitter.get_file_name(reference_id) else {
         // Keep the span of the first access, so the diagnostic can point at the source.
@@ -1203,7 +1236,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self.ctx.constant_value_map.get(&target_commonjs_exported_symbol_meta.0)
             }) {
             is_inlined_commonjs_export = true;
-            export_meta.value.to_expression(*self.ast_factory.builder())
+            export_meta.value.to_expression(self.ast_factory.builder())
           } else {
             let (object_ref_expr, _) = self.finalized_expr_for_symbol_ref(
               object_ref,

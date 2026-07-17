@@ -27,8 +27,6 @@ pub mod lazy_json_export_initializers;
 mod legacy_output_adapter;
 mod non_splittable_json_defaults;
 mod passes;
-#[cfg(feature = "testing")]
-pub mod testing;
 mod tree_shake_runner;
 mod tree_shaking;
 
@@ -52,15 +50,16 @@ use passes::{
   CreateWrapperDeclarationsPass, CrossModuleOptimizationInput, CrossModuleOptimizationOutput,
   CrossModuleOptimizationOwned, CrossModuleOptimizationPass, DetermineModuleFormatsInput,
   DetermineModuleFormatsPass, DetermineModuleSideEffectsInput, DetermineModuleSideEffectsPass,
-  ExtractGlobalConstantsPass, FinalizeModuleDependenciesInput, FinalizeModuleDependenciesOwned,
-  FinalizeModuleDependenciesPass, FinalizeResolvedExportsPass, NormalizeLazyExportsInput,
+  EntryPlanDraft, ExtractGlobalConstantsPass, FinalizeModuleDependenciesInput,
+  FinalizeModuleDependenciesOwned, FinalizeModuleDependenciesPass, FinalizeResolvedExportsPass,
+  ModuleDependenciesDraft, ModuleFormatsDraft, ModuleSideEffects, NormalizeLazyExportsInput,
   NormalizeLazyExportsOutput, NormalizeLazyExportsOwned, NormalizeLazyExportsPass,
   PlanModuleWrappingInput, PlanModuleWrappingPass, ReferenceChunkingOptions,
   ReferenceNeededSymbolsInput, ReferenceNeededSymbolsOutput, ReferenceNeededSymbolsOwned,
   ReferenceNeededSymbolsPass, ReferenceTreeShakingOptions, ResolveMemberExpressionsInput,
   ResolveMemberExpressionsOutput, ResolveMemberExpressionsOwned, ResolveMemberExpressionsPass,
-  TlaScanFacts, TreeShakeInclusionPolicy, TreeShakeInput, TreeShakeOptions, TreeShakeOutput,
-  TreeShakeOwned, TreeShakePass,
+  ResolvedExports, ResolvedExportsDraft, TlaScanFacts, TreeShakeInclusionPolicy, TreeShakeInput,
+  TreeShakeOptions, TreeShakeOutput, TreeShakeOwned, TreeShakePass, WrapperPlan, WrapperSeeds,
 };
 
 /// Information about safely merged CJS namespaces for a module
@@ -136,109 +135,164 @@ impl<'a> LinkStage<'a> {
     let mut diagnostics = Diagnostics::from(warnings);
     let tla_scan_facts = TlaScanFacts::new(tla_module_count, tla_keyword_span_map);
     let mut pass_pipeline = PassPipelineCtx::new();
-    let (
+    let (_, (module_table, global_constants)) = run_infallible_pass(
+      ExtractGlobalConstantsPass,
+      &mut pass_pipeline,
+      ConstantExtractionInput { enabled: options.optimization.is_inline_const_enabled() },
       module_table,
+    );
+
+    let canonicalize_entries = |pipeline: &mut PassPipelineCtx| {
+      let (_, entry_plan) =
+        run_infallible_pass(CanonicalizeEntriesPass, pipeline, &module_table, entry_points);
+      entry_plan
+    };
+    let collect_initial_dependencies = |pipeline: &mut PassPipelineCtx| {
+      let (_, dependencies) =
+        run_infallible_pass(CollectInitialDependenciesPass, pipeline, &module_table, ());
+      dependencies
+    };
+    let collect_external_star_exports = |pipeline: &mut PassPipelineCtx| {
+      let (_, external_star_exports) =
+        run_infallible_pass(CollectExternalStarExportsPass, pipeline, &module_table, ());
+      external_star_exports
+    };
+    let compute_module_execution_order =
+      |pipeline: &mut PassPipelineCtx, entry_plan: &EntryPlanDraft| {
+        let (execution_orders, sorted_modules) = run_infallible_pass(
+          ComputeModuleExecutionOrderPass,
+          pipeline,
+          ComputeModuleExecutionOrderInput {
+            module_table: &module_table,
+            entry_plan,
+            runtime: runtime.id(),
+            code_splitting_disabled: options.code_splitting.is_disabled(),
+            check_circular_dependencies: options
+              .checks
+              .contains(EventKindSwitcher::CircularDependency),
+          },
+          (),
+        );
+        (execution_orders, sorted_modules)
+      };
+    let compute_tla = |pipeline: &mut PassPipelineCtx| {
+      let (tla_facts, ()) =
+        run_infallible_pass(ComputeTlaPass, pipeline, &module_table, tla_scan_facts);
+      tla_facts
+    };
+    let determine_module_formats = |pipeline: &mut PassPipelineCtx, entry_plan: &EntryPlanDraft| {
+      let (_, (module_formats, wrapper_seeds)) = run_infallible_pass(
+        DetermineModuleFormatsPass,
+        pipeline,
+        DetermineModuleFormatsInput {
+          module_table: &module_table,
+          entry_plan,
+          output_format: options.format,
+          code_splitting_disabled: options.code_splitting.is_disabled(),
+        },
+        (),
+      );
+      (module_formats, wrapper_seeds)
+    };
+    let compute_cjs_namespace_merges =
+      |pipeline: &mut PassPipelineCtx, module_formats: &ModuleFormatsDraft| {
+        let (_, cjs_namespace_merges) = run_infallible_pass(
+          ComputeCjsNamespaceMergesPass,
+          pipeline,
+          ComputeCjsNamespaceMergesInput {
+            module_table: &module_table,
+            module_formats,
+            strict_execution_order: options.is_strict_execution_order_enabled(),
+          },
+          (),
+        );
+        cjs_namespace_merges
+      };
+    let compute_dynamic_exports =
+      |pipeline: &mut PassPipelineCtx, module_formats: &ModuleFormatsDraft| {
+        let (dynamic_exports, ()) = run_infallible_pass(
+          ComputeDynamicExportsPass,
+          pipeline,
+          ComputeDynamicExportsInput { module_table: &module_table, module_formats },
+          (),
+        );
+        dynamic_exports
+      };
+    let plan_module_wrapping = |pipeline: &mut PassPipelineCtx,
+                                module_formats: &ModuleFormatsDraft,
+                                wrapper_seeds: WrapperSeeds| {
+      let (_, wrapper_plan) = run_infallible_pass(
+        PlanModuleWrappingPass,
+        pipeline,
+        PlanModuleWrappingInput {
+          module_table: &module_table,
+          module_formats,
+          runtime: runtime.id(),
+          strict_execution_order: options.is_strict_execution_order_enabled(),
+          on_demand_wrapping: options.experimental.is_on_demand_wrapping_enabled(),
+        },
+        wrapper_seeds,
+      );
+      wrapper_plan
+    };
+    let create_wrapper_declarations =
+      |pipeline: &mut PassPipelineCtx, wrapper_plan: WrapperPlan| {
+        let (commonjs_helper, esm_helper) = if options.profiler_names {
+          (runtime.resolve_symbol("__commonJS"), runtime.resolve_symbol("__esm"))
+        } else {
+          (runtime.resolve_symbol("__commonJSMin"), runtime.resolve_symbol("__esmMin"))
+        };
+        let (_, wrapper_output) = run_infallible_pass(
+          CreateWrapperDeclarationsPass,
+          pipeline,
+          CreateWrapperDeclarationsInput {
+            module_table: &module_table,
+            commonjs_helper,
+            esm_helper,
+          },
+          CreateWrapperDeclarationsOwned { wrapper_plan, symbols: symbol_ref_db, stmt_infos },
+        );
+        wrapper_output
+      };
+
+    let (
       entry_plan,
-      global_constants,
       dependencies,
       external_star_exports,
       execution_orders,
       sorted_modules,
+      tla_facts,
+      module_formats,
+      cjs_namespace_merges,
+      dynamic_exports,
+      wrapper_output,
     ) = {
-      let (_, (module_table, global_constants)) = run_infallible_pass(
-        ExtractGlobalConstantsPass,
-        &mut pass_pipeline,
-        ConstantExtractionInput { enabled: options.optimization.is_inline_const_enabled() },
-        module_table,
-      );
-
-      let (_, entry_plan) = run_infallible_pass(
-        CanonicalizeEntriesPass,
-        &mut pass_pipeline,
-        &module_table,
-        entry_points,
-      );
-      let (_, dependencies) =
-        run_infallible_pass(CollectInitialDependenciesPass, &mut pass_pipeline, &module_table, ());
-      let (_, external_star_exports) =
-        run_infallible_pass(CollectExternalStarExportsPass, &mut pass_pipeline, &module_table, ());
-      let (execution_orders, sorted_modules) = run_infallible_pass(
-        ComputeModuleExecutionOrderPass,
-        &mut pass_pipeline,
-        ComputeModuleExecutionOrderInput {
-          module_table: &module_table,
-          entry_plan: &entry_plan,
-          runtime: runtime.id(),
-          code_splitting_disabled: options.code_splitting.is_disabled(),
-          check_circular_dependencies: options
-            .checks
-            .contains(EventKindSwitcher::CircularDependency),
-        },
-        (),
-      );
+      let entry_plan = canonicalize_entries(&mut pass_pipeline);
+      let dependencies = collect_initial_dependencies(&mut pass_pipeline);
+      let external_star_exports = collect_external_star_exports(&mut pass_pipeline);
+      let (execution_orders, sorted_modules) =
+        compute_module_execution_order(&mut pass_pipeline, &entry_plan);
+      let tla_facts = compute_tla(&mut pass_pipeline);
+      let (module_formats, wrapper_seeds) =
+        determine_module_formats(&mut pass_pipeline, &entry_plan);
+      let cjs_namespace_merges = compute_cjs_namespace_merges(&mut pass_pipeline, &module_formats);
+      let dynamic_exports = compute_dynamic_exports(&mut pass_pipeline, &module_formats);
+      let wrapper_plan = plan_module_wrapping(&mut pass_pipeline, &module_formats, wrapper_seeds);
+      let wrapper_output = create_wrapper_declarations(&mut pass_pipeline, wrapper_plan);
       (
-        module_table,
         entry_plan,
-        global_constants,
         dependencies,
         external_star_exports,
         execution_orders,
         sorted_modules,
+        tla_facts,
+        module_formats,
+        cjs_namespace_merges,
+        dynamic_exports,
+        wrapper_output,
       )
     };
-    let (tla_facts, ()) =
-      run_infallible_pass(ComputeTlaPass, &mut pass_pipeline, &module_table, tla_scan_facts);
 
-    let (_, (module_formats, wrapper_seeds)) = run_infallible_pass(
-      DetermineModuleFormatsPass,
-      &mut pass_pipeline,
-      DetermineModuleFormatsInput {
-        module_table: &module_table,
-        entry_plan: &entry_plan,
-        output_format: options.format,
-        code_splitting_disabled: options.code_splitting.is_disabled(),
-      },
-      (),
-    );
-    let (_, cjs_namespace_merges) = run_infallible_pass(
-      ComputeCjsNamespaceMergesPass,
-      &mut pass_pipeline,
-      ComputeCjsNamespaceMergesInput {
-        module_table: &module_table,
-        module_formats: &module_formats,
-        strict_execution_order: options.is_strict_execution_order_enabled(),
-      },
-      (),
-    );
-    let (dynamic_exports, ()) = run_infallible_pass(
-      ComputeDynamicExportsPass,
-      &mut pass_pipeline,
-      ComputeDynamicExportsInput { module_table: &module_table, module_formats: &module_formats },
-      (),
-    );
-    let (_, wrapper_plan) = run_infallible_pass(
-      PlanModuleWrappingPass,
-      &mut pass_pipeline,
-      PlanModuleWrappingInput {
-        module_table: &module_table,
-        module_formats: &module_formats,
-        runtime: runtime.id(),
-        strict_execution_order: options.is_strict_execution_order_enabled(),
-        on_demand_wrapping: options.experimental.is_on_demand_wrapping_enabled(),
-      },
-      wrapper_seeds,
-    );
-    let (commonjs_helper, esm_helper) = if options.profiler_names {
-      (runtime.resolve_symbol("__commonJS"), runtime.resolve_symbol("__esm"))
-    } else {
-      (runtime.resolve_symbol("__commonJSMin"), runtime.resolve_symbol("__esmMin"))
-    };
-    let (_, wrapper_output) = run_infallible_pass(
-      CreateWrapperDeclarationsPass,
-      &mut pass_pipeline,
-      CreateWrapperDeclarationsInput { module_table: &module_table, commonjs_helper, esm_helper },
-      CreateWrapperDeclarationsOwned { wrapper_plan, symbols: symbol_ref_db, stmt_infos },
-    );
     let CreateWrapperDeclarationsOutput { wrapper_declarations, symbols, stmt_infos } =
       wrapper_output;
     let (_, normalized) = run_infallible_pass(
@@ -268,33 +322,80 @@ impl<'a> LinkStage<'a> {
       lazy_json_export_initializers,
       non_splittable_json_defaults,
     } = normalized;
-    let (module_side_effects, ()) = run_infallible_pass(
-      DetermineModuleSideEffectsPass,
-      &mut pass_pipeline,
-      DetermineModuleSideEffectsInput {
-        module_table: &module_table,
-        dynamic_exports: &dynamic_exports,
-        module_wrappers: &module_wrappers,
-      },
-      (),
-    );
-    let (_, resolved_exports_draft) =
-      run_infallible_pass(CollectResolvedExportsPass, &mut pass_pipeline, &module_table, ());
+    let determine_module_side_effects = |pipeline: &mut PassPipelineCtx| {
+      let (module_side_effects, ()) = run_infallible_pass(
+        DetermineModuleSideEffectsPass,
+        pipeline,
+        DetermineModuleSideEffectsInput {
+          module_table: &module_table,
+          dynamic_exports: &dynamic_exports,
+          module_wrappers: &module_wrappers,
+        },
+        (),
+      );
+      module_side_effects
+    };
+    let collect_resolved_exports = |pipeline: &mut PassPipelineCtx| {
+      let (_, resolved_exports_draft) =
+        run_infallible_pass(CollectResolvedExportsPass, pipeline, &module_table, ());
+      resolved_exports_draft
+    };
+    let bind_imports = |pipeline: &mut PassPipelineCtx,
+                        module_side_effects: &ModuleSideEffects,
+                        resolved_exports_draft: &ResolvedExportsDraft,
+                        symbols: SymbolRefDb,
+                        dependencies: ModuleDependenciesDraft| {
+      let (_, binding) = run_infallible_pass(
+        BindImportsPass,
+        pipeline,
+        BindImportsInput {
+          module_table: &module_table,
+          resolved_exports: resolved_exports_draft,
+          module_formats: &module_formats,
+          dynamic_exports: &dynamic_exports,
+          module_side_effects,
+          execution_orders: &execution_orders,
+          output_format: options.format,
+          shim_missing_exports: options.shim_missing_exports,
+        },
+        BindImportsOwned { symbols, dependencies },
+      );
+      binding
+    };
+    let finalize_resolved_exports =
+      |pipeline: &mut PassPipelineCtx,
+       symbols: &SymbolRefDb,
+       resolved_exports_draft: ResolvedExportsDraft| {
+        let (_, resolved_exports) = run_infallible_pass(
+          FinalizeResolvedExportsPass,
+          pipeline,
+          symbols,
+          resolved_exports_draft,
+        );
+        resolved_exports
+      };
+    let compute_cjs_routing = |pipeline: &mut PassPipelineCtx| {
+      let (_, cjs_routing) = run_infallible_pass(
+        ComputeCjsRoutingPass,
+        pipeline,
+        ComputeCjsRoutingInput {
+          module_table: &module_table,
+          module_formats: &module_formats,
+          dynamic_exports: &dynamic_exports,
+        },
+        (),
+      );
+      cjs_routing
+    };
 
-    let (_, binding) = run_infallible_pass(
-      BindImportsPass,
+    let module_side_effects = determine_module_side_effects(&mut pass_pipeline);
+    let resolved_exports_draft = collect_resolved_exports(&mut pass_pipeline);
+    let binding = bind_imports(
       &mut pass_pipeline,
-      BindImportsInput {
-        module_table: &module_table,
-        resolved_exports: &resolved_exports_draft,
-        module_formats: &module_formats,
-        dynamic_exports: &dynamic_exports,
-        module_side_effects: &module_side_effects,
-        execution_orders: &execution_orders,
-        output_format: options.format,
-        shim_missing_exports: options.shim_missing_exports,
-      },
-      BindImportsOwned { symbols, dependencies },
+      &module_side_effects,
+      &resolved_exports_draft,
+      symbols,
+      dependencies,
     );
     let BindImportsOutput {
       symbols,
@@ -304,22 +405,10 @@ impl<'a> LinkStage<'a> {
       normal_export_chains,
       external_namespace_merges,
     } = binding;
-    let (_, resolved_exports) = run_infallible_pass(
-      FinalizeResolvedExportsPass,
-      &mut pass_pipeline,
-      &symbols,
-      resolved_exports_draft,
-    );
-    let (_, cjs_routing) = run_infallible_pass(
-      ComputeCjsRoutingPass,
-      &mut pass_pipeline,
-      ComputeCjsRoutingInput {
-        module_table: &module_table,
-        module_formats: &module_formats,
-        dynamic_exports: &dynamic_exports,
-      },
-      (),
-    );
+    let resolved_exports =
+      finalize_resolved_exports(&mut pass_pipeline, &symbols, resolved_exports_draft);
+    let cjs_routing = compute_cjs_routing(&mut pass_pipeline);
+
     let (_, member_resolution) = run_infallible_pass(
       ResolveMemberExpressionsPass,
       &mut pass_pipeline,
@@ -341,36 +430,46 @@ impl<'a> LinkStage<'a> {
     );
     let ResolveMemberExpressionsOutput { resolutions, cjs_routing, global_constants, dependencies } =
       member_resolution;
-    let (_, entry_export_roots) = run_infallible_pass(
-      CollectEntryExportRootsPass,
-      &mut pass_pipeline,
-      CollectEntryExportRootsInput {
-        module_table: &module_table,
-        entry_plan: &entry_plan,
-        module_wrappers: &module_wrappers,
-        resolved_exports: &resolved_exports,
-        dynamic_import_usage: &dynamic_import_exports_usage_map,
-        preserve_signature_overrides: &overrode_preserve_entry_signature_map,
-        default_preserve_signature: options.preserve_entry_signatures,
-      },
-      (),
-    );
-    let (_, stmt_infos) = run_infallible_pass(
-      CreateSyntheticExportStatementsPass,
-      &mut pass_pipeline,
-      CreateSyntheticExportStatementsInput {
-        module_table: &module_table,
-        module_formats: &module_formats,
-        resolved_exports: &resolved_exports,
-        shimmed_missing_exports: &shimmed_missing_exports,
-        external_star_exports: &external_star_exports,
-        export_all_helper: runtime.resolve_symbol("__exportAll"),
-        re_export_helper: runtime.resolve_symbol("__reExport"),
-        output_format: options.format,
-        generated_code_symbols: options.generated_code.symbols,
-      },
-      stmt_infos,
-    );
+    let collect_entry_export_roots =
+      |pipeline: &mut PassPipelineCtx, resolved_exports: &ResolvedExports| {
+        let (_, entry_export_roots) = run_infallible_pass(
+          CollectEntryExportRootsPass,
+          pipeline,
+          CollectEntryExportRootsInput {
+            module_table: &module_table,
+            entry_plan: &entry_plan,
+            module_wrappers: &module_wrappers,
+            resolved_exports,
+            dynamic_import_usage: &dynamic_import_exports_usage_map,
+            preserve_signature_overrides: &overrode_preserve_entry_signature_map,
+            default_preserve_signature: options.preserve_entry_signatures,
+          },
+          (),
+        );
+        entry_export_roots
+      };
+    let create_synthetic_export_statements =
+      |pipeline: &mut PassPipelineCtx, stmt_infos: IndexStmtInfos| {
+        let (_, stmt_infos) = run_infallible_pass(
+          CreateSyntheticExportStatementsPass,
+          pipeline,
+          CreateSyntheticExportStatementsInput {
+            module_table: &module_table,
+            module_formats: &module_formats,
+            resolved_exports: &resolved_exports,
+            shimmed_missing_exports: &shimmed_missing_exports,
+            external_star_exports: &external_star_exports,
+            export_all_helper: runtime.resolve_symbol("__exportAll"),
+            re_export_helper: runtime.resolve_symbol("__reExport"),
+            output_format: options.format,
+            generated_code_symbols: options.generated_code.symbols,
+          },
+          stmt_infos,
+        );
+        stmt_infos
+      };
+    let entry_export_roots = collect_entry_export_roots(&mut pass_pipeline, &resolved_exports);
+    let stmt_infos = create_synthetic_export_statements(&mut pass_pipeline, stmt_infos);
     let runtime_require_ref = (options.format.should_call_runtime_require()
       && options.polyfill_require_for_esm_format_with_node_platform())
     .then(|| runtime.resolve_symbol("__require"));

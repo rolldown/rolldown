@@ -1,5 +1,6 @@
 mod ast_factory;
 mod extensions;
+mod injected_expression;
 mod scope;
 mod source_utils;
 
@@ -13,6 +14,7 @@ pub use crate::{
     jsx::{JsxExt, JsxMemberExpressionObjectExt},
     statement_ext::StatementExt,
   },
+  injected_expression::parse_injected_expression,
   scope::is_top_level,
   source_utils::contains_script_closing_tag,
 };

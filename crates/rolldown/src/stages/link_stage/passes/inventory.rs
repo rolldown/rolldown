@@ -1777,14 +1777,8 @@ fn link_pass_inventory_is_complete() {
 #[test]
 fn link_stage_symbol_links_end_in_bind_imports() {
   let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/stages/link_stage");
-  let testing_entry = root.join("testing.rs");
   let mut calls = BTreeMap::new();
   for source in rust_sources(&root) {
-    // The testing-only benchmark entry invokes `LinkStage::link`; it is not a symbol-database
-    // link and therefore is outside this canonicalization barrier.
-    if source == testing_entry {
-      continue;
-    }
     let text = fs::read_to_string(&source)
       .unwrap_or_else(|error| panic!("failed to read {}: {error}", source.display()));
     let file = syn::parse_file(&text)

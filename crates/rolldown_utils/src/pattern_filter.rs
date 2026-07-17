@@ -3,6 +3,7 @@ use std::{borrow::Cow, path::Path};
 
 use crate::js_regex::HybridRegex;
 use fast_glob::glob_match;
+use sugar_path::SugarPath;
 
 #[derive(Debug, Clone)]
 pub enum StringOrRegex {
@@ -104,7 +105,8 @@ fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
   if glob.starts_with("**") || Path::new(glob).is_absolute() {
     normalize_path(glob)
   } else {
-    let final_path = Path::new(cwd).join(glob);
+    let joined = Path::new(cwd).join(glob);
+    let final_path = joined.normalize();
     Cow::Owned(normalize_path(&final_path.to_string_lossy()).into_owned())
   }
 }
@@ -301,13 +303,18 @@ mod tests {
         );
         assert_eq!(
           result, expected,
-          r"Failed at case {i}, 
+          r"Failed at case {i},
 subcase: {si},
 filter: {:?}, id: {id}",
           test_case.input_filter
         );
       }
     }
+  }
+
+  #[test]
+  fn test_get_matcher_string() {
+    assert_eq!(get_matcher_string("./foo/*.txt", "/home/rolldown"), "/home/rolldown/foo/*.txt");
   }
 
   #[test]

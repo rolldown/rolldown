@@ -53,7 +53,7 @@ pub(super) use cross_module_optimization::{
   UnreachableDynamicImports,
 };
 pub(super) use determine_module_formats::{
-  DetermineModuleFormatsInput, ModuleFormats, ModuleFormatsDraft,
+  DetermineModuleFormatsInput, ModuleFormats, ModuleFormatsDraft, WrapperSeeds,
 };
 pub(super) use determine_module_side_effects::{
   DetermineModuleSideEffectsInput, ModuleSideEffects,
@@ -68,7 +68,7 @@ pub(super) use finalize_resolved_exports::ResolvedExports;
 pub(super) use normalize_lazy_exports::{
   NormalizeLazyExportsInput, NormalizeLazyExportsOutput, NormalizeLazyExportsOwned,
 };
-pub(super) use plan_module_wrapping::PlanModuleWrappingInput;
+pub(super) use plan_module_wrapping::{PlanModuleWrappingInput, WrapperPlan};
 pub(super) use reference_needed_symbols::{
   ReferenceChunkingOptions, ReferenceImportRecordPatches, ReferenceNeededSymbolsInput,
   ReferenceNeededSymbolsOutput, ReferenceNeededSymbolsOwned, ReferenceTreeShakingOptions,
@@ -250,6 +250,7 @@ pub(super) mod test_utils {
         meta: EcmaViewMeta::empty(),
         mutations: Vec::new(),
         new_url_references: FxHashMap::default(),
+        rolldown_file_url_references: Vec::new(),
         this_expr_replace_map: FxHashMap::default(),
         hmr_hot_ref: None,
         hmr_info: HmrInfo::default(),

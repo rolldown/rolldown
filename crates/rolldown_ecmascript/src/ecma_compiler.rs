@@ -4,8 +4,8 @@ use arcstr::ArcStr;
 use oxc::{
   allocator::Allocator,
   ast::{
-    AstBuilder,
     ast::{Program, Statement},
+    builder::AstBuilder,
   },
   codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions, LegalComment},
   minifier::{Minifier, MinifierOptions},

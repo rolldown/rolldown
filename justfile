@@ -221,10 +221,11 @@ build-browser-release:
 build-test-dev-server:
   vp run --filter @rolldown/test-dev-server build
 
-# Set up the vendored Vite submodule at `vite/` (init the submodule, link the
-# workspace rolldown into it, install + build vite). It backs the
-# `@rolldown/test-dev-server` browser tests; `packages/vite-tests` shares the
-# same checkout. Requires `just build-rolldown` first.
+# Set up the Vite checkout at `vite/` (clone vitejs/vite rolldown-canary
+# rebased onto main, link the workspace rolldown into it, install + build
+# vite). It backs the `@rolldown/test-dev-server` browser tests, and
+# `packages/vite-tests` clones the same checkout. Requires
+# `just build-rolldown` first.
 setup-vite:
   vp run --filter @rolldown-internal/scripts setup-vite
 
@@ -232,9 +233,6 @@ setup-vite:
 
 bench-rust:
   cargo bench -p bench
-
-build-link-baseline:
-  node ./scripts/misc/build-link-baseline.mjs
 
 bench-node:
   vp --filter bench run bench

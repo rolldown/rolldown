@@ -100,10 +100,7 @@ struct EmittedDiagnostic {
   diagnostic: BuildDiagnostic,
 }
 
-/// Driver-owned diagnostic sink for one serial pipeline or parallel branch.
-///
-/// A concurrent driver gives each branch its own context and appends completed
-/// contexts in declared pass order.
+/// Driver-owned diagnostic sink for one serial pipeline.
 #[derive(Default)]
 pub struct PassPipelineCtx {
   diagnostics: Vec<EmittedDiagnostic>,
@@ -113,11 +110,6 @@ impl PassPipelineCtx {
   /// Creates an empty pipeline context.
   pub fn new() -> Self {
     Self::default()
-  }
-
-  /// Appends a completed branch while preserving both local and branch order.
-  pub fn append(&mut self, other: Self) {
-    self.diagnostics.extend(other.diagnostics);
   }
 
   /// Consumes the write-only pipeline sink and returns ordinary diagnostics.

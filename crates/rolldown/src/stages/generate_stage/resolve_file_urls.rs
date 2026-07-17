@@ -1,5 +1,5 @@
 use oxc::semantic::NodeId;
-use rolldown_common::{ModuleIdx, OutputFormat, RollupFileUrlReference};
+use rolldown_common::{ModuleIdx, OutputFormat, RolldownFileUrlReference};
 use rolldown_error::{BuildDiagnostic, EmptyImportMetaKind};
 use rolldown_plugin::{HookResolveFileUrlArgs, HookResolveFileUrlOutput};
 use rustc_hash::FxHashMap;
@@ -9,7 +9,7 @@ use crate::chunk_graph::ChunkGraph;
 
 use super::GenerateStage;
 
-/// Plugin-supplied replacements for `import.meta.ROLLUP_FILE_URL_<referenceId>`,
+/// Plugin-supplied replacements for `import.meta.ROLLDOWN_FILE_URL_<referenceId>`,
 /// keyed by the module and the `NodeId` of the member expression being replaced.
 ///
 /// The code is unparsed: the module finalizer parses it once, into that module's arena.
@@ -46,7 +46,7 @@ impl GenerateStage<'_> {
     for module in &self.link_output.module_table.modules {
       let Some(module) = module.as_normal() else { continue };
       if !self.link_output.metas[module.idx].is_included
-        || module.ecma_view.rollup_file_url_references.is_empty()
+        || module.ecma_view.rolldown_file_url_references.is_empty()
       {
         continue;
       }
@@ -58,8 +58,8 @@ impl GenerateStage<'_> {
         .expect("chunk should have a preliminary filename by now")
         .as_str();
 
-      for RollupFileUrlReference { node_id, span, stmt_info_idx, reference_id } in
-        &module.ecma_view.rollup_file_url_references
+      for RolldownFileUrlReference { node_id, span, stmt_info_idx, reference_id } in
+        &module.ecma_view.rolldown_file_url_references
       {
         if !self.link_output.metas[module.idx].stmt_info_included.has_bit(*stmt_info_idx) {
           continue;
@@ -99,7 +99,7 @@ impl GenerateStage<'_> {
                 module.ecma_view.source.clone(),
                 *span,
                 self.options.format.as_str().into(),
-                EmptyImportMetaKind::RollupFileUrl,
+                EmptyImportMetaKind::RolldownFileUrl,
               )
               .with_severity_warning(),
             );

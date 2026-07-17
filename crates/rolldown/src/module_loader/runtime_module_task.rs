@@ -119,7 +119,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       ast_usage,
       symbol_ref_db,
       new_url_references,
-      rollup_file_url_references,
+      rolldown_file_url_references,
       dummy_record_set,
       ecma_view_meta,
       ..
@@ -187,7 +187,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         meta: ecma_view_meta,
         mutations: vec![],
         new_url_references,
-        rollup_file_url_references,
+        rolldown_file_url_references,
         this_expr_replace_map: FxHashMap::default(),
         hmr_info: scan_result.hmr_info,
         hmr_hot_ref: None,

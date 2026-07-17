@@ -196,7 +196,7 @@ export interface ResolveFileUrlArgs {
   format: InternalModuleFormat;
   /**
    * The id of the original module this file was referenced by
-   * using the `import.meta.ROLLUP_FILE_URL_*` reference.
+   * using the `import.meta.ROLLDOWN_FILE_URL_*` reference.
    */
   moduleId: string;
   /** The reference id of this file. */

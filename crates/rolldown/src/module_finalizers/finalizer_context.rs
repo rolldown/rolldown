@@ -49,7 +49,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub retained_export_symbols: &'me RetainedExportSymbols,
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   pub resolved_paths: Option<&'me PathsOutputOption>,
-  /// Plugin-supplied replacements for `import.meta.ROLLUP_FILE_URL_*`, keyed by
+  /// Plugin-supplied replacements for `import.meta.ROLLDOWN_FILE_URL_*`, keyed by
   /// `(module, NodeId of the member expression)`. Empty when no plugin implements the
   /// `resolveFileUrl` hook. The code is unparsed; this is the only place it is parsed.
   pub resolved_file_urls: &'me FxHashMap<(ModuleIdx, NodeId), HookResolveFileUrlOutput>,

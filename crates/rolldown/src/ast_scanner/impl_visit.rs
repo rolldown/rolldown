@@ -14,7 +14,7 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
   MemberExprObjectReferencedType, MemberExprRef, OutputFormat, RUNTIME_MODULE_KEY,
-  RollupFileUrlReference, StmtInfoIdx, StmtInfoMeta, SymbolRefFlags,
+  RolldownFileUrlReference, StmtInfoIdx, StmtInfoMeta, SymbolRefFlags,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
@@ -23,7 +23,7 @@ use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
 use rolldown_error::{BuildDiagnostic, EmptyImportMetaKind};
 use rolldown_std_utils::OptionExt;
 
-use crate::ast_scanner::cjs_export_analyzer::CommonJsAstType;
+use crate::{ast_scanner::cjs_export_analyzer::CommonJsAstType, utils};
 
 use super::{
   AstScanner, UntranspiledSyntax, cjs_export_analyzer::CjsGlobalAssignmentType,
@@ -277,17 +277,17 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_new_expression(self, it);
   }
 
-  /// Records `import.meta.ROLLUP_FILE_URL_<referenceId>` for the `resolveFileUrl` hook.
+  /// Records `import.meta.ROLLDOWN_FILE_URL_<referenceId>` for the `resolveFileUrl` hook.
   ///
   /// Deliberately not folded into `visit_meta_property`: that method returns early when
-  /// `keep_esm_import_export_syntax()` is set, but `ROLLUP_FILE_URL_` is rewritten
+  /// `keep_esm_import_export_syntax()` is set, but `ROLLDOWN_FILE_URL_` is rewritten
   /// regardless of that option.
   fn visit_member_expression(&mut self, it: &ast::MemberExpression<'ast>) {
     if it.object().is_import_meta()
       && let Some(property_name) = it.static_property_name()
-      && let Some(reference_id) = property_name.strip_prefix("ROLLUP_FILE_URL_")
+      && let Some(reference_id) = utils::file_url::strip_file_url_prefix(property_name)
     {
-      self.result.rollup_file_url_references.push(RollupFileUrlReference {
+      self.result.rolldown_file_url_references.push(RolldownFileUrlReference {
         node_id: it.node_id(),
         span: it.span(),
         stmt_info_idx: self.current_stmt_idx,
@@ -307,8 +307,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         .as_member_expression_kind()
         .map(|member_expr| {
           let static_name = member_expr.static_property_name().unwrap_or(ast::Str::from(""));
-          // `import.meta.ROLLUP_FILE_URL_*` is deferred to `resolveFileUrl` hook as it can configure the output
-          if static_name.as_str().starts_with("ROLLUP_FILE_URL_") {
+          // `import.meta.ROLLDOWN_FILE_URL_*` is deferred to the `resolveFileUrl` hook as it can configure the output
+          if utils::file_url::starts_with_file_url_prefix(static_name.as_str()) {
             return false;
           }
 

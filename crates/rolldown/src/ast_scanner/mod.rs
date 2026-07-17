@@ -34,7 +34,7 @@ use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
   ExportsKind, FlatOptions, HmrInfo, ImportAttribute, ImportKind, ImportRecordIdx,
   ImportRecordMeta, LocalExport, MemberExprProp, MemberExprRef, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, RawImportRecord, RollupFileUrlReference, Specifier, StmtEvalFlags,
+  ModuleIdx, NamedImport, RawImportRecord, RolldownFileUrlReference, Specifier, StmtEvalFlags,
   StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
   TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
@@ -115,8 +115,8 @@ pub struct ScanResult {
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
-  /// `import.meta.ROLLUP_FILE_URL_<referenceId>`, one entry per occurrence.
-  pub rollup_file_url_references: Vec<RollupFileUrlReference>,
+  /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>`, one entry per occurrence.
+  pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
   pub hmr_info: HmrInfo,
   pub hmr_hot_ref: Option<SymbolRef>,
@@ -224,7 +224,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       hashbang_range: None,
       dynamic_import_rec_exports_usage: FxHashMap::default(),
       new_url_references: FxHashMap::default(),
-      rollup_file_url_references: Vec::new(),
+      rolldown_file_url_references: Vec::new(),
       this_expr_replace_map: FxHashMap::default(),
       hmr_info: HmrInfo::default(),
       hmr_hot_ref,

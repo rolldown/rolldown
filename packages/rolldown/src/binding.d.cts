@@ -2316,7 +2316,7 @@ export interface BindingHookResolveFileUrlArgs {
   /** Filename of the emitted file, relative to the output directory. */
   fileName: string
   format: 'es' | 'cjs' | 'iife' | 'umd'
-  /** Id of the module containing the `import.meta.ROLLUP_FILE_URL_*` reference. */
+  /** Id of the module containing the `import.meta.ROLLDOWN_FILE_URL_*` reference. */
   moduleId: string
   referenceId: string
   /** Path from the chunk to the emitted file. */

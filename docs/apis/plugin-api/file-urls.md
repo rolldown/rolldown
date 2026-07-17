@@ -1,6 +1,9 @@
 # File URLs
 
-To reference a file URL reference from within JS code, use the `import.meta.ROLLUP_FILE_URL_referenceId` replacement. This will generate code that resolves the emitted file relative to `import.meta.url` and assumes the `URL` global is available. This works out of the box for the `esm` format, and for the `cjs` format on the `node` platform where `import.meta.url` is [polyfilled](/in-depth/non-esm-output-formats#well-known-import-meta-properties). For the `iife` and `umd` formats, `import.meta.url` needs to be polyfilled or the [`resolveFileUrl`](/reference/Interface.Plugin#resolvefileurl) hook needs to be implemented to return code that does not rely on `import.meta.url`. The same hook can also be used to customize the URL resolution for the other formats.
+To reference a file URL reference from within JS code, use the `import.meta.ROLLDOWN_FILE_URL_referenceId` replacement. This will generate code that resolves the emitted file relative to `import.meta.url` and assumes the `URL` global is available. This works out of the box for the `esm` format, and for the `cjs` format on the `node` platform where `import.meta.url` is [polyfilled](/in-depth/non-esm-output-formats#well-known-import-meta-properties). For the `iife` and `umd` formats, `import.meta.url` needs to be polyfilled or the [`resolveFileUrl`](/reference/Interface.Plugin#resolvefileurl) hook needs to be implemented to return code that does not rely on `import.meta.url`. The same hook can also be used to customize the URL resolution for the other formats.
+
+> [!TIP]
+> Rolldown also accepts `import.meta.ROLLUP_FILE_URL_referenceId` as an alias of `import.meta.ROLLDOWN_FILE_URL_referenceId` for compatibility with Rollup.
 
 The following example will detect imports of `.svg` files, emit the imported files as assets, and return their URLs to be used e.g. as the `src` attribute of an `img` tag:
 
@@ -27,7 +30,7 @@ function svgResolverPlugin() {
           name: path.basename(id),
           source: fs.readFileSync(id),
         });
-        return `export default import.meta.ROLLUP_FILE_URL_${referenceId};`;
+        return `export default import.meta.ROLLDOWN_FILE_URL_${referenceId};`;
       },
     },
   };
@@ -43,7 +46,7 @@ document.body.appendChild(image);
 
 :::
 
-Similar to assets, emitted chunks can be referenced from within JS code via `import.meta.ROLLUP_FILE_URL_referenceId` as well.
+Similar to assets, emitted chunks can be referenced from within JS code via `import.meta.ROLLDOWN_FILE_URL_referenceId` as well.
 
 The following example will detect imports prefixed with `register-paint-worklet:` and generate the necessary code and separate chunk to generate a CSS paint worklet. Note that this will only work in modern browsers and will only work if the output format is set to `es`.
 
@@ -60,7 +63,7 @@ function registerPaintWorkletPlugin() {
       filter: { id: prefixRegex(REGISTER_WORKLET) },
       handler(id) {
         return `CSS.paintWorklet.addModule(
-          import.meta.ROLLUP_FILE_URL_${this.emitFile({
+          import.meta.ROLLDOWN_FILE_URL_${this.emitFile({
             type: 'chunk',
             id: id.slice(REGISTER_WORKLET.length),
           })}

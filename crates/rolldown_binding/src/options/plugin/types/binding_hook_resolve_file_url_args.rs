@@ -8,7 +8,7 @@ pub struct BindingHookResolveFileUrlArgs {
   pub file_name: String,
   #[napi(ts_type = "'es' | 'cjs' | 'iife' | 'umd'")]
   pub format: String,
-  /// Id of the module containing the `import.meta.ROLLUP_FILE_URL_*` reference.
+  /// Id of the module containing the `import.meta.ROLLDOWN_FILE_URL_*` reference.
   pub module_id: String,
   pub reference_id: String,
   /// Path from the chunk to the emitted file.

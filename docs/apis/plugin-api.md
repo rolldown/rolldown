@@ -207,7 +207,7 @@ generateChunks: beforeAddons, banner, footer, intro, outro, afterAddons
 
 # edges
 renderStart -> beforeImportMeta: each chunk
-beforeImportMeta -> resolveFileUrl: each import.meta.ROLLUP_FILE_URL_*
+beforeImportMeta -> resolveFileUrl: each import.meta.ROLLDOWN_FILE_URL_*
 resolveFileUrl -> beforeImportMeta
 beforeImportMeta -> beforeAddons
 augmentChunkHash -> generateBundle

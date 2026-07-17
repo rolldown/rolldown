@@ -35,6 +35,7 @@ use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
+use crate::utils;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
 mod hmr;
@@ -97,7 +98,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
   pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
   pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
-  /// Reference ids of `import.meta.ROLLUP_FILE_URL_*` accesses that no emitted file matches.
+  /// Reference ids of `import.meta.ROLLDOWN_FILE_URL_*` accesses that no emitted file matches.
   ///
   /// Deduplicated by reference id, because `try_rewrite_member_expr` runs *twice* on every member
   /// expression it fails to rewrite: `visit_expression` calls it, and on `None` the arm falls
@@ -1071,7 +1072,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         _ => {}
       }
-      return self.rewrite_rollup_file_url(
+      return self.rewrite_rolldown_file_url(
         property_name,
         original_expr_span,
         member_expr.node_id(),
@@ -1080,14 +1081,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
-  fn rewrite_rollup_file_url(
+  fn rewrite_rolldown_file_url(
     &mut self,
     property_name: &str,
     original_expr_span: Span,
     node_id: NodeId,
   ) -> Option<Expression<'ast>> {
-    // rewrite `import.meta.ROLLUP_FILE_URL_<referenceId>`
-    if let Some(reference_id) = property_name.strip_prefix("ROLLUP_FILE_URL_") {
+    // rewrite `import.meta.ROLLDOWN_FILE_URL_<referenceId>`
+    if let Some(reference_id) = utils::file_url::strip_file_url_prefix(property_name) {
       // A plugin's `resolveFileUrl` result wins over the default. Copy the `&'me`
       // reference out of `ctx` first, so the lookup does not borrow `self` and the
       // error path below can borrow it mutably.

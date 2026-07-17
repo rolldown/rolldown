@@ -31,9 +31,9 @@ bitflags! {
     }
 }
 
-/// One occurrence of `import.meta.ROLLUP_FILE_URL_<referenceId>`.
+/// One occurrence of `import.meta.ROLLDOWN_FILE_URL_<referenceId>`.
 #[derive(Debug, Clone)]
-pub struct RollupFileUrlReference {
+pub struct RolldownFileUrlReference {
   /// Cross-pass identity of the member expression; the key the module finalizer
   /// looks the replacement up by (see internal-docs/ast-mutation/implementation.md).
   pub node_id: NodeId,
@@ -148,10 +148,10 @@ pub struct EcmaView {
   pub mutations: Vec<ArcSourceMutation>,
   /// `NodeId` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
-  /// Occurrences of `import.meta.ROLLUP_FILE_URL_<referenceId>`, in source order.
+  /// Occurrences of `import.meta.ROLLDOWN_FILE_URL_<referenceId>`, in source order.
   /// One entry per occurrence: the `resolveFileUrl` hook is called per occurrence,
   /// matching Rollup, so duplicates are meaningful.
-  pub rollup_file_url_references: Vec<RollupFileUrlReference>,
+  pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
 
   pub hmr_hot_ref: Option<SymbolRef>,

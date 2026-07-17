@@ -32,7 +32,7 @@ impl PluginDriver {
     Ok(())
   }
 
-  /// Resolves `import.meta.ROLLUP_FILE_URL_<referenceId>` via the `resolveFileUrl`
+  /// Resolves `import.meta.ROLLDOWN_FILE_URL_<referenceId>` via the `resolveFileUrl`
   /// hook. The first plugin returning a non-null string wins.
   ///
   /// The returned code is not parsed here. It is parsed exactly once, later, into the

@@ -7,7 +7,7 @@ use std::borrow::Cow;
 /// point can still name the plugin that produced the code.
 #[derive(Debug)]
 pub struct HookResolveFileUrlOutput {
-  /// A single JavaScript expression, replacing `import.meta.ROLLUP_FILE_URL_<id>`.
+  /// A single JavaScript expression, replacing `import.meta.ROLLDOWN_FILE_URL_<id>`.
   pub code: String,
   pub plugin_name: Cow<'static, str>,
 }

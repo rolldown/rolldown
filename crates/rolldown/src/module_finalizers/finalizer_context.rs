@@ -12,9 +12,11 @@ pub type FinalizerMutableFields = (
 );
 
 use oxc::ast_visit::VisitMut as _;
+use oxc::semantic::NodeId;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::AstFactory;
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, CausedPlugin};
+use rolldown_plugin::HookResolveFileUrlOutput;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -47,6 +49,10 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub retained_export_symbols: &'me RetainedExportSymbols,
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   pub resolved_paths: Option<&'me PathsOutputOption>,
+  /// Plugin-supplied replacements for `import.meta.ROLLUP_FILE_URL_*`, keyed by
+  /// `(module, NodeId of the member expression)`. Empty when no plugin implements the
+  /// `resolveFileUrl` hook. The code is unparsed; this is the only place it is parsed.
+  pub resolved_file_urls: &'me FxHashMap<(ModuleIdx, NodeId), HookResolveFileUrlOutput>,
   /// True if any module in the bundle has enum member values to inline.
   /// Allows skipping enum inlining checks in the hot visitor path for enum-free bundles.
   pub has_enum_inlining: bool,
@@ -125,11 +131,12 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
         missing_file_reference_ids: FxIndexMap::default(),
+        resolve_file_url_errors: Vec::new(),
       };
       finalizer.visit_program(oxc_program);
 
       let missing_file_reference_ids = finalizer.missing_file_reference_ids;
-      let errors = if missing_file_reference_ids.is_empty() {
+      let mut errors: Vec<BuildDiagnostic> = if missing_file_reference_ids.is_empty() {
         vec![]
       } else {
         let module = finalizer.ctx.module;
@@ -145,6 +152,18 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
           })
           .collect()
       };
+
+      let mut resolve_file_url_errors = finalizer.resolve_file_url_errors;
+      if !resolve_file_url_errors.is_empty() {
+        // Dedup because a failed rewrite leaves the `import.meta.*` node in place, and the
+        // visitor reaches the same node more than once, recording the failure each time.
+        resolve_file_url_errors.sort_unstable();
+        resolve_file_url_errors.dedup();
+        // Attribute each failure to its plugin, so the user sees `[plugin foo] ...`
+        errors.extend(resolve_file_url_errors.into_iter().map(|(plugin_name, message)| {
+          BuildDiagnostic::plugin_error(CausedPlugin::new(plugin_name), anyhow::anyhow!(message))
+        }));
+      }
 
       (
         finalizer.transferred_import_record,

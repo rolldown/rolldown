@@ -10,15 +10,17 @@ use oxc::{
   semantic::{ScopeFlags, SymbolId},
   span::{GetSpan, Span},
 };
+use oxc_str::CompactStr;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  MemberExprObjectReferencedType, MemberExprRef, OutputFormat, RUNTIME_MODULE_KEY, StmtInfoIdx,
-  StmtInfoMeta, SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
+  MemberExprObjectReferencedType, MemberExprRef, OutputFormat, RUNTIME_MODULE_KEY,
+  RollupFileUrlReference, StmtInfoIdx, StmtInfoMeta, SymbolRefFlags,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, EmptyImportMetaKind};
 use rolldown_std_utils::OptionExt;
 
 use crate::ast_scanner::cjs_export_analyzer::CommonJsAstType;
@@ -275,6 +277,26 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_new_expression(self, it);
   }
 
+  /// Records `import.meta.ROLLUP_FILE_URL_<referenceId>` for the `resolveFileUrl` hook.
+  ///
+  /// Deliberately not folded into `visit_meta_property`: that method returns early when
+  /// `keep_esm_import_export_syntax()` is set, but `ROLLUP_FILE_URL_` is rewritten
+  /// regardless of that option.
+  fn visit_member_expression(&mut self, it: &ast::MemberExpression<'ast>) {
+    if it.object().is_import_meta()
+      && let Some(property_name) = it.static_property_name()
+      && let Some(reference_id) = property_name.strip_prefix("ROLLUP_FILE_URL_")
+    {
+      self.result.rollup_file_url_references.push(RollupFileUrlReference {
+        node_id: it.node_id(),
+        span: it.span(),
+        stmt_info_idx: self.current_stmt_idx,
+        reference_id: CompactStr::from(reference_id),
+      });
+    }
+    walk::walk_member_expression(self, it);
+  }
+
   fn visit_meta_property(&mut self, it: &ast::MetaProperty<'ast>) {
     if self.immutable_ctx.flat_options.keep_esm_import_export_syntax() {
       walk::walk_meta_property(self, it);
@@ -285,12 +307,13 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         .as_member_expression_kind()
         .map(|member_expr| {
           let static_name = member_expr.static_property_name().unwrap_or(ast::Str::from(""));
-          // `import.meta.ROLLUP_FILE_URL_*` is rewritten to `new URL(..., import.meta.url).href`,
-          // so it degrades exactly like `import.meta.url` does.
-          let is_special_property = static_name == "url"
-            || static_name == "dirname"
-            || static_name == "filename"
-            || static_name.as_str().starts_with("ROLLUP_FILE_URL_");
+          // `import.meta.ROLLUP_FILE_URL_*` is deferred to `resolveFileUrl` hook as it can configure the output
+          if static_name.as_str().starts_with("ROLLUP_FILE_URL_") {
+            return false;
+          }
+
+          let is_special_property =
+            static_name == "url" || static_name == "dirname" || static_name == "filename";
           let format = &self.immutable_ctx.options.format;
           !is_special_property || matches!(format, OutputFormat::Iife | OutputFormat::Umd)
         })
@@ -298,15 +321,16 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         .unwrap_or(true);
 
       if should_warn && it.meta.name == "import" && it.property.name == "meta" {
+        let is_import_meta_url = parent.as_member_expression_kind().is_some_and(|member_expr| {
+          member_expr.static_property_name().is_some_and(|static_name| static_name == "url")
+        });
         self.result.warnings.push(
           BuildDiagnostic::empty_import_meta(
             self.immutable_ctx.id.to_string(),
             self.immutable_ctx.source.clone(),
             it.span(),
             self.immutable_ctx.options.format.as_str().into(),
-            parent.as_member_expression_kind().is_some_and(|member_expr| {
-              member_expr.static_property_name().is_some_and(|static_name| static_name == "url")
-            }),
+            if is_import_meta_url { EmptyImportMetaKind::Url } else { EmptyImportMetaKind::Plain },
           )
           .with_severity_warning(),
         );

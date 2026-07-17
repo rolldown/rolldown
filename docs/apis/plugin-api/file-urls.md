@@ -1,6 +1,6 @@
 # File URLs
 
-To reference a file URL reference from within JS code, use the `import.meta.ROLLUP_FILE_URL_referenceId` replacement. This will generate code that depends on the output format and generates a URL that points to the emitted file in the target environment. Note that the transformation assumes `URL` is available and `import.meta.url` is polyfilled except for CJS and ESM output formats.
+To reference a file URL reference from within JS code, use the `import.meta.ROLLUP_FILE_URL_referenceId` replacement. This will generate code that resolves the emitted file relative to `import.meta.url` and assumes the `URL` global is available. This works out of the box for the `esm` format, and for the `cjs` format on the `node` platform where `import.meta.url` is [polyfilled](/in-depth/non-esm-output-formats#well-known-import-meta-properties). For the `iife` and `umd` formats, `import.meta.url` needs to be polyfilled or the [`resolveFileUrl`](/reference/Interface.Plugin#resolvefileurl) hook needs to be implemented to return code that does not rely on `import.meta.url`. The same hook can also be used to customize the URL resolution for the other formats.
 
 The following example will detect imports of `.svg` files, emit the imported files as assets, and return their URLs to be used e.g. as the `src` attribute of an `img` tag:
 

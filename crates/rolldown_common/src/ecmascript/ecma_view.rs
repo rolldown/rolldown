@@ -12,7 +12,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   ExportsKind, HmrInfo, ImportRecordIdx, ImporterRecord, LocalExport, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, ResolvedImportRecord, SourceMutation, SymbolRef,
+  ModuleIdx, NamedImport, ResolvedImportRecord, SourceMutation, StmtInfoIdx, SymbolRef,
   side_effects::DeterminedSideEffects, types::source_mutation::ArcSourceMutation,
 };
 
@@ -29,6 +29,22 @@ bitflags! {
         /// to apply cross module optimization.
         const TopExportedSideEffectsFreeFunction = 1 << 5;
     }
+}
+
+/// One occurrence of `import.meta.ROLLUP_FILE_URL_<referenceId>`.
+#[derive(Debug, Clone)]
+pub struct RollupFileUrlReference {
+  /// Cross-pass identity of the member expression; the key the module finalizer
+  /// looks the replacement up by (see internal-docs/ast-mutation/implementation.md).
+  pub node_id: NodeId,
+  /// Span of the whole member expression, as a source location for the iife/umd
+  /// empty-`import.meta` warning.
+  pub span: Span,
+  /// The enclosing top-level statement, so occurrences whose statement is
+  /// tree-shaken away can be skipped when invoking the `resolveFileUrl` hook.
+  pub stmt_info_idx: StmtInfoIdx,
+  /// The `<referenceId>` suffix, as handed out by `emitFile`.
+  pub reference_id: CompactStr,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -132,6 +148,10 @@ pub struct EcmaView {
   pub mutations: Vec<ArcSourceMutation>,
   /// `NodeId` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
+  /// Occurrences of `import.meta.ROLLUP_FILE_URL_<referenceId>`, in source order.
+  /// One entry per occurrence: the `resolveFileUrl` hook is called per occurrence,
+  /// matching Rollup, so duplicates are meaningful.
+  pub rollup_file_url_references: Vec<RollupFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
 
   pub hmr_hot_ref: Option<SymbolRef>,

@@ -7,6 +7,7 @@ pub mod binding_filter_expression;
 pub mod binding_hook_filter;
 pub mod binding_hook_load_output;
 pub mod binding_hook_render_chunk_output;
+pub mod binding_hook_resolve_file_url_args;
 pub mod binding_hook_resolve_id_extra_args;
 pub mod binding_hook_resolve_id_output;
 pub mod binding_hook_side_effects;

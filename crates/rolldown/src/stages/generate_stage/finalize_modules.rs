@@ -11,7 +11,7 @@ use crate::{
   type_alias::IndexEcmaAst,
 };
 
-use super::GenerateStage;
+use super::{GenerateStage, resolve_file_urls::ResolvedFileUrls};
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
@@ -19,6 +19,7 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     ast_table: &mut IndexEcmaAst,
+    resolved_file_urls: &ResolvedFileUrls,
   ) -> BuildResult<()> {
     let has_enum_inlining = self.link_output.has_enum_inlining;
 
@@ -55,6 +56,7 @@ impl GenerateStage<'_> {
             safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
             retained_export_symbols: &self.link_output.retained_export_symbols,
             resolved_paths: self.resolved_paths.as_ref(),
+            resolved_file_urls,
             has_enum_inlining,
           };
 
@@ -65,39 +67,22 @@ impl GenerateStage<'_> {
             module_errors,
           ) = ctx.finalize_normal_module(ast, ast_scope);
 
-          (!module_errors.is_empty()
-            || !transferred_import_record.is_empty()
+          let payload = (!transferred_import_record.is_empty()
             || !matches!(concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None))
-          .then_some((
-            idx,
-            transferred_import_record,
-            rendered_concatenated_wrapped_module_parts,
-            module_errors,
-          ))
+          .then_some((idx, transferred_import_record, rendered_concatenated_wrapped_module_parts));
+          Some((payload, module_errors))
         })
         .collect::<Vec<_>>()
     });
 
-    let mut errors = vec![];
-    let transfer_parts_rendered_maps = finalized
-      .into_iter()
-      .filter_map(|(idx, transferred_import_record, rendered_parts, module_errors)| {
-        if module_errors.is_empty() {
-          return Some((idx, transferred_import_record, rendered_parts));
-        }
-        errors.extend(module_errors);
-        None
-      })
-      .collect::<Vec<_>>();
-
-    if !errors.is_empty() {
-      Err(errors)?;
-    }
-
     let mut normalized_transfer_parts_rendered_maps = FxHashMap::default();
-    for (idx, transferred_import_record, rendered_concatenated_module_parts) in
-      transfer_parts_rendered_maps
-    {
+    let mut errors = vec![];
+    for (payload, module_errors) in finalized {
+      errors.extend(module_errors);
+      let Some((idx, transferred_import_record, rendered_concatenated_module_parts)) = payload
+      else {
+        continue;
+      };
       for (rec_idx, rendered_string) in transferred_import_record {
         normalized_transfer_parts_rendered_maps.insert((idx, rec_idx), rendered_string);
       }
@@ -106,6 +91,10 @@ impl GenerateStage<'_> {
       chunk
         .module_idx_to_render_concatenated_module
         .insert(idx, rendered_concatenated_module_parts);
+    }
+
+    if !errors.is_empty() {
+      Err(errors)?;
     }
 
     if normalized_transfer_parts_rendered_maps.is_empty() {

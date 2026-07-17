@@ -112,6 +112,7 @@ mod minify_chunks;
 mod on_demand_wrapping;
 mod post_banner_footer;
 mod render_chunk_to_assets;
+mod resolve_file_urls;
 mod runtime_module_sweep;
 
 pub struct GenerateStage<'a> {
@@ -211,7 +212,12 @@ impl<'a> GenerateStage<'a> {
 
     let mut ast_table = std::mem::take(&mut self.ast_table);
     self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph);
-    self.finalize_modules(&mut chunk_graph, &mut ast_table)?;
+    let (resolved_file_urls, empty_import_meta_warnings) =
+      self.resolve_file_urls(&chunk_graph).await?;
+    if !empty_import_meta_warnings.is_empty() {
+      self.link_output.diagnostics.extend(empty_import_meta_warnings);
+    }
+    self.finalize_modules(&mut chunk_graph, &mut ast_table, &resolved_file_urls)?;
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs).await
   }

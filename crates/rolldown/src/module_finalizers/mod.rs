@@ -2,7 +2,7 @@ use bitflags::bitflags;
 use oxc::allocator::GetAllocator;
 use oxc::ast::ast::ObjectPropertyKind;
 use oxc::ast::builder::{GetAstBuilder, NONE};
-use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
+use oxc::semantic::{NodeId, ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, CloneIn, Dummy, IntoIn, ReplaceWith, TakeIn},
   ast::ast::{
@@ -20,7 +20,9 @@ use rolldown_common::{
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
   AstFactory, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
+  parse_injected_expression,
 };
+use std::borrow::Cow;
 
 mod finalizer_context;
 mod impl_visit_mut;
@@ -106,6 +108,10 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   /// Deduplicating also makes a reference id that is accessed several times report once, matching
   /// Rollup, which throws on the first access it renders.
   pub missing_file_reference_ids: FxIndexMap<CompactStr, Span>,
+  /// Code returned by `resolveFileUrl` that failed to parse, as `(plugin name, message)`.
+  /// Collected here because the finalizer is sync and rayon-parallel; `finalize_modules`
+  /// turns these into plugin-attributed build errors once the parallel pass is done.
+  pub resolve_file_url_errors: Vec<(Cow<'static, str>, String)>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -1065,7 +1071,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         _ => {}
       }
-      return self.rewrite_rollup_file_url(property_name, original_expr_span);
+      return self.rewrite_rollup_file_url(
+        property_name,
+        original_expr_span,
+        member_expr.node_id(),
+      );
     }
     None
   }
@@ -1074,9 +1084,33 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &mut self,
     property_name: &str,
     original_expr_span: Span,
+    node_id: NodeId,
   ) -> Option<Expression<'ast>> {
     // rewrite `import.meta.ROLLUP_FILE_URL_<referenceId>`
     if let Some(reference_id) = property_name.strip_prefix("ROLLUP_FILE_URL_") {
+      // A plugin's `resolveFileUrl` result wins over the default. Copy the `&'me`
+      // reference out of `ctx` first, so the lookup does not borrow `self` and the
+      // error path below can borrow it mutably.
+      let resolved_file_urls = self.ctx.resolved_file_urls;
+      if let Some(resolved) = resolved_file_urls.get(&(self.ctx.idx, node_id)) {
+        // The only place this code is parsed. The driver deliberately hands it over
+        // unparsed, along with the plugin that produced it.
+        match parse_injected_expression(self.alloc, &resolved.code) {
+          Ok(expr) => return Some(expr),
+          Err(diagnostics) => {
+            self.resolve_file_url_errors.push((
+              resolved.plugin_name.clone(),
+              format!(
+                "The `resolveFileUrl` hook returned code that is not a valid expression for referenceId={reference_id}: {}
+{diagnostics}",
+                resolved.code
+              ),
+            ));
+            return None;
+          }
+        }
+      }
+
       // compute relative path from chunk to asset
       let Ok(asset_file_name) = self.ctx.file_emitter.get_file_name(reference_id) else {
         // Keep the span of the first access, so the diagnostic can point at the source.

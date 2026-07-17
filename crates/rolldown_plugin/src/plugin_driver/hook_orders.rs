@@ -22,6 +22,7 @@ pub struct PluginHookOrders {
   pub order_by_outro_meta: Vec<PluginIdx>,
   pub order_by_render_chunk_meta: Vec<PluginIdx>,
   pub order_by_augment_chunk_hash_meta: Vec<PluginIdx>,
+  pub order_by_resolve_file_url_meta: Vec<PluginIdx>,
   pub order_by_render_error_meta: Vec<PluginIdx>,
   pub order_by_generate_bundle_meta: Vec<PluginIdx>,
   pub order_by_write_bundle_meta: Vec<PluginIdx>,
@@ -120,6 +121,12 @@ impl PluginHookOrders {
         plugin_usage_vec,
         HookUsage::AugmentChunkHash,
         |p| p.call_augment_chunk_hash_meta(),
+      ),
+      order_by_resolve_file_url_meta: Self::sort_plugins_by_hook_meta(
+        index_plugins,
+        plugin_usage_vec,
+        HookUsage::ResolveFileUrl,
+        |p| p.call_resolve_file_url_meta(),
       ),
       order_by_render_error_meta: Self::sort_plugins_by_hook_meta(
         index_plugins,

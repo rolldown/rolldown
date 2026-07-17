@@ -51,6 +51,7 @@ Rust Core (crates/rolldown)
 - `crates/rolldown_watcher`: Watch mode coordinator. See `internal-docs/watch-mode/implementation.md` for architecture, state machine, debounce/consolidation rules, and event lifecycle.
 - `docs/`: Documentation site built with VitePress.
 - `internal-docs/`: Internal design & implementation docs — one folder per feature (`design.md` + `implementation.md`). See the "Context Engineering" section above.
+- Path manipulation: read `internal-docs/path-manipulation/style-guide.md` before composing paths, and prefer its consuming `rolldown_std_utils` helpers for owned `PathBuf` values.
 
 ## Auto-generated or Submodule Files
 

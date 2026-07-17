@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 
 use crate::js_regex::HybridRegex;
 use fast_glob::glob_match;
-use sugar_path::SugarPath;
+use rolldown_std_utils::normalize_path_buf_to_slash;
 
 #[derive(Debug, Clone)]
 pub enum StringOrRegex {
@@ -105,9 +105,7 @@ fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
   if glob.starts_with("**") || Path::new(glob).is_absolute() {
     normalize_path(glob)
   } else {
-    let joined = Path::new(cwd).join(glob);
-    let final_path = joined.normalize();
-    Cow::Owned(normalize_path(&final_path.to_string_lossy()).into_owned())
+    Cow::Owned(normalize_path_buf_to_slash(Path::new(cwd).join(glob)))
   }
 }
 
@@ -313,8 +311,25 @@ filter: {:?}, id: {id}",
   }
 
   #[test]
-  fn test_get_matcher_string() {
-    assert_eq!(get_matcher_string("./foo/*.txt", "/home/rolldown"), "/home/rolldown/foo/*.txt");
+  fn relative_current_dir_globs_match_like_clean_globs() {
+    #[cfg(windows)]
+    let (cwd, matching_id, nonmatching_id) =
+      (r"C:\home\rolldown", r"C:\home\rolldown\foo\file.txt", r"C:\home\rolldown\bar\file.txt");
+    #[cfg(not(windows))]
+    let (cwd, matching_id, nonmatching_id) =
+      ("/home/rolldown", "/home/rolldown/foo/file.txt", "/home/rolldown/bar/file.txt");
+
+    let dirty = get_matcher_string("./foo/*.txt", cwd);
+    let clean = get_matcher_string("foo/*.txt", cwd);
+    assert_eq!(dirty, clean);
+
+    for glob in ["./foo/*.txt", "foo/*.txt"] {
+      let pattern = [StringOrRegex::new(glob.to_string(), None).unwrap()];
+      assert_eq!(filter(None, Some(&pattern), matching_id, cwd), FilterResult::Match(true));
+      assert_eq!(filter(None, Some(&pattern), nonmatching_id, cwd), FilterResult::NoneMatch(false),);
+      assert_eq!(filter(Some(&pattern), None, matching_id, cwd), FilterResult::Match(false));
+      assert_eq!(filter(Some(&pattern), None, nonmatching_id, cwd), FilterResult::NoneMatch(true),);
+    }
   }
 
   #[test]

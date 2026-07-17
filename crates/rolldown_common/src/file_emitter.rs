@@ -7,7 +7,7 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet, Entry};
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
-use rolldown_std_utils::path_buf_to_slash;
+use rolldown_std_utils::normalize_path_buf_to_slash;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::make_unique_name::make_unique_name;
 use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
@@ -16,7 +16,6 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use sugar_path::SugarPathBuf;
 
 #[derive(Debug, Default)]
 pub struct EmittedAsset {
@@ -294,7 +293,7 @@ impl FileEmitter {
       let name = path.file_stem().and_then(OsStr::to_str).map(|stem| {
         if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
           // Normalize to resolve ".." and "." where possible, then convert to forward slashes
-          path_buf_to_slash(parent.join(stem).into_normalized())
+          normalize_path_buf_to_slash(parent.join(stem))
         } else {
           stem.to_string()
         }

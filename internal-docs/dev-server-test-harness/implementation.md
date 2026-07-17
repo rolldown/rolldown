@@ -149,8 +149,10 @@ serving. What the harness does own lives in `src/vite-server.ts`:
 Fixes and test adjustments belong on the vitejs/vite `rolldown-canary` branch,
 which both this harness and `packages/vite-tests` track. Everything
 environment-specific happens in untracked files, via the
-`scripts/src/setup-vite/` script (`just setup-vite`, idempotent, `vp`-only;
-its checkout step is also reused by `packages/vite-tests`):
+`scripts/src/setup-vite/` script (`just setup-vite`, idempotent, `vp`-only).
+It is the only entry point that touches `vite/`: the command that moves the
+commit also rebuilds everything right after, so the checkout and the built
+dist never drift apart. The steps:
 
 1. ensure `vite/` is at the latest `rolldown-canary` rebased onto `main`
    (clone if missing, update otherwise); a checkout taken over by the
@@ -167,10 +169,9 @@ its checkout step is also reused by `packages/vite-tests`):
 Repo-wide tools ignore `vite/**` (a `.gitignore`
 entry covers gitignore-respecting walkers like oxfmt, plus `.typos.toml` and
 `.ls-lint.json` entries) — a repo-wide `vp fmt --write` must never touch
-files inside `vite/`. On CI, the checkout is created on demand: the dev-server
-workflow via the setup step, the vite-tests jobs via `run.ts` (which clones
-the checkout locally to run Vite's own suite); every other job needs no Vite
-checkout.
+files inside `vite/`. On CI, both the dev-server workflow and the vite-tests
+jobs prepare the checkout via a setup-vite step (`run.ts` then clones it
+locally to run Vite's own suite); every other job needs no Vite checkout.
 
 ### Server entry point (`src/`)
 

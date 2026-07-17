@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { styleText } from 'node:util';
 import { x } from 'tinyexec';
-import { ensureViteCheckout, viteDir } from '../../scripts/src/setup-vite/checkout.js';
 
+const VITE_DIR = path.resolve(import.meta.dirname, '../../vite');
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
 const OVERRIDES = [
   `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`,
@@ -45,18 +45,23 @@ async function runCmdAndPipeOrExit(title: string, cmdOptions: Parameters<typeof 
 
 fs.rmSync(REPO_PATH, { recursive: true, force: true });
 
-// Reuse the shared `vite/` checkout at the repo root (kept at the latest
-// `rolldown-canary` rebased onto the latest `main`, see
-// scripts/src/setup-vite/checkout.ts), the same code the dev-server tests
-// run on. The tests run on a throwaway LOCAL clone of it, never on the
-// checkout itself: this suite edits tracked files (pnpm overrides) and the
-// checkout must stay unpatched. The clone shares objects via hardlinks, so
-// no network is needed beyond the checkout itself.
-printTitle('# Ensuring the vite checkout...');
-ensureViteCheckout();
+// Reuse the shared `vite/` checkout at the repo root, prepared by
+// `just setup-vite` (the latest `rolldown-canary` rebased onto the latest
+// `main`), the same code the dev-server tests run on. Setup happens only
+// there, never here, so the checkout and the dev-server's built vite dist
+// cannot drift apart. The tests run on a throwaway LOCAL clone of the
+// checkout, never on the checkout itself: this suite edits tracked files
+// (pnpm overrides) and the checkout must stay unpatched. The clone shares
+// objects via hardlinks, so it needs no network.
+if (!fs.existsSync(path.join(VITE_DIR, 'package.json'))) {
+  console.error(
+    styleText(['red', 'bold'], `Vite checkout not found at ${VITE_DIR}. Run \`just setup-vite\` first.`),
+  );
+  process.exit(1);
+}
 await runCmdAndPipeOrExit(
   '# Cloning the local vite checkout...',
-  ['git', ['clone', viteDir, REPO_PATH]],
+  ['git', ['clone', VITE_DIR, REPO_PATH]],
 );
 
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');

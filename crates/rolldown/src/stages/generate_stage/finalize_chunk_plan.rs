@@ -46,6 +46,15 @@ impl GenerateStage<'_> {
       let runtime_chunk_before = chunk_graph.module_to_chunk[runtime_idx];
       self.sweep_unused_runtime_module(chunk_graph, used_symbol_refs);
       if runtime_chunk_before.is_some() && chunk_graph.module_to_chunk[runtime_idx].is_none() {
+        // The sweep removed the runtime from its chunk. When that chunk is still live (the runtime
+        // co-hosted with user modules), its `modules[0]` changed, so the `exec_order` the
+        // provisional `assign_chunk_exec_orders` in `generate_chunks` derived from the runtime
+        // (`exec_order` 0) is now stale and would sort the chunk ahead of chunks it should follow.
+        // Re-derive every live chunk's `exec_order` from its current lead module before rebuilding
+        // the sorted list, which restores the ordering the pre-#10104 pipeline produced by sweeping
+        // before assignment. See `assign_chunk_exec_orders` for how this composes with the
+        // strict-only `renumber_live_chunks`.
+        self.assign_chunk_exec_orders(chunk_graph);
         chunk_graph.rebuild_sorted_chunk_idx_vec(true);
       }
     }

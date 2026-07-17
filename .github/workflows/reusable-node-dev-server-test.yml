@@ -44,11 +44,18 @@ jobs:
       - name: Build `@rolldown/test-dev-server`
         run: vp run --filter '@rolldown/test-dev-server' build
 
+      # The rebase in setup-vite needs a committer identity.
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
       # The browser-platform tests run on Vite's full bundle mode, served from
-      # the vendored Vite submodule (kept pristine — no rolldown-side patches).
-      # setup-vite inits the submodule, installs its pinned deps, builds vite,
-      # and points its runtime `rolldown` resolution at packages/rolldown.
-      - name: Setup Vite submodule (browser-platform backend)
+      # a clone of vitejs/vite at the latest rolldown-canary rebased onto the
+      # latest main (kept unpatched, no rolldown-side edits). setup-vite
+      # creates the checkout, installs its pinned deps, builds vite, and
+      # points its runtime `rolldown` resolution at packages/rolldown.
+      - name: Setup Vite checkout (browser-platform backend)
         run: vp run --filter '@rolldown-internal/scripts' setup-vite
 
       - name: Install Playwright

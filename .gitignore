@@ -192,6 +192,7 @@ nul
 # Zed local config
 .zed
 
-# Vendored Vite submodule (test-dev-server browser backend): the gitlink is
-# tracked, but repo tools must not lint/format the submodule contents.
+# Vite checkout (test-dev-server browser backend): a plain clone of
+# vitejs/vite created by `just setup-vite`, never tracked, and repo tools
+# must not lint/format its contents.
 /vite/

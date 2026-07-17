@@ -45,12 +45,14 @@ async function runCmdAndPipeOrExit(title: string, cmdOptions: Parameters<typeof 
 
 fs.rmSync(REPO_PATH, { recursive: true, force: true });
 
-// The tests run on a throwaway LOCAL clone of the shared `vite/` submodule,
-// never on the submodule itself: this suite edits tracked files (pnpm
-// overrides, spec patches) and the submodule must stay pristine. The clone
-// shares objects via hardlinks (no network) and checks out the submodule's
-// current HEAD — the same commit the dev-server tests run on.
-printTitle('# Ensuring the vite submodule checkout...');
+// Reuse the shared `vite/` checkout at the repo root (kept at the latest
+// `rolldown-canary` rebased onto the latest `main`, see
+// scripts/src/setup-vite/checkout.ts), the same code the dev-server tests
+// run on. The tests run on a throwaway LOCAL clone of it, never on the
+// checkout itself: this suite edits tracked files (pnpm overrides) and the
+// checkout must stay unpatched. The clone shares objects via hardlinks, so
+// no network is needed beyond the checkout itself.
+printTitle('# Ensuring the vite checkout...');
 ensureViteCheckout();
 await runCmdAndPipeOrExit(
   '# Cloning the local vite checkout...',
@@ -78,46 +80,6 @@ await runCmdAndPipeOrExit(
   '# Running `pnpm run build`...',
   ['pnpm', ['run', 'build'], { nodeOptions: { cwd: REPO_PATH } }],
 );
-
-// Skip known failing tests
-// https://github.com/rolldown/rolldown/issues/8839
-const assetsSpecPath = path.resolve(REPO_PATH, 'playground/assets/__tests__/assets.spec.ts');
-const assetsSpec = fs.readFileSync(assetsSpecPath, 'utf-8');
-fs.writeFileSync(assetsSpecPath, assetsSpec.replace(
-  "test('import with raw query'",
-  "test.skip('import with raw query'"
-), 'utf-8');
-
-// Rolldown keeps the deduplicated CSS file under the `style2-*` name, not
-// `style-*` (same adjustment as vitejs/vite@d716106b5 on the old rolldown-canary branch).
-const cssCodesplitSpecPath = path.resolve(
-  REPO_PATH,
-  'playground/css-codesplit/__tests__/css-codesplit-consistent.spec.ts',
-);
-const cssCodesplitSpec = fs.readFileSync(cssCodesplitSpecPath, 'utf-8');
-fs.writeFileSync(cssCodesplitSpecPath, cssCodesplitSpec.replaceAll(
-  `      expect(findAssetFile(/style2-.+\\.css/)).toBeUndefined()
-      expect(findAssetFile(/style-.+\\.css/)).toMatch('h2{color:#00f}')`,
-  `      expect(findAssetFile(/style-.+\\.css/)).toBeUndefined()
-      expect(findAssetFile(/style2-.+\\.css/)).toMatch('h2{color:#00f}')`,
-), 'utf-8');
-
-// With client-side HMR, `import.meta.hot.invalidate()` is handled inside the
-// client and never reaches the server, so there is no "hmr invalidate" server
-// log anymore. Assert the user-visible result instead.
-const fbmHmrSpecPath = path.resolve(
-  REPO_PATH,
-  'playground/hmr-full-bundle-mode/__tests__/hmr-full-bundle-mode.spec.ts',
-);
-const fbmHmrSpec = fs.readFileSync(fbmHmrSpecPath, 'utf-8');
-fs.writeFileSync(fbmHmrSpecPath, fbmHmrSpec.replace(
-  `    await expect
-      .poll(() => serverLogs.slice(logIndex).join('\\n'))
-      .toContain('hmr invalidate')`,
-  `    await expect
-      .poll(() => page.textContent('.invalidation-parent'))
-      .toBe('child updated')`,
-), 'utf-8');
 
 // Remove VITE_PLUS_* env vars to prevent leaking into loadEnv() test snapshots
 for (const key of Object.keys(process.env)) {

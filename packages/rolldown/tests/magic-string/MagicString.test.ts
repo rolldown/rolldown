@@ -1816,7 +1816,7 @@ describe('MagicString', () => {
       assert.strictEqual(s.toString(), '1 3 1 2');
     });
 
-    it.skip('works with string replace and function replacer', () => {
+    it('works with string replace and function replacer', () => {
       const code = '1 2 1 2';
       const s = new MagicString(code);
       let index = -1;
@@ -1861,7 +1861,7 @@ describe('MagicString', () => {
       assert.strictEqual(s.toString(), '$ $ $ $ a b c');
     });
 
-    it.skip('works with global regex replace function', () => {
+    it('works with global regex replace function', () => {
       const code = 'hey this is magic';
       const s = new MagicString(code);
 
@@ -1870,7 +1870,7 @@ describe('MagicString', () => {
       assert.strictEqual(s.toString(), 'Hey This Is Magic');
     });
 
-    it.skip('replace function offset', () => {
+    it('replace function offset', () => {
       // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace#specifying_a_function_as_a_parameter
       function replacer(match, p1, p2, p3, offset, string, groups) {
         // p1 is nondigits, p2 digits, and p3 non-alphanumerics
@@ -1884,7 +1884,7 @@ describe('MagicString', () => {
       );
     });
 
-    it.skip('should ignore non-changed replacements', () => {
+    it('should ignore non-changed replacements', () => {
       const code = 'a12bc345#$*%';
       const matched = [];
 
@@ -1908,7 +1908,7 @@ describe('MagicString', () => {
     it('works with string replace', () => {
       assert.strictEqual(new MagicString('1212').replaceAll('2', '3').toString(), '1313');
     });
-    it.skip('works with string replace and function replacer', () => {
+    it('works with string replace and function replacer', () => {
       const code = '1 2 1 2';
       const s = new MagicString(code);
       const indexs = [];
@@ -1937,7 +1937,7 @@ describe('MagicString', () => {
       assert.strictEqual(new MagicString('121212').replaceAll('12', '21').toString(), '212121');
     });
 
-    it.skip('global regex result the same as .replace', () => {
+    it('global regex result the same as .replace', () => {
       assert.strictEqual(
         new MagicString('1 2 3 4 a b c').replaceAll(/(\d)/g, 'xx$1$10').toString(),
         new MagicString('1 2 3 4 a b c').replace(/(\d)/g, 'xx$1$10').toString(),
@@ -1958,7 +1958,7 @@ describe('MagicString', () => {
       );
     });
 
-    it.skip('rejects with non-global regexp', () => {
+    it('rejects with non-global regexp', () => {
       assert.throws(() => new MagicString('123').replaceAll(/./, ''), {
         name: 'TypeError',
         message: 'MagicString.prototype.replaceAll called with a non-global RegExp argument',

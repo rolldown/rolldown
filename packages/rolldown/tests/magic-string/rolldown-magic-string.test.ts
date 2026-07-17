@@ -515,6 +515,52 @@ describe('regex replace', () => {
   });
 });
 
+describe('function replacer over surrogate pairs', () => {
+  // A non-Unicode regex like `/./g` matches each UTF-16 code unit, so it splits an
+  // astral character into two matches. Upstream (a UTF-16 rope) replaces each half
+  // independently; our UTF-8 store cannot address a lone surrogate, but when both
+  // halves are replaced we coalesce the two edits into one overwrite of the whole
+  // character — reproducing upstream's output without splitting the string.
+  it('coalesces both halves of a pair into one replacement', () => {
+    const s = new MagicString('🤷');
+    s.replace(/./g, () => 'x');
+    assert.strictEqual(s.toString(), 'xx');
+  });
+
+  it('coalesces a pair embedded in ASCII', () => {
+    const s = new MagicString('a🤷b');
+    s.replace(/./g, () => '#');
+    assert.strictEqual(s.toString(), '####');
+  });
+
+  it('replaces the whole character once with the Unicode flag', () => {
+    const s = new MagicString('🤷');
+    s.replace(/./gu, () => 'x');
+    assert.strictEqual(s.toString(), 'x');
+  });
+
+  it('is a no-op when the replacer returns each match unchanged', () => {
+    const s = new MagicString('🤷');
+    s.replace(/./g, (m) => m);
+    assert.strictEqual(s.toString(), '🤷');
+    assert.strictEqual(s.hasChanged(), false);
+  });
+
+  // Replacing only one half of a pair would strand the other as a lone surrogate,
+  // which UTF-8 cannot represent — reject it atomically, leaving the string untouched.
+  it('throws without mutating when only the high half is replaced', () => {
+    const s = new MagicString('🤷');
+    assert.throws(() => s.replace(/./g, (m, i) => (i === 0 ? 'X' : m)), /splits a surrogate pair/);
+    assert.strictEqual(s.toString(), '🤷');
+  });
+
+  it('throws without mutating when only the low half is replaced', () => {
+    const s = new MagicString('🤷');
+    assert.throws(() => s.replace(/./g, (m, i) => (i === 1 ? 'X' : m)), /splits a surrogate pair/);
+    assert.strictEqual(s.toString(), '🤷');
+  });
+});
+
 describe('lastLine', () => {
   it('returns the content after the last newline', () => {
     assert.strictEqual(new MagicString('abc\ndef').lastLine(), 'def');

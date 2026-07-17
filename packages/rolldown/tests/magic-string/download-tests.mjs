@@ -125,16 +125,10 @@ const SKIP_TESTS = [
   'should clone sourcemapLocations', // uses sourcemapLocations
   // Note: 'should works' (hasChanged) now works — clone preserves hasChanged state
   // Note: 'should not report change if content is identical' no longer in upstream tests
-  // replace/replaceAll — regex with string replacement now supported in Rust binding
-  // Note: 'works with global regex replace' now works
-  // Note: 'works with global regex replace $$' now works
-  'rejects with non-global regexp', // napi-rs can't throw TypeError (only Error), test expects TypeError
-  // Note: 'global regex result the same as .replace' — has function replacer parts, kept skipped
-  'works with global regex replace function', // function replacer not supported
-  'replace function offset', // function replacer not supported
-  'works with string replace and function replacer', // function replacer not supported
-  'should ignore non-changed replacements', // uses function replacer
-  'global regex result the same as .replace', // uses function replacer in one assertion
+  // replace/replaceAll — regex, function replacer, and non-global TypeError all supported
+  // (regex + string replacement in the Rust binding; function replacers on the JS side in
+  // binding-magic-string.ts; 'rejects with non-global regexp' passes via the wrapper's
+  // real TypeError)
   // Note: 'should support length' and 'should support isEmpty' now work correctly
   // generateMap-specific skips (features not in string_wizard)
   'should generate a correct sourcemap including correct lines', // uses generateDecodedMap which has different mappings count

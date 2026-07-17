@@ -85,21 +85,162 @@ NativeBindingMagicString.prototype.update = function (
   return nativeUpdate.call(this, start, end, content, options);
 };
 
-// Override replace/replaceAll to support RegExp patterns.
-// String patterns delegate to the native Rust implementation.
-// RegExp patterns delegate to native replaceRegex which uses the regress crate
-// for ECMAScript-compatible regex matching with capture groups.
+// Override replace/replaceAll to support RegExp patterns and function replacers.
+// String patterns with string replacements delegate to the native Rust implementation.
+// RegExp patterns with string replacements delegate to native replaceRegex which uses
+// the regress crate for ECMAScript-compatible regex matching with capture groups.
+// Function replacers run entirely on the JS side (transcribed from magic-string's
+// `_replaceRegexp`/`_replaceString`/`_replaceAllString`): the match runs against
+// `original` with a real JS RegExp and each changed match becomes an `overwrite()`.
+// A JS callback cannot cross the FFI boundary synchronously, and this keeps regex
+// semantics (lastIndex, named groups, unicode flags) exactly JavaScript's.
 // eslint-disable-next-line @typescript-eslint/unbound-method -- intentionally saving refs before overriding
 const nativeReplace = NativeBindingMagicString.prototype.replace;
 // eslint-disable-next-line @typescript-eslint/unbound-method
 const nativeReplaceAll = NativeBindingMagicString.prototype.replaceAll;
 
+type ReplacerFunction = (substring: string, ...args: any[]) => string;
+
+// Spec `AdvanceStringIndex` (ECMA-262): the next code unit, or the next code point
+// when the regexp is unicode-aware (`u`/`v`) and we're sitting on a surrogate pair.
+// Used to step past a zero-width match so the exec loop below can terminate.
+function advanceStringIndex(str: string, index: number, unicode: boolean): number {
+  if (!unicode || index + 1 >= str.length) return index + 1;
+  const first = str.charCodeAt(index);
+  if (first < 0xd800 || first > 0xdbff) return index + 1;
+  const second = str.charCodeAt(index + 1);
+  if (second < 0xdc00 || second > 0xdfff) return index + 1;
+  return index + 2;
+}
+
+interface Edit {
+  start: number;
+  end: number;
+  value: string;
+}
+
+// A UTF-16 index sits *inside* a surrogate pair when the unit before it is a high
+// surrogate and the unit at it is a low surrogate. Overwriting across such a boundary
+// would split an indivisible UTF-8 character, which our native store cannot represent.
+function isSurrogatePairInterior(str: string, index: number): boolean {
+  if (index <= 0 || index >= str.length) return false;
+  const prev = str.charCodeAt(index - 1);
+  const cur = str.charCodeAt(index);
+  return prev >= 0xd800 && prev <= 0xdbff && cur >= 0xdc00 && cur <= 0xdfff;
+}
+
+// Upstream edits a UTF-16 rope one code unit at a time, so a non-Unicode regexp like
+// `/./g` can replace each half of a surrogate pair independently. Our UTF-8 store cannot
+// address a lone surrogate, but when *both* halves are replaced the two adjacent edits
+// coalesce into one overwrite of the whole character (`🤷` -> `"x" + "x"` = `"xx"`),
+// reproducing upstream without ever splitting the string. When only one half is replaced
+// the result would contain a lone surrogate, which is unrepresentable — so we throw.
+// `edits` must be in ascending, non-overlapping order (as regex matches always are).
+function coalesceSurrogateEdits(original: string, edits: Edit[]): Edit[] {
+  const merged: Edit[] = [];
+  for (let i = 0; i < edits.length; ) {
+    let { start, end, value } = edits[i];
+    i++;
+    if (isSurrogatePairInterior(original, start)) {
+      // The high half preceding `start` is untouched, so overwriting from here would
+      // strand it as a lone surrogate.
+      throw new Error(
+        `Cannot replace a range that splits a surrogate pair at UTF-16 index ${start}; ` +
+          'use a Unicode-aware RegExp (u or v flag)',
+      );
+    }
+    while (isSurrogatePairInterior(original, end)) {
+      // `end` bisects a pair: the low half is only representable if the adjacent edit
+      // consumes it too. Merge that edit in; otherwise the low half is stranded.
+      const next = edits[i];
+      if (!next || next.start !== end) {
+        throw new Error(
+          `Cannot replace a range that splits a surrogate pair at UTF-16 index ${end}; ` +
+            'use a Unicode-aware RegExp (u or v flag)',
+        );
+      }
+      value += next.value;
+      end = next.end;
+      i++;
+    }
+    merged.push({ start, end, value });
+  }
+  return merged;
+}
+
+// The callback sees the same arguments as `String.prototype.replace`:
+// (match, p1, ..., pn, offset, string, groups). Like upstream, `groups` is always
+// passed (undefined when the pattern has no named groups), and an overwrite is only
+// issued when the replacement differs from the matched text, so a no-op replacer
+// leaves `hasChanged()` false. Matches are collected before any callback/overwrite runs,
+// so `coalesceSurrogateEdits` can see the full set (needed to merge surrogate-pair halves).
+function replaceRegexWithFunction(
+  s: any,
+  searchValue: RegExp,
+  replacement: ReplacerFunction,
+): void {
+  const original: string = s.original;
+  const matches: RegExpMatchArray[] = [];
+  if (searchValue.global) {
+    // Upstream exec-loops from the regex's current lastIndex (it does not pre-reset
+    // the way `String.prototype.replace` does) and leaves it at 0 on exhaustion.
+    const fullUnicode = searchValue.unicode || searchValue.unicodeSets;
+    let match: RegExpExecArray | null;
+    while ((match = searchValue.exec(original))) {
+      matches.push(match);
+      // A zero-width match (e.g. `/(?=a)/g`, `/^/gm`) leaves lastIndex unchanged, so
+      // the next exec() would re-match the same position forever. Upstream omits this
+      // guard and hangs; advance lastIndex ourselves per the spec instead.
+      if (match[0].length === 0) {
+        searchValue.lastIndex = advanceStringIndex(original, searchValue.lastIndex, fullUnicode);
+      }
+    }
+  } else {
+    const match = original.match(searchValue);
+    if (match) {
+      matches.push(match);
+    }
+  }
+  const edits: Edit[] = [];
+  for (const match of matches) {
+    if (match.index == null) continue;
+    const value = replacement(
+      ...(match as [string, ...string[]]),
+      match.index,
+      original,
+      match.groups,
+    );
+    if (value !== match[0]) {
+      edits.push({ start: match.index, end: match.index + match[0].length, value });
+    }
+  }
+  for (const { start, end, value } of coalesceSurrogateEdits(original, edits)) {
+    s.overwrite(start, end, value);
+  }
+}
+
 NativeBindingMagicString.prototype.replace = function (
   searchValue: string | RegExp,
-  replacement: string,
+  replacement: string | ReplacerFunction,
 ): any {
   if (typeof searchValue === 'string') {
+    if (typeof replacement === 'function') {
+      // Upstream `_replaceString`: first occurrence only.
+      const original: string = (this as any).original;
+      const index = original.indexOf(searchValue);
+      if (index !== -1) {
+        const value = replacement(searchValue, index, original);
+        if (searchValue !== value) {
+          this.overwrite(index, index + searchValue.length, value);
+        }
+      }
+      return this;
+    }
     return nativeReplace.call(this, searchValue, replacement);
+  }
+  if (typeof replacement === 'function') {
+    replaceRegexWithFunction(this, searchValue, replacement);
+    return this;
   }
   // For global regexes, JS resets lastIndex to 0 before matching.
   if (searchValue.global) {
@@ -121,15 +262,44 @@ NativeBindingMagicString.prototype.replace = function (
 
 NativeBindingMagicString.prototype.replaceAll = function (
   searchValue: string | RegExp,
-  replacement: string,
+  replacement: string | ReplacerFunction,
 ): any {
   if (typeof searchValue === 'string') {
+    if (typeof replacement === 'function') {
+      // Upstream `_replaceAllString`: every occurrence, non-overlapping.
+      const original: string = (this as any).original;
+      const stringLength = searchValue.length;
+      if (stringLength === 0) {
+        // An empty search matches at every index without advancing, so upstream's
+        // indexOf loop spins forever. A zero-length overwrite is unsupported anyway,
+        // so reject it exactly like the native path rather than hanging.
+        throw new Error(
+          'Cannot overwrite a zero-length range – use appendLeft or prependRight instead',
+        );
+      }
+      for (
+        let index = original.indexOf(searchValue);
+        index !== -1;
+        index = original.indexOf(searchValue, index + stringLength)
+      ) {
+        const previous = original.slice(index, index + stringLength);
+        const value = replacement(previous, index, original);
+        if (previous !== value) {
+          this.overwrite(index, index + stringLength, value);
+        }
+      }
+      return this;
+    }
     return nativeReplaceAll.call(this, searchValue, replacement);
   }
   if (!searchValue.global) {
     throw new TypeError(
       'MagicString.prototype.replaceAll called with a non-global RegExp argument',
     );
+  }
+  if (typeof replacement === 'function') {
+    replaceRegexWithFunction(this, searchValue, replacement);
+    return this;
   }
   searchValue.lastIndex = 0;
   (this as any).replaceRegex(searchValue, replacement);
@@ -139,10 +309,16 @@ NativeBindingMagicString.prototype.replaceAll = function (
 
 export interface RolldownMagicString extends NativeBindingMagicString {
   readonly isRolldownMagicString: true;
-  /** Accepts a string or RegExp pattern. RegExp supports `$&`, `$$`, and `$N` substitutions. */
-  replace(from: string | RegExp, to: string): this;
-  /** Accepts a string or RegExp pattern. RegExp must have the global (`g`) flag. */
-  replaceAll(from: string | RegExp, to: string): this;
+  /**
+   * Accepts a string or RegExp pattern. String replacements support `$&`, `$$`, and `$N`
+   * substitutions; a function replacer is called like `String.prototype.replace`'s.
+   */
+  replace(from: string | RegExp, to: string | ReplacerFunction): this;
+  /**
+   * Accepts a string or RegExp pattern. RegExp must have the global (`g`) flag.
+   * A function replacer is called like `String.prototype.replace`'s, once per match.
+   */
+  replaceAll(from: string | RegExp, to: string | ReplacerFunction): this;
 }
 
 type RolldownMagicStringConstructor = Omit<typeof NativeBindingMagicString, 'prototype'> & {

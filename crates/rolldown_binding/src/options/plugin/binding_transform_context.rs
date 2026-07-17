@@ -37,8 +37,10 @@ impl BindingTransformPluginContext {
     &self,
     magic_string: &mut BindingMagicString<'static>,
   ) -> napi::Result<Option<String>> {
-    // This moves the contents out, leaving `magic_string` unusable from JS onwards.
-    let internal_magic_string = magic_string.take_inner();
+    // This moves the contents out, leaving `magic_string` unusable from JS onwards —
+    // including for a repeated send, which errors here instead of queueing the empty
+    // leftover into the sourcemap channel.
+    let internal_magic_string = magic_string.take_inner()?;
 
     self.inner.send_magic_string(internal_magic_string).map_err(|_| {
       napi::Error::from_reason(

@@ -418,10 +418,13 @@ pub struct BindingMagicString<'a> {
 
 impl<'a> BindingMagicString<'a> {
   /// Moves the inner `MagicString` out for delivery to the sourcemap worker, marking this
-  /// instance unusable. See [`Self::consumed`].
-  pub(crate) fn take_inner(&mut self) -> MagicString<'a> {
+  /// instance unusable. Errors if the instance was already consumed: repeating the transfer
+  /// would hand the empty `MagicString` left behind by the first move to the sourcemap
+  /// channel, silently replacing the real map. See [`Self::consumed`].
+  pub(crate) fn take_inner(&mut self) -> napi::Result<MagicString<'a>> {
+    self.ensure_live()?;
     self.consumed = true;
-    std::mem::take(&mut self.inner)
+    Ok(std::mem::take(&mut self.inner))
   }
 
   /// Errors if this instance was already consumed by `sendMagicString`.

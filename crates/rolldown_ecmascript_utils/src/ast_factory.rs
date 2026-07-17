@@ -1,7 +1,6 @@
 use oxc::{
   allocator::{self, Allocator, GetAllocator, IntoIn},
   ast::{
-    AstBuilder, NONE,
     ast::{
       Argument, ArrowFunctionExpression, AssignmentOperator, AssignmentTarget, BindingIdentifier,
       BindingPattern, CallExpression, ClassElement, Declaration, ExportDefaultDeclarationKind,
@@ -13,7 +12,7 @@ use oxc::{
       SimpleAssignmentTarget, Statement, StaticMemberExpression, StringLiteral,
       VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
     },
-    builder::GetAstBuilder,
+    builder::{AstBuilder, GetAstBuilder, NONE},
   },
   span::{GetSpanMut, SPAN, Span},
 };
@@ -30,7 +29,6 @@ use rolldown_utils::ecmascript::is_validate_identifier_name;
 /// at one point.
 ///
 /// See `internal-docs/ast-construction/implementation.md`.
-#[derive(Clone, Copy)]
 pub struct AstFactory<'ast>(AstBuilder<'ast>);
 
 /// Options for [`AstFactory::make_esm_wrapper_stmt`], grouping the wrapper's binding, body and

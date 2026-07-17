@@ -1,16 +1,13 @@
 use bitflags::bitflags;
 use oxc::allocator::GetAllocator;
 use oxc::ast::ast::ObjectPropertyKind;
-use oxc::ast::builder::GetAstBuilder;
+use oxc::ast::builder::{GetAstBuilder, NONE};
 use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, CloneIn, Dummy, IntoIn, ReplaceWith, TakeIn},
-  ast::{
-    NONE,
-    ast::{
-      self, ClassElement, Expression, IdentifierReference, ImportExpression, NumberBase, Statement,
-      VariableDeclarationKind,
-    },
+  ast::ast::{
+    self, ClassElement, Expression, IdentifierReference, ImportExpression, NumberBase, Statement,
+    VariableDeclarationKind,
   },
   span::{GetSpan, GetSpanMut, SPAN, Span},
 };
@@ -288,11 +285,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
 
-    // `AstFactory` is `Copy`, so copying it out lets the `&mut self` iterator below stay borrowed
-    // while we still construct nodes through `factory`. That decouples node construction from the
-    // borrow without the throwaway heap `Vec` the previous `.collect()` needed: the common 0/1
-    // cases now allocate nothing, and only the rare sequence case allocates — straight in the arena.
-    let factory = self.ast_factory;
+    // A fresh `AstFactory` (a free wrapper over the arena reference) lets the `&mut self` iterator
+    // below stay borrowed while we still construct nodes through `factory`. That decouples node
+    // construction from the borrow without the throwaway heap `Vec` the previous `.collect()`
+    // needed: the common 0/1 cases now allocate nothing, and only the rare sequence case
+    // allocates — straight in the arena.
+    let factory = AstFactory::new(self.alloc);
     let mut init_exprs = self
       .collect_wrapped_esm_init_modules_for_import_record(rec_idx)
       .into_iter()
@@ -469,7 +467,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         || (self.state.contains(TraverseState::SmartInlineConst) || meta.safe_to_inline)
       {
         return (
-          meta.value.to_expression(*self.ast_factory.builder()),
+          meta.value.to_expression(self.ast_factory.builder()),
           FinalizedExprProcessHint::empty(),
         );
       }
@@ -654,7 +652,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
     Some((
-      constant_meta.value.to_expression(*self.ast_factory.builder()),
+      constant_meta.value.to_expression(self.ast_factory.builder()),
       FinalizedExprProcessHint::empty(),
     ))
   }
@@ -758,7 +756,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let symbol_name = canonical_ref.name(self.ctx.symbol_db);
     let member_map = module.ecma_view.enum_member_value_map.get(symbol_name)?;
     let meta = member_map.get(property_name)?;
-    Some(meta.value.to_expression(*self.ast_factory.builder()))
+    Some(meta.value.to_expression(self.ast_factory.builder()))
   }
 
   fn var_declaration_to_expr_seq_and_bindings(
@@ -1002,7 +1000,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let require_call = ast::CallExpression::boxed(
               SPAN,
               ast::Expression::new_identifier(SPAN, "require", &self.ast_factory),
-              oxc::ast::NONE,
+              NONE,
               oxc::allocator::Vec::from_value_in(
                 ast::Argument::StringLiteral(ast::StringLiteral::boxed(
                   SPAN,
@@ -1029,7 +1027,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let require_path_to_file_url_call = ast::CallExpression::boxed(
               SPAN,
               ast::Expression::StaticMemberExpression(require_path_to_file_url),
-              oxc::ast::NONE,
+              NONE,
               oxc::allocator::Vec::from_value_in(
                 ast::Argument::Identifier(ast::IdentifierReference::boxed(
                   SPAN,
@@ -1203,7 +1201,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self.ctx.constant_value_map.get(&target_commonjs_exported_symbol_meta.0)
             }) {
             is_inlined_commonjs_export = true;
-            export_meta.value.to_expression(*self.ast_factory.builder())
+            export_meta.value.to_expression(self.ast_factory.builder())
           } else {
             let (object_ref_expr, _) = self.finalized_expr_for_symbol_ref(
               object_ref,

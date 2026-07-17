@@ -1,12 +1,12 @@
 use oxc::{
   allocator::Allocator,
   ast::{
-    AstBuilder, NONE,
     ast::{
       Argument, BindingIdentifier, BindingPattern, Declaration, Expression, FormalParameter,
       FormalParameterKind, FormalParameters, Function, FunctionBody, IdentifierName,
       MemberExpression, Statement, VariableDeclarator,
     },
+    builder::{AstBuilder, NONE},
   },
   ast_visit::{VisitMut, walk_mut},
   span::SPAN,

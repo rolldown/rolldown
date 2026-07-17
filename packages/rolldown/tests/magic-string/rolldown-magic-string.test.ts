@@ -654,6 +654,28 @@ describe('indent overloads', () => {
   });
 });
 
+describe('generateMap return shape', () => {
+  // The native map exposes its data through non-enumerable getters, so `JSON.stringify`
+  // used to yield "{}". A `toJSON` (reusing the native `toString`) restores upstream's
+  // plain-object behaviour, byte-for-byte.
+  it('JSON.stringify(map) produces the V3 source map', () => {
+    const s = new MagicString('hello world');
+    s.overwrite(0, 5, 'HELLO', { storeName: true });
+    const map = s.generateMap({ file: 'out.js', source: 'in.js', includeContent: true });
+    assert.strictEqual(
+      JSON.stringify(map),
+      '{"version":3,"file":"out.js","sources":["in.js"],"sourcesContent":["hello world"],' +
+        '"names":["hello"],"mappings":"AAAAA,KAAK"}',
+    );
+  });
+
+  it('generateDecodedMap has no version field, matching upstream', () => {
+    const s = new MagicString('hello world');
+    const dec = s.generateDecodedMap({ source: 'in.js' });
+    assert.ok(!('version' in dec));
+  });
+});
+
 describe('lastLine', () => {
   it('returns the content after the last newline', () => {
     assert.strictEqual(new MagicString('abc\ndef').lastLine(), 'def');

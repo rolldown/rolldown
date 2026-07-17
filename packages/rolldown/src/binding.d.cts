@@ -1538,8 +1538,6 @@ export declare class BindingChunkingContext {
 
 /** A decoded source map with mappings as an array of arrays instead of VLQ-encoded string. */
 export declare class BindingDecodedMap {
-  /** The source map version (always 3). */
-  get version(): number
   /** The generated file name. */
   get file(): string | null
   /** The list of original source files. */

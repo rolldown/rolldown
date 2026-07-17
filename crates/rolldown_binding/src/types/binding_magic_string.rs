@@ -337,11 +337,8 @@ impl BindingSourceMap {
 
 #[napi]
 impl BindingDecodedMap {
-  /// The source map version (always 3).
-  #[napi(getter)]
-  pub fn version(&self) -> u32 {
-    3
-  }
+  // NB: no `version` getter — upstream's `generateDecodedMap()` result has no `version`
+  // field (unlike the encoded `SourceMap`), so exposing one here diverged from magic-string.
 
   /// The generated file name.
   #[napi(getter)]

@@ -1,5 +1,6 @@
 import {
   BindingMagicString as NativeBindingMagicString,
+  BindingSourceMap,
   type BindingIndentOptions,
   type BindingOverwriteOptions,
   type BindingUpdateOptions,
@@ -13,6 +14,19 @@ import {
 Object.defineProperty(NativeBindingMagicString.prototype, 'isRolldownMagicString', {
   value: true,
   writable: false,
+  configurable: false,
+});
+
+// napi getters are non-enumerable, so `JSON.stringify(map)` on a `generateMap()` result would
+// otherwise yield "{}". Upstream returns a plain object; give the native map a `toJSON` (which
+// `JSON.stringify` honors) that reuses the native `toString()` — it already emits spec-correct
+// V3 JSON with absent fields omitted.
+Object.defineProperty(BindingSourceMap.prototype, 'toJSON', {
+  value: function toJSON(this: { toString(): string }): unknown {
+    return JSON.parse(this.toString());
+  },
+  writable: false,
+  enumerable: false,
   configurable: false,
 });
 

@@ -610,6 +610,22 @@ describe('snip', () => {
   });
 });
 
+describe('ignoreList constructor option', () => {
+  // The enabled case (`ignoreList` getter === true, and generateMap emitting
+  // x_google_ignoreList: [0]) is already pinned by the auto-generated conformance suite
+  // (see MagicString.test.ts "stores ignore-list hint" and "generates x_google_ignoreList").
+  // Only the default/disabled case is uncovered there, so that is all we pin here: the
+  // option defaults to false and generateMap omits x_google_ignoreList. Verified against
+  // magic-string 0.30.21.
+  it('does not mark the source when disabled', () => {
+    const s = new MagicString('abc');
+    assert.strictEqual(s.ignoreList, false);
+    // The binding currently returns null here where upstream returns undefined; the
+    // null/undefined normalization is part of the generateMap return-shape work.
+    assert.ok(!s.generateMap({ source: 'i.js' }).x_google_ignoreList);
+  });
+});
+
 describe('lastLine', () => {
   it('returns the content after the last newline', () => {
     assert.strictEqual(new MagicString('abc\ndef').lastLine(), 'def');

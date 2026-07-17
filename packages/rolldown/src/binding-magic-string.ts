@@ -351,6 +351,22 @@ export interface RolldownMagicString extends NativeBindingMagicString {
     content: string,
     options?: boolean | BindingUpdateOptions | null,
   ): this;
+  /**
+   * Rolldown-only; not part of the magic-string API. `relocate` is the native name behind
+   * the standard {@link RolldownMagicString.move} alias — prefer `move`.
+   *
+   * @internal
+   * @deprecated Use `move` instead.
+   */
+  relocate(start: number, end: number, to: number): this;
+  /**
+   * Rolldown-only native regex primitive that `replace`/`replaceAll` call internally.
+   * Not part of the magic-string API — prefer `replace(regexp, …)` / `replaceAll(regexp, …)`.
+   *
+   * @internal
+   * @deprecated Use `replace`/`replaceAll` with a RegExp instead.
+   */
+  replaceRegex(from: RegExp, to: string): number;
 }
 
 type RolldownMagicStringConstructor = Omit<typeof NativeBindingMagicString, 'prototype'> & {

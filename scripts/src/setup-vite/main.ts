@@ -2,9 +2,9 @@
 // tests run on Vite's full bundle mode backed by the workspace's local
 // rolldown, WITHOUT modifying anything in the Vite repo:
 //
-//   1. clone vitejs/vite (`rolldown-canary` rebased onto `main`) if needed
-//      and build the checkout exactly as-is (updating an existing checkout
-//      is always a manual git step, see checkout.ts),
+//   1. ensure the checkout is at the latest `rolldown-canary` rebased onto
+//      `main` (a checkout taken over by the developer is built as-is, see
+//      checkout.ts),
 //   2. `pnpm install --frozen-lockfile` (no manifest or lockfile writes),
 //   3. build the `vite` package with its own pinned dependencies,
 //   4. swap the `packages/vite/node_modules/rolldown` symlink to point at the
@@ -35,8 +35,8 @@ if (!nodeFs.existsSync(nodePath.join(localRolldownDir, 'dist', 'index.mjs'))) {
   process.exit(1);
 }
 
-// 1. Ensure `vite/` has a checkout (see checkout.ts), then build whatever
-// commit is checked out.
+// 1. Ensure `vite/` has an up-to-date checkout (see checkout.ts), then
+// build whatever commit is checked out.
 ensureViteCheckout();
 
 // 2. Install Vite's workspace deps exactly as pinned upstream, via vp. It

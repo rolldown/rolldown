@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { styleText } from 'node:util';
 import { x } from 'tinyexec';
+import { ensureViteCheckout, viteDir } from '../../scripts/src/setup-vite/checkout.js';
 
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
 const OVERRIDES = [
@@ -44,16 +45,18 @@ async function runCmdAndPipeOrExit(title: string, cmdOptions: Parameters<typeof 
 
 fs.rmSync(REPO_PATH, { recursive: true, force: true });
 
-// Test the latest `rolldown-canary` rebased onto the latest `main`, so that
-// test adjustments landing on `rolldown-canary` take effect right away and
-// new tests from Vite `main` surface incompatibilities with rolldown early.
+// Reuse the shared `vite/` checkout at the repo root (kept at the latest
+// `rolldown-canary` rebased onto the latest `main`, see
+// scripts/src/setup-vite/checkout.ts), the same code the dev-server tests
+// run on. The tests run on a throwaway LOCAL clone of it, never on the
+// checkout itself: this suite edits tracked files (pnpm overrides) and the
+// checkout must stay unpatched. The clone shares objects via hardlinks, so
+// no network is needed beyond the checkout itself.
+printTitle('# Ensuring the vite checkout...');
+ensureViteCheckout();
 await runCmdAndPipeOrExit(
-  '# Cloning vite repo (rolldown-canary branch)...',
-  ['git', ['clone', '--branch', 'rolldown-canary', 'https://github.com/vitejs/vite.git', REPO_PATH]],
-);
-await runCmdAndPipeOrExit(
-  '# Rebasing rolldown-canary onto main...',
-  ['git', ['rebase', 'origin/main'], { nodeOptions: { cwd: REPO_PATH } }],
+  '# Cloning the local vite checkout...',
+  ['git', ['clone', viteDir, REPO_PATH]],
 );
 
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');

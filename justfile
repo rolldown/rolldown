@@ -223,7 +223,8 @@ build-test-dev-server:
 
 # Set up the Vite checkout at `vite/` (clone vitejs/vite rolldown-canary
 # rebased onto main, link the workspace rolldown into it, install + build
-# vite). It backs the `@rolldown/test-dev-server` browser tests. Requires
+# vite). It backs the `@rolldown/test-dev-server` browser tests, and
+# `packages/vite-tests` clones the same checkout. Requires
 # `just build-rolldown` first.
 setup-vite:
   vp run --filter @rolldown-internal/scripts setup-vite

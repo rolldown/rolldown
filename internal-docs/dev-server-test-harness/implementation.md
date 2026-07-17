@@ -149,11 +149,12 @@ serving. What the harness does own lives in `src/vite-server.ts`:
 Fixes and test adjustments belong on the vitejs/vite `rolldown-canary` branch,
 which both this harness and `packages/vite-tests` track. Everything
 environment-specific happens in untracked files, via the
-`scripts/src/setup-vite/` script (`just setup-vite`, idempotent, `vp`-only):
+`scripts/src/setup-vite/` script (`just setup-vite`, idempotent, `vp`-only;
+its checkout step is also reused by `packages/vite-tests`):
 
-1. clone vitejs/vite `rolldown-canary` rebased onto `main` if `vite/` is
-   missing; an existing checkout is built exactly as-is, the script never
-   moves it, so updating it is always a manual git step inside `vite/`,
+1. ensure `vite/` is at the latest `rolldown-canary` rebased onto `main`
+   (clone if missing, update otherwise); a checkout taken over by the
+   developer (dirty, or off `rolldown-canary`) is built exactly as-is,
 2. `vp install --frozen-lockfile` (vp delegates to the checkout's pinned
    pnpm; this also resets a previous step-4 swap, so the build always uses
    Vite's own pinned rolldown),
@@ -166,11 +167,10 @@ environment-specific happens in untracked files, via the
 Repo-wide tools ignore `vite/**` (a `.gitignore`
 entry covers gitignore-respecting walkers like oxfmt, plus `.typos.toml` and
 `.ls-lint.json` entries) — a repo-wide `vp fmt --write` must never touch
-files inside `vite/`. On CI, only the dev-server workflow creates the checkout
-(via the setup step); every other job needs no Vite checkout. The vite-tests
-jobs run Vite's own suite on a separate throwaway clone of vitejs/vite, at the
-same latest `rolldown-canary` rebased onto the latest `main` (see
-`packages/vite-tests/run.ts`).
+files inside `vite/`. On CI, the checkout is created on demand: the dev-server
+workflow via the setup step, the vite-tests jobs via `run.ts` (which clones
+the checkout locally to run Vite's own suite); every other job needs no Vite
+checkout.
 
 ### Server entry point (`src/`)
 

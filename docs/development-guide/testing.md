@@ -264,7 +264,7 @@ just build-rolldown
 pnpm --filter @rolldown/test-dev-server build
 ```
 
-The browser suite also needs the Vite checkout set up once (clone vitejs/vite `rolldown-canary` rebased onto `main` + install + build + link the workspace rolldown into it). The setup builds an existing checkout as-is and never moves it, so updating it is a manual git step inside `vite/`. Re-run it after updating the checkout or after running an install inside it (an install resets the rolldown link):
+The browser suite also needs the Vite checkout set up (clone or update vitejs/vite `rolldown-canary` rebased onto `main`, then install + build + link the workspace rolldown into it). A checkout you took over (dirty, or switched to another branch) is built as-is. Re-run the setup after running an install inside the checkout (an install resets the rolldown link):
 
 ```sh
 just setup-vite

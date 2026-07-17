@@ -72,6 +72,19 @@ impl<'name> Renamer<'name> {
     self.resolver.reserve(name);
   }
 
+  /// Force a symbol to a specific name and reserve that name so no other symbol
+  /// in this chunk can take it. Used by `experimental.minChunkSize` to give a
+  /// duplicated leaf symbol the same globally-pinned name in every chunk it is
+  /// copied into. Must be called before the normal deconfliction pass so the
+  /// reservation wins over author symbols (including entry-module symbols, which
+  /// otherwise bypass `accept` — `ConflictResolver::resolve` still checks the
+  /// reserved `used` set first).
+  pub fn pin_name(&mut self, symbol_ref: SymbolRef, name: CompactStr) {
+    let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
+    self.resolver.reserve(name.clone());
+    self.canonical_names.insert(canonical_ref, name);
+  }
+
   /// Check if a candidate name is available for a top-level symbol without causing
   /// unintended variable capture in nested scopes.
   ///

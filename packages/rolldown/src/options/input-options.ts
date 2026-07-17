@@ -718,6 +718,19 @@ export interface InputOptions {
      * @default false
      */
     lazyBarrel?: boolean;
+    /**
+     * Minimum chunk size, in bytes, below which a side-effect-free common "leaf"
+     * chunk (whose modules have no imports of their own) is duplicated into each
+     * importing chunk instead of being emitted as a standalone shared chunk.
+     *
+     * This mirrors webpack/rspack `splitChunks.minSize`: tiny shared modules are
+     * inlined into their consumers to reduce the number of emitted chunks and
+     * network requests, at the cost of duplicating the small module.
+     *
+     * @experimental
+     * @default undefined (disabled)
+     */
+    minChunkSize?: number;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

@@ -280,7 +280,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let importee_linking_info = &self.ctx.linking_infos[importee_idx];
       matches!(importee_linking_info.wrap_kind(), WrapKind::None)
         && importee_linking_info.is_included
-        && self.ctx.chunk_graph.module_to_chunk[importee_idx] == Some(self.ctx.chunk_idx)
+        && (self.ctx.chunk_graph.module_to_chunk[importee_idx] == Some(self.ctx.chunk_idx)
+          // A duplicated leaf (experimental.minChunkSize) is local to every chunk
+          // it was copied into.
+          || self.ctx.chunk_graph.duplicated_leaf_modules.contains(&importee_idx))
     }) {
       return None;
     }

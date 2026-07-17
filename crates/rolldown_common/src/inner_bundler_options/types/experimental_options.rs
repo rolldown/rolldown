@@ -80,6 +80,15 @@ pub struct ExperimentalOptions {
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
+  /// Minimum chunk size, in bytes, below which a side-effect-free common "leaf"
+  /// chunk (whose modules have no imports of their own) is duplicated into each
+  /// importing chunk instead of being emitted as a standalone shared chunk.
+  ///
+  /// This mirrors webpack/rspack `splitChunks.minSize`: tiny shared modules are
+  /// inlined into their consumers to reduce chunk/request count. `None` (the
+  /// default) disables the optimization. See
+  /// `internal-docs/min-size-chunk-merging/design.md`.
+  pub min_chunk_size: Option<f64>,
 }
 
 impl ExperimentalOptions {
@@ -124,5 +133,11 @@ impl ExperimentalOptions {
 
   pub fn is_lazy_barrel_enabled(&self) -> bool {
     self.lazy_barrel.unwrap_or(false)
+  }
+
+  /// Returns the configured min chunk size (bytes) when the small-common-leaf
+  /// duplication optimization is enabled, i.e. a positive threshold was set.
+  pub fn min_chunk_size(&self) -> Option<f64> {
+    self.min_chunk_size.filter(|size| *size > 0.0)
   }
 }

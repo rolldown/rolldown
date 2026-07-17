@@ -1050,6 +1050,14 @@
             "boolean",
             "null"
           ]
+        },
+        "minChunkSize": {
+          "description": "Minimum chunk size, in bytes, below which a side-effect-free common \"leaf\"\nchunk (whose modules have no imports of their own) is duplicated into each\nimporting chunk instead of being emitted as a standalone shared chunk.\n\nThis mirrors webpack/rspack `splitChunks.minSize`: tiny shared modules are\ninlined into their consumers to reduce chunk/request count. `None` (the\ndefault) disables the optimization. See\n`internal-docs/min-size-chunk-merging/design.md`.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
         }
       },
       "additionalProperties": false

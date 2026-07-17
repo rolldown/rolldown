@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+import { n as init_util, t as getValue } from "./util.js";
+//#region entry-a.js
+init_util();
+const a = getValue() + "-a";
+//#endregion
+export { a };
+
+```
+
+## entry-b.js
+
+```js
+import { i as __toCommonJS, n as init_util, r as util_exports } from "./util.js";
+const b = (init_util(), __toCommonJS(util_exports)).getValue() + "-b";
+//#endregion
+export { b };
+
+```
+
+## util.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region util.js
+var util_exports = /* @__PURE__ */ __exportAll({
+	getValue: () => getValue,
+	value: () => value
+});
+function getValue() {
+	return value;
+}
+var value;
+var init_util = __esmMin((() => {
+	value = "shared-value";
+}));
+//#endregion
+export { __toCommonJS as i, init_util as n, util_exports as r, getValue as t };
+
+```

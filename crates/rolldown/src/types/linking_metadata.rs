@@ -69,7 +69,7 @@ pub struct LinkingMetadata {
 
   // Entry chunks need to generate code that doesn't belong to any module. This is the list of symbols are referenced by the
   // generated code. Tree-shaking will cares about these symbols to make sure they are not removed.
-  // The second element means if the symbol is a facade symbol.
+  // The second element records whether the reference came from a CommonJS export.
   pub referenced_symbols_by_entry_point_chunk: Vec<(SymbolRef, bool)>,
 
   /// The dependencies of the module. It means if you want include this module, you need to include these dependencies too.
@@ -95,9 +95,6 @@ pub struct LinkingMetadata {
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub is_tla_or_contains_tla_dependency: bool,
   pub concatenated_wrapped_module_kind: ConcatenateWrappedModuleKind,
-  /// Used to to track a facade binding referenced cjs module
-  /// included reexport symbol from commonjs module
-  pub named_import_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,
   pub import_record_ns_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,
   /// Currently our symbol link system could only link one symbol to another one, but for commonjs
   /// tree shaking, when one symbol was linked it may not only link the namespace ref symbol, and

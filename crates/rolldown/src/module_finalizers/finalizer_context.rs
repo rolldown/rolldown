@@ -24,7 +24,9 @@ use crate::{
   SharedOptions,
   chunk_graph::ChunkGraph,
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
-  stages::link_stage::SafelyMergeCjsNsInfo,
+  stages::link_stage::{
+    SafelyMergeCjsNsInfo, lazy_json_export_initializers::LazyJsonModuleExportInitializers,
+  },
   types::linking_metadata::{EsmInitTarget, LinkingMetadata, LinkingMetadataVec},
 };
 
@@ -34,7 +36,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub chunk_idx: ChunkIdx,
   pub module: &'me NormalModule,
   /// Statement-info table for the current module, threaded in from the
-  /// link-stage side `IndexVec<ModuleIdx, StmtInfos>` (see `LinkStage.stmt_infos`).
+  /// link-stage side `IndexVec<ModuleIdx, StmtInfos>` (see `LinkStageOutput.stmt_infos`).
   pub stmt_infos: &'me StmtInfos,
   pub modules: &'me IndexModules,
   pub linking_info: &'me LinkingMetadata,
@@ -47,6 +49,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub constant_value_map: &'me FxHashMap<SymbolRef, ConstExportMeta>,
   pub safely_merge_cjs_ns_map: &'me FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub retained_export_symbols: &'me RetainedExportSymbols,
+  pub lazy_json_export_initializers: Option<&'me LazyJsonModuleExportInitializers>,
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   pub resolved_paths: Option<&'me PathsOutputOption>,
   /// Plugin-supplied replacements for `import.meta.ROLLDOWN_FILE_URL_*`, keyed by

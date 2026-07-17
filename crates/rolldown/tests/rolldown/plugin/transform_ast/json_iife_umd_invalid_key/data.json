@@ -1,0 +1,8 @@
+{
+  "single'quote": 1,
+  "line\nbreak": 2,
+  "back\\slash": 3,
+  "__proto__": {
+    "safe": true
+  }
+}

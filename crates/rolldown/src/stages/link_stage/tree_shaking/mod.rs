@@ -1,6 +1,5 @@
-pub(super) mod determine_side_effects;
-mod dynamic_entries;
 pub mod include_statements;
+pub(in crate::stages::link_stage) mod inclusion_core;
 mod on_demand;
 mod passes;
 

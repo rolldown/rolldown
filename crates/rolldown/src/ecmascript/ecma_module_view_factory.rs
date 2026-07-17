@@ -2,10 +2,11 @@ use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, FlatOptions, ImportRecordIdx,
-  RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, StmtEvalFlags,
+  RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, StmtEvalFlags, StmtInfoIdx,
+  StmtInfoMeta,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
 use crate::{
@@ -33,6 +34,7 @@ pub async fn create_ecma_view(
     mut ast,
     scoping,
     has_lazy_export,
+    lazy_export_payload_stmt_index,
     warnings,
     preserve_jsx,
     enum_member_value_map,
@@ -66,7 +68,7 @@ pub async fn create_ecma_view(
     commonjs_exports,
     named_imports,
     mut named_exports,
-    stmt_infos,
+    mut stmt_infos,
     import_records: raw_import_records,
     default_export_ref,
     namespace_object_ref,
@@ -93,6 +95,22 @@ pub async fn create_ecma_view(
     cjs_reexport_require_node_ids: _,
     cjs_reexport_import_record_ids,
   } = scan_result;
+  if has_lazy_export {
+    let Some(body_index) = lazy_export_payload_stmt_index else {
+      return Err(BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
+        "the lazy-export payload for `{}` was not carried into Scan",
+        module_id.as_str()
+      )))?;
+    };
+    let stmt_info_idx = StmtInfoIdx::from_usize(body_index.saturating_add(1));
+    let Some(stmt_info) = stmt_infos.infos.get_mut(stmt_info_idx) else {
+      return Err(BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
+        "the lazy-export payload for `{}` maps to statement {body_index}, outside the scanned statement table",
+        module_id.as_str()
+      )))?;
+    };
+    stmt_info.meta.insert(StmtInfoMeta::LazyExportPayload);
+  }
   // If a export symbol in commonjs defined in multiple time, we just bailout treeshake it.
   for (k, v) in commonjs_exports {
     if v.len() == 1 {

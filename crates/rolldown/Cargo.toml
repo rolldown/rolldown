@@ -73,6 +73,7 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 cow-utils = { workspace = true }
 dunce = { workspace = true }
 insta = { workspace = true }
+proc-macro2 = { workspace = true }
 regex = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_testing = { path = "../rolldown_testing" }
@@ -81,6 +82,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 sugar_path = { workspace = true }
+syn = { workspace = true, features = ["full", "parsing", "visit"] }
 testing_macros = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
 walkdir = { workspace = true }

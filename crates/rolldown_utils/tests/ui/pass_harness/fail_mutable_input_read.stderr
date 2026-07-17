@@ -1,0 +1,11 @@
+error[E0277]: the trait bound `&'a mut Payload: Copy` is not satisfied
+  --> tests/ui/pass_harness/fail_mutable_input_read.rs:11:24
+   |
+11 |   type InputRead<'a> = &'a mut Payload;
+   |                        ^^^^^^^^^^^^^^^ the trait `Copy` is not implemented for `&'a mut Payload`
+   |
+note: required by a bound in `rolldown_utils::pass::Pass::InputRead`
+  --> src/pass.rs
+   |
+   |   type InputRead<'a>: Copy;
+   |                       ^^^^ required by this bound in `Pass::InputRead`

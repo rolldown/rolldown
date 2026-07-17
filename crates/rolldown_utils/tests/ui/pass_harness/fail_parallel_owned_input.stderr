@@ -1,0 +1,15 @@
+error[E0382]: use of moved value: `owned`
+  --> tests/ui/pass_harness/fail_parallel_owned_input.rs:34:5
+   |
+29 |   let owned = String::from("one owner");
+   |       ----- move occurs because `owned` has type `std::string::String`, which does not implement the `Copy` trait
+...
+33 |     || run_infallible_pass(OwnedPass, &mut left, (), owned),
+   |     -- value moved into closure here                 ----- variable moved due to use in closure
+34 |     || run_infallible_pass(OwnedPass, &mut right, (), owned),
+   |     ^^ value used here after move                     ----- use occurs due to use in closure
+   |
+help: consider cloning the value if the performance cost is acceptable
+   |
+33 |     || run_infallible_pass(OwnedPass, &mut left, (), owned.clone()),
+   |                                                           ++++++++

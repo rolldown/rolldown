@@ -1,0 +1,19 @@
+error[E0080]: index out of bounds: the length is 1 but the index is 1
+ --> src/pass.rs
+  |
+  |     [()][size_of::<P>()];
+  |     ^^^^^^^^^^^^^^^^^^^^ evaluation of `rolldown_utils::pass::run_pass::<StatefulPass>::{constant#0}` failed here
+
+note: erroneous constant encountered
+ --> src/pass.rs
+  |
+  | /   const {
+... |
+  | |   }
+  | |___^
+
+note: the above error was encountered while instantiating `fn run_pass::<StatefulPass>`
+ --> src/pass.rs
+  |
+  |   match run_pass(pass, pipeline, read, owned) {
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

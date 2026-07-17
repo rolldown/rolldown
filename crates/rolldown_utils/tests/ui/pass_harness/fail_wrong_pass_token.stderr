@@ -1,0 +1,15 @@
+error[E0308]: mismatched types
+  --> tests/ui/pass_harness/fail_wrong_pass_token.rs:25:20
+   |
+25 |     SecondPass.run(token, cx, (), ())
+   |                --- ^^^^^ expected `RunToken<'_, SecondPass>`, found `RunToken<'_, FirstPass>`
+   |                |
+   |                arguments to this method are incorrect
+   |
+   = note: expected struct `RunToken<'_, SecondPass>`
+              found struct `RunToken<'run, FirstPass>`
+note: method defined here
+  --> src/pass.rs
+   |
+   |   fn run(
+   |      ^^^

@@ -132,6 +132,10 @@ bitflags! {
         const ReExportDynamicExports = 1 << 2;
         /// Statement contains non-static dynamic import like `import(foo)` or `import('a' + 'b')`
         const NonStaticDynamicImport = 1 << 3;
+        /// Synthetic snapshot initializer for a transformed JSON named export.
+        const LazyJsonExportInitializer = 1 << 4;
+        /// Original lazy-export payload statement preserved across `transformAst` reordering.
+        const LazyExportPayload = 1 << 5;
     }
 }
 

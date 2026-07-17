@@ -422,7 +422,7 @@ where
     .filter_map(|(_importer, named_import)| {
       let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
       // A named import that is itself re-exported skips the external binding merger
-      // (`bind_imports_and_exports`), so its canonical ref stays importer-local; its usage
+      // (`BindImportsPass`), so its canonical ref stays importer-local; its usage
       // is still answered by `used_symbol_refs` until exports get their own tracking.
       let is_used = if ctx.link_output.module_table[canonical_ref.owner].is_external() {
         ctx.link_output.used_external_symbols.contains(&canonical_ref)

@@ -101,7 +101,7 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      // Helper-flag channel (`reference_needed_symbols` registrations folded by tree-shaking).
+      // Helper-flag channel (`ReferenceNeededSymbolsPass` requirements folded by tree-shaking).
       // `ReExport` is the one flag whose link-time justification the walk-back can invalidate:
       // it was registered for `export * from './normal'` statements because the importee had
       // dynamic exports at link time. The finalizer emits the `__reExport` call only when the
@@ -117,7 +117,7 @@ impl GenerateStage<'_> {
         return true;
       }
 
-      // Namespace-object channel: `create_exports_for_ecma_modules` put `__exportAll` (and
+      // Namespace-object channel: `CreateSyntheticExportStatementsPass` put `__exportAll` (and
       // `__reExport` for star re-exports of externals) on the namespace statement. The
       // statement renders only when `finalized_module_namespace_ref_usage` retained the
       // namespace; mirror `generate_declaration_of_module_namespace_object`.

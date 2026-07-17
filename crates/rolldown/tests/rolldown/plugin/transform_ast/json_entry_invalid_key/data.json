@@ -1,0 +1,12 @@
+{
+  "😈": 1,
+  "property-name": 2,
+  "for": 3,
+  "normal": 4,
+  "single'quote": 5,
+  "line\nbreak": 6,
+  "back\\slash": 7,
+  "__proto__": {
+    "safe": true
+  }
+}

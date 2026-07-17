@@ -1,119 +1,122 @@
-# determine_module_exports_kind
+# Determine module formats
 
 ## Summary
 
-`determine_module_exports_kind` runs early in `LinkStage` and decides two things that gate everything downstream: each module's final `ExportsKind` (with one carefully-noted exception, see §"Invariants") and which modules need a `WrapKind::Esm` / `WrapKind::Cjs` wrapper at finalization. It is the place where the bundler stops _observing_ what the source said and starts _deciding_ how each module will be emitted. Wrap decisions depend only on the _syntax_ of the `(importer, importee, ImportKind)` triple, not on usage, so they're settled before symbol-binding and tree-shaking — both of which need to know whether an importee is wrapped CJS or raw ESM to compute re-export visibility correctly.
+`DetermineModuleFormatsPass` classifies every normal module's link-time `ExportsKind` and produces the initial wrapper requirements that follow directly from import syntax and the output format. It does not mutate `ModuleTable` or linking metadata. Instead, it returns two owned, non-clone artifacts: `ModuleFormatsDraft` and `WrapperSeeds`.
 
-Source: `crates/rolldown/src/stages/link_stage/determine_module_exports_kind.rs`.
+The output is deliberately still a draft. Lazy-export normalization is the final format writer, while wrapper planning, declaration allocation, and lazy JSON rebuilding still have to run before wrapper state is final.
 
-Related code:
-
-- `crates/rolldown/src/stages/link_stage/generate_lazy_export.rs` — the one stage allowed to revise `exports_kind` after this pass (see §"Invariants").
-- `crates/rolldown/src/stages/link_stage/wrapping.rs` — consumes the `WrapKind` decisions made here.
-- `LinkingMetadata::sync_wrap_kind` — the writer used for wrap state.
+Source: `crates/rolldown/src/stages/link_stage/passes/determine_module_formats.rs`.
 
 ## Pipeline placement
 
-The relevant prefix of `LinkStage::link()` (in `mod.rs`) runs roughly:
+The relevant typed prefix of `LinkStage::link()` is:
 
+```text
+CanonicalizeEntriesPass → EntryPlanDraft
+ComputeModuleExecutionOrderPass borrows EntryPlanDraft
+ComputeTlaPass
+DetermineModuleFormatsPass borrows EntryPlanDraft
+  ├─ ComputeCjsNamespaceMergesPass borrows ModuleFormatsDraft
+  ├─ ComputeDynamicExportsPass borrows ModuleFormatsDraft
+  └─ PlanModuleWrappingPass borrows ModuleFormatsDraft and consumes WrapperSeeds
+       └─ CreateWrapperDeclarationsPass consumes WrapperPlan, SymbolRefDb, and IndexStmtInfos
+            └─ NormalizeLazyExportsPass borrows EntryPlanDraft, CjsNamespaceMerges, and GlobalConstantsDraft; consumes format and wrapper drafts with the module, AST, symbol, and statement tables
+                 ├─ DetermineModuleSideEffectsPass borrows final ModuleWrappers and sealed DynamicExports → sealed ModuleSideEffects
+                 └─ final ModuleTable → CollectResolvedExportsPass → ResolvedExportsDraft
+final ModuleFormats + sealed DynamicExports + sealed ModuleSideEffects + ResolvedExportsDraft
+  + ModuleDependenciesDraft + sealed ModuleExecutionOrders → BindImportsPass → FinalizeResolvedExportsPass
+  → ComputeCjsRoutingPass → ResolveMemberExpressionsPass → CollectEntryExportRootsPass
+  → CreateSyntheticExportStatementsPass → ReferenceNeededSymbolsPass → CrossModuleOptimizationPass
+  → TreeShakePass → FinalizeModuleDependenciesPass → LegacyOutputAdapter
 ```
-sort_modules
-compute_tla
-determine_module_exports_kind   <- this file
-determine_safely_merge_cjs_ns
-wrap_modules
-generate_lazy_export
-determine_side_effects
-bind_imports_and_exports
-create_exports_for_ecma_modules
-reference_needed_symbols
-include_statements
-```
 
-Position is load-bearing: `wrap_modules` propagates wrap requirements transitively through the graph using the `WrapKind`s set here as roots, and `bind_imports_and_exports` reads the `exports_kind` set here to decide how to thread re-exports through CJS namespace bindings.
+`NormalizeLazyExportsPass` performs the final draft-to-final transition. `DetermineModuleSideEffectsPass` first reads final wrappers and sealed dynamic exports, and `CollectResolvedExportsPass` then reads the identity-stable final module table and returns owned raw maps. No representation helper projects these facts early. Binding also borrows the raw resolved-export draft and sealed execution orders while owning initial dependencies and symbols. `FinalizeResolvedExportsPass` consumes the draft afterward. Final formats are read by B, J, synthetic statement creation, N, and H; final wrappers are read by S, entry-root collection, N, and H; dynamic exports are read by S, B, J, M, and finally N; side effects are read by B, M, N, H, and finally G. Only `LegacyOutputAdapter` projects their legacy fields after G.
 
-## State this pass touches
+## Pass contract
 
-`determine_module_exports_kind` writes:
+| Slot            | Type                                 | Purpose                                                                                                                 |
+| --------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `InputRead<'a>` | `DetermineModuleFormatsInput<'a>`    | Borrows `ModuleTable` and the unique `EntryPlanDraft`; copies only `OutputFormat` and the code-splitting-disabled flag. |
+| `InputOwned`    | `()`                                 | The pass owns no entity table.                                                                                          |
+| `OutputRead`    | `()`                                 | Format and wrapper values are still mutable drafts.                                                                     |
+| `OutputOwned`   | `(ModuleFormatsDraft, WrapperSeeds)` | Two separate compact domains with one writer and explicit later consumers.                                              |
+| `Error`         | `Infallible`                         | The link boundary remains infallible.                                                                                   |
 
-- `module.exports_kind` for some normal modules (in-place via `addr_of!` cast — see §"The unsafe block").
-- `self.metas[idx].wrap_kind` (and `original_wrap_kind`) via `LinkingMetadata::sync_wrap_kind`. **Not idempotent** — the last writer wins, so call order is part of the contract.
+`ModuleFormatsDraft` is a dense `IndexVec<ModuleIdx, Option<ExportsKind>>`. `Some(ExportsKind::None)` means a normal module whose format is still `None`; `None` means the slot belongs to an external module. Keeping those states distinct prevents external modules from being classified as ordinary `ExportsKind::None` modules.
 
-It does not touch symbol tables, tree-shaking flags, or chunk graph.
+`WrapperSeeds` owns a dense `IndexVec<ModuleIdx, WrapperStateDraftSlot>`. Each slot carries `kind: Option<WrapKind>` and `required_by_other_module: bool`: a normal module starts with `Some(WrapKind::None)`, while an external module uses `None`; the independent required flag can still become true for an external target reached by `require`. `DetermineModuleFormatsPass` produces the initial kind, and `PlanModuleWrappingPass` uniquely consumes the artifact, mutates both fields, and reuses the same `IndexVec` allocation as `WrapperPlan` instead of allocating or copying a second dense table.
 
-## Promotion + wrap rules
+Neither artifact exposes a constructor, `Clone`, `Default`, or mutable access.
 
-For each `(importer, importee, rec.kind)`:
+## Promotion and seed rules
 
-| `rec.kind`                 | `importee.exports_kind` | Effect                                                                                |
-| -------------------------- | ----------------------- | ------------------------------------------------------------------------------------- |
-| `Import`                   | `None` (non-lazy)       | Promote to `Esm`.                                                                     |
-| `Import`                   | `Esm` / `CommonJs`      | No-op. (CJS-imported-by-ESM is wrapping work handled in `wrap_modules`.)              |
-| `Require`                  | `Esm`                   | Mark importee `WrapKind::Esm` (to satisfy `require()` of an ESM module).              |
-| `Require`                  | `CommonJs`              | Mark importee `WrapKind::Cjs`.                                                        |
-| `Require`                  | `None`                  | Mark `WrapKind::Cjs` and promote `exports_kind` to `CommonJs`.                        |
-| `DynamicImport` (split)    | any                     | No-op. Code-splitting handles dynamic imports natively.                               |
-| `DynamicImport` (no split) | `Esm`                   | Mark `WrapKind::Esm`. `import()` lowers to `require + Promise.resolve(__toESM(...))`. |
-| `DynamicImport` (no split) | `CommonJs`              | Mark `WrapKind::Cjs`.                                                                 |
-| `DynamicImport` (no split) | `None`                  | Mark `WrapKind::Cjs` and promote to `CommonJs`.                                       |
-| `AtImport` / `UrlImport`   | —                       | `unreachable!` — see §"Why CSS import kinds are `unreachable!`".                      |
-| `NewUrl` / `HotAccept`     | —                       | No-op (asset reference / HMR metadata, not a module-shape signal).                    |
+After unresolved and external targets are skipped, each import record applies the following rule to the current draft value:
 
-After processing all import records, the importer is itself wrapped as CJS when:
+| Import kind                              | Current target format | Result                                                                       |
+| ---------------------------------------- | --------------------- | ---------------------------------------------------------------------------- |
+| `Import`                                 | `None`, non-lazy      | Promote the format to `Esm`; leave the wrapper seed unchanged.               |
+| `Import`                                 | `None`, lazy          | Leave both values unchanged for lazy normalization.                          |
+| `Import`                                 | `Esm` or `CommonJs`   | Leave both values unchanged.                                                 |
+| `Require`                                | `Esm`                 | Seed `WrapKind::Esm`.                                                        |
+| `Require`                                | `CommonJs`            | Seed `WrapKind::Cjs`.                                                        |
+| `Require`                                | `None`                | Promote to `CommonJs` and seed `WrapKind::Cjs`.                              |
+| `DynamicImport`, code splitting enabled  | Any                   | Leave both values unchanged.                                                 |
+| `DynamicImport`, code splitting disabled | Any                   | Apply the same rule as `Require`.                                            |
+| `NewUrl` or `HotAccept`                  | Any                   | Leave both values unchanged.                                                 |
+| `AtImport` or `UrlImport`                | Any                   | Preserve the legacy unreachable invariant for malformed normal-module input. |
 
-- `importer.exports_kind == CommonJs`, **and**
-- it is _not_ an entry, **or** the output format is `Esm`, **or** the output is `Iife`/`Umd` and the importer touches `module`/`exports`.
+After all records for one importer have been processed, a CommonJS importer is itself seeded as `WrapKind::Cjs` when it is not an entry, when the output is ESM, or when the output is IIFE/UMD and the module uses either `module` or `exports`.
 
-The "is entry + Esm output" branch is what allows `module.exports = ...` to keep working in a CJS-emit-as-ESM scenario; the `Iife`/`Umd` branch prevents leaking `module`/`exports` into the IIFE wrapper's outer scope.
+Entry membership comes from `EntryPlanDraft::contains_root`, so user-defined, dynamic-import, and emitted entries all receive the same exemption. It is not derived from `user_defined_entry_modules`.
 
-> **Why "lazy export" is excluded from the `Import` + `None` arm:**
-> Lazy-export modules are deferred ESM facades; promoting them here would short-circuit the dedicated lazy-export pass that runs later (`generate_lazy_export`), which performs additional restructuring that a naive `None → Esm` promotion would skip.
+## Order is semantic
 
-## Invariants (the contract for downstream stages)
+The pass is intentionally serial. It walks the physical `ModuleTable` order, then each module's original import-record order, and every record reads the draft after all earlier promotions. A promotion made by an earlier importer must be visible to later importers.
 
-After this pass completes:
+For a target whose initial format is `None`:
 
-1. **Non-lazy modules have their final `exports_kind`.** Every `Module::Normal` whose meta does **not** have `has_lazy_export()` has been classified — a residual `ExportsKind::None` means "no JS importer touched it; treat as a side-effect-only script."
-2. **Lazy-export modules are intentionally not finalized here.** `generate_lazy_export` runs later and may flip a lazy module's `exports_kind` to `Esm` (`generate_lazy_export.rs:88`, `:287`) and even revise its `wrap_kind` to `WrapKind::None` for the JSON-lazy path (`:296`). Don't widen invariant (1) without auditing that pass.
-3. **For every non-lazy `(importer, importee)` pair where wrapping is required, `metas[importee.idx].wrap_kind` is set.** `wrap_modules` may transitively propagate wrappers from there, but it will never _introduce_ a wrap that this pass missed.
+- `Import` followed by `Require` produces `Esm` plus `WrapKind::Esm`.
+- `Require` followed by `Import` produces `CommonJs` plus `WrapKind::Cjs`.
 
-Anything that breaks (1) or (3) is a bug _here_, not in the consumer.
+This first-observer behavior is why the pass cannot classify modules independently, collect promotions in parallel, or apply a later reduction without changing semantics. Both import-record order and module order have focused tests.
 
-## The `addr_of!(*importee).cast_mut()` trick
+## CSS import-kind invariant
 
-The body of the loop holds a shared borrow of `self.module_table.modules` (via the iterator) while wanting to write `importee.exports_kind`. Because `importee` is one element of the same `Vec` we're iterating, asking the borrow checker for `&mut` here is futile; the cast through a raw pointer is the local escape hatch.
+`AtImport` and `UrlImport` are constructively absent from valid normal-module link input. CSS module types are rejected with a structured diagnostic before an ECMA view is created, and every normal-module raw record comes from the ECMA scanner, whose record-producing paths emit only `Import`, `DynamicImport`, `Require`, `NewUrl`, and `HotAccept`. The loader preserves each kind and also has an earlier redundant guard against CSS kinds.
 
-Safety argument (also annotated in-source):
+The old link methods nevertheless treated synthetic malformed `ModuleTable` values as unreachable at format classification and reference analysis. The extracted passes preserve those branches so the migration does not weaken or delay the invariant. The production-source inventory admits only the fully qualified `std::unreachable!` path in `determine_module_formats.rs` and `reference_needed_symbols.rs`, and only with the two legacy messages; all other production expression macros remain rejected unless separately listed in the closed allowlist.
 
-- `importer` and `importee` are _different_ modules in every well-formed case (an import always resolves to a different module).
-- In the self-import edge case (`importee == importer`), the only field written is `exports_kind`, which is independent of every field read in the surrounding match arms. The aliasing is therefore benign.
-- No re-entrant traversal observes the half-written state; mutation happens after the read of `importee.exports_kind` and the write does not change the iterator.
+## Downstream lifecycle
 
-This is _load-bearing unsafe_. The cleaner alternative is a two-pass form:
+The current typed consumers are:
 
-1. Walk modules, collect a `Vec<(ModuleIdx, ExportsKind)>` of intended promotions.
-2. Apply each via `module_table.modules[idx].as_normal_mut()`.
-3. Re-walk to set `wrap_kind` (or fold step 3 into step 1's collection).
+- `ComputeCjsNamespaceMergesPass`, which reads `CommonJs` formats and returns an owned map that must eventually move into `LinkStageOutput`.
+- `ComputeDynamicExportsPass`, which preserves the existing export-star DFS and returns a sealed dense bitset.
+- `PlanModuleWrappingPass`, which consumes `WrapperSeeds`, propagates wrapper requirements and `required_by_other_module`, and returns `WrapperPlan`.
+- `CreateWrapperDeclarationsPass`, which consumes that compact plan plus the symbol and statement tables, preserves module-order allocation, and returns the same tables with a dense `WrapperDeclarationsDraft`. Each declaration is `None`, `Cjs { wrapper_ref, wrapper_stmt_info }`, or `Esm { wrapper_ref, wrapper_stmt_info }`, so kind and both identities cannot diverge; the required flag remains independent for external modules.
+- `NormalizeLazyExportsPass`, which borrows the entry, CJS-merge, and global-constant identity carriers; atomically owns the module, AST, statement, symbol, format-draft, and wrapper-draft domains; and returns the same large allocations with final `ModuleFormats`, `ModuleWrappers`, member-resolution-only `NonSplittableJsonDefaults`, and Generate-only `LazyJsonExportInitializers`.
+- `DetermineModuleSideEffectsPass`, which borrows final `ModuleWrappers` and sealed `DynamicExports`, preserves the legacy ordered recursion and cache, and returns sealed dense `ModuleSideEffects`. The typed artifact remains available through G, and only the adapter projects it.
+- `CollectResolvedExportsPass`, which borrows the final `ModuleTable`, preserves path-local export-star traversal, and returns owned dense `ResolvedExportsDraft`.
+- `BindImportsPass`, which borrows final `ModuleFormats`, sealed `DynamicExports`, sealed `ModuleSideEffects`, the resolved-export draft, and sealed execution orders while owning the symbol database and initial dependencies. It preserves serial immediate commit order and returns its one-call output envelope for immediate destructuring.
+- `FinalizeResolvedExportsPass`, which consumes the draft after binding's last Link-stage symbol link and produces paired raw and sorted canonical maps. The final artifact survives through member-expression resolution, entry-root collection, synthetic statement creation, and H, then is projected once without cloning by the adapter after G.
 
-That refactor was previously merged and then reverted (#9237) after a hard-to-reproduce regression. Until that regression has a minimal repro, the unsafe form stays. If you change this loop, preserve the property that **only `exports_kind` is mutated**, and only on a `&NormalModule` that is otherwise unaliased for the duration of the write.
-
-## Why CSS import kinds are `unreachable!`
-
-`Module::as_normal` filters out `Module::External`, `Module::CssModule`, and any non-JS module variant before this pass sees them. CSS dependencies are reached only via `ImportKind::AtImport` / `UrlImport`, which originate from CSS modules — not from JS. Therefore those kinds cannot appear in a JS module's `import_records`, and the panic is a guard against a misclassification upstream. `NewUrl` and `HotAccept` _do_ appear on JS modules but carry no exports/wrap implication, so they're explicit no-ops.
+Lazy normalization is the implemented final format writer. A non-CJS object-form lazy JSON module is rebuilt into independently tree-shakeable bindings only when its recursive JSON AST, owner-local side tables, statement and reverse-index shape, facade-symbol database, and optional ESM wrapper exactly match the pristine loader state and no borrowed identity carrier names that module as an owner. That path replaces the local semantic database and whole statement table, changes the format to ESM, recreates namespace/default/HMR facades, and clears the invalidated wrapper declaration. Every transformed or otherwise non-pristine module instead keeps its existing identities. Before `transformAst`, Parse records the loader-created payload statement's arena address in a side channel without changing the AST exposed to hooks. The address survives statement moves and in-place edits. If a hook replaces the whole statement and loses that identity, Parse accepts the result only when exactly one expression-statement candidate remains; otherwise it returns `TRANSFORM_ERROR` before Scan instead of guessing. Scan then maps the resolved body index to exactly one `StmtInfoMeta::LazyExportPayload` or fails the build. Lazy normalization requires that unique marker and wraps the exact expression; Link has no expression-order fallback. JSON property exports use ordinary appended facade bindings and synthetic initializer statements, preserve plugin-defined exports, support arbitrary string names, and snapshot from the materialized default object immediately after its payload. Accessor-shaped objects also produce a sparse member-resolution-only set that prevents default-property reads from being rewritten to snapshots. Generate consumes the separate sparse initializer recipe after inclusion, emits only retained bindings, and drops it immediately after parallel module finalization. `__proto__` is computed so it remains an own data property, while CJS/IIFE/UMD export-name adapters escape every `Object.defineProperty` key. The pass therefore completes `ModuleFormatsDraft → ModuleFormats` and `WrapperDeclarationsDraft → ModuleWrappers` only after the final possible identity change.
 
 ## Editing checklist
 
-Things that are easy to break and worth re-checking when changing this file:
-
-- **Order between `sync_wrap_kind` calls and `exports_kind` mutation.** Wrap decisions inside the `Require` / `DynamicImport` arms read `importee.exports_kind` _before_ any promotion would happen. Don't reorder.
-- **The CJS-importer wrap rule** (after the per-record loop). The conjunction of conditions encodes three different output-format contracts; flattening it into a `match self.options.format` rewrite has tripped more than one reviewer. Add a regression test rather than refactoring blindly.
-- **Don't widen the unsafe block.** Anything that needs mutable access to other fields of `NormalModule` should go through a separate pass.
-- **Don't promote lazy-export modules here.** Leave `has_lazy_export()` modules to `generate_lazy_export`; promoting them prematurely will break the JSON-lazy and ESM-default code paths in that file.
-
-## Unresolved Questions
-
-- The `addr_of!` cast is a known wart. The two-pass refactor that removes it has been tried twice; both attempts hit a regression that wouldn't reproduce reliably (#9237). Worth one more attempt with a fuzzer-driven test corpus before accepting the unsafe block as permanent.
+- Preserve physical module order and import-record order.
+- Read the evolving draft, not the scan-time format, for every record.
+- Run the CommonJS importer-entry rule only after all records for that importer.
+- Keep external slots distinct from normal `ExportsKind::None` slots.
+- Keep static imports of lazy `None` modules unpromoted.
+- Apply disabled dynamic imports exactly like `Require`.
+- Keep entry membership tied to the canonical entry draft.
+- Do not add a broad options object, linking metadata, `LinkStage`, a panic path, or a clone of either output artifact.
+- Do not parallelize this pass. Any future concurrency belongs between independent passes after this serial classification is complete and must be justified by measurement.
 
 ## Related
 
-- [module-execution-order](../module-execution-order/implementation.md)
+- [Pass-based pipeline implementation](../../pass-based-pipeline/implementation.md)
+- [Module execution order](../module-execution-order/implementation.md)
+- [Resolved exports](../resolved-exports/implementation.md)

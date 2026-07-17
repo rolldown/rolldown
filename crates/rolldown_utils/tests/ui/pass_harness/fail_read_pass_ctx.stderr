@@ -1,0 +1,5 @@
+error[E0599]: no method named `into_diagnostics` found for mutable reference `&mut PassCtx<'_>` in the current scope
+  --> tests/ui/pass_harness/fail_read_pass_ctx.rs:22:16
+   |
+22 |     let _ = cx.into_diagnostics();
+   |                ^^^^^^^^^^^^^^^^ method not found in `&mut PassCtx<'_>`

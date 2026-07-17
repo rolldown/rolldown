@@ -8,6 +8,7 @@ use tracing::debug_span;
 
 use crate::{
   chunk_graph::ChunkGraph, module_finalizers::ScopeHoistingFinalizerContext,
+  stages::link_stage::lazy_json_export_initializers::LazyJsonExportInitializers,
   type_alias::IndexEcmaAst,
 };
 
@@ -19,6 +20,7 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     ast_table: &mut IndexEcmaAst,
+    lazy_json_export_initializers: &LazyJsonExportInitializers,
     resolved_file_urls: &ResolvedFileUrls,
   ) -> BuildResult<()> {
     let has_enum_inlining = self.link_output.has_enum_inlining;
@@ -55,6 +57,7 @@ impl GenerateStage<'_> {
             constant_value_map: &self.link_output.global_constant_symbol_map,
             safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
             retained_export_symbols: &self.link_output.retained_export_symbols,
+            lazy_json_export_initializers: lazy_json_export_initializers.for_module(idx),
             resolved_paths: self.resolved_paths.as_ref(),
             resolved_file_urls,
             has_enum_inlining,

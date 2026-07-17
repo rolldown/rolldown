@@ -217,7 +217,15 @@ impl<'a> GenerateStage<'a> {
     if !empty_import_meta_warnings.is_empty() {
       self.link_output.diagnostics.extend(empty_import_meta_warnings);
     }
-    self.finalize_modules(&mut chunk_graph, &mut ast_table, &resolved_file_urls)?;
+    let lazy_json_export_initializers =
+      std::mem::take(&mut self.link_output.lazy_json_export_initializers);
+    self.finalize_modules(
+      &mut chunk_graph,
+      &mut ast_table,
+      &lazy_json_export_initializers,
+      &resolved_file_urls,
+    )?;
+    drop(lazy_json_export_initializers);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs).await
   }

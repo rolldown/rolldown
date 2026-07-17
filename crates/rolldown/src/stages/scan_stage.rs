@@ -42,8 +42,9 @@ pub struct NormalizedScanStageOutput {
   pub module_table: ModuleTable,
   pub index_ecma_ast: IndexEcmaAst,
   /// Per-module `StmtInfos` side table, parallel to `module_table.modules`.
-  /// External modules get an empty `StmtInfos::new()` placeholder. Routed
-  /// directly into `LinkStage.stmt_infos` instead of living on `EcmaView`.
+  /// External modules get an empty `StmtInfos::new()` placeholder. The one-shot
+  /// Link facade moves it into a driver local before the first pass, and the
+  /// output adapter later moves it into `LinkStageOutput`.
   pub stmt_infos: IndexStmtInfos,
   pub entry_points: Vec<EntryPoint>,
   pub symbol_ref_db: SymbolRefDb,

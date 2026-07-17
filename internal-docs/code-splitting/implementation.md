@@ -245,9 +245,9 @@ When `strict_execution_order` is **not** enabled, CJS modules are wrapped in `__
 
 During scope hoisting, each `require_xxx()` init call is placed at the point where the CJS module is first referenced. This default placement can produce incorrect initialization order when unwrapped ESM modules reference different wrapped CJS modules that have a dependency between them.
 
-The root cause is how modules are laid out in the bundle. The link stage's `sort_modules()` (in `sort_modules.rs`) computes a global execution order via DFS of the import graph — in that analysis, `require()` is treated as an implicit static import so that required modules are ordered before their requirers. Modules are then emitted in this order. For **wrapped** modules (CJS/ESM), only the wrapper definition is placed at that position; the actual init call (`require_xxx()`) is placed wherever the module is first referenced by an **unwrapped** module. When two wrapped modules are referenced by different unwrapped modules, the init calls can end up in the wrong relative order.
+The root cause is how modules are laid out in the bundle. The link stage's `ComputeModuleExecutionOrderPass` (in `stages/link_stage/passes/compute_module_execution_order.rs`) computes a global execution order via DFS of the import graph — in that analysis, `require()` is treated as an implicit static import so that required modules are ordered before their requirers. Modules are then emitted in this order. For **wrapped** modules (CJS/ESM), only the wrapper definition is placed at that position; the actual init call (`require_xxx()`) is placed wherever the module is first referenced by an **unwrapped** module. When two wrapped modules are referenced by different unwrapped modules, the init calls can end up in the wrong relative order.
 
-Note: `sort_modules()` and `js_import_order()` (described below) are two different DFS analyses with different traversal rules. `sort_modules()` follows both `import` and `require()` edges to determine global execution order. `js_import_order()` only follows `import` edges because it specifically analyzes **eager** initialization — `require()` calls produce lazy wrappers that don't contribute to eager init order.
+Note: `ComputeModuleExecutionOrderPass` and `js_import_order()` (described below) are two different DFS analyses with different traversal rules. The execution-order pass follows both `import` and `require()` edges to determine global execution order. `js_import_order()` only follows `import` edges because it specifically analyzes **eager** initialization — `require()` calls produce lazy wrappers that don't contribute to eager init order.
 
 Consider this example (based on [#5531](https://github.com/rolldown/rolldown/issues/5531)):
 
@@ -268,7 +268,7 @@ import './lib.js';
 assert.equal(bar, 'foo');
 ```
 
-`sort_modules()` DFS from `main.js` produces: `leaflet(1) < leaflet-toolbar(2) < lib(3) < main(4)`. The execution order correctly puts `leaflet` before `leaflet-toolbar`. But in the bundled output, since both are **wrapped**, their wrapper definitions are just inert function declarations — what matters is where the init calls land:
+`ComputeModuleExecutionOrderPass` DFS from `main.js` produces: `leaflet(1) < leaflet-toolbar(2) < lib(3) < main(4)`. The execution order correctly puts `leaflet` before `leaflet-toolbar`. But in the bundled output, since both are **wrapped**, their wrapper definitions are just inert function declarations — what matters is where the init calls land:
 
 - `lib.js` (exec_order 3, unwrapped) references `leaflet-toolbar` via `require()` → `require_leaflet_toolbar()` is placed here
 - `main.js` (exec_order 4, unwrapped) references `leaflet` via `import` → `require_leaflet()` is placed here

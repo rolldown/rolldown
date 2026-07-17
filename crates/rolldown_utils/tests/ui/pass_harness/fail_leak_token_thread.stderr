@@ -1,0 +1,14 @@
+error[E0521]: borrowed data escapes outside of method
+  --> tests/ui/pass_harness/fail_leak_token_thread.rs:22:19
+   |
+15 |   fn run<'run>(
+   |          ---- lifetime `'run` defined here
+16 |     self,
+17 |     token: RunToken<'run, Self>,
+   |     ----- `token` is a reference that is only valid in the method body
+...
+22 |     let _handle = std::thread::spawn(move || drop(token));
+   |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |                   |
+   |                   `token` escapes the method body here
+   |                   argument requires that `'run` must outlive `'static`

@@ -1,0 +1,11 @@
+error[E0599]: no method named `into_inner` found for struct `Sealed<u32>` in the current scope
+ --> tests/ui/pass_harness/fail_unwrap_sealed.rs:4:10
+  |
+4 |   sealed.into_inner()
+  |          ^^^^^^^^^^
+  |
+help: there is a method `into_in` with a similar name, but with different arguments
+ --> $CARGO/oxc_allocator-$VERSION/src/convert.rs
+  |
+  |     fn into_in(self, allocator: &'a Allocator) -> T;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

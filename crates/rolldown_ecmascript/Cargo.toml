@@ -16,6 +16,7 @@ workspace = true
 [dependencies]
 arcstr = { workspace = true }
 oxc = { workspace = true }
+oxc_ast = { workspace = true }
 oxc_sourcemap = { workspace = true }
 oxc_str = { workspace = true }
 rolldown_error = { workspace = true }
@@ -23,3 +24,9 @@ self_cell = { workspace = true }
 
 [lib]
 doctest = false
+
+[package.metadata.cargo-shear]
+# `oxc_ast` is depended on directly only to enable its `disable_old_builder` feature
+# on the copy re-exported by the `oxc` umbrella crate (which has no passthrough
+# feature). Code imports it via `oxc::ast::…`.
+ignored = ["oxc_ast"]

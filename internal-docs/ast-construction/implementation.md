@@ -32,7 +32,7 @@ Two facts constrain every choice and are documented in [ast-mutation](../ast-mut
 
 ## The convention
 
-Everything goes through one handle, `ast_factory: AstFactory<'a>` — rolldown's newtype over `oxc::ast::AstBuilder`. Pick the tool by what you are building:
+Everything goes through one handle, `ast_factory: AstFactory<'a>` — rolldown's newtype over `oxc::ast::builder::AstBuilder`. Pick the tool by what you are building:
 
 ### Generic nodes → oxc's per-type constructors, passing the `ast_factory` handle
 
@@ -53,8 +53,7 @@ Inside an `&self` method that holds the handle, pass `self` directly (it impleme
 For constructions that compose several nodes into a recurring rolldown convention (CJS/ESM interop wrappers, `__toESM` / `__toCommonJS` calls, `.then` chains, …), add an inherent `make_*` method to the `AstFactory` newtype rather than open-coding it at the call site:
 
 ```rust
-#[derive(Clone, Copy)]
-pub struct AstFactory<'a>(oxc::ast::AstBuilder<'a>);
+pub struct AstFactory<'a>(oxc::ast::builder::AstBuilder<'a>);
 
 // generic oxc constructors reach the handle through these traits
 impl<'a> GetAllocator<'a> for AstFactory<'a> {
@@ -80,7 +79,7 @@ A method earns a place here only if it encodes a multi-step rolldown convention 
 
 ### Build programmatically by default; parsing source is an exception
 
-Construct nodes through the `ast_factory` handle (oxc constructors via `Deref`, rolldown patterns via `make_*`). This is the default for **all** node construction, including code rolldown emits, because direct construction has no runtime cost whereas parsing a source string pays lexing + parsing overhead on every build.
+Construct nodes through the `ast_factory` handle (oxc per-type constructors taking the handle, rolldown patterns via `make_*`). This is the default for **all** node construction, including code rolldown emits, because direct construction has no runtime cost whereas parsing a source string pays lexing + parsing overhead on every build.
 
 Authoring code as JS source and parsing it (`EcmaCompiler::parse`) is reserved for a large, fixed body of code where maintaining it as real JS clearly outweighs the one-time parse cost. In practice that is the **runtime module** (`crates/rolldown/src/module_loader/runtime_module_task.rs:226`) and essentially nothing else on the output side — treat it as a special case, not a tool to reach for. Never parse for nodes that splice into an existing AST and need a synthetic `SPAN` + dummy `NodeId` — build those programmatically, per the constraint above.
 
@@ -114,6 +113,7 @@ The convention arrived incrementally, but the oxc#23043 cutover (oxc 0.138) was 
 
 - `AstSnippet` became the `AstFactory` newtype: its `pub builder` field became the wrapped `AstBuilder`; the thin renames were dropped in favor of oxc constructors; the genuine patterns became inherent `make_*` methods. The awkward `AstSnippet` name disappears — rolldown now owns a properly-named builder.
 - The oxc 0.138 builder redesign was migrated in one pass: every generic-node call site moved from the (then-deprecated) `ast_factory.<builder_method>(..)` form to the per-type constructors (`Foo::new(.., &ast_factory)` / `Foo::boxed(..)` / `oxc::allocator::Vec::new_in(..)` / `Str::from_str_in(..)`), `AstFactory` gained the `GetAstBuilder` / `GetAllocator` impls, and the `Deref` was removed. New code follows the per-type convention directly.
+- With every call site on the new API, oxc_ast's **`disable_old_builder`** cargo feature is now enabled, completing the oxc#23043 migration. It removes the deprecated `AstBuilder` methods, drops `AstBuilder`'s `Clone`/`Copy` (so `AstFactory` is not `Copy` either — borrow the handle, or reconstruct one with `AstFactory::new(alloc)` where a detached handle is needed), and removes the top-level `oxc::ast::{AstBuilder, NONE}` re-exports — import from `oxc::ast::builder::` instead. The umbrella `oxc` crate has no passthrough for the feature, so it is enabled via a direct `oxc_ast` dependency carried by `crates/rolldown_ecmascript/Cargo.toml` (cargo-shear-ignored; cargo feature unification applies it to the copy the umbrella re-exports). Keep that pin in lockstep with the `oxc` version when upgrading.
 
 ## Related
 

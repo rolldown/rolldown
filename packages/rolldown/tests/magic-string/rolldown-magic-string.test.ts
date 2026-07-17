@@ -561,6 +561,39 @@ describe('function replacer over surrogate pairs', () => {
   });
 });
 
+describe('overwrite/update legacy boolean 4th arg', () => {
+  // Upstream magic-string accepts a deprecated boolean options argument. `update(…, true)`
+  // means `{ storeName: true }`; `overwrite(…, true)` spreads it away to the default.
+  // The binding used to silently ignore the boolean (napi coerced it to no options).
+  const MAP = { source: 'i.js', includeContent: true } as const;
+
+  it('update(…, true) stores the original name', () => {
+    const s = new MagicString('abcdef');
+    s.update(0, 3, 'X', true);
+    assert.deepStrictEqual(s.generateMap(MAP).names, ['abc']);
+    assert.strictEqual(s.toString(), 'Xdef');
+  });
+
+  it('update(…, false) stores no name', () => {
+    const s = new MagicString('abcdef');
+    s.update(0, 3, 'X', false);
+    assert.deepStrictEqual(s.generateMap(MAP).names, []);
+  });
+
+  it('overwrite(…, true) is the default (boolean ignored, no stored name)', () => {
+    const s = new MagicString('abcdef');
+    s.overwrite(0, 3, 'X', true);
+    assert.deepStrictEqual(s.generateMap(MAP).names, []);
+    assert.strictEqual(s.toString(), 'Xdef');
+  });
+
+  it('still accepts the object form', () => {
+    const s = new MagicString('abcdef');
+    s.update(0, 3, 'X', { storeName: true });
+    assert.deepStrictEqual(s.generateMap(MAP).names, ['abc']);
+  });
+});
+
 describe('lastLine', () => {
   it('returns the content after the last newline', () => {
     assert.strictEqual(new MagicString('abc\ndef').lastLine(), 'def');

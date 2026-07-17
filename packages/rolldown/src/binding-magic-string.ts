@@ -1,4 +1,8 @@
-import { BindingMagicString as NativeBindingMagicString } from './binding.cjs';
+import {
+  BindingMagicString as NativeBindingMagicString,
+  type BindingOverwriteOptions,
+  type BindingUpdateOptions,
+} from './binding.cjs';
 
 // Set `isRolldownMagicString` so external packages (e.g. rolldown-string) can
 // detect native BindingMagicString instances without importing rolldown:
@@ -72,7 +76,15 @@ NativeBindingMagicString.prototype.overwrite = function (
   options?: any,
 ): any {
   assertString(content, 'replacement content must be a string');
-  return nativeOverwrite.call(this, start, end, content, options);
+  // Upstream accepts a legacy boolean 4th arg but spreads it away, so any boolean is
+  // equivalent to the default options — normalize it so napi doesn't reject the type.
+  return nativeOverwrite.call(
+    this,
+    start,
+    end,
+    content,
+    typeof options === 'boolean' ? undefined : options,
+  );
 };
 
 NativeBindingMagicString.prototype.update = function (
@@ -82,7 +94,10 @@ NativeBindingMagicString.prototype.update = function (
   options?: any,
 ): any {
   assertString(content, 'replacement content must be a string');
-  return nativeUpdate.call(this, start, end, content, options);
+  // Upstream's legacy boolean 4th arg on update: `true` is the deprecated `storeName`
+  // shorthand; `false` carries no options.
+  const opts = typeof options === 'boolean' ? (options ? { storeName: true } : undefined) : options;
+  return nativeUpdate.call(this, start, end, content, opts);
 };
 
 // Override replace/replaceAll to support RegExp patterns and function replacers.
@@ -319,6 +334,23 @@ export interface RolldownMagicString extends NativeBindingMagicString {
    * A function replacer is called like `String.prototype.replace`'s, once per match.
    */
   replaceAll(from: string | RegExp, to: string | ReplacerFunction): this;
+  /**
+   * The 4th argument also accepts the deprecated boolean form. `overwrite(s, e, c, true)`
+   * spreads to the default options (upstream ignores it); `update(s, e, c, true)` is
+   * equivalent to `{ storeName: true }`.
+   */
+  overwrite(
+    start: number,
+    end: number,
+    content: string,
+    options?: boolean | BindingOverwriteOptions | null,
+  ): this;
+  update(
+    start: number,
+    end: number,
+    content: string,
+    options?: boolean | BindingUpdateOptions | null,
+  ): this;
 }
 
 type RolldownMagicStringConstructor = Omit<typeof NativeBindingMagicString, 'prototype'> & {

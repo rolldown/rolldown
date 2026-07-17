@@ -594,6 +594,22 @@ describe('overwrite/update legacy boolean 4th arg', () => {
   });
 });
 
+describe('snip', () => {
+  // Upstream returns a fresh clone (`this.clone()` then trims), not `this`; the binding
+  // returns a new instance too. Pin it so a refactor can't silently make snip mutate the
+  // receiver or hand back a view that shares state with the original.
+  it('returns a new, independent instance and leaves the original untouched', () => {
+    const a = new MagicString('abcdef');
+    const b = a.snip(1, 4);
+    assert.notStrictEqual(b, a);
+    assert.strictEqual(a.toString(), 'abcdef');
+    assert.strictEqual(b.toString(), 'bcd');
+    b.overwrite(1, 2, 'Z');
+    assert.strictEqual(a.toString(), 'abcdef');
+    assert.strictEqual(b.toString(), 'Zcd');
+  });
+});
+
 describe('lastLine', () => {
   it('returns the content after the last newline', () => {
     assert.strictEqual(new MagicString('abc\ndef').lastLine(), 'def');

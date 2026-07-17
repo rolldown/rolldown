@@ -60,12 +60,7 @@ import { withFilter } from 'rolldown/filter';
 export default defineConfig({
   plugins: [
     // Run the transform hook of the `yaml` plugin only for modules which end in `.yaml`
-    withFilter(
-      yaml({
-        /*...*/
-      }),
-      { transform: { id: /\.yaml$/ } },
-    ),
+    withFilter(yaml({/*...*/}), { transform: { id: /\.yaml$/ } }),
   ],
 });
 ```

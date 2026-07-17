@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+import assert$1 from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 __rolldown_runtime__.registerGraph({
 	ids: [
@@ -43,52 +44,26 @@ parent_hot.accept((newMod) => {
 	const { childValue, parentValue } = newMod;
 	assert.strictEqual(parentValue, "parent");
 	assert.strictEqual(childValue, "child");
+	globalThis.__delete_file_used_parent_reran = true;
 });
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert$1.strictEqual(globalThis.__delete_file_used_parent_reran, true, "step 1 (recreate child.js with changed content) should have re-run parent.js");
+});
 //#endregion
 
 ```
 
 # HMR Step 0
 
-## Code
-
-```js
-__rolldown_runtime__.registerGraph({ids:["parent.js","child.js"],localCount:1,edges:[[1]],dynamicEdges:[[]]});
-//#region parent.js
-__rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
-			parentValue: () => parentValue,
-			childValue: () => import_child_00.value
-		});
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		__rolldown_runtime__.initModule("child.js");
-		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		var import_child_00 = __rolldown_runtime__.loadExports("child.js");
-		const parentValue = "parent";
-		hot_parent.accept((newMod) => {
-			const { childValue, parentValue } = newMod;
-			assert.strictEqual(parentValue, "parent");
-			assert.strictEqual(childValue, "child");
-		});
-	} finally {}
-}));
-
-//#endregion
-```
-
 ## Meta
 
-- update type: patch
-
-### Changed Ids
-
-- parent.js
+- update type: noop
 
 # HMR Step 1
 
@@ -99,10 +74,14 @@ __rolldown_runtime__.registerGraph({ids:["child.js","parent.js"],localCount:2,ed
 //#region child.js
 __rolldown_runtime__.registerFactory("child.js", "esm", (function(__rolldown_module_id__) {
 	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			value: () => value,
+			recreated: () => recreated
+		});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = "child";
+		const recreated = true;
 	} finally {}
 }));
 
@@ -123,6 +102,7 @@ __rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_mo
 			const { childValue, parentValue } = newMod;
 			assert.strictEqual(parentValue, "parent");
 			assert.strictEqual(childValue, "child");
+			globalThis.__delete_file_used_parent_reran = true;
 		});
 	} finally {}
 }));

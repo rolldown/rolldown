@@ -24,7 +24,9 @@ describe('hmr-not-loaded-dynamic-import', () => {
     // nothing has been edited since; every call costs its full stability window.
     await plantReloadMarker();
 
-    editFile('main.js', (code) => code + '\n');
+    // A real statement, not trivia: a rebuild whose output is byte-identical
+    // (whitespace/comment-only edit) is suppressed as a noop and would not reload.
+    editFile('main.js', (code) => code + 'globalThis.__editStep = 1;\n');
     // The reload resets the counter to its initial markup.
     await expect.poll(() => readReloadMarker()).toBe(null);
     await expect.poll(() => page.textContent('button')).toBe('Counter 0');
@@ -37,7 +39,7 @@ describe('hmr-not-loaded-dynamic-import', () => {
     await waitForBuildStable();
     await plantReloadMarker();
 
-    editFile('dep.js', (code) => code + '\n');
+    editFile('dep.js', (code) => code.replace("'dep'", "'dep2'"));
     // Wait out the rebuild, then prove the page was left alone: no reload, state intact.
     await waitForBuildStable();
     expect(await readReloadMarker()).toBe('alive');

@@ -17,7 +17,7 @@ use rolldown_ecmascript_utils::AstFactory;
 use rolldown_error::BuildResult;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_sourcemap::{Source, SourceJoiner, SourceMapSource};
+use rolldown_sourcemap::{Source, SourceJoiner, SourceMap, SourceMapSource};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
@@ -81,6 +81,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     changed_file_paths: &FxIndexMap<String, WatcherChangeKind>,
     clients: &[ClientHmrInput<'_>],
     stamp_table: &mut HmrStampTable,
+    last_build_errored: bool,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     tracing::trace!(
       "[HmrStage] starts computing HMR updates\n - changed_file_paths: {:#?}\n - clients: {:#?}",
@@ -121,6 +122,24 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .collect::<Vec<_>>(),
     );
 
+    // Files re-queued by an earlier failed scan (`pending_rescans`) get
+    // re-fetched and merged by this update as well. Treat them as changed so
+    // their recovered content reaches the clients' patches; otherwise only
+    // the server-side graph would learn about their edits.
+    //
+    // This fold must come BEFORE the empty early-return below. A watched path
+    // that maps to no module would otherwise return `Noop` without retrying the
+    // rescans, and that empty success clears `last_task_errored` — so a later
+    // restore of the broken file to its pre-break bytes would be suppressed as
+    // unchanged, leaving clients stuck on the error overlay. Folding first
+    // makes the empty event re-fetch the broken file, which keeps failing (and
+    // keeps the latch set) until the file is actually fixed.
+    for resolved_id in &self.cache.pending_rescans {
+      if let Some(state) = self.cache.module_id_to_idx.get(&resolved_id.id) {
+        changed_modules.insert(state.idx());
+      }
+    }
+
     if changed_modules.is_empty() {
       return Ok(
         clients
@@ -133,15 +152,35 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       );
     }
 
-    // Files re-queued by an earlier failed scan (`pending_rescans`) get
-    // re-fetched and merged by this update as well. Treat them as changed so
-    // their recovered content reaches the clients' patches; otherwise only
-    // the server-side graph would learn about their edits.
-    for resolved_id in &self.cache.pending_rescans {
-      if let Some(state) = self.cache.module_id_to_idx.get(&resolved_id.id) {
-        changed_modules.insert(state.idx());
-      }
-    }
+    // After an errored build (`last_build_errored`) the capture is skipped, so
+    // every changed module ships. A failed scan merges nothing, so undoing the
+    // broken edit rebuilds byte-identical output — the graph can't tell "broke,
+    // then fixed" from "nothing happened", but clients are stuck on the error
+    // (overlay / fallback page) and a suppressed update would leave them there.
+    let pre_rebuild_renders = if last_build_errored {
+      FxHashMap::default()
+    } else {
+      let pre_rebuild_inputs = changed_modules
+        .iter()
+        .filter_map(|module_idx| {
+          self.module_table().modules[*module_idx].as_normal()?;
+          let ecma_ast = self.index_ecma_ast()[*module_idx].as_ref()?;
+          Some(ModuleRenderInput {
+            idx: *module_idx,
+            ecma_ast: ecma_ast.clone_with_another_arena(),
+          })
+        })
+        .collect::<Vec<_>>();
+      pre_rebuild_inputs
+        .into_par_iter()
+        .map(|render_input| {
+          let module_idx = render_input.idx;
+          (module_idx, self.render_module_code(render_input, 0, false).0)
+        })
+        .collect::<Vec<_>>()
+        .into_iter()
+        .collect::<FxHashMap<_, _>>()
+    };
 
     // 1. Do ONE module refetch and cache merge — the update-superset walk (which
     // selects the factories to ship) runs on the post-rebuild table; boundary
@@ -198,6 +237,44 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       self.cache.update_defer_sync_data(&options).await?;
       new_added_modules
     };
+
+    // Drop the changed modules whose post-rebuild render is byte-identical to the
+    // pre-rebuild capture: their output didn't change, so stamping and shipping
+    // them would only make every client re-run code it already holds. A module
+    // that can't be compared (no pre-rebuild render, or no longer normal) stays
+    // in. Dep identity is part of the compared code (internal imports print as
+    // `loadExports("<dep stable id>")`), so a resolution shift under an unchanged
+    // source still ships.
+    let recheck_inputs = changed_modules
+      .iter()
+      .filter(|module_idx| pre_rebuild_renders.contains_key(*module_idx))
+      .filter_map(|module_idx| {
+        self.module_table().modules[*module_idx].as_normal()?;
+        let ecma_ast = self.index_ecma_ast()[*module_idx].as_ref()?;
+        Some(ModuleRenderInput { idx: *module_idx, ecma_ast: ecma_ast.clone_with_another_arena() })
+      })
+      .collect::<Vec<_>>();
+    let output_unchanged_modules = recheck_inputs
+      .into_par_iter()
+      .filter_map(|render_input| {
+        let module_idx = render_input.idx;
+        let (code, _) = self.render_module_code(render_input, 0, false);
+        (pre_rebuild_renders[&module_idx] == code).then_some(module_idx)
+      })
+      .collect::<Vec<_>>()
+      .into_iter()
+      .collect::<FxHashSet<_>>();
+    if !output_unchanged_modules.is_empty() {
+      tracing::debug!(
+        target: "hmr",
+        "skip modules whose rebuilt output is unchanged: {:?}",
+        output_unchanged_modules
+          .iter()
+          .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
+          .collect::<Vec<_>>(),
+      );
+      changed_modules.retain(|module_idx| !output_unchanged_modules.contains(module_idx));
+    }
 
     // 2. Stamp the rebuild: `latest[m] = rebuild_seq` for every changed or newly added
     // module — the versioned ship map's staleness source.
@@ -474,65 +551,22 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .into_par_iter()
       .enumerate()
       .flat_map(|(index, render_input)| {
-        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast } = render_input;
+        let affected_module_idx = render_input.idx;
+        let (code, map) = self.render_module_code(render_input, index, true);
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
           unreachable!("Only normal modules should be rendered");
         };
 
-        let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
-        let use_pife_for_module_wrappers =
-          self.options.optimization.is_pife_for_module_wrappers_enabled();
-        let modules = &self.module_table().modules;
-
-        ast.program.with_mut(|fields| {
-          // Re-running semantic re-stamps every NodeId. The NodeId-keyed side-table lookups
-          // below still hit only because the clone is unmutated at this point: identical tree
-          // shape re-derives exactly the scan-time ids (see internal-docs/ast-mutation/implementation.md).
-          let scoping = EcmaAst::make_semantic(fields.program).into_scoping();
-
-          let mut finalizer = HmrAstFinalizer {
-            modules,
-            ast_factory: AstFactory::new(fields.allocator),
-            import_bindings: FxHashMap::default(),
-            module: affected_module,
-            exports: oxc::allocator::Vec::new_in(&fields.allocator),
-            use_pife_for_module_wrappers,
-            dependencies: FxIndexSet::default(),
-            imports: FxHashSet::default(),
-            generated_static_import_infos: FxHashMap::default(),
-            re_export_all_dependencies: FxIndexSet::default(),
-            generated_static_import_stmts_from_external: FxIndexMap::default(),
-            unique_index: index,
-            named_exports: FxHashMap::default(),
-          };
-
-          traverse_mut(&mut finalizer, fields.allocator, fields.program, scoping, ());
-        });
-
-        let codegen = EcmaCompiler::print_with(
-          &ast,
-          PrintOptions {
-            sourcemap: enable_sourcemap,
-            filename: affected_module.id.to_string(),
-            comments: PrintCommentsOptions {
-              legal: false,
-              annotation: self.options.comments.annotation,
-              jsdoc: self.options.comments.jsdoc,
-            },
-            initial_indent: 0,
-          },
-        );
-
         let intro_comment: Box<dyn Source + Send> =
           Box::new(concat_string!("//#region ", affected_module.debug_id));
         let outro_comment: Box<dyn Source + Send> = Box::new(concat_string!("//#endregion"));
 
-        let code_source: Box<dyn Source + Send> = if let Some(map) = codegen.map {
-          Box::new(SourceMapSource::new(codegen.code, map.into_owned()))
+        let code_source: Box<dyn Source + Send> = if let Some(map) = map {
+          Box::new(SourceMapSource::new(code, map))
         } else {
-          Box::new(codegen.code)
+          Box::new(code)
         };
 
         [intro_comment, code_source, outro_comment]
@@ -593,6 +627,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // Note: the carried set might include external modules. There's no way to "update" them, so we need to remove them.
     carried_modules.retain(|idx| self.module_table().modules[*idx].is_normal());
 
+    // Nothing to ship and nothing for the client's walk to re-run — every changed
+    // module rendered byte-identical (dropped upstream) and the stale sweep
+    // carried nothing. Say so explicitly instead of sending an empty patch.
+    if carried_modules.is_empty() && changed_ids.is_empty() {
+      return Ok(HmrUpdate::Noop);
+    }
+
     // Sorting `carried_modules` is not strictly necessary, but it:
     // - Makes the snapshot more stable when we change logic that affects the order of modules.
     carried_modules
@@ -632,65 +673,22 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .into_par_iter()
       .enumerate()
       .flat_map(|(index, render_input)| {
-        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast } = render_input;
+        let affected_module_idx = render_input.idx;
+        let (code, map) = self.render_module_code(render_input, index, true);
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
           unreachable!("HMR only supports normal module");
         };
 
-        let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
-        let use_pife_for_module_wrappers =
-          self.options.optimization.is_pife_for_module_wrappers_enabled();
-        let modules = &self.module_table().modules;
-
-        ast.program.with_mut(|fields| {
-          // Re-running semantic re-stamps every NodeId. The NodeId-keyed side-table lookups
-          // below still hit only because the clone is unmutated at this point: identical tree
-          // shape re-derives exactly the scan-time ids (see internal-docs/ast-mutation/implementation.md).
-          let scoping = EcmaAst::make_semantic(fields.program).into_scoping();
-
-          let mut finalizer = HmrAstFinalizer {
-            modules,
-            ast_factory: AstFactory::new(fields.allocator),
-            import_bindings: FxHashMap::default(),
-            module: affected_module,
-            exports: oxc::allocator::Vec::new_in(&fields.allocator),
-            use_pife_for_module_wrappers,
-            dependencies: FxIndexSet::default(),
-            imports: FxHashSet::default(),
-            generated_static_import_infos: FxHashMap::default(),
-            re_export_all_dependencies: FxIndexSet::default(),
-            generated_static_import_stmts_from_external: FxIndexMap::default(),
-            unique_index: index,
-            named_exports: FxHashMap::default(),
-          };
-
-          traverse_mut(&mut finalizer, fields.allocator, fields.program, scoping, ());
-        });
-
-        let codegen = EcmaCompiler::print_with(
-          &ast,
-          PrintOptions {
-            sourcemap: enable_sourcemap,
-            filename: affected_module.id.to_string(),
-            comments: PrintCommentsOptions {
-              legal: false, // ignore hmr chunk comments
-              annotation: self.options.comments.annotation,
-              jsdoc: self.options.comments.jsdoc,
-            },
-            initial_indent: 0,
-          },
-        );
-
         let intro_comment: Box<dyn Source + Send> =
           Box::new(concat_string!("//#region ", affected_module.debug_id));
         let outro_comment: Box<dyn Source + Send> = Box::new(concat_string!("//#endregion"));
 
-        let code_source: Box<dyn Source + Send> = if let Some(map) = codegen.map {
-          Box::new(SourceMapSource::new(codegen.code, map.into_owned()))
+        let code_source: Box<dyn Source + Send> = if let Some(map) = map {
+          Box::new(SourceMapSource::new(code, map))
         } else {
-          Box::new(codegen.code)
+          Box::new(code)
         };
 
         [intro_comment, code_source, outro_comment]
@@ -746,6 +744,76 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       seq: 0,
       carried,
     }))
+  }
+
+  /// Finalize and print one module into its HMR payload form (factory-registration
+  /// snippet, without the `//#region` framing).
+  ///
+  /// `unique_index` seeds the payload-position-dependent binding suffixes, so two
+  /// renders of the same module compare equal only when they pin it to the same
+  /// value. `with_sourcemap: false` skips sourcemap generation even when the
+  /// options ask for one.
+  fn render_module_code(
+    &self,
+    render_input: ModuleRenderInput,
+    unique_index: usize,
+    with_sourcemap: bool,
+  ) -> (String, Option<SourceMap>) {
+    let ModuleRenderInput { idx: module_idx, ecma_ast: mut ast } = render_input;
+
+    let Module::Normal(module) = &self.module_table().modules[module_idx] else {
+      unreachable!("HMR only supports normal module");
+    };
+
+    let enable_sourcemap =
+      with_sourcemap && self.options.sourcemap.is_some() && !module.is_virtual();
+    let use_pife_for_module_wrappers =
+      self.options.optimization.is_pife_for_module_wrappers_enabled();
+    let modules = &self.module_table().modules;
+
+    ast.program.with_mut(|fields| {
+      // Re-running semantic re-stamps every NodeId. The NodeId-keyed side-table lookups
+      // below still hit only because the clone is unmutated at this point: identical tree
+      // shape re-derives exactly the scan-time ids (see internal-docs/ast-mutation/implementation.md).
+      let scoping = EcmaAst::make_semantic(fields.program).into_scoping();
+
+      let mut finalizer = HmrAstFinalizer {
+        modules,
+        ast_factory: AstFactory::new(fields.allocator),
+        import_bindings: FxHashMap::default(),
+        module,
+        exports: oxc::allocator::Vec::new_in(&fields.allocator),
+        use_pife_for_module_wrappers,
+        dependencies: FxIndexSet::default(),
+        imports: FxHashSet::default(),
+        generated_static_import_infos: FxHashMap::default(),
+        re_export_all_dependencies: FxIndexSet::default(),
+        generated_static_import_stmts_from_external: FxIndexMap::default(),
+        unique_index,
+        named_exports: FxHashMap::default(),
+      };
+
+      traverse_mut(&mut finalizer, fields.allocator, fields.program, scoping, ());
+    });
+
+    let codegen = EcmaCompiler::print_with(
+      &ast,
+      PrintOptions {
+        sourcemap: enable_sourcemap,
+        filename: module.id.to_string(),
+        comments: PrintCommentsOptions {
+          legal: false, // ignore hmr chunk comments
+          annotation: self.options.comments.annotation,
+          jsdoc: self.options.comments.jsdoc,
+        },
+        initial_indent: 0,
+      },
+    );
+
+    match codegen.map {
+      Some(map) => (codegen.code, Some(map.into_owned())),
+      None => (codegen.code, None),
+    }
   }
 }
 

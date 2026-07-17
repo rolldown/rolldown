@@ -99,30 +99,9 @@ __rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_mo
 
 # HMR Step 2
 
-## Code
-
-```js
-__rolldown_runtime__.registerGraph({ids:["child.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
-//#region child.js
-__rolldown_runtime__.registerFactory("child.js", "esm", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		const value = "child";
-	} finally {}
-}));
-
-//#endregion
-```
-
 ## Meta
 
-- update type: patch
-
-### Changed Ids
-
-- child.js
+- update type: noop
 
 # HMR Step 3
 

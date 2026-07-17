@@ -205,7 +205,7 @@ To run the `tests/fixtures/resolve/alias` test, you could use `just test-node-ro
 | **browser**  | `browser` | A real Chromium page against an **in-process Vite full-bundle-mode dev server**. Most dev-engine tests live here. |
 | **fixtures** | `node`    | A custom dev server building to **disk**, with the built artifact run as a `node` child process.                  |
 
-The browser suite runs on Vite itself (`experimental.bundledDev`), served from the vendored Vite submodule at `vite/` (repo root) with its `rolldown` dependency linked to the workspace's `packages/rolldown` — so the tests exercise the local rolldown binding through the real Vite integration. The architecture and the reasoning behind the harness are captured in the [Dev Server Test Harness design doc](https://github.com/rolldown/rolldown/blob/main/internal-docs/dev-server-test-harness/implementation.md) — read it before changing the harness itself.
+The browser suite runs on Vite itself (`experimental.bundledDev`), served from the Vite checkout at `vite/` (repo root, a gitignored clone of vitejs/vite `rolldown-canary` rebased onto `main`) with its `rolldown` dependency linked to the workspace's `packages/rolldown`, so the tests exercise the local rolldown binding through the real Vite integration. The architecture and the reasoning behind the harness are captured in the [Dev Server Test Harness design doc](https://github.com/rolldown/rolldown/blob/main/internal-docs/dev-server-test-harness/implementation.md). Read it before changing the harness itself.
 
 ### Browser playgrounds
 
@@ -264,7 +264,7 @@ just build-rolldown
 pnpm --filter @rolldown/test-dev-server build
 ```
 
-The browser suite also needs the Vite submodule set up once (init + install + build + link the workspace rolldown into it). The setup builds the checkout as-is and never moves it — after a pin bump, run `git submodule update vite` first. Re-run it after updating the checkout or after running an install inside it (an install resets the rolldown link):
+The browser suite also needs the Vite checkout set up once (clone vitejs/vite `rolldown-canary` rebased onto `main` + install + build + link the workspace rolldown into it). The setup builds an existing checkout as-is and never moves it, so updating it is a manual git step inside `vite/`. Re-run it after updating the checkout or after running an install inside it (an install resets the rolldown link):
 
 ```sh
 just setup-vite

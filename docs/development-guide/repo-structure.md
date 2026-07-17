@@ -21,7 +21,7 @@ We store all the Node.js packages in this directory.
 
 # `/vite`
 
-The vendored [vitejs/vite](https://github.com/vitejs/vite) submodule used by the dev-server test harness (`packages/test-dev-server`). It must stay pristine: never edit tracked files inside it.
+The Vite checkout used by the dev-server test harness (`packages/test-dev-server`): a gitignored clone of [vitejs/vite](https://github.com/vitejs/vite) at the latest `rolldown-canary` rebased onto the latest `main`, created by `just setup-vite`. It must stay unpatched: never edit Vite source files inside it.
 
 # `/examples`
 

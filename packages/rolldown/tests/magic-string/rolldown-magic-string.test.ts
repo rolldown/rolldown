@@ -626,6 +626,34 @@ describe('ignoreList constructor option', () => {
   });
 });
 
+describe('indent overloads', () => {
+  // Upstream accepts the options object as the first argument, an `indentStart` option, and
+  // a mutable `indentExclusionRanges` property. Verified against magic-string 0.30.21.
+  it('accepts the options object as the first argument', () => {
+    const s = new MagicString('aaa\nbbb');
+    s.indent({ exclude: [[0, 3]] });
+    assert.strictEqual(s.toString(), 'aaa\n\tbbb');
+  });
+
+  it('indentStart:false leaves the first line un-indented', () => {
+    const s = new MagicString('aaa\nbbb\nccc');
+    s.indent('  ', { indentStart: false });
+    assert.strictEqual(s.toString(), 'aaa\n  bbb\n  ccc');
+  });
+
+  it('indentStart:false works via the object-first overload too', () => {
+    const s = new MagicString('aaa\nbbb');
+    s.indent({ indentStart: false });
+    assert.strictEqual(s.toString(), 'aaa\n\tbbb');
+  });
+
+  it('indentExclusionRanges is a settable property', () => {
+    const s = new MagicString('aaa\nbbb');
+    s.indentExclusionRanges = [[0, 3]];
+    assert.deepStrictEqual(s.indentExclusionRanges, [[0, 3]]);
+  });
+});
+
 describe('lastLine', () => {
   it('returns the content after the last newline', () => {
     assert.strictEqual(new MagicString('abc\ndef').lastLine(), 'def');

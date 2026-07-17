@@ -405,9 +405,19 @@ mod indent {
   #[test]
   fn should_prevent_excluded_characters_from_being_indented() {
     let mut s = MagicString::new("abc\ndef\nghi\njkl");
-    s.indent_with(IndentOptions { indentor: Some("  "), exclude: &[(7, 15)] }).unwrap();
+    s.indent_with(IndentOptions {
+      indentor: Some("  "),
+      exclude: &[(7, 15)],
+      ..Default::default()
+    })
+    .unwrap();
     assert_eq!(s.to_string(), "  abc\n  def\nghi\njkl");
-    s.indent_with(IndentOptions { indentor: Some(">>"), exclude: &[(7, 15)] }).unwrap();
+    s.indent_with(IndentOptions {
+      indentor: Some(">>"),
+      exclude: &[(7, 15)],
+      ..Default::default()
+    })
+    .unwrap();
     assert_eq!(s.to_string(), ">>  abc\n>>  def\nghi\njkl");
   }
 
@@ -417,7 +427,8 @@ mod indent {
     let mut s = MagicString::new("AB");
     s.overwrite(0, 1, "x\n");
     s.overwrite(1, 2, "y\n");
-    s.indent_with(IndentOptions { indentor: Some("  "), exclude: &[(0, 1)] }).unwrap();
+    s.indent_with(IndentOptions { indentor: Some("  "), exclude: &[(0, 1)], ..Default::default() })
+      .unwrap();
     assert_eq!(s.to_string(), "x\n  y\n");
   }
 
@@ -462,7 +473,8 @@ mod indent {
   #[test]
   fn should_ignore_the_end_of_each_exclude_range() {
     let mut s = MagicString::new("012\n456\n89a\nbcd");
-    s.indent_with(IndentOptions { indentor: Some(">"), exclude: &[(0, 3)] }).unwrap();
+    s.indent_with(IndentOptions { indentor: Some(">"), exclude: &[(0, 3)], ..Default::default() })
+      .unwrap();
     assert_eq!(s.to_string(), "012\n>456\n>89a\n>bcd");
   }
 }

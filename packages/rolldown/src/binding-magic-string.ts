@@ -1,5 +1,6 @@
 import {
   BindingMagicString as NativeBindingMagicString,
+  type BindingIndentOptions,
   type BindingOverwriteOptions,
   type BindingUpdateOptions,
 } from './binding.cjs';
@@ -38,6 +39,8 @@ const nativePrependRight = NativeBindingMagicString.prototype.prependRight;
 const nativeOverwrite = NativeBindingMagicString.prototype.overwrite;
 // eslint-disable-next-line @typescript-eslint/unbound-method
 const nativeUpdate = NativeBindingMagicString.prototype.update;
+// eslint-disable-next-line @typescript-eslint/unbound-method
+const nativeIndent = NativeBindingMagicString.prototype.indent;
 
 NativeBindingMagicString.prototype.append = function (content: any): any {
   assertString(content, 'outro content must be a string');
@@ -98,6 +101,14 @@ NativeBindingMagicString.prototype.update = function (
   // shorthand; `false` carries no options.
   const opts = typeof options === 'boolean' ? (options ? { storeName: true } : undefined) : options;
   return nativeUpdate.call(this, start, end, content, opts);
+};
+
+NativeBindingMagicString.prototype.indent = function (indentor?: any, options?: any): any {
+  // Upstream accepts the options object as the first argument: indent({ exclude, indentStart }).
+  if (indentor !== null && typeof indentor === 'object') {
+    return nativeIndent.call(this, undefined, indentor);
+  }
+  return nativeIndent.call(this, indentor, options);
 };
 
 // Override replace/replaceAll to support RegExp patterns and function replacers.
@@ -350,6 +361,14 @@ export interface RolldownMagicString extends NativeBindingMagicString {
     end: number,
     content: string,
     options?: boolean | BindingUpdateOptions | null,
+  ): this;
+  /**
+   * The options object may also be passed as the first argument: `indent({ exclude, indentStart })`.
+   * `indentStart: false` leaves the first line un-indented.
+   */
+  indent(
+    indentor?: string | BindingIndentOptions | null,
+    options?: BindingIndentOptions | null,
   ): this;
   /**
    * Rolldown-only; not part of the magic-string API. `relocate` is the native name behind

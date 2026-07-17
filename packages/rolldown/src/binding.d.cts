@@ -1596,6 +1596,11 @@ export declare class BindingMagicString {
   get original(): string
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
+  /**
+   * Upstream `indentExclusionRanges` is a mutable property; expose a setter so it can be
+   * reassigned after construction.
+   */
+  set indentExclusionRanges(ranges: Array<Array<number>> | Array<number> | undefined | null)
   get ignoreList(): boolean
   get offset(): number
   set offset(offset: number)
@@ -2366,6 +2371,11 @@ export interface BindingHookTransformOutput {
 
 export interface BindingIndentOptions {
   exclude?: Array<Array<number>> | Array<number>
+  /**
+   * `magic-string`'s `indentStart`; defaults to `true`. When `false`, the first line is
+   * left un-indented and only later lines are indented.
+   */
+  indentStart?: boolean
 }
 
 export type BindingInjectImport =

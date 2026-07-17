@@ -234,6 +234,9 @@ pub struct BindingOverwriteOptions {
 #[derive(Default)]
 pub struct BindingIndentOptions {
   pub exclude: Option<Either<Vec<Vec<i64>>, Vec<i64>>>,
+  /// `magic-string`'s `indentStart`; defaults to `true`. When `false`, the first line is
+  /// left un-indented and only later lines are indented.
+  pub indent_start: Option<bool>,
 }
 
 #[napi(object)]
@@ -476,6 +479,13 @@ impl BindingMagicString<'_> {
   #[napi(getter)]
   pub fn indent_exclusion_ranges(&self) -> Option<Either<Vec<Vec<i64>>, Vec<i64>>> {
     self.indent_exclusion_ranges.as_ref().map(IndentExclusionRanges::to_either)
+  }
+
+  /// Upstream `indentExclusionRanges` is a mutable property; expose a setter so it can be
+  /// reassigned after construction.
+  #[napi(setter)]
+  pub fn set_indent_exclusion_ranges(&mut self, ranges: Option<Either<Vec<Vec<i64>>, Vec<i64>>>) {
+    self.indent_exclusion_ranges = ranges.map(IndentExclusionRanges::from_either);
   }
 
   #[napi(getter)]
@@ -953,6 +963,8 @@ impl BindingMagicString<'_> {
     options: Option<BindingIndentOptions>,
   ) -> napi::Result<This<'s>> {
     self.ensure_live()?;
+    // Default `indentStart` to true, matching magic-string.
+    let indent_start = options.as_ref().and_then(|o| o.indent_start).unwrap_or(true);
     // Per-call exclude takes priority; fall back to constructor's indentExclusionRanges.
     let explicit_exclude = options.and_then(|opts| opts.exclude);
     let exclude_ranges = if let Some(ref e) = explicit_exclude {
@@ -968,6 +980,7 @@ impl BindingMagicString<'_> {
       .indent_with(string_wizard::IndentOptions {
         indentor: indentor.as_deref(),
         exclude: &exclude_ranges,
+        indent_start,
       })
       .map_err(napi::Error::from_reason)?;
     Ok(this)

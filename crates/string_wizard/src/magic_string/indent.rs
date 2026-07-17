@@ -44,7 +44,7 @@ pub fn guess_indentor(source: &str) -> Option<String> {
   Some(" ".repeat(min_space_count))
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct IndentOptions<'a, 'b> {
   /// MagicString will guess the `indentor` from lines of the source if passed `None`.
   pub indentor: Option<&'a str>,
@@ -52,6 +52,16 @@ pub struct IndentOptions<'a, 'b> {
   /// Half-open `[start, end)` source-offset ranges (as in `magic-string`) whose characters
   /// are left un-indented.
   pub exclude: &'b [(u32, u32)],
+
+  /// Whether to indent the first line. `magic-string`'s `indentStart` option; defaults to
+  /// `true`. When `false`, the first line is left as-is and only later lines are indented.
+  pub indent_start: bool,
+}
+
+impl Default for IndentOptions<'_, '_> {
+  fn default() -> Self {
+    Self { indentor: None, exclude: &[], indent_start: true }
+  }
 }
 
 impl MagicString<'_> {
@@ -96,7 +106,7 @@ impl MagicString<'_> {
     let indentor = opts.indentor.unwrap_or_else(|| self.get_indent_string());
 
     let mut indent_replacer =
-      IndentReplacer { should_indent_next_char: true, indentor: indentor.to_string() };
+      IndentReplacer { should_indent_next_char: opts.indent_start, indentor: indentor.to_string() };
 
     for intro_frag in self.intro.iter_mut() {
       indent_frag(intro_frag, &mut indent_replacer)

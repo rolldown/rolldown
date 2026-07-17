@@ -1,0 +1,98 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region a/a-first.js
+(globalThis.__events ??= []).push("a-first");
+//#endregion
+//#region a/wrapper.js
+function mkWv() {
+	return "WV";
+}
+var wv;
+function init_wrapper() {
+	return (init_wrapper = __esmMin((() => {
+		wv = /* @__PURE__ */ mkWv();
+	})))();
+}
+//#endregion
+export { wv as n, init_wrapper as t };
+
+```
+
+## main.js
+
+```js
+import "./a.js";
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+## main2.js
+
+```js
+import { n as wv, t as init_wrapper } from "./a.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region e-first.js
+(globalThis.__events ??= []).push("e-first");
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_wrapper();
+		globalThis.__mainResult = wv;
+	})))();
+}
+//#endregion
+export { init_main as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```
+
+## sec.js
+
+```js
+import { t as require_sec } from "./sec2.js";
+export default require_sec();
+
+```
+
+## sec2.js
+
+```js
+import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region gs/t.js
+var t_exports = /* @__PURE__ */ __exportAll({
+	tv: () => tv,
+	unused: () => unused
+});
+var tv, unused;
+var init_t = __esmMin((() => {
+	tv = /* @__PURE__ */ (() => "TV")();
+	unused = "UNUSED";
+}));
+//#endregion
+//#region gs/sec.js
+var require_sec = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const { tv } = (init_t(), __toCommonJS(t_exports));
+	globalThis.__secRan = (globalThis.__secRan ?? 0) + 1;
+	(globalThis.__events ??= []).push("sec-body");
+	module.exports = { s: tv };
+}));
+//#endregion
+export { require_sec as t };
+
+```

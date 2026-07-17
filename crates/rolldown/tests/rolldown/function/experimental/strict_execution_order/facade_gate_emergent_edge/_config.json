@@ -1,0 +1,19 @@
+{
+  "configName": "on-demand",
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "sec", "import": "./gs/sec.js" }
+    ],
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
+    "experimental": { "onDemandWrapping": true },
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        { "name": "a", "test": "[\\\\/]a[\\\\/]" },
+        { "name": "gs", "test": "[\\\\/]gs[\\\\/]" }
+      ]
+    }
+  }
+}

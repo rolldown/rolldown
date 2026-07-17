@@ -27,10 +27,9 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
+//#region main.js
+node_assert.default.strictEqual(require_lib.default.value, 42);
 //#endregion
-__esmMin((() => {
-	node_assert.default.strictEqual(require_lib.default.value, 42);
-}))();
 exports.lib = require_lib.default;
 
 ```
@@ -46,23 +45,44 @@ Object.defineProperties(exports, {
 	__esModule: { value: true },
 	[Symbol.toStringTag]: { value: "Module" }
 });
+const require_lib = require("./lib2.js");
+require_lib.init_lib();
+exports.default = require_lib.lib_default;
+exports.named = require_lib.named;
+
+```
+
+### lib2.js
+
+```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 //#region lib.js
 var lib_default, named;
-var init_lib = require_rolldown_runtime.__esmMin((() => {
-	lib_default = { value: 42 };
-	named = "named_value";
-}));
+function init_lib() {
+	return (init_lib = require_rolldown_runtime.__esmMin((() => {
+		lib_default = { value: 42 };
+		named = "named_value";
+	})))();
+}
 //#endregion
-init_lib();
-exports.default = lib_default;
 Object.defineProperty(exports, "init_lib", {
 	enumerable: true,
 	get: function() {
 		return init_lib;
 	}
 });
-exports.named = named;
+Object.defineProperty(exports, "lib_default", {
+	enumerable: true,
+	get: function() {
+		return lib_default;
+	}
+});
+Object.defineProperty(exports, "named", {
+	enumerable: true,
+	get: function() {
+		return named;
+	}
+});
 
 ```
 
@@ -70,16 +90,33 @@ exports.named = named;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_lib = require("./lib2.js");
+require("./main2.js").init_main();
+exports.lib = require_lib.lib_default;
+
+```
+
+### main2.js
+
+```js
+const require_lib = require("./lib2.js");
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
+//#region main.js
+function init_main() {
+	return (init_main = require_rolldown_runtime.__esmMin((() => {
+		require_lib.init_lib();
+		node_assert.default.strictEqual(require_lib.lib_default.value, 42);
+	})))();
+}
 //#endregion
-require_rolldown_runtime.__esmMin((() => {
-	require_lib.init_lib();
-	node_assert.default.strictEqual(require_lib.default.value, 42);
-}))();
-exports.lib = require_lib.default;
+Object.defineProperty(exports, "init_main", {
+	enumerable: true,
+	get: function() {
+		return init_main;
+	}
+});
 
 ```
 

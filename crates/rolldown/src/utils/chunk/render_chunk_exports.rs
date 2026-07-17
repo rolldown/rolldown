@@ -21,66 +21,60 @@ pub fn render_wrapped_entry_chunk(
 ) -> Option<String> {
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
-    match entry_meta.wrap_kind() {
-      WrapKind::Esm => {
-        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-        // init_xxx
+    if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+      let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+
+      let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
+        *wrapper_ref,
+        ctx.chunk_idx,
+        &ctx.chunk.canonical_names,
+      );
+
+      return match ctx.options.format {
+        OutputFormat::Esm => {
+          // export default require_xxx();
+          Some(concat_string!("export default ", wrapper_ref_name.as_str(), "();\n"))
+        }
+        OutputFormat::Cjs => {
+          if matches!(&export_mode, Some(OutputExports::Named)) {
+            Some(render_object_define_property("default", &concat_string!(wrapper_ref_name, "()")))
+          } else {
+            // module.exports = require_xxx();
+            Some(concat_string!("module.exports = ", wrapper_ref_name, "();\n"))
+          }
+        }
+        OutputFormat::Iife | OutputFormat::Umd => {
+          if matches!(&export_mode, Some(OutputExports::Named)) {
+            Some(render_object_define_property("default", &concat_string!(wrapper_ref_name, "()")))
+          } else {
+            // return require_xxx();
+            Some(concat_string!("return ", wrapper_ref_name, "();\n"))
+          }
+        }
+      };
+    }
+
+    match ctx.esm_init_target(entry_id) {
+      Some(target) => {
         let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
-          *wrapper_ref,
+          target.wrapper_ref,
           ctx.chunk_idx,
           &ctx.chunk.canonical_names,
         );
-        if entry_meta.is_tla_or_contains_tla_dependency {
+        if target.tla_tainted {
           Some(concat_string!("await ", wrapper_ref_name, "();"))
         } else {
           Some(concat_string!(wrapper_ref_name, "();"))
         }
       }
-      WrapKind::Cjs => {
-        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
-
-        let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
-          *wrapper_ref,
-          ctx.chunk_idx,
-          &ctx.chunk.canonical_names,
-        );
-
-        match ctx.options.format {
-          OutputFormat::Esm => {
-            // export default require_xxx();
-            Some(concat_string!("export default ", wrapper_ref_name.as_str(), "();\n"))
-          }
-          OutputFormat::Cjs => {
-            if matches!(&export_mode, Some(OutputExports::Named)) {
-              Some(render_object_define_property(
-                "default",
-                &concat_string!(wrapper_ref_name, "()"),
-              ))
-            } else {
-              // module.exports = require_xxx();
-              Some(concat_string!("module.exports = ", wrapper_ref_name, "();\n"))
-            }
-          }
-          OutputFormat::Iife | OutputFormat::Umd => {
-            if matches!(&export_mode, Some(OutputExports::Named)) {
-              Some(render_object_define_property(
-                "default",
-                &concat_string!(wrapper_ref_name, "()"),
-              ))
-            } else {
-              // return require_xxx();
-              Some(concat_string!("return ", wrapper_ref_name, "();\n"))
-            }
-          }
-        }
-      }
-      WrapKind::None => None,
+      None => None,
     }
   } else {
     None
   }
 }
 
+#[expect(clippy::too_many_lines)] // Dispatches over every output format and export mode inline.
 pub fn render_chunk_exports(
   ctx: &GenerateContext<'_>,
   export_mode: Option<&OutputExports>,
@@ -178,12 +172,35 @@ pub fn render_chunk_exports(
 
                 match export_mode {
                   Some(OutputExports::Named) => {
-                    if must_keep_live_binding(
+                    // A strict-execution-order wrapper (`init_*`) self-rebinds on first call
+                    // (`function init_x() { return (init_x = __esmMin(cb))() }`), so any
+                    // cross-chunk export of it must expose a *live* getter. A value snapshot
+                    // (`exports.init_x = init_x`) would freeze the pre-rebind function and re-run
+                    // the module body on every later call. On current inputs wrapper refs only
+                    // render through the common-chunk arm below (an entry chunk holding an
+                    // order-wrapped module is split into a facade), which is unconditionally a
+                    // getter; this entry-chunk pin is defense-in-depth so no future topology or
+                    // optimization can route a wrapper into the value-snapshot branch.
+                    let is_order_wrapper_ref =
+                      ctx.order_wrap_state.is_execution_order_wrapper_ref(canonical_ref);
+                    let keep_live_binding = must_keep_live_binding(
                       export_ref,
                       &link_output.symbol_db,
                       options,
                       &link_output.module_table.modules,
-                    ) {
+                    );
+                    // Today `must_keep_live_binding` keeps wrapper refs live on its own, but only
+                    // because the facade ref happens to lack `IsNotReassigned` — an emergent
+                    // property, not a guaranteed one. If it ever breaks (e.g. a single-assignment
+                    // optimization starts flagging facades), fail loudly in debug builds instead
+                    // of silently leaning on the explicit `is_order_wrapper_ref` disjunct below.
+                    debug_assert!(
+                      !is_order_wrapper_ref || keep_live_binding,
+                      "a strict-execution-order wrapper ref must never take the value-snapshot \
+                       export branch (`exports.{exported_name} = {exported_value}`): it would \
+                       freeze the pre-rebind function and re-run the module body",
+                    );
+                    if is_order_wrapper_ref || keep_live_binding {
                       render_object_define_property(&exported_name, &exported_value)
                     } else if exported_name.as_str() == "__proto__" {
                       // `__proto__` has special semantics - assigning to it sets the prototype

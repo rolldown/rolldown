@@ -1,8 +1,4 @@
 {
-  "expectExecutionFailure": {
-    "reason": "Expected to fail until rolldown#10104 is applied.",
-    "outputContains": ["the dynamic target must initialize before the chunk checkpoint"]
-  },
   "configName": "on-demand",
   "config": {
     "input": [
@@ -32,10 +28,6 @@
   "configVariants": [
     {
       "_configName": "wrap-all",
-      "_expectExecutionFailure": {
-        "reason": "Expected to fail until rolldown#10104 is applied.",
-        "outputContains": ["the dynamic target must initialize before the chunk checkpoint"]
-      },
       "onDemandWrapping": false
     }
   ]

@@ -7,25 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region leaf.js
+let foo;
+foo = 1;
+
+//#endregion
+//#region inner.js
 var inner_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 
-var foo;
-var init_inner = __esmMin((() => {
-//#region leaf.js
-	;
-	foo = 1;
-
 //#endregion
-}));
-
-var init_main = __esmMin((() => {
-//#region outer.js
-	init_inner();
-
-//#endregion
-}));
-
-init_main();
 export { inner_exports as star };
 ```
 
@@ -36,39 +26,50 @@ export { inner_exports as star };
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region dep.js
-var init_dep = __esmMin((() => {}));
+import { n as init_inner, r as inner_exports, t as init_main } from "./main2.js";
 
-//#endregion
+init_main();
+export { inner_exports as star };
+```
+
+### main2.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+
 //#region leaf.js
 var foo;
-var init_leaf = __esmMin((() => {
-	init_dep();
-	;
-	foo = 1;
-}));
+function init_leaf() {
+	return (init_leaf = __esmMin((() => {
+		;
+		foo = 1;
+	})))();
+}
 
 //#endregion
 //#region inner.js
 var inner_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
-var init_inner = __esmMin((() => {
-	init_leaf();
-}));
-
-//#endregion
-//#region outer.js
-var init_outer = __esmMin((() => {
-	init_inner();
-}));
+function init_inner() {
+	return (init_inner = __esmMin((() => {
+		init_leaf();
+	})))();
+}
 
 //#endregion
 //#region main.js
-var init_main = __esmMin((() => {
-	init_outer();
-}));
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_inner();
+	})))();
+}
 
 //#endregion
-init_main();
-export { inner_exports as star };
+export { init_inner as n, inner_exports as r, init_main as t };
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
 ```

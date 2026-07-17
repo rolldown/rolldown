@@ -5,23 +5,11 @@
   "configVariants": [
     {
       "_configName": "on-demand",
-      "_expectExecutionFailure": {
-        "reason": "Expected to fail until rolldown#10104 is applied.",
-        "outputContains": [
-          "inlined namespace member must not initialize its dead re-export before page-b"
-        ]
-      },
       "strictExecutionOrder": true,
       "onDemandWrapping": true
     },
     {
       "_configName": "wrap-all",
-      "_expectExecutionFailure": {
-        "reason": "Expected to fail until rolldown#10104 is applied.",
-        "outputContains": [
-          "inlined namespace member must not initialize its dead re-export before page-b"
-        ]
-      },
       "strictExecutionOrder": true
     }
   ]

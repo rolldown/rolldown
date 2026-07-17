@@ -1,8 +1,4 @@
 {
-  "expectExecutionFailure": {
-    "reason": "Expected to fail until rolldown#10104 is applied.",
-    "outputContains": ["the hoisted self-rebinding order wrapper form must be preserved"]
-  },
   "configName": "on-demand",
   "config": {
     "input": [
@@ -34,26 +30,14 @@
   "configVariants": [
     {
       "_configName": "wrap-all",
-      "_expectExecutionFailure": {
-        "reason": "Expected to fail until rolldown#10104 is applied.",
-        "outputContains": ["the hoisted self-rebinding order wrapper form must be preserved"]
-      },
       "onDemandWrapping": false
     },
     {
       "_configName": "minify-on-demand",
-      "_expectExecutionFailure": {
-        "reason": "Expected to fail until rolldown#10104 is applied.",
-        "outputContains": ["the self-rebinding order wrapper form must survive minification"]
-      },
       "minify": true
     },
     {
       "_configName": "minify-wrap-all",
-      "_expectExecutionFailure": {
-        "reason": "Expected to fail until rolldown#10104 is applied.",
-        "outputContains": ["the self-rebinding order wrapper form must survive minification"]
-      },
       "minify": true,
       "onDemandWrapping": false
     }

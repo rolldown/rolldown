@@ -94,10 +94,22 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       // Tree-shaking side effects / global reads / pure annotations come from the analyzer.
       // Top-level reads of imported bindings are detected by a separate uniform walk so the
       // signal is complete by construction (no per-expression-form gaps).
-      if !self.result.ecma_view_meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
+      if self.immutable_ctx.options.is_strict_execution_order_enabled() {
+        let has_top_level_import_read =
+          self.result.ecma_view_meta.contains(EcmaViewMeta::TopLevelImportRead)
+            || TopLevelImportReadDetector::detect(&self.result.symbol_ref_db.ast_scopes, stmt);
+        if stmt_eval_facts.is_order_sensitive() || has_top_level_import_read {
+          self.result.ecma_view_meta.insert(EcmaViewMeta::ExecutionOrderSensitive);
+        }
+        if has_top_level_import_read {
+          self.result.ecma_view_meta.insert(EcmaViewMeta::TopLevelImportRead);
+        }
+      } else if !self.result.ecma_view_meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
         && (stmt_eval_facts.is_order_sensitive()
           || TopLevelImportReadDetector::detect(&self.result.symbol_ref_db.ast_scopes, stmt))
       {
+        // Preserve the flag-off scanner path: once sensitivity is known, later statements do not
+        // need the strict-only import-read classification and must not pay for another AST walk.
         self.result.ecma_view_meta.insert(EcmaViewMeta::ExecutionOrderSensitive);
       }
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));

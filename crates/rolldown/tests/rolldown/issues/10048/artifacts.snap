@@ -6,9 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region data.js
-const themes = {
+//#endregion
+//#region entry.js
+globalThis.__themes = {
 	light: {
 		base: "light",
 		appBg: "#ffffff"
@@ -18,15 +18,10 @@ const themes = {
 		appBg: "#000000"
 	}
 };
-//#endregion
 function getProjectAnnotations() {
 	return [globalThis.__themes];
 }
-__esmMin((() => {
-	//#region entry.js
-	globalThis.__themes = themes;
-	//#endregion
-}))();
+//#endregion
 export { getProjectAnnotations };
 
 ```
@@ -38,36 +33,52 @@ export { getProjectAnnotations };
 ### entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { n as init_entry, t as getProjectAnnotations } from "./entry2.js";
+init_entry();
+export { getProjectAnnotations };
+
+```
+
+### entry2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region data.js
 var themes;
-var init_data = __esmMin((() => {
-	themes = {
-		light: {
-			base: "light",
-			appBg: "#ffffff"
-		},
-		dark: {
-			base: "dark",
-			appBg: "#000000"
-		}
-	};
-}));
-//#endregion
-//#region theming.js
-var init_theming = __esmMin((() => {
-	init_data();
-}));
+function init_data() {
+	return (init_data = __esmMin((() => {
+		themes = {
+			light: {
+				base: "light",
+				appBg: "#ffffff"
+			},
+			dark: {
+				base: "dark",
+				appBg: "#000000"
+			}
+		};
+	})))();
+}
 //#endregion
 //#region entry.js
 function getProjectAnnotations() {
 	return [globalThis.__themes];
 }
+function init_entry() {
+	return (init_entry = __esmMin((() => {
+		init_data();
+		globalThis.__themes = themes;
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_theming();
-	globalThis.__themes = themes;
-}))();
-export { getProjectAnnotations };
+export { init_entry as n, getProjectAnnotations as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```

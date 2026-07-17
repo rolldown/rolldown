@@ -2,7 +2,7 @@ use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
   ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts,
   RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb,
-  WrapKind,
+  UsedSymbolRefs, WrapKind,
 };
 
 pub type FinalizerMutableFields = (
@@ -24,8 +24,11 @@ use crate::{
   SharedOptions,
   chunk_graph::ChunkGraph,
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
-  stages::link_stage::SafelyMergeCjsNsInfo,
-  types::linking_metadata::{EsmInitTarget, LinkingMetadata, LinkingMetadataVec},
+  stages::{
+    generate_stage::order_wrap_state::{EsmInitOrigin, EsmInitTarget, OrderWrapState},
+    link_stage::SafelyMergeCjsNsInfo,
+  },
+  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
 pub struct ScopeHoistingFinalizerContext<'me> {
@@ -36,9 +39,14 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   /// Statement-info table for the current module, threaded in from the
   /// link-stage side `IndexVec<ModuleIdx, StmtInfos>` (see `LinkStage.stmt_infos`).
   pub stmt_infos: &'me StmtInfos,
+  /// The full per-module statement-info table. Wrapped-ESM init target resolution needs another
+  /// module's statement inclusion to tell whether an eager forwarder discharges its own hops.
+  pub index_stmt_infos: &'me crate::type_alias::IndexStmtInfos,
   pub modules: &'me IndexModules,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
+  pub order_wrap_state: &'me OrderWrapState,
+  pub used_symbol_refs: &'me UsedSymbolRefs,
   pub symbol_db: &'me SymbolRefDb,
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,
@@ -58,21 +66,15 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub has_enum_inlining: bool,
 }
 
-/// How the finalizer must wrap the current module, resolved once from its linking metadata.
 #[derive(Clone, Copy, Debug)]
 pub(super) enum ModuleWrapperMode {
-  /// No wrapper declaration is emitted for this module.
   None,
-  /// CJS interop wrapper (`__commonJS`); carries the wrapper symbol.
   InteropCjs(SymbolRef),
-  /// ESM interop wrapper (`__esm`); carries the init target the call sites reference.
   InteropEsm(EsmInitTarget),
+  ExecutionOrder(EsmInitTarget),
 }
 
 impl<'me> ScopeHoistingFinalizerContext<'me> {
-  /// Classify how this module's wrapper is emitted. Replaces the finalizer's inline
-  /// `wrap_kind() + wrapper-statement-included` checks with a single view so all wrapper and
-  /// `init_*()` decisions read the same source of truth.
   pub(super) fn wrapper_mode(&self) -> ModuleWrapperMode {
     let legacy_wrapper_is_included = self
       .linking_info
@@ -85,9 +87,22 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
       );
     }
 
-    match self.linking_info.esm_init_target() {
-      Some(target) if legacy_wrapper_is_included => ModuleWrapperMode::InteropEsm(target),
-      _ => ModuleWrapperMode::None,
+    let Some(target) = self.order_wrap_state.esm_init_target(self.idx, self.linking_info) else {
+      return ModuleWrapperMode::None;
+    };
+    let declaration_is_included = match target.origin {
+      EsmInitOrigin::Interop => legacy_wrapper_is_included,
+      EsmInitOrigin::ExecutionOrder => {
+        self.order_wrap_state.order_wrapper_chunk(self.idx) == Some(self.chunk_idx)
+      }
+    };
+    if !declaration_is_included {
+      return ModuleWrapperMode::None;
+    }
+
+    match target.origin {
+      EsmInitOrigin::Interop => ModuleWrapperMode::InteropEsm(target),
+      EsmInitOrigin::ExecutionOrder => ModuleWrapperMode::ExecutionOrder(target),
     }
   }
 

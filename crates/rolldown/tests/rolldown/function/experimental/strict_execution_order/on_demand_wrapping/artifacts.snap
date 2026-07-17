@@ -6,40 +6,84 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { t as require_dynamic } from "./dynamic2.js";
+export default require_dynamic();
+
+```
+
+## dynamic2.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
 //#region dynamic.js
 var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e3;
 	globalThis.a = 1e3;
 }));
 //#endregion
-export default require_dynamic();
-export { __esmMin as n, require_dynamic as t };
+export { require_dynamic as t };
 
 ```
 
 ## main.js
 
 ```js
-import { n as __esmMin, t as require_dynamic } from "./dynamic.js";
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+## main2.js
+
+```js
+import { t as require_dynamic } from "./dynamic2.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
 import { strictEqual } from "node:assert";
+//#region sideeffects.js
+function init_sideeffects() {
+	return (init_sideeffects = __esmMin((() => {
+		globalThis.a = 2;
+	})))();
+}
+//#endregion
+//#region esm.js
+var a;
+function init_esm() {
+	return (init_esm = __esmMin((() => {
+		require_dynamic();
+		init_sideeffects();
+		a = globalThis.a;
+		strictEqual(a, 2);
+	})))();
+}
+//#endregion
+//#region cjs.js
 function foo() {
 	return 100;
 }
-var a;
-__esmMin((() => {
-	//#region sideeffects.js
-	globalThis.a = 2;
-	//#endregion
-	//#region esm.js
-	require_dynamic();
-	a = globalThis.a;
-	strictEqual(a, 2);
-	//#endregion
-	//#region main.js
-	console.log(`mod.foo: `, foo);
-	//#endregion
-}))();
+function init_cjs() {
+	return (init_cjs = __esmMin((() => {
+		init_esm();
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_cjs();
+		console.log(`mod.foo: `, foo);
+	})))();
+}
+//#endregion
+export { init_main as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __commonJSMin as t };
 
 ```
 
@@ -50,45 +94,83 @@ __esmMin((() => {
 ### dynamic.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { t as require_dynamic } from "./dynamic2.js";
+export default require_dynamic();
+
+```
+
+### dynamic2.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
 //#region dynamic.js
 var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e3;
 	globalThis.a = 1e3;
 }));
 //#endregion
-export default require_dynamic();
-export { __esmMin as n, require_dynamic as t };
+export { require_dynamic as t };
 
 ```
 
 ### main.js
 
 ```js
-import { n as __esmMin, t as require_dynamic } from "./dynamic.js";
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { t as require_dynamic } from "./dynamic2.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
 import { strictEqual } from "node:assert";
 //#region sideeffects.js
-var init_sideeffects = __esmMin((() => {
-	globalThis.a = 2;
-})), a;
-var init_esm = __esmMin((() => {
-	require_dynamic();
-	init_sideeffects();
-	a = globalThis.a;
-	strictEqual(a, 2);
-}));
+function init_sideeffects() {
+	return (init_sideeffects = __esmMin((() => {
+		globalThis.a = 2;
+	})))();
+}
+//#endregion
+//#region esm.js
+var a;
+function init_esm() {
+	return (init_esm = __esmMin((() => {
+		require_dynamic();
+		init_sideeffects();
+		a = globalThis.a;
+		strictEqual(a, 2);
+	})))();
+}
 //#endregion
 //#region cjs.js
 function foo() {
 	return 100;
 }
-var init_cjs = __esmMin((() => {
-	init_esm();
-}));
+function init_cjs() {
+	return (init_cjs = __esmMin((() => {
+		init_esm();
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_cjs();
-	console.log(`mod.foo: `, foo);
-}))();
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_cjs();
+		console.log(`mod.foo: `, foo);
+	})))();
+}
+//#endregion
+export { init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __commonJSMin as t };
 
 ```

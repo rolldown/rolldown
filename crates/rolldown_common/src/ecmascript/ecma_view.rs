@@ -28,6 +28,8 @@ bitflags! {
         /// If the module has top-level empty function, if any module has top level empty function, we need
         /// to apply cross module optimization.
         const TopExportedSideEffectsFreeFunction = 1 << 5;
+        /// Module evaluation reads at least one imported binding.
+        const TopLevelImportRead = 1 << 6;
     }
 }
 

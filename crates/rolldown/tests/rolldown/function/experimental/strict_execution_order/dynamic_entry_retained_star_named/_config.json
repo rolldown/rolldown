@@ -1,8 +1,4 @@
 {
-  "expectExecutionFailure": {
-    "reason": "Expected to fail until rolldown#10104 is applied.",
-    "outputContains": ["named retained-star re-export must initialize common before page-a"]
-  },
   "configName": "on-demand",
   "config": {
     "external": ["node:assert"],
@@ -14,10 +10,6 @@
   "configVariants": [
     {
       "_configName": "wrap-all",
-      "_expectExecutionFailure": {
-        "reason": "Expected to fail until rolldown#10104 is applied.",
-        "outputContains": ["named retained-star re-export must initialize common before page-a"]
-      },
       "onDemandWrapping": false
     }
   ]

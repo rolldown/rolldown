@@ -7,16 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import nodeAssert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
-var value;
-__esmMin((() => {
-	//#region lib-foo.js
-	value = "foo";
-	//#endregion
-	//#region main.js
-	nodeAssert.equal(value, "foo");
-	//#endregion
-}))();
+//#endregion
+//#region main.js
+nodeAssert.equal("foo", "foo");
+//#endregion
 
 ```
 
@@ -27,41 +21,40 @@ __esmMin((() => {
 ### main.js
 
 ```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import nodeAssert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
-//#region dep.js
-var init_dep = __esmMin((() => {}));
-//#endregion
 //#region lib-foo.js
 var value;
-var init_lib_foo = __esmMin((() => {
-	init_dep();
-	value = "foo";
-}));
+function init_lib_foo() {
+	return (init_lib_foo = __esmMin((() => {
+		value = "foo";
+	})))();
+}
 //#endregion
-//#region proxy-foo.js
-var init_proxy_foo = __esmMin((() => {
-	init_lib_foo();
-}));
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_lib_foo();
+		nodeAssert.equal(value, "foo");
+	})))();
+}
 //#endregion
-//#region proxy.js
-var init_proxy = __esmMin((() => {
-	init_proxy_foo();
-}));
-//#endregion
-//#region ns-proxy.js
-var init_ns_proxy = __esmMin((() => {
-	init_proxy();
-}));
-//#endregion
-//#region ns-proxy-2.js
-var init_ns_proxy_2 = __esmMin((() => {
-	init_ns_proxy();
-}));
-//#endregion
-__esmMin((() => {
-	init_ns_proxy_2();
-	nodeAssert.equal(value, "foo");
-}))();
+export { init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```

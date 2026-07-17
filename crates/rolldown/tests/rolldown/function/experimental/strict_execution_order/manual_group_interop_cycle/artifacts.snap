@@ -6,41 +6,55 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## group-0.js
 
 ```js
+import { t as init_m1 } from "./m1.js";
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
-import { t as init_m1 } from "./main.js";
 //#region m3.cjs
 var require_m3 = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("m3");
 }));
 //#endregion
 //#region m2.js
-var init_m2 = __esmMin((() => {
-	console.log("m2");
-}));
+function init_m2() {
+	return (init_m2 = __esmMin((() => {
+		console.log("m2");
+	})))();
+}
 //#endregion
 //#region main.js
-var init_main = __esmMin((() => {
-	init_m1();
-	init_m2();
-	console.log("m0");
-}));
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_m1();
+		init_m2();
+		console.log("m0");
+	})))();
+}
 //#endregion
-export { require_m3 as n, init_main as t };
+export { init_m2 as n, require_m3 as r, init_main as t };
+
+```
+
+## m1.js
+
+```js
+import { r as require_m3 } from "./group-0.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+function init_m1() {
+	return (init_m1 = __esmMin((() => {
+		require_m3();
+		console.log("m1");
+	})))();
+}
+//#endregion
+export { init_m1 as t };
 
 ```
 
 ## main.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as require_m3, t as init_main } from "./group-0.js";
-var init_m1 = __esmMin((() => {
-	require_m3();
-	console.log("m1");
-}));
-//#endregion
+import { t as init_main } from "./group-0.js";
+import "./m1.js";
 init_main();
-export { init_m1 as t };
 
 ```
 
@@ -59,41 +73,55 @@ export { __esmMin as n, __commonJSMin as t };
 ### group-0.js
 
 ```js
+import { t as init_m1 } from "./m1.js";
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
-import { t as init_m1 } from "./main.js";
 //#region m3.cjs
 var require_m3 = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("m3");
 }));
 //#endregion
 //#region m2.js
-var init_m2 = __esmMin((() => {
-	console.log("m2");
-}));
+function init_m2() {
+	return (init_m2 = __esmMin((() => {
+		console.log("m2");
+	})))();
+}
 //#endregion
 //#region main.js
-var init_main = __esmMin((() => {
-	init_m1();
-	init_m2();
-	console.log("m0");
-}));
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_m1();
+		init_m2();
+		console.log("m0");
+	})))();
+}
 //#endregion
-export { require_m3 as n, init_main as t };
+export { init_m2 as n, require_m3 as r, init_main as t };
+
+```
+
+### m1.js
+
+```js
+import { r as require_m3 } from "./group-0.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+function init_m1() {
+	return (init_m1 = __esmMin((() => {
+		require_m3();
+		console.log("m1");
+	})))();
+}
+//#endregion
+export { init_m1 as t };
 
 ```
 
 ### main.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as require_m3, t as init_main } from "./group-0.js";
-var init_m1 = __esmMin((() => {
-	require_m3();
-	console.log("m1");
-}));
-//#endregion
+import { t as init_main } from "./group-0.js";
+import "./m1.js";
 init_main();
-export { init_m1 as t };
 
 ```
 

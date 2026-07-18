@@ -40,10 +40,11 @@
  *   - reset(start: number, end: number): this (partial - can't split edited chunks)
  *   - generateMap(options?): BindingSourceMap (returns object with version, file, sources, etc.)
  *   - generateDecodedMap(options?): BindingDecodedMap (returns object with decoded mappings array)
+ *   - addSourcemapLocation(char: number): void
+ *   - sourcemapLocations: number[] (getter — upstream exposes a BitSet)
  *
  * NOT supported (will be skipped):
  *   - constructor options: filename, offset, indentExclusionRanges, and ignoreList ARE supported
- *   - addSourcemapLocation (not in string_wizard)
  *   - storeName option in overwrite/update (not exposed in binding)
  *   - Note: overwrite option in update and contentOnly option in overwrite ARE now supported
  *   - x_google_ignoreList / ignoreList in generateMap output is now supported
@@ -63,7 +64,7 @@ const BASE_URL = 'https://raw.githubusercontent.com/Rich-Harris/magic-string/mas
 
 // Describe blocks to skip entirely (unsupported features)
 const SKIP_DESCRIBE_BLOCKS = [
-  'addSourcemapLocation', // not in string_wizard
+  // Note: 'addSourcemapLocation' is now supported
   // Note: 'getIndentString' is now supported
   'original', // not supported
   // Note: 'generateMap' is now supported (returns BindingSourceMap object)
@@ -88,7 +89,7 @@ const SKIP_TESTS = [
   // options-specific skips
   // Note: 'stores ignore-list hint' is now supported (ignoreList option)
   // Note: 'indentExclusionRanges' is now supported (constructor option + getter + clone)
-  'sourcemapLocations', // not supported
+  // Note: 'sourcemapLocations' / addSourcemapLocation are now supported
   'should return cloned content', // clone-related
   'should noop', // edge cases that may differ
   // Note: 'negative indices' now works in remove (normalize_index handles them correctly)
@@ -122,7 +123,7 @@ const SKIP_TESTS = [
   // clone-specific skips (tests that use unsupported constructor options)
   // Note: 'should clone filename info' now works since filename is supported
   // Note: 'should clone indentExclusionRanges' now works since indentExclusionRanges is supported
-  'should clone sourcemapLocations', // uses sourcemapLocations
+  // Note: 'should clone sourcemapLocations' now works (sourcemapLocations getter + clone)
   // Note: 'should works' (hasChanged) now works — clone preserves hasChanged state
   // Note: 'should not report change if content is identical' no longer in upstream tests
   // replace/replaceAll — regex, function replacer, and non-global TypeError all supported
@@ -132,7 +133,7 @@ const SKIP_TESTS = [
   // Note: 'should support length' and 'should support isEmpty' now work correctly
   // generateMap-specific skips (features not in string_wizard)
   'should generate a correct sourcemap including correct lines', // uses generateDecodedMap which has different mappings count
-  'should generate a sourcemap using specified locations', // addSourcemapLocation not implemented
+  // Note: 'should generate a sourcemap using specified locations' now works (addSourcemapLocation)
   'generates a map with trimmed content', // trim sourcemap behavior differs
   // Note: 'generates x_google_ignoreList' is now supported
   'generates segments per word boundary with hires "boundary" in the next line', // multiline boundary mappings differ

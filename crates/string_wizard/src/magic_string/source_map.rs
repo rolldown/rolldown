@@ -62,6 +62,7 @@ impl MagicString<'_> {
         &locator,
         &self.source,
         name_id,
+        &self.sourcemap_locations,
       );
 
       chunk.outro.iter().for_each(|frag| {

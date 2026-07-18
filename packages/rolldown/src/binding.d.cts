@@ -1600,6 +1600,13 @@ export declare class BindingMagicString {
    */
   set indentExclusionRanges(ranges: Array<Array<number>> | Array<number> | undefined | null)
   get ignoreList(): boolean
+  /**
+   * UTF-16 indices previously registered via `addSourcemapLocation`, sorted ascending.
+   * Upstream exposes `sourcemapLocations` as a `BitSet`; a plain index array is the closest
+   * JS-friendly equivalent. Indices are reported in the caller's coordinate system, i.e.
+   * with the current `offset` subtracted back out.
+   */
+  get sourcemapLocations(): Array<number>
   get offset(): number
   set offset(offset: number)
   replace(from: string, to: string): this
@@ -1669,6 +1676,15 @@ export declare class BindingMagicString {
    * This is done by returning a UTF-16 encoded JS string via `napi_create_string_utf16`.
    */
   slice(start?: number | undefined | null, end?: number | undefined | null): string
+  /**
+   * Marks the character at the given index: `generateMap`/`generateDecodedMap` will emit a
+   * mapping segment for it even at low resolution. Matches magic-string's
+   * `addSourcemapLocation`. Out-of-bounds indices are tolerated and never match a character,
+   * like upstream's grow-on-demand BitSet; an index inside a surrogate pair rounds to the
+   * following character boundary, this binding's usual stand-in for unrepresentable
+   * UTF-16 positions.
+   */
+  addSourcemapLocation(charIndex: number): void
   /**
    * Generates a source map for the transformations applied to this MagicString.
    * Returns a BindingSourceMap object with version, file, sources, sourcesContent, names, mappings.

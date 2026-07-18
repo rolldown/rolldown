@@ -63,6 +63,32 @@ function test() {
 }
 
 #[test]
+fn sourcemap_locations_force_segments_at_low_resolution() {
+  // Mirrors magic-string's "should generate a sourcemap using specified locations" test:
+  // marked characters get their own mapping segment even with hires off. Locations are byte
+  // offsets here (UTF-16 and byte offsets coincide on ASCII); the expected mappings string is
+  // exactly what magic-string@0.30.21 asserts for the same input.
+  let mut s = MagicString::new("abcdefghijkl");
+  s.add_sourcemap_location(0);
+  s.add_sourcemap_location(3);
+  s.add_sourcemap_location(10);
+  s.remove(6, 9).unwrap();
+  let sm = s.source_map(SourceMapOptions { include_content: true, ..Default::default() });
+  assert_eq!(sm.to_json().mappings, "AAAA,GAAG,GAAM,CAAC");
+}
+
+#[test]
+fn sourcemap_location_inside_edited_chunk_has_no_effect() {
+  // magic-string consults sourcemapLocations only while walking unedited chunks; a location
+  // covered by an edit (here: a removal) emits nothing extra.
+  let mut s = MagicString::new("abcdefghijkl");
+  s.add_sourcemap_location(7);
+  s.remove(6, 9).unwrap();
+  let sm = s.source_map(SourceMapOptions::default());
+  assert_eq!(sm.to_json().mappings, "AAAA,MAAS");
+}
+
+#[test]
 fn hires_boundary_maps_word_at_start_of_next_line() {
   // The first line ends with a word char and the second starts with one.
   let s = MagicString::new("const a = 1\nconst b = 2");

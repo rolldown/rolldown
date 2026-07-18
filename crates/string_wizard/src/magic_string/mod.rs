@@ -12,7 +12,7 @@ pub mod update;
 
 use std::{borrow::Cow, collections::VecDeque, sync::OnceLock};
 
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   CowStr,
@@ -46,6 +46,12 @@ pub struct MagicString<'s> {
   /// is the *whole* requested range, independent of how that range happens to be split into
   /// chunks, so a range that spans a split boundary still stores its full original text.
   stored_names: FxHashMap<String, u32>,
+
+  /// Byte offsets marked via [`Self::add_sourcemap_location`]. Sourcemap generation emits a
+  /// mapping segment for every marked position inside an unedited chunk even at low
+  /// resolution. Mirrors `magic-string`'s `sourcemapLocations` BitSet, which stores UTF-16
+  /// indices — callers holding JS indices convert at the boundary.
+  sourcemap_locations: FxHashSet<u32>,
 
   // This is used to speed up the search for the chunk that contains a given index.
   last_searched_chunk_idx: ChunkIdx,
@@ -85,6 +91,7 @@ impl<'text> MagicString<'text> {
       ignore_list: options.ignore_list,
       guessed_indentor: OnceLock::default(),
       stored_names: FxHashMap::default(),
+      sourcemap_locations: FxHashSet::default(),
       last_searched_chunk_idx: initial_chunk_idx,
     };
 
@@ -277,6 +284,19 @@ impl<'text> MagicString<'text> {
       let next_id = self.stored_names.len() as u32;
       self.stored_names.insert(original.to_string(), next_id);
     }
+  }
+
+  /// Marks the character starting at byte offset `index`: sourcemap generation will emit a
+  /// mapping segment for it even when `hires` is off. Mirrors `magic-string`'s
+  /// `addSourcemapLocation`. An offset that never coincides with a character start inside an
+  /// unedited chunk simply never matches; it is kept but has no effect.
+  pub fn add_sourcemap_location(&mut self, index: u32) {
+    self.sourcemap_locations.insert(index);
+  }
+
+  /// Byte offsets previously marked via [`Self::add_sourcemap_location`], in arbitrary order.
+  pub fn sourcemap_locations(&self) -> impl Iterator<Item = u32> + '_ {
+    self.sourcemap_locations.iter().copied()
   }
 
   /// Stored names in `names`-array order, paired with their index.

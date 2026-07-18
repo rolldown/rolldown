@@ -182,7 +182,7 @@ describe('MagicString', () => {
       assert.deepEqual(source.indentExclusionRanges, clone.indentExclusionRanges);
     });
 
-    it.skip('should clone sourcemapLocations', () => {
+    it('should clone sourcemapLocations', () => {
       const source = new MagicString('abcdefghijkl', {
         filename: 'foo.js',
       });
@@ -291,7 +291,7 @@ describe('MagicString', () => {
       );
     });
 
-    it.skip('should generate a sourcemap using specified locations', () => {
+    it('should generate a sourcemap using specified locations', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.addSourcemapLocation(0);

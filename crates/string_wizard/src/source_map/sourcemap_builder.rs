@@ -1,3 +1,5 @@
+use rustc_hash::FxHashSet;
+
 use crate::chunk::Chunk;
 
 use super::locator::Locator;
@@ -52,6 +54,7 @@ impl<'a> SourcemapBuilder<'a> {
     locator: &Locator,
     source: &str,
     name_id: Option<u32>,
+    sourcemap_locations: &FxHashSet<u32>,
   ) {
     let mut loc = locator.locate(chunk_start_utf16);
     if let Some(edited_content) = &chunk.edited_content {
@@ -68,6 +71,10 @@ impl<'a> SourcemapBuilder<'a> {
       self.advance(edited_content);
     } else {
       let chunk_content = chunk.span.text(source);
+      // Byte offset of the current char in the original source, matched against
+      // `sourcemap_locations` (magic-string's `sourcemapLocations.has(originalCharIndex)`,
+      // with byte offsets standing in for its UTF-16 indices).
+      let mut byte_pos = chunk.start();
       let mut new_line = true;
       let mut char_in_hires_boundary = false;
       for char in chunk_content.chars() {
@@ -80,7 +87,10 @@ impl<'a> SourcemapBuilder<'a> {
             char_in_hires_boundary = false;
           }
           _ => {
-            if new_line || !matches!(self.hires, Hires::False) {
+            if new_line
+              || !matches!(self.hires, Hires::False)
+              || sourcemap_locations.contains(&byte_pos)
+            {
               if matches!(self.hires, Hires::Boundary) {
                 if char.is_alphanumeric() || char == '_' {
                   if !char_in_hires_boundary {
@@ -122,6 +132,7 @@ impl<'a> SourcemapBuilder<'a> {
             new_line = false;
           }
         }
+        byte_pos += char.len_utf8() as u32;
       }
     }
   }

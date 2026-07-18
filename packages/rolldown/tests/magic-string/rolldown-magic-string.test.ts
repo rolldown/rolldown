@@ -676,6 +676,31 @@ describe('generateMap return shape', () => {
   });
 });
 
+describe('addSourcemapLocation', () => {
+  // The functional and clone conformance tests are un-skipped in MagicString.test.ts; here we
+  // pin the binding-specific parts: UTF-16 index handling across the FFI boundary and the
+  // getter's array shape (upstream exposes a BitSet).
+  it('takes UTF-16 indices and emits UTF-16 columns around astral characters', () => {
+    const s = new MagicString('🤷ab');
+    s.addSourcemapLocation(2); // 'a' — one emoji (2 UTF-16 units) before it
+    const map = s.generateDecodedMap({ source: 'i.js' });
+    assert.deepStrictEqual(map.mappings, [
+      [
+        [0, 0, 0, 0],
+        [2, 0, 0, 2],
+      ],
+    ]);
+  });
+
+  it('exposes marked indices via sourcemapLocations, sorted and deduplicated', () => {
+    const s = new MagicString('abcdef');
+    s.addSourcemapLocation(4);
+    s.addSourcemapLocation(1);
+    s.addSourcemapLocation(4);
+    assert.deepStrictEqual(s.sourcemapLocations, [1, 4]);
+  });
+});
+
 describe('lastLine', () => {
   it('returns the content after the last newline', () => {
     assert.strictEqual(new MagicString('abc\ndef').lastLine(), 'def');

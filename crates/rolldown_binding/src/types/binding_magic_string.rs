@@ -490,6 +490,23 @@ impl BindingMagicString<'_> {
     self.ignore_list
   }
 
+  /// UTF-16 indices previously registered via `addSourcemapLocation`, sorted ascending.
+  /// Upstream exposes `sourcemapLocations` as a `BitSet`; a plain index array is the closest
+  /// JS-friendly equivalent. Indices are reported in the caller's coordinate system, i.e.
+  /// with the current `offset` subtracted back out.
+  #[napi(getter)]
+  pub fn sourcemap_locations(&self) -> napi::Result<Vec<u32>> {
+    self.ensure_live()?;
+    let mut locations: Vec<u32> = self
+      .inner
+      .sourcemap_locations()
+      .filter_map(|byte| self.utf16_to_byte_mapper.byte_to_utf16(byte))
+      .filter_map(|utf16| u32::try_from(i64::from(utf16) - self.offset).ok())
+      .collect();
+    locations.sort_unstable();
+    Ok(locations)
+  }
+
   #[napi(getter)]
   pub fn get_offset(&self) -> i64 {
     self.offset
@@ -1231,6 +1248,22 @@ impl BindingMagicString<'_> {
     }
 
     env.create_string_utf16(&utf16_buf)
+  }
+
+  /// Marks the character at the given index: `generateMap`/`generateDecodedMap` will emit a
+  /// mapping segment for it even at low resolution. Matches magic-string's
+  /// `addSourcemapLocation`. Out-of-bounds indices are tolerated and never match a character,
+  /// like upstream's grow-on-demand BitSet; an index inside a surrogate pair rounds to the
+  /// following character boundary, this binding's usual stand-in for unrepresentable
+  /// UTF-16 positions.
+  #[napi]
+  pub fn add_sourcemap_location(&mut self, char_index: u32) -> napi::Result<()> {
+    self.ensure_live()?;
+    let index = self.apply_offset_u32(char_index)?;
+    if let Some(byte) = self.utf16_to_byte_mapper.utf16_to_byte(index) {
+      self.inner.add_sourcemap_location(byte);
+    }
+    Ok(())
   }
 
   /// Generates a source map for the transformations applied to this MagicString.

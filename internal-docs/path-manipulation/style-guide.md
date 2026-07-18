@@ -18,6 +18,8 @@ Implementation: `crates/rolldown_std_utils/src/path_ext.rs`. Module-id identity:
 
 sugar_path 3: `relative` returns `Cow<Path>` (empty when equal); `normalize` preserves a trailing separator; slash conversion is strict by default. Explicit cwd arguments must be absolute. Keep workspace feature `cached_current_dir`.
 
+`ModuleId::relative_path` preserves that `Cow<Path>` result. Only call `.into_owned()` when the caller needs to mutate or retain a `PathBuf`.
+
 When a `PathBuf` was just created by `join` or another owned operation and the final value is a slash-separated `String`, consume it with `normalize_path_buf_to_slash`. Calling non-consuming `normalize()` first produces a `Cow<Path>` and forces the later `String` conversion to copy the normalized buffer.
 
 When the destination is `ArcStr`, pass `to_slash()` directly instead of calling `into_owned()` first; `ArcStr` copies strings into its own allocation.

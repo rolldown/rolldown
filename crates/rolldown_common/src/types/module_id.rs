@@ -2,7 +2,7 @@ use std::{
   borrow::{Borrow, Cow},
   cmp::Ordering,
   hash::{Hash, Hasher},
-  path::{Path, PathBuf},
+  path::Path,
 };
 
 use arcstr::ArcStr;
@@ -140,8 +140,8 @@ impl ModuleId {
     Path::new(self.as_str()).representative_file_name()
   }
 
-  pub fn relative_path(&self, root: impl AsRef<Path>) -> PathBuf {
-    Path::new(self.as_str()).relative(root).into_owned()
+  pub fn relative_path(&self, root: impl AsRef<Path>) -> Cow<'_, Path> {
+    Path::new(self.as_str()).relative(root)
   }
 
   pub fn stabilize(&self, cwd: &Path) -> StableModuleId {
@@ -239,5 +239,39 @@ impl From<ArcStr> for ModuleId {
 impl Borrow<str> for ModuleId {
   fn borrow(&self) -> &str {
     self.as_str()
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn relative_path_preserves_borrowed_and_owned_results() {
+    #[cfg(not(windows))]
+    let (target, descendant_base, sibling_base, descendant, sibling) = (
+      "/workspace/package/src/index.js",
+      "/workspace/package",
+      "/workspace/package/dist",
+      "src/index.js",
+      "../src/index.js",
+    );
+    #[cfg(windows)]
+    let (target, descendant_base, sibling_base, descendant, sibling) = (
+      r"C:\workspace\package\src\index.js",
+      r"C:\workspace\package",
+      r"C:\workspace\package\dist",
+      r"src\index.js",
+      r"..\src\index.js",
+    );
+
+    let module_id = ModuleId::new(target);
+    let relative = module_id.relative_path(descendant_base);
+    assert_eq!(relative, Path::new(descendant));
+    assert!(matches!(relative, Cow::Borrowed(_)));
+
+    let relative = module_id.relative_path(sibling_base);
+    assert_eq!(relative, Path::new(sibling));
+    assert!(matches!(relative, Cow::Owned(_)));
   }
 }

@@ -36,7 +36,7 @@ impl ViteManifestPlugin {
   pub fn get_chunk_name(&self, chunk: &OutputChunk, is_legacy: bool) -> String {
     match &chunk.facade_module_id {
       Some(module_id) => {
-        let mut name = module_id.relative_path(&self.root);
+        let mut name = module_id.relative_path(&self.root).into_owned();
         if is_legacy && !chunk.name.contains("-legacy") {
           let extension = OsString::from(name.extension().unwrap_or_default());
           if let Some(stem) = name.file_stem() {

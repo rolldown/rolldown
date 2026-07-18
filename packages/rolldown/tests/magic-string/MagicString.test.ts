@@ -519,7 +519,7 @@ describe('MagicString', () => {
       assert.equal(loc.column, 33);
     });
 
-    it.skip('generates segments per word boundary with hires "boundary" in the next line', () => {
+    it('generates segments per word boundary with hires "boundary" in the next line', () => {
       const s = new MagicString('// foo\nconsole.log("bar")');
 
       // rename bar to hello

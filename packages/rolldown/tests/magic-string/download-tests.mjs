@@ -136,7 +136,9 @@ const SKIP_TESTS = [
   // Note: 'should generate a sourcemap using specified locations' now works (addSourcemapLocation)
   'generates a map with trimmed content', // trim sourcemap behavior differs
   // Note: 'generates x_google_ignoreList' is now supported
-  'generates segments per word boundary with hires "boundary" in the next line', // multiline boundary mappings differ
+  // Note: 'generates segments per word boundary with hires "boundary" in the next line' now
+  // passes byte-exact — fixed by the boundary-walk fix pinned in string_wizard's
+  // hires_boundary_maps_word_at_start_of_next_line test; the skip had gone stale.
   'generates a correct source map with update using a content containing a new line', // multiline update mappings differ
   'generates a correct source map with update using content ending with a new line', // multiline update mappings differ
 ];

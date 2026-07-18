@@ -701,6 +701,34 @@ describe('addSourcemapLocation', () => {
   });
 });
 
+describe('TypeError parity for non-string content', () => {
+  // Upstream throws TypeError with these exact messages before doing anything else; napi
+  // argument conversion would produce a generic Error instead, so the JS wrapper in
+  // binding-magic-string.ts validates first. The conformance suite pins the error *type*
+  // only for append/overwrite/update (and replaceAll's non-global message, not repeated
+  // here); prepend and the four positional inserts have no coverage there, and none of the
+  // content messages are pinned anywhere else.
+  // (Upstream really does say "outro" for `prepend` — matched bug-for-bug.)
+  const cases: Array<[string, (s: any) => void, string]> = [
+    ['append', (s) => s.append(123), 'outro content must be a string'],
+    ['prepend', (s) => s.prepend(123), 'outro content must be a string'],
+    ['appendLeft', (s) => s.appendLeft(0, 123), 'inserted content must be a string'],
+    ['appendRight', (s) => s.appendRight(0, 123), 'inserted content must be a string'],
+    ['prependLeft', (s) => s.prependLeft(0, 123), 'inserted content must be a string'],
+    ['prependRight', (s) => s.prependRight(0, 123), 'inserted content must be a string'],
+    ['overwrite', (s) => s.overwrite(0, 1, 123), 'replacement content must be a string'],
+    ['update', (s) => s.update(0, 1, 123), 'replacement content must be a string'],
+  ];
+  for (const [name, fn, message] of cases) {
+    it(`${name} throws TypeError: "${message}"`, () => {
+      const s = new MagicString('abcdef');
+      assert.throws(() => fn(s), { name: 'TypeError', message });
+      // Validation happens before the native call, so the rejected call changed nothing.
+      assert.strictEqual(s.toString(), 'abcdef');
+    });
+  }
+});
+
 describe('lastLine', () => {
   it('returns the content after the last newline', () => {
     assert.strictEqual(new MagicString('abc\ndef').lastLine(), 'def');

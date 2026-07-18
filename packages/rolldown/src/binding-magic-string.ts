@@ -30,61 +30,45 @@ Object.defineProperty(BindingSourceMap.prototype, 'toJSON', {
   configurable: false,
 });
 
-// Validate content type to match JS magic-string behavior.
-// napi-rs throws a generic Error on type mismatch, but JS magic-string throws TypeError.
+// Validate content type to match JS magic-string behavior: upstream throws `TypeError`
+// with these exact messages before doing anything else. napi-rs's argument conversion runs
+// before any Rust code and can only produce a generic `Error` with its own wording, so the
+// JS boundary is the one layer that can see the raw value and throw the right error type —
+// validating here is the settled policy for TypeError parity, not a stopgap.
 function assertString(content: unknown, msg: string): asserts content is string {
   if (typeof content !== 'string') throw new TypeError(msg);
 }
 
+// Methods whose only wrapping need is that validation, as (method, content-arg index,
+// upstream message) rows — one line per site keeps the surface auditable against upstream.
+// Methods that need more than validation keep hand-written overrides below and call
+// `assertString` themselves (overwrite/update: legacy boolean 4th arg; replace/replaceAll:
+// function replacers, and replaceAll's own non-global-RegExp TypeError).
+// (Upstream really does say "outro" for `prepend` — matched bug-for-bug.)
+const contentValidatedMethods = [
+  ['append', 0, 'outro content must be a string'],
+  ['prepend', 0, 'outro content must be a string'],
+  ['appendLeft', 1, 'inserted content must be a string'],
+  ['appendRight', 1, 'inserted content must be a string'],
+  ['prependLeft', 1, 'inserted content must be a string'],
+  ['prependRight', 1, 'inserted content must be a string'],
+] as const;
+
+for (const [method, contentArg, message] of contentValidatedMethods) {
+  const native = NativeBindingMagicString.prototype[method] as (...args: any[]) => any;
+  (NativeBindingMagicString.prototype as any)[method] = function (this: any, ...args: any[]): any {
+    assertString(args[contentArg], message);
+    return native.apply(this, args);
+  };
+}
+
 // Save native method refs before overriding.
-// eslint-disable-next-line @typescript-eslint/unbound-method
-const nativeAppend = NativeBindingMagicString.prototype.append;
-// eslint-disable-next-line @typescript-eslint/unbound-method
-const nativePrepend = NativeBindingMagicString.prototype.prepend;
-// eslint-disable-next-line @typescript-eslint/unbound-method
-const nativeAppendLeft = NativeBindingMagicString.prototype.appendLeft;
-// eslint-disable-next-line @typescript-eslint/unbound-method
-const nativeAppendRight = NativeBindingMagicString.prototype.appendRight;
-// eslint-disable-next-line @typescript-eslint/unbound-method
-const nativePrependLeft = NativeBindingMagicString.prototype.prependLeft;
-// eslint-disable-next-line @typescript-eslint/unbound-method
-const nativePrependRight = NativeBindingMagicString.prototype.prependRight;
 // eslint-disable-next-line @typescript-eslint/unbound-method
 const nativeOverwrite = NativeBindingMagicString.prototype.overwrite;
 // eslint-disable-next-line @typescript-eslint/unbound-method
 const nativeUpdate = NativeBindingMagicString.prototype.update;
 // eslint-disable-next-line @typescript-eslint/unbound-method
 const nativeIndent = NativeBindingMagicString.prototype.indent;
-
-NativeBindingMagicString.prototype.append = function (content: any): any {
-  assertString(content, 'outro content must be a string');
-  return nativeAppend.call(this, content);
-};
-
-NativeBindingMagicString.prototype.prepend = function (content: any): any {
-  assertString(content, 'outro content must be a string');
-  return nativePrepend.call(this, content);
-};
-
-NativeBindingMagicString.prototype.appendLeft = function (index: any, content: any): any {
-  assertString(content, 'inserted content must be a string');
-  return nativeAppendLeft.call(this, index, content);
-};
-
-NativeBindingMagicString.prototype.appendRight = function (index: any, content: any): any {
-  assertString(content, 'inserted content must be a string');
-  return nativeAppendRight.call(this, index, content);
-};
-
-NativeBindingMagicString.prototype.prependLeft = function (index: any, content: any): any {
-  assertString(content, 'inserted content must be a string');
-  return nativePrependLeft.call(this, index, content);
-};
-
-NativeBindingMagicString.prototype.prependRight = function (index: any, content: any): any {
-  assertString(content, 'inserted content must be a string');
-  return nativePrependRight.call(this, index, content);
-};
 
 NativeBindingMagicString.prototype.overwrite = function (
   start: any,

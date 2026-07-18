@@ -10,20 +10,24 @@ use sugar_path::SugarPath;
 struct PrintHandler;
 
 impl WatcherEventHandler for PrintHandler {
-  async fn on_event(&self, event: WatchEvent) {
+  async fn on_event(&self, event: WatchEvent) -> anyhow::Result<()> {
     println!("[Event] {event}");
+    Ok(())
   }
 
-  async fn on_change(&self, path: &str, kind: WatcherChangeKind) {
+  async fn on_change(&self, path: &str, kind: WatcherChangeKind) -> anyhow::Result<()> {
     println!("[Change] {kind:?}: {path}");
+    Ok(())
   }
 
-  async fn on_restart(&self) {
+  async fn on_restart(&self) -> anyhow::Result<()> {
     println!("[Restart]");
+    Ok(())
   }
 
-  async fn on_close(&self) {
+  async fn on_close(&self) -> anyhow::Result<()> {
     println!("[Close] Watcher closed");
+    Ok(())
   }
 }
 
@@ -46,7 +50,7 @@ async fn main() {
 
   let watcher = Watcher::new(vec![config], PrintHandler, &WatcherConfig::default())
     .expect("Failed to create watcher");
-  watcher.run();
+  watcher.run().expect("Failed to start watcher");
 
   println!("Watching for changes... Press Ctrl+C to stop.");
 

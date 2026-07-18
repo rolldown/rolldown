@@ -5,3 +5,6 @@ pub mod manual_integration_test_helper;
 pub mod test_config;
 pub mod types;
 pub mod utils;
+
+#[cfg(test)]
+mod dev_engine_tests;

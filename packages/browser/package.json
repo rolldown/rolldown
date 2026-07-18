@@ -23,6 +23,8 @@
   "files": [
     "bin",
     "dist",
+    "LICENSE",
+    "THIRD-PARTY-LICENSE",
     "!*/.tsbuildinfo"
   ],
   "type": "module",
@@ -31,6 +33,7 @@
   "types": "./dist/index.d.mts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.mts",
       "browser": "./dist/index.browser.mjs",
       "default": "./dist/index.mjs"
     },
@@ -51,7 +54,23 @@
     "./parallelPlugin": "./dist/parallel-plugin.mjs",
     "./parseAst": "./dist/parse-ast-index.mjs",
     "./package.json": "./package.json",
-    "./utils": "./dist/utils-index.mjs"
+    "./utils": "./dist/utils-index.mjs",
+    "./workerd": {
+      "types": "./dist/workerd.d.mts",
+      "workerd": "./dist/workerd.browser.mjs",
+      "browser": "./dist/workerd.browser.mjs",
+      "default": "./dist/workerd.mjs"
+    },
+    "./workerd/wasm": {
+      "types": "./dist/workerd-wasm.d.ts",
+      "workerd": "./dist/rolldown-binding.wasm32-wasip1.wasm",
+      "default": "./dist/rolldown-binding.wasm32-wasip1.wasm"
+    },
+    "./workerd/wasm.wasm": {
+      "types": "./dist/workerd-wasm.d.ts",
+      "workerd": "./dist/rolldown-binding.wasm32-wasip1.wasm",
+      "default": "./dist/rolldown-binding.wasm32-wasip1.wasm"
+    }
   },
   "publishConfig": {
     "access": "public",
@@ -62,12 +81,6 @@
     "build:debug": "pnpm run --filter rolldown build-browser-pkg:debug",
     "build:release": "pnpm run --filter rolldown build-browser-pkg:release",
     "build-node": "TARGET='browser' pnpm run --filter rolldown build-node",
-    "preinstall": "npx only-allow pnpm",
     "publint": "publint ."
-  },
-  "dependencies": {
-    "@emnapi/core": "1.11.2",
-    "@emnapi/runtime": "1.11.2",
-    "@napi-rs/wasm-runtime": "catalog:"
   }
 }

@@ -61,11 +61,27 @@ impl BindingWatcherEvent {
   }
 
   #[napi]
+  pub fn bundle_start_data(&self) -> BindingBundleStartEventData {
+    match &self.inner {
+      WatcherEventInner::BundleEvent(WatchEvent::BundleStart(data)) => {
+        BindingBundleStartEventData {
+          task_index: u32::try_from(data.task_index.index())
+            .expect("watch task index must fit its u32 backing type"),
+        }
+      }
+      _ => unreachable!("Expected BundleEvent::BundleStart"),
+    }
+  }
+
+  #[napi]
   pub fn bundle_end_data(&self) -> BindingBundleEndEventData {
     match &self.inner {
       WatcherEventInner::BundleEvent(WatchEvent::BundleEnd(data)) => BindingBundleEndEventData {
         output: data.output.clone(),
         duration: data.duration,
+        task_index: u32::try_from(data.task_index.index())
+          .expect("watch task index must fit its u32 backing type"),
+        close_identity: data.bundle_handle.close_identity().to_string(),
         result: data.bundle_handle.clone(),
       },
       _ => unreachable!("Expected BundleEvent::BundleEnd"),
@@ -81,6 +97,9 @@ impl BindingWatcherEvent {
           .iter()
           .map(|diagnostic| to_binding_error(diagnostic, data.cwd.clone()))
           .collect(),
+        task_index: u32::try_from(data.task_index.index())
+          .expect("watch task index must fit its u32 backing type"),
+        close_identity: data.bundle_handle.close_identity().to_string(),
         result: data.bundle_handle.clone(),
       },
       _ => unreachable!("Expected BundleEvent::Error"),
@@ -99,6 +118,11 @@ impl BindingWatcherEvent {
 }
 
 #[napi]
+pub struct BindingBundleStartEventData {
+  pub task_index: u32,
+}
+
+#[napi]
 pub struct BindingWatcherChangeData {
   pub path: String,
   pub kind: String,
@@ -108,11 +132,23 @@ pub struct BindingWatcherChangeData {
 pub struct BindingBundleEndEventData {
   pub output: String,
   pub duration: u32,
+  task_index: u32,
+  close_identity: String,
   result: BundleHandle,
 }
 
 #[napi]
 impl BindingBundleEndEventData {
+  #[napi(getter)]
+  pub fn task_index(&self) -> u32 {
+    self.task_index
+  }
+
+  #[napi(getter)]
+  pub fn close_identity(&self) -> String {
+    self.close_identity.clone()
+  }
+
   #[napi(getter)]
   pub fn result(&self) -> BindingWatcherBundler {
     BindingWatcherBundler::new(self.result.clone())
@@ -122,11 +158,23 @@ impl BindingBundleEndEventData {
 #[napi]
 pub struct BindingBundleErrorEventData {
   error: Vec<BindingError>,
+  task_index: u32,
+  close_identity: String,
   result: BundleHandle,
 }
 
 #[napi]
 impl BindingBundleErrorEventData {
+  #[napi(getter)]
+  pub fn task_index(&self) -> u32 {
+    self.task_index
+  }
+
+  #[napi(getter)]
+  pub fn close_identity(&self) -> String {
+    self.close_identity.clone()
+  }
+
   #[napi(getter)]
   pub fn result(&self) -> BindingWatcherBundler {
     BindingWatcherBundler::new(self.result.clone())

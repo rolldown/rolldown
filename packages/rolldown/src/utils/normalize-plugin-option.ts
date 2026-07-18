@@ -5,14 +5,28 @@ import { LOG_LEVEL_WARN } from '../log/logging';
 import { logInputHookInOutputPlugin } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
-import type { RolldownOutputPlugin, RolldownPlugin } from '../plugin';
+import type { Plugin, RolldownOutputPlugin, RolldownPlugin } from '../plugin';
 import { asyncFlatten } from './async-flatten';
+import type { CloseCallbackScope } from './close-callback-scope';
+import { getParallelPluginInfo } from './parallel-plugin';
 
 export const normalizePluginOption: {
-  (plugins: OutputOptions['plugins']): Promise<RolldownOutputPlugin[]>;
-  (plugins: InputOptions['plugins']): Promise<RolldownPlugin[]>;
-  (plugins: unknown): Promise<any[]>;
-} = async (plugins: any) => (await asyncFlatten([plugins])).filter(Boolean);
+  (
+    plugins: OutputOptions['plugins'],
+    closeCallbackScope?: CloseCallbackScope,
+  ): Promise<RolldownOutputPlugin[]>;
+  (
+    plugins: InputOptions['plugins'],
+    closeCallbackScope?: CloseCallbackScope,
+  ): Promise<RolldownPlugin[]>;
+  (plugins: unknown, closeCallbackScope?: CloseCallbackScope): Promise<any[]>;
+} = async (plugins: any, closeCallbackScope?: CloseCallbackScope) =>
+  (
+    await asyncFlatten(
+      [plugins],
+      closeCallbackScope ? (callback) => closeCallbackScope.run(callback) : undefined,
+    )
+  ).filter(Boolean);
 
 export function checkOutputPluginOption(
   plugins: RolldownOutputPlugin[],
@@ -36,14 +50,15 @@ export function normalizePlugins<T extends RolldownPlugin>(
   anonymousPrefix: string,
 ): T[] {
   for (const [index, plugin] of plugins.entries()) {
-    if ('_parallel' in plugin) {
+    if (getParallelPluginInfo(plugin)) {
       continue;
     }
     if (plugin instanceof BuiltinPlugin) {
       continue;
     }
-    if (!plugin.name) {
-      plugin.name = `${anonymousPrefix}${index + 1}`;
+    const objectPlugin = plugin as Plugin;
+    if (!objectPlugin.name) {
+      objectPlugin.name = `${anonymousPrefix}${index + 1}`;
     }
   }
   return plugins;

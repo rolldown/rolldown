@@ -1,5 +1,6 @@
 import type { BindingChunkingContext, BindingOutputOptions } from '../binding.cjs';
 import type { OutputOptions } from '../options/output-options';
+import type { BuildCallbackRunner } from '../plugin/bindingify-plugin';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
@@ -10,6 +11,7 @@ import { logger } from '../cli/logger';
 export function bindingifyOutputOptions(
   outputOptions: OutputOptions,
   pluginContextData: PluginContextData,
+  runBuildCallback?: BuildCallbackRunner,
 ): BindingOutputOptions {
   const {
     dir,
@@ -61,6 +63,7 @@ export function bindingifyOutputOptions(
     outputOptions.advancedChunks,
     manualChunks,
     pluginContextData,
+    runBuildCallback,
   );
 
   return {
@@ -75,23 +78,26 @@ export function bindingifyOutputOptions(
     sourcemapDebugIds,
     sourcemapFileNames,
     sourcemapExcludeSources,
-    sourcemapIgnoreList: sourcemapIgnoreList ?? /node_modules/,
-    sourcemapPathTransform,
-    banner: bindingifyAddon(banner),
-    footer: bindingifyAddon(footer),
-    postBanner: bindingifyAddon(postBanner),
-    postFooter: bindingifyAddon(postFooter),
-    intro: bindingifyAddon(intro),
-    outro: bindingifyAddon(outro),
+    sourcemapIgnoreList: wrapOptionalBuildCallback(
+      sourcemapIgnoreList ?? /node_modules/,
+      runBuildCallback,
+    ),
+    sourcemapPathTransform: wrapOptionalBuildCallback(sourcemapPathTransform, runBuildCallback),
+    banner: bindingifyAddon(banner, runBuildCallback),
+    footer: bindingifyAddon(footer, runBuildCallback),
+    postBanner: bindingifyAddon(postBanner, runBuildCallback),
+    postFooter: bindingifyAddon(postFooter, runBuildCallback),
+    intro: bindingifyAddon(intro, runBuildCallback),
+    outro: bindingifyAddon(outro, runBuildCallback),
     extend: outputOptions.extend,
-    globals,
-    paths,
+    globals: wrapOptionalBuildCallback(globals, runBuildCallback),
+    paths: wrapOptionalBuildCallback(paths, runBuildCallback),
     generatedCode,
     esModule,
     name,
-    assetFileNames: bindingifyAssetFilenames(assetFileNames),
-    entryFileNames,
-    chunkFileNames,
+    assetFileNames: bindingifyAssetFilenames(assetFileNames, runBuildCallback),
+    entryFileNames: wrapOptionalBuildCallback(entryFileNames, runBuildCallback),
+    chunkFileNames: wrapOptionalBuildCallback(chunkFileNames, runBuildCallback),
     // TODO(sapphi-red): support parallel plugins
     plugins: [],
     minify: outputOptions.minify,
@@ -100,7 +106,7 @@ export function bindingifyOutputOptions(
     dynamicImportInCjs: outputOptions.dynamicImportInCjs,
     manualCodeSplitting: advancedChunks,
     polyfillRequire: outputOptions.polyfillRequire,
-    sanitizeFileName,
+    sanitizeFileName: wrapOptionalBuildCallback(sanitizeFileName, runBuildCallback),
     preserveModules,
     virtualDirname,
     legalComments,
@@ -114,14 +120,20 @@ export function bindingifyOutputOptions(
   };
 }
 
-type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro';
+type AddonKeys = 'banner' | 'footer' | 'postBanner' | 'postFooter' | 'intro' | 'outro';
 
-function bindingifyAddon(configAddon: OutputOptions[AddonKeys]): BindingOutputOptions[AddonKeys] {
+function bindingifyAddon(
+  configAddon: OutputOptions[AddonKeys],
+  runBuildCallback?: BuildCallbackRunner,
+): BindingOutputOptions[AddonKeys] {
   if (configAddon == null || configAddon === '') {
     return undefined;
   }
   if (typeof configAddon === 'function') {
-    return async (chunk) => configAddon(transformRenderedChunk(chunk));
+    return async (chunk) =>
+      runBuildCallback
+        ? runBuildCallback(() => configAddon(transformRenderedChunk(chunk)))
+        : configAddon(transformRenderedChunk(chunk));
   }
   return configAddon;
 }
@@ -169,17 +181,20 @@ function bindingifySourcemap(
 
 function bindingifyAssetFilenames(
   assetFileNames: OutputOptions['assetFileNames'],
+  runBuildCallback?: BuildCallbackRunner,
 ): BindingOutputOptions['assetFileNames'] {
   if (typeof assetFileNames === 'function') {
     return (asset) => {
-      return assetFileNames({
-        name: asset.name,
-        names: asset.names,
-        originalFileName: asset.originalFileName,
-        originalFileNames: asset.originalFileNames,
-        source: transformAssetSource(asset.source),
-        type: 'asset',
-      });
+      const invoke = () =>
+        assetFileNames({
+          name: asset.name,
+          names: asset.names,
+          originalFileName: asset.originalFileName,
+          originalFileNames: asset.originalFileNames,
+          source: transformAssetSource(asset.source),
+          type: 'asset',
+        });
+      return runBuildCallback ? runBuildCallback(invoke) : invoke();
     };
   }
   return assetFileNames;
@@ -201,6 +216,7 @@ function bindingifyCodeSplitting(
   advancedChunks: OutputOptions['advancedChunks'],
   manualChunks: OutputOptions['manualChunks'],
   pluginContextData: PluginContextData,
+  runBuildCallback?: BuildCallbackRunner,
 ): {
   inlineDynamicImports: BindingOutputOptions['inlineDynamicImports'];
   advancedChunks: BindingOutputOptions['manualCodeSplitting'];
@@ -316,10 +332,15 @@ function bindingifyCodeSplitting(
         const { name, ...restGroup } = group;
         return {
           ...restGroup,
+          test: wrapOptionalBuildCallback(restGroup.test, runBuildCallback),
           name:
             typeof name === 'function'
               ? (id: string, ctx: BindingChunkingContext) =>
-                  name(id, new ChunkingContextImpl(ctx, pluginContextData))
+                  runBuildCallback
+                    ? runBuildCallback(() =>
+                        name(id, new ChunkingContextImpl(ctx, pluginContextData)),
+                      )
+                    : name(id, new ChunkingContextImpl(ctx, pluginContextData))
               : name,
         };
       }),
@@ -330,4 +351,13 @@ function bindingifyCodeSplitting(
     inlineDynamicImports,
     advancedChunks: advancedChunksResult,
   };
+}
+
+function wrapOptionalBuildCallback<Value>(
+  value: Value,
+  runBuildCallback?: BuildCallbackRunner,
+): Value {
+  if (!runBuildCallback || typeof value !== 'function') return value;
+  const callback = value as (...args: unknown[]) => unknown;
+  return ((...args: unknown[]) => runBuildCallback(() => callback(...args))) as Value;
 }

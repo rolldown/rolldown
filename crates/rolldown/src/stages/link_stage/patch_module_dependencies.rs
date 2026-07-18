@@ -1,3 +1,4 @@
+#[cfg(not(target_family = "wasm"))]
 use rayon::iter::ParallelIterator;
 use rolldown_common::{Module, ModuleIdx, RuntimeHelper};
 use rolldown_utils::{index_vec_ext::IndexVecRefExt, indexmap::FxIndexSet};

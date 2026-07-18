@@ -3,7 +3,7 @@ use crate::types::binding_outputs::BindingOutputs;
 use crate::types::binding_rebuild_strategy::BindingRebuildStrategy;
 use crate::types::binding_string_or_regex::BindingStringOrRegex;
 use crate::types::error::BindingResult;
-use crate::types::js_callback::JsCallback;
+use crate::types::js_callback::MaybeAsyncJsCallback;
 use napi::bindgen_prelude::FnArgs;
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -24,17 +24,18 @@ pub struct BindingDevOptions {
   #[napi(
     ts_type = "undefined | ((result: BindingResult<[BindingClientHmrUpdate[], string[]]>) => void | Promise<void>)"
   )]
-  pub on_hmr_updates:
-    Option<JsCallback<FnArgs<(BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>,)>, ()>>,
+  pub on_hmr_updates: Option<
+    MaybeAsyncJsCallback<FnArgs<(BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>,)>>,
+  >,
   #[napi(
     ts_type = "undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)"
   )]
-  pub on_output: Option<JsCallback<FnArgs<(BindingResult<BindingOutputs>,)>, ()>>,
+  pub on_output: Option<MaybeAsyncJsCallback<FnArgs<(BindingResult<BindingOutputs>,)>>>,
   /// Called with assets emitted while generating an HMR patch or compiling a
   /// lazy entry. These never go through `on_output`, so a consumer (e.g. Vite)
   /// must register this to serve them (e.g. write them to its in-memory files).
   #[napi(ts_type = "undefined | ((output: BindingOutputs) => void | Promise<void>)")]
-  pub on_additional_assets: Option<JsCallback<FnArgs<(BindingOutputs,)>, ()>>,
+  pub on_additional_assets: Option<MaybeAsyncJsCallback<FnArgs<(BindingOutputs,)>>>,
   pub rebuild_strategy: Option<BindingRebuildStrategy>,
   pub watch: Option<BindingDevWatchOptions>,
 }

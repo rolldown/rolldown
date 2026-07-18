@@ -206,10 +206,21 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   }
 
   fn create_sourcemap_channel(&self) -> SourcemapChannel {
+    #[cfg(feature = "async-runtime")]
+    if !rolldown_utils::async_runtime::is_multi_threaded() {
+      return (None, None);
+    }
+
     if self.options.experimental.is_native_magic_string_enabled()
       && self.options.is_sourcemap_enabled()
     {
       let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
+      // A long-lived `while let Ok(..) = rx.recv()` consumer must live on a
+      // dedicated OS thread, NOT a runtime `spawn_blocking`. On the MultiThread
+      // runtime with `worker_threads == 1`, a `spawn_blocking` consumer is run
+      // inline by the single drainer (`take_blocking`), which then blocks in
+      // `rx.recv()` forever while `active_drainers` is at max -- so the module
+      // runnables that feed this channel never get polled -> hard deadlock.
       let handler = thread::spawn(move || {
         let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
         while let Ok(msg) = rx.recv() {

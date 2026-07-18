@@ -28,7 +28,7 @@ export function bindingifyRenderStart(
 
   return {
     plugin: async (ctx, opts) => {
-      handler.call(
+      await handler.call(
         new PluginContextImpl(
           args.outputOptions,
           ctx,
@@ -230,7 +230,7 @@ export function bindingifyRenderError(
 
   return {
     plugin: async (ctx, err) => {
-      handler.call(
+      await handler.call(
         new PluginContextImpl(
           args.outputOptions,
           ctx,
@@ -322,18 +322,22 @@ export function bindingifyCloseBundle(
 
   return {
     plugin: async (ctx, err) => {
-      await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        err ? aggregateBindingErrorsIntoJsError(err) : undefined,
-      );
+      const invokeHook = () =>
+        handler.call(
+          new PluginContextImpl(
+            args.outputOptions,
+            ctx,
+            args.plugin,
+            args.pluginContextData,
+            args.onLog,
+            args.logLevel,
+            args.watchMode,
+          ),
+          err ? aggregateBindingErrorsIntoJsError(err) : undefined,
+        );
+      await (args.closeCallbackScope
+        ? args.closeCallbackScope.runWithCloseIdentity(ctx.closeIdentity(), invokeHook)
+        : invokeHook());
     },
     meta: bindingifyPluginHookMeta(meta),
   };

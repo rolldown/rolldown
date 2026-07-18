@@ -1,3 +1,4 @@
+import { isWasiTest } from '@tests/runtime-flavor';
 import { defineTest } from 'rolldown-tests';
 import { viteImportGlobPlugin } from 'rolldown/experimental';
 import { existsSync, lstatSync, unlinkSync, renameSync } from 'node:fs';
@@ -11,6 +12,11 @@ const targetPath = join(__dirname, 'packages', 'my-lib');
 const backupPath = linkPath + '.bak';
 
 export default defineTest({
+  // KNOWN: wasi fs limitation. `walkdir` with `follow_links(true)` (used by
+  // rolldown_plugin_vite_import_glob) cannot traverse the `linked/my-lib`
+  // directory symlink on wasm32-wasip1, so the glob
+  // `./linked/*/components/*.js` matches 0 of the 2 expected modules.
+  skip: isWasiTest,
   config: {
     plugins: [viteImportGlobPlugin()],
   },

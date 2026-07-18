@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check-workerd-packed-consumer": "node ./misc/check-workerd-packed-consumer.mjs",
+    "check-wasi-binding-packed-consumer": "node ./misc/check-wasi-binding-packed-consumer.mjs",
+    "test:package-transactions": "node --test --test-concurrency=1 ./misc/napi-package-transactions.test.mjs ./misc/stage-wasi-packages.test.mjs",
     "setup-bench": "oxnode ./misc/setup-benchmark-input/index.js",
     "setup-vite": "oxnode ./src/setup-vite/main.ts",
     "gen-esbuild-tests": "oxnode ./src/esbuild-tests/gen-tests.ts",
@@ -25,6 +28,7 @@
     "zx": "catalog:"
   },
   "devDependencies": {
+    "@napi-rs/cli": "catalog:",
     "@oxc-node/cli": "catalog:",
     "@oxlint/plugins": "^1.72.0",
     "acorn": "catalog:",
@@ -32,6 +36,8 @@
     "diff": "catalog:",
     "estree-toolkit": "catalog:",
     "micromatch": "catalog:",
-    "web-tree-sitter": "catalog:"
+    "miniflare": "catalog:",
+    "web-tree-sitter": "catalog:",
+    "wrangler": "catalog:"
   }
 }

@@ -1,6 +1,10 @@
+use rolldown_dev_common::types::DevCallbackError;
 use rolldown_fs_watcher::FsEventResult;
 
-use crate::type_aliases::{EnsureLatestBundleOutputSender, GetStateSender};
+use crate::type_aliases::{
+  BeginWatchRegistrationErrorObservationSender, CloseSender, EnsureLatestBundleOutputSender,
+  GetStateSender, PreviewWatchRegistrationErrorsSender, WatchRegistrationErrorObserverId,
+};
 #[cfg(feature = "testing")]
 use crate::type_aliases::{GetWatchedFilesSender, ScheduleBuildIfStaleSender};
 use crate::types::error_stage::ErrorStage;
@@ -15,6 +19,9 @@ pub enum CoordinatorMsg {
     /// the next file change. See `internal-docs/dev-engine/implementation.md` §7.
     error_stage: Option<ErrorStage>,
     has_generated_bundle_output: bool,
+    /// Callback execution failure, retained separately from build diagnostics
+    /// so lifecycle waiters can observe rejected/throwing consumer callbacks.
+    callback_error: Option<DevCallbackError>,
   },
   #[cfg(feature = "testing")]
   ScheduleBuildIfStale {
@@ -22,6 +29,19 @@ pub enum CoordinatorMsg {
   },
   GetState {
     reply: GetStateSender,
+  },
+  BeginWatchRegistrationErrorObservation {
+    reply: BeginWatchRegistrationErrorObservationSender,
+  },
+  PreviewWatchRegistrationErrors {
+    observer_id: WatchRegistrationErrorObserverId,
+    reply: PreviewWatchRegistrationErrorsSender,
+  },
+  AcknowledgeWatchRegistrationErrors {
+    observer_id: WatchRegistrationErrorObserverId,
+  },
+  CancelWatchRegistrationErrorObservation {
+    observer_id: WatchRegistrationErrorObserverId,
   },
   EnsureLatestBundleOutput {
     reply: EnsureLatestBundleOutputSender,
@@ -35,5 +55,7 @@ pub enum CoordinatorMsg {
   ModuleChanged {
     module_id: String,
   },
-  Close,
+  Close {
+    reply: CloseSender,
+  },
 }

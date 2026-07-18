@@ -270,6 +270,78 @@ mod relocate {
     // chunk pointing at itself, and this `to_string` would then never return.
     assert_eq!(s.to_string(), "bac");
   }
+
+  #[test]
+  fn errors_when_the_range_endpoints_have_swapped_list_positions() {
+    let mut s = MagicString::new("abc");
+    // Reorders the chunks to C -> A -> B.
+    s.relocate(0, 2, 3).unwrap();
+    assert_eq!(s.to_string(), "cab");
+
+    // [1,3) selects first = B (the list tail) and last = C (the head): both endpoints have a
+    // neighbor, so an endpoint-only check passes, but A is wedged between them. Accepting the
+    // move rewired A to point at itself and `to_string` never returned.
+    let err = s.relocate(1, 3, 0).unwrap_err();
+    assert!(err.contains("non-contiguous"), "unexpected error: {err}");
+    assert_eq!(s.to_string(), "cab");
+  }
+
+  #[test]
+  fn errors_when_the_range_is_broken_mid_list() {
+    let mut s = MagicString::new("abcd");
+    // Reorders the chunks to A -> C -> D -> B.
+    s.relocate(1, 2, 4).unwrap();
+    assert_eq!(s.to_string(), "acdb");
+
+    // [1,3) is B..C with the break mid-list. Accepting the move silently produced "b" —
+    // no hang, just wrong output plus orphaned chunk cycles.
+    s.relocate(1, 3, 0).unwrap_err();
+    assert_eq!(s.to_string(), "acdb");
+  }
+
+  #[test]
+  fn zero_width_relocate_is_a_noop() {
+    // Needs no earlier move: on a pristine string the chunk ending at `start` sits *before*
+    // the chunk starting at `start`, so treating them as a range self-cycled two chunks and
+    // this printed "a".
+    let mut s = MagicString::new("abc");
+    s.relocate(1, 1, 3).unwrap();
+    assert_eq!(s.to_string(), "abc");
+  }
+
+  #[test]
+  fn zero_width_relocate_to_its_own_position_still_errors() {
+    // The one zero-width case that is not a no-op: the containment guard runs first, so
+    // `relocate(n, n, n)` keeps the same "inside itself" error as magic-string and as this
+    // method before the zero-width no-op existed.
+    let mut s = MagicString::new("abc");
+    let err = s.relocate(1, 1, 1).unwrap_err();
+    assert!(err.contains("inside itself"), "unexpected error: {err}");
+    assert_eq!(s.to_string(), "abc");
+  }
+
+  #[test]
+  fn moving_a_chunk_to_the_slot_it_already_occupies_is_a_noop() {
+    let mut s = MagicString::new("abcdef");
+    // Reorders the chunks to A -> E -> B -> C -> D -> F.
+    s.relocate(4, 5, 1).unwrap();
+    assert_eq!(s.to_string(), "aebcdf");
+
+    // E already sits right before original position 1, so there is nothing to do. The splice
+    // used to link E to itself and drop it from the list, printing "abcdf".
+    s.relocate(4, 5, 1).unwrap();
+    assert_eq!(s.to_string(), "aebcdf");
+  }
+
+  #[test]
+  fn rejects_inverted_and_out_of_bounds_ranges() {
+    let mut s = MagicString::new("abc");
+    // Both used to panic indexing `chunk_by_start`/`chunk_by_end` with a position no chunk
+    // has, since `split_at` silently ignores out-of-range indices.
+    s.relocate(2, 1, 3).unwrap_err();
+    s.relocate(1, 99, 0).unwrap_err();
+    assert_eq!(s.to_string(), "abc");
+  }
 }
 
 mod indent {

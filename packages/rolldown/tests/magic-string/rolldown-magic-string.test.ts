@@ -177,7 +177,7 @@ describe('move', () => {
     const s = new MagicString('abc');
     s.move(0, 1, 2);
     assert.strictEqual(s.toString(), 'bac');
-    assert.throws(() => s.move(1, 3, 0), /spans the entire string/);
+    assert.throws(() => s.move(1, 3, 0), /non-contiguous/);
     assert.strictEqual(s.toString(), 'bac');
   });
 });

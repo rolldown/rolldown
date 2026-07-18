@@ -6,7 +6,7 @@ use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_sourcemap::SourceMap;
 use rolldown_std_utils::relative_path_to_slash;
-use sugar_path::SugarPath;
+use sugar_path::{SugarPath, SugarPathBuf};
 use url::Url;
 
 use super::uuid::uuid_v4_string_from_u128;
@@ -100,7 +100,7 @@ pub async fn prepare_sourcemap(
     map.set_sources(
       map
         .get_sources()
-        .map(|x| x.as_path().relative(file_dir).to_string_lossy().into_owned())
+        .map(|x| x.as_path().relative(file_dir).into_owned().into_slash_lossy())
         .collect::<Vec<_>>(),
     );
   }

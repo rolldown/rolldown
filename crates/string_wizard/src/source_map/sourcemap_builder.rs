@@ -58,17 +58,38 @@ impl<'a> SourcemapBuilder<'a> {
   ) {
     let mut loc = locator.locate(chunk_start_utf16);
     if let Some(edited_content) = &chunk.edited_content {
-      if !edited_content.is_empty() {
-        self.source_map_builder.add_token(
-          self.generated_code_line,
-          self.generated_code_column,
-          loc.line,
-          loc.column,
-          Some(self.source_id),
-          name_id,
-        );
+      if edited_content.is_empty() {
+        // An empty edit (e.g. `remove`) maps to nothing. (Upstream's `else if
+        // (this.pending)` branch here is dead code — `pending` is never assigned.)
+      } else {
+        // magic-string's `addEdit`: an edit spanning multiple generated lines gets one
+        // segment per content line — each pointing at the edit's original position, with
+        // the name repeated — except a trailing empty line after a final newline, which
+        // gets none. The final line's characters are then advanced over to keep the
+        // generated column in sync.
+        let bytes = edited_content.as_bytes();
+        let mut line_start = 0usize;
+        loop {
+          self.source_map_builder.add_token(
+            self.generated_code_line,
+            self.generated_code_column,
+            loc.line,
+            loc.column,
+            Some(self.source_id),
+            name_id,
+          );
+          match memchr::memchr(b'\n', &bytes[line_start..]) {
+            // A newline that is not the content's last byte starts another content line,
+            // which needs its own segment.
+            Some(pos) if line_start + pos < bytes.len() - 1 => {
+              self.bump_line();
+              line_start += pos + 1;
+            }
+            _ => break,
+          }
+        }
+        self.advance(&edited_content[line_start..]);
       }
-      self.advance(edited_content);
     } else {
       let chunk_content = chunk.span.text(source);
       // Byte offset of the current char in the original source, matched against

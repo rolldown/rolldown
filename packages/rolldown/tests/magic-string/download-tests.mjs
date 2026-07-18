@@ -139,8 +139,8 @@ const SKIP_TESTS = [
   // Note: 'generates segments per word boundary with hires "boundary" in the next line' now
   // passes byte-exact — fixed by the boundary-walk fix pinned in string_wizard's
   // hires_boundary_maps_word_at_start_of_next_line test; the skip had gone stale.
-  'generates a correct source map with update using a content containing a new line', // multiline update mappings differ
-  'generates a correct source map with update using content ending with a new line', // multiline update mappings differ
+  // Note: 'update using a content containing/ending with a new line' now pass — the Rust
+  // builder ports magic-string's addEdit (one segment per content line of an edit)
 ];
 
 async function downloadFile(filename) {

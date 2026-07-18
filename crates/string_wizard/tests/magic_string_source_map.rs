@@ -78,6 +78,26 @@ fn sourcemap_locations_force_segments_at_low_resolution() {
 }
 
 #[test]
+fn multiline_edit_maps_each_generated_line_to_the_edit_start() {
+  // magic-string's `addEdit` emits one segment per content line of an edit — all pointing
+  // at the edit's original position — except a trailing empty line after a final newline.
+  // Mirrors the conformance tests "update using a content containing/ending with a new
+  // line" (hires); expected strings are exactly what magic-string@0.30.21 produces.
+  let mut s = MagicString::new("foobar");
+  s.update_with(3, 4, "\nbb", UpdateOptions::default()).unwrap();
+  assert_eq!(s.to_string(), "foo\nbbar");
+  let sm = s.source_map(SourceMapOptions { hires: Hires::True, ..Default::default() });
+  assert_eq!(sm.to_json().mappings, "AAAA,CAAC,CAAC,CAAC;AAAA,EAAC,CAAC");
+
+  let mut s = MagicString::new("foobar");
+  s.update_with(2, 3, "od\n", UpdateOptions::default()).unwrap();
+  s.update_with(4, 5, "a\nnd\n", UpdateOptions::default()).unwrap();
+  assert_eq!(s.to_string(), "food\nba\nnd\nr");
+  let sm = s.source_map(SourceMapOptions { hires: Hires::True, ..Default::default() });
+  assert_eq!(sm.to_json().mappings, "AAAA,CAAC,CAAC;AAAC,CAAC;AAAA;AAAC");
+}
+
+#[test]
 fn sourcemap_location_inside_edited_chunk_has_no_effect() {
   // magic-string consults sourcemapLocations only while walking unedited chunks; a location
   // covered by an edit (here: a removal) emits nothing extra.

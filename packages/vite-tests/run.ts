@@ -3,11 +3,8 @@ import path from 'node:path';
 import { styleText } from 'node:util';
 import { x } from 'tinyexec';
 
+const VITE_DIR = path.resolve(import.meta.dirname, '../../vite');
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
-const ROLLDOWN_REPO_ROOT = path.resolve(import.meta.dirname, '../..');
-// Single source of truth for the vite commit used by tests in this repo:
-// the pin of the `packages/test-dev-server/vite` submodule.
-const VITE_SUBMODULE_PATH = 'packages/test-dev-server/vite';
 const OVERRIDES = [
   `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`,
   `  "@rolldown/pluginutils": ${path.resolve(import.meta.dirname, '../pluginutils')}`
@@ -48,27 +45,23 @@ async function runCmdAndPipeOrExit(title: string, cmdOptions: Parameters<typeof 
 
 fs.rmSync(REPO_PATH, { recursive: true, force: true });
 
-// Read the pinned vite commit from the submodule gitlink. This works without
-// initializing the submodule, so CI does not need a submodule checkout here.
-const pinResult = await x('git', ['rev-parse', `HEAD:${VITE_SUBMODULE_PATH}`], {
-  nodeOptions: { cwd: ROLLDOWN_REPO_ROOT },
-});
-if (pinResult.exitCode !== 0) {
-  console.error(styleText(['red', 'bold'], `Failed to read the vite pin from the ${VITE_SUBMODULE_PATH} submodule.`));
+// Reuse the shared `vite/` checkout at the repo root, prepared by
+// `just setup-vite` (the latest `rolldown-canary` rebased onto the latest
+// `main`), the same code the dev-server tests run on. Setup happens only
+// there, never here, so the checkout and the dev-server's built vite dist
+// cannot drift apart. The tests run on a throwaway LOCAL clone of the
+// checkout, never on the checkout itself: this suite edits tracked files
+// (pnpm overrides) and the checkout must stay unpatched. The clone shares
+// objects via hardlinks, so it needs no network.
+if (!fs.existsSync(path.join(VITE_DIR, 'package.json'))) {
+  console.error(
+    styleText(['red', 'bold'], `Vite checkout not found at ${VITE_DIR}. Run \`just setup-vite\` first.`),
+  );
   process.exit(1);
 }
-const vitePin = pinResult.stdout.trim();
-
 await runCmdAndPipeOrExit(
-  '# Cloning vite repo...',
-  ['git', ['clone', 'https://github.com/vitejs/vite.git', REPO_PATH]],
-);
-
-// The pinned commit must be pushed to vitejs/vite (same requirement as the
-// submodule itself), otherwise this checkout fails.
-await runCmdAndPipeOrExit(
-  `# Checking out pinned vite commit ${vitePin}...`,
-  ['git', ['-c', 'advice.detachedHead=false', 'checkout', vitePin], { nodeOptions: { cwd: REPO_PATH } }],
+  '# Cloning the local vite checkout...',
+  ['git', ['clone', VITE_DIR, REPO_PATH]],
 );
 
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');
@@ -92,46 +85,6 @@ await runCmdAndPipeOrExit(
   '# Running `pnpm run build`...',
   ['pnpm', ['run', 'build'], { nodeOptions: { cwd: REPO_PATH } }],
 );
-
-// Skip known failing tests
-// https://github.com/rolldown/rolldown/issues/8839
-const assetsSpecPath = path.resolve(REPO_PATH, 'playground/assets/__tests__/assets.spec.ts');
-const assetsSpec = fs.readFileSync(assetsSpecPath, 'utf-8');
-fs.writeFileSync(assetsSpecPath, assetsSpec.replace(
-  "test('import with raw query'",
-  "test.skip('import with raw query'"
-), 'utf-8');
-
-// Rolldown keeps the deduplicated CSS file under the `style2-*` name, not
-// `style-*` (same adjustment as vitejs/vite@d716106b5 on the old rolldown-canary branch).
-const cssCodesplitSpecPath = path.resolve(
-  REPO_PATH,
-  'playground/css-codesplit/__tests__/css-codesplit-consistent.spec.ts',
-);
-const cssCodesplitSpec = fs.readFileSync(cssCodesplitSpecPath, 'utf-8');
-fs.writeFileSync(cssCodesplitSpecPath, cssCodesplitSpec.replaceAll(
-  `      expect(findAssetFile(/style2-.+\\.css/)).toBeUndefined()
-      expect(findAssetFile(/style-.+\\.css/)).toMatch('h2{color:#00f}')`,
-  `      expect(findAssetFile(/style-.+\\.css/)).toBeUndefined()
-      expect(findAssetFile(/style2-.+\\.css/)).toMatch('h2{color:#00f}')`,
-), 'utf-8');
-
-// With client-side HMR, `import.meta.hot.invalidate()` is handled inside the
-// client and never reaches the server, so there is no "hmr invalidate" server
-// log anymore. Assert the user-visible result instead.
-const fbmHmrSpecPath = path.resolve(
-  REPO_PATH,
-  'playground/hmr-full-bundle-mode/__tests__/hmr-full-bundle-mode.spec.ts',
-);
-const fbmHmrSpec = fs.readFileSync(fbmHmrSpecPath, 'utf-8');
-fs.writeFileSync(fbmHmrSpecPath, fbmHmrSpec.replace(
-  `    await expect
-      .poll(() => serverLogs.slice(logIndex).join('\\n'))
-      .toContain('hmr invalidate')`,
-  `    await expect
-      .poll(() => page.textContent('.invalidation-parent'))
-      .toBe('child updated')`,
-), 'utf-8');
 
 // Remove VITE_PLUS_* env vars to prevent leaking into loadEnv() test snapshots
 for (const key of Object.keys(process.env)) {

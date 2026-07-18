@@ -28,9 +28,10 @@ describe('hmr-watch-file-load', () => {
 
     // The old fixture's `// @reload` step: force a full rebuild + fresh client session
     // in between. Editing a module nobody accepts walks to no boundary and full-reloads
-    // onto a freshly rebuilt bundle.
+    // onto a freshly rebuilt bundle. The edit is a real statement, not trivia: a
+    // rebuild whose output is byte-identical is suppressed as a noop.
     await waitForBuildStable();
-    editFile('main.js', (code) => `${code}// reload step\n`);
+    editFile('main.js', (code) => `${code}globalThis.__reloadStep = 1;\n`);
     await expect.poll(() => readMarker()).toBe(null);
     await expect.poll(() => page.textContent('.config')).toBe('hello world v2');
     await waitForBuildStable();

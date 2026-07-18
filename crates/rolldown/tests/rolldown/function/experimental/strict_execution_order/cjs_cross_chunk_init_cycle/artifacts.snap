@@ -7,32 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-//#region \0rolldown/runtime.js
-var __esmMin = (fn, res, err) => () => {
-	if (err) throw err[0];
-	try {
-		return fn && (res = fn(fn = 0)), res;
-	} catch (e) {
-		throw err = [e], e;
-	}
-};
-//#endregion
-//#region m0.js
-var v0;
-var init_m0 = __esmMin((() => {
-	globalThis.__log.push("m0");
-	v0 = 10;
-}));
-//#endregion
-init_m0();
-exports.__esmMin = __esmMin;
-Object.defineProperty(exports, "init_m0", {
-	enumerable: true,
-	get: function() {
-		return init_m0;
-	}
-});
-exports.v0 = v0;
+const require_m0 = require("./m0.js");
+require_m0.init_m0();
+exports.v0 = require_m0.v0;
 
 ```
 
@@ -40,21 +17,9 @@ exports.v0 = v0;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_e0 = require("./e0.js");
 const require_g = require("./g.js");
-//#region m3.js
-var init_m3 = require_e0.__esmMin((() => {
-	require_g.init_m2();
-	globalThis.__log.push("m3");
-}));
-//#endregion
+require("./m3.js");
 require_g.init_m1();
-Object.defineProperty(exports, "init_m3", {
-	enumerable: true,
-	get: function() {
-		return init_m3;
-	}
-});
 exports.v1 = require_g.v1;
 exports.v2 = require_g.v2;
 
@@ -63,25 +28,30 @@ exports.v2 = require_g.v2;
 ## g.js
 
 ```js
-const require_e0 = require("./e0.js");
-const require_e1 = require("./e1.js");
+const require_m0 = require("./m0.js");
+const require_m3 = require("./m3.js");
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 //#region m2.js
 var v2;
-var init_m2 = require_e0.__esmMin((() => {
-	require_e0.init_m0();
-	require_e1.init_m3();
-	globalThis.__log.push("m2");
-	v2 = 12;
-}));
+function init_m2() {
+	return (init_m2 = require_rolldown_runtime.__esmMin((() => {
+		require_m0.init_m0();
+		require_m3.init_m3();
+		globalThis.__log.push("m2");
+		v2 = 12;
+	})))();
+}
 //#endregion
 //#region m1.js
 var v1;
-var init_m1 = require_e0.__esmMin((() => {
-	require_e1.init_m3();
-	init_m2();
-	globalThis.__log.push("m1");
-	v1 = 1;
-}));
+function init_m1() {
+	return (init_m1 = require_rolldown_runtime.__esmMin((() => {
+		require_m3.init_m3();
+		init_m2();
+		globalThis.__log.push("m1");
+		v1 = 1;
+	})))();
+}
 //#endregion
 Object.defineProperty(exports, "init_m1", {
 	enumerable: true,
@@ -105,6 +75,78 @@ Object.defineProperty(exports, "v2", {
 	enumerable: true,
 	get: function() {
 		return v2;
+	}
+});
+
+```
+
+## m0.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region m0.js
+var v0;
+function init_m0() {
+	return (init_m0 = require_rolldown_runtime.__esmMin((() => {
+		globalThis.__log.push("m0");
+		v0 = 10;
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_m0", {
+	enumerable: true,
+	get: function() {
+		return init_m0;
+	}
+});
+Object.defineProperty(exports, "v0", {
+	enumerable: true,
+	get: function() {
+		return v0;
+	}
+});
+
+```
+
+## m3.js
+
+```js
+const require_g = require("./g.js");
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region m3.js
+function init_m3() {
+	return (init_m3 = require_rolldown_runtime.__esmMin((() => {
+		require_g.init_m2();
+		globalThis.__log.push("m3");
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_m3", {
+	enumerable: true,
+	get: function() {
+		return init_m3;
+	}
+});
+
+```
+
+## rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+//#endregion
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
 	}
 });
 
@@ -118,32 +160,9 @@ Object.defineProperty(exports, "v2", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-//#region \0rolldown/runtime.js
-var __esmMin = (fn, res, err) => () => {
-	if (err) throw err[0];
-	try {
-		return fn && (res = fn(fn = 0)), res;
-	} catch (e) {
-		throw err = [e], e;
-	}
-};
-//#endregion
-//#region m0.js
-var v0;
-var init_m0 = __esmMin((() => {
-	globalThis.__log.push("m0");
-	v0 = 10;
-}));
-//#endregion
-init_m0();
-exports.__esmMin = __esmMin;
-Object.defineProperty(exports, "init_m0", {
-	enumerable: true,
-	get: function() {
-		return init_m0;
-	}
-});
-exports.v0 = v0;
+const require_m0 = require("./m0.js");
+require_m0.init_m0();
+exports.v0 = require_m0.v0;
 
 ```
 
@@ -151,21 +170,9 @@ exports.v0 = v0;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_e0 = require("./e0.js");
 const require_g = require("./g.js");
-//#region m3.js
-var init_m3 = require_e0.__esmMin((() => {
-	require_g.init_m2();
-	globalThis.__log.push("m3");
-}));
-//#endregion
+require("./m3.js");
 require_g.init_m1();
-Object.defineProperty(exports, "init_m3", {
-	enumerable: true,
-	get: function() {
-		return init_m3;
-	}
-});
 exports.v1 = require_g.v1;
 exports.v2 = require_g.v2;
 
@@ -174,25 +181,30 @@ exports.v2 = require_g.v2;
 ### g.js
 
 ```js
-const require_e0 = require("./e0.js");
-const require_e1 = require("./e1.js");
+const require_m0 = require("./m0.js");
+const require_m3 = require("./m3.js");
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 //#region m2.js
 var v2;
-var init_m2 = require_e0.__esmMin((() => {
-	require_e0.init_m0();
-	require_e1.init_m3();
-	globalThis.__log.push("m2");
-	v2 = 12;
-}));
+function init_m2() {
+	return (init_m2 = require_rolldown_runtime.__esmMin((() => {
+		require_m0.init_m0();
+		require_m3.init_m3();
+		globalThis.__log.push("m2");
+		v2 = 12;
+	})))();
+}
 //#endregion
 //#region m1.js
 var v1;
-var init_m1 = require_e0.__esmMin((() => {
-	require_e1.init_m3();
-	init_m2();
-	globalThis.__log.push("m1");
-	v1 = 1;
-}));
+function init_m1() {
+	return (init_m1 = require_rolldown_runtime.__esmMin((() => {
+		require_m3.init_m3();
+		init_m2();
+		globalThis.__log.push("m1");
+		v1 = 1;
+	})))();
+}
 //#endregion
 Object.defineProperty(exports, "init_m1", {
 	enumerable: true,
@@ -221,6 +233,78 @@ Object.defineProperty(exports, "v2", {
 
 ```
 
+### m0.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region m0.js
+var v0;
+function init_m0() {
+	return (init_m0 = require_rolldown_runtime.__esmMin((() => {
+		globalThis.__log.push("m0");
+		v0 = 10;
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_m0", {
+	enumerable: true,
+	get: function() {
+		return init_m0;
+	}
+});
+Object.defineProperty(exports, "v0", {
+	enumerable: true,
+	get: function() {
+		return v0;
+	}
+});
+
+```
+
+### m3.js
+
+```js
+const require_g = require("./g.js");
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region m3.js
+function init_m3() {
+	return (init_m3 = require_rolldown_runtime.__esmMin((() => {
+		require_g.init_m2();
+		globalThis.__log.push("m3");
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_m3", {
+	enumerable: true,
+	get: function() {
+		return init_m3;
+	}
+});
+
+```
+
+### rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+//#endregion
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+
+```
+
 # Variant: minify-on-demand: [minify: true]
 
 ## Assets
@@ -228,19 +312,37 @@ Object.defineProperty(exports, "v2", {
 ### e0.js
 
 ```js
-Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}},t,n=e((()=>{globalThis.__log.push(`m0`),t=10}));n(),exports.n=e,Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}}),exports.v0=t;
+Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./m0.js");e.t(),exports.v0=e.n;
 ```
 
 ### e1.js
 
 ```js
-Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./e0.js"),t=require("./g.js");var n=e.n((()=>{t.r(),globalThis.__log.push(`m3`)}));t.t(),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}}),exports.v1=t.n,exports.v2=t.i;
+Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./g.js");require("./m3.js"),e.t(),exports.v1=e.n,exports.v2=e.i;
 ```
 
 ### g.js
 
 ```js
-const e=require("./e0.js"),t=require("./e1.js");var n,r=e.n((()=>{e.t(),t.t(),globalThis.__log.push(`m2`),n=12})),i,a=e.n((()=>{t.t(),r(),globalThis.__log.push(`m1`),i=1}));Object.defineProperty(exports,"i",{enumerable:!0,get:function(){return n}}),Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return r}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return a}});
+const e=require("./m0.js"),t=require("./m3.js"),n=require("./rolldown-runtime.js");var r;function i(){return(i=n.t((()=>{e.t(),t.t(),globalThis.__log.push(`m2`),r=12})))()}var a;function o(){return(o=n.t((()=>{t.t(),i(),globalThis.__log.push(`m1`),a=1})))()}Object.defineProperty(exports,"i",{enumerable:!0,get:function(){return r}}),Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return a}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return o}});
+```
+
+### m0.js
+
+```js
+const e=require("./rolldown-runtime.js");var t;function n(){return(n=e.t((()=>{globalThis.__log.push(`m0`),t=10})))()}Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return t}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}});
+```
+
+### m3.js
+
+```js
+const e=require("./g.js"),t=require("./rolldown-runtime.js");function n(){return(n=t.t((()=>{e.r(),globalThis.__log.push(`m3`)})))()}Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}});
+```
+
+### rolldown-runtime.js
+
+```js
+var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}};Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return e}});
 ```
 
 # Variant: minify-wrap-all: [minify: true] [on_demand_wrapping: false]
@@ -250,17 +352,35 @@ const e=require("./e0.js"),t=require("./e1.js");var n,r=e.n((()=>{e.t(),t.t(),gl
 ### e0.js
 
 ```js
-Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}},t,n=e((()=>{globalThis.__log.push(`m0`),t=10}));n(),exports.n=e,Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}}),exports.v0=t;
+Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./m0.js");e.t(),exports.v0=e.n;
 ```
 
 ### e1.js
 
 ```js
-Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./e0.js"),t=require("./g.js");var n=e.n((()=>{t.r(),globalThis.__log.push(`m3`)}));t.t(),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}}),exports.v1=t.n,exports.v2=t.i;
+Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./g.js");require("./m3.js"),e.t(),exports.v1=e.n,exports.v2=e.i;
 ```
 
 ### g.js
 
 ```js
-const e=require("./e0.js"),t=require("./e1.js");var n,r=e.n((()=>{e.t(),t.t(),globalThis.__log.push(`m2`),n=12})),i,a=e.n((()=>{t.t(),r(),globalThis.__log.push(`m1`),i=1}));Object.defineProperty(exports,"i",{enumerable:!0,get:function(){return n}}),Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return r}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return a}});
+const e=require("./m0.js"),t=require("./m3.js"),n=require("./rolldown-runtime.js");var r;function i(){return(i=n.t((()=>{e.t(),t.t(),globalThis.__log.push(`m2`),r=12})))()}var a;function o(){return(o=n.t((()=>{t.t(),i(),globalThis.__log.push(`m1`),a=1})))()}Object.defineProperty(exports,"i",{enumerable:!0,get:function(){return r}}),Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return a}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return o}});
+```
+
+### m0.js
+
+```js
+const e=require("./rolldown-runtime.js");var t;function n(){return(n=e.t((()=>{globalThis.__log.push(`m0`),t=10})))()}Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return t}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}});
+```
+
+### m3.js
+
+```js
+const e=require("./g.js"),t=require("./rolldown-runtime.js");function n(){return(n=t.t((()=>{e.r(),globalThis.__log.push(`m3`)})))()}Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}});
+```
+
+### rolldown-runtime.js
+
+```js
+var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}};Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return e}});
 ```

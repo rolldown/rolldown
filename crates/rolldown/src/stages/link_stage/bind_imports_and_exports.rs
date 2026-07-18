@@ -6,7 +6,7 @@ use oxc_str::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType,
+  EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, IndexModules, MemberExprObjectReferencedType,
   MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
   OutputFormat, ResolvedExport, Specifier, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
   SymbolRefDb, SymbolRefFlags,
@@ -137,15 +137,21 @@ impl LinkStage<'_> {
         .collect::<FxHashMap<_, _>>();
 
       let mut module_stack = vec![];
+      // The star-export origin map only feeds `record_star_reexport_path`, which is strict-only.
+      let mut star_export_record_by_name =
+        self.options.is_strict_execution_order_enabled().then(FxHashMap::default);
       if module.has_star_export() || module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
         Self::add_exports_for_export_star(
           &self.module_table.modules,
           &mut resolved_exports,
+          star_export_record_by_name.as_mut(),
           module_id,
           &mut module_stack,
+          None,
         );
       }
       meta.resolved_exports = resolved_exports;
+      meta.star_export_record_by_name = star_export_record_by_name.unwrap_or_default();
     });
     let side_effects_modules = self
       .module_table
@@ -164,6 +170,7 @@ impl LinkStage<'_> {
       external_import_binding_merger: FxHashMap::default(),
       side_effects_modules: &side_effects_modules,
       normal_symbol_exports_chain_map: &mut normal_symbol_exports_chain_map,
+      star_reexport_records_by_imported_symbol: &mut self.star_reexport_records_by_imported_symbol,
       external_import_namespace_merger: FxHashMap::default(),
     };
     self.module_table.modules.iter().for_each(|module| {
@@ -308,8 +315,10 @@ impl LinkStage<'_> {
   fn add_exports_for_export_star(
     normal_modules: &IndexModules,
     resolve_exports: &mut FxHashMap<CompactStr, ResolvedExport>,
+    mut star_export_record_by_name: Option<&mut FxHashMap<CompactStr, ImportRecordIdx>>,
     module_idx: ModuleIdx,
     module_stack: &mut Vec<ModuleIdx>,
+    root_record: Option<ImportRecordIdx>,
   ) {
     if module_stack.contains(&module_idx) {
       return;
@@ -333,7 +342,12 @@ impl LinkStage<'_> {
         vec![]
       };
 
-    for dep_id in module.star_export_module_ids().chain(cjs_reexport_modules) {
+    let star_exports = module
+      .star_export_records()
+      .map(|(rec_idx, module_idx)| (Some(rec_idx), module_idx))
+      .chain(cjs_reexport_modules.into_iter().map(|module_idx| (None, module_idx)));
+    for (rec_idx, dep_id) in star_exports {
+      let root_record = root_record.or(rec_idx);
       let Module::Normal(dep_module) = &normal_modules[dep_id] else {
         continue;
       };
@@ -378,10 +392,22 @@ impl LinkStage<'_> {
             exported_name.clone(),
             ResolvedExport::new(named_export.referenced, named_export.came_from_commonjs),
           );
+          if let Some(root_record) = root_record
+            && let Some(map) = star_export_record_by_name.as_deref_mut()
+          {
+            map.insert(exported_name.clone(), root_record);
+          }
         }
       }
 
-      Self::add_exports_for_export_star(normal_modules, resolve_exports, dep_id, module_stack);
+      Self::add_exports_for_export_star(
+        normal_modules,
+        resolve_exports,
+        star_export_record_by_name.as_deref_mut(),
+        dep_id,
+        module_stack,
+        root_record,
+      );
     }
 
     module_stack.pop();
@@ -851,6 +877,8 @@ struct BindImportsAndExportsContext<'a> {
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   pub side_effects_modules: &'a FxHashSet<ModuleIdx>,
   pub normal_symbol_exports_chain_map: &'a mut FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  pub star_reexport_records_by_imported_symbol:
+    &'a mut FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
 }
 
 impl BindImportsAndExportsContext<'_> {
@@ -874,6 +902,19 @@ impl BindImportsAndExportsContext<'_> {
 
       let rec = &module.import_records[named_import.record_idx];
       let Some(resolved_module_idx) = rec.resolved_module else { continue };
+      if self.options.is_strict_execution_order_enabled()
+        && let Specifier::Literal(name) = &named_import.imported
+      {
+        record_star_reexport_path(
+          resolved_module_idx,
+          name,
+          *imported_as_ref,
+          self.index_modules,
+          self.metas,
+          self.star_reexport_records_by_imported_symbol,
+          &mut FxHashSet::default(),
+        );
+      }
       let is_external = matches!(self.index_modules[resolved_module_idx], Module::External(_));
 
       if is_esm && is_external {
@@ -1279,4 +1320,61 @@ impl BindImportsAndExportsContext<'_> {
 
     ret
   }
+}
+
+pub(super) fn record_star_reexport_path(
+  module_idx: ModuleIdx,
+  export_name: &CompactStr,
+  imported_as_ref: SymbolRef,
+  modules: &IndexModules,
+  metas: &LinkingMetadataVec,
+  records_by_imported_symbol: &mut FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
+  visited: &mut FxHashSet<(ModuleIdx, CompactStr)>,
+) {
+  let mut path = vec![];
+  collect_star_reexport_path(module_idx, export_name, modules, metas, &mut path, visited);
+  if path.is_empty() {
+    return;
+  }
+  let paths = records_by_imported_symbol.entry(imported_as_ref).or_default();
+  if !paths.contains(&path) {
+    paths.push(path);
+  }
+}
+
+fn collect_star_reexport_path(
+  module_idx: ModuleIdx,
+  export_name: &CompactStr,
+  modules: &IndexModules,
+  metas: &LinkingMetadataVec,
+  path: &mut Vec<(ModuleIdx, ImportRecordIdx)>,
+  visited: &mut FxHashSet<(ModuleIdx, CompactStr)>,
+) {
+  if !visited.insert((module_idx, export_name.clone())) {
+    return;
+  }
+  let Some(module) = modules[module_idx].as_normal() else {
+    return;
+  };
+  let (record_idx, next_export_name) = if let Some(record_idx) =
+    metas[module_idx].star_export_record_by_name.get(export_name).copied()
+  {
+    (record_idx, export_name.clone())
+  } else {
+    let Some(named_export) = module.named_exports.get(export_name) else {
+      return;
+    };
+    let Some(named_import) = module.named_imports.get(&named_export.referenced) else {
+      return;
+    };
+    let Specifier::Literal(next_export_name) = &named_import.imported else {
+      return;
+    };
+    (named_import.record_idx, next_export_name.clone())
+  };
+  path.push((module_idx, record_idx));
+  let Some(importee_idx) = module.import_records[record_idx].resolved_module else {
+    return;
+  };
+  collect_star_reexport_path(importee_idx, &next_export_name, modules, metas, path, visited);
 }

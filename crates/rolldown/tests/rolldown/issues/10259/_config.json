@@ -1,0 +1,42 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/10259 — an entries-aware manual group merges three entry-private app modules while leaving app-personal's private dependency in the personal entry chunk. The resulting common-chunk/entry-chunk cycle must keep every strict init wrapper callable regardless of which entry is loaded first.",
+  "configName": "on-demand",
+  "config": {
+    "input": [
+      {
+        "name": "personal",
+        "import": "./personal.js"
+      },
+      {
+        "name": "admin",
+        "import": "./admin.js"
+      },
+      {
+        "name": "theming",
+        "import": "./theming.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "apps",
+          "test": "[\\\\/]app-(?:personal|admin|theming)\\.js$",
+          "includeDependenciesRecursively": false,
+          "entriesAware": true,
+          "entriesAwareMergeThreshold": 102400
+        }
+      ]
+    },
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
+}

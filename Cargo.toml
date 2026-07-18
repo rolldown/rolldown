@@ -277,6 +277,9 @@ oxc = { version = "0.140.0", features = [
   "regular_expression",
 ] }
 oxc_allocator = { version = "0.140.0", features = ["pool"] }
+# Depended on directly only to enable `disable_old_builder` (removes oxc's deprecated
+# old AstBuilder API); the `oxc` umbrella crate has no passthrough feature for it.
+oxc_ast = { version = "0.140.0", features = ["disable_old_builder"] }
 oxc_ecmascript = { version = "0.140.0" }
 oxc_napi = { version = "0.140.0" }
 oxc_str = { version = "0.140.0" }
@@ -358,6 +361,10 @@ napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb81
 # and oxc_sourcemap live in their own repos and are intentionally left alone.
 oxc = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
 oxc_allocator = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
+# oxc_ast joined this list when main made it a direct workspace dep (to enable
+# `disable_old_builder`); without the patch the feature would land on an unused
+# duplicate registry copy instead of the git copy the umbrella re-exports.
+oxc_ast = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
 oxc_ecmascript = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
 oxc_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
 oxc_str = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }

@@ -852,6 +852,7 @@ mod tests {
       stamp_table: Arc::new(Mutex::new(rolldown_common::HmrStampTable::default())),
       pending_payloads: Arc::new(Mutex::new(rustc_hash::FxHashMap::default())),
       top_level_evaluated: Mutex::new(Arc::new(rustc_hash::FxHashMap::default())),
+      last_task_errored: std::sync::atomic::AtomicBool::new(false),
     });
     BundleCoordinator::new(
       Arc::new(Mutex::new(bundler)),
@@ -1270,6 +1271,7 @@ mod tests {
       stamp_table: Arc::new(Mutex::new(rolldown_common::HmrStampTable::default())),
       pending_payloads: Arc::new(Mutex::new(rustc_hash::FxHashMap::default())),
       top_level_evaluated: Mutex::new(Arc::new(rustc_hash::FxHashMap::default())),
+      last_task_errored: std::sync::atomic::AtomicBool::new(false),
     });
     let commit_attempts = Arc::new(AtomicUsize::new(0));
     let watcher: DynFsWatcher = Box::new(CommitFailingWatcher {
@@ -1404,6 +1406,7 @@ mod tests {
       stamp_table: Arc::new(Mutex::new(rolldown_common::HmrStampTable::default())),
       pending_payloads: Arc::new(Mutex::new(rustc_hash::FxHashMap::default())),
       top_level_evaluated: Mutex::new(Arc::new(rustc_hash::FxHashMap::default())),
+      last_task_errored: std::sync::atomic::AtomicBool::new(false),
     });
     let commit_attempts = Arc::new(AtomicUsize::new(0));
     let watcher: DynFsWatcher = Box::new(CommitFailingWatcher {

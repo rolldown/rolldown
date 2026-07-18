@@ -3,33 +3,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## common.js
-
-```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-//#region common.js
-function mark() {
-	globalThis.namespaceValue = typeof globalThis.namespaceValue === "number" ? globalThis.namespaceValue + 1 : 0;
-}
-var common, _;
-var init_common = __esmMin((() => {
-	common = "common";
-	_ = /* @__PURE__ */ mark();
-}));
-//#endregion
-export { common as n, init_common as r, _ as t };
-
-```
-
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+await import("./page-b2.js").then(console.log);
+await import("./page-a2.js").then(console.log);
 //#endregion
-await __esmMin((async () => {
-	await import("./page-b.js").then(console.log);
-	await import("./page-a.js").then(console.log);
-}))();
 
 ```
 
@@ -37,17 +17,39 @@ await __esmMin((async () => {
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as common, r as init_common, t as _ } from "./common.js";
 import assert from "node:assert";
+//#region common.js
+function mark() {
+	globalThis.namespaceValue = typeof globalThis.namespaceValue === "number" ? globalThis.namespaceValue + 1 : 0;
+}
+var common, _;
+function init_common() {
+	return (init_common = __esmMin((() => {
+		common = "common";
+		_ = /* @__PURE__ */ mark();
+	})))();
+}
+//#endregion
 //#region page-a.js
 function render() {
 	console.log(common, _);
 }
+function init_page_a() {
+	return (init_page_a = __esmMin((() => {
+		init_common();
+		assert.strictEqual(globalThis.namespaceValue, 0);
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_common();
-	assert.strictEqual(globalThis.namespaceValue, 0);
-}))();
+export { render as n, init_page_a as t };
+
+```
+
+## page-a2.js
+
+```js
+import { n as render, t as init_page_a } from "./page-a.js";
+init_page_a();
 export { render };
 
 ```
@@ -56,15 +58,25 @@ export { render };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as init_common } from "./common.js";
 import assert from "node:assert";
+//#endregion
+//#region page-b.js
 function render() {}
-__esmMin((() => {
-	//#region bridge.js
-	init_common();
-	assert.strictEqual(globalThis.namespaceValue, void 0, "namespace member must not initialize its dead re-export before page-b");
-	//#endregion
-}))();
+function init_page_b() {
+	return (init_page_b = __esmMin((() => {
+		assert.strictEqual(globalThis.namespaceValue, void 0, "namespace member must not initialize its dead re-export before page-b");
+	})))();
+}
+//#endregion
+export { render as n, init_page_b as t };
+
+```
+
+## page-b2.js
+
+```js
+import { n as render, t as init_page_b } from "./page-b.js";
+init_page_b();
 export { render };
 
 ```
@@ -81,33 +93,27 @@ export { __esmMin as t };
 
 ## Assets
 
-### common.js
-
-```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-//#region common.js
-function mark() {
-	globalThis.namespaceValue = typeof globalThis.namespaceValue === "number" ? globalThis.namespaceValue + 1 : 0;
-}
-var common, _;
-var init_common = __esmMin((() => {
-	common = "common";
-	_ = /* @__PURE__ */ mark();
-}));
-//#endregion
-export { common as n, init_common as r, _ as t };
-
-```
-
 ### main.js
 
 ```js
+import { t as init_main } from "./main2.js";
+await init_main();
+
+```
+
+### main2.js
+
+```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await import("./page-b2.js").then(console.log);
+		await import("./page-a2.js").then(console.log);
+	})))();
+}
 //#endregion
-await __esmMin((async () => {
-	await import("./page-b.js").then(console.log);
-	await import("./page-a.js").then(console.log);
-}))();
+export { init_main as t };
 
 ```
 
@@ -115,17 +121,39 @@ await __esmMin((async () => {
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as common, r as init_common, t as _ } from "./common.js";
 import assert from "node:assert";
+//#region common.js
+function mark() {
+	globalThis.namespaceValue = typeof globalThis.namespaceValue === "number" ? globalThis.namespaceValue + 1 : 0;
+}
+var common, _;
+function init_common() {
+	return (init_common = __esmMin((() => {
+		common = "common";
+		_ = /* @__PURE__ */ mark();
+	})))();
+}
+//#endregion
 //#region page-a.js
 function render() {
 	console.log(common, _);
 }
+function init_page_a() {
+	return (init_page_a = __esmMin((() => {
+		init_common();
+		assert.strictEqual(globalThis.namespaceValue, 0);
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_common();
-	assert.strictEqual(globalThis.namespaceValue, 0);
-}))();
+export { render as n, init_page_a as t };
+
+```
+
+### page-a2.js
+
+```js
+import { n as render, t as init_page_a } from "./page-a.js";
+init_page_a();
 export { render };
 
 ```
@@ -134,19 +162,28 @@ export { render };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as init_common } from "./common.js";
 import assert from "node:assert";
-var init_bridge = __esmMin((() => {
-	init_common();
-}));
+function init_bridge() {
+	return (init_bridge = __esmMin((() => {})))();
+}
 //#endregion
 //#region page-b.js
 function render() {}
+function init_page_b() {
+	return (init_page_b = __esmMin((() => {
+		assert.strictEqual(globalThis.namespaceValue, void 0, "namespace member must not initialize its dead re-export before page-b");
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_bridge();
-	assert.strictEqual(globalThis.namespaceValue, void 0, "namespace member must not initialize its dead re-export before page-b");
-}))();
+export { render as n, init_page_b as t };
+
+```
+
+### page-b2.js
+
+```js
+import { n as render, t as init_page_b } from "./page-b.js";
+init_page_b();
 export { render };
 
 ```

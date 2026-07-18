@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use oxc::allocator::GetAllocator;
 use oxc::allocator::{Allocator, ReplaceWith, TakeIn};
-use oxc::ast::NONE;
 use oxc::ast::ast::{self, BindingPattern, Declaration, ImportOrExportKind, Statement};
+use oxc::ast::builder::NONE;
 use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{SPAN, Span};
 use rolldown_ecmascript_utils::{AstFactory, StatementExt};

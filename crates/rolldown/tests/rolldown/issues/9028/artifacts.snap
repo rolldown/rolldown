@@ -6,8 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-}))();
+//#region main.js
+console.log(42);
+//#endregion
 
 ```
 
@@ -18,18 +19,30 @@ source: crates/rolldown_testing/src/integration_test.rs
 ### main.js
 
 ```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		console.log(42);
+	})))();
+}
+//#endregion
+export { init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
-var init_lib = __esmMin((() => {}));
-//#endregion
-//#region barrel.js
-var init_barrel = __esmMin((() => {
-	init_lib();
-}));
-//#endregion
-__esmMin((() => {
-	init_barrel();
-	console.log(42);
-}))();
+export { __esmMin as t };
 
 ```

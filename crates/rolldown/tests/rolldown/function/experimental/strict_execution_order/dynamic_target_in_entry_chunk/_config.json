@@ -1,8 +1,4 @@
 {
-  "expectExecutionFailure": {
-    "reason": "Expected to fail until rolldown#10104 is applied.",
-    "outputContains": ["loading dynamic target entry must not execute co-located entry a"]
-  },
   "configName": "wrap-all",
   "config": {
     "input": [
@@ -28,10 +24,6 @@
   "configVariants": [
     {
       "_configName": "on-demand",
-      "_expectExecutionFailure": {
-        "reason": "Expected to fail until rolldown#10104 is applied.",
-        "outputContains": ["loading dynamic target entry must not execute co-located entry a"]
-      },
       "onDemandWrapping": true
     }
   ]

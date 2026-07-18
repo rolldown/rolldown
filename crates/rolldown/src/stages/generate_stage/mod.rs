@@ -5,8 +5,8 @@ use futures::future::try_join_all;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
-  ChunkIdx, ChunkKind, InstantiationKind, OutputExports, PackageJson, PathsOutputOption,
-  UsedSymbolRefs, UsedSymbolRefsBuilder,
+  ChunkIdx, ChunkKind, InstantiationKind, ModuleIdx, OutputExports, PackageJson, PathsOutputOption,
+  RUNTIME_HELPER_NAMES, UsedSymbolRefs, UsedSymbolRefsBuilder,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -16,13 +16,10 @@ use rolldown_std_utils::{
   representative_file_name_for_preserve_modules, strip_path_prefix_to_slash,
 };
 use rolldown_utils::{
-  dashmap::FxDashMap,
-  hash_placeholder::HashPlaceholderGenerator,
-  indexmap::FxIndexSet,
-  node_style_absolute,
-  rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _},
+  dashmap::FxDashMap, hash_placeholder::HashPlaceholderGenerator, index_vec_ext::IndexVecExt as _,
+  indexmap::FxIndexSet, node_style_absolute, rayon::ParallelIterator as _,
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
 use tracing::debug_span;
 
@@ -95,7 +92,6 @@ use crate::{
     deconflict_chunk_symbols::deconflict_chunk_symbols,
     determine_export_mode::determine_export_mode, generate_pre_rendered_chunk,
     render_chunk_exports::get_chunk_export_names,
-    validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
   },
 };
 
@@ -106,12 +102,16 @@ mod compute_cross_chunk_links;
 mod compute_wrapped_esm_init_metadata;
 mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
+mod finalize_chunk_plan;
 mod finalize_modules;
 mod manual_code_splitting;
 mod minify_chunks;
-mod on_demand_wrapping;
+mod order_analysis;
+pub mod order_wrap_state;
+mod order_wrapping;
 mod post_banner_footer;
 mod render_chunk_to_assets;
+mod resolve_file_urls;
 mod runtime_module_sweep;
 
 pub struct GenerateStage<'a> {
@@ -146,51 +146,62 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
     let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs).await?;
 
-    // The unused-runtime-module sweep (inside `generate_chunks`, after the chunk optimizer's
-    // re-run of the inclusion pass) was the last writer; sealing consumes the builder, so
-    // nothing downstream can mutate the set.
+    let mut order_state = self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs)?;
+
+    // Order lowering and the unused-runtime sweep have had their last chance to update liveness.
+    // Sealing consumes the builder, so nothing downstream can mutate the set.
     let used_symbol_refs = used_symbol_refs.seal();
-
-    // Count only live chunks. Chunks merged away during chunk optimization (e.g.
-    // the standalone runtime chunk folded back into its host) stay in
-    // `chunk_table` as tombstones but are skipped at render time, so they must
-    // not count toward the multi-chunk check that gates single-file output.
-    let live_chunk_count = chunk_graph
-      .chunk_table
-      .len()
-      .saturating_sub(chunk_graph.post_chunk_optimization_operations.len());
-    if live_chunk_count > 1 {
-      validate_options_for_multi_chunk_output(self.options)?;
-    }
-
     self.compute_retained_export_symbols(&used_symbol_refs);
 
-    self.compute_cross_chunk_links(&mut chunk_graph, &used_symbol_refs);
+    let mut ast_table = std::mem::take(&mut self.ast_table);
+    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph, &mut order_state);
+
+    self.compute_cross_chunk_links(&mut chunk_graph, &used_symbol_refs, &order_state);
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);
 
-    self.on_demand_wrapping(&mut chunk_graph);
-
     self.merge_cjs_namespace(&mut chunk_graph);
 
-    // See internal-docs/devtools/implementation.md for devtools action lifecycle.
     self.trace_action_chunks_infos(&chunk_graph);
 
     let mut warnings = vec![];
-    self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings, &used_symbol_refs)?;
+    self.compute_chunk_output_exports(
+      &mut chunk_graph,
+      &mut warnings,
+      &used_symbol_refs,
+      &order_state,
+    )?;
     if !warnings.is_empty() {
       self.link_output.diagnostics.extend(warnings);
     }
-
     let index_chunk_id_to_name =
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
+    let rendered_modules =
+      order_state.has_import_overlays().then(|| rendered_module_set(&chunk_graph));
+    let symbols = &self.link_output.symbol_db;
+    let runtime = &self.link_output.runtime;
+    let order_live_symbols = order_state.live_symbols(
+      |symbol_ref| symbols.canonical_ref_resolving_namespace(symbol_ref),
+      |helper| {
+        let index = helper.bits().trailing_zeros() as usize;
+        runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index])
+      },
+      |importer_idx| {
+        rendered_modules
+          .as_ref()
+          .is_some_and(|rendered_modules| rendered_modules.contains(&importer_idx))
+      },
+    );
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
-      chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
+      chunk_graph.chunk_table.par_iter_mut_enumerated().for_each(|(chunk_idx, chunk)| {
         deconflict_chunk_symbols(
+          chunk_idx,
           chunk,
           self.link_output,
+          &order_state,
+          &order_live_symbols,
           self.options.format,
           &index_chunk_id_to_name,
         );
@@ -209,11 +220,16 @@ impl<'a> GenerateStage<'a> {
       self.resolved_paths = Some(paths.resolve_all(ids).await);
     }
 
-    let mut ast_table = std::mem::take(&mut self.ast_table);
-    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph);
-    self.finalize_modules(&mut chunk_graph, &mut ast_table)?;
+    let resolved_file_urls = self.resolve_file_urls(&chunk_graph).await?;
+    self.finalize_modules(
+      &mut chunk_graph,
+      &mut ast_table,
+      &resolved_file_urls,
+      &used_symbol_refs,
+      &order_state,
+    )?;
     self.detect_ineffective_dynamic_imports(&chunk_graph);
-    self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs).await
+    self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await
   }
 
   /// Notices:
@@ -416,6 +432,7 @@ impl<'a> GenerateStage<'a> {
     chunk_graph: &mut ChunkGraph,
     warnings: &mut Vec<BuildDiagnostic>,
     used_symbol_refs: &UsedSymbolRefs,
+    order_state: &order_wrap_state::OrderWrapState,
   ) -> BuildResult<()> {
     // Collect all the chunk data we need first
     let mut chunk_export_data = Vec::new();
@@ -435,6 +452,7 @@ impl<'a> GenerateStage<'a> {
           options: self.options,
           link_output: self.link_output,
           used_symbol_refs,
+          order_wrap_state: order_state,
           chunk_graph,
           plugin_driver: self.plugin_driver,
           module_id_to_codegen_ret: Vec::new(),
@@ -591,4 +609,13 @@ impl<'a> GenerateStage<'a> {
       trace_action!(action::PackageGraphReady { action: "PackageGraphReady", packages });
     }
   }
+}
+
+fn rendered_module_set(chunk_graph: &ChunkGraph) -> FxHashSet<ModuleIdx> {
+  chunk_graph
+    .chunk_table
+    .iter_enumerated()
+    .filter(|(chunk_idx, _)| chunk_graph.chunk_is_live(*chunk_idx))
+    .flat_map(|(_, chunk)| chunk.modules.iter().copied())
+    .collect()
 }

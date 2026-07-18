@@ -4,7 +4,7 @@ use std::{
   future::Future,
   panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
   pin::Pin,
-  sync::{Arc, Mutex, PoisonError},
+  sync::{Arc, Mutex, PoisonError, atomic::AtomicBool},
   task::{Context, Poll},
 };
 
@@ -232,6 +232,11 @@ pub struct DevContext {
   /// `Arc` into the new session, since a hello can only come from the runtime
   /// inside a served entry chunk.
   pub top_level_evaluated: TokioMutex<Arc<FxHashMap<ArcStr, u32>>>,
+  /// Whether the previous bundling task errored. The next HMR compute passes it
+  /// as `last_build_errored` to disable the unchanged-output suppression, so a
+  /// byte-identical recovery still reaches clients stuck on that error. Written
+  /// at the end of every task; tasks are serialized by the coordinator.
+  pub last_task_errored: AtomicBool,
 }
 
 impl DevContext {

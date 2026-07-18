@@ -242,7 +242,6 @@ async fn strict_off_interop_esm_wrapper_keeps_legacy_shape() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[should_panic(expected = "on-demand wrapping must preserve byte-identical hazard-free output")]
 async fn on_demand_wrapping_does_not_change_hazard_free_output() {
   let default_output = bundle(false).await;
   let strict_output = bundle(true).await;
@@ -278,7 +277,6 @@ async fn wrap_all_mode_wraps_even_hazard_free_output() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[should_panic(expected = "must explicitly trigger its init target")]
 async fn order_wrapper_entry_uses_explicit_prologue() {
   let fixture_dir = format!("{FIXTURE_ROOT}/../experimental/strict_execution_order/issue_4782");
   let output = bundle_fixture(
@@ -357,7 +355,6 @@ async fn dynamic_entry_does_not_static_import_side_effectful_runtime_host() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[should_panic(expected = "a should import the restored dynamic facade directly")]
 async fn wrapped_dynamic_entry_keeps_facade_after_manual_chunk_merge() {
   let output = bundle_fixture_with_options(
     &format!("{FIXTURE_ROOT}/m4_dynamic_facade_race"),
@@ -400,7 +397,6 @@ async fn wrapped_dynamic_entry_keeps_facade_after_manual_chunk_merge() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[should_panic(expected = "m31 should be split into its own chunk")]
 async fn restored_dynamic_facade_keeps_dependency_chunk_inert() {
   let output = bundle_fixture_with_options(
     &format!("{FIXTURE_ROOT}/m4_dynamic_facade_dependency"),
@@ -440,7 +436,6 @@ async fn restored_dynamic_facade_keeps_dependency_chunk_inert() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[should_panic(expected = "the dynamic import should target the restored facade")]
 async fn emitted_dynamic_entry_keeps_order_wrapper_facade() {
   let bundle = bundle_emitted_target("emitted_dynamic_entry", &["target"]).await;
   let host = bundle.assets.get("host.js").expect("host entry should be emitted");
@@ -463,7 +458,6 @@ async fn emitted_dynamic_entry_keeps_order_wrapper_facade() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[should_panic(expected = "chunks/target.js should be emitted")]
 async fn emitted_entry_keeps_order_wrapper_facade() {
   let bundle = bundle_emitted_target("emitted_entry", &["target"]).await;
   assert_order_wrapper_facade(&bundle.assets, "chunks/target.js", "init_target");
@@ -481,7 +475,6 @@ async fn emitted_entry_keeps_order_wrapper_facade() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[should_panic(expected = "chunks/target-a.js should be emitted")]
 async fn duplicate_emitted_entries_keep_order_wrapper_facades() {
   let bundle = bundle_emitted_target("emitted_entry", &["target-a", "target-b"]).await;
   for name in ["target-a", "target-b"] {
@@ -503,7 +496,6 @@ async fn duplicate_emitted_entries_keep_order_wrapper_facades() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[should_panic(expected = "output.file must reject the final multi-chunk graph")]
 async fn late_order_wrapping_revalidates_output_file() {
   let fixture_dir = format!("{FIXTURE_ROOT}/../experimental/strict_execution_order/issue_4782");
   let mut bundler = Bundler::new(BundlerOptions {

@@ -3,8 +3,8 @@ use oxc::ast::ast::Str;
 use oxc::{
   allocator::IntoIn,
   ast::{
-    NONE,
     ast::{self, ExportDefaultDeclarationKind, Expression, ObjectPropertyKind, Statement},
+    builder::NONE,
   },
   semantic::{IsGlobalReference, Scoping, SymbolId},
   span::{SPAN, Span},

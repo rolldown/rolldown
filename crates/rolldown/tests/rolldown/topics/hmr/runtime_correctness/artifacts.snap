@@ -429,7 +429,7 @@ __rolldown_runtime__.registerFactory("trigger-dep.js", "esm", (function(__rolldo
 	try {
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, {});
 		const hot_trigger_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		console.log();
+		console.log("hmr");
 	} finally {}
 }));
 

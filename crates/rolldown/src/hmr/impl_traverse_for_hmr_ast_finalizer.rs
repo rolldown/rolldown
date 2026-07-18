@@ -1,7 +1,7 @@
 use oxc::allocator::GetAllocator;
 use oxc::{
   allocator::TakeIn,
-  ast::{NONE, ast},
+  ast::{ast, builder::NONE},
   span::SPAN,
 };
 use oxc_traverse::Traverse;

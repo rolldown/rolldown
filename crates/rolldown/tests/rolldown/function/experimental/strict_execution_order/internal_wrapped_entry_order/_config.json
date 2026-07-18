@@ -1,8 +1,4 @@
 {
-  "expectExecutionFailure": {
-    "reason": "Expected to fail until rolldown#10104 is applied.",
-    "outputContains": ["internal wrapped entry must preserve source execution order"]
-  },
   "configName": "on-demand",
   "config": {
     "input": [
@@ -28,10 +24,6 @@
   "configVariants": [
     {
       "_configName": "wrap-all",
-      "_expectExecutionFailure": {
-        "reason": "Expected to fail until rolldown#10104 is applied.",
-        "outputContains": ["internal wrapped entry must preserve source execution order"]
-      },
       "onDemandWrapping": false
     }
   ]

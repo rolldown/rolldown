@@ -1,6 +1,9 @@
 use std::{
   ops::{Deref, DerefMut},
-  sync::{Arc, atomic::AtomicU32},
+  sync::{
+    Arc,
+    atomic::{AtomicU32, Ordering},
+  },
 };
 
 use arcstr::ArcStr;
@@ -86,6 +89,8 @@ impl BundlingTask {
     let has_generated_bundle_output = self.has_rebuild_happen;
     let error_stage = self.final_error_stage();
     let callback_error = callback_result.as_ref().err().cloned();
+    // Feeds the next task's noop-upgrade check — see `DevContext::last_task_errored`.
+    self.dev_context.last_task_errored.store(error_stage.is_some(), Ordering::Relaxed);
 
     tracing::trace!(
       "[BundlingTask] completed\n - has_generated_bundle_output: {has_generated_bundle_output:?}",
@@ -228,7 +233,9 @@ impl BundlingTask {
       .map(|(client_id, shipped)| ClientHmrInput { client_id: client_id.as_str(), shipped })
       .collect();
 
-    // Compute HMR updates for all clients in one call
+    // Compute HMR updates for all clients in one call. After an errored task the
+    // unchanged-output suppression is disabled, so a byte-identical recovery
+    // still reaches clients stuck on that error (a `Noop` would send nothing).
     let mut stamp_table = self.dev_context.stamp_table.lock().await;
     let mut hmr_result = bundler
       .compute_hmr_update_for_file_changes(
@@ -236,6 +243,7 @@ impl BundlingTask {
         &client_inputs,
         &mut stamp_table,
         Arc::clone(&self.next_hmr_patch_id),
+        self.dev_context.last_task_errored.load(Ordering::Relaxed),
       )
       .await;
     drop(stamp_table);

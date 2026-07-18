@@ -6,17 +6,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_reader } from "./reader.js";
+import "./reader.js";
+import { t as init_main } from "./main2.js";
 export * from "external" with { type: "json" };
-__esmMin((() => {
-	//#region setup.js
-	globalThis.setupValue = "ready";
-	//#endregion
-	//#region main.js
-	init_reader();
-	//#endregion
-}))();
+init_main();
+
+```
+
+## main2.js
+
+```js
+import { t as init_reader } from "./reader.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region setup.js
+globalThis.setupValue = "ready";
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_reader();
+	})))();
+}
+//#endregion
+export { init_main as t };
 
 ```
 
@@ -25,9 +37,11 @@ __esmMin((() => {
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region reader.js
-var init_reader = __esmMin((() => {
-	console.log(globalThis.setupValue);
-}));
+function init_reader() {
+	return (init_reader = __esmMin((() => {
+		console.log(globalThis.setupValue);
+	})))();
+}
 //#endregion
 export { init_reader as t };
 
@@ -48,18 +62,34 @@ export { __esmMin as t };
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_reader } from "./reader.js";
+import "./reader.js";
+import { t as init_main } from "./main2.js";
 export * from "external" with { type: "json" };
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { t as init_reader } from "./reader.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region setup.js
-var init_setup = __esmMin((() => {
-	globalThis.setupValue = "ready";
-}));
+function init_setup() {
+	return (init_setup = __esmMin((() => {
+		globalThis.setupValue = "ready";
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_setup();
-	init_reader();
-}))();
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_setup();
+		init_reader();
+	})))();
+}
+//#endregion
+export { init_setup as n, init_main as t };
 
 ```
 
@@ -68,9 +98,11 @@ __esmMin((() => {
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region reader.js
-var init_reader = __esmMin((() => {
-	console.log(globalThis.setupValue);
-}));
+function init_reader() {
+	return (init_reader = __esmMin((() => {
+		console.log(globalThis.setupValue);
+	})))();
+}
 //#endregion
 export { init_reader as t };
 

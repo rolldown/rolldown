@@ -119,6 +119,7 @@ impl LinkStage<'_> {
     //
     //
     let tree_shaking = self.options.treeshake.is_some();
+    let strict_execution_order = self.options.is_strict_execution_order_enabled();
     for (module_idx, extended_dependencies, runtime_helper) in processed_module_results {
       // Symbol-derived dependencies always force their owner module to be loaded. Import-record
       // targets (what `meta.dependencies` holds at this point) only do so when evaluating them
@@ -131,24 +132,54 @@ impl LinkStage<'_> {
       // facades onto the chunk holding their exports — e.g. a statically imported re-export
       // barrel that is also a dynamic entry must not push its re-export targets into a separate
       // chunk, see rollup's `entry-without-code-dynamic`).
-      let load_dependencies: FxIndexSet<ModuleIdx> = extended_dependencies
-        .iter()
-        .copied()
-        .chain(self.metas[module_idx].dependencies.iter().copied().filter(|dep_idx| {
-          !tree_shaking
-            || self.entries.contains_key(dep_idx)
-            || self.module_table[*dep_idx].side_effects().has_side_effects()
-        }))
-        .collect();
+      let execution_dependencies = strict_execution_order.then(|| {
+        extended_dependencies
+          .iter()
+          .copied()
+          .chain(self.metas[module_idx].dependencies.iter().copied().filter(|dep_idx| {
+            !tree_shaking || self.module_table[*dep_idx].side_effects().has_side_effects()
+          }))
+          .collect::<FxIndexSet<ModuleIdx>>()
+      });
+      let load_dependencies: FxIndexSet<ModuleIdx> =
+        if let Some(execution_dependencies) = &execution_dependencies {
+          execution_dependencies
+            .iter()
+            .copied()
+            .chain(
+              self.metas[module_idx]
+                .dependencies
+                .iter()
+                .copied()
+                .filter(|dep_idx| self.entries.contains_key(dep_idx)),
+            )
+            .collect()
+        } else {
+          extended_dependencies
+            .iter()
+            .copied()
+            .chain(self.metas[module_idx].dependencies.iter().copied().filter(|dep_idx| {
+              !tree_shaking
+                || self.entries.contains_key(dep_idx)
+                || self.module_table[*dep_idx].side_effects().has_side_effects()
+            }))
+            .collect()
+        };
 
       let meta = &mut self.metas[module_idx];
       meta.dependencies.extend(extended_dependencies);
       meta.load_dependencies = load_dependencies;
+      if let Some(execution_dependencies) = execution_dependencies {
+        meta.execution_dependencies = execution_dependencies;
+      }
       meta.depended_runtime_helper |= runtime_helper;
 
       if !runtime_helper.is_empty() {
         meta.dependencies.insert(self.runtime.id());
         meta.load_dependencies.insert(self.runtime.id());
+        if strict_execution_order {
+          meta.execution_dependencies.insert(self.runtime.id());
+        }
       }
     }
 
@@ -161,6 +192,9 @@ impl LinkStage<'_> {
           for &entry_module_idx in self.entries.keys() {
             self.metas[entry_module_idx].dependencies.insert(runtime_idx);
             self.metas[entry_module_idx].load_dependencies.insert(runtime_idx);
+            if strict_execution_order {
+              self.metas[entry_module_idx].execution_dependencies.insert(runtime_idx);
+            }
             self.metas[entry_module_idx].has_side_effectful_runtime_dep = true;
           }
         }

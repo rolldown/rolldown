@@ -11,6 +11,7 @@ import {
 
 import {
   bindingifyAugmentChunkHash,
+  bindingifyResolveFileUrl,
   bindingifyBanner,
   bindingifyCloseBundle,
   bindingifyFooter,
@@ -69,6 +70,7 @@ const BUILD_CALLBACK_HOOK_NAMES = [
   'load',
   'renderChunk',
   'augmentChunkHash',
+  'resolveFileUrl',
   'renderStart',
   'renderError',
   'generateBundle',
@@ -141,6 +143,8 @@ export function bindingifyPlugin(
 
   const { plugin: augmentChunkHash, meta: augmentChunkHashMeta } = bindingifyAugmentChunkHash(args);
 
+  const { plugin: resolveFileUrl, meta: resolveFileUrlMeta } = bindingifyResolveFileUrl(args);
+
   const { plugin: renderStart, meta: renderStartMeta } = bindingifyRenderStart(args);
 
   const { plugin: renderError, meta: renderErrorMeta } = bindingifyRenderError(args);
@@ -194,6 +198,8 @@ export function bindingifyPlugin(
     renderChunkFilter,
     augmentChunkHash,
     augmentChunkHashMeta,
+    resolveFileUrl,
+    resolveFileUrlMeta,
     renderStart,
     renderStartMeta,
     renderError,

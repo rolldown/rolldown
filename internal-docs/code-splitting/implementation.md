@@ -1,5 +1,7 @@
 # Code Splitting
 
+The rationale and target architecture are documented in [design.md](./design.md). This file describes the current implementation, where generate-stage order lowering owns wrappers and importer overlays in `OrderWrapState` without changing link-stage `WrapKind` or user statement inclusion.
+
 ## Summary
 
 Code splitting determines which modules go into which output chunks. Rolldown uses a BitSet-based reachability model — the same fundamental approach as esbuild and Rollup. Each entry point gets a bit position, modules are marked with the set of entries that can reach them, and modules with identical reachability patterns are grouped into the same chunk.
@@ -54,20 +56,19 @@ generate_chunks()
     │    ├─ ChunkOptimizer           Merge common chunks into entry chunks, remove empty facades
     │    └─ try_merge_runtime_chunk() Optionally merge the standalone runtime into a safe host
     │
-    ├─ find_entry_level_external_module()             Flatten star-to-external chains to chunk-level
-    │                                                 re-exports; re-propagate has_dynamic_exports
-    │
-    ├─ finalized_module_namespace_ref_usage()         Final namespace-object retention decision
-    │
-    ├─ sweep_unused_runtime_module()                  Drop the runtime module when the walk-back
-    │                                                 left zero helper demand (see Runtime Module
-    │                                                 Placement below)
-    │
-    └─ Chunk exec-order assignment    → ChunkGraph    Final module-to-chunk assignment
+    └─ Chunk exec-order assignment    → ChunkGraph    Provisional module-to-chunk assignment
 
 Post-ChunkGraph processing (in generate()):
 
 ChunkGraph
+    │
+    ├─ finalize_chunk_plan()
+    │    ├─ finalize provisional namespace/external facts
+    │    ├─ analyze_execution_order()                Build an OrderWrapPlan with per-module reasons
+    │    ├─ apply_order_wraps()                      Lower the plan into wrappers and topology edits
+    │    ├─ recompute metadata if topology changed
+    │    ├─ sweep_unused_runtime_module()            Drop a runtime with no source or order-state demand
+    │    └─ validate final output shape
     │
     ├─ used_symbol_refs.seal()                        Freeze liveness; the sweep is the last writer
     │
@@ -75,20 +76,28 @@ ChunkGraph
     │
     ├─ ensure_lazy_module_initialization_order()      Reorder wrapped module init calls
     │
-    ├─ on_demand_wrapping()                           Strip unnecessary wrappers
-    │
     └─ merge_cjs_namespace()                          Merge CJS namespace objects
 ```
 
 **Key files:**
 
 - `crates/rolldown/src/stages/generate_stage/code_splitting.rs` — pipeline orchestration, `generate_chunks()`, `ensure_lazy_module_initialization_order()`
+- `crates/rolldown/src/stages/generate_stage/order_analysis.rs` — `strictExecutionOrder` analysis and the reasoned `OrderWrapPlan`
+- `crates/rolldown/src/stages/generate_stage/order_wrapping.rs` — applies order wrappers after chunk assignment
+- `crates/rolldown/src/stages/generate_stage/order_wrap_state.rs` — owns synthetic wrapper declarations, importer overlays, namespace/runtime requirements, and order init metadata
+- `crates/rolldown/src/stages/generate_stage/finalize_chunk_plan.rs` — final topology boundary before output metadata and validation
 - `crates/rolldown/src/stages/generate_stage/dynamic_already_loaded.rs` — Rollup-style dynamic import already-loaded atom reduction
 - `crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs` — merge/optimization
 - `crates/rolldown/src/stages/generate_stage/runtime_module_sweep.rs` — post-optimization runtime-demand sweep
 - `crates/rolldown/src/chunk_graph.rs` — output data structure
 - `crates/rolldown_utils/src/bitset.rs` — compact reachability representation
-- `crates/rolldown/src/types/linking_metadata.rs` — `original_wrap_kind()` used for init order analysis
+- `crates/rolldown/src/types/linking_metadata.rs` — immutable link-stage `wrap_kind()`
+
+Wrap-all (the default strict mode) seeds the plan from the expected orders alone and skips prediction; `experimental.onDemandWrapping` enables the selective analysis. `finalize_chunk_plan` may run two metadata passes. Namespace usage and entry-level external re-exports are first finalized on the provisional graph. They are recomputed when order wrapping or strict entry facades change topology.
+
+Both modes consume the same frozen tree-shaking facts. `order_wrapper_is_reexport_transparent` identifies pure order wrappers that are only init-routing waypoints. `collect_wrapped_esm_init_targets_for_import_record` then resolves obligations per consumer: it filters named specifiers by local facade liveness, follows consumed re-export facades recorded in `OrderWrapState`, resolves static namespace-member reads from included `StmtInfo` references, expands all exports only for opaque namespace use, and applies the same constant-inline bypass as the inclusion pass. This lets wrap-all emit more wrappers without retaining or executing more user code than on-demand.
+
+Order planning closes over sensitive suffixes, dependent importers/readers, and eligible sensitive modules in any static chunk SCC already touched by the plan. Under `onDemandWrapping` it then runs the emergent-cycle fixpoint in `order_analysis.rs` (`post_lowering_import_edges`): each round projects the plan's post-lowering `init_*` forwarding edges onto the pre-lowering baseline from `predicted_static_import_edges`, wraps every eligible module in a chunk cycle those edges close, and repeats until the at-risk set stops growing (see the design doc for the projected/omitted edge-source inventory). Set `ROLLDOWN_ORDER_DEBUG=1` for a stderr trace of the per-round SCC counts and final wrap delta.
 
 ## Bit Positions and Entry Points
 
@@ -214,11 +223,11 @@ The merge target must not create a static cycle or force unrelated entry chunks 
 
 Tree-shaking includes runtime helpers at link time, before chunks exist, and some of its reasons are pessimistic: a star re-export chain ending at an external module registers `__reExport`/`__exportAll` demand that only chunking can invalidate. `find_entry_level_external_module` performs that walk-back (flattening the chain to chunk-level `export * from '<external>'` statements and re-propagating `has_dynamic_exports` to `false` through transitive star importers), and `finalized_module_namespace_ref_usage` then drops the namespace objects that only served the chain. The finalizer consequently emits no helper call — but the runtime module was already included and placed, so it used to ship as a dead chunk plus bare imports (#9374, #7233).
 
-`sweep_unused_runtime_module` (in `runtime_module_sweep.rs`) closes that gap. It runs at the tail of `generate_chunks()`, strictly after `try_merge_runtime_chunk` and the two walk-back passes above, and before chunk exec-order assignment. It re-derives runtime demand from the same post-walk-back facts the module finalizer renders from, through four channels: per-module `depended_runtime_helper` flags (with `ReExport` discounted unless some included `export * from './normal'` importee still has `has_dynamic_exports` — the exact condition the finalizer checks; CommonJS importees always keep it), the namespace-object channel gated on `namespace_included` (sharing `LinkingMetadata::ns_star_external_re_export_emitted` with the finalizer so the prediction cannot diverge from the emission), runtime-owned symbols referenced by included statements, and `referenced_symbols_by_entry_point_chunk`.
+`sweep_unused_runtime_module` (in `runtime_module_sweep.rs`) closes that gap. It runs near the tail of `finalize_chunk_plan()`, after `try_merge_runtime_chunk`, order lowering, and the final namespace/external walk-back, but before liveness is sealed and cross-chunk links are derived. It re-derives runtime demand from the same post-walk-back facts the module finalizer renders from, through four source-module channels: per-module `depended_runtime_helper` flags (with `ReExport` discounted unless some included `export * from './normal'` importee still has `has_dynamic_exports` — the exact condition the finalizer checks; CommonJS importees always keep it), the namespace-object channel gated on `namespace_included` (sharing `LinkingMetadata::ns_star_external_re_export_emitted` with the finalizer so the prediction cannot diverge from the emission), runtime-owned symbols referenced by included statements, and `referenced_symbols_by_entry_point_chunk`. If `OrderWrapState` reports synthetic runtime-helper demand, the sweep is skipped conservatively because that demand does not live in link-stage metadata.
 
 The sweep is **all-or-nothing and conservative**: any remaining demand — or any bail-out condition (tree-shaking disabled, runtime not included, runtime has side effects as in dev/HMR mode) — leaves everything exactly as tree-shaking decided. Only a runtime with zero demand is un-included: its statement/module inclusion is cleared, its symbols are purged from `used_symbol_refs` via `remove_owned_by`, it is removed from its chunk, and a now-empty chunk is tombstoned with `PostChunkOptimizationOperation::Removed`.
 
-**Liveness invariants the sweep relies on.** Stale references to runtime symbols survive the sweep by design — namespace statements that will not render keep their `__exportAll` reference, chunk-level `depended_runtime_helper` bits keep their flags, and `compute_cross_chunk_links` speculatively inserts `__toCommonJS` for CJS-format ESM entries. All of these are filtered against `used_symbol_refs` before becoming imports or exports, so purging the runtime's symbols is what actually severs every cross-chunk edge. Every bare-import emitter tolerates `module_to_chunk == None`, and naming/rendering already skip tombstoned chunks (the same lifecycle the chunk optimizer's removals use). This is why the sweep must be the **last writer** of `used_symbol_refs` — `generate()` seals the builder immediately after `generate_chunks()` returns.
+**Liveness invariants the sweep relies on.** Stale references to runtime symbols survive the sweep by design — namespace statements that will not render keep their `__exportAll` reference, chunk-level `depended_runtime_helper` bits keep their flags, and `compute_cross_chunk_links` speculatively inserts `__toCommonJS` for CJS-format ESM entries. All of these are filtered against `used_symbol_refs` before becoming imports or exports, so purging the runtime's symbols is what actually severs every cross-chunk edge. Every bare-import emitter tolerates `module_to_chunk == None`, and naming/rendering already skip tombstoned chunks (the same lifecycle the chunk optimizer's removals use). If the sweep tombstones the runtime after the provisional execution-order assignment, `finalize_chunk_plan()` rebuilds the live sorted-chunk list. The sweep remains the **last writer** of `used_symbol_refs`: `generate()` seals the builder immediately after `finalize_chunk_plan()` returns.
 
 **Regression coverage:** `crates/rolldown/tests/rolldown/issues/9374/` (snapshot-asserted: no runtime chunk for a multi-entry star-to-external chain, `minify: false` so vestigial namespace declarations would also surface); issues `6992`, `7115`, `7233`, `7233_chain` cover the same class under `preserveModules` for both ESM and CJS output.
 
@@ -303,7 +312,7 @@ assert.equal(bar, 'foo'); // require_leaflet() removed from here by remove_map
 
 The function builds `insert_map` and `remove_map` on each chunk to move init calls from their default position to the correct one. `remove_map` suppresses the init call at the original location; `insert_map` prepends it before the module that needs it.
 
-When `strict_execution_order` **is** enabled, all modules are already wrapped and execute in the correct order, so this pass is skipped entirely.
+When `strict_execution_order` **is** enabled, the order plan wraps the eager carriers that need scheduling and closes over their dependent readers/importers. The plan owns lazy-init ordering for that output, so this pass is skipped entirely.
 
 ### Algorithm
 
@@ -318,7 +327,7 @@ The function iterates over every chunk in the `ChunkGraph` and performs six step
 - `WrapKind::Cjs` or `WrapKind::Esm` → pushed onto a `wrapped_modules` list
 - `WrapKind::None` → records how many wrapped modules appeared before it in DFS order (its "wrapped dependency count")
 
-Uses `original_wrap_kind()` from `LinkingMetadata`, which preserves the pre-`strictExecutionOrder` wrap kind.
+Uses the immutable link-stage `wrap_kind()` from `LinkingMetadata`.
 
 **Step 4 — Determine modules to check.** Collects all unwrapped modules that have wrapped dependencies, plus the wrapped modules they depend on (up to the maximum dependency count). If this set is empty, no reordering is needed and the function returns early.
 

@@ -22,12 +22,16 @@ use std::sync::{Arc, atomic::AtomicU32};
 #[cfg(feature = "experimental")]
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all)]
+  /// `last_build_errored` disables the unchanged-output suppression: a recovery
+  /// that rebuilds byte-identical output must still reach clients stuck on the
+  /// error — see `HmrStage::compute_hmr_update_for_file_changes`.
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &FxIndexMap<String, WatcherChangeKind>,
     clients: &[ClientHmrInput<'_>],
     stamp_table: &mut HmrStampTable,
     next_hmr_patch_id: Arc<AtomicU32>,
+    last_build_errored: bool,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     // HMR partial scans use the shared rayon pool without passing through
     // `BundleFactory::build_bundle`; wait for any deferred drops here too.
@@ -46,7 +50,14 @@ impl Bundler {
       cache: &mut self.cache,
       next_hmr_patch_id,
     });
-    hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths, clients, stamp_table).await
+    hmr_stage
+      .compute_hmr_update_for_file_changes(
+        changed_file_paths,
+        clients,
+        stamp_table,
+        last_build_errored,
+      )
+      .await
   }
 
   /// Compute the top-level-evaluated set of the current snapshot: the modules whose

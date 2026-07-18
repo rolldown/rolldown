@@ -7,7 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+let node_assert = require("node:assert");
+node_assert = require_rolldown_runtime.__toESM(node_assert);
 //#region lib.js
+node_assert.default.strictEqual("lib runtime helper", "lib runtime helper");
 const foo = "foo_value";
 const bar = 42;
 //#endregion
@@ -20,17 +24,29 @@ exports.foo = foo;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-// HIDDEN [\0rolldown/runtime.js]
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
+node_assert = require_rolldown_runtime.__toESM(node_assert);
+//#region main.js
+node_assert.default.strictEqual(require_lib.foo, "foo_value");
+node_assert.default.strictEqual(42, 42);
 //#endregion
-__esmMin((() => {
-	node_assert.default.strictEqual(require_lib.foo, "foo_value");
-	node_assert.default.strictEqual(42, 42);
-}))();
 exports.bar = require_lib.bar;
 exports.foo = require_lib.foo;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 
 ```
 
@@ -42,10 +58,15 @@ exports.foo = require_lib.foo;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
 //#region lib.js
+node_assert.default.strictEqual("lib runtime helper", "lib runtime helper");
 const foo = "foo_value";
 const bar = 42;
 //#endregion
+exports.__toESM = __toESM;
 exports.bar = bar;
 exports.foo = foo;
 
@@ -55,15 +76,13 @@ exports.foo = foo;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-// HIDDEN [\0rolldown/runtime.js]
 const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
+node_assert = require_lib.__toESM(node_assert);
+//#region main.js
+node_assert.default.strictEqual(require_lib.foo, "foo_value");
+node_assert.default.strictEqual(42, 42);
 //#endregion
-__esmMin((() => {
-	node_assert.default.strictEqual(require_lib.foo, "foo_value");
-	node_assert.default.strictEqual(42, 42);
-}))();
 exports.bar = require_lib.bar;
 exports.foo = require_lib.foo;
 
@@ -77,19 +96,41 @@ exports.foo = require_lib.foo;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-// HIDDEN [\0rolldown/runtime.js]
+const require_lib = require("./lib2.js");
+require_lib.init_lib();
+exports.bar = require_lib.bar;
+exports.foo = require_lib.foo;
+
+```
+
+### lib2.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+let node_assert = require("node:assert");
+node_assert = require_rolldown_runtime.__toESM(node_assert);
 //#region lib.js
 var foo, bar;
-var init_lib = __esmMin((() => {
-	foo = "foo_value";
-	bar = 42;
-}));
+function init_lib() {
+	return (init_lib = require_rolldown_runtime.__esmMin((() => {
+		node_assert.default.strictEqual("lib runtime helper", "lib runtime helper");
+		foo = "foo_value";
+		bar = 42;
+	})))();
+}
 //#endregion
-init_lib();
-exports.__esmMin = __esmMin;
-exports.__toESM = __toESM;
-exports.bar = bar;
-exports.foo = foo;
+Object.defineProperty(exports, "bar", {
+	enumerable: true,
+	get: function() {
+		return bar;
+	}
+});
+Object.defineProperty(exports, "foo", {
+	enumerable: true,
+	get: function() {
+		return foo;
+	}
+});
 Object.defineProperty(exports, "init_lib", {
 	enumerable: true,
 	get: function() {
@@ -103,17 +144,54 @@ Object.defineProperty(exports, "init_lib", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_lib = require("./lib.js");
-let node_assert = require("node:assert");
-node_assert = require_lib.__toESM(node_assert);
-//#endregion
-require_lib.__esmMin((() => {
-	require_lib.init_lib();
-	node_assert.default.strictEqual(require_lib.foo, "foo_value");
-	node_assert.default.strictEqual(42, 42);
-}))();
+const require_lib = require("./lib2.js");
+require("./main2.js").init_main();
 exports.bar = require_lib.bar;
 exports.foo = require_lib.foo;
+
+```
+
+### main2.js
+
+```js
+const require_lib = require("./lib2.js");
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+let node_assert = require("node:assert");
+node_assert = require_rolldown_runtime.__toESM(node_assert);
+//#region main.js
+function init_main() {
+	return (init_main = require_rolldown_runtime.__esmMin((() => {
+		require_lib.init_lib();
+		node_assert.default.strictEqual(require_lib.foo, "foo_value");
+		node_assert.default.strictEqual(42, 42);
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_main", {
+	enumerable: true,
+	get: function() {
+		return init_main;
+	}
+});
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 
 ```
 
@@ -125,17 +203,41 @@ exports.foo = require_lib.foo;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_lib = require("./lib2.js");
+require_lib.init_lib();
+exports.bar = require_lib.bar;
+exports.foo = require_lib.foo;
+
+```
+
+### lib2.js
+
+```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
+let node_assert = require("node:assert");
+node_assert = require_rolldown_runtime.__toESM(node_assert);
 //#region lib.js
 var foo, bar;
-var init_lib = require_rolldown_runtime.__esmMin((() => {
-	foo = "foo_value";
-	bar = 42;
-}));
+function init_lib() {
+	return (init_lib = require_rolldown_runtime.__esmMin((() => {
+		node_assert.default.strictEqual("lib runtime helper", "lib runtime helper");
+		foo = "foo_value";
+		bar = 42;
+	})))();
+}
 //#endregion
-init_lib();
-exports.bar = bar;
-exports.foo = foo;
+Object.defineProperty(exports, "bar", {
+	enumerable: true,
+	get: function() {
+		return bar;
+	}
+});
+Object.defineProperty(exports, "foo", {
+	enumerable: true,
+	get: function() {
+		return foo;
+	}
+});
 Object.defineProperty(exports, "init_lib", {
 	enumerable: true,
 	get: function() {
@@ -149,18 +251,35 @@ Object.defineProperty(exports, "init_lib", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_rolldown_runtime = require("./rolldown-runtime.js");
-const require_lib = require("./lib.js");
-let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
-//#endregion
-require_rolldown_runtime.__esmMin((() => {
-	require_lib.init_lib();
-	node_assert.default.strictEqual(require_lib.foo, "foo_value");
-	node_assert.default.strictEqual(42, 42);
-}))();
+const require_lib = require("./lib2.js");
+require("./main2.js").init_main();
 exports.bar = require_lib.bar;
 exports.foo = require_lib.foo;
+
+```
+
+### main2.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_lib = require("./lib2.js");
+let node_assert = require("node:assert");
+node_assert = require_rolldown_runtime.__toESM(node_assert);
+//#region main.js
+function init_main() {
+	return (init_main = require_rolldown_runtime.__esmMin((() => {
+		require_lib.init_lib();
+		node_assert.default.strictEqual(require_lib.foo, "foo_value");
+		node_assert.default.strictEqual(42, 42);
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_main", {
+	enumerable: true,
+	get: function() {
+		return init_main;
+	}
+});
 
 ```
 

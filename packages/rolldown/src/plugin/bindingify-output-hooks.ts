@@ -191,6 +191,34 @@ export function bindingifyAugmentChunkHash(
   };
 }
 
+export function bindingifyResolveFileUrl(
+  args: BindingifyPluginArgs,
+): PluginHookWithBindingExt<BindingPluginOptions['resolveFileUrl']> {
+  const hook = args.plugin.resolveFileUrl;
+  if (!hook) {
+    return {};
+  }
+  const { handler, meta } = normalizeHook(hook);
+
+  return {
+    plugin: async (ctx, resolveFileUrlArgs) => {
+      return handler.call(
+        new PluginContextImpl(
+          args.outputOptions,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+          args.onLog,
+          args.logLevel,
+          args.watchMode,
+        ),
+        resolveFileUrlArgs,
+      );
+    },
+    meta: bindingifyPluginHookMeta(meta),
+  };
+}
+
 export function bindingifyRenderError(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderError']> {

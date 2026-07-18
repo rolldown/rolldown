@@ -4,8 +4,8 @@ use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression};
 use oxc::{
   allocator::{self, IntoIn, ReplaceWith, TakeIn},
   ast::{
-    NONE,
     ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
+    builder::NONE,
     match_member_expression,
   },
   ast_visit::{VisitMut, walk_mut},
@@ -15,9 +15,10 @@ use oxc_str::CompactStr;
 use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
-  EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperStmtOptions, ExpressionExt, JsxExt,
-  JsxMemberExpressionObjectExt,
+  EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions, ExpressionExt,
+  JsxExt, JsxMemberExpressionObjectExt,
 };
+use rolldown_error::EmptyImportMetaKind;
 
 use crate::module_finalizers::{KeepNameId, ModuleWrapperMode, TraverseState};
 
@@ -106,9 +107,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       program.body.splice(last_import_stmt_idx..last_import_stmt_idx, hmr_header);
     }
 
-    // check if we need to add wrapper
     let wrapper_mode = self.ctx.wrapper_mode();
-    self.needs_hosted_top_level_binding = matches!(wrapper_mode, ModuleWrapperMode::InteropEsm(_));
+    self.needs_hosted_top_level_binding = matches!(
+      wrapper_mode,
+      ModuleWrapperMode::InteropEsm(_) | ModuleWrapperMode::ExecutionOrder(_)
+    );
 
     // the order should be
     // 1. module namespace object declaration
@@ -169,7 +172,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.ctx.linking_info.is_tla_or_contains_tla_dependency,
         ));
       }
-      ModuleWrapperMode::InteropEsm(target) => {
+      ModuleWrapperMode::InteropEsm(target) | ModuleWrapperMode::ExecutionOrder(target) => {
         let is_concatenated_wrapped_module = !matches!(
           self.ctx.linking_info.concatenated_wrapped_module_kind,
           ConcatenateWrappedModuleKind::None
@@ -227,24 +230,24 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
 
         if !is_concatenated_wrapped_module && !self.top_level_var_bindings.is_empty() {
-          let ast_factory = self.ast_factory;
+          let ast_factory = &self.ast_factory;
           let decorations = self.top_level_var_bindings.iter().map(|var_name| {
             ast::VariableDeclarator::new(
               SPAN,
               ast::VariableDeclarationKind::Var,
-              ast::BindingPattern::new_binding_identifier(SPAN, *var_name, &ast_factory),
+              ast::BindingPattern::new_binding_identifier(SPAN, *var_name, ast_factory),
               NONE,
               None,
               false,
-              &ast_factory,
+              ast_factory,
             )
           });
           program.body.push(Statement::VariableDeclaration(ast::VariableDeclaration::boxed(
             SPAN,
             ast::VariableDeclarationKind::Var,
-            oxc::allocator::Vec::from_iter_in(decorations, &ast_factory),
+            oxc::allocator::Vec::from_iter_in(decorations, ast_factory),
             false,
-            &ast_factory,
+            ast_factory,
           )));
         }
 
@@ -293,6 +296,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             EsmWrapperBodyKind::Async
           } else {
             EsmWrapperBodyKind::Sync
+          },
+          decl_kind: if matches!(wrapper_mode, ModuleWrapperMode::ExecutionOrder(_)) {
+            EsmWrapperDeclKind::HoistedFunction
+          } else {
+            EsmWrapperDeclKind::Var
           },
         }));
       }
@@ -488,6 +496,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           && meta.meta.name == "import"
           && meta.property.name == "meta"
         {
+          self.record_surviving_import_meta(meta.span, EmptyImportMetaKind::Plain);
           *expr = ast::Expression::new_object_expression(
             SPAN,
             oxc::allocator::Vec::new_in(&self.ast_factory),

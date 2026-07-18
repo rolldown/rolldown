@@ -119,7 +119,7 @@ pub use crate::{
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{
       EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ExportOrigin, PrependRenderedImport,
-      ThisExprReplaceKind, generate_replace_this_expr_map,
+      RolldownFileUrlReference, ThisExprReplaceKind, generate_replace_this_expr_map,
     },
     json_to_program::{json_value_to_ecma_ast, json_value_to_expression},
     module_idx::ModuleIdx,

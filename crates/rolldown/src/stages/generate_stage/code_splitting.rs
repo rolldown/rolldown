@@ -168,15 +168,6 @@ impl GenerateStage<'_> {
 
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
 
-    self.find_entry_level_external_module(&mut chunk_graph);
-
-    self.finalized_module_namespace_ref_usage();
-
-    // Runs after the two passes above invalidated the link-time reasons for including the
-    // runtime module, and before chunk exec-order assignment so a dropped runtime chunk is
-    // tombstoned like any other removed chunk.
-    self.sweep_unused_runtime_module(&mut chunk_graph, used_symbol_refs);
-
     chunk_graph
       .chunk_table
       .iter_mut_enumerated()
@@ -238,7 +229,7 @@ impl GenerateStage<'_> {
     // EntryPoint (is_user_defined: true) < EntryPoint (is_user_defined: false) or Common
     // [order by chunk index]               [order by exec order]
 
-    chunk_graph.rebuild_sorted_chunk_idx_vec();
+    chunk_graph.rebuild_sorted_chunk_idx_vec(false);
 
     Ok(chunk_graph)
   }
@@ -543,7 +534,11 @@ impl GenerateStage<'_> {
   ///    indirect external module re-exports optimization.
   /// 3. **All other cases**: Remove the namespace object
   ///
-  pub fn finalized_module_namespace_ref_usage(&mut self) {
+  pub fn finalized_module_namespace_ref_usage(
+    &mut self,
+    chunk_graph: &ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+  ) {
     let to_eliminate = self
       .link_output
       .module_table
@@ -558,8 +553,13 @@ impl GenerateStage<'_> {
         // exist regardless of the module's exports_kind (e.g. empty modules have
         // ExportsKind::None but still need their namespace declaration when exported
         // cross-chunk).
-        let is_namespace_referenced = if module_namespace_included_reason
-          .contains(ModuleNamespaceIncludedReason::SimulateFacadeChunk)
+        let order_requires_namespace = order_state
+          .requires_namespace(m.namespace_object_ref, |importer_idx| {
+            chunk_graph.module_is_in_live_chunk(importer_idx)
+          });
+        let is_namespace_referenced = if order_requires_namespace
+          || module_namespace_included_reason
+            .contains(ModuleNamespaceIncludedReason::SimulateFacadeChunk)
         {
           true
         } else if matches!(m.exports_kind, ExportsKind::Esm) {
@@ -619,7 +619,11 @@ impl GenerateStage<'_> {
   }
 
   /// Find all entry level external modules, and re propagate `has_dynamic_exports` for affected modules.
-  fn find_entry_level_external_module(&mut self, chunk_graph: &mut ChunkGraph) {
+  pub(super) fn find_entry_level_external_module(&mut self, chunk_graph: &mut ChunkGraph) {
+    for chunk in chunk_graph.chunk_table.iter_mut() {
+      chunk.entry_level_external_module_idx.clear();
+    }
+
     let module_to_entry_level_external_rec_list_maps = chunk_graph
       .chunk_table
       .par_iter_enumerated()

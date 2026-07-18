@@ -184,6 +184,7 @@ async: color="#ff7e17", dark$color="#cc5f1a", penwidth=1
 
 # nodes
 renderStart(/reference/Interface.Plugin#renderstart): parallel, sync
+resolveFileUrl(/reference/Interface.Plugin#resolvefileurl): first, sync
 banner(/reference/Interface.Plugin#banner): sequential, sync
 footer(/reference/Interface.Plugin#footer): sequential, sync
 intro(/reference/Interface.Plugin#intro): sequential, sync
@@ -197,6 +198,7 @@ generateBundle(/reference/Interface.Plugin#generatebundle): sequential, sync
 writeBundle(/reference/Interface.Plugin#writebundle): parallel, sync
 renderError(/reference/Interface.Plugin#rendererror): parallel, sync
 closeBundle(/reference/Interface.Plugin#closebundle): parallel, sync
+beforeImportMeta: invisible
 beforeAddons: invisible
 afterAddons: invisible
 
@@ -204,7 +206,10 @@ afterAddons: invisible
 generateChunks: beforeAddons, banner, footer, intro, outro, afterAddons
 
 # edges
-renderStart -> beforeAddons: each chunk
+renderStart -> beforeImportMeta: each chunk
+beforeImportMeta -> resolveFileUrl: each import.meta.ROLLDOWN_FILE_URL_*
+resolveFileUrl -> beforeImportMeta
+beforeImportMeta -> beforeAddons
 augmentChunkHash -> generateBundle
 generateBundle -> writeBundle
 writeBundle .-> closeBundle
@@ -216,7 +221,7 @@ banner -> afterAddons
 footer -> afterAddons
 intro -> afterAddons
 outro -> afterAddons
-afterAddons .-> beforeAddons: next chunk, constraint=false
+afterAddons .-> beforeImportMeta: next chunk, constraint=false
 afterAddons -> renderChunk: each chunk
 renderChunk -> minify
 minify -> postBanner
@@ -234,7 +239,6 @@ Note that `minify` in the graph above is not a plugin hook and is the step where
 The following Output Generation Hooks are supported by Rollup, but not by Rolldown:
 
 - `resolveImportMeta` ([#1010](https://github.com/rolldown/rolldown/issues/1010))
-- `resolveFileUrl`
 - `renderDynamicImport` ([#4532](https://github.com/rolldown/rolldown/issues/4532))
 
 :::

@@ -2739,6 +2739,7 @@ version = "1.2.0"
 dependencies = [
  "arcstr",
  "oxc",
+ "oxc_ast",
  "oxc_sourcemap",
  "oxc_str",
  "rolldown_error",

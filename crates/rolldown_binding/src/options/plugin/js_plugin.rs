@@ -18,6 +18,7 @@ use super::{
   binding_load_context::BindingLoadPluginContext,
   binding_transform_context::BindingTransformPluginContext,
   types::{
+    binding_hook_resolve_file_url_args::BindingHookResolveFileUrlArgs,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
     binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
@@ -518,6 +519,41 @@ impl Plugin for JsPlugin {
 
   fn augment_chunk_hash_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
     self.augment_chunk_hash_meta.as_ref().map(Into::into)
+  }
+
+  async fn resolve_file_url(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookResolveFileUrlArgs<'_>,
+  ) -> rolldown_plugin::HookResolveFileUrlReturn {
+    match &self.resolve_file_url {
+      Some(cb) => Ok(
+        cb.await_call(
+          (
+            ctx.clone().into(),
+            BindingHookResolveFileUrlArgs {
+              chunk_id: args.chunk_id.to_string(),
+              file_name: args.file_name.to_string(),
+              format: args.format.as_str().to_string(),
+              module_id: args.module_id.to_string(),
+              reference_id: args.reference_id.to_string(),
+              relative_path: args.relative_path.to_string(),
+            },
+          )
+            .into(),
+        )
+        .instrument(debug_span!("resolve_file_url_hook", plugin_name = self.name))
+        .await
+        .with_context(|| {
+          format!("resolveFileUrl hook threw an error for referenceId={}", args.reference_id)
+        })?,
+      ),
+      _ => Ok(None),
+    }
+  }
+
+  fn resolve_file_url_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.resolve_file_url_meta.as_ref().map(Into::into)
   }
 
   async fn render_error(

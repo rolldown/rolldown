@@ -6,33 +6,49 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+## main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region core/setupWorker.js
 function setupWorker(handler) {
 	return { handler };
 }
-var init_setupWorker = __esmMin((() => {}));
+function init_setupWorker() {
+	return (init_setupWorker = __esmMin((() => {})))();
+}
 //#endregion
 //#region core/http.js
 function http() {
 	return "http";
 }
-var init_http = __esmMin((() => {}));
-//#endregion
-//#region core/index.js
-var init_core = __esmMin((() => {
-	init_setupWorker();
-	init_http();
-}));
+function init_http() {
+	return (init_http = __esmMin((() => {})))();
+}
 //#endregion
 //#region main.js
 var worker;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		worker = setupWorker(http());
+		console.log(worker);
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_core();
-	worker = setupWorker(http());
-	console.log(worker);
-}))();
+export { init_main as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```
 
@@ -43,7 +59,6 @@ __esmMin((() => {
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
 //#region core/setupWorker.js
 function setupWorker(handler) {
 	return { handler };
@@ -54,12 +69,9 @@ function http() {
 	return "http";
 }
 //#endregion
-var worker;
-__esmMin((() => {
-	//#region main.js
-	worker = setupWorker(http());
-	console.log(worker);
-	//#endregion
-}))();
+//#region main.js
+const worker = setupWorker(http());
+console.log(worker);
+//#endregion
 
 ```

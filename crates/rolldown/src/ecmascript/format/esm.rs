@@ -1,8 +1,10 @@
+use std::collections::VecDeque;
+
 use arcstr::ArcStr;
 use itertools::Itertools;
 use rolldown_common::{
-  AddonRenderContext, ExportsKind, ExternalModule, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  ModuleTable, RUNTIME_MODULE_KEY, Specifier, SymbolRef,
+  AddonRenderContext, ExportsKind, ExternalModule, ImportAttribute, ImportRecordIdx,
+  ImportRecordMeta, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier, SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
@@ -60,28 +62,17 @@ pub fn render_esm<'code>(
           let ext_name = m.get_import_path(ctx.chunk, ctx.resolved_paths);
           // Preserve the `with { ... }` import attribute from the originating
           // `export * from "..." with { ... }` record (issue #9160) instead of dropping it.
-          // Find the entry-level export-star record (in a chunk module) that resolved to this
-          // external and reuse its attribute. Notes:
+          // Follow this entry's export-star chain to the record that resolved to this external and
+          // reuse its attribute. This remains entry-specific when several facades share one
+          // implementation chunk. Notes:
           // - If no such record carries an attribute, `with_clause` is `None` and we emit the
           //   plain `export * from` exactly as before (safe degradation, no regression). This is
-          //   also what happens if the owning module lives in a different chunk.
+          //   also what happens if the originating record is unavailable.
           // - If several records re-export the same external with *different* attributes (a
-          //   pathological, conflicting input), the first by chunk exec-order wins — consistent
-          //   with the existing import-side behavior (see the TODO in `render_esm_chunk_imports`).
-          let with_clause = ctx
-            .chunk
-            .modules
-            .iter()
-            .filter_map(|module_idx| ctx.link_output.module_table[*module_idx].as_normal())
-            .find_map(|module| {
-              module.import_records.iter_enumerated().find_map(|(rec_idx, rec)| {
-                (rec.resolved_module == Some(importee_idx)
-                  && rec.meta.contains(ImportRecordMeta::IsExportStar)
-                  && rec.meta.contains(ImportRecordMeta::EntryLevelExternal))
-                .then(|| module.import_attribute_map.get(&rec_idx))
-                .flatten()
-              })
-            });
+          //   pathological, conflicting input), the first attributed record in the entry's
+          //   breadth-first export-star traversal wins.
+          let with_clause =
+            find_entry_level_external_import_attribute(ctx, entry_module.idx, importee_idx);
           // An absent attribute is just an empty suffix, so both cases collapse to a
           // single `append_source` (same shape `create_import_declaration` uses below).
           source_joiner.append_source(concat_string!(
@@ -116,6 +107,63 @@ pub fn render_esm<'code>(
   }
 
   source_joiner
+}
+
+fn find_entry_level_external_import_attribute<'a>(
+  ctx: &'a GenerateContext<'_>,
+  entry_module_idx: ModuleIdx,
+  external_module_idx: ModuleIdx,
+) -> Option<&'a ImportAttribute> {
+  let module_table = &ctx.link_output.module_table;
+  // Order-wrap entry facades render entry-level re-exports while the owning record lives in
+  // another chunk, so strict follows the export-star chain from the entry. Flag-off keeps
+  // main's same-chunk scan so its output stays byte-identical.
+  if !ctx.options.is_strict_execution_order_enabled() {
+    return ctx.chunk.modules.iter().find_map(|module_idx| {
+      let module = module_table[*module_idx].as_normal()?;
+      module.import_records.iter_enumerated().find_map(|(rec_idx, rec)| {
+        (rec.resolved_module == Some(external_module_idx)
+          && rec.meta.contains(ImportRecordMeta::IsExportStar)
+          && rec.meta.contains(ImportRecordMeta::EntryLevelExternal))
+        .then(|| module.import_attribute_map.get(&rec_idx))
+        .flatten()
+      })
+    });
+  }
+
+  let mut queue = VecDeque::from([entry_module_idx]);
+  let mut visited = FxHashSet::default();
+
+  while let Some(module_idx) = queue.pop_front() {
+    if !visited.insert(module_idx) {
+      continue;
+    }
+    let Some(module) = module_table[module_idx].as_normal() else {
+      continue;
+    };
+
+    for (rec_idx, rec) in module.import_records.iter_enumerated() {
+      if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
+        continue;
+      }
+      let Some(importee_idx) = rec.resolved_module else {
+        continue;
+      };
+      if importee_idx == external_module_idx
+        && rec.meta.contains(ImportRecordMeta::EntryLevelExternal)
+      {
+        if let Some(import_attribute) = module.import_attribute_map.get(&rec_idx) {
+          return Some(import_attribute);
+        }
+        continue;
+      }
+      if module_table[importee_idx].is_normal() {
+        queue.push_back(importee_idx);
+      }
+    }
+  }
+
+  None
 }
 
 fn render_chunk_content<'code>(
@@ -230,7 +278,9 @@ fn render_chunk_content<'code>(
     // into `make_esm_wrapper_stmt` for the non-concatenated wrapper.
     let is_async = ctx.link_output.metas[group.entry].is_tla_or_contains_tla_dependency;
 
-    source_joiner.append_source(hoisted_fns);
+    if !hoisted_fns.is_empty() {
+      source_joiner.append_source(hoisted_fns);
+    }
     if !hoisted_vars.is_empty() {
       source_joiner.append_source(concat_string!("var ", hoisted_vars, ";"));
     }

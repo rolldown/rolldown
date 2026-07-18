@@ -1,16 +1,13 @@
 use bitflags::bitflags;
 use oxc::allocator::GetAllocator;
 use oxc::ast::ast::ObjectPropertyKind;
-use oxc::ast::builder::GetAstBuilder;
-use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
+use oxc::ast::builder::{GetAstBuilder, NONE};
+use oxc::semantic::{NodeId, ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, CloneIn, Dummy, IntoIn, ReplaceWith, TakeIn},
-  ast::{
-    NONE,
-    ast::{
-      self, ClassElement, Expression, IdentifierReference, ImportExpression, NumberBase, Statement,
-      VariableDeclarationKind,
-    },
+  ast::ast::{
+    self, ClassElement, Expression, IdentifierReference, ImportExpression, NumberBase, Statement,
+    VariableDeclarationKind,
   },
   span::{GetSpan, GetSpanMut, SPAN, Span},
 };
@@ -23,7 +20,10 @@ use rolldown_common::{
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
   AstFactory, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
+  parse_injected_expression,
 };
+use rolldown_error::EmptyImportMetaKind;
+use std::borrow::Cow;
 
 mod finalizer_context;
 mod impl_visit_mut;
@@ -36,6 +36,11 @@ use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
+use crate::esm_init_obligations::{
+  ObligationPurpose, WrappedEsmInitTargetContext,
+  collect_wrapped_esm_init_targets_for_import_record, record_is_init_obligation,
+};
+use crate::utils;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
 mod hmr;
@@ -98,7 +103,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
   pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
   pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
-  /// Reference ids of `import.meta.ROLLUP_FILE_URL_*` accesses that no emitted file matches.
+  /// Reference ids of `import.meta.ROLLDOWN_FILE_URL_*` accesses that no emitted file matches.
   ///
   /// Deduplicated by reference id, because `try_rewrite_member_expr` runs *twice* on every member
   /// expression it fails to rewrite: `visit_expression` calls it, and on `None` the arm falls
@@ -109,6 +114,17 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   /// Deduplicating also makes a reference id that is accessed several times report once, matching
   /// Rollup, which throws on the first access it renders.
   pub missing_file_reference_ids: FxIndexMap<CompactStr, Span>,
+  /// Code returned by `resolveFileUrl` that failed to parse, as `(plugin name, message)`.
+  /// Collected here because the finalizer is sync and rayon-parallel; `finalize_modules`
+  /// turns these into plugin-attributed build errors once the parallel pass is done.
+  pub resolve_file_url_errors: Vec<(Cow<'static, str>, String)>,
+  /// Spans of the `import.meta` accesses this finalizer could not rewrite away, and so replaced
+  /// with an empty object.
+  ///
+  /// Keyed by span, because an `import.meta.<prop>` that fails to rewrite is reached twice: once
+  /// as the member expression (which knows the property) and once as the bare `import.meta`
+  /// object it walks into. The first insert wins, so the property-aware one is kept.
+  pub surviving_import_meta_spans: FxIndexMap<Span, EmptyImportMetaKind>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -153,9 +169,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     await_if_tla: bool,
   ) -> ast::Expression<'ast> {
     let importee_linking_info = &self.ctx.linking_infos[importee_idx];
+    let target = self
+      .ctx
+      .order_wrap_state
+      .esm_init_target(importee_idx, importee_linking_info)
+      .expect("wrapped ESM init call should have an init target");
     // `init_foo`
     let (wrapper_ref_expr, _) =
-      self.finalized_expr_for_symbol_ref(importee_linking_info.wrapper_ref.unwrap(), false, false);
+      self.finalized_expr_for_symbol_ref(target.wrapper_ref, false, false);
     // `init_foo()`
     let init_call = ast::Expression::new_call_expression_with_pure(
       call_span,
@@ -163,10 +184,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       NONE,
       oxc::allocator::Vec::new_in(&self.ast_factory),
       false,
-      mark_pure_if_noop && importee_linking_info.init_is_noop,
+      mark_pure_if_noop && target.init_is_noop,
       &self.ast_factory,
     );
-    if await_if_tla && importee_linking_info.is_tla_or_contains_tla_dependency {
+    if await_if_tla && target.tla_tainted {
       // `await init_foo()`
       ast::Expression::AwaitExpression(ast::AwaitExpression::boxed(
         SPAN,
@@ -175,82 +196,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       ))
     } else {
       init_call
-    }
-  }
-
-  fn collect_wrapped_esm_init_modules_for_import_record(
-    &self,
-    rec_idx: ImportRecordIdx,
-  ) -> Vec<ModuleIdx> {
-    // See internal-docs/linking/reference-needed-symbols/implementation.md for why this follows
-    // canonical owners through non-wrapped barrel modules.
-    //
-    // Duplicate owners are tolerated here rather than deduped via a set: the sole caller filters
-    // each owner through `generated_init_esm_importee_ids` (a persistent `FxHashSet`) *before*
-    // building the init call, so a repeat owner is dropped at that check and never re-emits. A
-    // `Vec` push avoids the per-record hashing/allocation of an `FxIndexSet` that the global set
-    // already subsumes.
-    let mut init_modules = Vec::new();
-    let rec = &self.ctx.module.import_records[rec_idx];
-    let Some(importee_idx) = rec.resolved_module else { return init_modules };
-    let importee_linking_info = &self.ctx.linking_infos[importee_idx];
-
-    if rec.meta.contains(ImportRecordMeta::IsExportStar) {
-      for resolved_export in importee_linking_info.resolved_exports.values() {
-        self.add_wrapped_esm_init_module_for_symbol(resolved_export.symbol_ref, &mut init_modules);
-      }
-      return init_modules;
-    }
-
-    for named_import in
-      self.ctx.module.named_imports.values().filter(|item| item.record_idx == rec_idx)
-    {
-      match &named_import.imported {
-        Specifier::Star => {
-          for resolved_export in importee_linking_info.resolved_exports.values() {
-            self.add_wrapped_esm_init_module_for_symbol(
-              resolved_export.symbol_ref,
-              &mut init_modules,
-            );
-          }
-        }
-        Specifier::Literal(name) => {
-          if let Some(resolved_export) = importee_linking_info.resolved_exports.get(name) {
-            self.add_wrapped_esm_init_module_for_symbol(
-              resolved_export.symbol_ref,
-              &mut init_modules,
-            );
-          } else {
-            self
-              .add_wrapped_esm_init_module_for_symbol(named_import.imported_as, &mut init_modules);
-          }
-        }
-      }
-    }
-
-    init_modules
-  }
-
-  fn add_wrapped_esm_init_module_for_symbol(
-    &self,
-    symbol_ref: SymbolRef,
-    init_modules: &mut Vec<ModuleIdx>,
-  ) {
-    let canonical_ref = self.ctx.symbol_db.canonical_ref_resolving_namespace(symbol_ref);
-    let meta = &self.ctx.linking_infos[canonical_ref.owner];
-    if matches!(meta.wrap_kind(), WrapKind::Esm)
-      // Only emit `init_*()` for wrapped owners that tree-shaking actually kept.
-      // A non-wrapped barrel can forward a binding (e.g. via `export { ns }` or
-      // `export *`) from a wrapped ESM module that ends up tree-shaken because the
-      // binding is never read. In that case the owner's `init_*` wrapper statement
-      // was never included, so it has no chunk assignment and emitting a call to it
-      // would reference a function that doesn't exist in the output. This mirrors
-      // the `is_included` guard in `collect_transitive_esm_init_targets`.
-      && meta.is_included
-      && meta.wrapper_ref.is_some_and(|wrapper_ref| self.wrapper_is_reachable_in_chunk(wrapper_ref))
-      && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)
-    {
-      init_modules.push(canonical_ref.owner);
     }
   }
 
@@ -275,34 +220,39 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &mut self,
     rec_idx: ImportRecordIdx,
   ) -> Option<Statement<'ast>> {
-    let rec = &self.ctx.module.import_records[rec_idx];
-    // If the non-wrapped forwarding module is emitted in this chunk, its own
-    // lowered statement already preserves the required init call in execution
-    // order. This fallback is only for barrels that do not execute here.
-    if rec.resolved_module.is_some_and(|importee_idx| {
-      let importee_linking_info = &self.ctx.linking_infos[importee_idx];
-      matches!(importee_linking_info.wrap_kind(), WrapKind::None)
-        && importee_linking_info.is_included
-        && self.ctx.chunk_graph.module_to_chunk[importee_idx] == Some(self.ctx.chunk_idx)
-    }) {
-      return None;
-    }
-
-    // `AstFactory` is `Copy`, so copying it out lets the `&mut self` iterator below stay borrowed
-    // while we still construct nodes through `factory`. That decouples node construction from the
-    // borrow without the throwaway heap `Vec` the previous `.collect()` needed: the common 0/1
-    // cases now allocate nothing, and only the rare sequence case allocates — straight in the arena.
-    let factory = self.ast_factory;
-    let mut init_exprs = self
-      .collect_wrapped_esm_init_modules_for_import_record(rec_idx)
-      .into_iter()
-      .filter_map(|module_idx| {
-        if !self.generated_init_esm_importee_ids.insert(module_idx) {
-          return None;
-        }
-        // `add_wrapped_esm_init_module_for_symbol` only collects modules with a `wrapper_ref`.
-        Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
-      });
+    // A fresh `AstFactory` (a free wrapper over the arena reference) lets the `&mut self` iterator
+    // below stay borrowed while we still construct nodes through `factory`. That decouples node
+    // construction from the borrow without the throwaway heap `Vec` the previous `.collect()`
+    // needed: the common 0/1 cases now allocate nothing, and only the rare sequence case
+    // allocates — straight in the arena.
+    let factory = AstFactory::new(self.alloc);
+    let targets = collect_wrapped_esm_init_targets_for_import_record(
+      &WrappedEsmInitTargetContext {
+        importer: self.ctx.module,
+        importer_meta: self.ctx.linking_info,
+        modules: self.ctx.modules,
+        metas: self.ctx.linking_infos,
+        stmt_infos: self.ctx.index_stmt_infos,
+        symbol_db: self.ctx.symbol_db,
+        constant_value_map: self.ctx.constant_value_map,
+        inline_const_mode: self.ctx.options.optimization.inline_const.map(|config| config.mode),
+        order_wrap_state: self.ctx.order_wrap_state,
+        strict_execution_order: self.ctx.options.is_strict_execution_order_enabled(),
+      },
+      rec_idx,
+      |symbol_ref| self.ctx.used_symbol_refs.contains(&symbol_ref),
+      |wrapper_ref| self.wrapper_is_reachable_in_chunk(wrapper_ref),
+      |forwarding_module_idx| {
+        self.ctx.chunk_graph.module_to_chunk[forwarding_module_idx] == Some(self.ctx.chunk_idx)
+      },
+    );
+    let mut init_exprs = targets.into_iter().filter_map(|module_idx| {
+      if !self.generated_init_esm_importee_ids.insert(module_idx) {
+        return None;
+      }
+      // The shared target resolver only collects modules with a reachable `wrapper_ref`.
+      Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
+    });
     // Drive the iterator by hand. Every branch consumes it to exhaustion, so each owner's
     // `generated_init_esm_importee_ids` insert still runs (the global dedup must observe all of
     // them) regardless of how many statements we end up emitting.
@@ -336,7 +286,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];
     match importee_linking_info.wrap_kind() {
       WrapKind::None => {
-        if let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx) {
+        // Emission consumes the shared obligation gate; this transform only runs for *included*
+        // statements (excluded ones take `remove_unused_top_level_stmt`'s early branch).
+        if record_is_init_obligation(
+          ObligationPurpose::Emit,
+          self.ctx.order_wrap_state,
+          self.ctx.idx,
+          rec,
+          rec_idx,
+          true,
+        ) && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
+        {
           *stmt = init_stmt;
           return false;
         }
@@ -469,7 +429,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         || (self.state.contains(TraverseState::SmartInlineConst) || meta.safe_to_inline)
       {
         return (
-          meta.value.to_expression(*self.ast_factory.builder()),
+          meta.value.to_expression(self.ast_factory.builder()),
           FinalizedExprProcessHint::empty(),
         );
       }
@@ -654,7 +614,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
     Some((
-      constant_meta.value.to_expression(*self.ast_factory.builder()),
+      constant_meta.value.to_expression(self.ast_factory.builder()),
       FinalizedExprProcessHint::empty(),
     ))
   }
@@ -758,7 +718,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let symbol_name = canonical_ref.name(self.ctx.symbol_db);
     let member_map = module.ecma_view.enum_member_value_map.get(symbol_name)?;
     let meta = member_map.get(property_name)?;
-    Some(meta.value.to_expression(*self.ast_factory.builder()))
+    Some(meta.value.to_expression(self.ast_factory.builder()))
   }
 
   fn var_declaration_to_expr_seq_and_bindings(
@@ -986,23 +946,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<Expression<'ast>> {
     if member_expr.object().is_import_meta() {
       let original_expr_span = member_expr.span();
-      let is_node_cjs = matches!(
-        (self.ctx.options.platform, &self.ctx.options.format),
-        (Platform::Node, OutputFormat::Cjs)
-      );
+      let can_polyfill_import_meta_url = self.can_polyfill_import_meta_url();
 
       let property_name = member_expr.static_property_name()?;
       match property_name {
         // Try to polyfill `import.meta.url`
         "url" => {
-          let new_expr = if is_node_cjs {
+          let new_expr = if can_polyfill_import_meta_url {
             // Replace it with `require('url').pathToFileURL(__filename).href`
 
             // require('url')
             let require_call = ast::CallExpression::boxed(
               SPAN,
               ast::Expression::new_identifier(SPAN, "require", &self.ast_factory),
-              oxc::ast::NONE,
+              NONE,
               oxc::allocator::Vec::from_value_in(
                 ast::Argument::StringLiteral(ast::StringLiteral::boxed(
                   SPAN,
@@ -1029,7 +986,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let require_path_to_file_url_call = ast::CallExpression::boxed(
               SPAN,
               ast::Expression::StaticMemberExpression(require_path_to_file_url),
-              oxc::ast::NONE,
+              NONE,
               oxc::allocator::Vec::from_value_in(
                 ast::Argument::Identifier(ast::IdentifierReference::boxed(
                   SPAN,
@@ -1054,6 +1011,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           } else {
             // If we don't support polyfill `import.meta.url` in this platform and format, we just keep it as it is
             // so users may handle it in their own way.
+            if !self.ctx.options.format.keep_esm_import_export_syntax() {
+              // Claim the span before walking reaches the bare `import.meta`, so the warning knows
+              // this is an `import.meta.url`
+              self.record_surviving_import_meta(
+                member_expr.object().span(),
+                EmptyImportMetaKind::Url,
+              );
+            }
             None
           };
           return new_expr;
@@ -1061,24 +1026,70 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         "dirname" | "filename" => {
           let name =
             oxc::ast::ast::Str::from_str_in(&format!("__{property_name}"), &self.ast_factory);
-          return is_node_cjs.then_some(ast::Expression::Identifier(
+          return can_polyfill_import_meta_url.then_some(ast::Expression::Identifier(
             ast::IdentifierReference::boxed(SPAN, name, &self.ast_factory),
           ));
         }
         _ => {}
       }
-      return self.rewrite_rollup_file_url(property_name, original_expr_span);
+      return self.rewrite_rolldown_file_url(
+        property_name,
+        original_expr_span,
+        member_expr.node_id(),
+      );
     }
     None
   }
 
-  fn rewrite_rollup_file_url(
+  fn can_polyfill_import_meta_url(&self) -> bool {
+    matches!(
+      (self.ctx.options.platform, &self.ctx.options.format),
+      (Platform::Node, OutputFormat::Cjs)
+    )
+  }
+
+  /// Remember an `import.meta` that no rewrite could get rid of, so it is left to be replaced with
+  /// an empty object. Callers are responsible for only reaching this on a non-esm output, which
+  /// keeps `import.meta` as-is rather than replacing it.
+  pub fn record_surviving_import_meta(&mut self, span: Span, kind: EmptyImportMetaKind) {
+    self.surviving_import_meta_spans.entry(span).or_insert(kind);
+  }
+
+  fn rewrite_rolldown_file_url(
     &mut self,
     property_name: &str,
     original_expr_span: Span,
+    node_id: NodeId,
   ) -> Option<Expression<'ast>> {
-    // rewrite `import.meta.ROLLUP_FILE_URL_<referenceId>`
-    if let Some(reference_id) = property_name.strip_prefix("ROLLUP_FILE_URL_") {
+    // rewrite `import.meta.ROLLDOWN_FILE_URL_<referenceId>`
+    if let Some(reference_id) = utils::file_url::strip_file_url_prefix(property_name) {
+      // A plugin's `resolveFileUrl` result wins over the default. Copy the `&'me`
+      // reference out of `ctx` first, so the lookup does not borrow `self` and the
+      // error path below can borrow it mutably.
+      let resolved_file_urls = self.ctx.resolved_file_urls;
+      if let Some(resolved) = resolved_file_urls.get(&(self.ctx.idx, node_id)) {
+        // The only place this code is parsed. The driver deliberately hands it over
+        // unparsed, along with the plugin that produced it.
+        match parse_injected_expression(self.alloc, &resolved.code) {
+          Ok(mut expr) => {
+            let mut rewriter = ResolveFileUrlHookResultSpanRewriter(original_expr_span);
+            oxc::ast_visit::VisitMut::visit_expression(&mut rewriter, &mut expr);
+            return Some(expr);
+          }
+          Err(diagnostics) => {
+            self.resolve_file_url_errors.push((
+              resolved.plugin_name.clone(),
+              format!(
+                "The `resolveFileUrl` hook returned code that is not a valid expression for referenceId={reference_id}: {}
+{diagnostics}",
+                resolved.code
+              ),
+            ));
+            return None;
+          }
+        }
+      }
+
       // compute relative path from chunk to asset
       let Ok(asset_file_name) = self.ctx.file_emitter.get_file_name(reference_id) else {
         // Keep the span of the first access, so the diagnostic can point at the source.
@@ -1092,6 +1103,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         absolutize_path_buf(self.ctx.options.cwd.as_path().join(&self.ctx.options.out_dir));
       let absolute_asset_file_name = asset_file_name.absolutize_with(output_dir);
       let relative_asset_path = &self.ctx.chunk.relative_path_for(&absolute_asset_file_name);
+
+      if !self.ctx.options.format.keep_esm_import_export_syntax()
+        && !self.can_polyfill_import_meta_url()
+      {
+        // Record the origin before walking the generated `import.meta.url`. The generic URL
+        // handler reaches the same span later, and first-insert-wins preserves this richer kind.
+        self.record_surviving_import_meta(original_expr_span, EmptyImportMetaKind::RolldownFileUrl);
+      }
 
       // new URL({relative_asset_path}, import.meta.url).href
       // TODO: needs import.meta.url polyfill for non esm
@@ -1112,7 +1131,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               ast::Argument::StaticMemberExpression(ast::StaticMemberExpression::boxed(
                 SPAN,
                 ast::Expression::new_meta_property(
-                  SPAN,
+                  // Carry the source span, so that if this generated `import.meta.url` cannot be
+                  // polyfilled either, the diagnostic points at the `import.meta.ROLLDOWN_FILE_URL_*`
+                  // the user actually wrote.
+                  original_expr_span,
                   ast::IdentifierName::new(SPAN, "import", &self.ast_factory),
                   ast::IdentifierName::new(SPAN, "meta", &self.ast_factory),
                   &self.ast_factory,
@@ -1203,7 +1225,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self.ctx.constant_value_map.get(&target_commonjs_exported_symbol_meta.0)
             }) {
             is_inlined_commonjs_export = true;
-            export_meta.value.to_expression(*self.ast_factory.builder())
+            export_meta.value.to_expression(self.ast_factory.builder())
           } else {
             let (object_ref_expr, _) = self.finalized_expr_for_symbol_ref(
               object_ref,
@@ -1465,9 +1487,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       NONE,
                       oxc::allocator::Vec::new_in(&self.ast_factory),
                       false,
-                      // No-op `init_*()` (empty ESM closure) is pure; `init_is_noop` is only
-                      // set for `WrapKind::Esm`, so a `require_*()` here is never marked pure.
-                      importee_linking_info.init_is_noop,
+                      self
+                        .ctx
+                        .order_wrap_state
+                        .esm_init_target(importee.idx, importee_linking_info)
+                        .is_some_and(|target| target.init_is_noop),
                       &self.ast_factory,
                     ))
                   };
@@ -1669,8 +1693,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
     old_body.into_iter().enumerate().zip(self.ctx.stmt_infos.iter_enumerated().skip(1)).for_each(
-      |((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
-        let is_stmt_included = self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx);
+      |((_top_stmt_idx, mut top_stmt), (stmt_info_idx, stmt_info))| {
+        let is_order_runtime_stmt =
+          self.ctx.order_wrap_state.forces_runtime_stmt(self.ctx.runtime, self.ctx.idx, stmt_info);
+        let is_stmt_included =
+          self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx) || is_order_runtime_stmt;
 
         if !is_stmt_included {
           // For ESM-wrapped modules, excluded re-export statements still need init calls for
@@ -1678,10 +1705,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           // stage's `compute_wrapped_esm_init_metadata`; emitting the calls (with the
           // module-wide dedup below) is all that happens here.
           let linking_info = self.ctx.linking_info;
-          if let Some(targets) = linking_info.transitive_esm_init_targets.get(&stmt_info_idx) {
+          if let Some(targets) = self
+            .ctx
+            .order_wrap_state
+            .transitive_init_targets(self.ctx.idx, linking_info)
+            .get(&stmt_info_idx)
+          {
             for &importee_idx in targets {
               if self.generated_init_esm_importee_ids.insert(importee_idx) {
-                let init_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, false);
+                // An excluded re-export can forward to a TLA-tainted wrapper. The current module
+                // is then TLA-tainted as well, so its async init body must await the forwarded
+                // promise before later statements observe the importee's bindings.
+                let init_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, true);
                 program.body.push(ast::Statement::new_expression_statement(
                   SPAN,
                   init_expr,
@@ -1689,6 +1724,51 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 ));
               }
             }
+          }
+          let overlay_records = self
+            .ctx
+            .order_wrap_state
+            .import_overlays_for_statement(self.ctx.idx, stmt_info_idx)
+            .map(|(key, overlay)| {
+              (
+                key.record,
+                overlay.reexports_dynamic_exports,
+                !overlay.retained_reexport_path.is_empty(),
+              )
+            })
+            .collect::<Vec<_>>();
+          for (rec_idx, reexports_dynamic_exports, has_retained_reexport_path) in overlay_records {
+            if !has_retained_reexport_path
+              && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
+            {
+              program.body.push(init_stmt);
+            }
+            if !reexports_dynamic_exports {
+              continue;
+            }
+            let Some(importee_idx) = self.ctx.module.import_records[rec_idx].resolved_module else {
+              continue;
+            };
+            let Some(importee) = self.ctx.modules[importee_idx].as_normal() else {
+              continue;
+            };
+            let (importer_namespace_ref, _) = self.finalized_expr_for_symbol_ref(
+              self.ctx.module.namespace_object_ref,
+              false,
+              false,
+            );
+            let (importee_namespace_ref, _) =
+              self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
+            let call_expr = self.ast_factory.make_re_export_call(
+              self.finalized_expr_for_runtime_symbol("__reExport"),
+              importer_namespace_ref,
+              importee_namespace_ref,
+            );
+            program.body.push(ast::Statement::new_expression_statement(
+              top_stmt.span(),
+              Expression::CallExpression(call_expr.into_in(self.alloc)),
+              &self.ast_factory,
+            ));
           }
           return;
         }
@@ -1723,7 +1803,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             match &self.ctx.modules[module_idx] {
               Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                if matches!(importee_linking_info.wrap_kind(), WrapKind::None)
+                // Same shared obligation gate as the import-declaration path; the statement is
+                // included by construction here.
+                if record_is_init_obligation(
+                  ObligationPurpose::Emit,
+                  self.ctx.order_wrap_state,
+                  self.ctx.idx,
+                  rec,
+                  rec_idx,
+                  true,
+                ) && matches!(importee_linking_info.wrap_kind(), WrapKind::None)
                   && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
                 {
                   program.body.push(init_stmt);
@@ -1736,16 +1825,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     ConcatenateWrappedModuleKind::Inner
                   )
                 {
-                  // Deliberately not unified with `wrapped_esm_init_call_expr`: this site
-                  // resolves the wrapper via `canonical_name_for` (bare identifier, no
-                  // cross-chunk `require_binding.init_x` form, no `@__PURE__`, no
-                  // `generated_init_esm_importee_ids` dedup); switching it would be a
-                  // behavior change, not a refactor.
-                  let wrapper_ref_name =
-                    self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                  let (wrapper_ref, _) = self.finalized_expr_for_symbol_ref(
+                    importee_linking_info.wrapper_ref.unwrap(),
+                    false,
+                    false,
+                  );
                   let mut init_expr = ast::Expression::new_call_expression(
                     SPAN,
-                    self.ast_factory.make_id_ref_expr(SPAN, wrapper_ref_name),
+                    wrapper_ref,
                     NONE,
                     oxc::allocator::Vec::new_in(&self.ast_factory),
                     false,
@@ -2243,6 +2330,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.ast_factory.make_seq_in_parens(wrapper_call_expr, finalized_namespace)
         }
         WrapKind::None => {
+          // Order-wrapped dynamic entries never reach this rewrite: their eliminated facades
+          // are restored in `restore_order_wrap_entry_facades`.
+          debug_assert!(
+            self
+              .ctx
+              .order_wrap_state
+              .esm_init_target(importee_idx, &self.ctx.linking_infos[importee_idx])
+              .is_none()
+          );
           let (finalized_expr, _) =
             self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
           finalized_expr
@@ -2336,6 +2432,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               }
             }
             WrapKind::None => {
+              debug_assert!(
+                self
+                  .ctx
+                  .order_wrap_state
+                  .esm_init_target(importee_idx, &self.ctx.linking_infos[importee_idx])
+                  .is_none()
+              );
               let call_expr = self.ast_factory.make_then_extract_property(base_expr, name);
               Some(Expression::CallExpression(call_expr))
             }
@@ -2670,5 +2773,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
 
     Some(())
+  }
+}
+
+struct ResolveFileUrlHookResultSpanRewriter(Span);
+
+impl oxc::ast_visit::VisitMut<'_> for ResolveFileUrlHookResultSpanRewriter {
+  fn visit_span(&mut self, span: &mut Span) {
+    *span = self.0;
   }
 }

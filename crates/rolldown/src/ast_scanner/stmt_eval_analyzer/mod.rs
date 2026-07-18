@@ -15,6 +15,8 @@ use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, St
 use rolldown_ecmascript_utils::ExpressionExt;
 use rustc_hash::FxHashSet;
 
+use crate::utils;
+
 bitflags! {
     #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
     /// Reasons that make an otherwise side-effect-free statement sensitive to execution order.
@@ -173,7 +175,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
   }
 
   /// `import.meta.url` is a spec-defined side-effect-free property read, and
-  /// `import.meta.ROLLUP_FILE_URL_<referenceId>` is a placeholder the finalizer rewrites into a
+  /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>` is a placeholder the finalizer rewrites into a
   /// `new URL(...)` expression. Other accesses like `import.meta.hot.accept()` may have side effects.
   fn is_side_effect_free_import_meta_access(member_expr: &ast::MemberExpression) -> bool {
     let Expression::MetaProperty(meta_property) = member_expr.object() else {
@@ -184,7 +186,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
     }
     member_expr
       .static_property_name()
-      .is_some_and(|name| name == "url" || name.starts_with("ROLLUP_FILE_URL_"))
+      .is_some_and(|name| name == "url" || utils::file_url::starts_with_file_url_prefix(name))
   }
 
   fn analyze_member_expr(&self, member_expr: &ast::MemberExpression) -> StmtEvalFacts {
@@ -1009,6 +1011,10 @@ mod test {
     assert!(!has_side_effect_for_tree_shaking("import.meta?.url"));
     assert!(!has_side_effect_for_tree_shaking("import.meta['url']"));
     assert!(!has_side_effect_for_tree_shaking("import.meta?.['url']"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta.ROLLDOWN_FILE_URL_abc123"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta?.ROLLDOWN_FILE_URL_abc123"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta['ROLLDOWN_FILE_URL_abc123']"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta?.['ROLLDOWN_FILE_URL_abc123']"));
     assert!(!has_side_effect_for_tree_shaking("import.meta.ROLLUP_FILE_URL_abc123"));
     assert!(!has_side_effect_for_tree_shaking("import.meta?.ROLLUP_FILE_URL_abc123"));
     assert!(!has_side_effect_for_tree_shaking("import.meta['ROLLUP_FILE_URL_abc123']"));

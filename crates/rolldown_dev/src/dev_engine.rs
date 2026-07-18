@@ -149,6 +149,7 @@ impl DevEngine {
       stamp_table: Arc::new(Mutex::new(HmrStampTable::default())),
       pending_payloads: Arc::new(Mutex::new(FxHashMap::default())),
       top_level_evaluated: Mutex::new(Arc::new(FxHashMap::default())),
+      last_task_errored: std::sync::atomic::AtomicBool::new(false),
     });
 
     let watcher_config = FsWatcherConfig {

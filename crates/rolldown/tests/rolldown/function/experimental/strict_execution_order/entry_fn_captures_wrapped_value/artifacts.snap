@@ -6,20 +6,32 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+## main2.js
+
+```js
 import { n as init_facade, t as getPref } from "./pref.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region first.js
-var init_first = __esmMin((() => {
-	(globalThis.__events ??= []).push("first");
-}));
+function init_first() {
+	return (init_first = __esmMin((() => {
+		(globalThis.__events ??= []).push("first");
+	})))();
+}
 //#endregion
 //#region node_modules/pref-pkg/index.js
 function tag(value) {
 	return `tag:${value}`;
 }
-var init_pref_pkg = __esmMin((() => {
-	init_facade();
-}));
+function init_pref_pkg() {
+	return (init_pref_pkg = __esmMin((() => {
+		init_facade();
+	})))();
+}
 //#endregion
 //#region main.js
 function boot() {
@@ -28,14 +40,17 @@ function boot() {
 async function initApplication() {
 	return tag(await getPref());
 }
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_first();
+		init_facade();
+		(globalThis.__events ??= []).push("main");
+		globalThis.__result = boot();
+		globalThis.__ready = initApplication();
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_first();
-	init_pref_pkg();
-	(globalThis.__events ??= []).push("main");
-	globalThis.__result = boot();
-	globalThis.__ready = initApplication();
-}))();
+export { init_first as n, init_main as t };
 
 ```
 
@@ -47,16 +62,20 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 function makePref() {
 	return () => "PREF_OK";
 }
-var init_manager = __esmMin((() => {
-	(globalThis.__events ??= []).push("manager");
-}));
+function init_manager() {
+	return (init_manager = __esmMin((() => {
+		(globalThis.__events ??= []).push("manager");
+	})))();
+}
 //#endregion
 //#region node_modules/pref-pkg/facade.js
 var getPref;
-var init_facade = __esmMin((() => {
-	init_manager();
-	getPref = makePref();
-}));
+function init_facade() {
+	return (init_facade = __esmMin((() => {
+		init_manager();
+		getPref = makePref();
+	})))();
+}
 //#endregion
 export { init_facade as n, getPref as t };
 
@@ -77,30 +96,41 @@ export { __esmMin as t };
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
 import { n as init_facade, t as getPref } from "./pref.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region first.js
+(globalThis.__events ??= []).push("first");
+//#endregion
+//#region node_modules/pref-pkg/index.js
 function tag(value) {
 	return `tag:${value}`;
 }
+//#endregion
+//#region main.js
 function boot() {
 	return tag(getPref());
 }
 async function initApplication() {
 	return tag(await getPref());
 }
-__esmMin((() => {
-	//#region first.js
-	(globalThis.__events ??= []).push("first");
-	//#endregion
-	//#region node_modules/pref-pkg/index.js
-	init_facade();
-	//#endregion
-	//#region main.js
-	(globalThis.__events ??= []).push("main");
-	globalThis.__result = boot();
-	globalThis.__ready = initApplication();
-	//#endregion
-}))();
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_facade();
+		(globalThis.__events ??= []).push("main");
+		globalThis.__result = boot();
+		globalThis.__ready = initApplication();
+	})))();
+}
+//#endregion
+export { init_main as t };
 
 ```
 
@@ -112,16 +142,20 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 function makePref() {
 	return () => "PREF_OK";
 }
-var init_manager = __esmMin((() => {
-	(globalThis.__events ??= []).push("manager");
-}));
+function init_manager() {
+	return (init_manager = __esmMin((() => {
+		(globalThis.__events ??= []).push("manager");
+	})))();
+}
 //#endregion
 //#region node_modules/pref-pkg/facade.js
 var getPref;
-var init_facade = __esmMin((() => {
-	init_manager();
-	getPref = makePref();
-}));
+function init_facade() {
+	return (init_facade = __esmMin((() => {
+		init_manager();
+		getPref = makePref();
+	})))();
+}
 //#endregion
 export { init_facade as n, getPref as t };
 

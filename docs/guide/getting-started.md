@@ -290,9 +290,7 @@ The rolldown watcher api is compatible with rollup [watch](https://rollupjs.org/
 ```js
 import { watch } from 'rolldown';
 
-const watcher = watch({
-  /* option */
-}); // or watch([/* multiple option */] )
+const watcher = watch({/* option */}); // or watch([/* multiple option */] )
 
 watcher.on('event', () => {});
 

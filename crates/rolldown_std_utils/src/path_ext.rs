@@ -4,7 +4,8 @@
 //! `Cow<Path>` from `relative` and makes slash conversion explicit; the patterns
 //! below are the ones we want in call sites so later code does not reintroduce
 //! lossy or double-allocating chains like
-//! `relative(...).to_slash_lossy().into_owned()`.
+//! `relative(...).to_slash_lossy().into_owned()` or
+//! `normalize().as_ref().expect_to_slash()`.
 
 use std::{
   borrow::Cow,
@@ -80,7 +81,7 @@ pub fn strip_path_prefix_to_slash(path: &Path, prefix: &Path) -> Option<String> 
 ///
 /// Uses sugar_path 3's intended composition for known-UTF-8 Rolldown paths:
 /// `relative` may borrow a clean descendant, then one owned buffer becomes the
-/// final slash `String` via [`SugarPathBuf::into_slash`].
+/// final slash `String` via [`sugar_path::SugarPathBuf::into_slash`].
 ///
 /// Prefer this over `relative(...).to_slash_lossy().into_owned()` or
 /// `relative(...).as_path().expect_to_slash()`.
@@ -131,6 +132,22 @@ pub fn path_buf_to_slash(path: PathBuf) -> String {
   path.into_slash()
 }
 
+/// Normalize an owned path, then consume it into a `/`-separated UTF-8 string.
+///
+/// Prefer this when `path` was just created by `join` or another owned operation.
+/// The consuming chain lets the normalized `PathBuf` become the final `String`
+/// instead of copying it through a non-consuming
+/// [`sugar_path::SugarPath::normalize`] result.
+///
+/// # Panics
+///
+/// Panics if `path` is not valid UTF-8. Rolldown module and resolver paths are
+/// required to satisfy that invariant.
+#[inline]
+pub fn normalize_path_buf_to_slash(path: PathBuf) -> String {
+  path.into_normalized().into_slash()
+}
+
 #[test]
 fn test_relative_path_helpers() {
   let workspace = std::env::current_dir().unwrap().join("path-helper-tests");
@@ -146,6 +163,12 @@ fn test_relative_path_helpers() {
   assert_eq!(absolute_path_to_relative_slash(&nested, &workspace), "src/lib/mod.js");
   assert!(absolutize_path_buf(PathBuf::from("path-helper-tests")).is_absolute());
   assert_eq!(path_buf_to_slash(PathBuf::from("src").join("lib.js")), "src/lib.js");
+  assert_eq!(
+    normalize_path_buf_to_slash(
+      PathBuf::from("src").join(".").join("nested").join("..").join("lib.js")
+    ),
+    "src/lib.js",
+  );
 }
 
 #[test]

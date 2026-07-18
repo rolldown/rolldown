@@ -10,10 +10,12 @@ use oxc::{
   semantic::{ScopeFlags, SymbolId},
   span::{GetSpan, Span},
 };
+use oxc_str::CompactStr;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  MemberExprObjectReferencedType, MemberExprRef, OutputFormat, RUNTIME_MODULE_KEY, StmtInfoIdx,
-  StmtInfoMeta, SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
+  MemberExprObjectReferencedType, MemberExprRef, OutputFormat, RUNTIME_MODULE_KEY,
+  RolldownFileUrlReference, StmtInfoIdx, StmtInfoMeta, SymbolRefFlags,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
@@ -21,7 +23,7 @@ use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
 
-use crate::ast_scanner::cjs_export_analyzer::CommonJsAstType;
+use crate::{ast_scanner::cjs_export_analyzer::CommonJsAstType, utils};
 
 use super::{
   AstScanner, UntranspiledSyntax, cjs_export_analyzer::CjsGlobalAssignmentType,
@@ -92,10 +94,22 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       // Tree-shaking side effects / global reads / pure annotations come from the analyzer.
       // Top-level reads of imported bindings are detected by a separate uniform walk so the
       // signal is complete by construction (no per-expression-form gaps).
-      if !self.result.ecma_view_meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
+      if self.immutable_ctx.options.is_strict_execution_order_enabled() {
+        let has_top_level_import_read =
+          self.result.ecma_view_meta.contains(EcmaViewMeta::TopLevelImportRead)
+            || TopLevelImportReadDetector::detect(&self.result.symbol_ref_db.ast_scopes, stmt);
+        if stmt_eval_facts.is_order_sensitive() || has_top_level_import_read {
+          self.result.ecma_view_meta.insert(EcmaViewMeta::ExecutionOrderSensitive);
+        }
+        if has_top_level_import_read {
+          self.result.ecma_view_meta.insert(EcmaViewMeta::TopLevelImportRead);
+        }
+      } else if !self.result.ecma_view_meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
         && (stmt_eval_facts.is_order_sensitive()
           || TopLevelImportReadDetector::detect(&self.result.symbol_ref_db.ast_scopes, stmt))
       {
+        // Preserve the flag-off scanner path: once sensitivity is known, later statements do not
+        // need the strict-only import-read classification and must not pay for another AST walk.
         self.result.ecma_view_meta.insert(EcmaViewMeta::ExecutionOrderSensitive);
       }
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
@@ -275,45 +289,24 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_new_expression(self, it);
   }
 
-  fn visit_meta_property(&mut self, it: &ast::MetaProperty<'ast>) {
-    if self.immutable_ctx.flat_options.keep_esm_import_export_syntax() {
-      walk::walk_meta_property(self, it);
-      return;
+  /// Records `import.meta.ROLLDOWN_FILE_URL_<referenceId>` for the `resolveFileUrl` hook.
+  ///
+  /// Deliberately not folded into `visit_meta_property`: that method returns early when
+  /// `keep_esm_import_export_syntax()` is set, but `ROLLDOWN_FILE_URL_` is rewritten
+  /// regardless of that option.
+  fn visit_member_expression(&mut self, it: &ast::MemberExpression<'ast>) {
+    if it.object().is_import_meta()
+      && let Some(property_name) = it.static_property_name()
+      && let Some(reference_id) = utils::file_url::strip_file_url_prefix(property_name)
+    {
+      self.result.rolldown_file_url_references.push(RolldownFileUrlReference {
+        node_id: it.node_id(),
+        stmt_info_idx: self.current_stmt_idx,
+        reference_id: CompactStr::from(reference_id),
+      });
     }
-    if let Some(parent) = self.visit_path.last() {
-      let should_warn = parent
-        .as_member_expression_kind()
-        .map(|member_expr| {
-          let static_name = member_expr.static_property_name().unwrap_or(ast::Str::from(""));
-          // `import.meta.ROLLUP_FILE_URL_*` is rewritten to `new URL(..., import.meta.url).href`,
-          // so it degrades exactly like `import.meta.url` does.
-          let is_special_property = static_name == "url"
-            || static_name == "dirname"
-            || static_name == "filename"
-            || static_name.as_str().starts_with("ROLLUP_FILE_URL_");
-          let format = &self.immutable_ctx.options.format;
-          !is_special_property || matches!(format, OutputFormat::Iife | OutputFormat::Umd)
-        })
-        // Here we need to set it to `true` to emit warnings when leaving `import.meta` alone along with the logic head of this.
-        .unwrap_or(true);
-
-      if should_warn && it.meta.name == "import" && it.property.name == "meta" {
-        self.result.warnings.push(
-          BuildDiagnostic::empty_import_meta(
-            self.immutable_ctx.id.to_string(),
-            self.immutable_ctx.source.clone(),
-            it.span(),
-            self.immutable_ctx.options.format.as_str().into(),
-            parent.as_member_expression_kind().is_some_and(|member_expr| {
-              member_expr.static_property_name().is_some_and(|static_name| static_name == "url")
-            }),
-          )
-          .with_severity_warning(),
-        );
-      }
-    }
+    walk::walk_member_expression(self, it);
   }
-
   fn visit_this_expression(&mut self, it: &ast::ThisExpression) {
     if !self.is_this_nested() {
       self.top_level_this_expr_set.insert(it.node_id());

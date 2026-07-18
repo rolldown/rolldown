@@ -42,6 +42,8 @@ impl<'text> MagicString<'text> {
     while let Some(idx) = chunk_idx {
       let chunk = &self.chunks[idx];
       let next_idx = chunk.next;
+      let is_edited = chunk.edited_content.is_some();
+      let chunk_end = chunk.end();
 
       // Get the chunk content
       let content = if let Some(ref edited) = chunk.edited_content {
@@ -51,8 +53,7 @@ impl<'text> MagicString<'text> {
       };
 
       // Trim intro of chunk
-      let chunk = &mut self.chunks[idx];
-      if trim_deque_start(&mut chunk.intro, pattern) {
+      if trim_deque_start(&mut self.chunks[idx].intro, pattern) {
         return true;
       }
 
@@ -62,7 +63,7 @@ impl<'text> MagicString<'text> {
       if content.is_empty() {
         // Content is empty (e.g. from a remove); the outro is next in output order, so trim
         // it and abort if non-whitespace remains.
-        if trim_deque_start(&mut chunk.outro, pattern) {
+        if trim_deque_start(&mut self.chunks[idx].outro, pattern) {
           return true;
         }
         chunk_idx = next_idx;
@@ -75,16 +76,32 @@ impl<'text> MagicString<'text> {
       }
 
       if !trimmed_content.is_empty() {
-        // Partial trim - update the chunk and return
-        chunk.edited_content = Some(trimmed_content.to_string().into());
+        // Partial trim. For an unedited chunk, split at the trim boundary and blank only
+        // the whitespace half — the kept half stays *unedited*, so hires sourcemaps keep
+        // their per-character fidelity (magic-string's `Chunk.trimStart` splits the same
+        // way). An edited chunk has no per-character mapping to preserve; storing the
+        // trimmed content is what upstream's re-edit amounts to.
+        if is_edited {
+          self.chunks[idx].edited_content = Some(trimmed_content.to_string().into());
+        } else {
+          let boundary = chunk_end - trimmed_content.len() as u32;
+          if self.split_at(boundary).is_ok() {
+            // `split_at` keeps the first half at `idx`; blank just the leading whitespace.
+            self.chunks[idx].edited_content = Some("".into());
+          } else {
+            // Unreachable: only edited chunks refuse to split. Degrade to the whole-chunk
+            // edit rather than panicking across the FFI boundary.
+            self.chunks[idx].edited_content = Some(trimmed_content.to_string().into());
+          }
+        }
         return true;
       }
 
       // Entire content was trimmed - mark as empty
-      chunk.edited_content = Some("".into());
+      self.chunks[idx].edited_content = Some("".into());
 
       // Trim outro of this chunk - if non-whitespace remains, we're done
-      if trim_deque_start(&mut chunk.outro, pattern) {
+      if trim_deque_start(&mut self.chunks[idx].outro, pattern) {
         return true;
       }
 
@@ -108,6 +125,8 @@ impl<'text> MagicString<'text> {
     while let Some(idx) = chunk_idx {
       let chunk = &self.chunks[idx];
       let prev_idx = chunk.prev;
+      let is_edited = chunk.edited_content.is_some();
+      let chunk_start = chunk.start();
 
       // Get the chunk content
       let content = if let Some(ref edited) = chunk.edited_content {
@@ -117,8 +136,7 @@ impl<'text> MagicString<'text> {
       };
 
       // Trim outro of chunk
-      let chunk = &mut self.chunks[idx];
-      if trim_deque_end(&mut chunk.outro, pattern) {
+      if trim_deque_end(&mut self.chunks[idx].outro, pattern) {
         return true;
       }
 
@@ -128,7 +146,7 @@ impl<'text> MagicString<'text> {
       if content.is_empty() {
         // Content is empty (e.g. from a remove); the intro is next in reverse output order,
         // so trim it and abort if non-whitespace remains.
-        if trim_deque_end(&mut chunk.intro, pattern) {
+        if trim_deque_end(&mut self.chunks[idx].intro, pattern) {
           return true;
         }
         chunk_idx = prev_idx;
@@ -141,16 +159,33 @@ impl<'text> MagicString<'text> {
       }
 
       if !trimmed_content.is_empty() {
-        // Partial trim - update the chunk and return
-        chunk.edited_content = Some(trimmed_content.to_string().into());
+        // Partial trim. For an unedited chunk, split at the trim boundary and blank only
+        // the whitespace half — the kept half stays *unedited*, so hires sourcemaps keep
+        // their per-character fidelity (magic-string's `Chunk.trimEnd` splits the same
+        // way). An edited chunk has no per-character mapping to preserve; storing the
+        // trimmed content is what upstream's re-edit amounts to.
+        if is_edited {
+          self.chunks[idx].edited_content = Some(trimmed_content.to_string().into());
+        } else {
+          let boundary = chunk_start + trimmed_content.len() as u32;
+          if self.split_at(boundary).is_ok() {
+            // The trailing whitespace is the second half, starting at the boundary.
+            let whitespace_idx = self.chunk_by_start[&boundary];
+            self.chunks[whitespace_idx].edited_content = Some("".into());
+          } else {
+            // Unreachable: only edited chunks refuse to split. Degrade to the whole-chunk
+            // edit rather than panicking across the FFI boundary.
+            self.chunks[idx].edited_content = Some(trimmed_content.to_string().into());
+          }
+        }
         return true;
       }
 
       // Entire content was trimmed - mark as empty
-      chunk.edited_content = Some("".into());
+      self.chunks[idx].edited_content = Some("".into());
 
       // Trim intro of this chunk - if non-whitespace remains, we're done
-      if trim_deque_end(&mut chunk.intro, pattern) {
+      if trim_deque_end(&mut self.chunks[idx].intro, pattern) {
         return true;
       }
 

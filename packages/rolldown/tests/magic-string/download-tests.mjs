@@ -135,7 +135,8 @@ const SKIP_TESTS = [
   // Note: 'should generate a correct sourcemap including correct lines' now passes —
   // mappings are padded out to the full generated line count like upstream's
   // Note: 'should generate a sourcemap using specified locations' now works (addSourcemapLocation)
-  'generates a map with trimmed content', // trim sourcemap behavior differs
+  // Note: 'generates a map with trimmed content' now passes — trim splits at the boundary
+  // and blanks only the whitespace chunk, keeping per-character mapping fidelity
   // Note: 'generates x_google_ignoreList' is now supported
   // Note: 'generates segments per word boundary with hires "boundary" in the next line' now
   // passes byte-exact — fixed by the boundary-walk fix pinned in string_wizard's

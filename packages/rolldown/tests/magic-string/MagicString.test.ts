@@ -424,7 +424,7 @@ describe('MagicString', () => {
       });
     });
 
-    it.skip('generates a map with trimmed content (#53)', () => {
+    it('generates a map with trimmed content (#53)', () => {
       const s1 = new MagicString('abcdefghijkl ').trim();
       const map1 = s1.generateMap({
         file: 'output',

@@ -109,6 +109,24 @@ fn sourcemap_location_inside_edited_chunk_has_no_effect() {
 }
 
 #[test]
+fn trim_preserves_hires_mapping_fidelity() {
+  // Trimming must not destroy per-character mappings: magic-string's `Chunk.trimStart`/
+  // `trimEnd` split at the trim boundary and blank only the whitespace chunk, keeping the
+  // content chunk unedited. Whole-chunk editing instead collapses the hires walk to a
+  // single segment. Expected strings are exactly magic-string@0.30.21's output; mirrors
+  // the conformance test "generates a map with trimmed content (#53)".
+  let mut s = MagicString::new("abcdefghijkl ");
+  s.trim(None);
+  let sm = s.source_map(SourceMapOptions { hires: Hires::True, ..Default::default() });
+  assert_eq!(sm.to_json().mappings, "AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC");
+
+  let mut s = MagicString::new(" abcdefghijkl");
+  s.trim(None);
+  let sm = s.source_map(SourceMapOptions { hires: Hires::True, ..Default::default() });
+  assert_eq!(sm.to_json().mappings, "AAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC");
+}
+
+#[test]
 fn hires_boundary_maps_word_at_start_of_next_line() {
   // The first line ends with a word char and the second starts with one.
   let s = MagicString::new("const a = 1\nconst b = 2");

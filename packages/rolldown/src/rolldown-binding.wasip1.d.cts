@@ -2327,6 +2327,19 @@ export interface BindingHookRenderChunkOutput {
   map?: BindingSourcemap | null
 }
 
+export interface BindingHookResolveFileUrlArgs {
+  /** Preliminary filename of the chunk containing the reference. */
+  chunkId: string
+  /** Filename of the emitted file, relative to the output directory. */
+  fileName: string
+  format: 'es' | 'cjs' | 'iife' | 'umd'
+  /** Id of the module containing the `import.meta.ROLLDOWN_FILE_URL_*` reference. */
+  moduleId: string
+  referenceId: string
+  /** Path from the chunk to the emitted file. */
+  relativePath: string
+}
+
 export interface BindingHookResolveIdExtraArgs {
   custom?: number
   isEntry: boolean
@@ -2598,6 +2611,8 @@ export interface BindingOutputs {
 
 export interface BindingOverwriteOptions {
   contentOnly?: boolean
+  /** Stores the replaced content in the generated sourcemap's `names` field. */
+  storeName?: boolean
 }
 
 export interface BindingPluginContextResolvedId {
@@ -2653,6 +2668,8 @@ export interface BindingPluginOptions {
   renderChunkFilter?: BindingHookFilter
   augmentChunkHash?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => MaybePromise<void | string>
   augmentChunkHashMeta?: BindingPluginHookMeta
+  resolveFileUrl?: (ctx: BindingPluginContext, args: BindingHookResolveFileUrlArgs) => MaybePromise<void | string | null>
+  resolveFileUrlMeta?: BindingPluginHookMeta
   renderStart?: (ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void
   renderStartMeta?: BindingPluginHookMeta
   renderError?: (ctx: BindingPluginContext, error: BindingError[]) => void
@@ -2939,6 +2956,8 @@ export interface BindingTsconfigResult {
 
 export interface BindingUpdateOptions {
   overwrite?: boolean
+  /** Stores the replaced content in the generated sourcemap's `names` field. */
+  storeName?: boolean
 }
 
 export interface BindingViteAliasPluginAlias {

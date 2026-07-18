@@ -6,7 +6,6 @@
   "type": "module",
   "scripts": {
     "prepare": "vp config",
-    "postinstall": "node vendor/emnapi/install.mjs",
     "lint-knip": "knip",
     "lint-publint": "pnpm run -r --aggregate-output publint",
     "build": "echo \"Use just build\"",

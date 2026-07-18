@@ -32,12 +32,12 @@ onlyBuiltDependencies:
   - tree-sitter
 
 overrides:
-  # emnapi v2 line: napi-build at a9c93cd5 unconditionally exports the emnapi v2
+  # emnapi v2 line: napi-build at ad23bdeb unconditionally exports the emnapi v2
   # env-management symbols (emnapi_create_env/emnapi_delete_env) on WASI, which
-  # only the 2.0.0-alpha C archives define. The published package misses the
-  # non-threaded wasm32-wasip1 archive; vendor/emnapi overlays it (see
-  # vendor/emnapi/README.md).
-  emnapi: 2.0.0-alpha.2
+  # only the 2.0.0-alpha C archives define. The released 2.0.0-alpha.3 ships the
+  # per-flavor napi-rs archives the pin links (non-threads
+  # `libemnapi-basic-napi-rs.a`, threads `libemnapi-napi-rs-mt.a`).
+  emnapi: 2.0.0-alpha.3
   vitepress>vite: npm:rolldown-vite@latest
 
 catalog:
@@ -139,10 +139,10 @@ minimumReleaseAgeExclude:
   - '@emnapi/core@1.11.2'
   - '@emnapi/runtime@1.11.2'
   - emnapi@1.11.2
-  - '@emnapi/core@2.0.0-alpha.2'
-  - '@emnapi/runtime@2.0.0-alpha.2'
-  - '@emnapi/wasi-threads@2.0.0'
-  - emnapi@2.0.0-alpha.2
+  - '@emnapi/core@2.0.0-alpha.3'
+  - '@emnapi/runtime@2.0.0-alpha.3'
+  - '@emnapi/wasi-threads@2.0.1'
+  - emnapi@2.0.0-alpha.3
   - '@oxc-minify/*'
   - '@oxc-parser/*'
   - '@oxc-transform/*'
@@ -156,27 +156,18 @@ minimumReleaseAgeExclude:
   - void
 
 # The published @napi-rs/wasm-runtime@1.1.6 declares @emnapi/core / @emnapi/runtime
-# ^1.7.1 peers; napi-rs at a9c93cd5 ships the same 1.1.6 runtime source with the
-# peers bumped to ^2.0.0-alpha.2 (patched below to add the @emnapi/core/plugins
+# ^1.7.1 peers; napi-rs at ad23bdeb ships the same 1.1.6 runtime source with the
+# peers bumped to ^2.0.0-alpha.3 (patched below to add the @emnapi/core/plugins
 # re-exports). Allow the v2 resolution the unpublished bump would declare.
 peerDependencyRules:
   allowedVersions:
-    '@napi-rs/wasm-runtime>@emnapi/core': 2.0.0-alpha.2
-    '@napi-rs/wasm-runtime>@emnapi/runtime': 2.0.0-alpha.2
-    '@napi-rs/cli>@emnapi/core': 2.0.0-alpha.2
-    '@napi-rs/cli>@emnapi/runtime': 2.0.0-alpha.2
+    '@napi-rs/wasm-runtime>@emnapi/core': 2.0.0-alpha.3
+    '@napi-rs/wasm-runtime>@emnapi/runtime': 2.0.0-alpha.3
+    '@napi-rs/cli>@emnapi/core': 2.0.0-alpha.3
+    '@napi-rs/cli>@emnapi/runtime': 2.0.0-alpha.3
 
 patchedDependencies:
-  # TEMP: emnapi#220 fixes unshared-memory writes after reentrant callbacks,
-  # re-targeted to the emnapi v2 line (napi-rs a9c93cd5 requires the v2 env
-  # management ABI). Ports napi-rs's .yarn/patches/@emnapi-core-npm-2.0.0-alpha.2
-  # patch plus the v1-patch fixes v2 still misses (TSFN dispatch send-on-throw,
-  # enqueue liveSet-before-exchange, reentrant-call result DataView refresh).
-  # The WASI loaders bundle this patched runtime so published consumers do not
-  # need to reproduce the workspace patch. Remove after an upstream release.
-  '@emnapi/core@2.0.0-alpha.2': patches/@emnapi__core@2.0.0-alpha.2.patch
-  '@emnapi/wasi-threads@2.0.0': patches/@emnapi__wasi-threads@2.0.0.patch
-  # TEMP: napi-rs at a9c93cd5 ships this same 1.1.6 runtime source with the
+  # TEMP: napi-rs at ad23bdeb ships this same 1.1.6 runtime source with the
   # @emnapi/core/plugins re-exports (emnapiAsyncWorkPlugin / emnapiTSFNPlugin,
   # required by the emnapi v2 plugin split) and createContext. Copy of that
   # repo's runtime.cjs / runtime.js, plus a v1-compat default: when a caller
@@ -185,19 +176,16 @@ patchedDependencies:
   # implementations, so pre-v2 callers never passed plugins). Drop once a
   # v2-ready @napi-rs/wasm-runtime is published.
   '@napi-rs/wasm-runtime@1.1.6': patches/@napi-rs__wasm-runtime@1.1.6.patch
-  # TEMP: the v2 runtime is ESM-only ("type": "module", single ESM dist), so
-  # require() yields a frozen module namespace. The generated CJS WASI loaders
-  # and the context-lifecycle test harness share one MUTABLE
-  # require('@emnapi/runtime') exports object (v1 shipped a real CJS entry).
-  # Restores that contract with a CJS facade (index.cjs) + a require condition.
-  '@emnapi/runtime@2.0.0-alpha.2': patches/@emnapi__runtime@2.0.0-alpha.2.patch
   '@napi-rs/cli@3.7.2': patches/@napi-rs__cli@3.7.2.patch
   # TEMP: vendors napi-rs#3353 (wasm32-wasip1 single-thread support incl. the
   # deferred workerd-safe loader) with per-flavor WASI artifact naming plus the
   # emnapi v2 loader migration (EMNAPI_LINK_DIR per flavor, TSFN/async-work JS
   # plugins) — see internal-docs/async-runtime/implementation.md. Regenerated
-  # from the napi pin `a9c93cd5` with its botched cli/ merge resolved to the
-  # 56e32d5c (v3.10.5 line) side for build.ts/misc.ts/metadata.ts/version.ts/
+  # from the napi pin lineage (now `ad23bdeb`, whose only cli delta over
+  # `a9c93cd5` — the Plan-A non-threads preflight archive rename to
+  # `libemnapi-basic-napi-rs.a` plus emnapi 2.0.0-alpha.3 dep bumps — is folded
+  # in) with a9c93cd5's botched cli/ merge resolved to the 56e32d5c (v3.10.5
+  # line) side for build.ts/misc.ts/metadata.ts/version.ts/
   # load-wasi-template.ts (a9c93cd5 concatenated both parents' conflict hunks
   # and does not compile; the 56e32d5c side carries the emnapi-v2 loader
   # migration). dist rebuild of dist/index.cjs + dist/index.js + dist/cli.js —

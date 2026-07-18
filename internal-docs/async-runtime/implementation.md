@@ -1527,7 +1527,8 @@ wasm32-wasip1
 --features async-runtime
 ```
 
-The napi-rs CLI changes from napi-rs#3353 link `libemnapi-basic.a`, emit
+The napi-rs CLI changes from napi-rs#3353 link `libemnapi-basic-napi-rs.a`
+(the non-threaded napi-rs flavor shipped by the released emnapi package), emit
 unshared `WebAssembly.Memory`, set `asyncWorkPoolSize: 0`, and omit Worker
 imports and factories. `packages/rolldown` keeps the threaded WASI scripts and
 adds `build-binding:wasi-single`; browser-package scripts select the
@@ -1551,10 +1552,12 @@ back-compat):
 
 Unshared memory growth detaches the previous JavaScript `ArrayBuffer`. The
 emnapi fix in emnapi#220 refreshes TSFN atomic views after event-loop turns and
-refreshes NAPI result DataViews after reentrant JavaScript calls. Rolldown
-applies the equivalent workaround through
-`patches/@emnapi__core@1.11.2.patch`. The browser package build bundles that
-patched emnapi/wasm runtime into the published `workerd.mjs` and
+refreshes NAPI result DataViews after reentrant JavaScript calls. The pinned
+`emnapi@2.0.0-alpha.3` release ships those fixes (and the `@emnapi/runtime` CJS
+entry the generated CJS WASI loaders require) upstream, so no emnapi workspace
+patches or vendored archives remain — the per-flavor napi-rs link archives come
+straight from the released package. The browser package build bundles that
+emnapi/wasm runtime into the published `workerd.mjs` and
 `workerd.browser.mjs` entries. It aliases the deferred loader's bare `buffer`
 import to the npm polyfill and bundles that implementation too; packed
 validation rejects any remaining `buffer`, `node:buffer`, emnapi, or wasm
@@ -1641,8 +1644,8 @@ mismatch before treating a reused live PID as stale. Only identities of the same
 recognized format are comparable; unavailable, unknown, or cross-format
 identities retain conservative PID-only behavior.
 
-emnapi 1.11.2 already includes the separate bound-`setImmediate` fix from
-emnapi#221.
+emnapi 2.0.0-alpha.3 already includes the separate bound-`setImmediate` fix
+from emnapi#221.
 
 The managed workerd entry must register both the runnable task host and timer
 host for every independently created instance, including callers of the root

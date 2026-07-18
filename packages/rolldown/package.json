@@ -129,8 +129,8 @@
     "@rolldown/pluginutils": "catalog:"
   },
   "devDependencies": {
-    "@emnapi/core": "2.0.0-alpha.2",
-    "@emnapi/runtime": "2.0.0-alpha.2",
+    "@emnapi/core": "2.0.0-alpha.3",
+    "@emnapi/runtime": "2.0.0-alpha.3",
     "@napi-rs/cli": "catalog:",
     "@napi-rs/wasm-runtime": "catalog:",
     "@oxc-node/cli": "catalog:",

@@ -248,14 +248,11 @@ catalogs:
       version: 8.8.5
 
 overrides:
-  emnapi: 2.0.0-alpha.2
+  emnapi: 2.0.0-alpha.3
   vitepress>vite: npm:rolldown-vite@latest
 
 patchedDependencies:
-  '@emnapi/core@2.0.0-alpha.2': 03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9
-  '@emnapi/runtime@2.0.0-alpha.2': 187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0
-  '@emnapi/wasi-threads@2.0.0': cf914102d8c9422ec44859c3037ac2804cb0882dc8b215304f8b8da0f921d770
-  '@napi-rs/cli@3.7.2': bff0db87dff294ecad23a10bb9c1e22db56db112a5611a1ad61404f5f046c203
+  '@napi-rs/cli@3.7.2': 0094f1aa5b51a10ac2b53675edd75d5b9d0d5c6440179eee193cb4fecb5ce89e
   '@napi-rs/wasm-runtime@1.1.6': 861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f
 
 importers:
@@ -316,7 +313,7 @@ importers:
     devDependencies:
       '@voidzero-dev/vitepress-theme':
         specifier: ^4.8.4
-        version: 4.8.4(change-case@5.4.4)(focus-trap@8.2.1)(vite@8.1.3(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.39(typescript@6.0.3))
+        version: 4.8.4(change-case@5.4.4)(focus-trap@8.2.1)(vite@8.1.3(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.39(typescript@6.0.3))
       oxc-minify:
         specifier: 'catalog:'
         version: 0.140.0
@@ -334,13 +331,13 @@ importers:
         version: 1.1.3(typedoc-plugin-markdown@4.12.0(typedoc@0.28.19(typescript@6.0.3)))
       vitepress:
         specifier: ^2.0.0-alpha.17
-        version: 2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)
+        version: 2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)
       vitepress-plugin-feedback-tracker:
         specifier: ^0.2.0-alpha.1
-        version: 0.2.0-alpha.1(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.39(typescript@6.0.3))
+        version: 0.2.0-alpha.1(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.39(typescript@6.0.3))
       vitepress-plugin-graphviz:
         specifier: ^0.1.0
-        version: 0.1.0(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0))
+        version: 0.1.0(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0))
       vitepress-plugin-group-icons:
         specifier: ^1.7.5
         version: 1.7.5(vite@8.1.3(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
@@ -349,7 +346,7 @@ importers:
         version: 1.13.2
       vitepress-plugin-og:
         specifier: ^0.0.5
-        version: 0.0.5(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0))
+        version: 0.0.5(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0))
       void:
         specifier: ^0.10.8
         version: 0.10.8(arktype@2.2.0)(kysely@0.29.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(valibot@1.4.2(typescript@6.0.3))(vite@8.1.3(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))(vitest@4.1.9)(vue@3.5.39(typescript@6.0.3))(workerd@1.20260701.1)(zod@4.4.3)
@@ -548,17 +545,17 @@ importers:
         version: 1.0.1
     devDependencies:
       '@emnapi/core':
-        specifier: 2.0.0-alpha.2
-        version: 2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9)
+        specifier: 2.0.0-alpha.3
+        version: 2.0.0-alpha.3
       '@emnapi/runtime':
-        specifier: 2.0.0-alpha.2
-        version: 2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0)
+        specifier: 2.0.0-alpha.3
+        version: 2.0.0-alpha.3
       '@napi-rs/cli':
         specifier: 'catalog:'
-        version: 3.7.2(patch_hash=bff0db87dff294ecad23a10bb9c1e22db56db112a5611a1ad61404f5f046c203)(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(supports-color@8.1.1)
+        version: 3.7.2(patch_hash=0094f1aa5b51a10ac2b53675edd75d5b9d0d5c6440179eee193cb4fecb5ce89e)(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(supports-color@8.1.1)
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
-        version: 1.1.6(patch_hash=861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f)(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
+        version: 1.1.6(patch_hash=861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f)(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.1.0
@@ -1028,7 +1025,7 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: 'catalog:'
-        version: 3.7.2(patch_hash=bff0db87dff294ecad23a10bb9c1e22db56db112a5611a1ad61404f5f046c203)(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.2)(@types/node@24.10.3)
+        version: 3.7.2(patch_hash=0094f1aa5b51a10ac2b53675edd75d5b9d0d5c6440179eee193cb4fecb5ce89e)(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.2)(@types/node@24.10.3)
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.1.0
@@ -1833,8 +1830,8 @@ packages:
   '@emnapi/core@1.9.1':
     resolution: {integrity: sha512-mukuNALVsoix/w1BJwFzwXBN/dHeejQtuVzcDsfOEsdpCumXb/E9j8w11h5S54tT1xhifGfbbSm/ICrObRb3KA==}
 
-  '@emnapi/core@2.0.0-alpha.2':
-    resolution: {integrity: sha512-0ioC02NRioay0mtikGTFB7J1hj/wvc28Jf3nYskEa/nCO9vCzOC41p22KaQ58OWdd/QNgaNp/TrSbBRJhjz/5Q==}
+  '@emnapi/core@2.0.0-alpha.3':
+    resolution: {integrity: sha512-AZypUeJ/yByuxyS7BlSNRDOMLMlROYtjYdIAuBmJssVz1UJDSeYxLrdizhXCFYhedC5bqd/ASy8EuNXbVVXp9g==}
 
   '@emnapi/runtime@1.11.0':
     resolution: {integrity: sha512-55coeOFKHv1ywEcUXJtWU5f+Jr/W5tZDvZig8DLKSwUN1JpROQ4rk/SNOQiFWmaR/VKF4zuFyW1B8JduOSv6Pg==}
@@ -1848,8 +1845,8 @@ packages:
   '@emnapi/runtime@1.9.1':
     resolution: {integrity: sha512-VYi5+ZVLhpgK4hQ0TAjiQiZ6ol0oe4mBx7mVv7IflsiEp0OWoVsp/+f9Vc1hOhE0TtkORVrI1GvzyreqpgWtkA==}
 
-  '@emnapi/runtime@2.0.0-alpha.2':
-    resolution: {integrity: sha512-/9J2lgnfjETAmYsqkTBoqczuSDwHiNRhlvSnVLyIi4X4skchHvIUTvM8YKmR5PE8A8Heryyla5+pvOtV635RMw==}
+  '@emnapi/runtime@2.0.0-alpha.3':
+    resolution: {integrity: sha512-hFPAhMUjJD9BSyCANEISPOogeXC9Zo9ZQl7L6vKnaVsMkCtzznaW/naYypeyl0Gv5rYfWYsZbpixTMpjDJzQeA==}
 
   '@emnapi/wasi-threads@1.2.0':
     resolution: {integrity: sha512-N10dEJNSsUx41Z6pZsXU8FjPjpBEplgH24sfkmITrBED1/U2Esum9F3lfLrMjKHHjmi557zQn7kR9R+XWXu5Rg==}
@@ -1857,8 +1854,8 @@ packages:
   '@emnapi/wasi-threads@1.2.2':
     resolution: {integrity: sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA==}
 
-  '@emnapi/wasi-threads@2.0.0':
-    resolution: {integrity: sha512-GEmt/pnE23JTCIgXatmwMquncl0ZRkKq5IyOdodgozEPKtSBWWqh6hw1Qr376WN35kz80OLO7qUR4wYnx7VbBg==}
+  '@emnapi/wasi-threads@2.0.1':
+    resolution: {integrity: sha512-9DsSk+o5NBX0CCJT8s0EROGSGxjR/tKu6aBTaVyq+SjAEQH4XcdcRxPBRzsBLizTTJ49MJjF+jgu3qnO9GLQcQ==}
 
   '@emotion/is-prop-valid@1.2.2':
     resolution: {integrity: sha512-uNsoYd37AFmaCdXlg6EYD1KaPOaRWRByMCYzbKUX4+hhMfrxdVSelShywL4JVaAeM/eHUOSprYBQls+/neX3pw==}
@@ -6309,8 +6306,8 @@ packages:
   electron-to-chromium@1.5.372:
     resolution: {integrity: sha512-M3yhbAlilnwqC8D21t28UCDGHyitShTmmLRU/H+b74P6Ski16Nb9HONYEaVpMj/pwC7BEo5B95FpjODLCWbtfA==}
 
-  emnapi@2.0.0-alpha.2:
-    resolution: {integrity: sha512-Kv0pJlNKOS2/4JSMemRQpuER18nZ2N9yfS1enTw1ma1GxB3WTyV7Tw9N+YiKxwhMfZZPCVpPH5vPWOXanSRUXw==}
+  emnapi@2.0.0-alpha.3:
+    resolution: {integrity: sha512-K9bc9Xx4OwSfhJpdSOpcfIKzn7/6emuubaIorf6I5e7WBAM79665rf6iHr9y50NL4qYMUP/AheTpD1Z4yU1EBw==}
     peerDependencies:
       node-addon-api: '>= 6.1.0'
     peerDependenciesMeta:
@@ -10197,9 +10194,9 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9)':
+  '@emnapi/core@2.0.0-alpha.3':
     dependencies:
-      '@emnapi/wasi-threads': 2.0.0(patch_hash=cf914102d8c9422ec44859c3037ac2804cb0882dc8b215304f8b8da0f921d770)
+      '@emnapi/wasi-threads': 2.0.1
       tslib: 2.8.1
 
   '@emnapi/runtime@1.11.0':
@@ -10222,7 +10219,7 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0)':
+  '@emnapi/runtime@2.0.0-alpha.3':
     dependencies:
       tslib: 2.8.1
 
@@ -10236,7 +10233,7 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@emnapi/wasi-threads@2.0.0(patch_hash=cf914102d8c9422ec44859c3037ac2804cb0882dc8b215304f8b8da0f921d770)':
+  '@emnapi/wasi-threads@2.0.1':
     dependencies:
       tslib: 2.8.1
 
@@ -10880,7 +10877,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@napi-rs/cli@3.7.2(patch_hash=bff0db87dff294ecad23a10bb9c1e22db56db112a5611a1ad61404f5f046c203)(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.2)(@types/node@24.10.3)':
+  '@napi-rs/cli@3.7.2(patch_hash=0094f1aa5b51a10ac2b53675edd75d5b9d0d5c6440179eee193cb4fecb5ce89e)(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.2)(@types/node@24.10.3)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@24.10.3)
       '@napi-rs/cross-toolchain': 1.0.3(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.2)
@@ -10888,7 +10885,7 @@ snapshots:
       '@octokit/rest': 22.0.1
       clipanion: 4.0.0-rc.4(typanion@3.14.0)
       colorette: 2.0.20
-      emnapi: 2.0.0-alpha.2
+      emnapi: 2.0.0-alpha.3
       es-toolkit: 1.47.0
       js-yaml: 4.3.0
       obug: 2.1.3
@@ -10912,22 +10909,22 @@ snapshots:
       - node-addon-api
       - supports-color
 
-  '@napi-rs/cli@3.7.2(patch_hash=bff0db87dff294ecad23a10bb9c1e22db56db112a5611a1ad61404f5f046c203)(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(supports-color@8.1.1)':
+  '@napi-rs/cli@3.7.2(patch_hash=0094f1aa5b51a10ac2b53675edd75d5b9d0d5c6440179eee193cb4fecb5ce89e)(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(supports-color@8.1.1)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@24.10.3)
-      '@napi-rs/cross-toolchain': 1.0.3(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(supports-color@8.1.1)
-      '@napi-rs/wasm-tools': 1.0.1(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
+      '@napi-rs/cross-toolchain': 1.0.3(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(supports-color@8.1.1)
+      '@napi-rs/wasm-tools': 1.0.1(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
       '@octokit/rest': 22.0.1
       clipanion: 4.0.0-rc.4(typanion@3.14.0)
       colorette: 2.0.20
-      emnapi: 2.0.0-alpha.2
+      emnapi: 2.0.0-alpha.3
       es-toolkit: 1.47.0
       js-yaml: 4.3.0
       obug: 2.1.3
       semver: 7.8.5
       typanion: 3.14.0
     optionalDependencies:
-      '@emnapi/runtime': 2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0)
+      '@emnapi/runtime': 2.0.0-alpha.3
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@napi-rs/cross-toolchain-arm64-target-aarch64'
@@ -10954,10 +10951,10 @@ snapshots:
       - '@emnapi/runtime'
       - supports-color
 
-  '@napi-rs/cross-toolchain@1.0.3(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(supports-color@8.1.1)':
+  '@napi-rs/cross-toolchain@1.0.3(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(supports-color@8.1.1)':
     dependencies:
-      '@napi-rs/lzma': 1.4.5(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
-      '@napi-rs/tar': 1.1.0(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
+      '@napi-rs/lzma': 1.4.5(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
+      '@napi-rs/tar': 1.1.0(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
       - '@emnapi/core'
@@ -11062,9 +11059,9 @@ snapshots:
       - '@emnapi/runtime'
     optional: true
 
-  '@napi-rs/lzma-wasm32-wasi@1.4.5(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))':
+  '@napi-rs/lzma-wasm32-wasi@1.4.5(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.6(patch_hash=861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f)(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
+      '@napi-rs/wasm-runtime': 1.1.6(patch_hash=861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f)(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -11102,7 +11099,7 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  '@napi-rs/lzma@1.4.5(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))':
+  '@napi-rs/lzma@1.4.5(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)':
     optionalDependencies:
       '@napi-rs/lzma-android-arm-eabi': 1.4.5
       '@napi-rs/lzma-android-arm64': 1.4.5
@@ -11117,7 +11114,7 @@ snapshots:
       '@napi-rs/lzma-linux-s390x-gnu': 1.4.5
       '@napi-rs/lzma-linux-x64-gnu': 1.4.5
       '@napi-rs/lzma-linux-x64-musl': 1.4.5
-      '@napi-rs/lzma-wasm32-wasi': 1.4.5(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
+      '@napi-rs/lzma-wasm32-wasi': 1.4.5(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
       '@napi-rs/lzma-win32-arm64-msvc': 1.4.5
       '@napi-rs/lzma-win32-ia32-msvc': 1.4.5
       '@napi-rs/lzma-win32-x64-msvc': 1.4.5
@@ -11169,9 +11166,9 @@ snapshots:
       - '@emnapi/runtime'
     optional: true
 
-  '@napi-rs/tar-wasm32-wasi@1.1.0(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))':
+  '@napi-rs/tar-wasm32-wasi@1.1.0(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.6(patch_hash=861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f)(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
+      '@napi-rs/wasm-runtime': 1.1.6(patch_hash=861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f)(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -11208,7 +11205,7 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  '@napi-rs/tar@1.1.0(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))':
+  '@napi-rs/tar@1.1.0(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)':
     optionalDependencies:
       '@napi-rs/tar-android-arm-eabi': 1.1.0
       '@napi-rs/tar-android-arm64': 1.1.0
@@ -11222,7 +11219,7 @@ snapshots:
       '@napi-rs/tar-linux-s390x-gnu': 1.1.0
       '@napi-rs/tar-linux-x64-gnu': 1.1.0
       '@napi-rs/tar-linux-x64-musl': 1.1.0
-      '@napi-rs/tar-wasm32-wasi': 1.1.0(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
+      '@napi-rs/tar-wasm32-wasi': 1.1.0(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
       '@napi-rs/tar-win32-arm64-msvc': 1.1.0
       '@napi-rs/tar-win32-ia32-msvc': 1.1.0
       '@napi-rs/tar-win32-x64-msvc': 1.1.0
@@ -11265,10 +11262,10 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
-  '@napi-rs/wasm-runtime@1.1.6(patch_hash=861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f)(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))':
+  '@napi-rs/wasm-runtime@1.1.6(patch_hash=861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f)(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)':
     dependencies:
-      '@emnapi/core': 2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9)
-      '@emnapi/runtime': 2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0)
+      '@emnapi/core': 2.0.0-alpha.3
+      '@emnapi/runtime': 2.0.0-alpha.3
       '@tybys/wasm-util': 0.10.3
 
   '@napi-rs/wasm-tools-android-arm-eabi@1.0.1':
@@ -11306,9 +11303,9 @@ snapshots:
       - '@emnapi/runtime'
     optional: true
 
-  '@napi-rs/wasm-tools-wasm32-wasi@1.0.1(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))':
+  '@napi-rs/wasm-tools-wasm32-wasi@1.0.1(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.6(patch_hash=861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f)(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
+      '@napi-rs/wasm-runtime': 1.1.6(patch_hash=861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f)(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -11342,7 +11339,7 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  '@napi-rs/wasm-tools@1.0.1(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))':
+  '@napi-rs/wasm-tools@1.0.1(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)':
     optionalDependencies:
       '@napi-rs/wasm-tools-android-arm-eabi': 1.0.1
       '@napi-rs/wasm-tools-android-arm64': 1.0.1
@@ -11353,7 +11350,7 @@ snapshots:
       '@napi-rs/wasm-tools-linux-arm64-musl': 1.0.1
       '@napi-rs/wasm-tools-linux-x64-gnu': 1.0.1
       '@napi-rs/wasm-tools-linux-x64-musl': 1.0.1
-      '@napi-rs/wasm-tools-wasm32-wasi': 1.0.1(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
+      '@napi-rs/wasm-tools-wasm32-wasi': 1.0.1(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
       '@napi-rs/wasm-tools-win32-arm64-msvc': 1.0.1
       '@napi-rs/wasm-tools-win32-ia32-msvc': 1.0.1
       '@napi-rs/wasm-tools-win32-x64-msvc': 1.0.1
@@ -12341,9 +12338,9 @@ snapshots:
   '@rolldown/binding-openharmony-arm64@1.1.4':
     optional: true
 
-  '@rolldown/binding-wasm32-wasi@1.0.0-beta.53(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))':
+  '@rolldown/binding-wasm32-wasi@1.0.0-beta.53(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.6(patch_hash=861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f)(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
+      '@napi-rs/wasm-runtime': 1.1.6(patch_hash=861e316ab12a5c7b9db3dfe5ef1d8de026da3b9b58093e8ee27593e51d72fb6f)(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -12766,10 +12763,10 @@ snapshots:
 
   '@ungap/structured-clone@1.3.1': {}
 
-  '@vitejs/plugin-vue@6.0.7(rolldown-vite@7.3.1(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))(vue@3.5.39(typescript@6.0.3))':
+  '@vitejs/plugin-vue@6.0.7(rolldown-vite@7.3.1(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))(vue@3.5.39(typescript@6.0.3))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: rolldown-vite@7.3.1(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
+      vite: rolldown-vite@7.3.1(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
       vue: 3.5.39(typescript@6.0.3)
 
   '@vitest/browser-preview@4.1.9(vite@8.1.3(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))(vitest@4.1.9)':
@@ -12923,7 +12920,7 @@ snapshots:
   '@voidzero-dev/vite-plus-win32-x64-msvc@0.2.2':
     optional: true
 
-  '@voidzero-dev/vitepress-theme@4.8.4(change-case@5.4.4)(focus-trap@8.2.1)(vite@8.1.3(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.39(typescript@6.0.3))':
+  '@voidzero-dev/vitepress-theme@4.8.4(change-case@5.4.4)(focus-trap@8.2.1)(vite@8.1.3(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.39(typescript@6.0.3))':
     dependencies:
       '@docsearch/css': 4.6.3
       '@docsearch/js': 4.6.3
@@ -12940,7 +12937,7 @@ snapshots:
       minisearch: 7.2.0
       reka-ui: 2.9.9(vue@3.5.39(typescript@6.0.3))
       tailwindcss: 4.3.0
-      vitepress: 2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)
+      vitepress: 2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)
       vue: 3.5.39(typescript@6.0.3)
     transitivePeerDependencies:
       - '@vue/composition-api'
@@ -13667,7 +13664,7 @@ snapshots:
 
   electron-to-chromium@1.5.372: {}
 
-  emnapi@2.0.0-alpha.2: {}
+  emnapi@2.0.0-alpha.3: {}
 
   emoji-regex@8.0.0: {}
 
@@ -15370,14 +15367,14 @@ snapshots:
     transitivePeerDependencies:
       - oxc-resolver
 
-  rolldown-vite@7.3.1(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0):
+  rolldown-vite@7.3.1(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0):
     dependencies:
       '@oxc-project/runtime': 0.101.0
       fdir: 6.5.0(picomatch@4.0.5)
       lightningcss: 1.32.0
       picomatch: 4.0.5
       postcss: 8.5.16
-      rolldown: 1.0.0-beta.53(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
+      rolldown: 1.0.0-beta.53(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
       tinyglobby: 0.2.17
     optionalDependencies:
       '@types/node': 24.10.3
@@ -15391,7 +15388,7 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  rolldown@1.0.0-beta.53(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0)):
+  rolldown@1.0.0-beta.53(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3):
     dependencies:
       '@oxc-project/types': 0.101.0
       '@rolldown/pluginutils': 1.0.0-beta.53
@@ -15406,7 +15403,7 @@ snapshots:
       '@rolldown/binding-linux-x64-gnu': 1.0.0-beta.53
       '@rolldown/binding-linux-x64-musl': 1.0.0-beta.53
       '@rolldown/binding-openharmony-arm64': 1.0.0-beta.53
-      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.53(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))
+      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.53(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
       '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.53
       '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.53
     transitivePeerDependencies:
@@ -16099,15 +16096,15 @@ snapshots:
       tsx: 4.23.0
       yaml: 2.9.0
 
-  vitepress-plugin-feedback-tracker@0.2.0-alpha.1(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.39(typescript@6.0.3)):
+  vitepress-plugin-feedback-tracker@0.2.0-alpha.1(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.39(typescript@6.0.3)):
     dependencies:
-      vitepress: 2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)
+      vitepress: 2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)
       vue: 3.5.39(typescript@6.0.3)
 
-  vitepress-plugin-graphviz@0.1.0(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)):
+  vitepress-plugin-graphviz@0.1.0(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)):
     dependencies:
       '@hpcc-js/wasm-graphviz': 1.22.0
-      vitepress: 2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)
+      vitepress: 2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)
 
   vitepress-plugin-group-icons@1.7.5(vite@8.1.3(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)):
     dependencies:
@@ -16136,13 +16133,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  vitepress-plugin-og@0.0.5(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)):
+  vitepress-plugin-og@0.0.5(vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)):
     dependencies:
       sharp: 0.34.5
       ufo: 1.6.4
-      vitepress: 2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)
+      vitepress: 2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0)
 
-  vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0):
+  vitepress@2.0.0-alpha.17(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.140.0)(postcss@8.5.16)(terser@5.48.0)(tsx@4.23.0)(typescript@6.0.3)(yaml@2.9.0):
     dependencies:
       '@docsearch/css': 4.6.3
       '@docsearch/js': 4.6.3
@@ -16152,7 +16149,7 @@ snapshots:
       '@shikijs/transformers': 3.23.0
       '@shikijs/types': 3.23.0
       '@types/markdown-it': 14.1.2
-      '@vitejs/plugin-vue': 6.0.7(rolldown-vite@7.3.1(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))(vue@3.5.39(typescript@6.0.3))
+      '@vitejs/plugin-vue': 6.0.7(rolldown-vite@7.3.1(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))(vue@3.5.39(typescript@6.0.3))
       '@vue/devtools-api': 8.1.2
       '@vue/shared': 3.5.39
       '@vueuse/core': 14.3.0(vue@3.5.39(typescript@6.0.3))
@@ -16161,7 +16158,7 @@ snapshots:
       mark.js: 8.11.1
       minisearch: 7.2.0
       shiki: 3.23.0
-      vite: rolldown-vite@7.3.1(@emnapi/core@2.0.0-alpha.2(patch_hash=03da4e369a11977fac51e3b8bd5e685887c3d480f16cb994ea0acbdb705e34f9))(@emnapi/runtime@2.0.0-alpha.2(patch_hash=187a65ce06dbe22516a42ca07f184f3f0f9d35bf81c5604d1d4832a6f6da7bc0))(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
+      vite: rolldown-vite@7.3.1(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
       vue: 3.5.39(typescript@6.0.3)
     optionalDependencies:
       oxc-minify: 0.140.0

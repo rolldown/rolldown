@@ -332,19 +332,22 @@ debug = "full"
 strip = "none"
 
 [patch.crates-io]
-# integration/rolldown-non-threaded-wasi-napi3 head (a9c93cd5) merges the rebased
+# integration/rolldown-non-threaded-wasi-napi3 head (ad23bdeb) merges the rebased
 # napi stack (crates/napi v3.10.5, the merged SPI + #3353/#3393) INTO rolldown's
 # rich async-runtime SPI. rolldown_binding hard-depends on that rich SPI —
 # fallible try_start/try_shutdown_async_runtime, TokioRuntimeRetirementWaiter,
 # primitive-value boxing on promise rejection, and graceful ThreadsafeFunction
-# release on napi_closing — which the pure #3393 head (56e32d5c) dropped. One rev
+# release on napi_closing — which the pure #3393 head (56e32d5c) dropped. On WASI,
+# napi-build at this rev links the emnapi archives shipped by the released
+# `emnapi@2.0.0-alpha.3` npm package (non-threads `libemnapi-basic-napi-rs.a`,
+# threads `libemnapi-napi-rs-mt.a`); no vendored archives are needed. One rev
 # covers both the napi core crates here and the napi-async-runtime crate pinned in
 # rolldown_utils/Cargo.toml (consumed napi-free), so the whole napi graph is unified
 # on a single rev.
-napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "a9c93cd5bc4bae7ef3e9edffea0e6e8819c1d7fe" }
-napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "a9c93cd5bc4bae7ef3e9edffea0e6e8819c1d7fe" }
-napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "a9c93cd5bc4bae7ef3e9edffea0e6e8819c1d7fe" }
-napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "a9c93cd5bc4bae7ef3e9edffea0e6e8819c1d7fe" }
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
 
 # Redirect Oxc's napi binding crates onto a 0.140.0-based branch that drops the
 # forced `tokio_rt` feature (oxc-project/oxc PR #24475, backported to the

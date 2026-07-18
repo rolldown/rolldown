@@ -132,7 +132,8 @@ const SKIP_TESTS = [
   // real TypeError)
   // Note: 'should support length' and 'should support isEmpty' now work correctly
   // generateMap-specific skips (features not in string_wizard)
-  'should generate a correct sourcemap including correct lines', // uses generateDecodedMap which has different mappings count
+  // Note: 'should generate a correct sourcemap including correct lines' now passes —
+  // mappings are padded out to the full generated line count like upstream's
   // Note: 'should generate a sourcemap using specified locations' now works (addSourcemapLocation)
   'generates a map with trimmed content', // trim sourcemap behavior differs
   // Note: 'generates x_google_ignoreList' is now supported

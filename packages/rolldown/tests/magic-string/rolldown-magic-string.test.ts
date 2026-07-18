@@ -701,6 +701,28 @@ describe('addSourcemapLocation', () => {
   });
 });
 
+describe('generateMap trailing lines', () => {
+  // Upstream's mappings cover every generated line — its advance() extends the per-line
+  // array past the last token (e.g. an appended outro full of newlines); a token-derived
+  // encoding would stop early. All expected values verified against magic-string 0.30.21.
+  it('keeps trailing token-less lines in encoded and decoded mappings', () => {
+    const s = new MagicString('abc');
+    s.append('\n\n');
+    assert.strictEqual(s.generateMap({ source: 'i.js' }).mappings, 'AAAA;;');
+    assert.deepStrictEqual(s.generateDecodedMap({ source: 'i.js' }).mappings, [
+      [[0, 0, 0, 0]],
+      [],
+      [],
+    ]);
+  });
+
+  it('represents an empty source as a single empty line, like upstream', () => {
+    const s = new MagicString('');
+    assert.strictEqual(s.generateMap({ source: 'i.js' }).mappings, '');
+    assert.deepStrictEqual(s.generateDecodedMap({ source: 'i.js' }).mappings, [[]]);
+  });
+});
+
 describe('TypeError parity for non-string content', () => {
   // Upstream throws TypeError with these exact messages before doing anything else; napi
   // argument conversion would produce a generic Error instead, so the JS wrapper in

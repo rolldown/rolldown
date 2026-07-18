@@ -144,6 +144,17 @@ impl<'text> MagicString<'text> {
       + self.outro.iter().map(|f| f.len()).sum::<usize>()
   }
 
+  /// Number of lines in the generated output (newline count + 1), computed without
+  /// materializing the string. Sourcemap consumers use this to pad `mappings` out to the
+  /// full output: `magic-string`'s mappings cover every generated line — its `advance()`
+  /// extends the per-line array past the last mapped token — while a token-derived encoding
+  /// stops at the last token and loses trailing token-less lines.
+  pub fn generated_line_count(&self) -> usize {
+    let newlines: usize =
+      self.fragments().map(|f| memchr::memchr_iter(b'\n', f.as_bytes()).count()).sum();
+    newlines + 1
+  }
+
   /// Returns `true` if all chunk content (intro + content + outro) is whitespace or empty.
   /// This aligns with the reference `magic-string` behavior where `isEmpty()` uses `.trim()`.
   pub fn is_empty(&self) -> bool {

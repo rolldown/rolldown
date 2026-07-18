@@ -260,11 +260,25 @@ pub struct BindingSourceMap {
   json: JSONSourceMap,
 }
 
+/// magic-string's `mappings` cover every generated line, including trailing token-less ones
+/// (its `advance()` extends the per-line mappings array past the last token); oxc's encoder
+/// stops at the last token. Pad with trailing `;` so the encoded string is line-for-line
+/// identical to upstream's.
+fn pad_mappings_to_line_count(mappings: &mut String, total_lines: usize) {
+  let represented_lines = mappings.matches(';').count() + 1;
+  for _ in represented_lines..total_lines {
+    mappings.push(';');
+  }
+}
+
 /// A decoded source map with mappings as an array of arrays instead of VLQ-encoded string.
 #[napi]
 pub struct BindingDecodedMap {
   inner: SourceMap,
   json: JSONSourceMap,
+  /// Total generated line count, so `mappings` can pad out trailing token-less lines the
+  /// way upstream's per-line array does. See [`pad_mappings_to_line_count`].
+  generated_line_count: usize,
 }
 
 #[napi]
@@ -366,6 +380,7 @@ impl BindingDecodedMap {
 
   /// The decoded mappings as an array of line arrays.
   /// Each line is an array of segments, where each segment is [generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex?].
+  /// One entry per generated line, like upstream — trailing token-less lines are empty arrays.
   #[napi(getter)]
   pub fn mappings(&self) -> Vec<Vec<Vec<i64>>> {
     let mut lines: Vec<Vec<Vec<i64>>> = Vec::new();
@@ -391,6 +406,13 @@ impl BindingDecodedMap {
       }
 
       lines[current_line as usize].push(segment);
+    }
+
+    // Trailing token-less lines (e.g. an appended outro full of newlines) still get an
+    // entry each, matching upstream's per-line array. This also covers the empty-source
+    // case, where upstream returns `[[]]` rather than `[]`.
+    while lines.len() < self.generated_line_count {
+      lines.push(Vec::new());
     }
 
     lines
@@ -1305,7 +1327,9 @@ impl BindingMagicString<'_> {
       source_map
     };
 
-    Ok(BindingSourceMap { json: source_map.to_json() })
+    let mut json = source_map.to_json();
+    pad_mappings_to_line_count(&mut json.mappings, self.inner.generated_line_count());
+    Ok(BindingSourceMap { json })
   }
 
   /// Generates a decoded source map for the transformations applied to this MagicString.
@@ -1347,8 +1371,10 @@ impl BindingMagicString<'_> {
       source_map
     };
 
-    let json = source_map.to_json();
-    Ok(BindingDecodedMap { inner: source_map, json })
+    let generated_line_count = self.inner.generated_line_count();
+    let mut json = source_map.to_json();
+    pad_mappings_to_line_count(&mut json.mappings, generated_line_count);
+    Ok(BindingDecodedMap { inner: source_map, json, generated_line_count })
   }
 }
 

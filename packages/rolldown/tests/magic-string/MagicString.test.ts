@@ -280,7 +280,7 @@ describe('MagicString', () => {
       assert.equal(originLoc.column, 0);
     });
 
-    it.skip('should generate a correct sourcemap including correct lines', () => {
+    it('should generate a correct sourcemap including correct lines', () => {
       const s = new MagicString('var answer = 42;\nconsole.log("the answer is %s", answer);');
       s.append('\n\n\n\n}).call(global);');
       assert.equal(

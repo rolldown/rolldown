@@ -1549,6 +1549,7 @@ export declare class BindingDecodedMap {
   /**
    * The decoded mappings as an array of line arrays.
    * Each line is an array of segments, where each segment is [generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex?].
+   * One entry per generated line, like upstream — trailing token-less lines are empty arrays.
    */
   get mappings(): Array<Array<Array<number>>>
   /** The list of source indices that should be excluded from debugging. */

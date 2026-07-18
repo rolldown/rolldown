@@ -180,7 +180,11 @@ impl GenerateStage<'_> {
     // The at-risk set is monotone and finite; this bound only guards against a logic error.
     let iteration_cap = self.link_output.module_table.modules.len() + 1;
     let mut iterations = 0usize;
-    loop {
+    // The converged round's post-lowering edges are the ones the facade gate must see (see the
+    // `import_edges` field return below): the fixpoint recomputes them every round and, before this
+    // change, threw them all away, so `create_order_wrap_entry_facades` gated on the pre-lowering
+    // baseline and missed edges that only lowering mints.
+    let final_post_edges = loop {
       // Project the chunk edges the current plan's lowering will add — the `init_*` forwarding
       // imports of wrapped modules — on top of the pre-lowering baseline, then find the chunk
       // cycles those emergent edges close.
@@ -214,7 +218,9 @@ impl GenerateStage<'_> {
         )
       });
       if added == 0 {
-        break;
+        // Converged: `post_edges` here already includes the final plan's lowering-added imports and
+        // closes no further cycle, so it is the exact edge set the facade gate needs.
+        break post_edges;
       }
       plan = self.build_order_wrap_plan(
         all_at_risk.clone(),
@@ -225,7 +231,7 @@ impl GenerateStage<'_> {
         &reverse_static_imports,
       );
       assert!(iterations < iteration_cap, "order-wrap emergent-cycle fixpoint did not converge");
-    }
+    };
     order_debug_trace(|| {
       format!(
         "[order] fixpoint converged in {iterations} iteration(s): {} modules planned (+{} over the one-shot plan)",
@@ -239,7 +245,16 @@ impl GenerateStage<'_> {
       planned_modules = plan.len(),
       "emergent-cycle fixpoint converged"
     );
-    Some(OrderAnalysis { plan, import_edges, on_demand: true })
+    // Return the converged *post-lowering* edges, not the pre-lowering `import_edges` baseline.
+    // The only consumer is `create_order_wrap_entry_facades`, whose gate splits an interop-wrapped
+    // entry into a facade when another chunk imports the entry's chunk. Lowering can mint the first
+    // such edge itself — e.g. an `init_*` forward through an excluded re-export hop into the entry's
+    // host chunk — and when that edge closes no cycle the fixpoint converges without revisiting the
+    // facade decision, so a baseline-only gate would leave the entry's inline trigger in place and
+    // run its whole program when the importing chunk loads. Post-lowering edges are a superset of the
+    // baseline, and more facades are always legal (wrap-all splits unconditionally), so feeding the
+    // gate the final edges only ever adds correct facades.
+    Some(OrderAnalysis { plan, import_edges: final_post_edges, on_demand: true })
   }
 
   /// Project the chunk-level static import edges the lowering of `plan` will produce, as the

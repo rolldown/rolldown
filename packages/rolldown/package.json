@@ -100,8 +100,8 @@
     "build-binding": "oxnode ./build-binding.ts",
     "build-binding:release": "pnpm build-binding --release",
     "build-binding:profile": "pnpm build-binding --profile profile --features chrome-tracing",
-    "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
-    "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
+    "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads --no-default-features --features tokio-runtime",
+    "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads --no-default-features --features tokio-runtime",
     "# Scrips for node #": "_",
     "build-node": "node --enable-source-maps --import @oxc-node/core/register -C dev ./build.ts",
     "build-types-check": "tsc -p ./tsconfig.check.json",
@@ -123,6 +123,8 @@
     "@rolldown/pluginutils": "catalog:"
   },
   "devDependencies": {
+    "@emnapi/core": "2.0.0-alpha.3",
+    "@emnapi/runtime": "2.0.0-alpha.3",
     "@napi-rs/cli": "catalog:",
     "@napi-rs/wasm-runtime": "catalog:",
     "@oxc-node/cli": "catalog:",

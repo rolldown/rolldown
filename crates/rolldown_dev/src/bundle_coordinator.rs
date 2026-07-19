@@ -6,14 +6,16 @@ use std::{
 
 use anyhow::Context;
 use arcstr::ArcStr;
-use futures::FutureExt;
+use async_lock::Mutex;
+use futures::{FutureExt, StreamExt};
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
-use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap, pattern_filter};
+use rolldown_utils::{
+  dashmap::FxDashSet, futures::spawn_detached, indexmap::FxIndexMap, pattern_filter,
+};
 use sugar_path::SugarPath;
-use tokio::sync::Mutex;
 
 use rolldown::Bundler;
 
@@ -98,7 +100,7 @@ impl BundleCoordinator {
       }
     }
     tracing::trace!("[BundleCoordinator] starts running\n - state: {:?}", self.state);
-    while let Some(msg) = self.rx.recv().await {
+    while let Some(msg) = self.rx.next().await {
       tracing::trace!("[BundleCoordinator] received message\n - message: {msg:#?}");
       match msg {
         CoordinatorMsg::WatchEvent(watch_event) => {
@@ -383,7 +385,7 @@ impl BundleCoordinator {
             self.set_initial_build_state(CoordinatorState::InProgress);
           }
           let bundling_future = (Box::pin(bundling_task.run()) as PinBoxSendStaticFuture).shared();
-          tokio::spawn(bundling_future.clone());
+          spawn_detached(bundling_future.clone());
 
           self.current_bundling_future = Some(bundling_future.clone());
 

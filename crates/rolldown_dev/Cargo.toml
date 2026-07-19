@@ -24,6 +24,7 @@ testing = []
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
+async-lock = { workspace = true }
 futures = { workspace = true }
 rolldown = { workspace = true, features = ["experimental"] }
 rolldown-notify = { workspace = true }
@@ -34,8 +35,10 @@ rolldown_fs_watcher = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
 tracing = { workspace = true }
 
 [dev-dependencies]
 rolldown_workspace = { workspace = true }
+# tokio backs examples/dev.rs's #[tokio::main]; production code runs on the
+# runtime-agnostic facade.
+tokio = { workspace = true, features = ["rt", "macros", "rt-multi-thread"] }

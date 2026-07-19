@@ -9,7 +9,7 @@ use napi::{
 };
 use napi_derive::napi;
 use rolldown_common::WatcherChangeKind;
-use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler};
+use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler, WatcherStartError};
 
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_watcher_event::BindingWatcherEvent;
@@ -18,6 +18,10 @@ use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
 };
+
+fn watcher_start_error_to_napi(error: WatcherStartError) -> napi::Error {
+  napi::Error::from_reason(error.to_string())
+}
 
 /// Bridges watcher events from Rust to JS via a `ThreadsafeFunction`.
 struct NapiWatcherEventHandler {
@@ -100,11 +104,24 @@ impl BindingWatcher {
   #[tracing::instrument(level = "debug", skip_all)]
   #[napi(ts_return_type = "Promise<void>")]
   pub fn run<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
-    let inner = Arc::clone(&self.inner);
-    spawn_boxed_future(env, async move {
-      inner.run();
-      Ok(())
-    })
+    #[cfg(feature = "async-runtime")]
+    {
+      // Shared-runtime submission is thread-safe. Attempt it before entering a
+      // N-API future so a stopped runtime can still return a rejected Promise
+      // while preserving the coordinator for a later explicit retry.
+      match self.inner.run().map_err(watcher_start_error_to_napi) {
+        Ok(()) => PromiseRaw::resolve(env, ()),
+        Err(error) => PromiseRaw::reject(env, error),
+      }
+    }
+
+    #[cfg(not(feature = "async-runtime"))]
+    {
+      // Tokio submission needs the runtime context supplied by the N-API
+      // future, but any admission failure must still reject the JS Promise.
+      let inner = Arc::clone(&self.inner);
+      spawn_boxed_future(env, async move { inner.run().map_err(watcher_start_error_to_napi) })
+    }
   }
 
   /// Gives consumers a reliable way to await the watcher's completion.
@@ -123,6 +140,9 @@ impl BindingWatcher {
   #[napi(ts_return_type = "Promise<void>")]
   pub fn close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let inner = Arc::clone(&self.inner);
+    // Publish close before returning to JavaScript so an event listener cannot
+    // return into a new build while its close task is still waiting to start.
+    inner.publish_close();
     spawn_boxed_future(env, async move {
       inner.close().await.map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))
     })

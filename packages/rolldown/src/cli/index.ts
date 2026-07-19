@@ -1,8 +1,6 @@
 import process from 'node:process';
 import { version } from '../../package.json';
 import { parseCliArguments } from './arguments';
-import { bundleWithCliOptions, bundleWithConfig } from './commands/bundle';
-import { showHelp } from './commands/help';
 import { logger } from './logger';
 import { checkNodeVersion } from './version-check';
 
@@ -29,6 +27,14 @@ async function main() {
       }
     }
   }
+
+  // Binding-backed modules snapshot runtime environment variables during
+  // module initialization, so load them only after applying --environment.
+  await import('./timer-host-entry');
+  const [{ bundleWithCliOptions, bundleWithConfig }, { showHelp }] = await Promise.all([
+    import('./commands/bundle'),
+    import('./commands/help'),
+  ]);
 
   if (cliOptions.help) {
     showHelp();

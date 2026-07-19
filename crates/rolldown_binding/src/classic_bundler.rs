@@ -133,12 +133,12 @@ impl ClassicBundler {
       }
       if let Some(rx) = devtools_flush_rx {
         // Block on the writer-thread ack in a blocking task so we don't stall
-        // a tokio worker. Bounded wait so a hung writer thread (e.g. stalled
-        // fs I/O on an NFS disconnect) can't wedge `bundle.close()` forever.
-        // All three failure modes (timeout, writer disconnected, blocking task
-        // panicked) are surfaced as errors so the documented "logs readable
-        // after close()" contract does not silently break.
-        let join_result = napi::tokio::task::spawn_blocking(move || {
+        // an async runtime worker. Bounded wait so a hung writer thread (e.g.
+        // stalled fs I/O on an NFS disconnect) can't wedge `bundle.close()`
+        // forever. All three failure modes (timeout, writer disconnected,
+        // blocking task panicked) are surfaced as errors so the documented
+        // "logs readable after close()" contract does not silently break.
+        let join_result = rolldown_utils::futures::spawn_blocking(move || {
           rx.recv_timeout(std::time::Duration::from_secs(30))
         })
         .await

@@ -1,3 +1,10 @@
+// FIRST import: this worker env loads the binding, so it must register its
+// own timer host (the per-env contract from timer-host.ts). On native the
+// process-global driver registry can mask a missing registration (main's
+// driver serves), but on the wasm artifacts the registry is per-instance --
+// without this, a parallel-plugin worker's instance is genuinely driverless
+// and a CurrentThread sleep there panics.
+import './timer-host';
 import { parentPort, workerData } from 'node:worker_threads';
 import { registerPlugins } from './binding.cjs';
 import type { InputOptions } from './options/input-options';
@@ -7,7 +14,16 @@ import { bindingifyPlugin } from './plugin/bindingify-plugin';
 import { PluginContextData } from './plugin/plugin-context-data';
 import type { WorkerData } from './utils/initialize-parallel-plugins';
 
-const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
+// `watchMode` rides along once the initializer starts sending it; the base
+// bootstrap protocol does not include it yet, so default to `false`.
+const {
+  registryId,
+  pluginInfos,
+  threadNumber,
+  watchMode = false,
+} = workerData as WorkerData & {
+  watchMode?: boolean;
+};
 (async () => {
   try {
     const plugins = await Promise.all(
@@ -31,8 +47,7 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
             [],
             () => {},
             'info' as const,
-            // TODO: support this.meta.watchMode
-            false,
+            watchMode,
           ),
         };
       }),

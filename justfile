@@ -103,6 +103,33 @@ test-node-hmr-only *args:
 test-vite: # We don't use `test-node-vite` because it's not expected to run in `just test-node`.
   vp run --filter vite-tests test
 
+# Run the async-runtime unit tests in the N-API binding. This recipe is their
+# CI home: the workspace-wide `test-rust` recipe excludes `rolldown_binding`.
+test-async-runtime-binding:
+  cargo test -p rolldown_binding --no-default-features --features async-runtime --lib async_runtime::tests::
+  cargo test -p rolldown_binding --no-default-features --features async-runtime --lib async_runtime_lease::tests::
+  cargo test -p rolldown_binding --no-default-features --features async-runtime --lib env_config::tests::
+
+# Run the scheduler unit tests plus the node and watcher suites on both
+# flavors of the shared async runtime. Requires
+# `just build-rolldown-async-runtime` first. The single-thread lane arms the
+# runtime's own deadlock detection (`ROLLDOWN_PARK_DEADLINE_MS`): a
+# `block_on`-over-JS hang freezes the JS event loop before vitest's own
+# timeouts can fire, so the runtime panics with a typed `BlockOnDeadlock`
+# diagnostic instead of hanging until a job-level timeout. The watcher suite
+# runs on both flavors because the watch-mode debounce timer goes through
+# `rolldown_utils::time::sleep_until` instead of tokio's reactor.
+[unix]
+test-async-runtime:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cargo test -p rolldown_utils --features async-runtime
+  just test-async-runtime-binding
+  ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:main
+  ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:watcher
+  vp run --filter rolldown-tests test:main
+  vp run --filter rolldown-tests test:watcher
+
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
 
 # Run both Rolldown's tests and Rollup's test suite without building Rolldown.
@@ -197,6 +224,18 @@ build-rolldown-test-dev-server:
 # Build `rolldown` located in `packages/rolldown` itself and its `.wasm` binding for WASI.
 build-rolldown-wasi:
   vp run --filter rolldown build-wasi:debug
+
+# Build `rolldown` and its native `.node` binding with the shared async
+# runtime plus the test-only lifecycle probe features
+# (`runtime-waker-teardown-test` / `runtime-submission-failure-test`). The
+# test-featured build regenerates `binding.cjs`/`binding.d.cts` with the
+# `__rolldownTest*` probe exports, so restore the committed production copies
+# before building the package glue from them. The probes stay reachable at
+# runtime because the loader re-exports the native addon wholesale.
+build-rolldown-async-runtime:
+  vp exec --filter rolldown -- node --import @oxc-node/core/register ./build-binding.ts --no-default-features --features async-runtime,runtime-waker-teardown-test,runtime-submission-failure-test
+  git checkout -- packages/rolldown/src/binding.cjs packages/rolldown/src/binding.d.cts
+  vp run --filter rolldown build-js-glue
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
 build-rolldown-release:

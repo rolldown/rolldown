@@ -20,6 +20,7 @@ bitflags = { workspace = true }
 dashmap = { workspace = true }
 derive_more = { workspace = true }
 fast-glob = { workspace = true }
+futures = { workspace = true }
 itertools = { workspace = true }
 oxc = { workspace = true }
 oxc_ecmascript = { workspace = true }
@@ -41,7 +42,6 @@ simdutf8 = { workspace = true }
 smallvec = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true }
 
 num-bigint = { workspace = true }
 

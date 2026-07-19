@@ -1,7 +1,7 @@
 use std::borrow::Cow;
+use std::collections::VecDeque;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, Expression, ObjectPropertyKind, PropertyKey, PropertyKind,
@@ -9,7 +9,6 @@ use oxc::ast::ast::{
 use oxc::ast_visit::{Visit, walk};
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
-use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
 use rolldown_std_utils::relative_path_to_slash;
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
@@ -24,6 +23,82 @@ pub struct GlobImportVisit<'a> {
   pub magic_string: Option<MagicString<'a>>,
   pub import_decls: Vec<String>,
   pub errors: Vec<anyhow::Error>,
+  pub resolved_glob_groups: VecDeque<Vec<(String, Option<String>)>>,
+}
+
+#[derive(Default)]
+pub struct GlobResolveVisit {
+  pub glob_groups: Vec<Vec<String>>,
+}
+
+impl GlobResolveVisit {
+  fn collect(glob: &str, group: &mut Vec<String>) {
+    let glob = glob.strip_prefix('!').unwrap_or(glob);
+    if requires_async_resolution(glob) {
+      group.push(glob.to_string());
+    }
+  }
+
+  fn collect_argument(argument: &Argument<'_>) -> Vec<String> {
+    let mut group = Vec::new();
+    match argument {
+      Argument::StringLiteral(value) => Self::collect(value.value.as_str(), &mut group),
+      Argument::TemplateLiteral(value) => {
+        if let Some(value) = value.single_quasi() {
+          Self::collect(value.as_str(), &mut group);
+        }
+      }
+      Argument::ArrayExpression(array) => {
+        for element in &array.elements {
+          match element {
+            ArrayExpressionElement::StringLiteral(value) => {
+              Self::collect(value.value.as_str(), &mut group);
+            }
+            ArrayExpressionElement::TemplateLiteral(value) => {
+              if let Some(value) = value.single_quasi() {
+                Self::collect(value.as_str(), &mut group);
+              }
+            }
+            _ => {}
+          }
+        }
+      }
+      _ => {}
+    }
+    group
+  }
+}
+
+impl<'ast> Visit<'ast> for GlobResolveVisit {
+  fn visit_expression(&mut self, expression: &Expression<'ast>) {
+    if let Some(call) = expression.as_call_expression()
+      && is_import_meta_glob_call(call)
+    {
+      self.glob_groups.push(call.arguments.first().map(Self::collect_argument).unwrap_or_default());
+      return;
+    }
+    walk::walk_expression(self, expression);
+  }
+}
+
+fn is_import_meta_glob_call(call: &ast::CallExpression<'_>) -> bool {
+  let Expression::StaticMemberExpression(member) = &call.callee else {
+    return false;
+  };
+  matches!(
+    &member.object,
+    Expression::MetaProperty(property)
+      if member.property.name == "glob"
+        && property.meta.name == "import"
+        && property.property.name == "meta"
+  )
+}
+
+fn requires_async_resolution(glob: &str) -> bool {
+  !(glob.starts_with('/')
+    || glob.starts_with("**")
+    || glob.starts_with("./")
+    || glob.starts_with("../"))
 }
 
 impl<'ast> Visit<'ast> for GlobImportVisit<'_> {
@@ -140,6 +215,10 @@ impl<'ast> GlobImportVisit<'_> {
           && p.meta.name == "import"
           && p.property.name == "meta" =>
       {
+        // Consume the complete group at call entry. If one unresolved glob
+        // aborts this call, later calls still receive their own pre-resolved
+        // results instead of inheriting the unused tail of this array.
+        let resolved_globs = self.resolved_glob_groups.pop_front().unwrap_or_default();
         let mut files: Vec<ImportGlobFileData> = vec![];
         let mut options = ImportGlobOptions::default();
 
@@ -156,7 +235,7 @@ impl<'ast> GlobImportVisit<'_> {
         //   './dir/foo.js': () => import('./dir/foo.js'),
         //   './dir/bar.js': () => import('./dir/bar.js?raw').then((m) => m.setup),
         // }
-        if self.eval_glob_expr(arg, &mut files, &options).is_some() {
+        if self.eval_glob_expr(arg, &mut files, &options, &resolved_globs).is_some() {
           self.generate_glob_object_expression(&files, &options, omit_type, call_expr.span);
         }
 
@@ -274,6 +353,8 @@ impl GlobImportVisit<'_> {
     dir: &str,
     root: &str,
     base: Option<&str>,
+    resolved_globs: &[(String, Option<String>)],
+    resolved_glob_index: &mut usize,
   ) -> Option<PathWithGlob<'a>> {
     let dir = if let Some(base) = base {
       if let Some(base) = base.strip_prefix('/') {
@@ -291,25 +372,12 @@ impl GlobImportVisit<'_> {
     } else if glob.starts_with("./") || glob.starts_with("../") {
       path_posix::join(&[&dir, glob])
     } else {
-      let is_sub_imports_pattern = glob.starts_with('#') && glob.contains('*');
-      let mut custom = rolldown_plugin::CustomField::new();
-      custom.insert(ViteImportGlob, ViteImportGlobValue(is_sub_imports_pattern));
-      let future = self.ctx.resolve(
-        glob,
-        Some(self.id),
-        Some(rolldown_plugin::PluginContextResolveOptions {
-          custom: Arc::new(custom),
-          ..Default::default()
-        }),
-      );
-
       let resolved_id =
-        rolldown_utils::futures::block_on(future).ok().and_then(Result::ok).map(|resolved| {
-          path_posix::normalize(&rolldown_utils::pattern_filter::normalize_path(
-            resolved.id.as_str(),
-          ))
-          .into_owned()
+        resolved_globs.get(*resolved_glob_index).and_then(|(candidate, resolved)| {
+          debug_assert_eq!(candidate, glob);
+          resolved.clone()
         });
+      *resolved_glob_index += 1;
 
       if let Some(ref id) = resolved_id
         && Path::new(id.as_str()).is_absolute()
@@ -387,6 +455,7 @@ impl GlobImportVisit<'_> {
     arg: &Argument,
     files: &mut Vec<ImportGlobFileData>,
     options: &ImportGlobOptions,
+    resolved_globs: &[(String, Option<String>)],
   ) -> Option<()> {
     let root = Path::new(&self.root);
     let is_virtual_module = self.is_virtual_module();
@@ -404,6 +473,7 @@ impl GlobImportVisit<'_> {
     let mut is_relative = true;
     let mut negated_globs = vec![];
     let mut positive_globs = vec![];
+    let mut resolved_glob_index = 0;
 
     let mut values = vec![];
     match arg {
@@ -436,6 +506,8 @@ impl GlobImportVisit<'_> {
           &dir_slash,
           &root_slash,
           options.base.as_deref(),
+          resolved_globs,
+          &mut resolved_glob_index,
         )?);
       } else {
         positive_globs.push(self.to_absolute_glob(
@@ -443,12 +515,15 @@ impl GlobImportVisit<'_> {
           &dir_slash,
           &root_slash,
           options.base.as_deref(),
+          resolved_globs,
+          &mut resolved_glob_index,
         )?);
         if !value.starts_with('.') {
           is_relative = false;
         }
       }
     }
+    debug_assert_eq!(resolved_glob_index, resolved_globs.len());
 
     if negated_globs.is_empty() && positive_globs.is_empty() {
       return Some(());

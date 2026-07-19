@@ -5,6 +5,9 @@ use crate::watch_task::{BuildOutcome, WatchTask, WatchTaskIdx};
 use crate::watcher::WatcherConfig;
 use crate::watcher_msg::WatcherMsg;
 use crate::watcher_state::WatcherState;
+use event_listener::Event;
+use futures::channel::mpsc;
+use futures::{FutureExt, StreamExt, pin_mut, select_biased};
 use oxc_index::IndexVec;
 use rolldown_common::WatcherChangeKind;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -13,7 +16,28 @@ use std::mem;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
-use tokio::sync::{Notify, mpsc};
+
+enum DebounceWaitResult {
+  Message(Option<WatcherMsg>),
+  Timeout,
+}
+
+async fn wait_for_debounce_input(
+  rx: &mut mpsc::UnboundedReceiver<WatcherMsg>,
+  timeout: impl Future<Output = ()>,
+) -> DebounceWaitResult {
+  // `select_biased!` requires each branch future to be `Unpin + FusedFuture`.
+  // `rx.next()` (StreamExt::Next) already is, so it is used inline. The custom
+  // `Sleep` only impls `Future`, so fuse it (for `FusedFuture`) and pin it (for
+  // `Unpin`). The biased order matches tokio's `biased;`: message first, timeout
+  // second, so a queued change at the deadline still extends the debounce window.
+  let timeout = timeout.fuse();
+  pin_mut!(timeout);
+  select_biased! {
+    message = rx.next() => DebounceWaitResult::Message(message),
+    () = timeout => DebounceWaitResult::Timeout,
+  }
+}
 
 /// The coordinator actor that owns all state and runs the event loop.
 pub struct WatchCoordinator<H: WatcherEventHandler> {
@@ -23,7 +47,7 @@ pub struct WatchCoordinator<H: WatcherEventHandler> {
   debounce_duration: Duration,
   tasks: IndexVec<WatchTaskIdx, WatchTask>,
   closed: Arc<AtomicBool>,
-  close_notify: Arc<Notify>,
+  close_notify: Arc<Event>,
 }
 
 impl<H: WatcherEventHandler> WatchCoordinator<H> {
@@ -33,7 +57,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     tasks: IndexVec<WatchTaskIdx, WatchTask>,
     config: &WatcherConfig,
     closed: Arc<AtomicBool>,
-    close_notify: Arc<Notify>,
+    close_notify: Arc<Event>,
   ) -> Self {
     Self {
       rx,
@@ -57,7 +81,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     loop {
       match &self.state {
         WatcherState::Idle => {
-          let msg = self.rx.recv().await;
+          let msg = self.rx.next().await;
           match msg {
             Some(WatcherMsg::FileChanges { task_index, changes }) => {
               self.process_file_changes(task_index, changes).await;
@@ -70,10 +94,15 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
           }
         }
         WatcherState::Debouncing { deadline, .. } => {
-          let timeout = tokio::time::sleep_until((*deadline).into());
+          // Runtime-aware timer facade: the async-runtime build has no tokio
+          // reactor, so `tokio::time::sleep_until` would panic here ("no
+          // reactor running"). Every rx arm below drops this future when it
+          // wins the select -- the facade's Sleep cancels on drop, matching
+          // tokio's semantics, so the deadline-extension loop is unchanged.
+          let timeout = rolldown_utils::time::sleep_until(*deadline);
 
-          tokio::select! {
-            () = timeout => {
+          match wait_for_debounce_input(&mut self.rx, timeout).await {
+            DebounceWaitResult::Timeout => {
               let (new_state, changes) = mem::take(&mut self.state).on_debounce_timeout();
               self.state = new_state;
 
@@ -84,18 +113,16 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
                 }
               }
             }
-            msg = self.rx.recv() => {
-              match msg {
-                Some(WatcherMsg::FileChanges { task_index, changes }) => {
-                  self.process_file_changes(task_index, changes).await;
-                }
-                Some(WatcherMsg::Close) => {
-                  self.handle_close().await;
-                  break;
-                }
-                None => break,
+            DebounceWaitResult::Message(message) => match message {
+              Some(WatcherMsg::FileChanges { task_index, changes }) => {
+                self.process_file_changes(task_index, changes).await;
               }
-            }
+              Some(WatcherMsg::Close) => {
+                self.handle_close().await;
+                break;
+              }
+              None => break,
+            },
           }
         }
         WatcherState::Closing | WatcherState::Closed => {
@@ -239,14 +266,24 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   where
     F: Future<Output = ()>,
   {
+    // Listen-before-check idiom for `event_listener::Event` (no stored permit):
+    // create the listener before reading `closed`. `publish_close` sets `closed`
+    // before `notify`, so a listener created here before the notify is woken, and
+    // observing `closed == true` skips the permit-less await.
     let wait_for_close = async {
+      let listener = self.close_notify.listen();
       if !self.closed.load(Ordering::Relaxed) {
-        self.close_notify.notified().await;
+        listener.await;
       }
-    };
+    }
+    .fuse();
+    // Consumer callbacks only impl `Future`, so fuse the handler too and pin
+    // both for `select_biased!` (needs `Unpin + FusedFuture`).
+    let handler = handler.fuse();
+    pin_mut!(wait_for_close, handler);
 
-    tokio::select! {
-      biased;
+    // Biased order matches tokio's `biased;`: close first, then handler.
+    select_biased! {
       () = wait_for_close => false,
       () = handler => !self.closed.load(Ordering::Relaxed),
     }
@@ -282,6 +319,12 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   /// Uses try_recv to process all pending messages without blocking.
   async fn drain_buffered_events(&mut self) {
     loop {
+      // `futures`' non-deprecated `try_recv()` mirrors tokio's `try_recv()` shape
+      // exactly: `Ok(msg)` = a buffered message (still drained after close while
+      // any remain), `Err(TryRecvError::Empty)` = empty but open, and
+      // `Err(TryRecvError::Closed)` = closed and fully drained. tokio mapped both
+      // its `Empty` and `Disconnected` errors to the same break, so the single
+      // `Err(_)` arm preserves the original semantics unchanged.
       match self.rx.try_recv() {
         Ok(WatcherMsg::FileChanges { task_index, changes }) => {
           self.process_file_changes(task_index, changes).await;
@@ -317,5 +360,24 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     }
 
     self.state = mem::take(&mut self.state).to_closed();
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[tokio::test]
+  async fn queued_change_wins_when_debounce_timeout_is_already_ready() {
+    let (tx, mut rx) = mpsc::unbounded();
+    tx.unbounded_send(WatcherMsg::FileChanges {
+      task_index: WatchTaskIdx::from_usize(0),
+      changes: vec![FileChangeEvent::new("main.js".to_string(), WatcherChangeKind::Update)],
+    })
+    .expect("queue file change");
+
+    let result = wait_for_debounce_input(&mut rx, std::future::ready(())).await;
+
+    assert!(matches!(result, DebounceWaitResult::Message(Some(WatcherMsg::FileChanges { .. }))));
   }
 }

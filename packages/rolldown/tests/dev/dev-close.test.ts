@@ -1,4 +1,5 @@
 import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
+import { isSingleThread } from '@tests/runtime-flavor';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -35,7 +36,9 @@ function dev(
 //
 // Fix: after `close()`, `ensureCurrentBuildFinish()` is a no-op rather than
 // an error — there is no ongoing bundle to wait for.
-test(
+// Dev mode spawns the BindingDevEngine, which is out of scope for the
+// single-thread (CurrentThread) runtime flavor.
+test.skipIf(isSingleThread)(
   'ensureCurrentBuildFinish after close resolves instead of rejecting',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

@@ -252,7 +252,7 @@ xxhash-rust = "0.8.16"
 prettyplease = "0.2.37"
 proc-macro2 = "1"
 quote = "1"
-syn = { version = "2", default-features = false }
+syn = { version = "3", default-features = false }
 
 # napi
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks

@@ -1,6 +1,6 @@
 # Plugin API
 
-## Overview
+## Overrride
 
 Rolldown's plugin interface is almost fully compatible with Rollup's (detailed tracking [here](https://github.com/rolldown/rolldown/issues/819)), so if you have written a Rollup plugin before, you already know how to write a Rolldown plugin!
 

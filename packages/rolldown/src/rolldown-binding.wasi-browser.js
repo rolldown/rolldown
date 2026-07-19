@@ -6,7 +6,7 @@ import {
   WASI as __WASI,
 } from '@napi-rs/wasm-runtime'
 import { createContext as __emnapiCreateContext } from '@emnapi/runtime'
-import { memfs, Buffer } from '@napi-rs/wasm-runtime/fs'
+import { memfs } from '@napi-rs/wasm-runtime/fs'
 
 
 export const { fs: __fs, vol: __volume } = memfs()
@@ -125,8 +125,6 @@ function __destroyEmnapiContext() {
 }
 
 try {
-  ;(__emnapiContext.features ?? __emnapiContext.feature).Buffer = Buffer
-
   ;({
     instance: __napiInstance,
     module: __wasiModule,
@@ -220,7 +218,6 @@ export const BindingAsyncRuntimeLease = __napiModule.exports.BindingAsyncRuntime
 export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 export const BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
 export const BindingBundler = __napiModule.exports.BindingBundler
-export const BindingBundleStartEventData = __napiModule.exports.BindingBundleStartEventData
 export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
 export const BindingChunkingContext = __napiModule.exports.BindingChunkingContext
 export const BindingDecodedMap = __napiModule.exports.BindingDecodedMap

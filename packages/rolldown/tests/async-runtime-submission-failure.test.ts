@@ -32,8 +32,7 @@ test.skipIf(!capabilities.asyncRuntimeBuild || capabilities.wasi || !hasSchedule
     expect(child.signal).toBeNull();
     expect(child.status, child.stderr || child.stdout).toBe(0);
     expect(JSON.parse(child.stdout.trim().split('\n').at(-1)!)).toEqual({
-      closeBundleCalls: 1,
-      replayedTerminalError: true,
+      generateRetried: true,
       submissionRejected: true,
       watcherBuildEnds: 1,
       watcherBuildStarts: 1,

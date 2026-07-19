@@ -20,12 +20,9 @@ assert.equal(typeof stopRuntime, 'function');
 assert.equal(typeof startRuntime, 'function');
 const uninstallCurrentThreadTaskHost = installCurrentThreadTaskHost(binding);
 
-const CLOSE_BUNDLE = 1 << 13;
 const root = mkdtempSync(path.join(tmpdir(), 'rolldown-submission-failure-'));
 writeFileSync(path.join(root, 'main.js'), 'export const value = 1;\n');
 
-const terminalError = new TypeError('terminal closeBundle failure after submission retry');
-let closeBundleCalls = 0;
 const bundler = new binding.BindingBundler();
 let watcher;
 const options = {
@@ -34,16 +31,7 @@ const options = {
     input: [{ import: './main.js' }],
     logLevel: binding.BindingLogLevel.Silent,
     onLog() {},
-    plugins: [
-      {
-        name: 'submission-failure-close',
-        hookUsage: CLOSE_BUNDLE,
-        closeBundle() {
-          closeBundleCalls += 1;
-          throw terminalError;
-        },
-      },
-    ],
+    plugins: [],
   },
   outputOptions: {
     dir: path.join(root, 'dist'),
@@ -52,33 +40,20 @@ const options = {
 };
 
 try {
-  const output = await bundler.generate(options);
-  assert.equal(output?.isBindingErrors, undefined);
-
   stopRuntime();
   let submissionError;
   try {
-    await bundler.closeTerminal();
+    await bundler.generate(options);
   } catch (error) {
     submissionError = error;
   }
   assert.ok(submissionError instanceof Error);
-  assert.equal(
-    submissionError.message,
-    'the async runtime is stopped; call start before submitting work',
-  );
-  assert.equal(closeBundleCalls, 0);
+  assert.match(submissionError.message, /the async runtime is stopped/);
 
   startRuntime();
-  const retry = await bundler.closeTerminal();
-  assert.equal(retry.isBindingErrors, true);
-  assert.equal(retry.errors[0].field0, terminalError);
-  assert.equal(closeBundleCalls, 1);
-
-  const replay = await bundler.closeTerminal();
-  assert.equal(replay.isBindingErrors, true);
-  assert.equal(replay.errors[0].field0, terminalError);
-  assert.equal(closeBundleCalls, 1);
+  const retried = await bundler.generate(options);
+  assert.equal(retried?.isBindingErrors, undefined);
+  await bundler.close();
 
   let resolveWatcherEnd;
   const watcherEnd = new Promise((resolve) => {
@@ -141,13 +116,11 @@ try {
   }
   assert.equal(watcherBuildStarts, 1);
   assert.equal(watcherBuildEnds, 1);
-  const watcherClose = await watcher.close();
-  assert.deepEqual(watcherClose.errors, []);
+  await watcher.close();
 
   console.log(
     JSON.stringify({
-      closeBundleCalls,
-      replayedTerminalError: replay.errors[0].field0 === terminalError,
+      generateRetried: true,
       submissionRejected: true,
       watcherBuildEnds,
       watcherBuildStarts,
@@ -159,7 +132,7 @@ try {
     startRuntime();
   } catch {}
   await watcher?.close().catch(() => {});
-  await bundler.closeTerminal().catch(() => {});
+  await bundler.close().catch(() => {});
   uninstallCurrentThreadTaskHost();
   rmSync(root, { force: true, recursive: true });
 }

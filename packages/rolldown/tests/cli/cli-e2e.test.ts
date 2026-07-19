@@ -417,7 +417,7 @@ describe('config', () => {
 
     const status = await $({
       cwd,
-    })`rolldown -c rolldown.config.js --environment PRODUCTION,FOO:bar,HOST:http://localhost:4000`;
+    })`rolldown -c rolldown.config.js --environment PRODUCTION,FOO:bar,HOST:http://localhost:4000,ROLLDOWN_WORKER_THREADS:3`;
     expect(status.exitCode).toBe(0);
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });

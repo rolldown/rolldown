@@ -9,7 +9,7 @@ use rolldown_error::{
 };
 use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
@@ -165,7 +165,12 @@ impl WatchTask {
         }
         Ok(BuildOutcome::Success(BundleEndEventData {
           task_index,
-          output: self.options.cwd.join(&self.options.out_dir).to_string_lossy().into_owned(),
+          output: resolve_output_path(
+            &self.options.cwd,
+            self.options.file.as_deref().unwrap_or(&self.options.out_dir),
+          )
+          .to_string_lossy()
+          .into_owned(),
           duration,
           bundle_handle,
         }))
@@ -366,6 +371,35 @@ impl WatchTask {
   }
 }
 
+/// Resolve the output path reported by `BundleEnd` events.
+///
+/// Rollup reports the resolved `output.file` (falling back to `output.dir`)
+/// here, so honor `file` when it is set instead of always using `out_dir`,
+/// and normalize `.`/`..` components for a stable absolute path.
+fn resolve_output_path(cwd: &Path, output: &str) -> PathBuf {
+  let output = Path::new(output);
+  let path = if output.is_absolute() { output.to_path_buf() } else { cwd.join(output) };
+  let absolute_path = if path.is_absolute() {
+    path
+  } else {
+    std::env::current_dir().map_or(path.clone(), |current_dir| current_dir.join(path))
+  };
+
+  let mut normalized = PathBuf::new();
+  for component in absolute_path.components() {
+    match component {
+      Component::CurDir => {}
+      Component::ParentDir => {
+        normalized.pop();
+      }
+      Component::Prefix(_) | Component::RootDir | Component::Normal(_) => {
+        normalized.push(component.as_os_str());
+      }
+    }
+  }
+  normalized
+}
+
 /// Outcome of a build attempt
 pub enum BuildOutcome {
   /// Build was skipped (no rebuild needed)
@@ -376,4 +410,18 @@ pub enum BuildOutcome {
   Error(WatchErrorEventData),
   /// `watcher.close()` was called during the build; output was discarded.
   Closed,
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn relative_output_path_is_resolved_and_normalized() {
+    let cwd = std::env::current_dir().expect("current directory");
+    assert_eq!(resolve_output_path(&cwd, "./nested/../dist/out.js"), cwd.join("dist/out.js"));
+
+    let absolute = cwd.join("absolute.js");
+    assert_eq!(resolve_output_path(&cwd, absolute.to_string_lossy().as_ref()), absolute);
+  }
 }

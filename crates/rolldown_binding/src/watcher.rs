@@ -8,6 +8,7 @@ use napi::{
   bindgen_prelude::{FnArgs, PromiseRaw},
 };
 use napi_derive::napi;
+use rolldown::BundlerConfig;
 use rolldown_common::WatcherChangeKind;
 use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler};
 
@@ -18,6 +19,38 @@ use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
 };
+
+fn create_watcher_config(configs: &[BundlerConfig]) -> WatcherConfig {
+  // Rollup applies the maximum buildDelay across enabled configs. The file
+  // watcher itself is shared in Rolldown, so use the first config that
+  // explicitly selects backend/debouncer behavior for the remaining fields.
+  let debounce = configs
+    .iter()
+    .filter_map(|config| config.options.watch.as_ref()?.build_delay)
+    .max()
+    .map(|ms| Duration::from_millis(u64::from(ms)));
+  let watch = configs
+    .iter()
+    .filter_map(|config| config.options.watch.as_ref())
+    .find(|watch| {
+      watch.use_polling
+        || watch.poll_interval.is_some()
+        || watch.compare_contents_for_polling
+        || watch.use_debounce
+        || watch.debounce_delay.is_some()
+        || watch.debounce_tick_rate.is_some()
+    })
+    .or_else(|| configs.first().and_then(|config| config.options.watch.as_ref()));
+  WatcherConfig {
+    debounce,
+    use_polling: watch.is_some_and(|watch| watch.use_polling),
+    poll_interval: watch.and_then(|watch| watch.poll_interval),
+    compare_contents_for_polling: watch.is_some_and(|watch| watch.compare_contents_for_polling),
+    use_debounce: watch.is_some_and(|watch| watch.use_debounce),
+    debounce_delay: watch.and_then(|watch| watch.debounce_delay),
+    debounce_tick_rate: watch.and_then(|watch| watch.debounce_tick_rate),
+  }
+}
 
 /// Bridges watcher events from Rust to JS via a `ThreadsafeFunction`.
 struct NapiWatcherEventHandler {
@@ -74,17 +107,7 @@ impl BindingWatcher {
       .map(create_bundler_config_from_binding_options)
       .collect::<Result<Vec<_>, _>>()?;
 
-    // Extract watcher config from the first config's watch options.
-    let watch = configs.first().and_then(|c| c.options.watch.as_ref());
-    let watcher_config = WatcherConfig {
-      debounce: watch.and_then(|w| w.build_delay).map(|ms| Duration::from_millis(u64::from(ms))),
-      use_polling: watch.is_some_and(|w| w.use_polling),
-      poll_interval: watch.and_then(|w| w.poll_interval),
-      compare_contents_for_polling: watch.is_some_and(|w| w.compare_contents_for_polling),
-      use_debounce: watch.is_some_and(|w| w.use_debounce),
-      debounce_delay: watch.and_then(|w| w.debounce_delay),
-      debounce_tick_rate: watch.and_then(|w| w.debounce_tick_rate),
-    };
+    let watcher_config = create_watcher_config(&configs);
 
     let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
     let inner =
@@ -126,5 +149,42 @@ impl BindingWatcher {
     spawn_boxed_future(env, async move {
       inner.close().await.map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))
     })
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use rolldown::BundlerOptions;
+  use rolldown_common::WatchOption;
+
+  #[test]
+  fn watcher_config_uses_max_build_delay_and_first_explicit_backend_config() {
+    let configs = vec![
+      BundlerConfig::new(
+        BundlerOptions {
+          watch: Some(WatchOption { build_delay: Some(50), ..Default::default() }),
+          ..Default::default()
+        },
+        vec![],
+      ),
+      BundlerConfig::new(
+        BundlerOptions {
+          watch: Some(WatchOption {
+            build_delay: Some(250),
+            use_polling: true,
+            poll_interval: Some(75),
+            ..Default::default()
+          }),
+          ..Default::default()
+        },
+        vec![],
+      ),
+    ];
+
+    let config = create_watcher_config(&configs);
+    assert_eq!(config.debounce, Some(Duration::from_millis(250)));
+    assert!(config.use_polling);
+    assert_eq!(config.poll_interval, Some(75));
   }
 }

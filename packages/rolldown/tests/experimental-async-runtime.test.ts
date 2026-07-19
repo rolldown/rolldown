@@ -14,8 +14,8 @@ import {
 } from 'rolldown/experimental';
 import { describe, expect, test } from 'vitest';
 
-// The four `rolldown/experimental` async-runtime fns are feature-gated (see
-// internal-docs/async-runtime/implementation.md, RD-6). They are exported on
+// The four `rolldown/experimental` async-runtime fns are feature-gated. They
+// are exported on
 // every build, but only the `async-runtime` build honors them. On the default
 // `tokio-runtime` build:
 //   - `configureAsyncRuntime` throws a feature-disabled error,

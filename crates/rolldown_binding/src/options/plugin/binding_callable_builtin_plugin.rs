@@ -41,7 +41,7 @@ where
   F: Future<Output = napi::Result<V>> + Send + 'static,
 {
   // Public callable hooks are already enclosed by the native-token lease in
-  // run-with-runtime-lease.ts. See internal-docs/async-runtime/implementation.md.
+  // run-with-runtime-lease.ts.
   AsyncBlockBuilder::<V, F>::with(future).build(env)
 }
 

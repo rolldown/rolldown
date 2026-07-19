@@ -167,7 +167,6 @@ mod async_runtime_lease {
     ) -> napi::Result<()> {
       // One acquisition may first recover an abandoned shutdown and then need
       // to roll back its own start if environment cancellation wins.
-      // See internal-docs/async-runtime/implementation.md.
       let mut start = Some(start);
       loop {
         let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
@@ -1158,7 +1157,9 @@ mod async_runtime_acquisition {
 }
 
 #[cfg(all(target_family = "wasm", tokio_unstable))]
-// See internal-docs/async-runtime/implementation.md.
+// Process-wide ledger of the runtime leases handed to JavaScript through
+// `acquireAsyncRuntime`; the threaded-WASI tokio runtime stays alive until the
+// last lease is released.
 static ASYNC_RUNTIME_LEASES: async_runtime_lease::Manager = async_runtime_lease::Manager::new();
 
 pub struct AsyncRuntimeLeaseOwner {

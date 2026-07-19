@@ -38,7 +38,10 @@ const LOCAL_CURRENT_THREAD_HOST_INSTALLATIONS = new WeakMap<
   CurrentThreadHostInstallation
 >();
 
-// See internal-docs/async-runtime/implementation.md.
+// Every package copy loaded in this realm must share one installation
+// registry per binding object, so the registry lives on `globalThis` behind a
+// version-keyed symbol; fall back to this module's local WeakMap when the
+// global slot is unusable.
 function getCurrentThreadHostInstallations(): WeakMap<object, CurrentThreadHostInstallation> {
   try {
     const existing = Reflect.get(globalThis, CURRENT_THREAD_HOST_INSTALLATIONS, globalThis);

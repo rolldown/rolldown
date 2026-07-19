@@ -2,7 +2,9 @@ import * as binding from './binding.cjs';
 import type { BindingRuntimeCapabilities } from './binding.cjs';
 import { BindingMismatchError } from './utils/binding-mismatch-error';
 
-// See internal-docs/async-runtime/implementation.md.
+// Workflow feature matrix derived from the binding's self-reported runtime
+// capabilities; JS gates dev/watch/parallel-plugin surfaces on these flags
+// instead of sniffing the artifact target.
 export interface RuntimeSupport {
   dev: boolean;
   watch: boolean;
@@ -201,7 +203,7 @@ function normalizeRuntimeCapabilities(
   // No cross-checks for devSupported/watchSupported: missing fields already
   // took the stable `threads` / inverse-`wasi` compatibility defaults above,
   // but explicit values are independent workflow capabilities and are
-  // preserved (see internal-docs/async-runtime/implementation.md).
+  // preserved.
   if (loadedTarget && loadedTarget !== target) {
     throw new BindingRuntimeContractError(
       'getRuntimeCapabilities().target does not match the generated loader target',

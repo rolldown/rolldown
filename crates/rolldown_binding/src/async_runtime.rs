@@ -40,7 +40,7 @@ use crate::types::js_callback::JsCallback;
 struct RolldownAsyncRuntime;
 
 #[cfg(feature = "async-runtime")]
-// SAFETY: See internal-docs/async-runtime/implementation.md. Shutdown closes
+// SAFETY: Shutdown closes
 // admission, waits for the scheduler generation to quiesce, joins native
 // workers, and releases active resources. Independently, napi-rs permanently
 // retains the native image after a module that registered this backend exports
@@ -70,7 +70,7 @@ unsafe impl AsyncRuntime for RolldownAsyncRuntime {
     work: Box<dyn FnOnce() + Send + 'static>,
   ) -> std::result::Result<(), AsyncRuntimeRejection<Box<dyn FnOnce() + Send + 'static>>> {
     // Route blocking work submitted through this SPI to the same bounded lane
-    // as Rolldown's facade. See internal-docs/async-runtime/implementation.md.
+    // as Rolldown's facade.
     match try_spawn_blocking(work) {
       Ok(handle) => {
         handle.detach();
@@ -938,7 +938,9 @@ impl Drop for NativeCurrentThreadTaskHostPayload {
 }
 
 #[cfg(feature = "async-runtime")]
-// See internal-docs/async-runtime/implementation.md.
+// Bridges CurrentThread-flavor scheduling onto the owning JS thread through a
+// threadsafe function; the `dead` / `environment_closing` flags turn late
+// wakeups into no-ops instead of calls into a torn-down environment.
 struct NativeCurrentThreadTaskHost {
   inner: std::sync::Arc<NativeCurrentThreadTaskHostInner>,
 }

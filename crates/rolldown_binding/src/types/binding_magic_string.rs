@@ -17,7 +17,6 @@ use super::js_regex::JsRegExp;
 /// The alias keeps the lifetime out of the `#[napi]` field syntax while fixing
 /// it to `'static`; the constructor below satisfies that bound by moving its
 /// `String` into `Cow::Owned`.
-/// See internal-docs/async-runtime/implementation.md.
 type BindingMagicStringStorage = MagicString<'static>;
 
 /// Internal representation preserving the original JS format (flat `[start, end]` vs nested

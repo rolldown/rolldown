@@ -1,10 +1,10 @@
-import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../binding.cjs';
+import { BindingBundler } from '../binding.cjs';
 import type { InputOptions } from '../options/input-options';
 import { PluginDriver } from '../plugin/plugin-driver';
+import { acquireRuntimeLease, type RuntimeLease } from '../runtime-lifecycle';
 import { createBundlerOptions } from '../utils/create-bundler-option';
 import { unwrapBindingResult } from '../utils/error';
 import { validateOption } from '../utils/validator';
-import { RolldownBuild } from './rolldown/rolldown-build';
 
 export { freeExternalMemory } from '../types/external-memory-handle';
 
@@ -34,17 +34,43 @@ export const scan = async (
 
   const ret = await createBundlerOptions(inputOptions, rawOutputOptions, false);
 
-  const bundler = new BindingBundler();
-
-  if (RolldownBuild.asyncRuntimeShutdown) {
-    startAsyncRuntime();
+  let acquiredLease: RuntimeLease | undefined;
+  let bundler: BindingBundler;
+  try {
+    acquiredLease = await acquireRuntimeLease();
+    bundler = new BindingBundler();
+  } catch (error) {
+    // Setup failure must not abandon the parallel-plugin workers already
+    // spawned by createBundlerOptions or an acquired runtime lease.
+    const cleanupErrors: unknown[] = [];
+    try {
+      await ret.stopWorkers?.();
+    } catch (cleanupError) {
+      cleanupErrors.push(cleanupError);
+    }
+    try {
+      acquiredLease?.release();
+    } catch (cleanupError) {
+      cleanupErrors.push(cleanupError);
+    }
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError([error, ...cleanupErrors], 'Scan setup and cleanup both failed', {
+        cause: error,
+      });
+    }
+    throw error;
   }
+  const runtimeLease = acquiredLease;
 
   async function cleanup() {
-    await bundler.close();
-    await ret.stopWorkers?.();
-    shutdownAsyncRuntime();
-    RolldownBuild.asyncRuntimeShutdown = true;
+    try {
+      await bundler.close();
+      await ret.stopWorkers?.();
+    } finally {
+      // Lease release is idempotent, so the doubled cleanup on the scan error
+      // path cannot over-release the runtime.
+      runtimeLease.release();
+    }
   }
 
   let cleanupPromise = Promise.resolve();

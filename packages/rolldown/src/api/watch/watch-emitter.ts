@@ -20,7 +20,7 @@ type RolldownWatchBuild = BindingWatcherBundler;
  * - `END`: finished building all bundles
  * - `ERROR`: encountered an error while bundling
  *   - `error`: the error that was thrown
- *   - `result`: the bundle object
+ *   - `result`: the bundle object, or `null` if setup failed before a bundle was created
  *
  * @category Programmatic APIs
  */
@@ -42,7 +42,7 @@ export type RolldownWatcherEvent =
   | {
       code: 'ERROR';
       error: Error /* the error is not compilable with rollup */;
-      result: RolldownWatchBuild;
+      result: RolldownWatchBuild | null;
     };
 
 /**
@@ -126,5 +126,48 @@ export class WatcherEmitter implements RolldownWatcher {
 
   async close(): Promise<void> {
     // Overridden by Watcher to also close the native watcher
+  }
+
+  /** @internal Surface setup failures through the normal watcher event API. */
+  async failSetup(error: unknown): Promise<void> {
+    const errors: unknown[] = [];
+    try {
+      await this.emit('event', {
+        code: 'ERROR',
+        error: normalizeSetupError(error),
+        result: null,
+      });
+    } catch (reportError) {
+      errors.push(reportError);
+    }
+    try {
+      await this.emit('event', { code: 'END' });
+    } catch (reportError) {
+      errors.push(reportError);
+    }
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
+      throw new AggregateError(errors, 'Watcher setup terminal event listeners failed', {
+        cause: errors[0],
+      });
+    }
+  }
+}
+
+function normalizeSetupError(error: unknown): Error {
+  try {
+    if (
+      error instanceof Error ||
+      (Object.prototype.toString.call(error) === '[object Error]' &&
+        typeof (error as Error).message === 'string')
+    ) {
+      return error as Error;
+    }
+  } catch {}
+
+  try {
+    return new Error(String(error), { cause: error });
+  } catch {
+    return new Error('Watcher setup failed with a non-coercible thrown value', { cause: error });
   }
 }

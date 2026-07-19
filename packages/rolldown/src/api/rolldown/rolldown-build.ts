@@ -1,6 +1,7 @@
-import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../../binding.cjs';
+import { BindingBundler } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
+import type { RuntimeLease } from '../../runtime-lifecycle';
 import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
 import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
@@ -23,15 +24,28 @@ Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose');
 export class RolldownBuild {
   #inputOptions: InputOptions;
   #bundler: BindingBundler;
+  #runtimeLease: RuntimeLease;
   #stopWorkers?: () => Promise<void>;
 
-  /** @internal */
-  static asyncRuntimeShutdown = false;
-
   /** @hidden should not be used directly */
-  constructor(inputOptions: InputOptions) {
+  constructor(inputOptions: InputOptions, runtimeLease: RuntimeLease) {
     this.#inputOptions = inputOptions;
-    this.#bundler = new BindingBundler();
+    this.#runtimeLease = runtimeLease;
+    try {
+      this.#bundler = new BindingBundler();
+    } catch (error) {
+      // Construction failure must not abandon the acquired runtime lease.
+      try {
+        this.#runtimeLease.release();
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          'Bundle construction and runtime release both failed',
+          { cause: error },
+        );
+      }
+      throw error;
+    }
   }
 
   /**
@@ -91,11 +105,15 @@ export class RolldownBuild {
    * ```
    */
   async close(): Promise<void> {
-    await this.#stopWorkers?.();
-    await this.#bundler.close();
-    shutdownAsyncRuntime();
-    RolldownBuild.asyncRuntimeShutdown = true;
-    this.#stopWorkers = void 0;
+    try {
+      await this.#stopWorkers?.();
+      await this.#bundler.close();
+      this.#stopWorkers = void 0;
+    } finally {
+      // Lease release is idempotent, so a repeated or failed close cannot
+      // over-release the runtime.
+      this.#runtimeLease.release();
+    }
   }
 
   /** @hidden documented in close method */
@@ -118,10 +136,6 @@ export class RolldownBuild {
     validateOption('output', outputOptions);
     await this.#stopWorkers?.();
     const option = await createBundlerOptions(this.#inputOptions, outputOptions, false);
-
-    if (RolldownBuild.asyncRuntimeShutdown) {
-      startAsyncRuntime();
-    }
 
     try {
       this.#stopWorkers = option.stopWorkers;

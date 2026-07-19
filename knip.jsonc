@@ -1,5 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema-jsonc.json",
+  "ignoreBinaries": ["rustup"], // build-binding.ts resolves the toolchain rustc via `rustup which rustc`
   "ignoreWorkspaces": ["examples/**"], // no rolldown plugin yet
   "workspaces": {
     ".": {

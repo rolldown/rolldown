@@ -13,7 +13,7 @@
     "vue": "catalog:"
   },
   "devDependencies": {
-    "@voidzero-dev/vitepress-theme": "^4.8.4",
+    "@voidzero-dev/vitepress-theme": "^5.0.0",
     "oxc-minify": "catalog:",
     "typedoc": "^0.28.19",
     "typedoc-plugin-markdown": "^4.12.0",

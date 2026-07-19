@@ -3,8 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import nodePath from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { MessageChannel, Worker } from 'node:worker_threads';
-import { createParallelPluginWorkerBootstrap } from '../src/utils/initialize-parallel-plugins';
+import { Worker } from 'node:worker_threads';
 // Ensures the timer host is registered before `timers` is asserted: importing
 // the rolldown entry runs `setup.ts` -> `timer-host.ts` -> `registerTimerHost`
 // (the same side effect every public binding-loading entry now carries).
@@ -1171,69 +1170,30 @@ describe('getRuntimeCapabilities', () => {
       expect(graphText).toContain('timer.resolve()');
 
       // BEHAVIORAL: the real entry must actually run as a worker under this
-      // lane's flavor (empty plugin set: registerPlugins(id, []) no-ops on an
-      // unknown registry id and the entry posts success).
-      const { port1: controlPort, port2: workerControlPort } = new MessageChannel();
-      const authentication = {
-        readyToken: 'runtime-capabilities-ready',
-        resultToken: 'runtime-capabilities-result',
-        session: 'runtime-capabilities-session',
-        startToken: 'runtime-capabilities-start',
-      };
-      const worker = new Worker(
-        createParallelPluginWorkerBootstrap(
-          pathToFileURL(parallelWorkerEntry).href,
-          authentication,
-        ),
-        {
-          eval: true,
-          transferList: [workerControlPort],
-          workerData: {
-            controlPort: workerControlPort,
-            registryId: 0,
-            pluginInfos: [],
-            threadNumber: 0,
-            watchMode: false,
-          },
+      // lane's flavor. The base bootstrap protocol spawns the entry file
+      // directly with `workerData`; an empty plugin set means
+      // `registerPlugins(0, [])` no-ops on an unknown registry id and the
+      // entry posts `{ type: 'success' }` on `parentPort`.
+      const worker = new Worker(parallelWorkerEntry, {
+        workerData: {
+          registryId: 0,
+          pluginInfos: [],
+          threadNumber: 0,
+          watchMode: false,
         },
-      );
+      });
       try {
-        const messages: string[] = [];
         const outcome: any = await Promise.race([
           new Promise((resolve, reject) => {
-            const onMessage = (message: any) => {
-              if (
-                message?.session !== authentication.session ||
-                (message?.type === 'ready'
-                  ? message?.token !== authentication.readyToken
-                  : message?.token !== authentication.resultToken)
-              ) {
-                reject(new Error('parallel-plugin worker sent an unauthenticated response'));
-                return;
-              }
-              messages.push(message.type);
-              if (message.type === 'ready') {
-                controlPort.postMessage({
-                  session: authentication.session,
-                  token: authentication.startToken,
-                  type: 'start',
-                });
-                return;
-              }
-              controlPort.off('message', onMessage);
-              resolve(message);
-            };
-            controlPort.on('message', onMessage);
+            worker.once('message', resolve);
             worker.once('error', reject);
           }),
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('parallel-plugin worker never reported')), 20_000),
           ),
         ]);
-        expect(messages).toEqual(['ready', 'success']);
-        expect(outcome.type).toBe('success');
+        expect(outcome).toEqual({ type: 'success' });
       } finally {
-        controlPort.close();
         await worker.terminate();
       }
     },

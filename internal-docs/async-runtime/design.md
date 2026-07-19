@@ -12,8 +12,7 @@ generation-quiescent: accepted work is cancelled or completed, scheduler roles
 exit, and physical workers retire before a restart may create the next pool.
 The existing Tokio runtime remains the default and is selected by the
 `tokio-runtime` feature; the new implementation is selected by
-`async-runtime`. See
-[implementation.md](./implementation.md) for the component map.
+`async-runtime`.
 
 ## Design Principles
 
@@ -493,6 +492,5 @@ Tokio, Tokio-blocking, Rayon, and ad-hoc thread-pool tuning problems.
 
 ## Related
 
-- [implementation.md](./implementation.md) - the scheduler and integration map
 - [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md) -
   deferred drops and rebuild ownership

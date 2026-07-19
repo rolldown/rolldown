@@ -3,8 +3,15 @@
   "include": ["src/*", "src/**/*", "**/_config.ts", "**/*.test.ts", "**/*.test-d.ts"],
   "compilerOptions": {
     "types": ["node", "vite/client"],
-    "rootDir": "./",
+    // The `@src/*` alias below pulls files from `../src` into this program,
+    // so the root directory must cover the whole package.
+    "rootDir": "../",
     "allowJs": true,
-    "isolatedDeclarations": false
+    "isolatedDeclarations": false,
+    // Mirrors the `@src` alias in vitest.config.mts so type checking (and
+    // knip's import resolution) can follow `@src/*` imports.
+    "paths": {
+      "@src/*": ["../src/*"]
+    }
   }
 }

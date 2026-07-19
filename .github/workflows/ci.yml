@@ -419,6 +419,15 @@ jobs:
       - name: Build @rolldown/browser
         run: just build-browser
 
+      # `just build-browser` compiles the threaded-WASI binding with the
+      # `tokio-runtime` profile, which regenerates binding.cjs/binding.d.cts
+      # with that feature surface. The committed copies come from the default
+      # async-runtime native build, so restore them; otherwise the
+      # `git diff --exit-code` below fails on expected regeneration instead of
+      # guarding real codegen drift.
+      - name: Restore the native binding loader clobbered by the WASI browser build
+        run: git checkout -- packages/rolldown/src/binding.cjs packages/rolldown/src/binding.d.cts
+
       - name: Build @rolldown/debug
         run: just build-rolldown-debug
 

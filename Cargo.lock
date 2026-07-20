@@ -166,9 +166,9 @@ dependencies = [
  "rolldown_fs",
  "rolldown_resolver",
  "rolldown_sourcemap",
+ "rolldown_utils",
  "rolldown_workspace",
  "rustc-hash",
- "tokio",
 ]
 
 [[package]]
@@ -466,7 +466,6 @@ dependencies = [
  "oorandom",
  "serde",
  "serde_json",
- "tokio",
 ]
 
 [[package]]

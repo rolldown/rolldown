@@ -169,6 +169,22 @@ pub enum BenchMode {
   Bundle,
 }
 
+/// Criterion executor that drives benchmark futures on the production shared
+/// async runtime (`rolldown_utils::async_runtime`) — the same scheduler
+/// `generate()`'s internal spawns run on, so the outer bench driver and the
+/// inner bundling work share one runtime with no cross-runtime wakeup hop.
+struct SharedRuntimeExecutor;
+
+impl criterion::async_executor::AsyncExecutor for SharedRuntimeExecutor {
+  fn block_on<T>(&self, future: impl std::future::Future<Output = T>) -> T {
+    rolldown_utils::async_runtime::block_on(future)
+  }
+}
+
+// The shared runtime's configuration freezes on the first submission, so pin
+// it exactly once before any benchmark iteration runs.
+static CONFIGURE_SHARED_RUNTIME: std::sync::Once = std::sync::Once::new();
+
 pub fn run_bench_group(
   c: &mut Criterion,
   group_name: &str,
@@ -177,18 +193,26 @@ pub fn run_bench_group(
   items: Vec<(&str, BundlerOptions)>,
 ) {
   let mut group = c.benchmark_group(group_name);
-  let runtime = tokio::runtime::Builder::new_multi_thread()
-    .worker_threads(8)
-    .enable_all()
-    .max_blocking_threads(4)
-    .build()
-    .expect("Failed to build tokio runtime");
+  // Pin the historical bench configuration (MultiThread, 8 workers / 4
+  // blocking tasks) for A/B parity with the previously pinned tokio runtime.
+  // Production instead resolves these limits from the environment at addon
+  // load. The runtime starts lazily on the first submission — no explicit
+  // start is needed.
+  CONFIGURE_SHARED_RUNTIME.call_once(|| {
+    rolldown_utils::async_runtime::configure(rolldown_utils::async_runtime::RuntimeOptions {
+      flavor: rolldown_utils::async_runtime::RuntimeFlavor::MultiThread,
+      worker_threads: 8,
+      max_blocking_tasks: 4,
+      ..Default::default()
+    })
+    .expect("Failed to configure the shared async runtime");
+  });
 
   for (name, options) in items {
     for item in derive_benchmark_items(derive_options, name, options) {
       let mut ctx = create_bench_context(&item.options);
       group.bench_function(format!("{group_name}@{}", item.name), |b| {
-        b.to_async(&runtime).iter(|| {
+        b.to_async(SharedRuntimeExecutor).iter(|| {
           let bundle = ctx.factory.create_bundle_with_fs(ctx.mem_fs.clone(), ctx.create_resolver());
           async {
             match mode {

@@ -1502,6 +1502,14 @@ export interface TypeScriptOptions {
    */
   rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
+/**
+ * One JavaScript-held async runtime lifecycle lease.
+ *
+ * Every artifact runs the shared tokio-free runtime, whose lifecycle is tied
+ * to the napi environment hooks rather than JavaScript-held leases. The lease
+ * API remains a compatibility no-op because the generated WASI loaders still
+ * acquire a lease at import and release it at teardown.
+ */
 export declare class BindingAsyncRuntimeLease {
   release(): void
 }
@@ -1883,6 +1891,13 @@ export declare class TsconfigCache {
   size(): number
 }
 
+/**
+ * Acquire one async runtime lifecycle lease.
+ *
+ * Every artifact uses automatic N-API environment lifecycle for the shared
+ * runtime, so the resolved lease's `release()` is a no-op; the generated WASI
+ * loaders still acquire and release leases around module use.
+ */
 export declare function acquireAsyncRuntime(): Promise<BindingAsyncRuntimeLease>
 
 export interface AliasItem {
@@ -2754,13 +2769,15 @@ export interface BindingResolveOptions {
  */
 export interface BindingRuntimeCapabilities {
   /**
-   * The scheduler the binding was compiled with: 'tokio' (the default
-   * build) or 'shared' (`--features async-runtime`).
+   * The scheduler the binding was compiled with: always 'shared' (the
+   * tokio-free shared runtime). The 'tokio' member of the union survives
+   * only for LEGACY bindings, whose JS support layer synthesizes
+   * `backend: 'tokio'` capability objects.
    */
   backend: 'tokio' | 'shared'
   /**
-   * The executor flavor actually in effect (post-validation; on the shared
-   * build this reflects a pre-first-use `configureAsyncRuntime` override).
+   * The executor flavor actually in effect (post-validation; this reflects
+   * a pre-first-use `configureAsyncRuntime` override).
    */
   flavor: BindingRuntimeFlavor
   /**
@@ -2773,20 +2790,23 @@ export interface BindingRuntimeCapabilities {
    * 'native'`).
    */
   wasi: boolean
-  /** Compiled with `--features async-runtime` (either flavor). */
+  /**
+   * The binding runs the shared async runtime: always true. Survives for
+   * LEGACY bindings, whose JS support layer synthesizes `false`.
+   */
   asyncRuntimeBuild: boolean
   /** Work is scheduled across multiple threads (`flavor === 'MultiThread'`). */
   threads: boolean
   /**
    * A timer facility backs `sleep_until` (the watch-mode debounce). This is
-   * true on native/threaded-WASI Tokio builds and on the shared MultiThread
-   * flavor. On the shared CurrentThread flavor timers are delegated to the
-   * host event loop, so this reads true while a LIVE `registerTimerHost`
-   * registrant exists. Every public package entry that loads the binding
-   * registers a host driver per importing env at import, so through any
-   * supported entry the answer is true; a registrant whose env died (an
-   * exited worker) is evicted and does NOT count. Only a raw shared binding
-   * loaded outside the supported entries can observe false.
+   * true on the MultiThread flavor (executor-owned timer heap). On the
+   * CurrentThread flavor timers are delegated to the host event loop, so
+   * this reads true while a LIVE `registerTimerHost` registrant exists.
+   * Every public package entry that loads the binding registers a host
+   * driver per importing env at import, so through any supported entry the
+   * answer is true; a registrant whose env died (an exited worker) is
+   * evicted and does NOT count. Only a raw binding loaded outside the
+   * supported entries can observe false.
    */
   timers: boolean
   /**
@@ -3089,9 +3109,7 @@ export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcema
 /**
  * Override the shared async runtime's flavor and thread counts.
  *
- * Must be called before the first async binding call. On the default
- * `tokio-runtime` build this throws a feature-disabled error; only the
- * `async-runtime` build honors it.
+ * Must be called before the first async binding call.
  */
 export declare function configureAsyncRuntime(options: BindingRuntimeOptions): void
 
@@ -3125,18 +3143,12 @@ export type FilterTokenKind =  'Id'|
 /**
  * Return the effective async runtime configuration.
  *
- * On the `async-runtime` build this reports the controller's validated
- * options, including a pre-first-use `configureAsyncRuntime` override. On the
- * default `tokio-runtime` build it reports the resolved load-time snapshot
- * used to construct Tokio. The environment is never re-read.
+ * Reports the controller's validated options, including a pre-first-use
+ * `configureAsyncRuntime` override. The environment is never re-read.
  */
 export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
 
-/**
- * Return a snapshot of the shared async runtime's task and scheduler counters.
- *
- * On the default `tokio-runtime` build every counter is zero.
- */
+/** Return a snapshot of the shared async runtime's task and scheduler counters. */
 export declare function getAsyncRuntimeMetrics(): BindingRuntimeMetrics
 
 /**
@@ -3157,9 +3169,10 @@ export declare function getRuntimeCapabilities(): BindingRuntimeCapabilities
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
 
 /**
- * Return whether one exact CurrentThread host registration is still live.
- *
- * The default Tokio build has no CurrentThread host registrations.
+ * Return whether one exact CurrentThread task- or timer-host registration is
+ * still live. The JavaScript package revalidates its process-global marker on
+ * every module evaluation so native eviction cannot leave a stale installed
+ * bit that permanently suppresses replacement registration.
  */
 export declare function isCurrentThreadHostRegistrationActive(registrationHigh: number, registrationLow: number): boolean
 
@@ -3225,8 +3238,6 @@ export interface PreRenderedChunk {
  * Install a native-owned host turn used to poll CurrentThread runnables
  * without re-entering arbitrary future waker locks. Called once per importing
  * environment. JavaScript callbacks are rejected synchronously.
- *
- * A no-op on the default `tokio-runtime` build.
  */
 export declare function registerCurrentThreadTaskHost(registrationHigh: number, registrationLow: number, dispatch?: never): void
 
@@ -3237,8 +3248,7 @@ export declare function registerPlugins(id: number, plugins: Array<BindingPlugin
  * CurrentThread timers (watch-mode debounce). Called at import by every
  * binding-loading JS entry with paired setTimeout/clearTimeout callbacks; each
  * importing env (main thread and workers alike) registers its own host, and
- * every live host receives each timer. A no-op on the default `tokio-runtime`
- * build (tokio owns its timer wheel).
+ * every live host receives each timer.
  */
 export declare function registerTimerHost(registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): void
 
@@ -3254,26 +3264,24 @@ export declare function reserveCurrentThreadHostRegistration(): BindingHostRegis
  *
  * Live gauges and their lifetime high-water marks are preserved so active
  * task guards can complete without corrupting concurrent observations.
- *
- * A no-op on the default `tokio-runtime` build.
  */
 export declare function resetAsyncRuntimeMetrics(): void
 
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 
 /**
- * Shutdown one manually retained threaded-WASI async runtime owner.
+ * Shutdown one manually retained async runtime owner.
  *
- * Native and threadless-WASI artifacts use automatic N-API environment
- * lifecycle; this compatibility API remains a no-op on those artifacts.
+ * Every artifact uses automatic N-API environment lifecycle for the shared
+ * runtime; this compatibility API remains a no-op.
  */
 export declare function shutdownAsyncRuntime(): void
 
 /**
- * Start and manually retain one threaded-WASI async runtime owner.
+ * Start and manually retain one async runtime owner.
  *
- * Native and threadless-WASI artifacts use automatic N-API environment
- * lifecycle; this compatibility API remains a no-op on those artifacts.
+ * Every artifact uses automatic N-API environment lifecycle for the shared
+ * runtime; this compatibility API remains a no-op.
  */
 export declare function startAsyncRuntime(): void
 
@@ -3281,16 +3289,12 @@ export declare function startAsyncRuntime(): void
  * Evict exactly one native host installed by `registerCurrentThreadTaskHost`.
  * Managed workerd disposal uses this before environment cleanup so a later
  * throwing cleanup hook cannot leave the process-global driver selected.
- *
- * A no-op on the default `tokio-runtime` build.
  */
 export declare function unregisterCurrentThreadTaskHost(registrationHigh: number, registrationLow: number): void
 
 /**
  * Evict exactly one callback installed by `registerTimerHost`.
  * Pending sleeps are woken so they can reselect another live environment.
- *
- * A no-op on the default `tokio-runtime` build.
  */
 export declare function unregisterTimerHost(registrationHigh: number, registrationLow: number): void
 

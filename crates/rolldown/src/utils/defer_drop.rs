@@ -65,11 +65,18 @@ static PENDING_IS_ZERO: Condvar = Condvar::new();
 type DropJob = Box<dyn FnOnce() + Send + 'static>;
 
 /// Contain a panicking user `Drop` impl so it cannot kill the dedicated
-/// worker (or unwind into the caller on the fallback paths). The caught
-/// panic payload is dropped without further containment.
+/// worker (or unwind into the caller on the fallback paths).
 #[cfg(not(target_family = "wasm"))]
 fn run_drop_safely(drop_job: impl FnOnce()) {
-  let _ = catch_unwind(AssertUnwindSafe(drop_job));
+  if let Err(payload) = catch_unwind(AssertUnwindSafe(drop_job)) {
+    // Dropping the caught payload runs a user destructor too, in normal
+    // control flow rather than during an unwind — so a panic there is a plain
+    // panic that would escape this function and kill the worker. Contain it
+    // as well. This is not open-ended hardening: it bottoms out here, and the
+    // `PendingGuard` call sites hold the guard live across this function so
+    // `drain()` is retired even if a payload nests panics deeper still.
+    let _ = catch_unwind(AssertUnwindSafe(move || drop(payload)));
+  }
 }
 
 /// Deferred drops use their own serial worker instead of inheriting the
@@ -84,9 +91,11 @@ static DROP_QUEUE: LazyLock<Option<Sender<DropJob>>> = LazyLock::new(|| {
     std::thread::Builder::new().name("rolldown-deferred-drop".to_string()).spawn(move || {
       while let Ok(job) = receiver.recv() {
         // Retire the pending count only after the value (and any caught panic
-        // payload) has finished destruction.
+        // payload) has finished destruction. The guard is held live across
+        // that destruction rather than constructed after it, so an escaping
+        // panic unwinds *through* it instead of skipping it.
+        let _guard = PendingGuard;
         run_drop_safely(job);
-        drop(PendingGuard);
       }
     });
   worker.ok().map(|_| sender)
@@ -94,6 +103,8 @@ static DROP_QUEUE: LazyLock<Option<Sender<DropJob>>> = LazyLock::new(|| {
 
 /// Decrements `PENDING` on drop, so the count goes down even if the deferred
 /// value's `Drop` impl panics — a panic must not wedge `drain()` forever.
+/// Hold it live across the destruction it accounts for, never construct it
+/// afterwards: an escaping panic would skip a guard that does not exist yet.
 #[cfg(not(target_family = "wasm"))]
 struct PendingGuard;
 
@@ -127,8 +138,8 @@ pub fn spawn_drop<T: Send + 'static>(value: T) {
         // The worker should be process-lived. If it ever exits unexpectedly,
         // preserve correctness by completing this drop synchronously without
         // exposing a user-defined Drop panic that the worker path contains.
+        let _guard = PendingGuard;
         run_drop_safely(error.0);
-        drop(PendingGuard);
       }
     } else {
       // Thread creation can fail under resource pressure. Deferred destruction
@@ -194,5 +205,59 @@ mod tests {
       .expect("deferred drop was queued behind its caller in the one-worker Rayon pool");
     release_tx.send(()).unwrap();
     drain();
+  }
+
+  /// A panic payload whose own `Drop` panics.
+  struct HostilePayload;
+
+  impl Drop for HostilePayload {
+    fn drop(&mut self) {
+      panic!("hostile panic payload destructor");
+    }
+  }
+
+  /// A deferred value whose `Drop` panics with a [`HostilePayload`].
+  struct PanicWithHostilePayload;
+
+  impl Drop for PanicWithHostilePayload {
+    fn drop(&mut self) {
+      std::panic::panic_any(HostilePayload);
+    }
+  }
+
+  // `PENDING` and the worker are process-global, so an unretired count here
+  // wedges `drain()` for every other test in this binary too.
+  #[test]
+  fn a_panicking_panic_payload_destructor_cannot_wedge_drain() {
+    spawn_drop(PanicWithHostilePayload);
+
+    let (drained_tx, drained_rx) = sync_channel(1);
+    std::thread::spawn(move || {
+      drain();
+      let _ = drained_tx.send(());
+    });
+
+    drained_rx
+      .recv_timeout(Duration::from_secs(10))
+      .expect("drain() hung: the drop worker died before retiring its pending count");
+
+    // The hostile payload must not have taken the worker down with it, or every
+    // later deferred drop silently falls back to running inline on its caller.
+    let (worker_tx, worker_rx) = sync_channel(1);
+    spawn_drop(ReportDroppingThread(worker_tx));
+    drain();
+    assert_eq!(
+      worker_rx.recv_timeout(Duration::from_secs(10)).ok().flatten().as_deref(),
+      Some("rolldown-deferred-drop"),
+      "the deferred-drop worker did not survive the hostile panic payload"
+    );
+  }
+
+  struct ReportDroppingThread(SyncSender<Option<String>>);
+
+  impl Drop for ReportDroppingThread {
+    fn drop(&mut self) {
+      let _ = self.0.send(std::thread::current().name().map(ToString::to_string));
+    }
   }
 }

@@ -12,6 +12,7 @@ use rolldown::BundlerConfig;
 use rolldown_common::WatcherChangeKind;
 use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler};
 
+use crate::options::BindingWatchOption;
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
@@ -20,26 +21,44 @@ use crate::utils::{
   spawn_boxed_future,
 };
 
-fn create_watcher_config(configs: &[BundlerConfig]) -> WatcherConfig {
-  // Rollup applies the maximum buildDelay across enabled configs. The file
-  // watcher itself is shared in Rolldown, so use the first config that
-  // explicitly selects backend/debouncer behavior for the remaining fields.
+/// Whether a config explicitly selects file-watcher backend/debouncer behavior.
+///
+/// This has to run on the *binding* option, before it is converted into
+/// `rolldown_common::WatchOption`: that conversion collapses the `Option<bool>`
+/// fields with `unwrap_or_default()`, which makes an explicit `usePolling: false`
+/// indistinguishable from an unset field.
+fn selects_watcher_backend(watch: &BindingWatchOption) -> bool {
+  watch.use_polling.is_some()
+    || watch.poll_interval.is_some()
+    || watch.compare_contents_for_polling.is_some()
+    || watch.use_debounce.is_some()
+    || watch.debounce_delay.is_some()
+    || watch.debounce_tick_rate.is_some()
+}
+
+/// Build the single `WatcherConfig` that applies to every watch task.
+///
+/// `selects_backend` is a per-config flag parallel to `configs`, produced by
+/// [`selects_watcher_backend`] before the binding options are converted.
+///
+/// See "Multi-Config Watcher Options" in `internal-docs/watch-mode/implementation.md`.
+fn create_watcher_config(configs: &[BundlerConfig], selects_backend: &[bool]) -> WatcherConfig {
+  // `buildDelay` feeds the coordinator's single debounce window, so take the
+  // maximum across configs the way Rollup does.
   let debounce = configs
     .iter()
     .filter_map(|config| config.options.watch.as_ref()?.build_delay)
     .max()
     .map(|ms| Duration::from_millis(u64::from(ms)));
+  // One `WatcherConfig` configures the fs watcher of every task, so the
+  // backend/debouncer fields can only come from a single config. Match the
+  // `MULTIPLE_WATCHER_OPTION` warning the JS layer emits ("using first one to
+  // start watcher"): the first config that sets any of them wins.
   let watch = configs
     .iter()
-    .filter_map(|config| config.options.watch.as_ref())
-    .find(|watch| {
-      watch.use_polling
-        || watch.poll_interval.is_some()
-        || watch.compare_contents_for_polling
-        || watch.use_debounce
-        || watch.debounce_delay.is_some()
-        || watch.debounce_tick_rate.is_some()
-    })
+    .zip(selects_backend.iter().copied())
+    .filter(|(_, selects)| *selects)
+    .find_map(|(config, _)| config.options.watch.as_ref())
     .or_else(|| configs.first().and_then(|config| config.options.watch.as_ref()));
   WatcherConfig {
     debounce,
@@ -102,12 +121,19 @@ impl BindingWatcher {
     options: Vec<BindingBundlerOptions>,
     listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>,
   ) -> napi::Result<Self> {
+    // Capture which configs explicitly set a watcher backend before the
+    // conversion below erases the difference between `false` and unset.
+    let selects_backend = options
+      .iter()
+      .map(|option| option.input_options.watch.as_ref().is_some_and(selects_watcher_backend))
+      .collect::<Vec<_>>();
+
     let configs = options
       .into_iter()
       .map(create_bundler_config_from_binding_options)
       .collect::<Result<Vec<_>, _>>()?;
 
-    let watcher_config = create_watcher_config(&configs);
+    let watcher_config = create_watcher_config(&configs, &selects_backend);
 
     let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
     let inner =
@@ -158,33 +184,70 @@ mod tests {
   use rolldown::BundlerOptions;
   use rolldown_common::WatchOption;
 
+  fn config(watch: WatchOption) -> BundlerConfig {
+    BundlerConfig::new(BundlerOptions { watch: Some(watch), ..Default::default() }, vec![])
+  }
+
   #[test]
-  fn watcher_config_uses_max_build_delay_and_first_explicit_backend_config() {
+  fn explicit_backend_option_is_detected_before_conversion() {
+    // `usePolling: false` is an explicit choice, not an absent option.
+    assert!(selects_watcher_backend(&BindingWatchOption {
+      use_polling: Some(false),
+      ..Default::default()
+    }));
+    assert!(selects_watcher_backend(&BindingWatchOption {
+      poll_interval: Some(75),
+      ..Default::default()
+    }));
+    // `buildDelay` is merged separately and does not select a backend.
+    assert!(!selects_watcher_backend(&BindingWatchOption {
+      build_delay: Some(10),
+      ..Default::default()
+    }));
+  }
+
+  #[test]
+  fn build_delay_is_the_max_across_configs() {
     let configs = vec![
-      BundlerConfig::new(
-        BundlerOptions {
-          watch: Some(WatchOption { build_delay: Some(50), ..Default::default() }),
-          ..Default::default()
-        },
-        vec![],
-      ),
-      BundlerConfig::new(
-        BundlerOptions {
-          watch: Some(WatchOption {
-            build_delay: Some(250),
-            use_polling: true,
-            poll_interval: Some(75),
-            ..Default::default()
-          }),
-          ..Default::default()
-        },
-        vec![],
-      ),
+      config(WatchOption { build_delay: Some(50), ..Default::default() }),
+      config(WatchOption { build_delay: Some(250), ..Default::default() }),
+      config(WatchOption::default()),
     ];
 
-    let config = create_watcher_config(&configs);
-    assert_eq!(config.debounce, Some(Duration::from_millis(250)));
-    assert!(config.use_polling);
-    assert_eq!(config.poll_interval, Some(75));
+    let watcher_config = create_watcher_config(&configs, &[false, false, false]);
+    assert_eq!(watcher_config.debounce, Some(Duration::from_millis(250)));
+  }
+
+  #[test]
+  fn backend_comes_from_the_first_config_that_sets_one() {
+    let configs = vec![
+      config(WatchOption { build_delay: Some(50), ..Default::default() }),
+      config(WatchOption {
+        build_delay: Some(250),
+        use_polling: true,
+        poll_interval: Some(75),
+        ..Default::default()
+      }),
+    ];
+
+    let watcher_config = create_watcher_config(&configs, &[false, true]);
+    assert_eq!(watcher_config.debounce, Some(Duration::from_millis(250)));
+    assert!(watcher_config.use_polling);
+    assert_eq!(watcher_config.poll_interval, Some(75));
+  }
+
+  /// `[{ usePolling: false }, { usePolling: true }]` — both configs set the
+  /// option, so the first one wins, matching the `MULTIPLE_WATCHER_OPTION`
+  /// warning ("using first one to start watcher"). Selecting on the converted
+  /// `use_polling: bool` instead would skip the first config and enable polling.
+  #[test]
+  fn explicit_false_in_the_first_config_wins_over_a_later_true() {
+    let configs = vec![
+      config(WatchOption { use_polling: false, ..Default::default() }),
+      config(WatchOption { use_polling: true, ..Default::default() }),
+    ];
+
+    let watcher_config = create_watcher_config(&configs, &[true, true]);
+    assert!(!watcher_config.use_polling);
   }
 }

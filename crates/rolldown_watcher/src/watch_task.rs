@@ -376,6 +376,8 @@ impl WatchTask {
 /// Rollup reports the resolved `output.file` (falling back to `output.dir`)
 /// here, so honor `file` when it is set instead of always using `out_dir`,
 /// and normalize `.`/`..` components for a stable absolute path.
+///
+/// See "API Contract" in `internal-docs/watch-mode/implementation.md`.
 fn resolve_output_path(cwd: &Path, output: &str) -> PathBuf {
   let output = Path::new(output);
   let path = if output.is_absolute() { output.to_path_buf() } else { cwd.join(output) };

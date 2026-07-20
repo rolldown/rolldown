@@ -474,10 +474,7 @@ Tokio, Tokio-blocking, Rayon, and ad-hoc thread-pool tuning problems.
 - Threaded and single-thread WASI builds use distinct artifact names. The
   threaded build retains the `wasi` loader/wasm names and worker scripts; the
   single-thread build uses `wasip1` names, includes the deferred workerd loader,
-  and ships no worker scripts. Shared WebAssembly artifacts normalize an
-  inherited `ROLLDOWN_RUNTIME=multi` override to `CurrentThread` before module
-  initialization because the shared scheduler has no WebAssembly MultiThread
-  executor.
+  and ships no worker scripts.
 - Legacy Tokio-era threaded-WASI artifacts own independent native runtime
   leases: concurrent acquisitions retain separate owners, only the final
   release shuts down the runtime, and restart waits for the previous

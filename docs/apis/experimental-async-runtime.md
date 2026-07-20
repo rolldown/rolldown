@@ -24,12 +24,11 @@ after the first runtime generation starts.
 
 ## Artifacts
 
-| Artifact                                          | Backend | Supported flavor                     |
-| ------------------------------------------------- | ------- | ------------------------------------ |
-| Standard native npm binding                       | Shared  | `MultiThread` or `CurrentThread`     |
-| Published threaded WASI (`wasm32-wasip1-threads`) | Shared  | `CurrentThread`                      |
-| Any WebAssembly binding                           | Shared  | `CurrentThread` on both WASI targets |
-| Legacy Tokio-era published binding                | Tokio   | `MultiThread`; configuration throws  |
+| Artifact                                    | Backend | Supported flavor                             |
+| ------------------------------------------- | ------- | -------------------------------------------- |
+| Standard native npm binding                 | Shared  | `MultiThread` or `CurrentThread`             |
+| Any WebAssembly binding (both WASI targets) | Shared  | `CurrentThread`                              |
+| Legacy Tokio-era published binding          | Tokio   | reports its own flavor; configuration throws |
 
 Use `getRuntimeCapabilities()` instead of inferring the backend or target from
 environment variables. Legacy artifacts without a capability report are
@@ -44,6 +43,10 @@ The binding reads these variables once during module initialization:
 - `ROLLDOWN_WORKER_THREADS`
 - `ROLLDOWN_MAX_BLOCKING_THREADS`
 - `ROLLDOWN_PARK_DEADLINE_MS`
+
+`ROLLDOWN_RUNTIME` selects the flavor and the two thread-count variables size
+the topology. `ROLLDOWN_PARK_DEADLINE_MS` is not a topology knob: it opts into
+deadline-based `block_on` deadlock detection, which is disabled by default.
 
 Native `ROLLDOWN_*` worker counts are capped at 256. Explicit
 `configureAsyncRuntime()` thread values above 256 throw
@@ -83,6 +86,10 @@ the JavaScript host thread safe. Query `blockOnJsThreadSafe`,
 `watchSupported`, `devSupported`, and `timers` from
 `getRuntimeCapabilities()` before enabling features that depend on them.
 
-A custom shared-runtime WebAssembly artifact remains `CurrentThread` even when
-compiled for `wasm32-wasip1-threads`; that target does not add a shared
-multi-thread executor. Watch mode remains unsupported on WASI.
+Every WebAssembly artifact remains `CurrentThread`, including the published
+threaded build for `wasm32-wasip1-threads`: the shared scheduler has no
+WebAssembly multi-thread executor, so that target gains threads for napi-rs
+host work but not a parallel executor. Consequently `wasm32-wasip1-threads`
+reports `devSupported: false` — `dev()` is unavailable there even though the
+legacy Tokio-era artifact for the same target reported it as supported. Watch
+mode remains unsupported on every WASI artifact.

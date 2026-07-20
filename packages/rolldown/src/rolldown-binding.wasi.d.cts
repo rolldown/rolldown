@@ -2838,6 +2838,12 @@ export interface BindingRuntimeConfig {
   flavor: BindingRuntimeFlavor
   workerThreads: number
   maxBlockingTasks: number
+  /**
+   * Effective MultiThread drainer idle-linger budget in microseconds
+   * (`0` = lingering disabled). Reported for introspection parity; not
+   * settable through `configureAsyncRuntime`.
+   */
+  drainLingerUs: number
 }
 
 export type BindingRuntimeFlavor =  'CurrentThread'|

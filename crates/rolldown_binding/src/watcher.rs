@@ -104,23 +104,12 @@ impl BindingWatcher {
   #[tracing::instrument(level = "debug", skip_all)]
   #[napi(ts_return_type = "Promise<void>")]
   pub fn run<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
-    #[cfg(feature = "async-runtime")]
-    {
-      // Shared-runtime submission is thread-safe. Attempt it before entering a
-      // N-API future so a stopped runtime can still return a rejected Promise
-      // while preserving the coordinator for a later explicit retry.
-      match self.inner.run().map_err(watcher_start_error_to_napi) {
-        Ok(()) => PromiseRaw::resolve(env, ()),
-        Err(error) => PromiseRaw::reject(env, error),
-      }
-    }
-
-    #[cfg(not(feature = "async-runtime"))]
-    {
-      // Tokio submission needs the runtime context supplied by the N-API
-      // future, but any admission failure must still reject the JS Promise.
-      let inner = Arc::clone(&self.inner);
-      spawn_boxed_future(env, async move { inner.run().map_err(watcher_start_error_to_napi) })
+    // Shared-runtime submission is thread-safe. Attempt it before entering a
+    // N-API future so a stopped runtime can still return a rejected Promise
+    // while preserving the coordinator for a later explicit retry.
+    match self.inner.run().map_err(watcher_start_error_to_napi) {
+      Ok(()) => PromiseRaw::resolve(env, ()),
+      Err(error) => PromiseRaw::reject(env, error),
     }
   }
 

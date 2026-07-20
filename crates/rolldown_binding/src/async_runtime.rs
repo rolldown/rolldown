@@ -1,26 +1,20 @@
 // The public napi surface in this module (the `Binding*` `#[napi(object)]` types and
 // the `configure_async_runtime` / `get_async_runtime_*` / `reset_async_runtime_metrics`
 // `#[napi]` exports) is reachable only from JS. The in-crate unit-test binary never
-// constructs or calls it, so `dead_code` flags it in the TEST profile under every
-// feature combination (the `async-runtime` arms when the feature is on, the stub arms
-// when it is off). Relax dead_code for the TEST profile only: genuinely dead library
-// code is still caught by the non-test (cdylib) clippy gate, which carries no such allow.
+// constructs or calls it, so `dead_code` flags it in the TEST profile. Relax dead_code
+// for the TEST profile only: genuinely dead library code is still caught by the
+// non-test (cdylib) clippy gate, which carries no such allow.
 #![cfg_attr(test, allow(dead_code))]
 
-#[cfg(feature = "async-runtime")]
 use std::{future::Future, pin::Pin, ptr};
 
-#[cfg(feature = "async-runtime")]
 use napi::bindgen_prelude::{
   AsyncRuntime, AsyncRuntimeRejection, AsyncRuntimeTask, register_async_runtime,
 };
 use napi::bindgen_prelude::{FnArgs, Promise, Unknown};
-#[cfg(feature = "async-runtime")]
 use napi::threadsafe_function::ThreadsafeFunctionCallMode;
 use napi_derive::napi;
-#[cfg(feature = "async-runtime")]
 use rolldown_utils::MAX_ASYNC_RUNTIME_WORKER_THREADS;
-#[cfg(feature = "async-runtime")]
 use rolldown_utils::async_runtime::{
   CurrentThreadTaskDelivery, CurrentThreadTaskDriver, CurrentThreadTaskDriverId, RuntimeFlavor,
   RuntimeMetricsSnapshot, RuntimeOptions, RuntimeOptionsPatch, TimerDriver, TimerDriverId, TimerId,
@@ -32,14 +26,11 @@ use rolldown_utils::async_runtime::{
 };
 use rolldown_utils::max_async_runtime_worker_threads;
 
-#[cfg(feature = "async-runtime")]
 use crate::types::js_callback::InvalidReturnValue;
 use crate::types::js_callback::JsCallback;
 
-#[cfg(feature = "async-runtime")]
 struct RolldownAsyncRuntime;
 
-#[cfg(feature = "async-runtime")]
 // SAFETY: Shutdown closes
 // admission, waits for the scheduler generation to quiesce, joins native
 // workers, and releases active resources. Independently, napi-rs permanently
@@ -98,7 +89,6 @@ pub enum BindingRuntimeFlavor {
   MultiThread,
 }
 
-#[cfg(feature = "async-runtime")]
 impl From<BindingRuntimeFlavor> for RuntimeFlavor {
   fn from(value: BindingRuntimeFlavor) -> Self {
     match value {
@@ -108,7 +98,6 @@ impl From<BindingRuntimeFlavor> for RuntimeFlavor {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 impl From<RuntimeFlavor> for BindingRuntimeFlavor {
   fn from(value: RuntimeFlavor) -> Self {
     match value {
@@ -127,7 +116,6 @@ pub struct BindingRuntimeOptions {
   pub max_blocking_tasks: Option<f64>,
 }
 
-#[cfg(feature = "async-runtime")]
 impl TryFrom<BindingRuntimeOptions> for RuntimeOptionsPatch {
   type Error = napi::Error;
 
@@ -148,7 +136,6 @@ impl TryFrom<BindingRuntimeOptions> for RuntimeOptionsPatch {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 fn validate_binding_thread_count(
   field: &str,
   value: Option<f64>,
@@ -185,7 +172,6 @@ pub struct BindingRuntimeConfig {
   pub max_blocking_tasks: u32,
 }
 
-#[cfg(feature = "async-runtime")]
 impl From<RuntimeOptions> for BindingRuntimeConfig {
   fn from(value: RuntimeOptions) -> Self {
     Self {
@@ -216,7 +202,6 @@ pub struct BindingRuntimeMetrics {
   pub max_active_blocking_tasks: f64,
 }
 
-#[cfg(feature = "async-runtime")]
 impl From<RuntimeMetricsSnapshot> for BindingRuntimeMetrics {
   fn from(value: RuntimeMetricsSnapshot) -> Self {
     Self {
@@ -244,10 +229,8 @@ fn saturating_u32(value: u64) -> u32 {
   u32::try_from(value).unwrap_or(u32::MAX)
 }
 
-#[cfg(feature = "async-runtime")]
 const MAX_SAFE_JS_INTEGER: u64 = (1_u64 << 53) - 1;
 
-#[cfg(feature = "async-runtime")]
 #[expect(
   clippy::cast_precision_loss,
   reason = "the value is clamped to JavaScript's exactly representable integer range"
@@ -256,77 +239,39 @@ fn safe_js_number(value: u64) -> f64 {
   value.min(MAX_SAFE_JS_INTEGER) as f64
 }
 
-#[cfg(feature = "async-runtime")]
 #[napi]
 /// Override the shared async runtime's flavor and thread counts.
 ///
-/// Must be called before the first async binding call. On the default
-/// `tokio-runtime` build this throws a feature-disabled error; only the
-/// `async-runtime` build honors it.
+/// Must be called before the first async binding call.
 pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<()> {
   configure_partial(options.try_into()?)
     .map_err(|error| napi::Error::from_reason(error.to_string()))
 }
 
-#[cfg(not(feature = "async-runtime"))]
-#[napi]
-/// Override the shared async runtime's flavor and thread counts.
-///
-/// Must be called before the first async binding call. On the default
-/// `tokio-runtime` build this throws a feature-disabled error; only the
-/// `async-runtime` build honors it.
-pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<()> {
-  let _ = options;
-  Err(napi::Error::from_reason(
-    "This Rolldown binding was built without the `async-runtime` feature",
-  ))
-}
-
-#[cfg(feature = "async-runtime")]
 #[napi]
 /// Return the effective async runtime configuration.
 ///
-/// On the `async-runtime` build this reports the controller's validated
-/// options, including a pre-first-use `configureAsyncRuntime` override. On the
-/// default `tokio-runtime` build it reports the resolved load-time snapshot
-/// used to construct Tokio. The environment is never re-read.
+/// Reports the controller's validated options, including a pre-first-use
+/// `configureAsyncRuntime` override. The environment is never re-read.
 pub fn get_async_runtime_config() -> BindingRuntimeConfig {
   configured_options().into()
 }
 
 // === Unified config-resolution pipeline =====================================
 //
-// ONE typed resolution replaces the previously divergent per-backend paths:
-// every runtime-config environment variable is read in exactly one place
-// (`RuntimeEnv::from_process`), resolved through one pure per-(backend,
-// target) defaults table (`resolve_runtime_config_for`), and snapshotted once
-// per process (`resolved_runtime_config`). Every consumer -- the tokio
-// builder in lib.rs `init`, the shared runtime's `register_async_runtime`,
-// the `get_async_runtime_config` reporter and the `get_runtime_capabilities`
+// ONE typed resolution: every runtime-config environment variable is read in
+// exactly one place (`RuntimeEnv::from_process`), resolved through one pure
+// per-target defaults table (`resolve_runtime_config_for`), and snapshotted
+// once per process (`resolved_runtime_config`). Every consumer -- the shared
+// runtime's `register_async_runtime` and the `get_runtime_capabilities`
 // export -- reads that same snapshot, so a later `process.env` mutation can
 // never make what we report diverge from the runtime that was actually built.
 //
-// The per-backend defaults are preserved within explicit production bounds:
-// - tokio-native keeps `physical * 3 / 2` workers and the dedicated
-//   4-thread blocking pool (the PR #6270 world), capped at 256 workers;
-// - the shared runtime keeps `max(physical, 2)` workers and reserves one
-//   execution lane from blocking admission, capped at 256 workers;
-// - the threaded-WASI tokio artifact keeps mirroring the napi-rs loader's
-//   async work pool size;
-// - the pure resolver models threadless-WASI Tokio as its current-thread
-//   executor with no worker pool, although lib.rs rejects that unusable build
-//   combination before an artifact can be produced;
-// - the shared wasm artifact reports the CurrentThread executor's one physical
+// The defaults are preserved within explicit production bounds:
+// - the shared native runtime keeps `max(physical, 2)` workers and reserves
+//   one execution lane from blocking admission, capped at 256 workers;
+// - the wasm artifacts report the CurrentThread executor's one physical
 //   execution lane (no env worker override, as before).
-
-/// Which scheduler this binding was compiled with.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ResolvedRuntimeBackend {
-  /// The default `tokio-runtime` build: napi drives a tokio runtime.
-  Tokio,
-  /// The `--features async-runtime` build: the shared rolldown scheduler.
-  Shared,
-}
 
 /// Which target family this binding was compiled for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -355,7 +300,6 @@ impl From<ResolvedRuntimeFlavor> for BindingRuntimeFlavor {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 impl From<ResolvedRuntimeFlavor> for RuntimeFlavor {
   fn from(value: ResolvedRuntimeFlavor) -> Self {
     match value {
@@ -369,22 +313,15 @@ impl From<ResolvedRuntimeFlavor> for RuntimeFlavor {
 /// ONLY place the process environment is read for runtime configuration.
 #[derive(Debug, Clone, Default)]
 pub struct RuntimeEnv {
-  /// `ROLLDOWN_RUNTIME` -- flavor override; honored by the shared backend
-  /// only (silently ignored on tokio builds, as before).
+  /// `ROLLDOWN_RUNTIME` -- flavor override.
   pub runtime: Option<String>,
   /// `ROLLDOWN_WORKER_THREADS`.
   pub worker_threads: Option<String>,
   /// `ROLLDOWN_MAX_BLOCKING_THREADS`.
   pub max_blocking_threads: Option<String>,
   /// `ROLLDOWN_PARK_DEADLINE_MS` -- opt-in deadline-based `block_on`
-  /// deadlock detection; consumed by the shared backend only.
+  /// deadlock detection.
   pub park_deadline_ms: Option<String>,
-  /// `NAPI_RS_ASYNC_WORK_POOL_SIZE` -- the napi-rs WASI loader's pool knob,
-  /// normalized by Rolldown's generated Node loader before the WASI guest
-  /// sees it, then mirrored by the threaded-WASI tokio reporter arm.
-  pub napi_async_work_pool_size: Option<String>,
-  /// `UV_THREADPOOL_SIZE` -- the loader's fallback pool knob.
-  pub uv_threadpool_size: Option<String>,
 }
 
 impl RuntimeEnv {
@@ -395,35 +332,22 @@ impl RuntimeEnv {
       worker_threads: std::env::var("ROLLDOWN_WORKER_THREADS").ok(),
       max_blocking_threads: std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS").ok(),
       park_deadline_ms: std::env::var("ROLLDOWN_PARK_DEADLINE_MS").ok(),
-      napi_async_work_pool_size: std::env::var("NAPI_RS_ASYNC_WORK_POOL_SIZE").ok(),
-      uv_threadpool_size: std::env::var("UV_THREADPOOL_SIZE").ok(),
     }
   }
 }
 
 /// The typed result of config resolution: the effective values the runtime is
-/// built from and the tokio-backend reporter serves. Shared CurrentThread is
-/// normalized to one worker; shared MultiThread is normalized to a truthful
-/// minimum of two workers before it reaches the controller.
+/// built from. CurrentThread is normalized to one worker; MultiThread is
+/// normalized to a truthful minimum of two workers before it reaches the
+/// controller.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ResolvedRuntimeConfig {
-  pub backend: ResolvedRuntimeBackend,
   pub target: ResolvedRuntimeTarget,
   pub flavor: ResolvedRuntimeFlavor,
   pub worker_threads: usize,
   pub max_blocking_tasks: usize,
-  /// `Some(ms)` only when deadline-based deadlock detection is armed;
-  /// resolved for the shared backend only (tokio has no such knob, and the
-  /// env var stays ignored there exactly as before).
+  /// `Some(ms)` only when deadline-based deadlock detection is armed.
   pub park_deadline_ms: Option<u64>,
-}
-
-const fn compiled_backend() -> ResolvedRuntimeBackend {
-  if cfg!(feature = "async-runtime") {
-    ResolvedRuntimeBackend::Shared
-  } else {
-    ResolvedRuntimeBackend::Tokio
-  }
 }
 
 const fn compiled_target() -> ResolvedRuntimeTarget {
@@ -488,231 +412,81 @@ fn clamp_shared_blocking_tasks(
   }
 }
 
-const EMNAPI_ASYNC_WORK_POOL_SIZE_MAX: usize = 1024;
-
-// The size of the async work pool the napi-rs WASI loader actually creates on
-// the threaded WASI artifact. Rolldown's generated Node loader canonicalizes
-// the selected env value to a positive decimal integer and writes it back into
-// the copied WASI environment before instantiation, so the guest and emnapi
-// consume the same value. Non-generated loaders are outside that reporting
-// contract: this fallback accepts canonical positive decimal values and keeps
-// their diagnostic report bounded, but cannot reproduce JavaScript Number
-// syntax that the custom loader did not canonicalize first.
-fn wasm_async_work_pool_size(
-  napi_async_work_pool_size_env: Option<String>,
-  uv_threadpool_size_env: Option<String>,
-) -> usize {
-  use crate::env_config::resolve_thread_count;
-  let selected =
-    napi_async_work_pool_size_env.or(uv_threadpool_size_env).map(|value| value.trim().to_string());
-  resolve_thread_count(selected, 4, EMNAPI_ASYNC_WORK_POOL_SIZE_MAX)
-}
-
-/// The pure per-(backend, target) resolution table. Parameterized on the
-/// compile-time facts so every arm is unit-testable on any host; the process
-/// entry point is [`resolved_runtime_config`].
+/// The pure per-target resolution table. Parameterized on the compile-time
+/// facts so every arm is unit-testable on any host; the process entry point
+/// is [`resolved_runtime_config`].
 fn resolve_runtime_config_for(
-  backend: ResolvedRuntimeBackend,
   target: ResolvedRuntimeTarget,
   env: &RuntimeEnv,
 ) -> ResolvedRuntimeConfig {
-  use crate::env_config::{MAX_TOKIO_BLOCKING_THREADS, resolve_thread_count};
-  match backend {
-    ResolvedRuntimeBackend::Tokio => match target {
-      ResolvedRuntimeTarget::Native => {
-        // The PR #6270 world: rolldown puts a lot of blocking work on the
-        // worker threads rather than the blocking pool, so worker threads are
-        // scaled up (physical * 3 / 2) while the blocking pool is pinned to a
-        // dedicated 4 (tokio's own default of 512 is far too high for the few
-        // genuinely `blocking` tasks rolldown spawns).
-        let default_worker_threads = detected_native_parallelism().saturating_mul(3) / 2;
-        let worker_threads = resolve_thread_count(
-          env.worker_threads.clone(),
-          default_worker_threads,
-          max_async_runtime_worker_threads(),
-        );
-        let max_blocking_tasks =
-          resolve_thread_count(env.max_blocking_threads.clone(), 4, MAX_TOKIO_BLOCKING_THREADS);
-        ResolvedRuntimeConfig {
-          backend,
-          target,
-          flavor: ResolvedRuntimeFlavor::MultiThread,
-          worker_threads,
-          max_blocking_tasks,
-          // tokio has no park-deadline knob; `ROLLDOWN_RUNTIME` and
-          // `ROLLDOWN_PARK_DEADLINE_MS` stay silently ignored, as before.
-          park_deadline_ms: None,
-        }
-      }
-      ResolvedRuntimeTarget::WasiThreads => {
-        // Threaded-WASI tokio artifact: no Rust-built runtime exists (lib.rs
-        // `init`'s native arm is cfg'd out); the napi-rs WASI loader sizes
-        // one async work pool that carries both the worker and the blocking
-        // work. Report that single pool honestly for both fields.
-        let pool = wasm_async_work_pool_size(
-          env.napi_async_work_pool_size.clone(),
-          env.uv_threadpool_size.clone(),
-        );
-        ResolvedRuntimeConfig {
-          backend,
-          target,
-          flavor: ResolvedRuntimeFlavor::MultiThread,
-          worker_threads: pool,
-          max_blocking_tasks: pool,
-          park_deadline_ms: None,
-        }
-      }
-      ResolvedRuntimeTarget::Wasi => ResolvedRuntimeConfig {
-        // Keep the pure resolution table exhaustive and unit-testable even
-        // though lib.rs rejects this build combination: napi-rs creates a
-        // current-thread runtime but rejects every built-in async submission.
-        backend,
-        target,
-        flavor: ResolvedRuntimeFlavor::CurrentThread,
-        worker_threads: 1,
-        max_blocking_tasks: 1,
-        park_deadline_ms: None,
-      },
-    },
-    ResolvedRuntimeBackend::Shared => {
-      let native = matches!(target, ResolvedRuntimeTarget::Native);
-      let default_flavor = if native {
-        ResolvedRuntimeFlavor::MultiThread
-      } else {
-        ResolvedRuntimeFlavor::CurrentThread
-      };
-      let requested_flavor = resolve_runtime_flavor(env.runtime.as_deref(), default_flavor);
-      // The shared scheduler has no MultiThread executor on WebAssembly:
-      // `rolldown_utils` does not compile Rayon there. Normalize an unsupported
-      // environment override before the module-init hook calls `configure`, so
-      // loading a threadless WASI artifact can never panic because
-      // `ROLLDOWN_RUNTIME=multi` leaked in from a native process environment.
-      let flavor = if native { requested_flavor } else { ResolvedRuntimeFlavor::CurrentThread };
-      let requested_worker_threads = if native {
-        resolve_thread_count(
-          env.worker_threads.clone(),
-          detected_native_parallelism(),
-          max_async_runtime_worker_threads(),
-        )
-      } else {
-        // `RuntimeOptions::default()` parity: the env worker override has
-        // never applied on wasm (`register_async_runtime`'s override block
-        // was `not(target_family = "wasm")`), so the default stays
-        // `available_parallelism` and `ROLLDOWN_WORKER_THREADS` is ignored.
-        std::thread::available_parallelism().map_or(1, usize::from)
-      };
-      let worker_threads = match flavor {
-        ResolvedRuntimeFlavor::CurrentThread => 1,
-        ResolvedRuntimeFlavor::MultiThread => requested_worker_threads.max(2),
-      };
-      let requested_blocking_tasks =
-        resolve_thread_count(env.max_blocking_threads.clone(), worker_threads, worker_threads);
-      let max_blocking_tasks =
-        clamp_shared_blocking_tasks(flavor, worker_threads, requested_blocking_tasks);
-      ResolvedRuntimeConfig {
-        backend,
-        target,
-        flavor,
-        worker_threads,
-        max_blocking_tasks,
-        park_deadline_ms: parse_park_deadline_ms(env.park_deadline_ms.clone()),
-      }
-    }
+  use crate::env_config::resolve_thread_count;
+  let native = matches!(target, ResolvedRuntimeTarget::Native);
+  let default_flavor =
+    if native { ResolvedRuntimeFlavor::MultiThread } else { ResolvedRuntimeFlavor::CurrentThread };
+  let requested_flavor = resolve_runtime_flavor(env.runtime.as_deref(), default_flavor);
+  // The shared scheduler has no MultiThread executor on WebAssembly:
+  // `rolldown_utils` does not compile Rayon there. Normalize an unsupported
+  // environment override before the module-init hook calls `configure`, so
+  // loading a WASI artifact can never panic because `ROLLDOWN_RUNTIME=multi`
+  // leaked in from a native process environment.
+  let flavor = if native { requested_flavor } else { ResolvedRuntimeFlavor::CurrentThread };
+  let requested_worker_threads = if native {
+    resolve_thread_count(
+      env.worker_threads.clone(),
+      detected_native_parallelism(),
+      max_async_runtime_worker_threads(),
+    )
+  } else {
+    // `RuntimeOptions::default()` parity: the env worker override has
+    // never applied on wasm (`register_async_runtime`'s override block
+    // was `not(target_family = "wasm")`), so the default stays
+    // `available_parallelism` and `ROLLDOWN_WORKER_THREADS` is ignored.
+    std::thread::available_parallelism().map_or(1, usize::from)
+  };
+  let worker_threads = match flavor {
+    ResolvedRuntimeFlavor::CurrentThread => 1,
+    ResolvedRuntimeFlavor::MultiThread => requested_worker_threads.max(2),
+  };
+  let requested_blocking_tasks =
+    resolve_thread_count(env.max_blocking_threads.clone(), worker_threads, worker_threads);
+  let max_blocking_tasks =
+    clamp_shared_blocking_tasks(flavor, worker_threads, requested_blocking_tasks);
+  ResolvedRuntimeConfig {
+    target,
+    flavor,
+    worker_threads,
+    max_blocking_tasks,
+    park_deadline_ms: parse_park_deadline_ms(env.park_deadline_ms.clone()),
   }
 }
 
 /// The per-process resolved runtime-config snapshot. The environment is read
 /// exactly once, and lib.rs `init` (a `module_init` hook that runs on EVERY
-/// artifact, including the threaded-WASI one that builds no Rust runtime)
-/// forces the resolution at module load -- the same moment the WASI loader
-/// sizes its async work pool -- so a later env mutation can never make the
-/// report diverge from the runtime/pool that already exists, regardless of
-/// whether the host's WASI shim snapshots or live-reads its environment.
-/// Native Tokio registers a retained runtime factory that rebuilds every napi
-/// lifecycle generation from this snapshot, so environment reload and explicit
-/// restart preserve the reported worker and blocking limits.
+/// artifact) forces the resolution at module load -- the same moment the WASI
+/// loader sizes its async work pool -- so a later env mutation can never make
+/// the report diverge from the runtime/pool that already exists, regardless
+/// of whether the host's WASI shim snapshots or live-reads its environment.
 pub fn resolved_runtime_config() -> &'static ResolvedRuntimeConfig {
   static RESOLVED_RUNTIME_CONFIG: std::sync::OnceLock<ResolvedRuntimeConfig> =
     std::sync::OnceLock::new();
-  RESOLVED_RUNTIME_CONFIG.get_or_init(|| {
-    resolve_runtime_config_for(compiled_backend(), compiled_target(), &RuntimeEnv::from_process())
-  })
+  RESOLVED_RUNTIME_CONFIG
+    .get_or_init(|| resolve_runtime_config_for(compiled_target(), &RuntimeEnv::from_process()))
 }
 
-#[cfg(not(feature = "async-runtime"))]
-#[napi]
-/// Return the effective async runtime configuration.
-///
-/// On the `async-runtime` build this reports the controller's validated
-/// options, including a pre-first-use `configureAsyncRuntime` override. On the
-/// default `tokio-runtime` build it reports the resolved load-time snapshot
-/// used to construct Tokio. The environment is never re-read.
-pub fn get_async_runtime_config() -> BindingRuntimeConfig {
-  let resolved = resolved_runtime_config();
-  BindingRuntimeConfig {
-    flavor: resolved.flavor.into(),
-    worker_threads: saturating_u32(resolved.worker_threads as u64),
-    max_blocking_tasks: saturating_u32(resolved.max_blocking_tasks as u64),
-  }
-}
-
-#[cfg(feature = "async-runtime")]
 #[napi]
 /// Return a snapshot of the shared async runtime's task and scheduler counters.
-///
-/// On the default `tokio-runtime` build every counter is zero.
 pub fn get_async_runtime_metrics() -> BindingRuntimeMetrics {
   metrics().into()
 }
 
-#[cfg(not(feature = "async-runtime"))]
-#[napi]
-/// Return a snapshot of the shared async runtime's task and scheduler counters.
-///
-/// On the default `tokio-runtime` build every counter is zero.
-pub fn get_async_runtime_metrics() -> BindingRuntimeMetrics {
-  let config = get_async_runtime_config();
-  BindingRuntimeMetrics {
-    flavor: config.flavor,
-    worker_threads: config.worker_threads,
-    max_blocking_tasks: config.max_blocking_tasks,
-    tasks_spawned: 0.0,
-    tasks_completed: 0.0,
-    tasks_panicked: 0.0,
-    runnable_schedules: 0.0,
-    runnable_polls: 0.0,
-    queued_runnables: 0.0,
-    max_queued_runnables: 0.0,
-    active_runnables: 0.0,
-    max_active_runnables: 0.0,
-    blocking_tasks_started: 0.0,
-    blocking_tasks_completed: 0.0,
-    active_blocking_tasks: 0.0,
-    max_active_blocking_tasks: 0.0,
-  }
-}
-
-#[cfg(feature = "async-runtime")]
 #[napi]
 /// Reset cumulative async runtime event counters to zero.
 ///
 /// Live gauges and their lifetime high-water marks are preserved so active
 /// task guards can complete without corrupting concurrent observations.
-///
-/// A no-op on the default `tokio-runtime` build.
 pub fn reset_async_runtime_metrics() {
   reset_metrics();
 }
-
-#[cfg(not(feature = "async-runtime"))]
-#[napi]
-/// Reset cumulative async runtime event counters to zero.
-///
-/// Live gauges and their lifetime high-water marks are preserved so active
-/// task guards can complete without corrupting concurrent observations.
-///
-/// A no-op on the default `tokio-runtime` build.
-pub fn reset_async_runtime_metrics() {}
 
 #[napi(object)]
 pub struct BindingHostRegistration {
@@ -786,7 +560,6 @@ pub fn reserve_current_thread_host_registration() -> napi::Result<BindingHostReg
   reserve_host_registration_id().map(BindingHostRegistration::from_id)
 }
 
-#[cfg(feature = "async-runtime")]
 fn current_thread_task_host_napi_result(
   status: napi::sys::napi_status,
   context: &'static str,
@@ -798,7 +571,6 @@ fn current_thread_task_host_napi_result(
   }
 }
 
-#[cfg(feature = "async-runtime")]
 fn contain_current_thread_task_host_unwind<T>(operation: impl FnOnce() -> T) -> Option<T> {
   match std::panic::catch_unwind(std::panic::AssertUnwindSafe(operation)) {
     Ok(value) => Some(value),
@@ -812,7 +584,7 @@ fn contain_current_thread_task_host_unwind<T>(operation: impl FnOnce() -> T) -> 
   }
 }
 
-#[cfg(all(feature = "async-runtime", test))]
+#[cfg(test)]
 thread_local! {
   static NATIVE_TASK_HOST_AFTER_DRIVE_TEST_HOOK:
     std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
@@ -822,14 +594,14 @@ thread_local! {
       const { std::cell::RefCell::new(None) };
 }
 
-#[cfg(all(feature = "async-runtime", test))]
+#[cfg(test)]
 fn run_native_task_host_after_drive_test_hook() {
   if let Some(hook) = NATIVE_TASK_HOST_AFTER_DRIVE_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
     hook();
   }
 }
 
-#[cfg(all(feature = "async-runtime", test))]
+#[cfg(test)]
 fn run_native_task_host_after_payload_drop_test_hook() {
   if let Some(hook) =
     NATIVE_TASK_HOST_AFTER_PAYLOAD_DROP_TEST_HOOK.with(|slot| slot.borrow_mut().take())
@@ -838,7 +610,6 @@ fn run_native_task_host_after_payload_drop_test_hook() {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 unsafe extern "C" fn finalize_native_current_thread_task_host(
   _env: napi::sys::napi_env,
   finalize_data: *mut std::ffi::c_void,
@@ -857,7 +628,6 @@ unsafe extern "C" fn finalize_native_current_thread_task_host(
   });
 }
 
-#[cfg(feature = "async-runtime")]
 unsafe extern "C" fn call_native_current_thread_task_host(
   env: napi::sys::napi_env,
   _js_callback: napi::sys::napi_value,
@@ -902,14 +672,12 @@ unsafe extern "C" fn call_native_current_thread_task_host(
   let _ = contain_current_thread_task_host_unwind(|| drop(callback_lease));
 }
 
-#[cfg(feature = "async-runtime")]
 struct NativeCurrentThreadTaskHostPayload {
   delivery: CurrentThreadTaskDelivery,
   #[cfg(test)]
   drop_observer: Option<std::sync::Arc<std::sync::atomic::AtomicUsize>>,
 }
 
-#[cfg(feature = "async-runtime")]
 impl NativeCurrentThreadTaskHostPayload {
   fn new(delivery: CurrentThreadTaskDelivery) -> Self {
     Self {
@@ -928,7 +696,7 @@ impl NativeCurrentThreadTaskHostPayload {
   }
 }
 
-#[cfg(all(feature = "async-runtime", test))]
+#[cfg(test)]
 impl Drop for NativeCurrentThreadTaskHostPayload {
   fn drop(&mut self) {
     if let Some(observer) = &self.drop_observer {
@@ -937,7 +705,6 @@ impl Drop for NativeCurrentThreadTaskHostPayload {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 // Bridges CurrentThread-flavor scheduling onto the owning JS thread through a
 // threadsafe function; the `dead` / `environment_closing` flags turn late
 // wakeups into no-ops instead of calls into a torn-down environment.
@@ -945,7 +712,6 @@ struct NativeCurrentThreadTaskHost {
   inner: std::sync::Arc<NativeCurrentThreadTaskHostInner>,
 }
 
-#[cfg(feature = "async-runtime")]
 struct NativeCurrentThreadTaskHostInner {
   threadsafe_function: std::sync::Mutex<Option<usize>>,
   dead: std::sync::atomic::AtomicBool,
@@ -954,12 +720,10 @@ struct NativeCurrentThreadTaskHostInner {
   registration: std::sync::Mutex<Option<CurrentThreadTaskDriverId>>,
 }
 
-#[cfg(feature = "async-runtime")]
 static NATIVE_CURRENT_THREAD_TASK_HOSTS: std::sync::LazyLock<
   std::sync::Mutex<rustc_hash::FxHashMap<u64, std::sync::Weak<NativeCurrentThreadTaskHostInner>>>,
 > = std::sync::LazyLock::new(|| std::sync::Mutex::new(rustc_hash::FxHashMap::default()));
 
-#[cfg(feature = "async-runtime")]
 fn registered_current_thread_task_host(
   id: u64,
 ) -> Option<std::sync::Arc<NativeCurrentThreadTaskHostInner>> {
@@ -972,7 +736,6 @@ fn registered_current_thread_task_host(
   inner
 }
 
-#[cfg(feature = "async-runtime")]
 impl NativeCurrentThreadTaskHostInner {
   fn new(env: &napi::Env, host_registration: u64) -> napi::Result<std::sync::Arc<Self>> {
     const ASYNC_RESOURCE_NAME: &[u8] = b"rolldown_current_thread_task_host";
@@ -1174,7 +937,6 @@ impl NativeCurrentThreadTaskHostInner {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 impl CurrentThreadTaskDriver for NativeCurrentThreadTaskHost {
   fn dispatch(&self, delivery: CurrentThreadTaskDelivery) -> bool {
     self.inner.dispatch(delivery)
@@ -1213,7 +975,6 @@ pub fn get_current_thread_task_host_contract_version() -> u32 {
   CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION
 }
 
-#[cfg(feature = "async-runtime")]
 #[napi]
 /// Return whether one exact CurrentThread task- or timer-host registration is
 /// still live. The JavaScript package revalidates its process-global marker on
@@ -1228,20 +989,6 @@ pub fn is_current_thread_host_registration_active(
     || registered_timer_host(id).is_some_and(|inner| inner.is_live())
 }
 
-#[cfg(not(feature = "async-runtime"))]
-#[napi]
-/// Return whether one exact CurrentThread host registration is still live.
-///
-/// The default Tokio build has no CurrentThread host registrations.
-pub fn is_current_thread_host_registration_active(
-  registration_high: u32,
-  registration_low: u32,
-) -> bool {
-  let _ = (registration_high, registration_low);
-  false
-}
-
-#[cfg(feature = "async-runtime")]
 fn install_cleanup_hook_or_rollback<T>(
   install: impl FnOnce() -> napi::Result<T>,
   rollback: impl FnOnce(),
@@ -1255,7 +1002,6 @@ fn install_cleanup_hook_or_rollback<T>(
   }
 }
 
-#[cfg(feature = "async-runtime")]
 fn install_host_driver_registration<T>(
   dead: &std::sync::atomic::AtomicBool,
   registration: &std::sync::Mutex<Option<T>>,
@@ -1284,13 +1030,10 @@ fn install_host_driver_registration<T>(
   }
 }
 
-#[cfg(feature = "async-runtime")]
 #[napi(ts_args_type = "registrationHigh: number, registrationLow: number, dispatch?: never")]
 /// Install a native-owned host turn used to poll CurrentThread runnables
 /// without re-entering arbitrary future waker locks. Called once per importing
 /// environment. JavaScript callbacks are rejected synchronously.
-///
-/// A no-op on the default `tokio-runtime` build.
 pub fn register_current_thread_task_host(
   env: &napi::Env,
   registration_high: u32,
@@ -1324,47 +1067,16 @@ pub fn register_current_thread_task_host(
   Ok(())
 }
 
-#[cfg(not(feature = "async-runtime"))]
-#[napi(ts_args_type = "registrationHigh: number, registrationLow: number, dispatch?: never")]
-/// Install a native-owned host turn used to poll CurrentThread runnables
-/// without re-entering arbitrary future waker locks. Called once per importing
-/// environment. JavaScript callbacks are rejected synchronously.
-///
-/// A no-op on the default `tokio-runtime` build.
-pub fn register_current_thread_task_host(
-  registration_high: u32,
-  registration_low: u32,
-  dispatch: Option<Unknown<'_>>,
-) -> napi::Result<()> {
-  reject_current_thread_task_host_callback(dispatch)?;
-  claim_host_registration_id(registration_high, registration_low)?;
-  Ok(())
-}
-
-#[cfg(feature = "async-runtime")]
 #[napi]
 /// Evict exactly one native host installed by `registerCurrentThreadTaskHost`.
 /// Managed workerd disposal uses this before environment cleanup so a later
 /// throwing cleanup hook cannot leave the process-global driver selected.
-///
-/// A no-op on the default `tokio-runtime` build.
 pub fn unregister_current_thread_task_host(registration_high: u32, registration_low: u32) {
   let id = BindingHostRegistration::id(registration_high, registration_low);
   release_host_registration_id(id);
   if let Some(inner) = registered_current_thread_task_host(id) {
     inner.rollback();
   }
-}
-
-#[cfg(not(feature = "async-runtime"))]
-#[napi]
-/// Evict exactly one native host installed by `registerCurrentThreadTaskHost`.
-/// Managed workerd disposal uses this before environment cleanup so a later
-/// throwing cleanup hook cannot leave the process-global driver selected.
-///
-/// A no-op on the default `tokio-runtime` build.
-pub fn unregister_current_thread_task_host(registration_high: u32, registration_low: u32) {
-  release_host_registration_id(BindingHostRegistration::id(registration_high, registration_low));
 }
 
 /// Host timer driver for the shared runtime's CurrentThread flavor:
@@ -1392,18 +1104,15 @@ pub fn unregister_current_thread_task_host(registration_high: u32, registration_
 /// function's `aborted` flag) and by relay-call failure. Eviction wakes every
 /// sleep armed here so each re-polls onto the registry's next live registrant
 /// (see `TimerDriverRegistry`).
-#[cfg(feature = "async-runtime")]
 struct JsTimerHost {
   inner: std::sync::Arc<JsTimerHostInner>,
 }
 
-#[cfg(feature = "async-runtime")]
 #[derive(Default)]
 struct RelayIdAllocator {
   next: std::sync::atomic::AtomicU64,
 }
 
-#[cfg(feature = "async-runtime")]
 impl RelayIdAllocator {
   fn reserve(&self) -> Result<u32, RelayIdExhausted> {
     self
@@ -1418,11 +1127,9 @@ impl RelayIdAllocator {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct RelayIdExhausted;
 
-#[cfg(feature = "async-runtime")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 enum RelayCancellationAccounting {
@@ -1430,13 +1137,11 @@ enum RelayCancellationAccounting {
   CleanupOnly = 1,
 }
 
-#[cfg(feature = "async-runtime")]
 struct HostTimerRelayHealth {
   cancellation_accounting: std::sync::atomic::AtomicU8,
   failure_recorded: std::sync::atomic::AtomicBool,
 }
 
-#[cfg(feature = "async-runtime")]
 impl Default for HostTimerRelayHealth {
   fn default() -> Self {
     Self {
@@ -1448,7 +1153,6 @@ impl Default for HostTimerRelayHealth {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 impl HostTimerRelayHealth {
   fn set_cancellation_accounting(&self, accounting: RelayCancellationAccounting) {
     self.cancellation_accounting.store(accounting as u8, std::sync::atomic::Ordering::Release);
@@ -1489,7 +1193,6 @@ impl HostTimerRelayHealth {
 /// failures the host is evicted anyway (announced in the log). Reset on any
 /// successful relay. Small on purpose: each strike costs one wasted arm/wake
 /// round-trip for the affected sleep.
-#[cfg(feature = "async-runtime")]
 const HOST_TIMER_MAX_TRANSIENT_FAILURES: u32 = 3;
 
 /// Does this relay error mean the HOST IS GONE (evict immediately), as
@@ -1519,12 +1222,10 @@ const HOST_TIMER_MAX_TRANSIENT_FAILURES: u32 = 3;
 /// at the next selection, or by the next relay failure (which will probe
 /// dead) -> bounded, correct. A LIVE host's failure -- whatever its message
 /// says -- takes the strike path.
-#[cfg(feature = "async-runtime")]
 fn should_evict_for_relay_error(status: napi::Status, host_is_live: bool) -> bool {
   status == napi::Status::Closing || !host_is_live
 }
 
-#[cfg(feature = "async-runtime")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum HostTimerFailureAction {
   Duplicate,
@@ -1533,7 +1234,6 @@ enum HostTimerFailureAction {
   Retry(u32),
 }
 
-#[cfg(feature = "async-runtime")]
 fn record_host_timer_failure(
   transient_failures: &std::sync::atomic::AtomicU32,
   relay_health: &HostTimerRelayHealth,
@@ -1554,7 +1254,6 @@ fn record_host_timer_failure(
   }
 }
 
-#[cfg(feature = "async-runtime")]
 fn reset_host_timer_failures_after_success(
   transient_failures: &std::sync::atomic::AtomicU32,
   relay_health: &HostTimerRelayHealth,
@@ -1564,7 +1263,6 @@ fn reset_host_timer_failures_after_success(
   }
 }
 
-#[cfg(feature = "async-runtime")]
 struct JsTimerHostInner {
   callback: JsCallback<FnArgs<(u32, f64)>, Promise<()>>,
   cancel_callback: JsCallback<FnArgs<(u32,)>, ()>,
@@ -1586,12 +1284,10 @@ struct JsTimerHostInner {
   transient_failures: std::sync::atomic::AtomicU32,
 }
 
-#[cfg(feature = "async-runtime")]
 static JS_TIMER_HOSTS: std::sync::LazyLock<
   std::sync::Mutex<rustc_hash::FxHashMap<u64, std::sync::Weak<JsTimerHostInner>>>,
 > = std::sync::LazyLock::new(|| std::sync::Mutex::new(rustc_hash::FxHashMap::default()));
 
-#[cfg(feature = "async-runtime")]
 fn registered_timer_host(id: u64) -> Option<std::sync::Arc<JsTimerHostInner>> {
   let mut registrations = JS_TIMER_HOSTS.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
   let inner = registrations.get(&id).and_then(std::sync::Weak::upgrade);
@@ -1601,7 +1297,6 @@ fn registered_timer_host(id: u64) -> Option<std::sync::Arc<JsTimerHostInner>> {
   inner
 }
 
-#[cfg(feature = "async-runtime")]
 struct PendingHostTimer {
   cancellation: Option<futures::channel::oneshot::Sender<()>>,
   relay_health: std::sync::Arc<HostTimerRelayHealth>,
@@ -1610,7 +1305,6 @@ struct PendingHostTimer {
   schedule_state: RelayScheduleState,
 }
 
-#[cfg(feature = "async-runtime")]
 impl PendingHostTimer {
   fn signal_native_cancellation(&mut self) {
     if let Some(sender) = self.cancellation.take() {
@@ -1619,14 +1313,12 @@ impl PendingHostTimer {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RelayScheduleState {
   AwaitingCallback,
   CallbackComplete,
 }
 
-#[cfg(feature = "async-runtime")]
 trait PendingRelayState: Send + Sync + 'static {
   fn take_pending_relay(
     &self,
@@ -1645,7 +1337,6 @@ trait PendingRelayState: Send + Sync + 'static {
   );
 }
 
-#[cfg(feature = "async-runtime")]
 struct PendingRelayDropGuard<T: PendingRelayState> {
   state: std::sync::Arc<T>,
   id: TimerId,
@@ -1653,7 +1344,6 @@ struct PendingRelayDropGuard<T: PendingRelayState> {
   cleanup_on_drop: bool,
 }
 
-#[cfg(feature = "async-runtime")]
 impl<T: PendingRelayState> PendingRelayDropGuard<T> {
   fn new(state: std::sync::Arc<T>, id: TimerId, relay_id: u32) -> Self {
     Self { state, id, relay_id, cleanup_on_drop: true }
@@ -1664,7 +1354,6 @@ impl<T: PendingRelayState> PendingRelayDropGuard<T> {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 impl<T: PendingRelayState> Drop for PendingRelayDropGuard<T> {
   fn drop(&mut self) {
     if !self.cleanup_on_drop {
@@ -1684,7 +1373,6 @@ impl<T: PendingRelayState> Drop for PendingRelayDropGuard<T> {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 enum PendingHostTimerRegistration {
   Refreshed(std::task::Waker),
   Armed {
@@ -1695,7 +1383,6 @@ enum PendingHostTimerRegistration {
   Exhausted(std::task::Waker),
 }
 
-#[cfg(feature = "async-runtime")]
 fn register_pending_host_timer_locked(
   pending: &mut rustc_hash::FxHashMap<TimerId, PendingHostTimer>,
   relay_ids: &RelayIdAllocator,
@@ -1723,7 +1410,7 @@ fn register_pending_host_timer_locked(
   PendingHostTimerRegistration::Armed { relay_id, cancellation, relay_health }
 }
 
-#[cfg(all(feature = "async-runtime", test))]
+#[cfg(test)]
 fn register_pending_host_timer(
   pending: &std::sync::Mutex<rustc_hash::FxHashMap<TimerId, PendingHostTimer>>,
   relay_ids: &RelayIdAllocator,
@@ -1734,7 +1421,6 @@ fn register_pending_host_timer(
   register_pending_host_timer_locked(&mut pending, relay_ids, id, waker)
 }
 
-#[cfg(feature = "async-runtime")]
 fn register_pending_host_timer_if_live(
   pending: &std::sync::Mutex<rustc_hash::FxHashMap<TimerId, PendingHostTimer>>,
   relay_ids: &RelayIdAllocator,
@@ -1749,7 +1435,6 @@ fn register_pending_host_timer_if_live(
   Ok(register_pending_host_timer_locked(&mut pending, relay_ids, id, waker))
 }
 
-#[cfg(feature = "async-runtime")]
 fn take_pending_host_timers(
   pending: &std::sync::Mutex<rustc_hash::FxHashMap<TimerId, PendingHostTimer>>,
   accounting: RelayCancellationAccounting,
@@ -1761,7 +1446,6 @@ fn take_pending_host_timers(
   std::mem::take(&mut *pending)
 }
 
-#[cfg(feature = "async-runtime")]
 fn take_pending_host_timer(
   pending: &std::sync::Mutex<rustc_hash::FxHashMap<TimerId, PendingHostTimer>>,
   id: TimerId,
@@ -1781,7 +1465,6 @@ fn take_pending_host_timer(
   }
 }
 
-#[cfg(feature = "async-runtime")]
 fn run_host_timer_cleanup_safely(cleanup: impl FnOnce()) {
   if let Err(payload) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(cleanup))
     && let Err(nested_payload) =
@@ -1794,7 +1477,6 @@ fn run_host_timer_cleanup_safely(cleanup: impl FnOnce()) {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 fn retire_pending_relay<T: PendingRelayState>(
   state: &std::sync::Arc<T>,
   mut pending: PendingHostTimer,
@@ -1810,7 +1492,6 @@ fn retire_pending_relay<T: PendingRelayState>(
   wake_host_timer_safely(pending.waker);
 }
 
-#[cfg(feature = "async-runtime")]
 fn retire_pending_relays<T: PendingRelayState>(
   state: &std::sync::Arc<T>,
   pending: rustc_hash::FxHashMap<TimerId, PendingHostTimer>,
@@ -1820,7 +1501,6 @@ fn retire_pending_relays<T: PendingRelayState>(
   }
 }
 
-#[cfg(feature = "async-runtime")]
 fn complete_relay_schedule_callback<T: PendingRelayState, R>(
   state: &std::sync::Arc<T>,
   id: TimerId,
@@ -1841,7 +1521,6 @@ fn complete_relay_schedule_callback<T: PendingRelayState, R>(
   run_host_timer_cleanup_safely(|| deliver(result));
 }
 
-#[cfg(feature = "async-runtime")]
 fn normalize_timer_schedule_result(
   result: napi::Result<napi::Either<Promise<()>, InvalidReturnValue>>,
 ) -> napi::Result<Promise<()>> {
@@ -1858,7 +1537,6 @@ fn normalize_timer_schedule_result(
   }
 }
 
-#[cfg(feature = "async-runtime")]
 fn wake_host_timer_safely(waker: std::task::Waker) {
   // Host eviction runs from a napi env cleanup hook. A custom RawWaker must
   // not unwind through that FFI boundary or abort the remaining timer drain.
@@ -1868,12 +1546,10 @@ fn wake_host_timer_safely(waker: std::task::Waker) {
   run_host_timer_cleanup_safely(|| drop(waker));
 }
 
-#[cfg(feature = "async-runtime")]
 fn drop_host_timer_waker_safely(waker: std::task::Waker) {
   run_host_timer_cleanup_safely(|| drop(waker));
 }
 
-#[cfg(feature = "async-runtime")]
 fn recover_host_timer_failure(recover: impl FnOnce(), diagnostic: std::fmt::Arguments<'_>) {
   recover();
   run_host_timer_cleanup_safely(|| {
@@ -1882,7 +1558,6 @@ fn recover_host_timer_failure(recover: impl FnOnce(), diagnostic: std::fmt::Argu
   });
 }
 
-#[cfg(feature = "async-runtime")]
 impl JsTimerHostInner {
   fn lock_pending(
     &self,
@@ -2096,7 +1771,6 @@ impl JsTimerHostInner {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 impl PendingRelayState for JsTimerHostInner {
   fn take_pending_relay(
     &self,
@@ -2120,7 +1794,6 @@ impl PendingRelayState for JsTimerHostInner {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 impl TimerDriver for JsTimerHost {
   fn register(&self, id: TimerId, deadline: std::time::Instant, waker: std::task::Waker) {
     if !self.inner.is_live() {
@@ -2313,7 +1986,6 @@ impl TimerDriver for JsTimerHost {
   }
 }
 
-#[cfg(feature = "async-runtime")]
 #[napi(
   ts_args_type = "registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void"
 )]
@@ -2321,8 +1993,7 @@ impl TimerDriver for JsTimerHost {
 /// CurrentThread timers (watch-mode debounce). Called at import by every
 /// binding-loading JS entry with paired setTimeout/clearTimeout callbacks; each
 /// importing env (main thread and workers alike) registers its own host, and
-/// every live host receives each timer. A no-op on the default `tokio-runtime`
-/// build (tokio owns its timer wheel).
+/// every live host receives each timer.
 pub fn register_timer_host(
   env: &napi::Env,
   registration_high: u32,
@@ -2377,33 +2048,9 @@ pub fn register_timer_host(
   Ok(())
 }
 
-#[cfg(not(feature = "async-runtime"))]
-#[napi(
-  ts_args_type = "registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void"
-)]
-/// Install the host timer callback backing the shared async runtime's
-/// CurrentThread timers (watch-mode debounce). Called at import by every
-/// binding-loading JS entry with paired setTimeout/clearTimeout callbacks; each
-/// importing env (main thread and workers alike) registers its own host, and
-/// every live host receives each timer. A no-op on the default `tokio-runtime`
-/// build (tokio owns its timer wheel).
-pub fn register_timer_host(
-  registration_high: u32,
-  registration_low: u32,
-  schedule: JsCallback<FnArgs<(u32, f64)>, Promise<()>>,
-  cancel: JsCallback<FnArgs<(u32,)>, ()>,
-) -> napi::Result<()> {
-  let _ = (schedule, cancel);
-  claim_host_registration_id(registration_high, registration_low)?;
-  Ok(())
-}
-
-#[cfg(feature = "async-runtime")]
 #[napi]
 /// Evict exactly one callback installed by `registerTimerHost`.
 /// Pending sleeps are woken so they can reselect another live environment.
-///
-/// A no-op on the default `tokio-runtime` build.
 pub fn unregister_timer_host(registration_high: u32, registration_low: u32) {
   let id = BindingHostRegistration::id(registration_high, registration_low);
   release_host_registration_id(id);
@@ -2412,17 +2059,6 @@ pub fn unregister_timer_host(registration_high: u32, registration_low: u32) {
   }
 }
 
-#[cfg(not(feature = "async-runtime"))]
-#[napi]
-/// Evict exactly one callback installed by `registerTimerHost`.
-/// Pending sleeps are woken so they can reselect another live environment.
-///
-/// A no-op on the default `tokio-runtime` build.
-pub fn unregister_timer_host(registration_high: u32, registration_low: u32) {
-  release_host_registration_id(BindingHostRegistration::id(registration_high, registration_low));
-}
-
-#[cfg(feature = "async-runtime")]
 #[napi_derive::module_init]
 fn install_async_runtime_backend() {
   // Consume the SAME resolved snapshot the reporter and the capability export
@@ -2554,12 +2190,14 @@ pub fn start_async_runtime_for_submission_failure_test() -> napi::Result<()> {
 #[expect(clippy::struct_excessive_bools)]
 #[napi(object)]
 pub struct BindingRuntimeCapabilities {
-  /// The scheduler the binding was compiled with: 'tokio' (the default
-  /// build) or 'shared' (`--features async-runtime`).
+  /// The scheduler the binding was compiled with: always 'shared' (the
+  /// tokio-free shared runtime). The 'tokio' member of the union survives
+  /// only for LEGACY bindings, whose JS support layer synthesizes
+  /// `backend: 'tokio'` capability objects.
   #[napi(ts_type = "'tokio' | 'shared'")]
   pub backend: String,
-  /// The executor flavor actually in effect (post-validation; on the shared
-  /// build this reflects a pre-first-use `configureAsyncRuntime` override).
+  /// The executor flavor actually in effect (post-validation; this reflects
+  /// a pre-first-use `configureAsyncRuntime` override).
   pub flavor: BindingRuntimeFlavor,
   /// The compile target: 'native', 'wasi' (threadless `wasm32-wasip1`) or
   /// 'wasi-threads' (`wasm32-wasip1-threads`).
@@ -2568,19 +2206,20 @@ pub struct BindingRuntimeCapabilities {
   /// Convenience: the binding is a WebAssembly/WASI artifact (`target !==
   /// 'native'`).
   pub wasi: bool,
-  /// Compiled with `--features async-runtime` (either flavor).
+  /// The binding runs the shared async runtime: always true. Survives for
+  /// LEGACY bindings, whose JS support layer synthesizes `false`.
   pub async_runtime_build: bool,
   /// Work is scheduled across multiple threads (`flavor === 'MultiThread'`).
   pub threads: bool,
   /// A timer facility backs `sleep_until` (the watch-mode debounce). This is
-  /// true on native/threaded-WASI Tokio builds and on the shared MultiThread
-  /// flavor. On the shared CurrentThread flavor timers are delegated to the
-  /// host event loop, so this reads true while a LIVE `registerTimerHost`
-  /// registrant exists. Every public package entry that loads the binding
-  /// registers a host driver per importing env at import, so through any
-  /// supported entry the answer is true; a registrant whose env died (an
-  /// exited worker) is evicted and does NOT count. Only a raw shared binding
-  /// loaded outside the supported entries can observe false.
+  /// true on the MultiThread flavor (executor-owned timer heap). On the
+  /// CurrentThread flavor timers are delegated to the host event loop, so
+  /// this reads true while a LIVE `registerTimerHost` registrant exists.
+  /// Every public package entry that loads the binding registers a host
+  /// driver per importing env at import, so through any supported entry the
+  /// answer is true; a registrant whose env died (an exited worker) is
+  /// evicted and does NOT count. Only a raw binding loaded outside the
+  /// supported entries can observe false.
   pub timers: bool,
   /// Binding dev mode is supported by THIS RUNTIME: true when native work can
   /// progress on a MultiThread executor, false on CurrentThread where
@@ -2613,43 +2252,28 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
     ResolvedRuntimeTarget::WasiThreads => "wasi-threads",
   };
   let wasi = !matches!(resolved.target, ResolvedRuntimeTarget::Native);
-  let async_runtime_build = matches!(resolved.backend, ResolvedRuntimeBackend::Shared);
 
-  #[cfg(feature = "async-runtime")]
-  let (flavor, timers) = {
-    // The runtime controller's validated options are the flavor authority on
-    // this build: they include a pre-first-use `configureAsyncRuntime`
-    // override, which the load-time snapshot cannot know about.
-    let flavor: BindingRuntimeFlavor = configured_options().flavor.into();
-    let timers = match flavor {
-      // Executor-owned timer heap, available unconditionally.
-      BindingRuntimeFlavor::MultiThread => true,
-      // Host-delegated timers: available while a LIVE driver is registered
-      // (see the `timers` field doc for the before-registration case). Dead
-      // registrants -- hosts whose envs were torn down -- do not count, so
-      // this cannot read `true` off a worker-registered driver that died
-      // with its worker.
-      BindingRuntimeFlavor::CurrentThread => rolldown_utils::async_runtime::has_live_timer_driver(),
-    };
-    (flavor, timers)
+  // The runtime controller's validated options are the flavor authority:
+  // they include a pre-first-use `configureAsyncRuntime` override, which the
+  // load-time snapshot cannot know about.
+  let flavor: BindingRuntimeFlavor = configured_options().flavor.into();
+  let timers = match flavor {
+    // Executor-owned timer heap, available unconditionally.
+    BindingRuntimeFlavor::MultiThread => true,
+    // Host-delegated timers: available while a LIVE driver is registered
+    // (see the `timers` field doc for the before-registration case). Dead
+    // registrants -- hosts whose envs were torn down -- do not count, so
+    // this cannot read `true` off a worker-registered driver that died
+    // with its worker.
+    BindingRuntimeFlavor::CurrentThread => rolldown_utils::async_runtime::has_live_timer_driver(),
   };
-  #[cfg(not(feature = "async-runtime"))]
-  let (flavor, timers) = {
-    // Native and threaded-WASI Tokio builds own a usable timer facility.
-    // Threadless WASI cannot make host-independent timer progress.
-    (
-      BindingRuntimeFlavor::from(resolved.flavor),
-      !matches!(resolved.target, ResolvedRuntimeTarget::Wasi),
-    )
-  };
-
   let threads = matches!(flavor, BindingRuntimeFlavor::MultiThread);
   BindingRuntimeCapabilities {
-    backend: if async_runtime_build { "shared" } else { "tokio" }.to_string(),
+    backend: "shared".to_string(),
     flavor,
     target: target.to_string(),
     wasi,
-    async_runtime_build,
+    async_runtime_build: true,
     threads,
     timers,
     dev_supported: threads,
@@ -2660,23 +2284,20 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
   }
 }
 
-// Resolver tests are parameterized on (backend, target), so every arm of the
-// defaults table is exercised under BOTH feature profiles and on any host.
-// The runtime snapshot must win over later environment mutations: the
-// environment is read exactly once inside the `OnceLock` initializer of
-// `resolved_runtime_config`.
+// Resolver tests are parameterized on the target, so every arm of the
+// defaults table is exercised on any host. The runtime snapshot must win over
+// later environment mutations: the environment is read exactly once inside
+// the `OnceLock` initializer of `resolved_runtime_config`.
 #[cfg(test)]
 mod tests {
   use rolldown_utils::max_async_runtime_worker_threads;
 
   use super::{
-    BindingHostRegistration, EMNAPI_ASYNC_WORK_POOL_SIZE_MAX, ResolvedRuntimeBackend,
-    ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RuntimeEnv, claim_host_registration_id,
-    get_current_thread_task_host_contract_version, native_default_parallelism,
-    parse_park_deadline_ms, reserve_current_thread_host_registration, resolve_runtime_config_for,
-    unregister_current_thread_task_host, wasm_async_work_pool_size,
+    BindingHostRegistration, ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RuntimeEnv,
+    claim_host_registration_id, get_current_thread_task_host_contract_version,
+    native_default_parallelism, parse_park_deadline_ms, reserve_current_thread_host_registration,
+    resolve_runtime_config_for, unregister_current_thread_task_host,
   };
-  #[cfg(feature = "async-runtime")]
   use super::{
     BindingRuntimeFlavor, BindingRuntimeOptions, HOST_TIMER_MAX_TRANSIENT_FAILURES,
     HostTimerFailureAction, HostTimerRelayHealth, MAX_SAFE_JS_INTEGER,
@@ -2691,7 +2312,6 @@ mod tests {
     safe_js_number, take_pending_host_timers, wake_host_timer_safely,
   };
 
-  #[cfg(feature = "async-runtime")]
   #[derive(Default)]
   struct TestPendingRelayState {
     pending: std::sync::Mutex<
@@ -2702,7 +2322,6 @@ mod tests {
     panic_on_cancel: std::sync::atomic::AtomicBool,
   }
 
-  #[cfg(feature = "async-runtime")]
   impl PendingRelayState for TestPendingRelayState {
     fn take_pending_relay(
       &self,
@@ -2755,7 +2374,6 @@ mod tests {
     }
   }
 
-  #[cfg(feature = "async-runtime")]
   fn test_pending_relay_guard(
     state: &std::sync::Arc<TestPendingRelayState>,
     id: rolldown_utils::async_runtime::TimerId,
@@ -2778,7 +2396,6 @@ mod tests {
     (relay_id, relay_health, PendingRelayDropGuard::new(std::sync::Arc::clone(state), id, relay_id))
   }
 
-  #[cfg(feature = "async-runtime")]
   struct BudgetBoundaryTimerWait {
     state: std::sync::Arc<TestPendingRelayState>,
     timer_id: rolldown_utils::async_runtime::TimerId,
@@ -2786,7 +2403,6 @@ mod tests {
     registered: bool,
   }
 
-  #[cfg(feature = "async-runtime")]
   impl std::future::Future for BudgetBoundaryTimerWait {
     type Output = ();
 
@@ -2840,7 +2456,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   fn native_task_host_with_raw_owner(raw: usize) -> NativeCurrentThreadTaskHostInner {
     NativeCurrentThreadTaskHostInner {
       threadsafe_function: std::sync::Mutex::new(Some(raw)),
@@ -2851,7 +2466,6 @@ mod tests {
     }
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn native_task_host_competing_release_paths_retire_the_raw_owner_once() {
     let inner = std::sync::Arc::new(native_task_host_with_raw_owner(1));
@@ -2886,7 +2500,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn native_task_host_closing_call_retires_owner_without_a_second_release() {
     let inner = native_task_host_with_raw_owner(1);
@@ -2922,7 +2535,6 @@ mod tests {
     }
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn binding_runtime_options_convert_to_a_partial_core_patch() {
     use rolldown_utils::async_runtime::{RuntimeFlavor, RuntimeOptionsPatch};
@@ -2939,7 +2551,6 @@ mod tests {
     assert_eq!(patch.max_blocking_tasks, Some(7));
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn binding_runtime_options_reject_unsafe_thread_counts() {
     use rolldown_utils::async_runtime::RuntimeOptionsPatch;
@@ -2973,7 +2584,6 @@ mod tests {
     }
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn runtime_metrics_preserve_safe_javascript_integer_range() {
     const BEYOND_U32_JS_NUMBER: f64 = 4_294_967_296.0;
@@ -2989,7 +2599,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn relay_ids_fail_closed_without_reuse_at_u32_exhaustion() {
     let allocator = RelayIdAllocator::default();
@@ -3024,7 +2633,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn host_timer_wake_and_drop_panics_are_contained_separately() {
     struct PanickingWakeAndDrop;
@@ -3049,7 +2657,6 @@ mod tests {
     wake_host_timer_safely(waker);
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn relay_drop_guard_cleans_only_its_matching_pending_relay() {
     struct CountingWake(std::sync::Arc<std::sync::atomic::AtomicUsize>);
@@ -3157,7 +2764,6 @@ mod tests {
     drop(disarmed_pending);
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn relay_callback_completion_precedes_delivery_and_closes_terminal_drop_window() {
     struct CountingWake(std::sync::Arc<std::sync::atomic::AtomicUsize>);
@@ -3190,7 +2796,6 @@ mod tests {
     assert_eq!(wakes.load(std::sync::atomic::Ordering::SeqCst), 1);
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn relay_callback_completion_finishes_cleanup_that_won_before_js_returned() {
     struct CountingWake(std::sync::Arc<std::sync::atomic::AtomicUsize>);
@@ -3225,7 +2830,6 @@ mod tests {
     assert_eq!(wakes.load(std::sync::atomic::Ordering::SeqCst), 1);
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn relay_terminal_cleanup_contains_cancel_panics_and_still_wakes() {
     struct CountingWake(std::sync::Arc<std::sync::atomic::AtomicUsize>);
@@ -3259,7 +2863,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn relay_native_cancellation_settles_before_fallible_host_cancellation() {
     use futures::FutureExt as _;
@@ -3290,7 +2893,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn relay_bulk_eviction_contains_each_cancel_panic_and_wakes_every_timer() {
     struct CountingWake(std::sync::Arc<std::sync::atomic::AtomicUsize>);
@@ -3332,7 +2934,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn failed_relay_retirement_cancels_only_after_the_schedule_callback_returns() {
     struct CountingWake(std::sync::Arc<std::sync::atomic::AtomicUsize>);
@@ -3382,7 +2983,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn host_timer_cleanup_contains_panicking_payload_drop_across_ffi() {
     const CHILD_ENV: &str = "ROLLDOWN_TEST_HOST_TIMER_PANIC_PAYLOAD_CHILD";
@@ -3429,7 +3029,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn host_timer_failure_recovery_precedes_and_survives_diagnostic_panics() {
     struct PanickingDiagnostic;
@@ -3452,7 +3051,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn host_timer_registry_drops_wakers_after_unlock() {
     struct LockCheckingDrop {
@@ -3529,7 +3127,6 @@ mod tests {
     assert!(evicted_waker_dropped.load(std::sync::atomic::Ordering::SeqCst));
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn host_timer_eviction_prevents_pending_registration_after_its_drain() {
     let pending = std::sync::Arc::new(std::sync::Mutex::new(rustc_hash::FxHashMap::default()));
@@ -3567,7 +3164,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn cleanup_hook_registration_failure_rolls_back_host_registration() {
     let rollback_calls = std::sync::atomic::AtomicUsize::new(0);
@@ -3587,7 +3183,6 @@ mod tests {
     assert_eq!(rollback_calls.load(std::sync::atomic::Ordering::SeqCst), 1);
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn host_driver_installation_allows_reentrant_eviction_before_publication() {
     let dead = std::sync::atomic::AtomicBool::new(false);
@@ -3625,15 +3220,10 @@ mod tests {
     assert!(registration.lock().unwrap().is_none());
   }
 
-  fn resolve(
-    backend: ResolvedRuntimeBackend,
-    target: ResolvedRuntimeTarget,
-    env: &RuntimeEnv,
-  ) -> super::ResolvedRuntimeConfig {
-    resolve_runtime_config_for(backend, target, env)
+  fn resolve(target: ResolvedRuntimeTarget, env: &RuntimeEnv) -> super::ResolvedRuntimeConfig {
+    resolve_runtime_config_for(target, env)
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn rolldown_runtime_rejects_after_shutdown_and_accepts_after_restart() {
     use std::{
@@ -3711,7 +3301,7 @@ mod tests {
     );
   }
 
-  #[cfg(all(feature = "async-runtime", not(target_family = "wasm")))]
+  #[cfg(not(target_family = "wasm"))]
   #[test]
   fn native_task_host_null_env_retires_payload_and_recovers_exact_delivery() {
     const CHILD_ENV: &str = "ROLLDOWN_TEST_NATIVE_TASK_HOST_NULL_ENV_CHILD";
@@ -3837,7 +3427,7 @@ mod tests {
     );
   }
 
-  #[cfg(all(feature = "async-runtime", not(target_family = "wasm")))]
+  #[cfg(not(target_family = "wasm"))]
   #[test]
   fn native_task_host_callback_lease_covers_ack_payload_and_restart() {
     const CHILD_ENV: &str = "ROLLDOWN_TEST_NATIVE_TASK_HOST_CALLBACK_LEASE_CHILD";
@@ -4010,7 +3600,7 @@ mod tests {
     );
   }
 
-  #[cfg(all(feature = "async-runtime", not(target_family = "wasm")))]
+  #[cfg(not(target_family = "wasm"))]
   #[test]
   fn timer_relay_terminal_drop_at_host_turn_budget_settles_without_later_work() {
     const CHILD_ENV: &str = "ROLLDOWN_TEST_TIMER_RELAY_TERMINAL_DROP_CHILD";
@@ -4166,77 +3756,8 @@ mod tests {
   }
 
   #[test]
-  fn tokio_native_defaults_are_the_measured_pr6270_world() {
-    let resolved = resolve(ResolvedRuntimeBackend::Tokio, ResolvedRuntimeTarget::Native, &env());
-    assert_eq!(resolved.flavor, ResolvedRuntimeFlavor::MultiThread);
-    assert_eq!(
-      resolved.worker_threads,
-      (native_default_parallelism(num_cpus::get_physical(), num_cpus::get()).saturating_mul(3) / 2)
-        .min(max_async_runtime_worker_threads()),
-      "tokio-native scales workers to physical * 3 / 2 within the production ceiling"
-    );
-    assert_eq!(resolved.max_blocking_tasks, 4, "tokio-native keeps the dedicated 4-thread pool");
-    assert_eq!(resolved.park_deadline_ms, None);
-  }
-
-  #[test]
-  fn tokio_native_honors_thread_env_overrides_and_ignores_the_rest() {
-    let resolved = resolve(
-      ResolvedRuntimeBackend::Tokio,
-      ResolvedRuntimeTarget::Native,
-      &RuntimeEnv {
-        runtime: Some("single".to_string()),
-        worker_threads: Some("7".to_string()),
-        max_blocking_threads: Some("5".to_string()),
-        park_deadline_ms: Some("1500".to_string()),
-        ..RuntimeEnv::default()
-      },
-    );
-    assert_eq!((resolved.worker_threads, resolved.max_blocking_tasks), (7, 5));
-    // Pins today's behavior: the tokio backend silently ignores
-    // ROLLDOWN_RUNTIME and ROLLDOWN_PARK_DEADLINE_MS.
-    assert_eq!(resolved.flavor, ResolvedRuntimeFlavor::MultiThread);
-    assert_eq!(resolved.park_deadline_ms, None);
-    // Unusable values (zero / garbage) fall back to the defaults, matching
-    // `resolve_thread_count` -- a typo must never panic module init.
-    let fallback = resolve(
-      ResolvedRuntimeBackend::Tokio,
-      ResolvedRuntimeTarget::Native,
-      &RuntimeEnv {
-        worker_threads: Some("0".to_string()),
-        max_blocking_threads: Some("abc".to_string()),
-        ..RuntimeEnv::default()
-      },
-    );
-    assert_eq!(
-      fallback.worker_threads,
-      (native_default_parallelism(num_cpus::get_physical(), num_cpus::get()).saturating_mul(3) / 2)
-        .min(max_async_runtime_worker_threads())
-    );
-    assert_eq!(fallback.max_blocking_tasks, 4);
-  }
-
-  #[test]
   fn native_thread_env_overrides_clamp_to_production_limits() {
-    let tokio = resolve(
-      ResolvedRuntimeBackend::Tokio,
-      ResolvedRuntimeTarget::Native,
-      &RuntimeEnv {
-        worker_threads: Some("1000000".to_string()),
-        max_blocking_threads: Some("1000000".to_string()),
-        ..RuntimeEnv::default()
-      },
-    );
-    assert_eq!(tokio.worker_threads, max_async_runtime_worker_threads());
-    assert_eq!(tokio.max_blocking_tasks, crate::env_config::MAX_TOKIO_BLOCKING_THREADS);
-    assert_eq!(
-      tokio.worker_threads.checked_add(tokio.max_blocking_tasks),
-      Some(max_async_runtime_worker_threads() + crate::env_config::MAX_TOKIO_BLOCKING_THREADS),
-      "bounded Tokio thread counts must not overflow"
-    );
-
     let shared = resolve(
-      ResolvedRuntimeBackend::Shared,
       ResolvedRuntimeTarget::Native,
       &RuntimeEnv {
         worker_threads: Some("1000000".to_string()),
@@ -4253,32 +3774,6 @@ mod tests {
   }
 
   #[test]
-  fn tokio_wasi_threads_mirrors_the_loader_pool_for_both_fields() {
-    // Loader-pool invariant: the threaded-WASI arm must size the pool from
-    // the SAME env keys and precedence the napi-rs WASI loader uses.
-    let resolved = resolve(
-      ResolvedRuntimeBackend::Tokio,
-      ResolvedRuntimeTarget::WasiThreads,
-      &RuntimeEnv {
-        napi_async_work_pool_size: Some("6".to_string()),
-        uv_threadpool_size: Some("2".to_string()),
-        // Ignored on this arm: the loader, not rolldown, owns the pool.
-        worker_threads: Some("99".to_string()),
-        max_blocking_threads: Some("98".to_string()),
-        ..RuntimeEnv::default()
-      },
-    );
-    assert_eq!(resolved.backend, ResolvedRuntimeBackend::Tokio);
-    assert_eq!(resolved.target, ResolvedRuntimeTarget::WasiThreads);
-    assert_eq!(resolved.flavor, ResolvedRuntimeFlavor::MultiThread);
-    assert_eq!(
-      (resolved.worker_threads, resolved.max_blocking_tasks),
-      (6, 6),
-      "one loader pool carries both the worker and the blocking work"
-    );
-  }
-
-  #[test]
   fn native_defaults_respect_host_and_container_parallelism() {
     assert_eq!(native_default_parallelism(128, 2), 2);
     assert_eq!(native_default_parallelism(8, 16), 8);
@@ -4287,61 +3782,8 @@ mod tests {
   }
 
   #[test]
-  fn tokio_threadless_wasi_reports_current_thread_without_a_worker_pool() {
-    let resolved = resolve(
-      ResolvedRuntimeBackend::Tokio,
-      ResolvedRuntimeTarget::Wasi,
-      &RuntimeEnv {
-        worker_threads: Some("99".to_string()),
-        max_blocking_threads: Some("98".to_string()),
-        napi_async_work_pool_size: Some("97".to_string()),
-        uv_threadpool_size: Some("96".to_string()),
-        ..RuntimeEnv::default()
-      },
-    );
-    assert_eq!(resolved.backend, ResolvedRuntimeBackend::Tokio);
-    assert_eq!(resolved.target, ResolvedRuntimeTarget::Wasi);
-    assert_eq!(resolved.flavor, ResolvedRuntimeFlavor::CurrentThread);
-    assert_eq!((resolved.worker_threads, resolved.max_blocking_tasks), (1, 1));
-  }
-
-  #[test]
-  fn wasm_pool_size_matches_loader_env_precedence() {
-    // NAPI_RS_ASYNC_WORK_POOL_SIZE wins when present (the `??` first operand).
-    assert_eq!(
-      wasm_async_work_pool_size(Some("6".to_string()), Some("2".to_string())),
-      6,
-      "NAPI_RS_ASYNC_WORK_POOL_SIZE must take precedence over UV_THREADPOOL_SIZE"
-    );
-    // Falls back to UV_THREADPOOL_SIZE when the first key is absent.
-    assert_eq!(
-      wasm_async_work_pool_size(None, Some("2".to_string())),
-      2,
-      "UV_THREADPOOL_SIZE must be used when NAPI_RS_ASYNC_WORK_POOL_SIZE is unset"
-    );
-    // Default of 4 when neither key is set (loader's else branch).
-    assert_eq!(wasm_async_work_pool_size(None, None), 4, "default pool size is 4");
-    assert_eq!(
-      wasm_async_work_pool_size(Some("2048".to_string()), None),
-      EMNAPI_ASYNC_WORK_POOL_SIZE_MAX,
-      "the reporter must mirror emnapi's maximum pool size"
-    );
-    // Non-positive / non-numeric values resolve to the default 4, mirroring the
-    // generated loader's fallback. A present-but-zero first key still "wins"
-    // the `??` and then falls to 4 (never the UV value).
-    assert_eq!(wasm_async_work_pool_size(Some("0".to_string()), Some("9".to_string())), 4);
-    assert_eq!(wasm_async_work_pool_size(Some("abc".to_string()), None), 4);
-    // Surrounding whitespace is tolerated by both paths.
-    assert_eq!(
-      wasm_async_work_pool_size(Some(" 5 ".to_string()), None),
-      5,
-      "a normalized decimal value with surrounding whitespace must size the pool"
-    );
-  }
-
-  #[test]
   fn shared_native_defaults_reserve_one_runnable_lane() {
-    let resolved = resolve(ResolvedRuntimeBackend::Shared, ResolvedRuntimeTarget::Native, &env());
+    let resolved = resolve(ResolvedRuntimeTarget::Native, &env());
     assert_eq!(resolved.flavor, ResolvedRuntimeFlavor::MultiThread);
     assert_eq!(
       resolved.worker_threads,
@@ -4362,7 +3804,6 @@ mod tests {
     // The blocking default follows the RESOLVED worker count, then reserves
     // one lane: with workers overridden to 7 the blocking cap is 6.
     let resolved = resolve(
-      ResolvedRuntimeBackend::Shared,
       ResolvedRuntimeTarget::Native,
       &RuntimeEnv { worker_threads: Some("7".to_string()), ..RuntimeEnv::default() },
     );
@@ -4379,7 +3820,6 @@ mod tests {
       ("turbo", ResolvedRuntimeFlavor::MultiThread),
     ] {
       let resolved = resolve(
-        ResolvedRuntimeBackend::Shared,
         ResolvedRuntimeTarget::Native,
         &RuntimeEnv { runtime: Some(raw.to_string()), ..RuntimeEnv::default() },
       );
@@ -4390,7 +3830,6 @@ mod tests {
   #[test]
   fn shared_multi_thread_one_worker_override_reports_effective_two_worker_minimum() {
     let resolved = resolve(
-      ResolvedRuntimeBackend::Shared,
       ResolvedRuntimeTarget::Native,
       &RuntimeEnv {
         worker_threads: Some("1".to_string()),
@@ -4419,7 +3858,6 @@ mod tests {
 
     // And the resolver wires it through on the shared backend.
     let resolved = resolve(
-      ResolvedRuntimeBackend::Shared,
       ResolvedRuntimeTarget::Native,
       &RuntimeEnv { park_deadline_ms: Some("60000".to_string()), ..RuntimeEnv::default() },
     );
@@ -4429,8 +3867,7 @@ mod tests {
   #[test]
   fn shared_wasi_defaults_keep_runtime_options_parity() {
     for target in [ResolvedRuntimeTarget::Wasi, ResolvedRuntimeTarget::WasiThreads] {
-      let resolved = resolve(ResolvedRuntimeBackend::Shared, target, &env());
-      assert_eq!(resolved.backend, ResolvedRuntimeBackend::Shared);
+      let resolved = resolve(target, &env());
       assert_eq!(resolved.target, target);
       assert_eq!(
         resolved.flavor,
@@ -4449,7 +3886,6 @@ mod tests {
       // and an expect panic while loading the addon is not an acceptable
       // configuration error.
       let overridden = resolve(
-        ResolvedRuntimeBackend::Shared,
         target,
         &RuntimeEnv {
           runtime: Some("multi".to_string()),
@@ -4470,7 +3906,6 @@ mod tests {
   /// napi 3.10 error.rs), so message matching is forgeable by a live
   /// callback. The two authorities: the unforgeable `Closing` status, and
   /// the liveness probe.
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn relay_eviction_is_decided_by_status_and_probe_never_by_message() {
     use napi::Status;
@@ -4513,7 +3948,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn cancellation_failures_share_the_three_strike_budget_without_cleanup_double_counting() {
     use std::sync::atomic::{AtomicU32, Ordering};
@@ -4550,7 +3984,6 @@ mod tests {
     );
   }
 
-  #[cfg(feature = "async-runtime")]
   #[test]
   fn a_same_relay_success_cannot_erase_its_recorded_failure() {
     use std::sync::atomic::{AtomicU32, Ordering};

@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+import fsDefault, { readFileSync } from "node:fs";
+//#region main.js
+assert.strictEqual(readFileSync, readFileSync);
+assert.strictEqual(fsDefault, fsDefault);
+//#endregion
+export { readFileSync };
+
+```

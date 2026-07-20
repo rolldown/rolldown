@@ -2,6 +2,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::span::Span;
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
@@ -45,6 +46,26 @@ pub use tree_shaking::{
 };
 mod wrapping;
 
+/// Merge state for named imports of one `(external module, imported name)` binding whose local
+/// binding is re-exported (e.g. `export { a } from 'ext'`). Unlike plain imports, these symbols
+/// can be reached from other chunks (through internal import chains and chunk exports), so
+/// `bind_imports_and_exports` must not merge them eagerly across modules (#3405). They are
+/// collected here instead and merged chunk-by-chunk in
+/// `GenerateStage::merge_external_import_symbols`, once chunk assignment is known (#3427).
+#[derive(Debug, Default)]
+pub struct DeferredExternalBindingMerge {
+  /// The re-exported named-import symbols importing this binding. Each is a union-find root:
+  /// links made during import matching always point from the importer side into these symbols.
+  pub symbols: FxIndexSet<SymbolRef>,
+  /// Facade symbol the eager merger created for the plain (non-re-exported) imports of the same
+  /// binding, if any. A plain import is only referenced from its own module, so when every
+  /// module in `eager_import_owners` lands in one chunk, the facade's references all live in
+  /// that chunk and it can be folded into that chunk's canonical symbol as well.
+  pub eager_facade: Option<SymbolRef>,
+  /// Owner modules of the plain imports merged into `eager_facade`.
+  pub eager_import_owners: Vec<ModuleIdx>,
+}
+
 /// Information about safely merged CJS namespaces for a module
 #[derive(Debug, Default, Clone)]
 pub struct SafelyMergeCjsNsInfo {
@@ -71,6 +92,9 @@ pub struct LinkStageOutput {
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
+  /// See [`DeferredExternalBindingMerge`].
+  pub deferred_external_binding_merges:
+    FxHashMap<(ModuleIdx, CompactStr), DeferredExternalBindingMerge>,
   /// https://rollupjs.org/plugin-development/#this-emitfile
   /// Used to store `preserveSignature` specified with `this.emitFile` in plugins.
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
@@ -115,6 +139,9 @@ pub struct LinkStage<'a> {
   pub star_reexport_records_by_imported_symbol:
     FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, rolldown_common::ImportRecordIdx)>>>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
+  /// See [`DeferredExternalBindingMerge`].
+  pub deferred_external_binding_merges:
+    FxHashMap<(ModuleIdx, CompactStr), DeferredExternalBindingMerge>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
@@ -220,6 +247,7 @@ impl<'a> LinkStage<'a> {
       normal_symbol_exports_chain_map: FxHashMap::default(),
       star_reexport_records_by_imported_symbol: FxHashMap::default(),
       external_import_namespace_merger: FxHashMap::default(),
+      deferred_external_binding_merges: FxHashMap::default(),
       overrode_preserve_entry_signature_map: scan_stage_output
         .overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: scan_stage_output.entry_point_to_reference_ids,
@@ -264,6 +292,7 @@ impl<'a> LinkStage<'a> {
         dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
         safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
         external_import_namespace_merger: self.external_import_namespace_merger,
+        deferred_external_binding_merges: self.deferred_external_binding_merges,
         overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
         entry_point_to_reference_ids: self.entry_point_to_reference_ids,
         global_constant_symbol_map: self.global_constant_symbol_map,

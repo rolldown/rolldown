@@ -1,0 +1,12 @@
+{
+  "_comment": "Within one chunk, plain imports, re-exports and pass-through re-exports of the same external binding collapse into a single import specifier (#3427), including the default import.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.js"
+      }
+    ],
+    "external": ["node:fs", "node:assert"]
+  }
+}

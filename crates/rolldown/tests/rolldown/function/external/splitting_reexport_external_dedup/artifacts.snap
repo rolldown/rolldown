@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_a.js
+
+```js
+import { t as x } from "./shared.js";
+import assert from "node:assert";
+import { readFileSync } from "node:fs";
+//#region entry_a.js
+assert.strictEqual(typeof x, "function");
+assert.strictEqual(x, readFileSync);
+//#endregion
+
+```
+
+## entry_b.js
+
+```js
+import { t as x } from "./shared.js";
+import assert from "node:assert";
+import { readFileSync } from "node:fs";
+//#region entry_b.js
+assert.strictEqual(typeof x, "function");
+assert.strictEqual(x, readFileSync);
+//#endregion
+
+```
+
+## shared.js
+
+```js
+import { readFileSync as x } from "node:fs";
+export { x as t };
+
+```

@@ -21,6 +21,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const WASI_THREADS_TARGET = 'wasm32-wasip1-threads';
 const WASI_BINARY_NAME = 'rolldown-binding.wasm32-wasi';
 const WASI_THREADS_DECLARATION = join(__dirname, 'src', 'rolldown-binding.wasi.d.cts');
+// The test-only runtime probe features add `__rolldownTest*` exports to the
+// generated declaration surface. The default build IS the shared runtime, so
+// these features are the only remaining native flag that changes the surface.
+const RUNTIME_TEST_FEATURES = ['runtime-waker-teardown-test', 'runtime-submission-failure-test'];
 
 const args = process.argv.slice(2);
 
@@ -90,11 +94,6 @@ interface WasiDeclarationBuildOptions {
   target?: string;
   features?: readonly string[];
 }
-
-// The test-only runtime probe features add `__rolldownTest*` exports to the
-// generated declaration surface. The default build IS the shared runtime, so
-// these features are the only remaining native flag that changes the surface.
-const RUNTIME_TEST_FEATURES = ['runtime-waker-teardown-test', 'runtime-submission-failure-test'];
 
 /**
  * Whether this build regenerates `binding.d.cts` with the test-only runtime

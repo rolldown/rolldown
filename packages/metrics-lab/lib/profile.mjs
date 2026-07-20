@@ -58,7 +58,10 @@ function sourceLocator(code, map) {
       const span = spans[mid];
       if (offset < span.start) hi = mid - 1;
       else if (offset >= span.end) lo = mid + 1;
-      else return span.srcIdx >= 0 ? String(map.sources[span.srcIdx] ?? `#${span.srcIdx}`).replaceAll('\\', '/') : '(unmapped)';
+      else
+        return span.srcIdx >= 0
+          ? String(map.sources[span.srcIdx] ?? `#${span.srcIdx}`).replaceAll('\\', '/')
+          : '(unmapped)';
     }
     return '(unmapped)';
   };

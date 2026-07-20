@@ -10,8 +10,8 @@ const CHROME_CANDIDATES = [
   process.env.CHROME_PATH,
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-  process.env.LOCALAPPDATA
-    && path.join(process.env.LOCALAPPDATA, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+  process.env.LOCALAPPDATA &&
+    path.join(process.env.LOCALAPPDATA, 'Google', 'Chrome', 'Application', 'chrome.exe'),
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
   '/usr/bin/google-chrome',
   '/usr/bin/chromium',
@@ -27,25 +27,31 @@ export function findChrome() {
 
 export async function launchBrowser({ profileDir }) {
   if (typeof WebSocket === 'undefined') {
-    throw new Error(`This harness needs Node >= 22 (global WebSocket); running ${process.version}.`);
+    throw new Error(
+      `This harness needs Node >= 22 (global WebSocket); running ${process.version}.`,
+    );
   }
   const exe = findChrome();
   fs.rmSync(profileDir, { recursive: true, force: true });
   fs.mkdirSync(profileDir, { recursive: true });
-  const child = spawn(exe, [
-    '--headless=new',
-    '--remote-debugging-port=0',
-    `--user-data-dir=${profileDir}`,
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--disable-background-networking',
-    '--disable-component-update',
-    '--disable-sync',
-    '--disable-default-apps',
-    '--mute-audio',
-    '--window-size=1280,900',
-    'about:blank',
-  ], { stdio: ['ignore', 'ignore', 'pipe'] });
+  const child = spawn(
+    exe,
+    [
+      '--headless=new',
+      '--remote-debugging-port=0',
+      `--user-data-dir=${profileDir}`,
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-background-networking',
+      '--disable-component-update',
+      '--disable-sync',
+      '--disable-default-apps',
+      '--mute-audio',
+      '--window-size=1280,900',
+      'about:blank',
+    ],
+    { stdio: ['ignore', 'ignore', 'pipe'] },
+  );
 
   const wsUrl = await new Promise((resolve, reject) => {
     let stderr = '';
@@ -64,7 +70,9 @@ export async function launchBrowser({ profileDir }) {
     };
     const onExit = (code) => {
       cleanup();
-      reject(new Error(`Chrome exited before announcing DevTools endpoint (code ${code}).\n${stderr}`));
+      reject(
+        new Error(`Chrome exited before announcing DevTools endpoint (code ${code}).\n${stderr}`),
+      );
     };
     const cleanup = () => {
       clearTimeout(timer);
@@ -80,10 +88,22 @@ export async function launchBrowser({ profileDir }) {
   return {
     cdp,
     async close() {
-      try { cdp.close(); } catch { /* already closed */ }
-      try { child.kill(); } catch { /* already gone */ }
+      try {
+        cdp.close();
+      } catch {
+        /* already closed */
+      }
+      try {
+        child.kill();
+      } catch {
+        /* already gone */
+      }
       await new Promise((r) => setTimeout(r, 250));
-      try { child.kill('SIGKILL'); } catch { /* already gone */ }
+      try {
+        child.kill('SIGKILL');
+      } catch {
+        /* already gone */
+      }
     },
   };
 }
@@ -122,7 +142,9 @@ function connect(wsUrl) {
         if (!listeners.has(key)) listeners.set(key, []);
         listeners.get(key).push(handler);
       },
-      close() { ws.close(); },
+      close() {
+        ws.close();
+      },
     };
   });
 }
@@ -157,10 +179,16 @@ export async function openPage(cdp, { throttle, injectScript } = {}) {
     on: (method, handler) => cdp.on(method, handler, sessionId),
     navigate: (url) => send('Page.navigate', { url }),
     async evaluate(expression) {
-      const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+      const result = await send('Runtime.evaluate', {
+        expression,
+        returnByValue: true,
+        awaitPromise: true,
+      });
       if (result.exceptionDetails) {
-        const detail = result.exceptionDetails.exception?.description
-          ?? result.exceptionDetails.text ?? 'unknown error';
+        const detail =
+          result.exceptionDetails.exception?.description ??
+          result.exceptionDetails.text ??
+          'unknown error';
         throw new Error(`page evaluate threw: ${detail}`);
       }
       return result.result.value;

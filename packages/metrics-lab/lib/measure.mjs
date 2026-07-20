@@ -140,7 +140,10 @@ function readyExpr(expectedFeatures) {
 }
 
 /** One navigation; resolves with the collected sample (missing vitals stay null). */
-export async function timedRun(cdp, { url, throttle, expectedFeatures = [], settleMs = 1500, timeoutMs = 60_000 }) {
+export async function timedRun(
+  cdp,
+  { url, throttle, expectedFeatures = [], settleMs = 1500, timeoutMs = 60_000 },
+) {
   const page = await openPage(cdp, { throttle, injectScript: OBSERVER_JS });
   try {
     await page.navigate(url);
@@ -183,7 +186,10 @@ function gatingFetches(samples) {
     for (const resource of sample.resources ?? []) {
       if (resource.type !== 'fetch' && resource.type !== 'xhr') continue;
       if (resource.end <= 0 || resource.end > sample.fcp) continue;
-      seen.set(resource.name, `${resource.name} (${resource.type}, finished ${Math.round(sample.fcp - resource.end)}ms before first paint)`);
+      seen.set(
+        resource.name,
+        `${resource.name} (${resource.type}, finished ${Math.round(sample.fcp - resource.end)}ms before first paint)`,
+      );
     }
   }
   return [...seen.values()];
@@ -200,7 +206,8 @@ function resourceWeight(samples) {
   const kb = (bytes) => Math.round(((bytes ?? 0) / 1024) * 10) / 10;
   const rows = [];
   for (const type of types) {
-    const field = (pool, name) => median(pool.map((s) => s.resourceTypes?.[type]?.[name] ?? 0)) ?? 0;
+    const field = (pool, name) =>
+      median(pool.map((s) => s.resourceTypes?.[type]?.[name] ?? 0)) ?? 0;
     const row = {
       type,
       count: Math.round(field(samples, 'count')),
@@ -224,10 +231,11 @@ export function weightLabel(row) {
  * rendering — the fonts/images a fetch-only render-gap analysis is blind to.
  */
 export function heavyPrepaintTypes(weightRows) {
-  return (weightRows ?? []).filter((row) => (
-    (row.type === 'font' && (row.preFcpKb >= 50 || row.preFcpCount >= 5))
-    || (row.type === 'image' && row.preFcpKb >= 100)
-  ));
+  return (weightRows ?? []).filter(
+    (row) =>
+      (row.type === 'font' && (row.preFcpKb >= 50 || row.preFcpCount >= 5)) ||
+      (row.type === 'image' && row.preFcpKb >= 100),
+  );
 }
 
 /**
@@ -269,9 +277,9 @@ export function summarize(samples, expectedFeatures = []) {
     .map((s) => s.lcp - s.load);
   const prepaintLongtask = samples
     .filter((s) => typeof s.fcp === 'number')
-    .map((s) => (s.longtasks ?? [])
-      .filter((t) => t.start < s.fcp)
-      .reduce((sum, t) => sum + t.duration, 0));
+    .map((s) =>
+      (s.longtasks ?? []).filter((t) => t.start < s.fcp).reduce((sum, t) => sum + t.duration, 0),
+    );
   return {
     runs: samples.length,
     metrics: {
@@ -293,15 +301,17 @@ export function summarize(samples, expectedFeatures = []) {
     resourceWeight: resourceWeight(samples),
     renderBlockingGate: renderBlockingGate(samples),
     guard: {
-      allFeaturesReady: samples.every(
-        (s) => expectedFeatures.every((f) => s.ready && s.ready[f] === true),
+      allFeaturesReady: samples.every((s) =>
+        expectedFeatures.every((f) => s.ready && s.ready[f] === true),
       ),
       // null when the page has no hero probe elements (measuring an arbitrary app
       // via --dist); the demo app must render both.
       heroRendered: samples.some((s) => s.heroTitle !== null || s.heroSubtitle !== null)
         ? samples.every(
-          (s) => (s.heroTitle ?? '').length > 0 && (s.heroSubtitle === null || s.heroSubtitle.length > 0),
-        )
+            (s) =>
+              (s.heroTitle ?? '').length > 0 &&
+              (s.heroSubtitle === null || s.heroSubtitle.length > 0),
+          )
         : null,
       lcpObservedInAllRuns: samples.every((s) => typeof s.lcp === 'number'),
     },

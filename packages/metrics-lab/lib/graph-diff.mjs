@@ -59,7 +59,10 @@ function groupByChangedAncestor(graph, changedList, changedIdSet) {
   for (const item of changedList) {
     const { rootId, skipped } = resolve(item.id);
     let g = groups.get(rootId);
-    if (!g) { g = { rootId, bytes: 0, count: 0, skipped: new Set() }; groups.set(rootId, g); }
+    if (!g) {
+      g = { rootId, bytes: 0, count: 0, skipped: new Set() };
+      groups.set(rootId, g);
+    }
     g.bytes += item.bytes;
     g.count += 1;
     for (const s of skipped) g.skipped.add(s);
@@ -88,7 +91,10 @@ export function diffGraphs(before, after) {
   }
   for (const [id, m] of beforeById) {
     const am = afterById.get(id);
-    if (!am) { removed.push({ id, bytes: m.bytes }); continue; }
+    if (!am) {
+      removed.push({ id, bytes: m.bytes });
+      continue;
+    }
     if (am.bytes !== m.bytes) {
       bytesChanged.push({ id, before: m.bytes, after: am.bytes, delta: am.bytes - m.bytes });
     }
@@ -103,8 +109,10 @@ export function diffGraphs(before, after) {
   const afterEager = eagerIds(after);
   const entered = [];
   const left = [];
-  for (const id of afterEager) if (!beforeEager.has(id)) entered.push({ id, bytes: afterById.get(id).bytes });
-  for (const id of beforeEager) if (!afterEager.has(id)) left.push({ id, bytes: beforeById.get(id).bytes });
+  for (const id of afterEager)
+    if (!beforeEager.has(id)) entered.push({ id, bytes: afterById.get(id).bytes });
+  for (const id of beforeEager)
+    if (!afterEager.has(id)) left.push({ id, bytes: beforeById.get(id).bytes });
   entered.sort(byBytesDesc);
   left.sort(byBytesDesc);
   const enteredBytes = entered.reduce((s, m) => s + m.bytes, 0);
@@ -113,7 +121,9 @@ export function diffGraphs(before, after) {
   return {
     added: added.sort(byBytesDesc),
     removed: removed.sort(byBytesDesc),
-    bytesChanged: bytesChanged.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta) || a.id.localeCompare(b.id)),
+    bytesChanged: bytesChanged.sort(
+      (a, b) => Math.abs(b.delta) - Math.abs(a.delta) || a.id.localeCompare(b.id),
+    ),
     edgesChanged: edgesChanged.sort((a, b) => a.id.localeCompare(b.id)),
     entered,
     left,

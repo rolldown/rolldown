@@ -14,6 +14,127 @@ pub type SourceMap = oxc_sourcemap::SourceMap<'static>;
 
 pub use crate::source::{Source, SourceMapSource};
 
+struct CachedSourceMapLookup<'map> {
+  lookup_table: Vec<&'map [Token]>,
+  cursor: Option<LookupCursor>,
+}
+
+#[derive(Clone, Copy)]
+struct LookupCursor {
+  line: u32,
+  col: u32,
+  token_index: usize,
+}
+
+// Bound cursor walks so reordered mappings cannot repeatedly rescan a long generated line.
+const MAX_LINEAR_LOOKUP_STEPS: usize = 8;
+
+impl<'map> CachedSourceMapLookup<'map> {
+  fn new(sourcemap: &'map oxc_sourcemap::SourceMap<'_>) -> Self {
+    Self { lookup_table: sourcemap.generate_lookup_table(), cursor: None }
+  }
+
+  #[inline]
+  fn lookup_token_approx(&mut self, line: u32, col: u32) -> Option<Token> {
+    let line_tokens = *self.lookup_table.get(line as usize)?;
+    if line_tokens.is_empty() {
+      return None;
+    }
+    let token_index = if let Some(cursor) = self.cursor
+      && cursor.line == line
+      && cursor.col <= col
+    {
+      let mut token_index = cursor.token_index;
+      let current_col = line_tokens[token_index].get_dst_col();
+      if current_col < col {
+        let mut steps = 0;
+        while let Some(next) = line_tokens.get(token_index + 1) {
+          match next.get_dst_col().cmp(&col) {
+            std::cmp::Ordering::Less if steps < MAX_LINEAR_LOOKUP_STEPS => {
+              token_index += 1;
+              steps += 1;
+            }
+            std::cmp::Ordering::Less => {
+              token_index = Self::binary_search_token_index(line_tokens, col);
+              break;
+            }
+            std::cmp::Ordering::Equal => {
+              token_index += 1;
+              break;
+            }
+            std::cmp::Ordering::Greater => break,
+          }
+        }
+      }
+      token_index
+    } else {
+      Self::binary_search_token_index(line_tokens, col)
+    };
+    self.cursor = Some(LookupCursor { line, col, token_index });
+    line_tokens.get(token_index).copied()
+  }
+
+  #[inline]
+  fn binary_search_token_index(line_tokens: &[Token], col: u32) -> usize {
+    match line_tokens.binary_search_by_key(&col, Token::get_dst_col) {
+      Ok(mut token_index) => {
+        while token_index > 0 && line_tokens[token_index - 1].get_dst_col() == col {
+          token_index -= 1;
+        }
+        token_index
+      }
+      Err(0) => 0,
+      Err(token_index) => token_index - 1,
+    }
+  }
+}
+
+#[test]
+fn test_cached_sourcemap_lookup_matches_regular_lookup() {
+  let mut tokens = vec![
+    Token::new(0, 2, 0, 0, Some(0), None),
+    Token::new(0, 2, 0, 1, Some(0), None),
+    Token::new(0, 5, 0, 2, Some(0), None),
+    Token::new(2, 3, 1, 0, Some(0), None),
+    Token::new(2, 8, 1, 1, Some(0), None),
+  ];
+  tokens.extend((0..16).map(|col| Token::new(4, col, 2, col, Some(0), None)));
+  let sourcemap =
+    SourceMap::new(None, vec![], None, vec![], vec![], tokens.into_boxed_slice(), None);
+  let lookup_table = sourcemap.generate_lookup_table();
+  let mut cached_lookup = CachedSourceMapLookup::new(&sourcemap);
+
+  // Monotonic queries exercise the cursor, the repeated/regressing queries exercise the exact
+  // match and binary-search fallbacks, and line 1 covers an empty lookup-table entry.
+  for (line, col) in [
+    (0, 0),
+    (0, 1),
+    (0, 2),
+    (0, 2),
+    (0, 3),
+    (0, 5),
+    (0, 6),
+    (0, 3),
+    (1, 0),
+    (2, 0),
+    (2, 3),
+    (2, 9),
+    (0, 5),
+    (3, 0),
+    (4, 0),
+    (4, 15),
+    (4, 1),
+    (4, 14),
+    (5, 0),
+  ] {
+    assert_eq!(
+      cached_lookup.lookup_token_approx(line, col),
+      sourcemap.lookup_token_approx(&lookup_table, line, col),
+      "lookup differs at ({line}, {col})"
+    );
+  }
+}
+
 /// Strips the first `lines` destination lines from the sourcemap, decrementing all remaining
 /// destination line numbers accordingly. Used to re-anchor a sourcemap after removing a
 /// prefix (e.g. a shebang line) from the generated code.
@@ -73,10 +194,12 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
   let chain_without_last = &sourcemap_chain[..sourcemap_chain.len() - 1];
 
   // Pre-compute lookup tables in reverse order so we avoid reversing on every token lookup.
-  let sourcemap_and_lookup_table: Vec<_> = chain_without_last
+  // Generated mappings usually trace monotonically through a line. Keep a cursor in each map so
+  // nearby queries scan forward, while out-of-order mappings and large jumps use binary search.
+  let mut sourcemap_lookups: Vec<_> = chain_without_last
     .iter()
     .rev()
-    .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table()))
+    .map(|sourcemap| CachedSourceMapLookup::new(sourcemap))
     .collect();
 
   let tokens: Box<[Token]> = last_map
@@ -88,17 +211,19 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
         return Some(unmapped_token());
       }
 
-      let mut original_token = token;
-      for (sourcemap, lookup_table) in &sourcemap_and_lookup_table {
-        let traced = sourcemap.lookup_source_view_token_approx(
-          lookup_table,
-          original_token.get_src_line(),
-          original_token.get_src_col(),
-        )?;
-        if traced.get_source_id().is_none() {
+      let mut lookups = sourcemap_lookups.iter_mut();
+      let first_lookup = lookups.next().expect("sourcemap chain should contain at least two maps");
+      let mut original_token =
+        first_lookup.lookup_token_approx(token.get_src_line(), token.get_src_col())?;
+      if original_token.get_source_id().is_none() {
+        return Some(unmapped_token());
+      }
+      for lookup in lookups {
+        original_token = lookup
+          .lookup_token_approx(original_token.get_src_line(), original_token.get_src_col())?;
+        if original_token.get_source_id().is_none() {
           return Some(unmapped_token());
         }
-        original_token = traced;
       }
 
       Some(Token::new(

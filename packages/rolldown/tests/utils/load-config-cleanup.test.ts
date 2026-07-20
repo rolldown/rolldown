@@ -19,34 +19,38 @@ const fixture = path.join(
   'load-config',
   'bundled-cleanup.config.ts',
 );
-let generatedOutputDir: string | undefined;
+const fixtureDir = path.dirname(fixture);
+let generatedFiles: string[] = [];
 
 afterEach(async () => {
   vi.restoreAllMocks();
   close.mockReset();
   rolldown.mockReset();
   write.mockReset();
-  if (generatedOutputDir !== undefined) {
-    await rm(generatedOutputDir, { force: true, recursive: true });
-    generatedOutputDir = undefined;
+  for (const generatedFile of generatedFiles) {
+    await rm(generatedFile, { force: true });
   }
+  generatedFiles = [];
 });
+
+async function emit(outputDir: string, fileName: string, code: string): Promise<void> {
+  const generatedFile = path.join(outputDir, fileName);
+  generatedFiles.push(generatedFile);
+  await writeFile(generatedFile, code);
+}
 
 describe('loadConfig bundle cleanup', () => {
   it('closes the transient build and removes every generated output', async () => {
     rolldown.mockResolvedValue({ close, write });
     write.mockImplementation(async (outputOptions: { dir: string }) => {
-      generatedOutputDir = outputOptions.dir;
       const fileName = 'rolldown.config.cleanup.mjs';
-      await writeFile(
-        path.join(outputOptions.dir, fileName),
+      await emit(
+        outputOptions.dir,
+        fileName,
         'import input from "./config-chunk.mjs"; export default { input }',
       );
-      await writeFile(
-        path.join(outputOptions.dir, 'config-chunk.mjs'),
-        'export default "./entry.js"',
-      );
-      await writeFile(path.join(outputOptions.dir, 'config-asset.txt'), 'temporary config asset');
+      await emit(outputOptions.dir, 'config-chunk.mjs', 'export default "./entry.js"');
+      await emit(outputOptions.dir, 'config-asset.txt', 'temporary config asset');
       return {
         output: [
           { fileName, isEntry: true, type: 'chunk' },
@@ -60,12 +64,17 @@ describe('loadConfig bundle cleanup', () => {
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({
         codeSplitting: false,
+        // Runtime-relative resolution inside a config resolves against the
+        // directory the generated file lives in, so it has to be the config's own.
+        dir: fixtureDir,
       }),
     );
     expect(close).toHaveBeenCalledOnce();
-    expect(path.dirname(generatedOutputDir!)).toBe(path.dirname(fixture));
-    await expect(access(generatedOutputDir!)).rejects.toMatchObject({ code: 'ENOENT' });
-    generatedOutputDir = undefined;
+    for (const generatedFile of generatedFiles) {
+      await expect(access(generatedFile)).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+    // The config's own directory must survive the cleanup.
+    await expect(access(fixture)).resolves.toBeUndefined();
   });
 
   it('closes the transient build when config generation fails', async () => {
@@ -99,8 +108,7 @@ describe('loadConfig bundle cleanup', () => {
     const fileName = 'rolldown.config.close-failure.mjs';
     rolldown.mockResolvedValue({ close, write });
     write.mockImplementation(async (outputOptions: { dir: string }) => {
-      generatedOutputDir = outputOptions.dir;
-      await writeFile(path.join(outputOptions.dir, fileName), 'export default {}');
+      await emit(outputOptions.dir, fileName, 'export default {}');
       return {
         output: [{ fileName, isEntry: true, type: 'chunk' }],
       };
@@ -110,20 +118,15 @@ describe('loadConfig bundle cleanup', () => {
     const error = await loadConfig(fixture).catch((error: unknown) => error);
 
     expect((error as Error).cause).toBe(closeError);
-    await expect(access(generatedOutputDir!)).rejects.toMatchObject({ code: 'ENOENT' });
-    generatedOutputDir = undefined;
+    await expect(access(path.join(fixtureDir, fileName))).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it('preserves config import and recursive cleanup failures', async () => {
-    const cleanupError = new Error('config directory cleanup failed');
+  it('preserves config import and cleanup failures', async () => {
+    const cleanupError = new Error('config cleanup failed');
     const fileName = 'rolldown.config.import-failure.mjs';
     rolldown.mockResolvedValue({ close, write });
     write.mockImplementation(async (outputOptions: { dir: string }) => {
-      generatedOutputDir = outputOptions.dir;
-      await writeFile(
-        path.join(outputOptions.dir, fileName),
-        'throw new Error("config import failed")',
-      );
+      await emit(outputOptions.dir, fileName, 'throw new Error("config import failed")');
       return {
         output: [{ fileName, isEntry: true, type: 'chunk' }],
       };
@@ -137,5 +140,33 @@ describe('loadConfig bundle cleanup', () => {
     expect((cause as AggregateError).errors).toHaveLength(2);
     expect((cause as AggregateError).errors[0]).toMatchObject({ message: 'config import failed' });
     expect((cause as AggregateError).errors[1]).toBe(cleanupError);
+  });
+
+  it('rejects when the bundled config rejects with `undefined`', async () => {
+    const fileName = 'rolldown.config.undefined-rejection.mjs';
+    rolldown.mockResolvedValue({ close, write });
+    write.mockImplementation(async (outputOptions: { dir: string }) => {
+      await emit(outputOptions.dir, fileName, 'throw undefined');
+      return {
+        output: [{ fileName, isEntry: true, type: 'chunk' }],
+      };
+    });
+
+    const error = await loadConfig(fixture).catch((error: unknown) => error);
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error & { cause?: unknown }).cause).toBeUndefined();
+    await expect(access(path.join(fixtureDir, fileName))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('rejects when the config build rejects with `undefined`', async () => {
+    rolldown.mockResolvedValue({ close, write });
+    write.mockRejectedValue(undefined);
+
+    const error = await loadConfig(fixture).catch((error: unknown) => error);
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error & { cause?: unknown }).cause).toBeUndefined();
+    expect(close).toHaveBeenCalledOnce();
   });
 });

@@ -1,0 +1,22 @@
+{
+  "name": "@rolldown/metrics-lab",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Browser-loading perf harness for agent loops: throttled runs, first-paint coverage, boot CPU profile, fused verdict.",
+  "type": "module",
+  "bin": {
+    "metrics-lab": "./harness.mjs"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "files": [
+    "harness.mjs",
+    "lib",
+    "AGENTS.md",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  }
+}

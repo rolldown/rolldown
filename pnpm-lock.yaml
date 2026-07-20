@@ -525,6 +525,8 @@ importers:
         specifier: 'catalog:'
         version: 0.1.0
 
+  packages/metrics-lab: {}
+
   packages/rolldown:
     dependencies:
       '@oxc-project/types':

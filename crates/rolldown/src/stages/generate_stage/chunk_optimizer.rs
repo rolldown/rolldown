@@ -1035,30 +1035,23 @@ impl GenerateStage<'_> {
     );
 
     let runtime = &self.link_output.runtime;
-    let context = &mut IncludeContext {
-      modules: &self.link_output.module_table.modules,
-      stmt_infos: &self.link_output.stmt_infos,
-      symbols: &self.link_output.symbol_db,
-      is_included_vec: &mut stmt_info_included_vec,
-      is_module_included_vec: &mut module_included_vec,
-      tree_shaking: self.options.treeshake.is_some(),
-      runtime_idx: self.link_output.runtime.id(),
-      metas: &self.link_output.metas,
+    let context = &mut IncludeContext::new(
+      &self.link_output.module_table.modules,
+      &self.link_output.stmt_infos,
+      &self.link_output.symbol_db,
+      &mut stmt_info_included_vec,
+      &mut module_included_vec,
+      self.link_output.runtime.id(),
+      &self.link_output.metas,
       used_symbol_refs,
-      used_external_symbols: &mut self.link_output.used_external_symbols,
-      constant_symbol_map: &self.link_output.global_constant_symbol_map,
-      options: self.options,
-      normal_symbol_exports_chain_map: &self.link_output.normal_symbol_exports_chain_map,
-      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
-      module_inclusion_changed: false,
-      module_namespace_included_reason: &mut module_namespace_reason_vec,
-      inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
-      json_module_none_self_reference_included_symbol: FxHashMap::default(),
-      entry_module_idxs: &self.link_output.user_defined_entry_modules,
-      body_demand_keys: &body_demand_keys,
-      body_demand_swept: FxHashSet::default(),
-      pending: Vec::new(),
-    };
+      &mut self.link_output.used_external_symbols,
+      &self.link_output.global_constant_symbol_map,
+      self.options,
+      &self.link_output.normal_symbol_exports_chain_map,
+      &mut module_namespace_reason_vec,
+      &self.link_output.user_defined_entry_modules,
+      &body_demand_keys,
+    );
 
     let mut runtime_dependent_chunks = FxHashSet::default();
 

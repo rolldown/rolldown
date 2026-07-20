@@ -38,7 +38,7 @@ pub type ModuleInclusionVec = IndexBitSet<ModuleIdx>;
 pub type ModuleNamespaceReasonVec = IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>;
 
 bitflags::bitflags! {
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct SymbolIncludeReason: u8 {
         const Normal = 1;
         const EntryExport = 1 << 1;
@@ -59,6 +59,7 @@ bitflags::bitflags! {
     }
 }
 
+#[expect(clippy::struct_excessive_bools)] // Cached option flags; raw booleans read clearest.
 pub struct IncludeContext<'a> {
   pub modules: &'a IndexModules,
   /// Per-module statement-info table, detached from `EcmaView` and held on
@@ -69,6 +70,13 @@ pub struct IncludeContext<'a> {
   pub is_module_included_vec: &'a mut ModuleInclusionVec,
   pub tree_shaking: bool,
   pub inline_const_smart: bool,
+  /// `options.treeshake.commonjs()`, hoisted out of the per-statement sweep.
+  pub treeshake_commonjs: bool,
+  /// `options.treeshake.property_write_side_effects() == False`, hoisted out of the
+  /// per-reference symbol handling.
+  pub property_write_side_effects_disabled: bool,
+  /// `options.is_dev_mode_enabled()`, hoisted out of the per-module handling.
+  pub dev_mode: bool,
   pub runtime_idx: ModuleIdx,
   pub metas: &'a LinkingMetadataVec,
   pub used_symbol_refs: &'a mut UsedSymbolRefsBuilder,
@@ -101,10 +109,12 @@ pub struct IncludeContext<'a> {
   /// Work queue of the inclusion engine (see [`drain_work_items`]). Edge producers push typed
   /// work items here instead of recursing; the public `include_*` entry points drain it to
   /// empty before returning. Invariant (debug-asserted at every public entry point): empty
-  /// whenever control is outside the engine. Visible outside this module only because
-  /// `chunk_optimizer` constructs `IncludeContext` with a struct literal; nothing outside this
-  /// module should touch it.
-  pub(in crate::stages) pending: Vec<WorkItem>,
+  /// whenever control is outside the engine.
+  pending: Vec<WorkItem>,
+  /// Memo for [`handle_include_symbol`]'s canonical-level tail — a deterministic, monotone
+  /// function of `(canonical ref, include reason)`, so exact repeats are skipped. Alias-keyed
+  /// work runs before the memo gate and is never skipped.
+  processed_symbol_reasons: FxHashSet<(SymbolRef, SymbolIncludeReason)>,
 }
 
 impl<'a> IncludeContext<'a> {
@@ -134,6 +144,12 @@ impl<'a> IncludeContext<'a> {
       is_module_included_vec,
       tree_shaking: options.treeshake.is_some(),
       inline_const_smart: options.optimization.is_inline_const_smart_mode(),
+      treeshake_commonjs: options.treeshake.commonjs(),
+      property_write_side_effects_disabled: matches!(
+        options.treeshake.property_write_side_effects(),
+        rolldown_common::PropertyWriteSideEffects::False
+      ),
+      dev_mode: options.is_dev_mode_enabled(),
       runtime_idx,
       metas,
       used_symbol_refs,
@@ -149,23 +165,35 @@ impl<'a> IncludeContext<'a> {
       body_demand_keys,
       body_demand_swept: FxHashSet::default(),
       pending: Vec::new(),
+      processed_symbol_reasons: FxHashSet::default(),
     }
   }
 }
 
 /// A unit of inclusion work. Edge producers push these instead of recursing, which keeps the
 /// engine iterative (no stack-depth limit on deep graphs) and makes the traversal a visible
-/// queue rather than an implicit call stack. Visible outside this module only as the `pending`
-/// field's type; not part of the module's API.
+/// queue rather than an implicit call stack.
 #[derive(Debug, Clone, Copy)]
-pub(in crate::stages) enum WorkItem {
+enum WorkItem {
   /// Structurally include a module: sweep its side-effect statements and evaluate its
   /// side-effectful dependencies.
   Module(ModuleIdx),
   /// A symbol became used: retain its declaration, wrapper, and owner module.
-  Symbol(SymbolRef, SymbolIncludeReason),
+  /// See [`push_symbol`] for the `check_cjs_bailout` flag.
+  Symbol { symbol_ref: SymbolRef, reason: SymbolIncludeReason, check_cjs_bailout: bool },
   /// Include one statement and follow everything it references.
   Statement(ModuleIdx, StmtInfoIdx),
+}
+
+/// Enqueue a symbol work item. Pass `check_cjs_bailout: false` only when the access is known
+/// to be partial or engine-internal; see [`check_cjs_bailout`].
+fn push_symbol(
+  ctx: &mut IncludeContext,
+  symbol_ref: SymbolRef,
+  reason: SymbolIncludeReason,
+  check_cjs_bailout: bool,
+) {
+  ctx.pending.push(WorkItem::Symbol { symbol_ref, reason, check_cjs_bailout });
 }
 
 /// Drain the work queue to empty. LIFO order mirrors the depth-first shape of the recursion this
@@ -175,7 +203,9 @@ fn drain_work_items(ctx: &mut IncludeContext) {
   while let Some(item) = ctx.pending.pop() {
     match item {
       WorkItem::Module(module_idx) => handle_include_module(ctx, module_idx),
-      WorkItem::Symbol(symbol_ref, reason) => handle_include_symbol(ctx, symbol_ref, reason),
+      WorkItem::Symbol { symbol_ref, reason, check_cjs_bailout } => {
+        handle_include_symbol(ctx, symbol_ref, reason, check_cjs_bailout);
+      }
       WorkItem::Statement(module_idx, stmt_info_idx) => {
         handle_include_statement(ctx, module_idx, stmt_info_idx);
       }
@@ -194,32 +224,16 @@ pub(super) fn include_symbol_and_check_cjs_bailout(
   include_reason: SymbolIncludeReason,
 ) {
   debug_assert!(ctx.pending.is_empty(), "engine queue must be empty between public entry points");
-  push_symbol_and_check_cjs_bailout(ctx, symbol_ref, include_reason);
+  push_symbol(ctx, symbol_ref, include_reason, true);
   drain_work_items(ctx);
   debug_assert!(ctx.pending.is_empty(), "public entry points must drain the queue to empty");
 }
 
-/// Engine-internal variant of [`include_symbol_and_check_cjs_bailout`]: enqueues the symbol and
-/// runs the (order-independent) bailout check immediately, without draining. Handlers and edge
-/// producers must use this — only the public entry points drain.
-fn push_symbol_and_check_cjs_bailout(
-  ctx: &mut IncludeContext,
-  symbol_ref: SymbolRef,
-  include_reason: SymbolIncludeReason,
-) {
-  ctx.pending.push(WorkItem::Symbol(symbol_ref, include_reason));
-  check_cjs_bailout(ctx, symbol_ref);
-}
-
-/// Check if including this symbol should trigger CJS tree-shaking bailout.
-/// This is called at `include_symbol` call sites where the symbol is NOT accessed
-/// via a resolved member expression on a CJS namespace (i.e., where the full namespace
-/// might be used opaquely). When we know only a specific property is accessed
-/// (member expression with `target_commonjs_exported_symbol`), we skip this check
-/// to allow CJS tree-shaking.
-fn check_cjs_bailout(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
-  let canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
-
+/// Check if including this symbol should trigger CJS tree-shaking bailout. Runs for symbols
+/// pushed with `check_cjs_bailout`: sites where the full namespace might be used opaquely.
+/// Producers that resolve a specific property access (`target_commonjs_exported_symbol`)
+/// clear the flag so CJS tree-shaking can work. Takes the already-resolved canonical.
+fn check_cjs_bailout(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
   // If the symbol is a CJS namespace import ref, bail out the target CJS module.
   if let Some(idx) =
     ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
@@ -331,6 +345,8 @@ impl LinkStage<'_> {
     let mut unused_record_idxs = vec![];
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
     let mut included_dynamic_entry = FxHashSet::default();
+    // Indices into `dynamic_entries` (in topological order) still awaiting inclusion.
+    let mut pending_entry_indices: Vec<usize> = (0..dynamic_entries.len()).collect();
     loop {
       context.module_inclusion_changed = false;
 
@@ -341,9 +357,12 @@ impl LinkStage<'_> {
       let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
       include_cjs_bailout_exports(context, &self.metas, bailout_modules);
 
-      dynamic_entries.iter().for_each(|entry| {
+      // Included entries are settled (inclusion is monotone) and drop out, so later
+      // iterations rescan only the dead/undecided tail; siblings of an included idx drop too.
+      pending_entry_indices.retain(|&entry_index| {
+        let entry = &dynamic_entries[entry_index];
         if included_dynamic_entry.contains(&entry.idx) {
-          return;
+          return false;
         }
         let included = self.process_and_retain_dynamic_entry(
           entry,
@@ -355,6 +374,7 @@ impl LinkStage<'_> {
         if included {
           included_dynamic_entry.insert(entry.idx);
         }
+        !included
       });
 
       if !context.module_inclusion_changed {
@@ -537,16 +557,16 @@ fn handle_include_module(ctx: &mut IncludeContext, module_idx: ModuleIdx) {
   if module.meta.has_eval() && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
     // `eval` can observe any module-level binding, so every import must survive.
     module.named_imports.keys().for_each(|symbol| {
-      push_symbol_and_check_cjs_bailout(ctx, *symbol, SymbolIncludeReason::Normal);
+      push_symbol(ctx, *symbol, SymbolIncludeReason::Normal, true);
     });
   }
 
   ctx.metas[module.idx].included_commonjs_export_symbol.iter().for_each(|symbol_ref| {
-    push_symbol_and_check_cjs_bailout(ctx, *symbol_ref, SymbolIncludeReason::Normal);
+    push_symbol(ctx, *symbol_ref, SymbolIncludeReason::Normal, true);
   });
 
   // With enabling HMR, rolldown will register included esm module's namespace object to the runtime.
-  if ctx.options.is_dev_mode_enabled()
+  if ctx.dev_mode
     && module.idx != ctx.runtime_idx
     && matches!(module.exports_kind, ExportsKind::Esm)
   {
@@ -564,15 +584,15 @@ fn handle_include_module(ctx: &mut IncludeContext, module_idx: ModuleIdx) {
 /// dangle an import and keep today's behavior.
 fn sweep_side_effect_statements(ctx: &mut IncludeContext, module: &NormalModule) {
   let on_demand_side_effects = side_effects_included_on_demand(module, ctx.entry_module_idxs);
+  let has_eval = module.meta.has_eval();
+  let safely_treeshake_commonjs =
+    module.meta.contains(EcmaViewMeta::SafelyTreeshakeCommonjs) && ctx.treeshake_commonjs;
   ctx.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt().for_each(
     |(stmt_info_id, stmt_info)| {
       // No need to handle the namespace statement specially, because it doesn't have side effects and will only be included if it is used.
-      let bail_eval = module.meta.has_eval()
-        && !stmt_info.declared_symbols.is_empty()
-        && stmt_info_id.index() != 0;
-      let has_side_effects = if module.meta.contains(EcmaViewMeta::SafelyTreeshakeCommonjs)
-        && ctx.options.treeshake.commonjs()
-      {
+      let bail_eval =
+        has_eval && !stmt_info.declared_symbols.is_empty() && stmt_info_id.index() != 0;
+      let has_side_effects = if safely_treeshake_commonjs {
         stmt_info.eval_flags.contains(StmtEvalFlags::UnknownSideEffect)
       } else {
         stmt_info.eval_flags.has_side_effect_for_tree_shaking()
@@ -640,7 +660,7 @@ pub fn include_symbol(
   include_reason: SymbolIncludeReason,
 ) {
   debug_assert!(ctx.pending.is_empty(), "engine queue must be empty between public entry points");
-  ctx.pending.push(WorkItem::Symbol(symbol_ref, include_reason));
+  push_symbol(ctx, symbol_ref, include_reason, false);
   drain_work_items(ctx);
   debug_assert!(ctx.pending.is_empty(), "public entry points must drain the queue to empty");
 }
@@ -649,32 +669,45 @@ fn handle_include_symbol(
   ctx: &mut IncludeContext,
   symbol_ref: SymbolRef,
   include_reason: SymbolIncludeReason,
+  should_check_cjs_bailout: bool,
 ) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
+
+  // Must run before the constant bypass and the memo gate: it writes into the
+  // per-fixpoint-iteration bailout set, the one effect the memo must never skip.
+  if should_check_cjs_bailout {
+    check_cjs_bailout(ctx, canonical_ref);
+  }
 
   if is_bypassed_inlined_constant(ctx, canonical_ref, include_reason) {
     return;
   }
 
-  drain_body_demand_stmts(ctx, canonical_ref);
-
-  // Also include the symbol that points to the canonical ref.
+  // Alias-keyed work — keyed by `symbol_ref`, not the canonical, so it must run for every
+  // reference and stays outside the memo gate.
   ctx.used_symbol_refs.insert(symbol_ref);
   if ctx.modules[symbol_ref.owner].is_external() {
     ctx.used_external_symbols.insert(symbol_ref);
   }
+  include_property_write_referencing_stmts(ctx, symbol_ref);
 
-  // CJS bailout checks are handled by `include_symbol_and_check_cjs_bailout`
-  // at most call sites. This keeps `include_symbol` focused on inclusion only.
+  // Canonical-level tail below: skip exact repeats (see `processed_symbol_reasons`).
+  if !ctx.processed_symbol_reasons.insert((canonical_ref, include_reason)) {
+    return;
+  }
+
+  drain_body_demand_stmts(ctx, canonical_ref);
 
   follow_cjs_namespace_alias(ctx, &mut canonical_ref);
 
   let is_simulated_facade_chunk =
     note_namespace_inclusion_reason(ctx, canonical_ref, include_reason);
 
-  ctx.used_symbol_refs.insert(canonical_ref);
-  if ctx.modules[canonical_ref.owner].is_external() {
-    ctx.used_external_symbols.insert(canonical_ref);
+  if canonical_ref != symbol_ref {
+    ctx.used_symbol_refs.insert(canonical_ref);
+    if ctx.modules[canonical_ref.owner].is_external() {
+      ctx.used_external_symbols.insert(canonical_ref);
+    }
   }
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
     demand_esm_init_wrapper(ctx, canonical_ref);
@@ -684,8 +717,6 @@ fn handle_include_symbol(
       ctx.pending.push(WorkItem::Module(module.idx));
     }
   }
-
-  include_property_write_referencing_stmts(ctx, symbol_ref);
 }
 
 /// Mirror of the finalizer's constant inlining: a constant value is always inlined at its
@@ -745,7 +776,7 @@ fn follow_cjs_namespace_alias(ctx: &mut IncludeContext, canonical_ref: &mut Symb
       ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(canonical_ref)
     {
       // Include specific named export from CJS module.
-      // Default import bailout is handled by check_cjs_bailout at call sites.
+      // Default import bailout is handled via the work item's `check_cjs_bailout` flag.
       // ```js
       // import {a} from './cjs.js'
       // console.log(a)
@@ -757,7 +788,7 @@ fn follow_cjs_namespace_alias(ctx: &mut IncludeContext, canonical_ref: &mut Symb
           return;
         };
         if namespace_alias.property_name.as_str() != "default" {
-          ctx.pending.push(WorkItem::Symbol(export_symbol.symbol_ref, SymbolIncludeReason::Normal));
+          push_symbol(ctx, export_symbol.symbol_ref, SymbolIncludeReason::Normal, false);
         }
       });
     }
@@ -800,7 +831,7 @@ fn demand_esm_init_wrapper(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
       .filter(|wrapper_ref| *wrapper_ref != canonical_ref)
   };
   if let Some(wrapper_ref) = wrapper_ref {
-    ctx.pending.push(WorkItem::Symbol(wrapper_ref, SymbolIncludeReason::Normal));
+    push_symbol(ctx, wrapper_ref, SymbolIncludeReason::Normal, false);
   }
 }
 
@@ -826,10 +857,7 @@ fn note_json_self_reference(
 /// With `propertyWriteSideEffects: false`, property-write statements are not side effects — but
 /// once the written-to symbol is included, its write statements must come along.
 fn include_property_write_referencing_stmts(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
-  if matches!(
-    ctx.options.treeshake.property_write_side_effects(),
-    rolldown_common::PropertyWriteSideEffects::False
-  ) {
+  if ctx.property_write_side_effects_disabled {
     let stmt_ids: &[StmtInfoIdx] = ctx.stmt_infos[symbol_ref.owner]
       .symbol_ref_to_referenced_stmt_idx()
       .get(&symbol_ref)
@@ -837,7 +865,10 @@ fn include_property_write_referencing_stmts(ctx: &mut IncludeContext, symbol_ref
       .unwrap_or(&[]);
     if ctx.modules[symbol_ref.owner].as_normal().is_some() {
       for stmt_info_id in stmt_ids.iter().copied() {
-        ctx.pending.push(WorkItem::Statement(symbol_ref.owner, stmt_info_id));
+        // Work-skip only; the authoritative dedup is `set_bit` in the statement handler.
+        if !ctx.is_included_vec[symbol_ref.owner].has_bit(stmt_info_id) {
+          ctx.pending.push(WorkItem::Statement(symbol_ref.owner, stmt_info_id));
+        }
       }
     }
   }
@@ -896,14 +927,16 @@ fn handle_include_statement(
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
           enqueue_declaring_statements(ctx, sym_ref);
         });
-        ctx.pending.push(WorkItem::Symbol(resolved_ref, include_kind));
         // When the member expression resolves to a specific CJS export property
         // (e.g., `ns.x`), we skip the bailout check — we know the access is partial
         // and CJS tree-shaking can work. Otherwise, the full namespace may be used
         // opaquely, so we check for bailout.
-        if member_expr_resolution.target_commonjs_exported_symbol.is_none() {
-          check_cjs_bailout(ctx, resolved_ref);
-        }
+        push_symbol(
+          ctx,
+          resolved_ref,
+          include_kind,
+          member_expr_resolution.target_commonjs_exported_symbol.is_none(),
+        );
       } else {
         // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
       }
@@ -924,7 +957,7 @@ fn handle_include_statement(
         .for_each(|sym_ref| {
           enqueue_declaring_statements(ctx, sym_ref);
         });
-      push_symbol_and_check_cjs_bailout(ctx, *original_ref, include_kind);
+      push_symbol(ctx, *original_ref, include_kind, true);
     }
   });
 }

@@ -22,13 +22,6 @@ path = "bench/concat_string.rs"
 [lints]
 workspace = true
 
-[features]
-# The tokio-free shared scheduler is the default. `tokio-runtime` is the opt-in
-# fallback that restores the tokio spawn/timer facade arms (and pulls tokio in).
-default = ["async-runtime"]
-async-runtime = ["dep:napi-async-runtime"]
-tokio-runtime = ["dep:tokio", "dep:async-scoped"]
-
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
@@ -44,9 +37,9 @@ infer = { workspace = true }
 itoa = { workspace = true }
 memchr = { workspace = true }
 mime = { workspace = true }
-# The shared scheduler behind the `async-runtime` feature; napi-free with
-# default features off (the napi SPI adapter stays in rolldown_binding).
-napi-async-runtime = { version = "0.1.0", git = "https://github.com/napi-rs/napi-rs.git", rev = "b228ba8c8bef6c465622885ee018b3db6d3fa53f", default-features = false, optional = true }
+# The shared scheduler; napi-free with default features off (the napi SPI
+# adapter stays in rolldown_binding).
+napi-async-runtime = { version = "0.1.0", git = "https://github.com/napi-rs/napi-rs.git", rev = "b228ba8c8bef6c465622885ee018b3db6d3fa53f", default-features = false }
 nom = { workspace = true }
 oxc = { workspace = true }
 oxc_index = { workspace = true }
@@ -59,17 +52,10 @@ rustc-hash = { workspace = true }
 serde_json = { workspace = true }
 simdutf8 = { workspace = true }
 sugar_path = { workspace = true }
-# `time` backs the `time::sleep_until` facade's `tokio-runtime` (non-async-runtime)
-# branch; tokio supports it on both wasm targets. Optional: pulled only by the
-# opt-in `tokio-runtime` feature so the default build stays tokio-free.
-tokio = { workspace = true, features = ["rt", "time"], optional = true }
 uuid = { workspace = true, features = ["v4"] }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-# Only the `tokio-runtime` facade arm (block_on_spawn_all) uses async-scoped, so
-# it is optional and pulled by the `tokio-runtime` feature.
-async-scoped = { workspace = true, features = ["use-tokio"], optional = true }
 rayon = { workspace = true }
 
 [dev-dependencies]

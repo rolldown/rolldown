@@ -249,7 +249,7 @@ vfs = "0.13.0"
 walkdir = "2.5.0"
 xxhash-rust = "0.8.16"
 
-prettyplease = "0.2.37"
+prettyplease = "0.3.0"
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "3", default-features = false }

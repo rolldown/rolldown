@@ -62,6 +62,10 @@ class Watcher {
   emitter: WatcherEmitter;
   runtimeLease: RuntimeLease;
   stopWorkers: ((() => Promise<void>) | undefined)[];
+  /** A close attempt is running right now. */
+  #closing: boolean = false;
+  /** Parallel-plugin workers are terminated once, even across close retries. */
+  #workersStopped: boolean = false;
 
   constructor(
     emitter: WatcherEmitter,
@@ -91,14 +95,31 @@ class Watcher {
   }
 
   async close(): Promise<void> {
-    if (this.closed) return;
-    this.closed = true;
+    // Return without awaiting when a close already finished, and also while one
+    // is still running: the native `close` event is dispatched from inside that
+    // teardown, and its listener is allowed to re-enter close() (rolldown#9462).
+    // Awaiting the in-flight attempt there would deadlock the coordinator.
+    if (this.closed || this.#closing) return;
+    this.#closing = true;
     try {
-      for (const stop of this.stopWorkers) {
-        await stop?.();
+      if (!this.#workersStopped) {
+        for (const stop of this.stopWorkers) {
+          await stop?.();
+        }
+        this.#workersStopped = true;
       }
+      // A stopped or failed async runtime rejects this submission. The native
+      // watcher then keeps its retained coordinator -- and with it every fs
+      // watcher and bundler -- and only releases them once a later `close()`
+      // is accepted. So `closed` is latched only after the teardown actually
+      // succeeded: latching it up front would make close() a no-op forever and
+      // strand those resources with no caller-reachable recovery.
       await this.inner.close();
+      this.closed = true;
     } finally {
+      // Cleared either way; `closed` is what makes a finished close a no-op, so
+      // a rejected teardown stays retryable once the runtime is back.
+      this.#closing = false;
       // Lease release is idempotent, so a failed native close cannot leave
       // the runtime lease behind.
       this.runtimeLease.release();

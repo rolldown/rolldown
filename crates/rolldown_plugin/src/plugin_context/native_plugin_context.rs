@@ -42,6 +42,8 @@ pub struct NativePluginContextImpl {
   pub(crate) module_infos: SharedModuleInfoDashMap,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_devtools::Session,
+  /// Shared handle to the owning `PluginDriver`'s `onLog` task collector
+  pub(crate) log_hook_tasks: crate::plugin_driver::SharedLogHookTasks,
   pub(crate) bundle_span: tracing::Span,
   // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
   // by manual calls of `PluginContext.resolve()`. We use a dedicated span here to distinguish whether the call is
@@ -195,10 +197,10 @@ impl NativePluginContextImpl {
     if let Some(on_log) = &self.options.on_log {
       let on_log = on_log.clone();
       let log = log.into_log(Some(self.plugin_name.to_string()));
-      rolldown_utils::futures::spawn(async move {
-        // FIXME: should collect error happened here and cause the build to fail later
-        let _ = on_log.call(level, log).await;
-      });
+      // Run the async `onLog` callback as a detached task, but keep the handle so
+      // the build can await it at a barrier and fail if the callback errored
+      let handle = rolldown_utils::futures::spawn(async move { on_log.call(level, log).await });
+      self.log_hook_tasks.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push(handle);
     }
   }
 

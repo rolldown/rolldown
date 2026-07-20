@@ -1,6 +1,5 @@
 fn main() {
   use napi_build::setup;
-  println!("cargo::rustc-check-cfg=cfg(tokio_unstable)");
   // The two WASI targets are indistinguishable at cfg level on current rustc:
   // `rustc --print cfg` emits IDENTICAL sets for wasm32-wasip1 and
   // wasm32-wasip1-threads (same `target_env = "p1"`, and `target_feature =

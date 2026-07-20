@@ -24,7 +24,10 @@ derive_more = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 itertools = { workspace = true }
-napi = { workspace = true }
+# `napi/async-runtime` (= napi4) provides the pluggable async-runtime SPI plus
+# `AsyncTask`; it deliberately does NOT enable `napi/async` (= tokio_rt), so
+# napi never drags tokio in on any target.
+napi = { workspace = true, features = ["async-runtime"] }
 napi-derive = { workspace = true }
 num_cpus = { workspace = true }
 oxc = { workspace = true }
@@ -88,33 +91,13 @@ mimalloc-safe = { workspace = true, features = [
   "v3",
 ] }
 
-# Threaded WASI is the only target where `.cargo/config.toml` sets `--cfg
-# tokio_unstable`, which compiles the `async_runtime_acquisition` lease path.
-# That path drives the built-in Tokio runtime (retirement waiter + shared-runtime
-# start/shutdown), so this target additionally needs napi's `async` (= tokio_rt)
-# feature for `TokioRuntimeRetirementWaiter`. Native and threadless WASI keep the
-# custom tokio-free runtime and never enable this.
-[target.wasm32-wasip1-threads.dependencies]
-napi = { workspace = true, features = ["async"] }
-
 [build-dependencies]
 napi-build = { workspace = true }
 
 [features]
-# The custom tokio-free scheduler is the default runtime. The tokio flavor
-# stays reachable only via `--no-default-features --features tokio-runtime`.
-default = ["async-runtime"]
-async-runtime = [
-  # `napi/async-runtime` (= napi4) provides the pluggable async-runtime SPI plus
-  # `AsyncTask`; it deliberately does NOT enable `napi/async` (= tokio_rt), so the
-  # custom flavor no longer drags tokio in through napi.
-  "napi/async-runtime",
-  "rolldown/async-runtime",
-  "rolldown_utils/async-runtime",
-]
+default = []
 chrome-tracing = ["rolldown_tracing/chrome-tracing"]
 default_global_allocator = []
 disable_panic_hook = []
-runtime-waker-teardown-test = ["async-runtime"]
-runtime-submission-failure-test = ["async-runtime"]
-tokio-runtime = ["napi/async", "rolldown/tokio-runtime", "rolldown_utils/tokio-runtime"]
+runtime-waker-teardown-test = []
+runtime-submission-failure-test = []

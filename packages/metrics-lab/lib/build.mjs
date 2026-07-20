@@ -7,8 +7,8 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-const ROLLDOWN_DIST = process.env.ROLLDOWN_DIST
-  ?? path.join(REPO_ROOT, 'packages', 'rolldown', 'dist', 'index.mjs');
+const ROLLDOWN_DIST =
+  process.env.ROLLDOWN_DIST ?? path.join(REPO_ROOT, 'packages', 'rolldown', 'dist', 'index.mjs');
 
 export async function buildApp({ appDir, metricsDir }) {
   if (!fs.existsSync(ROLLDOWN_DIST)) {
@@ -38,9 +38,10 @@ export async function buildApp({ appDir, metricsDir }) {
   const entryBytes = fs.statSync(path.join(distDir, 'main.js')).size;
   const chunksDir = path.join(distDir, 'chunks');
   const chunks = fs.existsSync(chunksDir)
-    ? fs.readdirSync(chunksDir)
-      .filter((f) => f.endsWith('.js'))
-      .map((f) => ({ file: `chunks/${f}`, bytes: fs.statSync(path.join(chunksDir, f)).size }))
+    ? fs
+        .readdirSync(chunksDir)
+        .filter((f) => f.endsWith('.js'))
+        .map((f) => ({ file: `chunks/${f}`, bytes: fs.statSync(path.join(chunksDir, f)).size }))
     : [];
   let buildMetrics = null;
   try {

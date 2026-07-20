@@ -12,7 +12,9 @@ import path from 'node:path';
 export function moduleGraphCandidates({ reportDir, demoMetricsDir, dist }) {
   const candidates = [];
   if (reportDir) {
-    candidates.push(reportDir.endsWith('.json') ? reportDir : path.join(reportDir, 'module-graph.json'));
+    candidates.push(
+      reportDir.endsWith('.json') ? reportDir : path.join(reportDir, 'module-graph.json'),
+    );
   }
   if (demoMetricsDir) candidates.push(path.join(demoMetricsDir, 'module-graph.json'));
   if (dist) {
@@ -96,9 +98,7 @@ export function resolveModule(graph, query) {
 function entryIndices(graph) {
   if (graph.__entryIdx) return graph.__entryIdx;
   const idOf = new Map(graph.modules.map((m, i) => [m.id, i]));
-  const idx = (graph.entryModules ?? [])
-    .map((id) => idOf.get(id))
-    .filter((i) => i != null);
+  const idx = (graph.entryModules ?? []).map((id) => idOf.get(id)).filter((i) => i != null);
   graph.__entryIdx = idx;
   return idx;
 }
@@ -187,7 +187,11 @@ export function deferAllInto(graph, target) {
 export function whatIf(graph, target, keep = []) {
   const mods = graph.modules;
   const base = {
-    target: mods[target], removed: [], removedBytes: 0, removedCount: 0, cutEdges: [],
+    target: mods[target],
+    removed: [],
+    removedBytes: 0,
+    removedCount: 0,
+    cutEdges: [],
     alreadyLazy: mods[target].dynamicOnly === true,
     notStaticallyReachable: mods[target].staticReachable === false,
     isEntry: entryIndices(graph).includes(target),
@@ -198,8 +202,12 @@ export function whatIf(graph, target, keep = []) {
   if (base.isEntry || base.notStaticallyReachable) return base;
   // Sentries stay eager via extraRoots; the target itself is never its own sentry.
   const extraRoots = keep.filter((k) => k !== target);
-  const { eager: next, removed, removedBytes, removedCount } =
-    evalOverrides(graph, deferAllInto(graph, target), extraRoots.length ? extraRoots : null);
+  const {
+    eager: next,
+    removed,
+    removedBytes,
+    removedCount,
+  } = evalOverrides(graph, deferAllInto(graph, target), extraRoots.length ? extraRoots : null);
   // Cut edges are the target's static importers that STAY eager (all static preds are
   // themselves eager, so "survives" = "still in the next eager set"); an importer that
   // is itself removed needs no edit — it is gone from the initial load anyway.

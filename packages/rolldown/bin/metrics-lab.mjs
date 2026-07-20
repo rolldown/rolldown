@@ -13,8 +13,12 @@ const self = fs.realpathSync(fileURLToPath(import.meta.url));
 const harness = path.resolve(path.dirname(self), '..', '..', 'metrics-lab', 'harness.mjs');
 
 if (!fs.existsSync(harness)) {
-  console.error('rolldown-metrics: the metrics-lab harness is not part of the published rolldown package.');
-  console.error('It is available when rolldown is linked from a source checkout, or as its own package:');
+  console.error(
+    'rolldown-metrics: the metrics-lab harness is not part of the published rolldown package.',
+  );
+  console.error(
+    'It is available when rolldown is linked from a source checkout, or as its own package:',
+  );
   console.error('  npm i -D @rolldown/metrics-lab   then   npx metrics-lab scan --app .');
   process.exit(1);
 }

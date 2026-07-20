@@ -132,6 +132,11 @@ impl TryFrom<BindingRuntimeOptions> for RuntimeOptionsPatch {
         value.max_blocking_tasks,
         MAX_ASYNC_RUNTIME_WORKER_THREADS,
       )?,
+      // Not exposed through the JS `configureAsyncRuntime` surface: the
+      // drainer linger budget is resolved once at module init from
+      // `ROLLDOWN_DRAIN_LINGER_US` (mirroring how upstream's napi adapter
+      // owns it at addon load), so a JS patch always leaves it unchanged.
+      drain_linger: None,
     })
   }
 }
@@ -170,6 +175,10 @@ pub struct BindingRuntimeConfig {
   pub flavor: BindingRuntimeFlavor,
   pub worker_threads: u32,
   pub max_blocking_tasks: u32,
+  /// Effective MultiThread drainer idle-linger budget in microseconds
+  /// (`0` = lingering disabled). Reported for introspection parity; not
+  /// settable through `configureAsyncRuntime`.
+  pub drain_linger_us: u32,
 }
 
 impl From<RuntimeOptions> for BindingRuntimeConfig {
@@ -178,6 +187,9 @@ impl From<RuntimeOptions> for BindingRuntimeConfig {
       flavor: value.flavor.into(),
       worker_threads: saturating_u32(value.worker_threads as u64),
       max_blocking_tasks: saturating_u32(value.max_blocking_tasks as u64),
+      drain_linger_us: saturating_u32(
+        u64::try_from(value.drain_linger.as_micros()).unwrap_or(u64::MAX),
+      ),
     }
   }
 }
@@ -322,6 +334,10 @@ pub struct RuntimeEnv {
   /// `ROLLDOWN_PARK_DEADLINE_MS` -- opt-in deadline-based `block_on`
   /// deadlock detection.
   pub park_deadline_ms: Option<String>,
+  /// `ROLLDOWN_DRAIN_LINGER_US` -- MultiThread drainer idle-linger budget in
+  /// microseconds. `0` disables lingering; oversized values are clamped by
+  /// the shared crate's validation.
+  pub drain_linger_us: Option<String>,
 }
 
 impl RuntimeEnv {
@@ -332,6 +348,7 @@ impl RuntimeEnv {
       worker_threads: std::env::var("ROLLDOWN_WORKER_THREADS").ok(),
       max_blocking_threads: std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS").ok(),
       park_deadline_ms: std::env::var("ROLLDOWN_PARK_DEADLINE_MS").ok(),
+      drain_linger_us: std::env::var("ROLLDOWN_DRAIN_LINGER_US").ok(),
     }
   }
 }
@@ -348,6 +365,10 @@ pub struct ResolvedRuntimeConfig {
   pub max_blocking_tasks: usize,
   /// `Some(ms)` only when deadline-based deadlock detection is armed.
   pub park_deadline_ms: Option<u64>,
+  /// `Some(us)` only when `ROLLDOWN_DRAIN_LINGER_US` parsed; `None` keeps the
+  /// shared crate's `DEFAULT_DRAIN_LINGER_MICROS`. `Some(0)` is a real value
+  /// (lingering disabled), not unset.
+  pub drain_linger_us: Option<u64>,
 }
 
 const fn compiled_target() -> ResolvedRuntimeTarget {
@@ -376,6 +397,19 @@ const fn compiled_target() -> ResolvedRuntimeTarget {
 /// (`NAPI_RUNTIME_PARK_DEADLINE_MS`).
 fn parse_park_deadline_ms(raw: Option<String>) -> Option<u64> {
   raw.and_then(|value| value.parse::<u64>().ok()).filter(|&millis| millis != 0)
+}
+
+/// Parse a raw `ROLLDOWN_DRAIN_LINGER_US` value; unset or non-numeric keeps
+/// the shared crate's default budget. Unlike `parse_park_deadline_ms` there
+/// is deliberately NO `!= 0` filter: `0` is a value (lingering disabled), not
+/// unset. Oversized values are clamped by the shared crate's validation, not
+/// here. Rolldown keeps a `ROLLDOWN_`-prefixed variable rather than the
+/// shared crate's `DRAIN_LINGER_ENV` (`NAPI_RUNTIME_DRAIN_LINGER_US`)
+/// because this binding vendors its own `AsyncRuntime` adapter and never
+/// calls the shared napi adapter's `install()`, so the upstream env
+/// resolution never runs here.
+fn parse_drain_linger_us(raw: Option<String>) -> Option<u64> {
+  raw.and_then(|value| value.trim().parse::<u64>().ok())
 }
 
 /// Parse a raw `ROLLDOWN_RUNTIME` value; unknown / unset values keep
@@ -457,6 +491,7 @@ fn resolve_runtime_config_for(
     worker_threads,
     max_blocking_tasks,
     park_deadline_ms: parse_park_deadline_ms(env.park_deadline_ms.clone()),
+    drain_linger_us: parse_drain_linger_us(env.drain_linger_us.clone()),
   }
 }
 
@@ -2073,6 +2108,14 @@ fn install_async_runtime_backend() {
     // Resolved from `ROLLDOWN_PARK_DEADLINE_MS` by the single resolver; the
     // runtime itself no longer reads the environment at executor construction.
     park_deadline: resolved.park_deadline_ms.map(std::time::Duration::from_millis),
+    // Resolved from `ROLLDOWN_DRAIN_LINGER_US` by the same single resolver
+    // (this binding vendors its own adapter, so the shared napi adapter's
+    // `NAPI_RUNTIME_DRAIN_LINGER_US` resolution never runs). Unset keeps the
+    // shared crate's default budget; `configure` clamps oversized values.
+    drain_linger: resolved.drain_linger_us.map_or(
+      std::time::Duration::from_micros(rolldown_utils::async_runtime::DEFAULT_DRAIN_LINGER_MICROS),
+      std::time::Duration::from_micros,
+    ),
     // The shared `napi-async-runtime` crate defaults to its own neutral
     // prefix; pin Rolldown's historical worker thread names explicitly.
     thread_name_prefix: "rolldown-runtime".to_string(),
@@ -3862,6 +3905,86 @@ mod tests {
       &RuntimeEnv { park_deadline_ms: Some("60000".to_string()), ..RuntimeEnv::default() },
     );
     assert_eq!(resolved.park_deadline_ms, Some(60000));
+  }
+
+  #[test]
+  fn shared_drain_linger_parsing_keeps_zero_and_drops_garbage() {
+    use super::parse_drain_linger_us;
+
+    // Unset keeps `None` so the shared crate's default budget flows through.
+    assert_eq!(parse_drain_linger_us(None), None);
+    // `0` is a VALUE (lingering disabled), not unset -- unlike
+    // `parse_park_deadline_ms` there must be no zero filter.
+    assert_eq!(parse_drain_linger_us(Some("0".to_string())), Some(0));
+    // Garbage disables the override instead of panicking module init.
+    assert_eq!(parse_drain_linger_us(Some("abc".to_string())), None);
+    assert_eq!(parse_drain_linger_us(Some("-5".to_string())), None);
+    assert_eq!(parse_drain_linger_us(Some(String::new())), None);
+    assert_eq!(parse_drain_linger_us(Some(" 750 ".to_string())), Some(750));
+    // Huge values parse untouched here: clamping to the shared ceiling is
+    // `configure` validation's job, not the resolver's.
+    assert_eq!(parse_drain_linger_us(Some(u64::MAX.to_string())), Some(u64::MAX));
+
+    // And the resolver wires it through on the shared backend.
+    let resolved = resolve(
+      ResolvedRuntimeTarget::Native,
+      &RuntimeEnv { drain_linger_us: Some("250".to_string()), ..RuntimeEnv::default() },
+    );
+    assert_eq!(resolved.drain_linger_us, Some(250));
+    let disabled = resolve(
+      ResolvedRuntimeTarget::Native,
+      &RuntimeEnv { drain_linger_us: Some("0".to_string()), ..RuntimeEnv::default() },
+    );
+    assert_eq!(disabled.drain_linger_us, Some(0));
+    assert_eq!(resolve(ResolvedRuntimeTarget::Native, &env()).drain_linger_us, None);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn shared_drain_linger_oversized_budget_is_accepted_and_clamped_by_configure() {
+    const CHILD_ENV: &str = "ROLLDOWN_TEST_DRAIN_LINGER_OVERSIZED_CHILD";
+
+    if std::env::var_os(CHILD_ENV).is_some() {
+      use std::time::Duration;
+
+      use rolldown_utils::async_runtime::{
+        MAX_DRAIN_LINGER_MICROS, RuntimeFlavor, RuntimeOptions, configure, configured_options,
+      };
+
+      // An env typo resolving to a huge budget must never panic module init:
+      // `configure` clamps to the shared ceiling instead of erroring.
+      configure(RuntimeOptions {
+        flavor: RuntimeFlavor::CurrentThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        drain_linger: Duration::from_micros(u64::MAX),
+        ..RuntimeOptions::default()
+      })
+      .expect("configure must accept (and clamp) an oversized drain-linger budget");
+      assert_eq!(
+        configured_options().drain_linger,
+        Duration::from_micros(MAX_DRAIN_LINGER_MICROS),
+        "validation must clamp the oversized budget to the shared ceiling"
+      );
+      return;
+    }
+
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+      .arg("--exact")
+      .arg(
+        "async_runtime::tests::shared_drain_linger_oversized_budget_is_accepted_and_clamped_by_configure",
+      )
+      .arg("--nocapture")
+      .env(CHILD_ENV, "1")
+      .output()
+      .expect("the oversized drain-linger subprocess must start");
+    assert!(
+      output.status.success(),
+      "the oversized drain-linger configuration failed; status={:?}\nstdout={}\nstderr={}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+    );
   }
 
   #[test]

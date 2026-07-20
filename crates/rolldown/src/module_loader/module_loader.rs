@@ -26,10 +26,7 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
-#[cfg(feature = "async-runtime")]
 use rolldown_utils::async_runtime::try_spawn_detached;
-#[cfg(not(feature = "async-runtime"))]
-use rolldown_utils::futures::spawn_detached;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
@@ -205,12 +202,9 @@ where
   F: std::future::Future<Output = ()> + Send + 'static,
 {
   let future = supervised_module_task(future, tx);
-  #[cfg(feature = "async-runtime")]
   if let Err(future) = try_spawn_detached(future) {
     drop(future);
   }
-  #[cfg(not(feature = "async-runtime"))]
-  spawn_detached(future);
 }
 
 impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
@@ -1229,7 +1223,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
   }
 }
 
-#[cfg(all(test, feature = "async-runtime"))]
+#[cfg(test)]
 mod tests {
   use std::{sync::mpsc, time::Duration};
 

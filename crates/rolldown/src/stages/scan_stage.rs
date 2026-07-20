@@ -206,7 +206,6 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   }
 
   fn create_sourcemap_channel(&self) -> SourcemapChannel {
-    #[cfg(feature = "async-runtime")]
     if !rolldown_utils::async_runtime::is_multi_threaded() {
       return (None, None);
     }

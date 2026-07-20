@@ -14,8 +14,6 @@ workspace = true
 
 [features]
 default = ["serde"]
-async-runtime = ["rolldown_utils/async-runtime"]
-tokio-runtime = ["rolldown_utils/tokio-runtime"]
 serde = ["dep:serde", "oxc_index/serde"]
 testing = []
 experimental = []

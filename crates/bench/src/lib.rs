@@ -221,7 +221,10 @@ pub fn run_bench_group(
             // root future on rayon's global pool (the criterion thread is not
             // a runtime worker), instantiating a second thread pool that
             // production never has — and that CodSpeed's simulation bills.
-            rolldown_utils::async_runtime::spawn(async move {
+            // Boxed: the root bundling state machine is large, and an unboxed
+            // future is memcpy-ed at every non-inlined hop of the runtime's
+            // spawn chain. Boxing moves it to the heap once.
+            rolldown_utils::async_runtime::spawn(Box::pin(async move {
               match mode {
                 BenchMode::Scan => {
                   bundle.scan().await.expect("Failed to scan");
@@ -230,7 +233,7 @@ pub fn run_bench_group(
                   bundle.generate().await.expect("Failed to bundle");
                 }
               }
-            })
+            }))
             .await
             .expect("bench bundling task failed");
           }

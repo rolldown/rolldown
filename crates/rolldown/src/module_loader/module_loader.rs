@@ -201,6 +201,13 @@ fn spawn_module_task<F>(future: F, tx: futures::channel::mpsc::UnboundedSender<M
 where
   F: std::future::Future<Output = ()> + Send + 'static,
 {
+  // Module task state machines are large (tens of KB). Box the future once at
+  // the spawn boundary so every downstream hop (`supervised_module_task`,
+  // `try_spawn_detached`, the runtime's abort/containment wrappers, and
+  // `async_task`'s final allocation) moves a pointer-sized future instead of
+  // memcpy-ing the whole state machine at each non-inlined call. Without this,
+  // spawning ~1k module tasks copies hundreds of MB through the spawn chain.
+  let future: std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> = Box::pin(future);
   let future = supervised_module_task(future, tx);
   if let Err(future) = try_spawn_detached(future) {
     drop(future);

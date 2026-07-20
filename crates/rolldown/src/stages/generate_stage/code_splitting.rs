@@ -168,6 +168,45 @@ impl GenerateStage<'_> {
 
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
 
+    self.assign_chunk_exec_orders(&mut chunk_graph);
+    chunk_graph.rebuild_sorted_chunk_idx_vec(false);
+
+    Ok(chunk_graph)
+  }
+
+  /// Assign each live chunk a render `exec_order` from the execution order of its lead module, so
+  /// that both `sorted_chunk_idx_vec` and the cross-chunk import sort (`compute_cross_chunk_links`)
+  /// reflect real evaluation order. A `Common` chunk keys on `modules[0]` — the lowest-`exec_order`
+  /// module after `sort_chunk_modules`.
+  ///
+  /// This keying is sensitive to chunk *membership*: the runtime module has `exec_order` 0 and
+  /// `sort_chunk_modules` always places it first, so any chunk hosting the runtime keys on 0. The
+  /// provisional call in `generate_chunks` runs before the post-chunking
+  /// `sweep_unused_runtime_module`, so a still-live chunk the sweep later strips the runtime out of
+  /// would otherwise keep an `exec_order` derived from a module it no longer contains — sorting
+  /// ahead of chunks it should follow. `finalize_chunk_plan` therefore re-runs this after such a
+  /// sweep, restoring the ordering the pre-#10104 pipeline produced by sweeping *before* assignment.
+  ///
+  /// Composition with the strict path: `renumber_live_chunks` (strict-only, after order-wrap
+  /// lowering) merely *compacts* existing `exec_order` values to close tombstone gaps; it never
+  /// re-derives them from `modules[0]`. The two compose by last-writer-wins: the re-run happens after
+  /// lowering, so when the sweep removes the runtime it re-derives every live chunk's order from its
+  /// current `modules[0]`, producing a dense, correctly-keyed order that supersedes any earlier
+  /// `renumber_live_chunks` compaction. (They rarely both fire anyway, for two different reasons:
+  /// an order wrapper's synthetic statements keep `required_runtime_helpers()` non-empty, which
+  /// skips the sweep outright, while the empty-plan facade path leaves that set empty and is
+  /// instead stopped inside the sweep — an empty plan makes the `plan.modules()` collection in
+  /// `create_order_wrap_entry_facades` contribute nothing, leaving only its two
+  /// `wrap_kind() != WrapKind::None` filters, and such an entry always force-includes a wrapper
+  /// statement referencing `__commonJS`/`__esm`, so `runtime_helpers_still_demanded` keeps the
+  /// runtime.)
+  ///
+  /// The esbuild-style `Chunk#bits` sort is intentionally avoided: `Chunk#bits` is not stably
+  /// ordered (e.g. `BitSet(0) 00000001_00000000` > `BitSet(8) 00000000_00000001`), so it cannot fix
+  /// the relative order of dynamic and common chunks. `Chunk#exec_order` is both cheaper and stable,
+  /// and guarantees entry chunks precede others, static chunks precede dynamic ones, and every chunk
+  /// has a stable order at the per-entry-chunk level.
+  pub(super) fn assign_chunk_exec_orders(&self, chunk_graph: &mut ChunkGraph) {
     chunk_graph
       .chunk_table
       .iter_mut_enumerated()
@@ -219,19 +258,6 @@ impl GenerateStage<'_> {
       .for_each(|(i, (_chunk_idx, chunk))| {
         chunk.exec_order = i.try_into().expect("Too many chunks, u32 overflowed.");
       });
-    // The esbuild using `Chunk#bits` to sorted chunks, but the order of `Chunk#bits` is not stable, eg `BitSet(0) 00000001_00000000` > `BitSet(8) 00000000_00000001`. It couldn't ensure the order of dynamic chunks and common chunks.
-    // Consider the compare `Chunk#exec_order` should be faster than `Chunk#bits`, we use `Chunk#exec_order` to sort chunks.
-    // Note Here could be make sure the order of chunks.
-    // - entry chunks are always before other chunks
-    // - static chunks are always before dynamic chunks
-    // - other chunks has stable order at per entry chunk level
-    // i.e.
-    // EntryPoint (is_user_defined: true) < EntryPoint (is_user_defined: false) or Common
-    // [order by chunk index]               [order by exec order]
-
-    chunk_graph.rebuild_sorted_chunk_idx_vec(false);
-
-    Ok(chunk_graph)
   }
 
   /// Merge symbols that import the same binding from the same external module, now that chunk

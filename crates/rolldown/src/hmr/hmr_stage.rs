@@ -7,13 +7,13 @@ use std::{
 };
 
 use arcstr::ArcStr;
+use oxc::ast::builder::AstBuilder;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput, HmrPatch, HmrStampTable, HmrUpdate,
   ImportKind, Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
-use rolldown_ecmascript_utils::AstFactory;
 use rolldown_error::BuildResult;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
@@ -779,7 +779,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
       let mut finalizer = HmrAstFinalizer {
         modules,
-        ast_factory: AstFactory::new(fields.allocator),
+        ast_builder: AstBuilder::new(fields.allocator),
         import_bindings: FxHashMap::default(),
         module,
         exports: oxc::allocator::Vec::new_in(&fields.allocator),

@@ -193,13 +193,13 @@ heck = "0.5.0"
 idna_adapter = "=1.0.0"
 ignore = "0.4.27"
 indexmap = "2.14.0"
-infer = { version = "0.19.0", default-features = false }
+infer = { version = "0.22.0", default-features = false }
 insta = "1.48.0"
 itertools = "0.15.0"
 itoa = "1.0.18"
 json-escape-simd = "3.1.1"
 json-strip-comments = "3"
-jsonschema = { version = "0.47.0", default-features = false }
+jsonschema = { version = "0.48.0", default-features = false }
 memchr = "2.8.2"
 mimalloc-safe = "0.1.64"
 mime = "0.3.17"
@@ -251,10 +251,10 @@ vfs = "0.13.0"
 walkdir = "2.5.0"
 xxhash-rust = "0.8.16"
 
-prettyplease = "0.2.37"
+prettyplease = "0.3.0"
 proc-macro2 = "1"
 quote = "1"
-syn = { version = "2", default-features = false }
+syn = { version = "3", default-features = false }
 
 # napi
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks

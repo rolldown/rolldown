@@ -21,18 +21,37 @@ import { launchBrowser } from './lib/cdp.mjs';
 import { startServer } from './lib/serve.mjs';
 import { buildApp } from './lib/build.mjs';
 import {
-  FEATURES, FEATURE_NAMES, featureModes, generateApp, setFeatureMode,
+  FEATURES,
+  FEATURE_NAMES,
+  featureModes,
+  generateApp,
+  setFeatureMode,
 } from './lib/gen-app.mjs';
 import {
-  DEFAULT_THROTTLE, deltaSection, heavyPrepaintTypes, scaleThrottle, summarize, timedRun, weightLabel,
+  DEFAULT_THROTTLE,
+  deltaSection,
+  heavyPrepaintTypes,
+  scaleThrottle,
+  summarize,
+  timedRun,
+  weightLabel,
 } from './lib/measure.mjs';
 import {
-  COLD_OPEN_MIN_BYTES, attributeChunks, coldAtPaintModules, coverageRun,
-  largeAtPaintModules, siblingVariantGroups,
+  COLD_OPEN_MIN_BYTES,
+  attributeChunks,
+  coldAtPaintModules,
+  coverageRun,
+  largeAtPaintModules,
+  siblingVariantGroups,
 } from './lib/coverage.mjs';
 import { aggregateProfile, profileRun } from './lib/profile.mjs';
 import {
-  deferAllInto, evalOverrides, loadModuleGraph, moduleGraphCandidates, resolveModule, whatIf,
+  deferAllInto,
+  evalOverrides,
+  loadModuleGraph,
+  moduleGraphCandidates,
+  resolveModule,
+  whatIf,
 } from './lib/module-graph.mjs';
 import { minCut } from './lib/min-cut.mjs';
 import { diffGraphs } from './lib/graph-diff.mjs';
@@ -42,8 +61,11 @@ const APP_DIR = path.join(ROOT, 'app');
 // State placement: inside the package while developing it from the repo, but for
 // an installed copy (anywhere under node_modules) state belongs to the USER'S
 // project — node_modules is wiped on reinstall and should never hold results.
-const STATE_DIR = process.env.METRICS_LAB_STATE
-  ?? (/[\\/]node_modules[\\/]/.test(ROOT) ? path.join(process.cwd(), '.metrics-lab') : path.join(ROOT, 'state'));
+const STATE_DIR =
+  process.env.METRICS_LAB_STATE ??
+  (/[\\/]node_modules[\\/]/.test(ROOT)
+    ? path.join(process.cwd(), '.metrics-lab')
+    : path.join(ROOT, 'state'));
 const TARGET_FILE = path.join(STATE_DIR, 'target.json');
 const BUILD_METRICS_DIR = path.join(STATE_DIR, 'rolldown-metrics');
 const CHROME_PROFILE_DIR = path.join(STATE_DIR, 'chrome-profile');
@@ -76,8 +98,9 @@ const CANDIDATE_MAX_PAINT_RATIO = 0.02;
 
 // How to spell an invocation in hints: a launcher can dictate it (rolldown-metrics),
 // otherwise the bin name when installed, the script when run from the repo.
-const CLI = process.env.METRICS_LAB_CLI
-  ?? (/[\\/]node_modules[\\/]/.test(ROOT) ? 'npx metrics-lab' : 'node harness.mjs');
+const CLI =
+  process.env.METRICS_LAB_CLI ??
+  (/[\\/]node_modules[\\/]/.test(ROOT) ? 'npx metrics-lab' : 'node harness.mjs');
 
 const kb = (n) => `${(n / 1024).toFixed(1)}KB`;
 const ms = (v) => (v == null ? 'n/a' : `${Math.round(v)}ms`);
@@ -118,7 +141,11 @@ const TARGET_OPTS = {
 };
 
 function targetSlug(dist) {
-  return dist.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(-60);
+  return dist
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(-60);
 }
 
 function isDemoDist(dist) {
@@ -146,15 +173,16 @@ function targetPaths(dist) {
 function resolveAppDist(appArg) {
   const app = path.resolve(appArg);
   const candidates = ['dist', 'build', 'out'].map((dir) => path.join(app, dir));
-  const dist = candidates.find((dir) => fs.existsSync(path.join(dir, 'index.html')))
+  const dist =
+    candidates.find((dir) => fs.existsSync(path.join(dir, 'index.html'))) ??
     // --app aimed at the built dir itself is a common miss - accept it.
-    ?? (fs.existsSync(path.join(app, 'index.html')) ? app : null);
+    (fs.existsSync(path.join(app, 'index.html')) ? app : null);
   if (!dist) {
     throw new Error(
-      `no build found under ${app} - tried dist/, build/, out/, and the dir itself (none has an index.html).\n`
-      + 'Build the app first. --app takes the APP ROOT (the dir you build from); if the build output\n'
-      + 'lives somewhere else, pass --dist <builtDir> directly. Never change the app\'s outDir to fit\n'
-      + 'this tool - aim the tool at the build instead.',
+      `no build found under ${app} - tried dist/, build/, out/, and the dir itself (none has an index.html).\n` +
+        'Build the app first. --app takes the APP ROOT (the dir you build from); if the build output\n' +
+        "lives somewhere else, pass --dist <builtDir> directly. Never change the app's outDir to fit\n" +
+        'this tool - aim the tool at the build instead.',
     );
   }
   return dist;
@@ -187,15 +215,15 @@ function expectedFeaturesFor(target, opts) {
 function requireEntry(target, opts = {}) {
   if (!fs.existsSync(path.join(target.dist, 'index.html'))) {
     throw new Error(
-      `no build at ${target.dist} - build the app first.\n`
-      + '(Wrong target? --app <appRoot> resolves dist/build/out; --dist <builtDir> aims directly.)',
+      `no build at ${target.dist} - build the app first.\n` +
+        '(Wrong target? --app <appRoot> resolves dist/build/out; --dist <builtDir> aims directly.)',
     );
   }
   const entry = opts.entry ?? detectEntry(target.dist);
   if (!entry) {
     throw new Error(
-      `could not detect the entry script in ${path.join(target.dist, 'index.html')} - `
-      + 'pass --entry <file> (path relative to the build dir).',
+      `could not detect the entry script in ${path.join(target.dist, 'index.html')} - ` +
+        'pass --entry <file> (path relative to the build dir).',
     );
   }
   return entry;
@@ -212,7 +240,10 @@ function detectEntry(distDir) {
     if (!src || src.startsWith('http')) continue;
     // webpack emits cache-busting queries (main.bundle.js?abc123) - strip them
     // or every existsSync/readFile on the entry fails.
-    locals.push({ src: src.split('?')[0].replace(/^\.?\//, ''), module: tag.includes('type="module"') });
+    locals.push({
+      src: src.split('?')[0].replace(/^\.?\//, ''),
+      module: tag.includes('type="module"'),
+    });
   }
   const moduleScript = locals.find((s) => s.module);
   if (moduleScript) return moduleScript.src;
@@ -243,13 +274,20 @@ async function ensureThrottleProfile(target, { origin, cdp, netScaleFlag = null 
   if (netScaleFlag != null) {
     const netScale = Number(netScaleFlag);
     if (!CALIBRATE_LADDER.includes(netScale)) {
-      throw new Error(`--net-scale must be one of ${CALIBRATE_LADDER.join('/')} (named, reproducible steps only)`);
+      throw new Error(
+        `--net-scale must be one of ${CALIBRATE_LADDER.join('/')} (named, reproducible steps only)`,
+      );
     }
     if (existing?.netScale !== netScale) {
       writeJson(target.paths.throttleProfile, {
-        schemaVersion: 1, netScale, source: 'flag', pinnedAtMs: Date.now(),
+        schemaVersion: 1,
+        netScale,
+        source: 'flag',
+        pinnedAtMs: Date.now(),
       });
-      console.log(`throttle profile pinned by flag: net x${netScale}${existing ? ` (was x${existing.netScale} - the pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`);
+      console.log(
+        `throttle profile pinned by flag: net x${netScale}${existing ? ` (was x${existing.netScale} - the pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
+      );
     }
     return readJson(target.paths.throttleProfile);
   }
@@ -258,7 +296,9 @@ async function ensureThrottleProfile(target, { origin, cdp, netScaleFlag = null 
   let chosen = 1;
   for (const netScale of CALIBRATE_LADDER) {
     const sample = await timedRun(cdp, {
-      url: `${origin}/`, throttle: scaleThrottle(DEFAULT_THROTTLE, netScale), settleMs: 1000,
+      url: `${origin}/`,
+      throttle: scaleThrottle(DEFAULT_THROTTLE, netScale),
+      settleMs: 1000,
     });
     const lcpMs = typeof sample.lcp === 'number' ? Math.round(sample.lcp) : null;
     probes.push({ netScale, lcpMs });
@@ -276,8 +316,12 @@ async function ensureThrottleProfile(target, { origin, cdp, netScaleFlag = null 
     pinnedAtMs: Date.now(),
   };
   writeJson(target.paths.throttleProfile, profile);
-  console.log(`throttle profile pinned: net x${profile.netScale} (${probes.map((p) => `x${p.netScale}=${p.lcpMs == null ? 'n/a' : `${p.lcpMs}ms`}`).join(', ')}; ceiling ${CALIBRATE_CEILING_MS}ms)`);
-  console.log('this scale is part of the measurement identity - every later scan and the scoring legs use it.');
+  console.log(
+    `throttle profile pinned: net x${profile.netScale} (${probes.map((p) => `x${p.netScale}=${p.lcpMs == null ? 'n/a' : `${p.lcpMs}ms`}`).join(', ')}; ceiling ${CALIBRATE_CEILING_MS}ms)`,
+  );
+  console.log(
+    'this scale is part of the measurement identity - every later scan and the scoring legs use it.',
+  );
   return profile;
 }
 
@@ -292,7 +336,11 @@ async function withServerAndBrowser(target, throttleOff, fn, { netScaleFlag = nu
   try {
     let throttle = null;
     if (!throttleOff) {
-      const profile = await ensureThrottleProfile(target, { origin: server.origin, cdp: browser.cdp, netScaleFlag });
+      const profile = await ensureThrottleProfile(target, {
+        origin: server.origin,
+        cdp: browser.cdp,
+        netScaleFlag,
+      });
       throttle = scaleThrottle(DEFAULT_THROTTLE, profile.netScale);
     }
     return await fn({ origin: server.origin, cdp: browser.cdp, throttle });
@@ -304,7 +352,11 @@ async function withServerAndBrowser(target, throttleOff, fn, { netScaleFlag = nu
 
 // --- measure core ----------------------------------------------------------------
 
-async function gatherSamples(cdp, origin, { throttle, expectedFeatures, runs, warmup, settleMs, earlyStop = null }) {
+async function gatherSamples(
+  cdp,
+  origin,
+  { throttle, expectedFeatures, runs, warmup, settleMs, earlyStop = null },
+) {
   // Navigate '/' (not '/index.html'): SPA routers treat the literal
   // /index.html path as an unknown route and render their 404 page - drawDB
   // showed us a "looking for something?" screen instead of its landing.
@@ -327,7 +379,9 @@ async function gatherSamples(cdp, origin, { throttle, expectedFeatures, runs, wa
     if (earlyStop && i === 0 && runs > 1 && typeof sample.lcp === 'number') {
       const deltaMs = sample.lcp - earlyStop.baselineLcp;
       if (Math.abs(deltaMs) >= earlyStop.factor * earlyStop.thresholdMs) {
-        process.stderr.write(`early stop after run 1: |dLCP| ${Math.round(Math.abs(deltaMs))}ms >= ${earlyStop.factor}x noise threshold ${Math.round(earlyStop.thresholdMs)}ms\n`);
+        process.stderr.write(
+          `early stop after run 1: |dLCP| ${Math.round(Math.abs(deltaMs))}ms >= ${earlyStop.factor}x noise threshold ${Math.round(earlyStop.thresholdMs)}ms\n`,
+        );
         return {
           samples,
           earlyStopped: {
@@ -344,7 +398,11 @@ async function gatherSamples(cdp, origin, { throttle, expectedFeatures, runs, wa
   return { samples, earlyStopped: null };
 }
 
-function writeMeasureReport(target, samples, { expectedFeatures, label, throttle, earlyStopped = null }) {
+function writeMeasureReport(
+  target,
+  samples,
+  { expectedFeatures, label, throttle, earlyStopped = null },
+) {
   const summary = summarize(samples, expectedFeatures);
   const prev = readJson(target.paths.runtimeState);
   const baseline = readJson(target.paths.runtimeBaseline);
@@ -370,9 +428,10 @@ function writeMeasureReport(target, samples, { expectedFeatures, label, throttle
     renderBlockingGate: summary.renderBlockingGate,
     delta: sameScale(prev) ? deltaSection(prev.metrics, summary.metrics) : null,
     baselineDelta: sameScale(baseline) ? deltaSection(baseline.metrics, summary.metrics) : null,
-    baselineScaleMismatch: (baseline && currScale != null && !sameScale(baseline))
-      ? { pinned: baseline.netScale ?? 1, current: currScale }
-      : null,
+    baselineScaleMismatch:
+      baseline && currScale != null && !sameScale(baseline)
+        ? { pinned: baseline.netScale ?? 1, current: currScale }
+        : null,
     samples: summary.samples,
   };
   writeJson(target.paths.runtimeMetrics, report);
@@ -380,15 +439,23 @@ function writeMeasureReport(target, samples, { expectedFeatures, label, throttle
   // (quick probes and early-stopped scans - a 1-run baseline poisons deltas);
   // netScale travels so future measurements refuse cross-scale comparisons.
   writeJson(target.paths.runtimeState, {
-    schemaVersion: 1, tsMs: report.generatedAtMs, label: report.label, runs: report.runs, netScale: currScale ?? undefined, metrics: report.metrics,
-  });
-  fs.appendFileSync(target.paths.history, `${JSON.stringify({
+    schemaVersion: 1,
     tsMs: report.generatedAtMs,
     label: report.label,
-    deferred: report.deferred,
+    runs: report.runs,
+    netScale: currScale ?? undefined,
     metrics: report.metrics,
-    guard: report.guard,
-  })}\n`);
+  });
+  fs.appendFileSync(
+    target.paths.history,
+    `${JSON.stringify({
+      tsMs: report.generatedAtMs,
+      label: report.label,
+      deferred: report.deferred,
+      metrics: report.metrics,
+      guard: report.guard,
+    })}\n`,
+  );
   return { report, hadBaseline: Boolean(baseline) };
 }
 
@@ -403,44 +470,61 @@ function deferredList() {
 // and get re-read on every later turn). The signal lines and numbers always print.
 function printMeasureSummary(report, hadBaseline, { advice = true } = {}) {
   const m = report.metrics;
-  console.log(`\n${report.label ? `[${report.label}] ` : ''}${report.runs} runs`
-    + `${report.deferred?.length ? `, deferred: ${report.deferred.join(', ')}` : ''}`);
+  console.log(
+    `\n${report.label ? `[${report.label}] ` : ''}${report.runs} runs` +
+      `${report.deferred?.length ? `, deferred: ${report.deferred.join(', ')}` : ''}`,
+  );
   if (report.earlyStopped) {
     const e = report.earlyStopped;
-    console.log(`early stop after run 1 of ${e.plannedRuns}: |dLCP vs pinned baseline| ${Math.abs(e.deltaMs)}ms >= ${e.factor}x noise threshold ${e.thresholdMs}ms`
-      + ' - the remaining runs cannot flip this call. Decision-grade for accept/revert; pinning still needs a full scan.');
+    console.log(
+      `early stop after run 1 of ${e.plannedRuns}: |dLCP vs pinned baseline| ${Math.abs(e.deltaMs)}ms >= ${e.factor}x noise threshold ${e.thresholdMs}ms` +
+        ' - the remaining runs cannot flip this call. Decision-grade for accept/revert; pinning still needs a full scan.',
+    );
   }
-  console.log(`LCP ${ms(m['runtime.lcp_ms'])} (p75 ${ms(m['runtime.lcp_p75_ms'])}) | `
-    + `FCP ${ms(m['runtime.fcp_ms'])} | load ${ms(m['runtime.load_ms'])} | `
-    + `CLS ${m['runtime.cls']} | transfer ${kb(m['runtime.transfer_bytes'])} | `
-    + `${m['runtime.js_request_count']} js requests`
-    + `${(report.throttle?.netScale ?? 1) !== 1 ? ` | net x${report.throttle.netScale} (pinned)` : ''}`);
+  console.log(
+    `LCP ${ms(m['runtime.lcp_ms'])} (p75 ${ms(m['runtime.lcp_p75_ms'])}) | ` +
+      `FCP ${ms(m['runtime.fcp_ms'])} | load ${ms(m['runtime.load_ms'])} | ` +
+      `CLS ${m['runtime.cls']} | transfer ${kb(m['runtime.transfer_bytes'])} | ` +
+      `${m['runtime.js_request_count']} js requests` +
+      `${(report.throttle?.netScale ?? 1) !== 1 ? ` | net x${report.throttle.netScale} (pinned)` : ''}`,
+  );
   if (report.baselineScaleMismatch) {
     const mm = report.baselineScaleMismatch;
-    console.log(`vs pinned baseline: INCOMPARABLE - the baseline was pinned under net x${mm.pinned}, this measurement ran under net x${mm.current}.`);
+    console.log(
+      `vs pinned baseline: INCOMPARABLE - the baseline was pinned under net x${mm.pinned}, this measurement ran under net x${mm.current}.`,
+    );
     console.log('next: re-pin under the current profile (scan --pin) before judging any change.');
   }
-  const guardOk = report.guard.allFeaturesReady
-    && report.guard.heroRendered !== false // null = no hero probe on this app
-    && report.guard.lcpObservedInAllRuns;
+  const guardOk =
+    report.guard.allFeaturesReady &&
+    report.guard.heroRendered !== false && // null = no hero probe on this app
+    report.guard.lcpObservedInAllRuns;
   console.log(`guard: ${guardOk ? 'PASS' : `FAIL ${JSON.stringify(report.guard)}`}`);
 
   // Deep signals: things LCP alone doesn't say, each with the move it suggests.
   const gate = report.renderBlockingGate;
   if (gate?.gating) {
-    console.log(`render-blocking CSS gate: ${gate.count} blocking stylesheet(s), ${gate.kb}KB held ${Math.round(gate.shareOfFcp * 100)}% of the FCP timeline (last finished ${gate.lastEndMs}ms, FCP ${gate.fcpMs}ms).`);
+    console.log(
+      `render-blocking CSS gate: ${gate.count} blocking stylesheet(s), ${gate.kb}KB held ${Math.round(gate.shareOfFcp * 100)}% of the FCP timeline (last finished ${gate.lastEndMs}ms, FCP ${gate.fcpMs}ms).`,
+    );
     for (const w of (gate.worst ?? []).slice(0, 3)) {
       console.log(`  blocking until ${w.end}ms: ${w.name} (${kb(w.bytes)})`);
     }
     if (advice) {
-      console.log('  next: nothing paints until these finish - inline the small critical CSS, load the rest');
-      console.log('  non-blocking (preload + media swap), and split styles only later routes need. Fix this');
+      console.log(
+        '  next: nothing paints until these finish - inline the small critical CSS, load the rest',
+      );
+      console.log(
+        '  non-blocking (preload + media swap), and split styles only later routes need. Fix this',
+      );
       console.log('  and any render-gating fetch before judging CPU/JS deferrals.');
     }
   }
   const renderGap = m['runtime.render_gap_ms'];
   if (typeof renderGap === 'number' && renderGap > 150) {
-    console.log(`render gap: first paint landed ${Math.round(renderGap)}ms AFTER the load event - rendering is gated on post-load work, not on downloading.`);
+    console.log(
+      `render gap: first paint landed ${Math.round(renderGap)}ms AFTER the load event - rendering is gated on post-load work, not on downloading.`,
+    );
     const fetches = report.gatingFetches ?? [];
     for (const fetchLine of fetches) {
       console.log(`  completed just before paint: ${fetchLine}`);
@@ -453,46 +537,71 @@ function printMeasureSummary(report, hadBaseline, { advice = true } = {}) {
     if (!advice) {
       // verdict names the gap's cause class and the move - no second copy here
     } else if (fetches.length) {
-      console.log('  next: find what the boot path awaits before the first render (a config/data fetch, a locale chunk) and render with bundled defaults instead, applying the fetched result when it arrives.');
+      console.log(
+        '  next: find what the boot path awaits before the first render (a config/data fetch, a locale chunk) and render with bundled defaults instead, applying the fetched result when it arrives.',
+      );
     } else if (heavy.some((w) => w.type === 'font')) {
-      console.log('  next: no render-gating fetch - the paint likely waits on fonts. Make first paint depend on at most one (subset) font: preload it, and defer loading/registering the rest until after paint.');
+      console.log(
+        '  next: no render-gating fetch - the paint likely waits on fonts. Make first paint depend on at most one (subset) font: preload it, and defer loading/registering the rest until after paint.',
+      );
     } else if (heavy.length) {
-      console.log('  next: no render-gating fetch - heavy images load before first paint. Lazy-load below-the-fold images and shrink the ones the first view needs.');
+      console.log(
+        '  next: no render-gating fetch - heavy images load before first paint. Lazy-load below-the-fold images and shrink the ones the first view needs.',
+      );
     } else {
-      console.log(`  next: no render-gating fetch or heavy pre-paint asset - the gap is post-load CPU, late-executing chunks, or a hero revealed by an entry animation. Run \`${CLI} profile\` and defer the attributed app work; if the profile shows only framework/baseline work, check whether the LCP element mounts invisible (opacity-0 fade-in wrapper) - LCP counts the first frame it paints VISIBLE, so render the hero visible immediately and animate only decoration.`);
+      console.log(
+        `  next: no render-gating fetch or heavy pre-paint asset - the gap is post-load CPU, late-executing chunks, or a hero revealed by an entry animation. Run \`${CLI} profile\` and defer the attributed app work; if the profile shows only framework/baseline work, check whether the LCP element mounts invisible (opacity-0 fade-in wrapper) - LCP counts the first frame it paints VISIBLE, so render the hero visible immediately and animate only decoration.`,
+      );
     }
   }
   const prepaintCpu = m['runtime.prepaint_longtask_ms'];
   if (typeof prepaintCpu === 'number' && prepaintCpu > 150) {
     console.log(`pre-paint CPU: ${Math.round(prepaintCpu)}ms of long tasks before first paint.`);
     if (advice) {
-      console.log(`  next: run \`${CLI} profile\` to see which modules burn that CPU; defer work the first paint does not need. ORDER MATTERS: fix any render gap (above) first - CPU that overlaps a render-blocking fetch is free, so deferring it can measure worse until the fetch is fixed.`);
+      console.log(
+        `  next: run \`${CLI} profile\` to see which modules burn that CPU; defer work the first paint does not need. ORDER MATTERS: fix any render gap (above) first - CPU that overlaps a render-blocking fetch is free, so deferring it can measure worse until the fetch is fixed.`,
+      );
     }
   }
 
   if (report.baselineDelta?.['runtime.lcp_ms']) {
     const d = report.baselineDelta['runtime.lcp_ms'];
     const threshold = Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * d.prev);
-    const call = d.delta <= -threshold ? 'improvement beyond noise'
-      : d.delta >= threshold ? 'REGRESSION beyond noise'
-        : 'within noise';
-    console.log(`vs pinned baseline: LCP ${d.delta > 0 ? '+' : ''}${Math.round(d.delta)}ms `
-      + `(${d.pct > 0 ? '+' : ''}${d.pct}%) -> ${call} (noise threshold ${Math.round(threshold)}ms)`);
+    const call =
+      d.delta <= -threshold
+        ? 'improvement beyond noise'
+        : d.delta >= threshold
+          ? 'REGRESSION beyond noise'
+          : 'within noise';
+    console.log(
+      `vs pinned baseline: LCP ${d.delta > 0 ? '+' : ''}${Math.round(d.delta)}ms ` +
+        `(${d.pct > 0 ? '+' : ''}${d.pct}%) -> ${call} (noise threshold ${Math.round(threshold)}ms)`,
+    );
     if (call === 'improvement beyond noise') {
-      console.log(report.earlyStopped
-        ? `next: keep this change - re-pin with \`${CLI} scan --pin\` (pins need full sampling), then commit it.`
-        : `next: keep this change - re-pin with \`${CLI} baseline\` (or scan --pin), then commit it.`);
-      console.log(`Probe your NEXT change with \`${CLI} scan --quick\` (one run, minutes cheaper); run a full scan only to accept/revert or pin.`);
+      console.log(
+        report.earlyStopped
+          ? `next: keep this change - re-pin with \`${CLI} scan --pin\` (pins need full sampling), then commit it.`
+          : `next: keep this change - re-pin with \`${CLI} baseline\` (or scan --pin), then commit it.`,
+      );
+      console.log(
+        `Probe your NEXT change with \`${CLI} scan --quick\` (one run, minutes cheaper); run a full scan only to accept/revert or pin.`,
+      );
     } else {
-      console.log('next: this attempt did not clearly improve LCP - revert the change and rebuild (then try a different one).');
-      console.log(`Probe the next attempt with \`${CLI} scan --quick\` first; confirm keepers with a full scan.`);
+      console.log(
+        'next: this attempt did not clearly improve LCP - revert the change and rebuild (then try a different one).',
+      );
+      console.log(
+        `Probe the next attempt with \`${CLI} scan --quick\` first; confirm keepers with a full scan.`,
+      );
     }
   } else if (hadBaseline) {
     console.log('vs pinned baseline: n/a (metric missing)');
   }
   if (report.delta?.['runtime.lcp_ms']) {
     const d = report.delta['runtime.lcp_ms'];
-    console.log(`vs previous measure: LCP ${d.delta > 0 ? '+' : ''}${Math.round(d.delta)}ms (${d.pct > 0 ? '+' : ''}${d.pct}%)`);
+    console.log(
+      `vs previous measure: LCP ${d.delta > 0 ? '+' : ''}${Math.round(d.delta)}ms (${d.pct > 0 ? '+' : ''}${d.pct}%)`,
+    );
   }
 }
 
@@ -502,10 +611,14 @@ function pinBaseline(target) {
   // A 1-run median (quick probe or early-stopped scan) poisons every later
   // delta. scan --pin always runs full sampling - use it.
   if (state.runs === 1) {
-    throw new Error('refusing to pin a single-run measurement - run a full scan first (scan --pin re-measures with full sampling and then pins)');
+    throw new Error(
+      'refusing to pin a single-run measurement - run a full scan first (scan --pin re-measures with full sampling and then pins)',
+    );
   }
   writeJson(target.paths.runtimeBaseline, state);
-  console.log(`baseline pinned (label: ${state.label ?? 'none'}, LCP ${ms(state.metrics['runtime.lcp_ms'])})`);
+  console.log(
+    `baseline pinned (label: ${state.label ?? 'none'}, LCP ${ms(state.metrics['runtime.lcp_ms'])})`,
+  );
   if (target.isDemo) {
     const buildState = path.join(BUILD_METRICS_DIR, '.state.json');
     if (fs.existsSync(buildState)) {
@@ -523,8 +636,10 @@ function pinBaseline(target) {
 // measure --pin / first-scan auto-pin) gets the snapshot.
 function snapshotBaselineGraph(target) {
   const entry = detectEntry(target.dist);
-  const builtAtMs = entry && fs.existsSync(path.join(target.dist, entry))
-    ? fs.statSync(path.join(target.dist, entry)).mtimeMs : null;
+  const builtAtMs =
+    entry && fs.existsSync(path.join(target.dist, entry))
+      ? fs.statSync(path.join(target.dist, entry)).mtimeMs
+      : null;
   const mg = moduleGraphStatus(target, builtAtMs);
   if (mg.state === 'present') {
     fs.mkdirSync(path.dirname(target.paths.baselineModuleGraph), { recursive: true });
@@ -532,9 +647,13 @@ function snapshotBaselineGraph(target) {
     fs.copyFileSync(mg.graph.file, target.paths.baselineModuleGraph);
     console.log(`baseline module graph snapshotted (graph-diff will compare against it)`);
   } else if (mg.state === 'stale') {
-    console.log('note: module graph predates this build - no graph snapshot pinned (graph-diff needs a fresh one).');
+    console.log(
+      'note: module graph predates this build - no graph snapshot pinned (graph-diff needs a fresh one).',
+    );
   } else if (mg.state === 'absent-rolldown') {
-    console.log('note: no module graph collected - enable devtools metrics to pin one for graph-diff.');
+    console.log(
+      'note: no module graph collected - enable devtools metrics to pin one for graph-diff.',
+    );
   }
 }
 
@@ -547,7 +666,11 @@ function buildCoverageReport(target, cov, entry) {
   for (const fetch of cov.scriptFetches ?? []) {
     if (!fetch.prePaint) continue;
     let file = fetch.pathname;
-    try { file = decodeURIComponent(file); } catch { /* keep raw */ }
+    try {
+      file = decodeURIComponent(file);
+    } catch {
+      /* keep raw */
+    }
     prePaintFetches.set(file.replace(/^\/+/, ''), fetch.bytes ?? 0);
   }
   const { chunks, modules, skipped } = attributeChunks({
@@ -569,7 +692,8 @@ function buildCoverageReport(target, cov, entry) {
   const modes = target.isDemo ? featureModes(APP_DIR) : null;
   const candidates = [];
   for (const mod of modules) {
-    if (mod.totalBytes < CANDIDATE_MIN_BYTES || mod.paintRatio >= CANDIDATE_MAX_PAINT_RATIO) continue;
+    if (mod.totalBytes < CANDIDATE_MIN_BYTES || mod.paintRatio >= CANDIDATE_MAX_PAINT_RATIO)
+      continue;
     const feature = FEATURE_NAMES.find((n) => mod.source.endsWith(`features/${n}.ts`));
     if (modes) {
       if (!feature || modes[feature] !== 'baseline') continue;
@@ -586,7 +710,10 @@ function buildCoverageReport(target, cov, entry) {
     chunks,
     skippedChunks: skipped,
     deferred: target.isDemo ? deferredList() : null,
-    thresholds: { candidateMinBytes: CANDIDATE_MIN_BYTES, candidateMaxPaintRatio: CANDIDATE_MAX_PAINT_RATIO },
+    thresholds: {
+      candidateMinBytes: CANDIDATE_MIN_BYTES,
+      candidateMaxPaintRatio: CANDIDATE_MAX_PAINT_RATIO,
+    },
     modules,
     candidates,
     coldAtPaint: coldAtPaintModules(modules).slice(0, 20),
@@ -606,17 +733,24 @@ function printCoverageReport(target, report, { compact = false, advice = true } 
   const { modules, candidates, entry } = report;
   const chunks = report.chunks ?? [];
   const extraChunks = chunks.filter((c) => !c.entry);
-  const chunkTag = (mod) => (extraChunks.some((c) => c.file === mod.chunk) ? `  [${mod.chunk}]` : '');
-  console.log(`initial-load coverage (${entry}${extraChunks.length ? ` + ${extraChunks.length} pre-paint chunk(s)` : ''}, first paint vs settled):\n`);
+  const chunkTag = (mod) =>
+    extraChunks.some((c) => c.file === mod.chunk) ? `  [${mod.chunk}]` : '';
+  console.log(
+    `initial-load coverage (${entry}${extraChunks.length ? ` + ${extraChunks.length} pre-paint chunk(s)` : ''}, first paint vs settled):\n`,
+  );
   if (extraChunks.length) {
-    console.log('  pre-paint chunks - fetched AND executed before first paint, so critical-path transfer:');
+    console.log(
+      '  pre-paint chunks - fetched AND executed before first paint, so critical-path transfer:',
+    );
     for (const c of extraChunks) {
       console.log(`    ${c.file}  ${kb(c.totalBytes)}  paint ${(c.paintRatio * 100).toFixed(0)}%`);
     }
   }
   for (const s of report.skippedChunks ?? []) {
     if (s.reason === 'no-sourcemap') {
-      console.log(`  NOTE: chunk ${s.file} executed before paint but has no sourcemap - its bytes are NOT attributed below`);
+      console.log(
+        `  NOTE: chunk ${s.file} executed before paint but has no sourcemap - its bytes are NOT attributed below`,
+      );
     }
   }
   const staticPrepaint = (report.skippedChunks ?? [])
@@ -624,53 +758,79 @@ function printCoverageReport(target, report, { compact = false, advice = true } 
     .sort((a, b) => (b.bytes ?? 0) - (a.bytes ?? 0));
   if (staticPrepaint.length) {
     const totalBytes = staticPrepaint.reduce((sum, s) => sum + (s.bytes ?? 0), 0);
-    console.log(`  STATIC PRE-PAINT TRANSFER: ${staticPrepaint.length} chunk(s), ${kb(totalBytes)} - fetched BEFORE first paint (static tags/preloads)`);
-    console.log('  but executed only after it. Their download competes with the paint for bandwidth. Largest:');
+    console.log(
+      `  STATIC PRE-PAINT TRANSFER: ${staticPrepaint.length} chunk(s), ${kb(totalBytes)} - fetched BEFORE first paint (static tags/preloads)`,
+    );
+    console.log(
+      '  but executed only after it. Their download competes with the paint for bandwidth. Largest:',
+    );
     for (const s of staticPrepaint.slice(0, 10)) {
-      console.log(`    ${s.file}  ${kb(s.bytes ?? 0)}${s.neverExecuted ? '  (never executed by settle at all)' : ''}`);
+      console.log(
+        `    ${s.file}  ${kb(s.bytes ?? 0)}${s.neverExecuted ? '  (never executed by settle at all)' : ''}`,
+      );
     }
-    if (staticPrepaint.length > 10) console.log(`    ... +${staticPrepaint.length - 10} more in coverage.json`);
+    if (staticPrepaint.length > 10)
+      console.log(`    ... +${staticPrepaint.length - 10} more in coverage.json`);
     if (advice) {
-      console.log('  next: load these on demand (dynamic import / drop them from the initial script tags or preloads)');
+      console.log(
+        '  next: load these on demand (dynamic import / drop them from the initial script tags or preloads)',
+      );
       console.log('  so the first paint stops paying for their transfer.');
     }
   }
   const lazyChunks = (report.skippedChunks ?? []).filter((s) => s.reason === 'post-paint');
   if (lazyChunks.length) {
-    console.log(`  (${lazyChunks.length} chunk(s) fetched AND first executed after paint - already deferred, not analyzed: ${lazyChunks.map((s) => s.file).join(', ')})`);
+    console.log(
+      `  (${lazyChunks.length} chunk(s) fetched AND first executed after paint - already deferred, not analyzed: ${lazyChunks.map((s) => s.file).join(', ')})`,
+    );
   }
   if (extraChunks.length || lazyChunks.length || staticPrepaint.length) console.log('');
   const pct = (r) => `${(r * 100).toFixed(1)}%`;
   const shown = modules.slice(0, compact ? 15 : 60);
   for (const mod of shown) {
-    const verdict = mod.paintRatio >= CANDIDATE_MAX_PAINT_RATIO ? 'used-before-paint'
-      : mod.settleRatio >= CANDIDATE_MAX_PAINT_RATIO ? 'post-paint-only'
-        : 'not-executed-by-settle';
-    console.log(`  ${mod.source.padEnd(34)} ${kb(mod.totalBytes).padStart(9)}  `
-      + `paint ${pct(mod.paintRatio).padStart(6)}  settle ${pct(mod.settleRatio).padStart(6)}  ${verdict}${chunkTag(mod)}`);
+    const verdict =
+      mod.paintRatio >= CANDIDATE_MAX_PAINT_RATIO
+        ? 'used-before-paint'
+        : mod.settleRatio >= CANDIDATE_MAX_PAINT_RATIO
+          ? 'post-paint-only'
+          : 'not-executed-by-settle';
+    console.log(
+      `  ${mod.source.padEnd(34)} ${kb(mod.totalBytes).padStart(9)}  ` +
+        `paint ${pct(mod.paintRatio).padStart(6)}  settle ${pct(mod.settleRatio).padStart(6)}  ${verdict}${chunkTag(mod)}`,
+    );
   }
   if (modules.length > shown.length) {
-    console.log(`  ... +${modules.length - shown.length} more modules (largest shown) - full list in coverage.json`
-      + (compact ? ', full table with scan --full' : ''));
+    console.log(
+      `  ... +${modules.length - shown.length} more modules (largest shown) - full list in coverage.json` +
+        (compact ? ', full table with scan --full' : ''),
+    );
   }
   if (candidates.length) {
     const shownCandidates = candidates.slice(0, 12);
-    console.log(`\ndefer candidates (>=${kb(CANDIDATE_MIN_BYTES)}, <${CANDIDATE_MAX_PAINT_RATIO * 100}% executed at paint), largest first:`);
+    console.log(
+      `\ndefer candidates (>=${kb(CANDIDATE_MIN_BYTES)}, <${CANDIDATE_MAX_PAINT_RATIO * 100}% executed at paint), largest first:`,
+    );
     for (const c of shownCandidates) {
-      console.log(`  ${c.feature ?? c.source}  (${kb(c.totalBytes)}${chunkTag(c) ? `, in ${c.chunk}` : ''})`
-        + `${c.feature ? `  -> node harness.mjs defer ${c.feature}` : ''}`);
+      console.log(
+        `  ${c.feature ?? c.source}  (${kb(c.totalBytes)}${chunkTag(c) ? `, in ${c.chunk}` : ''})` +
+          `${c.feature ? `  -> node harness.mjs defer ${c.feature}` : ''}`,
+      );
     }
     if (candidates.length > shownCandidates.length) {
       console.log(`  ... +${candidates.length - shownCandidates.length} more in coverage.json`);
     }
     if (advice) {
-      console.log(target.isDemo
-        ? '\nnext: defer the top candidate, rebuild, then measure.'
-        : '\nnext: change the app so the landing page stops loading these before first paint\n'
-          + '(follow their import chains from the entry), rebuild, run its functional check, then measure.');
+      console.log(
+        target.isDemo
+          ? '\nnext: defer the top candidate, rebuild, then measure.'
+          : '\nnext: change the app so the landing page stops loading these before first paint\n' +
+              '(follow their import chains from the entry), rebuild, run its functional check, then measure.',
+      );
     }
   } else {
-    console.log('\nno defer candidates at current thresholds - nothing sizeable is parsed-but-unexecuted.');
+    console.log(
+      '\nno defer candidates at current thresholds - nothing sizeable is parsed-but-unexecuted.',
+    );
   }
 
   // The unified byte view: candidates catch the never-ran extreme, but a module
@@ -679,16 +839,27 @@ function printCoverageReport(target, report, { compact = false, advice = true } 
   const cold = report.coldAtPaint ?? coldAtPaintModules(modules);
   if (cold.length) {
     const shownCold = cold.slice(0, 12);
-    console.log('\ncold bytes at paint - fetched+parsed before first paint but mostly unread by it, coldest first:');
+    console.log(
+      '\ncold bytes at paint - fetched+parsed before first paint but mostly unread by it, coldest first:',
+    );
     for (const mod of shownCold) {
-      console.log(`  ${kb(mod.coldBytes).padStart(9)} cold  (${kb(mod.totalBytes)} @ ${(mod.paintRatio * 100).toFixed(0)}% at paint)  ${mod.source}`
-        + `${chunkTag(mod) ? `  [${mod.chunk}]` : ''}${mod.framework ? '  (framework runtime - import edge rarely movable)' : ''}`);
+      console.log(
+        `  ${kb(mod.coldBytes).padStart(9)} cold  (${kb(mod.totalBytes)} @ ${(mod.paintRatio * 100).toFixed(0)}% at paint)  ${mod.source}` +
+          `${chunkTag(mod) ? `  [${mod.chunk}]` : ''}${mod.framework ? '  (framework runtime - import edge rarely movable)' : ''}`,
+      );
     }
-    if (cold.length > shownCold.length) console.log(`  ... +${cold.length - shownCold.length} more in coverage.json`);
+    if (cold.length > shownCold.length)
+      console.log(`  ... +${cold.length - shownCold.length} more in coverage.json`);
     if (advice) {
-      console.log('next: for each non-framework module, find the import edge that pulls it in before paint and move');
-      console.log('that edge behind interaction/idle (dynamic import). A middling percentage on a vendor SDK usually');
-      console.log('means one boot-time init call drags the whole package - defer the call, not just the import.');
+      console.log(
+        'next: for each non-framework module, find the import edge that pulls it in before paint and move',
+      );
+      console.log(
+        'that edge behind interaction/idle (dynamic import). A middling percentage on a vendor SDK usually',
+      );
+      console.log(
+        'means one boot-time init call drags the whole package - defer the call, not just the import.',
+      );
     }
   }
 
@@ -697,19 +868,29 @@ function printCoverageReport(target, report, { compact = false, advice = true } 
   // that inversion typically hides real weight.
   const largeHot = largeAtPaintModules(modules);
   if (largeHot.length) {
-    console.log('\nlarge modules fully executed at paint - "executed" does NOT prove the first paint needs their contents (top-level data evaluates on import):');
+    console.log(
+      '\nlarge modules fully executed at paint - "executed" does NOT prove the first paint needs their contents (top-level data evaluates on import):',
+    );
     for (const mod of largeHot) {
-      console.log(`  ${mod.source}  (${kb(mod.totalBytes)}, ${(mod.paintRatio * 100).toFixed(0)}% at paint${chunkTag(mod) ? `, in ${mod.chunk}` : ''})`);
+      console.log(
+        `  ${mod.source}  (${kb(mod.totalBytes)}, ${(mod.paintRatio * 100).toFixed(0)}% at paint${chunkTag(mod) ? `, in ${mod.chunk}` : ''})`,
+      );
     }
     if (advice) {
-      console.log('next: for each, check how much of it the first render actually reads; split rarely-read parts (full records, long bodies, alternate variants) into a module reached only by dynamic import.');
+      console.log(
+        'next: for each, check how much of it the first render actually reads; split rarely-read parts (full records, long bodies, alternate variants) into a module reached only by dynamic import.',
+      );
     }
   }
 
   for (const group of siblingVariantGroups(modules)) {
-    console.log(`\nsibling group ${group.dir}: ${group.files} modules, ${kb(group.bytes)}, ~${Math.round((group.paintBytes / group.bytes) * 100)}% executed at paint.`);
+    console.log(
+      `\nsibling group ${group.dir}: ${group.files} modules, ${kb(group.bytes)}, ~${Math.round((group.paintBytes / group.bytes) * 100)}% executed at paint.`,
+    );
     if (advice) {
-      console.log('next: families of same-shaped modules (locales, themes, per-tenant configs) usually need only ONE variant per session - keep the default in the entry and load the active variant with a dynamic import.');
+      console.log(
+        'next: families of same-shaped modules (locales, themes, per-tenant configs) usually need only ONE variant per session - keep the default in the entry and load the active variant with a dynamic import.',
+      );
     }
   }
 }
@@ -731,11 +912,14 @@ function buildProfileReport(target, profile, entry) {
 function printProfileReport(report, { advice = true } = {}) {
   console.log(`boot CPU by module, navigation -> first paint (${report.totalMs}ms sampled):\n`);
   for (const row of report.rows.slice(0, 20)) {
-    const pctStr = report.totalMs > 0 ? `${((row.ms / report.totalMs) * 100).toFixed(0).padStart(4)}%` : '';
+    const pctStr =
+      report.totalMs > 0 ? `${((row.ms / report.totalMs) * 100).toFixed(0).padStart(4)}%` : '';
     console.log(`  ${row.bucket.padEnd(40)} ${String(row.ms).padStart(7)}ms ${pctStr}`);
   }
   if (advice) {
-    console.log('\nnext: work here runs BEFORE the page paints. Defer whatever the first render does not need (idle callback + dynamic import). Fix render-gating fetches first: CPU that overlaps a blocked render is free, so deferring it can measure worse until the fetch is fixed.');
+    console.log(
+      '\nnext: work here runs BEFORE the page paints. Defer whatever the first render does not need (idle callback + dynamic import). Fix render-gating fetches first: CPU that overlaps a blocked render is free, so deferring it can measure worse until the fetch is fixed.',
+    );
   }
 }
 
@@ -752,9 +936,10 @@ function printVerdict(target) {
   const builtAtMs = fs.statSync(entryFile).mtimeMs;
   // A report vouches only for the build it ran against: entry filename must match
   // (hashed names change with content) and it must postdate the current build.
-  const fresh = (report) => Boolean(report)
-    && (!report.entry || report.entry === entry)
-    && report.generatedAtMs >= builtAtMs;
+  const fresh = (report) =>
+    Boolean(report) &&
+    (!report.entry || report.entry === entry) &&
+    report.generatedAtMs >= builtAtMs;
 
   const runtime = readJson(target.paths.runtimeMetrics);
   const coverage = readJson(target.paths.coverage);
@@ -772,18 +957,34 @@ function printVerdict(target) {
   };
 
   if (!fresh(runtime)) {
-    lead('unknown', 'render gap / pre-paint CPU',
+    lead(
+      'unknown',
+      'render gap / pre-paint CPU',
       runtime ? 'measurement is stale (dist was rebuilt after it)' : 'no measurement yet',
-      `${CLI} measure --runs 5 --label <name>  (or scan)`);
+      `${CLI} measure --runs 5 --label <name>  (or scan)`,
+    );
   } else {
     const gate = runtime.renderBlockingGate;
     if (gate?.gating) {
-      lead('open', `render-blocking CSS gates first paint (${gate.count} stylesheet(s), ${gate.kb}KB)`,
-        `held ${Math.round(gate.shareOfFcp * 100)}% of the FCP timeline (finished ${gate.lastEndMs}ms, FCP ${gate.fcpMs}ms) - nothing painted until it arrived: ${(gate.worst ?? []).slice(0, 2).map((w) => `${w.name} ${kb(w.bytes)}`).join(', ')}`,
-        'inline critical CSS, load the rest non-blocking (preload + media swap), split route-only styles - fix this before judging CPU/JS deferrals');
+      lead(
+        'open',
+        `render-blocking CSS gates first paint (${gate.count} stylesheet(s), ${gate.kb}KB)`,
+        `held ${Math.round(gate.shareOfFcp * 100)}% of the FCP timeline (finished ${gate.lastEndMs}ms, FCP ${gate.fcpMs}ms) - nothing painted until it arrived: ${(
+          gate.worst ?? []
+        )
+          .slice(0, 2)
+          .map((w) => `${w.name} ${kb(w.bytes)}`)
+          .join(', ')}`,
+        'inline critical CSS, load the rest non-blocking (preload + media swap), split route-only styles - fix this before judging CPU/JS deferrals',
+      );
     } else {
-      lead('clear', 'render-blocking CSS',
-        gate ? `blocking CSS held only ${Math.round((gate.shareOfFcp ?? 0) * 100)}% of the FCP timeline - not the gate` : 'none observed');
+      lead(
+        'clear',
+        'render-blocking CSS',
+        gate
+          ? `blocking CSS held only ${Math.round((gate.shareOfFcp ?? 0) * 100)}% of the FCP timeline - not the gate`
+          : 'none observed',
+      );
     }
 
     const gap = runtime.metrics['runtime.render_gap_ms'];
@@ -791,75 +992,134 @@ function printVerdict(target) {
       const fetches = runtime.gatingFetches ?? [];
       const heavy = heavyPrepaintTypes(runtime.resourceWeight);
       if (fetches.length) {
-        lead('open', `render gap ${Math.round(gap)}ms`,
+        lead(
+          'open',
+          `render gap ${Math.round(gap)}ms`,
           `paint is gated on post-load work (${fetches.join('; ')})`,
-          'render with bundled defaults and apply fetched results when they arrive - fix this before judging CPU deferrals');
+          'render with bundled defaults and apply fetched results when they arrive - fix this before judging CPU deferrals',
+        );
       } else if (heavy.length) {
-        lead('open', `render gap ${Math.round(gap)}ms`,
+        lead(
+          'open',
+          `render gap ${Math.round(gap)}ms`,
           `no render-gating fetch; before first paint: ${heavy.map(weightLabel).join(', ')}`,
           heavy.some((w) => w.type === 'font')
             ? 'make first paint depend on at most one (subset) font - preload it, defer the rest until after paint - fix this before judging CPU deferrals'
-            : 'lazy-load below-the-fold images and shrink the ones the first view needs - fix this before judging CPU deferrals');
+            : 'lazy-load below-the-fold images and shrink the ones the first view needs - fix this before judging CPU deferrals',
+        );
       } else {
-        lead('open', `render gap ${Math.round(gap)}ms`,
+        lead(
+          'open',
+          `render gap ${Math.round(gap)}ms`,
           'no render-gating fetch or heavy pre-paint asset - post-load CPU, late-executing chunks, or a hero that mounts invisible',
-          `${CLI} profile  (or scan), then defer the attributed app work. If the profile shows only framework/baseline work, check for an entry animation that mounts the LCP element at opacity 0 (fade-in wrapper): LCP counts the first VISIBLY painted frame - render the hero visible immediately, animate only decoration - fix this before judging CPU deferrals`);
+          `${CLI} profile  (or scan), then defer the attributed app work. If the profile shows only framework/baseline work, check for an entry animation that mounts the LCP element at opacity 0 (fade-in wrapper): LCP counts the first VISIBLY painted frame - render the hero visible immediately, animate only decoration - fix this before judging CPU deferrals`,
+        );
       }
     } else {
-      lead('clear', 'render gap', gap == null ? 'not measurable' : `paint lands ${Math.round(gap)}ms after load`);
+      lead(
+        'clear',
+        'render gap',
+        gap == null ? 'not measurable' : `paint lands ${Math.round(gap)}ms after load`,
+      );
     }
 
     const cpu = runtime.metrics['runtime.prepaint_longtask_ms'];
     if (typeof cpu !== 'number' || cpu <= 150) {
-      lead('clear', 'pre-paint CPU', cpu == null ? 'no long tasks observed' : `${Math.round(cpu)}ms of long tasks before paint (baseline territory)`);
+      lead(
+        'clear',
+        'pre-paint CPU',
+        cpu == null
+          ? 'no long tasks observed'
+          : `${Math.round(cpu)}ms of long tasks before paint (baseline territory)`,
+      );
     } else if (!fresh(profile)) {
-      lead('unknown', `pre-paint CPU ${Math.round(cpu)}ms`,
+      lead(
+        'unknown',
+        `pre-paint CPU ${Math.round(cpu)}ms`,
         profile ? 'profile is stale (dist was rebuilt after it)' : 'not yet attributed to modules',
-        `${CLI} profile  (or scan)`);
+        `${CLI} profile  (or scan)`,
+      );
     } else {
-      const appRows = (profile.rows ?? []).filter((row) =>
-        row.bucket.includes('/') && !row.bucket.startsWith('(') && row.ms >= 15);
+      const appRows = (profile.rows ?? []).filter(
+        (row) => row.bucket.includes('/') && !row.bucket.startsWith('(') && row.ms >= 15,
+      );
       if (appRows.length) {
-        lead('open', `pre-paint CPU ${Math.round(cpu)}ms`,
-          `deferrable app work before paint: ${appRows.slice(0, 3).map((row) => `${row.bucket} ${row.ms}ms`).join(', ')}`,
-          'defer work the first render does not need (idle callback + dynamic import)');
+        lead(
+          'open',
+          `pre-paint CPU ${Math.round(cpu)}ms`,
+          `deferrable app work before paint: ${appRows
+            .slice(0, 3)
+            .map((row) => `${row.bucket} ${row.ms}ms`)
+            .join(', ')}`,
+          'defer work the first render does not need (idle callback + dynamic import)',
+        );
       } else {
-        lead('clear', `pre-paint CPU ${Math.round(cpu)}ms`,
-          'profile attributes it to baseline parse/engine work, not deferrable app modules');
+        lead(
+          'clear',
+          `pre-paint CPU ${Math.round(cpu)}ms`,
+          'profile attributes it to baseline parse/engine work, not deferrable app modules',
+        );
       }
     }
   }
 
   if (!fresh(coverage)) {
-    lead('unknown', 'coverage (cold-at-paint / candidates / large-at-paint / sibling groups)',
+    lead(
+      'unknown',
+      'coverage (cold-at-paint / candidates / large-at-paint / sibling groups)',
       coverage ? 'coverage report is stale (dist was rebuilt after it)' : 'no coverage run yet',
-      `${CLI} coverage  (or scan)`);
+      `${CLI} coverage  (or scan)`,
+    );
   } else {
     const candidates = coverage.candidates ?? [];
-    const inChunk = (c) => (coverage.chunks?.some((ch) => !ch.entry && ch.file === c.chunk) ? ` [${c.chunk}]` : '');
+    const inChunk = (c) =>
+      coverage.chunks?.some((ch) => !ch.entry && ch.file === c.chunk) ? ` [${c.chunk}]` : '';
     if (candidates.length) {
-      lead('open', `defer candidates (${candidates.length})`,
-        candidates.slice(0, 3).map((c) => `${c.feature ?? c.source} ${kb(c.totalBytes)}${inChunk(c)}`).join(', '),
-        'lazy-load them, rebuild, re-measure');
+      lead(
+        'open',
+        `defer candidates (${candidates.length})`,
+        candidates
+          .slice(0, 3)
+          .map((c) => `${c.feature ?? c.source} ${kb(c.totalBytes)}${inChunk(c)}`)
+          .join(', '),
+        'lazy-load them, rebuild, re-measure',
+      );
     } else {
       lead('clear', 'defer candidates', 'nothing sizeable is parsed-but-unexecuted');
     }
 
-    const cold = (coverage.coldAtPaint ?? coldAtPaintModules(coverage.modules ?? []))
-      .filter((m) => !m.framework);
+    const cold = (coverage.coldAtPaint ?? coldAtPaintModules(coverage.modules ?? [])).filter(
+      (m) => !m.framework,
+    );
     const coldOpen = cold.filter((m) => m.coldBytes >= COLD_OPEN_MIN_BYTES);
     if (coldOpen.length) {
-      lead('open', `cold bytes at paint (${coldOpen.length} module(s) >=${kb(COLD_OPEN_MIN_BYTES)} cold)`,
-        coldOpen.slice(0, 4).map((m) => `${m.source} ${kb(m.coldBytes)} cold of ${kb(m.totalBytes)} @ ${(m.paintRatio * 100).toFixed(0)}%${inChunk(m)}`).join(', '),
-        'move their import edges behind interaction/idle; a partially-executed vendor SDK usually hides one boot-time init call - defer the call, not just the import');
+      lead(
+        'open',
+        `cold bytes at paint (${coldOpen.length} module(s) >=${kb(COLD_OPEN_MIN_BYTES)} cold)`,
+        coldOpen
+          .slice(0, 4)
+          .map(
+            (m) =>
+              `${m.source} ${kb(m.coldBytes)} cold of ${kb(m.totalBytes)} @ ${(m.paintRatio * 100).toFixed(0)}%${inChunk(m)}`,
+          )
+          .join(', '),
+        'move their import edges behind interaction/idle; a partially-executed vendor SDK usually hides one boot-time init call - defer the call, not just the import',
+      );
     } else {
-      lead('clear', 'cold bytes at paint', `no non-framework module holds >=${kb(COLD_OPEN_MIN_BYTES)} unread at paint`);
+      lead(
+        'clear',
+        'cold bytes at paint',
+        `no non-framework module holds >=${kb(COLD_OPEN_MIN_BYTES)} unread at paint`,
+      );
     }
     const unattributed = (coverage.skippedChunks ?? []).filter((s) => s.reason === 'no-sourcemap');
     if (unattributed.length) {
-      lead('unknown', `unattributed pre-paint chunk(s): ${unattributed.map((s) => s.file).join(', ')}`,
+      lead(
+        'unknown',
+        `unattributed pre-paint chunk(s): ${unattributed.map((s) => s.file).join(', ')}`,
         'executed before first paint but built without a sourcemap - their bytes are invisible to coverage',
-        'rebuild with sourcemaps for these chunks, then re-run coverage');
+        'rebuild with sourcemaps for these chunks, then re-run coverage',
+      );
     }
 
     const staticPre = (coverage.skippedChunks ?? [])
@@ -867,27 +1127,48 @@ function printVerdict(target) {
       .sort((a, b) => (b.bytes ?? 0) - (a.bytes ?? 0));
     const staticPreBytes = staticPre.reduce((sum, s) => sum + (s.bytes ?? 0), 0);
     if (staticPreBytes >= 100 * 1024) {
-      lead('open', `static pre-paint transfer (${staticPre.length} chunk(s), ${kb(staticPreBytes)})`,
-        `fetched before paint, executed after it - the paint paid for the download: ${staticPre.slice(0, 3).map((s) => `${s.file} ${kb(s.bytes ?? 0)}`).join(', ')}`,
-        'make these load on demand (dynamic import / drop from initial script tags or preloads) - biggest lever when transfer dominates LCP');
+      lead(
+        'open',
+        `static pre-paint transfer (${staticPre.length} chunk(s), ${kb(staticPreBytes)})`,
+        `fetched before paint, executed after it - the paint paid for the download: ${staticPre
+          .slice(0, 3)
+          .map((s) => `${s.file} ${kb(s.bytes ?? 0)}`)
+          .join(', ')}`,
+        'make these load on demand (dynamic import / drop from initial script tags or preloads) - biggest lever when transfer dominates LCP',
+      );
     } else {
-      lead('clear', 'static pre-paint transfer', staticPre.length ? `only ${kb(staticPreBytes)} fetched-but-unused before paint` : 'nothing fetched before paint that the paint does not use');
+      lead(
+        'clear',
+        'static pre-paint transfer',
+        staticPre.length
+          ? `only ${kb(staticPreBytes)} fetched-but-unused before paint`
+          : 'nothing fetched before paint that the paint does not use',
+      );
     }
 
     const largeHot = largeAtPaintModules(coverage.modules ?? []);
     if (largeHot.length) {
-      lead('open', `large modules executed at paint (${largeHot.length})`,
-        largeHot.slice(0, 3).map((m) => `${m.source} ${kb(m.totalBytes)}`).join(', '),
-        'executed does not mean needed - verify how much the first render reads; split rarely-read data behind dynamic import');
+      lead(
+        'open',
+        `large modules executed at paint (${largeHot.length})`,
+        largeHot
+          .slice(0, 3)
+          .map((m) => `${m.source} ${kb(m.totalBytes)}`)
+          .join(', '),
+        'executed does not mean needed - verify how much the first render reads; split rarely-read data behind dynamic import',
+      );
     } else {
       lead('clear', 'large modules executed at paint', 'none at current thresholds');
     }
 
     const groups = siblingVariantGroups(coverage.modules ?? []);
     if (groups.length) {
-      lead('open', `sibling variant groups (${groups.length})`,
+      lead(
+        'open',
+        `sibling variant groups (${groups.length})`,
         groups.map((g) => `${g.dir} ${g.files} modules ${kb(g.bytes)}`).join(', '),
-        'keep the default variant in the entry, load the active one dynamically');
+        'keep the default variant in the entry, load the active one dynamically',
+      );
     } else {
       lead('clear', 'sibling variant groups', 'none detected');
     }
@@ -901,46 +1182,97 @@ function printVerdict(target) {
     const rows = retainedLeadRows(mg.graph);
     if (rows.length) {
       const mods = mg.graph.modules;
-      lead('open', `statically retained imports (${rows.length} module(s) >=${kb(GRAPH_RETAINED_OPEN_BYTES)})`,
-        rows.slice(0, 3).map((m) => `${m.id} retains ${kb(m.retainedBytes)}/${m.retainedModuleCount} module(s)${m.idom != null ? ` via ${mods[m.idom].id}` : ''}`).join(', '),
-        `${CLI} what-if <module> prices the deferral (exact modules+bytes freed; --keep a,b holds needed parts eager); ${CLI} cut <module> lists the fewest import edits when several paths reach it; make the importer use dynamic import(). Retained is potential, not proof - if the first render genuinely needs it, justify with a measurement or constraint`);
+      lead(
+        'open',
+        `statically retained imports (${rows.length} module(s) >=${kb(GRAPH_RETAINED_OPEN_BYTES)})`,
+        rows
+          .slice(0, 3)
+          .map(
+            (m) =>
+              `${m.id} retains ${kb(m.retainedBytes)}/${m.retainedModuleCount} module(s)${m.idom != null ? ` via ${mods[m.idom].id}` : ''}`,
+          )
+          .join(', '),
+        `${CLI} what-if <module> prices the deferral (exact modules+bytes freed; --keep a,b holds needed parts eager); ${CLI} cut <module> lists the fewest import edits when several paths reach it; make the importer use dynamic import(). Retained is potential, not proof - if the first render genuinely needs it, justify with a measurement or constraint`,
+      );
     } else {
-      lead('clear', 'statically retained imports', `no non-framework module retains >=${kb(GRAPH_RETAINED_OPEN_BYTES)} behind a cuttable static edge`);
+      lead(
+        'clear',
+        'statically retained imports',
+        `no non-framework module retains >=${kb(GRAPH_RETAINED_OPEN_BYTES)} behind a cuttable static edge`,
+      );
     }
   } else if (mg.state === 'stale') {
-    lead('unknown', 'static module graph', 'module-graph.json predates the current build - a build without the devtools flag leaves it stale',
-      'keep build.rolldownOptions.devtools = { mode: "metrics" } in the vite config, rebuild, re-scan');
+    lead(
+      'unknown',
+      'static module graph',
+      'module-graph.json predates the current build - a build without the devtools flag leaves it stale',
+      'keep build.rolldownOptions.devtools = { mode: "metrics" } in the vite config, rebuild, re-scan',
+    );
   } else if (mg.state === 'absent-rolldown') {
-    lead('unknown', 'static module graph', 'not collected - this app builds with rolldown, so one config line enables static split-candidate ranking',
-      `vite >= 8: add build.rolldownOptions.devtools = { mode: "metrics" } to the vite config, rebuild, re-scan - \`${CLI} graph\` then ranks every candidate by the bytes a deferral frees, \`${CLI} what-if\` prices one cut, no browser run needed`);
+    lead(
+      'unknown',
+      'static module graph',
+      'not collected - this app builds with rolldown, so one config line enables static split-candidate ranking',
+      `vite >= 8: add build.rolldownOptions.devtools = { mode: "metrics" } to the vite config, rebuild, re-scan - \`${CLI} graph\` then ranks every candidate by the bytes a deferral frees, \`${CLI} what-if\` prices one cut, no browser run needed`,
+    );
   }
 
   console.log(`verdict for ${target.dist} (entry ${entry})\n`);
   for (const line of lines) console.log(line);
   console.log('');
   if (fresh(runtime) && runtime.earlyStopped) {
-    console.log(`NOTE: the latest measurement EARLY-STOPPED after run 1 - its LCP delta was >=${runtime.earlyStopped.factor}x the`);
-    console.log('noise threshold, so the accept/revert call is decision-grade. Pinning still needs a full scan (scan --pin).\n');
+    console.log(
+      `NOTE: the latest measurement EARLY-STOPPED after run 1 - its LCP delta was >=${runtime.earlyStopped.factor}x the`,
+    );
+    console.log(
+      'noise threshold, so the accept/revert call is decision-grade. Pinning still needs a full scan (scan --pin).\n',
+    );
   } else if (fresh(runtime) && runtime.runs === 1) {
-    console.log('NOTE: the latest measurement used a SINGLE run (quick mode) - its delta is indicative only.');
-    console.log('Confirm any accept/revert decision with a full scan (>=3 runs) before acting on it.\n');
+    console.log(
+      'NOTE: the latest measurement used a SINGLE run (quick mode) - its delta is indicative only.',
+    );
+    console.log(
+      'Confirm any accept/revert decision with a full scan (>=3 runs) before acting on it.\n',
+    );
   }
   if (openCount + unknownCount === 0) {
-    console.log('VERDICT: every signal class is clear and fresh. Nothing further is indicated by these tools.');
-    console.log('Boundary: coverage attributes the entry + same-origin pre-paint chunks with sourcemaps;');
-    console.log('cross-origin scripts are unattributed, and non-JS weight (fonts/images/CSS) is counted');
-    console.log('by type but not analyzed further. Server latency, cache policy, and interaction-time');
-    console.log('cost are out of scope. Remaining LCP is baseline network + parse + render for what the');
+    console.log(
+      'VERDICT: every signal class is clear and fresh. Nothing further is indicated by these tools.',
+    );
+    console.log(
+      'Boundary: coverage attributes the entry + same-origin pre-paint chunks with sourcemaps;',
+    );
+    console.log(
+      'cross-origin scripts are unattributed, and non-JS weight (fonts/images/CSS) is counted',
+    );
+    console.log(
+      'by type but not analyzed further. Server latency, cache policy, and interaction-time',
+    );
+    console.log(
+      'cost are out of scope. Remaining LCP is baseline network + parse + render for what the',
+    );
     console.log('page genuinely needs at first paint.');
   } else {
-    console.log(`VERDICT: not done - ${openCount} lead(s) OPEN, ${unknownCount} signal(s) UNKNOWN or stale.`);
-    console.log('Work the OPEN items (render gap first), gather the UNKNOWN signals, rebuild, re-measure.');
+    console.log(
+      `VERDICT: not done - ${openCount} lead(s) OPEN, ${unknownCount} signal(s) UNKNOWN or stale.`,
+    );
+    console.log(
+      'Work the OPEN items (render gap first), gather the UNKNOWN signals, rebuild, re-measure.',
+    );
     console.log('');
-    console.log('Do NOT report this work as finished or "confirmed by the harness" while leads are OPEN -');
+    console.log(
+      'Do NOT report this work as finished or "confirmed by the harness" while leads are OPEN -',
+    );
     console.log('a re-pinned baseline records your gain; it does not close the checklist above.');
-    console.log('Copy the checklist verbatim into your final summary. If you stop now, your summary must');
-    console.log(`say "stopping with ${openCount} lead(s) OPEN" and justify each one with a measurement`);
-    console.log('(you tried it and the delta was sub-noise) or a concrete constraint (framework dep,');
+    console.log(
+      'Copy the checklist verbatim into your final summary. If you stop now, your summary must',
+    );
+    console.log(
+      `say "stopping with ${openCount} lead(s) OPEN" and justify each one with a measurement`,
+    );
+    console.log(
+      '(you tried it and the delta was sub-noise) or a concrete constraint (framework dep,',
+    );
     console.log('the first paint genuinely needs it, outside the declared scope).');
   }
 }
@@ -969,8 +1301,10 @@ async function cmdBuild() {
   for (const chunk of result.chunks) console.log(`async ${chunk.file}: ${kb(chunk.bytes)}`);
   const m = result.buildMetrics?.metrics;
   if (m) {
-    console.log(`build metrics: total ${m['build.total_ms']}ms, output ${kb(m['output.total_bytes'] ?? 0)}, `
-      + `max initial load ${kb(m['output.max_initial_load_bytes'] ?? 0)}`);
+    console.log(
+      `build metrics: total ${m['build.total_ms']}ms, output ${kb(m['output.total_bytes'] ?? 0)}, ` +
+        `max initial load ${kb(m['output.max_initial_load_bytes'] ?? 0)}`,
+    );
     console.log(`build report: ${path.join(BUILD_METRICS_DIR, 'metrics.json')}`);
   } else {
     console.log('build metrics report missing (devtools metrics mode did not run?)');
@@ -996,28 +1330,39 @@ async function cmdMeasure(argv) {
   const pinnedLcp = baselineState?.metrics?.['runtime.lcp_ms'];
   // The early stop compares run 1 against the pinned baseline - only valid when
   // both were measured under the SAME pinned net scale.
-  const expectedScale = opts['net-scale'] != null
-    ? Number(opts['net-scale'])
-    : readJson(target.paths.throttleProfile)?.netScale ?? null;
+  const expectedScale =
+    opts['net-scale'] != null
+      ? Number(opts['net-scale'])
+      : (readJson(target.paths.throttleProfile)?.netScale ?? null);
   const scaleMatches = expectedScale != null && (baselineState?.netScale ?? 1) === expectedScale;
-  const earlyStop = (!opts.pin && !opts['no-early-stop'] && typeof pinnedLcp === 'number' && scaleMatches)
-    ? {
-      baselineLcp: pinnedLcp,
-      thresholdMs: Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * pinnedLcp),
-      factor: EARLY_STOP_FACTOR,
-    }
-    : null;
-  const { samples, earlyStopped, throttle: usedThrottle } = await withServerAndBrowser(target, opts['no-throttle'], async ({ origin, cdp, throttle }) => ({
-    ...await gatherSamples(cdp, origin, {
+  const earlyStop =
+    !opts.pin && !opts['no-early-stop'] && typeof pinnedLcp === 'number' && scaleMatches
+      ? {
+          baselineLcp: pinnedLcp,
+          thresholdMs: Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * pinnedLcp),
+          factor: EARLY_STOP_FACTOR,
+        }
+      : null;
+  const {
+    samples,
+    earlyStopped,
+    throttle: usedThrottle,
+  } = await withServerAndBrowser(
+    target,
+    opts['no-throttle'],
+    async ({ origin, cdp, throttle }) => ({
+      ...(await gatherSamples(cdp, origin, {
+        throttle,
+        expectedFeatures,
+        runs: Number(opts.runs),
+        warmup: Number(opts.warmup),
+        settleMs: Number(opts.settle),
+        earlyStop,
+      })),
       throttle,
-      expectedFeatures,
-      runs: Number(opts.runs),
-      warmup: Number(opts.warmup),
-      settleMs: Number(opts.settle),
-      earlyStop,
     }),
-    throttle,
-  }), { netScaleFlag: opts['net-scale'] ?? null });
+    { netScaleFlag: opts['net-scale'] ?? null },
+  );
   const { report, hadBaseline } = writeMeasureReport(target, samples, {
     expectedFeatures,
     label: opts.label,
@@ -1026,7 +1371,10 @@ async function cmdMeasure(argv) {
   });
   printMeasureSummary(report, hadBaseline);
   if (opts.pin) pinBaseline(target);
-  else if (!hadBaseline) console.log(`no pinned baseline yet - run \`${CLI} baseline\` (or pass --pin) to pin this measurement`);
+  else if (!hadBaseline)
+    console.log(
+      `no pinned baseline yet - run \`${CLI} baseline\` (or pass --pin) to pin this measurement`,
+    );
   console.log(`\nfull report: ${target.paths.runtimeMetrics}`);
 }
 
@@ -1043,7 +1391,9 @@ async function cmdCoverage(argv) {
   const entry = requireEntry(target, opts);
   if (!opts.entry) console.log(`entry: ${entry} (auto-detected from dist/index.html)`);
   if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
-    throw new Error(`entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`);
+    throw new Error(
+      `entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`,
+    );
   }
   const cov = await withServerAndBrowser(target, opts['no-throttle'], ({ origin, cdp, throttle }) =>
     coverageRun(cdp, {
@@ -1052,7 +1402,8 @@ async function cmdCoverage(argv) {
       expectedFeatures,
       entryName: `/${entry.replaceAll('\\', '/')}`,
       settleMs: Number(opts.settle),
-    }));
+    }),
+  );
   const report = buildCoverageReport(target, cov, entry);
   printCoverageReport(target, report);
   console.log(`\nfull report: ${target.paths.coverage}`);
@@ -1068,10 +1419,15 @@ async function cmdProfile(argv) {
   const entry = requireEntry(target, opts);
   if (!opts.entry) console.log(`entry: ${entry} (auto-detected from dist/index.html)`);
   if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
-    throw new Error(`entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`);
+    throw new Error(
+      `entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`,
+    );
   }
-  const profile = await withServerAndBrowser(target, opts['no-throttle'], ({ origin, cdp, throttle }) =>
-    profileRun(cdp, { origin, throttle }));
+  const profile = await withServerAndBrowser(
+    target,
+    opts['no-throttle'],
+    ({ origin, cdp, throttle }) => profileRun(cdp, { origin, throttle }),
+  );
   const report = buildProfileReport(target, profile, entry);
   printProfileReport(report);
   console.log(`\nfull report: ${target.paths.profile}`);
@@ -1113,7 +1469,9 @@ async function cmdScan(argv) {
     'net-scale': { type: 'string' },
   });
   if (opts.quick && opts.pin) {
-    throw new Error('scan --quick cannot --pin: a 1-run baseline poisons every later delta. Run a full scan to pin.');
+    throw new Error(
+      'scan --quick cannot --pin: a 1-run baseline poisons every later delta. Run a full scan to pin.',
+    );
   }
   if (opts.quick) {
     opts.runs = '1';
@@ -1122,7 +1480,9 @@ async function cmdScan(argv) {
   const expectedFeatures = expectedFeaturesFor(target, opts);
   const entry = requireEntry(target, opts);
   if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
-    throw new Error(`entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`);
+    throw new Error(
+      `entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`,
+    );
   }
   // Early stop needs a decision context (a pinned baseline measured under the
   // SAME pinned net scale) and full-median exemptions: --pin measurements
@@ -1130,48 +1490,63 @@ async function cmdScan(argv) {
   // single run.
   const baselineState = readJson(target.paths.runtimeBaseline);
   const pinnedLcp = baselineState?.metrics?.['runtime.lcp_ms'];
-  const expectedScale = opts['net-scale'] != null
-    ? Number(opts['net-scale'])
-    : readJson(target.paths.throttleProfile)?.netScale ?? null;
+  const expectedScale =
+    opts['net-scale'] != null
+      ? Number(opts['net-scale'])
+      : (readJson(target.paths.throttleProfile)?.netScale ?? null);
   const scaleMatches = expectedScale != null && (baselineState?.netScale ?? 1) === expectedScale;
-  const earlyStop = (!opts.quick && !opts.pin && !opts['no-early-stop'] && typeof pinnedLcp === 'number' && scaleMatches)
-    ? {
-      baselineLcp: pinnedLcp,
-      thresholdMs: Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * pinnedLcp),
-      factor: EARLY_STOP_FACTOR,
-    }
-    : null;
+  const earlyStop =
+    !opts.quick &&
+    !opts.pin &&
+    !opts['no-early-stop'] &&
+    typeof pinnedLcp === 'number' &&
+    scaleMatches
+      ? {
+          baselineLcp: pinnedLcp,
+          thresholdMs: Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * pinnedLcp),
+          factor: EARLY_STOP_FACTOR,
+        }
+      : null;
 
-  const gathered = await withServerAndBrowser(target, opts['no-throttle'], async ({ origin, cdp, throttle }) => {
-    const { samples, earlyStopped } = await gatherSamples(cdp, origin, {
-      throttle,
-      expectedFeatures,
-      runs: Number(opts.runs),
-      warmup: Number(opts.warmup),
-      settleMs: Number(opts.settle),
-      earlyStop,
-    });
-    process.stderr.write('coverage run...\n');
-    const cov = await coverageRun(cdp, {
-      origin,
-      throttle,
-      expectedFeatures,
-      entryName: `/${entry.replaceAll('\\', '/')}`,
-      settleMs: 2000,
-    });
-    if (opts.quick) return { samples, earlyStopped, cov, profile: null, throttle };
-    // The profile only ever matters when pre-paint CPU is above the verdict's
-    // 150ms threshold - skip its navigation otherwise (a scan-time minute on
-    // slow apps). --profile forces it.
-    const prepaintMs = summarize(samples, expectedFeatures).metrics['runtime.prepaint_longtask_ms'];
-    if (!opts.profile && !(typeof prepaintMs === 'number' && prepaintMs > 150)) {
-      process.stderr.write(`profile skipped (pre-paint CPU ${prepaintMs == null ? 'n/a' : `${Math.round(prepaintMs)}ms`} - baseline territory; force with --profile)\n`);
-      return { samples, earlyStopped, cov, profile: null, throttle };
-    }
-    process.stderr.write('profile run...\n');
-    const profile = await profileRun(cdp, { origin, throttle });
-    return { samples, earlyStopped, cov, profile, throttle };
-  }, { netScaleFlag: opts['net-scale'] ?? null });
+  const gathered = await withServerAndBrowser(
+    target,
+    opts['no-throttle'],
+    async ({ origin, cdp, throttle }) => {
+      const { samples, earlyStopped } = await gatherSamples(cdp, origin, {
+        throttle,
+        expectedFeatures,
+        runs: Number(opts.runs),
+        warmup: Number(opts.warmup),
+        settleMs: Number(opts.settle),
+        earlyStop,
+      });
+      process.stderr.write('coverage run...\n');
+      const cov = await coverageRun(cdp, {
+        origin,
+        throttle,
+        expectedFeatures,
+        entryName: `/${entry.replaceAll('\\', '/')}`,
+        settleMs: 2000,
+      });
+      if (opts.quick) return { samples, earlyStopped, cov, profile: null, throttle };
+      // The profile only ever matters when pre-paint CPU is above the verdict's
+      // 150ms threshold - skip its navigation otherwise (a scan-time minute on
+      // slow apps). --profile forces it.
+      const prepaintMs = summarize(samples, expectedFeatures).metrics[
+        'runtime.prepaint_longtask_ms'
+      ];
+      if (!opts.profile && !(typeof prepaintMs === 'number' && prepaintMs > 150)) {
+        process.stderr.write(
+          `profile skipped (pre-paint CPU ${prepaintMs == null ? 'n/a' : `${Math.round(prepaintMs)}ms`} - baseline territory; force with --profile)\n`,
+        );
+        return { samples, earlyStopped, cov, profile: null, throttle };
+      }
+      process.stderr.write('profile run...\n');
+      const profile = await profileRun(cdp, { origin, throttle });
+      return { samples, earlyStopped, cov, profile, throttle };
+    },
+    { netScaleFlag: opts['net-scale'] ?? null },
+  );
 
   const { report, hadBaseline } = writeMeasureReport(target, gathered.samples, {
     expectedFeatures,
@@ -1183,7 +1558,9 @@ async function cmdScan(argv) {
   // means this is a re-scan, so the module table prints compact (--full restores it).
   const isRescan = fs.existsSync(target.paths.coverage);
   const coverageReport = buildCoverageReport(target, gathered.cov, entry);
-  const profileReport = gathered.profile ? buildProfileReport(target, gathered.profile, entry) : null;
+  const profileReport = gathered.profile
+    ? buildProfileReport(target, gathered.profile, entry)
+    : null;
 
   // advice:false throughout - the verdict printed below carries every next: line,
   // so the sections above it report numbers without a second copy of the coaching.
@@ -1204,7 +1581,9 @@ async function cmdScan(argv) {
     pinBaseline(target);
   } else if (!hadBaseline) {
     if (opts.quick) {
-      console.log('(no pinned baseline yet, and quick scans are never pinned - run a full scan to establish it)');
+      console.log(
+        '(no pinned baseline yet, and quick scans are never pinned - run a full scan to establish it)',
+      );
     } else {
       // First scan of a target IS the baseline: pin it so every later scan
       // reports a baselineDelta without extra ceremony.
@@ -1230,13 +1609,16 @@ const GRAPH_FRESH_SLACK_MS = 30 * 1000;
 const GRAPH_FRAMEWORK_RE = /^(react-dom|react|scheduler|vue|@vue|svelte|preact)(\/|$)/;
 
 function moduleGraphStatus(target, builtAtMs = null) {
-  const graph = loadModuleGraph(moduleGraphCandidates({
-    demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : null,
-    dist: target.dist,
-  }));
+  const graph = loadModuleGraph(
+    moduleGraphCandidates({
+      demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : null,
+      dist: target.dist,
+    }),
+  );
   if (graph) {
-    const stale = typeof builtAtMs === 'number'
-      && fs.statSync(graph.file).mtimeMs < builtAtMs - GRAPH_FRESH_SLACK_MS;
+    const stale =
+      typeof builtAtMs === 'number' &&
+      fs.statSync(graph.file).mtimeMs < builtAtMs - GRAPH_FRESH_SLACK_MS;
     return { state: stale ? 'stale' : 'present', graph };
   }
   const rolldownBuilt = target.isDemo || rolldownBuildDetected(path.dirname(target.dist));
@@ -1257,8 +1639,9 @@ function rolldownBuildDetected(appRoot) {
     if (deps.vite && !viteSpec) viteSpec = deps.vite;
     const vitePkg = readJson(path.join(dir, 'node_modules', 'vite', 'package.json'));
     if (vitePkg) {
-      return vitePkg.name === 'rolldown-vite'
-        || Number(String(vitePkg.version ?? '').split('.')[0]) >= 8;
+      return (
+        vitePkg.name === 'rolldown-vite' || Number(String(vitePkg.version ?? '').split('.')[0]) >= 8
+      );
     }
     const parent = path.dirname(dir);
     if (parent === dir) break;
@@ -1276,13 +1659,17 @@ function rolldownBuildDetected(appRoot) {
 function retainedLeadRows(graph) {
   const entrySet = new Set(graph.entryModules);
   const mods = graph.modules;
-  const isHtmlBootChild = (m) => m.idom != null
-    && entrySet.has(mods[m.idom].id) && /\.html?$/i.test(mods[m.idom].id);
+  const isHtmlBootChild = (m) =>
+    m.idom != null && entrySet.has(mods[m.idom].id) && /\.html?$/i.test(mods[m.idom].id);
   return mods
-    .filter((m) => m.staticReachable && !entrySet.has(m.id)
-      && m.retainedBytes >= GRAPH_RETAINED_OPEN_BYTES
-      && !isHtmlBootChild(m)
-      && !GRAPH_FRAMEWORK_RE.test(m.id))
+    .filter(
+      (m) =>
+        m.staticReachable &&
+        !entrySet.has(m.id) &&
+        m.retainedBytes >= GRAPH_RETAINED_OPEN_BYTES &&
+        !isHtmlBootChild(m) &&
+        !GRAPH_FRAMEWORK_RE.test(m.id),
+    )
     .sort((a, b) => b.retainedBytes - a.retainedBytes || a.id.localeCompare(b.id));
 }
 
@@ -1322,11 +1709,15 @@ function printGraphSection(target, builtAtMs = null) {
   const mg = moduleGraphStatus(target, builtAtMs);
   if (mg.state === 'absent') return;
   if (mg.state === 'stale') {
-    console.log('static module graph: STALE (predates the current build) - rebuild with build.rolldownOptions.devtools = { mode: "metrics" } in the vite config\n');
+    console.log(
+      'static module graph: STALE (predates the current build) - rebuild with build.rolldownOptions.devtools = { mode: "metrics" } in the vite config\n',
+    );
     return;
   }
   if (mg.state === 'absent-rolldown') {
-    console.log(`static module graph: not collected - this app builds with rolldown. vite >= 8: add build.rolldownOptions.devtools = { mode: "metrics" } to the vite config, rebuild, re-scan (unlocks \`${CLI} graph\` / \`${CLI} what-if\`)\n`);
+    console.log(
+      `static module graph: not collected - this app builds with rolldown. vite >= 8: add build.rolldownOptions.devtools = { mode: "metrics" } to the vite config, rebuild, re-scan (unlocks \`${CLI} graph\` / \`${CLI} what-if\`)\n`,
+    );
     return;
   }
   const mods = mg.graph.modules;
@@ -1336,21 +1727,29 @@ function printGraphSection(target, builtAtMs = null) {
     .sort((a, b) => b.retainedBytes - a.retainedBytes || a.id.localeCompare(b.id))
     .slice(0, 8);
   if (!rows.length) return;
-  console.log('statically retained imports (rolldown module graph - what one deferral would free):');
+  console.log(
+    'statically retained imports (rolldown module graph - what one deferral would free):',
+  );
   for (const mod of rows) {
-    console.log(`  ${kb(mod.retainedBytes).padStart(10)}  ${mod.id}${mod.idom != null ? `  via ${mods[mod.idom].id}` : ''}`);
+    console.log(
+      `  ${kb(mod.retainedBytes).padStart(10)}  ${mod.id}${mod.idom != null ? `  via ${mods[mod.idom].id}` : ''}`,
+    );
   }
   const note = packageRootNote(rows);
   if (note) console.log(`  ${note}`);
-  console.log(`  full ranking: \`${CLI} graph\`; exact modules+bytes for one cut: \`${CLI} what-if <module>\`\n`);
+  console.log(
+    `  full ranking: \`${CLI} graph\`; exact modules+bytes for one cut: \`${CLI} what-if <module>\`\n`,
+  );
 }
 
 // The full graph-diff render (the `graph-diff` command). Eager-tier diff is the headline;
 // node classification (added/removed/bytes/edges) follows. Sections are sorted |Δ| desc.
 function printGraphDiff(diff) {
   const line = (sign, m) => `  ${`${sign}${kb(m.bytes)}`.padStart(11)}  ${m.id}`;
-  console.log(`eager set: +${diff.entered.length} module(s)/+${kb(diff.enteredBytes)} entered, `
-    + `-${diff.left.length}/-${kb(diff.leftBytes)} left the initial load\n`);
+  console.log(
+    `eager set: +${diff.entered.length} module(s)/+${kb(diff.enteredBytes)} entered, ` +
+      `-${diff.left.length}/-${kb(diff.leftBytes)} left the initial load\n`,
+  );
   if (diff.entered.length) {
     console.log('entered the initial load (weight the change ADDED to first paint):');
     for (const m of diff.entered.slice(0, 15)) console.log(line('+', m));
@@ -1375,7 +1774,9 @@ function printGraphDiff(diff) {
   if (diff.removed.length) nodes.push(`-${diff.removed.length} removed`);
   if (diff.bytesChanged.length) nodes.push(`${diff.bytesChanged.length} bytes-changed`);
   if (diff.edgesChanged.length) nodes.push(`${diff.edgesChanged.length} edges-changed`);
-  console.log(`nodes: ${nodes.length ? nodes.join(', ') : 'no id-level changes'} (renames read as add+remove - ids are identity).`);
+  console.log(
+    `nodes: ${nodes.length ? nodes.join(', ') : 'no id-level changes'} (renames read as add+remove - ids are identity).`,
+  );
 }
 
 // Exclusion-aware rollup: bytes attributed to a changed subtree root count only nodes
@@ -1385,8 +1786,10 @@ function printDiffGroups(groups, sign) {
   if (!multi.length) return;
   console.log('  grouped under nearest changed ancestor:');
   for (const g of multi.slice(0, 8)) {
-    console.log(`    ${sign}${kb(g.bytes)} across ${g.count} changed module(s) under ${g.rootId}`
-      + `${g.skipped ? ` (+${g.skipped} unchanged dep(s) skipped)` : ''}`);
+    console.log(
+      `    ${sign}${kb(g.bytes)} across ${g.count} changed module(s) under ${g.rootId}` +
+        `${g.skipped ? ` (+${g.skipped} unchanged dep(s) skipped)` : ''}`,
+    );
   }
 }
 
@@ -1399,37 +1802,49 @@ function printEagerDiffSummary(target, builtAtMs) {
   if (mg.state !== 'present') return;
   const diff = diffGraphs(baseline, mg.graph);
   if (!diff.entered.length && !diff.left.length) {
-    console.log('eager set vs pinned baseline: unchanged (CSS/assets/order can still move the measurement).\n');
+    console.log(
+      'eager set vs pinned baseline: unchanged (CSS/assets/order can still move the measurement).\n',
+    );
     return;
   }
   const topStr = diff.entered.length
     ? `top entered ${diff.entered[0].id} (+${kb(diff.entered[0].bytes)})`
     : `top left ${diff.left[0].id} (-${kb(diff.left[0].bytes)})`;
-  console.log(`eager set vs pinned baseline: +${diff.entered.length} module(s)/+${kb(diff.enteredBytes)} entered, `
-    + `-${diff.left.length}/-${kb(diff.leftBytes)} left; ${topStr}.`);
-  console.log(`(deterministic eager-set attribution; \`${CLI} graph-diff\` shows the full account.)\n`);
+  console.log(
+    `eager set vs pinned baseline: +${diff.entered.length} module(s)/+${kb(diff.enteredBytes)} entered, ` +
+      `-${diff.left.length}/-${kb(diff.leftBytes)} left; ${topStr}.`,
+  );
+  console.log(
+    `(deterministic eager-set attribution; \`${CLI} graph-diff\` shows the full account.)\n`,
+  );
 }
 
 function requireModuleGraph(opts) {
   const target = resolveTarget(opts);
-  const graph = loadModuleGraph(moduleGraphCandidates({
-    reportDir: opts.report,
-    demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : null,
-    dist: target.dist,
-  }));
+  const graph = loadModuleGraph(
+    moduleGraphCandidates({
+      reportDir: opts.report,
+      demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : null,
+      dist: target.dist,
+    }),
+  );
   if (!graph) {
     throw new Error(
-      'no module-graph.json found - it is written by rolldown devtools metrics builds.\n'
-      + 'vite >= 8: add `build.rolldownOptions.devtools = { mode: "metrics" }` to the vite config\n'
-      + '(report lands in node_modules/.rolldown/metrics), rebuild, then re-run.\n'
-      + 'Or point at an existing report with --report <dir>.',
+      'no module-graph.json found - it is written by rolldown devtools metrics builds.\n' +
+        'vite >= 8: add `build.rolldownOptions.devtools = { mode: "metrics" }` to the vite config\n' +
+        '(report lands in node_modules/.rolldown/metrics), rebuild, then re-run.\n' +
+        'Or point at an existing report with --report <dir>.',
     );
   }
   return graph;
 }
 
 async function cmdGraph(argv) {
-  const opts = parse(argv, { ...TARGET_OPTS, report: { type: 'string' }, top: { type: 'string', default: '15' } });
+  const opts = parse(argv, {
+    ...TARGET_OPTS,
+    report: { type: 'string' },
+    top: { type: 'string', default: '15' },
+  });
   const graph = requireModuleGraph(opts);
   const mods = graph.modules;
   console.log(`module graph: ${graph.file}`);
@@ -1437,21 +1852,32 @@ async function cmdGraph(argv) {
   const staticMods = mods.filter((m) => m.staticReachable);
   const staticBytes = staticMods.reduce((sum, m) => sum + m.bytes, 0);
   const lazyCount = mods.filter((m) => m.dynamicOnly).length;
-  console.log(`initial-load view: ${staticMods.length} modules / ${kb(staticBytes)} statically reachable; ${lazyCount} already lazy (dynamic-import only)\n`);
+  console.log(
+    `initial-load view: ${staticMods.length} modules / ${kb(staticBytes)} statically reachable; ${lazyCount} already lazy (dynamic-import only)\n`,
+  );
   const entrySet = new Set(graph.entryModules);
   const rows = staticMods
     .filter((m) => m.retainedBytes > 0 && !entrySet.has(m.id))
     .sort((a, b) => b.retainedBytes - a.retainedBytes || a.id.localeCompare(b.id))
     .slice(0, Number(opts.top));
-  console.log('retained size - what deferring each module\'s import edge would remove from the initial load:');
+  console.log(
+    "retained size - what deferring each module's import edge would remove from the initial load:",
+  );
   for (const mod of rows) {
     const via = mod.idom != null ? `  via ${mods[mod.idom].id}` : '  (directly under the entries)';
-    console.log(`  ${kb(mod.retainedBytes).padStart(10)}  ${mod.id}  (own ${kb(mod.bytes)}, ${mod.retainedModuleCount} module(s))${via}`);
+    console.log(
+      `  ${kb(mod.retainedBytes).padStart(10)}  ${mod.id}  (own ${kb(mod.bytes)}, ${mod.retainedModuleCount} module(s))${via}`,
+    );
   }
-  if (!rows.length) console.log('  (nothing sizeable is uniquely retained - the entries themselves hold the bytes)');
+  if (!rows.length)
+    console.log(
+      '  (nothing sizeable is uniquely retained - the entries themselves hold the bytes)',
+    );
   const note = packageRootNote(rows);
   if (note) console.log(`\n${note}`);
-  console.log(`\nnext: ${CLI} what-if <module>  - the exact modules+bytes that one deferral frees (add --keep a,b to hold some imports eager)`);
+  console.log(
+    `\nnext: ${CLI} what-if <module>  - the exact modules+bytes that one deferral frees (add --keep a,b to hold some imports eager)`,
+  );
 }
 
 async function cmdWhatIf(argv) {
@@ -1460,13 +1886,17 @@ async function cmdWhatIf(argv) {
     options: { ...TARGET_OPTS, report: { type: 'string' }, keep: { type: 'string' } },
     allowPositionals: true,
   });
-  if (!positionals.length) throw new Error(`usage: ${CLI} what-if <module> [<module> ...] [--keep a,b] [--report <dir>]`);
+  if (!positionals.length)
+    throw new Error(`usage: ${CLI} what-if <module> [<module> ...] [--keep a,b] [--report <dir>]`);
   const graph = requireModuleGraph(opts);
   const resolve = (q) => {
     const hit = resolveModule(graph, q);
-    if (!hit) throw new Error(`no module matches '${q}' (ids are project-relative, e.g. src/router.ts)`);
+    if (!hit)
+      throw new Error(`no module matches '${q}' (ids are project-relative, e.g. src/router.ts)`);
     if (hit.ambiguous) {
-      throw new Error(`'${q}' is ambiguous:\n  ${hit.ambiguous.join('\n  ')}\nuse a longer suffix.`);
+      throw new Error(
+        `'${q}' is ambiguous:\n  ${hit.ambiguous.join('\n  ')}\nuse a longer suffix.`,
+      );
     }
     return hit.index;
   };
@@ -1478,7 +1908,9 @@ async function cmdWhatIf(argv) {
   const targets = [];
   for (const t of resolved) {
     if (entrySet.has(graph.modules[t].id)) {
-      console.log(`${graph.modules[t].id} is an entry - it IS the initial load, so there is no import edge to defer. Skipped; \`${CLI} graph\` ranks its heavy children instead.`);
+      console.log(
+        `${graph.modules[t].id} is an entry - it IS the initial load, so there is no import edge to defer. Skipped; \`${CLI} graph\` ranks its heavy children instead.`,
+      );
     } else {
       targets.push(t);
     }
@@ -1493,15 +1925,21 @@ async function cmdWhatIf(argv) {
 
   console.log(`what-if deferred: ${result.target.id}`);
   if (result.notStaticallyReachable) {
-    console.log(result.alreadyLazy
-      ? 'already lazy: every path to this module crosses a dynamic import - it costs the initial load nothing.'
-      : 'not reachable from the entries at all in this build.');
+    console.log(
+      result.alreadyLazy
+        ? 'already lazy: every path to this module crosses a dynamic import - it costs the initial load nothing.'
+        : 'not reachable from the entries at all in this build.',
+    );
     return;
   }
   if (result.cutEdges.length) {
-    console.log(`cut ${result.cutEdges.length} static import edge(s), from: ${result.cutEdges.join(', ')}`);
+    console.log(
+      `cut ${result.cutEdges.length} static import edge(s), from: ${result.cutEdges.join(', ')}`,
+    );
   }
-  console.log(`removes ${kb(result.removedBytes)} / ${result.removedCount} module(s) from the initial load${keep.length ? ` (keeping ${keep.length} sentry module(s) eager)` : ''}:`);
+  console.log(
+    `removes ${kb(result.removedBytes)} / ${result.removedCount} module(s) from the initial load${keep.length ? ` (keeping ${keep.length} sentry module(s) eager)` : ''}:`,
+  );
   const shown = result.removed.slice(0, 20);
   for (const mod of shown) {
     console.log(`  ${kb(mod.bytes).padStart(10)}  ${mod.id}`);
@@ -1513,10 +1951,19 @@ async function cmdWhatIf(argv) {
   // edits than deferring every direct import, point at `cut`. Only prints when it wins,
   // so the common (naive-is-minimal) case stays byte-identical.
   const cut = minCut(graph, target, keepProtectedEdges(graph, keep));
-  if (!cut.blockedByProtected && !cut.hasUncuttableSink && cut.flow > 0 && cut.flow < result.cutEdges.length) {
-    console.log(`\nmin cut: ${cut.flow} edge(s) instead of ${result.cutEdges.length} - \`${CLI} cut ${result.target.id}\` lists them.`);
+  if (
+    !cut.blockedByProtected &&
+    !cut.hasUncuttableSink &&
+    cut.flow > 0 &&
+    cut.flow < result.cutEdges.length
+  ) {
+    console.log(
+      `\nmin cut: ${cut.flow} edge(s) instead of ${result.cutEdges.length} - \`${CLI} cut ${result.target.id}\` lists them.`,
+    );
   }
-  console.log(`\nnext: make those importer(s) load it with a dynamic import(), rebuild, run the app's functional check, then \`${CLI} scan\` to confirm the LCP effect.`);
+  console.log(
+    `\nnext: make those importer(s) load it with a dynamic import(), rebuild, run the app's functional check, then \`${CLI} scan\` to confirm the LCP effect.`,
+  );
 }
 
 // Every static import edge into a `--keep` sentry is protected: the min cut must not
@@ -1538,24 +1985,35 @@ function printCombinedWhatIf(graph, targets, keep) {
   const summed = targets.reduce((sum, t) => sum + whatIf(graph, t, keep).removedBytes, 0);
   const ids = targets.map((t) => graph.modules[t].id);
   console.log(`what-if deferred (combined): ${ids.join(', ')}`);
-  console.log(`removes ${kb(combined.removedBytes)} / ${combined.removedCount} module(s) from the initial load`
-    + `${keepRoots.length ? ` (keeping ${keepRoots.length} sentry module(s) eager)` : ''}:`);
+  console.log(
+    `removes ${kb(combined.removedBytes)} / ${combined.removedCount} module(s) from the initial load` +
+      `${keepRoots.length ? ` (keeping ${keepRoots.length} sentry module(s) eager)` : ''}:`,
+  );
   const shown = combined.removed.slice(0, 20);
   for (const mod of shown) console.log(`  ${kb(mod.bytes).padStart(10)}  ${mod.id}`);
-  if (combined.removed.length > shown.length) console.log(`  ... +${combined.removed.length - shown.length} more`);
+  if (combined.removed.length > shown.length)
+    console.log(`  ... +${combined.removed.length - shown.length} more`);
   const delta = combined.removedBytes - summed;
   const together = targets.length === 2 ? 'both' : 'all';
   if (delta > 0) {
-    console.log(`\ncombined ${kb(combined.removedBytes)} vs ${kb(summed)} summed individually`
-      + ` - ${kb(delta)} of shared internals count only when ${together} are deferred.`);
+    console.log(
+      `\ncombined ${kb(combined.removedBytes)} vs ${kb(summed)} summed individually` +
+        ` - ${kb(delta)} of shared internals count only when ${together} are deferred.`,
+    );
   } else if (delta < 0) {
-    console.log(`\ncombined ${kb(combined.removedBytes)} vs ${kb(summed)} summed individually`
-      + ' - the targets\' retained sets overlap, so the group frees less than the naive sum.');
+    console.log(
+      `\ncombined ${kb(combined.removedBytes)} vs ${kb(summed)} summed individually` +
+        " - the targets' retained sets overlap, so the group frees less than the naive sum.",
+    );
   } else {
-    console.log(`\ncombined ${kb(combined.removedBytes)} vs ${kb(summed)} summed individually`
-      + ' - no shared internals; the targets are independent, so the combined free equals the sum.');
+    console.log(
+      `\ncombined ${kb(combined.removedBytes)} vs ${kb(summed)} summed individually` +
+        ' - no shared internals; the targets are independent, so the combined free equals the sum.',
+    );
   }
-  console.log(`\nnext: make each importer load its target with a dynamic import(), rebuild, run the app's functional check, then \`${CLI} scan\` to confirm the LCP effect.`);
+  console.log(
+    `\nnext: make each importer load its target with a dynamic import(), rebuild, run the app's functional check, then \`${CLI} scan\` to confirm the LCP effect.`,
+  );
 }
 
 async function cmdCut(argv) {
@@ -1569,9 +2027,12 @@ async function cmdCut(argv) {
   const graph = requireModuleGraph(opts);
   const resolve = (q) => {
     const hit = resolveModule(graph, q);
-    if (!hit) throw new Error(`no module matches '${q}' (ids are project-relative, e.g. src/router.ts)`);
+    if (!hit)
+      throw new Error(`no module matches '${q}' (ids are project-relative, e.g. src/router.ts)`);
     if (hit.ambiguous) {
-      throw new Error(`'${q}' is ambiguous:\n  ${hit.ambiguous.join('\n  ')}\nuse a longer suffix.`);
+      throw new Error(
+        `'${q}' is ambiguous:\n  ${hit.ambiguous.join('\n  ')}\nuse a longer suffix.`,
+      );
     }
     return hit.index;
   };
@@ -1583,20 +2044,26 @@ async function cmdCut(argv) {
   // has nothing to cut.
   if (mod.staticReachable === false) {
     console.log(`min cut for ${mod.id}`);
-    console.log(mod.dynamicOnly === true
-      ? 'already lazy: every path to this module crosses a dynamic import - nothing to cut.'
-      : 'not reachable from the entries at all in this build - nothing to cut.');
+    console.log(
+      mod.dynamicOnly === true
+        ? 'already lazy: every path to this module crosses a dynamic import - nothing to cut.'
+        : 'not reachable from the entries at all in this build - nothing to cut.',
+    );
     return;
   }
   const cut = minCut(graph, target, keepProtectedEdges(graph, keep));
   if (cut.hasUncuttableSink) {
     console.log(`min cut for ${mod.id}`);
-    console.log('this module is an entry - it cannot be detached by cutting imports (you would delete the module itself).');
+    console.log(
+      'this module is an entry - it cannot be detached by cutting imports (you would delete the module itself).',
+    );
     return;
   }
   if (cut.blockedByProtected) {
     console.log(`min cut for ${mod.id}`);
-    console.log('every path to it runs through a --keep-protected import - no cut avoids them. Relax --keep to cut it.');
+    console.log(
+      'every path to it runs through a --keep-protected import - no cut avoids them. Relax --keep to cut it.',
+    );
     return;
   }
   if (cut.flow === 0 || !cut.cutEdges.length) {
@@ -1605,29 +2072,44 @@ async function cmdCut(argv) {
     return;
   }
   const naive = whatIf(graph, target, keep).cutEdges.length;
-  const priced = evalOverrides(graph, cut.cutEdges.map((e) => ({ ...e, kind: 'defer' })));
-  console.log(`min cut for ${mod.id} - ${cut.flow} import edge(s) to make dynamic (naive what-if would touch ${naive}):`);
+  const priced = evalOverrides(
+    graph,
+    cut.cutEdges.map((e) => ({ ...e, kind: 'defer' })),
+  );
+  console.log(
+    `min cut for ${mod.id} - ${cut.flow} import edge(s) to make dynamic (naive what-if would touch ${naive}):`,
+  );
   for (const e of cut.cutEdges) {
     console.log(`  ${graph.modules[e.from].id}  ->  ${graph.modules[e.to].id}`);
   }
-  console.log(`make each import dynamic (import()) -> frees ${kb(priced.removedBytes)} / ${priced.removedCount} module(s) from the initial load`
-    + `${keep.length ? ` (keeping ${keep.length} sentry module(s) eager)` : ''}.`);
-  console.log(`\nnext: open those file(s), change the static import to a dynamic import(), rebuild, run the app's functional check, then \`${CLI} scan\` to confirm the LCP effect.`);
+  console.log(
+    `make each import dynamic (import()) -> frees ${kb(priced.removedBytes)} / ${priced.removedCount} module(s) from the initial load` +
+      `${keep.length ? ` (keeping ${keep.length} sentry module(s) eager)` : ''}.`,
+  );
+  console.log(
+    `\nnext: open those file(s), change the static import to a dynamic import(), rebuild, run the app's functional check, then \`${CLI} scan\` to confirm the LCP effect.`,
+  );
 }
 
 async function cmdGraphDiff(argv) {
-  const opts = parse(argv, { ...TARGET_OPTS, report: { type: 'string' }, against: { type: 'string' } });
+  const opts = parse(argv, {
+    ...TARGET_OPTS,
+    report: { type: 'string' },
+    against: { type: 'string' },
+  });
   const target = resolveTarget(opts);
-  const current = loadModuleGraph(moduleGraphCandidates({
-    reportDir: opts.report,
-    demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : null,
-    dist: target.dist,
-  }));
+  const current = loadModuleGraph(
+    moduleGraphCandidates({
+      reportDir: opts.report,
+      demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : null,
+      dist: target.dist,
+    }),
+  );
   if (!current) {
     throw new Error(
-      'no current module-graph.json found - it is written by rolldown devtools metrics builds.\n'
-      + 'vite >= 8: add `build.rolldownOptions.devtools = { mode: "metrics" }` to the vite config,\n'
-      + 'rebuild, then re-run. Or point at an existing report with --report <dir>.',
+      'no current module-graph.json found - it is written by rolldown devtools metrics builds.\n' +
+        'vite >= 8: add `build.rolldownOptions.devtools = { mode: "metrics" }` to the vite config,\n' +
+        'rebuild, then re-run. Or point at an existing report with --report <dir>.',
     );
   }
   // Default: compare against the pinned baseline snapshot; --against compares vs any saved
@@ -1636,12 +2118,16 @@ async function cmdGraphDiff(argv) {
     ? loadModuleGraph(moduleGraphCandidates({ reportDir: opts.against }))
     : loadModuleGraph([target.paths.baselineModuleGraph]);
   if (!baseline) {
-    console.log(opts.against
-      ? `no module graph found at --against ${opts.against}`
-      : `no pinned baseline module graph yet - pin one with \`${CLI} scan --pin\` or \`${CLI} baseline\`, or pass --against <file>.`);
+    console.log(
+      opts.against
+        ? `no module graph found at --against ${opts.against}`
+        : `no pinned baseline module graph yet - pin one with \`${CLI} scan --pin\` or \`${CLI} baseline\`, or pass --against <file>.`,
+    );
     return;
   }
-  console.log(`graph-diff: ${opts.against ? 'against' : 'pinned baseline'} ${baseline.file}\n         -> current ${current.file}\n`);
+  console.log(
+    `graph-diff: ${opts.against ? 'against' : 'pinned baseline'} ${baseline.file}\n         -> current ${current.file}\n`,
+  );
   printGraphDiff(diffGraphs(baseline, current));
 }
 
@@ -1651,7 +2137,10 @@ async function cmdBaseline(argv) {
 }
 
 async function cmdTarget(argv) {
-  const opts = parse(argv, { demo: { type: 'boolean', default: false }, 'net-scale': { type: 'string' } });
+  const opts = parse(argv, {
+    demo: { type: 'boolean', default: false },
+    'net-scale': { type: 'string' },
+  });
   const positional = argv.filter((a) => !a.startsWith('--') && a !== opts['net-scale']);
   if (opts.demo) {
     fs.rmSync(TARGET_FILE, { force: true });
@@ -1664,7 +2153,11 @@ async function cmdTarget(argv) {
     console.log(`target: ${dist}`);
   } else {
     const sticky = readJson(TARGET_FILE);
-    console.log(sticky?.dist ? `target: ${sticky.dist}` : 'no target set - commands default to the demo app (set one: node harness.mjs target <appDir>)');
+    console.log(
+      sticky?.dist
+        ? `target: ${sticky.dist}`
+        : 'no target set - commands default to the demo app (set one: node harness.mjs target <appDir>)',
+    );
     if (!sticky?.dist && !opts['net-scale']) return;
   }
   // Pin the net-scale without a probe run - the operator (or eval prep) declares
@@ -1672,18 +2165,30 @@ async function cmdTarget(argv) {
   if (opts['net-scale'] != null) {
     const netScale = Number(opts['net-scale']);
     if (!CALIBRATE_LADDER.includes(netScale)) {
-      throw new Error(`--net-scale must be one of ${CALIBRATE_LADDER.join('/')} (named, reproducible steps only)`);
+      throw new Error(
+        `--net-scale must be one of ${CALIBRATE_LADDER.join('/')} (named, reproducible steps only)`,
+      );
     }
     const target = resolveTarget({});
     const existing = readJson(target.paths.throttleProfile);
-    writeJson(target.paths.throttleProfile, { schemaVersion: 1, netScale, source: 'target-cmd', pinnedAtMs: Date.now() });
-    console.log(`throttle profile pinned: net x${netScale}${existing && existing.netScale !== netScale ? ` (was x${existing.netScale} - any pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`);
+    writeJson(target.paths.throttleProfile, {
+      schemaVersion: 1,
+      netScale,
+      source: 'target-cmd',
+      pinnedAtMs: Date.now(),
+    });
+    console.log(
+      `throttle profile pinned: net x${netScale}${existing && existing.netScale !== netScale ? ` (was x${existing.netScale} - any pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
+    );
   }
 }
 
 async function cmdDefer(argv, mode) {
   const feature = argv[0];
-  if (!feature) throw new Error(`usage: node harness.mjs ${mode === 'deferred' ? 'defer' : 'undefer'} <${FEATURE_NAMES.join('|')}>`);
+  if (!feature)
+    throw new Error(
+      `usage: node harness.mjs ${mode === 'deferred' ? 'defer' : 'undefer'} <${FEATURE_NAMES.join('|')}>`,
+    );
   const result = setFeatureMode(APP_DIR, feature, mode);
   console.log(`${feature}: ${mode}${result.changed ? '' : ' (already)'}`);
   if (result.changed) console.log('rebuild before measuring: node harness.mjs build');
@@ -1694,15 +2199,24 @@ async function cmdStatus() {
   console.log(sticky?.dist ? `target: ${sticky.dist}` : 'target: (none - demo app)');
   const target = resolveTarget({});
   const entryName = detectEntry(target.dist);
-  console.log(`entry chunk: ${entryName && fs.existsSync(path.join(target.dist, entryName))
-    ? `${entryName} ${kb(fs.statSync(path.join(target.dist, entryName)).size)}`
-    : '(not built)'}`);
+  console.log(
+    `entry chunk: ${
+      entryName && fs.existsSync(path.join(target.dist, entryName))
+        ? `${entryName} ${kb(fs.statSync(path.join(target.dist, entryName)).size)}`
+        : '(not built)'
+    }`,
+  );
   const last = readJson(target.paths.runtimeState);
-  if (last) console.log(`last measure: ${last.label ?? '(unlabeled)'} LCP ${ms(last.metrics['runtime.lcp_ms'])}`);
+  if (last)
+    console.log(
+      `last measure: ${last.label ?? '(unlabeled)'} LCP ${ms(last.metrics['runtime.lcp_ms'])}`,
+    );
   const baseline = readJson(target.paths.runtimeBaseline);
-  console.log(baseline
-    ? `pinned baseline: ${baseline.label ?? '(unlabeled)'} LCP ${ms(baseline.metrics['runtime.lcp_ms'])}`
-    : 'pinned baseline: none');
+  console.log(
+    baseline
+      ? `pinned baseline: ${baseline.label ?? '(unlabeled)'} LCP ${ms(baseline.metrics['runtime.lcp_ms'])}`
+      : 'pinned baseline: none',
+  );
   if (target.isDemo) {
     const modes = featureModes(APP_DIR);
     if (modes) {

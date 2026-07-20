@@ -59,6 +59,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "arc-swap"
+version = "1.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c049c0be4daef0b145cb3555416b3b8ef5b7888a38aea1a3a155801fe7b0810b"
+dependencies = [
+ "rustversion",
+]
+
+[[package]]
 name = "arcstr"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -367,7 +376,7 @@ version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -620,7 +629,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1304,7 +1313,7 @@ dependencies = [
 [[package]]
 name = "napi"
 version = "3.10.5"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=b228ba8c8bef6c465622885ee018b3db6d3fa53f#b228ba8c8bef6c465622885ee018b3db6d3fa53f"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1325,9 +1334,11 @@ dependencies = [
 [[package]]
 name = "napi-async-runtime"
 version = "0.1.0"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=b228ba8c8bef6c465622885ee018b3db6d3fa53f#b228ba8c8bef6c465622885ee018b3db6d3fa53f"
 dependencies = [
+ "arc-swap",
  "async-task",
+ "crossbeam-deque",
  "futures",
  "rayon",
  "rustc-hash",
@@ -1336,12 +1347,12 @@ dependencies = [
 [[package]]
 name = "napi-build"
 version = "2.3.2"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=b228ba8c8bef6c465622885ee018b3db6d3fa53f#b228ba8c8bef6c465622885ee018b3db6d3fa53f"
 
 [[package]]
 name = "napi-derive"
 version = "3.5.10"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=b228ba8c8bef6c465622885ee018b3db6d3fa53f#b228ba8c8bef6c465622885ee018b3db6d3fa53f"
 dependencies = [
  "convert_case",
  "ctor",
@@ -1354,7 +1365,7 @@ dependencies = [
 [[package]]
 name = "napi-derive-backend"
 version = "5.1.2"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=b228ba8c8bef6c465622885ee018b3db6d3fa53f#b228ba8c8bef6c465622885ee018b3db6d3fa53f"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -1366,7 +1377,7 @@ dependencies = [
 [[package]]
 name = "napi-sys"
 version = "3.2.3"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=b228ba8c8bef6c465622885ee018b3db6d3fa53f#b228ba8c8bef6c465622885ee018b3db6d3fa53f"
 dependencies = [
  "libloading",
 ]
@@ -1425,7 +1436,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3343,7 +3354,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3641,7 +3652,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3660,7 +3671,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4064,7 +4075,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

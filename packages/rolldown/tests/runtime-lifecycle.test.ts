@@ -14,28 +14,19 @@ const binding = vi.hoisted(() => {
   };
   return {
     acquireAsyncRuntime: vi.fn(),
-    capabilities: nativeSharedCapabilities as Record<string, unknown> | undefined,
-    loadedTarget: undefined as string | undefined,
+    capabilities: nativeSharedCapabilities as Record<string, unknown>,
     nativeSharedCapabilities,
     shutdownAsyncRuntime: vi.fn(),
     startAsyncRuntime: vi.fn(),
   };
 });
 
-vi.mock('../src/binding.cjs', () => {
-  const exports: Record<string, unknown> = {
-    acquireAsyncRuntime: binding.acquireAsyncRuntime,
-    shutdownAsyncRuntime: binding.shutdownAsyncRuntime,
-    startAsyncRuntime: binding.startAsyncRuntime,
-  };
-  if (binding.capabilities) {
-    exports.getRuntimeCapabilities = () => binding.capabilities;
-  }
-  if (binding.loadedTarget) {
-    exports.__rolldownBindingTarget = binding.loadedTarget;
-  }
-  return exports;
-});
+vi.mock('../src/binding.cjs', () => ({
+  acquireAsyncRuntime: binding.acquireAsyncRuntime,
+  getRuntimeCapabilities: () => binding.capabilities,
+  shutdownAsyncRuntime: binding.shutdownAsyncRuntime,
+  startAsyncRuntime: binding.startAsyncRuntime,
+}));
 
 // @ts-ignore These focused unit tests intentionally reach package source outside the test rootDir.
 import { acquireRuntimeLease, isRuntimeLeaseRequired } from '../src/runtime-lifecycle';
@@ -84,24 +75,27 @@ test('shared threaded-WASI bindings skip the lease round-trip entirely', async (
 
 test('legacy threaded-WASI bindings still lease through acquireAsyncRuntime', async () => {
   vi.resetModules();
-  // No capability reporter: the compat shim synthesizes the legacy
-  // tokio-backed threaded-WASI report from the generated loader target.
-  binding.capabilities = undefined;
-  binding.loadedTarget = 'wasi-threads';
+  // No capability reporter export at all: the compat shim synthesizes the
+  // legacy tokio-backed threaded-WASI report from the generated loader
+  // target. The hoisted vi.mock factory result is cached across
+  // vi.resetModules, so omitting a key needs a per-test vi.doMock.
+  const legacyAcquire = vi.fn();
   const release = vi.fn();
-  binding.acquireAsyncRuntime.mockResolvedValueOnce({ release });
+  legacyAcquire.mockResolvedValueOnce({ release });
+  vi.doMock('../src/binding.cjs', () => ({
+    __rolldownBindingTarget: 'wasi-threads',
+    acquireAsyncRuntime: legacyAcquire,
+  }));
   try {
     const lifecycle = await import('../src/runtime-lifecycle');
     expect(lifecycle.isRuntimeLeaseRequired()).toBe(true);
 
     const lease = await lifecycle.acquireRuntimeLease();
-    expect(binding.acquireAsyncRuntime).toHaveBeenCalledOnce();
+    expect(legacyAcquire).toHaveBeenCalledOnce();
     lease.release();
     expect(release).toHaveBeenCalledOnce();
   } finally {
-    binding.capabilities = binding.nativeSharedCapabilities;
-    binding.loadedTarget = undefined;
-    binding.acquireAsyncRuntime.mockReset();
+    vi.doUnmock('../src/binding.cjs');
     Reflect.deleteProperty(globalThis, LEASE_MANAGER_REGISTRY_KEY);
     vi.resetModules();
   }

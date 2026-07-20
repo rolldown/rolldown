@@ -2,7 +2,7 @@
 
 ## Summary
 
-Rolldown's optional async runtime uses one scheduling domain for async task
+Rolldown's async runtime uses one scheduling domain for async task
 polling, CPU parallelism, and bounded blocking filesystem work. Heavy
 post-build destruction uses a separate serial maintenance worker so a rebuild
 can never wait on a drop queued behind itself in the shared pool. The runtime
@@ -10,16 +10,18 @@ supports a cooperative current-thread flavor for hosts without threads and a
 work-stealing multi-thread flavor for native builds. Shutdown is
 generation-quiescent: accepted work is cancelled or completed, scheduler roles
 exit, and physical workers retire before a restart may create the next pool.
-The existing Tokio runtime remains the default and is selected by the
-`tokio-runtime` feature; the new implementation is selected by
-`async-runtime`.
+This scheduler is the only runtime in the shipped binding: Tokio has been
+removed from every production dependency graph, and every artifact — native
+and WebAssembly — compiles the shared runtime unconditionally.
 
 ## Design Principles
 
 1. **Thread availability is a build/runtime property, not an assumption.**
-   `wasm32-wasip1` uses the current-thread flavor and must not import shared
-   memory, construct workers, park with `Atomics.wait`, or call
-   `std::thread::spawn`. Native builds default to the multi-thread flavor.
+   WebAssembly builds use the current-thread flavor — the shared scheduler has
+   no WebAssembly multi-thread executor — and threadless `wasm32-wasip1` must
+   not import shared memory, construct workers, park with `Atomics.wait`, or
+   call `std::thread::spawn`. Native builds default to the multi-thread
+   flavor.
 
 2. **CPU and async work share a pool.** Module-task futures run on the same
    Rayon pool used by link and generate stages. Nested Rayon work therefore
@@ -124,15 +126,14 @@ The existing Tokio runtime remains the default and is selected by the
    mutex, so concurrent calls serialize against the latest committed options
    instead of overwriting disjoint fields from stale snapshots. A rejected
    candidate leaves the prior configuration unchanged.
-   Native `ROLLDOWN_*` worker counts clamp to 256 and native Tokio blocking
-   counts clamp to 512 before runtime construction. Explicit JavaScript options
-   above 256 reject atomically. The native Tokio builder also checks the
-   combined worker/blocking capacity before entering Tokio's internal addition.
-   Every native shared-runtime package entry installs both CurrentThread host
+   Native `ROLLDOWN_*` worker counts clamp to 256 before runtime
+   construction. Explicit JavaScript options
+   above 256 reject atomically.
+   Every native package entry installs both CurrentThread host
    bridges before that window can be used. Host installation is independent of
    the import-time flavor, so a legal synchronous `MultiThread -> CurrentThread`
    update cannot leave a module-cached environment without runnable or timer
-   delivery. Tokio builds skip those bridges.
+   delivery.
 
 7. **Lifecycle transitions linearize with submission and generations do not
    overlap.** Backend acquisition, explicit start, and shutdown share one
@@ -326,10 +327,10 @@ The existing Tokio runtime remains the default and is selected by the
    Generation quiescence does not prove that every externally cloned task
    waker has been dropped: its wake, clone, and drop vtable can remain callable
    after the task future and all runtime-owned workers retire. Native
-   async-runtime builds therefore deliberately retain the addon image. After a
+   builds therefore deliberately retain the addon image. After a
    module that registered a custom backend exports successfully, napi-rs pins
-   its native image permanently. This guarantee is independent of Tokio being
-   enabled and independent of runtime-generation cleanup. Failures before any
+   its native image permanently. This guarantee is independent of
+   runtime-generation cleanup. Failures before any
    native callback or handle can escape roll back without retention; failures
    after exports or environment support may have exposed native values retain
    the image conservatively.
@@ -377,13 +378,16 @@ The existing Tokio runtime remains the default and is selected by the
    synchronously submit diagnostic, cleanup, owner-release, or lifecycle work.
    The default detector-disabled runtime retains only predictable option
    branches and performs no admission atomics or publication locking.
-   Threaded-WASI JavaScript ownership follows the same rule across host realms:
-   every public async operation receives a native RAII token, and a restart
-   waits off the JavaScript thread for the previous Tokio generation to retire.
-   No realm-local "first owner" may stand in for process-global ownership.
-   Bindings from the preceding implicit-owner protocol fail closed instead of
-   attempting to coordinate that single owner through realm-local JavaScript
-   state.
+   Threaded-WASI artifacts run the same shared CurrentThread runtime and need
+   no cross-realm JavaScript ownership protocol; the lifecycle exports remain
+   as no-ops for loader compatibility. Only legacy Tokio-era threaded-WASI
+   artifacts — recognized through the package's compatibility shim, which
+   synthesizes `backend: 'tokio'` for bindings without a capability report —
+   still hold their runtime alive through explicit reference-counted
+   JavaScript leases, and a restart there waits off the JavaScript thread for
+   the previous generation to retire. Legacy bindings from the still-earlier
+   implicit-owner protocol fail closed instead of attempting to coordinate a
+   single owner through realm-local JavaScript state.
    JavaScript close single-flight state is published before invoking cleanup,
    so synchronous re-entry joins the original lifecycle attempt rather than
    creating a second owner-release or native-close sequence.
@@ -428,12 +432,15 @@ The existing Tokio runtime remains the default and is selected by the
    panic, shutdown cancellation, or rejected submission becomes exactly one
    build diagnostic and completion accounting cannot hang.
 
-9. **The supported compatibility path does not change.** Native and
-   `wasm32-wasip1-threads` builds without `async-runtime` retain napi-rs's
-   Tokio executor and Rolldown's previous behavior. Threadless
-   `wasm32-wasip1` rejects the Tokio-only feature combination at compile time:
-   napi-rs can construct a current-thread runtime there but rejects every
-   built-in async submission, so such an artifact cannot run Rolldown.
+9. **There is no Tokio build.** The former `tokio-runtime`/`async-runtime`
+   feature pair is gone: every target compiles the shared runtime
+   unconditionally, and the `just check-no-tokio` gate proves with
+   `cargo tree -i tokio` that the shipped binding's dependency graph — native
+   plus both WASI targets — and the CodSpeed bench harness stay tokio-free.
+   `wasm32-wasip1-threads` runs the current-thread flavor; napi-rs async work
+   there is served by the host loader's emnapi worker pool, not by a runtime
+   Rolldown owns. Threadless `wasm32-wasip1` runs the same flavor with no
+   workers at all.
 
 ## Background
 
@@ -471,10 +478,13 @@ Tokio, Tokio-blocking, Rayon, and ad-hoc thread-pool tuning problems.
   inherited `ROLLDOWN_RUNTIME=multi` override to `CurrentThread` before module
   initialization because the shared scheduler has no WebAssembly MultiThread
   executor.
-- Threaded-WASI public objects own independent native runtime leases. Concurrent
-  acquisitions retain separate owners, only the final release shuts down the
-  runtime, and restart waits for the previous generation to retire. Closing one
-  build cannot stop another live build, and every lease releases at most once.
+- Legacy Tokio-era threaded-WASI artifacts own independent native runtime
+  leases: concurrent acquisitions retain separate owners, only the final
+  release shuts down the runtime, and restart waits for the previous
+  generation to retire, so closing one build cannot stop another live build
+  and every lease releases at most once. Current shared-runtime bindings
+  expose that lease surface as no-ops; the JavaScript package arms real
+  leases only for the legacy artifacts.
 - The canonical workerd entry is `@rolldown/browser/workerd`. Release staging
   also routes `rolldown/workerd` and the threadless optional package's
   `./workerd` facade through the same managed factory. They create independent

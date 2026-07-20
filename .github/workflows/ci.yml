@@ -83,13 +83,6 @@ jobs:
 
       - run: just lint-rust
 
-      # The workspace-wide clippy in `just lint-rust` runs with default features.
-      # Lint the shared-runtime profile explicitly (`--no-default-features` pins it
-      # even if the default feature set drifts), including its test targets, so
-      # cfg-gated regressions cannot land silently.
-      - name: Clippy (async-runtime feature)
-        run: cargo clippy -p rolldown_utils -p rolldown_binding --no-default-features --features async-runtime --all-targets -- --deny warnings
-
       - name: Check allocations
         run: |
           cargo allocs
@@ -198,10 +191,16 @@ jobs:
       # timeouts can never fire, but the runtime now panics with a typed
       # BlockOnDeadlock diagnostic instead of hanging — a regression fails
       # fast rather than eating the runner until the job timeout above.
-      # The watcher suite runs on both flavors since the runtime timer
-      # facility replaced tokio's reactor for the watch-mode debounce timer.
+      # The watcher suite runs on both flavors since the runtime's own timer
+      # facility drives the watch-mode debounce timer.
       - name: Scheduler unit tests + node & watcher suites (single- and multi-thread flavors)
         run: just test-async-runtime
+
+      # The default build IS the shared runtime on every target; prove the
+      # shipped binding graphs (native + both WASI targets) and the CodSpeed
+      # bench harness stay tokio-free.
+      - name: Prove the production graphs are tokio-free
+        run: just check-no-tokio
 
   native-async-runtime-check:
     name: Native Async Runtime Lifecycle (${{ matrix.os }})
@@ -419,12 +418,11 @@ jobs:
       - name: Build @rolldown/browser
         run: just build-browser
 
-      # `just build-browser` compiles the threaded-WASI binding with the
-      # `tokio-runtime` profile, which regenerates binding.cjs/binding.d.cts
-      # with that feature surface. The committed copies come from the default
-      # async-runtime native build, so restore them; otherwise the
-      # `git diff --exit-code` below fails on expected regeneration instead of
-      # guarding real codegen drift.
+      # `just build-browser` compiles the threaded-WASI binding, and the napi
+      # CLI regenerates binding.cjs/binding.d.cts with the WASI flavor of the
+      # loader surface. The committed copies come from the default native
+      # build, so restore them; otherwise the `git diff --exit-code` below
+      # fails on expected regeneration instead of guarding real codegen drift.
       - name: Restore the native binding loader clobbered by the WASI browser build
         run: git checkout -- packages/rolldown/src/binding.cjs packages/rolldown/src/binding.d.cts
 

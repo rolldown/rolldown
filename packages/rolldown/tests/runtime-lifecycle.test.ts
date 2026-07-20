@@ -1,8 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 
-const binding = vi.hoisted(() => ({
-  acquireAsyncRuntime: vi.fn(),
-  getRuntimeCapabilities: () => ({
+const binding = vi.hoisted(() => {
+  const nativeSharedCapabilities: Record<string, unknown> = {
     asyncRuntimeBuild: true,
     backend: 'shared',
     blockOnJsThreadSafe: false,
@@ -12,27 +11,100 @@ const binding = vi.hoisted(() => ({
     timers: true,
     wasi: false,
     watchSupported: true,
-  }),
-  shutdownAsyncRuntime: vi.fn(),
-  startAsyncRuntime: vi.fn(),
-}));
+  };
+  return {
+    acquireAsyncRuntime: vi.fn(),
+    capabilities: nativeSharedCapabilities as Record<string, unknown> | undefined,
+    loadedTarget: undefined as string | undefined,
+    nativeSharedCapabilities,
+    shutdownAsyncRuntime: vi.fn(),
+    startAsyncRuntime: vi.fn(),
+  };
+});
 
-vi.mock('../src/binding.cjs', () => binding);
+vi.mock('../src/binding.cjs', () => {
+  const exports: Record<string, unknown> = {
+    acquireAsyncRuntime: binding.acquireAsyncRuntime,
+    shutdownAsyncRuntime: binding.shutdownAsyncRuntime,
+    startAsyncRuntime: binding.startAsyncRuntime,
+  };
+  if (binding.capabilities) {
+    exports.getRuntimeCapabilities = () => binding.capabilities;
+  }
+  if (binding.loadedTarget) {
+    exports.__rolldownBindingTarget = binding.loadedTarget;
+  }
+  return exports;
+});
 
 // @ts-ignore These focused unit tests intentionally reach package source outside the test rootDir.
-import { acquireRuntimeLease } from '../src/runtime-lifecycle';
+import { acquireRuntimeLease, isRuntimeLeaseRequired } from '../src/runtime-lifecycle';
 // @ts-ignore These focused unit tests intentionally reach package source outside the test rootDir.
 import * as runtimeLease from '../src/runtime-lease-manager';
 
 const { getOrCreateWasiRuntimeLeaseManager, WasiRuntimeLeaseManager } = runtimeLease;
+const LEASE_MANAGER_REGISTRY_KEY = Symbol.for('@rolldown/runtime-lease-managers/v1');
 
 test('the native lease fallback never calls legacy manual lifecycle exports', async () => {
+  expect(isRuntimeLeaseRequired()).toBe(false);
   const lease = await acquireRuntimeLease();
 
   expect(() => lease.release()).not.toThrow();
   expect(binding.acquireAsyncRuntime).not.toHaveBeenCalled();
   expect(binding.startAsyncRuntime).not.toHaveBeenCalled();
   expect(binding.shutdownAsyncRuntime).not.toHaveBeenCalled();
+});
+
+test('shared threaded-WASI bindings skip the lease round-trip entirely', async () => {
+  vi.resetModules();
+  binding.capabilities = {
+    asyncRuntimeBuild: true,
+    backend: 'shared',
+    blockOnJsThreadSafe: false,
+    devSupported: false,
+    flavor: 'CurrentThread',
+    target: 'wasi-threads',
+    threads: false,
+    timers: true,
+    wasi: true,
+    watchSupported: false,
+  };
+  try {
+    const lifecycle = await import('../src/runtime-lifecycle');
+    expect(lifecycle.isRuntimeLeaseRequired()).toBe(false);
+
+    const lease = await lifecycle.acquireRuntimeLease();
+    expect(() => lease.release()).not.toThrow();
+    expect(binding.acquireAsyncRuntime).not.toHaveBeenCalled();
+  } finally {
+    binding.capabilities = binding.nativeSharedCapabilities;
+    vi.resetModules();
+  }
+});
+
+test('legacy threaded-WASI bindings still lease through acquireAsyncRuntime', async () => {
+  vi.resetModules();
+  // No capability reporter: the compat shim synthesizes the legacy
+  // tokio-backed threaded-WASI report from the generated loader target.
+  binding.capabilities = undefined;
+  binding.loadedTarget = 'wasi-threads';
+  const release = vi.fn();
+  binding.acquireAsyncRuntime.mockResolvedValueOnce({ release });
+  try {
+    const lifecycle = await import('../src/runtime-lifecycle');
+    expect(lifecycle.isRuntimeLeaseRequired()).toBe(true);
+
+    const lease = await lifecycle.acquireRuntimeLease();
+    expect(binding.acquireAsyncRuntime).toHaveBeenCalledOnce();
+    lease.release();
+    expect(release).toHaveBeenCalledOnce();
+  } finally {
+    binding.capabilities = binding.nativeSharedCapabilities;
+    binding.loadedTarget = undefined;
+    binding.acquireAsyncRuntime.mockReset();
+    Reflect.deleteProperty(globalThis, LEASE_MANAGER_REGISTRY_KEY);
+    vi.resetModules();
+  }
 });
 
 describe('WasiRuntimeLeaseManager', () => {

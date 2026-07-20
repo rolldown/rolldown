@@ -89,20 +89,23 @@ try {
 interface WasiDeclarationBuildOptions {
   target?: string;
   features?: readonly string[];
-  noDefaultFeatures?: boolean;
 }
 
+// The test-only runtime probe features add `__rolldownTest*` exports to the
+// generated declaration surface. The default build IS the shared runtime, so
+// these features are the only remaining native flag that changes the surface.
+const RUNTIME_TEST_FEATURES = ['runtime-waker-teardown-test', 'runtime-submission-failure-test'];
+
 /**
- * Whether this build regenerates `binding.d.cts` with the dedicated
- * async-runtime surface (`--no-default-features --features async-runtime`,
- * optionally with the test-only runtime features stacked on top).
+ * Whether this build regenerates `binding.d.cts` with the test-only runtime
+ * probe surface (`--features runtime-waker-teardown-test` /
+ * `runtime-submission-failure-test` on top of the default shared runtime).
  */
 function isAsyncRuntimeDeclarationBuild(options: WasiDeclarationBuildOptions): boolean {
   if (options.target === WASI_THREADS_TARGET) return false;
   return (
-    options.noDefaultFeatures === true &&
     options.features?.some((features) =>
-      features.split(',').some((feature) => feature.trim() === 'async-runtime'),
+      features.split(',').some((feature) => RUNTIME_TEST_FEATURES.includes(feature.trim())),
     ) === true
   );
 }

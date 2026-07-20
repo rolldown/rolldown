@@ -249,10 +249,11 @@ function createAggregateError(
   return fallback;
 }
 
-// Host integration for the `--features async-runtime` binding. CurrentThread
-// runnable wakes enter through a fresh host turn instead of polling inline from
-// an arbitrary Rust Waker call; timers delegate to setTimeout. Both are no-ops
-// on the default tokio build.
+// Host integration for the shared-runtime binding (every current build).
+// CurrentThread runnable wakes enter through a fresh host turn instead of
+// polling inline from an arbitrary Rust Waker call; timers delegate to
+// setTimeout. Both are no-ops for legacy tokio-backed bindings, which the
+// compat shim reports with `asyncRuntimeBuild: false`.
 //
 // This lives in its own side-effect module because every public entry that
 // loads the binding needs it (library entry via `setup.ts`, the CLI, and the

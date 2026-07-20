@@ -18,8 +18,8 @@ import {
 } from 'rolldown/experimental';
 import { describe, expect, test } from 'vitest';
 
-// This spec runs against whatever binding the worktree built (default tokio,
-// async-runtime native in either flavor, or a WASI artifact) and asserts the
+// This spec runs against whatever binding the worktree built (native in
+// either shared-runtime flavor, or a WASI artifact) and asserts the
 // capability report is internally coherent and matches the artifact. The
 // per-lane correctness of the individual flags is additionally pinned by the
 // suites themselves: every `isWasiTest` / `isSingleThread` skip predicate in
@@ -27,45 +27,6 @@ import { describe, expect, test } from 'vitest';
 // capability shifts the lane's pass/skip counts immediately.
 
 const testsDir = fileURLToPath(new URL('.', import.meta.url));
-const retainedTokioFactoryWorker = `
-  (async () => {
-    const { parentPort } = await import('node:worker_threads');
-    try {
-      const input = 'virtual:retained-tokio-factory-worker';
-      const { build } = await import('rolldown');
-      const { getAsyncRuntimeConfig } = await import('rolldown/experimental');
-      await build({
-        input,
-        plugins: [{
-          name: 'retained-tokio-factory-worker',
-          resolveId(id) {
-            if (id === input) return id;
-          },
-          load(id) {
-            if (id === input) return 'export const loaded = true;';
-          },
-        }],
-        write: false,
-      });
-      parentPort.postMessage({
-        type: 'loaded',
-        config: getAsyncRuntimeConfig(),
-      });
-      await new Promise((resolve) => parentPort.once('message', resolve));
-      parentPort.close();
-    } catch (error) {
-      parentPort.postMessage({
-        type: 'error',
-        error: error instanceof Error ? error.stack : String(error),
-      });
-      parentPort.close();
-    }
-  })().catch((error) => {
-    setTimeout(() => {
-      throw error;
-    });
-  });
-`;
 
 // Run `script` (an ESM module body) in a FRESH node process that resolves
 // packages from this tests package; returns the last stdout line parsed as
@@ -83,11 +44,14 @@ function inFreshProcess(script: string, env: Record<string, string | undefined> 
 
 describe('getRuntimeCapabilities', () => {
   const caps = getRuntimeCapabilities();
-  const timersExpected = !(caps.backend === 'tokio' && caps.target === 'wasi');
+  // Every shared-runtime artifact has a timer facility once a public entry
+  // has loaded: MultiThread owns a timer heap, CurrentThread delegates to the
+  // registered host driver.
+  const timersExpected = true;
 
   test('reports a coherent capability set for the loaded artifact', () => {
-    expect(['tokio', 'shared']).toContain(caps.backend);
-    expect(caps.asyncRuntimeBuild).toBe(caps.backend === 'shared');
+    expect(caps.backend).toBe('shared');
+    expect(caps.asyncRuntimeBuild).toBe(true);
 
     expect(['native', 'wasi', 'wasi-threads']).toContain(caps.target);
     expect(caps.wasi).toBe(caps.target !== 'native');
@@ -107,7 +71,9 @@ describe('getRuntimeCapabilities', () => {
     expect(caps.watchSupported).toBe(!caps.wasi);
     expect(caps.devSupported).toBe(caps.threads);
 
-    if (caps.backend === 'shared' && caps.wasi) {
+    // Every shared-runtime WebAssembly artifact -- wasi and wasi-threads
+    // alike -- schedules on the calling thread only.
+    if (caps.wasi) {
       expect(caps.flavor).toBe('CurrentThread');
       expect(caps.threads).toBe(false);
       expect(getAsyncRuntimeConfig()).toMatchObject({
@@ -115,10 +81,6 @@ describe('getRuntimeCapabilities', () => {
         maxBlockingTasks: 1,
         workerThreads: 1,
       });
-    }
-    if (caps.backend === 'tokio' && caps.target === 'wasi-threads') {
-      expect(caps.flavor).toBe('MultiThread');
-      expect(caps.threads).toBe(true);
     }
   });
 
@@ -260,9 +222,9 @@ describe('getRuntimeCapabilities', () => {
     );
   });
   test('a timer facility is available once any public entry has loaded', () => {
-    // Native/threaded-WASI Tokio builds own a timer wheel; the shared
-    // MultiThread flavor owns a timer heap; shared CurrentThread delegates to
-    // the host driver. Threadless-WASI Tokio has no host-independent progress.
+    // The shared MultiThread flavor owns a timer heap; shared CurrentThread
+    // delegates to the host driver registered by the entry's timer-host side
+    // effect.
     expect(caps.timers).toBe(timersExpected);
   });
 
@@ -328,636 +290,9 @@ describe('getRuntimeCapabilities', () => {
     expect(mutated).toEqual(control);
   });
 
-  test.runIf(caps.backend === 'tokio' && caps.target === 'native')(
-    'native Tokio restarts from the retained factory configuration',
-    { timeout: 45_000 },
-    () => {
-      const child = spawnSync(
-        process.execPath,
-        [
-          '--input-type=module',
-          '-e',
-          `
-            import { once } from 'node:events';
-            import { Worker } from 'node:worker_threads';
-
-            async function withTimeout(promise, timeout, description) {
-              let timer;
-              try {
-                return await Promise.race([
-                  promise,
-                  new Promise((_, reject) => {
-                    timer = setTimeout(
-                      () => reject(new Error(description + ' timed out')),
-                      timeout,
-                    );
-                  }),
-                ]);
-              } finally {
-                clearTimeout(timer);
-              }
-            }
-
-            let worker;
-            let workerExited = false;
-            try {
-              worker = new Worker(${JSON.stringify(retainedTokioFactoryWorker)}, {
-                env: process.env,
-                eval: true,
-              });
-              const [workerMessage] = await withTimeout(
-                once(worker, 'message'),
-                10_000,
-                'first environment import',
-              );
-              if (workerMessage.type === 'error') {
-                throw new Error(workerMessage.error);
-              }
-              const workerExit = once(worker, 'exit');
-              worker.postMessage({ type: 'close' });
-              const [workerExitCode] = await withTimeout(
-                workerExit,
-                10_000,
-                'first environment teardown',
-              );
-              workerExited = true;
-              if (workerExitCode !== 0) {
-                throw new Error('first environment exited with code ' + workerExitCode);
-              }
-
-              process.env.ROLLDOWN_WORKER_THREADS = '5';
-              process.env.ROLLDOWN_MAX_BLOCKING_THREADS = '3';
-              const input = 'virtual:retained-tokio-factory-main';
-              const { build } = await import('rolldown');
-              const { getAsyncRuntimeConfig } = await import('rolldown/experimental');
-              await build({
-                input,
-                plugins: [{
-                  name: 'retained-tokio-factory-main',
-                  resolveId(id) {
-                    if (id === input) return id;
-                  },
-                  load(id) {
-                    if (id === input) return 'export const loaded = true;';
-                  },
-                }],
-                write: false,
-              });
-
-              console.log(JSON.stringify({
-                generationOneConfig: workerMessage.config,
-                generationTwoConfig: getAsyncRuntimeConfig(),
-              }));
-            } finally {
-              if (worker && !workerExited) {
-                await worker.terminate().catch(() => {});
-              }
-            }
-          `,
-        ],
-        {
-          cwd: testsDir,
-          encoding: 'utf8',
-          env: {
-            ...process.env,
-            ROLLDOWN_MAX_BLOCKING_THREADS: '1',
-            ROLLDOWN_RUNTIME: 'multi',
-            ROLLDOWN_WORKER_THREADS: '2',
-            UV_THREADPOOL_SIZE: '4',
-          },
-          timeout: 40_000,
-        },
-      );
-
-      expect(child.error, child.stderr).toBeUndefined();
-      expect(child.status, child.stderr).toBe(0);
-      const lines = child.stdout.trim().split('\n');
-      expect(JSON.parse(lines[lines.length - 1])).toEqual({
-        generationOneConfig: {
-          flavor: 'MultiThread',
-          maxBlockingTasks: 1,
-          workerThreads: 2,
-        },
-        generationTwoConfig: {
-          flavor: 'MultiThread',
-          maxBlockingTasks: 1,
-          workerThreads: 2,
-        },
-      });
-    },
-  );
-
-  test.runIf(
-    caps.backend === 'tokio' &&
-      caps.target === 'native' &&
-      (process.platform === 'darwin' || process.platform === 'linux'),
-  )(
-    'native Tokio retains Unix physical concurrency limits across environment reload',
-    { timeout: 60_000 },
-    () => {
-      const child = spawnSync(
-        process.execPath,
-        [
-          '--input-type=module',
-          '-e',
-          `
-            import { execFileSync } from 'node:child_process';
-            import { once } from 'node:events';
-            import { readdirSync } from 'node:fs';
-            import { mkdtemp, open, rm } from 'node:fs/promises';
-            import { tmpdir } from 'node:os';
-            import path from 'node:path';
-            import { setTimeout as delay } from 'node:timers/promises';
-            import { Worker } from 'node:worker_threads';
-
-            function physicalThreadCount() {
-              if (process.platform === 'linux') {
-                return readdirSync('/proc/self/task').length;
-              }
-              const output = execFileSync(
-                'ps',
-                ['-M', '-p', String(process.pid)],
-                { encoding: 'utf8' },
-              );
-              return output.split(/\\r?\\n/).filter((line) => line.trim()).length - 1;
-            }
-
-            async function stableThreadCount() {
-              const deadline = Date.now() + 10_000;
-              let last = -1;
-              let matchingSamples = 0;
-              while (Date.now() < deadline) {
-                const current = physicalThreadCount();
-                if (current === last) {
-                  matchingSamples += 1;
-                } else {
-                  last = current;
-                  matchingSamples = 1;
-                }
-                if (matchingSamples === 4) return current;
-                await delay(25);
-              }
-              throw new Error('physical thread count did not stabilize');
-            }
-
-            async function withTimeout(promise, timeout, description) {
-              let timer;
-              try {
-                return await Promise.race([
-                  promise,
-                  new Promise((_, reject) => {
-                    timer = setTimeout(
-                      () => reject(new Error(description + ' timed out')),
-                      timeout,
-                    );
-                  }),
-                ]);
-              } finally {
-                clearTimeout(timer);
-              }
-            }
-
-            let worker;
-            let workerExited = false;
-            let directory;
-            const writerHandles = [];
-            try {
-              worker = new Worker(${JSON.stringify(retainedTokioFactoryWorker)}, {
-                env: process.env,
-                eval: true,
-              });
-              const [workerMessage] = await withTimeout(
-                once(worker, 'message'),
-                10_000,
-                'first environment import',
-              );
-              if (workerMessage.type === 'error') {
-                throw new Error(workerMessage.error);
-              }
-              const workerExit = once(worker, 'exit');
-              worker.postMessage({ type: 'close' });
-              const [workerExitCode] = await withTimeout(
-                workerExit,
-                10_000,
-                'first environment teardown',
-              );
-              workerExited = true;
-              if (workerExitCode !== 0) {
-                throw new Error('first environment exited with code ' + workerExitCode);
-              }
-
-              const baselineThreads = await stableThreadCount();
-              process.env.ROLLDOWN_WORKER_THREADS = '5';
-              process.env.ROLLDOWN_MAX_BLOCKING_THREADS = '3';
-              const { build } = await import('rolldown');
-              const generationTwoThreads = await stableThreadCount();
-
-              directory = await mkdtemp(path.join(tmpdir(), 'rd-tokio-reload-'));
-              const inputs = [
-                path.join(directory, 'first.js'),
-                path.join(directory, 'second.js'),
-              ];
-              execFileSync('mkfifo', inputs);
-
-              let loadCount = 0;
-              let resolveBothLoads;
-              const bothLoads = new Promise((resolve) => {
-                resolveBothLoads = resolve;
-              });
-              const buildPromises = inputs.map((input, index) =>
-                build({
-                  input,
-                  plugins: [{
-                    name: 'tokio-blocking-limit-' + index,
-                    resolveId(id) {
-                      if (id === input) return id;
-                    },
-                    load(id) {
-                      if (id !== input) return;
-                      loadCount += 1;
-                      if (loadCount === inputs.length) resolveBothLoads();
-                      return null;
-                    },
-                  }],
-                  write: false,
-                }),
-              );
-              await withTimeout(bothLoads, 10_000, 'both Rolldown load hooks');
-
-              const writerOpened = [false, false];
-              const writerPromises = inputs.map(async (input, index) => {
-                const handle = await open(input, 'w');
-                writerHandles[index] = handle;
-                writerOpened[index] = true;
-                return { handle, index };
-              });
-
-              const firstWriter = await withTimeout(
-                Promise.race(writerPromises),
-                10_000,
-                'first FIFO source read',
-              );
-              await delay(250);
-              const bothWritersOpenedBeforeFirstRelease = writerOpened.every(Boolean);
-
-              await firstWriter.handle.writeFile('export const first = 1;');
-              await firstWriter.handle.close();
-              writerHandles[firstWriter.index] = undefined;
-
-              const secondWriter = await withTimeout(
-                writerPromises[1 - firstWriter.index],
-                10_000,
-                'second FIFO source read',
-              );
-              await secondWriter.handle.writeFile('export const second = 2;');
-              await secondWriter.handle.close();
-              writerHandles[secondWriter.index] = undefined;
-
-              await withTimeout(
-                Promise.all(buildPromises),
-                10_000,
-                'FIFO-backed Rolldown builds',
-              );
-
-              console.log(JSON.stringify({
-                bothWritersOpenedBeforeFirstRelease,
-                generationTwoWorkerThreads: generationTwoThreads - baselineThreads,
-              }));
-            } finally {
-              await Promise.all(
-                writerHandles.map((handle) => handle?.close().catch(() => {})),
-              );
-              if (worker && !workerExited) {
-                await worker.terminate().catch(() => {});
-              }
-              if (directory) {
-                await rm(directory, { force: true, recursive: true });
-              }
-            }
-          `,
-        ],
-        {
-          cwd: testsDir,
-          encoding: 'utf8',
-          env: {
-            ...process.env,
-            ROLLDOWN_MAX_BLOCKING_THREADS: '1',
-            ROLLDOWN_RUNTIME: 'multi',
-            ROLLDOWN_WORKER_THREADS: '2',
-            UV_THREADPOOL_SIZE: '4',
-          },
-          timeout: 55_000,
-        },
-      );
-
-      expect(child.error, child.stderr).toBeUndefined();
-      expect(child.status, child.stderr).toBe(0);
-      const lines = child.stdout.trim().split('\n');
-      expect(JSON.parse(lines[lines.length - 1])).toEqual({
-        bothWritersOpenedBeforeFirstRelease: false,
-        generationTwoWorkerThreads: 2,
-      });
-    },
-  );
-
-  test.runIf(caps.backend === 'tokio' && caps.target === 'native' && process.platform === 'win32')(
-    'native Tokio retains Windows physical concurrency limits across environment reload',
-    { timeout: 90_000 },
-    () => {
-      const child = spawnSync(
-        process.execPath,
-        [
-          '--input-type=module',
-          '-e',
-          `
-            import { execFileSync } from 'node:child_process';
-            import { once } from 'node:events';
-            import { createServer } from 'node:net';
-            import { setTimeout as delay } from 'node:timers/promises';
-            import { Worker } from 'node:worker_threads';
-
-            function physicalThreadCount() {
-              const output = execFileSync(
-                'powershell.exe',
-                [
-                  '-NoLogo',
-                  '-NoProfile',
-                  '-NonInteractive',
-                  '-Command',
-                  '[Console]::Out.Write((Get-Process -Id ' +
-                    process.pid +
-                    ').Threads.Count)',
-                ],
-                { encoding: 'utf8' },
-              );
-              const count = Number.parseInt(output.trim(), 10);
-              if (!Number.isInteger(count)) {
-                throw new Error('PowerShell returned an invalid thread count: ' + output);
-              }
-              return count;
-            }
-
-            async function stableThreadCount() {
-              const deadline = Date.now() + 20_000;
-              let last = -1;
-              let matchingSamples = 0;
-              while (Date.now() < deadline) {
-                const current = physicalThreadCount();
-                if (current === last) {
-                  matchingSamples += 1;
-                } else {
-                  last = current;
-                  matchingSamples = 1;
-                }
-                if (matchingSamples === 4) return current;
-                await delay(50);
-              }
-              throw new Error('physical thread count did not stabilize');
-            }
-
-            async function withTimeout(promise, timeout, description) {
-              let timer;
-              try {
-                return await Promise.race([
-                  promise,
-                  new Promise((_, reject) => {
-                    timer = setTimeout(
-                      () => reject(new Error(description + ' timed out')),
-                      timeout,
-                    );
-                  }),
-                ]);
-              } finally {
-                clearTimeout(timer);
-              }
-            }
-
-            let worker;
-            let workerExited = false;
-            const pipeServers = [];
-            const connections = [undefined, undefined];
-            try {
-              worker = new Worker(${JSON.stringify(retainedTokioFactoryWorker)}, {
-                env: process.env,
-                eval: true,
-              });
-              const [workerMessage] = await withTimeout(
-                once(worker, 'message'),
-                10_000,
-                'first environment import',
-              );
-              if (workerMessage.type === 'error') {
-                throw new Error(workerMessage.error);
-              }
-              const workerExit = once(worker, 'exit');
-              worker.postMessage({ type: 'close' });
-              const [workerExitCode] = await withTimeout(
-                workerExit,
-                10_000,
-                'first environment teardown',
-              );
-              workerExited = true;
-              if (workerExitCode !== 0) {
-                throw new Error('first environment exited with code ' + workerExitCode);
-              }
-
-              const baselineThreads = await stableThreadCount();
-              process.env.ROLLDOWN_WORKER_THREADS = '5';
-              process.env.ROLLDOWN_MAX_BLOCKING_THREADS = '3';
-              const { build } = await import('rolldown');
-              const generationTwoThreads = await stableThreadCount();
-              const warmupInput = 'virtual:retained-tokio-factory-windows-warmup';
-              await build({
-                input: warmupInput,
-                plugins: [{
-                  name: 'retained-tokio-factory-windows-warmup',
-                  resolveId(id) {
-                    if (id === warmupInput) return id;
-                  },
-                  load(id) {
-                    if (id === warmupInput) {
-                      return 'export const loaded = true;';
-                    }
-                  },
-                }],
-                write: false,
-              });
-              const blockingBaselineThreads = await stableThreadCount();
-
-              const backslash = String.fromCharCode(92);
-              const pipeRoot =
-                backslash + backslash + '.' + backslash + 'pipe' + backslash;
-              const pipeNonce = 'rolldown-tokio-' + process.pid + '-' + Date.now();
-              const inputs = [
-                pipeRoot + pipeNonce + '-first.js',
-                pipeRoot + pipeNonce + '-second.js',
-              ];
-
-              for (const [index, input] of inputs.entries()) {
-                let resolveConnection;
-                const connection = new Promise((resolve) => {
-                  resolveConnection = resolve;
-                });
-                const server = createServer((socket) => {
-                  socket.on('error', () => {});
-                  connections[index] = socket;
-                  resolveConnection(socket);
-                });
-                const listening = new Promise((resolve, reject) => {
-                  server.once('error', reject);
-                  server.listen(input, resolve);
-                });
-                pipeServers.push({ connection, listening, server });
-              }
-              await withTimeout(
-                Promise.all(pipeServers.map(({ listening }) => listening)),
-                10_000,
-                'Windows named-pipe listeners',
-              );
-
-              let loadCount = 0;
-              let resolveBothLoads;
-              const bothLoads = new Promise((resolve) => {
-                resolveBothLoads = resolve;
-              });
-              const buildPromises = inputs.map((input, index) =>
-                build({
-                  input,
-                  plugins: [{
-                    name: 'tokio-blocking-limit-' + index,
-                    resolveId(id) {
-                      if (id === input) return id;
-                    },
-                    load(id) {
-                      if (id !== input) return;
-                      loadCount += 1;
-                      if (loadCount === inputs.length) resolveBothLoads();
-                      return null;
-                    },
-                  }],
-                  write: false,
-                }),
-              );
-              await withTimeout(bothLoads, 10_000, 'both Rolldown load hooks');
-
-              const firstConnection = await withTimeout(
-                Promise.race(
-                  pipeServers.map(({ connection }, index) =>
-                    connection.then((socket) => ({ index, socket })),
-                  ),
-                ),
-                10_000,
-                'first Windows named-pipe source read',
-              );
-              const activeThreads = await stableThreadCount();
-              const connectedPipesBeforeFirstRelease =
-                connections.filter(Boolean).length;
-
-              firstConnection.socket.end(
-                'export const first = ' + firstConnection.index + ';',
-              );
-              const secondIndex = 1 - firstConnection.index;
-              const secondConnection = await withTimeout(
-                pipeServers[secondIndex].connection,
-                10_000,
-                'second Windows named-pipe source read',
-              );
-              secondConnection.end('export const second = ' + secondIndex + ';');
-
-              await withTimeout(
-                Promise.all(buildPromises),
-                10_000,
-                'named-pipe-backed Rolldown builds',
-              );
-
-              console.log(JSON.stringify({
-                activeBlockingThreads:
-                  activeThreads - blockingBaselineThreads,
-                connectedPipesBeforeFirstRelease,
-                generationTwoWorkerThreads: generationTwoThreads - baselineThreads,
-              }));
-            } finally {
-              for (const connection of connections) {
-                connection?.destroy();
-              }
-              await Promise.all(
-                pipeServers.map(
-                  ({ server }) =>
-                    new Promise((resolve) => {
-                      if (!server.listening) {
-                        resolve();
-                        return;
-                      }
-                      server.close(resolve);
-                    }),
-                ),
-              );
-              if (worker && !workerExited) {
-                await worker.terminate().catch(() => {});
-              }
-            }
-          `,
-        ],
-        {
-          cwd: testsDir,
-          encoding: 'utf8',
-          env: {
-            ...process.env,
-            ROLLDOWN_MAX_BLOCKING_THREADS: '1',
-            ROLLDOWN_RUNTIME: 'multi',
-            ROLLDOWN_WORKER_THREADS: '2',
-            UV_THREADPOOL_SIZE: '4',
-          },
-          timeout: 85_000,
-        },
-      );
-
-      expect(child.error, child.stderr).toBeUndefined();
-      expect(child.status, child.stderr).toBe(0);
-      const lines = child.stdout.trim().split('\n');
-      expect(JSON.parse(lines[lines.length - 1])).toEqual({
-        activeBlockingThreads: 1,
-        connectedPipesBeforeFirstRelease: 1,
-        generationTwoWorkerThreads: 2,
-      });
-    },
-  );
-
-  test.runIf(caps.backend === 'tokio' && caps.target === 'wasi-threads')(
-    'threaded-WASI reports emnapi pool normalization from the generated loader',
-    () => {
-      const report = inFreshProcess(
-        `
-          const { getAsyncRuntimeConfig, getRuntimeCapabilities } =
-            await import('rolldown/experimental');
-          console.log(JSON.stringify({
-            capabilities: getRuntimeCapabilities(),
-            config: getAsyncRuntimeConfig(),
-          }));
-        `,
-        { NAPI_RS_ASYNC_WORK_POOL_SIZE: '2048' },
-      );
-      expect(report).toMatchObject({
-        capabilities: {
-          asyncRuntimeBuild: false,
-          backend: 'tokio',
-          flavor: 'MultiThread',
-          target: 'wasi-threads',
-          threads: true,
-        },
-        config: {
-          flavor: 'MultiThread',
-          maxBlockingTasks: 1024,
-          workerThreads: 1024,
-        },
-      });
-    },
-  );
-
   test.runIf(caps.target === 'native')(
     'oversized thread environment values are bounded before addon import',
     () => {
-      const workerThreads = caps.backend === 'tokio' ? '1' : '1000000';
       const report = inFreshProcess(
         `
           const { getAsyncRuntimeConfig } = await import('rolldown/experimental');
@@ -966,11 +301,11 @@ describe('getRuntimeCapabilities', () => {
         {
           ROLLDOWN_MAX_BLOCKING_THREADS: '1000000',
           ROLLDOWN_RUNTIME: 'multi',
-          ROLLDOWN_WORKER_THREADS: workerThreads,
+          ROLLDOWN_WORKER_THREADS: '1000000',
         },
       );
-      expect(report.workerThreads).toBe(caps.backend === 'tokio' ? 1 : 256);
-      expect(report.maxBlockingTasks).toBe(caps.backend === 'tokio' ? 512 : 255);
+      expect(report.workerThreads).toBe(256);
+      expect(report.maxBlockingTasks).toBe(255);
     },
   );
 

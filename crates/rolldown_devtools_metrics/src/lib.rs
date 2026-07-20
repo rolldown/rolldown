@@ -1,0 +1,599 @@
+//! In-memory aggregation of Rolldown's devtools event stream into a small, agent-readable
+//! metrics report.
+//!
+//! This is the metrics sink for build data: instead of (or alongside) the multi-GB JSON-lines
+//! devtools log, the writer thread folds the exact same `trace_action!` events (module graph,
+//! chunk graph, package graph, assets, per-hook calls) into bounded top-N aggregates, then
+//! renders at session close:
+//!
+//! - `metrics.json` — the canonical, schema-versioned, machine-readable report. Every other
+//!   file is a view of this model, so the JSON and markdown can never drift.
+//! - `entry.md` + on-demand detail markdown files — progressive disclosure for agents/humans.
+//! - `delta.md` / `metrics.json#delta` — build-over-build comparison via `.state.json`.
+//! - `history.jsonl` — one flat summary line per build, appended across builds/sessions.
+//! - `AGENTS.md` — self-describing contract for agents that discover the directory.
+//!
+//! It never retains the large `content` payloads carried by load/transform/renderChunk events —
+//! only counts, sizes, graph structure, and timing. Durations are exact: they are computed from
+//! `Instant`s captured at event-emit time on the build thread (not at fold time on the writer
+//! thread), so writer-queue latency does not skew them.
+
+mod graph;
+mod render;
+mod report;
+
+#[cfg(test)]
+mod tests;
+
+use std::time::Instant;
+
+use rustc_hash::FxHashMap;
+use serde::Deserialize;
+
+/// Configuration for a metrics session, supplied when the session is opened.
+#[derive(Debug, Clone)]
+pub struct MetricsConfig {
+  /// Output directory for the report, relative to cwd (or absolute).
+  pub dir: String,
+  /// Upper bound for every "top-N" list so output stays small regardless of app size.
+  pub top_n: usize,
+  /// Whether to read/write `.state.json` and emit a build-over-build delta.
+  pub delta: bool,
+}
+
+impl Default for MetricsConfig {
+  fn default() -> Self {
+    Self { dir: "node_modules/.rolldown/metrics".to_string(), top_n: 20, delta: true }
+  }
+}
+
+impl MetricsConfig {
+  /// Build a config, falling back to defaults for any unset option.
+  #[must_use]
+  pub fn new(dir: Option<String>, top_n: Option<usize>, delta: Option<bool>) -> Self {
+    let defaults = Self::default();
+    Self {
+      dir: dir.unwrap_or(defaults.dir),
+      top_n: top_n.unwrap_or(defaults.top_n),
+      delta: delta.unwrap_or(defaults.delta),
+    }
+  }
+}
+
+#[derive(Default)]
+pub(crate) struct ChunkAgg {
+  pub(crate) name: String,
+  pub(crate) reason: String,
+  pub(crate) is_entry: bool,
+  /// User-defined entry only (excludes async entries) — these are the dominator-tree roots.
+  pub(crate) is_user_entry: bool,
+  pub(crate) entry_module: Option<String>,
+  pub(crate) module_count: usize,
+  pub(crate) static_imports: Vec<u32>,
+  pub(crate) dynamic_imports: Vec<u32>,
+}
+
+pub(crate) struct PackageAgg {
+  pub(crate) name: String,
+  pub(crate) version: Option<String>,
+  pub(crate) dependency_type: String,
+  pub(crate) size: u64,
+  pub(crate) module_count: usize,
+  pub(crate) is_used: bool,
+}
+
+pub(crate) struct AssetAgg {
+  pub(crate) filename: String,
+  pub(crate) size: u64,
+}
+
+#[derive(Default)]
+pub(crate) struct HookStat {
+  pub(crate) count: usize,
+  pub(crate) micros: u64,
+  /// Calls that did no work: `resolveId`/`load`/`renderChunk` returned nothing, or `transform`
+  /// returned nothing / the code unchanged. A high no-op share on a hot hook is the primary
+  /// "this plugin should declare a hook filter" signal (span-level equivalent: PR #10154's
+  /// `result_kind`).
+  pub(crate) noop_calls: usize,
+}
+
+struct PendingCall {
+  plugin: String,
+  hook: &'static str,
+  /// Emit-time instant of the `*CallStart` event.
+  start: Instant,
+  module_id: Option<String>,
+  /// `(len, fxhash)` of the transform Start `content`, so the End can detect "returned the
+  /// code unchanged" without retaining the source text.
+  content_fingerprint: Option<(usize, u64)>,
+}
+
+/// Accumulates one session's devtools events into bounded aggregates.
+#[derive(Default)]
+pub struct MetricsAggregator {
+  config: MetricsConfig,
+
+  // session meta (set once)
+  cwd: Option<String>,
+  platform: Option<String>,
+  format: Option<String>,
+  input_count: usize,
+  plugin_count: usize,
+  /// 1-based index of the current build within the session (watch mode reuses a session).
+  build_index: usize,
+
+  // build timing (from emit-time instants)
+  build_start: Option<Instant>,
+  /// First `BuildEnd` after `build_start`: the scan stage emits its own `BuildEnd` before the
+  /// generate stage runs, so this marks the scan/generate boundary.
+  scan_end: Option<Instant>,
+  /// Last `BuildEnd`: the bundle emits the final one after assets are rendered.
+  build_end: Option<Instant>,
+
+  // modules
+  module_count: usize,
+  external_count: usize,
+  import_kind_hist: FxHashMap<String, usize>,
+  most_imported: Vec<(String, usize)>,
+  /// module id -> `(imported module id, is_dynamic)` edges. Feeds reachable-from-N-entries
+  /// and the dominator-tree retained-size analysis (which needs the static/dynamic split).
+  module_imports: FxHashMap<String, Vec<(String, bool)>>,
+  /// module id -> rendered bytes (from `ModuleRenderedReady`) — the retained-size weights.
+  module_bytes: FxHashMap<String, u64>,
+
+  // chunks (reason histogram is computed at report time over non-empty chunks)
+  chunks: FxHashMap<u32, ChunkAgg>,
+  /// module id -> chunk ids it is bundled into. Only populated when there is >1 chunk (else no
+  /// duplication is possible). For cross-chunk duplication.
+  module_chunks: FxHashMap<String, Vec<u32>>,
+
+  // packages
+  package_direct: usize,
+  package_transitive: usize,
+  packages: Vec<PackageAgg>,
+  /// package name -> [(version, rendered size)] across ALL packages (pre top-N). For duplicate
+  /// version detection.
+  package_versions: FxHashMap<String, Vec<(String, u64)>>,
+
+  // assets / sizes
+  asset_count: usize,
+  total_bytes: u64,
+  js_bytes: u64,
+  css_bytes: u64,
+  other_bytes: u64,
+  chunk_sizes: FxHashMap<u32, u64>,
+  chunk_filenames: FxHashMap<u32, String>,
+  assets: Vec<AssetAgg>,
+
+  // hooks
+  hook_calls: FxHashMap<(String, &'static str), HookStat>,
+  module_transform: FxHashMap<String, HookStat>,
+  pending: FxHashMap<String, PendingCall>,
+}
+
+impl MetricsAggregator {
+  #[must_use]
+  pub fn new(config: MetricsConfig) -> Self {
+    Self { config, ..Default::default() }
+  }
+
+  /// Fold one resolved devtools action (a JSON object that already has `session_id`/`build_id`
+  /// injected) into the aggregates. `at` is the emit-time instant of the event. Unknown actions
+  /// are ignored.
+  pub fn fold(&mut self, value: &serde_json::Value, at: Instant) {
+    let Some(action) = value.get("action").and_then(serde_json::Value::as_str) else {
+      return;
+    };
+    match action {
+      "SessionMeta" => self.fold_session_meta(value),
+      "BuildStart" => self.on_build_start(at),
+      "BuildEnd" => {
+        if self.scan_end.is_none() {
+          self.scan_end = Some(at);
+        }
+        self.build_end = Some(at);
+      }
+      "ModuleGraphReady" => self.fold_module_graph(value),
+      "ModuleRenderedReady" => self.fold_module_rendered(value),
+      "ChunkGraphReady" => self.fold_chunk_graph(value),
+      "PackageGraphReady" => self.fold_package_graph(value),
+      "AssetsReady" => self.fold_assets(value),
+      "HookResolveIdCallStart" => self.hook_start(value, "resolveId", at),
+      "HookLoadCallStart" => self.hook_start(value, "load", at),
+      "HookTransformCallStart" => self.hook_start(value, "transform", at),
+      "HookRenderChunkStart" => self.hook_start(value, "renderChunk", at),
+      "HookResolveIdCallEnd"
+      | "HookLoadCallEnd"
+      | "HookTransformCallEnd"
+      | "HookRenderChunkEnd" => self.hook_end(value, at),
+      _ => {}
+    }
+  }
+
+  fn on_build_start(&mut self, at: Instant) {
+    // A completed build is about to be discarded (rebuild in the same session): persist its
+    // summary line first so history.jsonl records every build, not just the last one.
+    if self.build_end.is_some() {
+      self.append_history();
+    }
+    // The bundle emits `BuildStart` twice back-to-back (bundle entry + scan stage); only count
+    // a new build when the previous one completed (or this is the first).
+    let is_new_build = self.build_end.is_some() || self.build_start.is_none();
+
+    // Reset per-build aggregates so the report reflects the most recent build, while keeping
+    // session meta.
+    let config = std::mem::take(&mut self.config);
+    let (cwd, platform, format, input_count, plugin_count, build_index) = (
+      self.cwd.take(),
+      self.platform.take(),
+      self.format.take(),
+      self.input_count,
+      self.plugin_count,
+      self.build_index,
+    );
+    *self = Self::new(config);
+    self.cwd = cwd;
+    self.platform = platform;
+    self.format = format;
+    self.input_count = input_count;
+    self.plugin_count = plugin_count;
+    self.build_index = if is_new_build { build_index + 1 } else { build_index };
+    self.build_start = Some(at);
+  }
+
+  fn fold_session_meta(&mut self, value: &serde_json::Value) {
+    if let Ok(meta) = serde_json::from_value::<MSessionMeta>(value.clone()) {
+      self.cwd = Some(meta.cwd);
+      self.platform = Some(meta.platform);
+      self.format = Some(meta.format);
+      self.input_count = meta.inputs.len();
+      self.plugin_count = meta.plugins.len();
+    }
+  }
+
+  fn fold_module_graph(&mut self, value: &serde_json::Value) {
+    let Ok(graph) = serde_json::from_value::<MModuleGraph>(value.clone()) else {
+      return;
+    };
+    self.module_count = graph.modules.len();
+    self.external_count = 0;
+    self.import_kind_hist.clear();
+    self.module_imports.clear();
+    let mut imported: Vec<(String, usize)> = Vec::new();
+    for module in graph.modules {
+      if module.is_external {
+        self.external_count += 1;
+      }
+      let mut deps: Vec<(String, bool)> = Vec::new();
+      if let Some(imports) = module.imports {
+        for import in imports {
+          let is_dynamic = import.kind == "dynamic-import";
+          *self.import_kind_hist.entry(import.kind).or_default() += 1;
+          deps.push((import.module_id, is_dynamic));
+        }
+      }
+      // Only genuinely shared modules (imported by 2+ modules) are "most-imported" / shared-chunk
+      // candidates; modules imported exactly once are the long tail and only add noise.
+      let importer_count = module.importers.map_or(0, |i| i.len());
+      if importer_count >= 2 {
+        imported.push((module.id.clone(), importer_count));
+      }
+      // Import adjacency for reachable-from-N-entries.
+      if !deps.is_empty() {
+        self.module_imports.insert(module.id, deps);
+      }
+    }
+    // Sort by importer count desc, tie-break by id asc for deterministic (diff-stable) output.
+    imported.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    imported.truncate(self.config.top_n);
+    self.most_imported = imported;
+  }
+
+  fn fold_module_rendered(&mut self, value: &serde_json::Value) {
+    let Ok(rendered) = serde_json::from_value::<MModuleRendered>(value.clone()) else {
+      return;
+    };
+    self.module_bytes.clear();
+    for module in rendered.modules {
+      self.module_bytes.insert(module.id, u64::from(module.bytes));
+    }
+  }
+
+  fn fold_chunk_graph(&mut self, value: &serde_json::Value) {
+    let Ok(graph) = serde_json::from_value::<MChunkGraph>(value.clone()) else {
+      return;
+    };
+    self.chunks.clear();
+    self.module_chunks.clear();
+    // Duplication is only possible with >1 chunk; skip the bookkeeping otherwise (the common case).
+    let multi_chunk = graph.chunks.len() > 1;
+    for chunk in graph.chunks {
+      let mut static_imports = Vec::new();
+      let mut dynamic_imports = Vec::new();
+      for import in chunk.imports {
+        if import.kind == "dynamic-import" {
+          dynamic_imports.push(import.chunk_id);
+        } else {
+          static_imports.push(import.chunk_id);
+        }
+      }
+      if multi_chunk {
+        for module_id in &chunk.modules {
+          self.module_chunks.entry(module_id.clone()).or_default().push(chunk.chunk_id);
+        }
+      }
+      self.chunks.insert(
+        chunk.chunk_id,
+        ChunkAgg {
+          name: chunk.name.unwrap_or_else(|| format!("chunk-{}", chunk.chunk_id)),
+          reason: chunk.reason,
+          is_entry: chunk.is_user_defined_entry || chunk.is_async_entry,
+          is_user_entry: chunk.is_user_defined_entry,
+          entry_module: chunk.entry_module,
+          module_count: chunk.modules.len(),
+          static_imports,
+          dynamic_imports,
+        },
+      );
+    }
+  }
+
+  fn fold_package_graph(&mut self, value: &serde_json::Value) {
+    let Ok(graph) = serde_json::from_value::<MPackageGraph>(value.clone()) else {
+      return;
+    };
+    self.package_direct = 0;
+    self.package_transitive = 0;
+    self.package_versions.clear();
+    let mut packages: Vec<PackageAgg> = Vec::with_capacity(graph.packages.len());
+    for package in graph.packages {
+      if package.dependency_type == "direct" {
+        self.package_direct += 1;
+      } else {
+        self.package_transitive += 1;
+      }
+      let name = package.name.unwrap_or_else(|| "<unknown>".to_string());
+      let size = u64::from(package.size);
+      // Track every (version, size) per name to flag duplicate versions later.
+      self
+        .package_versions
+        .entry(name.clone())
+        .or_default()
+        .push((package.version.clone().unwrap_or_default(), size));
+      packages.push(PackageAgg {
+        name,
+        version: package.version,
+        dependency_type: package.dependency_type,
+        size,
+        module_count: package.modules.len(),
+        is_used: package.is_used,
+      });
+    }
+    packages.sort_by(|a, b| b.size.cmp(&a.size).then_with(|| a.name.cmp(&b.name)));
+    packages.truncate(self.config.top_n);
+    self.packages = packages;
+  }
+
+  fn fold_assets(&mut self, value: &serde_json::Value) {
+    let Ok(assets) = serde_json::from_value::<MAssets>(value.clone()) else {
+      return;
+    };
+    self.asset_count = 0;
+    self.total_bytes = 0;
+    self.js_bytes = 0;
+    self.css_bytes = 0;
+    self.other_bytes = 0;
+    self.chunk_sizes.clear();
+    self.chunk_filenames.clear();
+    let mut list: Vec<AssetAgg> = Vec::new();
+    for asset in assets.assets {
+      if asset.filename.ends_with(".map") {
+        continue;
+      }
+      let size = u64::from(asset.size);
+      self.asset_count += 1;
+      self.total_bytes += size;
+      if let Some(chunk_id) = asset.chunk_id {
+        // Assets created from a chunk are the chunk's rendered JS.
+        self.js_bytes += size;
+        self.chunk_sizes.insert(chunk_id, size);
+        self.chunk_filenames.insert(chunk_id, asset.filename.clone());
+      } else if asset.filename.ends_with(".css") {
+        self.css_bytes += size;
+      } else {
+        self.other_bytes += size;
+      }
+      list.push(AssetAgg { filename: asset.filename, size });
+    }
+    list.sort_by(|a, b| b.size.cmp(&a.size).then_with(|| a.filename.cmp(&b.filename)));
+    list.truncate(self.config.top_n);
+    self.assets = list;
+  }
+
+  fn hook_start(&mut self, value: &serde_json::Value, hook: &'static str, at: Instant) {
+    let (Some(call_id), Some(plugin)) =
+      (str_field(value, "call_id"), str_field(value, "plugin_name"))
+    else {
+      return;
+    };
+    // Only transform needs the input fingerprint (its End always carries `Some(content)`, so
+    // "no-op" means "output == input" rather than "returned nothing").
+    let content_fingerprint = if hook == "transform" { content_fingerprint(value) } else { None };
+    self.pending.insert(
+      call_id,
+      PendingCall {
+        plugin,
+        hook,
+        start: at,
+        module_id: str_field(value, "module_id"),
+        content_fingerprint,
+      },
+    );
+  }
+
+  fn hook_end(&mut self, value: &serde_json::Value, at: Instant) {
+    let Some(call_id) = str_field(value, "call_id") else {
+      return;
+    };
+    let Some(call) = self.pending.remove(&call_id) else {
+      return;
+    };
+    let micros = u64::try_from(at.duration_since(call.start).as_micros()).unwrap_or(u64::MAX);
+    let is_noop = match call.hook {
+      // These hooks emit `resolved_id`/`content: None` when they returned nothing.
+      "resolveId" => field_is_null(value, "resolved_id"),
+      "load" | "renderChunk" => field_is_null(value, "content"),
+      // Transform's End carries the (possibly unchanged) code either way; no-op means the
+      // output fingerprint matches the input's.
+      "transform" => match (call.content_fingerprint, content_fingerprint(value)) {
+        (Some(input), Some(output)) => input == output,
+        _ => field_is_null(value, "content"),
+      },
+      _ => false,
+    };
+    let stat = self.hook_calls.entry((call.plugin, call.hook)).or_default();
+    stat.count += 1;
+    stat.micros += micros;
+    stat.noop_calls += usize::from(is_noop);
+    if call.hook == "transform"
+      && let Some(module_id) = call.module_id
+    {
+      let entry = self.module_transform.entry(module_id).or_default();
+      entry.count += 1;
+      entry.micros += micros;
+    }
+  }
+}
+
+fn str_field(value: &serde_json::Value, key: &str) -> Option<String> {
+  value.get(key).and_then(serde_json::Value::as_str).map(ToString::to_string)
+}
+
+fn field_is_null(value: &serde_json::Value, key: &str) -> bool {
+  value.get(key).is_none_or(serde_json::Value::is_null)
+}
+
+/// `(len, fxhash)` of the action's `content` string — enough to detect "same content" without
+/// retaining source text in memory.
+fn content_fingerprint(value: &serde_json::Value) -> Option<(usize, u64)> {
+  use std::hash::Hasher as _;
+  let content = value.get("content")?.as_str()?;
+  let mut hasher = rustc_hash::FxHasher::default();
+  hasher.write(content.as_bytes());
+  Some((content.len(), hasher.finish()))
+}
+
+// --- minimal deserialize mirrors (serde ignores the action/build_id/session_id/content fields) ---
+
+#[derive(Deserialize)]
+struct MSessionMeta {
+  #[serde(default)]
+  inputs: Vec<serde_json::Value>,
+  #[serde(default)]
+  plugins: Vec<serde_json::Value>,
+  #[serde(default)]
+  cwd: String,
+  #[serde(default)]
+  platform: String,
+  #[serde(default)]
+  format: String,
+}
+
+#[derive(Deserialize)]
+struct MModuleGraph {
+  modules: Vec<MModule>,
+}
+
+#[derive(Deserialize)]
+struct MModule {
+  id: String,
+  #[serde(default)]
+  is_external: bool,
+  #[serde(default)]
+  imports: Option<Vec<MImport>>,
+  #[serde(default)]
+  importers: Option<Vec<String>>,
+}
+
+#[derive(Deserialize)]
+struct MImport {
+  kind: String,
+  #[serde(default)]
+  module_id: String,
+}
+
+#[derive(Deserialize)]
+struct MModuleRendered {
+  modules: Vec<MRenderedModule>,
+}
+
+#[derive(Deserialize)]
+struct MRenderedModule {
+  id: String,
+  #[serde(default)]
+  bytes: u32,
+}
+
+#[derive(Deserialize)]
+struct MChunkGraph {
+  chunks: Vec<MChunk>,
+}
+
+#[derive(Deserialize)]
+struct MChunk {
+  chunk_id: u32,
+  #[serde(default)]
+  name: Option<String>,
+  #[serde(default)]
+  is_user_defined_entry: bool,
+  #[serde(default)]
+  is_async_entry: bool,
+  #[serde(default)]
+  entry_module: Option<String>,
+  #[serde(default)]
+  modules: Vec<String>,
+  reason: String,
+  #[serde(default)]
+  imports: Vec<MChunkImport>,
+}
+
+#[derive(Deserialize)]
+struct MChunkImport {
+  chunk_id: u32,
+  kind: String,
+}
+
+#[derive(Deserialize)]
+struct MPackageGraph {
+  packages: Vec<MPackage>,
+}
+
+#[derive(Deserialize)]
+struct MPackage {
+  #[serde(default)]
+  name: Option<String>,
+  #[serde(default)]
+  version: Option<String>,
+  #[serde(default)]
+  is_used: bool,
+  dependency_type: String,
+  #[serde(default)]
+  size: u32,
+  #[serde(default)]
+  modules: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct MAssets {
+  assets: Vec<MAsset>,
+}
+
+#[derive(Deserialize)]
+struct MAsset {
+  #[serde(default)]
+  chunk_id: Option<u32>,
+  #[serde(default)]
+  size: u32,
+  filename: String,
+}

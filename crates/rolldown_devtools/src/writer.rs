@@ -8,9 +8,10 @@ use std::{
     mpsc::{Sender, channel},
   },
   thread,
-  time::{SystemTime, UNIX_EPOCH},
+  time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
+use rolldown_devtools_metrics::{MetricsAggregator, MetricsConfig};
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::ser::{SerializeMap, Serializer as _};
 
@@ -19,13 +20,19 @@ pub enum LogCommand {
   /// Bind a session to the directory its relative log paths resolve against; the wasm binding has no process working directory, so relying on one writes outside the project.
   SetSessionCwd { session_id: String, cwd: PathBuf },
   /// Emit one event. Carries a fully resolved action payload plus the
-  /// session/filename the producer has already decided on.
-  Write { session_id: String, filename: Arc<str>, action_value: serde_json::Value },
+  /// session/filename the producer has already decided on. `at` is captured at
+  /// emit time on the build thread, so duration metrics derived from event pairs
+  /// are not skewed by writer-queue latency.
+  Write { session_id: String, filename: Arc<str>, action_value: serde_json::Value, at: Instant },
   /// Flush and close every file associated with this session. When `ack` is
   /// `Some`, the writer signals it once all files for this session have been
   /// flushed to the OS, so callers can establish a happens-before relationship
   /// between "build finished" and "log file is readable".
   CloseSession { session_id: String, ack: Option<Sender<()>> },
+  /// Mark a session as metrics-mode: subsequent `Write`s are folded into an in-memory
+  /// aggregator (no JSON-lines log for this session) and a metrics report is rendered on
+  /// `CloseSession`.
+  OpenMetricsSession { session_id: String, config: MetricsConfig },
 }
 
 static LOG_WRITER_TX: LazyLock<Sender<LogCommand>> = LazyLock::new(|| {
@@ -61,6 +68,12 @@ pub fn flush_session(session_id: String) -> std::sync::mpsc::Receiver<()> {
   rx
 }
 
+/// Register a metrics-mode session before its build emits events. Must be sent before any
+/// `Write` for this session so the writer aggregates (rather than writes files) those events.
+pub fn open_metrics_session(session_id: String, config: MetricsConfig) {
+  send(LogCommand::OpenMetricsSession { session_id, config });
+}
+
 #[derive(Default)]
 struct WriterState {
   files: FxHashMap<Arc<str>, BufWriter<File>>,
@@ -68,6 +81,8 @@ struct WriterState {
   exist_hash_by_session: FxHashMap<String, FxHashSet<String>>,
   cwd_by_session: FxHashMap<String, PathBuf>,
   unopenable_files_by_session: FxHashMap<String, FxHashSet<Arc<str>>>,
+  /// Sessions opened in metrics mode: events are aggregated here instead of written to disk.
+  metrics: FxHashMap<String, MetricsAggregator>,
 }
 
 impl WriterState {
@@ -76,7 +91,12 @@ impl WriterState {
       LogCommand::SetSessionCwd { session_id, cwd } => {
         self.cwd_by_session.insert(session_id, cwd);
       }
-      LogCommand::Write { session_id, filename, action_value } => {
+      LogCommand::Write { session_id, filename, action_value, at } => {
+        // Metrics-mode sessions aggregate in-memory and never touch disk.
+        if let Some(aggregator) = self.metrics.get_mut(&session_id) {
+          aggregator.fold(&action_value, at);
+          return;
+        }
         let unopenable = self.unopenable_files_by_session.get(&session_id);
         if unopenable.is_some_and(|files| files.contains(&filename)) {
           return;
@@ -110,7 +130,15 @@ impl WriterState {
         let hashes = self.exist_hash_by_session.entry(session_id).or_default();
         let _ = write_event(file, &action_value, hashes);
       }
+      LogCommand::OpenMetricsSession { session_id, config } => {
+        self.metrics.insert(session_id, MetricsAggregator::new(config));
+      }
       LogCommand::CloseSession { session_id, ack } => {
+        // Metrics mode: render the report before acking, so the report is on disk
+        // by the time `bundle.close()` resolves (same contract as the log-file path).
+        if let Some(aggregator) = self.metrics.remove(&session_id) {
+          let _ = aggregator.render();
+        }
         if let Some(files) = self.files_by_session.remove(&session_id) {
           for fname in files {
             if let Some(mut w) = self.files.remove(&fname) {

@@ -334,7 +334,7 @@ debug = "full"
 strip = "none"
 
 [patch.crates-io]
-# integration/rolldown-non-threaded-wasi-napi3 tip (b9046fa6) merges the rebased
+# integration/rolldown-non-threaded-wasi-napi3 tip (e1ef8dbe) merges the rebased
 # napi stack (crates/napi v3.10.5, the merged SPI + #3353/#3393) INTO rolldown's
 # rich async-runtime SPI, and adds the maintainer's injector+ArcSwap scheduler to
 # the napi-async-runtime crate. rolldown_binding hard-depends on that rich SPI —
@@ -346,10 +346,10 @@ strip = "none"
 # vendored archives are needed. One rev covers both the napi core crates here and
 # the napi-async-runtime crate pinned in rolldown_utils/Cargo.toml (consumed
 # napi-free), so the whole napi graph is unified on a single rev.
-napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b9046fa6098428ed62d96105d950ff1d83447149" }
-napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b9046fa6098428ed62d96105d950ff1d83447149" }
-napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b9046fa6098428ed62d96105d950ff1d83447149" }
-napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "b9046fa6098428ed62d96105d950ff1d83447149" }
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "e1ef8dbee46187d738cf2859d2c144e9befb4d12" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "e1ef8dbee46187d738cf2859d2c144e9befb4d12" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "e1ef8dbee46187d738cf2859d2c144e9befb4d12" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "e1ef8dbee46187d738cf2859d2c144e9befb4d12" }
 
 # Redirect Oxc's napi binding crates onto a 0.140.0-based branch that drops the
 # forced `tokio_rt` feature (oxc-project/oxc PR #24475, backported to the

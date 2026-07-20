@@ -15,9 +15,8 @@ export function makeGraph(nodes, entryIds) {
   const idToIndex = new Map(nodes.map((m, i) => [m.id, i]));
   const entryIdxs = entryIds.map((id) => idToIndex.get(id));
   const root = n;
-  const staticSuccs = (v) => (v === root
-    ? entryIdxs
-    : (nodes[v].imports ?? []).filter(([, dyn]) => !dyn).map(([to]) => to));
+  const staticSuccs = (v) =>
+    v === root ? entryIdxs : (nodes[v].imports ?? []).filter(([, dyn]) => !dyn).map(([to]) => to);
 
   // reverse post-order over static edges from the virtual root
   const postOrder = [];
@@ -40,7 +39,12 @@ export function makeGraph(nodes, entryIds) {
     }
   }
   const rpo = new Array(n + 1).fill(Infinity);
-  postOrder.slice().reverse().forEach((v, i) => { rpo[v] = i; });
+  postOrder
+    .slice()
+    .reverse()
+    .forEach((v, i) => {
+      rpo[v] = i;
+    });
   const staticReachable = (v) => rpo[v] !== Infinity;
 
   const preds = Array.from({ length: n + 1 }, () => []);
@@ -53,14 +57,18 @@ export function makeGraph(nodes, entryIds) {
   const idom = new Array(n + 1).fill(-1);
   idom[root] = root;
   const intersect = (a0, b0) => {
-    let a = a0; let b = b0;
+    let a = a0;
+    let b = b0;
     while (a !== b) {
       while (rpo[a] > rpo[b]) a = idom[a];
       while (rpo[b] > rpo[a]) b = idom[b];
     }
     return a;
   };
-  const order = postOrder.slice().reverse().filter((v) => v !== root);
+  const order = postOrder
+    .slice()
+    .reverse()
+    .filter((v) => v !== root);
   let changed = true;
   while (changed) {
     changed = false;
@@ -70,14 +78,20 @@ export function makeGraph(nodes, entryIds) {
         if (idom[p] === -1) continue;
         newIdom = newIdom === -1 ? p : intersect(newIdom, p);
       }
-      if (newIdom !== -1 && idom[v] !== newIdom) { idom[v] = newIdom; changed = true; }
+      if (newIdom !== -1 && idom[v] !== newIdom) {
+        idom[v] = newIdom;
+        changed = true;
+      }
     }
   }
 
   const retainedBytes = new Array(n + 1).fill(0);
   const retainedCount = new Array(n + 1).fill(0);
   for (let v = 0; v < n; v++) {
-    if (staticReachable(v)) { retainedBytes[v] = nodes[v].bytes; retainedCount[v] = 1; }
+    if (staticReachable(v)) {
+      retainedBytes[v] = nodes[v].bytes;
+      retainedCount[v] = 1;
+    }
   }
   for (const v of postOrder) {
     if (v === root || idom[v] === -1 || idom[v] === v) continue;
@@ -90,7 +104,11 @@ export function makeGraph(nodes, entryIds) {
   for (const e of entryIdxs) reachAll[e] = true;
   while (s2.length) {
     const v = s2.pop();
-    for (const [to] of nodes[v].imports ?? []) if (!reachAll[to]) { reachAll[to] = true; s2.push(to); }
+    for (const [to] of nodes[v].imports ?? [])
+      if (!reachAll[to]) {
+        reachAll[to] = true;
+        s2.push(to);
+      }
   }
 
   const modules = nodes.map((m, v) => {
@@ -101,7 +119,7 @@ export function makeGraph(nodes, entryIds) {
       imports: m.imports ?? [],
       staticReachable: reach,
       dynamicOnly: reachAll[v] && !reach,
-      idom: (reach && idom[v] !== -1 && idom[v] !== root && idom[v] < n) ? idom[v] : null,
+      idom: reach && idom[v] !== -1 && idom[v] !== root && idom[v] < n ? idom[v] : null,
       retainedBytes: reach ? retainedBytes[v] : 0,
       retainedModuleCount: reach ? retainedCount[v] : 0,
     };

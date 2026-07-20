@@ -10,26 +10,45 @@ import { minCut } from '../lib/min-cut.mjs';
 import { deferAllInto, evalOverrides, whatIf } from '../lib/module-graph.mjs';
 import { chain, indexOf, makeGraph } from './graph-fixtures.mjs';
 
-const cutIds = (graph, result) => result.cutEdges
-  .map((e) => `${graph.modules[e.from].id}->${graph.modules[e.to].id}`)
-  .sort();
+const cutIds = (graph, result) =>
+  result.cutEdges.map((e) => `${graph.modules[e.from].id}->${graph.modules[e.to].id}`).sort();
 
 // entry -> gate -> {p1,p2} -> X : all paths to X run through gate.
-const bottleneck = makeGraph([
-  { id: 'entry', bytes: 5, imports: [[1, false]] },
-  { id: 'gate', bytes: 10, imports: [[2, false], [4, false]] },
-  { id: 'p1', bytes: 20, imports: [[3, false]] },
-  { id: 'X', bytes: 1000, imports: [] },
-  { id: 'p2', bytes: 20, imports: [[3, false]] },
-], ['entry']);
+const bottleneck = makeGraph(
+  [
+    { id: 'entry', bytes: 5, imports: [[1, false]] },
+    {
+      id: 'gate',
+      bytes: 10,
+      imports: [
+        [2, false],
+        [4, false],
+      ],
+    },
+    { id: 'p1', bytes: 20, imports: [[3, false]] },
+    { id: 'X', bytes: 1000, imports: [] },
+    { id: 'p2', bytes: 20, imports: [[3, false]] },
+  ],
+  ['entry'],
+);
 
 // entry -> p1 -> X, entry -> p2 -> X : two independent paths, no shared bottleneck.
-const parallel = makeGraph([
-  { id: 'entry', bytes: 5, imports: [[1, false], [3, false]] },
-  { id: 'p1', bytes: 20, imports: [[2, false]] },
-  { id: 'X', bytes: 1000, imports: [] },
-  { id: 'p2', bytes: 20, imports: [[2, false]] },
-], ['entry']);
+const parallel = makeGraph(
+  [
+    {
+      id: 'entry',
+      bytes: 5,
+      imports: [
+        [1, false],
+        [3, false],
+      ],
+    },
+    { id: 'p1', bytes: 20, imports: [[2, false]] },
+    { id: 'X', bytes: 1000, imports: [] },
+    { id: 'p2', bytes: 20, imports: [[2, false]] },
+  ],
+  ['entry'],
+);
 
 test('bottleneck: min cut is 1 at the join, not 2 at the leaves', () => {
   const X = indexOf(bottleneck, 'X');
@@ -67,10 +86,13 @@ test('protecting the bottleneck pushes the cut down to the leaves', () => {
 });
 
 test('an all-protected path is blocked_by_protected (no valid cut)', () => {
-  const g = makeGraph([
-    { id: 'entry', bytes: 5, imports: [[1, false]] },
-    { id: 'X', bytes: 100, imports: [] },
-  ], ['entry']);
+  const g = makeGraph(
+    [
+      { id: 'entry', bytes: 5, imports: [[1, false]] },
+      { id: 'X', bytes: 100, imports: [] },
+    ],
+    ['entry'],
+  );
   const result = minCut(g, indexOf(g, 'X'), [{ from: indexOf(g, 'entry'), to: indexOf(g, 'X') }]);
   assert.equal(result.blockedByProtected, true);
   assert.deepEqual(result.cutEdges, []);
@@ -83,10 +105,13 @@ test('an entry sink is uncuttable', () => {
 });
 
 test('a dynamic-only / unreachable target needs no cut (flow 0)', () => {
-  const g = makeGraph([
-    { id: 'entry', bytes: 5, imports: [[1, true]] }, // dynamic import only
-    { id: 'X', bytes: 100, imports: [] },
-  ], ['entry']);
+  const g = makeGraph(
+    [
+      { id: 'entry', bytes: 5, imports: [[1, true]] }, // dynamic import only
+      { id: 'X', bytes: 100, imports: [] },
+    ],
+    ['entry'],
+  );
   const result = minCut(g, indexOf(g, 'X'));
   assert.equal(result.flow, 0);
   assert.deepEqual(result.cutEdges, []);
@@ -108,15 +133,24 @@ test('flow == |cut| holds and the cut actually detaches X', () => {
     const result = minCut(g, X);
     assert.equal(result.flow, result.cutEdges.length);
     // feeding the cut into the overlay must remove X from the eager set
-    const priced = evalOverrides(g, result.cutEdges.map((e) => ({ ...e, kind: 'defer' })));
-    assert.ok(priced.removed.some((m) => m.id === 'X'), 'X should leave the initial load');
+    const priced = evalOverrides(
+      g,
+      result.cutEdges.map((e) => ({ ...e, kind: 'defer' })),
+    );
+    assert.ok(
+      priced.removed.some((m) => m.id === 'X'),
+      'X should leave the initial load',
+    );
   }
 });
 
 test('cut pricing frees the whole bottleneck subtree, exceeding what-if(X)', () => {
   const X = indexOf(bottleneck, 'X');
   const result = minCut(bottleneck, X);
-  const priced = evalOverrides(bottleneck, result.cutEdges.map((e) => ({ ...e, kind: 'defer' })));
+  const priced = evalOverrides(
+    bottleneck,
+    result.cutEdges.map((e) => ({ ...e, kind: 'defer' })),
+  );
   // cutting entry->gate frees gate + p1 + p2 + X = 10 + 20 + 20 + 1000 = 1050
   assert.equal(priced.removedBytes, 1050);
   // what-if(X) alone frees only X's retained bytes (1000)
@@ -126,17 +160,31 @@ test('cut pricing frees the whole bottleneck subtree, exceeding what-if(X)', () 
 
 test('naive-minimal case: cut and what-if free the same bytes', () => {
   // star: entry imports a, b, X directly — X has one in-edge, so naive IS minimal.
-  const star = makeGraph([
-    { id: 'entry', bytes: 5, imports: [[1, false], [2, false], [3, false]] },
-    { id: 'a', bytes: 10, imports: [] },
-    { id: 'b', bytes: 20, imports: [] },
-    { id: 'X', bytes: 500, imports: [] },
-  ], ['entry']);
+  const star = makeGraph(
+    [
+      {
+        id: 'entry',
+        bytes: 5,
+        imports: [
+          [1, false],
+          [2, false],
+          [3, false],
+        ],
+      },
+      { id: 'a', bytes: 10, imports: [] },
+      { id: 'b', bytes: 20, imports: [] },
+      { id: 'X', bytes: 500, imports: [] },
+    ],
+    ['entry'],
+  );
   const X = indexOf(star, 'X');
   const result = minCut(star, X);
   assert.equal(result.flow, 1);
   assert.deepEqual(cutIds(star, result), ['entry->X']);
-  const priced = evalOverrides(star, result.cutEdges.map((e) => ({ ...e, kind: 'defer' })));
+  const priced = evalOverrides(
+    star,
+    result.cutEdges.map((e) => ({ ...e, kind: 'defer' })),
+  );
   assert.equal(priced.removedBytes, whatIf(star, X).removedBytes);
 });
 
@@ -144,10 +192,20 @@ test('naive-minimal case: cut and what-if free the same bytes', () => {
 // collapse to one unit edge — two parallel unit edges would push flow to 2 across a
 // single deduped cut edge and trip the flow == |cut| invariant throw.
 test('duplicate parallel edges collapse to one cut edge (no invariant throw)', () => {
-  const g = makeGraph([
-    { id: 'entry', bytes: 5, imports: [[1, false], [1, false]] },
-    { id: 'X', bytes: 100, imports: [] },
-  ], ['entry']);
+  const g = makeGraph(
+    [
+      {
+        id: 'entry',
+        bytes: 5,
+        imports: [
+          [1, false],
+          [1, false],
+        ],
+      },
+      { id: 'X', bytes: 100, imports: [] },
+    ],
+    ['entry'],
+  );
   const result = minCut(g, indexOf(g, 'X'));
   assert.equal(result.flow, 1);
   assert.deepEqual(cutIds(g, result), ['entry->X']);
@@ -156,13 +214,23 @@ test('duplicate parallel edges collapse to one cut edge (no invariant throw)', (
 // The unigraph min_cut redundant-diamond case: feat reachable via m1 and m2, cut
 // nearest the sink severs both incoming edges of feat.
 test('redundant diamond severs both incoming edges nearest the sink', () => {
-  const g = makeGraph([
-    { id: 'root', bytes: 1, imports: [[1, false], [2, false]] },
-    { id: 'm1', bytes: 10, imports: [[3, false]] },
-    { id: 'm2', bytes: 10, imports: [[3, false]] },
-    { id: 'feat', bytes: 100, imports: [[4, false]] },
-    { id: 'leaf', bytes: 50, imports: [] },
-  ], ['root']);
+  const g = makeGraph(
+    [
+      {
+        id: 'root',
+        bytes: 1,
+        imports: [
+          [1, false],
+          [2, false],
+        ],
+      },
+      { id: 'm1', bytes: 10, imports: [[3, false]] },
+      { id: 'm2', bytes: 10, imports: [[3, false]] },
+      { id: 'feat', bytes: 100, imports: [[4, false]] },
+      { id: 'leaf', bytes: 50, imports: [] },
+    ],
+    ['root'],
+  );
   const result = minCut(g, indexOf(g, 'feat'));
   assert.equal(result.flow, 2);
   assert.deepEqual(cutIds(g, result), ['m1->feat', 'm2->feat']);

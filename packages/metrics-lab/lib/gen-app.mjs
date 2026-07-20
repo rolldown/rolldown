@@ -108,27 +108,27 @@ function heavyFunctions(name, kb, seed) {
       words.push('"' + s + '"');
     }
     parts.push(
-      `export function ${name}_block_${i}(x: number): number {\n`
-      + `  const table = [${words.join(', ')}];\n`
-      + '  let acc = x | 0;\n'
-      + '  for (let i = 0; i < table.length; i++) {\n'
-      + '    const s = table[i];\n'
-      + '    for (let j = 0; j < s.length; j++) {\n'
-      + `      acc = (acc * 31 + s.charCodeAt(j) + ${i}) | 0;\n`
-      + '    }\n'
-      + '  }\n'
-      + '  return acc;\n'
-      + '}\n',
+      `export function ${name}_block_${i}(x: number): number {\n` +
+        `  const table = [${words.join(', ')}];\n` +
+        '  let acc = x | 0;\n' +
+        '  for (let i = 0; i < table.length; i++) {\n' +
+        '    const s = table[i];\n' +
+        '    for (let j = 0; j < s.length; j++) {\n' +
+        `      acc = (acc * 31 + s.charCodeAt(j) + ${i}) | 0;\n` +
+        '    }\n' +
+        '  }\n' +
+        '  return acc;\n' +
+        '}\n',
     );
   }
   const calls = [];
   for (let i = 0; i < kb; i++) calls.push(`  acc = (acc + ${name}_block_${i}(acc)) | 0;`);
   parts.push(
-    `export function ${name}_run_all(seed: number): number {\n`
-    + '  let acc = seed | 0;\n'
-    + `${calls.join('\n')}\n`
-    + '  return acc;\n'
-    + '}\n',
+    `export function ${name}_run_all(seed: number): number {\n` +
+      '  let acc = seed | 0;\n' +
+      `${calls.join('\n')}\n` +
+      '  return acc;\n' +
+      '}\n',
   );
   return parts.join('\n');
 }
@@ -321,11 +321,7 @@ function featureTs(name) {
 }
 
 function featureBlock(name, mode) {
-  return [
-    `// <feature:${name}>`,
-    ...FEATURES[name][mode],
-    `// </feature:${name}>`,
-  ].join('\n');
+  return [`// <feature:${name}>`, ...FEATURES[name][mode], `// </feature:${name}>`].join('\n');
 }
 
 function mainTs() {
@@ -374,7 +370,8 @@ export function setFeatureMode(appDir, feature, mode) {
   const close = `// </feature:${feature}>`;
   const start = src.indexOf(open);
   const end = src.indexOf(close);
-  if (start < 0 || end < 0) throw new Error(`feature block markers for "${feature}" not found in main.ts`);
+  if (start < 0 || end < 0)
+    throw new Error(`feature block markers for "${feature}" not found in main.ts`);
   const next = src.slice(0, start) + featureBlock(feature, mode) + src.slice(end + close.length);
   if (next !== src) fs.writeFileSync(mainPath, next);
   return { changed: next !== src };

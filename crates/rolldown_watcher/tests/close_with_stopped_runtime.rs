@@ -47,10 +47,8 @@ struct TestDir(PathBuf);
 
 impl TestDir {
   fn new() -> Self {
-    let path = std::env::temp_dir().join(format!(
-      "rolldown-watcher-stopped-runtime-{}",
-      std::process::id()
-    ));
+    let path =
+      std::env::temp_dir().join(format!("rolldown-watcher-stopped-runtime-{}", std::process::id()));
     std::fs::create_dir_all(&path).expect("create test directory");
     Self(path)
   }

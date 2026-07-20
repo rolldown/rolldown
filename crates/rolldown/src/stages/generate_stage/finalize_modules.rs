@@ -39,6 +39,7 @@ impl GenerateStage<'_> {
               && (!strict || chunk_graph.module_is_in_live_chunk(*idx))
           })
         })
+        .filter(|(idx, _ast)| chunk_graph.module_to_chunk[*idx].is_some())
         .filter_map(|(idx, ast)| {
           let ast = ast.as_mut()?;
           let module = self.link_output.module_table[idx].as_normal().unwrap();

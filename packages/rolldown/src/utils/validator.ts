@@ -678,6 +678,24 @@ const InputOptionsSchema = v.strictObject({
     v.optional(
       v.object({
         sessionId: v.pipe(v.optional(v.string()), v.description('Used to name the build.')),
+        mode: v.pipe(
+          v.optional(v.union([v.literal('full'), v.literal('metrics')])),
+          v.description(
+            "'full' (default): write JSON-lines devtools logs. 'metrics': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.",
+          ),
+        ),
+        metricsDir: v.pipe(
+          v.optional(v.string()),
+          v.description('Metrics mode: output directory (default node_modules/.rolldown/metrics).'),
+        ),
+        metricsTopN: v.pipe(
+          v.optional(v.number()),
+          v.description('Metrics mode: upper bound for every top-N list (default 20).'),
+        ),
+        metricsDelta: v.pipe(
+          v.optional(v.boolean()),
+          v.description('Metrics mode: emit a build-over-build delta (default true).'),
+        ),
       }),
     ),
     v.description(

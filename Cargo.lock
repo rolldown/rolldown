@@ -2708,6 +2708,7 @@ version = "1.2.0"
 dependencies = [
  "blake3",
  "rolldown_devtools_action",
+ "rolldown_devtools_metrics",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -2721,6 +2722,16 @@ version = "1.2.0"
 dependencies = [
  "serde",
  "ts-rs",
+]
+
+[[package]]
+name = "rolldown_devtools_metrics"
+version = "1.2.0"
+dependencies = [
+ "insta",
+ "rustc-hash",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

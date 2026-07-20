@@ -89,7 +89,12 @@ where
       format!("node_modules/.rolldown/{session_id}/logs.json").into()
     };
 
-    writer::send(LogCommand::Write { session_id, filename, action_value });
+    writer::send(LogCommand::Write {
+      session_id,
+      filename,
+      action_value,
+      at: std::time::Instant::now(),
+    });
     Ok(())
   }
 }

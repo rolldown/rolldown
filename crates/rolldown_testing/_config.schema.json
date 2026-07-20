@@ -1677,6 +1677,36 @@
             "string",
             "null"
           ]
+        },
+        "mode": {
+          "description": "`\"full\"` (default): write JSON-lines devtools logs to disk.\n`\"metrics\"`: aggregate the same event stream in-memory and emit an agent-readable\nreport (`metrics.json` + markdown views + per-build `history.jsonl`) instead of the\nmulti-GB `logs.json`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metricsDir": {
+          "description": "Metrics mode: directory the report is written to, relative to cwd\n(default: `node_modules/.rolldown/metrics`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metricsTopN": {
+          "description": "Metrics mode: upper bound for every \"top-N\" list, so output stays small regardless of\napp size (default: 20).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "metricsDelta": {
+          "description": "Metrics mode: whether to emit a build-over-build delta (default: true).",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

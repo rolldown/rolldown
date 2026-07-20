@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_devtools_metrics/src/tests.rs
+expression: "render::render_timing(&report)"
+---
+# Build Timing
+
+- **Total build**: 100.0 ms — scan 60.0 ms + generate 40.0 ms
+
+## Hook cost by plugin & type
+
+Durations are measured at event emission and summed across concurrent calls, so they can exceed wall-clock on parallel builds. No-op = the hook ran but did nothing (resolveId/load/renderChunk returned nothing; transform returned the code unchanged) — a high no-op share on a hot hook means the plugin should declare a hook filter.
+
+| Plugin | Hook | Calls | No-op | Time |
+| --- | --- | --- | --- | --- |
+| `test-plugin` | transform | 2 | 1 (50%) | 7.0 ms |
+| `test-plugin` | resolveId | 2 | 1 (50%) | 3.0 ms |
+| `test-plugin` | load | 1 | 1 (100%) | 1.0 ms |
+
+## Slowest plugins (all hooks)
+
+| Plugin | Calls | Time |
+| --- | --- | --- |
+| `test-plugin` | 5 | 11.0 ms |
+
+## Transform hotspots (modules)
+
+| Time | Calls | Module |
+| --- | --- | --- |
+| 5.0 ms | 1 | `src/a.ts` |
+| 2.0 ms | 1 | `src/b.ts` |

@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_devtools_metrics/src/tests.rs
+expression: "render::render_entry(&report)"
+---
+# Build Metrics (devtools metrics mode)
+
+Build 100.0 ms · output 5.6 kB · 6 modules (1 external) / 4 chunks / 5 assets / 3 packages · node / esm · build #1
+
+## Details (load on demand)
+
+| File | Load this when… |
+| --- | --- |
+| `metrics.json` | you need one precise number or the `delta`/`baselineDelta` sections — query it (jq/grep a metric id), don't read it wholesale |
+| `timing.md` | investigating slow builds: stage split, plugin & hook cost |
+| `chunks.md` | bundle size: chunk composition, reasons & cross-chunk duplication |
+| `modules.md` | module graph: import kinds, most-imported, shared-across-entries |
+| `packages.md` | dependency bloat: largest packages, direct/transitive, duplicate versions |
+| `graph.md` | code-splitting: entry points, chunk import graph & initial-load cost |
+| `history.jsonl` | trends: one summary line per build |
+| `AGENTS.md` | the directory contract: files, metric ids, experiment workflow |
+
+> Derived in-memory from the rolldown devtools event stream (same data that feeds Vite DevTools). Durations are measured at event emission. Sizes are per-asset/chunk and per-package; per-module byte size is not yet in the devtools stream.

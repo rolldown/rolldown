@@ -92,7 +92,8 @@ export function generatedSpans(code, map) {
   }
   for (let i = 0; i < points.length; i++) {
     const end = i + 1 < points.length ? points[i + 1].start : code.length;
-    if (end > points[i].start) spans.push({ start: points[i].start, end, srcIdx: points[i].srcIdx });
+    if (end > points[i].start)
+      spans.push({ start: points[i].start, end, srcIdx: points[i].srcIdx });
   }
   return spans;
 }
@@ -160,7 +161,8 @@ function overlapBytes(spans, intervals) {
     const span = spans[i];
     while (j < intervals.length && intervals[j].end <= span.start) j++;
     for (let k = j; k < intervals.length && intervals[k].start < span.end; k++) {
-      executed[i] += Math.min(span.end, intervals[k].end) - Math.max(span.start, intervals[k].start);
+      executed[i] +=
+        Math.min(span.end, intervals[k].end) - Math.max(span.start, intervals[k].start);
       if (intervals[k].end >= span.end) break;
     }
   }
@@ -194,9 +196,10 @@ export function coverageBySource({ code, map, atPaint, atSettle }) {
   );
   const rows = new Map();
   spans.forEach((span, i) => {
-    const source = span.srcIdx >= 0
-      ? String(map.sources[span.srcIdx] ?? `#${span.srcIdx}`).replaceAll('\\', '/')
-      : '(unmapped)';
+    const source =
+      span.srcIdx >= 0
+        ? String(map.sources[span.srcIdx] ?? `#${span.srcIdx}`).replaceAll('\\', '/')
+        : '(unmapped)';
     const row = rows.get(source) ?? { totalBytes: 0, paintBytes: 0, settleBytes: 0 };
     row.totalBytes += span.end - span.start;
     row.paintBytes += paintExec[i];
@@ -236,7 +239,11 @@ export function attributeChunks({ scripts, entryName, readChunk, prePaintFetches
     const file = toFile(script.pathname);
     if (!isEntry && !script.atPaint) {
       if (prePaintFetches.has(file)) {
-        skipped.push({ file, reason: 'static-prepaint-transfer', bytes: prePaintFetches.get(file) });
+        skipped.push({
+          file,
+          reason: 'static-prepaint-transfer',
+          bytes: prePaintFetches.get(file),
+        });
       } else {
         skipped.push({ file, reason: 'post-paint' });
       }
@@ -293,7 +300,7 @@ export function attributeChunks({ scripts, entryName, readChunk, prePaintFetches
 export const LARGE_AT_PAINT_MIN_BYTES = 8 * 1024;
 export const SIBLING_MIN_FILES = 3;
 export const SIBLING_MIN_BYTES = 6 * 1024;
-export const COLD_MIN_BYTES = 12 * 1024;      // per-module floor to appear in the cold list
+export const COLD_MIN_BYTES = 12 * 1024; // per-module floor to appear in the cold list
 export const COLD_OPEN_MIN_BYTES = 25 * 1024; // a non-framework module this cold keeps the lead OPEN
 // Framework runtimes carry real cold bytes (unreached branches) but their import
 // edge can't move — annotate instead of flagging, so agents don't chase them.
@@ -305,8 +312,12 @@ const FRAMEWORK_RE = /node_modules\/(react-dom|react|scheduler|vue|@vue\/[^/]+|s
  * imported — so these are verify-need leads, not certainties.
  */
 export function largeAtPaintModules(modules) {
-  return modules.filter((mod) =>
-    mod.totalBytes >= LARGE_AT_PAINT_MIN_BYTES && mod.paintRatio >= 0.5 && mod.source !== '(unmapped)');
+  return modules.filter(
+    (mod) =>
+      mod.totalBytes >= LARGE_AT_PAINT_MIN_BYTES &&
+      mod.paintRatio >= 0.5 &&
+      mod.source !== '(unmapped)',
+  );
 }
 
 /**
@@ -350,10 +361,12 @@ export function siblingVariantGroups(modules) {
   }
   return [...byDir.values()].filter((group) => {
     const sizeable = group.sizes.filter((size) => size >= 1024);
-    return sizeable.length >= SIBLING_MIN_FILES
-      && group.bytes >= SIBLING_MIN_BYTES
-      && group.paintBytes / group.bytes >= 0.5
-      && Math.max(...sizeable) <= Math.min(...sizeable) * 2;
+    return (
+      sizeable.length >= SIBLING_MIN_FILES &&
+      group.bytes >= SIBLING_MIN_BYTES &&
+      group.paintBytes / group.bytes >= 0.5 &&
+      Math.max(...sizeable) <= Math.min(...sizeable) * 2
+    );
   });
 }
 
@@ -373,23 +386,27 @@ export async function coverageRun(cdp, options) {
   }
 }
 
-async function coverageAttempt(cdp, {
-  origin,
-  throttle,
-  expectedFeatures = [],
-  entryName = '/main.js',
-  settleMs = 2000,
-  timeoutMs = 60_000,
-}) {
-  const debug = process.env.COVERAGE_DEBUG
-    ? (msg) => console.error(`[coverage] ${msg}`)
-    : () => {};
+async function coverageAttempt(
+  cdp,
+  {
+    origin,
+    throttle,
+    expectedFeatures = [],
+    entryName = '/main.js',
+    settleMs = 2000,
+    timeoutMs = 60_000,
+  },
+) {
+  const debug = process.env.COVERAGE_DEBUG ? (msg) => console.error(`[coverage] ${msg}`) : () => {};
   const page = await openPage(cdp, { throttle, injectScript: OBSERVER_JS });
   try {
     await page.navigate(`${origin}/blank.html`);
     await sleep(150);
     await page.send('Profiler.enable');
-    const armed = await page.send('Profiler.startPreciseCoverage', { callCount: false, detailed: true });
+    const armed = await page.send('Profiler.startPreciseCoverage', {
+      callCount: false,
+      detailed: true,
+    });
     debug(`armed on blank (v8 timestamp ${armed?.timestamp})`);
     // '/' not '/index.html': router-strict SPAs 404 on the literal file path.
     await page.navigate(`${origin}/`);
@@ -410,7 +427,9 @@ async function coverageAttempt(cdp, {
       await sleep(25);
     }
     const atPaint = await page.send('Profiler.takePreciseCoverage');
-    debug(`atPaint scripts: ${atPaint.result.map((s) => `${s.url || '(inline)'}#${s.functions.length}`).join(', ') || '(none)'}`);
+    debug(
+      `atPaint scripts: ${atPaint.result.map((s) => `${s.url || '(inline)'}#${s.functions.length}`).join(', ') || '(none)'}`,
+    );
 
     for (;;) {
       const done = await page.evaluate(`(() => {
@@ -438,8 +457,12 @@ async function coverageAttempt(cdp, {
       for (const script of take.result) {
         if (!script.url || !script.url.startsWith(origin)) continue;
         const pathname = new URL(script.url).pathname;
-        const rec = byUrl.get(script.url)
-          ?? { url: script.url, pathname, atPaint: null, atSettle: null };
+        const rec = byUrl.get(script.url) ?? {
+          url: script.url,
+          pathname,
+          atPaint: null,
+          atSettle: null,
+        };
         rec[key] = (rec[key] ?? []).concat(script.functions);
         byUrl.set(script.url, rec);
       }
@@ -456,7 +479,8 @@ async function coverageAttempt(cdp, {
     // post-paint is still critical-path cost when its FETCH started before the
     // paint (static <script> tags, modulepreload) — the download competes with
     // the paint for bandwidth. Execution timing alone cannot see that.
-    const scriptFetches = JSON.parse(await page.evaluate(`JSON.stringify((() => {
+    const scriptFetches = JSON.parse(
+      await page.evaluate(`JSON.stringify((() => {
       const fcp = (window.__perfMetrics || {}).fcp ?? null;
       return performance.getEntriesByType('resource')
         .filter((r) => r.name.startsWith(location.origin))
@@ -464,7 +488,8 @@ async function coverageAttempt(cdp, {
           bytes: r.encodedBodySize || r.transferSize || 0 }))
         .filter((r) => /\\.[mc]?js$/.test(r.pathname))
         .map((r) => ({ ...r, prePaint: fcp != null && r.startMs < fcp }));
-    })())`));
+    })())`),
+    );
     return { scripts, scriptFetches };
   } finally {
     await page.close().catch(() => {});

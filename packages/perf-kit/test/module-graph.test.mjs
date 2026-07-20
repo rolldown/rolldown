@@ -59,58 +59,104 @@ function oldWhatIf(graph, target, keep = []) {
 // --- hand graphs -----------------------------------------------------------------
 const graphs = {
   // entry -> a -> c, entry -> b -> c: c joins under entry (idom = entry, not a/b).
-  diamond: makeGraph([
-    { id: 'entry', bytes: 10, imports: [[1, false], [2, false]] },
-    { id: 'a', bytes: 100, imports: [[3, false]] },
-    { id: 'b', bytes: 200, imports: [[3, false]] },
-    { id: 'c', bytes: 1000, imports: [] },
-  ], ['entry']),
+  diamond: makeGraph(
+    [
+      {
+        id: 'entry',
+        bytes: 10,
+        imports: [
+          [1, false],
+          [2, false],
+        ],
+      },
+      { id: 'a', bytes: 100, imports: [[3, false]] },
+      { id: 'b', bytes: 200, imports: [[3, false]] },
+      { id: 'c', bytes: 1000, imports: [] },
+    ],
+    ['entry'],
+  ),
 
   // entry -> route -> heavy -> util; entry -(dynamic)-> lazy -> lazydep
-  chainDynamic: makeGraph([
-    { id: 'entry', bytes: 5, imports: [[1, false], [4, true]] },
-    { id: 'route', bytes: 10, imports: [[2, false]] },
-    { id: 'heavy', bytes: 5000, imports: [[3, false]] },
-    { id: 'util', bytes: 300, imports: [] },
-    { id: 'lazy', bytes: 70, imports: [[5, false]] },
-    { id: 'lazydep', bytes: 30, imports: [] },
-  ], ['entry']),
+  chainDynamic: makeGraph(
+    [
+      {
+        id: 'entry',
+        bytes: 5,
+        imports: [
+          [1, false],
+          [4, true],
+        ],
+      },
+      { id: 'route', bytes: 10, imports: [[2, false]] },
+      { id: 'heavy', bytes: 5000, imports: [[3, false]] },
+      { id: 'util', bytes: 300, imports: [] },
+      { id: 'lazy', bytes: 70, imports: [[5, false]] },
+      { id: 'lazydep', bytes: 30, imports: [] },
+    ],
+    ['entry'],
+  ),
 
   // two entries share a module -> shared hangs off the virtual root (idom null).
-  multiEntry: makeGraph([
-    { id: 'a', bytes: 10, imports: [[2, false]] },
-    { id: 'b', bytes: 20, imports: [[2, false]] },
-    { id: 'shared', bytes: 500, imports: [] },
-  ], ['a', 'b']),
+  multiEntry: makeGraph(
+    [
+      { id: 'a', bytes: 10, imports: [[2, false]] },
+      { id: 'b', bytes: 20, imports: [[2, false]] },
+      { id: 'shared', bytes: 500, imports: [] },
+    ],
+    ['a', 'b'],
+  ),
 
   // entry -> a <-> b cycle inside a dominated region.
-  cycle: makeGraph([
-    { id: 'entry', bytes: 1, imports: [[1, false]] },
-    { id: 'a', bytes: 40, imports: [[2, false]] },
-    { id: 'b', bytes: 60, imports: [[1, false]] },
-  ], ['entry']),
+  cycle: makeGraph(
+    [
+      { id: 'entry', bytes: 1, imports: [[1, false]] },
+      { id: 'a', bytes: 40, imports: [[2, false]] },
+      { id: 'b', bytes: 60, imports: [[1, false]] },
+    ],
+    ['entry'],
+  ),
 
   // Shared-internals: entry imports fa and fb; both pull a shared `core` (+ its dep),
   // dominated by neither individually (idom = entry). Deferring one frees only its
   // own slice; deferring BOTH frees core too — combined > sum.
-  sharedInternals: makeGraph([
-    { id: 'entry', bytes: 10, imports: [[1, false], [2, false]] },
-    { id: 'fa', bytes: 100, imports: [[3, false]] },
-    { id: 'fb', bytes: 100, imports: [[3, false]] },
-    { id: 'core', bytes: 800, imports: [[4, false]] },
-    { id: 'coredep', bytes: 200, imports: [] },
-  ], ['entry']),
+  sharedInternals: makeGraph(
+    [
+      {
+        id: 'entry',
+        bytes: 10,
+        imports: [
+          [1, false],
+          [2, false],
+        ],
+      },
+      { id: 'fa', bytes: 100, imports: [[3, false]] },
+      { id: 'fb', bytes: 100, imports: [[3, false]] },
+      { id: 'core', bytes: 800, imports: [[4, false]] },
+      { id: 'coredep', bytes: 200, imports: [] },
+    ],
+    ['entry'],
+  ),
 
   // Sentry reachability: entry -> target -> sentry -> sdep; target -> d. Deferring
   // target with --keep sentry must keep sentry + sdep eager even though they are only
   // reachable via target (the extraRoots re-seed).
-  sentry: makeGraph([
-    { id: 'entry', bytes: 5, imports: [[1, false]] },
-    { id: 'target', bytes: 50, imports: [[2, false], [4, false]] },
-    { id: 'sentry', bytes: 300, imports: [[3, false]] },
-    { id: 'sdep', bytes: 70, imports: [] },
-    { id: 'd', bytes: 25, imports: [] },
-  ], ['entry']),
+  sentry: makeGraph(
+    [
+      { id: 'entry', bytes: 5, imports: [[1, false]] },
+      {
+        id: 'target',
+        bytes: 50,
+        imports: [
+          [2, false],
+          [4, false],
+        ],
+      },
+      { id: 'sentry', bytes: 300, imports: [[3, false]] },
+      { id: 'sdep', bytes: 70, imports: [] },
+      { id: 'd', bytes: 25, imports: [] },
+    ],
+    ['entry'],
+  ),
 };
 
 // Observable behavior = exactly what cmdWhatIf consumes: for an unreachable target
@@ -161,8 +207,11 @@ test('base eagerSet equals the staticReachable module set', () => {
   for (const [name, graph] of Object.entries(graphs)) {
     const base = eagerSet(graph);
     const fromFlags = new Set(graph.modules.flatMap((m, i) => (m.staticReachable ? [i] : [])));
-    assert.deepEqual([...base].sort((x, y) => x - y), [...fromFlags].sort((x, y) => x - y),
-      `base eager mismatch on ${name}`);
+    assert.deepEqual(
+      [...base].sort((x, y) => x - y),
+      [...fromFlags].sort((x, y) => x - y),
+      `base eager mismatch on ${name}`,
+    );
   }
 });
 
@@ -187,8 +236,11 @@ test('whatIf overlay reproduces the old grow/prune closure exactly', () => {
         if (keep.includes(t)) continue; // deferring X while keeping X is degenerate
         const got = observable(whatIf(graph, t, keep));
         const want = observable(oldWhatIf(graph, t, keep));
-        assert.deepEqual(got, want,
-          `divergence on ${name}: target=${ids[t]} keep=[${keepIds.join(',')}]`);
+        assert.deepEqual(
+          got,
+          want,
+          `divergence on ${name}: target=${ids[t]} keep=[${keepIds.join(',')}]`,
+        );
       }
     }
   }
@@ -226,10 +278,12 @@ test('single-target overlay equals retainedBytes/retainedModuleCount', () => {
       const mod = graph.modules[t];
       if (!mod.staticReachable || entrySet.has(mod.id)) continue;
       const { removedBytes, removedCount } = evalOverrides(graph, deferAllInto(graph, t));
-      assert.equal(removedBytes, mod.retainedBytes,
-        `retainedBytes mismatch on ${name}: ${mod.id}`);
-      assert.equal(removedCount, mod.retainedModuleCount,
-        `retainedModuleCount mismatch on ${name}: ${mod.id}`);
+      assert.equal(removedBytes, mod.retainedBytes, `retainedBytes mismatch on ${name}: ${mod.id}`);
+      assert.equal(
+        removedCount,
+        mod.retainedModuleCount,
+        `retainedModuleCount mismatch on ${name}: ${mod.id}`,
+      );
     }
   }
 });
@@ -247,8 +301,10 @@ test('combined deferral exceeds the sum when internals are shared', () => {
   const combined = evalOverrides(g, overrides);
   // deferring BOTH frees fa + fb + core + coredep = 100+100+800+200 = 1200
   assert.equal(combined.removedBytes, 1200);
-  assert.ok(combined.removedBytes > retFa + retFb,
-    `combined ${combined.removedBytes} should exceed summed ${retFa + retFb}`);
+  assert.ok(
+    combined.removedBytes > retFa + retFb,
+    `combined ${combined.removedBytes} should exceed summed ${retFa + retFb}`,
+  );
   // shared internals = combined - sum = 1200 - 200 = 1000 (core + coredep)
   assert.equal(combined.removedBytes - (retFa + retFb), 1000);
 });
@@ -268,8 +324,17 @@ test("override kind 'remove' matches 'defer' on eager reachability", () => {
   const g = graphs.diamond;
   const c = indexOf(g, 'c');
   const preds = g.staticPreds[c];
-  const asDefer = evalOverrides(g, preds.map((p) => ({ from: p, to: c, kind: 'defer' })));
-  const asRemove = evalOverrides(g, preds.map((p) => ({ from: p, to: c, kind: 'remove' })));
-  assert.deepEqual(asRemove.removed.map((m) => m.id), asDefer.removed.map((m) => m.id));
+  const asDefer = evalOverrides(
+    g,
+    preds.map((p) => ({ from: p, to: c, kind: 'defer' })),
+  );
+  const asRemove = evalOverrides(
+    g,
+    preds.map((p) => ({ from: p, to: c, kind: 'remove' })),
+  );
+  assert.deepEqual(
+    asRemove.removed.map((m) => m.id),
+    asDefer.removed.map((m) => m.id),
+  );
   assert.equal(asRemove.removedBytes, asDefer.removedBytes);
 });

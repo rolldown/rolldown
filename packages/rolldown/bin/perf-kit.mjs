@@ -13,8 +13,12 @@ const self = fs.realpathSync(fileURLToPath(import.meta.url));
 const harness = path.resolve(path.dirname(self), '..', '..', 'perf-kit', 'harness.mjs');
 
 if (!fs.existsSync(harness)) {
-  console.error('rolldown-metrics: the perf-kit harness is not part of the published rolldown package.');
-  console.error('It is available when rolldown is linked from a source checkout, or as its own package:');
+  console.error(
+    'rolldown-metrics: the perf-kit harness is not part of the published rolldown package.',
+  );
+  console.error(
+    'It is available when rolldown is linked from a source checkout, or as its own package:',
+  );
   console.error('  npm i -D @rolldown/perf-kit   then   npx perf-kit scan --app .');
   process.exit(1);
 }

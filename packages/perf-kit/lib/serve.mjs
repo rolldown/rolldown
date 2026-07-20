@@ -33,7 +33,18 @@ const ISOLATION_HEADERS = {
 // overcharge the throttled lab by 3-4x versus what any user's wire sees
 // (found via drawDB). transfer_bytes reads encodedBodySize, so metrics report
 // compressed bytes - same as production.
-const COMPRESSIBLE = new Set(['.html', '.js', '.mjs', '.css', '.json', '.map', '.svg', '.txt', '.webmanifest', '.wasm']);
+const COMPRESSIBLE = new Set([
+  '.html',
+  '.js',
+  '.mjs',
+  '.css',
+  '.json',
+  '.map',
+  '.svg',
+  '.txt',
+  '.webmanifest',
+  '.wasm',
+]);
 
 function wantsGzip(req, ext) {
   return COMPRESSIBLE.has(ext) && /\bgzip\b/.test(req.headers['accept-encoding'] ?? '');
@@ -54,13 +65,21 @@ export function startServer(rootDir, port = 0) {
       return;
     }
     if (pathname === '/blank.html') {
-      res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-store', ...ISOLATION_HEADERS });
+      res.writeHead(200, {
+        'content-type': MIME['.html'],
+        'cache-control': 'no-store',
+        ...ISOLATION_HEADERS,
+      });
       res.end(BLANK_HTML);
       return;
     }
     if (pathname === '/') pathname = '/index.html';
     const file = path.normalize(path.join(rootDir, pathname));
-    if (!file.startsWith(path.normalize(rootDir)) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+    if (
+      !file.startsWith(path.normalize(rootDir)) ||
+      !fs.existsSync(file) ||
+      !fs.statSync(file).isFile()
+    ) {
       res.writeHead(404).end('not found');
       return;
     }
@@ -72,7 +91,9 @@ export function startServer(rootDir, port = 0) {
     };
     if (wantsGzip(req, ext)) {
       res.writeHead(200, { ...headers, 'content-encoding': 'gzip' });
-      fs.createReadStream(file).pipe(zlib.createGzip({ level: 6 })).pipe(res);
+      fs.createReadStream(file)
+        .pipe(zlib.createGzip({ level: 6 }))
+        .pipe(res);
     } else {
       res.writeHead(200, headers);
       fs.createReadStream(file).pipe(res);

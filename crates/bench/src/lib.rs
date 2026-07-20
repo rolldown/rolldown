@@ -215,14 +215,24 @@ pub fn run_bench_group(
         b.to_async(SharedRuntimeExecutor).iter(|| {
           let bundle = ctx.factory.create_bundle_with_fs(ctx.mem_fs.clone(), ctx.create_resolver());
           async {
-            match mode {
-              BenchMode::Scan => {
-                bundle.scan().await.expect("Failed to scan");
+            // Run the root bundling future as a spawned task on the runtime
+            // pool instead of polling it inline on criterion's main thread.
+            // Inline polling would run `par_iter` sections reached from the
+            // root future on rayon's global pool (the criterion thread is not
+            // a runtime worker), instantiating a second thread pool that
+            // production never has — and that CodSpeed's simulation bills.
+            rolldown_utils::async_runtime::spawn(async move {
+              match mode {
+                BenchMode::Scan => {
+                  bundle.scan().await.expect("Failed to scan");
+                }
+                BenchMode::Bundle => {
+                  bundle.generate().await.expect("Failed to bundle");
+                }
               }
-              BenchMode::Bundle => {
-                bundle.generate().await.expect("Failed to bundle");
-              }
-            }
+            })
+            .await
+            .expect("bench bundling task failed");
           }
         });
       });

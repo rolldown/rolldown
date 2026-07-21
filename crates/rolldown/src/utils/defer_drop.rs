@@ -72,10 +72,17 @@ fn run_drop_safely(drop_job: impl FnOnce()) {
     // Dropping the caught payload runs a user destructor too, in normal
     // control flow rather than during an unwind — so a panic there is a plain
     // panic that would escape this function and kill the worker. Contain it
-    // as well. This is not open-ended hardening: it bottoms out here, and the
-    // `PendingGuard` call sites hold the guard live across this function so
-    // `drain()` is retired even if a payload nests panics deeper still.
-    let _ = catch_unwind(AssertUnwindSafe(move || drop(payload)));
+    // as well.
+    if let Err(nested_payload) = catch_unwind(AssertUnwindSafe(move || drop(payload))) {
+      // The containment genuinely bottoms out HERE, not one layer up: letting
+      // this `Err` drop would run the nested payload's own destructor outside
+      // any unwind boundary, and a payload nesting panics one level deeper
+      // would escape after all and kill the worker (demoting every later
+      // deferred drop to an inline drop on its caller). A payload that cannot
+      // be destroyed is leaked instead — the same terminal state
+      // `contain_current_thread_task_host_unwind` uses in rolldown_binding.
+      std::mem::forget(nested_payload);
+    }
   }
 }
 
@@ -259,5 +266,63 @@ mod tests {
     fn drop(&mut self) {
       let _ = self.0.send(std::thread::current().name().map(ToString::to_string));
     }
+  }
+
+  /// A third-level payload whose own `Drop` panics again. Its destructor runs
+  /// when the *inner* `catch_unwind`'s `Err` result is destroyed, i.e. outside
+  /// both unwind boundaries in `run_drop_safely`.
+  struct DoublyHostilePayload;
+
+  impl Drop for DoublyHostilePayload {
+    fn drop(&mut self) {
+      panic!("doubly hostile panic payload destructor");
+    }
+  }
+
+  /// A panic payload whose `Drop` panics with a [`DoublyHostilePayload`].
+  struct HostilePayloadNestingAnotherHostilePayload;
+
+  impl Drop for HostilePayloadNestingAnotherHostilePayload {
+    fn drop(&mut self) {
+      std::panic::panic_any(DoublyHostilePayload);
+    }
+  }
+
+  /// A deferred value whose `Drop` panics with the nested hostile payload.
+  struct PanicWithNestedHostilePayload;
+
+  impl Drop for PanicWithNestedHostilePayload {
+    fn drop(&mut self) {
+      std::panic::panic_any(HostilePayloadNestingAnotherHostilePayload);
+    }
+  }
+
+  #[test]
+  fn a_nested_hostile_panic_payload_cannot_kill_the_worker() {
+    spawn_drop(PanicWithNestedHostilePayload);
+
+    // The guard retires the pending count even if the worker dies, so drain()
+    // completing says nothing yet -- but it must complete before the worker
+    // probe below, or the probe races the hostile drop itself.
+    let (drained_tx, drained_rx) = sync_channel(1);
+    std::thread::spawn(move || {
+      drain();
+      let _ = drained_tx.send(());
+    });
+    drained_rx
+      .recv_timeout(Duration::from_secs(10))
+      .expect("drain() hung: the drop worker died before retiring its pending count");
+
+    // The nested payload must not have taken the worker down: a dead worker
+    // silently demotes every later deferred drop to an inline drop on its
+    // caller, and the same nested payload would then unwind into a build.
+    let (worker_tx, worker_rx) = sync_channel(1);
+    spawn_drop(ReportDroppingThread(worker_tx));
+    drain();
+    assert_eq!(
+      worker_rx.recv_timeout(Duration::from_secs(10)).ok().flatten().as_deref(),
+      Some("rolldown-deferred-drop"),
+      "the deferred-drop worker did not survive the nested hostile panic payload"
+    );
   }
 }

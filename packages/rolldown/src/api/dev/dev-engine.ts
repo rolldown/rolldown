@@ -90,25 +90,36 @@ export class DevEngine {
       },
     };
 
-    const runtimeLease = await acquireRuntimeLease();
+    let acquiredLease: RuntimeLease | undefined;
     let inner: BindingDevEngine;
     try {
+      acquiredLease = await acquireRuntimeLease();
       inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
     } catch (error) {
-      // Construction failure must not abandon the acquired runtime lease.
+      // Setup failure must not abandon the parallel-plugin workers already
+      // spawned by createBundlerOptions or an acquired runtime lease.
+      const cleanupErrors: unknown[] = [];
       try {
-        runtimeLease.release();
+        await options.stopWorkers?.();
       } catch (cleanupError) {
+        cleanupErrors.push(cleanupError);
+      }
+      try {
+        acquiredLease?.release();
+      } catch (cleanupError) {
+        cleanupErrors.push(cleanupError);
+      }
+      if (cleanupErrors.length > 0) {
         throw new AggregateError(
-          [error, cleanupError],
-          'Dev engine construction and runtime release both failed',
+          [error, ...cleanupErrors],
+          'Dev engine setup and cleanup both failed',
           { cause: error },
         );
       }
       throw error;
     }
 
-    return new DevEngine(inner, runtimeLease);
+    return new DevEngine(inner, acquiredLease);
   }
 
   private constructor(inner: BindingDevEngine, runtimeLease: RuntimeLease) {

@@ -1,10 +1,11 @@
 use oxc::allocator::GetAllocator;
+use oxc::ast::builder::AstBuilder;
 use oxc::{
   allocator::{CloneIn as _, TakeIn as _},
   ast::{
     ast::{
       Argument, ArrowFunctionExpression, AwaitExpression, BindingPattern, BindingProperty,
-      Declaration, Expression, FormalParameterKind, FormalParameters, FunctionBody,
+      Declaration, Expression, FormalParameterKind, FormalParameters, FunctionBody, IdentifierName,
       MemberExpression, ObjectPattern, PropertyKey, ReturnStatement, Statement,
       StaticMemberExpression, VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
     },
@@ -14,21 +15,23 @@ use oxc::{
   semantic::ScopeFlags,
   span::SPAN,
 };
-use rolldown_ecmascript_utils::{AstFactory, BindingPatternExt as _};
+use rolldown_ecmascript_utils::{
+  BindingPatternExt as _, ExpressionFactoryExt as _, IdentifierNameFactoryExt as _,
+};
 
 use super::ast_visit::BuildImportAnalysisVisitor;
 
 impl<'a> BuildImportAnalysisVisitor<'a> {
   #[expect(clippy::fn_params_excessive_bools)]
   pub fn new(
-    ast_factory: AstFactory<'a>,
+    ast_builder: AstBuilder<'a>,
     insert_preload: bool,
     render_built_url: bool,
     is_relative_base: bool,
     is_modern: bool,
   ) -> Self {
     Self {
-      ast_factory,
+      ast_builder,
       is_modern,
       insert_preload,
       render_built_url,
@@ -66,20 +69,20 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
             oxc::allocator::Vec::from_value_in(
               BindingProperty::new(
                 SPAN,
-                PropertyKey::new_static_identifier(SPAN, key, &self.ast_factory),
-                BindingPattern::new_binding_identifier(SPAN, value, &self.ast_factory),
+                PropertyKey::new_static_identifier(SPAN, key, &self.ast_builder),
+                BindingPattern::new_binding_identifier(SPAN, value, &self.ast_builder),
                 true,
                 false,
-                &self.ast_factory,
+                &self.ast_builder,
               ),
-              &self.ast_factory,
+              &self.ast_builder,
             ),
             NONE,
-            &self.ast_factory,
+            &self.ast_builder,
           ),
-          await_expr.take_in(&self.ast_factory.allocator()),
+          await_expr.take_in(&self.ast_builder.allocator()),
         ),
-        &self.ast_factory,
+        &self.ast_builder,
       ));
       return true;
     }
@@ -112,7 +115,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       };
       match &params.items.first()?.pattern {
         BindingPattern::ObjectPattern(object_pat) => {
-          Some(object_pat.clone_in(self.ast_factory.allocator()))
+          Some(object_pat.clone_in(self.ast_builder.allocator()))
         }
         _ => None,
       }
@@ -127,8 +130,8 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
         object_pat,
         Expression::new_await_expression(
           SPAN,
-          callee.object.take_in(&self.ast_factory.allocator()),
-          &self.ast_factory,
+          callee.object.take_in(&self.ast_builder.allocator()),
+          &self.ast_builder,
         ),
       );
       walk_arguments(self, &mut call_expr.arguments);
@@ -137,9 +140,11 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
     // For non-destructuring: wrap the entire import().then() expression
     walk_arguments(self, &mut call_expr.arguments);
-    let import_then_expr = expr.take_in(&self.ast_factory.allocator());
-    *expr = self
-      .vite_preload_call(Argument::from(self.ast_factory.make_arrow_returning(import_then_expr)));
+    let import_then_expr = expr.take_in(&self.ast_builder.allocator());
+    *expr = self.vite_preload_call(Argument::from(Expression::new_arrow_returning(
+      import_then_expr,
+      &self.ast_builder,
+    )));
     true
   }
 
@@ -147,9 +152,10 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
   /// to `__vitePreload(() => import('foo'),...)`
   pub fn rewrite_import_expr(&self, expr: &mut Expression<'a>) -> bool {
     let Expression::ImportExpression(_) = expr else { return false };
-    *expr = self.vite_preload_call(Argument::from(
-      self.ast_factory.make_arrow_returning(expr.take_in(&self.ast_factory.allocator())),
-    ));
+    *expr = self.vite_preload_call(Argument::from(Expression::new_arrow_returning(
+      expr.take_in(&self.ast_builder.allocator()),
+      &self.ast_builder,
+    )));
     true
   }
 
@@ -167,16 +173,16 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
         FormalParameters::new(
           SPAN,
           FormalParameterKind::Signature,
-          oxc::allocator::Vec::new_in(&self.ast_factory),
+          oxc::allocator::Vec::new_in(&self.ast_builder),
           NONE,
-          &self.ast_factory,
+          &self.ast_builder,
         ),
         NONE,
         FunctionBody::new(
           SPAN,
-          oxc::allocator::Vec::new_in(&self.ast_factory),
+          oxc::allocator::Vec::new_in(&self.ast_builder),
           {
-            let mut statements = oxc::allocator::Vec::with_capacity_in(2, &self.ast_factory);
+            let mut statements = oxc::allocator::Vec::with_capacity_in(2, &self.ast_builder);
             statements.push(Statement::from(Declaration::VariableDeclaration(
               VariableDeclaration::boxed(
                 SPAN,
@@ -186,29 +192,29 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
                     SPAN,
                     VariableDeclarationKind::Const,
                     BindingPattern::ObjectPattern(
-                      object_pat.clone_in(self.ast_factory.allocator()),
+                      object_pat.clone_in(self.ast_builder.allocator()),
                     ),
                     NONE,
                     Some(await_expr),
                     false,
-                    &self.ast_factory,
+                    &self.ast_builder,
                   ),
-                  &self.ast_factory,
+                  &self.ast_builder,
                 ),
                 false,
-                &self.ast_factory,
+                &self.ast_builder,
               ),
             )));
             statements.push(Statement::ReturnStatement(ReturnStatement::boxed(
               SPAN,
-              Some(BindingPattern::ObjectPattern(object_pat).into_expression(&self.ast_factory)),
-              &self.ast_factory,
+              Some(BindingPattern::ObjectPattern(object_pat).into_expression(&self.ast_builder)),
+              &self.ast_builder,
             )));
             statements
           },
-          &self.ast_factory,
+          &self.ast_builder,
         ),
-        &self.ast_factory,
+        &self.ast_builder,
       ),
     )))
   }
@@ -216,18 +222,18 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
   pub fn vite_preload_call(&self, argument: Argument<'a>) -> Expression<'a> {
     Expression::new_call_expression(
       SPAN,
-      self.ast_factory.make_id_ref_expr(SPAN, "__vitePreload"),
+      Expression::new_id_ref_expr(SPAN, "__vitePreload", &self.ast_builder),
       NONE,
       {
         let append_import_meta_url = self.render_built_url || self.is_relative_base;
         let capacity = if append_import_meta_url { 3 } else { 2 };
-        let mut items = oxc::allocator::Vec::with_capacity_in(capacity, &self.ast_factory);
+        let mut items = oxc::allocator::Vec::with_capacity_in(capacity, &self.ast_builder);
 
         items.push(argument);
         items.push(Argument::from(if self.is_modern {
-          self.ast_factory.make_id_ref_expr(SPAN, "__VITE_PRELOAD__")
+          Expression::new_id_ref_expr(SPAN, "__VITE_PRELOAD__", &self.ast_builder)
         } else {
-          Expression::new_void_0(SPAN, &self.ast_factory)
+          Expression::new_void_0(SPAN, &self.ast_builder)
         }));
         if append_import_meta_url {
           items.push(Argument::from(Expression::from(
@@ -235,20 +241,20 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
               SPAN,
               Expression::new_meta_property(
                 SPAN,
-                self.ast_factory.make_id_name(SPAN, "import"),
-                self.ast_factory.make_id_name(SPAN, "meta"),
-                &self.ast_factory,
+                IdentifierName::new_id_name(SPAN, "import", &self.ast_builder),
+                IdentifierName::new_id_name(SPAN, "meta", &self.ast_builder),
+                &self.ast_builder,
               ),
-              self.ast_factory.make_id_name(SPAN, "url"),
+              IdentifierName::new_id_name(SPAN, "url", &self.ast_builder),
               false,
-              &self.ast_factory,
+              &self.ast_builder,
             ),
           )));
         }
         items
       },
       false,
-      &self.ast_factory,
+      &self.ast_builder,
     )
   }
 }

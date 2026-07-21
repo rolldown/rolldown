@@ -83,7 +83,6 @@ catalog:
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
   mocha: ^11.7.5
-  oxc-minify: '=0.140.0'
   oxc-parser: '=0.140.0'
   oxc-transform: '=0.140.0'
   pathe: ^2.0.3
@@ -99,7 +98,7 @@ catalog:
   source-map: 0.7.6
   source-map-support: ^0.5.21
   strip-comments: ^2.0.1
-  terser: ^5.44.1
+  terser: ^5.49.0
   tinybench: ^6.0.0
   tinyexec: ^1.0.1
   tsx: ^4.22.0

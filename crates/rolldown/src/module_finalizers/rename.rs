@@ -1,6 +1,6 @@
-use oxc::ast::ast::{self, Expression, IdentifierReference};
+use oxc::ast::ast::{self, Expression, IdentifierReference, MemberExpression};
 use rolldown_common::SymbolRef;
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::{ExpressionExt, MemberExpressionFactoryExt as _};
 
 use super::ScopeHoistingFinalizer;
 
@@ -78,7 +78,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     if let Some(ns_alias) = &symbol.namespace_alias {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
-      let access_expr = self.ast_factory.make_member_access(canonical_ns_name, prop_name);
+      let access_expr =
+        MemberExpression::new_member_access(canonical_ns_name, prop_name, &self.ast_builder);
 
       return Some(ast::SimpleAssignmentTarget::from(access_expr));
     }
@@ -88,8 +89,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       return Some(ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
         ast::IdentifierReference::boxed(
           id_ref.span,
-          oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_factory),
-          &self.ast_factory,
+          oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_builder),
+          &self.ast_builder,
         ),
       ));
     }
@@ -131,15 +132,16 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         let symbol = self.ctx.symbol_db.get(canonical_ref);
 
         if let Some(ns_alias) = &symbol.namespace_alias {
-          *target = ast::SimpleAssignmentTarget::from(self.ast_factory.make_member_access(
+          *target = ast::SimpleAssignmentTarget::from(MemberExpression::new_member_access(
             self.canonical_name_for(ns_alias.namespace_ref),
             &ns_alias.property_name,
+            &self.ast_builder,
           ));
         } else {
           let canonical_name = self.canonical_name_for(canonical_ref);
           if target_id_ref.name != canonical_name {
             target_id_ref.name =
-              oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_factory).into();
+              oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_builder).into();
           }
           target_id_ref.reference_id.take();
         }
@@ -169,7 +171,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
               ident.name =
-                oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_factory).into();
+                oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_builder).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();
@@ -185,7 +187,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
               ident.name =
-                oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_factory).into();
+                oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_builder).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();

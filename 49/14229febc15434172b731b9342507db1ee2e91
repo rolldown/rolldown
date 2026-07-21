@@ -1,0 +1,57 @@
+packages/rolldown/src/utils/bindingify-input-options.ts
+  s_e506ac547b5ec1::t_a8e3a0655868ed 31,123-125,127-132
+packages/test-dev-server/tests/fixtures.test.ts
+  s_e506ac547b5ec1::t_56788691ec0488 189,193-194
+crates/rolldown_plugin_hmr/src/hmr_plugin.rs
+  s_e506ac547b5ec1::t_f0b32ffe559f51 1,3-4,16,35-36,39-40
+crates/rolldown_binding/src/options/binding_input_options/binding_experimental_options.rs
+  s_e506ac547b5ec1::t_91f38c9d0744b5 66-68,74-80
+internal-docs/dev-engine/implementation.md
+  s_71237f05a86068::t_26f72d9861f89e 81-96
+packages/rolldown/package.json
+  s_e506ac547b5ec1::t_4fc281e5bb64bb 34,53-56,91-94
+packages/rolldown/src/utils/default-dev-runtime.ts
+  s_e506ac547b5ec1::t_6b10375e69c93e 1-14
+pnpm-lock.yaml
+  s_e506ac547b5ec1::t_584592e65c0399 747-749
+packages/browser/package.json
+  s_e506ac547b5ec1::t_6f0587a10cff1e 32-34,48-51
+crates/rolldown_testing/src/integration_test.rs
+  s_e506ac547b5ec1::t_6ec9d072ef3718 670-674
+  s_e506ac547b5ec1::t_eef5ca4ead9d0a 675
+packages/rolldown/src/binding.d.cts
+  s_e506ac547b5ec1::t_c9b0e35255ea0e 2237
+  s_e506ac547b5ec1::t_4f4688f56769ba 2238-2239
+packages/test-dev-server/tests/package.json
+  s_e506ac547b5ec1::t_c57fac10ecc17e 17-18
+crates/rolldown_common/src/inner_bundler_options/types/dev_mode_options.rs
+  s_e506ac547b5ec1::t_ee1a586db70c4c 19-22
+packages/rolldown/src/options/input-options.ts
+  s_e506ac547b5ec1::t_f21c1786e15e45 223-229
+packages/rolldown/src/utils/validator.ts
+  s_e506ac547b5ec1::t_34f39bc133383d 599
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4914229febc15434172b731b9342507db1ee2e91",
+  "prompts": {},
+  "sessions": {
+    "s_71237f05a86068": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6fb1-5f4d-7163-af9f-8dd2794e177a",
+        "model": "unknown"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_e506ac547b5ec1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6faa-7a7d-7500-b59c-dd73d37827a9",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

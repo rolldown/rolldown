@@ -4,9 +4,9 @@ mod ast_visit;
 use std::borrow::Cow;
 
 use arcstr::ArcStr;
+use oxc::ast::builder::AstBuilder;
 use oxc::ast_visit::VisitMut;
 use rolldown_common::side_effects::HookSideEffects;
-use rolldown_ecmascript_utils::AstFactory;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
@@ -60,9 +60,9 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
   ) -> HookTransformAstReturn {
     let mut ast = args.ast;
     ast.program.with_mut(|fields| {
-      let ast_factory = AstFactory::new(fields.allocator);
+      let ast_builder = AstBuilder::new(fields.allocator);
       let mut visitor = BuildImportAnalysisVisitor::new(
-        ast_factory,
+        ast_builder,
         self.insert_preload,
         self.render_built_url,
         self.is_relative_base,

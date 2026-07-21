@@ -1,7 +1,7 @@
 use oxc_str::CompactStr;
 
 use crate::{
-  stages::link_stage::LinkStageOutput,
+  stages::{generate_stage::order_wrap_state::OrderWrapState, link_stage::LinkStageOutput},
   utils::{
     external_import_interop::{external_import_needs_interop, specifier_needs_interop},
     renamer::{NestedScopeRenamer, Renamer},
@@ -9,15 +9,18 @@ use crate::{
 };
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, NormalModule, OutputFormat, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, NormalModule, OutputFormat, SymbolRef, WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn deconflict_chunk_symbols(
+  chunk_idx: ChunkIdx,
   chunk: &mut Chunk,
   link_output: &LinkStageOutput,
+  order_wrap_state: &OrderWrapState,
+  order_live_symbols: &FxHashSet<SymbolRef>,
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
 ) {
@@ -90,8 +93,15 @@ pub fn deconflict_chunk_symbols(
     });
   }
 
-  let chunk_scope_captured_names =
-    collect_chunk_scope_captured_names(chunk, link_output, format, &renamer);
+  let chunk_scope_captured_names = collect_chunk_scope_captured_names(
+    chunk_idx,
+    chunk,
+    link_output,
+    order_wrap_state,
+    order_live_symbols,
+    format,
+    &renamer,
+  );
 
   // The renamer relies on `chunk.modules` being in ascending exec_order so that
   // `.rev()` yields entry-first / descending exec_order — the same priority as
@@ -124,7 +134,15 @@ pub fn deconflict_chunk_symbols(
 
       link_output.stmt_infos[module.idx]
         .iter_enumerated()
-        .filter(|(idx, _)| meta.stmt_info_included.has_bit(*idx))
+        // A runtime statement tree-shaking excluded but order wrapping force-includes is rendered
+        // and symbol-assigned, so it must reach the renamer too. Mirror the overlay-aware inclusion
+        // test the other two consumers already use (`compute_cross_chunk_links` and the module
+        // finalizer's `remove_unused_top_level_stmt`); without it a user top-level binding named
+        // `__esmMin`/`__esm` co-hosted with the runtime collides with the forced helper declaration.
+        .filter(|(idx, stmt_info)| {
+          meta.stmt_info_included.has_bit(*idx)
+            || order_wrap_state.forces_runtime_stmt(&link_output.runtime, module.idx, stmt_info)
+        })
         .for_each(|(_, stmt_info)| {
           for declared_symbol in stmt_info.declared_symbols.iter().filter(|item| item.is_normal()) {
             let symbol_ref = declared_symbol.inner();
@@ -160,6 +178,13 @@ pub fn deconflict_chunk_symbols(
           }
         });
     });
+
+  for synthetic in order_wrap_state.synthetic_statements_for_chunk(chunk_idx) {
+    for declared_symbol in synthetic.declared_symbols.iter().filter(|item| item.is_normal()) {
+      debug_assert_eq!(declared_symbol.inner().owner, synthetic.owner);
+      renamer.add_symbol_in_root_scope(declared_symbol.inner(), true);
+    }
+  }
 
   // Though, those symbols in `imports_from_other_chunks` doesn't belong to this chunk, but in the final output, they still behave
   // like declared in this chunk. This is because we need to generate import statements in this chunk to import symbols from other
@@ -240,12 +265,20 @@ pub fn deconflict_chunk_symbols(
 /// triggered the rename would have been the user-source local — which is exactly the case we
 /// want to catch.
 fn collect_chunk_scope_captured_names(
+  chunk_idx: ChunkIdx,
   chunk: &Chunk,
   link_output: &LinkStageOutput,
+  order_wrap_state: &OrderWrapState,
+  order_live_symbols: &FxHashSet<SymbolRef>,
   format: OutputFormat,
   renamer: &Renamer<'_>,
 ) -> FxHashSet<CompactStr> {
   let mut captured: FxHashSet<CompactStr> = FxHashSet::default();
+  for synthetic in order_wrap_state.synthetic_statements_for_chunk(chunk_idx) {
+    for declared in &synthetic.declared_symbols {
+      captured.insert(CompactStr::new(declared.inner().name(&link_output.symbol_db)));
+    }
+  }
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd) {
     // Mirror the set rendered as factory params by `render_chunk_external_imports` +
     // `render_factory_parameters`.
@@ -279,7 +312,7 @@ fn collect_chunk_scope_captured_names(
         link_output.metas[canonical_ref.owner].wrapper_ref.is_some_and(|wrapper_ref| {
           link_output.symbol_db.canonical_ref_for(wrapper_ref) == canonical_ref
         });
-      if is_cjs_wrapper {
+      if is_cjs_wrapper || order_live_symbols.contains(&canonical_ref) {
         captured.insert(CompactStr::new(canonical_ref.name(&link_output.symbol_db)));
       }
     }

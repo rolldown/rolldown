@@ -4,8 +4,8 @@ use super::plugin_context::PluginContext;
 use crate::{
   HookAddonArgs, HookBuildEndArgs, HookBuildStartArgs, HookCloseBundleArgs, HookGenerateBundleArgs,
   HookInjectionOutputReturn, HookLoadArgs, HookRenderChunkArgs, HookRenderStartArgs,
-  HookResolveIdArgs, HookTransformArgs, HookUsage, Plugin, PluginHookMeta, SharedLoadPluginContext,
-  SharedTransformPluginContext,
+  HookResolveFileUrlArgs, HookResolveIdArgs, HookTransformArgs, HookUsage, Plugin, PluginHookMeta,
+  SharedLoadPluginContext, SharedTransformPluginContext,
   types::{
     hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs,
     hook_write_bundle_args::HookWriteBundleArgs,
@@ -18,6 +18,7 @@ pub use crate::plugin::HookAugmentChunkHashReturn;
 pub use crate::plugin::HookLoadReturn;
 pub use crate::plugin::HookNoopReturn;
 pub use crate::plugin::HookRenderChunkReturn;
+pub use crate::plugin::HookResolveFileUrlReturn;
 pub use crate::plugin::HookResolveIdReturn;
 pub use crate::plugin::HookTransformAstReturn;
 pub use crate::plugin::HookTransformReturn;
@@ -162,6 +163,14 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   ) -> HookFuture<'a, HookAugmentChunkHashReturn>;
 
   fn call_augment_chunk_hash_meta(&self) -> Option<PluginHookMeta>;
+
+  fn call_resolve_file_url<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookResolveFileUrlArgs<'a>,
+  ) -> HookFuture<'a, HookResolveFileUrlReturn>;
+
+  fn call_resolve_file_url_meta(&self) -> Option<PluginHookMeta>;
 
   fn call_render_error<'a>(
     &'a self,
@@ -392,6 +401,18 @@ impl<T: Plugin> Pluginable for T {
 
   fn call_augment_chunk_hash_meta(&self) -> Option<PluginHookMeta> {
     Plugin::augment_chunk_hash_meta(self)
+  }
+
+  fn call_resolve_file_url<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookResolveFileUrlArgs<'a>,
+  ) -> HookFuture<'a, HookResolveFileUrlReturn> {
+    Box::pin(Plugin::resolve_file_url(self, ctx, args))
+  }
+
+  fn call_resolve_file_url_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::resolve_file_url_meta(self)
   }
 
   fn call_render_error<'a>(

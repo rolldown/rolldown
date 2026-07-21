@@ -3,6 +3,7 @@ import path from 'node:path';
 import { styleText } from 'node:util';
 import { x } from 'tinyexec';
 
+const VITE_DIR = path.resolve(import.meta.dirname, '../../vite');
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
 const OVERRIDES = [
   `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`,
@@ -44,14 +45,23 @@ async function runCmdAndPipeOrExit(title: string, cmdOptions: Parameters<typeof 
 
 fs.rmSync(REPO_PATH, { recursive: true, force: true });
 
+// Reuse the shared `vite/` checkout at the repo root, prepared by
+// `just setup-vite` (the latest `rolldown-canary` rebased onto the latest
+// `main`), the same code the dev-server tests run on. Setup happens only
+// there, never here, so the checkout and the dev-server's built vite dist
+// cannot drift apart. The tests run on a throwaway LOCAL clone of the
+// checkout, never on the checkout itself: this suite edits tracked files
+// (pnpm overrides) and the checkout must stay unpatched. The clone shares
+// objects via hardlinks, so it needs no network.
+if (!fs.existsSync(path.join(VITE_DIR, 'package.json'))) {
+  console.error(
+    styleText(['red', 'bold'], `Vite checkout not found at ${VITE_DIR}. Run \`just setup-vite\` first.`),
+  );
+  process.exit(1);
+}
 await runCmdAndPipeOrExit(
-  '# Cloning vite repo (rolldown-canary branch)...',
-  ['git', ['clone', '--branch', 'rolldown-canary', 'https://github.com/vitejs/vite.git', REPO_PATH]],
-);
-
-await runCmdAndPipeOrExit(
-  '# Rebasing rolldown-canary onto main...',
-  ['git', ['rebase', 'origin/main'], { nodeOptions: { cwd: REPO_PATH } }],
+  '# Cloning the local vite checkout...',
+  ['git', ['clone', VITE_DIR, REPO_PATH]],
 );
 
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');
@@ -75,15 +85,6 @@ await runCmdAndPipeOrExit(
   '# Running `pnpm run build`...',
   ['pnpm', ['run', 'build'], { nodeOptions: { cwd: REPO_PATH } }],
 );
-
-// Skip known failing tests
-// https://github.com/rolldown/rolldown/issues/8839
-const assetsSpecPath = path.resolve(REPO_PATH, 'playground/assets/__tests__/assets.spec.ts');
-const assetsSpec = fs.readFileSync(assetsSpecPath, 'utf-8');
-fs.writeFileSync(assetsSpecPath, assetsSpec.replace(
-  "test('import with raw query'",
-  "test.skip('import with raw query'"
-), 'utf-8');
 
 // Remove VITE_PLUS_* env vars to prevent leaking into loadEnv() test snapshots
 for (const key of Object.keys(process.env)) {

@@ -8,8 +8,9 @@ use crate::{
   SharedLoadPluginContext, SharedTransformPluginContext,
   types::{
     hook_build_start_args::HookBuildStartArgs, hook_render_error::HookRenderErrorArgs,
-    hook_render_start_args::HookRenderStartArgs, hook_transform_ast_args::HookTransformAstArgs,
-    hook_transform_output::HookTransformOutput,
+    hook_render_start_args::HookRenderStartArgs,
+    hook_resolve_file_url_args::HookResolveFileUrlArgs,
+    hook_transform_ast_args::HookTransformAstArgs, hook_transform_output::HookTransformOutput,
   },
 };
 use anyhow::Result;
@@ -23,6 +24,7 @@ pub type HookLoadReturn = Result<Option<HookLoadOutput>>;
 pub type HookNoopReturn = Result<()>;
 pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
 pub type HookAugmentChunkHashReturn = Result<Option<String>>;
+pub type HookResolveFileUrlReturn = Result<Option<String>>;
 pub type HookInjectionOutputReturn = Result<Option<String>>;
 
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
@@ -203,6 +205,18 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   }
 
   fn augment_chunk_hash_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
+  fn resolve_file_url(
+    &self,
+    _ctx: &PluginContext,
+    _args: &HookResolveFileUrlArgs<'_>,
+  ) -> impl std::future::Future<Output = HookResolveFileUrlReturn> + Send {
+    async { Ok(None) }
+  }
+
+  fn resolve_file_url_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 

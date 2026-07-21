@@ -10,6 +10,8 @@ pub mod hook_render_chunk_args;
 pub mod hook_render_chunk_output;
 pub mod hook_render_error;
 pub mod hook_render_start_args;
+pub mod hook_resolve_file_url_args;
+pub mod hook_resolve_file_url_output;
 pub mod hook_resolve_id_args;
 pub mod hook_resolve_id_output;
 pub mod hook_resolve_id_skipped;

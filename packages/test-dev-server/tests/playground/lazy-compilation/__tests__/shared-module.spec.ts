@@ -12,6 +12,7 @@ describe('lazy-shared-module', () => {
     // server rebuilds main.js around the fetched proxies. No assertions here
     // — the bug only shows on the rebuilt output.
     await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
+    await waitForBuildStable();
     await page.click('#shared-module-btn');
     await expect.poll(() => page.textContent('#shared-module-status')).toBe('done');
 

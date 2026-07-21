@@ -13,23 +13,60 @@ export { foo };
 
 ```
 
-# Variant: [strict_execution_order: true]
+# Variant: wrap-all: [strict_execution_order: true]
 
 ## Assets
 
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { n as foo, t as init_main } from "./main2.js";
+await init_main();
+export { foo };
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region lib.js
 var foo;
-var init_lib = __esmMin((async () => {
-	foo = await Promise.resolve("foo");
-}));
+function init_lib() {
+	return (init_lib = __esmMin((async () => {
+		foo = await Promise.resolve("foo");
+	})))();
+}
 //#endregion
-await __esmMin((async () => {
-	await init_lib();
-}))();
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await init_lib();
+	})))();
+}
+//#endregion
+export { foo as n, init_lib as r, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+//#region lib.js
+const foo = await Promise.resolve("foo");
+//#endregion
 export { foo };
 
 ```

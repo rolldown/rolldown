@@ -1,18 +1,20 @@
 use oxc::allocator::GetAllocator;
+use oxc::ast::builder::AstBuilder;
 use oxc::{
   allocator::CloneIn as _,
   ast::{
-    NONE,
     ast::{
-      BindingPattern, Expression, ImportDeclarationSpecifier, ImportOrExportKind,
-      ModuleDeclaration, ModuleExportName, Statement, StringLiteral, VariableDeclaration,
+      BindingIdentifier, BindingPattern, Expression, ImportDeclarationSpecifier,
+      ImportOrExportKind, ModuleDeclaration, ModuleExportName, Statement, StringLiteral,
+      VariableDeclaration,
     },
+    builder::NONE,
   },
   ast_visit::{VisitMut, walk_mut},
   semantic::ScopeFlags,
   span::SPAN,
 };
-use rolldown_ecmascript_utils::AstFactory;
+use rolldown_ecmascript_utils::BindingIdentifierFactoryExt as _;
 
 use super::PRELOAD_HELPER_ID;
 
@@ -20,7 +22,7 @@ const PRELOAD_METHOD: &str = "__vitePreload";
 
 #[expect(clippy::struct_excessive_bools)]
 pub struct BuildImportAnalysisVisitor<'a> {
-  pub ast_factory: AstFactory<'a>,
+  pub ast_builder: AstBuilder<'a>,
   pub scope_stack: Vec<ScopeFlags>,
   pub insert_preload: bool,
   pub has_inserted_helper: bool,
@@ -39,18 +41,18 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
         Some(oxc::allocator::Vec::from_value_in(
           ImportDeclarationSpecifier::new_import_specifier(
             SPAN,
-            ModuleExportName::new_identifier_name(SPAN, PRELOAD_METHOD, &self.ast_factory),
-            self.ast_factory.make_id(SPAN, PRELOAD_METHOD),
+            ModuleExportName::new_identifier_name(SPAN, PRELOAD_METHOD, &self.ast_builder),
+            BindingIdentifier::new_id(SPAN, PRELOAD_METHOD, &self.ast_builder),
             ImportOrExportKind::Value,
-            &self.ast_factory,
+            &self.ast_builder,
           ),
-          &self.ast_factory,
+          &self.ast_builder,
         )),
-        StringLiteral::new(SPAN, PRELOAD_HELPER_ID, None, &self.ast_factory),
+        StringLiteral::new(SPAN, PRELOAD_HELPER_ID, None, &self.ast_builder),
         None,
         NONE,
         ImportOrExportKind::Value,
-        &self.ast_factory,
+        &self.ast_builder,
       )));
     }
   }
@@ -88,10 +90,10 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
           decl.init = Some(Expression::new_await_expression(
             SPAN,
             self.construct_vite_preload_call(
-              object_pat.clone_in(self.ast_factory.allocator()),
+              object_pat.clone_in(self.ast_builder.allocator()),
               decl.init.take().unwrap(),
             ),
-            &self.ast_factory,
+            &self.ast_builder,
           ));
           self.need_prepend_helper = true;
         } else {

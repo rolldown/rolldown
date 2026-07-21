@@ -11,6 +11,7 @@ use rolldown_plugin::{
   HookResolveIdReturn, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
   PluginContext, SharedLoadPluginContext,
 };
+use rolldown_std_utils::relative_path_as_js_specifier;
 use rolldown_utils::{
   futures::{block_on, block_on_spawn_all},
   pattern_filter::StringOrRegex,
@@ -122,15 +123,10 @@ impl Plugin for ViteDynamicImportVarsPlugin {
         let result = block_on(block_on_spawn_all(task));
         for (i, item) in result.into_iter().enumerate() {
           if let Some(id) = item {
-            let id = id.relative(importer);
-            let id = id.to_slash_lossy();
-            let id = if id.is_empty() {
+            let id = relative_path_as_js_specifier(id, importer);
+            if id == "." {
               continue;
-            } else if id.as_bytes()[0] == b'.' {
-              id.into_owned()
-            } else {
-              rolldown_utils::concat_string!("./", id)
-            };
+            }
 
             let addr = visitor.async_imports_addrs[i];
             visitor.rewrite_variable_dynamic_import(unsafe { &*addr }, Some(&id));

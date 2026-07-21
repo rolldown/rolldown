@@ -16,6 +16,7 @@ use cow_utils::CowUtils;
 use owo_colors::Style;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
+use rolldown_std_utils::relative_path_to_slash;
 use sugar_path::SugarPath as _;
 
 pub type LogInfoFn =
@@ -214,9 +215,10 @@ impl Plugin for ViteReporterPlugin {
       let map_pad = utils::display_size(biggest_map_size).len();
       let compress_pad = utils::display_size(biggest_compress_size).len();
 
-      let out_dir =
-        args.options.cwd.join(&args.options.out_dir).normalize().relative(&args.options.cwd);
-      let out_dir = out_dir.to_slash_lossy();
+      let out_dir = relative_path_to_slash(
+        args.options.cwd.join(&args.options.out_dir).normalize(),
+        &args.options.cwd,
+      );
       let out_dir_prefix = format!("{out_dir}/");
 
       let mut info = String::new();

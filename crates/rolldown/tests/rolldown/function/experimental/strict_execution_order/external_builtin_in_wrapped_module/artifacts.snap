@@ -1,0 +1,84 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { sep } from "node:path";
+//#region dep.js
+globalThis.__depRan = true;
+//#endregion
+//#region main.js
+const out = `dep:${sep.length > 0}`;
+//#endregion
+export { out };
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import { n as out, t as init_main } from "./main2.js";
+init_main();
+export { out };
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { sep } from "node:path";
+//#region dep.js
+var marker;
+function init_dep() {
+	return (init_dep = __esmMin((() => {
+		globalThis.__depRan = true;
+		marker = `dep:${sep.length > 0}`;
+	})))();
+}
+//#endregion
+//#region main.js
+var out;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_dep();
+		out = marker;
+	})))();
+}
+//#endregion
+export { out as n, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import { sep } from "node:path";
+//#region dep.js
+globalThis.__depRan = true;
+//#endregion
+//#region main.js
+const out = `dep:${sep.length > 0}`;
+//#endregion
+export { out };
+
+```

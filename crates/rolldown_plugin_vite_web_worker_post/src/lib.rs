@@ -2,8 +2,8 @@ mod ast_visitor;
 
 use std::borrow::Cow;
 
+use oxc::ast::builder::AstBuilder;
 use oxc::ast_visit::VisitMut;
-use rolldown_ecmascript_utils::AstFactory;
 use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
 
 use crate::ast_visitor::WebWorkerPostVisitor;
@@ -26,8 +26,8 @@ impl Plugin for ViteWebWorkerPostPlugin {
     mut args: rolldown_plugin::HookTransformAstArgs<'_>,
   ) -> rolldown_plugin::HookTransformAstReturn {
     args.ast.program.with_mut(|fields| {
-      let ast_factory = AstFactory::new(fields.allocator);
-      let mut visitor = WebWorkerPostVisitor::new(ast_factory);
+      let ast_builder = AstBuilder::new(fields.allocator);
+      let mut visitor = WebWorkerPostVisitor::new(ast_builder);
       visitor.visit_program(fields.program);
     });
     Ok(args.ast)

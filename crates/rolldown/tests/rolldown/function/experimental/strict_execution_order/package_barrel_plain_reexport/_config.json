@@ -1,0 +1,34 @@
+{
+  "configName": "wrap-all",
+  "config": {
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "carbon",
+          "test": "[\\\\/]barrel\\.js$"
+        },
+        {
+          "name": "comp",
+          "test": "[\\\\/](?:checkbox|radio)\\.js$"
+        },
+        {
+          "name": "ca",
+          "test": "[\\\\/]cyc-a\\.js$"
+        },
+        {
+          "name": "cb",
+          "test": "[\\\\/]cyc-b\\.js$"
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    }
+  ]
+}

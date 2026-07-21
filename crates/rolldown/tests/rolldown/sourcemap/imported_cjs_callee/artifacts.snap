@@ -1,0 +1,107 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region client.cjs
+var require_client = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports.createRoot = function createRoot(element) {
+		return { render() {
+			element.textContent = "rendered";
+		} };
+	};
+}));
+
+//#endregion
+//#region main.js
+var import_client = require_client();
+(0, import_client.createRoot)(document.getElementById("root")).render();
+
+//#endregion
+//# sourceMappingURL=main.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../client.cjs
+(0:0) "module." --> (6:1) "module."
+(0:7) "exports." --> (6:8) "exports."
+(0:15) "createRoot = " --> (6:16) "createRoot = "
+(0:28) "function " --> (6:29) "function "
+(0:37) "createRoot(" --> (6:38) "createRoot("
+(0:48) "element) " --> (6:49) "element) "
+(0:57) "{\n" --> (6:58) "{\n"
+(1:2) "return " --> (7:2) "return "
+(1:9) "{\n" --> (7:9) "{ "
+(2:4) "render() " --> (7:11) "render() "
+(2:13) "{\n" --> (7:20) "{\n"
+(3:6) "element." --> (8:3) "element."
+(3:14) "textContent = " --> (8:11) "textContent = "
+(3:28) "'rendered';\n" --> (8:25) "\"rendered\";\n"
+(4:4) "},\n" --> (9:2) "} "
+(5:2) "};\n" --> (9:4) "};\n"
+(6:0) "};\n" --> (10:1) "};\n"
+- ../main.js
+(2:0) "createRoot(" --> (16:4) "import_client.createRoot)("
+(2:11) "document." --> (16:30) "document."
+(2:20) "getElementById(" --> (16:39) "getElementById("
+(2:35) "'root'" --> (16:54) "\"root\""
+(2:41) ")" --> (16:60) ")"
+(2:42) ")" --> (16:61) ")"
+(2:43) "." --> (16:62) "."
+(2:44) "render(" --> (16:63) "render("
+(2:51) ");\n" --> (16:70) ");\n"
+```
+
+# Variant: minified: [minify: true]
+
+## Assets
+
+### main.js
+
+```js
+(0,((e,t)=>()=>(t||(e((t={exports:{}}).exports,t),e=null),t.exports))(((e,t)=>{t.exports.createRoot=function(e){return{render(){e.textContent=`rendered`}}}}))().createRoot)(document.getElementById(`root`)).render();
+//# sourceMappingURL=main.js.map
+```
+
+## Sourcemap Visualizer
+
+```
+- ../main.js
+(2:0) "createRoot(document.getElementById('root')).render();\n" --> (0:1) "0,((e,t)=>()=>(t||(e((t={exports:{}}).exports,t),e=null),t.exports))(((e,t)=>{"
+- ../client.cjs
+(0:0) "module." --> (0:79) "t."
+(0:7) "exports." --> (0:81) "exports."
+(0:15) "createRoot = " --> (0:89) "createRoot="
+(0:28) "function createRoot(" --> (0:100) "function("
+(0:48) "element) " --> (0:109) "e)"
+(0:57) "{\n" --> (0:111) "{"
+(1:2) "return " --> (0:112) "return"
+(1:9) "{\n" --> (0:118) "{"
+(2:4) "render() " --> (0:119) "render()"
+(2:13) "{\n" --> (0:127) "{"
+(3:6) "element." --> (0:128) "e."
+(3:14) "textContent = " --> (0:130) "textContent="
+(3:28) "'rendered';\n" --> (0:142) "`rendered`"
+(4:4) "},\n" --> (0:152) "}"
+(5:2) "};\n" --> (0:153) "}"
+(6:0) "};\n" --> (0:154) "}}))("
+- ../main.js
+(2:0) "createRoot(" --> (0:159) ")"
+(2:0) "createRoot(" --> (0:160) "."
+(2:0) "createRoot(" --> (0:161) "createRoot)"
+(2:0) "createRoot(" --> (0:172) "("
+(2:11) "document." --> (0:173) "document."
+(2:20) "getElementById(" --> (0:182) "getElementById("
+(2:35) "'root'" --> (0:197) "`root`"
+(2:41) ")" --> (0:203) ")"
+(2:42) ")" --> (0:204) ")"
+(2:43) "." --> (0:205) "."
+(2:44) "render(" --> (0:206) "render("
+(2:51) ");\n" --> (0:213) ");\n"
+```

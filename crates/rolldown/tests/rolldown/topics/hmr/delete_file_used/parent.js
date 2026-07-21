@@ -6,4 +6,5 @@ import.meta.hot.accept((newMod) => {
   const { childValue, parentValue } = newMod;
   assert.strictEqual(parentValue, 'parent');
   assert.strictEqual(childValue, 'child');
+  globalThis.__delete_file_used_parent_reran = true;
 });

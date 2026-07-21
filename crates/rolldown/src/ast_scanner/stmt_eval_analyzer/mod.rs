@@ -6,7 +6,8 @@ use oxc::ast::ast::{
   IdentifierReference, UnaryOperator, VariableDeclarationKind,
 };
 use oxc::ast::match_member_expression;
-use oxc::semantic::{NodeId, SymbolId};
+use oxc::ast_visit::{Visit, walk};
+use oxc::semantic::{NodeId, ScopeFlags, SymbolId};
 use oxc_ecmascript::GlobalContext;
 use oxc_ecmascript::side_effects::{
   MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects,
@@ -14,6 +15,8 @@ use oxc_ecmascript::side_effects::{
 use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, StmtEvalFlags};
 use rolldown_ecmascript_utils::ExpressionExt;
 use rustc_hash::FxHashSet;
+
+use crate::utils;
 
 bitflags! {
     #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
@@ -173,20 +176,18 @@ impl<'a> StmtEvalAnalyzer<'a> {
   }
 
   /// `import.meta.url` is a spec-defined side-effect-free property read, and
-  /// `import.meta.ROLLUP_FILE_URL_<referenceId>` is a placeholder the finalizer rewrites into a
+  /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>` is a placeholder the finalizer rewrites into a
   /// `new URL(...)` expression. Other accesses like `import.meta.hot.accept()` may have side effects.
   fn is_side_effect_free_import_meta_access(member_expr: &ast::MemberExpression) -> bool {
-    let ast::MemberExpression::StaticMemberExpression(static_expr) = member_expr else {
-      return false;
-    };
-    let Expression::MetaProperty(meta_property) = &static_expr.object else {
+    let Expression::MetaProperty(meta_property) = member_expr.object() else {
       return false;
     };
     if meta_property.meta.name != "import" || meta_property.property.name != "meta" {
       return false;
     }
-    let property_name = static_expr.property.name.as_str();
-    property_name == "url" || property_name.starts_with("ROLLUP_FILE_URL_")
+    member_expr
+      .static_property_name()
+      .is_some_and(|name| name == "url" || utils::file_url::starts_with_file_url_prefix(name))
   }
 
   fn analyze_member_expr(&self, member_expr: &ast::MemberExpression) -> StmtEvalFacts {
@@ -398,8 +399,15 @@ impl<'a> StmtEvalAnalyzer<'a> {
       Expression::BinaryExpression(e) => self.fold_compound(expr, [&e.left, &e.right]),
       Expression::UnaryExpression(e) => self.fold_compound(expr, [&e.argument]),
 
+      // Class expressions: same definition-time order-sensitivity as class declarations (heritage,
+      // computed keys, static initializers, static blocks, decorators). Method/instance bodies are
+      // not evaluated here.
+      Expression::ClassExpression(class) => {
+        self.analyze_class_definition(expr.may_have_side_effects(self), class)
+      }
+
       // Everything else: delegate entirely to Oxc.
-      // Covers literals, function/arrow/class expressions (bodies not evaluated
+      // Covers literals, function/arrow expressions (bodies not evaluated
       // here), await/import/yield (inherently side-effectful), tagged-template
       // (handled like a call by oxc; no `pure` flag), JSX, V8 intrinsics, etc.
       _ => StmtEvalFacts::from_tree_shaking_side_effect(expr.may_have_side_effects(self)),
@@ -461,9 +469,29 @@ impl<'a> StmtEvalAnalyzer<'a> {
     }
   }
 
+  /// Base facts for a `class` declaration/expression, plus its definition-time order-sensitive
+  /// reasons. `has_side_effect` must be the caller's existing whole-class
+  /// `may_have_side_effects` judgment so the tree-shaking channel stays byte-identical to what the
+  /// delegate arms produced before; only when oxc certified the class side-effect-free do we look
+  /// deeper, and then only to grow `order_sensitive_reasons`.
+  fn analyze_class_definition(&self, has_side_effect: bool, class: &ast::Class) -> StmtEvalFacts {
+    let mut facts = StmtEvalFacts::from_tree_shaking_side_effect(has_side_effect);
+    if !has_side_effect {
+      facts.order_sensitive_reasons |= DefinitionTimeOrderReasonCollector::collect(self, class);
+    }
+    facts
+  }
+
   fn analyze_decl(&self, decl: &ast::Declaration) -> StmtEvalFacts {
     match decl {
       ast::Declaration::VariableDeclaration(var_decl) => self.analyze_var_decl(var_decl),
+      // Class definition-time positions (heritage, computed keys, static initializers, static
+      // blocks, decorators) can read a whitelisted global or carry a pure annotation, which makes
+      // the class order-sensitive even when oxc reports no tree-shaking side effect. The delegate
+      // catch-all below drops those reasons.
+      ast::Declaration::ClassDeclaration(class) => {
+        self.analyze_class_definition(decl.may_have_side_effects(self), class)
+      }
       _ => StmtEvalFacts::from_tree_shaking_side_effect(decl.may_have_side_effects(self)),
     }
   }
@@ -523,8 +551,9 @@ impl<'a> StmtEvalAnalyzer<'a> {
             self.analyze_expr(decl.to_expression())
           }
           ast::ExportDefaultDeclarationKind::FunctionDeclaration(_) => StmtEvalFacts::default(),
-          ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
-            StmtEvalFacts::from_tree_shaking_side_effect(decl.may_have_side_effects(self))
+          ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+            // Same definition-time order-sensitivity as a plain class declaration.
+            self.analyze_class_definition(class.may_have_side_effects(self), class)
           }
           ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
             StmtEvalFacts::from_unknown_side_effect()
@@ -617,6 +646,166 @@ impl<'a> StmtEvalAnalyzer<'a> {
     }
     facts
   }
+}
+
+/// Collects order-sensitive reasons from the parts of a class that run while the class is being
+/// defined. This is intentionally independent from `StmtEvalAnalyzer`'s tree-shaking walk: a
+/// tree-shaking flag is enough for that walk to stop, but it must not hide a later global read or
+/// pure annotation from order analysis.
+struct DefinitionTimeOrderReasonCollector<'analyzer, 'ctx> {
+  analyzer: &'analyzer StmtEvalAnalyzer<'ctx>,
+  reasons: StmtOrderSensitiveReasons,
+}
+
+impl<'analyzer, 'ctx> DefinitionTimeOrderReasonCollector<'analyzer, 'ctx> {
+  fn collect(
+    analyzer: &'analyzer StmtEvalAnalyzer<'ctx>,
+    class: &ast::Class,
+  ) -> StmtOrderSensitiveReasons {
+    let mut collector = Self { analyzer, reasons: StmtOrderSensitiveReasons::empty() };
+    collector.visit_class(class);
+    collector.reasons
+  }
+
+  fn add_reason_if(&mut self, reason: StmtOrderSensitiveReasons, value: bool) {
+    if value {
+      self.reasons.insert(reason);
+    }
+  }
+
+  /// Function and arrow bodies are normally deferred until call time. A directly invoked function
+  /// literal is different: its parameters and non-generator body run immediately.
+  fn visit_immediately_invoked_function(&mut self, callee: &Expression<'_>) {
+    match callee.get_inner_expression() {
+      Expression::FunctionExpression(function) => {
+        self.visit_formal_parameters(&function.params);
+        if !function.generator
+          && let Some(body) = &function.body
+        {
+          self.visit_function_body(body);
+        }
+      }
+      Expression::ArrowFunctionExpression(arrow) => {
+        self.visit_formal_parameters(&arrow.params);
+        self.visit_function_body(&arrow.body);
+      }
+      Expression::SequenceExpression(sequence) => {
+        if let Some(last) = sequence.expressions.last() {
+          self.visit_immediately_invoked_function(last);
+        }
+      }
+      _ => {}
+    }
+  }
+
+  fn visit_class_definition(&mut self, class: &ast::Class<'_>) {
+    // Decorator expressions and the heritage expression are evaluated when the class is defined.
+    for decorator in &class.decorators {
+      self.visit_expression(&decorator.expression);
+    }
+    if let Some(super_class) = &class.super_class {
+      self.visit_expression(super_class);
+    }
+
+    for element in &class.body.body {
+      match element {
+        ast::ClassElement::StaticBlock(block) => {
+          for stmt in &block.body {
+            self.visit_statement(stmt);
+          }
+        }
+        ast::ClassElement::MethodDefinition(method) => {
+          for decorator in &method.decorators {
+            self.visit_expression(&decorator.expression);
+          }
+          if method.computed {
+            self.visit_expression(method.key.to_expression());
+          }
+          // Method/getter/setter bodies run when invoked, not at definition time.
+        }
+        ast::ClassElement::PropertyDefinition(property) => {
+          for decorator in &property.decorators {
+            self.visit_expression(&decorator.expression);
+          }
+          if property.computed {
+            self.visit_expression(property.key.to_expression());
+          }
+          // Instance initializers run during construction; static initializers run now.
+          if property.r#static
+            && let Some(value) = &property.value
+          {
+            self.visit_expression(value);
+          }
+        }
+        ast::ClassElement::AccessorProperty(accessor) => {
+          for decorator in &accessor.decorators {
+            self.visit_expression(&decorator.expression);
+          }
+          if accessor.computed {
+            self.visit_expression(accessor.key.to_expression());
+          }
+          if accessor.r#static
+            && let Some(value) = &accessor.value
+          {
+            self.visit_expression(value);
+          }
+        }
+        // Type-level construct, no runtime evaluation.
+        ast::ClassElement::TSIndexSignature(_) => {}
+      }
+    }
+  }
+}
+
+impl<'ast> Visit<'ast> for DefinitionTimeOrderReasonCollector<'_, '_> {
+  fn visit_identifier_reference(&mut self, ident: &IdentifierReference<'ast>) {
+    let is_global_read = ident.reference_id.get().is_some_and(|reference_id| {
+      let reference = self.analyzer.scope.scoping().get_reference(reference_id);
+      reference.symbol_id().is_none() && reference.is_read()
+    });
+    self.add_reason_if(StmtOrderSensitiveReasons::GlobalVarAccess, is_global_read);
+  }
+
+  fn visit_assignment_expression(&mut self, assignment: &ast::AssignmentExpression<'ast>) {
+    // A plain CJS export write is tree-shaking-only. Its target must not become a global-read
+    // reason, but its RHS still runs and may contain one.
+    if check_pure_cjs_export(self.analyzer.scope, &assignment.left).is_some() {
+      self.visit_expression(&assignment.right);
+    } else {
+      walk::walk_assignment_expression(self, assignment);
+    }
+  }
+
+  fn visit_call_expression(&mut self, call: &CallExpression<'ast>) {
+    let is_pure_annotated = !self.analyzer.flat_options.ignore_annotations()
+      && (call.pure || self.analyzer.is_call_expr_marked_pure(call));
+    self.add_reason_if(StmtOrderSensitiveReasons::PureAnnotation, is_pure_annotated);
+
+    walk::walk_call_expression(self, call);
+    self.visit_immediately_invoked_function(&call.callee);
+  }
+
+  fn visit_new_expression(&mut self, new_expr: &ast::NewExpression<'ast>) {
+    self.add_reason_if(
+      StmtOrderSensitiveReasons::PureAnnotation,
+      !self.analyzer.flat_options.ignore_annotations() && new_expr.pure,
+    );
+    walk::walk_new_expression(self, new_expr);
+    self.visit_immediately_invoked_function(&new_expr.callee);
+  }
+
+  // Merely creating a function does not run its parameters or body.
+  fn visit_function(&mut self, _function: &ast::Function<'ast>, _flags: ScopeFlags) {}
+
+  fn visit_arrow_function_expression(&mut self, _arrow: &ast::ArrowFunctionExpression<'ast>) {}
+
+  // A nested class has the same definition-time/deferred split as the outer class.
+  fn visit_class(&mut self, class: &ast::Class<'ast>) {
+    self.visit_class_definition(class);
+  }
+
+  // Types are erased before runtime.
+  fn visit_ts_type(&mut self, _ty: &ast::TSType<'ast>) {}
 }
 
 /// Bundler-specific: detect `exports.staticProp = ...` CJS export pattern.
@@ -713,7 +902,10 @@ mod test {
 
   use itertools::Itertools;
   use oxc::{parser::Parser, span::SourceType};
-  use rolldown_common::{AstScopes, NormalizedBundlerOptions, StmtEvalFlags};
+  use rolldown_common::{
+    AstScopes, InnerOptions, NormalizedBundlerOptions, PropertyReadSideEffects,
+    PropertyWriteSideEffects, StmtEvalFlags,
+  };
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
   use super::StmtEvalAnalyzer;
@@ -773,6 +965,29 @@ mod test {
         StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
           .analyze_stmt(stmt)
           .is_order_sensitive()
+      })
+      .collect_vec()
+  }
+
+  fn get_stmt_eval_with_options(
+    code: &str,
+    options: &Arc<NormalizedBundlerOptions>,
+  ) -> Vec<(StmtEvalFlags, bool)> {
+    let source_type = SourceType::tsx();
+    let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
+    let semantic = EcmaAst::make_semantic(ast.program());
+    let scoping = semantic.into_scoping();
+    let ast_scopes = AstScopes::new(scoping);
+
+    let flags = FlatOptions::from_shared_options(options);
+    ast
+      .program()
+      .body
+      .iter()
+      .map(|stmt| {
+        let facts =
+          StmtEvalAnalyzer::new(&ast_scopes, flags, options, None, None).analyze_stmt(stmt);
+        (facts.tree_shaking_flags(), facts.is_order_sensitive())
       })
       .collect_vec()
   }
@@ -1008,8 +1223,21 @@ mod test {
     assert!(!has_side_effect_for_tree_shaking("import.meta"));
     assert!(!has_side_effect_for_tree_shaking("const meta = import.meta"));
     assert!(!has_side_effect_for_tree_shaking("import.meta.url"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta?.url"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta['url']"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta?.['url']"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta.ROLLDOWN_FILE_URL_abc123"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta?.ROLLDOWN_FILE_URL_abc123"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta['ROLLDOWN_FILE_URL_abc123']"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta?.['ROLLDOWN_FILE_URL_abc123']"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta.ROLLUP_FILE_URL_abc123"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta?.ROLLUP_FILE_URL_abc123"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta['ROLLUP_FILE_URL_abc123']"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta?.['ROLLUP_FILE_URL_abc123']"));
+    assert!(has_side_effect_for_tree_shaking("import.meta[foo()]"));
     // Other import.meta properties are not spec-defined as side-effect-free
     assert!(has_side_effect_for_tree_shaking("import.meta.hot"));
+    assert!(has_side_effect_for_tree_shaking("import.meta['hot']"));
     // Deeper chains may throw (e.g. import.meta.nonExisting is undefined, .foo throws TypeError)
     assert!(has_side_effect_for_tree_shaking("import.meta.nonExisting.foo"));
     assert!(has_side_effect_for_tree_shaking("const { url } = import.meta"));
@@ -1554,6 +1782,144 @@ let remove15 = class {
     ));
     assert!(has_side_effect_for_tree_shaking("function fn() {} class MyClass { @fn method() {} }"));
     assert!(has_side_effect_for_tree_shaking("function fn() {} class MyClass { @fn field }"));
+  }
+
+  // #10104 follow-up: a class's definition-time-evaluated positions (heritage, computed keys,
+  // static field/accessor initializers, static blocks, decorators) that read a whitelisted global
+  // or carry a pure annotation make the class order-sensitive — the same treatment
+  // `var x = Math.max(1, 2)` already gets. The three oxc-delegate arms (class declaration, class
+  // expression, `export default class`) used to drop those reasons. The tree-shaking channel is
+  // untouched: every side-effect-free class here keeps `StmtEvalFlags::empty()`.
+  #[test]
+  fn test_class_definition_time_order_sensitivity() {
+    // Static field initializer reading a whitelisted global -> order-sensitive, and NOT a
+    // tree-shaking side effect (so only the order-sensitive channel grew).
+    assert_eq!(get_stmt_order_sensitivity("class C { static x = Math.max(1, 2) }"), vec![true]);
+    assert_eq!(
+      get_stmt_eval_flags("class C { static x = Math.max(1, 2) }"),
+      vec![StmtEvalFlags::empty()]
+    );
+    // Static field initializer with a pure annotation (mirrors the object-literal case above).
+    assert_eq!(
+      get_stmt_order_sensitivity("class C { static x = /* @__PURE__ */ (() => globalValue)() }"),
+      vec![true]
+    );
+    assert_eq!(
+      get_stmt_eval_flags("class C { static x = /* @__PURE__ */ (() => globalValue)() }"),
+      vec![StmtEvalFlags::empty()]
+    );
+    // Heritage (extends) reading a whitelisted global.
+    assert_eq!(get_stmt_order_sensitivity("class C extends Object {}"), vec![true]);
+    assert_eq!(get_stmt_eval_flags("class C extends Object {}"), vec![StmtEvalFlags::empty()]);
+    // Computed key evaluating a global read.
+    assert_eq!(get_stmt_order_sensitivity("class C { [Math.max(1, 2)]() {} }"), vec![true]);
+    assert_eq!(
+      get_stmt_eval_flags("class C { [Math.max(1, 2)]() {} }"),
+      vec![StmtEvalFlags::empty()]
+    );
+    // Static block reading a global.
+    assert_eq!(get_stmt_order_sensitivity("class C { static { Math.max(1, 2) } }"), vec![true]);
+    // Class expression and `export default class` route through the same machinery.
+    assert_eq!(
+      get_stmt_order_sensitivity("const C = class { static x = Math.max(1, 2) }"),
+      vec![true]
+    );
+    assert_eq!(
+      get_stmt_order_sensitivity("export default class { static x = Math.max(1, 2) }"),
+      vec![true]
+    );
+    assert_eq!(
+      get_stmt_eval_flags("export default class { static x = Math.max(1, 2) }"),
+      vec![StmtEvalFlags::empty()]
+    );
+  }
+
+  // Positions that run at construction/call time — not class definition time — stay
+  // order-insensitive, so on-demand wrapping is not needlessly triggered.
+  #[test]
+  fn test_class_non_definition_time_stays_order_insensitive() {
+    assert_eq!(get_stmt_order_sensitivity("class C {}"), vec![false]);
+    // Instance (non-static) field initializer runs in the constructor.
+    assert_eq!(get_stmt_order_sensitivity("class C { x = Math.max(1, 2) }"), vec![false]);
+    assert_eq!(get_stmt_eval_flags("class C { x = Math.max(1, 2) }"), vec![StmtEvalFlags::empty()]);
+    assert_eq!(get_stmt_order_sensitivity("const C = class { x = Math.max(1, 2) }"), vec![false]);
+    assert_eq!(
+      get_stmt_order_sensitivity("export default class { x = Math.max(1, 2) }"),
+      vec![false]
+    );
+    // Method body runs when invoked, not at definition time.
+    assert_eq!(
+      get_stmt_order_sensitivity("class C { m() { return Math.max(1, 2) } }"),
+      vec![false]
+    );
+  }
+
+  // The whole-class Oxc gate owns tree-shaking flags. The separate definition-time walk must
+  // collect every order-sensitive reason without being stopped by a nested tree-shaking flag, and
+  // must not turn a tree-shaking-only flag into an order-sensitive reason.
+  #[test]
+  fn test_class_definition_time_reason_walk_is_independent_of_tree_shaking() {
+    let cjs_options = NormalizedBundlerOptions {
+      treeshake: InnerOptions {
+        unknown_global_side_effects: Some(false),
+        property_write_side_effects: Some(PropertyWriteSideEffects::False),
+        ..InnerOptions::default()
+      }
+      .into(),
+      ..NormalizedBundlerOptions::default()
+    };
+    let cjs_options = Arc::new(cjs_options);
+    for (code, expected_order_sensitive) in [
+      ("export class C { static x = [exports.a = 1] }", false),
+      ("export class C { static x = [exports.a = 1, Math.max(1, 2)] }", true),
+      ("export class C { static x = [exports.a = 1, /* @__PURE__ */ (() => 1)()] }", true),
+      ("export class C { static x = [Math.max(1, 2), exports.a = 1] }", true),
+      ("export class C { static { { exports.a = 1; Math.max(1, 2) } } }", true),
+      ("export class C { static { const x = 1; Math.max(x, 2) } }", true),
+      ("export class C { static x = (({}).x = Math.max(1, 2)) }", true),
+    ] {
+      assert_eq!(
+        get_stmt_eval_with_options(code, &cjs_options),
+        vec![(StmtEvalFlags::empty(), expected_order_sensitive)],
+        "{code}"
+      );
+    }
+
+    let property_read_options = NormalizedBundlerOptions {
+      treeshake: InnerOptions {
+        property_read_side_effects: Some(PropertyReadSideEffects::False),
+        ..InnerOptions::default()
+      }
+      .into(),
+      ..NormalizedBundlerOptions::default()
+    };
+    let property_read_options = Arc::new(property_read_options);
+    for (code, expected_order_sensitive) in [
+      ("class C { static { const [x = 1] = [] } }", false),
+      ("class C { static { const [x = Math.max(1, 2)] = [] } }", true),
+      ("class C { static x = ({})[Math.max(1, 2)] }", true),
+    ] {
+      assert_eq!(
+        get_stmt_eval_with_options(code, &property_read_options),
+        vec![(StmtEvalFlags::empty(), expected_order_sensitive)],
+        "{code}"
+      );
+    }
+
+    assert_eq!(
+      get_stmt_eval_with_options(
+        "class C { static x = (() => Math.max(1, 2))() }",
+        &Arc::new(NormalizedBundlerOptions::default()),
+      ),
+      vec![(StmtEvalFlags::empty(), true)]
+    );
+    assert_eq!(
+      get_stmt_eval_with_options(
+        "class C { static x = () => Math.max(1, 2) }",
+        &Arc::new(NormalizedBundlerOptions::default()),
+      ),
+      vec![(StmtEvalFlags::empty(), false)]
+    );
   }
 
   #[test]

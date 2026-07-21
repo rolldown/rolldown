@@ -11,6 +11,7 @@ import {
 
 import {
   bindingifyAugmentChunkHash,
+  bindingifyResolveFileUrl,
   bindingifyBanner,
   bindingifyCloseBundle,
   bindingifyFooter,
@@ -97,6 +98,8 @@ export function bindingifyPlugin(
 
   const { plugin: augmentChunkHash, meta: augmentChunkHashMeta } = bindingifyAugmentChunkHash(args);
 
+  const { plugin: resolveFileUrl, meta: resolveFileUrlMeta } = bindingifyResolveFileUrl(args);
+
   const { plugin: renderStart, meta: renderStartMeta } = bindingifyRenderStart(args);
 
   const { plugin: renderError, meta: renderErrorMeta } = bindingifyRenderError(args);
@@ -145,6 +148,8 @@ export function bindingifyPlugin(
     renderChunkFilter,
     augmentChunkHash,
     augmentChunkHashMeta,
+    resolveFileUrl,
+    resolveFileUrlMeta,
     renderStart,
     renderStartMeta,
     renderError,
@@ -183,6 +188,7 @@ function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
     'load',
     'renderChunk',
     'augmentChunkHash',
+    'resolveFileUrl',
     'renderStart',
     'renderError',
     'generateBundle',

@@ -1,0 +1,16 @@
+{
+  "config": {
+    "external": ["node:path"]
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "strictExecutionOrder": true
+    },
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
+}

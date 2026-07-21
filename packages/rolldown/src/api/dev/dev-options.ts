@@ -87,10 +87,11 @@ export interface DevOptions {
   /**
    * Strategy for triggering rebuilds after HMR updates.
    * - `'always'`: Always trigger a rebuild after HMR updates
-   * - `'auto'`: Trigger rebuild only if HMR updates contain full reload updates
-   * - `'never'`: Never trigger rebuild after HMR updates (default)
-   * @default 'auto'
+   * - `'never'`: Never trigger rebuild after HMR updates. The server no longer
+   *   decides full reloads, so there is no `'auto'` upgrade anymore; pull fresh
+   *   bundle output explicitly (e.g. `ensureLatestBuildOutput`) when needed.
+   * @default 'never'
    */
-  rebuildStrategy?: 'always' | 'auto' | 'never';
+  rebuildStrategy?: 'always' | 'never';
   watch?: DevWatchOptions;
 }

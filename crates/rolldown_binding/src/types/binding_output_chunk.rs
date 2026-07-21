@@ -149,7 +149,6 @@ pub struct JsOutputChunk {
   pub map: Option<BindingSourcemap>,
   pub sourcemap_filename: Option<String>,
   pub preliminary_filename: String,
-  pub preliminary_sourcemap_filename: Option<String>,
 }
 
 pub fn update_output_chunk(

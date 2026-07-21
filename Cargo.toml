@@ -259,12 +259,9 @@ syn = { version = "3", default-features = false }
 # napi
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks
 # (e.g. #7289) by showing which napi function is pending.
-napi = { version = "=3.12.0-alpha.0", features = ["anyhow", "tracing", "object_indexmap"] }
+napi = { version = "3", features = ["anyhow", "tracing", "object_indexmap"] }
 napi-build = { version = "2" }
-napi-derive = { version = "=3.7.0-alpha.0", default-features = false, features = [
-  "type-def",
-  "tracing",
-] }
+napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
 oxc = { version = "0.140.0", features = [
@@ -337,42 +334,39 @@ debug = "full"
 strip = "none"
 
 [patch.crates-io]
-# napi core (napi 3.12.0-alpha.0, napi-derive 3.7.0-alpha.0, napi-build 2.3.2) and
-# napi-async-runtime 0.2.0-alpha.0 are consumed as PUBLISHED alpha releases from
-# crates.io — see [workspace.dependencies] and rolldown_utils/Cargo.toml. These
-# alphas carry rolldown_binding's rich async-runtime SPI (fallible try_* / waiter,
-# primitive boxing on promise rejection, graceful TSFN release on napi_closing) plus
-# the injector/ArcSwap + drain_linger scheduler, reconciled onto napi-rs main. napi
-# core needs no git patch; napi-build 2.3.2 / napi-sys 3.3.0 on crates.io already
-# ship the emnapi-v2 WASI archive selection. The oxc *_napi crates below widen their
-# napi req to accept the 3.12.0-alpha prerelease (Cargo excludes prereleases from a
-# plain ^3.x).
+# napi core is pinned to the reconciled integration branch (napi-rs main merged into
+# rolldown's rich async-runtime SPI + codegen_v1, plus the injector/ArcSwap +
+# drain_linger scheduler and the #3405/#3404/#3408/#3409 grafts). Versioned
+# non-prerelease (napi 3.12.0) so this single patch redirects the ONE shared napi node
+# for the WHOLE graph — rolldown_binding AND every oxc_*_napi / oxc_resolver_napi /
+# oxc_sourcemap — with no downstream napi-req widening (a prerelease would be excluded
+# from their ^3.x and would force per-crate patches). One rev also covers
+# napi-async-runtime pinned in rolldown_utils/Cargo.toml (consumed napi-free). The
+# published napi 3.12.0-alpha.* / napi-async-runtime 0.2.0-alpha.* on crates.io carry
+# the same content for standalone consumers.
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e", version = "=3.7.0" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e" }
 
 # Redirect Oxc's napi binding crates onto a 0.140.0-based branch that drops the
 # forced `tokio_rt` feature (oxc-project/oxc PR #24475, backported to the
 # published 0.140.0 release commit as branch patch/oxc-0.140.0-no-tokio-rt).
 # Without this, Oxc's *_napi crates force `napi/tokio_rt -> dep:tokio` onto the
-# whole graph via Cargo feature unification, which blocks dropping tokio. The
-# monorepo crates AND the separate-repo oxc_resolver_napi / oxc_sourcemap (below)
-# additionally widen their napi req to accept the 3.12.0-alpha prerelease; oxc_index
-# has no napi dep so it stays on crates.io.
-oxc = { git = "https://github.com/oxc-project/oxc.git", rev = "41197f20430d2039dc1f71fd57d2461e7d706808" }
-oxc_allocator = { git = "https://github.com/oxc-project/oxc.git", rev = "41197f20430d2039dc1f71fd57d2461e7d706808" }
+# whole graph via Cargo feature unification, which blocks dropping tokio. Only
+# the monorepo crates Rolldown depends on are patched; oxc_index, oxc_resolver*,
+# and oxc_sourcemap live in their own repos and are intentionally left alone (the
+# single napi patch above already redirects the napi they resolve).
+oxc = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
 # oxc_ast joined this list when main made it a direct workspace dep (to enable
 # `disable_old_builder`); without the patch the feature would land on an unused
 # duplicate registry copy instead of the git copy the umbrella re-exports.
-oxc_ast = { git = "https://github.com/oxc-project/oxc.git", rev = "41197f20430d2039dc1f71fd57d2461e7d706808" }
-oxc_ecmascript = { git = "https://github.com/oxc-project/oxc.git", rev = "41197f20430d2039dc1f71fd57d2461e7d706808" }
-oxc_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "41197f20430d2039dc1f71fd57d2461e7d706808" }
-oxc_str = { git = "https://github.com/oxc-project/oxc.git", rev = "41197f20430d2039dc1f71fd57d2461e7d706808" }
-oxc_minify_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "41197f20430d2039dc1f71fd57d2461e7d706808" }
-oxc_parser_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "41197f20430d2039dc1f71fd57d2461e7d706808" }
-oxc_transform_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "41197f20430d2039dc1f71fd57d2461e7d706808" }
-oxc_traverse = { git = "https://github.com/oxc-project/oxc.git", rev = "41197f20430d2039dc1f71fd57d2461e7d706808" }
-
-# oxc_resolver_napi (oxc-project/oxc-resolver) and oxc_sourcemap (oxc-project/oxc-sourcemap)
-# live in their own repos; their released v11.24.2 / v8.1.2 pin napi ^3.8 / ^3.0, which
-# exclude the 3.12.0-alpha prerelease. Patch to branches off those exact tags that only
-# widen the napi / napi-derive req (crate content otherwise unchanged).
-oxc_resolver_napi = { git = "https://github.com/oxc-project/oxc-resolver.git", rev = "6602d59757d093a9536e1298e6e8b113d29d57e4" }
-oxc_sourcemap = { git = "https://github.com/oxc-project/oxc-sourcemap.git", rev = "9a8675b8400b3ac7077bf2b02ed66b5ac5375b1d" }
+oxc_ast = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
+oxc_str = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }

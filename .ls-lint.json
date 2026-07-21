@@ -28,7 +28,7 @@
     "tmp/**",
     "rollup/**",
     "test262/**",
-    "packages/test-dev-server/vite/**",
+    "vite/**",
     "target/**",
     "packages/rollup-tests/test/**",
     "packages/rolldown/npm/**",

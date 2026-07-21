@@ -31,6 +31,16 @@ impl MagicString<'_> {
 
     let locator = Locator::new(&self.source);
 
+    // Seed `names` with every stored range up front, so the array reflects what was replaced
+    // rather than whatever chunks happen to line up. A chunk only carries a name when its own
+    // span is exactly one of those ranges — a range split across chunks stays in `names` with
+    // no mapping pointing at it, which is what magic-string does.
+    let name_ids: FxHashMap<&str, u32> = self
+      .stored_names_ordered()
+      .into_iter()
+      .map(|(name, _)| (name, source_builder.add_name(name)))
+      .collect();
+
     self.intro.iter().for_each(|frag| {
       source_builder.advance(frag);
     });
@@ -42,15 +52,16 @@ impl MagicString<'_> {
       chunk.intro.iter().for_each(|frag| {
         source_builder.advance(frag);
       });
-      let name =
-        (chunk.keep_in_mappings && chunk.is_edited()).then(|| chunk.span.text(&self.source));
+      let name_id = (chunk.keep_in_mappings && chunk.is_edited())
+        .then(|| name_ids.get(chunk.span.text(&self.source)).copied())
+        .flatten();
 
       source_builder.add_chunk(
         chunk,
         utf16_index_map[&chunk.start()],
         &locator,
         &self.source,
-        name,
+        name_id,
       );
 
       chunk.outro.iter().for_each(|frag| {

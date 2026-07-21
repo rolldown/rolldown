@@ -52,75 +52,76 @@ pub enum EventKind {
   /// {@include ../docs/checks-filename-conflict.md}
   FilenameConflict = 15,
   FilenameOutsideOutputDirectoryError = 16,
+  FileNotFoundError = 17,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // --- These kinds are derived from esbuild
-  AssignToImportError = 17,
+  AssignToImportError = 18,
   /// Whether to emit warnings when a CommonJS variable is used in an ES module.
   ///
   /// CommonJS variables like `module` and `exports` are treated as global variables in ES modules and may not work as expected.
   ///
   /// {@include ../docs/checks-commonjs-variable-in-esm.md}
-  CommonJsVariableInEsm = 18,
+  CommonJsVariableInEsm = 19,
   /// Whether to emit warnings when an imported variable is not exported.
   ///
   /// If the code is importing a variable that is not exported by the imported module, the value will always be `undefined`. This might be a mistake in the code.
   ///
   /// {@include ../docs/checks-import-is-undefined.md}
-  ImportIsUndefined = 19,
-  UnsupportedFeatureError = 20,
+  ImportIsUndefined = 20,
+  UnsupportedFeatureError = 21,
   /// Whether to emit warnings when `import.meta` is not supported with the output format and is replaced with an empty object (`{}`).
   ///
   /// See [`import.meta` in Non-ESM Output Formats page](https://rolldown.rs/in-depth/non-esm-output-formats#import-meta) for more details.
-  EmptyImportMeta = 21,
+  EmptyImportMeta = 22,
 
   // --- These kinds are rolldown specific
-  JsonParseError = 22,
-  IllegalReassignmentError = 23,
-  InvalidDefineConfigError = 24,
-  ResolveError = 25,
-  UnhandleableError = 26,
-  UnloadableDependencyError = 27,
-  TransformError = 28,
-  ToleratedTransform = 29,
+  JsonParseError = 23,
+  IllegalReassignmentError = 24,
+  InvalidDefineConfigError = 25,
+  ResolveError = 26,
+  UnhandleableError = 27,
+  UnloadableDependencyError = 28,
+  TransformError = 29,
+  ToleratedTransform = 30,
 
-  NapiError = 30,
+  NapiError = 31,
   /// Whether to emit warnings when a namespace is called as a function.
   ///
   /// A module namespace object is an object and not a function. Calling it as a function will cause a runtime error.
   ///
   /// {@include ../docs/checks-cannot-call-namespace.md}
-  CannotCallNamespace = 31,
+  CannotCallNamespace = 32,
   /// Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   ///
   /// {@include ../docs/checks-configuration-field-conflict.md}
-  ConfigurationFieldConflict = 32,
+  ConfigurationFieldConflict = 33,
   /// Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   ///
   /// Using built-in features is generally more performant than using plugins.
-  PreferBuiltinFeature = 33,
-  BundlerInitializeError = 34,
-  PluginError = 35,
-  AlreadyClosedError = 36,
+  PreferBuiltinFeature = 34,
+  BundlerInitializeError = 35,
+  PluginError = 36,
+  AlreadyClosedError = 37,
   /// Whether to emit warnings when Rolldown could not clean the output directory.
   ///
   /// See [`output.cleanDir`](https://rolldown.rs/reference/OutputOptions.cleanDir).
-  CouldNotCleanDirectory = 37,
+  CouldNotCleanDirectory = 38,
   /// Whether to emit warnings when plugins take significant time during the build process.
   ///
   /// {@include ../docs/checks-plugin-timings.md}
-  PluginTimings = 38,
+  PluginTimings = 39,
   /// Whether to emit warnings when both the code and postBanner contain shebang
   ///
   /// Having multiple shebangs in a file is a syntax error.
-  DuplicateShebang = 39,
-  TsConfigError = 40,
+  DuplicateShebang = 40,
+  TsConfigError = 41,
   /// Whether to emit warnings when a tsconfig option or combination of options is not supported.
-  UnsupportedTsconfigOption = 41,
-  RuntimeModuleSymbolNotFoundError = 42,
+  UnsupportedTsconfigOption = 42,
+  RuntimeModuleSymbolNotFoundError = 43,
   /// Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
-  IneffectiveDynamicImport = 44,
-  RequireTlaError = 45,
+  IneffectiveDynamicImport = 45,
+  RequireTlaError = 46,
   /// Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   ///
   /// Such modules can significantly slow down module resolution. Consider using
@@ -128,9 +129,9 @@ pub enum EventKind {
   /// to rewrite barrel imports at the source level so the barrel file is never loaded.
   ///
   /// See [Large barrel modules](https://rolldown.rs/in-depth/lazy-barrel-optimization#large-barrel-modules) for more details.
-  LargeBarrelModules = 46,
+  LargeBarrelModules = 47,
   /// Whether to emit warnings when a plugin transforms code without generating a sourcemap.
-  SourcemapBroken = 47,
+  SourcemapBroken = 48,
 }
 
 impl Display for EventKind {
@@ -156,6 +157,7 @@ impl Display for EventKind {
       EventKind::FilenameOutsideOutputDirectoryError => {
         write!(f, "FILE_NAME_OUTSIDE_OUTPUT_DIRECTORY")
       }
+      EventKind::FileNotFoundError => write!(f, "FILE_NOT_FOUND"),
 
       // --- Derived from esbuild
       EventKind::AssignToImportError => write!(f, "ASSIGN_TO_IMPORT"),

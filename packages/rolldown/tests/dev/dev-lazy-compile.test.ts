@@ -67,3 +67,61 @@ test(
     ).rejects.toThrow('Lazy entry module not found in cache');
   },
 );
+
+// A lazy chunk is pure first-evaluation demand: a module the entry chunk already
+// evaluated at top level serves lazy imports from its live exports, so its factory must
+// not be re-shipped to a registered client (whose session froze the top-level-evaluated
+// map at hello). An unregistered client has no session and must still receive the
+// full closure.
+test(
+  'lazy chunk omits factories for modules the entry chunk evaluated at top level',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-evaluated-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'main.js'),
+      `import { shared } from './shared.js';\nconsole.log(shared);\nimport('./lazy.js');\n`,
+    );
+    fs.writeFileSync(path.join(dir, 'shared.js'), `export const shared = 'shared';\n`);
+    fs.writeFileSync(
+      path.join(dir, 'lazy.js'),
+      `import { shared } from './shared.js';\nexport const lazy = shared + '-lazy';\n`,
+    );
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+
+    const lazyProxyId = `${path.join(dir, 'lazy.js')}?rolldown-lazy=1`;
+    const sharedFactory = /registerFactory\("[^"]*shared\.js"/;
+    const lazyFactory = /registerFactory\("[^"]*lazy\.js\b[^"]*"/;
+
+    // The hello freezes the top-level-evaluated map into the session: `shared.js` is
+    // statically imported by the entry, so its exports are already live.
+    await engine.registerClient('registered-client');
+    const chunk = await engine.compileEntry(lazyProxyId, 'registered-client');
+    expect(chunk.code).toMatch(lazyFactory);
+    expect(chunk.code).not.toMatch(sharedFactory);
+
+    // No session → both per-client maps empty → the full closure ships.
+    const coldChunk = await engine.compileEntry(lazyProxyId, 'client-without-session');
+    expect(coldChunk.code).toMatch(lazyFactory);
+    expect(coldChunk.code).toMatch(sharedFactory);
+  },
+);

@@ -1,0 +1,260 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## admin.js
+
+```js
+import "./apps~personal~admin~theming.js";
+import { t as init_admin } from "./admin2.js";
+init_admin();
+
+```
+
+## admin2.js
+
+```js
+import { n as init_app_admin } from "./apps~personal~admin~theming.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region admin.js
+function init_admin() {
+	return (init_admin = __esmMin((() => {
+		init_app_admin();
+		(globalThis.sideEffectLog ??= []).push("admin");
+	})))();
+}
+//#endregion
+export { init_admin as t };
+
+```
+
+## apps~personal~admin~theming.js
+
+```js
+import { n as PaletteIcon, r as init_palette_icon } from "./personal2.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region app-personal.js
+function init_app_personal() {
+	return (init_app_personal = __esmMin((() => {
+		init_palette_icon();
+		(globalThis.sideEffectLog ??= []).push(`app-personal:${PaletteIcon}`);
+	})))();
+}
+//#endregion
+//#region app-admin.js
+function init_app_admin() {
+	return (init_app_admin = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("app-admin");
+	})))();
+}
+//#endregion
+//#region app-theming.js
+function init_app_theming() {
+	return (init_app_theming = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("app-theming");
+	})))();
+}
+//#endregion
+export { init_app_admin as n, init_app_personal as r, init_app_theming as t };
+
+```
+
+## personal.js
+
+```js
+import "./apps~personal~admin~theming.js";
+import { t as init_personal } from "./personal2.js";
+init_personal();
+
+```
+
+## personal2.js
+
+```js
+import { r as init_app_personal } from "./apps~personal~admin~theming.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region palette-icon.js
+var PaletteIcon;
+function init_palette_icon() {
+	return (init_palette_icon = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("palette-icon");
+		PaletteIcon = "PaletteIcon";
+	})))();
+}
+//#endregion
+//#region personal.js
+function init_personal() {
+	return (init_personal = __esmMin((() => {
+		init_app_personal();
+		(globalThis.sideEffectLog ??= []).push("personal");
+	})))();
+}
+//#endregion
+export { PaletteIcon as n, init_palette_icon as r, init_personal as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+## theming.js
+
+```js
+import "./apps~personal~admin~theming.js";
+import { t as init_theming } from "./theming2.js";
+init_theming();
+
+```
+
+## theming2.js
+
+```js
+import { t as init_app_theming } from "./apps~personal~admin~theming.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region theming.js
+function init_theming() {
+	return (init_theming = __esmMin((() => {
+		init_app_theming();
+		(globalThis.sideEffectLog ??= []).push("theming");
+	})))();
+}
+//#endregion
+export { init_theming as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### admin.js
+
+```js
+import "./apps~personal~admin~theming.js";
+import { t as init_admin } from "./admin2.js";
+init_admin();
+
+```
+
+### admin2.js
+
+```js
+import { n as init_app_admin } from "./apps~personal~admin~theming.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region admin.js
+function init_admin() {
+	return (init_admin = __esmMin((() => {
+		init_app_admin();
+		(globalThis.sideEffectLog ??= []).push("admin");
+	})))();
+}
+//#endregion
+export { init_admin as t };
+
+```
+
+### apps~personal~admin~theming.js
+
+```js
+import { n as PaletteIcon, r as init_palette_icon } from "./personal2.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region app-personal.js
+function init_app_personal() {
+	return (init_app_personal = __esmMin((() => {
+		init_palette_icon();
+		(globalThis.sideEffectLog ??= []).push(`app-personal:${PaletteIcon}`);
+	})))();
+}
+//#endregion
+//#region app-admin.js
+function init_app_admin() {
+	return (init_app_admin = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("app-admin");
+	})))();
+}
+//#endregion
+//#region app-theming.js
+function init_app_theming() {
+	return (init_app_theming = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("app-theming");
+	})))();
+}
+//#endregion
+export { init_app_admin as n, init_app_personal as r, init_app_theming as t };
+
+```
+
+### personal.js
+
+```js
+import "./apps~personal~admin~theming.js";
+import { t as init_personal } from "./personal2.js";
+init_personal();
+
+```
+
+### personal2.js
+
+```js
+import { r as init_app_personal } from "./apps~personal~admin~theming.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region palette-icon.js
+var PaletteIcon;
+function init_palette_icon() {
+	return (init_palette_icon = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("palette-icon");
+		PaletteIcon = "PaletteIcon";
+	})))();
+}
+//#endregion
+//#region personal.js
+function init_personal() {
+	return (init_personal = __esmMin((() => {
+		init_app_personal();
+		(globalThis.sideEffectLog ??= []).push("personal");
+	})))();
+}
+//#endregion
+export { PaletteIcon as n, init_palette_icon as r, init_personal as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### theming.js
+
+```js
+import "./apps~personal~admin~theming.js";
+import { t as init_theming } from "./theming2.js";
+init_theming();
+
+```
+
+### theming2.js
+
+```js
+import { t as init_app_theming } from "./apps~personal~admin~theming.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region theming.js
+function init_theming() {
+	return (init_theming = __esmMin((() => {
+		init_app_theming();
+		(globalThis.sideEffectLog ??= []).push("theming");
+	})))();
+}
+//#endregion
+export { init_theming as t };
+
+```

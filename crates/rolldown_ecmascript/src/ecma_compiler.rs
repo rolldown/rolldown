@@ -4,8 +4,8 @@ use arcstr::ArcStr;
 use oxc::{
   allocator::Allocator,
   ast::{
-    AstBuilder,
     ast::{Program, Statement},
+    builder::AstBuilder,
   },
   codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions, LegalComment},
   minifier::{Minifier, MinifierOptions},
@@ -107,17 +107,20 @@ impl EcmaCompiler {
       .build(ast.program())
   }
 
+  /// The returned map borrows `source_text` (its `sourcesContent` and token names are slices
+  /// of it) — callers that keep it beyond the borrow must `into_owned` it; callers that only
+  /// feed it to `collapse_sourcemaps` can use it as-is and skip that copy.
   #[expect(clippy::too_many_arguments)]
-  pub fn dce_or_minify(
-    allocator: &Allocator,
-    source_text: &str,
+  pub fn dce_or_minify<'a>(
+    allocator: &'a Allocator,
+    source_text: &'a str,
     source_type: SourceType,
     enable_sourcemap: bool,
     filename: &str,
     compress: bool,
     minify_options: MinifierOptions,
     codegen_options: CodegenOptions,
-  ) -> (String, Option<SourceMap<'static>>) {
+  ) -> (String, Option<SourceMap<'a>>) {
     let mut program = Parser::new(allocator, source_text, source_type)
       .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
       .parse()
@@ -136,7 +139,7 @@ impl EcmaCompiler {
       .with_scoping(ret.scoping)
       .with_private_member_mappings(ret.class_private_mappings)
       .build(&program);
-    (ret.code, ret.map.map(SourceMap::into_owned))
+    (ret.code, ret.map)
   }
 }
 

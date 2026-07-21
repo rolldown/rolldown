@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::types::hook_close_bundle_args::HookCloseBundleArgs;
 use crate::types::hook_render_error::HookRenderErrorArgs;
-use crate::{HookAddonArgs, PluginDriver};
+use crate::{HookAddonArgs, HookResolveFileUrlArgs, HookResolveFileUrlOutput, PluginDriver};
 use crate::{
   HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs, HookTransformOutputMap,
 };
@@ -30,6 +30,34 @@ impl PluginDriver {
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
+  }
+
+  /// Resolves `import.meta.ROLLDOWN_FILE_URL_<referenceId>` via the `resolveFileUrl`
+  /// hook. The first plugin returning a non-null string wins.
+  ///
+  /// The returned code is not parsed here. It is parsed exactly once, later, into the
+  /// arena of the module that references the file. The winning plugin's name travels
+  /// with the code so that a parse failure there can still be attributed to it.
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::resolve_file_url",
+    skip_all
+  )]
+  pub async fn resolve_file_url(
+    &self,
+    args: &HookResolveFileUrlArgs<'_>,
+  ) -> Result<Option<HookResolveFileUrlOutput>> {
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_resolve_file_url_meta)
+    {
+      let start = self.start_timing();
+      let result = plugin.call_resolve_file_url(ctx, args).await;
+      self.record_timing(plugin_idx, start);
+      if let Some(code) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+        return Ok(Some(HookResolveFileUrlOutput { code, plugin_name: plugin.call_name() }));
+      }
+    }
+    Ok(None)
   }
 
   #[tracing::instrument(

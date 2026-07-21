@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "setup-bench": "oxnode ./misc/setup-benchmark-input/index.js",
+    "setup-vite": "oxnode ./src/setup-vite/main.ts",
     "gen-esbuild-tests": "oxnode ./src/esbuild-tests/gen-tests.ts",
     "esbuild-snap-diff": "oxnode ./src/esbuild-tests/snap-diff/index.ts"
   },
@@ -25,7 +26,7 @@
   },
   "devDependencies": {
     "@oxc-node/cli": "catalog:",
-    "@oxlint/plugins": "^1.72.0",
+    "@oxlint/plugins": "^1.74.0",
     "acorn": "catalog:",
     "astring": "catalog:",
     "diff": "catalog:",

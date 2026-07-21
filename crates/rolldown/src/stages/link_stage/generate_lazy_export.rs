@@ -1,8 +1,9 @@
 use indexmap::map::Entry;
 use oxc::allocator::GetAllocator;
+use oxc::ast::builder::AstBuilder;
 use oxc::{
-  allocator::{Allocator, TakeIn},
-  ast::ast::{self, Expression},
+  allocator::{ReplaceWith, TakeIn},
+  ast::ast::{self, Expression, Statement},
   semantic::{SemanticBuilder, Stats},
   span::SPAN,
 };
@@ -13,7 +14,7 @@ use rolldown_common::{
   SymbolRefDbForModule, TaggedSymbolRef, WrapKind,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_ecmascript_utils::AstFactory;
+use rolldown_ecmascript_utils::{ExpressionFactoryExt as _, StatementFactoryExt as _};
 use rolldown_utils::ecmascript::legitimize_json_local_binding_name;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -107,32 +108,25 @@ enum LazyExportWrap {
 /// and replaces the statement with either `module.exports = expr` or `export default expr`.
 fn replace_first_expr_stmt(ecma_ast: &mut EcmaAst, kind: LazyExportWrap) {
   ecma_ast.program.with_mut(|fields| {
-    let ast_factory = AstFactory::new(fields.allocator);
+    let ast_builder = AstBuilder::new(fields.allocator);
     let Some(stmt) = fields.program.body.first_mut() else { unreachable!() };
-    let expr = match stmt {
-      ast::Statement::ExpressionStatement(stmt) => {
-        stmt.expression.take_in(&ast_factory.allocator())
+    stmt.replace_with(|old| {
+      let ast::Statement::ExpressionStatement(expr_stmt) = old else { unreachable!() };
+      let expr = expr_stmt.unbox().expression;
+      match kind {
+        LazyExportWrap::CjsExport => Statement::new_module_exports_stmt(expr, &ast_builder),
+        LazyExportWrap::EsmDefault => Statement::new_export_default_stmt(expr, &ast_builder),
       }
-      _ => unreachable!(),
-    };
-    *stmt = match kind {
-      LazyExportWrap::CjsExport => ast_factory.make_module_exports_stmt(expr),
-      LazyExportWrap::EsmDefault => ast_factory.make_export_default_stmt(expr),
-    };
+    });
   });
 }
 
-/// Takes `expr` (leaving a dummy in its place) and returns the owned inner
-/// expression with any wrapping `(...)` parentheses removed.
-fn take_without_parentheses<'ast>(
-  expr: &mut Expression<'ast>,
-  allocator: &'ast Allocator,
-) -> Expression<'ast> {
-  let mut inner_expr = expr.take_in(&allocator);
-  while let Expression::ParenthesizedExpression(mut paren_expr) = inner_expr {
-    inner_expr = paren_expr.expression.take_in(&allocator);
+/// Returns the owned expression with any wrapping `(...)` parentheses removed.
+fn into_without_parentheses(mut expr: Expression<'_>) -> Expression<'_> {
+  while let Expression::ParenthesizedExpression(paren_expr) = expr {
+    expr = paren_expr.unbox().expression;
   }
-  inner_expr
+  expr
 }
 
 fn update_module_default_export_info(
@@ -161,25 +155,25 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
     FxIndexMap::default();
   let transformed = ecma_ast.program.with_mut(|fields| {
     let mut index_map = FxIndexMap::default();
-    let ast_factory = AstFactory::new(fields.allocator);
+    let ast_builder = AstBuilder::new(fields.allocator);
     let program = fields.program;
-    let Some(stmts) = program.body.first_mut() else { unreachable!() };
-    let expr = match stmts {
-      ast::Statement::ExpressionStatement(stmt) => &mut stmt.expression,
-      _ => {
-        unreachable!()
-      }
+    let Some(ast::Statement::ExpressionStatement(stmt)) = program.body.first() else {
+      unreachable!()
     };
-    if !matches!(expr.without_parentheses(), Expression::ObjectExpression(_)) {
+    if !matches!(stmt.expression.without_parentheses(), Expression::ObjectExpression(_)) {
       return false;
     }
-    let Expression::ObjectExpression(mut obj_expr) =
-      take_without_parentheses(expr, ast_factory.allocator())
+    // Take the single-statement body by value; this leaves `program.body` empty.
+    let Some(ast::Statement::ExpressionStatement(stmt)) =
+      program.body.take_in(&ast_builder.allocator()).into_iter().next()
     else {
       unreachable!();
     };
-    // clean program body, since we already take it and left a dummy expr
-    program.body.clear();
+    let Expression::ObjectExpression(mut obj_expr) =
+      into_without_parentheses(stmt.unbox().expression)
+    else {
+      unreachable!();
+    };
 
     // convert {"a": "b", "c": "d"} to
     // {"a": b, "c": d}
@@ -201,7 +195,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
 
           let value = std::mem::replace(
             &mut property.value,
-            ast_factory.make_id_ref_expr(SPAN, legitimized_ident.as_str()),
+            Expression::new_id_ref_expr(SPAN, legitimized_ident.as_str(), &ast_builder),
           );
           // TODO(shulaoda): Waiting for oxc transform to support the ES feature `ShorthandProperties`.
           if key == "__proto__" {
@@ -210,8 +204,8 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
             property.shorthand = is_legal_ident;
             property.key = ast::PropertyKey::StaticIdentifier(ast::IdentifierName::boxed(
               SPAN,
-              oxc::ast::ast::Str::from_str_in(legitimized_ident.as_ref(), &ast_factory),
-              &ast_factory,
+              oxc::ast::ast::Str::from_str_in(legitimized_ident.as_ref(), &ast_builder),
+              &ast_builder,
             ));
           }
           match index_map.entry(legitimized_ident) {
@@ -230,15 +224,18 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
     let stmts = index_map
       .into_iter()
       // declaration
-      .map(|(local, v)| ast_factory.make_var_decl(local.as_str(), v))
+      .map(|(local, v)| Statement::new_var_decl(local.as_str(), v, &ast_builder))
       // export default json module
-      .chain(std::iter::once(
-        ast_factory.make_export_default_stmt(Expression::ObjectExpression(obj_expr)),
-      ))
+      .chain(std::iter::once(Statement::new_export_default_stmt(
+        Expression::ObjectExpression(obj_expr),
+        &ast_builder,
+      )))
       // export all declaration
-      .chain(std::iter::once(
-        ast_factory.make_export_named_stmt(None, declaration_binding_names.iter()),
-      ));
+      .chain(std::iter::once(Statement::new_export_named_stmt(
+        None,
+        declaration_binding_names.iter(),
+        &ast_builder,
+      )));
     program.body.extend(stmts);
     true
   });

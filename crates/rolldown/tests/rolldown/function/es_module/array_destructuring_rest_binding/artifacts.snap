@@ -7,31 +7,79 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
+//#endregion
+//#region main.js
+const [first, ...rest] = Object.values({
+	a: "1",
+	b: "2",
+	c: "3"
+});
+if (!first) throw new Error("empty");
+const all = [first, ...rest];
+assert.deepStrictEqual(all, [
+	"1",
+	"2",
+	"3"
+]);
+//#endregion
+export { all };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+import { n as init_main, t as all } from "./main2.js";
+init_main();
+export { all };
+
+```
+
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
 //#region lib.js
 var stages;
-var init_lib = __esmMin((() => {
-	stages = {
-		a: "1",
-		b: "2",
-		c: "3"
-	};
-}));
+function init_lib() {
+	return (init_lib = __esmMin((() => {
+		stages = {
+			a: "1",
+			b: "2",
+			c: "3"
+		};
+	})))();
+}
 //#endregion
 //#region main.js
 var first, rest, all;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_lib();
+		[first, ...rest] = Object.values(stages);
+		if (!first) throw new Error("empty");
+		all = [first, ...rest];
+		assert.deepStrictEqual(all, [
+			"1",
+			"2",
+			"3"
+		]);
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_lib();
-	[first, ...rest] = Object.values(stages);
-	if (!first) throw new Error("empty");
-	all = [first, ...rest];
-	assert.deepStrictEqual(all, [
-		"1",
-		"2",
-		"3"
-	]);
-}))();
-export { all };
+export { init_main as n, all as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
 
 ```

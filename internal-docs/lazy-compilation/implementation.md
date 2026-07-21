@@ -504,7 +504,7 @@ For future debugging, these files handle lazy compilation:
 13. **`crates/rolldown/src/bundler/impl_bundler_hmr.rs`** - `Bundler::compile_lazy_entry` entry point
 14. **`crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js`** - browser runtime: `createEsm/CjsInitializer` (dedup gate), `registerModule`, `loadExports`, module-registered batching
 
-### Reference Dev Server (Vite full bundle mode, vendored at `packages/test-dev-server/vite`)
+### Reference Dev Server (Vite full bundle mode, vendored at `vite/` (repo root))
 
 15. **`packages/vite/src/node/server/middlewares/triggerLazyBundling.ts`** - the `/@vite/lazy` middleware (500 on error, `application/javascript` on success)
 16. **`packages/vite/src/node/server/bundledDev.ts`** - `triggerLazyBundling` (`devEngine.compileEntry`), `onAdditionalAssets` storage, rebuild/reload handling

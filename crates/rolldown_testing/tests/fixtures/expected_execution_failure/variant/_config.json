@@ -1,0 +1,12 @@
+{
+  "snapshot": false,
+  "configVariants": [
+    {
+      "_configName": "known-failure",
+      "_expectExecutionFailure": {
+        "reason": "exercise variant-scoped expected execution failure",
+        "outputContains": ["known variant execution failure"]
+      }
+    }
+  ]
+}

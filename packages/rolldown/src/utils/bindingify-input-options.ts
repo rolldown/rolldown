@@ -18,7 +18,7 @@ import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
 import type { AttachDebugOptions, DevModeOptions, InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
-import type { RolldownPlugin } from '../plugin';
+import type { Plugin, RolldownPlugin } from '../plugin';
 import { bindingifyPlugin } from '../plugin/bindingify-plugin';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import { arraify } from './misc';
@@ -27,6 +27,7 @@ import {
   type NormalizedTransformOptions,
   normalizeTransformOptions,
 } from './normalize-transform-options';
+import { getParallelPluginInfo } from './parallel-plugin';
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
@@ -39,7 +40,7 @@ export function bindingifyInputOptions(
   watchMode: boolean,
 ): BindingInputOptions {
   const plugins = rawPlugins.map((plugin) => {
-    if ('_parallel' in plugin) {
+    if (getParallelPluginInfo(plugin)) {
       return undefined;
     }
     if (plugin instanceof BuiltinPlugin) {
@@ -51,7 +52,7 @@ export function bindingifyInputOptions(
       }
     }
     return bindingifyPlugin(
-      plugin,
+      plugin as Plugin,
       inputOptions,
       outputOptions,
       pluginContextData,

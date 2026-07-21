@@ -1,0 +1,34 @@
+{
+  "configName": "on-demand",
+  "config": {
+    "input": [
+      {
+        "name": "a",
+        "import": "./a.js"
+      },
+      {
+        "name": "b",
+        "import": "./b.js"
+      }
+    ],
+    "banner": "if (import.meta.url.endsWith('/dyn.js')) queueMicrotask(() => (globalThis.events ??= []).push('checkpoint:' + Boolean(globalThis.ready)));",
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    },
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "dyn",
+          "test": "[\\\\/](?:target|observer)\\.js$"
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
+}

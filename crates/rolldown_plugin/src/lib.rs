@@ -24,8 +24,8 @@ pub use crate::{
   generated::hook_usage::HookUsage,
   plugin::{
     HookAugmentChunkHashReturn, HookInjectionOutputReturn, HookLoadReturn, HookNoopReturn,
-    HookRenderChunkReturn, HookResolveIdReturn, HookTransformAstReturn, HookTransformReturn,
-    Plugin,
+    HookRenderChunkReturn, HookResolveFileUrlReturn, HookResolveIdReturn, HookTransformAstReturn,
+    HookTransformReturn, Plugin,
   },
   plugin_context::{
     LoadPluginContext, PluginContext, SharedLoadPluginContext, SharedNativePluginContext,
@@ -45,6 +45,8 @@ pub use crate::{
   types::hook_render_chunk_output::HookRenderChunkOutput,
   types::hook_render_error::HookRenderErrorArgs,
   types::hook_render_start_args::HookRenderStartArgs,
+  types::hook_resolve_file_url_args::HookResolveFileUrlArgs,
+  types::hook_resolve_file_url_output::HookResolveFileUrlOutput,
   types::hook_resolve_id_args::HookResolveIdArgs,
   types::hook_resolve_id_output::HookResolveIdOutput,
   types::hook_timing::HookTimingCollector,

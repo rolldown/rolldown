@@ -7,23 +7,42 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["entry.js"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
+__rolldown_runtime__.createModuleHotContext("entry.js");
+__rolldown_runtime__.registerModule("entry.js", {});
+console.log("input\n");
+//#endregion
 
 ```
 
 # HMR Step 0
 
-## Meta
-
-- update type: full-reload
-- reason: no hmr boundary found for module `entry.js`
-
-## Build Output
-
-### Assets
-
-#### entry.js
+## Code
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({ids:["entry.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+//#region entry.js
+__rolldown_runtime__.registerFactory("entry.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, {});
+		const hot_entry = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const content = "input2\n";
+		console.log(content);
+	} finally {}
+}));
 
+//#endregion
 ```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- entry.js

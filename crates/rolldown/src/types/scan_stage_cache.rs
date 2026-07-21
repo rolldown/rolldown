@@ -155,7 +155,7 @@ impl ScanStageCache {
       if let rolldown_common::Module::Normal(normal_module) = &new_module {
         self
           .module_idx_by_abs_path
-          .insert(normal_module.id.as_arc_str().to_slash().unwrap().into(), normal_module.idx);
+          .insert(ArcStr::from(normal_module.id.as_arc_str().to_slash()), normal_module.idx);
       }
       // Update `module_idx_by_stable_id`
       self.module_idx_by_stable_id.insert(new_module.stable_id().clone(), new_module.idx());
@@ -306,7 +306,7 @@ impl ScanStageCache {
 
     for module in &build_snapshot.module_table.modules {
       if let rolldown_common::Module::Normal(normal_module) = module {
-        let filename = normal_module.id.as_arc_str().to_slash().unwrap().into();
+        let filename = ArcStr::from(normal_module.id.as_arc_str().to_slash());
         let module_idx = normal_module.idx;
         self.module_idx_by_abs_path.insert(filename, module_idx);
       }

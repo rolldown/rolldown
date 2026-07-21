@@ -8,6 +8,64 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"trigger-dep.js",
+		"cases/require/cjs-lib-reassign-module-exports.js",
+		"cases/require/cjs-lib.js",
+		"cases/require/umd-lib.js",
+		"cases/require/index.js",
+		"cases/manual_reexport/lib.js",
+		"cases/manual_reexport/barrel.js",
+		"cases/manual_reexport/index.js",
+		"cases/deconflict_import_bindings/foo.mjs",
+		"cases/deconflict_import_bindings/foo/index.mjs",
+		"cases/deconflict_import_bindings/index.js",
+		"main.js"
+	],
+	localCount: 12,
+	edges: [
+		[],
+		[0],
+		[0],
+		[0],
+		[
+			0,
+			1,
+			2,
+			3
+		],
+		[0],
+		[5, 0],
+		[6, 0],
+		[0],
+		[0],
+		[
+			8,
+			9,
+			0
+		],
+		[
+			4,
+			7,
+			10
+		]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[]
+	]
+});
 //#region trigger-dep.js
 var trigger_dep_exports = /* @__PURE__ */ __exportAll({});
 var init_trigger_dep = __esmMin((() => {
@@ -148,12 +206,13 @@ if (main_hot) main_hot.accept();
 ## Code
 
 ```js
+__rolldown_runtime__.registerGraph({ids:["cases/deconflict_import_bindings/foo.mjs","cases/deconflict_import_bindings/foo/index.mjs","cases/deconflict_import_bindings/index.js","cases/manual_reexport/barrel.js","cases/manual_reexport/index.js","cases/manual_reexport/lib.js","cases/require/cjs-lib-reassign-module-exports.js","cases/require/cjs-lib.js","cases/require/index.js","cases/require/umd-lib.js","main.js","trigger-dep.js"],localCount:12,edges:[[11],[11],[0,1,11],[5,11],[3,11],[11],[11],[11],[11,6,7,9],[11],[8,4,2],[]],dynamicEdges:[[],[],[],[],[],[],[],[],[],[],[],[]]});
 //#region cases/deconflict_import_bindings/foo.mjs
-var init_foo_0 = __rolldown_runtime__.createEsmInitializer("cases/deconflict_import_bindings/foo.mjs", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/foo.mjs", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		init_trigger_dep_11();
+		__rolldown_runtime__.initModule("trigger-dep.js");
 		const hot_foo = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_trigger_dep_00 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const foo = "foo";
@@ -162,11 +221,11 @@ var init_foo_0 = __rolldown_runtime__.createEsmInitializer("cases/deconflict_imp
 
 //#endregion
 //#region cases/deconflict_import_bindings/foo/index.mjs
-var init_foo_1 = __rolldown_runtime__.createEsmInitializer("cases/deconflict_import_bindings/foo/index.mjs", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/foo/index.mjs", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		init_trigger_dep_11();
+		__rolldown_runtime__.initModule("trigger-dep.js");
 		const hot_foo = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_trigger_dep_10 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const foo = "foo-index";
@@ -176,13 +235,13 @@ var init_foo_1 = __rolldown_runtime__.createEsmInitializer("cases/deconflict_imp
 //#endregion
 //#region cases/deconflict_import_bindings/index.js
 import * as import_node_assert_20 from "node:assert";
-var init_deconflict_import_bindings_2 = __rolldown_runtime__.createEsmInitializer("cases/deconflict_import_bindings/index.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/index.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		init_foo_0();
-		init_foo_1();
-		init_trigger_dep_11();
+		__rolldown_runtime__.initModule("cases/deconflict_import_bindings/foo.mjs");
+		__rolldown_runtime__.initModule("cases/deconflict_import_bindings/foo/index.mjs");
+		__rolldown_runtime__.initModule("trigger-dep.js");
 		const hot_deconflict_import_bindings = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_foo_21 = __rolldown_runtime__.loadExports("cases/deconflict_import_bindings/foo.mjs");
 		var import_foo_22 = __rolldown_runtime__.loadExports("cases/deconflict_import_bindings/foo/index.mjs");
@@ -194,15 +253,15 @@ var init_deconflict_import_bindings_2 = __rolldown_runtime__.createEsmInitialize
 
 //#endregion
 //#region cases/manual_reexport/barrel.js
-var init_barrel_3 = __rolldown_runtime__.createEsmInitializer("cases/manual_reexport/barrel.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("cases/manual_reexport/barrel.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			Globals: () => import_lib_30.Globals,
 			value: () => import_lib_30.value
 		});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		init_lib_5();
-		init_trigger_dep_11();
+		__rolldown_runtime__.initModule("cases/manual_reexport/lib.js");
+		__rolldown_runtime__.initModule("trigger-dep.js");
 		const hot_barrel = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_lib_30 = __rolldown_runtime__.loadExports("cases/manual_reexport/lib.js");
 		var import_trigger_dep_31 = __rolldown_runtime__.loadExports("trigger-dep.js");
@@ -212,12 +271,12 @@ var init_barrel_3 = __rolldown_runtime__.createEsmInitializer("cases/manual_reex
 //#endregion
 //#region cases/manual_reexport/index.js
 import * as import_node_assert_40 from "node:assert";
-var init_manual_reexport_4 = __rolldown_runtime__.createEsmInitializer("cases/manual_reexport/index.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("cases/manual_reexport/index.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		init_barrel_3();
-		init_trigger_dep_11();
+		__rolldown_runtime__.initModule("cases/manual_reexport/barrel.js");
+		__rolldown_runtime__.initModule("trigger-dep.js");
 		const hot_manual_reexport = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_barrel_41 = __rolldown_runtime__.loadExports("cases/manual_reexport/barrel.js");
 		var import_trigger_dep_42 = __rolldown_runtime__.loadExports("trigger-dep.js");
@@ -228,14 +287,14 @@ var init_manual_reexport_4 = __rolldown_runtime__.createEsmInitializer("cases/ma
 
 //#endregion
 //#region cases/manual_reexport/lib.js
-var init_lib_5 = __rolldown_runtime__.createEsmInitializer("cases/manual_reexport/lib.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("cases/manual_reexport/lib.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			Globals: () => Globals,
 			value: () => value
 		});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		init_trigger_dep_11();
+		__rolldown_runtime__.initModule("trigger-dep.js");
 		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_trigger_dep_50 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const Globals = Object;
@@ -245,10 +304,12 @@ var init_lib_5 = __rolldown_runtime__.createEsmInitializer("cases/manual_reexpor
 
 //#endregion
 //#region cases/require/cjs-lib-reassign-module-exports.js
-var require_cjs_lib_reassign_module_exports_6 = __rolldown_runtime__.createCjsInitializer("cases/require/cjs-lib-reassign-module-exports.js", (function(__rolldown_exports__, __rolldown_module__, __rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("cases/require/cjs-lib-reassign-module-exports.js", "cjs", (function(__rolldown_module_id__) {
 	try {
+		var __rolldown_module__ = { exports: {} };
+		var __rolldown_exports__ = __rolldown_module__.exports;
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
-		init_trigger_dep_11();
+		__rolldown_runtime__.initModule("trigger-dep.js");
 		const hot_cjs_lib_reassign_module_exports = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_trigger_dep_60 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		__rolldown_module__.exports = function() {
@@ -260,10 +321,12 @@ var require_cjs_lib_reassign_module_exports_6 = __rolldown_runtime__.createCjsIn
 
 //#endregion
 //#region cases/require/cjs-lib.js
-var require_cjs_lib_7 = __rolldown_runtime__.createCjsInitializer("cases/require/cjs-lib.js", (function(__rolldown_exports__, __rolldown_module__, __rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("cases/require/cjs-lib.js", "cjs", (function(__rolldown_module_id__) {
 	try {
+		var __rolldown_module__ = { exports: {} };
+		var __rolldown_exports__ = __rolldown_module__.exports;
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
-		init_trigger_dep_11();
+		__rolldown_runtime__.initModule("trigger-dep.js");
 		const hot_cjs_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_trigger_dep_70 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		__rolldown_exports__.foo = "foo";
@@ -285,23 +348,23 @@ var require_cjs_lib_7 = __rolldown_runtime__.createCjsInitializer("cases/require
 //#endregion
 //#region cases/require/index.js
 import * as import_node_assert_80 from "node:assert";
-var init_require_8 = __rolldown_runtime__.createEsmInitializer("cases/require/index.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("cases/require/index.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		init_trigger_dep_11();
+		__rolldown_runtime__.initModule("trigger-dep.js");
 		const hot_require = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_trigger_dep_81 = __rolldown_runtime__.loadExports("trigger-dep.js");
-		const requiredCjsLibReassignModuleExports = (require_cjs_lib_reassign_module_exports_6(), __rolldown_runtime__.loadExports("cases/require/cjs-lib-reassign-module-exports.js"));
+		const requiredCjsLibReassignModuleExports = (__rolldown_runtime__.initModule("cases/require/cjs-lib-reassign-module-exports.js"), __rolldown_runtime__.loadExports("cases/require/cjs-lib-reassign-module-exports.js"));
 		import_node_assert_80.default.strictEqual(requiredCjsLibReassignModuleExports(), "exports");
 		import_node_assert_80.default.strictEqual(requiredCjsLibReassignModuleExports.foo, "foo");
-		const requireCjsLib = (require_cjs_lib_7(), __rolldown_runtime__.loadExports("cases/require/cjs-lib.js"));
+		const requireCjsLib = (__rolldown_runtime__.initModule("cases/require/cjs-lib.js"), __rolldown_runtime__.loadExports("cases/require/cjs-lib.js"));
 		import_node_assert_80.default.strictEqual(requireCjsLib.foo, "foo");
 		import_node_assert_80.default.strictEqual(requireCjsLib.bar, "bar");
 		import_node_assert_80.default.strictEqual(requireCjsLib.baz, undefined);
 		import_node_assert_80.default.strictEqual(requireCjsLib.baz3, undefined);
 		import_node_assert_80.default.strictEqual(requireCjsLib.qux, "qux");
-		const requiredUmdLib = (require_umd_lib_9(), __rolldown_runtime__.loadExports("cases/require/umd-lib.js"));
+		const requiredUmdLib = (__rolldown_runtime__.initModule("cases/require/umd-lib.js"), __rolldown_runtime__.loadExports("cases/require/umd-lib.js"));
 		import_node_assert_80.default.strictEqual(requiredUmdLib(), "exports");
 		import_node_assert_80.default.strictEqual(requiredUmdLib.foo, "foo");
 		{
@@ -313,10 +376,12 @@ var init_require_8 = __rolldown_runtime__.createEsmInitializer("cases/require/in
 
 //#endregion
 //#region cases/require/umd-lib.js
-var require_umd_lib_9 = __rolldown_runtime__.createCjsInitializer("cases/require/umd-lib.js", (function(__rolldown_exports__, __rolldown_module__, __rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("cases/require/umd-lib.js", "cjs", (function(__rolldown_module_id__) {
 	try {
+		var __rolldown_module__ = { exports: {} };
+		var __rolldown_exports__ = __rolldown_module__.exports;
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
-		init_trigger_dep_11();
+		__rolldown_runtime__.initModule("trigger-dep.js");
 		const hot_umd_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_trigger_dep_90 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		(function(root, umdLib) {
@@ -341,13 +406,13 @@ var require_umd_lib_9 = __rolldown_runtime__.createCjsInitializer("cases/require
 
 //#endregion
 //#region main.js
-var init_main_10 = __rolldown_runtime__.createEsmInitializer("main.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("main.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		init_require_8();
-		init_manual_reexport_4();
-		init_deconflict_import_bindings_2();
+		__rolldown_runtime__.initModule("cases/require/index.js");
+		__rolldown_runtime__.initModule("cases/manual_reexport/index.js");
+		__rolldown_runtime__.initModule("cases/deconflict_import_bindings/index.js");
 		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_require_100 = __rolldown_runtime__.loadExports("cases/require/index.js");
 		var import_manual_reexport_101 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
@@ -360,23 +425,21 @@ var init_main_10 = __rolldown_runtime__.createEsmInitializer("main.js", (functio
 
 //#endregion
 //#region trigger-dep.js
-var init_trigger_dep_11 = __rolldown_runtime__.createEsmInitializer("trigger-dep.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("trigger-dep.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, {});
 		const hot_trigger_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		console.log();
+		console.log("hmr");
 	} finally {}
 }));
 
 //#endregion
-init_main_10()
-__rolldown_runtime__.applyUpdates([['main.js', 'main.js']]);
 ```
 
 ## Meta
 
 - update type: patch
 
-### Hmr Boundaries
+### Changed Ids
 
-- boundary: main.js, accepted_via: main.js
+- trigger-dep.js

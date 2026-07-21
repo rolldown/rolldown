@@ -301,7 +301,7 @@ impl Generator for EcmaGenerator {
           .preliminary_filename
           .clone()
           .expect("should have preliminary filename"),
-        preliminary_sourcemap_filename: ctx.chunk.preliminary_sourcemap_filename.clone().into(),
+        preliminary_sourcemap_filename: ctx.chunk.preliminary_sourcemap_filename.clone(),
         augment_chunk_hash: None,
         post_banner,
         post_footer,

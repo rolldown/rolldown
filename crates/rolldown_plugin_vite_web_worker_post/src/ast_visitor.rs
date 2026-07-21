@@ -1,20 +1,25 @@
+use oxc::ast::builder::AstBuilder;
 use oxc::{
   ast::ast::{
-    Expression, IdentifierName, ObjectExpression, ObjectPropertyKind, StaticMemberExpression,
+    Expression, IdentifierName, ObjectExpression, ObjectPropertyKind, Statement,
+    StaticMemberExpression,
   },
   ast_visit::VisitMut,
   span::SPAN,
 };
-use rolldown_ecmascript_utils::{AstFactory, ExpressionExt as _};
+use rolldown_ecmascript_utils::{
+  ExpressionExt as _, ExpressionFactoryExt as _, IdentifierNameFactoryExt as _,
+  StatementFactoryExt as _,
+};
 
 pub struct WebWorkerPostVisitor<'ast> {
-  pub ast_factory: AstFactory<'ast>,
+  pub ast_builder: AstBuilder<'ast>,
   pub should_inject_import_meta_object: bool,
 }
 
 impl<'ast> WebWorkerPostVisitor<'ast> {
-  pub fn new(ast_factory: AstFactory<'ast>) -> Self {
-    Self { ast_factory, should_inject_import_meta_object: false }
+  pub fn new(ast_builder: AstBuilder<'ast>) -> Self {
+    Self { ast_builder, should_inject_import_meta_object: false }
   }
 
   #[inline]
@@ -23,20 +28,20 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
       SPAN,
       Expression::StaticMemberExpression(StaticMemberExpression::boxed(
         SPAN,
-        self.ast_factory.make_id_ref_expr(SPAN, "self"),
-        self.ast_factory.make_id_name(SPAN, "location"),
+        Expression::new_id_ref_expr(SPAN, "self", &self.ast_builder),
+        IdentifierName::new_id_name(SPAN, "location", &self.ast_builder),
         false,
-        &self.ast_factory,
+        &self.ast_builder,
       )),
-      self.ast_factory.make_id_name(SPAN, "href"),
+      IdentifierName::new_id_name(SPAN, "href", &self.ast_builder),
       false,
-      &self.ast_factory,
+      &self.ast_builder,
     ))
   }
 
   #[inline]
   fn create_import_meta_object_decl(&self) -> oxc::ast::ast::Statement<'ast> {
-    self.ast_factory.make_var_decl(
+    Statement::new_var_decl(
       "_vite_importMeta",
       Expression::ObjectExpression(ObjectExpression::boxed(
         SPAN,
@@ -46,19 +51,20 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
             oxc::ast::ast::PropertyKind::Init,
             oxc::ast::ast::PropertyKey::StaticIdentifier(IdentifierName::boxed(
               SPAN,
-              oxc::ast::ast::Str::from_str_in("url", &self.ast_factory),
-              &self.ast_factory,
+              oxc::ast::ast::Str::from_str_in("url", &self.ast_builder),
+              &self.ast_builder,
             )),
             self.create_self_location_href_expr(),
             false,
             false,
             false,
-            &self.ast_factory,
+            &self.ast_builder,
           ),
-          &self.ast_factory,
+          &self.ast_builder,
         ),
-        &self.ast_factory,
+        &self.ast_builder,
       )),
+      &self.ast_builder,
     )
   }
 }
@@ -82,7 +88,7 @@ impl<'ast> VisitMut<'ast> for WebWorkerPostVisitor<'ast> {
         if meta.meta.name == "import" && meta.property.name == "meta" =>
       {
         self.should_inject_import_meta_object = true;
-        *it = self.ast_factory.make_id_ref_expr(SPAN, "_vite_importMeta");
+        *it = Expression::new_id_ref_expr(SPAN, "_vite_importMeta", &self.ast_builder);
       }
       _ => oxc::ast_visit::walk_mut::walk_expression(self, it),
     }

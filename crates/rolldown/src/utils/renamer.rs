@@ -7,7 +7,8 @@ use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use oxc_str::CompactStr;
 
 use rolldown_common::{
-  ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefDbForModule, WrapKind,
+  ExportsKind, ImportRecordMeta, ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb,
+  SymbolRefDbForModule, WrapKind,
 };
 use rolldown_utils::concat_string;
 
@@ -548,6 +549,39 @@ impl NestedScopeRenamer<'_, '_> {
       };
       if let Some(binding) = self.scoping.get_binding(root_scope_id, canonical_name.as_str().into())
         && binding != reference_symbol
+      {
+        let local_ref: SymbolRef = (self.module_idx, binding).into();
+        if self.link_output.symbol_db.canonical_ref_for(local_ref).owner == self.module_idx {
+          shadowing_locals.insert(local_ref);
+        }
+      }
+    }
+
+    // `require()` of a wrapped-ESM importee — the finalizer rewrites it to
+    // `(init_x(), __toCommonJS(xxx_exports))`, so a root-scope local sharing the importee's
+    // namespace-object final name shadows that read (issue #9882, require()/namespace channel).
+    // We mirror the finalizer's gate (`module_finalizers/mod.rs`): a non-CommonJS importee whose
+    // require is actually used. The namespace object lives in the importee module, never in
+    // `self.module`, so any same-named root-scope local here is a genuine shadowing local.
+    for rec in &self.module.import_records {
+      let Some(importee_idx) = rec.resolved_module else {
+        continue;
+      };
+      if rec.meta.contains(ImportRecordMeta::IsRequireUnused) {
+        continue;
+      }
+      let Some(importee) = self.link_output.module_table[importee_idx].as_normal() else {
+        continue;
+      };
+      if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+        continue;
+      }
+      let Some(canonical_name) =
+        self.renamer.get_canonical_name(importee.namespace_object_ref).cloned()
+      else {
+        continue;
+      };
+      if let Some(binding) = self.scoping.get_binding(root_scope_id, canonical_name.as_str().into())
       {
         let local_ref: SymbolRef = (self.module_idx, binding).into();
         if self.link_output.symbol_db.canonical_ref_for(local_ref).owner == self.module_idx {

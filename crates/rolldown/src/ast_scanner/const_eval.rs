@@ -13,7 +13,7 @@ use rolldown_common::{ConstExportMeta, ConstantValue};
 use rustc_hash::FxHashMap;
 
 pub struct ConstEvalCtx<'me, 'ast: 'me> {
-  pub ast: oxc::ast::AstBuilder<'ast>,
+  pub ast: oxc::ast::builder::AstBuilder<'ast>,
   pub scope: &'me Scoping,
   pub constant_map: &'me FxHashMap<SymbolId, ConstExportMeta>,
   pub overrode_get_constant_value_from_reference_id: Option<
@@ -30,9 +30,9 @@ impl<'ast> GetAllocator<'ast> for ConstEvalCtx<'_, 'ast> {
 }
 
 impl<'ast> GetAstBuilder<'ast> for ConstEvalCtx<'_, 'ast> {
-  type Builder = oxc::ast::AstBuilder<'ast>;
+  type Builder = oxc::ast::builder::AstBuilder<'ast>;
 
-  fn builder(&self) -> &oxc::ast::AstBuilder<'ast> {
+  fn builder(&self) -> &oxc::ast::builder::AstBuilder<'ast> {
     &self.ast
   }
 }

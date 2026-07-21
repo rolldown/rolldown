@@ -102,7 +102,7 @@ pub mod bundler_options {
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
   chunk::{
-    Chunk, ChunkMeta, PostChunkOptimizationOperation, PreliminarySourcemapFilename,
+    Chunk, ChunkMeta, PostChunkOptimizationOperation,
     chunk_table::ChunkTable,
     types::{
       AddonRenderContext,
@@ -119,7 +119,7 @@ pub use crate::{
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{
       EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ExportOrigin, PrependRenderedImport,
-      ThisExprReplaceKind, generate_replace_this_expr_map,
+      RolldownFileUrlReference, ThisExprReplaceKind, generate_replace_this_expr_map,
     },
     json_to_program::{json_value_to_ecma_ast, json_value_to_expression},
     module_idx::ModuleIdx,
@@ -130,8 +130,8 @@ pub use crate::{
   },
   hmr::{
     client_hmr_input::ClientHmrInput, client_hmr_update::ClientHmrUpdate,
-    hmr_boundary::HmrBoundary, hmr_boundary_output::HmrBoundaryOutput, hmr_patch::HmrPatch,
-    hmr_update::HmrUpdate,
+    hmr_boundary::HmrBoundary, hmr_patch::HmrPatch, hmr_stamp_table::HmrStampTable,
+    hmr_update::HmrUpdate, lazy_chunk_output::HmrLazyChunkOutput,
   },
   module::{
     Module,

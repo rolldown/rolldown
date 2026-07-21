@@ -221,6 +221,12 @@ function patchBindingJs(): Plugin {
 if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   try {
     nativeBinding = require('./webcontainer-fallback.cjs');
+    // The fallback loads the @rolldown/binding-wasm32-wasi artifact, so the
+    // exported loader target must be derived the same way the generated WASI
+    // branches derive it; leaving it 'native' makes runtime-support reject
+    // the binding's capability report as a target mismatch.
+    loadedBindingTarget =
+      nativeBinding.__rolldownBindingTarget === 'wasi' ? 'wasi' : 'wasi-threads'
   } catch (err) {
     loadErrors.push(err)
   }

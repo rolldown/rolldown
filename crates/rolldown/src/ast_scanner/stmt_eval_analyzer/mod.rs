@@ -8,6 +8,7 @@ use oxc::ast::ast::{
 use oxc::ast::match_member_expression;
 use oxc::ast_visit::{Visit, walk};
 use oxc::semantic::{NodeId, ScopeFlags, SymbolId};
+use oxc::transformer::EngineTargets;
 use oxc_ecmascript::GlobalContext;
 use oxc_ecmascript::side_effects::{
   MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects,
@@ -179,12 +180,9 @@ impl<'a> StmtEvalAnalyzer<'a> {
   /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>` is a placeholder the finalizer rewrites into a
   /// `new URL(...)` expression. Other accesses like `import.meta.hot.accept()` may have side effects.
   fn is_side_effect_free_import_meta_access(member_expr: &ast::MemberExpression) -> bool {
-    let Expression::MetaProperty(meta_property) = member_expr.object() else {
+    let Expression::ImportMeta(_) = member_expr.object() else {
       return false;
     };
-    if meta_property.meta.name != "import" || meta_property.property.name != "meta" {
-      return false;
-    }
     member_expr
       .static_property_name()
       .is_some_and(|name| name == "url" || utils::file_url::starts_with_file_url_prefix(name))
@@ -871,6 +869,10 @@ impl GlobalContext<'_> for StmtEvalAnalyzer<'_> {
 }
 
 impl MayHaveSideEffectsContext<'_> for StmtEvalAnalyzer<'_> {
+  fn engine_targets(&self) -> Option<&EngineTargets> {
+    Some(&self.options.transform_options.target)
+  }
+
   fn annotations(&self) -> bool {
     !self.flat_options.ignore_annotations()
   }

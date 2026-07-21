@@ -22,7 +22,7 @@ import{t as e}from"./main2.js";await e();
 ### main2.js
 
 ```js
-import{t as e}from"./rolldown-runtime.js";async function t(){console.log(`foo`)}function n(){return(n=e((()=>{})))()}function r(){return(r=e((async()=>{await t()})))()}export{r as t};
+import{t as e}from"./rolldown-runtime.js";async function t(){console.log(`foo`)}function n(){return(n=e((async()=>{await t()})))()}export{n as t};
 ```
 
 ### rolldown-runtime.js

@@ -504,12 +504,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           }
         }
       }
-      ast::Expression::MetaProperty(meta) => {
-        if !self.ctx.options.format.keep_esm_import_export_syntax()
-          && meta.meta.name == "import"
-          && meta.property.name == "meta"
-        {
-          self.record_surviving_import_meta(meta.span, EmptyImportMetaKind::Plain);
+      ast::Expression::ImportMeta(import_meta) => {
+        if !self.ctx.options.format.keep_esm_import_export_syntax() {
+          self.record_surviving_import_meta(import_meta.span, EmptyImportMetaKind::Plain);
           *expr = ast::Expression::new_object_expression(
             SPAN,
             oxc::allocator::Vec::new_in(&self.ast_builder),

@@ -1165,13 +1165,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               )),
               ast::Argument::StaticMemberExpression(ast::StaticMemberExpression::boxed(
                 SPAN,
-                ast::Expression::new_meta_property(
+                ast::Expression::new_import_meta(
                   // Carry the source span, so that if this generated `import.meta.url` cannot be
                   // polyfilled either, the diagnostic points at the `import.meta.ROLLDOWN_FILE_URL_*`
                   // the user actually wrote.
                   original_expr_span,
-                  ast::IdentifierName::new(SPAN, "import", &self.ast_builder),
-                  ast::IdentifierName::new(SPAN, "meta", &self.ast_builder),
                   &self.ast_builder,
                 ),
                 ast::IdentifierName::new(SPAN, "url", &self.ast_builder),

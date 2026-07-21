@@ -135,7 +135,49 @@ describe('experimental async runtime API', () => {
     expect(Number.isInteger(config.workerThreads)).toBe(true);
     expect(config.maxBlockingTasks).toBeGreaterThan(0);
     expect(Number.isInteger(config.maxBlockingTasks)).toBe(true);
+    // The drainer budget is reported on every artifact; `0` (disabled) is a
+    // valid report, so assert shape only here — the env-driven values are
+    // pinned by the subprocess test below.
+    expect(Number.isInteger(config.drainLingerUs)).toBe(true);
+    expect(config.drainLingerUs).toBeGreaterThanOrEqual(0);
   });
+
+  // `ROLLDOWN_DRAIN_LINGER_US` is resolved once at module init, so each case
+  // needs a fresh process. The value is introspection-only: it has no
+  // `configureAsyncRuntime` option, making the config report the only way a
+  // caller can verify it took effect.
+  test.runIf(!capabilities.wasi)(
+    'getAsyncRuntimeConfig reports the effective drain-linger budget',
+    { timeout: 30_000 },
+    () => {
+      const reportedDrainLingerUs = (drainLingerUs: string | undefined): number => {
+        const env: NodeJS.ProcessEnv = { ...process.env };
+        delete env.ROLLDOWN_DRAIN_LINGER_US;
+        if (drainLingerUs !== undefined) {
+          env.ROLLDOWN_DRAIN_LINGER_US = drainLingerUs;
+        }
+        const child = spawnSync(
+          process.execPath,
+          [
+            '--input-type=module',
+            '-e',
+            `const { getAsyncRuntimeConfig } = await import('rolldown/experimental');
+             console.log(JSON.stringify(getAsyncRuntimeConfig()));`,
+          ],
+          { cwd: testsDir, encoding: 'utf8', env, timeout: 25_000 },
+        );
+        expect(child.error).toBeUndefined();
+        expect(child.status, child.stderr || child.stdout).toBe(0);
+        return JSON.parse(child.stdout.trim().split('\n').at(-1)!).drainLingerUs;
+      };
+
+      // Unset keeps the shared crate's DEFAULT_DRAIN_LINGER_MICROS.
+      expect(reportedDrainLingerUs(undefined)).toBe(500);
+      expect(reportedDrainLingerUs('250')).toBe(250);
+      // `0` is a real value (lingering disabled), not unset.
+      expect(reportedDrainLingerUs('0')).toBe(0);
+    },
+  );
 
   // The increment path: event counters rise after a bundle, then reset. The
   // Rolldown scheduler is installed on every current binding, so async

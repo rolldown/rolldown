@@ -8,13 +8,20 @@ const binding = vi.hoisted(() => ({
   getAsyncRuntimeMetrics: undefined as unknown,
   resetAsyncRuntimeMetrics: undefined as unknown,
 }));
-const validConfig = {
+const validTopology = {
   flavor: 'MultiThread',
   maxBlockingTasks: 1,
   workerThreads: 2,
 };
+const validConfig = {
+  ...validTopology,
+  drainLingerUs: 500,
+};
+// Deliberately built from the topology, NOT from validConfig: the binding's
+// metrics snapshot omits the config-only drainLingerUs field, and the
+// normalizer must not require it there.
 const validMetrics = {
-  ...validConfig,
+  ...validTopology,
   activeBlockingTasks: 0,
   activeRunnables: 0,
   blockingTasksCompleted: 0,
@@ -166,6 +173,10 @@ test.each([
   ['an unknown flavor', { ...validConfig, flavor: 'ThreadPool' }],
   ['a zero worker count', { ...validConfig, workerThreads: 0 }],
   ['a fractional blocking limit', { ...validConfig, maxBlockingTasks: 1.5 }],
+  // A legacy Tokio-era binding reports exactly this three-field shape; the
+  // strict contract turns that version skew into reinstall guidance.
+  ['a missing drain linger budget', validTopology],
+  ['a negative drain linger budget', { ...validConfig, drainLingerUs: -1 }],
   [
     'a CurrentThread report with multiple workers',
     { flavor: 'CurrentThread', workerThreads: 2, maxBlockingTasks: 1 },
@@ -233,6 +244,17 @@ test.each([
       message: expect.stringContaining('incompatible getAsyncRuntimeMetrics() result'),
     }),
   );
+});
+
+test('metrics accept a snapshot without the config-only drain linger field', async () => {
+  // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
+  const api = await import('../src/api/async-runtime');
+
+  const metrics = api.getAsyncRuntimeMetrics();
+  expect(metrics).toMatchObject(validTopology);
+  expect(Object.prototype.hasOwnProperty.call(metrics, 'drainLingerUs')).toBe(false);
+  // The config path DOES require and preserve the field from the same mock.
+  expect(api.getAsyncRuntimeConfig()).toEqual(validConfig);
 });
 
 test('preserves a throwing metrics field getter as the mismatch cause', async () => {

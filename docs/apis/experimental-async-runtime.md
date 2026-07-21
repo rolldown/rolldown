@@ -44,10 +44,16 @@ The binding reads these variables once during module initialization:
 - `ROLLDOWN_WORKER_THREADS`
 - `ROLLDOWN_MAX_BLOCKING_THREADS`
 - `ROLLDOWN_PARK_DEADLINE_MS`
+- `ROLLDOWN_DRAIN_LINGER_US`
 
 `ROLLDOWN_RUNTIME` selects the flavor and the two thread-count variables size
 the topology. `ROLLDOWN_PARK_DEADLINE_MS` is not a topology knob: it opts into
 deadline-based `block_on` deadlock detection, which is disabled by default.
+`ROLLDOWN_DRAIN_LINGER_US` sets the MultiThread drainer's idle-linger budget
+in microseconds: `0` disables lingering, unset or unparsable values keep the
+built-in default (500µs), and oversized values are clamped. It has no
+`configureAsyncRuntime` option; the effective value is reported by
+`getAsyncRuntimeConfig()` as `drainLingerUs`.
 
 Native `ROLLDOWN_*` worker counts are capped at 256. Explicit
 `configureAsyncRuntime()` thread values above 256 throw

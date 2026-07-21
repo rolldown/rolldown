@@ -35,6 +35,13 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
   }
 
   let output_mode = std::env::var(LOG_OUTPUT_ENV_NAME).unwrap_or_else(|_| "stdout".to_string());
+  let targets = match Targets::from_str(&env_var) {
+    Ok(targets) => targets,
+    Err(error) => {
+      report_tracing_init_failure(&format!("invalid `{LOG_ENV_NAME}` filter: {error}"));
+      return None;
+    }
+  };
 
   // Remove events that have `devtoolsAction` field, as those events are only for devtools.
   let filter_for_removing_devtools_event = filter_fn(|metadata| {
@@ -55,7 +62,7 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
         let (chrome_layer, guard) =
           ChromeLayerBuilder::new().trace_style(trace_style).include_args(true).build();
         tracing_subscriber::registry()
-          .with(Targets::from_str(&env_var).unwrap())
+          .with(targets)
           .with(chrome_layer.with_filter(filter_for_removing_devtools_event))
           .init();
         Some(Box::new(guard))
@@ -70,7 +77,7 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
         );
         tracing_subscriber::registry()
           .with(filter_for_removing_devtools_event)
-          .with(Targets::from_str(&env_var).unwrap())
+          .with(targets)
           .with(
             fmt::layer()
               .pretty()
@@ -83,12 +90,22 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
       }
     }
     "json" => {
-      panic!("`json` output mode is not implemented yet");
+      report_tracing_init_failure(
+        "`RD_LOG_OUTPUT=json` is not implemented; falling back to readable output",
+      );
+      tracing_subscriber::registry()
+        .with(filter_for_removing_devtools_event)
+        .with(targets)
+        .with(
+          fmt::layer().pretty().with_span_events(FmtSpan::NONE).with_level(true).with_target(false),
+        )
+        .init();
+      None
     }
     "readable" => {
       tracing_subscriber::registry()
         .with(filter_for_removing_devtools_event)
-        .with(Targets::from_str(&env_var).unwrap())
+        .with(targets)
         .with(
           fmt::layer().pretty().with_span_events(FmtSpan::NONE).with_level(true).with_target(false),
         )
@@ -99,11 +116,19 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
     _ => {
       tracing_subscriber::registry()
         .with(filter_for_removing_devtools_event)
-        .with(Targets::from_str(&env_var).unwrap())
+        .with(targets)
         .with(fmt::layer().pretty().with_span_events(FmtSpan::CLOSE | FmtSpan::ENTER))
         .init();
       tracing::debug!("Tracing initialized");
       None
     }
   }
+}
+
+#[expect(
+  clippy::print_stderr,
+  reason = "tracing is unavailable for reporting its own init failure"
+)]
+fn report_tracing_init_failure(message: &str) {
+  eprintln!("Rolldown tracing disabled: {message}");
 }

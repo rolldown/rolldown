@@ -1,9 +1,10 @@
 # Experimental Async Runtime
 
 Every current Rolldown binding runs a shared scheduler that executes async
-polling, CPU work, and bounded blocking work in one scheduling domain. Check
-the loaded artifact before configuring it — older published artifacts predate
-this runtime:
+polling, CPU work, and bounded blocking work in one scheduling domain on the
+default `MultiThread` flavor (see [CurrentThread](#currentthread) for that
+flavor's narrower scope). Check the loaded artifact before configuring it —
+older published artifacts predate this runtime:
 
 ```ts
 import { configureAsyncRuntime, getRuntimeCapabilities } from 'rolldown/experimental';
@@ -85,6 +86,18 @@ shape, but their scheduler counters are zero.
 the JavaScript host thread safe. Query `blockOnJsThreadSafe`,
 `watchSupported`, `devSupported`, and `timers` from
 `getRuntimeCapabilities()` before enabling features that depend on them.
+
+On the native artifact, `ROLLDOWN_RUNTIME=single` (or a `CurrentThread`
+override) governs the shared scheduler only: async polling moves to the
+JavaScript host thread, blocking admission narrows to one task, and the
+reported `workerThreads: 1` / `threads: false` describe exactly that
+scheduler topology. Rolldown's data-parallel compute is not part of the
+shared scheduler's topology: it keeps using Rayon's process-global pool,
+which is sized from the CPU count and spins up on first use — the same
+compute pool every Tokio-era binding used on every flavor. Native
+`CurrentThread` is therefore a scheduler-flavor knob, not a process-wide
+single-thread mode. Only the WebAssembly artifacts, which compile without
+Rayon, execute on a single lane.
 
 Every WebAssembly artifact remains `CurrentThread`, including the published
 threaded build for `wasm32-wasip1-threads`: the shared scheduler has no

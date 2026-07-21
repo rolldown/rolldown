@@ -3,7 +3,13 @@
 ## Summary
 
 Rolldown's async runtime uses one scheduling domain for async task
-polling, CPU parallelism, and bounded blocking filesystem work. Heavy
+polling, CPU parallelism, and bounded blocking filesystem work on the
+MultiThread flavor: futures are polled on the executor's own Rayon pool
+workers, so `par_iter` splits stay inside that pool. On the native
+CurrentThread flavor only the scheduler itself is single-lane — futures are
+polled on the JS host thread, and Rolldown's data-parallel compute reaches
+Rayon's process-global pool (sized from the CPU count), exactly as every
+Tokio-era binding did on every flavor. Heavy
 post-build destruction uses a separate serial maintenance worker so a rebuild
 can never wait on a drop queued behind itself in the shared pool. The runtime
 supports a cooperative current-thread flavor for hosts without threads and a

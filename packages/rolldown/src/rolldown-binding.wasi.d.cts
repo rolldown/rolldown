@@ -2795,7 +2795,16 @@ export interface BindingRuntimeCapabilities {
    * LEGACY bindings, whose JS support layer synthesizes `false`.
    */
   asyncRuntimeBuild: boolean
-  /** Work is scheduled across multiple threads (`flavor === 'MultiThread'`). */
+  /**
+   * The shared scheduler executes its work across multiple executor threads
+   * (`flavor === 'MultiThread'`). This describes the scheduler's own
+   * topology, not the whole process: on the native artifact Rolldown's
+   * data-parallel compute (Rayon) runs on a separate process-global pool
+   * sized from the CPU count regardless of flavor -- exactly as on every
+   * Tokio-era binding -- so `threads: false` does not mean single-threaded
+   * execution. Only the WebAssembly artifacts, which compile without Rayon,
+   * execute on a single lane.
+   */
   threads: boolean
   /**
    * A timer facility backs `sleep_until` (the watch-mode debounce). This is

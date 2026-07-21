@@ -10,7 +10,7 @@ use futures::channel::mpsc;
 use futures::{FutureExt, StreamExt, pin_mut, select_biased};
 use oxc_index::IndexVec;
 use rolldown_common::WatcherChangeKind;
-use rolldown_utils::indexmap::FxIndexMap;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use std::future::Future;
 use std::mem;
 use std::sync::Arc;
@@ -214,6 +214,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     // queue is drained and the build pass repeats while any task still needs a
     // rebuild, keeping the whole save in a single Start..End envelope.
     let mut dispatched_changes = changes;
+    let mut rebuilt_tasks: IndexVec<WatchTaskIdx, bool> =
+      self.tasks.iter().map(|_| false).collect();
     loop {
       for task_index in self.tasks.indices() {
         if !self.tasks[task_index].needs_rebuild {
@@ -226,7 +228,12 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         }
 
         let task = &mut self.tasks[task_index];
-        match task.build(task_index).await {
+        let outcome = task.build(task_index).await;
+        // This task has now been rebuilt inside this envelope: any message it
+        // reports from here on cannot be its own report of the save that
+        // scheduled the rebuild — it is a genuinely new filesystem event.
+        rebuilt_tasks[task_index] = true;
+        match outcome {
           Ok(BuildOutcome::Success(data)) => {
             if !self.dispatch_event(WatchEvent::BundleEnd(data)).await {
               return false;
@@ -247,8 +254,20 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         }
       }
 
-      // Pull the messages queued while the builds ran.
-      self.drain_buffered_events().await;
+      // Pull the messages queued while the builds ran, remembering which paths
+      // were reported by a task that already rebuilt in this envelope: such a
+      // message cannot be a same-save sibling report — that task's report of
+      // the save was consumed before its build ran — so those paths are new
+      // saves that must be re-reported below even when their (path, kind) was
+      // already dispatched.
+      let mut new_save_paths = FxIndexSet::default();
+      self
+        .drain_buffered_events_observing(|task_index, changes| {
+          if rebuilt_tasks[task_index] {
+            new_save_paths.extend(changes.iter().map(|change| change.path.clone()));
+          }
+        })
+        .await;
       if matches!(self.state, WatcherState::Closing | WatcherState::Closed) {
         // A queued close was drained; the close sequence has already run.
         return true;
@@ -258,14 +277,15 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       }
 
       // Consume the drained changes so they don't schedule a duplicate
-      // envelope after `End`, and dispatch change notifications only for the
-      // (path, kind) pairs this envelope has not reported yet — same-save
-      // sibling messages repeat a path that was already dispatched above.
+      // envelope after `End`. Same-save sibling messages repeat a (path, kind)
+      // this envelope already reported and stay silent; a genuinely new save
+      // of an already-reported path re-dispatches `change`/`watchChange`.
       let (new_state, drained_changes) = mem::take(&mut self.state).on_debounce_timeout();
       self.state = new_state;
       if let Some(drained_changes) = drained_changes {
         for (path, kind) in drained_changes {
-          if dispatched_changes.get(&path).copied() == Some(kind) {
+          if !new_save_paths.contains(&path) && dispatched_changes.get(&path).copied() == Some(kind)
+          {
             continue;
           }
           if !self.dispatch_change(path.as_str(), kind).await {
@@ -363,6 +383,16 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   /// Drain buffered fs events that arrived during a build.
   /// Uses try_recv to process all pending messages without blocking.
   async fn drain_buffered_events(&mut self) {
+    self.drain_buffered_events_observing(|_, _| {}).await;
+  }
+
+  /// Like [`Self::drain_buffered_events`], but lets the caller observe each
+  /// drained `FileChanges` message with its task provenance, which the state
+  /// machine's path-keyed merge discards.
+  async fn drain_buffered_events_observing(
+    &mut self,
+    mut observe: impl FnMut(WatchTaskIdx, &[FileChangeEvent]),
+  ) {
     loop {
       // `futures`' non-deprecated `try_recv()` mirrors tokio's `try_recv()` shape
       // exactly: `Ok(msg)` = a buffered message (still drained after close while
@@ -372,6 +402,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       // `Err(_)` arm preserves the original semantics unchanged.
       match self.rx.try_recv() {
         Ok(WatcherMsg::FileChanges { task_index, changes }) => {
+          observe(task_index, &changes);
           self.process_file_changes(task_index, changes).await;
         }
         Ok(WatcherMsg::Close) => {
@@ -566,6 +597,207 @@ mod tests {
     let result = wait_for_debounce_input(&mut rx, std::future::ready(())).await;
 
     assert!(matches!(result, DebounceWaitResult::Message(Some(WatcherMsg::FileChanges { .. }))));
+  }
+
+  /// Counts `watchChange` plugin hook invocations.
+  #[derive(Debug)]
+  struct WatchChangeCountingPlugin {
+    count: Arc<AtomicUsize>,
+  }
+
+  impl rolldown::plugin::Plugin for WatchChangeCountingPlugin {
+    fn name(&self) -> std::borrow::Cow<'static, str> {
+      "watch-change-counter".into()
+    }
+
+    fn register_hook_usage(&self) -> rolldown::plugin::HookUsage {
+      rolldown::plugin::HookUsage::WatchChange
+    }
+
+    async fn watch_change(
+      &self,
+      _ctx: &rolldown::plugin::PluginContext,
+      _path: &str,
+      _event: WatcherChangeKind,
+    ) -> rolldown::plugin::HookNoopReturn {
+      self.count.fetch_add(1, Ordering::SeqCst);
+      Ok(())
+    }
+  }
+
+  /// Simulates a genuinely new save of the same file (same change kind) that
+  /// lands while the previous save's rebuild is still inside its envelope: the
+  /// second save's message is queued during the rebuild's BundleEnd dispatch,
+  /// strictly before the coordinator can dispatch `End`.
+  struct SecondSaveInjectingHandler {
+    events: Arc<Mutex<Vec<String>>>,
+    tx: mpsc::UnboundedSender<WatcherMsg>,
+    inject_path: String,
+    injected: AtomicBool,
+    end_count: Arc<AtomicUsize>,
+    initial_end: Arc<Notify>,
+    rebuild_end: Arc<Notify>,
+  }
+
+  impl WatcherEventHandler for SecondSaveInjectingHandler {
+    async fn on_event(&self, event: WatchEvent) {
+      if matches!(event, WatchEvent::BundleEnd(_))
+        && self.end_count.load(Ordering::SeqCst) == 1
+        && !self.injected.swap(true, Ordering::SeqCst)
+      {
+        // The first save's rebuild just finished building; the user saves the
+        // file again (same path, same kind) before `End` is dispatched.
+        self
+          .tx
+          .unbounded_send(WatcherMsg::FileChanges {
+            task_index: WatchTaskIdx::from_usize(0),
+            changes: vec![FileChangeEvent::new(
+              self.inject_path.clone(),
+              WatcherChangeKind::Update,
+            )],
+          })
+          .expect("queue second save");
+      }
+
+      self.events.lock().expect("events lock").push(event.as_str().to_string());
+
+      if matches!(event, WatchEvent::End) {
+        let ends = self.end_count.fetch_add(1, Ordering::SeqCst) + 1;
+        if ends == 1 {
+          self.initial_end.notify_one();
+        } else {
+          self.rebuild_end.notify_one();
+        }
+      }
+    }
+
+    async fn on_change(&self, _path: &str, _kind: WatcherChangeKind) {
+      self.events.lock().expect("events lock").push("CHANGE".to_string());
+    }
+
+    async fn on_restart(&self) {
+      self.events.lock().expect("events lock").push("RESTART".to_string());
+    }
+
+    async fn on_close(&self) {
+      self.events.lock().expect("events lock").push("CLOSE".to_string());
+    }
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn second_save_during_rebuild_still_reports_change_and_watch_change() {
+    let test_dir = TestDir::new();
+    let input = test_dir.0.join("main.js");
+    fs::write(&input, "export const value = 1;").expect("write input");
+    let input = fs::canonicalize(input).expect("canonicalize input");
+    let cwd = input.parent().expect("input has parent").to_path_buf();
+    let input_str = input.to_string_lossy().into_owned();
+
+    let (tx, rx) = mpsc::unbounded();
+    let closed = Arc::new(AtomicBool::new(false));
+    let close_notify = Arc::new(Event::new());
+    let watch_change_count = Arc::new(AtomicUsize::new(0));
+
+    let mut tasks = IndexVec::new();
+    let fs_watcher: DynFsWatcher = Box::new(NoopWatcher);
+    let task = WatchTask::new(
+      BundlerConfig::new(
+        BundlerOptions {
+          cwd: Some(cwd),
+          input: Some(vec![input_str.clone().into()]),
+          file: Some("dist/out.js".into()),
+          ..Default::default()
+        },
+        vec![Arc::new(WatchChangeCountingPlugin { count: Arc::clone(&watch_change_count) })],
+      ),
+      fs_watcher,
+      &closed,
+    )
+    .expect("create watch task");
+    tasks.push(task);
+
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let end_count = Arc::new(AtomicUsize::new(0));
+    let initial_end = Arc::new(Notify::new());
+    let rebuild_end = Arc::new(Notify::new());
+    let coordinator = WatchCoordinator::new(
+      rx,
+      SecondSaveInjectingHandler {
+        events: Arc::clone(&events),
+        tx: tx.clone(),
+        inject_path: input_str.clone(),
+        injected: AtomicBool::new(false),
+        end_count: Arc::clone(&end_count),
+        initial_end: Arc::clone(&initial_end),
+        rebuild_end: Arc::clone(&rebuild_end),
+      },
+      tasks,
+      &WatcherConfig::default(),
+      Arc::clone(&closed),
+      Arc::clone(&close_notify),
+    );
+    let handle = tokio::spawn(coordinator.run());
+
+    tokio::time::timeout(Duration::from_secs(30), initial_end.notified())
+      .await
+      .expect("initial build should finish");
+
+    // Save #1. Save #2 is queued by the handler while save #1's rebuild
+    // BundleEnd is being dispatched.
+    tx.unbounded_send(WatcherMsg::FileChanges {
+      task_index: WatchTaskIdx::from_usize(0),
+      changes: vec![FileChangeEvent::new(input_str.clone(), WatcherChangeKind::Update)],
+    })
+    .expect("send first file change");
+
+    tokio::time::timeout(Duration::from_secs(30), rebuild_end.notified())
+      .await
+      .expect("rebuild should finish");
+
+    closed.store(true, Ordering::Relaxed);
+    close_notify.notify(usize::MAX);
+    tx.unbounded_send(WatcherMsg::Close).expect("send close");
+    tokio::time::timeout(Duration::from_secs(30), handle)
+      .await
+      .expect("coordinator should close")
+      .expect("coordinator task should not panic");
+
+    let events = events.lock().expect("events lock").clone();
+    // Probe validation: save #1's notifications must be observable at all.
+    assert!(
+      events.iter().filter(|e| *e == "CHANGE").count() >= 1,
+      "save #1 should report a change event; events: {events:?}"
+    );
+    assert!(watch_change_count.load(Ordering::SeqCst) >= 1, "save #1 should invoke watchChange");
+    // The genuinely new second save must be reported too: one more `change`
+    // event and one more `watchChange` invocation, still in one envelope.
+    assert_eq!(
+      events,
+      [
+        // Initial build.
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        // One rebuild envelope covering both saves: save #2 lands after save
+        // #1's build pass, is reported, and triggers the second build pass.
+        "CHANGE",
+        "RESTART",
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "CHANGE",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        "CLOSE",
+      ]
+    );
+    assert_eq!(
+      watch_change_count.load(Ordering::SeqCst),
+      2,
+      "each distinct save must invoke the watchChange hook"
+    );
   }
 
   #[tokio::test(flavor = "multi_thread")]

@@ -1,0 +1,23 @@
+crates/rolldown/tests/rolldown/function/wrapped_esm_init_interop/ambiguous_star_reexport/mod_a.js
+  s_a17cbbd51082e3::t_cd6b9b75abb453 1-2
+crates/rolldown/tests/rolldown/function/wrapped_esm_init_interop/ambiguous_star_reexport/mod_b.js
+  s_a17cbbd51082e3::t_62b3338dcacae6 1-2
+crates/rolldown/tests/rolldown/function/wrapped_esm_init_interop/namespace_liveness_gating/barrel.js
+  s_a17cbbd51082e3::t_83db1c48b2f512 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "eafc697bce61772b07e2e91b65e377ad75bd3a1f",
+  "prompts": {},
+  "sessions": {
+    "s_a17cbbd51082e3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f83cb-1329-7ff0-b748-ec2b5655e3cd",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

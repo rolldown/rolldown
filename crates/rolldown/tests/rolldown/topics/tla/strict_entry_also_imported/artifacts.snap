@@ -1,0 +1,130 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as value } from "./entry-a.js";
+export { value };
+
+```
+
+## b.js
+
+```js
+import { t as value } from "./entry-a.js";
+//#region entry-b.js
+const combined = `b:${value}`;
+//#endregion
+export { combined };
+
+```
+
+## entry-a.js
+
+```js
+//#region entry-a.js
+const value = await Promise.resolve("a");
+//#endregion
+export { value as t };
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### a.js
+
+```js
+import { n as value, t as init_entry_a } from "./entry-a.js";
+await init_entry_a();
+export { value };
+
+```
+
+### b.js
+
+```js
+import { n as init_entry_b, t as combined } from "./entry-b.js";
+await init_entry_b();
+export { combined };
+
+```
+
+### entry-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region entry-a.js
+var value;
+function init_entry_a() {
+	return (init_entry_a = __esmMin((async () => {
+		value = await Promise.resolve("a");
+	})))();
+}
+//#endregion
+export { value as n, init_entry_a as t };
+
+```
+
+### entry-b.js
+
+```js
+import { n as value, t as init_entry_a } from "./entry-a.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region entry-b.js
+var combined;
+function init_entry_b() {
+	return (init_entry_b = __esmMin((async () => {
+		await init_entry_a();
+		combined = `b:${value}`;
+	})))();
+}
+//#endregion
+export { init_entry_b as n, combined as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### a.js
+
+```js
+import { t as value } from "./entry-a.js";
+export { value };
+
+```
+
+### b.js
+
+```js
+import { t as value } from "./entry-a.js";
+//#region entry-b.js
+const combined = `b:${value}`;
+//#endregion
+export { combined };
+
+```
+
+### entry-a.js
+
+```js
+//#region entry-a.js
+const value = await Promise.resolve("a");
+//#endregion
+export { value as t };
+
+```

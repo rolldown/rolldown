@@ -14,55 +14,70 @@ export { value };
 
 ```
 
-# Variant: [strict_execution_order: true]
+# Variant: wrap-all: [strict_execution_order: true]
 
 ## Assets
 
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region tla.js
-var value$1;
-var init_tla = __esmMin((async () => {
-	value$1 = await Promise.resolve("tla");
-}));
-//#endregion
-//#region lib.js
-var value;
-var init_lib = __esmMin((async () => {
-	await init_tla();
-	value = value$1 + "+lib";
-}));
-//#endregion
-await __esmMin((async () => {
-	await init_lib();
-}))();
+import { r as value, t as init_main } from "./main2.js";
+await init_main();
 export { value };
 
 ```
 
-# Variant: [on_demand_wrapping: true] [strict_execution_order: true]
+### main2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region tla.js
+var value$1;
+function init_tla() {
+	return (init_tla = __esmMin((async () => {
+		value$1 = await Promise.resolve("tla");
+	})))();
+}
+//#endregion
+//#region lib.js
+var value;
+function init_lib() {
+	return (init_lib = __esmMin((async () => {
+		await init_tla();
+		value = value$1 + "+lib";
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await init_lib();
+	})))();
+}
+//#endregion
+export { init_lib as n, value as r, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
 
 ## Assets
 
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-var value$1, value;
-var init_lib = __esmMin((async () => {
-	//#region tla.js
-	value$1 = await Promise.resolve("tla");
-	//#endregion
-	//#region lib.js
-	value = value$1 + "+lib";
-	//#endregion
-}));
 //#endregion
-await __esmMin((async () => {
-	await init_lib();
-}))();
+//#region lib.js
+const value = await Promise.resolve("tla") + "+lib";
+//#endregion
 export { value };
 
 ```

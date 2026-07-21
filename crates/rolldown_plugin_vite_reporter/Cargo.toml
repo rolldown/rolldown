@@ -26,6 +26,7 @@ owo-colors = { workspace = true }
 rayon = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
+rolldown_std_utils = { workspace = true }
 sugar_path = { workspace = true }
 supports-color = { workspace = true }
 terminal_size = { workspace = true }

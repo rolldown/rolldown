@@ -646,7 +646,8 @@ export interface InputOptions {
     chunkImportMap?: boolean | { baseUrl?: string; fileName?: string };
 
     /**
-     * Enable on-demand wrapping of modules.
+     * Under `output.strictExecutionOrder`, derive a conservative wrapping plan from predicted
+     * chunk execution hazards instead of wrapping every eligible module.
      * @default false
      * @hidden not ready for public usage yet
      */

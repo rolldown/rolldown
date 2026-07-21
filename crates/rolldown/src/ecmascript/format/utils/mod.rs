@@ -144,7 +144,11 @@ pub fn render_modules_with_peek_runtime_module_at_first<'a>(
     _ => {}
   }
 
-  source_joiner.append_source(import_code);
+  // An empty import prelude is not a source slot. Appending it would make `SourceJoiner` insert a
+  // separator line before the modules.
+  if !import_code.is_empty() {
+    source_joiner.append_source(import_code);
+  }
 
   // chunk content
   module_sources_peekable.for_each(

@@ -1,5 +1,5 @@
 Scenario                         |     Allocs |   Reallocs
 ----------------------------------------------------------
-sourcemap/join_with_sourcemap    |       4005 |          0
+sourcemap/join_with_sourcemap    |          5 |          0
 sourcemap/join_no_sourcemap      |          1 |          0
 sourcemap/collapse_codegen_chain |          8 |         15

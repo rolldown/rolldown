@@ -1,8 +1,6 @@
-use oxc::ast::builder::GetAstBuilder;
-use oxc::{
-  ast::{NONE, ast},
-  span::SPAN,
-};
+use oxc::allocator::GetAllocator;
+use oxc::ast::builder::{AstBuilder, NONE};
+use oxc::{ast::ast, span::SPAN};
 use rolldown_common::NormalModule;
 use rolldown_ecmascript::CJS_MODULE_REF;
 #[cfg(feature = "experimental")]
@@ -18,7 +16,7 @@ pub static MODULE_EXPORTS_NAME_FOR_ESM: &str = "__rolldown_exports__";
 pub static MODULE_ID_PARAM_FOR_HMR: &str = "__rolldown_module_id__";
 
 pub trait HmrAstBuilder<'any, 'ast> {
-  fn builder(&self) -> oxc::ast::AstBuilder<'ast>;
+  fn builder(&self) -> AstBuilder<'ast>;
 
   fn module(&self) -> &NormalModule;
 
@@ -168,8 +166,8 @@ pub trait HmrAstBuilder<'any, 'ast> {
 
 #[cfg(feature = "experimental")]
 impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
-  fn builder(&self) -> oxc::ast::AstBuilder<'ast> {
-    *self.ast_factory.builder()
+  fn builder(&self) -> AstBuilder<'ast> {
+    AstBuilder::new(self.ast_builder.allocator())
   }
 
   fn module(&self) -> &NormalModule {
@@ -202,8 +200,8 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
 }
 
 impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast> {
-  fn builder(&self) -> oxc::ast::AstBuilder<'ast> {
-    *self.ast_factory.builder()
+  fn builder(&self) -> AstBuilder<'ast> {
+    AstBuilder::new(self.ast_builder.allocator())
   }
 
   fn module(&self) -> &NormalModule {

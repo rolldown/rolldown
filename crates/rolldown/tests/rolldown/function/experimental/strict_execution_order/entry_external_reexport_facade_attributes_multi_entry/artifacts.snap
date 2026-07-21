@@ -1,0 +1,100 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import "./shared.js";
+export * from "external" with { type: "json" };
+
+```
+
+## b.js
+
+```js
+import "./shared.js";
+export * from "external" with { type: "css" };
+
+```
+
+## shared.js
+
+```js
+//#region setup.js
+globalThis.setupValue = "ready";
+//#endregion
+//#region reader.js
+console.log(globalThis.setupValue);
+//#endregion
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### a.js
+
+```js
+import { n as init_a } from "./shared.js";
+export * from "external" with { type: "json" };
+init_a();
+
+```
+
+### b.js
+
+```js
+import { t as init_b } from "./shared.js";
+export * from "external" with { type: "css" };
+init_b();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region setup.js
+function init_setup() {
+	return (init_setup = __esmMin((() => {
+		globalThis.setupValue = "ready";
+	})))();
+}
+//#endregion
+//#region reader.js
+function init_reader() {
+	return (init_reader = __esmMin((() => {
+		console.log(globalThis.setupValue);
+	})))();
+}
+//#endregion
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_setup();
+		init_reader();
+	})))();
+}
+//#endregion
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_setup();
+		init_reader();
+	})))();
+}
+//#endregion
+export { init_setup as i, init_a as n, init_reader as r, init_b as t };
+
+```

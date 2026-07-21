@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
 use oxc::{
   allocator::Allocator,
-  ast::AstBuilder,
+  ast::builder::AstBuilder,
   span::{SPAN, SourceType},
 };
 use rolldown_ecmascript::EcmaAst;
@@ -32,7 +32,7 @@ pub fn json_value_to_ecma_ast(value: &Value) -> EcmaAst {
 
   EcmaAst::from_allocator_and_source(source, allocator, |allocator| {
     let builder = AstBuilder::new(allocator);
-    let expr = json_value_to_expression(value, builder);
+    let expr = json_value_to_expression(value, &builder);
     let stmt = oxc::ast::ast::Statement::new_expression_statement(SPAN, expr, &builder);
 
     oxc::ast::ast::Program::new(
@@ -60,12 +60,12 @@ pub fn json_value_to_ecma_ast(value: &Value) -> EcmaAst {
 /// An `Expression` representing the JSON value
 pub fn json_value_to_expression<'a>(
   value: &Value,
-  builder: AstBuilder<'a>,
+  builder: &AstBuilder<'a>,
 ) -> oxc::ast::ast::Expression<'a> {
   match value {
-    Value::Null => oxc::ast::ast::Expression::new_null_literal(SPAN, &builder),
+    Value::Null => oxc::ast::ast::Expression::new_null_literal(SPAN, builder),
 
-    Value::Bool(b) => oxc::ast::ast::Expression::new_boolean_literal(SPAN, *b, &builder),
+    Value::Bool(b) => oxc::ast::ast::Expression::new_boolean_literal(SPAN, *b, builder),
 
     Value::Number(n) => {
       // A JSON number string is always a valid f64 literal, so parsing it never fails:
@@ -79,15 +79,15 @@ pub fn json_value_to_expression<'a>(
         f,
         None,
         oxc::ast::ast::NumberBase::Decimal,
-        &builder,
+        builder,
       )
     }
 
     Value::String(s) => oxc::ast::ast::Expression::new_string_literal(
       SPAN,
-      oxc::ast::ast::Str::from_str_in(s, &builder),
+      oxc::ast::ast::Str::from_str_in(s, builder),
       None,
-      &builder,
+      builder,
     ),
 
     Value::Array(arr) => {
@@ -96,9 +96,9 @@ pub fn json_value_to_expression<'a>(
           let expr = json_value_to_expression(item, builder);
           oxc::ast::ast::ArrayExpressionElement::from(expr)
         }),
-        &builder,
+        builder,
       );
-      oxc::ast::ast::Expression::new_array_expression(SPAN, elements, &builder)
+      oxc::ast::ast::Expression::new_array_expression(SPAN, elements, builder)
     }
 
     Value::Object(obj) => {
@@ -106,9 +106,9 @@ pub fn json_value_to_expression<'a>(
         obj.iter().map(|(key, val)| {
           let key_expr = oxc::ast::ast::Expression::new_string_literal(
             SPAN,
-            oxc::ast::ast::Str::from_str_in(key, &builder),
+            oxc::ast::ast::Str::from_str_in(key, builder),
             None,
-            &builder,
+            builder,
           );
           let value_expr = json_value_to_expression(val, builder);
 
@@ -117,15 +117,15 @@ pub fn json_value_to_expression<'a>(
             oxc::ast::ast::PropertyKind::Init,
             oxc::ast::ast::PropertyKey::from(key_expr),
             value_expr,
+            false, // method
             false, // shorthand
             false, // computed
-            false, // method
-            &builder,
+            builder,
           )
         }),
-        &builder,
+        builder,
       );
-      oxc::ast::ast::Expression::new_object_expression(SPAN, properties, &builder)
+      oxc::ast::ast::Expression::new_object_expression(SPAN, properties, builder)
     }
   }
 }

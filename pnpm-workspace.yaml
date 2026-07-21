@@ -38,12 +38,13 @@ catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
-  '@napi-rs/cli': ^3.7.2
+  '@jridgewell/trace-mapping': ^0.3.31
+  '@napi-rs/cli': ^3.7.3
   '@napi-rs/wasm-runtime': ^1.1.6
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
-  '@oxc-project/runtime': '=0.139.0'
-  '@oxc-project/types': '=0.139.0'
+  '@oxc-project/runtime': '=0.140.0'
+  '@oxc-project/types': '=0.140.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
@@ -82,15 +83,14 @@ catalog:
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
   mocha: ^11.7.5
-  oxc-minify: '=0.139.0'
-  oxc-parser: '=0.139.0'
-  oxc-transform: '=0.139.0'
+  oxc-parser: '=0.140.0'
+  oxc-transform: '=0.140.0'
   pathe: ^2.0.3
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
   remeda: ^2.34.1
-  rolldown-plugin-dts: ^0.26.0
+  rolldown-plugin-dts: ^0.27.0
   rollup: ^4.60.4
   semver: ^7.8.0
   serve-static: ^2.0.0
@@ -98,7 +98,7 @@ catalog:
   source-map: 0.7.6
   source-map-support: ^0.5.21
   strip-comments: ^2.0.1
-  terser: ^5.44.1
+  terser: ^5.49.0
   tinybench: ^6.0.0
   tinyexec: ^1.0.1
   tsx: ^4.22.0
@@ -124,7 +124,7 @@ trustPolicyExclude:
 verifyDepsBeforeRun: install
 
 minimumReleaseAgeExclude:
-  - '@napi-rs/cli@3.7.2'
+  - '@napi-rs/cli@3.7.3'
   - '@napi-rs/wasm-runtime@1.1.6'
   - '@emnapi/core@1.11.1'
   - '@emnapi/runtime@1.11.1'

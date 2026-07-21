@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use rolldown_common::{ConcatenateWrappedModuleKind, PrependRenderedImport};
+use rolldown_common::{ConcatenateWrappedModuleKind, PrependRenderedImport, UsedSymbolRefs};
+use rolldown_error::{BuildResult, Severity};
 use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _};
 use rustc_hash::FxHashMap;
 use tracing::debug_span;
@@ -10,7 +11,7 @@ use crate::{
   type_alias::IndexEcmaAst,
 };
 
-use super::GenerateStage;
+use super::{GenerateStage, resolve_file_urls::ResolvedFileUrls};
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
@@ -18,16 +19,25 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     ast_table: &mut IndexEcmaAst,
-  ) {
+    resolved_file_urls: &ResolvedFileUrls,
+    used_symbol_refs: &UsedSymbolRefs,
+    order_state: &super::order_wrap_state::OrderWrapState,
+  ) -> BuildResult<()> {
     let has_enum_inlining = self.link_output.has_enum_inlining;
+    let has_required_order_runtime = !order_state.required_runtime_helpers().is_empty();
+    // Off-strict, lowering never mutates the chunk graph, so the liveness guard cannot fire.
+    let strict = self.options.is_strict_execution_order_enabled();
 
-    let transfer_parts_rendered_maps = debug_span!("finalize_modules").in_scope(|| {
+    let finalized = debug_span!("finalize_modules").in_scope(|| {
       ast_table
         .par_iter_mut_enumerated()
         .filter(|(idx, _ast)| {
-          self.link_output.module_table[*idx]
-            .as_normal()
-            .is_some_and(|m| self.link_output.metas[m.idx].is_included)
+          self.link_output.module_table[*idx].as_normal().is_some_and(|m| {
+            let is_required_order_runtime =
+              m.idx == self.link_output.runtime.id() && has_required_order_runtime;
+            (self.link_output.metas[m.idx].is_included || is_required_order_runtime)
+              && (!strict || chunk_graph.module_is_in_live_chunk(*idx))
+          })
         })
         .filter_map(|(idx, ast)| {
           let ast = ast.as_mut()?;
@@ -45,8 +55,11 @@ impl GenerateStage<'_> {
             linking_info,
             module,
             stmt_infos: &self.link_output.stmt_infos[idx],
+            index_stmt_infos: &self.link_output.stmt_infos,
             modules: &self.link_output.module_table.modules,
             linking_infos: &self.link_output.metas,
+            order_wrap_state: order_state,
+            used_symbol_refs,
             runtime: &self.link_output.runtime,
             options: self.options,
             file_emitter: &self.plugin_driver.file_emitter,
@@ -54,24 +67,33 @@ impl GenerateStage<'_> {
             safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
             retained_export_symbols: &self.link_output.retained_export_symbols,
             resolved_paths: self.resolved_paths.as_ref(),
+            resolved_file_urls,
             has_enum_inlining,
           };
 
           let concatenated_wrapped_module_kind = ctx.linking_info.concatenated_wrapped_module_kind;
-          let (transferred_import_record, rendered_concatenated_wrapped_module_parts) =
-            ctx.finalize_normal_module(ast, ast_scope);
+          let (
+            transferred_import_record,
+            rendered_concatenated_wrapped_module_parts,
+            module_diagnostics,
+          ) = ctx.finalize_normal_module(ast, ast_scope);
 
-          (!transferred_import_record.is_empty()
+          let payload = (!transferred_import_record.is_empty()
             || !matches!(concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None))
-          .then_some((idx, transferred_import_record, rendered_concatenated_wrapped_module_parts))
+          .then_some((idx, transferred_import_record, rendered_concatenated_wrapped_module_parts));
+          Some((payload, module_diagnostics))
         })
         .collect::<Vec<_>>()
     });
 
     let mut normalized_transfer_parts_rendered_maps = FxHashMap::default();
-    for (idx, transferred_import_record, rendered_concatenated_module_parts) in
-      transfer_parts_rendered_maps
-    {
+    let mut diagnostics = vec![];
+    for (payload, module_diagnostics) in finalized {
+      diagnostics.extend(module_diagnostics);
+      let Some((idx, transferred_import_record, rendered_concatenated_module_parts)) = payload
+      else {
+        continue;
+      };
       for (rec_idx, rendered_string) in transferred_import_record {
         normalized_transfer_parts_rendered_maps.insert((idx, rec_idx), rendered_string);
       }
@@ -82,8 +104,15 @@ impl GenerateStage<'_> {
         .insert(idx, rendered_concatenated_module_parts);
     }
 
+    let has_error = diagnostics.iter().any(|diagnostic| diagnostic.severity() == Severity::Error);
+    self.link_output.diagnostics.extend(diagnostics);
+    if has_error {
+      let errors = self.link_output.diagnostics.extract_errors();
+      Err(errors)?;
+    }
+
     if normalized_transfer_parts_rendered_maps.is_empty() {
-      return;
+      return Ok(());
     }
     for chunk in chunk_graph.chunk_table.iter_mut() {
       for (module_idx, recs) in &chunk.insert_map {
@@ -102,5 +131,7 @@ impl GenerateStage<'_> {
         }
       }
     }
+
+    Ok(())
   }
 }

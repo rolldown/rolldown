@@ -7,6 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["foo_inner.js", "foo.js"],
+	localCount: 2,
+	edges: [[], [0]],
+	dynamicEdges: [[], []]
+});
 //#region foo_inner.js
 var foo_inner_exports = /* @__PURE__ */ __exportAll({ default: () => foo_inner_default });
 __rolldown_runtime__.createModuleHotContext("foo_inner.js");
@@ -27,6 +33,12 @@ console.log(foo_inner_default);
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
 import "./foo.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["main.js", "foo.js"],
+	localCount: 1,
+	edges: [[1]],
+	dynamicEdges: [[]]
+});
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");

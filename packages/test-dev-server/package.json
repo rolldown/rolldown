@@ -17,8 +17,7 @@
   "scripts": {
     "build": "tsc -b",
     "dev": "tsc -b --watch",
-    "test": "pnpm run --filter @rolldown/test-dev-server-tests test",
-    "setup-vite": "node ./scripts/setup-vite.mjs"
+    "test": "pnpm run --filter @rolldown/test-dev-server-tests test"
   },
   "dependencies": {
     "@types/ws": "catalog:",

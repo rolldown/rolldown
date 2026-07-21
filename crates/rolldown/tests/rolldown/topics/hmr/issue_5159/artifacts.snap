@@ -8,6 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __exportAll } from "./main.js";
 import { t as trim } from "./string.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["bar.js", "utils/string.js"],
+	localCount: 1,
+	edges: [[1]],
+	dynamicEdges: [[]]
+});
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ default: () => bar_default });
 __rolldown_runtime__.createModuleHotContext("bar.js");
@@ -25,6 +31,16 @@ export { bar_default as default };
 ```js
 import { t as __exportAll } from "./main.js";
 import { n as unused, t as trim } from "./string.js";
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"utils/index.js",
+		"foo.js",
+		"utils/string.js"
+	],
+	localCount: 2,
+	edges: [[2], [0]],
+	dynamicEdges: [[], []]
+});
 //#region utils/index.js
 var utils_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,
@@ -49,6 +65,20 @@ export { foo_default as default };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"main.js",
+		"foo.js",
+		"bar.js"
+	],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[1, 2]]
+});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", {});
+import("./foo.js"), import("./bar.js");
+//#endregion
 export { __exportAll as t };
 
 ```
@@ -57,6 +87,12 @@ export { __exportAll as t };
 
 ```js
 import { t as __exportAll } from "./main.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["utils/string.js"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
 //#region utils/string.js
 var string_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,

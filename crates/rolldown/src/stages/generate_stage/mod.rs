@@ -5,22 +5,21 @@ use futures::future::try_join_all;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
-  ChunkIdx, ChunkKind, InstantiationKind, OutputExports, PackageJson, PathsOutputOption,
-  PreliminarySourcemapFilename, UsedSymbolRefs, UsedSymbolRefsBuilder,
+  ChunkIdx, ChunkKind, InstantiationKind, ModuleIdx, OutputExports, PackageJson, PathsOutputOption,
+  RUNTIME_HELPER_NAMES, UsedSymbolRefs, UsedSymbolRefsBuilder,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{
-  PathBufExt as _, representative_file_name_for_preserve_modules, strip_path_prefix_to_slash,
+  PathBufExt as _, absolutize_path_buf, path_buf_to_slash, relative_path_to_slash,
+  representative_file_name_for_preserve_modules, strip_path_prefix_to_slash,
 };
 use rolldown_utils::{
-  dashmap::FxDashMap,
-  hash_placeholder::HashPlaceholderGenerator,
-  indexmap::FxIndexSet,
-  rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _},
+  dashmap::FxDashMap, hash_placeholder::HashPlaceholderGenerator, index_vec_ext::IndexVecExt as _,
+  indexmap::FxIndexSet, node_style_absolute, rayon::ParallelIterator as _,
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
 use tracing::debug_span;
 
@@ -93,7 +92,6 @@ use crate::{
     deconflict_chunk_symbols::deconflict_chunk_symbols,
     determine_export_mode::determine_export_mode, generate_pre_rendered_chunk,
     render_chunk_exports::get_chunk_export_names,
-    validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
   },
 };
 
@@ -104,12 +102,17 @@ mod compute_cross_chunk_links;
 mod compute_wrapped_esm_init_metadata;
 mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
+mod finalize_chunk_plan;
 mod finalize_modules;
 mod manual_code_splitting;
 mod minify_chunks;
-mod on_demand_wrapping;
+mod order_analysis;
+pub mod order_wrap_state;
+mod order_wrapping;
 mod post_banner_footer;
 mod render_chunk_to_assets;
+mod resolve_file_urls;
+mod runtime_module_sweep;
 
 pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
@@ -143,52 +146,62 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
     let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs).await?;
 
-    // The chunk optimizer's re-run of the inclusion pass (inside `generate_chunks`) was the
-    // last writer; sealing consumes the builder, so nothing downstream can mutate the set.
+    let mut order_state = self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs)?;
+
+    // Order lowering and the unused-runtime sweep have had their last chance to update liveness.
+    // Sealing consumes the builder, so nothing downstream can mutate the set.
     let used_symbol_refs = used_symbol_refs.seal();
-
-    // Count only live chunks. Chunks merged away during chunk optimization (e.g.
-    // the standalone runtime chunk folded back into its host) stay in
-    // `chunk_table` as tombstones but are skipped at render time, so they must
-    // not count toward the multi-chunk check that gates single-file output.
-    let live_chunk_count = chunk_graph
-      .chunk_table
-      .len()
-      .saturating_sub(chunk_graph.post_chunk_optimization_operations.len());
-    if live_chunk_count > 1 {
-      validate_options_for_multi_chunk_output(self.options)?;
-    }
-
-    self.finalized_module_namespace_ref_usage();
-
     self.compute_retained_export_symbols(&used_symbol_refs);
 
-    self.compute_cross_chunk_links(&mut chunk_graph, &used_symbol_refs);
+    let mut ast_table = std::mem::take(&mut self.ast_table);
+    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph, &mut order_state);
+
+    self.compute_cross_chunk_links(&mut chunk_graph, &used_symbol_refs, &order_state);
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);
 
-    self.on_demand_wrapping(&mut chunk_graph);
-
     self.merge_cjs_namespace(&mut chunk_graph);
 
-    // See internal-docs/devtools/implementation.md for devtools action lifecycle.
     self.trace_action_chunks_infos(&chunk_graph);
 
     let mut warnings = vec![];
-    self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings, &used_symbol_refs)?;
+    self.compute_chunk_output_exports(
+      &mut chunk_graph,
+      &mut warnings,
+      &used_symbol_refs,
+      &order_state,
+    )?;
     if !warnings.is_empty() {
-      self.link_output.warnings.extend(warnings);
+      self.link_output.diagnostics.extend(warnings);
     }
-
     let index_chunk_id_to_name =
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
+    let rendered_modules =
+      order_state.has_import_overlays().then(|| rendered_module_set(&chunk_graph));
+    let symbols = &self.link_output.symbol_db;
+    let runtime = &self.link_output.runtime;
+    let order_live_symbols = order_state.live_symbols(
+      |symbol_ref| symbols.canonical_ref_resolving_namespace(symbol_ref),
+      |helper| {
+        let index = helper.bits().trailing_zeros() as usize;
+        runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index])
+      },
+      |importer_idx| {
+        rendered_modules
+          .as_ref()
+          .is_some_and(|rendered_modules| rendered_modules.contains(&importer_idx))
+      },
+    );
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
-      chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
+      chunk_graph.chunk_table.par_iter_mut_enumerated().for_each(|(chunk_idx, chunk)| {
         deconflict_chunk_symbols(
+          chunk_idx,
           chunk,
           self.link_output,
+          &order_state,
+          &order_live_symbols,
           self.options.format,
           &index_chunk_id_to_name,
         );
@@ -207,11 +220,16 @@ impl<'a> GenerateStage<'a> {
       self.resolved_paths = Some(paths.resolve_all(ids).await);
     }
 
-    let mut ast_table = std::mem::take(&mut self.ast_table);
-    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph);
-    self.finalize_modules(&mut chunk_graph, &mut ast_table);
+    let resolved_file_urls = self.resolve_file_urls(&chunk_graph).await?;
+    self.finalize_modules(
+      &mut chunk_graph,
+      &mut ast_table,
+      &resolved_file_urls,
+      &used_symbol_refs,
+      &order_state,
+    )?;
     self.detect_ineffective_dynamic_imports(&chunk_graph);
-    self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs).await
+    self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await
   }
 
   /// Notices:
@@ -230,6 +248,7 @@ impl<'a> GenerateStage<'a> {
       let preserve_modules_root = self.options.preserve_modules_root.clone();
       let input_base = chunk.input_base.clone();
       let virtual_dirname = self.options.virtual_dirname.clone();
+      let cwd = self.options.cwd.clone();
       async move {
         if let Some(name) = &chunk.name {
           let name = sanitize_filename.call(name).await?;
@@ -253,23 +272,31 @@ impl<'a> GenerateStage<'a> {
               // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
               let chunk_name = {
                 let p = PathBuf::from(sanitized_absolute_filename.as_str());
-                let relative_path = if p.is_absolute() {
-                  if let Some(ref preserve_modules_root) = preserve_modules_root {
-                    // See internal-docs/module-id/implementation.md: output paths may normalize separators even
-                    // when module ids keep native separators.
-                    if let Some(relative_path) = strip_path_prefix_to_slash(
-                      absolute_chunk_file_name.as_path(),
-                      preserve_modules_root.as_path(),
-                    ) {
-                      relative_path
-                    } else {
-                      p.relative(input_base.as_str()).to_slash_lossy().into_owned()
-                    }
+                // Besides genuinely absolute paths, `node_style_absolute` anchors
+                // a rooted-but-volume-less id (`/favicon`, `\favicon`) to the
+                // cwd volume root (a drive or UNC share): Node and Rollup treat
+                // such ids as absolute, but Rust's
+                // `Path::is_absolute()` reports them as non-absolute on Windows,
+                // and letting them fall into the `virtual_dirname` join below
+                // would discard the prefix and leak the leading slash into
+                // `[name]`.
+                let relative_path = if let Some(abs) = node_style_absolute(&p, &cwd) {
+                  let stripped_by_root =
+                    preserve_modules_root.as_ref().and_then(|preserve_modules_root| {
+                      // See internal-docs/module-id/implementation.md: output paths may normalize separators even
+                      // when module ids keep native separators.
+                      strip_path_prefix_to_slash(
+                        &node_style_absolute(absolute_chunk_file_name.as_path(), &cwd)?,
+                        preserve_modules_root.as_path(),
+                      )
+                    });
+                  if let Some(relative_path) = stripped_by_root {
+                    relative_path
                   } else {
-                    p.relative(input_base.as_str()).to_slash_lossy().into_owned()
+                    relative_path_to_slash(abs, input_base.as_str())
                   }
                 } else {
-                  PathBuf::from(virtual_dirname.as_str()).join(p).to_slash_lossy().into_owned()
+                  path_buf_to_slash(PathBuf::from(virtual_dirname.as_str()).join(p))
                 };
                 // `p` may be an absolute or relative path without extension, depending on the module path.
                 // Now we need to add the extension back when generating the relative chunk name.
@@ -351,13 +378,13 @@ impl<'a> GenerateStage<'a> {
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
 
     let used_name_counts = FxDashMap::default();
+    let output_dir = absolutize_path_buf(self.options.cwd.join(&self.options.out_dir));
 
     for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
       let chunk = &mut chunk_graph.chunk_table[*chunk_id];
-      if chunk.preliminary_filename.is_some()
-        && chunk.preliminary_sourcemap_filename != PreliminarySourcemapFilename::Uninstantiated
-      {
-        // Already generated
+      // `preliminary_filename` is the single source of truth for "already generated": it is
+      // written only here, together with `preliminary_sourcemap_filename`.
+      if chunk.preliminary_filename.is_some() {
         continue;
       }
 
@@ -367,40 +394,34 @@ impl<'a> GenerateStage<'a> {
         .insert(*chunk_id, pre_generated_chunk_name.representative_chunk_name.clone());
       let pre_rendered_chunk =
         generate_pre_rendered_chunk(chunk, &pre_generated_chunk_name.chunk_name, self.link_output);
-      if chunk.preliminary_filename.is_none() {
-        let preliminary_filename = chunk
-          .generate_preliminary_filename(
-            self.options,
-            &pre_rendered_chunk,
-            &pre_generated_chunk_name.chunk_filename,
-            &mut hash_placeholder_generator,
-            &used_name_counts,
-          )
-          .await?;
-        // Defer chunk name assignment to make sure at this point only entry chunk have a name
-        // if user provided one.
-        chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
+      let preliminary_filename = chunk
+        .generate_preliminary_filename(
+          self.options,
+          &pre_rendered_chunk,
+          &pre_generated_chunk_name.chunk_filename,
+          &mut hash_placeholder_generator,
+          &used_name_counts,
+        )
+        .await?;
+      // Defer chunk name assignment to make sure at this point only entry chunk have a name
+      // if user provided one.
+      chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
 
-        chunk.absolute_preliminary_filename = Some(
-          preliminary_filename
-            .absolutize_with(self.options.cwd.join(&self.options.out_dir))
-            .into_owned()
-            .expect_into_string(),
-        );
-        chunk.preliminary_filename = Some(preliminary_filename);
-      }
-      if chunk.preliminary_sourcemap_filename == PreliminarySourcemapFilename::Uninstantiated {
-        let preliminary_sourcemap_filename = chunk
-          .generate_preliminary_sourcemap_filename(
-            self.options,
-            &pre_rendered_chunk,
-            &pre_generated_chunk_name.chunk_filename,
-            &mut hash_placeholder_generator,
-            &used_name_counts,
-          )
-          .await?;
-        chunk.preliminary_sourcemap_filename = preliminary_sourcemap_filename;
-      }
+      chunk.absolute_preliminary_filename =
+        Some(preliminary_filename.absolutize_with(&output_dir).into_owned().expect_into_string());
+      chunk.preliminary_filename = Some(preliminary_filename);
+      // Derives its `[chunkhash]` from the just-assigned `preliminary_filename`, so it must run
+      // after it.
+      let preliminary_sourcemap_filename = chunk
+        .generate_preliminary_sourcemap_filename(
+          self.options,
+          &pre_rendered_chunk,
+          &pre_generated_chunk_name.chunk_filename,
+          &mut hash_placeholder_generator,
+          &used_name_counts,
+        )
+        .await?;
+      chunk.preliminary_sourcemap_filename = preliminary_sourcemap_filename;
       chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
     }
     Ok(index_chunk_id_to_representative_name)
@@ -411,6 +432,7 @@ impl<'a> GenerateStage<'a> {
     chunk_graph: &mut ChunkGraph,
     warnings: &mut Vec<BuildDiagnostic>,
     used_symbol_refs: &UsedSymbolRefs,
+    order_state: &order_wrap_state::OrderWrapState,
   ) -> BuildResult<()> {
     // Collect all the chunk data we need first
     let mut chunk_export_data = Vec::new();
@@ -430,6 +452,7 @@ impl<'a> GenerateStage<'a> {
           options: self.options,
           link_output: self.link_output,
           used_symbol_refs,
+          order_wrap_state: order_state,
           chunk_graph,
           plugin_driver: self.plugin_driver,
           module_id_to_codegen_ret: Vec::new(),
@@ -586,4 +609,13 @@ impl<'a> GenerateStage<'a> {
       trace_action!(action::PackageGraphReady { action: "PackageGraphReady", packages });
     }
   }
+}
+
+fn rendered_module_set(chunk_graph: &ChunkGraph) -> FxHashSet<ModuleIdx> {
+  chunk_graph
+    .chunk_table
+    .iter_enumerated()
+    .filter(|(chunk_idx, _)| chunk_graph.chunk_is_live(*chunk_idx))
+    .flat_map(|(_, chunk)| chunk.modules.iter().copied())
+    .collect()
 }

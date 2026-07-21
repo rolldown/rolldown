@@ -23,22 +23,22 @@
 # ----------------------------------------------------------------------------
 # Core engine
 # ----------------------------------------------------------------------------
-/crates/rolldown/                                       @hyf0 @IWANABETHATGUY @shulaoda
-/crates/rolldown_common/                                @IWANABETHATGUY @hyf0 @shulaoda
-/crates/rolldown_binding/                               @hyf0 @shulaoda @IWANABETHATGUY
-/crates/rolldown_plugin/                                @hyf0 @shulaoda @IWANABETHATGUY
-/crates/rolldown_resolver/                              @hyf0 @shulaoda @IWANABETHATGUY
-/crates/rolldown_watcher/                               @hyf0 @IWANABETHATGUY
-/crates/rolldown_fs/                                    @hyf0 @shulaoda @IWANABETHATGUY
-/crates/rolldown_fs_watcher/                            @hyf0 @IWANABETHATGUY
-/crates/rolldown_sourcemap/                             @hyf0 @shulaoda @IWANABETHATGUY
+/crates/rolldown/                                       @hyfdev @IWANABETHATGUY @shulaoda
+/crates/rolldown_common/                                @IWANABETHATGUY @hyfdev @shulaoda
+/crates/rolldown_binding/                               @hyfdev @shulaoda @IWANABETHATGUY
+/crates/rolldown_plugin/                                @hyfdev @shulaoda @IWANABETHATGUY
+/crates/rolldown_resolver/                              @hyfdev @shulaoda @IWANABETHATGUY
+/crates/rolldown_watcher/                               @hyfdev @IWANABETHATGUY
+/crates/rolldown_fs/                                    @hyfdev @shulaoda @IWANABETHATGUY
+/crates/rolldown_fs_watcher/                            @hyfdev @IWANABETHATGUY
+/crates/rolldown_sourcemap/                             @hyfdev @shulaoda @IWANABETHATGUY
 
 # ----------------------------------------------------------------------------
 # ECMAScript & string tooling
 # ----------------------------------------------------------------------------
-/crates/rolldown_ecmascript/                            @IWANABETHATGUY @hyf0
-/crates/rolldown_ecmascript_utils/                      @IWANABETHATGUY @hyf0
-/crates/string_wizard/                                  @hyf0 @IWANABETHATGUY
+/crates/rolldown_ecmascript/                            @IWANABETHATGUY @hyfdev
+/crates/rolldown_ecmascript_utils/                      @IWANABETHATGUY @hyfdev
+/crates/string_wizard/                                  @hyfdev @IWANABETHATGUY
 
 # ----------------------------------------------------------------------------
 # Vite plugin suite
@@ -52,46 +52,46 @@
 # ----------------------------------------------------------------------------
 /crates/rolldown_plugin_utils/                          @shulaoda @sapphi-red
 /crates/rolldown_plugin_oxc_runtime/                    @shulaoda @IWANABETHATGUY
-/crates/rolldown_plugin_chunk_import_map/               @shulaoda @hyf0
+/crates/rolldown_plugin_chunk_import_map/               @shulaoda @hyfdev
 /crates/rolldown_plugin_esm_external_require/           @shulaoda @sapphi-red
 /crates/rolldown_plugin_isolated_declaration/           @shulaoda @IWANABETHATGUY
 /crates/rolldown_plugin_replace/                        @IWANABETHATGUY @shulaoda
 /crates/rolldown_plugin_bundle_analyzer/                @IWANABETHATGUY @shulaoda
-/crates/rolldown_plugin_asset_module/                   @hyf0 @IWANABETHATGUY
-/crates/rolldown_plugin_copy_module/                    @hyf0 @shulaoda
-/crates/rolldown_plugin_data_url/                       @hyf0 @shulaoda
+/crates/rolldown_plugin_asset_module/                   @hyfdev @IWANABETHATGUY
+/crates/rolldown_plugin_copy_module/                    @hyfdev @shulaoda
+/crates/rolldown_plugin_data_url/                       @hyfdev @shulaoda
 
 # ----------------------------------------------------------------------------
 # Dev / HMR
 # ----------------------------------------------------------------------------
-/crates/rolldown_plugin_hmr/                            @hyf0 @sapphi-red
-/crates/rolldown_plugin_lazy_compilation/               @h-a-n-a @hyf0
-/crates/rolldown_dev/                                   @hyf0 @h-a-n-a
-/crates/rolldown_dev_common/                            @hyf0 @h-a-n-a
-/crates/rolldown_devtools/                              @hyf0 @IWANABETHATGUY
-/crates/rolldown_devtools_action/                       @hyf0 @IWANABETHATGUY
-/packages/test-dev-server/                              @hyf0 @sapphi-red @h-a-n-a
+/crates/rolldown_plugin_hmr/                            @hyfdev @sapphi-red
+/crates/rolldown_plugin_lazy_compilation/               @h-a-n-a @hyfdev
+/crates/rolldown_dev/                                   @hyfdev @h-a-n-a
+/crates/rolldown_dev_common/                            @hyfdev @h-a-n-a
+/crates/rolldown_devtools/                              @hyfdev @IWANABETHATGUY
+/crates/rolldown_devtools_action/                       @hyfdev @IWANABETHATGUY
+/packages/test-dev-server/                              @hyfdev @sapphi-red @h-a-n-a
 
 # ----------------------------------------------------------------------------
 # Tooling & infra
 # ----------------------------------------------------------------------------
-/crates/bench/                                          @hyf0 @IWANABETHATGUY
-/crates/rolldown_error/                                 @IWANABETHATGUY @hyf0 @shulaoda
-/crates/rolldown_utils/                                 @IWANABETHATGUY @hyf0 @shulaoda
+/crates/bench/                                          @hyfdev @IWANABETHATGUY
+/crates/rolldown_error/                                 @IWANABETHATGUY @hyfdev @shulaoda
+/crates/rolldown_utils/                                 @IWANABETHATGUY @hyfdev @shulaoda
 /crates/rolldown_std_utils/                             @IWANABETHATGUY @shulaoda
-/crates/rolldown_tracing/                               @hyf0 @IWANABETHATGUY
-/crates/rolldown_workspace/                             @IWANABETHATGUY @hyf0
-/crates/rolldown_testing/                               @hyf0 @IWANABETHATGUY
-/crates/rolldown_testing_config/                        @IWANABETHATGUY @hyf0
+/crates/rolldown_tracing/                               @hyfdev @IWANABETHATGUY
+/crates/rolldown_workspace/                             @IWANABETHATGUY @hyfdev
+/crates/rolldown_testing/                               @hyfdev @IWANABETHATGUY
+/crates/rolldown_testing_config/                        @IWANABETHATGUY @hyfdev
 
 # ----------------------------------------------------------------------------
 # JS/TS packages
 # ----------------------------------------------------------------------------
-/packages/rolldown/                                     @IWANABETHATGUY @shulaoda @hyf0
-/packages/bench/                                        @hyf0 @shulaoda
-/packages/browser/                                      @shulaoda @hyf0
-/packages/debug/                                        @hyf0 @IWANABETHATGUY
-/packages/rollup-tests/                                 @sapphi-red @hyf0
+/packages/rolldown/                                     @IWANABETHATGUY @shulaoda @hyfdev
+/packages/bench/                                        @hyfdev @shulaoda
+/packages/browser/                                      @shulaoda @hyfdev
+/packages/debug/                                        @hyfdev @IWANABETHATGUY
+/packages/rollup-tests/                                 @sapphi-red @hyfdev
 /packages/vite-tests/                                   @sapphi-red @shulaoda
 
 # ----------------------------------------------------------------------------
@@ -99,5 +99,5 @@
 # (unanchored so they match agent-instruction files at any depth -- e.g. the
 #  root AGENTS.md, .claude/CLAUDE.md, rollup/AGENTS.md. Kept last so they win.)
 # ----------------------------------------------------------------------------
-AGENTS.md                                               @hyf0 @IWANABETHATGUY @shulaoda @h-a-n-a @sapphi-red
-CLAUDE.md                                               @hyf0 @IWANABETHATGUY @shulaoda @h-a-n-a @sapphi-red
+AGENTS.md                                               @hyfdev @IWANABETHATGUY @shulaoda @h-a-n-a @sapphi-red
+CLAUDE.md                                               @hyfdev @IWANABETHATGUY @shulaoda @h-a-n-a @sapphi-red

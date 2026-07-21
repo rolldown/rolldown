@@ -23,6 +23,7 @@ export enum HookUsageKind {
   footer = 1 << 18,
   intro = 1 << 19,
   outro = 1 << 20,
+  resolveFileUrl = 1 << 21,
 }
 
 export class HookUsage {
@@ -123,6 +124,10 @@ export function extractHookUsage(plugin: Plugin): HookUsage {
 
   if (plugin.outro) {
     hookUsage.union(HookUsageKind.outro);
+  }
+
+  if (plugin.resolveFileUrl) {
+    hookUsage.union(HookUsageKind.resolveFileUrl);
   }
 
   return hookUsage;

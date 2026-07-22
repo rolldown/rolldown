@@ -7,7 +7,7 @@ import type {
 } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
-import { logCycleLoading } from '../log/logs';
+import { error, logCycleLoading, logFailedValidation } from '../log/logs';
 import type { OutputOptions } from '../options/output-options';
 import { parseAst } from '../parse-ast-index';
 import {
@@ -21,7 +21,7 @@ import { bindingifySourcemap } from '../types/sourcemap';
 import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
 import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
-import { unreachable } from '../utils/misc';
+import { isPathFragment, unreachable } from '../utils/misc';
 import { fsModule, type RolldownFsModule } from './fs';
 import type { CustomPluginOptions, ModuleOptions, Plugin, ResolvedId } from './index';
 import type { PluginContextData } from './plugin-context-data';
@@ -381,6 +381,14 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
         isEntry: file.isEntry,
         isDynamicEntry: file.isDynamicEntry,
       });
+    }
+    const validatedName = file.fileName || file.name;
+    if (typeof validatedName === 'string' && isPathFragment(validatedName)) {
+      return error(
+        logFailedValidation(
+          `The "fileName" or "name" properties of emitted chunks and assets must be strings that are neither absolute nor relative paths, received "${validatedName}".`,
+        ),
+      );
     }
     if (file.type === 'chunk') {
       return this.context.emitChunk({

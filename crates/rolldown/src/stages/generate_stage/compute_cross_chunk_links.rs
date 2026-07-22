@@ -620,7 +620,19 @@ impl GenerateStage<'_> {
     module_idx: ModuleIdx,
   ) {
     let meta = &self.link_output.metas[module_idx];
-    for targets in order_state.transitive_init_targets(module_idx, meta).values() {
+    // Iterate the targets in a deterministic, cross-target-stable order. The map is an
+    // `FxHashMap<StmtInfoIdx, _>`, and its `values()` order follows FxHash bucket layout. FxHash is
+    // unseeded but hashes differently on 32-bit vs 64-bit, so `values()` visits buckets in a
+    // different order on native (64-bit) than on wasm32/WASI. That order flows straight into
+    // `depended_symbols` (an `FxIndexSet`), whose insertion order drives the chunk's imported-symbol
+    // rename order (the `$1`/`$2` suffixes) in `deconflict_chunk_symbols` — so a hash-ordered walk
+    // here makes native and WASI builds resolve rename collisions differently. Sorting by the owning
+    // `StmtInfoIdx` pins one order for every target.
+    for (_, targets) in order_state
+      .transitive_init_targets(module_idx, meta)
+      .iter()
+      .sorted_unstable_by_key(|(stmt_info_idx, _)| **stmt_info_idx)
+    {
       for &target_idx in targets {
         let meta = &self.link_output.metas[target_idx];
         if let Some(target) = order_state.esm_init_target(target_idx, meta)

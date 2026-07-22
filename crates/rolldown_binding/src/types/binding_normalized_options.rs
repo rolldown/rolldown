@@ -11,6 +11,7 @@ use rustc_hash::FxBuildHasher;
 use crate::utils::minify_options_conversion::{
   codegen_options_to_napi_codegen_options, compress_options_to_napi_compress_options,
   mangle_options_to_napi_mangle_options,
+  mangle_properties_options_to_napi_mangle_properties_options,
 };
 
 #[napi]
@@ -282,6 +283,10 @@ impl BindingNormalizedOptions {
             .mangle
             .as_ref()
             .map(|mangle| Either::B(mangle_options_to_napi_mangle_options(mangle))),
+          mangle_props: minify_options
+            .mangle_properties
+            .as_ref()
+            .map(mangle_properties_options_to_napi_mangle_properties_options),
           codegen: Some(Either::B(codegen_options_to_napi_codegen_options(*remove_whitespace))),
           ..Default::default()
         })

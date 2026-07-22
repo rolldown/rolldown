@@ -1,0 +1,8 @@
+{
+  "_comment": "experimental.lazyBarrel star-re-export deferral: a sideEffects:false barrel re-exports a.js..d.js via `export *` only. The entry imports `fromA` (a.js) and `fromC` (c.js). Instead of eagerly loading every star target to attribute the names, the loader probes star targets in order and stops once both names are found, so d.js is never loaded and stays out of the bundle. Executing the entry must bind the star-re-exported values correctly.",
+  "config": {
+    "experimental": {
+      "lazyBarrel": true
+    }
+  }
+}

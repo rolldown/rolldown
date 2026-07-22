@@ -135,10 +135,21 @@ pub struct ExportSource {
 pub struct BarrelInfo {
   /// `export const a = 1`
   pub local: Vec<CompactStr>,
-  /// `export * from './x'`
+  /// `export * from './x'` — the ordered star-re-export records. `star_cursor`
+  /// marks how far on-demand probing has advanced through them.
   pub star: Vec<ImportRecordIdx>,
   /// `export { a } from './x'` or `export * as ns from './x'`
   pub named: FxHashMap<CompactStr, ExportSource>,
+  /// Requested names not resolvable to a `named`/`local` export, awaiting a
+  /// providing `export *` target. `take_needed_records` accumulates these
+  /// instead of eagerly loading every star target; the loader probes star
+  /// targets in `star` order (via `star_cursor`) until this set drains.
+  pub pending_star_names: FxHashSet<CompactStr>,
+  /// Index into `star` of the next star target to probe on demand.
+  pub star_cursor: usize,
+  /// A star-target probe spawned by this barrel is in flight; suppresses
+  /// kicking a second concurrent probe. Cleared when the probe target loads.
+  pub star_probe_in_flight: bool,
 }
 
 impl BarrelInfo {
@@ -151,13 +162,16 @@ impl BarrelInfo {
   /// - If `imports` is `All`: returns all records (takes entire `imported_exports_per_record`)
   /// - If `imports` is `Partial` with names:
   ///   - Named exports are resolved to their source records
-  ///   - Missing names are searched in star re-exports
+  ///   - Names not resolvable to a `named` export are recorded in
+  ///     `self.pending_star_names` for on-demand `export *` probing by the loader
+  ///     (star targets are *not* returned here — they are loaded lazily)
   ///   - If any local (own) export is used, all non-re-export import records must be loaded
   ///     (since the barrel module itself needs to execute)
   ///
   /// # Side effects
   /// - Consumes matched entries from `imported_exports_per_record`
   /// - Removes matched entries from `self.named`
+  /// - Extends `self.pending_star_names` with names awaiting a star target
   /// - Clears `self.local` if a local export is used
   pub fn take_needed_records(
     &mut self,
@@ -217,17 +231,21 @@ impl BarrelInfo {
             missing_names.insert(name.clone());
           }
         }
-        if !missing_names.is_empty() {
-          let missing = ImportedExports::Partial(missing_names);
-          for rec_idx in &self.star {
-            match needs_records.entry(*rec_idx) {
-              Entry::Occupied(mut occ) => occ.get_mut().merge(&missing),
-              Entry::Vacant(vac) => {
-                vac.insert(missing.clone());
-              }
-            }
-          }
-        }
+        // Names not resolvable to a `named`/`local` export may come from an
+        // `export *` target. Rather than eagerly loading every star target (which
+        // forces the whole barrel into memory), record them as pending: the loader
+        // probes star targets one at a time, in `star` order, stopping once every
+        // pending name has been found in a loaded target.
+        //
+        // KNOWN LIMITATION: strict `export *` ambiguity (two star targets exporting
+        // the same name → that name is excluded and diagnosed) requires visiting
+        // *all* targets. Greedy "stop when found" probing loads only up to the first
+        // provider, so an ambiguous name resolves to that first provider instead of
+        // being excluded. This is acceptable because the whole path is gated on the
+        // barrel being `sideEffects:false` (`UserDefined(false)`) and opt-in
+        // `experimental.lazyBarrel`; it never produces wrong output for the common
+        // unambiguous case and never crashes on the ambiguous one.
+        self.pending_star_names.extend(missing_names);
         if has_local_export {
           let mut reexports = FxHashSet::with_capacity(self.named.len() + self.star.len());
           reexports

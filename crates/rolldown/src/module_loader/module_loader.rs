@@ -125,6 +125,14 @@ pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   /// of the first TLA keyword. Stored here instead of on every `EcmaView`
   /// because top-level await is rarely used in real-world apps.
   tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
+  /// On-demand `export *` deferral (transient per scan, not build-cache state):
+  /// maps a star-re-export *target* module to the barrel modules that
+  /// speculatively loaded it while probing for a requested name. When the target
+  /// finishes loading, the loader subtracts the names it provides from each
+  /// awaiting barrel's `pending_star_names` and probes the barrel's next star
+  /// target if names remain. See `BarrelInfo::take_needed_records` for why star
+  /// targets can't be attributed to a requested name up front.
+  star_probe_targets: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
 }
 
 pub struct ModuleLoaderOutput {
@@ -218,6 +226,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       magic_string_tx,
       tla_module_count: 0,
       tla_keyword_span_map: FxHashMap::default(),
+      star_probe_targets: FxHashMap::default(),
     })
   }
 
@@ -642,6 +651,16 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
                 })
               },
             );
+            // Kick the first `export *` probe for this barrel's own requested-but-
+            // unresolved names (no-op unless it defers star targets).
+            self.drive_star_probes(module_idx, &mut work_queue, &user_defined_entries);
+            self.process_barrel_import_record(&mut work_queue, &user_defined_entries);
+          }
+
+          // This module may itself be a star-re-export target another barrel is
+          // probing; advance those barrels now that its exports are known.
+          if self.flat_options.is_lazy_barrel_enabled() {
+            self.on_star_probe_target_loaded(module_idx, &mut work_queue, &user_defined_entries);
             self.process_barrel_import_record(&mut work_queue, &user_defined_entries);
           }
 
@@ -1076,75 +1095,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           return true;
         };
 
-        let mut is_module_from_cache_snapshot = false;
-        let barrel_normal_module = match &self.intermediate_normal_modules.modules {
-          HybridIndexVec::IndexVec(modules) => modules[idx]
-            .as_ref()
-            .expect("Barrel module should exists in full build")
-            .as_normal()
-            .unwrap(),
-          HybridIndexVec::Map(modules) => {
-            if let Some(module) = modules.get(&idx) {
-              module
-                .as_ref()
-                .expect("Barrel module should exists in partial build")
-                .as_normal()
-                .unwrap()
-            } else {
-              is_module_from_cache_snapshot = true;
-              self
-                .cache
-                .get_snapshot()
-                .module_table
-                .get(idx)
-                .expect("Barrel module should exist in cache snapshot in partial scan mode")
-                .as_normal()
-                .unwrap()
-            }
-          }
-        };
-
-        let target_idx = match barrel_normal_module.import_records[rec_idx].resolved_module {
-          Some(existing_idx) => existing_idx,
-          None => {
-            let importer_record = ImporterRecord {
-              kind: barrel_normal_module.import_records[rec_idx].kind,
-              importer_path: barrel_normal_module.id.clone(),
-              importer_idx: barrel_normal_module.idx,
-            };
-            let new_idx = self.try_spawn_new_task(
-              resolved_id.clone(),
-              Some(ModuleTaskOwner::new(barrel_normal_module, import_record_state.span)),
-              false,
-              import_record_state.asserted_module_type.as_ref(),
-              user_defined_entries,
-            );
-            self.intermediate_normal_modules.importers[new_idx].push(importer_record);
-            self.mark_module_importers_changed(new_idx);
-            // Update resolved module in either cache snapshot or intermediate modules
-            if is_module_from_cache_snapshot {
-              self
-                .cache
-                .barrel_state
-                .resolved_barrel_modules
-                .entry(idx)
-                .or_default()
-                .push((rec_idx, new_idx));
-            } else {
-              self
-                .intermediate_normal_modules
-                .modules
-                .get_mut(idx)
-                .as_mut()
-                .expect("barrel module should exist")
-                .as_normal_mut()
-                .unwrap()
-                .import_records[rec_idx]
-                .resolved_module = Some(new_idx);
-            }
-            new_idx
-          }
-        };
+        let target_idx = self.spawn_or_get_barrel_record_target(
+          idx,
+          rec_idx,
+          import_record_state,
+          resolved_id,
+          user_defined_entries,
+        );
         let keep_tracking = match self.cache.barrel_state.barrel_infos.get(&target_idx) {
           Some(Some(s)) => target_idx == idx || !s.tracked_records.is_empty(),
           Some(None) => false,
@@ -1163,6 +1120,202 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         self.cache.barrel_state.barrel_infos.get_mut(&idx).unwrap().as_mut().unwrap();
       barrel_module_state.tracked_records = tracked_records;
       barrel_module_state.remaining_imported_specifiers = remaining_imported_specifiers;
+
+      // A new request may have added pending star names; probe the next star
+      // target on demand (no-op unless this barrel has unresolved `export *`).
+      self.drive_star_probes(idx, work_queue, user_defined_entries);
+    }
+  }
+
+  /// Resolve `rec_idx`'s target module for barrel `barrel_idx`, spawning its load
+  /// task if not already resolved. Mirrors the initial resolution in the main
+  /// module-load loop, handling both intermediate modules and the partial-scan
+  /// cache snapshot. Returns the target `ModuleIdx`.
+  #[expect(clippy::rc_buffer)]
+  fn spawn_or_get_barrel_record_target(
+    &mut self,
+    barrel_idx: ModuleIdx,
+    rec_idx: ImportRecordIdx,
+    import_record_state: &rolldown_common::ImportRecordStateInit,
+    resolved_id: &ResolvedId,
+    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
+  ) -> ModuleIdx {
+    let mut is_module_from_cache_snapshot = false;
+    let barrel_normal_module = match &self.intermediate_normal_modules.modules {
+      HybridIndexVec::IndexVec(modules) => modules[barrel_idx]
+        .as_ref()
+        .expect("Barrel module should exists in full build")
+        .as_normal()
+        .unwrap(),
+      HybridIndexVec::Map(modules) => {
+        if let Some(module) = modules.get(&barrel_idx) {
+          module
+            .as_ref()
+            .expect("Barrel module should exists in partial build")
+            .as_normal()
+            .unwrap()
+        } else {
+          is_module_from_cache_snapshot = true;
+          self
+            .cache
+            .get_snapshot()
+            .module_table
+            .get(barrel_idx)
+            .expect("Barrel module should exist in cache snapshot in partial scan mode")
+            .as_normal()
+            .unwrap()
+        }
+      }
+    };
+
+    match barrel_normal_module.import_records[rec_idx].resolved_module {
+      Some(existing_idx) => existing_idx,
+      None => {
+        let importer_record = ImporterRecord {
+          kind: barrel_normal_module.import_records[rec_idx].kind,
+          importer_path: barrel_normal_module.id.clone(),
+          importer_idx: barrel_normal_module.idx,
+        };
+        let new_idx = self.try_spawn_new_task(
+          resolved_id.clone(),
+          Some(ModuleTaskOwner::new(barrel_normal_module, import_record_state.span)),
+          false,
+          import_record_state.asserted_module_type.as_ref(),
+          user_defined_entries,
+        );
+        self.intermediate_normal_modules.importers[new_idx].push(importer_record);
+        self.mark_module_importers_changed(new_idx);
+        // Update resolved module in either cache snapshot or intermediate modules
+        if is_module_from_cache_snapshot {
+          self
+            .cache
+            .barrel_state
+            .resolved_barrel_modules
+            .entry(barrel_idx)
+            .or_default()
+            .push((rec_idx, new_idx));
+        } else {
+          self
+            .intermediate_normal_modules
+            .modules
+            .get_mut(barrel_idx)
+            .as_mut()
+            .expect("barrel module should exist")
+            .as_normal_mut()
+            .unwrap()
+            .import_records[rec_idx]
+            .resolved_module = Some(new_idx);
+        }
+        new_idx
+      }
+    }
+  }
+
+  /// Names a loaded module directly provides as ESM exports (its `named_exports`
+  /// keys), or `None` if the module has not finished loading yet. Names reachable
+  /// only through the module's *own* deferred `export *` are not listed — a first
+  /// cut that can make an outer barrel over-probe (never under-load): the request
+  /// pushed to the target still drives its nested stars.
+  fn module_provided_export_names(&self, idx: ModuleIdx) -> Option<FxHashSet<oxc_str::CompactStr>> {
+    let module = match &self.intermediate_normal_modules.modules {
+      HybridIndexVec::IndexVec(modules) => modules.get(idx).and_then(Option::as_ref),
+      HybridIndexVec::Map(modules) => match modules.get(&idx) {
+        Some(module) => module.as_ref(),
+        None => self.cache.get_snapshot().module_table.modules.get(idx),
+      },
+    };
+    module?.as_normal().map(|normal| normal.named_exports.keys().cloned().collect())
+  }
+
+  /// Drive on-demand `export *` probing for barrel `barrel_idx`: while names are
+  /// still pending and star targets remain, load star targets in `star` order,
+  /// stopping at the first one whose load has not yet completed (its result feeds
+  /// back through [`Self::on_star_probe_target_loaded`]). Targets already in memory
+  /// are resolved synchronously in the loop. Only one probe is ever in flight per
+  /// barrel. No-op unless the barrel has unresolved star names.
+  #[expect(clippy::rc_buffer)]
+  fn drive_star_probes(
+    &mut self,
+    barrel_idx: ModuleIdx,
+    work_queue: &mut VecDeque<(ModuleIdx, ImportedExports)>,
+    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
+  ) {
+    loop {
+      let Some(Some(state)) = self.cache.barrel_state.barrel_infos.get_mut(&barrel_idx) else {
+        return;
+      };
+      if state.info.star_probe_in_flight
+        || state.info.pending_star_names.is_empty()
+        || state.info.star_cursor >= state.info.star.len()
+      {
+        return;
+      }
+      let rec_idx = state.info.star[state.info.star_cursor];
+      state.info.star_cursor += 1;
+      // The probed star record is now being loaded; stop deferring it.
+      let tracked = state.tracked_records.remove(&rec_idx);
+      state.remaining_imported_specifiers.remove(&rec_idx);
+      let pending = ImportedExports::Partial(
+        state.info.pending_star_names.iter().cloned().collect::<FxHashSet<_>>(),
+      );
+
+      let Some((import_record_state, resolved_id)) = tracked else {
+        // Record was already resolved/loaded outside the deferral bookkeeping;
+        // nothing to spawn, keep looking through the next star target.
+        continue;
+      };
+      let target_idx = self.spawn_or_get_barrel_record_target(
+        barrel_idx,
+        rec_idx,
+        &import_record_state,
+        &resolved_id,
+        user_defined_entries,
+      );
+
+      // Feed the request into the target so a nested barrel resolves it too.
+      work_queue.push_back((target_idx, pending));
+
+      match self.module_provided_export_names(target_idx) {
+        // Target already loaded: subtract the names it provides and keep probing
+        // synchronously — there will be no load message to advance us.
+        Some(provided) => {
+          if let Some(Some(state)) = self.cache.barrel_state.barrel_infos.get_mut(&barrel_idx) {
+            state.info.pending_star_names.retain(|name| !provided.contains(name));
+          }
+        }
+        // Target not yet loaded: register it as this barrel's in-flight probe and
+        // wait for its completion to advance us.
+        None => {
+          self.star_probe_targets.entry(target_idx).or_default().insert(barrel_idx);
+          if let Some(Some(state)) = self.cache.barrel_state.barrel_infos.get_mut(&barrel_idx) {
+            state.info.star_probe_in_flight = true;
+          }
+          return;
+        }
+      }
+    }
+  }
+
+  /// Feedback for a completed star-target probe: subtract the names `target_idx`
+  /// provides from every barrel that was waiting on it, clear those barrels'
+  /// in-flight flag, and probe their next star target if names remain.
+  #[expect(clippy::rc_buffer)]
+  fn on_star_probe_target_loaded(
+    &mut self,
+    target_idx: ModuleIdx,
+    work_queue: &mut VecDeque<(ModuleIdx, ImportedExports)>,
+    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
+  ) {
+    let Some(waiting_barrels) = self.star_probe_targets.remove(&target_idx) else {
+      return;
+    };
+    let provided = self.module_provided_export_names(target_idx).unwrap_or_default();
+    for barrel_idx in waiting_barrels {
+      if let Some(Some(state)) = self.cache.barrel_state.barrel_infos.get_mut(&barrel_idx) {
+        state.info.pending_star_names.retain(|name| !provided.contains(name));
+        state.info.star_probe_in_flight = false;
+      }
+      self.drive_star_probes(barrel_idx, work_queue, user_defined_entries);
     }
   }
 }

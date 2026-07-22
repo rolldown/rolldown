@@ -929,6 +929,25 @@ mod test {
     })
   }
 
+  fn has_side_effect_for_tree_shaking_with_target(code: &str, target: &str) -> bool {
+    let source_type = SourceType::tsx();
+    let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
+    let semantic = EcmaAst::make_semantic(ast.program());
+    let scoping = semantic.into_scoping();
+    let ast_scopes = AstScopes::new(scoping);
+
+    let mut options = NormalizedBundlerOptions::default();
+    options.transform_options.target =
+      oxc::transformer::EngineTargets::from_target(target).expect("valid target");
+    let options = Arc::new(options);
+    let flags = FlatOptions::from_shared_options(&options);
+    ast.program().body.iter().any(|stmt| {
+      StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
+        .analyze_stmt(stmt)
+        .has_side_effect_for_tree_shaking()
+    })
+  }
+
   fn get_stmt_eval_flags(code: &str) -> Vec<StmtEvalFlags> {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
@@ -1451,7 +1470,9 @@ mod test {
     assert!(!has_side_effect_for_tree_shaking("RegExp('abc', 'g')"));
     assert!(!has_side_effect_for_tree_shaking("new RegExp('abc', 'g')"));
     assert!(!has_side_effect_for_tree_shaking("RegExp('abc', 'gi')"));
-    assert!(!has_side_effect_for_tree_shaking("new RegExp('abc', 'gimsuy')"));
+    // Flags newer than ES5 (`s`/`u`/`y`) are may-throw without an explicit target;
+    // see `test_regexp_constructor_with_engine_targets`.
+    assert!(has_side_effect_for_tree_shaking("new RegExp('abc', 'gimsuy')"));
     // RegExp with a RegExp literal argument is valid
     assert!(!has_side_effect_for_tree_shaking("RegExp(/foo/)"));
     assert!(!has_side_effect_for_tree_shaking("new RegExp(/foo/)"));
@@ -1477,6 +1498,20 @@ mod test {
     // RegExp literals are side-effect-free (they're validated at parse time)
     assert!(!has_side_effect_for_tree_shaking("/abc/"));
     assert!(!has_side_effect_for_tree_shaking("/abc/g"));
+  }
+
+  #[test]
+  fn test_regexp_constructor_with_engine_targets() {
+    // Without an explicit target, runtime support for post-ES5 RegExp features is
+    // unknown: constructor calls using them are commonly feature-detection probes
+    // that throw on unsupporting engines, so they must stay in the output
+    // (https://github.com/oxc-project/oxc/issues/18050).
+    assert!(has_side_effect_for_tree_shaking("new RegExp('abc', 'gimsuy')"));
+    // An explicit target new enough for every used feature opts into
+    // feature-aware analysis (`s` is ES2018; `u`/`y` are ES2015).
+    assert!(!has_side_effect_for_tree_shaking_with_target("new RegExp('abc', 'gimsuy')", "es2018"));
+    // A target older than a used feature stays conservative.
+    assert!(has_side_effect_for_tree_shaking_with_target("new RegExp('abc', 'gimsuy')", "es2015"));
   }
 
   #[test]

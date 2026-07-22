@@ -317,7 +317,7 @@ pub fn prepare_build_context(
     let target = match &raw_transform_options.target {
       Some(Either::Left(target)) => EngineTargets::from_target(target),
       Some(Either::Right(targets)) => EngineTargets::from_target_list(targets),
-      None => EngineTargets::from_target("esnext"),
+      None => Ok(EngineTargets::default()),
     }
     .map_err(|message| {
       let hint = message

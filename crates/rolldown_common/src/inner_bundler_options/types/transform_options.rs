@@ -187,7 +187,7 @@ impl Default for TransformOptions {
   fn default() -> Self {
     Self {
       inner: TransformOptionsInner::Normal(Arc::new(OxcTransformOptions::default())),
-      target: EngineTargets::from_target("esnext").expect("esnext to be a valid target"),
+      target: EngineTargets::default(),
       jsx_preset: JsxPreset::default(),
     }
   }

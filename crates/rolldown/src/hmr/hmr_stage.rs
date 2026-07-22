@@ -29,9 +29,15 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use crate::{
-  SharedOptions, SharedResolver, hmr::hmr_ast_finalizer::HmrAstFinalizer,
-  module_loader::ModuleLoader, type_alias::IndexEcmaAst, types::scan_stage_cache::ScanStageCache,
-  utils::process_code_and_sourcemap::process_code_and_sourcemap,
+  SharedOptions, SharedResolver,
+  hmr::hmr_ast_finalizer::HmrAstFinalizer,
+  module_loader::ModuleLoader,
+  type_alias::IndexEcmaAst,
+  types::scan_stage_cache::ScanStageCache,
+  utils::{
+    process_code_and_sourcemap::process_code_and_sourcemap,
+    render_ecma_module::collapse_module_sourcemap,
+  },
 };
 
 pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
@@ -810,10 +816,34 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       },
     );
 
-    match codegen.map {
+    // The codegen map is the last element of the module's sourcemap chain, so on its
+    // own it maps back to what the plugins produced rather than to the original file.
+    // Collapsing the chain is what lets a position in a patch or a lazy chunk resolve
+    // to the source the user wrote, the same way `render_ecma_module` does for a
+    // module rendered into a chunk.
+    //
+    // Warnings are dropped: a module rendered here was rendered by the full build too,
+    // which reports a broken chain for it already.
+    let (code, codegen_map) = match codegen.map {
       Some(map) => (codegen.code, Some(map.into_owned())),
       None => (codegen.code, None),
-    }
+    };
+
+    // Guarded, because a chain collapses to a map even when the codegen step
+    // contributed none — which would hand back a sourcemap for a render that asked
+    // not to have one.
+    let map = enable_sourcemap
+      .then(|| {
+        collapse_module_sourcemap(
+          &module.sourcemap_chain,
+          codegen_map,
+          module.id.as_str(),
+          &mut Vec::new(),
+        )
+      })
+      .flatten();
+
+    (code, map)
   }
 }
 

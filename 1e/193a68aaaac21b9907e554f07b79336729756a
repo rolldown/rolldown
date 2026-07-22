@@ -1,0 +1,25 @@
+crates/rolldown/src/module_finalizers/finalizer_context.rs
+  s_1524eb9f9fabad::t_4f8a7237355d4c 29,52
+crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs
+  s_1524eb9f9fabad::t_2848402d195b53 1,44-60,84,98,241-244,256,274,352,504-512,627,631-639,659
+crates/rolldown/src/stages/generate_stage/finalize_modules.rs
+  s_1524eb9f9fabad::t_cd6ca1ecc2d463 14,25
+crates/rolldown/src/stages/generate_stage/mod.rs
+  s_1524eb9f9fabad::t_0129254d28da85 117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1e193a68aaaac21b9907e554f07b79336729756a",
+  "prompts": {},
+  "sessions": {
+    "s_1524eb9f9fabad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8761-7347-7b70-b3f1-24c54174fc35",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

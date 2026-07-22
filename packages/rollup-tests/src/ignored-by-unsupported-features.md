@@ -408,8 +408,6 @@
  - rollup@function@hashing@minimum-hash-size: throws when the maximum hash size is exceeded (`VALIDATION_ERROR` error)
  - rollup@function@hashing@length-at-non-hash: throws when configuring a length for placeholder other than "hash" (`VALIDATION_ERROR` error)
  - rollup@function@emit-file@invalid-file-type: throws for invalid file types (`pluginCode":"VALIDATION_ERROR"` expected, but got `pluginCode:"InvalidArg"`)
- - rollup@function@emit-file@invalid-asset-name3: throws for invalid asset names with absolute path on Windows OS (`PLUGIN_ERROR`>`VALIDATION_ERROR` error)
- - rollup@function@emit-file@invalid-asset-name: throws for invalid asset names (`PLUGIN_ERROR`>`VALIDATION_ERROR` error)
  - rollup@function@emit-file@emit-same-file: warns if multiple files with the same name are emitted (`FILE_NAME_CONFLICT` error)
  - rollup@function@emit-file@emit-from-output-options: throws when trying to emit files from the outputOptions hook (`CANNOT_EMIT_FROM_OPTIONS_HOOK` error)
  - rollup@function@conflicting-reexports@namespace-import: warns when a conflicting binding is imported via a namespace import (`MISSING_EXPORT` warning)

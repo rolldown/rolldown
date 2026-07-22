@@ -6,6 +6,8 @@ import {
   type BindingLazyChunkOutput,
   BindingRebuildStrategy,
   type BindingResult,
+  shutdownAsyncRuntime,
+  startAsyncRuntime,
 } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
@@ -19,6 +21,7 @@ import type { DevOptions } from './dev-options';
 export class DevEngine {
   #inner: BindingDevEngine;
   #cachedBuildFinishPromise: Promise<void> | null = null;
+  #asyncRuntimeReleased = false;
 
   static async create(
     inputOptions: InputOptions,
@@ -88,6 +91,8 @@ export class DevEngine {
 
     const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
 
+    startAsyncRuntime();
+
     return new DevEngine(inner);
   }
 
@@ -143,7 +148,13 @@ export class DevEngine {
   }
 
   async close(): Promise<void> {
+    // Claim the release before the first await so a second `close` cannot release twice.
+    const shouldRelease = !this.#asyncRuntimeReleased;
+    this.#asyncRuntimeReleased = true;
     await this.#inner.close();
+    if (shouldRelease) {
+      shutdownAsyncRuntime();
+    }
   }
 
   /**

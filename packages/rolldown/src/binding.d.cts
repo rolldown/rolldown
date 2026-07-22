@@ -3062,19 +3062,14 @@ export declare function registerPlugins(id: number, plugins: Array<BindingPlugin
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 
 /**
- * Shutdown the tokio runtime manually.
+ * Release one holder of the tokio runtime, shutting it down once none are left.
  *
  * This is required for the wasm target with `tokio_unstable` cfg.
  * In the wasm runtime, the `park` threads will hang there until the tokio::Runtime is shutdown.
  */
 export declare function shutdownAsyncRuntime(): void
 
-/**
- * Start the async runtime manually.
- *
- * This is required when the async runtime is shutdown manually.
- * Usually it's used in test.
- */
+/** Acquire one holder of the tokio runtime, starting it if it is not running. */
 export declare function startAsyncRuntime(): void
 
 export interface ViteImportGlobMeta {

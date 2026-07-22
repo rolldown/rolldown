@@ -4,7 +4,6 @@ import { PluginDriver } from '../plugin/plugin-driver';
 import { createBundlerOptions } from '../utils/create-bundler-option';
 import { unwrapBindingResult } from '../utils/error';
 import { validateOption } from '../utils/validator';
-import { RolldownBuild } from './rolldown/rolldown-build';
 
 export { freeExternalMemory } from '../types/external-memory-handle';
 
@@ -36,15 +35,16 @@ export const scan = async (
 
   const bundler = new BindingBundler();
 
-  if (RolldownBuild.asyncRuntimeShutdown) {
-    startAsyncRuntime();
-  }
+  startAsyncRuntime();
 
+  // On the error path `cleanup` runs from both `catch` and `finally`, so it must be idempotent.
+  let cleanedUp = false;
   async function cleanup() {
+    if (cleanedUp) return;
+    cleanedUp = true;
     await bundler.close();
     await ret.stopWorkers?.();
     shutdownAsyncRuntime();
-    RolldownBuild.asyncRuntimeShutdown = true;
   }
 
   let cleanupPromise = Promise.resolve();

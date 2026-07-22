@@ -264,7 +264,7 @@ napi-build = { version = "2" }
 napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.140.0", features = [
+oxc = { version = "0.141.0", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -275,17 +275,17 @@ oxc = { version = "0.140.0", features = [
   "isolated_declarations",
   "regular_expression",
 ] }
-oxc_allocator = { version = "0.140.0", features = ["pool"] }
+oxc_allocator = { version = "0.141.0", features = ["pool"] }
 # Depended on directly only to enable `disable_old_builder` (removes oxc's deprecated
 # old AstBuilder API); the `oxc` umbrella crate has no passthrough feature for it.
-oxc_ast = { version = "0.140.0", features = ["disable_old_builder"] }
-oxc_ecmascript = { version = "0.140.0" }
-oxc_napi = { version = "0.140.0" }
-oxc_str = { version = "0.140.0" }
-oxc_minify_napi = { version = "0.140.0" }
-oxc_parser_napi = { version = "0.140.0" }
-oxc_transform_napi = { version = "0.140.0" }
-oxc_traverse = { version = "0.140.0" }
+oxc_ast = { version = "0.141.0", features = ["disable_old_builder"] }
+oxc_ecmascript = { version = "0.141.0" }
+oxc_napi = { version = "0.141.0" }
+oxc_str = { version = "0.141.0" }
+oxc_minify_napi = { version = "0.141.0" }
+oxc_parser_napi = { version = "0.141.0" }
+oxc_transform_napi = { version = "0.141.0" }
+oxc_traverse = { version = "0.141.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
@@ -348,25 +348,3 @@ napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1
 napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e", version = "=3.7.0" }
 napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e" }
 napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e" }
-
-# Redirect Oxc's napi binding crates onto a 0.140.0-based branch that drops the
-# forced `tokio_rt` feature (oxc-project/oxc PR #24475, backported to the
-# published 0.140.0 release commit as branch patch/oxc-0.140.0-no-tokio-rt).
-# Without this, Oxc's *_napi crates force `napi/tokio_rt -> dep:tokio` onto the
-# whole graph via Cargo feature unification, which blocks dropping tokio. Only
-# the monorepo crates Rolldown depends on are patched; oxc_index, oxc_resolver*,
-# and oxc_sourcemap live in their own repos and are intentionally left alone (the
-# single napi patch above already redirects the napi they resolve).
-oxc = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
-oxc_allocator = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
-# oxc_ast joined this list when main made it a direct workspace dep (to enable
-# `disable_old_builder`); without the patch the feature would land on an unused
-# duplicate registry copy instead of the git copy the umbrella re-exports.
-oxc_ast = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
-oxc_ecmascript = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
-oxc_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
-oxc_str = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
-oxc_minify_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
-oxc_parser_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
-oxc_transform_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }
-oxc_traverse = { git = "https://github.com/oxc-project/oxc.git", rev = "530f7201ebff113f033fa422772c9036a0c29a13" }

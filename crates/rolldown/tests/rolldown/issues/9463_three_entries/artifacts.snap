@@ -108,9 +108,6 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 function foo() {
 	(globalThis.sideEffectLog ??= []).push("shared-foo");
 }
-function init_shared() {
-	return (init_shared = __esmMin((() => {})))();
-}
 //#endregion
 //#region a.js
 function init_a() {

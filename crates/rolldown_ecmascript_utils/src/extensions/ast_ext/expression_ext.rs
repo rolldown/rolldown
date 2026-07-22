@@ -45,8 +45,7 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
 
   /// // Check if the expression is `import.meta`
   fn is_import_meta(&self) -> bool {
-    matches!(self, ast::Expression::MetaProperty(meta_prop)
-    if meta_prop.meta.name == "import" && meta_prop.property.name == "meta")
+    matches!(self, ast::Expression::ImportMeta(_))
   }
 
   /// Check if the expression is `import.meta.url`

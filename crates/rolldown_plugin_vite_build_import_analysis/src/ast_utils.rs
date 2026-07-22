@@ -239,12 +239,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
           items.push(Argument::from(Expression::from(
             MemberExpression::new_static_member_expression(
               SPAN,
-              Expression::new_meta_property(
-                SPAN,
-                IdentifierName::new_id_name(SPAN, "import", &self.ast_builder),
-                IdentifierName::new_id_name(SPAN, "meta", &self.ast_builder),
-                &self.ast_builder,
-              ),
+              Expression::new_import_meta(SPAN, &self.ast_builder),
               IdentifierName::new_id_name(SPAN, "url", &self.ast_builder),
               false,
               &self.ast_builder,

@@ -87,10 +87,8 @@ fn is_import_meta_glob_call(call: &ast::CallExpression<'_>) -> bool {
   };
   matches!(
     &member.object,
-    Expression::MetaProperty(property)
+    Expression::ImportMeta(_)
       if member.property.name == "glob"
-        && property.meta.name == "import"
-        && property.property.name == "meta"
   )
 }
 
@@ -210,11 +208,7 @@ impl<'ast> GlobImportVisit<'_> {
         let Some(arg_expr) = arg.as_expression() else { return false };
         self.transform_glob_import(arg_expr, omit_type)
       }
-      Expression::MetaProperty(p)
-        if mem_expr.property.name == "glob"
-          && p.meta.name == "import"
-          && p.property.name == "meta" =>
-      {
+      Expression::ImportMeta(_) if mem_expr.property.name == "glob" => {
         // Consume the complete group at call entry. If one unresolved glob
         // aborts this call, later calls still receive their own pre-resolved
         // results instead of inheriting the unused tail of this array.

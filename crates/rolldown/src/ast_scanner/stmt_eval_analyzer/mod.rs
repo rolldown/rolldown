@@ -8,6 +8,7 @@ use oxc::ast::ast::{
 use oxc::ast::match_member_expression;
 use oxc::ast_visit::{Visit, walk};
 use oxc::semantic::{NodeId, ScopeFlags, SymbolId};
+use oxc::transformer::EngineTargets;
 use oxc_ecmascript::GlobalContext;
 use oxc_ecmascript::side_effects::{
   MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects,
@@ -179,12 +180,9 @@ impl<'a> StmtEvalAnalyzer<'a> {
   /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>` is a placeholder the finalizer rewrites into a
   /// `new URL(...)` expression. Other accesses like `import.meta.hot.accept()` may have side effects.
   fn is_side_effect_free_import_meta_access(member_expr: &ast::MemberExpression) -> bool {
-    let Expression::MetaProperty(meta_property) = member_expr.object() else {
+    let Expression::ImportMeta(_) = member_expr.object() else {
       return false;
     };
-    if meta_property.meta.name != "import" || meta_property.property.name != "meta" {
-      return false;
-    }
     member_expr
       .static_property_name()
       .is_some_and(|name| name == "url" || utils::file_url::starts_with_file_url_prefix(name))
@@ -871,6 +869,10 @@ impl GlobalContext<'_> for StmtEvalAnalyzer<'_> {
 }
 
 impl MayHaveSideEffectsContext<'_> for StmtEvalAnalyzer<'_> {
+  fn engine_targets(&self) -> Option<&EngineTargets> {
+    Some(&self.options.transform_options.target)
+  }
+
   fn annotations(&self) -> bool {
     !self.flat_options.ignore_annotations()
   }
@@ -919,6 +921,25 @@ mod test {
     let ast_scopes = AstScopes::new(scoping);
 
     let options = Arc::new(NormalizedBundlerOptions::default());
+    let flags = FlatOptions::from_shared_options(&options);
+    ast.program().body.iter().any(|stmt| {
+      StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
+        .analyze_stmt(stmt)
+        .has_side_effect_for_tree_shaking()
+    })
+  }
+
+  fn has_side_effect_for_tree_shaking_with_target(code: &str, target: &str) -> bool {
+    let source_type = SourceType::tsx();
+    let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
+    let semantic = EcmaAst::make_semantic(ast.program());
+    let scoping = semantic.into_scoping();
+    let ast_scopes = AstScopes::new(scoping);
+
+    let mut options = NormalizedBundlerOptions::default();
+    options.transform_options.target =
+      oxc::transformer::EngineTargets::from_target(target).expect("valid target");
+    let options = Arc::new(options);
     let flags = FlatOptions::from_shared_options(&options);
     ast.program().body.iter().any(|stmt| {
       StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
@@ -1449,7 +1470,9 @@ mod test {
     assert!(!has_side_effect_for_tree_shaking("RegExp('abc', 'g')"));
     assert!(!has_side_effect_for_tree_shaking("new RegExp('abc', 'g')"));
     assert!(!has_side_effect_for_tree_shaking("RegExp('abc', 'gi')"));
-    assert!(!has_side_effect_for_tree_shaking("new RegExp('abc', 'gimsuy')"));
+    // Flags newer than ES5 (`s`/`u`/`y`) are may-throw without an explicit target;
+    // see `test_regexp_constructor_with_engine_targets`.
+    assert!(has_side_effect_for_tree_shaking("new RegExp('abc', 'gimsuy')"));
     // RegExp with a RegExp literal argument is valid
     assert!(!has_side_effect_for_tree_shaking("RegExp(/foo/)"));
     assert!(!has_side_effect_for_tree_shaking("new RegExp(/foo/)"));
@@ -1475,6 +1498,20 @@ mod test {
     // RegExp literals are side-effect-free (they're validated at parse time)
     assert!(!has_side_effect_for_tree_shaking("/abc/"));
     assert!(!has_side_effect_for_tree_shaking("/abc/g"));
+  }
+
+  #[test]
+  fn test_regexp_constructor_with_engine_targets() {
+    // Without an explicit target, runtime support for post-ES5 RegExp features is
+    // unknown: constructor calls using them are commonly feature-detection probes
+    // that throw on unsupporting engines, so they must stay in the output
+    // (https://github.com/oxc-project/oxc/issues/18050).
+    assert!(has_side_effect_for_tree_shaking("new RegExp('abc', 'gimsuy')"));
+    // An explicit target new enough for every used feature opts into
+    // feature-aware analysis (`s` is ES2018; `u`/`y` are ES2015).
+    assert!(!has_side_effect_for_tree_shaking_with_target("new RegExp('abc', 'gimsuy')", "es2018"));
+    // A target older than a used feature stays conservative.
+    assert!(has_side_effect_for_tree_shaking_with_target("new RegExp('abc', 'gimsuy')", "es2015"));
   }
 
   #[test]

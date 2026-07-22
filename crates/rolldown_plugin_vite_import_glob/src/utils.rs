@@ -135,11 +135,7 @@ impl<'ast> GlobImportVisit<'_> {
         let Some(arg_expr) = arg.as_expression() else { return false };
         self.transform_glob_import(arg_expr, omit_type)
       }
-      Expression::MetaProperty(p)
-        if mem_expr.property.name == "glob"
-          && p.meta.name == "import"
-          && p.property.name == "meta" =>
-      {
+      Expression::ImportMeta(_) if mem_expr.property.name == "glob" => {
         let mut files: Vec<ImportGlobFileData> = vec![];
         let mut options = ImportGlobOptions::default();
 

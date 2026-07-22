@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 //#endregion
-//#region main.js
-assert((/* @__PURE__ */ (() => {
+//#region example.data
+var example_default = (/* @__PURE__ */ (() => {
 	var table = /* @__PURE__ */ new Uint8Array(128);
 	for (var i = 0; i < 64; i++) table[i < 26 ? i + 65 : i < 52 ? i + 71 : i < 62 ? i - 4 : i * 4 - 205] = i;
 	return (base64) => {
@@ -23,7 +23,10 @@ assert((/* @__PURE__ */ (() => {
 		}
 		return bytes;
 	};
-})())("") instanceof Uint8Array);
+})())("");
+//#endregion
+//#region main.js
+assert(example_default instanceof Uint8Array);
 //#endregion
 
 ```

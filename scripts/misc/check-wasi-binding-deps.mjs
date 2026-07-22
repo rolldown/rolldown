@@ -14,6 +14,35 @@ import semver from 'semver';
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const TRACKED = ['@napi-rs/wasm-runtime', '@emnapi/core', '@emnapi/runtime'];
 const BINDING_PKG = path.join(REPO_ROOT, 'packages/rolldown/npm/wasm32-wasi/package.json');
+const WORKSPACE_MANIFEST = path.join(REPO_ROOT, 'pnpm-workspace.yaml');
+
+// The emnapi v2 plugin exports (`emnapiAsyncWorkPlugin` / `emnapiTSFNPlugin`)
+// that @rolldown/browser's loader and the generated @rolldown/binding-wasm32-wasi
+// glue import from `@napi-rs/wasm-runtime` currently exist ONLY via a local pnpm
+// patch. pnpm `patchedDependencies` are never propagated to registry consumers,
+// so a fresh install of either package resolves the pristine
+// `@napi-rs/wasm-runtime`, which lacks those exports, and fails at load time
+// (browser: a static ESM link error; wasi: undefined plugins at instantiate).
+// Refuse to publish while the patch is in place — drop it once a v2-ready
+// `@napi-rs/wasm-runtime` is published upstream (see the patch note in
+// pnpm-workspace.yaml), which lets these artifacts ship unpatched.
+function assertWasmRuntimeNotPatched() {
+  const manifest = fs.readFileSync(WORKSPACE_MANIFEST, 'utf8');
+  // Matches only the `patchedDependencies` entry — a quoted `@napi-rs/wasm-runtime@<version>`
+  // key mapping to a `patches/…` file — not the catalog range or onlyBuiltDependencies list.
+  const patched = /^\s*['"]@napi-rs\/wasm-runtime@[^'"]+['"]\s*:\s*patches\//m.test(manifest);
+  if (patched) {
+    console.error(
+      '@napi-rs/wasm-runtime is pnpm-patched to add the emnapi v2 plugin exports\n' +
+        '(emnapiAsyncWorkPlugin / emnapiTSFNPlugin). Those exports do NOT ship to registry\n' +
+        'consumers, so a fresh install of @rolldown/browser or @rolldown/binding-wasm32-wasi\n' +
+        'would load the pristine @napi-rs/wasm-runtime and fail. Refusing to publish.\n\n' +
+        'Drop the @napi-rs/wasm-runtime patchedDependencies entry once a v2-ready\n' +
+        '@napi-rs/wasm-runtime is published upstream, then re-run.',
+    );
+    process.exit(1);
+  }
+}
 
 function readBindingSpecifiers() {
   const pkg = JSON.parse(fs.readFileSync(BINDING_PKG, 'utf8'));
@@ -48,6 +77,8 @@ function readBrowserResolved() {
   }
   return out;
 }
+
+assertWasmRuntimeNotPatched();
 
 const bindingSpecifiers = readBindingSpecifiers();
 const browserResolved = readBrowserResolved();

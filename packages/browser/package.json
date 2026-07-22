@@ -1,6 +1,7 @@
 {
   "name": "@rolldown/browser",
   "version": "1.2.0",
+  "private": true,
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",

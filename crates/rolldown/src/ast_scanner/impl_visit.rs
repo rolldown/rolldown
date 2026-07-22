@@ -297,12 +297,13 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_member_expression(&mut self, it: &ast::MemberExpression<'ast>) {
     if it.object().is_import_meta()
       && let Some(property_name) = it.static_property_name()
-      && let Some(reference_id) = utils::file_url::strip_file_url_prefix(property_name)
+      && let Some(file_url) = utils::file_url::strip_file_url_prefix(property_name)
     {
       self.result.rolldown_file_url_references.push(RolldownFileUrlReference {
         node_id: it.node_id(),
         stmt_info_idx: self.current_stmt_idx,
-        reference_id: CompactStr::from(reference_id),
+        reference_id: CompactStr::from(file_url.reference_id),
+        url_id: file_url.url_id.map(CompactStr::from),
       });
     }
     walk::walk_member_expression(self, it);

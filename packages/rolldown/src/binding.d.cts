@@ -2321,6 +2321,11 @@ export interface BindingHookResolveFileUrlArgs {
   referenceId: string
   /** Path from the chunk to the emitted file. */
   relativePath: string
+  /**
+   * The `<urlId>` of `import.meta.ROLLDOWN_FILE_URL_<referenceId>_<urlId>`, if present.
+   * Only the rolldown-specific form carries it; the `ROLLUP_FILE_URL_` alias never does.
+   */
+  urlId?: string
 }
 
 export interface BindingHookResolveIdExtraArgs {

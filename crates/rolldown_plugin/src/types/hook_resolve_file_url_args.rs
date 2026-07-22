@@ -12,4 +12,9 @@ pub struct HookResolveFileUrlArgs<'a> {
   pub reference_id: &'a str,
   /// Path from the chunk to the emitted file.
   pub relative_path: &'a str,
+  /// The `<urlId>` of `import.meta.ROLLDOWN_FILE_URL_<referenceId>_<urlId>`, if present.
+  /// Only the rolldown-specific form carries it; the `ROLLUP_FILE_URL_` alias never does.
+  ///
+  /// This API is experimental and may change in minor versions.
+  pub url_id: Option<&'a str>,
 }

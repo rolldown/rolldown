@@ -1249,6 +1249,9 @@ mod test {
     assert!(!has_side_effect_for_tree_shaking("import.meta?.['url']"));
     assert!(!has_side_effect_for_tree_shaking("import.meta.ROLLDOWN_FILE_URL_abc123"));
     assert!(!has_side_effect_for_tree_shaking("import.meta?.ROLLDOWN_FILE_URL_abc123"));
+    assert!(!has_side_effect_for_tree_shaking(
+      "import.meta.ROLLDOWN_FILE_URL_aaaaaaaaaaaaaaaaaaaaaa_myUrlId"
+    ));
     assert!(!has_side_effect_for_tree_shaking("import.meta['ROLLDOWN_FILE_URL_abc123']"));
     assert!(!has_side_effect_for_tree_shaking("import.meta?.['ROLLDOWN_FILE_URL_abc123']"));
     assert!(!has_side_effect_for_tree_shaking("import.meta.ROLLUP_FILE_URL_abc123"));

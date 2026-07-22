@@ -1096,8 +1096,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     original_expr_span: Span,
     node_id: NodeId,
   ) -> Option<Expression<'ast>> {
-    // rewrite `import.meta.ROLLDOWN_FILE_URL_<referenceId>`
-    if let Some(reference_id) = utils::file_url::strip_file_url_prefix(property_name) {
+    // rewrite `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`
+    if let Some(reference_id) =
+      utils::file_url::strip_file_url_prefix(property_name).map(|file_url| file_url.reference_id)
+    {
       // A plugin's `resolveFileUrl` result wins over the default. Copy the `&'me`
       // reference out of `ctx` first, so the lookup does not borrow `self` and the
       // error path below can borrow it mutably.

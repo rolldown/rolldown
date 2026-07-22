@@ -44,6 +44,8 @@ pub struct RolldownFileUrlReference {
   pub stmt_info_idx: StmtInfoIdx,
   /// The `<referenceId>` suffix, as handed out by `emitFile`.
   pub reference_id: CompactStr,
+  /// Optional `urlId`
+  pub url_id: Option<CompactStr>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -147,7 +149,7 @@ pub struct EcmaView {
   pub mutations: Vec<ArcSourceMutation>,
   /// `NodeId` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
-  /// Occurrences of `import.meta.ROLLDOWN_FILE_URL_<referenceId>`, in source order.
+  /// Occurrences of `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, in source order.
   /// One entry per occurrence: the `resolveFileUrl` hook is called per occurrence,
   /// matching Rollup, so duplicates are meaningful.
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,

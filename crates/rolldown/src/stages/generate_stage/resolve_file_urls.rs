@@ -59,7 +59,7 @@ impl GenerateStage<'_> {
           continue;
         }
 
-        for RolldownFileUrlReference { node_id, stmt_info_idx, reference_id } in
+        for RolldownFileUrlReference { node_id, stmt_info_idx, reference_id, url_id } in
           &module.ecma_view.rolldown_file_url_references
         {
           if !self.link_output.metas[module.idx].stmt_info_included.has_bit(*stmt_info_idx) {
@@ -81,6 +81,7 @@ impl GenerateStage<'_> {
               module_id: module.id.as_str(),
               reference_id,
               relative_path: &relative_path,
+              url_id: url_id.as_deref(),
             };
             self.plugin_driver.resolve_file_url(&args).await?
           } else {

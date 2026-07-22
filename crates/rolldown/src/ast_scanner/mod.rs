@@ -115,7 +115,7 @@ pub struct ScanResult {
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
-  /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>`, one entry per occurrence.
+  /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, one entry per occurrence.
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
   pub hmr_info: HmrInfo,

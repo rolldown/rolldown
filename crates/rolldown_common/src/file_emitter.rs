@@ -458,3 +458,31 @@ impl FileEmitter {
 }
 
 pub type SharedFileEmitter = Arc<FileEmitter>;
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// Reference ids are the base64url encoding of a 128-bit xxhash (with `-` remapped to `$`),
+  /// which is always 22 characters. The `import.meta.ROLLDOWN_FILE_URL_<referenceId>_<urlId>`
+  /// parser depends on this: because a reference id can contain any identifier character
+  /// (`[A-Za-z0-9_$]`, including `$` and `_`), the `urlId` cannot be found by searching for a
+  /// separator, so it is split off by this fixed length instead.
+  ///
+  /// If this length ever changes, `REFERENCE_ID_LEN` in `rolldown/src/utils/file_url.rs` must
+  /// be updated in lockstep or urlId parsing will silently corrupt reference ids.
+  #[test]
+  fn assign_reference_id_is_always_22_chars() {
+    let emitter = FileEmitter::new(Arc::new(NormalizedBundlerOptions::default()));
+
+    // Counter-based ids: assets emitted without an explicit file name.
+    for _ in 0..1000 {
+      assert_eq!(emitter.assign_reference_id(None).len(), 22);
+    }
+
+    // Name/file-name-based ids: chunks and explicitly named files, including edge-case inputs.
+    for name in ["a", "index.js", "assets/deeply/nested/asset.name.txt", ""] {
+      assert_eq!(emitter.assign_reference_id(Some(ArcStr::from(name))).len(), 22, "name={name:?}");
+    }
+  }
+}

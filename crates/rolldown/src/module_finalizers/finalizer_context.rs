@@ -25,7 +25,10 @@ use crate::{
   chunk_graph::ChunkGraph,
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
   stages::{
-    generate_stage::order_wrap_state::{EsmInitOrigin, EsmInitTarget, OrderWrapState},
+    generate_stage::{
+      FinalEsmInitMetadata, Sealed,
+      order_wrap_state::{EsmInitOrigin, EsmInitTarget, OrderWrapState},
+    },
     link_stage::SafelyMergeCjsNsInfo,
   },
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
@@ -46,6 +49,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub order_wrap_state: &'me OrderWrapState,
+  pub final_esm_init_metadata: &'me Sealed<FinalEsmInitMetadata>,
   pub used_symbol_refs: &'me UsedSymbolRefs,
   pub symbol_db: &'me SymbolRefDb,
   pub runtime: &'me RuntimeModuleBrief,

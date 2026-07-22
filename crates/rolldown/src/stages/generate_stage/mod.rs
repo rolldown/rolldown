@@ -114,6 +114,8 @@ mod render_chunk_to_assets;
 mod resolve_file_urls;
 mod runtime_module_sweep;
 
+pub use compute_wrapped_esm_init_metadata::{FinalEsmInitMetadata, Sealed};
+
 pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
   /// Per-module AST table threaded by value from `LinkStage::link()`. Moved out
@@ -146,7 +148,7 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
     let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs).await?;
 
-    let mut order_state = self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs)?;
+    let order_state = self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs)?;
 
     // Order lowering and the unused-runtime sweep have had their last chance to update liveness.
     // Sealing consumes the builder, so nothing downstream can mutate the set.
@@ -154,9 +156,15 @@ impl<'a> GenerateStage<'a> {
     self.compute_retained_export_symbols(&used_symbol_refs);
 
     let mut ast_table = std::mem::take(&mut self.ast_table);
-    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph, &mut order_state);
+    let final_esm_init_metadata =
+      self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph, &order_state);
 
-    self.compute_cross_chunk_links(&mut chunk_graph, &used_symbol_refs, &order_state);
+    self.compute_cross_chunk_links(
+      &mut chunk_graph,
+      &used_symbol_refs,
+      &order_state,
+      &final_esm_init_metadata,
+    );
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);
 
@@ -227,6 +235,7 @@ impl<'a> GenerateStage<'a> {
       &resolved_file_urls,
       &used_symbol_refs,
       &order_state,
+      &final_esm_init_metadata,
     )?;
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await

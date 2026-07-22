@@ -186,7 +186,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       NONE,
       oxc::allocator::Vec::new_in(&self.ast_builder),
       false,
-      mark_pure_if_noop && target.init_is_noop,
+      mark_pure_if_noop && self.ctx.final_esm_init_metadata.init_is_noop(importee_idx),
       &self.ast_builder,
     );
     if await_if_tla && target.tla_tainted {
@@ -1529,11 +1529,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       NONE,
                       oxc::allocator::Vec::new_in(&self.ast_builder),
                       false,
-                      self
-                        .ctx
-                        .order_wrap_state
-                        .esm_init_target(importee.idx, importee_linking_info)
-                        .is_some_and(|target| target.init_is_noop),
+                      self.ctx.final_esm_init_metadata.init_is_noop(importee.idx),
                       &self.ast_builder,
                     ))
                   };
@@ -1759,14 +1755,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if !is_stmt_included {
           // For ESM-wrapped modules, excluded re-export statements still need init calls for
           // correct initialization order. Their targets are precomputed by the generate
-          // stage's `compute_wrapped_esm_init_metadata`; emitting the calls (with the
-          // module-wide dedup below) is all that happens here.
-          let linking_info = self.ctx.linking_info;
+          // stage's `Sealed<FinalEsmInitMetadata>`; emitting the calls (with the module-wide dedup
+          // below) is all that happens here.
           if let Some(targets) = self
             .ctx
-            .order_wrap_state
-            .transitive_init_targets(self.ctx.idx, linking_info)
-            .get(&stmt_info_idx)
+            .final_esm_init_metadata
+            .transitive_init_targets(self.ctx.idx)
+            .and_then(|targets_by_stmt| targets_by_stmt.get(&stmt_info_idx))
           {
             for &importee_idx in targets {
               if self.generated_init_esm_importee_ids.insert(importee_idx) {

@@ -55,6 +55,24 @@ export default defineTest({
             );
           }
 
+          // Chunk names are validated the same way
+          expect(() => {
+            this.emitFile({
+              type: 'chunk',
+              id: './main.js',
+              name: '../node_modules/some-lib/entry',
+            });
+          }).toThrow(
+            'The "fileName" or "name" properties of emitted chunks and assets must be strings that are neither absolute nor relative paths, received "../node_modules/some-lib/entry".',
+          );
+
+          // Subdirectory names are not path fragments
+          this.emitFile({
+            type: 'asset',
+            name: 'sub/dir/asset.txt',
+            source: 'content',
+          });
+
           // Emit a valid asset so the build succeeds
           this.emitFile({
             type: 'asset',

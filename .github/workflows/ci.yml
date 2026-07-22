@@ -26,11 +26,26 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      rust-changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}
-      node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
+      # A Windows CI request runs the complete Windows suite, even for paths outside the normal filters.
+      rust-changes: "${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+      node-changes: "${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
       # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
-      run-windows: "${{ (github.event_name == 'pull_request') && contains(github.event.pull_request.labels.*.name, 'ci: windows') }}"
+      run-windows: "${{ steps.pr-labels.outputs.run-windows == 'true' }}"
     steps:
+      # Reruns keep the original event payload, so query the current labels instead.
+      - name: Read pull request labels
+        if: github.event_name == 'pull_request'
+        id: pr-labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if ! run_windows="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '[.labels[].name] | any(. == "ci: windows")')"; then
+            echo "::warning::Could not read pull request labels; running Windows CI."
+            run_windows=true
+          fi
+          echo "run-windows=${run_windows}" >> "$GITHUB_OUTPUT"
+
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
@@ -61,8 +76,8 @@ jobs:
               - 'rollup'
       - name: Show outputs
         run: |
-          echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"
-          echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
+          echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+          echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
 
   rust-validation:
     name: Rust Validation

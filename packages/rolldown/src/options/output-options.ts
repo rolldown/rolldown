@@ -91,13 +91,13 @@ export type ManualChunksFunction = (
 /** @inline */
 export type GlobalsFunction = (name: string) => string;
 
-/** @category Plugin APIs */
+/** @category Code Splitting */
 export type CodeSplittingNameFunction = (
   moduleId: string,
   ctx: ChunkingContext,
 ) => string | NullValue;
 
-/** @inline */
+/** @inline @category Code Splitting */
 export type CodeSplittingTestFunction = (id: string) => boolean | undefined | void;
 
 export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
@@ -117,7 +117,7 @@ export interface CommentsOptions {
   jsdoc?: boolean;
 }
 
-/** @inline */
+/** @inline @category Code Splitting */
 export interface ChunkingContext {
   getModuleInfo(moduleId: string): ModuleInfo | null;
 }
@@ -763,9 +763,12 @@ export interface OutputOptions {
  * Built-in module tag names computed by rolldown.
  *
  * - `'$initial'` — the module is statically imported by at least one user-defined entry point, or is part of its static dependency chain.
+ *
+ * @category Code Splitting
  */
 export type BuiltinModuleTag = '$initial';
 
+/** @category Code Splitting */
 export type CodeSplittingGroup = {
   /**
    * Name of the group. It will be also used as the name of the chunk and replace the `[name]` placeholder in the {@linkcode OutputOptions.chunkFileNames | output.chunkFileNames} option.
@@ -964,11 +967,15 @@ export type CodeSplittingGroup = {
  * Alias for {@linkcode CodeSplittingGroup}. Use this type for the `codeSplitting.groups` option.
  *
  * @deprecated Please use {@linkcode CodeSplittingGroup} instead.
+ *
+ * @category Code Splitting
  */
 export type AdvancedChunksGroup = CodeSplittingGroup;
 
 /**
  * Configuration options for advanced code splitting.
+ *
+ * @category Code Splitting
  */
 export type CodeSplittingOptions = {
   /**
@@ -1005,6 +1012,8 @@ export type CodeSplittingOptions = {
  * Alias for {@linkcode CodeSplittingOptions}. Use this type for the `codeSplitting` option.
  *
  * @deprecated Please use {@linkcode CodeSplittingOptions} instead.
+ *
+ * @category Code Splitting
  */
 export type AdvancedChunksOptions = CodeSplittingOptions;
 

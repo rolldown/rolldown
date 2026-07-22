@@ -20,6 +20,10 @@ This scheduler is the only runtime in the shipped binding: Tokio has been
 removed from every production dependency graph, and every artifact — native
 and WebAssembly — compiles the shared runtime unconditionally.
 
+For the machinery that realizes these principles — where the runtime is
+selected, configured, bridged across the napi boundary, and consumed by the
+Rust core — see [implementation.md](./implementation.md).
+
 ## Design Principles
 
 1. **Thread availability is a build/runtime property, not an assumption.**
@@ -505,5 +509,7 @@ Tokio, Tokio-blocking, Rayon, and ad-hoc thread-pool tuning problems.
 
 ## Related
 
+- [implementation.md](./implementation.md) — the machinery that realizes these
+  principles (components, data flow, file pointers)
 - [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md) -
   deferred drops and rebuild ownership

@@ -41,6 +41,11 @@ jobs:
       - name: Stability Test
         run: vp run --filter rolldown-tests test:stability
 
+      # Runs against the WASI binding itself (NAPI_RS_FORCE_WASI), which no
+      # other CI test does. Regression coverage for #8411 and #8747.
+      - name: Tokio Runtime Lifecycle Test
+        run: vp run --filter rolldown-tests test:wasi-runtime
+
       # `@example/typescript` is excluded because its config enables `devtools`, which currently
       # panics under WASI when the writer tries to open its log file (crates/rolldown_devtools/src/writer.rs).
       # `@example/native-magic-string` is excluded because it depends on a native-only addon.

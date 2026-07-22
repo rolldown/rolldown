@@ -209,7 +209,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         // Otherwise we'd have marked a side-effecting `init_*()` as `@__PURE__` and DCE could
         // wrongly drop it. Turns any misclassification into a loud failure across the fixtures.
         debug_assert!(
-          !target.init_is_noop || stmts_inside_closure.is_empty(),
+          !self.ctx.final_esm_init_metadata.init_is_noop(self.ctx.idx)
+            || stmts_inside_closure.is_empty(),
           "init_is_noop set but the __esm closure is non-empty for {}",
           self.ctx.module.stable_id
         );

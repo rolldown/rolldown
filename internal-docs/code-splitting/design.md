@@ -211,8 +211,6 @@ pub struct OrderWrappedModule {
   pub wrapper_statement: Option<OrderSyntheticStmtIdx>,
   pub chunk: Option<ChunkIdx>,
   pub reexport_init_transparent: bool,
-  pub init_is_noop: bool,
-  pub transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }
 
 pub struct OrderSyntheticStmt {
@@ -239,9 +237,9 @@ pub struct OrderImportOverlay {
 }
 ```
 
-`OrderWrapState` is the sole owner of these fields. Helper views may borrow it, but the data is not mirrored into `LinkingMetadata`.
+`OrderWrapState` is the sole owner of these order-lowering fields. Helper views may borrow it, but the data is not mirrored into `LinkingMetadata`.
 
-- wrapper symbols and init metadata belong to order state, not `LinkingMetadata`;
+- order-wrapper symbols and placement belong to order state, not `LinkingMetadata`;
 - order state does not contain mutable user-statement inclusion;
 - importer-specific references and runtime helpers belong to `import_overlays`, not the original `StmtInfo`;
 - synthetic declarations participate in chunk assignment and deconfliction through an explicit synthetic-statement API, with secondary indexes for chunk rendering;
@@ -276,6 +274,29 @@ pub struct OrderLoweringOutput<'a> {
 
 The API does not expose mutable `LinkingMetadata`, `StmtInfos`, or the chunk graph. The surrounding generate-stage pass places the synthetic wrappers, creates any entry facades, and recomputes topology-derived facts after lowering; the lowerer communicates new symbol, namespace, runtime, and re-export-routing requirements through `OrderWrapState`.
 
+### Final ESM init metadata
+
+After wrapper selection and final chunk topology are fixed, `compute_wrapped_esm_init_metadata` derives the two facts that depend on both link and order state: whether an `init_*()` call is a no-op, and which wrapped modules must be initialized at each excluded statement. Interop and execution-order wrappers share one sealed result instead of writing the same kind of final fact back into either owner's mutable state:
+
+```rust
+pub struct Sealed<T>(T); // private field and constructor; Deref only, never DerefMut or unwrap
+
+pub struct FinalEsmInitMetadata {
+  modules: FxHashMap<ModuleIdx, ModuleEsmInitMetadata>,
+}
+
+struct ModuleEsmInitMetadata {
+  init_is_noop: bool,
+  transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
+}
+
+fn compute_wrapped_esm_init_metadata(/* ... */) -> Sealed<FinalEsmInitMetadata>;
+```
+
+`Sealed<T>` and its private constructor live in the leaf module that computes this artifact. The result cannot be unwrapped or mutably dereferenced, so taking ownership again does not reopen mutation. Final cross-chunk linking and module finalization accept only `&Sealed<FinalEsmInitMetadata>`; an unsealed value cannot satisfy either signature.
+
+The table is sparse: a missing entry means `init_is_noop == false` and no excluded-statement targets, never that the module lacks a wrapper. Wrapper identity remains in `LinkingMetadata` or `OrderWrapState`. The earlier on-demand projection continues to recompute a conservative draft from its probe `OrderWrapState` because final metadata does not exist yet; it marks final metadata unavailable instead of manufacturing an empty sealed value.
+
 ### Shared init-target view
 
 Finalization and cross-chunk linking need to work with two sources of lazy initialization:
@@ -288,7 +309,6 @@ They use a read-only view instead of testing an effective `WrapKind`:
 ```rust
 pub struct EsmInitTarget {
   pub wrapper_ref: SymbolRef,
-  pub init_is_noop: bool,
   pub tla_tainted: bool,
   pub origin: EsmInitOrigin,
 }
@@ -299,7 +319,7 @@ pub enum EsmInitOrigin {
 }
 ```
 
-An accessor resolves at most one ESM init target for a module. Interop ESM wrapping takes precedence because an already interop-wrapped module is represented by that existing wrapper; the order planner selects an eligible carrier instead of adding a second wrapper.
+An accessor resolves at most one ESM init target for a module. Interop ESM wrapping takes precedence because an already interop-wrapped module is represented by that existing wrapper; the order planner selects an eligible carrier instead of adding a second wrapper. This view carries structural wrapper identity only; final no-op and excluded-statement facts come from `FinalEsmInitMetadata`.
 
 ### Synthetic symbol inclusion
 
@@ -329,7 +349,7 @@ The module finalizer has three explicit cases:
 - ESM interop wrapper from `WrapKind::Esm`;
 - execution-order wrapper from `OrderWrapState`.
 
-The execution-order case reuses the established hoisted `function init_*()` code shape but obtains its symbol and init facts from order state. It never observes an overridden interop kind.
+The execution-order case reuses the established hoisted `function init_*()` code shape, obtains its wrapper symbol from order state, and obtains final derived init facts from `FinalEsmInitMetadata`. It never observes an overridden interop kind.
 
 Removed user import/re-export statements are finalized with any matching `OrderImportOverlay`. The finalizer may emit a synthetic init or re-export expression in the removed statement's source position, but it does not restore the original statement.
 
@@ -349,9 +369,9 @@ link + tree shaking
   -> provisional ChunkGraph
   -> OrderAnalysis / OrderWrapPlan
   -> lower plan into OrderWrapState + final ChunkGraph
-  -> compute init metadata using LinkingMetadata + OrderWrapState
-  -> compute cross-chunk links using the shared EsmInitTarget view
-  -> finalize modules using explicit interop/order wrapper cases
+  -> compute Sealed<FinalEsmInitMetadata> using LinkingMetadata + OrderWrapState
+  -> compute cross-chunk links using EsmInitTarget + Sealed<FinalEsmInitMetadata>
+  -> finalize modules using explicit interop/order wrapper cases + Sealed<FinalEsmInitMetadata>
   -> render entry prologues using the shared EsmInitTarget view
 ```
 
@@ -366,6 +386,7 @@ link + tree shaking
 - A planned static chunk SCC includes every eligible order-sensitive module in that SCC.
 - Every ordinary-import init obligation corresponds to a link-stage execution dependency.
 - Every excluded-statement init obligation is either a retained re-export obligation or a synthetic obligation backed by an execution dependency.
+- Final cross-chunk registration and finalizer emission require the same `Sealed<FinalEsmInitMetadata>` type; pre-final projection cannot supply one and does not consume final metadata.
 - Wrap-all and on-demand preserve the same link-stage statement and binding liveness; only their wrapper plans may differ.
 - Every order-wrapped entry has an explicit entry trigger.
 - Flag-off builds create no order wrappers or strict-only entry facades.

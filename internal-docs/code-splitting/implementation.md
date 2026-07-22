@@ -1,6 +1,6 @@
 # Code Splitting
 
-The rationale and target architecture are documented in [design.md](./design.md). This file describes the current implementation, where generate-stage order lowering owns wrappers and importer overlays in `OrderWrapState` without changing link-stage `WrapKind` or user statement inclusion.
+The rationale and target architecture are documented in [design.md](./design.md). This file describes the current implementation, where generate-stage order lowering owns wrappers and importer overlays in `OrderWrapState` without changing link-stage `WrapKind` or user statement inclusion, and final interop/order init facts are sealed separately in `FinalEsmInitMetadata`.
 
 ## Summary
 
@@ -72,6 +72,8 @@ ChunkGraph
     │
     ├─ used_symbol_refs.seal()                        Freeze liveness; the sweep is the last writer
     │
+    ├─ compute_wrapped_esm_init_metadata()            Produce Sealed<FinalEsmInitMetadata>
+    │
     ├─ compute_cross_chunk_links()                    Determine cross-chunk imports/exports
     │
     ├─ ensure_lazy_module_initialization_order()      Reorder wrapped module init calls
@@ -84,7 +86,8 @@ ChunkGraph
 - `crates/rolldown/src/stages/generate_stage/code_splitting.rs` — pipeline orchestration, `generate_chunks()`, `ensure_lazy_module_initialization_order()`
 - `crates/rolldown/src/stages/generate_stage/order_analysis.rs` — `strictExecutionOrder` analysis and the reasoned `OrderWrapPlan`
 - `crates/rolldown/src/stages/generate_stage/order_wrapping.rs` — applies order wrappers after chunk assignment
-- `crates/rolldown/src/stages/generate_stage/order_wrap_state.rs` — owns synthetic wrapper declarations, importer overlays, namespace/runtime requirements, and order init metadata
+- `crates/rolldown/src/stages/generate_stage/order_wrap_state.rs` — owns synthetic wrapper declarations, importer overlays, namespace/runtime requirements, and re-export routing evidence
+- `crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs` — derives the sealed final no-op and excluded-statement init facts shared by interop and order wrappers
 - `crates/rolldown/src/stages/generate_stage/finalize_chunk_plan.rs` — final topology boundary before output metadata and validation
 - `crates/rolldown/src/stages/generate_stage/dynamic_already_loaded.rs` — Rollup-style dynamic import already-loaded atom reduction
 - `crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs` — merge/optimization
@@ -94,6 +97,8 @@ ChunkGraph
 - `crates/rolldown/src/types/linking_metadata.rs` — immutable link-stage `wrap_kind()`
 
 Wrap-all (the default strict mode) seeds the plan from the expected orders alone and skips prediction; `experimental.onDemandWrapping` enables the selective analysis. `finalize_chunk_plan` may run two metadata passes. Namespace usage and entry-level external re-exports are first finalized on the provisional graph. They are recomputed when order wrapping or strict entry facades change topology.
+
+Once final topology and liveness are fixed, `compute_wrapped_esm_init_metadata` produces a sparse `Sealed<FinalEsmInitMetadata>`: absence of a module entry means the default no-op/empty-target values, not absence of a wrapper. `Sealed<T>` has a private field and constructor, exposes only `Deref`, and offers neither `DerefMut` nor an unwrap operation. Final cross-chunk linking and module finalization require that sealed type, so re-owning the artifact cannot reopen mutation and an unsealed result cannot reach either consumer. The earlier `predicted_static_import_edges` pass explicitly marks final metadata unavailable instead of manufacturing an empty sealed artifact; its Project-mode obligation traversal remains separate and conservative.
 
 Both modes consume the same frozen tree-shaking facts. `order_wrapper_is_reexport_transparent` identifies pure order wrappers that are only init-routing waypoints. `collect_wrapped_esm_init_targets_for_import_record` then resolves obligations per consumer: it filters named specifiers by local facade liveness, follows consumed re-export facades recorded in `OrderWrapState`, resolves static namespace-member reads from included `StmtInfo` references, expands all exports only for opaque namespace use, and applies the same constant-inline bypass as the inclusion pass. This lets wrap-all emit more wrappers without retaining or executing more user code than on-demand.
 

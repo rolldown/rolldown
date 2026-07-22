@@ -204,6 +204,37 @@ describe('Error output format', () => {
   });
 });
 
+// https://github.com/rolldown/rolldown/issues/9994
+// Emitting a chunk with a path-fragment name is rejected at emit time and attributed
+// to the offending plugin, instead of failing late with a message that blamed the
+// `chunkFileNames` pattern and named no plugin.
+test('emitFile chunk with a path-like name is rejected and attributed to the plugin', async () => {
+  const error = await buildWithPlugin({
+    name: 'emit-invalid-chunk-name',
+    buildStart() {
+      this.emitFile({
+        type: 'chunk',
+        id: './main.js',
+        name: '../node_modules/@builder.io/qwik-city/lib/index.qwik.mjs_entry_ErrorBoundary',
+      });
+    },
+  });
+  // Keep only the plugin attribution + message; drop everything from the first stack
+  // frame onward. That is either the JS `    at …` frames (absolute paths / OS-specific
+  // separators) or the Rust `Stack backtrace:` block that `RUST_BACKTRACE=1` (set by the
+  // test scripts) inserts before them — both make the snapshot machine-dependent.
+  const rendered = removeAnsiColors(error!.message)
+    .replace(/\r\n/g, '\n')
+    .split(/\n\s*Stack backtrace:|\n\s+at /)[0]
+    .trimEnd();
+  expect(rendered).toMatchInlineSnapshot(`
+    "Build failed with 1 error:
+
+    [plugin emit-invalid-chunk-name]
+    Error: The "fileName" or "name" properties of emitted chunks and assets must be strings that are neither absolute nor relative paths, received "../node_modules/@builder.io/qwik-city/lib/index.qwik.mjs_entry_ErrorBoundary"."
+  `);
+});
+
 // oxlint-disable no-control-regex
 function removeAnsiColors(str: string) {
   return str.replace(/\x1b\[[0-9;]*m/g, '');

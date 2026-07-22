@@ -53,6 +53,20 @@ pub struct EmittedChunk {
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
 }
 
+impl EmittedChunk {
+  /// Returns true if the emitted chunk has a valid name (not an absolute or relative path).
+  /// Mirrors [`EmittedAsset::has_valid_name`] and Rollup's `hasValidName`.
+  pub fn has_valid_name(&self) -> bool {
+    let validated_name = self.file_name.as_deref().or(self.name.as_deref());
+    validated_name.is_none_or(|name| !is_path_fragment(name))
+  }
+
+  /// Returns the validated name (fileName or name) if present.
+  pub fn validated_name(&self) -> Option<&str> {
+    self.file_name.as_deref().or(self.name.as_deref())
+  }
+}
+
 pub struct EmittedChunkInfo {
   pub reference_id: ArcStr,
   pub filename: ArcStr,
@@ -121,6 +135,18 @@ impl FileEmitter {
   }
 
   pub fn emit_chunk(&self, chunk: Arc<EmittedChunk>) -> anyhow::Result<ArcStr> {
+    // Reject a path-fragment name here, like the asset path in `emit_file` and Rollup's
+    // `emitFile()`. Deferring to `FilenameTemplate::render` loses the plugin context and
+    // blames the `chunkFileNames` pattern; erroring inside the hook lets the driver
+    // attribute it to the emitting plugin. https://github.com/rolldown/rolldown/issues/9994
+    if !chunk.has_valid_name() {
+      return Err(
+        BuildDiagnostic::invalid_option(InvalidOptionType::InvalidEmittedFileName(
+          chunk.validated_name().unwrap_or_default().to_string(),
+        ))
+        .into(),
+      );
+    }
     // Must stay synchronous: making this async would force the napi binding back
     // onto `block_on`, pinning the JS thread while `send().await` waits on channel
     // capacity — but the consumer draining the channel itself needs the JS thread

@@ -1,4 +1,8 @@
-import type { MinifyOptions as BindingMinifyOptions, PreRenderedChunk } from '../binding.cjs';
+import type {
+  ManglePropertiesOptions as BindingManglePropertiesOptions,
+  MinifyOptions as BindingMinifyOptions,
+  PreRenderedChunk,
+} from '../binding.cjs';
 import type { RolldownOutputPluginOption } from '../plugin';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import type { ModuleInfo } from '../types/module-info';
@@ -100,7 +104,27 @@ export type CodeSplittingNameFunction = (
 /** @inline @category Code Splitting */
 export type CodeSplittingTestFunction = (id: string) => boolean | undefined | void;
 
-export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
+export interface ManglePropertiesOptions extends Omit<BindingManglePropertiesOptions, 'cache'> {
+  /**
+   * Stable mappings from original names to output names. `false` reserves an original name.
+   * Rolldown generates mappings independently for each output chunk and does not expose newly
+   * generated mappings. Pin every matching property shared across chunks here; otherwise
+   * different generated names can cause incorrect runtime property reads or writes. A cache is
+   * also required when a mapping must remain stable across builds with different output graphs.
+   */
+  cache?: Record<string, string | false>;
+}
+
+export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap' | 'mangleProps'> & {
+  /**
+   * Mangle matching property names independently in each generated chunk.
+   *
+   * Rolldown does not currently coordinate generated mappings across chunks. If the same
+   * unpinned property receives different names in different chunks, Rolldown warns because
+   * objects crossing those chunk boundaries can be corrupted. Pin such properties with `cache`.
+   */
+  mangleProps?: ManglePropertiesOptions;
+};
 
 export interface CommentsOptions {
   /**

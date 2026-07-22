@@ -1520,6 +1520,12 @@
             "boolean",
             "null"
           ]
+        },
+        "crossChunkPropertyMangle": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

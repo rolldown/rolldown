@@ -21,6 +21,9 @@ use super::events::bundler_initialize_error::BundlerInitializeError;
 use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
+use super::events::cross_chunk_property_mangle::{
+  CrossChunkPropertyMangle, CrossChunkPropertyMangleConflict,
+};
 use super::events::duplicate_shebang::DuplicateShebang;
 use super::events::filename_conflict::FilenameConflict;
 use super::events::filename_outside_output_directory::FilenameOutsideOutputDirectory;
@@ -438,6 +441,10 @@ impl BuildDiagnostic {
 
   pub fn sourcemap_broken(plugin_name: String, id: Option<String>) -> Self {
     Self::new_inner(SourcemapBroken { plugin_name, id })
+  }
+
+  pub fn cross_chunk_property_mangle(conflicts: Vec<CrossChunkPropertyMangleConflict>) -> Self {
+    Self::new_inner(CrossChunkPropertyMangle { conflicts })
   }
 
   pub fn tsconfig_error(reason: ResolveError) -> Self {

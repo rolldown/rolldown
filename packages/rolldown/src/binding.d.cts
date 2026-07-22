@@ -169,6 +169,37 @@ export interface MangleOptionsKeepNames {
   class: boolean
 }
 
+export interface ManglePropertiesOptions {
+  /**
+   * Rust-regex source selecting property names to mangle. Matching is unanchored unless the
+   * expression contains anchors.
+   */
+  include: string
+  /** Rust-regex source excluding property names selected by `include`. */
+  exclude?: string
+  /** Exact names that are neither mangled nor emitted as automatic output names. */
+  reserved?: Array<string>
+  /**
+   * Mangle quoted property occurrences in addition to unquoted occurrences.
+   *
+   * @default false
+   */
+  quoted?: boolean
+  /**
+   * Generate readable `_$name$_`-style output names.
+   *
+   * @default false
+   */
+  debug?: boolean
+  /**
+   * Stable mappings from original names to output names. `false` reserves an original name.
+   * Entries that do not match `include`, or that match `exclude`, remain inert but are
+   * preserved in the returned `mangleCache`. String targets must be `IdentifierName` values
+   * other than `__proto__`, `constructor`, or `prototype`.
+   */
+  cache?: Record<string, string | false>
+}
+
 /**
  * Minify asynchronously.
  *
@@ -181,6 +212,8 @@ export interface MinifyOptions {
   module?: boolean
   compress?: boolean | CompressOptions
   mangle?: boolean | MangleOptions
+  /** Mangle matching property names independently of identifier mangling. */
+  mangleProps?: ManglePropertiesOptions
   codegen?: boolean | CodegenOptions
   sourcemap?: boolean
 }
@@ -194,6 +227,8 @@ export interface MinifyResult {
    * Only populated when `codegen.legalComments` is `"linked"` or `"external"`.
    */
   legalComments: Array<string>
+  /** Updated property-name cache. Present when `mangleProps` ran on a parse without errors. */
+  mangleCache?: Record<string, string | false>
 }
 
 /** Minify synchronously. */
@@ -1969,6 +2004,7 @@ export interface BindingChecksOptions {
   ineffectiveDynamicImport?: boolean
   largeBarrelModules?: boolean
   sourcemapBroken?: boolean
+  crossChunkPropertyMangle?: boolean
 }
 
 export interface BindingChunkImportMap {

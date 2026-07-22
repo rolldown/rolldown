@@ -616,6 +616,13 @@ pub fn normalize_binding_options(
         }
         napi::bindgen_prelude::Either3::C(opts) => {
           {
+            let mangle_properties = opts
+              .mangle_props
+              .as_ref()
+              .map(oxc::minifier::ManglePropertiesOptions::try_from)
+              .transpose()
+              .map_err(|err| napi::Error::new(napi::Status::InvalidArg, err))?
+              .map(Box::new);
             let mangle = match &opts.mangle {
               Some(Either::A(false)) => None,
               None | Some(Either::A(true)) => Some(RawMangleOptions::default()),
@@ -642,6 +649,7 @@ pub fn normalize_binding_options(
             };
             Ok(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
               mangle,
+              mangle_properties,
               compress,
               remove_whitespace: match &opts.codegen {
                 None => true,

@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## barrel.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region mod_a.js
+var mod_a_exports = /* @__PURE__ */ __exportAll({ x: () => "ax" });
+var init_mod_a = __esmMin((() => {
+	globalThis.__log.push("A");
+}));
+//#endregion
+//#region mod_b.js
+var mod_b_exports = /* @__PURE__ */ __exportAll({ x: () => "bx" });
+var init_mod_b = __esmMin((() => {
+	globalThis.__log.push("B");
+}));
+//#endregion
+//#region dynamic.cjs
+var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { dynamic: "dynamic" };
+}));
+//#endregion
+//#region barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({});
+init_mod_a();
+init_mod_b();
+__reExport(barrel_exports, /* @__PURE__ */ __toESM(require_dynamic()));
+//#endregion
+export { mod_a_exports as a, init_mod_a as i, init_mod_b as n, __exportAll as o, mod_b_exports as r, __reExport as s, barrel_exports as t };
+
+```
+
+## main.js
+
+```js
+import { i as init_mod_a, n as init_mod_b, o as __exportAll, s as __reExport, t as barrel_exports } from "./barrel.js";
+__reExport(/* @__PURE__ */ __exportAll({}), barrel_exports);
+globalThis.__log.push("BEFORE_REQUIRE");
+init_mod_a();
+init_mod_b();
+globalThis.__log.push("MAIN");
+//#endregion
+
+```
+
+## wrapper.js
+
+```js
+import "./barrel.js";
+
+```

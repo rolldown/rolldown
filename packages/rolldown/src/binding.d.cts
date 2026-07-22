@@ -2817,6 +2817,10 @@ export interface BindingTsconfigCompilerOptions {
   importsNotUsedAsValues?: 'remove' | 'preserve' | 'error'
 }
 
+export interface BindingTsconfigPathsOptions {
+  configFile: string
+}
+
 /**
  * Raw tsconfig options for inline configuration.
  *
@@ -2944,7 +2948,7 @@ export interface BindingViteResolvePluginResolveOptions {
   tryIndex: boolean
   tryPrefix?: string
   preserveSymlinks: boolean
-  tsconfigPaths: boolean
+  tsconfigPaths: boolean | BindingTsconfigPathsOptions
 }
 
 export interface BindingViteTransformPluginConfig {

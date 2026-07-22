@@ -36,6 +36,7 @@ const sidebarForGuide: DefaultTheme.SidebarItem[] = [
       { text: 'Automatic Code Splitting', link: '/in-depth/automatic-code-splitting.md' },
       { text: 'Manual Code Splitting', link: '/in-depth/manual-code-splitting.md' },
       { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
+      { text: 'Runtime Module', link: '/in-depth/runtime-module.md' },
       {
         text: 'Non ESM Output Formats',
         link: '/in-depth/non-esm-output-formats.md',

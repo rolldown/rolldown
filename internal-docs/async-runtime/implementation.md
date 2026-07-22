@@ -223,14 +223,17 @@ capability report, and (for legacy artifacts only) manages runtime leases. It
 never drives tasks.
 
 - **Host install (register-only, contract-gated)** —
-  `packages/rolldown/src/timer-host.ts` installs **both** the task host and the
-  timer host as a module side effect. Before any native side effect it verifies
+  `packages/rolldown/src/timer-host.ts` installs the task host and (on
+  non-browser builds) the timer host as a module side effect. Before any native side effect it verifies
   `getCurrentThreadTaskHostContractVersion() === 4`, then reserves + validates
   the capability, then calls `registerCurrentThreadTaskHost(high, low)`
   (no callback) and `registerTimerHost(high, low, schedule, cancel)`. The
   timer host arms `setTimeout` hops (chunked to `MAX_HOST_TIMEOUT_MS`) and, on
   `cancel`, clears the timeout **and** resolves the relay promise (dropping a
-  sleep must not wait out the deadline). Installed once per binding via a
+  sleep must not wait out the deadline). On the **browser** build the timer
+  registration is guarded by `!import.meta.browserBuild` (timer-host.ts), so a
+  browser entry installs only the task host and reports `timers: false` — the
+  browser event loop backs timers directly. Installed once per binding via a
   per-realm `Symbol.for('rolldown.current-thread-host-installations.v4')`
   WeakMap. Every native package entry pulls it in through a side-effect
   `import './timer-host'` (`setup.ts`, `config.ts`, `plugins-index.ts`,

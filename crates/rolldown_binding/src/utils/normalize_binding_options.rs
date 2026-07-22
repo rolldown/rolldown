@@ -28,10 +28,10 @@ use oxc::transformer::EngineTargets;
 use rolldown::{
   AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
   ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
-  IsExternal, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType,
-  OptimizationOption, OutputExports, OutputFormat, Platform, PluginTimingsOption,
-  RawCompressOptions, RawMangleOptions, RawMinifyOptions, RawMinifyOptionsDetailed,
-  SanitizeFilename, StrictMode, TsConfig,
+  IsExternal, ManglePropertiesPattern, ManglePropertiesPatterns, ManualCodeSplittingOptions,
+  MatchGroup, MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat,
+  Platform, PluginTimingsOption, RawCompressOptions, RawMangleOptions, RawManglePropertiesOptions,
+  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, StrictMode, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -635,8 +635,27 @@ pub fn normalize_binding_options(
             Err(napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))
           }
         }
-        napi::bindgen_prelude::Either3::C(opts) => {
+        napi::bindgen_prelude::Either3::C(mut opts) => {
           {
+            let mangle_properties = opts
+              .mangle_props
+              .take()
+              .map(|options| -> Result<RawManglePropertiesOptions, String> {
+                let compiled = oxc::minifier::ManglePropertiesOptions::try_from(&options)?;
+                let patterns = ManglePropertiesPatterns {
+                  include: ManglePropertiesPattern {
+                    source: options.include.source,
+                    flags: options.include.flags,
+                  },
+                  exclude: options.exclude.map(|exclude| ManglePropertiesPattern {
+                    source: exclude.source,
+                    flags: exclude.flags,
+                  }),
+                };
+                Ok(RawManglePropertiesOptions { options: compiled, patterns })
+              })
+              .transpose()
+              .map_err(|err| napi::Error::new(napi::Status::InvalidArg, err))?;
             let mangle = match &opts.mangle {
               Some(Either::A(false)) => None,
               None | Some(Either::A(true)) => Some(RawMangleOptions::default()),
@@ -663,6 +682,7 @@ pub fn normalize_binding_options(
             };
             Ok(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
               mangle,
+              mangle_properties: mangle_properties.map(Box::new),
               compress,
               remove_whitespace: match &opts.codegen {
                 None => true,

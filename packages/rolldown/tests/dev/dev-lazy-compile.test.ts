@@ -220,3 +220,48 @@ test(
     expect(path.resolve(path.join(dir, 'dist'), position.source!)).toBe(lazyPath);
   },
 );
+
+// With `sourcemap: true` the chunk gets a `sourceMappingURL`, so the map it names
+// has to be reachable: a lazy chunk is not written to disk, which leaves the
+// return value as the only way for the consumer to serve it.
+test(
+  'lazy chunk returns the sourcemap its sourceMappingURL names',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-sourcemap-file-${uniqueId}`);
+    const { lazyProxyId, plugin } = setupShiftedLazyModule(dir);
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        plugins: [plugin],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist'), sourcemap: true },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.ensureCurrentBuildFinish();
+    await engine.registerClient('c1');
+
+    const chunk = await engine.compileEntry(lazyProxyId, 'c1');
+
+    const referenced = /\/\/# sourceMappingURL=(.+)$/.exec(chunk.code.trimEnd())?.[1];
+    expect(chunk.sourcemapFilename).toBe(referenced);
+    expect(chunk.sourcemap).toBeTypeOf('string');
+
+    const position = await SourceMapConsumer.with(JSON.parse(chunk.sourcemap!), null, (consumer) =>
+      consumer.originalPositionFor(throwPosition(chunk.code)),
+    );
+    expect(position.line).toBe(2);
+  },
+);

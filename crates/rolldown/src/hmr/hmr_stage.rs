@@ -599,7 +599,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
     let file_dir = self.options.cwd.as_path().join(&self.options.out_dir);
 
-    if let Some(map) = map.as_mut() {
+    let sourcemap_asset = if let Some(map) = map.as_mut() {
       process_code_and_sourcemap(
         &self.options,
         &mut code,
@@ -610,8 +610,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         /*is_css*/ false,
         None,
       )
-      .await?;
-    }
+      .await?
+    } else {
+      None
+    };
 
     let carried = modules_to_be_updated
       .iter()
@@ -621,7 +623,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       })
       .collect();
 
-    Ok(HmrLazyChunkOutput { code, filename, carried })
+    Ok(HmrLazyChunkOutput {
+      code,
+      filename,
+      sourcemap_filename: sourcemap_asset.as_ref().map(|asset| asset.filename.to_string()),
+      sourcemap: sourcemap_asset.map(|asset| asset.source.try_into_string()).transpose()?,
+      carried,
+    })
   }
 
   async fn render_hmr_patch(

@@ -66,6 +66,17 @@ export default defineTest({
             'The "fileName" or "name" properties of emitted chunks and assets must be strings that are neither absolute nor relative paths, received "../node_modules/some-lib/entry".',
           );
 
+          // Prebuilt chunk file names are validated too, with a prebuilt-specific message
+          expect(() => {
+            this.emitFile({
+              type: 'prebuilt-chunk',
+              fileName: '../prebuilt.js',
+              code: 'export default 1;',
+            });
+          }).toThrow(
+            'The "fileName" property of emitted prebuilt chunks must be strings that are neither absolute nor relative paths, received "../prebuilt.js".',
+          );
+
           // Subdirectory names are not path fragments
           this.emitFile({
             type: 'asset',

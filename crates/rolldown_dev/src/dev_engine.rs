@@ -478,7 +478,13 @@ impl DevEngine {
     }
 
     // Wait for coordinator to close (coordinator handles watcher cleanup)
-    let coordinator_state = self.coordinator_state.lock().await;
+    let mut coordinator_state = self.coordinator_state.lock().await;
+    // Drop a coordinator future that was constructed but never spawned (e.g.
+    // `run()` failed to submit it onto a stopped runtime): its fs watcher and
+    // receiver would otherwise linger until the engine itself is dropped, rather
+    // than being released here at `close()`. When the coordinator was spawned,
+    // `try_start` already took it (leaving `None`), so this is a no-op.
+    coordinator_state.coordinator = None;
     if let Some(coordinator_handle) = coordinator_state.handle.clone() {
       if let Err(error) = coordinator_handle.await {
         return Err(anyhow::anyhow!("{error}").into());

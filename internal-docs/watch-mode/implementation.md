@@ -63,7 +63,7 @@ watcher.run();       // spawns the coordinator (non-blocking)
 watcher.close().await?;  // sends Close, awaits completion
 ```
 
-Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` spawns it on the tokio runtime. `close()` sets the shared close signal, sends a fire-and-forget `Close` message, and awaits the shared completion future. `wait_for_close()` gives consumers a reliable way to await the watcher's completion without closing it.
+Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` spawns it on rolldown's [shared async runtime](../async-runtime/implementation.md) via `rolldown_utils::futures::try_spawn`. `close()` sets the shared close signal, sends a fire-and-forget `Close` message, and awaits the shared completion future. `wait_for_close()` gives consumers a reliable way to await the watcher's completion without closing it.
 
 ### Known Divergences from Rollup
 
@@ -80,8 +80,8 @@ Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates
 
 ```
 Watcher (public API)
-  ├── tx: mpsc::Sender ──→ WatchCoordinator (actor, owns everything)
-  └── close_notify ──────→ wakes the coordinator while it awaits a consumer callback
+  ├── tx: futures mpsc::UnboundedSender ──→ WatchCoordinator (actor, owns everything)
+  └── close_notify (event_listener::Event) ──→ wakes the coordinator while it awaits a consumer callback
                                ├── handler: H (WatcherEventHandler impl)
                                ├── state: WatcherState
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
@@ -105,7 +105,7 @@ Data flow:
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
 - Each `WatchTask` owns its `DynFsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
-- Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
+- Bundler is `Arc<TokioMutex<>>` (where `TokioMutex` aliases `async_lock::Mutex`, not tokio's) because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
 
@@ -148,7 +148,7 @@ Debouncing ──(timeout)──→ run rebuild sequence → drain buffered → 
 Any ──(Close)──→ Closing → Closed
 ```
 
-**No explicit Building state.** The coordinator's event loop blocks during build (it `await`s). Fs events buffer in the mpsc channel. After build, `drain_buffered_events()` via `try_recv()` picks them up.
+**No explicit Building state.** The coordinator's event loop blocks during build (it `await`s). Fs events buffer in the unbounded `futures::channel::mpsc` channel. After build, `drain_buffered_events()` via `try_recv()` picks them up.
 
 ```rust
 enum WatcherState {
@@ -188,7 +188,7 @@ Changes accumulate in an `invalidatedIds` Map during the delay window — both p
 
 ### Rolldown's Approach
 
-The `WatcherState::Debouncing` state does the same thing with `tokio::select!` and a deadline reset:
+The `WatcherState::Debouncing` state does the same thing with a deadline reset and a manual biased `futures` select. `wait_for_debounce_input()` runs `select_biased!` over the mpsc receiver and a `rolldown_utils::time::sleep_until(deadline)` timer, message-first (matching tokio's `biased;` semantics) so a change queued right at the deadline still wins and extends the window:
 
 - File change → `Idle` becomes `Debouncing { changes, deadline }`
 - More changes → deadline resets, changes accumulate with kind consolidation per path
@@ -236,7 +236,7 @@ File change detected by per-task FsWatcher
       - task.invalidate(path) → sets needs_rebuild = true
       - task.call_on_invalidate(path) → fires immediately, before debounce
       - State: Idle → Debouncing, or extends deadline
-  → Debounce timer fires (tokio::select!)
+  → Debounce deadline fires (`sleep_until` wins the biased `select_biased!`)
   → run_build_sequence(changes):
       1. handler.on_change(path, kind) for each change
       2. task.call_watch_change(path, kind) for each task × each change
@@ -487,6 +487,7 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 ## Related
 
 - [design.md](./design.md) — watch-mode design principles and open questions
+- [async-runtime](../async-runtime/implementation.md) — the shared async runtime the coordinator is spawned on (`try_spawn`, `sleep_until`), replacing tokio
 - [rust-bundler](../rust-bundler/implementation.md) — Core Bundler struct and `Bundle.close()` design
 - [rust-classic-bundler](../rust-classic-bundler/implementation.md) — Rollup API compatibility wrapper
 - [module-id](../module-id/implementation.md) — Module ID, path identity, and normalization

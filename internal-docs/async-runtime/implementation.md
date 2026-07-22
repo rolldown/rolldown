@@ -121,7 +121,7 @@ crate freezes after first use.
   - `compiled_target()` — `Native` / `Wasi` / `WasiThreads` via
     `cfg!(rolldown_wasi_threads)` (§9).
   - `validate_binding_thread_count()` + `TryFrom<BindingRuntimeOptions> for
-    RuntimeOptionsPatch` — the **256-ceiling / positive-integer / atomic-reject**
+RuntimeOptionsPatch` — the **256-ceiling / positive-integer / atomic-reject**
     validation for the JS `configureAsyncRuntime` path
     (`MAX_ASYNC_RUNTIME_WORKER_THREADS`).
   - `configure_async_runtime()` (`#[napi]`) → the crate's `configure_partial`
@@ -129,7 +129,7 @@ crate freezes after first use.
     backend); `get_async_runtime_config()` → `configured_options()` is the
     reporting authority.
 - `crates/rolldown_binding/src/env_config.rs` — `resolve_thread_count(raw,
-  default, maximum)` — shared clamp; treats `0`/garbage as unset so it cannot
+default, maximum)` — shared clamp; treats `0`/garbage as unset so it cannot
   panic the constructor's `validate()`.
 - `crates/rolldown_binding/src/lib.rs` — `init()` (`#[module_init]`) — forces
   `resolved_runtime_config()` at load on every artifact.
@@ -142,7 +142,7 @@ crate freezes after first use.
 ## 4. CurrentThread task-host bridge (native TSFN, contract v4)
 
 The task host is **register-only** on the JS side. Each importing napi env
-installs a *weak* threadsafe function whose JS function pointer is null and
+installs a _weak_ threadsafe function whose JS function pointer is null and
 whose native callback drives tasks; **no drive/cancel token ever crosses
 JavaScript** (Principle 7's task-host boundary).
 
@@ -245,7 +245,7 @@ never drives tasks.
   cross-checks, `getRuntimeSupport` → `threadlessWasi` / `workerd` / `dev` /
   `watch`, `assertRuntimeFeature`). A binding with **no** capability reporter is
   treated as legacy: `getLegacyRuntimeCapabilities` synthesizes
-  `backend:'tokio'`; a *partial* contract throws `BindingMismatchError`.
+  `backend:'tokio'`; a _partial_ contract throws `BindingMismatchError`.
 - **Loaders** — `packages/rolldown/src/binding.cjs` (native; line-8
   `loadedBindingTarget='native'`, exported as `__rolldownBindingTarget`),
   `rolldown-binding.wasi.cjs` / `rolldown-binding.wasi-browser.js` (threaded
@@ -299,7 +299,7 @@ CurrentThread timer:
   feature pair is gone (Principle 9); every target compiles the shared runtime
   unconditionally.
 - `crates/rolldown_utils/Cargo.toml` — `napi-async-runtime = { git = …, rev =
-  9999dad3…, default-features = false }` (napi-free consumption). The root
+9999dad3…, default-features = false }` (napi-free consumption). The root
   `Cargo.toml` `[patch.crates-io]` redirects the single shared `napi` node
   graph-wide to the same rev — one non-prerelease `3.12.0` node covers
   `rolldown_binding` **and** every `oxc_*_napi`.
@@ -337,7 +337,7 @@ CurrentThread timer:
   `contain_current_thread_task_host_unwind` (binding),
   `run_drop_safely` / `PendingGuard` (`defer_drop.rs`).
 - **Module-loader = one accepted supervised task** — `supervised_module_task`
-  + `ModuleTaskSupervisor::Drop` (Principle 8).
+  - `ModuleTaskSupervisor::Drop` (Principle 8).
 
 ## Related
 

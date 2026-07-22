@@ -66,6 +66,41 @@ export default defineTest({
             'The "fileName" or "name" properties of emitted chunks and assets must be strings that are neither absolute nor relative paths, received "../node_modules/some-lib/entry".',
           );
 
+          // Prebuilt chunk file names are validated too, with a prebuilt-specific message
+          expect(() => {
+            this.emitFile({
+              type: 'prebuilt-chunk',
+              fileName: '../prebuilt.js',
+              code: 'export default 1;',
+            });
+          }).toThrow(
+            'The "fileName" property of emitted prebuilt chunks must be strings that are neither absolute nor relative paths, received "../prebuilt.js".',
+          );
+
+          // A missing/non-string prebuilt `fileName` is rejected by the same check, so it
+          // never reaches N-API (which would report `Missing field \`fileName\`` with a
+          // napi Status as pluginCode). Mirrors Rollup's
+          // test/function/samples/emit-file/invalid-prebuilt-chunk-filename.
+          expect(() => {
+            this.emitFile({
+              type: 'prebuilt-chunk',
+              code: 'export default 1;',
+            } as any);
+          }).toThrow(
+            'The "fileName" property of emitted prebuilt chunks must be strings that are neither absolute nor relative paths, received "undefined".',
+          );
+
+          // `code` is validated first, as in Rollup's emitPrebuiltChunk. Mirrors
+          // test/function/samples/emit-file/invalid-prebuit-chunk-code.
+          expect(() => {
+            this.emitFile({
+              type: 'prebuilt-chunk',
+              fileName: 'my-chunk.js',
+            } as any);
+          }).toThrow(
+            'Emitted prebuilt chunks need to have a valid string code, received "undefined".',
+          );
+
           // Subdirectory names are not path fragments
           this.emitFile({
             type: 'asset',

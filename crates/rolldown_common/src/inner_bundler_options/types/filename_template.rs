@@ -1,32 +1,25 @@
-use std::path::Path;
-
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rolldown_utils::replace_all_placeholder::{ReplaceAllPlaceholder, Replacer};
 
-/// Check if a string is a path fragment (absolute or relative path).
-/// Patterns can be neither absolute nor relative paths.
+/// Check if a string is a path fragment (absolute or relative path). File name
+/// patterns and emitted names can be neither absolute nor relative paths.
 ///
-/// Returns true if the name:
-/// - Starts with "/" (Unix absolute path)
-/// - Starts with "./" or "../" (relative paths)
-/// - Is an absolute path (e.g., "C:/" on Windows)
+/// This mirrors Rollup's `isPathFragment` predicate exactly (and the JS
+/// `isPathFragment` in `packages/rolldown/src/utils/misc.ts`), so that the
+/// render-time check and the JS `emitFile` check agree. In particular the
+/// Windows-drive and leading-separator cases are recognized regardless of the
+/// host OS — using `Path::is_absolute()` here would miss e.g. `F:\foo` on Unix.
 pub fn is_path_fragment(name: &str) -> bool {
-  if name.is_empty() {
-    return false;
-  }
-
-  // Check for "/" prefix (Unix absolute)
-  if name.starts_with('/') {
-    return true;
-  }
-
-  // Check for "./" or "../" prefix (relative)
-  if name.starts_with("./") || name.starts_with("../") {
-    return true;
-  }
-
-  // Check if it's an absolute path (handles Windows paths like "C:/")
-  Path::new(name).is_absolute()
+  matches!(
+    name.as_bytes(),
+    // Unix absolute, or a leading separator that Rollup's `ABSOLUTE_PATH_REGEX`
+    // (`/^(?:\/|(?:[A-Za-z]:)?[/\\|])/`) treats as absolute.
+    [b'/' | b'\\' | b'|', ..]
+    // Relative: `.` followed by `/` or `.` (covers "./", "..", "../", "..foo").
+    | [b'.', b'/' | b'.', ..]
+    // Windows drive absolute (`C:/`, `C:\`, `C:|`), regardless of host OS.
+    | [b'A'..=b'Z' | b'a'..=b'z', b':', b'/' | b'\\' | b'|', ..]
+  )
 }
 
 #[derive(Debug)]
@@ -140,18 +133,32 @@ mod tests {
 
   #[test]
   fn test_is_path_fragment() {
-    // Absolute paths
+    // Unix absolute paths
     assert!(is_path_fragment("/absolute/path"));
     assert!(is_path_fragment("/"));
 
-    // Relative paths
+    // Leading separators Rollup treats as absolute (host-OS independent)
+    assert!(is_path_fragment("\\server\\share"));
+    assert!(is_path_fragment("|foo"));
+
+    // Relative paths (`.` followed by `/` or `.`)
     assert!(is_path_fragment("./relative"));
     assert!(is_path_fragment("../parent"));
+    assert!(is_path_fragment(".."));
+    assert!(is_path_fragment("..foo"));
 
-    // Valid subdirectory patterns (not path fragments)
+    // Windows drive-letter absolute paths, recognized on any host OS
+    assert!(is_path_fragment("C:/windows"));
+    assert!(is_path_fragment("C:\\windows"));
+    assert!(is_path_fragment("F:\\test.ext"));
+    assert!(is_path_fragment("c:|weird"));
+
+    // Valid subdirectory patterns / names (not path fragments)
     assert!(!is_path_fragment("dist/[name].js"));
     assert!(!is_path_fragment("[name]-[hash].js"));
     assert!(!is_path_fragment("chunk"));
+    assert!(!is_path_fragment(".foo"));
+    assert!(!is_path_fragment("C:relative")); // drive with no separator is not absolute
 
     // Empty string
     assert!(!is_path_fragment(""));

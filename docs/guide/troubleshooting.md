@@ -195,3 +195,21 @@ console.log(bar());
 You'll see this warning if you generate a sourcemap with your bundle ([`sourcemap: true`](/reference/OutputOptions.sourcemap) or `sourcemap: 'inline'`) but you're using one or more plugins that transformed code without generating a sourcemap for the transformation.
 
 Usually, a plugin will only omit the sourcemap if it (the plugin, not the bundle) was configured with `sourcemap: false` - so all you need to do is change that. If the plugin doesn't generate a sourcemap, consider raising an issue with the plugin author.
+
+## Debugging with `RD_LOG`
+
+Rolldown can emit detailed internal logs when you set the `RD_LOG` environment variable. This is useful when diagnosing unexpected resolve results, chunking decisions, or other bundler behavior without attaching a debugger.
+
+```bash
+# Verbose debug logs on stdout
+RD_LOG=debug rolldown -c rolldown.config.js
+
+# Focus on module resolution (oxc-resolver)
+RD_LOG='oxc_resolver' rolldown -c rolldown.config.js
+```
+
+Filter syntax follows [`tracing-subscriber`'s `EnvFilter` directives](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives).
+
+For Chrome DevTools-compatible JSON traces, set `RD_LOG_OUTPUT=chrome-json` as well. That format needs a build with the `chrome-tracing` cargo feature (enabled for profile builds such as `pnpm build-binding:profile`); release binaries without it fall back to readable stdout and print a warning.
+
+Contributor-oriented details (when to use `debug` vs `trace`, instrumented functions, and adding new log sites) live in the [Tracing/Logging](/development-guide/tracing-logging) development guide.

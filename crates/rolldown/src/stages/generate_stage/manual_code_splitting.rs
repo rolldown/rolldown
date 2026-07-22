@@ -309,6 +309,7 @@ impl ManualSplitter<'_> {
           &keys,
           merge_threshold,
           &self.link_output.module_table,
+          &self.options,
         );
       }
 
@@ -552,6 +553,7 @@ fn merge_entries_aware_subgroups(
   group_keys: &[u32],
   threshold: f64,
   module_table: &ModuleTable,
+  options: &SharedOptions,
 ) {
   let mut version_by_key: FxHashMap<u32, u32> = FxHashMap::default();
   let mut unqualified_heap: BinaryHeap<Reverse<(OrderedSize, u32, u32)>> = BinaryHeap::new();
@@ -609,6 +611,14 @@ fn merge_entries_aware_subgroups(
       continue;
     };
 
+    let candidate = subgroups.get(&candidate_key).unwrap();
+    let target = subgroups.get(&target_key).unwrap();
+    if !options.is_strict_execution_order_enabled()
+      && !options.experimental.is_on_demand_wrapping_enabled()
+      && candidate.bits != target.bits
+    {
+      continue;
+    }
     merge_subgroups(subgroups, candidate_key, target_key, module_table);
     bump_version(&mut version_by_key, candidate_key);
     bump_version(&mut version_by_key, target_key);

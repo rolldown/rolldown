@@ -1,17 +1,28 @@
-// Regression test for #8411 and #8747, WASI only.
+// Runtime lifecycle regression test, WASI only.
 //
-// The wasm binding refcounts the shared tokio runtime. Before the fix,
-// `RolldownBuild.close()` and `Watcher.close()` released the runtime without a
-// matching acquire, and `DevEngine` never acquired at all. The first `close()`
-// in the process then tore the runtime down under every later consumer, and
-// the next binding call crashed with "Access tokio runtime failed in spawn".
-// On native targets the runtime functions are no-ops, so this can only be
-// caught by running against the WASI binding.
+// Origin: #10379 added this to cover the "Access tokio runtime failed in spawn"
+// crash class (#8411, #8747), where the wasm binding refcounted a shared *tokio*
+// runtime and an unbalanced release tore it down under a still-live consumer.
 //
-// This file is a plain node script wired into the WASI CI lane. It must set
-// NAPI_RS_FORCE_WASI before importing rolldown, and `error` mode is required:
-// with `true`, a missing wasi build silently falls back to the native binding
-// and the test would pass without testing anything.
+// This branch is tokio-free: the WASI binding runs the shared CurrentThread
+// runtime whose lifecycle is owned by the N-API environment, not by
+// JavaScript-held runtime leases (those are compatibility no-ops here). The
+// tokio refcount and its crash class therefore cannot exist, and dev()/watch()
+// are unsupported on the WASI artifact by design (CurrentThread has no
+// MultiThread executor; watch is unsupported on every WASI artifact).
+//
+// So the tokio-shaped sequences are replaced with their tokio-free equivalents:
+//   1. repeated sequential build+close — the shared runtime survives one
+//      consumer closing and stays usable for the next.
+//   2. two builds alive at once, close one — the other must keep working
+//      (the invariant behind #8411/#8747, expressed with the supported API).
+//   3. dev()/watch() reject per the WASI capability contract.
+// The WASI binding is still force-loaded and asserted, so the lane keeps
+// executing the real wasm binding (the reason #10379 added it).
+//
+// It must set NAPI_RS_FORCE_WASI before importing rolldown, and `error` mode is
+// required: with `true`, a missing wasi build silently falls back to the native
+// binding and the test would pass without testing anything.
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -36,66 +47,85 @@ function makeFixture(name) {
   return dir;
 }
 
-async function buildAndClose(dir) {
+async function build(dir) {
   const bundle = await rolldown({ input: path.join(dir, 'entry.js'), cwd: dir });
   await bundle.generate({ format: 'esm' });
-  await bundle.close();
+  return bundle;
 }
 
-// #8411: a closed build (Vite bundling vite.config.ts) followed by a DevEngine.
+// 1. Repeated sequential build+close: closing one consumer must leave the
+//    shared runtime usable for the next.
 {
-  const dir = makeFixture('dev-after-close');
-  await buildAndClose(dir);
-  const engine = await dev(
-    { input: path.join(dir, 'entry.js'), cwd: dir },
-    { dir: path.join(dir, 'dist') },
-    {},
-  );
-  await engine.run();
-  await engine.ensureCurrentBuildFinish();
-  await engine.close();
-  console.log('[wasi-runtime] dev engine after build close: ok');
+  for (let i = 0; i < 3; i++) {
+    const bundle = await build(makeFixture(`sequential-${i}`));
+    await bundle.close();
+  }
+  console.log('[wasi-runtime] sequential build+close: ok');
 }
 
-// #8747: a closed build followed by watch mode.
+// 2. Two consumers alive at once; closing one must not tear the runtime down
+//    under the other (the #8411/#8747 invariant, via the WASI-supported API).
 {
-  const dir = makeFixture('watch-after-close');
-  await buildAndClose(dir);
+  const first = await build(makeFixture('concurrent-a'));
+  const second = await build(makeFixture('concurrent-b'));
+  await first.close();
+  // `second` was built before `first` closed and must still be closable
+  // against a live runtime.
+  await second.close();
+  // A fresh build after both closes must still succeed.
+  const third = await build(makeFixture('concurrent-c'));
+  await third.close();
+  console.log('[wasi-runtime] close-while-another-alive: ok');
+}
+
+// 3. dev() is unsupported on the WASI artifact and must reject synchronously via
+//    the capability contract rather than spawning onto the runtime.
+{
+  const dir = makeFixture('unsupported-dev');
+  let devRejected = false;
+  try {
+    await dev({ input: path.join(dir, 'entry.js'), cwd: dir }, { dir: path.join(dir, 'dist') }, {});
+  } catch (error) {
+    if (error?.code !== 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE') throw error;
+    devRejected = true;
+  }
+  if (!devRejected) {
+    console.error('[wasi-runtime] dev() should be unsupported on WASI but did not reject');
+    process.exit(1);
+  }
+  console.log('[wasi-runtime] dev() rejected as unsupported: ok');
+}
+
+// 4. watch() is unsupported on every WASI artifact and reports it through its
+//    normal ERROR event lifecycle instead of building.
+{
+  const dir = makeFixture('unsupported-watch');
   const watcher = watch({
     input: path.join(dir, 'entry.js'),
     cwd: dir,
     output: { dir: path.join(dir, 'dist') },
   });
-  await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timed out waiting for BUNDLE_END')), 60_000);
+  const watchError = await new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error('timed out waiting for the unsupported-watch ERROR event')),
+      60_000,
+    );
     watcher.on('event', (event) => {
-      if (event.code === 'BUNDLE_END') {
+      if (event.code === 'ERROR') {
         clearTimeout(timer);
-        resolve();
-      } else if (event.code === 'ERROR') {
+        resolve(event.error);
+      } else if (event.code === 'BUNDLE_END') {
         clearTimeout(timer);
-        reject(event.error);
+        reject(new Error('watch() unexpectedly built on WASI instead of reporting unsupported'));
       }
     });
   });
   await watcher.close();
-  console.log('[wasi-runtime] watch after build close: ok');
-}
-
-// The invariant behind both fixes: closing one consumer must not tear the
-// runtime down under another consumer that is still alive.
-{
-  const dir = makeFixture('close-while-dev-alive');
-  const engine = await dev(
-    { input: path.join(dir, 'entry.js'), cwd: dir },
-    { dir: path.join(dir, 'dist') },
-    {},
-  );
-  await engine.run();
-  await buildAndClose(makeFixture('unrelated-build'));
-  await engine.ensureCurrentBuildFinish();
-  await engine.close();
-  console.log('[wasi-runtime] build close while dev engine alive: ok');
+  if (!watchError) {
+    console.error('[wasi-runtime] watch() should report an unsupported-runtime error on WASI');
+    process.exit(1);
+  }
+  console.log('[wasi-runtime] watch() reported unsupported via ERROR event: ok');
 }
 
 fs.rmSync(root, { recursive: true, force: true });

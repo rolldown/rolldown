@@ -86,6 +86,7 @@ async function runTypedoc(entryPoints: string[]): Promise<void> {
     categoryOrder: [
       'Programmatic APIs',
       'Plugin APIs',
+      'Code Splitting',
       'Config',
       'Builtin Plugins',
       'Utilities',

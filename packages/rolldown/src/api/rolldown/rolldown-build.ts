@@ -93,12 +93,15 @@ export class RolldownBuild {
     // Claim the release before the first await so a second `close` cannot release twice.
     const shouldRelease = !this.#asyncRuntimeReleased;
     this.#asyncRuntimeReleased = true;
-    await this.#stopWorkers?.();
-    // `BindingBundler.close` spawns onto the runtime, so release only after it settles.
-    await this.#bundler.close();
-    this.#stopWorkers = void 0;
-    if (shouldRelease) {
-      shutdownAsyncRuntime();
+    try {
+      await this.#stopWorkers?.();
+      // `BindingBundler.close` spawns onto the runtime, so release only after it settles.
+      await this.#bundler.close();
+      this.#stopWorkers = void 0;
+    } finally {
+      if (shouldRelease) {
+        shutdownAsyncRuntime();
+      }
     }
   }
 

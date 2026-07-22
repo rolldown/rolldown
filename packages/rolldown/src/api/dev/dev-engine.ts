@@ -151,9 +151,12 @@ export class DevEngine {
     // Claim the release before the first await so a second `close` cannot release twice.
     const shouldRelease = !this.#asyncRuntimeReleased;
     this.#asyncRuntimeReleased = true;
-    await this.#inner.close();
-    if (shouldRelease) {
-      shutdownAsyncRuntime();
+    try {
+      await this.#inner.close();
+    } finally {
+      if (shouldRelease) {
+        shutdownAsyncRuntime();
+      }
     }
   }
 

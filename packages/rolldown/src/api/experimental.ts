@@ -42,9 +42,12 @@ export const scan = async (
   async function cleanup() {
     if (cleanedUp) return;
     cleanedUp = true;
-    await bundler.close();
-    await ret.stopWorkers?.();
-    shutdownAsyncRuntime();
+    try {
+      await bundler.close();
+      await ret.stopWorkers?.();
+    } finally {
+      shutdownAsyncRuntime();
+    }
   }
 
   let cleanupPromise = Promise.resolve();

@@ -91,11 +91,14 @@ class Watcher {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
-    for (const stop of this.stopWorkers) {
-      await stop?.();
+    try {
+      for (const stop of this.stopWorkers) {
+        await stop?.();
+      }
+      await this.inner.close();
+    } finally {
+      shutdownAsyncRuntime();
     }
-    await this.inner.close();
-    shutdownAsyncRuntime();
   }
 
   private async run(): Promise<void> {

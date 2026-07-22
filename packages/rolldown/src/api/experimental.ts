@@ -1,6 +1,7 @@
-import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../binding.cjs';
+import { BindingBundler } from '../binding.cjs';
 import type { InputOptions } from '../options/input-options';
 import { PluginDriver } from '../plugin/plugin-driver';
+import { acquireRuntimeLease, type RuntimeLease } from '../runtime-lifecycle';
 import { createBundlerOptions } from '../utils/create-bundler-option';
 import { unwrapBindingResult } from '../utils/error';
 import { validateOption } from '../utils/validator';
@@ -33,20 +34,42 @@ export const scan = async (
 
   const ret = await createBundlerOptions(inputOptions, rawOutputOptions, false);
 
-  const bundler = new BindingBundler();
+  let acquiredLease: RuntimeLease | undefined;
+  let bundler: BindingBundler;
+  try {
+    acquiredLease = await acquireRuntimeLease();
+    bundler = new BindingBundler();
+  } catch (error) {
+    // Setup failure must not abandon the parallel-plugin workers already
+    // spawned by createBundlerOptions or an acquired runtime lease.
+    const cleanupErrors: unknown[] = [];
+    try {
+      await ret.stopWorkers?.();
+    } catch (cleanupError) {
+      cleanupErrors.push(cleanupError);
+    }
+    try {
+      acquiredLease?.release();
+    } catch (cleanupError) {
+      cleanupErrors.push(cleanupError);
+    }
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError([error, ...cleanupErrors], 'Scan setup and cleanup both failed', {
+        cause: error,
+      });
+    }
+    throw error;
+  }
+  const runtimeLease = acquiredLease;
 
-  startAsyncRuntime();
-
-  // On the error path `cleanup` runs from both `catch` and `finally`, so it must be idempotent.
-  let cleanedUp = false;
   async function cleanup() {
-    if (cleanedUp) return;
-    cleanedUp = true;
     try {
       await bundler.close();
       await ret.stopWorkers?.();
     } finally {
-      shutdownAsyncRuntime();
+      // Lease release is idempotent, so the doubled cleanup on the scan error
+      // path cannot over-release the runtime.
+      runtimeLease.release();
     }
   }
 

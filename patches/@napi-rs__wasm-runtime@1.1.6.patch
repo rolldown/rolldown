@@ -1,0 +1,95 @@
+diff --git a/runtime.cjs b/runtime.cjs
+index a22e62a..6f3aea3 100644
+--- a/runtime.cjs
++++ b/runtime.cjs
+@@ -1,11 +1,43 @@
+-const { MessageHandler, instantiateNapiModuleSync, instantiateNapiModule } = require('@emnapi/core')
+-const { getDefaultContext } = require('@emnapi/runtime')
++const {
++  MessageHandler,
++  instantiateNapiModuleSync: __instantiateNapiModuleSync,
++  instantiateNapiModule: __instantiateNapiModule,
++} = require('@emnapi/core')
++// Single-threaded (non-shared-memory) WASI builds link an emnapi archive
++// without the C async-work and threadsafe-function implementations (they are
++// unconditional `napi_generic_failure` stubs without threads), so
++// instantiation must provide the JavaScript implementations through these
++// plugins. Threaded (shared-memory) builds link the C implementations and
++// ignore the plugins; this mirrors the upstream @emnapi/core v2 plugin split
++// (v1 bundled these implementations in the core runtime unconditionally).
++const {
++  asyncWork: emnapiAsyncWorkPlugin,
++  tsfn: emnapiTSFNPlugin,
++} = require('@emnapi/core/plugins')
++const { createContext, getDefaultContext } = require('@emnapi/runtime')
+ const { WASI } = require('@tybys/wasm-util')
+ 
+ const { createFsProxy, createOnMessage } = require('./dist/fs-proxy.cjs')
+ 
++// emnapi v1 compatibility: v1's instantiateNapiModule(Sync) always carried the
++// async-work/threadsafe-function implementations, so callers never passed
++// plugins. Default them when the caller provides none; `plugins: []` remains
++// an explicit opt-out.
++const __withDefaultPlugins = (options) =>
++  options && options.plugins != null
++    ? options
++    : { ...options, plugins: [emnapiAsyncWorkPlugin, emnapiTSFNPlugin] }
++
++const instantiateNapiModule = (wasmInput, options) =>
++  __instantiateNapiModule(wasmInput, __withDefaultPlugins(options))
++const instantiateNapiModuleSync = (wasmInput, options) =>
++  __instantiateNapiModuleSync(wasmInput, __withDefaultPlugins(options))
++
+ module.exports = {
+   MessageHandler,
++  createContext,
++  emnapiAsyncWorkPlugin,
++  emnapiTSFNPlugin,
+   instantiateNapiModule,
+   instantiateNapiModuleSync,
+   getDefaultContext,
+diff --git a/runtime.js b/runtime.js
+index abbe9e2..5ad3dfd 100644
+--- a/runtime.js
++++ b/runtime.js
+@@ -1,8 +1,35 @@
+-export {
+-  instantiateNapiModuleSync,
+-  instantiateNapiModule,
+-  MessageHandler,
++import {
++  instantiateNapiModuleSync as __instantiateNapiModuleSync,
++  instantiateNapiModule as __instantiateNapiModule,
+ } from '@emnapi/core'
+-export { getDefaultContext } from '@emnapi/runtime'
++import { asyncWork, tsfn } from '@emnapi/core/plugins'
++
++export { MessageHandler } from '@emnapi/core'
++// Single-threaded (non-shared-memory) WASI builds link an emnapi archive
++// without the C async-work and threadsafe-function implementations (they are
++// unconditional `napi_generic_failure` stubs without threads), so
++// instantiation must provide the JavaScript implementations through these
++// plugins. Threaded (shared-memory) builds link the C implementations and
++// ignore the plugins; this mirrors the upstream @emnapi/core v2 plugin split
++// (v1 bundled these implementations in the core runtime unconditionally).
++export {
++  asyncWork as emnapiAsyncWorkPlugin,
++  tsfn as emnapiTSFNPlugin,
++} from '@emnapi/core/plugins'
++export { createContext, getDefaultContext } from '@emnapi/runtime'
+ export * from '@tybys/wasm-util'
+ export { createOnMessage, createFsProxy } from './fs-proxy.js'
++
++// emnapi v1 compatibility: v1's instantiateNapiModule(Sync) always carried the
++// async-work/threadsafe-function implementations, so callers never passed
++// plugins. Default them when the caller provides none; `plugins: []` remains
++// an explicit opt-out.
++const __withDefaultPlugins = (options) =>
++  options && options.plugins != null
++    ? options
++    : { ...options, plugins: [asyncWork, tsfn] }
++
++export const instantiateNapiModule = (wasmInput, options) =>
++  __instantiateNapiModule(wasmInput, __withDefaultPlugins(options))
++export const instantiateNapiModuleSync = (wasmInput, options) =>
++  __instantiateNapiModuleSync(wasmInput, __withDefaultPlugins(options))

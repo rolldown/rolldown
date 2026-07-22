@@ -6,12 +6,12 @@ import {
   type BindingLazyChunkOutput,
   BindingRebuildStrategy,
   type BindingResult,
-  shutdownAsyncRuntime,
-  startAsyncRuntime,
 } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
+import { acquireRuntimeLease, type RuntimeLease } from '../../runtime-lifecycle';
+import { assertRuntimeFeature } from '../../runtime-support';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { normalizeBindingResult, unwrapBindingResult } from '../../utils/error';
 import { normalizedStringOrRegex } from '../../utils/normalize-string-or-regex';
@@ -20,14 +20,15 @@ import type { DevOptions } from './dev-options';
 
 export class DevEngine {
   #inner: BindingDevEngine;
+  #runtimeLease: RuntimeLease;
   #cachedBuildFinishPromise: Promise<void> | null = null;
-  #asyncRuntimeReleased = false;
 
   static async create(
     inputOptions: InputOptions,
     outputOptions: OutputOptions = {},
     devOptions: DevOptions = {},
   ): Promise<DevEngine> {
+    assertRuntimeFeature('dev');
     inputOptions = await PluginDriver.callOptionsHook(inputOptions);
     const options = await createBundlerOptions(inputOptions, outputOptions, false);
 
@@ -89,15 +90,41 @@ export class DevEngine {
       },
     };
 
-    const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
+    let acquiredLease: RuntimeLease | undefined;
+    let inner: BindingDevEngine;
+    try {
+      acquiredLease = await acquireRuntimeLease();
+      inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
+    } catch (error) {
+      // Setup failure must not abandon the parallel-plugin workers already
+      // spawned by createBundlerOptions or an acquired runtime lease.
+      const cleanupErrors: unknown[] = [];
+      try {
+        await options.stopWorkers?.();
+      } catch (cleanupError) {
+        cleanupErrors.push(cleanupError);
+      }
+      try {
+        acquiredLease?.release();
+      } catch (cleanupError) {
+        cleanupErrors.push(cleanupError);
+      }
+      if (cleanupErrors.length > 0) {
+        throw new AggregateError(
+          [error, ...cleanupErrors],
+          'Dev engine setup and cleanup both failed',
+          { cause: error },
+        );
+      }
+      throw error;
+    }
 
-    startAsyncRuntime();
-
-    return new DevEngine(inner);
+    return new DevEngine(inner, acquiredLease);
   }
 
-  private constructor(inner: BindingDevEngine) {
+  private constructor(inner: BindingDevEngine, runtimeLease: RuntimeLease) {
     this.#inner = inner;
+    this.#runtimeLease = runtimeLease;
   }
 
   async run(): Promise<void> {
@@ -148,15 +175,12 @@ export class DevEngine {
   }
 
   async close(): Promise<void> {
-    // Claim the release before the first await so a second `close` cannot release twice.
-    const shouldRelease = !this.#asyncRuntimeReleased;
-    this.#asyncRuntimeReleased = true;
     try {
       await this.#inner.close();
     } finally {
-      if (shouldRelease) {
-        shutdownAsyncRuntime();
-      }
+      // Lease release is idempotent, so a repeated or failed close cannot
+      // over-release the runtime.
+      this.#runtimeLease.release();
     }
   }
 

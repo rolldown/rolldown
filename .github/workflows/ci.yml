@@ -72,6 +72,7 @@ jobs:
               - *rust-changes
               - 'packages/**'
               - 'examples/**'
+              - 'patches/**'
               - 'scripts/**'
               - 'rollup'
       - name: Show outputs
@@ -164,6 +165,92 @@ jobs:
     uses: ./.github/workflows/reusable-wasi.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  native-async-runtime:
+    name: Native Async Runtime
+    needs: changes
+    if: ${{ needs.changes.outputs.node-changes == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          tools: just
+          cache-key: debug-build-async-runtime
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+        with:
+          version: '0.2.1'
+          cache: true
+
+      - name: Build Rolldown with the shared async runtime
+        run: just build-rolldown-async-runtime
+
+      # dev/*.test.ts files import this workspace package at module scope, so
+      # collection fails without its dist/ even though the dev tests themselves
+      # are skipped on this lane.
+      - name: Build `@rolldown/test-dev-server`
+        run: vp run --filter '@rolldown/test-dev-server' build
+
+      # Runs (1) the scheduler unit tests (their only CI home), then the node
+      # and watcher suites under (2) ROLLDOWN_RUNTIME=single and (3) the
+      # default multi-thread flavor. The single lane arms the runtime's own
+      # deadlock detection (ROLLDOWN_PARK_DEADLINE_MS inside the recipe): a
+      # block_on-over-JS hazard hang freezes the JS event loop so vitest
+      # timeouts can never fire, but the runtime now panics with a typed
+      # BlockOnDeadlock diagnostic instead of hanging — a regression fails
+      # fast rather than eating the runner until the job timeout above.
+      # The watcher suite runs on both flavors since the runtime's own timer
+      # facility drives the watch-mode debounce timer.
+      - name: Scheduler unit tests + node & watcher suites (single- and multi-thread flavors)
+        run: just test-async-runtime
+
+      # The default build IS the shared runtime on every target; prove the
+      # shipped binding graphs (native + both WASI targets) and the CodSpeed
+      # bench harness stay tokio-free.
+      - name: Prove the production graphs are tokio-free
+        run: just check-no-tokio
+
+  native-async-runtime-check:
+    name: Native Async Runtime Lifecycle (${{ matrix.os }})
+    needs: changes
+    if: ${{ needs.changes.outputs.node-changes == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          tools: just
+          cache-key: native-async-runtime-check-${{ matrix.os }}
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+        with:
+          version: '0.2.1'
+          cache: true
+
+      # Build the real addon with the test-only scheduler-waker probe. The
+      # focused worker test is the unload-safety proof; a cdylib-only build
+      # cannot exercise Node's environment cleanup or native image unloading.
+      - name: Build shared async runtime probe
+        run: just build-rolldown-async-runtime
+
+      - name: Test worker environment teardown
+        run: vp run --filter rolldown-tests test:main async-runtime-worker-teardown.test.ts
+        env:
+          ROLLDOWN_TEST_REQUIRE_SHARED_ASYNC_RUNTIME: '1'
 
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]
@@ -345,6 +432,14 @@ jobs:
 
       - name: Build @rolldown/browser
         run: just build-browser
+
+      # `just build-browser` compiles the threaded-WASI binding, and the napi
+      # CLI regenerates binding.cjs/binding.d.cts with the WASI flavor of the
+      # loader surface. The committed copies come from the default native
+      # build, so restore them; otherwise the `git diff --exit-code` below
+      # fails on expected regeneration instead of guarding real codegen drift.
+      - name: Restore the native binding loader clobbered by the WASI browser build
+        run: git checkout -- packages/rolldown/src/binding.cjs packages/rolldown/src/binding.d.cts
 
       - name: Build @rolldown/debug
         run: just build-rolldown-debug

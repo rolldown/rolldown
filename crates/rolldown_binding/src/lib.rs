@@ -18,13 +18,10 @@
 // already `FxBuildHasher` at every use site).
 #![allow(clippy::disallowed_types)]
 
-#[cfg(all(target_family = "wasm", tokio_unstable))]
-use std::sync::{
-  LazyLock,
-  atomic::{AtomicU32, Ordering},
-};
-
 use napi_derive::napi;
+
+pub mod async_runtime;
+mod env_config;
 
 #[cfg(all(
   not(target_family = "wasm"),
@@ -53,72 +50,82 @@ pub mod worker_manager;
 pub use oxc_parser_napi;
 pub use oxc_resolver_napi;
 
-/// Number of live holders of the shared tokio runtime.
+/// One JavaScript-held async runtime lifecycle lease.
 ///
-/// Starts at 0 so the runtime is torn down exactly when the last holder releases it.
-/// Every JS object that outlives a single call and spawns onto the runtime
-/// (`RolldownBuild`, `Watcher`, `DevEngine`, the `scan` bundler) must acquire on
-/// create and release on close. An unpaired release drops the runtime out from
-/// under the remaining holders (#8411, #8747).
-#[cfg(all(target_family = "wasm", tokio_unstable))]
-pub static ACTIVE_TASK_COUNT: LazyLock<AtomicU32> = LazyLock::new(|| AtomicU32::new(0));
+/// Every artifact runs the shared tokio-free runtime, whose lifecycle is tied
+/// to the napi environment hooks rather than JavaScript-held leases. The lease
+/// API remains a compatibility no-op because the generated WASI loaders still
+/// acquire a lease at import and release it at teardown.
+#[napi]
+pub struct BindingAsyncRuntimeLease {}
 
 #[napi]
-/// Release one holder of the tokio runtime, shutting it down once none are left.
-///
-/// This is required for the wasm target with `tokio_unstable` cfg.
-/// In the wasm runtime, the `park` threads will hang there until the tokio::Runtime is shutdown.
-pub fn shutdown_async_runtime() {
-  #[cfg(all(target_family = "wasm", tokio_unstable))]
-  {
-    if ACTIVE_TASK_COUNT.load(Ordering::Relaxed) > 0 {
-      if ACTIVE_TASK_COUNT.fetch_sub(1, Ordering::Relaxed) == 1 {
-        napi::bindgen_prelude::shutdown_async_runtime();
-      }
-    }
+impl BindingAsyncRuntimeLease {
+  #[napi]
+  pub fn release(&self) {}
+}
+
+pub struct AcquireAsyncRuntimeTask {}
+
+#[napi]
+impl napi::Task for AcquireAsyncRuntimeTask {
+  type Output = ();
+  type JsValue = BindingAsyncRuntimeLease;
+
+  fn compute(&mut self) -> napi::Result<Self::Output> {
+    Ok(())
+  }
+
+  fn resolve(&mut self, _env: napi::Env, (): Self::Output) -> napi::Result<Self::JsValue> {
+    Ok(BindingAsyncRuntimeLease {})
   }
 }
 
 #[napi]
-/// Acquire one holder of the tokio runtime, starting it if it is not running.
-pub fn start_async_runtime() {
-  #[cfg(all(target_family = "wasm", tokio_unstable))]
-  {
-    napi::bindgen_prelude::start_async_runtime();
-    ACTIVE_TASK_COUNT.fetch_add(1, Ordering::Relaxed);
+/// Acquire one async runtime lifecycle lease.
+///
+/// Every artifact uses automatic N-API environment lifecycle for the shared
+/// runtime, so the resolved lease's `release()` is a no-op; the generated WASI
+/// loaders still acquire and release leases around module use.
+pub fn acquire_async_runtime(
+  _env: &napi::Env,
+) -> napi::bindgen_prelude::AsyncTask<AcquireAsyncRuntimeTask> {
+  napi::bindgen_prelude::AsyncTask::new(AcquireAsyncRuntimeTask {})
+}
+
+#[napi]
+/// Shutdown one manually retained async runtime owner.
+///
+/// Every artifact uses automatic N-API environment lifecycle for the shared
+/// runtime; this compatibility API remains a no-op.
+pub fn shutdown_async_runtime() {}
+
+#[napi]
+/// Start and manually retain one async runtime owner.
+///
+/// Every artifact uses automatic N-API environment lifecycle for the shared
+/// runtime; this compatibility API remains a no-op.
+pub fn start_async_runtime() {}
+
+#[cfg(test)]
+mod manual_async_runtime_transition_tests {
+  #[test]
+  fn manual_lifecycle_exports_are_noops() {
+    super::start_async_runtime();
+    super::shutdown_async_runtime();
   }
 }
 
 #[napi_derive::module_init]
 fn init() {
-  #[cfg(not(target_family = "wasm"))]
-  {
-    use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
-    let max_blocking_threads = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
-      .ok()
-      .and_then(|v| v.parse::<usize>().ok())
-      // default value in tokio implementation is **512**
-      // it's too high for us
-      // we don't have that many `blocking` tasks to run at this moment
-      .unwrap_or(4);
-    let worker_threads = std::env::var("ROLLDOWN_WORKER_THREADS")
-      .ok()
-      .and_then(|v| v.parse::<usize>().ok())
-      // unlike the web server scenario
-      // rolldown puts a lot of blocking tasks in the worker threads rather than blocking_threads
-      // so we need to increase the worker threads rather than the blocking_threads
-      .unwrap_or(num_cpus::get_physical() * 3 / 2);
-    let mut builder = tokio::runtime::Builder::new_multi_thread();
-
-    let rt = builder
-      .max_blocking_threads(max_blocking_threads)
-      .worker_threads(worker_threads)
-      .thread_name("rolldown-worker")
-      .enable_all()
-      .build()
-      .expect("Failed to create tokio runtime");
-    create_custom_tokio_runtime(rt);
-  }
+  // Pin the runtime-config snapshot at module load on EVERY artifact. The
+  // WASI JS loaders size the real emnapi async work pool from the environment
+  // at module load -- resolving lazily here would let a post-import env
+  // change make the report diverge from the pool that is already running (and
+  // would leave the pinning to the accident of the host's WASI shim
+  // snapshotting its env). One source of truth: resolve here, where every
+  // consumer of the snapshot agrees on "load time".
+  crate::async_runtime::resolved_runtime_config();
 
   #[cfg(not(feature = "disable_panic_hook"))]
   {

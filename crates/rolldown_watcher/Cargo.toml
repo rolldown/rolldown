@@ -17,6 +17,8 @@ workspace = true
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
+async-lock = { workspace = true }
+event-listener = { workspace = true }
 futures = { workspace = true }
 oxc_index = { workspace = true }
 rolldown = { workspace = true, features = ["experimental"] }
@@ -25,10 +27,17 @@ rolldown_error = { workspace = true }
 rolldown_fs_watcher = { workspace = true }
 rolldown-notify = { workspace = true }
 rolldown_utils = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
 tracing = { workspace = true }
 
 [dev-dependencies]
 rolldown_workspace = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread", "signal"] }
+# `time` here only serves examples/watch.rs's demo sleep.
+tokio = { workspace = true, features = [
+  "rt",
+  "macros",
+  "sync",
+  "rt-multi-thread",
+  "signal",
+  "time",
+] }

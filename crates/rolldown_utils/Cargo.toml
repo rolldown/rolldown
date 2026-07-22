@@ -37,6 +37,9 @@ infer = { workspace = true }
 itoa = { workspace = true }
 memchr = { workspace = true }
 mime = { workspace = true }
+# The shared scheduler; napi-free with default features off (the napi SPI
+# adapter stays in rolldown_binding).
+napi-async-runtime = { version = "0.2.0", git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e", default-features = false }
 nom = { workspace = true }
 oxc = { workspace = true }
 oxc_index = { workspace = true }
@@ -49,12 +52,10 @@ rustc-hash = { workspace = true }
 serde_json = { workspace = true }
 simdutf8 = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-async-scoped = { workspace = true, features = ["use-tokio"] }
 rayon = { workspace = true }
 
 [dev-dependencies]

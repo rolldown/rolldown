@@ -24,7 +24,10 @@ derive_more = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 itertools = { workspace = true }
-napi = { workspace = true }
+# `napi/async-runtime` (= napi4) provides the pluggable async-runtime SPI plus
+# `AsyncTask`; it deliberately does NOT enable `napi/async` (= tokio_rt), so
+# napi never drags tokio in on any target.
+napi = { workspace = true, features = ["async-runtime"] }
 napi-derive = { workspace = true }
 num_cpus = { workspace = true }
 oxc = { workspace = true }
@@ -92,6 +95,9 @@ mimalloc-safe = { workspace = true, features = [
 napi-build = { workspace = true }
 
 [features]
+default = []
 chrome-tracing = ["rolldown_tracing/chrome-tracing"]
 default_global_allocator = []
 disable_panic_hook = []
+runtime-waker-teardown-test = []
+runtime-submission-failure-test = []

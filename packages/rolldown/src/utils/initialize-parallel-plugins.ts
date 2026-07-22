@@ -2,6 +2,7 @@ import os from 'node:os';
 import { Worker } from 'node:worker_threads';
 import { ParallelJsPluginRegistry } from '../binding.cjs';
 import type { RolldownPlugin } from '../plugin';
+import { assertRuntimeFeature } from '../runtime-support';
 import { getParallelPluginInfo } from './parallel-plugin';
 
 export type WorkerData = {
@@ -34,6 +35,12 @@ export async function initializeParallelPlugins(plugins: RolldownPlugin[]): Prom
   if (pluginInfos.length <= 0) {
     return undefined;
   }
+
+  // Markers can reach a build without passing through this process's
+  // `defineParallelPlugin` (for example already-materialized `_parallel`
+  // descriptors), so re-assert here, before the registry and worker-thread
+  // side effects.
+  assertRuntimeFeature('parallelPlugins');
 
   const count = availableParallelism();
   const parallelJsPluginRegistry = new ParallelJsPluginRegistry(count);

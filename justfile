@@ -103,6 +103,33 @@ test-node-hmr-only *args:
 test-vite: # We don't use `test-node-vite` because it's not expected to run in `just test-node`.
   vp run --filter vite-tests test
 
+# Run the async-runtime unit tests in the N-API binding. This recipe is their
+# CI home: the workspace-wide `test-rust` recipe excludes `rolldown_binding`.
+test-async-runtime-binding:
+  cargo test -p rolldown_binding --lib async_runtime::tests::
+  cargo test -p rolldown_binding --lib env_config::tests::
+  cargo test -p rolldown_binding --lib manual_async_runtime_transition_tests::
+
+# Run the scheduler unit tests plus the node and watcher suites on both
+# flavors of the shared async runtime. Requires
+# `just build-rolldown-async-runtime` first. The single-thread lane arms the
+# runtime's own deadlock detection (`ROLLDOWN_PARK_DEADLINE_MS`): a
+# `block_on`-over-JS hang freezes the JS event loop before vitest's own
+# timeouts can fire, so the runtime panics with a typed `BlockOnDeadlock`
+# diagnostic instead of hanging until a job-level timeout. The watcher suite
+# runs on both flavors because the watch-mode debounce timer goes through
+# the runtime's own `rolldown_utils::time::sleep_until` facility.
+[unix]
+test-async-runtime:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cargo test -p rolldown_utils
+  just test-async-runtime-binding
+  ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:main
+  ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:watcher
+  vp run --filter rolldown-tests test:main
+  vp run --filter rolldown-tests test:watcher
+
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
 
 # Run both Rolldown's tests and Rollup's test suite without building Rolldown.
@@ -159,6 +186,38 @@ lint-rust: clippy
 clippy:
   cargo clippy --workspace --all-targets -- --deny warnings
 
+# Prove the production dependency graphs are tokio-free: the shipped binding
+# on every target plus the CodSpeed bench harness. `cargo tree -i tokio`
+# prints an inverted dependency tree when tokio is reachable; when it is not,
+# it either prints nothing (still in the lockfile through dev-deps) or fails
+# with "did not match any packages" (absent from the resolved set) — both
+# count as tokio-free here.
+[unix]
+check-no-tokio:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  check() {
+    local out status=0
+    out=$(cargo tree -i tokio "$@" 2>&1) || status=$?
+    if [ "$status" -ne 0 ]; then
+      if grep -q 'did not match any packages' <<<"$out"; then
+        return 0
+      fi
+      printf '%s\n' "$out" >&2
+      return "$status"
+    fi
+    if grep -q '^tokio ' <<<"$out"; then
+      echo "error: tokio is reachable (cargo tree -i tokio $*):" >&2
+      printf '%s\n' "$out" >&2
+      return 1
+    fi
+    return 0
+  }
+  check -e no-dev -p rolldown_binding
+  check -e no-dev -p rolldown_binding --target wasm32-wasip1
+  check -e no-dev -p rolldown_binding --target wasm32-wasip1-threads
+  check -p bench
+
 lint-node:
   vp check
   vp run lint-knip
@@ -197,6 +256,18 @@ build-rolldown-test-dev-server:
 # Build `rolldown` located in `packages/rolldown` itself and its `.wasm` binding for WASI.
 build-rolldown-wasi:
   vp run --filter rolldown build-wasi:debug
+
+# Build `rolldown` and its native `.node` binding (the default build IS the
+# shared async runtime) plus the test-only lifecycle probe features
+# (`runtime-waker-teardown-test` / `runtime-submission-failure-test`). The
+# test-featured build regenerates `binding.cjs`/`binding.d.cts` with the
+# `__rolldownTest*` probe exports, so restore the committed production copies
+# before building the package glue from them. The probes stay reachable at
+# runtime because the loader re-exports the native addon wholesale.
+build-rolldown-async-runtime:
+  vp exec --filter rolldown -- node --import @oxc-node/core/register ./build-binding.ts --features runtime-waker-teardown-test,runtime-submission-failure-test
+  git checkout -- packages/rolldown/src/binding.cjs packages/rolldown/src/binding.d.cts
+  vp run --filter rolldown build-js-glue
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
 build-rolldown-release:

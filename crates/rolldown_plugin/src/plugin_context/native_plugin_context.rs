@@ -40,7 +40,7 @@ pub struct NativePluginContextImpl {
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
   pub(crate) module_infos: SharedModuleInfoDashMap,
-  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
+  pub(crate) tx: Arc<Mutex<Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_devtools::Session,
   pub(crate) bundle_span: tracing::Span,
   // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
@@ -62,7 +62,7 @@ impl NativePluginContextImpl {
       guard.context("The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.")?
     };
     sender
-      .send(ModuleLoaderMsg::FetchModule(Box::new(ResolvedId {
+      .unbounded_send(ModuleLoaderMsg::FetchModule(Box::new(ResolvedId {
         id: ModuleId::new(specifier),
         side_effects,
         module_def_format,
@@ -195,7 +195,7 @@ impl NativePluginContextImpl {
     if let Some(on_log) = &self.options.on_log {
       let on_log = on_log.clone();
       let log = log.into_log(Some(self.plugin_name.to_string()));
-      rolldown_utils::futures::spawn(async move {
+      rolldown_utils::futures::spawn_detached(async move {
         // FIXME: should collect error happened here and cause the build to fail later
         let _ = on_log.call(level, log).await;
       });

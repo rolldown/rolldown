@@ -169,8 +169,9 @@ anyhow = "1.0.103"
 append-only-vec = "0.1.8"
 arcstr = { version = "1.2.0", default-features = false }
 ariadne = { package = "rolldown-ariadne", version = "0.6.0" }
+async-broadcast = "0.7.2"
 async-channel = "2.5.0"
-async-scoped = "0.9.0"
+async-lock = "3.4.2"
 base-encode = "0.3.1"
 base64-simd = "0.8.0"
 bitflags = "2.13.0"
@@ -180,6 +181,7 @@ criterion2 = { version = "3.0.4", default-features = false }
 dashmap = "6.2.1"
 derive_more = { version = "2.1.1", features = ["debug"] }
 dunce = "1.0.5" # Normalize Windows paths to the most compatible format, avoiding UNC where possible
+event-listener = "5.4.1"
 fast-glob = "1.0.1"
 flate2 = { version = "=1.1.9", features = ["zlib-rs"] }
 form_urlencoded = "1.2.2"
@@ -257,7 +259,7 @@ syn = { version = "3", default-features = false }
 # napi
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks
 # (e.g. #7289) by showing which napi function is pending.
-napi = { version = "3", features = ["async", "anyhow", "tracing", "object_indexmap"] }
+napi = { version = "3", features = ["anyhow", "tracing", "object_indexmap"] }
 napi-build = { version = "2" }
 napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
 
@@ -330,3 +332,19 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+[patch.crates-io]
+# napi core is pinned to the reconciled integration branch (napi-rs main merged into
+# rolldown's rich async-runtime SPI + codegen_v1, plus the injector/ArcSwap +
+# drain_linger scheduler and the #3405/#3404/#3408/#3409 grafts). Versioned
+# non-prerelease (napi 3.12.0) so this single patch redirects the ONE shared napi node
+# for the WHOLE graph — rolldown_binding AND every oxc_*_napi / oxc_resolver_napi /
+# oxc_sourcemap — with no downstream napi-req widening (a prerelease would be excluded
+# from their ^3.x and would force per-crate patches). One rev also covers
+# napi-async-runtime pinned in rolldown_utils/Cargo.toml (consumed napi-free). The
+# published napi 3.12.0-alpha.* / napi-async-runtime 0.2.0-alpha.* on crates.io carry
+# the same content for standalone consumers.
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e", version = "=3.7.0" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e" }

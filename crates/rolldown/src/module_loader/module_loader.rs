@@ -155,6 +155,11 @@ pub struct ModuleLoaderOutput {
   pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
+struct ResolvedUserDefinedEntries {
+  entries: Vec<(Option<ArcStr>, ResolvedId)>,
+  pending_messages: VecDeque<ModuleLoaderMsg>,
+}
+
 impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
   fn drop(&mut self) {
     self.cache.importers = std::mem::take(&mut self.intermediate_normal_modules.importers);
@@ -319,6 +324,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
   ) -> ModuleIdx {
     let idx = match self.cache.module_id_to_idx.get(&resolved_id.id).copied() {
       Some(VisitState::Seen(idx)) => {
+        if is_user_defined_entry {
+          self.shared_context.plugin_driver.mark_module_info_as_entry(&resolved_id.id);
+        }
         if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
           self.request_all_exports_for_entry(idx, user_defined_entries);
         }
@@ -390,6 +398,15 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let barrel_state_backup = (!self.is_full_scan && self.flat_options.is_lazy_barrel_enabled())
       .then(|| self.cache.barrel_state.clone());
 
+    let ResolvedUserDefinedEntries { entries: resolved_user_defined_entries, mut pending_messages } =
+      match fetch_mode {
+        ScanMode::Full => self.resolve_user_defined_entries().await?,
+        ScanMode::Partial(_) => {
+          ResolvedUserDefinedEntries { entries: vec![], pending_messages: VecDeque::new() }
+        }
+      };
+    let user_defined_entries = Arc::new(resolved_user_defined_entries);
+
     // Initialize runtime module task if not yet started
     if let Entry::Vacant(e) = self.cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
       let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
@@ -398,11 +415,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       e.insert(VisitState::Seen(idx));
       self.remaining += 1;
     }
-
-    let user_defined_entries = Arc::new(match fetch_mode {
-      ScanMode::Full => self.resolve_user_defined_entries().await?,
-      ScanMode::Partial(_) => vec![],
-    });
 
     let entries_count = user_defined_entries.len() + /* runtime */ 1;
     self.intermediate_normal_modules.modules.reserve(entries_count);
@@ -479,8 +491,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut overrode_preserve_entry_signature_map = FxHashMap::default();
 
     while self.remaining > 0 {
-      let Some(msg) = self.rx.recv().await else {
-        break;
+      let msg = if let Some(msg) = pending_messages.pop_front() {
+        msg
+      } else {
+        let Some(msg) = self.rx.recv().await else {
+          break;
+        };
+        msg
       };
       match msg {
         ModuleLoaderMsg::NormalModuleDone(task_result) => {
@@ -925,22 +942,39 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
-  pub async fn resolve_user_defined_entries(
-    &self,
-  ) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
-    let resolved_ids =
-      join_all(self.shared_context.options.input.iter().map(|input_item| async move {
-        let resolved = load_entry_module(
-          &self.shared_context.resolver,
-          &self.shared_context.plugin_driver,
-          &input_item.import,
-          None,
-        )
-        .await;
+  async fn resolve_user_defined_entries(&mut self) -> BuildResult<ResolvedUserDefinedEntries> {
+    let inputs = self.shared_context.options.input.clone();
+    let resolver = Arc::clone(&self.shared_context.resolver);
+    let plugin_driver = Arc::clone(&self.shared_context.plugin_driver);
+    let resolve_entries = async move {
+      join_all(inputs.iter().map(|input_item| async {
+        let resolved = load_entry_module(&resolver, &plugin_driver, &input_item.import, None).await;
 
         resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
       }))
-      .await;
+      .await
+    };
+    tokio::pin!(resolve_entries);
+
+    let no_user_defined_entries = Arc::new(vec![]);
+    let mut pending_messages = VecDeque::new();
+    let resolved_ids = loop {
+      tokio::select! {
+        resolved_ids = &mut resolve_entries => break resolved_ids,
+        Some(msg) = self.rx.recv() => match msg {
+          ModuleLoaderMsg::FetchModule(resolved_id) => {
+            self.try_spawn_new_task(
+              *resolved_id,
+              None,
+              false,
+              None,
+              &no_user_defined_entries,
+            );
+          }
+          msg => pending_messages.push_back(msg),
+        }
+      }
+    };
 
     let mut ret = Vec::with_capacity(self.shared_context.options.input.len());
 
@@ -959,7 +993,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       Err(errors)?;
     }
 
-    Ok(ret)
+    Ok(ResolvedUserDefinedEntries { entries: ret, pending_messages })
   }
 
   /// Traces the import chain from a module back to an entry point.

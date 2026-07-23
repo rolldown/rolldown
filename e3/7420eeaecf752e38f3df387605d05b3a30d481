@@ -1,0 +1,19 @@
+crates/rolldown_common/src/inner_bundler_options/types/represent_type.rs
+  s_792eba8c768726::t_f176212ee29083 77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e37420eeaecf752e38f3df387605d05b3a30d481",
+  "prompts": {},
+  "sessions": {
+    "s_792eba8c768726": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8e3a-ea6e-7263-80d8-76fd52f03da2",
+        "model": "unknown"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

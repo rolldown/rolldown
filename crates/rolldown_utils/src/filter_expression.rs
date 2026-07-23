@@ -47,9 +47,10 @@ fn cost_rank(expr: &FilterExpr) -> u32 {
     // map, so rank it *above* the cheap `Id`/`ModuleType` checks — they should get to
     // short-circuit before that parse is forced.
     FilterExpr::Query(..) => 2,
-    // `memmem` over the full source, cheaper than a regex over it.
-    FilterExpr::Code(StringOrRegex::String(_)) => 3,
-    FilterExpr::Code(StringOrRegex::Regex(_)) => 4,
+    // Both `Code` variants scan the full source and neither is reliably cheaper — an
+    // anchored regex can fail fast, while an absent string still scans everything — so
+    // give them one tier and let the stable sort preserve their authored order.
+    FilterExpr::Code(_) => 3,
     // A wrapper costs whatever its (single) inner expression costs.
     FilterExpr::Not(inner) | FilterExpr::CleanUrl(inner) => cost_rank(inner),
     // Rank a compound by its *costliest* reachable leaf, not its cheapest: an operand
@@ -500,6 +501,28 @@ mod test {
           filter_expr_interpreter(&expr, id, code, None, None, ".", &mut InterpreterCtx::default());
         assert_eq!(got, baseline, "mismatch for id={id:?} code={code:?} code_first={code_first}");
       }
+    }
+  }
+
+  #[test]
+  fn optimize_keeps_code_checks_in_authored_order() {
+    // Both `Code` variants scan the full source; which is cheaper depends on the pattern
+    // (an anchored regex can fail fast, an absent string scans everything), so their
+    // authored order must be preserved rather than reordered by variant.
+    let mut expr = FilterExpr::Or(vec![
+      FilterExpr::Code(StringOrRegex::Regex("^import".into())),
+      FilterExpr::Code(StringOrRegex::String("rare-marker".to_string())),
+    ]);
+    optimize_filter_expr(&mut expr);
+    match &expr {
+      FilterExpr::Or(args) => {
+        assert!(
+          matches!(args[0], FilterExpr::Code(StringOrRegex::Regex(_))),
+          "authored Code order must be preserved, got {args:?}"
+        );
+        assert!(matches!(args[1], FilterExpr::Code(StringOrRegex::String(_))));
+      }
+      other => panic!("expected Or, got {other:?}"),
     }
   }
 }

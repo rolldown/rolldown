@@ -42,15 +42,22 @@ pub enum FilterExprKind {
 fn cost_rank(expr: &FilterExpr) -> u32 {
   match expr {
     FilterExpr::ModuleType(_) => 0,
-    FilterExpr::Query(..) => 1,
-    FilterExpr::Id(_) | FilterExpr::ImporterId(_) => 2,
+    FilterExpr::Id(_) | FilterExpr::ImporterId(_) => 1,
+    // The first `Query` eval scans/decodes the id's URL and collects its params into a
+    // map, so rank it *above* the cheap `Id`/`ModuleType` checks — they should get to
+    // short-circuit before that parse is forced.
+    FilterExpr::Query(..) => 2,
     // `memmem` over the full source, cheaper than a regex over it.
     FilterExpr::Code(StringOrRegex::String(_)) => 3,
     FilterExpr::Code(StringOrRegex::Regex(_)) => 4,
     // A wrapper costs whatever its (single) inner expression costs.
     FilterExpr::Not(inner) | FilterExpr::CleanUrl(inner) => cost_rank(inner),
-    // `And`/`Or` short-circuit, so the entry cost is the cheapest operand's.
-    FilterExpr::And(args) | FilterExpr::Or(args) => args.iter().map(cost_rank).min().unwrap_or(0),
+    // Rank a compound by its *costliest* reachable leaf, not its cheapest: an operand
+    // whose cheap leaf fails still falls through to its expensive one, so `min` would let
+    // e.g. `or(moduleType, code)` pose as free (rank 0) and jump ahead of a cheaper
+    // sibling that would have rejected first — forcing the very full-source scan this
+    // reordering exists to avoid.
+    FilterExpr::And(args) | FilterExpr::Or(args) => args.iter().map(cost_rank).max().unwrap_or(0),
   }
 }
 
@@ -310,7 +317,7 @@ pub fn parse(mut tokens: Vec<Token>) -> anyhow::Result<FilterExprKind> {
 #[cfg(test)]
 mod test {
   use crate::{
-    filter_expression::{FilterExpr, InterpreterCtx, Token, filter_expr_interpreter},
+    filter_expression::{FilterExpr, InterpreterCtx, QueryValue, Token, filter_expr_interpreter},
     pattern_filter::StringOrRegex,
   };
 
@@ -393,6 +400,50 @@ mod test {
       None,
       ".",
     ));
+  }
+
+  #[test]
+  fn optimize_keeps_query_after_id() {
+    // The first `Query` eval parses the id's URL and builds a param map, so a cheap
+    // `Id` check must run (and get to short-circuit) before that parse is forced —
+    // even though `Query` has fewer nodes, it is not cheaper to evaluate.
+    let mut expr = FilterExpr::And(vec![
+      FilterExpr::Id(StringOrRegex::Regex("target".into())),
+      FilterExpr::Query("raw".to_string(), QueryValue::Boolean(true)),
+    ]);
+    optimize_filter_expr(&mut expr);
+    match &expr {
+      FilterExpr::And(args) => {
+        assert!(matches!(args[0], FilterExpr::Id(_)), "Id must precede Query, got {args:?}");
+        assert!(matches!(args[1], FilterExpr::Query(..)));
+      }
+      other => panic!("expected And, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn optimize_ranks_compound_by_costliest_leaf() {
+    // A nested `or` containing a `Code` regex must not be ranked cheap by its
+    // `ModuleType` leaf: a non-matching module has to reject at the cheap `Id` check
+    // first, not fall into the full-source `Code` scan inside the `or`.
+    let mut expr = FilterExpr::And(vec![
+      FilterExpr::Id(StringOrRegex::Regex("target".into())),
+      FilterExpr::Or(vec![
+        FilterExpr::ModuleType("css".to_string()),
+        FilterExpr::Code(StringOrRegex::Regex("needle".into())),
+      ]),
+    ]);
+    optimize_filter_expr(&mut expr);
+    match &expr {
+      FilterExpr::And(args) => {
+        assert!(
+          matches!(args[0], FilterExpr::Id(_)),
+          "Id must precede the Code-bearing Or, got {args:?}"
+        );
+        assert!(matches!(args[1], FilterExpr::Or(_)));
+      }
+      other => panic!("expected And, got {other:?}"),
+    }
   }
 
   #[test]

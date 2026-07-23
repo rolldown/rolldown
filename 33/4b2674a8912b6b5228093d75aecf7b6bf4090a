@@ -1,0 +1,82 @@
+crates/rolldown_binding/src/options/plugin/types/binding_hook_load_output.rs
+  s_792eba8c768726::t_585e3cb5744498 1,17-20,32
+crates/rolldown_binding/src/options/plugin/binding_callable_builtin_plugin.rs
+  s_792eba8c768726::t_8872df96c60a83 248-251,260
+crates/rolldown_common/src/inner_bundler_options/types/represent_type.rs
+  s_792eba8c768726::t_3db0456544b940 1-76,78-79
+  s_792eba8c768726::t_f176212ee29083 77
+crates/rolldown/tests/rolldown/plugin/plugin_context/mod.rs
+  s_792eba8c768726::t_e5709ccd87d942 3
+crates/rolldown_binding/src/types/binding_module_info.rs
+  s_792eba8c768726::t_e22d0c29a208b5 25-28,64
+packages/rolldown/src/plugin/bindingify-build-hooks.ts
+  s_792eba8c768726::t_ca4351dc61e48c 305,359
+crates/rolldown/src/module_loader/runtime_module_task.rs
+  s_792eba8c768726::t_03c6598513a560 82,95,165
+crates/rolldown_binding/src/options/plugin/types/binding_hook_transform_output.rs
+  s_792eba8c768726::t_b0f769c3893a8f 2,20-23,42,59
+packages/rolldown/src/binding.d.cts
+  s_792eba8c768726::t_2bf705cc3b1c66 1690,2284,2304,2373
+packages/rolldown/tests/module-representation.test-d.ts
+  s_792eba8c768726::t_2f0a78203436d9 1-27
+packages/rolldown/src/plugin/index.ts
+  s_792eba8c768726::t_c9a5d2ea38782f 78-88,214-220,222-227
+  s_792eba8c768726::t_5da3b44e92d572 75-77
+crates/rolldown_common/src/types/module_info.rs
+  s_792eba8c768726::t_92b20da9d6e9d3 5,18
+crates/rolldown/tests/rolldown/plugin/plugin_context/represent_type/mod.rs
+  s_792eba8c768726::t_892103933723ea 1-71
+packages/rolldown/src/utils/transform-module-info.ts
+  s_792eba8c768726::t_13142650707792 22
+crates/rolldown_common/src/module/normal_module.rs
+  s_792eba8c768726::t_8893758d93922b 9,32,117
+crates/rolldown_plugin/src/types/hook_transform_output.rs
+  s_792eba8c768726::t_f357747472137f 2,48
+crates/rolldown_plugin/src/plugin_driver/build_hooks.rs
+  s_792eba8c768726::t_9b068e41556d65 260,341-343
+packages/rolldown/src/types/module-info.ts
+  s_792eba8c768726::t_d523e44979007f 1,53-58
+docs/in-depth/module-types.md
+  s_792eba8c768726::t_bfe3e69f932c50 9,12,30,39,41-43,45-62,64-65,67,69,73-80
+  s_792eba8c768726::t_333ec05186c189 3,5,7,11,13,23,38,40,44,63,66,71
+packages/rolldown/tests/fixtures/plugin/context/represent-type/main.js
+  s_792eba8c768726::t_8be892561a6596 1
+crates/rolldown_plugin/src/types/hook_load_output.rs
+  s_792eba8c768726::t_435557cd381722 2,11
+packages/rolldown/tests/fixtures/plugin/context/represent-type/_config.ts
+  s_792eba8c768726::t_54329e385cf08a 1-24
+crates/rolldown_common/src/lib.rs
+  s_792eba8c768726::t_07dd1eaca71088 71
+packages/rolldown/src/options/input-options.ts
+  s_792eba8c768726::t_244eaf4b97e31a 71,73,75,77,80,82,521-524
+crates/rolldown/tests/rolldown/plugin/plugin_context/represent_type/entry.js
+  s_792eba8c768726::t_1aae97f8706ec8 1
+packages/rolldown/src/index.ts
+  s_792eba8c768726::t_4a392b2181099b 74,197
+crates/rolldown/src/utils/transform_source.rs
+  s_792eba8c768726::t_c329411b9f9f23 8,22,33
+crates/rolldown/src/module_loader/module_task.rs
+  s_792eba8c768726::t_5b55ac8b547d1e 8-9,106,112,220,254,283,308,325
+crates/rolldown/src/utils/load_source.rs
+  s_792eba8c768726::t_51d77facc1a32d 4-5,22-24,34-38,56-67,79-142,144-150
+crates/rolldown/src/module_loader/external_module_task.rs
+  s_792eba8c768726::t_ce1c52bda2e85a 67
+crates/rolldown_common/src/inner_bundler_options/types/mod.rs
+  s_792eba8c768726::t_ae8b189f6b9a4b 31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "334b2674a8912b6b5228093d75aecf7b6bf4090a",
+  "prompts": {},
+  "sessions": {
+    "s_792eba8c768726": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8e3a-ea6e-7263-80d8-76fd52f03da2",
+        "model": "unknown"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

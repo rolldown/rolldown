@@ -14,7 +14,7 @@ init_main();
 ## main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region core/setupWorker.js
 function setupWorker(handler) {
 	return { handler };
@@ -35,14 +35,6 @@ function init_main() {
 }
 //#endregion
 export { init_main as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
 
 ```
 

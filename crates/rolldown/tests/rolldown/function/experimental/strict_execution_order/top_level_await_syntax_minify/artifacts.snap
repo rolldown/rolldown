@@ -22,11 +22,5 @@ import{t as e}from"./main2.js";await e();
 ### main2.js
 
 ```js
-import{t as e}from"./rolldown-runtime.js";async function t(){console.log(`foo`)}function n(){return(n=e((async()=>{await t()})))()}export{n as t};
-```
-
-### rolldown-runtime.js
-
-```js
-var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}};export{e as t};
+var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}};async function t(){console.log(`foo`)}function n(){return(n=e((async()=>{await t()})))()}export{n as t};
 ```

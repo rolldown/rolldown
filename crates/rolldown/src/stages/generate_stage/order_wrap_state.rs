@@ -41,6 +41,33 @@ impl OrderWrapState {
       .fold(synthetic_helpers, |helpers, overlay| helpers | overlay.runtime_helpers)
   }
 
+  /// The chunks whose rendered output calls a runtime helper that order lowering introduced: a
+  /// wrapper's synthetic `init_*` declaration renders in its assigned chunk, and an overlay's
+  /// lowered import/re-export glue renders at the importer's import site. Pre-lowering helper
+  /// demand is not collected here — the runtime-chunk merge proof re-scans it from chunk and
+  /// statement metadata.
+  pub(crate) fn runtime_helper_consumer_chunks(
+    &self,
+    module_to_chunk: &IndexVec<ModuleIdx, Option<ChunkIdx>>,
+  ) -> FxHashSet<ChunkIdx> {
+    let mut consumers = FxHashSet::default();
+    for stmt in &self.synthetic_statements {
+      if !stmt.runtime_helpers.is_empty()
+        && let Some(chunk_idx) = stmt.chunk
+      {
+        consumers.insert(chunk_idx);
+      }
+    }
+    for (key, overlay) in &self.import_overlays {
+      if !overlay.runtime_helpers.is_empty()
+        && let Some(chunk_idx) = module_to_chunk[key.importer]
+      {
+        consumers.insert(chunk_idx);
+      }
+    }
+    consumers
+  }
+
   pub(crate) fn requires_runtime_symbol(
     &self,
     runtime: &RuntimeModuleBrief,

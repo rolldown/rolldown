@@ -124,6 +124,16 @@ export interface WatcherFileWatcherOptions {
   debounceTickRate?: number;
 }
 
+/**
+ * Called with each watched file path and should return `true` when the path matches.
+ */
+export type WatchFilterFunction = (id: string) => boolean;
+
+/**
+ * Watch filter value. Strings are treated as glob patterns.
+ */
+export type WatchFilter = StringOrRegExp | WatchFilterFunction;
+
 export interface WatcherOptions {
   /**
    * Whether to skip the {@linkcode RolldownBuild.write | bundle.write()} step when a rebuild is triggered.
@@ -159,7 +169,7 @@ export interface WatcherOptions {
   /**
    * Filter to limit the file-watching to certain files.
    *
-   * Strings are treated as glob patterns.
+   * Strings are treated as glob patterns. Functions should return `true` for paths that should be watched.
    * Note that this only filters the module graph but does not allow adding
    * additional watch files.
    *
@@ -173,11 +183,11 @@ export interface WatcherOptions {
    * ```
    * @default []
    */
-  include?: StringOrRegExp | StringOrRegExp[];
+  include?: WatchFilter | WatchFilter[];
   /**
    * Filter to prevent files from being watched.
    *
-   * Strings are treated as glob patterns.
+   * Strings are treated as glob patterns. Functions should return `true` for paths that should be ignored.
    *
    * @example
    * ```js
@@ -189,7 +199,7 @@ export interface WatcherOptions {
    * ```
    * @default []
    */
-  exclude?: StringOrRegExp | StringOrRegExp[];
+  exclude?: WatchFilter | WatchFilter[];
   /**
    * An optional function that will be called immediately every time
    * a module changes that is part of the build.

@@ -115,7 +115,8 @@ impl WatchTask {
             watched_files_ref,
             options_ref,
             &watch_files,
-          )?;
+          )
+          .await?;
 
           let scan_output = scan_result?;
 
@@ -145,7 +146,14 @@ impl WatchTask {
     };
 
     // Also register any files discovered during render/write phase
-    self.update_watch_files(&new_watch_files)?;
+    if let Err(errs) = self.update_watch_files(&new_watch_files).await {
+      return Ok(BuildOutcome::Error(WatchErrorEventData {
+        task_index,
+        diagnostics: Arc::from(errs.into_vec()),
+        cwd: self.options.cwd.clone(),
+        bundle_handle,
+      }));
+    }
 
     #[expect(clippy::cast_possible_truncation)]
     let duration = start_time.elapsed().as_millis() as u32;
@@ -253,21 +261,19 @@ impl WatchTask {
   }
 
   /// Update watched files by adding new ones to the fs watcher.
-  fn update_watch_files(&self, files: &[ArcStr]) -> BuildResult<()> {
-    Self::update_watch_files_from(&self.fs_watcher, &self.watched_files, &self.options, files)
+  async fn update_watch_files(&self, files: &[ArcStr]) -> BuildResult<()> {
+    Self::update_watch_files_from(&self.fs_watcher, &self.watched_files, &self.options, files).await
   }
 
   /// Static helper: update FS watcher with newly discovered files.
   /// Separated from `&self` to allow calling from closures during build.
-  fn update_watch_files_from(
+  async fn update_watch_files_from(
     fs_watcher: &std::sync::Mutex<DynFsWatcher>,
     watched_files: &FxDashSet<ArcStr>,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],
   ) -> BuildResult<()> {
-    let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
-    let mut watcher_paths = fs_watcher.paths_mut();
-
+    let mut files_to_watch = Vec::new();
     for file in files {
       let file_str = file.as_str();
       if watched_files.contains(file_str) {
@@ -277,22 +283,27 @@ impl WatchTask {
       if !path.exists() {
         continue;
       }
-      if pattern_filter::filter(
-        options.watch.exclude.as_deref(),
-        options.watch.include.as_deref(),
-        file_str,
-        options.cwd.to_string_lossy().as_ref(),
-      )
-      .inner()
+      if !Self::should_watch_file(options, file_str)
+        .await
+        .map_err(BuildDiagnostic::unhandleable_error)?
       {
-        match watcher_paths.add(path, RecursiveMode::NonRecursive) {
-          Ok(()) => {
-            tracing::debug!(name = "notify watch", path = ?path);
-            watched_files.insert(file.clone());
-          }
-          Err(e) => {
-            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?e);
-          }
+        continue;
+      }
+      files_to_watch.push(file);
+    }
+
+    let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
+    let mut watcher_paths = fs_watcher.paths_mut();
+
+    for file in files_to_watch {
+      let path = Path::new(file.as_str());
+      match watcher_paths.add(path, RecursiveMode::NonRecursive) {
+        Ok(()) => {
+          tracing::debug!(name = "notify watch", path = ?path);
+          watched_files.insert(file.clone());
+        }
+        Err(e) => {
+          tracing::debug!(name = "notify watch skipped", path = ?path, error = ?e);
         }
       }
     }
@@ -300,6 +311,45 @@ impl WatchTask {
     watcher_paths.commit().map_err_to_unhandleable()?;
 
     Ok(())
+  }
+
+  async fn should_watch_file(
+    options: &NormalizedBundlerOptions,
+    file: &str,
+  ) -> anyhow::Result<bool> {
+    let cwd = options.cwd.to_string_lossy();
+    let excluded_by_pattern = matches!(
+      pattern_filter::filter(options.watch.exclude.as_deref(), None, file, cwd.as_ref()),
+      pattern_filter::FilterResult::Match(false)
+    );
+    if excluded_by_pattern {
+      return Ok(false);
+    }
+
+    if let Some(exclude_fn) = &options.watch.exclude_fn {
+      if exclude_fn.call(file).await? {
+        return Ok(false);
+      }
+    }
+
+    let include_patterns = options.watch.include.as_deref();
+    let included_by_pattern = matches!(
+      pattern_filter::filter(None, include_patterns, file, cwd.as_ref()),
+      pattern_filter::FilterResult::Match(true)
+    );
+    if included_by_pattern {
+      return Ok(true);
+    }
+
+    if let Some(include_fn) = &options.watch.include_fn {
+      if include_fn.call(file).await? {
+        return Ok(true);
+      }
+    }
+
+    let has_include_patterns = include_patterns.is_some_and(|patterns| !patterns.is_empty());
+    let has_include_filter = has_include_patterns || options.watch.include_fn.is_some();
+    Ok(!has_include_filter)
   }
 
   /// Mark this task as needing rebuild if the changed file is in our watch list.

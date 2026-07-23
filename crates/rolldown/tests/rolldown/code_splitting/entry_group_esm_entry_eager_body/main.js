@@ -1,5 +1,5 @@
-import leaf from "./leaf.js";
-import { value } from "./leaf-esm.js";
+import leaf from './leaf.js';
+import { value } from './leaf-esm.js';
 if (leaf.ok !== true) {
   throw new Error(`cjs leaf not initialized: ${JSON.stringify(leaf)}`);
 }

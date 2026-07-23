@@ -100,12 +100,19 @@ pub fn filter(
   }
 }
 
+/// Whether resolving `glob` into a matcher depends on `cwd`. Relative globs are
+/// joined onto `cwd`; `**`-prefixed and absolute globs are used as-is (so their
+/// resolution is independent of `cwd`).
+pub(crate) fn glob_matcher_depends_on_cwd(glob: &str) -> bool {
+  !(glob.starts_with("**") || Path::new(glob).is_absolute())
+}
+
 /// https://github.com/rollup/plugins/blob/e1a5ef99f1578eb38a8c87563cb9651db228f3bd/packages/pluginutils/src/createFilter.ts#L10
-fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
-  if glob.starts_with("**") || Path::new(glob).is_absolute() {
-    normalize_path(glob)
-  } else {
+pub(crate) fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
+  if glob_matcher_depends_on_cwd(glob) {
     Cow::Owned(normalize_path_buf_to_slash(Path::new(cwd).join(glob)))
+  } else {
+    normalize_path(glob)
   }
 }
 

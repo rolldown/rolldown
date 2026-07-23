@@ -1,0 +1,147 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+## main2.js
+
+```js
+import { n as value, t as init_reader } from "./reader.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region patch.js
+globalThis.__orderRead = () => 42;
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_reader();
+		if (value !== 42) throw new Error(`reader evaluated before patch: value = ${value}`);
+	})))();
+}
+//#endregion
+export { init_main as t };
+
+```
+
+## reader.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region reader.js
+var value;
+function init_reader() {
+	return (init_reader = __esmMin((() => {
+		value = (() => /* @__PURE__ */ globalThis.__orderRead?.() ?? 5)();
+	})))();
+}
+//#endregion
+export { value as n, init_reader as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## warnings
+
+### INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+## Assets
+
+### main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+### main2.js
+
+```js
+import { n as value, t as init_reader } from "./reader.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region patch.js
+function init_patch() {
+	return (init_patch = __esmMin((() => {
+		globalThis.__orderRead = () => 42;
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_patch();
+		init_reader();
+		if (value !== 42) throw new Error(`reader evaluated before patch: value = ${value}`);
+	})))();
+}
+//#endregion
+export { init_patch as n, init_main as t };
+
+```
+
+### reader.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region reader.js
+var value;
+function init_reader() {
+	return (init_reader = __esmMin((() => {
+		value = (() => /* @__PURE__ */ globalThis.__orderRead?.() ?? 5)();
+	})))();
+}
+//#endregion
+export { value as n, init_reader as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

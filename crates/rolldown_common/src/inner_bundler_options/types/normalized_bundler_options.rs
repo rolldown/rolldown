@@ -220,6 +220,12 @@ impl NormalizedBundlerOptions {
     self.strict_execution_order
   }
 
+  /// Strict execution order with on-demand wrapping — the mode that runs the extended
+  /// eager-evaluation order-reason walk during scanning.
+  pub fn is_strict_on_demand_wrapping_enabled(&self) -> bool {
+    self.strict_execution_order && self.experimental.is_on_demand_wrapping_enabled()
+  }
+
   /// make sure the `polyfill_require` is only valid for `esm` format with `node` platform
   #[inline]
   pub fn polyfill_require_for_esm_format_with_node_platform(&self) -> bool {

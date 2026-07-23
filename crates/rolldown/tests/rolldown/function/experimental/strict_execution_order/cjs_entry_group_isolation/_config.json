@@ -1,0 +1,21 @@
+{
+  "_comment": "Two mutually unreachable CommonJS entries co-located into one chunk by a codeSplitting group, in cjs output. Under strictExecutionOrder each entry must stay behind its lazy require_* wrapper: requiring the silent entry must not run the effect entry's top level, and each entry must keep its own module.exports instead of clobbering the shared chunk's.",
+  "configName": "wrap-all",
+  "config": {
+    "input": [
+      { "name": "effect", "import": "./effect.js" },
+      { "name": "silent", "import": "./silent.js" }
+    ],
+    "format": "cjs",
+    "strictExecutionOrder": true,
+    "codeSplitting": {
+      "groups": [{ "name": "common" }]
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    }
+  ]
+}

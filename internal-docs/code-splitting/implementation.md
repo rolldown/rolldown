@@ -1,6 +1,6 @@
 # Code Splitting
 
-The rationale and target architecture are documented in [design.md](./design.md). This file describes the current implementation, where generate-stage order lowering owns wrappers and importer overlays in `OrderWrapState` without changing link-stage `WrapKind` or user statement inclusion, and final interop/order init facts are sealed separately in `FinalEsmInitMetadata`.
+The rationale and target architecture are documented in [design.md](./design.md). This file describes the current implementation, where generate-stage order lowering owns wrappers and importer overlays in `OrderWrapState` without changing link-stage `WrapKind` or user statement inclusion, and final interop/order init facts are sealed separately in `FinalEsmInitMetadata`. One strict-mode exception stays at the link stage: `wrap_modules` forces `WrapKind::Cjs` onto every CommonJS module when `strictExecutionOrder` is enabled, because order lowering only wraps ESM modules while the interop rules leave a CommonJS module nobody imports (a CommonJS entry in cjs output) eager — a co-locating `codeSplitting` group would otherwise run one entry's top level while loading another.
 
 ## Summary
 

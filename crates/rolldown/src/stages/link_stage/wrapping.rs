@@ -140,6 +140,25 @@ impl LinkStage<'_> {
       }
     }
 
+    // Under strict execution order every CommonJS module must stay behind its lazy `require_*`
+    // wrapper. The generate-stage order lowering only wraps ESM modules, and the interop rules
+    // above leave a CommonJS module that nothing imports (a CommonJS entry in cjs output)
+    // unwrapped — its body would run eagerly at the top level of whatever chunk hosts it, so a
+    // co-locating `codeSplitting` group would leak one entry's execution into another and let
+    // competing top-level `module.exports` assignments clobber each other.
+    if self.options.is_strict_execution_order_enabled() {
+      for (idx, linking_info) in
+        self.metas.iter_mut_enumerated().filter(|(module_idx, _)| *module_idx != self.runtime.id())
+      {
+        let Some(module) = self.module_table[idx].as_normal() else {
+          continue;
+        };
+        if module.exports_kind == ExportsKind::CommonJs {
+          linking_info.set_wrap_kind(WrapKind::Cjs);
+        }
+      }
+    }
+
     for m in &self.module_table.modules {
       let Some(ecma_module) = m.as_normal() else { continue };
       let idx = ecma_module.idx;

@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region leaf.js
+var require_leaf = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { ok: true };
+}));
+//#endregion
+//#region main.js
+var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const leaf = require_leaf();
+	if (leaf.ok !== true) throw new Error(`leaf not initialized: ${JSON.stringify(leaf)}`);
+	module.exports = { ok: leaf.ok };
+}));
+//#endregion
+module.exports = require_main();
+
+```
+
+## other.js
+
+```js
+//#region other.js
+const m = require("./main.js");
+if (m.ok !== true) throw new Error(`entry exports not visible: ${JSON.stringify(m)}`);
+module.exports = { ok: true };
+//#endregion
+
+```

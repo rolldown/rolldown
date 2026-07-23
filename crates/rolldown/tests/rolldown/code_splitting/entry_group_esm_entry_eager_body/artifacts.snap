@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+var import_leaf = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { ok: true };
+})))());
+if (import_leaf.default.ok !== true) throw new Error(`cjs leaf not initialized: ${JSON.stringify(import_leaf.default)}`);
+const done = true;
+//#endregion
+exports.done = done;
+
+```

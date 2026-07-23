@@ -1,0 +1,130 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region leaf.js
+var require_leaf = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { ok: true };
+}));
+//#endregion
+//#region leaf-esm.js
+var leaf_esm_exports = /* @__PURE__ */ __exportAll({ ok: () => true });
+var init_leaf_esm = __esmMin((() => {}));
+//#endregion
+//#region main.js
+const leaf = require_leaf();
+const leafEsm = (init_leaf_esm(), __toCommonJS(leaf_esm_exports));
+if (leaf.ok !== true) throw new Error(`cjs leaf not initialized: ${JSON.stringify(leaf)}`);
+if (leafEsm.ok !== true) throw new Error(`esm leaf not initialized: ${JSON.stringify(leafEsm)}`);
+module.exports = { ok: leaf.ok && leafEsm.ok };
+//#endregion
+
+```
+
+# Variant: strict-wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region leaf.js
+var require_leaf = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { ok: true };
+}));
+//#endregion
+//#region leaf-esm.js
+var leaf_esm_exports = /* @__PURE__ */ __exportAll({ ok: () => true });
+var init_leaf_esm = __esmMin((() => {}));
+//#endregion
+//#region main.js
+const leaf = require_leaf();
+const leafEsm = (init_leaf_esm(), __toCommonJS(leaf_esm_exports));
+if (leaf.ok !== true) throw new Error(`cjs leaf not initialized: ${JSON.stringify(leaf)}`);
+if (leafEsm.ok !== true) throw new Error(`esm leaf not initialized: ${JSON.stringify(leafEsm)}`);
+module.exports = { ok: leaf.ok && leafEsm.ok };
+//#endregion
+
+```
+
+# Variant: strict-on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region leaf.js
+var require_leaf = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { ok: true };
+}));
+//#endregion
+//#region leaf-esm.js
+var leaf_esm_exports = /* @__PURE__ */ __exportAll({ ok: () => true });
+var init_leaf_esm = __esmMin((() => {}));
+//#endregion
+//#region main.js
+const leaf = require_leaf();
+const leafEsm = (init_leaf_esm(), __toCommonJS(leaf_esm_exports));
+if (leaf.ok !== true) throw new Error(`cjs leaf not initialized: ${JSON.stringify(leaf)}`);
+if (leafEsm.ok !== true) throw new Error(`esm leaf not initialized: ${JSON.stringify(leafEsm)}`);
+module.exports = { ok: leaf.ok && leafEsm.ok };
+//#endregion
+
+```
+
+# Variant: esm-format-control: [format: Esm]
+
+## Assets
+
+### entry-group.js
+
+```js
+import { i as __toCommonJS, t as __commonJSMin } from "./rolldown-runtime.js";
+import { n as leaf_esm_exports, r as require_leaf, t as init_leaf_esm } from "./main.js";
+//#region main.js
+var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const leaf = require_leaf();
+	const leafEsm = (init_leaf_esm(), __toCommonJS(leaf_esm_exports));
+	if (leaf.ok !== true) throw new Error(`cjs leaf not initialized: ${JSON.stringify(leaf)}`);
+	if (leafEsm.ok !== true) throw new Error(`esm leaf not initialized: ${JSON.stringify(leafEsm)}`);
+	module.exports = { ok: leaf.ok && leafEsm.ok };
+}));
+//#endregion
+export { require_main as t };
+
+```
+
+### main.js
+
+```js
+import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as require_main } from "./entry-group.js";
+//#region leaf.js
+var require_leaf = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { ok: true };
+}));
+//#endregion
+//#region leaf-esm.js
+var leaf_esm_exports = /* @__PURE__ */ __exportAll({ ok: () => true });
+var init_leaf_esm = __esmMin((() => {}));
+//#endregion
+export default require_main();
+export { leaf_esm_exports as n, require_leaf as r, init_leaf_esm as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```

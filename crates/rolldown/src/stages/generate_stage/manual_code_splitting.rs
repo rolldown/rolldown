@@ -9,8 +9,9 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkKind, ChunkingContext, EntryPoint, ManualCodeSplittingOptions, MatchGroup,
-  MatchGroupTest, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry,
+  Chunk, ChunkKind, ChunkingContext, EntryPoint, ExportsKind, ManualCodeSplittingOptions,
+  MatchGroup, MatchGroupTest, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry,
+  OutputFormat,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::SharedPluginDriver;
@@ -118,6 +119,41 @@ impl ManualSplitter<'_> {
     let metas = &self.link_output.metas;
     let mut module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::default();
     let mut group_idx_by_id: FxHashMap<ModuleGroupId, ModuleGroupIdx> = FxHashMap::default();
+
+    // A user-defined entry whose body executes eagerly must stay in its entry chunk in cjs
+    // output: captured into a group chunk, its body runs while the entry chunk's top-of-file
+    // `require` of the group chunk is still executing, so it reads the entry chunk's
+    // `require_*`/`init_*` wrapper exports before they are installed. A CommonJS entry is pinned
+    // in every mode — unwrapped, its bare body also carries the chunk's `module.exports`, and
+    // wrapped, its facade runs `module.exports = require_main()` before the facade's own wrapper
+    // exports exist and then clobbers the entry's exports (see the
+    // `code_splitting/entry_group_*` fixtures). Other entries are pinned only while unwrapped and
+    // outside strict execution order, whose post-chunking lowering legalizes captured entries
+    // itself. Dynamic-import entries are safe to capture: their cjs lowering defers the chunk
+    // require into `Promise.resolve().then(...)`, which runs only after the exporting chunk
+    // finished executing. ESM output is unaffected — hoisted live-bound import cycles tolerate
+    // the ordering.
+    let pinned_entries: FxHashSet<ModuleIdx> = if matches!(self.options.format, OutputFormat::Cjs) {
+      self
+        .link_output
+        .entries
+        .iter()
+        .filter(|(idx, entry_points)| {
+          if !entry_points.iter().any(|entry_point| entry_point.kind.is_user_defined()) {
+            return false;
+          }
+          let Some(module) = self.link_output.module_table[**idx].as_normal() else {
+            return false;
+          };
+          matches!(module.exports_kind, ExportsKind::CommonJs)
+            || (self.link_output.metas[**idx].wrap_kind().is_none()
+              && !self.options.is_strict_execution_order_enabled())
+        })
+        .map(|(idx, _)| *idx)
+        .collect()
+    } else {
+      FxHashSet::default()
+    };
 
     let mut entries_aware_groups: Vec<ModuleGroup> = Vec::new();
     let mut entries_aware_idx_by_id: FxHashMap<ModuleGroupId, usize> = FxHashMap::default();
@@ -239,13 +275,15 @@ impl ManualSplitter<'_> {
           &mut module_groups[idx]
         };
 
+        // Seeding `visited` with the pinned entries makes the capture walk treat them as already
+        // handled: they are neither added to the group nor traversed through.
         add_module_and_dependencies_to_group_recursively(
           group,
           normal_module.idx,
           &self.link_output.metas,
           &self.link_output.module_table,
           self.module_to_assigned,
-          &mut FxHashSet::default(),
+          &mut pinned_entries.clone(),
           include_dependencies_recursively,
         );
       }

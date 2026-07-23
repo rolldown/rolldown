@@ -1,0 +1,37 @@
+{
+  "_comment": "A code-splitting group captures only the CJS entry while its required leaves stay outside. The unwrapped entry must stay in its entry chunk: moved into the group chunk, its bare body called the leaves' `require_*`/`init_*` wrapper exports through a require cycle before the entry chunk installed them, and its `module.exports` landed on the wrong chunk. ESM output keeps the entry wrapped and is unaffected.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "format": "cjs",
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "entry-group",
+          "test": "[\\\\/]main\\.js$",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "strict-wrap-all",
+      "strictExecutionOrder": true
+    },
+    {
+      "_configName": "strict-on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    },
+    {
+      "_configName": "esm-format-control",
+      "format": "esm"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "format": "cjs",
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "entry-group",
+          "test": "[\\\\/]main\\.js$",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    }
+  },
+  "_comment": "The unwrapped-ESM-entry arm of the same family: outside strict execution order an ESM entry stays unwrapped, and captured into the group chunk its eager body read the entry chunk's require_* wrapper (CJS leaf) and live-binding getters (ESM leaf) before the entry chunk installed them."
+}

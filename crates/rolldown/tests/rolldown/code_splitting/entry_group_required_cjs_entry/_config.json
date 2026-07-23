@@ -1,0 +1,26 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "other",
+        "import": "./other.js"
+      }
+    ],
+    "format": "cjs",
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "entry-group",
+          "test": "[\\\\/]main\\.js$",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    }
+  },
+  "_comment": "Same shape as entry_group_facade_wrapper_cycle, but the CJS entry is also required by a second entry, so it gets a require_* wrapper. A wrapped CJS entry captured by a group chunk is equally unsafe in cjs output: the facade ran `module.exports = require_main()` before its own wrapper exports existed and then clobbered the entry's exports with the re-export assignment."
+}

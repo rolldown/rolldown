@@ -1,8 +1,8 @@
 use oxc::ast::ast::{
   ArrowFunctionExpression, CallExpression, ExportNamedDeclaration, Expression, Function,
-  IdentifierReference, Statement, TSType,
+  IdentifierReference, Statement,
 };
-use oxc::ast_visit::{Visit, walk};
+use oxc::ast_visit::{VisitJs, walk_js};
 use oxc::semantic::ScopeFlags;
 use rolldown_common::AstScopes;
 
@@ -76,7 +76,7 @@ impl<'scopes> TopLevelImportReadDetector<'scopes> {
   }
 }
 
-impl<'ast> Visit<'ast> for TopLevelImportReadDetector<'_> {
+impl<'ast> VisitJs<'ast> for TopLevelImportReadDetector<'_> {
   fn visit_identifier_reference(&mut self, it: &IdentifierReference<'ast>) {
     if self.reads_import {
       return;
@@ -97,7 +97,7 @@ impl<'ast> Visit<'ast> for TopLevelImportReadDetector<'_> {
     if self.reads_import {
       return;
     }
-    walk::walk_expression(self, it);
+    walk_js::walk_expression(self, it);
   }
 
   // Merely creating a function does not run its parameters or body.
@@ -108,7 +108,7 @@ impl<'ast> Visit<'ast> for TopLevelImportReadDetector<'_> {
     if self.reads_import {
       return;
     }
-    walk::walk_call_expression(self, it);
+    walk_js::walk_call_expression(self, it);
     if !self.reads_import {
       self.visit_immediately_invoked_function(&it.callee);
     }
@@ -121,9 +121,6 @@ impl<'ast> Visit<'ast> for TopLevelImportReadDetector<'_> {
       self.visit_declaration(declaration);
     }
   }
-
-  // Types are erased at runtime; a type-only import reference is never a value read.
-  fn visit_ts_type(&mut self, _it: &TSType<'ast>) {}
 }
 
 #[cfg(test)]

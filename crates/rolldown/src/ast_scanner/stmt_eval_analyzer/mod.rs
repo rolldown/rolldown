@@ -6,7 +6,7 @@ use oxc::ast::ast::{
   IdentifierReference, UnaryOperator, VariableDeclarationKind,
 };
 use oxc::ast::match_member_expression;
-use oxc::ast_visit::{Visit, walk};
+use oxc::ast_visit::{VisitJs, walk_js};
 use oxc::semantic::{NodeId, ScopeFlags, SymbolId};
 use oxc::transformer::EngineTargets;
 use oxc_ecmascript::GlobalContext;
@@ -755,7 +755,7 @@ impl<'analyzer, 'ctx> DefinitionTimeOrderReasonCollector<'analyzer, 'ctx> {
   }
 }
 
-impl<'ast> Visit<'ast> for DefinitionTimeOrderReasonCollector<'_, '_> {
+impl<'ast> VisitJs<'ast> for DefinitionTimeOrderReasonCollector<'_, '_> {
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference<'ast>) {
     let is_global_read = ident.reference_id.get().is_some_and(|reference_id| {
       let reference = self.analyzer.scope.scoping().get_reference(reference_id);
@@ -770,7 +770,7 @@ impl<'ast> Visit<'ast> for DefinitionTimeOrderReasonCollector<'_, '_> {
     if check_pure_cjs_export(self.analyzer.scope, &assignment.left).is_some() {
       self.visit_expression(&assignment.right);
     } else {
-      walk::walk_assignment_expression(self, assignment);
+      walk_js::walk_assignment_expression(self, assignment);
     }
   }
 
@@ -779,7 +779,7 @@ impl<'ast> Visit<'ast> for DefinitionTimeOrderReasonCollector<'_, '_> {
       && (call.pure || self.analyzer.is_call_expr_marked_pure(call));
     self.add_reason_if(StmtOrderSensitiveReasons::PureAnnotation, is_pure_annotated);
 
-    walk::walk_call_expression(self, call);
+    walk_js::walk_call_expression(self, call);
     self.visit_immediately_invoked_function(&call.callee);
   }
 
@@ -788,7 +788,7 @@ impl<'ast> Visit<'ast> for DefinitionTimeOrderReasonCollector<'_, '_> {
       StmtOrderSensitiveReasons::PureAnnotation,
       !self.analyzer.flat_options.ignore_annotations() && new_expr.pure,
     );
-    walk::walk_new_expression(self, new_expr);
+    walk_js::walk_new_expression(self, new_expr);
     self.visit_immediately_invoked_function(&new_expr.callee);
   }
 
@@ -801,9 +801,6 @@ impl<'ast> Visit<'ast> for DefinitionTimeOrderReasonCollector<'_, '_> {
   fn visit_class(&mut self, class: &ast::Class<'ast>) {
     self.visit_class_definition(class);
   }
-
-  // Types are erased before runtime.
-  fn visit_ts_type(&mut self, _ty: &ast::TSType<'ast>) {}
 }
 
 /// Bundler-specific: detect `exports.staticProp = ...` CJS export pattern.

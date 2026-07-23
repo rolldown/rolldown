@@ -6,7 +6,7 @@ use std::sync::Arc;
 use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, Expression, ObjectPropertyKind, PropertyKey, PropertyKind,
 };
-use oxc::ast_visit::{Visit, walk};
+use oxc::ast_visit::{VisitJs, walk_js};
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
@@ -26,9 +26,9 @@ pub struct GlobImportVisit<'a> {
   pub errors: Vec<anyhow::Error>,
 }
 
-impl<'ast> Visit<'ast> for GlobImportVisit<'_> {
+impl<'ast> VisitJs<'ast> for GlobImportVisit<'_> {
   fn visit_program(&mut self, it: &ast::Program<'ast>) {
-    walk::walk_program(self, it);
+    walk_js::walk_program(self, it);
     if !self.import_decls.is_empty() {
       self
         .magic_string
@@ -40,7 +40,7 @@ impl<'ast> Visit<'ast> for GlobImportVisit<'_> {
     if self.transform_glob_import(expr, ImportGlobOmitType::None) {
       return;
     }
-    walk::walk_expression(self, expr);
+    walk_js::walk_expression(self, expr);
   }
 }
 

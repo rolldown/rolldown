@@ -1,0 +1,19 @@
+docs/in-depth/module-types.md
+  s_792eba8c768726::t_333ec05186c189 3,5,7,11,13,23,38,40,44,63,66,71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6097b560e15090aa1033f588d6c1c5240e4486dd",
+  "prompts": {},
+  "sessions": {
+    "s_792eba8c768726": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8e3a-ea6e-7263-80d8-76fd52f03da2",
+        "model": "unknown"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

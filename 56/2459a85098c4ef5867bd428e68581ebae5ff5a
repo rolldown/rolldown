@@ -1,0 +1,21 @@
+packages/rolldown/src/options/input-options.ts
+  s_792eba8c768726::t_244eaf4b97e31a 71,73,75,77,80,82,521-524
+docs/in-depth/module-types.md
+  s_792eba8c768726::t_bfe3e69f932c50 3-4,6-9,11-13,15,17-22,32-33,40,48-87,89,91-93,95-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "562459a85098c4ef5867bd428e68581ebae5ff5a",
+  "prompts": {},
+  "sessions": {
+    "s_792eba8c768726": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8e3a-ea6e-7263-80d8-76fd52f03da2",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

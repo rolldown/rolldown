@@ -22,8 +22,8 @@ export default defineTest({
   },
   catchError(e: any) {
     expect(e).toBeInstanceOf(Error);
-    expect(e.message).toContain('id');
-    expect(e.message).toContain('resolveId');
-    expect(e.message).toContain('RegExp');
+    expect(e.message).toMatchInlineSnapshot(
+      `"A string \`id\` filter is not supported for the \`resolveId\` hook, because its \`id\` is the import specifier rather than a resolved path. Use a RegExp instead."`,
+    );
   },
 });

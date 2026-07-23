@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { InputOptions, OutputOptions } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
+import { SourceMapConsumer, SourceMapGenerator } from 'source-map';
 import { expect, test } from 'vitest';
 
 const TEST_TIMEOUT = 60_000;
@@ -123,5 +124,144 @@ test(
     const coldChunk = await engine.compileEntry(lazyProxyId, 'client-without-session');
     expect(coldChunk.code).toMatch(lazyFactory);
     expect(coldChunk.code).toMatch(sharedFactory);
+  },
+);
+
+/**
+ * Writes `main.js` and a `lazy.js` whose `throw` sits on line 2, and returns a
+ * plugin that pushes that line down — the shape of any transform that removes or
+ * inserts lines, such as TypeScript type stripping.
+ */
+function setupShiftedLazyModule(dir: string) {
+  const lazyPath = path.join(dir, 'lazy.js');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'main.js'), `globalThis.load = () => import('./lazy.js');\n`);
+  const original = `export function boom() {\n  throw new Error('from lazy');\n}\n`;
+  fs.writeFileSync(lazyPath, original);
+
+  const shiftBy = 3;
+  const plugin = {
+    name: 'shift-lines',
+    transform(code: string, id: string) {
+      if (!id.endsWith('lazy.js')) {
+        return;
+      }
+      const generator = new SourceMapGenerator({ file: id });
+      code.split('\n').forEach((_, index) => {
+        generator.addMapping({
+          source: id,
+          original: { line: index + 1, column: 0 },
+          generated: { line: index + 1 + shiftBy, column: 0 },
+        });
+      });
+      generator.setSourceContent(id, code);
+      return { code: '\n'.repeat(shiftBy) + code, map: generator.toJSON() };
+    },
+  };
+
+  return { lazyPath, lazyProxyId: `${lazyPath}?rolldown-lazy=1`, plugin };
+}
+
+/** Line/column of the only `throw` in `code`, as a sourcemap consumer wants it. */
+function throwPosition(code: string) {
+  const lines = code.split('\n');
+  const index = lines.findIndex((line) => line.includes('from lazy'));
+  return { line: index + 1, column: lines[index].indexOf('throw') };
+}
+
+function inlineSourceMap(code: string) {
+  const match = /sourceMappingURL=data:application\/json[^,]+base64,([\w+/=]+)\s*$/.exec(code);
+  expect(match, 'the lazy chunk should carry an inline sourcemap').not.toBeNull();
+  return JSON.parse(Buffer.from(match![1], 'base64').toString());
+}
+
+// A module's sourcemap chain is what maps the rendered output back to the file
+// the user wrote; the oxc codegen map is only its last element and on its own
+// points at what the plugins produced. A lazy chunk collapses the whole chain,
+// the same way a module rendered into a chunk does — otherwise every position in
+// a lazily compiled module is off by whatever the transforms shifted, which is
+// every stack frame and every devtools jump inside it.
+test(
+  'lazy chunk sourcemap maps through the plugin sourcemap chain',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-sourcemap-${uniqueId}`);
+    const { lazyPath, lazyProxyId, plugin } = setupShiftedLazyModule(dir);
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        plugins: [plugin],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist'), sourcemap: 'inline' },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.ensureCurrentBuildFinish();
+    await engine.registerClient('c1');
+
+    const chunk = await engine.compileEntry(lazyProxyId, 'c1');
+    const position = await SourceMapConsumer.with(inlineSourceMap(chunk.code), null, (consumer) =>
+      consumer.originalPositionFor(throwPosition(chunk.code)),
+    );
+
+    // Line 2 of the file on disk, not line 5 of what the plugin handed the bundler.
+    expect(position.line).toBe(2);
+    expect(path.resolve(path.join(dir, 'dist'), position.source!)).toBe(lazyPath);
+  },
+);
+
+// With `sourcemap: true` the chunk gets a `sourceMappingURL`, so the map it names
+// has to be reachable: a lazy chunk is not written to disk, which leaves the
+// return value as the only way for the consumer to serve it.
+test(
+  'lazy chunk returns the sourcemap its sourceMappingURL names',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-sourcemap-file-${uniqueId}`);
+    const { lazyProxyId, plugin } = setupShiftedLazyModule(dir);
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        plugins: [plugin],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist'), sourcemap: true },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.ensureCurrentBuildFinish();
+    await engine.registerClient('c1');
+
+    const chunk = await engine.compileEntry(lazyProxyId, 'c1');
+
+    const referenced = /\/\/# sourceMappingURL=(.+)$/.exec(chunk.code.trimEnd())?.[1];
+    expect(chunk.sourcemapFilename).toBe(referenced);
+    expect(chunk.sourcemap).toBeTypeOf('string');
+
+    const position = await SourceMapConsumer.with(JSON.parse(chunk.sourcemap!), null, (consumer) =>
+      consumer.originalPositionFor(throwPosition(chunk.code)),
+    );
+    expect(position.line).toBe(2);
   },
 );

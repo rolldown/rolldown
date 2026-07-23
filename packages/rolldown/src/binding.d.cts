@@ -2456,6 +2456,13 @@ export interface BindingJsWatchChangeEvent {
 export interface BindingLazyChunkOutput {
   code: string
   filename: string
+  /**
+   * The chunk's sourcemap, when `sourcemap` is `File` or `Hidden`. Serve it
+   * under `sourcemapFilename`, which is what the chunk's `sourceMappingURL`
+   * refers to.
+   */
+  sourcemap?: string
+  sourcemapFilename?: string
 }
 
 export interface BindingLog {

@@ -301,7 +301,12 @@ impl BindingDevEngine {
       inner
         .compile_lazy_entry(module_id, client_id)
         .await
-        .map(|output| BindingLazyChunkOutput { code: output.code, filename: output.filename })
+        .map(|output| BindingLazyChunkOutput {
+          code: output.code,
+          filename: output.filename,
+          sourcemap: output.sourcemap,
+          sourcemap_filename: output.sourcemap_filename,
+        })
         .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")))
     })
   }
@@ -313,6 +318,11 @@ impl BindingDevEngine {
 pub struct BindingLazyChunkOutput {
   pub code: String,
   pub filename: String,
+  /// The chunk's sourcemap, when `sourcemap` is `File` or `Hidden`. Serve it
+  /// under `sourcemapFilename`, which is what the chunk's `sourceMappingURL`
+  /// refers to.
+  pub sourcemap: Option<String>,
+  pub sourcemap_filename: Option<String>,
 }
 
 #[napi(object)]

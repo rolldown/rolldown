@@ -1,0 +1,19 @@
+docs/superpowers/plans/2026-07-23-module-representation-metadata.md
+  s_792eba8c768726::t_9e4caef56d2b58 502
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "23b41b7ddddfe2c669337ed1f48cde32224111d6",
+  "prompts": {},
+  "sessions": {
+    "s_792eba8c768726": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8e3a-ea6e-7263-80d8-76fd52f03da2",
+        "model": "unknown"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+internal-docs/module-representation/design.md
+  s_792eba8c768726::t_a6cdec8b0d73b7 24-25,27-31,65-69,73-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "eb06206f7bd07bdff07da88f507677c53104a068",
+  "prompts": {},
+  "sessions": {
+    "s_792eba8c768726": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8e3a-ea6e-7263-80d8-76fd52f03da2",
+        "model": "unknown"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

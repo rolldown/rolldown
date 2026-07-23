@@ -370,6 +370,13 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
   public emitFile: PluginContext['emitFile'] = (file): string => {
     if (file.type === 'prebuilt-chunk') {
+      if (typeof file.fileName === 'string' && isPathFragment(file.fileName)) {
+        return error(
+          logFailedValidation(
+            `The "fileName" property of emitted prebuilt chunks must be strings that are neither absolute nor relative paths, received "${file.fileName}".`,
+          ),
+        );
+      }
       return this.context.emitPrebuiltChunk({
         fileName: file.fileName,
         name: file.name,

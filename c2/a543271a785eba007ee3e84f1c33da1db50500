@@ -1,0 +1,39 @@
+crates/rolldown/src/utils/load_source.rs
+  s_792eba8c768726::t_51d77facc1a32d 4-5,22-24,34-38,56-67,79-142,144-150
+crates/rolldown/src/utils/transform_source.rs
+  s_792eba8c768726::t_c329411b9f9f23 8,22,33
+crates/rolldown/tests/rolldown/plugin/plugin_context/represent_type/mod.rs
+  s_792eba8c768726::t_892103933723ea 1-71
+crates/rolldown/src/module_loader/external_module_task.rs
+  s_792eba8c768726::t_ce1c52bda2e85a 67
+crates/rolldown/src/module_loader/module_task.rs
+  s_792eba8c768726::t_5b55ac8b547d1e 8-9,106,112,220,254,283,308,325
+crates/rolldown/src/module_loader/runtime_module_task.rs
+  s_792eba8c768726::t_03c6598513a560 82,95,165
+crates/rolldown/tests/rolldown/plugin/plugin_context/mod.rs
+  s_792eba8c768726::t_e5709ccd87d942 3
+crates/rolldown/tests/rolldown/plugin/plugin_context/represent_type/entry.js
+  s_792eba8c768726::t_1aae97f8706ec8 1
+crates/rolldown_common/src/module/normal_module.rs
+  s_792eba8c768726::t_8893758d93922b 9,32,117
+crates/rolldown_common/src/types/module_info.rs
+  s_792eba8c768726::t_92b20da9d6e9d3 5,18
+crates/rolldown_plugin/src/plugin_driver/build_hooks.rs
+  s_792eba8c768726::t_9b068e41556d65 260,341-343
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c2a543271a785eba007ee3e84f1c33da1db50500",
+  "prompts": {},
+  "sessions": {
+    "s_792eba8c768726": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8e3a-ea6e-7263-80d8-76fd52f03da2",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

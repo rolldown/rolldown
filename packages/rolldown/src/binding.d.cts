@@ -1687,6 +1687,7 @@ export declare class BindingModuleInfo {
   exports: Array<string>
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
+  representType?: 'js' | 'json' | 'text' | 'base64' | 'dataurl' | 'binary' | 'empty' | 'url' | 'copy'
   get code(): string | null
 }
 
@@ -2280,6 +2281,7 @@ export interface BindingHookJsLoadOutput {
   code: string
   map?: string
   moduleSideEffects?: boolean | 'no-treeshake'
+  representType?: 'js' | 'json' | 'text' | 'base64' | 'dataurl' | 'binary' | 'empty' | 'url' | 'copy'
 }
 
 export interface BindingHookJsResolveIdOptions {
@@ -2299,6 +2301,7 @@ export interface BindingHookLoadOutput {
   moduleSideEffects?: boolean | 'no-treeshake'
   map?: BindingSourcemap
   moduleType?: string
+  representType?: 'js' | 'json' | 'text' | 'base64' | 'dataurl' | 'binary' | 'empty' | 'url' | 'copy'
 }
 
 export interface BindingHookRenderChunkOutput {
@@ -2367,6 +2370,7 @@ export interface BindingHookTransformOutput {
    */
   map?: BindingSourcemap | null
   moduleType?: string
+  representType?: 'js' | 'json' | 'text' | 'base64' | 'dataurl' | 'binary' | 'empty' | 'url' | 'copy'
 }
 
 export interface BindingIndentOptions {

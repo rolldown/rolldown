@@ -22,6 +22,10 @@ pub struct BindingModuleInfo {
   pub is_entry: bool,
   #[napi(ts_type = "'es' | 'cjs' | 'unknown'")]
   pub input_format: String,
+  #[napi(
+    ts_type = "'js' | 'json' | 'text' | 'base64' | 'dataurl' | 'binary' | 'empty' | 'url' | 'copy'"
+  )]
+  pub represent_type: Option<String>,
 }
 
 #[napi]
@@ -57,6 +61,7 @@ impl BindingModuleInfo {
       is_entry: inner.is_entry,
       exports: inner.exports.iter().map(ToString::to_string).collect(),
       input_format: input_format.to_string(),
+      represent_type: inner.represent_type.map(|value| value.to_string()),
       inner,
     }
   }

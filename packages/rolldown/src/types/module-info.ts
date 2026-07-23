@@ -1,4 +1,4 @@
-import type { ModuleOptions } from '..';
+import type { ModuleOptions, RepresentType } from '..';
 
 /** @category Plugin APIs */
 export interface ModuleInfo extends ModuleOptions {
@@ -50,4 +50,10 @@ export interface ModuleInfo extends ModuleOptions {
    * @experimental
    */
   inputFormat: 'es' | 'cjs' | 'unknown';
+  /**
+   * The explicitly supplied representation metadata for the module.
+   *
+   * This is `undefined` when no plugin returned `representType`.
+   */
+  representType?: RepresentType;
 }

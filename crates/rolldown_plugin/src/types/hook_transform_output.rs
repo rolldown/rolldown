@@ -1,5 +1,5 @@
-use rolldown_common::ModuleType;
 use rolldown_common::side_effects::HookSideEffects;
+use rolldown_common::{ModuleType, RepresentType};
 use rolldown_sourcemap::SourceMap;
 
 /// The sourcemap returned by a `transform` or `renderChunk` plugin's `map` field.
@@ -45,4 +45,5 @@ pub struct HookTransformOutput {
   pub map: HookTransformOutputMap,
   pub side_effects: Option<HookSideEffects>,
   pub module_type: Option<ModuleType>,
+  pub represent_type: Option<RepresentType>,
 }

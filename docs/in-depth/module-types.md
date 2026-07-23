@@ -1,14 +1,16 @@
 # Module Types
 
-As a web bundler, JavaScript is not the only file type with built-in support in Rolldown. For example, Rolldown can handle TypeScript and JSX files directly, parsing and transforming them to JavaScript before bundling them. We refer to these file types with first-class support in Rolldown as **Module Types**.
+Rolldown distinguishes the type of content a module contains from the way that content is represented to its importers.
 
-## How module types affect users
+`moduleType` declares the content type, similarly to the HTTP `Content-Type` header. It tells Rolldown and plugins how to interpret the source. For example, Rolldown parses content with `moduleType: 'json'` as JSON even when the module's file extension is not `.json`.
 
-End users usually do not need to concern themselves with Module Types, since Rolldown automatically recognizes and handles known Module Types.
+`representType` describes how a module is represented to its importers. It is currently metadata only: setting it does not change parsing, conversion, emission, or bundling behavior.
 
-By default, Rolldown determines the module type of a module based on its file extension. However, in some cases this may not be sufficient. For example, imagine a file containing JSON data, but its extension is `.data`. Rolldown can't recognize it as a JSON file because the extension is not `.json`.
+## Specifying a content type
 
-In this case, users need to explicitly tell Rolldown that files with the `.data` extension should be treated as the JSON module type. This can be done via the `moduleTypes` option in the config:
+End users usually do not need to set `moduleType` because Rolldown recognizes known content types from file extensions. For example, it parses and transforms TypeScript and JSX before bundling them as JavaScript.
+
+Sometimes an extension does not identify the content. If a `.data` file contains JSON, use the `moduleTypes` input option to declare that content type:
 
 ```js [rolldown.config.js]
 export default {
@@ -18,16 +20,14 @@ export default {
 };
 ```
 
-## Module types and plugins
-
-Plugins can specify the module type of a specific file via the `load` hook and the `transform` hook:
+Plugins can declare the content type of a specific module from a `load` or `transform` hook:
 
 ```js
 const myPlugin = {
   load(id) {
     if (id.endsWith('.data')) {
       return {
-        code: '...',
+        code: '{"answer": 42}',
         moduleType: 'json',
       };
     }
@@ -35,10 +35,46 @@ const myPlugin = {
 };
 ```
 
-The main significance of module types is that it provides a central convention for supported types, making it easier to chain multiple plugins that need to operate on the same module type.
+This shared content-type convention lets plugins cooperate without inferring a type from an id. For example, `@vitejs/plugin-vue` can mark a virtual style block with `moduleType: 'css'`, allowing a CSS plugin to recognize it without understanding Vue-specific query parameters.
 
-For example, `@vitejs/plugin-vue` currently creates virtual css modules for the style blocks in `.vue` files and append `?lang=css` to the id of a virtual module, allowing these modules to be recognized as css by the vue plugin. However, this is only a convention of the vue plugin - other plugins may ignore the query string and thus not recognize the convention.
+Similarly, a JSONC plugin can strip comments in its `load` hook and return the remaining content with `moduleType: 'json'`. Rolldown can then handle the JSON without needing first-class JSONC support.
 
-With module types, `@vitejs/plugin-vue` can explicitly specify the module type of virtual css modules as `css`, and other plugins like the postcss plugin can process these css modules without being aware of the vue plugin.
+## Specifying representation metadata
 
-Another example: to add support for `.jsonc` files, a plugin could simply strip comments of `.jsonc` files in the `load` hook and return `moduleType: 'json'`. Rolldown will handle the rest.
+A plugin may also set `representType` in a `load` or `transform` result. Later hooks can read the final explicitly supplied value from `ModuleInfo.representType`:
+
+```js
+const metadataPlugin = {
+  load(id) {
+    if (id.endsWith('.data')) {
+      return {
+        code: '{"answer": 42}',
+        moduleType: 'json',
+        representType: 'text',
+      };
+    }
+  },
+  moduleParsed(moduleInfo) {
+    console.log(moduleInfo.representType); // 'text'
+  },
+};
+```
+
+If multiple hooks return `representType`, the last explicit value wins. If no hook returns it, `ModuleInfo.representType` is `undefined`.
+
+::: warning Metadata only
+`representType` does not yet select a loader or change the generated output. Continue to provide valid content and the appropriate `moduleType` for current Rolldown processing.
+:::
+
+## Deprecated representation-oriented module types
+
+The following `moduleType` values mix representation choices into the content type API. They remain accepted for compatibility but are deprecated. Use the corresponding `representType` value for representation metadata:
+
+| Deprecated `moduleType` | Use `representType` |
+| ----------------------- | ------------------- |
+| `base64`                | `base64`            |
+| `dataurl`               | `dataurl`           |
+| `binary`                | `binary`            |
+| `empty`                 | `empty`             |
+| `asset`                 | `url`               |
+| `copy`                  | `copy`              |

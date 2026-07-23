@@ -257,6 +257,7 @@ impl PluginDriver {
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     side_effects: &mut Option<HookSideEffects>,
     module_type: &mut ModuleType,
+    represent_type: &mut Option<rolldown_common::RepresentType>,
     magic_string_tx: Option<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>,
     code_changed_by_plugins: &mut Option<Vec<String>>,
   ) -> Result<String> {
@@ -336,6 +337,9 @@ impl PluginDriver {
         }
         if let Some(ty) = r.module_type {
           *module_type = ty;
+        }
+        if let Some(value) = r.represent_type {
+          *represent_type = Some(value);
         }
       } else {
         trace_action!(action::HookTransformCallEnd {

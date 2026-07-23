@@ -302,6 +302,7 @@ export function bindingifyTransform(
           (mapHandledByNativeChannel || ret.map === null ? null : undefined),
         moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
         moduleType: ret.moduleType,
+        representType: ret.representType,
       };
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -355,6 +356,7 @@ export function bindingifyLoad(
         code: ret.code,
         map: bindingifySourcemap(map),
         moduleType: ret.moduleType,
+        representType: ret.representType,
         moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
       };
     },

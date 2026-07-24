@@ -245,13 +245,13 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               ast_builder,
             )
           });
-          program.body.push(Statement::VariableDeclaration(ast::VariableDeclaration::boxed(
+          program.body.push(Statement::new_variable_declaration(
             SPAN,
             ast::VariableDeclarationKind::Var,
             oxc::allocator::Vec::from_iter_in(decorations, ast_builder),
             false,
             ast_builder,
-          )));
+          ));
         }
 
         // The wrapping would happen during the chunk codegen phase
@@ -355,11 +355,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         self.var_declaration_to_expr_seq_and_bindings(decl, self.state)
       {
         self.top_level_var_bindings.extend(bindings);
-        *it = ast::Statement::ExpressionStatement(ast::ExpressionStatement::boxed(
-          SPAN,
-          expr,
-          &self.ast_builder,
-        ));
+        *it = ast::Statement::new_expression_statement(SPAN, expr, &self.ast_builder);
       }
     }
   }
@@ -718,28 +714,24 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         self.generate_finalized_simple_assignment_target_for_reference(&prop.binding)
       {
         let binding = if let Some(init) = prop.init.take() {
-          ast::AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
-            ast::AssignmentTargetWithDefault::boxed(
-              Span::default(),
-              ast::AssignmentTarget::from(target),
-              init,
-              &self.ast_builder,
-            ),
+          ast::AssignmentTargetMaybeDefault::new_assignment_target_with_default(
+            Span::default(),
+            ast::AssignmentTarget::from(target),
+            init,
+            &self.ast_builder,
           )
         } else {
           ast::AssignmentTargetMaybeDefault::from(target)
         };
-        *property = ast::AssignmentTargetProperty::AssignmentTargetPropertyProperty(
-          ast::AssignmentTargetPropertyProperty::boxed(
-            Span::default(),
-            ast::PropertyKey::StaticIdentifier(
-              IdentifierName::new_id_name(prop.span, &prop.binding.name, &self.ast_builder)
-                .into_in(self.alloc),
-            ),
-            binding,
-            false,
-            &self.ast_builder,
+        *property = ast::AssignmentTargetProperty::new_assignment_target_property_property(
+          Span::default(),
+          ast::PropertyKey::StaticIdentifier(
+            IdentifierName::new_id_name(prop.span, &prop.binding.name, &self.ast_builder)
+              .into_in(self.alloc),
           ),
+          binding,
+          false,
+          &self.ast_builder,
         );
       } else {
         prop.binding.reference_id.get_mut().take();

@@ -67,12 +67,12 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // module/exports objects become locals the body's rewritten `module`/`exports`
     // references resolve to.
     let cjs_module_locals: Vec<ast::Statement<'ast>> = if self.module.exports_kind.is_commonjs() {
-      let empty_exports_object = ast::Expression::ObjectExpression(ast::ObjectExpression::boxed(
+      let empty_exports_object = ast::Expression::new_object_expression(
         SPAN,
         oxc::allocator::Vec::new_in(&self.ast_builder),
         &self.ast_builder,
-      ));
-      let module_object = ast::Expression::ObjectExpression(ast::ObjectExpression::boxed(
+      );
+      let module_object = ast::Expression::new_object_expression(
         SPAN,
         oxc::allocator::Vec::from_value_in(
           ast::ObjectPropertyKind::new_object_property(
@@ -88,7 +88,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           &self.ast_builder,
         ),
         &self.ast_builder,
-      ));
+      );
       vec![
         // var __rolldown_module__ = { exports: {} };
         ast::Statement::from(ast::Declaration::new_variable_declaration(
@@ -168,8 +168,13 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       &self.ast_builder,
     );
 
-    let try_stmt =
-      ast::TryStatement::boxed(SPAN, try_block, NONE, Some(final_block), &self.ast_builder);
+    let try_stmt = ast::Statement::new_try_statement(
+      SPAN,
+      try_block,
+      NONE,
+      Some(final_block),
+      &self.ast_builder,
+    );
 
     // The runtime calls the factory with the module's stable id as its argument, so it's
     // available inside the body as `__rolldown_module_id__`. This lets registerModule /
@@ -209,10 +214,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       Some(ast::FunctionBody::new(
         SPAN,
         oxc::allocator::Vec::new_in(&self.ast_builder),
-        oxc::allocator::Vec::from_value_in(
-          ast::Statement::TryStatement(try_stmt),
-          &self.ast_builder,
-        ),
+        oxc::allocator::Vec::from_value_in(try_stmt, &self.ast_builder),
         &self.ast_builder,
       )),
       &self.ast_builder,
@@ -224,13 +226,13 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // Every factory is id-addressed and registry-gated at runtime; re-execution policy
     // is runtime data (evictions), never a per-payload flag.
     let mut register_factory_args = oxc::allocator::Vec::with_capacity_in(3, &self.ast_builder);
-    register_factory_args.push(ast::Argument::StringLiteral(ast::StringLiteral::boxed(
+    register_factory_args.push(ast::Argument::new_string_literal(
       SPAN,
       oxc::ast::ast::Str::from_str_in(&self.module.stable_id, &self.ast_builder),
       None,
       &self.ast_builder,
-    )));
-    register_factory_args.push(ast::Argument::StringLiteral(ast::StringLiteral::boxed(
+    ));
+    register_factory_args.push(ast::Argument::new_string_literal(
       SPAN,
       oxc::ast::ast::Str::from_str_in(
         if self.module.exports_kind.is_commonjs() { "cjs" } else { "esm" },
@@ -238,11 +240,11 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       ),
       None,
       &self.ast_builder,
-    )));
+    ));
     register_factory_args
       .push(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper)));
 
-    let register_factory_call = ast::CallExpression::boxed(
+    let register_factory_call = ast::Expression::new_call_expression(
       SPAN,
       Expression::new_id_ref_expr(SPAN, "__rolldown_runtime__.registerFactory", &self.ast_builder),
       NONE,
@@ -253,7 +255,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
 
     node.body.push(ast::Statement::new_expression_statement(
       SPAN,
-      ast::Expression::CallExpression(register_factory_call),
+      register_factory_call,
       &self.ast_builder,
     ));
   }

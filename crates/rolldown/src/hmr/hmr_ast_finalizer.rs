@@ -148,16 +148,16 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
               &specifier.exported.name(),
               match &specifier.local {
                 ast::ModuleExportName::IdentifierName(ident) => {
-                  Expression::StaticMemberExpression(ast::StaticMemberExpression::boxed(
+                  Expression::new_static_member_expression(
                     SPAN,
                     Expression::new_id_ref_expr(SPAN, &binding_name, &self.ast_builder),
                     ast::IdentifierName::new(SPAN, ident.name.as_str(), &self.ast_builder),
                     false,
                     &self.ast_builder,
-                  ))
+                  )
                 }
                 ast::ModuleExportName::StringLiteral(str) => {
-                  Expression::ComputedMemberExpression(ast::ComputedMemberExpression::boxed(
+                  Expression::new_computed_member_expression(
                     SPAN,
                     Expression::new_id_ref_expr(SPAN, &binding_name, &self.ast_builder),
                     ast::Expression::new_string_literal(
@@ -168,7 +168,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                     ),
                     false,
                     &self.ast_builder,
-                  ))
+                  )
                 }
                 ast::ModuleExportName::IdentifierReference(_) => {
                   unreachable!(
@@ -176,7 +176,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                   )
                 }
               },
-              matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_)), &self.ast_builder
+              matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_)),
+              &self.ast_builder,
             )
           }));
           if let Some(stmt) = self.create_load_exports_call_stmt(importee, &binding_name, decl.span)
@@ -437,7 +438,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     );
 
     // var [binding_name] = [__toESM-wrapped loadExports call];
-    let stmt = Statement::from(ast::Declaration::new_variable_declaration(
+    let stmt = Statement::new_variable_declaration(
       span,
       ast::VariableDeclarationKind::Var,
       oxc::allocator::Vec::from_value_in(
@@ -463,7 +464,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       ),
       false,
       &self.ast_builder,
-    ));
+    );
     Some(stmt)
   }
 
@@ -513,11 +514,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       &self.ast_builder,
     );
 
-    Some(ast::Statement::ExpressionStatement(ast::ExpressionStatement::boxed(
-      span,
-      call_expr,
-      &self.ast_builder,
-    )))
+    Some(ast::Statement::new_expression_statement(span, call_expr, &self.ast_builder))
   }
 
   fn generate_declaration_of_module_namespace_object(
@@ -610,22 +607,22 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
     if importee.id.contains("?rolldown-lazy=1") {
       // Build: encodeURIComponent(importee.id)
-      let encode_call = ast::Expression::CallExpression(ast::CallExpression::boxed(
+      let encode_call = ast::Expression::new_call_expression(
         SPAN,
         Expression::new_id_ref_expr(SPAN, "encodeURIComponent", &self.ast_builder),
         NONE,
         oxc::allocator::Vec::from_value_in(
-          ast::Argument::StringLiteral(ast::StringLiteral::boxed(
+          ast::Argument::new_string_literal(
             SPAN,
             Str::from_str_in(&importee.id, &self.ast_builder),
             None,
             &self.ast_builder,
-          )),
+          ),
           &self.ast_builder,
         ),
         false,
         &self.ast_builder,
-      ));
+      );
 
       // Build template literal: `/@vite/lazy?id=${encodeURIComponent(importee.id)}&clientId=${__rolldown_runtime__.clientId}`
       let url_expr = {
@@ -680,22 +677,22 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         ast::Expression::new_import_expression(SPAN, url_expr, None, None, &self.ast_builder);
 
       // Build: __rolldown_runtime__.loadExports("<stable_proxy_id>")
-      let load_exports_call = ast::Expression::CallExpression(ast::CallExpression::boxed(
+      let load_exports_call = ast::Expression::new_call_expression(
         SPAN,
         Expression::new_id_ref_expr(SPAN, "__rolldown_runtime__.loadExports", &self.ast_builder),
         NONE,
         oxc::allocator::Vec::from_value_in(
-          ast::Argument::StringLiteral(ast::StringLiteral::boxed(
+          ast::Argument::new_string_literal(
             SPAN,
             Str::from_str_in(&importee.stable_id, &self.ast_builder),
             None,
             &self.ast_builder,
-          )),
+          ),
           &self.ast_builder,
         ),
         false,
         &self.ast_builder,
-      ));
+      );
 
       // Build: () => __rolldown_runtime__.loadExports("<stable_proxy_id>")
       let arrow_fn = ast::Expression::new_arrow_function_expression(
@@ -715,11 +712,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           SPAN,
           oxc::allocator::Vec::new_in(&self.ast_builder),
           oxc::allocator::Vec::from_value_in(
-            ast::Statement::ExpressionStatement(ast::ExpressionStatement::boxed(
-              SPAN,
-              load_exports_call,
-              &self.ast_builder,
-            )),
+            ast::Statement::new_expression_statement(SPAN, load_exports_call, &self.ast_builder),
             &self.ast_builder,
           ),
           &self.ast_builder,
@@ -728,13 +721,13 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       );
 
       // Build: import(...).then(() => __rolldown_runtime__.loadExports("..."))
-      let then_callee = Expression::StaticMemberExpression(ast::StaticMemberExpression::boxed(
+      let then_callee = Expression::new_static_member_expression(
         SPAN,
         import_expr,
         ast::IdentifierName::new(SPAN, "then", &self.ast_builder),
         false,
         &self.ast_builder,
-      ));
+      );
 
       *it = ast::Expression::new_call_expression(
         SPAN,
@@ -752,22 +745,22 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     // __rolldown_runtime__.loadExports('./foo.js')
     // Use stable module ID for consistent runtime lookup
-    let mut load_exports_call_expr = ast::Expression::CallExpression(ast::CallExpression::boxed(
+    let mut load_exports_call_expr = ast::Expression::new_call_expression(
       SPAN,
       Expression::new_id_ref_expr(SPAN, "__rolldown_runtime__.loadExports", &self.ast_builder),
       NONE,
       oxc::allocator::Vec::from_value_in(
-        ast::Argument::StringLiteral(ast::StringLiteral::boxed(
+        ast::Argument::new_string_literal(
           SPAN,
           Str::from_str_in(&importee.stable_id, &self.ast_builder),
           None,
           &self.ast_builder,
-        )),
+        ),
         &self.ast_builder,
       ),
       false,
       &self.ast_builder,
-    ));
+    );
 
     if is_importee_cjs {
       let is_node_cjs = importee.def_format.is_commonjs();
@@ -777,13 +770,13 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         &self.ast_builder,
       );
       if is_node_cjs {
-        args.push(ast::Argument::from(ast::Expression::new_numeric_literal(
+        args.push(ast::Argument::new_numeric_literal(
           SPAN,
           1.0,
           None,
           ast::NumberBase::Decimal,
           &self.ast_builder,
-        )));
+        ));
       }
 
       // __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports('./foo.js'), node_mode)
@@ -812,14 +805,14 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let init_call = self.make_init_module_call(&self.modules[importee_idx]);
     let promise_resolve_then_load_exports =
       Expression::new_promise_resolve_then(load_exports_call_expr, &self.ast_builder);
-    *it = ast::Expression::SequenceExpression(ast::SequenceExpression::boxed(
+    *it = ast::Expression::new_sequence_expression(
       SPAN,
       oxc::allocator::Vec::from_array_in(
         [init_call, promise_resolve_then_load_exports],
         &self.ast_builder,
       ),
       &self.ast_builder,
-    ));
+    );
   }
 
   pub fn try_rewrite_require(
@@ -921,13 +914,13 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         false,
         &self.ast_builder,
       );
-      Expression::from(ast::MemberExpression::new_static_member_expression(
+      Expression::new_static_member_expression(
         SPAN,
         to_commonjs_call,
         IdentifierName::new_id_name(SPAN, "default", &self.ast_builder),
         false,
         &self.ast_builder,
-      ))
+      )
     } else {
       Expression::new_call_with_arg(
         Expression::new_member_access_expr(

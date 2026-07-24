@@ -2,9 +2,9 @@ use oxc::{
   allocator::Allocator,
   ast::{
     ast::{
-      Argument, BindingIdentifier, BindingPattern, Declaration, Expression, FormalParameter,
-      FormalParameterKind, FormalParameters, Function, FunctionBody, IdentifierName,
-      MemberExpression, Statement, VariableDeclarator,
+      Argument, BindingIdentifier, BindingPattern, Expression, FormalParameter,
+      FormalParameterKind, FormalParameters, FunctionBody, IdentifierName, Statement,
+      VariableDeclarator,
     },
     builder::{AstBuilder, NONE},
   },
@@ -39,16 +39,16 @@ impl<'ast> VisitMut<'ast> for LazyCompilationRuntimeInjector<'ast> {
       // Build: import_expr.then(__unwrap_lazy_compilation_entry)
       *expr = Expression::new_call_expression(
         SPAN,
-        Expression::from(MemberExpression::new_static_member_expression(
+        Expression::new_static_member_expression(
           SPAN,
           import_expr,
           IdentifierName::new(SPAN, "then", &self.ast_builder),
           false,
           &self.ast_builder,
-        )),
+        ),
         NONE,
         oxc::allocator::Vec::from_value_in(
-          Argument::from(Expression::new_identifier(SPAN, HELPER_NAME, &self.ast_builder)),
+          Argument::new_identifier(SPAN, HELPER_NAME, &self.ast_builder),
           &self.ast_builder,
         ),
         false,
@@ -94,7 +94,7 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
   );
 
   // var e = m['rolldown:exports'];
-  let var_decl_stmt = Statement::from(Declaration::new_variable_declaration(
+  let var_decl_stmt = Statement::new_variable_declaration(
     SPAN,
     oxc::ast::ast::VariableDeclarationKind::Var,
     oxc::allocator::Vec::from_value_in(
@@ -103,13 +103,13 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
         oxc::ast::ast::VariableDeclarationKind::Var,
         BindingPattern::new_binding_identifier(SPAN, "e", &ast_builder),
         NONE,
-        Some(Expression::from(MemberExpression::new_computed_member_expression(
+        Some(Expression::new_computed_member_expression(
           SPAN,
           Expression::new_identifier(SPAN, "m", &ast_builder),
           Expression::new_string_literal(SPAN, "rolldown:exports", None, &ast_builder),
           false,
           &ast_builder,
-        ))),
+        )),
         false,
         &ast_builder,
       ),
@@ -117,7 +117,7 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
     ),
     false,
     &ast_builder,
-  ));
+  );
 
   // return e ? e : m;
   let return_stmt = Statement::new_return_statement(
@@ -140,7 +140,7 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
     FunctionBody::new(SPAN, oxc::allocator::Vec::new_in(&ast_builder), body_stmts, &ast_builder);
 
   // function __unwrap_lazy_compilation_entry(m) { ... }
-  Statement::FunctionDeclaration(Function::boxed(
+  Statement::new_function_declaration(
     SPAN,
     oxc::ast::ast::FunctionType::FunctionDeclaration,
     Some(BindingIdentifier::new(SPAN, HELPER_NAME, &ast_builder)),
@@ -153,5 +153,5 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
     NONE, // return_type
     Some(body),
     &ast_builder,
-  ))
+  )
 }

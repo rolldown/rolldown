@@ -86,12 +86,10 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
 
     let canonical_name = self.canonical_name_for(canonical_ref);
     if id_ref.name != canonical_name {
-      return Some(ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
-        ast::IdentifierReference::boxed(
-          id_ref.span,
-          oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_builder),
-          &self.ast_builder,
-        ),
+      return Some(ast::SimpleAssignmentTarget::new_assignment_target_identifier(
+        id_ref.span,
+        oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_builder),
+        &self.ast_builder,
       ));
     }
 

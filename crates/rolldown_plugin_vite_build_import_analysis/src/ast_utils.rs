@@ -4,10 +4,9 @@ use oxc::{
   allocator::{CloneIn as _, TakeIn as _},
   ast::{
     ast::{
-      Argument, ArrowFunctionExpression, AwaitExpression, BindingPattern, BindingProperty,
-      Declaration, Expression, FormalParameterKind, FormalParameters, FunctionBody, IdentifierName,
-      MemberExpression, ObjectPattern, PropertyKey, ReturnStatement, Statement,
-      StaticMemberExpression, VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
+      Argument, BindingPattern, BindingProperty, Expression, FormalParameterKind, FormalParameters,
+      FunctionBody, IdentifierName, ObjectPattern, PropertyKey, Statement, StaticMemberExpression,
+      VariableDeclarationKind, VariableDeclarator,
     },
     builder::NONE,
   },
@@ -61,7 +60,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
         key @ "default" => (key, "__vite_default__"),
         _ => (member_expr.property.name.as_str(), member_expr.property.name.as_str()),
       };
-      *await_expr = Expression::AwaitExpression(AwaitExpression::boxed(
+      *await_expr = Expression::new_await_expression(
         SPAN,
         self.construct_vite_preload_call(
           ObjectPattern::boxed(
@@ -83,7 +82,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
           await_expr.take_in(&self.ast_builder.allocator()),
         ),
         &self.ast_builder,
-      ));
+      );
       return true;
     }
     false
@@ -164,59 +163,53 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     object_pat: oxc::allocator::Box<'a, ObjectPattern<'a>>,
     await_expr: Expression<'a>,
   ) -> Expression<'a> {
-    self.vite_preload_call(Argument::from(Expression::ArrowFunctionExpression(
-      ArrowFunctionExpression::boxed(
+    self.vite_preload_call(Argument::new_arrow_function_expression(
+      SPAN,
+      false,
+      true,
+      NONE,
+      FormalParameters::new(
         SPAN,
-        false,
-        true,
+        FormalParameterKind::Signature,
+        oxc::allocator::Vec::new_in(&self.ast_builder),
         NONE,
-        FormalParameters::new(
-          SPAN,
-          FormalParameterKind::Signature,
-          oxc::allocator::Vec::new_in(&self.ast_builder),
-          NONE,
-          &self.ast_builder,
-        ),
-        NONE,
-        FunctionBody::new(
-          SPAN,
-          oxc::allocator::Vec::new_in(&self.ast_builder),
-          {
-            let mut statements = oxc::allocator::Vec::with_capacity_in(2, &self.ast_builder);
-            statements.push(Statement::from(Declaration::VariableDeclaration(
-              VariableDeclaration::boxed(
+        &self.ast_builder,
+      ),
+      NONE,
+      FunctionBody::new(
+        SPAN,
+        oxc::allocator::Vec::new_in(&self.ast_builder),
+        {
+          let mut statements = oxc::allocator::Vec::with_capacity_in(2, &self.ast_builder);
+          statements.push(Statement::new_variable_declaration(
+            SPAN,
+            VariableDeclarationKind::Const,
+            oxc::allocator::Vec::from_value_in(
+              VariableDeclarator::new(
                 SPAN,
                 VariableDeclarationKind::Const,
-                oxc::allocator::Vec::from_value_in(
-                  VariableDeclarator::new(
-                    SPAN,
-                    VariableDeclarationKind::Const,
-                    BindingPattern::ObjectPattern(
-                      object_pat.clone_in(self.ast_builder.allocator()),
-                    ),
-                    NONE,
-                    Some(await_expr),
-                    false,
-                    &self.ast_builder,
-                  ),
-                  &self.ast_builder,
-                ),
+                BindingPattern::ObjectPattern(object_pat.clone_in(self.ast_builder.allocator())),
+                NONE,
+                Some(await_expr),
                 false,
                 &self.ast_builder,
               ),
-            )));
-            statements.push(Statement::ReturnStatement(ReturnStatement::boxed(
-              SPAN,
-              Some(BindingPattern::ObjectPattern(object_pat).into_expression(&self.ast_builder)),
               &self.ast_builder,
-            )));
-            statements
-          },
-          &self.ast_builder,
-        ),
+            ),
+            false,
+            &self.ast_builder,
+          ));
+          statements.push(Statement::new_return_statement(
+            SPAN,
+            Some(BindingPattern::ObjectPattern(object_pat).into_expression(&self.ast_builder)),
+            &self.ast_builder,
+          ));
+          statements
+        },
         &self.ast_builder,
       ),
-    )))
+      &self.ast_builder,
+    ))
   }
 
   pub fn vite_preload_call(&self, argument: Argument<'a>) -> Expression<'a> {
@@ -236,15 +229,13 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
           Expression::new_void_0(SPAN, &self.ast_builder)
         }));
         if append_import_meta_url {
-          items.push(Argument::from(Expression::from(
-            MemberExpression::new_static_member_expression(
-              SPAN,
-              Expression::new_import_meta(SPAN, &self.ast_builder),
-              IdentifierName::new_id_name(SPAN, "url", &self.ast_builder),
-              false,
-              &self.ast_builder,
-            ),
-          )));
+          items.push(Argument::new_static_member_expression(
+            SPAN,
+            Expression::new_import_meta(SPAN, &self.ast_builder),
+            IdentifierName::new_id_name(SPAN, "url", &self.ast_builder),
+            false,
+            &self.ast_builder,
+          ));
         }
         items
       },

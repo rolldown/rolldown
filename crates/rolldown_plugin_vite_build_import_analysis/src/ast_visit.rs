@@ -5,8 +5,7 @@ use oxc::{
   ast::{
     ast::{
       BindingIdentifier, BindingPattern, Expression, ImportDeclarationSpecifier,
-      ImportOrExportKind, ModuleDeclaration, ModuleExportName, Statement, StringLiteral,
-      VariableDeclaration,
+      ImportOrExportKind, ModuleExportName, Statement, StringLiteral, VariableDeclaration,
     },
     builder::NONE,
   },
@@ -36,7 +35,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   fn visit_program(&mut self, it: &mut oxc::ast::ast::Program<'a>) {
     walk_mut::walk_program(self, it);
     if self.need_prepend_helper && self.insert_preload && !self.has_inserted_helper {
-      it.body.push(Statement::from(ModuleDeclaration::new_import_declaration(
+      it.body.push(Statement::new_import_declaration(
         SPAN,
         Some(oxc::allocator::Vec::from_value_in(
           ImportDeclarationSpecifier::new_import_specifier(
@@ -53,7 +52,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
         NONE,
         ImportOrExportKind::Value,
         &self.ast_builder,
-      )));
+      ));
     }
   }
 

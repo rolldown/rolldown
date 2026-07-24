@@ -35,12 +35,12 @@ pub trait HmrAstBuilder<'any, 'ast> {
   /// by the runtime. The main-bundle path has no such wrapper, so it still needs to emit the
   /// stable id as a string literal.
   fn module_id_argument(&self) -> ast::Argument<'ast> {
-    ast::Argument::StringLiteral(ast::StringLiteral::boxed(
+    ast::Argument::new_string_literal(
       SPAN,
       ast::Str::from_str_in(&self.module().stable_id, &self.builder()),
       None,
       &self.builder(),
-    ))
+    )
   }
 
   /// `__rolldown_runtime__.registerModule(moduleId, module)`
@@ -49,15 +49,14 @@ pub trait HmrAstBuilder<'any, 'ast> {
       rolldown_common::ExportsKind::Esm => {
         let binding_name_for_namespace_object_ref_atom =
           self.binding_name_for_namespace_object_ref_atom();
-        let namespace_object_ref_expr =
-          ast::Expression::Identifier(ast::IdentifierReference::boxed(
-            SPAN,
-            binding_name_for_namespace_object_ref_atom,
-            &self.builder(),
-          ));
+        let namespace_object_ref_expr = ast::Expression::new_identifier(
+          SPAN,
+          binding_name_for_namespace_object_ref_atom,
+          &self.builder(),
+        );
 
         // { exports: namespace }
-        ast::Argument::ObjectExpression(ast::ObjectExpression::boxed(
+        ast::Argument::new_object_expression(
           SPAN,
           oxc::allocator::Vec::from_value_in(
             ast::ObjectPropertyKind::new_object_property(
@@ -73,23 +72,19 @@ pub trait HmrAstBuilder<'any, 'ast> {
             &self.builder(),
           ),
           &self.builder(),
-        ))
+        )
       }
       rolldown_common::ExportsKind::CommonJs => {
         // `module`
-        ast::Argument::from(ast::Expression::Identifier(ast::IdentifierReference::boxed(
-          SPAN,
-          Self::cjs_module_name(),
-          &self.builder(),
-        )))
+        ast::Argument::new_identifier(SPAN, Self::cjs_module_name(), &self.builder())
       }
       rolldown_common::ExportsKind::None => {
         // `{}`
-        ast::Argument::from(ast::Expression::ObjectExpression(ast::ObjectExpression::boxed(
+        ast::Argument::new_object_expression(
           SPAN,
           oxc::allocator::Vec::new_in(&self.builder()),
           &self.builder(),
-        )))
+        )
       }
     };
 
@@ -102,31 +97,23 @@ pub trait HmrAstBuilder<'any, 'ast> {
     );
 
     // __rolldown_runtime__.registerModule(moduleId, module)
-    let register_call = ast::CallExpression::boxed(
+    let register_call = ast::Expression::new_call_expression(
       SPAN,
-      ast::Expression::Identifier(ast::IdentifierReference::boxed(
-        SPAN,
-        "__rolldown_runtime__.registerModule",
-        &self.builder(),
-      )),
+      ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.registerModule", &self.builder()),
       NONE,
       arguments,
       false,
       &self.builder(),
     );
 
-    ast::Statement::ExpressionStatement(ast::ExpressionStatement::boxed(
-      SPAN,
-      ast::Expression::CallExpression(register_call),
-      &self.builder(),
-    ))
+    ast::Statement::new_expression_statement(SPAN, register_call, &self.builder())
   }
 
   /// `var $hot_name = __rolldown_runtime__.createModuleHotContext($stable_id);`
   fn create_module_hot_context_initializer_stmt(&self) -> ast::Statement<'ast> {
     // var $hot_name = __rolldown_runtime__.createModuleHotContext($stable_id);
     // Use stable module ID for consistent lookup
-    ast::Statement::VariableDeclaration(ast::VariableDeclaration::boxed(
+    ast::Statement::new_variable_declaration(
       SPAN,
       ast::VariableDeclarationKind::Const,
       oxc::allocator::Vec::from_value_in(
@@ -141,18 +128,18 @@ pub trait HmrAstBuilder<'any, 'ast> {
           ),
           NONE,
           // __rolldown_runtime__.createModuleHotContext($stable_id)
-          Some(ast::Expression::CallExpression(ast::CallExpression::boxed(
+          Some(ast::Expression::new_call_expression(
             SPAN,
-            ast::Expression::Identifier(ast::IdentifierReference::boxed(
+            ast::Expression::new_identifier(
               SPAN,
               "__rolldown_runtime__.createModuleHotContext",
               &self.builder(),
-            )),
+            ),
             NONE,
             oxc::allocator::Vec::from_value_in(self.module_id_argument(), &self.builder()),
             false,
             &self.builder(),
-          ))),
+          )),
           false,
           &self.builder(),
         ),
@@ -160,7 +147,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
       ),
       false,
       &self.builder(),
-    ))
+    )
   }
 }
 
@@ -191,11 +178,7 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
   /// (or `createCjsInitializer(id, function (exports, module, __rolldown_module_id__) { … })`),
   /// so the id is in lexical scope as a parameter.
   fn module_id_argument(&self) -> ast::Argument<'ast> {
-    ast::Argument::Identifier(ast::IdentifierReference::boxed(
-      SPAN,
-      MODULE_ID_PARAM_FOR_HMR,
-      &self.builder(),
-    ))
+    ast::Argument::new_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR, &self.builder())
   }
 }
 

@@ -1,9 +1,6 @@
 use oxc::ast::builder::AstBuilder;
 use oxc::{
-  ast::ast::{
-    Expression, IdentifierName, ObjectExpression, ObjectPropertyKind, Statement,
-    StaticMemberExpression,
-  },
+  ast::ast::{Expression, IdentifierName, ObjectPropertyKind, Statement},
   ast_visit::VisitMut,
   span::SPAN,
 };
@@ -24,36 +21,36 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
 
   #[inline]
   fn create_self_location_href_expr(&self) -> Expression<'ast> {
-    Expression::StaticMemberExpression(StaticMemberExpression::boxed(
+    Expression::new_static_member_expression(
       SPAN,
-      Expression::StaticMemberExpression(StaticMemberExpression::boxed(
+      Expression::new_static_member_expression(
         SPAN,
         Expression::new_id_ref_expr(SPAN, "self", &self.ast_builder),
         IdentifierName::new_id_name(SPAN, "location", &self.ast_builder),
         false,
         &self.ast_builder,
-      )),
+      ),
       IdentifierName::new_id_name(SPAN, "href", &self.ast_builder),
       false,
       &self.ast_builder,
-    ))
+    )
   }
 
   #[inline]
   fn create_import_meta_object_decl(&self) -> oxc::ast::ast::Statement<'ast> {
     Statement::new_var_decl(
       "_vite_importMeta",
-      Expression::ObjectExpression(ObjectExpression::boxed(
+      Expression::new_object_expression(
         SPAN,
         oxc::allocator::Vec::from_value_in(
           ObjectPropertyKind::new_object_property(
             SPAN,
             oxc::ast::ast::PropertyKind::Init,
-            oxc::ast::ast::PropertyKey::StaticIdentifier(IdentifierName::boxed(
+            oxc::ast::ast::PropertyKey::new_static_identifier(
               SPAN,
               oxc::ast::ast::Str::from_str_in("url", &self.ast_builder),
               &self.ast_builder,
-            )),
+            ),
             self.create_self_location_href_expr(),
             false,
             false,
@@ -63,7 +60,7 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
           &self.ast_builder,
         ),
         &self.ast_builder,
-      )),
+      ),
       &self.ast_builder,
     )
   }

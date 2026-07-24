@@ -82,7 +82,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
           &self.ast_builder,
         );
         if let Some(named_decl_span) = named_decl_span {
-          Statement::ExportNamedDeclaration(ast::ExportNamedDeclaration::boxed(
+          Statement::new_export_named_declaration(
             if i == 0 { named_decl_span } else { SPAN },
             Some(Declaration::VariableDeclaration(new_decl)),
             oxc::allocator::Vec::new_in(&self.ast_builder),
@@ -91,7 +91,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
             ImportOrExportKind::Value,
             NONE,
             &self.ast_builder,
-          ))
+          )
         } else {
           Statement::VariableDeclaration(new_decl)
         }
@@ -196,11 +196,11 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
     }
     walk_mut::walk_statement(self, it);
     if let Some(split) = self.split_multi_declarator(it, false) {
-      *it = Statement::BlockStatement(ast::BlockStatement::boxed(
+      *it = Statement::new_block_statement(
         SPAN,
         oxc::allocator::Vec::from_iter_in(split, &self.ast_builder),
         &self.ast_builder,
-      ));
+      );
     }
   }
 
@@ -253,7 +253,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
           unreachable!()
         };
         let cond_expr = cond_expr.unbox();
-        ast::Expression::ConditionalExpression(ast::ConditionalExpression::boxed(
+        ast::Expression::new_conditional_expression(
           SPAN,
           cond_expr.test,
           ast::Expression::new_call_expression(
@@ -279,7 +279,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
             &self.ast_builder,
           ),
           &self.ast_builder,
-        ))
+        )
       });
     }
     // transpose `import(test ? 'a' : 'b')` into `test ? import('a') : import('b')`

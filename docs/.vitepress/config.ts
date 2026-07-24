@@ -6,6 +6,7 @@ import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-i
 import llmstxt from 'vitepress-plugin-llms';
 import { addOgImage } from 'vitepress-plugin-og';
 import { graphvizMarkdownPlugin } from 'vitepress-plugin-graphviz';
+import rolldownPackageJson from '../../packages/rolldown/package.json' with { type: 'json' };
 import { createHooksGraphProcessor } from './markdown-hooks-graph.ts';
 
 const sidebarForGuide: DefaultTheme.SidebarItem[] = [
@@ -325,6 +326,7 @@ const config = defineConfig({
             text: 'Roadmap',
             link: 'https://github.com/rolldown/rolldown/discussions/153',
           },
+          { text: 'Releases', link: '/releases' },
         ],
       },
     ],
@@ -380,6 +382,7 @@ const config = defineConfig({
               link: 'https://github.com/rolldown/rolldown/discussions/153',
             },
             { text: 'Team', link: '/team' },
+            { text: 'Releases', link: '/releases' },
           ],
         },
       ],
@@ -398,6 +401,9 @@ const config = defineConfig({
   },
 
   vite: {
+    define: {
+      __ROLLDOWN_VERSION__: JSON.stringify(rolldownPackageJson.version),
+    },
     optimizeDeps: {
       exclude: ['@docsearch/css', 'vitepress-plugin-feedback-tracker'],
     },

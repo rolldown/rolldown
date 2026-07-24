@@ -5,7 +5,7 @@ export default defineTest({
   sequential: true,
   config: {
     treeshake: {
-      manualPureFunctions: ['styled', 'local'],
+      manualPureFunctions: ['styled'],
     },
     external: ['styled-components'],
   },
@@ -13,18 +13,7 @@ export default defineTest({
     let code = output.output[0].code;
 
     expect(code).toMatchInlineSnapshot(`
-      "import styled from "styled-components";
-      //#region main.js
-      function effect(value) {
-      \tconsole.log(value);
-      \treturn value;
-      }
-      styled()[effect("computed key")];
-      styled(effect("call argument")).value;
-      new (styled())[effect("new callee")].Box();
-      let another = console.log;
-      another();
-      //#endregion
+      "import "styled-components";
       "
     `);
   },

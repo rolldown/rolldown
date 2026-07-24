@@ -220,6 +220,14 @@ impl NormalizedBundlerOptions {
     self.strict_execution_order
   }
 
+  pub fn has_manual_code_splitting_groups(&self) -> bool {
+    self
+      .manual_code_splitting
+      .as_ref()
+      .and_then(|options| options.groups.as_ref())
+      .is_some_and(|groups| !groups.is_empty())
+  }
+
   /// make sure the `polyfill_require` is only valid for `esm` format with `node` platform
   #[inline]
   pub fn polyfill_require_for_esm_format_with_node_platform(&self) -> bool {

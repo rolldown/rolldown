@@ -141,19 +141,25 @@ impl LinkStage<'_> {
     }
 
     // Under strict execution order every CommonJS module must stay behind its lazy `require_*`
-    // wrapper. The generate-stage order lowering only wraps ESM modules, and the interop rules
-    // above leave a CommonJS module that nothing imports (a CommonJS entry in cjs output)
-    // unwrapped — its body would run eagerly at the top level of whatever chunk hosts it, so a
-    // co-locating `codeSplitting` group would leak one entry's execution into another and let
-    // competing top-level `module.exports` assignments clobber each other.
-    if self.options.is_strict_execution_order_enabled() {
-      for (idx, linking_info) in
-        self.metas.iter_mut_enumerated().filter(|(module_idx, _)| *module_idx != self.runtime.id())
-      {
+    // wrapper once a co-locating `codeSplitting` group is in play. The generate-stage order
+    // lowering only wraps ESM modules, and the interop rules above leave a CommonJS module that
+    // nothing imports (a CommonJS entry in cjs output) unwrapped — its body would run eagerly at
+    // the top level of whatever chunk hosts it, so a group capturing it would leak one entry's
+    // execution into another and let competing top-level `module.exports` assignments clobber
+    // each other. Without groups no chunking mechanism moves a never-imported CommonJS module out
+    // of its own entry chunk, and rendering it raw there is not only safe but load-bearing: the
+    // raw body keeps the entry's real Node module contract (`module.filename`,
+    // `require.main === module`, the `exports` object shape), which a wrapper's synthetic
+    // `module`/`exports` parameters cannot reproduce. The runtime module is ESM, so the
+    // `exports_kind` check below skips it.
+    if self.options.is_strict_execution_order_enabled()
+      && self.options.has_manual_code_splitting_groups()
+    {
+      for (idx, linking_info) in self.metas.iter_mut_enumerated() {
         let Some(module) = self.module_table[idx].as_normal() else {
           continue;
         };
-        if module.exports_kind == ExportsKind::CommonJs {
+        if matches!(module.exports_kind, ExportsKind::CommonJs) {
           linking_info.set_wrap_kind(WrapKind::Cjs);
         }
       }

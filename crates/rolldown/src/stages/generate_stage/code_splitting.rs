@@ -2,7 +2,10 @@ use std::{borrow::Cow, cmp::Ordering, collections::VecDeque, path::Path};
 
 use crate::{
   chunk_graph::ChunkGraph,
-  stages::generate_stage::{chunk_ext::ChunkDebugExt, chunk_optimizer::ChunkOptimizationGraph},
+  stages::generate_stage::{
+    chunk_ext::ChunkDebugExt,
+    chunk_optimizer::{ChunkOptimizationGraph, RuntimeMergeCascade},
+  },
   types::linking_metadata::LinkingMetadataVec,
   utils::chunk::normalize_preserve_entry_signature,
 };
@@ -1063,7 +1066,7 @@ impl GenerateStage<'_> {
       );
     }
 
-    self.try_merge_runtime_chunk(chunk_graph, None);
+    self.try_merge_runtime_chunk(chunk_graph, None, RuntimeMergeCascade::Full);
 
     Ok(())
   }

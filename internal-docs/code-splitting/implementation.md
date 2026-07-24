@@ -66,6 +66,7 @@ ChunkGraph
     │    ├─ finalize provisional namespace/external facts
     │    ├─ analyze_execution_order()                Build an OrderWrapPlan with per-module reasons
     │    ├─ apply_order_wraps()                      Lower the plan into wrappers and topology edits
+    │    │    └─ ensure_runtime_module_for_order_wraps()   Re-place the runtime, then sole-consumer fold
     │    ├─ recompute metadata if topology changed
     │    ├─ sweep_unused_runtime_module()            Drop a runtime with no source or order-state demand
     │    └─ validate final output shape
@@ -209,8 +210,10 @@ consumer_chunks = (non-removed chunks with non-empty depended_runtime_helper)
                 ∪ chunks whose included statements reference runtime-owned symbols
                 ∪ chunks containing modules that depend on the runtime module
                 ∪ chunks containing wrapped modules or side-effectful runtime dependencies
-                ∪ facade-elimination consumers added during the current pass
+                ∪ caller-supplied additional consumers
 ```
+
+The additional-consumers channel carries demand that only the caller can see: facade-elimination consumers during chunk optimization, and order-introduced consumers during the post-order-lowering fold below.
 
 Most runtime-helper dependencies are known at link time, before chunking, so this consumer set is usually complete as soon as chunks exist. Facade elimination is the exception: collapsing a facade into its target chunk can add a helper edge that did not exist during early chunking, through one of two `wrap_kind`-gated paths in `optimize_facade_entry_chunks`:
 
@@ -221,10 +224,24 @@ A `WrapKind::Esm` facade hits both paths.
 
 A chunk only _consumes_ the runtime once it carries a non-empty `depended_runtime_helper` (or references a runtime-owned symbol). So in a build that needed no helpers at link time, _no_ chunk consumed the runtime — and one of the paths above can create the very first consumer _after_ early chunking has already placed the runtime standalone. To keep that placement decision sound, the pass restores the inclusion metadata it just mutated, (re)materializes the standalone runtime chunk, and re-runs `try_merge_runtime_chunk` with these newly added consumers (the final bullet of the consumer set above).
 
-The merge target must not create a static cycle or force unrelated entry chunks to execute just to access helpers. Candidate targets are tried in compactness-preserving order: a sole runtime consumer, a sole live chunk with the runtime bitset, a live common chunk with the same runtime bitset, then a consumer-set dominator. Manual code splitting / advanced chunk group chunks may host runtime only when that chunk is the sole runtime consumer; otherwise their contents are user-directed grouping output, and absorbing the runtime would make unrelated chunks load the group for helpers. Safety is checked by following static chunk-loading edges through still-live chunks. Dynamic imports are not followed; static imports and `require()` records are both considered because either can become a static chunk import in generated output. Chunks containing top-level await, or a dependency on top-level await, are runtime hosts only when they are the sole runtime consumer; otherwise a dynamically imported chunk that statically imports its awaiting importer for helpers can produce an unsettled async module cycle.
+The merge target must not create a static cycle or force unrelated entry chunks to execute just to access helpers. Candidate targets are tried in compactness-preserving order: a sole runtime consumer, a sole live chunk with the runtime bitset, a live common chunk with the same runtime bitset, then a consumer-set dominator. The caller selects how deep this cascade may go (`RuntimeMergeCascade`): both merge attempts during chunk optimization use the full cascade, while the post-order-lowering fold below stops after the sole-consumer step. Manual code splitting / advanced chunk group chunks may host runtime only when that chunk is the sole runtime consumer; otherwise their contents are user-directed grouping output, and absorbing the runtime would make unrelated chunks load the group for helpers. Safety is checked by following static chunk-loading edges through still-live chunks. Dynamic imports are not followed; static imports and `require()` records are both considered because either can become a static chunk import in generated output. Chunks containing top-level await, or a dependency on top-level await, are runtime hosts only when they are the sole runtime consumer; otherwise a dynamically imported chunk that statically imports its awaiting importer for helpers can produce an unsettled async module cycle.
 
 - **Safe target found** → runtime moves into that chunk, and the empty standalone runtime chunk is marked removed.
 - **No safe target** → keep the standalone runtime chunk. Runtime imports that resolve only to externals are ignored for chunk-cycle checks; live internal runtime imports keep the runtime standalone instead.
+
+### Post-Order-Lowering Runtime Fold (`ensure_runtime_module_for_order_wraps`)
+
+Order lowering can invalidate the placement the merge above decided. Synthetic wrappers and importer overlays add helper demand that lives only in `OrderWrapState`, never in link-stage metadata, so a chunk with no pre-lowering demand can become a consumer — and that new consumer may sit in a static cycle with the runtime's current host. `ensure_runtime_module_for_order_wraps` therefore restores the standalone-first baseline at the end of `apply_order_wraps()` when code splitting is enabled: a runtime co-hosted in a user chunk is evicted into a fresh standalone chunk, and a runtime that was never placed is materialized standalone. (With code splitting disabled, the single-chunk placement above stands.) These (re)minted chunks carry synthetic all-live-union bits so they sort and name as a universal source; the bits are not reachability facts.
+
+Evicting unconditionally would permanently split layouts the pre-lowering merge had already proven safe (#10294). So every exit of the pass — standalone runtime kept, co-hosted runtime evicted, runtime newly materialized — re-runs `try_merge_runtime_chunk` against the post-lowering consumer set (`fold_runtime_chunk_after_order_lowering`). The order-introduced consumers come from `OrderWrapState::runtime_helper_consumer_chunks`: a synthetic `init_*` declaration consumes helpers in its assigned chunk, and an importer overlay consumes them in the importer's chunk, where its lowered import glue renders. They are passed through the additional-consumers channel; pre-lowering demand is re-scanned by the merge itself, so the proof sees the full post-lowering consumer set. The standalone-kept exit re-runs the proof too, because entry-facade restoration during lowering can tombstone chunks the pre-lowering merge counted as consumers — a sole consumer may exist only now.
+
+The fold is deliberately narrower than the optimization-time merge:
+
+- **Sole-consumer host only (`RuntimeMergeCascade::SingleConsumerOnly`).** Exec order and the order-wrap plan are already fixed. Any other host would create or reorder chunk-evaluation edges the order analysis never modeled: a dominator merge turns transitive reachability into a direct helper import whose exec-order sort position can hoist the host past sibling imports, and a bitset host can gain a brand-new consumer edge. Merging into the sole consumer only removes that consumer's edge to a runtime-only chunk — no new edges, no reordering.
+- **ESM output only.** Under CJS output, `compute_cross_chunk_links` later gives every ESM-exports entry chunk — including zero-module facades minted during lowering — a speculative `__toCommonJS` demand that is invisible at fold time, so a chunk with no visible demand could be handed a brand-new require edge into a user chunk. Other formats keep the standalone or evicted layout.
+- **No bits union.** The full cascade unions the runtime chunk's bits into the host so bits stay an exact reachability record. Here the runtime chunk's bits are the synthetic all-live union above; folding them in would widen the host's bits, which is user-visible through bits-derived chunk names. The sole-consumer host keeps its own bits.
+
+**Regression coverage:** `crates/rolldown/tests/rolldown/issues/9463/` and `issues/9463_plain_group/` — the runtime folds into the sole consumer `common~a~b~shared` instead of shipping as a helper-only chunk, in both config cells; `issues/10265/` and `optimization/chunk_merging/dynamic_entry_merged_in_user_defined_entry/` — the only demand is order-introduced (synthetic `init_*` wrappers), and the runtime folds into the chunk hosting them, while the latter's cjs cells pin the ESM-only gate by keeping the standalone `rolldown-runtime.js`; the `function/experimental/strict_execution_order/` snapshots pin the folded layouts under wrap-all and on-demand wrapping (`top_level_await_syntax` pins the TLA sole-consumer case).
 
 ### Unused-Runtime Sweep (`sweep_unused_runtime_module`)
 
@@ -240,7 +257,7 @@ The sweep is **all-or-nothing and conservative**: any remaining demand — or an
 
 **Why this shape**
 
-Runtime used to be placed by normal bitset grouping and later peeled out when a cycle was detected. That made every optimizer responsible for understanding runtime-host edge cases. Standalone-first flips the default: the initial layout is always cycle-safe, and runtime-specific processing is confined to two final passes — the optional merge into a proven dominator above, then the unused-runtime sweep once the entry-level-external walk-back has settled what the finalizer will actually emit.
+Runtime used to be placed by normal bitset grouping and later peeled out when a cycle was detected. That made every optimizer responsible for understanding runtime-host edge cases. Standalone-first flips the default: the initial layout is always cycle-safe, and runtime-specific processing is confined to three final passes — the optional merge into a proven host after chunk optimization, the post-order-lowering re-placement and sole-consumer fold, then the unused-runtime sweep once the entry-level-external walk-back has settled what the finalizer will actually emit.
 
 **Regression coverage**
 

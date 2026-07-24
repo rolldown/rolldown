@@ -31,7 +31,7 @@ init_main();
 ## main2.js
 
 ```js
-import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region dep-a.js
 var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const sideEffect = {};
@@ -56,14 +56,6 @@ function init_main() {
 }
 //#endregion
 export { init_dep_b as n, init_main as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```
 
@@ -99,7 +91,7 @@ init_main();
 ### main2.js
 
 ```js
-import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region dep-a.js
 var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const sideEffect = {};
@@ -124,13 +116,5 @@ function init_main() {
 }
 //#endregion
 export { init_dep_b as n, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```

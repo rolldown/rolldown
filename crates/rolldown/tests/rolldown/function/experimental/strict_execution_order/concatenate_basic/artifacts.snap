@@ -62,7 +62,7 @@ init_main();
 ### main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region setup.js
 function init_setup() {
 	return (init_setup = __esmMin((() => {
@@ -82,14 +82,6 @@ export { init_setup as n, init_main as t };
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 # Variant: pife-for-module-wrappers-wrap-all: [on_demand_wrapping: false] [pife_for_module_wrappers: false]
 
 ## Assets
@@ -105,7 +97,7 @@ init_main();
 ### main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region setup.js
 function init_setup() {
 	return (init_setup = __esmMin(() => {
@@ -125,14 +117,6 @@ export { init_setup as n, init_main as t };
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 # Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
@@ -148,7 +132,7 @@ init_main();
 ### main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region setup.js
 function init_setup() {
 	return (init_setup = __esmMin((() => {
@@ -165,13 +149,5 @@ function init_main() {
 }
 //#endregion
 export { init_setup as n, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
 
 ```

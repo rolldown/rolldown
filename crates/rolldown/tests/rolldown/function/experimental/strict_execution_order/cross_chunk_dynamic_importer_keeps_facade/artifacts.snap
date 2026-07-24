@@ -1,44 +1,14 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## INEFFECTIVE_DYNAMIC_IMPORT
-
-```text
-[INEFFECTIVE_DYNAMIC_IMPORT] target.js is dynamically imported by a.js, b.js but also statically imported by a.js, dynamic import will not move module into another chunk.
-
-```
-
 # Assets
 
 ## a.js
 
 ```js
-import { n as init_a, t as aTargetPromise } from "./a2.js";
+import { i as init_a, r as aTargetPromise } from "./ga.js";
 init_a();
 export { aTargetPromise };
-
-```
-
-## a2.js
-
-```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
-//#region target.js
-var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
-(globalThis.log ??= []).push("target");
-//#endregion
-//#region a.js
-var aTargetPromise;
-function init_a() {
-	return (init_a = __esmMin((() => {
-		(globalThis.log ??= []).push("a:1");
-		aTargetPromise = Promise.resolve().then(() => target_exports);
-	})))();
-}
-//#endregion
-export { init_a as n, target_exports as r, aTargetPromise as t };
 
 ```
 
@@ -47,9 +17,33 @@ export { init_a as n, target_exports as r, aTargetPromise as t };
 ```js
 //#region b.js
 (globalThis.log ??= []).push("b");
-const bTargetPromise = import("./a2.js").then((n) => n.r);
+const bTargetPromise = import("./target.js");
 //#endregion
 export { bTargetPromise };
+
+```
+
+## ga.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var aTargetPromise;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		(globalThis.log ??= []).push("a");
+		aTargetPromise = import("./target.js");
+	})))();
+}
+var value;
+function init_target() {
+	return (init_target = __esmMin((() => {
+		(globalThis.log ??= []).push("target");
+		value = 1;
+	})))();
+}
+//#endregion
+export { init_a as i, value as n, aTargetPromise as r, init_target as t };
 
 ```
 
@@ -61,51 +55,25 @@ export { __exportAll as n, __esmMin as t };
 
 ```
 
-# Variant: wrap-all: [on_demand_wrapping: false]
+## target.js
 
-## warnings
-
-### INEFFECTIVE_DYNAMIC_IMPORT
-
-```text
-[INEFFECTIVE_DYNAMIC_IMPORT] target.js is dynamically imported by a.js, b.js but also statically imported by a.js, dynamic import will not move module into another chunk.
+```js
+import { n as value, t as init_target } from "./ga.js";
+init_target();
+export { value };
 
 ```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 
 ### a.js
 
 ```js
-import { n as init_a, t as aTargetPromise } from "./a2.js";
+import { i as init_a, r as aTargetPromise } from "./ga.js";
 init_a();
 export { aTargetPromise };
-
-```
-
-### a2.js
-
-```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-var value;
-function init_target() {
-	return (init_target = __esmMin((() => {
-		(globalThis.log ??= []).push("target");
-		value = 1;
-	})))();
-}
-//#endregion
-//#region a.js
-var aTargetPromise;
-function init_a() {
-	return (init_a = __esmMin((() => {
-		init_target();
-		(globalThis.log ??= []).push("a:1");
-		aTargetPromise = import("./target.js");
-	})))();
-}
-//#endregion
-export { value as i, init_a as n, init_target as r, aTargetPromise as t };
 
 ```
 
@@ -135,6 +103,30 @@ export { init_b as n, bTargetPromise as t };
 
 ```
 
+### ga.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var aTargetPromise;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		(globalThis.log ??= []).push("a");
+		aTargetPromise = import("./target.js");
+	})))();
+}
+var value;
+function init_target() {
+	return (init_target = __esmMin((() => {
+		(globalThis.log ??= []).push("target");
+		value = 1;
+	})))();
+}
+//#endregion
+export { init_a as i, value as n, aTargetPromise as r, init_target as t };
+
+```
+
 ### rolldown-runtime.js
 
 ```js
@@ -146,7 +138,7 @@ export { __exportAll as n, __esmMin as t };
 ### target.js
 
 ```js
-import { i as value, r as init_target } from "./a2.js";
+import { n as value, t as init_target } from "./ga.js";
 init_target();
 export { value };
 

@@ -13,17 +13,14 @@
       }
     ],
     "strictExecutionOrder": true,
-    "preserveEntrySignatures": "allow-extension",
     "experimental": {
-      "chunkOptimization": true,
       "onDemandWrapping": true
     },
     "codeSplitting": {
       "groups": [
         {
           "name": "ga",
-          "test": "[\\\\/](?:a|target)\\.js$",
-          "includeDependenciesRecursively": false
+          "test": "[\\\\/](?:a|target)\\.js$"
         }
       ]
     }

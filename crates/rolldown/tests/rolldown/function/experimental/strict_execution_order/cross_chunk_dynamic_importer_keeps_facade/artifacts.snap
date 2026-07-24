@@ -35,6 +35,8 @@ function init_a() {
 		aTargetPromise = import("./target.js");
 	})))();
 }
+//#endregion
+//#region target.js
 var value;
 function init_target() {
 	return (init_target = __esmMin((() => {
@@ -115,6 +117,8 @@ function init_a() {
 		aTargetPromise = import("./target.js");
 	})))();
 }
+//#endregion
+//#region target.js
 var value;
 function init_target() {
 	return (init_target = __esmMin((() => {

@@ -1,12 +1,12 @@
 use oxc::{
-  allocator::Allocator,
+  allocator::{Allocator, GetAllocator},
   ast::{
     ast::{
       Argument, BindingIdentifier, BindingPattern, Expression, FormalParameter,
       FormalParameterKind, FormalParameters, FunctionBody, IdentifierName, Statement,
       VariableDeclarator,
     },
-    builder::{AstBuilder, NONE},
+    builder::{AstBuilder, GetAstBuilder, NONE},
   },
   ast_visit::{VisitMut, walk_mut},
   span::SPAN,
@@ -33,8 +33,7 @@ impl<'ast> VisitMut<'ast> for LazyCompilationRuntimeInjector<'ast> {
     // Then transform import expressions
     if matches!(expr, Expression::ImportExpression(_)) {
       // Transform: import(x) -> import(x).then(__unwrap_lazy_compilation_entry)
-      let import_expr =
-        std::mem::replace(expr, Expression::new_null_literal(SPAN, &self.ast_builder));
+      let import_expr = std::mem::replace(expr, Expression::new_null_literal(SPAN, self));
 
       // Build: import_expr.then(__unwrap_lazy_compilation_entry)
       *expr = Expression::new_call_expression(
@@ -42,18 +41,34 @@ impl<'ast> VisitMut<'ast> for LazyCompilationRuntimeInjector<'ast> {
         Expression::new_static_member_expression(
           SPAN,
           import_expr,
-          IdentifierName::new(SPAN, "then", &self.ast_builder),
+          IdentifierName::new(SPAN, "then", self),
           false,
-          &self.ast_builder,
+          self,
         ),
         NONE,
-        [Argument::new_identifier(SPAN, HELPER_NAME, &self.ast_builder)],
+        [Argument::new_identifier(SPAN, HELPER_NAME, self)],
         false,
-        &self.ast_builder,
+        self,
       );
 
       self.transformed_count += 1;
     }
+  }
+}
+
+impl<'ast> GetAstBuilder<'ast> for LazyCompilationRuntimeInjector<'ast> {
+  type Builder = AstBuilder<'ast>;
+
+  #[inline]
+  fn builder(&self) -> &AstBuilder<'ast> {
+    &self.ast_builder
+  }
+}
+
+impl<'ast> GetAllocator<'ast> for LazyCompilationRuntimeInjector<'ast> {
+  #[inline]
+  fn allocator(&self) -> &'ast Allocator {
+    self.ast_builder.allocator()
   }
 }
 

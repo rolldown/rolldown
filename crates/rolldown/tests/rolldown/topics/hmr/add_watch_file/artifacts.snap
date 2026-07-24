@@ -13,6 +13,7 @@ __rolldown_runtime__.registerGraph({
 	edges: [[]],
 	dynamicEdges: [[]]
 });
+//#region entry.js
 __rolldown_runtime__.createModuleHotContext("entry.js");
 __rolldown_runtime__.registerModule("entry.js", {});
 console.log("input\n");

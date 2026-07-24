@@ -7,7 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+// HIDDEN [\0rolldown/runtime.js]
+//#region src/cjs.js
+//#endregion
+//#region main.js
 (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "cjs-a";
 })))();

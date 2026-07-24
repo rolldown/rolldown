@@ -40,6 +40,8 @@ var require_c1 = /* @__PURE__ */ __commonJSMin((() => {
 	require_c2();
 	console.log("C1");
 }));
+//#endregion
+//#region m3.js
 function init_m3() {
 	return (init_m3 = __esmMin((() => {
 		require_c1();
@@ -157,6 +159,8 @@ var require_c1 = /* @__PURE__ */ __commonJSMin((() => {
 	require_c2();
 	console.log("C1");
 }));
+//#endregion
+//#region m3.js
 function init_m3() {
 	return (init_m3 = __esmMin((() => {
 		require_c1();

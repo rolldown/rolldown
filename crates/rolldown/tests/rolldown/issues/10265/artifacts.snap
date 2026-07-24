@@ -29,6 +29,8 @@ function leaf() {
 	return "leaf";
 }
 var init_leaf = __esmMin((() => {}));
+//#endregion
+//#region a.js
 function getA() {
 	return getB && leaf ? "a" : "unreachable";
 }
@@ -66,15 +68,7 @@ export { __exportAll as n, __esmMin as t };
 ### main.js
 
 ```js
-var __esmMin = (fn, res, err) => () => {
-	if (err) throw err[0];
-	try {
-		return fn && (res = fn(fn = 0)), res;
-	} catch (e) {
-		throw err = [e], e;
-	}
-};
-//#endregion
+// HIDDEN [\0rolldown/runtime.js]
 //#region b.js
 function getB() {
 	return getA ? "b" : "unreachable";
@@ -88,6 +82,8 @@ function leaf() {
 	return "leaf";
 }
 var init_leaf = __esmMin((() => {}));
+//#endregion
+//#region a.js
 function getA() {
 	return getB && leaf ? "a" : "unreachable";
 }

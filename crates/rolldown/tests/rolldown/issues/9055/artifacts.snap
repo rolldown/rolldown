@@ -16,6 +16,8 @@ var require_greet$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.greet = greet;
 }));
 //#endregion
+//#region cjs-dependency.cjs
+//#endregion
 //#region index.js
 var import_cjs_dependency = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });

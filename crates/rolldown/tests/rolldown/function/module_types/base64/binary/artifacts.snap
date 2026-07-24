@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+//#region rolldown.webp
 //#endregion
 //#region main.js
 assert(true);

@@ -57,6 +57,8 @@ function init_observer() {
 		console.log("observer eval", Boolean(globalThis.ready));
 	})))();
 }
+//#endregion
+//#region target.js
 var value;
 function init_target() {
 	return (init_target = __esmMin((() => {
@@ -165,6 +167,8 @@ function init_observer() {
 		console.log("observer eval", Boolean(globalThis.ready));
 	})))();
 }
+//#endregion
+//#region target.js
 var value;
 function init_target() {
 	return (init_target = __esmMin((() => {

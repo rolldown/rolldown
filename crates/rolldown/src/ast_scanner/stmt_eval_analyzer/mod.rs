@@ -3,7 +3,7 @@ use std::ops::{BitOr, BitOrAssign};
 use bitflags::bitflags;
 use oxc::ast::ast::{
   self, Argument, AssignmentTarget, BindingPattern, CallExpression, ChainElement, Expression,
-  IdentifierReference, UnaryOperator, VariableDeclarationKind,
+  IdentifierReference, SpreadElement, UnaryOperator, VariableDeclarationKind,
 };
 use oxc::ast::match_member_expression;
 use oxc::ast_visit::{VisitJs, walk_js};
@@ -193,7 +193,11 @@ impl<'a> StmtEvalAnalyzer<'a> {
 
   fn analyze_member_expr(&self, member_expr: &ast::MemberExpression) -> StmtEvalFacts {
     if self.is_expr_manual_pure_functions(member_expr.object()) {
-      return StmtEvalFacts::default();
+      let mut facts = self.analyze_eager_chain_children(member_expr.object());
+      if let ast::MemberExpression::ComputedMemberExpression(expr) = member_expr {
+        facts |= self.analyze_expr(&expr.expression);
+      }
+      return facts;
     }
     // ES module namespace objects are frozen/sealed by spec — property reads
     // on them are guaranteed side-effect-free. A computed key is still evaluated,
@@ -212,6 +216,32 @@ impl<'a> StmtEvalAnalyzer<'a> {
     let mut facts = StmtEvalFacts::from_tree_shaking_side_effect(has_side_effect);
     facts.set_order_sensitive_reason(StmtOrderSensitiveReasons::GlobalVarAccess, is_global);
     facts
+  }
+
+  fn analyze_eager_chain_children(&self, expr: &Expression) -> StmtEvalFacts {
+    let mut facts = StmtEvalFacts::default();
+    for_each_eager_chain_child(expr, |child| {
+      facts |= match child {
+        EagerChild::Expr(expr) => self.analyze_expr(expr),
+        EagerChild::Spread(spread) => self.analyze_spread_argument(spread),
+      };
+    });
+    facts
+  }
+
+  /// Analyze a `...operand` spread argument with its runtime semantics: `operand` is evaluated and
+  /// then iterated. Iterating an array, string, or template literal runs only built-in iterators,
+  /// so the only effects are those of evaluating `operand` — which [`Self::analyze_expr`], gated on
+  /// oxc, already captures (including a nested spread such as `...[...x]`). Any other operand may
+  /// run a user-defined `Symbol.iterator` when spread, so it stays conservatively unknown. Mirrors
+  /// oxc's `Argument::may_have_side_effects` spread handling.
+  fn analyze_spread_argument(&self, spread: &SpreadElement) -> StmtEvalFacts {
+    match &spread.argument {
+      Expression::ArrayExpression(_)
+      | Expression::StringLiteral(_)
+      | Expression::TemplateLiteral(_) => self.analyze_expr(&spread.argument),
+      _ => StmtEvalFacts::from_unknown_side_effect(),
+    }
   }
 
   /// Analyze a member-like write target after Oxc has determined the full write is side-effect-free.
@@ -290,8 +320,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
       return false;
     }
     let manual_pure_functions = self.options.treeshake.manual_pure_functions().unwrap();
-    extract_first_part_of_member_expr_like(expr)
-      .is_some_and(|first| manual_pure_functions.contains(first))
+    chain_root_ident(expr).is_some_and(|first| manual_pure_functions.contains(first))
   }
 
   fn analyze_expr(&self, expr: &Expression) -> StmtEvalFacts {
@@ -930,28 +959,61 @@ fn check_pure_cjs_export(scope: &AstScopes, target: &AssignmentTarget) -> Option
   }
 }
 
-/// Extract the first (leftmost) identifier name from a member expression chain.
-/// Used by both `StmtEvalAnalyzer::is_expr_manual_pure_functions` and
-/// `StmtEvalAnalyzer::manual_pure_functions`.
-fn extract_first_part_of_member_expr_like<'a>(expr: &'a Expression) -> Option<&'a str> {
+/// An eagerly-evaluated subexpression surfaced by [`chain_root_visiting_eager_children`].
+enum EagerChild<'a> {
+  /// A computed member key or a non-spread call argument — evaluated as a plain expression.
+  Expr(&'a Expression<'a>),
+  /// A spread call argument (`...operand`) — evaluating `operand` and iterating it may both have
+  /// effects, so it needs spread-aware analysis rather than plain expression analysis.
+  Spread(&'a SpreadElement<'a>),
+}
+
+/// Descend a member-expression-like chain to its leftmost identifier, invoking `on_eager_child`
+/// for every eagerly-evaluated subexpression on the way down — computed keys and call arguments
+/// (see [`EagerChild`]). Returns the root identifier's name, or `None` when the chain doesn't
+/// bottom out in a plain identifier.
+///
+/// This is the shared engine behind [`chain_root_ident`] and [`for_each_eager_chain_child`]; call
+/// whichever of those fits instead of reading the return value and driving the visitor from the
+/// same call site.
+fn chain_root_visiting_eager_children<'a>(
+  expr: &'a Expression,
+  mut on_eager_child: impl FnMut(EagerChild<'a>),
+) -> Option<&'a str> {
+  fn visit_call_args<'a>(
+    args: &'a [Argument<'a>],
+    on_eager_child: &mut impl FnMut(EagerChild<'a>),
+  ) {
+    for arg in args {
+      on_eager_child(match arg {
+        Argument::SpreadElement(spread) => EagerChild::Spread(spread),
+        _ => EagerChild::Expr(arg.to_expression()),
+      });
+    }
+  }
+
   let mut cur = expr;
   loop {
     match cur {
       Expression::Identifier(ident) => break Some(ident.name.as_str()),
       Expression::ComputedMemberExpression(expr) => {
+        on_eager_child(EagerChild::Expr(&expr.expression));
         cur = &expr.object;
       }
       Expression::StaticMemberExpression(expr) => {
         cur = &expr.object;
       }
       Expression::CallExpression(expr) => {
+        visit_call_args(&expr.arguments, &mut on_eager_child);
         cur = &expr.callee;
       }
       Expression::ChainExpression(expr) => match expr.expression {
         ChainElement::CallExpression(ref call_expression) => {
+          visit_call_args(&call_expression.arguments, &mut on_eager_child);
           cur = &call_expression.callee;
         }
         ChainElement::ComputedMemberExpression(ref computed_member_expression) => {
+          on_eager_child(EagerChild::Expr(&computed_member_expression.expression));
           cur = &computed_member_expression.object;
         }
         ChainElement::StaticMemberExpression(ref static_member_expression) => {
@@ -964,6 +1026,19 @@ fn extract_first_part_of_member_expr_like<'a>(expr: &'a Expression) -> Option<&'
       _ => break None,
     }
   }
+}
+
+/// The leftmost identifier a member-expression-like chain reads from (`a` in `a.b().c[d]`), or
+/// `None` when the chain doesn't bottom out in a plain identifier. Used by
+/// `StmtEvalAnalyzer::is_expr_manual_pure_functions` and `StmtEvalAnalyzer::manual_pure_functions`.
+fn chain_root_ident<'a>(expr: &'a Expression) -> Option<&'a str> {
+  chain_root_visiting_eager_children(expr, |_| {})
+}
+
+/// Invoke `visit` on every eagerly-evaluated subexpression of a member-expression-like chain —
+/// computed keys and call arguments (see [`EagerChild`]).
+fn for_each_eager_chain_child<'a>(expr: &'a Expression, visit: impl FnMut(EagerChild<'a>)) {
+  let _ = chain_root_visiting_eager_children(expr, visit);
 }
 
 impl GlobalContext<'_> for StmtEvalAnalyzer<'_> {
@@ -983,6 +1058,7 @@ impl MayHaveSideEffectsContext<'_> for StmtEvalAnalyzer<'_> {
 
   fn manual_pure_functions(&self, callee: &Expression) -> bool {
     self.is_expr_manual_pure_functions(callee)
+      && !self.analyze_eager_chain_children(callee).has_side_effect_for_tree_shaking()
   }
 
   fn property_read_side_effects(&self) -> PropertyReadSideEffects {
@@ -2025,6 +2101,77 @@ mod test {
   }
 
   #[test]
+  fn test_manual_pure_chains_keep_eager_child_side_effects() {
+    let options = Arc::new(NormalizedBundlerOptions {
+      treeshake: InnerOptions {
+        manual_pure_functions: Some(std::iter::once("make".to_string()).collect()),
+        ..InnerOptions::default()
+      }
+      .into(),
+      ..NormalizedBundlerOptions::default()
+    });
+    for code in [
+      "make()[effect()];",
+      "make(effect()).value;",
+      "new (make()[effect()].Box)();",
+      "make(effect());",
+    ] {
+      assert_eq!(
+        get_stmt_eval_with_options(code, &options),
+        vec![(StmtEvalFlags::UnknownSideEffect, true)],
+        "{code}"
+      );
+    }
+  }
+
+  #[test]
+  fn test_manual_pure_chains_drop_side_effect_free_spreads() {
+    let options = Arc::new(NormalizedBundlerOptions {
+      treeshake: InnerOptions {
+        manual_pure_functions: Some(std::iter::once("make".to_string()).collect()),
+        ..InnerOptions::default()
+      }
+      .into(),
+      ..NormalizedBundlerOptions::default()
+    });
+    // Spreading an array/string/template literal iterates only built-in iterators, so a matched
+    // manual-pure chain wrapping one stays removable (Rollup drops these too).
+    for code in [
+      "make(...[]).value;",
+      "make(...'').value;",
+      "make(...`literal`).value;",
+      "make(...[1, 2]).value;",
+    ] {
+      assert_eq!(
+        get_stmt_eval_with_options(code, &options),
+        vec![(StmtEvalFlags::empty(), false)],
+        "{code}"
+      );
+    }
+    // The call-position form is likewise side-effect-free; reading the unresolved `make` global
+    // only makes it order-sensitive.
+    assert_eq!(
+      get_stmt_eval_with_options("make(...[])();", &options),
+      vec![(StmtEvalFlags::empty(), true)],
+      "make(...[])();"
+    );
+    // A side-effectful spread element, or a non-literal (possibly user-iterable) operand, keeps the
+    // statement — evaluating or iterating the operand may run arbitrary code.
+    for code in [
+      "make(...[effect()]).value;",
+      "make(...effect()).value;",
+      "make(...spreadable).value;",
+      "make(...[...spreadable]).value;",
+    ] {
+      assert_eq!(
+        get_stmt_eval_with_options(code, &options),
+        vec![(StmtEvalFlags::UnknownSideEffect, true)],
+        "{code}"
+      );
+    }
+  }
+
+  #[test]
   fn test_conditional_and_logical_iife_callees_behind_manual_pure_member() {
     // A bare conditional/logical-callee IIFE needs no collector arm: oxc's IIFE certification
     // recognizes only direct function/arrow callees, so the statement keeps `UnknownSideEffect`
@@ -2041,9 +2188,7 @@ mod test {
       vec![(StmtEvalFlags::UnknownSideEffect, true)]
     );
 
-    // Behind a manual-pure member root the regular analyzer certifies the whole member read
-    // without visiting the computed key, so the collector's conditional/logical callee arms are
-    // the only detector of the branch bodies the call may run.
+    // Computed-key indirect IIFEs stay conservative under both analysis paths.
     let make_options = strict_on_demand_options(InnerOptions {
       manual_pure_functions: Some(std::iter::once("make".to_string()).collect()),
       ..InnerOptions::default()
@@ -2052,13 +2197,17 @@ mod test {
       "function make() {} const value = make[(true ? (() => (/* @__PURE__ */ globalThis.__orderRead?.() ?? 5)) : (() => 9))()];",
       "function make() {} const value = make[(true && (() => (/* @__PURE__ */ globalThis.__orderRead?.() ?? 5)))()];",
     ] {
-      assert_last_statement_gets_eager_reason_only(code, &make_options, StmtEvalFlags::empty());
+      let regular = get_stmt_eval_with_options(code, &make_options);
+      assert_eq!(regular.last(), Some(&(StmtEvalFlags::UnknownSideEffect, true)), "{code}");
+      assert_eq!(
+        get_stmt_eval_with_top_level_eager_order_reasons(code, &make_options),
+        regular,
+        "{code}"
+      );
     }
   }
 
-  // The same manual-pure member-root route, for the remaining eager-execution forms: `new` of a
-  // class literal runs construction-time positions, evaluating a template calls a literal tag,
-  // and an assignment-expression callee may invoke its RHS.
+  // The same manual-pure member-root route, for the remaining eager-execution forms.
   #[test]
   fn test_eager_walk_covers_constructed_classes_literal_tags_and_assignment_callees() {
     let make_options = strict_on_demand_options(InnerOptions {
@@ -2081,7 +2230,13 @@ mod test {
       // Logical assignments are `AssignmentExpression`s, not `LogicalExpression`s.
       "function make() {} let assigned; const value = make[(assigned ??= () => (/* @__PURE__ */ globalThis.__orderRead?.() ?? 5))()];",
     ] {
-      assert_last_statement_gets_eager_reason_only(code, &make_options, StmtEvalFlags::empty());
+      let regular = get_stmt_eval_with_options(code, &make_options);
+      assert_eq!(regular.last(), Some(&(StmtEvalFlags::UnknownSideEffect, true)), "{code}");
+      assert_eq!(
+        get_stmt_eval_with_top_level_eager_order_reasons(code, &make_options),
+        regular,
+        "{code}"
+      );
     }
   }
 
@@ -2359,18 +2514,18 @@ let remove15 = class {
   }
 
   #[test]
-  fn test_extract_first_part_of_member_expr_like() {
-    assert_eq!(extract_first_part_of_member_expr_like_helper("a.b"), "a");
-    assert_eq!(extract_first_part_of_member_expr_like_helper("styled?.div()"), "styled");
-    assert_eq!(extract_first_part_of_member_expr_like_helper("styled()"), "styled");
-    assert_eq!(extract_first_part_of_member_expr_like_helper("styled().div"), "styled");
-    assert_eq!(extract_first_part_of_member_expr_like_helper("styled()()"), "styled");
+  fn test_chain_root_ident() {
+    assert_eq!(chain_root_ident_helper("a.b"), "a");
+    assert_eq!(chain_root_ident_helper("styled?.div()"), "styled");
+    assert_eq!(chain_root_ident_helper("styled()"), "styled");
+    assert_eq!(chain_root_ident_helper("styled().div"), "styled");
+    assert_eq!(chain_root_ident_helper("styled()()"), "styled");
   }
 
-  fn extract_first_part_of_member_expr_like_helper(code: &str) -> String {
+  fn chain_root_ident_helper(code: &str) -> String {
     let allocator = oxc::allocator::Allocator::default();
     let parser = Parser::new(&allocator, code, SourceType::ts());
     let expr = parser.parse_expression().unwrap();
-    super::extract_first_part_of_member_expr_like(&expr).unwrap().to_string()
+    super::chain_root_ident(&expr).unwrap().to_string()
   }
 }

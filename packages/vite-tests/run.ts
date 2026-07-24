@@ -107,6 +107,12 @@ const failedTestServe = await runCmdAndPipe(
 );
 if (failedTestServe) failed.push('test-serve');
 
+const failedTestServeBundled = await runCmdAndPipe(
+  '# Running `pnpm test-serve-bundled`...',
+  ['pnpm', ['run', 'test-serve-bundled'], { nodeOptions: { cwd: REPO_PATH } }],
+);
+if (failedTestServeBundled) failed.push('test-serve-bundled');
+
 const failedTestBuild = await runCmdAndPipe(
   '# Running `pnpm test-build`...',
   ['pnpm', ['run', 'test-build'], { nodeOptions: { cwd: REPO_PATH } }],

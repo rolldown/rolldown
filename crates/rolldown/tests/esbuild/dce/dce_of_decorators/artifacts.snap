@@ -10,6 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 const fn = () => {
 	console.log("side effect");
 };
+//#endregion
+//#region keep-these.js
 (@fn class {});
 (class {
 	@fn field;

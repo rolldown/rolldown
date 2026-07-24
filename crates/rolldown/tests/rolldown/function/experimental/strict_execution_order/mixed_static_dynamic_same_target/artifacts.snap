@@ -38,6 +38,8 @@ function init_dep_b() {
 		sideEffect.touched = true;
 	})))();
 }
+//#endregion
+//#region main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		require_dep_a();
@@ -97,6 +99,8 @@ function init_dep_b() {
 		sideEffect.touched = true;
 	})))();
 }
+//#endregion
+//#region main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		require_dep_a();

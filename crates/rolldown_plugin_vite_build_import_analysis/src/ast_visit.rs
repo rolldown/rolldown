@@ -1,5 +1,5 @@
-use oxc::allocator::GetAllocator;
-use oxc::ast::builder::AstBuilder;
+use oxc::allocator::{Allocator, GetAllocator};
+use oxc::ast::builder::{AstBuilder, GetAstBuilder};
 use oxc::{
   allocator::CloneIn as _,
   ast::{
@@ -40,18 +40,18 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
         Some(oxc::allocator::Vec::from_value_in(
           ImportDeclarationSpecifier::new_import_specifier(
             SPAN,
-            ModuleExportName::new_identifier_name(SPAN, PRELOAD_METHOD, &self.ast_builder),
-            BindingIdentifier::new_id(SPAN, PRELOAD_METHOD, &self.ast_builder),
+            ModuleExportName::new_identifier_name(SPAN, PRELOAD_METHOD, self),
+            BindingIdentifier::new_id(SPAN, PRELOAD_METHOD, self),
             ImportOrExportKind::Value,
-            &self.ast_builder,
+            self,
           ),
-          &self.ast_builder,
+          self,
         )),
-        StringLiteral::new(SPAN, PRELOAD_HELPER_ID, None, &self.ast_builder),
+        StringLiteral::new(SPAN, PRELOAD_HELPER_ID, None, self),
         None,
         NONE,
         ImportOrExportKind::Value,
-        &self.ast_builder,
+        self,
       ));
     }
   }
@@ -92,7 +92,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
               object_pat.clone_in(self.ast_builder.allocator()),
               decl.init.take().unwrap(),
             ),
-            &self.ast_builder,
+            self,
           ));
           self.need_prepend_helper = true;
         } else {
@@ -124,5 +124,21 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
 
   fn leave_scope(&mut self) {
     self.scope_stack.pop();
+  }
+}
+
+impl<'a> GetAstBuilder<'a> for BuildImportAnalysisVisitor<'a> {
+  type Builder = AstBuilder<'a>;
+
+  #[inline]
+  fn builder(&self) -> &AstBuilder<'a> {
+    &self.ast_builder
+  }
+}
+
+impl<'a> GetAllocator<'a> for BuildImportAnalysisVisitor<'a> {
+  #[inline]
+  fn allocator(&self) -> &'a Allocator {
+    self.ast_builder.allocator()
   }
 }

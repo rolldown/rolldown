@@ -31,6 +31,7 @@ await init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+//#region foo.js
 function init_foo() {
 	return (init_foo = __esmMin((async () => {
 		await 1e3;

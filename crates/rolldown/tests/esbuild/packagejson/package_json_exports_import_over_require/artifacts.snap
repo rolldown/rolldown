@@ -7,6 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region node_modules/pkg/require.js
+//#endregion
 //#region src/entry.js
 (/* @__PURE__ */ __commonJSMin((() => {
 	console.log("FAILURE");

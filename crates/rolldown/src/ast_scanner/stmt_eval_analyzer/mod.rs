@@ -964,7 +964,6 @@ fn walk_member_expr_like<'a>(
 
   let mut cur = expr;
   loop {
-    cur = cur.get_inner_expression();
     match cur {
       Expression::Identifier(ident) => break Some(ident.name.as_str()),
       Expression::ComputedMemberExpression(expr) => {
@@ -990,10 +989,7 @@ fn walk_member_expr_like<'a>(
         ChainElement::StaticMemberExpression(ref static_member_expression) => {
           cur = &static_member_expression.object;
         }
-        ChainElement::TSNonNullExpression(ref ts_non_null_expression) => {
-          cur = &ts_non_null_expression.expression;
-        }
-        ChainElement::PrivateFieldExpression(_) => {
+        ChainElement::TSNonNullExpression(_) | ChainElement::PrivateFieldExpression(_) => {
           break None;
         }
       },

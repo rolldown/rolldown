@@ -596,6 +596,7 @@ const DevModeSchema = v.union([
     port: v.optional(v.number()),
     host: v.optional(v.string()),
     implement: v.optional(v.string()),
+    skipCommonRuntimeInjection: v.optional(v.boolean()),
     lazy: v.optional(v.boolean()),
   }),
 ]);

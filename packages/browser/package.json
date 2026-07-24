@@ -29,6 +29,9 @@
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
+  "imports": {
+    "#default-runtime": "./dist/experimental-default-runtime.mjs"
+  },
   "exports": {
     ".": {
       "browser": "./dist/index.browser.mjs",
@@ -41,6 +44,10 @@
     },
     "./experimental/runtime-types": {
       "types": "./dist/experimental-runtime-types.d.ts"
+    },
+    "./experimental/runtime": {
+      "types": "./dist/experimental-runtime.d.ts",
+      "default": "./dist/experimental-runtime.mjs"
     },
     "./plugins": {
       "browser": "./dist/plugins-index.browser.mjs",

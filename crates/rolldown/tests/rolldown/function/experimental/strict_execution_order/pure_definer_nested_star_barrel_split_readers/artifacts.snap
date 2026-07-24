@@ -1,0 +1,167 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as vDef } from "./outer-barrel.js";
+//#region a.js
+(globalThis.__events ??= []).push("a");
+const defValue = vDef;
+//#endregion
+export { defValue };
+
+```
+
+## b.js
+
+```js
+import { t as outer_barrel_exports } from "./outer-barrel.js";
+//#region b.js
+(globalThis.__events ??= []).push("b");
+const loaded = typeof outer_barrel_exports === "object";
+//#endregion
+export { loaded };
+
+```
+
+## outer-barrel.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region definer.js
+function build() {
+	return { value: 7 };
+}
+const vDef = /* @__PURE__ */ build();
+//#endregion
+//#region sibling.js
+(globalThis.__events ??= []).push("sibling");
+const vSib = { value: 3 };
+//#endregion
+//#region outer-barrel.js
+var outer_barrel_exports = /* @__PURE__ */ __exportAll({
+	vDef: () => vDef,
+	vSib: () => vSib
+});
+//#endregion
+export { vDef as n, outer_barrel_exports as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### a.js
+
+```js
+import { n as init_a, t as defValue } from "./a2.js";
+init_a();
+export { defValue };
+
+```
+
+### a2.js
+
+```js
+import { i as vDef, t as init_outer_barrel } from "./outer-barrel.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var defValue;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_outer_barrel();
+		(globalThis.__events ??= []).push("a");
+		defValue = vDef;
+	})))();
+}
+//#endregion
+export { init_a as n, defValue as t };
+
+```
+
+### b.js
+
+```js
+import { n as loaded, t as init_b } from "./b2.js";
+init_b();
+export { loaded };
+
+```
+
+### b2.js
+
+```js
+import { n as outer_barrel_exports, t as init_outer_barrel } from "./outer-barrel.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+var loaded;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_outer_barrel();
+		(globalThis.__events ??= []).push("b");
+		loaded = typeof outer_barrel_exports === "object";
+	})))();
+}
+//#endregion
+export { loaded as n, init_b as t };
+
+```
+
+### outer-barrel.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+//#region definer.js
+function build() {
+	return { value: 7 };
+}
+var vDef;
+function init_definer() {
+	return (init_definer = __esmMin((() => {
+		vDef = /* @__PURE__ */ build();
+	})))();
+}
+//#endregion
+//#region sibling.js
+var vSib;
+function init_sibling() {
+	return (init_sibling = __esmMin((() => {
+		(globalThis.__events ??= []).push("sibling");
+		vSib = { value: 3 };
+	})))();
+}
+//#endregion
+//#region inner-barrel.js
+function init_inner_barrel() {
+	return (init_inner_barrel = __esmMin((() => {
+		init_definer();
+		init_sibling();
+	})))();
+}
+//#endregion
+//#region outer-barrel.js
+var outer_barrel_exports = /* @__PURE__ */ __exportAll({
+	vDef: () => vDef,
+	vSib: () => vSib
+});
+function init_outer_barrel() {
+	return (init_outer_barrel = __esmMin((() => {
+		init_inner_barrel();
+	})))();
+}
+//#endregion
+export { vDef as i, outer_barrel_exports as n, init_definer as r, init_outer_barrel as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```

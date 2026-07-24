@@ -130,12 +130,8 @@ pub trait ExpressionFactoryExt<'ast> {
           SPAN,
           Expression::new_static_member_expression(
             SPAN,
-            Expression::new_identifier(
-              SPAN,
-              oxc::ast::ast::Str::from_str_in("Promise", builder),
-              builder,
-            ),
-            IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in("resolve", builder), builder),
+            Expression::new_identifier(SPAN, "Promise", builder),
+            IdentifierName::new(SPAN, "resolve", builder),
             false,
             builder,
           ),
@@ -144,7 +140,7 @@ pub trait ExpressionFactoryExt<'ast> {
           false,
           builder,
         ),
-        IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in("then", builder), builder),
+        IdentifierName::new(SPAN, "then", builder),
         false,
         builder,
       ),
@@ -907,11 +903,7 @@ fn then_with_arrow_callback<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
       [FormalParameter::new(
         SPAN,
         [],
-        BindingPattern::new_binding_identifier(
-          SPAN,
-          oxc::ast::ast::Str::from_str_in("n", builder),
-          builder,
-        ),
+        BindingPattern::new_binding_identifier(SPAN, "n", builder),
         NONE,
         NONE,
         false,

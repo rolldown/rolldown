@@ -2499,7 +2499,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  #[expect(clippy::too_many_lines)]
   fn try_rewrite_import_expression(&self, node: &mut ast::Expression<'ast>) -> bool {
     let ast::Expression::ImportExpression(expr) = node else {
       return false;
@@ -2695,11 +2694,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             [ast::FormalParameter::new(
               SPAN,
               [],
-              ast::BindingPattern::new_binding_identifier(
-                SPAN,
-                oxc::ast::ast::Str::from_str_in("m", &self.ast_builder),
-                &self.ast_builder,
-              ),
+              ast::BindingPattern::new_binding_identifier(SPAN, "m", &self.ast_builder),
               NONE,
               NONE,
               false,

@@ -45,11 +45,7 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
         [ObjectPropertyKind::new_object_property(
           SPAN,
           oxc::ast::ast::PropertyKind::Init,
-          oxc::ast::ast::PropertyKey::new_static_identifier(
-            SPAN,
-            oxc::ast::ast::Str::from_str_in("url", &self.ast_builder),
-            &self.ast_builder,
-          ),
+          oxc::ast::ast::PropertyKey::new_static_identifier(SPAN, "url", &self.ast_builder),
           self.create_self_location_href_expr(),
           false,
           false,

@@ -3,7 +3,7 @@ use std::ops::{BitOr, BitOrAssign};
 use bitflags::bitflags;
 use oxc::ast::ast::{
   self, Argument, AssignmentTarget, BindingPattern, CallExpression, ChainElement, Expression,
-  IdentifierReference, UnaryOperator, VariableDeclarationKind,
+  IdentifierReference, SpreadElement, UnaryOperator, VariableDeclarationKind,
 };
 use oxc::ast::match_member_expression;
 use oxc::ast_visit::{VisitJs, walk_js};
@@ -221,10 +221,27 @@ impl<'a> StmtEvalAnalyzer<'a> {
   fn analyze_eager_chain_children(&self, expr: &Expression) -> StmtEvalFacts {
     let mut facts = StmtEvalFacts::default();
     for_each_eager_chain_child(expr, |child| {
-      facts |= child
-        .map_or_else(StmtEvalFacts::from_unknown_side_effect, |child| self.analyze_expr(child));
+      facts |= match child {
+        EagerChild::Expr(expr) => self.analyze_expr(expr),
+        EagerChild::Spread(spread) => self.analyze_spread_argument(spread),
+      };
     });
     facts
+  }
+
+  /// Analyze a `...operand` spread argument with its runtime semantics: `operand` is evaluated and
+  /// then iterated. Iterating an array, string, or template literal runs only built-in iterators,
+  /// so the only effects are those of evaluating `operand` — which [`Self::analyze_expr`], gated on
+  /// oxc, already captures (including a nested spread such as `...[...x]`). Any other operand may
+  /// run a user-defined `Symbol.iterator` when spread, so it stays conservatively unknown. Mirrors
+  /// oxc's `Argument::may_have_side_effects` spread handling.
+  fn analyze_spread_argument(&self, spread: &SpreadElement) -> StmtEvalFacts {
+    match &spread.argument {
+      Expression::ArrayExpression(_)
+      | Expression::StringLiteral(_)
+      | Expression::TemplateLiteral(_) => self.analyze_expr(&spread.argument),
+      _ => StmtEvalFacts::from_unknown_side_effect(),
+    }
   }
 
   /// Analyze a member-like write target after Oxc has determined the full write is side-effect-free.
@@ -942,26 +959,35 @@ fn check_pure_cjs_export(scope: &AstScopes, target: &AssignmentTarget) -> Option
   }
 }
 
+/// An eagerly-evaluated subexpression surfaced by [`chain_root_visiting_eager_children`].
+enum EagerChild<'a> {
+  /// A computed member key or a non-spread call argument — evaluated as a plain expression.
+  Expr(&'a Expression<'a>),
+  /// A spread call argument (`...operand`) — evaluating `operand` and iterating it may both have
+  /// effects, so it needs spread-aware analysis rather than plain expression analysis.
+  Spread(&'a SpreadElement<'a>),
+}
+
 /// Descend a member-expression-like chain to its leftmost identifier, invoking `on_eager_child`
-/// for every eagerly-evaluated subexpression on the way down — computed keys and call arguments,
-/// with `None` marking a spread argument. Returns the root identifier's name, or `None` when the
-/// chain doesn't bottom out in a plain identifier.
+/// for every eagerly-evaluated subexpression on the way down — computed keys and call arguments
+/// (see [`EagerChild`]). Returns the root identifier's name, or `None` when the chain doesn't
+/// bottom out in a plain identifier.
 ///
 /// This is the shared engine behind [`chain_root_ident`] and [`for_each_eager_chain_child`]; call
 /// whichever of those fits instead of reading the return value and driving the visitor from the
 /// same call site.
 fn chain_root_visiting_eager_children<'a>(
   expr: &'a Expression,
-  mut on_eager_child: impl FnMut(Option<&'a Expression>),
+  mut on_eager_child: impl FnMut(EagerChild<'a>),
 ) -> Option<&'a str> {
   fn visit_call_args<'a>(
     args: &'a [Argument<'a>],
-    on_eager_child: &mut impl FnMut(Option<&'a Expression<'a>>),
+    on_eager_child: &mut impl FnMut(EagerChild<'a>),
   ) {
     for arg in args {
       on_eager_child(match arg {
-        Argument::SpreadElement(_) => None,
-        _ => Some(arg.to_expression()),
+        Argument::SpreadElement(spread) => EagerChild::Spread(spread),
+        _ => EagerChild::Expr(arg.to_expression()),
       });
     }
   }
@@ -971,7 +997,7 @@ fn chain_root_visiting_eager_children<'a>(
     match cur {
       Expression::Identifier(ident) => break Some(ident.name.as_str()),
       Expression::ComputedMemberExpression(expr) => {
-        on_eager_child(Some(&expr.expression));
+        on_eager_child(EagerChild::Expr(&expr.expression));
         cur = &expr.object;
       }
       Expression::StaticMemberExpression(expr) => {
@@ -987,7 +1013,7 @@ fn chain_root_visiting_eager_children<'a>(
           cur = &call_expression.callee;
         }
         ChainElement::ComputedMemberExpression(ref computed_member_expression) => {
-          on_eager_child(Some(&computed_member_expression.expression));
+          on_eager_child(EagerChild::Expr(&computed_member_expression.expression));
           cur = &computed_member_expression.object;
         }
         ChainElement::StaticMemberExpression(ref static_member_expression) => {
@@ -1010,8 +1036,8 @@ fn chain_root_ident<'a>(expr: &'a Expression) -> Option<&'a str> {
 }
 
 /// Invoke `visit` on every eagerly-evaluated subexpression of a member-expression-like chain —
-/// computed keys and call arguments, with `None` marking a spread argument.
-fn for_each_eager_chain_child<'a>(expr: &'a Expression, visit: impl FnMut(Option<&'a Expression>)) {
+/// computed keys and call arguments (see [`EagerChild`]).
+fn for_each_eager_chain_child<'a>(expr: &'a Expression, visit: impl FnMut(EagerChild<'a>)) {
   let _ = chain_root_visiting_eager_children(expr, visit);
 }
 
@@ -2089,6 +2115,53 @@ mod test {
       "make(effect()).value;",
       "new (make()[effect()].Box)();",
       "make(effect());",
+    ] {
+      assert_eq!(
+        get_stmt_eval_with_options(code, &options),
+        vec![(StmtEvalFlags::UnknownSideEffect, true)],
+        "{code}"
+      );
+    }
+  }
+
+  #[test]
+  fn test_manual_pure_chains_drop_side_effect_free_spreads() {
+    let options = Arc::new(NormalizedBundlerOptions {
+      treeshake: InnerOptions {
+        manual_pure_functions: Some(std::iter::once("make".to_string()).collect()),
+        ..InnerOptions::default()
+      }
+      .into(),
+      ..NormalizedBundlerOptions::default()
+    });
+    // Spreading an array/string/template literal iterates only built-in iterators, so a matched
+    // manual-pure chain wrapping one stays removable (Rollup drops these too).
+    for code in [
+      "make(...[]).value;",
+      "make(...'').value;",
+      "make(...`literal`).value;",
+      "make(...[1, 2]).value;",
+    ] {
+      assert_eq!(
+        get_stmt_eval_with_options(code, &options),
+        vec![(StmtEvalFlags::empty(), false)],
+        "{code}"
+      );
+    }
+    // The call-position form is likewise side-effect-free; reading the unresolved `make` global
+    // only makes it order-sensitive.
+    assert_eq!(
+      get_stmt_eval_with_options("make(...[])();", &options),
+      vec![(StmtEvalFlags::empty(), true)],
+      "make(...[])();"
+    );
+    // A side-effectful spread element, or a non-literal (possibly user-iterable) operand, keeps the
+    // statement — evaluating or iterating the operand may run arbitrary code.
+    for code in [
+      "make(...[effect()]).value;",
+      "make(...effect()).value;",
+      "make(...spreadable).value;",
+      "make(...[...spreadable]).value;",
     ] {
       assert_eq!(
         get_stmt_eval_with_options(code, &options),

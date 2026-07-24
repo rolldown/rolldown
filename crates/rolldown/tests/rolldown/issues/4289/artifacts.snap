@@ -42,6 +42,10 @@ async function main() {
 	nodeAssert$1.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
 }
 main();
+//#endregion
+//#region node-mode-by-cjs-extension.cjs
+//#endregion
+//#region main.js
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const nodeAssert$2 = __require("node:assert");
 	async function main() {
@@ -106,6 +110,10 @@ async function main() {
 	node_assert.default.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
 }
 main();
+//#endregion
+//#region node-mode-by-cjs-extension.cjs
+//#endregion
+//#region main.js
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const nodeAssert = require("node:assert");
 	async function main() {
@@ -156,6 +164,10 @@ async function main() {
 	nodeAssert$1.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
 }
 main();
+//#endregion
+//#region node-mode-by-cjs-extension.cjs
+//#endregion
+//#region main.js
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const nodeAssert$2 = __require("node:assert");
 	async function main() {

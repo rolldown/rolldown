@@ -40,6 +40,8 @@ function init_leafhost() {
 		console.log("L");
 	})))();
 }
+//#endregion
+//#region m6.js
 function init_m6() {
 	return (init_m6 = __esmMin((() => {
 		console.log("M6");
@@ -134,6 +136,8 @@ function init_leafhost() {
 		console.log("L");
 	})))();
 }
+//#endregion
+//#region m6.js
 function init_m6() {
 	return (init_m6 = __esmMin((() => {
 		console.log("M6");

@@ -41,6 +41,8 @@ var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	console.log("C");
 	module.exports = {};
 }));
+//#endregion
+//#region p.js
 function init_p() {
 	return (init_p = __esmMin((() => {
 		require_c();
@@ -141,6 +143,8 @@ var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	console.log("C");
 	module.exports = {};
 }));
+//#endregion
+//#region p.js
 function init_p() {
 	return (init_p = __esmMin((() => {
 		require_c();

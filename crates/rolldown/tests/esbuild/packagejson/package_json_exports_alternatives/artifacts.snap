@@ -36,6 +36,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import redApple from "pkg/apples/red.js";
 import redBook from "pkg/books/red";
+//#region node_modules/pkg/good-apples/green.js
+//#endregion
+//#region node_modules/pkg/good-books/green-book.js
 //#endregion
 //#region src/entry.js
 console.log({

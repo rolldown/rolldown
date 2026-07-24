@@ -38,6 +38,7 @@ export { mod_a_exports as a, init_mod_a as i, init_mod_b as n, __exportAll as o,
 
 ```js
 import { i as init_mod_a, n as init_mod_b, o as __exportAll, s as __reExport, t as barrel_exports } from "./barrel.js";
+//#region main.js
 __reExport(/* @__PURE__ */ __exportAll({}), barrel_exports);
 globalThis.__log.push("BEFORE_REQUIRE");
 init_mod_a();

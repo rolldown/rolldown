@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry_ts.js
 
 ```js
+//#region entry.ts
 (class {
 	b1;
 	b2;

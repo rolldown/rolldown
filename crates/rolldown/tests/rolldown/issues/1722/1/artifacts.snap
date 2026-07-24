@@ -16,6 +16,8 @@ export { main, sub };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region sub.cjs
+//#endregion
 //#region main.js
 var import_sub = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.sub = "sub";

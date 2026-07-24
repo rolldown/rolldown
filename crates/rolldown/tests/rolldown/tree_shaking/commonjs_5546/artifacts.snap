@@ -13,6 +13,10 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.default = "default";
 	exports.foo = "foo";
 }));
+//#endregion
+//#region lib/index.js
+//#endregion
+//#region main.js
 let indirect = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = require_cjs();
 })))())).default;

@@ -13,6 +13,8 @@ function test(a) {
 }
 console.log(a$1);
 //#endregion
+//#region other.js
+//#endregion
 //#region main.js
 console.log("from-other", test("x"));
 //#endregion

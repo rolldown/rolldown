@@ -26,6 +26,7 @@ use crate::hmr_files::{
   apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
   copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
 };
+use crate::preserve_region_markers::PreserveRegionMarkersPlugin;
 use crate::types::{
   BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput, HmrStepOutput,
 };
@@ -560,8 +561,12 @@ impl IntegrationTest {
   pub async fn run_multiple(
     &self,
     mut multiple_options: Vec<NamedBundlerOptions>,
-    plugins: Vec<SharedPluginable>,
+    mut plugins: Vec<SharedPluginable>,
   ) {
+    // Registered last so it runs right before the internal dce pass; see the module docs of
+    // `preserve_region_markers` for why snapshots need markers kept intact.
+    plugins.push(Arc::new(PreserveRegionMarkersPlugin));
+
     let test_folder_path = &self.test_folder_path;
 
     // Detect HMR mode by checking for HMR edit files

@@ -59,6 +59,7 @@ export { render };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+//#region bridge.js
 //#endregion
 //#region page-b.js
 function render() {}
@@ -163,6 +164,7 @@ export { render };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+//#region bridge.js
 //#endregion
 //#region page-b.js
 function render() {}

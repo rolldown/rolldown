@@ -9,6 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
+//#region foo.js
+//#endregion
+//#region entry.js
 (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 123;
 })))();

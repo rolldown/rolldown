@@ -18,6 +18,8 @@ export { a };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region c.js
+//#endregion
 //#region b.js
 var import_c = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.test = 1e3;

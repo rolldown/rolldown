@@ -258,6 +258,7 @@ export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
 ## stmt-fn.js
 
 ```js
+//#region stmt-fn.js
 //! These should all have "no side effects"
 //#endregion
 
@@ -266,6 +267,7 @@ export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
 ## stmt-local.js
 
 ```js
+//#region stmt-local.js
 //! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
 //#endregion
 

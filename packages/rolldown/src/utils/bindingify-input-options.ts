@@ -11,18 +11,24 @@ import type {
   BindingInjectImportNamed,
   BindingInjectImportNamespace,
   BindingInputOptions,
+  BindingStringOrRegex,
 } from '../binding.cjs';
 import { bindingifyManifestPlugin, BuiltinPlugin } from '../builtin-plugin/utils';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
-import type { AttachDebugOptions, DevModeOptions, InputOptions } from '../options/input-options';
+import type {
+  AttachDebugOptions,
+  DevModeOptions,
+  InputOptions,
+  WatchFilter,
+  WatchFilterFunction,
+} from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import type { Plugin, RolldownPlugin } from '../plugin';
 import { bindingifyPlugin } from '../plugin/bindingify-plugin';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import { arraify } from './misc';
-import { normalizedStringOrRegex } from './normalize-string-or-regex';
 import {
   type NormalizedTransformOptions,
   normalizeTransformOptions,
@@ -291,6 +297,8 @@ function bindingifyInput(input: InputOptions['input']): BindingInputOptions['inp
 
 function bindingifyWatch(watch: InputOptions['watch']): BindingInputOptions['watch'] {
   if (watch) {
+    const include = normalizeWatchFilter(watch.include);
+    const exclude = normalizeWatchFilter(watch.exclude);
     if (watch.notify) {
       console.warn('The "watch.notify" option is deprecated. Please use "watch.watcher" instead.');
     }
@@ -305,11 +313,48 @@ function bindingifyWatch(watch: InputOptions['watch']): BindingInputOptions['wat
       useDebounce: watcher.useDebounce,
       debounceDelay: watcher.debounceDelay,
       debounceTickRate: watcher.debounceTickRate,
-      include: normalizedStringOrRegex(watch.include),
-      exclude: normalizedStringOrRegex(watch.exclude),
+      include: include.patterns,
+      includeFn: include.fn,
+      exclude: exclude.patterns,
+      excludeFn: exclude.fn,
       onInvalidate: (...args) => watch.onInvalidate?.(...args),
     };
   }
+}
+
+function normalizeWatchFilter(filter: WatchFilter | WatchFilter[] | undefined): {
+  patterns?: BindingStringOrRegex[];
+  fn?: WatchFilterFunction;
+} {
+  if (!filter) {
+    return {};
+  }
+
+  const filters = arraify(filter);
+  const patterns: BindingStringOrRegex[] = [];
+  const fnFilters: WatchFilterFunction[] = [];
+  for (const item of filters) {
+    if (typeof item === 'function') {
+      fnFilters.push(item);
+      continue;
+    }
+    patterns.push(item);
+  }
+
+  return {
+    patterns: patterns.length > 0 ? patterns : undefined,
+    fn:
+      fnFilters.length > 0
+        ? (id) => {
+            for (const fn of fnFilters) {
+              if (fn(id)) {
+                return true;
+              }
+            }
+            return false;
+          }
+        : undefined,
+  };
 }
 
 function bindingifyTreeshakeOptions(

@@ -764,6 +764,35 @@ test.concurrent(
 );
 
 test.concurrent(
+  'watch include/exclude function filters',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('include-exclude-function', retryCount);
+    const watcher = watch({
+      input,
+      output: { file: output },
+      watch: {
+        exclude: ['**/not-main.js', (id) => id.endsWith('main.js')],
+      },
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await waitBuildFinished(watcher);
+
+    // edit file
+    await editFile(input, 'console.log(2)');
+    // The input is excluded via function filter, so the output file should not be updated
+    await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
+  },
+);
+
+test.concurrent(
   'watch onInvalidate',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {
@@ -795,6 +824,49 @@ test.concurrent(
 
     await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(2)');
     expect(onInvalidateFn).toBeCalled();
+  },
+);
+
+test.concurrent(
+  'watch include/exclude function errors should emit ERROR event',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'include-exclude-function-error',
+      retryCount,
+    );
+    const errors: string[] = [];
+    const watcher = watch({
+      input,
+      output: { file: output },
+      watch: {
+        exclude: [
+          (id) => {
+            if (id.endsWith('main.js')) {
+              throw new Error('watch filter boom');
+            }
+            return false;
+          },
+        ],
+      },
+    });
+    watcher.on('event', (event) => {
+      if (event.code === 'ERROR') {
+        errors.push(event.error.message);
+      }
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await expect.poll(() => errors.length).toBe(1);
+    expect(errors[0]).toContain('watch.exclude option');
+    expect(errors[0]).toContain('watch filter boom');
+    expect(fs.existsSync(output)).toBe(false);
   },
 );
 

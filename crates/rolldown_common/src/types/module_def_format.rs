@@ -1,7 +1,7 @@
 use std::path::Path;
 
 /// Module Definition Format.
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ModuleDefFormat {
   #[default]
   Unknown,

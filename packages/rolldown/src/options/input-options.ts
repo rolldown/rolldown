@@ -658,6 +658,48 @@ export interface InputOptions {
      */
     incrementalBuild?: boolean;
     /**
+     * Persist per-module build pipeline results (plugin `load` and
+     * `transform` output plus dependency resolution) to disk and reuse them
+     * across builds and processes.
+     *
+     * Entries are keyed on each module's on-disk content: a hit skips every
+     * `resolveId`, `load` and `transform` hook for that module and replays
+     * the resolved dependencies, which mainly pays off for expensive
+     * JavaScript hooks (framework compilers, legacy transpilers) and very
+     * large module graphs. Parsing, scanning and all later build stages run
+     * unchanged. Virtual modules and data URLs always bypass the cache.
+     *
+     * The cache key covers the rolldown version, platform, the ordered
+     * plugin names, each module's id and file content, plus the `key`
+     * option. Plugin configuration or implementation changes and resolution
+     * inputs outside module files (lockfile, `tsconfig.json` paths, newly
+     * added files that shadow a previous resolution) are NOT detected
+     * automatically: fold anything that affects resolve/load/transform
+     * output (e.g. a hash of your resolved config and lockfile) into `key`.
+     *
+     * Hooks are assumed to be deterministic functions of the module's id and
+     * content. Side channels (`this.emitFile`, `this.addWatchFile`, custom
+     * module meta) are not replayed on cache hits, and the cache is not
+     * applied when `nativeMagicString` is enabled together with sourcemaps.
+     * When no plugin registers a `resolveId`, `load` or `transform` hook the
+     * cache disables itself, since there would be nothing to skip.
+     *
+     * @default false
+     */
+    buildCache?:
+      | boolean
+      | {
+          /**
+           * Directory where cache entries are stored, resolved against `cwd`.
+           * @default 'node_modules/.cache/rolldown'
+           */
+          dir?: string;
+          /**
+           * Extra cache invalidation key, hashed into every entry.
+           */
+          key?: string;
+        };
+    /**
      * Use native Rust implementation of MagicString for source map generation.
      *
      * [MagicString](https://github.com/rich-harris/magic-string) is a JavaScript library commonly used by bundlers

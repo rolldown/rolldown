@@ -177,6 +177,7 @@ function bindingifyExperimental(
     chunkImportMap: experimental?.chunkImportMap,
     onDemandWrapping: experimental?.onDemandWrapping,
     incrementalBuild: experimental?.incrementalBuild,
+    buildCache: experimental?.buildCache,
     nativeMagicString: experimental?.nativeMagicString,
     chunkOptimization: experimental?.chunkOptimization,
     lazyBarrel: experimental?.lazyBarrel,

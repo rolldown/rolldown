@@ -221,6 +221,73 @@ test(
   },
 );
 
+test(
+  'lazy proxy modules skip user plugin hooks',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-skip-hooks-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const main = path.join(dir, 'main.js');
+    const lazy = path.join(dir, 'lazy.js');
+    fs.writeFileSync(main, `globalThis.load = () => import('./lazy.js');\n`);
+    fs.writeFileSync(lazy, `export const value = 1;\n`);
+
+    const seenTransformIds: string[] = [];
+    const seenModuleParsedIds: string[] = [];
+    const plugin = {
+      name: 'assert-no-lazy-proxy-hooks',
+      load: {
+        order: 'pre',
+        handler(id: string) {
+          if (id.includes('?rolldown-lazy=1')) {
+            throw new Error(`load hook saw lazy proxy id: ${id}`);
+          }
+        },
+      },
+      transform(code: string, id: string) {
+        seenTransformIds.push(id);
+        if (id.includes('?rolldown-lazy=1')) {
+          throw new Error(`transform hook saw lazy proxy id: ${id}`);
+        }
+        return code;
+      },
+      moduleParsed(moduleInfo: { id: string }) {
+        seenModuleParsedIds.push(moduleInfo.id);
+        if (moduleInfo.id.includes('?rolldown-lazy=1')) {
+          throw new Error(`moduleParsed hook saw lazy proxy id: ${moduleInfo.id}`);
+        }
+      },
+    };
+
+    const engine = await dev(
+      {
+        input: main,
+        plugins: [plugin],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('c1');
+    await engine.compileEntry(`${lazy}?rolldown-lazy=1`, 'c1');
+
+    expect(seenTransformIds.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
+    expect(seenTransformIds.some((id) => id.endsWith('lazy.js'))).toBe(true);
+    expect(seenModuleParsedIds.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
+    expect(seenModuleParsedIds.some((id) => id.endsWith('lazy.js'))).toBe(true);
+  },
+);
+
 // With `sourcemap: true` the chunk gets a `sourceMappingURL`, so the map it names
 // has to be reachable: a lazy chunk is not written to disk, which leaves the
 // return value as the only way for the consumer to serve it.

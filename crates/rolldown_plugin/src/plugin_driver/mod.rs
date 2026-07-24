@@ -36,6 +36,8 @@ pub struct PluginDriver {
   plugins: IndexPluginable,
   contexts: IndexPluginContext,
   hook_orders: PluginHookOrders,
+  pub(crate) should_skip_user_plugins_for_lazy_proxy_modules: bool,
+  pub(crate) lazy_compilation_plugin_idx: Option<PluginIdx>,
   pub file_emitter: SharedFileEmitter,
   pub watch_files: Arc<FxDashSet<ArcStr>>,
   pub module_infos: SharedModuleInfoDashMap,

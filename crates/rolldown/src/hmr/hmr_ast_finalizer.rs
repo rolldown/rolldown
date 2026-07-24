@@ -151,7 +151,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                   Expression::new_static_member_expression(
                     SPAN,
                     Expression::new_id_ref_expr(SPAN, &binding_name, &self.ast_builder),
-                    ast::IdentifierName::new(SPAN, ident.name.as_str(), &self.ast_builder),
+                    ast::IdentifierName::new(SPAN, ident.name, &self.ast_builder),
                     false,
                     &self.ast_builder,
                   )
@@ -160,12 +160,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                   Expression::new_computed_member_expression(
                     SPAN,
                     Expression::new_id_ref_expr(SPAN, &binding_name, &self.ast_builder),
-                    ast::Expression::new_string_literal(
-                      SPAN,
-                      str.value.as_str(),
-                      None,
-                      &self.ast_builder,
-                    ),
+                    ast::Expression::new_string_literal(SPAN, str.value, None, &self.ast_builder),
                     false,
                     &self.ast_builder,
                   )
@@ -193,7 +188,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                 decl.id.get_binding_identifiers().into_iter().map(|ident| {
                   ObjectPropertyKind::new_lazy_export_property(
                     ident.name.as_str(),
-                    Expression::new_id_ref_expr(SPAN, ident.name.as_str(), &self.ast_builder),
+                    Expression::new_identifier(SPAN, ident.name, &self.ast_builder),
                     false,
                     &self.ast_builder,
                   )
@@ -202,20 +197,20 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             }
             ast::Declaration::FunctionDeclaration(fn_decl) => {
               // export function foo() {}
-              let id = fn_decl.id.as_ref().unwrap().name.as_str();
+              let id = fn_decl.id.as_ref().unwrap().name;
               self.exports.push(ObjectPropertyKind::new_lazy_export_property(
-                id,
-                Expression::new_id_ref_expr(SPAN, id, &self.ast_builder),
+                id.as_str(),
+                Expression::new_identifier(SPAN, id, &self.ast_builder),
                 false,
                 &self.ast_builder,
               ));
             }
             ast::Declaration::ClassDeclaration(cls_decl) => {
               // export class Foo {}
-              let id = cls_decl.id.as_ref().unwrap().name.as_str();
+              let id = cls_decl.id.as_ref().unwrap().name;
               self.exports.push(ObjectPropertyKind::new_lazy_export_property(
-                id,
-                Expression::new_id_ref_expr(SPAN, id, &self.ast_builder),
+                id.as_str(),
+                Expression::new_identifier(SPAN, id, &self.ast_builder),
                 false,
                 &self.ast_builder,
               ));
@@ -241,7 +236,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           if let Some(id) = &function.id {
             self.exports.push(ObjectPropertyKind::new_lazy_export_property(
               "default",
-              Expression::new_id_ref_expr(SPAN, &id.name, &self.ast_builder),
+              Expression::new_identifier(SPAN, id.name, &self.ast_builder),
               false,
               &self.ast_builder,
             ));
@@ -261,7 +256,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           if let Some(id) = &class.id {
             self.exports.push(ObjectPropertyKind::new_lazy_export_property(
               "default",
-              Expression::new_id_ref_expr(SPAN, &id.name, &self.ast_builder),
+              Expression::new_identifier(SPAN, id.name, &self.ast_builder),
               false,
               &self.ast_builder,
             ));

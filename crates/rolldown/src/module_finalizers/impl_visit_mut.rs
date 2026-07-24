@@ -2,9 +2,9 @@ use itertools::Itertools;
 use oxc::ast::AstType;
 use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression};
 use oxc::{
-  allocator::{self, IntoIn, ReplaceWith, TakeIn},
+  allocator::{self, ReplaceWith, TakeIn},
   ast::{
-    ast::{self, BindingPattern, Expression, IdentifierName, SimpleAssignmentTarget, Statement},
+    ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
     builder::NONE,
     match_member_expression,
   },
@@ -16,8 +16,7 @@ use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKi
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
   EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions, ExpressionExt,
-  ExpressionFactoryExt as _, IdentifierNameFactoryExt as _, JsxExt, JsxMemberExpressionObjectExt,
-  StatementFactoryExt as _,
+  ExpressionFactoryExt as _, JsxExt, JsxMemberExpressionObjectExt, StatementFactoryExt as _,
 };
 use rolldown_error::EmptyImportMetaKind;
 
@@ -721,10 +720,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         };
         *property = ast::AssignmentTargetProperty::new_assignment_target_property_property(
           Span::default(),
-          ast::PropertyKey::StaticIdentifier(
-            IdentifierName::new_id_name(prop.span, &prop.binding.name, &self.ast_builder)
-              .into_in(self.alloc),
-          ),
+          ast::PropertyKey::new_static_identifier(prop.span, prop.binding.name, &self.ast_builder),
           binding,
           false,
           &self.ast_builder,

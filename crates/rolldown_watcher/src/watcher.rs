@@ -135,13 +135,18 @@ impl Watcher {
   /// Close the watcher and wait for the coordinator to finish.
   /// Must be called after `run()` — calling before `run()` will skip cleanup hooks.
   pub async fn close(&self) -> Result<()> {
-    self.closed.store(true, std::sync::atomic::Ordering::Relaxed);
-    // Wake the coordinator even when it is waiting for a user event callback. The mpsc message
-    // remains the normal state-machine input when the coordinator is idle or debouncing.
-    self.close_notify.notify_one();
-    let _ = self.tx.send(WatcherMsg::Close);
+    self.signal_close();
     self.wait_for_close().await;
     Ok(())
+  }
+
+  /// The synchronous part of `close`: tell the coordinator to stop, without awaiting it. `Close`
+  /// drives the idle and debouncing states; `closed` + `close_notify` also interrupt an in-flight
+  /// user callback.
+  fn signal_close(&self) {
+    self.closed.store(true, std::sync::atomic::Ordering::Relaxed);
+    self.close_notify.notify_one();
+    let _ = self.tx.send(WatcherMsg::Close);
   }
 
   fn create_tasks(
@@ -161,6 +166,14 @@ impl Watcher {
       tasks.push(task);
     }
     Ok(tasks)
+  }
+}
+
+impl Drop for Watcher {
+  // The coordinator keeps a `tx` clone per task, so its channel never closes on its own. Signal it
+  // here, or a watcher dropped without `close` would leak the spawned coordinator task.
+  fn drop(&mut self) {
+    self.signal_close();
   }
 }
 
@@ -193,5 +206,69 @@ mod tests {
     let config = WatcherConfig { poll_interval: Some(250), ..Default::default() };
     let fs_config = config.to_fs_watcher_config();
     assert_eq!(fs_config.poll_interval, 250);
+  }
+
+  /// Regression: a `run()` watcher dropped without `close()` must still stop its spawned
+  /// coordinator. Each task's fs watcher holds a `tx.clone()`, so the coordinator's channel never
+  /// closes on its own; `on_close` firing after the drop proves `Drop` signalled it, not leaked.
+  #[tokio::test(flavor = "multi_thread")]
+  async fn dropping_a_running_watcher_shuts_down_the_coordinator() {
+    use crate::{WatchEvent, WatcherEventHandler};
+    use rolldown::{BundlerConfig, BundlerOptions};
+    use rolldown_common::{WatchOption, WatcherChangeKind};
+    use std::sync::Arc;
+    use sugar_path::SugarPath as _;
+    use tokio::sync::Notify;
+
+    struct SignalHandler {
+      built: Arc<Notify>,
+      closed: Arc<Notify>,
+    }
+
+    impl WatcherEventHandler for SignalHandler {
+      async fn on_event(&self, event: WatchEvent) {
+        if matches!(event, WatchEvent::End) {
+          self.built.notify_one();
+        }
+      }
+      async fn on_change(&self, _path: &str, _kind: WatcherChangeKind) {}
+      async fn on_restart(&self) {}
+      async fn on_close(&self) {
+        self.closed.notify_one();
+      }
+    }
+
+    let built = Arc::new(Notify::new());
+    let closed = Arc::new(Notify::new());
+
+    let cwd =
+      rolldown_workspace::crate_dir("rolldown").join("./examples/basic").normalize().into_owned();
+    let config = BundlerConfig::new(
+      BundlerOptions {
+        input: Some(vec!["./entry.js".to_string().into()]),
+        cwd: Some(cwd),
+        // Keep the build in-memory so the test never touches disk.
+        watch: Some(WatchOption { skip_write: true, ..Default::default() }),
+        ..Default::default()
+      },
+      vec![],
+    );
+
+    let handler = SignalHandler { built: Arc::clone(&built), closed: Arc::clone(&closed) };
+    let watcher =
+      Watcher::new(vec![config], handler, &WatcherConfig::default()).expect("failed to create");
+    watcher.run();
+
+    // Wait for the initial build so the coordinator is parked in `Idle` on `rx.recv()`.
+    tokio::time::timeout(Duration::from_secs(30), built.notified())
+      .await
+      .expect("initial build did not finish");
+
+    // Drop without `close()`; `Drop` must signal the coordinator to shut down.
+    drop(watcher);
+
+    tokio::time::timeout(Duration::from_secs(30), closed.notified())
+      .await
+      .expect("coordinator did not shut down after drop");
   }
 }

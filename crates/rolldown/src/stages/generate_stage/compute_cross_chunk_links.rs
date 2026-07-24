@@ -385,8 +385,18 @@ impl GenerateStage<'_> {
                     return;
                   }
                   if matches!(rec.kind, ImportKind::DynamicImport) {
-                    let importee_chunk =
-                      chunk_graph.module_to_chunk[module_idx].expect("importee chunk should exist");
+                    // The finalizer rewrites `import()` specifiers through
+                    // `entry_module_to_entry_chunk`, which diverges from the hosting chunk
+                    // whenever the dynamic entry's facade chunk survives while another chunk
+                    // hosts its body (order-wrap facade splits, or kept facades when
+                    // common-chunk merging is off); record the chunk the emitted specifier
+                    // actually names.
+                    let importee_chunk = chunk_graph
+                      .entry_module_to_entry_chunk
+                      .get(&module_idx)
+                      .copied()
+                      .or(chunk_graph.module_to_chunk[module_idx])
+                      .expect("importee chunk should exist");
                     cross_chunk_dynamic_imports.insert(importee_chunk);
                   }
                 }

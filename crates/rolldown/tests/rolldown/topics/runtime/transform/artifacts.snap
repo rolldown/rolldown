@@ -6,7 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+//#region \0rolldown/runtime.js
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+const value = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = "cjs-value";
+})))().value;
+//#endregion
 export { value };
 
 ```

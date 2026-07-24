@@ -34,6 +34,60 @@ pub enum FilterExprKind {
   Exclude(FilterExpr),
 }
 
+/// Relative, static cost estimate for evaluating a [`FilterExpr`], used to order
+/// `And`/`Or` operands cheapest-first (see [`optimize_filter_expr`]). Lower is
+/// cheaper. These are ordinal ranks, not measured costs — only their relative
+/// order matters. The dominant distinction is that `Code` tests scan the entire
+/// module source, whereas `Id`/`ImporterId` only test the (short) path.
+fn cost_rank(expr: &FilterExpr) -> u32 {
+  match expr {
+    FilterExpr::ModuleType(_) => 0,
+    FilterExpr::Id(_) | FilterExpr::ImporterId(_) => 1,
+    // The first `Query` eval scans/decodes the id's URL and collects its params into a
+    // map, so rank it *above* the cheap `Id`/`ModuleType` checks — they should get to
+    // short-circuit before that parse is forced.
+    FilterExpr::Query(..) => 2,
+    // Both `Code` variants scan the full source and neither is reliably cheaper — an
+    // anchored regex can fail fast, while an absent string still scans everything — so
+    // give them one tier and let the stable sort preserve their authored order.
+    FilterExpr::Code(_) => 3,
+    // A wrapper costs whatever its (single) inner expression costs.
+    FilterExpr::Not(inner) | FilterExpr::CleanUrl(inner) => cost_rank(inner),
+    // Rank a compound by its *costliest* reachable leaf, not its cheapest: an operand
+    // whose cheap leaf fails still falls through to its expensive one, so `min` would let
+    // e.g. `or(moduleType, code)` pose as free (rank 0) and jump ahead of a cheaper
+    // sibling that would have rejected first — forcing the very full-source scan this
+    // reordering exists to avoid.
+    FilterExpr::And(args) | FilterExpr::Or(args) => args.iter().map(cost_rank).max().unwrap_or(0),
+  }
+}
+
+/// Reorder `And`/`Or` operands cheapest-first (stably) so that short-circuit
+/// evaluation skips expensive leaves — most importantly a `Code` regex over the
+/// full module source — whenever a cheaper operand already decides the result.
+///
+/// This is a semantics-preserving transform: the boolean operators are pure over
+/// side-effect-free predicates. The only interpreter state, the lazily-populated
+/// [`InterpreterCtx::parsed_url_cache`], is keyed by the (fixed) id's query and so
+/// is order-independent. Reordering only ever moves *cheaper* operands earlier, so
+/// it can only make short-circuiting skip an expensive leaf more often, never less.
+fn optimize_filter_expr(expr: &mut FilterExpr) {
+  match expr {
+    FilterExpr::And(args) | FilterExpr::Or(args) => {
+      for arg in args.iter_mut() {
+        optimize_filter_expr(arg);
+      }
+      args.sort_by_cached_key(cost_rank);
+    }
+    FilterExpr::Not(inner) | FilterExpr::CleanUrl(inner) => optimize_filter_expr(inner),
+    FilterExpr::Id(_)
+    | FilterExpr::ImporterId(_)
+    | FilterExpr::Code(_)
+    | FilterExpr::ModuleType(_)
+    | FilterExpr::Query(..) => {}
+  }
+}
+
 pub fn filter_expr_interpreter<'a>(
   expr: &FilterExpr,
   id: Option<&'a str>,
@@ -244,8 +298,16 @@ pub fn parse(mut tokens: Vec<Token>) -> anyhow::Result<FilterExprKind> {
   }
 
   match tokens.pop() {
-    Some(Token::Include) => Ok(FilterExprKind::Include(rec(&mut tokens)?)),
-    Some(Token::Exclude) => Ok(FilterExprKind::Exclude(rec(&mut tokens)?)),
+    Some(Token::Include) => {
+      let mut expr = rec(&mut tokens)?;
+      optimize_filter_expr(&mut expr);
+      Ok(FilterExprKind::Include(expr))
+    }
+    Some(Token::Exclude) => {
+      let mut expr = rec(&mut tokens)?;
+      optimize_filter_expr(&mut expr);
+      Ok(FilterExprKind::Exclude(expr))
+    }
     Some(other) => {
       anyhow::bail!("filter expression should start with Include or Exclude, but got {other:?}")
     }
@@ -256,11 +318,11 @@ pub fn parse(mut tokens: Vec<Token>) -> anyhow::Result<FilterExprKind> {
 #[cfg(test)]
 mod test {
   use crate::{
-    filter_expression::{FilterExpr, InterpreterCtx, Token, filter_expr_interpreter},
+    filter_expression::{FilterExpr, InterpreterCtx, QueryValue, Token, filter_expr_interpreter},
     pattern_filter::StringOrRegex,
   };
 
-  use super::{filter_exprs_interpreter, parse};
+  use super::{filter_exprs_interpreter, optimize_filter_expr, parse};
 
   #[test]
   fn test_filter_expr_interpreter() {
@@ -339,5 +401,128 @@ mod test {
       None,
       ".",
     ));
+  }
+
+  #[test]
+  fn optimize_keeps_query_after_id() {
+    // The first `Query` eval parses the id's URL and builds a param map, so a cheap
+    // `Id` check must run (and get to short-circuit) before that parse is forced —
+    // even though `Query` has fewer nodes, it is not cheaper to evaluate.
+    let mut expr = FilterExpr::And(vec![
+      FilterExpr::Id(StringOrRegex::Regex("target".into())),
+      FilterExpr::Query("raw".to_string(), QueryValue::Boolean(true)),
+    ]);
+    optimize_filter_expr(&mut expr);
+    match &expr {
+      FilterExpr::And(args) => {
+        assert!(matches!(args[0], FilterExpr::Id(_)), "Id must precede Query, got {args:?}");
+        assert!(matches!(args[1], FilterExpr::Query(..)));
+      }
+      other => panic!("expected And, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn optimize_ranks_compound_by_costliest_leaf() {
+    // A nested `or` containing a `Code` regex must not be ranked cheap by its
+    // `ModuleType` leaf: a non-matching module has to reject at the cheap `Id` check
+    // first, not fall into the full-source `Code` scan inside the `or`.
+    let mut expr = FilterExpr::And(vec![
+      FilterExpr::Id(StringOrRegex::Regex("target".into())),
+      FilterExpr::Or(vec![
+        FilterExpr::ModuleType("css".to_string()),
+        FilterExpr::Code(StringOrRegex::Regex("needle".into())),
+      ]),
+    ]);
+    optimize_filter_expr(&mut expr);
+    match &expr {
+      FilterExpr::And(args) => {
+        assert!(
+          matches!(args[0], FilterExpr::Id(_)),
+          "Id must precede the Code-bearing Or, got {args:?}"
+        );
+        assert!(matches!(args[1], FilterExpr::Or(_)));
+      }
+      other => panic!("expected And, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn optimize_reorders_operands_cheapest_first() {
+    // and(code(/regex/), id(/regex/)) — the expensive `Code` leaf is authored first.
+    let mut expr = FilterExpr::And(vec![
+      FilterExpr::Code(StringOrRegex::Regex("import".into())),
+      FilterExpr::Id(StringOrRegex::Regex("node_modules".into())),
+    ]);
+    optimize_filter_expr(&mut expr);
+    // After optimization the cheap `Id` leaf must come first so it can short-circuit.
+    match &expr {
+      FilterExpr::And(args) => {
+        assert!(
+          matches!(args[0], FilterExpr::Id(_)),
+          "expected Id first after reorder, got {args:?}"
+        );
+        assert!(matches!(args[1], FilterExpr::Code(_)));
+      }
+      other => panic!("expected And, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn optimize_preserves_semantics() {
+    // Build the same And in both orders; after optimization they must agree with
+    // each other and with the original evaluation for every input.
+    let build = |code_first: bool| {
+      let id = FilterExpr::Id(StringOrRegex::Regex("node_modules".into()));
+      let code = FilterExpr::Not(Box::new(FilterExpr::Code(StringOrRegex::Regex("import".into()))));
+      let args = if code_first { vec![code, id] } else { vec![id, code] };
+      FilterExpr::And(args)
+    };
+    let inputs = [
+      (Some("/node_modules/bar.js"), Some("console.log('x')")),
+      (Some("/node_modules/bar.js"), Some("import('x')")),
+      (Some("/src/foo.js"), Some("console.log('x')")),
+      (Some("/src/foo.js"), Some("import('x')")),
+    ];
+    for (id, code) in inputs {
+      let baseline = filter_expr_interpreter(
+        &build(false),
+        id,
+        code,
+        None,
+        None,
+        ".",
+        &mut InterpreterCtx::default(),
+      );
+      for code_first in [false, true] {
+        let mut expr = build(code_first);
+        optimize_filter_expr(&mut expr);
+        let got =
+          filter_expr_interpreter(&expr, id, code, None, None, ".", &mut InterpreterCtx::default());
+        assert_eq!(got, baseline, "mismatch for id={id:?} code={code:?} code_first={code_first}");
+      }
+    }
+  }
+
+  #[test]
+  fn optimize_keeps_code_checks_in_authored_order() {
+    // Both `Code` variants scan the full source; which is cheaper depends on the pattern
+    // (an anchored regex can fail fast, an absent string scans everything), so their
+    // authored order must be preserved rather than reordered by variant.
+    let mut expr = FilterExpr::Or(vec![
+      FilterExpr::Code(StringOrRegex::Regex("^import".into())),
+      FilterExpr::Code(StringOrRegex::String("rare-marker".to_string())),
+    ]);
+    optimize_filter_expr(&mut expr);
+    match &expr {
+      FilterExpr::Or(args) => {
+        assert!(
+          matches!(args[0], FilterExpr::Code(StringOrRegex::Regex(_))),
+          "authored Code order must be preserved, got {args:?}"
+        );
+        assert!(matches!(args[1], FilterExpr::Code(StringOrRegex::String(_))));
+      }
+      other => panic!("expected Or, got {other:?}"),
+    }
   }
 }

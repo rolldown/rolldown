@@ -7,14 +7,15 @@ use crate::{
   HookResolveFileUrlArgs, HookResolveIdArgs, HookTransformArgs, HookUsage, Plugin, PluginHookMeta,
   SharedLoadPluginContext, SharedTransformPluginContext,
   types::{
-    hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs,
-    hook_write_bundle_args::HookWriteBundleArgs,
+    hook_hot_update_args::HookHotUpdateArgs, hook_render_error::HookRenderErrorArgs,
+    hook_transform_ast_args::HookTransformAstArgs, hook_write_bundle_args::HookWriteBundleArgs,
   },
 };
 use anyhow::Ok;
 use rolldown_common::{ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind};
 
 pub use crate::plugin::HookAugmentChunkHashReturn;
+pub use crate::plugin::HookHotUpdateReturn;
 pub use crate::plugin::HookLoadReturn;
 pub use crate::plugin::HookNoopReturn;
 pub use crate::plugin::HookRenderChunkReturn;
@@ -219,6 +220,18 @@ pub trait Pluginable: Any + Send + Sync + 'static {
   }
 
   fn call_watch_change_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
+  fn call_hot_update<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookHotUpdateArgs,
+  ) -> HookFuture<'a, HookHotUpdateReturn> {
+    Box::pin(async { Ok(None) })
+  }
+
+  fn call_hot_update_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
@@ -485,6 +498,18 @@ impl<T: Plugin> Pluginable for T {
 
   fn call_watch_change_meta(&self) -> Option<PluginHookMeta> {
     Plugin::watch_change_meta(self)
+  }
+
+  fn call_hot_update<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookHotUpdateArgs,
+  ) -> HookFuture<'a, HookHotUpdateReturn> {
+    Box::pin(Plugin::hot_update(self, ctx, args))
+  }
+
+  fn call_hot_update_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::hot_update_meta(self)
   }
 
   fn call_close_watcher<'a>(&'a self, ctx: &'a PluginContext) -> HookFuture<'a, HookNoopReturn> {

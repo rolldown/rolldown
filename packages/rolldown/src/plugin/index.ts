@@ -658,9 +658,36 @@ export interface FunctionPluginHooks {
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.closeWatcher]: (this: PluginContext) => void;
+
+  /**
+   * **Experimental, dev mode only.** Runs once per changed file during an HMR update, after
+   * Rolldown maps the file to its default affected modules and before those modules are
+   * re-fetched.
+   *
+   * Return an array of module ids to replace the affected set for the plugins after this one
+   * (an empty array suppresses the update for this file); return nothing to pass the current
+   * set through unchanged. Module ids are raw ids and are validated against the module graph —
+   * unknown ids are dropped. Use {@linkcode PluginContext.getModuleInfo | this.getModuleInfo()}
+   * to inspect a module's importers.
+   *
+   * @kind async sequential
+   * @group Build Hooks
+   */
+  [DEFINED_HOOK_NAMES.hotUpdate]: (
+    this: PluginContext,
+    options: HotUpdateOptions,
+  ) => MaybePromise<string[] | NullValue>;
 }
 
 export type ChangeEvent = 'create' | 'update' | 'delete';
+
+export interface HotUpdateOptions {
+  type: ChangeEvent;
+  /** Normalized absolute path of the changed file. */
+  file: string;
+  /** The affected module ids as currently computed (raw module ids). */
+  modules: string[];
+}
 
 export type PluginOrder = 'pre' | 'post' | null;
 
@@ -703,6 +730,7 @@ type FirstPluginHooks = DefinedHookNames[
 type SequentialPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'
   | 'generateBundle'
+  | 'hotUpdate'
   | 'onLog'
   | 'options'
   | 'outputOptions'

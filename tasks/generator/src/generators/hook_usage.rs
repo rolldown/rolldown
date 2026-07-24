@@ -11,7 +11,7 @@ pub struct HookUsageGenerator;
 
 define_generator!(HookUsageGenerator);
 
-const HOOK_KIND: [&str; 22] = [
+const HOOK_KIND: [&str; 23] = [
   "build_start",
   "resolve_id",
   "resolve_dynamic_import",
@@ -34,6 +34,7 @@ const HOOK_KIND: [&str; 22] = [
   "intro",
   "outro",
   "resolve_file_url",
+  "hot_update",
 ];
 
 const DISABLE_JS_HOOK: [&str; 1] = ["transform_ast"];

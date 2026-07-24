@@ -8,6 +8,39 @@ import {
 import type { ChangeEvent } from './index';
 import { PluginContextImpl } from './plugin-context';
 
+export function bindingifyHotUpdate(
+  args: BindingifyPluginArgs,
+): PluginHookWithBindingExt<BindingPluginOptions['hotUpdate']> {
+  const hook = args.plugin.hotUpdate;
+  if (!hook) {
+    return {};
+  }
+  const { handler, meta } = normalizeHook(hook);
+
+  return {
+    plugin: async (ctx, hookArgs) => {
+      const result = await handler.call(
+        new PluginContextImpl(
+          args.outputOptions,
+          ctx,
+          args.plugin,
+          args.pluginContextData,
+          args.onLog,
+          args.logLevel,
+          args.watchMode,
+        ),
+        {
+          type: hookArgs.kind as ChangeEvent,
+          file: hookArgs.file,
+          modules: hookArgs.modules,
+        },
+      );
+      return result ?? undefined;
+    },
+    meta: bindingifyPluginHookMeta(meta),
+  };
+}
+
 export function bindingifyWatchChange(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['watchChange']> {

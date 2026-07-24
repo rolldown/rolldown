@@ -2369,6 +2369,14 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
+export interface BindingHotUpdateArgs {
+  kind: 'create' | 'update' | 'delete'
+  /** Normalized absolute path of the changed file. */
+  file: string
+  /** The affected module ids as currently computed (raw module ids). */
+  modules: Array<string>
+}
+
 export interface BindingIndentOptions {
   exclude?: Array<Array<number>> | Array<number>
 }
@@ -2672,6 +2680,8 @@ export interface BindingPluginOptions {
   closeBundleMeta?: BindingPluginHookMeta
   watchChange?: (ctx: BindingPluginContext, path: string, event: string) => MaybePromise<VoidNullable>
   watchChangeMeta?: BindingPluginHookMeta
+  hotUpdate?: (ctx: BindingPluginContext, args: BindingHotUpdateArgs) => MaybePromise<VoidNullable<Array<string>>>
+  hotUpdateMeta?: BindingPluginHookMeta
   closeWatcher?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
   closeWatcherMeta?: BindingPluginHookMeta
   banner?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void

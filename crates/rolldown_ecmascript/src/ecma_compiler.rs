@@ -67,13 +67,10 @@ impl EcmaCompiler {
               SPAN,
               SourceType::default().with_module(true),
               owner.source.as_str(),
-              oxc::allocator::Vec::new_in(&builder),
+              [],
               None,
-              oxc::allocator::Vec::new_in(&builder),
-              oxc::allocator::Vec::from_value_in(
-                Statement::new_expression_statement(SPAN, expr, &builder),
-                &builder,
-              ),
+              [],
+              [Statement::new_expression_statement(SPAN, expr, &builder)],
               &builder,
             );
             Ok(ProgramCellDependent { program })

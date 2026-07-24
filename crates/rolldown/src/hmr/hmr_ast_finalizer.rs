@@ -441,27 +441,24 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let stmt = Statement::new_variable_declaration(
       span,
       ast::VariableDeclarationKind::Var,
-      oxc::allocator::Vec::from_value_in(
-        ast::VariableDeclarator::new(
+      [ast::VariableDeclarator::new(
+        SPAN,
+        ast::VariableDeclarationKind::Var,
+        ast::BindingPattern::new_binding_identifier(
           SPAN,
-          ast::VariableDeclarationKind::Var,
-          ast::BindingPattern::new_binding_identifier(
-            SPAN,
-            Str::from_str_in(binding_name, &self.ast_builder),
-            &self.ast_builder,
-          ),
-          NONE,
-          Some(Expression::new_to_esm_call_with_interop(
-            "__rolldown_runtime__.__toESM",
-            call_expr,
-            interop,
-            &self.ast_builder,
-          )),
-          false,
+          Str::from_str_in(binding_name, &self.ast_builder),
           &self.ast_builder,
         ),
+        NONE,
+        Some(Expression::new_to_esm_call_with_interop(
+          "__rolldown_runtime__.__toESM",
+          call_expr,
+          interop,
+          &self.ast_builder,
+        )),
+        false,
         &self.ast_builder,
-      ),
+      )],
       false,
       &self.ast_builder,
     );
@@ -549,10 +546,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       SPAN,
       Expression::new_id_ref_expr(SPAN, "__rolldown_runtime__.__exportAll", &self.ast_builder),
       NONE,
-      oxc::allocator::Vec::from_array_in(
-        [ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.ast_builder.allocator()))],
-        &self.ast_builder,
-      ),
+      [ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.ast_builder.allocator()))],
       false,
       &self.ast_builder,
     );
@@ -611,15 +605,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         SPAN,
         Expression::new_id_ref_expr(SPAN, "encodeURIComponent", &self.ast_builder),
         NONE,
-        oxc::allocator::Vec::from_value_in(
-          ast::Argument::new_string_literal(
-            SPAN,
-            Str::from_str_in(&importee.id, &self.ast_builder),
-            None,
-            &self.ast_builder,
-          ),
+        [ast::Argument::new_string_literal(
+          SPAN,
+          Str::from_str_in(&importee.id, &self.ast_builder),
+          None,
           &self.ast_builder,
-        ),
+        )],
         false,
         &self.ast_builder,
       );
@@ -681,15 +672,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         SPAN,
         Expression::new_id_ref_expr(SPAN, "__rolldown_runtime__.loadExports", &self.ast_builder),
         NONE,
-        oxc::allocator::Vec::from_value_in(
-          ast::Argument::new_string_literal(
-            SPAN,
-            Str::from_str_in(&importee.stable_id, &self.ast_builder),
-            None,
-            &self.ast_builder,
-          ),
+        [ast::Argument::new_string_literal(
+          SPAN,
+          Str::from_str_in(&importee.stable_id, &self.ast_builder),
+          None,
           &self.ast_builder,
-        ),
+        )],
         false,
         &self.ast_builder,
       );
@@ -703,18 +691,15 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         ast::FormalParameters::new(
           SPAN,
           ast::FormalParameterKind::ArrowFormalParameters,
-          oxc::allocator::Vec::new_in(&self.ast_builder),
+          [],
           NONE,
           &self.ast_builder,
         ),
         NONE,
         ast::FunctionBody::new(
           SPAN,
-          oxc::allocator::Vec::new_in(&self.ast_builder),
-          oxc::allocator::Vec::from_value_in(
-            ast::Statement::new_expression_statement(SPAN, load_exports_call, &self.ast_builder),
-            &self.ast_builder,
-          ),
+          [],
+          [ast::Statement::new_expression_statement(SPAN, load_exports_call, &self.ast_builder)],
           &self.ast_builder,
         ),
         &self.ast_builder,
@@ -733,7 +718,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         SPAN,
         then_callee,
         NONE,
-        oxc::allocator::Vec::from_value_in(ast::Argument::from(arrow_fn), &self.ast_builder),
+        [ast::Argument::from(arrow_fn)],
         false,
         &self.ast_builder,
       );
@@ -749,15 +734,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       SPAN,
       Expression::new_id_ref_expr(SPAN, "__rolldown_runtime__.loadExports", &self.ast_builder),
       NONE,
-      oxc::allocator::Vec::from_value_in(
-        ast::Argument::new_string_literal(
-          SPAN,
-          Str::from_str_in(&importee.stable_id, &self.ast_builder),
-          None,
-          &self.ast_builder,
-        ),
+      [ast::Argument::new_string_literal(
+        SPAN,
+        Str::from_str_in(&importee.stable_id, &self.ast_builder),
+        None,
         &self.ast_builder,
-      ),
+      )],
       false,
       &self.ast_builder,
     );
@@ -807,10 +789,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       Expression::new_promise_resolve_then(load_exports_call_expr, &self.ast_builder);
     *it = ast::Expression::new_sequence_expression(
       SPAN,
-      oxc::allocator::Vec::from_array_in(
-        [init_call, promise_resolve_then_load_exports],
-        &self.ast_builder,
-      ),
+      [init_call, promise_resolve_then_load_exports],
       &self.ast_builder,
     );
   }

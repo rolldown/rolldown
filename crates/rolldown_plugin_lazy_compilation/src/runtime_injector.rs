@@ -47,10 +47,7 @@ impl<'ast> VisitMut<'ast> for LazyCompilationRuntimeInjector<'ast> {
           &self.ast_builder,
         ),
         NONE,
-        oxc::allocator::Vec::from_value_in(
-          Argument::new_identifier(SPAN, HELPER_NAME, &self.ast_builder),
-          &self.ast_builder,
-        ),
+        [Argument::new_identifier(SPAN, HELPER_NAME, &self.ast_builder)],
         false,
         &self.ast_builder,
       );
@@ -74,21 +71,18 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
   let params = FormalParameters::new(
     SPAN,
     FormalParameterKind::FormalParameter,
-    oxc::allocator::Vec::from_value_in(
-      FormalParameter::new(
-        SPAN,
-        oxc::allocator::Vec::new_in(&ast_builder),
-        BindingPattern::new_binding_identifier(SPAN, "m", &ast_builder),
-        NONE,
-        NONE,
-        false,
-        None,
-        false,
-        false,
-        &ast_builder,
-      ),
+    [FormalParameter::new(
+      SPAN,
+      [],
+      BindingPattern::new_binding_identifier(SPAN, "m", &ast_builder),
+      NONE,
+      NONE,
+      false,
+      None,
+      false,
+      false,
       &ast_builder,
-    ),
+    )],
     NONE,
     &ast_builder,
   );
@@ -97,24 +91,21 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
   let var_decl_stmt = Statement::new_variable_declaration(
     SPAN,
     oxc::ast::ast::VariableDeclarationKind::Var,
-    oxc::allocator::Vec::from_value_in(
-      VariableDeclarator::new(
+    [VariableDeclarator::new(
+      SPAN,
+      oxc::ast::ast::VariableDeclarationKind::Var,
+      BindingPattern::new_binding_identifier(SPAN, "e", &ast_builder),
+      NONE,
+      Some(Expression::new_computed_member_expression(
         SPAN,
-        oxc::ast::ast::VariableDeclarationKind::Var,
-        BindingPattern::new_binding_identifier(SPAN, "e", &ast_builder),
-        NONE,
-        Some(Expression::new_computed_member_expression(
-          SPAN,
-          Expression::new_identifier(SPAN, "m", &ast_builder),
-          Expression::new_string_literal(SPAN, "rolldown:exports", None, &ast_builder),
-          false,
-          &ast_builder,
-        )),
+        Expression::new_identifier(SPAN, "m", &ast_builder),
+        Expression::new_string_literal(SPAN, "rolldown:exports", None, &ast_builder),
         false,
         &ast_builder,
-      ),
+      )),
+      false,
       &ast_builder,
-    ),
+    )],
     false,
     &ast_builder,
   );
@@ -136,8 +127,7 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
   let mut body_stmts = oxc::allocator::Vec::with_capacity_in(2, &ast_builder);
   body_stmts.push(var_decl_stmt);
   body_stmts.push(return_stmt);
-  let body =
-    FunctionBody::new(SPAN, oxc::allocator::Vec::new_in(&ast_builder), body_stmts, &ast_builder);
+  let body = FunctionBody::new(SPAN, [], body_stmts, &ast_builder);
 
   // function __unwrap_lazy_compilation_entry(m) { ... }
   Statement::new_function_declaration(

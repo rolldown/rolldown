@@ -37,11 +37,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut ast::Program<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    let mut try_block = ast::BlockStatement::boxed(
-      SPAN,
-      oxc::allocator::Vec::new_in(&self.ast_builder),
-      &self.ast_builder,
-    );
+    let mut try_block = ast::BlockStatement::boxed(SPAN, [], &self.ast_builder);
 
     // `initModule("<stable id>")` for EVERY static dep, uniformly registry-gated: a
     // co-carried factory runs, a resident module short-circuits. No payload-membership
@@ -67,26 +63,20 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // module/exports objects become locals the body's rewritten `module`/`exports`
     // references resolve to.
     let cjs_module_locals: Vec<ast::Statement<'ast>> = if self.module.exports_kind.is_commonjs() {
-      let empty_exports_object = ast::Expression::new_object_expression(
-        SPAN,
-        oxc::allocator::Vec::new_in(&self.ast_builder),
-        &self.ast_builder,
-      );
+      let empty_exports_object =
+        ast::Expression::new_object_expression(SPAN, [], &self.ast_builder);
       let module_object = ast::Expression::new_object_expression(
         SPAN,
-        oxc::allocator::Vec::from_value_in(
-          ast::ObjectPropertyKind::new_object_property(
-            SPAN,
-            ast::PropertyKind::Init,
-            ast::PropertyKey::new_static_identifier(SPAN, "exports", &self.ast_builder),
-            empty_exports_object,
-            true,
-            false,
-            false,
-            &self.ast_builder,
-          ),
+        [ast::ObjectPropertyKind::new_object_property(
+          SPAN,
+          ast::PropertyKind::Init,
+          ast::PropertyKey::new_static_identifier(SPAN, "exports", &self.ast_builder),
+          empty_exports_object,
+          true,
+          false,
+          false,
           &self.ast_builder,
-        ),
+        )],
         &self.ast_builder,
       );
       vec![
@@ -162,11 +152,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       .body
       .extend(std::mem::take(&mut self.generated_static_import_stmts_from_external).into_values());
 
-    let final_block = ast::BlockStatement::boxed(
-      SPAN,
-      oxc::allocator::Vec::new_in(&self.ast_builder),
-      &self.ast_builder,
-    );
+    let final_block = ast::BlockStatement::boxed(SPAN, [], &self.ast_builder);
 
     let try_stmt = ast::Statement::new_try_statement(
       SPAN,
@@ -182,7 +168,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // string literal.
     let module_id_param = ast::FormalParameter::new(
       SPAN,
-      oxc::allocator::Vec::new_in(&self.ast_builder),
+      [],
       ast::BindingPattern::new_binding_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR, &self.ast_builder),
       NONE,
       NONE,
@@ -195,7 +181,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     let params = ast::FormalParameters::new(
       SPAN,
       ast::FormalParameterKind::Signature,
-      oxc::allocator::Vec::from_value_in(module_id_param, &self.ast_builder),
+      [module_id_param],
       NONE,
       &self.ast_builder,
     );
@@ -211,12 +197,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       NONE,
       params,
       NONE,
-      Some(ast::FunctionBody::new(
-        SPAN,
-        oxc::allocator::Vec::new_in(&self.ast_builder),
-        oxc::allocator::Vec::from_value_in(try_stmt, &self.ast_builder),
-        &self.ast_builder,
-      )),
+      Some(ast::FunctionBody::new(SPAN, [], [try_stmt], &self.ast_builder)),
       &self.ast_builder,
     );
     // mark the callback as PIFE because the callback is executed when this chunk is loaded

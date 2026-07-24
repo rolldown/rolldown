@@ -39,10 +39,10 @@ pub fn json_value_to_ecma_ast(value: &Value) -> EcmaAst {
       SPAN,
       SourceType::default().with_module(true),
       "",
-      oxc::allocator::Vec::new_in(&builder),
+      [],
       None,
-      oxc::allocator::Vec::new_in(&builder),
-      oxc::allocator::Vec::from_value_in(stmt, &builder),
+      [],
+      [stmt],
       &builder,
     )
   })

@@ -58,19 +58,16 @@ pub trait HmrAstBuilder<'any, 'ast> {
         // { exports: namespace }
         ast::Argument::new_object_expression(
           SPAN,
-          oxc::allocator::Vec::from_value_in(
-            ast::ObjectPropertyKind::new_object_property(
-              SPAN,
-              ast::PropertyKind::Init,
-              ast::PropertyKey::new_static_identifier(SPAN, "exports", &self.builder()),
-              namespace_object_ref_expr,
-              true,
-              false,
-              false,
-              &self.builder(),
-            ),
+          [ast::ObjectPropertyKind::new_object_property(
+            SPAN,
+            ast::PropertyKind::Init,
+            ast::PropertyKey::new_static_identifier(SPAN, "exports", &self.builder()),
+            namespace_object_ref_expr,
+            true,
+            false,
+            false,
             &self.builder(),
-          ),
+          )],
           &self.builder(),
         )
       }
@@ -80,28 +77,18 @@ pub trait HmrAstBuilder<'any, 'ast> {
       }
       rolldown_common::ExportsKind::None => {
         // `{}`
-        ast::Argument::new_object_expression(
-          SPAN,
-          oxc::allocator::Vec::new_in(&self.builder()),
-          &self.builder(),
-        )
+        ast::Argument::new_object_expression(SPAN, [], &self.builder())
       }
     };
 
-    // ...(moduleId, module)
+    // __rolldown_runtime__.registerModule(moduleId, module)
     // moduleId is either `__rolldown_module_id__` (HMR/lazy path) or the stable-id
     // string literal (main-bundle path).
-    let arguments = oxc::allocator::Vec::from_array_in(
-      [self.module_id_argument(), module_exports],
-      &self.builder(),
-    );
-
-    // __rolldown_runtime__.registerModule(moduleId, module)
     let register_call = ast::Expression::new_call_expression(
       SPAN,
       ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.registerModule", &self.builder()),
       NONE,
-      arguments,
+      [self.module_id_argument(), module_exports],
       false,
       &self.builder(),
     );
@@ -136,7 +123,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
               &self.builder(),
             ),
             NONE,
-            oxc::allocator::Vec::from_value_in(self.module_id_argument(), &self.builder()),
+            [self.module_id_argument()],
             false,
             &self.builder(),
           )),

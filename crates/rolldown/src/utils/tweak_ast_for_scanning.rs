@@ -85,7 +85,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
           Statement::new_export_named_declaration(
             if i == 0 { named_decl_span } else { SPAN },
             Some(Declaration::VariableDeclaration(new_decl)),
-            oxc::allocator::Vec::new_in(&self.ast_builder),
+            [],
             // Since it is `export a = 1, b = 2;`, source should be `None`
             None,
             ImportOrExportKind::Value,
@@ -260,10 +260,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
             SPAN,
             ast::Expression::new_identifier(SPAN, "require", &self.ast_builder),
             NONE,
-            oxc::allocator::Vec::from_value_in(
-              ast::Argument::from(cond_expr.consequent),
-              &self.ast_builder,
-            ),
+            [ast::Argument::from(cond_expr.consequent)],
             false,
             &self.ast_builder,
           ),
@@ -271,10 +268,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
             SPAN,
             ast::Expression::new_identifier(SPAN, "require", &self.ast_builder),
             NONE,
-            oxc::allocator::Vec::from_value_in(
-              ast::Argument::from(cond_expr.alternate),
-              &self.ast_builder,
-            ),
+            [ast::Argument::from(cond_expr.alternate)],
             false,
             &self.ast_builder,
           ),

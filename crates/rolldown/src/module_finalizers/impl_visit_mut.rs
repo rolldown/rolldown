@@ -504,11 +504,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       ast::Expression::ImportMeta(import_meta) => {
         if !self.ctx.options.format.keep_esm_import_export_syntax() {
           self.record_surviving_import_meta(import_meta.span, EmptyImportMetaKind::Plain);
-          *expr = ast::Expression::new_object_expression(
-            SPAN,
-            oxc::allocator::Vec::new_in(&self.ast_builder),
-            &self.ast_builder,
-          );
+          *expr = ast::Expression::new_object_expression(SPAN, [], &self.ast_builder);
         }
       }
       ast::Expression::ChainExpression(_) => {

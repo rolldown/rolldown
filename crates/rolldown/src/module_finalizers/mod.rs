@@ -184,7 +184,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       call_span,
       wrapper_ref_expr,
       NONE,
-      oxc::allocator::Vec::new_in(&self.ast_builder),
+      [],
       false,
       mark_pure_if_noop && self.ctx.final_esm_init_metadata.init_is_noop(importee_idx),
       &self.ast_builder,
@@ -336,7 +336,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             SPAN,
             importee_wrapper_ref_name,
             NONE,
-            oxc::allocator::Vec::new_in(&self.ast_builder),
+            [],
             false,
             &self.ast_builder,
           )
@@ -991,10 +991,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               SPAN,
               ast::Expression::new_identifier(SPAN, "require", &self.ast_builder),
               NONE,
-              oxc::allocator::Vec::from_value_in(
-                ast::Argument::new_string_literal(SPAN, "url", None, &self.ast_builder),
-                &self.ast_builder,
-              ),
+              [ast::Argument::new_string_literal(SPAN, "url", None, &self.ast_builder)],
               false,
               &self.ast_builder,
             );
@@ -1013,10 +1010,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               SPAN,
               require_path_to_file_url,
               NONE,
-              oxc::allocator::Vec::from_value_in(
-                ast::Argument::new_identifier(SPAN, "__filename", &self.ast_builder),
-                &self.ast_builder,
-              ),
+              [ast::Argument::new_identifier(SPAN, "__filename", &self.ast_builder)],
               false,
               &self.ast_builder,
             );
@@ -1146,30 +1140,27 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           SPAN,
           ast::Expression::new_identifier(SPAN, "URL", &self.ast_builder),
           NONE,
-          oxc::allocator::Vec::from_array_in(
-            [
-              ast::Argument::new_string_literal(
-                SPAN,
-                oxc::ast::ast::Str::from_str_in(relative_asset_path, &self.ast_builder),
-                None,
+          [
+            ast::Argument::new_string_literal(
+              SPAN,
+              oxc::ast::ast::Str::from_str_in(relative_asset_path, &self.ast_builder),
+              None,
+              &self.ast_builder,
+            ),
+            ast::Argument::new_static_member_expression(
+              SPAN,
+              ast::Expression::new_import_meta(
+                // Carry the source span, so that if this generated `import.meta.url` cannot be
+                // polyfilled either, the diagnostic points at the `import.meta.ROLLDOWN_FILE_URL_*`
+                // the user actually wrote.
+                original_expr_span,
                 &self.ast_builder,
               ),
-              ast::Argument::new_static_member_expression(
-                SPAN,
-                ast::Expression::new_import_meta(
-                  // Carry the source span, so that if this generated `import.meta.url` cannot be
-                  // polyfilled either, the diagnostic points at the `import.meta.ROLLDOWN_FILE_URL_*`
-                  // the user actually wrote.
-                  original_expr_span,
-                  &self.ast_builder,
-                ),
-                ast::IdentifierName::new(SPAN, "url", &self.ast_builder),
-                false,
-                &self.ast_builder,
-              ),
-            ],
-            &self.ast_builder,
-          ),
+              ast::IdentifierName::new(SPAN, "url", &self.ast_builder),
+              false,
+              &self.ast_builder,
+            ),
+          ],
           &self.ast_builder,
         ),
         ast::IdentifierName::new(SPAN, "href", &self.ast_builder),
@@ -1407,21 +1398,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     Ok(ast::Declaration::new_variable_declaration(
       class.span,
       VariableDeclarationKind::Var,
-      oxc::allocator::Vec::from_value_in(
-        ast::VariableDeclarator::new(
-          SPAN,
-          VariableDeclarationKind::Var,
-          ast::BindingPattern::BindingIdentifier(oxc::allocator::Box::new_in(
-            id,
-            &self.ast_builder,
-          )),
-          NONE,
-          Some(Expression::ClassExpression(class)),
-          false,
-          &self.ast_builder,
-        ),
+      [ast::VariableDeclarator::new(
+        SPAN,
+        VariableDeclarationKind::Var,
+        ast::BindingPattern::BindingIdentifier(oxc::allocator::Box::new_in(id, &self.ast_builder)),
+        NONE,
+        Some(Expression::ClassExpression(class)),
+        false,
         &self.ast_builder,
-      ),
+      )],
       false,
       &self.ast_builder,
     ))
@@ -1464,7 +1449,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       SPAN,
                       wrap_ref_expr,
                       NONE,
-                      oxc::allocator::Vec::new_in(&self.ast_builder),
+                      [],
                       false,
                       &self.ast_builder,
                     ))
@@ -1478,7 +1463,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       SPAN,
                       wrap_ref_expr,
                       NONE,
-                      oxc::allocator::Vec::new_in(&self.ast_builder),
+                      [],
                       false,
                       &self.ast_builder,
                     ),
@@ -1517,7 +1502,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       SPAN,
                       wrap_ref_expr,
                       NONE,
-                      oxc::allocator::Vec::new_in(&self.ast_builder),
+                      [],
                       false,
                       self.ctx.final_esm_init_metadata.init_is_noop(importee.idx),
                       &self.ast_builder,
@@ -1543,10 +1528,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     SPAN,
                     to_commonjs_expr,
                     NONE,
-                    oxc::allocator::Vec::from_value_in(
-                      ast::Argument::from(namespace_object_ref_expr),
-                      &self.ast_builder,
-                    ),
+                    [ast::Argument::from(namespace_object_ref_expr)],
                     false,
                     &self.ast_builder,
                   );
@@ -1611,19 +1593,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           Expression::new_member_access_expr("Object", "freeze", &self.ast_builder),
           ast::Expression::new_object_expression(
             SPAN,
-            oxc::allocator::Vec::from_value_in(
-              ast::ObjectPropertyKind::new_object_property(
-                SPAN,
-                ast::PropertyKind::Init,
-                ast::PropertyKey::new_static_identifier(SPAN, "__proto__", &self.ast_builder),
-                ast::Expression::new_null_literal(SPAN, &self.ast_builder),
-                false,
-                false,
-                false,
-                &self.ast_builder,
-              ),
+            [ast::ObjectPropertyKind::new_object_property(
+              SPAN,
+              ast::PropertyKind::Init,
+              ast::PropertyKey::new_static_identifier(SPAN, "__proto__", &self.ast_builder),
+              ast::Expression::new_null_literal(SPAN, &self.ast_builder),
+              false,
+              false,
+              false,
               &self.ast_builder,
-            ),
+            )],
             &self.ast_builder,
           ),
           true,
@@ -1656,7 +1635,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     SPAN,
                     Expression::new_id_ref_expr(SPAN, importee_wrapper_ref_name, &self.ast_builder),
                     NONE,
-                    oxc::allocator::Vec::new_in(&self.ast_builder),
+                    [],
                     false,
                     &self.ast_builder,
                   ),
@@ -1675,7 +1654,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                         &self.ast_builder,
                       ),
                       NONE,
-                      oxc::allocator::Vec::new_in(&self.ast_builder),
+                      [],
                       false,
                       &self.ast_builder,
                     ),
@@ -1698,7 +1677,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     SPAN,
                     Expression::new_id_ref_expr(SPAN, importee_wrapper_ref_name, &self.ast_builder),
                     NONE,
-                    oxc::allocator::Vec::new_in(&self.ast_builder),
+                    [],
                     false,
                     &self.ast_builder,
                   ),
@@ -1875,7 +1854,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     SPAN,
                     wrapper_ref,
                     NONE,
-                    oxc::allocator::Vec::new_in(&self.ast_builder),
+                    [],
                     false,
                     &self.ast_builder,
                   );
@@ -1956,7 +1935,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                           SPAN,
                           importee_wrapper_ref_expr,
                           NONE,
-                          oxc::allocator::Vec::new_in(&self.ast_builder),
+                          [],
                           false,
                           &self.ast_builder,
                         ),
@@ -2353,7 +2332,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             SPAN,
             finalized_importee_wrapper_ref,
             NONE,
-            oxc::allocator::Vec::new_in(&self.ast_builder),
+            [],
             false,
             &self.ast_builder,
           );
@@ -2381,7 +2360,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             SPAN,
             finalized_importee_wrapper_ref,
             NONE,
-            oxc::allocator::Vec::new_in(&self.ast_builder),
+            [],
             false,
             &self.ast_builder,
           );
@@ -2444,15 +2423,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               SPAN,
               ast::Expression::new_identifier(SPAN, "require", &self.ast_builder),
               NONE,
-              oxc::allocator::Vec::from_value_in(
-                ast::Argument::new_string_literal(
-                  expr.span,
-                  oxc::ast::ast::Str::from_str_in(&import_path, &self.ast_builder),
-                  None,
-                  &self.ast_builder,
-                ),
+              [ast::Argument::new_string_literal(
+                expr.span,
+                oxc::ast::ast::Str::from_str_in(&import_path, &self.ast_builder),
+                None,
                 &self.ast_builder,
-              ),
+              )],
               false,
               &self.ast_builder,
             );
@@ -2605,15 +2581,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             SPAN,
             ast::Expression::new_identifier(SPAN, "require", &self.ast_builder),
             NONE,
-            oxc::allocator::Vec::from_value_in(
-              ast::Argument::new_string_literal(
-                expr.span,
-                oxc::ast::ast::Str::from_str_in(&import_path, &self.ast_builder),
-                None,
-                &self.ast_builder,
-              ),
+            [ast::Argument::new_string_literal(
+              expr.span,
+              oxc::ast::ast::Str::from_str_in(&import_path, &self.ast_builder),
+              None,
               &self.ast_builder,
-            ),
+            )],
             false,
             &self.ast_builder,
           );
@@ -2719,36 +2692,30 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           ast::FormalParameters::new(
             SPAN,
             ast::FormalParameterKind::ArrowFormalParameters,
-            oxc::allocator::Vec::from_value_in(
-              ast::FormalParameter::new(
+            [ast::FormalParameter::new(
+              SPAN,
+              [],
+              ast::BindingPattern::new_binding_identifier(
                 SPAN,
-                oxc::allocator::Vec::new_in(&self.ast_builder),
-                ast::BindingPattern::new_binding_identifier(
-                  SPAN,
-                  oxc::ast::ast::Str::from_str_in("m", &self.ast_builder),
-                  &self.ast_builder,
-                ),
-                NONE,
-                NONE,
-                false,
-                None,
-                false,
-                false,
+                oxc::ast::ast::Str::from_str_in("m", &self.ast_builder),
                 &self.ast_builder,
               ),
+              NONE,
+              NONE,
+              false,
+              None,
+              false,
+              false,
               &self.ast_builder,
-            ),
+            )],
             NONE,
             &self.ast_builder,
           ),
           NONE,
           ast::FunctionBody::new(
             SPAN,
-            oxc::allocator::Vec::new_in(&self.ast_builder),
-            oxc::allocator::Vec::from_value_in(
-              ast::Statement::new_expression_statement(SPAN, to_esm_call, &self.ast_builder),
-              &self.ast_builder,
-            ),
+            [],
+            [ast::Statement::new_expression_statement(SPAN, to_esm_call, &self.ast_builder)],
             &self.ast_builder,
           ),
           &self.ast_builder,
@@ -2768,7 +2735,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           SPAN,
           callee,
           NONE,
-          oxc::allocator::Vec::from_value_in(arrow_fn, &self.ast_builder),
+          [arrow_fn],
           false,
           &self.ast_builder,
         )

@@ -65,17 +65,14 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
         self.construct_vite_preload_call(
           ObjectPattern::boxed(
             SPAN,
-            oxc::allocator::Vec::from_value_in(
-              BindingProperty::new(
-                SPAN,
-                PropertyKey::new_static_identifier(SPAN, key, &self.ast_builder),
-                BindingPattern::new_binding_identifier(SPAN, value, &self.ast_builder),
-                true,
-                false,
-                &self.ast_builder,
-              ),
+            [BindingProperty::new(
+              SPAN,
+              PropertyKey::new_static_identifier(SPAN, key, &self.ast_builder),
+              BindingPattern::new_binding_identifier(SPAN, value, &self.ast_builder),
+              true,
+              false,
               &self.ast_builder,
-            ),
+            )],
             NONE,
             &self.ast_builder,
           ),
@@ -168,34 +165,25 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       false,
       true,
       NONE,
-      FormalParameters::new(
-        SPAN,
-        FormalParameterKind::Signature,
-        oxc::allocator::Vec::new_in(&self.ast_builder),
-        NONE,
-        &self.ast_builder,
-      ),
+      FormalParameters::new(SPAN, FormalParameterKind::Signature, [], NONE, &self.ast_builder),
       NONE,
       FunctionBody::new(
         SPAN,
-        oxc::allocator::Vec::new_in(&self.ast_builder),
+        [],
         {
           let mut statements = oxc::allocator::Vec::with_capacity_in(2, &self.ast_builder);
           statements.push(Statement::new_variable_declaration(
             SPAN,
             VariableDeclarationKind::Const,
-            oxc::allocator::Vec::from_value_in(
-              VariableDeclarator::new(
-                SPAN,
-                VariableDeclarationKind::Const,
-                BindingPattern::ObjectPattern(object_pat.clone_in(self.ast_builder.allocator())),
-                NONE,
-                Some(await_expr),
-                false,
-                &self.ast_builder,
-              ),
+            [VariableDeclarator::new(
+              SPAN,
+              VariableDeclarationKind::Const,
+              BindingPattern::ObjectPattern(object_pat.clone_in(self.ast_builder.allocator())),
+              NONE,
+              Some(await_expr),
+              false,
               &self.ast_builder,
-            ),
+            )],
             false,
             &self.ast_builder,
           ));

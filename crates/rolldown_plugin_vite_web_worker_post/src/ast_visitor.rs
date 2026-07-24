@@ -42,23 +42,20 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
       "_vite_importMeta",
       Expression::new_object_expression(
         SPAN,
-        oxc::allocator::Vec::from_value_in(
-          ObjectPropertyKind::new_object_property(
+        [ObjectPropertyKind::new_object_property(
+          SPAN,
+          oxc::ast::ast::PropertyKind::Init,
+          oxc::ast::ast::PropertyKey::new_static_identifier(
             SPAN,
-            oxc::ast::ast::PropertyKind::Init,
-            oxc::ast::ast::PropertyKey::new_static_identifier(
-              SPAN,
-              oxc::ast::ast::Str::from_str_in("url", &self.ast_builder),
-              &self.ast_builder,
-            ),
-            self.create_self_location_href_expr(),
-            false,
-            false,
-            false,
+            oxc::ast::ast::Str::from_str_in("url", &self.ast_builder),
             &self.ast_builder,
           ),
+          self.create_self_location_href_expr(),
+          false,
+          false,
+          false,
           &self.ast_builder,
-        ),
+        )],
         &self.ast_builder,
       ),
       &self.ast_builder,

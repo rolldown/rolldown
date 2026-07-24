@@ -149,7 +149,7 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
   }
 
   fn binding_name_for_namespace_object_ref_atom(&self) -> ast::Str<'ast> {
-    ast::Str::from_str_in(MODULE_EXPORTS_NAME_FOR_ESM, &self.builder())
+    ast::Str::from(MODULE_EXPORTS_NAME_FOR_ESM)
   }
 
   fn alias_name_for_import_meta_hot(&self) -> ast::Str<'ast> {

@@ -621,28 +621,19 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           [
             ast::TemplateElement::new(
               SPAN,
-              ast::TemplateElementValue {
-                raw: Str::from_str_in("/@vite/lazy?id=", &self.ast_builder),
-                cooked: None,
-              },
+              ast::TemplateElementValue { raw: Str::from("/@vite/lazy?id="), cooked: None },
               false,
               &self.ast_builder,
             ),
             ast::TemplateElement::new(
               SPAN,
-              ast::TemplateElementValue {
-                raw: Str::from_str_in("&clientId=", &self.ast_builder),
-                cooked: None,
-              },
+              ast::TemplateElementValue { raw: Str::from("&clientId="), cooked: None },
               false,
               &self.ast_builder,
             ),
             ast::TemplateElement::new(
               SPAN,
-              ast::TemplateElementValue {
-                raw: Str::from_str_in("", &self.ast_builder),
-                cooked: None,
-              },
+              ast::TemplateElementValue { raw: Str::from(""), cooked: None },
               true,
               &self.ast_builder,
             ),

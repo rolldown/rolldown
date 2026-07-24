@@ -100,7 +100,12 @@ impl GenerateStage<'_> {
         let entry_chunk_idx = chunk_graph.entry_module_to_entry_chunk[&module_idx];
         debug_assert!(is_rendered_chunk(chunk_graph, entry_chunk_idx));
         match chunk_graph.chunk_table[entry_chunk_idx].kind {
-          ChunkKind::EntryPoint { module, .. } => debug_assert_eq!(module, module_idx),
+          // A dynamic entry merged into a user-defined entry chunk keeps that host chunk as
+          // its entry chunk (the facade stays eliminated); the host must contain the module.
+          ChunkKind::EntryPoint { module, .. } => debug_assert!(
+            module == module_idx
+              || chunk_graph.chunk_table[entry_chunk_idx].modules.contains(&module_idx)
+          ),
           ChunkKind::Common => {
             debug_assert!(chunk_graph.chunk_table[entry_chunk_idx].modules.contains(&module_idx));
           }

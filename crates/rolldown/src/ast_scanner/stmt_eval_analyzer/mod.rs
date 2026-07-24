@@ -2172,6 +2172,42 @@ mod test {
   }
 
   #[test]
+  fn test_manual_pure_chains_without_eager_children_are_side_effect_free() {
+    let options = Arc::new(NormalizedBundlerOptions {
+      treeshake: InnerOptions {
+        manual_pure_functions: Some(std::iter::once("make".to_string()).collect()),
+        ..InnerOptions::default()
+      }
+      .into(),
+      ..NormalizedBundlerOptions::default()
+    });
+    // A manual-pure root with no eagerly-evaluated child is side-effect-free (removable), across
+    // bare calls, member reads, repeated/optional/chained calls, and tagged templates. `make` is
+    // declared so it resolves locally and its read contributes no global-access order reason.
+    for code in [
+      "function make() {} make();",
+      "function make() {} make.div;",
+      "function make() {} make.div`x`;",
+      "function make() {} make?.div();",
+      "function make() {} make()();",
+      "function make() {} make().div();",
+    ] {
+      assert_eq!(
+        get_stmt_eval_with_options(code, &options).last(),
+        Some(&(StmtEvalFlags::empty(), false)),
+        "{code}"
+      );
+    }
+    // Scoping: `manualPureFunctions` only touches listed names, so a call to an unlisted function
+    // keeps its side effects.
+    assert_eq!(
+      get_stmt_eval_with_options("other();", &options).first().map(|(flags, _)| *flags),
+      Some(StmtEvalFlags::UnknownSideEffect),
+      "unlisted call must not be treated as pure"
+    );
+  }
+
+  #[test]
   fn test_conditional_and_logical_iife_callees_behind_manual_pure_member() {
     // A bare conditional/logical-callee IIFE needs no collector arm: oxc's IIFE certification
     // recognizes only direct function/arrow callees, so the statement keeps `UnknownSideEffect`

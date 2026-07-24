@@ -2242,70 +2242,52 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if is_importer_importee_in_same_chunk {
       let importee_meta = &self.ctx.linking_infos[importee.idx];
 
-      let finalized_expr = match importee_meta.wrap_kind() {
-        WrapKind::Cjs => {
-          let importee_wrapper_ref = self.ctx.linking_infos[importee.idx].wrapper_ref.unwrap();
+      let finalized_expr = if matches!(importee_meta.wrap_kind(), WrapKind::Cjs) {
+        let importee_wrapper_ref = self.ctx.linking_infos[importee.idx].wrapper_ref.unwrap();
 
-          let (finalized_importee_wrapper_ref, _) =
-            self.finalized_expr_for_symbol_ref(importee_wrapper_ref, false, false);
+        let (finalized_importee_wrapper_ref, _) =
+          self.finalized_expr_for_symbol_ref(importee_wrapper_ref, false, false);
 
-          let finalized_to_esm = self.finalized_expr_for_runtime_symbol("__toESM");
+        let finalized_to_esm = self.finalized_expr_for_runtime_symbol("__toESM");
 
-          // require_xxx()
-          let wrapper_ref_call_expr = ast::Expression::new_call_expression(
-            SPAN,
-            finalized_importee_wrapper_ref,
-            NONE,
-            [],
-            false,
-            self,
-          );
+        // require_xxx()
+        let wrapper_ref_call_expr = ast::Expression::new_call_expression(
+          SPAN,
+          finalized_importee_wrapper_ref,
+          NONE,
+          [],
+          false,
+          self,
+        );
 
-          // __toESM(require_xxx(), isNodeMode)
-          Expression::new_to_esm_wrapper(
-            finalized_to_esm,
-            wrapper_ref_call_expr,
-            self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
-            self,
-          )
-        }
-        WrapKind::Esm => {
-          // (init_xxx(), namespace_exports)
-          let importee_wrapper_ref = self.ctx.linking_infos[importee.idx].wrapper_ref.unwrap();
+        // __toESM(require_xxx(), isNodeMode)
+        Expression::new_to_esm_wrapper(
+          finalized_to_esm,
+          wrapper_ref_call_expr,
+          self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
+          self,
+        )
+      } else if let Some(target) =
+        self.ctx.order_wrap_state.esm_init_target(importee_idx, importee_meta)
+      {
+        // (init_xxx(), namespace_exports) — the `esm_init_target` view covers both interop
+        // `WrapKind::Esm` wrappers and execution-order wrappers, so a merged dynamic entry
+        // carries its trigger inline instead of resurrecting the facade chunk.
+        //
+        // This shape never awaits the init. A TLA-tainted entry cannot reach it today
+        // because facade elimination is globally disabled when any module is TLA-tainted
+        // (`allow_merge_common_chunks` in code_splitting.rs); pin that coupling here.
+        debug_assert!(!target.tla_tainted);
+        let wrapper_call_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, false);
 
-          let (finalized_importee_wrapper_ref, _) =
-            self.finalized_expr_for_symbol_ref(importee_wrapper_ref, false, false);
+        let (finalized_namespace, _) =
+          self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
 
-          let (finalized_namespace, _) =
-            self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
-
-          // init_xxx()
-          let wrapper_call_expr = ast::Expression::new_call_expression(
-            SPAN,
-            finalized_importee_wrapper_ref,
-            NONE,
-            [],
-            false,
-            self,
-          );
-
-          // (init_xxx(), namespace_exports)
-          Expression::new_seq_in_parens(wrapper_call_expr, finalized_namespace, self)
-        }
-        WrapKind::None => {
-          // Order-wrapped dynamic entries never reach this rewrite: their eliminated facades
-          // are restored in `restore_order_wrap_entry_facades`.
-          debug_assert!(
-            self
-              .ctx
-              .order_wrap_state
-              .esm_init_target(importee_idx, &self.ctx.linking_infos[importee_idx])
-              .is_none()
-          );
-          let (finalized_expr, _) =
-            self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
-          finalized_expr
-        }
+        Expression::new_seq_in_parens(wrapper_call_expr, finalized_namespace, self)
+      } else {
+        let (finalized_expr, _) =
+          self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
+        finalized_expr
       };
 
       Some(Expression::new_promise_resolve_then(finalized_expr, self))
@@ -2318,19 +2300,29 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // For ESM modules with wrap_kind Esm, convert to `import('./chunk.js').then(n => (n.init_xxx(), n.namespace))`
       let importee_meta = &self.ctx.linking_infos[importee_idx];
       let wrap_kind = importee_meta.wrap_kind();
+      // Interop `WrapKind::Esm` wrappers and execution-order wrappers share the same
+      // `.then(n => (n.init_xxx(), n.namespace))` shape via the `esm_init_target` view.
+      let init_target = if matches!(wrap_kind, WrapKind::Cjs) {
+        None
+      } else {
+        self.ctx.order_wrap_state.esm_init_target(importee_idx, importee_meta)
+      };
 
-      // For wrapped modules (CJS/ESM), look up the wrapper_ref; for others, look up the namespace symbol
-      let primary_export_symbol = match wrap_kind {
-        WrapKind::Cjs | WrapKind::Esm => importee_meta.wrapper_ref,
-        WrapKind::None => self.ctx.modules[importee_idx].namespace_object_ref(),
+      // For wrapped modules, look up the wrapper_ref; for others, look up the namespace symbol
+      let primary_export_symbol = if matches!(wrap_kind, WrapKind::Cjs) {
+        importee_meta.wrapper_ref
+      } else if let Some(target) = &init_target {
+        Some(target.wrapper_ref)
+      } else {
+        self.ctx.modules[importee_idx].namespace_object_ref()
       };
 
       let primary_export_name = primary_export_symbol.and_then(|sym| {
         importee_chunk.exports_to_other_chunks.get(&sym).and_then(|names| names.first())
       });
 
-      // For ESM wrapped modules, we also need the namespace symbol
-      let namespace_export_name = if matches!(wrap_kind, WrapKind::Esm) {
+      // For ESM-init wrapped modules, we also need the namespace symbol
+      let namespace_export_name = if init_target.is_some() {
         self.ctx.modules[importee_idx].namespace_object_ref().and_then(|ns_ref| {
           importee_chunk.exports_to_other_chunks.get(&ns_ref).and_then(|names| names.first())
         })
@@ -2363,46 +2355,35 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             Expression::ImportExpression(import_expr)
           };
 
-          match wrap_kind {
-            WrapKind::Cjs => {
-              // For CJS modules: import('./chunk.js').then(n => __toESM(n.require_xxx()))
-              let finalized_to_esm = self.finalized_expr_for_runtime_symbol("__toESM");
-              let call_expr = CallExpression::new_then_call_cjs_wrapper_with_to_esm(
-                base_expr,
-                name,
-                finalized_to_esm,
-                self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
-                self,
+          if matches!(wrap_kind, WrapKind::Cjs) {
+            // For CJS modules: import('./chunk.js').then(n => __toESM(n.require_xxx()))
+            let finalized_to_esm = self.finalized_expr_for_runtime_symbol("__toESM");
+            let call_expr = CallExpression::new_then_call_cjs_wrapper_with_to_esm(
+              base_expr,
+              name,
+              finalized_to_esm,
+              self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
+              self,
+            );
+            Some(Expression::CallExpression(call_expr))
+          } else if init_target.is_some() {
+            // For ESM-init wrapped modules: import('./chunk.js').then(n => (n.init_xxx(), n.namespace))
+            if let Some(ns_name) = namespace_export_name {
+              let call_expr = CallExpression::new_then_call_esm_wrapper_with_namespace(
+                base_expr, name, ns_name, self,
               );
               Some(Expression::CallExpression(call_expr))
-            }
-            WrapKind::Esm => {
-              // For ESM modules: import('./chunk.js').then(n => (n.init_xxx(), n.namespace))
-              if let Some(ns_name) = namespace_export_name {
-                let call_expr = CallExpression::new_then_call_esm_wrapper_with_namespace(
-                  base_expr, name, ns_name, self,
-                );
-                Some(Expression::CallExpression(call_expr))
-              } else {
-                tracing::warn!(
-                  "ESM wrapped module {:?} in chunk {:?} has wrapper but no namespace export.",
-                  importee_idx,
-                  importee_chunk_idx
-                );
-                None
-              }
-            }
-            WrapKind::None => {
-              debug_assert!(
-                self
-                  .ctx
-                  .order_wrap_state
-                  .esm_init_target(importee_idx, &self.ctx.linking_infos[importee_idx])
-                  .is_none()
+            } else {
+              tracing::warn!(
+                "ESM wrapped module {:?} in chunk {:?} has wrapper but no namespace export.",
+                importee_idx,
+                importee_chunk_idx
               );
-              let call_expr = CallExpression::new_then_extract_property(base_expr, name, self);
-              Some(Expression::CallExpression(call_expr))
+              None
             }
+          } else {
+            let call_expr = CallExpression::new_then_extract_property(base_expr, name, self);
+            Some(Expression::CallExpression(call_expr))
           }
         }
         None => {

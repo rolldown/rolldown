@@ -12,14 +12,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 # Assets
 
-## dep-b.js
-
-```js
-import { n as init_dep_b } from "./main2.js";
-init_dep_b();
-
-```
-
 ## main.js
 
 ```js
@@ -31,7 +23,7 @@ init_main();
 ## main2.js
 
 ```js
-import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 //#region dep-a.js
 var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const sideEffect = {};
@@ -40,6 +32,7 @@ var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 }));
 //#endregion
 //#region dep-b.js
+var dep_b_exports = /* @__PURE__ */ __exportAll({});
 function init_dep_b() {
 	return (init_dep_b = __esmMin((() => {
 		sideEffect.touched = true;
@@ -51,7 +44,7 @@ function init_main() {
 	return (init_main = __esmMin((() => {
 		require_dep_a();
 		init_dep_b();
-		import("./dep-b.js");
+		Promise.resolve().then(() => (init_dep_b(), dep_b_exports));
 	})))();
 }
 //#endregion
@@ -80,14 +73,6 @@ export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ## Assets
 
-### dep-b.js
-
-```js
-import { n as init_dep_b } from "./main2.js";
-init_dep_b();
-
-```
-
 ### main.js
 
 ```js
@@ -99,7 +84,7 @@ init_main();
 ### main2.js
 
 ```js
-import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 //#region dep-a.js
 var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const sideEffect = {};
@@ -108,6 +93,7 @@ var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 }));
 //#endregion
 //#region dep-b.js
+var dep_b_exports = /* @__PURE__ */ __exportAll({});
 function init_dep_b() {
 	return (init_dep_b = __esmMin((() => {
 		sideEffect.touched = true;
@@ -119,7 +105,7 @@ function init_main() {
 	return (init_main = __esmMin((() => {
 		require_dep_a();
 		init_dep_b();
-		import("./dep-b.js");
+		Promise.resolve().then(() => (init_dep_b(), dep_b_exports));
 	})))();
 }
 //#endregion

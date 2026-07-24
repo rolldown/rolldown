@@ -151,57 +151,27 @@ let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
 //#region lib.js
 var lib_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ a: () => 123 });
-var a;
 function init_lib() {
-	return (init_lib = require_rolldown_runtime.__esmMin((() => {
-		a = 123;
-	})))();
+	return (init_lib = require_rolldown_runtime.__esmMin((() => {})))();
 }
 //#endregion
 //#region entry.js
 function init_entry() {
 	return (init_entry = require_rolldown_runtime.__esmMin((() => {
 		init_lib();
-		Promise.resolve().then(() => require("./lib.js")).then((mod) => {
+		Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
 			node_assert.default.strictEqual(mod.a, 123);
 			node_assert.default.strictEqual(123, 123);
 		});
 	})))();
 }
 //#endregion
-Object.defineProperty(exports, "a", {
-	enumerable: true,
-	get: function() {
-		return a;
-	}
-});
 Object.defineProperty(exports, "init_entry", {
 	enumerable: true,
 	get: function() {
 		return init_entry;
 	}
 });
-Object.defineProperty(exports, "init_lib", {
-	enumerable: true,
-	get: function() {
-		return init_lib;
-	}
-});
-Object.defineProperty(exports, "lib_exports", {
-	enumerable: true,
-	get: function() {
-		return lib_exports;
-	}
-});
-
-```
-
-### lib.js
-
-```js
-const require_entry = require("./entry2.js");
-require_entry.init_lib();
-exports.a = require_entry.a;
 
 ```
 
@@ -254,37 +224,26 @@ init_entry();
 ### entry2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
 //#region lib.js
-var a;
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
 function init_lib() {
-	return (init_lib = __esmMin((() => {
-		a = 123;
-	})))();
+	return (init_lib = __esmMin((() => {})))();
 }
 //#endregion
 //#region entry.js
 function init_entry() {
 	return (init_entry = __esmMin((() => {
 		init_lib();
-		import("./lib.js").then((mod) => {
+		Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
 			assert.strictEqual(mod.a, 123);
 			assert.strictEqual(123, 123);
 		});
 	})))();
 }
 //#endregion
-export { a as n, init_lib as r, init_entry as t };
-
-```
-
-### lib.js
-
-```js
-import { n as a, r as init_lib } from "./entry2.js";
-init_lib();
-export { a };
+export { init_entry as t };
 
 ```
 

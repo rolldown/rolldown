@@ -1,0 +1,149 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { i as init_a, r as aTargetPromise } from "./ga.js";
+init_a();
+export { aTargetPromise };
+
+```
+
+## b.js
+
+```js
+//#region b.js
+(globalThis.log ??= []).push("b");
+const bTargetPromise = import("./target.js");
+//#endregion
+export { bTargetPromise };
+
+```
+
+## ga.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var aTargetPromise;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		(globalThis.log ??= []).push("a");
+		aTargetPromise = import("./target.js");
+	})))();
+}
+//#endregion
+//#region target.js
+var value;
+function init_target() {
+	return (init_target = __esmMin((() => {
+		(globalThis.log ??= []).push("target");
+		value = 1;
+	})))();
+}
+//#endregion
+export { init_a as i, value as n, aTargetPromise as r, init_target as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+## target.js
+
+```js
+import { n as value, t as init_target } from "./ga.js";
+init_target();
+export { value };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### a.js
+
+```js
+import { i as init_a, r as aTargetPromise } from "./ga.js";
+init_a();
+export { aTargetPromise };
+
+```
+
+### b.js
+
+```js
+import { n as init_b, t as bTargetPromise } from "./b2.js";
+init_b();
+export { bTargetPromise };
+
+```
+
+### b2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+var bTargetPromise;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		(globalThis.log ??= []).push("b");
+		bTargetPromise = import("./target.js");
+	})))();
+}
+//#endregion
+export { init_b as n, bTargetPromise as t };
+
+```
+
+### ga.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var aTargetPromise;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		(globalThis.log ??= []).push("a");
+		aTargetPromise = import("./target.js");
+	})))();
+}
+//#endregion
+//#region target.js
+var value;
+function init_target() {
+	return (init_target = __esmMin((() => {
+		(globalThis.log ??= []).push("target");
+		value = 1;
+	})))();
+}
+//#endregion
+export { init_a as i, value as n, aTargetPromise as r, init_target as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+### target.js
+
+```js
+import { n as value, t as init_target } from "./ga.js";
+init_target();
+export { value };
+
+```

@@ -2,7 +2,7 @@ use itertools::Itertools;
 use oxc::ast::AstType;
 use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression};
 use oxc::{
-  allocator::{self, ReplaceWith, TakeIn},
+  allocator::{self, GetAllocator, ReplaceWith, TakeIn},
   ast::{
     ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
     builder::NONE,
@@ -595,7 +595,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             }
             Expression::StaticMemberExpression(member_expr) => {
               *it = ast::JSXElementName::MemberExpression(oxc::allocator::Box::new_in(
-                JSXMemberExpression::from_ast(member_expr.unbox(), self.alloc).unwrap(),
+                JSXMemberExpression::from_ast(member_expr.unbox(), self.allocator()).unwrap(),
                 self,
               ));
             }
@@ -628,7 +628,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                     // TODO: Currently only support `StaticMemberExpression`, `ThisExpression` and `IdentifierReference`.
                     // In most of scenarios, it should be enough. The ultimate solution is create
                     // an extra binding for the cjs property access then *Uppercase* the binding.
-                    JSXMemberExpression::from_ast(member_expr.unbox(), self.alloc).unwrap(),
+                    JSXMemberExpression::from_ast(member_expr.unbox(), self.allocator()).unwrap(),
                     self,
                   )),
                 );

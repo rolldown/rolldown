@@ -90,7 +90,6 @@ pub enum KeepNameId<'a> {
 pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub ctx: ScopeHoistingFinalizerContext<'me>,
   pub scope: &'me AstScopes,
-  pub alloc: &'ast Allocator,
   pub ast_builder: AstBuilder<'ast>,
   /// Wrapped-ESM importees whose `init_*()` call was already emitted while finalizing this
   /// module, so the various init-emission paths don't emit duplicates.
@@ -223,7 +222,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // construction from the borrow without the throwaway heap `Vec` the previous `.collect()`
     // needed: the common 0/1 cases now allocate nothing, and only the rare sequence case
     // allocates — straight in the arena.
-    let ast_builder = AstBuilder::new(self.alloc);
+    let ast_builder = AstBuilder::new(self.allocator());
     let targets = collect_wrapped_esm_init_targets_for_import_record(
       &WrappedEsmInitTargetContext {
         importer: self.ctx.module,
@@ -764,7 +763,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       self.canonical_name_for(self.ctx.module.namespace_object_ref);
 
     // construct `{ prop_name: () => returned, ... }`
-    let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
+    let mut arg_obj_expr = ast::ObjectExpression::dummy(self.allocator());
 
     // Even if the module namespace is included, some exports may not be used due to `optimize_facade_dynamic_entry_chunks`
     // https://github.com/rolldown/rolldown/blob/d6d65f9080e427cd9feef56eb7a110fbcf6c1414/crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs#L347-L354
@@ -790,7 +789,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // instead of creating a property. Use computed property syntax for it.
         let key = if is_validate_identifier_name(prop_name) && prop_name != "__proto__" {
           ast::PropertyKey::StaticIdentifier(
-            IdentifierName::new_id_name(SPAN, prop_name, self).into_in(self.alloc),
+            IdentifierName::new_id_name(SPAN, prop_name, self).into_in(self.allocator()),
           )
         } else {
           ast::PropertyKey::new_string_literal(
@@ -819,7 +818,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       if arg_obj_expr.properties.is_empty() && !self.ctx.options.generated_code.symbols {
         Expression::ObjectExpression(oxc::allocator::Box::new_in(arg_obj_expr, self))
       } else {
-        let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
+        let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.allocator()));
         let args = if self.ctx.options.generated_code.symbols {
           oxc::allocator::Vec::from_iter_in([obj_expr], self)
         } else {
@@ -883,7 +882,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               // Insert `__reExport(foo_exports, ns)`
               ast::Statement::new_expression_statement(
                 SPAN,
-                Expression::CallExpression(call_expr.into_in(self.alloc)),
+                Expression::CallExpression(call_expr.into_in(self.allocator())),
                 self,
               ),
             ]
@@ -921,7 +920,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
             Some(ast::Statement::new_expression_statement(
               SPAN,
-              Expression::CallExpression(re_export_call_expr.into_in(self.alloc)),
+              Expression::CallExpression(re_export_call_expr.into_in(self.allocator())),
               self,
             ))
           });
@@ -1052,7 +1051,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       if let Some(resolved) = resolved_file_urls.get(&(self.ctx.idx, node_id)) {
         // The only place this code is parsed. The driver deliberately hands it over
         // unparsed, along with the plugin that produced it.
-        match parse_injected_expression(self.alloc, &resolved.code) {
+        match parse_injected_expression(self.allocator(), &resolved.code) {
           Ok(mut expr) => {
             let mut rewriter = ResolveFileUrlHookResultSpanRewriter(original_expr_span);
             oxc::ast_visit::VisitMut::visit_expression(&mut rewriter, &mut expr);
@@ -1294,8 +1293,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let finalized_expr = match expr {
           ast::Expression::Identifier(ident_ref) => self
             .try_rewrite_identifier_reference_expr(ident_ref, false)
-            .unwrap_or_else(|| expr.clone_in(self.alloc)),
-          _ => expr.clone_in(self.alloc),
+            .unwrap_or_else(|| expr.clone_in(self.allocator())),
+          _ => expr.clone_in(self.allocator()),
         };
         let final_access = ast::SimpleAssignmentTarget::new_computed_member_expression(
           SPAN,
@@ -1733,7 +1732,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             );
             program.body.push(ast::Statement::new_expression_statement(
               top_stmt.span(),
-              Expression::CallExpression(call_expr.into_in(self.alloc)),
+              Expression::CallExpression(call_expr.into_in(self.allocator())),
               self,
             ));
           }
@@ -1893,7 +1892,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     // __reExport(importer_exports, __toESM(require_foo()))
                     let stmt = ast::Statement::new_expression_statement(
                       SPAN,
-                      Expression::CallExpression(call_expr.into_in(self.alloc)),
+                      Expression::CallExpression(call_expr.into_in(self.allocator())),
                       self,
                     );
                     program.body.push(stmt);
@@ -2728,7 +2727,7 @@ impl<'ast> GetAstBuilder<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 impl<'ast> GetAllocator<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   #[inline]
   fn allocator(&self) -> &'ast Allocator {
-    self.alloc
+    self.ast_builder.allocator()
   }
 }
 

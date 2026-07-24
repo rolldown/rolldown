@@ -7,6 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region node_modules/this-is-only-used-for-testing/index.js
+//#endregion
 //#region helper.js
 var import_this_is_only_used_for_testing = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	function CJS() {}

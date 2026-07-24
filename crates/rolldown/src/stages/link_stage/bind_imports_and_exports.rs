@@ -245,6 +245,7 @@ impl LinkStage<'_> {
       meta.sorted_and_non_ambiguous_resolved_exports =
         FxIndexMap::from_iter(sorted_and_non_ambiguous_resolved_exports);
     });
+    self.record_namespace_consumed_star_reexport_paths();
     self.update_cjs_module_meta();
     self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
     self.normal_symbol_exports_chain_map = normal_symbol_exports_chain_map;
@@ -413,6 +414,58 @@ impl LinkStage<'_> {
     module_stack.pop();
   }
 
+  /// Strict-execution-order only: record the star re-export paths behind every non-ambiguous
+  /// export of a statically namespace-imported module (`import * as ns`), keyed by the importee's
+  /// namespace object. Dynamic imports are deliberately NOT scanned here: `import()` consumption
+  /// flows through the entry export interface, and `create_exports_for_ecma_modules` already
+  /// records those paths per referenced entry export (keyed by the export's symbol, gated by the
+  /// entry-chunk arm of `collect_frozen_reexport_usage`).
+  ///
+  /// A namespace object consumed as a whole retains EVERY export — including bindings reached
+  /// through `export *` chains that no named import or statically resolved member read records.
+  /// Without a recorded path, an init-owning barrel on such a chain has no retained-re-export
+  /// evidence for its excluded star hop, so its `init_*` never initializes a side-effect-free
+  /// definer that only the namespace observes. `collect_frozen_reexport_usage` gates every
+  /// namespace-keyed path on the namespace object actually being included, so a namespace
+  /// tree-shaking drops retains nothing here.
+  fn record_namespace_consumed_star_reexport_paths(&mut self) {
+    if !self.options.is_strict_execution_order_enabled() {
+      return;
+    }
+    let mut namespace_consumed = FxHashSet::default();
+    for module in self.module_table.modules.iter().filter_map(|module| module.as_normal()) {
+      for named_import in module.named_imports.values() {
+        if matches!(named_import.imported, Specifier::Star)
+          && let Some(importee_idx) = module.import_records[named_import.record_idx].resolved_module
+        {
+          namespace_consumed.insert(importee_idx);
+        }
+      }
+    }
+    for importee_idx in namespace_consumed {
+      let Some(importee) = self.module_table[importee_idx].as_normal() else {
+        continue;
+      };
+      // Key every path by the importee's namespace object, not by each export's canonical symbol:
+      // an export used through a DIFFERENT route (a direct import elsewhere) must not retain a
+      // barrel path nobody consumes. `collect_frozen_reexport_usage` gates a namespace-keyed path
+      // on the namespace object actually being included — the exact breadth demand.
+      let namespace_ref = importee.namespace_object_ref;
+      let meta = &self.metas[importee_idx];
+      for export_name in meta.sorted_and_non_ambiguous_resolved_exports.keys() {
+        record_star_reexport_path(
+          importee_idx,
+          export_name,
+          namespace_ref,
+          &self.module_table.modules,
+          &self.metas,
+          &mut self.star_reexport_records_by_imported_symbol,
+          &mut FxHashSet::default(),
+        );
+      }
+    }
+  }
+
   /// Try to find the final pointed `SymbolRef` of the member expression.
   /// ```js
   /// // index.js
@@ -457,6 +510,7 @@ impl LinkStage<'_> {
     } else {
       FxHashSet::default()
     };
+    let strict_execution_order = self.options.is_strict_execution_order_enabled();
     let resolved_meta_data = self
       .module_table
       .modules
@@ -467,10 +521,16 @@ impl LinkStage<'_> {
           let mut resolved_map = FxHashMap::default();
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
+          let mut star_reexport_consumptions: Vec<(SymbolRef, Vec<(ModuleIdx, CompactStr)>)> =
+            vec![];
           stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
               let mut depended_refs: Vec<SymbolRef> = vec![];
+              // Strict-only: every (module, export) step this member chain statically resolves
+              // through, recorded so re-export hops consumed via a namespace read retain their
+              // barrel-forwarding evidence exactly like named imports do.
+              let mut star_reexport_steps: Vec<(ModuleIdx, CompactStr)> = vec![];
 
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
                 // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
@@ -559,6 +619,9 @@ impl LinkStage<'_> {
                     return;
                   }
 
+                  if strict_execution_order {
+                    star_reexport_steps.push((canonical_ref_owner.idx, name.clone()));
+                  }
                   depended_refs.push(export_symbol.symbol_ref);
                   if let Some(chains) =
                     normal_symbol_exports_chain_map.get(&export_symbol.symbol_ref)
@@ -713,6 +776,13 @@ impl LinkStage<'_> {
                 }
 
                 if cursor > 0 || target_commonjs_exported_symbol.is_some() {
+                  // Key the consumed steps by the final canonical ref: it is the symbol the
+                  // inclusion pass marks used for this read (an inlined constant never is, and
+                  // needs no init), which is exactly the usedness gate
+                  // `collect_frozen_reexport_usage` applies to this index.
+                  if !star_reexport_steps.is_empty() {
+                    star_reexport_consumptions.push((canonical_ref, star_reexport_steps));
+                  }
                   resolved_map.insert(
                     member_expr_ref.node_id,
                     MemberExprRefResolution {
@@ -729,9 +799,9 @@ impl LinkStage<'_> {
             });
           });
 
-          (resolved_map, side_effects_dependency, written_cjs_exports)
+          (resolved_map, side_effects_dependency, written_cjs_exports, star_reexport_consumptions)
         }
-        Module::External(_) => (FxHashMap::default(), vec![], vec![]),
+        Module::External(_) => (FxHashMap::default(), vec![], vec![], vec![]),
       })
       .collect::<Vec<_>>();
 
@@ -744,7 +814,7 @@ impl LinkStage<'_> {
     // `cjs[name] = value`, or writes through `ns.default`), bail out all CJS exports of the
     // target module since we can't determine which specific property is affected.
     let mut written_cjs_export_symbols: Vec<SymbolRef> = Vec::new();
-    for (meta, (_, _, written_cjs_exports)) in self.metas.iter().zip(resolved_meta_data.iter()) {
+    for (meta, (_, _, written_cjs_exports, _)) in self.metas.iter().zip(resolved_meta_data.iter()) {
       written_cjs_export_symbols.extend(written_cjs_exports);
       for (import_symbol, cjs_module_idx) in
         meta.named_import_to_cjs_module.iter().chain(meta.import_record_ns_to_cjs_module.iter())
@@ -766,8 +836,34 @@ impl LinkStage<'_> {
     for symbol_ref in &written_cjs_export_symbols {
       self.global_constant_symbol_map.remove(symbol_ref);
     }
+    // A statically resolved namespace member read consumes re-export hops exactly like a named
+    // import: without this, a side-effect-free definer reached only through an `export *` barrel
+    // by namespace readers leaves the barrel's forwarding hop without retention evidence, and the
+    // wrapped barrel's `init_*` never initializes the definer (`collect_frozen_reexport_usage`
+    // keys its retained re-export paths off this same index).
+    if strict_execution_order {
+      let mut recorded = FxHashSet::default();
+      for (_, _, _, star_reexport_consumptions) in &resolved_meta_data {
+        for (imported_as_ref, steps) in star_reexport_consumptions {
+          for (module_idx, export_name) in steps {
+            if !recorded.insert((*module_idx, export_name.clone(), *imported_as_ref)) {
+              continue;
+            }
+            record_star_reexport_path(
+              *module_idx,
+              export_name,
+              *imported_as_ref,
+              &self.module_table.modules,
+              &self.metas,
+              &mut self.star_reexport_records_by_imported_symbol,
+              &mut FxHashSet::default(),
+            );
+          }
+        }
+      }
+    }
     self.metas.iter_mut().zip(resolved_meta_data).for_each(
-      |(meta, (resolved_map, side_effects_dependency, _))| {
+      |(meta, (resolved_map, side_effects_dependency, _, _))| {
         meta.resolved_member_expr_refs = resolved_map;
         meta.dependencies.extend(side_effects_dependency);
       },

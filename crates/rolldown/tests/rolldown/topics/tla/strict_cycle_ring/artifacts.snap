@@ -9,6 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region ring-b.js
 globalThis.__ringB = "b";
 //#endregion
+//#region ring-a.js
+//#endregion
 //#region main.js
 const value = await Promise.resolve("a");
 //#endregion
@@ -80,6 +82,8 @@ export { __esmMin as t };
 ```js
 //#region ring-b.js
 globalThis.__ringB = "b";
+//#endregion
+//#region ring-a.js
 //#endregion
 //#region main.js
 const value = await Promise.resolve("a");

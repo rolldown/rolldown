@@ -16,6 +16,10 @@ var b_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
 //#region test.ts
 var Test = void 0;
 //#endregion
+//#region c.ts
+//#endregion
+//#region d.ts
+//#endregion
 //#region entry.ts
 console.log(a_exports, b_exports, /* @__PURE__ */ __exportAll({
 	Test: () => Test,

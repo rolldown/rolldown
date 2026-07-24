@@ -1,0 +1,177 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as vDef, t as outer_exports } from "./outer.js";
+//#region a.js
+(globalThis.__events ??= []).push("a");
+const defValue = vDef;
+const nsObject = outer_exports;
+//#endregion
+export { defValue, nsObject };
+
+```
+
+## b.js
+
+```js
+import { n as vDef } from "./outer.js";
+//#region b.js
+(globalThis.__events ??= []).push("b");
+const sharedDef = vDef;
+//#endregion
+export { sharedDef };
+
+```
+
+## outer.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region definer1.js
+function build$1() {
+	return { value: 7 };
+}
+const vDef = /* @__PURE__ */ build$1();
+//#endregion
+//#region definer2.js
+function build() {
+	return { value: 11 };
+}
+const wDef = /* @__PURE__ */ build();
+//#endregion
+//#region mid.js
+(globalThis.__events ??= []).push("mid");
+//#endregion
+//#region outer.js
+var outer_exports = /* @__PURE__ */ __exportAll({
+	vDef: () => vDef,
+	wDef: () => wDef
+});
+//#endregion
+export { vDef as n, outer_exports as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### a.js
+
+```js
+import { n as init_a, r as nsObject, t as defValue } from "./a2.js";
+init_a();
+export { defValue, nsObject };
+
+```
+
+### a2.js
+
+```js
+import { i as vDef, n as outer_exports, t as init_outer } from "./outer.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var defValue, nsObject;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_outer();
+		(globalThis.__events ??= []).push("a");
+		defValue = vDef;
+		nsObject = outer_exports;
+	})))();
+}
+//#endregion
+export { init_a as n, nsObject as r, defValue as t };
+
+```
+
+### b.js
+
+```js
+import { n as sharedDef, t as init_b } from "./b2.js";
+init_b();
+export { sharedDef };
+
+```
+
+### b2.js
+
+```js
+import { i as vDef, t as init_outer } from "./outer.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+var sharedDef;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_outer();
+		(globalThis.__events ??= []).push("b");
+		sharedDef = vDef;
+	})))();
+}
+//#endregion
+export { sharedDef as n, init_b as t };
+
+```
+
+### outer.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+//#region definer1.js
+function build$1() {
+	return { value: 7 };
+}
+var vDef;
+function init_definer1() {
+	return (init_definer1 = __esmMin((() => {
+		vDef = /* @__PURE__ */ build$1();
+	})))();
+}
+//#endregion
+//#region definer2.js
+function build() {
+	return { value: 11 };
+}
+var wDef;
+function init_definer2() {
+	return (init_definer2 = __esmMin((() => {
+		wDef = /* @__PURE__ */ build();
+	})))();
+}
+//#endregion
+//#region mid.js
+function init_mid() {
+	return (init_mid = __esmMin((() => {
+		init_definer1();
+		init_definer2();
+		(globalThis.__events ??= []).push("mid");
+	})))();
+}
+//#endregion
+//#region outer.js
+var outer_exports = /* @__PURE__ */ __exportAll({
+	vDef: () => vDef,
+	wDef: () => wDef
+});
+function init_outer() {
+	return (init_outer = __esmMin((() => {
+		init_mid();
+	})))();
+}
+//#endregion
+export { vDef as i, outer_exports as n, init_definer1 as r, init_outer as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```

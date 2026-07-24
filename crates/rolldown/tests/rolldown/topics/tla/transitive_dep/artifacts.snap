@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region tla.js
 //#endregion
 //#region lib.js
 const value = await Promise.resolve("tla") + "+lib";
@@ -74,6 +75,7 @@ export { __esmMin as t };
 ### main.js
 
 ```js
+//#region tla.js
 //#endregion
 //#region lib.js
 const value = await Promise.resolve("tla") + "+lib";

@@ -39,10 +39,10 @@ pub fn json_value_to_ecma_ast(value: &Value) -> EcmaAst {
       SPAN,
       SourceType::default().with_module(true),
       "",
-      oxc::allocator::Vec::new_in(&builder),
+      [],
       None,
-      oxc::allocator::Vec::new_in(&builder),
-      oxc::allocator::Vec::from_value_in(stmt, &builder),
+      [],
+      [stmt],
       &builder,
     )
   })
@@ -104,7 +104,7 @@ pub fn json_value_to_expression<'a>(
     Value::Object(obj) => {
       let properties = oxc::allocator::Vec::from_iter_in(
         obj.iter().map(|(key, val)| {
-          let key_expr = oxc::ast::ast::Expression::new_string_literal(
+          let key_expr = oxc::ast::ast::PropertyKey::new_string_literal(
             SPAN,
             oxc::ast::ast::Str::from_str_in(key, builder),
             None,
@@ -115,7 +115,7 @@ pub fn json_value_to_expression<'a>(
           oxc::ast::ast::ObjectPropertyKind::new_object_property(
             SPAN,
             oxc::ast::ast::PropertyKind::Init,
-            oxc::ast::ast::PropertyKey::from(key_expr),
+            key_expr,
             value_expr,
             false, // method
             false, // shorthand

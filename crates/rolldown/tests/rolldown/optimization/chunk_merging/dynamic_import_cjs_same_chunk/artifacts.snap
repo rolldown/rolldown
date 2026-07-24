@@ -21,6 +21,8 @@ import assert from "node:assert";
 var require_cjs_module = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.value = 42;
 }));
+//#endregion
+//#region main.js
 require_cjs_module();
 assert.strictEqual(42, 42);
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then((mod) => {
@@ -58,6 +60,8 @@ node_assert = __toESM(node_assert);
 var require_cjs_module = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.value = 42;
 }));
+//#endregion
+//#region main.js
 require_cjs_module();
 node_assert.default.strictEqual(42, 42);
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then((mod) => {

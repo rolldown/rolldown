@@ -256,6 +256,7 @@ init_entry();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+//#region lib.js
 var a;
 function init_lib() {
 	return (init_lib = __esmMin((() => {

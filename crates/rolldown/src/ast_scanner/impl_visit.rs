@@ -82,7 +82,13 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         None,
         Some(&self.namespace_object_symbol_ids),
       );
-      let stmt_eval_facts = analyzer.analyze_stmt(stmt);
+      let mut stmt_eval_facts = analyzer.analyze_stmt(stmt);
+      if self.immutable_ctx.options.is_strict_on_demand_wrapping_enabled()
+        && !self.result.ecma_view_meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
+        && !stmt_eval_facts.is_order_sensitive()
+      {
+        analyzer.add_top_level_eager_order_reasons(stmt, &mut stmt_eval_facts);
+      }
       self.current_stmt_info.eval_flags = stmt_eval_facts.tree_shaking_flags();
 
       #[cfg(debug_assertions)]

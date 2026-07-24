@@ -687,18 +687,50 @@ pub(super) fn collect_frozen_reexport_usage(input: &OrderLoweringInput<'_>) -> F
   let mut root_paths =
     FxHashMap::<(ModuleIdx, ImportRecordIdx), Vec<(ModuleIdx, ImportRecordIdx)>>::default();
   for (imported_as_ref, paths) in input.star_reexport_records_by_imported_symbol {
+    // A namespace-keyed path (recorded for a whole consumed namespace by
+    // `record_namespace_consumed_star_reexport_paths`, or a member read resolving to a
+    // namespace-valued binding) is consumed exactly when that namespace object is materialized:
+    // an included namespace retains every non-ambiguous export, so its star chains are
+    // execution-relevant; symbol-level usedness would conflate routes (a leaf used through a
+    // direct import elsewhere must not retain a barrel path nobody consumes).
+    let key_is_namespace = input.modules[imported_as_ref.owner]
+      .as_normal()
+      .is_some_and(|module| module.namespace_object_ref == *imported_as_ref);
     for path in paths {
       let Some(root) = path.first().copied() else {
         continue;
       };
-      let consumer_is_used = input.used_symbols.contains(imported_as_ref)
-        || consumed_facades.contains(imported_as_ref)
-        || input.linking[root.0]
-          .referenced_symbols_by_entry_point_chunk
-          .iter()
-          .any(|(symbol_ref, _)| symbol_ref == imported_as_ref);
+      let consumer_is_used = if key_is_namespace {
+        // `namespace_included` here is the provisional pre-wrap value: `finalize_chunk_plan` runs
+        // `finalized_module_namespace_ref_usage` before order analysis/lowering and re-runs it
+        // only after. The skew is safe — the post-wrap refinement can only ADD namespaces
+        // demanded by import overlays (`requires_namespace`: `export *` of a dynamic-exports
+        // importee, `require` interop, splitting-disabled dynamic import), and those routes
+        // discharge their breadth at runtime through `__reExport`/`__toCommonJS` glue rather
+        // than statically routed init forwarding. An opaque `import * as` consumer — the demand
+        // this gate exists for — is a link-time fact the provisional pass already observes.
+        input.linking[imported_as_ref.owner].namespace_included
+      } else {
+        input.used_symbols.contains(imported_as_ref)
+          || consumed_facades.contains(imported_as_ref)
+          || input.linking[root.0]
+            .referenced_symbols_by_entry_point_chunk
+            .iter()
+            .any(|(symbol_ref, _)| symbol_ref == imported_as_ref)
+      };
       if consumer_is_used {
         root_paths.entry(root).or_default().extend(path.iter().copied());
+        // An ancestor's excluded-hop traversal stops at the first init-owning barrel it meets and
+        // delegates the rest of the chain to that barrel's own `init_*`
+        // (`collect_order_wrap_esm_init_targets` pushes the owning wrapper without descending).
+        // That delegation is only sound if the owning barrel itself carries the remainder as
+        // retained evidence, so record each such suffix as that barrel's own root — otherwise its
+        // interior hop forwards nothing and the chain's pure leaf is never initialized.
+        for (position, record) in path.iter().copied().enumerate().skip(1) {
+          if module_owns_reexport_init(input, record.0) {
+            root_paths.entry(record).or_default().extend(path[position..].iter().copied());
+          }
+        }
       }
     }
   }

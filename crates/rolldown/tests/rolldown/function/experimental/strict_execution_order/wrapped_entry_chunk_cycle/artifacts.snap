@@ -35,6 +35,7 @@ export { extend, useDep };
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_dep } from "./dep.js";
+//#region shared.js
 var extend;
 var init_shared = __esmMin((() => {
 	extend = Object.assign;
@@ -45,6 +46,8 @@ var require_interop = /* @__PURE__ */ __commonJSMin((() => {
 	init_shared();
 	init_dep();
 }));
+//#endregion
+//#region hub.js
 var init_hub = __esmMin((() => {
 	require_interop();
 	init_shared();
@@ -166,6 +169,7 @@ exports.useDep = require_dep.useDep;
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_dep = require("./dep.js");
+//#region shared.js
 var extend;
 var init_shared = require_rolldown_runtime.__esmMin((() => {
 	extend = Object.assign;
@@ -176,6 +180,8 @@ var require_interop = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin((()
 	init_shared();
 	require_dep.init_dep();
 }));
+//#endregion
+//#region hub.js
 var init_hub = require_rolldown_runtime.__esmMin((() => {
 	require_interop();
 	init_shared();
@@ -343,6 +349,7 @@ exports.useDep = require_dep.useDep;
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_dep = require("./dep.js");
+//#region shared.js
 var extend;
 var init_shared = require_rolldown_runtime.__esmMin((() => {
 	extend = Object.assign;
@@ -353,6 +360,8 @@ var require_interop = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin((()
 	init_shared();
 	require_dep.init_dep();
 }));
+//#endregion
+//#region hub.js
 var init_hub = require_rolldown_runtime.__esmMin((() => {
 	require_interop();
 	init_shared();
@@ -501,6 +510,7 @@ export { extend, useDep };
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_dep } from "./dep.js";
+//#region shared.js
 var extend;
 var init_shared = __esmMin((() => {
 	extend = Object.assign;
@@ -511,6 +521,8 @@ var require_interop = /* @__PURE__ */ __commonJSMin((() => {
 	init_shared();
 	init_dep();
 }));
+//#endregion
+//#region hub.js
 var init_hub = __esmMin((() => {
 	require_interop();
 	init_shared();

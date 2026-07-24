@@ -7,6 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region foo.js
+//#endregion
 //#region entry.js
 new ((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var Foo = class {};

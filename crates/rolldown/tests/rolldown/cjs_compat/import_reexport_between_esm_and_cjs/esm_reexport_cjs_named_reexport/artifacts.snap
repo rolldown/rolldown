@@ -7,6 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region commonjs.js
+//#endregion
+//#region main.js
+//#endregion
 var a = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = 1;
 })))().a;

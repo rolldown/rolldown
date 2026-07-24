@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## package.js
 
 ```js
+//#region (ignored) node_modules/package/util.js
 //#endregion
 //#region node_modules/package/index.js
 console.log(void 0);

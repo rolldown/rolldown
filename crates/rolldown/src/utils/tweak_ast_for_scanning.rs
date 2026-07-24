@@ -2,7 +2,7 @@ use itertools::Itertools;
 use oxc::allocator::GetAllocator;
 use oxc::allocator::{Allocator, ReplaceWith, TakeIn};
 use oxc::ast::ast::{self, BindingPattern, Declaration, ImportOrExportKind, Statement};
-use oxc::ast::builder::{AstBuilder, NONE};
+use oxc::ast::builder::{AstBuilder, GetAstBuilder, NONE};
 use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{SPAN, Span};
 use rolldown_ecmascript_utils::StatementExt;
@@ -52,7 +52,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
     if let Statement::LabeledStatement(stmt) = it
       && labels.contains(stmt.label.name.as_str())
     {
-      *it = ast::Statement::new_empty_statement(stmt.span, &self.ast_builder);
+      *it = ast::Statement::new_empty_statement(stmt.span, self);
       return true;
     }
     false
@@ -70,28 +70,28 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
     let var_decl_span = var_decl.span;
     var_decl
       .declarations
-      .take_in(&self.ast_builder.allocator())
+      .take_in(self)
       .into_iter()
       .enumerate()
       .map(|(i, declarator)| {
         let new_decl = ast::VariableDeclaration::boxed(
           if i == 0 && named_decl_span.is_none() { var_decl_span } else { SPAN },
           var_decl.kind,
-          oxc::allocator::Vec::from_iter_in([declarator], &self.ast_builder),
+          oxc::allocator::Vec::from_iter_in([declarator], self),
           var_decl.declare,
-          &self.ast_builder,
+          self,
         );
         if let Some(named_decl_span) = named_decl_span {
-          Statement::ExportNamedDeclaration(ast::ExportNamedDeclaration::boxed(
+          Statement::new_export_named_declaration(
             if i == 0 { named_decl_span } else { SPAN },
             Some(Declaration::VariableDeclaration(new_decl)),
-            oxc::allocator::Vec::new_in(&self.ast_builder),
+            [],
             // Since it is `export a = 1, b = 2;`, source should be `None`
             None,
             ImportOrExportKind::Value,
             NONE,
-            &self.ast_builder,
-          ))
+            self,
+          )
         } else {
           Statement::VariableDeclaration(new_decl)
         }
@@ -163,7 +163,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
   }
 
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
-    let original_body = program.body.take_in(&self.ast_builder.allocator());
+    let original_body = program.body.take_in(self);
     program.body.reserve_exact(original_body.len());
     self.top_level_stmt_temp_storage = Vec::with_capacity(
       original_body.iter().filter(|stmt| !stmt.is_module_declaration_with_source()).count(),
@@ -196,11 +196,8 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
     }
     walk_mut::walk_statement(self, it);
     if let Some(split) = self.split_multi_declarator(it, false) {
-      *it = Statement::BlockStatement(ast::BlockStatement::boxed(
-        SPAN,
-        oxc::allocator::Vec::from_iter_in(split, &self.ast_builder),
-        &self.ast_builder,
-      ));
+      *it =
+        Statement::new_block_statement(SPAN, oxc::allocator::Vec::from_iter_in(split, self), self);
     }
   }
 
@@ -212,7 +209,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
       walk_mut::walk_statements(self, it);
       return;
     }
-    let stmts = it.take_in(&self.ast_builder.allocator());
+    let stmts = it.take_in(self);
     for mut stmt in stmts {
       if self.try_drop_labeled(&mut stmt) {
         it.push(stmt);
@@ -253,33 +250,27 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
           unreachable!()
         };
         let cond_expr = cond_expr.unbox();
-        ast::Expression::ConditionalExpression(ast::ConditionalExpression::boxed(
+        ast::Expression::new_conditional_expression(
           SPAN,
           cond_expr.test,
           ast::Expression::new_call_expression(
             SPAN,
-            ast::Expression::new_identifier(SPAN, "require", &self.ast_builder),
+            ast::Expression::new_identifier(SPAN, "require", self),
             NONE,
-            oxc::allocator::Vec::from_value_in(
-              ast::Argument::from(cond_expr.consequent),
-              &self.ast_builder,
-            ),
+            [ast::Argument::from(cond_expr.consequent)],
             false,
-            &self.ast_builder,
+            self,
           ),
           ast::Expression::new_call_expression(
             SPAN,
-            ast::Expression::new_identifier(SPAN, "require", &self.ast_builder),
+            ast::Expression::new_identifier(SPAN, "require", self),
             NONE,
-            oxc::allocator::Vec::from_value_in(
-              ast::Argument::from(cond_expr.alternate),
-              &self.ast_builder,
-            ),
+            [ast::Argument::from(cond_expr.alternate)],
             false,
-            &self.ast_builder,
+            self,
           ),
-          &self.ast_builder,
-        ))
+          self,
+        )
       });
     }
     // transpose `import(test ? 'a' : 'b')` into `test ? import('a') : import('b')`
@@ -296,24 +287,28 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
         ast::Expression::new_conditional_expression(
           SPAN,
           cond_expr.test,
-          ast::Expression::new_import_expression(
-            SPAN,
-            cond_expr.consequent,
-            None,
-            None,
-            &self.ast_builder,
-          ),
-          ast::Expression::new_import_expression(
-            SPAN,
-            cond_expr.alternate,
-            None,
-            None,
-            &self.ast_builder,
-          ),
-          &self.ast_builder,
+          ast::Expression::new_import_expression(SPAN, cond_expr.consequent, None, None, self),
+          ast::Expression::new_import_expression(SPAN, cond_expr.alternate, None, None, self),
+          self,
         )
       });
     }
     walk_mut::walk_expression(self, it);
+  }
+}
+
+impl<'ast> GetAstBuilder<'ast> for PreProcessor<'ast, '_> {
+  type Builder = AstBuilder<'ast>;
+
+  #[inline]
+  fn builder(&self) -> &AstBuilder<'ast> {
+    &self.ast_builder
+  }
+}
+
+impl<'ast> GetAllocator<'ast> for PreProcessor<'ast, '_> {
+  #[inline]
+  fn allocator(&self) -> &'ast Allocator {
+    self.ast_builder.allocator()
   }
 }

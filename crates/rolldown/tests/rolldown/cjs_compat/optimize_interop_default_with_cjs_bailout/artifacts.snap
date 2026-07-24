@@ -15,6 +15,8 @@ var init_json = __esmMin((() => {
 	json_default = JSON.parse("[1, 2, 3]");
 }));
 //#endregion
+//#region commonjs.js
+//#endregion
 //#region main.js
 var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
 	var __importDefault = exports && exports.__importDefault || function(mod) {

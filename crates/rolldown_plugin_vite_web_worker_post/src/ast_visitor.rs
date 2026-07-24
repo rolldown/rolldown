@@ -1,16 +1,11 @@
-use oxc::ast::builder::AstBuilder;
+use oxc::allocator::{Allocator, GetAllocator};
+use oxc::ast::builder::{AstBuilder, GetAstBuilder};
 use oxc::{
-  ast::ast::{
-    Expression, IdentifierName, ObjectExpression, ObjectPropertyKind, Statement,
-    StaticMemberExpression,
-  },
+  ast::ast::{Expression, IdentifierName, ObjectPropertyKind, Statement},
   ast_visit::VisitMut,
   span::SPAN,
 };
-use rolldown_ecmascript_utils::{
-  ExpressionExt as _, ExpressionFactoryExt as _, IdentifierNameFactoryExt as _,
-  StatementFactoryExt as _,
-};
+use rolldown_ecmascript_utils::{ExpressionExt as _, StatementFactoryExt as _};
 
 pub struct WebWorkerPostVisitor<'ast> {
   pub ast_builder: AstBuilder<'ast>,
@@ -24,47 +19,40 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
 
   #[inline]
   fn create_self_location_href_expr(&self) -> Expression<'ast> {
-    Expression::StaticMemberExpression(StaticMemberExpression::boxed(
+    Expression::new_static_member_expression(
       SPAN,
-      Expression::StaticMemberExpression(StaticMemberExpression::boxed(
+      Expression::new_static_member_expression(
         SPAN,
-        Expression::new_id_ref_expr(SPAN, "self", &self.ast_builder),
-        IdentifierName::new_id_name(SPAN, "location", &self.ast_builder),
+        Expression::new_identifier(SPAN, "self", self),
+        IdentifierName::new(SPAN, "location", self),
         false,
-        &self.ast_builder,
-      )),
-      IdentifierName::new_id_name(SPAN, "href", &self.ast_builder),
+        self,
+      ),
+      IdentifierName::new(SPAN, "href", self),
       false,
-      &self.ast_builder,
-    ))
+      self,
+    )
   }
 
   #[inline]
   fn create_import_meta_object_decl(&self) -> oxc::ast::ast::Statement<'ast> {
     Statement::new_var_decl(
       "_vite_importMeta",
-      Expression::ObjectExpression(ObjectExpression::boxed(
+      Expression::new_object_expression(
         SPAN,
-        oxc::allocator::Vec::from_value_in(
-          ObjectPropertyKind::new_object_property(
-            SPAN,
-            oxc::ast::ast::PropertyKind::Init,
-            oxc::ast::ast::PropertyKey::StaticIdentifier(IdentifierName::boxed(
-              SPAN,
-              oxc::ast::ast::Str::from_str_in("url", &self.ast_builder),
-              &self.ast_builder,
-            )),
-            self.create_self_location_href_expr(),
-            false,
-            false,
-            false,
-            &self.ast_builder,
-          ),
-          &self.ast_builder,
-        ),
-        &self.ast_builder,
-      )),
-      &self.ast_builder,
+        [ObjectPropertyKind::new_object_property(
+          SPAN,
+          oxc::ast::ast::PropertyKind::Init,
+          oxc::ast::ast::PropertyKey::new_static_identifier(SPAN, "url", self),
+          self.create_self_location_href_expr(),
+          false,
+          false,
+          false,
+          self,
+        )],
+        self,
+      ),
+      self,
     )
   }
 }
@@ -86,9 +74,25 @@ impl<'ast> VisitMut<'ast> for WebWorkerPostVisitor<'ast> {
       }
       Expression::ImportMeta(_) => {
         self.should_inject_import_meta_object = true;
-        *it = Expression::new_id_ref_expr(SPAN, "_vite_importMeta", &self.ast_builder);
+        *it = Expression::new_identifier(SPAN, "_vite_importMeta", self);
       }
       _ => oxc::ast_visit::walk_mut::walk_expression(self, it),
     }
+  }
+}
+
+impl<'ast> GetAstBuilder<'ast> for WebWorkerPostVisitor<'ast> {
+  type Builder = AstBuilder<'ast>;
+
+  #[inline]
+  fn builder(&self) -> &AstBuilder<'ast> {
+    &self.ast_builder
+  }
+}
+
+impl<'ast> GetAllocator<'ast> for WebWorkerPostVisitor<'ast> {
+  #[inline]
+  fn allocator(&self) -> &'ast Allocator {
+    self.ast_builder.allocator()
   }
 }

@@ -13,6 +13,8 @@ var require_util_browser = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "util-browser";
 }));
 //#endregion
+//#region node_modules/demo-pkg/main.js
+//#endregion
 //#region src/entry.js
 var import_main = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const util = require_util_browser();

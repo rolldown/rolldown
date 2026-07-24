@@ -19,8 +19,8 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::CJS_REQUIRE_REF_STR;
 use rolldown_ecmascript_utils::{
-  BindingIdentifierFactoryExt as _, ExpressionExt, ExpressionFactoryExt as _,
-  IdentifierNameFactoryExt as _, ObjectPropertyKindFactoryExt as _, StatementFactoryExt as _,
+  ExpressionExt, ExpressionFactoryExt as _, ObjectPropertyKindFactoryExt as _,
+  StatementFactoryExt as _,
 };
 use rolldown_utils::{
   ecmascript::is_validate_identifier_name,
@@ -247,10 +247,10 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             ));
           } else {
             function.id =
-              Some(BindingIdentifier::new_id(SPAN, "__rolldown_default__", &self.ast_builder));
+              Some(BindingIdentifier::new(SPAN, "__rolldown_default__", &self.ast_builder));
             self.exports.push(ObjectPropertyKind::new_lazy_export_property(
               "default",
-              Expression::new_id_ref_expr(SPAN, "__rolldown_default__", &self.ast_builder),
+              Expression::new_identifier(SPAN, "__rolldown_default__", &self.ast_builder),
               false,
               &self.ast_builder,
             ));
@@ -267,10 +267,10 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             ));
           } else {
             class.id =
-              Some(BindingIdentifier::new_id(SPAN, "__rolldown_default__", &self.ast_builder));
+              Some(BindingIdentifier::new(SPAN, "__rolldown_default__", &self.ast_builder));
             self.exports.push(ObjectPropertyKind::new_lazy_export_property(
               "default",
-              Expression::new_id_ref_expr(SPAN, "__rolldown_default__", &self.ast_builder),
+              Expression::new_identifier(SPAN, "__rolldown_default__", &self.ast_builder),
               false,
               &self.ast_builder,
             ));
@@ -287,7 +287,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           ));
           self.exports.push(ObjectPropertyKind::new_lazy_export_property(
             "default",
-            Expression::new_id_ref_expr(SPAN, "__rolldown_default__", &self.ast_builder),
+            Expression::new_identifier(SPAN, "__rolldown_default__", &self.ast_builder),
             false,
             &self.ast_builder,
           ));
@@ -544,7 +544,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
     let export_call_expr = ast::Expression::new_call_expression(
       SPAN,
-      Expression::new_id_ref_expr(SPAN, "__rolldown_runtime__.__exportAll", &self.ast_builder),
+      Expression::new_identifier(SPAN, "__rolldown_runtime__.__exportAll", &self.ast_builder),
       NONE,
       [ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.ast_builder.allocator()))],
       false,
@@ -603,7 +603,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       // Build: encodeURIComponent(importee.id)
       let encode_call = ast::Expression::new_call_expression(
         SPAN,
-        Expression::new_id_ref_expr(SPAN, "encodeURIComponent", &self.ast_builder),
+        Expression::new_identifier(SPAN, "encodeURIComponent", &self.ast_builder),
         NONE,
         [ast::Argument::new_string_literal(
           SPAN,
@@ -670,7 +670,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       // Build: __rolldown_runtime__.loadExports("<stable_proxy_id>")
       let load_exports_call = ast::Expression::new_call_expression(
         SPAN,
-        Expression::new_id_ref_expr(SPAN, "__rolldown_runtime__.loadExports", &self.ast_builder),
+        Expression::new_identifier(SPAN, "__rolldown_runtime__.loadExports", &self.ast_builder),
         NONE,
         [ast::Argument::new_string_literal(
           SPAN,
@@ -732,7 +732,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     // Use stable module ID for consistent runtime lookup
     let mut load_exports_call_expr = ast::Expression::new_call_expression(
       SPAN,
-      Expression::new_id_ref_expr(SPAN, "__rolldown_runtime__.loadExports", &self.ast_builder),
+      Expression::new_identifier(SPAN, "__rolldown_runtime__.loadExports", &self.ast_builder),
       NONE,
       [ast::Argument::new_string_literal(
         SPAN,
@@ -764,7 +764,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       // __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports('./foo.js'), node_mode)
       load_exports_call_expr = ast::Expression::new_call_expression(
         SPAN,
-        Expression::new_id_ref_expr(
+        Expression::new_identifier(
           SPAN,
           "__rolldown_runtime__.__toDynamicImportESM",
           &self.ast_builder,
@@ -896,7 +896,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       Expression::new_static_member_expression(
         SPAN,
         to_commonjs_call,
-        IdentifierName::new_id_name(SPAN, "default", &self.ast_builder),
+        IdentifierName::new(SPAN, "default", &self.ast_builder),
         false,
         &self.ast_builder,
       )

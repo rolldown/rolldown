@@ -227,7 +227,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
 
     let register_factory_call = ast::Expression::new_call_expression(
       SPAN,
-      Expression::new_id_ref_expr(SPAN, "__rolldown_runtime__.registerFactory", &self.ast_builder),
+      Expression::new_identifier(SPAN, "__rolldown_runtime__.registerFactory", &self.ast_builder),
       NONE,
       register_factory_args,
       false,

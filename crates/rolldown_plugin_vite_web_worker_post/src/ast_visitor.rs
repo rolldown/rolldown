@@ -4,10 +4,7 @@ use oxc::{
   ast_visit::VisitMut,
   span::SPAN,
 };
-use rolldown_ecmascript_utils::{
-  ExpressionExt as _, ExpressionFactoryExt as _, IdentifierNameFactoryExt as _,
-  StatementFactoryExt as _,
-};
+use rolldown_ecmascript_utils::{ExpressionExt as _, StatementFactoryExt as _};
 
 pub struct WebWorkerPostVisitor<'ast> {
   pub ast_builder: AstBuilder<'ast>,
@@ -25,12 +22,12 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
       SPAN,
       Expression::new_static_member_expression(
         SPAN,
-        Expression::new_id_ref_expr(SPAN, "self", &self.ast_builder),
-        IdentifierName::new_id_name(SPAN, "location", &self.ast_builder),
+        Expression::new_identifier(SPAN, "self", &self.ast_builder),
+        IdentifierName::new(SPAN, "location", &self.ast_builder),
         false,
         &self.ast_builder,
       ),
-      IdentifierName::new_id_name(SPAN, "href", &self.ast_builder),
+      IdentifierName::new(SPAN, "href", &self.ast_builder),
       false,
       &self.ast_builder,
     )
@@ -76,7 +73,7 @@ impl<'ast> VisitMut<'ast> for WebWorkerPostVisitor<'ast> {
       }
       Expression::ImportMeta(_) => {
         self.should_inject_import_meta_object = true;
-        *it = Expression::new_id_ref_expr(SPAN, "_vite_importMeta", &self.ast_builder);
+        *it = Expression::new_identifier(SPAN, "_vite_importMeta", &self.ast_builder);
       }
       _ => oxc::ast_visit::walk_mut::walk_expression(self, it),
     }

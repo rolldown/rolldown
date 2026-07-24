@@ -14,9 +14,7 @@ use oxc::{
   semantic::ScopeFlags,
   span::SPAN,
 };
-use rolldown_ecmascript_utils::{
-  BindingPatternExt as _, ExpressionFactoryExt as _, IdentifierNameFactoryExt as _,
-};
+use rolldown_ecmascript_utils::{BindingPatternExt as _, ExpressionFactoryExt as _};
 
 use super::ast_visit::BuildImportAnalysisVisitor;
 
@@ -203,7 +201,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
   pub fn vite_preload_call(&self, argument: Argument<'a>) -> Expression<'a> {
     Expression::new_call_expression(
       SPAN,
-      Expression::new_id_ref_expr(SPAN, "__vitePreload", &self.ast_builder),
+      Expression::new_identifier(SPAN, "__vitePreload", &self.ast_builder),
       NONE,
       {
         let append_import_meta_url = self.render_built_url || self.is_relative_base;
@@ -212,7 +210,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
         items.push(argument);
         items.push(Argument::from(if self.is_modern {
-          Expression::new_id_ref_expr(SPAN, "__VITE_PRELOAD__", &self.ast_builder)
+          Expression::new_identifier(SPAN, "__VITE_PRELOAD__", &self.ast_builder)
         } else {
           Expression::new_void_0(SPAN, &self.ast_builder)
         }));
@@ -220,7 +218,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
           items.push(Argument::new_static_member_expression(
             SPAN,
             Expression::new_import_meta(SPAN, &self.ast_builder),
-            IdentifierName::new_id_name(SPAN, "url", &self.ast_builder),
+            IdentifierName::new(SPAN, "url", &self.ast_builder),
             false,
             &self.ast_builder,
           ));

@@ -193,7 +193,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
 
   fn analyze_member_expr(&self, member_expr: &ast::MemberExpression) -> StmtEvalFacts {
     if self.is_expr_manual_pure_functions(member_expr.object()) {
-      let mut facts = self.analyze_member_expr_like_eager_children(member_expr.object());
+      let mut facts = self.analyze_eager_chain_children(member_expr.object());
       if let ast::MemberExpression::ComputedMemberExpression(expr) = member_expr {
         facts |= self.analyze_expr(&expr.expression);
       }
@@ -218,9 +218,9 @@ impl<'a> StmtEvalAnalyzer<'a> {
     facts
   }
 
-  fn analyze_member_expr_like_eager_children(&self, expr: &Expression) -> StmtEvalFacts {
+  fn analyze_eager_chain_children(&self, expr: &Expression) -> StmtEvalFacts {
     let mut facts = StmtEvalFacts::default();
-    walk_member_expr_like(expr, |child| {
+    for_each_eager_chain_child(expr, |child| {
       facts |= child
         .map_or_else(StmtEvalFacts::from_unknown_side_effect, |child| self.analyze_expr(child));
     });
@@ -303,8 +303,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
       return false;
     }
     let manual_pure_functions = self.options.treeshake.manual_pure_functions().unwrap();
-    extract_first_part_of_member_expr_like(expr)
-      .is_some_and(|first| manual_pure_functions.contains(first))
+    chain_root_ident(expr).is_some_and(|first| manual_pure_functions.contains(first))
   }
 
   fn analyze_expr(&self, expr: &Expression) -> StmtEvalFacts {
@@ -943,19 +942,24 @@ fn check_pure_cjs_export(scope: &AstScopes, target: &AssignmentTarget) -> Option
   }
 }
 
-/// Walk a member-expression-like chain down to its leftmost identifier, feeding every eagerly
-/// evaluated child (computed keys and call arguments; `None` stands for a spread argument) to the
-/// visitor.
-fn walk_member_expr_like<'a>(
+/// Descend a member-expression-like chain to its leftmost identifier, invoking `on_eager_child`
+/// for every eagerly-evaluated subexpression on the way down — computed keys and call arguments,
+/// with `None` marking a spread argument. Returns the root identifier's name, or `None` when the
+/// chain doesn't bottom out in a plain identifier.
+///
+/// This is the shared engine behind [`chain_root_ident`] and [`for_each_eager_chain_child`]; call
+/// whichever of those fits instead of reading the return value and driving the visitor from the
+/// same call site.
+fn chain_root_visiting_eager_children<'a>(
   expr: &'a Expression,
-  mut visit_eager_child: impl FnMut(Option<&'a Expression>),
+  mut on_eager_child: impl FnMut(Option<&'a Expression>),
 ) -> Option<&'a str> {
   fn visit_call_args<'a>(
     args: &'a [Argument<'a>],
-    visit_eager_child: &mut impl FnMut(Option<&'a Expression<'a>>),
+    on_eager_child: &mut impl FnMut(Option<&'a Expression<'a>>),
   ) {
     for arg in args {
-      visit_eager_child(match arg {
+      on_eager_child(match arg {
         Argument::SpreadElement(_) => None,
         _ => Some(arg.to_expression()),
       });
@@ -967,23 +971,23 @@ fn walk_member_expr_like<'a>(
     match cur {
       Expression::Identifier(ident) => break Some(ident.name.as_str()),
       Expression::ComputedMemberExpression(expr) => {
-        visit_eager_child(Some(&expr.expression));
+        on_eager_child(Some(&expr.expression));
         cur = &expr.object;
       }
       Expression::StaticMemberExpression(expr) => {
         cur = &expr.object;
       }
       Expression::CallExpression(expr) => {
-        visit_call_args(&expr.arguments, &mut visit_eager_child);
+        visit_call_args(&expr.arguments, &mut on_eager_child);
         cur = &expr.callee;
       }
       Expression::ChainExpression(expr) => match expr.expression {
         ChainElement::CallExpression(ref call_expression) => {
-          visit_call_args(&call_expression.arguments, &mut visit_eager_child);
+          visit_call_args(&call_expression.arguments, &mut on_eager_child);
           cur = &call_expression.callee;
         }
         ChainElement::ComputedMemberExpression(ref computed_member_expression) => {
-          visit_eager_child(Some(&computed_member_expression.expression));
+          on_eager_child(Some(&computed_member_expression.expression));
           cur = &computed_member_expression.object;
         }
         ChainElement::StaticMemberExpression(ref static_member_expression) => {
@@ -998,11 +1002,17 @@ fn walk_member_expr_like<'a>(
   }
 }
 
-/// Extract the first (leftmost) identifier name from a member expression chain.
-/// Used by both `StmtEvalAnalyzer::is_expr_manual_pure_functions` and
-/// `StmtEvalAnalyzer::manual_pure_functions`.
-fn extract_first_part_of_member_expr_like<'a>(expr: &'a Expression) -> Option<&'a str> {
-  walk_member_expr_like(expr, |_| {})
+/// The leftmost identifier a member-expression-like chain reads from (`a` in `a.b().c[d]`), or
+/// `None` when the chain doesn't bottom out in a plain identifier. Used by
+/// `StmtEvalAnalyzer::is_expr_manual_pure_functions` and `StmtEvalAnalyzer::manual_pure_functions`.
+fn chain_root_ident<'a>(expr: &'a Expression) -> Option<&'a str> {
+  chain_root_visiting_eager_children(expr, |_| {})
+}
+
+/// Invoke `visit` on every eagerly-evaluated subexpression of a member-expression-like chain —
+/// computed keys and call arguments, with `None` marking a spread argument.
+fn for_each_eager_chain_child<'a>(expr: &'a Expression, visit: impl FnMut(Option<&'a Expression>)) {
+  let _ = chain_root_visiting_eager_children(expr, visit);
 }
 
 impl GlobalContext<'_> for StmtEvalAnalyzer<'_> {
@@ -1022,7 +1032,7 @@ impl MayHaveSideEffectsContext<'_> for StmtEvalAnalyzer<'_> {
 
   fn manual_pure_functions(&self, callee: &Expression) -> bool {
     self.is_expr_manual_pure_functions(callee)
-      && !self.analyze_member_expr_like_eager_children(callee).has_side_effect_for_tree_shaking()
+      && !self.analyze_eager_chain_children(callee).has_side_effect_for_tree_shaking()
   }
 
   fn property_read_side_effects(&self) -> PropertyReadSideEffects {
@@ -2431,18 +2441,18 @@ let remove15 = class {
   }
 
   #[test]
-  fn test_extract_first_part_of_member_expr_like() {
-    assert_eq!(extract_first_part_of_member_expr_like_helper("a.b"), "a");
-    assert_eq!(extract_first_part_of_member_expr_like_helper("styled?.div()"), "styled");
-    assert_eq!(extract_first_part_of_member_expr_like_helper("styled()"), "styled");
-    assert_eq!(extract_first_part_of_member_expr_like_helper("styled().div"), "styled");
-    assert_eq!(extract_first_part_of_member_expr_like_helper("styled()()"), "styled");
+  fn test_chain_root_ident() {
+    assert_eq!(chain_root_ident_helper("a.b"), "a");
+    assert_eq!(chain_root_ident_helper("styled?.div()"), "styled");
+    assert_eq!(chain_root_ident_helper("styled()"), "styled");
+    assert_eq!(chain_root_ident_helper("styled().div"), "styled");
+    assert_eq!(chain_root_ident_helper("styled()()"), "styled");
   }
 
-  fn extract_first_part_of_member_expr_like_helper(code: &str) -> String {
+  fn chain_root_ident_helper(code: &str) -> String {
     let allocator = oxc::allocator::Allocator::default();
     let parser = Parser::new(&allocator, code, SourceType::ts());
     let expr = parser.parse_expression().unwrap();
-    super::extract_first_part_of_member_expr_like(&expr).unwrap().to_string()
+    super::chain_root_ident(&expr).unwrap().to_string()
   }
 }

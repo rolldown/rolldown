@@ -339,15 +339,17 @@ export function bindingifyCloseBundle(
   };
 }
 
-export function bindingifyBanner(
+function bindingifyAddonHook(
   args: BindingifyPluginArgs,
+  name: 'banner' | 'footer' | 'intro' | 'outro',
 ): PluginHookWithBindingExt<BindingPluginOptions['banner']> {
-  const hook = args.plugin.banner;
+  const hook = args.plugin[name];
   if (!hook) {
     return {};
   }
 
   const { handler, meta } = normalizeHook(hook);
+
   return {
     plugin: async (ctx, chunk) => {
       if (typeof handler === 'string') {
@@ -369,103 +371,28 @@ export function bindingifyBanner(
     },
     meta: bindingifyPluginHookMeta(meta),
   };
+}
+
+export function bindingifyBanner(
+  args: BindingifyPluginArgs,
+): PluginHookWithBindingExt<BindingPluginOptions['banner']> {
+  return bindingifyAddonHook(args, 'banner');
 }
 
 export function bindingifyFooter(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['footer']> {
-  const hook = args.plugin.footer;
-  if (!hook) {
-    return {};
-  }
-
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
-    plugin: async (ctx, chunk) => {
-      if (typeof handler === 'string') {
-        return handler;
-      }
-
-      return handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        transformRenderedChunk(chunk),
-      );
-    },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  return bindingifyAddonHook(args, 'footer');
 }
 
 export function bindingifyIntro(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['intro']> {
-  const hook = args.plugin.intro;
-  if (!hook) {
-    return {};
-  }
-
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
-    plugin: async (ctx, chunk) => {
-      if (typeof handler === 'string') {
-        return handler;
-      }
-
-      return handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        transformRenderedChunk(chunk),
-      );
-    },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  return bindingifyAddonHook(args, 'intro');
 }
 
 export function bindingifyOutro(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['outro']> {
-  const hook = args.plugin.outro;
-  if (!hook) {
-    return {};
-  }
-
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
-    plugin: async (ctx, chunk) => {
-      if (typeof handler === 'string') {
-        return handler;
-      }
-
-      return handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        transformRenderedChunk(chunk),
-      );
-    },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  return bindingifyAddonHook(args, 'outro');
 }

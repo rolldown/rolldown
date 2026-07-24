@@ -1,8 +1,13 @@
-import type { BindingHookFilter, BindingPluginOptions } from '../binding.cjs';
+import type {
+  BindingHookFilter,
+  BindingOutputs,
+  BindingPluginContext,
+  BindingPluginOptions,
+  BindingResult,
+} from '../binding.cjs';
 import { RolldownMagicString } from '../binding-magic-string';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError, unwrapBindingResult } from '../utils/error';
-import { normalizeHook } from '../utils/normalize-hook';
 import { transformRenderedChunk } from '../utils/transform-rendered-chunk';
 import {
   type ChangedOutputs,
@@ -11,22 +16,13 @@ import {
 } from '../utils/transform-to-rollup-output';
 import { bindingifyRenderChunkFilter } from './bindingify-hook-filter';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
-import {
-  bindingifyPluginHookMeta,
-  type PluginHookWithBindingExt,
-} from './bindingify-plugin-hook-meta';
+import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
 import { createPluginContext } from './plugin-context';
 
 export function bindingifyRenderStart(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderStart']> {
-  const hook = args.plugin.renderStart;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.renderStart, ({ handler }) => ({
     plugin: async (ctx, opts) => {
       handler.call(
         createPluginContext(args, ctx),
@@ -34,19 +30,12 @@ export function bindingifyRenderStart(
         args.pluginContextData.getInputOptions(opts),
       );
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 export function bindingifyRenderChunk(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderChunk'], BindingHookFilter | undefined> {
-  const hook = args.plugin.renderChunk;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta, options } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.renderChunk, ({ handler, options }) => ({
     plugin: async (ctx, code, chunk, opts, meta) => {
       // cache the chunks binding to deduplicated avoid clone chunks
       if (args.pluginContextData.getRenderChunkMeta() == null) {
@@ -142,142 +131,96 @@ export function bindingifyRenderChunk(
         map: bindingifySourcemap(ret.map),
       };
     },
-    meta: bindingifyPluginHookMeta(meta),
     filter: bindingifyRenderChunkFilter(options.filter),
-  };
+  }));
 }
 
 export function bindingifyAugmentChunkHash(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['augmentChunkHash']> {
-  const hook = args.plugin.augmentChunkHash;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.augmentChunkHash, ({ handler }) => ({
     plugin: async (ctx, chunk) => {
       return handler.call(createPluginContext(args, ctx), transformRenderedChunk(chunk));
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 
 export function bindingifyResolveFileUrl(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['resolveFileUrl']> {
-  const hook = args.plugin.resolveFileUrl;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.resolveFileUrl, ({ handler }) => ({
     plugin: async (ctx, resolveFileUrlArgs) => {
       return handler.call(createPluginContext(args, ctx), resolveFileUrlArgs);
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 
 export function bindingifyRenderError(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderError']> {
-  const hook = args.plugin.renderError;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.renderError, ({ handler }) => ({
     plugin: async (ctx, err) => {
       handler.call(createPluginContext(args, ctx), aggregateBindingErrorsIntoJsError(err));
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
+}
+
+function createOutputBundle(
+  args: BindingifyPluginArgs,
+  ctx: BindingPluginContext,
+  bundle: BindingResult<BindingOutputs>,
+) {
+  const changed = {
+    updated: new Set(),
+    deleted: new Set(),
+  } as ChangedOutputs;
+  const context = createPluginContext(args, ctx);
+  const output = transformToOutputBundle(context, unwrapBindingResult(bundle), changed);
+  return { changed, context, output };
 }
 
 export function bindingifyGenerateBundle(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['generateBundle']> {
-  const hook = args.plugin.generateBundle;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.generateBundle, ({ handler }) => ({
     plugin: async (ctx, bundle, isWrite, opts) => {
-      const changed = {
-        updated: new Set(),
-        deleted: new Set(),
-      } as ChangedOutputs;
-      const context = createPluginContext(args, ctx);
-      const output = transformToOutputBundle(context, unwrapBindingResult(bundle), changed);
+      const { changed, context, output } = createOutputBundle(args, ctx, bundle);
       await handler.call(context, args.pluginContextData.getOutputOptions(opts), output, isWrite);
       return collectChangedBundle(changed, output);
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 
 export function bindingifyWriteBundle(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['writeBundle']> {
-  const hook = args.plugin.writeBundle;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.writeBundle, ({ handler }) => ({
     plugin: async (ctx, bundle, opts) => {
-      const changed = {
-        updated: new Set(),
-        deleted: new Set(),
-      } as ChangedOutputs;
-      const context = createPluginContext(args, ctx);
-      const output = transformToOutputBundle(context, unwrapBindingResult(bundle), changed);
+      const { changed, context, output } = createOutputBundle(args, ctx, bundle);
       await handler.call(context, args.pluginContextData.getOutputOptions(opts), output);
       return collectChangedBundle(changed, output);
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 
 export function bindingifyCloseBundle(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['closeBundle']> {
-  const hook = args.plugin.closeBundle;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.closeBundle, ({ handler }) => ({
     plugin: async (ctx, err) => {
       await handler.call(
         createPluginContext(args, ctx),
         err ? aggregateBindingErrorsIntoJsError(err) : undefined,
       );
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 
 function bindingifyAddonHook(
   args: BindingifyPluginArgs,
   name: 'banner' | 'footer' | 'intro' | 'outro',
 ): PluginHookWithBindingExt<BindingPluginOptions['banner']> {
-  const hook = args.plugin[name];
-  if (!hook) {
-    return {};
-  }
-
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin[name], ({ handler }) => ({
     plugin: async (ctx, chunk) => {
       if (typeof handler === 'string') {
         return handler;
@@ -285,8 +228,7 @@ function bindingifyAddonHook(
 
       return handler.call(createPluginContext(args, ctx), transformRenderedChunk(chunk));
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 
 export function bindingifyBanner(

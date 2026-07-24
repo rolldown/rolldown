@@ -132,6 +132,8 @@ pub enum EventKind {
   LargeBarrelModules = 47,
   /// Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   SourcemapBroken = 48,
+  /// Whether to emit warnings when property mangling assigns inconsistent names across chunks.
+  CrossChunkPropertyMangle = 49,
 }
 
 impl Display for EventKind {
@@ -195,6 +197,7 @@ impl Display for EventKind {
       EventKind::RequireTlaError => write!(f, "REQUIRE_TLA"),
       EventKind::LargeBarrelModules => write!(f, "LARGE_BARREL_MODULES"),
       EventKind::SourcemapBroken => write!(f, "SOURCEMAP_BROKEN"),
+      EventKind::CrossChunkPropertyMangle => write!(f, "CROSS_CHUNK_PROPERTY_MANGLE"),
     }
   }
 }

@@ -8,7 +8,7 @@ use oxc::{
     builder::AstBuilder,
   },
   codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions, LegalComment},
-  minifier::{Minifier, MinifierOptions},
+  minifier::{ManglePropertyCache, Minifier, MinifierOptions},
   parser::{ParseOptions, Parser},
   span::{SPAN, SourceType},
 };
@@ -117,7 +117,7 @@ impl EcmaCompiler {
     compress: bool,
     minify_options: MinifierOptions,
     codegen_options: CodegenOptions,
-  ) -> (String, Option<SourceMap<'a>>) {
+  ) -> (String, Option<SourceMap<'a>>, Option<ManglePropertyCache>) {
     let mut program = Parser::new(allocator, source_text, source_type)
       .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
       .parse()
@@ -128,6 +128,7 @@ impl EcmaCompiler {
     } else {
       minifier.dce(allocator, &mut program)
     };
+    let property_mangle_cache = ret.property_mangle_cache;
     let ret = Codegen::new()
       .with_options(CodegenOptions {
         source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
@@ -136,7 +137,7 @@ impl EcmaCompiler {
       .with_scoping(ret.scoping)
       .with_private_member_mappings(ret.class_private_mappings)
       .build(&program);
-    (ret.code, ret.map)
+    (ret.code, ret.map, property_mangle_cache)
   }
 }
 

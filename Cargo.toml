@@ -298,6 +298,20 @@ oxc_resolver = { version = "11.24.2", features = [
 oxc_resolver_napi = { version = "11.24.2", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "8.1.0" } # https://github.com/oxc-project/oxc-sourcemap
 
+# Temporary compatibility overlay for oxc-project/oxc#24740 and #24741.
+# Remove this section after the property-mangling APIs are available in a released Oxc version.
+[patch.crates-io]
+oxc = { git = "https://github.com/oxc-project/oxc.git", rev = "7d303eef4190736d8f67ea839b0a043bdb1fe1df" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc.git", rev = "7d303eef4190736d8f67ea839b0a043bdb1fe1df" }
+oxc_ast = { git = "https://github.com/oxc-project/oxc.git", rev = "7d303eef4190736d8f67ea839b0a043bdb1fe1df" }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc.git", rev = "7d303eef4190736d8f67ea839b0a043bdb1fe1df" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "7d303eef4190736d8f67ea839b0a043bdb1fe1df" }
+oxc_str = { git = "https://github.com/oxc-project/oxc.git", rev = "7d303eef4190736d8f67ea839b0a043bdb1fe1df" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "7d303eef4190736d8f67ea839b0a043bdb1fe1df" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "7d303eef4190736d8f67ea839b0a043bdb1fe1df" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "7d303eef4190736d8f67ea839b0a043bdb1fe1df" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc.git", rev = "7d303eef4190736d8f67ea839b0a043bdb1fe1df" }
+
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.
 debug = "line-tables-only"

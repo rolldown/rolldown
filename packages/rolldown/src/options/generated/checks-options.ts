@@ -190,4 +190,10 @@ export interface ChecksOptions {
    * @default true
    * */
   sourcemapBroken?: boolean;
+
+  /**
+   * Whether to emit warnings when property mangling assigns inconsistent names across chunks.
+   * @default true
+   * */
+  crossChunkPropertyMangle?: boolean;
 }

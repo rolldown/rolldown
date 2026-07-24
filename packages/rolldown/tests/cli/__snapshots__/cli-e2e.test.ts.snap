@@ -29,6 +29,7 @@ OPTIONS
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.crossChunkPropertyMangle Whether to emit warnings when property mangling assigns inconsistent names across chunks.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -178,6 +179,7 @@ OPTIONS
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.crossChunkPropertyMangle Whether to emit warnings when property mangling assigns inconsistent names across chunks.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -327,6 +329,7 @@ OPTIONS
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.crossChunkPropertyMangle Whether to emit warnings when property mangling assigns inconsistent names across chunks.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -476,6 +479,7 @@ OPTIONS
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.crossChunkPropertyMangle Whether to emit warnings when property mangling assigns inconsistent names across chunks.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.

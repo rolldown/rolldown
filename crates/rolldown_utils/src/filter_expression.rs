@@ -1,10 +1,14 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::OnceLock};
 
+use fast_glob::glob_match;
 use rustc_hash::FxHashMap;
 
 use crate::{
   js_regex::HybridRegex,
-  pattern_filter::{StringOrRegex, StringOrRegexMatchKind, normalize_path},
+  pattern_filter::{
+    StringOrRegex, StringOrRegexMatchKind, get_matcher_string, glob_matcher_depends_on_cwd,
+    normalize_path,
+  },
   url::{clean_url, get_query},
 };
 
@@ -14,11 +18,76 @@ pub enum FilterExpr {
   And(Vec<FilterExpr>),
   Not(Box<FilterExpr>),
   Code(StringOrRegex),
-  Id(StringOrRegex),
-  ImporterId(StringOrRegex),
+  Id(IdMatcher),
+  ImporterId(IdMatcher),
   CleanUrl(Box<FilterExpr>),
   ModuleType(String),
   Query(String, QueryValue),
+}
+
+/// Path matcher for `Id`/`ImporterId` leaves. Wraps a [`StringOrRegex`] and, for
+/// glob (`String`) patterns, memoizes the resolved matcher so `get_matcher_string`'s
+/// allocation doesn't run on every module tested.
+///
+/// The cache is cwd-*correct*, not cwd-*assuming*. A `**`-prefixed or absolute glob
+/// resolves independently of `cwd`, so it is cached once and reused for any `cwd`. A
+/// relative glob's resolution joins `cwd`, so it is cached together with the `cwd` it
+/// was resolved for and re-resolved from scratch whenever a later call presents a
+/// different `cwd`. Matching is therefore behaviorally identical to resolving on every
+/// call — no `cwd` is ever baked in — while the repeated allocation is still avoided in
+/// the common case where `cwd` is constant for a build.
+#[derive(Debug)]
+pub struct IdMatcher {
+  pattern: StringOrRegex,
+  glob_cache: OnceLock<ResolvedGlob>,
+}
+
+#[derive(Debug)]
+enum ResolvedGlob {
+  /// A `**`-prefixed or absolute glob: resolution ignores `cwd`, valid for any `cwd`.
+  CwdIndependent(Box<str>),
+  /// A relative glob: resolution joined `cwd`, so it is only valid for that `cwd`.
+  ScopedToCwd { cwd: Box<str>, matcher: Box<str> },
+}
+
+impl ResolvedGlob {
+  fn resolve(glob: &str, cwd: &str) -> Self {
+    let matcher = Box::from(get_matcher_string(glob, cwd).as_ref());
+    if glob_matcher_depends_on_cwd(glob) {
+      Self::ScopedToCwd { cwd: Box::from(cwd), matcher }
+    } else {
+      Self::CwdIndependent(matcher)
+    }
+  }
+}
+
+impl IdMatcher {
+  fn test(&self, value: &str, cwd: &str) -> bool {
+    match &self.pattern {
+      StringOrRegex::Regex(re) => re.matches(value),
+      StringOrRegex::String(glob) => {
+        match self.glob_cache.get_or_init(|| ResolvedGlob::resolve(glob, cwd)) {
+          ResolvedGlob::CwdIndependent(matcher) => glob_match(matcher.as_bytes(), value.as_bytes()),
+          ResolvedGlob::ScopedToCwd { cwd: resolved_cwd, matcher }
+            if resolved_cwd.as_bytes() == cwd.as_bytes() =>
+          {
+            glob_match(matcher.as_bytes(), value.as_bytes())
+          }
+          // Relative glob first resolved under a different `cwd`: resolve fresh so we
+          // never match against a stale, wrong-`cwd` matcher.
+          ResolvedGlob::ScopedToCwd { .. } => {
+            glob_match(get_matcher_string(glob, cwd).as_bytes(), value.as_bytes())
+          }
+        }
+      }
+    }
+  }
+}
+
+impl From<StringOrRegex> for IdMatcher {
+  fn from(pattern: StringOrRegex) -> Self {
+    Self { pattern, glob_cache: OnceLock::new() }
+  }
 }
 
 #[derive(Debug)]
@@ -110,13 +179,11 @@ pub fn filter_expr_interpreter<'a>(
     FilterExpr::Code(pattern) => {
       pattern.test(code.expect("`code` should not be none"), &StringOrRegexMatchKind::Code)
     }
-    FilterExpr::Id(id_pattern) => {
-      id_pattern.test(id.expect("`id` should not be none"), &StringOrRegexMatchKind::Id(cwd))
-    }
+    FilterExpr::Id(id_pattern) => id_pattern.test(id.expect("`id` should not be none"), cwd),
     FilterExpr::ImporterId(id_pattern) => {
       // When importer_id is None (e.g., entry files), return false (no match)
       match importer_id {
-        Some(importer) => id_pattern.test(importer, &StringOrRegexMatchKind::Id(cwd)),
+        Some(importer) => id_pattern.test(importer, cwd),
         None => false,
       }
     }
@@ -246,8 +313,10 @@ pub fn parse(mut tokens: Vec<Token>) -> anyhow::Result<FilterExprKind> {
   fn rec(tokens: &mut Vec<Token>) -> anyhow::Result<FilterExpr> {
     let token = pop(tokens)?;
     match token {
-      Token::Id => Ok(FilterExpr::Id(pop_string_or_regex(tokens, "Id")?)),
-      Token::ImporterId => Ok(FilterExpr::ImporterId(pop_string_or_regex(tokens, "ImporterId")?)),
+      Token::Id => Ok(FilterExpr::Id(pop_string_or_regex(tokens, "Id")?.into())),
+      Token::ImporterId => {
+        Ok(FilterExpr::ImporterId(pop_string_or_regex(tokens, "ImporterId")?.into()))
+      }
       Token::Code => Ok(FilterExpr::Code(pop_string_or_regex(tokens, "Code")?)),
       Token::Query => {
         let key = match pop(tokens)? {
@@ -322,13 +391,13 @@ mod test {
     pattern_filter::StringOrRegex,
   };
 
-  use super::{filter_exprs_interpreter, optimize_filter_expr, parse};
+  use super::{IdMatcher, filter_exprs_interpreter, optimize_filter_expr, parse};
 
   #[test]
   fn test_filter_expr_interpreter() {
     // https://github.com/vitejs/rolldown-vite/blob/fef84b75dbb35a6ec27debdc0dced1d0f1250eb8/packages/vite/src/node/plugins/importAnalysisBuild.ts?plain=1#L242-L244
     let expr = FilterExpr::And(vec![
-      FilterExpr::Id(StringOrRegex::Regex("node_modules".into())),
+      FilterExpr::Id(StringOrRegex::Regex("node_modules".into()).into()),
       FilterExpr::Not(Box::new(FilterExpr::Code(StringOrRegex::Regex("import\\s*".into())))),
     ]);
     assert!(!filter_expr_interpreter(
@@ -364,7 +433,7 @@ mod test {
     #[cfg(windows)]
     {
       use super::FilterExprKind;
-      let expr = FilterExpr::Id(StringOrRegex::Regex("src/".into()));
+      let expr = FilterExpr::Id(StringOrRegex::Regex("src/".into()).into());
 
       assert!(filter_exprs_interpreter(
         &[FilterExprKind::Include(expr)],
@@ -409,7 +478,7 @@ mod test {
     // `Id` check must run (and get to short-circuit) before that parse is forced —
     // even though `Query` has fewer nodes, it is not cheaper to evaluate.
     let mut expr = FilterExpr::And(vec![
-      FilterExpr::Id(StringOrRegex::Regex("target".into())),
+      FilterExpr::Id(StringOrRegex::Regex("target".into()).into()),
       FilterExpr::Query("raw".to_string(), QueryValue::Boolean(true)),
     ]);
     optimize_filter_expr(&mut expr);
@@ -428,7 +497,7 @@ mod test {
     // `ModuleType` leaf: a non-matching module has to reject at the cheap `Id` check
     // first, not fall into the full-source `Code` scan inside the `or`.
     let mut expr = FilterExpr::And(vec![
-      FilterExpr::Id(StringOrRegex::Regex("target".into())),
+      FilterExpr::Id(StringOrRegex::Regex("target".into()).into()),
       FilterExpr::Or(vec![
         FilterExpr::ModuleType("css".to_string()),
         FilterExpr::Code(StringOrRegex::Regex("needle".into())),
@@ -448,11 +517,25 @@ mod test {
   }
 
   #[test]
+  fn id_matcher_relative_glob_is_cwd_correct() {
+    // A relative glob resolves against cwd. The same matcher instance must stay
+    // correct when evaluated under different cwds — no cwd may be baked into the
+    // cache (the earlier caching bug kept matching the first cwd seen forever).
+    let matcher = IdMatcher::from(StringOrRegex::String("src/*.ts".to_string()));
+    // Under cwd `/a`, only ids under `/a/src/` match.
+    assert!(matcher.test("/a/src/foo.ts", "/a"));
+    assert!(!matcher.test("/b/src/foo.ts", "/a"));
+    // Same instance under cwd `/b`: it must re-resolve; now only `/b/src/` matches.
+    assert!(matcher.test("/b/src/foo.ts", "/b"));
+    assert!(!matcher.test("/a/src/foo.ts", "/b"));
+  }
+
+  #[test]
   fn optimize_reorders_operands_cheapest_first() {
     // and(code(/regex/), id(/regex/)) — the expensive `Code` leaf is authored first.
     let mut expr = FilterExpr::And(vec![
       FilterExpr::Code(StringOrRegex::Regex("import".into())),
-      FilterExpr::Id(StringOrRegex::Regex("node_modules".into())),
+      FilterExpr::Id(StringOrRegex::Regex("node_modules".into()).into()),
     ]);
     optimize_filter_expr(&mut expr);
     // After optimization the cheap `Id` leaf must come first so it can short-circuit.
@@ -473,7 +556,7 @@ mod test {
     // Build the same And in both orders; after optimization they must agree with
     // each other and with the original evaluation for every input.
     let build = |code_first: bool| {
-      let id = FilterExpr::Id(StringOrRegex::Regex("node_modules".into()));
+      let id = FilterExpr::Id(StringOrRegex::Regex("node_modules".into()).into());
       let code = FilterExpr::Not(Box::new(FilterExpr::Code(StringOrRegex::Regex("import".into()))));
       let args = if code_first { vec![code, id] } else { vec![id, code] };
       FilterExpr::And(args)

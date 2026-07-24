@@ -61,7 +61,19 @@ export var __reExport = (target, mod, secondTarget) => (
 export var __toESM = (mod, isNodeMode, target) => (
   (target = mod != null ? __create(__getProtoOf(mod)) : {}),
   __copyProps(
-    isNodeMode || !mod || !mod.__esModule
+    (isNodeMode
+      ? !(mod &&
+          // The `typeof` guard skips primitive exports, which would make
+          // `Reflect.isExtensible` throw. Extensibility and prototype are
+          // checked before Symbol.toStringTag because they never trigger a
+          // proxy `get` trap, so exotic exports like Vite's browser-external
+          // shims (proxies that throw on any property access) short-circuit
+          // here without being touched.
+          typeof mod === 'object' &&
+          !Reflect.isExtensible(mod) &&
+          __getProtoOf(mod) === null &&
+          mod[Symbol.toStringTag] === 'Module')
+      : !mod || !mod.__esModule)
       ? __defProp(target, 'default', { value: mod, enumerable: true })
       : target,
     mod,

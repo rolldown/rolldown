@@ -65,18 +65,18 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
             SPAN,
             [BindingProperty::new(
               SPAN,
-              PropertyKey::new_static_identifier(SPAN, key, &self.ast_builder),
-              BindingPattern::new_binding_identifier(SPAN, value, &self.ast_builder),
+              PropertyKey::new_static_identifier(SPAN, key, self),
+              BindingPattern::new_binding_identifier(SPAN, value, self),
               true,
               false,
-              &self.ast_builder,
+              self,
             )],
             NONE,
-            &self.ast_builder,
+            self,
           ),
-          await_expr.take_in(&self.ast_builder.allocator()),
+          await_expr.take_in(self),
         ),
-        &self.ast_builder,
+        self,
       );
       return true;
     }
@@ -122,11 +122,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       };
       callee.object = self.construct_vite_preload_call(
         object_pat,
-        Expression::new_await_expression(
-          SPAN,
-          callee.object.take_in(&self.ast_builder.allocator()),
-          &self.ast_builder,
-        ),
+        Expression::new_await_expression(SPAN, callee.object.take_in(self), self),
       );
       walk_arguments(self, &mut call_expr.arguments);
       return true;
@@ -134,11 +130,9 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
     // For non-destructuring: wrap the entire import().then() expression
     walk_arguments(self, &mut call_expr.arguments);
-    let import_then_expr = expr.take_in(&self.ast_builder.allocator());
-    *expr = self.vite_preload_call(Argument::from(Expression::new_arrow_returning(
-      import_then_expr,
-      &self.ast_builder,
-    )));
+    let import_then_expr = expr.take_in(self);
+    *expr = self
+      .vite_preload_call(Argument::from(Expression::new_arrow_returning(import_then_expr, self)));
     true
   }
 
@@ -146,10 +140,8 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
   /// to `__vitePreload(() => import('foo'),...)`
   pub fn rewrite_import_expr(&self, expr: &mut Expression<'a>) -> bool {
     let Expression::ImportExpression(_) = expr else { return false };
-    *expr = self.vite_preload_call(Argument::from(Expression::new_arrow_returning(
-      expr.take_in(&self.ast_builder.allocator()),
-      &self.ast_builder,
-    )));
+    *expr = self
+      .vite_preload_call(Argument::from(Expression::new_arrow_returning(expr.take_in(self), self)));
     true
   }
 
@@ -163,13 +155,13 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       false,
       true,
       NONE,
-      FormalParameters::new(SPAN, FormalParameterKind::Signature, [], NONE, &self.ast_builder),
+      FormalParameters::new(SPAN, FormalParameterKind::Signature, [], NONE, self),
       NONE,
       FunctionBody::new(
         SPAN,
         [],
         {
-          let mut statements = oxc::allocator::Vec::with_capacity_in(2, &self.ast_builder);
+          let mut statements = oxc::allocator::Vec::with_capacity_in(2, self);
           statements.push(Statement::new_variable_declaration(
             SPAN,
             VariableDeclarationKind::Const,
@@ -180,53 +172,53 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
               NONE,
               Some(await_expr),
               false,
-              &self.ast_builder,
+              self,
             )],
             false,
-            &self.ast_builder,
+            self,
           ));
           statements.push(Statement::new_return_statement(
             SPAN,
-            Some(BindingPattern::ObjectPattern(object_pat).into_expression(&self.ast_builder)),
-            &self.ast_builder,
+            Some(BindingPattern::ObjectPattern(object_pat).into_expression(self)),
+            self,
           ));
           statements
         },
-        &self.ast_builder,
+        self,
       ),
-      &self.ast_builder,
+      self,
     ))
   }
 
   pub fn vite_preload_call(&self, argument: Argument<'a>) -> Expression<'a> {
     Expression::new_call_expression(
       SPAN,
-      Expression::new_identifier(SPAN, "__vitePreload", &self.ast_builder),
+      Expression::new_identifier(SPAN, "__vitePreload", self),
       NONE,
       {
         let append_import_meta_url = self.render_built_url || self.is_relative_base;
         let capacity = if append_import_meta_url { 3 } else { 2 };
-        let mut items = oxc::allocator::Vec::with_capacity_in(capacity, &self.ast_builder);
+        let mut items = oxc::allocator::Vec::with_capacity_in(capacity, self);
 
         items.push(argument);
         items.push(Argument::from(if self.is_modern {
-          Expression::new_identifier(SPAN, "__VITE_PRELOAD__", &self.ast_builder)
+          Expression::new_identifier(SPAN, "__VITE_PRELOAD__", self)
         } else {
-          Expression::new_void_0(SPAN, &self.ast_builder)
+          Expression::new_void_0(SPAN, self)
         }));
         if append_import_meta_url {
           items.push(Argument::new_static_member_expression(
             SPAN,
-            Expression::new_import_meta(SPAN, &self.ast_builder),
-            IdentifierName::new(SPAN, "url", &self.ast_builder),
+            Expression::new_import_meta(SPAN, self),
+            IdentifierName::new(SPAN, "url", self),
             false,
-            &self.ast_builder,
+            self,
           ));
         }
         items
       },
       false,
-      &self.ast_builder,
+      self,
     )
   }
 }

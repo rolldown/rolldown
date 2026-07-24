@@ -78,8 +78,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     if let Some(ns_alias) = &symbol.namespace_alias {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
-      let access_expr =
-        MemberExpression::new_member_access(canonical_ns_name, prop_name, &self.ast_builder);
+      let access_expr = MemberExpression::new_member_access(canonical_ns_name, prop_name, self);
 
       return Some(ast::SimpleAssignmentTarget::from(access_expr));
     }
@@ -88,8 +87,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     if id_ref.name != canonical_name {
       return Some(ast::SimpleAssignmentTarget::new_assignment_target_identifier(
         id_ref.span,
-        oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_builder),
-        &self.ast_builder,
+        oxc::ast::ast::Str::from_str_in(canonical_name, self),
+        self,
       ));
     }
 
@@ -133,13 +132,12 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           *target = ast::SimpleAssignmentTarget::from(MemberExpression::new_member_access(
             self.canonical_name_for(ns_alias.namespace_ref),
             &ns_alias.property_name,
-            &self.ast_builder,
+            self,
           ));
         } else {
           let canonical_name = self.canonical_name_for(canonical_ref);
           if target_id_ref.name != canonical_name {
-            target_id_ref.name =
-              oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_builder).into();
+            target_id_ref.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
           }
           target_id_ref.reference_id.take();
         }
@@ -168,8 +166,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
-              ident.name =
-                oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_builder).into();
+              ident.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();
@@ -184,8 +181,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
-              ident.name =
-                oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_builder).into();
+              ident.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();

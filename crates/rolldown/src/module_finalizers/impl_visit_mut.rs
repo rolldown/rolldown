@@ -136,8 +136,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         let canonical_name = self.canonical_name_for(*symbol_ref);
         program.body.push(Statement::new_var_decl(
           canonical_name,
-          ast::Expression::new_void_0(SPAN, &self.ast_builder),
-          &self.ast_builder,
+          ast::Expression::new_void_0(SPAN, self),
+          self,
         ));
       }
     });
@@ -159,7 +159,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
         let (commonjs_ref_expr, _) = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
 
-        let mut stmts_inside_closure = allocator::Vec::new_in(&self.alloc);
+        let mut stmts_inside_closure = allocator::Vec::new_in(self);
         stmts_inside_closure.append(&mut program.body);
 
         program.body.push(Statement::new_commonjs_wrapper_stmt(
@@ -170,7 +170,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.ctx.options.profiler_names,
           &self.ctx.module.stable_id,
           self.ctx.linking_info.is_tla_or_contains_tla_dependency,
-          &self.ast_builder,
+          self,
         ));
       }
       ModuleWrapperMode::InteropEsm(target) | ModuleWrapperMode::ExecutionOrder(target) => {
@@ -178,10 +178,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.ctx.linking_info.concatenated_wrapped_module_kind,
           ConcatenateWrappedModuleKind::None
         );
-        let old_body = program.body.take_in(&self.alloc);
+        let old_body = program.body.take_in(self);
 
-        let mut fn_stmts = allocator::Vec::new_in(&self.alloc);
-        let mut stmts_inside_closure = allocator::Vec::new_in(&self.alloc);
+        let mut fn_stmts = allocator::Vec::new_in(self);
+        let mut stmts_inside_closure = allocator::Vec::new_in(self);
 
         // Hoist all top-level "var" and "function" declarations out of the closure
         old_body.into_iter().for_each(|mut stmt| match &mut stmt {
@@ -274,9 +274,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.ctx.linking_info.concatenated_wrapped_module_kind,
           ConcatenateWrappedModuleKind::Root
         ) {
-          self.rendered_concatenated_wrapped_module_parts.rendered_esm_runtime_expr = Some(
-            ast::ExpressionStatement::new(SPAN, esm_ref_expr, &self.ast_builder).to_source_string(),
-          );
+          self.rendered_concatenated_wrapped_module_parts.rendered_esm_runtime_expr =
+            Some(ast::ExpressionStatement::new(SPAN, esm_ref_expr, self).to_source_string());
           self.rendered_concatenated_wrapped_module_parts.wrap_ref_name =
             Some(CompactStr::new(wrap_ref_name));
           program.body.extend(stmts_inside_closure);
@@ -309,7 +308,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               EsmWrapperDeclKind::Var
             },
           },
-          &self.ast_builder,
+          self,
         ));
       }
       ModuleWrapperMode::None => {
@@ -331,7 +330,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       assert!(symbol.namespace_alias.is_none());
       let canonical_name = self.canonical_name_for(symbol_ref);
       if ident.name != canonical_name {
-        ident.name = oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_builder).into();
+        ident.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
       }
       ident.symbol_id.get_mut().take();
     } else {
@@ -354,7 +353,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         self.var_declaration_to_expr_seq_and_bindings(decl, self.state)
       {
         self.top_level_var_bindings.extend(bindings);
-        *it = ast::Statement::new_expression_statement(SPAN, expr, &self.ast_builder);
+        *it = ast::Statement::new_expression_statement(SPAN, expr, self);
       }
     }
   }
@@ -408,8 +407,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                 let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
                 let canonical_name = self.canonical_name_for(symbol_ref);
                 if id.name != canonical_name {
-                  id.name =
-                    oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_builder).into();
+                  id.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
                 }
                 // Clear symbol_id to prevent double processing:
                 // - visit_expression won't re-wrap when walker visits inner fn
@@ -425,7 +423,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                     fn_expr,
                     finalized_callee,
                     true,
-                    &self.ast_builder,
+                    self,
                   )
                 });
               }
@@ -485,17 +483,13 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         {
           match kind {
             ThisExprReplaceKind::Exports => {
-              *expr = ast::Expression::new_identifier(SPAN, "exports", &self.ast_builder);
+              *expr = ast::Expression::new_identifier(SPAN, "exports", self);
             }
             ThisExprReplaceKind::Context if self.ctx.options.context.is_empty() => {
-              *expr = ast::Expression::new_void_0(SPAN, &self.ast_builder);
+              *expr = ast::Expression::new_void_0(SPAN, self);
             }
             ThisExprReplaceKind::Context => {
-              *expr = Expression::new_id_ref_expr(
-                SPAN,
-                self.ctx.options.context.as_str(),
-                &self.ast_builder,
-              );
+              *expr = Expression::new_id_ref_expr(SPAN, self.ctx.options.context.as_str(), self);
             }
           }
         }
@@ -503,7 +497,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       ast::Expression::ImportMeta(import_meta) => {
         if !self.ctx.options.format.keep_esm_import_export_syntax() {
           self.record_surviving_import_meta(import_meta.span, EmptyImportMetaKind::Plain);
-          *expr = ast::Expression::new_object_expression(SPAN, [], &self.ast_builder);
+          *expr = ast::Expression::new_object_expression(SPAN, [], self);
         }
       }
       ast::Expression::ChainExpression(_) => {
@@ -538,14 +532,14 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                 *expr = ast::Expression::new_chain_expression(
                   chain_span,
                   ast::ChainElement::StaticMemberExpression(member),
-                  &self.ast_builder,
+                  self,
                 );
               }
               ast::Expression::ComputedMemberExpression(member) => {
                 *expr = ast::Expression::new_chain_expression(
                   chain_span,
                   ast::ChainElement::ComputedMemberExpression(member),
-                  &self.ast_builder,
+                  self,
                 );
               }
               _ => {
@@ -602,7 +596,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             Expression::StaticMemberExpression(member_expr) => {
               *it = ast::JSXElementName::MemberExpression(oxc::allocator::Box::new_in(
                 JSXMemberExpression::from_ast(member_expr.unbox(), self.alloc).unwrap(),
-                &self.alloc,
+                self,
               ));
             }
             Expression::ThisExpression(this_expr) => {
@@ -635,7 +629,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                     // In most of scenarios, it should be enough. The ultimate solution is create
                     // an extra binding for the cjs property access then *Uppercase* the binding.
                     JSXMemberExpression::from_ast(member_expr.unbox(), self.alloc).unwrap(),
-                    &self.alloc,
+                    self,
                   )),
                 );
               }
@@ -713,17 +707,17 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             Span::default(),
             ast::AssignmentTarget::from(target),
             init,
-            &self.ast_builder,
+            self,
           )
         } else {
           ast::AssignmentTargetMaybeDefault::from(target)
         };
         *property = ast::AssignmentTargetProperty::new_assignment_target_property_property(
           Span::default(),
-          ast::PropertyKey::new_static_identifier(prop.span, prop.binding.name, &self.ast_builder),
+          ast::PropertyKey::new_static_identifier(prop.span, prop.binding.name, self),
           binding,
           false,
-          &self.ast_builder,
+          self,
         );
       } else {
         prop.binding.reference_id.get_mut().take();

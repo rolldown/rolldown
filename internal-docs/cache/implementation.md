@@ -340,9 +340,18 @@ arm is `unreachable!()`.
    `EcmaView::rebuild_importer_sets`. The scan does this only for modules it
    produced; a cached module whose importer added/removed/re-kinded an import
    of it is refreshed here (issue #7416).
-5. **Merge entry points** — for a matching existing entry
-   point, drop `related_stmt_infos` for re-scanned modules and extend with the
-   new ones; otherwise push the new entry point.
+5. **Merge entry points** — drop the `related_stmt_infos` rows of every
+   re-scanned module from the cached dynamic import entries (the incoming
+   entry only carries records that still exist), extend matching entries with
+   the incoming rows or push new ones, then prune dynamic import entries that
+   no longer have any dynamic edge in `importers`. Edges of orphaned (no
+   longer reachable) importers survive in `importers` on purpose, so an
+   entry only they point at stays in the cache: re-adding an import of the
+   orphan revives the entry without a re-scan. `create_output` compensates
+   by filtering dynamic import entries against reachability
+   (`compute_live_modules`, a BFS from the non-dynamic entries), so only
+   entries a live module dynamically imports produce chunks — matching a
+   fresh build.
 6. **Patch barrel modules** — drain
    `barrel_state.resolved_barrel_modules` and write the resolved import records
    back into the cached modules.

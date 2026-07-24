@@ -1,0 +1,274 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+import { t as __exportAll } from "./main.js";
+//#region lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+__rolldown_runtime__.createModuleHotContext("lazy.js");
+__rolldown_runtime__.registerModule("lazy.js", { exports: lazy_exports });
+const value = "lazy";
+//#endregion
+export { value };
+
+```
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region b.js
+var b_exports = /* @__PURE__ */ __exportAll({ loadFromB: () => loadFromB });
+const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
+__rolldown_runtime__.registerModule("b.js", { exports: b_exports });
+async function loadFromB() {
+	await import("./lazy.js").then(console.log);
+}
+b_hot.accept();
+//#endregion
+//#region c.js
+var c_exports = /* @__PURE__ */ __exportAll({ loadFromC: () => loadFromC });
+const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
+__rolldown_runtime__.registerModule("c.js", { exports: c_exports });
+async function loadFromC() {
+	await import("./lazy.js").then(console.log);
+}
+c_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+//#endregion
+export { __exportAll as t };
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+//#region b.js
+var init_b_0 = __rolldown_runtime__.createEsmInitializer("b.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ loadFromB: () => loadFromB });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_b = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		async function loadFromB() {
+			console.log("b no longer loads lazy");
+		}
+		hot_b.accept();
+	} finally {}
+}));
+
+//#endregion
+init_b_0()
+__rolldown_runtime__.applyUpdates([['b.js', 'b.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: b.js, accepted_via: b.js
+
+## Build Output
+
+### Assets
+
+#### lazy.js
+
+```js
+import { t as __exportAll } from "./main.js";
+//#region lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+__rolldown_runtime__.createModuleHotContext("lazy.js");
+__rolldown_runtime__.registerModule("lazy.js", { exports: lazy_exports });
+const value = "lazy";
+//#endregion
+export { value };
+
+```
+
+#### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region b.js
+var b_exports = /* @__PURE__ */ __exportAll({ loadFromB: () => loadFromB });
+const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
+__rolldown_runtime__.registerModule("b.js", { exports: b_exports });
+async function loadFromB() {
+	console.log("b no longer loads lazy");
+}
+b_hot.accept();
+//#endregion
+//#region c.js
+var c_exports = /* @__PURE__ */ __exportAll({ loadFromC: () => loadFromC });
+const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
+__rolldown_runtime__.registerModule("c.js", { exports: c_exports });
+async function loadFromC() {
+	await import("./lazy.js").then(console.log);
+}
+c_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+//#endregion
+export { __exportAll as t };
+
+```
+
+# HMR Step 1
+
+## Code
+
+```js
+//#region c.js
+var init_c_0 = __rolldown_runtime__.createEsmInitializer("c.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ loadFromC: () => loadFromC });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_c = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		async function loadFromC() {
+			console.log("c no longer loads lazy");
+		}
+		hot_c.accept();
+	} finally {}
+}));
+
+//#endregion
+init_c_0()
+__rolldown_runtime__.applyUpdates([['c.js', 'c.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: c.js, accepted_via: c.js
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region b.js
+var b_exports = /* @__PURE__ */ __exportAll({ loadFromB: () => loadFromB });
+const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
+__rolldown_runtime__.registerModule("b.js", { exports: b_exports });
+async function loadFromB() {
+	console.log("b no longer loads lazy");
+}
+b_hot.accept();
+//#endregion
+//#region c.js
+var c_exports = /* @__PURE__ */ __exportAll({ loadFromC: () => loadFromC });
+const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
+__rolldown_runtime__.registerModule("c.js", { exports: c_exports });
+async function loadFromC() {
+	console.log("c no longer loads lazy");
+}
+c_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+//#endregion
+
+```
+
+# HMR Step 2
+
+## Code
+
+```js
+//#region b.js
+var init_b_0 = __rolldown_runtime__.createEsmInitializer("b.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ loadFromB: () => loadFromB });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_b = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		async function loadFromB() {
+			await Promise.resolve().then(() => __rolldown_runtime__.loadExports("lazy.js")).then(console.log);
+		}
+		hot_b.accept();
+	} finally {}
+}));
+
+//#endregion
+init_b_0()
+__rolldown_runtime__.applyUpdates([['b.js', 'b.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: b.js, accepted_via: b.js
+
+## Build Output
+
+### Assets
+
+#### lazy.js
+
+```js
+import { t as __exportAll } from "./main.js";
+//#region lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+__rolldown_runtime__.createModuleHotContext("lazy.js");
+__rolldown_runtime__.registerModule("lazy.js", { exports: lazy_exports });
+const value = "lazy";
+//#endregion
+export { value };
+
+```
+
+#### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region b.js
+var b_exports = /* @__PURE__ */ __exportAll({ loadFromB: () => loadFromB });
+const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
+__rolldown_runtime__.registerModule("b.js", { exports: b_exports });
+async function loadFromB() {
+	await import("./lazy.js").then(console.log);
+}
+b_hot.accept();
+//#endregion
+//#region c.js
+var c_exports = /* @__PURE__ */ __exportAll({ loadFromC: () => loadFromC });
+const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
+__rolldown_runtime__.registerModule("c.js", { exports: c_exports });
+async function loadFromC() {
+	console.log("c no longer loads lazy");
+}
+c_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+//#endregion
+export { __exportAll as t };
+
+```

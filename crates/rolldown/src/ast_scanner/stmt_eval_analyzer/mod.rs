@@ -943,10 +943,25 @@ fn check_pure_cjs_export(scope: &AstScopes, target: &AssignmentTarget) -> Option
   }
 }
 
+/// Walk a member-expression-like chain down to its leftmost identifier, feeding every eagerly
+/// evaluated child (computed keys and call arguments; `None` stands for a spread argument) to the
+/// visitor.
 fn walk_member_expr_like<'a>(
   expr: &'a Expression,
   mut visit_eager_child: impl FnMut(Option<&'a Expression>),
 ) -> Option<&'a str> {
+  fn visit_call_args<'a>(
+    args: &'a [Argument<'a>],
+    visit_eager_child: &mut impl FnMut(Option<&'a Expression<'a>>),
+  ) {
+    for arg in args {
+      visit_eager_child(match arg {
+        Argument::SpreadElement(_) => None,
+        _ => Some(arg.to_expression()),
+      });
+    }
+  }
+
   let mut cur = expr;
   loop {
     cur = cur.get_inner_expression();
@@ -960,22 +975,12 @@ fn walk_member_expr_like<'a>(
         cur = &expr.object;
       }
       Expression::CallExpression(expr) => {
-        for arg in &expr.arguments {
-          visit_eager_child(match arg {
-            Argument::SpreadElement(_) => None,
-            _ => Some(arg.to_expression()),
-          });
-        }
+        visit_call_args(&expr.arguments, &mut visit_eager_child);
         cur = &expr.callee;
       }
       Expression::ChainExpression(expr) => match expr.expression {
         ChainElement::CallExpression(ref call_expression) => {
-          for arg in &call_expression.arguments {
-            visit_eager_child(match arg {
-              Argument::SpreadElement(_) => None,
-              _ => Some(arg.to_expression()),
-            });
-          }
+          visit_call_args(&call_expression.arguments, &mut visit_eager_child);
           cur = &call_expression.callee;
         }
         ChainElement::ComputedMemberExpression(ref computed_member_expression) => {

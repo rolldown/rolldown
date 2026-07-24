@@ -13,9 +13,9 @@ function effect(value) {
   console.log(value);
   return value;
 }
-styled()[effect('computed key')];
-styled(effect('call argument')).value;
-new (styled()[effect('new callee')].Box)();
+styled()[effect('computed key')]; // retained
+styled(effect('call argument')).value; // retained
+new (styled()[effect('new callee')].Box)(); // retained
 
 let another = console.log;
 another(); // retained

@@ -716,7 +716,7 @@ export interface InputOptions {
      * describing your use case so we can address it before the option is gone.
      *
      * @see {@link https://rolldown.rs/in-depth/lazy-barrel-optimization | Lazy Barrel Documentation}
-     * @default false
+     * @default true
      */
     lazyBarrel?: boolean;
   };

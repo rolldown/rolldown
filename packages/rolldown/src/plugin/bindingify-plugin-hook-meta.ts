@@ -3,7 +3,7 @@ import type { ObjectHook, ObjectHookMeta, PluginOrder } from '.';
 import type { AnyFn } from '../types/utils';
 import { normalizeHook } from '../utils/normalize-hook';
 
-export function bindingifyPluginHookMeta(options: ObjectHookMeta): BindingPluginHookMeta {
+function bindingifyPluginHookMeta(options: ObjectHookMeta): BindingPluginHookMeta {
   return {
     order: bindingPluginOrder(options.order),
   };

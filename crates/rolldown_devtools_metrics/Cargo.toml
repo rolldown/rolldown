@@ -1,0 +1,23 @@
+[package]
+name = "rolldown_devtools_metrics"
+version = "1.2.0"
+edition.workspace = true
+license = "MIT"
+publish = true
+description = "In-memory aggregation of Rolldown devtools events into an agent-readable metrics report"
+readme = "../../README.md"
+
+[lib]
+doctest = false
+
+[dependencies]
+rustc-hash = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }
+# The real binding builds with `arbitrary_precision` unified in (via rolldown_common); run the
+# tests under the same feature so deserialization regressions (e.g. untagged numeric enums,
+# which silently fail under it) surface here instead of only at runtime.
+serde_json = { workspace = true, features = ["arbitrary_precision"] }

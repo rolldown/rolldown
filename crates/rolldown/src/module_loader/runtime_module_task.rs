@@ -79,6 +79,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     let mut sourcemap_chain = vec![];
     let mut side_effects: Option<HookSideEffects> = None;
     let mut module_type = ModuleType::Js;
+    let mut represent_type = None;
     let mut code_changed_by_plugins: Option<Vec<String>> = Some(vec![]);
 
     let source: ArcStr = self
@@ -91,6 +92,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         &mut sourcemap_chain,
         &mut side_effects,
         &mut module_type,
+        &mut represent_type,
         None,
         &mut code_changed_by_plugins,
       )
@@ -160,6 +162,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       debug_id: stabilize_id(RUNTIME_MODULE_KEY, &self.ctx.options.cwd),
       exec_order: u32::MAX,
       module_type,
+      represent_type,
 
       ecma_view: EcmaView {
         source,

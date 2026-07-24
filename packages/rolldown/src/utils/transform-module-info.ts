@@ -19,6 +19,7 @@ export function transformModuleInfo(info: BindingModuleInfo, option: ModuleOptio
     exports: info.exports,
     isEntry: info.isEntry,
     inputFormat: info.inputFormat,
+    representType: info.representType,
     ...option,
   };
 }

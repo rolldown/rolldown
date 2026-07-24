@@ -245,6 +245,10 @@ pub struct BindingHookJsLoadOutput {
   pub map: Option<String>,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
   pub module_side_effects: Option<BindingHookSideEffects>,
+  #[napi(
+    ts_type = "'js' | 'json' | 'text' | 'base64' | 'dataurl' | 'binary' | 'empty' | 'url' | 'copy'"
+  )]
+  pub represent_type: Option<String>,
 }
 
 impl From<HookLoadOutput> for BindingHookJsLoadOutput {
@@ -253,6 +257,7 @@ impl From<HookLoadOutput> for BindingHookJsLoadOutput {
       code: BindingSharedString::from(value.code),
       map: value.map.map(|map| map.to_json_string()),
       module_side_effects: value.side_effects.map(Into::into),
+      represent_type: value.represent_type.map(|value| value.to_string()),
     }
   }
 }

@@ -68,12 +68,18 @@ export type ModuleTypes = Record<
   | 'tsx'
   | 'json'
   | 'text'
+  /** Deprecated: use `representType: 'base64'` in a plugin hook instead. */
   | 'base64'
+  /** Deprecated: use `representType: 'dataurl'` in a plugin hook instead. */
   | 'dataurl'
+  /** Deprecated: use `representType: 'binary'` in a plugin hook instead. */
   | 'binary'
+  /** Deprecated: use `representType: 'empty'` in a plugin hook instead. */
   | 'empty'
   | 'css'
+  /** Deprecated: use `representType: 'url'` in a plugin hook instead. */
   | 'asset'
+  /** Deprecated: use `representType: 'copy'` in a plugin hook instead. */
   | 'copy'
 >;
 
@@ -511,6 +517,10 @@ export interface InputOptions {
    * Maps file patterns to module types, controlling how files are processed.
    *
    * This is conceptually similar to [esbuild's `loader`](https://esbuild.github.io/api/#loader) option, allowing you to specify how each file extensions should be handled.
+   *
+   * The representation-oriented values `base64`, `dataurl`, `binary`, `empty`,
+   * `asset`, and `copy` are deprecated. Return `representType` from a plugin
+   * hook instead; `asset` maps to `representType: 'url'`.
    *
    * See [the In-Depth Guide](https://rolldown.rs/in-depth/module-types) for more details.
    *

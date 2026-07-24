@@ -15,7 +15,7 @@ import {
   bindingifyPluginHookMeta,
   type PluginHookWithBindingExt,
 } from './bindingify-plugin-hook-meta';
-import { PluginContextImpl } from './plugin-context';
+import { createPluginContext } from './plugin-context';
 
 export function bindingifyRenderStart(
   args: BindingifyPluginArgs,
@@ -29,15 +29,7 @@ export function bindingifyRenderStart(
   return {
     plugin: async (ctx, opts) => {
       handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        createPluginContext(args, ctx),
         args.pluginContextData.getOutputOptions(opts),
         args.pluginContextData.getInputOptions(opts),
       );
@@ -82,15 +74,7 @@ export function bindingifyRenderChunk(
       }
 
       const ret = await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        createPluginContext(args, ctx),
         code,
         transformRenderedChunk(chunk),
         args.pluginContextData.getOutputOptions(opts),
@@ -174,18 +158,7 @@ export function bindingifyAugmentChunkHash(
 
   return {
     plugin: async (ctx, chunk) => {
-      return handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        transformRenderedChunk(chunk),
-      );
+      return handler.call(createPluginContext(args, ctx), transformRenderedChunk(chunk));
     },
     meta: bindingifyPluginHookMeta(meta),
   };
@@ -202,18 +175,7 @@ export function bindingifyResolveFileUrl(
 
   return {
     plugin: async (ctx, resolveFileUrlArgs) => {
-      return handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        resolveFileUrlArgs,
-      );
+      return handler.call(createPluginContext(args, ctx), resolveFileUrlArgs);
     },
     meta: bindingifyPluginHookMeta(meta),
   };
@@ -230,18 +192,7 @@ export function bindingifyRenderError(
 
   return {
     plugin: async (ctx, err) => {
-      handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        aggregateBindingErrorsIntoJsError(err),
-      );
+      handler.call(createPluginContext(args, ctx), aggregateBindingErrorsIntoJsError(err));
     },
     meta: bindingifyPluginHookMeta(meta),
   };
@@ -262,15 +213,7 @@ export function bindingifyGenerateBundle(
         updated: new Set(),
         deleted: new Set(),
       } as ChangedOutputs;
-      const context = new PluginContextImpl(
-        args.outputOptions,
-        ctx,
-        args.plugin,
-        args.pluginContextData,
-        args.onLog,
-        args.logLevel,
-        args.watchMode,
-      );
+      const context = createPluginContext(args, ctx);
       const output = transformToOutputBundle(context, unwrapBindingResult(bundle), changed);
       await handler.call(context, args.pluginContextData.getOutputOptions(opts), output, isWrite);
       return collectChangedBundle(changed, output);
@@ -294,15 +237,7 @@ export function bindingifyWriteBundle(
         updated: new Set(),
         deleted: new Set(),
       } as ChangedOutputs;
-      const context = new PluginContextImpl(
-        args.outputOptions,
-        ctx,
-        args.plugin,
-        args.pluginContextData,
-        args.onLog,
-        args.logLevel,
-        args.watchMode,
-      );
+      const context = createPluginContext(args, ctx);
       const output = transformToOutputBundle(context, unwrapBindingResult(bundle), changed);
       await handler.call(context, args.pluginContextData.getOutputOptions(opts), output);
       return collectChangedBundle(changed, output);
@@ -323,15 +258,7 @@ export function bindingifyCloseBundle(
   return {
     plugin: async (ctx, err) => {
       await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        createPluginContext(args, ctx),
         err ? aggregateBindingErrorsIntoJsError(err) : undefined,
       );
     },
@@ -356,18 +283,7 @@ function bindingifyAddonHook(
         return handler;
       }
 
-      return handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        transformRenderedChunk(chunk),
-      );
+      return handler.call(createPluginContext(args, ctx), transformRenderedChunk(chunk));
     },
     meta: bindingifyPluginHookMeta(meta),
   };

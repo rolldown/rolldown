@@ -3,7 +3,6 @@ import path from 'node:path';
 import type {
   BindingHookFilter,
   BindingHookResolveIdOutput,
-  BindingPluginContext,
   BindingPluginOptions,
 } from '../binding.cjs';
 import { RolldownMagicString } from '../binding-magic-string';
@@ -28,23 +27,8 @@ import {
 } from './bindingify-plugin-hook-meta';
 import type { PluginHooks, SourceDescription } from './index';
 import { LoadPluginContextImpl } from './load-plugin-context';
-import { PluginContextImpl } from './plugin-context';
+import { createPluginContext } from './plugin-context';
 import { TransformPluginContextImpl } from './transform-plugin-context';
-
-function createPluginContext(
-  args: BindingifyPluginArgs,
-  ctx: BindingPluginContext,
-): PluginContextImpl {
-  return new PluginContextImpl(
-    args.outputOptions,
-    ctx,
-    args.plugin,
-    args.pluginContextData,
-    args.onLog,
-    args.logLevel,
-    args.watchMode,
-  );
-}
 
 export function bindingifyBuildStart(
   args: BindingifyPluginArgs,

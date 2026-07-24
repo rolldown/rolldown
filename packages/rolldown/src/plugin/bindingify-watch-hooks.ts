@@ -6,7 +6,7 @@ import {
   type PluginHookWithBindingExt,
 } from './bindingify-plugin-hook-meta';
 import type { ChangeEvent } from './index';
-import { PluginContextImpl } from './plugin-context';
+import { createPluginContext } from './plugin-context';
 
 export function bindingifyWatchChange(
   args: BindingifyPluginArgs,
@@ -19,19 +19,7 @@ export function bindingifyWatchChange(
 
   return {
     plugin: async (ctx, id, event) => {
-      await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        id,
-        { event: event as ChangeEvent },
-      );
+      await handler.call(createPluginContext(args, ctx), id, { event: event as ChangeEvent });
     },
     meta: bindingifyPluginHookMeta(meta),
   };
@@ -48,17 +36,7 @@ export function bindingifyCloseWatcher(
 
   return {
     plugin: async (ctx) => {
-      await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-      );
+      await handler.call(createPluginContext(args, ctx));
     },
     meta: bindingifyPluginHookMeta(meta),
   };

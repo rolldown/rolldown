@@ -1,10 +1,29 @@
 {
   "extends": "../../../tsconfig.json",
-  "include": ["src/*", "src/**/*", "**/_config.ts", "**/*.test.ts", "**/*.test-d.ts"],
+  "include": [
+    "src/*",
+    "src/**/*",
+    "**/_config.ts",
+    "**/*.test.ts",
+    "**/*.test-d.ts",
+    // Ambient types (e.g. `ImportMeta.browserBuild`) for the `../src` files
+    // pulled in through the `@src/*` alias below.
+    "../src/types.d.ts"
+  ],
   "compilerOptions": {
     "types": ["node", "vite/client"],
-    "rootDir": "./",
+    // The `@src/*` alias below pulls files from `../src` into this program,
+    // so the root directory must cover the whole package.
+    "rootDir": "../",
     "allowJs": true,
-    "isolatedDeclarations": false
+    "isolatedDeclarations": false,
+    // `../src` uses legacy decorators (see ../tsconfig.json); keep both
+    // programs in agreement so the aliased files type-check the same way.
+    "experimentalDecorators": true,
+    // Mirrors the `@src` alias in vitest.config.mts so type checking (and
+    // knip's import resolution) can follow `@src/*` imports.
+    "paths": {
+      "@src/*": ["../src/*"]
+    }
   }
 }

@@ -7,7 +7,30 @@ import { rolldown } from '../api/rolldown';
 import type { ConfigExport } from './define-config';
 import type { OutputChunk } from '../types/rolldown-output';
 
-async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<string> {
+interface BundledConfig {
+  /** Absolute path of the generated entry chunk. */
+  entryFile: string;
+  /** Absolute paths of every file the config build emitted. */
+  generatedFiles: string[];
+}
+
+/**
+ * Remove every file the config build emitted, collecting instead of throwing so
+ * a cleanup failure never hides the failure that triggered the cleanup.
+ */
+async function removeGeneratedFiles(generatedFiles: string[]): Promise<unknown[]> {
+  const errors: unknown[] = [];
+  for (const generatedFile of generatedFiles) {
+    try {
+      await fs.promises.rm(generatedFile, { force: true });
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  return errors;
+}
+
+async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<BundledConfig> {
   const dirnameVarName = 'injected_original_dirname';
   const filenameVarName = 'injected_original_filename';
   const importMetaUrlVarName = 'injected_original_import_meta_url';
@@ -44,19 +67,57 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<strin
       },
     ],
   });
+  // The generated module has to sit next to the original config file: configs may
+  // keep runtime-relative resolution that Rolldown leaves untouched (for example
+  // `require.resolve('./helper')`), and Node resolves those against the directory
+  // the generated file lives in. Writing into a nested temporary directory would
+  // break them, so every emitted file is tracked and removed individually instead.
   const outputDir = path.dirname(configFile);
-  const result = await bundle.write({
-    dir: outputDir,
-    format: isEsm ? 'esm' : 'cjs',
-    sourcemap: 'inline',
-    // respect the original file extension, mts -> mjs, cts -> cjs
-    // mts should be generate mjs, it avoid add `type: module` at package.json
-    entryFileNames: `rolldown.config.[hash]${path.extname(configFile).replace('ts', 'js')}`,
-  });
-  const fileName = result.output.find(
-    (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
-  )!.fileName;
-  return path.join(outputDir, fileName);
+  let entryFile: string | undefined;
+  let generatedFiles: string[] = [];
+  let bundleFailed = false;
+  let operationError: unknown;
+  try {
+    const result = await bundle.write({
+      dir: outputDir,
+      format: isEsm ? 'esm' : 'cjs',
+      codeSplitting: false,
+      sourcemap: 'inline',
+      // respect the original file extension, mts -> mjs, cts -> cjs
+      // mts should be generate mjs, it avoid add `type: module` at package.json
+      entryFileNames: `rolldown.config.[hash]${path.extname(configFile).replace('ts', 'js')}`,
+    });
+    generatedFiles = result.output.map((output) => path.join(outputDir, output.fileName));
+    const fileName = result.output.find(
+      (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
+    )?.fileName;
+    if (fileName === undefined) {
+      throw new Error(`Rolldown did not emit an entry chunk for config file "${configFile}"`);
+    }
+    entryFile = path.join(outputDir, fileName);
+  } catch (error) {
+    bundleFailed = true;
+    operationError = error;
+  }
+
+  let closeFailed = false;
+  let closeError: unknown;
+  try {
+    await bundle.close();
+  } catch (error) {
+    closeFailed = true;
+    closeError = error;
+  }
+
+  const errors: unknown[] = [];
+  if (bundleFailed) errors.push(operationError);
+  if (closeFailed) errors.push(closeError);
+  if (errors.length > 0) {
+    errors.push(...(await removeGeneratedFiles(generatedFiles)));
+  }
+
+  throwCollectedErrors(errors, 'Config bundling and cleanup both failed');
+  return { entryFile: entryFile!, generatedFiles };
 }
 
 const SUPPORTED_JS_CONFIG_FORMATS = ['.js', '.mjs', '.cjs'];
@@ -76,12 +137,31 @@ async function findConfigFileNameInCwd(): Promise<string> {
 
 async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   const isEsm = isFilePathESM(configFile);
-  const file = await bundleTsConfig(configFile, isEsm);
+  const { entryFile, generatedFiles } = await bundleTsConfig(configFile, isEsm);
+  let config: ConfigExport | undefined;
+  // Track completion separately from the rejection value: a config is free to
+  // reject with any value, `undefined` included, and that still is a failure.
+  let imported = false;
+  let importError: unknown;
   try {
-    return (await import(pathToFileURL(file).href)).default;
-  } finally {
-    fs.unlink(file, () => {}); // Ignore errors
+    config = (await import(pathToFileURL(entryFile).href)).default;
+    imported = true;
+  } catch (error) {
+    importError = error;
   }
+
+  const errors: unknown[] = [];
+  if (!imported) errors.push(importError);
+  errors.push(...(await removeGeneratedFiles(generatedFiles)));
+  throwCollectedErrors(errors, 'Config import and cleanup both failed');
+  return config!;
+}
+
+function throwCollectedErrors(errors: unknown[], message: string): void {
+  if (errors.length > 1) {
+    throw new AggregateError(errors, message, { cause: errors[0] });
+  }
+  if (errors.length === 1) throw errors[0];
 }
 
 function isFilePathESM(filePath: string): boolean {

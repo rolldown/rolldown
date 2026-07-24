@@ -1,0 +1,11 @@
+{
+  "_comment": "With preserveModules, `..y.js` becomes its own chunk whose derived [name] is `..y` — a path fragment — which is rejected at render time, matching Rollup's isPathFragment VALIDATION_ERROR. inlineConst is disabled so the module is kept as a separate chunk (as in issue #5557).",
+  "config": {
+    "preserveModules": true,
+    "optimization": {
+      "inlineConst": false
+    }
+  },
+  "expectError": true,
+  "expectExecuted": false
+}

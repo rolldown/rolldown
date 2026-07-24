@@ -149,6 +149,7 @@ When `load` is called for a proxy module:
 
 1. Only ids present in `lazy_entries` are served at all — any other `?rolldown-lazy=1` id falls through to `Ok(None)`
 2. If in `fetched_entries` → return fetched template; otherwise → return stub template
+3. User-land build hooks are skipped for proxy ids (`?rolldown-lazy=1`) so plugins only see real modules; the lazy plugin itself still runs to serve the stub/fetched template.
 
 **Security gate — unknown module rejection (#9969)**: the id passed to `compileEntry` / `compile_lazy_entry` is treated purely as a lookup key into the build cache, never resolved as a filesystem path. An id not present from a prior build is rejected in `HmrStage::compile_lazy_entry` with `Lazy entry module not found in cache` — so a malicious `/@vite/lazy` request cannot bundle an arbitrary file (analogous to Vite's `server.fs.strict`; pinned by `packages/rolldown/tests/dev/dev-lazy-compile.test.ts`). Note the ordering: `DevEngine::compile_lazy_entry` calls `mark_as_fetched` unconditionally **before** this validation, so an unknown id still lands in `fetched_entries` (harmless, but worth knowing when debugging).
 

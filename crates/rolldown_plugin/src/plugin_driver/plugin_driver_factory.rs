@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ModuleIdx, SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
+  ModuleIdx, PluginIdx, SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
 };
 use rolldown_resolver::Resolver;
 use rolldown_utils::dashmap::FxDashSet;
@@ -58,10 +58,13 @@ impl PluginDriverFactory {
     } else {
       None
     };
+    let should_skip_user_plugins_for_lazy_proxy_modules =
+      options.experimental.dev_mode.as_ref().and_then(|dev_mode| dev_mode.lazy) == Some(true);
 
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(self.plugins.len());
       let mut index_contexts = IndexPluginContext::with_capacity(self.plugins.len());
+      let mut lazy_compilation_plugin_idx: Option<PluginIdx> = None;
 
       self.plugins.iter().for_each(|plugin| {
         let plugin_idx = index_plugins.push(Arc::clone(plugin));
@@ -73,6 +76,9 @@ impl PluginDriverFactory {
           if !plugin_name.starts_with("builtin:") {
             collector.register_plugin(plugin_idx, ArcStr::from(plugin_name.as_ref()));
           }
+        }
+        if lazy_compilation_plugin_idx.is_none() && plugin_name == "lazy-compilation" {
+          lazy_compilation_plugin_idx = Some(plugin_idx);
         }
 
         index_contexts.push(PluginContext::Native(Arc::new(NativePluginContextImpl {
@@ -97,6 +103,8 @@ impl PluginDriverFactory {
         hook_orders: PluginHookOrders::new(&index_plugins, &plugin_usage_vec),
         plugins: index_plugins,
         contexts: index_contexts,
+        should_skip_user_plugins_for_lazy_proxy_modules,
+        lazy_compilation_plugin_idx,
         file_emitter: Arc::clone(file_emitter),
         watch_files,
         module_infos,

@@ -515,4 +515,25 @@ mod test {
     assert!(matcher.test("/b/src/foo.ts", "/b"));
     assert!(!matcher.test("/a/src/foo.ts", "/b"));
   }
+
+  #[test]
+  fn id_matcher_cwd_independent_glob_is_reused_across_cwds() {
+    // A `**`-prefixed glob resolves without consulting cwd, so it is cached once and
+    // handed back under *every* cwd — the only arm that reuses a single entry that
+    // way. That reuse is safe only while `get_matcher_string` and
+    // `glob_matcher_depends_on_cwd` agree on which globs read cwd; should they ever
+    // drift apart, this arm would keep matching against whichever directory happened
+    // to be current when the cache was first filled, with nothing to catch it.
+    let matcher = IdMatcher::from(StringOrRegex::String("**/*.ts".to_string()));
+    // Fill the cache under `/a`.
+    assert!(matcher.test("/a/src/foo.ts", "/a"));
+    // The same instance under a different cwd must answer identically: matching is
+    // decided by the glob alone, never by the cwd the entry was resolved for.
+    assert!(matcher.test("/b/src/foo.ts", "/b"));
+    assert!(matcher.test("/b/src/foo.ts", "/a"));
+    assert!(matcher.test("/a/src/foo.ts", "/b"));
+    // A non-match stays a non-match under either cwd.
+    assert!(!matcher.test("/a/src/foo.js", "/a"));
+    assert!(!matcher.test("/a/src/foo.js", "/b"));
+  }
 }

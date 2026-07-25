@@ -42,15 +42,16 @@ pub enum FilterExprKind {
 fn cost_rank(expr: &FilterExpr) -> u32 {
   match expr {
     FilterExpr::ModuleType(_) => 0,
-    FilterExpr::Id(_) | FilterExpr::ImporterId(_) => 1,
-    // The first `Query` eval scans/decodes the id's URL and collects its params into a
-    // map, so rank it *above* the cheap `Id`/`ModuleType` checks — they should get to
-    // short-circuit before that parse is forced.
-    FilterExpr::Query(..) => 2,
+    // `Id`/`ImporterId` test the (short) path. The first `Query` eval additionally
+    // scans/decodes the id's URL into a param map — but that map is cached on the
+    // shared [`InterpreterCtx`], so an earlier top-level rule may already have warmed
+    // it and left `Query` cheaper than an `Id` regex. Neither is reliably cheaper, so
+    // give them one tier and let the stable sort preserve their authored order.
+    FilterExpr::Id(_) | FilterExpr::ImporterId(_) | FilterExpr::Query(..) => 1,
     // Both `Code` variants scan the full source and neither is reliably cheaper — an
     // anchored regex can fail fast, while an absent string still scans everything — so
     // give them one tier and let the stable sort preserve their authored order.
-    FilterExpr::Code(_) => 3,
+    FilterExpr::Code(_) => 2,
     // A wrapper costs whatever its (single) inner expression costs.
     FilterExpr::Not(inner) | FilterExpr::CleanUrl(inner) => cost_rank(inner),
     // Rank a compound by its *costliest* reachable leaf, not its cheapest: an operand
@@ -71,6 +72,12 @@ fn cost_rank(expr: &FilterExpr) -> u32 {
 /// [`InterpreterCtx::parsed_url_cache`], is keyed by the (fixed) id's query and so
 /// is order-independent. Reordering only ever moves *cheaper* operands earlier, so
 /// it can only make short-circuiting skip an expensive leaf more often, never less.
+///
+/// Reordering does change *which* leaves get evaluated, so every leaf must be total
+/// over the inputs a hook can supply — a leaf whose input is unavailable evaluates to
+/// "no match" rather than panicking (see [`filter_expr_interpreter`]). Otherwise
+/// moving, say, an `Id` leaf ahead of a `Code` leaf that used to short-circuit first
+/// would turn a `renderChunk` filter (which has no `id`) into a crash.
 fn optimize_filter_expr(expr: &mut FilterExpr) {
   match expr {
     FilterExpr::And(args) | FilterExpr::Or(args) => {
@@ -88,6 +95,12 @@ fn optimize_filter_expr(expr: &mut FilterExpr) {
   }
 }
 
+/// Every leaf is total over the inputs a hook can supply: hooks pass `None` for the
+/// inputs they don't have (`renderChunk` has no `id`, `resolveId`/`load` have no
+/// `code`), and a leaf reading a missing input reports "no match" instead of
+/// panicking. That keeps the expression a pure boolean function of its leaves, which
+/// is what makes the operand reordering in [`optimize_filter_expr`] safe: the result
+/// no longer depends on which operands short-circuiting happens to reach.
 pub fn filter_expr_interpreter<'a>(
   expr: &FilterExpr,
   id: Option<&'a str>,
@@ -108,10 +121,12 @@ pub fn filter_expr_interpreter<'a>(
       !filter_expr_interpreter(inner, id, code, module_type, importer_id, cwd, ctx)
     }
     FilterExpr::Code(pattern) => {
-      pattern.test(code.expect("`code` should not be none"), &StringOrRegexMatchKind::Code)
+      // When code is None (e.g. the `resolveId`/`load` hooks), return false (no match)
+      code.is_some_and(|code| pattern.test(code, &StringOrRegexMatchKind::Code))
     }
     FilterExpr::Id(id_pattern) => {
-      id_pattern.test(id.expect("`id` should not be none"), &StringOrRegexMatchKind::Id(cwd))
+      // When id is None (e.g. the `renderChunk` hook), return false (no match)
+      id.is_some_and(|id| id_pattern.test(id, &StringOrRegexMatchKind::Id(cwd)))
     }
     FilterExpr::ImporterId(id_pattern) => {
       // When importer_id is None (e.g., entry files), return false (no match)
@@ -133,8 +148,10 @@ pub fn filter_expr_interpreter<'a>(
       ctx,
     ),
     FilterExpr::Query(key, value) => {
+      // When id is None (e.g. the `renderChunk` hook) there is no query to test
+      let Some(id) = id else { return false };
       if ctx.parsed_url_cache.is_none() {
-        let query_string = get_query(id.expect("`id` should not be none"));
+        let query_string = get_query(id);
         let cache = form_urlencoded::parse(query_string.as_bytes())
           .into_iter()
           .map(|(k, v)| (k.to_string(), v))
@@ -404,19 +421,48 @@ mod test {
   }
 
   #[test]
-  fn optimize_keeps_query_after_id() {
-    // The first `Query` eval parses the id's URL and builds a param map, so a cheap
-    // `Id` check must run (and get to short-circuit) before that parse is forced —
-    // even though `Query` has fewer nodes, it is not cheaper to evaluate.
+  fn optimize_keeps_id_and_query_in_authored_order() {
+    // The first `Query` eval parses the id's URL into a param map, but that map is
+    // cached on the shared `InterpreterCtx` and an earlier top-level rule may already
+    // have warmed it — so `Query` is not reliably more expensive than an `Id` regex.
+    // Their authored order must survive, in both directions.
+    let build = |query_first: bool| {
+      let id = FilterExpr::Id(StringOrRegex::Regex("target".into()));
+      let query = FilterExpr::Query("raw".to_string(), QueryValue::Boolean(true));
+      FilterExpr::And(if query_first { vec![query, id] } else { vec![id, query] })
+    };
+    for query_first in [false, true] {
+      let mut expr = build(query_first);
+      optimize_filter_expr(&mut expr);
+      match &expr {
+        FilterExpr::And(args) if query_first => {
+          assert!(matches!(args[0], FilterExpr::Query(..)), "authored order lost: {args:?}");
+          assert!(matches!(args[1], FilterExpr::Id(_)));
+        }
+        FilterExpr::And(args) => {
+          assert!(matches!(args[0], FilterExpr::Id(_)), "authored order lost: {args:?}");
+          assert!(matches!(args[1], FilterExpr::Query(..)));
+        }
+        other => panic!("expected And, got {other:?}"),
+      }
+    }
+  }
+
+  #[test]
+  fn optimize_keeps_id_and_query_ahead_of_code() {
+    // Both still outrank `Code`: whatever a path or query test costs, it beats
+    // scanning the entire module source.
     let mut expr = FilterExpr::And(vec![
-      FilterExpr::Id(StringOrRegex::Regex("target".into())),
+      FilterExpr::Code(StringOrRegex::Regex("needle".into())),
       FilterExpr::Query("raw".to_string(), QueryValue::Boolean(true)),
+      FilterExpr::Id(StringOrRegex::Regex("target".into())),
     ]);
     optimize_filter_expr(&mut expr);
     match &expr {
       FilterExpr::And(args) => {
-        assert!(matches!(args[0], FilterExpr::Id(_)), "Id must precede Query, got {args:?}");
-        assert!(matches!(args[1], FilterExpr::Query(..)));
+        assert!(matches!(args[0], FilterExpr::Query(..)), "Code must sort last, got {args:?}");
+        assert!(matches!(args[1], FilterExpr::Id(_)));
+        assert!(matches!(args[2], FilterExpr::Code(_)));
       }
       other => panic!("expected And, got {other:?}"),
     }
@@ -524,5 +570,72 @@ mod test {
       }
       other => panic!("expected Or, got {other:?}"),
     }
+  }
+
+  fn parse_reversed(mut tokens: Vec<Token>) -> super::FilterExprKind {
+    tokens.reverse();
+    parse(tokens).unwrap()
+  }
+
+  #[test]
+  fn missing_id_is_a_non_match_not_a_panic() {
+    // `renderChunk` evaluates filters with `id: None`, and its binding accepts an
+    // arbitrary `TopLevelFilterExpression[]`, so `id`/`query` leaves are reachable
+    // there. Reordering hoists them ahead of the `Code` leaf that used to
+    // short-circuit first, so they must evaluate to "no match" rather than panic.
+    let code_then_id = parse_reversed(vec![
+      Token::Include,
+      Token::And(2u32),
+      Token::Code,
+      Token::Regex("__never__".into()),
+      Token::Id,
+      Token::Regex("target".into()),
+    ]);
+    assert!(!filter_exprs_interpreter(
+      &[code_then_id],
+      None,
+      Some("console.log('test')"),
+      None,
+      None,
+      ".",
+    ));
+
+    let code_then_query = parse_reversed(vec![
+      Token::Include,
+      Token::And(2u32),
+      Token::Code,
+      Token::Regex("__never__".into()),
+      Token::Query,
+      Token::String("raw".to_string()),
+      Token::Boolean(true),
+    ]);
+    assert!(!filter_exprs_interpreter(
+      &[code_then_query],
+      None,
+      Some("console.log('test')"),
+      None,
+      None,
+      ".",
+    ));
+  }
+
+  #[test]
+  fn missing_code_is_a_non_match_not_a_panic() {
+    // Mirror case: `resolveId`/`load` evaluate filters with `code: None`, so a `code`
+    // leaf that survives short-circuiting must not panic either.
+    let build = || {
+      parse_reversed(vec![
+        Token::Include,
+        Token::Or(2u32),
+        Token::Code,
+        Token::Regex("import".into()),
+        Token::Id,
+        Token::Regex("target".into()),
+      ])
+    };
+    // The `id` leaf decides the match; the unavailable `code` leaf is never reached.
+    assert!(filter_exprs_interpreter(&[build()], Some("/target.js"), None, None, None, "."));
+    // Here it *is* reached, and reports no match instead of panicking.
+    assert!(!filter_exprs_interpreter(&[build()], Some("/other.js"), None, None, None, "."));
   }
 }

@@ -97,7 +97,7 @@ By default, Rolldown tries to keep the semantics of `require` and does not conve
 
 ::: tip Still want to convert `require` to `import`?
 
-If you want to convert `require` calls to `import` statements, you can use [the built-in `esmExternalRequirePlugin`](/builtin-plugins/esm-external-require).
+If you want to convert `require` calls to `import` statements, you can use [the built-in `esmExternalRequirePlugin`](/builtin-plugins/esm-external-require). Note that the plugin must own the externals it converts: list them in the plugin's `external` option, not in the top-level `external` option.
 
 :::
 

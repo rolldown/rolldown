@@ -86,10 +86,14 @@ pub fn filter_expr_interpreter<'a>(
       ctx,
     ),
     FilterExpr::Query(key, value) => {
-      // When id is None (e.g. the `renderChunk` hook) there is no query to test
-      let Some(id) = id else { return false };
       if ctx.parsed_url_cache.is_none() {
-        let query_string = get_query(id);
+        // When id is None (e.g. the `renderChunk` hook) there is no query at all —
+        // which is an *empty* query, not a missing one. Reporting "no match" for the
+        // whole leaf instead would make `query(k, false)` ("the id does not carry
+        // `?k`") disagree with the equivalent `not(query(k, true))`, and would leave
+        // `query(k, true)` and `query(k, false)` both false at once — a state no real
+        // id can produce, since they are exact complements everywhere else.
+        let query_string = id.map(get_query).unwrap_or("");
         let cache = form_urlencoded::parse(query_string.as_bytes())
           .into_iter()
           .map(|(k, v)| (k.to_string(), v))
@@ -376,6 +380,40 @@ mod test {
       ".",
       &mut InterpreterCtx::default()
     ));
+  }
+
+  #[test]
+  fn a_missing_id_reads_as_an_empty_query_not_a_dead_leaf() {
+    // `query(k, false)` asks "the id does not carry `?k`". With no id at all there is
+    // no query, so it holds — and must keep agreeing with the equivalent
+    // `not(query(k, true))`, and stay the exact complement of `query(k, true)`.
+    let eval = |expr: &FilterExpr| {
+      filter_expr_interpreter(
+        expr,
+        None,
+        Some("console.log('test')"),
+        None,
+        None,
+        ".",
+        &mut InterpreterCtx::default(),
+      )
+    };
+    let present = FilterExpr::Query("raw".to_string(), QueryValue::Boolean(true));
+    let absent = FilterExpr::Query("raw".to_string(), QueryValue::Boolean(false));
+
+    assert!(!eval(&present), "no id carries `?raw`");
+    assert!(eval(&absent), "`query(k, false)` holds when there is no query");
+    assert_eq!(
+      eval(&absent),
+      eval(&FilterExpr::Not(Box::new(FilterExpr::Query(
+        "raw".to_string(),
+        QueryValue::Boolean(true)
+      )))),
+      "`query(k, false)` must agree with `not(query(k, true))`"
+    );
+
+    // The string/regex variants have no key to compare against, so they still miss.
+    assert!(!eval(&FilterExpr::Query("raw".to_string(), QueryValue::String("1".to_string()))));
   }
 
   #[test]

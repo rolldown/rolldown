@@ -52,6 +52,7 @@
       "ignore": ["{cli,fixtures,stability}/**"], // lots of unlisted dependencies
       "ignoreUnresolved": ["./world"],
       "ignoreDependencies": [
+        "@rolldown/test-dual-format", // used in packages/rolldown/tests/builtin-plugin/vite-resolve.test.ts
         "@rolldown/test-side-effects-field", // used in packages/rolldown/tests/fixtures/plugin/context/resolve-side-effects
         "direct-graph-lib", // fixture dependency in packages/rolldown/tests/behaviors/emit-debug-data
         "duplicate-a", // fixture dependency in packages/rolldown/tests/behaviors/emit-debug-data

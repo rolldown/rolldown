@@ -34,6 +34,11 @@ pub enum FilterExprKind {
   Exclude(FilterExpr),
 }
 
+/// Every leaf is total over the inputs a hook can supply. Hooks pass `None` for the
+/// inputs they don't have — `renderChunk` has no `id`, `resolveId`/`load` have no
+/// `code` — and each hook's filter is typed as an arbitrary `TopLevelFilterExpression[]`,
+/// so a leaf reading an input its hook never supplies is reachable. Such a leaf reports
+/// "no match" instead of panicking.
 pub fn filter_expr_interpreter<'a>(
   expr: &FilterExpr,
   id: Option<&'a str>,
@@ -54,10 +59,12 @@ pub fn filter_expr_interpreter<'a>(
       !filter_expr_interpreter(inner, id, code, module_type, importer_id, cwd, ctx)
     }
     FilterExpr::Code(pattern) => {
-      pattern.test(code.expect("`code` should not be none"), &StringOrRegexMatchKind::Code)
+      // When code is None (e.g. the `resolveId`/`load` hooks), return false (no match)
+      code.is_some_and(|code| pattern.test(code, &StringOrRegexMatchKind::Code))
     }
     FilterExpr::Id(id_pattern) => {
-      id_pattern.test(id.expect("`id` should not be none"), &StringOrRegexMatchKind::Id(cwd))
+      // When id is None (e.g. the `renderChunk` hook), return false (no match)
+      id.is_some_and(|id| id_pattern.test(id, &StringOrRegexMatchKind::Id(cwd)))
     }
     FilterExpr::ImporterId(id_pattern) => {
       // When importer_id is None (e.g., entry files), return false (no match)
@@ -79,8 +86,10 @@ pub fn filter_expr_interpreter<'a>(
       ctx,
     ),
     FilterExpr::Query(key, value) => {
+      // When id is None (e.g. the `renderChunk` hook) there is no query to test
+      let Some(id) = id else { return false };
       if ctx.parsed_url_cache.is_none() {
-        let query_string = get_query(id.expect("`id` should not be none"));
+        let query_string = get_query(id);
         let cache = form_urlencoded::parse(query_string.as_bytes())
           .into_iter()
           .map(|(k, v)| (k.to_string(), v))
@@ -256,7 +265,7 @@ pub fn parse(mut tokens: Vec<Token>) -> anyhow::Result<FilterExprKind> {
 #[cfg(test)]
 mod test {
   use crate::{
-    filter_expression::{FilterExpr, InterpreterCtx, Token, filter_expr_interpreter},
+    filter_expression::{FilterExpr, InterpreterCtx, QueryValue, Token, filter_expr_interpreter},
     pattern_filter::StringOrRegex,
   };
 
@@ -338,6 +347,49 @@ mod test {
       None,
       None,
       ".",
+    ));
+  }
+
+  #[test]
+  fn missing_id_is_a_non_match_not_a_panic() {
+    // `renderChunk` evaluates filters with `id: None`, and `bindingifyRenderChunkFilter`
+    // accepts an arbitrary `TopLevelFilterExpression[]` (only `importerId` is rejected),
+    // so an `id`/`query` leaf is reachable there and must report "no match".
+    let id_only = FilterExpr::Id(StringOrRegex::Regex("target".into()));
+    assert!(!filter_expr_interpreter(
+      &id_only,
+      None,
+      Some("console.log('test')"),
+      None,
+      None,
+      ".",
+      &mut InterpreterCtx::default()
+    ));
+
+    let query_only = FilterExpr::Query("raw".to_string(), QueryValue::Boolean(true));
+    assert!(!filter_expr_interpreter(
+      &query_only,
+      None,
+      Some("console.log('test')"),
+      None,
+      None,
+      ".",
+      &mut InterpreterCtx::default()
+    ));
+  }
+
+  #[test]
+  fn missing_code_is_a_non_match_not_a_panic() {
+    // Mirror case: `resolveId`/`load` evaluate filters with `code: None`.
+    let code_only = FilterExpr::Code(StringOrRegex::Regex("import".into()));
+    assert!(!filter_expr_interpreter(
+      &code_only,
+      Some("/target.js"),
+      None,
+      None,
+      None,
+      ".",
+      &mut InterpreterCtx::default()
     ));
   }
 }

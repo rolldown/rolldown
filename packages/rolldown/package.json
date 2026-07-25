@@ -24,6 +24,8 @@
     "bin",
     "cli",
     "dist",
+    "LICENSE",
+    "THIRD-PARTY-LICENSE",
     "!dist/*.node"
   ],
   "type": "module",

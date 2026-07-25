@@ -23,6 +23,8 @@
   "files": [
     "bin",
     "dist",
+    "LICENSE",
+    "THIRD-PARTY-LICENSE",
     "!*/.tsbuildinfo"
   ],
   "type": "module",
@@ -31,6 +33,7 @@
   "types": "./dist/index.d.mts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.mts",
       "browser": "./dist/index.browser.mjs",
       "default": "./dist/index.mjs"
     },
@@ -62,7 +65,6 @@
     "build:debug": "pnpm run --filter rolldown build-browser-pkg:debug",
     "build:release": "pnpm run --filter rolldown build-browser-pkg:release",
     "build-node": "TARGET='browser' pnpm run --filter rolldown build-node",
-    "preinstall": "npx only-allow pnpm",
     "publint": "publint ."
   },
   "dependencies": {

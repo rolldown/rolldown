@@ -34,6 +34,11 @@ pub enum FilterExprKind {
   Exclude(FilterExpr),
 }
 
+/// Every leaf is total over the inputs a hook can supply. Hooks pass `None` for the
+/// inputs they don't have — `renderChunk` has no `id`, `resolveId`/`load` have no
+/// `code` — and each hook's filter is typed as an arbitrary `TopLevelFilterExpression[]`,
+/// so a leaf reading an input its hook never supplies is reachable. Such a leaf reports
+/// "no match" instead of panicking.
 pub fn filter_expr_interpreter<'a>(
   expr: &FilterExpr,
   id: Option<&'a str>,
@@ -54,10 +59,12 @@ pub fn filter_expr_interpreter<'a>(
       !filter_expr_interpreter(inner, id, code, module_type, importer_id, cwd, ctx)
     }
     FilterExpr::Code(pattern) => {
-      pattern.test(code.expect("`code` should not be none"), &StringOrRegexMatchKind::Code)
+      // When code is None (e.g. the `resolveId`/`load` hooks), return false (no match)
+      code.is_some_and(|code| pattern.test(code, &StringOrRegexMatchKind::Code))
     }
     FilterExpr::Id(id_pattern) => {
-      id_pattern.test(id.expect("`id` should not be none"), &StringOrRegexMatchKind::Id(cwd))
+      // When id is None (e.g. the `renderChunk` hook), return false (no match)
+      id.is_some_and(|id| id_pattern.test(id, &StringOrRegexMatchKind::Id(cwd)))
     }
     FilterExpr::ImporterId(id_pattern) => {
       // When importer_id is None (e.g., entry files), return false (no match)
@@ -80,7 +87,13 @@ pub fn filter_expr_interpreter<'a>(
     ),
     FilterExpr::Query(key, value) => {
       if ctx.parsed_url_cache.is_none() {
-        let query_string = get_query(id.expect("`id` should not be none"));
+        // When id is None (e.g. the `renderChunk` hook) there is no query at all —
+        // which is an *empty* query, not a missing one. Reporting "no match" for the
+        // whole leaf instead would make `query(k, false)` ("the id does not carry
+        // `?k`") disagree with the equivalent `not(query(k, true))`, and would leave
+        // `query(k, true)` and `query(k, false)` both false at once — a state no real
+        // id can produce, since they are exact complements everywhere else.
+        let query_string = id.map(get_query).unwrap_or("");
         let cache = form_urlencoded::parse(query_string.as_bytes())
           .into_iter()
           .map(|(k, v)| (k.to_string(), v))
@@ -256,7 +269,7 @@ pub fn parse(mut tokens: Vec<Token>) -> anyhow::Result<FilterExprKind> {
 #[cfg(test)]
 mod test {
   use crate::{
-    filter_expression::{FilterExpr, InterpreterCtx, Token, filter_expr_interpreter},
+    filter_expression::{FilterExpr, InterpreterCtx, QueryValue, Token, filter_expr_interpreter},
     pattern_filter::StringOrRegex,
   };
 
@@ -338,6 +351,83 @@ mod test {
       None,
       None,
       ".",
+    ));
+  }
+
+  #[test]
+  fn missing_id_is_a_non_match_not_a_panic() {
+    // `renderChunk` evaluates filters with `id: None`, and `bindingifyRenderChunkFilter`
+    // accepts an arbitrary `TopLevelFilterExpression[]` (only `importerId` is rejected),
+    // so an `id`/`query` leaf is reachable there and must report "no match".
+    let id_only = FilterExpr::Id(StringOrRegex::Regex("target".into()));
+    assert!(!filter_expr_interpreter(
+      &id_only,
+      None,
+      Some("console.log('test')"),
+      None,
+      None,
+      ".",
+      &mut InterpreterCtx::default()
+    ));
+
+    let query_only = FilterExpr::Query("raw".to_string(), QueryValue::Boolean(true));
+    assert!(!filter_expr_interpreter(
+      &query_only,
+      None,
+      Some("console.log('test')"),
+      None,
+      None,
+      ".",
+      &mut InterpreterCtx::default()
+    ));
+  }
+
+  #[test]
+  fn a_missing_id_reads_as_an_empty_query_not_a_dead_leaf() {
+    // `query(k, false)` asks "the id does not carry `?k`". With no id at all there is
+    // no query, so it holds — and must keep agreeing with the equivalent
+    // `not(query(k, true))`, and stay the exact complement of `query(k, true)`.
+    let eval = |expr: &FilterExpr| {
+      filter_expr_interpreter(
+        expr,
+        None,
+        Some("console.log('test')"),
+        None,
+        None,
+        ".",
+        &mut InterpreterCtx::default(),
+      )
+    };
+    let present = FilterExpr::Query("raw".to_string(), QueryValue::Boolean(true));
+    let absent = FilterExpr::Query("raw".to_string(), QueryValue::Boolean(false));
+
+    assert!(!eval(&present), "no id carries `?raw`");
+    assert!(eval(&absent), "`query(k, false)` holds when there is no query");
+    assert_eq!(
+      eval(&absent),
+      eval(&FilterExpr::Not(Box::new(FilterExpr::Query(
+        "raw".to_string(),
+        QueryValue::Boolean(true)
+      )))),
+      "`query(k, false)` must agree with `not(query(k, true))`"
+    );
+
+    // The string/regex variants have no key to compare against, so they still miss.
+    assert!(!eval(&FilterExpr::Query("raw".to_string(), QueryValue::String("1".to_string()))));
+  }
+
+  #[test]
+  fn missing_code_is_a_non_match_not_a_panic() {
+    // Mirror case: `resolveId`/`load` evaluate filters with `code: None`.
+    let code_only = FilterExpr::Code(StringOrRegex::Regex("import".into()));
+    assert!(!filter_expr_interpreter(
+      &code_only,
+      Some("/target.js"),
+      None,
+      None,
+      None,
+      ".",
+      &mut InterpreterCtx::default()
     ));
   }
 }

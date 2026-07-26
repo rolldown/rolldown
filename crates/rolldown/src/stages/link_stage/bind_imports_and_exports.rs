@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::hash::{Hash, Hasher};
 
 use arcstr::ArcStr;
 use indexmap::IndexSet;
@@ -38,7 +39,6 @@ struct ImportTracker {
 #[derive(Debug)]
 pub struct MatchingContext {
   tracker_stack: Vec<ImportTracker>,
-  circular_reexport: Option<(String, String)>,
 }
 
 impl MatchingContext {
@@ -64,7 +64,15 @@ impl PartialEq for MatchImportKindNormal {
   }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+// Must agree with the `PartialEq` above: `reexports` is deliberately excluded from both, so that
+// two resolutions of the same symbol hash and compare as one.
+impl Hash for MatchImportKindNormal {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.symbol.hash(state);
+  }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
 #[expect(clippy::box_collection)]
 pub enum MatchImportKind {
   // "sourceIndex" and "ref" are in use
@@ -73,11 +81,35 @@ pub enum MatchImportKind {
   Namespace { namespace_ref: SymbolRef },
   // Both "matchImportNormal" and "matchImportNamespace"
   NormalAndNamespace { namespace_ref: SymbolRef, alias: CompactStr },
-  // The import could not be evaluated due to a cycle
-  Cycle,
+  // The import could not be evaluated due to a cycle. Boxed to keep the enum small, since this
+  // carries everything needed to report the cycle if no other branch resolves the binding.
+  Cycle(Box<CircularReexportInfo>),
   // The import resolved to multiple symbols via "export * from"
   Ambiguous { symbol_ref: SymbolRef, potentially_ambiguous_symbol_refs: Box<Vec<SymbolRef>> },
   NoMatch,
+}
+
+/// Where a circular re-export was detected, so `CIRCULAR_REEXPORT` can be reported by whoever ends
+/// up keeping the `Cycle` as the final resolution.
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct CircularReexportInfo {
+  importer_id: String,
+  imported_specifier: String,
+}
+
+impl MatchImportKind {
+  /// The symbol a resolution binds to, if it has one. Used to describe a resolution when reporting
+  /// an ambiguous export.
+  fn bound_symbol(&self) -> Option<SymbolRef> {
+    match *self {
+      MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => Some(symbol),
+      MatchImportKind::Namespace { namespace_ref }
+      | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
+      MatchImportKind::Cycle(_) | MatchImportKind::Ambiguous { .. } | MatchImportKind::NoMatch => {
+        None
+      }
+    }
+  }
 }
 
 #[derive(Debug)]
@@ -988,7 +1020,7 @@ impl BindImportsAndExportsContext<'_> {
     // from an empty stack (and the ambiguous-reexport recursion gets its own cloned stack), so
     // clearing before each call preserves behavior while reusing this allocation instead of
     // allocating a fresh `Vec` per import.
-    let mut matching_ctx = MatchingContext { tracker_stack: Vec::new(), circular_reexport: None };
+    let mut matching_ctx = MatchingContext { tracker_stack: Vec::new() };
     for (imported_as_ref, named_import) in &module.named_imports {
       let match_import_span = tracing::trace_span!(
         "MATCH_IMPORT",
@@ -1041,7 +1073,6 @@ impl BindImportsAndExportsContext<'_> {
         }
       }
       matching_ctx.tracker_stack.clear();
-      matching_ctx.circular_reexport = None;
       let ret = self.match_import_with_export(
         self.index_modules,
         &mut matching_ctx,
@@ -1054,14 +1085,10 @@ impl BindImportsAndExportsContext<'_> {
       );
       tracing::trace!("Got match result {:?}", ret);
       match ret {
-        MatchImportKind::Cycle => {
-          let (importer_id, imported_specifier) = matching_ctx
-            .circular_reexport
-            .take()
-            .expect("cycle should always have a circular reexport diagnostic");
+        MatchImportKind::Cycle(info) => {
           self
             .diagnostics
-            .push(BuildDiagnostic::circular_reexport(importer_id, imported_specifier));
+            .push(BuildDiagnostic::circular_reexport(info.importer_id, info.imported_specifier));
         }
         MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
           let importee = self.index_modules[resolved_module_idx].stable_id().to_string();
@@ -1252,10 +1279,10 @@ impl BindImportsAndExportsContext<'_> {
         {
           // ResolveExport treats an in-progress (module, binding) request as null.
           let importer_module = &index_modules[tracker.importer];
-          let importer_id = importer_module.id().to_string();
-          let imported_specifier = tracker.imported.to_string();
-          ctx.circular_reexport = Some((importer_id, imported_specifier));
-          break 'tracking MatchImportKind::Cycle;
+          break 'tracking MatchImportKind::Cycle(Box::new(CircularReexportInfo {
+            importer_id: importer_module.id().to_string(),
+            imported_specifier: tracker.imported.to_string(),
+          }));
         }
       }
       ctx.tracker_stack.push(tracker.clone());
@@ -1303,10 +1330,7 @@ impl BindImportsAndExportsContext<'_> {
                 if let Some(resolved_module_idx) = rec.resolved_module {
                   let ambiguous_result = self.match_import_with_export(
                     index_modules,
-                    &mut MatchingContext {
-                      tracker_stack: ctx.tracker_stack.clone(),
-                      circular_reexport: None,
-                    },
+                    &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
                     ImportTracker {
                       importer: ambiguous_ref_owner.idx(),
                       importee: resolved_module_idx,
@@ -1378,36 +1402,35 @@ impl BindImportsAndExportsContext<'_> {
 
     tracing::trace!("ambiguous_results {:#?}", ambiguous_results);
     tracing::trace!("ret {:#?}", ret);
-    ambiguous_results.retain(|result| !matches!(result, MatchImportKind::Cycle));
-    let ret = if matches!(ret, MatchImportKind::Cycle) && !ambiguous_results.is_empty() {
-      ambiguous_results.pop().unwrap()
+    // `ResolveExport` skips a star branch that resolves to null instead of failing the whole
+    // lookup, so cycles must not take part in the agreement check below. Walking a cycle also
+    // re-visits the same module once per lap, which collects the surviving branches repeatedly —
+    // those duplicates would otherwise show up as repeated exporters, and repeated files, in the
+    // ambiguity diagnostic. An insertion-ordered set keeps source order for the "first branch
+    // wins" rule below while deduplicating in linear time, since a name supplied by N distinct
+    // `export *` sources would make a scan of the collected results quadratic.
+    let mut ambiguous_results = ambiguous_results
+      .into_iter()
+      .filter(|result| !matches!(result, MatchImportKind::Cycle(_)))
+      .collect::<FxIndexSet<_>>();
+
+    // A cycle resolves to null, so the binding is whatever the remaining star branches say. Per
+    // `ResolveExport` the first non-null branch wins and the rest only have to agree with it.
+    let ret = if matches!(ret, MatchImportKind::Cycle(_)) {
+      ambiguous_results.shift_remove_index(0).unwrap_or(ret)
     } else {
       ret
     };
 
-    for ambiguous_result in &ambiguous_results {
-      if *ambiguous_result != ret {
-        if let MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) = ret {
-          return MatchImportKind::Ambiguous {
-            symbol_ref: symbol,
-            potentially_ambiguous_symbol_refs: Box::new(
-              ambiguous_results
-                .iter()
-                .filter_map(|kind| match *kind {
-                  MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => Some(symbol),
-                  MatchImportKind::Namespace { namespace_ref }
-                  | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => {
-                    Some(namespace_ref)
-                  }
-                  _ => None,
-                })
-                .collect(),
-            ),
-          };
-        }
-
-        unreachable!("symbol should always exist");
-      }
+    if let Some(symbol_ref) = ret.bound_symbol()
+      && ambiguous_results.iter().any(|result| *result != ret)
+    {
+      return MatchImportKind::Ambiguous {
+        symbol_ref,
+        potentially_ambiguous_symbol_refs: Box::new(
+          ambiguous_results.iter().filter_map(MatchImportKind::bound_symbol).collect(),
+        ),
+      };
     }
 
     if let Module::Normal(importee) = &self.index_modules[tracker.importee] {

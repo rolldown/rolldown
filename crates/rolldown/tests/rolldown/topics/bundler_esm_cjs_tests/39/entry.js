@@ -1,2 +1,2 @@
 import * as foo from './foo.js';
-input.works = foo[Math.random() < 1 && 'default'] === void 0 && foo.bar === 123;
+input.works = foo[Math.random() < 1 && 'default'].bar === 123 && foo.bar === 123;

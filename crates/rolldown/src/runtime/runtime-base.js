@@ -61,7 +61,11 @@ export var __reExport = (target, mod, secondTarget) => (
 export var __toESM = (mod, isNodeMode, target) => (
   (target = mod != null ? __create(__getProtoOf(mod)) : {}),
   __copyProps(
-    isNodeMode || !mod || !mod.__esModule
+    // Some CommonJS modules set `__esModule` without shipping a `default`
+    // export (e.g. tslib's UMD build). Treating them as Babel output would
+    // leave `default` undefined, so only respect `__esModule` when an own
+    // `default` actually exists, like rollup's `getDefaultExportFromCjs`.
+    isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, 'default')
       ? __defProp(target, 'default', { value: mod, enumerable: true })
       : target,
     mod,

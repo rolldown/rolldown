@@ -85,14 +85,11 @@ impl AssetModulePlugin {
       return Ok(None);
     }
 
-    let reference_id = emit_asset(
-      &ctx,
-      clean_id,
-      |e| anyhow::anyhow!("Failed to read asset module {clean_id}: {e}"),
-      |reference_id| ctx.associate_module_with_file_ref(args.id, reference_id),
-      |clean_id| ctx.add_watch_file(clean_id),
-    )
+    let reference_id = emit_asset(&ctx, clean_id, |e| {
+      anyhow::anyhow!("Failed to read asset module {clean_id}: {e}")
+    })
     .await?;
+    ctx.associate_module_with_file_ref(args.id, &reference_id);
 
     // Return JS code that exports the asset placeholder via CJS.
     // Using `module.exports` ensures `require()` returns the string directly.

@@ -91,13 +91,9 @@ impl Plugin for CopyModulePlugin {
       return Ok(None);
     }
 
-    let reference_id = emit_asset(
-      ctx,
-      clean_id,
-      |e| anyhow::anyhow!("Failed to read copy module {}: {e}", resolved_id.id),
-      |_| {},
-      |clean_id| ctx.add_watch_file(clean_id),
-    )
+    let reference_id = emit_asset(ctx, clean_id, |e| {
+      anyhow::anyhow!("Failed to read copy module {}: {e}", resolved_id.id)
+    })
     .await?;
 
     // Return a prefixed external ID — the prefix will be rewritten in render_chunk

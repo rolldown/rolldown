@@ -13,8 +13,6 @@ pub async fn emit_asset(
   ctx: &PluginContext,
   clean_id: &str,
   read_error: impl FnOnce(std::io::Error) -> anyhow::Error,
-  after_emit: impl FnOnce(&str),
-  add_watch_file: impl FnOnce(&str),
 ) -> anyhow::Result<ArcStr> {
   let path = Path::new(clean_id);
   let bytes = tokio::fs::read(clean_id).await.map_err(read_error)?;
@@ -31,8 +29,7 @@ pub async fn emit_asset(
     })
     .await?;
 
-  after_emit(&reference_id);
-  add_watch_file(clean_id);
+  ctx.add_watch_file(clean_id);
 
   Ok(reference_id)
 }

@@ -437,11 +437,13 @@ impl PluginDriver {
         is_user_defined_entry: args.is_user_defined_entry,
         module_type: args.module_type,
       };
-      args.ast = plugin
+      let start = self.start_timing();
+      let result = plugin
         .call_transform_ast(ctx, transform_args)
         .instrument(debug_span!("transform_ast_hook", plugin_name = plugin.call_name().as_ref()))
-        .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+        .await;
+      self.record_timing(plugin_idx, HookKind::TransformAst, start);
+      args.ast = result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(args.ast)
   }

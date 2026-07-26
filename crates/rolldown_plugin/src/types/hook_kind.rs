@@ -60,6 +60,7 @@ pub enum HookKind {
   ResolveDynamicImport,
   Load,
   Transform,
+  TransformAst,
   ModuleParsed,
   BuildStart,
   BuildEnd,
@@ -81,6 +82,9 @@ pub enum HookKind {
   /// classifier. Not a plugin hook: the Rust core calls this user callback directly,
   /// so it is invisible to per-plugin timing yet can dominate a build.
   CodeSplittingName,
+  /// The `groups[].test` predicate, when given as a function. Runs in the same loop as
+  /// [`Self::CodeSplittingName`] and is invisible for the same reason.
+  CodeSplittingTest,
 }
 
 impl HookKind {
@@ -92,6 +96,7 @@ impl HookKind {
       | Self::ResolveDynamicImport
       | Self::Load
       | Self::Transform
+      | Self::TransformAst
       | Self::ModuleParsed => TimingSection::FetchModule,
       Self::Banner | Self::Footer | Self::Intro | Self::Outro => TimingSection::InstantiateChunks,
       Self::RenderChunk => TimingSection::RenderChunks,
@@ -107,7 +112,8 @@ impl HookKind {
       | Self::GenerateBundle
       | Self::WriteBundle
       | Self::CloseBundle
-      | Self::CodeSplittingName => TimingSection::Serial,
+      | Self::CodeSplittingName
+      | Self::CodeSplittingTest => TimingSection::Serial,
     }
   }
 
@@ -118,6 +124,7 @@ impl HookKind {
       Self::ResolveDynamicImport => "resolveDynamicImport",
       Self::Load => "load",
       Self::Transform => "transform",
+      Self::TransformAst => "transformAst",
       Self::ModuleParsed => "moduleParsed",
       Self::BuildStart => "buildStart",
       Self::BuildEnd => "buildEnd",
@@ -136,6 +143,7 @@ impl HookKind {
       Self::WatchChange => "watchChange",
       Self::CloseWatcher => "closeWatcher",
       Self::CodeSplittingName => "codeSplitting groups[].name",
+      Self::CodeSplittingTest => "codeSplitting groups[].test",
     }
   }
 }

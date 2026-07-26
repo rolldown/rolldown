@@ -35,6 +35,9 @@ use crate::{
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
 
+/// One owner's accumulated estimate: the total, plus the per-hook breakdown behind it.
+type OwnerEstimate = (u64, Vec<(HookKind, u64)>);
+
 /// `micros` as a whole-percent share of the build. Clamped because a hook can overlap
 /// a section it is not part of — `pluginContext.load()` inside `buildStart` pulls
 /// module loading into the serially-measured span — which can push the total slightly
@@ -213,7 +216,10 @@ impl PluginDriver {
       return None;
     }
 
-    let mut by_owner: FxIndexMap<ArcStr, (u64, Vec<(HookKind, u64)>)> = FxIndexMap::default();
+    // Keyed on identity, not display name: two registrations of the same plugin are
+    // separate culprits, and merging them could clear the one-second floor that
+    // neither reached on its own. Names are resolved for display further down.
+    let mut by_owner: FxIndexMap<Option<PluginIdx>, OwnerEstimate> = FxIndexMap::default();
     for estimate in collector.estimate() {
       let owner = by_owner.entry(estimate.owner).or_default();
       owner.0 += estimate.estimated_micros;
@@ -231,10 +237,10 @@ impl PluginDriver {
 
     let result = rows
       .into_iter()
-      .map(|(name, (total_micros, mut hooks))| {
+      .map(|(owner, (total_micros, mut hooks))| {
         hooks.sort_by_key(|(_, micros)| std::cmp::Reverse(*micros));
         rolldown_error::PluginTimingInfo {
-          name: name.to_string(),
+          name: collector.owner_name(owner).to_string(),
           percent: percent_of(total_micros, total_build_micros),
           estimated_ms: total_micros / 1_000,
           // A lone hook would just repeat the row it sits under.

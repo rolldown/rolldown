@@ -9,18 +9,16 @@ use super::hook_kind::{HookKind, TimingSection};
 /// The estimated wall-clock time one hook of one owner cost the build.
 #[derive(Debug, Clone)]
 pub struct HookTimingEstimate {
-  /// The plugin the hook belongs to, or a label for callbacks the Rust core invokes
+  /// The plugin the hook belongs to, or `None` for callbacks the Rust core invokes
   /// directly rather than through a plugin.
-  pub owner: ArcStr,
+  ///
+  /// This is the plugin's identity, not its name. Two registrations of the same
+  /// plugin are distinct owners even though they display identically, so callers
+  /// must aggregate on this and resolve a name only for display — see
+  /// [`HookTimingCollector::owner_name`].
+  pub owner: Option<PluginIdx>,
   pub hook: HookKind,
   pub estimated_micros: u64,
-}
-
-/// Reported in place of a plugin name for callbacks invoked directly by the Rust
-/// core. They are still user code, just configured on the output options rather than
-/// in a plugin.
-fn core_owner() -> ArcStr {
-  arcstr::literal!("output options")
 }
 
 /// Collects timing information for plugin hooks.
@@ -147,12 +145,21 @@ impl HookTimingCollector {
             apportion(measured, section_hook_micros[section as usize], wall_micros)
           }
         };
-        let owner = owner.map_or_else(core_owner, |plugin_idx| {
-          self.plugin_names.get(&plugin_idx).map_or_else(ArcStr::new, |name| name.clone())
-        });
         Some(HookTimingEstimate { owner, hook, estimated_micros })
       })
       .collect()
+  }
+
+  /// The name to display for an owner. Callbacks the Rust core invokes directly are
+  /// still user code, just configured on the output options rather than in a plugin.
+  ///
+  /// Only for rendering — never key on this. Distinct plugins can share a name, and a
+  /// plugin is free to be named the same as the core label.
+  pub fn owner_name(&self, owner: Option<PluginIdx>) -> ArcStr {
+    owner.map_or_else(
+      || arcstr::literal!("output options"),
+      |plugin_idx| self.plugin_names.get(&plugin_idx).map_or_else(ArcStr::new, |name| name.clone()),
+    )
   }
 
   /// Clear all collected timings, keeping plugin registrations.
@@ -196,7 +203,7 @@ mod tests {
 
     let estimates = collector.estimate();
     assert_eq!(estimates.len(), 1);
-    assert_eq!(estimates[0].owner.as_str(), "output options");
+    assert_eq!(collector.owner_name(estimates[0].owner).as_str(), "output options");
     // Serial call sites need no boundary: the sum is already the elapsed time.
     assert_eq!(estimates[0].estimated_micros, 3_500);
   }
@@ -270,6 +277,44 @@ mod tests {
 
     let estimates = collector.estimate();
     assert_eq!(estimates.len(), 1);
-    assert_eq!(estimates[0].owner.as_str(), "my-plugin");
+    assert_eq!(collector.owner_name(estimates[0].owner).as_str(), "my-plugin");
+  }
+
+  #[test]
+  fn same_named_plugins_stay_distinct_owners() {
+    let collector = HookTimingCollector::default();
+    let first = PluginIdx::from_raw(0);
+    let second = PluginIdx::from_raw(1);
+    collector.register_plugin(first, arcstr::literal!("my-plugin"));
+    collector.register_plugin(second, arcstr::literal!("my-plugin"));
+
+    collector.record(Some(first), HookKind::Transform, 1_000);
+    collector.record(Some(second), HookKind::Transform, 3_000);
+    collector.record_section_micros(TimingSection::FetchModule, 4_000);
+
+    // Two registrations of one plugin are separate culprits. Keying on the display
+    // name would fuse them into a single 4_000 row that neither earned.
+    let mut estimates = collector.estimate();
+    estimates.sort_by_key(|estimate| estimate.estimated_micros);
+    assert_eq!(estimates.len(), 2);
+    assert_eq!(estimates[0].owner, Some(first));
+    assert_eq!(estimates[0].estimated_micros, 1_000);
+    assert_eq!(estimates[1].owner, Some(second));
+    assert_eq!(estimates[1].estimated_micros, 3_000);
+  }
+
+  #[test]
+  fn transform_ast_takes_its_share_of_module_loading() {
+    let collector = HookTimingCollector::default();
+
+    // `transformAst` runs inside `fetch_modules`. Leaving it untimed would not omit
+    // its cost — the whole section wall clock is apportioned regardless, so its time
+    // would be handed to `transform` instead.
+    collector.record(None, HookKind::Transform, 3_000);
+    collector.record(None, HookKind::TransformAst, 1_000);
+    collector.record_section_micros(TimingSection::FetchModule, 8_000);
+
+    assert_eq!(owned(&collector, HookKind::Transform), 6_000);
+    assert_eq!(owned(&collector, HookKind::TransformAst), 2_000);
   }
 }

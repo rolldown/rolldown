@@ -151,7 +151,13 @@ impl ManualSplitter<'_> {
           None => true,
           Some(MatchGroupTest::Regex(reg)) => reg.matches(&normal_module.id),
           Some(MatchGroupTest::Function(func)) => {
-            func(&normal_module.id).await?.unwrap_or_default()
+            // Same story as the `name` classifier below: a user callback the Rust core
+            // invokes directly, so nothing else would ever record it. Serial, so the
+            // accumulated time is the elapsed time. The `Regex` arm is Rust-side.
+            let test_timing = self.plugin_driver.start_timing();
+            let result = func(&normal_module.id).await;
+            self.plugin_driver.record_core_timing(HookKind::CodeSplittingTest, test_timing);
+            result?.unwrap_or_default()
           }
         };
 

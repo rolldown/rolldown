@@ -2827,14 +2827,11 @@ name = "rolldown_plugin_asset_module"
 version = "1.2.0"
 dependencies = [
  "anyhow",
- "memchr",
  "rolldown_common",
  "rolldown_plugin",
- "rolldown_std_utils",
+ "rolldown_plugin_utils",
  "rolldown_utils",
  "rustc-hash",
- "string_wizard",
- "tokio",
 ]
 
 [[package]]
@@ -2870,14 +2867,11 @@ version = "1.2.0"
 dependencies = [
  "anyhow",
  "arcstr",
- "memchr",
  "rolldown_common",
  "rolldown_plugin",
- "rolldown_std_utils",
+ "rolldown_plugin_utils",
  "rolldown_utils",
  "rustc-hash",
- "string_wizard",
- "tokio",
 ]
 
 [[package]]
@@ -2971,12 +2965,16 @@ name = "rolldown_plugin_utils"
 version = "1.2.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "memchr",
  "oxc",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_std_utils",
  "rolldown_utils",
  "serde_json",
+ "string_wizard",
+ "tokio",
 ]
 
 [[package]]

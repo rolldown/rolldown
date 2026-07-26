@@ -6,15 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { n as result, t as init_main } from "./main2.js";
-init_main();
-export { result };
-
-```
-
-## main2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region b.js
 function getB() {
@@ -49,7 +40,8 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { result as n, init_main as t };
+init_main();
+export { result };
 
 ```
 

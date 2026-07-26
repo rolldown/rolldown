@@ -6,15 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import "./test.js";
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-## main2.js
-
-```js
 import { t as init_foo } from "./test.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region setup.js
@@ -27,7 +18,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as t };
+init_main();
 
 ```
 
@@ -71,15 +62,6 @@ export { init_foo as t };
 ### main.js
 
 ```js
-import "./test.js";
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-### main2.js
-
-```js
 import { t as init_foo } from "./test.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region setup.js
@@ -97,7 +79,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_setup as n, init_main as t };
+init_main();
 
 ```
 

@@ -20,15 +20,6 @@ export { foo };
 ### main.js
 
 ```js
-import { n as foo, t as init_main } from "./main2.js";
-await init_main();
-export { foo };
-
-```
-
-### main2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var foo;
@@ -45,7 +36,8 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { foo as n, init_lib as r, init_main as t };
+await init_main();
+export { foo };
 
 ```
 

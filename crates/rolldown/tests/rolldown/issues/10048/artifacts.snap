@@ -34,15 +34,6 @@ export { getProjectAnnotations };
 ### entry.js
 
 ```js
-import { n as init_entry, t as getProjectAnnotations } from "./entry2.js";
-init_entry();
-export { getProjectAnnotations };
-
-```
-
-### entry2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region data.js
 var themes;
@@ -72,6 +63,7 @@ function init_entry() {
 	})))();
 }
 //#endregion
-export { init_entry as n, getProjectAnnotations as t };
+init_entry();
+export { getProjectAnnotations };
 
 ```

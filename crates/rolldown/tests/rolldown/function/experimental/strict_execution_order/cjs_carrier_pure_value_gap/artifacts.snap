@@ -24,14 +24,6 @@ export default require_pure_cjs();
 ## main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-## main2.js
-
-```js
 import { n as read, t as init_reader } from "./reader.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
 //#region e.js
@@ -46,7 +38,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as t };
+init_main();
 
 ```
 
@@ -120,14 +112,6 @@ export { __esmMin as n, __commonJSMin as t };
 ## second.js
 
 ```js
-import { t as init_second } from "./second2.js";
-init_second();
-
-```
-
-## second2.js
-
-```js
 import { n as read, t as init_reader } from "./reader.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
 //#region second.js
@@ -138,19 +122,11 @@ function init_second() {
 	})))();
 }
 //#endregion
-export { init_second as t };
+init_second();
 
 ```
 
 ## unused.js
-
-```js
-import { t as init_unused } from "./unused2.js";
-init_unused();
-
-```
-
-## unused2.js
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
@@ -161,7 +137,7 @@ function init_unused() {
 	})))();
 }
 //#endregion
-export { init_unused as t };
+init_unused();
 
 ```
 
@@ -190,14 +166,6 @@ export default require_pure_cjs();
 ### main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-### main2.js
-
-```js
 import { n as read, t as init_reader } from "./reader.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
 //#region e.js
@@ -217,7 +185,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_e as n, init_main as t };
+init_main();
 
 ```
 
@@ -291,14 +259,6 @@ export { __esmMin as n, __commonJSMin as t };
 ### second.js
 
 ```js
-import { t as init_second } from "./second2.js";
-init_second();
-
-```
-
-### second2.js
-
-```js
 import { n as read, t as init_reader } from "./reader.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
 //#region second.js
@@ -309,19 +269,11 @@ function init_second() {
 	})))();
 }
 //#endregion
-export { init_second as t };
+init_second();
 
 ```
 
 ### unused.js
-
-```js
-import { t as init_unused } from "./unused2.js";
-init_unused();
-
-```
-
-### unused2.js
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
@@ -332,6 +284,6 @@ function init_unused() {
 	})))();
 }
 //#endregion
-export { init_unused as t };
+init_unused();
 
 ```

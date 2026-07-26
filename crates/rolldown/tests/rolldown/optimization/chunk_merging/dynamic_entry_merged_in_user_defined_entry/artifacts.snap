@@ -15,14 +15,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { t as init_entry } from "./entry2.js";
-init_entry();
-
-```
-
-## entry2.js
-
-```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
@@ -38,7 +30,7 @@ function init_entry() {
 	})))();
 }
 //#endregion
-export { init_entry as t };
+init_entry();
 
 ```
 
@@ -58,13 +50,6 @@ export { init_entry as t };
 ### entry.js
 
 ```js
-require("./entry2.js").init_entry();
-
-```
-
-### entry2.js
-
-```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
@@ -81,12 +66,7 @@ function init_entry() {
 	})))();
 }
 //#endregion
-Object.defineProperty(exports, "init_entry", {
-	enumerable: true,
-	get: function() {
-		return init_entry;
-	}
-});
+init_entry();
 
 ```
 

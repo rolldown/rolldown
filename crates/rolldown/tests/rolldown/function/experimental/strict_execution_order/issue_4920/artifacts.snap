@@ -27,15 +27,6 @@ export { dep_default as dep };
 ### main.js
 
 ```js
-import { n as dep_default, t as init_main } from "./main2.js";
-init_main();
-export { dep_default as dep };
-
-```
-
-### main2.js
-
-```js
 import nodeAssert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
@@ -57,6 +48,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { dep_default as n, init_dep as r, init_main as t };
+init_main();
+export { dep_default as dep };
 
 ```

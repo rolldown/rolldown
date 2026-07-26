@@ -36,14 +36,6 @@ console.log(globalThis.array);
 ### entry.js
 
 ```js
-import { t as init_main } from "./main.js";
-init_main();
-
-```
-
-### main.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region init.js
 function init_init() {
@@ -84,6 +76,6 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_init as i, init_bar as n, init_foo as r, init_main as t };
+init_main();
 
 ```

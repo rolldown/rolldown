@@ -3,43 +3,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## _virtual/lazy.js
-
-```js
-import { __esmMin } from "../rolldown-runtime.js";
-//#region lazy.js
-var lazy;
-function init_lazy() {
-	return (init_lazy = __esmMin((() => {
-		globalThis.__events.push("lazy");
-		lazy = "L";
-	})))();
-}
-//#endregion
-export { init_lazy, lazy };
-
-```
-
-## _virtual/main.js
-
-```js
-import dep, { init_dep } from "../dep.js";
-import { __esmMin } from "../rolldown-runtime.js";
-//#region main.js
-var mod;
-function init_main() {
-	return (init_main = __esmMin((async () => {
-		init_dep();
-		globalThis.__events.push("main " + dep() + "N");
-		mod = await import("../lazy.js");
-		globalThis.__events.push("after " + mod.lazy);
-	})))();
-}
-//#endregion
-export { init_main };
-
-```
-
 ## dep.js
 
 ```js
@@ -62,7 +25,16 @@ export { dep as default, init_dep };
 ## lazy.js
 
 ```js
-import { init_lazy, lazy } from "./_virtual/lazy.js";
+import { __esmMin } from "./rolldown-runtime.js";
+//#region lazy.js
+var lazy;
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		globalThis.__events.push("lazy");
+		lazy = "L";
+	})))();
+}
+//#endregion
 init_lazy();
 export { lazy };
 
@@ -71,8 +43,19 @@ export { lazy };
 ## main.js
 
 ```js
-import "./dep.js";
-import { init_main } from "./_virtual/main.js";
+import dep, { init_dep } from "./dep.js";
+import { __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+var mod;
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		init_dep();
+		globalThis.__events.push("main " + dep() + "N");
+		mod = await import("./lazy.js");
+		globalThis.__events.push("after " + mod.lazy);
+	})))();
+}
+//#endregion
 await init_main();
 
 ```

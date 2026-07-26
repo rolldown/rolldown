@@ -29,14 +29,6 @@ assert.equal(foo_inner_default.foo, "foo");
 ### main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-### main2.js
-
-```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region setup.js
@@ -72,6 +64,6 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_foo as n, init_setup as r, init_main as t };
+init_main();
 
 ```

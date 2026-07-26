@@ -29,14 +29,6 @@ console.log("main", fromLib, import_cjs.default.value);
 ### main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-### main2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region cjs.cjs
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -63,7 +55,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as t };
+init_main();
 
 ```
 

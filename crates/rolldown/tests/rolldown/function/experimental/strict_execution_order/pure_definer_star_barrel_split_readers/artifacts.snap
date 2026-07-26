@@ -45,15 +45,6 @@ export { init_a as n, init_definer as r, defValue as t };
 ## b.js
 
 ```js
-import { n as sibValue, t as init_b } from "./b2.js";
-init_b();
-export { sibValue };
-
-```
-
-## b2.js
-
-```js
 import { r as vSib, t as init_barrel } from "./barrel.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region b.js
@@ -66,7 +57,8 @@ function init_b() {
 	})))();
 }
 //#endregion
-export { sibValue as n, init_b as t };
+init_b();
+export { sibValue };
 
 ```
 
@@ -150,15 +142,6 @@ export { init_a as n, init_definer as r, defValue as t };
 ### b.js
 
 ```js
-import { n as sibValue, t as init_b } from "./b2.js";
-init_b();
-export { sibValue };
-
-```
-
-### b2.js
-
-```js
 import { r as vSib, t as init_barrel } from "./barrel.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region b.js
@@ -171,7 +154,8 @@ function init_b() {
 	})))();
 }
 //#endregion
-export { sibValue as n, init_b as t };
+init_b();
+export { sibValue };
 
 ```
 

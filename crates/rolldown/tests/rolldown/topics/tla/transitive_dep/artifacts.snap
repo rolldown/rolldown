@@ -22,15 +22,6 @@ export { value };
 ### main.js
 
 ```js
-import { r as value, t as init_main } from "./main2.js";
-await init_main();
-export { value };
-
-```
-
-### main2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region tla.js
 var value$1;
@@ -56,7 +47,8 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_lib as n, value as r, init_main as t };
+await init_main();
+export { value };
 
 ```
 

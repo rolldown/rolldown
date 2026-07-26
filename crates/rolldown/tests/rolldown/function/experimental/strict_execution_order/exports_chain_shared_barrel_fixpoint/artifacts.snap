@@ -26,15 +26,6 @@ export { inner_exports as star };
 ### main.js
 
 ```js
-import { n as init_inner, r as inner_exports, t as init_main } from "./main2.js";
-
-init_main();
-export { inner_exports as star };
-```
-
-### main2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region leaf.js
 var foo;
@@ -63,5 +54,6 @@ function init_main() {
 }
 
 //#endregion
-export { init_inner as n, inner_exports as r, init_main as t };
+init_main();
+export { inner_exports as star };
 ```

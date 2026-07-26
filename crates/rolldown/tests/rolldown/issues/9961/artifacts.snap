@@ -6,14 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-## main2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region core/setupWorker.js
 function setupWorker(handler) {
@@ -34,7 +26,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as t };
+init_main();
 
 ```
 

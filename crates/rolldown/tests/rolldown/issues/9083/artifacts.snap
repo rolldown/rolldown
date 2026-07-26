@@ -64,15 +64,6 @@ export { manager };
 ### main.js
 
 ```js
-import { r as manager, t as init_main } from "./main2.js";
-await init_main();
-export { manager };
-
-```
-
-### main2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region deep.js
 function sleep(ms) {
@@ -116,6 +107,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_middle as n, manager as r, init_main as t };
+await init_main();
+export { manager };
 
 ```

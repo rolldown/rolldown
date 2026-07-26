@@ -22,14 +22,6 @@ console.log(123);
 ### main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-await init_main();
-
-```
-
-### main2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 function init_foo() {
@@ -46,6 +38,6 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as t };
+await init_main();
 
 ```

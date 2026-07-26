@@ -43,12 +43,6 @@ fn order_debug_trace(message: impl FnOnce() -> String) {
 #[derive(Debug)]
 pub(super) struct OrderAnalysis {
   pub(super) plan: OrderWrapPlan,
-  pub(super) import_edges: IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
-  /// Whether this analysis was produced by the selective on-demand mode (as opposed to wrap-all).
-  /// Lowering reads it to decide whether entry-facade splitting is conditional (on-demand) or
-  /// unconditional (wrap-all) instead of re-reading the `experimental.onDemandWrapping` option, so
-  /// the wrapping policy lives in exactly one place — the analysis that already branched on it.
-  pub(super) on_demand: bool,
 }
 
 #[derive(Debug, Default)]
@@ -112,7 +106,7 @@ impl GenerateStage<'_> {
     // inert and no evaluation-order prediction is needed. The on-demand analysis below is the
     // opt-in selective mode behind `experimental.onDemandWrapping`.
     if !self.options.experimental.is_on_demand_wrapping_enabled() {
-      return Some(self.wrap_all_order_analysis(chunk_graph));
+      return Some(self.wrap_all_order_analysis());
     }
 
     let import_edges = self.predicted_static_import_edges(chunk_graph, used_symbol_refs);
@@ -239,7 +233,7 @@ impl GenerateStage<'_> {
       planned_modules = plan.len(),
       "emergent-cycle fixpoint converged"
     );
-    Some(OrderAnalysis { plan, import_edges, on_demand: true })
+    Some(OrderAnalysis { plan })
   }
 
   /// Project the chunk-level static import edges the lowering of `plan` will produce, as the
@@ -605,7 +599,7 @@ impl GenerateStage<'_> {
     probe_state
   }
 
-  fn wrap_all_order_analysis(&self, chunk_graph: &ChunkGraph) -> OrderAnalysis {
+  fn wrap_all_order_analysis(&self) -> OrderAnalysis {
     let mut plan = OrderWrapPlan::default();
     // Only membership matters here, so one shared visit-state vector lets every module be
     // walked once across all roots instead of once per root.
@@ -620,11 +614,7 @@ impl GenerateStage<'_> {
         }
       }
     }
-    OrderAnalysis {
-      plan,
-      import_edges: index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()],
-      on_demand: false,
-    }
+    OrderAnalysis { plan }
   }
 
   fn expected_order_for_root(&self, root: ModuleIdx) -> Vec<ModuleIdx> {

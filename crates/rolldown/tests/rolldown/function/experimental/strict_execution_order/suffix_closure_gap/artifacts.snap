@@ -65,15 +65,6 @@ function init_dyn() {
 	})))();
 }
 //#endregion
-export { init_dyn as t };
-
-```
-
-### dyn2.js
-
-```js
-import "./main2.js";
-import { t as init_dyn } from "./dyn.js";
 init_dyn();
 
 ```
@@ -123,7 +114,7 @@ function init_main() {
 		init_setup();
 		init_intermediate();
 		setup();
-		import("./dyn2.js");
+		import("./dyn.js");
 	})))();
 }
 //#endregion

@@ -34,15 +34,6 @@ export { all };
 ### main.js
 
 ```js
-import { n as init_main, t as all } from "./main2.js";
-init_main();
-export { all };
-
-```
-
-### main2.js
-
-```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
@@ -73,6 +64,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as n, all as t };
+init_main();
+export { all };
 
 ```

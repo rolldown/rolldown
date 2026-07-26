@@ -13,8 +13,8 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, RuntimeHelper, SymbolRef, UsedSymbolRefs,
-  UsedSymbolRefsBuilder, WrapKind,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, RuntimeHelper, SymbolRef, TaggedSymbolRef,
+  UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -58,6 +58,26 @@ impl<'a> FinalEsmInitMetadataAvailability<'a> {
   }
 }
 
+/// What a cross-chunk link computation does with the symbol->chunk ownership it derives.
+///
+/// [`GenerateStage::collect_depended_symbols`] does not only *read* the chunk graph: it writes each
+/// declared symbol's owning chunk back into the shared symbol database, and
+/// [`GenerateStage::compute_chunk_imports`] then reads that ownership to resolve which chunk a
+/// depended symbol is imported from. So the write is load-bearing *within* one pass, and the pass
+/// cannot be turned into a plain read-only query by dropping it.
+///
+/// It can be scoped instead. `Scoped` records each symbol's previous owner while committing, so the
+/// caller can roll the database back afterwards and leave no trace. That is what lets the entry
+/// facade decision run the real link computation as a question ("which chunks import this chunk?")
+/// before the final pass answers it for real.
+enum SymbolChunkOwnership<'a> {
+  /// Keep the derived ownership. Used by the final [`GenerateStage::compute_cross_chunk_links`].
+  Commit,
+  /// Keep it only for the duration of this pass; record the previous owners into the journal so the
+  /// caller can restore them.
+  Scoped(&'a mut Vec<(SymbolRef, Option<ChunkIdx>)>),
+}
+
 trait UsedSymbolRefsView: Sync {
   fn contains(&self, symbol_ref: &SymbolRef) -> bool;
 }
@@ -96,6 +116,7 @@ impl GenerateStage<'_> {
       used_symbol_refs,
       order_state,
       FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
+      SymbolChunkOwnership::Commit,
     );
 
     #[cfg(debug_assertions)]
@@ -248,13 +269,64 @@ impl GenerateStage<'_> {
     used_symbol_refs: &UsedSymbolRefsBuilder,
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
     let empty_order_state = super::order_wrap_state::OrderWrapState::default();
-    self
-      .compute_cross_chunk_link_state(
-        chunk_graph,
-        used_symbol_refs,
-        &empty_order_state,
-        FinalEsmInitMetadataAvailability::Unavailable,
-      )
+    let state = self.compute_cross_chunk_link_state(
+      chunk_graph,
+      used_symbol_refs,
+      &empty_order_state,
+      FinalEsmInitMetadataAvailability::Unavailable,
+      SymbolChunkOwnership::Commit,
+    );
+    Self::static_import_edges_of(chunk_graph, state)
+  }
+
+  /// The static chunk->chunk import edges the *final* cross-chunk link pass will compute, asked
+  /// before that pass runs.
+  ///
+  /// Unlike [`Self::predicted_static_import_edges`] this is not a prediction: it drives the same
+  /// machinery with the fully lowered [`OrderWrapState`](super::order_wrap_state::OrderWrapState)
+  /// and the real final init metadata, so every edge source the final pass registers — value
+  /// references, `init_*` forwarding, retained re-export overlays, transitive init obligations —
+  /// is present, with no re-derived approximation that could silently miss one.
+  ///
+  /// The entry-facade decision in `create_order_wrap_entry_facades` needs exactly this: an entry's
+  /// inline `init_E()` trigger is only safe while nothing *else* loads the chunk hosting `E`.
+  ///
+  /// Answering it here is sound because the facade split cannot invalidate the answer. A facade is
+  /// an empty chunk that takes over the entry role from the implementation chunk: it adds one
+  /// importer of that implementation chunk (itself), and it inherits — never widens — the outgoing
+  /// edges the implementation chunk had as an entry chunk. So for every *other* chunk the relation
+  /// "some chunk other than me imports me" is unchanged, and all facade decisions can be taken
+  /// together from this one pre-facade snapshot.
+  ///
+  /// The symbol->chunk ownership the pass commits is rolled back before returning, so this leaves
+  /// the symbol database exactly as it found it and the final pass is still the only writer.
+  pub(super) fn lowered_static_import_edges(
+    &mut self,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    final_esm_init_metadata: &Sealed<FinalEsmInitMetadata>,
+  ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
+    let mut journal = Vec::new();
+    let state = self.compute_cross_chunk_link_state(
+      chunk_graph,
+      used_symbol_refs,
+      order_state,
+      FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
+      SymbolChunkOwnership::Scoped(&mut journal),
+    );
+    let symbols = &mut self.link_output.symbol_db;
+    for (symbol_ref, previous_chunk_idx) in journal.into_iter().rev() {
+      symbols.get_mut(symbol_ref).chunk_idx = previous_chunk_idx;
+    }
+    Self::static_import_edges_of(chunk_graph, state)
+  }
+
+  fn static_import_edges_of(
+    chunk_graph: &ChunkGraph,
+    state: CrossChunkLinkState,
+  ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
+    state
       .index_imports_from_other_chunks
       .into_iter_enumerated()
       .map(|(chunk_idx, importee_map)| {
@@ -272,6 +344,7 @@ impl GenerateStage<'_> {
     used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
+    symbol_chunk_ownership: SymbolChunkOwnership<'_>,
   ) -> CrossChunkLinkState {
     let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
       index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
@@ -312,6 +385,7 @@ impl GenerateStage<'_> {
       used_symbol_refs,
       order_state,
       final_esm_init_metadata,
+      symbol_chunk_ownership,
     );
 
     self.compute_chunk_imports(
@@ -350,6 +424,7 @@ impl GenerateStage<'_> {
     used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
+    symbol_chunk_ownership: SymbolChunkOwnership<'_>,
   ) {
     let symbols = &self.link_output.symbol_db;
     let chunk_id_to_symbols_vec = append_only_vec::AppendOnlyVec::new();
@@ -556,8 +631,22 @@ impl GenerateStage<'_> {
         chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));
       },
     );
+    self.assign_symbol_chunk_ownership(chunk_id_to_symbols_vec, symbol_chunk_ownership);
+  }
+
+  /// Record which chunk owns each declared symbol, so [`Self::compute_chunk_imports`] can resolve a
+  /// depended symbol to the chunk it must be imported from.
+  fn assign_symbol_chunk_ownership(
+    &mut self,
+    chunk_id_to_symbols_vec: append_only_vec::AppendOnlyVec<(ChunkIdx, Vec<TaggedSymbolRef>)>,
+    symbol_chunk_ownership: SymbolChunkOwnership<'_>,
+  ) {
     // shadowing previous immutable borrow
     let symbols = &mut self.link_output.symbol_db;
+    let mut journal = match symbol_chunk_ownership {
+      SymbolChunkOwnership::Commit => None,
+      SymbolChunkOwnership::Scoped(journal) => Some(journal),
+    };
     for (chunk_idx, symbol_list) in chunk_id_to_symbols_vec {
       for declared in symbol_list {
         let declared = declared.inner();
@@ -574,6 +663,9 @@ impl GenerateStage<'_> {
         }
 
         let symbol_data = symbols.get_mut(declared);
+        if let Some(journal) = journal.as_deref_mut() {
+          journal.push((declared, symbol_data.chunk_idx));
+        }
         symbol_data.chunk_idx = Some(chunk_idx);
       }
     }

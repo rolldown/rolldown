@@ -5,6 +5,7 @@ use crate::{
 };
 use itertools::Itertools;
 use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
+use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta,
   IndexModules, ModuleIdx, OutputFormat, PostChunkOptimizationOperation, RuntimeHelper,
@@ -111,8 +112,19 @@ impl GenerateStage<'_> {
     let plan = &analysis.plan;
     if plan.is_empty() {
       // Entry-trigger facades are needed even with an empty plan: a pure interop graph can
-      // still share one entry's chunk with another entry.
-      if !self.create_order_wrap_entry_facades(chunk_graph, analysis) {
+      // still share one entry's chunk with another entry. With nothing order-wrapped, the only
+      // candidates are interop-wrapped entries, so a pure-ESM graph has none and asks nothing.
+      //
+      // The three passes hoisted ahead of the query below are skipped here, which is safe only
+      // because an empty plan makes each one a no-op: nothing demands an order-wrap runtime
+      // helper, restoring is filtered by the plan, and `finalize_chunk_plan` already ran the
+      // namespace pass against this same default `order_state`.
+      let candidates = self.entry_facade_candidates(plan);
+      if candidates.is_empty() {
+        return false;
+      }
+      let import_edges = self.entry_facade_import_edges(chunk_graph, used_symbol_refs, order_state);
+      if !self.create_order_wrap_entry_facades(chunk_graph, candidates, &import_edges) {
         return false;
       }
       chunk_graph.sort_chunk_modules(self.link_output, self.options);
@@ -145,12 +157,67 @@ impl GenerateStage<'_> {
       &self.link_output.symbol_db,
     );
     self.place_order_wrap_modules(chunk_graph, plan, order_state);
-    self.create_order_wrap_entry_facades(chunk_graph, analysis);
+    // Restoring runs before everything below it. A restored facade is an optimizer-removed chunk
+    // brought back to life, so it changes both the live-chunk count the runtime placement reads
+    // and the edge set the facade decision reads — and `compute_chunk_imports` skips removed
+    // chunks, so asking first would hide the edge from a revived facade to the chunk hosting its
+    // implementation, leaving an entry that shares that chunk with an inline trigger the restored
+    // facade's load then fires. Restoring is not itself a candidate for the necessity gate: it
+    // exists because a chunk can host only one entry's top-level trigger, so an entry merged into
+    // another entry's chunk has no trigger at all without its own file.
     self.restore_order_wrap_entry_facades(chunk_graph, plan);
-    self.ensure_runtime_module_for_order_wraps(chunk_graph, order_state);
+    // Placement runs before the facade decision so that decision can ask the real link computation
+    // which chunks import which: the order wrappers demand runtime helpers, and resolving a
+    // depended symbol to its chunk requires the runtime module to already sit in one. The merge
+    // re-proof this normalizes for is deferred to `fold_runtime_chunk_after_order_lowering` below,
+    // because it counts the runtime chunk's consumers and must see the final facade topology.
+    let fold_runtime_chunk = self.ensure_runtime_module_for_order_wraps(chunk_graph);
+    // Refresh the namespace facts against the lowered order state before querying the edges.
+    // `finalize_chunk_plan` re-runs this once more after lowering anyway; doing it here too means
+    // the query sees the namespaces the final link pass will see, instead of the provisional
+    // pre-lowering set, so a namespace an import overlay demands cannot become an edge the query
+    // missed. Facades do not move modules between chunks, so the result is the same before and
+    // after they are created.
+    self.finalized_module_namespace_ref_usage(chunk_graph, order_state);
+    // Collecting the candidates reads only the module graph, so it can run before the edges and
+    // spare the query entirely when no entry could need a facade in the first place.
+    let candidates = self.entry_facade_candidates(plan);
+    if !candidates.is_empty() {
+      let import_edges = self.entry_facade_import_edges(chunk_graph, used_symbol_refs, order_state);
+      self.create_order_wrap_entry_facades(chunk_graph, candidates, &import_edges);
+    }
+    if fold_runtime_chunk {
+      self.fold_runtime_chunk_after_order_lowering(chunk_graph, order_state);
+    }
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
     self.renumber_live_chunks(chunk_graph);
     true
+  }
+
+  /// The chunk->chunk static import edges the entry-facade decision is taken against.
+  ///
+  /// Computed from the fully lowered order state through the same cross-chunk link pass that
+  /// produces the final edges, so the decision reads facts rather than a re-derived approximation
+  /// of them. See [`GenerateStage::lowered_static_import_edges`].
+  fn entry_facade_import_edges(
+    &mut self,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
+    order_state: &OrderWrapState,
+  ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
+    if self.options.code_splitting.is_disabled() {
+      // A single-chunk build has no other chunk to load the entry's implementation, and
+      // `create_order_wrap_entry_facades` bails out on it anyway.
+      return index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()];
+    }
+    let final_esm_init_metadata =
+      self.compute_wrapped_esm_init_metadata(&self.ast_table, chunk_graph, order_state);
+    self.lowered_static_import_edges(
+      chunk_graph,
+      used_symbol_refs,
+      order_state,
+      &final_esm_init_metadata,
+    )
   }
 
   fn place_order_wrap_modules(
@@ -174,17 +241,16 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn create_order_wrap_entry_facades(
-    &self,
-    chunk_graph: &mut ChunkGraph,
-    analysis: &OrderAnalysis,
-  ) -> bool {
+  /// Entries whose inline `init_E()` trigger might have to move into a facade — an order-wrapped
+  /// entry, or an interop-wrapped one, whether or not anything imports it.
+  ///
+  /// Reads only the module graph, never the chunk topology, so the caller can collect these before
+  /// computing the import edges and skip that query entirely when there is nothing to decide.
+  fn entry_facade_candidates(&self, plan: &OrderWrapPlan) -> Vec<ModuleIdx> {
     if self.options.code_splitting.is_disabled() {
-      return false;
+      return vec![];
     }
-    let plan = &analysis.plan;
-
-    let mut entries_to_split = plan
+    let mut candidates = plan
       .modules()
       .filter(|module_idx| self.link_output.entries.contains_key(module_idx))
       .collect_vec();
@@ -195,7 +261,7 @@ impl GenerateStage<'_> {
       if !meta.is_included {
         continue;
       }
-      entries_to_split.extend(module.import_records.iter().filter_map(|rec| {
+      candidates.extend(module.import_records.iter().filter_map(|rec| {
         if !matches!(rec.kind, ImportKind::Import | ImportKind::Require) {
           return None;
         }
@@ -206,19 +272,30 @@ impl GenerateStage<'_> {
         .then_some(importee_idx)
       }));
     }
+    candidates.extend(self.link_output.entries.keys().copied().filter(|entry_module_idx| {
+      !matches!(self.link_output.metas[*entry_module_idx].wrap_kind(), WrapKind::None)
+    }));
+    candidates
+  }
 
-    // Move an interop entry trigger to a facade when another chunk imports its implementation.
-    // Wrap-all mode computes no prediction and splits unconditionally. The wrapping policy is
-    // carried on the analysis (decided once in `analyze_execution_order`) rather than re-read here.
-    let on_demand = analysis.on_demand;
+  fn create_order_wrap_entry_facades(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    facade_candidates: Vec<ModuleIdx>,
+    import_edges: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
+  ) -> bool {
+    if self.options.code_splitting.is_disabled() {
+      return false;
+    }
+
     let mut imported_chunks = FxHashSet::default();
-    for (chunk_idx, importee_chunks) in analysis.import_edges.iter_enumerated() {
+    for (chunk_idx, importee_chunks) in import_edges.iter_enumerated() {
       imported_chunks
         .extend(importee_chunks.iter().copied().filter(|importee| *importee != chunk_idx));
     }
     // A dynamic import evaluates its target's chunk, so an inline entry trigger hosted there
     // would run the entry's whole program during that load (e.g. a manual group placing a
-    // dynamic target next to an entry). Predicted static edges cannot see these loads; collect
+    // dynamic target next to an entry). The static edge set cannot see these loads; collect
     // the cross-chunk dynamic-import targets directly.
     let mut dynamic_target_modules_by_chunk: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>> =
       FxHashMap::default();
@@ -230,7 +307,15 @@ impl GenerateStage<'_> {
       }
       let importer_chunk = chunk_graph.module_to_chunk[module.idx];
       for rec in &module.import_records {
-        if rec.kind != ImportKind::DynamicImport {
+        // Only records the emitted code still executes count as loads. Tree shaking flags a
+        // dynamic record whose entry it dropped as `DeadDynamicImport`, and the finalizer rewrites
+        // exactly those to an inert `Promise.resolve().then(...)` stub that loads nothing — so a
+        // dead record must not force the split. The importee can still be included through a
+        // static route, which is precisely when it may share an entry's chunk. Same exclusion as
+        // `dynamic_already_loaded`.
+        if rec.kind != ImportKind::DynamicImport
+          || rec.meta.contains(ImportRecordMeta::DeadDynamicImport)
+        {
           continue;
         }
         let Some(importee_idx) = rec.resolved_module else { continue };
@@ -246,20 +331,30 @@ impl GenerateStage<'_> {
         dynamic_target_modules_by_chunk.entry(importee_chunk).or_default().insert(importee_idx);
       }
     }
-    entries_to_split.extend(self.link_output.entries.keys().copied().filter(|entry_module_idx| {
-      !matches!(self.link_output.metas[*entry_module_idx].wrap_kind(), WrapKind::None)
-        && (!on_demand
-          || chunk_graph.entry_module_to_entry_chunk.get(entry_module_idx).is_some_and(
-            |entry_chunk_idx| {
-              imported_chunks.contains(entry_chunk_idx)
-                // A dynamic import of the entry module itself must run its program, so only
-                // other hosted targets force the split.
-                || dynamic_target_modules_by_chunk.get(entry_chunk_idx).is_some_and(|targets| {
-                  targets.iter().any(|target| target != entry_module_idx)
-                })
-            },
-          ))
-    }));
+    // An entry's `init_E()` trigger may stay inline at the top of the chunk hosting `E` exactly
+    // while that chunk is loaded only to enter `E`. Once anything else can load it — another chunk
+    // imports it, or it also hosts some other chunk's dynamic-import target — the trigger has to
+    // move into a facade or `E`'s program runs during that unrelated load.
+    //
+    // This is the same question for an order-wrapped entry and for an interop-wrapped one, so all
+    // candidate sources are gated by it. It used to be asked only of interop entries, and only in
+    // on-demand mode; an order-wrapped entry always split, which cost one extra chunk per entry
+    // (including every dynamic entry) even when nothing but the entry itself could load the chunk.
+    let mut entries_to_split = facade_candidates
+      .into_iter()
+      .filter(|entry_module_idx| {
+        chunk_graph.entry_module_to_entry_chunk.get(entry_module_idx).is_some_and(
+          |entry_chunk_idx| {
+            imported_chunks.contains(entry_chunk_idx)
+              // A dynamic import of the entry module itself must run its program, so only
+              // other hosted targets force the split.
+              || dynamic_target_modules_by_chunk.get(entry_chunk_idx).is_some_and(|targets| {
+                targets.iter().any(|target| target != entry_module_idx)
+              })
+          },
+        )
+      })
+      .collect_vec();
     entries_to_split.sort_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order());
     entries_to_split.dedup();
 
@@ -393,31 +488,32 @@ impl GenerateStage<'_> {
     }
   }
 
-  /// Normalize the runtime module onto a standalone chunk, then re-run the runtime-chunk merge
-  /// proof with the post-lowering consumer set.
+  /// Normalize the runtime module onto a standalone chunk. Returns whether the caller still owes
+  /// the runtime-chunk merge re-proof (`fold_runtime_chunk_after_order_lowering`).
   ///
   /// The baseline `try_merge_runtime_chunk` calls run before order analysis, so a pre-lowering
   /// merge never proved anything about the helper demand the wrappers and overlays above added.
   /// Evicting a co-hosted runtime first restores the standalone shape that proof requires; by this
   /// point lowering has materialized every order-introduced demand in [`OrderWrapState`], so the
   /// re-proof sees the complete consumer set.
-  fn ensure_runtime_module_for_order_wraps(
-    &mut self,
-    chunk_graph: &mut ChunkGraph,
-    order_state: &OrderWrapState,
-  ) {
+  ///
+  /// Normalizing has to happen before the entry-facade edge query — resolving a depended symbol to
+  /// its chunk needs the runtime module to sit in one — while the re-proof has to happen after it,
+  /// because it counts the runtime chunk's consumers and facade creation is what settles them. So
+  /// the two are split: this returns the obligation and `apply_order_wraps` discharges it once the
+  /// facade topology is final.
+  fn ensure_runtime_module_for_order_wraps(&mut self, chunk_graph: &mut ChunkGraph) -> bool {
     let runtime_idx = self.link_output.runtime.id();
     if let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_idx] {
       if self.options.code_splitting.is_disabled() {
-        return;
+        return false;
       }
       let runtime_chunk = &chunk_graph.chunk_table[runtime_chunk_idx];
       if runtime_chunk.modules.len() == 1 {
         self.clear_module_symbol_chunk_indices(runtime_idx);
-        // Facade restoration above can tombstone chunks the pre-lowering merge counted as
-        // consumers, so a standalone runtime may only now have a sole consumer left.
-        self.fold_runtime_chunk_after_order_lowering(chunk_graph, order_state);
-        return;
+        // Facade restoration can tombstone chunks the pre-lowering merge counted as consumers, so
+        // a standalone runtime may only now have a sole consumer left.
+        return true;
       }
       let mut bits = runtime_chunk.bits.clone();
       for chunk_idx in self.live_chunks(chunk_graph) {
@@ -456,13 +552,12 @@ impl GenerateStage<'_> {
         self.link_output.metas[runtime_idx].depended_runtime_helper,
       );
       self.clear_module_symbol_chunk_indices(runtime_idx);
-      self.fold_runtime_chunk_after_order_lowering(chunk_graph, order_state);
-      return;
+      return true;
     }
 
     let live_chunk_indices = self.live_chunks(chunk_graph);
     let Some(first_chunk_idx) = live_chunk_indices.first().copied() else {
-      return;
+      return false;
     };
 
     if self.options.code_splitting.is_disabled() || live_chunk_indices.len() == 1 {
@@ -470,7 +565,7 @@ impl GenerateStage<'_> {
       chunk.modules.insert(0, runtime_idx);
       chunk_graph.module_to_chunk[runtime_idx] = Some(first_chunk_idx);
       self.clear_module_symbol_chunk_indices(runtime_idx);
-      return;
+      return false;
     }
 
     let mut bits = chunk_graph.chunk_table[first_chunk_idx].bits.clone();
@@ -500,7 +595,7 @@ impl GenerateStage<'_> {
       self.link_output.metas[runtime_idx].depended_runtime_helper,
     );
     self.clear_module_symbol_chunk_indices(runtime_idx);
-    self.fold_runtime_chunk_after_order_lowering(chunk_graph, order_state);
+    true
   }
 
   /// Re-run the runtime-chunk merge proof against the post-lowering consumer set: the

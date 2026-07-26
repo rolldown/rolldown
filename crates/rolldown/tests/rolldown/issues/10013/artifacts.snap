@@ -40,22 +40,6 @@ export { other as t };
 ### a.js
 
 ```js
-import { t as init_entry_a } from "./entry-a.js";
-init_entry_a();
-
-```
-
-### b.js
-
-```js
-import { t as init_entry_b } from "./entry-b.js";
-init_entry_b();
-
-```
-
-### entry-a.js
-
-```js
 import { n as other, t as init_helper } from "./helper.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region entry-a.js
@@ -66,11 +50,11 @@ function init_entry_a() {
 	})))();
 }
 //#endregion
-export { init_entry_a as t };
+init_entry_a();
 
 ```
 
-### entry-b.js
+### b.js
 
 ```js
 import { n as other, t as init_helper } from "./helper.js";
@@ -83,7 +67,7 @@ function init_entry_b() {
 	})))();
 }
 //#endregion
-export { init_entry_b as t };
+init_entry_b();
 
 ```
 

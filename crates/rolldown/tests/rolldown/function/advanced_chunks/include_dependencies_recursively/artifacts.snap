@@ -31,14 +31,6 @@ export { foo as t };
 ### main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-### main2.js
-
-```js
 import { n as init_foo, t as foo } from "./vendor.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 import nodeAssert from "node:assert";
@@ -50,7 +42,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as t };
+init_main();
 
 ```
 

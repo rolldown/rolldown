@@ -25,15 +25,6 @@ export { value };
 ### main.js
 
 ```js
-import { n as value, t as init_main } from "./main2.js";
-await init_main();
-export { value };
-
-```
-
-### main2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region ring-b.js
 function init_ring_b() {
@@ -61,7 +52,8 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { value as n, init_main as t };
+await init_main();
+export { value };
 
 ```
 

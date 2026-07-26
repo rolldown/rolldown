@@ -83,7 +83,10 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         Some(&self.namespace_object_symbol_ids),
       );
       let mut stmt_eval_facts = analyzer.analyze_stmt(stmt);
-      if self.immutable_ctx.options.is_strict_on_demand_wrapping_enabled()
+      // Every strict build reads `ExecutionOrderSensitive` to decide what a wrapper would buy, so
+      // the reasons have to be collected whenever strict execution order is on. Collecting them
+      // only for the selective plan left the default plan with a weaker signal than it needs.
+      if self.immutable_ctx.options.is_strict_execution_order_enabled()
         && !self.result.ecma_view_meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
         && !stmt_eval_facts.is_order_sensitive()
       {

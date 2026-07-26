@@ -1211,7 +1211,7 @@ mod test {
       .map(|stmt| {
         let analyzer = StmtEvalAnalyzer::new(&ast_scopes, flags, options, None, None);
         let mut facts = analyzer.analyze_stmt(stmt);
-        if options.is_strict_on_demand_wrapping_enabled() && !facts.is_order_sensitive() {
+        if options.is_strict_execution_order_enabled() && !facts.is_order_sensitive() {
           analyzer.add_top_level_eager_order_reasons(stmt, &mut facts);
         }
         (facts.tree_shaking_flags(), facts.is_order_sensitive())
@@ -2277,7 +2277,7 @@ mod test {
   }
 
   #[test]
-  fn test_extended_top_level_reasons_do_not_leak_to_default_or_wrap_all() {
+  fn test_extended_top_level_reasons_do_not_leak_to_the_non_strict_default() {
     let manual_pure_tag = "function tag() { return (/* @__PURE__ */ globalThis.__orderRead?.() ?? 5); } class C { static value = tag``; }";
     let manual_pure_treeshake = || InnerOptions {
       manual_pure_functions: Some(std::iter::once("tag".to_string()).collect()),
@@ -2293,19 +2293,20 @@ mod test {
       strict_execution_order: true,
       ..NormalizedBundlerOptions::default()
     });
-    for options in [&default_options, &wrap_all_options] {
-      assert_eq!(
-        get_stmt_eval_with_top_level_eager_order_reasons(manual_pure_tag, options),
-        vec![(StmtEvalFlags::empty(), false), (StmtEvalFlags::empty(), false)]
+    assert_eq!(
+      get_stmt_eval_with_top_level_eager_order_reasons(manual_pure_tag, &default_options),
+      vec![(StmtEvalFlags::empty(), false), (StmtEvalFlags::empty(), false)]
+    );
+
+    // Both strict plans read the same signal, so both collect the same reasons.
+    let strict_on_demand = strict_on_demand_options(manual_pure_treeshake());
+    for options in [&wrap_all_options, &strict_on_demand] {
+      assert_last_statement_gets_eager_reason_only(
+        manual_pure_tag,
+        options,
+        StmtEvalFlags::empty(),
       );
     }
-
-    let strict_on_demand = strict_on_demand_options(manual_pure_treeshake());
-    assert_last_statement_gets_eager_reason_only(
-      manual_pure_tag,
-      &strict_on_demand,
-      StmtEvalFlags::empty(),
-    );
   }
 
   #[test]

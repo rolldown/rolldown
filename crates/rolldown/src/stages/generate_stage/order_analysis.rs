@@ -4,9 +4,10 @@ use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
-  ChunkIdx, ConcatenateWrappedModuleKind, EcmaViewMeta, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, Module, ModuleIdx, NormalModule, SymbolOrMemberExprRef, SymbolRef,
-  UsedSymbolRefsBuilder, WrapKind,
+  ChunkIdx, ChunkKind, ChunkMeta, ConcatenateWrappedModuleKind, EcmaViewMeta, ExportsKind,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, NormalModule,
+  PostChunkOptimizationOperation, SymbolOrMemberExprRef, SymbolRef, UsedSymbolRefsBuilder,
+  WrapKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -103,10 +104,11 @@ impl GenerateStage<'_> {
     }
 
     // Wrap-all is the default strict mode: every eligible module defers, so the eager phase is
-    // inert and no evaluation-order prediction is needed. The on-demand analysis below is the
-    // opt-in selective mode behind `experimental.onDemandWrapping`.
-    if !self.options.experimental.is_on_demand_wrapping_enabled() {
-      return Some(self.wrap_all_order_analysis());
+    // inert and no evaluation-order prediction is needed. The one exception is an entry whose
+    // wrapper would only buy a resurrected facade file — see `unobservable_merged_away_entries`.
+    // The selective plan below stays behind `experimental.onDemandWrapping`.
+    if !self.options.is_strict_on_demand_wrapping_enabled() {
+      return Some(self.wrap_all_order_analysis(chunk_graph));
     }
 
     let import_edges = self.predicted_static_import_edges(chunk_graph, used_symbol_refs);
@@ -599,8 +601,9 @@ impl GenerateStage<'_> {
     probe_state
   }
 
-  fn wrap_all_order_analysis(&self) -> OrderAnalysis {
+  fn wrap_all_order_analysis(&self, chunk_graph: &ChunkGraph) -> OrderAnalysis {
     let mut plan = OrderWrapPlan::default();
+    let exempt = self.unobservable_merged_away_entries(chunk_graph);
     // Only membership matters here, so one shared visit-state vector lets every module be
     // walked once across all roots instead of once per root.
     let mut states = index_vec![VisitState::Unvisited; self.link_output.module_table.modules.len()];
@@ -609,12 +612,60 @@ impl GenerateStage<'_> {
         continue;
       }
       for module_idx in self.expected_order_for_root_with_states(root, &mut states) {
-        if self.is_order_wrap_eligible(module_idx) {
+        if self.is_order_wrap_eligible(module_idx) && !exempt.contains(&module_idx) {
           plan.insert(module_idx);
         }
       }
     }
     OrderAnalysis { plan }
+  }
+
+  /// Entry modules `restore_order_wrap_entry_facades` would resurrect a file for: an emptied
+  /// dynamic-imported or emitted entry chunk the post-chunk optimizer removed. Collected in one pass
+  /// over the chunk table rather than re-scanning it per entry, and mirroring that function's
+  /// condition exactly.
+  fn merged_away_entries(&self, chunk_graph: &ChunkGraph) -> FxHashSet<ModuleIdx> {
+    chunk_graph
+      .chunk_table
+      .iter_enumerated()
+      .filter_map(|(chunk_idx, chunk)| match chunk.kind {
+        ChunkKind::EntryPoint { meta, module, .. } => (chunk.modules.is_empty()
+          && meta.intersects(ChunkMeta::DynamicImported | ChunkMeta::EmittedChunk)
+          && matches!(
+            chunk_graph.post_chunk_optimization_operations.get(&chunk_idx),
+            Some(
+              PostChunkOptimizationOperation::Removed
+                | PostChunkOptimizationOperation::RemovedWithPreservedExports
+            )
+          ))
+        .then_some(module),
+        ChunkKind::Common => None,
+      })
+      .collect()
+  }
+
+  /// Entries wrap-all should not wrap even though it wraps everything else.
+  ///
+  /// An entry the post-chunk optimizer merged away has no file of its own, so wrapping it makes
+  /// `restore_order_wrap_entry_facades` resurrect one — a file per lazy route on apps that declare
+  /// many (lobehub: 1008 of them). That file is unavoidable *given the wrapper*: the resurrected
+  /// chunk is the only place the entry's trigger can live, since one file can host only one entry's
+  /// top-level trigger and a cross-chunk `import()` call-site trigger fires a microtask too late
+  /// (`m4_dynamic_facade_race`). So the wrapper itself is what to drop, and it is safe to drop
+  /// exactly when nothing about the entry's execution position is observable: no module in its own
+  /// static load closure is order-sensitive, so running the whole closure early — which is what an
+  /// unwrapped body inline in the host chunk does — changes nothing an importer can see.
+  ///
+  /// Reads module content through [`Self::is_order_sensitive`], never chunk reachability, so it
+  /// needs no prediction of a graph that does not exist yet — the failure mode every earlier attempt
+  /// at narrowing this cost ran into.
+  fn unobservable_merged_away_entries(&self, chunk_graph: &ChunkGraph) -> FxHashSet<ModuleIdx> {
+    self
+      .merged_away_entries(chunk_graph)
+      .into_iter()
+      .filter(|&root| self.link_output.metas[root].is_included)
+      .filter(|&root| self.sensitive_order(&self.expected_order_for_root(root)).is_empty())
+      .collect()
   }
 
   fn expected_order_for_root(&self, root: ModuleIdx) -> Vec<ModuleIdx> {

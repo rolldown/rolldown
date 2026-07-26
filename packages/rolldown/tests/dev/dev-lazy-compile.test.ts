@@ -332,3 +332,54 @@ test(
     expect(position.line).toBe(2);
   },
 );
+
+// `export * as ns from './dep'` and `export * from './dep'` are the same oxc node,
+// separated only by `exported`. Reading it wrong drops the name from the namespace
+// object, and the consumer sees `undefined`. The snapshot fixture
+// (crates/rolldown/tests/rolldown/topics/hmr/export_star_as) pins the HMR patch; this
+// pins the lazy chunk, which reaches the same finalizer by a different route.
+test(
+  'a lazy chunk keeps the export name of `export * as ns from`',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-export-star-as-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./lazy.js');\n`);
+    // reachable only through the namespace re-export
+    fs.writeFileSync(path.join(dir, 'dep.js'), `export const value = 'from-dep';\n`);
+    fs.writeFileSync(path.join(dir, 'reexport.js'), `export * as NS from './dep.js';\n`);
+    fs.writeFileSync(
+      path.join(dir, 'lazy.js'),
+      `import { NS } from './reexport.js';\nexport const lazy = NS.value;\n`,
+    );
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+
+    const chunk = await engine.compileEntry(
+      `${path.join(dir, 'lazy.js')}?rolldown-lazy=1`,
+      'export-star-as-client',
+    );
+
+    // the namespace object carries `NS`, rather than `dep.js`'s own exports being
+    // spread onto the re-exporting module the way `export *` would
+    expect(chunk.code).toMatch(/NS:\s*\(\)\s*=>/);
+    expect(chunk.code).not.toMatch(/__reExport\(/);
+  },
+);

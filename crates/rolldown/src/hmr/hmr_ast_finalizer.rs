@@ -297,7 +297,19 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         {
           program_body.push(stmt);
         }
-        if let Some(stmt) =
+        if let Some(exported) = &export_all_decl.exported {
+          // `export * as ns from './dep.js'` binds the importee's namespace object to a
+          // single export name. It must not go through `__reExport`, which copies the
+          // importee's own exports onto this module - that is `export * from './dep.js'`,
+          // a different statement that happens to share this AST node.
+          let exported_name = exported.name();
+          self.exports.push(ObjectPropertyKind::new_lazy_export_property(
+            &exported_name,
+            Expression::new_id_ref_expr(SPAN, &binding_name, &self.ast_builder),
+            !is_validate_identifier_name(&exported_name),
+            &self.ast_builder,
+          ));
+        } else if let Some(stmt) =
           self.create_re_export_call_stmt(importee, &binding_name, export_all_decl.span)
         {
           program_body.push(stmt);

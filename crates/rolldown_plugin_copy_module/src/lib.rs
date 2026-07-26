@@ -95,6 +95,7 @@ impl Plugin for CopyModulePlugin {
       anyhow::anyhow!("Failed to read copy module {}: {e}", resolved_id.id)
     })
     .await?;
+    ctx.add_watch_file(clean_id);
 
     // Return a prefixed external ID — the prefix will be rewritten in render_chunk
     let placeholder_id: ArcStr = format!("{PREFIX}{reference_id}").into();

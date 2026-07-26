@@ -90,6 +90,8 @@ impl AssetModulePlugin {
     })
     .await?;
     ctx.associate_module_with_file_ref(args.id, &reference_id);
+    // Through LoadPluginContext, which also records the module's HMR transform dependency.
+    ctx.add_watch_file(clean_id);
 
     // Return JS code that exports the asset placeholder via CJS.
     // Using `module.exports` ensures `require()` returns the string directly.

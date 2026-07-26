@@ -29,8 +29,6 @@ pub async fn emit_asset(
     })
     .await?;
 
-  ctx.add_watch_file(clean_id);
-
   Ok(reference_id)
 }
 

@@ -10,14 +10,11 @@ import {
 } from './bindingify-build-hooks';
 
 import {
+  bindingifyAddonHook,
   bindingifyAugmentChunkHash,
   bindingifyResolveFileUrl,
-  bindingifyBanner,
   bindingifyCloseBundle,
-  bindingifyFooter,
   bindingifyGenerateBundle,
-  bindingifyIntro,
-  bindingifyOutro,
   bindingifyRenderChunk,
   bindingifyRenderError,
   bindingifyRenderStart,
@@ -110,13 +107,13 @@ export function bindingifyPlugin(
 
   const { plugin: closeBundle, meta: closeBundleMeta } = bindingifyCloseBundle(args);
 
-  const { plugin: banner, meta: bannerMeta } = bindingifyBanner(args);
+  const { plugin: banner, meta: bannerMeta } = bindingifyAddonHook(args, 'banner');
 
-  const { plugin: footer, meta: footerMeta } = bindingifyFooter(args);
+  const { plugin: footer, meta: footerMeta } = bindingifyAddonHook(args, 'footer');
 
-  const { plugin: intro, meta: introMeta } = bindingifyIntro(args);
+  const { plugin: intro, meta: introMeta } = bindingifyAddonHook(args, 'intro');
 
-  const { plugin: outro, meta: outroMeta } = bindingifyOutro(args);
+  const { plugin: outro, meta: outroMeta } = bindingifyAddonHook(args, 'outro');
 
   const { plugin: watchChange, meta: watchChangeMeta } = bindingifyWatchChange(args);
 

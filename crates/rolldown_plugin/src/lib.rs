@@ -39,6 +39,7 @@ pub use crate::{
   types::hook_build_start_args::HookBuildStartArgs,
   types::hook_close_bundle_args::HookCloseBundleArgs,
   types::hook_generate_bundle_args::HookGenerateBundleArgs,
+  types::hook_kind::{HookKind, TimingSection},
   types::hook_load_args::HookLoadArgs,
   types::hook_load_output::HookLoadOutput,
   types::hook_render_chunk_args::HookRenderChunkArgs,

@@ -18,7 +18,7 @@ use rolldown_common::{
   ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx, SharedFileEmitter,
   SharedModuleInfoDashMap,
 };
-use rolldown_utils::dashmap::FxDashSet;
+use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap};
 use sugar_path::SugarPath;
 use tokio::sync::broadcast;
 
@@ -27,10 +27,22 @@ use crate::{
   PluginContext,
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::hook_timing::HookTimingCollector,
+  types::{
+    hook_kind::{HookKind, TimingSection},
+    hook_timing::HookTimingCollector,
+  },
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
+
+/// `micros` as a whole-percent share of the build. Clamped because a hook can overlap
+/// a section it is not part of — `pluginContext.load()` inside `buildStart` pulls
+/// module loading into the serially-measured span — which can push the total slightly
+/// past the build's wall clock.
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
+fn percent_of(micros: u64, total_build_micros: u64) -> u8 {
+  ((micros as f64 / total_build_micros as f64 * 100.0).round() as u64).min(100) as u8
+}
 
 pub struct PluginDriver {
   plugins: IndexPluginable,
@@ -120,23 +132,47 @@ impl PluginDriver {
     self.hook_timing_collector.as_ref().map(|_| std::time::Instant::now())
   }
 
-  /// Record the elapsed time for a plugin if timing collection is enabled.
+  /// Record the elapsed time of a plugin hook call if timing collection is enabled.
   #[inline]
-  pub fn record_timing(&self, plugin_idx: PluginIdx, start: Option<std::time::Instant>) {
+  pub fn record_timing(
+    &self,
+    plugin_idx: PluginIdx,
+    hook: HookKind,
+    start: Option<std::time::Instant>,
+  ) {
+    self.record_hook_timing(Some(plugin_idx), hook, start);
+  }
+
+  /// Record the elapsed time of a user callback the Rust core invokes directly rather
+  /// than through a plugin — notably the `output.codeSplitting` / `advancedChunks`
+  /// `groups[].name` chunk classifier, whose cost is otherwise invisible to
+  /// `[PLUGIN_TIMINGS]` even when it dominates the build.
+  #[inline]
+  pub fn record_core_timing(&self, hook: HookKind, start: Option<std::time::Instant>) {
+    self.record_hook_timing(None, hook, start);
+  }
+
+  #[inline]
+  fn record_hook_timing(
+    &self,
+    owner: Option<PluginIdx>,
+    hook: HookKind,
+    start: Option<std::time::Instant>,
+  ) {
     if let (Some(collector), Some(start)) = (&self.hook_timing_collector, start) {
       #[expect(clippy::cast_possible_truncation)]
-      collector.record(plugin_idx, start.elapsed().as_micros() as u64);
+      collector.record(owner, hook, start.elapsed().as_micros() as u64);
     }
   }
 
-  /// Record the elapsed time for the `output.codeSplitting` / `advancedChunks`
-  /// `groups[].name` chunk-name classifier (a user JS callback invoked directly from the
-  /// Rust core, not via a plugin hook) if timing collection is enabled.
+  /// Record how long a section that runs hooks concurrently actually took. Hook time
+  /// measured inside it is apportioned against this span, which is what makes those
+  /// hooks comparable to serially-invoked ones — see [`TimingSection`].
   #[inline]
-  pub fn record_code_splitting_name_timing(&self, start: Option<std::time::Instant>) {
+  pub fn record_section_time(&self, section: TimingSection, start: Option<std::time::Instant>) {
     if let (Some(collector), Some(start)) = (&self.hook_timing_collector, start) {
       #[expect(clippy::cast_possible_truncation)]
-      collector.record_code_splitting_name(start.elapsed().as_micros() as u64);
+      collector.record_section_micros(section, start.elapsed().as_micros() as u64);
     }
   }
 
@@ -159,11 +195,12 @@ impl PluginDriver {
   }
 
   /// Get plugin timings summary if timing collection is enabled and plugins are taking significant time.
-  /// Returns a list of (name, percentage) pairs at or above average time (min 1 second).
-  /// Includes both plugin hooks and non-plugin output-option callbacks (e.g. the
-  /// `output.codeSplitting` `groups[].name` chunk classifier), so the report is not blind
-  /// to user callbacks invoked directly from the Rust core rather than via a plugin hook.
-  #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
+  ///
+  /// Rows are per owner — a plugin, or the output options for callbacks the Rust core
+  /// invokes directly — carrying the estimated wall-clock time attributable to them
+  /// and a breakdown of which hooks it went to. Estimates are shares of real elapsed
+  /// time rather than sums of measured hook durations, so a hook called serially is
+  /// comparable to one called concurrently thousands of times; see [`TimingSection`].
   pub fn get_plugin_timings_info(&self) -> Option<Vec<rolldown_error::PluginTimingInfo>> {
     const MAX_ROWS: usize = 5;
     const ONE_SECOND_MICROS: u64 = 1_000_000;
@@ -171,21 +208,49 @@ impl PluginDriver {
     if !collector.plugins_are_slow() {
       return None;
     }
-    let mut summary = collector.get_summary();
-    summary.extend(collector.get_output_callback_summary());
-    let total_micros: u64 = summary.iter().map(|s| s.total_duration_micros).sum();
-    if summary.is_empty() || total_micros == 0 {
+    let total_build_micros = collector.total_build_micros();
+    if total_build_micros == 0 {
       return None;
     }
-    summary.sort_by_key(|s| std::cmp::Reverse(s.total_duration_micros));
-    let threshold = (total_micros / summary.len() as u64).max(ONE_SECOND_MICROS);
-    let result = summary
-      .iter()
-      .filter(|s| s.total_duration_micros >= threshold)
-      .take(MAX_ROWS)
-      .map(|s| rolldown_error::PluginTimingInfo {
-        name: s.plugin_name.to_string(),
-        percent: (s.total_duration_micros as f64 / total_micros as f64 * 100.0).round() as u8,
+
+    let mut by_owner: FxIndexMap<ArcStr, (u64, Vec<(HookKind, u64)>)> = FxIndexMap::default();
+    for estimate in collector.estimate() {
+      let owner = by_owner.entry(estimate.owner).or_default();
+      owner.0 += estimate.estimated_micros;
+      owner.1.push((estimate.hook, estimate.estimated_micros));
+    }
+
+    // Estimates are real time, so a flat floor is a meaningful filter on its own —
+    // unlike a share of the summed hook durations, which had no fixed scale.
+    let mut rows = by_owner
+      .into_iter()
+      .filter(|(_, (total_micros, _))| *total_micros >= ONE_SECOND_MICROS)
+      .collect::<Vec<_>>();
+    rows.sort_by_key(|(_, (total_micros, _))| std::cmp::Reverse(*total_micros));
+    rows.truncate(MAX_ROWS);
+
+    let result = rows
+      .into_iter()
+      .map(|(name, (total_micros, mut hooks))| {
+        hooks.sort_by_key(|(_, micros)| std::cmp::Reverse(*micros));
+        rolldown_error::PluginTimingInfo {
+          name: name.to_string(),
+          percent: percent_of(total_micros, total_build_micros),
+          estimated_ms: total_micros / 1_000,
+          // A lone hook would just repeat the row it sits under.
+          hooks: if hooks.len() > 1 {
+            hooks
+              .into_iter()
+              .map(|(hook, micros)| rolldown_error::PluginHookTimingInfo {
+                name: hook.label(),
+                percent: percent_of(micros, total_build_micros),
+                estimated_ms: micros / 1_000,
+              })
+              .collect()
+          } else {
+            Vec::new()
+          },
+        }
       })
       .collect::<Vec<_>>();
     if result.is_empty() { None } else { Some(result) }

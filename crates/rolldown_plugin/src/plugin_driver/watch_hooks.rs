@@ -1,3 +1,4 @@
+use crate::HookKind;
 use crate::HookNoopReturn;
 use crate::PluginDriver;
 use anyhow::Context;
@@ -16,7 +17,7 @@ impl PluginDriver {
     {
       let start = self.start_timing();
       let result = plugin.call_watch_change(ctx, path, event).await;
-      self.record_timing(plugin_idx, start);
+      self.record_timing(plugin_idx, HookKind::WatchChange, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
@@ -33,7 +34,7 @@ impl PluginDriver {
     {
       let start = self.start_timing();
       let result = plugin.call_close_watcher(ctx).await;
-      self.record_timing(plugin_idx, start);
+      self.record_timing(plugin_idx, HookKind::CloseWatcher, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())

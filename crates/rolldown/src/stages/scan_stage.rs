@@ -14,7 +14,7 @@ use rolldown_common::{
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::FileSystem;
-use rolldown_plugin::SharedPluginDriver;
+use rolldown_plugin::{SharedPluginDriver, TimingSection};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -192,7 +192,13 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
       .plugin_driver
       .set_context_load_modules_tx(Some(module_loader.shared_context.tx.clone()))?;
 
-    let mut module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+    // Module tasks are spawned per module, so the per-module hooks they call queue
+    // behind each other and their measured durations sum to far more than the phase
+    // actually took. Recording the real span lets that sum be scaled back down to it.
+    let fetch_timing = self.plugin_driver.start_timing();
+    let module_loader_output = module_loader.fetch_modules(fetch_mode).await;
+    self.plugin_driver.record_section_time(TimingSection::FetchModule, fetch_timing);
+    let mut module_loader_output = module_loader_output?;
 
     if let Some(handler) = handler {
       self.process_sourcemap_handler(handler, &mut module_loader_output);

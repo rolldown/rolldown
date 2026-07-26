@@ -10,6 +10,7 @@ use rolldown_common::{
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildResult, Diagnostics};
+use rolldown_plugin::TimingSection;
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, ParallelIterator},
@@ -56,16 +57,28 @@ impl GenerateStage<'_> {
     // (the last reader), where it is dropped at scope exit by the compiler —
     // releasing the per-module bumpalo arenas before `minify_chunks` and
     // `finalize_assets` allocate.
-    let (mut instantiated_chunks, index_chunk_to_instances) = self
+    //
+    // Each of these three fans out over chunks, so the hooks they call overlap and
+    // their measured durations overcount. Recording the real span of each lets that
+    // be scaled back down to the time the phase actually took.
+    let instantiate_timing = self.plugin_driver.start_timing();
+    let instantiated = self
       .instantiate_chunks(chunk_graph, ast_table, &mut diagnostics, used_symbol_refs, order_state)
-      .await?;
+      .await;
+    self.plugin_driver.record_section_time(TimingSection::InstantiateChunks, instantiate_timing);
+    let (mut instantiated_chunks, index_chunk_to_instances) = instantiated?;
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
 
-    diagnostics
-      .extend(render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?);
+    let render_timing = self.plugin_driver.start_timing();
+    let rendered = render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await;
+    self.plugin_driver.record_section_time(TimingSection::RenderChunks, render_timing);
+    diagnostics.extend(rendered?);
 
-    augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
+    let hash_timing = self.plugin_driver.start_timing();
+    let augmented = augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await;
+    self.plugin_driver.record_section_time(TimingSection::AugmentChunkHash, hash_timing);
+    augmented?;
 
     Self::minify_chunks(self.options, &mut instantiated_chunks)?;
 

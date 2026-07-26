@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-  HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
+  HookBuildEndArgs, HookKind, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
   HookResolveIdReturn, HookTransformArgs, LoadPluginContext, PluginContext, PluginDriver,
   TransformPluginContext,
   pluginable::HookTransformAstReturn,
@@ -53,7 +53,7 @@ impl PluginDriver {
     {
       let start = self.start_timing();
       let result = plugin.call_build_start(ctx, &crate::HookBuildStartArgs { options: opts }).await;
-      self.record_timing(plugin_idx, start);
+      self.record_timing(plugin_idx, HookKind::BuildStart, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
 
@@ -125,7 +125,7 @@ impl PluginDriver {
             args,
           )
           .await;
-        self.record_timing(plugin_idx, start);
+        self.record_timing(plugin_idx, HookKind::ResolveId, start);
         if let Some(r) = result? {
           trace_action!(action::HookResolveIdCallEnd {
             action: "HookResolveIdCallEnd",
@@ -199,7 +199,7 @@ impl PluginDriver {
           args,
         )
         .await;
-      self.record_timing(plugin_idx, start);
+      self.record_timing(plugin_idx, HookKind::ResolveDynamicImport, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         return Ok(Some(r));
       }
@@ -235,7 +235,7 @@ impl PluginDriver {
         let load_ctx = Arc::new(LoadPluginContext::new(ctx.clone(), args.module_idx));
         let start = self.start_timing();
         let result = plugin.call_load(load_ctx, args).await;
-        self.record_timing(plugin_idx, start);
+        self.record_timing(plugin_idx, HookKind::Load, start);
         if let Some(r) = result? {
           trace_action!(action::HookLoadCallEnd {
             action: "HookLoadCallEnd",
@@ -329,7 +329,7 @@ impl PluginDriver {
           &HookTransformArgs { id, code: code_arc_ref, module_type: &*module_type },
         )
         .await;
-      self.record_timing(plugin_idx, start);
+      self.record_timing(plugin_idx, HookKind::Transform, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         let map_was_omitted = matches!(r.map, crate::HookTransformOutputMap::Omitted);
@@ -470,7 +470,7 @@ impl PluginDriver {
       }
       let start = self.start_timing();
       let result = plugin.call_module_parsed(ctx, Arc::clone(&module_info), normal_module).await;
-      self.record_timing(plugin_idx, start);
+      self.record_timing(plugin_idx, HookKind::ModuleParsed, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
@@ -487,7 +487,7 @@ impl PluginDriver {
     {
       let start = self.start_timing();
       let result = plugin.call_build_end(ctx, args).await;
-      self.record_timing(plugin_idx, start);
+      self.record_timing(plugin_idx, HookKind::BuildEnd, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())

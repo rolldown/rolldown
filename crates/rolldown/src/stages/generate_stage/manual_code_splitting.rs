@@ -13,7 +13,7 @@ use rolldown_common::{
   MatchGroupTest, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry,
 };
 use rolldown_error::BuildResult;
-use rolldown_plugin::SharedPluginDriver;
+use rolldown_plugin::{HookKind, SharedPluginDriver};
 use rolldown_utils::{BitSet, IndexBitSet, xxhash::xxhash_with_base};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -192,11 +192,13 @@ impl ManualSplitter<'_> {
 
         // Time the user's chunk `name` classifier. It is a Rust-core output-option
         // callback that never passes through the plugin driver, so it is otherwise
-        // invisible to `[PLUGIN_TIMINGS]`. `start_timing()` is a no-op (returns `None`)
-        // unless plugin-timing collection is enabled, so this is zero-overhead by default.
+        // invisible to `[PLUGIN_TIMINGS]`. Calls are serial, so the accumulated time is
+        // the elapsed time and needs no section boundary. `start_timing()` is a no-op
+        // (returns `None`) unless plugin-timing collection is enabled, so this is
+        // zero-overhead by default.
         let name_timing = self.plugin_driver.start_timing();
         let name_result = match_group.name.value(&ctx, &normal_module.id).await;
-        self.plugin_driver.record_code_splitting_name_timing(name_timing);
+        self.plugin_driver.record_core_timing(HookKind::CodeSplittingName, name_timing);
         let Some(group_name) = name_result? else {
           // Group which doesn't have a name will be ignored.
           continue;

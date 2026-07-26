@@ -216,10 +216,10 @@ export function bindingifyCloseBundle(
   }));
 }
 
-function bindingifyAddonHook(
+export function bindingifyAddonHook<K extends 'banner' | 'footer' | 'intro' | 'outro'>(
   args: BindingifyPluginArgs,
-  name: 'banner' | 'footer' | 'intro' | 'outro',
-): PluginHookWithBindingExt<BindingPluginOptions['banner']> {
+  name: K,
+): PluginHookWithBindingExt<BindingPluginOptions[K]> {
   return bindingifyHook(args.plugin[name], ({ handler }) => ({
     plugin: async (ctx, chunk) => {
       if (typeof handler === 'string') {
@@ -229,28 +229,4 @@ function bindingifyAddonHook(
       return handler.call(createPluginContext(args, ctx), transformRenderedChunk(chunk));
     },
   }));
-}
-
-export function bindingifyBanner(
-  args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<BindingPluginOptions['banner']> {
-  return bindingifyAddonHook(args, 'banner');
-}
-
-export function bindingifyFooter(
-  args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<BindingPluginOptions['footer']> {
-  return bindingifyAddonHook(args, 'footer');
-}
-
-export function bindingifyIntro(
-  args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<BindingPluginOptions['intro']> {
-  return bindingifyAddonHook(args, 'intro');
-}
-
-export function bindingifyOutro(
-  args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<BindingPluginOptions['outro']> {
-  return bindingifyAddonHook(args, 'outro');
 }

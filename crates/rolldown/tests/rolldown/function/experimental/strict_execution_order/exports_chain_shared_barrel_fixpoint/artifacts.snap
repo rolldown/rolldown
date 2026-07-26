@@ -35,8 +35,7 @@ export { inner_exports as star };
 ### main2.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
-
+// HIDDEN [\0rolldown/runtime.js]
 //#region leaf.js
 var foo;
 function init_leaf() {
@@ -65,11 +64,4 @@ function init_main() {
 
 //#endregion
 export { init_inner as n, inner_exports as r, init_main as t };
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
 ```

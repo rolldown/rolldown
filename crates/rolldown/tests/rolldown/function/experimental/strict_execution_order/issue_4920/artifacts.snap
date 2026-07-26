@@ -36,8 +36,8 @@ export { dep_default as dep };
 ### main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
 import nodeAssert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
 function foo() {
 	globalThis.value = 1;
@@ -58,13 +58,5 @@ function init_main() {
 }
 //#endregion
 export { dep_default as n, init_dep as r, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
 
 ```

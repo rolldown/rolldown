@@ -31,7 +31,7 @@ export { value };
 ### main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region tla.js
 var value$1;
 function init_tla() {
@@ -57,14 +57,6 @@ function init_main() {
 }
 //#endregion
 export { init_lib as n, value as r, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
 
 ```
 

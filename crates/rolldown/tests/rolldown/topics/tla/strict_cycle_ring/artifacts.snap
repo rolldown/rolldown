@@ -34,7 +34,7 @@ export { value };
 ### main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region ring-b.js
 function init_ring_b() {
 	return (init_ring_b = __esmMin((async () => {
@@ -62,14 +62,6 @@ function init_main() {
 }
 //#endregion
 export { value as n, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
 
 ```
 

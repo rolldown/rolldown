@@ -30,8 +30,8 @@ init_main();
 ### main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
 //#region main.js
 var A, foo;
 function init_main() {
@@ -43,13 +43,5 @@ function init_main() {
 }
 //#endregion
 export { init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
 
 ```

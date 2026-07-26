@@ -39,7 +39,6 @@ nodeAssert.strictEqual(import_foo.value, "foo");
 
 ```js
 import { t as init_main } from "./main2.js";
-import "./rolldown-runtime.js";
 init_main();
 
 ```
@@ -47,8 +46,8 @@ init_main();
 ### main2.js
 
 ```js
-import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 import nodeAssert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
 __rolldown_runtime__.registerGraph({
 	ids: ["foo.cjs", "main.js"],
 	localCount: 2,
@@ -74,13 +73,5 @@ function init_main() {
 }
 //#endregion
 export { init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```

@@ -7,8 +7,8 @@ use itertools::Itertools;
 use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta,
-  IndexModules, ModuleIdx, PostChunkOptimizationOperation, RuntimeHelper, StmtInfoIdx, SymbolRef,
-  SymbolRefDb, UsedSymbolRefsBuilder, WrapKind,
+  IndexModules, ModuleIdx, OutputFormat, PostChunkOptimizationOperation, RuntimeHelper,
+  StmtInfoIdx, SymbolRef, SymbolRefDb, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::StatementExt;
@@ -17,6 +17,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use super::{
   GenerateStage,
   chunk_ext::{ChunkCreationReason, ChunkDebugExt},
+  chunk_optimizer::RuntimeMergeCascade,
   order_analysis::{OrderAnalysis, OrderWrapPlan},
   order_wrap_state::{OrderImportKey, OrderImportOverlay, OrderWrapState},
 };
@@ -146,7 +147,7 @@ impl GenerateStage<'_> {
     self.place_order_wrap_modules(chunk_graph, plan, order_state);
     self.create_order_wrap_entry_facades(chunk_graph, analysis);
     self.restore_order_wrap_entry_facades(chunk_graph, plan);
-    self.ensure_runtime_module_for_order_wraps(chunk_graph);
+    self.ensure_runtime_module_for_order_wraps(chunk_graph, order_state);
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
     self.renumber_live_chunks(chunk_graph);
     true
@@ -392,7 +393,19 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn ensure_runtime_module_for_order_wraps(&mut self, chunk_graph: &mut ChunkGraph) {
+  /// Normalize the runtime module onto a standalone chunk, then re-run the runtime-chunk merge
+  /// proof with the post-lowering consumer set.
+  ///
+  /// The baseline `try_merge_runtime_chunk` calls run before order analysis, so a pre-lowering
+  /// merge never proved anything about the helper demand the wrappers and overlays above added.
+  /// Evicting a co-hosted runtime first restores the standalone shape that proof requires; by this
+  /// point lowering has materialized every order-introduced demand in [`OrderWrapState`], so the
+  /// re-proof sees the complete consumer set.
+  fn ensure_runtime_module_for_order_wraps(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+    order_state: &OrderWrapState,
+  ) {
     let runtime_idx = self.link_output.runtime.id();
     if let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_idx] {
       if self.options.code_splitting.is_disabled() {
@@ -401,6 +414,9 @@ impl GenerateStage<'_> {
       let runtime_chunk = &chunk_graph.chunk_table[runtime_chunk_idx];
       if runtime_chunk.modules.len() == 1 {
         self.clear_module_symbol_chunk_indices(runtime_idx);
+        // Facade restoration above can tombstone chunks the pre-lowering merge counted as
+        // consumers, so a standalone runtime may only now have a sole consumer left.
+        self.fold_runtime_chunk_after_order_lowering(chunk_graph, order_state);
         return;
       }
       let mut bits = runtime_chunk.bits.clone();
@@ -440,6 +456,7 @@ impl GenerateStage<'_> {
         self.link_output.metas[runtime_idx].depended_runtime_helper,
       );
       self.clear_module_symbol_chunk_indices(runtime_idx);
+      self.fold_runtime_chunk_after_order_lowering(chunk_graph, order_state);
       return;
     }
 
@@ -483,6 +500,32 @@ impl GenerateStage<'_> {
       self.link_output.metas[runtime_idx].depended_runtime_helper,
     );
     self.clear_module_symbol_chunk_indices(runtime_idx);
+    self.fold_runtime_chunk_after_order_lowering(chunk_graph, order_state);
+  }
+
+  /// Re-run the runtime-chunk merge proof against the post-lowering consumer set: the
+  /// order-introduced consumers from [`OrderWrapState`] plus the merge's own re-scan of every
+  /// pre-lowering consumer. Restricted to a sole-consumer host — see
+  /// [`RuntimeMergeCascade::SingleConsumerOnly`].
+  ///
+  /// Esm output only. Under cjs output, `compute_cross_chunk_links` later gives every ESM-exports
+  /// entry chunk — including the zero-module facades minted above — a `__toCommonJS` demand that
+  /// is invisible here, so a fold could hand an entry chunk with no demand at all a brand-new
+  /// require edge into a user chunk. Other formats keep the standalone/evicted layout.
+  fn fold_runtime_chunk_after_order_lowering(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    order_state: &OrderWrapState,
+  ) {
+    if !matches!(self.options.format, OutputFormat::Esm) {
+      return;
+    }
+    let order_consumers = order_state.runtime_helper_consumer_chunks(&chunk_graph.module_to_chunk);
+    self.try_merge_runtime_chunk(
+      chunk_graph,
+      Some(&order_consumers),
+      RuntimeMergeCascade::SingleConsumerOnly,
+    );
   }
 
   fn update_chunk_runtime_helpers_after_module_removal(

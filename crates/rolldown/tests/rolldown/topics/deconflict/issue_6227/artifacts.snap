@@ -44,7 +44,7 @@ init_main();
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region init.js
 function init_init() {
 	return (init_init = __esmMin((() => {
@@ -85,13 +85,5 @@ function init_main() {
 }
 //#endregion
 export { init_init as i, init_bar as n, init_foo as r, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
 
 ```

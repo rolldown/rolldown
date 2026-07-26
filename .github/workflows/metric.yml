@@ -85,3 +85,22 @@ jobs:
           COMMIT_HASH: ${{ github.sha }}
           GIT_REPOSITORY_URL: ${{ github.repository }}
           BINARY_SIZE: ${{ needs.compile-time-and-binary-size.outputs.binary_size }}
+
+  # Nothing consumes this workflow's output, so a break here is invisible until
+  # someone notices the charts have gone flat — last time that took 11 days.
+  notify-failure:
+    name: Notify Failure
+    needs: [compile-time-and-binary-size, metric]
+    # `failure()` covers either job failing, and unlike `always()` it stays quiet
+    # on cancellation.
+    if: ${{ failure() && github.repository == 'rolldown/rolldown' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Discord
+        uses: tsickert/discord-webhook@b217a69502f52803de774ded2b1ab7c282e99645 # v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_ROLLDOWN_CHANNEL }}
+          embed-title: Metric workflow failed
+          embed-description: |
+            Compile time and binary size are no longer being recorded to [rolldown/metric](https://github.com/rolldown/metric).
+          embed-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

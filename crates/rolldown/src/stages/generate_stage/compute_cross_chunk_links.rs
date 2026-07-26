@@ -1295,9 +1295,15 @@ impl GenerateStage<'_> {
         // single default export per chunk must be named `default`. Otherwise use the
         // `default_export_ref` representative name. The `&&` keeps the `entry_module`
         // lookup guarded behind the `preserve_modules` check.
+        //
+        // `preserve_modules` emits one chunk per module, so a chunk normally carries the module it
+        // mirrors. Synthetic chunks are the exception: the shared `rolldown-runtime` chunk that
+        // strict execution order splits out mirrors no user module and is `ChunkKind::Common`, so
+        // it has no entry module and none of its exports can be a module's default export.
         let base = if self.options.preserve_modules
-          && chunk.entry_module(&self.link_output.module_table).unwrap().default_export_ref
-            == *chunk_export
+          && chunk
+            .entry_module(&self.link_output.module_table)
+            .is_some_and(|entry_module| entry_module.default_export_ref == *chunk_export)
         {
           CompactStr::new_const("default")
         } else {

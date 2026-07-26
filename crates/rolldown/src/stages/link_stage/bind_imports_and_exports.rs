@@ -38,6 +38,7 @@ struct ImportTracker {
 #[derive(Debug)]
 pub struct MatchingContext {
   tracker_stack: Vec<ImportTracker>,
+  circular_reexport: Option<(String, String)>,
 }
 
 impl MatchingContext {
@@ -987,7 +988,7 @@ impl BindImportsAndExportsContext<'_> {
     // from an empty stack (and the ambiguous-reexport recursion gets its own cloned stack), so
     // clearing before each call preserves behavior while reusing this allocation instead of
     // allocating a fresh `Vec` per import.
-    let mut matching_ctx = MatchingContext { tracker_stack: Vec::new() };
+    let mut matching_ctx = MatchingContext { tracker_stack: Vec::new(), circular_reexport: None };
     for (imported_as_ref, named_import) in &module.named_imports {
       let match_import_span = tracing::trace_span!(
         "MATCH_IMPORT",
@@ -1040,6 +1041,7 @@ impl BindImportsAndExportsContext<'_> {
         }
       }
       matching_ctx.tracker_stack.clear();
+      matching_ctx.circular_reexport = None;
       let ret = self.match_import_with_export(
         self.index_modules,
         &mut matching_ctx,
@@ -1052,7 +1054,15 @@ impl BindImportsAndExportsContext<'_> {
       );
       tracing::trace!("Got match result {:?}", ret);
       match ret {
-        MatchImportKind::Cycle => {}
+        MatchImportKind::Cycle => {
+          let (importer_id, imported_specifier) = matching_ctx
+            .circular_reexport
+            .take()
+            .expect("cycle should always have a circular reexport diagnostic");
+          self
+            .diagnostics
+            .push(BuildDiagnostic::circular_reexport(importer_id, imported_specifier));
+        }
         MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
           let importee = self.index_modules[resolved_module_idx].stable_id().to_string();
 
@@ -1235,18 +1245,17 @@ impl BindImportsAndExportsContext<'_> {
 
     let mut ambiguous_results = vec![];
     let mut reexports = vec![];
-    let ret = loop {
+    let ret = 'tracking: loop {
       for prev_tracker in ctx.tracker_stack.iter().rev() {
         if prev_tracker.importer == tracker.importer
           && prev_tracker.imported_as == tracker.imported_as
         {
+          // ResolveExport treats an in-progress (module, binding) request as null.
           let importer_module = &index_modules[tracker.importer];
           let importer_id = importer_module.id().to_string();
           let imported_specifier = tracker.imported.to_string();
-          self
-            .diagnostics
-            .push(BuildDiagnostic::circular_reexport(importer_id, imported_specifier));
-          return MatchImportKind::Cycle;
+          ctx.circular_reexport = Some((importer_id, imported_specifier));
+          break 'tracking MatchImportKind::Cycle;
         }
       }
       ctx.tracker_stack.push(tracker.clone());
@@ -1294,7 +1303,10 @@ impl BindImportsAndExportsContext<'_> {
                 if let Some(resolved_module_idx) = rec.resolved_module {
                   let ambiguous_result = self.match_import_with_export(
                     index_modules,
-                    &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
+                    &mut MatchingContext {
+                      tracker_stack: ctx.tracker_stack.clone(),
+                      circular_reexport: None,
+                    },
                     ImportTracker {
                       importer: ambiguous_ref_owner.idx(),
                       importee: resolved_module_idx,
@@ -1366,6 +1378,12 @@ impl BindImportsAndExportsContext<'_> {
 
     tracing::trace!("ambiguous_results {:#?}", ambiguous_results);
     tracing::trace!("ret {:#?}", ret);
+    ambiguous_results.retain(|result| !matches!(result, MatchImportKind::Cycle));
+    let ret = if matches!(ret, MatchImportKind::Cycle) && !ambiguous_results.is_empty() {
+      ambiguous_results.pop().unwrap()
+    } else {
+      ret
+    };
 
     for ambiguous_result in &ambiguous_results {
       if *ambiguous_result != ret {

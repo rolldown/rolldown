@@ -1294,6 +1294,46 @@ test.concurrent(
 );
 
 test.concurrent(
+  'watch should preserve plugin attribution in sourcemap warnings',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-sourcemap-warning-plugin', retryCount, {
+      'main.js': `console.log('main')`,
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const pluginName = 'test-sourcemap-plugin';
+    const onLogFn = vi.fn();
+    const watcher = watch({
+      input: path.join(dir, 'main.js'),
+      output: { dir: path.join(dir, 'dist'), sourcemap: true },
+      plugins: [
+        {
+          name: pluginName,
+          transform(code) {
+            return { code: code + '\n// touched\n' };
+          },
+        },
+      ],
+      onLog(_level, log) {
+        if (log.code === 'SOURCEMAP_BROKEN') {
+          onLogFn(log.plugin);
+        }
+      },
+    });
+    onTestFinished(async () => await watcher.close());
+
+    await waitBuildFinished(watcher);
+    expect(onLogFn).toHaveBeenCalledWith(pluginName);
+  },
+);
+
+test.concurrent(
   'watch should fail when onLog rejects a warning',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {

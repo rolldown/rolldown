@@ -94,7 +94,7 @@ struct ActualOrderTraversal {
 
 impl GenerateStage<'_> {
   pub(super) fn analyze_execution_order(
-    &mut self,
+    &self,
     chunk_graph: &ChunkGraph,
     used_symbol_refs: &UsedSymbolRefsBuilder,
   ) -> Option<OrderAnalysis> {

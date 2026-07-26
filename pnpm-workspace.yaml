@@ -95,7 +95,7 @@ catalog:
   semver: ^7.8.0
   serve-static: ^2.0.0
   signal-exit: 4.1.0
-  source-map: 0.7.6
+  source-map: 0.8.0
   source-map-support: ^0.5.21
   strip-comments: ^2.0.1
   terser: ^5.49.0

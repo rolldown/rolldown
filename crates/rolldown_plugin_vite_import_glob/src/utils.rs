@@ -9,7 +9,10 @@ use oxc::ast::ast::{
 use oxc::ast_visit::{VisitJs, walk_js};
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
-use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
+use rolldown_plugin_utils::{
+  constants::{ViteImportGlob, ViteImportGlobValue},
+  to_string_literal,
+};
 use rolldown_std_utils::relative_path_to_slash;
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
@@ -185,6 +188,7 @@ impl<'ast> GlobImportVisit<'_> {
         Cow::Borrowed(import_path)
       };
 
+      let formatted_file = to_string_literal(&formatted_file);
       let value: Cow<'_, str> = if matches!(omit_type, ImportGlobOmitType::Values) {
         Cow::Borrowed("0")
       } else if options.eager {
@@ -205,16 +209,16 @@ impl<'ast> GlobImportVisit<'_> {
           Some(import) => format!("{{ {import} as {name} }}"),
         };
 
-        self.import_decls.push(format!("import {module_specifier} from \"{formatted_file}\";"));
+        self.import_decls.push(format!("import {module_specifier} from {formatted_file};"));
 
         Cow::Owned(name)
       } else {
         // () => import('./dir/bar.js') or () => import('./dir/foo.js').then((m) => m.setup)
         Cow::Owned(match options.import.as_deref() {
           Some(import) if import != "*" => {
-            format!("() => import(\"{formatted_file}\").then((m) => m[\"{import}\"])")
+            format!("() => import({formatted_file}).then((m) => m[{}])", to_string_literal(import))
           }
-          _ => format!("() => import(\"{formatted_file}\")"),
+          _ => format!("() => import({formatted_file})"),
         })
       };
 
@@ -237,14 +241,14 @@ impl<'ast> GlobImportVisit<'_> {
       ImportGlobOmitType::Values => format!(
         "{{{}{line_breaks}}}",
         properties
-          .map(|(file, value)| format!("\"{file}\": {value}"))
+          .map(|(file, value)| format!("{}: {value}", to_string_literal(file)))
           .collect::<Vec<_>>()
           .join(",")
       ),
       ImportGlobOmitType::None => format!(
         "/* #__PURE__ */ Object.assign({{{}{line_breaks}}})",
         properties
-          .map(|(file, value)| format!("\"{file}\": {value}"))
+          .map(|(file, value)| format!("{}: {value}", to_string_literal(file)))
           .collect::<Vec<_>>()
           .join(",")
       ),

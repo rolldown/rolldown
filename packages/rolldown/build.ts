@@ -199,6 +199,17 @@ function withShared({
 // package, and the generated rolldown/workerd facade.
 // See internal-docs/async-runtime/implementation.md.
 async function bundleManagedWorkerdLoaders() {
+  // The workerd entries reuse the browser pipeline (rolldown(), bindingify,
+  // RolldownBuild) against per-instance managed bindings, so they are browser
+  // builds of the package API from the pipeline's point of view.
+  const workerdDefine = {
+    'import.meta.browserBuild': 'true',
+    'import.meta.workerdPackageApi': 'true',
+    // Same polyfill as the browser package build: workerd has no ambient
+    // `process`, and the logger init reads this flag.
+    'process.env.ROLLDOWN_TEST': 'false',
+  };
+
   await build({
     input: nodePath.resolve('src/workerd.ts'),
     platform: 'node',
@@ -212,8 +223,10 @@ async function bundleManagedWorkerdLoaders() {
       format: 'esm',
       codeSplitting: false,
     },
+    plugins: [aliasWorkerdPipelineModules()],
     transform: {
       target: 'node22',
+      define: workerdDefine,
     },
   });
 
@@ -230,9 +243,10 @@ async function bundleManagedWorkerdLoaders() {
       format: 'esm',
       codeSplitting: false,
     },
-    plugins: [removeBuiltModules()],
+    plugins: [aliasWorkerdPipelineModules(), removeBuiltModules()],
     transform: {
       target: 'node22',
+      define: workerdDefine,
     },
   });
 
@@ -371,6 +385,38 @@ function bundleThreadedNodeWorkerRuntime(): Plugin {
           runtimeRequire,
           "import { instantiateNapiModuleSync, MessageHandler, getDefaultContext, emnapiAsyncWorkPlugin, emnapiTSFNPlugin } from '@napi-rs/wasm-runtime';",
         );
+      },
+    },
+  };
+}
+
+// The bundled workerd entries must never evaluate ambient-binding side
+// effects: the binding surface is entered per managed instance instead.
+// - `src/binding.cjs` -> slot-based forwarding proxy (`binding-workerd-proxy`)
+// - `src/timer-host.ts` -> empty stub (the deferred loader registers hosts)
+// - `src/binding-magic-string.ts` -> throwing stub (prototype mutation at
+//   module evaluation needs a live binding)
+// The dts-only workerd build intentionally omits this plugin so declarations
+// keep coming from the real modules.
+function aliasWorkerdPipelineModules(): Plugin {
+  const aliases = new Map([
+    [bindingFile, nodePath.resolve('src/binding-workerd-proxy.ts')],
+    [nodePath.resolve('src/timer-host.ts'), nodePath.resolve('src/workerd-stubs/timer-host.ts')],
+    [
+      nodePath.resolve('src/binding-magic-string.ts'),
+      nodePath.resolve('src/workerd-stubs/binding-magic-string.ts'),
+    ],
+  ]);
+  return {
+    name: 'alias-workerd-pipeline-modules',
+    resolveId: {
+      filter: { id: /binding|timer-host/ },
+      async handler(id, importer, options) {
+        const resolution = await this.resolve(id, importer, options);
+        if (!resolution) return resolution;
+        const target = aliases.get(resolution.id);
+        if (target) return { id: target };
+        return resolution;
       },
     },
   };

@@ -1403,19 +1403,33 @@ function __createManagedBindingFacade(__binding, __state) {
         __managedCloseOwner !== undefined ||
         __token.close === __target
       )
+    // \`BindingBundler#closeTerminal()\` runs the same native cleanup path as
+    // \`close()\` and is the only close the reused RolldownBuild pipeline calls.
+    // Release the open-object token when such a call leaves the object
+    // reporting \`closed === true\`, so instance disposal is not blocked by an
+    // already terminally-closed bundler.
+    const __terminallyClosesBindingObject =
+      __key === 'closeTerminal' && __token !== undefined
+    const __releaseIfReportsClosed = () => {
+      try {
+        if (Reflect.get(__closeOwner, 'closed', __closeOwner) === true) {
+          __releaseBindingObject(__closeOwner)
+        }
+      } catch {}
+    }
     return __finishManagedCall(
       __result,
       __wrapValue,
       () => {
-        if (__closesBindingObject) __releaseBindingObject(__closeOwner)
+        if (__closesBindingObject) {
+          __releaseBindingObject(__closeOwner)
+        } else if (__terminallyClosesBindingObject) {
+          __releaseIfReportsClosed()
+        }
       },
       () => {
-        if (!__closesBindingObject) return
-        try {
-          if (Reflect.get(__closeOwner, 'closed', __closeOwner) === true) {
-            __releaseBindingObject(__closeOwner)
-          }
-        } catch {}
+        if (!__closesBindingObject && !__terminallyClosesBindingObject) return
+        __releaseIfReportsClosed()
       },
     )
   }

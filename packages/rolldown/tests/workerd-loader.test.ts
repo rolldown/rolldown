@@ -3587,7 +3587,12 @@ console.log('managed binding wrappers collected')
     { timeout: 30_000 },
     ({ pluginSource }) => {
       const tsxLoader = createRequire(import.meta.url).resolve('tsx');
-      const workerdUrl = new URL('../src/workerd.ts', import.meta.url).href;
+      // Import the deferred loader directly: the public workerd entry now
+      // also pulls the high-level build() pipeline, whose legacy decorators
+      // the child's tsx transform mishandles; these tests only exercise the
+      // managed loader's own mediation behavior.
+      const workerdUrl = new URL('../src/rolldown-binding.wasip1-deferred.js', import.meta.url)
+        .href;
       const child = spawnSync(
         process.execPath,
         [
@@ -3644,7 +3649,12 @@ console.log('input record context invalidated')
     { timeout: 30_000 },
     () => {
       const tsxLoader = createRequire(import.meta.url).resolve('tsx');
-      const workerdUrl = new URL('../src/workerd.ts', import.meta.url).href;
+      // Import the deferred loader directly: the public workerd entry now
+      // also pulls the high-level build() pipeline, whose legacy decorators
+      // the child's tsx transform mishandles; these tests only exercise the
+      // managed loader's own mediation behavior.
+      const workerdUrl = new URL('../src/rolldown-binding.wasip1-deferred.js', import.meta.url)
+        .href;
       const child = spawnSync(
         process.execPath,
         [

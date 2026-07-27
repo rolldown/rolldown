@@ -29,6 +29,19 @@ export const instantiate: typeof createInstance = createInstance;
  */
 export const getWorkerdRuntimeStats: typeof getDeferredRuntimeStats = getDeferredRuntimeStats;
 
+export {
+  build,
+  createWorkerdBundle,
+  type WorkerdBuildOptions,
+  type WorkerdBundle,
+  type WorkerdBundleOptions,
+} from './workerd-build';
+export type { InputOptions } from './options/input-options';
+export type { OutputOptions } from './options/output-options';
+export type { RolldownOutput, OutputChunk, OutputAsset } from './types/rolldown-output';
+export type { BundleError } from './utils/error';
+export type { Plugin, RolldownPlugin } from './plugin';
+
 /** Per-item `dropInner()` statuses reported by {@linkcode freeOutputs}. */
 export interface WorkerdFreeOutputsReport {
   /** Release status of each output chunk, in `outputs.chunks` order. */

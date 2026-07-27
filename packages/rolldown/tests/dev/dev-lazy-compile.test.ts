@@ -383,3 +383,67 @@ test(
     expect(chunk.code).not.toMatch(/__reExport\(/);
   },
 );
+
+// The dev runtime registry only holds modules this build wrapped, so an external can
+// only be reached through a real import statement. The three re-export forms used to
+// ask the registry for it instead, which yields `{}`; and when the same module also
+// imported that external, the two paths emitted one binding name twice, the inner
+// `var` shadowing the real import.
+test(
+  'a lazy chunk imports externals it re-exports instead of asking the registry',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-reexport-external-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./lazy.js');\n`);
+    // reachable only through the lazy chunk, and re-exports the external three ways
+    // while also importing it — the case that produced the shadowing `var`
+    fs.writeFileSync(
+      path.join(dir, 'reexport.js'),
+      `import { helper } from 'external-dep';\n` +
+        `export { helper as reHelper } from 'external-dep';\n` +
+        `export * as EXT from 'external-dep';\n` +
+        `export * from 'external-dep';\n` +
+        `export const helperType = typeof helper;\n`,
+    );
+    fs.writeFileSync(
+      path.join(dir, 'lazy.js'),
+      `import { EXT, reHelper, helperType } from './reexport.js';\n` +
+        `export const lazy = [EXT, reHelper, helperType];\n`,
+    );
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        external: ['external-dep'],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+
+    const chunk = await engine.compileEntry(
+      `${path.join(dir, 'lazy.js')}?rolldown-lazy=1`,
+      'reexport-external-client',
+    );
+
+    const bindings = [...chunk.code.matchAll(/import \* as (\w+) from "external-dep"/g)].map(
+      (match) => match[1],
+    );
+    expect(bindings).toHaveLength(1);
+    // the registry never holds an external, so nothing may look it up there
+    expect(chunk.code).not.toMatch(/loadExports\("external-dep"\)/);
+    // and the one binding is declared once, so the import is not shadowed
+    expect(chunk.code).not.toMatch(new RegExp(`var\\s+${bindings[0]}\\b`));
+  },
+);

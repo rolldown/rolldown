@@ -117,21 +117,10 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             }
           });
         });
-        match importee {
-          Module::Normal(_) => {
-            if let Some(stmt) =
-              self.create_load_exports_call_stmt(importee, &binding_name, import_decl.span)
-            {
-              program_body.push(stmt);
-            }
-          }
-          Module::External(importee_ext) => {
-            self.create_static_import_stmt_from_external_module(
-              importee_ext,
-              &binding_name,
-              import_decl.span,
-            );
-          }
+        if let Some(stmt) =
+          self.create_importee_binding_stmt(importee, &binding_name, import_decl.span)
+        {
+          program_body.push(stmt);
         }
       }
       ast::Statement::ExportNamedDeclaration(mut decl) => {
@@ -175,7 +164,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
               &self.ast_builder,
             )
           }));
-          if let Some(stmt) = self.create_load_exports_call_stmt(importee, &binding_name, decl.span)
+          if let Some(stmt) = self.create_importee_binding_stmt(importee, &binding_name, decl.span)
           {
             program_body.push(stmt);
           }
@@ -293,7 +282,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         self.dependencies.insert(importee_idx);
         let binding_name = self.ensure_static_import_info(importee_idx, rec_id).to_string();
         if let Some(stmt) =
-          self.create_load_exports_call_stmt(importee, &binding_name, export_all_decl.span)
+          self.create_importee_binding_stmt(importee, &binding_name, export_all_decl.span)
         {
           program_body.push(stmt);
         }
@@ -407,23 +396,46 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     }
   }
 
-  fn create_load_exports_call_stmt(
+  /// Bind the importee's namespace object to `binding_name`, whatever brought the importee in -
+  /// a plain import or any of the three re-export forms. All of them read the binding the same
+  /// way afterwards, so they must all obtain it the same way.
+  ///
+  /// Only normal modules can come from the dev runtime registry: it holds the modules this build
+  /// wrapped, and an external is by definition not one of them. `loadExports` on an external id
+  /// finds nothing, warns, and returns `{}` - so an external has to keep a real import statement
+  /// and let the host resolve it. That statement is emitted outside the wrapper, hence no
+  /// statement to return here.
+  fn create_importee_binding_stmt(
     &mut self,
     importee: &Module,
     binding_name: &str,
     span: Span,
   ) -> Option<Statement<'ast>> {
-    if self.imports.contains(&importee.idx()) {
+    match importee {
+      Module::Normal(importee) => self.create_load_exports_call_stmt(importee, binding_name, span),
+      Module::External(importee) => {
+        self.create_static_import_stmt_from_external_module(importee, binding_name, span);
+        None
+      }
+    }
+  }
+
+  /// Takes a `&NormalModule` rather than a `&Module` on purpose: asking the registry for an
+  /// external is the defect this pairing exists to prevent, so it should not be expressible.
+  fn create_load_exports_call_stmt(
+    &mut self,
+    importee: &NormalModule,
+    binding_name: &str,
+    span: Span,
+  ) -> Option<Statement<'ast>> {
+    if self.imports.contains(&importee.idx) {
       return None;
     }
-    self.imports.insert(importee.idx());
+    self.imports.insert(importee.idx);
 
     // Use stable module ID for consistent runtime lookup
-    let id = importee.stable_id();
-    let interop = match importee {
-      Module::Normal(importee) => self.module.interop(importee),
-      Module::External(_) => None,
-    };
+    let id = importee.stable_id.as_ref();
+    let interop = self.module.interop(importee);
     let call_expr = Expression::new_call_with_arg(
       Expression::new_member_access_expr("__rolldown_runtime__", "loadExports", self),
       ast::Expression::new_string_literal(SPAN, Str::from_str_in(id, self), None, self),
@@ -513,8 +525,6 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     binding_name_for_namespace_object_ref: &str,
     scoping: &Scoping,
   ) -> Vec<ast::Statement<'ast>> {
-    // TODO reexport external module
-
     // construct `{ prop_name: () => returned, ... }`
     let mut arg_obj_expr = ast::ObjectExpression::boxed(
       SPAN,

@@ -1,8 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 
-const binding = vi.hoisted(() => ({
-  acquireAsyncRuntime: vi.fn(),
-  getRuntimeCapabilities: () => ({
+const binding = vi.hoisted(() => {
+  const nativeSharedCapabilities: Record<string, unknown> = {
     asyncRuntimeBuild: true,
     backend: 'shared',
     blockOnJsThreadSafe: false,
@@ -12,35 +11,99 @@ const binding = vi.hoisted(() => ({
     timers: true,
     wasi: false,
     watchSupported: true,
-  }),
-  shutdownAsyncRuntime: vi.fn(),
-  startAsyncRuntime: vi.fn(),
-}));
+  };
+  return {
+    acquireAsyncRuntime: vi.fn(),
+    capabilities: nativeSharedCapabilities as Record<string, unknown>,
+    nativeSharedCapabilities,
+    shutdownAsyncRuntime: vi.fn(),
+    startAsyncRuntime: vi.fn(),
+  };
+});
 
-vi.mock('../src/binding.cjs', () => binding);
+vi.mock('../src/binding.cjs', () => ({
+  acquireAsyncRuntime: binding.acquireAsyncRuntime,
+  getRuntimeCapabilities: () => binding.capabilities,
+  shutdownAsyncRuntime: binding.shutdownAsyncRuntime,
+  startAsyncRuntime: binding.startAsyncRuntime,
+}));
 
 // @ts-ignore These focused unit tests intentionally reach package source outside the test rootDir.
 import {
   acquireRuntimeLease,
   CloseCoordinator,
   getCloseTerminalErrors,
+  isRuntimeLeaseRequired,
 } from '../src/runtime-lifecycle';
 // @ts-ignore These focused unit tests intentionally reach package source outside the test rootDir.
 import * as runtimeLease from '../src/runtime-lease-manager';
 
-const {
-  getOrCreateLegacyWasiRuntimeLeaseManager,
-  getOrCreateWasiRuntimeLeaseManager,
-  WasiRuntimeLeaseManager,
-} = runtimeLease;
+const { getOrCreateWasiRuntimeLeaseManager, WasiRuntimeLeaseManager } = runtimeLease;
+const LEASE_MANAGER_REGISTRY_KEY = Symbol.for('@rolldown/runtime-lease-managers/v1');
 
 test('the native lease fallback never calls legacy manual lifecycle exports', async () => {
+  expect(isRuntimeLeaseRequired()).toBe(false);
   const lease = await acquireRuntimeLease();
 
   expect(() => lease.release()).not.toThrow();
   expect(binding.acquireAsyncRuntime).not.toHaveBeenCalled();
   expect(binding.startAsyncRuntime).not.toHaveBeenCalled();
   expect(binding.shutdownAsyncRuntime).not.toHaveBeenCalled();
+});
+
+test('shared threaded-WASI bindings skip the lease round-trip entirely', async () => {
+  vi.resetModules();
+  binding.capabilities = {
+    asyncRuntimeBuild: true,
+    backend: 'shared',
+    blockOnJsThreadSafe: false,
+    devSupported: false,
+    flavor: 'CurrentThread',
+    target: 'wasi-threads',
+    threads: false,
+    timers: true,
+    wasi: true,
+    watchSupported: false,
+  };
+  try {
+    const lifecycle = await import('../src/runtime-lifecycle');
+    expect(lifecycle.isRuntimeLeaseRequired()).toBe(false);
+
+    const lease = await lifecycle.acquireRuntimeLease();
+    expect(() => lease.release()).not.toThrow();
+    expect(binding.acquireAsyncRuntime).not.toHaveBeenCalled();
+  } finally {
+    binding.capabilities = binding.nativeSharedCapabilities;
+    vi.resetModules();
+  }
+});
+
+test('legacy threaded-WASI bindings still lease through acquireAsyncRuntime', async () => {
+  vi.resetModules();
+  // No capability reporter export at all: the compat shim synthesizes the
+  // legacy tokio-backed threaded-WASI report from the generated loader
+  // target. The hoisted vi.mock factory result is cached across
+  // vi.resetModules, so omitting a key needs a per-test vi.doMock.
+  const legacyAcquire = vi.fn();
+  const release = vi.fn();
+  legacyAcquire.mockResolvedValueOnce({ release });
+  vi.doMock('../src/binding.cjs', () => ({
+    __rolldownBindingTarget: 'wasi-threads',
+    acquireAsyncRuntime: legacyAcquire,
+  }));
+  try {
+    const lifecycle = await import('../src/runtime-lifecycle');
+    expect(lifecycle.isRuntimeLeaseRequired()).toBe(true);
+
+    const lease = await lifecycle.acquireRuntimeLease();
+    expect(legacyAcquire).toHaveBeenCalledOnce();
+    lease.release();
+    expect(release).toHaveBeenCalledOnce();
+  } finally {
+    vi.doUnmock('../src/binding.cjs');
+    Reflect.deleteProperty(globalThis, LEASE_MANAGER_REGISTRY_KEY);
+    vi.resetModules();
+  }
 });
 
 describe('WasiRuntimeLeaseManager', () => {
@@ -161,35 +224,6 @@ describe('WasiRuntimeLeaseManager', () => {
     lease.release();
     expect(acquire).toHaveBeenCalledOnce();
     expect(release).toHaveBeenCalledOnce();
-  });
-
-  test.each([
-    ['a non-extensible registry host', Object.preventExtensions({})],
-    [
-      'an incompatible registry value',
-      (() => {
-        const host = {};
-        Object.defineProperty(host, Symbol.for('@rolldown/runtime-lease-managers/v1'), {
-          configurable: false,
-          enumerable: false,
-          value: {},
-          writable: false,
-        });
-        return host;
-      })(),
-    ],
-  ])('fails closed for legacy implicit ownership with %s', (_name, registryHost) => {
-    expect(() =>
-      getOrCreateLegacyWasiRuntimeLeaseManager(
-        function startAsyncRuntime() {},
-        {
-          enabled: true,
-          shutdown: vi.fn(),
-          start: vi.fn(),
-        },
-        registryHost,
-      ),
-    ).toThrow('global Rolldown runtime lease registry');
   });
 
   test('shares one lease manager across package copies', async () => {

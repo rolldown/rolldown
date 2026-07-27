@@ -81,7 +81,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     if let Err(errs) = self.run_inner().await {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
       // The loader owner may have been cancelled while this detached task was awaiting a hook.
-      // See internal-docs/async-runtime/implementation.md.
+      // Cancellation closes the receiver, so a failed send is ignored here.
       let _ = self
         .ctx
         .tx
@@ -238,7 +238,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     }));
 
     // The loader owner may have been cancelled while this detached task was awaiting a hook.
-    // See internal-docs/async-runtime/implementation.md.
+    // Cancellation closes the receiver, so a failed send is ignored here.
     let _ = self.ctx.tx.unbounded_send(result);
 
     Ok(())

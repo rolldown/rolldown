@@ -21,7 +21,7 @@ export default defineTest({
       {
         name: 'explicit-unmapped-boundary',
         transform(code, id) {
-          if (!id.endsWith('/main.js')) {
+          if (!id.endsWith('main.js')) {
             return;
           }
           return {

@@ -26,10 +26,7 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
-#[cfg(feature = "async-runtime")]
 use rolldown_utils::async_runtime::try_spawn_detached;
-#[cfg(not(feature = "async-runtime"))]
-use rolldown_utils::futures::spawn_detached;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
@@ -204,13 +201,17 @@ fn spawn_module_task<F>(future: F, tx: futures::channel::mpsc::UnboundedSender<M
 where
   F: std::future::Future<Output = ()> + Send + 'static,
 {
+  // Module task state machines are large (tens of KB). Box the future once at
+  // the spawn boundary so every downstream hop (`supervised_module_task`,
+  // `try_spawn_detached`, the runtime's abort/containment wrappers, and
+  // `async_task`'s final allocation) moves a pointer-sized future instead of
+  // memcpy-ing the whole state machine at each non-inlined call. Without this,
+  // spawning ~1k module tasks copies hundreds of MB through the spawn chain.
+  let future: std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> = Box::pin(future);
   let future = supervised_module_task(future, tx);
-  #[cfg(feature = "async-runtime")]
   if let Err(future) = try_spawn_detached(future) {
     drop(future);
   }
-  #[cfg(not(feature = "async-runtime"))]
-  spawn_detached(future);
 }
 
 impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
@@ -1229,7 +1230,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
   }
 }
 
-#[cfg(all(test, feature = "async-runtime"))]
+#[cfg(test)]
 mod tests {
   use std::{sync::mpsc, time::Duration};
 

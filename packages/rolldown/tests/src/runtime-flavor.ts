@@ -8,13 +8,13 @@ import { getRuntimeCapabilities } from 'rolldown/experimental';
 // already loaded the binding at collection time for `runtimeFlavor` before.
 const capabilities = getRuntimeCapabilities();
 
-// Flavor is reported by every build: async-runtime builds report the
-// configured executor; the default tokio build reports 'MultiThread'.
+// Flavor is reported by every build: native builds report the configured
+// shared-runtime executor; every WebAssembly build is 'CurrentThread'.
 export const runtimeFlavor: string = capabilities.flavor;
 
 // True when the binding schedules everything on the calling thread
-// (native async-runtime build with ROLLDOWN_RUNTIME=single, or the wasip1
-// build). Equivalent to `capabilities.flavor === 'CurrentThread'`.
+// (native build with ROLLDOWN_RUNTIME=single, or any WASI build).
+// Equivalent to `capabilities.flavor === 'CurrentThread'`.
 export const isSingleThread: boolean = !capabilities.threads;
 
 // True when the loaded binding is a WebAssembly/WASI artifact ('wasi' or
@@ -23,6 +23,6 @@ export const isSingleThread: boolean = !capabilities.threads;
 // symlink traversal); no CI env var is involved, the artifact identifies itself.
 export const isWasiTest: boolean = capabilities.wasi;
 
-// True when the binding was compiled with `--features async-runtime` (either
-// flavor).
+// True for every current binding (the shared runtime is the only backend);
+// false only when the compat shim synthesized a legacy tokio-era report.
 export const isAsyncRuntimeBuild: boolean = capabilities.asyncRuntimeBuild;

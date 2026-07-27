@@ -9,12 +9,6 @@ export interface RuntimeControl {
   acquire(this: void): Promise<unknown>;
 }
 
-export interface LegacyRuntimeControl {
-  enabled: boolean;
-  shutdown(this: void): void;
-  start(this: void): void;
-}
-
 /**
  * Every threaded-WASI operation owns one native runtime token. Native and
  * threadless artifacts use no-op leases.
@@ -84,83 +78,6 @@ export class WasiRuntimeLeaseManager {
   }
 }
 
-/**
- * Compatibility manager for bindings from before `acquireAsyncRuntime()`.
- * Those bindings start threaded WASI with one implicit owner, then expose
- * synchronous start/shutdown reference-count operations.
- */
-export class LegacyWasiRuntimeLeaseManager {
-  #activeLeases = 0;
-  #failedReleases = new Set<LegacyLeaseState>();
-  #initialLeaseAvailable = true;
-  readonly #control: LegacyRuntimeControl;
-
-  constructor(control: LegacyRuntimeControl) {
-    this.#control = control;
-  }
-
-  get activeLeases(): number {
-    return this.#activeLeases;
-  }
-
-  acquire(): Promise<RuntimeLease> {
-    if (!this.#control.enabled) {
-      return Promise.resolve(NOOP_LEASE);
-    }
-
-    return this.#acquire();
-  }
-
-  async #acquire(): Promise<RuntimeLease> {
-    this.#recoverFailedReleases();
-    if (this.#activeLeases > 0 || !this.#initialLeaseAvailable) {
-      this.#control.start();
-    } else {
-      this.#initialLeaseAvailable = false;
-    }
-    this.#activeLeases += 1;
-
-    const state: LegacyLeaseState = { released: false };
-    return {
-      release: () => {
-        if (state.released) return;
-        try {
-          releaseWithRetry(this.#control.shutdown);
-        } catch (error) {
-          this.#failedReleases.add(state);
-          throw error;
-        }
-        this.#activeLeases -= 1;
-        state.released = true;
-        this.#failedReleases.delete(state);
-      },
-    };
-  }
-
-  #recoverFailedReleases(): void {
-    const errors: unknown[] = [];
-    for (const state of this.#failedReleases) {
-      try {
-        releaseWithRetry(this.#control.shutdown);
-      } catch (error) {
-        errors.push(error);
-        continue;
-      }
-      this.#activeLeases -= 1;
-      state.released = true;
-      this.#failedReleases.delete(state);
-    }
-    if (errors.length === 1) throw errors[0];
-    if (errors.length > 1) {
-      throw new AggregateError(
-        errors,
-        'Failed to recover abandoned legacy runtime lease releases',
-        { cause: errors[0] },
-      );
-    }
-  }
-}
-
 function releaseWithRetry(release: () => void): void {
   try {
     release();
@@ -220,40 +137,9 @@ export function getOrCreateWasiRuntimeLeaseManager(
     return new WasiRuntimeLeaseManager(control);
   }
 
-  return getOrCreateRuntimeLeaseManager(
-    bindingIdentity,
-    () => new WasiRuntimeLeaseManager(control),
-    registryHost,
-  );
-}
-
-/** Package-copy sharing for the legacy implicit-owner protocol. */
-export function getOrCreateLegacyWasiRuntimeLeaseManager(
-  bindingIdentity: object,
-  control: LegacyRuntimeControl,
-  registryHost: object = globalThis,
-): LegacyWasiRuntimeLeaseManager {
-  if (!control.enabled) {
-    return new LegacyWasiRuntimeLeaseManager(control);
-  }
-
-  return getOrCreateRuntimeLeaseManager(
-    bindingIdentity,
-    () => new LegacyWasiRuntimeLeaseManager(control),
-    registryHost,
-    false,
-  );
-}
-
-function getOrCreateRuntimeLeaseManager<T extends SharedRuntimeLeaseManager>(
-  bindingIdentity: object,
-  createManager: () => T,
-  registryHost: object,
-  allowLocalFallback = true,
-): T {
   const registry = getWasiRuntimeLeaseRegistry(bindingIdentity, registryHost);
   if (!registry) {
-    return createLocalManagerOrThrow(createManager, allowLocalFallback);
+    return new WasiRuntimeLeaseManager(control);
   }
 
   try {
@@ -262,24 +148,15 @@ function getOrCreateRuntimeLeaseManager<T extends SharedRuntimeLeaseManager>(
       | undefined;
     if (manager) {
       return typeof manager.acquire === 'function'
-        ? (manager as T)
-        : createLocalManagerOrThrow(createManager, allowLocalFallback);
+        ? (manager as WasiRuntimeLeaseManager)
+        : new WasiRuntimeLeaseManager(control);
     }
-    const newManager = createManager();
+    const newManager = new WasiRuntimeLeaseManager(control);
     WeakMap.prototype.set.call(registry, bindingIdentity, newManager);
     return newManager;
   } catch {
-    return createLocalManagerOrThrow(createManager, allowLocalFallback);
+    return new WasiRuntimeLeaseManager(control);
   }
-}
-
-function createLocalManagerOrThrow<T>(createManager: () => T, allowLocalFallback: boolean): T {
-  if (allowLocalFallback) {
-    return createManager();
-  }
-  throw new TypeError(
-    'Unable to safely establish the global Rolldown runtime lease registry required by this legacy threaded-WASI binding',
-  );
 }
 
 function getWasiRuntimeLeaseRegistry(
@@ -321,9 +198,5 @@ const NOOP_LEASE: RuntimeLease = Object.freeze({
 
 interface LeaseState {
   nativeLease: RuntimeLease;
-  released: boolean;
-}
-
-interface LegacyLeaseState {
   released: boolean;
 }

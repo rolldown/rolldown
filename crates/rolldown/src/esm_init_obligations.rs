@@ -25,8 +25,8 @@
 //!   hops whose registration flows through the metadata pass rather than the included-record path.
 //!
 //! Excluded statements are the one structural asymmetry: for Emit and Register their targets are
-//! precomputed once by `compute_wrapped_esm_init_metadata` (post-convergence, stored as
-//! `transitive_init_targets`), while Project must recompute them per fixpoint round from the
+//! precomputed once by `compute_wrapped_esm_init_metadata` (post-convergence, returned as
+//! `Sealed<FinalEsmInitMetadata>`), while Project must recompute them per fixpoint round from the
 //! current plan — both through the shared excluded-hop router
 //! [`collect_order_wrap_esm_init_targets`], so the routing itself cannot drift.
 //!

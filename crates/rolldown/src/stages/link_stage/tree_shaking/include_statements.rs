@@ -656,7 +656,14 @@ fn handle_include_symbol(
     return;
   }
 
-  drain_body_demand_stmts(ctx, canonical_ref);
+  // A simulated-facade include only materializes the eliminated facade's namespace object
+  // as a chunk export; it is not a semantic observation of the module, so it must not
+  // body-demand it (the namespace statement's getters were already narrowed to link-time
+  // used symbols, mirroring the `WorkItem::Module` gate below). Resurrecting gated
+  // statements here would also let inclusion grow after chunk assignment finished (#10337).
+  if !include_reason.contains(SymbolIncludeReason::SimulatedFacadeChunk) {
+    drain_body_demand_stmts(ctx, canonical_ref);
+  }
 
   // Also include the symbol that points to the canonical ref.
   ctx.used_symbol_refs.insert(symbol_ref);

@@ -134,7 +134,15 @@ pub fn deconflict_chunk_symbols(
 
       link_output.stmt_infos[module.idx]
         .iter_enumerated()
-        .filter(|(idx, _)| meta.stmt_info_included.has_bit(*idx))
+        // A runtime statement tree-shaking excluded but order wrapping force-includes is rendered
+        // and symbol-assigned, so it must reach the renamer too. Mirror the overlay-aware inclusion
+        // test the other two consumers already use (`compute_cross_chunk_links` and the module
+        // finalizer's `remove_unused_top_level_stmt`); without it a user top-level binding named
+        // `__esmMin`/`__esm` co-hosted with the runtime collides with the forced helper declaration.
+        .filter(|(idx, stmt_info)| {
+          meta.stmt_info_included.has_bit(*idx)
+            || order_wrap_state.forces_runtime_stmt(&link_output.runtime, module.idx, stmt_info)
+        })
         .for_each(|(_, stmt_info)| {
           for declared_symbol in stmt_info.declared_symbols.iter().filter(|item| item.is_normal()) {
             let symbol_ref = declared_symbol.inner();

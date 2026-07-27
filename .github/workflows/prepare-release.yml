@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0 # for changelog
           persist-credentials: true # for create-pull-request
 
-      - uses: taiki-e/install-action@c7eb1735f09259a5035e8e5d44b1406b1cddc0fb # v2.83.0
+      - uses: taiki-e/install-action@ed67fa35ac944f3a9b33f12c4dd43b6f31a47e20 # v2.83.3
         with:
           tool: just
 

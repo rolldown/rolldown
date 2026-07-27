@@ -21,6 +21,7 @@
     "@types/mocha": "catalog:",
     "@types/node": "catalog:",
     "@types/strip-comments": "catalog:",
+    "acorn": "catalog:",
     "source-map": "catalog:",
     "strip-comments": "catalog:",
     "terser": "catalog:"

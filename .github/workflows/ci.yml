@@ -175,7 +175,7 @@ jobs:
           cache-key: debug-build-async-runtime
           save-cache: ${{ github.ref_name == 'main' }}
 
-      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
+      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
         with:
           version: '0.2.1'
           cache: true
@@ -197,10 +197,16 @@ jobs:
       # timeouts can never fire, but the runtime now panics with a typed
       # BlockOnDeadlock diagnostic instead of hanging — a regression fails
       # fast rather than eating the runner until the job timeout above.
-      # The watcher suite runs on both flavors since the runtime timer
-      # facility replaced tokio's reactor for the watch-mode debounce timer.
+      # The watcher suite runs on both flavors since the runtime's own timer
+      # facility drives the watch-mode debounce timer.
       - name: Scheduler unit tests + node & watcher suites (single- and multi-thread flavors)
         run: just test-async-runtime
+
+      # The default build IS the shared runtime on every target; prove the
+      # shipped binding graphs (native + both WASI targets) and the CodSpeed
+      # bench harness stay tokio-free.
+      - name: Prove the production graphs are tokio-free
+        run: just check-no-tokio
 
   native-async-runtime-check:
     name: Native Async Runtime Lifecycle (${{ matrix.os }})
@@ -221,7 +227,7 @@ jobs:
           cache-key: native-async-runtime-check-${{ matrix.os }}
           save-cache: ${{ github.ref_name == 'main' }}
 
-      - uses: voidzero-dev/setup-vp@35171c92dd08b67d5a9d3f2a4327800e58396f2a # v1.13.0
+      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
         with:
           version: '0.2.1'
           cache: true

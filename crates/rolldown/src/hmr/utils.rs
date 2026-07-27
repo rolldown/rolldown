@@ -167,7 +167,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
 #[cfg(feature = "experimental")]
 impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
   fn builder(&self) -> AstBuilder<'ast> {
-    AstBuilder::new(self.ast_factory.allocator())
+    AstBuilder::new(self.ast_builder.allocator())
   }
 
   fn module(&self) -> &NormalModule {
@@ -201,7 +201,7 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
 
 impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast> {
   fn builder(&self) -> AstBuilder<'ast> {
-    AstBuilder::new(self.ast_factory.allocator())
+    AstBuilder::new(self.ast_builder.allocator())
   }
 
   fn module(&self) -> &NormalModule {

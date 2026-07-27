@@ -39,7 +39,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
   pub async fn run(self) {
     if let Err(errs) = self.run_inner().await {
       // The loader owner may have been cancelled while this detached task was awaiting a hook.
-      // See internal-docs/async-runtime/implementation.md.
+      // Cancellation closes the receiver, so a failed send is ignored here.
       let _ = self
         .ctx
         .tx
@@ -98,7 +98,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       need_renormalize_render_path,
     }));
     // The loader owner may have been cancelled while this detached task was awaiting a hook.
-    // See internal-docs/async-runtime/implementation.md.
+    // Cancellation closes the receiver, so a failed send is ignored here.
     let _ = self.ctx.tx.unbounded_send(msg);
     Ok(())
   }

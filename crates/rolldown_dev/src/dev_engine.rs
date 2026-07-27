@@ -50,6 +50,9 @@ pub struct CoordinatorState {
 }
 
 impl CoordinatorState {
+  /// Start the retained coordinator future. When submission fails (e.g. the
+  /// async runtime rejected the spawn), the coordinator is retained so a later
+  /// call can retry after a runtime restart.
   fn try_start<E>(
     &mut self,
     start: impl FnOnce(

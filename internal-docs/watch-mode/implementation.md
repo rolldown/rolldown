@@ -76,7 +76,7 @@ watcher.run()?;      // submits the coordinator (non-blocking)
 watcher.close().await?;  // sends Close, awaits completion
 ```
 
-Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` submits it on the selected runtime and returns `Result<(), WatcherStartError>`. Submission is fallible: if shutdown rejects the task, the exact boxed coordinator future is restored to the not-yet-started state and the typed error is returned, so a call after runtime restart can retry it instead of silently creating a watcher with no coordinator. `close()` first publishes the shared close signal, then performs the same fallible start and awaits the shared completion future; a rejected close-time submission is surfaced instead of reporting a false successful close. The future carries a cloneable terminal close result, so concurrent and later `close()` callers observe the same success or failure. Publishing close before a not-yet-started coordinator prevents a creation-tick close from racing into the initial build. `wait_for_close()` is intentionally completion-only: it keeps Node alive but does not surface the close error through an otherwise ignored promise.
+Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` submits it on the selected [shared async runtime](../async-runtime/implementation.md) via `rolldown_utils::futures::try_spawn` and returns `Result<(), WatcherStartError>`. Submission is fallible: if shutdown rejects the task, the exact boxed coordinator future is restored to the not-yet-started state and the typed error is returned, so a call after runtime restart can retry it instead of silently creating a watcher with no coordinator. `close()` first publishes the shared close signal, then performs the same fallible start and awaits the shared completion future; a rejected close-time submission is surfaced instead of reporting a false successful close. The future carries a cloneable terminal close result, so concurrent and later `close()` callers observe the same success or failure. Publishing close before a not-yet-started coordinator prevents a creation-tick close from racing into the initial build. `wait_for_close()` is intentionally completion-only: it keeps Node alive but does not surface the close error through an otherwise ignored promise.
 
 ### Known Divergences from Rollup
 
@@ -116,8 +116,8 @@ config-level watch set/event stream rather than timing-based deduplication.
 
 ```
 Watcher (public API)
-  ├── tx: mpsc::Sender ──→ WatchCoordinator (actor, owns everything)
-  └── close_notify ──────→ wakes the coordinator while it awaits a consumer callback
+  ├── tx: futures mpsc::UnboundedSender ──→ WatchCoordinator (actor, owns everything)
+  └── close_notify (event_listener::Event) ──→ wakes the coordinator while it awaits a consumer callback
                                ├── handler: H (WatcherEventHandler impl)
                                ├── state: WatcherState
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
@@ -143,7 +143,7 @@ Data flow:
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access. The state retains the boxed coordinator future until runtime submission succeeds, and restores it on rejection. `publish_close()` sets the atomic flag, notification, and actor message without spawning; N-API calls it synchronously before returning the close promise so a JavaScript listener cannot return into a new build before close is visible. The async `close()` future enters through the selected runtime, starts a not-yet-running coordinator, and awaits its shared result.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
 - Each `WatchTask` owns its `DynFsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
-- Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
+- Bundler is `Arc<TokioMutex<>>` (where `TokioMutex` aliases `async_lock::Mutex`, not tokio's) because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
 
@@ -189,7 +189,7 @@ Delayed retry ──(exhausted)──→ Closing with replayable registration er
 Any ──(Close)──→ Closing → Closed
 ```
 
-**No explicit Building state.** The coordinator's event loop blocks during build (it `await`s). Fs events buffer in the mpsc channel. After build, `drain_buffered_events()` via `try_recv()` picks them up.
+**No explicit Building state.** The coordinator's event loop blocks during build (it `await`s). Fs events buffer in the unbounded `futures::channel::mpsc` channel. After build, `drain_buffered_events()` via `try_recv()` picks them up.
 Registration backoff is likewise a coordinator sub-phase rather than a `WatcherState` variant. It
 continues to receive file-change and close messages while waiting, but the retry deadline is fixed
 so incoming changes cannot turn a bounded recovery into an indefinite wait.
@@ -232,7 +232,7 @@ Changes accumulate in an `invalidatedIds` Map during the delay window — both p
 
 ### Rolldown's Approach
 
-The `WatcherState::Debouncing` state does the same thing with `tokio::select!` and a deadline reset:
+The `WatcherState::Debouncing` state does the same thing with a deadline reset and a manual biased `futures` select. `wait_for_debounce_input()` runs `select_biased!` over the mpsc receiver and a `rolldown_utils::time::sleep_until(deadline)` timer, message-first (matching tokio's `biased;` semantics) so a change queued right at the deadline still wins and extends the window:
 
 - File change → `Idle` becomes `Debouncing { changes, deadline }`
 - More changes → deadline resets, changes accumulate with kind consolidation per path
@@ -283,7 +283,7 @@ File change detected by per-task FsWatcher
       - task.invalidate(path) → sets needs_rebuild = true
       - task.call_on_invalidate(path) → fires immediately, before debounce
       - State: Idle → Debouncing, or extends deadline
-  → Debounce timer fires (tokio::select!)
+  → Debounce deadline fires (`sleep_until` wins the biased `select_biased!`)
   → run_build_sequence(changes):
       1. handler.on_change(path, kind) for each change
       2. task.call_watch_change(path, kind) for each task × each change
@@ -765,6 +765,7 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 ## Related
 
 - [design.md](./design.md) — watch-mode design principles and open questions
+- [async-runtime](../async-runtime/implementation.md) — the shared async runtime the coordinator is spawned on (`try_spawn`, `sleep_until`), replacing tokio
 - [rust-bundler](../rust-bundler/implementation.md) — Core Bundler struct and `Bundle.close()` design
 - [rust-classic-bundler](../rust-classic-bundler/implementation.md) — Rollup API compatibility wrapper
 - [module-id](../module-id/implementation.md) — Module ID, path identity, and normalization

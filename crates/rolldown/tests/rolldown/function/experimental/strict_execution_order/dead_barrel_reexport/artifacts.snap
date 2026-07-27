@@ -163,9 +163,6 @@ export { render };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-function init_bridge() {
-	return (init_bridge = __esmMin((() => {})))();
-}
 //#endregion
 //#region page-b.js
 function render() {}

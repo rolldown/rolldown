@@ -27,11 +27,6 @@ function init_first() {
 function tag(value) {
 	return `tag:${value}`;
 }
-function init_pref_pkg() {
-	return (init_pref_pkg = __esmMin((() => {
-		init_facade();
-	})))();
-}
 //#endregion
 //#region main.js
 function boot() {

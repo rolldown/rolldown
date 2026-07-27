@@ -1,4 +1,4 @@
-use super::GenerateStage;
+use super::{FinalEsmInitMetadata, GenerateStage, Sealed};
 use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::{
   ObligationPurpose, WrappedEsmInitTargetContext,
@@ -41,6 +41,23 @@ struct CrossChunkLinkState {
   order_live_symbols: FxHashSet<SymbolRef>,
 }
 
+#[derive(Clone, Copy)]
+enum FinalEsmInitMetadataAvailability<'a> {
+  /// The prediction pass runs before wrapper selection and final chunk topology are fixed.
+  Unavailable,
+  /// Final cross-chunk linking can only receive metadata through the sealed boundary.
+  Sealed(&'a Sealed<FinalEsmInitMetadata>),
+}
+
+impl<'a> FinalEsmInitMetadataAvailability<'a> {
+  fn sealed(self) -> Option<&'a Sealed<FinalEsmInitMetadata>> {
+    match self {
+      Self::Unavailable => None,
+      Self::Sealed(metadata) => Some(metadata),
+    }
+  }
+}
+
 trait UsedSymbolRefsView: Sync {
   fn contains(&self, symbol_ref: &SymbolRef) -> bool;
 }
@@ -64,6 +81,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     used_symbol_refs: &UsedSymbolRefs,
     order_state: &super::order_wrap_state::OrderWrapState,
+    final_esm_init_metadata: &Sealed<FinalEsmInitMetadata>,
   ) {
     let CrossChunkLinkState {
       index_chunk_exported_symbols,
@@ -73,7 +91,12 @@ impl GenerateStage<'_> {
       index_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
       order_live_symbols,
-    } = self.compute_cross_chunk_link_state(chunk_graph, used_symbol_refs, order_state);
+    } = self.compute_cross_chunk_link_state(
+      chunk_graph,
+      used_symbol_refs,
+      order_state,
+      FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
+    );
 
     #[cfg(debug_assertions)]
     let predicted_static_import_edges: IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> =
@@ -215,10 +238,10 @@ impl GenerateStage<'_> {
   }
 
   /// Compute provisional links for order analysis. Runtime symbol placement is cleared if moved.
-  /// Uses an empty order state, so the edges are the *pre-lowering* baseline topology (value and
-  /// side-effect imports, before any wrapping adds `init_*` wrapper imports). The emergent-cycle
-  /// fixpoint layers the plan's `init_*` forwarding edges on top of this baseline
-  /// (`post_lowering_import_edges`).
+  /// Uses an empty order state and explicitly marks final-init metadata unavailable, so the edges
+  /// are the *pre-lowering* baseline topology (value and side-effect imports, before wrapping adds
+  /// `init_*` imports). The emergent-cycle fixpoint layers the plan's `init_*` forwarding edges on
+  /// top of this baseline (`post_lowering_import_edges`).
   pub(super) fn predicted_static_import_edges(
     &mut self,
     chunk_graph: &ChunkGraph,
@@ -226,7 +249,12 @@ impl GenerateStage<'_> {
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
     let empty_order_state = super::order_wrap_state::OrderWrapState::default();
     self
-      .compute_cross_chunk_link_state(chunk_graph, used_symbol_refs, &empty_order_state)
+      .compute_cross_chunk_link_state(
+        chunk_graph,
+        used_symbol_refs,
+        &empty_order_state,
+        FinalEsmInitMetadataAvailability::Unavailable,
+      )
       .index_imports_from_other_chunks
       .into_iter_enumerated()
       .map(|(chunk_idx, importee_map)| {
@@ -243,6 +271,7 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
+    final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
   ) -> CrossChunkLinkState {
     let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
       index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
@@ -282,6 +311,7 @@ impl GenerateStage<'_> {
       &mut index_cross_chunk_dynamic_imports,
       used_symbol_refs,
       order_state,
+      final_esm_init_metadata,
     );
 
     self.compute_chunk_imports(
@@ -310,6 +340,7 @@ impl GenerateStage<'_> {
 
   /// - Assign each symbol to the chunk it belongs to
   /// - Collect all referenced symbols and consider them potential imports
+  #[expect(clippy::too_many_arguments)]
   fn collect_depended_symbols(
     &mut self,
     chunk_graph: &ChunkGraph,
@@ -318,6 +349,7 @@ impl GenerateStage<'_> {
     index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
     used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
+    final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
   ) {
     let symbols = &self.link_output.symbol_db;
     let chunk_id_to_symbols_vec = append_only_vec::AppendOnlyVec::new();
@@ -434,6 +466,7 @@ impl GenerateStage<'_> {
             chunk_graph,
             used_symbol_refs,
             order_state,
+            final_esm_init_metadata,
             depended_symbols,
             module.idx,
           );
@@ -468,12 +501,15 @@ impl GenerateStage<'_> {
           } else if let Some(target) = order_state.esm_init_target(entry.idx, entry_meta) {
             depended_symbols.insert(target.wrapper_ref);
           }
-          self.add_transitive_esm_init_depended_symbols(
-            chunk_graph,
-            order_state,
-            depended_symbols,
-            entry.idx,
-          );
+          if let Some(final_esm_init_metadata) = final_esm_init_metadata.sealed() {
+            self.add_transitive_esm_init_depended_symbols(
+              chunk_graph,
+              order_state,
+              final_esm_init_metadata,
+              depended_symbols,
+              entry.idx,
+            );
+          }
 
           if matches!(self.options.format, OutputFormat::Cjs)
             && matches!(entry.exports_kind, ExportsKind::Esm)
@@ -588,15 +624,19 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
+    final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
     depended_symbols: &mut FxIndexSet<SymbolRef>,
     module_idx: ModuleIdx,
   ) {
-    self.add_transitive_esm_init_depended_symbols(
-      chunk_graph,
-      order_state,
-      depended_symbols,
-      module_idx,
-    );
+    if let Some(final_esm_init_metadata) = final_esm_init_metadata.sealed() {
+      self.add_transitive_esm_init_depended_symbols(
+        chunk_graph,
+        order_state,
+        final_esm_init_metadata,
+        depended_symbols,
+        module_idx,
+      );
+    }
     self.add_included_import_esm_init_depended_symbols(
       chunk_graph,
       used_symbol_refs,
@@ -616,11 +656,24 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
     order_state: &super::order_wrap_state::OrderWrapState,
+    final_esm_init_metadata: &Sealed<FinalEsmInitMetadata>,
     depended_symbols: &mut FxIndexSet<SymbolRef>,
     module_idx: ModuleIdx,
   ) {
-    let meta = &self.link_output.metas[module_idx];
-    for targets in order_state.transitive_init_targets(module_idx, meta).values() {
+    let Some(targets_by_stmt) = final_esm_init_metadata.transitive_init_targets(module_idx) else {
+      return;
+    };
+    // Iterate the targets in a deterministic, cross-target-stable order. The map is an
+    // `FxHashMap<StmtInfoIdx, _>`, and its iteration order follows FxHash bucket layout. FxHash is
+    // unseeded but hashes differently on 32-bit vs 64-bit, so iteration visits buckets in a
+    // different order on native (64-bit) than on wasm32/WASI. That order flows straight into
+    // `depended_symbols` (an `FxIndexSet`), whose insertion order drives the chunk's imported-symbol
+    // rename order (the `$1`/`$2` suffixes) in `deconflict_chunk_symbols` — so a hash-ordered walk
+    // here makes native and WASI builds resolve rename collisions differently. Sorting by the owning
+    // `StmtInfoIdx` pins one order for every target.
+    for (_, targets) in
+      targets_by_stmt.iter().sorted_unstable_by_key(|(stmt_info_idx, _)| **stmt_info_idx)
+    {
       for &target_idx in targets {
         let meta = &self.link_output.metas[target_idx];
         if let Some(target) = order_state.esm_init_target(target_idx, meta)

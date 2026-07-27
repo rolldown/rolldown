@@ -19,16 +19,10 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 function setupWorker(handler) {
 	return { handler };
 }
-function init_setupWorker() {
-	return (init_setupWorker = __esmMin((() => {})))();
-}
 //#endregion
 //#region core/http.js
 function http() {
 	return "http";
-}
-function init_http() {
-	return (init_http = __esmMin((() => {})))();
 }
 //#endregion
 //#region main.js

@@ -1764,6 +1764,7 @@ test.concurrent(
     });
     watcher.on('event', async (event) => {
       if (event.code === 'ERROR') {
+        // `result` is `null` when setup failed before a bundle was created.
         await event.result?.close();
       }
     });

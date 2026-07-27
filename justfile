@@ -107,41 +107,28 @@ test-node-hmr-only *args:
 test-vite: # We don't use `test-node-vite` because it's not expected to run in `just test-node`.
   vp run --filter vite-tests test
 
+# Run the async-runtime unit tests in the N-API binding. This recipe is their
+# CI home: the workspace-wide `test-rust` recipe excludes `rolldown_binding`.
+test-async-runtime-binding:
+  cargo test -p rolldown_binding --lib async_runtime::tests::
+  cargo test -p rolldown_binding --lib classic_bundler::tests::
+  cargo test -p rolldown_binding --lib env_config::tests::
+  cargo test -p rolldown_binding --lib manual_async_runtime_transition_tests::
+
 # Run the scheduler unit tests plus the node and watcher suites on both
 # flavors of the shared async runtime. Requires
-# `just build-rolldown-async-runtime` first.
-#
-# The binding test recipe is the CI home for async-runtime unit tests in
-# `rolldown_binding`, which the workspace-wide `test-rust` recipe excludes.
-# The single-thread (`ROLLDOWN_RUNTIME=single`) lane arms the runtime's OWN
-# deadlock detection instead of the old external GNU-timeout watchdog: when
-# the CurrentThread executor's block_on-over-JS hazard fires (a `block_on`
-# that transitively awaits a JS continuation deadlocks the thread it parks),
-# the whole JS event loop freezes, so vitest's own test timeouts can never
-# fire. `ROLLDOWN_PARK_DEADLINE_MS` bounds every runtime-owned park (with
-# progress-based reset, so a legitimately busy build never trips it) and
-# panics with the typed `BlockOnDeadlock` diagnostic naming the offending
-# park — the lane fails fast and loud instead of hanging until a job-level
-# timeout. See rolldown_utils::async_runtime::BlockOnDeadlock.
-#
-# The watcher suite runs on both flavors since the runtime timer facility
-# landed: watch-mode debounce goes through `rolldown_utils::time::sleep_until`
-# (MultiThread heap driver / CurrentThread host-delegated setTimeout) instead
-# of tokio's reactor. Dev-engine (`dev-watch.test.ts`) tests are skipped on
-# the single flavor inside the test file (BindingDevEngine is out of scope
-# for CurrentThread), not here.
-# Run async-runtime unit tests in the N-API binding.
-test-async-runtime-binding:
-  cargo test -p rolldown_binding --no-default-features --features async-runtime --lib async_runtime::tests::
-  cargo test -p rolldown_binding --no-default-features --features async-runtime --lib async_runtime_lease::tests::
-  cargo test -p rolldown_binding --no-default-features --features async-runtime --lib classic_bundler::tests::
-
-# Run the shared-runtime Rust and Node.js test matrix.
+# `just build-rolldown-async-runtime` first. The single-thread lane arms the
+# runtime's own deadlock detection (`ROLLDOWN_PARK_DEADLINE_MS`): a
+# `block_on`-over-JS hang freezes the JS event loop before vitest's own
+# timeouts can fire, so the runtime panics with a typed `BlockOnDeadlock`
+# diagnostic instead of hanging until a job-level timeout. The watcher suite
+# runs on both flavors because the watch-mode debounce timer goes through
+# the runtime's own `rolldown_utils::time::sleep_until` facility.
 [unix]
 test-async-runtime:
   #!/usr/bin/env bash
   set -euo pipefail
-  cargo test -p rolldown_utils --features async-runtime
+  cargo test -p rolldown_utils
   just test-async-runtime-binding
   ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:main
   ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:watcher
@@ -203,6 +190,38 @@ lint-rust: clippy
 # Also, clippy already cover compiler error.
 clippy:
   cargo clippy --workspace --all-targets -- --deny warnings
+
+# Prove the production dependency graphs are tokio-free: the shipped binding
+# on every target plus the CodSpeed bench harness. `cargo tree -i tokio`
+# prints an inverted dependency tree when tokio is reachable; when it is not,
+# it either prints nothing (still in the lockfile through dev-deps) or fails
+# with "did not match any packages" (absent from the resolved set) — both
+# count as tokio-free here.
+[unix]
+check-no-tokio:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  check() {
+    local out status=0
+    out=$(cargo tree -i tokio "$@" 2>&1) || status=$?
+    if [ "$status" -ne 0 ]; then
+      if grep -q 'did not match any packages' <<<"$out"; then
+        return 0
+      fi
+      printf '%s\n' "$out" >&2
+      return "$status"
+    fi
+    if grep -q '^tokio ' <<<"$out"; then
+      echo "error: tokio is reachable (cargo tree -i tokio $*):" >&2
+      printf '%s\n' "$out" >&2
+      return 1
+    fi
+    return 0
+  }
+  check -e no-dev -p rolldown_binding
+  check -e no-dev -p rolldown_binding --target wasm32-wasip1
+  check -e no-dev -p rolldown_binding --target wasm32-wasip1-threads
+  check -p bench
 
 lint-node:
   vp check

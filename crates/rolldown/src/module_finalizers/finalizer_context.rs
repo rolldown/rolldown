@@ -11,10 +11,10 @@ pub type FinalizerMutableFields = (
   Vec<BuildDiagnostic>,                // diagnostics
 );
 
+use oxc::ast::builder::AstBuilder;
 use oxc::ast_visit::VisitMut as _;
 use oxc::semantic::NodeId;
 use rolldown_ecmascript::EcmaAst;
-use rolldown_ecmascript_utils::AstFactory;
 use rolldown_error::{BuildDiagnostic, CausedPlugin};
 use rolldown_plugin::HookResolveFileUrlOutput;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -25,7 +25,10 @@ use crate::{
   chunk_graph::ChunkGraph,
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
   stages::{
-    generate_stage::order_wrap_state::{EsmInitOrigin, EsmInitTarget, OrderWrapState},
+    generate_stage::{
+      FinalEsmInitMetadata, Sealed,
+      order_wrap_state::{EsmInitOrigin, EsmInitTarget, OrderWrapState},
+    },
     link_stage::SafelyMergeCjsNsInfo,
   },
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
@@ -46,6 +49,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub order_wrap_state: &'me OrderWrapState,
+  pub final_esm_init_metadata: &'me Sealed<FinalEsmInitMetadata>,
   pub used_symbol_refs: &'me UsedSymbolRefs,
   pub symbol_db: &'me SymbolRefDb,
   pub runtime: &'me RuntimeModuleBrief,
@@ -133,7 +137,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         alloc,
         ctx: self,
         scope: ast_scope,
-        ast_factory: AstFactory::new(alloc),
+        ast_builder: AstBuilder::new(alloc),
         generated_init_esm_importee_ids: FxHashSet::default(),
         scope_stack: vec![],
         top_level_var_bindings: FxIndexSet::default(),

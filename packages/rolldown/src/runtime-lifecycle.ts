@@ -114,9 +114,17 @@ export class CloseCoordinator {
   }
 }
 
-// See internal-docs/async-runtime/implementation.md.
+// Only legacy tokio-backed threaded-WASI artifacts hold their async runtime
+// alive through explicit reference-counted leases (the compat shim
+// synthesizes `backend: 'tokio'` for old bindings without a capability
+// reporter). Every current binding runs the shared runtime, follows the
+// automatic N-API environment lifecycle on every target, and uses no-op
+// leases.
 const capabilityBinding = binding as Record<PropertyKey, unknown>;
-const runtimeLeaseRequired = getRuntimeCapabilitiesCompat().target === 'wasi-threads';
+const loadedRuntimeCapabilities = getRuntimeCapabilitiesCompat();
+const runtimeLeaseRequired =
+  loadedRuntimeCapabilities.target === 'wasi-threads' &&
+  loadedRuntimeCapabilities.backend === 'tokio';
 const acquireAsyncRuntime =
   'acquireAsyncRuntime' in capabilityBinding ? capabilityBinding.acquireAsyncRuntime : undefined;
 
@@ -149,30 +157,11 @@ function createRuntimeLeaseManager():
     });
   }
 
-  const startAsyncRuntime =
-    'startAsyncRuntime' in capabilityBinding ? capabilityBinding.startAsyncRuntime : undefined;
-  const shutdownAsyncRuntime =
-    'shutdownAsyncRuntime' in capabilityBinding
-      ? capabilityBinding.shutdownAsyncRuntime
-      : undefined;
-  if (typeof startAsyncRuntime === 'function' && typeof shutdownAsyncRuntime === 'function') {
-    return {
-      async acquire() {
-        throw new BindingMismatchError(
-          'The loaded threaded-WASI binding uses the legacy implicit runtime-owner protocol, ' +
-            'which cannot be coordinated safely across JavaScript realms. Upgrade Rolldown to ' +
-            'a binding that exposes acquireAsyncRuntime().',
-        );
-      },
-    };
-  }
-
   return {
     async acquire() {
       throw new BindingMismatchError(
-        'The loaded threaded-WASI binding does not expose acquireAsyncRuntime() or the legacy ' +
-          'startAsyncRuntime()/shutdownAsyncRuntime() lifecycle API. Reinstall Rolldown so the ' +
-          'JavaScript package and binding versions match.',
+        'The loaded threaded-WASI binding does not expose the acquireAsyncRuntime() lifecycle ' +
+          'API. Reinstall Rolldown so the JavaScript package and binding versions match.',
       );
     },
   };

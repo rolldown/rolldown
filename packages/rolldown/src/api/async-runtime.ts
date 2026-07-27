@@ -112,10 +112,10 @@ function readAsyncRuntimeInteger(
   return value;
 }
 
-function normalizeAsyncRuntimeConfig(
+function normalizeAsyncRuntimeTopology(
   exportName: string,
   result: Record<PropertyKey, unknown>,
-): AsyncRuntimeConfig {
+): AsyncRuntimeTopology {
   const flavor = readAsyncRuntimeFlavor(exportName, result);
   const workerThreads = readAsyncRuntimeInteger(exportName, result, 'workerThreads', 1);
   const maxBlockingTasks = readAsyncRuntimeInteger(exportName, result, 'maxBlockingTasks', 1);
@@ -126,6 +126,20 @@ function normalizeAsyncRuntimeConfig(
     );
   }
   return { flavor, workerThreads, maxBlockingTasks };
+}
+
+function normalizeAsyncRuntimeConfig(
+  exportName: string,
+  result: Record<PropertyKey, unknown>,
+): AsyncRuntimeConfig {
+  // The drainer budget is part of the CONFIG snapshot only; the binding's
+  // metrics snapshot deliberately omits it, so the shared topology
+  // normalization above stays field-exact for both reporters. Topology is
+  // validated first so a topology violation reports itself rather than a
+  // drainer-field error.
+  const topology = normalizeAsyncRuntimeTopology(exportName, result);
+  const drainLingerUs = readAsyncRuntimeInteger(exportName, result, 'drainLingerUs', 0);
+  return { ...topology, drainLingerUs };
 }
 
 /**
@@ -145,8 +159,7 @@ export type AsyncRuntimeFlavor = 'CurrentThread' | 'MultiThread';
  * MultiThread promotes one worker to two, applies the platform worker cap,
  * and limits blocking admission to `workerThreads - 1`.
  * Without overrides, native shared builds start from the smaller of physical
- * and process-available CPU counts. Native Tokio reports 1.5 times that count
- * (rounded down) with four blocking threads.
+ * and process-available CPU counts.
  *
  * @experimental
  */
@@ -159,14 +172,29 @@ export interface AsyncRuntimeOptions {
 }
 
 /**
+ * Executor topology shared by the config and metrics snapshots.
+ *
+ * @experimental
+ */
+interface AsyncRuntimeTopology {
+  flavor: AsyncRuntimeFlavor;
+  workerThreads: number;
+  maxBlockingTasks: number;
+}
+
+/**
  * Effective, immutable configuration used by the loaded binding.
  *
  * @experimental
  */
-export interface AsyncRuntimeConfig {
-  flavor: AsyncRuntimeFlavor;
-  workerThreads: number;
-  maxBlockingTasks: number;
+export interface AsyncRuntimeConfig extends AsyncRuntimeTopology {
+  /**
+   * Effective MultiThread drainer idle-linger budget in microseconds
+   * (`0` = lingering disabled). Resolved from `ROLLDOWN_DRAIN_LINGER_US` at
+   * binding load and reported for introspection parity; not settable
+   * through {@link configureAsyncRuntime}.
+   */
+  drainLingerUs: number;
 }
 
 /**
@@ -178,11 +206,16 @@ export interface AsyncRuntimeConfig {
  * updates. Each maximum is at least its corresponding live gauge in the same
  * snapshot.
  *
- * All counters are zero on a binding built with the default Tokio backend.
+ * All counters are zero until the shared runtime schedules its first task.
+ * A legacy Tokio-backed binding never installs the shared scheduler, so its
+ * counters stay zero.
+ *
+ * The snapshot reports the executor topology but not the config-only
+ * {@link AsyncRuntimeConfig.drainLingerUs} budget.
  *
  * @experimental
  */
-export interface AsyncRuntimeMetrics extends AsyncRuntimeConfig {
+export interface AsyncRuntimeMetrics extends AsyncRuntimeTopology {
   tasksSpawned: number;
   tasksCompleted: number;
   tasksPanicked: number;
@@ -201,11 +234,11 @@ export interface AsyncRuntimeMetrics extends AsyncRuntimeConfig {
 /**
  * Configure the shared async runtime before its first async operation.
  *
- * Use `getRuntimeCapabilities().asyncRuntimeBuild` to detect support. The
- * default native npm binding and the published threaded-WASI binding both use
- * Tokio and throw when this function is called. A custom shared-runtime native
- * binding supports both flavors. A custom shared-runtime WebAssembly binding,
- * including `wasm32-wasip1-threads`, supports `CurrentThread` only.
+ * Every current binding runs the shared runtime: native bindings support
+ * both flavors, and every WebAssembly binding, including
+ * `wasm32-wasip1-threads`, supports `CurrentThread` only. A legacy
+ * Tokio-backed binding (`getRuntimeCapabilities().asyncRuntimeBuild ===
+ * false`) throws when this function is called.
  *
  * Configuration is process-wide for the loaded native binding and remains
  * immutable after the first real runtime generation starts. Environment
@@ -215,10 +248,14 @@ export interface AsyncRuntimeMetrics extends AsyncRuntimeConfig {
  * - `ROLLDOWN_WORKER_THREADS`
  * - `ROLLDOWN_MAX_BLOCKING_THREADS`
  * - `ROLLDOWN_PARK_DEADLINE_MS`
+ * - `ROLLDOWN_DRAIN_LINGER_US`
  *
- * Native `ROLLDOWN_*` worker counts are capped at 256. Native Tokio
- * blocking-thread counts are capped at 512. Explicit options above their
- * documented limits throw instead of being silently truncated.
+ * The drainer linger budget has no option here: `ROLLDOWN_DRAIN_LINGER_US`
+ * is resolved once at binding load and reported by
+ * {@link getAsyncRuntimeConfig} as `drainLingerUs`.
+ *
+ * Native `ROLLDOWN_*` worker counts are capped at 256. Explicit options
+ * above their documented limits throw instead of being silently truncated.
  *
  * @experimental
  */
@@ -230,10 +267,10 @@ export function configureAsyncRuntime(options: AsyncRuntimeOptions): void {
 /**
  * Return the effective runtime configuration snapshotted by the binding.
  *
- * This never re-reads environment variables. On a Tokio binding it reports
- * the Tokio-derived configuration even though {@link configureAsyncRuntime}
- * is unavailable. On the published threaded-WASI binding, the thread counts
- * report the generated loader's effective emnapi pool size, capped at 1024.
+ * This never re-reads environment variables. A legacy Tokio-backed binding
+ * predates the `drainLingerUs` field, so its three-field report fails this
+ * package's contract check with reinstall guidance instead of returning a
+ * partial snapshot.
  *
  * @experimental
  */
@@ -253,7 +290,7 @@ export function getAsyncRuntimeConfig(): AsyncRuntimeConfig {
 export function getAsyncRuntimeMetrics(): AsyncRuntimeMetrics {
   const exportName = 'getAsyncRuntimeMetrics';
   const result = readBindingResultObject(exportName, invokeAsyncRuntimeReporter(exportName));
-  const config = normalizeAsyncRuntimeConfig(exportName, result);
+  const topology = normalizeAsyncRuntimeTopology(exportName, result);
   const metrics = Object.fromEntries(
     ASYNC_RUNTIME_METRIC_FIELDS.map((field) => [
       field,
@@ -274,7 +311,7 @@ export function getAsyncRuntimeMetrics(): AsyncRuntimeMetrics {
     }
   }
 
-  return { ...config, ...metrics };
+  return { ...topology, ...metrics };
 }
 
 /**

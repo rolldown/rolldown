@@ -108,6 +108,7 @@ module.exports = [
     "rollup@form@top-level-await: top-level await support@generates system",
     "rollup@form@undefined-default-export: handles default exporting undefined",
     "rollup@form@unmodified-default-exports-function-argument: passing unbound default export to function cannot rebind it",
+    "rollup@form@switch-cases@missing-space: Inserts space when simplifying switch cases without space",
     "rollup@form@yield-expression@missing-space: Inserts space when simplifying yield expression without space",
     "rollup@form@arbitrary-module-namespace-identifiers: renders exports that are not identifiers@generates es",
     "rollup@form@arbitrary-module-namespace-identifiers2: renders exports that are not identifiers@generates es",

@@ -590,10 +590,11 @@ fn lower_order_state(
 /// retained-re-export-path overlay for a re-export that itself reaches the plan through a
 /// tree-shaken barrel. Split out of [`lower_order_state`] so the emergent-cycle fixpoint projector
 /// can populate an identical set of overlays on its probe state — the overlays and the nested
-/// re-export records are what let the shared `transitive_esm_init_targets` restrict a barrel's hop
-/// walk to its retained path, so projection stays byte-faithful to the real registration instead of
-/// over-approximating. Reads and writes only the [`OrderWrapState`]; it never mints symbols, so the
-/// projector can drive it with each module's namespace ref as a wrapper placeholder.
+/// re-export records are what let the final metadata pass's `transitive_esm_init_targets` restrict
+/// a barrel's hop walk to its retained path, so projection stays byte-faithful to the real
+/// registration instead of over-approximating. Reads and writes only the [`OrderWrapState`]; it
+/// never mints symbols, so the projector can drive it with each module's namespace ref as a wrapper
+/// placeholder.
 pub(super) fn populate_order_import_overlays(
   input: &OrderLoweringInput<'_>,
   reexport_usage: &FrozenReexportUsage,

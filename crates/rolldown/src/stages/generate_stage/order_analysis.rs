@@ -484,8 +484,9 @@ impl GenerateStage<'_> {
   /// Excluded non-included-forwarder projection — a wrapped importer's re-export of a *non-included*
   /// forwarder forwards init to every wrapped module the forwarder's static imports reach, walking
   /// the forwarder itself rather than only its resolved exports. This mirrors the excluded-statement
-  /// metadata routing (`transitive_esm_init_targets` → `collect_order_wrap_esm_init_targets`) that
-  /// `add_transitive_esm_init_depended_symbols` registers. This is the edge source the
+  /// final metadata routing (`transitive_esm_init_targets` →
+  /// `collect_order_wrap_esm_init_targets`) that `add_transitive_esm_init_depended_symbols`
+  /// registers. This is the edge source the
   /// resolved-exports-only projection missed (Hole 2).
   ///
   /// The walk passes `retained_reexport_path: None` while the real metadata pass can carry `Some`

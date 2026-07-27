@@ -1,3 +1,7 @@
+#![forbid(unsafe_code)]
+
+use std::ops::Deref;
+
 use oxc::ast::ast::{Declaration, Statement};
 use oxc_index::IndexVec;
 use rolldown_common::{
@@ -20,16 +24,66 @@ use super::{
   order_wrap_state::{EsmInitOrigin, OrderImportKey, OrderWrapState},
 };
 
+/// An artifact whose owner can only read the sealed value.
+///
+/// Construction is private to this leaf module, and the wrapper exposes neither `DerefMut` nor an
+/// unwrap operation. Once a value crosses this boundary, re-owning it cannot make it mutable again.
+#[derive(Debug)]
+pub struct Sealed<T>(T);
+
+impl<T> Sealed<T> {
+  fn new(value: T) -> Self {
+    Self(value)
+  }
+}
+
+impl<T> Deref for Sealed<T> {
+  type Target = T;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+/// Final post-chunking facts needed to emit wrapped ESM initialization.
+///
+/// This artifact is deliberately separate from both link-owned [`LinkingMetadata`] and
+/// order-lowering-owned [`OrderWrapState`]. It is computed once after chunk topology and wrapper
+/// selection are final, sealed, then shared read-only by cross-chunk linking and module
+/// finalization.
+#[derive(Debug)]
+pub struct FinalEsmInitMetadata {
+  modules: FxHashMap<ModuleIdx, ModuleEsmInitMetadata>,
+}
+
+impl FinalEsmInitMetadata {
+  pub(crate) fn init_is_noop(&self, module_idx: ModuleIdx) -> bool {
+    self.modules.get(&module_idx).is_some_and(|metadata| metadata.init_is_noop)
+  }
+
+  pub(crate) fn transitive_init_targets(
+    &self,
+    module_idx: ModuleIdx,
+  ) -> Option<&FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>> {
+    self.modules.get(&module_idx).map(|metadata| &metadata.transitive_init_targets)
+  }
+}
+
+#[derive(Debug)]
+struct ModuleEsmInitMetadata {
+  init_is_noop: bool,
+  transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
+}
+
 impl GenerateStage<'_> {
-  /// Compute no-op wrappers and excluded-statement init targets after final chunk assignment.
-  /// This must finish before parallel module finalization.
+  /// Compute the immutable no-op and excluded-statement init facts after final chunk assignment.
+  /// This must finish before cross-chunk linking and parallel module finalization.
   pub(super) fn compute_wrapped_esm_init_metadata(
-    &mut self,
+    &self,
     ast_table: &IndexEcmaAst,
     chunk_graph: &ChunkGraph,
-    order_state: &mut OrderWrapState,
-  ) {
-    // Classify in parallel (read-only); the cheap write-back stays sequential.
+    order_state: &OrderWrapState,
+  ) -> Sealed<FinalEsmInitMetadata> {
     let keep_names = self.options.keep_names;
     // Off-strict, lowering never mutates the chunk graph, so the liveness guard cannot fire.
     let strict = self.options.is_strict_execution_order_enabled();
@@ -37,14 +91,13 @@ impl GenerateStage<'_> {
     let modules = &self.link_output.module_table.modules;
     let stmt_infos_vec = &self.link_output.stmt_infos;
     let module_to_chunk = &chunk_graph.module_to_chunk;
-    let order_state_view = &*order_state;
     let results = metas
       .par_iter_enumerated()
       .filter_map(|(module_idx, meta)| {
         if !meta.is_included {
           return None;
         }
-        let init_target = order_state_view.esm_init_target(module_idx, meta)?;
+        let init_target = order_state.esm_init_target(module_idx, meta)?;
         let is_noop = init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
         let targets_by_stmt = modules[module_idx]
           .as_normal()
@@ -63,32 +116,19 @@ impl GenerateStage<'_> {
                 chunk_idx,
                 order_wrap: matches!(init_target.origin, EsmInitOrigin::ExecutionOrder),
                 execution_dependencies: &meta.execution_dependencies,
-                order_state: order_state_view,
+                order_state,
               },
             )
           })
           .unwrap_or_default();
         (is_noop || !targets_by_stmt.is_empty()).then_some((
           module_idx,
-          init_target.origin,
-          is_noop,
-          targets_by_stmt,
+          ModuleEsmInitMetadata { init_is_noop: is_noop, transitive_init_targets: targets_by_stmt },
         ))
       })
       .collect::<Vec<_>>();
 
-    for (module_idx, origin, is_noop, targets_by_stmt) in results {
-      match origin {
-        EsmInitOrigin::Interop => {
-          let meta = &mut self.link_output.metas[module_idx];
-          meta.init_is_noop = is_noop;
-          meta.transitive_esm_init_targets = targets_by_stmt;
-        }
-        EsmInitOrigin::ExecutionOrder => {
-          order_state.set_order_init_metadata(module_idx, is_noop, targets_by_stmt);
-        }
-      }
-    }
+    Sealed::new(FinalEsmInitMetadata { modules: results.into_iter().collect() })
   }
 }
 

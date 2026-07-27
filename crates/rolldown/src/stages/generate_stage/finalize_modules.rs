@@ -11,7 +11,7 @@ use crate::{
   type_alias::IndexEcmaAst,
 };
 
-use super::{GenerateStage, resolve_file_urls::ResolvedFileUrls};
+use super::{FinalEsmInitMetadata, GenerateStage, Sealed, resolve_file_urls::ResolvedFileUrls};
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
@@ -22,6 +22,7 @@ impl GenerateStage<'_> {
     resolved_file_urls: &ResolvedFileUrls,
     used_symbol_refs: &UsedSymbolRefs,
     order_state: &super::order_wrap_state::OrderWrapState,
+    final_esm_init_metadata: &Sealed<FinalEsmInitMetadata>,
   ) -> BuildResult<()> {
     let has_enum_inlining = self.link_output.has_enum_inlining;
     let has_required_order_runtime = !order_state.required_runtime_helpers().is_empty();
@@ -59,6 +60,7 @@ impl GenerateStage<'_> {
             modules: &self.link_output.module_table.modules,
             linking_infos: &self.link_output.metas,
             order_wrap_state: order_state,
+            final_esm_init_metadata,
             used_symbol_refs,
             runtime: &self.link_output.runtime,
             options: self.options,

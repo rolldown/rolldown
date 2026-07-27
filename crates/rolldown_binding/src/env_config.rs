@@ -1,15 +1,9 @@
-pub const MAX_TOKIO_BLOCKING_THREADS: usize = 512;
-
 /// Resolve an env-derived thread count: parse the raw value, treat a missing,
 /// non-numeric, OR zero value as "unset" and fall back to `default`, then clamp
-/// the result to `maximum`. A `0` must never survive here because both
-/// module-init paths feed this count into a constructor that rejects `0`:
-/// - `register_async_runtime` (async-runtime feature) — `RuntimeOptions::validate()`
-///   rejects a `0` thread count, panicking the `expect()` during addon load.
-/// - `init` (default tokio-runtime feature) — `tokio::runtime::Builder`'s
-///   `worker_threads(0)` / `max_blocking_threads(0)` assert `> 0` and panic the
-///   `expect()` during addon load.
-///
+/// the result to `maximum`. A `0` must never survive here because module init
+/// feeds this count into `register_async_runtime`, whose
+/// `RuntimeOptions::validate()` rejects a `0` thread count, panicking the
+/// `expect()` during addon load.
 pub fn resolve_thread_count(raw: Option<String>, default: usize, maximum: usize) -> usize {
   assert!(default > 0, "the default thread count must be positive");
   assert!(maximum > 0, "the maximum thread count must be positive");
@@ -29,8 +23,8 @@ mod tests {
     const DEFAULT: usize = 8;
     const MAXIMUM: usize = 16;
     // RD-3: a `0` typo must be treated as unset, never fed to a constructor that
-    // rejects 0 (validate() / tokio Builder), which would panic the module_init
-    // `expect`.
+    // rejects 0 (`RuntimeOptions::validate()`), which would panic the
+    // module_init `expect`.
     assert_eq!(resolve_thread_count(Some("0".to_string()), DEFAULT, MAXIMUM), DEFAULT);
     // Valid positive numbers pass through unchanged.
     assert_eq!(resolve_thread_count(Some("4".to_string()), DEFAULT, MAXIMUM), 4);

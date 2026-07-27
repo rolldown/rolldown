@@ -133,7 +133,6 @@ impl OrderWrapState {
     if matches!(meta.wrap_kind(), WrapKind::Esm) {
       return meta.wrapper_ref.map(|wrapper_ref| EsmInitTarget {
         wrapper_ref,
-        init_is_noop: meta.init_is_noop,
         tla_tainted: meta.is_tla_or_contains_tla_dependency,
         origin: EsmInitOrigin::Interop,
       });
@@ -141,7 +140,6 @@ impl OrderWrapState {
 
     self.modules.get(&module_idx).map(|module| EsmInitTarget {
       wrapper_ref: module.wrapper_ref,
-      init_is_noop: module.init_is_noop,
       tla_tainted: meta.is_tla_or_contains_tla_dependency,
       origin: EsmInitOrigin::ExecutionOrder,
     })
@@ -191,8 +189,6 @@ impl OrderWrapState {
             wrapper_statement,
             chunk: None,
             reexport_init_transparent: false,
-            init_is_noop: false,
-            transitive_init_targets: FxHashMap::default(),
           },
         )
         .is_none(),
@@ -345,33 +341,6 @@ impl OrderWrapState {
       .is_some_and(|importers| importers.iter().copied().any(importer_is_live))
   }
 
-  pub(crate) fn set_order_init_metadata(
-    &mut self,
-    module_idx: ModuleIdx,
-    init_is_noop: bool,
-    transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
-  ) {
-    let module = self.modules.get_mut(&module_idx).expect("order-wrapped module should exist");
-    module.init_is_noop = init_is_noop;
-    module.transitive_init_targets = transitive_init_targets;
-  }
-
-  pub(crate) fn transitive_init_targets<'a>(
-    &'a self,
-    module_idx: ModuleIdx,
-    meta: &'a crate::types::linking_metadata::LinkingMetadata,
-  ) -> &'a FxHashMap<StmtInfoIdx, Vec<ModuleIdx>> {
-    if self
-      .esm_init_target(module_idx, meta)
-      .is_some_and(|target| matches!(target.origin, EsmInitOrigin::ExecutionOrder))
-    {
-      if let Some(module) = self.modules.get(&module_idx) {
-        return &module.transitive_init_targets;
-      }
-    }
-    &meta.transitive_esm_init_targets
-  }
-
   pub(crate) fn order_wrapper_chunk(&self, module_idx: ModuleIdx) -> Option<ChunkIdx> {
     self.modules.get(&module_idx)?.chunk
   }
@@ -438,8 +407,6 @@ pub struct OrderWrappedModule {
   /// dependency. Binding-driven consumers may therefore route through it to the leaf wrappers
   /// they consume. Side-effect-only imports still call the wrapper directly.
   pub(crate) reexport_init_transparent: bool,
-  pub(crate) init_is_noop: bool,
-  pub(crate) transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -451,7 +418,6 @@ pub enum EsmInitOrigin {
 #[derive(Clone, Copy, Debug)]
 pub struct EsmInitTarget {
   pub(crate) wrapper_ref: SymbolRef,
-  pub(crate) init_is_noop: bool,
   pub(crate) tla_tainted: bool,
   pub(crate) origin: EsmInitOrigin,
 }

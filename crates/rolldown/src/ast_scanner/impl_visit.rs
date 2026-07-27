@@ -291,7 +291,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   /// Records `import.meta.ROLLDOWN_FILE_URL_<referenceId>` for the `resolveFileUrl` hook.
   ///
-  /// Deliberately not folded into `visit_meta_property`: that method returns early when
+  /// Deliberately not folded into `visit_import_meta`: that method returns early when
   /// `keep_esm_import_export_syntax()` is set, but `ROLLDOWN_FILE_URL_` is rewritten
   /// regardless of that option.
   fn visit_member_expression(&mut self, it: &ast::MemberExpression<'ast>) {

@@ -1,4 +1,4 @@
-use std::{any::Any, borrow::Cow, fmt::Debug, future::Future, pin::Pin, sync::Arc};
+use std::{any::Any, borrow::Cow, fmt, future::Future, pin::Pin, sync::Arc};
 
 use super::plugin_context::PluginContext;
 use crate::{
@@ -31,7 +31,12 @@ type HookFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 ///
 /// The main reason we don't expose this trait is that its boxed futures make it harder for
 /// rust-analyzer to provide a good auto-completion experience.
-pub trait Pluginable: Any + Debug + Send + Sync + 'static {
+///
+/// `Debug` is deliberately implemented on the trait object below instead of being a supertrait.
+/// A `Debug` supertrait puts every concrete plugin's formatter in its erased vtable, retaining
+/// all of their nested formatting code in release binaries even though diagnostics only need the
+/// plugin name.
+pub trait Pluginable: Any + Send + Sync + 'static {
   fn call_name(&self) -> Cow<'static, str>;
 
   // The `option` hook consider call at node side.
@@ -226,6 +231,12 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   }
 
   fn call_hook_usage(&self) -> HookUsage;
+}
+
+impl fmt::Debug for dyn Pluginable {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.debug_struct("Plugin").field("name", &self.call_name()).finish_non_exhaustive()
+  }
 }
 
 impl<T: Plugin> Pluginable for T {

@@ -1,6 +1,7 @@
 import { acquireRuntimeLease, isRuntimeLeaseRequired } from '../runtime-lifecycle';
 
-// See internal-docs/async-runtime/implementation.md.
+// Snapshot once at module load: only threaded-WASI bindings require explicit
+// runtime leases; every other artifact runs the no-op lease path.
 const requiresRuntimeLease = isRuntimeLeaseRequired();
 
 export function runWithRuntimeLease<T>(

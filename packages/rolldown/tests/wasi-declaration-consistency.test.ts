@@ -13,6 +13,7 @@ const targetNeutralTypes = [
   'MangleOptions',
   'BindingNormalizedOptions',
   'BindingOutputOptions',
+  'BindingRuntimeConfig',
   'JsOutputChunk',
 ] as const;
 

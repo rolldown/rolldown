@@ -7,13 +7,13 @@ import type {
   JsOutputChunk,
 } from '../binding.cjs';
 import type { MinimalPluginContext } from '../plugin/minimal-plugin-context';
-import { getRuntimeSupport } from '../runtime-support';
 import { OutputAssetImpl } from '../types/output-asset-impl';
 import type { OutputBundle } from '../types/output-bundle';
 import { OutputChunkImpl } from '../types/output-chunk-impl';
 import type { OutputAsset, OutputChunk, RolldownOutput, SourceMap } from '../types/rolldown-output';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { type AssetSource, bindingAssetSource, transformAssetSource } from './asset-source';
+import { shouldEagerlyFreeOutputs } from './threadless-free';
 import { transformChunkModules } from './transform-rendered-chunk';
 
 export function transformToRollupSourceMap(map: string): SourceMap {
@@ -31,30 +31,6 @@ export function transformToRollupSourceMap(map: string): SourceMap {
     },
   };
   return obj;
-}
-
-// Threadless WASI consumers (@rolldown/browser, the wasi-single dist) can run
-// in engines that rarely — for workerd, never — run the GC finalizers emnapi
-// relies on to release each build's native output payload: Wasm memory adds no
-// JS-heap pressure, so V8 sees no reason to collect. Every generate() would
-// then keep its chunk code, sourcemaps, and per-module rendered sources
-// resident forever, growing linear memory by roughly one output payload per
-// rebuild. For that flavor we copy all output fields to JavaScript eagerly and
-// drop the native side immediately. Native (and threaded-WASI) builds keep the
-// lazy fields: finalization works there and the eager copy costs performance.
-let eagerlyFreeOutputs: boolean | undefined;
-
-function shouldEagerlyFreeOutputs(): boolean {
-  if (eagerlyFreeOutputs === undefined) {
-    try {
-      eagerlyFreeOutputs = getRuntimeSupport().threadlessWasi;
-    } catch {
-      // A binding without a readable capability report keeps the historical
-      // lazy behavior.
-      eagerlyFreeOutputs = false;
-    }
-  }
-  return eagerlyFreeOutputs;
 }
 
 function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputChunkImpl {

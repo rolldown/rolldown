@@ -1813,6 +1813,7 @@ export declare class BindingRenderedChunkMeta {
 }
 
 export declare class BindingRenderedModule {
+  dropInner(): ExternalMemoryStatus
   get code(): string | null
   get renderedExports(): Array<string>
 }

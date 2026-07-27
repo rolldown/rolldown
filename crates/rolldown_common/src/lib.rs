@@ -165,7 +165,7 @@ pub use crate::{
   types::flat_options::FlatOptions,
   types::hmr_info::HmrInfo,
   types::hybrid_index_vec::HybridIndexVec,
-  types::import_attribute::ImportAttribute,
+  types::import_attribute::{ImportAttribute, ImportAttributeKey, ImportAttributeKind},
   types::import_kind::ImportKind,
   types::import_record::{
     DynamicImportExprInfo, ImportRecordIdx, ImportRecordMeta, ImportRecordStateInit,

@@ -1,0 +1,21 @@
+{
+  "_comment": "The runtime namespace import synthesized for an eliminated dynamic facade must retain the external star's import attributes.",
+  "expectExecuted": false,
+  "config": {
+    "external": ["external"],
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "target",
+          "test": "[\\\\/](target|reader)\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "hiddenRuntimeModule": false
+}

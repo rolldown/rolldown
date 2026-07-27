@@ -1,0 +1,20 @@
+{
+  "_comment": "When chunk optimization eliminates a dynamic entry facade, the simulated namespace in the implementation chunk must retain exports from an external star re-export.",
+  "config": {
+    "external": ["external"],
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "target",
+          "test": "[\\\\/](target|reader)\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "hiddenRuntimeModule": false
+}

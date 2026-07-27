@@ -1,0 +1,30 @@
+{
+  "_comment": "The namespace synthesized for an eliminated dynamic entry facade must retain a transitive external star even when another live entry invalidates an imported module.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "live",
+        "import": "./live.js"
+      }
+    ],
+    "external": ["external"],
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "target",
+          "test": "[\\\\/](target|reader|barrel)\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "hiddenRuntimeModule": false
+}

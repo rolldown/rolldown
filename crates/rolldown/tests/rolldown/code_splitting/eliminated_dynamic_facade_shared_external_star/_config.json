@@ -1,0 +1,30 @@
+{
+  "_comment": "A live entry may flatten an external star record that is also needed by the namespace synthesized for an eliminated dynamic facade.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "live",
+        "import": "./live.js"
+      }
+    ],
+    "external": ["external"],
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "target",
+          "test": "[\\\\/](target|reader|barrel)\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "hiddenRuntimeModule": false
+}

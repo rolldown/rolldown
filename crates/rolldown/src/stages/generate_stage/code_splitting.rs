@@ -719,10 +719,10 @@ impl GenerateStage<'_> {
           }
         }
 
-        if !self.link_output.metas[module_idx]
-          .module_namespace_included_reason
-          .contains(ModuleNamespaceIncludedReason::Unknown)
-        {
+        // `EntryLevelExternal` is record-global: another live entry can flatten a record that is
+        // also part of an observed or simulated namespace. Invalidate only when no such namespace
+        // needs the external star to remain dynamic.
+        if !self.link_output.metas[module_idx].entry_level_external_star_keeps_dynamic_exports() {
           invalidated_modules.insert(module.idx);
         }
       }
@@ -1176,6 +1176,8 @@ fn propagate_has_dynamic_exports(
     return linking_infos[target].has_dynamic_exports;
   }
   visited_modules.insert(target);
+  let entry_level_external_keeps_dynamic_exports =
+    linking_infos[target].entry_level_external_star_keeps_dynamic_exports();
 
   let has_dynamic_exports = match &modules[target] {
     Module::Normal(module) => {
@@ -1191,7 +1193,7 @@ fn propagate_has_dynamic_exports(
               return false;
             }
             if rec.meta.contains(ImportRecordMeta::EntryLevelExternal) {
-              return false;
+              return entry_level_external_keeps_dynamic_exports;
             }
             propagate_has_dynamic_exports(
               module_idx,

@@ -5,9 +5,9 @@ use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType,
-  FacadeChunkEliminationReason, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTable,
-  NormalModule, PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, StmtInfos,
-  UsedSymbolRefsBuilder, WrapKind,
+  FacadeChunkEliminationReason, ImportRecordMeta, Module, ModuleIdx, ModuleNamespaceIncludedReason,
+  ModuleTable, NormalModule, PostChunkOptimizationOperation, PreserveEntrySignatures,
+  RuntimeHelper, StmtInfos, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_utils::{BitSet, IndexBitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -66,6 +66,40 @@ struct ChunkCandidate {
 }
 
 type TempIndexChunks = IndexVec<ChunkIdx, ChunkCandidate>;
+
+/// Marks the normal-module namespace chain that carries dynamic star exports into a namespace
+/// synthesized for an optimizer-eliminated facade. A live entry may later flatten the same
+/// external-star record, so this per-module reason is kept separately from the record-level
+/// `EntryLevelExternal` flag.
+fn mark_simulated_facade_export_star_chain(context: &mut IncludeContext<'_>, entry: ModuleIdx) {
+  let mut queue = VecDeque::from([entry]);
+  let mut visited = FxHashSet::default();
+
+  while let Some(module_idx) = queue.pop_front() {
+    if !visited.insert(module_idx) {
+      continue;
+    }
+    context.module_namespace_included_reason[module_idx]
+      .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
+
+    let Some(module) = context.modules[module_idx].as_normal() else {
+      continue;
+    };
+    module.import_records.iter().for_each(|rec| {
+      if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
+        return;
+      }
+      let Some(importee_idx) = rec.resolved_module else {
+        return;
+      };
+      if context.modules[importee_idx].is_normal()
+        && context.metas[importee_idx].has_dynamic_exports
+      {
+        queue.push_back(importee_idx);
+      }
+    });
+  }
+}
 
 /// A temporary structure for managing chunk graph optimizations.
 /// Only store simplified information needed during optimization passes.
@@ -1153,8 +1187,7 @@ impl GenerateStage<'_> {
           module.namespace_object_ref,
           SymbolIncludeReason::SimulatedFacadeChunk,
         );
-        context.module_namespace_included_reason[*entry_module_idx]
-          .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
+        mark_simulated_facade_export_star_chain(context, *entry_module_idx);
         let target_chunk = &mut chunk_graph.chunk_table[*to_chunk_idx];
         target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
         runtime_dependent_chunks.insert(*to_chunk_idx);

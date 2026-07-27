@@ -22,16 +22,20 @@ use oxc::{
       Argument, ArrowFunctionExpression, AssignmentOperator, AssignmentTarget, BindingIdentifier,
       BindingPattern, CallExpression, ClassElement, Declaration, ExportDefaultDeclarationKind,
       ExportSpecifier, Expression, FormalParameter, FormalParameterKind, FormalParameters,
-      FunctionBody, FunctionType, IdentifierName, ImportDeclarationSpecifier, ImportOrExportKind,
+      FunctionBody, FunctionType, IdentifierName, ImportAttribute as AstImportAttribute,
+      ImportAttributeKey as AstImportAttributeKey, ImportDeclarationSpecifier, ImportOrExportKind,
       MemberExpression, ModuleExportName, NumberBase, ObjectExpression, ObjectPropertyKind,
       PropertyKey, PropertyKind, Statement, StringLiteral, VariableDeclarationKind,
-      VariableDeclarator,
+      VariableDeclarator, WithClause, WithClauseKeyword,
     },
     builder::{GetAstBuilder, NONE},
   },
   span::{GetSpanMut, SPAN, Span},
 };
-use rolldown_common::{EcmaModuleAstUsage, Interop, MemberExprProp};
+use rolldown_common::{
+  EcmaModuleAstUsage, ImportAttribute, ImportAttributeKey, ImportAttributeKind, Interop,
+  MemberExprProp,
+};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 /// Options for [`StatementFactoryExt::new_esm_wrapper_stmt`].
@@ -681,6 +685,16 @@ pub trait StatementFactoryExt<'ast> {
     as_name: &str,
     builder: &B,
   ) -> Statement<'ast> {
+    Statement::new_import_star_stmt_with_attribute(source, as_name, None, builder)
+  }
+
+  /// `import * as <as_name> from "<source>" with { ... };`
+  fn new_import_star_stmt_with_attribute<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+    source: &str,
+    as_name: &str,
+    import_attribute: Option<&ImportAttribute>,
+    builder: &B,
+  ) -> Statement<'ast> {
     let specifiers = oxc::allocator::Vec::from_value_in(
       ImportDeclarationSpecifier::new_import_namespace_specifier(
         SPAN,
@@ -689,12 +703,48 @@ pub trait StatementFactoryExt<'ast> {
       ),
       builder,
     );
+    let with_clause = import_attribute.map(|import_attribute| {
+      let keyword = match import_attribute.kind() {
+        ImportAttributeKind::With => WithClauseKeyword::With,
+        ImportAttributeKind::Assert => WithClauseKeyword::Assert,
+      };
+      let with_entries = oxc::allocator::Vec::from_iter_in(
+        import_attribute.entries().map(|(key, value)| {
+          let key = match key {
+            ImportAttributeKey::Identifier(name) => AstImportAttributeKey::new_identifier(
+              SPAN,
+              oxc::ast::ast::Str::from_str_in(name.as_str(), builder),
+              builder,
+            ),
+            ImportAttributeKey::String(name) => AstImportAttributeKey::new_string_literal(
+              SPAN,
+              oxc::ast::ast::Str::from_str_in(name.as_str(), builder),
+              None,
+              builder,
+            ),
+          };
+          AstImportAttribute::new(
+            SPAN,
+            key,
+            StringLiteral::new(
+              SPAN,
+              oxc::ast::ast::Str::from_str_in(value, builder),
+              None,
+              builder,
+            ),
+            builder,
+          )
+        }),
+        builder,
+      );
+      WithClause::boxed(SPAN, keyword, with_entries, builder)
+    });
     Statement::new_import_declaration(
       SPAN,
       Some(specifiers),
       StringLiteral::new(SPAN, oxc::ast::ast::Str::from_str_in(source, builder), None, builder),
       None,
-      NONE,
+      with_clause,
       ImportOrExportKind::Value,
       builder,
     )

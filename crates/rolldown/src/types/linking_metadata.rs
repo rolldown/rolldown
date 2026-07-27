@@ -128,6 +128,14 @@ impl LinkingMetadata {
     self.sorted_and_non_ambiguous_resolved_exports.is_empty()
   }
 
+  /// Whether an entry-level external star must keep contributing dynamic exports because this
+  /// module's namespace is observed directly or simulates an optimizer-eliminated facade.
+  pub fn entry_level_external_star_keeps_dynamic_exports(&self) -> bool {
+    self.module_namespace_included_reason.intersects(
+      ModuleNamespaceIncludedReason::Unknown | ModuleNamespaceIncludedReason::SimulateFacadeChunk,
+    )
+  }
+
   #[inline]
   pub fn wrap_kind(&self) -> WrapKind {
     self.wrap_kind
@@ -146,8 +154,9 @@ impl LinkingMetadata {
   /// of re-deriving the condition. In ESM output an entry-level external star
   /// re-export is flattened to a chunk-level `export * from '<external>'` statement instead, so
   /// no runtime call is needed — unless the namespace object is genuinely observed
-  /// ([`ModuleNamespaceIncludedReason::Unknown`]), in which case the namespace must still merge
-  /// the external's exports at runtime.
+  /// ([`ModuleNamespaceIncludedReason::Unknown`]) or stands in for an optimizer-eliminated
+  /// dynamic facade ([`ModuleNamespaceIncludedReason::SimulateFacadeChunk`]), in which case the
+  /// namespace must still merge the external's exports at runtime.
   pub fn ns_star_external_re_export_emitted(
     &self,
     rec_meta: ImportRecordMeta,
@@ -156,7 +165,7 @@ impl LinkingMetadata {
     match format {
       OutputFormat::Esm => {
         !rec_meta.contains(ImportRecordMeta::EntryLevelExternal)
-          || self.module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown)
+          || self.entry_level_external_star_keeps_dynamic_exports()
       }
       OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => true,
     }

@@ -878,7 +878,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             );
             vec![
               // Insert `import * as ns from 'ext'`external module in esm format
-              Statement::new_import_star_stmt(importee_name, importee_namespace_name, self),
+              Statement::new_import_star_stmt_with_attribute(
+                importee_name,
+                importee_namespace_name,
+                self.ctx.module.import_attribute_map.get(&idx),
+                self,
+              ),
               // Insert `__reExport(foo_exports, ns)`
               ast::Statement::new_expression_statement(
                 SPAN,

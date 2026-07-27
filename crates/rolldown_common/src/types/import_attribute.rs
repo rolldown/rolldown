@@ -36,6 +36,14 @@ impl ImportAttribute {
     self.entries.contains_key(key)
   }
 
+  pub fn kind(&self) -> ImportAttributeKind {
+    self.kind
+  }
+
+  pub fn entries(&self) -> impl Iterator<Item = (&ImportAttributeKey, &str)> {
+    self.entries.iter().map(|(key, value)| (key, value.as_str()))
+  }
+
   pub fn from_with_clause(with_clause: &ast::WithClause) -> Self {
     let kind = match with_clause.keyword {
       ast::WithClauseKeyword::With => ImportAttributeKind::With,

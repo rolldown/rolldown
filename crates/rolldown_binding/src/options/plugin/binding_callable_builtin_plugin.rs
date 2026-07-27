@@ -222,13 +222,14 @@ impl From<BindingHookJsResolveIdOptions> for Arc<CustomField> {
   fn from(value: BindingHookJsResolveIdOptions) -> Self {
     let mut map = CustomField::default();
     map.insert(ResolveIdOptionsScan, value.scan.unwrap_or(false));
-    if let Some(vite_plugin_custom) = value.custom {
-      let is_sub_imports_pattern =
-        vite_plugin_custom.vite_import_glob.and_then(|meta| meta.is_sub_imports_pattern);
+    // Only mark the call as an `import.meta.glob` resolution when the caller actually passed
+    // `custom['vite:import-glob']`. Plugins routinely pass unrelated `custom` metadata, and the
+    // presence of this key alone changes how `builtin:vite-resolve` resolves the specifier.
+    if let Some(vite_import_glob) = value.custom.and_then(|custom| custom.vite_import_glob) {
       map.insert(
         rolldown_plugin_utils::constants::ViteImportGlob,
         rolldown_plugin_utils::constants::ViteImportGlobValue(
-          is_sub_imports_pattern.unwrap_or(false),
+          vite_import_glob.is_sub_imports_pattern.unwrap_or(false),
         ),
       );
     }
@@ -243,6 +244,9 @@ pub struct BindingHookJsResolveIdOutput {
   pub external: Option<BindingResolvedExternal>,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
   pub module_side_effects: Option<BindingHookSideEffects>,
+  /// @internal The package json path resolved by oxc resolver, so that the caller can hand it
+  /// back to rolldown instead of making it infer the module format from the id alone.
+  pub package_json_path: Option<String>,
 }
 
 impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
@@ -251,6 +255,7 @@ impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
       id: value.id.to_string(),
       external: value.external.map(Into::into),
       module_side_effects: value.side_effects.map(Into::into),
+      package_json_path: value.package_json_path,
     }
   }
 }

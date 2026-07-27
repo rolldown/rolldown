@@ -129,6 +129,20 @@ export class RolldownBuild {
   }
 
   /**
+   * Whether the NATIVE side of the bundle has completed its terminal close.
+   *
+   * Unlike {@linkcode closed}, this stays `false` while a requested close is
+   * still in flight or has failed retryably — `closed` flips at request time,
+   * before any native work. Lifecycle managers (the workerd wrapper) probe
+   * this to decide whether native resources are truly released.
+   *
+   * @internal
+   */
+  get __nativeBundlerClosed(): boolean {
+    return this.#bundler.closed;
+  }
+
+  /**
    * Generate bundles in-memory.
    *
    * If you directly want to write bundles to disk, use the {@linkcode write} method instead.

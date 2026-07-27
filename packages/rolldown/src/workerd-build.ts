@@ -324,7 +324,9 @@ export async function createWorkerdBundle(
     get closed(): boolean {
       if (released) return true;
       try {
-        return bundle.closed;
+        // Not `bundle.closed`: that flips at close-request time. This getter
+        // promises "close() has completed", so report the native truth.
+        return bundle.__nativeBundlerClosed;
       } catch {
         // The instance was disposed out from under the bundle.
         return true;
@@ -344,13 +346,16 @@ export async function createWorkerdBundle(
         await bundle.close();
       } catch (error) {
         // `close()` can reject while the native bundle is still fully open
-        // (e.g. when called from one of the bundle's own active hooks). Keep
-        // the instance slot and keep reporting the bundle open so the caller
-        // can retry; release only when the rejection happened after native
-        // cleanup completed (e.g. a throwing closeBundle hook).
+        // (e.g. when called from one of the bundle's own active hooks, on a
+        // retryable native-close failure, or while another close is still in
+        // flight). Keep the instance slot and keep reporting the bundle open
+        // so the caller can retry; release only when native cleanup actually
+        // completed (e.g. a throwing closeBundle hook). The public `closed`
+        // flag is unusable here: it flips at close-REQUEST time, before any
+        // native work, so probe the native truth instead.
         let stillOpen = false;
         try {
-          stillOpen = !bundle.closed;
+          stillOpen = !bundle.__nativeBundlerClosed;
         } catch {
           // The instance was disposed out from under the bundle.
         }

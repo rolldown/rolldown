@@ -28,6 +28,21 @@ const bundledRuntimePackages = [
   'buffer',
   'node:buffer',
 ];
+// The dist code itself stays fully bundled (the AST scans below still forbid
+// bare runtime imports), but the manifest deliberately declares the registry
+// emnapi v2 line: the .wasm links the emnapi 2.0.0-alpha C archives, so a v1
+// JS runtime is an ABI mismatch (f3ac20b26). @napi-rs/wasm-runtime is only
+// v2-ready through the workspace pnpm patch, which never reaches registry
+// installers — @rolldown/browser therefore stays `private: true` until a
+// v2-ready runtime is published upstream (bb2996029). These pins are the ABI
+// line a future registry consumer must resolve; drift here must fail CI until
+// this script is updated deliberately.
+const expectedRegistryRuntimeDependencies = {
+  '@emnapi/core': '2.0.0-alpha.3',
+  '@emnapi/runtime': '2.0.0-alpha.3',
+  '@napi-rs/wasm-runtime': '^1.1.6',
+};
+const forbiddenRegistryRuntimeDependencies = ['buffer', 'node:buffer'];
 
 async function run(command, args, options = {}) {
   return execFileAsync(command, args, {
@@ -302,11 +317,45 @@ export default {
     './dist/index.d.mts',
     'Published browser root must expose its declarations under conditional exports',
   );
-  for (const dependency of bundledRuntimePackages) {
+  for (const [dependency, pinnedRange] of Object.entries(expectedRegistryRuntimeDependencies)) {
+    assert.equal(
+      installedManifest.dependencies?.[dependency],
+      pinnedRange,
+      `Published consumers must resolve ${dependency}@${pinnedRange} from the registry`,
+    );
+  }
+  assert.deepEqual(
+    Object.keys(installedManifest.dependencies ?? {}).sort((a, b) => a.localeCompare(b)),
+    Object.keys(expectedRegistryRuntimeDependencies).sort((a, b) => a.localeCompare(b)),
+    'Published @rolldown/browser must declare exactly the pinned emnapi v2 runtime dependencies',
+  );
+  for (const dependency of forbiddenRegistryRuntimeDependencies) {
     assert.equal(
       installedManifest.dependencies?.[dependency],
       undefined,
       `Published consumers must not resolve ${dependency} from the registry`,
+    );
+  }
+  // The pins must not only be declared — the registry copies they resolve to
+  // must actually install next to the tarball at the pinned emnapi v2
+  // versions. An unpublished or drifted version must fail here. The script
+  // already pins the pnpm version and forces the isolated node-linker, so the
+  // .pnpm store layout is deterministic.
+  const pnpmStoreEntries = await readdir(path.join(consumerDir, 'node_modules/.pnpm'));
+  for (const [dependency, pinnedRange] of Object.entries(expectedRegistryRuntimeDependencies)) {
+    const storePrefix = `${dependency.replace('/', '+')}@${pinnedRange.replace(/^\^/, '')}`;
+    const installed = pnpmStoreEntries.filter((entry) =>
+      pinnedRange.startsWith('^')
+        ? entry.startsWith(`${dependency.replace('/', '+')}@${pinnedRange.slice(1).split('.')[0]}.`)
+        : entry === storePrefix || entry.startsWith(`${storePrefix}_`),
+    );
+    assert.ok(
+      installed.length > 0,
+      `${dependency}@${pinnedRange} must install from the registry into the packed consumer (found: ${
+        pnpmStoreEntries
+          .filter((entry) => entry.startsWith(dependency.replace('/', '+')))
+          .join(', ') || 'none'
+      })`,
     );
   }
 
@@ -553,7 +602,7 @@ export default {
 
   await run(
     process.execPath,
-    [wranglerBin, 'deploy', '--dry-run', '--experimental-autoconfig=false', '--outdir', outputDir],
+    [wranglerBin, 'deploy', '--dry-run', '--autoconfig=false', '--outdir', outputDir],
     { cwd: consumerDir },
   );
 
@@ -618,7 +667,7 @@ export default {
   }
 
   console.log(
-    'OK: packed @rolldown/browser vendors its runtimes, rejects cross-bundle memory reuse, bundles with Wrangler, and runs in Miniflare',
+    'OK: packed @rolldown/browser vendors its runtimes in dist, declares the pinned registry emnapi v2 line, rejects cross-bundle memory reuse, bundles with Wrangler, and runs in Miniflare',
   );
 } finally {
   await rm(tempDir, { recursive: true, force: true });

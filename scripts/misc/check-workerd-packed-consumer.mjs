@@ -95,7 +95,7 @@ async function assertInstallableWithPnpm(tarball, version) {
 }
 
 function findBareRuntimeImports(code, sourceType) {
-  const program = parse(code, { ecmaVersion: 'latest', sourceType });
+  const program = parse(code, { ecmaVersion: 'latest', sourceType, allowHashBang: true });
   const imports = [];
   const pending = [program];
 
@@ -103,18 +103,14 @@ function findBareRuntimeImports(code, sourceType) {
     const node = pending.pop();
     if (!node || typeof node !== 'object') continue;
 
+    // `ExportNamedDeclaration`/`ExportAllDeclaration` carry a `source` for the
+    // `export ... from '...'` forms, which resolve the specifier exactly like
+    // an import would.
     if (
-      node.type === 'ImportDeclaration' &&
-      typeof node.source?.value === 'string' &&
-      bundledRuntimePackages.some(
-        (specifier) =>
-          node.source.value === specifier || node.source.value.startsWith(`${specifier}/`),
-      )
-    ) {
-      imports.push(node.source.value);
-    }
-    if (
-      node.type === 'ImportExpression' &&
+      (node.type === 'ImportDeclaration' ||
+        node.type === 'ImportExpression' ||
+        node.type === 'ExportNamedDeclaration' ||
+        node.type === 'ExportAllDeclaration') &&
       typeof node.source?.value === 'string' &&
       bundledRuntimePackages.some(
         (specifier) =>
@@ -161,6 +157,14 @@ assert.deepEqual(
   ),
   ['@emnapi/core', '@napi-rs/wasm-runtime', 'buffer'],
   'runtime import scan must cover dynamic imports and require.resolve',
+);
+assert.deepEqual(
+  findBareRuntimeImports(
+    "export * from '@emnapi/runtime'; export { getDefaultContext } from '@napi-rs/wasm-runtime'; export * as ns from '@emnapi/core';",
+    'module',
+  ),
+  ['@emnapi/core', '@emnapi/runtime', '@napi-rs/wasm-runtime'],
+  'runtime import scan must cover the export-from re-export forms',
 );
 
 try {
@@ -385,6 +389,37 @@ export default {
       findBareRuntimeImports(loaderCode, sourceType),
       [],
       `${loader} must vendor its emnapi/wasm runtime`,
+    );
+  }
+
+  // Every packed dist JS file must stay self-contained, not just the entries
+  // the smokes below exercise: with the registry runtime dependencies now
+  // installed in the consumer, a bare specifier that leaks into ANY chunk
+  // would silently resolve to the unpatched registry packages (the manifest
+  // pins document the ABI line; dist must never actually load them).
+  const collectPackedDistJs = async (dir) => {
+    const collected = [];
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const entryPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        collected.push(...(await collectPackedDistJs(entryPath)));
+      } else if (/\.(?:js|mjs|cjs)$/.test(entry.name)) {
+        collected.push(entryPath);
+      }
+    }
+    return collected;
+  };
+  const packedDistJsFiles = await collectPackedDistJs(path.join(installedBrowserDir, 'dist'));
+  assert.ok(
+    packedDistJsFiles.length >= 4,
+    'packed dist sweep must find at least the four loader/bundle entries',
+  );
+  for (const distFile of packedDistJsFiles) {
+    const distCode = await readFile(distFile, 'utf8');
+    assert.deepEqual(
+      findBareRuntimeImports(distCode, distFile.endsWith('.cjs') ? 'script' : 'module'),
+      [],
+      `${path.relative(installedBrowserDir, distFile)} must not import or re-export external emnapi/wasm runtime packages`,
     );
   }
 

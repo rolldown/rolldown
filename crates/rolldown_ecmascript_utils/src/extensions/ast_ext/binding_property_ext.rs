@@ -3,10 +3,8 @@ use oxc::{
   allocator::{IntoIn as _, TakeIn},
   ast::{
     ast::{
-      ArrayAssignmentTarget, AssignmentTargetMaybeDefault, AssignmentTargetProperty,
-      AssignmentTargetPropertyIdentifier, AssignmentTargetPropertyProperty, AssignmentTargetRest,
-      AssignmentTargetWithDefault, BindingPattern, BindingProperty, IdentifierReference,
-      ObjectAssignmentTarget,
+      AssignmentTargetMaybeDefault, AssignmentTargetProperty, AssignmentTargetRest, BindingPattern,
+      BindingProperty, IdentifierReference,
     },
     builder::GetAstBuilder,
   },
@@ -31,53 +29,43 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
         let assign_pat = assign_pat.unbox();
         if self.shorthand {
           let binding_id = assign_pat.left.get_binding_identifier().unwrap();
-          AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
-            AssignmentTargetPropertyIdentifier::boxed(
-              self.span,
-              IdentifierReference::new(binding_id.span, binding_id.name, builder),
-              Some(assign_pat.right),
-              builder,
-            ),
+          AssignmentTargetProperty::new_assignment_target_property_identifier(
+            self.span,
+            IdentifierReference::new(binding_id.span, binding_id.name, builder),
+            Some(assign_pat.right),
+            builder,
           )
         } else {
-          AssignmentTargetProperty::AssignmentTargetPropertyProperty(
-            AssignmentTargetPropertyProperty::boxed(
-              self.span,
-              self.key,
-              AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
-                AssignmentTargetWithDefault::boxed(
-                  assign_pat.span,
-                  assign_pat.left.into_assignment_target(builder),
-                  assign_pat.right,
-                  builder,
-                ),
-              ),
-              self.computed,
+          AssignmentTargetProperty::new_assignment_target_property_property(
+            self.span,
+            self.key,
+            AssignmentTargetMaybeDefault::new_assignment_target_with_default(
+              assign_pat.span,
+              assign_pat.left.into_assignment_target(builder),
+              assign_pat.right,
               builder,
             ),
+            self.computed,
+            builder,
           )
           .into_in(builder.allocator())
         }
       }
       BindingPattern::BindingIdentifier(ref id) => {
         if self.shorthand {
-          AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
-            AssignmentTargetPropertyIdentifier::boxed(
-              self.span,
-              IdentifierReference::new(id.span, id.name, builder),
-              None,
-              builder,
-            ),
+          AssignmentTargetProperty::new_assignment_target_property_identifier(
+            self.span,
+            IdentifierReference::new(id.span, id.name, builder),
+            None,
+            builder,
           )
         } else {
-          AssignmentTargetProperty::AssignmentTargetPropertyProperty(
-            AssignmentTargetPropertyProperty::boxed(
-              self.span,
-              self.key,
-              AssignmentTargetMaybeDefault::from(self.value.into_assignment_target(builder)),
-              self.computed,
-              builder,
-            ),
+          AssignmentTargetProperty::new_assignment_target_property_property(
+            self.span,
+            self.key,
+            AssignmentTargetMaybeDefault::from(self.value.into_assignment_target(builder)),
+            self.computed,
+            builder,
           )
           .into_in(builder.allocator())
         }
@@ -97,19 +85,17 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
             AssignmentTargetMaybeDefault::from(binding_pat.into_assignment_target(builder))
           }));
         });
-        AssignmentTargetProperty::AssignmentTargetPropertyProperty(
-          AssignmentTargetPropertyProperty::boxed(
-            self.span,
-            self.key,
-            AssignmentTargetMaybeDefault::ArrayAssignmentTarget(ArrayAssignmentTarget::boxed(
-              arr_pat.span,
-              elements,
-              rest,
-              builder,
-            )),
-            self.computed,
+        AssignmentTargetProperty::new_assignment_target_property_property(
+          self.span,
+          self.key,
+          AssignmentTargetMaybeDefault::new_array_assignment_target(
+            arr_pat.span,
+            elements,
+            rest,
             builder,
           ),
+          self.computed,
+          builder,
         )
         .into_in(builder.allocator())
       }
@@ -127,19 +113,17 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
         obj_pat.properties.take_in(&builder.allocator()).into_iter().for_each(|property| {
           properties.push(property.into_assignment_target_property(builder));
         });
-        AssignmentTargetProperty::AssignmentTargetPropertyProperty(
-          AssignmentTargetPropertyProperty::boxed(
-            self.span,
-            self.key,
-            AssignmentTargetMaybeDefault::ObjectAssignmentTarget(ObjectAssignmentTarget::boxed(
-              obj_pat.span,
-              properties,
-              rest,
-              builder,
-            )),
-            self.computed,
+        AssignmentTargetProperty::new_assignment_target_property_property(
+          self.span,
+          self.key,
+          AssignmentTargetMaybeDefault::new_object_assignment_target(
+            obj_pat.span,
+            properties,
+            rest,
             builder,
           ),
+          self.computed,
+          builder,
         )
         .into_in(builder.allocator())
       }

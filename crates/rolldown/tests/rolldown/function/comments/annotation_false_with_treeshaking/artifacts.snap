@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region icons.js
 //#endregion
 //#region main.js
 console.log(window.bar(function() {
@@ -22,6 +23,7 @@ console.log(window.bar(function() {
 ### main.js
 
 ```js
+//#region icons.js
 //#endregion
 //#region main.js
 console.log(/* @__PURE__ */ window.bar(function() {

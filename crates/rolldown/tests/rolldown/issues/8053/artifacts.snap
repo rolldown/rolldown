@@ -20,6 +20,8 @@ assert(typeof import_lodash.noop === "function");
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+//#region lodash.cjs
+//#endregion
 //#region utils.js
 var import_lodash = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.noop = function noop() {};
@@ -59,6 +61,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
+//#region lodash.cjs
 //#endregion
 //#region utils.js
 var import_lodash = (/* @__PURE__ */ __commonJSMin(((exports) => {

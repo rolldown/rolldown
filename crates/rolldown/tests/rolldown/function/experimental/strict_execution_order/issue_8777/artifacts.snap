@@ -29,16 +29,7 @@ export { Foo, fooClasses, getFooUtilityClass };
 ### main.js
 
 ```js
-import { a as getFooUtilityClass, i as fooClasses, n as Foo, t as init_main } from "./main2.js";
-init_main();
-export { Foo, fooClasses, getFooUtilityClass };
-
-```
-
-### main2.js
-
-```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region components/Foo/fooClasses.js
 function getFooUtilityClass(slot) {
 	return "MuiFoo-" + slot;
@@ -70,14 +61,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { getFooUtilityClass as a, fooClasses as i, Foo as n, init_fooClasses as o, init_Foo as r, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+init_main();
+export { Foo, fooClasses, getFooUtilityClass };
 
 ```

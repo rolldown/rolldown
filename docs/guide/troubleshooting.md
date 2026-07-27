@@ -195,3 +195,9 @@ console.log(bar());
 You'll see this warning if you generate a sourcemap with your bundle ([`sourcemap: true`](/reference/OutputOptions.sourcemap) or `sourcemap: 'inline'`) but you're using one or more plugins that transformed code without generating a sourcemap for the transformation.
 
 Usually, a plugin will only omit the sourcemap if it (the plugin, not the bundle) was configured with `sourcemap: false` - so all you need to do is change that. If the plugin doesn't generate a sourcemap, consider raising an issue with the plugin author.
+
+## Error: "Cannot find module '@rolldown/binding-...'"
+
+This error means Node.js found the `rolldown` package but not the platform-specific native package. It is usually caused by a known npm bug with optional dependencies ([npm/cli#4828](https://github.com/npm/cli/issues/4828)); if you installed with npm, removing `node_modules` and `package-lock.json` and reinstalling fixes it.
+
+It can also happen when the config file lives in a symlinked directory that points into another project, for example one shared between Windows and WSL ([#9854](https://github.com/rolldown/rolldown/issues/9854)). Node.js resolves the config to its real path before resolving its imports, so `import ... from 'rolldown'` can pick up a `node_modules` installed for a different platform. Keep the config outside the symlinked directory, or run with the `NODE_OPTIONS=--preserve-symlinks` environment variable set (not compatible with pnpm, whose `node_modules` layout relies on symlinks).

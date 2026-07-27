@@ -49,14 +49,6 @@ function init_lazy_chunk() {
 	})))();
 }
 //#endregion
-export { init_lazy_chunk as t };
-
-```
-
-### lazy-chunk2.js
-
-```js
-import { t as init_lazy_chunk } from "./lazy-chunk.js";
 init_lazy_chunk();
 
 ```
@@ -82,7 +74,7 @@ function init_polyfill() {
 //#endregion
 //#region user-lib.js
 async function foo() {
-	return import("./lazy-chunk2.js");
+	return import("./lazy-chunk.js");
 }
 function init_user_lib() {
 	return (init_user_lib = __esmMin((() => {
@@ -128,14 +120,6 @@ function init_lazy_chunk() {
 	})))();
 }
 //#endregion
-export { init_lazy_chunk as t };
-
-```
-
-### lazy-chunk2.js
-
-```js
-import { t as init_lazy_chunk } from "./lazy-chunk.js";
 init_lazy_chunk();
 
 ```
@@ -161,7 +145,7 @@ function init_polyfill() {
 //#endregion
 //#region user-lib.js
 async function foo() {
-	return import("./lazy-chunk2.js");
+	return import("./lazy-chunk.js");
 }
 function init_user_lib() {
 	return (init_user_lib = __esmMin((() => {

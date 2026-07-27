@@ -12,6 +12,10 @@ const a$2 = 1;
 function foo$1(a$1) {
 	console.log(a$1, a$2);
 }
+//#endregion
+//#region bar.js
+//#endregion
+//#region main.js
 const { foo } = { foo: foo$1 };
 assert.strictEqual(typeof foo, "function");
 //#endregion
@@ -37,19 +41,19 @@ assert.strictEqual(typeof foo, "function");
 (3:20) ");\n" --> (4:21) ");\n"
 (4:0) "}\n" --> (5:0) "}\n"
 - ../main.js
-(5:0) "const " --> (6:0) "const "
-(5:6) "{ " --> (6:6) "{ "
-(5:8) "foo } = " --> (6:8) "foo } = "
-(5:16) "bar;\n" --> (6:16) "{ "
+(5:0) "const " --> (10:0) "const "
+(5:6) "{ " --> (10:6) "{ "
+(5:8) "foo } = " --> (10:8) "foo } = "
+(5:16) "bar;\n" --> (10:16) "{ "
 - ../bar.js
-(2:17) "foo };\n" --> (6:18) "foo: "
-(2:17) "foo };\n" --> (6:23) "foo$1 "
+(2:17) "foo };\n" --> (10:18) "foo: "
+(2:17) "foo };\n" --> (10:23) "foo$1 "
 - ../main.js
-(5:16) "bar;\n" --> (6:29) "};\n"
-(7:0) "assert." --> (7:0) "assert."
-(7:7) "strictEqual(" --> (7:7) "strictEqual("
-(7:19) "typeof " --> (7:19) "typeof "
-(7:26) "foo, " --> (7:26) "foo, "
-(7:31) "'function'" --> (7:31) "\"function\""
-(7:41) ");\n" --> (7:41) ");\n"
+(5:16) "bar;\n" --> (10:29) "};\n"
+(7:0) "assert." --> (11:0) "assert."
+(7:7) "strictEqual(" --> (11:7) "strictEqual("
+(7:19) "typeof " --> (11:19) "typeof "
+(7:26) "foo, " --> (11:26) "foo, "
+(7:31) "'function'" --> (11:31) "\"function\""
+(7:41) ");\n" --> (11:41) ");\n"
 ```

@@ -3,13 +3,15 @@ mod utils;
 use std::{borrow::Cow, path::PathBuf, sync::Arc};
 
 use oxc::ast::ast::Program;
-use oxc::ast_visit::Visit;
-use rolldown_common::ModuleType;
+use oxc::ast_visit::VisitJs;
 use rolldown_plugin::{
   HookTransformArgs, HookTransformOutput, HookTransformOutputMap, HookTransformReturn, HookUsage,
   Plugin, SharedTransformPluginContext,
 };
-use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
+use rolldown_plugin_utils::{
+  constants::{ViteImportGlob, ViteImportGlobValue},
+  parse_program,
+};
 use sugar_path::SugarPath as _;
 
 #[derive(Debug, Default)]
@@ -73,38 +75,16 @@ impl Plugin for ViteImportGlobPlugin {
     ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    if matches!(
-      args.module_type,
-      ModuleType::Js | ModuleType::Ts | ModuleType::Jsx | ModuleType::Tsx
-    ) && args.code.contains("import.meta.glob")
-    {
-      let source_type = match args.module_type {
-        ModuleType::Js => oxc::span::SourceType::mjs(),
-        ModuleType::Jsx => oxc::span::SourceType::jsx(),
-        ModuleType::Ts => oxc::span::SourceType::ts(),
-        ModuleType::Tsx => oxc::span::SourceType::tsx(),
-        _ => unreachable!(),
-      };
+    if args.code.contains("import.meta.glob") {
       let id = args.id.to_slash_lossy().into_owned();
       let configured_root = self.root.as_ref().map(PathBuf::from);
       let root = configured_root.as_ref().unwrap_or(ctx.cwd());
       let glob_groups = {
         let allocator = oxc::allocator::Allocator::default();
-        let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type)
-          .with_options(oxc::parser::ParseOptions {
-            preserve_parens: false,
-            ..oxc::parser::ParseOptions::default()
-          })
-          .parse();
-        if parser_ret.panicked
-          && let Some(err) =
-            parser_ret.diagnostics.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
-        {
-          return Err(anyhow::anyhow!(format!(
-            "Failed to parse code in '{}': {:?}",
-            args.id, err.message
-          )));
-        }
+        let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
+        else {
+          return Ok(None);
+        };
         let mut resolve_visitor = utils::GlobResolveVisit::default();
         resolve_visitor.visit_program(&parser_ret.program);
         if resolve_visitor.glob_groups.iter().all(Vec::is_empty) {
@@ -158,12 +138,10 @@ impl Plugin for ViteImportGlobPlugin {
       // its allocator. Reparse once resolutions are ready, then transform
       // synchronously without blocking the CurrentThread runtime.
       let allocator = oxc::allocator::Allocator::default();
-      let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type)
-        .with_options(oxc::parser::ParseOptions {
-          preserve_parens: false,
-          ..oxc::parser::ParseOptions::default()
-        })
-        .parse();
+      let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
+      else {
+        return Ok(None);
+      };
       return self.transform_program(
         &ctx,
         args,

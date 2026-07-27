@@ -21,6 +21,26 @@ use rolldown_sourcemap::SourceMap;
 use rolldown_utils::{IndexBitSet, unique_arc::UniqueArc};
 use tracing::{Instrument, debug_span};
 
+const LAZY_PROXY_QUERY: &str = "?rolldown-lazy=1";
+
+#[inline]
+fn is_lazy_proxy_module_id(module_id: &str) -> bool {
+  module_id.ends_with(LAZY_PROXY_QUERY)
+}
+
+#[inline]
+fn should_skip_plugin_for_lazy_proxy(
+  should_skip_user_plugins_for_lazy_proxy_modules: bool,
+  module_id: &str,
+  plugin_idx: PluginIdx,
+  lazy_compilation_plugin_idx: Option<PluginIdx>,
+) -> bool {
+  if !should_skip_user_plugins_for_lazy_proxy_modules || !is_lazy_proxy_module_id(module_id) {
+    return false;
+  }
+  lazy_compilation_plugin_idx.is_some_and(|idx| idx != plugin_idx)
+}
+
 impl PluginDriver {
   #[tracing::instrument(
     level = "trace",
@@ -196,6 +216,14 @@ impl PluginDriver {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_load_meta)
     {
+      if should_skip_plugin_for_lazy_proxy(
+        self.should_skip_user_plugins_for_lazy_proxy_modules,
+        args.id,
+        plugin_idx,
+        self.lazy_compilation_plugin_idx,
+      ) {
+        continue;
+      }
       let ret = async {
         trace_action!(action::HookLoadCallStart {
           action: "HookLoadCallStart",
@@ -269,6 +297,14 @@ impl PluginDriver {
     {
       let call_id = tracing::enabled!(tracing::Level::TRACE).then(rolldown_utils::uuid::uuid_v4);
       let code_arc_ref = code_arc.get_or_insert_with(|| ArcStr::from(code.as_str()));
+      if should_skip_plugin_for_lazy_proxy(
+        self.should_skip_user_plugins_for_lazy_proxy_modules,
+        id,
+        plugin_idx,
+        self.lazy_compilation_plugin_idx,
+      ) {
+        continue;
+      }
 
       trace_action!(action::HookTransformCallStart {
         action: "HookTransformCallStart",
@@ -380,9 +416,17 @@ impl PluginDriver {
     skip_all
   )]
   pub async fn transform_ast(&self, mut args: HookTransformAstArgs<'_>) -> HookTransformAstReturn {
-    for (_, plugin, ctx) in
+    for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_ast_meta)
     {
+      if should_skip_plugin_for_lazy_proxy(
+        self.should_skip_user_plugins_for_lazy_proxy_modules,
+        args.id,
+        plugin_idx,
+        self.lazy_compilation_plugin_idx,
+      ) {
+        continue;
+      }
       // Reconstructing the struct is necessary because `args.ast` is moved and reassigned each iteration
       #[expect(clippy::unnecessary_struct_initialization)]
       let transform_args = HookTransformAstArgs {
@@ -412,9 +456,18 @@ impl PluginDriver {
     module_info: Arc<ModuleInfo>,
     normal_module: &NormalModule,
   ) -> HookNoopReturn {
+    let module_id = normal_module.id.as_str();
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_module_parsed_meta)
     {
+      if should_skip_plugin_for_lazy_proxy(
+        self.should_skip_user_plugins_for_lazy_proxy_modules,
+        module_id,
+        plugin_idx,
+        self.lazy_compilation_plugin_idx,
+      ) {
+        continue;
+      }
       let start = self.start_timing();
       let result = plugin.call_module_parsed(ctx, Arc::clone(&module_info), normal_module).await;
       self.record_timing(plugin_idx, start);

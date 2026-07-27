@@ -207,6 +207,16 @@ export interface ResolveFileUrlArgs {
    * This path will contain no leading `./`, but may contain a leading `../`.
    */
   relativePath: string;
+  /**
+   * The `urlId` of an `import.meta.ROLLDOWN_FILE_URL_<referenceId>_<urlId>` reference,
+   * or `undefined` when the reference has no `urlId`.
+   *
+   * This is a rolldown-specific extension: the Rollup-compatible
+   * `import.meta.ROLLUP_FILE_URL_<referenceId>` form never carries a `urlId`.
+   *
+   * @experimental This API may change in minor versions.
+   */
+  urlId?: string | undefined;
 }
 
 /** @inline */

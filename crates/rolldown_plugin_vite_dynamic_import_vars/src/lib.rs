@@ -5,14 +5,14 @@ mod utils;
 use std::{borrow::Cow, pin::Pin, sync::Arc};
 
 use oxc::ast::ast::Program;
-use oxc::ast_visit::Visit;
-use rolldown_common::ModuleType;
+use oxc::ast_visit::VisitJs;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformArgs, HookTransformOutput, HookTransformOutputMap,
   HookTransformReturn, HookUsage, Plugin, PluginContext, SharedLoadPluginContext,
   SharedTransformPluginContext,
 };
+use rolldown_plugin_utils::parse_program;
 use rolldown_std_utils::relative_path_as_js_specifier;
 use rolldown_utils::{futures::block_on_spawn_all, pattern_filter::StringOrRegex};
 use sugar_path::SugarPath as _;
@@ -131,38 +131,14 @@ impl Plugin for ViteDynamicImportVarsPlugin {
     if !self.filter(args.id, ctx.cwd()) {
       return Ok(None);
     }
-    if matches!(
-      args.module_type,
-      ModuleType::Js | ModuleType::Ts | ModuleType::Jsx | ModuleType::Tsx
-    ) && utils::has_dynamic_import(args.code)
-    {
-      let source_type = match args.module_type {
-        ModuleType::Js => oxc::span::SourceType::mjs(),
-        ModuleType::Jsx => oxc::span::SourceType::jsx(),
-        ModuleType::Ts => oxc::span::SourceType::ts(),
-        ModuleType::Tsx => oxc::span::SourceType::tsx(),
-        _ => unreachable!(),
-      };
+    if utils::has_dynamic_import(args.code) {
       if let Some(resolver) = &self.resolver {
         let async_imports = {
           let allocator = oxc::allocator::Allocator::default();
-          let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type)
-            .with_options(oxc::parser::ParseOptions {
-              preserve_parens: false,
-              ..oxc::parser::ParseOptions::default()
-            })
-            .parse();
-          if parser_ret.panicked
-            && let Some(err) = parser_ret
-              .diagnostics
-              .iter()
-              .find(|e| e.severity == oxc::diagnostics::Severity::Error)
-          {
-            return Err(anyhow::anyhow!(format!(
-              "Failed to parse code in '{}': {:?}",
-              args.id, err.message
-            )));
-          }
+          let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
+          else {
+            return Ok(None);
+          };
           let mut visitor = ast_visit::DynamicImportResolveVisit {
             comments: &parser_ret.program.comments,
             current_comment: 0,
@@ -181,12 +157,10 @@ impl Plugin for ViteDynamicImportVarsPlugin {
         let resolved_async_imports = block_on_spawn_all(task).await;
 
         let allocator = oxc::allocator::Allocator::default();
-        let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type)
-          .with_options(oxc::parser::ParseOptions {
-            preserve_parens: false,
-            ..oxc::parser::ParseOptions::default()
-          })
-          .parse();
+        let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
+        else {
+          return Ok(None);
+        };
         return self.transform_program(
           &ctx,
           args,
@@ -196,21 +170,10 @@ impl Plugin for ViteDynamicImportVarsPlugin {
       }
 
       let allocator = oxc::allocator::Allocator::default();
-      let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type)
-        .with_options(oxc::parser::ParseOptions {
-          preserve_parens: false,
-          ..oxc::parser::ParseOptions::default()
-        })
-        .parse();
-      if parser_ret.panicked
-        && let Some(err) =
-          parser_ret.diagnostics.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
-      {
-        return Err(anyhow::anyhow!(format!(
-          "Failed to parse code in '{}': {:?}",
-          args.id, err.message
-        )));
-      }
+      let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
+      else {
+        return Ok(None);
+      };
       return self.transform_program(&ctx, args, &parser_ret.program, None);
     }
     Ok(None)

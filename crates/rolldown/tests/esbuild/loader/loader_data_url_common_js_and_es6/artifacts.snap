@@ -10,6 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region y.txt
 var y_default = "data:text/plain;charset=utf-8,y";
 //#endregion
+//#region x.txt
+//#endregion
 //#region entry.js
 const x_url = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "data:text/plain;charset=utf-8,x";

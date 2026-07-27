@@ -538,6 +538,7 @@ impl Plugin for JsPlugin {
               module_id: args.module_id.to_string(),
               reference_id: args.reference_id.to_string(),
               relative_path: args.relative_path.to_string(),
+              url_id: args.url_id.map(str::to_string),
             },
           )
             .into(),

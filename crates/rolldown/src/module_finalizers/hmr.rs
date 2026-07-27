@@ -27,7 +27,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     if expr.is_import_meta_hot() {
       if let Some(hmr_hot_ref) = self.ctx.module.ecma_view.hmr_hot_ref {
         let hot_name = self.canonical_name_for(hmr_hot_ref);
-        *expr = Expression::new_id_ref_expr(SPAN, hot_name, &self.ast_builder);
+        *expr = Expression::new_id_ref_expr(SPAN, hot_name, self);
       }
     }
   }
@@ -58,7 +58,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         // Use stable module ID for consistent runtime lookup
         string_literal.value = oxc::ast::ast::Str::from_str_in(
           self.ctx.modules[import_record.into_resolved_module()].stable_id(),
-          &self.ast_builder,
+          self,
         );
       }
       ast::Argument::ArrayExpression(array_expression) => {
@@ -73,7 +73,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
             // Use stable module ID for consistent runtime lookup
             string_literal.value = oxc::ast::ast::Str::from_str_in(
               self.ctx.modules[import_record.into_resolved_module()].stable_id(),
-              &self.ast_builder,
+              self,
             );
           }
         });

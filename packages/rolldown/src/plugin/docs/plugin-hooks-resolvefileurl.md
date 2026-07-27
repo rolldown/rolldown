@@ -4,6 +4,8 @@ This hook can be used to customize the behavior of `import.meta.ROLLDOWN_FILE_UR
 
 The returned string must be a single JavaScript expression. Also the returned expression must be side-effect free. If the URL is not used in the code, Rolldown will remove it.
 
+Rolldown additionally accepts `import.meta.ROLLDOWN_FILE_URL_referenceId_urlId`, where `urlId` is an arbitrary identifier of your choosing. It is passed to this hook as `args.urlId`, letting a single plugin resolve the same emitted file differently depending on the reference. The `urlId` API is experimental and may change in minor versions. The `urlId` is not available on the Rollup-compatible `ROLLUP_FILE_URL_` alias. Use only ASCII identifier characters in a `urlId`: letters, digits, `_`, and `$`.
+
 ::: tip `import.meta.url` in the returned string
 
 If the returned string contains `import.meta.url`, it will be rewritten for non-ESM formats similarly to [when `import.meta.url` is used in the code directly](/in-depth/non-esm-output-formats#well-known-import-meta-properties). Unlike Rolldown, Rollup outputs `import.meta.url` as-is.

@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
 use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
-use oxc::ast_visit::{Visit, VisitMut, walk};
+use oxc::ast_visit::{VisitJs, VisitMut, walk_js};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, Stats};
@@ -208,6 +208,11 @@ impl PreProcessEcmaAst {
       })?;
     }
 
+    debug_assert!(
+      ast.program().source_type.is_javascript(),
+      "ECMAScript transform must produce a JavaScript AST"
+    );
+
     // Step 4: Run inject plugin.
     if !bundle_options.inject.is_empty() {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
@@ -320,7 +325,7 @@ impl FunctionDeclarationStartMatcher {
   }
 }
 
-impl<'ast> Visit<'ast> for FunctionDeclarationStartMatcher {
+impl<'ast> VisitJs<'ast> for FunctionDeclarationStartMatcher {
   fn visit_program(&mut self, program: &Program<'ast>) {
     for stmt in &program.body {
       if self.remaining_target_count == 0 {
@@ -342,7 +347,7 @@ impl<'ast> Visit<'ast> for FunctionDeclarationStartMatcher {
       }
     }
     if self.remaining_target_count > 0 {
-      walk::walk_statement(self, stmt);
+      walk_js::walk_statement(self, stmt);
     }
   }
 }

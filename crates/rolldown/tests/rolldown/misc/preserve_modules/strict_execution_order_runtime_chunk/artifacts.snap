@@ -1,0 +1,109 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dep.js
+
+```js
+import { __esmMin } from "./rolldown-runtime.js";
+//#region dep.js
+function dep() {
+	return "D";
+}
+function init_dep() {
+	return (init_dep = __esmMin((() => {
+		globalThis.__events.push("dep");
+	})))();
+}
+//#endregion
+init_dep();
+export { dep as default, init_dep };
+
+```
+
+## lazy.js
+
+```js
+import { __esmMin } from "./rolldown-runtime.js";
+//#region lazy.js
+var lazy;
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		globalThis.__events.push("lazy");
+		lazy = "L";
+	})))();
+}
+//#endregion
+init_lazy();
+export { lazy };
+
+```
+
+## main.js
+
+```js
+import dep, { init_dep } from "./dep.js";
+import { __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+var mod;
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		init_dep();
+		globalThis.__events.push("main " + dep() + "N");
+		mod = await import("./lazy.js");
+		globalThis.__events.push("after " + mod.lazy);
+	})))();
+}
+//#endregion
+await init_main();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### dep.js
+
+```js
+//#region dep.js
+globalThis.__events.push("dep");
+function dep() {
+	return "D";
+}
+//#endregion
+export { dep as default };
+
+```
+
+### lazy.js
+
+```js
+//#region lazy.js
+globalThis.__events.push("lazy");
+const lazy = "L";
+//#endregion
+export { lazy };
+
+```
+
+### main.js
+
+```js
+import dep from "./dep.js";
+//#region main.js
+globalThis.__events.push("main " + dep() + "N");
+const mod = await import("./lazy.js");
+globalThis.__events.push("after " + mod.lazy);
+//#endregion
+
+```

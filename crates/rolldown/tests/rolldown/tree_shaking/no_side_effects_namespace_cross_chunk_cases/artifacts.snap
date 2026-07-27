@@ -11,6 +11,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 function fn() {
 	console.log("fn side effect");
 }
+//#endregion
+//#region entry-a.js
 console.log(/* @__PURE__ */ fn());
 fn.call(null);
 //#endregion

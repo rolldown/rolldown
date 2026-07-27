@@ -6,14 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-var __esmMin = (fn, res, err) => () => {
-	if (err) throw err[0];
-	try {
-		return fn && (res = fn(fn = 0)), res;
-	} catch (e) {
-		throw err = [e], e;
-	}
-};
+// HIDDEN [\0rolldown/runtime.js]
+//#region esm.js
 //#endregion
 //#region main.js
 __esmMin((() => {}))();

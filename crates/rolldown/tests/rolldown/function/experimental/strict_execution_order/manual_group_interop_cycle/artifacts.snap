@@ -38,6 +38,7 @@ export { init_m2 as n, require_m3 as r, init_main as t };
 ```js
 import { r as require_m3 } from "./group-0.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+//#region m1.js
 function init_m1() {
 	return (init_m1 = __esmMin((() => {
 		require_m3();
@@ -105,6 +106,7 @@ export { init_m2 as n, require_m3 as r, init_main as t };
 ```js
 import { r as require_m3 } from "./group-0.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+//#region m1.js
 function init_m1() {
 	return (init_m1 = __esmMin((() => {
 		require_m3();

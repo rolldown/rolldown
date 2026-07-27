@@ -134,7 +134,6 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         .unwrap_or_default();
 
       let mut finalizer = ScopeHoistingFinalizer {
-        alloc,
         ctx: self,
         scope: ast_scope,
         ast_builder: AstBuilder::new(alloc),

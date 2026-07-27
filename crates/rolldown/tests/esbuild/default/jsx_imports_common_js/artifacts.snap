@@ -7,6 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region custom-react.js
+//#endregion
 //#region entry.jsx
 var import_custom_react = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {};

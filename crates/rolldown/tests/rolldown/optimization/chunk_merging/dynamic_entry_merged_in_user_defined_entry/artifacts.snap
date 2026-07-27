@@ -15,16 +15,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { t as init_entry } from "./entry2.js";
-init_entry();
-
-```
-
-## entry2.js
-
-```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
 //#endregion
@@ -38,15 +30,7 @@ function init_entry() {
 	})))();
 }
 //#endregion
-export { init_entry as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
+init_entry();
 
 ```
 
@@ -66,13 +50,6 @@ export { __exportAll as n, __esmMin as t };
 ### entry.js
 
 ```js
-require("./entry2.js").init_entry();
-
-```
-
-### entry2.js
-
-```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
@@ -89,12 +66,7 @@ function init_entry() {
 	})))();
 }
 //#endregion
-Object.defineProperty(exports, "init_entry", {
-	enumerable: true,
-	get: function() {
-		return init_entry;
-	}
-});
+init_entry();
 
 ```
 
@@ -254,8 +226,9 @@ init_entry();
 ### entry2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.js
 var a;
 function init_lib() {
 	return (init_lib = __esmMin((() => {
@@ -284,13 +257,5 @@ export { a as n, init_lib as r, init_entry as t };
 import { n as a, r as init_lib } from "./entry2.js";
 init_lib();
 export { a };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
 
 ```

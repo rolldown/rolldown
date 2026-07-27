@@ -382,6 +382,7 @@ function createBindingDevOptions(
     onAdditionalAssets: bindingOnAdditionalAssets,
     rebuildStrategy: bindingifyRebuildStrategy(rebuildStrategy),
     watch: watch && {
+      enabled: watch.enabled,
       skipWrite: watch.skipWrite,
       usePolling: watch.usePolling,
       pollInterval: watch.pollInterval,

@@ -97,7 +97,7 @@ By default, Rolldown tries to keep the semantics of `require` and does not conve
 
 ::: tip Still want to convert `require` to `import`?
 
-If you want to convert `require` calls to `import` statements, you can use [the built-in `esmExternalRequirePlugin`](/builtin-plugins/esm-external-require).
+If you want to convert `require` calls to `import` statements, you can use [the built-in `esmExternalRequirePlugin`](/builtin-plugins/esm-external-require). Note that the plugin must own the externals it converts: list them in the plugin's `external` option, not in the top-level `external` option.
 
 :::
 
@@ -143,6 +143,9 @@ If it matches one of the conditions below, the `default` import is the `module.e
 - The closest `package.json` for the importer has a `type` field set to `module`
 - (When it's a dynamic import) The closest `package.json` for the importer has a `type` field set to `commonjs`
 - The `module.exports.__esModule` value of the importee CJS module is not set to `true`
+- The `module.exports` value of the importee CJS module has no own `default` property
+
+The last condition handles CJS modules that set `__esModule` without actually shipping a `default` export (for example tslib's UMD build). Without it, the `default` import would be `undefined`. `@rollup/plugin-commonjs` handles this case with the same fallback.
 
 :::: details Behavior in details
 

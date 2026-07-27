@@ -264,9 +264,18 @@ fn transitive_esm_init_targets(
       }
       let mut targets = vec![];
       if ctx.order_wrap {
-        let retained_reexport_path = overlay
-          .filter(|overlay| !overlay.retained_reexport_path.is_empty())
-          .map(|overlay| overlay.retained_reexport_path.as_slice());
+        // A recorded retained path restricts the hop walk to the chains resolved reads consumed.
+        // That is only sound when the path is the record's whole evidence: an included namespace
+        // (or forwarded dynamic exports) retains EVERY non-ambiguous export of this star record —
+        // including chains no resolved read recorded — so the walk must stay unrestricted there or
+        // the off-path pure definers lose their only init call site.
+        let retained_reexport_path = if namespace_reexport_is_retained {
+          None
+        } else {
+          overlay
+            .filter(|overlay| !overlay.retained_reexport_path.is_empty())
+            .map(|overlay| overlay.retained_reexport_path.as_slice())
+        };
         let mut retained_path_visited = FxHashSet::default();
         collect_order_wrap_esm_init_targets(
           ctx.modules,

@@ -27,6 +27,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 42;
 }));
+//#endregion
+//#region b.js
 require_cjs();
 var b_exports = /* @__PURE__ */ __exportAll({});
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));

@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-//#endregion
+// HIDDEN [\0rolldown/runtime.js]
 //#region rolldown.webp
 var rolldown_default = (/* @__PURE__ */ (() => {
 	var table = /* @__PURE__ */ new Uint8Array(128);

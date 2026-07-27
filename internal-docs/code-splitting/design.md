@@ -45,12 +45,16 @@ These are the main places where strict output deliberately accepts extra wrapper
   moves that entry point; the prediction also cannot see `var`-form interop wrapper
   definitions that another cycle chunk calls eagerly.
 - **Entry-trigger facades**: an inline entry trigger fires whenever its chunk is evaluated,
-  so an interop-wrapped entry whose chunk another chunk loads moves its trigger to a facade
-  (unconditionally in wrap-all mode, which has no predicted edges). "Loads" covers both
-  predicted static imports and cross-chunk dynamic imports of any other module hosted in the
-  entry chunk — e.g. a manual group placing a dynamic target next to an entry, where the
-  `import()` evaluates the entry chunk (a dynamic import of the entry module itself must run
-  its program, so it does not force the split).
+  so an entry whose chunk anything else _can_ load — order-wrapped or interop-wrapped, in both
+  strict modes — moves its trigger to a facade. The question is answered by running the real
+  cross-chunk link computation against the fully lowered order state
+  (`lowered_static_import_edges`), not a prediction, so an entry whose chunk only it can load
+  keeps its trigger inline and costs no extra file. "Loads" covers both static imports from
+  other chunks and cross-chunk dynamic imports of any other module hosted in the entry chunk —
+  e.g. a manual group placing a dynamic target next to an entry, where the `import()` evaluates
+  the entry chunk. A dynamic import of the entry module itself must run its program, and a
+  dead dynamic import lowers to an inert stub, so neither forces the split; any other surviving
+  record counts as a possible load even if never executed.
 - **CJS namespace merge is skipped under strict** (`determine_safely_merge_cjs_ns`): merging
   moves the surviving require call to whichever statement stays included — an intra-body
   move no wrapping can repair. Per-importer call sites cost bytes; the wrapper memoizes.
@@ -61,12 +65,12 @@ These are the main places where strict output deliberately accepts extra wrapper
 
 Every site that can run a wrapped module, in one place:
 
-| Trigger                                                      | Lives in                                    | Owner                                                                  |
-| ------------------------------------------------------------ | ------------------------------------------- | ---------------------------------------------------------------------- |
-| `init_*()` for an order-wrapped importee of a live statement | importer body, statement position           | finalizer via the shared init-target view                              |
-| `init_*()` / `require_*()` obligations of removed statements | importer body, removed statement's position | `OrderImportOverlay` / transitive init targets                         |
-| user or dynamic entry activation                             | entry facade prologue                       | `create_order_wrap_entry_facades` / `restore_order_wrap_entry_facades` |
-| interop `require_*()` of an eager importer                   | importer body (its carrier)                 | flag-off interop machinery, order-analysis carrier rule                |
+| Trigger                                                      | Lives in                                                                                 | Owner                                                                  |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `init_*()` for an order-wrapped importee of a live statement | importer body, statement position                                                        | finalizer via the shared init-target view                              |
+| `init_*()` / `require_*()` obligations of removed statements | importer body, removed statement's position                                              | `OrderImportOverlay` / transitive init targets                         |
+| user or dynamic entry activation                             | entry chunk prologue (a facade only when other chunks can load the implementation chunk) | `create_order_wrap_entry_facades` / `restore_order_wrap_entry_facades` |
+| interop `require_*()` of an eager importer                   | importer body (its carrier)                                                              | flag-off interop machinery, order-analysis carrier rule                |
 
 A trigger must never sit inline in a chunk body that other chunks can evaluate as a
 dependency; that is the facade rule's content.

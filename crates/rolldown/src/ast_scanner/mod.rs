@@ -12,7 +12,6 @@ use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, try_extract_const_literal};
 use oxc::ast::ast::{BindingPattern, Expression, ImportExpression};
 use oxc::ast::{AstKind, ast};
-use oxc::ast_visit::walk;
 use oxc::semantic::{NodeId, Reference, ScopeFlags, Scoping};
 use oxc::span::SPAN;
 use oxc::{
@@ -23,7 +22,7 @@ use oxc::{
       ImportDeclaration, ModuleDeclaration, Program,
     },
   },
-  ast_visit::Visit,
+  ast_visit::{VisitJs, walk_js},
   semantic::SymbolId,
   span::{GetSpan, Span},
 };
@@ -57,8 +56,7 @@ bitflags! {
   #[derive(Debug, Clone, Copy, Default)]
   /// Tracks untranspiled syntax encountered during scanning.
   pub(crate) struct UntranspiledSyntax: u8 {
-    const TypeScript = 1 << 0;
-    const Jsx = 1 << 1;
+    const Jsx = 1 << 0;
   }
 }
 
@@ -115,7 +113,7 @@ pub struct ScanResult {
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
-  /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>`, one entry per occurrence.
+  /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, one entry per occurrence.
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
   pub hmr_info: HmrInfo,
@@ -713,14 +711,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn visit_function_decl(&mut self, it: &ast::Function<'ast>, flags: oxc::semantic::ScopeFlags) {
     self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
-    walk::walk_function(self, it, flags);
+    walk_js::walk_function(self, it, flags);
   }
 
   fn visit_class_decl(&mut self, it: &ast::Class<'ast>) {
     let previous_class_decl_id = self.cur_class_decl.take();
     self.cur_class_decl = self.get_class_id(it);
     self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
-    walk::walk_class(self, it);
+    walk_js::walk_class(self, it);
     self.cur_class_decl = previous_class_decl_id;
   }
 
@@ -819,9 +817,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             let id = cls_decl.id.as_ref().unwrap();
             self.add_local_export(id.name.as_str(), id.symbol_id(), id.span);
           }
-          _ => {
-            self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
-          }
+          _ => {}
         }
       }
     }
@@ -839,7 +835,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
-    use oxc::ast::ast::ExportDefaultDeclarationKind;
     let local_binding_for_default_export = match &decl.declaration {
       ast::ExportDefaultDeclarationKind::Identifier(id) => {
         if let Some(symbol_id) = self.resolve_symbol_from_reference(id) {
@@ -892,11 +887,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           (symbol_id, id.span)
         })
       }
-      ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
-        self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
-        None
-      }
-      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
+      _ => None,
     };
     let (reference, span) = local_binding_for_default_export
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));

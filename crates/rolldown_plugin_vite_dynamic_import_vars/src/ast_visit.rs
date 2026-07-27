@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 use cow_utils::CowUtils;
 use oxc::{
   ast::{Comment, ast::Expression},
-  ast_visit::{Visit, walk},
+  ast_visit::{VisitJs, walk_js},
 };
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_std_utils::relative_path_to_slash;
@@ -38,7 +38,7 @@ pub struct DynamicImportResolveVisit<'ast, 'a> {
   pub async_imports: Vec<String>,
 }
 
-impl<'ast> Visit<'ast> for DynamicImportResolveVisit<'ast, '_> {
+impl<'ast> VisitJs<'ast> for DynamicImportResolveVisit<'ast, '_> {
   fn visit_expression(&mut self, expr: &Expression<'ast>) {
     if let Expression::ImportExpression(import_expr) = expr
       && let Expression::TemplateLiteral(source) = &import_expr.source
@@ -65,14 +65,14 @@ impl<'ast> Visit<'ast> for DynamicImportResolveVisit<'ast, '_> {
       }
       return;
     }
-    walk::walk_expression(self, expr);
+    walk_js::walk_expression(self, expr);
   }
 }
 
-impl<'ast> Visit<'ast> for DynamicImportVarsVisit<'ast, '_> {
+impl<'ast> VisitJs<'ast> for DynamicImportVarsVisit<'ast, '_> {
   fn visit_expression(&mut self, expr: &Expression<'ast>) {
     if self.rewrite_variable_dynamic_import(expr, None) {
-      walk::walk_expression(self, expr);
+      walk_js::walk_expression(self, expr);
     }
   }
 }

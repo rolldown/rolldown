@@ -149,6 +149,7 @@ When `load` is called for a proxy module:
 
 1. Only ids present in `lazy_entries` are served at all — any other `?rolldown-lazy=1` id falls through to `Ok(None)`
 2. If in `fetched_entries` → return fetched template; otherwise → return stub template
+3. User-land build hooks are skipped for proxy ids (`?rolldown-lazy=1`) so plugins only see real modules; the lazy plugin itself still runs to serve the stub/fetched template.
 
 **Security gate — unknown module rejection (#9969)**: the id passed to `compileEntry` / `compile_lazy_entry` is treated purely as a lookup key into the build cache, never resolved as a filesystem path. An id not present from a prior build is rejected in `HmrStage::compile_lazy_entry` with `Lazy entry module not found in cache` — so a malicious `/@vite/lazy` request cannot bundle an arbitrary file (analogous to Vite's `server.fs.strict`; pinned by `packages/rolldown/tests/dev/dev-lazy-compile.test.ts`). Note the ordering: `DevEngine::compile_lazy_entry` calls `mark_as_fetched` unconditionally **before** this validation, so an unknown id still lands in `fetched_entries` (harmless, but worth knowing when debugging).
 
@@ -450,6 +451,12 @@ The flow is:
 **Problem**: An error thrown while a lazily-compiled module initialized escaped as an unhandled rejection instead of surfacing at the consumer's `await import(...)`.
 
 **Solution**: The stub template awaits the **re-registered proxy's own `'rolldown:exports'` promise** (`return await loadExports($STABLE_PROXY_MODULE_ID)['rolldown:exports']`) rather than handing back a namespace — so a rejection anywhere in the chain rejects `lazyExports` and the consumer's import promise. Pinned by the two lazy-init-error specs (cold and warm paths).
+
+### Issue 11: `export * as ns from` Is Not `export * from`
+
+**Problem**: `export * as ns from './dep'` and `export * from './dep'` are the same oxc AST node (`ExportAllDeclaration`), distinguished only by whether `exported` is set. The HMR finalizer ignored that field and rendered both as a star re-export — `__reExport(__rolldown_exports__, import_dep)` — so the re-exporting module's namespace object never carried `ns`, and every consumer read `undefined`. Only the module wrappers were affected (lazy chunks and HMR patches); the scope-hoisted build resolves the same source correctly.
+
+**Solution**: When `exported` is present, bind the importee's `loadExports` result under that single name in the namespace object (`{ ns: () => import_dep }`, computed when the name is not a valid identifier) and emit no `__reExport`. Pinned by `crates/rolldown/tests/rolldown/topics/hmr/export_star_as/`.
 
 ## Implementation Notes
 

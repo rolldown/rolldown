@@ -13,8 +13,8 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, RuntimeHelper, SymbolRef, UsedSymbolRefs,
-  UsedSymbolRefsBuilder, WrapKind,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, RuntimeHelper, SymbolRef, SymbolRefDb,
+  TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -39,6 +39,7 @@ struct CrossChunkLinkState {
   index_cross_chunk_imports: IndexCrossChunkImports,
   index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports,
   order_live_symbols: FxHashSet<SymbolRef>,
+  symbol_chunk_table: SymbolChunkTable,
 }
 
 #[derive(Clone, Copy)]
@@ -55,6 +56,31 @@ impl<'a> FinalEsmInitMetadataAvailability<'a> {
       Self::Unavailable => None,
       Self::Sealed(metadata) => Some(metadata),
     }
+  }
+}
+
+/// Symbol -> owning chunk, derived by [`GenerateStage::collect_depended_symbols`] for one
+/// cross-chunk link pass.
+///
+/// The derivation used to be written into the shared symbol database mid-pass so that
+/// [`GenerateStage::compute_chunk_imports`] could read it back — a load-bearing write that forced
+/// every link pass, including the what-if ones, to mutate shared state and undo it afterwards.
+/// Carried as pass-local data instead, the whole pass is read-only by construction: a pass whose
+/// result is never committed (the prediction pass, the entry-facade edge query) simply drops its
+/// table, and the final [`GenerateStage::compute_cross_chunk_links`] remains the single writer,
+/// flushing its table into the database in one place for the downstream consumers of
+/// `chunk_idx` (the CJS cross-chunk reference rendering in the module finalizer and the
+/// chunk-export generator).
+struct SymbolChunkTable {
+  map: FxHashMap<SymbolRef, ChunkIdx>,
+}
+
+impl SymbolChunkTable {
+  /// The chunk owning `symbol_ref`, as this pass derived it; falls back to the value already in
+  /// the symbol database, mirroring the write-then-read behavior this table replaced (a symbol
+  /// the pass did not assign resolves exactly as it did then).
+  fn chunk_of(&self, symbol_ref: SymbolRef, symbols: &SymbolRefDb) -> Option<ChunkIdx> {
+    self.map.get(&symbol_ref).copied().or_else(|| symbols.get(symbol_ref).chunk_idx)
   }
 }
 
@@ -91,12 +117,18 @@ impl GenerateStage<'_> {
       index_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
       order_live_symbols,
+      symbol_chunk_table,
     } = self.compute_cross_chunk_link_state(
       chunk_graph,
       used_symbol_refs,
       order_state,
       FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
     );
+    // The single flush of symbol->chunk ownership into the shared symbol database. Everything
+    // downstream that reads `chunk_idx` — the module finalizer and the chunk-export generator
+    // rendering CJS cross-chunk references — sees exactly this pass's derivation; the what-if
+    // passes (prediction, the entry-facade edge query) never write at all.
+    self.commit_symbol_chunk_table(&symbol_chunk_table);
 
     #[cfg(debug_assertions)]
     let predicted_static_import_edges: IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> =
@@ -237,24 +269,70 @@ impl GenerateStage<'_> {
     }
   }
 
-  /// Compute provisional links for order analysis. Runtime symbol placement is cleared if moved.
-  /// Uses an empty order state and explicitly marks final-init metadata unavailable, so the edges
-  /// are the *pre-lowering* baseline topology (value and side-effect imports, before wrapping adds
-  /// `init_*` imports). The emergent-cycle fixpoint layers the plan's `init_*` forwarding edges on
-  /// top of this baseline (`post_lowering_import_edges`).
+  /// Compute provisional links for order analysis. Uses an empty order state and explicitly marks
+  /// final-init metadata unavailable, so the edges are the *pre-lowering* baseline topology (value
+  /// and side-effect imports, before wrapping adds `init_*` imports). The emergent-cycle fixpoint
+  /// layers the plan's `init_*` forwarding edges on top of this baseline
+  /// (`post_lowering_import_edges`). Read-only: the symbol ownership this pass derives is dropped
+  /// with its table, so no provisional values ever reach the symbol database.
   pub(super) fn predicted_static_import_edges(
-    &mut self,
+    &self,
     chunk_graph: &ChunkGraph,
     used_symbol_refs: &UsedSymbolRefsBuilder,
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
     let empty_order_state = super::order_wrap_state::OrderWrapState::default();
-    self
-      .compute_cross_chunk_link_state(
-        chunk_graph,
-        used_symbol_refs,
-        &empty_order_state,
-        FinalEsmInitMetadataAvailability::Unavailable,
-      )
+    let state = self.compute_cross_chunk_link_state(
+      chunk_graph,
+      used_symbol_refs,
+      &empty_order_state,
+      FinalEsmInitMetadataAvailability::Unavailable,
+    );
+    Self::static_import_edges_of(chunk_graph, state)
+  }
+
+  /// The static chunk->chunk import edges the *final* cross-chunk link pass will compute, asked
+  /// before that pass runs.
+  ///
+  /// Unlike [`Self::predicted_static_import_edges`] this is not a prediction: it drives the same
+  /// machinery with the fully lowered [`OrderWrapState`](super::order_wrap_state::OrderWrapState)
+  /// and the real final init metadata, so every edge source the final pass registers — value
+  /// references, `init_*` forwarding, retained re-export overlays, transitive init obligations —
+  /// is present, with no re-derived approximation that could silently miss one.
+  ///
+  /// The entry-facade decision in `create_order_wrap_entry_facades` needs exactly this: an entry's
+  /// inline `init_E()` trigger is only safe while nothing *else* loads the chunk hosting `E`.
+  ///
+  /// Answering it here is sound because the facade split cannot invalidate the answer. A facade is
+  /// an empty chunk that takes over the entry role from the implementation chunk: it adds one
+  /// importer of that implementation chunk (itself), and it inherits — never widens — the outgoing
+  /// edges the implementation chunk had as an entry chunk. So for every *other* chunk the relation
+  /// "some chunk other than me imports me" is unchanged, and all facade decisions can be taken
+  /// together from this one pre-facade snapshot.
+  ///
+  /// The symbol->chunk ownership the pass derives stays in its pass-local [`SymbolChunkTable`] and
+  /// is dropped with the state, so this query is read-only by construction and the final pass is
+  /// still the only writer of the symbol database.
+  pub(super) fn lowered_static_import_edges(
+    &self,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    final_esm_init_metadata: &Sealed<FinalEsmInitMetadata>,
+  ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
+    let state = self.compute_cross_chunk_link_state(
+      chunk_graph,
+      used_symbol_refs,
+      order_state,
+      FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
+    );
+    Self::static_import_edges_of(chunk_graph, state)
+  }
+
+  fn static_import_edges_of(
+    chunk_graph: &ChunkGraph,
+    state: CrossChunkLinkState,
+  ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
+    state
       .index_imports_from_other_chunks
       .into_iter_enumerated()
       .map(|(chunk_idx, importee_map)| {
@@ -267,7 +345,7 @@ impl GenerateStage<'_> {
   }
 
   fn compute_cross_chunk_link_state(
-    &mut self,
+    &self,
     chunk_graph: &ChunkGraph,
     used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
@@ -304,7 +382,7 @@ impl GenerateStage<'_> {
       },
     );
 
-    self.collect_depended_symbols(
+    let symbol_chunk_table = self.collect_depended_symbols(
       chunk_graph,
       &mut index_chunk_depended_symbols,
       &mut index_chunk_direct_imports_from_external_modules,
@@ -325,6 +403,7 @@ impl GenerateStage<'_> {
       used_symbol_refs,
       order_state,
       &order_live_symbols,
+      &symbol_chunk_table,
     );
 
     CrossChunkLinkState {
@@ -335,14 +414,16 @@ impl GenerateStage<'_> {
       index_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
       order_live_symbols,
+      symbol_chunk_table,
     }
   }
 
-  /// - Assign each symbol to the chunk it belongs to
+  /// - Derive each declared symbol's owning chunk, returned as the pass-local
+  ///   [`SymbolChunkTable`]
   /// - Collect all referenced symbols and consider them potential imports
   #[expect(clippy::too_many_arguments)]
   fn collect_depended_symbols(
-    &mut self,
+    &self,
     chunk_graph: &ChunkGraph,
     index_chunk_depended_symbols: &mut IndexChunkDependedSymbols,
     index_chunk_imports_from_external_modules: &mut IndexChunkImportsFromExternalModules,
@@ -350,7 +431,7 @@ impl GenerateStage<'_> {
     used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
-  ) {
+  ) -> SymbolChunkTable {
     let symbols = &self.link_output.symbol_db;
     let chunk_id_to_symbols_vec = append_only_vec::AppendOnlyVec::new();
 
@@ -385,8 +466,18 @@ impl GenerateStage<'_> {
                     return;
                   }
                   if matches!(rec.kind, ImportKind::DynamicImport) {
-                    let importee_chunk =
-                      chunk_graph.module_to_chunk[module_idx].expect("importee chunk should exist");
+                    // The finalizer rewrites `import()` specifiers through
+                    // `entry_module_to_entry_chunk`, which diverges from the hosting chunk
+                    // whenever the dynamic entry's facade chunk survives while another chunk
+                    // hosts its body (order-wrap facade splits, or kept facades when
+                    // common-chunk merging is off); record the chunk the emitted specifier
+                    // actually names.
+                    let importee_chunk = chunk_graph
+                      .entry_module_to_entry_chunk
+                      .get(&module_idx)
+                      .copied()
+                      .or(chunk_graph.module_to_chunk[module_idx])
+                      .expect("importee chunk should exist");
                     cross_chunk_dynamic_imports.insert(importee_chunk);
                   }
                 }
@@ -546,26 +637,37 @@ impl GenerateStage<'_> {
         chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));
       },
     );
-    // shadowing previous immutable borrow
-    let symbols = &mut self.link_output.symbol_db;
+    self.build_symbol_chunk_table(chunk_id_to_symbols_vec)
+  }
+
+  /// Record which chunk owns each declared symbol, so [`Self::compute_chunk_imports`] can resolve a
+  /// depended symbol to the chunk it must be imported from.
+  fn build_symbol_chunk_table(
+    &self,
+    chunk_id_to_symbols_vec: append_only_vec::AppendOnlyVec<(ChunkIdx, Vec<TaggedSymbolRef>)>,
+  ) -> SymbolChunkTable {
+    let mut map = FxHashMap::default();
     for (chunk_idx, symbol_list) in chunk_id_to_symbols_vec {
       for declared in symbol_list {
         let declared = declared.inner();
-        if cfg!(debug_assertions) {
-          let symbol_data = symbols.get(declared);
-          debug_assert!(
-            symbol_data.chunk_idx.unwrap_or(chunk_idx) == chunk_idx,
-            "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {:?}, new {chunk_idx:?}",
-            declared.name(symbols),
-            declared,
-            self.link_output.module_table[declared.owner].id().as_str(),
-            symbol_data.chunk_idx,
-          );
-        }
-
-        let symbol_data = symbols.get_mut(declared);
-        symbol_data.chunk_idx = Some(chunk_idx);
+        let previous = map.insert(declared, chunk_idx);
+        debug_assert!(
+          previous.is_none_or(|previous| previous == chunk_idx),
+          "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {previous:?}, new {chunk_idx:?}",
+          declared.name(&self.link_output.symbol_db),
+          declared,
+          self.link_output.module_table[declared.owner].id().as_str(),
+        );
       }
+    }
+    SymbolChunkTable { map }
+  }
+
+  /// The single point where derived symbol->chunk ownership enters the shared symbol database.
+  fn commit_symbol_chunk_table(&mut self, table: &SymbolChunkTable) {
+    let symbols = &mut self.link_output.symbol_db;
+    for (symbol_ref, chunk_idx) in &table.map {
+      symbols.get_mut(*symbol_ref).chunk_idx = Some(*chunk_idx);
     }
   }
 
@@ -811,6 +913,7 @@ impl GenerateStage<'_> {
     used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
     order_live_symbols: &FxHashSet<SymbolRef>,
+    symbol_chunk_table: &SymbolChunkTable,
   ) {
     // For each module that has been absorbed as a facade namespace, we need to know
     // which other modules dynamically import it so we can tell whether the absorbed
@@ -1017,7 +1120,7 @@ impl GenerateStage<'_> {
             // namespace or default imports from external modules. Named-only imports render as
             // direct `require()` bindings and must not inherit another chunk's `__toESM`.
             let to_esm_ref = self.link_output.runtime.resolve_symbol("__toESM");
-            if self.link_output.symbol_db.get(to_esm_ref).chunk_idx.is_some() {
+            if symbol_chunk_table.chunk_of(to_esm_ref, &self.link_output.symbol_db).is_some() {
               // __toESM is in a chunk, so it's being used
               to_esm_ref
             } else {
@@ -1028,16 +1131,17 @@ impl GenerateStage<'_> {
           } else {
             import_ref
           };
-          let import_symbol = self.link_output.symbol_db.get(import_ref);
-          let importee_chunk_idx = import_symbol.chunk_idx.unwrap_or_else(|| {
-            let symbol_owner = &self.link_output.module_table[import_ref.owner];
-            let symbol_name = import_ref.name(&self.link_output.symbol_db);
-            panic!(
-              "Symbol {:?} in {:?} should belong to a chunk",
-              symbol_name,
-              symbol_owner.id().as_str()
-            )
-          });
+          let importee_chunk_idx = symbol_chunk_table
+            .chunk_of(import_ref, &self.link_output.symbol_db)
+            .unwrap_or_else(|| {
+              let symbol_owner = &self.link_output.module_table[import_ref.owner];
+              let symbol_name = import_ref.name(&self.link_output.symbol_db);
+              panic!(
+                "Symbol {:?} in {:?} should belong to a chunk",
+                symbol_name,
+                symbol_owner.id().as_str()
+              )
+            });
           // Check if the import is from another chunk
           if chunk_id != importee_chunk_idx {
             index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
@@ -1285,9 +1389,15 @@ impl GenerateStage<'_> {
         // single default export per chunk must be named `default`. Otherwise use the
         // `default_export_ref` representative name. The `&&` keeps the `entry_module`
         // lookup guarded behind the `preserve_modules` check.
+        //
+        // `preserve_modules` emits one chunk per module, so a chunk normally carries the module it
+        // mirrors. Synthetic chunks are the exception: the shared `rolldown-runtime` chunk that
+        // strict execution order splits out mirrors no user module and is `ChunkKind::Common`, so
+        // it has no entry module and none of its exports can be a module's default export.
         let base = if self.options.preserve_modules
-          && chunk.entry_module(&self.link_output.module_table).unwrap().default_export_ref
-            == *chunk_export
+          && chunk
+            .entry_module(&self.link_output.module_table)
+            .is_some_and(|entry_module| entry_module.default_export_ref == *chunk_export)
         {
           CompactStr::new_const("default")
         } else {

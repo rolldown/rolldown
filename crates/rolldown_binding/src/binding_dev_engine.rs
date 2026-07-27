@@ -289,6 +289,7 @@ impl BindingDevEngine {
       dev_options.as_ref().and_then(|opts| opts.rebuild_strategy).map(Into::into);
     // Take ownership of watch so we can consume Vec fields (include/exclude).
     let watch_options = dev_options.and_then(|opts| opts.watch);
+    let watcher_enabled = watch_options.as_ref().and_then(|watch| watch.enabled);
     let skip_write = watch_options.as_ref().and_then(|watch| watch.skip_write);
     let use_polling = watch_options.as_ref().and_then(|watch| watch.use_polling);
     let poll_interval = watch_options.as_ref().and_then(|watch| watch.poll_interval);
@@ -399,7 +400,8 @@ impl BindingDevEngine {
       }) as OnAdditionalAssetsCallback
     });
 
-    let dev_watch_options = if skip_write.is_some()
+    let dev_watch_options = if watcher_enabled.is_some()
+      || skip_write.is_some()
       || use_polling.is_some()
       || poll_interval.is_some()
       || use_debounce.is_some()
@@ -410,7 +412,7 @@ impl BindingDevEngine {
       || watch_exclude.is_some()
     {
       Some(rolldown_dev::DevWatchOptions {
-        disable_watcher: None,
+        disable_watcher: watcher_enabled.map(|enabled| !enabled),
         skip_write,
         use_polling,
         poll_interval: poll_interval.map(u64::from),
@@ -673,7 +675,12 @@ impl BindingDevEngine {
         inner
           .compile_lazy_entry(module_id, client_id)
           .await
-          .map(|output| BindingLazyChunkOutput { code: output.code, filename: output.filename }),
+          .map(|output| BindingLazyChunkOutput {
+            code: output.code,
+            filename: output.filename,
+            sourcemap: output.sourcemap,
+            sourcemap_filename: output.sourcemap_filename,
+          }),
         cwd.as_ref(),
       );
       drop(operation);
@@ -688,6 +695,11 @@ impl BindingDevEngine {
 pub struct BindingLazyChunkOutput {
   pub code: String,
   pub filename: String,
+  /// The chunk's sourcemap, when `sourcemap` is `File` or `Hidden`. Serve it
+  /// under `sourcemapFilename`, which is what the chunk's `sourceMappingURL`
+  /// refers to.
+  pub sourcemap: Option<String>,
+  pub sourcemap_filename: Option<String>,
 }
 
 #[napi(object)]

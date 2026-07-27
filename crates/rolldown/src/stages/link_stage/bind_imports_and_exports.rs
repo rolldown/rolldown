@@ -73,28 +73,30 @@ impl Hash for MatchImportKindNormal {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-#[expect(clippy::box_collection)]
 pub enum MatchImportKind {
   // "sourceIndex" and "ref" are in use
   Normal(MatchImportKindNormal),
   // "namespaceRef" and "alias" are in use
-  Namespace { namespace_ref: SymbolRef },
+  Namespace {
+    namespace_ref: SymbolRef,
+  },
   // Both "matchImportNormal" and "matchImportNamespace"
-  NormalAndNamespace { namespace_ref: SymbolRef, alias: CompactStr },
-  // The import could not be evaluated due to a cycle. Boxed to keep the enum small, since this
-  // carries everything needed to report the cycle if no other branch resolves the binding.
-  Cycle(Box<CircularReexportInfo>),
+  NormalAndNamespace {
+    namespace_ref: SymbolRef,
+    alias: CompactStr,
+  },
+  /// The import could not be evaluated due to a cycle; carries where it was detected so
+  /// CIRCULAR_REEXPORT can be reported if no other branch resolves the binding.
+  Cycle {
+    importer: ModuleIdx,
+    imported: Specifier,
+  },
   // The import resolved to multiple symbols via "export * from"
-  Ambiguous { symbol_ref: SymbolRef, potentially_ambiguous_symbol_refs: Box<Vec<SymbolRef>> },
+  Ambiguous {
+    symbol_ref: SymbolRef,
+    potentially_ambiguous_symbol_refs: Box<Vec<SymbolRef>>,
+  },
   NoMatch,
-}
-
-/// Where a circular re-export was detected, so `CIRCULAR_REEXPORT` can be reported by whoever ends
-/// up keeping the `Cycle` as the final resolution.
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct CircularReexportInfo {
-  importer_id: String,
-  imported_specifier: String,
 }
 
 impl MatchImportKind {
@@ -105,9 +107,9 @@ impl MatchImportKind {
       MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => Some(symbol),
       MatchImportKind::Namespace { namespace_ref }
       | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
-      MatchImportKind::Cycle(_) | MatchImportKind::Ambiguous { .. } | MatchImportKind::NoMatch => {
-        None
-      }
+      MatchImportKind::Cycle { .. }
+      | MatchImportKind::Ambiguous { .. }
+      | MatchImportKind::NoMatch => None,
     }
   }
 }
@@ -1085,10 +1087,11 @@ impl BindImportsAndExportsContext<'_> {
       );
       tracing::trace!("Got match result {:?}", ret);
       match ret {
-        MatchImportKind::Cycle(info) => {
-          self
-            .diagnostics
-            .push(BuildDiagnostic::circular_reexport(info.importer_id, info.imported_specifier));
+        MatchImportKind::Cycle { importer, imported } => {
+          self.diagnostics.push(BuildDiagnostic::circular_reexport(
+            self.index_modules[importer].id().to_string(),
+            imported.to_string(),
+          ));
         }
         MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
           let importee = self.index_modules[resolved_module_idx].stable_id().to_string();
@@ -1286,18 +1289,18 @@ impl BindImportsAndExportsContext<'_> {
 
     let mut ambiguous_results = vec![];
     let mut reexports = vec![];
-    let ret = 'tracking: loop {
-      for prev_tracker in ctx.tracker_stack.iter().rev() {
-        if prev_tracker.importer == tracker.importer
-          && prev_tracker.imported_as == tracker.imported_as
-        {
-          // ResolveExport treats an in-progress (module, binding) request as null.
-          let importer_module = &index_modules[tracker.importer];
-          break 'tracking MatchImportKind::Cycle(Box::new(CircularReexportInfo {
-            importer_id: importer_module.id().to_string(),
-            imported_specifier: tracker.imported.to_string(),
-          }));
-        }
+    let ret = loop {
+      if ctx
+        .tracker_stack
+        .iter()
+        .rev()
+        .any(|prev| prev.importer == tracker.importer && prev.imported_as == tracker.imported_as)
+      {
+        // ResolveExport treats an in-progress (module, binding) request as null.
+        break MatchImportKind::Cycle {
+          importer: tracker.importer,
+          imported: tracker.imported.clone(),
+        };
       }
       ctx.tracker_stack.push(tracker.clone());
       let import_status = self.advance_import_tracker(ctx);
@@ -1430,14 +1433,14 @@ impl BindImportsAndExportsContext<'_> {
     // name supplied by N distinct `export *` sources would otherwise make this scan quadratic.
     let mut deduped_ambiguous_results = FxIndexMap::default();
     for (result, promotion_state) in ambiguous_results {
-      if !matches!(result, MatchImportKind::Cycle(_)) {
+      if !matches!(result, MatchImportKind::Cycle { .. }) {
         deduped_ambiguous_results.entry(result).or_insert(promotion_state);
       }
     }
 
     // A cycle resolves to null, so the binding is whatever the remaining star branches say. Per
     // `ResolveExport` the first non-null branch wins and the rest only have to agree with it.
-    let (ret, promoted_export) = if matches!(ret, MatchImportKind::Cycle(_)) {
+    let (ret, promoted_export) = if matches!(ret, MatchImportKind::Cycle { .. }) {
       if let Some((mut promoted, (mut reexports_prefix, promoted_export))) =
         deduped_ambiguous_results.shift_remove_index(0)
       {

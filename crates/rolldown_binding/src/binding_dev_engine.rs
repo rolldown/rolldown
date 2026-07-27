@@ -672,15 +672,12 @@ impl BindingDevEngine {
       // flattened into a `GenericFailure` string. See dev-callbacks.test.ts
       // "compileEntry awaits onAdditionalAssets and propagates its rejection".
       let result = dev_engine_binding_result(
-        inner
-          .compile_lazy_entry(module_id, client_id)
-          .await
-          .map(|output| BindingLazyChunkOutput {
-            code: output.code,
-            filename: output.filename,
-            sourcemap: output.sourcemap,
-            sourcemap_filename: output.sourcemap_filename,
-          }),
+        inner.compile_lazy_entry(module_id, client_id).await.map(|output| BindingLazyChunkOutput {
+          code: output.code,
+          filename: output.filename,
+          sourcemap: output.sourcemap,
+          sourcemap_filename: output.sourcemap_filename,
+        }),
         cwd.as_ref(),
       );
       drop(operation);

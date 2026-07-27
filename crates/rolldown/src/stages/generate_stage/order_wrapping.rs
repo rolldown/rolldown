@@ -200,7 +200,7 @@ impl GenerateStage<'_> {
   /// produces the final edges, so the decision reads facts rather than a re-derived approximation
   /// of them. See [`GenerateStage::lowered_static_import_edges`].
   fn entry_facade_import_edges(
-    &mut self,
+    &self,
     chunk_graph: &ChunkGraph,
     used_symbol_refs: &UsedSymbolRefsBuilder,
     order_state: &OrderWrapState,

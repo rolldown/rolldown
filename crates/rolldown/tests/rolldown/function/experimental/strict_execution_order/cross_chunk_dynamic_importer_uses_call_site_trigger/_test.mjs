@@ -1,9 +1,9 @@
 import assert from 'node:assert';
 
-// A dynamic entry with a cross-chunk dynamic importer keeps its facade chunk (asserted
-// by the snapshot), so its trigger runs synchronously within the facade's module
-// evaluation. Executing entry `b` must initialize `target` without triggering entry
-// `a`'s side effect, and `target` must initialize exactly once across both entries.
+// Neither dynamic importer needs a facade chunk (asserted by the snapshot): each
+// import() rewrite carries the trigger itself. Executing entry `b` must still initialize
+// `target` without triggering entry `a`'s side effect, and `target` must still initialize
+// exactly once across both entries — the guarantee survives losing the file.
 
 globalThis.log = [];
 

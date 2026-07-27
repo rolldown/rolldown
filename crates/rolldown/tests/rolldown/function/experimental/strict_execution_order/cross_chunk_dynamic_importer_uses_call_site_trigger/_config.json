@@ -1,5 +1,5 @@
 {
-  "_comment": "A dynamic entry with one same-chunk and one cross-chunk dynamic importer must keep its restored facade: the cross-chunk importer needs the trigger to run synchronously within the facade's module evaluation (see m4_dynamic_facade_race). Only when every dynamic importer is same-chunk may the facade stay eliminated.",
+  "_comment": "A dynamic entry with one same-chunk and one cross-chunk dynamic importer needs no facade: the same-chunk importer collapses to `Promise.resolve().then(() => (init_target(), ns))` and the cross-chunk one to `import(host).then(n => (n.init_target(), n.ns))`, so every entry path carries the trigger. Entering `b` still must not run entry `a`, and `target` still must initialize exactly once.",
   "configName": "on-demand",
   "config": {
     "input": [

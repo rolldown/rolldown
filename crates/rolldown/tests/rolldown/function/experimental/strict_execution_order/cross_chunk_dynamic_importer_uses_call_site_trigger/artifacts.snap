@@ -17,7 +17,7 @@ export { aTargetPromise };
 ```js
 //#region b.js
 (globalThis.log ??= []).push("b");
-const bTargetPromise = import("./target.js");
+const bTargetPromise = import("./ga.js").then((n) => (n.t(), n.n));
 //#endregion
 export { bTargetPromise };
 
@@ -32,29 +32,19 @@ var aTargetPromise;
 function init_a() {
 	return (init_a = __esmMin((() => {
 		(globalThis.log ??= []).push("a");
-		aTargetPromise = import("./target.js");
+		aTargetPromise = Promise.resolve().then(() => (init_target(), target_exports));
 	})))();
 }
 //#endregion
 //#region target.js
-var value;
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 function init_target() {
 	return (init_target = __esmMin((() => {
 		(globalThis.log ??= []).push("target");
-		value = 1;
 	})))();
 }
 //#endregion
-export { init_a as i, value as n, aTargetPromise as r, init_target as t };
-
-```
-
-## target.js
-
-```js
-import { n as value, t as init_target } from "./ga.js";
-init_target();
-export { value };
+export { init_a as i, target_exports as n, aTargetPromise as r, init_target as t };
 
 ```
 
@@ -80,7 +70,7 @@ var bTargetPromise;
 function init_b() {
 	return (init_b = __esmMin((() => {
 		(globalThis.log ??= []).push("b");
-		bTargetPromise = import("./target.js");
+		bTargetPromise = import("./ga.js").then((n) => (n.t(), n.n));
 	})))();
 }
 //#endregion
@@ -92,26 +82,25 @@ export { bTargetPromise };
 ### ga.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 //#region a.js
 var aTargetPromise;
 function init_a() {
 	return (init_a = __esmMin((() => {
 		(globalThis.log ??= []).push("a");
-		aTargetPromise = import("./target.js");
+		aTargetPromise = Promise.resolve().then(() => (init_target(), target_exports));
 	})))();
 }
 //#endregion
 //#region target.js
-var value;
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 function init_target() {
 	return (init_target = __esmMin((() => {
 		(globalThis.log ??= []).push("target");
-		value = 1;
 	})))();
 }
 //#endregion
-export { init_a as i, value as n, aTargetPromise as r, init_target as t };
+export { init_a as i, target_exports as n, aTargetPromise as r, init_target as t };
 
 ```
 
@@ -120,14 +109,5 @@ export { init_a as i, value as n, aTargetPromise as r, init_target as t };
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 export { __exportAll as n, __esmMin as t };
-
-```
-
-### target.js
-
-```js
-import { n as value, t as init_target } from "./ga.js";
-init_target();
-export { value };
 
 ```

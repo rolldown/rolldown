@@ -2857,7 +2857,6 @@ dependencies = [
  "arcstr",
  "rolldown_common",
  "rolldown_plugin",
- "rolldown_std_utils",
  "rolldown_utils",
  "rustc-hash",
  "serde",

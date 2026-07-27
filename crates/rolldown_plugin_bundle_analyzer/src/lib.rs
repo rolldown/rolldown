@@ -1,10 +1,10 @@
-use std::{borrow::Cow, path::Path, sync::Arc};
+use std::{borrow::Cow, sync::Arc};
 
 use arcstr::ArcStr;
 use rolldown_common::{EmittedAsset, Output, OutputChunk};
 use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
-use rolldown_std_utils::relative_path_to_slash;
 use rolldown_utils::rustc_hash::FxHashMapExt;
+use rolldown_utils::stabilize_id::stabilize_id;
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
 
@@ -162,7 +162,7 @@ impl BundleAnalyzerPlugin {
 
           modules_data.push(ModuleData {
             id: format!("mod-{idx}"),
-            path: stabilize_module_id(module_id, cwd),
+            path: stabilize_id(module_id, cwd),
             size,
             importers: None, // Will be filled in later
           });
@@ -348,21 +348,6 @@ impl BundleAnalyzerPlugin {
     }
 
     visited.into_iter().collect()
-  }
-}
-
-/// Stabilize a module ID by converting absolute paths to relative paths from cwd.
-/// This ensures stable, portable output across different machines.
-fn stabilize_module_id(id: &str, cwd: &Path) -> String {
-  let path = Path::new(id);
-  if path.is_absolute() {
-    // Convert absolute path to relative path from cwd using forward slashes
-    relative_path_to_slash(path, cwd)
-  } else if id.starts_with('\0') {
-    // Escape virtual module prefix
-    id.replace('\0', "\\0")
-  } else {
-    id.to_string()
   }
 }
 

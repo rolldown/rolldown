@@ -28,6 +28,7 @@ import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import { bindingifyCloseWatcher, bindingifyWatchChange } from './bindingify-watch-hooks';
 import { extractHookUsage } from './generated/hook-usage';
+import { hookCostRecorderFor, type HookCostRecorder, measureHookCost } from './hook-cost';
 import type { Plugin, RolldownPlugin } from './index';
 import type { PluginContextData } from './plugin-context-data';
 
@@ -118,6 +119,11 @@ export function bindingifyPlugin(
   const { plugin: watchChange, meta: watchChangeMeta } = bindingifyWatchChange(args);
 
   const { plugin: closeWatcher, meta: closeWatcherMeta } = bindingifyCloseWatcher(args);
+  // `checks.pluginTimings` is on unless turned off, matching the driver's own default.
+  // Keyed on the input options so each build accumulates separately: a worker sub-build
+  // runs nested inside its parent, and shared counters would mix the two.
+  const recorder =
+    options.checks?.pluginTimings === false ? undefined : hookCostRecorderFor(options, onLog);
   let hookUsage = extractHookUsage(plugin).inner();
   const result: BindingPluginOptions = {
     // The plugin name already normalized at `normalizePlugins`, see `packages/rolldown/src/utils/normalize-plugin-option.ts`
@@ -171,10 +177,13 @@ export function bindingifyPlugin(
     closeWatcherMeta,
     hookUsage,
   };
-  return wrapHandlers(result);
+  return wrapHandlers(result, recorder);
 }
 
-function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
+function wrapHandlers(
+  plugin: BindingPluginOptions,
+  recorder: HookCostRecorder | undefined,
+): BindingPluginOptions {
   for (const hookName of [
     'buildStart',
     'resolveId',
@@ -198,7 +207,10 @@ function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
     'watchChange',
     'closeWatcher',
   ] as const) {
-    const handler = plugin[hookName] as any;
+    const raw = plugin[hookName] as any;
+    // Measure the handler itself, inside the error wrapper, so the span covers the
+    // plugin's own work rather than the wrapper's promise machinery.
+    const handler = raw && measureHookCost(recorder, plugin.name, hookName, raw);
     if (handler) {
       plugin[hookName] = async (...args: any[]) => {
         try {

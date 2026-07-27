@@ -4,6 +4,7 @@ import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
 import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
+import { flushHookCostReport } from '../../plugin/hook-cost';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { unwrapBindingResult } from '../../utils/error';
 import { validateOption } from '../../utils/validator';
@@ -93,6 +94,8 @@ export class RolldownBuild {
     // Claim the release before the first await so a second `close` cannot release twice.
     const shouldRelease = !this.#asyncRuntimeReleased;
     this.#asyncRuntimeReleased = true;
+    // Every hook has run by now, and this is the last point the log handler is alive.
+    flushHookCostReport(this.#inputOptions);
     try {
       await this.#stopWorkers?.();
       // `BindingBundler.close` spawns onto the runtime, so release only after it settles.

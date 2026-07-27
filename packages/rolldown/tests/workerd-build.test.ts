@@ -363,6 +363,51 @@ describe('workerd build() against the built dist', () => {
   );
 
   distTest(
+    'a close() rejected while the bundle is open keeps the slot and allows retry',
+    async () => {
+      const { workerd, wasmModule } = await loadDistWorkerd();
+      const graph = makeVirtualGraph(3);
+      const instance = await workerd.createInstance(wasmModule);
+      try {
+        let bundle!: Awaited<ReturnType<typeof workerd.createWorkerdBundle>>;
+        let hookCloseError: unknown;
+        bundle = await workerd.createWorkerdBundle(instance, {
+          input: 'virt:entry.js',
+          plugins: [
+            graph.plugin(),
+            {
+              name: 'close-from-hook',
+              buildStart: async () => {
+                // Closing from an active hook rejects upstream while the
+                // native bundle stays open; the wrapper must not release the
+                // slot or report the bundle closed.
+                hookCloseError = await bundle.close().catch((error: unknown) => error);
+              },
+            },
+          ],
+        });
+        const result = await bundle.generate({ format: 'esm' });
+        expect(result.output[0].type).toBe('chunk');
+        expect(hookCloseError).toBeInstanceOf(Error);
+        expect(bundle.closed).toBe(false);
+        // The instance slot is still held, so disposing must be refused...
+        expect(() => instance.dispose()).toThrow();
+        // ...until a retried close succeeds.
+        await bundle.close();
+        expect(bundle.closed).toBe(true);
+      } finally {
+        try {
+          instance.dispose();
+        } catch {
+          // A failed assertion above may have left the bundle open; don't
+          // let the refused dispose mask it.
+        }
+      }
+    },
+    180_000,
+  );
+
+  distTest(
     'surfaces build failures as an ANSI-free BundleError and keeps the instance usable',
     async () => {
       const { workerd, wasmModule } = await loadDistWorkerd();

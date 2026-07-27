@@ -36,6 +36,13 @@ export {
   type WorkerdBundle,
   type WorkerdBundleOptions,
 } from './workerd-build';
+// Hosts without `node:async_hooks` (no nodejs_als/nodejs_compat flag) can
+// provide their own storage; AsyncContextUnavailableError points users here.
+export {
+  configureAsyncContext,
+  type AsyncContextProvider,
+  type AsyncContextStorage,
+} from './utils/async-context';
 export type { InputOptions } from './options/input-options';
 export type { OutputOptions } from './options/output-options';
 export type { RolldownOutput, OutputChunk, OutputAsset } from './types/rolldown-output';

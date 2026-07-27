@@ -130,33 +130,40 @@ function assertWorkerdBundleContext(): void {
   }
 }
 
-let asyncContextConfigured = false;
+let asyncContextInit: Promise<void> | undefined;
 
 // Workerd (with the `nodejs_als` or `nodejs_compat` compatibility flag) and
 // Node.js both provide `node:async_hooks`. The workerd bundles are browser
 // builds, so the pipeline's required async context has no default provider;
 // configure AsyncLocalStorage when the host offers it. Hosts without it keep
 // working for builds that never invoke JavaScript callbacks.
-async function ensureAsyncContext(): Promise<void> {
-  if (asyncContextConfigured || !import.meta.browserBuild) return;
-  asyncContextConfigured = true;
-  try {
-    if (getAsyncContextSupport().source !== 'unavailable') return;
-    // Keep the specifier dynamic so bundlers (wrangler/esbuild) do not try to
-    // resolve a node builtin statically in workers without nodejs_compat.
-    const specifier = 'node:async_hooks';
-    const hooks: { AsyncLocalStorage?: new () => unknown } = await import(
-      /* @vite-ignore */ specifier
-    );
-    const AsyncLocalStorageImpl = hooks?.AsyncLocalStorage;
-    if (typeof AsyncLocalStorageImpl !== 'function') return;
-    configureAsyncContext({
-      createStorage: () => new AsyncLocalStorageImpl() as AsyncContextStorage,
-    });
-  } catch {
-    // Leave the async context unavailable; builds that require it report
-    // AsyncContextUnavailableError with configuration instructions.
-  }
+function ensureAsyncContext(): Promise<void> {
+  if (!import.meta.browserBuild) return Promise.resolve();
+  // A boolean latch would race: the first caller parks on the dynamic import
+  // (which crosses a macrotask in workerd) while a concurrent first build
+  // sails past the latch on pure microtasks and hits the pipeline's
+  // async-context preflight before the storage is configured. Every caller
+  // awaits one shared initialization promise instead.
+  asyncContextInit ??= (async () => {
+    try {
+      if (getAsyncContextSupport().source !== 'unavailable') return;
+      // Keep the specifier dynamic so bundlers (wrangler/esbuild) do not try
+      // to resolve a node builtin statically in workers without nodejs_compat.
+      const specifier = 'node:async_hooks';
+      const hooks: { AsyncLocalStorage?: new () => unknown } = await import(
+        /* @vite-ignore */ specifier
+      );
+      const AsyncLocalStorageImpl = hooks?.AsyncLocalStorage;
+      if (typeof AsyncLocalStorageImpl !== 'function') return;
+      configureAsyncContext({
+        createStorage: () => new AsyncLocalStorageImpl() as AsyncContextStorage,
+      });
+    } catch {
+      // Leave the async context unavailable; builds that require it report
+      // AsyncContextUnavailableError with configuration instructions.
+    }
+  })();
+  return asyncContextInit;
 }
 
 function requireInstanceExports(instance: DeferredRolldownInstance): object {
@@ -183,16 +190,34 @@ function requireInstanceExports(instance: DeferredRolldownInstance): object {
  * `output`, ...) against a managed workerd Rolldown instance, entirely in
  * memory.
  *
+ * Only one instance can be the active binding at a time. Concurrent builds on
+ * the SAME instance are supported; a build on a different instance while one
+ * is active rejects. For concurrent fetch handlers, share one module-scope
+ * instance (below) rather than passing `module:` per request — every `module:`
+ * call creates its own private instance, so overlapping `module:` builds
+ * reject each other.
+ *
+ * Plugin builds need an async-context storage: enable the `nodejs_als` (or
+ * `nodejs_compat`) compatibility flag, or call `configureAsyncContext()` from
+ * this entry with your own storage.
+ *
  * ```js
- * import { build } from '@rolldown/browser/workerd';
+ * import { build, createInstance } from '@rolldown/browser/workerd';
  * import wasmModule from '@rolldown/browser/workerd/wasm';
  *
- * const { output } = await build({
- *   module: wasmModule,
- *   input: 'virtual:entry',
- *   plugins: [myVirtualFilesPlugin],
- *   output: { format: 'esm' },
- * });
+ * const instance = await createInstance(wasmModule);
+ *
+ * export default {
+ *   async fetch() {
+ *     const { output } = await build({
+ *       instance,
+ *       input: 'virtual:entry',
+ *       plugins: [myVirtualFilesPlugin],
+ *       output: { format: 'esm' },
+ *     });
+ *     return new Response(output[0].code);
+ *   },
+ * };
  * ```
  */
 export async function build(options: WorkerdBuildOptions): Promise<RolldownOutput> {
@@ -318,10 +343,21 @@ export async function createWorkerdBundle(
       try {
         await bundle.close();
       } catch (error) {
+        // `close()` can reject while the native bundle is still fully open
+        // (e.g. when called from one of the bundle's own active hooks). Keep
+        // the instance slot and keep reporting the bundle open so the caller
+        // can retry; release only when the rejection happened after native
+        // cleanup completed (e.g. a throwing closeBundle hook).
+        let stillOpen = false;
+        try {
+          stillOpen = !bundle.closed;
+        } catch {
+          // The instance was disposed out from under the bundle.
+        }
+        if (!stillOpen) release();
         throw stripAnsi ? stripAnsiFromError(error) : error;
-      } finally {
-        release();
       }
+      release();
     },
   };
 }

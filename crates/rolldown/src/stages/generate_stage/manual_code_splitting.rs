@@ -190,7 +190,14 @@ impl ManualSplitter<'_> {
 
         let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.module_infos));
 
-        let Some(group_name) = match_group.name.value(&ctx, &normal_module.id).await? else {
+        // Time the user's chunk `name` classifier. It is a Rust-core output-option
+        // callback that never passes through the plugin driver, so it is otherwise
+        // invisible to `[PLUGIN_TIMINGS]`. `start_timing()` is a no-op (returns `None`)
+        // unless plugin-timing collection is enabled, so this is zero-overhead by default.
+        let name_timing = self.plugin_driver.start_timing();
+        let name_result = match_group.name.value(&ctx, &normal_module.id).await;
+        self.plugin_driver.record_code_splitting_name_timing(name_timing);
+        let Some(group_name) = name_result? else {
           // Group which doesn't have a name will be ignored.
           continue;
         };

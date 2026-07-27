@@ -27,6 +27,13 @@ pub struct HookTimingCollector {
   total_build_micros: AtomicU64,
   /// Link stage time in microseconds (pure Rust core, no plugins)
   link_stage_micros: AtomicU64,
+  /// Accumulated time (microseconds) for the `output.codeSplitting` / `advancedChunks`
+  /// `groups[].name` chunk-name classifier — a user JS callback invoked directly from the
+  /// Rust core (NOT a plugin hook), so it is invisible to per-plugin timing yet can
+  /// dominate a build. Surfaced as its own row in the `[PLUGIN_TIMINGS]` report. The set of
+  /// such core-invoked output callbacks is known statically, so each gets a fixed field
+  /// rather than a dynamic map (precedent: `link_stage_micros`).
+  code_splitting_name_micros: AtomicU64,
 }
 
 impl HookTimingCollector {
@@ -40,6 +47,12 @@ impl HookTimingCollector {
     if let Some(data) = self.plugins.get(&plugin_idx) {
       data.duration_micros.fetch_add(micros, Ordering::Relaxed);
     }
+  }
+
+  /// Accumulate execution time (microseconds) for the `output.codeSplitting` /
+  /// `advancedChunks` `groups[].name` chunk-name classifier.
+  pub fn record_code_splitting_name(&self, micros: u64) {
+    self.code_splitting_name_micros.fetch_add(micros, Ordering::Relaxed);
   }
 
   /// Set total build time in microseconds
@@ -84,10 +97,50 @@ impl HookTimingCollector {
     summaries
   }
 
+  /// Get timing summaries for non-plugin output-option callbacks invoked from the Rust
+  /// core (reuses the `PluginTimingSummary` shape, with a stable label in `plugin_name`).
+  /// Only callbacks that actually ran are included.
+  pub fn get_output_callback_summary(&self) -> Vec<PluginTimingSummary> {
+    let mut summaries = Vec::new();
+    let code_splitting_name = self.code_splitting_name_micros.load(Ordering::Relaxed);
+    if code_splitting_name > 0 {
+      summaries.push(PluginTimingSummary {
+        plugin_name: arcstr::literal!("output.codeSplitting groups[].name"),
+        total_duration_micros: code_splitting_name,
+      });
+    }
+    summaries
+  }
+
   /// Clear all collected timings
   pub fn clear(&self) {
     for mut entry in self.plugins.iter_mut() {
       entry.value_mut().duration_micros.store(0, Ordering::Relaxed);
     }
+    self.code_splitting_name_micros.store(0, Ordering::Relaxed);
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn output_callback_timing_accumulates() {
+    let collector = HookTimingCollector::default();
+
+    // Nothing ran yet → no row.
+    assert!(collector.get_output_callback_summary().is_empty());
+
+    collector.record_code_splitting_name(1_000);
+    collector.record_code_splitting_name(2_500);
+
+    let summary = collector.get_output_callback_summary();
+    assert_eq!(summary.len(), 1);
+    assert_eq!(summary[0].plugin_name.as_str(), "output.codeSplitting groups[].name");
+    assert_eq!(summary[0].total_duration_micros, 3_500);
+
+    collector.clear();
+    assert!(collector.get_output_callback_summary().is_empty());
   }
 }

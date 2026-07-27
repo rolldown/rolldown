@@ -46,12 +46,15 @@ impl HookTimingCollector {
   }
 
   /// Accumulate a hook's measured execution time in microseconds. `owner` is `None`
-  /// for callbacks the Rust core invokes directly; plugin hooks are recorded only for
-  /// registered (non-internal) plugins.
+  /// for callbacks the Rust core invokes directly.
+  ///
+  /// Every hook is recorded, including internal `builtin:` plugins that are never
+  /// reported. Their work is part of the section wall clock being apportioned, so
+  /// leaving it out of the denominator would hand their share to whichever user plugin
+  /// happens to be measured — a 1ms user `transform` beside a 5s builtin one would be
+  /// billed the entire phase. [`Self::estimate`] drops them from its rows instead, which
+  /// withholds their share rather than redistributing it.
   pub fn record(&self, owner: Option<PluginIdx>, hook: HookKind, micros: u64) {
-    if owner.is_some_and(|plugin_idx| !self.plugin_names.contains_key(&plugin_idx)) {
-      return;
-    }
     let key = (owner, hook);
     // Take the read path once the slot exists, which is every call after the first
     // for a given (owner, hook) pair.
@@ -109,10 +112,14 @@ impl HookTimingCollector {
     (total - link) as f64 / link as f64 > 100.0
   }
 
-  /// Estimate the wall-clock time each hook cost the build.
+  /// Estimate the wall-clock time each reportable owner's hooks cost the build.
   ///
   /// See [`TimingSection`] for why measured hook time is not comparable across
   /// sections and how the estimate corrects for it.
+  ///
+  /// The denominator spans every recorded hook, but only registered plugins get rows:
+  /// a user cannot act on a `builtin:` plugin, so its share of the phase is withheld
+  /// from the report rather than handed to someone who did not spend it.
   pub fn estimate(&self) -> Vec<HookTimingEstimate> {
     let mut section_hook_micros = [0u64; TimingSection::COUNT];
     for entry in &self.hooks {
@@ -127,6 +134,10 @@ impl HookTimingCollector {
         let (owner, hook) = *entry.key();
         let measured = entry.value().load(Ordering::Relaxed);
         if measured == 0 {
+          return None;
+        }
+        // Counted above, reported nowhere. See the note on this method.
+        if owner.is_some_and(|plugin_idx| !self.plugin_names.contains_key(&plugin_idx)) {
           return None;
         }
         let estimated_micros = match hook.section() {
@@ -265,7 +276,7 @@ mod tests {
   }
 
   #[test]
-  fn unregistered_plugins_are_not_recorded() {
+  fn unregistered_plugins_get_no_row() {
     let collector = HookTimingCollector::default();
     let plugin_idx = PluginIdx::from_raw(0);
 
@@ -273,11 +284,30 @@ mod tests {
     assert!(collector.estimate().is_empty());
 
     collector.register_plugin(plugin_idx, arcstr::literal!("my-plugin"));
-    collector.record(Some(plugin_idx), HookKind::CodeSplittingName, 1_000);
 
     let estimates = collector.estimate();
     assert_eq!(estimates.len(), 1);
     assert_eq!(collector.owner_name(estimates[0].owner).as_str(), "my-plugin");
+  }
+
+  #[test]
+  fn builtin_plugins_keep_their_share_of_the_section() {
+    let collector = HookTimingCollector::default();
+    let user = PluginIdx::from_raw(0);
+    let builtin = PluginIdx::from_raw(1);
+    // Only the user plugin is registered; `builtin:` names never are.
+    collector.register_plugin(user, arcstr::literal!("my-plugin"));
+
+    collector.record(Some(user), HookKind::Transform, 1_000);
+    collector.record(Some(builtin), HookKind::Transform, 9_000);
+    collector.record_section_micros(TimingSection::FetchModule, 10_000);
+
+    // The builtin did nine tenths of the measured work. Excluding it from the
+    // denominator would bill the user plugin for the whole phase.
+    let estimates = collector.estimate();
+    assert_eq!(estimates.len(), 1);
+    assert_eq!(estimates[0].owner, Some(user));
+    assert_eq!(estimates[0].estimated_micros, 1_000);
   }
 
   #[test]

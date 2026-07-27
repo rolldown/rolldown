@@ -175,4 +175,58 @@ describe('workerd output ownership against the built dist', () => {
     },
     180_000,
   );
+
+  distTest(
+    're-emitting a returned binary asset copies its JavaScript bytes',
+    async () => {
+      const { workerd, wasmModule } = await loadDistWorkerd();
+      const graph = makeVirtualGraph(3);
+      const instance = await workerd.createInstance(wasmModule);
+      const size = 64 * 1024;
+      const makePattern = (seed: number) => {
+        const bytes = new Uint8Array(size);
+        for (let i = 0; i < size; i++) bytes[i] = (i * 7 + seed) & 0xff;
+        return bytes;
+      };
+      const buildEmitting = async (source: Uint8Array) => {
+        const result = await workerd.build({
+          instance,
+          input: 'virt:entry.js',
+          plugins: [
+            graph.plugin(),
+            {
+              name: 'emit-binary-asset',
+              generateBundle() {
+                this.emitFile({ type: 'asset', fileName: 'blob.bin', source });
+              },
+            },
+          ],
+        });
+        const asset = result.output.find(
+          (item) => item.type === 'asset' && item.fileName === 'blob.bin',
+        );
+        return (asset as { source: Uint8Array }).source;
+      };
+
+      try {
+        const original = makePattern(0);
+        const emitted = await buildEmitting(original);
+        expect(Uint8Array.from(emitted)).toStrictEqual(original);
+
+        // The returned array must carry its own JavaScript bytes: the native
+        // payload behind it is freed eagerly on this flavor, so a re-emit that
+        // resolved through the original native address would read freed (and
+        // by then reused) memory.
+        const reemitted = await buildEmitting(emitted);
+        expect(Uint8Array.from(reemitted)).toStrictEqual(original);
+
+        for (let i = 1; i <= 2; i++) await buildEmitting(makePattern(i * 13));
+        const afterChurn = await buildEmitting(emitted);
+        expect(Uint8Array.from(afterChurn)).toStrictEqual(original);
+      } finally {
+        instance.dispose();
+      }
+    },
+    180_000,
+  );
 });

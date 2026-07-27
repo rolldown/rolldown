@@ -58,9 +58,15 @@ impl BindingRenderedModule {
     Ok(self.try_get_inner()?.code())
   }
 
+  // Owned `String`s, not `&str` borrowed from the inner `Arc`: napi-derive
+  // converts the returned `Vec` after this function has returned, one
+  // `napi_set_element` at a time. Those are ordinary JavaScript `[[Set]]`
+  // operations on a holey array, so a `Array.prototype` index setter can run
+  // between elements and re-enter `dropInner()` — freeing the data the
+  // remaining borrows point into.
   #[napi(getter)]
-  pub fn rendered_exports(&self) -> napi::Result<Vec<&str>> {
-    Ok(self.try_get_inner()?.rendered_exports.iter().map(AsRef::as_ref).collect())
+  pub fn rendered_exports(&self) -> napi::Result<Vec<String>> {
+    Ok(self.try_get_inner()?.rendered_exports.iter().map(|export| export.to_string()).collect())
   }
 }
 

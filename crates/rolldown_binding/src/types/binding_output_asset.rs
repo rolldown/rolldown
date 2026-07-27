@@ -116,8 +116,8 @@ impl BindingOutputAsset {
   }
 }
 
-/// Create a `Uint8Array` over a JS-owned copy of `data` without giving any
-/// native memory to a GC finalizer.
+/// Create a `Uint8Array` holding a JS-owned copy of `data`, with no native
+/// memory handed to a GC finalizer and no native address remembered for it.
 ///
 /// `napi_create_external_arraybuffer` on emnapi copies the referenced Wasm
 /// bytes into a fresh JS `ArrayBuffer` synchronously (JavaScript cannot alias
@@ -132,18 +132,21 @@ impl BindingOutputAsset {
 /// FinalizationRegistry — the exact never-runs-on-workerd mechanism this
 /// function exists to avoid.
 ///
-/// Known edge: emnapi remembers (in a WeakMap) that this `ArrayBuffer` once
-/// lived at `data`'s address. Passing the SAME `Uint8Array` object back into
-/// the binding after the asset's native payload was freed reads through that
-/// stale address. The lazy native path has the identical edge once GC frees
-/// its forgotten `Vec`; consumers re-emitting a freed build's bytes should
-/// pass a fresh copy.
+/// The external `ArrayBuffer` is NOT what we return: emnapi records its
+/// creation address in a table, and any later marshaling of that exact object
+/// back into the binding (re-emitting a build's `asset.source`, or reading a
+/// plugin's in-place edit of it) resolves through that address instead of the
+/// JavaScript bytes. Once the eager threadless free drops the asset payload,
+/// that address is freed memory — a use-after-free that can read another
+/// build's data. `slice()` produces an engine-created buffer with no table
+/// entry, so the returned array marshals back by copying its JS bytes, at the
+/// cost of one extra in-JS copy per binary asset.
 #[cfg(target_family = "wasm")]
 fn js_owned_uint8_array<'env>(
   env: &'env Env,
   data: &[u8],
 ) -> napi::Result<napi::bindgen_prelude::Unknown<'env>> {
-  use napi::bindgen_prelude::FromNapiValue;
+  use napi::bindgen_prelude::{FromNapiValue, JsObjectValue, Object, Unknown};
 
   let len = data.len();
   let mut array_buffer = std::ptr::null_mut();
@@ -156,21 +159,36 @@ fn js_owned_uint8_array<'env>(
       },
       "Failed to create the empty JS-owned ArrayBuffer for an asset source"
     )?;
-  } else {
+    let mut typed_array = std::ptr::null_mut();
     napi::check_status!(
       unsafe {
-        napi::sys::napi_create_external_arraybuffer(
+        napi::sys::napi_create_typedarray(
           env.raw(),
-          data.as_ptr().cast_mut().cast(),
-          len,
-          None,
-          std::ptr::null_mut(),
-          &mut array_buffer,
+          napi::sys::TypedarrayType::uint8_array,
+          0,
+          array_buffer,
+          0,
+          &mut typed_array,
         )
       },
-      "Failed to create the JS-owned ArrayBuffer copy of an asset source"
+      "Failed to create the empty Uint8Array for an asset source"
     )?;
+    return unsafe { Unknown::from_napi_value(env.raw(), typed_array) };
   }
+
+  napi::check_status!(
+    unsafe {
+      napi::sys::napi_create_external_arraybuffer(
+        env.raw(),
+        data.as_ptr().cast_mut().cast(),
+        len,
+        None,
+        std::ptr::null_mut(),
+        &mut array_buffer,
+      )
+    },
+    "Failed to create the JS-owned ArrayBuffer copy of an asset source"
+  )?;
   let mut typed_array = std::ptr::null_mut();
   napi::check_status!(
     unsafe {
@@ -185,7 +203,10 @@ fn js_owned_uint8_array<'env>(
     },
     "Failed to create the Uint8Array view over the JS-owned asset source"
   )?;
-  unsafe { napi::bindgen_prelude::Unknown::from_napi_value(env.raw(), typed_array) }
+  // Detach the result from the recorded native address (see above).
+  let view: Object = unsafe { Object::from_napi_value(env.raw(), typed_array)? };
+  let slice_fn: napi::bindgen_prelude::Function<(), Unknown> = view.get_named_property("slice")?;
+  slice_fn.apply(view, ())
 }
 
 #[napi_derive::napi(object, object_to_js = false)]

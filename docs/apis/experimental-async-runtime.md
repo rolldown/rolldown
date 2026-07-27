@@ -25,19 +25,17 @@ after the first runtime generation starts.
 
 ## Artifacts
 
-| Artifact                                         | Backend | Supported flavor                             |
-| ------------------------------------------------ | ------- | -------------------------------------------- |
-| Standard native npm binding                      | Shared  | `MultiThread` or `CurrentThread`             |
-| Any WebAssembly binding (both WASI targets)      | Shared  | `CurrentThread`                              |
-| Custom native binding built with `tokio-runtime` | Tokio   | `MultiThread`; configuration throws          |
-| Legacy Tokio-era published binding               | Tokio   | reports its own flavor; configuration throws |
+| Artifact                                    | Backend | Supported flavor                             |
+| ------------------------------------------- | ------- | -------------------------------------------- |
+| Standard native npm binding                 | Shared  | `MultiThread` or `CurrentThread`             |
+| Any WebAssembly binding (both WASI targets) | Shared  | `CurrentThread`                              |
+| Legacy Tokio-era published binding          | Tokio   | reports its own flavor; configuration throws |
 
 Use `getRuntimeCapabilities()` instead of inferring the backend or target from
 environment variables. Legacy artifacts without a capability report are
 recognized by the package's compatibility shim, which synthesizes
-`backend: 'tokio'` for them. Threadless `wasm32-wasip1` cannot be built with
-`tokio-runtime`; the binding rejects that unusable feature combination at
-compile time because napi-rs cannot execute built-in async tasks there.
+`backend: 'tokio'` for them. Every current binding compiles the shared
+backend; the former binding-level `tokio-runtime` build flavor was removed.
 
 ## Environment
 
@@ -56,9 +54,7 @@ deadline-based `block_on` deadlock detection, which is disabled by default.
 in microseconds: `0` disables lingering, unset or unparsable values keep the
 built-in default (500µs), and oversized values are clamped. It has no
 `configureAsyncRuntime` option; the effective value is reported by
-`getAsyncRuntimeConfig()` as `drainLingerUs`. On a custom `tokio-runtime`
-build the thread-count variables also configure native Tokio, whose blocking
-threads are capped at 512.
+`getAsyncRuntimeConfig()` as `drainLingerUs`.
 
 Native `ROLLDOWN_*` worker counts are capped at 256. Explicit
 `configureAsyncRuntime()` thread values above 256 throw
@@ -72,10 +68,7 @@ execution lane. Later environment changes have no effect.
 Without thread-count overrides, the native runtime starts from
 `min(physical CPUs, process-available CPUs)`, promotes MultiThread to at least
 two workers, and admits at most `workerThreads - 1` blocking tasks. Both
-defaults remain subject to the production and platform caps above. A custom
-native binding built with `tokio-runtime` instead uses
-`floor(min(physical CPUs, process-available CPUs) * 3 / 2)` Tokio workers and
-four blocking threads.
+defaults remain subject to the production and platform caps above.
 
 The published Node threaded-WASI loader additionally sizes emnapi's async-work
 pool from `NAPI_RS_ASYNC_WORK_POOL_SIZE`, falling back to `UV_THREADPOOL_SIZE`
@@ -91,9 +84,8 @@ lifetime high-water marks. `resetAsyncRuntimeMetrics()` clears cumulative
 events only. It preserves live gauges and high-water marks while work can still
 publish retirement updates.
 
-Tokio bindings — legacy Tokio-era artifacts and custom `tokio-runtime`
-builds — expose the same query functions for a stable API shape, but their
-scheduler counters are zero.
+Legacy Tokio-era artifacts expose the same query functions for a stable API
+shape, but their scheduler counters are zero.
 
 ## CurrentThread
 

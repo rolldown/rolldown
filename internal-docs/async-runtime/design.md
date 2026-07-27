@@ -19,9 +19,10 @@ exit, and physical workers retire before a restart may create the next pool.
 This scheduler is the runtime of every shipped artifact: it is selected by
 the `async-runtime` Cargo feature, which is enabled by default, so native and
 WebAssembly artifacts alike compile the shared runtime and keep Tokio out of
-their production dependency graphs. The previous Tokio executor survives only
-as the opt-in `tokio-runtime` fallback lane
-(`--no-default-features --features tokio-runtime`).
+their production dependency graphs. The previous Tokio executor is no longer
+buildable as a binding artifact — the binding-level `tokio-runtime` feature
+was removed; only the crate-level `tokio-runtime` facade arms in
+`rolldown_utils`/`rolldown` remain.
 
 For the machinery that realizes these principles — where the runtime is
 selected, configured, bridged across the napi boundary, and consumed by the
@@ -139,11 +140,11 @@ Rust core — see [implementation.md](./implementation.md).
    mutex, so concurrent calls serialize against the latest committed options
    instead of overwriting disjoint fields from stale snapshots. A rejected
    candidate leaves the prior configuration unchanged.
-   Native `ROLLDOWN_*` worker counts clamp to 256 and, on the opt-in
-   `tokio-runtime` lane, native Tokio blocking
-   counts clamp to 512 before runtime construction. Explicit JavaScript options
-   above 256 reject atomically. The native Tokio builder also checks the
-   combined worker/blocking capacity before entering Tokio's internal addition.
+   Native `ROLLDOWN_*` worker counts clamp to 256 before runtime construction.
+   Explicit JavaScript options above 256 reject atomically. (The removed
+   `tokio-runtime` binding lane additionally clamped native Tokio blocking
+   counts to 512 and checked the combined worker/blocking capacity before
+   entering Tokio's internal addition.)
    Every native shared-runtime package entry installs both CurrentThread host
    bridges before that window can be used. Host installation is independent of
    the import-time flavor, so a legal synchronous `MultiThread -> CurrentThread`
@@ -396,8 +397,9 @@ Rust core — see [implementation.md](./implementation.md).
    Threaded-WASI artifacts run the same shared CurrentThread runtime and need
    no cross-realm JavaScript ownership protocol; the lifecycle exports remain
    as no-ops for loader compatibility. Only Tokio-backed threaded-WASI
-   artifacts — the opt-in `tokio-runtime` lane and legacy Tokio-era artifacts
-   recognized through the package's compatibility shim, which
+   artifacts — previously published legacy Tokio-era artifacts (the buildable
+   `tokio-runtime` binding lane was removed), recognized through the package's
+   compatibility shim, which
    synthesizes `backend: 'tokio'` for bindings without a capability report —
    still hold their runtime alive through explicit reference-counted
    JavaScript leases, and a restart there waits off the JavaScript thread for
@@ -448,20 +450,22 @@ Rust core — see [implementation.md](./implementation.md).
    panic, shutdown cancellation, or rejected submission becomes exactly one
    build diagnostic and completion accounting cannot hang.
 
-9. **The shipped binding is tokio-free; Tokio survives only as an opt-in
-   fallback lane.** Every shipped artifact compiles the shared runtime through
+9. **The binding is tokio-free; no Tokio-backed binding can be built
+   anymore.** Every shipped artifact compiles the shared runtime through
    the default `async-runtime` feature, and the `just check-no-tokio` gate
    proves with `cargo tree -i tokio` that the shipped binding's dependency
    graph — native plus both WASI targets — and the CodSpeed bench harness stay
    tokio-free. `wasm32-wasip1-threads` runs the current-thread flavor; napi-rs
    async work there is served by the host loader's emnapi worker pool, not by
    a runtime Rolldown owns. Threadless `wasm32-wasip1` runs the same flavor
-   with no workers at all. Native and `wasm32-wasip1-threads` builds may still
-   opt out (`--no-default-features --features tokio-runtime`) to retain
-   napi-rs's Tokio executor and Rolldown's previous behavior. Threadless
-   `wasm32-wasip1` rejects that Tokio-only feature combination at compile
-   time: napi-rs can construct a current-thread runtime there but rejects
-   every built-in async submission, so such an artifact cannot run Rolldown.
+   with no workers at all. The former binding-level `tokio-runtime` opt-out
+   (`--no-default-features --features tokio-runtime`), which retained
+   napi-rs's Tokio executor on native and `wasm32-wasip1-threads` and was
+   rejected at compile time on threadless `wasm32-wasip1`, was removed: the
+   feature no longer exists, and a build without `async-runtime` is rejected
+   by a `compile_error!` in `rolldown_binding/src/lib.rs`. Only the
+   crate-level `tokio-runtime` facade arms in `rolldown_utils`/`rolldown`
+   remain, compile-checked via `cargo check --workspace --all-features`.
 
 ## Background
 

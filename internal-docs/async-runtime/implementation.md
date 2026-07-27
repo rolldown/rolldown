@@ -37,7 +37,8 @@ symbol named below is **provided by the crate**, not defined here.
 
 The shared runtime is selected by the `async-runtime` Cargo feature, which is
 the default and what every shipped artifact compiles. The previous Tokio
-executor survives only as the opt-in `tokio-runtime` fallback lane (§9, §10).
+executor was removed from the binding; §9 and §10 record the retired
+`tokio-runtime` lane.
 
 ---
 
@@ -61,9 +62,8 @@ crate's fallible `try_*` API.
   (`#[napi_derive::module_init]`) — the single backend-selection/registration
   point: builds `RuntimeOptions` from the resolved snapshot (§3), calls the
   crate's `configure(options)`, then `register_async_runtime(RolldownAsyncRuntime)`.
-  Compiled under the default `async-runtime` feature — every shipped target
-  includes it; only the opt-in `tokio-runtime` fallback lane omits it
-  (§9, §10).
+  Compiled under the default (and required) `async-runtime` feature — every
+  target includes it (§9, §10).
 - `crates/rolldown_binding/src/utils/mod.rs` — `spawn_boxed_future()` — the
   JS-entry helper that boxes a future and hands it to `env.spawn_future`
   (i.e. into `RolldownAsyncRuntime::spawn`); used by the bundler entry points
@@ -309,17 +309,15 @@ CurrentThread timer:
 
 ## 9. Build, targets, and the no-tokio gate
 
-- `crates/rolldown_binding/Cargo.toml` — the `async-runtime` / `tokio-runtime`
-  feature pair selects the runtime lane, and `async-runtime` is the
-  **default**. It enables `napi = { features = ["async-runtime"] }` — the
+- `crates/rolldown_binding/Cargo.toml` — `async-runtime` is the **default
+  and only** runtime feature: the binding-level `tokio-runtime` feature was
+  removed, and a build without `async-runtime` hits a `compile_error!` in
+  `lib.rs`. It enables `napi = { features = ["async-runtime"] }` — the
   pluggable-SPI (napi4) plus `AsyncTask` — but deliberately **not**
   `napi/async` (which would pull `tokio_rt`), so the shipped binding compiles
   the shared runtime on every target. The shipped/CI profile is
-  `--no-default-features --features async-runtime`; a combined profile
-  (default features plus `async-runtime`) is also supported because the
-  shared backend takes precedence over `tokio-runtime`. The opt-in
-  `tokio-runtime` fallback enables `napi/async` and restores the Tokio facade
-  arms (Principle 9; §10).
+  `--no-default-features --features async-runtime`, equivalent to the
+  default feature set (Principle 9; §10).
 - `crates/rolldown_utils/Cargo.toml` — `napi-async-runtime = { version =
 "0.2.0", git = …, rev = 9999dad3…, default-features = false }` (napi-free
   consumption), pulled in by the `async-runtime` feature; the `tokio-runtime`
@@ -334,35 +332,41 @@ CurrentThread timer:
   tokio-free via `cargo tree -i tokio` over four scopes:
   `-e no-dev -p rolldown_binding` (native), the same with
   `--target wasm32-wasip1` and `--target wasm32-wasip1-threads`, and
-  `-p bench`. The optional `tokio-runtime`-lane dependencies stay outside the
+  `-p bench`. The optional crate-level `tokio-runtime` facade dependencies
+  (`rolldown_utils`/`rolldown`) stay outside the
   default-feature graph, and the lone unconditional `tokio` entry (in
   `crates/rolldown` `[dev-dependencies]`) is excluded by `-e no-dev`.
 
 ---
 
-## 10. The `tokio-runtime` fallback lane and dedicated test builds
+## 10. The removed `tokio-runtime` fallback lane and dedicated test builds
 
-The opt-in lane restores the previous Tokio executor end to end (Principle
-9's compatibility path):
+The opt-in binding lane that restored the previous Tokio executor end to end
+(Principle 9's former compatibility path) was **removed**: the binding-level
+`tokio-runtime` feature no longer exists, and
+`.github/workflows/reusable-wasi.yml` pins both rejections (Cargo's
+unknown-feature error for `--features tokio-runtime`; the `lib.rs`
+`compile_error!` without `async-runtime`). For the historical record, that
+lane behaved as follows:
 
-- On a `tokio-runtime`-only build, `configureAsyncRuntime` throws a
-  feature-disabled error, `getAsyncRuntimeConfig` reports values derived from
+- On a `tokio-runtime`-only build, `configureAsyncRuntime` threw a
+  feature-disabled error, `getAsyncRuntimeConfig` reported values derived from
   the environment variables and built-in defaults, and
-  `getAsyncRuntimeMetrics` always returns zeroed counters.
-- Tokio resolution distinguishes all three target families so the pure
-  defaults table (§3) remains exhaustive and unit-testable. Native uses the
+  `getAsyncRuntimeMetrics` always returned zeroed counters.
+- Tokio resolution distinguished all three target families so the pure
+  defaults table (§3) remained exhaustive and unit-testable. Native used the
   bounded Rolldown-built multi-thread runtime — worker threads at
   `physical * 3 / 2` and a dedicated 4-thread blocking pool instead of
   tokio's 512 — built by `lib.rs::init` from the same resolved snapshot the
   diagnostics reporters serve, with a checked worker+blocking capacity
-  addition. `wasm32-wasip1-threads` mirrors the generated loader's emnapi
-  pool. The table models threadless `wasm32-wasip1` as napi-rs's single
-  current-thread lane, but `lib.rs` rejects that Tokio-only feature
+  addition. `wasm32-wasip1-threads` mirrored the generated loader's emnapi
+  pool. The table modeled threadless `wasm32-wasip1` as napi-rs's single
+  current-thread lane, but `lib.rs` rejected that Tokio-only feature
   combination at compile time because napi-rs rejects every built-in async
-  task there; threadless artifacts must enable `async-runtime`.
-- Tokio builds skip the CurrentThread host bridges; the lease surface's real
-  machinery is compiled only for the Tokio-backed threaded-WASI artifact
-  (`cfg(all(target_family = "wasm", tokio_unstable))`, §12).
+  task there.
+- Tokio builds skipped the CurrentThread host bridges; the lease surface's
+  real machinery was compiled only for the Tokio-backed threaded-WASI
+  artifact (`cfg(all(target_family = "wasm", tokio_unstable))`, §12).
 
 Two test-only features harden the shared-runtime lane
 (`just build-rolldown-async-runtime` enables both; their exports are absent
@@ -512,11 +516,11 @@ Current threaded-WASI artifacts run the shared CurrentThread runtime and need
 no JavaScript ownership protocol: the binding's lease surface
 (`acquireAsyncRuntime()`, `startAsyncRuntime`, `shutdownAsyncRuntime`) remains
 exported for loader compatibility but resolves no-op leases. The real
-machinery below is compiled only for the Tokio-backed threaded-WASI artifact
-(`cfg(all(target_family = "wasm", tokio_unstable))`) — the opt-in
-`tokio-runtime` lane and previously published legacy Tokio-era artifacts,
-which the package recognizes through the capability report (or the legacy
-shim's synthesized `backend: 'tokio'`, §7).
+machinery below exists only in previously published legacy Tokio-era
+artifacts — it compiled under
+`cfg(all(target_family = "wasm", tokio_unstable))` before the binding-level
+`tokio-runtime` lane was removed — which the package recognizes through the
+capability report (or the legacy shim's synthesized `backend: 'tokio'`, §7).
 
 On a Tokio-backed artifact, threaded WASI starts with zero Rolldown owners.
 Every public asynchronous
@@ -1107,8 +1111,8 @@ out the required re-measurement.
 
 - **No tokio in the shipped graph** — `Justfile::check-no-tokio`;
   `rolldown_binding/Cargo.toml`'s default `async-runtime` feature uses
-  `napi/async-runtime`, not `napi/async`; the `tokio-runtime` fallback lane is
-  opt-in only (Principle 9).
+  `napi/async-runtime`, not `napi/async`; the binding has no `tokio-runtime`
+  feature at all (Principle 9).
 - **Shared runtime on every shipped target** — `install_async_runtime_backend`
   (`#[module_init]`, compiled under the default `async-runtime` feature).
 - **Single env read + frozen snapshot** — `RuntimeEnv::from_process` is the

@@ -18,20 +18,12 @@
 // already `FxBuildHasher` at every use site).
 #![allow(clippy::disallowed_types)]
 
-#[cfg(not(any(feature = "tokio-runtime", feature = "async-runtime")))]
+// The shared tokio-free scheduler is the only runtime; the binding-level Tokio
+// flavor was removed. The negative check in `.github/workflows/reusable-wasi.yml`
+// greps for this message, so keep them in sync.
+#[cfg(not(feature = "async-runtime"))]
 compile_error!(
-  "rolldown_binding requires at least one async runtime feature: enable `tokio-runtime` or `async-runtime`"
-);
-
-#[cfg(all(
-  target_family = "wasm",
-  target_os = "wasi",
-  not(rolldown_wasi_threads),
-  feature = "tokio-runtime",
-  not(feature = "async-runtime")
-))]
-compile_error!(
-  "wasm32-wasip1 requires Rolldown's `async-runtime` feature; built-in Tokio async tasks require wasm32-wasip1-threads"
+  "rolldown_binding requires the `async-runtime` feature: the shared tokio-free scheduler is the only runtime"
 );
 
 use napi_derive::napi;

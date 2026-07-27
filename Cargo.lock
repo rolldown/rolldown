@@ -1324,15 +1324,14 @@ dependencies = [
 
 [[package]]
 name = "napi"
-version = "3.12.0"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=9999dad3b6de72a1f3a89964cb93aea000a5b06e#9999dad3b6de72a1f3a89964cb93aea000a5b06e"
+version = "3.11.0"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=55421392cbaa24d4df69419e4c6d4958fbcb6a12#55421392cbaa24d4df69419e4c6d4958fbcb6a12"
 dependencies = [
  "anyhow",
  "bitflags",
  "ctor",
  "futures",
  "indexmap",
- "libc",
  "napi-build",
  "napi-sys",
  "nohash-hasher",
@@ -1345,7 +1344,8 @@ dependencies = [
 [[package]]
 name = "napi-async-runtime"
 version = "0.2.0"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=9999dad3b6de72a1f3a89964cb93aea000a5b06e#9999dad3b6de72a1f3a89964cb93aea000a5b06e"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5cb114343feaa2063dfe5ad79afbd7f5a2fea7e4721e971cbc96e4553bf34622"
 dependencies = [
  "arc-swap",
  "async-task",
@@ -1358,12 +1358,12 @@ dependencies = [
 [[package]]
 name = "napi-build"
 version = "2.3.2"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=9999dad3b6de72a1f3a89964cb93aea000a5b06e#9999dad3b6de72a1f3a89964cb93aea000a5b06e"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=55421392cbaa24d4df69419e4c6d4958fbcb6a12#55421392cbaa24d4df69419e4c6d4958fbcb6a12"
 
 [[package]]
 name = "napi-derive"
-version = "3.7.0"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=9999dad3b6de72a1f3a89964cb93aea000a5b06e#9999dad3b6de72a1f3a89964cb93aea000a5b06e"
+version = "3.6.0"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=55421392cbaa24d4df69419e4c6d4958fbcb6a12#55421392cbaa24d4df69419e4c6d4958fbcb6a12"
 dependencies = [
  "convert_case",
  "ctor",
@@ -1375,8 +1375,8 @@ dependencies = [
 
 [[package]]
 name = "napi-derive-backend"
-version = "6.1.0"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=9999dad3b6de72a1f3a89964cb93aea000a5b06e#9999dad3b6de72a1f3a89964cb93aea000a5b06e"
+version = "6.0.0"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=55421392cbaa24d4df69419e4c6d4958fbcb6a12#55421392cbaa24d4df69419e4c6d4958fbcb6a12"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -1388,7 +1388,7 @@ dependencies = [
 [[package]]
 name = "napi-sys"
 version = "3.3.0"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=9999dad3b6de72a1f3a89964cb93aea000a5b06e#9999dad3b6de72a1f3a89964cb93aea000a5b06e"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=55421392cbaa24d4df69419e4c6d4958fbcb6a12#55421392cbaa24d4df69419e4c6d4958fbcb6a12"
 dependencies = [
  "libloading",
 ]

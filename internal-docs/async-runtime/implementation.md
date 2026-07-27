@@ -319,12 +319,12 @@ CurrentThread timer:
   `--no-default-features --features async-runtime`, equivalent to the
   default feature set (Principle 9; §10).
 - `crates/rolldown_utils/Cargo.toml` — `napi-async-runtime = { version =
-"0.2.0", git = …, rev = 9999dad3…, default-features = false }` (napi-free
+"0.2.0", default-features = false }` from crates.io (napi-free
   consumption), pulled in by the `async-runtime` feature; the `tokio-runtime`
   feature pulls `tokio` + `async-scoped` instead. The root `Cargo.toml`
   `[patch.crates-io]` redirects the single shared `napi` node graph-wide to
-  the same rev — one non-prerelease `3.12.0` node covers `rolldown_binding`
-  **and** every `oxc_*_napi`.
+  a napi-rs **main** rev (post-#3420) — one non-prerelease `3.11.0` node
+  covers `rolldown_binding` **and** every `oxc_*_napi`.
 - `crates/rolldown_binding/build.rs` — emits `cargo::rustc-cfg=rolldown_wasi_threads`
   only for `wasm32-wasip1-threads` (the two WASI targets are otherwise
   cfg-indistinguishable); consumed by `compiled_target()`.
@@ -462,7 +462,7 @@ browser-build, and packed-browser tests exercise this contract;
 than a target capability.
 
 This invariant depends on the workspace's napi-rs pin
-`9999dad3b6de72a1f3a89964cb93aea000a5b06e` in `Cargo.toml` (§9). Synchronous
+`55421392cbaa24d4df69419e4c6d4958fbcb6a12` in `Cargo.toml` (§9). Synchronous
 threadsafe-function exceptions use
 `Error::capture_unknown_with_status_and_diagnostics`, and Promise rejections use
 `Error::from_unknown_without_coercion`; both retain the exact JavaScript value

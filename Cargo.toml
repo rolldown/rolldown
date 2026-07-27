@@ -337,20 +337,22 @@ debug = "full"
 strip = "none"
 
 [patch.crates-io]
-# napi core is pinned to the reconciled integration branch (napi-rs main merged into
-# rolldown's rich async-runtime SPI + codegen_v1, plus the injector/ArcSwap +
-# drain_linger scheduler and the #3405/#3404/#3408/#3409 grafts). Versioned
-# non-prerelease (napi 3.12.0) so this single patch redirects the ONE shared napi node
-# for the WHOLE graph — rolldown_binding AND every oxc_*_napi / oxc_resolver_napi /
-# oxc_sourcemap — with no downstream napi-req widening (a prerelease would be excluded
-# from their ^3.x and would force per-crate patches). One rev also covers
-# napi-async-runtime pinned in rolldown_utils/Cargo.toml (consumed napi-free). The
-# published napi 3.12.0-alpha.* / napi-async-runtime 0.2.0-alpha.* on crates.io carry
-# the same content for standalone consumers.
+# napi core is pinned to upstream napi-rs main, which now carries everything the
+# former integration fork had: the shared async-runtime crate + rich SPI (#3393,
+# #3420 with the injector/ArcSwap + drain_linger scheduler), non-threaded WASI
+# support (#3353), and the #3405/#3404/#3408/#3409 fixes. crates.io napi 3.11.0
+# predates the WASI fixes, so the git pin stays until napi 3.12.0 is published;
+# main's napi is versioned non-prerelease (3.11.0), so this single patch redirects
+# the ONE shared napi node for the WHOLE graph — rolldown_binding AND every
+# oxc_*_napi / oxc_resolver_napi / oxc_sourcemap — with no downstream napi-req
+# widening. napi-async-runtime is no longer git-pinned: rolldown_utils consumes
+# the published 0.2.0 from crates.io (napi-free, default features off).
 # On WASI, napi-build at this rev links the emnapi archives shipped by the
 # released `emnapi` npm package (non-threads `libemnapi-basic-napi-rs.a`,
 # threads `libemnapi-napi-rs-mt.a`); no vendored archives are needed.
-napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e" }
-napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e", version = "=3.7.0" }
-napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e" }
-napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "9999dad3b6de72a1f3a89964cb93aea000a5b06e" }
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "55421392cbaa24d4df69419e4c6d4958fbcb6a12" }
+# `version` disambiguates: the napi-rs repo carries a second in-tree package
+# named `napi-derive` (0.0.0, test fixture), so the patch must select 3.6.0.
+napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "55421392cbaa24d4df69419e4c6d4958fbcb6a12", version = "=3.6.0" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "55421392cbaa24d4df69419e4c6d4958fbcb6a12" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "55421392cbaa24d4df69419e4c6d4958fbcb6a12" }

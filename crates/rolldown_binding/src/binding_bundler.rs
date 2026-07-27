@@ -193,8 +193,7 @@ impl BindingBundler {
     )?;
     // `nested` was created in this `env`; only its phantom resolved type changes
     // because JavaScript promise resolution assimilates it.
-    // SAFETY: `nested` was created in this `env`; only the phantom resolved type changes.
-    Ok(unsafe { PromiseRaw::new(env.raw(), nested.raw()) })
+    Ok(PromiseRaw::new(env.raw(), nested.raw()))
   }
 
   #[napi(skip_typescript)]

@@ -24,7 +24,13 @@ const tempDir = await mkdtemp(path.join(tmpdir(), 'rolldown-workerd-consumer-'))
 const bundledRuntimePackages = [
   '@emnapi/core',
   '@emnapi/runtime',
+  // Transitives of the bundled runtimes: the patched @napi-rs/wasm-runtime
+  // consumes bare @tybys/wasm-util, and @emnapi/core's dist imports bare
+  // @emnapi/wasi-threads. If either ever escapes the bundle, it would resolve
+  // from the (unpatched) registry.
+  '@emnapi/wasi-threads',
   '@napi-rs/wasm-runtime',
+  '@tybys/wasm-util',
   'buffer',
   'node:buffer',
 ];
@@ -128,7 +134,11 @@ function findBareRuntimeImports(code, sourceType) {
           node.arguments[0].value === specifier ||
           node.arguments[0].value.startsWith(`${specifier}/`),
       ) &&
-      ((node.callee?.type === 'Identifier' && node.callee.name === 'require') ||
+      // `__require` (optionally suffixed) is rolldown's own require-of-external
+      // interop helper in ESM output — the shape a real externalization
+      // regression of the CJS runtime files would produce.
+      ((node.callee?.type === 'Identifier' &&
+        (node.callee.name === 'require' || /^__require\d*$/.test(node.callee.name))) ||
         (node.callee?.type === 'MemberExpression' &&
           node.callee.object?.type === 'Identifier' &&
           node.callee.object.name === 'require' &&
@@ -165,6 +175,22 @@ assert.deepEqual(
   ),
   ['@emnapi/core', '@emnapi/runtime', '@napi-rs/wasm-runtime'],
   'runtime import scan must cover the export-from re-export forms',
+);
+assert.deepEqual(
+  findBareRuntimeImports(
+    '__require("@emnapi/core"); __require2("@napi-rs/wasm-runtime"); notrequire("@emnapi/runtime");',
+    'module',
+  ),
+  ['@emnapi/core', '@napi-rs/wasm-runtime'],
+  'runtime import scan must cover rolldown __require-of-external calls',
+);
+assert.deepEqual(
+  findBareRuntimeImports(
+    "import '@tybys/wasm-util'; import { WASIThreads } from '@emnapi/wasi-threads';",
+    'module',
+  ),
+  ['@emnapi/wasi-threads', '@tybys/wasm-util'],
+  'runtime import scan must cover the bundled runtime transitives',
 );
 
 try {

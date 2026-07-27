@@ -14,7 +14,7 @@ import type { OutputAsset, OutputChunk, RolldownOutput, SourceMap } from '../typ
 import { bindingifySourcemap } from '../types/sourcemap';
 import { type AssetSource, bindingAssetSource, transformAssetSource } from './asset-source';
 import { shouldEagerlyFreeOutputs } from './threadless-free';
-import { transformChunkModules } from './transform-rendered-chunk';
+import { snapshotChunkModules, transformChunkModules } from './transform-rendered-chunk';
 
 export function transformToRollupSourceMap(map: string): SourceMap {
   const parsed: Omit<SourceMap, 'toString' | 'toUrl'> = JSON.parse(map);
@@ -49,7 +49,15 @@ function transformToMutableRollupOutputChunk(
     fileName: bindingChunk.getFileName(),
     name: bindingChunk.getName(),
     get modules() {
-      return transformChunkModules(bindingChunk.getModules());
+      // Every getModules() call marshals fresh per-module native boxes, which
+      // only finalizers reclaim — never on the threadless flavor. Snapshot to
+      // plain data and release them immediately there (the proxy caches this
+      // map after the first read, and module edits are never sent back to
+      // Rust — collectChangedBundle always submits an empty modules map).
+      const bindingModules = bindingChunk.getModules();
+      return shouldEagerlyFreeOutputs()
+        ? snapshotChunkModules(bindingModules)
+        : transformChunkModules(bindingModules);
     },
     get imports() {
       return bindingChunk.getImports();

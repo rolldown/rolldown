@@ -94,7 +94,12 @@ export class OutputChunkImpl extends PlainObjectLike implements OutputChunk {
   __rolldown_external_memory_handle__(keepDataAlive?: boolean): ExternalMemoryStatus {
     if (keepDataAlive) {
       this.#evaluateAllLazyFields();
-      this.#snapshotModules();
+      // Threadless WASI only: on native the historical keepDataAlive shape
+      // (live-getter wrappers whose boxes are reclaimed by GC finalizers)
+      // keeps working and stays byte-identical for existing consumers.
+      if (shouldEagerlyFreeOutputs()) {
+        this.#snapshotModules();
+      }
     }
     return this.bindingChunk.dropInner();
   }
@@ -108,12 +113,10 @@ export class OutputChunkImpl extends PlainObjectLike implements OutputChunk {
 
   // The cached `modules` map holds live-getter wrappers whose every read calls
   // into a `BindingRenderedModule` box (its own native `Arc` clone, unaffected
-  // by this chunk's `dropInner()`). `keepDataAlive` promises JS-owned data, so
-  // replace each wrapper with a plain snapshot of its three fields. On the
-  // threadless-WASI flavor also release the boxes eagerly: engines like
-  // workerd never run the GC finalizers that would otherwise free them (and
-  // reads after the instance is disposed would throw). Native builds keep
-  // relying on finalizers for the boxes.
+  // by this chunk's `dropInner()`). On the threadless-WASI flavor the GC
+  // finalizers that would reclaim those boxes never run (and reads after the
+  // owning instance is disposed would throw), so replace each wrapper with a
+  // plain snapshot of its three fields and release the boxes eagerly.
   #snapshotModules(): void {
     const modules = this.modules;
     for (const key of Object.keys(modules)) {
@@ -125,7 +128,7 @@ export class OutputChunkImpl extends PlainObjectLike implements OutputChunk {
       };
     }
     const bindingModules = this.#bindingModules;
-    if (bindingModules !== undefined && shouldEagerlyFreeOutputs()) {
+    if (bindingModules !== undefined) {
       for (const box of bindingModules.values) {
         box.dropInner();
       }

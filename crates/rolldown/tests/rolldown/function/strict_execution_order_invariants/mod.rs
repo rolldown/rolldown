@@ -503,6 +503,12 @@ async fn late_order_wrapping_revalidates_output_file() {
   // entry's chunk, leaving one chunk; `restore_order_wrap_entry_facades` then revives `lib.js`'s
   // facade because a chunk can host only one entry's top-level trigger.
   //
+  // The fixture's `import()` takes a second argument on purpose. An options import is never
+  // rewritten, so its call site cannot carry the trigger and lowering must revive the facade —
+  // which is what makes the graph multi-chunk late, exactly the `output.file` re-validation this
+  // test pins. A one-argument `import()` here would collapse into the entry's chunk instead,
+  // leaving a single chunk and testing nothing.
+  //
   // `lib.js` pulls in a side-effectful `probe.js`, which keeps its load closure order-sensitive.
   // Without that the wrapper is skippable — the entry would never be wrapped, nothing would be
   // restored, and the graph would stay single-chunk, testing nothing.

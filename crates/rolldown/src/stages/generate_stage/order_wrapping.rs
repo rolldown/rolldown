@@ -439,8 +439,74 @@ impl GenerateStage<'_> {
       .filter(|module_idx| self.link_output.entries.contains_key(module_idx))
       .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
       .collect_vec();
+    if entries_to_restore.is_empty() {
+      return;
+    }
+
+    // Chunk of every live dynamic importer, per restore candidate; one pass over the
+    // module table serves all candidates.
+    let mut dynamic_importer_chunks: FxHashMap<ModuleIdx, Vec<Option<ChunkIdx>>> =
+      entries_to_restore.iter().map(|module_idx| (*module_idx, Vec::new())).collect();
+    for module in
+      self.link_output.module_table.modules.iter().filter_map(|module| module.as_normal())
+    {
+      let meta = &self.link_output.metas[module.idx];
+      if !meta.is_included {
+        continue;
+      }
+      // Walk statements rather than records: a record whose statement tree-shaking excluded is not
+      // a call site, and `DeadDynamicImport` only marks a pure import of a side-effect-free module,
+      // not statement exclusion. Same discipline as `is_included_dynamic_import_record` in
+      // `dynamic_already_loaded`.
+      for (stmt_info_idx, stmt_info) in
+        self.link_output.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt()
+      {
+        if !meta.stmt_info_included.has_bit(stmt_info_idx) {
+          continue;
+        }
+        for rec_idx in &stmt_info.import_records {
+          let rec = &module.import_records[*rec_idx];
+          if rec.kind == ImportKind::DynamicImport
+            && !rec.meta.contains(ImportRecordMeta::DeadDynamicImport)
+            && let Some(importee_idx) = rec.resolved_module
+            && let Some(importer_chunks) = dynamic_importer_chunks.get_mut(&importee_idx)
+          {
+            // `None` means "this call site cannot carry the trigger". A two-argument `import()`
+            // is never rewritten by the finalizer, so it keeps its original specifier and needs
+            // the facade file to exist at that stable path; recording it as chunkless makes the
+            // same-chunk check below reject the collapse, since the host chunk is always `Some`.
+            importer_chunks.push(
+              if rec.meta.contains(ImportRecordMeta::DynamicImportWithOptions) {
+                None
+              } else {
+                chunk_graph.module_to_chunk[module.idx]
+              },
+            );
+          }
+        }
+      }
+    }
 
     for entry_module_idx in entries_to_restore {
+      // When every live dynamic importer sits in the chunk that hosts the entry's
+      // implementation, the same-chunk collapse in `rewrite_dynamic_import_for_merged_entry`
+      // carries the trigger inline (`Promise.resolve().then(() => (init_x(), ns))`) without
+      // loading any file, so the eliminated facade stays eliminated. A cross-chunk dynamic
+      // importer still needs the facade: its trigger must run synchronously within the
+      // facade's module evaluation, not in a `.then` microtask after the host chunk settles
+      // (see `m4_dynamic_facade_race`). Emitted-chunk facades are always restored because an
+      // `emitFile` reference id must resolve to a real file.
+      //
+      // A two-argument `import()` breaks the collapse the same way: the finalizer's
+      // `try_rewrite_import_expression` bails on `expr.options.is_some()`, so the call site keeps
+      // its original specifier and still needs a real file there. The importer scan above records
+      // those call sites as `None`, which fails the same-chunk check and keeps the facade.
+      let entry_host_chunk = chunk_graph.module_to_chunk[entry_module_idx];
+      let collapse_carries_trigger = entry_host_chunk.is_some()
+        && dynamic_importer_chunks[&entry_module_idx]
+          .iter()
+          .all(|importer_chunk| *importer_chunk == entry_host_chunk);
+
       let facade_chunk_indices = chunk_graph
         .chunk_table
         .iter_enumerated()
@@ -449,6 +515,7 @@ impl GenerateStage<'_> {
             if module == entry_module_idx
               && chunk.modules.is_empty()
               && meta.intersects(ChunkMeta::DynamicImported | ChunkMeta::EmittedChunk)
+              && (meta.contains(ChunkMeta::EmittedChunk) || !collapse_carries_trigger)
               && matches!(
                 chunk_graph.post_chunk_optimization_operations.get(&chunk_idx),
                 Some(

@@ -78,6 +78,15 @@ bitflags::bitflags! {
     /// The import record is solely for re-export purposes, created by
     /// `export { .. } from '..'` or `export * as ns from '..'`
     const IsReExportOnly = 1 << 10;
+    /// The `import()` call has a second argument, e.g. `import('mod', { with: { type: 'json' } })`.
+    /// `try_rewrite_import_expression` returns early on `expr.options.is_some()`, so the specifier
+    /// rewrite that redirects a call site at a merged host chunk — and the `.then(...)` rewrite
+    /// that makes it carry an execution-order trigger — never run: the emitted code keeps the
+    /// specifier exactly as written. Passes that assume a dynamic import call site can be pointed
+    /// somewhere else must treat these records as unrewritable. Note this is specific to that
+    /// function; `try_rewrite_inline_dynamic_import_expr` runs first and does not check options,
+    /// so a dead or code-splitting-disabled import is still replaced wholesale.
+    const DynamicImportWithOptions = 1 << 11;
 
     const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();
   }

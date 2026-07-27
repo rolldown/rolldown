@@ -613,6 +613,9 @@ importers:
       '@rolldown/test-dev-server':
         specifier: workspace:*
         version: link:../../test-dev-server
+      '@rolldown/test-dual-format':
+        specifier: link:./package-fixtures/test-dual-format
+        version: link:package-fixtures/test-dual-format
       '@rolldown/test-side-effects-field':
         specifier: link:./package-fixtures/test-side-effects-field
         version: link:package-fixtures/test-side-effects-field

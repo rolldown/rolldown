@@ -87,6 +87,11 @@ impl BindingCallableBuiltinPlugin {
     importer: Option<String>,
     options: Option<BindingHookJsResolveIdOptions>,
   ) -> napi::Result<AsyncBlock<Option<BindingHookJsResolveIdOutput>>> {
+    let kind = options
+      .as_ref()
+      .and_then(|options| options.kind.as_deref())
+      .map_or(Ok(rolldown_common::ImportKind::Import), TryInto::try_into)
+      .map_err(|err| napi::Error::new(napi::Status::InvalidArg, err))?;
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
@@ -98,7 +103,7 @@ impl BindingCallableBuiltinPlugin {
             specifier: &id,
             importer: importer.as_deref(),
             is_entry: options.as_ref().is_some_and(|options| options.is_entry.unwrap_or_default()),
-            kind: rolldown_common::ImportKind::Import,
+            kind,
             custom: options.map(Into::into).unwrap_or_default(),
           },
         )
@@ -197,6 +202,18 @@ impl BindingCallableBuiltinPlugin {
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingHookJsResolveIdOptions {
   pub is_entry: Option<bool>,
+  // Refer to crates/rolldown_common/src/types/import_kind.rs
+  /// - `import-statement`: `import { foo } from './lib.js';`
+  /// - `dynamic-import`: `import('./lib.js')`
+  /// - `require-call`: `require('./lib.js')`
+  /// - `import-rule`: `@import 'bg-color.css'`
+  /// - `url-token`: `url('./icon.png')`
+  /// - `new-url`: `new URL('./worker.js', import.meta.url)`
+  /// - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
+  #[napi(
+    ts_type = "'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'"
+  )]
+  pub kind: Option<String>,
   pub scan: Option<bool>,
   pub custom: Option<BindingVitePluginCustom>,
 }

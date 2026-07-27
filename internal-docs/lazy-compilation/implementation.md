@@ -454,7 +454,7 @@ The flow is:
 
 ### Issue 11: `export * as ns from` Is Not `export * from`
 
-**Problem**: `export * as ns from './dep'` and `export * from './dep'` are the same oxc AST node (`ExportAllDeclaration`), distinguished only by whether `exported` is set. The HMR finalizer ignored that field and rendered both as a star re-export — `__reExport(__rolldown_exports__, import_dep)` — so the re-exporting module's namespace object never carried `ns`, and every consumer read `undefined`. Only the module wrappers were affected (lazy chunks and HMR patches); the scope-hoisted build resolves the same source correctly, which is why the bug appeared only under `experimental.devMode.lazy`.
+**Problem**: `export * as ns from './dep'` and `export * from './dep'` are the same oxc AST node (`ExportAllDeclaration`), distinguished only by whether `exported` is set. The HMR finalizer ignored that field and rendered both as a star re-export — `__reExport(__rolldown_exports__, import_dep)` — so the re-exporting module's namespace object never carried `ns`, and every consumer read `undefined`. Only the module wrappers were affected (lazy chunks and HMR patches); the scope-hoisted build resolves the same source correctly.
 
 **Solution**: When `exported` is present, bind the importee's `loadExports` result under that single name in the namespace object (`{ ns: () => import_dep }`, computed when the name is not a valid identifier) and emit no `__reExport`. Pinned by `crates/rolldown/tests/rolldown/topics/hmr/export_star_as/`.
 

@@ -322,15 +322,10 @@ export async function createWorkerdBundle(
 
   return {
     get closed(): boolean {
-      if (released) return true;
-      try {
-        // Not `bundle.closed`: that flips at close-request time. This getter
-        // promises "close() has completed", so report the native truth.
-        return bundle.__nativeBundlerClosed;
-      } catch {
-        // The instance was disposed out from under the bundle.
-        return true;
-      }
+      // Not `bundle.closed`: that flips at close-request time, and even the
+      // native bundler's own flag flips when the terminal close STARTS. This
+      // getter promises "close() has completed", so report actual settlement.
+      return released || bundle.__nativeCloseSettled;
     },
     async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
       try {
@@ -349,20 +344,20 @@ export async function createWorkerdBundle(
         // (e.g. when called from one of the bundle's own active hooks, on a
         // retryable native-close failure, or while another close is still in
         // flight). Keep the instance slot and keep reporting the bundle open
-        // so the caller can retry; release only when native cleanup actually
-        // completed (e.g. a throwing closeBundle hook). The public `closed`
-        // flag is unusable here: it flips at close-REQUEST time, before any
-        // native work, so probe the native truth instead.
-        let stillOpen = false;
-        try {
-          stillOpen = !bundle.__nativeBundlerClosed;
-        } catch {
-          // The instance was disposed out from under the bundle.
-        }
-        if (!stillOpen) release();
+        // so the caller can retry; release only when the native terminal
+        // close actually settled (e.g. a throwing closeBundle hook).
+        if (bundle.__nativeCloseSettled) release();
         throw stripAnsi ? stripAnsiFromError(error) : error;
       }
-      release();
+      // A fulfilled close() may be a re-entrant acknowledgement from inside a
+      // closeBundle hook, issued while the REAL close is still running its
+      // cleanup. Resolve early (so in-hook awaits cannot deadlock) but only
+      // release the instance slot once the native terminal close settles.
+      if (bundle.__nativeCloseSettled) {
+        release();
+      } else {
+        void bundle.__whenNativeCloseSettled().then(release);
+      }
     },
   };
 }

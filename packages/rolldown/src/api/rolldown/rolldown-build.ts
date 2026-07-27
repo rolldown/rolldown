@@ -88,6 +88,8 @@ export class RolldownBuild {
   #nativeEntryQueue: Promise<void> = Promise.resolve();
   #nativeClosePromise: Promise<Error[]> | undefined;
   #closeRequested = false;
+  #terminalCloseSettled = false;
+  #terminalCloseWaiters: { promise: Promise<void>; resolve: () => void } | undefined;
   #closeIdentity = createCloseIdentity('rolldown-build');
   #closeCallbackScope = new CloseCallbackScope(this.#closeIdentity);
   #closeCoordinator = new CloseCoordinator(
@@ -129,17 +131,43 @@ export class RolldownBuild {
   }
 
   /**
-   * Whether the NATIVE side of the bundle has completed its terminal close.
+   * Whether the NATIVE terminal close has actually SETTLED.
    *
-   * Unlike {@linkcode closed}, this stays `false` while a requested close is
-   * still in flight or has failed retryably — `closed` flips at request time,
-   * before any native work. Lifecycle managers (the workerd wrapper) probe
-   * this to decide whether native resources are truly released.
+   * Unlike {@linkcode closed} (which flips at close-request time) and the
+   * native bundler's own `closed` flag (which flips synchronously when the
+   * terminal close STARTS, before its cleanup future runs), this becomes true
+   * only once `closeTerminal()` resolved — i.e. native cleanup ran to its
+   * terminal outcome. Lifecycle managers (the workerd wrapper) drive resource
+   * release from this signal.
    *
    * @internal
    */
-  get __nativeBundlerClosed(): boolean {
-    return this.#bundler.closed;
+  get __nativeCloseSettled(): boolean {
+    return this.#terminalCloseSettled;
+  }
+
+  /**
+   * Resolves once the native terminal close settles (see
+   * {@linkcode __nativeCloseSettled}). Never rejects. Needed because a close()
+   * issued from inside an active closeBundle callback is acknowledged early,
+   * while the real close is still running.
+   *
+   * @internal
+   */
+  __whenNativeCloseSettled(): Promise<void> {
+    if (this.#terminalCloseSettled) return Promise.resolve();
+    this.#terminalCloseWaiters ??= (() => {
+      let resolve!: () => void;
+      const promise = new Promise<void>((r) => (resolve = r));
+      return { promise, resolve };
+    })();
+    return this.#terminalCloseWaiters.promise;
+  }
+
+  #markTerminalCloseSettled(): void {
+    this.#terminalCloseSettled = true;
+    this.#terminalCloseWaiters?.resolve();
+    this.#terminalCloseWaiters = undefined;
   }
 
   /**
@@ -223,7 +251,11 @@ export class RolldownBuild {
     this.#nativeClosePromise ??= (async () =>
       normalizeBindingResultErrors(await this.#bundler.closeTerminal()))();
     try {
-      terminalErrors.push(...(await this.#nativeClosePromise));
+      const settledTerminalErrors = await this.#nativeClosePromise;
+      // closeTerminal resolved: native cleanup reached its terminal outcome
+      // (hook errors, if any, come back as values in the array).
+      this.#markTerminalCloseSettled();
+      terminalErrors.push(...settledTerminalErrors);
       errors.push(...terminalErrors);
     } catch (error) {
       this.#nativeClosePromise = undefined;

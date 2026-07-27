@@ -363,6 +363,80 @@ describe('workerd build() against the built dist', () => {
   );
 
   distTest(
+    'a re-entrant close acknowledgement does not release the slot early',
+    async () => {
+      const { workerd, wasmModule } = await loadDistWorkerd();
+      const graph = makeVirtualGraph(3);
+      const instanceA = await workerd.createInstance(wasmModule);
+      const instanceB = await workerd.createInstance(wasmModule);
+      try {
+        let bundle!: Awaited<ReturnType<typeof workerd.createWorkerdBundle>>;
+        let inHook:
+          | { innerResolved: boolean; closedInHook: boolean; admission: string }
+          | undefined;
+        bundle = await workerd.createWorkerdBundle(instanceA, {
+          input: 'virt:entry.js',
+          plugins: [
+            graph.plugin(),
+            {
+              name: 'reentrant-close',
+              closeBundle: async () => {
+                // A close() from inside closeBundle is acknowledged early
+                // while the REAL close is still running its cleanup; the
+                // instance slot must not be released in that window.
+                const innerResolved = await bundle.close().then(
+                  () => true,
+                  () => false,
+                );
+                const closedInHook = bundle.closed;
+                const admission = await workerd
+                  .build({
+                    instance: instanceB,
+                    input: 'virt:entry.js',
+                    plugins: [graph.plugin()],
+                  })
+                  .then(
+                    () => 'admitted',
+                    (error: unknown) =>
+                      error instanceof Error &&
+                      /Another workerd Rolldown instance/.test(error.message)
+                        ? 'refused'
+                        : `unexpected: ${error}`,
+                  );
+                inHook = { innerResolved, closedInHook, admission };
+              },
+            },
+          ],
+        });
+        await bundle.generate({ format: 'esm' });
+        await bundle.close();
+        expect(inHook).toBeDefined();
+        expect(inHook!.innerResolved).toBe(true);
+        expect(inHook!.closedInHook).toBe(false);
+        expect(inHook!.admission).toBe('refused');
+        expect(bundle.closed).toBe(true);
+        // The slot released once the real close settled: dispose works and
+        // the other instance can build.
+        instanceA.dispose();
+        const result = await workerd.build({
+          instance: instanceB,
+          input: 'virt:entry.js',
+          plugins: [graph.plugin()],
+        });
+        expect(result.output[0].type).toBe('chunk');
+      } finally {
+        try {
+          instanceA.dispose();
+        } catch {
+          // Disposed in the happy path above.
+        }
+        instanceB.dispose();
+      }
+    },
+    180_000,
+  );
+
+  distTest(
     'a close() rejected while the bundle is open keeps the slot and allows retry',
     async () => {
       const { workerd, wasmModule } = await loadDistWorkerd();

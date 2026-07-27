@@ -7,6 +7,7 @@ import type {
   JsOutputChunk,
 } from '../binding.cjs';
 import type { MinimalPluginContext } from '../plugin/minimal-plugin-context';
+import { getRuntimeSupport } from '../runtime-support';
 import { OutputAssetImpl } from '../types/output-asset-impl';
 import type { OutputBundle } from '../types/output-bundle';
 import { OutputChunkImpl } from '../types/output-chunk-impl';
@@ -32,7 +33,31 @@ export function transformToRollupSourceMap(map: string): SourceMap {
   return obj;
 }
 
-function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputChunk {
+// Threadless WASI consumers (@rolldown/browser, the wasi-single dist) can run
+// in engines that rarely — for workerd, never — run the GC finalizers emnapi
+// relies on to release each build's native output payload: Wasm memory adds no
+// JS-heap pressure, so V8 sees no reason to collect. Every generate() would
+// then keep its chunk code, sourcemaps, and per-module rendered sources
+// resident forever, growing linear memory by roughly one output payload per
+// rebuild. For that flavor we copy all output fields to JavaScript eagerly and
+// drop the native side immediately. Native (and threaded-WASI) builds keep the
+// lazy fields: finalization works there and the eager copy costs performance.
+let eagerlyFreeOutputs: boolean | undefined;
+
+function shouldEagerlyFreeOutputs(): boolean {
+  if (eagerlyFreeOutputs === undefined) {
+    try {
+      eagerlyFreeOutputs = getRuntimeSupport().threadlessWasi;
+    } catch {
+      // A binding without a readable capability report keeps the historical
+      // lazy behavior.
+      eagerlyFreeOutputs = false;
+    }
+  }
+  return eagerlyFreeOutputs;
+}
+
+function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputChunkImpl {
   return new OutputChunkImpl(bindingChunk);
 }
 
@@ -92,7 +117,7 @@ function transformToMutableRollupOutputChunk(
   });
 }
 
-function transformToRollupOutputAsset(bindingAsset: BindingOutputAsset): OutputAsset {
+function transformToRollupOutputAsset(bindingAsset: BindingOutputAsset): OutputAssetImpl {
   return new OutputAssetImpl(bindingAsset);
 }
 
@@ -131,11 +156,19 @@ function transformToMutableRollupOutputAsset(
 
 export function transformToRollupOutput(output: BindingOutputs): RolldownOutput {
   const { chunks, assets } = output;
+  const chunkItems = chunks.map((chunk) => transformToRollupOutputChunk(chunk));
+  const assetItems = assets.map((asset) => transformToRollupOutputAsset(asset));
+  if (shouldEagerlyFreeOutputs()) {
+    for (const item of [...chunkItems, ...assetItems]) {
+      // keepDataAlive: materialize every lazy field into the JavaScript wrapper
+      // first, then release the native payload. Reads keep working; a later
+      // explicit freeExternalMemory() reports "already been freed".
+      item.__rolldown_external_memory_handle__(true);
+    }
+  }
+  const outputItems: (OutputChunk | OutputAsset)[] = [...chunkItems, ...assetItems];
   return {
-    output: [
-      ...chunks.map((chunk) => transformToRollupOutputChunk(chunk)),
-      ...assets.map((asset) => transformToRollupOutputAsset(asset)),
-    ],
+    output: outputItems,
   } as RolldownOutput;
 }
 

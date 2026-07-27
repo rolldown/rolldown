@@ -112,14 +112,6 @@ function init_dynamic_page() {
 	})))();
 }
 //#endregion
-export { init_reader as n, render as r, init_dynamic_page as t };
-
-```
-
-## dynamic-page2.js
-
-```js
-import { r as render, t as init_dynamic_page } from "./dynamic-page.js";
 init_dynamic_page();
 export { render };
 
@@ -128,19 +120,10 @@ export { render };
 ## main.js
 
 ```js
-import { n as loadPage, t as init_main } from "./main2.js";
-init_main();
-export { loadPage };
-
-```
-
-## main2.js
-
-```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region main.js
 function loadPage() {
-	return import("./dynamic-page2.js");
+	return import("./dynamic-page.js");
 }
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -148,7 +131,8 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { loadPage as n, init_main as t };
+init_main();
+export { loadPage };
 
 ```
 
@@ -273,14 +257,6 @@ function init_dynamic_page() {
 	})))();
 }
 //#endregion
-export { init_reader as n, render as r, init_dynamic_page as t };
-
-```
-
-### dynamic-page2.js
-
-```js
-import { r as render, t as init_dynamic_page } from "./dynamic-page.js";
 init_dynamic_page();
 export { render };
 
@@ -292,7 +268,7 @@ export { render };
 //#region main.js
 (globalThis.__events ??= []).push("main");
 function loadPage() {
-	return import("./dynamic-page2.js");
+	return import("./dynamic-page.js");
 }
 //#endregion
 export { loadPage };

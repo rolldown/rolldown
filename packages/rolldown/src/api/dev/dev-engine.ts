@@ -77,6 +77,7 @@ export class DevEngine {
           : BindingRebuildStrategy.Never
         : undefined,
       watch: devOptions.watch && {
+        enabled: devOptions.watch.enabled,
         skipWrite: devOptions.watch.skipWrite,
         usePolling: devOptions.watch.usePolling,
         pollInterval: devOptions.watch.pollInterval,

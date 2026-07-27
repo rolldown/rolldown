@@ -68,16 +68,6 @@ export { pv as n, init_eagerhaz as r, init_definer as t };
 ## main.js
 
 ```js
-import "./a.js";
-import "./b.js";
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-## main2.js
-
-```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { i as init_a_first, n as marker } from "./a.js";
 import { n as pv, r as init_eagerhaz, t as init_definer } from "./b.js";
@@ -103,7 +93,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_e_first as n, init_main as t };
+init_main();
 
 ```
 
@@ -184,16 +174,6 @@ export { pv as n, init_eagerhaz as r, init_definer as t };
 ### main.js
 
 ```js
-import "./a.js";
-import "./b.js";
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-### main2.js
-
-```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { i as init_a_first, n as marker } from "./a.js";
 import { n as pv, r as init_eagerhaz, t as init_definer } from "./b.js";
@@ -219,7 +199,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_e_first as n, init_main as t };
+init_main();
 
 ```
 

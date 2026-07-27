@@ -22,6 +22,7 @@ import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
 import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
 import { isPathFragment, unreachable } from '../utils/misc';
+import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { fsModule, type RolldownFsModule } from './fs';
 import type { CustomPluginOptions, ModuleOptions, Plugin, ResolvedId } from './index';
 import type { PluginContextData } from './plugin-context-data';
@@ -440,6 +441,21 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
   public parse(input: string, options?: ParserOptions | null): Program {
     return parseAst(input, options);
   }
+}
+
+export function createPluginContext(
+  args: BindingifyPluginArgs,
+  ctx: BindingPluginContext,
+): PluginContextImpl {
+  return new PluginContextImpl(
+    args.outputOptions,
+    ctx,
+    args.plugin,
+    args.pluginContextData,
+    args.onLog,
+    args.logLevel,
+    args.watchMode,
+  );
 }
 
 function _assert() {

@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region main.js
 await import("./page-b2.js");
-const pageA = await import("./page-a2.js");
+const pageA = await import("./page-a.js");
 console.log(pageA.commonA, pageA.commonB);
 //#endregion
 
@@ -17,6 +17,7 @@ console.log(pageA.commonA, pageA.commonB);
 ## page-a.js
 
 ```js
+import "./page-b.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
 //#region common-a.js
@@ -51,15 +52,6 @@ function init_page_a() {
 	})))();
 }
 //#endregion
-export { init_common_a as a, commonA as i, commonB as n, init_common_b as r, init_page_a as t };
-
-```
-
-## page-a2.js
-
-```js
-import { i as commonA, n as commonB, t as init_page_a } from "./page-a.js";
-import "./page-b.js";
 init_page_a();
 export { commonA, commonB };
 
@@ -110,26 +102,18 @@ export { __esmMin as t };
 ### main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-await init_main();
-
-```
-
-### main2.js
-
-```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region main.js
 var pageA;
 function init_main() {
 	return (init_main = __esmMin((async () => {
 		await import("./page-b2.js");
-		pageA = await import("./page-a2.js");
+		pageA = await import("./page-a.js");
 		console.log(pageA.commonA, pageA.commonB);
 	})))();
 }
 //#endregion
-export { init_main as t };
+await init_main();
 
 ```
 
@@ -171,15 +155,6 @@ function init_page_a() {
 	})))();
 }
 //#endregion
-export { init_common_a as a, commonA as i, commonB as n, init_common_b as r, init_page_a as t };
-
-```
-
-### page-a2.js
-
-```js
-import { i as commonA, n as commonB, t as init_page_a } from "./page-a.js";
-import "./page-b.js";
 init_page_a();
 export { commonA, commonB };
 

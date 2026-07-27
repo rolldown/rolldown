@@ -6,15 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## e0.js
 
 ```js
-import "./gb.js";
-import { t as init_e0 } from "./e02.js";
-init_e0();
-
-```
-
-## e02.js
-
-```js
 import { r as init_m13 } from "./gb.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region e0.js
@@ -27,7 +18,7 @@ function init_e0() {
 	})))();
 }
 //#endregion
-export { init_e0 as t };
+init_e0();
 
 ```
 
@@ -97,15 +88,6 @@ export { __esmMin as t };
 ### e0.js
 
 ```js
-import "./gb.js";
-import { t as init_e0 } from "./e02.js";
-init_e0();
-
-```
-
-### e02.js
-
-```js
 import { r as init_m13 } from "./gb.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region e0.js
@@ -118,7 +100,7 @@ function init_e0() {
 	})))();
 }
 //#endregion
-export { init_e0 as t };
+init_e0();
 
 ```
 

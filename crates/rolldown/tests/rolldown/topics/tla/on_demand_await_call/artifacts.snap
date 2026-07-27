@@ -27,16 +27,7 @@ export { value as normalLibValue, value$1 as tlaLibValue };
 ### main.js
 
 ```js
-import { a as value, r as value$1, t as init_main } from "./main2.js";
-await init_main();
-export { value as normalLibValue, value$1 as tlaLibValue };
-
-```
-
-### main2.js
-
-```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region normal-dep.js
 var value$3;
 function init_normal_dep() {
@@ -46,28 +37,28 @@ function init_normal_dep() {
 }
 //#endregion
 //#region normal-lib.js
-var value$2;
+var value;
 function init_normal_lib() {
 	return (init_normal_lib = __esmMin((() => {
 		init_normal_dep();
-		value$2 = value$3 + "+normal-lib";
+		value = value$3 + "+normal-lib";
 	})))();
 }
 //#endregion
 //#region tla-dep.js
-var value$1;
+var value$2;
 function init_tla_dep() {
 	return (init_tla_dep = __esmMin((async () => {
-		value$1 = await Promise.resolve("tla-dep");
+		value$2 = await Promise.resolve("tla-dep");
 	})))();
 }
 //#endregion
 //#region tla-lib.js
-var value;
+var value$1;
 function init_tla_lib() {
 	return (init_tla_lib = __esmMin((async () => {
 		await init_tla_dep();
-		value = value$1 + "+tla-lib";
+		value$1 = value$2 + "+tla-lib";
 	})))();
 }
 //#endregion
@@ -79,15 +70,8 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { value$2 as a, init_normal_lib as i, init_tla_lib as n, value as r, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+await init_main();
+export { value as normalLibValue, value$1 as tlaLibValue };
 
 ```
 

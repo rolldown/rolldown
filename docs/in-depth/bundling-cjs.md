@@ -143,6 +143,9 @@ If it matches one of the conditions below, the `default` import is the `module.e
 - The closest `package.json` for the importer has a `type` field set to `module`
 - (When it's a dynamic import) The closest `package.json` for the importer has a `type` field set to `commonjs`
 - The `module.exports.__esModule` value of the importee CJS module is not set to `true`
+- The `module.exports` value of the importee CJS module has no own `default` property
+
+The last condition handles CJS modules that set `__esModule` without actually shipping a `default` export (for example tslib's UMD build). Without it, the `default` import would be `undefined`. `@rollup/plugin-commonjs` handles this case with the same fallback.
 
 :::: details Behavior in details
 

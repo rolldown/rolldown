@@ -29,6 +29,19 @@ use super::{
   code_splitting::IndexSplittingInfo,
 };
 
+/// Which hosts [`GenerateStage::try_merge_runtime_chunk`] may fold the runtime chunk into.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum RuntimeMergeCascade {
+  /// The full host cascade: sole consumer, then bitset hosts, then a consumer dominator.
+  Full,
+  /// Only a sole consumer. The post-order-lowering fold uses this: any other host creates or
+  /// reorders chunk-evaluation edges the order analysis never modeled — a dominator merge turns
+  /// transitive reachability into a direct import whose exec-order sort position can hoist the
+  /// host past sibling imports, and a bitset host can gain a brand-new consumer edge — while a
+  /// sole-consumer merge only removes that consumer's edge to the runtime-only chunk.
+  SingleConsumerOnly,
+}
+
 struct FacadeChunkElimination {
   reason: FacadeChunkEliminationReason,
   entry_module_idx: ModuleIdx,
@@ -1173,7 +1186,11 @@ impl GenerateStage<'_> {
       chunk_graph,
       input_base,
     );
-    self.try_merge_runtime_chunk(chunk_graph, Some(&runtime_dependent_chunks));
+    self.try_merge_runtime_chunk(
+      chunk_graph,
+      Some(&runtime_dependent_chunks),
+      RuntimeMergeCascade::Full,
+    );
   }
 
   /// Merge the standalone runtime chunk into a safe existing host. Prefer a
@@ -1183,6 +1200,7 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &mut ChunkGraph,
     additional_runtime_consumers: Option<&FxHashSet<ChunkIdx>>,
+    cascade: RuntimeMergeCascade,
   ) {
     let runtime_module_idx = self.link_output.runtime.id();
     let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_module_idx] else {
@@ -1212,46 +1230,49 @@ impl GenerateStage<'_> {
       runtime_module_idx,
       additional_runtime_consumers,
     );
-    let Some(target_chunk_idx) = self
-      .find_single_runtime_consumer(&consumer_chunks)
-      .or_else(|| {
-        self.find_single_runtime_bitset_host(
-          chunk_graph,
-          runtime_chunk_idx,
-          &runtime_chunk_bits,
-          &consumer_chunks,
-          module_table,
-        )
-      })
-      .or_else(|| {
-        self.find_runtime_bitset_host(
-          chunk_graph,
-          runtime_chunk_idx,
-          &runtime_chunk_bits,
-          &consumer_chunks,
-          module_table,
-        )
-      })
-      .or_else(|| {
-        Self::find_consumer_dominator(&consumer_chunks, chunk_graph, module_table).filter(
-          |&target_chunk_idx| {
-            Self::runtime_merge_target_is_allowed(chunk_graph, target_chunk_idx)
-              && self.runtime_target_is_tla_safe(chunk_graph, target_chunk_idx, &consumer_chunks)
-              && self.runtime_merge_preserves_target_signature(
-                chunk_graph,
-                target_chunk_idx,
-                &consumer_chunks,
-              )
-              && !Self::runtime_target_would_create_static_cycle(
-                target_chunk_idx,
-                &consumer_chunks,
-                chunk_graph,
-                module_table,
-              )
-          },
-        )
-      })
-    else {
+    let single_consumer = self.find_single_runtime_consumer(&consumer_chunks);
+    let target_chunk_idx = match cascade {
+      RuntimeMergeCascade::SingleConsumerOnly => single_consumer,
+      RuntimeMergeCascade::Full => single_consumer
+        .or_else(|| {
+          self.find_single_runtime_bitset_host(
+            chunk_graph,
+            runtime_chunk_idx,
+            &runtime_chunk_bits,
+            &consumer_chunks,
+            module_table,
+          )
+        })
+        .or_else(|| {
+          self.find_runtime_bitset_host(
+            chunk_graph,
+            runtime_chunk_idx,
+            &runtime_chunk_bits,
+            &consumer_chunks,
+            module_table,
+          )
+        })
+        .or_else(|| {
+          Self::find_consumer_dominator(&consumer_chunks, chunk_graph, module_table).filter(
+            |&target_chunk_idx| {
+              Self::runtime_merge_target_is_allowed(chunk_graph, target_chunk_idx)
+                && self.runtime_target_is_tla_safe(chunk_graph, target_chunk_idx, &consumer_chunks)
+                && self.runtime_merge_preserves_target_signature(
+                  chunk_graph,
+                  target_chunk_idx,
+                  &consumer_chunks,
+                )
+                && !Self::runtime_target_would_create_static_cycle(
+                  target_chunk_idx,
+                  &consumer_chunks,
+                  chunk_graph,
+                  module_table,
+                )
+            },
+          )
+        }),
+    };
+    let Some(target_chunk_idx) = target_chunk_idx else {
       return;
     };
     if target_chunk_idx == runtime_chunk_idx {
@@ -1267,7 +1288,13 @@ impl GenerateStage<'_> {
     );
     let target_chunk = &mut chunk_graph.chunk_table[target_chunk_idx];
     target_chunk.depended_runtime_helper.insert(runtime_chunk_helpers);
-    target_chunk.bits.union(&runtime_chunk_bits);
+    // A sole-consumer host already has exact bits: the runtime becomes internal to it, so nobody
+    // else loads it through this chunk. The post-order-lowering standalone runtime chunk carries
+    // synthetic all-live-union bits (minted as a universal source), and folding those in would
+    // widen the host's bits — visible through bits-derived chunk names.
+    if matches!(cascade, RuntimeMergeCascade::Full) {
+      target_chunk.bits.union(&runtime_chunk_bits);
+    }
     chunk_graph
       .post_chunk_optimization_operations
       .insert(runtime_chunk_idx, PostChunkOptimizationOperation::Removed);

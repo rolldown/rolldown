@@ -6,16 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { n as result, t as init_main } from "./main2.js";
-init_main();
-export { result };
-
-```
-
-## main2.js
-
-```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region b.js
 function getB() {
 	return getA ? "b" : "unreachable";
@@ -49,15 +40,8 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { result as n, init_main as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
+init_main();
+export { result };
 
 ```
 

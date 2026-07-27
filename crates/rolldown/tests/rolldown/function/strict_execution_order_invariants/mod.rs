@@ -497,20 +497,25 @@ async fn duplicate_emitted_entries_keep_order_wrapper_facades() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn late_order_wrapping_revalidates_output_file() {
-  let fixture_dir = format!("{FIXTURE_ROOT}/../experimental/strict_execution_order/issue_4782");
+  // `output.file` is first validated against the provisional chunk graph, so the shape that
+  // exercises the *re*-validation has to be single-chunk then and multi-chunk only after order
+  // lowering. Here the chunk optimizer merges the dynamically imported `lib.js` into the user
+  // entry's chunk, leaving one chunk; `restore_order_wrap_entry_facades` then revives `lib.js`'s
+  // facade because a chunk can host only one entry's top-level trigger.
+  //
+  // `lib.js` pulls in a side-effectful `probe.js`, which keeps its load closure order-sensitive.
+  // Without that the wrapper is skippable — the entry would never be wrapped, nothing would be
+  // restored, and the graph would stay single-chunk, testing nothing.
+  let fixture_dir = format!("{FIXTURE_ROOT}/late_split_revalidates_output_file");
   let mut bundler = Bundler::new(BundlerOptions {
     input: Some(vec![InputItem {
-      name: Some("main".to_string()),
-      import: "./main.js".to_string(),
+      name: Some("entry".to_string()),
+      import: "./entry.js".to_string(),
     }]),
     cwd: Some(fixture_dir.into()),
     file: Some("bundle.js".to_string()),
     format: Some(OutputFormat::Esm),
     strict_execution_order: Some(true),
-    experimental: Some(rolldown_common::ExperimentalOptions {
-      on_demand_wrapping: Some(true),
-      ..Default::default()
-    }),
     ..Default::default()
   })
   .expect("failed to create bundler");

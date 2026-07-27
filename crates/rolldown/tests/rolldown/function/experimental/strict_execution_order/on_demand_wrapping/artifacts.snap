@@ -28,14 +28,6 @@ export { require_dynamic as t };
 ## main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-## main2.js
-
-```js
 import { t as require_dynamic } from "./dynamic2.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { strictEqual } from "node:assert";
@@ -75,7 +67,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as t };
+init_main();
 
 ```
 
@@ -116,14 +108,6 @@ export { require_dynamic as t };
 ### main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-### main2.js
-
-```js
 import { t as require_dynamic } from "./dynamic2.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { strictEqual } from "node:assert";
@@ -163,7 +147,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as t };
+init_main();
 
 ```
 

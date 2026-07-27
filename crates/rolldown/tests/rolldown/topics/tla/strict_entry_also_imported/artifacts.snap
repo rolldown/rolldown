@@ -48,7 +48,17 @@ export { value };
 ### b.js
 
 ```js
-import { n as init_entry_b, t as combined } from "./entry-b.js";
+import { n as value, t as init_entry_a } from "./entry-a.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region entry-b.js
+var combined;
+function init_entry_b() {
+	return (init_entry_b = __esmMin((async () => {
+		await init_entry_a();
+		combined = `b:${value}`;
+	})))();
+}
+//#endregion
 await init_entry_b();
 export { combined };
 
@@ -67,24 +77,6 @@ function init_entry_a() {
 }
 //#endregion
 export { value as n, init_entry_a as t };
-
-```
-
-### entry-b.js
-
-```js
-import { n as value, t as init_entry_a } from "./entry-a.js";
-import { t as __esmMin } from "./rolldown-runtime.js";
-//#region entry-b.js
-var combined;
-function init_entry_b() {
-	return (init_entry_b = __esmMin((async () => {
-		await init_entry_a();
-		combined = `b:${value}`;
-	})))();
-}
-//#endregion
-export { init_entry_b as n, combined as t };
 
 ```
 

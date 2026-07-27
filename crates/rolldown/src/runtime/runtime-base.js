@@ -61,7 +61,8 @@ export var __reExport = (target, mod, secondTarget) => (
 export var __toESM = (mod, isNodeMode, target) => (
   (target = mod != null ? __create(__getProtoOf(mod)) : {}),
   __copyProps(
-    isNodeMode || !mod || !mod.__esModule
+    // `__esModule` alone is not enough: the module must own a `default` (#10360).
+    isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, 'default')
       ? __defProp(target, 'default', { value: mod, enumerable: true })
       : target,
     mod,

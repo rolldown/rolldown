@@ -29,15 +29,7 @@ console.log("main", fromLib, import_cjs.default.value);
 ### main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-### main2.js
-
-```js
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region cjs.cjs
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	console.log("cjs");
@@ -63,15 +55,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __toESM as r, __commonJSMin as t };
+init_main();
 
 ```
 

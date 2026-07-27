@@ -2041,6 +2041,7 @@ export interface BindingDevtoolsOptions {
 }
 
 export interface BindingDevWatchOptions {
+  enabled?: boolean
   skipWrite?: boolean
   usePolling?: boolean
   pollInterval?: number

@@ -1,4 +1,4 @@
-import { getRuntimeCapabilities } from 'rolldown/experimental';
+import { getRuntimeCapabilities, getRuntimeSupport } from 'rolldown/experimental';
 
 // The binding self-reports what it IS (backend / flavor / target) through
 // `getRuntimeCapabilities()`: compile-time facts plus the config snapshot
@@ -22,6 +22,14 @@ export const isSingleThread: boolean = !capabilities.threads;
 // in single-thread mode". Gates wasm-boundary-specific skips (watch and
 // symlink traversal); no CI env var is involved, the artifact identifies itself.
 export const isWasiTest: boolean = capabilities.wasi;
+
+// True only for the threadless WASI artifact ('wasi' target without threads),
+// which is neither `isWasiTest` alone (threaded WASI is a wasm build too) nor
+// `isSingleThread` alone (a native CurrentThread binding is threadless but not
+// wasm). This is the exact predicate the package uses for its eager-output-free
+// path (`src/utils/threadless-free.ts` reads the same `threadlessWasi` field),
+// so tests that assert the eager-free contract stay in lockstep with it.
+export const isThreadlessWasi: boolean = getRuntimeSupport(capabilities).threadlessWasi;
 
 // True for every current binding (the shared runtime is the only backend);
 // false only when the compat shim synthesized a legacy tokio-era report.

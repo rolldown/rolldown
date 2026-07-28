@@ -93,6 +93,32 @@ after the host chunk settles. The importing promise still resolves only after `i
 a microtask queued during host evaluation can observe the target before initialization. Both strict
 modes use this policy; `m4_dynamic_facade_race` pins it.
 
+## Thenable chunk namespaces
+
+`import()` resolves through the promise resolution procedure, so a chunk namespace that carries a
+callable `then` export is assimilated: the promise settles with whatever that `then` produces, and
+the call-site rewrite's extraction callback never receives the namespace. For a merged dynamic
+entry this would let a chunk-mate's export change what importing the target observes — impossible
+in source, where importing a module never exposes a sibling's exports.
+
+The defense splits by who owns the export name:
+
+- **Bundler-owned names are never `then`.** `deconflict_exported_names` reserves it before naming
+  internal exports — a source symbol named `then` deconflicts to `then$1` like any collision — and
+  the minified-name generator skips the literal `then` (it would otherwise appear at value
+  443,179). An `emitFile`-promised export keeps `then` only when `then` is the promised name
+  itself; #10500 tracks routing those through the predefined-names path, which removes that
+  carve-out.
+- **User-observable names cannot be renamed, so the collapse is refused instead**: an entry's own
+  public exports, `emitFile`-promised names, and whatever an `export * from` chain reaching an
+  external module supplies at runtime. `order_wrap_host_can_expose_then_export` guards the restore
+  path and the entry-facade decision guards the create path — see the entry-trigger facade bullet
+  above.
+
+Deliberately kept: a dynamic-import target's own `then` export. Native `import()` of the source
+module assimilates the same way, so renaming it would diverge from source semantics rather than
+preserve them.
+
 ## Tree-shaking parity across strict modes
 
 Late order lowering cannot make an excluded import binding or re-export live. The difficult case

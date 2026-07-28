@@ -1349,9 +1349,10 @@ impl GenerateStage<'_> {
           loop {
             named_index += 1;
             export_name = generate_minified_names(named_index).into();
-            // Unreachable in practice — base54 needs about 14M names before it produces a
-            // four-character `then` — but the generator is the only other source of internal
-            // export names, so make it impossible rather than improbable.
+            // Unreachable in practice — the generator first produces the four-character `then`
+            // at value 443,179, i.e. after ~443k internal exports in one chunk — but it is the
+            // only other source of internal export names, so make it impossible rather than
+            // improbable.
             if !used_names.contains(&export_name) && export_name != THENABLE_HAZARD_EXPORT_NAME {
               break;
             }
@@ -1393,7 +1394,8 @@ impl GenerateStage<'_> {
       let mut resolver =
         ConflictResolver::with_capacity(index_chunk_exported_symbols[chunk_id].len());
       // Names taken from source symbols can collide with `then`; reserving it up front deconflicts
-      // those to `then$1` like any other collision. Predefined names take the `lst` branch below,
+      // those to `then$1` like any other collision. See
+      // internal-docs/code-splitting/design.md ("Thenable chunk namespaces"). Predefined names take the `lst` branch below,
       // which re-reserves (a no-op) and emits them verbatim, so a public `then` still stays `then`.
       resolver.reserve(CompactStr::new_const(THENABLE_HAZARD_EXPORT_NAME));
       for (chunk_export, predefined_names) in index_chunk_exported_symbols[chunk_id]

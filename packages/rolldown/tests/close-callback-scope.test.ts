@@ -1,6 +1,8 @@
 // @ts-nocheck This focused unit test intentionally reaches package source outside the test rootDir.
 import { AsyncLocalStorage } from 'node:async_hooks';
 import path from 'node:path';
+import { rolldown } from 'rolldown';
+import type { Plugin } from 'rolldown';
 import { rollup } from 'rollup';
 import * as ts from 'typescript';
 import { expect, test } from 'vitest';
@@ -959,6 +961,128 @@ test('plugin array flattening preserves depth-first left-to-right accessor order
   ]);
   expect(accesses).toEqual(['first', 'nested', 'second']);
 });
+
+// A plugin-option accessor runs while the build that reads it is already
+// registered as an active build, so `bundle.close()` must be acknowledged
+// reentrantly there. Returning a thenable DERIVED from that close is the
+// regression: unless the accessor itself runs inside the close-callback scope,
+// the derived thenable waits for a close that waits for this build.
+const PLUGIN_ACCESSOR_DEADLINE_MS = 5_000;
+const VIRTUAL_ENTRY_ID = '\0close-callback-scope-entry';
+
+function createVirtualEntryPlugin(): Plugin {
+  return {
+    name: 'close-callback-scope-virtual-entry',
+    resolveId(id) {
+      if (id === VIRTUAL_ENTRY_ID) return VIRTUAL_ENTRY_ID;
+    },
+    load(id) {
+      if (id === VIRTUAL_ENTRY_ID) return 'export const value = 1;';
+    },
+  };
+}
+
+function settleWithinDeadline<T>(operation: Promise<T>, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} did not settle within ${PLUGIN_ACCESSOR_DEADLINE_MS}ms`)),
+      PLUGIN_ACCESSOR_DEADLINE_MS,
+    );
+  });
+  return Promise.race([operation, deadline]).finally(() => clearTimeout(timer));
+}
+
+test(
+  'output plugin option accessors closing the bundle do not deadlock generate',
+  { timeout: PLUGIN_ACCESSOR_DEADLINE_MS * 3 },
+  async ({ onTestFinished }) => {
+    const bundle = await rolldown({
+      input: VIRTUAL_ENTRY_ID,
+      plugins: [createVirtualEntryPlugin()],
+    });
+    onTestFinished(() => settleWithinDeadline(bundle.close(), 'close()').catch(() => {}));
+
+    let accessorCloses = 0;
+    const outputOptions = Object.defineProperty({}, 'plugins', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        accessorCloses += 1;
+        return bundle.close().then(() => []);
+      },
+    });
+
+    const output = await settleWithinDeadline(bundle.generate(outputOptions), 'generate()');
+
+    expect(accessorCloses).toBeGreaterThan(0);
+    expect(output.output[0].code).toContain('const value = 1');
+  },
+);
+
+test(
+  'output plugin array index accessors closing the bundle do not deadlock generate',
+  { timeout: PLUGIN_ACCESSOR_DEADLINE_MS * 3 },
+  async ({ onTestFinished }) => {
+    const bundle = await rolldown({
+      input: VIRTUAL_ENTRY_ID,
+      plugins: [createVirtualEntryPlugin()],
+    });
+    onTestFinished(() => settleWithinDeadline(bundle.close(), 'close()').catch(() => {}));
+
+    let accessorCloses = 0;
+    const outputPlugins = Object.defineProperties([], {
+      0: {
+        configurable: true,
+        enumerable: true,
+        get() {
+          accessorCloses += 1;
+          return bundle.close().then(() => ({ name: 'deferred-output-plugin' }));
+        },
+      },
+      length: { value: 1 },
+    });
+
+    const output = await settleWithinDeadline(
+      bundle.generate({ plugins: outputPlugins }),
+      'generate()',
+    );
+
+    expect(accessorCloses).toBeGreaterThan(0);
+    expect(output.output[0].code).toContain('const value = 1');
+  },
+);
+
+test(
+  'input plugin array index accessors closing the bundle do not deadlock generate',
+  { timeout: PLUGIN_ACCESSOR_DEADLINE_MS * 3 },
+  async ({ onTestFinished }) => {
+    const entryPlugin = createVirtualEntryPlugin();
+    let bundle: Awaited<ReturnType<typeof rolldown>> | undefined;
+    let accessorCloses = 0;
+    const inputPlugins = Object.defineProperties([], {
+      0: {
+        configurable: true,
+        enumerable: true,
+        get() {
+          // `rolldown()` reads this accessor before the bundle exists.
+          if (!bundle) return entryPlugin;
+          accessorCloses += 1;
+          return bundle.close().then(() => entryPlugin);
+        },
+      },
+      length: { value: 1 },
+    });
+
+    bundle = await rolldown({ input: VIRTUAL_ENTRY_ID, plugins: inputPlugins });
+    onTestFinished(() => settleWithinDeadline(bundle!.close(), 'close()').catch(() => {}));
+
+    const output = await settleWithinDeadline(bundle.generate({}), 'generate()');
+
+    expect(accessorCloses).toBeGreaterThan(0);
+    expect(output.output[0].code).toContain('const value = 1');
+  },
+);
 
 let browserCloseCallbackScopePromise: Promise<typeof CloseCallbackScope> | undefined;
 let browserCloseCallbackModuleIndex = 0;

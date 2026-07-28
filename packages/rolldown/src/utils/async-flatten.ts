@@ -36,7 +36,12 @@ export async function asyncFlatten<T>(
         );
       }),
     );
-    pending = boxed.flatMap(flattenArrays);
+    // Flattening runs after an `await`, so the array traps it invokes (`length`,
+    // `in`, and the index getters) are user callbacks that native close can end
+    // up waiting on. Keep them inside the close-callback scope so a
+    // `bundle.close()` issued from one of them is acknowledged reentrantly
+    // instead of closing a dependency cycle with the build that awaits it.
+    pending = runSynchronousCallback(() => boxed.flatMap(flattenArrays));
     if (!requiresAnotherPass) return pending.map(({ value }) => value);
   }
 }

@@ -41,9 +41,35 @@ export async function createBundlerOptions(
   configWatchHooks: boolean = watchMode,
   runBuildCallback?: BuildCallbackRunner,
 ): Promise<BundlerOptionWithStopWorker> {
-  assertParallelPluginOptionsSupported(inputOptions.plugins, outputOptions.plugins);
-  const inputPlugins = await normalizePluginOption(inputOptions.plugins, closeCallbackScope);
-  const outputPlugins = await normalizePluginOption(outputOptions.plugins, closeCallbackScope);
+  // A `plugins` accessor is user code that native close can end up waiting on,
+  // and every read below happens while a build is (or is about to be)
+  // registered as an active build. Reading inside the close-callback scope lets
+  // a `bundle.close()` issued from such an accessor be acknowledged
+  // reentrantly, so a thenable derived from that close still settles.
+  // `run()` assimilates a thenable RESULT, which would replace a user-supplied
+  // thenable plugin option, so only the accessor runs inside the scope and the
+  // raw value is handed to `normalizePluginOption` for assimilation.
+  const readPluginOption = <T>(read: () => T): T => {
+    if (!closeCallbackScope) return read();
+    let value!: T;
+    closeCallbackScope.run(() => {
+      value = read();
+    });
+    return value;
+  };
+
+  assertParallelPluginOptionsSupported(
+    readPluginOption(() => inputOptions.plugins),
+    readPluginOption(() => outputOptions.plugins),
+  );
+  const inputPlugins = await normalizePluginOption(
+    readPluginOption(() => inputOptions.plugins),
+    closeCallbackScope,
+  );
+  const outputPlugins = await normalizePluginOption(
+    readPluginOption(() => outputOptions.plugins),
+    closeCallbackScope,
+  );
 
   const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO;
   const inputObjectPlugins = getObjectPlugins(inputPlugins);
@@ -84,8 +110,11 @@ export async function createBundlerOptions(
       ? runBuildCallback(callOutputOptionsHook, 'outputOptions')
       : invokeOutputOptionsHook();
 
-  assertParallelPluginOptionsSupported(outputOptions.plugins);
-  const hookOutputPlugins = await normalizePluginOption(outputOptions.plugins, closeCallbackScope);
+  assertParallelPluginOptionsSupported(readPluginOption(() => outputOptions.plugins));
+  const hookOutputPlugins = await normalizePluginOption(
+    readPluginOption(() => outputOptions.plugins),
+    closeCallbackScope,
+  );
   const normalizedInputPlugins = normalizePlugins(inputPlugins, ANONYMOUS_PLUGIN_PREFIX);
   const normalizedOutputPlugins = normalizePlugins(
     hookOutputPlugins,

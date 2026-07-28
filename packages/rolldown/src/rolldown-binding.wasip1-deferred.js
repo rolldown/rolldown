@@ -2141,14 +2141,16 @@ async function __instantiate(
     context: __emnapiContext,
     asyncWorkPoolSize: 0,
     // The wasm links a "basic" emnapi archive (no C async-work /
-    // threadsafe-function implementations), so instantiation must provide
-    // the JavaScript implementations through the emnapi plugins. Harnesses
-    // that replace the import block with injected dependencies leave the
-    // plugin bindings undeclared; passing undefined lets the (patched)
-    // @napi-rs/wasm-runtime instantiateNapiModule default to the real
-    // plugins, matching emnapi v1 semantics where the implementations were
-    // always bundled.
-    plugins: typeof __emnapiAsyncWorkPlugin === 'undefined' ? undefined : [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
+    // threadsafe-function implementations), so instantiation must provide the
+    // JavaScript implementations through the emnapi plugins. @napi-rs/wasm-runtime
+    // exports them but never defaults them, so omitting them is what makes
+    // instantiation fail with a LinkError naming napi_create_threadsafe_function.
+    // The typeof guard is only for harnesses that replace the import block with
+    // injected dependencies and so leave the plugin bindings undeclared — a real
+    // named import can never be undefined, a missing export is a link-time error.
+    // Any such harness that instantiates a real basic-archive wasm has to inject
+    // the plugins itself; the empty fallback just avoids a ReferenceError.
+    plugins: typeof __emnapiAsyncWorkPlugin === 'undefined' ? [] : [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
     wasi: __wasi,
     overwriteImports(importObject) {
       importObject.env = {

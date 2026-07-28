@@ -46,7 +46,7 @@ const bundledRuntimePackages = [
 const expectedRegistryRuntimeDependencies = {
   '@emnapi/core': '2.0.0-alpha.3',
   '@emnapi/runtime': '2.0.0-alpha.3',
-  '@napi-rs/wasm-runtime': '^1.1.6',
+  '@napi-rs/wasm-runtime': '^1.2.0',
 };
 const forbiddenRegistryRuntimeDependencies = ['buffer', 'node:buffer'];
 

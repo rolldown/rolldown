@@ -4617,7 +4617,16 @@ globalThis.setImmediate = (callback, ...args) => {
 }
 
 try {
-  const [{ instantiateNapiModule, getDefaultContext, WASI }, { createContext }] =
+  const [
+    {
+      instantiateNapiModule,
+      getDefaultContext,
+      WASI,
+      emnapiAsyncWorkPlugin,
+      emnapiTSFNPlugin,
+    },
+    { createContext },
+  ] =
     await Promise.all([
       import(${JSON.stringify(wasmRuntimeUrl)}),
       import(${JSON.stringify(emnapiRuntimeUrl)}),
@@ -4625,10 +4634,16 @@ try {
   const source = await readFile(${JSON.stringify(fileURLToPath(deferredLoaderPath))}, 'utf8')
   const dependencyKey = '__rolldownManagedTsfnDisposalTest'
   let rawBinding
+  // Replacing the import block leaves the loader's plugin bindings undeclared,
+  // so the async-work/TSFN plugins have to be injected alongside the runtime.
+  // Without them the basic emnapi archive this wasm links fails to instantiate
+  // with a LinkError on napi_create_threadsafe_function.
   globalThis[dependencyKey] = {
     Buffer,
     createContext,
     getDefaultContext,
+    emnapiAsyncWorkPlugin,
+    emnapiTSFNPlugin,
     instantiateNapiModule: async (...args) => {
       const result = await instantiateNapiModule(...args)
       rawBinding = result.napiModule.exports
@@ -4644,6 +4659,8 @@ try {
   instantiateNapiModule: __emnapiInstantiateNapiModule,
   WASI: __WASI,
   createContext: __emnapiCreateContext,
+  emnapiAsyncWorkPlugin: __emnapiAsyncWorkPlugin,
+  emnapiTSFNPlugin: __emnapiTSFNPlugin,
   Buffer,
 } = globalThis[\${JSON.stringify(dependencyKey)}]\\n\`,
     )

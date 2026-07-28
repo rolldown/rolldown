@@ -52,7 +52,7 @@ catalog:
   '@emnapi/runtime': 2.0.0-alpha.3
   '@jridgewell/trace-mapping': ^0.3.31
   '@napi-rs/cli': 3.7.2
-  '@napi-rs/wasm-runtime': ^1.1.6
+  '@napi-rs/wasm-runtime': ^1.2.0
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
   '@oxc-project/runtime': '=0.142.0'
@@ -150,14 +150,10 @@ verifyDepsBeforeRun: install
 
 minimumReleaseAgeExclude:
   - '@napi-rs/cli@3.7.2'
-  - '@napi-rs/wasm-runtime@1.1.6'
-  - '@emnapi/core@1.11.2'
-  - '@emnapi/runtime@1.11.2'
-  - emnapi@1.11.2
-  - '@emnapi/core@2.0.0-alpha.3'
-  - '@emnapi/runtime@2.0.0-alpha.3'
+  - '@emnapi/core@1.11.2 || 2.0.0-alpha.3'
+  - '@emnapi/runtime@1.11.2 || 2.0.0-alpha.3'
+  - emnapi@1.11.2 || 2.0.0-alpha.3
   - '@emnapi/wasi-threads@2.0.1'
-  - emnapi@2.0.0-alpha.3
   - '@oxc-minify/*'
   - '@oxc-parser/*'
   - '@oxc-transform/*'
@@ -169,14 +165,17 @@ minimumReleaseAgeExclude:
   - vite-plus
   - vitepress-plugin-feedback-tracker@0.2.0-alpha.1
   - void
+  - '@napi-rs/wasm-runtime@1.2.0'
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false
 
-# The published @napi-rs/wasm-runtime@1.1.6 declares @emnapi/core / @emnapi/runtime
-# ^1.7.1 peers; napi-rs at ad23bdeb ships the same 1.1.6 runtime source with the
-# peers bumped to ^2.0.0-alpha.3 (patched below to add the @emnapi/core/plugins
-# re-exports). Allow the v2 resolution the unpublished bump would declare.
+# The catalog resolves @napi-rs/wasm-runtime to 1.2.0, which declares
+# @emnapi/core / @emnapi/runtime ^2.0.0-alpha.3 peers and needs no rule. But the
+# oxc packages (oxc-parser / oxc-transform / oxc-minify) still pull transitive
+# 1.1.6 copies, which declare ^1.7.1 peers, and the `emnapi` override above
+# forces those onto the v2 line. Keep allowing that resolution.
+# @napi-rs/cli@3.7.2 declares an @emnapi/runtime ^1.7.1 peer for the same reason.
 peerDependencyRules:
   allowedVersions:
     '@napi-rs/wasm-runtime>@emnapi/core': 2.0.0-alpha.3
@@ -185,15 +184,6 @@ peerDependencyRules:
     '@napi-rs/cli>@emnapi/runtime': 2.0.0-alpha.3
 
 patchedDependencies:
-  # TEMP: napi-rs at ad23bdeb ships this same 1.1.6 runtime source with the
-  # @emnapi/core/plugins re-exports (emnapiAsyncWorkPlugin / emnapiTSFNPlugin,
-  # required by the emnapi v2 plugin split) and createContext. Copy of that
-  # repo's runtime.cjs / runtime.js, plus a v1-compat default: when a caller
-  # passes no `plugins` option, instantiateNapiModule(Sync) supplies the
-  # async-work/TSFN plugins itself (emnapi v1 always bundled those
-  # implementations, so pre-v2 callers never passed plugins). Drop once a
-  # v2-ready @napi-rs/wasm-runtime is published.
-  '@napi-rs/wasm-runtime@1.1.6': patches/@napi-rs__wasm-runtime@1.1.6.patch
   '@napi-rs/cli@3.7.2': patches/@napi-rs__cli@3.7.2.patch
   # TEMP: vendors napi-rs#3353 (wasm32-wasip1 single-thread support incl. the
   # deferred workerd-safe loader) with per-flavor WASI artifact naming plus the

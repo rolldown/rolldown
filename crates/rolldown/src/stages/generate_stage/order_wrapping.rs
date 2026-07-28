@@ -7,9 +7,9 @@ use itertools::Itertools;
 use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta,
-  IndexModules, ModuleIdx, OutputFormat, PostChunkOptimizationOperation, RuntimeHelper,
-  StmtInfoIdx, SymbolRef, SymbolRefDb, UsedSymbolRefsBuilder, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, IndexModules, ModuleIdx, OutputFormat, PostChunkOptimizationOperation,
+  RuntimeHelper, StmtInfoIdx, SymbolRef, SymbolRefDb, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::StatementExt;
@@ -20,12 +20,22 @@ use super::{
   chunk_ext::{ChunkCreationReason, ChunkDebugExt},
   chunk_optimizer::RuntimeMergeCascade,
   order_analysis::{OrderAnalysis, OrderWrapPlan},
-  order_wrap_state::{OrderImportKey, OrderImportOverlay, OrderWrapState},
+  order_wrap_state::{
+    OrderImportKey, OrderImportOverlay, OrderWrapState, SimulatedFacadeNamespaceExport,
+  },
 };
 
 /// The one export name that makes a module namespace a thenable to the promise resolution
 /// procedure, and so unsafe to hand to a `import('./host.js').then(...)` rewrite.
 const THEN: &str = "then";
+
+#[derive(Clone, Copy)]
+struct LiveDynamicImporter {
+  module_idx: ModuleIdx,
+  /// `None` means that this call site cannot carry the trigger (currently a two-argument
+  /// `import()` whose source specifier is intentionally left untouched).
+  trigger_chunk: Option<ChunkIdx>,
+}
 
 pub(super) struct OrderLoweringInput<'a> {
   pub(super) plan: &'a OrderWrapPlan,
@@ -128,9 +138,15 @@ impl GenerateStage<'_> {
         return false;
       }
       let import_edges = self.entry_facade_import_edges(chunk_graph, used_symbol_refs, order_state);
-      if !self.create_order_wrap_entry_facades(chunk_graph, candidates, &import_edges) {
+      if !self.create_order_wrap_entry_facades(chunk_graph, candidates, &import_edges, order_state)
+      {
         return false;
       }
+      order_state.compute_runtime_symbol_closure(
+        &self.link_output.runtime,
+        &self.link_output.stmt_infos[self.link_output.runtime.id()],
+        &self.link_output.symbol_db,
+      );
       chunk_graph.sort_chunk_modules(self.link_output, self.options);
       self.renumber_live_chunks(chunk_graph);
       return true;
@@ -188,7 +204,17 @@ impl GenerateStage<'_> {
     let candidates = self.entry_facade_candidates(plan);
     if !candidates.is_empty() {
       let import_edges = self.entry_facade_import_edges(chunk_graph, used_symbol_refs, order_state);
-      self.create_order_wrap_entry_facades(chunk_graph, candidates, &import_edges);
+      self.create_order_wrap_entry_facades(chunk_graph, candidates, &import_edges, order_state);
+      // `create_order_wrap_entry_facades` may replace a newly-created dynamic facade with a
+      // call-site trigger. Its simulated namespace adds late runtime-helper demand after the
+      // initial closure above (`__exportAll`, plus `__reExport` when the finalizer will merge an
+      // external star), so close the dependency set once more before placement and final
+      // cross-chunk linking consume it.
+      order_state.compute_runtime_symbol_closure(
+        &self.link_output.runtime,
+        &self.link_output.stmt_infos[runtime_idx],
+        &self.link_output.symbol_db,
+      );
     }
     if fold_runtime_chunk {
       self.fold_runtime_chunk_after_order_lowering(chunk_graph, order_state);
@@ -287,6 +313,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     facade_candidates: Vec<ModuleIdx>,
     import_edges: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
+    order_state: &mut OrderWrapState,
   ) -> bool {
     if self.options.code_splitting.is_disabled() {
       return false;
@@ -362,6 +389,9 @@ impl GenerateStage<'_> {
     entries_to_split.sort_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order());
     entries_to_split.dedup();
 
+    let dynamic_importers =
+      self.live_dynamic_importers(chunk_graph, entries_to_split.iter().copied());
+
     let mut created = false;
     for entry_module_idx in entries_to_split {
       let Some(entry_chunk_idx) =
@@ -373,6 +403,65 @@ impl GenerateStage<'_> {
         chunk_graph.post_chunk_optimization_operations.get(&entry_chunk_idx),
         Some(PostChunkOptimizationOperation::Removed)
       ) {
+        continue;
+      }
+
+      let importer_sites = &dynamic_importers[&entry_module_idx];
+      let importer_chunks =
+        importer_sites.iter().map(|importer| importer.trigger_chunk).collect_vec();
+      let entry_meta = &self.link_output.metas[entry_module_idx];
+      let collapse_carries_trigger = order_state.esm_init_target(entry_module_idx, entry_meta).is_some()
+          && !entry_meta.is_tla_or_contains_tla_dependency
+          && !importer_sites.is_empty()
+          && importer_sites.iter().all(|importer| importer.trigger_chunk.is_some())
+          // A facade restored after chunk optimization is also an entry chunk, but its module
+          // lives in a different implementation chunk. Only collapse an entry chunk that still
+          // owns the dynamic entry implementation; otherwise this would merely turn the empty
+          // facade into an empty common chunk and leave the entry mapping pointing at it.
+          && chunk_graph.chunk_table[entry_chunk_idx].modules.contains(&entry_module_idx)
+          && matches!(
+            chunk_graph.chunk_table[entry_chunk_idx].kind,
+            ChunkKind::EntryPoint { meta, module, .. }
+              if module == entry_module_idx && meta == ChunkMeta::DynamicImported
+          )
+          // Entry-level external stars render on the facade chunk, with format-specific behavior
+          // that a module-local simulated namespace does not reproduce. ESM would lose its
+          // chunk-level `export *`; CJS-like formats would replace a deduplicated `Object.keys`
+          // merge with per-record `__reExport` calls (which also differ for primitive exports).
+          // The chunk fact includes direct and transitive star chains, so keep either shape.
+          && chunk_graph.chunk_table[entry_chunk_idx].entry_level_external_module_idx.is_empty()
+          && !self.order_wrap_host_can_expose_then_export(
+            chunk_graph,
+            entry_chunk_idx,
+            &importer_chunks,
+          );
+
+      if collapse_carries_trigger {
+        let entry_module = self.link_output.module_table[entry_module_idx]
+          .as_normal()
+          .expect("dynamic entry should be a normal module");
+        let namespace_exports = self.simulated_facade_namespace_exports(entry_module_idx);
+        let bits = chunk_graph.chunk_table[entry_chunk_idx].bits.clone();
+        let entry_chunk = &mut chunk_graph.chunk_table[entry_chunk_idx];
+        entry_chunk.kind = ChunkKind::Common;
+        entry_chunk.add_creation_reason(
+          ChunkCreationReason::CommonChunk { bits: &bits, link_output: self.link_output },
+          self.options,
+        );
+        chunk_graph
+          .common_chunk_exported_facade_chunk_namespace
+          .entry(entry_chunk_idx)
+          .or_default()
+          .insert(entry_module_idx);
+        order_state.insert_simulated_facade_namespace(
+          entry_module_idx,
+          entry_module.namespace_object_ref,
+          entry_chunk_idx,
+          RuntimeHelper::ExportAll,
+          namespace_exports,
+          importer_sites.iter().map(|importer| importer.module_idx),
+        );
+        created = true;
         continue;
       }
 
@@ -433,6 +522,77 @@ impl GenerateStage<'_> {
     created
   }
 
+  fn simulated_facade_namespace_exports(
+    &self,
+    entry_module_idx: ModuleIdx,
+  ) -> Vec<SimulatedFacadeNamespaceExport> {
+    self.link_output.metas[entry_module_idx]
+      .referenced_canonical_exports_symbols(
+        entry_module_idx,
+        EntryPointKind::DynamicImport,
+        &self.link_output.dynamic_import_exports_usage_map,
+        false,
+      )
+      .map(|(name, export)| {
+        let canonical_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
+        let is_inlinable_constant =
+          self.link_output.global_constant_symbol_map.get(&canonical_ref).is_some_and(|meta| {
+            !meta.commonjs_export
+              && (!self.options.optimization.is_inline_const_smart_mode() || meta.safe_to_inline)
+          });
+        SimulatedFacadeNamespaceExport {
+          name: name.clone(),
+          referenced_symbol: (!is_inlinable_constant).then_some(export.symbol_ref),
+        }
+      })
+      .collect()
+  }
+
+  /// Collect every live `import()` call site for the requested dynamic entries. Statement
+  /// inclusion is authoritative: a surviving import record in an excluded statement is not an
+  /// emitted call site and therefore cannot carry an entry trigger.
+  fn live_dynamic_importers(
+    &self,
+    chunk_graph: &ChunkGraph,
+    targets: impl IntoIterator<Item = ModuleIdx>,
+  ) -> FxHashMap<ModuleIdx, Vec<LiveDynamicImporter>> {
+    let mut importers: FxHashMap<ModuleIdx, Vec<LiveDynamicImporter>> =
+      targets.into_iter().map(|module_idx| (module_idx, Vec::new())).collect();
+    for module in
+      self.link_output.module_table.modules.iter().filter_map(|module| module.as_normal())
+    {
+      let meta = &self.link_output.metas[module.idx];
+      if !meta.is_included {
+        continue;
+      }
+      for (stmt_info_idx, stmt_info) in
+        self.link_output.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt()
+      {
+        if !meta.stmt_info_included.has_bit(stmt_info_idx) {
+          continue;
+        }
+        for rec_idx in &stmt_info.import_records {
+          let rec = &module.import_records[*rec_idx];
+          if rec.kind == ImportKind::DynamicImport
+            && !rec.meta.contains(ImportRecordMeta::DeadDynamicImport)
+            && let Some(importee_idx) = rec.resolved_module
+            && let Some(target_importers) = importers.get_mut(&importee_idx)
+          {
+            target_importers.push(LiveDynamicImporter {
+              module_idx: module.idx,
+              trigger_chunk: if rec.meta.contains(ImportRecordMeta::DynamicImportWithOptions) {
+                None
+              } else {
+                chunk_graph.module_to_chunk[module.idx]
+              },
+            });
+          }
+        }
+      }
+    }
+    importers
+  }
+
   fn restore_order_wrap_entry_facades(&self, chunk_graph: &mut ChunkGraph, plan: &OrderWrapPlan) {
     if self.options.code_splitting.is_disabled() {
       return;
@@ -447,49 +607,9 @@ impl GenerateStage<'_> {
       return;
     }
 
-    // Chunk of every live dynamic importer, per restore candidate; one pass over the
-    // module table serves all candidates.
-    let mut dynamic_importer_chunks: FxHashMap<ModuleIdx, Vec<Option<ChunkIdx>>> =
-      entries_to_restore.iter().map(|module_idx| (*module_idx, Vec::new())).collect();
-    for module in
-      self.link_output.module_table.modules.iter().filter_map(|module| module.as_normal())
-    {
-      let meta = &self.link_output.metas[module.idx];
-      if !meta.is_included {
-        continue;
-      }
-      // Walk statements rather than records: a record whose statement tree-shaking excluded is not
-      // a call site, and `DeadDynamicImport` only marks a pure import of a side-effect-free module,
-      // not statement exclusion. Same discipline as `is_included_dynamic_import_record` in
-      // `dynamic_already_loaded`.
-      for (stmt_info_idx, stmt_info) in
-        self.link_output.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt()
-      {
-        if !meta.stmt_info_included.has_bit(stmt_info_idx) {
-          continue;
-        }
-        for rec_idx in &stmt_info.import_records {
-          let rec = &module.import_records[*rec_idx];
-          if rec.kind == ImportKind::DynamicImport
-            && !rec.meta.contains(ImportRecordMeta::DeadDynamicImport)
-            && let Some(importee_idx) = rec.resolved_module
-            && let Some(importer_chunks) = dynamic_importer_chunks.get_mut(&importee_idx)
-          {
-            // `None` means "this call site cannot carry the trigger". A two-argument `import()`
-            // keeps the specifier the user wrote, so it can neither run the trigger nor point at
-            // the host chunk; recording it as chunkless makes the `all(Option::is_some)` check
-            // below reject the collapse and put the facade back at that name.
-            importer_chunks.push(
-              if rec.meta.contains(ImportRecordMeta::DynamicImportWithOptions) {
-                None
-              } else {
-                chunk_graph.module_to_chunk[module.idx]
-              },
-            );
-          }
-        }
-      }
-    }
+    // One statement-aware scan serves every restore candidate. See `live_dynamic_importers`.
+    let dynamic_importers =
+      self.live_dynamic_importers(chunk_graph, entries_to_restore.iter().copied());
 
     for entry_module_idx in entries_to_restore {
       // Every live importer is a dynamic one, so every entry path into this module is an `import()`
@@ -518,12 +638,14 @@ impl GenerateStage<'_> {
       //   it — a chunk-mate's export would change what `import()` of the target observes, which it
       //   cannot do in the source. `order_wrap_host_can_expose_then_export` detects that.
       let entry_host_chunk = chunk_graph.module_to_chunk[entry_module_idx];
-      let importer_chunks = &dynamic_importer_chunks[&entry_module_idx];
+      let importer_sites = &dynamic_importers[&entry_module_idx];
+      let importer_chunks =
+        importer_sites.iter().map(|importer| importer.trigger_chunk).collect_vec();
       let collapse_carries_trigger = entry_host_chunk.is_some()
-        && !importer_chunks.is_empty()
-        && importer_chunks.iter().all(std::option::Option::is_some)
+        && !importer_sites.is_empty()
+        && importer_sites.iter().all(|importer| importer.trigger_chunk.is_some())
         && !entry_host_chunk.is_some_and(|host_chunk_idx| {
-          self.order_wrap_host_can_expose_then_export(chunk_graph, host_chunk_idx, importer_chunks)
+          self.order_wrap_host_can_expose_then_export(chunk_graph, host_chunk_idx, &importer_chunks)
         });
 
       let facade_chunk_indices = chunk_graph

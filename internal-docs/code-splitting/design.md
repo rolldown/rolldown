@@ -55,6 +55,18 @@ These are the main places where strict output deliberately accepts extra wrapper
   the entry chunk. A dynamic import of the entry module itself must run its program, and a
   dead dynamic import lowers to an inert stub, so neither forces the split; any other surviving
   record counts as a possible load even if never executed.
+  A pure dynamic entry is the exception when every live `import()` call site can carry the trigger:
+  the implementation chunk becomes a common chunk and each call site rewrites to either
+  `Promise.resolve().then(() => (init_*(), namespace))` or
+  `import(host).then(n => (n.init_*(), n.namespace))`. This applies both to facades removed by the
+  chunk optimizer and to facades that strict lowering would otherwise create. It is rejected for a
+  previously restored empty facade, an emitted/user entry, a two-argument `import()`, a TLA-tainted
+  target, a cross-chunk host namespace that may expose callable `then`, or — on the create path — a
+  direct or transitive export-star chain that reaches an external module. Entry-level external
+  merges render on the facade chunk in every format, and the module-local simulated namespace does
+  not reproduce their format-specific behavior. The external-star guard is create-path-only: the
+  restore path instead relies on the chunk optimizer's simulated-namespace handling, whose
+  external-star preservation is handled separately.
 - **CJS namespace merge is skipped under strict** (`determine_safely_merge_cjs_ns`): merging
   moves the surviving require call to whichever statement stays included — an intra-body
   move no wrapping can repair. Per-importer call sites cost bytes; the wrapper memoizes.
@@ -65,16 +77,21 @@ These are the main places where strict output deliberately accepts extra wrapper
 
 Every site that can run a wrapped module, in one place:
 
-| Trigger                                                                    | Lives in                                          | Owner                                                                               |
-| -------------------------------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `init_*()` for an order-wrapped importee of a live statement               | importer body, statement position                 | finalizer via the shared init-target view                                           |
-| `init_*()` / `require_*()` obligations of removed statements               | importer body, removed statement's position       | `OrderImportOverlay` / transitive init targets                                      |
-| user or dynamic entry activation, unless the `import()` rewrite carries it | entry facade prologue                             | `create_order_wrap_entry_facades` / `restore_order_wrap_entry_facades`              |
-| merged dynamic entry activation with a live dynamic importer               | importer body, the rewritten `import()` call site | finalizer `rewrite_dynamic_import_for_merged_entry` via the shared init-target view |
-| interop `require_*()` of an eager importer                                 | importer body (its carrier)                       | flag-off interop machinery, order-analysis carrier rule                             |
+| Trigger                                                                           | Lives in                                                                                 | Owner                                                                               |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `init_*()` for an order-wrapped importee of a live statement                      | importer body, statement position                                                        | finalizer via the shared init-target view                                           |
+| `init_*()` / `require_*()` obligations of removed statements                      | importer body, removed statement's position                                              | `OrderImportOverlay` / transitive init targets                                      |
+| user or dynamic entry activation, unless every live `import()` rewrite carries it | entry chunk prologue (a facade only when other chunks can load the implementation chunk) | `create_order_wrap_entry_facades` / `restore_order_wrap_entry_facades`              |
+| collapsible dynamic entry activation                                              | importer body, the rewritten `import()` call site                                        | finalizer `rewrite_dynamic_import_for_merged_entry` via the shared init-target view |
+| interop `require_*()` of an eager importer                                        | importer body (its carrier)                                                              | flag-off interop machinery, order-analysis carrier rule                             |
 
 A trigger must never sit inline in a chunk body that other chunks can evaluate as a
 dependency; that is the facade rule's content.
+
+Moving a dynamic entry trigger to the promise continuation deliberately puts it one microtask
+after the host chunk settles. The importing promise still resolves only after `init_*()` runs, but
+a microtask queued during host evaluation can observe the target before initialization. Both strict
+modes use this policy; `m4_dynamic_facade_race` pins it.
 
 ## Tree-shaking parity across strict modes
 
@@ -93,6 +110,17 @@ member that the constant-inlining pass will replace is skipped using the same co
 inline mode as tree shaking. Module-global leaf or namespace liveness is deliberately insufficient,
 because another importer can make the same canonical symbol live without retaining it for this
 consumer.
+
+A namespace synthesized only to replace a collapsed dynamic-entry facade is not an opaque namespace
+consumer. Its getters are restricted to the export interface already retained by link-time
+`import()` consumers, and its synthetic statement references every non-inlined binding behind those
+getters so cross-chunk linking cannot leave a dangling getter after the entry chunk becomes common.
+The restriction is by export name, not merely canonical symbol: another consumer retaining the same
+binding under a different alias must not widen this dynamic-entry interface. If the module namespace
+also has a real semantic consumer, that complete semantic interface wins. Excluded re-export init
+routing otherwise continues to use the dynamic consumers' recorded paths. Treating the synthetic
+namespace as opaque would discard those paths and can skip a required leaf initializer in a
+re-export cycle (`retained_star_renamed_cycle`).
 
 ## Audit decisions
 

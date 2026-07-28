@@ -548,6 +548,42 @@ true` and calls `rebuild()`.
 - On error, sets `self.hmr_errored = true`.
 - Invokes the `on_hmr_updates` callback if configured.
 
+### Inside `compute_hmr_update_for_file_changes` (`hmr_stage.rs`)
+
+Per changed file:
+
+1. **Default affected set** — the file's own module, plus every module
+   that registered the file with `addWatchFile` (transform
+   dependencies), in a stable order: own module first, then
+   registrants sorted by stable id.
+2. **`hotUpdate` plugin chain** (dev-only) — plugins run in hook order;
+   each may replace the set. Module ids cross the hook
+   slash-normalized, in the same convention as `file`; returned ids
+   with native separators still round-trip. An empty return suppresses
+   this file's update. Ids the graph does not know are dropped. Lazy-compilation
+   proxies and runtime modules are hidden from the hook in both
+   directions. A hook error fails the whole batch: the update errors
+   and none of the batch's edits reach the graph. Unlike a failed
+   scan, nothing is queued in `pending_rescans`, so the lost edits
+   reach the graph only when a later change touches those files
+   again — the same contract as `watchChange`.
+3. **Delete handling** — a deleted module cannot be re-fetched; the
+   update starts from its importers instead.
+
+Then, across all files of the batch:
+
+4. **Failed-scan retry fold** — files queued by an earlier failed scan
+   are added before the empty early-return, so a suppressing hook
+   cannot block error recovery.
+5. **Unchanged-output suppression** — modules whose re-rendered output
+   is byte-identical to the pre-rebuild render are dropped from the
+   update. Two exemptions ship anyway: everything after an errored
+   build (recovery must reach clients stuck on the overlay), and
+   modules a `hotUpdate` hook explicitly returned (the change may live
+   outside the module's own code, so identical output proves nothing).
+6. **Refetch and patch** — one partial scan and cache merge, then the
+   per-client update-superset walk picks the factories to ship.
+
 ### `rebuild` (`bundling_task.rs:189-223`)
 
 - Locks the `Bundler`.

@@ -28,13 +28,20 @@ import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import type { TypeAssert } from '../types/assert';
 import type { CloseCallbackScope } from '../utils/close-callback-scope';
-import { bindingifyCloseWatcher, bindingifyWatchChange } from './bindingify-watch-hooks';
+import {
+  bindingifyCloseWatcher,
+  bindingifyHotUpdate,
+  bindingifyWatchChange,
+} from './bindingify-watch-hooks';
 import { extractHookUsage, HookUsageKind } from './generated/hook-usage';
 import type { Plugin, RolldownPlugin } from './index';
+import type { PluginWithInternalHooks } from './internal-hooks';
 import type { PluginContextData } from './plugin-context-data';
 
 export interface BindingifyPluginArgs {
-  plugin: Plugin;
+  // `PluginWithInternalHooks` rather than `Plugin` so the bindingify functions
+  // can read hidden hooks (see ./internal-hooks) without casting.
+  plugin: PluginWithInternalHooks;
   options: InputOptions;
   outputOptions: OutputOptions;
   pluginContextData: PluginContextData;
@@ -78,6 +85,7 @@ const BUILD_CALLBACK_HOOK_NAMES = [
   'intro',
   'outro',
   'watchChange',
+  'hotUpdate',
   'closeWatcher',
 ] as const satisfies readonly BindingPluginCallbackName[];
 
@@ -162,6 +170,8 @@ export function bindingifyPlugin(
 
   const { plugin: watchChange, meta: watchChangeMeta } = bindingifyWatchChange(args);
 
+  const { plugin: hotUpdate, meta: hotUpdateMeta } = bindingifyHotUpdate(args);
+
   const { plugin: closeWatcher, meta: closeWatcherMeta } = configWatchHooks
     ? bindingifyCloseWatcher(args)
     : {};
@@ -217,6 +227,8 @@ export function bindingifyPlugin(
     outroMeta,
     watchChange,
     watchChangeMeta,
+    hotUpdate,
+    hotUpdateMeta,
     closeWatcher,
     closeWatcherMeta,
     hookUsage,

@@ -1,4 +1,5 @@
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx, RUNTIME_HELPER_NAMES,
   RuntimeHelper, RuntimeModuleBrief, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
@@ -19,7 +20,14 @@ pub struct OrderWrapState {
   import_overlays: FxHashMap<OrderImportKey, OrderImportOverlay>,
   import_overlays_by_importer: FxHashMap<ModuleIdx, Vec<OrderImportKey>>,
   import_overlays_by_statement: FxHashMap<(ModuleIdx, StmtInfoIdx), Vec<OrderImportKey>>,
+  /// Namespace demand introduced by import/re-export lowering. Unlike a simulated facade, this is
+  /// a semantic namespace consumer and may therefore broaden re-export init routing.
   namespace_requirements: FxHashMap<SymbolRef, FxIndexSet<ModuleIdx>>,
+  /// Namespace objects materialized only so a collapsed dynamic-entry facade can still return its
+  /// link-time-retained export interface. This must not turn that narrowed interface into an opaque
+  /// namespace read and initialize exports that tree shaking did not retain.
+  simulated_facade_namespace_requirements:
+    FxHashMap<SymbolRef, SimulatedFacadeNamespaceRequirement>,
   runtime_symbols: FxHashSet<SymbolRef>,
   nested_reexport_records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
   consumed_reexport_facades: FxHashSet<SymbolRef>,
@@ -230,6 +238,54 @@ impl OrderWrapState {
     self.synthetic_statements.push(stmt)
   }
 
+  /// Record the namespace declaration and runtime demand needed when strict-order lowering keeps
+  /// a dynamic entry in its implementation chunk and moves activation to its `import()` call sites.
+  ///
+  /// The module finalizer still owns rendering the namespace declaration. The requirement records
+  /// the exact export names the removed facade exposed, while this synthetic statement makes the
+  /// declaration and its non-inlined backing bindings visible to symbol-to-chunk assignment,
+  /// deconfliction, cross-chunk linking, and the runtime-helper closure. Those bindings were already
+  /// retained by the link-stage entry interface; this does not reopen user-code liveness.
+  /// See `internal-docs/code-splitting/design.md` ("Trigger placement").
+  pub(super) fn insert_simulated_facade_namespace(
+    &mut self,
+    owner: ModuleIdx,
+    namespace_ref: SymbolRef,
+    chunk_idx: ChunkIdx,
+    runtime_helpers: RuntimeHelper,
+    exports: impl IntoIterator<Item = SimulatedFacadeNamespaceExport>,
+    live_importers: impl IntoIterator<Item = ModuleIdx>,
+  ) {
+    let mut referenced_symbols = vec![];
+    let requirement =
+      self.simulated_facade_namespace_requirements.entry(namespace_ref).or_default();
+    for export in exports {
+      requirement.export_names.insert(export.name);
+      if let Some(symbol_ref) = export.referenced_symbol {
+        referenced_symbols.push(symbol_ref);
+      }
+    }
+    requirement.live_importers.extend(live_importers);
+    let stmt_idx = self.add_synthetic_statement(OrderSyntheticStmt {
+      owner,
+      declared_symbols: vec![TaggedSymbolRef::normal(namespace_ref)],
+      referenced_symbols,
+      runtime_helpers,
+      chunk: None,
+    });
+    self.assign_synthetic_statement_chunk(stmt_idx, chunk_idx);
+  }
+
+  pub(crate) fn simulated_facade_export_names(
+    &self,
+    namespace_ref: SymbolRef,
+  ) -> Option<&FxHashSet<CompactStr>> {
+    self
+      .simulated_facade_namespace_requirements
+      .get(&namespace_ref)
+      .map(|requirement| &requirement.export_names)
+  }
+
   pub(crate) fn assign_synthetic_statement_chunk(
     &mut self,
     stmt_idx: OrderSyntheticStmtIdx,
@@ -362,6 +418,26 @@ impl OrderWrapState {
     symbol_ref: SymbolRef,
     importer_is_live: impl Fn(ModuleIdx) -> bool,
   ) -> bool {
+    let mut importer_is_live = importer_is_live;
+    self
+      .namespace_requirements
+      .get(&symbol_ref)
+      .is_some_and(|importers| importers.iter().copied().any(&mut importer_is_live))
+      || self
+        .simulated_facade_namespace_requirements
+        .get(&symbol_ref)
+        .is_some_and(|requirement| requirement.live_importers.iter().copied().any(importer_is_live))
+  }
+
+  /// Whether order lowering itself observes this namespace semantically. A namespace created only
+  /// to replace a dynamic-entry facade is deliberately excluded: its getters were narrowed to the
+  /// exports retained by the original `import()` consumers, so init routing must keep using those
+  /// consumer-local paths instead of expanding the whole namespace.
+  pub(crate) fn requires_semantic_namespace(
+    &self,
+    symbol_ref: SymbolRef,
+    importer_is_live: impl Fn(ModuleIdx) -> bool,
+  ) -> bool {
     self
       .namespace_requirements
       .get(&symbol_ref)
@@ -417,6 +493,18 @@ impl OrderWrapState {
         .iter()
         .any(|declared| self.requires_runtime_symbol(runtime, declared.inner()))
   }
+}
+
+#[derive(Debug, Default)]
+struct SimulatedFacadeNamespaceRequirement {
+  live_importers: FxIndexSet<ModuleIdx>,
+  export_names: FxHashSet<CompactStr>,
+}
+
+#[derive(Debug)]
+pub(super) struct SimulatedFacadeNamespaceExport {
+  pub(super) name: CompactStr,
+  pub(super) referenced_symbol: Option<SymbolRef>,
 }
 
 #[derive(Debug)]

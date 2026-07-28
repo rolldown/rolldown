@@ -44,33 +44,34 @@ catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
+  # emnapi v2 line (see the `emnapi` override above): the .wasm links the
+  # 2.0.0-alpha C archives, so a v1 JS runtime is an ABI mismatch. Both
+  # `packages/browser` and `packages/rolldown` resolve these through the catalog
+  # so the ABI pin lives in exactly one place.
+  '@emnapi/core': 2.0.0-alpha.3
+  '@emnapi/runtime': 2.0.0-alpha.3
   '@jridgewell/trace-mapping': ^0.3.31
   '@napi-rs/cli': 3.7.2
   '@napi-rs/wasm-runtime': ^1.1.6
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
-  '@oxc-project/runtime': '=0.141.0'
-  '@oxc-project/types': '=0.141.0'
+  '@oxc-project/runtime': '=0.142.0'
+  '@oxc-project/types': '=0.142.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
-  '@rollup/plugin-json': ^6.1.0
   '@rollup/plugin-node-resolve': ^16.0.0
   '@types/babel__core': 7.20.5
   '@types/connect': ^3.4.38
   '@types/fs-extra': ^11.0.4
   '@types/lodash-es': ^4.17.12
-  '@types/mocha': 10.0.10
   '@types/node': 24.10.3
   '@types/semver': ^7.5.8
   '@types/serve-static': ^2.0.0
   buffer: ^6.0.3
-  '@types/strip-comments': ^2.0.4
   '@types/ws': ^8.18.0
   acorn: ^8.17.0
-  acorn-import-assertions: ^1.9.0
   astring: ^1.9.0
-  buble: ^0.20.0
   cac: ^7.0.0
   chalk: ^5.3.0
   change-case: ^5.4.4
@@ -82,7 +83,6 @@ catalog:
   estree-toolkit: ^1.7.8
   execa: ^9.2.0
   fast-glob: ^3.3.3
-  fixturify: ^3.0.0
   follow-redirects: ^1.15.6
   fresh-import: ^0.2.1
   fs-extra: ^11.4.0
@@ -90,9 +90,8 @@ catalog:
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
   miniflare: ^4.20260611.0
-  mocha: ^11.7.5
-  oxc-parser: '=0.141.0'
-  oxc-transform: '=0.141.0'
+  oxc-parser: '=0.142.0'
+  oxc-transform: '=0.142.0'
   pathe: ^2.0.3
   react: ^19.0.0
   react-dom: ^19.0.0
@@ -104,9 +103,6 @@ catalog:
   serve-static: ^2.0.0
   signal-exit: 4.1.0
   source-map: 0.8.0
-  source-map-support: ^0.5.21
-  strip-comments: ^2.0.1
-  terser: ^5.49.0
   tinybench: ^6.0.0
   tinyexec: ^1.0.1
   tsx: ^4.22.0
@@ -120,6 +116,26 @@ catalog:
   ws: ^8.20.1
   wrangler: ^4.100.0
   zx: ^8.1.2
+
+catalogs:
+  # deps used by `rollup-tests` package. these should be synced with `rollup`
+  rollup-tests:
+    '@jridgewell/sourcemap-codec': ^1.5.5
+    '@rollup/plugin-commonjs': ^29.0.0
+    '@rollup/plugin-json': ^6.1.0
+    '@rollup/plugin-node-resolve': ^16.0.0
+    '@types/mocha': 10.0.10
+    '@types/strip-comments': ^2.0.4
+    acorn-import-assertions: ^1.9.0
+    acorn-import-phases: ^1.0.4
+    acorn-jsx: ^5.3.2
+    buble: ^0.20.0
+    fixturify: ^3.0.0
+    magic-string: ^1.1.0
+    mocha: ^11.7.5
+    strip-comments: ^2.0.1
+    source-map-support: ^0.5.21
+    terser: ^5.49.0
 
 shellEmulator: true
 
@@ -153,6 +169,9 @@ minimumReleaseAgeExclude:
   - vite-plus
   - vitepress-plugin-feedback-tracker@0.2.0-alpha.1
   - void
+
+# avoid accidentally relying on `NODE_PATH` env var
+extendNodePath: false
 
 # The published @napi-rs/wasm-runtime@1.1.6 declares @emnapi/core / @emnapi/runtime
 # ^1.7.1 peers; napi-rs at ad23bdeb ships the same 1.1.6 runtime source with the

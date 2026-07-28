@@ -1,0 +1,22 @@
+{
+  "_comment": "The ESM external-star facade guard follows the complete export-star chain, so a dynamic entry that re-exports an internal barrel which re-exports an external also keeps its facade.",
+  "configName": "wrap-all",
+  "config": {
+    "external": ["external"],
+    "preserveEntrySignatures": "allow-extension",
+    "strictExecutionOrder": true,
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "reader",
+          "test": "[\\\\/]reader\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "hiddenRuntimeModule": false
+}

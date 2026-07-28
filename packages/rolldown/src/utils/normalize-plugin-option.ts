@@ -6,6 +6,7 @@ import { logInputHookInOutputPlugin } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import type { Plugin, RolldownOutputPlugin, RolldownPlugin } from '../plugin';
+import { INTERNAL_PLUGIN_HOOK_NAMES } from '../plugin/internal-hooks';
 import { asyncFlatten } from './async-flatten';
 import type { CloseCallbackScope } from './close-callback-scope';
 import { getParallelPluginInfo } from './parallel-plugin';
@@ -33,7 +34,7 @@ export function checkOutputPluginOption(
   onLog: LogHandler,
 ): RolldownOutputPlugin[] {
   for (const plugin of plugins) {
-    for (const hook of ENUMERATED_INPUT_PLUGIN_HOOK_NAMES) {
+    for (const hook of [...ENUMERATED_INPUT_PLUGIN_HOOK_NAMES, ...INTERNAL_PLUGIN_HOOK_NAMES]) {
       if (hook in plugin) {
         // remove the hook from the plugin if it is not an output plugin hook, avoid the plugin to be called
         // @ts-expect-error Here the plugin typing should be RolldownPlugin

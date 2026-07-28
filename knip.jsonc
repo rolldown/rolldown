@@ -47,8 +47,6 @@
         "src/browser.js",
       ],
       "ignoreDependencies": [
-        "@rollup/plugin-json",
-        "buble",
         "buffer", // Workerd aliases the bare Node builtin name to this polyfill.
         "pathe",
       ],
@@ -78,12 +76,19 @@
     "packages/rollup-tests": {
       "entry": ["src/**/*.js", "test/**/*.{js,ts}"],
       "ignoreDependencies": [
+        "@jridgewell/sourcemap-codec",
+        "@rollup/plugin-commonjs",
+        "@rollup/plugin-json",
+        "@rollup/plugin-node-resolve",
         "acorn-import-assertions",
         "acorn-import-phases",
-        "locate-character",
-        "requirejs",
+        "acorn-jsx",
+        "buble",
+        "magic-string",
         "terser",
+        "requirejs",
         "weak-napi",
+        "locate-character",
       ],
       "ignoreUnresolved": ["/types$"],
     },

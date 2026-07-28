@@ -31,6 +31,17 @@ type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
 type IndexImportsFromOtherChunks =
   IndexVec<ChunkIdx, FxHashMap<ChunkIdx, Vec<CrossChunkImportItem>>>;
 
+/// A chunk is loaded through `import('./chunk.js')`, whose promise resolves with the chunk's
+/// namespace object. Promise resolution assimilates any value with a callable `then` as a
+/// thenable, so a chunk exporting `then` hijacks every dynamic import of that chunk — including
+/// the `.then((n) => n.ns)` the finalizer generates to reach a merged dynamic entry, whose
+/// callback then receives whatever the exported `then` resolved with instead of the namespace.
+///
+/// Internal cross-chunk export names are bundler-owned, so simply never hand out `then` for one.
+/// Names the user can observe — an entry chunk's public exports and the export names an
+/// `emitFile` consumer relies on — are a contract and keep whatever they declare.
+const THENABLE_HAZARD_EXPORT_NAME: &str = "then";
+
 struct CrossChunkLinkState {
   index_chunk_exported_symbols: IndexChunkExportedSymbols,
   index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules,
@@ -1338,7 +1349,10 @@ impl GenerateStage<'_> {
           loop {
             named_index += 1;
             export_name = generate_minified_names(named_index).into();
-            if !used_names.contains(&export_name) {
+            // Unreachable in practice — base54 needs about 14M names before it produces a
+            // four-character `then` — but the generator is the only other source of internal
+            // export names, so make it impossible rather than improbable.
+            if !used_names.contains(&export_name) && export_name != THENABLE_HAZARD_EXPORT_NAME {
               break;
             }
           }
@@ -1349,8 +1363,39 @@ impl GenerateStage<'_> {
         continue;
       }
 
+      // The symbols an `emitFile` consumer reaches under the name `then`. Unlike an entry
+      // signature they arrive with no predefined name, so they would otherwise be
+      // indistinguishable from a bundler-owned internal name below. Only the export name is the
+      // contract: a preserve-name module whose local `then` leaves under an alias goes through
+      // the resolver like everything else, so it can never hand `then` to the chunk.
+      //
+      // The carve-out below additionally requires the declaring symbol to be named `then`: with
+      // internal minification off this pass outputs declaring-symbol names, so export aliases are
+      // already not honored — a pre-existing defect tracked in #10500, whose fix (routing
+      // preserved names through the predefined-names path) also removes this set and the
+      // first-wins flag below.
+      let preserved_then_refs: FxHashSet<SymbolRef> = preserve_export_names_modules
+        .get(&chunk_id)
+        .map(|modules| {
+          modules
+            .iter()
+            .flat_map(|&module_idx| {
+              self.link_output.metas[module_idx]
+                .canonical_exports(false)
+                .filter(|(name, _)| name.as_str() == THENABLE_HAZARD_EXPORT_NAME)
+                .map(|(_, export)| self.link_output.symbol_db.canonical_ref_for(export.symbol_ref))
+            })
+            .collect()
+        })
+        .unwrap_or_default();
+      let mut preserved_then_taken = false;
+
       let mut resolver =
         ConflictResolver::with_capacity(index_chunk_exported_symbols[chunk_id].len());
+      // Names taken from source symbols can collide with `then`; reserving it up front deconflicts
+      // those to `then$1` like any other collision. Predefined names take the `lst` branch below,
+      // which re-reserves (a no-op) and emits them verbatim, so a public `then` still stays `then`.
+      resolver.reserve(CompactStr::new_const(THENABLE_HAZARD_EXPORT_NAME));
       for (chunk_export, predefined_names) in index_chunk_exported_symbols[chunk_id]
         .iter()
         .sorted_by_cached_key(|(symbol_ref, _predefined_names)| {
@@ -1403,7 +1448,20 @@ impl GenerateStage<'_> {
         } else {
           original_name
         };
-        let chosen = resolver.resolve(base, |_, _| true);
+        let chosen = if base == THENABLE_HAZARD_EXPORT_NAME
+          && !preserved_then_taken
+          && preserved_then_refs
+            .contains(&self.link_output.symbol_db.canonical_ref_for(*chunk_export))
+        {
+          // A name an `emitFile` consumer relies on is a contract, so it keeps `then`. The
+          // reservation above only fences off bundler-owned internal names. Two preserved
+          // modules both exporting the name `then` cannot both be honored — the second falls
+          // back to the resolver so the chunk at least stays parseable.
+          preserved_then_taken = true;
+          base
+        } else {
+          resolver.resolve(base, |_, _| true)
+        };
         chunk.exports_to_other_chunks.entry(*chunk_export).or_default().push(chosen);
       }
     }

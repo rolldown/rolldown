@@ -129,6 +129,23 @@ function fanFiles() {
       'export const moduleTag = String(total) + stamp;',
     ].join('\n') + '\n',
   );
+  // Two more entries over the SAME fan, for the concurrency case. Each adds an
+  // offset only it supplies, so the two concurrent results are told apart by
+  // the value they compute: an empty, cross-wired or silently shared result
+  // cannot fake the other side's total.
+  for (const [tag, offset] of [
+    ['a', 1000],
+    ['b', 2000],
+  ]) {
+    files.set(
+      `fan:entry-${tag}.js`,
+      [
+        ...featureNames.map((name, i) => `import { ${name} } from '~feat-${i}';`),
+        `export const tag = '${tag}';`,
+        `export const total = ${featureNames.join(' + ')} + ${offset};`,
+      ].join('\n') + '\n',
+    );
+  }
   // An entry whose sole import can never be resolved by any hook.
   files.set(
     'fan:bad-entry.js',
@@ -277,12 +294,40 @@ async function caseErrorSurface() {
   } finally {
     instance.dispose();
   }
+  // Read before the owned-instance half below, so the two deltas cannot mask
+  // each other.
+  const callerOwnedLiveDelta = getWorkerdRuntimeStats().liveInstances - baseline;
+
+  // The half above is CALLER-owned, and its dispose() is explicit -- so its
+  // delta proves the failed build left the instance disposable, nothing more.
+  // `build({ module })` is the path that can genuinely leak: it creates a
+  // PRIVATE instance that only build() itself can ever dispose, so a failed
+  // build that forgets strands an entire Wasm instance in the isolate, every
+  // time. Nothing else in this suite would notice.
+  const ownedBaseline = getWorkerdRuntimeStats().liveInstances;
+  let ownedCaught = null;
+  try {
+    await build({
+      module: wasmModule,
+      input: 'fan:bad-entry.js',
+      plugins: [fanPlugin(newTrace(), files)],
+    });
+  } catch (error) {
+    ownedCaught = errInfo(error);
+  }
+  const ownedFailure = {
+    caught: ownedCaught,
+    liveDelta: getWorkerdRuntimeStats().liveInstances - ownedBaseline,
+  };
+
   return {
     caught,
     reuse,
     disposed: instance.disposed,
-    // No instance may survive a failed build.
-    liveDelta: getWorkerdRuntimeStats().liveInstances - baseline,
+    // A failed build must leave the caller's own instance reusable (`reuse`)
+    // and disposable. See `ownedFailure` for the actual leak assertion.
+    liveDelta: callerOwnedLiveDelta,
+    ownedFailure,
   };
 }
 
@@ -333,6 +378,28 @@ async function caseLifecycle() {
   return out;
 }
 
+/**
+ * Flatten one half of the concurrent pair. "The promise fulfilled" is not
+ * evidence of a build, so the chunk's `code` travels to the driver, which
+ * executes it and checks the value it computes -- a build that resolved with
+ * the other build's output, or with nothing at all, cannot pass as a success.
+ * `entriesLoaded` does the same for the hooks: each build must have driven its
+ * own trace over its own entry.
+ */
+function describeConcurrent(settled, trace) {
+  if (settled.status !== 'fulfilled') {
+    return { ok: false, error: errInfo(settled.reason) };
+  }
+  const chunk = settled.value.output.find((item) => item.type === 'chunk');
+  return {
+    ok: chunk !== undefined,
+    fileName: chunk?.fileName ?? null,
+    code: chunk?.code ?? null,
+    loadedCount: new Set(trace.loaded).size,
+    entriesLoaded: Array.from(new Set(trace.loaded.filter((id) => id.startsWith('fan:entry-')))),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // CASE 4: concurrency and single-slot admission.
 async function caseConcurrency() {
@@ -340,21 +407,32 @@ async function caseConcurrency() {
   const baseline = getWorkerdRuntimeStats().liveInstances;
   const out = {};
 
-  // (a) Two concurrent builds on ONE shared instance must both succeed.
+  // (a) Two concurrent builds on ONE shared instance must both succeed -- and
+  //     each must produce ITS OWN result. They run distinct entries with
+  //     distinct computed totals so that empty output, cross-wiring, or one
+  //     build silently producing nothing fails here instead of passing.
   {
     const shared = await createInstance(wasmModule);
+    const traceA = newTrace();
+    const traceB = newTrace();
     try {
       const [first, second] = await Promise.allSettled([
-        build({ instance: shared, input: 'fan:entry.js', plugins: [fanPlugin(newTrace(), files)] }),
-        build({ instance: shared, input: 'fan:entry.js', plugins: [fanPlugin(newTrace(), files)] }),
+        build({
+          instance: shared,
+          input: 'fan:entry-a.js',
+          plugins: [fanPlugin(traceA, files)],
+          output: { format: 'esm' },
+        }),
+        build({
+          instance: shared,
+          input: 'fan:entry-b.js',
+          plugins: [fanPlugin(traceB, files)],
+          output: { format: 'esm' },
+        }),
       ]);
       out.concurrentSameInstance = {
-        first:
-          first.status === 'fulfilled' ? { ok: true } : { ok: false, error: errInfo(first.reason) },
-        second:
-          second.status === 'fulfilled'
-            ? { ok: true }
-            : { ok: false, error: errInfo(second.reason) },
+        first: describeConcurrent(first, traceA),
+        second: describeConcurrent(second, traceB),
       };
     } finally {
       shared.dispose();
@@ -523,12 +601,14 @@ async function caseMemorySlope(url) {
   const moduleCount = Number(url.searchParams.get('modules') ?? 150);
   const files = makeSlopeGraph(moduleCount);
 
+  const baseline = getWorkerdRuntimeStats().liveInstances;
   const instance = await createInstance(wasmModule);
   const memPerRound = [];
   const outputBytesPerRound = [];
   let hookCalls = 0;
   let modulesSeen = 0;
   let error = null;
+  let disposeError = null;
   try {
     for (let round = 0; round < rounds; round += 1) {
       const plugins = [slopeGraphPlugin(files)];
@@ -586,10 +666,14 @@ async function caseMemorySlope(url) {
   } catch (e) {
     error = String(e?.stack ?? e);
   } finally {
+    // Reported in its OWN field, never folded into `error` and never dropped:
+    // the case that matters is every round SUCCEEDING and only the teardown
+    // breaking. Swallowing it there leaves `error` null and a full set of
+    // samples, and the driver passes the budget on a broken instance.
     try {
       instance.dispose();
-    } catch {
-      /* already reported through `error` */
+    } catch (e) {
+      disposeError = String(e?.stack ?? e);
     }
   }
 
@@ -602,8 +686,14 @@ async function caseMemorySlope(url) {
     memPerRound,
     memFirstMiB: memPerRound.length ? +(memPerRound[0] / MiB).toFixed(3) : null,
     memLastMiB: memPerRound.length ? +(memPerRound.at(-1) / MiB).toFixed(3) : null,
+    // The floor every sample must clear: linear memory never drops below the
+    // pages the instance declared at creation.
+    declaredInitialMemoryBytes: getWorkerdRuntimeStats().declaredInitialMemoryBytes,
     outputBytesPerRound,
+    disposed: instance.disposed,
+    liveDelta: getWorkerdRuntimeStats().liveInstances - baseline,
     error,
+    disposeError,
   };
 }
 

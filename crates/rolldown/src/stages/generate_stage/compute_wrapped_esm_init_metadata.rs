@@ -6,7 +6,8 @@ use oxc::ast::ast::{Declaration, Statement};
 use oxc_index::IndexVec;
 use rolldown_common::{
   ChunkIdx, ConcatenateWrappedModuleKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
-  IndexModules, Module, ModuleIdx, NormalModule, StmtInfoIdx, StmtInfos, WrapKind,
+  IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, NormalModule, StmtInfoIdx,
+  StmtInfos, WrapKind,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_utils::{index_vec_ext::IndexVecRefExt, rayon::ParallelIterator as _};
@@ -232,8 +233,22 @@ fn transitive_esm_init_targets(
         statement: stmt_idx,
         record: rec_idx,
       });
+      // A simulated dynamic-entry facade materializes a namespace object, but it is not an opaque
+      // observation of every export. The namespace statement is narrowed to the exports retained
+      // by link-time consumers, so re-export init routing must keep using their recorded paths.
+      // Only a real link-stage namespace use or semantic order-lowering glue may expand all
+      // non-ambiguous exports here.
+      let namespace_is_semantically_observed = meta.module_namespace_included_reason.intersects(
+        ModuleNamespaceIncludedReason::Unknown
+          | ModuleNamespaceIncludedReason::ReExportDynamicExports,
+      ) || ctx
+        .order_state
+        .requires_semantic_namespace(module.namespace_object_ref, |importer_idx| {
+          ctx.chunk_graph.module_is_in_live_chunk(importer_idx)
+        });
       let namespace_reexport_is_retained = rec.meta.contains(ImportRecordMeta::IsExportStar)
         && meta.namespace_included
+        && namespace_is_semantically_observed
         && (ctx.metas[root].has_dynamic_exports
           || meta.star_export_record_by_name.iter().any(|(name, owner)| {
             *owner == rec_idx && meta.sorted_and_non_ambiguous_resolved_exports.contains_key(name)

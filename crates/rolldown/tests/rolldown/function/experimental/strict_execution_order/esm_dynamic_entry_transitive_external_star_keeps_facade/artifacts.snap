@@ -1,0 +1,123 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+var loaded;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		loaded = import("./target2.js").then((namespace) => namespace);
+	})))();
+}
+//#endregion
+init_main();
+export { loaded };
+
+```
+
+## reader.js
+
+```js
+//! ManualCodeSplitting: [Group-Name: reader]
+import { t as init_target } from "./target.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region reader.js
+function read() {
+	globalThis.__externalStarLog.push(`reader:1`);
+}
+function init_reader() {
+	return (init_reader = __esmMin((() => {
+		init_target();
+	})))();
+}
+//#endregion
+export { read as n, init_reader as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+//! Common Chunk: [Shared-By: main.js, target.js]
+//#region \0rolldown/runtime.js
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
+//#endregion
+export { __exportAll as n, __reExport as r, __esmMin as t };
+
+```
+
+## target.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: None]
+//! Common Chunk: [Shared-By: target.js]
+import { n as read, t as init_reader } from "./reader.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region barrel.js
+function init_barrel() {
+	return (init_barrel = __esmMin((() => {})))();
+}
+//#endregion
+//#region target.js
+var x;
+function init_target() {
+	return (init_target = __esmMin((() => {
+		init_reader();
+		init_barrel();
+		globalThis.__externalStarLog.push("target");
+		x = 1;
+		read();
+	})))();
+}
+//#endregion
+export { x as n, init_target as t };
+
+```
+
+## target2.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: None]
+import { n as x, t as init_target } from "./target.js";
+export * from "external";
+init_target();
+export { x };
+
+```

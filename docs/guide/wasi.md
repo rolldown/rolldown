@@ -2,10 +2,15 @@
 
 Rolldown publishes two WASI flavors:
 
-- `wasm32-wasip1-threads` uses the threaded napi-rs loader and the Tokio
-  runtime.
-- `wasm32-wasip1` uses an unshared-memory, threadless loader and the
-  CurrentThread runtime. `@rolldown/browser` uses this flavor.
+- `wasm32-wasip1-threads` uses the threaded napi-rs loader.
+- `wasm32-wasip1` uses an unshared-memory, threadless loader.
+  `@rolldown/browser` uses this flavor.
+
+Both run the shared tokio-free scheduler on its CurrentThread flavor: that
+scheduler has no MultiThread executor on WebAssembly, so every WASI artifact
+reports `backend: 'shared'`, `flavor: 'CurrentThread'` and `threads: false`.
+The real OS threads in `wasm32-wasip1-threads` change the loader, not the
+executor.
 
 Query the loaded artifact instead of inferring support from environment
 variables:
@@ -30,7 +35,7 @@ runtime report.
 | Feature                                         | Native MultiThread | Native CurrentThread  | Threaded WASI         | Threadless WASI                     |
 | ----------------------------------------------- | ------------------ | --------------------- | --------------------- | ----------------------------------- |
 | One-shot `rolldown()` / `build()`               | Yes                | Yes                   | Yes                   | Yes                                 |
-| `dev()`                                         | Yes                | No, fails immediately | Yes                   | No, fails immediately               |
+| `dev()`                                         | Yes                | No, fails immediately | No, fails immediately | No, fails immediately               |
 | `watch()`                                       | Yes                | Yes                   | No, fails immediately | No, fails immediately               |
 | Async built-in-plugin resolution                | Yes                | Yes                   | Yes                   | Yes                                 |
 | Complete plugin error metadata and cause chains | Yes                | Yes                   | Yes                   | Yes                                 |

@@ -2,6 +2,141 @@
 import { expect, test, vi } from 'vitest';
 
 const binding = vi.hoisted(() => {
+  const registryConstructions: number[] = [];
+  const workerSpawns: unknown[] = [];
+
+  type Listener = (...args: unknown[]) => void;
+
+  class FakeEmitter {
+    listeners = new Map<string, Set<Listener>>();
+
+    on(event: string, listener: Listener): this {
+      const listeners = this.listeners.get(event) ?? new Set<Listener>();
+      listeners.add(listener);
+      this.listeners.set(event, listeners);
+      return this;
+    }
+
+    off(event: string, listener: Listener): this {
+      this.listeners.get(event)?.delete(listener);
+      return this;
+    }
+
+    listenerCount(event: string): number {
+      return this.listeners.get(event)?.size ?? 0;
+    }
+
+    emit(event: string, ...args: unknown[]): void {
+      const listeners = this.listeners.get(event);
+      if (!listeners) return;
+      // Snapshot: a listener may unsubscribe while the event is dispatched.
+      for (const listener of Array.from(listeners)) {
+        listener(...args);
+      }
+    }
+  }
+
+  // A MessagePort pair that keeps the real port semantics the bootstrap
+  // handshake depends on: delivery is asynchronous, and messages posted before
+  // the peer subscribes stay buffered instead of being dropped.
+  class FakeMessagePort extends FakeEmitter {
+    peer: FakeMessagePort | undefined;
+    closed = false;
+    queue: unknown[] = [];
+
+    postMessage(message: unknown): void {
+      const peer = this.peer;
+      if (!peer || peer.closed) return;
+      peer.queue.push(message);
+      queueMicrotask(() => peer.flush());
+    }
+
+    flush(): void {
+      if (this.closed) {
+        this.queue.length = 0;
+        return;
+      }
+      if (this.listenerCount('message') === 0) return;
+      while (this.queue.length > 0) {
+        this.emit('message', this.queue.shift());
+      }
+    }
+
+    override on(event: string, listener: Listener): this {
+      super.on(event, listener);
+      if (event === 'message') queueMicrotask(() => this.flush());
+      return this;
+    }
+
+    close(): void {
+      this.closed = true;
+      this.queue.length = 0;
+    }
+
+    ref(): void {}
+    unref(): void {}
+    start(): void {}
+  }
+
+  class FakeMessageChannel {
+    port1 = new FakeMessagePort();
+    port2 = new FakeMessagePort();
+
+    constructor() {
+      this.port1.peer = this.port2;
+      this.port2.peer = this.port1;
+    }
+  }
+
+  // The supervisor authenticates every control message with tokens it embeds
+  // in the generated bootstrap source, so the stand-in worker replies with the
+  // very tokens the real worker would have read out of that source.
+  const BOOTSTRAP_AUTHENTICATION = /const authentication = Object\.freeze\((\{[^{}]*\})\);/;
+
+  class FakeWorker extends FakeEmitter {
+    controlPort: FakeMessagePort;
+
+    constructor(source: string, options: { workerData: { controlPort: FakeMessagePort } }) {
+      super();
+      workerSpawns.push([source, options]);
+      const match = BOOTSTRAP_AUTHENTICATION.exec(source);
+      if (!match) {
+        throw new Error('the parallel-plugin bootstrap did not embed its authentication tokens');
+      }
+      const authentication = JSON.parse(match[1]) as Record<string, string>;
+      const controlPort = options.workerData.controlPort;
+      this.controlPort = controlPort;
+      controlPort.on('message', (message: unknown) => {
+        const start = message as Record<string, unknown> | null;
+        if (
+          start?.session === authentication.session &&
+          start.token === authentication.startToken &&
+          start.type === 'start'
+        ) {
+          controlPort.postMessage({
+            session: authentication.session,
+            token: authentication.resultToken,
+            type: 'success',
+          });
+        }
+      });
+      controlPort.postMessage({
+        session: authentication.session,
+        token: authentication.readyToken,
+        type: 'ready',
+      });
+    }
+
+    postMessage(): void {}
+    ref(): void {}
+    unref(): void {}
+
+    terminate(): Promise<number> {
+      this.controlPort.close();
+      return Promise.resolve(0);
+    }
+  }
+
   const nativeSharedCapabilities: Record<string, unknown> = {
     asyncRuntimeBuild: true,
     backend: 'shared',
@@ -30,10 +165,12 @@ const binding = vi.hoisted(() => {
   };
   return {
     capabilities: threadedWasiCapabilities as Record<string, unknown>,
+    FakeMessageChannel,
+    FakeWorker,
     nativeSharedCapabilities,
-    registryConstructions: [] as number[],
+    registryConstructions,
     threadedWasiCapabilities,
-    workerSpawns: [] as unknown[],
+    workerSpawns,
   };
 });
 
@@ -48,23 +185,13 @@ vi.mock('../src/binding.cjs', () => ({
 }));
 
 // Worker spawning is the side effect the runtime gate must precede; a real
-// spawn would load the dist worker entry and the real binding.
-vi.mock('node:worker_threads', () => ({
-  Worker: class {
-    constructor(...args: unknown[]) {
-      binding.workerSpawns.push(args);
-    }
-    once(event: string, listener: (message: unknown) => void) {
-      if (event === 'message') {
-        queueMicrotask(() => listener({ type: 'success' }));
-      }
-      return this;
-    }
-    unref() {}
-    terminate() {
-      return Promise.resolve();
-    }
-  },
+// spawn would load the dist worker entry and the real binding. The stand-ins
+// play the worker side of the authenticated control-port handshake so the pool
+// still initializes and shuts down through the production code path.
+vi.mock('node:worker_threads', async (importOriginal) => ({
+  ...(await importOriginal()),
+  MessageChannel: binding.FakeMessageChannel,
+  Worker: binding.FakeWorker,
 }));
 
 // @ts-ignore These focused unit tests intentionally reach package source outside the test rootDir.

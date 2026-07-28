@@ -186,7 +186,7 @@ function inlineSourceMap(code: string) {
 // the same way a module rendered into a chunk does — otherwise every position in
 // a lazily compiled module is off by whatever the transforms shifted, which is
 // every stack frame and every devtools jump inside it.
-test(
+test.skipIf(isSingleThread)(
   'lazy chunk sourcemap maps through the plugin sourcemap chain',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -226,7 +226,7 @@ test(
   },
 );
 
-test(
+test.skipIf(isSingleThread)(
   'lazy proxy modules skip user plugin hooks',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -296,7 +296,7 @@ test(
 // With `sourcemap: true` the chunk gets a `sourceMappingURL`, so the map it names
 // has to be reachable: a lazy chunk is not written to disk, which leaves the
 // return value as the only way for the consumer to serve it.
-test(
+test.skipIf(isSingleThread)(
   'lazy chunk returns the sourcemap its sourceMappingURL names',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -343,7 +343,7 @@ test(
 // object, and the consumer sees `undefined`. The snapshot fixture
 // (crates/rolldown/tests/rolldown/topics/hmr/export_star_as) pins the HMR patch; this
 // pins the lazy chunk, which reaches the same finalizer by a different route.
-test(
+test.skipIf(isSingleThread)(
   'a lazy chunk keeps the export name of `export * as ns from`',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

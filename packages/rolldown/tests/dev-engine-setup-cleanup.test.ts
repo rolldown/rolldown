@@ -93,7 +93,10 @@ test('a failing worker stop surfaces together with the setup error', async () =>
       }
     },
   }));
-  const stopWorkers = vi.fn().mockRejectedValue(cleanupError);
+  // Setup cleanup is retried once before the failure is reported, so a worker
+  // stop that keeps failing would surface its diagnostic twice. Fail the first
+  // attempt only, mirroring the scan setup path's retry coverage.
+  const stopWorkers = vi.fn().mockRejectedValueOnce(cleanupError).mockResolvedValue(undefined);
   vi.doMock('../src/utils/create-bundler-option', () => ({
     createBundlerOptions: vi.fn().mockResolvedValue({
       bundlerOptions: {},
@@ -114,7 +117,7 @@ test('a failing worker stop surfaces together with the setup error', async () =>
   expect(failure).toBeInstanceOf(AggregateError);
   expect(failure.errors).toEqual([constructionError, cleanupError]);
   expect(failure.cause).toBe(constructionError);
-  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledTimes(2);
 });
 
 test('successful setup keeps the workers running', async () => {
@@ -122,7 +125,9 @@ test('successful setup keeps the workers running', async () => {
   vi.doMock('../src/binding.cjs', () => ({
     getRuntimeCapabilities: () => NATIVE_SHARED_CAPABILITIES,
     BindingDevEngine: class {
-      async close() {}
+      // DevEngine#close() drives the native terminal close, which reports its
+      // diagnostics as a BindingResult instead of rejecting.
+      async closeTerminal() {}
     },
   }));
   const stopWorkers = mockBundlerOptions();

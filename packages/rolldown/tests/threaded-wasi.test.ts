@@ -9,13 +9,20 @@ test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
   'executes threaded WASI while preserving concurrent runtime leases',
   { timeout: 20_000 },
   async () => {
+    // The threaded artifact runs the shared tokio-free scheduler like every
+    // other artifact, and the resolver normalizes every non-native target to
+    // CurrentThread (`crates/rolldown_binding/src/async_runtime.rs`): the
+    // shared scheduler has no MultiThread executor on WebAssembly because
+    // `napi-async-runtime` does not compile Rayon there. Real OS threads in
+    // `wasm32-wasip1-threads` therefore change the loader, not the executor.
     expect(capabilities).toMatchObject({
-      backend: 'tokio',
-      flavor: 'MultiThread',
+      backend: 'shared',
+      flavor: 'CurrentThread',
       target: 'wasi-threads',
       wasi: true,
-      asyncRuntimeBuild: false,
-      threads: true,
+      asyncRuntimeBuild: true,
+      threads: false,
+      devSupported: false,
       watchSupported: false,
     });
     const support = getRuntimeSupport();
@@ -127,58 +134,48 @@ test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
   },
 );
 
+// `dev()` needs a MultiThread executor to complete its initial build, and the
+// threaded WASI artifact resolves to CurrentThread like every wasm artifact,
+// so the binding reports `devSupported: false` and the public entry must fail
+// closed before entering the binding instead of stalling on a build that can
+// never finish.
 test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
-  'runs and closes a threaded WASI dev engine',
+  'rejects threaded WASI dev engines before entering the binding',
   { timeout: 20_000 },
   async () => {
-    expect(getRuntimeSupport().dev).toBe(true);
+    expect(getRuntimeSupport().dev).toBe(false);
 
-    let closeBundleCalls = 0;
-    let outputCalls = 0;
-    const engine = await dev(
-      {
-        input: 'entry',
-        experimental: { devMode: true },
-        plugins: [
-          {
-            name: 'threaded-wasi-dev-lifecycle',
-            resolveId(id) {
-              if (id === 'entry') return '\0entry';
+    let hookCalls = 0;
+    await expect(
+      dev(
+        {
+          input: 'entry',
+          experimental: { devMode: true },
+          plugins: [
+            {
+              name: 'threaded-wasi-dev-lifecycle',
+              resolveId(id) {
+                hookCalls += 1;
+                if (id === 'entry') return '\0entry';
+              },
+              load(id) {
+                hookCalls += 1;
+                if (id === '\0entry') return 'export const value = 1';
+              },
             },
-            load(id) {
-              if (id === '\0entry') return 'export const value = 1';
-            },
-            closeBundle() {
-              closeBundleCalls += 1;
-            },
-          },
-        ],
-      },
-      {},
-      {
-        onOutput(result) {
-          if (result instanceof Error) throw result;
-          expect(result.output).toEqual([
-            expect.objectContaining({
-              type: 'chunk',
-              exports: ['value'],
-            }),
-          ]);
-          outputCalls += 1;
+          ],
         },
-      },
-    );
-
-    try {
-      await engine.run();
-      expect(outputCalls).toBe(1);
-    } finally {
-      await Promise.all([engine.close(), engine.close()]);
-    }
-
-    expect(closeBundleCalls).toBe(1);
-    await expect(engine.ensureCurrentBuildFinish()).resolves.toBeUndefined();
-    await expect(engine.run()).rejects.toThrow('Dev engine is closed');
-    await expect(engine.close()).resolves.toBeUndefined();
+        {},
+        {
+          onOutput() {
+            hookCalls += 1;
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
+      feature: 'dev',
+    });
+    expect(hookCalls).toBe(0);
   },
 );

@@ -22,6 +22,11 @@ impl LinkStage<'_> {
         // from the reference itself. See `chunk_recorded_external_interop` and issue #10069.
         let mut reads_external_as_esm = false;
         let mut note_external_interop = |canonical_ref: SymbolRef| {
+          // Runs for every referenced symbol of every module; the flag is monotonic, so once it is
+          // set there is nothing left to learn.
+          if reads_external_as_esm {
+            return;
+          }
           let symbol = self.symbols.get(canonical_ref);
           let namespace_ref = match &symbol.namespace_alias {
             Some(ns) => self.symbols.canonical_ref_for(ns.namespace_ref),

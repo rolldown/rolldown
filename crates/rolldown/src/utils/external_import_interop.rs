@@ -127,6 +127,50 @@ pub fn chunk_external_interop_modes(
   any.then_some(modes)
 }
 
+/// Whether a module in this chunk that reads `external_namespace_ref` is itself ESM by definition
+/// format — that is, whether a mixed-mode node binding would actually be read.
+///
+/// Modes are recorded from the *import writer's* format, but the finalizer picks between the two
+/// bindings using the *rendering module's* format (see `module_finalizers`). The two disagree once
+/// an ESM shim is dropped and only a non-ESM consumer survives: the chunk then looks mixed-mode,
+/// renders `let <node> = __toESM(mod, 1);`, and nothing ever reads `<node>`. DCE removes the unused
+/// binding but keeps the call, so the output carries a bare `__toESM(mod, 1);` that runs the eager
+/// `__getOwnPropertyNames`/`__getOwnPropertyDescriptor` walk — extra Proxy traps at require time —
+/// for a value that is discarded.
+///
+/// Gating on this mirrors the finalizer's rule, so the binding is planned only when it can be read.
+pub fn chunk_has_node_esm_reader(
+  link_output: &LinkStageOutput,
+  assignments: ChunkAssignments<'_>,
+  chunk_idx: ChunkIdx,
+  external_namespace_ref: SymbolRef,
+  named_imports: Option<&[(ModuleIdx, NamedImport)]>,
+) -> bool {
+  let is_node_esm = |module_idx: ModuleIdx| {
+    link_output.module_table[module_idx]
+      .as_normal()
+      .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
+  };
+  let canonical_ref = link_output.symbol_db.canonical_ref_for(external_namespace_ref);
+  let observer_reads_as_node = link_output
+    .used_external_symbols
+    .interop_uses_by_observer(&canonical_ref)
+    .is_some_and(|observers| {
+      observers.keys().any(|observer| {
+        // An unattributable observer could be rendered here, so it has to count.
+        let could_be_in_chunk = match assignments.live_chunk_of(*observer) {
+          Some(observer_chunk) => observer_chunk == chunk_idx,
+          None => true,
+        };
+        could_be_in_chunk && is_node_esm(*observer)
+      })
+    });
+  observer_reads_as_node
+    || named_imports.unwrap_or_default().iter().any(|(importer_idx, import)| {
+      specifier_needs_interop(&import.imported) && is_node_esm(*importer_idx)
+    })
+}
+
 /// Where modules ended up after chunking, as far as attributing an external observation needs it.
 ///
 /// Deconflicting runs inside a `par_iter_mut` over the chunk table and so cannot hold a

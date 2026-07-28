@@ -122,6 +122,15 @@ async fn node_mode_named_only_import_does_not_flip_a_non_node_default_import() {
 /// One consumer reaching the same external through both a `.mjs` and a `.js` shim. Linking
 /// collapses both onto the external's namespace symbol, so the two references are literally the
 /// same canonical symbol and cannot render as different bindings.
+///
+/// Both flags therefore get recorded while only a non-ESM module survives to read them. Planning a
+/// mixed-mode pair here would emit a node binding nothing reads, and DCE keeps the discarded
+/// `__toESM(mod, 1)` call — an eager property walk, plus Proxy traps, for a dropped value. One
+/// wrapper is emitted instead, in the mode matching the module that actually reads it.
+///
+/// The provenance mismatch itself is not fixed and is not fixable here: the `.mjs`-routed reference
+/// reads the non-Node wrapper. That needs per-reference provenance in the finalizer, and is only
+/// observable for an external declaring `__esModule` *and* owning a `default`.
 #[tokio::test(flavor = "multi_thread")]
 async fn dual_provenance_through_shims_of_different_formats() {
   let output = bundle_entries(vec![InputItem {
@@ -131,17 +140,15 @@ async fn dual_provenance_through_shims_of_different_formats() {
   .await;
   let entry = &output["dual-provenance-entry.js"];
 
-  let wrappers = entry.matches("__toESM(").count();
-  let node_mode_binding = entry.matches(", 1);").count();
-  assert!(
-    wrappers >= 1,
-    "the default observations must produce at least one interop wrapper:\n{entry}"
+  assert_eq!(
+    entry.matches("__toESM(").count(),
+    1,
+    "only the surviving non-ESM consumer reads the external, so exactly one wrapper is expected \
+     — a second one would be dead on arrival and leave a discarded call behind:\n{entry}"
   );
-  // Documents the current limitation rather than asserting the ideal: if two wrappers are emitted,
-  // both references still resolve to the same canonical symbol, so one of them reads a binding
-  // that does not match the format of the shim it came through. See the module doc comment.
   assert!(
-    wrappers <= 2 && node_mode_binding <= 1,
-    "unexpected wrapper shape for dual-provenance references:\n{entry}"
+    !entry.contains(", 1)"),
+    "the only module reading the wrapper is non-ESM, so the wrapper must not use Node mode:\n\
+     {entry}"
   );
 }

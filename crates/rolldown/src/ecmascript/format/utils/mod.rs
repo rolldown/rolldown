@@ -101,8 +101,10 @@ pub fn render_chunk_external_imports<'a>(
             import_code.push_str(external_module_symbol_name);
             import_code.push_str(");\n");
           } else {
-            // Single-mode: only one of the two flags is set, so it names the mode outright.
-            let is_node_esm = interop_modes.node_esm;
+            // Single-mode. Both flags can still be set: deconflicting suppresses the node binding
+            // when no ESM-format module in the chunk would read it (`chunk_has_node_esm_reader`).
+            // Those readers take this plain binding, so non-Node is the mode that matches them.
+            let is_node_esm = interop_modes.node_esm && !interop_modes.non_node_esm;
             import_code.push_str(external_module_symbol_name);
             import_code.push_str(" = ");
             import_code.push_str(to_esm_fn_name);

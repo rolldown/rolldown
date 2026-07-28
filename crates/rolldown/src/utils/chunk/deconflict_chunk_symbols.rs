@@ -3,7 +3,9 @@ use oxc_str::CompactStr;
 use crate::{
   stages::{generate_stage::order_wrap_state::OrderWrapState, link_stage::LinkStageOutput},
   utils::{
-    external_import_interop::{ChunkAssignments, chunk_external_interop_modes},
+    external_import_interop::{
+      ChunkAssignments, chunk_external_interop_modes, chunk_has_node_esm_reader,
+    },
     renamer::{NestedScopeRenamer, Renamer},
   },
 };
@@ -226,11 +228,19 @@ pub fn deconflict_chunk_symbols(
     // Externals the chunk only *references* (their importing module lives in another chunk or was
     // tree-shaken away) carry no `named_imports`, but the inclusion pass still recorded how they
     // are observed — so they can be mixed-mode too. See `chunk_recorded_external_interop`.
+    //
+    // Only the cjs renderer emits bindings for that indirect list; `render_chunk_external_imports`
+    // walks the direct list alone, so a name planned from an indirect external under iife/umd would
+    // have no `let` to bind it. Keep the two in step rather than plan a name nothing declares.
+    let indirect_externals = matches!(format, OutputFormat::Cjs)
+      .then(|| chunk.import_symbol_from_external_modules.iter())
+      .into_iter()
+      .flatten();
     let externals = chunk
       .direct_imports_from_external_modules
       .iter()
       .map(|(ext_idx, named_imports)| (*ext_idx, Some(named_imports.as_slice())))
-      .chain(chunk.import_symbol_from_external_modules.iter().map(|ext_idx| (*ext_idx, None)));
+      .chain(indirect_externals.map(|ext_idx| (*ext_idx, None)));
     for (ext_idx, named_imports) in externals {
       let ext =
         link_output.module_table[ext_idx].as_external().expect("Should be external module here");
@@ -243,7 +253,18 @@ pub fn deconflict_chunk_symbols(
       ) else {
         continue;
       };
-      if modes.node_esm && modes.non_node_esm {
+      // Both modes are needed *and* some module here will actually read the node one. Without the
+      // second test the binding is dead on arrival and only its `__toESM(mod, 1)` call survives DCE.
+      if modes.node_esm
+        && modes.non_node_esm
+        && chunk_has_node_esm_reader(
+          link_output,
+          chunk_assignments,
+          chunk_idx,
+          ext.namespace_ref,
+          named_imports,
+        )
+      {
         let canonical_ref = link_output.symbol_db.canonical_ref_for(ext.namespace_ref);
         let original_name = canonical_ref.name(&link_output.symbol_db);
         let node_name = renamer.create_conflictless_name(original_name);

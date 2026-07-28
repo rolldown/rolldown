@@ -179,8 +179,11 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
             );
             s.push_str(&require_external);
           } else {
-            // Single-mode: only one of the two flags is set, so it names the mode outright.
-            let node_mode_arg = if interop_modes.node_esm { ", 1" } else { "" };
+            // Single-mode. Both flags can still be set: deconflicting suppresses the node binding
+            // when no ESM-format module in the chunk would read it (`chunk_has_node_esm_reader`).
+            // Those readers take this plain binding, so non-Node is the mode that matches them.
+            let node_mode_arg =
+              if interop_modes.node_esm && !interop_modes.non_node_esm { ", 1" } else { "" };
             let require_external = concat_string!(
               "let ",
               external_module_symbol_name,

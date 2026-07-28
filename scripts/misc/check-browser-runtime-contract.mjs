@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { readdir, readFile } from 'node:fs/promises';
+import { parse } from 'acorn';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -28,10 +29,60 @@ for (const entry of ['index.browser.mjs', 'experimental-index.browser.mjs']) {
   }
 }
 
+// The workerd entries may probe for `node:async_hooks` at runtime: workerd
+// serves it behind the `nodejs_als`/`nodejs_compat` compatibility flag, and the
+// probe is a guarded dynamic import whose rejection is swallowed elsewhere. A
+// STATIC dependency on it is still forbidden everywhere, including there.
+const runtimeAsyncHooksProbeEntries = new Set(['workerd.mjs', 'workerd.browser.mjs']);
+
+function findAsyncHooksReferences(code) {
+  const program = parse(code, { ecmaVersion: 'latest', sourceType: 'module' });
+  const references = [];
+  const pending = [program];
+  while (pending.length > 0) {
+    const node = pending.pop();
+    if (!node || typeof node !== 'object') continue;
+    const isStaticSource =
+      (node.type === 'ImportDeclaration' ||
+        node.type === 'ExportNamedDeclaration' ||
+        node.type === 'ExportAllDeclaration') &&
+      node.source?.value === 'node:async_hooks';
+    const isDynamicSource =
+      node.type === 'ImportExpression' && node.source?.value === 'node:async_hooks';
+    const isRequire =
+      node.type === 'CallExpression' &&
+      node.callee?.type === 'Identifier' &&
+      /^(?:__)?require\d*$/.test(node.callee.name) &&
+      node.arguments?.[0]?.value === 'node:async_hooks';
+    if (isStaticSource || isRequire) references.push('static');
+    if (isDynamicSource) references.push('dynamic');
+    for (const value of Object.values(node)) {
+      if (Array.isArray(value)) {
+        pending.push(...value);
+      } else if (value && typeof value === 'object') {
+        pending.push(value);
+      }
+    }
+  }
+  return references;
+}
+
+assert.deepEqual(
+  findAsyncHooksReferences(
+    "import 'node:async_hooks'; import('node:async_hooks'); __require('node:async_hooks');",
+  ).sort(),
+  ['dynamic', 'static', 'static'],
+  'async-hooks scan must tell static dependencies from runtime probes',
+);
+
 for (const entry of entries.filter((entry) => /\.(?:js|mjs)$/.test(entry))) {
   const code = await readFile(path.join(distDir, entry), 'utf8');
-  if (code.includes('node:async_hooks')) {
-    throw new Error(`${entry} must not import node:async_hooks in the browser artifact`);
+  const references = findAsyncHooksReferences(code);
+  if (references.includes('static')) {
+    throw new Error(`${entry} must not statically import node:async_hooks in the browser artifact`);
+  }
+  if (references.length > 0 && !runtimeAsyncHooksProbeEntries.has(entry)) {
+    throw new Error(`${entry} must not reference node:async_hooks in the browser artifact`);
   }
 }
 

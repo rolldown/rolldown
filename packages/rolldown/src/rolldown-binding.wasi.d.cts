@@ -1813,6 +1813,7 @@ export declare class BindingRenderedChunkMeta {
 }
 
 export declare class BindingRenderedModule {
+  dropInner(): ExternalMemoryStatus
   get code(): string | null
   get renderedExports(): Array<string>
 }
@@ -2073,6 +2074,7 @@ export interface BindingDevtoolsOptions {
 }
 
 export interface BindingDevWatchOptions {
+  enabled?: boolean
   skipWrite?: boolean
   usePolling?: boolean
   pollInterval?: number
@@ -2316,6 +2318,16 @@ export interface BindingHookJsLoadOutput {
 
 export interface BindingHookJsResolveIdOptions {
   isEntry?: boolean
+  /**
+   * - `import-statement`: `import { foo } from './lib.js';`
+   * - `dynamic-import`: `import('./lib.js')`
+   * - `require-call`: `require('./lib.js')`
+   * - `import-rule`: `@import 'bg-color.css'`
+   * - `url-token`: `url('./icon.png')`
+   * - `new-url`: `new URL('./worker.js', import.meta.url)`
+   * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
+   */
+  kind?: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
   scan?: boolean
   custom?: BindingVitePluginCustom
 }
@@ -2353,6 +2365,11 @@ export interface BindingHookResolveFileUrlArgs {
   referenceId: string
   /** Path from the chunk to the emitted file. */
   relativePath: string
+  /**
+   * The `<urlId>` of `import.meta.ROLLDOWN_FILE_URL_<referenceId>_<urlId>`, if present.
+   * Only the rolldown-specific form carries it; the `ROLLUP_FILE_URL_` alias never does.
+   */
+  urlId?: string
 }
 
 export interface BindingHookResolveIdExtraArgs {
@@ -2488,6 +2505,13 @@ export interface BindingJsWatchChangeEvent {
 export interface BindingLazyChunkOutput {
   code: string
   filename: string
+  /**
+   * The chunk's sourcemap, when `sourcemap` is `File` or `Hidden`. Serve it
+   * under `sourcemapFilename`, which is what the chunk's `sourceMappingURL`
+   * refers to.
+   */
+  sourcemap?: string
+  sourcemapFilename?: string
 }
 
 export interface BindingLog {

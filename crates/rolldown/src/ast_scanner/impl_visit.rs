@@ -83,7 +83,10 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         Some(&self.namespace_object_symbol_ids),
       );
       let mut stmt_eval_facts = analyzer.analyze_stmt(stmt);
-      if self.immutable_ctx.options.is_strict_on_demand_wrapping_enabled()
+      // `ExecutionOrderSensitive` is read outside the wrap planner too — it gates which leaf
+      // modules `sort_chunk_modules` may sort by id — so it has to mean the same thing in every
+      // strict plan. Collecting the reasons only for the selective plan left the default weaker.
+      if self.immutable_ctx.options.is_strict_execution_order_enabled()
         && !self.result.ecma_view_meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
         && !stmt_eval_facts.is_order_sensitive()
       {
@@ -214,6 +217,9 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
           meta.set(ImportRecordMeta::IsTopLevel, self.is_root_scope());
           meta.set(ImportRecordMeta::IsUnspannedImport, expr.source.span().is_empty());
           meta.set(ImportRecordMeta::InTryCatchBlock, self.in_side_try_catch_block());
+          // Mirrors the bail condition in `try_rewrite_import_expression` exactly: any options
+          // argument at all makes it leave the specifier untouched.
+          meta.set(ImportRecordMeta::DynamicImportWithOptions, expr.options.is_some());
           meta
         },
         Some(expr.node_id()),

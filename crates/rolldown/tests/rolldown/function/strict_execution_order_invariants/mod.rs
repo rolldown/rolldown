@@ -355,7 +355,7 @@ async fn dynamic_entry_does_not_static_import_side_effectful_runtime_host() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn wrapped_dynamic_entry_keeps_facade_after_manual_chunk_merge() {
+async fn wrapped_dynamic_entry_uses_the_call_site_trigger_after_manual_chunk_merge() {
   let output = bundle_fixture_with_options(
     &format!("{FIXTURE_ROOT}/m4_dynamic_facade_race"),
     vec![
@@ -381,19 +381,22 @@ async fn wrapped_dynamic_entry_keeps_facade_after_manual_chunk_merge() {
 
   let a_chunk =
     output.values().find(|code| code.contains("a done")).expect("a entry should be emitted");
-  let target_import = "import(\"./chunks/target.js\")";
+  let host_import = "import(\"./chunks/dyn.js\")";
   assert!(
-    a_chunk.contains(target_import),
-    "a should import the restored dynamic facade directly:\n{a_chunk}",
+    a_chunk.contains(host_import),
+    "a should import the chunk hosting the dynamic target:\n{a_chunk}",
   );
-  let after_target_import =
-    a_chunk.split_once(target_import).expect("the target import was checked above").1.trim_start();
+  let after_host_import =
+    a_chunk.split_once(host_import).expect("the host import was checked above").1.trim_start();
   assert!(
-    !after_target_import.starts_with(".then("),
-    "a must not call the wrapped dynamic entry through a shared-chunk .then trigger:\n{a_chunk}",
+    after_host_import.starts_with(".then("),
+    "the import() rewrite must carry the target's trigger:\n{a_chunk}",
   );
-
-  assert_order_wrapper_facade(&output, "chunks/target.js", "init_target");
+  assert!(
+    !output.keys().any(|name| name.contains("target.js")),
+    "no facade file should be emitted for the dynamic target: {:?}",
+    output.keys().collect::<Vec<_>>(),
+  );
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -502,6 +505,12 @@ async fn late_order_wrapping_revalidates_output_file() {
   // lowering. Here the chunk optimizer merges the dynamically imported `lib.js` into the user
   // entry's chunk, leaving one chunk; `restore_order_wrap_entry_facades` then revives `lib.js`'s
   // facade because a chunk can host only one entry's top-level trigger.
+  //
+  // The fixture's `import()` takes a second argument on purpose. An options import is never
+  // rewritten, so its call site cannot carry the trigger and lowering must revive the facade —
+  // which is what makes the graph multi-chunk late, exactly the `output.file` re-validation this
+  // test pins. A one-argument `import()` here would collapse into the entry's chunk instead,
+  // leaving a single chunk and testing nothing.
   //
   // `lib.js` pulls in a side-effectful `probe.js`, which keeps its load closure order-sensitive.
   // Without that the wrapper is skippable — the entry would never be wrapped, nothing would be

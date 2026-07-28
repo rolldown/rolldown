@@ -23,6 +23,10 @@ use super::{
   order_wrap_state::{OrderImportKey, OrderImportOverlay, OrderWrapState},
 };
 
+/// The one export name that makes a module namespace a thenable to the promise resolution
+/// procedure, and so unsafe to hand to a `import('./host.js').then(...)` rewrite.
+const THEN: &str = "then";
+
 pub(super) struct OrderLoweringInput<'a> {
   pub(super) plan: &'a OrderWrapPlan,
   pub(super) modules: &'a IndexModules,
@@ -439,8 +443,89 @@ impl GenerateStage<'_> {
       .filter(|module_idx| self.link_output.entries.contains_key(module_idx))
       .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order())
       .collect_vec();
+    if entries_to_restore.is_empty() {
+      return;
+    }
+
+    // Chunk of every live dynamic importer, per restore candidate; one pass over the
+    // module table serves all candidates.
+    let mut dynamic_importer_chunks: FxHashMap<ModuleIdx, Vec<Option<ChunkIdx>>> =
+      entries_to_restore.iter().map(|module_idx| (*module_idx, Vec::new())).collect();
+    for module in
+      self.link_output.module_table.modules.iter().filter_map(|module| module.as_normal())
+    {
+      let meta = &self.link_output.metas[module.idx];
+      if !meta.is_included {
+        continue;
+      }
+      // Walk statements rather than records: a record whose statement tree-shaking excluded is not
+      // a call site, and `DeadDynamicImport` only marks a pure import of a side-effect-free module,
+      // not statement exclusion. Same discipline as `is_included_dynamic_import_record` in
+      // `dynamic_already_loaded`.
+      for (stmt_info_idx, stmt_info) in
+        self.link_output.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt()
+      {
+        if !meta.stmt_info_included.has_bit(stmt_info_idx) {
+          continue;
+        }
+        for rec_idx in &stmt_info.import_records {
+          let rec = &module.import_records[*rec_idx];
+          if rec.kind == ImportKind::DynamicImport
+            && !rec.meta.contains(ImportRecordMeta::DeadDynamicImport)
+            && let Some(importee_idx) = rec.resolved_module
+            && let Some(importer_chunks) = dynamic_importer_chunks.get_mut(&importee_idx)
+          {
+            // `None` means "this call site cannot carry the trigger". A two-argument `import()`
+            // keeps the specifier the user wrote, so it can neither run the trigger nor point at
+            // the host chunk; recording it as chunkless makes the `all(Option::is_some)` check
+            // below reject the collapse and put the facade back at that name.
+            importer_chunks.push(
+              if rec.meta.contains(ImportRecordMeta::DynamicImportWithOptions) {
+                None
+              } else {
+                chunk_graph.module_to_chunk[module.idx]
+              },
+            );
+          }
+        }
+      }
+    }
 
     for entry_module_idx in entries_to_restore {
+      // Every live importer is a dynamic one, so every entry path into this module is an `import()`
+      // that the finalizer can rewrite to carry the trigger: `Promise.resolve().then(() => (init_x(),
+      // ns))` when the importer shares the host chunk, `import('./host.js').then(n => (n.init_x(),
+      // n.namespace))` when it does not. Neither needs a file of its own, so the eliminated facade
+      // stays eliminated. The trade this accepts: the trigger then runs in the rewrite's `.then`, one
+      // microtask after the host chunk settles, instead of inside a facade's own evaluation — see
+      // `m4_dynamic_facade_race`, which pins that ordering. A module with no live dynamic importer
+      // has no call site to carry anything, so it keeps the facade, and an emitted chunk keeps its
+      // facade because an `emitFile` reference id must resolve to a real file. See
+      // internal-docs/code-splitting/design.md ("Trigger placement") for the policy this
+      // implements.
+      //
+      // Two shapes break that rewrite, and both keep the facade:
+      //
+      // - A two-argument `import()` keeps the specifier the user wrote, so a file has to stay at
+      //   that name. The importer scan above records those call sites as `None`. Keeping the
+      //   facade is necessary but not sufficient: because the specifier is never rewritten, such
+      //   a call site only resolves when the emitted facade name matches what the source wrote,
+      //   so hashed output names break it either way. That part is not specific to the collapse
+      //   and predates it.
+      // - The cross-chunk rewrite reads the target's exports back out of the *host chunk's*
+      //   namespace, which it obtains by resolving `import('./host.js')`. A namespace carrying a
+      //   callable `then` is assimilated as a thenable, so the extraction callback never receives
+      //   it — a chunk-mate's export would change what `import()` of the target observes, which it
+      //   cannot do in the source. `order_wrap_host_can_expose_then_export` detects that.
+      let entry_host_chunk = chunk_graph.module_to_chunk[entry_module_idx];
+      let importer_chunks = &dynamic_importer_chunks[&entry_module_idx];
+      let collapse_carries_trigger = entry_host_chunk.is_some()
+        && !importer_chunks.is_empty()
+        && importer_chunks.iter().all(std::option::Option::is_some)
+        && !entry_host_chunk.is_some_and(|host_chunk_idx| {
+          self.order_wrap_host_can_expose_then_export(chunk_graph, host_chunk_idx, importer_chunks)
+        });
+
       let facade_chunk_indices = chunk_graph
         .chunk_table
         .iter_enumerated()
@@ -449,6 +534,7 @@ impl GenerateStage<'_> {
             if module == entry_module_idx
               && chunk.modules.is_empty()
               && meta.intersects(ChunkMeta::DynamicImported | ChunkMeta::EmittedChunk)
+              && (meta.contains(ChunkMeta::EmittedChunk) || !collapse_carries_trigger)
               && matches!(
                 chunk_graph.post_chunk_optimization_operations.get(&chunk_idx),
                 Some(
@@ -486,6 +572,70 @@ impl GenerateStage<'_> {
         chunk_graph.post_chunk_optimization_operations.remove(&facade_chunk_idx);
       }
     }
+  }
+
+  /// Whether collapsing a dynamic entry into `host_chunk_idx` could let a cross-chunk `import()`
+  /// of that chunk resolve to something other than the chunk's namespace. See
+  /// internal-docs/code-splitting/design.md ("Trigger placement") for the trigger-siting policy
+  /// this guards.
+  ///
+  /// The cross-chunk rewrite is `import('./host.js').then(n => (n.init_x(), n.namespace))`, so the
+  /// host chunk's namespace passes through the promise resolution procedure. If that namespace
+  /// exposes a callable `then`, it is assimilated as a thenable and `n` becomes whatever that
+  /// `then` resolves with — the extraction callback never sees the namespace. In the source the
+  /// target's `import()` cannot observe a sibling module's exports at all, so this is a behaviour
+  /// change and the facade (whose namespace holds only the entry's own exports) has to stay.
+  ///
+  /// Same-chunk importers are immune: their rewrite is `Promise.resolve().then(() => ...)` and
+  /// never dynamically imports the host, so the guard only applies once some importer sits
+  /// elsewhere. The check is deliberately over-approximate — every module placed in the chunk
+  /// counts, not just the ones whose `then` actually reaches the chunk's export list — because a
+  /// false positive only restores a facade while a false negative breaks user code.
+  ///
+  /// Both name spaces have to be inspected, because `deconflict_exported_names` picks the emitted
+  /// name from a different one per chunk kind: an entry chunk exports its entry module's canonical
+  /// exports under their source-level alias, while everything reaching a chunk through the
+  /// cross-chunk symbol path is emitted under the *declaring symbol's* name. So `export { then as
+  /// hostThen }` is a hazard even though no export is named `then`, and `export { local as then }`
+  /// is a hazard even though no symbol is named `then`.
+  fn order_wrap_host_can_expose_then_export(
+    &self,
+    chunk_graph: &ChunkGraph,
+    host_chunk_idx: ChunkIdx,
+    importer_chunks: &[Option<ChunkIdx>],
+  ) -> bool {
+    if importer_chunks.iter().all(|importer_chunk| *importer_chunk == Some(host_chunk_idx)) {
+      return false;
+    }
+
+    let symbol_db = &self.link_output.symbol_db;
+    let module_can_expose_then = |module_idx: ModuleIdx| {
+      self.link_output.metas[module_idx].resolved_exports.iter().any(|(name, export)| {
+        name.as_str() == THEN
+          || symbol_db.canonical_ref_for(export.symbol_ref).name(symbol_db) == THEN
+      })
+    };
+
+    let host_chunk = &chunk_graph.chunk_table[host_chunk_idx];
+    // An entry chunk keeps its entry module's own export names even when internal exports are
+    // minified (see `deconflict_exported_names`), so those always reach the emitted namespace.
+    if let ChunkKind::EntryPoint { module, .. } = host_chunk.kind
+      && module_can_expose_then(module)
+    {
+      return true;
+    }
+
+    // Mirrors `deconflict_exported_names`: when internal export names are minified they become
+    // short generated identifiers that can never be `then`, so only the modules explicitly held
+    // back from minification can still contribute one.
+    if !self.options.preserve_modules && self.options.minify_internal_exports {
+      return chunk_graph
+        .common_chunk_preserve_export_names_modules
+        .get(&host_chunk_idx)
+        .is_some_and(|modules| modules.iter().copied().any(module_can_expose_then));
+    }
+
+    host_chunk.modules.iter().copied().any(module_can_expose_then)
   }
 
   /// Normalize the runtime module onto a standalone chunk. Returns whether the caller still owes

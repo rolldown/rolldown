@@ -1,0 +1,113 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { i as init_a, r as aTargetPromise } from "./ga.js";
+init_a();
+export { aTargetPromise };
+
+```
+
+## b.js
+
+```js
+//#region b.js
+(globalThis.log ??= []).push("b");
+const bTargetPromise = import("./ga.js").then((n) => (n.t(), n.n));
+//#endregion
+export { bTargetPromise };
+
+```
+
+## ga.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region a.js
+var aTargetPromise;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		(globalThis.log ??= []).push("a");
+		aTargetPromise = Promise.resolve().then(() => (init_target(), target_exports));
+	})))();
+}
+//#endregion
+//#region target.js
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+function init_target() {
+	return (init_target = __esmMin((() => {
+		(globalThis.log ??= []).push("target");
+	})))();
+}
+//#endregion
+export { init_a as i, target_exports as n, aTargetPromise as r, init_target as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### a.js
+
+```js
+import { i as init_a, r as aTargetPromise } from "./ga.js";
+init_a();
+export { aTargetPromise };
+
+```
+
+### b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+var bTargetPromise;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		(globalThis.log ??= []).push("b");
+		bTargetPromise = import("./ga.js").then((n) => (n.t(), n.n));
+	})))();
+}
+//#endregion
+init_b();
+export { bTargetPromise };
+
+```
+
+### ga.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var aTargetPromise;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		(globalThis.log ??= []).push("a");
+		aTargetPromise = Promise.resolve().then(() => (init_target(), target_exports));
+	})))();
+}
+//#endregion
+//#region target.js
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+function init_target() {
+	return (init_target = __esmMin((() => {
+		(globalThis.log ??= []).push("target");
+	})))();
+}
+//#endregion
+export { init_a as i, target_exports as n, aTargetPromise as r, init_target as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```

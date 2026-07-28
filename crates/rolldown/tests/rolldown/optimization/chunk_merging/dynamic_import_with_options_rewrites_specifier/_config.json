@@ -1,5 +1,5 @@
 {
-  "_comment": "A live two-argument `import()` is rewritten like any other call site. Its wrapped dynamic entry is merged into the manually assigned host chunk, and the collapse carries the entry trigger, so no facade file stays behind at the specifier the source wrote.",
+  "_comment": "A two-argument `import()` of a bundled module is rewritten exactly like a one-argument one: the second argument is dropped and the specifier is redirected at the chunk that actually holds the target. The manual group merges the dynamic entry into `dyn.js`, so the call site collapses to the host chunk's namespace extraction and no `target.js` file is emitted.",
   "config": {
     "input": [
       {
@@ -13,10 +13,6 @@
     ],
     "entryFilenames": "[name].js",
     "chunkFilenames": "[name].js",
-    "strictExecutionOrder": true,
-    "experimental": {
-      "onDemandWrapping": true
-    },
     "codeSplitting": {
       "groups": [
         {

@@ -30,6 +30,7 @@ impl Drop for WrittenBundle {
 
 #[derive(Debug)]
 struct EmitTarget {
+  id: &'static str,
   names: &'static [&'static str],
 }
 
@@ -46,7 +47,7 @@ impl Plugin for EmitTarget {
     for &name in self.names {
       ctx.emit_chunk(EmittedChunk {
         name: Some(name.into()),
-        id: "./target.js".to_string(),
+        id: self.id.to_string(),
         preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
         ..Default::default()
       })?;
@@ -157,7 +158,7 @@ async fn bundle_emitted_target(
       })),
       ..Default::default()
     },
-    vec![Arc::new(EmitTarget { names })],
+    vec![Arc::new(EmitTarget { id: "./target.js", names })],
   )
   .expect("failed to create bundler");
 
@@ -500,33 +501,45 @@ async fn duplicate_emitted_entries_keep_order_wrapper_facades() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn late_order_wrapping_revalidates_output_file() {
-  // `output.file` is first validated against the provisional chunk graph, so the shape that
-  // exercises the *re*-validation has to be single-chunk then and multi-chunk only after order
-  // lowering. Here the chunk optimizer merges the dynamically imported `lib.js` into the user
-  // entry's chunk, leaving one chunk; `restore_order_wrap_entry_facades` then revives `lib.js`'s
-  // facade because a chunk can host only one entry's top-level trigger.
+  // `output.file` is validated against the *final* chunk graph, so the shape that exercises it has
+  // to render as one chunk after chunk optimization and gain a second chunk only during order
+  // lowering.
   //
-  // The fixture's `import()` takes a second argument on purpose. An options import is never
-  // rewritten, so its call site cannot carry the trigger and lowering must revive the facade —
-  // which is what makes the graph multi-chunk late, exactly the `output.file` re-validation this
-  // test pins. A one-argument `import()` here would collapse into the entry's chunk instead,
-  // leaving a single chunk and testing nothing.
+  // The `grp` group puts every module in one manual chunk, which leaves the user entry chunk empty
+  // and folds the group back into it; the chunk emitted for the same entry module is likewise an
+  // empty facade the optimizer merges into the group. That is one rendered chunk. Order lowering
+  // then revives the emitted facade — an `emitFile` reference id has to resolve to a real file —
+  // and only then is the graph multi-chunk. Flipping `strict_execution_order` off makes this build
+  // succeed, which is what keeps the assertion below honest.
   //
-  // `lib.js` pulls in a side-effectful `probe.js`, which keeps its load closure order-sensitive.
-  // Without that the wrapper is skippable — the entry would never be wrapped, nothing would be
-  // restored, and the graph would stay single-chunk, testing nothing.
+  // `lib.js` pulls in a side-effectful `probe.js`, which keeps the entry's load closure
+  // order-sensitive. Without that the wrapper is skippable — the entry would never be wrapped,
+  // nothing would be restored, and the graph would stay single-chunk, testing nothing.
   let fixture_dir = format!("{FIXTURE_ROOT}/late_split_revalidates_output_file");
-  let mut bundler = Bundler::new(BundlerOptions {
-    input: Some(vec![InputItem {
-      name: Some("entry".to_string()),
-      import: "./entry.js".to_string(),
-    }]),
-    cwd: Some(fixture_dir.into()),
-    file: Some("bundle.js".to_string()),
-    format: Some(OutputFormat::Esm),
-    strict_execution_order: Some(true),
-    ..Default::default()
-  })
+  let mut bundler = Bundler::with_plugins(
+    BundlerOptions {
+      input: Some(vec![InputItem {
+        name: Some("entry".to_string()),
+        import: "./entry.js".to_string(),
+      }]),
+      cwd: Some(fixture_dir.into()),
+      file: Some("bundle.js".to_string()),
+      format: Some(OutputFormat::Esm),
+      strict_execution_order: Some(true),
+      code_splitting: Some(CodeSplittingMode::Advanced(ManualCodeSplittingOptions {
+        groups: Some(vec![MatchGroup {
+          name: MatchGroupName::Static("grp".to_string()),
+          test: Some(MatchGroupTest::Regex(
+            HybridRegex::new(r"[\\/](?:entry|lib|probe)\.js$").expect("regex should be valid"),
+          )),
+          ..Default::default()
+        }]),
+        ..Default::default()
+      })),
+      ..Default::default()
+    },
+    vec![Arc::new(EmitTarget { id: "./entry.js", names: &["emitted"] })],
+  )
   .expect("failed to create bundler");
 
   let Err(error) = bundler.generate().await else {

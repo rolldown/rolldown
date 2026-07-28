@@ -2434,15 +2434,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let ast::Expression::ImportExpression(expr) = node else {
       return false;
     };
-    if expr.options.is_some() {
-      return false;
-    }
 
     let (Some(str), Some(rec_idx)) =
       (expr.source.as_static_module_request(), self.ctx.module.imports.get(&expr.node_id()))
     else {
+      // No import record — a computed specifier or a `/* @vite-ignore */`-ed call. The target is
+      // unknown, so a second argument cannot be dropped: `require()` takes no attributes and the
+      // callee may well be external, where attributes are load-bearing. Keep the native
+      // `import()` in that case. Returning `false` also lets the walker descend into the options
+      // expression so any reference inside it is still finalized.
       if matches!(self.ctx.options.format, OutputFormat::Cjs)
         && !self.ctx.options.dynamic_import_in_cjs
+        && expr.options.is_none()
       {
         // Transform `import(expr)` to `Promise.resolve().then(() => __toESM(require(expr)))`
         let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
@@ -2469,7 +2472,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut needs_to_esm_helper = false;
     let rec = &self.ctx.module.import_records[*rec_idx];
-    let Some(importee_idx) = rec.resolved_module else { return true };
+    let Some(importee_idx) = rec.resolved_module else {
+      // Unresolved: nothing to point somewhere else. Report "rewritten" only when there is no
+      // options expression left to walk into.
+      return expr.options.is_none();
+    };
 
     match &self.ctx.modules[importee_idx] {
       Module::Normal(importee) => {
@@ -2483,6 +2490,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let Some(importee_chunk) = self.ctx.chunk_graph.chunk_table.get(importee_chunk_idx) else {
           return false;
         };
+
+        // The importee is bundled, so the second argument is inert and is dropped here. Import
+        // attributes only reach the output for external imports, where `ecmascript/format/esm.rs`
+        // renders them from `import_attribute_map`; for an internal module they select no loader
+        // and do not affect module identity, and a static attributed import of an internal module
+        // already drops them. Dropping them makes `import(spec, options)` produce byte-identical
+        // output to `import(spec)`: the specifier below is redirected at the chunk that actually
+        // holds the module, and the merged-entry and CJS rewrites apply as usual. Keeping the
+        // argument instead would emit a specifier the source wrote for a file the bundle never
+        // emits.
+        //
+        // Trade accepted: an options *expression* with side effects is no longer evaluated when
+        // the target is internal. The argument is spec'd as an object literal carrying `with`, and
+        // such a call site does not resolve today anyway, so nothing that worked stops working.
+        expr.options = None;
 
         let import_path = self.ctx.chunk.import_path_for(importee_chunk);
         expr.source = Expression::new_string_literal(
@@ -2550,6 +2572,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         needs_to_esm_helper = importee.exports_kind.is_commonjs();
       }
       Module::External(importee) => {
+        if expr.options.is_some() {
+          // Attributes are load-bearing for an external import: the host resolves the specifier
+          // and `with { type: 'json' }` picks the module type. Leave the call exactly as written —
+          // in particular do not lower it to `require()`, which cannot carry attributes.
+          return false;
+        }
         let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
         if str != import_path {
           expr.source = Expression::new_string_literal(

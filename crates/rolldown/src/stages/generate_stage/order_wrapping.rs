@@ -32,8 +32,8 @@ const THEN: &str = "then";
 #[derive(Clone, Copy)]
 struct LiveDynamicImporter {
   module_idx: ModuleIdx,
-  /// `None` means that this call site cannot carry the trigger (currently a two-argument
-  /// `import()` whose source specifier is intentionally left untouched).
+  /// The chunk hosting the importer, i.e. where the rewritten call site would carry the trigger.
+  /// `None` means the importer has no chunk of its own, so it cannot carry one.
   trigger_chunk: Option<ChunkIdx>,
 }
 
@@ -580,11 +580,7 @@ impl GenerateStage<'_> {
           {
             target_importers.push(LiveDynamicImporter {
               module_idx: module.idx,
-              trigger_chunk: if rec.meta.contains(ImportRecordMeta::DynamicImportWithOptions) {
-                None
-              } else {
-                chunk_graph.module_to_chunk[module.idx]
-              },
+              trigger_chunk: chunk_graph.module_to_chunk[module.idx],
             });
           }
         }
@@ -624,19 +620,12 @@ impl GenerateStage<'_> {
       // internal-docs/code-splitting/design.md ("Trigger placement") for the policy this
       // implements.
       //
-      // Two shapes break that rewrite, and both keep the facade:
-      //
-      // - A two-argument `import()` keeps the specifier the user wrote, so a file has to stay at
-      //   that name. The importer scan above records those call sites as `None`. Keeping the
-      //   facade is necessary but not sufficient: because the specifier is never rewritten, such
-      //   a call site only resolves when the emitted facade name matches what the source wrote,
-      //   so hashed output names break it either way. That part is not specific to the collapse
-      //   and predates it.
-      // - The cross-chunk rewrite reads the target's exports back out of the *host chunk's*
-      //   namespace, which it obtains by resolving `import('./host.js')`. A namespace carrying a
-      //   callable `then` is assimilated as a thenable, so the extraction callback never receives
-      //   it — a chunk-mate's export would change what `import()` of the target observes, which it
-      //   cannot do in the source. `order_wrap_host_can_expose_then_export` detects that.
+      // One shape breaks that rewrite and keeps the facade: the cross-chunk rewrite reads the
+      // target's exports back out of the *host chunk's* namespace, which it obtains by resolving
+      // `import('./host.js')`. A namespace carrying a callable `then` is assimilated as a thenable,
+      // so the extraction callback never receives it — a chunk-mate's export would change what
+      // `import()` of the target observes, which it cannot do in the source.
+      // `order_wrap_host_can_expose_then_export` detects that.
       let entry_host_chunk = chunk_graph.module_to_chunk[entry_module_idx];
       let importer_sites = &dynamic_importers[&entry_module_idx];
       let importer_chunks =

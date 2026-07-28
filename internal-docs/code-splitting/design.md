@@ -60,13 +60,13 @@ These are the main places where strict output deliberately accepts extra wrapper
   `Promise.resolve().then(() => (init_*(), namespace))` or
   `import(host).then(n => (n.init_*(), n.namespace))`. This applies both to facades removed by the
   chunk optimizer and to facades that strict lowering would otherwise create. It is rejected for a
-  previously restored empty facade, an emitted/user entry, a two-argument `import()`, a TLA-tainted
-  target, a cross-chunk host namespace that may expose callable `then`, or — on the create path — a
-  direct or transitive export-star chain that reaches an external module. Entry-level external
-  merges render on the facade chunk in every format, and the module-local simulated namespace does
-  not reproduce their format-specific behavior. The external-star guard is create-path-only: the
-  restore path instead relies on the chunk optimizer's simulated-namespace handling, whose
-  external-star preservation is handled separately.
+  previously restored empty facade, an emitted/user entry, a TLA-tainted target, a cross-chunk host
+  namespace that may expose callable `then`, or — on the create path — a direct or transitive
+  export-star chain that reaches an external module. Entry-level external merges render on the
+  facade chunk in every format, and the module-local simulated namespace does not reproduce their
+  format-specific behavior. The external-star guard is create-path-only: the restore path instead
+  relies on the chunk optimizer's simulated-namespace handling, whose external-star preservation is
+  handled separately.
 - **CJS namespace merge is skipped under strict** (`determine_safely_merge_cjs_ns`): merging
   moves the surviving require call to whichever statement stays included — an intra-body
   move no wrapping can repair. Per-importer call sites cost bytes; the wrapper memoizes.

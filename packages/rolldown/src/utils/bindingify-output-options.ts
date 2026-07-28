@@ -6,10 +6,16 @@ import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
 import { logger } from '../cli/logger';
+import {
+  measureHookCost,
+  OUTPUT_OPTIONS_OWNER,
+  type PluginTimingsRecorder,
+} from './plugin-timings';
 
 export function bindingifyOutputOptions(
   outputOptions: OutputOptions,
   pluginContextData: PluginContextData,
+  timings: PluginTimingsRecorder | undefined,
 ): BindingOutputOptions {
   const {
     dir,
@@ -61,6 +67,7 @@ export function bindingifyOutputOptions(
     outputOptions.advancedChunks,
     manualChunks,
     pluginContextData,
+    timings,
   );
 
   return {
@@ -201,6 +208,7 @@ function bindingifyCodeSplitting(
   advancedChunks: OutputOptions['advancedChunks'],
   manualChunks: OutputOptions['manualChunks'],
   pluginContextData: PluginContextData,
+  timings: PluginTimingsRecorder | undefined,
 ): {
   inlineDynamicImports: BindingOutputOptions['inlineDynamicImports'];
   advancedChunks: BindingOutputOptions['manualCodeSplitting'];
@@ -316,10 +324,18 @@ function bindingifyCodeSplitting(
         const { name, ...restGroup } = group;
         return {
           ...restGroup,
+          // The core calls this classifier directly rather than through a plugin, so it
+          // belongs to no plugin's rows — and it runs once per module, which is how it ends
+          // up dominating a build.
           name:
             typeof name === 'function'
-              ? (id: string, ctx: BindingChunkingContext) =>
-                  name(id, new ChunkingContextImpl(ctx, pluginContextData))
+              ? measureHookCost(
+                  timings,
+                  OUTPUT_OPTIONS_OWNER,
+                  'codeSplitting groups[].name',
+                  (id: string, ctx: BindingChunkingContext) =>
+                    name(id, new ChunkingContextImpl(ctx, pluginContextData)),
+                )
               : name,
         };
       }),

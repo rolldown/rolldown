@@ -29,6 +29,10 @@ import {
 } from './normalize-transform-options';
 import { getParallelPluginInfo } from './parallel-plugin';
 import { getDefaultDevRuntime } from './default-dev-runtime';
+import {
+  type PluginTimingsRecorder,
+  summarizePluginTimings,
+} from './plugin-timings';
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
@@ -39,6 +43,7 @@ export function bindingifyInputOptions(
   onLog: LogHandler,
   logLevel: LogLevelOption,
   watchMode: boolean,
+  timings: PluginTimingsRecorder | undefined,
 ): BindingInputOptions {
   const plugins = rawPlugins.map((plugin) => {
     if (getParallelPluginInfo(plugin)) {
@@ -61,6 +66,7 @@ export function bindingifyInputOptions(
       onLog,
       logLevel,
       watchMode,
+      timings,
     );
   });
 
@@ -91,6 +97,9 @@ export function bindingifyInputOptions(
     dropLabels: normalizedTransform.dropLabels,
     keepNames: outputOptions.keepNames,
     checks: inputOptions.checks,
+    // Pulled by the core while the build closes, so what it returns includes `closeBundle`.
+    // Only registered when measuring; its absence is how Rust knows to stay quiet.
+    pluginTimings: timings ? () => summarizePluginTimings(inputOptions) : undefined,
     deferSyncScanData: () => {
       let ret: BindingDeferSyncScanData[] = [];
       pluginContextData.moduleOptionMap.forEach((value, key) => {

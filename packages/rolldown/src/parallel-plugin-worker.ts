@@ -33,6 +33,9 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
             'info' as const,
             // TODO: support this.meta.watchMode
             false,
+            // Not measured: these hooks run on a worker thread, so their spans could not
+            // be summed with the main thread's or reported through its log handler.
+            undefined,
           ),
         };
       }),

@@ -445,6 +445,7 @@ pub fn prepare_build_context(
     keep_names: raw_options.keep_names.unwrap_or_default(),
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),
     defer_sync_scan_data: raw_options.defer_sync_scan_data,
+    plugin_timings: raw_options.plugin_timings,
     transform_options,
     make_absolute_externals_relative: raw_options
       .make_absolute_externals_relative

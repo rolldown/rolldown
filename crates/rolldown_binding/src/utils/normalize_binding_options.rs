@@ -7,6 +7,7 @@ use crate::options::{
   AssetFileNamesOutputOption, BindingOnLog, ChunkFileNamesOutputOption, SanitizeFileName,
   SourcemapIgnoreListOutputOption,
 };
+use crate::types::binding_plugin_timings::BindingPluginTimingsMeasurement;
 use crate::types::binding_string_or_regex::{
   BindingStringOrRegex, bindingify_string_or_regex_array,
 };
@@ -28,8 +29,9 @@ use rolldown::{
   AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
   ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
   IsExternal, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType,
-  OptimizationOption, OutputExports, OutputFormat, Platform, RawCompressOptions, RawMangleOptions,
-  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, StrictMode, TsConfig,
+  OptimizationOption, OutputExports, OutputFormat, Platform, PluginTimingsOption,
+  RawCompressOptions, RawMangleOptions, RawMinifyOptions, RawMinifyOptionsDetailed,
+  SanitizeFilename, StrictMode, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -237,6 +239,24 @@ fn normalize_external_option(
         })
       })))
     }
+  })
+}
+
+fn normalize_plugin_timings_option(
+  plugin_timings: Option<JsCallback<(), BindingPluginTimingsMeasurement>>,
+) -> Option<PluginTimingsOption> {
+  plugin_timings.map(|ts_fn| {
+    PluginTimingsOption::new(move || {
+      let ts_fn = Arc::clone(&ts_fn);
+      Box::pin(async move {
+        ts_fn
+          .invoke_async(())
+          .await
+          .context("pluginTimings option")
+          .map(Into::into)
+          .map_err(anyhow::Error::from)
+      })
+    })
   })
 }
 
@@ -450,6 +470,7 @@ pub fn normalize_binding_options(
   let external = normalize_external_option(input_options.external);
   let get_defer_sync_scan_data =
     normalize_defer_sync_scan_data_option(input_options.defer_sync_scan_data);
+  let get_plugin_timings = normalize_plugin_timings_option(input_options.plugin_timings);
   let sourcemap_ignore_list =
     normalize_sourcemap_ignore_list_option(output_options.sourcemap_ignore_list);
   let sourcemap_path_transform =
@@ -690,6 +711,7 @@ pub fn normalize_binding_options(
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
     defer_sync_scan_data: get_defer_sync_scan_data,
+    plugin_timings: get_plugin_timings,
     transform: transform_options,
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative

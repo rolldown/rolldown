@@ -15,7 +15,7 @@ use crate::{
 use napi::{Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
 use rolldown::{BundleHandle, BundlerConfig};
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, PluginTimings};
 use rolldown_plugin::BuildTimings;
 use std::sync::Arc;
 
@@ -23,8 +23,8 @@ use std::sync::Arc;
 pub struct BindingBundler {
   inner: ClassicBundler,
   /// Every build this bundler has run, in order. A `RolldownBuild` may `generate` more
-  /// than once, so the plugin-timing report at close sums their clocks rather than reading
-  /// only the last.
+  /// than once, and the plugin-timing measurement accumulates across all of them, so the
+  /// clocks it is judged against are summed over all of them too.
   bundle_handles: Vec<BundleHandle>,
 }
 
@@ -188,7 +188,7 @@ impl BindingBundler {
     spawn_boxed_future(env, async move {
       let res = cleanup_fut.await;
       handle_result(res)?;
-      // After the cleanup, so `closeBundle`'s cost is part of what gets reported.
+      // After the cleanup, so `closeBundle` is part of what the other side reports.
       handle_result(report_plugin_timings(&handles).await)?;
       Ok(())
     })
@@ -209,17 +209,24 @@ impl BindingBundler {
   }
 }
 
-/// Warn about slow plugins, once the build is closing.
+/// Ask the JavaScript side what its plugin callbacks cost, and warn if it is worth saying.
 ///
-/// Emitted here rather than from `Bundle::write`/`generate` because `closeBundle` runs
-/// inside `close()`: reporting before it means measuring that hook and then discarding the
-/// measurement. The clocks are summed across every output for the same reason the report is
-/// deferred — one `RolldownBuild` may `generate` more than once, and each output's plugin
-/// work counts.
+/// The gate lives here because the clocks it needs — the build and the link stage — are only
+/// visible on this side; what the callbacks actually cost is only visible on the other. The
+/// diagnostic then goes out through the usual path, so `checks.pluginTimings` filters it
+/// like any other.
 async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
   let Some(last) = handles.last() else {
     return Ok(());
   };
+  let options = last.options();
+  let Some(get_timings) = options.plugin_timings.as_ref() else {
+    return Ok(());
+  };
+
+  // Summed over every output, because the measurement on the other side is: one
+  // `RolldownBuild` may generate more than once, and judging a cumulative measurement
+  // against only the last output's clocks would both suppress and inflate reports.
   let total_micros: u64 =
     handles.iter().map(|handle| handle.plugin_driver().build_timings.total_micros()).sum();
   let link_micros: u64 =
@@ -228,16 +235,14 @@ async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
     return Ok(());
   }
 
-  let summaries =
-    handles.iter().flat_map(|handle| handle.plugin_driver().plugin_timing_summaries()).collect();
-  let Some(plugins) = rolldown_plugin::plugin_timings_info(summaries) else {
+  let measurement = get_timings.exec().await?;
+  #[expect(clippy::cast_precision_loss)]
+  let build_ms = total_micros as f64 / 1_000.0;
+  let Some(timings) = PluginTimings::new(build_ms, measurement) else {
     return Ok(());
   };
-  handle_warnings(
-    vec![BuildDiagnostic::plugin_timings(plugins).with_severity_warning()],
-    last.options(),
-  )
-  .await
+  handle_warnings(vec![BuildDiagnostic::plugin_timings(timings).with_severity_warning()], options)
+    .await
 }
 
 impl BindingBundler {

@@ -5,10 +5,13 @@ use std::{
 
 /// The two wall clocks that decide whether a build was plugin-bound.
 ///
-/// Kept apart from [`crate::HookTimingCollector`], which measures what individual plugins
-/// cost: these are properties of the build itself, they are set once each rather than
-/// accumulated per call, and the question they answer — "is this worth reporting on at
-/// all?" — is asked before any per-plugin number is looked at.
+/// Plugin hooks themselves are timed on the JavaScript side, because this side can only
+/// bracket dispatch and completion and for a concurrently dispatched hook that is mostly
+/// queue wait — see `packages/rolldown/src/utils/plugin-timings.ts`. But the *link stage*
+/// is visible only from here, and it is the one stretch of a build that is pure core work
+/// with no plugin in it. Non-link time running far ahead of link time is what says the
+/// build is plugin-bound, so these are handed across the binding for the JavaScript side
+/// to gate its report on.
 #[derive(Debug, Default)]
 pub struct BuildTimings {
   total_micros: AtomicU64,
@@ -35,19 +38,22 @@ impl BuildTimings {
     self.link_stage_micros.load(Ordering::Relaxed)
   }
 
-  /// Whether the build looks plugin-bound: over `MIN_BUILD_MICROS` long, with non-link time
-  /// more than `PLUGIN_TIME_OVER_LINK_TIME` times the link stage.
+  /// Whether the build looks plugin-bound: over `MIN_BUILD` long, with non-link time more
+  /// than `PLUGIN_TIME_OVER_LINK_TIME` times the link stage.
   ///
-  /// This works because plugins run during the scan and generate stages, not the link
-  /// stage, which makes the link stage the one stretch of a build with no plugin in it. The
-  /// multiplier was settled by studying plugin impact on real-world projects, and the
-  /// minimum build time keeps fast builds quiet.
+  /// The link stage is the one stretch of a build with no plugin in it, which is what makes
+  /// it a baseline. The multiplier was settled by studying real-world projects.
+  ///
+  /// This only decides whether to *look*; what the build actually spent in plugin callbacks
+  /// is measured on the JavaScript side, because this side cannot see when a callback began
+  /// running — see `packages/rolldown/src/utils/plugin-timings.ts`.
   pub fn plugins_are_slow(&self) -> bool {
     Self::is_plugin_bound(self.total_micros(), self.link_stage_micros())
   }
 
   /// The same test over totals supplied by the caller, so a build that produced several
-  /// outputs can sum its clocks before asking.
+  /// outputs can sum its clocks before asking. The measurement it is judged against
+  /// accumulates across outputs, so these have to as well.
   #[expect(clippy::cast_precision_loss)]
   pub fn is_plugin_bound(total_micros: u64, link_stage_micros: u64) -> bool {
     const MIN_BUILD_MICROS: u64 = 3_000_000;

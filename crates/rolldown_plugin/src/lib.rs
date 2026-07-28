@@ -51,8 +51,6 @@ pub use crate::{
   types::hook_resolve_file_url_output::HookResolveFileUrlOutput,
   types::hook_resolve_id_args::HookResolveIdArgs,
   types::hook_resolve_id_output::HookResolveIdOutput,
-  types::hook_timing::HookTimingCollector,
-  types::hook_timing::plugin_timings_info,
   types::hook_transform_args::HookTransformArgs,
   types::hook_transform_ast_args::HookTransformAstArgs,
   types::hook_transform_output::{HookTransformOutput, HookTransformOutputMap},

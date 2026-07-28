@@ -25,6 +25,7 @@ use binding_watch_option::BindingWatchOption;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use crate::generated::binding_checks_options;
+use crate::types::binding_plugin_timings::BindingPluginTimingsMeasurement;
 use crate::types::binding_string_or_regex::BindingStringOrRegex;
 use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::types::preserve_entry_signatures::BindingPreserveEntrySignatures;
@@ -97,6 +98,10 @@ pub struct BindingInputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "undefined | (() => BindingDeferSyncScanData[])")]
   pub defer_sync_scan_data: Option<JsCallback<(), Vec<BindingDeferSyncScanData>>>,
+  /// Asked for while the build is closing, so what it returns includes `closeBundle`.
+  #[debug(skip)]
+  #[napi(ts_type = "undefined | (() => BindingPluginTimingsMeasurement)")]
+  pub plugin_timings: Option<JsCallback<(), BindingPluginTimingsMeasurement>>,
   pub make_absolute_externals_relative: Option<BindingMakeAbsoluteExternalsRelative>,
   pub devtools: Option<BindingDevtoolsOptions>,
   #[debug(skip)]

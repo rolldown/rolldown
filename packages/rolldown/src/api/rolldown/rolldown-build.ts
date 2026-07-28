@@ -124,7 +124,12 @@ export class RolldownBuild {
   async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
     await this.#stopWorkers?.();
-    const option = await createBundlerOptions(this.#inputOptions, outputOptions, false);
+    const option = await createBundlerOptions(
+      this.#inputOptions,
+      outputOptions,
+      /* watchMode */ false,
+      /* measureTimings */ true,
+    );
 
     try {
       this.#stopWorkers = option.stopWorkers;

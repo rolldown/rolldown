@@ -1,0 +1,7 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/10069 - the re-export shim is tree-shaken away, but the surviving `.default` access on the external namespace still needs the `__toESM` interop wrapper.",
+  "config": {
+    "external": ["node:https"],
+    "format": "cjs"
+  }
+}

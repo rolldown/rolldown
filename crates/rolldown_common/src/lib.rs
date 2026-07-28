@@ -218,7 +218,7 @@ pub use crate::{
   types::symbol_ref_db::{
     GetLocalDb, GetLocalDbMut, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,
   },
-  types::used_external_symbols::UsedExternalSymbols,
+  types::used_external_symbols::{ExternalInteropUse, UsedExternalSymbols},
   types::used_symbol_refs::{UsedSymbolRefs, UsedSymbolRefsBuilder},
   types::watch::WatcherChangeKind,
   types::wrap_kind::WrapKind,

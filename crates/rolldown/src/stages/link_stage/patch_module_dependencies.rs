@@ -1,5 +1,5 @@
 use rayon::iter::ParallelIterator;
-use rolldown_common::{Module, ModuleIdx, RuntimeHelper};
+use rolldown_common::{Module, ModuleIdx, RuntimeHelper, SymbolRef};
 use rolldown_utils::{index_vec_ext::IndexVecRefExt, indexmap::FxIndexSet};
 
 use super::LinkStage;
@@ -15,6 +15,23 @@ impl LinkStage<'_> {
         if !meta.depended_runtime_helper.is_empty() {
           extended_dependencies.insert(self.runtime.id());
         }
+
+        // Set when this module's own included code reads an external module as an ES module. The
+        // `__toESM` that renders it is requested by the import statement, which may sit in a
+        // module tree-shaking already dropped, so the edge to the runtime has to be (re)derived
+        // from the reference itself. See `recorded_external_interop` and issue #10069.
+        let mut reads_external_as_esm = false;
+        let mut note_external_interop = |canonical_ref: SymbolRef| {
+          let symbol = self.symbols.get(canonical_ref);
+          let namespace_ref = match &symbol.namespace_alias {
+            Some(ns) => self.symbols.canonical_ref_for(ns.namespace_ref),
+            None => canonical_ref,
+          };
+          if self.used_external_symbols.interop_use(&namespace_ref).is_some() {
+            reads_external_as_esm = true;
+          }
+        };
+
         // Symbols from runtime are referenced by bundler not import statements.
         meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
           |(symbol_ref, _came_from_cjs)| {
@@ -29,10 +46,16 @@ impl LinkStage<'_> {
             if let Some(ns) = &symbol.namespace_alias {
               extended_dependencies.insert(ns.namespace_ref.owner);
             }
+            // An entry export can be the *only* live reference to an external — no included
+            // statement mentions it. The recorded interop is bundle-wide, so this chunk still
+            // renders `__toESM(require(...))`; without this edge the helper has no cross-chunk
+            // binding here and finalization panics looking one up.
+            note_external_interop(canonical_ref);
           },
         );
 
         let Module::Normal(_) = &self.module_table[module_idx] else {
+          // External modules are not rendered, so they never need a runtime-helper edge.
           return (module_idx, extended_dependencies, RuntimeHelper::default());
         };
 
@@ -51,6 +74,7 @@ impl LinkStage<'_> {
                   if let Some(ns) = &symbol.namespace_alias {
                     extended_dependencies.insert(ns.namespace_ref.owner);
                   }
+                  note_external_interop(canonical_ref);
                 }
                 rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
                   match member_expr.represent_symbol_ref(&meta.resolved_member_expr_refs) {
@@ -61,6 +85,7 @@ impl LinkStage<'_> {
                       if let Some(ns) = &symbol.namespace_alias {
                         extended_dependencies.insert(ns.namespace_ref.owner);
                       }
+                      note_external_interop(canonical_ref);
                     }
                     _ => {
                       // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
@@ -82,7 +107,7 @@ impl LinkStage<'_> {
           let dep_meta = &self.metas[*dep_module_idx];
           dep_meta.depended_runtime_helper.contains(RuntimeHelper::ToEsm)
         });
-        let inherited_runtime = if needs_inherit_to_esm_runtime {
+        let inherited_runtime = if needs_inherit_to_esm_runtime || reads_external_as_esm {
           RuntimeHelper::ToEsm
         } else {
           RuntimeHelper::default()

@@ -5,7 +5,7 @@ use rolldown_sourcemap::SourceJoiner;
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
   types::generator::GenerateContext,
-  utils::external_import_interop::external_import_needs_interop,
+  utils::external_import_interop::{external_import_needs_interop, recorded_external_interop},
 };
 
 pub mod namespace;
@@ -67,8 +67,12 @@ pub fn render_chunk_external_imports<'a>(
         .canonical_name_for_or_original(importee.namespace_ref, &ctx.chunk.canonical_names);
 
       if ctx.link_output.used_external_symbols.contains(&importee.namespace_ref) {
-        // Check if this import needs __toESM
-        let needs_interop = external_import_needs_interop(named_imports);
+        // Check if this import needs __toESM. `named_imports` only covers imports written by
+        // modules that live in this chunk, so also consult what the inclusion pass recorded —
+        // see `recorded_external_interop`.
+        let recorded_interop = recorded_external_interop(ctx.link_output, importee.namespace_ref);
+        let needs_interop =
+          recorded_interop.is_some() || external_import_needs_interop(named_imports);
         if needs_interop {
           let to_esm_fn_name = ctx.link_output.symbol_db.canonical_name_for_or_original(
             ctx.link_output.runtime.resolve_symbol("__toESM"),
@@ -94,11 +98,12 @@ pub fn render_chunk_external_imports<'a>(
             import_code.push_str(");\n");
           } else {
             // Single-mode: check if any importer is ESM for node-mode flag
-            let is_node_esm = named_imports.iter().any(|(importer_idx, _)| {
-              ctx.link_output.module_table[*importer_idx]
-                .as_normal()
-                .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
-            });
+            let is_node_esm = recorded_interop.is_some_and(|use_| use_.node_esm)
+              || named_imports.iter().any(|(importer_idx, _)| {
+                ctx.link_output.module_table[*importer_idx]
+                  .as_normal()
+                  .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
+              });
             import_code.push_str(external_module_symbol_name);
             import_code.push_str(" = ");
             import_code.push_str(to_esm_fn_name);

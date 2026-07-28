@@ -3,7 +3,9 @@ use oxc_str::CompactStr;
 use crate::{
   stages::{generate_stage::order_wrap_state::OrderWrapState, link_stage::LinkStageOutput},
   utils::{
-    external_import_interop::{external_import_needs_interop, specifier_needs_interop},
+    external_import_interop::{
+      external_import_needs_interop, recorded_external_interop, specifier_needs_interop,
+    },
     renamer::{NestedScopeRenamer, Renamer},
   },
 };
@@ -223,13 +225,27 @@ pub fn deconflict_chunk_symbols(
   // needing interop on the same external. Create a separate binding name for node-mode.
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     let mut node_mode_names = FxHashMap::default();
-    for (ext_idx, named_imports) in &chunk.direct_imports_from_external_modules {
-      if !external_import_needs_interop(named_imports) {
+    // Externals the chunk only *references* (their importing module lives in another chunk or was
+    // tree-shaken away) carry no `named_imports`, but the inclusion pass still recorded how they
+    // are observed — so they can be mixed-mode too. See `recorded_external_interop`.
+    let externals = chunk
+      .direct_imports_from_external_modules
+      .iter()
+      .map(|(ext_idx, named_imports)| (*ext_idx, Some(named_imports.as_slice())))
+      .chain(chunk.import_symbol_from_external_modules.iter().map(|ext_idx| (*ext_idx, None)));
+    for (ext_idx, named_imports) in externals {
+      let ext =
+        link_output.module_table[ext_idx].as_external().expect("Should be external module here");
+      let recorded = recorded_external_interop(link_output, ext.namespace_ref);
+      if recorded.is_none() && !named_imports.is_some_and(external_import_needs_interop) {
         continue;
       }
-      let mut has_node_mode = false;
-      let mut has_non_node_mode = false;
-      for (importer_idx, import) in named_imports {
+      let mut has_node_mode = recorded.is_some_and(|use_| use_.node_esm);
+      let mut has_non_node_mode = recorded.is_some_and(|use_| use_.non_node_esm);
+      for (importer_idx, import) in named_imports.unwrap_or_default() {
+        if has_node_mode && has_non_node_mode {
+          break;
+        }
         if !specifier_needs_interop(&import.imported) {
           continue;
         }
@@ -241,13 +257,8 @@ pub fn deconflict_chunk_symbols(
         } else {
           has_non_node_mode = true;
         }
-        if has_node_mode && has_non_node_mode {
-          break;
-        }
       }
       if has_node_mode && has_non_node_mode {
-        let ext =
-          link_output.module_table[*ext_idx].as_external().expect("Should be external module here");
         let canonical_ref = link_output.symbol_db.canonical_ref_for(ext.namespace_ref);
         let original_name = canonical_ref.name(&link_output.symbol_db);
         let node_name = renamer.create_conflictless_name(original_name);

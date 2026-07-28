@@ -1,0 +1,12 @@
+{
+  "_comment": "Regression guard for the interop record leaking into a chunk with no runtime edge. `entry-a` default-imports the external through a shim tree-shaking drops, which records the interop bundle-wide (see `recorded_external_interop`). `entry-b` only re-exports a *named* binding, so its sole live reference to the external lives in `referenced_symbols_by_entry_point_chunk`, not in any included statement. Its chunk still renders `__toESM` from that bundle-wide record, so `patch_module_dependencies` has to derive the runtime edge from entry exports too — otherwise finalization panics looking up an absent cross-chunk binding.",
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      { "name": "entry-a", "import": "./entry-a.js" },
+      { "name": "entry-b", "import": "./entry-b.js" }
+    ],
+    "external": ["node:https"],
+    "format": "cjs"
+  }
+}

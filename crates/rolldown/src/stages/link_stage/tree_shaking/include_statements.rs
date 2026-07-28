@@ -428,11 +428,19 @@ impl LinkStage<'_> {
         meta.module_namespace_included_reason = module_namespace_included_reason[module.idx];
       });
 
-    let depended_runtime_helper = collect_depended_runtime_helpers(
+    let mut depended_runtime_helper = collect_depended_runtime_helpers(
       &self.module_table.modules,
       &self.metas,
       &is_module_included_vec,
     );
+    // `__toESM` is otherwise requested by the *statement* that wrote `import ... from 'external'`,
+    // so it dies with the module holding it — routinely a re-export shim that tree-shaking drops
+    // while the `<external_ns>.default` reference it produced lives on elsewhere (issue #10069).
+    // The recorded uses are the post-linking truth about who still reads the external as an ES
+    // module, so they keep the helper alive on their own.
+    if used_external_symbols.has_interop_use() {
+      depended_runtime_helper |= RuntimeHelper::ToEsm;
+    }
     let context = &mut IncludeContext::new(
       &self.module_table.modules,
       &self.stmt_infos,
@@ -674,6 +682,9 @@ fn handle_include_symbol(
   // CJS bailout checks are handled by `include_symbol_and_check_cjs_bailout`
   // at most call sites. This keeps `include_symbol` focused on inclusion only.
 
+  // The alias holder is the module that wrote `import ... from 'external'`; keep it around,
+  // `follow_cjs_namespace_alias` rewrites `canonical_ref` past it.
+  let alias_holder_ref = canonical_ref;
   follow_cjs_namespace_alias(ctx, &mut canonical_ref);
 
   let is_simulated_facade_chunk =
@@ -682,6 +693,7 @@ fn handle_include_symbol(
   ctx.used_symbol_refs.insert(canonical_ref);
   if ctx.modules[canonical_ref.owner].is_external() {
     ctx.used_external_symbols.insert(canonical_ref);
+    note_external_interop_use(ctx, symbol_ref, alias_holder_ref, canonical_ref);
   }
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
     demand_esm_init_wrapper(ctx, canonical_ref);
@@ -767,6 +779,90 @@ fn follow_cjs_namespace_alias(ctx: &mut IncludeContext, canonical_ref: &mut Symb
           ctx.pending.push(WorkItem::Symbol(export_symbol.symbol_ref, SymbolIncludeReason::Normal));
         }
       });
+    }
+  }
+}
+
+/// Record whether this reference makes an external module observable *as an ES module*, which is
+/// what decides the `__toESM` wrapper in non-ESM formats (issue #10069).
+///
+/// See internal-docs/runtime-helpers/implementation.md.
+///
+/// The renderers cannot re-derive this from the static imports the chunk's own modules carry: a
+/// re-export shim (`import d from 'external'; export { d }`) is routinely tree-shaken away while
+/// the `<external_ns>.default` reference it produced survives in another module. So the inclusion
+/// pass — the one place that walks the reference *after* linking resolved it — records it.
+///
+/// - Reached through a `namespace_alias`, the alias names the property: only `default` needs the
+///   wrapper, a named import reads the CommonJS object directly.
+/// - Reached without one, the reference *is* the namespace object (`import * as ns`), which always
+///   needs it.
+fn note_external_interop_use(
+  ctx: &mut IncludeContext,
+  symbol_ref: SymbolRef,
+  alias_holder_ref: SymbolRef,
+  external_ref: SymbolRef,
+) {
+  if ctx.options.format.keep_esm_import_export_syntax() {
+    return;
+  }
+  // Only the module-level namespace binding is wrapped. The per-name facade symbols minted by the
+  // external import binding merger are read off that (already wrapped) namespace. Key the record
+  // by the canonical ref, which is what readers query with.
+  let Some(external) = ctx.modules[external_ref.owner].as_external() else {
+    return;
+  };
+  let namespace_ref = ctx.symbols.canonical_ref_for(external.namespace_ref);
+  if namespace_ref != ctx.symbols.canonical_ref_for(external_ref) {
+    return;
+  }
+
+  // `alias_holder_ref == external_ref` means no alias was followed.
+  let importer_ref = if alias_holder_ref == external_ref {
+    // A whole-namespace reference (`import * as ns from 'external'`). Linking collapses the whole
+    // re-export chain onto the external's namespace symbol, so `symbol_ref` can belong to a
+    // consumer several hops downstream rather than to the module that wrote the import. Node
+    // decides ESM/CJS interop from the *importing* module's format, so walk back to it.
+    external_import_writer(ctx, symbol_ref)
+  } else {
+    let imports_default = ctx
+      .symbols
+      .get(alias_holder_ref)
+      .namespace_alias
+      .as_ref()
+      .is_some_and(|alias| alias.property_name.as_str() == "default");
+    if !imports_default {
+      return;
+    }
+    Some(alias_holder_ref)
+  };
+
+  // An unrecoverable importer only costs the node-mode flag; the use itself must still be
+  // recorded, because that is what keeps `__toESM` alive at all (issue #10069).
+  let node_esm = importer_ref.is_some_and(|importer_ref| {
+    ctx.modules[importer_ref.owner]
+      .as_normal()
+      .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
+  });
+  ctx.used_external_symbols.note_interop_use(namespace_ref, node_esm);
+}
+
+/// Walk the symbol link chain to the binding that actually wrote `import ... from 'external'`.
+///
+/// The chain runs from the reference towards the external namespace it was linked to
+/// (consumer -> re-export shim -> external), so the last binding still owned by a normal module is
+/// the one holding the import. Returns `None` when the reference *is* the external namespace and no
+/// importing module is recoverable.
+fn external_import_writer(ctx: &IncludeContext, symbol_ref: SymbolRef) -> Option<SymbolRef> {
+  let mut cursor = symbol_ref;
+  let mut writer = None;
+  loop {
+    if ctx.modules[cursor.owner].as_normal().is_some() {
+      writer = Some(cursor);
+    }
+    match ctx.symbols.get(cursor).link {
+      Some(next) => cursor = next,
+      None => return writer,
     }
   }
 }

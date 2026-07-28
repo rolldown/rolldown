@@ -249,7 +249,7 @@ impl NormalizedBundlerOptions {
   ) -> anyhow::Result<FilenameTemplate> {
     Ok(FilenameTemplate::new(
       self.asset_filenames.call(rollup_pre_rendered_asset).await?,
-      "assetFileNames",
+      "output.assetFileNames",
     ))
   }
 
@@ -270,7 +270,7 @@ impl NormalizedBundlerOptions {
         .map_or(vec![], |original_file_name| vec![original_file_name.into()]),
     };
     let asset_filename = self.asset_filenames.call(&rollup_pre_rendered_asset).await?;
-    Ok(Some(FilenameTemplate::new(asset_filename, "assetFileNames")))
+    Ok(Some(FilenameTemplate::new(asset_filename, "output.assetFileNames")))
   }
 
   pub async fn sanitize_file_name_with_file(

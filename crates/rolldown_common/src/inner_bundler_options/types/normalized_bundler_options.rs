@@ -220,8 +220,8 @@ impl NormalizedBundlerOptions {
     self.strict_execution_order
   }
 
-  /// Strict execution order with on-demand wrapping — the mode that runs the extended
-  /// eager-evaluation order-reason walk during scanning.
+  /// Strict execution order with on-demand wrapping — the selective mode that derives its wrapping
+  /// plan from the execution-order analysis instead of deferring every eligible module.
   pub fn is_strict_on_demand_wrapping_enabled(&self) -> bool {
     self.strict_execution_order && self.experimental.is_on_demand_wrapping_enabled()
   }

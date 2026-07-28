@@ -85,19 +85,18 @@ pub struct DevContext {
   submission succeeds. A submission rejected during runtime shutdown returns
   that same future to the state slot, so `run()` can retry it after restart
   instead of permanently consuming the coordinator. Its `run()` is a single
-  `while let Some(msg) =
-self.rx.recv().await` loop, so all coordinator state mutation is
-  serialized — there is no lock on `CoordinatorState`, the message loop
-  _is_ the lock.
+  `while let Some(msg) = self.rx.next().await` loop, so all coordinator state
+  mutation is serialized — there is no lock on `CoordinatorState`, the message
+  loop _is_ the lock.
 - Each `BundlingTask` runs in its **own** spawned task. The coordinator
   keeps a `Shared` future handle to the currently running one
   (`current_bundling_future`).
 - The `Bundler` is shared as `Arc<Mutex<Bundler>>`. A `BundlingTask`
   locks it for the duration of its HMR/rebuild work.
 - Communication is via an **unbounded** mpsc channel
-  (`unbounded_channel::<CoordinatorMsg>()`, `dev_engine.rs:62`).
-  Request/response messages carry a `tokio::sync::oneshot` reply
-  channel.
+  (`futures::channel::mpsc::unbounded::<CoordinatorMsg>()`,
+  `dev_engine.rs:140`). Request/response messages carry a
+  `futures::channel::oneshot` reply channel (`type_aliases.rs`).
 
 ---
 
@@ -128,7 +127,7 @@ pub enum CoordinatorMsg {
 }
 ```
 
-Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
+Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:129-186`):
 
 | Message                                   | Handler                                                  |
 | ----------------------------------------- | -------------------------------------------------------- |
@@ -242,14 +241,14 @@ stateDiagram-v2
 These are the `set_initial_build_state` call sites — the single mutation
 point, a convenient place to observe every transition.
 
-| Transition                                                         | Site                                           |
-| ------------------------------------------------------------------ | ---------------------------------------------- |
-| `Initialized → Idle`                                               | `run()` startup, `bundle_coordinator.rs:84-87` |
-| `Idle/Failed/FullBuildFailed → FullBuildInProgress` / `InProgress` | `schedule_build_if_stale`, `:378-380`          |
-| `FullBuildInProgress → FullBuildFailed`                            | `handle_bundle_completed`, `:286`              |
-| `FullBuildInProgress → Idle`                                       | `handle_bundle_completed`, `:291`              |
-| `InProgress → Failed { last_error_stage }`                         | `handle_bundle_completed`, `:311`              |
-| `InProgress → Idle`                                                | `handle_bundle_completed`, `:316`              |
+| Transition                                                         | Site                                             |
+| ------------------------------------------------------------------ | ------------------------------------------------ |
+| `Initialized → Idle`                                               | `run()` startup, `bundle_coordinator.rs:115-118` |
+| `Idle/Failed/FullBuildFailed → FullBuildInProgress` / `InProgress` | `schedule_build_if_stale`, `:378-380`            |
+| `FullBuildInProgress → FullBuildFailed`                            | `handle_bundle_completed`, `:286`                |
+| `FullBuildInProgress → Idle`                                       | `handle_bundle_completed`, `:291`                |
+| `InProgress → Failed { last_error_stage }`                         | `handle_bundle_completed`, `:311`                |
+| `InProgress → Idle`                                                | `handle_bundle_completed`, `:316`                |
 
 ### What enqueues a rebuild
 
@@ -270,14 +269,14 @@ of them.
 
 ## 4. The coordinator run loop and startup
 
-`BundleCoordinator::run` (`bundle_coordinator.rs:80-151`):
+`BundleCoordinator::run` (`bundle_coordinator.rs:111-187`):
 
 1. Asserts it starts in `Initialized`; otherwise logs an error and
    returns.
 2. Pushes a `TaskInput::FullBuild` into `queued_tasks`, sets state to
    `Idle`, calls `schedule_build_if_stale()` — this kicks off the
    initial build (`Idle → FullBuildInProgress`).
-3. Enters the `while let Some(msg) = self.rx.recv().await` loop,
+3. Enters the `while let Some(msg) = self.rx.next().await` loop,
    dispatching each `CoordinatorMsg` as in §2.
 4. On `Close`, awaits the complete running `BundlingTask`, then acquires the
    bundler and calls `Bundler::close()`. The task boundary includes both HMR
@@ -1003,10 +1002,17 @@ exits without replying, `DevEngine` awaits that exit and falls back to
 `Bundler::close()`. A fallback hook failure is aggregated with the coordinator
 transport failure so cleanup is still attempted without hiding either cause.
 
-`BindingDevEngine` adds an admission barrier around every asynchronous N-API
-operation. Close marks that binding lifecycle as closing, rejects new
-operations, waits for all accepted operations to drop their guards, and only
-then invokes native `DevEngine::close()`. The TypeScript owner applies the same
+`BindingDevEngine` adds an admission barrier around its asynchronous N-API
+operations, with one deliberate exception: `notify_payload_delivered` takes no
+operation guard (its neighbours `register_client` and `remove_client` do), so a
+delivery notification can still be in flight while close runs. That is safe
+because `DevEngine::close`/`close_inner` never touch the `clients` or
+`pending_payloads` state the notification updates, the spawned task holds its
+own `Arc` on the engine, the two locks are never held at once, and the merge
+into `session.shipped` is an idempotent `max`. Close marks that binding
+lifecycle as closing, rejects new guarded operations, waits for all accepted
+operations to drop their guards, and only then invokes native
+`DevEngine::close()`. The TypeScript owner applies the same
 ordering before calling `BindingDevEngine.close()`. The two barriers protect
 both direct binding consumers and the public TypeScript API. In particular,
 `run()` can finish its post-callback `GetState` request before the coordinator
@@ -1359,7 +1365,7 @@ terminal error object.
   method that touches the coordinator runs it first. By default the
   resulting error is surfaced to the binding consumer (§16d); methods that
   take the "swallow as `Ok`" exception (§16d) must also handle the
-  mid-call closed-race at every `.send(...)` and `.recv()` site.
+  mid-call closed-race at every `.unbounded_send(...)` and reply-await site.
 - **Plugin errors are user-visible.** Never silently drop them; they always
   reach `on_output` or `on_hmr_updates`.
 - **Each phase owns its delivery.** Inside `BundlingTask`, each phase
@@ -1393,23 +1399,22 @@ outside our crate?_ If yes, route it. If no, panic.
 
 Existing panic sites in `rolldown_dev` that are intentional, not punts:
 
-- `crates/rolldown_dev/src/watcher_event_handler.rs:10` —
-  `coordinator_tx.send(...).expect(...)`. The coordinator's mpsc receiver is
-  owned by the coordinator task, which only shuts down on the `Close`
-  message. The fs watcher cannot trigger that path; if its `send` fails, our
-  shutdown ordering is wrong.
-- `crates/rolldown_dev/src/bundling_task.rs:71` — same pattern on the final
-  `BundleCompleted` send. The coordinator awaits any in-flight `BundlingTask`
-  before processing `Close` (§4), so by construction the receiver is alive
-  when this send runs.
-- `crates/rolldown_dev/src/bundle_coordinator.rs:323, 420` —
+- `crates/rolldown_dev/src/bundling_task.rs:99-105` —
+  `coordinator_tx.unbounded_send(...).expect(...)` on the final
+  `BundleCompleted` send. The coordinator's mpsc receiver is owned by the
+  coordinator task, which only shuts down on the `Close` message, and the
+  coordinator awaits any in-flight `BundlingTask` before processing `Close`
+  (§4), so by construction the receiver is alive when this send runs.
+- `crates/rolldown_dev/src/bundle_coordinator.rs:428, 529` —
   `current_bundling_future.clone().unwrap()` is reachable only in states
   `*InProgress`, where the state machine guarantees `Some(_)`. A `None` here
   means a transition was missed.
-- `crates/rolldown_dev/src/dev_engine.rs:117` — `join_handle.await.unwrap()`
-  on the coordinator task. The coordinator's `run()` is internal code that
-  must not panic; a `JoinError` here means we introduced a panic in
-  coordinator logic and should fix _that_, not paper over the symptom.
+
+Two sites that used to panic are now routed instead:
+`watcher_event_handler.rs:10` logs at debug level when `unbounded_send` finds
+the coordinator channel already closed, and the coordinator task join
+(`dev_engine.rs:205, 231`) folds its error into the close result rather than
+unwrapping it.
 
 When adding new panic sites, document the invariant being asserted in the
 `.expect(...)` message so the next reader sees the contract without having to

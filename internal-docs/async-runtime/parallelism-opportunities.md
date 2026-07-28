@@ -213,8 +213,8 @@ prior guesses are corrected where the profile disagrees.
 
 ### 6. Scan-frontier / dispatcher latency — REJECTED
 
-- **Where**: `crates/rolldown/src/module_loader/module_loader.rs:398-684`
-  (serial `rx.recv()` dispatcher; children spawn only after the parent's
+- **Where**: `crates/rolldown/src/module_loader/module_loader.rs:441-988`
+  (serial `rx.next()` dispatcher; children spawn only after the parent's
   result message is dequeued); FIFO runnable queue with no LIFO slot
   (`crates/rolldown_utils/src/async_runtime.rs:492,559`).
 - **Measured**: scan occupancy 0.93 (mean 16.7/18 active, 5 ms sampler) at

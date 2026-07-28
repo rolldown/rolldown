@@ -125,11 +125,11 @@
     "@rolldown/pluginutils": "catalog:"
   },
   "devDependencies": {
+    "@emnapi/core": "catalog:",
+    "@emnapi/runtime": "catalog:",
     "@napi-rs/cli": "catalog:",
     "@napi-rs/wasm-runtime": "catalog:",
     "@oxc-node/cli": "catalog:",
-    "@rollup/plugin-json": "catalog:",
-    "buble": "catalog:",
     "cac": "catalog:",
     "consola": "catalog:",
     "execa": "catalog:",

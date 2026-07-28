@@ -143,7 +143,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           .canonical_name_for_or_original(importee.namespace_ref, &ctx.chunk.canonical_names);
         // Check if this import needs __toESM. `named_imports` only covers imports written by
         // modules that live in this chunk, so also consult what the inclusion pass recorded —
-        // see `recorded_external_interop`.
+        // see `chunk_recorded_external_interop`.
         let recorded_interop = chunk_recorded_external_interop(
           ctx.link_output,
           ChunkAssignments::from_graph(ctx.chunk_graph),

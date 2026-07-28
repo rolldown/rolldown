@@ -19,7 +19,7 @@ impl LinkStage<'_> {
         // Set when this module's own included code reads an external module as an ES module. The
         // `__toESM` that renders it is requested by the import statement, which may sit in a
         // module tree-shaking already dropped, so the edge to the runtime has to be (re)derived
-        // from the reference itself. See `recorded_external_interop` and issue #10069.
+        // from the reference itself. See `chunk_recorded_external_interop` and issue #10069.
         let mut reads_external_as_esm = false;
         let mut note_external_interop = |canonical_ref: SymbolRef| {
           let symbol = self.symbols.get(canonical_ref);

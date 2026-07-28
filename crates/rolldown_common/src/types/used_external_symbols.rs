@@ -19,6 +19,18 @@ pub struct ExternalInteropUse {
   pub non_node_esm: bool,
 }
 
+impl ExternalInteropUse {
+  /// Combine two observations. A chunk holding both kinds of observer renders both bindings.
+  #[inline]
+  #[must_use]
+  pub fn union(self, other: Self) -> Self {
+    Self {
+      node_esm: self.node_esm || other.node_esm,
+      non_node_esm: self.non_node_esm || other.non_node_esm,
+    }
+  }
+}
+
 /// Symbols owned by external modules that are used by included code.
 ///
 /// Keys are refs whose `owner` is an external module: an external module's
@@ -35,16 +47,16 @@ pub struct UsedExternalSymbols {
   /// `__toESM` interop wrapper and how. Tracked separately from the statically-written imports a
   /// chunk's own modules carry, because the module that wrote the import may itself have been
   /// tree-shaken away while the reference to it survived (issue #10069).
-  interop_uses: FxHashMap<SymbolRef, ExternalInteropUse>,
-  /// Modules whose own included code performs the observation recorded in `interop_uses`, so the
-  /// wrapper can be limited to the chunks those modules land in. Inclusion runs before chunking, so
-  /// membership is resolved later against `ChunkGraph::module_to_chunk`.
   ///
-  /// This is the *observer* (the module holding the surviving reference), not the importer that
-  /// wrote `import ... from 'external'` — the latter is routinely tree-shaken away. An observer
-  /// that still ends up without a chunk means the observation cannot be attributed, and callers
-  /// must fall back to wrapping everywhere.
-  interop_observers: FxHashMap<SymbolRef, FxHashSet<ModuleIdx>>,
+  /// Keyed by *observer* — the module whose included code holds the surviving reference, not the
+  /// importer that wrote `import ... from 'external'`, which is routinely tree-shaken away. Keeping
+  /// each observer's mode separate lets a chunk aggregate only the observations it actually
+  /// contains, instead of inheriting another chunk's Node mode and emitting a second wrapper.
+  ///
+  /// Inclusion runs before chunking, so membership is resolved later against
+  /// `ChunkGraph::module_to_chunk`. An observer that still ends up without a chunk cannot be
+  /// attributed, and callers must fall back to honouring it in every chunk.
+  interop_uses: FxHashMap<SymbolRef, FxHashMap<ModuleIdx, ExternalInteropUse>>,
 }
 
 impl UsedExternalSymbols {
@@ -68,24 +80,31 @@ impl UsedExternalSymbols {
     node_esm: bool,
     observer: ModuleIdx,
   ) {
-    let use_ = self.interop_uses.entry(namespace_ref).or_default();
+    let use_ = self.interop_uses.entry(namespace_ref).or_default().entry(observer).or_default();
     if node_esm {
       use_.node_esm = true;
     } else {
       use_.non_node_esm = true;
     }
-    self.interop_observers.entry(namespace_ref).or_default().insert(observer);
   }
 
+  /// Every mode `namespace_ref` is observed in, across the whole bundle.
+  ///
+  /// Callers that render one chunk want [`Self::interop_uses_by_observer`] instead — aggregating
+  /// here would hand a chunk the modes of observers living in other chunks.
   #[inline]
   pub fn interop_use(&self, namespace_ref: &SymbolRef) -> Option<ExternalInteropUse> {
-    self.interop_uses.get(namespace_ref).copied()
+    let observers = self.interop_uses.get(namespace_ref)?;
+    observers.values().copied().reduce(ExternalInteropUse::union)
   }
 
-  /// Modules that observe `namespace_ref` as an ES module. Empty/absent when nothing did.
+  /// Per-observer modes for `namespace_ref`. Absent when nothing observed it as an ES module.
   #[inline]
-  pub fn interop_observers(&self, namespace_ref: &SymbolRef) -> Option<&FxHashSet<ModuleIdx>> {
-    self.interop_observers.get(namespace_ref)
+  pub fn interop_uses_by_observer(
+    &self,
+    namespace_ref: &SymbolRef,
+  ) -> Option<&FxHashMap<ModuleIdx, ExternalInteropUse>> {
+    self.interop_uses.get(namespace_ref)
   }
 
   #[inline]

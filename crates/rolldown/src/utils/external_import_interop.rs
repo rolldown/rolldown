@@ -51,10 +51,15 @@ pub fn import_record_needs_interop(module: &NormalModule, rec_idx: ImportRecordI
 /// namespace identity, turn data properties into accessors, and — for a CommonJS export implemented
 /// as a Proxy — fire extra `ownKeys`/`getOwnPropertyDescriptor` traps at require time.
 ///
-/// Observers that ended up without a live chunk cannot be attributed, so they fall back to wrapping
-/// every chunk that emits the external. That case is real: the observation can be recorded against
-/// a module tree-shaking later drops. Narrowing it away would under-approximate, which is exactly
-/// what produced #10069 — a silently wrong bundle — so over-wrapping stays the fallback.
+/// Modes are aggregated per observer, not across the bundle. A `.mjs` and a `.js` module importing
+/// the same external into separate chunks each observe it in one mode; unioning them bundle-wide
+/// would make both chunks look mixed-mode and emit `__toESM(mod, 1)` *and* `__toESM(mod)`, running
+/// the eager property walk twice for one live binding.
+///
+/// Observers that ended up without a live chunk cannot be attributed, so every chunk emitting the
+/// external honours them. That case is real: the observation can be recorded against a module
+/// tree-shaking later drops. Narrowing it away would under-approximate, which is exactly what
+/// produced #10069 — a silently wrong bundle — so over-wrapping stays the fallback.
 pub fn chunk_recorded_external_interop(
   link_output: &LinkStageOutput,
   assignments: ChunkAssignments<'_>,
@@ -62,17 +67,19 @@ pub fn chunk_recorded_external_interop(
   external_namespace_ref: SymbolRef,
 ) -> Option<ExternalInteropUse> {
   let canonical_ref = link_output.symbol_db.canonical_ref_for(external_namespace_ref);
-  let use_ = link_output.used_external_symbols.interop_use(&canonical_ref)?;
-  let Some(observers) = link_output.used_external_symbols.interop_observers(&canonical_ref) else {
-    return Some(use_);
-  };
-  if observers.iter().any(|observer| assignments.live_chunk_of(*observer).is_none()) {
-    return Some(use_);
-  }
+  let observers = link_output.used_external_symbols.interop_uses_by_observer(&canonical_ref)?;
   observers
     .iter()
-    .any(|observer| assignments.live_chunk_of(*observer) == Some(chunk_idx))
-    .then_some(use_)
+    .filter(|(observer, _)| {
+      // An observer without a live chunk could be rendered anywhere, so every chunk has to honour
+      // it. Attributable ones only bind the chunk they landed in.
+      match assignments.live_chunk_of(**observer) {
+        Some(observer_chunk) => observer_chunk == chunk_idx,
+        None => true,
+      }
+    })
+    .map(|(_, use_)| *use_)
+    .reduce(ExternalInteropUse::union)
 }
 
 /// Where modules ended up after chunking, as far as attributing an external observation needs it.

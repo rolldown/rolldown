@@ -18,6 +18,7 @@ use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 #[tracing::instrument(level = "trace", skip_all)]
+#[expect(clippy::too_many_arguments)]
 pub fn deconflict_chunk_symbols(
   chunk_idx: ChunkIdx,
   chunk: &mut Chunk,
@@ -229,7 +230,7 @@ pub fn deconflict_chunk_symbols(
     let mut node_mode_names = FxHashMap::default();
     // Externals the chunk only *references* (their importing module lives in another chunk or was
     // tree-shaken away) carry no `named_imports`, but the inclusion pass still recorded how they
-    // are observed — so they can be mixed-mode too. See `recorded_external_interop`.
+    // are observed — so they can be mixed-mode too. See `chunk_recorded_external_interop`.
     let externals = chunk
       .direct_imports_from_external_modules
       .iter()

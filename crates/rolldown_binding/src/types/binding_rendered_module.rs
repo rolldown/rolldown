@@ -66,7 +66,7 @@ impl BindingRenderedModule {
   // remaining borrows point into.
   #[napi(getter)]
   pub fn rendered_exports(&self) -> napi::Result<Vec<String>> {
-    Ok(self.try_get_inner()?.rendered_exports.iter().map(|export| export.to_string()).collect())
+    Ok(self.try_get_inner()?.rendered_exports.iter().map(ToString::to_string).collect())
   }
 }
 

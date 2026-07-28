@@ -120,13 +120,13 @@ mod tests {
 
   #[test]
   fn basic() {
-    FilenameTemplate::new("[name]-[hash:8].js".to_string(), "entryFileNames");
+    FilenameTemplate::new("[name]-[hash:8].js".to_string(), "output.entryFileNames");
   }
 
   #[test]
   fn hash_with_len() {
     let filename_template =
-      FilenameTemplate::new("[name]-[hash:3]-[hash:3].js".to_string(), "entryFileNames");
+      FilenameTemplate::new("[name]-[hash:3]-[hash:3].js".to_string(), "output.entryFileNames");
 
     let mut hash_iter = ["abc", "def"].iter();
     let hash_replacer =
@@ -175,7 +175,8 @@ mod tests {
 
   #[test]
   fn test_invalid_pattern() {
-    let template = FilenameTemplate::new("/absolute/path/[name].js".to_string(), "entryFileNames");
+    let template =
+      FilenameTemplate::new("/absolute/path/[name].js".to_string(), "output.entryFileNames");
     let result = template.render(Some("test"), None, None, None, None::<&str>);
     assert!(result.is_err());
     assert!(
@@ -185,7 +186,7 @@ mod tests {
 
   #[test]
   fn test_invalid_name_substitution() {
-    let template = FilenameTemplate::new("[name].js".to_string(), "entryFileNames");
+    let template = FilenameTemplate::new("[name].js".to_string(), "output.entryFileNames");
     let result = template.render(Some("/absolute/name"), None, None, None, None::<&str>);
     assert!(result.is_err());
     assert!(
@@ -198,7 +199,7 @@ mod tests {
 
   #[test]
   fn test_valid_subdirectory() {
-    let template = FilenameTemplate::new("dist/[name].js".to_string(), "entryFileNames");
+    let template = FilenameTemplate::new("dist/[name].js".to_string(), "output.entryFileNames");
     let result = template.render(Some("test"), None, None, None, None::<&str>);
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "dist/test.js");

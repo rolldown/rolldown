@@ -195,12 +195,12 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         let pattern_name = match chunk {
           rolldown_common::Output::Chunk(c) => {
             if c.is_entry {
-              "entryFileNames"
+              "output.entryFileNames"
             } else {
-              "chunkFileNames"
+              "output.chunkFileNames"
             }
           }
-          rolldown_common::Output::Asset(_) => "assetFileNames",
+          rolldown_common::Output::Asset(_) => "output.assetFileNames",
         };
         return Err(
           BuildDiagnostic::invalid_option(rolldown_error::InvalidOptionType::NulByteInFilename {

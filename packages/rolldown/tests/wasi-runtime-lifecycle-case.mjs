@@ -32,37 +32,64 @@ assert.equal(
 );
 assert.equal(
   runtimeCapabilities.backend,
-  'tokio',
-  'the published threaded-WASI artifact must use the shipped Tokio backend',
+  'shared',
+  'the published threaded-WASI artifact must use the shared tokio-free scheduler',
 );
 assert.equal(
   runtimeCapabilities.asyncRuntimeBuild,
-  false,
-  'the published threaded-WASI artifact must not claim the custom shared backend',
+  true,
+  'the published threaded-WASI artifact is built on the shared scheduler',
 );
+// The shared scheduler has no MultiThread executor on WebAssembly (it is
+// Rayon-backed and Rayon is not compiled for wasm), so the resolver normalizes
+// every non-native target to CurrentThread. The real OS threads of
+// `wasm32-wasip1-threads` change the loader, not the executor.
 assert.equal(
   runtimeCapabilities.flavor,
-  'MultiThread',
-  'the published Tokio threaded-WASI artifact must report its emnapi worker pool',
+  'CurrentThread',
+  'every WebAssembly artifact resolves to the shared scheduler CurrentThread flavor',
+);
+assert.equal(
+  runtimeCapabilities.threads,
+  false,
+  'the threaded-WASI artifact schedules on the calling lane only',
 );
 assert.equal(
   runtimeCapabilities.devSupported,
-  true,
-  'the published Tokio threaded-WASI artifact must preserve dev support',
+  false,
+  'dev needs a MultiThread executor, which no WebAssembly artifact has',
 );
+// The lease API is a compatibility no-op on the shared runtime (the runtime
+// lifecycle follows the N-API environment hooks), but the generated WASI
+// loaders still acquire a lease at import and release it at teardown, so the
+// export has to stay.
 assert.equal(
   typeof binding.acquireAsyncRuntime,
   'function',
   'the generated threaded-WASI binding must export acquireAsyncRuntime',
 );
 assert.deepEqual(
-  runtimeConfig,
+  Object.keys(runtimeConfig).sort(),
+  ['drainLingerUs', 'flavor', 'maxBlockingTasks', 'workerThreads'],
+  'the threaded-WASI runtime config surface must not drift',
+);
+assert.deepEqual(
   {
-    flavor: 'MultiThread',
-    maxBlockingTasks: 4,
-    workerThreads: 4,
+    flavor: runtimeConfig.flavor,
+    maxBlockingTasks: runtimeConfig.maxBlockingTasks,
+    workerThreads: runtimeConfig.workerThreads,
   },
-  'the published threaded-WASI artifact must report the generated loader default pool',
+  {
+    flavor: 'CurrentThread',
+    maxBlockingTasks: 1,
+    workerThreads: 1,
+  },
+  'the threaded-WASI artifact must report the shared scheduler single-lane shape',
+);
+assert.equal(
+  typeof runtimeConfig.drainLingerUs,
+  'number',
+  'the drainer linger budget is reported for introspection parity',
 );
 
 const poolCapProbe = spawnSync(
@@ -92,23 +119,34 @@ const poolCapProbe = spawnSync(
 );
 assert.equal(poolCapProbe.error, undefined, poolCapProbe.stderr);
 assert.equal(poolCapProbe.status, 0, poolCapProbe.stderr || poolCapProbe.stdout);
-assert.deepEqual(JSON.parse(poolCapProbe.stdout.trim().split('\n').at(-1)), {
+// `NAPI_RS_ASYNC_WORK_POOL_SIZE` sized napi-rs' Tokio work pool, which this
+// artifact no longer has. The probe therefore now guards the opposite
+// contract: a stray Tokio-era pool variable must NOT resize the shared
+// scheduler, and the artifact keeps its one-lane CurrentThread shape.
+const poolCapReport = JSON.parse(poolCapProbe.stdout.trim().split('\n').at(-1));
+assert.equal(
+  typeof poolCapReport.config.drainLingerUs,
+  'number',
+  'the probed runtime config must report the drainer linger budget',
+);
+delete poolCapReport.config.drainLingerUs;
+assert.deepEqual(poolCapReport, {
   capabilities: {
-    asyncRuntimeBuild: false,
-    backend: 'tokio',
+    asyncRuntimeBuild: true,
+    backend: 'shared',
     blockOnJsThreadSafe: false,
-    devSupported: true,
-    flavor: 'MultiThread',
+    devSupported: false,
+    flavor: 'CurrentThread',
     target: 'wasi-threads',
-    threads: true,
+    threads: false,
     timers: true,
     wasi: true,
     watchSupported: false,
   },
   config: {
-    flavor: 'MultiThread',
-    maxBlockingTasks: 1024,
-    workerThreads: 1024,
+    flavor: 'CurrentThread',
+    maxBlockingTasks: 1,
+    workerThreads: 1,
   },
 });
 
@@ -208,20 +246,30 @@ await check('overlapping owners and restart after final release', async () => {
   await generateAndClose('restart-after-overlap');
 });
 
-await check('immediate token reacquisition waits for Tokio retirement', async () => {
+// Tokio retired a refcounted runtime between the last release and the next
+// acquisition, so a tight reacquire loop used to race that retirement. The
+// shared runtime's lifecycle follows the N-API environment instead and the
+// leases are compatibility no-ops, so the loop now guards the weaker but still
+// real contract: churning leases must not disturb a later build.
+await check('rapid lease churn leaves the shared runtime usable', async () => {
   for (let iteration = 0; iteration < 24; iteration += 1) {
     const lease = await binding.acquireAsyncRuntime();
     lease.release();
   }
 
-  await generateAndClose('restart-after-retirement-stress');
+  await generateAndClose('restart-after-lease-churn');
 });
 
-await check(
-  'environment teardown cancels a runtime acquisition blocked by retirement',
-  async () => {
-    const worker = new Worker(
-      `
+// The original case asserted that a worker's acquisition stayed PENDING behind
+// Tokio's retirement barrier. That barrier no longer exists -- a lease is a
+// no-op -- and the assertion only survived because one acquisition round-trip
+// through the wasm worker proxy measures ~33ms against its 25ms window, i.e. it
+// asserted machine speed, not runtime behaviour. What still matters, and is
+// what #8411/#8747 were about, is that tearing an environment down mid
+// acquisition must not wedge the runtime for the surviving realm.
+await check('environment teardown mid-acquisition leaves the main realm usable', async () => {
+  const worker = new Worker(
+    `
       const { parentPort } = require('node:worker_threads');
       const binding = require(${JSON.stringify(bindingPath)});
       parentPort.postMessage({ type: 'ready' });
@@ -240,52 +288,53 @@ await check(
         }
       });
     `,
-      { eval: true },
-    );
+    { eval: true },
+  );
 
-    const parentLease = await binding.acquireAsyncRuntime();
-    let parentLeaseReleased = false;
-    const slowSource = `export const retirementLoad = [${Array.from(
-      { length: 750_000 },
-      (_, index) => index,
-    ).join(',')}];`;
-    const retirementWork = Promise.allSettled(
-      Array.from({ length: 4 }, (_, index) =>
-        binding.transform(`retirement-${index}.js`, slowSource, undefined),
-      ),
-    );
+  const parentLease = await binding.acquireAsyncRuntime();
+  let parentLeaseReleased = false;
+  const slowSource = `export const retirementLoad = [${Array.from(
+    { length: 750_000 },
+    (_, index) => index,
+  ).join(',')}];`;
+  const retirementWork = Promise.allSettled(
+    Array.from({ length: 4 }, (_, index) =>
+      binding.transform(`retirement-${index}.js`, slowSource, undefined),
+    ),
+  );
 
-    try {
-      assert.equal((await waitForWorkerMessage(worker)).type, 'ready');
-      await new Promise((resolve) => setImmediate(resolve));
+  try {
+    assert.equal((await waitForWorkerMessage(worker)).type, 'ready');
+    await new Promise((resolve) => setImmediate(resolve));
+    parentLease.release();
+    parentLeaseReleased = true;
+    worker.postMessage('acquire');
+    assert.equal((await waitForWorkerMessage(worker)).type, 'acquiring');
+
+    // Whether the acquisition resolves before the worker is terminated is a
+    // scheduling race and deliberately not asserted; either outcome must
+    // leave the main realm working, which is what this case checks below.
+    const settled = await waitForWorkerMessageOrDelay(worker, 25);
+    assert.ok(
+      settled === undefined || settled.type === 'acquired' || settled.type === 'rejected',
+      `unexpected worker acquisition outcome: ${JSON.stringify(settled)}`,
+    );
+  } finally {
+    if (!parentLeaseReleased) {
       parentLease.release();
-      parentLeaseReleased = true;
-      worker.postMessage('acquire');
-      assert.equal((await waitForWorkerMessage(worker)).type, 'acquiring');
-
-      const earlyResult = await waitForWorkerMessageOrDelay(worker, 25);
-      assert.equal(
-        earlyResult,
-        undefined,
-        `worker acquisition did not remain pending behind retirement: ${JSON.stringify(earlyResult)}`,
-      );
-    } finally {
-      if (!parentLeaseReleased) {
-        parentLease.release();
-      }
-      await worker.terminate();
-      await retirementWork;
     }
+    await worker.terminate();
+    await retirementWork;
+  }
 
-    const restartedLease = await withTimeout(
-      binding.acquireAsyncRuntime(),
-      30_000,
-      'main realm could not acquire after cancelling the worker environment',
-    );
-    restartedLease.release();
-    await generateAndClose('restart-after-environment-cancellation');
-  },
-);
+  const restartedLease = await withTimeout(
+    binding.acquireAsyncRuntime(),
+    30_000,
+    'main realm could not acquire after cancelling the worker environment',
+  );
+  restartedLease.release();
+  await generateAndClose('restart-after-environment-cancellation');
+});
 
 await check('operation rejection releases the runtime for a restart', async () => {
   const operationError = new Error('injected scan failure');
@@ -356,12 +405,27 @@ await check('construction failures release real runtime leases', async () => {
   await generateAndClose('restart-after-construction-failure');
 });
 
-await check('dev engine runs, closes, and restarts on threaded WASI', async () => {
-  await runVirtualDevEngine('threaded-wasi-dev-first');
-  await runVirtualDevEngine('threaded-wasi-dev-restart');
-});
+// `dev()` needs a MultiThread executor to finish its initial build, and no
+// WebAssembly artifact has one, so the public entry must fail closed through the
+// capability contract instead of stalling on a build that can never complete.
+// The rejection must also be repeatable and must leave the runtime usable.
+await check(
+  'dev is rejected by the capability contract and leaves the runtime usable',
+  async () => {
+    for (const label of ['threaded-wasi-dev-first', 'threaded-wasi-dev-restart']) {
+      await assert.rejects(runVirtualDevEngine(label), isDevUnsupported);
+    }
 
-await check('cancelled callback close retries after threaded WASI restart', async () => {
+    await generateAndClose('restart-after-unsupported-dev');
+  },
+);
+
+// The original case drove a real dev engine through a cancelled close callback.
+// That scenario is unreachable now that dev is rejected, but the copied-package
+// machinery still proves something worth proving: the gate lives above the
+// binding, so a second package copy cannot reach `BindingDevEngine` and cannot
+// strand a runtime lease on its way to the rejection.
+await check('a package copy cannot reach the dev binding behind the capability gate', async () => {
   const copyRoot = mkdtempSync(path.join(packageDir, '.wasi-dev-close-copy-'));
   const copyDirectory = path.join(copyRoot, 'dist');
   cpSync(distDir, copyDirectory, { recursive: true });
@@ -393,93 +457,57 @@ await check('cancelled callback close retries after threaded WASI restart', asyn
     `,
   );
 
-  let engine;
-  let restartLease;
   try {
     const copiedExperimental = await import(
       pathToFileURL(path.join(copyDirectory, 'experimental-index.mjs')).href
     );
     const id = 'virtual:cancelled-callback-close';
-    let resolveCallback;
-    let rejectCallback;
-    const callbackCompleted = new Promise((resolve, reject) => {
-      resolveCallback = resolve;
-      rejectCallback = reject;
-    });
-    engine = await copiedExperimental.dev(
-      {
-        input: id,
-        experimental: { devMode: true },
-        plugins: [
-          {
-            name: 'cancelled-callback-close',
-            resolveId(source) {
-              if (source === id) return `\0${source}`;
+    let outputCallbackCalls = 0;
+    await assert.rejects(
+      copiedExperimental.dev(
+        {
+          input: id,
+          experimental: { devMode: true },
+          plugins: [
+            {
+              name: 'cancelled-callback-close',
+              resolveId(source) {
+                if (source === id) return `\0${source}`;
+              },
+              load(source) {
+                if (source === `\0${id}`) return 'export const cancelledCallbackClose = true;';
+              },
             },
-            load(source) {
-              if (source === `\0${id}`) return 'export const cancelledCallbackClose = true;';
-            },
-          },
-        ],
-      },
-      {},
-      {
-        async onOutput(output) {
-          try {
-            if (output instanceof Error) throw output;
-            assert.ok(capture.engine, 'the copied package must expose its raw dev engine');
-            assert.ok(capture.runtimeLease, 'the copied package must expose its runtime lease');
-            await capture.engine.close();
-            capture.runtimeLease.release();
-            resolveCallback();
-          } catch (error) {
-            rejectCallback(error);
-            throw error;
-          }
+          ],
         },
-      },
+        {},
+        {
+          onOutput() {
+            outputCallbackCalls += 1;
+          },
+        },
+      ),
+      isDevUnsupported,
     );
 
-    const runResult = engine.run();
-    void runResult.catch(() => {});
-    await withTimeout(
-      callbackCompleted,
-      30_000,
-      'dev callback did not release the final threaded-WASI runtime lease',
+    assert.equal(outputCallbackCalls, 0, 'the rejected dev entry must not emit output');
+    assert.equal(
+      capture.engine,
+      undefined,
+      'the capability gate must reject before constructing BindingDevEngine',
     );
-    const [runOutcome] = await withTimeout(
-      Promise.allSettled([runResult]),
-      30_000,
-      'dev run did not settle after threaded-WASI runtime shutdown',
-    );
-    assert.equal(runOutcome.status, 'rejected');
-
-    restartLease = await withTimeout(
-      binding.acquireAsyncRuntime(),
-      30_000,
-      'threaded-WASI runtime did not restart after cancelling callback close',
-    );
-    await withTimeout(
-      capture.engine.close(),
-      30_000,
-      'raw dev close remained stuck on the cancelled detached executor',
-    );
-    await withTimeout(
-      capture.engine.close(),
-      30_000,
-      'raw dev close did not replay its terminal result',
+    assert.equal(
+      capture.runtimeLease,
+      undefined,
+      'the rejected dev entry must not strand a runtime lease',
     );
   } finally {
-    if (engine) {
-      await Promise.allSettled([engine.close()]);
-    }
     capture.runtimeLease?.release();
-    restartLease?.release();
     delete globalThis[captureKey];
     rmSync(copyRoot, { force: true, recursive: true });
   }
 
-  await generateAndClose('restart-after-cancelled-callback-close');
+  await generateAndClose('restart-after-rejected-copy-dev');
 });
 
 await check('a worker realm acquires, uses, and releases its own runtime lease', async () => {
@@ -773,6 +801,10 @@ function isParallelPluginUnsupported(error) {
     error?.code === 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE' &&
     error?.feature === 'parallelPlugins'
   );
+}
+
+function isDevUnsupported(error) {
+  return error?.code === 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE' && error?.feature === 'dev';
 }
 
 function containsError(error, expected) {

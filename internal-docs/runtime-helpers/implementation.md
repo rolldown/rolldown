@@ -28,4 +28,6 @@ Inclusion runs before chunking, so the record cannot name a chunk directly. It s
 
 An observer that ends up without a live chunk cannot be attributed, so every chunk emitting the external honours it — contributing only that observer's mode, not the bundle union. This fallback is load-bearing: narrowing it away under-approximates, which is what produced #10069.
 
-`patch_module_dependencies` stays bundle-wide on purpose. It runs before chunking and cannot know which chunks will wrap; over-supplying a runtime edge is dead weight (a bindings-less `require` of the runtime chunk), while under-supplying panics in helper finalization.
+`patch_module_dependencies` derives the runtime edge from the same observer set, so a module demands `__toESM` only when it is an observer. The two decisions have to agree: a module that gains the edge without wrapping puts `__toESM` in its chunk's depended symbols, and the resulting cross-chunk import loses its binding to DCE while the side-effectful `require` of the runtime chunk survives — a bare `require("./rolldown-runtime.js")` for a helper nothing calls. Under-supplying is worse: a chunk that wraps without the edge references a helper it never imported, and finalization panics looking up the missing cross-chunk binding.
+
+Chunks do not exist yet at that point, so `is_included` stands in for "will have a chunk". An observer that is not included cannot be attributed to one, and rendering falls back to wrapping every chunk emitting the external — so every referencing module keeps the edge, matching that fallback.

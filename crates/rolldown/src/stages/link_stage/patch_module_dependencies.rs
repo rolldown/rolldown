@@ -32,7 +32,22 @@ impl LinkStage<'_> {
             Some(ns) => self.symbols.canonical_ref_for(ns.namespace_ref),
             None => canonical_ref,
           };
-          if self.used_external_symbols.has_interop_use_for(&namespace_ref) {
+          let Some(observers) = self.used_external_symbols.interop_uses_by_observer(&namespace_ref)
+          else {
+            return;
+          };
+          // Mirror `chunk_recorded_external_interop`, which puts the wrapper only in the chunks the
+          // observers land in: a module that merely reads a *name* off the same external renders no
+          // `__toESM` call and must not demand the helper, or its chunk gains a cross-chunk import
+          // whose binding then dies in DCE, leaving a bare `require` of the runtime chunk behind.
+          //
+          // Chunks do not exist yet, so `is_included` stands in for "will have a chunk". An
+          // observer that is *not* included cannot be attributed to one, and rendering falls back
+          // to wrapping every chunk emitting the external — so every referencing module needs the
+          // helper, exactly as before.
+          let has_unattributable_observer =
+            observers.keys().any(|observer| !self.metas[*observer].is_included);
+          if has_unattributable_observer || observers.contains_key(&module_idx) {
             reads_external_as_esm = true;
           }
         };

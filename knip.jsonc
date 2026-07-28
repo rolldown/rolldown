@@ -99,6 +99,11 @@
     },
     "scripts": {
       "entry": ["misc/**", "lint/index.ts"],
+      // misc/workerd-suite/worker.js runs inside workerd, not Node. Its two
+      // sibling specifiers are supplied at runtime by the Miniflare `modules`
+      // list in misc/check-workerd-suite.mjs (they point at
+      // packages/browser/dist), so they are deliberately unresolvable here.
+      "ignoreUnresolved": ["./workerd.browser.mjs", "./rolldown-binding.wasm32-wasip1.wasm"],
     },
     "packages/test-dev-server/tests/fixtures/*": {
       "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin

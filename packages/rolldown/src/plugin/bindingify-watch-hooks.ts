@@ -4,6 +4,21 @@ import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plug
 import type { ChangeEvent } from './index';
 import { createPluginContext } from './plugin-context';
 
+export function bindingifyHotUpdate(
+  args: BindingifyPluginArgs,
+): PluginHookWithBindingExt<BindingPluginOptions['hotUpdate']> {
+  return bindingifyHook(args.plugin.hotUpdate, ({ handler }) => ({
+    plugin: async (ctx, hookArgs) => {
+      const result = await handler.call(createPluginContext(args, ctx), {
+        type: hookArgs.kind as ChangeEvent,
+        file: hookArgs.file,
+        modules: hookArgs.modules,
+      });
+      return result ?? undefined;
+    },
+  }));
+}
+
 export function bindingifyWatchChange(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['watchChange']> {

@@ -26,13 +26,20 @@ import type { LogLevelOption } from '../log/logging';
 import { error, logPluginError } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
-import { bindingifyCloseWatcher, bindingifyWatchChange } from './bindingify-watch-hooks';
+import {
+  bindingifyCloseWatcher,
+  bindingifyHotUpdate,
+  bindingifyWatchChange,
+} from './bindingify-watch-hooks';
 import { extractHookUsage } from './generated/hook-usage';
 import type { Plugin, RolldownPlugin } from './index';
+import type { PluginWithInternalHooks } from './internal-hooks';
 import type { PluginContextData } from './plugin-context-data';
 
 export interface BindingifyPluginArgs {
-  plugin: Plugin;
+  // `PluginWithInternalHooks` rather than `Plugin` so the bindingify functions
+  // can read hidden hooks (see ./internal-hooks) without casting.
+  plugin: PluginWithInternalHooks;
   options: InputOptions;
   outputOptions: OutputOptions;
   pluginContextData: PluginContextData;
@@ -117,6 +124,8 @@ export function bindingifyPlugin(
 
   const { plugin: watchChange, meta: watchChangeMeta } = bindingifyWatchChange(args);
 
+  const { plugin: hotUpdate, meta: hotUpdateMeta } = bindingifyHotUpdate(args);
+
   const { plugin: closeWatcher, meta: closeWatcherMeta } = bindingifyCloseWatcher(args);
   let hookUsage = extractHookUsage(plugin).inner();
   const result: BindingPluginOptions = {
@@ -167,6 +176,8 @@ export function bindingifyPlugin(
     outroMeta,
     watchChange,
     watchChangeMeta,
+    hotUpdate,
+    hotUpdateMeta,
     closeWatcher,
     closeWatcherMeta,
     hookUsage,
@@ -196,6 +207,7 @@ function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
     'intro',
     'outro',
     'watchChange',
+    'hotUpdate',
     'closeWatcher',
   ] as const) {
     const handler = plugin[hookName] as any;

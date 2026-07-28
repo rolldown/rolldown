@@ -271,6 +271,77 @@ test.concurrent(
   },
 );
 
+// Skipped acceptance test for https://github.com/rolldown/rolldown/issues/10487.
+//
+// DESIRED behavior, matching Vite's bundled dev and a cold build (covered
+// end-to-end by the `hmr-delete-self-watched` dev-server playground): deleting
+// a still-imported file must fail the round with an unresolved-import error,
+// and recreating the file must recover.
+//
+// The raw engine does not do this today: oxc_resolver caches every filesystem
+// lookup and watch events never invalidate the cache (only a full rebuild or a
+// tsconfig change clears it), so the importer's re-scan resolves the deleted
+// path from the stale cache and the round ends in a silent Noop that a server
+// restart contradicts. Skipped until per-event resolver-cache invalidation
+// lands — the fix un-skips this test.
+test.skip(
+  'deleting an imported file surfaces a resolve error and recreating it recovers',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('dev-delete-imported-file', retryCount, {
+      'main.js': `import './parent.js';\n`,
+      'parent.js': `import { value } from './child.js';\nexport const childValue = value;\nexport const parentValue = 'parent';\nimport.meta.hot.accept();\n`,
+      'child.js': `export const value = 'child';\n`,
+    });
+
+    const onHmrUpdates = vi.fn();
+    const engine = await dev(
+      {
+        cwd,
+        input: './main.js',
+        experimental: { devMode: true },
+      },
+      { dir: path.join(cwd, 'dist') },
+      { onHmrUpdates },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('client');
+
+    const errorCalls = () =>
+      onHmrUpdates.mock.calls
+        .map(([result]) => result)
+        .filter((result): result is Error => result instanceof Error);
+    const patches = () =>
+      onHmrUpdates.mock.calls
+        .flatMap(([result]) => (result instanceof Error ? [] : result.updates))
+        .filter((u) => u.clientId === 'client' && u.update.type === 'Patch');
+
+    // Delete the imported file: the round must fail with an unresolved import,
+    // exactly like a cold build of the same file state.
+    await sleep(1000);
+    onHmrUpdates.mockClear();
+    fs.rmSync(path.join(cwd, 'child.js'));
+    await expect.poll(() => errorCalls().length, { timeout: 20_000 }).toBeGreaterThan(0);
+    expect(String(errorCalls()[0])).toMatch(/child\.js/);
+
+    // Recreate the file with changed content: recovery must ship the new
+    // content to the client.
+    onHmrUpdates.mockClear();
+    await editFile(path.join(cwd, 'child.js'), `export const value = 'child2';\n`);
+    await expect.poll(() => patches().length, { timeout: 20_000 }).toBeGreaterThan(0);
+    const patch = patches()[0].update as { type: 'Patch'; code: string };
+    expect(patch.code).toContain('child2');
+  },
+);
+
 function createTestInputAndOutput(testLabel: string, retryCount: number) {
   const uniqueId = crypto.randomUUID().slice(0, 8);
   const dirname = `${testLabel}-${uniqueId}-retry${retryCount}`;

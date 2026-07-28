@@ -846,6 +846,12 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/playground/hmr-delete-self-watched:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/test-dev-server/tests/playground/hmr-dispose-data:
     devDependencies:
       '@rolldown/test-dev-server':
@@ -883,6 +889,36 @@ importers:
         version: link:../../..
 
   packages/test-dev-server/tests/playground/hmr-hot-off:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-hot-update-hook:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-hot-update-hook-chain:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-hot-update-hook-delete:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-hot-update-hook-error:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/hmr-hot-update-hook-vite:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*

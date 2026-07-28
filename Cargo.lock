@@ -1340,14 +1340,15 @@ dependencies = [
 
 [[package]]
 name = "napi"
-version = "3.11.0"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=55421392cbaa24d4df69419e4c6d4958fbcb6a12#55421392cbaa24d4df69419e4c6d4958fbcb6a12"
+version = "3.10.5"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
 dependencies = [
  "anyhow",
  "bitflags",
  "ctor",
  "futures",
  "indexmap",
+ "libc",
  "napi-build",
  "napi-sys",
  "nohash-hasher",
@@ -1374,12 +1375,12 @@ dependencies = [
 [[package]]
 name = "napi-build"
 version = "2.3.2"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=55421392cbaa24d4df69419e4c6d4958fbcb6a12#55421392cbaa24d4df69419e4c6d4958fbcb6a12"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
 
 [[package]]
 name = "napi-derive"
-version = "3.6.0"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=55421392cbaa24d4df69419e4c6d4958fbcb6a12#55421392cbaa24d4df69419e4c6d4958fbcb6a12"
+version = "3.5.10"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
 dependencies = [
  "convert_case",
  "ctor",
@@ -1391,8 +1392,8 @@ dependencies = [
 
 [[package]]
 name = "napi-derive-backend"
-version = "6.0.0"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=55421392cbaa24d4df69419e4c6d4958fbcb6a12#55421392cbaa24d4df69419e4c6d4958fbcb6a12"
+version = "5.1.2"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -1403,8 +1404,8 @@ dependencies = [
 
 [[package]]
 name = "napi-sys"
-version = "3.3.0"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=55421392cbaa24d4df69419e4c6d4958fbcb6a12#55421392cbaa24d4df69419e4c6d4958fbcb6a12"
+version = "3.2.3"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
 dependencies = [
  "libloading",
 ]

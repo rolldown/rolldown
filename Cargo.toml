@@ -337,22 +337,26 @@ debug = "full"
 strip = "none"
 
 [patch.crates-io]
-# napi core is pinned to upstream napi-rs main, which now carries everything the
-# former integration fork had: the shared async-runtime crate + rich SPI (#3393,
-# #3420 with the injector/ArcSwap + drain_linger scheduler), non-threaded WASI
-# support (#3353), and the #3405/#3404/#3408/#3409 fixes. crates.io napi 3.11.0
-# predates the WASI fixes, so the git pin stays until napi 3.12.0 is published;
-# main's napi is versioned non-prerelease (3.11.0), so this single patch redirects
-# the ONE shared napi node for the WHOLE graph — rolldown_binding AND every
-# oxc_*_napi / oxc_resolver_napi / oxc_sourcemap — with no downstream napi-req
-# widening. napi-async-runtime is no longer git-pinned: rolldown_utils consumes
-# the published 0.2.0 from crates.io (napi-free, default features off).
-# On WASI, napi-build at this rev links the emnapi archives shipped by the
-# released `emnapi` npm package (non-threads `libemnapi-basic-napi-rs.a`,
-# threads `libemnapi-napi-rs-mt.a`); no vendored archives are needed.
-napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "55421392cbaa24d4df69419e4c6d4958fbcb6a12" }
-# `version` disambiguates: the napi-rs repo carries a second in-tree package
-# named `napi-derive` (0.0.0, test fixture), so the patch must select 3.6.0.
-napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "55421392cbaa24d4df69419e4c6d4958fbcb6a12", version = "=3.6.0" }
-napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "55421392cbaa24d4df69419e4c6d4958fbcb6a12" }
-napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "55421392cbaa24d4df69419e4c6d4958fbcb6a12" }
+# integration/rolldown-non-threaded-wasi-napi3 head (ad23bdeb) merges the rebased
+# napi stack (crates/napi v3.10.5, the merged SPI + #3353/#3393) INTO rolldown's
+# rich async-runtime SPI. rolldown_binding hard-depends on that rich SPI —
+# fallible try_start/try_shutdown_async_runtime, TokioRuntimeRetirementWaiter,
+# primitive-value boxing on promise rejection, and graceful ThreadsafeFunction
+# release on napi_closing — which upstream napi-rs main does NOT carry. Do not
+# "unpin to main" again without re-checking those four: main's
+# `bindgen_runtime/js_values/promise.rs` catch arm converts a rejection with
+# `ctx.value.into()` (`From<Unknown> for Error` → `napi_create_reference`), which
+# returns napi_invalid_arg for primitives and replaces a thrown string/number/null
+# with `Error { InvalidArg, "Create Error reference failed" }`; and main has no
+# `register_finalizer`/`build_callback_with_finalizer`, so a ThreadsafeFunction
+# retained across an exiting worker Environment has no quiescence barrier and
+# access-violates on Windows. On WASI, napi-build at this rev links the emnapi
+# archives shipped by the released `emnapi` npm package (non-threads
+# `libemnapi-basic-napi-rs.a`, threads `libemnapi-napi-rs-mt.a`); no vendored
+# archives are needed. napi-async-runtime is NOT git-pinned: rolldown_utils
+# consumes the published 0.2.0 from crates.io (napi-free, default features off),
+# so it is independent of this rev.
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }

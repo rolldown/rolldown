@@ -66,6 +66,39 @@ export default defineTest({
             'The "fileName" or "name" properties of emitted chunks and assets must be strings that are neither absolute nor relative paths, received "../node_modules/some-lib/entry".',
           );
 
+          // Chunk `fileName` is validated the same way as `name`
+          expect(() => {
+            this.emitFile({
+              type: 'chunk',
+              id: './main.js',
+              fileName: '../out/entry.js',
+            });
+          }).toThrow(
+            'The "fileName" or "name" properties of emitted chunks and assets must be strings that are neither absolute nor relative paths, received "../out/entry.js".',
+          );
+
+          // Absolute chunk name
+          expect(() => {
+            this.emitFile({
+              type: 'chunk',
+              id: './main.js',
+              name: '/abs-entry',
+            });
+          }).toThrow(
+            'The "fileName" or "name" properties of emitted chunks and assets must be strings that are neither absolute nor relative paths, received "/abs-entry".',
+          );
+
+          // Windows drive-letter names are rejected regardless of the host OS
+          expect(() => {
+            this.emitFile({
+              type: 'asset',
+              name: 'F:\\win.txt',
+              source: 'content',
+            });
+          }).toThrow(
+            'The "fileName" or "name" properties of emitted chunks and assets must be strings that are neither absolute nor relative paths, received "F:\\win.txt".',
+          );
+
           // Prebuilt chunk file names are validated too, with a prebuilt-specific message
           expect(() => {
             this.emitFile({

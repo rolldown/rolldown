@@ -19,9 +19,8 @@ console.log(node_https.default.Agent.name);
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+require("./rolldown-runtime.js");
 let node_https = require("node:https");
-node_https = require_rolldown_runtime.__toESM(node_https);
 exports.foo = node_https.request;
 
 ```

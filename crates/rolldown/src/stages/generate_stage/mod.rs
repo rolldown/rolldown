@@ -93,6 +93,7 @@ use crate::{
     determine_export_mode::determine_export_mode, generate_pre_rendered_chunk,
     render_chunk_exports::get_chunk_export_names,
   },
+  utils::external_import_interop::ChunkAssignments,
 };
 
 mod chunk_ext;
@@ -203,7 +204,13 @@ impl<'a> GenerateStage<'a> {
       },
     );
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
-      chunk_graph.chunk_table.par_iter_mut_enumerated().for_each(|(chunk_idx, chunk)| {
+      // Borrow the chunk table mutably alongside the assignment tables it does not touch, so
+      // deconflicting can attribute recorded external interop to the chunk it belongs to.
+      let ChunkGraph { chunk_table, module_to_chunk, post_chunk_optimization_operations, .. } =
+        &mut chunk_graph;
+      let chunk_assignments =
+        ChunkAssignments::new(&*module_to_chunk, &*post_chunk_optimization_operations);
+      chunk_table.par_iter_mut_enumerated().for_each(|(chunk_idx, chunk)| {
         deconflict_chunk_symbols(
           chunk_idx,
           chunk,
@@ -212,6 +219,7 @@ impl<'a> GenerateStage<'a> {
           &order_live_symbols,
           self.options.format,
           &index_chunk_id_to_name,
+          chunk_assignments,
         );
       });
     });

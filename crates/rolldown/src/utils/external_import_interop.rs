@@ -1,8 +1,11 @@
+use oxc_index::IndexVec;
 use rolldown_common::{
-  ExternalInteropUse, ImportRecordIdx, NamedImport, NormalModule, Specifier, SymbolRef,
+  ChunkIdx, ExternalInteropUse, ImportRecordIdx, ModuleIdx, NamedImport, NormalModule,
+  PostChunkOptimizationOperation, Specifier, SymbolRef,
 };
+use rustc_hash::FxHashMap;
 
-use crate::stages::link_stage::LinkStageOutput;
+use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
 /// Check if a specific import specifier needs the `__toESM` helper.
 /// Only namespace imports (`import * as foo`) and default imports (`import foo`)
@@ -29,7 +32,7 @@ pub fn import_record_needs_interop(module: &NormalModule, rec_idx: ImportRecordI
     .any(|import| import.record_idx == rec_idx && specifier_needs_interop(&import.imported))
 }
 
-/// Interop the inclusion pass recorded for an external module, keyed by its namespace ref.
+/// Interop the inclusion pass recorded for an external module, attributed to one chunk.
 ///
 /// See internal-docs/runtime-helpers/implementation.md.
 ///
@@ -39,29 +42,66 @@ pub fn import_record_needs_interop(module: &NormalModule, rec_idx: ImportRecordI
 /// external is side-effect free, yet the `<external_ns>.default` it produced still needs the
 /// wrapper (issue #10069). Callers OR this into their own `named_imports`-derived answer.
 ///
-/// Granularity is per-bundle, not per-chunk — inclusion runs before chunking. So one chunk reading
-/// `ns.default` makes every chunk that emits this external wrap it, even a chunk that only reads a
-/// named export (see the `named-user` chunk in the `reexport_default_import_of_external_multi_chunk`
-/// fixture).
+/// A recorded observation only forces *this* chunk to wrap when the module that made it lands here.
+/// A chunk that merely holds a named import of the same external reads the CommonJS object directly
+/// and must be left alone: reading a name through the wrapper does yield the same value
+/// (`__copyProps` installs forwarding getters), but `__toESM` returns a fresh object
+/// (`__create(__getProtoOf(mod))`) and eagerly walks
+/// `__getOwnPropertyNames`/`__getOwnPropertyDescriptor`. Wrapping a named-only chunk would change
+/// namespace identity, turn data properties into accessors, and — for a CommonJS export implemented
+/// as a Proxy — fire extra `ownKeys`/`getOwnPropertyDescriptor` traps at require time.
 ///
-/// Reading a name through the wrapper still yields the same value — `__copyProps` installs getters
-/// that forward to the original. The wrapper is *not* fully transparent though: `__toESM` returns a
-/// fresh object (`__create(__getProtoOf(mod))`), and `__copyProps` eagerly walks
-/// `__getOwnPropertyNames`/`__getOwnPropertyDescriptor`. A named-only chunk therefore observes a
-/// different namespace identity, accessor-shaped descriptors instead of data properties, and — for
-/// a CommonJS export implemented as a Proxy — extra `ownKeys`/`getOwnPropertyDescriptor` traps at
-/// require time. Plain named access is unaffected; introspection and exotic exports are not.
-///
-/// Narrowing this to the chunk means recording *which* module observes the external and testing
-/// chunk membership. Not done yet, because the observing module is frequently the eliminated shim
-/// itself — it has no chunk to test against, so a naive membership test under-approximates, and
-/// under-approximating here is what produced #10069, a silently wrong bundle. A correct narrowing
-/// has to keep wrapping when the observer has no chunk, and only skip when every observer is live
-/// and assigned elsewhere.
-pub fn recorded_external_interop(
+/// Observers that ended up without a live chunk cannot be attributed, so they fall back to wrapping
+/// every chunk that emits the external. That case is real: the observation can be recorded against
+/// a module tree-shaking later drops. Narrowing it away would under-approximate, which is exactly
+/// what produced #10069 — a silently wrong bundle — so over-wrapping stays the fallback.
+pub fn chunk_recorded_external_interop(
   link_output: &LinkStageOutput,
+  assignments: ChunkAssignments<'_>,
+  chunk_idx: ChunkIdx,
   external_namespace_ref: SymbolRef,
 ) -> Option<ExternalInteropUse> {
   let canonical_ref = link_output.symbol_db.canonical_ref_for(external_namespace_ref);
-  link_output.used_external_symbols.interop_use(&canonical_ref)
+  let use_ = link_output.used_external_symbols.interop_use(&canonical_ref)?;
+  let Some(observers) = link_output.used_external_symbols.interop_observers(&canonical_ref) else {
+    return Some(use_);
+  };
+  if observers.iter().any(|observer| assignments.live_chunk_of(*observer).is_none()) {
+    return Some(use_);
+  }
+  observers
+    .iter()
+    .any(|observer| assignments.live_chunk_of(*observer) == Some(chunk_idx))
+    .then_some(use_)
+}
+
+/// Where modules ended up after chunking, as far as attributing an external observation needs it.
+///
+/// Deconflicting runs inside a `par_iter_mut` over the chunk table and so cannot hold a
+/// `&ChunkGraph`; it borrows the two relevant fields directly instead.
+#[derive(Clone, Copy)]
+pub struct ChunkAssignments<'a> {
+  module_to_chunk: &'a IndexVec<ModuleIdx, Option<ChunkIdx>>,
+  chunk_operations: &'a FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
+}
+
+impl<'a> ChunkAssignments<'a> {
+  pub fn new(
+    module_to_chunk: &'a IndexVec<ModuleIdx, Option<ChunkIdx>>,
+    chunk_operations: &'a FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
+  ) -> Self {
+    Self { module_to_chunk, chunk_operations }
+  }
+
+  pub fn from_graph(chunk_graph: &'a ChunkGraph) -> Self {
+    Self::new(&chunk_graph.module_to_chunk, &chunk_graph.post_chunk_optimization_operations)
+  }
+
+  /// Mirrors [`ChunkGraph::chunk_is_live`]: order-wrap lowering can remove a chunk after modules
+  /// were assigned to it, and a removed chunk cannot carry the wrapper.
+  fn live_chunk_of(&self, module_idx: ModuleIdx) -> Option<ChunkIdx> {
+    self.module_to_chunk.get(module_idx).copied().flatten().filter(|chunk_idx| {
+      self.chunk_operations.get(chunk_idx) != Some(&PostChunkOptimizationOperation::Removed)
+    })
+  }
 }

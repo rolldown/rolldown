@@ -6,7 +6,9 @@ use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
   utils::chunk::render_chunk_exports::render_chunk_exports,
-  utils::external_import_interop::{external_import_needs_interop, recorded_external_interop},
+  utils::external_import_interop::{
+    ChunkAssignments, chunk_recorded_external_interop, external_import_needs_interop,
+  },
 };
 use rolldown_common::{AddonRenderContext, NormalModule, OutputExports};
 use rolldown_error::BuildDiagnostic;
@@ -142,7 +144,12 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         // Check if this import needs __toESM. `named_imports` only covers imports written by
         // modules that live in this chunk, so also consult what the inclusion pass recorded —
         // see `recorded_external_interop`.
-        let recorded_interop = recorded_external_interop(ctx.link_output, importee.namespace_ref);
+        let recorded_interop = chunk_recorded_external_interop(
+          ctx.link_output,
+          ChunkAssignments::from_graph(ctx.chunk_graph),
+          ctx.chunk_idx,
+          importee.namespace_ref,
+        );
         let needs_interop = recorded_interop.is_some()
           || named_imports.is_some_and(|imports| external_import_needs_interop(imports));
         if needs_interop {

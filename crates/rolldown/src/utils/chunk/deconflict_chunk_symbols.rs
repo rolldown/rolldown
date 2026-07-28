@@ -4,7 +4,8 @@ use crate::{
   stages::{generate_stage::order_wrap_state::OrderWrapState, link_stage::LinkStageOutput},
   utils::{
     external_import_interop::{
-      external_import_needs_interop, recorded_external_interop, specifier_needs_interop,
+      ChunkAssignments, chunk_recorded_external_interop, external_import_needs_interop,
+      specifier_needs_interop,
     },
     renamer::{NestedScopeRenamer, Renamer},
   },
@@ -25,6 +26,7 @@ pub fn deconflict_chunk_symbols(
   order_live_symbols: &FxHashSet<SymbolRef>,
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
+  chunk_assignments: ChunkAssignments<'_>,
 ) {
   let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
   // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
@@ -236,7 +238,12 @@ pub fn deconflict_chunk_symbols(
     for (ext_idx, named_imports) in externals {
       let ext =
         link_output.module_table[ext_idx].as_external().expect("Should be external module here");
-      let recorded = recorded_external_interop(link_output, ext.namespace_ref);
+      let recorded = chunk_recorded_external_interop(
+        link_output,
+        chunk_assignments,
+        chunk_idx,
+        ext.namespace_ref,
+      );
       if recorded.is_none() && !named_imports.is_some_and(external_import_needs_interop) {
         continue;
       }

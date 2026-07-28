@@ -844,7 +844,10 @@ fn note_external_interop_use(
       .as_normal()
       .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
   });
-  ctx.used_external_symbols.note_interop_use(namespace_ref, node_esm);
+  // `symbol_ref` is the binding as written in the module holding the surviving reference, so its
+  // owner is the observer whose chunk has to carry the wrapper. That is a different module from
+  // `importer_ref` whenever the import was written by a shim that tree-shaking then dropped.
+  ctx.used_external_symbols.note_interop_use(namespace_ref, node_esm, symbol_ref.owner);
 }
 
 /// Walk the symbol link chain to the binding that actually wrote `import ... from 'external'`.

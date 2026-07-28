@@ -1,6 +1,7 @@
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::symbol_ref::SymbolRef;
+use crate::ecmascript::module_idx::ModuleIdx;
 
 /// How included code observes an external module as an ES module.
 ///
@@ -35,6 +36,15 @@ pub struct UsedExternalSymbols {
   /// chunk's own modules carry, because the module that wrote the import may itself have been
   /// tree-shaken away while the reference to it survived (issue #10069).
   interop_uses: FxHashMap<SymbolRef, ExternalInteropUse>,
+  /// Modules whose own included code performs the observation recorded in `interop_uses`, so the
+  /// wrapper can be limited to the chunks those modules land in. Inclusion runs before chunking, so
+  /// membership is resolved later against `ChunkGraph::module_to_chunk`.
+  ///
+  /// This is the *observer* (the module holding the surviving reference), not the importer that
+  /// wrote `import ... from 'external'` — the latter is routinely tree-shaken away. An observer
+  /// that still ends up without a chunk means the observation cannot be attributed, and callers
+  /// must fall back to wrapping everywhere.
+  interop_observers: FxHashMap<SymbolRef, FxHashSet<ModuleIdx>>,
 }
 
 impl UsedExternalSymbols {
@@ -49,20 +59,33 @@ impl UsedExternalSymbols {
   }
 
   /// Record that `namespace_ref` (an external module's canonical namespace ref) is observed as an
-  /// ES module by an importer that Node does (`node_esm`) or does not treat as ESM.
+  /// ES module by an importer that Node does (`node_esm`) or does not treat as ESM. `observer` is
+  /// the module whose included code holds the surviving reference.
   #[inline]
-  pub fn note_interop_use(&mut self, namespace_ref: SymbolRef, node_esm: bool) {
+  pub fn note_interop_use(
+    &mut self,
+    namespace_ref: SymbolRef,
+    node_esm: bool,
+    observer: ModuleIdx,
+  ) {
     let use_ = self.interop_uses.entry(namespace_ref).or_default();
     if node_esm {
       use_.node_esm = true;
     } else {
       use_.non_node_esm = true;
     }
+    self.interop_observers.entry(namespace_ref).or_default().insert(observer);
   }
 
   #[inline]
   pub fn interop_use(&self, namespace_ref: &SymbolRef) -> Option<ExternalInteropUse> {
     self.interop_uses.get(namespace_ref).copied()
+  }
+
+  /// Modules that observe `namespace_ref` as an ES module. Empty/absent when nothing did.
+  #[inline]
+  pub fn interop_observers(&self, namespace_ref: &SymbolRef) -> Option<&FxHashSet<ModuleIdx>> {
+    self.interop_observers.get(namespace_ref)
   }
 
   #[inline]

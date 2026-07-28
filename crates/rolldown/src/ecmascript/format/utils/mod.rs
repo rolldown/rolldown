@@ -5,7 +5,9 @@ use rolldown_sourcemap::SourceJoiner;
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
   types::generator::GenerateContext,
-  utils::external_import_interop::{external_import_needs_interop, recorded_external_interop},
+  utils::external_import_interop::{
+    ChunkAssignments, chunk_recorded_external_interop, external_import_needs_interop,
+  },
 };
 
 pub mod namespace;
@@ -70,7 +72,12 @@ pub fn render_chunk_external_imports<'a>(
         // Check if this import needs __toESM. `named_imports` only covers imports written by
         // modules that live in this chunk, so also consult what the inclusion pass recorded —
         // see `recorded_external_interop`.
-        let recorded_interop = recorded_external_interop(ctx.link_output, importee.namespace_ref);
+        let recorded_interop = chunk_recorded_external_interop(
+          ctx.link_output,
+          ChunkAssignments::from_graph(ctx.chunk_graph),
+          ctx.chunk_idx,
+          importee.namespace_ref,
+        );
         let needs_interop =
           recorded_interop.is_some() || external_import_needs_interop(named_imports);
         if needs_interop {

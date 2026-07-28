@@ -9,8 +9,6 @@
 // - Constructing one reports a clear unsupported-feature error.
 import type { RolldownMagicString as RealRolldownMagicString } from '../binding-magic-string';
 
-export type { RolldownMagicString as RolldownMagicStringType } from '../binding-magic-string';
-
 class UnsupportedWorkerdMagicString {
   constructor() {
     throw new Error(

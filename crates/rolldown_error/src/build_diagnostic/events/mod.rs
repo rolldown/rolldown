@@ -44,7 +44,6 @@ pub mod missing_name_option_for_iife_export;
 pub mod mixed_exports;
 pub mod oxc_error;
 pub mod plugin_error;
-pub mod plugin_timings;
 pub mod prefer_builtin_feature;
 pub mod require_tla;
 pub mod resolve_error;

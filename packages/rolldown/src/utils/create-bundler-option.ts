@@ -10,6 +10,7 @@ import { getObjectPlugins } from '../plugin/plugin-driver';
 import { bindingifyInputOptions } from './bindingify-input-options';
 import { bindingifyOutputOptions } from './bindingify-output-options';
 import { initializeParallelPlugins } from './initialize-parallel-plugins';
+import { pluginTimingsRecorderFor } from './plugin-timings';
 import {
   ANONYMOUS_OUTPUT_PLUGIN_PREFIX,
   ANONYMOUS_PLUGIN_PREFIX,
@@ -22,6 +23,12 @@ export async function createBundlerOptions(
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
   watchMode: boolean,
+  /**
+   * Whether to time plugin hooks. Only `RolldownBuild` asks for it, because it is the one
+   * caller that reaches `close()`, where the report is flushed. A recorder created for
+   * watch, dev or scan would be written to on every hook call and never read.
+   */
+  measureTimings = false,
 ): Promise<BundlerOptionWithStopWorker> {
   const inputPlugins = await normalizePluginOption(inputOptions.plugins);
   const outputPlugins = await normalizePluginOption(outputOptions.plugins);
@@ -55,6 +62,14 @@ export async function createBundlerOptions(
     ...checkOutputPluginOption(normalizedOutputPlugins, onLog),
   ];
 
+  // Keyed on the input options so a plugin running a nested `rolldown()` build accumulates
+  // separately from the build that spawned it, and so repeated `generate`/`write` calls on
+  // one build share a recorder — `close()` flushes it once, keyed on the same object.
+  const timings =
+    measureTimings && inputOptions.checks?.pluginTimings !== false
+      ? pluginTimingsRecorderFor(inputOptions, onLog)
+      : undefined;
+
   const parallelPluginInitResult = import.meta.browserBuild
     ? undefined
     : await initializeParallelPlugins(plugins);
@@ -84,10 +99,11 @@ export async function createBundlerOptions(
       onLog,
       logLevel,
       watchMode,
+      timings,
     );
 
     // Convert `OutputOptions` to `BindingOutputOptions`
-    const bindingOutputOptions = bindingifyOutputOptions(outputOptions, pluginContextData);
+    const bindingOutputOptions = bindingifyOutputOptions(outputOptions, pluginContextData, timings);
 
     return {
       bundlerOptions: {

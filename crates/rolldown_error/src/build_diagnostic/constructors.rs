@@ -33,7 +33,6 @@ use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
 use super::events::plugin_error::{CausedPlugin, PluginError};
-use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
@@ -426,10 +425,6 @@ impl BuildDiagnostic {
 
   pub fn could_not_clean_directory(dir: String, reason: String) -> Self {
     Self::new_inner(CouldNotCleanDirectory { dir, reason })
-  }
-
-  pub fn plugin_timings(plugins: Vec<PluginTimingInfo>) -> Self {
-    Self::new_inner(PluginTimings { plugins })
   }
 
   pub fn duplicate_shebang(filename: String, source: &str) -> Self {

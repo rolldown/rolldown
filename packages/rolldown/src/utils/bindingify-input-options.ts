@@ -28,6 +28,7 @@ import {
   normalizeTransformOptions,
 } from './normalize-transform-options';
 import { getParallelPluginInfo } from './parallel-plugin';
+import type { PluginTimingsRecorder } from './plugin-timings';
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
@@ -38,6 +39,7 @@ export function bindingifyInputOptions(
   onLog: LogHandler,
   logLevel: LogLevelOption,
   watchMode: boolean,
+  timings: PluginTimingsRecorder | undefined,
 ): BindingInputOptions {
   const plugins = rawPlugins.map((plugin) => {
     if (getParallelPluginInfo(plugin)) {
@@ -60,6 +62,7 @@ export function bindingifyInputOptions(
       onLog,
       logLevel,
       watchMode,
+      timings,
     );
   });
 

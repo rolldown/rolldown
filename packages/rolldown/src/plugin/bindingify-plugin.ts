@@ -32,6 +32,7 @@ import {
   bindingifyWatchChange,
 } from './bindingify-watch-hooks';
 import { extractHookUsage } from './generated/hook-usage';
+import { measureHookCost, type PluginTimingsRecorder } from '../utils/plugin-timings';
 import type { Plugin, RolldownPlugin } from './index';
 import type { PluginWithInternalHooks } from './internal-hooks';
 import type { PluginContextData } from './plugin-context-data';
@@ -59,6 +60,7 @@ export function bindingifyPlugin(
   onLog: LogHandler,
   logLevel: LogLevelOption,
   watchMode: boolean,
+  timings: PluginTimingsRecorder | undefined,
 ): BindingPluginOptions {
   const args: BindingifyPluginArgs = {
     plugin,
@@ -182,10 +184,13 @@ export function bindingifyPlugin(
     closeWatcherMeta,
     hookUsage,
   };
-  return wrapHandlers(result);
+  return wrapHandlers(result, timings);
 }
 
-function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
+function wrapHandlers(
+  plugin: BindingPluginOptions,
+  timings: PluginTimingsRecorder | undefined,
+): BindingPluginOptions {
   for (const hookName of [
     'buildStart',
     'resolveId',
@@ -210,7 +215,10 @@ function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
     'hotUpdate',
     'closeWatcher',
   ] as const) {
-    const handler = plugin[hookName] as any;
+    const raw = plugin[hookName] as any;
+    // Measure the handler itself, inside the error wrapper, so the span covers the
+    // plugin's own work rather than the wrapper's promise machinery.
+    const handler = raw && measureHookCost(timings, plugin.name, hookName, raw);
     if (handler) {
       plugin[hookName] = async (...args: any[]) => {
         try {

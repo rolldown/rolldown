@@ -109,6 +109,10 @@ pub enum EventKind {
   CouldNotCleanDirectory = 38,
   /// Whether to emit warnings when plugins take significant time during the build process.
   ///
+  /// Emitted by the JavaScript API rather than the bundler core: a hook's cost is only
+  /// observable from inside the callback, so this variant exists to carry the check
+  /// toggle and the code string, and is never constructed as a Rust diagnostic.
+  ///
   /// {@include ../docs/checks-plugin-timings.md}
   PluginTimings = 39,
   /// Whether to emit warnings when both the code and postBanner contain shebang

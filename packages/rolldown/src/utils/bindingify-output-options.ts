@@ -6,10 +6,16 @@ import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
 import { logger } from '../cli/logger';
+import {
+  measureHookCost,
+  OUTPUT_OPTIONS_OWNER,
+  type PluginTimingsRecorder,
+} from './plugin-timings';
 
 export function bindingifyOutputOptions(
   outputOptions: OutputOptions,
   pluginContextData: PluginContextData,
+  timings: PluginTimingsRecorder | undefined,
 ): BindingOutputOptions {
   const {
     dir,
@@ -61,6 +67,7 @@ export function bindingifyOutputOptions(
     outputOptions.advancedChunks,
     manualChunks,
     pluginContextData,
+    timings,
   );
 
   return {
@@ -201,6 +208,7 @@ function bindingifyCodeSplitting(
   advancedChunks: OutputOptions['advancedChunks'],
   manualChunks: OutputOptions['manualChunks'],
   pluginContextData: PluginContextData,
+  timings: PluginTimingsRecorder | undefined,
 ): {
   inlineDynamicImports: BindingOutputOptions['inlineDynamicImports'];
   advancedChunks: BindingOutputOptions['manualCodeSplitting'];
@@ -313,13 +321,25 @@ function bindingifyCodeSplitting(
     advancedChunksResult = {
       ...restOptions,
       groups: groups?.map((group) => {
-        const { name, ...restGroup } = group;
+        const { name, test, ...restGroup } = group;
+        // These are user callbacks the Rust core invokes directly rather than through a
+        // plugin, so they belong to no plugin's rows — and a chunk-name classifier can
+        // dominate a build. Timing them here is the only place they are visible at all.
         return {
           ...restGroup,
+          test:
+            typeof test === 'function'
+              ? measureHookCost(timings, OUTPUT_OPTIONS_OWNER, 'codeSplitting groups[].test', test)
+              : test,
           name:
             typeof name === 'function'
-              ? (id: string, ctx: BindingChunkingContext) =>
-                  name(id, new ChunkingContextImpl(ctx, pluginContextData))
+              ? measureHookCost(
+                  timings,
+                  OUTPUT_OPTIONS_OWNER,
+                  'codeSplitting groups[].name',
+                  (id: string, ctx: BindingChunkingContext) =>
+                    name(id, new ChunkingContextImpl(ctx, pluginContextData)),
+                )
               : name,
         };
       }),

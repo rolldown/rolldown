@@ -43,8 +43,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
-    let result = async {
+    async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
       let scan_stage_output = self.scan_modules(ScanMode::Full).await?;
@@ -53,16 +52,13 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       trace_action!(action::BuildEnd { action: "BuildEnd" });
       ret
     }
-    .await;
-    self.plugin_driver.set_total_build_time(start);
-    self.append_plugin_timings_warning(result)
+    .await
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn generate(mut self) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
-    let result = async {
+    async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
       let scan_stage_output = self.scan_modules(ScanMode::Full).await?;
@@ -74,9 +70,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       trace_action!(action::BuildEnd { action: "BuildEnd" });
       ret
     }
-    .await;
-    self.plugin_driver.set_total_build_time(start);
-    self.append_plugin_timings_warning(result)
+    .await
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
@@ -276,10 +270,8 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     scan_stage_output: NormalizedScanStageOutput,
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
     let (mut link_stage_output, ast_table, used_symbol_refs) =
       LinkStage::new(scan_stage_output, &self.options).link();
-    self.plugin_driver.set_link_stage_time(start);
 
     let bundle_output =
       GenerateStage::new(&mut link_stage_output, ast_table, &self.options, &self.plugin_driver)
@@ -410,19 +402,6 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         file: self.options.file.clone(),
       });
     }
-  }
-
-  /// Append plugin timings warning to result if applicable.
-  fn append_plugin_timings_warning(
-    &self,
-    result: BuildResult<BundleOutput>,
-  ) -> BuildResult<BundleOutput> {
-    result.map(|mut output| {
-      if let Some(plugins) = self.plugin_driver.get_plugin_timings_info() {
-        output.warnings.push(BuildDiagnostic::plugin_timings(plugins).with_severity_warning());
-      }
-      output
-    })
   }
 }
 

@@ -15,9 +15,7 @@ use crate::{
   plugin_context::{NativePluginContextImpl, PluginContextMeta},
   plugin_driver::{ContextLoadCompletionManager, hook_orders::PluginHookOrders},
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::hook_timing::HookTimingCollector,
 };
-use rolldown_error::EventKindSwitcher;
 
 pub struct PluginDriverFactory {
   plugins: Vec<SharedPluginable>,
@@ -52,12 +50,6 @@ impl PluginDriverFactory {
       CONTEXT_hook_resolve_id_trigger = "manual"
     );
 
-    // Create timing collector only if checks.pluginTimings is enabled
-    let hook_timing_collector = if options.checks.contains(EventKindSwitcher::PluginTimings) {
-      Some(Arc::new(HookTimingCollector::default()))
-    } else {
-      None
-    };
     let should_skip_user_plugins_for_lazy_proxy_modules =
       options.experimental.dev_mode.as_ref().and_then(|dev_mode| dev_mode.lazy) == Some(true);
 
@@ -70,13 +62,7 @@ impl PluginDriverFactory {
         let plugin_idx = index_plugins.push(Arc::clone(plugin));
         plugin_usage_vec.push(plugin.call_hook_usage());
 
-        // Register plugin in timing collector if enabled (skip internal builtin plugins)
         let plugin_name = plugin.call_name();
-        if let Some(ref collector) = hook_timing_collector {
-          if !plugin_name.starts_with("builtin:") {
-            collector.register_plugin(plugin_idx, ArcStr::from(plugin_name.as_ref()));
-          }
-        }
         if lazy_compilation_plugin_idx.is_none() && plugin_name == "lazy-compilation" {
           lazy_compilation_plugin_idx = Some(plugin_idx);
         }
@@ -111,7 +97,6 @@ impl PluginDriverFactory {
         transform_dependencies,
         context_load_completion_manager: ContextLoadCompletionManager::default(),
         tx,
-        hook_timing_collector: hook_timing_collector.clone(),
       }
     })
   }

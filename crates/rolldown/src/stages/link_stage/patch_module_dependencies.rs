@@ -27,7 +27,7 @@ impl LinkStage<'_> {
             Some(ns) => self.symbols.canonical_ref_for(ns.namespace_ref),
             None => canonical_ref,
           };
-          if self.used_external_symbols.interop_use(&namespace_ref).is_some() {
+          if self.used_external_symbols.has_interop_use_for(&namespace_ref) {
             reads_external_as_esm = true;
           }
         };

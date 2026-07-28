@@ -1,13 +1,11 @@
 use itertools::Itertools;
-use rolldown_common::{ExternalModule, NormalModule};
+use rolldown_common::ExternalModule;
 use rolldown_sourcemap::SourceJoiner;
 
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
   types::generator::GenerateContext,
-  utils::external_import_interop::{
-    ChunkAssignments, chunk_recorded_external_interop, external_import_needs_interop,
-  },
+  utils::external_import_interop::{ChunkAssignments, chunk_external_interop_modes},
 };
 
 pub mod namespace;
@@ -69,18 +67,17 @@ pub fn render_chunk_external_imports<'a>(
         .canonical_name_for_or_original(importee.namespace_ref, &ctx.chunk.canonical_names);
 
       if ctx.link_output.used_external_symbols.contains(&importee.namespace_ref) {
-        // Check if this import needs __toESM. `named_imports` only covers imports written by
-        // modules that live in this chunk, so also consult what the inclusion pass recorded —
-        // see `chunk_recorded_external_interop`.
-        let recorded_interop = chunk_recorded_external_interop(
+        // `named_imports` only covers imports written by modules that live in this chunk, so the
+        // mode set also folds in what the inclusion pass recorded for observers landing here.
+        // Deconflicting derives the mixed-mode binding names from this same call.
+        let interop_modes = chunk_external_interop_modes(
           ctx.link_output,
           ChunkAssignments::from_graph(ctx.chunk_graph),
           ctx.chunk_idx,
           importee.namespace_ref,
+          Some(named_imports.as_slice()),
         );
-        let needs_interop =
-          recorded_interop.is_some() || external_import_needs_interop(named_imports);
-        if needs_interop {
+        if let Some(interop_modes) = interop_modes {
           let to_esm_fn_name = ctx.link_output.symbol_db.canonical_name_for_or_original(
             ctx.link_output.runtime.resolve_symbol("__toESM"),
             &ctx.chunk.canonical_names,
@@ -104,13 +101,8 @@ pub fn render_chunk_external_imports<'a>(
             import_code.push_str(external_module_symbol_name);
             import_code.push_str(");\n");
           } else {
-            // Single-mode: check if any importer is ESM for node-mode flag
-            let is_node_esm = recorded_interop.is_some_and(|use_| use_.node_esm)
-              || named_imports.iter().any(|(importer_idx, _)| {
-                ctx.link_output.module_table[*importer_idx]
-                  .as_normal()
-                  .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
-              });
+            // Single-mode: only one of the two flags is set, so it names the mode outright.
+            let is_node_esm = interop_modes.node_esm;
             import_code.push_str(external_module_symbol_name);
             import_code.push_str(" = ");
             import_code.push_str(to_esm_fn_name);

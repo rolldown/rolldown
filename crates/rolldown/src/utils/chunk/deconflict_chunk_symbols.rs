@@ -3,17 +3,12 @@ use oxc_str::CompactStr;
 use crate::{
   stages::{generate_stage::order_wrap_state::OrderWrapState, link_stage::LinkStageOutput},
   utils::{
-    external_import_interop::{
-      ChunkAssignments, chunk_recorded_external_interop, external_import_needs_interop,
-      specifier_needs_interop,
-    },
+    external_import_interop::{ChunkAssignments, chunk_external_interop_modes},
     renamer::{NestedScopeRenamer, Renamer},
   },
 };
 use arcstr::ArcStr;
-use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, NormalModule, OutputFormat, SymbolRef, WrapKind,
-};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, SymbolRef, WrapKind};
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -239,34 +234,16 @@ pub fn deconflict_chunk_symbols(
     for (ext_idx, named_imports) in externals {
       let ext =
         link_output.module_table[ext_idx].as_external().expect("Should be external module here");
-      let recorded = chunk_recorded_external_interop(
+      let Some(modes) = chunk_external_interop_modes(
         link_output,
         chunk_assignments,
         chunk_idx,
         ext.namespace_ref,
-      );
-      if recorded.is_none() && !named_imports.is_some_and(external_import_needs_interop) {
+        named_imports,
+      ) else {
         continue;
-      }
-      let mut has_node_mode = recorded.is_some_and(|use_| use_.node_esm);
-      let mut has_non_node_mode = recorded.is_some_and(|use_| use_.non_node_esm);
-      for (importer_idx, import) in named_imports.unwrap_or_default() {
-        if has_node_mode && has_non_node_mode {
-          break;
-        }
-        if !specifier_needs_interop(&import.imported) {
-          continue;
-        }
-        if link_output.module_table[*importer_idx]
-          .as_normal()
-          .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
-        {
-          has_node_mode = true;
-        } else {
-          has_non_node_mode = true;
-        }
-      }
-      if has_node_mode && has_non_node_mode {
+      };
+      if modes.node_esm && modes.non_node_esm {
         let canonical_ref = link_output.symbol_db.canonical_ref_for(ext.namespace_ref);
         let original_name = canonical_ref.name(&link_output.symbol_db);
         let node_name = renamer.create_conflictless_name(original_name);

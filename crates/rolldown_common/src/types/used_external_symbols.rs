@@ -88,14 +88,15 @@ impl UsedExternalSymbols {
     }
   }
 
-  /// Every mode `namespace_ref` is observed in, across the whole bundle.
+  /// Whether anything in the bundle observes `namespace_ref` as an ES module.
   ///
-  /// Callers that render one chunk want [`Self::interop_uses_by_observer`] instead — aggregating
-  /// here would hand a chunk the modes of observers living in other chunks.
+  /// O(1), unlike folding the per-observer modes together. `patch_module_dependencies` asks this
+  /// for every external reference in the bundle, so aggregating on each query would make that walk
+  /// quadratic in the number of modules observing a popular external. Callers that need the modes
+  /// want [`Self::interop_uses_by_observer`], which keeps them attributable to a chunk.
   #[inline]
-  pub fn interop_use(&self, namespace_ref: &SymbolRef) -> Option<ExternalInteropUse> {
-    let observers = self.interop_uses.get(namespace_ref)?;
-    observers.values().copied().reduce(ExternalInteropUse::union)
+  pub fn has_interop_use_for(&self, namespace_ref: &SymbolRef) -> bool {
+    self.interop_uses.contains_key(namespace_ref)
   }
 
   /// Per-observer modes for `namespace_ref`. Absent when nothing observed it as an ES module.

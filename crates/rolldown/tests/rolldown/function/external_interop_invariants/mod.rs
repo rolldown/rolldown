@@ -92,3 +92,56 @@ async fn live_node_and_non_node_observers_keep_modes_chunk_local() {
     "the non-Node ESM observer's wrapper must not use Node mode:\n{non_node_entry}"
   );
 }
+
+/// A named-only import needs no interop at all, so its module's format must not decide the mode of
+/// the wrapper a *default* import in the same chunk gets. Deconflicting already filters on
+/// `specifier_needs_interop`; the renderers have to agree, or the chunk is planned single-mode and
+/// then rendered in the other mode.
+#[tokio::test(flavor = "multi_thread")]
+async fn node_mode_named_only_import_does_not_flip_a_non_node_default_import() {
+  let output = bundle_entries(vec![InputItem {
+    name: Some("same-chunk-mixed-entry".to_string()),
+    import: "./same-chunk-mixed-entry.js".to_string(),
+  }])
+  .await;
+  let entry = &output["same-chunk-mixed-entry.js"];
+
+  assert_eq!(
+    entry.matches("__toESM(").count(),
+    1,
+    "only the default import needs interop, so exactly one wrapper is expected:\n{entry}"
+  );
+  assert!(
+    !entry.contains(", 1);"),
+    "the only interop observer is a non-Node default import, so the wrapper must not use Node \
+     mode; the Node-mode importer here is named-only and reads the CommonJS object directly:\n\
+     {entry}"
+  );
+}
+
+/// One consumer reaching the same external through both a `.mjs` and a `.js` shim. Linking
+/// collapses both onto the external's namespace symbol, so the two references are literally the
+/// same canonical symbol and cannot render as different bindings.
+#[tokio::test(flavor = "multi_thread")]
+async fn dual_provenance_through_shims_of_different_formats() {
+  let output = bundle_entries(vec![InputItem {
+    name: Some("dual-provenance-entry".to_string()),
+    import: "./dual-provenance-entry.js".to_string(),
+  }])
+  .await;
+  let entry = &output["dual-provenance-entry.js"];
+
+  let wrappers = entry.matches("__toESM(").count();
+  let node_mode_binding = entry.matches(", 1);").count();
+  assert!(
+    wrappers >= 1,
+    "the default observations must produce at least one interop wrapper:\n{entry}"
+  );
+  // Documents the current limitation rather than asserting the ideal: if two wrappers are emitted,
+  // both references still resolve to the same canonical symbol, so one of them reads a binding
+  // that does not match the format of the shim it came through. See the module doc comment.
+  assert!(
+    wrappers <= 2 && node_mode_binding <= 1,
+    "unexpected wrapper shape for dual-provenance references:\n{entry}"
+  );
+}

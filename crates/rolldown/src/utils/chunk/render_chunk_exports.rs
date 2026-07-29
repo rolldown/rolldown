@@ -13,6 +13,7 @@ use rolldown_utils::{
 };
 use rustc_hash::FxHashSet;
 
+use crate::esm_init_obligations::WrappedEsmInitTarget;
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
 pub fn render_wrapped_entry_chunk(
@@ -52,6 +53,34 @@ pub fn render_wrapped_entry_chunk(
           }
         }
       };
+    }
+
+    if let Some(targets) = ctx.order_wrap_state.consumer_local_namespace_targets(entry_id) {
+      let mut rendered = String::new();
+      for target in targets {
+        let wrapper_ref = match target {
+          WrappedEsmInitTarget::Module(module_idx) => {
+            let target =
+              ctx.esm_init_target(*module_idx).expect("entry init target should have a wrapper");
+            debug_assert!(!target.tla_tainted);
+            target.wrapper_ref
+          }
+          WrappedEsmInitTarget::CjsCarrier(key) => {
+            ctx
+              .order_wrap_state
+              .order_cjs_carrier(*key)
+              .expect("entry CJS carrier should exist")
+              .wrapper_ref
+          }
+        };
+        let wrapper_name = ctx.finalized_string_pattern_for_symbol_ref(
+          wrapper_ref,
+          ctx.chunk_idx,
+          &ctx.chunk.canonical_names,
+        );
+        writeln!(rendered, "{wrapper_name}();").expect("writing to a string cannot fail");
+      }
+      return Some(rendered);
     }
 
     match ctx.esm_init_target(entry_id) {

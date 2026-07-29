@@ -504,22 +504,33 @@ pub trait CallExpressionFactoryExt<'ast> {
     then_with_arrow_callback(expr, member, builder)
   }
 
-  /// `<expr>.then(n => (n.<wrapper_name>(), n.<namespace_name>))`
-  fn new_then_call_esm_wrapper_with_namespace<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+  /// `<expr>.then(n => (n.<wrapper_name>()..., n.<namespace_name>))`
+  fn new_then_call_esm_wrappers_with_namespace<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     expr: Expression<'ast>,
-    wrapper_name: &str,
+    wrapper_names: &[&str],
     namespace_name: &str,
     builder: &B,
   ) -> allocator::Box<'ast, CallExpression<'ast>> {
-    let wrapper_member = Expression::new_static_member_expression(
-      SPAN,
-      Expression::new_identifier(SPAN, "n", builder),
-      IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in(wrapper_name, builder), builder),
-      false,
-      builder,
-    );
-    let wrapper_call =
-      Expression::new_call_expression(SPAN, wrapper_member, NONE, [], false, builder);
+    let mut expressions = allocator::Vec::with_capacity_in(wrapper_names.len() + 1, builder);
+    for wrapper_name in wrapper_names {
+      debug_assert!(is_validate_identifier_name(wrapper_name));
+      let wrapper_member = Expression::new_static_member_expression(
+        SPAN,
+        Expression::new_identifier(SPAN, "n", builder),
+        IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in(wrapper_name, builder), builder),
+        false,
+        builder,
+      );
+      expressions.push(Expression::new_call_expression(
+        SPAN,
+        wrapper_member,
+        NONE,
+        [],
+        false,
+        builder,
+      ));
+    }
+    debug_assert!(is_validate_identifier_name(namespace_name));
     let namespace_member = Expression::new_static_member_expression(
       SPAN,
       Expression::new_identifier(SPAN, "n", builder),
@@ -527,8 +538,16 @@ pub trait CallExpressionFactoryExt<'ast> {
       false,
       builder,
     );
-    let seq_expr = Expression::new_seq_in_parens(wrapper_call, namespace_member, builder);
-    then_with_arrow_callback(expr, seq_expr, builder)
+    if expressions.is_empty() {
+      return then_with_arrow_callback(expr, namespace_member, builder);
+    }
+    expressions.push(namespace_member);
+    let sequence = Expression::new_parenthesized_expression(
+      SPAN,
+      Expression::new_sequence_expression(SPAN, expressions, builder),
+      builder,
+    );
+    then_with_arrow_callback(expr, sequence, builder)
   }
 
   /// `<expr>.then(n => __toESM(n.<property_name>()))`

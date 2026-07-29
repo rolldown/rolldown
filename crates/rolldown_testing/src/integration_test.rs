@@ -615,10 +615,11 @@ impl IntegrationTest {
     // Dispatch to appropriate build method and generate snapshot
     let snapshot_content = if hmr_mode_enabled {
       let artifacts_snapshot =
-        self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps).await;
+        Box::pin(self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps)).await;
       artifacts_snapshot.render(&self.test_meta)
     } else {
-      let artifacts_snapshot = self.run_multiple_for_build(multiple_options, plugins).await;
+      let artifacts_snapshot =
+        Box::pin(self.run_multiple_for_build(multiple_options, plugins)).await;
       artifacts_snapshot.render(&self.test_meta)
     };
 

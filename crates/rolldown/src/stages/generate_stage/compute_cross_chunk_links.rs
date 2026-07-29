@@ -1,7 +1,7 @@
 use super::{FinalEsmInitMetadata, GenerateStage, Sealed};
 use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::{
-  ObligationPurpose, WrappedEsmInitTargetContext,
+  ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
   collect_wrapped_esm_init_targets_for_import_record, for_each_init_obligation_record,
 };
 use crate::utils::chunk::conflict_resolver::{ConflictResolver, deconflict_order_key};
@@ -528,6 +528,14 @@ impl GenerateStage<'_> {
               {
                 return;
               }
+              if stmt_info.import_records.iter().any(|rec_idx| {
+                order_state.has_order_cjs_carrier(super::order_wrap_state::OrderCjsCarrierKey {
+                  importer: module.idx,
+                  record: *rec_idx,
+                })
+              }) {
+                return;
+              }
               stmt_info.declared_symbols.iter().for_each(|declared| {
                 symbol_needs_to_assign.push(*declared);
               });
@@ -600,6 +608,15 @@ impl GenerateStage<'_> {
           if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
             depended_symbols
               .insert(entry_meta.wrapper_ref.expect("CJS entry should have a wrapper"));
+          } else if let Some(targets) = order_state.consumer_local_namespace_targets(entry.idx) {
+            for &target in targets {
+              self.add_wrapped_esm_init_target_depended_symbol(
+                chunk_graph,
+                order_state,
+                depended_symbols,
+                target,
+              );
+            }
           } else if let Some(target) = order_state.esm_init_target(entry.idx, entry_meta) {
             depended_symbols.insert(target.wrapper_ref);
           }
@@ -620,6 +637,8 @@ impl GenerateStage<'_> {
             depended_symbols.insert(entry.namespace_object_ref);
           }
         }
+
+        self.add_absorbed_entry_init_deps(chunk_graph, order_state, depended_symbols, chunk_id);
 
         for synthetic in order_state.synthetic_statements_for_chunk(chunk_id) {
           symbol_needs_to_assign.extend(synthetic.declared_symbols.iter().copied());
@@ -701,6 +720,18 @@ impl GenerateStage<'_> {
         depended_symbols.insert(wrapper_ref);
       }
       return;
+    }
+
+    // A carrier namespace is declared beside its CJS importee, even though the synthetic symbol
+    // is owned by the forwarding barrel. Register that exact per-record carrier as an additional
+    // init companion before the ordinary owner-based path below considers the barrel wrapper.
+    if let Some(key) = order_state.order_cjs_carrier_key_for_namespace(symbol_ref) {
+      self.add_wrapped_esm_init_target_depended_symbol(
+        chunk_graph,
+        order_state,
+        depended_symbols,
+        WrappedEsmInitTarget::CjsCarrier(key),
+      );
     }
 
     if matches!(self.link_output.module_table[symbol_ref.owner], Module::Normal(_))
@@ -787,12 +818,69 @@ impl GenerateStage<'_> {
     for (_, targets) in
       targets_by_stmt.iter().sorted_unstable_by_key(|(stmt_info_idx, _)| **stmt_info_idx)
     {
-      for &target_idx in targets {
+      for &target in targets {
+        self.add_wrapped_esm_init_target_depended_symbol(
+          chunk_graph,
+          order_state,
+          depended_symbols,
+          target,
+        );
+      }
+    }
+  }
+
+  fn add_wrapped_esm_init_target_depended_symbol(
+    &self,
+    chunk_graph: &ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    depended_symbols: &mut FxIndexSet<SymbolRef>,
+    target: WrappedEsmInitTarget,
+  ) {
+    match target {
+      WrappedEsmInitTarget::Module(target_idx) => {
         let meta = &self.link_output.metas[target_idx];
         if let Some(target) = order_state.esm_init_target(target_idx, meta)
           && order_state.init_target_included_in_live_chunk(&target, meta, target_idx, chunk_graph)
         {
           depended_symbols.insert(target.wrapper_ref);
+        }
+      }
+      WrappedEsmInitTarget::CjsCarrier(key) => {
+        if order_state.order_cjs_carrier_included_in_live_chunk(key, chunk_graph)
+          && let Some(carrier) = order_state.order_cjs_carrier(key)
+        {
+          depended_symbols.insert(carrier.wrapper_ref);
+        }
+      }
+    }
+  }
+
+  /// A collapsed dynamic-entry facade runs its initialization at each `import()` call site.
+  /// Consumer-local barrels replace the entry's shared wrapper with the complete namespace target
+  /// list, which can contain leaf wrappers and CJS carriers hosted by other chunks. Register those
+  /// targets as dependencies of the absorbed entry's host chunk so both the same-chunk direct calls
+  /// and the cross-chunk re-exports have real backing imports.
+  fn add_absorbed_entry_init_deps(
+    &self,
+    chunk_graph: &ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    depended_symbols: &mut FxIndexSet<SymbolRef>,
+    chunk_idx: ChunkIdx,
+  ) {
+    let Some(dynamic_entries) =
+      chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_idx)
+    else {
+      return;
+    };
+    for dynamic_entry in dynamic_entries {
+      if let Some(targets) = order_state.consumer_local_namespace_targets(*dynamic_entry) {
+        for &target in targets {
+          self.add_wrapped_esm_init_target_depended_symbol(
+            chunk_graph,
+            order_state,
+            depended_symbols,
+            target,
+          );
         }
       }
     }
@@ -862,18 +950,13 @@ impl GenerateStage<'_> {
             chunk_graph.module_to_chunk[forwarding_module_idx] == Some(chunk_idx)
           },
         );
-        for target_idx in targets {
-          let target_meta = &self.link_output.metas[target_idx];
-          if let Some(target) = order_state.esm_init_target(target_idx, target_meta)
-            && order_state.init_target_included_in_live_chunk(
-              &target,
-              target_meta,
-              target_idx,
-              chunk_graph,
-            )
-          {
-            depended_symbols.insert(target.wrapper_ref);
-          }
+        for target in targets {
+          self.add_wrapped_esm_init_target_depended_symbol(
+            chunk_graph,
+            order_state,
+            depended_symbols,
+            target,
+          );
         }
       },
     );
@@ -1075,6 +1158,32 @@ impl GenerateStage<'_> {
               if let Some(wrapper_ref) = meta.wrapper_ref {
                 index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
               }
+            } else if let Some(targets) =
+              order_state.consumer_local_namespace_targets(*dynamic_entry_module)
+            {
+              // A consumer-local namespace is activated by its complete leaf/carrier target list,
+              // never by the intentionally empty shared barrel wrapper.
+              for &target in targets {
+                let wrapper_ref = match target {
+                  WrappedEsmInitTarget::Module(module_idx) => {
+                    order_state
+                      .esm_init_target(module_idx, &self.link_output.metas[module_idx])
+                      .expect("dynamic-entry module target should have a wrapper")
+                      .wrapper_ref
+                  }
+                  WrappedEsmInitTarget::CjsCarrier(key) => {
+                    order_state
+                      .order_cjs_carrier(key)
+                      .expect("dynamic-entry CJS carrier should have a wrapper")
+                      .wrapper_ref
+                  }
+                };
+                index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
+              }
+              let ns_ref = self.link_output.module_table[*dynamic_entry_module]
+                .namespace_object_ref()
+                .expect("dynamic entry should be normal module");
+              index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
             } else if let Some(target) = order_state.esm_init_target(*dynamic_entry_module, meta) {
               // For ESM modules, export both wrapper_ref (init_xxx) and namespace
               // Generated code: `import('./chunk.js').then((n) => (n.init_xxx(), n.namespace))`

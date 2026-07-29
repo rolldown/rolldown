@@ -140,8 +140,16 @@ pub fn deconflict_chunk_symbols(
         // finalizer's `remove_unused_top_level_stmt`); without it a user top-level binding named
         // `__esmMin`/`__esm` co-hosted with the runtime collides with the forced helper declaration.
         .filter(|(idx, stmt_info)| {
-          meta.stmt_info_included.has_bit(*idx)
-            || order_wrap_state.forces_runtime_stmt(&link_output.runtime, module.idx, stmt_info)
+          (meta.stmt_info_included.has_bit(*idx)
+            || order_wrap_state.forces_runtime_stmt(&link_output.runtime, module.idx, stmt_info))
+            && !stmt_info.import_records.iter().any(|rec_idx| {
+              order_wrap_state.has_order_cjs_carrier(
+                crate::stages::generate_stage::order_wrap_state::OrderCjsCarrierKey {
+                  importer: module.idx,
+                  record: *rec_idx,
+                },
+              )
+            })
         })
         .for_each(|(_, stmt_info)| {
           for declared_symbol in stmt_info.declared_symbols.iter().filter(|item| item.is_normal()) {

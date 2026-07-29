@@ -5,7 +5,7 @@ use oxc::{
   allocator::{self, GetAllocator, ReplaceWith, TakeIn},
   ast::{
     ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
-    builder::NONE,
+    builder::{AstBuilder, NONE},
     match_member_expression,
   },
   ast_visit::{VisitJsMut, walk_js_mut},
@@ -20,9 +20,104 @@ use rolldown_ecmascript_utils::{
 };
 use rolldown_error::EmptyImportMetaKind;
 
-use crate::module_finalizers::{KeepNameId, ModuleWrapperMode, TraverseState};
+use crate::module_finalizers::{
+  FinalizedExprProcessHint, KeepNameId, ModuleWrapperMode, TraverseState,
+};
 
 use super::ScopeHoistingFinalizer;
+
+impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
+  fn append_order_cjs_carriers(&self, program: &mut ast::Program<'ast>) {
+    let carrier_keys =
+      self.ctx.order_wrap_state.order_cjs_carriers_for_importee(self.ctx.idx).to_vec();
+    for key in carrier_keys {
+      let ast_builder = AstBuilder::new(self.ast_builder.allocator());
+      let carrier =
+        self.ctx.order_wrap_state.order_cjs_carrier(key).expect("order CJS carrier should exist");
+      let wrapper_ref = carrier.wrapper_ref;
+      let namespace_ref = carrier.namespace_ref;
+      let importee = carrier.importee;
+      let needs_to_esm = carrier.needs_to_esm;
+      let is_node_mode = carrier.is_node_mode;
+      debug_assert_eq!(importee, self.ctx.idx);
+
+      let namespace_name = self.canonical_name_for(namespace_ref);
+      program.body.push(Statement::new_var_decl(
+        namespace_name,
+        ast::Expression::new_void_0(SPAN, &ast_builder),
+        &ast_builder,
+      ));
+
+      let importee_wrapper_ref =
+        self.ctx.linking_info.wrapper_ref.expect("carrier importee should have a CJS wrapper");
+      let (importee_wrapper_expr, hint) =
+        self.finalized_expr_for_symbol_ref(importee_wrapper_ref, false, false);
+      let require_call = if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
+        importee_wrapper_expr
+      } else {
+        ast::Expression::new_call_expression(
+          SPAN,
+          importee_wrapper_expr,
+          NONE,
+          [],
+          false,
+          &ast_builder,
+        )
+      };
+      let init_expr = if needs_to_esm {
+        Expression::new_to_esm_wrapper(
+          self.finalized_expr_for_runtime_symbol("__toESM"),
+          require_call,
+          is_node_mode,
+          &ast_builder,
+        )
+      } else {
+        require_call
+      };
+      let assignment = ast::Expression::new_assignment_expression(
+        SPAN,
+        ast::AssignmentOperator::Assign,
+        ast::AssignmentTarget::new_assignment_target_identifier(
+          SPAN,
+          oxc::ast::ast::Str::from_str_in(namespace_name, &ast_builder),
+          &ast_builder,
+        ),
+        init_expr,
+        &ast_builder,
+      );
+      let mut statements: allocator::Vec<'ast, Statement<'ast>> =
+        allocator::Vec::new_in(&ast_builder);
+      statements.push(Statement::new_expression_statement(SPAN, assignment, &ast_builder));
+
+      let esm_ref = if self.ctx.options.profiler_names {
+        self.canonical_ref_for_runtime("__esm")
+      } else {
+        self.canonical_ref_for_runtime("__esmMin")
+      };
+      let (esm_ref_expr, _) = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
+      program.body.push(Statement::new_esm_wrapper_stmt(
+        EsmWrapperStmtOptions {
+          binding_name: self.canonical_name_for(wrapper_ref),
+          esm_fn_expr: esm_ref_expr,
+          statements,
+          profiler_name: self
+            .ctx
+            .options
+            .profiler_names
+            .then_some(self.ctx.module.stable_id.as_str()),
+          call_kind: if self.ctx.options.optimization.is_pife_for_module_wrappers_enabled() {
+            EsmWrapperCallKind::Pife
+          } else {
+            EsmWrapperCallKind::Plain
+          },
+          body_kind: EsmWrapperBodyKind::Sync,
+          decl_kind: EsmWrapperDeclKind::HoistedFunction,
+        },
+        &ast_builder,
+      ));
+    }
+  }
+}
 
 impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn enter_scope(
@@ -315,6 +410,8 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         program.body.splice(0..0, declaration_of_module_namespace_object);
       }
     }
+
+    self.append_order_cjs_carriers(program);
 
     if self.json_module_inlined_prop.is_some() {
       program.body.drain_filter(|item| matches!(item, ast::Statement::EmptyStatement(_)));

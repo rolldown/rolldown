@@ -39,9 +39,10 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use crate::esm_init_obligations::{
-  ObligationPurpose, WrappedEsmInitTargetContext,
+  ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
   collect_wrapped_esm_init_targets_for_import_record, record_is_init_obligation,
 };
+use crate::stages::generate_stage::order_wrap_state::OrderCjsCarrierKey;
 use crate::utils;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
@@ -94,6 +95,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   /// Wrapped-ESM importees whose `init_*()` call was already emitted while finalizing this
   /// module, so the various init-emission paths don't emit duplicates.
   pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
+  pub generated_order_cjs_carriers: FxHashSet<OrderCjsCarrierKey>,
   pub scope_stack: Vec<ScopeFlags>,
   pub state: TraverseState,
   pub top_level_var_bindings: FxIndexSet<Ident<'ast>>,
@@ -196,18 +198,87 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  fn order_cjs_carrier_init_call_expr(
+    &self,
+    key: OrderCjsCarrierKey,
+    call_span: Span,
+  ) -> ast::Expression<'ast> {
+    let carrier = self
+      .ctx
+      .order_wrap_state
+      .order_cjs_carrier(key)
+      .expect("order CJS carrier call should have a target");
+    let (wrapper_ref_expr, _) =
+      self.finalized_expr_for_symbol_ref(carrier.wrapper_ref, false, false);
+    ast::Expression::new_call_expression(call_span, wrapper_ref_expr, NONE, [], false, self)
+  }
+
+  fn wrapped_esm_init_target_wrapper_ref(&self, target: WrappedEsmInitTarget) -> SymbolRef {
+    match target {
+      WrappedEsmInitTarget::Module(module_idx) => {
+        self
+          .ctx
+          .order_wrap_state
+          .esm_init_target(module_idx, &self.ctx.linking_infos[module_idx])
+          .expect("module init target should have a wrapper")
+          .wrapper_ref
+      }
+      WrappedEsmInitTarget::CjsCarrier(key) => {
+        self
+          .ctx
+          .order_wrap_state
+          .order_cjs_carrier(key)
+          .expect("CJS carrier init target should have a wrapper")
+          .wrapper_ref
+      }
+    }
+  }
+
+  fn wrapped_esm_init_target_call_expr(
+    &self,
+    target: WrappedEsmInitTarget,
+    call_span: Span,
+  ) -> ast::Expression<'ast> {
+    match target {
+      WrappedEsmInitTarget::Module(module_idx) => {
+        self.wrapped_esm_init_call_expr(module_idx, call_span, true, false)
+      }
+      WrappedEsmInitTarget::CjsCarrier(key) => {
+        self.order_cjs_carrier_init_call_expr(key, call_span)
+      }
+    }
+  }
+
+  fn wrapped_esm_init_targets_with_namespace_expr(
+    &self,
+    targets: &[WrappedEsmInitTarget],
+    namespace: ast::Expression<'ast>,
+  ) -> ast::Expression<'ast> {
+    if targets.is_empty() {
+      return namespace;
+    }
+    let mut expressions = allocator::Vec::with_capacity_in(targets.len() + 1, self);
+    expressions
+      .extend(targets.iter().map(|target| self.wrapped_esm_init_target_call_expr(*target, SPAN)));
+    expressions.push(namespace);
+    ast::Expression::new_parenthesized_expression(
+      SPAN,
+      ast::Expression::new_sequence_expression(SPAN, expressions, self),
+      self,
+    )
+  }
+
   /// Whether a wrapper symbol can be referenced from the chunk being finalized: it is either
   /// declared in this chunk or registered as a cross-chunk import — exactly the symbols
   /// deconfliction assigned a canonical name for. Finalizers run after cross-chunk imports are
   /// computed, so a synthesized call to any other wrapper would render as a bare identifier
   /// with no backing import (`ReferenceError` at runtime).
   ///
-  /// Skipping the init call in that case is sound: cross-chunk wrapper imports are registered
-  /// whenever a chunk depends on a symbol *owned by* the wrapped module
-  /// (`add_depended_symbol_with_wrapped_esm_init`), so an unreachable wrapper means every
-  /// access flows through the forwarding barrel's namespace object instead. That namespace
-  /// dependency imports the barrel's chunk, which executes first and performs the init via the
-  /// barrel's own lowered statements.
+  /// Skipping the init call in that case is sound because cross-chunk registration pairs every
+  /// live referenced binding with its required init companion: ordinary module bindings register
+  /// their module wrapper, while a carrier namespace additionally registers its matching per-record
+  /// carrier wrapper (`add_depended_symbol_with_wrapped_esm_init`). A wrapper absent here has no
+  /// retained declaration or backing import, so synthesizing a call would be invalid.
   fn wrapper_is_reachable_in_chunk(&self, wrapper_ref: SymbolRef) -> bool {
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(wrapper_ref);
     self.ctx.chunk.canonical_names.contains_key(&canonical_ref)
@@ -243,16 +314,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         self.ctx.chunk_graph.module_to_chunk[forwarding_module_idx] == Some(self.ctx.chunk_idx)
       },
     );
-    let mut init_exprs = targets.into_iter().filter_map(|module_idx| {
-      if !self.generated_init_esm_importee_ids.insert(module_idx) {
-        return None;
+    let mut init_exprs = targets.into_iter().filter_map(|target| match target {
+      WrappedEsmInitTarget::Module(module_idx) => {
+        if !self.generated_init_esm_importee_ids.insert(module_idx) {
+          return None;
+        }
+        Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
       }
-      // The shared target resolver only collects modules with a reachable `wrapper_ref`.
-      Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
+      WrappedEsmInitTarget::CjsCarrier(key) => {
+        if !self.generated_order_cjs_carriers.insert(key) {
+          return None;
+        }
+        Some(self.order_cjs_carrier_init_call_expr(key, SPAN))
+      }
     });
-    // Drive the iterator by hand. Every branch consumes it to exhaustion, so each owner's
-    // `generated_init_esm_importee_ids` insert still runs (the global dedup must observe all of
-    // them) regardless of how many statements we end up emitting.
+    // Drive the iterator by hand. Every branch consumes it to exhaustion, so both the module and
+    // carrier dedup sets observe every target regardless of how many statements we end up emitting.
     let first = init_exprs.next()?;
     let Some(second) = init_exprs.next() else {
       return Some(ast::Statement::new_expression_statement(SPAN, first, &ast_builder));
@@ -281,6 +358,26 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return true;
     };
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];
+    // A consumer-local barrel is a routing waypoint even when linking already gave it an ESM
+    // interop wrapper (for example, because an outer CommonJS module requires its namespace).
+    // Calling that shared wrapper would re-couple every retained route and, after CJS carrier
+    // extraction, can leave the namespace getters ahead of the carrier initialization. Resolve
+    // the record through the same per-consumer target view used by registration instead.
+    if self.ctx.order_wrap_state.is_consumer_local_reexport_route(importee.idx) {
+      if record_is_init_obligation(
+        ObligationPurpose::Emit,
+        self.ctx.order_wrap_state,
+        self.ctx.idx,
+        rec,
+        rec_idx,
+        true,
+      ) && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
+      {
+        *stmt = init_stmt;
+        return false;
+      }
+      return true;
+    }
     match importee_linking_info.wrap_kind() {
       WrapKind::None => {
         // Emission consumes the shared obligation gate; this transform only runs for *included*
@@ -300,6 +397,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // Remove this statement by ignoring it
       }
       WrapKind::Cjs => {
+        let carrier_key = OrderCjsCarrierKey { importer: self.ctx.idx, record: rec_idx };
+        if self.ctx.order_wrap_state.has_order_cjs_carrier(carrier_key) {
+          debug_assert!(!self.transferred_import_record.contains_key(&rec_idx));
+          return true;
+        }
         // Check if this CJS module's namespace can be merged with other imports
         let merge_info = self.ctx.safely_merge_cjs_ns_map.get(&resolved_module_idx);
 
@@ -1707,18 +1809,29 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             .transitive_init_targets(self.ctx.idx)
             .and_then(|targets_by_stmt| targets_by_stmt.get(&stmt_info_idx))
           {
-            for &importee_idx in targets {
-              if self.generated_init_esm_importee_ids.insert(importee_idx) {
-                // An excluded re-export can forward to a TLA-tainted wrapper. The current module
-                // is then TLA-tainted as well, so its async init body must await the forwarded
-                // promise before later statements observe the importee's bindings.
-                let init_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, true);
-                program.body.push(ast::Statement::new_expression_statement(
-                  SPAN,
-                  init_expr,
-                  self,
-                ));
-              }
+            for &target in targets {
+              let init_expr = match target {
+                WrappedEsmInitTarget::Module(importee_idx) => {
+                  if !self.generated_init_esm_importee_ids.insert(importee_idx) {
+                    continue;
+                  }
+                  // An excluded re-export can forward to a TLA-tainted wrapper. The current
+                  // module is then TLA-tainted as well, so its async init body must await the
+                  // forwarded promise before later statements observe the importee's bindings.
+                  self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, true)
+                }
+                WrappedEsmInitTarget::CjsCarrier(key) => {
+                  if !self.generated_order_cjs_carriers.insert(key) {
+                    continue;
+                  }
+                  self.order_cjs_carrier_init_call_expr(key, SPAN)
+                }
+              };
+              program.body.push(ast::Statement::new_expression_statement(
+                SPAN,
+                init_expr,
+                self,
+              ));
             }
           }
           let overlay_records = self
@@ -1801,6 +1914,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
                 // Same shared obligation gate as the import-declaration path; the statement is
                 // included by construction here.
+                let consumer_local_route = self
+                  .ctx
+                  .order_wrap_state
+                  .is_consumer_local_reexport_route(importee.idx);
                 if record_is_init_obligation(
                   ObligationPurpose::Emit,
                   self.ctx.order_wrap_state,
@@ -1808,13 +1925,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   rec,
                   rec_idx,
                   true,
-                ) && matches!(importee_linking_info.wrap_kind(), WrapKind::None)
+                ) && (matches!(importee_linking_info.wrap_kind(), WrapKind::None)
+                  || consumer_local_route)
                   && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
                 {
                   program.body.push(init_stmt);
                 }
 
                 if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm)
+                  && !consumer_local_route
                 // If it is a inner concatenated module, we should not call its wrapper here
                   && !matches!(
                     importee_linking_info.concatenated_wrapped_module_kind,
@@ -2297,6 +2416,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
           self,
         )
+      } else if let Some(targets) =
+        self.ctx.order_wrap_state.consumer_local_namespace_targets(importee_idx)
+      {
+        let (finalized_namespace, _) =
+          self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
+        self.wrapped_esm_init_targets_with_namespace_expr(targets, finalized_namespace)
       } else if let Some(target) =
         self.ctx.order_wrap_state.esm_init_target(importee_idx, importee_meta)
       {
@@ -2332,15 +2457,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let wrap_kind = importee_meta.wrap_kind();
       // Interop `WrapKind::Esm` wrappers and execution-order wrappers share the same
       // `.then(n => (n.init_xxx(), n.namespace))` shape via the `esm_init_target` view.
-      let init_target = if matches!(wrap_kind, WrapKind::Cjs) {
-        None
-      } else {
-        self.ctx.order_wrap_state.esm_init_target(importee_idx, importee_meta)
-      };
+      let consumer_local_targets =
+        self.ctx.order_wrap_state.consumer_local_namespace_targets(importee_idx);
+      let init_target = (!matches!(wrap_kind, WrapKind::Cjs) && consumer_local_targets.is_none())
+        .then(|| self.ctx.order_wrap_state.esm_init_target(importee_idx, importee_meta))
+        .flatten();
 
       // For wrapped modules, look up the wrapper_ref; for others, look up the namespace symbol
       let primary_export_symbol = if matches!(wrap_kind, WrapKind::Cjs) {
         importee_meta.wrapper_ref
+      } else if consumer_local_targets.is_some() {
+        self.ctx.modules[importee_idx].namespace_object_ref()
       } else if let Some(target) = &init_target {
         Some(target.wrapper_ref)
       } else {
@@ -2352,7 +2479,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       });
 
       // For ESM-init wrapped modules, we also need the namespace symbol
-      let namespace_export_name = if init_target.is_some() {
+      let namespace_export_name = if init_target.is_some() || consumer_local_targets.is_some() {
         self.ctx.modules[importee_idx].namespace_object_ref().and_then(|ns_ref| {
           importee_chunk.exports_to_other_chunks.get(&ns_ref).and_then(|names| names.first())
         })
@@ -2396,11 +2523,47 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self,
             );
             Some(Expression::CallExpression(call_expr))
+          } else if let Some(targets) = consumer_local_targets {
+            let Some(ns_name) = namespace_export_name else {
+              tracing::warn!(
+                "Consumer-local dynamic entry {:?} in chunk {:?} has no namespace export.",
+                importee_idx,
+                importee_chunk_idx
+              );
+              return None;
+            };
+            let mut wrapper_names = Vec::with_capacity(targets.len());
+            for &target in targets {
+              let wrapper_ref = self.wrapped_esm_init_target_wrapper_ref(target);
+              let Some(wrapper_name) = importee_chunk
+                .exports_to_other_chunks
+                .get(&wrapper_ref)
+                .and_then(|names| names.first())
+              else {
+                tracing::warn!(
+                  "Consumer-local dynamic entry {:?} in chunk {:?} is missing an init-target export.",
+                  importee_idx,
+                  importee_chunk_idx
+                );
+                return None;
+              };
+              wrapper_names.push(wrapper_name.as_str());
+            }
+            let call_expr = CallExpression::new_then_call_esm_wrappers_with_namespace(
+              base_expr,
+              &wrapper_names,
+              ns_name,
+              self,
+            );
+            Some(Expression::CallExpression(call_expr))
           } else if init_target.is_some() {
             // For ESM-init wrapped modules: import('./chunk.js').then(n => (n.init_xxx(), n.namespace))
             if let Some(ns_name) = namespace_export_name {
-              let call_expr = CallExpression::new_then_call_esm_wrapper_with_namespace(
-                base_expr, name, ns_name, self,
+              let call_expr = CallExpression::new_then_call_esm_wrappers_with_namespace(
+                base_expr,
+                &[name],
+                ns_name,
+                self,
               );
               Some(Expression::CallExpression(call_expr))
             } else {

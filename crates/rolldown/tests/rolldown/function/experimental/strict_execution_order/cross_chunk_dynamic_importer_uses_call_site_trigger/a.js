@@ -2,4 +2,4 @@
 // this `import()` alone could collapse — but b.js's cross-chunk import must keep the
 // facade for everyone.
 (globalThis.log ??= []).push('a');
-export const aTargetPromise = import('./target.js');
+export const aTargetPromise = import('./target.js').then(({ value }) => ({ value }));

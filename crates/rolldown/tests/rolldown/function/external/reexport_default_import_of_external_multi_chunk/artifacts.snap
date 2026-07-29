@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## another-default-user.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+let node_https = require("node:https");
+node_https = require_rolldown_runtime.__toESM(node_https);
+//#region another-default-user.js
+function getServerCtor() {
+	return node_https.default.Server;
+}
+//#endregion
+exports.getServerCtor = getServerCtor;
+
+```
+
+## default-user.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+let node_https = require("node:https");
+node_https = require_rolldown_runtime.__toESM(node_https);
+//#region default-user.js
+function getAgentCtor() {
+	return node_https.default.Agent;
+}
+//#endregion
+exports.getAgentCtor = getAgentCtor;
+
+```
+
+## named-user.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+require("./rolldown-runtime.js");
+let node_https = require("node:https");
+//#region named-user.js
+function getAgentCtorFromNamed() {
+	return node_https.Agent;
+}
+//#endregion
+exports.getAgentCtorFromNamed = getAgentCtorFromNamed;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+
+```

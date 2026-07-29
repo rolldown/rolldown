@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let external_pkg = require("external-pkg");
+external_pkg = __toESM(external_pkg, 1);
+//#region main.js
+function readDefault() {
+	return external_pkg.default;
+}
+//#endregion
+exports.readDefault = readDefault;
+
+```

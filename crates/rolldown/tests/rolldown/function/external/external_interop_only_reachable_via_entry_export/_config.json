@@ -1,0 +1,12 @@
+{
+  "_comment": "`entry-a` default-imports the external through a shim tree-shaking drops, so only `entry-a` observes it as an ES module. `entry-b` merely re-exports a *named* binding, and its sole live reference lives in `referenced_symbols_by_entry_point_chunk` rather than any included statement — the one path that never reaches the inclusion pass's statement walk. It must not wrap, since observer attribution is what keeps a named-only chunk off `__toESM` (see `chunk_recorded_external_interop`). Written originally to pin the panic that a wrapping `entry-b` hit with no runtime edge; observer attribution now stops it wrapping at all, so this pins the attribution instead and the panic path is only reachable if `patch_module_dependencies` is ever narrowed off bundle-wide. The bindings-less `require` of the runtime chunk in `entry-b` is that bundle-wide edge showing through — dead weight, not incorrect.",
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      { "name": "entry-a", "import": "./entry-a.js" },
+      { "name": "entry-b", "import": "./entry-b.js" }
+    ],
+    "external": ["node:https"],
+    "format": "cjs"
+  }
+}

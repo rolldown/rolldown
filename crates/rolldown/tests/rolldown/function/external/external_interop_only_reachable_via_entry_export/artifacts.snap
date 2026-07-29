@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+let node_https = require("node:https");
+node_https = require_rolldown_runtime.__toESM(node_https);
+//#region entry-a.js
+console.log(node_https.default.Agent.name);
+//#endregion
+
+```
+
+## entry-b.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+require("./rolldown-runtime.js");
+let node_https = require("node:https");
+exports.foo = node_https.request;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+
+```

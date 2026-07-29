@@ -19,13 +19,13 @@ use oxc::{
   allocator::{self, GetAllocator, IntoIn},
   ast::{
     ast::{
-      Argument, ArrowFunctionExpression, AssignmentOperator, AssignmentTarget, BindingIdentifier,
-      BindingPattern, CallExpression, ClassElement, Declaration, ExportDefaultDeclarationKind,
-      ExportSpecifier, Expression, FormalParameter, FormalParameterKind, FormalParameters,
-      FunctionBody, FunctionType, IdentifierName, ImportDeclarationSpecifier, ImportOrExportKind,
-      MemberExpression, ModuleExportName, NumberBase, ObjectExpression, ObjectPropertyKind,
-      PropertyKey, PropertyKind, Statement, StringLiteral, VariableDeclarationKind,
-      VariableDeclarator,
+      Argument, ArrowFunctionBody, ArrowFunctionExpression, AssignmentOperator, AssignmentTarget,
+      BindingIdentifier, BindingPattern, CallExpression, ClassElement, Declaration,
+      ExportDefaultDeclarationKind, ExportSpecifier, Expression, FormalParameter,
+      FormalParameterKind, FormalParameters, FunctionBody, FunctionType, IdentifierName,
+      ImportDeclarationSpecifier, ImportOrExportKind, MemberExpression, ModuleExportName,
+      NumberBase, ObjectExpression, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
+      StringLiteral, VariableDeclarationKind, VariableDeclarator,
     },
     builder::GetAstBuilder,
   },
@@ -79,18 +79,13 @@ pub trait ExpressionFactoryExt<'ast> {
     expr: Expression<'ast>,
     builder: &B,
   ) -> Expression<'ast> {
-    let statements = oxc::allocator::Vec::from_value_in(
-      Statement::new_expression_statement(SPAN, expr, builder),
-      builder,
-    );
     Expression::new_arrow_function_expression(
       SPAN,
-      true,
       false,
       None,
       FormalParameters::boxed(SPAN, FormalParameterKind::Signature, [], None, builder),
       None,
-      FunctionBody::boxed(SPAN, [], statements, builder),
+      ArrowFunctionBody::from(expr),
       builder,
     )
   }
@@ -800,8 +795,15 @@ pub trait StatementFactoryExt<'ast> {
     }
     let mut commonjs_call_expr =
       CallExpression::new_with_pure(SPAN, commonjs_expr, None, [], false, true, builder);
-    let mut arrow_expr =
-      ArrowFunctionExpression::boxed(SPAN, false, is_async, None, params, None, body, builder);
+    let mut arrow_expr = ArrowFunctionExpression::boxed(
+      SPAN,
+      is_async,
+      None,
+      params,
+      None,
+      ArrowFunctionBody::FunctionBody(body),
+      builder,
+    );
     arrow_expr.pife = true;
     if profiler_names {
       let obj_expr = ObjectExpression::boxed(
@@ -855,12 +857,11 @@ pub trait StatementFactoryExt<'ast> {
     let mut esm_call_expr = CallExpression::new(SPAN, esm_fn_expr, None, [], false, builder);
     let mut arrow_expr = ArrowFunctionExpression::boxed(
       SPAN,
-      false,
       matches!(body_kind, EsmWrapperBodyKind::Async),
       None,
       params,
       None,
-      body,
+      ArrowFunctionBody::FunctionBody(body),
       builder,
     );
     arrow_expr.pife = matches!(call_kind, EsmWrapperCallKind::Pife);
@@ -944,7 +945,6 @@ fn then_with_arrow_callback<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
 ) -> allocator::Box<'ast, CallExpression<'ast>> {
   let arrow_fn = Argument::new_arrow_function_expression(
     SPAN,
-    true,
     false,
     None,
     FormalParameters::boxed(
@@ -966,12 +966,7 @@ fn then_with_arrow_callback<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
       builder,
     ),
     None,
-    FunctionBody::boxed(
-      SPAN,
-      [],
-      [Statement::new_expression_statement(SPAN, return_expr, builder)],
-      builder,
-    ),
+    ArrowFunctionBody::from(return_expr),
     builder,
   );
   let callee = Expression::new_static_member_expression(

@@ -2846,7 +2846,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // (m) => __toESM(m.default, isNodeMode)
         let arrow_fn = ast::Argument::new_arrow_function_expression(
           SPAN,
-          true,  // expression
           false, // async
           None,
           ast::FormalParameters::boxed(
@@ -2868,12 +2867,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             self,
           ),
           None,
-          ast::FunctionBody::boxed(
-            SPAN,
-            [],
-            [ast::Statement::new_expression_statement(SPAN, to_esm_call, self)],
-            self,
-          ),
+          ast::ArrowFunctionBody::from(to_esm_call),
           self,
         );
 

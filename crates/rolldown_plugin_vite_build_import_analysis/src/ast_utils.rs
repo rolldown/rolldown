@@ -3,9 +3,9 @@ use oxc::ast::builder::AstBuilder;
 use oxc::{
   allocator::{CloneIn as _, TakeIn as _},
   ast::ast::{
-    Argument, BindingPattern, BindingProperty, Expression, FormalParameterKind, FormalParameters,
-    FunctionBody, IdentifierName, ObjectPattern, PropertyKey, Statement, StaticMemberExpression,
-    VariableDeclarationKind, VariableDeclarator,
+    Argument, ArrowFunctionBody, BindingPattern, BindingProperty, Expression, FormalParameterKind,
+    FormalParameters, FunctionBody, IdentifierName, ObjectPattern, PropertyKey, Statement,
+    StaticMemberExpression, VariableDeclarationKind, VariableDeclarator,
   },
   ast_visit::walk_js_mut::walk_arguments,
   semantic::ScopeFlags,
@@ -149,12 +149,11 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
   ) -> Expression<'a> {
     self.vite_preload_call(Argument::new_arrow_function_expression(
       SPAN,
-      false,
       true,
       None,
       FormalParameters::boxed(SPAN, FormalParameterKind::Signature, [], None, self),
       None,
-      FunctionBody::boxed(
+      ArrowFunctionBody::FunctionBody(FunctionBody::boxed(
         SPAN,
         [],
         {
@@ -182,7 +181,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
           statements
         },
         self,
-      ),
+      )),
       self,
     ))
   }

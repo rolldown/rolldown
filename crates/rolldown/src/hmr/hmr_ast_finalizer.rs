@@ -3,8 +3,8 @@ use oxc::ast::ast::Str;
 use oxc::{
   allocator::IntoIn,
   ast::ast::{
-    self, BindingIdentifier, ExportDefaultDeclarationKind, Expression, IdentifierName,
-    ObjectPropertyKind, Statement,
+    self, ArrowFunctionBody, BindingIdentifier, ExportDefaultDeclarationKind, Expression,
+    IdentifierName, ObjectPropertyKind, Statement,
   },
   semantic::{IsGlobalReference, Scoping, SymbolId},
   span::{SPAN, Span},
@@ -664,7 +664,6 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       // Build: () => __rolldown_runtime__.loadExports("<stable_proxy_id>")
       let arrow_fn = ast::Expression::new_arrow_function_expression(
         SPAN,
-        /* expression */ true,
         /* async */ false,
         None,
         ast::FormalParameters::boxed(
@@ -675,12 +674,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           self,
         ),
         None,
-        ast::FunctionBody::boxed(
-          SPAN,
-          [],
-          [ast::Statement::new_expression_statement(SPAN, load_exports_call, self)],
-          self,
-        ),
+        ArrowFunctionBody::from(load_exports_call),
         self,
       );
 

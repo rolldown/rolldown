@@ -143,7 +143,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           AstKind::ReturnStatement(_) => None,
           AstKind::FunctionBody(_) => {
             match self.visit_path.get(ast_after_remove_paren_idx.saturating_sub(2))? {
-              AstKind::ArrowFunctionExpression(expr) if expr.expression => None,
+              AstKind::ArrowFunctionExpression(expr) if expr.is_expression() => None,
               _ => Some(FxHashSet::default()),
             }
           }

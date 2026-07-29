@@ -64,7 +64,7 @@ impl<'scopes> TopLevelImportReadDetector<'scopes> {
       }
       Expression::ArrowFunctionExpression(arrow) => {
         self.visit_formal_parameters(&arrow.params);
-        self.visit_function_body(&arrow.body);
+        self.visit_arrow_function_body(&arrow.body);
       }
       Expression::SequenceExpression(sequence) => {
         if let Some(last) = sequence.expressions.last() {

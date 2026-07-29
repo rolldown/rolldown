@@ -20,6 +20,7 @@ export default defineConfig({
       'packages/rolldown/tests/stability/**',
       'packages/rolldown/tests/magic-string/*.test.ts',
       'packages/rolldown/src/binding.*',
+      'packages/rolldown/src/rolldown-binding.*',
       'packages/test-dev-server/tests/fixtures/**',
       'packages/test-dev-server/tests/playground/**',
       'packages/vite-tests/repo/**',

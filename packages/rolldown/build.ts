@@ -96,7 +96,7 @@ if (buildMeta.target === 'browser-pkg') {
   for (const config of configs) {
     await build(config);
   }
-  generateRuntimeTypes();
+  generateRuntimeEntry();
 })();
 
 function withShared({
@@ -233,27 +233,57 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   };
 }
 
-function generateRuntimeTypes() {
-  const inputFile = nodePath.resolve(
+// Prefix the common runtime with its canonical compiler-helper imports for standalone ESM use.
+// The default runtime loader removes this generated first line before injecting the source into a
+// bundle, where the same helpers are already in scope.
+function generateRuntimeEntry() {
+  const commonRuntimeInputFile = nodePath.resolve(
     __dirname,
     '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js',
   );
-  const outputFile = nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-types.d.ts');
+  const runtimeBaseInputFile = nodePath.resolve(
+    __dirname,
+    '../../crates/rolldown/src/runtime/runtime-base.js',
+  );
+  const defaultInputFile = nodePath.resolve(
+    __dirname,
+    '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-default.js',
+  );
+  const outputFile = nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime.d.ts');
 
-  console.log(styleText('green', '[build:done]'), 'Generating dts from', inputFile);
+  console.log(styleText('green', '[build:done]'), 'Generating dts from', commonRuntimeInputFile);
 
-  const jsCode = fs.readFileSync(inputFile, 'utf-8');
-  const result = ts.transpileDeclaration(jsCode, {
+  const commonRuntimeSource = fs.readFileSync(commonRuntimeInputFile, 'utf-8');
+  const runtimeHelperImport =
+    "import { __exportAll, __reExport, __toCommonJS, __toESM } from './experimental-runtime-base.mjs';\n";
+  fs.writeFileSync(
+    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime.mjs'),
+    runtimeHelperImport + commonRuntimeSource,
+  );
+  fs.copyFileSync(
+    runtimeBaseInputFile,
+    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-base.mjs'),
+  );
+  fs.copyFileSync(
+    defaultInputFile,
+    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-default-runtime.mjs'),
+  );
+
+  const result = ts.transpileDeclaration(commonRuntimeSource, {
     compilerOptions: {
-      ...getTsconfigCompilerOptionsForFile(inputFile),
+      ...getTsconfigCompilerOptionsForFile(commonRuntimeInputFile),
       noEmit: false,
       emitDeclarationOnly: true,
     },
-    fileName: inputFile,
+    fileName: commonRuntimeInputFile,
   });
 
   if (result && result.outputText) {
     fs.writeFileSync(outputFile, result.outputText, 'utf-8');
+    fs.copyFileSync(
+      outputFile,
+      nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-types.d.ts'),
+    );
   } else {
     throw new Error('Failed to generate d.ts from runtime-extra-dev.js');
   }

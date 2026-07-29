@@ -2,7 +2,7 @@ use itertools::Itertools;
 use oxc::allocator::GetAllocator;
 use oxc::allocator::{Allocator, ReplaceWith, TakeIn};
 use oxc::ast::ast::{self, BindingPattern, Declaration, ImportOrExportKind, Statement};
-use oxc::ast::builder::{AstBuilder, GetAstBuilder, NONE};
+use oxc::ast::builder::{AstBuilder, GetAstBuilder};
 use oxc::ast_visit::{VisitJsMut, walk_js_mut};
 use oxc::span::{SPAN, Span};
 use rolldown_ecmascript_utils::StatementExt;
@@ -89,7 +89,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
             // Since it is `export a = 1, b = 2;`, source should be `None`
             None,
             ImportOrExportKind::Value,
-            NONE,
+            None,
             self,
           )
         } else {
@@ -256,7 +256,7 @@ impl<'ast> VisitJsMut<'ast> for PreProcessor<'ast, '_> {
           ast::Expression::new_call_expression(
             SPAN,
             ast::Expression::new_identifier(SPAN, "require", self),
-            NONE,
+            None,
             [ast::Argument::from(cond_expr.consequent)],
             false,
             self,
@@ -264,7 +264,7 @@ impl<'ast> VisitJsMut<'ast> for PreProcessor<'ast, '_> {
           ast::Expression::new_call_expression(
             SPAN,
             ast::Expression::new_identifier(SPAN, "require", self),
-            NONE,
+            None,
             [ast::Argument::from(cond_expr.alternate)],
             false,
             self,

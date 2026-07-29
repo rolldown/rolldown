@@ -2,12 +2,9 @@ use oxc::allocator::GetAllocator;
 use oxc::ast::ast::Str;
 use oxc::{
   allocator::IntoIn,
-  ast::{
-    ast::{
-      self, BindingIdentifier, ExportDefaultDeclarationKind, Expression, IdentifierName,
-      ObjectPropertyKind, Statement,
-    },
-    builder::NONE,
+  ast::ast::{
+    self, BindingIdentifier, ExportDefaultDeclarationKind, Expression, IdentifierName,
+    ObjectPropertyKind, Statement,
   },
   semantic::{IsGlobalReference, Scoping, SymbolId},
   span::{SPAN, Span},
@@ -455,7 +452,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           Str::from_str_in(binding_name, self),
           self,
         ),
-        NONE,
+        None,
         Some(Expression::new_to_esm_call_with_interop(
           "__rolldown_runtime__.__toESM",
           call_expr,
@@ -505,7 +502,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let call_expr = ast::Expression::new_call_expression(
       SPAN,
       Expression::new_member_access_expr("__rolldown_runtime__", "__reExport", self),
-      NONE,
+      None,
       oxc::allocator::Vec::from_iter_in(
         [
           ast::Argument::from(Expression::new_id_ref_expr(SPAN, self_exports, self)),
@@ -549,7 +546,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let export_call_expr = ast::Expression::new_call_expression(
       SPAN,
       Expression::new_identifier(SPAN, "__rolldown_runtime__.__exportAll", self),
-      NONE,
+      None,
       [ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.ast_builder.allocator()))],
       false,
       self,
@@ -605,7 +602,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       let encode_call = ast::Expression::new_call_expression(
         SPAN,
         Expression::new_identifier(SPAN, "encodeURIComponent", self),
-        NONE,
+        None,
         [ast::Argument::new_string_literal(SPAN, Str::from_str_in(&importee.id, self), None, self)],
         false,
         self,
@@ -653,7 +650,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       let load_exports_call = ast::Expression::new_call_expression(
         SPAN,
         Expression::new_identifier(SPAN, "__rolldown_runtime__.loadExports", self),
-        NONE,
+        None,
         [ast::Argument::new_string_literal(
           SPAN,
           Str::from_str_in(&importee.stable_id, self),
@@ -669,16 +666,16 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         SPAN,
         /* expression */ true,
         /* async */ false,
-        NONE,
-        ast::FormalParameters::new(
+        None,
+        ast::FormalParameters::boxed(
           SPAN,
           ast::FormalParameterKind::ArrowFormalParameters,
           [],
-          NONE,
+          None,
           self,
         ),
-        NONE,
-        ast::FunctionBody::new(
+        None,
+        ast::FunctionBody::boxed(
           SPAN,
           [],
           [ast::Statement::new_expression_statement(SPAN, load_exports_call, self)],
@@ -699,7 +696,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       *it = ast::Expression::new_call_expression(
         SPAN,
         then_callee,
-        NONE,
+        None,
         [ast::Argument::from(arrow_fn)],
         false,
         self,
@@ -715,7 +712,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let mut load_exports_call_expr = ast::Expression::new_call_expression(
       SPAN,
       Expression::new_identifier(SPAN, "__rolldown_runtime__.loadExports", self),
-      NONE,
+      None,
       [ast::Argument::new_string_literal(
         SPAN,
         Str::from_str_in(&importee.stable_id, self),
@@ -745,7 +742,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       load_exports_call_expr = ast::Expression::new_call_expression(
         SPAN,
         Expression::new_identifier(SPAN, "__rolldown_runtime__.__toDynamicImportESM", self),
-        NONE,
+        None,
         args,
         false,
         self,

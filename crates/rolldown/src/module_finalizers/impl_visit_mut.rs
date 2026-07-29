@@ -5,7 +5,7 @@ use oxc::{
   allocator::{self, GetAllocator, ReplaceWith, TakeIn},
   ast::{
     ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
-    builder::{AstBuilder, NONE},
+    builder::AstBuilder,
     match_member_expression,
   },
   ast_visit::{VisitJsMut, walk_js_mut},
@@ -54,7 +54,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       let require_call = ast::Expression::new_call_expression(
         SPAN,
         importee_wrapper_expr,
-        NONE,
+        None,
         [],
         false,
         &ast_builder,
@@ -336,7 +336,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               SPAN,
               ast::VariableDeclarationKind::Var,
               ast::BindingPattern::new_binding_identifier(SPAN, *var_name, ast_builder),
-              NONE,
+              None,
               None,
               false,
               ast_builder,

@@ -6,7 +6,7 @@ use oxc::{
       FormalParameterKind, FormalParameters, FunctionBody, IdentifierName, Statement,
       VariableDeclarator,
     },
-    builder::{AstBuilder, GetAstBuilder, NONE},
+    builder::{AstBuilder, GetAstBuilder},
   },
   ast_visit::{VisitJsMut, walk_js_mut},
   span::SPAN,
@@ -45,7 +45,7 @@ impl<'ast> VisitJsMut<'ast> for LazyCompilationRuntimeInjector<'ast> {
           false,
           self,
         ),
-        NONE,
+        None,
         [Argument::new_identifier(SPAN, HELPER_NAME, self)],
         false,
         self,
@@ -83,22 +83,22 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
   let ast_builder = AstBuilder::new(allocator);
 
   // Parameter: m
-  let params = FormalParameters::new(
+  let params = FormalParameters::boxed(
     SPAN,
     FormalParameterKind::FormalParameter,
     [FormalParameter::new(
       SPAN,
       [],
       BindingPattern::new_binding_identifier(SPAN, "m", &ast_builder),
-      NONE,
-      NONE,
+      None,
+      None,
       false,
       None,
       false,
       false,
       &ast_builder,
     )],
-    NONE,
+    None,
     &ast_builder,
   );
 
@@ -110,7 +110,7 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
       SPAN,
       oxc::ast::ast::VariableDeclarationKind::Var,
       BindingPattern::new_binding_identifier(SPAN, "e", &ast_builder),
-      NONE,
+      None,
       Some(Expression::new_computed_member_expression(
         SPAN,
         Expression::new_identifier(SPAN, "m", &ast_builder),
@@ -142,7 +142,7 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
   let mut body_stmts = oxc::allocator::Vec::with_capacity_in(2, &ast_builder);
   body_stmts.push(var_decl_stmt);
   body_stmts.push(return_stmt);
-  let body = FunctionBody::new(SPAN, [], body_stmts, &ast_builder);
+  let body = FunctionBody::boxed(SPAN, [], body_stmts, &ast_builder);
 
   // function __unwrap_lazy_compilation_entry(m) { ... }
   Statement::new_function_declaration(
@@ -152,10 +152,10 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
     false, // generator
     false, // async
     false, // declare
-    NONE,  // type_parameters
-    NONE,  // this_param
+    None,  // type_parameters
+    None,  // this_param
     params,
-    NONE, // return_type
+    None, // return_type
     Some(body),
     &ast_builder,
   )

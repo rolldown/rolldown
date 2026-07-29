@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use oxc::allocator::GetAllocator;
 use oxc::ast::ast::{BindingIdentifier, CallExpression, IdentifierName, ObjectPropertyKind};
-use oxc::ast::builder::{AstBuilder, GetAstBuilder, NONE};
+use oxc::ast::builder::{AstBuilder, GetAstBuilder};
 use oxc::semantic::{NodeId, ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, CloneIn, Dummy, IntoIn, ReplaceWith, TakeIn},
@@ -185,7 +185,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let init_call = ast::Expression::new_call_expression_with_pure(
       call_span,
       wrapper_ref_expr,
-      NONE,
+      None,
       [],
       false,
       mark_pure_if_noop && self.ctx.final_esm_init_metadata.init_is_noop(importee_idx),
@@ -211,7 +211,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .expect("order CJS carrier call should have a target");
     let (wrapper_ref_expr, _) =
       self.finalized_expr_for_symbol_ref(carrier.wrapper_ref, false, false);
-    ast::Expression::new_call_expression(call_span, wrapper_ref_expr, NONE, [], false, self)
+    ast::Expression::new_call_expression(call_span, wrapper_ref_expr, None, [], false, self)
   }
 
   fn wrapped_esm_init_target_wrapper_ref(&self, target: WrappedEsmInitTarget) -> SymbolRef {
@@ -475,7 +475,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           ast::Expression::new_call_expression(
             SPAN,
             importee_wrapper_ref_name,
-            NONE,
+            None,
             [],
             false,
             self,
@@ -1004,7 +1004,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         ast::Expression::new_call_expression_with_pure(
           SPAN,
           self.finalized_expr_for_runtime_symbol("__exportAll"),
-          NONE,
+          None,
           args,
           false,
           true,
@@ -1126,7 +1126,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let require_call = ast::Expression::new_call_expression(
               SPAN,
               ast::Expression::new_identifier(SPAN, "require", self),
-              NONE,
+              None,
               [ast::Argument::new_string_literal(SPAN, "url", None, self)],
               false,
               self,
@@ -1145,7 +1145,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let require_path_to_file_url_call = ast::Expression::new_call_expression(
               SPAN,
               require_path_to_file_url,
-              NONE,
+              None,
               [ast::Argument::new_identifier(SPAN, "__filename", self)],
               false,
               self,
@@ -1271,7 +1271,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         ast::Expression::new_new_expression(
           SPAN,
           ast::Expression::new_identifier(SPAN, "URL", self),
-          NONE,
+          None,
           [
             ast::Argument::new_string_literal(
               SPAN,
@@ -1532,7 +1532,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         SPAN,
         VariableDeclarationKind::Var,
         ast::BindingPattern::BindingIdentifier(oxc::allocator::Box::new_in(id, self)),
-        NONE,
+        None,
         Some(Expression::ClassExpression(class)),
         false,
         self,
@@ -1578,7 +1578,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     Some(ast::Expression::new_call_expression(
                       SPAN,
                       wrap_ref_expr,
-                      NONE,
+                      None,
                       [],
                       false,
                       self,
@@ -1592,7 +1592,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     ast::Expression::new_call_expression(
                       SPAN,
                       wrap_ref_expr,
-                      NONE,
+                      None,
                       [],
                       false,
                       self,
@@ -1626,7 +1626,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     ast::Expression::new_call_expression_with_pure(
                       SPAN,
                       wrap_ref_expr,
-                      NONE,
+                      None,
                       [],
                       false,
                       self.ctx.final_esm_init_metadata.init_is_noop(importee.idx),
@@ -1652,7 +1652,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   let to_commonjs_call_expr = ast::Expression::new_call_expression(
                     SPAN,
                     to_commonjs_expr,
-                    NONE,
+                    None,
                     [ast::Argument::from(namespace_object_ref_expr)],
                     false,
                     self,
@@ -1755,7 +1755,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   ast::Expression::new_call_expression(
                     SPAN,
                     Expression::new_id_ref_expr(SPAN, importee_wrapper_ref_name, self),
-                    NONE,
+                    None,
                     [],
                     false,
                     self,
@@ -1770,7 +1770,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     ast::Expression::new_call_expression(
                       SPAN,
                       Expression::new_id_ref_expr(SPAN, importee_wrapper_ref_name, self),
-                      NONE,
+                      None,
                       [],
                       false,
                       self,
@@ -1793,7 +1793,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   ast::Expression::new_call_expression(
                     SPAN,
                     Expression::new_id_ref_expr(SPAN, importee_wrapper_ref_name, self),
-                    NONE,
+                    None,
                     [],
                     false,
                     self,
@@ -1987,7 +1987,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   let mut init_expr = ast::Expression::new_call_expression(
                     SPAN,
                     wrapper_ref,
-                    NONE,
+                    None,
                     [],
                     false,
                     self,
@@ -2068,7 +2068,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                         ast::Expression::new_call_expression(
                           SPAN,
                           importee_wrapper_ref_expr,
-                          NONE,
+                          None,
                           [],
                           false,
                           self,
@@ -2442,7 +2442,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let wrapper_ref_call_expr = ast::Expression::new_call_expression(
           SPAN,
           finalized_importee_wrapper_ref,
-          NONE,
+          None,
           [],
           false,
           self,
@@ -2534,7 +2534,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let require_call_expr = ast::Expression::new_call_expression(
               SPAN,
               ast::Expression::new_identifier(SPAN, "require", self),
-              NONE,
+              None,
               [ast::Argument::new_string_literal(
                 expr.span,
                 oxc::ast::ast::Str::from_str_in(&import_path, self),
@@ -2734,7 +2734,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let mut require_call_expr = ast::Expression::new_call_expression(
             SPAN,
             ast::Expression::new_identifier(SPAN, "require", self),
-            NONE,
+            None,
             [ast::Argument::new_string_literal(
               expr.span,
               oxc::ast::ast::Str::from_str_in(&import_path, self),
@@ -2848,27 +2848,27 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           SPAN,
           true,  // expression
           false, // async
-          NONE,
-          ast::FormalParameters::new(
+          None,
+          ast::FormalParameters::boxed(
             SPAN,
             ast::FormalParameterKind::ArrowFormalParameters,
             [ast::FormalParameter::new(
               SPAN,
               [],
               ast::BindingPattern::new_binding_identifier(SPAN, "m", self),
-              NONE,
-              NONE,
+              None,
+              None,
               false,
               None,
               false,
               false,
               self,
             )],
-            NONE,
+            None,
             self,
           ),
-          NONE,
-          ast::FunctionBody::new(
+          None,
+          ast::FunctionBody::boxed(
             SPAN,
             [],
             [ast::Statement::new_expression_statement(SPAN, to_esm_call, self)],
@@ -2887,7 +2887,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         );
 
         // `import('./some-cjs-module.js').then((m) => __toESM(m.default, isNodeMode))`
-        ast::Expression::new_call_expression(SPAN, callee, NONE, [arrow_fn], false, self)
+        ast::Expression::new_call_expression(SPAN, callee, None, [arrow_fn], false, self)
       });
     }
 

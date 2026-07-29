@@ -2,12 +2,9 @@ use oxc::allocator::{Allocator, GetAllocator};
 use oxc::ast::builder::{AstBuilder, GetAstBuilder};
 use oxc::{
   allocator::CloneIn as _,
-  ast::{
-    ast::{
-      BindingIdentifier, BindingPattern, Expression, ImportDeclarationSpecifier,
-      ImportOrExportKind, ModuleExportName, Statement, StringLiteral, VariableDeclaration,
-    },
-    builder::NONE,
+  ast::ast::{
+    BindingIdentifier, BindingPattern, Expression, ImportDeclarationSpecifier, ImportOrExportKind,
+    ModuleExportName, Statement, StringLiteral, VariableDeclaration,
   },
   ast_visit::{VisitJsMut, walk_js_mut},
   semantic::ScopeFlags,
@@ -49,7 +46,7 @@ impl<'a> VisitJsMut<'a> for BuildImportAnalysisVisitor<'a> {
         )),
         StringLiteral::new(SPAN, PRELOAD_HELPER_ID, None, self),
         None,
-        NONE,
+        None,
         ImportOrExportKind::Value,
         self,
       ));

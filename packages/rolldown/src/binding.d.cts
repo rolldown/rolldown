@@ -1582,8 +1582,13 @@ export declare class BindingDevEngine {
    * This is called when a dynamically imported module is first requested at runtime.
    * The module was previously stubbed with a proxy, and now we need to compile the
    * actual module and its dependencies.
+   * Failures come back as `BindingErrors`, the same shape the build and HMR callbacks
+   * use, rather than as a napi error carrying a formatted string. A lazy compile runs the
+   * full plugin pipeline, so what fails here is usually a user plugin - and `to_binding_error`
+   * hands its thrown JS error back untouched, keeping the stack and the diagnostic's module
+   * id instead of flattening both into a message.
    */
-  compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput>
+  compileEntry(moduleId: string, clientId: string): Promise<BindingResult<BindingLazyChunkOutput>>
 }
 
 export declare class BindingLoadPluginContext {

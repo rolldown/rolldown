@@ -61,8 +61,8 @@ test(
     await engine.run();
 
     // An arbitrary id that was never part of the build graph must be rejected.
-    // The thrown message is prefixed by the napi binding with
-    // "Failed to compile lazy entry: ..." so match on the inner substring.
+    // The rejection aggregates the diagnostics, so match on the message rather
+    // than on the whole string.
     await expect(
       engine.compileEntry('/does/not/exist.js?rolldown-lazy=1', 'some-client'),
     ).rejects.toThrow('Lazy entry module not found in cache');
@@ -381,5 +381,69 @@ test(
     // spread onto the re-exporting module the way `export *` would
     expect(chunk.code).toMatch(/NS:\s*\(\)\s*=>/);
     expect(chunk.code).not.toMatch(/__reExport\(/);
+  },
+);
+
+// A lazy compile is the first time a lazy module runs the plugin pipeline, so a plugin
+// throwing is the ordinary failure here rather than an exotic one. The engine used to
+// answer with a napi error built from `format!("{e:#?}")`, which flattened whatever was
+// thrown - message, custom fields, stack - into one string, leaving the caller unable to
+// tell which plugin or module was at fault.
+test(
+  'a plugin error during lazy compile reaches the caller intact',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-plugin-error-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./lazy.js');\n`);
+    fs.writeFileSync(path.join(dir, 'lazy.js'), `export const lazy = 'lazy';\n`);
+
+    const plugin = {
+      name: 'throws-on-lazy',
+      transform(_code: string, id: string) {
+        if (id.endsWith('lazy.js')) {
+          throw Object.assign(new Error('boom from a user plugin'), { code: 'PLUGIN_BOOM' });
+        }
+      },
+    };
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        plugins: [plugin],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    // The initial build stubs `lazy.js` with a proxy, so the plugin has not run on it yet.
+    await engine.run();
+
+    const rejection = await engine
+      .compileEntry(`${path.join(dir, 'lazy.js')}?rolldown-lazy=1`, 'c1')
+      .then(
+        () => null,
+        (error: unknown) => error,
+      );
+
+    expect(rejection).toBeInstanceOf(Error);
+    const [cause] = (rejection as { errors?: unknown[] }).errors ?? [];
+    // Which plugin, which hook, which module - and the throw site itself.
+    expect(cause).toMatchObject({
+      message: 'boom from a user plugin',
+      plugin: 'throws-on-lazy',
+      hook: 'transform',
+      id: path.join(dir, 'lazy.js'),
+    });
+    expect((cause as Error).stack).toContain('boom from a user plugin');
   },
 );

@@ -291,25 +291,32 @@ impl BindingDevEngine {
   /// This is called when a dynamically imported module is first requested at runtime.
   /// The module was previously stubbed with a proxy, and now we need to compile the
   /// actual module and its dependencies.
+  /// Failures come back as `BindingErrors`, the same shape the build and HMR callbacks
+  /// use, rather than as a napi error carrying a formatted string. A lazy compile runs the
+  /// full plugin pipeline, so what fails here is usually a user plugin - and `to_binding_error`
+  /// hands its thrown JS error back untouched, keeping the stack and the diagnostic's module
+  /// id instead of flattening both into a message.
   #[napi]
   pub fn compile_entry<'env>(
     &self,
     env: &'env Env,
     module_id: String,
     client_id: String,
-  ) -> napi::Result<PromiseRaw<'env, BindingLazyChunkOutput>> {
+  ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingLazyChunkOutput>>> {
     let inner = Arc::clone(&self.inner);
+    let cwd = Arc::<Path>::clone(&self.cwd);
     spawn_boxed_future(env, async move {
-      inner
-        .compile_lazy_entry(module_id, client_id)
-        .await
-        .map(|output| BindingLazyChunkOutput {
+      Ok(match inner.compile_lazy_entry(module_id, client_id).await {
+        Ok(output) => Either::B(BindingLazyChunkOutput {
           code: output.code,
           filename: output.filename,
           sourcemap: output.sourcemap,
           sourcemap_filename: output.sourcemap_filename,
-        })
-        .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")))
+        }),
+        Err(errors) => Either::A(BindingErrors::new(
+          errors.iter().map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf())).collect(),
+        )),
+      })
     })
   }
 }

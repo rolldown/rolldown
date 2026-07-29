@@ -1039,8 +1039,8 @@ on the boundary, and the JS wrapper calls `unwrapBindingResult` to either
 return the success value or throw a `BundleError`.
 
 Used by: `invalidate`, `ensureLatestBuildOutput`, `getBundleState`,
-`waitForOngoingBundle`. The thrown error reaches whichever audience called
-the method:
+`waitForOngoingBundle`, `compileEntry`. The thrown error reaches whichever
+audience called the method:
 
 - `invalidate` is typically called by the binding consumer's HMR layer in
   response to an end-user HMR client message. The thrown error is observed

@@ -172,8 +172,10 @@ export class DevEngine {
    * @param clientId - The client ID requesting this compilation
    * @returns The compiled chunk: its code plus the filename whose delivery the
    * serving middleware reports via {@link notifyPayloadDelivered}
+   * @throws The plugin's own error, since a lazy compile runs the full pipeline and is
+   * where a user plugin most often throws
    */
   async compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput> {
-    return this.#inner.compileEntry(moduleId, clientId);
+    return unwrapBindingResult(await this.#inner.compileEntry(moduleId, clientId));
   }
 }

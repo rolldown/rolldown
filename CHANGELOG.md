@@ -1,4 +1,179 @@
 
+## [1.2.1] - 2026-07-29
+
+### 🚀 Features
+
+- dev: support `hotUpdate` hook (#10305) by @h-a-n-a
+- dev: expose `disableWatcher` through the dev engine bindings (#10474) by @shulaoda
+- plugin: surface output-option callbacks in [PLUGIN_TIMINGS] (#10411) by @IWANABETHATGUY
+- `import.meta.ROLLDOWN_FILE_URL_<referenceId>_<urlId>` support to pass context to `resolveFileUrl` hook (#10297) by @sapphi-red
+- dev: skip the HMR update when a module's rebuilt output is unchanged (#10333) by @h-a-n-a
+- code-splitting: wrap strict execution order modules on demand (#10104) by @hyfdev
+- support `import.meta.ROLLDOWN_FILE_URL_*` (#10296) by @sapphi-red
+- implement `resolveFileUrl` plugin hook (#10291) by @sapphi-red
+- magic-string: support storeName on overwrite/update (#10312) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- external: keep `__toESM` when the importing module is tree-shaken (#10516) by @IWANABETHATGUY
+- dev: resolve re-exports from externals through a real import (#10489) by @tbvjaos510
+- code-splitting: route CJS barrel initialization per consumer (#10488) by @hyfdev
+- error: align filename-pattern diagnostics with Rollup's wording (#10501) by @IWANABETHATGUY
+- plugin: validate emitted prebuilt-chunk file names (#10399) by @IWANABETHATGUY
+- code-splitting: point a two-argument dynamic import at the chunk that holds the module (#10479) by @hyfdev
+- common: align is_path_fragment with Rollup's isPathFragment (#10398) by @IWANABETHATGUY
+- code-splitting: never name an internal chunk export `then` (#10480) by @hyfdev
+- code-splitting: avoid creating call-site-triggered entry facades (#10485) by @hyfdev
+- code-splitting: collect top-level eager order reasons in every strict build (#10463) by @hyfdev
+- code-splitting: let a cross-chunk dynamic importer carry the order trigger (#10456) by @hyfdev
+- code-splitting: avoid the dynamic-entry facade when the same-chunk collapse carries the trigger (#10433) by @hyfdev
+- binding: forward resolveId options.kind to callable builtin plugins (#10440) by @martijnwalraven
+- dev: keep the export name of `export * as ns from` (#10476) by @tbvjaos510
+- code-splitting: only split an entry facade when something else can load its chunk (#10441) by @hyfdev
+- code-splitting: fold the runtime chunk back after order lowering (#10414) by @hyfdev
+- runtime: don't leave default undefined for cjs that fakes __esModule (#10453) by @IWANABETHATGUY
+- import-glob: escape generated string literals (#10438) by @shantanuraj
+- preserve-modules: don't assume every chunk mirrors a module (#10442) by @hyfdev
+- filter: treat missing hook inputs as non-matches, not panics (#10443) by @IWANABETHATGUY
+- code-splitting: keep CommonJS modules wrapped under strict execution order (#10405) by @hyfdev
+- code-splitting: align dynamicImports metadata with the rewritten import() specifier (#10430) by @hyfdev
+- dev: skip user plugin hooks for ?rolldown-lazy proxy modules (#10426) by @unknownjedi
+- treeshake: preserve side-effect-free spread arguments in manual-pure chains (#10432) by @IWANABETHATGUY
+- treeshake: preserve eagerly evaluated child effects of manual pure chains (#10427) by @Nic-Polumeyv
+- code-splitting: initialize pure definers behind star re-export barrels under strict execution order (#10409) by @hyfdev
+- resolveId: reject string `id` filters (must be a RegExp) (#10412) by @IWANABETHATGUY
+- code-splitting: collect eager order reasons for on-demand wrapping (#10387) by @hyfdev
+- rolldown: apply output.paths to CJS export-star of external modules (#10406) by @IWANABETHATGUY
+- dev: sourcemaps of lazily compiled chunks (#10386) by @tbvjaos510
+- plugin: validate emitted file names at emitFile time (#10377) by @Nic-Polumeyv
+- guarantee tokio runtime release when close rejects (#10381) by @shulaoda
+- code-splitting: make strict transitive init registration deterministic and constant-time (#10320) by @hyfdev
+- pair tokio runtime acquire and release on wasm to prevent premature shutdown (#10363) by @shulaoda
+- don't body-demand modules from simulated facade chunk includes (#10351) by @IWANABETHATGUY
+- tracing: invalid RD_LOG filter and RD_LOG_OUTPUT=json no longer panic (#10343) by @Brooooooklyn
+- code-splitting: treat class definition-time global reads as order-sensitive (#10322) by @hyfdev
+- code-splitting: deconflict force-included runtime helper statements (#10336) by @hyfdev
+- binding: forward all missing parallel JS plugin hooks (#10345) by @Brooooooklyn
+- code-splitting: re-derive chunk exec order after the runtime sweep (#10334) by @hyfdev
+- types: add undefined to ExistingRawSourceMap optional properties (#10355) by @ocavue
+- magic-string: validate relocate ranges before rewiring (#10327) by @IWANABETHATGUY
+- add EMPTY_IMPORT_META warning for non-node CJS output (#10222) by @sapphi-red
+- call `resolveFileUrl` in a deterministic order (#10330) by @sapphi-red
+- magic-string: refuse repeated sendMagicString on a consumed instance (#10331) by @IWANABETHATGUY
+- magic-string: refuse to use a MagicString after sendMagicString consumed it (#10326) by @IWANABETHATGUY
+- magic-string: reject non-contiguous moves before rewiring the chunk list (#10311) by @IWANABETHATGUY
+- handle `./foo/bar` glob pattern the same as `foo/bar` (#10313) by @sapphi-red
+- magic-string: throw instead of panicking when append/prepend splits an edited chunk (#10301) by @IWANABETHATGUY
+- output: skip separator for empty hoisted functions (#10310) by @hyfdev
+- magic-string: don't report a change when edits cancel out (#10299) by @IWANABETHATGUY
+- sourcemap: map wrapped imported callees (#10288) by @hyfdev
+- magic-string: count positional inserts at index 0 on an empty source (#10306) by @IWANABETHATGUY
+- magic-string: return UTF-16 code units from length() (#10295) by @IWANABETHATGUY
+- output: skip separator for empty import prelude (#10289) by @hyfdev
+
+### 🚜 Refactor
+
+- dev: make it easier to customize the runtime (#10338) by @sapphi-red
+- code-splitting: declare CJS carrier namespaces initializer-free (#10513) by @hyfdev
+- rollup-tests: avoid relying on `NODE_PATH` env var resolution (#10496) by @sapphi-red
+- code-splitting: derive symbol chunk ownership as pass-local link data (#10449) by @hyfdev
+- plugin: share asset emission helpers between copy_module and asset_module (#10450) by @Nic-Polumeyv
+- plugin: dedupe hook binding boilerplate (#10428) by @Nic-Polumeyv
+- plugin: share the oxc parse preamble between import-glob and dynamic-import-vars (#10452) by @Nic-Polumeyv
+- implement `GetAstBuilder` on visitor/pass types (#10424) by @overlookmotel
+- pass arrays to AST builder methods (#10419) by @overlookmotel
+- shorten AST builder code (#10418) by @overlookmotel
+- centralize final ESM init metadata (#10376) by @hyfdev
+- descriptor-based parallel-plugin detection (getParallelPluginInfo) (#10349) by @Brooooooklyn
+- remove AstFactory in favor of new_* construction traits (#10353) by @Boshen
+- enable oxc_ast's `disable_old_builder` feature (#10316) by @Boshen
+
+### 📚 Documentation
+
+- development-guide: update config.json link line reference (#10523) by @dogledogle
+- clarify slash normalization for id hook filter (#10511) by @sapphi-red
+- code-splitting: record the thenable-namespace rule (#10502) by @hyfdev
+- clarify that `esmExternalRequirePlugin` must own its externals (#10439) by @TheAlexLichter
+- add troubleshooting entry for the @rolldown/binding-... resolution error (#10390) by @Nic-Polumeyv
+- add Code Splitting API reference category (#10382) by @vittorioexp
+
+### ⚡ Performance
+
+- use VisitJsMut in JavaScript-only AST passes (#10507) by @Boshen
+- cache the resolved glob matcher for Id/ImporterId filters (#10410) by @IWANABETHATGUY
+- scope_hoisting: remove `alloc` field from `ScopeHoistingFinalizer` (#10425) by @overlookmotel
+- reduce string allocations (#10423) by @overlookmotel
+- hmr: remove unnecessary string allocations (#10422) by @overlookmotel
+- avoid allocating static strings via custom builder methods (#10421) by @overlookmotel
+- pass string literals to AST builder methods (#10420) by @overlookmotel
+- use VisitJs in JavaScript-only AST passes (#10396) by @Boshen
+- plugin: shrink erased plugin debug vtables (#10370) by @Boshen
+- reuse normalized path buffers (#10315) by @hyfdev
+
+### 🧪 Testing
+
+- code-splitting: pin CJS barrel fallback triggers and flag-off equivalence (#10514) by @hyfdev
+- plugin: cover chunk fileName, absolute chunk name, and Windows drive names (#10400) by @IWANABETHATGUY
+- code-splitting: cover a single-chunk dynamic import of a wrapped module (#10505) by @hyfdev
+- file: remove the unused .dynamic_import fixture (#10481) by @hyfdev
+- treeshake: reduce manual-pure fixture to a minimal smoke test, move matrix to unit tests (#10436) by @IWANABETHATGUY
+- dev: run vite playgrounds under bundled dev (test-serve-bundled) (#10434) by @h-a-n-a
+- stop snapshots from silently hiding user code inside the runtime region (#10431) by @hyfdev
+- wasi: add tokio runtime lifecycle regression test (#10379) by @shulaoda
+- dev: expect preserved hot.data in hmr-whole-chain-dispose (#10380) by @h-a-n-a
+- code-splitting: pin flag-off wrapped-esm init emission (#10324) by @hyfdev
+- sourcemap: fix Windows-only failures in composition fixtures (#10368) by @shulaoda
+- generated-code: mark assert external in symbols_ns2 for deterministic output (#10339) by @hyfdev
+- code-splitting: cover entries-aware strict init cycle (#10307) by @hyfdev
+- make `just setup-vite` the only entry point that touches `vite/` (#10332) by @shulaoda
+- vite-tests: reuse the shared root vite checkout (#10325) by @shulaoda
+- test-dev-server: drop the vite submodule, track rolldown-canary (#10319) by @shulaoda
+- vite-tests: track the latest rolldown-canary rebased onto vite main (#10318) by @shulaoda
+- unify Vite in vite-test and test-dev-server (#10293) by @h-a-n-a
+
+### ⚙️ Miscellaneous Tasks
+
+- scope the binding artifact download to `bindings-*` (#10525) by @shulaoda
+- deps: update napi (#10506) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.62.3 (#10494) by @rolldown-guard[bot]
+- deps: upgrade oxc to 0.142.0 (#10497) by @shulaoda
+- deps: update test262 submodule for tests (#10495) by @rolldown-guard[bot]
+- deps: update github actions (#10460) by @renovate[bot]
+- deps: update rust crates (#10462) by @renovate[bot]
+- deps: update npm packages (#10461) by @renovate[bot]
+- metric: alert Discord when the metric workflow fails (#10447) by @IWANABETHATGUY
+- metric: mint a short-lived GitHub App token instead of a PAT (#10446) by @IWANABETHATGUY
+- repo: repair dangling CLAUDE.md symlink (#10451) by @hanayashiki
+- publint/package-metadata fixes and small correctness fixes (#10344) by @Brooooooklyn
+- deps: update dependency vite-plus to v0.2.6 (#10404) by @renovate[bot]
+- add Semgrep scan workflow (#10395) by @Boshen
+- enable Windows CI with a PR label (#10375) by @hyfdev
+- deps: upgrade oxc to 0.141.0 (#10373) by @camc314
+- deps: update napi (#10369) by @renovate[bot]
+- deps: update test262 submodule for tests (#10367) by @rolldown-guard[bot]
+- deps: update taiki-e/install-action action to v2.83.3 (#10358) by @renovate[bot]
+- deps: update rust crates (#10357) by @renovate[bot]
+- deps: update npm packages (#10359) by @renovate[bot]
+- deps: update rust crate syn to v3 (#10362) by @renovate[bot]
+- deps: update rust crate oxc_sourcemap to v8.1.2 (#10356) by @renovate[bot]
+- deps: update dependency vite-plus to v0.2.5 (#10329) by @renovate[bot]
+- docs: migrate Netlify redirects to Void config (#10282) by @tux-tn
+- deps: update dependency rust to v1.97.1 (#10317) by @renovate[bot]
+- runtime: remove unused `runtime/index.js` (#10302) by @IWANABETHATGUY
+
+### ❤️ New Contributors
+
+* @dogledogle made their first contribution in [#10523](https://github.com/rolldown/rolldown/pull/10523)
+* @tbvjaos510 made their first contribution in [#10489](https://github.com/rolldown/rolldown/pull/10489)
+* @martijnwalraven made their first contribution in [#10440](https://github.com/rolldown/rolldown/pull/10440)
+* @shantanuraj made their first contribution in [#10438](https://github.com/rolldown/rolldown/pull/10438)
+* @Nic-Polumeyv made their first contribution in [#10450](https://github.com/rolldown/rolldown/pull/10450)
+* @hanayashiki made their first contribution in [#10451](https://github.com/rolldown/rolldown/pull/10451)
+* @unknownjedi made their first contribution in [#10426](https://github.com/rolldown/rolldown/pull/10426)
+* @vittorioexp made their first contribution in [#10382](https://github.com/rolldown/rolldown/pull/10382)
+* @tux-tn made their first contribution in [#10282](https://github.com/rolldown/rolldown/pull/10282)
+
+
 ## [1.2.0] - 2026-07-15
 
 ### 🚀 Features

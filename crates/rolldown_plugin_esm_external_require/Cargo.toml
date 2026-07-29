@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_plugin_esm_external_require"
-version = "1.2.0"
+version = "1.2.1"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true

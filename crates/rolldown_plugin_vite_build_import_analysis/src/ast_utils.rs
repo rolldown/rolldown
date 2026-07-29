@@ -10,7 +10,7 @@ use oxc::{
     },
     builder::NONE,
   },
-  ast_visit::walk_mut::walk_arguments,
+  ast_visit::walk_js_mut::walk_arguments,
   semantic::ScopeFlags,
   span::SPAN,
 };

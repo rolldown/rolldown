@@ -1084,7 +1084,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         match parse_injected_expression(self.allocator(), &resolved.code) {
           Ok(mut expr) => {
             let mut rewriter = ResolveFileUrlHookResultSpanRewriter(original_expr_span);
-            oxc::ast_visit::VisitMut::visit_expression(&mut rewriter, &mut expr);
+            oxc::ast_visit::VisitJsMut::visit_expression(&mut rewriter, &mut expr);
             return Some(expr);
           }
           Err(diagnostics) => {
@@ -2772,7 +2772,7 @@ impl<'ast> GetAllocator<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
 struct ResolveFileUrlHookResultSpanRewriter(Span);
 
-impl oxc::ast_visit::VisitMut<'_> for ResolveFileUrlHookResultSpanRewriter {
+impl oxc::ast_visit::VisitJsMut<'_> for ResolveFileUrlHookResultSpanRewriter {
   fn visit_span(&mut self, span: &mut Span) {
     *span = self.0;
   }

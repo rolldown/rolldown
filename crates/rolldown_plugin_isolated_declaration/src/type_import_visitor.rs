@@ -2,14 +2,14 @@ use oxc::{
   ast::ast::{
     ExportNamedDeclaration, ImportDeclaration, ImportDeclarationSpecifier, ImportOrExportKind, Str,
   },
-  ast_visit::VisitMut,
+  ast_visit::VisitJsMut,
 };
 
 pub struct TypeImportVisitor<'ast> {
   pub imported: Vec<Str<'ast>>,
 }
 
-impl<'ast> VisitMut<'ast> for TypeImportVisitor<'ast> {
+impl<'ast> VisitJsMut<'ast> for TypeImportVisitor<'ast> {
   fn visit_import_declaration(&mut self, decl: &mut ImportDeclaration<'ast>) {
     match decl.import_kind {
       ImportOrExportKind::Type => {

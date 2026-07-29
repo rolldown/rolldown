@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 use arcstr::ArcStr;
 use oxc::{
   allocator::IntoIn,
-  ast_visit::VisitMut,
+  ast_visit::VisitJsMut,
   codegen::Codegen,
   isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions},
 };

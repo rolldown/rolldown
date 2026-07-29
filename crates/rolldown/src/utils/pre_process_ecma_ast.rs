@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
 use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
-use oxc::ast_visit::{VisitJs, VisitMut, walk_js};
+use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, Stats};

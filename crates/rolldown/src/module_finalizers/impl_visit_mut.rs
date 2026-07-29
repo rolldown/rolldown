@@ -8,7 +8,7 @@ use oxc::{
     builder::NONE,
     match_member_expression,
   },
-  ast_visit::{VisitMut, walk_mut},
+  ast_visit::{VisitJsMut, walk_js_mut},
   span::{SPAN, Span},
 };
 use oxc_str::CompactStr;
@@ -24,7 +24,7 @@ use crate::module_finalizers::{KeepNameId, ModuleWrapperMode, TraverseState};
 
 use super::ScopeHoistingFinalizer;
 
-impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
+impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn enter_scope(
     &mut self,
     flags: oxc::semantic::ScopeFlags,
@@ -82,7 +82,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn visit_logical_expression(&mut self, it: &mut ast::LogicalExpression<'ast>) {
     let pre = self.state;
     self.state.insert(TraverseState::SmartInlineConst);
-    walk_mut::walk_logical_expression(self, it);
+    walk_js_mut::walk_logical_expression(self, it);
     self.state = pre;
   }
 
@@ -142,7 +142,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
     });
 
-    walk_mut::walk_program(self, program);
+    walk_js_mut::walk_program(self, program);
 
     // Insert keep_name statements for top-level declarations
     self.insert_keep_name_statements(&mut program.body);
@@ -341,7 +341,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn visit_statement(&mut self, it: &mut ast::Statement<'ast>) {
     _ = self.try_inline_json_module_prop(it);
 
-    walk_mut::walk_statement(self, it);
+    walk_js_mut::walk_statement(self, it);
 
     // transform top level `var a = 1, b = 1;` to `a = 1, b = 1`
     // for `__esm(() => {})` wrapping VariableDeclaration hoist
@@ -509,7 +509,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         {
           *expr = new_expr;
           self.rewrite_import_meta_hot(expr);
-          walk_mut::walk_expression(self, expr);
+          walk_js_mut::walk_expression(self, expr);
           return;
         }
 
@@ -557,7 +557,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           if let Some(new_expr) = self.try_inline_enum_access(expr) {
             *expr = new_expr;
             self.rewrite_import_meta_hot(expr);
-            walk_mut::walk_expression(self, expr);
+            walk_js_mut::walk_expression(self, expr);
             return;
           }
         }
@@ -577,13 +577,13 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     }
     self.rewrite_import_meta_hot(expr);
 
-    walk_mut::walk_expression(self, expr);
+    walk_js_mut::walk_expression(self, expr);
   }
 
   fn visit_jsx_element_name(&mut self, it: &mut ast::JSXElementName<'ast>) {
     match it {
       ast::JSXElementName::Identifier(ident) => {
-        walk_mut::walk_jsx_identifier(self, ident);
+        walk_js_mut::walk_jsx_identifier(self, ident);
       }
       ast::JSXElementName::IdentifierReference(identifier_reference) => {
         if let Some(new_expr) =
@@ -611,7 +611,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
       ast::JSXElementName::NamespacedName(jsx_namespace_name) => {
-        walk_mut::walk_jsx_namespaced_name(self, jsx_namespace_name);
+        walk_js_mut::walk_jsx_namespaced_name(self, jsx_namespace_name);
       }
       ast::JSXElementName::MemberExpression(jsx_member_expression) => {
         if let Some(ident) = jsx_member_expression.get_identifier() {
@@ -646,7 +646,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
       ast::JSXElementName::ThisExpression(this_expression) => {
-        walk_mut::walk_this_expression(self, this_expression);
+        walk_js_mut::walk_this_expression(self, this_expression);
       }
     }
   }
@@ -665,7 +665,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
     } else {
-      walk_mut::walk_member_expression(self, expr);
+      walk_js_mut::walk_member_expression(self, expr);
     }
   }
 
@@ -685,13 +685,13 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
     }
 
-    walk_mut::walk_object_property(self, prop);
+    walk_js_mut::walk_object_property(self, prop);
   }
 
   fn visit_object_pattern(&mut self, pat: &mut ast::ObjectPattern<'ast>) {
     self.rewrite_object_pat_shorthand(pat);
 
-    walk_mut::walk_object_pattern(self, pat);
+    walk_js_mut::walk_object_pattern(self, pat);
   }
 
   fn visit_assignment_target_property(
@@ -724,13 +724,13 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
     }
 
-    walk_mut::walk_assignment_target_property(self, property);
+    walk_js_mut::walk_assignment_target_property(self, property);
   }
 
   fn visit_simple_assignment_target(&mut self, target: &mut SimpleAssignmentTarget<'ast>) {
     self.rewrite_simple_assignment_target(target);
 
-    walk_mut::walk_simple_assignment_target(self, target);
+    walk_js_mut::walk_simple_assignment_target(self, target);
   }
 
   fn visit_assignment_expression(&mut self, it: &mut ast::AssignmentExpression<'ast>) {
@@ -740,11 +740,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         &mut it.right,
       );
     }
-    walk_mut::walk_assignment_expression(self, it);
+    walk_js_mut::walk_assignment_expression(self, it);
   }
 
   fn visit_for_statement_init(&mut self, it: &mut ast::ForStatementInit<'ast>) {
-    walk_mut::walk_for_statement_init(self, it);
+    walk_js_mut::walk_for_statement_init(self, it);
     if self.state.contains(TraverseState::TopLevel)
       && self.needs_hosted_top_level_binding
       && let ast::ForStatementInit::VariableDeclaration(decl) = it
@@ -816,7 +816,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       | ast::Declaration::TSGlobalDeclaration(_) => unreachable!(),
     }
 
-    walk_mut::walk_declaration(self, it);
+    walk_js_mut::walk_declaration(self, it);
   }
 }
 

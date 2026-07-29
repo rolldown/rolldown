@@ -3,7 +3,7 @@ mod ast_visitor;
 use std::borrow::Cow;
 
 use oxc::ast::builder::AstBuilder;
-use oxc::ast_visit::VisitMut;
+use oxc::ast_visit::VisitJsMut;
 use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
 
 use crate::ast_visitor::WebWorkerPostVisitor;

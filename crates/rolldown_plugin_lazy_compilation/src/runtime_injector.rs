@@ -8,7 +8,7 @@ use oxc::{
     },
     builder::{AstBuilder, GetAstBuilder, NONE},
   },
-  ast_visit::{VisitMut, walk_mut},
+  ast_visit::{VisitJsMut, walk_js_mut},
   span::SPAN,
 };
 
@@ -25,10 +25,10 @@ impl<'ast> LazyCompilationRuntimeInjector<'ast> {
   }
 }
 
-impl<'ast> VisitMut<'ast> for LazyCompilationRuntimeInjector<'ast> {
+impl<'ast> VisitJsMut<'ast> for LazyCompilationRuntimeInjector<'ast> {
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
     // First visit children
-    walk_mut::walk_expression(self, expr);
+    walk_js_mut::walk_expression(self, expr);
 
     // Then transform import expressions
     if matches!(expr, Expression::ImportExpression(_)) {

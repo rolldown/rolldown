@@ -12,7 +12,7 @@ pub type FinalizerMutableFields = (
 );
 
 use oxc::ast::builder::AstBuilder;
-use oxc::ast_visit::VisitMut as _;
+use oxc::ast_visit::VisitJsMut as _;
 use oxc::semantic::NodeId;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, CausedPlugin};

@@ -1,8 +1,8 @@
-type MaybePromise<T> = T | Promise<T>;
-type Nullable<T> = T | null | undefined;
-type VoidNullable<T = void> = T | null | undefined | void;
-export type BindingStringOrRegex = string | RegExp;
-export type BindingResult<T> = { errors: BindingError[]; isBindingErrors: boolean } | T;
+type MaybePromise<T> = T | Promise<T>
+type Nullable<T> = T | null | undefined
+type VoidNullable<T = void> = T | null | undefined | void
+export type BindingStringOrRegex = string | RegExp
+export type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
 
 export interface CodegenOptions {
   /**
@@ -10,7 +10,7 @@ export interface CodegenOptions {
    *
    * @default true
    */
-  removeWhitespace?: boolean;
+  removeWhitespace?: boolean
   /**
    * How to handle legal comments (comments containing `@license`, `@preserve`, or starting with `//!`/`/*!`).
    *
@@ -22,7 +22,7 @@ export interface CodegenOptions {
    *
    * @default "none" (when minifying)
    */
-  legalComments?: 'none' | 'inline' | 'eof' | 'external' | { linked: string };
+legalComments?: 'none' | 'inline' | 'eof' | 'external' | { linked: string }
 }
 
 export interface CompressOptions {
@@ -40,34 +40,34 @@ export interface CompressOptions {
    *
    * @see [oxc#target](https://oxc.rs/docs/guide/usage/transformer/lowering#target)
    */
-  target?: string | Array<string>;
+  target?: string | Array<string>
   /**
    * Pass true to discard calls to `console.*`.
    *
    * @default false
    */
-  dropConsole?: boolean;
+  dropConsole?: boolean
   /**
    * Remove `debugger;` statements.
    *
    * @default true
    */
-  dropDebugger?: boolean;
+  dropDebugger?: boolean
   /**
    * Pass `true` to drop unreferenced functions and variables.
    *
    * Simple direct variable assignments do not count as references unless set to `keep_assign`.
    * @default true
    */
-  unused?: boolean | 'keep_assign';
+  unused?: boolean | 'keep_assign'
   /** Keep function / class names. */
-  keepNames?: CompressOptionsKeepNames;
+  keepNames?: CompressOptionsKeepNames
   /**
    * Join consecutive var, let and const statements.
    *
    * @default true
    */
-  joinVars?: boolean;
+  joinVars?: boolean
   /**
    * Join consecutive simple statements using the comma operator.
    *
@@ -75,7 +75,7 @@ export interface CompressOptions {
    *
    * @default true
    */
-  sequences?: boolean;
+  sequences?: boolean
   /**
    * Set of label names to drop from the code.
    *
@@ -83,11 +83,11 @@ export interface CompressOptions {
    *
    * @default []
    */
-  dropLabels?: Array<string>;
+  dropLabels?: Array<string>
   /** Limit the maximum number of iterations for debugging purpose. */
-  maxIterations?: number;
+  maxIterations?: number
   /** Treeshake options. */
-  treeshake?: TreeShakeOptions;
+  treeshake?: TreeShakeOptions
 }
 
 export interface CompressOptionsKeepNames {
@@ -98,7 +98,7 @@ export interface CompressOptionsKeepNames {
    *
    * @default false
    */
-  function: boolean;
+  function: boolean
   /**
    * Keep class names so that `Class.prototype.name` is preserved.
    *
@@ -106,7 +106,7 @@ export interface CompressOptionsKeepNames {
    *
    * @default false
    */
-  class: boolean;
+  class: boolean
 }
 
 export interface LegalCommentsLinked {
@@ -114,17 +114,17 @@ export interface LegalCommentsLinked {
    * Extract legal comments and write them to the given path, with a link
    * comment appended to the generated code.
    */
-  linked: string;
+  linked: string
 }
 
 export type LegalCommentsMode = /** Do not preserve any legal comments. */
-| 'none'
+'none'|
 /** Preserve all legal comments inline. */
-| 'inline'
+'inline'|
 /** Move all legal comments to the end of the file. */
-| 'eof'
+'eof'|
 /** Extract legal comments without linking. */
-| 'external';
+'external';
 
 export interface MangleOptions {
   /**
@@ -132,13 +132,13 @@ export interface MangleOptions {
    *
    * @default true for modules and commonjs, otherwise false
    */
-  toplevel?: boolean;
+  toplevel?: boolean
   /**
    * Preserve `name` property for functions and classes.
    *
    * @default false
    */
-  keepNames?: boolean | MangleOptionsKeepNames;
+  keepNames?: boolean | MangleOptionsKeepNames
   /**
    * Names that bindings must not be renamed to, and that bindings already
    * carrying them keep. Equivalent to terser's `mangle.reserved`.
@@ -149,9 +149,9 @@ export interface MangleOptions {
    *
    * @default []
    */
-  reserved?: Array<string>;
+  reserved?: Array<string>
   /** Debug mangled names. */
-  debug?: boolean;
+  debug?: boolean
 }
 
 export interface MangleOptionsKeepNames {
@@ -160,13 +160,13 @@ export interface MangleOptionsKeepNames {
    *
    * @default false
    */
-  function: boolean;
+  function: boolean
   /**
    * Preserve `name` property for classes.
    *
    * @default false
    */
-  class: boolean;
+  class: boolean
 }
 
 /**
@@ -174,38 +174,30 @@ export interface MangleOptionsKeepNames {
  *
  * Note: This function can be slower than `minifySync` due to the overhead of spawning a thread.
  */
-export declare function minify(
-  filename: string,
-  sourceText: string,
-  options?: MinifyOptions | undefined | null,
-): Promise<MinifyResult>;
+export declare function minify(filename: string, sourceText: string, options?: MinifyOptions | undefined | null): Promise<MinifyResult>
 
 export interface MinifyOptions {
   /** Use when minifying an ES module. */
-  module?: boolean;
-  compress?: boolean | CompressOptions;
-  mangle?: boolean | MangleOptions;
-  codegen?: boolean | CodegenOptions;
-  sourcemap?: boolean;
+  module?: boolean
+  compress?: boolean | CompressOptions
+  mangle?: boolean | MangleOptions
+  codegen?: boolean | CodegenOptions
+  sourcemap?: boolean
 }
 
 export interface MinifyResult {
-  code: string;
-  map?: SourceMap;
-  errors: Array<OxcError>;
+  code: string
+  map?: SourceMap
+  errors: Array<OxcError>
   /**
    * Legal comments extracted from the source code.
    * Only populated when `codegen.legalComments` is `"linked"` or `"external"`.
    */
-  legalComments: Array<string>;
+  legalComments: Array<string>
 }
 
 /** Minify synchronously. */
-export declare function minifySync(
-  filename: string,
-  sourceText: string,
-  options?: MinifyOptions | undefined | null,
-): MinifyResult;
+export declare function minifySync(filename: string, sourceText: string, options?: MinifyOptions | undefined | null): MinifyResult
 
 export interface TreeShakeOptions {
   /**
@@ -216,20 +208,20 @@ export interface TreeShakeOptions {
    *
    * @default true
    */
-  annotations?: boolean;
+  annotations?: boolean
   /**
    * Whether to treat this function call as pure.
    *
    * This function is called for normal function calls, new calls, and
    * tagged template calls.
    */
-  manualPureFunctions?: Array<string>;
+  manualPureFunctions?: Array<string>
   /**
    * Whether property read accesses have side effects.
    *
    * @default 'always'
    */
-  propertyReadSideEffects?: boolean | 'always';
+  propertyReadSideEffects?: boolean | 'always'
   /**
    * Whether property write accesses (assignments to member expressions) have side effects.
    *
@@ -238,7 +230,7 @@ export interface TreeShakeOptions {
    *
    * @default true
    */
-  propertyWriteSideEffects?: boolean;
+  propertyWriteSideEffects?: boolean
   /**
    * Whether accessing a global variable has side effects.
    *
@@ -247,7 +239,7 @@ export interface TreeShakeOptions {
    *
    * @default true
    */
-  unknownGlobalSideEffects?: boolean;
+  unknownGlobalSideEffects?: boolean
   /**
    * Whether invalid import statements have side effects.
    *
@@ -256,41 +248,43 @@ export interface TreeShakeOptions {
    *
    * @default true
    */
-  invalidImportSideEffects?: boolean;
+  invalidImportSideEffects?: boolean
 }
 export interface Comment {
-  type: 'Line' | 'Block';
-  value: string;
-  start: number;
-  end: number;
+  type: 'Line' | 'Block'
+  value: string
+  start: number
+  end: number
 }
 
 export interface ErrorLabel {
-  message: string | null;
-  start: number;
-  end: number;
+  message: string | null
+  start: number
+  end: number
 }
 
 export interface OxcError {
-  severity: Severity;
-  message: string;
-  labels: Array<ErrorLabel>;
-  helpMessage: string | null;
-  codeframe: string | null;
+  severity: Severity
+  message: string
+  labels: Array<ErrorLabel>
+  helpMessage: string | null
+  codeframe: string | null
 }
 
-export type Severity = 'Error' | 'Warning' | 'Advice';
+export type Severity =  'Error'|
+'Warning'|
+'Advice';
 export declare class ParseResult {
-  get program(): import('@oxc-project/types').Program;
-  get module(): EcmaScriptModule;
-  get comments(): Array<Comment>;
-  get errors(): Array<OxcError>;
+  get program(): import("@oxc-project/types").Program
+  get module(): EcmaScriptModule
+  get comments(): Array<Comment>
+  get errors(): Array<OxcError>
 }
 
 export interface DynamicImport {
-  start: number;
-  end: number;
-  moduleRequest: Span;
+  start: number
+  end: number
+  moduleRequest: Span
 }
 
 export interface EcmaScriptModule {
@@ -301,77 +295,77 @@ export interface EcmaScriptModule {
    *
    * Dynamic imports `import('foo')` are ignored since they can be used in non-ESM files.
    */
-  hasModuleSyntax: boolean;
+  hasModuleSyntax: boolean
   /** Import statements. */
-  staticImports: Array<StaticImport>;
+  staticImports: Array<StaticImport>
   /** Export statements. */
-  staticExports: Array<StaticExport>;
+  staticExports: Array<StaticExport>
   /** Dynamic import expressions. */
-  dynamicImports: Array<DynamicImport>;
+  dynamicImports: Array<DynamicImport>
   /** Span positions` of `import.meta` */
-  importMetas: Array<Span>;
+  importMetas: Array<Span>
 }
 
 export interface ExportExportName {
-  kind: ExportExportNameKind;
-  name: string | null;
-  start: number | null;
-  end: number | null;
+  kind: ExportExportNameKind
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ExportExportNameKind = /** `export { name } */
-| 'Name'
+'Name'|
 /** `export default expression` */
-| 'Default'
+'Default'|
 /** `export * from "mod" */
-| 'None';
+'None';
 
 export interface ExportImportName {
-  kind: ExportImportNameKind;
-  name: string | null;
-  start: number | null;
-  end: number | null;
+  kind: ExportImportNameKind
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ExportImportNameKind = /** `export { name } */
-| 'Name'
+'Name'|
 /** `export * as ns from "mod"` */
-| 'All'
+'All'|
 /** `export * from "mod"` */
-| 'AllButDefault'
+'AllButDefault'|
 /** Does not have a specifier. */
-| 'None';
+'None';
 
 export interface ExportLocalName {
-  kind: ExportLocalNameKind;
-  name: string | null;
-  start: number | null;
-  end: number | null;
+  kind: ExportLocalNameKind
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ExportLocalNameKind = /** `export { name } */
-| 'Name'
+'Name'|
 /** `export default expression` */
-| 'Default'
+'Default'|
 /**
  * If the exported value is not locally accessible from within the module.
  * `export default function () {}`
  */
-| 'None';
+'None';
 
 export interface ImportName {
-  kind: ImportNameKind;
-  name: string | null;
-  start: number | null;
-  end: number | null;
+  kind: ImportNameKind
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ImportNameKind = /** `import { x } from "mod"` */
-| 'Name'
+'Name'|
 /** `import * as ns from "mod"` */
-| 'NamespaceObject'
+'NamespaceObject'|
 /** `import defaultExport from "mod"` */
-| 'Default';
+'Default';
 
 /**
  * Parse JS/TS source asynchronously on a separate thread.
@@ -386,17 +380,13 @@ export type ImportNameKind = /** `import { x } from "mod"` */
  * Generally `parseSync` is preferable to use as it does not have the overhead of spawning a thread.
  * If you need to parallelize parsing multiple files, it is recommended to use worker threads.
  */
-export declare function parse(
-  filename: string,
-  sourceText: string,
-  options?: ParserOptions | undefined | null,
-): Promise<ParseResult>;
+export declare function parse(filename: string, sourceText: string, options?: ParserOptions | undefined | null): Promise<ParseResult>
 
 export interface ParserOptions {
   /** Treat the source text as `js`, `jsx`, `ts`, `tsx` or `dts`. */
-  lang?: 'js' | 'jsx' | 'ts' | 'tsx' | 'dts';
+  lang?: 'js' | 'jsx' | 'ts' | 'tsx' | 'dts'
   /** Treat the source text as `script` or `module` code. */
-  sourceType?: 'script' | 'module' | 'commonjs' | 'unambiguous' | undefined;
+  sourceType?: 'script' | 'module' | 'commonjs' | 'unambiguous' | undefined
   /**
    * Return an AST which includes TypeScript-related properties, or excludes them.
    *
@@ -404,7 +394,7 @@ export interface ParserOptions {
    * `'ts'` is default for TS / TSX files.
    * The type of the file is determined from `lang` option, or extension of provided `filename`.
    */
-  astType?: 'js' | 'ts';
+  astType?: 'js' | 'ts'
   /**
    * Controls whether the `range` property is included on AST nodes.
    * The `range` property is a `[number, number]` which indicates the start/end offsets
@@ -412,7 +402,7 @@ export interface ParserOptions {
    *
    * @default false
    */
-  range?: boolean;
+  range?: boolean
   /**
    * Emit `ParenthesizedExpression` and `TSParenthesizedType` in AST.
    *
@@ -422,7 +412,7 @@ export interface ParserOptions {
    *
    * @default true
    */
-  preserveParens?: boolean;
+  preserveParens?: boolean
   /**
    * Produce semantic errors with an additional AST pass.
    * Semantic errors depend on symbols and scopes, where the parser does not construct.
@@ -430,7 +420,7 @@ export interface ParserOptions {
    *
    * @default false
    */
-  showSemanticErrors?: boolean;
+  showSemanticErrors?: boolean
 }
 
 /**
@@ -443,36 +433,32 @@ export interface ParserOptions {
  * If you need to parallelize parsing multiple files, it is recommended to use worker threads
  * with `parseSync` rather than using `parse`.
  */
-export declare function parseSync(
-  filename: string,
-  sourceText: string,
-  options?: ParserOptions | undefined | null,
-): ParseResult;
+export declare function parseSync(filename: string, sourceText: string, options?: ParserOptions | undefined | null): ParseResult
 
 /** Returns `true` if raw transfer is supported on this platform. */
-export declare function rawTransferSupported(): boolean;
+export declare function rawTransferSupported(): boolean
 
 export interface Span {
-  start: number;
-  end: number;
+  start: number
+  end: number
 }
 
 export interface StaticExport {
-  start: number;
-  end: number;
-  entries: Array<StaticExportEntry>;
+  start: number
+  end: number
+  entries: Array<StaticExportEntry>
 }
 
 export interface StaticExportEntry {
-  start: number;
-  end: number;
-  moduleRequest: ValueSpan | null;
+  start: number
+  end: number
+  moduleRequest: ValueSpan | null
   /** The name under which the desired binding is exported by the module`. */
-  importName: ExportImportName;
+  importName: ExportImportName
   /** The name used to export this binding by this module. */
-  exportName: ExportExportName;
+  exportName: ExportExportName
   /** The name that is used to locally access the exported value from within the importing module. */
-  localName: ExportLocalName;
+  localName: ExportLocalName
   /**
    * Whether the export is a TypeScript `export type`.
    *
@@ -486,14 +472,14 @@ export interface StaticExportEntry {
    * export type { foo } from 'mod';
    * ```
    */
-  isType: boolean;
+  isType: boolean
 }
 
 export interface StaticImport {
   /** Start of import statement. */
-  start: number;
+  start: number
   /** End of import statement. */
-  end: number;
+  end: number
   /**
    * Import source.
    *
@@ -502,13 +488,13 @@ export interface StaticImport {
    * //                   ^^^
    * ```
    */
-  moduleRequest: ValueSpan;
+  moduleRequest: ValueSpan
   /**
    * Import specifiers.
    *
    * Empty for `import "mod"`.
    */
-  entries: Array<StaticImportEntry>;
+  entries: Array<StaticImportEntry>
 }
 
 export interface StaticImportEntry {
@@ -522,7 +508,7 @@ export interface StaticImportEntry {
    * //       ^^^
    * ```
    */
-  importName: ImportName;
+  importName: ImportName
   /**
    * The name that is used to locally access the imported value from within the importing module.
    * ```js
@@ -532,7 +518,7 @@ export interface StaticImportEntry {
    * //              ^^^
    * ```
    */
-  localName: ValueSpan;
+  localName: ValueSpan
   /**
    * Whether this binding is for a TypeScript type-only import.
    *
@@ -542,55 +528,55 @@ export interface StaticImportEntry {
    * import { type foo } from "mod";
    * ```
    */
-  isType: boolean;
+  isType: boolean
 }
 
 export interface ValueSpan {
-  value: string;
-  start: number;
-  end: number;
+  value: string
+  start: number
+  end: number
 }
 export declare class ResolverFactory {
-  constructor(options?: NapiResolveOptions | undefined | null);
-  static default(): ResolverFactory;
+  constructor(options?: NapiResolveOptions | undefined | null)
+  static default(): ResolverFactory
   /** Clone the resolver using the same underlying cache. */
-  cloneWithOptions(options: NapiResolveOptions): ResolverFactory;
+  cloneWithOptions(options: NapiResolveOptions): ResolverFactory
   /**
    * Clear the underlying cache.
    *
    * Warning: The caller must ensure that there're no ongoing resolution operations when calling this method. Otherwise, it may cause those operations to return an incorrect result.
    */
-  clearCache(): void;
+  clearCache(): void
   /** Synchronously resolve `specifier` at an absolute path to a `directory`. */
-  sync(directory: string, request: string): ResolveResult;
+  sync(directory: string, request: string): ResolveResult
   /** Asynchronously resolve `specifier` at an absolute path to a `directory`. */
-  async(directory: string, request: string): Promise<ResolveResult>;
+  async(directory: string, request: string): Promise<ResolveResult>
   /**
    * Synchronously resolve `specifier` at an absolute path to a `file`.
    *
    * This method automatically discovers tsconfig.json by traversing parent directories.
    */
-  resolveFileSync(file: string, request: string): ResolveResult;
+  resolveFileSync(file: string, request: string): ResolveResult
   /**
    * Asynchronously resolve `specifier` at an absolute path to a `file`.
    *
    * This method automatically discovers tsconfig.json by traversing parent directories.
    */
-  resolveFileAsync(file: string, request: string): Promise<ResolveResult>;
+  resolveFileAsync(file: string, request: string): Promise<ResolveResult>
   /**
    * Synchronously resolve `specifier` for TypeScript declaration files.
    *
    * `file` is the absolute path to the containing file.
    * Uses TypeScript's `moduleResolution: "bundler"` algorithm.
    */
-  resolveDtsSync(file: string, request: string): ResolveResult;
+  resolveDtsSync(file: string, request: string): ResolveResult
   /**
    * Asynchronously resolve `specifier` for TypeScript declaration files.
    *
    * `file` is the absolute path to the containing file.
    * Uses TypeScript's `moduleResolution: "bundler"` algorithm.
    */
-  resolveDtsAsync(file: string, request: string): Promise<ResolveResult>;
+  resolveDtsAsync(file: string, request: string): Promise<ResolveResult>
 }
 
 /** Node.js builtin module when `Options::builtin_modules` is enabled. */
@@ -600,22 +586,26 @@ export interface Builtin {
    *
    * Always prefixed with "node:" in compliance with the ESM specification.
    */
-  resolved: string;
+  resolved: string
   /**
    * Whether the request was prefixed with `node:` or not.
    * `fs` -> `false`.
    * `node:fs` returns `true`.
    */
-  isRuntimeModule: boolean;
+  isRuntimeModule: boolean
 }
 
 export declare enum EnforceExtension {
   Auto = 0,
   Enabled = 1,
-  Disabled = 2,
+  Disabled = 2
 }
 
-export type ModuleType = 'module' | 'commonjs' | 'json' | 'wasm' | 'addon';
+export type ModuleType =  'module'|
+'commonjs'|
+'json'|
+'wasm'|
+'addon';
 
 /**
  * Module Resolution Options
@@ -630,7 +620,7 @@ export interface NapiResolveOptions {
    *
    * Default `None`
    */
-  tsconfig?: 'auto' | TsconfigOptions;
+  tsconfig?: 'auto' | TsconfigOptions
   /**
    * Alias for [ResolveOptions::alias] and [ResolveOptions::fallback].
    *
@@ -640,7 +630,7 @@ export interface NapiResolveOptions {
    * A trailing $ can also be added to the given object's keys to signify an exact match.
    * Default `{}`
    */
-  alias?: Record<string, Array<string | undefined | null>>;
+  alias?: Record<string, Array<string | undefined | null>>
   /**
    * A list of alias fields in description files.
    * Specify a field, such as `browser`, to be parsed according to [this specification](https://github.com/defunctzombie/package-browser-field-spec).
@@ -648,14 +638,14 @@ export interface NapiResolveOptions {
    *
    * Default `[]`
    */
-  aliasFields?: (string | string[])[];
+  aliasFields?: (string | string[])[]
   /**
    * Condition names for exports field which defines entry points of a package.
    * The key order in the exports field is significant. During condition matching, earlier entries have higher priority and take precedence over later entries.
    *
    * Default `[]`
    */
-  conditionNames?: Array<string>;
+  conditionNames?: Array<string>
   /**
    * If true, it will not allow extension-less files.
    * So by default `require('./foo')` works if `./foo` has a `.js` extension,
@@ -667,14 +657,14 @@ export interface NapiResolveOptions {
    *
    * Default None, which is the same as `Some(false)` when the above empty rule is not applied.
    */
-  enforceExtension?: EnforceExtension;
+  enforceExtension?: EnforceExtension
   /**
    * A list of exports fields in description files.
    * Can be a path to json object such as `["path", "to", "exports"]`.
    *
    * Default `[["exports"]]`.
    */
-  exportsFields?: (string | string[])[];
+  exportsFields?: (string | string[])[]
   /**
    * Fields from `package.json` which are used to provide the internal requests of a package
    * (requests starting with # are considered internal).
@@ -683,13 +673,13 @@ export interface NapiResolveOptions {
    *
    * Default `[["imports"]]`.
    */
-  importsFields?: (string | string[])[];
+  importsFields?: (string | string[])[]
   /**
    * An object which maps extension to extension aliases.
    *
    * Default `{}`
    */
-  extensionAlias?: Record<string, Array<string>>;
+  extensionAlias?: Record<string, Array<string>>
   /**
    * Attempt to resolve these extensions in order.
    * If multiple files share the same name but have different extensions,
@@ -697,13 +687,13 @@ export interface NapiResolveOptions {
    *
    * Default `[".js", ".json", ".node"]`
    */
-  extensions?: Array<string>;
+  extensions?: Array<string>
   /**
    * Redirect module requests when normal resolving fails.
    *
    * Default `{}`
    */
-  fallback?: Record<string, Array<string | undefined | null>>;
+  fallback?: Record<string, Array<string | undefined | null>>
   /**
    * Request passed to resolve is already fully specified and extensions or main files are not resolved for it (they are still resolved for internal requests).
    *
@@ -711,56 +701,56 @@ export interface NapiResolveOptions {
    *
    * Default `false`
    */
-  fullySpecified?: boolean;
+  fullySpecified?: boolean
   /**
    * A list of main fields in description files
    *
    * Default `["main"]`.
    */
-  mainFields?: string | string[];
+  mainFields?: string | string[]
   /**
    * The filename to be used while resolving directories.
    *
    * Default `["index"]`
    */
-  mainFiles?: Array<string>;
+  mainFiles?: Array<string>
   /**
    * A list of directories to resolve modules from, can be absolute path or folder name.
    *
    * Default `["node_modules"]`
    */
-  modules?: string | string[];
+  modules?: string | string[]
   /**
    * Resolve to a context instead of a file.
    *
    * Default `false`
    */
-  resolveToContext?: boolean;
+  resolveToContext?: boolean
   /**
    * Prefer to resolve module requests as relative requests instead of using modules from node_modules directories.
    *
    * Default `false`
    */
-  preferRelative?: boolean;
+  preferRelative?: boolean
   /**
    * Prefer to resolve server-relative urls as absolute paths before falling back to resolve in ResolveOptions::roots.
    *
    * Default `false`
    */
-  preferAbsolute?: boolean;
+  preferAbsolute?: boolean
   /**
    * A list of resolve restrictions to restrict the paths that a request can be resolved on.
    *
    * Default `[]`
    */
-  restrictions?: Array<Restriction>;
+  restrictions?: Array<Restriction>
   /**
    * A list of directories where requests of server-relative URLs (starting with '/') are resolved.
    * On non-Windows systems these requests are resolved as an absolute path first.
    *
    * Default `[]`
    */
-  roots?: Array<string>;
+  roots?: Array<string>
   /**
    * Whether to resolve symlinks to their symlinked location.
    * When enabled, symlinked resources are resolved to their real path, not their symlinked location.
@@ -768,7 +758,7 @@ export interface NapiResolveOptions {
    *
    * Default `true`
    */
-  symlinks?: boolean;
+  symlinks?: boolean
   /**
    * Whether to read the `NODE_PATH` environment variable and append its entries to `modules`.
    *
@@ -777,20 +767,20 @@ export interface NapiResolveOptions {
    *
    * Default `true`
    */
-  nodePath?: boolean;
+  nodePath?: boolean
   /**
    * Whether to parse [module.builtinModules](https://nodejs.org/api/module.html#modulebuiltinmodules) or not.
    * For example, "zlib" will throw [crate::ResolveError::Builtin] when set to true.
    *
    * Default `false`
    */
-  builtinModules?: boolean;
+  builtinModules?: boolean
   /**
    * Resolve [ResolveResult::moduleType].
    *
    * Default `false`
    */
-  moduleType?: boolean;
+  moduleType?: boolean
   /**
    * Allow `exports` field in `require('../directory')`.
    *
@@ -801,13 +791,13 @@ export interface NapiResolveOptions {
    *
    * Default: `false`
    */
-  allowPackageExportsInDirectoryResolve?: boolean;
+  allowPackageExportsInDirectoryResolve?: boolean
 }
 
 export interface ResolveResult {
-  path?: string;
-  error?: string;
-  builtin?: Builtin;
+  path?: string
+  error?: string
+  builtin?: Builtin
   /**
    * Module type for this path.
    *
@@ -817,9 +807,9 @@ export interface ResolveResult {
    *
    *  The algorithm uses the file extension or finds the closest `package.json` with the `type` field.
    */
-  moduleType?: ModuleType;
+  moduleType?: ModuleType
   /** `package.json` path for the given module. */
-  packageJsonPath?: string;
+  packageJsonPath?: string
 }
 
 /**
@@ -827,11 +817,11 @@ export interface ResolveResult {
  * Use struct because napi don't support structured union now
  */
 export interface Restriction {
-  path?: string;
-  regex?: string;
+  path?: string
+  regex?: string
 }
 
-export declare function sync(path: string, request: string): ResolveResult;
+export declare function sync(path: string, request: string): ResolveResult
 
 /**
  * Tsconfig Options
@@ -845,23 +835,23 @@ export interface TsconfigOptions {
    * * a relative path to the configuration file. It will be resolved relative to cwd.
    * * an absolute path to the configuration file.
    */
-  configFile: string;
+  configFile: string
   /**
    * Support for Typescript Project References.
    *
    * * `'auto'`: use the `references` field from tsconfig of `config_file`.
    */
-  references?: 'auto';
+  references?: 'auto'
 }
 export interface SourceMap {
-  file?: string;
-  mappings: string;
-  names: Array<string>;
-  sourceRoot?: string;
-  sources: Array<string>;
-  sourcesContent?: Array<string>;
-  version: number;
-  x_google_ignoreList?: Array<number>;
+  file?: string
+  mappings: string
+  names: Array<string>
+  sourceRoot?: string
+  sources: Array<string>
+  sourcesContent?: Array<string>
+  version: number
+  x_google_ignoreList?: Array<number>
 }
 export interface ArrowFunctionsOptions {
   /**
@@ -872,14 +862,14 @@ export interface ArrowFunctionsOptions {
    *
    * @default false
    */
-  spec?: boolean;
+  spec?: boolean
 }
 
 export interface CompilerAssumptions {
-  ignoreFunctionLength?: boolean;
-  noDocumentAll?: boolean;
-  objectRestNoSymbols?: boolean;
-  pureGetters?: boolean;
+  ignoreFunctionLength?: boolean
+  noDocumentAll?: boolean
+  objectRestNoSymbols?: boolean
+  pureGetters?: boolean
   /**
    * When using public class fields, assume that they don't shadow any getter in the current class,
    * in its subclasses or in its superclass. Thus, it's safe to assign them rather than using
@@ -921,7 +911,7 @@ export interface CompilerAssumptions {
    * set both `set_public_class_fields` and [`crate::TypeScriptOptions::remove_class_fields_without_initializer`]
    * to `true`.
    */
-  setPublicClassFields?: boolean;
+  setPublicClassFields?: boolean
 }
 
 export interface DecoratorOptions {
@@ -934,7 +924,7 @@ export interface DecoratorOptions {
    * @see https://www.typescriptlang.org/tsconfig/#experimentalDecorators
    * @default false
    */
-  legacy?: boolean;
+  legacy?: boolean
   /**
    * Enables emitting decorator metadata.
    *
@@ -944,7 +934,7 @@ export interface DecoratorOptions {
    * @see https://www.typescriptlang.org/tsconfig/#emitDecoratorMetadata
    * @default false
    */
-  emitDecoratorMetadata?: boolean;
+  emitDecoratorMetadata?: boolean
   /**
    * Aligns nullable-union `design:type` emission with `--strictNullChecks`.
    *
@@ -956,12 +946,12 @@ export interface DecoratorOptions {
    * @see https://www.typescriptlang.org/tsconfig/#strictNullChecks
    * @default true
    */
-  strictNullChecks?: boolean;
+  strictNullChecks?: boolean
 }
 
 export interface Es2015Options {
   /** Transform arrow functions into function expressions. */
-  arrowFunction?: ArrowFunctionsOptions;
+  arrowFunction?: ArrowFunctionsOptions
 }
 
 export type HelperMode = /**
@@ -974,7 +964,7 @@ export type HelperMode = /**
  * helperName(...arguments);
  * ```
  */
-| 'Runtime'
+'Runtime'|
 /**
  * External mode: Helper functions are accessed from a global `babelHelpers` object.
  *
@@ -984,10 +974,10 @@ export type HelperMode = /**
  * babelHelpers.helperName(...arguments);
  * ```
  */
-| 'External';
+'External';
 
 export interface Helpers {
-  mode?: HelperMode;
+  mode?: HelperMode
 }
 
 /**
@@ -995,11 +985,7 @@ export interface Helpers {
  *
  * Note: This function can be slower than `isolatedDeclarationSync` due to the overhead of spawning a thread.
  */
-export declare function isolatedDeclaration(
-  filename: string,
-  sourceText: string,
-  options?: IsolatedDeclarationsOptions | undefined | null,
-): Promise<IsolatedDeclarationsResult>;
+export declare function isolatedDeclaration(filename: string, sourceText: string, options?: IsolatedDeclarationsOptions | undefined | null): Promise<IsolatedDeclarationsResult>
 
 export interface IsolatedDeclarationsOptions {
   /**
@@ -1010,22 +996,18 @@ export interface IsolatedDeclarationsOptions {
    *
    * See <https://www.typescriptlang.org/tsconfig/#stripInternal>
    */
-  stripInternal?: boolean;
-  sourcemap?: boolean;
+  stripInternal?: boolean
+  sourcemap?: boolean
 }
 
 export interface IsolatedDeclarationsResult {
-  code: string;
-  map?: SourceMap;
-  errors: Array<OxcError>;
+  code: string
+  map?: SourceMap
+  errors: Array<OxcError>
 }
 
 /** TypeScript Isolated Declarations for Standalone DTS Emit */
-export declare function isolatedDeclarationSync(
-  filename: string,
-  sourceText: string,
-  options?: IsolatedDeclarationsOptions | undefined | null,
-): IsolatedDeclarationsResult;
+export declare function isolatedDeclarationSync(filename: string, sourceText: string, options?: IsolatedDeclarationsOptions | undefined | null): IsolatedDeclarationsResult
 
 /**
  * Configure how TSX and JSX are transformed.
@@ -1041,13 +1023,13 @@ export interface JsxOptions {
    *
    * @default 'automatic'
    */
-  runtime?: 'classic' | 'automatic';
+  runtime?: 'classic' | 'automatic'
   /**
    * Emit development-specific information, such as `__source` and `__self`.
    *
    * @default false
    */
-  development?: boolean;
+  development?: boolean
   /**
    * Toggles whether or not to throw an error if an XML namespaced tag name
    * is used.
@@ -1057,19 +1039,19 @@ export interface JsxOptions {
    *
    * @default true
    */
-  throwIfNamespace?: boolean;
+  throwIfNamespace?: boolean
   /**
    * Mark JSX elements and top-level React method calls as pure for tree shaking.
    *
    * @default true
    */
-  pure?: boolean;
+  pure?: boolean
   /**
    * Replaces the import source when importing functions.
    *
    * @default 'react'
    */
-  importSource?: string;
+  importSource?: string
   /**
    * Replace the function used when compiling JSX expressions. It should be a
    * qualified name (e.g. `React.createElement`) or an identifier (e.g.
@@ -1079,7 +1061,7 @@ export interface JsxOptions {
    *
    * @default 'React.createElement'
    */
-  pragma?: string;
+  pragma?: string
   /**
    * Replace the component used when compiling JSX fragments. It should be a
    * valid JSX tag name.
@@ -1088,7 +1070,7 @@ export interface JsxOptions {
    *
    * @default 'React.Fragment'
    */
-  pragmaFrag?: string;
+  pragmaFrag?: string
   /**
    * Enable React Fast Refresh .
    *
@@ -1096,7 +1078,7 @@ export interface JsxOptions {
    *
    * @default false
    */
-  refresh?: boolean | ReactRefreshOptions;
+  refresh?: boolean | ReactRefreshOptions
 }
 
 /**
@@ -1114,11 +1096,7 @@ export interface JsxOptions {
  *
  * @deprecated Only works for Vite.
  */
-export declare function moduleRunnerTransform(
-  filename: string,
-  sourceText: string,
-  options?: ModuleRunnerTransformOptions | undefined | null,
-): Promise<ModuleRunnerTransformResult>;
+export declare function moduleRunnerTransform(filename: string, sourceText: string, options?: ModuleRunnerTransformOptions | undefined | null): Promise<ModuleRunnerTransformResult>
 
 export interface ModuleRunnerTransformOptions {
   /**
@@ -1130,7 +1108,7 @@ export interface ModuleRunnerTransformOptions {
    *
    * @see {@link SourceMap}
    */
-  sourcemap?: boolean;
+  sourcemap?: boolean
 }
 
 export interface ModuleRunnerTransformResult {
@@ -1139,15 +1117,15 @@ export interface ModuleRunnerTransformResult {
    *
    * If parsing failed, this will be an empty string.
    */
-  code: string;
+  code: string
   /**
    * The source map for the transformed code.
    *
    * This will be set if {@link TransformOptions#sourcemap} is `true`.
    */
-  map?: SourceMap;
-  deps: Array<string>;
-  dynamicDeps: Array<string>;
+  map?: SourceMap
+  deps: Array<string>
+  dynamicDeps: Array<string>
   /**
    * Parse and transformation errors.
    *
@@ -1155,19 +1133,15 @@ export interface ModuleRunnerTransformResult {
    * transformed code may still be available even if there are errors in this
    * list.
    */
-  errors: Array<OxcError>;
+  errors: Array<OxcError>
 }
 
 /** @deprecated Only works for Vite. */
-export declare function moduleRunnerTransformSync(
-  filename: string,
-  sourceText: string,
-  options?: ModuleRunnerTransformOptions | undefined | null,
-): ModuleRunnerTransformResult;
+export declare function moduleRunnerTransformSync(filename: string, sourceText: string, options?: ModuleRunnerTransformOptions | undefined | null): ModuleRunnerTransformResult
 
 export interface PluginsOptions {
-  styledComponents?: StyledComponentsOptions;
-  taggedTemplateEscape?: boolean;
+  styledComponents?: StyledComponentsOptions
+  taggedTemplateEscape?: boolean
 }
 
 export interface ReactRefreshOptions {
@@ -1176,14 +1150,14 @@ export interface ReactRefreshOptions {
    *
    * @default `$RefreshReg$`.
    */
-  refreshReg?: string;
+  refreshReg?: string
   /**
    * Specify the identifier of the refresh signature variable.
    *
    * @default `$RefreshSig$`.
    */
-  refreshSig?: string;
-  emitFullSignatures?: boolean;
+  refreshSig?: string
+  emitFullSignatures?: boolean
 }
 
 /**
@@ -1198,21 +1172,21 @@ export interface StyledComponentsOptions {
    *
    * @default true
    */
-  displayName?: boolean;
+  displayName?: boolean
   /**
    * Controls whether the `displayName` of a component will be prefixed with the filename
    * to make the component name as unique as possible.
    *
    * @default true
    */
-  fileName?: boolean;
+  fileName?: boolean
   /**
    * Adds a unique identifier to every styled component to avoid checksum mismatches
    * due to different class generation on the client and server during server-side rendering.
    *
    * @default true
    */
-  ssr?: boolean;
+  ssr?: boolean
   /**
    * Transpiles styled-components tagged template literals to a smaller representation
    * than what Babel normally creates, helping to reduce bundle size.
@@ -1222,14 +1196,14 @@ export interface StyledComponentsOptions {
    *
    * @default false
    */
-  transpileTemplateLiterals?: boolean;
+  transpileTemplateLiterals?: boolean
   /**
    * Minifies CSS content by removing all whitespace and comments from your CSS,
    * keeping valuable bytes out of your bundles.
    *
    * @default true
    */
-  minify?: boolean;
+  minify?: boolean
   /**
    * Enables transformation of JSX `css` prop when using styled-components.
    *
@@ -1237,19 +1211,19 @@ export interface StyledComponentsOptions {
    *
    * @default true
    */
-  cssProp?: boolean;
+  cssProp?: boolean
   /**
    * Enables "pure annotation" to aid dead code elimination by bundlers.
    *
    * @default false
    */
-  pure?: boolean;
+  pure?: boolean
   /**
    * Adds a namespace prefix to component identifiers to ensure class names are unique.
    *
    * Example: With `namespace: "my-app"`, generates `componentId: "my-app__sc-3rfj0a-1"`
    */
-  namespace?: string;
+  namespace?: string
   /**
    * List of file names that are considered meaningless for component naming purposes.
    *
@@ -1259,13 +1233,13 @@ export interface StyledComponentsOptions {
    *
    * @default `["index"]`
    */
-  meaninglessFileNames?: Array<string>;
+  meaninglessFileNames?: Array<string>
   /**
    * Import paths to be considered as styled-components imports at the top level.
    *
    * **Note: This feature is not yet implemented in oxc.**
    */
-  topLevelImportPaths?: Array<string>;
+  topLevelImportPaths?: Array<string>
 }
 
 /**
@@ -1282,11 +1256,7 @@ export interface StyledComponentsOptions {
  * @returns a promise that resolves to an object containing the transformed code,
  * source maps, and any errors that occurred during parsing or transformation.
  */
-export declare function transform(
-  filename: string,
-  sourceText: string,
-  options?: TransformOptions | undefined | null,
-): Promise<TransformResult>;
+export declare function transform(filename: string, sourceText: string, options?: TransformOptions | undefined | null): Promise<TransformResult>
 
 /**
  * Options for transforming a JavaScript or TypeScript file.
@@ -1302,16 +1272,16 @@ export declare function transform(
  */
 export interface TransformOptions {
   /** Treat the source text as `js`, `jsx`, `ts`, `tsx`, or `dts`. */
-  lang?: 'js' | 'jsx' | 'ts' | 'tsx' | 'dts';
+  lang?: 'js' | 'jsx' | 'ts' | 'tsx' | 'dts'
   /** Treat the source text as `script` or `module` code. */
-  sourceType?: 'script' | 'module' | 'commonjs' | 'unambiguous' | undefined;
+  sourceType?: 'script' | 'module' | 'commonjs' | 'unambiguous' | undefined
   /**
    * The current working directory. Used to resolve relative paths in other
    * options.
    */
-  cwd?: string;
+  cwd?: string
   /** Set assumptions in order to produce smaller output. */
-  assumptions?: CompilerAssumptions;
+  assumptions?: CompilerAssumptions
   /**
    * Configure how TypeScript is transformed.
    *
@@ -1319,19 +1289,19 @@ export interface TransformOptions {
    *
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/typescript}
    */
-  typescript?: TypeScriptOptions;
+  typescript?: TypeScriptOptions
   /** Decorator plugin */
-  decorator?: DecoratorOptions;
+  decorator?: DecoratorOptions
   /**
    * Third-party plugins to use.
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/plugins}
    */
-  plugins?: PluginsOptions;
+  plugins?: PluginsOptions
   /**
    * Configure how TSX and JSX are transformed.
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/jsx}
    */
-  jsx?: 'preserve' | JsxOptions;
+  jsx?: 'preserve' | JsxOptions
   /**
    * Sets the target environment for the generated JavaScript.
    *
@@ -1346,9 +1316,9 @@ export interface TransformOptions {
    *
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/lowering#target}
    */
-  target?: string | Array<string>;
+  target?: string | Array<string>
   /** Behaviour for runtime helpers. */
-  helpers?: Helpers;
+  helpers?: Helpers
   /**
    * Inject Plugin
    *
@@ -1356,7 +1326,7 @@ export interface TransformOptions {
    *
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#inject}
    */
-  inject?: Record<string, string | [string, string]>;
+  inject?: Record<string, string | [string, string]>
   /**
    * Define Plugin
    *
@@ -1364,7 +1334,7 @@ export interface TransformOptions {
    *
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#define}
    */
-  define?: Record<string, string>;
+  define?: Record<string, string>
   /**
    * Enable source map generation.
    *
@@ -1374,7 +1344,7 @@ export interface TransformOptions {
    *
    * @see {@link SourceMap}
    */
-  sourcemap?: boolean;
+  sourcemap?: boolean
 }
 
 export interface TransformResult {
@@ -1383,13 +1353,13 @@ export interface TransformResult {
    *
    * If parsing failed, this will be an empty string.
    */
-  code: string;
+  code: string
   /**
    * The source map for the transformed code.
    *
    * This will be set if {@link TransformOptions#sourcemap} is `true`.
    */
-  map?: SourceMap;
+  map?: SourceMap
   /**
    * The `.d.ts` declaration file for the transformed code. Declarations are
    * only generated if `declaration` is set to `true` and a TypeScript file
@@ -1400,13 +1370,13 @@ export interface TransformResult {
    * @see {@link TypeScriptOptions#declaration}
    * @see [declaration tsconfig option](https://www.typescriptlang.org/tsconfig/#declaration)
    */
-  declaration?: string;
+  declaration?: string
   /**
    * Declaration source map. Only generated if both
    * {@link TypeScriptOptions#declaration declaration} and
    * {@link TransformOptions#sourcemap sourcemap} are set to `true`.
    */
-  declarationMap?: SourceMap;
+  declarationMap?: SourceMap
   /**
    * Helpers used.
    *
@@ -1418,7 +1388,7 @@ export interface TransformResult {
    * { "_objectSpread": "@oxc-project/runtime/helpers/objectSpread2" }
    * ```
    */
-  helpersUsed: Record<string, string>;
+  helpersUsed: Record<string, string>
   /**
    * Parse and transformation errors.
    *
@@ -1426,7 +1396,7 @@ export interface TransformResult {
    * transformed code may still be available even if there are errors in this
    * list.
    */
-  errors: Array<OxcError>;
+  errors: Array<OxcError>
 }
 
 /**
@@ -1441,17 +1411,13 @@ export interface TransformResult {
  * @returns an object containing the transformed code, source maps, and any
  * errors that occurred during parsing or transformation.
  */
-export declare function transformSync(
-  filename: string,
-  sourceText: string,
-  options?: TransformOptions | undefined | null,
-): TransformResult;
+export declare function transformSync(filename: string, sourceText: string, options?: TransformOptions | undefined | null): TransformResult
 
 export interface TypeScriptOptions {
-  jsxPragma?: string;
-  jsxPragmaFrag?: string;
-  onlyRemoveTypeImports?: boolean;
-  allowNamespaces?: boolean;
+  jsxPragma?: string
+  jsxPragmaFrag?: string
+  onlyRemoveTypeImports?: boolean
+  allowNamespaces?: boolean
   /**
    * When enabled, type-only class fields are only removed if they are prefixed with the declare modifier:
    *
@@ -1460,7 +1426,7 @@ export interface TypeScriptOptions {
    * Allowing `declare` fields is built-in support in Oxc without any option. If you want to remove class fields
    * without initializer, you can use `remove_class_fields_without_initializer: true` instead.
    */
-  allowDeclareFields?: boolean;
+  allowDeclareFields?: boolean
   /**
    * When enabled, class fields without initializers are removed.
    *
@@ -1495,14 +1461,14 @@ export interface TypeScriptOptions {
    *
    * Defaults to `false`.
    */
-  removeClassFieldsWithoutInitializer?: boolean;
+  removeClassFieldsWithoutInitializer?: boolean
   /**
    * When true, optimize const enums by inlining their values at usage sites
    * and removing the enum declaration.
    *
    * @default false
    */
-  optimizeConstEnums?: boolean;
+  optimizeConstEnums?: boolean
   /**
    * When true, optimize regular (non-const) enums by inlining their member
    * accesses at usage sites when the member value is statically known.
@@ -1513,7 +1479,7 @@ export interface TypeScriptOptions {
    *
    * @default false
    */
-  optimizeEnums?: boolean;
+  optimizeEnums?: boolean
   /**
    * Also generate a `.d.ts` declaration file for TypeScript files.
    *
@@ -1523,7 +1489,7 @@ export interface TypeScriptOptions {
    *
    * @default false
    */
-  declaration?: IsolatedDeclarationsOptions;
+  declaration?: IsolatedDeclarationsOptions
   /**
    * Rewrite or remove TypeScript import/export declaration extensions.
    *
@@ -1534,90 +1500,82 @@ export interface TypeScriptOptions {
    *
    * @default false
    */
-  rewriteImportExtensions?: 'rewrite' | 'remove' | boolean;
+  rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
 export declare class BindingBundleEndEventData {
-  output: string;
-  duration: number;
-  get result(): BindingWatcherBundler;
+  output: string
+  duration: number
+  get result(): BindingWatcherBundler
 }
 
 export declare class BindingBundleErrorEventData {
-  get result(): BindingWatcherBundler;
-  get error(): Array<BindingError>;
+  get result(): BindingWatcherBundler
+  get error(): Array<BindingError>
 }
 
 export declare class BindingBundler {
-  constructor();
-  generate(options: BindingBundlerOptions): Promise<BindingResult<BindingOutputs>>;
-  write(options: BindingBundlerOptions): Promise<BindingResult<BindingOutputs>>;
-  scan(options: BindingBundlerOptions): Promise<BindingResult<undefined>>;
-  close(): Promise<undefined>;
-  get closed(): boolean;
-  getWatchFiles(): Array<string>;
+  constructor()
+  generate(options: BindingBundlerOptions): Promise<BindingResult<BindingOutputs>>
+  write(options: BindingBundlerOptions): Promise<BindingResult<BindingOutputs>>
+  scan(options: BindingBundlerOptions): Promise<BindingResult<undefined>>
+  close(): Promise<undefined>
+  get closed(): boolean
+  getWatchFiles(): Array<string>
 }
 
 export declare class BindingCallableBuiltinPlugin {
-  constructor(plugin: BindingBuiltinPlugin);
-  getOrder(hookName: string): string | null;
-  resolveId(
-    id: string,
-    importer?: string | undefined | null,
-    options?: BindingHookJsResolveIdOptions | undefined | null,
-  ): Promise<BindingHookJsResolveIdOutput | undefined | null>;
-  load(id: string): Promise<BindingHookJsLoadOutput | undefined | null>;
-  transform(
-    code: string,
-    id: string,
-    options: BindingTransformHookExtraArgs,
-  ): Promise<BindingHookTransformOutput | undefined | null>;
-  watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<undefined>;
+  constructor(plugin: BindingBuiltinPlugin)
+  getOrder(hookName: string): string | null
+  resolveId(id: string, importer?: string | undefined | null, options?: BindingHookJsResolveIdOptions | undefined | null): Promise<BindingHookJsResolveIdOutput | undefined | null>
+  load(id: string): Promise<BindingHookJsLoadOutput | undefined | null>
+  transform(code: string, id: string, options: BindingTransformHookExtraArgs): Promise<BindingHookTransformOutput | undefined | null>
+  watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<undefined>
 }
 
 export declare class BindingChunkingContext {
-  getModuleInfo(moduleId: string): BindingModuleInfo | null;
+  getModuleInfo(moduleId: string): BindingModuleInfo | null
 }
 
 /** A decoded source map with mappings as an array of arrays instead of VLQ-encoded string. */
 export declare class BindingDecodedMap {
   /** The source map version (always 3). */
-  get version(): number;
+  get version(): number
   /** The generated file name. */
-  get file(): string | null;
+  get file(): string | null
   /** The list of original source files. */
-  get sources(): Array<string>;
+  get sources(): Array<string>
   /** The original source contents (if `includeContent` was true). */
-  get sourcesContent(): Array<string | undefined | null>;
+  get sourcesContent(): Array<string | undefined | null>
   /** The list of symbol names used in mappings. */
-  get names(): Array<string>;
+  get names(): Array<string>
   /**
    * The decoded mappings as an array of line arrays.
    * Each line is an array of segments, where each segment is [generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex?].
    */
-  get mappings(): Array<Array<Array<number>>>;
+  get mappings(): Array<Array<Array<number>>>
   /** The list of source indices that should be excluded from debugging. */
-  get x_google_ignoreList(): Array<number> | null;
+  get x_google_ignoreList(): Array<number> | null
 }
 
 export declare class BindingDevEngine {
-  constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null);
-  run(): Promise<void>;
-  ensureCurrentBuildFinish(): Promise<void>;
-  getBundleState(): Promise<BindingBundleState>;
-  ensureLatestBuildOutput(): Promise<BindingResult<undefined>>;
-  triggerFullBuild(): void;
+  constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
+  run(): Promise<void>
+  ensureCurrentBuildFinish(): Promise<void>
+  getBundleState(): Promise<BindingBundleState>
+  ensureLatestBuildOutput(): Promise<BindingResult<undefined>>
+  triggerFullBuild(): void
   /**
    * Client-connect signal (the clientId hello): creates the per-client session
    * with an empty ship map. Reconnects arrive as fresh clientIds.
    */
-  registerClient(clientId: string): Promise<void>;
+  registerClient(clientId: string): Promise<void>
   /**
    * Delivery notification from the serving middleware: the response for
    * `filename` completed, so record its modules as shipped to that client.
    */
-  notifyPayloadDelivered(filename: string): Promise<void>;
-  removeClient(clientId: string): Promise<void>;
-  close(): Promise<void>;
+  notifyPayloadDelivered(filename: string): Promise<void>
+  removeClient(clientId: string): Promise<void>
+  close(): Promise<void>
   /**
    * Compile a lazy entry module and return HMR-style patch code.
    *
@@ -1625,93 +1583,80 @@ export declare class BindingDevEngine {
    * The module was previously stubbed with a proxy, and now we need to compile the
    * actual module and its dependencies.
    */
-  compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput>;
+  compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput>
 }
 
 export declare class BindingLoadPluginContext {
-  inner(): BindingPluginContext;
-  addWatchFile(file: string): void;
+  inner(): BindingPluginContext
+  addWatchFile(file: string): void
 }
 
 export declare class BindingMagicString {
-  constructor(source: string, options?: BindingMagicStringOptions | undefined | null);
-  get original(): string;
-  get filename(): string | null;
-  get indentExclusionRanges(): Array<Array<number>> | Array<number> | null;
-  get ignoreList(): boolean;
-  get offset(): number;
-  set offset(offset: number);
-  replace(from: string, to: string): this;
-  replaceAll(from: string, to: string): this;
+  constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
+  get original(): string
+  get filename(): string | null
+  get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
+  get ignoreList(): boolean
+  get offset(): number
+  set offset(offset: number)
+  replace(from: string, to: string): this
+  replaceAll(from: string, to: string): this
   /**
    * Returns the UTF-16 offset past the last match, or -1 if no match was found.
    * The JS wrapper uses this to update `lastIndex` on the caller's RegExp.
    * Global/sticky behavior is derived from the regex's own flags.
    */
-  replaceRegex(from: RegExp, to: string): number;
-  prepend(content: string): this;
-  append(content: string): this;
-  prependLeft(index: number, content: string): this;
-  prependRight(index: number, content: string): this;
-  appendLeft(index: number, content: string): this;
-  appendRight(index: number, content: string): this;
-  overwrite(
-    start: number,
-    end: number,
-    content: string,
-    options?: BindingOverwriteOptions | undefined | null,
-  ): this;
-  toString(): string;
-  hasChanged(): boolean;
-  length(): number;
-  isEmpty(): boolean;
-  remove(start: number, end: number): this;
-  update(
-    start: number,
-    end: number,
-    content: string,
-    options?: BindingUpdateOptions | undefined | null,
-  ): this;
-  relocate(start: number, end: number, to: number): this;
+  replaceRegex(from: RegExp, to: string): number
+  prepend(content: string): this
+  append(content: string): this
+  prependLeft(index: number, content: string): this
+  prependRight(index: number, content: string): this
+  appendLeft(index: number, content: string): this
+  appendRight(index: number, content: string): this
+  overwrite(start: number, end: number, content: string, options?: BindingOverwriteOptions | undefined | null): this
+  toString(): string
+  hasChanged(): boolean
+  length(): number
+  isEmpty(): boolean
+  remove(start: number, end: number): this
+  update(start: number, end: number, content: string, options?: BindingUpdateOptions | undefined | null): this
+  relocate(start: number, end: number, to: number): this
   /**
    * Alias for `relocate` to match the original magic-string API.
    * Moves the characters from `start` to `end` to `index`.
    * Returns `this` for method chaining.
    */
-  move(start: number, end: number, index: number): this;
-  indent(
-    indentor?: string | undefined | null,
-    options?: BindingIndentOptions | undefined | null,
-  ): this;
+  move(start: number, end: number, index: number): this
+  indent(indentor?: string | undefined | null, options?: BindingIndentOptions | undefined | null): this
   /** Trims whitespace or specified characters from the start and end. */
-  trim(charType?: string | undefined | null): this;
+  trim(charType?: string | undefined | null): this
   /** Trims whitespace or specified characters from the start. */
-  trimStart(charType?: string | undefined | null): this;
+  trimStart(charType?: string | undefined | null): this
   /** Trims whitespace or specified characters from the end. */
-  trimEnd(charType?: string | undefined | null): this;
+  trimEnd(charType?: string | undefined | null): this
   /** Trims newlines from the start and end. */
-  trimLines(): this;
+  trimLines(): this
   /**
    * Deprecated method that throws an error directing users to use prependRight or appendLeft.
    * This matches the original magic-string API which deprecated this method.
    */
-  insert(index: number, content: string): void;
+  insert(index: number, content: string): void
   /** Returns a clone of the MagicString instance. */
-  clone(): BindingMagicString;
+  clone(): BindingMagicString
   /** Returns the last character of the generated string, or an empty string if empty. */
-  lastChar(): string;
+  lastChar(): string
   /** Returns the content after the last newline in the generated string. */
-  lastLine(): string;
+  lastLine(): string
   /** Returns the guessed indentation string, or `\t` if none is found. */
-  getIndentString(): string;
+  getIndentString(): string
   /** Returns a clone with content outside the specified range removed. */
-  snip(start: number, end: number): BindingMagicString;
+  snip(start: number, end: number): BindingMagicString
   /**
    * Resets the portion of the string from `start` to `end` to its original content.
    * This undoes any modifications made to that range.
    * Supports negative indices (counting from the end).
    */
-  reset(start: number, end: number): this;
+  reset(start: number, end: number): this
   /**
    * Returns the content between the specified UTF-16 code unit positions (JS string indices).
    * Supports negative indices (counting from the end).
@@ -1720,186 +1665,174 @@ export declare class BindingMagicString {
    * included in the result (matching the original magic-string / JS behavior).
    * This is done by returning a UTF-16 encoded JS string via `napi_create_string_utf16`.
    */
-  slice(start?: number | undefined | null, end?: number | undefined | null): string;
+  slice(start?: number | undefined | null, end?: number | undefined | null): string
   /**
    * Generates a source map for the transformations applied to this MagicString.
    * Returns a BindingSourceMap object with version, file, sources, sourcesContent, names, mappings.
    */
-  generateMap(options?: BindingSourceMapOptions | undefined | null): BindingSourceMap;
+  generateMap(options?: BindingSourceMapOptions | undefined | null): BindingSourceMap
   /**
    * Generates a decoded source map for the transformations applied to this MagicString.
    * Returns a BindingDecodedMap object with mappings as an array of arrays.
    */
-  generateDecodedMap(options?: BindingSourceMapOptions | undefined | null): BindingDecodedMap;
+  generateDecodedMap(options?: BindingSourceMapOptions | undefined | null): BindingDecodedMap
 }
 
 export declare class BindingModuleInfo {
-  id: string;
-  importers: Array<string>;
-  dynamicImporters: Array<string>;
-  importedIds: Array<string>;
-  dynamicallyImportedIds: Array<string>;
-  exports: Array<string>;
-  isEntry: boolean;
-  inputFormat: 'es' | 'cjs' | 'unknown';
-  get code(): string | null;
+  id: string
+  importers: Array<string>
+  dynamicImporters: Array<string>
+  importedIds: Array<string>
+  dynamicallyImportedIds: Array<string>
+  exports: Array<string>
+  isEntry: boolean
+  inputFormat: 'es' | 'cjs' | 'unknown'
+  get code(): string | null
 }
 
 export declare class BindingNormalizedOptions {
-  get input(): Array<string> | Record<string, string>;
-  get cwd(): string;
-  get platform(): 'node' | 'browser' | 'neutral';
-  get shimMissingExports(): boolean;
-  get name(): string | null;
-  get entryFilenames(): string | undefined;
-  get chunkFilenames(): string | undefined;
-  get sourcemapFilenames(): string | undefined;
-  get assetFilenames(): string | undefined;
-  get dir(): string | null;
-  get file(): string | null;
-  get format(): 'es' | 'cjs' | 'iife' | 'umd';
-  get exports(): 'default' | 'named' | 'none' | 'auto';
-  get esModule(): boolean | 'if-default-prop';
-  get codeSplitting(): boolean;
-  get dynamicImportInCjs(): boolean;
-  get sourcemap(): boolean | 'inline' | 'hidden';
-  get sourcemapBaseUrl(): string | null;
-  get banner(): string | undefined | null | undefined;
-  get footer(): string | undefined | null | undefined;
-  get intro(): string | undefined | null | undefined;
-  get outro(): string | undefined | null | undefined;
-  get postBanner(): string | undefined | null | undefined;
-  get postFooter(): string | undefined | null | undefined;
-  get externalLiveBindings(): boolean;
-  get extend(): boolean;
-  get globals(): Record<string, string> | undefined;
-  get hashCharacters(): 'base64' | 'base36' | 'hex';
-  get sourcemapDebugIds(): boolean;
-  get sourcemapExcludeSources(): boolean;
-  get polyfillRequire(): boolean;
-  get minify(): false | 'dce-only' | MinifyOptions;
-  get legalComments(): 'none' | 'inline';
-  get comments(): BindingCommentsOptions;
-  get preserveModules(): boolean;
-  get preserveModulesRoot(): string | undefined;
-  get virtualDirname(): string;
-  get topLevelVar(): boolean;
-  get minifyInternalExports(): boolean;
-  get context(): string;
+  get input(): Array<string> | Record<string, string>
+  get cwd(): string
+  get platform(): 'node' | 'browser' | 'neutral'
+  get shimMissingExports(): boolean
+  get name(): string | null
+  get entryFilenames(): string | undefined
+  get chunkFilenames(): string | undefined
+  get sourcemapFilenames(): string | undefined
+  get assetFilenames(): string | undefined
+  get dir(): string | null
+  get file(): string | null
+  get format(): 'es' | 'cjs' | 'iife' | 'umd'
+  get exports(): 'default' | 'named' | 'none' | 'auto'
+  get esModule(): boolean | 'if-default-prop'
+  get codeSplitting(): boolean
+  get dynamicImportInCjs(): boolean
+  get sourcemap(): boolean | 'inline' | 'hidden'
+  get sourcemapBaseUrl(): string | null
+  get banner(): string | undefined | null | undefined
+  get footer(): string | undefined | null | undefined
+  get intro(): string | undefined | null | undefined
+  get outro(): string | undefined | null | undefined
+  get postBanner(): string | undefined | null | undefined
+  get postFooter(): string | undefined | null | undefined
+  get externalLiveBindings(): boolean
+  get extend(): boolean
+  get globals(): Record<string, string> | undefined
+  get hashCharacters(): 'base64' | 'base36' | 'hex'
+  get sourcemapDebugIds(): boolean
+  get sourcemapExcludeSources(): boolean
+  get polyfillRequire(): boolean
+  get minify(): false | 'dce-only' | MinifyOptions
+  get legalComments(): 'none' | 'inline'
+  get comments(): BindingCommentsOptions
+  get preserveModules(): boolean
+  get preserveModulesRoot(): string | undefined
+  get virtualDirname(): string
+  get topLevelVar(): boolean
+  get minifyInternalExports(): boolean
+  get context(): string
 }
 
 export declare class BindingOutputAsset {
-  dropInner(): ExternalMemoryStatus;
-  getFileName(): string;
-  getOriginalFileName(): string | null;
-  getOriginalFileNames(): Array<string>;
-  getSource(): BindingAssetSource;
-  getName(): string | null;
-  getNames(): Array<string>;
+  dropInner(): ExternalMemoryStatus
+  getFileName(): string
+  getOriginalFileName(): string | null
+  getOriginalFileNames(): Array<string>
+  getSource(): BindingAssetSource
+  getName(): string | null
+  getNames(): Array<string>
 }
 
 export declare class BindingOutputChunk {
-  dropInner(): ExternalMemoryStatus;
-  getIsEntry(): boolean;
-  getIsDynamicEntry(): boolean;
-  getFacadeModuleId(): string | null;
-  getModuleIds(): Array<string>;
-  getExports(): Array<string>;
-  getFileName(): string;
-  getModules(): BindingModules;
-  getImports(): Array<string>;
-  getDynamicImports(): Array<string>;
-  getCode(): string;
-  getMap(): string | null;
-  getSourcemapFileName(): string | null;
-  getPreliminaryFileName(): string;
-  getName(): string;
+  dropInner(): ExternalMemoryStatus
+  getIsEntry(): boolean
+  getIsDynamicEntry(): boolean
+  getFacadeModuleId(): string | null
+  getModuleIds(): Array<string>
+  getExports(): Array<string>
+  getFileName(): string
+  getModules(): BindingModules
+  getImports(): Array<string>
+  getDynamicImports(): Array<string>
+  getCode(): string
+  getMap(): string | null
+  getSourcemapFileName(): string | null
+  getPreliminaryFileName(): string
+  getName(): string
 }
 
 export declare class BindingPluginContext {
-  load(
-    specifier: string,
-    sideEffects: boolean | 'no-treeshake' | undefined,
-    packageJsonPath?: string,
-  ): Promise<void>;
-  resolve(
-    specifier: string,
-    importer?: string | undefined | null,
-    extraOptions?: BindingPluginContextResolveOptions | undefined | null,
-  ): Promise<BindingPluginContextResolvedId | null>;
-  emitFile(
-    file: BindingEmittedAsset,
-    assetFilename?: string | undefined | null,
-    fnSanitizedFileName?: string | undefined | null,
-  ): string;
-  emitChunk(file: BindingEmittedChunk): string;
-  emitPrebuiltChunk(file: BindingEmittedPrebuiltChunk): string;
-  getFileName(referenceId: string): string;
-  getModuleInfo(moduleId: string): BindingModuleInfo | null;
-  getModuleIds(): Array<string>;
-  addWatchFile(file: string): void;
+  load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
+  resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
+  emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
+  emitChunk(file: BindingEmittedChunk): string
+  emitPrebuiltChunk(file: BindingEmittedPrebuiltChunk): string
+  getFileName(referenceId: string): string
+  getModuleInfo(moduleId: string): BindingModuleInfo | null
+  getModuleIds(): Array<string>
+  addWatchFile(file: string): void
 }
 
 export declare class BindingRenderedChunk {
-  get name(): string;
-  get isEntry(): boolean;
-  get isDynamicEntry(): boolean;
-  get facadeModuleId(): string | null;
-  get moduleIds(): Array<string>;
-  get exports(): Array<string>;
-  get fileName(): string;
-  get modules(): BindingModules;
-  get imports(): Array<string>;
-  get dynamicImports(): Array<string>;
+  get name(): string
+  get isEntry(): boolean
+  get isDynamicEntry(): boolean
+  get facadeModuleId(): string | null
+  get moduleIds(): Array<string>
+  get exports(): Array<string>
+  get fileName(): string
+  get modules(): BindingModules
+  get imports(): Array<string>
+  get dynamicImports(): Array<string>
 }
 
 export declare class BindingRenderedChunkMeta {
-  get chunks(): Record<string, BindingRenderedChunk>;
+  get chunks(): Record<string, BindingRenderedChunk>
 }
 
 export declare class BindingRenderedModule {
-  get code(): string | null;
-  get renderedExports(): Array<string>;
+  get code(): string | null
+  get renderedExports(): Array<string>
 }
 
 /** A source map object with properties matching the SourceMap V3 specification. */
 export declare class BindingSourceMap {
   /** The source map version (always 3). */
-  get version(): number;
+  get version(): number
   /** The generated file name. */
-  get file(): string | null;
+  get file(): string | null
   /** The list of original source files. */
-  get sources(): Array<string>;
+  get sources(): Array<string>
   /** The original source contents (if `includeContent` was true). */
-  get sourcesContent(): Array<string | undefined | null>;
+  get sourcesContent(): Array<string | undefined | null>
   /** The list of symbol names used in mappings. */
-  get names(): Array<string>;
+  get names(): Array<string>
   /** The VLQ-encoded mappings string. */
-  get mappings(): string;
+  get mappings(): string
   /** The list of source indices that should be excluded from debugging. */
-  get x_google_ignoreList(): Array<number> | null;
+  get x_google_ignoreList(): Array<number> | null
   /** Returns the source map as a JSON string. */
-  toString(): string;
+  toString(): string
   /** Returns the source map as a base64-encoded data URL. */
-  toUrl(): string;
+  toUrl(): string
 }
 
 export declare class BindingTransformPluginContext {
-  getCombinedSourcemap(): string;
-  inner(): BindingPluginContext;
-  addWatchFile(file: string): void;
-  sendMagicString(magicString: BindingMagicString): string | null;
+  getCombinedSourcemap(): string
+  inner(): BindingPluginContext
+  addWatchFile(file: string): void
+  sendMagicString(magicString: BindingMagicString): string | null
 }
 
 export declare class BindingWatcher {
-  constructor(options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void);
-  run(): Promise<void>;
+  constructor(options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void)
+  run(): Promise<void>
   /**
    * Gives consumers a reliable way to await the watcher's completion.
    * The Node.js layer relies on the pending Promise to keep the process from exiting.
    */
-  waitForClose(): Promise<void>;
-  close(): Promise<void>;
+  waitForClose(): Promise<void>
+  close(): Promise<void>
 }
 
 /**
@@ -1907,100 +1840,99 @@ export declare class BindingWatcher {
  * This is returned from watcher event data to allow calling `result.close()`.
  */
 export declare class BindingWatcherBundler {
-  close(): Promise<void>;
+  close(): Promise<void>
 }
 
 export declare class BindingWatcherChangeData {
-  path: string;
-  kind: string;
+  path: string
+  kind: string
 }
 
 export declare class BindingWatcherEvent {
-  eventKind(): string;
-  bundleEventKind(): string;
-  bundleEndData(): BindingBundleEndEventData;
-  bundleErrorData(): BindingBundleErrorEventData;
-  watchChangeData(): BindingWatcherChangeData;
+  eventKind(): string
+  bundleEventKind(): string
+  bundleEndData(): BindingBundleEndEventData
+  bundleErrorData(): BindingBundleErrorEventData
+  watchChangeData(): BindingWatcherChangeData
 }
 
 export declare class ParallelJsPluginRegistry {
-  id: number;
-  workerCount: number;
-  constructor(workerCount: number);
+  id: number
+  workerCount: number
+  constructor(workerCount: number)
 }
 
 export declare class TraceSubscriberGuard {
-  close(): void;
+  close(): void
 }
 
 export declare class TsconfigCache {
   /** Create a new transform cache with auto tsconfig discovery enabled. */
-  constructor(yarnPnp: boolean);
+  constructor(yarnPnp: boolean)
   /**
    * Clear the cache.
    *
    * Call this when tsconfig files have changed to ensure fresh resolution.
    */
-  clear(): void;
+  clear(): void
   /** Get the number of cached entries. */
-  size(): number;
+  size(): number
 }
 
 export interface AliasItem {
-  find: string;
-  replacements: Array<string | undefined | null>;
+  find: string
+  replacements: Array<string | undefined | null>
 }
 
 export interface BindingAssetSource {
-  inner: string | Uint8Array;
+  inner: string | Uint8Array
 }
 
 export declare enum BindingAttachDebugInfo {
   None = 0,
   Simple = 1,
-  Full = 2,
+  Full = 2
 }
 
 export interface BindingBuiltinPlugin {
-  __name: BindingBuiltinPluginName;
-  options?: unknown;
+  __name: BindingBuiltinPluginName
+  options?: unknown
 }
 
-export type BindingBuiltinPluginName =
-  | 'builtin:bundle-analyzer'
-  | 'builtin:esm-external-require'
-  | 'builtin:isolated-declaration'
-  | 'builtin:replace'
-  | 'builtin:vite-alias'
-  | 'builtin:vite-build-import-analysis'
-  | 'builtin:vite-dynamic-import-vars'
-  | 'builtin:vite-import-glob'
-  | 'builtin:vite-json'
-  | 'builtin:vite-load-fallback'
-  | 'builtin:vite-manifest'
-  | 'builtin:vite-module-preload-polyfill'
-  | 'builtin:vite-react-refresh-wrapper'
-  | 'builtin:vite-reporter'
-  | 'builtin:vite-resolve'
-  | 'builtin:vite-transform'
-  | 'builtin:vite-web-worker-post'
-  | 'builtin:oxc-runtime';
+export type BindingBuiltinPluginName =  'builtin:bundle-analyzer'|
+'builtin:esm-external-require'|
+'builtin:isolated-declaration'|
+'builtin:replace'|
+'builtin:vite-alias'|
+'builtin:vite-build-import-analysis'|
+'builtin:vite-dynamic-import-vars'|
+'builtin:vite-import-glob'|
+'builtin:vite-json'|
+'builtin:vite-load-fallback'|
+'builtin:vite-manifest'|
+'builtin:vite-module-preload-polyfill'|
+'builtin:vite-react-refresh-wrapper'|
+'builtin:vite-reporter'|
+'builtin:vite-resolve'|
+'builtin:vite-transform'|
+'builtin:vite-web-worker-post'|
+'builtin:oxc-runtime';
 
 export interface BindingBundleAnalyzerPluginConfig {
   /** Output filename for the bundle analysis data (default: "analyze-data.json") */
-  fileName?: string;
+  fileName?: string
   /** Output format: "json" (default) or "md" for LLM-friendly markdown */
-  format?: 'json' | 'md';
+  format?: 'json' | 'md'
 }
 
 export interface BindingBundlerOptions {
-  inputOptions: BindingInputOptions;
-  outputOptions: BindingOutputOptions;
-  parallelPluginsRegistry?: ParallelJsPluginRegistry;
+  inputOptions: BindingInputOptions
+  outputOptions: BindingOutputOptions
+  parallelPluginsRegistry?: ParallelJsPluginRegistry
 }
 
 export interface BindingBundleState {
-  lastBuildErrored: boolean;
+  lastBuildErrored: boolean
   /**
    * The stage of the last incremental failure, when `last_build_errored`
    * is true and the engine is in an incremental-failure state. Absent on
@@ -2009,158 +1941,156 @@ export interface BindingBundleState {
    * rebuild on the next page load when this is `Hmr`. See
    * `internal-docs/dev-engine/implementation.md` §12.
    */
-  lastErrorStage?: BindingErrorStage;
-  hasStaleOutput: boolean;
+  lastErrorStage?: BindingErrorStage
+  hasStaleOutput: boolean
 }
 
 export interface BindingChecksOptions {
-  circularDependency?: boolean;
-  eval?: boolean;
-  missingGlobalName?: boolean;
-  missingNameOptionForIifeExport?: boolean;
-  invalidAnnotation?: boolean;
-  mixedExports?: boolean;
-  unresolvedEntry?: boolean;
-  unresolvedImport?: boolean;
-  filenameConflict?: boolean;
-  commonJsVariableInEsm?: boolean;
-  importIsUndefined?: boolean;
-  emptyImportMeta?: boolean;
-  toleratedTransform?: boolean;
-  cannotCallNamespace?: boolean;
-  configurationFieldConflict?: boolean;
-  preferBuiltinFeature?: boolean;
-  couldNotCleanDirectory?: boolean;
-  pluginTimings?: boolean;
-  duplicateShebang?: boolean;
-  unsupportedTsconfigOption?: boolean;
-  ineffectiveDynamicImport?: boolean;
-  largeBarrelModules?: boolean;
-  sourcemapBroken?: boolean;
+  circularDependency?: boolean
+  eval?: boolean
+  missingGlobalName?: boolean
+  missingNameOptionForIifeExport?: boolean
+  invalidAnnotation?: boolean
+  mixedExports?: boolean
+  unresolvedEntry?: boolean
+  unresolvedImport?: boolean
+  filenameConflict?: boolean
+  commonJsVariableInEsm?: boolean
+  importIsUndefined?: boolean
+  emptyImportMeta?: boolean
+  toleratedTransform?: boolean
+  cannotCallNamespace?: boolean
+  configurationFieldConflict?: boolean
+  preferBuiltinFeature?: boolean
+  couldNotCleanDirectory?: boolean
+  pluginTimings?: boolean
+  duplicateShebang?: boolean
+  unsupportedTsconfigOption?: boolean
+  ineffectiveDynamicImport?: boolean
+  largeBarrelModules?: boolean
+  sourcemapBroken?: boolean
 }
 
 export interface BindingChunkImportMap {
-  baseUrl?: string;
-  fileName?: string;
+  baseUrl?: string
+  fileName?: string
 }
 
 export declare enum BindingChunkModuleOrderBy {
   ModuleId = 0,
-  ExecOrder = 1,
+  ExecOrder = 1
 }
 
 export interface BindingChunkOptimizationOptions {
-  mergeCommonChunks?: boolean;
-  avoidRedundantChunkLoads?: boolean;
+  mergeCommonChunks?: boolean
+  avoidRedundantChunkLoads?: boolean
 }
 
 export interface BindingClientHmrUpdate {
-  clientId: string;
-  update: BindingHmrUpdate;
+  clientId: string
+  update: BindingHmrUpdate
 }
 
 export interface BindingCommentsOptions {
-  legal?: boolean;
-  annotation?: boolean;
-  jsdoc?: boolean;
+  legal?: boolean
+  annotation?: boolean
+  jsdoc?: boolean
 }
 
 export interface BindingCompilerOptions {
-  baseUrl?: string;
-  paths?: Record<string, Array<string>>;
-  experimentalDecorators?: boolean;
-  emitDecoratorMetadata?: boolean;
-  useDefineForClassFields?: boolean;
-  rewriteRelativeImportExtensions?: boolean;
-  jsx?: string;
-  jsxFactory?: string;
-  jsxFragmentFactory?: string;
-  jsxImportSource?: string;
-  verbatimModuleSyntax?: boolean;
-  preserveValueImports?: boolean;
-  importsNotUsedAsValues?: string;
-  target?: string;
-  module?: string;
-  allowJs?: boolean;
-  rootDirs?: Array<string>;
+  baseUrl?: string
+  paths?: Record<string, Array<string>>
+  experimentalDecorators?: boolean
+  emitDecoratorMetadata?: boolean
+  useDefineForClassFields?: boolean
+  rewriteRelativeImportExtensions?: boolean
+  jsx?: string
+  jsxFactory?: string
+  jsxFragmentFactory?: string
+  jsxImportSource?: string
+  verbatimModuleSyntax?: boolean
+  preserveValueImports?: boolean
+  importsNotUsedAsValues?: string
+  target?: string
+  module?: string
+  allowJs?: boolean
+  rootDirs?: Array<string>
 }
 
 export interface BindingDeferSyncScanData {
   /** ModuleId */
-  id: string;
-  sideEffects?: boolean | 'no-treeshake';
+  id: string
+  sideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingDevOptions {
-  onHmrUpdates?:
-    | undefined
-    | ((result: BindingResult<[BindingClientHmrUpdate[], string[]]>) => void | Promise<void>);
-  onOutput?: undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>);
+  onHmrUpdates?: undefined | ((result: BindingResult<[BindingClientHmrUpdate[], string[]]>) => void | Promise<void>)
+  onOutput?: undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)
   /**
    * Called with assets emitted while generating an HMR patch or compiling a
    * lazy entry. These never go through `on_output`, so a consumer (e.g. Vite)
    * must register this to serve them (e.g. write them to its in-memory files).
    */
-  onAdditionalAssets?: undefined | ((output: BindingOutputs) => void | Promise<void>);
-  rebuildStrategy?: BindingRebuildStrategy;
-  watch?: BindingDevWatchOptions;
+  onAdditionalAssets?: undefined | ((output: BindingOutputs) => void | Promise<void>)
+  rebuildStrategy?: BindingRebuildStrategy
+  watch?: BindingDevWatchOptions
 }
 
 export interface BindingDevtoolsOptions {
-  sessionId?: string;
+  sessionId?: string
 }
 
 export interface BindingDevWatchOptions {
-  enabled?: boolean;
-  skipWrite?: boolean;
-  usePolling?: boolean;
-  pollInterval?: number;
-  useDebounce?: boolean;
-  debounceDuration?: number;
-  compareContentsForPolling?: boolean;
-  debounceTickRate?: number;
-  include?: Array<BindingStringOrRegex>;
-  exclude?: Array<BindingStringOrRegex>;
+  enabled?: boolean
+  skipWrite?: boolean
+  usePolling?: boolean
+  pollInterval?: number
+  useDebounce?: boolean
+  debounceDuration?: number
+  compareContentsForPolling?: boolean
+  debounceTickRate?: number
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
 }
 
 export interface BindingEmittedAsset {
-  name?: string;
-  fileName?: string;
-  originalFileName?: string;
-  source: BindingAssetSource;
+  name?: string
+  fileName?: string
+  originalFileName?: string
+  source: BindingAssetSource
 }
 
 export interface BindingEmittedChunk {
-  name?: string;
-  fileName?: string;
-  id: string;
-  importer?: string;
-  preserveEntrySignatures?: BindingPreserveEntrySignatures;
+  name?: string
+  fileName?: string
+  id: string
+  importer?: string
+  preserveEntrySignatures?: BindingPreserveEntrySignatures
 }
 
 export interface BindingEmittedPrebuiltChunk {
-  fileName: string;
-  name?: string;
-  code: string;
-  exports?: Array<string>;
-  map?: BindingSourcemap;
-  sourcemapFileName?: string;
-  facadeModuleId?: string;
-  isEntry?: boolean;
-  isDynamicEntry?: boolean;
+  fileName: string
+  name?: string
+  code: string
+  exports?: Array<string>
+  map?: BindingSourcemap
+  sourcemapFileName?: string
+  facadeModuleId?: string
+  isEntry?: boolean
+  isDynamicEntry?: boolean
 }
 
 /** Enhanced transform options with tsconfig and inputMap support. */
 export interface BindingEnhancedTransformOptions {
   /** Treat the source text as 'js', 'jsx', 'ts', 'tsx', or 'dts'. */
-  lang?: 'js' | 'jsx' | 'ts' | 'tsx' | 'dts';
+  lang?: 'js' | 'jsx' | 'ts' | 'tsx' | 'dts'
   /** Treat the source text as 'script', 'module', 'commonjs', or 'unambiguous'. */
-  sourceType?: 'script' | 'module' | 'commonjs' | 'unambiguous' | undefined;
+  sourceType?: 'script' | 'module' | 'commonjs' | 'unambiguous' | undefined
   /**
    * The current working directory. Used to resolve relative paths in other
    * options.
    */
-  cwd?: string;
+  cwd?: string
   /**
    * Enable source map generation.
    *
@@ -2168,19 +2098,19 @@ export interface BindingEnhancedTransformOptions {
    *
    * @default false
    */
-  sourcemap?: boolean;
+  sourcemap?: boolean
   /** Set assumptions in order to produce smaller output. */
-  assumptions?: CompilerAssumptions;
+  assumptions?: CompilerAssumptions
   /**
    * Configure how TypeScript is transformed.
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/typescript}
    */
-  typescript?: TypeScriptOptions;
+  typescript?: TypeScriptOptions
   /**
    * Configure how TSX and JSX are transformed.
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/jsx}
    */
-  jsx?: 'preserve' | JsxOptions;
+  jsx?: 'preserve' | JsxOptions
   /**
    * Sets the target environment for the generated JavaScript.
    *
@@ -2195,34 +2125,34 @@ export interface BindingEnhancedTransformOptions {
    *
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/lowering#target}
    */
-  target?: string | Array<string>;
+  target?: string | Array<string>
   /** Behaviour for runtime helpers. */
-  helpers?: Helpers;
+  helpers?: Helpers
   /**
    * Define Plugin
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#define}
    */
-  define?: Record<string, string>;
+  define?: Record<string, string>
   /**
    * Inject Plugin
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#inject}
    */
-  inject?: Record<string, string | [string, string]>;
+  inject?: Record<string, string | [string, string]>
   /** Decorator plugin */
-  decorator?: DecoratorOptions;
+  decorator?: DecoratorOptions
   /**
    * Third-party plugins to use.
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/plugins}
    */
-  plugins?: PluginsOptions;
+  plugins?: PluginsOptions
   /**
    * Configure tsconfig handling.
    * - true: Auto-discover and load the nearest tsconfig.json
    * - TsconfigRawOptions: Use the provided inline tsconfig options
    */
-  tsconfig?: boolean | BindingTsconfigRawOptions;
+  tsconfig?: boolean | BindingTsconfigRawOptions
   /** An input source map to collapse with the output source map. */
-  inputMap?: SourceMap;
+  inputMap?: SourceMap
 }
 
 /** Result of the enhanced transform API. */
@@ -2232,13 +2162,13 @@ export interface BindingEnhancedTransformResult {
    *
    * If parsing failed, this will be an empty string.
    */
-  code: string;
+  code: string
   /**
    * The source map for the transformed code.
    *
    * This will be set if {@link BindingEnhancedTransformOptions#sourcemap} is `true`.
    */
-  map?: SourceMap;
+  map?: SourceMap
   /**
    * The `.d.ts` declaration file for the transformed code. Declarations are
    * only generated if `declaration` is set to `true` and a TypeScript file
@@ -2249,13 +2179,13 @@ export interface BindingEnhancedTransformResult {
    * @see {@link TypeScriptOptions#declaration}
    * @see [declaration tsconfig option](https://www.typescriptlang.org/tsconfig/#declaration)
    */
-  declaration?: string;
+  declaration?: string
   /**
    * Declaration source map. Only generated if both
    * {@link TypeScriptOptions#declaration declaration} and
    * {@link BindingEnhancedTransformOptions#sourcemap sourcemap} are set to `true`.
    */
-  declarationMap?: SourceMap;
+  declarationMap?: SourceMap
   /**
    * Helpers used.
    *
@@ -2267,22 +2197,22 @@ export interface BindingEnhancedTransformResult {
    * { "_objectSpread": "@oxc-project/runtime/helpers/objectSpread2" }
    * ```
    */
-  helpersUsed: Record<string, string>;
+  helpersUsed: Record<string, string>
   /** Parse and transformation errors. */
-  errors: Array<BindingError>;
+  errors: Array<BindingError>
   /** Parse and transformation warnings. */
-  warnings: Array<BindingError>;
+  warnings: Array<BindingError>
   /** Paths to tsconfig files that were loaded during transformation. */
-  tsconfigFilePaths: Array<string>;
+  tsconfigFilePaths: Array<string>
 }
 
 export type BindingError =
-  | { type: 'JsError'; field0: Error }
-  | { type: 'NativeError'; field0: NativeError };
+  | { type: 'JsError', field0: Error }
+  | { type: 'NativeError', field0: NativeError }
 
 export interface BindingErrors {
-  errors: Array<BindingError>;
-  isBindingErrors: boolean;
+  errors: Array<BindingError>
+  isBindingErrors: boolean
 }
 
 /**
@@ -2294,72 +2224,67 @@ export interface BindingErrors {
  * on the next page load (HMR generation may itself be buggy). See
  * `internal-docs/dev-engine/implementation.md` §12.
  */
-export type BindingErrorStage = 'Hmr' | 'Rebuild';
+export type BindingErrorStage =  'Hmr'|
+'Rebuild';
 
 export interface BindingEsmExternalRequirePluginConfig {
-  external: Array<BindingStringOrRegex>;
-  skipDuplicateCheck?: boolean;
+  external: Array<BindingStringOrRegex>
+  skipDuplicateCheck?: boolean
 }
 
 export interface BindingExperimentalDevModeOptions {
-  host?: string;
-  port?: number;
-  implement?: string;
-  lazy?: boolean;
+  host?: string
+  port?: number
+  implement?: string
+  lazy?: boolean
 }
 
 export interface BindingExperimentalOptions {
-  viteMode?: boolean;
-  resolveNewUrlToAsset?: boolean;
-  devMode?: BindingExperimentalDevModeOptions;
-  attachDebugInfo?: BindingAttachDebugInfo;
-  chunkModulesOrder?: BindingChunkModuleOrderBy;
-  chunkImportMap?: boolean | BindingChunkImportMap;
-  onDemandWrapping?: boolean;
-  incrementalBuild?: boolean;
-  nativeMagicString?: boolean;
-  chunkOptimization?: boolean | BindingChunkOptimizationOptions;
-  lazyBarrel?: boolean;
+  viteMode?: boolean
+  resolveNewUrlToAsset?: boolean
+  devMode?: BindingExperimentalDevModeOptions
+  attachDebugInfo?: BindingAttachDebugInfo
+  chunkModulesOrder?: BindingChunkModuleOrderBy
+  chunkImportMap?: boolean | BindingChunkImportMap
+  onDemandWrapping?: boolean
+  incrementalBuild?: boolean
+  nativeMagicString?: boolean
+  chunkOptimization?: boolean | BindingChunkOptimizationOptions
+  lazyBarrel?: boolean
 }
 
 export interface BindingFilterToken {
-  kind: FilterTokenKind;
-  payload?: BindingStringOrRegex | number | boolean;
+  kind: FilterTokenKind
+  payload?: BindingStringOrRegex | number | boolean
 }
 
 export interface BindingGeneratedCodeOptions {
-  symbols?: boolean;
-  preset?: string;
+  symbols?: boolean
+  preset?: string
 }
 
 export type BindingHmrUpdate =
-  | {
-      type: 'Patch';
-      code: string;
-      filename: string;
-      sourcemap?: string;
-      sourcemapFilename?: string /**
-       * Stable ids of the changed modules — the `changedIds` of the push envelope.
-       * The client walks from these on its own graph.
-       */;
-      changedIds: Array<string> /** Per-client envelope sequence number. */;
-      seq: number;
-    }
-  | { type: 'FullReload'; reason?: string }
-  | { type: 'Noop' };
+  | { type: 'Patch', code: string, filename: string, sourcemap?: string, sourcemapFilename?: string, /**
+   * Stable ids of the changed modules — the `changedIds` of the push envelope.
+   * The client walks from these on its own graph.
+   */
+  changedIds: Array<string>, /** Per-client envelope sequence number. */
+seq: number }
+| { type: 'FullReload', reason?: string }
+| { type: 'Noop' }
 
 export interface BindingHookFilter {
-  value?: Array<Array<BindingFilterToken>>;
+  value?: Array<Array<BindingFilterToken>>
 }
 
 export interface BindingHookJsLoadOutput {
-  code: string;
-  map?: string;
-  moduleSideEffects?: boolean | 'no-treeshake';
+  code: string
+  map?: string
+  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingHookJsResolveIdOptions {
-  isEntry?: boolean;
+  isEntry?: boolean
   /**
    * - `import-statement`: `import { foo } from './lib.js';`
    * - `dynamic-import`: `import('./lib.js')`
@@ -2369,61 +2294,54 @@ export interface BindingHookJsResolveIdOptions {
    * - `new-url`: `new URL('./worker.js', import.meta.url)`
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
    */
-  kind?:
-    | 'import-statement'
-    | 'dynamic-import'
-    | 'require-call'
-    | 'import-rule'
-    | 'url-token'
-    | 'new-url'
-    | 'hot-accept';
-  scan?: boolean;
-  custom?: BindingVitePluginCustom;
+  kind?: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
+  scan?: boolean
+  custom?: BindingVitePluginCustom
 }
 
 export interface BindingHookJsResolveIdOutput {
-  id: string;
-  external?: boolean | 'absolute' | 'relative';
-  moduleSideEffects?: boolean | 'no-treeshake';
+  id: string
+  external?: boolean | 'absolute' | 'relative'
+  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingHookLoadOutput {
-  code: string;
-  moduleSideEffects?: boolean | 'no-treeshake';
-  map?: BindingSourcemap;
-  moduleType?: string;
+  code: string
+  moduleSideEffects?: boolean | 'no-treeshake'
+  map?: BindingSourcemap
+  moduleType?: string
 }
 
 export interface BindingHookRenderChunkOutput {
-  code: string;
+  code: string
   /**
    * A sourcemap, or `null` to explicitly signal "no sourcemap" (distinct from
    * omitting the field, which mirrors Rollup's "possibly broken" semantics).
    */
-  map?: BindingSourcemap | null;
+  map?: BindingSourcemap | null
 }
 
 export interface BindingHookResolveFileUrlArgs {
   /** Preliminary filename of the chunk containing the reference. */
-  chunkId: string;
+  chunkId: string
   /** Filename of the emitted file, relative to the output directory. */
-  fileName: string;
-  format: 'es' | 'cjs' | 'iife' | 'umd';
+  fileName: string
+  format: 'es' | 'cjs' | 'iife' | 'umd'
   /** Id of the module containing the `import.meta.ROLLDOWN_FILE_URL_*` reference. */
-  moduleId: string;
-  referenceId: string;
+  moduleId: string
+  referenceId: string
   /** Path from the chunk to the emitted file. */
-  relativePath: string;
+  relativePath: string
   /**
    * The `<urlId>` of `import.meta.ROLLDOWN_FILE_URL_<referenceId>_<urlId>`, if present.
    * Only the rolldown-specific form carries it; the `ROLLUP_FILE_URL_` alias never does.
    */
-  urlId?: string;
+  urlId?: string
 }
 
 export interface BindingHookResolveIdExtraArgs {
-  custom?: number;
-  isEntry: boolean;
+  custom?: number
+  isEntry: boolean
   /**
    * - `import-statement`: `import { foo } from './lib.js';`
    * - `dynamic-import`: `import('./lib.js')`
@@ -2433,128 +2351,121 @@ export interface BindingHookResolveIdExtraArgs {
    * - `new-url`: `new URL('./worker.js', import.meta.url)`
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
    */
-  kind:
-    | 'import-statement'
-    | 'dynamic-import'
-    | 'require-call'
-    | 'import-rule'
-    | 'url-token'
-    | 'new-url'
-    | 'hot-accept';
+  kind: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
 }
 
 export interface BindingHookResolveIdOutput {
-  id: string;
-  external?: BindingResolvedExternal;
-  normalizeExternalId?: boolean;
-  moduleSideEffects?: boolean | 'no-treeshake';
+  id: string
+  external?: BindingResolvedExternal
+  normalizeExternalId?: boolean
+  moduleSideEffects?: boolean | 'no-treeshake'
   /**
    * @internal Used to store package json path resolved by oxc resolver,
    * we could get the related package json object via the path string.
    */
-  packageJsonPath?: string | null;
+  packageJsonPath?: string | null
 }
 
-export type BindingHookSideEffects = boolean | string;
+export type BindingHookSideEffects =
+  boolean | string
 
 export interface BindingHookTransformOutput {
-  code?: string;
-  moduleSideEffects?: BindingHookSideEffects;
+  code?: string
+  moduleSideEffects?: BindingHookSideEffects
   /**
    * A sourcemap, or `null` to explicitly signal "no sourcemap" (distinct from
    * omitting the field, which mirrors Rollup's "possibly broken" semantics).
    */
-  map?: BindingSourcemap | null;
-  moduleType?: string;
+  map?: BindingSourcemap | null
+  moduleType?: string
 }
 
 export interface BindingHotUpdateArgs {
-  kind: 'create' | 'update' | 'delete';
+  kind: 'create' | 'update' | 'delete'
   /** Normalized absolute path of the changed file. */
-  file: string;
+  file: string
   /** The affected module ids as currently computed (raw module ids). */
-  modules: Array<string>;
+  modules: Array<string>
 }
 
 export interface BindingIndentOptions {
-  exclude?: Array<Array<number>> | Array<number>;
+  exclude?: Array<Array<number>> | Array<number>
 }
 
-export type BindingInjectImport = BindingInjectImportNamed | BindingInjectImportNamespace;
+export type BindingInjectImport =
+  BindingInjectImportNamed | BindingInjectImportNamespace
 
 export interface BindingInjectImportNamed {
-  tagNamed: true;
-  imported: string;
-  alias?: string;
-  from: string;
+  tagNamed: true
+  imported: string
+  alias?: string
+  from: string
 }
 
 export interface BindingInjectImportNamespace {
-  tagNamespace: true;
-  alias: string;
-  from: string;
+  tagNamespace: true
+  alias: string
+  from: string
 }
 
 export interface BindingInlineConstConfig {
-  mode?: string;
-  pass?: number;
+  mode?: string
+  pass?: number
 }
 
 export interface BindingInputItem {
-  name?: string;
-  import: string;
+  name?: string
+  import: string
 }
 
 export interface BindingInputOptions {
-  external?:
-    | Array<string | RegExp>
-    | ((source: string, importer: string | undefined, isResolved: boolean) => boolean);
-  input: Array<BindingInputItem>;
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[];
-  resolve?: BindingResolveOptions;
-  shimMissingExports?: boolean;
-  platform?: 'node' | 'browser' | 'neutral';
-  logLevel: BindingLogLevel;
-  onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void;
-  cwd: string;
-  treeshake?: BindingTreeshake;
-  moduleTypes?: Record<string, string>;
-  define?: Array<[string, string]>;
-  dropLabels?: Array<string>;
-  inject?: Array<BindingInjectImport>;
-  experimental?: BindingExperimentalOptions;
-  profilerNames?: boolean;
-  transform?: TransformOptions;
-  watch?: BindingWatchOption;
-  keepNames?: boolean;
-  checks?: BindingChecksOptions;
-  deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[]);
-  makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative;
-  devtools?: BindingDevtoolsOptions;
-  invalidateJsSideCache?: () => void;
-  preserveEntrySignatures?: BindingPreserveEntrySignatures;
-  optimization?: BindingOptimization;
-  context?: string;
-  tsconfig?: boolean | string;
+  external?: Array<string | RegExp> | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
+  input: Array<BindingInputItem>
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  resolve?: BindingResolveOptions
+  shimMissingExports?: boolean
+  platform?: 'node' | 'browser' | 'neutral'
+  logLevel: BindingLogLevel
+  onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
+  cwd: string
+  treeshake?: BindingTreeshake
+  moduleTypes?: Record<string, string>
+  define?: Array<[string, string]>
+  dropLabels?: Array<string>
+  inject?: Array<BindingInjectImport>
+  experimental?: BindingExperimentalOptions
+  profilerNames?: boolean
+  transform?: TransformOptions
+  watch?: BindingWatchOption
+  keepNames?: boolean
+  checks?: BindingChecksOptions
+  deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
+  makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
+  devtools?: BindingDevtoolsOptions
+  invalidateJsSideCache?: () => void
+  preserveEntrySignatures?: BindingPreserveEntrySignatures
+  optimization?: BindingOptimization
+  context?: string
+  tsconfig?: boolean | string
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {
-  stripInternal?: boolean;
+  stripInternal?: boolean
 }
 
 export interface BindingJsonSourcemap {
-  file?: string;
-  mappings?: string;
-  sourceRoot?: string;
-  sources?: Array<string | undefined | null>;
-  sourcesContent?: Array<string | undefined | null>;
-  names?: Array<string>;
-  debugId?: string;
-  x_google_ignoreList?: Array<number>;
+  file?: string
+  mappings?: string
+  sourceRoot?: string
+  sources?: Array<string | undefined | null>
+  sourcesContent?: Array<string | undefined | null>
+  names?: Array<string>
+  debugId?: string
+  x_google_ignoreList?: Array<number>
 }
 
 export interface BindingJsWatchChangeEvent {
-  event: string;
+  event: string
 }
 
 /**
@@ -2562,166 +2473,162 @@ export interface BindingJsWatchChangeEvent {
  * stamps stay server-side as the engine's pending-payload entry.
  */
 export interface BindingLazyChunkOutput {
-  code: string;
-  filename: string;
+  code: string
+  filename: string
   /**
    * The chunk's sourcemap, when `sourcemap` is `File` or `Hidden`. Serve it
    * under `sourcemapFilename`, which is what the chunk's `sourceMappingURL`
    * refers to.
    */
-  sourcemap?: string;
-  sourcemapFilename?: string;
+  sourcemap?: string
+  sourcemapFilename?: string
 }
 
 export interface BindingLog {
-  message: string;
-  id?: string;
-  code?: string;
-  exporter?: string;
-  plugin?: string;
+  message: string
+  id?: string
+  code?: string
+  exporter?: string
+  plugin?: string
   /** Location information (line, column, file) */
-  loc?: BindingLogLocation;
+  loc?: BindingLogLocation
   /** Position in the source file in UTF-16 code units */
-  pos?: number;
+  pos?: number
   /** List of module IDs (used for CIRCULAR_DEPENDENCY warnings) */
-  ids?: Array<string>;
+  ids?: Array<string>
 }
 
 export declare enum BindingLogLevel {
   Silent = 0,
   Warn = 1,
   Info = 2,
-  Debug = 3,
+  Debug = 3
 }
 
 export interface BindingLogLocation {
   /** 1-based */
-  line: number;
+  line: number
   /** 0-based position in the line in UTF-16 code units */
-  column: number;
-  file?: string;
+  column: number
+  file?: string
 }
 
 export interface BindingMagicStringOptions {
-  filename?: string;
-  offset?: number;
-  indentExclusionRanges?: Array<Array<number>> | Array<number>;
-  ignoreList?: boolean;
+  filename?: string
+  offset?: number
+  indentExclusionRanges?: Array<Array<number>> | Array<number>
+  ignoreList?: boolean
 }
 
 export type BindingMakeAbsoluteExternalsRelative =
-  | { type: 'Bool'; field0: boolean }
-  | { type: 'IfRelativeSource' };
+  | { type: 'Bool', field0: boolean }
+  | { type: 'IfRelativeSource' }
 
 export interface BindingManualCodeSplittingOptions {
-  includeDependenciesRecursively?: boolean;
-  minSize?: number;
-  minShareCount?: number;
-  groups?: Array<BindingMatchGroup>;
-  maxSize?: number;
-  minModuleSize?: number;
-  maxModuleSize?: number;
+  includeDependenciesRecursively?: boolean
+  minSize?: number
+  minShareCount?: number
+  groups?: Array<BindingMatchGroup>
+  maxSize?: number
+  minModuleSize?: number
+  maxModuleSize?: number
 }
 
 export interface BindingMatchGroup {
-  name: string | ((id: string, ctx: BindingChunkingContext) => VoidNullable<string>);
-  test?: string | RegExp | ((id: string) => VoidNullable<boolean>);
-  priority?: number;
-  minSize?: number;
-  minShareCount?: number;
-  minModuleSize?: number;
-  maxModuleSize?: number;
-  maxSize?: number;
-  entriesAware?: boolean;
-  entriesAwareMergeThreshold?: number;
-  tags?: Array<string>;
-  includeDependenciesRecursively?: boolean;
+  name: string | ((id: string, ctx: BindingChunkingContext) => VoidNullable<string>)
+  test?: string | RegExp | ((id: string) => VoidNullable<boolean>)
+  priority?: number
+  minSize?: number
+  minShareCount?: number
+  minModuleSize?: number
+  maxModuleSize?: number
+  maxSize?: number
+  entriesAware?: boolean
+  entriesAwareMergeThreshold?: number
+  tags?: Array<string>
+  includeDependenciesRecursively?: boolean
 }
 
 export interface BindingModules {
-  values: Array<BindingRenderedModule>;
-  keys: Array<string>;
+  values: Array<BindingRenderedModule>
+  keys: Array<string>
 }
 
 export interface BindingModuleSideEffectsRule {
-  test?: RegExp | undefined;
-  sideEffects: boolean;
-  external?: boolean;
+  test?: RegExp | undefined
+  sideEffects: boolean
+  external?: boolean
 }
 
 export interface BindingOptimization {
-  inlineConst?: boolean | BindingInlineConstConfig;
-  pifeForModuleWrappers?: boolean;
+  inlineConst?: boolean | BindingInlineConstConfig
+  pifeForModuleWrappers?: boolean
 }
 
 export interface BindingOutputOptions {
-  name?: string;
-  assetFileNames?: string | ((chunk: BindingPreRenderedAsset) => string);
-  entryFileNames?: string | ((chunk: PreRenderedChunk) => string);
-  chunkFileNames?: string | ((chunk: PreRenderedChunk) => string);
-  sanitizeFileName?: boolean | ((name: string) => string);
-  banner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>);
-  postBanner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>);
-  footer?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>);
-  postFooter?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>);
-  dir?: string;
-  file?: string;
-  esModule?: boolean | 'if-default-prop';
-  exports?: 'default' | 'named' | 'none' | 'auto';
-  extend?: boolean;
-  externalLiveBindings?: boolean;
-  format?: 'es' | 'cjs' | 'iife' | 'umd';
-  generatedCode?: BindingGeneratedCodeOptions;
-  globals?: Record<string, string> | ((name: string) => string);
-  hashCharacters?: 'base64' | 'base36' | 'hex';
-  inlineDynamicImports?: boolean;
-  dynamicImportInCjs?: boolean;
-  intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>);
-  outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>);
-  paths?: Record<string, string> | ((id: string) => string);
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[];
-  sourcemap?: 'file' | 'inline' | 'hidden';
-  sourcemapFileNames?: string | ((chunk: PreRenderedChunk) => string);
-  sourcemapBaseUrl?: string;
-  sourcemapIgnoreList?:
-    | boolean
-    | string
-    | RegExp
-    | ((source: string, sourcemapPath: string) => boolean);
-  sourcemapDebugIds?: boolean;
-  sourcemapPathTransform?: (source: string, sourcemapPath: string) => string;
-  sourcemapExcludeSources?: boolean;
-  strict?: boolean | 'auto';
-  minify?: boolean | 'dce-only' | MinifyOptions;
-  manualCodeSplitting?: BindingManualCodeSplittingOptions;
-  legalComments?: 'none' | 'inline';
-  comments?: boolean | BindingCommentsOptions;
-  polyfillRequire?: boolean;
-  preserveModules?: boolean;
-  virtualDirname?: string;
-  preserveModulesRoot?: string;
-  topLevelVar?: boolean;
-  minifyInternalExports?: boolean;
-  cleanDir?: boolean;
-  strictExecutionOrder?: boolean;
+  name?: string
+  assetFileNames?: string | ((chunk: BindingPreRenderedAsset) => string)
+  entryFileNames?: string | ((chunk: PreRenderedChunk) => string)
+  chunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
+  sanitizeFileName?: boolean | ((name: string) => string)
+  banner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  postBanner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  footer?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  postFooter?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  dir?: string
+  file?: string
+  esModule?: boolean | 'if-default-prop'
+  exports?: 'default' | 'named' | 'none' | 'auto'
+  extend?: boolean
+  externalLiveBindings?: boolean
+  format?: 'es' | 'cjs' | 'iife' | 'umd'
+  generatedCode?: BindingGeneratedCodeOptions
+  globals?: Record<string, string> | ((name: string) => string)
+  hashCharacters?: 'base64' | 'base36' | 'hex'
+  inlineDynamicImports?: boolean
+  dynamicImportInCjs?: boolean
+  intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  paths?: Record<string, string> | ((id: string) => string)
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  sourcemap?: 'file' | 'inline' | 'hidden'
+  sourcemapFileNames?: string | ((chunk: PreRenderedChunk) => string)
+  sourcemapBaseUrl?: string
+  sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)
+  sourcemapDebugIds?: boolean
+  sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
+  sourcemapExcludeSources?: boolean
+  strict?: boolean | 'auto'
+  minify?: boolean | 'dce-only' | MinifyOptions
+  manualCodeSplitting?: BindingManualCodeSplittingOptions
+  legalComments?: 'none' | 'inline'
+  comments?: boolean | BindingCommentsOptions
+  polyfillRequire?: boolean
+  preserveModules?: boolean
+  virtualDirname?: string
+  preserveModulesRoot?: string
+  topLevelVar?: boolean
+  minifyInternalExports?: boolean
+  cleanDir?: boolean
+  strictExecutionOrder?: boolean
 }
 
 export interface BindingOutputs {
-  chunks: Array<BindingOutputChunk>;
-  assets: Array<BindingOutputAsset>;
+  chunks: Array<BindingOutputChunk>
+  assets: Array<BindingOutputAsset>
 }
 
 export interface BindingOverwriteOptions {
-  contentOnly?: boolean;
+  contentOnly?: boolean
   /** Stores the replaced content in the generated sourcemap's `names` field. */
-  storeName?: boolean;
+  storeName?: boolean
 }
 
 export interface BindingPluginContextResolvedId {
-  id: string;
-  packageJsonPath?: string;
-  external: boolean | 'absolute' | 'relative';
-  moduleSideEffects?: boolean | 'no-treeshake';
+  id: string
+  packageJsonPath?: string
+  external: boolean | 'absolute' | 'relative'
+  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingPluginContextResolveOptions {
@@ -2734,232 +2641,171 @@ export interface BindingPluginContextResolveOptions {
    * - `new-url`: `new URL('./worker.js', import.meta.url)`
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
    */
-  importKind?:
-    | 'import-statement'
-    | 'dynamic-import'
-    | 'require-call'
-    | 'import-rule'
-    | 'url-token'
-    | 'new-url'
-    | 'hot-accept';
-  isEntry?: boolean;
-  skipSelf?: boolean;
-  custom?: number;
-  vitePluginCustom?: BindingVitePluginCustom;
+  importKind?: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
+  isEntry?: boolean
+  skipSelf?: boolean
+  custom?: number
+  vitePluginCustom?: BindingVitePluginCustom
 }
 
 export interface BindingPluginHookMeta {
-  order?: BindingPluginOrder;
+  order?: BindingPluginOrder
 }
 
 export interface BindingPluginOptions {
-  name: string;
-  hookUsage: number;
-  buildStart?: (
-    ctx: BindingPluginContext,
-    opts: BindingNormalizedOptions,
-  ) => MaybePromise<VoidNullable>;
-  buildStartMeta?: BindingPluginHookMeta;
-  resolveId?: (
-    ctx: BindingPluginContext,
-    specifier: string,
-    importer: Nullable<string>,
-    options: BindingHookResolveIdExtraArgs,
-  ) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>;
-  resolveIdMeta?: BindingPluginHookMeta;
-  resolveIdFilter?: BindingHookFilter;
-  resolveDynamicImport?: (
-    ctx: BindingPluginContext,
-    specifier: string,
-    importer: Nullable<string>,
-  ) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>;
-  resolveDynamicImportMeta?: BindingPluginHookMeta;
-  load?: (
-    ctx: BindingLoadPluginContext,
-    id: string,
-  ) => MaybePromise<VoidNullable<BindingHookLoadOutput>>;
-  loadMeta?: BindingPluginHookMeta;
-  loadFilter?: BindingHookFilter;
-  transform?: (
-    ctx: BindingTransformPluginContext,
-    id: string,
-    code: string,
-    module_type: BindingTransformHookExtraArgs,
-  ) => MaybePromise<VoidNullable<BindingHookTransformOutput>>;
-  transformMeta?: BindingPluginHookMeta;
-  transformFilter?: BindingHookFilter;
-  moduleParsed?: (
-    ctx: BindingPluginContext,
-    module: BindingModuleInfo,
-  ) => MaybePromise<VoidNullable>;
-  moduleParsedMeta?: BindingPluginHookMeta;
-  buildEnd?: (ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>;
-  buildEndMeta?: BindingPluginHookMeta;
-  renderChunk?: (
-    ctx: BindingPluginContext,
-    code: string,
-    chunk: BindingRenderedChunk,
-    opts: BindingNormalizedOptions,
-    meta: BindingRenderedChunkMeta,
-  ) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>;
-  renderChunkMeta?: BindingPluginHookMeta;
-  renderChunkFilter?: BindingHookFilter;
-  augmentChunkHash?: (
-    ctx: BindingPluginContext,
-    chunk: BindingRenderedChunk,
-  ) => MaybePromise<void | string>;
-  augmentChunkHashMeta?: BindingPluginHookMeta;
-  resolveFileUrl?: (
-    ctx: BindingPluginContext,
-    args: BindingHookResolveFileUrlArgs,
-  ) => MaybePromise<void | string | null>;
-  resolveFileUrlMeta?: BindingPluginHookMeta;
-  renderStart?: (ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void;
-  renderStartMeta?: BindingPluginHookMeta;
-  renderError?: (ctx: BindingPluginContext, error: BindingError[]) => void;
-  renderErrorMeta?: BindingPluginHookMeta;
-  generateBundle?: (
-    ctx: BindingPluginContext,
-    bundle: BindingErrorsOr<BindingOutputs>,
-    isWrite: boolean,
-    opts: BindingNormalizedOptions,
-  ) => MaybePromise<VoidNullable<JsChangedOutputs>>;
-  generateBundleMeta?: BindingPluginHookMeta;
-  writeBundle?: (
-    ctx: BindingPluginContext,
-    bundle: BindingErrorsOr<BindingOutputs>,
-    opts: BindingNormalizedOptions,
-  ) => MaybePromise<VoidNullable<JsChangedOutputs>>;
-  writeBundleMeta?: BindingPluginHookMeta;
-  closeBundle?: (ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>;
-  closeBundleMeta?: BindingPluginHookMeta;
-  watchChange?: (
-    ctx: BindingPluginContext,
-    path: string,
-    event: string,
-  ) => MaybePromise<VoidNullable>;
-  watchChangeMeta?: BindingPluginHookMeta;
-  hotUpdate?: (
-    ctx: BindingPluginContext,
-    args: BindingHotUpdateArgs,
-  ) => MaybePromise<VoidNullable<Array<string>>>;
-  hotUpdateMeta?: BindingPluginHookMeta;
-  closeWatcher?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>;
-  closeWatcherMeta?: BindingPluginHookMeta;
-  banner?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void;
-  bannerMeta?: BindingPluginHookMeta;
-  footer?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void;
-  footerMeta?: BindingPluginHookMeta;
-  intro?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void;
-  introMeta?: BindingPluginHookMeta;
-  outro?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void;
-  outroMeta?: BindingPluginHookMeta;
+  name: string
+  hookUsage: number
+  buildStart?: (ctx: BindingPluginContext, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable>
+  buildStartMeta?: BindingPluginHookMeta
+  resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveIdMeta?: BindingPluginHookMeta
+  resolveIdFilter?: BindingHookFilter
+  resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveDynamicImportMeta?: BindingPluginHookMeta
+  load?: (ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  loadMeta?: BindingPluginHookMeta
+  loadFilter?: BindingHookFilter
+  transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
+  transformMeta?: BindingPluginHookMeta
+  transformFilter?: BindingHookFilter
+  moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
+  moduleParsedMeta?: BindingPluginHookMeta
+  buildEnd?: (ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>
+  buildEndMeta?: BindingPluginHookMeta
+  renderChunk?: (ctx: BindingPluginContext, code: string, chunk: BindingRenderedChunk, opts: BindingNormalizedOptions, meta: BindingRenderedChunkMeta) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
+  renderChunkMeta?: BindingPluginHookMeta
+  renderChunkFilter?: BindingHookFilter
+  augmentChunkHash?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => MaybePromise<void | string>
+  augmentChunkHashMeta?: BindingPluginHookMeta
+  resolveFileUrl?: (ctx: BindingPluginContext, args: BindingHookResolveFileUrlArgs) => MaybePromise<void | string | null>
+  resolveFileUrlMeta?: BindingPluginHookMeta
+  renderStart?: (ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void
+  renderStartMeta?: BindingPluginHookMeta
+  renderError?: (ctx: BindingPluginContext, error: BindingError[]) => void
+  renderErrorMeta?: BindingPluginHookMeta
+  generateBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
+  generateBundleMeta?: BindingPluginHookMeta
+  writeBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
+  writeBundleMeta?: BindingPluginHookMeta
+  closeBundle?: (ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>
+  closeBundleMeta?: BindingPluginHookMeta
+  watchChange?: (ctx: BindingPluginContext, path: string, event: string) => MaybePromise<VoidNullable>
+  watchChangeMeta?: BindingPluginHookMeta
+  hotUpdate?: (ctx: BindingPluginContext, args: BindingHotUpdateArgs) => MaybePromise<VoidNullable<Array<string>>>
+  hotUpdateMeta?: BindingPluginHookMeta
+  closeWatcher?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
+  closeWatcherMeta?: BindingPluginHookMeta
+  banner?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
+  bannerMeta?: BindingPluginHookMeta
+  footer?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
+  footerMeta?: BindingPluginHookMeta
+  intro?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
+  introMeta?: BindingPluginHookMeta
+  outro?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
+  outroMeta?: BindingPluginHookMeta
 }
 
 export declare enum BindingPluginOrder {
   Pre = 0,
-  Post = 1,
+  Post = 1
 }
 
 export interface BindingPluginWithIndex {
-  index: number;
-  plugin: BindingPluginOptions;
+  index: number
+  plugin: BindingPluginOptions
 }
 
 export interface BindingPreRenderedAsset {
-  name?: string;
-  names: Array<string>;
-  originalFileName?: string;
-  originalFileNames: Array<string>;
-  source: BindingAssetSource;
+  name?: string
+  names: Array<string>
+  originalFileName?: string
+  originalFileNames: Array<string>
+  source: BindingAssetSource
 }
 
 export type BindingPreserveEntrySignatures =
-  | { type: 'Bool'; field0: boolean }
-  | { type: 'String'; field0: string };
+  | { type: 'Bool', field0: boolean }
+  | { type: 'String', field0: string }
 
 export declare enum BindingPropertyReadSideEffects {
   Always = 0,
-  False = 1,
+  False = 1
 }
 
 export declare enum BindingPropertyWriteSideEffects {
   Always = 0,
-  False = 1,
+  False = 1
 }
 
 export declare enum BindingRebuildStrategy {
   Always = 0,
-  Never = 1,
+  Never = 1
 }
 
 export interface BindingReplacePluginConfig {
-  values: Record<string, string>;
-  delimiters?: [string, string];
-  preventAssignment?: boolean;
-  objectGuards?: boolean;
-  sourcemap?: boolean;
+  values: Record<string, string>
+  delimiters?: [string, string]
+  preventAssignment?: boolean
+  objectGuards?: boolean
+  sourcemap?: boolean
 }
 
-export type BindingResolvedExternal = boolean | string;
+export type BindingResolvedExternal =
+  boolean | string
 
 export interface BindingResolveOptions {
-  alias?: Array<AliasItem>;
-  aliasFields?: Array<Array<string>>;
-  conditionNames?: Array<string>;
-  exportsFields?: Array<Array<string>>;
-  extensions?: Array<string>;
-  extensionAlias?: Array<ExtensionAliasItem>;
-  mainFields?: Array<string>;
-  mainFiles?: Array<string>;
-  modules?: Array<string>;
-  symlinks?: boolean;
-  yarnPnp?: boolean;
+  alias?: Array<AliasItem>
+  aliasFields?: Array<Array<string>>
+  conditionNames?: Array<string>
+  exportsFields?: Array<Array<string>>
+  extensions?: Array<string>
+  extensionAlias?: Array<ExtensionAliasItem>
+  mainFields?: Array<string>
+  mainFiles?: Array<string>
+  modules?: Array<string>
+  symlinks?: boolean
+  yarnPnp?: boolean
 }
 
 export interface BindingSourcemap {
-  inner: string | BindingJsonSourcemap;
+  inner: string | BindingJsonSourcemap
 }
 
 export interface BindingSourceMapOptions {
   /** The filename for the generated file (goes into `map.file`) */
-  file?: string;
+  file?: string
   /** The filename of the original source (goes into `map.sources`) */
-  source?: string;
-  includeContent?: boolean;
+  source?: string
+  includeContent?: boolean
   /**
    * Accepts boolean or string: true, false, "boundary"
    * - true: high-resolution sourcemaps (character-level)
    * - false: low-resolution sourcemaps (line-level) - default
    * - "boundary": high-resolution only at word boundaries
    */
-  hires?: boolean | string;
+  hires?: boolean | string
 }
 
 export interface BindingTransformHookExtraArgs {
-  moduleType: string;
+  moduleType: string
 }
 
 export interface BindingTreeshake {
-  moduleSideEffects:
-    | boolean
-    | ReadonlyArray<string>
-    | BindingModuleSideEffectsRule[]
-    | ((id: string, external: boolean) => boolean | undefined);
-  annotations?: boolean;
-  manualPureFunctions?: ReadonlyArray<string>;
-  unknownGlobalSideEffects?: boolean;
-  invalidImportSideEffects?: boolean;
-  commonjs?: boolean;
-  propertyReadSideEffects?: BindingPropertyReadSideEffects;
-  propertyWriteSideEffects?: BindingPropertyWriteSideEffects;
+  moduleSideEffects: boolean | ReadonlyArray<string> | BindingModuleSideEffectsRule[] | ((id: string, external: boolean) => boolean | undefined)
+  annotations?: boolean
+  manualPureFunctions?: ReadonlyArray<string>
+  unknownGlobalSideEffects?: boolean
+  invalidImportSideEffects?: boolean
+  commonjs?: boolean
+  propertyReadSideEffects?: BindingPropertyReadSideEffects
+  propertyWriteSideEffects?: BindingPropertyWriteSideEffects
 }
 
 export interface BindingTsconfig {
-  files?: Array<string>;
-  include?: Array<string>;
-  exclude?: Array<string>;
-  compilerOptions: BindingCompilerOptions;
+  files?: Array<string>
+  include?: Array<string>
+  exclude?: Array<string>
+  compilerOptions: BindingCompilerOptions
 }
 
 /**
@@ -2969,34 +2815,34 @@ export interface BindingTsconfig {
  */
 export interface BindingTsconfigCompilerOptions {
   /** Specifies the JSX factory function to use. */
-  jsx?: 'react' | 'react-jsx' | 'react-jsxdev' | 'preserve' | 'react-native';
+  jsx?: 'react' | 'react-jsx' | 'react-jsxdev' | 'preserve' | 'react-native'
   /** Specifies the JSX factory function. */
-  jsxFactory?: string;
+  jsxFactory?: string
   /** Specifies the JSX fragment factory function. */
-  jsxFragmentFactory?: string;
+  jsxFragmentFactory?: string
   /** Specifies the module specifier for JSX imports. */
-  jsxImportSource?: string;
+  jsxImportSource?: string
   /** Enables experimental decorators. */
-  experimentalDecorators?: boolean;
+  experimentalDecorators?: boolean
   /** Enables decorator metadata emission. */
-  emitDecoratorMetadata?: boolean;
+  emitDecoratorMetadata?: boolean
   /** Enables all strict type-checking options. Used as the fallback for `strictNullChecks`. */
-  strict?: boolean;
+  strict?: boolean
   /**
    * Enables strict null checks. Controls whether `null`/`undefined` are elided from
    * nullable-union `design:type` decorator metadata.
    */
-  strictNullChecks?: boolean;
+  strictNullChecks?: boolean
   /** Preserves module structure of imports/exports. */
-  verbatimModuleSyntax?: boolean;
+  verbatimModuleSyntax?: boolean
   /** Configures how class fields are emitted. */
-  useDefineForClassFields?: boolean;
+  useDefineForClassFields?: boolean
   /** The ECMAScript target version. */
-  target?: string;
+  target?: string
   /** @deprecated Use verbatimModuleSyntax instead. */
-  preserveValueImports?: boolean;
+  preserveValueImports?: boolean
   /** @deprecated Use verbatimModuleSyntax instead. */
-  importsNotUsedAsValues?: 'remove' | 'preserve' | 'error';
+  importsNotUsedAsValues?: 'remove' | 'preserve' | 'error'
 }
 
 /**
@@ -3006,274 +2852,247 @@ export interface BindingTsconfigCompilerOptions {
  */
 export interface BindingTsconfigRawOptions {
   /** TypeScript compiler options. */
-  compilerOptions?: BindingTsconfigCompilerOptions;
+  compilerOptions?: BindingTsconfigCompilerOptions
 }
 
 export interface BindingTsconfigResult {
-  tsconfig: BindingTsconfig;
-  tsconfigFilePaths: Array<string>;
+  tsconfig: BindingTsconfig
+  tsconfigFilePaths: Array<string>
 }
 
 export interface BindingUpdateOptions {
-  overwrite?: boolean;
+  overwrite?: boolean
   /** Stores the replaced content in the generated sourcemap's `names` field. */
-  storeName?: boolean;
+  storeName?: boolean
 }
 
 export interface BindingViteAliasPluginAlias {
-  find: BindingStringOrRegex;
-  replacement: string;
+  find: BindingStringOrRegex
+  replacement: string
 }
 
 export interface BindingViteAliasPluginConfig {
-  entries: Array<BindingViteAliasPluginAlias>;
+  entries: Array<BindingViteAliasPluginAlias>
 }
 
 export interface BindingViteBuildImportAnalysisPluginConfig {
-  preloadCode: string;
-  insertPreload: boolean;
-  optimizeModulePreloadRelativePaths: boolean;
-  renderBuiltUrl: boolean;
-  isRelativeBase: boolean;
+  preloadCode: string
+  insertPreload: boolean
+  optimizeModulePreloadRelativePaths: boolean
+  renderBuiltUrl: boolean
+  isRelativeBase: boolean
 }
 
 export interface BindingViteDynamicImportVarsPluginConfig {
-  sourcemap?: boolean;
-  include?: Array<BindingStringOrRegex>;
-  exclude?: Array<BindingStringOrRegex>;
-  resolver?: (id: string, importer: string) => MaybePromise<string | undefined>;
+  sourcemap?: boolean
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  resolver?: (id: string, importer: string) => MaybePromise<string | undefined>
 }
 
 export interface BindingViteImportGlobPluginConfig {
-  root?: string;
-  sourcemap?: boolean;
-  restoreQueryExtension?: boolean;
+  root?: string
+  sourcemap?: boolean
+  restoreQueryExtension?: boolean
 }
 
 export interface BindingViteJsonPluginConfig {
-  minify?: boolean;
-  namedExports?: boolean;
-  stringify?: BindingViteJsonPluginStringify;
+  minify?: boolean
+  namedExports?: boolean
+  stringify?: BindingViteJsonPluginStringify
 }
 
-export type BindingViteJsonPluginStringify = boolean | string;
+export type BindingViteJsonPluginStringify =
+  boolean | string
 
 export interface BindingViteManifestPluginConfig {
-  root: string;
-  outPath: string;
-  isLegacy?: (args: BindingNormalizedOptions) => boolean;
-  cssEntries: () => Record<string, string>;
+  root: string
+  outPath: string
+  isLegacy?: (args: BindingNormalizedOptions) => boolean
+  cssEntries: () => Record<string, string>
 }
 
 export interface BindingViteModulePreloadPolyfillPluginConfig {
-  isServer?: boolean;
+  isServer?: boolean
 }
 
 export interface BindingVitePluginCustom {
-  'vite:import-glob'?: ViteImportGlobMeta;
+  'vite:import-glob'?: ViteImportGlobMeta
 }
 
 export interface BindingViteReactRefreshWrapperPluginConfig {
-  cwd: string;
-  include?: Array<BindingStringOrRegex>;
-  exclude?: Array<BindingStringOrRegex>;
-  jsxImportSource: string;
-  reactRefreshHost: string;
+  cwd: string
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  jsxImportSource: string
+  reactRefreshHost: string
 }
 
 export interface BindingViteReporterPluginConfig {
-  root: string;
-  isTty: boolean;
-  isLib: boolean;
-  assetsDir: string;
-  chunkLimit: number;
-  warnLargeChunks: boolean;
-  reportCompressedSize: boolean;
-  logInfo?: (msg: string) => void;
+  root: string
+  isTty: boolean
+  isLib: boolean
+  assetsDir: string
+  chunkLimit: number
+  warnLargeChunks: boolean
+  reportCompressedSize: boolean
+  logInfo?: (msg: string) => void
 }
 
 export interface BindingViteResolvePluginConfig {
-  resolveOptions: BindingViteResolvePluginResolveOptions;
-  environmentConsumer: string;
-  environmentName: string;
-  builtins: Array<BindingStringOrRegex>;
-  external: true | string[];
-  noExternal: true | Array<string | RegExp>;
-  dedupe: Array<string>;
-  disableCache?: boolean;
-  legacyInconsistentCjsInterop?: boolean;
-  finalizeBareSpecifier?: (
-    resolvedId: string,
-    rawId: string,
-    importer: string | null | undefined,
-  ) => VoidNullable<string>;
-  finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>;
-  resolveSubpathImports: (
-    id: string,
-    importer: string,
-    isRequire: boolean,
-    scan: boolean,
-  ) => VoidNullable<string>;
-  onWarn?: (message: string) => void;
-  onDebug?: (message: string) => void;
-  yarnPnp: boolean;
+  resolveOptions: BindingViteResolvePluginResolveOptions
+  environmentConsumer: string
+  environmentName: string
+  builtins: Array<BindingStringOrRegex>
+  external: true | string[]
+  noExternal: true | Array<string | RegExp>
+  dedupe: Array<string>
+  disableCache?: boolean
+  legacyInconsistentCjsInterop?: boolean
+  finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
+  finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>
+  resolveSubpathImports: (id: string, importer: string, isRequire: boolean, scan: boolean) => VoidNullable<string>
+  onWarn?: (message: string) => void
+  onDebug?: (message: string) => void
+  yarnPnp: boolean
 }
 
 export interface BindingViteResolvePluginResolveOptions {
-  isBuild: boolean;
-  isProduction: boolean;
-  asSrc: boolean;
-  preferRelative: boolean;
-  isRequire?: boolean;
-  root: string;
-  scan: boolean;
-  mainFields: Array<string>;
-  conditions: Array<string>;
-  externalConditions: Array<string>;
-  extensions: Array<string>;
-  tryIndex: boolean;
-  tryPrefix?: string;
-  preserveSymlinks: boolean;
-  tsconfigPaths: boolean;
+  isBuild: boolean
+  isProduction: boolean
+  asSrc: boolean
+  preferRelative: boolean
+  isRequire?: boolean
+  root: string
+  scan: boolean
+  mainFields: Array<string>
+  conditions: Array<string>
+  externalConditions: Array<string>
+  extensions: Array<string>
+  tryIndex: boolean
+  tryPrefix?: string
+  preserveSymlinks: boolean
+  tsconfigPaths: boolean
 }
 
 export interface BindingViteTransformPluginConfig {
-  root: string;
-  include?: Array<BindingStringOrRegex>;
-  exclude?: Array<BindingStringOrRegex>;
-  jsxRefreshInclude?: Array<BindingStringOrRegex>;
-  jsxRefreshExclude?: Array<BindingStringOrRegex>;
-  isServerConsumer?: boolean;
-  jsxInject?: string;
-  transformOptions?: TransformOptions;
-  yarnPnp?: boolean;
+  root: string
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  jsxRefreshInclude?: Array<BindingStringOrRegex>
+  jsxRefreshExclude?: Array<BindingStringOrRegex>
+  isServerConsumer?: boolean
+  jsxInject?: string
+  transformOptions?: TransformOptions
+  yarnPnp?: boolean
 }
 
 export interface BindingWatchOption {
-  skipWrite?: boolean;
-  include?: Array<BindingStringOrRegex>;
-  exclude?: Array<BindingStringOrRegex>;
-  buildDelay?: number;
-  usePolling?: boolean;
-  pollInterval?: number;
-  compareContentsForPolling?: boolean;
-  useDebounce?: boolean;
-  debounceDelay?: number;
-  debounceTickRate?: number;
-  onInvalidate?: ((id: string) => void) | undefined;
+  skipWrite?: boolean
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  buildDelay?: number
+  usePolling?: boolean
+  pollInterval?: number
+  compareContentsForPolling?: boolean
+  useDebounce?: boolean
+  debounceDelay?: number
+  debounceTickRate?: number
+  onInvalidate?: ((id: string) => void) | undefined
 }
 
-export declare function collapseSourcemaps(
-  sourcemapChain: Array<BindingSourcemap>,
-): BindingJsonSourcemap;
+export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
 
-export declare function enhancedTransform(
-  filename: string,
-  sourceText: string,
-  options: BindingEnhancedTransformOptions | undefined | null,
-  cache: TsconfigCache | undefined | null,
-  yarnPnp: boolean,
-): Promise<BindingEnhancedTransformResult>;
+export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
 
-export declare function enhancedTransformSync(
-  filename: string,
-  sourceText: string,
-  options: BindingEnhancedTransformOptions | undefined | null,
-  cache: TsconfigCache | undefined | null,
-  yarnPnp: boolean,
-): BindingEnhancedTransformResult;
+export declare function enhancedTransformSync(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingEnhancedTransformResult
 
 export interface ExtensionAliasItem {
-  target: string;
-  replacements: Array<string>;
+  target: string
+  replacements: Array<string>
 }
 
 export interface ExternalMemoryStatus {
-  freed: boolean;
-  reason?: string;
+  freed: boolean
+  reason?: string
 }
 
-export type FilterTokenKind =
-  | 'Id'
-  | 'ImporterId'
-  | 'Code'
-  | 'ModuleType'
-  | 'And'
-  | 'Or'
-  | 'Not'
-  | 'Include'
-  | 'Exclude'
-  | 'CleanUrl'
-  | 'QueryKey'
-  | 'QueryValue';
+export type FilterTokenKind =  'Id'|
+'ImporterId'|
+'Code'|
+'ModuleType'|
+'And'|
+'Or'|
+'Not'|
+'Include'|
+'Exclude'|
+'CleanUrl'|
+'QueryKey'|
+'QueryValue';
 
-export declare function initTraceSubscriber(): TraceSubscriberGuard | null;
+export declare function initTraceSubscriber(): TraceSubscriberGuard | null
 
 export interface JsChangedOutputs {
-  deleted: Set<string>;
-  changes: Record<string, JsOutputChunk | JsOutputAsset>;
+  deleted: Set<string>
+  changes: Record<string, JsOutputChunk | JsOutputAsset>
 }
 
 export interface JsOutputAsset {
-  names: Array<string>;
-  originalFileNames: Array<string>;
-  filename: string;
-  source: BindingAssetSource;
+  names: Array<string>
+  originalFileNames: Array<string>
+  filename: string
+  source: BindingAssetSource
 }
 
 export interface JsOutputChunk {
-  name: string;
-  isEntry: boolean;
-  isDynamicEntry: boolean;
-  facadeModuleId?: string;
-  moduleIds: Array<string>;
-  exports: Array<string>;
-  filename: string;
-  modules: Record<string, BindingRenderedModule>;
-  imports: Array<string>;
-  dynamicImports: Array<string>;
-  code: string;
-  map?: BindingSourcemap;
-  sourcemapFilename?: string;
-  preliminaryFilename: string;
+  name: string
+  isEntry: boolean
+  isDynamicEntry: boolean
+  facadeModuleId?: string
+  moduleIds: Array<string>
+  exports: Array<string>
+  filename: string
+  modules: Record<string, BindingRenderedModule>
+  imports: Array<string>
+  dynamicImports: Array<string>
+  code: string
+  map?: BindingSourcemap
+  sourcemapFilename?: string
+  preliminaryFilename: string
 }
 
 /** Error emitted from native side, it only contains kind and message, no stack trace. */
 export interface NativeError {
-  kind: string;
-  message: string;
+  kind: string
+  message: string
   /** The id of the file associated with the error */
-  id?: string;
+  id?: string
   /** The exporter associated with the error (for import/export errors) */
-  exporter?: string;
+  exporter?: string
   /** Location information (line, column, file) */
-  loc?: BindingLogLocation;
+  loc?: BindingLogLocation
   /** Position in the source file in UTF-16 code units */
-  pos?: number;
+  pos?: number
 }
 
 export interface PreRenderedChunk {
   /** The name of this chunk, which is used in naming patterns. */
-  name: string;
+  name: string
   /** Whether this chunk is a static entry point. */
-  isEntry: boolean;
+  isEntry: boolean
   /** Whether this chunk is a dynamic entry point. */
-  isDynamicEntry: boolean;
+  isDynamicEntry: boolean
   /** The id of a module that this chunk corresponds to. */
-  facadeModuleId?: string;
+  facadeModuleId?: string
   /** The list of ids of modules included in this chunk. */
-  moduleIds: Array<string>;
+  moduleIds: Array<string>
   /** Exported variable names from this chunk. */
-  exports: Array<string>;
+  exports: Array<string>
 }
 
-export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void;
+export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
-export declare function resolveTsconfig(
-  filename: string,
-  cache: TsconfigCache | undefined | null,
-  yarnPnp: boolean,
-): BindingTsconfigResult | null;
+export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 
 /**
  * Release one holder of the tokio runtime, shutting it down once none are left.
@@ -3281,11 +3100,11 @@ export declare function resolveTsconfig(
  * This is required for the wasm target with `tokio_unstable` cfg.
  * In the wasm runtime, the `park` threads will hang there until the tokio::Runtime is shutdown.
  */
-export declare function shutdownAsyncRuntime(): void;
+export declare function shutdownAsyncRuntime(): void
 
 /** Acquire one holder of the tokio runtime, starting it if it is not running. */
-export declare function startAsyncRuntime(): void;
+export declare function startAsyncRuntime(): void
 
 export interface ViteImportGlobMeta {
-  isSubImportsPattern?: boolean;
+  isSubImportsPattern?: boolean
 }

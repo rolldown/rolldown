@@ -130,6 +130,7 @@ export default defineConfig({
       'packages/rolldown/src/browser.js',
       'packages/rolldown/src/rolldown-binding.wasi-browser.js',
       'packages/rolldown/src/rolldown-binding.wasi.cjs',
+      'packages/rolldown/src/rolldown-binding.wasi.d.cts',
       'packages/rolldown/src/wasi-worker-browser.mjs',
       'packages/rolldown/src/wasi-worker.mjs',
       'packages/rolldown/tests/fixtures/misc/error/diagnostics/**/*.js',

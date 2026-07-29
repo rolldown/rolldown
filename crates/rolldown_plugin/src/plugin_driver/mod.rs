@@ -27,7 +27,7 @@ use crate::{
   PluginContext,
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::hook_timing::HookTimingCollector,
+  types::{build_timings::BuildTimings, hook_timing::HookTimingCollector},
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
@@ -47,6 +47,8 @@ pub struct PluginDriver {
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   /// Timing collector for plugin hooks (None if plugin timing is disabled)
   pub hook_timing_collector: Option<Arc<HookTimingCollector>>,
+  /// Wall clocks for the build as a whole, as opposed to what any one plugin cost.
+  pub build_timings: BuildTimings,
 }
 
 impl PluginDriver {
@@ -143,18 +145,16 @@ impl PluginDriver {
   /// Set total build time from start instant
   #[inline]
   pub fn set_total_build_time(&self, start: Option<std::time::Instant>) {
-    if let (Some(collector), Some(start)) = (&self.hook_timing_collector, start) {
-      #[expect(clippy::cast_possible_truncation)]
-      collector.set_total_build_micros(start.elapsed().as_micros() as u64);
+    if let Some(start) = start {
+      self.build_timings.set_total(start.elapsed());
     }
   }
 
   /// Set link stage time from start instant
   #[inline]
   pub fn set_link_stage_time(&self, start: Option<std::time::Instant>) {
-    if let (Some(collector), Some(start)) = (&self.hook_timing_collector, start) {
-      #[expect(clippy::cast_possible_truncation)]
-      collector.set_link_stage_micros(start.elapsed().as_micros() as u64);
+    if let Some(start) = start {
+      self.build_timings.set_link_stage(start.elapsed());
     }
   }
 
@@ -168,7 +168,7 @@ impl PluginDriver {
     const MAX_ROWS: usize = 5;
     const ONE_SECOND_MICROS: u64 = 1_000_000;
     let collector = self.hook_timing_collector.as_ref()?;
-    if !collector.plugins_are_slow() {
+    if !self.build_timings.plugins_are_slow() {
       return None;
     }
     let mut summary = collector.get_summary();

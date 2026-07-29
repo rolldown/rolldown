@@ -1,3 +1,4 @@
+pub mod build_timings;
 pub mod custom_field;
 pub mod hook_addon_args;
 pub mod hook_build_end_args;

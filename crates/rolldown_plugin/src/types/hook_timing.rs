@@ -23,10 +23,6 @@ struct PluginTimingData {
 pub struct HookTimingCollector {
   /// Map from plugin_idx to timing data (only non-internal plugins are registered)
   plugins: DashMap<PluginIdx, PluginTimingData>,
-  /// Total build time in microseconds
-  total_build_micros: AtomicU64,
-  /// Link stage time in microseconds (pure Rust core, no plugins)
-  link_stage_micros: AtomicU64,
   /// Accumulated time (microseconds) for the `output.codeSplitting` / `advancedChunks`
   /// `groups[].name` chunk-name classifier — a user JS callback invoked directly from the
   /// Rust core (NOT a plugin hook), so it is invisible to per-plugin timing yet can
@@ -53,34 +49,6 @@ impl HookTimingCollector {
   /// `advancedChunks` `groups[].name` chunk-name classifier.
   pub fn record_code_splitting_name(&self, micros: u64) {
     self.code_splitting_name_micros.fetch_add(micros, Ordering::Relaxed);
-  }
-
-  /// Set total build time in microseconds
-  pub(crate) fn set_total_build_micros(&self, micros: u64) {
-    self.total_build_micros.store(micros, Ordering::Relaxed);
-  }
-
-  /// Set link stage time in microseconds
-  pub(crate) fn set_link_stage_micros(&self, micros: u64) {
-    self.link_stage_micros.store(micros, Ordering::Relaxed);
-  }
-
-  /// Check if plugins are taking too much time.
-  ///
-  /// Returns `true` if plugin time (total - link stage) is more than 100x the link stage time.
-  /// This works because plugins primarily run during the scan and generate stages, not the link stage.
-  /// This 100x threshold was determined by studying plugin impact on real-world projects.
-  ///
-  /// To avoid noisy warnings for fast builds, the warning only triggers when total build time exceeds 3 seconds.
-  #[expect(clippy::cast_precision_loss)]
-  pub(crate) fn plugins_are_slow(&self) -> bool {
-    const MIN_BUILD_TIME_MICROS: u64 = 3_000_000;
-    let total = self.total_build_micros.load(Ordering::Relaxed);
-    let link = self.link_stage_micros.load(Ordering::Relaxed);
-    if total == 0 || link == 0 || link > total || total < MIN_BUILD_TIME_MICROS {
-      return false;
-    }
-    (total - link) as f64 / link as f64 > 100.0
   }
 
   /// Get timing summary for all plugins

@@ -458,6 +458,12 @@ The flow is:
 
 **Solution**: When `exported` is present, bind the importee's `loadExports` result under that single name in the namespace object (`{ ns: () => import_dep }`, computed when the name is not a valid identifier) and emit no `__reExport`. Pinned by `crates/rolldown/tests/rolldown/topics/hmr/export_star_as/`.
 
+### Issue 12: Re-exports From Externals Must Keep a Real Import (#10478)
+
+**Problem**: The dev runtime registry only holds modules this build wrapped, so an external is never in it — `loadExports('<external id>')` warns `Module <id> not found` and returns `{}`. The plain-import arm of the HMR finalizer knew this and emitted a real `import * as X from 'ext'` hoisted outside the wrapper; the three re-export arms (`export * from`, `export * as ns from`, `export { x } from`) did not, and asked the registry instead. Every re-exported name read as `undefined`, silently. When the same module also imported that external, both arms named the binding through `ensure_static_import_info` but deduplicated against different sets, so both declarations were emitted under one name — and since the real import sits at chunk top level while the `var` sits inside the factory, the `var` legally shadowed it and the module's own uses of the external broke too.
+
+**Solution**: Route all four arms through one `create_importee_binding_stmt`, which picks `loadExports` for normal modules and a real import statement for externals. The per-kind deduplication sets then stay disjoint by construction, so the shadowing `var` cannot be emitted. Pinned by `crates/rolldown/tests/rolldown/topics/hmr/reexport_external/` (HMR patch, executed) and a `dev-lazy-compile.test.ts` case (lazy chunk).
+
 ## Implementation Notes
 
 ### Naming Convention for Injected Helpers

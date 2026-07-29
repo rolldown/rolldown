@@ -7,6 +7,7 @@
         "import": "./main.js"
       }
     ],
+    "codeSplitting": false,
     "strictExecutionOrder": true,
     "preserveEntrySignatures": "allow-extension"
   },
@@ -14,10 +15,6 @@
     {
       "_configName": "on-demand",
       "onDemandWrapping": true
-    },
-    {
-      "_configName": "flag-off",
-      "strictExecutionOrder": false
     }
   ]
 }

@@ -30,28 +30,31 @@ function staticClosure(root) {
   return [...seen].map((name) => files.get(name)).join('\n');
 }
 
-const mainClosure = staticClosure('main.js');
-const routeFile = /import\(["']\.\/([^"']*route[^"']*)["']\)/.exec(mainClosure)?.[1];
-assert.ok(routeFile, 'main must retain the dynamic route boundary');
-assert.doesNotMatch(mainClosure, /effectful-clone/);
-assert.match(staticClosure(routeFile), /effectful-clone/);
-assert.match(staticClosure(routeFile), /nested-effectful-clone/);
+// With code splitting disabled everything shares one chunk. Wrap-all still routes the barrel per
+// consumer — the carrier keeps the unrelated CJS leaf lazy behind the inlined route trigger. The
+// on-demand plan sees no cross-chunk hazard in a single chunk, leaves the barrel out of its wrap
+// plan, and its monolithic interop body makes the leaf eager. Both orders respect source order —
+// only the eager set differs between the two plans, in wrap-all's favor.
+assert.deepStrictEqual([...files.keys()], ['main.js']);
+const onDemand = globalThis.__configName === 'on-demand';
+if (onDemand) {
+  assert.doesNotMatch(files.get('main.js'), /init_pure_barrel_cjs/);
+} else {
+  assert.match(files.get('main.js'), /init_pure_barrel_cjs/);
+}
 
 globalThis.__events = [];
 
 const entry = await import('./dist/main.js');
 
-assert.deepStrictEqual(globalThis.__events, ['cn', 'ancestor', 'main:cn:nested-cn']);
-assert.deepStrictEqual((await entry.loadRoute()).value, [{ value: 1 }, { value: 2 }]);
-// Both modes run the same lazy set on the route. Flag-off hoists the generated CJS interop of
-// the nested barrel above the outer one (lazy-init transfer); strict mode keeps the re-export
-// source order across both barrel hops.
+const entryEvents = onDemand ? ['cn', 'clone-deep', 'main:a b'] : ['cn', 'main:a b'];
+assert.deepStrictEqual(globalThis.__events, entryEvents);
+
+const route = await entry.loadRoute();
+
+assert.deepStrictEqual(route.value, { value: 1 });
 assert.deepStrictEqual(globalThis.__events, [
-  'cn',
-  'ancestor',
-  'main:cn:nested-cn',
-  ...(globalThis.__configName === 'flag-off'
-    ? ['nested-effectful-clone', 'effectful-clone']
-    : ['effectful-clone', 'nested-effectful-clone']),
+  ...entryEvents,
+  ...(onDemand ? [] : ['clone-deep']),
   'route',
 ]);

@@ -18,6 +18,10 @@
     {
       "_configName": "on-demand",
       "onDemandWrapping": true
+    },
+    {
+      "_configName": "flag-off",
+      "strictExecutionOrder": false
     }
   ]
 }

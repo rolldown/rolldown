@@ -30,28 +30,17 @@ function staticClosure(root) {
   return [...seen].map((name) => files.get(name)).join('\n');
 }
 
-const mainClosure = staticClosure('main.js');
-const routeFile = /import\(["']\.\/([^"']*route[^"']*)["']\)/.exec(mainClosure)?.[1];
-assert.ok(routeFile, 'main must retain the dynamic route boundary');
-assert.doesNotMatch(mainClosure, /effectful-clone/);
-assert.match(staticClosure(routeFile), /effectful-clone/);
-assert.match(staticClosure(routeFile), /nested-effectful-clone/);
+// A shimmed missing export on the barrel rejects consumer-local routing; the monolithic barrel
+// keeps the unrelated CJS leaf eager and the shimmed binding reads undefined.
+assert.match(staticClosure('main.js'), /clone-deep\.cjs/);
 
 globalThis.__events = [];
 
 const entry = await import('./dist/main.js');
 
-assert.deepStrictEqual(globalThis.__events, ['cn', 'ancestor', 'main:cn:nested-cn']);
-assert.deepStrictEqual((await entry.loadRoute()).value, [{ value: 1 }, { value: 2 }]);
-// Both modes run the same lazy set on the route. Flag-off hoists the generated CJS interop of
-// the nested barrel above the outer one (lazy-init transfer); strict mode keeps the re-export
-// source order across both barrel hops.
-assert.deepStrictEqual(globalThis.__events, [
-  'cn',
-  'ancestor',
-  'main:cn:nested-cn',
-  ...(globalThis.__configName === 'flag-off'
-    ? ['nested-effectful-clone', 'effectful-clone']
-    : ['effectful-clone', 'nested-effectful-clone']),
-  'route',
-]);
+assert.deepStrictEqual(globalThis.__events, ['cn', 'clone-deep', 'main:a b:true']);
+
+const route = await entry.loadRoute();
+
+assert.deepStrictEqual(route.value, { value: 1 });
+assert.deepStrictEqual(globalThis.__events, ['cn', 'clone-deep', 'main:a b:true', 'route']);

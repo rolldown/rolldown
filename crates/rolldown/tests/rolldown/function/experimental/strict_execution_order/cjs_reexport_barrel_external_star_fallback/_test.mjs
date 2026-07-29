@@ -30,28 +30,25 @@ function staticClosure(root) {
   return [...seen].map((name) => files.get(name)).join('\n');
 }
 
-const mainClosure = staticClosure('main.js');
-const routeFile = /import\(["']\.\/([^"']*route[^"']*)["']\)/.exec(mainClosure)?.[1];
-assert.ok(routeFile, 'main must retain the dynamic route boundary');
-assert.doesNotMatch(mainClosure, /effectful-clone/);
-assert.match(staticClosure(routeFile), /effectful-clone/);
-assert.match(staticClosure(routeFile), /nested-effectful-clone/);
+// An `export *` from an external module gives the barrel dynamic exports, which rejects
+// consumer-local routing. The monolithic barrel couples every consumer to its complete dependency
+// set: the unrelated CJS leaf and the external import both join the eager entry phase.
+assert.match(staticClosure('main.js'), /clone-deep\.cjs/);
 
 globalThis.__events = [];
 
 const entry = await import('./dist/main.js');
 
-assert.deepStrictEqual(globalThis.__events, ['cn', 'ancestor', 'main:cn:nested-cn']);
-assert.deepStrictEqual((await entry.loadRoute()).value, [{ value: 1 }, { value: 2 }]);
-// Both modes run the same lazy set on the route. Flag-off hoists the generated CJS interop of
-// the nested barrel above the outer one (lazy-init transfer); strict mode keeps the re-export
-// source order across both barrel hops.
-assert.deepStrictEqual(globalThis.__events, [
-  'cn',
-  'ancestor',
-  'main:cn:nested-cn',
-  ...(globalThis.__configName === 'flag-off'
-    ? ['nested-effectful-clone', 'effectful-clone']
-    : ['effectful-clone', 'nested-effectful-clone']),
-  'route',
-]);
+// The external import's position differs between the plans (wrap-all hoists the deferred chunk's
+// static imports ahead of every wrapper; on-demand keeps the eager barrel body at its source
+// position), but both keep the whole monolithic barrel — external included — in the eager phase.
+const entryEvents =
+  globalThis.__configName === 'on-demand'
+    ? ['cn', 'ext-lib', 'clone-deep', 'main:a b']
+    : ['ext-lib', 'cn', 'clone-deep', 'main:a b'];
+assert.deepStrictEqual(globalThis.__events, entryEvents);
+
+const route = await entry.loadRoute();
+
+assert.deepStrictEqual(route.value, { value: 1 });
+assert.deepStrictEqual(globalThis.__events, [...entryEvents, 'route:ext']);

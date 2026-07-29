@@ -252,3 +252,76 @@ init_route();
 export { stack };
 
 ```
+
+# Variant: flag-off: [strict_execution_order: false]
+
+## Assets
+
+### bare.js
+
+```js
+import "./outer.js";
+//#region bare.js
+globalThis.__events.push("bare");
+//#endregion
+
+```
+
+### main.js
+
+```js
+import "./outer.js";
+//#region node_modules/pure-leaves/cn.js
+globalThis.__events.push("cn");
+function cn(...values) {
+	return values.filter(Boolean).join(" ");
+}
+//#endregion
+//#region main.js
+globalThis.__events.push(`main:${cn("a", "b")}`);
+function loadRoute() {
+	return import("./route.js");
+}
+//#endregion
+export { loadRoute };
+
+```
+
+### outer.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region effect-before.cjs
+var require_effect_before = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("effect-before");
+	module.exports = {};
+}));
+//#endregion
+//#region effect-after.cjs
+var require_effect_after = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("effect-after");
+	module.exports = {};
+}));
+//#endregion
+//#region barrel.js
+require_effect_before();
+require_effect_after();
+//#endregion
+
+```
+
+### route.js
+
+```js
+import "./outer.js";
+//#region node_modules/pure-leaves/stack.js
+globalThis.__events.push("stack");
+var Stack = class {};
+//#endregion
+//#region route.js
+globalThis.__events.push("route");
+const stack = new Stack();
+//#endregion
+export { stack };
+
+```

@@ -56,15 +56,15 @@ globalThis.__events = [];
 
 const entry = await import('./dist/main.js');
 
-assert.deepStrictEqual(globalThis.__events, ['effect-before', 'cn', 'effect-after', 'main:a b']);
+// Both modes execute the same eager set. Flag-off hoists the generated CJS interop above the
+// barrel's leaves (lazy-init transfer); strict mode pins each require to its re-export source
+// position, which is the ordering this fixture family protects.
+const entryEvents =
+  globalThis.__configName === 'flag-off'
+    ? ['effect-before', 'effect-after', 'cn', 'main:a b']
+    : ['effect-before', 'cn', 'effect-after', 'main:a b'];
+assert.deepStrictEqual(globalThis.__events, entryEvents);
 
 await entry.loadRoute();
 
-assert.deepStrictEqual(globalThis.__events, [
-  'effect-before',
-  'cn',
-  'effect-after',
-  'main:a b',
-  'stack',
-  'route',
-]);
+assert.deepStrictEqual(globalThis.__events, [...entryEvents, 'stack', 'route']);

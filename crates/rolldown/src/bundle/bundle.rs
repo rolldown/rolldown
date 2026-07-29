@@ -15,7 +15,7 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
+use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
@@ -55,7 +55,8 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
     .await;
     self.plugin_driver.set_total_build_time(start);
-    self.append_plugin_timings_warning(result)
+    let result = self.append_plugin_timings_warning(result);
+    self.merge_log_hook_errors(result).await
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
@@ -76,15 +77,32 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
     .await;
     self.plugin_driver.set_total_build_time(start);
-    self.append_plugin_timings_warning(result)
+    let result = self.append_plugin_timings_warning(result);
+    self.merge_log_hook_errors(result).await
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn scan(mut self) -> BuildResult<()> {
-    self.scan_modules(ScanMode::Full).await?;
+    let result = self.scan_modules(ScanMode::Full).await.map(|_| ());
+    self.merge_log_hook_errors(result).await
+  }
 
-    Ok(())
+  /// Await the `onLog` callback tasks spawned during the build and fold any error
+  /// they produced into the result, so a throwing `onLog` fails the build
+  async fn merge_log_hook_errors<T>(&self, result: BuildResult<T>) -> BuildResult<T> {
+    let errors = self.plugin_driver.await_log_hook_tasks().await;
+    if errors.is_empty() {
+      return result;
+    }
+    let diagnostics = errors.into_iter().map(BuildDiagnostic::from);
+    match result {
+      Ok(_) => Err(BatchedBuildDiagnostic::new(diagnostics.collect())),
+      Err(mut batched) => {
+        batched.extend(diagnostics);
+        Err(batched)
+      }
+    }
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]

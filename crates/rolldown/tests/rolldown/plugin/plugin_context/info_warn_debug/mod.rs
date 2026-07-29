@@ -3,7 +3,7 @@ use std::{
   sync::{Arc, Mutex},
 };
 
-use rolldown::{BundlerOptions, InputItem, Log, LogLevel, LogWithoutPlugin, OnLog};
+use rolldown::{Bundler, BundlerOptions, InputItem, Log, LogLevel, LogWithoutPlugin, OnLog};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
@@ -74,4 +74,40 @@ async fn allow_pass_custom_arg() {
     .await;
 
   assert_eq!(*count.lock().unwrap(), 7);
+}
+
+// A throwing `onLog` callback should fail the build (the callback runs as a
+// detached task that the build awaits at a barrier)
+#[tokio::test(flavor = "multi_thread")]
+async fn on_log_error_fails_build() {
+  let on_log = OnLog::new(Arc::new(move |_log_level: LogLevel, log: Log| {
+    Box::pin(async move {
+      if log.plugin.as_deref() == Some("TestPlugin") {
+        anyhow::bail!("boom from onLog");
+      }
+      Ok(())
+    })
+  }));
+
+  let cwd = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    .join("tests/rolldown/plugin/plugin_context/info_warn_debug");
+
+  let mut bundler = Bundler::with_plugins(
+    BundlerOptions {
+      input: Some(vec![InputItem {
+        name: Some("entry".to_string()),
+        import: "./entry.js".to_string(),
+      }]),
+      cwd: Some(cwd),
+      on_log: Some(on_log),
+      ..Default::default()
+    },
+    vec![Arc::new(TestPlugin)],
+  )
+  .expect("failed to create bundler");
+
+  let Err(err) = bundler.generate().await else {
+    panic!("expected the build to fail when onLog errors");
+  };
+  assert!(err.to_string().contains("boom from onLog"), "unexpected error: {err}");
 }

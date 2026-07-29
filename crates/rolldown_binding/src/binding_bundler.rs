@@ -15,12 +15,17 @@ use crate::{
 use napi::{Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
 use rolldown::{BundleHandle, BundlerConfig};
+use rolldown_error::BuildDiagnostic;
+use rolldown_plugin::BuildTimings;
 use std::sync::Arc;
 
 #[napi]
 pub struct BindingBundler {
   inner: ClassicBundler,
-  last_bundle_handle: Option<BundleHandle>,
+  /// Every build this bundler has run, in order. A `RolldownBuild` may `generate` more
+  /// than once, so the plugin-timing report at close sums their clocks rather than reading
+  /// only the last.
+  bundle_handles: Vec<BundleHandle>,
 }
 
 #[napi]
@@ -28,7 +33,7 @@ impl BindingBundler {
   #[napi(constructor)]
   pub fn new() -> Self {
     let inner = ClassicBundler::new();
-    Self { inner, last_bundle_handle: None }
+    Self { inner, bundle_handles: Vec::new() }
   }
 
   #[napi]
@@ -45,7 +50,7 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.last_bundle_handle = Some(bundle.context());
+      self.bundle_handles.push(bundle.context());
     }
 
     let fut = async move {
@@ -94,7 +99,7 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.last_bundle_handle = Some(bundle.context());
+      self.bundle_handles.push(bundle.context());
     }
 
     let fut = async move {
@@ -142,7 +147,7 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.last_bundle_handle = Some(bundle.context());
+      self.bundle_handles.push(bundle.context());
     }
 
     let fut = async move {
@@ -179,9 +184,12 @@ impl BindingBundler {
   // - This also affects how the code is written in `Bundler::close()/inner.close()`, see the implementation there for more details.
   pub fn close<'env>(&mut self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let cleanup_fut = self.inner.close();
+    let handles = std::mem::take(&mut self.bundle_handles);
     spawn_boxed_future(env, async move {
       let res = cleanup_fut.await;
       handle_result(res)?;
+      // After the cleanup, so `closeBundle`'s cost is part of what gets reported.
+      handle_result(report_plugin_timings(&handles).await)?;
       Ok(())
     })
   }
@@ -194,11 +202,42 @@ impl BindingBundler {
   #[napi]
   pub fn get_watch_files(&self) -> Vec<String> {
     self
-      .last_bundle_handle
-      .as_ref()
+      .bundle_handles
+      .last()
       .map(|handle| handle.watch_files().iter().map(|s| s.to_string()).collect())
       .unwrap_or_default()
   }
+}
+
+/// Warn about slow plugins, once the build is closing.
+///
+/// Emitted here rather than from `Bundle::write`/`generate` because `closeBundle` runs
+/// inside `close()`: reporting before it means measuring that hook and then discarding the
+/// measurement. The clocks are summed across every output for the same reason the report is
+/// deferred — one `RolldownBuild` may `generate` more than once, and each output's plugin
+/// work counts.
+async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
+  let Some(last) = handles.last() else {
+    return Ok(());
+  };
+  let total_micros: u64 =
+    handles.iter().map(|handle| handle.plugin_driver().build_timings.total_micros()).sum();
+  let link_micros: u64 =
+    handles.iter().map(|handle| handle.plugin_driver().build_timings.link_stage_micros()).sum();
+  if !BuildTimings::is_plugin_bound(total_micros, link_micros) {
+    return Ok(());
+  }
+
+  let summaries =
+    handles.iter().flat_map(|handle| handle.plugin_driver().plugin_timing_summaries()).collect();
+  let Some(plugins) = rolldown_plugin::plugin_timings_info(summaries) else {
+    return Ok(());
+  };
+  handle_warnings(
+    vec![BuildDiagnostic::plugin_timings(plugins).with_severity_warning()],
+    last.options(),
+  )
+  .await
 }
 
 impl BindingBundler {

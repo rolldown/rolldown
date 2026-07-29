@@ -55,7 +55,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
     .await;
     self.plugin_driver.set_total_build_time(start);
-    self.append_plugin_timings_warning(result)
+    result
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
@@ -76,7 +76,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
     .await;
     self.plugin_driver.set_total_build_time(start);
-    self.append_plugin_timings_warning(result)
+    result
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
@@ -410,19 +410,6 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         file: self.options.file.clone(),
       });
     }
-  }
-
-  /// Append plugin timings warning to result if applicable.
-  fn append_plugin_timings_warning(
-    &self,
-    result: BuildResult<BundleOutput>,
-  ) -> BuildResult<BundleOutput> {
-    result.map(|mut output| {
-      if let Some(plugins) = self.plugin_driver.get_plugin_timings_info() {
-        output.warnings.push(BuildDiagnostic::plugin_timings(plugins).with_severity_warning());
-      }
-      output
-    })
   }
 }
 

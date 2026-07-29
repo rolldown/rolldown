@@ -27,7 +27,10 @@ use crate::{
   PluginContext,
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::{build_timings::BuildTimings, hook_timing::HookTimingCollector},
+  types::{
+    build_timings::BuildTimings,
+    hook_timing::{HookTimingCollector, PluginTimingSummary},
+  },
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
@@ -158,37 +161,17 @@ impl PluginDriver {
     }
   }
 
-  /// Get plugin timings summary if timing collection is enabled and plugins are taking significant time.
-  /// Returns a list of (name, percentage) pairs at or above average time (min 1 second).
-  /// Includes both plugin hooks and non-plugin output-option callbacks (e.g. the
-  /// `output.codeSplitting` `groups[].name` chunk classifier), so the report is not blind
-  /// to user callbacks invoked directly from the Rust core rather than via a plugin hook.
-  #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
-  pub fn get_plugin_timings_info(&self) -> Option<Vec<rolldown_error::PluginTimingInfo>> {
-    const MAX_ROWS: usize = 5;
-    const ONE_SECOND_MICROS: u64 = 1_000_000;
-    let collector = self.hook_timing_collector.as_ref()?;
-    if !self.build_timings.plugins_are_slow() {
-      return None;
-    }
-    let mut summary = collector.get_summary();
-    summary.extend(collector.get_output_callback_summary());
-    let total_micros: u64 = summary.iter().map(|s| s.total_duration_micros).sum();
-    if summary.is_empty() || total_micros == 0 {
-      return None;
-    }
-    summary.sort_by_key(|s| std::cmp::Reverse(s.total_duration_micros));
-    let threshold = (total_micros / summary.len() as u64).max(ONE_SECOND_MICROS);
-    let result = summary
-      .iter()
-      .filter(|s| s.total_duration_micros >= threshold)
-      .take(MAX_ROWS)
-      .map(|s| rolldown_error::PluginTimingInfo {
-        name: s.plugin_name.to_string(),
-        percent: (s.total_duration_micros as f64 / total_micros as f64 * 100.0).round() as u8,
-      })
-      .collect::<Vec<_>>();
-    if result.is_empty() { None } else { Some(result) }
+  /// What each plugin, and each core-invoked output callback, cost this build.
+  ///
+  /// Raw and unaggregated: a build may produce several outputs, each with its own driver,
+  /// and the report merges them — see `plugin_timings_info`.
+  pub fn plugin_timing_summaries(&self) -> Vec<PluginTimingSummary> {
+    let Some(collector) = self.hook_timing_collector.as_ref() else {
+      return Vec::new();
+    };
+    let mut summaries = collector.get_summary();
+    summaries.extend(collector.get_output_callback_summary());
+    summaries
   }
 }
 

@@ -8,9 +8,9 @@ The clock starts and stops **inside the JavaScript callback**, not around the ca
 
 2. **Detection threshold**: a warning is triggered when plugin time (total build time minus link stage time) exceeds 100x the link stage time. This threshold was determined by studying plugin impact on real-world projects. The link stage is the one part of a build that runs no plugins at all, which is what makes it a usable baseline.
 
-3. **Rows**: up to 12 hooks are listed, sorted by measured time, each shown as a share of total build time with its call count. Only hooks costing at least 1 second get a line.
+3. **Rows**: up to 12 hooks are listed, sorted by measured time, each shown as a share of total build time with its call count. Only hooks costing at least 1 second get a line. User callbacks configured on the options rather than on a plugin — `external`, `treeshake.moduleSideEffects`, the file-name and addon callbacks, and the [`output.advancedChunks`](/reference/OutputOptions.advancedChunks) `groups[].name` classifier and `groups[].test` predicate — appear under `input options` / `output options`.
 
-   The headline figure is the wall time in which _any_ plugin callback was running, counted once however much they overlap, so it can never exceed the build.
+   The headline figure is the wall time in which _any_ plugin callback was running, counted once however much they overlap, so it can never exceed the build. Individual rows can add up to more than it, because one callback may run inside another — `this.emitFile()` in `buildStart` invokes your `assetFileNames`, and that time belongs to both.
 
 > [!IMPORTANT]
 > **Some hooks are listed without a number**, under a heading saying they are not measurable.

@@ -29,7 +29,13 @@ import {
 } from './normalize-transform-options';
 import { getParallelPluginInfo } from './parallel-plugin';
 import { getDefaultDevRuntime } from './default-dev-runtime';
-import { type PluginTimingsRecorder, summarizePluginTimings } from './plugin-timings';
+import {
+  INPUT_OPTIONS_OWNER,
+  measureHookCost,
+  measureIfFunction,
+  type PluginTimingsRecorder,
+  summarizePluginTimings,
+} from './plugin-timings';
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
@@ -74,7 +80,7 @@ export function bindingifyInputOptions(
     input: bindingifyInput(inputOptions.input),
     plugins,
     cwd: inputOptions.cwd ?? process.cwd(),
-    external: bindingifyExternal(inputOptions.external),
+    external: bindingifyExternal(inputOptions.external, timings),
     resolve: bindingifyResolve(inputOptions.resolve),
     platform: inputOptions.platform,
     shimMissingExports: inputOptions.shimMissingExports,
@@ -83,7 +89,7 @@ export function bindingifyInputOptions(
     // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
     // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
     // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in Rust side), to represent `false | NormalizedTreeshakingOptions`
-    treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake),
+    treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake, timings),
     moduleTypes: inputOptions.moduleTypes,
     define: normalizedTransform.define,
     inject: bindingifyInject(normalizedTransform.inject),
@@ -154,12 +160,17 @@ function bindingifyAttachDebugInfo(
   }
 }
 
-function bindingifyExternal(external: InputOptions['external']): BindingInputOptions['external'] {
+function bindingifyExternal(
+  external: InputOptions['external'],
+  timings: PluginTimingsRecorder | undefined,
+): BindingInputOptions['external'] {
   if (external) {
     if (typeof external === 'function') {
+      // Runs once per import specifier, so a slow one is felt across the whole graph.
+      const measured = measureHookCost(timings, INPUT_OPTIONS_OWNER, 'external', external);
       return (id, importer, isResolved) => {
         if (id.startsWith('\0')) return false;
-        return external(id, importer, isResolved) ?? false;
+        return measured(id, importer, isResolved) ?? false;
       };
     }
     return arraify(external);
@@ -328,6 +339,7 @@ function bindingifyWatch(watch: InputOptions['watch']): BindingInputOptions['wat
 
 function bindingifyTreeshakeOptions(
   config: InputOptions['treeshake'],
+  timings: PluginTimingsRecorder | undefined,
 ): BindingInputOptions['treeshake'] {
   if (config === false) {
     return undefined;
@@ -373,7 +385,13 @@ function bindingifyTreeshakeOptions(
       { external: false, sideEffects: true },
     ];
   } else {
-    normalizedConfig.moduleSideEffects = config.moduleSideEffects;
+    // The function form runs once per module.
+    normalizedConfig.moduleSideEffects = measureIfFunction(
+      timings,
+      INPUT_OPTIONS_OWNER,
+      'treeshake.moduleSideEffects',
+      config.moduleSideEffects,
+    );
   }
 
   return normalizedConfig;

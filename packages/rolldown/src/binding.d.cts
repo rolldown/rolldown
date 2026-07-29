@@ -2719,8 +2719,9 @@ export declare enum BindingPluginOrder {
  * measurement exists, since this side can only bracket dispatch and completion.
  */
 export interface BindingPluginTiming {
-  /** The plugin the callback belongs to. */
+  /** The plugin the callback belongs to, or the options it was configured on. */
   owner: string
+  kind: 'plugin' | 'outputOption' | 'inputOption'
   hook: string
   calls: number
   ms: number

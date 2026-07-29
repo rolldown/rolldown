@@ -190,7 +190,7 @@ export function bindingifyPlugin(
   };
   // Keyed on the user's plugin object rather than its name: the same plugin configured
   // twice is two culprits, and `normalizePlugins` allows the duplicate name.
-  return wrapHandlers(result, { key: plugin, name: result.name }, timings);
+  return wrapHandlers(result, { key: plugin, name: result.name, kind: 'plugin' }, timings);
 }
 
 function wrapHandlers(

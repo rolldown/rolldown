@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   measureHookCost,
+  type PluginTimingKind,
   type PluginTimingRow,
   type PluginTimingsRecorder,
+  OUTPUT_OPTIONS_OWNER,
   pluginTimingsRecorderFor,
   summarizePluginTimings,
 } from '../src/utils/plugin-timings';
@@ -46,7 +48,7 @@ describe('measureHookCost', () => {
     const recorder = newRecorder();
     const hook = measureHookCost(
       recorder,
-      { key: 'my-plugin', name: 'my-plugin' },
+      { key: 'my-plugin', name: 'my-plugin', kind: 'plugin' },
       'transform',
       () => {
         clock.advance(40);
@@ -66,7 +68,12 @@ describe('measureHookCost', () => {
   it('returns the handler untouched when nothing is recording', () => {
     const handler = () => 'x';
     expect(
-      measureHookCost(undefined, { key: 'my-plugin', name: 'my-plugin' }, 'transform', handler),
+      measureHookCost(
+        undefined,
+        { key: 'my-plugin', name: 'my-plugin', kind: 'plugin' },
+        'transform',
+        handler,
+      ),
     ).toBe(handler);
   });
 
@@ -74,10 +81,15 @@ describe('measureHookCost', () => {
     const clock = fakeClock();
     const recorder = newRecorder();
     const boom = new Error('boom');
-    const hook = measureHookCost(recorder, { key: 'my-plugin', name: 'my-plugin' }, 'load', () => {
-      clock.advance(10);
-      throw boom;
-    });
+    const hook = measureHookCost(
+      recorder,
+      { key: 'my-plugin', name: 'my-plugin', kind: 'plugin' },
+      'load',
+      () => {
+        clock.advance(10);
+        throw boom;
+      },
+    );
 
     expect(hook).toThrow(boom);
 
@@ -91,8 +103,11 @@ describe('measureHookCost', () => {
   it('settles when the returned promise rejects, and rejects', async () => {
     const recorder = newRecorder();
     const boom = new Error('boom');
-    const hook = measureHookCost(recorder, { key: 'my-plugin', name: 'my-plugin' }, 'load', () =>
-      Promise.reject(boom),
+    const hook = measureHookCost(
+      recorder,
+      { key: 'my-plugin', name: 'my-plugin', kind: 'plugin' },
+      'load',
+      () => Promise.reject(boom),
     );
 
     await expect(hook()).rejects.toBe(boom);
@@ -104,7 +119,7 @@ describe('measureHookCost', () => {
     const recorder = newRecorder();
     const hook = measureHookCost(
       recorder,
-      { key: 'my-plugin', name: 'my-plugin' },
+      { key: 'my-plugin', name: 'my-plugin', kind: 'plugin' },
       'resolveId',
       () => ({ id: 'x' }),
     );
@@ -122,7 +137,7 @@ describe('measureHookCost', () => {
     const recorder = newRecorder();
     const hook = measureHookCost(
       recorder,
-      { key: 'my-plugin', name: 'my-plugin' },
+      { key: 'my-plugin', name: 'my-plugin', kind: 'plugin' },
       'transform',
       async () => {
         clock.advance(30);
@@ -145,7 +160,7 @@ describe('measureHookCost', () => {
     });
     const hook = measureHookCost(
       recorder,
-      { key: 'my-plugin', name: 'my-plugin' },
+      { key: 'my-plugin', name: 'my-plugin', kind: 'plugin' },
       'transform',
       () => gate,
     );
@@ -168,12 +183,22 @@ describe('owner identity', () => {
     // unrankable.
     const first = { name: 'dup' };
     const second = { name: 'dup' };
-    const a = measureHookCost(recorder, { key: first, name: 'dup' }, 'transform', () => {
-      clock.advance(10);
-    });
-    const b = measureHookCost(recorder, { key: second, name: 'dup' }, 'transform', () => {
-      clock.advance(30);
-    });
+    const a = measureHookCost(
+      recorder,
+      { key: first, name: 'dup', kind: 'plugin' },
+      'transform',
+      () => {
+        clock.advance(10);
+      },
+    );
+    const b = measureHookCost(
+      recorder,
+      { key: second, name: 'dup', kind: 'plugin' },
+      'transform',
+      () => {
+        clock.advance(30);
+      },
+    );
 
     a();
     b();
@@ -183,6 +208,25 @@ describe('owner identity', () => {
     expect(recorder.costs.size).toBe(2);
     expect(costOf(recorder, first, 'transform').ms).toBe(10);
     expect(costOf(recorder, second, 'transform').ms).toBe(30);
+  });
+});
+
+describe('owner kind', () => {
+  it('says where a callback was configured, so no consumer has to match on the name', () => {
+    const clock = fakeClock();
+    const recorder = newRecorder();
+    measureHookCost(recorder, OUTPUT_OPTIONS_OWNER, 'codeSplitting groups[].name', () => {
+      clock.advance(1);
+    })();
+    measureHookCost(recorder, { key: 'p', name: 'p', kind: 'plugin' }, 'transform', () => {
+      clock.advance(1);
+    })();
+
+    const kinds = [...recorder.costs.values()].flatMap((byHook) =>
+      [...byHook.values()].map((cost) => cost.kind),
+    );
+    const expected: PluginTimingKind[] = ['outputOption', 'plugin'];
+    expect(kinds).toEqual(expected);
   });
 });
 
@@ -202,7 +246,7 @@ describe('overlap accounting', () => {
     let next = 0;
     const hook = measureHookCost(
       recorder,
-      { key: 'my-plugin', name: 'my-plugin' },
+      { key: 'my-plugin', name: 'my-plugin', kind: 'plugin' },
       'transform',
       () => gates[next++]!,
     );
@@ -242,14 +286,14 @@ describe('busy time', () => {
     clock.set(0);
     const first = measureHookCost(
       recorder,
-      { key: 'a-plugin', name: 'a-plugin' },
+      { key: 'a-plugin', name: 'a-plugin', kind: 'plugin' },
       'transform',
       () => a,
     )();
     clock.set(10);
     const second = measureHookCost(
       recorder,
-      { key: 'b-plugin', name: 'b-plugin' },
+      { key: 'b-plugin', name: 'b-plugin', kind: 'plugin' },
       'transform',
       () => b,
     )();
@@ -288,6 +332,7 @@ function summaryWith(
     byHook.set(hookName, {
       owner,
       hookName,
+      kind: 'plugin',
       inFlight: 0,
       lastChange: 0,
       overlapMs: 0,
@@ -317,6 +362,7 @@ describe('summarizePluginTimings', () => {
         hook: 'transform',
         calls: 2,
         ms: 4,
+        kind: 'plugin',
         maxInFlight: 1,
         overlapMs: 0,
         rankable: true,

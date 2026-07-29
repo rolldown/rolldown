@@ -65,10 +65,19 @@ export interface TimingOwner {
   key: unknown;
   /** What the report shows. */
   name: string;
+  kind: PluginTimingKind;
 }
+
+/**
+ * Where a callback was configured. Supplied by the wrapping call site, which knows: it
+ * cannot be recovered from the owner's name, since a plugin may legally be called
+ * `output options`.
+ */
+export type PluginTimingKind = 'plugin' | 'outputOption' | 'inputOption';
 
 interface HookCost {
   owner: string;
+  kind: PluginTimingKind;
   hookName: string;
   calls: number;
   ms: number;
@@ -135,6 +144,7 @@ function costFor(recorder: PluginTimingsRecorder, owner: TimingOwner, hookName: 
   if (cost === undefined) {
     cost = {
       owner: owner.name,
+      kind: owner.kind,
       hookName,
       calls: 0,
       ms: 0,
@@ -242,12 +252,44 @@ export function measureHookCost<T extends (...args: never[]) => unknown>(
 export const OUTPUT_OPTIONS_OWNER: TimingOwner = {
   key: Symbol('output options'),
   name: 'output options',
+  kind: 'outputOption',
 };
+
+/** As {@link OUTPUT_OPTIONS_OWNER}, for callbacks configured on the input options. */
+export const INPUT_OPTIONS_OWNER: TimingOwner = {
+  key: Symbol('input options'),
+  name: 'input options',
+  kind: 'inputOption',
+};
+
+/**
+ * Wrap `value` when the user supplied a function, and leave every other form alone.
+ *
+ * Most option callbacks are declared as `string | RegExp | Function | ...`, so this keeps
+ * the one cast the wrapping needs in a single place.
+ */
+export function measureIfFunction<T>(
+  recorder: PluginTimingsRecorder | undefined,
+  owner: TimingOwner,
+  hookName: string,
+  value: T,
+): T {
+  if (typeof value !== 'function') {
+    return value;
+  }
+  return measureHookCost(
+    recorder,
+    owner,
+    hookName,
+    value as unknown as (...args: never[]) => unknown,
+  ) as unknown as T;
+}
 
 /** What one owner's hook cost the build. */
 export interface PluginTimingRow {
-  /** The plugin the callback belongs to. */
+  /** The plugin the callback belongs to, or the options it was configured on. */
   owner: string;
+  kind: PluginTimingKind;
   /** `transform`, `codeSplitting groups[].name`, … — what the user wrote in their config. */
   hook: string;
   calls: number;
@@ -310,6 +352,7 @@ export function summarizePluginTimings(key: object): PluginTimingsMeasurement {
       }
       rows.push({
         owner: cost.owner,
+        kind: cost.kind,
         hook: cost.hookName,
         calls: cost.calls,
         ms: cost.ms,

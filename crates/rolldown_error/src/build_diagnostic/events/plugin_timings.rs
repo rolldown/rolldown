@@ -8,6 +8,16 @@ const MIN_ROW_MS: f64 = 1_000.0;
 const MAX_MEASURED_ROWS: usize = 12;
 const MAX_UNMEASURABLE_ROWS: usize = 3;
 
+/// Where a measured callback was configured, so a report can tell a plugin's hook from a
+/// user callback the core invokes directly. The warning below does not use it; it is
+/// carried for the other consumers of the same measurement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PluginTimingKind {
+  Plugin,
+  OutputOption,
+  InputOption,
+}
+
 /// What one callback cost, measured inside it on the JavaScript side.
 ///
 /// The bundler can only bracket dispatch and completion, and for a concurrently dispatched
@@ -15,8 +25,9 @@ const MAX_UNMEASURABLE_ROWS: usize = 3;
 /// side of the binding. See `packages/rolldown/src/utils/plugin-timings.ts`.
 #[derive(Debug, Clone)]
 pub struct PluginTiming {
-  /// The plugin the callback belongs to.
+  /// The plugin the callback belongs to, or the options it was configured on.
   pub owner: String,
+  pub kind: PluginTimingKind,
   /// `transform`, `codeSplitting groups[].name`, … — what the user writes in their config.
   pub hook: String,
   pub calls: u32,
@@ -185,6 +196,7 @@ mod tests {
   fn row(owner: &str, hook: &str, ms: f64, calls: u32, max_in_flight: u32) -> PluginTiming {
     PluginTiming {
       owner: owner.to_string(),
+      kind: PluginTimingKind::Plugin,
       hook: hook.to_string(),
       calls,
       ms,

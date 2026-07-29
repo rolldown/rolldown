@@ -1,0 +1,19 @@
+packages/rolldown/src/plugin/hook-filter.ts
+  s_25c3a8cc4c98ed::t_13a186a78d4857 34-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0327fef87a82be4c42490a50df32a8b393c39e13",
+  "prompts": {},
+  "sessions": {
+    "s_25c3a8cc4c98ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fac27-2606-79d1-9b96-bedce35f4a5b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

@@ -29,4 +29,4 @@ const jsFiles = readdirSync(join(import.meta.dirname, 'dist')).filter((file) =>
 // - `main.js`
 // - `app.js` + `vendor.js`
 // - `lazy.js`
-assert.strictEqual(jsFiles.length, 4, `Expected 4 chunks but got: ${jsFiles.join(', ')}`);
+assert.strictEqual(jsFiles.length, 3, `Expected 3 chunks but got: ${jsFiles.join(', ')}`);

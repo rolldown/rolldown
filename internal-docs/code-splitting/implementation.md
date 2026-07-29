@@ -144,7 +144,7 @@ Before chunk materialization, Rolldown can reduce dynamic-entry bits for modules
 
 The pass groups modules into temporary atoms by their current dependent-entry bitset, computes the static atoms loaded by each entry, then runs a fixed-point propagation over dynamic imports. A dynamic entry's already-loaded atoms are the intersection of the static and already-loaded atoms of all entries that can reach its included dynamic importers. Any atom already loaded for a dynamic entry can drop that dynamic entry bit, and modules are then regrouped by the reduced bitsets during normal chunk creation.
 
-When the reduced bitset would put an atom into a single dynamic-entry chunk, the pass preserves that dynamic entry's observable namespace. The reduction is accepted only if the atom has no extra exports, its exports are already part of the dynamic entry's signature, it is runtime-only, or it is the removed dynamic-entry module itself. Otherwise the atom stays separate so `import("./entry.js")` does not expose helper exports needed only by other chunks.
+When the reduced bitset would put an atom into a single purely dynamic-imported entry chunk, the reduction is not restricted by `preserveEntrySignatures`. Since we control all dynamic importers of the chunk, we instead generate a synthetic namespace inside the chunk, and use it as the "imported namespace" in the importer code (`import("./chunk.js").then((n) => n.<ns>)`).
 
 Every accepted reduction must also keep the regrouped static atom graph acyclic. "Already loaded" does not always mean "already initialized": if a reduced atom is moved into a chunk that statically imports one of its consumers, an ES module cycle can expose uninitialized bindings, including CJS wrapper functions.
 

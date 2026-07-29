@@ -1,0 +1,11 @@
+{
+  "_comment": "`app.js` exports a callable `then`, so its `import()` namespace is thenable (the promise resolves through it, exactly like the unbundled module). The `.then((n) => n.<ns>)` namespace extraction would observe the wrong value, so the already-loaded analysis must not group `shared.js` into the dynamic entry chunk: it stays in its own chunk.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

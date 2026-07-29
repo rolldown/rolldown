@@ -1,0 +1,48 @@
+crates/rolldown/src/module_finalizers/impl_visit_mut.rs
+  s_1524eb9f9fabad::t_ea5c0346c6f1f3 212-213
+crates/rolldown/src/module_finalizers/mod.rs
+  s_1524eb9f9fabad::t_459fcc55e10bd1 189,1532,1759,1762-1764
+crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs
+  s_1524eb9f9fabad::t_c7ed6f2db9dfec 94-97,99,252-255,257,314,469,663-666
+  s_1524eb9f9fabad::t_26260ee0f8f08a 343
+  s_1524eb9f9fabad::t_2848402d195b53 1,44-60,84,98,241-244,256,274,352,504-512,627,631-639,659
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_a6f305dc0983c0::t_5b63a16e55ca9a 48-51,56-77,79-80,82,85,100,119,126
+  s_1524eb9f9fabad::t_aaa6c6e078ccf6 55
+crates/rolldown/src/stages/generate_stage/order_analysis.rs
+  s_1524eb9f9fabad::t_a1854e2b75d73d 487-489
+crates/rolldown/src/stages/generate_stage/order_wrapping.rs
+  s_1524eb9f9fabad::t_f272a0275eda0c 593-597
+internal-docs/code-splitting/design.md
+  s_1524eb9f9fabad::t_7df809d3f9fc0c 240,242,277-281,284-291,294-295,299,322,352
+crates/rolldown/src/module_finalizers/finalizer_context.rs
+  s_1524eb9f9fabad::t_4f8a7237355d4c 29,52
+crates/rolldown/src/stages/generate_stage/finalize_modules.rs
+  s_1524eb9f9fabad::t_cd6ca1ecc2d463 14,25
+crates/rolldown/src/stages/generate_stage/mod.rs
+  s_1524eb9f9fabad::t_0129254d28da85 117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "279f5107f6991d84c6d38f1099568d637e04d0ea",
+  "prompts": {},
+  "sessions": {
+    "s_1524eb9f9fabad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8761-7347-7b70-b3f1-24c54174fc35",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    },
+    "s_a6f305dc0983c0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7eb6-4cde-75c0-a32b-d790440743fc",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

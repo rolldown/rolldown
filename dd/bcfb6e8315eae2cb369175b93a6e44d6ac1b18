@@ -1,0 +1,21 @@
+.github/workflows/publish-to-npm.yml
+  s_140f3a229a13df::t_56f2aa03b1e218 84
+.github/workflows/publish-to-pkg.pr.new.yml
+  s_140f3a229a13df::t_07128f844e032a 83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ddbcfb6e8315eae2cb369175b93a6e44d6ac1b18",
+  "prompts": {},
+  "sessions": {
+    "s_140f3a229a13df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9a4db60a-5813-4fc0-8aa0-03db7ed19b53",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

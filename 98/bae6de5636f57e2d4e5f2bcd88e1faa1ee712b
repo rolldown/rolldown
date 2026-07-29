@@ -1,0 +1,51 @@
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_collapsed_dynamic_entry_external_star/artifacts.snap
+  s_a263216b342109::t_c3b1282a9f75a7 1-154
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_collapsed_dynamic_entry_external_star/reader.js
+  s_0d9d9f3dab497d::t_f437d86b814c62 1-5
+internal-docs/code-splitting/implementation.md
+  s_0d9d9f3dab497d::t_faa306d4900591 102-105
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star_named/artifacts.snap
+  s_a263216b342109::t_adda8c2c4aeeaa 10,51,59,66,74,90,134,145,152,160
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star/artifacts.snap
+  s_a263216b342109::t_5fedbc07d4983f 10,51,59,66,74,90,134,145,152,160
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_a263216b342109::t_34b035c9e13650 9-10,236-248,251
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_collapsed_dynamic_entry_external_star/target.js
+  s_0d9d9f3dab497d::t_7cb863c2cc81cd 1-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star_fanout/artifacts.snap
+  s_a263216b342109::t_1064a6166d5365 10,63,71,79,87,103,159,170,178,186
+crates/rolldown/src/stages/generate_stage/order_wrap_state.rs
+  s_0d9d9f3dab497d::t_0eaf13728b49c2 22-23,25-28,239-268,400-419
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_renamed_cycle/artifacts.snap
+  s_a263216b342109::t_060227a8e07320 10-11,20,34-39,47,55,59,66,74,90-91,104,118-123,131,139,146,153,161
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_collapsed_dynamic_entry_external_star/_config.json
+  s_0d9d9f3dab497d::t_a895b5b195ad5b 1-23
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_collapsed_dynamic_entry_external_star/_test.mjs
+  s_0d9d9f3dab497d::t_c16aea0f50715a 1-12
+crates/rolldown/src/stages/generate_stage/order_wrapping.rs
+  s_0d9d9f3dab497d::t_36d032730961b8 30-37,139-140,143-147,205-215,314,390-392,407-466,524-533,552,554-556,561,566-585,614-616,618-619,621
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "98bae6de5636f57e2d4e5f2bcd88e1faa1ee712b",
+  "prompts": {},
+  "sessions": {
+    "s_0d9d9f3dab497d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa2b8-c711-7a23-bc1e-0b9d4e5701a6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    },
+    "s_a263216b342109": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa32f-2224-7331-92fc-284bb0b3b993",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

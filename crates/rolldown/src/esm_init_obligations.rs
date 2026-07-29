@@ -232,7 +232,7 @@ pub fn collect_wrapped_esm_init_targets_for_module_namespace(
       &mut visited_symbols,
     );
   }
-  targets.sort_by_key(|target| consumer_local_target_order(ctx, ctx.importer.idx, *target));
+  targets.sort_by_cached_key(|target| consumer_local_target_order(ctx, ctx.importer.idx, *target));
   targets
 }
 
@@ -387,7 +387,7 @@ fn collect_esm_init_targets_for_record(
   }
 
   if route_through_transparent_wrapper {
-    targets.sort_by_key(|target| consumer_local_target_order(ctx, importee_idx, *target));
+    targets.sort_by_cached_key(|target| consumer_local_target_order(ctx, importee_idx, *target));
   }
 
   targets
@@ -419,11 +419,12 @@ fn consumer_local_target_order_path(
   if let WrappedEsmInitTarget::CjsCarrier(key) = target
     && key.importer == forwarder_idx
   {
-    let position = forwarder
-      .import_records
-      .iter_enumerated()
-      .position(|(rec_idx, _)| rec_idx == key.record)
-      .unwrap_or(usize::MAX);
+    // An index vec iterates in index order, so the record's own index is its source position.
+    let position = if key.record.index() < forwarder.import_records.len() {
+      key.record.index()
+    } else {
+      usize::MAX
+    };
     visited.remove(&forwarder_idx);
     return Some(vec![position]);
   }

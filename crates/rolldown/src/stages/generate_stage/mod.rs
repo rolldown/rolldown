@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use arcstr::ArcStr;
 use futures::future::try_join_all;
@@ -128,6 +129,10 @@ pub struct GenerateStage<'a> {
   /// `paths` option, it is resolved asynchronously here before entering sync rendering code,
   /// avoiding the need for `invoke_sync` which can cause deadlocks.
   resolved_paths: Option<PathsOutputOption>,
+  /// Synchronous-cycle facts read only from `import_records` kind/target and module normality,
+  /// which no generate-stage pass mutates — computed lazily once per build and shared by
+  /// pre-chunk probing, order analysis, and lowering.
+  cached_synchronous_cycle_modules: OnceLock<FxHashSet<ModuleIdx>>,
 }
 
 impl<'a> GenerateStage<'a> {
@@ -137,7 +142,22 @@ impl<'a> GenerateStage<'a> {
     options: &'a SharedOptions,
     plugin_driver: &'a SharedPluginDriver,
   ) -> Self {
-    Self { link_output, ast_table, options, plugin_driver, resolved_paths: None }
+    Self {
+      link_output,
+      ast_table,
+      options,
+      plugin_driver,
+      resolved_paths: None,
+      cached_synchronous_cycle_modules: OnceLock::new(),
+    }
+  }
+
+  /// Tarjan SCC over the synchronous `import`/`require` module graph. The graph never changes
+  /// during the generate stage, so every consumer shares one computation.
+  pub(super) fn synchronous_cycle_modules(&self) -> &FxHashSet<ModuleIdx> {
+    self.cached_synchronous_cycle_modules.get_or_init(|| {
+      order_wrapping::synchronous_cycle_modules(&self.link_output.module_table.modules)
+    })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]

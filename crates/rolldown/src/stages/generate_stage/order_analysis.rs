@@ -592,8 +592,7 @@ impl GenerateStage<'_> {
     // retained star re-exports) and the overlay projection sees every eager forwarder's hop. The
     // module's own namespace ref stands in for each not-yet-minted wrapper — projection reads only
     // target identity, never the wrapper symbol's value.
-    let cyclic_modules =
-      super::order_wrapping::synchronous_cycle_modules(&self.link_output.module_table.modules);
+    let cyclic_modules = self.synchronous_cycle_modules();
     let input = super::order_wrapping::OrderLoweringInput {
       plan,
       modules: &self.link_output.module_table.modules,
@@ -606,7 +605,7 @@ impl GenerateStage<'_> {
         .link_output
         .star_reexport_records_by_imported_symbol,
       used_symbols: used_symbol_refs,
-      cyclic_modules: &cyclic_modules,
+      cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
     };
     for module_idx in plan.modules() {
@@ -662,8 +661,7 @@ impl GenerateStage<'_> {
         probe_state.set_reexport_init_transparent(module_idx);
       }
     }
-    let cyclic_modules =
-      super::order_wrapping::synchronous_cycle_modules(&self.link_output.module_table.modules);
+    let cyclic_modules = self.synchronous_cycle_modules();
     let input = super::order_wrapping::OrderLoweringInput {
       plan,
       modules: &self.link_output.module_table.modules,
@@ -676,7 +674,7 @@ impl GenerateStage<'_> {
         .link_output
         .star_reexport_records_by_imported_symbol,
       used_symbols: used_symbol_refs,
-      cyclic_modules: &cyclic_modules,
+      cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
     };
     let consumer_local_plan =
@@ -694,6 +692,10 @@ impl GenerateStage<'_> {
     probe_state.set_consumed_reexport_facades(reexport_usage.consumed_facades().clone());
   }
 
+  // Deliberately recomputed per call rather than cached: the facade-chunk optimizer's inclusion
+  // replay can rewrite `metas.is_included` between the pre-chunk probe and the final analysis
+  // (`chunk_optimizer.rs`), so a shared snapshot would need a probe/final coherence decision
+  // first.
   fn wrap_all_order_analysis(&self) -> OrderAnalysis {
     let mut plan = OrderWrapPlan::default();
     // Only membership matters here, so one shared visit-state vector lets every module be

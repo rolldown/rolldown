@@ -459,7 +459,11 @@ impl GenerateStage<'_> {
 
     let runtime_helper = self.esm_runtime_helper();
     let code_splitting_disabled = self.options.code_splitting.is_disabled();
-    let cyclic_modules = synchronous_cycle_modules(&self.link_output.module_table.modules);
+    // Warm the shared cache with a short-lived whole-`self` borrow, then reborrow only the field
+    // so the mutable `symbol_db` borrow in the lowering output stays disjoint.
+    self.synchronous_cycle_modules();
+    let cyclic_modules =
+      self.cached_synchronous_cycle_modules.get().expect("warmed by the call above");
     let input = OrderLoweringInput {
       plan,
       modules: &self.link_output.module_table.modules,
@@ -472,7 +476,7 @@ impl GenerateStage<'_> {
         .link_output
         .star_reexport_records_by_imported_symbol,
       used_symbols: used_symbol_refs,
-      cyclic_modules: &cyclic_modules,
+      cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
     };
     let mut output =

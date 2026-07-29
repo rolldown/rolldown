@@ -165,6 +165,7 @@ docs/.wrangler
 
 # ci release avoid lerna error: Working tree has uncommitted changes
 crates/rolldown_binding/artifacts/
+packages/rolldown/artifacts/
 packages/**/THIRD-PARTY-LICENSE
 
 

@@ -7,10 +7,11 @@ use std::{
 };
 
 use arcstr::ArcStr;
+use async_lock::Mutex;
 use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate, ScanMode};
+use rolldown_dev_common::types::DevCallbackResult;
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
-use tokio::sync::Mutex;
 
 use rolldown::Bundler;
 
@@ -81,12 +82,13 @@ impl BundlingTask {
     }
   }
 
-  pub async fn run(mut self) {
+  pub async fn run(mut self) -> DevCallbackResult {
     tracing::trace!("[BundlingTask] starts to run.\n - Task Input: {:#?}", self.input);
-    self.run_inner().await;
+    let callback_result = self.run_inner().await;
 
     let has_generated_bundle_output = self.has_rebuild_happen;
     let error_stage = self.final_error_stage();
+    let callback_error = callback_result.as_ref().err().cloned();
     // Feeds the next task's noop-upgrade check — see `DevContext::last_task_errored`.
     self.dev_context.last_task_errored.store(error_stage.is_some(), Ordering::Relaxed);
 
@@ -94,17 +96,21 @@ impl BundlingTask {
       "[BundlingTask] completed\n - has_generated_bundle_output: {has_generated_bundle_output:?}",
     );
 
-    self.dev_context.coordinator_tx.send(CoordinatorMsg::BundleCompleted {
+    self.dev_context.coordinator_tx.unbounded_send(CoordinatorMsg::BundleCompleted {
       error_stage,
       has_generated_bundle_output,
+      callback_error,
     }).expect(
       "Coordinator channel closed while sending BundleCompleted - coordinator terminated unexpectedly"
     );
+
+    callback_result
   }
 
-  async fn run_inner(&mut self) {
-    {
+  async fn run_inner(&mut self) -> DevCallbackResult {
+    let watch_change_error = {
       let bundler = self.bundler.lock().await;
+      let mut watch_change_error = None;
       for (changed_file, event) in self.input.changed_files() {
         if let Some(plugin_driver) =
           bundler.last_bundle_handle.as_ref().map(rolldown::BundleHandle::plugin_driver)
@@ -112,16 +118,21 @@ impl BundlingTask {
           if let Err(err) = plugin_driver.watch_change(changed_file.to_str().unwrap(), *event).await
           {
             tracing::error!("[BundlingTask] watchChange hook failed: {err:?}");
-            // Classified as Hmr stage: the next Hmr task re-runs watch_change,
-            // which is sufficient to retry the hook.
-            self.hmr_errored = true;
-            if let Some(on_output) = self.dev_context.options.on_output.as_ref() {
-              on_output(Err(err.into()));
-            }
-            return;
+            watch_change_error = Some(err.into());
+            break;
           }
         }
       }
+      watch_change_error
+    };
+    if let Some(error) = watch_change_error {
+      // Classified as Hmr stage: the next Hmr task re-runs watch_change,
+      // which is sufficient to retry the hook.
+      self.hmr_errored = true;
+      if let Some(on_output) = self.dev_context.options.on_output.as_ref() {
+        on_output(Err(error)).await?;
+      }
+      return Ok(());
     }
 
     // A tsconfig edit affects every module the tsconfig governs, which HMR
@@ -162,20 +173,20 @@ impl BundlingTask {
             update: HmrUpdate::FullReload { reason: "tsconfig change".to_owned() },
           })
           .collect();
-        on_hmr_updates(Ok((updates, changed_files)));
+        on_hmr_updates(Ok((updates, changed_files))).await?;
       }
       self.input = TaskInput::FullBuild;
     }
 
     if self.input.require_generate_hmr_update() {
       tracing::trace!("[BundlingTask] starts to generate HMR updates");
-      let may_continue = self.generate_hmr_updates().await;
+      let may_continue = self.generate_hmr_updates().await?;
       tracing::trace!("[BundlingTask] completed generating HMR updates");
       // Stop only when HMR errored AND no callback was registered to receive
       // the error — preserving the pre-refactor `?` short-circuit. When the
       // consumer was informed via callback, the rebuild still runs.
       if !may_continue {
-        return;
+        return Ok(());
       }
     }
 
@@ -186,14 +197,16 @@ impl BundlingTask {
 
     if self.input.requires_rebuild() {
       self.has_rebuild_happen = true;
-      self.rebuild().await;
+      self.rebuild().await?;
     }
+
+    Ok(())
   }
 
   /// Returns `true` if subsequent build stages may continue.
   /// Callers should skip subsequent build stages on `false`.
   #[tracing::instrument(level = "trace", skip(self))]
-  pub async fn generate_hmr_updates(&mut self) -> bool {
+  pub async fn generate_hmr_updates(&mut self) -> DevCallbackResult<bool> {
     let mut bundler = self.bundler.lock().await;
     let changed_files = self
       .input
@@ -287,30 +300,52 @@ impl BundlingTask {
     // newly imported by the changed module) BEFORE sending the patch, so the
     // consumer can register/serve them before the client requests them. A pure
     // HMR patch never triggers `on_output`, so this is their only delivery path.
-    if succeeded {
+    let additional_assets = if succeeded {
       if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
         let mut output = BundleOutput::default();
-        bundler.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
-        if !output.assets.is_empty() {
-          on_additional_assets(output);
+        bundler
+          .file_emitter()
+          .expect("a successful HMR update requires an installed bundle handle")
+          .add_additional_files(&mut output.assets, &mut output.warnings);
+        if output.assets.is_empty() {
+          None
+        } else {
+          Some((Arc::clone(on_additional_assets), output))
         }
+      } else {
+        None
       }
+    } else {
+      None
+    };
+    drop(bundler);
+
+    if let Some((on_additional_assets, output)) = additional_assets
+      && let Err(error) = on_additional_assets(output).await
+    {
+      self.hmr_errored = true;
+      return Err(error);
     }
 
     // Call on_hmr_updates callback if provided
     if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
-      on_hmr_updates(hmr_result.map(|client_updates| {
+      if let Err(error) = on_hmr_updates(hmr_result.map(|client_updates| {
         (client_updates, changed_files.iter().map(|(p, _)| p.clone()).collect())
-      }));
+      }))
+      .await
+      {
+        self.hmr_errored = true;
+        return Err(error);
+      }
     }
 
     // Continue when HMR succeeded, or when the consumer was informed of the
     // failure via the callback. Stop only on an undeliverable error.
-    succeeded || has_callback
+    Ok(succeeded || has_callback)
   }
 
   #[tracing::instrument(level = "trace", skip_all)]
-  async fn rebuild(&mut self) {
+  async fn rebuild(&mut self) -> DevCallbackResult {
     let mut bundler = self.bundler.lock().await;
 
     // TODO: hyf0 `skip_write` in watch mode won't trigger generate stage, need to investigate why.
@@ -345,10 +380,16 @@ impl BundlingTask {
       };
       *self.dev_context.top_level_evaluated.lock().await = Arc::new(top_level_evaluated);
     }
+    drop(bundler);
 
     // Call on_output callback if provided
     if let Some(on_output) = self.dev_context.options.on_output.as_ref() {
-      on_output(build_result);
+      if let Err(error) = on_output(build_result).await {
+        self.rebuild_errored = true;
+        return Err(error);
+      }
     }
+
+    Ok(())
   }
 }

@@ -3,11 +3,11 @@ import type {
   BindingOutputs,
   BindingPluginContext,
   BindingPluginOptions,
-  BindingResult,
 } from '../binding.cjs';
 import { RolldownMagicString } from '../binding-magic-string';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError, unwrapBindingResult } from '../utils/error';
+import { dropBindingOutputs, shouldEagerlyFreeOutputs } from '../utils/threadless-free';
 import { transformRenderedChunk } from '../utils/transform-rendered-chunk';
 import {
   type ChangedOutputs,
@@ -168,25 +168,42 @@ export function bindingifyRenderError(
 function createOutputBundle(
   args: BindingifyPluginArgs,
   ctx: BindingPluginContext,
-  bundle: BindingResult<BindingOutputs>,
+  outputs: BindingOutputs,
 ) {
   const changed = {
     updated: new Set(),
     deleted: new Set(),
   } as ChangedOutputs;
   const context = createPluginContext(args, ctx);
-  const output = transformToOutputBundle(context, unwrapBindingResult(bundle), changed);
+  const output = transformToOutputBundle(context, outputs, changed);
   return { changed, context, output };
 }
 
+// Each generateBundle/writeBundle invocation receives its own marshaled copy
+// of the bundle: new BindingOutputChunk/BindingOutputAsset boxes sharing the
+// build's native `Arc`s (`js_plugin.rs` marshals `args.bundle.clone()`). Those
+// boxes are normally reclaimed by GC finalizers, which the threadless-WASI
+// flavor cannot rely on (workerd never runs them), so there we release them as
+// soon as the hook round-trip is done — after `collectChangedBundle` finished
+// its native reads and before the Rust side applies the changes (it then sees
+// our references gone and can `Arc::get_mut` in place). Plugins that stash the
+// `bundle` object past the hook invocation get throwing getters for
+// not-yet-read fields on this flavor only.
 export function bindingifyGenerateBundle(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['generateBundle']> {
   return bindingifyHook(args.plugin.generateBundle, ({ handler }) => ({
     plugin: async (ctx, bundle, isWrite, opts) => {
-      const { changed, context, output } = createOutputBundle(args, ctx, bundle);
-      await handler.call(context, args.pluginContextData.getOutputOptions(opts), output, isWrite);
-      return collectChangedBundle(changed, output);
+      const outputs = unwrapBindingResult(bundle);
+      try {
+        const { changed, context, output } = createOutputBundle(args, ctx, outputs);
+        await handler.call(context, args.pluginContextData.getOutputOptions(opts), output, isWrite);
+        return collectChangedBundle(changed, output);
+      } finally {
+        if (shouldEagerlyFreeOutputs()) {
+          dropBindingOutputs(outputs);
+        }
+      }
     },
   }));
 }
@@ -196,9 +213,16 @@ export function bindingifyWriteBundle(
 ): PluginHookWithBindingExt<BindingPluginOptions['writeBundle']> {
   return bindingifyHook(args.plugin.writeBundle, ({ handler }) => ({
     plugin: async (ctx, bundle, opts) => {
-      const { changed, context, output } = createOutputBundle(args, ctx, bundle);
-      await handler.call(context, args.pluginContextData.getOutputOptions(opts), output);
-      return collectChangedBundle(changed, output);
+      const outputs = unwrapBindingResult(bundle);
+      try {
+        const { changed, context, output } = createOutputBundle(args, ctx, outputs);
+        await handler.call(context, args.pluginContextData.getOutputOptions(opts), output);
+        return collectChangedBundle(changed, output);
+      } finally {
+        if (shouldEagerlyFreeOutputs()) {
+          dropBindingOutputs(outputs);
+        }
+      }
     },
   }));
 }
@@ -208,10 +232,14 @@ export function bindingifyCloseBundle(
 ): PluginHookWithBindingExt<BindingPluginOptions['closeBundle']> {
   return bindingifyHook(args.plugin.closeBundle, ({ handler }) => ({
     plugin: async (ctx, err) => {
-      await handler.call(
-        createPluginContext(args, ctx),
-        err ? aggregateBindingErrorsIntoJsError(err) : undefined,
-      );
+      const invokeHook = () =>
+        handler.call(
+          createPluginContext(args, ctx),
+          err ? aggregateBindingErrorsIntoJsError(err) : undefined,
+        );
+      await (args.closeCallbackScope
+        ? args.closeCallbackScope.runWithCloseIdentity(ctx.closeIdentity(), invokeHook)
+        : invokeHook());
     },
   }));
 }

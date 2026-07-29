@@ -24,6 +24,7 @@ extend-exclude = [
   "packages/rolldown/src/binding.js",
   "packages/rolldown/tests/fixtures/",
   "packages/rolldown/tests/stability/",
+  "patches/@napi-rs__cli@3.7.2.patch",
   "scripts/src/esbuild-tests/snap-diff/**/*.{txt,md}",
   "**/NUL",
 ]
@@ -42,3 +43,5 @@ styl = "styl"
 [default.extend-identifiers]
 IIFEs = "IIFEs"
 PnP = "PnP"
+# Cloudflare Workers compatibility flag (AsyncLocalStorage).
+nodejs_als = "nodejs_als"

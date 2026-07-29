@@ -39,6 +39,28 @@ pub fn spawn_boxed_future<T: 'static + Send + ToNapiValue>(
   env.spawn_future(fut)
 }
 
+pub enum DetachedFutureSpawn<F> {
+  Spawned,
+  Rejected(F),
+}
+
+pub fn try_spawn_detached_future<F>(fut: F) -> DetachedFutureSpawn<F>
+where
+  F: 'static + Send + Future<Output = ()>,
+{
+  #[cfg(feature = "async-runtime")]
+  return match rolldown_utils::async_runtime::try_spawn_detached(fut) {
+    Ok(()) => DetachedFutureSpawn::Spawned,
+    Err(fut) => DetachedFutureSpawn::Rejected(fut),
+  };
+
+  #[cfg(not(feature = "async-runtime"))]
+  {
+    drop(napi::bindgen_prelude::spawn(fut));
+    DetachedFutureSpawn::Spawned
+  }
+}
+
 #[napi]
 pub struct TraceSubscriberGuard {
   guard: Option<Box<dyn Any + Send>>,
@@ -62,7 +84,15 @@ pub fn init_trace_subscriber() -> Option<TraceSubscriberGuard> {
 pub fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {
   result.map_err(|e| match e.downcast::<napi::Error>() {
     Ok(e) => e,
-    Err(e) => napi::Error::from_reason(format!("Rolldown internal error: {e}")),
+    Err(e) => {
+      // Replayable lifecycle futures retain failures behind a shared wrapper.
+      // Clone a nested napi error so the original JS exception object, stack,
+      // subclass, and own properties survive the Rust close state machine.
+      if let Some(error) = e.chain().find_map(|cause| cause.downcast_ref::<napi::Error>()) {
+        return error.try_clone().unwrap_or_else(|clone_error| clone_error);
+      }
+      napi::Error::from_reason(format!("Rolldown internal error: {e}"))
+    }
   })
 }
 
@@ -135,4 +165,34 @@ pub async fn handle_warnings(
   }
 
   Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+  use std::{fmt, sync::Arc};
+
+  use super::handle_result;
+
+  #[derive(Debug)]
+  struct SharedNapiError(Arc<napi::Error>);
+
+  impl fmt::Display for SharedNapiError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+      self.0.fmt(f)
+    }
+  }
+
+  impl std::error::Error for SharedNapiError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+      Some(self.0.as_ref())
+    }
+  }
+
+  #[test]
+  fn handle_result_preserves_nested_napi_errors() {
+    let error =
+      anyhow::Error::new(SharedNapiError(Arc::new(napi::Error::from_reason("close bundle error"))));
+    let error = handle_result::<()>(Err(error)).expect_err("nested napi error must be returned");
+    assert_eq!(error.reason, "close bundle error");
+  }
 }

@@ -53,3 +53,27 @@ export function transformChunkModules(
   }
   return result;
 }
+
+/**
+ * Like {@linkcode transformChunkModules}, but copies every rendered module to
+ * plain JS data and releases each native `BindingRenderedModule` box
+ * immediately. For the threadless-WASI flavor, where GC finalizers (the boxes'
+ * normal reclamation path) never run.
+ */
+export function snapshotChunkModules(
+  modules: BindingRenderedChunk['modules'],
+): RenderedChunk['modules'] {
+  const result: RenderedChunk['modules'] = {};
+  for (let i = 0; i < modules.values.length; i++) {
+    const key = modules.keys[i];
+    const box = modules.values[i];
+    const code = box.code;
+    result[key] = {
+      code,
+      renderedLength: code?.length || 0,
+      renderedExports: box.renderedExports,
+    };
+    box.dropInner();
+  }
+  return result;
+}

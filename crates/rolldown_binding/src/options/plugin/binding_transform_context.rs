@@ -35,7 +35,7 @@ impl BindingTransformPluginContext {
   #[napi]
   pub fn send_magic_string(
     &self,
-    magic_string: &mut BindingMagicString<'static>,
+    magic_string: &mut BindingMagicString,
   ) -> napi::Result<Option<String>> {
     // This moves the contents out, leaving `magic_string` unusable from JS onwards —
     // including for a repeated send, which errors here instead of queueing the empty

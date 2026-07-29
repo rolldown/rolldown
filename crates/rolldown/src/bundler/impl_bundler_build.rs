@@ -55,13 +55,35 @@ impl Bundler {
   /// Close the bundler, calling the `closeBundle` plugin hook.
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&mut self) -> BuildResult<()> {
-    if self.closed {
-      return Ok(());
+    if !self.closed {
+      self.closed = true;
     }
-    self.closed = true;
     if let Some(handle) = &self.last_bundle_handle {
       handle.close().await?;
     }
+    Ok(())
+  }
+
+  /// Call the watch-session `closeWatcher` hook even when the watcher closes
+  /// before its first build creates a bundle/plugin driver.
+  // See internal-docs/watch-mode/implementation.md.
+  pub async fn close_watcher(&mut self) -> BuildResult<()> {
+    if let Some(handle) = self.last_bundle_handle.clone() {
+      handle.plugin_driver().close_watcher().await?;
+      return Ok(());
+    }
+
+    // Plugin drivers are normally created as part of `create_bundle`. An
+    // immediate watcher close still owes plugins `closeWatcher`, but must not
+    // manufacture a `closeBundle` lifecycle for a build that never started.
+    let handle = {
+      let bundle = self.bundle_factory.create_bundle(BundleMode::FullBuild, None)?;
+      bundle.context()
+    };
+    self.bundle_factory.last_bundle_handle = None;
+    let result = handle.plugin_driver().close_watcher().await;
+    handle.plugin_driver().clear();
+    result?;
     Ok(())
   }
 }

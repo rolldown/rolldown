@@ -4,6 +4,7 @@ import {
   type ParserOptions as BindingParserOptions,
   parseSync as originalParseSync,
 } from '../binding.cjs';
+import { runWithRuntimeLease } from './run-with-runtime-lease';
 // @ts-ignore
 import * as oxcParserWrap from 'oxc-parser/src-js/wrap.js';
 
@@ -40,7 +41,12 @@ export async function parse(
   sourceText: string,
   options?: ParserOptions | null,
 ): Promise<ParseResult> {
-  return oxcParserWrap.wrap(await originalParse(filename, sourceText, options));
+  return oxcParserWrap.wrap(
+    await runWithRuntimeLease(
+      () => originalParse(filename, sourceText, options),
+      'Parse and runtime release both failed',
+    ),
+  );
 }
 
 /**

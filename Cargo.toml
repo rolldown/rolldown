@@ -169,7 +169,11 @@ anyhow = "1.0.103"
 append-only-vec = "0.1.8"
 arcstr = { version = "1.2.0", default-features = false }
 ariadne = { package = "rolldown-ariadne", version = "0.6.0" }
+async-broadcast = "0.7.2"
 async-channel = "2.5.0"
+async-lock = "3.4.2"
+# Only used by the opt-in `tokio-runtime` facade arm in rolldown_utils
+# (block_on_spawn_all); the default tokio-free build never compiles it.
 async-scoped = "0.9.0"
 base-encode = "0.3.1"
 base64-simd = "0.8.0"
@@ -180,6 +184,7 @@ criterion2 = { version = "3.0.4", default-features = false }
 dashmap = "6.2.1"
 derive_more = { version = "2.1.1", features = ["debug"] }
 dunce = "1.0.5" # Normalize Windows paths to the most compatible format, avoiding UNC where possible
+event-listener = "5.4.1"
 fast-glob = "1.1.0"
 flate2 = { version = "=1.1.9", features = ["zlib-rs"] }
 form_urlencoded = "1.2.2"
@@ -257,7 +262,7 @@ syn = { version = "3", default-features = false }
 # napi
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks
 # (e.g. #7289) by showing which napi function is pending.
-napi = { version = "3", features = ["async", "anyhow", "tracing", "object_indexmap"] }
+napi = { version = "3", features = ["anyhow", "tracing", "object_indexmap"] }
 napi-build = { version = "2" }
 napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
 
@@ -327,3 +332,28 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+[patch.crates-io]
+# integration/rolldown-non-threaded-wasi-napi3 head (ad23bdeb) merges the rebased
+# napi stack (crates/napi v3.10.5, the merged SPI + #3353/#3393) INTO rolldown's
+# rich async-runtime SPI. rolldown_binding hard-depends on that rich SPI —
+# fallible try_start/try_shutdown_async_runtime, TokioRuntimeRetirementWaiter,
+# primitive-value boxing on promise rejection, and graceful ThreadsafeFunction
+# release on napi_closing — which upstream napi-rs main does NOT carry. Do not
+# "unpin to main" again without re-checking those four: main's
+# `bindgen_runtime/js_values/promise.rs` catch arm converts a rejection with
+# `ctx.value.into()` (`From<Unknown> for Error` → `napi_create_reference`), which
+# returns napi_invalid_arg for primitives and replaces a thrown string/number/null
+# with `Error { InvalidArg, "Create Error reference failed" }`; and main has no
+# `register_finalizer`/`build_callback_with_finalizer`, so a ThreadsafeFunction
+# retained across an exiting worker Environment has no quiescence barrier and
+# access-violates on Windows. On WASI, napi-build at this rev links the emnapi
+# archives shipped by the released `emnapi` npm package (non-threads
+# `libemnapi-basic-napi-rs.a`, threads `libemnapi-napi-rs-mt.a`); no vendored
+# archives are needed. napi-async-runtime is NOT git-pinned: rolldown_utils
+# consumes the published 0.2.0 from crates.io (napi-free, default features off),
+# so it is independent of this rev.
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }

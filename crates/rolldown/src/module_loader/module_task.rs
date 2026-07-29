@@ -80,11 +80,12 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
-      self
+      // The loader owner may have been cancelled while this detached task was awaiting a hook.
+      // Cancellation closes the receiver, so a failed send is ignored here.
+      let _ = self
         .ctx
         .tx
-        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
-        .expect("ModuleLoader: failed to send build errors - main thread terminated while processing module errors");
+        .unbounded_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
   }
 
@@ -236,9 +237,9 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       tla_keyword_span,
     }));
 
-    self.ctx.tx.send(result).expect(
-      "ModuleLoader channel closed while sending module completion - main thread terminated unexpectedly"
-    );
+    // The loader owner may have been cancelled while this detached task was awaiting a hook.
+    // Cancellation closes the receiver, so a failed send is ignored here.
+    let _ = self.ctx.tx.unbounded_send(result);
 
     Ok(())
   }

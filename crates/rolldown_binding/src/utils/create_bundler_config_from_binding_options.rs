@@ -8,14 +8,18 @@ use crate::{
 pub fn create_bundler_config_from_binding_options(
   option: BindingBundlerOptions,
 ) -> napi::Result<BundlerConfig> {
+  #[cfg(not(target_family = "wasm"))]
   let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
+  #[cfg(target_family = "wasm")]
+  let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry: _ } =
+    option;
 
   #[cfg(not(target_family = "wasm"))]
   let worker_count =
     parallel_plugins_registry.as_ref().map(|registry| registry.worker_count).unwrap_or_default();
   #[cfg(not(target_family = "wasm"))]
   let parallel_plugins_map =
-    parallel_plugins_registry.map(|registry| registry.take_plugin_values());
+    parallel_plugins_registry.map(|registry| registry.take_plugin_values()).transpose()?;
 
   #[cfg(not(target_family = "wasm"))]
   let worker_manager = if worker_count > 0 {

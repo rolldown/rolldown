@@ -80,21 +80,23 @@ pub struct DevContext {
 
 ### Threading model
 
-- The `BundleCoordinator` runs in **one** dedicated tokio task
-  (`DevEngine::run` does `tokio::spawn(coordinator.run())`,
-  `dev_engine.rs:115`). Its `run()` is a single `while let Some(msg) =
-self.rx.recv().await` loop, so all coordinator state mutation is
-  serialized — there is no lock on `CoordinatorState`, the message loop
-  _is_ the lock.
+- The `BundleCoordinator` runs in **one** task on the selected runtime.
+  `DevEngine` stores its boxed, not-yet-started future until fallible runtime
+  submission succeeds. A submission rejected during runtime shutdown returns
+  that same future to the state slot, so `run()` can retry it after restart
+  instead of permanently consuming the coordinator. Its `run()` is a single
+  `while let Some(msg) = self.rx.next().await` loop, so all coordinator state
+  mutation is serialized — there is no lock on `CoordinatorState`, the message
+  loop _is_ the lock.
 - Each `BundlingTask` runs in its **own** spawned task. The coordinator
   keeps a `Shared` future handle to the currently running one
   (`current_bundling_future`).
 - The `Bundler` is shared as `Arc<Mutex<Bundler>>`. A `BundlingTask`
   locks it for the duration of its HMR/rebuild work.
 - Communication is via an **unbounded** mpsc channel
-  (`unbounded_channel::<CoordinatorMsg>()`, `dev_engine.rs:62`).
-  Request/response messages carry a `tokio::sync::oneshot` reply
-  channel.
+  (`futures::channel::mpsc::unbounded::<CoordinatorMsg>()`,
+  `dev_engine.rs:140`). Request/response messages carry a
+  `futures::channel::oneshot` reply channel (`type_aliases.rs`).
 
 ---
 
@@ -109,30 +111,39 @@ pub enum CoordinatorMsg {
   BundleCompleted {                          // a BundlingTask finished
     error_stage: Option<ErrorStage>,         // None on success; see §10
     has_generated_bundle_output: bool,
+    callback_error: Option<DevCallbackError>,// rejected/thrown consumer callback
   },
   ScheduleBuildIfStale { reply: … },         // ask coordinator to drain its queue
   GetState { reply: … },                     // snapshot of coordinator state
+  BeginWatchRegistrationErrorObservation { reply: … },
+  PreviewWatchRegistrationErrors { observer_id, reply: … },
+  AcknowledgeWatchRegistrationErrors { observer_id },
+  CancelWatchRegistrationErrorObservation { observer_id },
   EnsureLatestBundleOutput { reply: … },     // "I need a fresh full bundle"
   TriggerFullBuild,                           // unconditional full build (fire-and-forget)
   GetWatchedFiles { reply: … },              // list of watched paths
   ModuleChanged { module_id: String },       // programmatic module change
-  Close,                                     // shut the coordinator down
+  Close { reply: … },                        // quiesce, close final bundle, reply
 }
 ```
 
-Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
+Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:129-186`):
 
-| Message                    | Handler                                      |
-| -------------------------- | -------------------------------------------- |
-| `WatchEvent`               | `handle_watch_event` → `handle_file_changes` |
-| `BundleCompleted`          | `handle_bundle_completed`                    |
-| `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result |
-| `GetState`                 | `create_state_snapshot`, reply               |
-| `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply         |
-| `TriggerFullBuild`         | `trigger_full_build` (no reply)              |
-| `GetWatchedFiles`          | reply with the `watched_files` set           |
-| `ModuleChanged`            | queue a `Rebuild`, schedule                  |
-| `Close`                    | await running task, then `break` the loop    |
+| Message                                   | Handler                                                  |
+| ----------------------------------------- | -------------------------------------------------------- |
+| `WatchEvent`                              | `handle_watch_event` → `handle_file_changes`             |
+| `BundleCompleted`                         | `handle_bundle_completed`                                |
+| `ScheduleBuildIfStale`                    | `schedule_build_if_stale`, reply with result             |
+| `GetState`                                | `create_state_snapshot`, reply                           |
+| `BeginWatchRegistrationErrorObservation`  | register and return an owned lifecycle waiter            |
+| `PreviewWatchRegistrationErrors`          | freeze the waiter and return attached failures           |
+| `AcknowledgeWatchRegistrationErrors`      | consume the frozen failures after reply delivery         |
+| `CancelWatchRegistrationErrorObservation` | detach a dropped waiter without consuming failures       |
+| `EnsureLatestBundleOutput`                | `ensure_latest_bundle_output`, reply                     |
+| `TriggerFullBuild`                        | `trigger_full_build` (no reply)                          |
+| `GetWatchedFiles`                         | reply with the `watched_files` set                       |
+| `ModuleChanged`                           | queue a `Rebuild`, schedule                              |
+| `Close`                                   | await running task, close final bundle, reply, then exit |
 
 The producers:
 
@@ -142,9 +153,10 @@ The producers:
 - A finishing **`BundlingTask`** sends `BundleCompleted` from its
   `run()` (`bundling_task.rs:75-80`).
 - The **`DevEngine`** sends `ScheduleBuildIfStale`, `GetState`,
-  `EnsureLatestBundleOutput`, `GetWatchedFiles`, `ModuleChanged`,
-  `Close` on behalf of its public API callers (the dev server, HTTP
-  middleware, lazy-compilation endpoint, etc.).
+  the watch-registration observation lifecycle messages,
+  `EnsureLatestBundleOutput`, `GetWatchedFiles`, `ModuleChanged`, and
+  `Close` on behalf of its public API callers (the dev server, HTTP middleware,
+  lazy-compilation endpoint, etc.).
 
 ---
 
@@ -229,14 +241,14 @@ stateDiagram-v2
 These are the `set_initial_build_state` call sites — the single mutation
 point, a convenient place to observe every transition.
 
-| Transition                                                         | Site                                           |
-| ------------------------------------------------------------------ | ---------------------------------------------- |
-| `Initialized → Idle`                                               | `run()` startup, `bundle_coordinator.rs:84-87` |
-| `Idle/Failed/FullBuildFailed → FullBuildInProgress` / `InProgress` | `schedule_build_if_stale`, `:378-380`          |
-| `FullBuildInProgress → FullBuildFailed`                            | `handle_bundle_completed`, `:286`              |
-| `FullBuildInProgress → Idle`                                       | `handle_bundle_completed`, `:291`              |
-| `InProgress → Failed { last_error_stage }`                         | `handle_bundle_completed`, `:311`              |
-| `InProgress → Idle`                                                | `handle_bundle_completed`, `:316`              |
+| Transition                                                         | Site                                             |
+| ------------------------------------------------------------------ | ------------------------------------------------ |
+| `Initialized → Idle`                                               | `run()` startup, `bundle_coordinator.rs:115-118` |
+| `Idle/Failed/FullBuildFailed → FullBuildInProgress` / `InProgress` | `schedule_build_if_stale`, `:378-380`            |
+| `FullBuildInProgress → FullBuildFailed`                            | `handle_bundle_completed`, `:286`                |
+| `FullBuildInProgress → Idle`                                       | `handle_bundle_completed`, `:291`                |
+| `InProgress → Failed { last_error_stage }`                         | `handle_bundle_completed`, `:311`                |
+| `InProgress → Idle`                                                | `handle_bundle_completed`, `:316`                |
 
 ### What enqueues a rebuild
 
@@ -257,17 +269,20 @@ of them.
 
 ## 4. The coordinator run loop and startup
 
-`BundleCoordinator::run` (`bundle_coordinator.rs:80-151`):
+`BundleCoordinator::run` (`bundle_coordinator.rs:111-187`):
 
 1. Asserts it starts in `Initialized`; otherwise logs an error and
    returns.
 2. Pushes a `TaskInput::FullBuild` into `queued_tasks`, sets state to
    `Idle`, calls `schedule_build_if_stale()` — this kicks off the
    initial build (`Idle → FullBuildInProgress`).
-3. Enters the `while let Some(msg) = self.rx.recv().await` loop,
+3. Enters the `while let Some(msg) = self.rx.next().await` loop,
    dispatching each `CoordinatorMsg` as in §2.
-4. On `Close`, awaits any running `BundlingTask` (so it doesn't panic
-   trying to send `BundleCompleted` into a dropped channel) and breaks.
+4. On `Close`, awaits the complete running `BundlingTask`, then acquires the
+   bundler and calls `Bundler::close()`. The task boundary includes both HMR
+   update generation and any following rebuild, so a rebuild cannot install a
+   replacement `BundleHandle` after shutdown closed the previous one. The
+   coordinator sends the close result through the message reply and then exits.
 
 `BundleCoordinator::new` initializes: `state = Initialized`,
 `queued_tasks = []`, `has_stale_bundle_output = true`,
@@ -406,8 +421,12 @@ When it spawns a task:
 3. Construct a `BundlingTask`.
 4. If `task_input.requires_full_rebuild()` → state `FullBuildInProgress`;
    else → state `InProgress`.
-5. `tokio::spawn` the task's `run()` as a `Shared` future; store it in
-   `current_bundling_future`.
+5. Wrap the task's `run()` in `BundlingFuture`. Its inner `Shared` future
+   captures a panic as a cloneable terminal outcome, publishes completion, and
+   wakes every waiter before the outer wrapper resumes the panic independently
+   for each waiter. Store it in `current_bundling_future`; a detached driver
+   polls only the inner shared state so the task progresses without becoming a
+   panic observer or consuming the original payload.
 
 The key invariant: at most one `BundlingTask` runs at a time. While one
 runs, the coordinator is in `*InProgress` and new file changes only
@@ -823,7 +842,42 @@ the coordinator is either `InProgress` (build still running —
 `ensure_latest_bundle_output` waits for it) or `Idle` (build finished —
 output is fresh). This works because `update_watch_paths()` runs even
 after a failed build (`handle_bundle_completed`, §11), so files that
-were already parsed are watched.
+were already parsed are watched. Creating a watcher path transaction can pause
+event delivery on backends such as macOS FSEvents until the transaction is
+committed. The coordinator therefore records individual `add` failures,
+continues staging the remaining paths, and always calls `commit`. If commit
+succeeds, only paths whose `add` succeeded are published to the coordinator's
+`watched_files` set; if commit fails, none of the staged paths are published.
+Add and commit failures are aggregated when both occur.
+
+Watch-registration failures use explicit lifecycle observers rather than one
+permanent error slot. `wait_for_ongoing_bundle` and
+`ensure_latest_bundle_output` register an RAII-owned observer before waiting.
+The coordinator sends ownership itself in the begin reply, so dropping a reply
+that was already buffered still runs the token destructor and queues
+cancellation. Each failed path publication creates an event attached to every
+observer active at that point. The next publication attempt supersedes that failure occurrence,
+regardless of whether the retry succeeds or reports a new failure. Queued
+observers remain attached to every occurrence they overlapped, while callers
+that start later attach only to the current unresolved failure. Once an
+observer has acknowledged a superseded event, later callers do not attach to
+it; the event is removed after the already-attached observers finish. If a
+failure is superseded before any observer sees it, the first concurrently
+registered observer set receives it and acknowledgement then removes it. This
+preserves every in-flight waiter's failures without letting historical retry
+failures poison all future page-access ensures. Close registers its own
+observer before draining the final task, so an unresolved or never-observed
+registration failure still joins `closeBundle` failures. Every unpublished
+candidate remains eligible for retry.
+
+Finishing is a three-step protocol. `Preview` first moves the observer out of
+the active set, freezing the exact failure set before it replies. The caller
+then sends `Acknowledge` only after receiving that reply; acknowledgement marks
+and removes only the frozen failures. Until then the RAII token remains armed,
+and dropping either the operation or a buffered preview reply sends
+`Cancel`, which removes the observer without marking any failure observed.
+This prevents both leaked begin observers and diagnostics consumed by an
+undelivered finish reply.
 
 **Edge case: recovery from a missing-import failure.** If the initial
 build failed because of a missing import, the missing file was never
@@ -835,7 +889,13 @@ case, `triggerFullBuild` (below) is needed to force a rebuild.
 `ensure_latest_bundle_output` to wait for the first `FullBuild`. The
 coordinator is in `FullBuildInProgress` and returns the running future.
 When the build finishes — success or failure — the output is as
-current as it can be. The loop breaks, `run()` returns.
+current as it can be. The loop breaks, `run()` returns. If the runtime rejects
+the coordinator submission while stopped, `run()` returns that lifecycle
+error and restores the exact boxed coordinator future; a later call after
+runtime restart retries the same coordinator. Coordinator submission is
+single-flight, but the initial-output wait is per caller: concurrent `run()`
+calls that observe an already-running coordinator still wait for the same
+initial build instead of returning before output callbacks finish.
 
 **Manual retry via `triggerFullBuild`.** A separate, fire-and-forget
 operation for callers that explicitly want to force a new build
@@ -944,7 +1004,7 @@ Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 | `get_bundle_state()`                             | `GetState` → `BundleState { last_build_errored, has_stale_output }`                            |
 | `invalidate(caller, first_invalidated_by)`       | locks the bundler, calls `compute_update_for_calling_invalidate` per client                    |
 | `compile_lazy_entry(proxy_module_id, client_id)` | compiles a lazy entry; on success sends `ModuleChanged`                                        |
-| `close()`                                        | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                                 |
+| `close()`                                        | sends `Close { reply }`; coordinator waits active work, closes the final bundle, and replies   |
 | `is_closed()` / `bundler_options()`              | accessors                                                                                      |
 
 `ModuleChanged` handling (`bundle_coordinator.rs:123-140`): updates watch
@@ -955,6 +1015,143 @@ The `#[cfg(feature = "testing")]` methods —
 `ensure_task_with_changed_files`, `get_watched_files`,
 `create_client_for_testing` — exist for the test harness to drive
 synthetic file changes and inspect coordinator state.
+
+Calling `close()` before `run()` is the only path without a running
+coordinator. It drops the unstarted coordinator and closes the bundler
+directly. Once `run()` has spawned the actor, terminal bundler cleanup belongs
+to the coordinator so accepting a close request establishes one ordering point
+for quiescence, final-handle selection, and error delivery.
+
+When close waits for an active build, that task queues `BundleCompleted` before
+its future resolves. The coordinator cannot process the queued message while
+the close handler owns the actor loop, so close performs the completion path's
+final watch-path publication itself after the task settles and before
+`Bundler::close()`. A publication failure joins any earlier registration
+failure, callback rejection, and `closeBundle` failure in the terminal result.
+
+`DevEngine::close()` sets `is_closed` before starting cleanup so new API work is
+rejected immediately. Cleanup itself is a separate shared future: concurrent
+callers wait for the same coordinated shutdown, and later callers replay its
+terminal success or failure without sending another `Close` message or rerunning
+`closeBundle`. If the close message cannot be delivered or the coordinator
+exits without replying, `DevEngine` awaits that exit and falls back to
+`Bundler::close()`. A fallback hook failure is aggregated with the coordinator
+transport failure so cleanup is still attempted without hiding either cause.
+
+`BindingDevEngine` adds an admission barrier around its asynchronous N-API
+operations, with one deliberate exception: `notify_payload_delivered` takes no
+operation guard (its neighbours `register_client` and `remove_client` do), so a
+delivery notification can still be in flight while close runs. That is safe
+because `DevEngine::close`/`close_inner` never touch the `clients` or
+`pending_payloads` state the notification updates, the spawned task holds its
+own `Arc` on the engine, the two locks are never held at once, and the merge
+into `session.shipped` is an idempotent `max`. Close marks that binding
+lifecycle as closing, rejects new guarded operations, waits for all accepted
+operations to drop their guards, and only then invokes native
+`DevEngine::close()`. The TypeScript owner applies the same
+ordering before calling `BindingDevEngine.close()`. The two barriers protect
+both direct binding consumers and the public TypeScript API. In particular,
+`run()` can finish its post-callback `GetState` request before the coordinator
+starts terminal `closeBundle`; a hook may therefore await the `run()` promise
+without creating `run -> GetState -> coordinator close -> closeBundle -> run`.
+
+The binding also counts its owned `on_output`, `on_hmr_updates`, and
+`on_additional_assets` callback promises. A raw `BindingDevEngine.close()` call
+while one of those callbacks is active starts one background close executor and
+returns a successful acknowledgement instead of waiting on the operation guard
+that owns the callback. The callback can then return, the guard drains, and the
+executor performs coordinated native close. Concurrent callback-context close
+calls receive the same acknowledgement; the first close after no owned callback
+is active waits for, or replays, the terminal result. Because N-API exposes no
+portable way to identify which JavaScript async continuation invoked a method,
+an unrelated raw close racing an active callback also receives the
+acknowledgement and must call close again to observe terminal diagnostics. The
+background executor is a detached Rust runtime task, not an unobserved
+JavaScript Promise; terminal close diagnostics are retained only in the
+lifecycle state for the next explicit close caller and cannot surface as an
+unhandled rejection. An armed execution guard resets the close-start latch and
+wakes terminal waiters if runtime shutdown cancels that detached task, so a
+later close can retry instead of waiting permanently for an executor that no
+longer exists. Detached admission failure drops the same guard and returns a
+rejected JavaScript Promise, preserving the asynchronous `close()` contract.
+The public TypeScript owner uses the binding's internal terminal-close entry point,
+which never acknowledges callback activity. Its dependency-aware close promise
+still acknowledges a close awaited from inside a callback, allowing that
+callback to return while the underlying terminal close continues. Unrelated
+public callers await the terminal result, including late callback and
+`closeBundle` diagnostics, before worker or runtime cleanup. If N-API cannot
+schedule the terminal close executor, dropping its execution guard owns the
+rollback: it clears only the `close_started` latch and wakes waiters so a later
+close can retry transport setup while the engine remains closed to new
+operations.
+
+### TypeScript parallel-plugin ownership
+
+`packages/rolldown/src/api/dev/dev-engine.ts` owns the `stopWorkers` closure
+returned by option normalization. `DevEngine.close()` is memoized, drains its
+accepted JavaScript operations, and then awaits the native
+terminal-close phase; native close waits for active dev callbacks,
+`closeBundle`, and coordinator shutdown. Parallel workers are terminated only afterward,
+including when native close reports terminal diagnostics. If the terminal-close
+promise rejects before delivering that structured result, TypeScript clears
+only the native close single-flight promise and retains both workers and the
+runtime lease for the next `close()` attempt. Constructor failure also
+terminates workers that were already initialized. Runtime-lease acquisition
+and binding-construction failures combine worker shutdown with lease release
+under one retryable setup-cleanup owner. A transient cleanup failure is retried
+immediately; if cleanup still fails, ownership remains in the shared
+pending-cleanup registry so a later option initialization can recover it
+instead of abandoning workers or a lease. The shared registry is implemented
+in platform-neutral `utils/retryable-cleanup.ts` so browser builds do not retain
+the Node-specific parallel-worker startup module. User-controlled `DevOptions`
+getters are materialized under the same setup-cleanup boundary. Top-level
+callback, rebuild-strategy, and watch getters are each read once, and a getter
+failure after parallel-worker startup terminates those workers before the
+creation promise rejects.
+
+Every JavaScript `DevEngine` also owns a process-unique close identity. Its
+wrapped plugin and dev callbacks use that identity by default, and `close()`
+selects its terminal promise through the shared `CloseCallbackScope` dependency
+graph. A callback on engine A that awaits `B.close()` records A -> B; if a
+callback on B then awaits `A.close()`, the second edge is acknowledged instead
+of deadlocking both native coordinators. Dependency edges are owned by the
+source callback invocation and are removed when that invocation returns, even
+when it started the target close without awaiting it.
+
+`ensureCurrentBuildFinish()` and `removeClient()` are intentional exceptions to
+the normal post-close rejection rule. Vite can leave an initial-build poll or a
+websocket disconnect callback queued while server shutdown closes the engine.
+Once close starts, both methods become no-ops because there is no remaining
+build/client state their late notification can usefully mutate; rejecting them
+would surface as an unhandled host promise after otherwise successful cleanup.
+
+Parallel plugin callbacks are weak napi TSFNs, so they do not keep a worker
+environment alive. `parallel-plugin-worker.ts` explicitly refs its
+`parentPort`. The main thread keeps each `Worker` referenced until its
+supervised bootstrap response settles, then calls `Worker.unref()` so an
+initialized pool does not pin process exit. File workers receive a sanitized
+copy of `process.execArgv`: parent-only string-input modes (`--input-type`,
+`--eval`/`-e`, `--print`/`-p`, check/interactive modes) are removed while
+the parent `--run <script>` mode is also removed; compatible preload, loader,
+condition, diagnostic, and runtime flags are preserved. The owned
+`stopWorkers()` path remains the explicit termination boundary.
+
+The public `devSupported` capability is exercised against the actual artifact,
+not inferred from thread availability alone: the threaded-WASI lifecycle suite
+creates a virtual-input engine, runs its initial build, observes output, closes
+it, and repeats the sequence after runtime restart. CurrentThread remains
+rejected before plugin callbacks, option setup, runtime leasing, or native
+construction.
+
+The three JavaScript dev callbacks run inside an engine-specific async context
+that remains active through their returned promise. Calling and awaiting
+`close()` from one of those callbacks would otherwise deadlock because native
+work awaits the callback while close waits for the admitted operation.
+`DevEngine.close()` rejects a same-engine callback that would initiate close
+before changing lifecycle state. If an external caller already initiated close,
+the callback instead receives the dependency-aware acknowledgement and can
+return while that external caller continues to await normal quiescence and
+terminal diagnostics. Descendants may close after the callback has settled.
 
 ---
 
@@ -1033,14 +1230,18 @@ static distinction. Code that needs to react differently must inspect
 
 ### 16b. The two delivery channels
 
-**Throw (synchronous API)** — public napi methods that take a single caller
-and return a single result use `BindingResult<T> = Either<BindingErrors, T>`
-on the boundary, and the JS wrapper calls `unwrapBindingResult` to either
-return the success value or throw a `BundleError`.
+**Promise/result API** — public napi methods that take a single caller and
+return a single result use `BindingResult<T> = Either<BindingErrors, T>` on the
+boundary. Build-oriented methods use `unwrapBindingResult` to either return the
+success value or throw a `BundleError`. Lifecycle-oriented dev methods
+normalize the individual binding errors, throw the original JavaScript error
+for a singleton, and throw one `AggregateError` for multiple diagnostics. This
+keeps callback and hook identities observable without nesting one native
+aggregate inside another JavaScript aggregate.
 
-Used by: `invalidate`, `ensureLatestBuildOutput`, `getBundleState`,
-`waitForOngoingBundle`. The thrown error reaches whichever audience called
-the method:
+Used by: `invalidate`, `ensureLatestBuildOutput`, `run`,
+`ensureCurrentBuildFinish`, `compileEntry`, and `close`. The thrown error
+reaches whichever audience called the method:
 
 - `invalidate` is typically called by the binding consumer's HMR layer in
   response to an end-user HMR client message. The thrown error is observed
@@ -1053,7 +1254,10 @@ the method:
 
 **Callback (async lifecycle)** — work that happens asynchronously inside a
 `BundlingTask` is reported through the `on_output` / `on_hmr_updates`
-callbacks registered when the engine was constructed (see §10).
+callbacks registered when the engine was constructed (see §10). All three dev
+callbacks accept synchronous or promise-returning functions. The Rust binding
+awaits either form before the task completes; a synchronous throw or rejected
+promise is an operation failure, not a detached JS exception.
 
 Used by: every error produced inside `BundlingTask::run_inner` —
 `watch_change`, `generate_hmr_updates`, `rebuild`. The consumer subscribes
@@ -1095,6 +1299,33 @@ an HMR error had no callback to surface it through (matching how the older
 neither HMR generation nor rebuild can proceed safely, so `run_inner` returns
 early.
 
+Callback execution failures are distinct from the `BuildResult` payload being
+delivered. `BundlingTask::run` returns a shared `DevCallbackResult`, includes
+the same error in `BundleCompleted`, and sets the corresponding HMR/Rebuild
+stage flag. The coordinator retains that error after the task future is
+cleared, clears it only when a subsequent task starts, and replays it through
+`run()`, `wait_for_ongoing_bundle()` / `ensureCurrentBuildFinish()`, and
+terminal `close()`. This makes watcher-driven callback rejection observable
+even when the consumer starts waiting after the task settled. A callback
+failure while close also fails is merged with the cleanup diagnostics.
+
+A Rust panic inside `BundlingTask::run` follows a separate path. The raw panic
+is caught before polling enters `futures::Shared` and stored as a cloneable
+terminal outcome. `Shared` can therefore complete and wake all registered
+waiters instead of entering its poisoned state with pending waiters. The outer
+`BundlingFuture` resumes the panic after observing that completed outcome, so
+`run()`, coordinator shutdown, and later waiters each see the invariant failure
+without compromising liveness. `String` and `&'static str` payloads retain
+their type and value for every waiter. An arbitrary non-cloneable payload is
+resumed unchanged by its first observer; later observers receive an explicit
+fallback panic because Rust provides no way to clone an arbitrary
+`Box<dyn Any + Send>`. The detached driver never observes the outer future, so
+it cannot consume that original payload. If no observer consumes an opaque
+payload, its destruction is panic-contained, including a destructor that
+produces another hostile panic payload. If the coordinator observes the panic
+while draining for `Close`, its task exits, the close reply is dropped, and
+`DevEngine::close()` runs direct bundler fallback cleanup.
+
 ### 16d. Engine-closed: surface to the binding consumer by default
 
 Lifecycle errors (engine closed, coordinator gone, channel dropped) are
@@ -1119,6 +1350,10 @@ Current methods that take the exception:
   semantically correct. The doc comment on the method spells this out.
 - `BindingDevEngine::ensure_current_build_finish` (the napi wrapper used
   by `DevEngine.ensureCurrentBuildFinish` in JS) — same shape, PR #9564.
+- `DevEngine.removeClient` in the TypeScript API — websocket disconnect
+  notification is idempotent, and once close has started the client is already
+  being discarded with the engine. Returning without entering the binding
+  avoids an unhandled rejection during normal server shutdown.
 
 Every other lifecycle error path should surface. When adding a new method,
 **default to surfacing**; only take the exception when there's an
@@ -1147,6 +1382,16 @@ Three stops:
    `normalizeBindingResult(container)` returns `T | Error` without throwing,
    used by callbacks that don't have a useful `throw` semantic.
 
+For dev lifecycle operations, `BindingDevEngine` converts every diagnostic in
+the `BatchedBuildDiagnostic` independently instead of rejecting the N-API
+promise with the first embedded JavaScript error. The TypeScript dev owner uses
+`normalizeBindingResultErrors` and the shared close-error aggregation rule:
+zero errors returns the value, one rethrows that exact error object, and
+multiple errors produce one `AggregateError`. Native close errors are retained
+as a flat list and join worker-shutdown or runtime-release failures in the same
+outer aggregate. Concurrent and later `close()` calls observe the memoized
+terminal error object.
+
 ### 16f. Conventions
 
 - **No `.expect()` / `.unwrap()` on `BuildResult` or any consumer-reachable
@@ -1156,7 +1401,7 @@ Three stops:
   method that touches the coordinator runs it first. By default the
   resulting error is surfaced to the binding consumer (§16d); methods that
   take the "swallow as `Ok`" exception (§16d) must also handle the
-  mid-call closed-race at every `.send(...)` and `.recv()` site.
+  mid-call closed-race at every `.unbounded_send(...)` and reply-await site.
 - **Plugin errors are user-visible.** Never silently drop them; they always
   reach `on_output` or `on_hmr_updates`.
 - **Each phase owns its delivery.** Inside `BundlingTask`, each phase
@@ -1190,23 +1435,22 @@ outside our crate?_ If yes, route it. If no, panic.
 
 Existing panic sites in `rolldown_dev` that are intentional, not punts:
 
-- `crates/rolldown_dev/src/watcher_event_handler.rs:10` —
-  `coordinator_tx.send(...).expect(...)`. The coordinator's mpsc receiver is
-  owned by the coordinator task, which only shuts down on the `Close`
-  message. The fs watcher cannot trigger that path; if its `send` fails, our
-  shutdown ordering is wrong.
-- `crates/rolldown_dev/src/bundling_task.rs:71` — same pattern on the final
-  `BundleCompleted` send. The coordinator awaits any in-flight `BundlingTask`
-  before processing `Close` (§4), so by construction the receiver is alive
-  when this send runs.
-- `crates/rolldown_dev/src/bundle_coordinator.rs:323, 420` —
+- `crates/rolldown_dev/src/bundling_task.rs:99-105` —
+  `coordinator_tx.unbounded_send(...).expect(...)` on the final
+  `BundleCompleted` send. The coordinator's mpsc receiver is owned by the
+  coordinator task, which only shuts down on the `Close` message, and the
+  coordinator awaits any in-flight `BundlingTask` before processing `Close`
+  (§4), so by construction the receiver is alive when this send runs.
+- `crates/rolldown_dev/src/bundle_coordinator.rs:428, 529` —
   `current_bundling_future.clone().unwrap()` is reachable only in states
   `*InProgress`, where the state machine guarantees `Some(_)`. A `None` here
   means a transition was missed.
-- `crates/rolldown_dev/src/dev_engine.rs:117` — `join_handle.await.unwrap()`
-  on the coordinator task. The coordinator's `run()` is internal code that
-  must not panic; a `JoinError` here means we introduced a panic in
-  coordinator logic and should fix _that_, not paper over the symptom.
+
+Two sites that used to panic are now routed instead:
+`watcher_event_handler.rs:10` logs at debug level when `unbounded_send` finds
+the coordinator channel already closed, and the coordinator task join
+(`dev_engine.rs:205, 231`) folds its error into the close result rather than
+unwrapping it.
 
 When adding new panic sites, document the invariant being asserted in the
 `.expect(...)` message so the next reader sees the contract without having to
@@ -1328,9 +1572,11 @@ the consumer. It fires **before** the patch / lazy code reaches the client (in
 `generate_hmr_updates` it runs before `on_hmr_updates`; in `compile_lazy_entry`
 before the code is returned), so a consumer that serves built files (e.g. Vite,
 which writes them to `memoryFiles`) can serve the asset by the time the browser
-requests it. It carries only what `add_additional_files` produces (emit_file'd
-assets + prebuilt chunks) — not the rendered chunks, and not assets emitted
-inside a `generateBundle` hook (that hook does not run for patches). It is a
+requests it. Delivery is awaited; rejection prevents the HMR update or lazy
+code from being exposed and is propagated to the lifecycle/API waiter. It
+carries only what `add_additional_files` produces (emit_file'd assets +
+prebuilt chunks) — not the rendered chunks, and not assets emitted inside a
+`generateBundle` hook (that hook does not run for patches). It is a
 `BundleOutput` so `add_additional_files` warnings ride along, as on `on_output`.
 
 ---

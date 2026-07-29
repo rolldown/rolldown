@@ -1,11 +1,21 @@
-import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../../binding.cjs';
+import { BindingBundler, type BindingResult } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
+import {
+  createRequiredAsyncContext,
+  trackAsyncCallbackSettlement,
+} from '../../utils/async-context';
+import {
+  CloseCoordinator,
+  type CloseAttemptResult,
+  type RuntimeLease,
+} from '../../runtime-lifecycle';
 import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
 import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
-import { unwrapBindingResult } from '../../utils/error';
+import { CloseCallbackScope, createCloseIdentity } from '../../utils/close-callback-scope';
+import { normalizeBindingResultErrors, unwrapBindingResult } from '../../utils/error';
 import { validateOption } from '../../utils/validator';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { rolldown } from './index';
@@ -15,6 +25,54 @@ import type { BundleError } from '../../utils/error';
 // @ts-expect-error TS2540: the polyfill of `asyncDispose`.
 Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose');
 
+interface BuildOperation {
+  failureClosePending?: boolean;
+  settled: boolean;
+  stopAttempt?: Promise<unknown[]>;
+  stopWorkers?: () => Promise<void>;
+}
+
+interface BuildCleanupOwnership {
+  retryCleanup: () => Promise<unknown[]>;
+  runtimeLeaseReleased: boolean;
+  workerOwners: Set<BuildOperation>;
+}
+
+type BindingBundlerWithTerminalClose = BindingBundler & {
+  closeTerminal(): Promise<BindingResult<void>>;
+  waitForFailureClose(): Promise<void>;
+};
+
+const FAILURE_CLOSE_ADMISSION_ERROR =
+  'Cannot start a new output while closeBundle is still running for a failed output.';
+
+const buildCleanupOwnership = new WeakMap<RolldownBuild, BuildCleanupOwnership>();
+
+/** @internal */
+export function hasRetryableBuildCleanup(build: RolldownBuild): boolean {
+  const ownership = buildCleanupOwnership.get(build);
+  return (
+    ownership !== undefined && (!ownership.runtimeLeaseReleased || ownership.workerOwners.size > 0)
+  );
+}
+
+/** @internal Retry only resource ownership retained by a failed bundle close. */
+export function retryRolldownBuildCleanup(build: RolldownBuild): Promise<unknown[]> {
+  const ownership = buildCleanupOwnership.get(build);
+  if (!ownership) return Promise.resolve([]);
+  return ownership.retryCleanup();
+}
+
+interface BuildCallbackInvocation {
+  active: boolean;
+  build: RolldownBuild;
+  callbackName: string;
+  parent: BuildCallbackInvocation | undefined;
+}
+
+// See internal-docs/async-context/implementation.md.
+const buildCallContext = createRequiredAsyncContext<BuildCallbackInvocation>();
+
 /**
  * The bundle object returned by {@linkcode rolldown} function.
  *
@@ -22,15 +80,45 @@ Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose');
  */
 export class RolldownBuild {
   #inputOptions: InputOptions;
-  #bundler: BindingBundler;
-  #stopWorkers?: () => Promise<void>;
-  #asyncRuntimeReleased = false;
+  #bundler: BindingBundlerWithTerminalClose;
+  #runtimeLease: RuntimeLease;
+  #activeBuilds = new Set<Promise<RolldownOutput>>();
+  #workerOwners = new Set<BuildOperation>();
+  #latestBuildOperation: BuildOperation | undefined;
+  #nativeEntryQueue: Promise<void> = Promise.resolve();
+  #nativeClosePromise: Promise<Error[]> | undefined;
+  #closeRequested = false;
+  #terminalCloseSettled = false;
+  #terminalCloseWaiters: { promise: Promise<void>; resolve: () => void } | undefined;
+  #closeIdentity = createCloseIdentity('rolldown-build');
+  #closeCallbackScope = new CloseCallbackScope(this.#closeIdentity);
+  #closeCoordinator = new CloseCoordinator(
+    'Bundle native close, parallel-plugin worker shutdown, or runtime release failed',
+  );
 
   /** @hidden should not be used directly */
-  constructor(inputOptions: InputOptions) {
+  constructor(inputOptions: InputOptions, runtimeLease: RuntimeLease) {
     this.#inputOptions = inputOptions;
-    this.#bundler = new BindingBundler();
-    startAsyncRuntime();
+    this.#runtimeLease = runtimeLease;
+    buildCleanupOwnership.set(this, {
+      retryCleanup: () => this.#closeCoordinator.retryOwnedCleanup(() => this.#close()),
+      runtimeLeaseReleased: false,
+      workerOwners: this.#workerOwners,
+    });
+    try {
+      this.#bundler = new BindingBundler() as BindingBundlerWithTerminalClose;
+    } catch (error) {
+      try {
+        this.#runtimeLease.release();
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          'Bundle construction and runtime release both failed',
+          { cause: error },
+        );
+      }
+      throw error;
+    }
   }
 
   /**
@@ -39,7 +127,47 @@ export class RolldownBuild {
    * If the bundle is closed, calling other methods will throw an error.
    */
   get closed(): boolean {
-    return this.#bundler.closed;
+    return this.#closeRequested || this.#bundler.closed;
+  }
+
+  /**
+   * Whether the NATIVE terminal close has actually SETTLED.
+   *
+   * Unlike {@linkcode closed} (which flips at close-request time) and the
+   * native bundler's own `closed` flag (which flips synchronously when the
+   * terminal close STARTS, before its cleanup future runs), this becomes true
+   * only once `closeTerminal()` resolved — i.e. native cleanup ran to its
+   * terminal outcome. Lifecycle managers (the workerd wrapper) drive resource
+   * release from this signal.
+   *
+   * @internal
+   */
+  get __nativeCloseSettled(): boolean {
+    return this.#terminalCloseSettled;
+  }
+
+  /**
+   * Resolves once the native terminal close settles (see
+   * {@linkcode __nativeCloseSettled}). Never rejects. Needed because a close()
+   * issued from inside an active closeBundle callback is acknowledged early,
+   * while the real close is still running.
+   *
+   * @internal
+   */
+  __whenNativeCloseSettled(): Promise<void> {
+    if (this.#terminalCloseSettled) return Promise.resolve();
+    this.#terminalCloseWaiters ??= (() => {
+      let resolve!: () => void;
+      const promise = new Promise<void>((r) => (resolve = r));
+      return { promise, resolve };
+    })();
+    return this.#terminalCloseWaiters.promise;
+  }
+
+  #markTerminalCloseSettled(): void {
+    this.#terminalCloseSettled = true;
+    this.#terminalCloseWaiters?.resolve();
+    this.#terminalCloseWaiters = undefined;
   }
 
   /**
@@ -52,7 +180,7 @@ export class RolldownBuild {
    * @throws {@linkcode BundleError} When an error occurs during the build.
    */
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    return this.#build(false, outputOptions);
+    return this.#startBuild(false, outputOptions);
   }
 
   /**
@@ -65,7 +193,7 @@ export class RolldownBuild {
    * @throws {@linkcode BundleError} When an error occurs during the build.
    */
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    return this.#build(true, outputOptions);
+    return this.#startBuild(true, outputOptions);
   }
 
   /**
@@ -89,20 +217,74 @@ export class RolldownBuild {
    * }
    * ```
    */
-  async close(): Promise<void> {
-    // Claim the release before the first await so a second `close` cannot release twice.
-    const shouldRelease = !this.#asyncRuntimeReleased;
-    this.#asyncRuntimeReleased = true;
-    try {
-      await this.#stopWorkers?.();
-      // `BindingBundler.close` spawns onto the runtime, so release only after it settles.
-      await this.#bundler.close();
-      this.#stopWorkers = void 0;
-    } finally {
-      if (shouldRelease) {
-        shutdownAsyncRuntime();
+  close(): Promise<void> {
+    const activeCallback = this.#activeBuildCallback();
+    if (activeCallback && activeCallback.callbackName !== 'closeBundle') {
+      return Promise.reject(
+        new Error('Cannot close a bundle from one of its active JavaScript callbacks'),
+      );
+    }
+    this.#closeRequested = true;
+    return this.#closeCallbackScope.selectClosePromise(
+      this.#closeCoordinator.close(() => this.#close()),
+      this.#closeIdentity,
+    );
+  }
+
+  async #close(): Promise<CloseAttemptResult> {
+    const errors: unknown[] = [];
+    const terminalErrors: unknown[] = [];
+    let retryable = false;
+    await Promise.allSettled(this.#activeBuilds);
+
+    const latestWorkerOwner = this.#latestBuildOperation;
+    for (const owner of this.#workerOwners) {
+      if (owner === latestWorkerOwner) continue;
+      try {
+        await this.#stopWorkerOwner(owner);
+      } catch (error) {
+        errors.push(error);
+        retryable = true;
       }
     }
+
+    this.#nativeClosePromise ??= (async () =>
+      normalizeBindingResultErrors(await this.#bundler.closeTerminal()))();
+    try {
+      const settledTerminalErrors = await this.#nativeClosePromise;
+      // closeTerminal resolved: native cleanup reached its terminal outcome
+      // (hook errors, if any, come back as values in the array).
+      this.#markTerminalCloseSettled();
+      terminalErrors.push(...settledTerminalErrors);
+      errors.push(...terminalErrors);
+    } catch (error) {
+      this.#nativeClosePromise = undefined;
+      errors.push(error);
+      retryable = true;
+      return { errors, retryable, terminalErrors };
+    }
+
+    if (latestWorkerOwner && this.#workerOwners.has(latestWorkerOwner)) {
+      try {
+        await this.#stopWorkerOwner(latestWorkerOwner);
+      } catch (error) {
+        errors.push(error);
+        retryable = true;
+      }
+    }
+
+    const cleanupOwnership = buildCleanupOwnership.get(this)!;
+    if (!cleanupOwnership.runtimeLeaseReleased) {
+      try {
+        this.#runtimeLease.release();
+        cleanupOwnership.runtimeLeaseReleased = true;
+      } catch (error) {
+        errors.push(error);
+        retryable = true;
+      }
+    }
+
+    return { errors, retryable, terminalErrors };
   }
 
   /** @hidden documented in close method */
@@ -121,25 +303,247 @@ export class RolldownBuild {
     return Promise.resolve(this.#bundler.getWatchFiles());
   }
 
+  #startBuild(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
+    if (this.#closeRequested) {
+      return Promise.reject(
+        new Error(
+          '[ALREADY_CLOSED] Cannot call bundle.generate() or bundle.write() after bundle.close() has started.\n',
+        ),
+      );
+    }
+    if (this.#activeBuildCallback()) {
+      return Promise.reject(
+        new Error(
+          "Cannot call bundle.generate() or bundle.write() from one of the same bundle's active JavaScript callbacks",
+        ),
+      );
+    }
+
+    const result = this.#build(isWrite, outputOptions);
+    this.#activeBuilds.add(result);
+    void result.then(
+      () => this.#activeBuilds.delete(result),
+      () => this.#activeBuilds.delete(result),
+    );
+    return result;
+  }
+
   async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
-    await this.#stopWorkers?.();
-    const option = await createBundlerOptions(this.#inputOptions, outputOptions, false);
+    const initiatingInvocation = buildCallContext.getStore();
+    const option = await createBundlerOptions(
+      this.#inputOptions,
+      outputOptions,
+      false,
+      this.#closeCallbackScope,
+      false,
+      (callback, callbackName) =>
+        this.#runBuildCallback(initiatingInvocation, callback, callbackName),
+    );
+    const operation: BuildOperation = {
+      settled: false,
+      stopWorkers: option.stopWorkers,
+    };
+    if (operation.stopWorkers) {
+      this.#workerOwners.add(operation);
+    }
 
+    let result: RolldownOutput;
+    let nativeBuildEntered = false;
+    let supersededCleanupErrors: unknown[] = [];
     try {
-      this.#stopWorkers = option.stopWorkers;
-      let output: Awaited<ReturnType<BindingBundler['generate']>>;
-      if (isWrite) {
-        output = await this.#bundler.write(option.bundlerOptions);
-      } else {
-        output = await this.#bundler.generate(option.bundlerOptions);
+      const nativeBuild = await this.#enterNativeBuild(operation, isWrite, option.bundlerOptions);
+      nativeBuildEntered = true;
+      supersededCleanupErrors = nativeBuild.supersededCleanupErrors;
+      result = new RolldownOutputImpl(unwrapBindingResult(await nativeBuild.nativePromise));
+    } catch (error) {
+      const errors: unknown[] = [error];
+      operation.settled = true;
+      if (this.#latestBuildOperation !== operation) {
+        if (nativeBuildEntered) {
+          // A contended native failure settles before its deferred closeBundle
+          // so a nested output can release the operation barrier. Keep that
+          // prompt rejection while retiring this superseded worker pool only
+          // after the native failure-close phase has completed.
+          operation.failureClosePending = true;
+          void this.#startWorkerStop(operation);
+        } else {
+          try {
+            await this.#stopWorkerOwner(operation);
+          } catch (caughtCleanupError) {
+            errors.push(caughtCleanupError);
+          }
+        }
       }
-      return new RolldownOutputImpl(unwrapBindingResult(output));
-    } catch (e) {
-      await option.stopWorkers?.();
-      throw e;
+      // The latest native BundleHandle still needs its parallel closeBundle
+      // hooks after a rejected build. See
+      // internal-docs/rust-classic-bundler/implementation.md.
+      errors.push(...supersededCleanupErrors);
+      if (errors.length > 1) {
+        throw new AggregateError(
+          errors,
+          'Bundle build and parallel-plugin worker cleanup both failed',
+          { cause: error },
+        );
+      }
+      throw error;
+    }
+
+    operation.settled = true;
+    const cleanupErrors = [...supersededCleanupErrors];
+    if (this.#latestBuildOperation !== operation) {
+      try {
+        await this.#stopWorkerOwner(operation);
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (cleanupErrors.length === 1) {
+      throw cleanupErrors[0];
+    }
+    if (cleanupErrors.length > 1) {
+      throw new AggregateError(
+        cleanupErrors,
+        'Multiple parallel-plugin worker cleanup attempts failed',
+        { cause: cleanupErrors[0] },
+      );
+    }
+    return result;
+  }
+
+  #enterNativeBuild(
+    operation: BuildOperation,
+    isWrite: boolean,
+    bundlerOptions: Parameters<BindingBundler['generate']>[0],
+  ): Promise<{
+    nativePromise: ReturnType<BindingBundler['generate']>;
+    supersededCleanupErrors: unknown[];
+  }> {
+    const entry = this.#nativeEntryQueue.then(async () => {
+      const previous = this.#latestBuildOperation;
+      let nativePromise: ReturnType<BindingBundler['generate']>;
+      for (;;) {
+        try {
+          nativePromise = isWrite
+            ? this.#bundler.write(bundlerOptions)
+            : this.#bundler.generate(bundlerOptions);
+          break;
+        } catch (error) {
+          if (!isFailureCloseAdmissionError(error)) {
+            throw error;
+          }
+          // This callback may be the operation that the failure-triggered
+          // close is waiting to release. Waiting for that close here would
+          // create a direct dependency cycle.
+          if (this.#closeCallbackScope.hasActiveCallback()) {
+            throw error;
+          }
+          await this.#bundler.waitForFailureClose();
+        }
+      }
+      // Binding construction errors throw before this point. Only publish the
+      // operation after Rust has installed its BundleHandle.
+      this.#latestBuildOperation = operation;
+
+      const supersededCleanupErrors: unknown[] = [];
+      if (previous?.settled) {
+        try {
+          // Native entry synchronously installs this operation's bundle
+          // handle. Retire the previous workers only after that replacement
+          // is visible, so a failed retirement cannot leave native closeBundle
+          // targeting a partially terminated worker pool.
+          await this.#stopWorkerOwner(previous);
+        } catch (error) {
+          supersededCleanupErrors.push(error);
+        }
+      }
+      return { nativePromise, supersededCleanupErrors };
+    });
+    this.#nativeEntryQueue = entry.then(
+      () => {},
+      () => {},
+    );
+    return entry;
+  }
+
+  #startWorkerStop(owner: BuildOperation): Promise<unknown[]> {
+    const stopWorkers = owner.stopWorkers;
+    if (!stopWorkers) return Promise.resolve([]);
+
+    // A detached retirement cannot reject without a listener. Retain its
+    // failure as data so the next foreground cleanup reports it and can retry.
+    owner.stopAttempt ??= (async () => {
+      try {
+        if (owner.failureClosePending) {
+          await this.#bundler.waitForFailureClose();
+          owner.failureClosePending = false;
+        }
+        await stopWorkers();
+      } catch (error) {
+        return [error];
+      }
+      if (owner.stopWorkers === stopWorkers) {
+        owner.stopAttempt = undefined;
+        owner.stopWorkers = undefined;
+        this.#workerOwners.delete(owner);
+      }
+      return [];
+    })();
+    return owner.stopAttempt;
+  }
+
+  async #stopWorkerOwner(owner: BuildOperation): Promise<void> {
+    const attempt = this.#startWorkerStop(owner);
+    const errors = await attempt;
+    if (errors.length > 0) {
+      if (owner.stopAttempt === attempt) {
+        owner.stopAttempt = undefined;
+      }
+      if (errors.length === 1) {
+        throw errors[0];
+      }
+      throw new AggregateError(errors, 'Parallel-plugin worker shutdown failed', {
+        cause: errors[0],
+      });
     }
   }
+
+  #activeBuildCallback(): BuildCallbackInvocation | undefined {
+    let invocation = buildCallContext.getStore();
+    while (invocation) {
+      if (invocation.build === this && invocation.active) return invocation;
+      invocation = invocation.parent;
+    }
+  }
+
+  #runBuildCallback<T>(
+    initiatingInvocation: BuildCallbackInvocation | undefined,
+    callback: () => T,
+    callbackName = 'JavaScript callback',
+  ): T {
+    const invocation: BuildCallbackInvocation = {
+      active: true,
+      build: this,
+      callbackName,
+      parent: buildCallContext.getStore() ?? initiatingInvocation,
+    };
+    const deactivate = () => {
+      invocation.active = false;
+    };
+
+    return buildCallContext.run(invocation, () => {
+      try {
+        return trackAsyncCallbackSettlement(this.#closeCallbackScope.run(callback), deactivate);
+      } catch (error) {
+        deactivate();
+        throw error;
+      }
+    });
+  }
+}
+
+function isFailureCloseAdmissionError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes(FAILURE_CLOSE_ADMISSION_ERROR);
 }
 
 function _assert() {

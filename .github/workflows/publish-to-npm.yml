@@ -81,6 +81,7 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: packages/rolldown/artifacts
+          pattern: bindings-*
 
       - name: Create rolldown/npm dirs
         run: vp exec --filter rolldown napi create-npm-dirs
@@ -91,9 +92,6 @@ jobs:
       - name: List Rolldown Bindings
         run: ls -R ./packages/rolldown/npm
         shell: bash
-
-      - name: Check wasm32-wasi binding deps match @rolldown/browser
-        run: node scripts/misc/check-wasi-binding-deps.mjs
 
       - name: Download Node Artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -106,6 +104,37 @@ jobs:
         with:
           path: packages/browser/dist
           name: browser-artifact
+
+      - name: Download bundled threaded WASI loaders
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: packages/rolldown/artifacts/threaded-wasi-loaders
+          name: threaded-wasi-loader-artifact
+
+      - name: Vendor WASI runtimes
+        run: node scripts/misc/stage-wasi-packages.mjs
+
+      - name: Check WASI binding runtime dependencies
+        run: node scripts/misc/check-wasi-binding-deps.mjs
+
+      - name: Install Node 20 for packed consumer validation
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '20.19.0'
+
+      - name: Capture Node 20 executable
+        run: echo "ROLLDOWN_NODE20_EXECUTABLE=$(command -v node)" >> "$GITHUB_ENV"
+
+      - name: Restore tooling Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+
+      - name: Install Chromium for packed WASI browser validation
+        run: vp exec playwright install chromium
+
+      - name: Test packed WASI consumers
+        run: node scripts/misc/check-wasi-binding-packed-consumer.mjs
 
       - name: Download `@rolldown/debug` Artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1

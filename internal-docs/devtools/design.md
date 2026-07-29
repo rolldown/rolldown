@@ -6,6 +6,15 @@
 
 Rolldown devtools is a tracing-based system that emits structured build-time data (module graphs, chunk graphs, plugin hook calls, generated assets) to disk so that external tools (e.g. Vite devtools) can consume it to provide debugging, profiling, and visualization experiences.
 
+## Lifecycle Principles
+
+- Output identity follows the canonical filesystem identity of an existing `cwd`, not its lexical spelling. Symlink, `.`/`..`, drive-letter, and case aliases must converge without changing where that filesystem path resolves.
+- The output files belong to a logical `(canonical output root, raw session ID)` pair, but every tracer has an independent owner lease. Same-key bundlers may append to the same files; one close or drop must not consume another owner's state or diagnostics.
+- `$ref:` dictionaries are file-local. A consumer must be able to parse `meta.json` or `logs.json` independently without loading the other file first.
+- Ordinary tracing writes are best-effort and must not unwind build work when the process-global writer cannot start or be accessed. The authoritative close path still returns structured failures.
+- Global subscriber installation is serialized, fallible, and capability-aware. When `RD_LOG` is enabled first, normal tracing and the dormant devtools layers are installed together; an existing external subscriber becomes a build diagnostic instead of an N-API-crossing panic. Because tracing subscribers cannot gain layers after global installation, requesting `RD_LOG` after a devtools-only subscriber returns an explicit recoverable incompatibility instead of pretending logging was enabled.
+- A devtools event is accepted only when its span ancestry carries both the selected session ID and canonical output root. Non-opted-in builds cannot fall back into another owner's files, and action callsites stay disabled while no tracer lease is active.
+
 ## Future Directions
 
 ### Plugin-Supplied Metadata
@@ -35,11 +44,11 @@ Now that the system is in use, it's a major issue. On large projects, enabling d
 - **Synchronous JSON serialization on the hot path.** Every `trace_action!` call serializes the action struct to JSON via `serde_json::to_string`, then the formatter parses it back into `serde_json::Value` for context injection and file writing. This double serialization happens inline during the build.
 - **Full module content in hook events.** `HookLoadCallEnd`, `HookTransformCallStart/End`, and `HookRenderChunkStart/End` include the full source text of every module. For large codebases this means serializing and writing megabytes of source code per build.
 - **blake3 hashing for dedup.** Every string >5 KB is hashed, and every string >10 KB triggers a hash lookup and `$ref` replacement. This adds CPU work proportional to total source size.
-- **Synchronous file I/O.** `DevtoolsFormatter::format_event` writes directly to files via `std::fs::File`, blocking the thread.
+- **Per-event channel and writer work.** `DevtoolsFormatter::format_event` sends each shaped `serde_json::Value` to a process-global background writer. File creation, hashing, serialization to JSON lines, buffering, and flushing are off the build thread, but every event still incurs an allocation-heavy channel handoff and is processed individually.
 
 Potential approaches:
 
-- **Async/buffered writes.** Move file I/O off the build thread — buffer events in memory and flush on a background thread or at build boundaries.
+- **Batch writer commands.** Accumulate multiple shaped actions per command or build boundary to reduce channel and per-event writer overhead while preserving the acknowledged close contract.
 - **Lazy content emission.** Don't include full source in hook events by default. Instead, emit a content hash or offset reference; let the consumer request full content on demand (or write content to separate sidecar files).
 - **Avoid double serialization.** Serialize directly to the output format instead of going through `serde_json::Value` as an intermediate.
 - **Tiered verbosity.** Let users opt into levels of detail (e.g. graph-only vs. full hook tracing) so lightweight consumers don't pay for data they don't need.
@@ -103,12 +112,24 @@ This allows the JSON-lines file writer to remain as the default (zero new depend
 
 ### Per-Build Scoping (vs. Global Activation)
 
-The current implementation uses a process-global `tracing_subscriber` registry initialized via `DebugTracer::init()` with an `AtomicBool` singleton guard. This means:
+The current implementation uses one process-global `tracing_subscriber`
+registry, but output ownership remains per bundler. `RD_LOG` initialization and
+the first devtools initialization share one serialized installation result.
+The installed devtools filters consult an active-tracer count before enabling
+action callsites and all span callsites. The first acquisition and final release
+rebuild tracing's process-wide callsite-interest cache, so callsites observed
+before a traced build can transition from `never` to `always` without requiring
+an active-count load on every action event. The filter intentionally leaves the
+maximum-level hint unspecified: trace-level actions must remain eligible when a
+co-installed `RD_LOG=info` layer has a lower maximum. The formatter rejects
+events whose span ancestry lacks the devtools output-root marker. A build that
+did not opt in therefore produces no devtools output even while another build
+is traced.
 
-- Setting `devtools: {}` in **one** rolldown config causes **all** bundler instances in the same process to emit devtools data, even those that didn't opt in.
-- There's no way to enable devtools for one build and disable it for another within the same process (e.g. a monorepo tool running multiple rolldown builds).
-
-The root cause is that `tracing_subscriber::registry().init()` installs a global subscriber. Once installed, every `tracing::trace!` event in the process flows through the devtools layer.
+The remaining global aspect is cost coupling: while any tracer is active,
+devtools action callsites are enabled process-wide and unrelated builds may
+still pay event-construction cost before the formatter rejects their missing
+session marker. True per-future subscribers would remove that residual cost.
 
 #### `tracing` Scoped Subscriber Mechanisms
 
@@ -172,7 +193,6 @@ Regardless of which approach is chosen for subscriber scoping, a **pre-emit chec
 
 ## Unresolved Questions
 
-- **Output location:** Currently hardcoded to `node_modules/.rolldown/` relative to real `process.cwd()`, not `InputOptions.cwd`. This means the devtools output may not land where expected if cwd differs.
 - **Incremental/watch mode:** The devtools system works for both `ClassicBundler` (one-shot) and core `Bundler` (incremental), but successive builds within the same session append to the same `logs.json`. No explicit "rebuild boundary" action exists yet.
 - **Dev engine integration:** `BindingDevEngine` creates a session but uses `Session::dummy()` — devtools is not yet wired up for the dev/HMR engine.
 

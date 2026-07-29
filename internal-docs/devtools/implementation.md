@@ -20,7 +20,7 @@ const bundle = await rolldown({
 await bundle.generate();
 ```
 
-The `devtools` option is `@experimental`. Setting `devtools: {}` is sufficient to enable tracing. The option flows through the binding layer as `BindingDevtoolsOptions` and normalizes to `DevtoolsOptions { session_id: Option<String> }` on the Rust side.
+The `devtools` option is `@experimental`. Setting `devtools: {}` is sufficient to enable tracing. The option flows through the binding layer as `BindingDevtoolsOptions` and normalizes to `DevtoolsOptions { session_id: Option<String> }` on the Rust side. `ClassicBundler` keeps its constructor-generated ID when `sessionId` is omitted, or replaces it with the requested value before creating the tracer and session span. That selected ID is therefore shared by emitted event fields, output-directory naming, and the acknowledged close flush.
 
 CLI equivalent: `--devtools.session-id <id>`.
 
@@ -29,26 +29,66 @@ CLI equivalent: `--devtools.session-id <id>`.
 When devtools is enabled, rolldown writes JSON-lines files to:
 
 ```
-<CWD>/node_modules/.rolldown/<session_id>/
+<InputOptions.cwd>/node_modules/.rolldown/<safe_session_component>/
   meta.json    # SessionMeta action (one JSON object per build; appended in watch/rebuild)
   logs.json    # All other actions, one JSON object per line
 ```
+
+The JavaScript API normalizes an omitted `cwd` to `process.cwd()` on Node and
+to `/` in browser builds. `ClassicBundler` canonicalizes an existing cwd before
+appending `node_modules/.rolldown` and records that root on the session span.
+Symlink, `.`/`..`, case, and drive aliases therefore share one filesystem
+identity without canonicalizing or relocating the output directory itself. If
+the cwd cannot be canonicalized, the writer falls back to absolute lexical
+normalization so the original I/O error is still reported through close.
+
+The raw `sessionId` remains the `session_id` value in emitted actions. For the
+directory name, portable non-empty IDs containing only lowercase ASCII letters,
+digits, `-`, and `_` are preserved (up to 200 bytes, excluding Windows device names).
+Other IDs are encoded as one `~`-prefixed lowercase-hex component, or as a
+fixed-size `~h<blake3>` component when the hex form would be too long. Path
+separators, `.`/`..`, absolute paths, Unicode, and platform-reserved names
+therefore cannot change the output root. Encoding uppercase IDs also prevents
+distinct raw IDs from aliasing on case-insensitive filesystems.
 
 Each line is a self-contained JSON object with an `action` discriminator field. Action events also carry `timestamp`, `session_id`, and `build_id` fields. `StringRef` entries contain only `action`, `id`, and `content` (no timestamp). The consumer reads the file and splits on newlines.
 
 ### Read-after-close contract
 
-`meta.json` and `logs.json` are only guaranteed to be complete and readable **after `await bundle.close()` resolves**. Internally, events flow through a channel to a background writer thread and are buffered via `BufWriter`, so reading the files immediately after `generate()`/`write()` may return empty or truncated content. `bundle.close()` sends a `CloseSession` command with an ack channel and awaits the writer thread's signal, establishing the happens-before edge consumers depend on.
+`meta.json` and `logs.json` are only guaranteed to be complete and readable **after `await bundle.close()` resolves successfully**. Native and threaded-WASI events flow through a channel to a background writer thread; genuine threadless WASI processes the same commands synchronously behind a mutex because it cannot create OS threads. Both backends buffer file output via `BufWriter`, so reading the files immediately after `generate()`/`write()` may return empty or truncated content. `bundle.close()` sends a per-owner `CloseSession` command with an ack channel and awaits the writer result, establishing the happens-before edge consumers depend on. Commands are processed serially in submission order, so the close result covers every earlier write command for that logical session.
+
+The writer retains directory creation, file open, event serialization/write, and flush failures per logical session and clones each distinct failure into every active owner's queue. A newly overlapping owner inherits already-retained failures. Repeated failures for the same operation/path are coalesced to the first diagnostic while the writer still retries the I/O, preventing one broken directory from creating an unbounded close aggregate. Every owner close flushes the shared files and returns only that owner's queue. Shared files, dictionaries, and retained failures remain available until the final owner closes; duplicate authoritative/fallback closes are no-ops. Consequently, one same-root/same-ID bundler cannot consume another's state or diagnostics.
+
+Writer startup, global backend access, command submission, ordinary command-processing panics, and per-file close flush panics are contained. A flush panic becomes an owner-scoped `FlushFile` failure while final-owner state is still retired, so the writer thread can acknowledge the close and continue serving other sessions. Ordinary formatter writes and tracer-drop cleanup remain best-effort; an authoritative close receives a structured failure if the backend could not start, was poisoned, or disconnected. The internal `closeTerminal()` transport reports each distinct writer failure as a separate binding diagnostic. Direct `BindingBundler.close()` consumers receive a JavaScript `AggregateError` when multiple failures exist; original JavaScript errors retain their object identity inside its `errors` array, while a lone JavaScript failure remains the rejection object itself.
+
+The process-global tracing subscriber has one serialized retained
+initialization result and records whether normal logging was installed.
+`RD_LOG` installs the normal logging layer and dormant devtools layers together,
+so enabling both facilities cannot attempt a second global subscriber
+installation. The first devtools-only build uses the same initializer when
+normal tracing is disabled. A later `RD_LOG` request cannot mutate that global
+subscriber, so it reports an explicit incompatibility on stderr instead of
+silently returning success without logging. Initialization constructs and
+retains the installed `tracing::Dispatch`; an external subscriber conflict or
+contained initializer panic becomes a bundler-initialization diagnostic instead
+of aborting Node.
 
 ### Large String Deduplication
 
-Top-level string fields larger than 5 KB are cached by blake3 hash. A `StringRef` record is emitted before the action that references it:
+Top-level string fields larger than 5 KB are cached by blake3 hash independently
+for each output file. A `StringRef` record is emitted as its own JSON line before
+the action that references it:
 
 ```json
 { "action": "StringRef", "id": "<blake3-hash>", "content": "<full string>" }
 ```
 
-Top-level string fields larger than 10 KB are additionally replaced with a `$ref:<hash>` placeholder in the action itself, pointing back to the `StringRef` entry. This keeps action records compact while preserving full content for consumers that need it. Note: nested strings (e.g. `AssetsReady.assets[].content`) are not ref'd — only top-level fields are considered.
+Top-level string fields larger than 10 KB are additionally replaced with a `$ref:<hash>` placeholder in the action itself, pointing back to a `StringRef` entry in the same file. This keeps action records compact while allowing `meta.json` and `logs.json` to be consumed independently. Note: nested strings (e.g. `AssetsReady.assets[].content`) are not ref'd — only top-level fields are considered.
+
+Structural routing fields (`action`, `build_id`, and `session_id`) are never
+dictionary entries and are never replaced. In particular, emitted
+`session_id` always remains the exact raw configured value even when the
+filesystem directory uses a bounded encoded component.
 
 ## Architecture
 
@@ -62,10 +102,10 @@ Top-level string fields larger than 10 KB are additionally replaced with a `$ref
 
 ### Key Types
 
-- **`DebugTracer`** — Initializes a `tracing_subscriber` registry with the devtools-specific layer and formatter. Singleton init via `AtomicBool`. On drop, sends a best-effort (no-ack) `CloseSession` to the writer thread as a cleanup fallback; the authoritative flush path is `ClassicBundler::close()`, which uses `rolldown_devtools::flush_session(session_id)` and awaits an ack before resolving.
+- **`DebugTracer`** — Acquires the serialized process-global subscriber result, registers one writer owner, and increments the active-tracer count used by both devtools layer filters. Its `DevtoolsSessionKey` combines the logical canonical-root/raw-ID pair with a unique owner ID. Clones share one `Arc` lease, so only the final clone sends the best-effort no-ack close fallback and decrements the active count. Each admitted native operation guard retains a clone, preventing N-API object finalization from closing the owner while that operation can still emit events. The authoritative flush path clones the same owner key into `ClassicBundler::close()`, passes it to `rolldown_devtools::flush_session(...)`, and awaits the structured result before resolving.
 - **`Session`** — Holds a session `id` (e.g. `sid_0_1710000000000`) and a parent `tracing::Span`. All build spans are children of the session span. A `Session::dummy()` is used when devtools is disabled (no-op span).
 - **`DevtoolsLayer`** — A `tracing_subscriber::Layer` that extracts `CONTEXT_*` prefixed fields from spans and stores them as `ContextData` in span extensions.
-- **`DevtoolsFormatter`** — A `FormatEvent` impl that serializes `devtoolsAction`-tagged events to JSON lines, injects context variables, and writes to the appropriate file.
+- **`DevtoolsFormatter`** — A `FormatEvent` impl that parses `devtoolsAction`-tagged events, injects context variables, consumes the output root carried by the session span, encodes the session directory component, and submits the resolved action to the selected writer backend.
 
 ### Tracing Mechanism
 
@@ -93,7 +133,7 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
 - Context injection without manual plumbing — `session_id`, `build_id`, `call_id` are all resolved from ancestor spans at emit time via `${variable_name}` placeholder substitution.
 - Automatic async context tracking — spans follow across `.await` boundaries.
 
-**Event filtering:** Both `rolldown_devtools` and `rolldown_tracing` filter events by the presence of the `devtoolsAction` field. The devtools layer only processes events with that field; the normal tracing layer (chrome/console) filters them _out_, so devtools events don't pollute standard trace output.
+**Event filtering:** Both `rolldown_devtools` and `rolldown_tracing` use the same devtools filter, which accepts action events carrying `devtoolsAction` and all spans. The layer stores extensions only for spans declaring `CONTEXT_*` fields, but the formatter must observe intermediate spans as well so an explicitly parented non-context span cannot sever its path to session ancestry. When `RD_LOG` is active, its normal layer is installed inside the devtools layers; otherwise the normal layer's rejecting filter IDs would be inherited by the formatter context and hide devtools span ancestry. The devtools filters expose cached `never` interest while no tracer lease exists and cached `always` interest while one is active. They intentionally return no maximum-level hint, so a co-installed lower-verbosity normal layer cannot globally suppress trace-level devtools actions. The `0 -> 1` and `1 -> 0` tracer transitions rebuild tracing's callsite-interest cache under the retained installed dispatch; this is required because N-API operations may perform the transition on a worker with a different thread-local default. Callsites first observed by an untraced build can therefore become active later without an active-count load on every steady-state action. The normal tracing layer (chrome/console) filters devtools actions _out_, so they do not pollute standard trace output. The formatter additionally requires `session_id` and `devtools_output_root` from span ancestry before routing a command. Missing context is discarded rather than mapped to a fallback owner.
 
 ### ID Generation
 
@@ -163,13 +203,25 @@ Run: `pnpm --filter @rolldown/debug run gen-action-types`
 
 ## Static Data Management
 
-File handles and hash caches are stored in process-global `LazyLock<DashMap>` statics:
+The process-global writer backend owns one `WriterState`. Native and
+`wasm32-wasip1-threads` builds use a channel plus one background writer thread.
+The genuine threadless `wasm32-wasip1` build stores the same state behind an
+inline mutex and processes commands synchronously:
 
-- `OPENED_FILE_HANDLES` — one file handle per output file path, preventing duplicate writes
-- `OPENED_FILES_BY_SESSION` — tracks which files belong to which session (for cleanup)
-- `EXIST_HASH_BY_SESSION` — tracks already-emitted `StringRef` hashes per session (for dedup)
+- `files` — one buffered file handle and `StringRef` dictionary per output path
+- `files_by_session` — files belonging to each logical session
+- `dir_ensured` — logical sessions whose output-directory creation has succeeded
+- `owners_by_session` — active unique owner leases for each logical session
+- `failures_by_session` — retained distinct failures used to seed overlapping owners
+- `failures_by_owner` — independent close result queue for each active owner
 
-These are cleaned up when the background writer thread processes a `CloseSession` command — either sent synchronously via `flush_session(...)` from `ClassicBundler::close()` (ack-based, happens-before `close()` resolving) or best-effort from `DebugTracer::drop`.
+Formatter writes carry the logical key made from the canonical
+`<cwd>/node_modules/.rolldown` output root plus raw session ID. Registration and
+close commands carry the public key, which adds a unique owner ID. Reusing an
+ID in different cwd values cannot merge state, while same-root/same-ID owners
+intentionally append to the same files without sharing close ownership.
+
+Each backend serializes access to this state, so write, register, and close commands cannot interleave inside a file operation. Writes with no active owner are ignored, preventing late events from reopening a finalized session. `CloseSession` flushes the addressed logical session, unregisters exactly one owner, and only removes shared state for the final owner. The ack returns `Result<(), DevtoolsWriterError>` containing that owner's retained failures. When the threaded backend's process-global channel disconnects, the writer flushes and clears any remaining state best-effort.
 
 ## Consumer Side
 
@@ -178,7 +230,7 @@ The `@rolldown/debug` package provides:
 ```ts
 import { parseToEvents, type Event, type StringRef } from '@rolldown/debug';
 
-const data = fs.readFileSync('node_modules/.rolldown/<sid>/logs.json', 'utf8');
+const data = fs.readFileSync('node_modules/.rolldown/<safe-session-component>/logs.json', 'utf8');
 const events = parseToEvents(data.trim());
 // events: Array<StringRef | { timestamp, session_id, action: "BuildStart" | "ModuleGraphReady" | "PackageGraphReady" | ... }>
 ```

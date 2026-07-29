@@ -42,28 +42,23 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       debug_assert_eq!(importee, self.ctx.idx);
 
       let namespace_name = self.canonical_name_for(namespace_ref);
-      program.body.push(Statement::new_var_decl(
-        namespace_name,
-        ast::Expression::new_void_0(SPAN, &ast_builder),
-        &ast_builder,
-      ));
+      program.body.push(Statement::new_var_decl_no_init(namespace_name, &ast_builder));
 
       let importee_wrapper_ref =
         self.ctx.linking_info.wrapper_ref.expect("carrier importee should have a CJS wrapper");
       let (importee_wrapper_expr, hint) =
         self.finalized_expr_for_symbol_ref(importee_wrapper_ref, false, false);
-      let require_call = if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
-        importee_wrapper_expr
-      } else {
-        ast::Expression::new_call_expression(
-          SPAN,
-          importee_wrapper_expr,
-          NONE,
-          [],
-          false,
-          &ast_builder,
-        )
-      };
+      // The carrier is appended by its own CJS importee's finalizer, so this wrapper reference is
+      // same-chunk and can never finalize into another chunk's CJS entry namespace value.
+      debug_assert!(!hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry));
+      let require_call = ast::Expression::new_call_expression(
+        SPAN,
+        importee_wrapper_expr,
+        NONE,
+        [],
+        false,
+        &ast_builder,
+      );
       let init_expr = if needs_to_esm {
         Expression::new_to_esm_wrapper(
           self.finalized_expr_for_runtime_symbol("__toESM"),

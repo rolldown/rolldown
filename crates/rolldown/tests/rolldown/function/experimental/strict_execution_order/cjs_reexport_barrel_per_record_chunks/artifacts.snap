@@ -50,7 +50,7 @@ var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-a");
 	module.exports = "a";
 }));
-var import_a = void 0;
+var import_a;
 function init_split_barrel_cjs_0() {
 	return (init_split_barrel_cjs_0 = __esmMin((() => {
 		import_a = /* @__PURE__ */ __toESM(require_a(), 1);
@@ -82,7 +82,7 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-b");
 	module.exports = "b";
 }));
-var import_b = void 0;
+var import_b;
 function init_split_barrel_cjs_1() {
 	return (init_split_barrel_cjs_1 = __esmMin((() => {
 		import_b = /* @__PURE__ */ __toESM(require_b(), 1);
@@ -168,7 +168,7 @@ var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-a");
 	module.exports = "a";
 }));
-var import_a = void 0;
+var import_a;
 function init_split_barrel_cjs_0() {
 	return (init_split_barrel_cjs_0 = __esmMin((() => {
 		import_a = /* @__PURE__ */ __toESM(require_a(), 1);
@@ -200,7 +200,7 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-b");
 	module.exports = "b";
 }));
-var import_b = void 0;
+var import_b;
 function init_split_barrel_cjs_1() {
 	return (init_split_barrel_cjs_1 = __esmMin((() => {
 		import_b = /* @__PURE__ */ __toESM(require_b(), 1);

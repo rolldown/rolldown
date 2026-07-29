@@ -608,6 +608,37 @@ pub trait StatementFactoryExt<'ast> {
     )
   }
 
+  /// `var <name>;`
+  fn new_var_decl_no_init<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+    name: &str,
+    builder: &B,
+  ) -> Statement<'ast> {
+    let declarations = oxc::allocator::Vec::from_value_in(
+      VariableDeclarator::new(
+        SPAN,
+        VariableDeclarationKind::Var,
+        BindingPattern::new_binding_identifier(
+          SPAN,
+          oxc::ast::ast::Str::from_str_in(name, builder),
+          builder,
+        ),
+        NONE,
+        None,
+        false,
+        builder,
+      ),
+      builder,
+    );
+
+    Statement::new_variable_declaration(
+      SPAN,
+      VariableDeclarationKind::Var,
+      declarations,
+      false,
+      builder,
+    )
+  }
+
   /// `export default <expr>`
   fn new_export_default_stmt<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     expr: Expression<'ast>,

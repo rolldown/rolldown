@@ -64,7 +64,7 @@ import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 var require_pure_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { snapshot: globalThis.__strict_order_value ?? "stale" };
 }));
-var import_pure_cjs = void 0;
+var import_pure_cjs;
 function init_pure_carrier_cjs_0() {
 	return (init_pure_carrier_cjs_0 = __esmMin((() => {
 		import_pure_cjs = require_pure_cjs();
@@ -215,7 +215,7 @@ import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 var require_pure_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { snapshot: globalThis.__strict_order_value ?? "stale" };
 }));
-var import_pure_cjs = void 0;
+var import_pure_cjs;
 function init_pure_carrier_cjs_0() {
 	return (init_pure_carrier_cjs_0 = __esmMin((() => {
 		import_pure_cjs = require_pure_cjs();

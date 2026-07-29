@@ -83,13 +83,13 @@ var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("shared-cjs");
 	module.exports = "shared";
 }));
-var import_shared$1 = void 0;
+var import_shared$1;
 function init_barrel_a_cjs_0() {
 	return (init_barrel_a_cjs_0 = __esmMin((() => {
 		import_shared$1 = /* @__PURE__ */ __toESM(require_shared(), 1);
 	})))();
 }
-var import_shared = void 0;
+var import_shared;
 function init_barrel_b_cjs_1() {
 	return (init_barrel_b_cjs_1 = __esmMin((() => {
 		import_shared = /* @__PURE__ */ __toESM(require_shared(), 1);
@@ -177,13 +177,13 @@ var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("shared-cjs");
 	module.exports = "shared";
 }));
-var import_shared$1 = void 0;
+var import_shared$1;
 function init_barrel_a_cjs_0() {
 	return (init_barrel_a_cjs_0 = __esmMin((() => {
 		import_shared$1 = /* @__PURE__ */ __toESM(require_shared(), 1);
 	})))();
 }
-var import_shared = void 0;
+var import_shared;
 function init_barrel_b_cjs_1() {
 	return (init_barrel_b_cjs_1 = __esmMin((() => {
 		import_shared = /* @__PURE__ */ __toESM(require_shared(), 1);

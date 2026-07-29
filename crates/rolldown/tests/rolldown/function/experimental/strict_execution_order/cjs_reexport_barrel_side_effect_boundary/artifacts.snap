@@ -12,7 +12,7 @@ var require_nested_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, mo
 	globalThis.__events.push("nested-effectful-clone");
 	module.exports = (value) => ({ ...value });
 }));
-var import_nested_effectful_clone = void 0;
+var import_nested_effectful_clone;
 function init_inner_effectful_barrel_cjs_0() {
 	return (init_inner_effectful_barrel_cjs_0 = __esmMin((() => {
 		import_nested_effectful_clone = /* @__PURE__ */ __toESM(require_nested_effectful_clone(), 1);
@@ -91,7 +91,7 @@ var require_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) =
 	globalThis.__events.push("effectful-clone");
 	module.exports = (value) => ({ ...value });
 }));
-var import_effectful_clone = void 0;
+var import_effectful_clone;
 function init_pure_boundary_barrel_cjs_1() {
 	return (init_pure_boundary_barrel_cjs_1 = __esmMin((() => {
 		import_effectful_clone = /* @__PURE__ */ __toESM(require_effectful_clone(), 1);
@@ -128,7 +128,7 @@ var require_nested_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, mo
 	globalThis.__events.push("nested-effectful-clone");
 	module.exports = (value) => ({ ...value });
 }));
-var import_nested_effectful_clone = void 0;
+var import_nested_effectful_clone;
 function init_inner_effectful_barrel_cjs_0() {
 	return (init_inner_effectful_barrel_cjs_0 = __esmMin((() => {
 		import_nested_effectful_clone = /* @__PURE__ */ __toESM(require_nested_effectful_clone(), 1);
@@ -201,7 +201,7 @@ var require_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) =
 	globalThis.__events.push("effectful-clone");
 	module.exports = (value) => ({ ...value });
 }));
-var import_effectful_clone = void 0;
+var import_effectful_clone;
 function init_pure_boundary_barrel_cjs_1() {
 	return (init_pure_boundary_barrel_cjs_1 = __esmMin((() => {
 		import_effectful_clone = /* @__PURE__ */ __toESM(require_effectful_clone(), 1);

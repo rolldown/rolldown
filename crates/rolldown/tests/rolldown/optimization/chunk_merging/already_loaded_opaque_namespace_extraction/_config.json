@@ -1,0 +1,11 @@
+{
+  "_comment": "Namespace extraction for the #10263 already-loaded inlining: the dynamic importer observes the whole namespace (`Object.keys`), so the merge publishes `app.js`'s simulated namespace from the chunk and the `import()` call site extracts it — extra exports stay hidden, like Rollup's `generateFacades` fallback.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region vendor.js
+function f0(x) {
+	return x * 2 + 1;
+}
+//#endregion
+//#region app.js
+var app_exports = /* @__PURE__ */ __exportAll({ done: () => done });
+console.log(f0(1));
+const done = import("./lazy.js").then(({ fn }) => {
+	fn();
+});
+//#endregion
+export { done, f0 as n, app_exports as t };
+
+```
+
+## lazy.js
+
+```js
+import { n as f0 } from "./app.js";
+//#region lazy.js
+function fn() {
+	console.log(f0(3));
+}
+//#endregion
+export { fn };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+const done = import("./app.js").then((n) => n.t).then((app) => {
+	console.log(app.missing);
+	return app.done;
+});
+//#endregion
+export { done };
+
+```

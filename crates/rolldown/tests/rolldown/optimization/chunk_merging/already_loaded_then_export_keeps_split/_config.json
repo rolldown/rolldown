@@ -1,0 +1,11 @@
+{
+  "_comment": "Negative boundary for the #10263 namespace extraction: `app.js` exports a callable `then`, so its chunk namespace is thenable — `import()` of the chunk assimilates through it and an extraction callback would receive the assimilated value instead of the chunk namespace. The merge is rejected and `vendor.js` keeps its own chunk.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

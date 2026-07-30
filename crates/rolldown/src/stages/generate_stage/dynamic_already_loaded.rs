@@ -3,12 +3,22 @@ use std::collections::VecDeque;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  PreserveEntrySignatures, StmtInfoIdx, dynamic_import_usage::DynamicImportExportsUsage,
+  ModuleNamespaceIncludedReason, PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, StmtInfos,
+  UsedSymbolRefsBuilder, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
-use rolldown_utils::BitSet;
+use rolldown_utils::{BitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::chunk_graph::ChunkGraph;
+use crate::{
+  chunk_graph::ChunkGraph,
+  stages::link_stage::{
+    IncludeContext, SymbolIncludeReason, compute_body_demand_keys, include_runtime_symbol,
+    include_symbol,
+  },
+  types::linking_metadata::{
+    included_info_to_linking_metadata_vec, linking_metadata_vec_to_included_info,
+  },
+};
 
 use super::{GenerateStage, code_splitting::IndexSplittingInfo};
 
@@ -24,12 +34,27 @@ struct DynamicEntryAnalysis {
   dynamically_dependent_entries_by_dynamic_entry: Vec<BitSet>,
 }
 
+enum ReducedEntriesDecision {
+  Reject,
+  Accept,
+  /// Accept, but the surviving dynamic entry's chunk must publish the entry's simulated
+  /// namespace and every `import()` of the entry must extract it. This is Rollup's
+  /// `generateFacades` fallback (`Chunk.ts`): a dynamic entry that cannot cleanly represent
+  /// its chunk gets its namespace object included and exported, and call sites append
+  /// `.then(n => n.<alias>)`.
+  AcceptWithNamespaceExtraction {
+    chunk_idx: ChunkIdx,
+    entry_module_idx: ModuleIdx,
+  },
+}
+
 impl GenerateStage<'_> {
   pub(super) fn optimize_dynamic_entry_bits(
-    &self,
+    &mut self,
     index_splitting_info: &mut IndexSplittingInfo,
-    chunk_graph: &ChunkGraph,
+    chunk_graph: &mut ChunkGraph,
     entries_len: u32,
+    used_symbol_refs: &mut UsedSymbolRefsBuilder,
   ) {
     let DynamicEntryAnalysis {
       dynamic_entry_indices,
@@ -59,6 +84,7 @@ impl GenerateStage<'_> {
     );
 
     let mut changed = false;
+    let mut extraction_entries: FxIndexMap<ChunkIdx, ModuleIdx> = FxIndexMap::default();
     for atom_idx in 0..atoms.len() {
       let original_dependent_entries = atoms[atom_idx].dependent_entries.clone();
       let dependent_entries = atoms[atom_idx].dependent_entries.index_of_one().collect::<Vec<_>>();
@@ -68,17 +94,28 @@ impl GenerateStage<'_> {
           atoms[atom_idx].dependent_entries.clear_bit(entry_idx);
         }
       }
-      if atoms[atom_idx].dependent_entries != original_dependent_entries
-        && self.can_use_reduced_dependent_entries(
+      let decision = if atoms[atom_idx].dependent_entries == original_dependent_entries {
+        ReducedEntriesDecision::Reject
+      } else {
+        self.reduced_dependent_entries_decision(
           &atoms[atom_idx],
           &original_dependent_entries,
           &atoms[atom_idx].dependent_entries,
           chunk_graph,
           &dynamic_entry_modules_by_entry,
         )
+      };
+      if !matches!(decision, ReducedEntriesDecision::Reject)
         && !Self::reduced_atom_graph_has_static_cycle(&atoms, &atom_dependencies)
       {
         changed = true;
+        if let ReducedEntriesDecision::AcceptWithNamespaceExtraction {
+          chunk_idx,
+          entry_module_idx,
+        } = decision
+        {
+          extraction_entries.insert(chunk_idx, entry_module_idx);
+        }
       } else {
         atoms[atom_idx].dependent_entries = original_dependent_entries;
       }
@@ -95,26 +132,39 @@ impl GenerateStage<'_> {
         index_splitting_info[module_idx].share_count = share_count;
       }
     }
+
+    if !extraction_entries.is_empty() {
+      self.export_simulated_namespaces_for_dynamic_entries(
+        chunk_graph,
+        &extraction_entries,
+        used_symbol_refs,
+      );
+    }
   }
 
-  fn can_use_reduced_dependent_entries(
+  fn reduced_dependent_entries_decision(
     &self,
     atom: &ChunkAtom,
     original_dependent_entries: &BitSet,
     dependent_entries: &BitSet,
     chunk_graph: &ChunkGraph,
     dynamic_entry_modules_by_entry: &[Option<ModuleIdx>],
-  ) -> bool {
+  ) -> ReducedEntriesDecision {
     let bit_count = dependent_entries.bit_count();
     if bit_count != 1 {
-      return bit_count > 1;
+      return if bit_count > 1 {
+        ReducedEntriesDecision::Accept
+      } else {
+        ReducedEntriesDecision::Reject
+      };
     }
 
     let Some(entry_bit) = dependent_entries.index_of_one().next() else {
-      return false;
+      return ReducedEntriesDecision::Reject;
     };
-    let Some(chunk) = chunk_graph.chunk_table.get(ChunkIdx::from_raw(entry_bit)) else {
-      return false;
+    let chunk_idx = ChunkIdx::from_raw(entry_bit);
+    let Some(chunk) = chunk_graph.chunk_table.get(chunk_idx) else {
+      return ReducedEntriesDecision::Reject;
     };
 
     let can_merge_without_changing_entry_signature =
@@ -128,16 +178,33 @@ impl GenerateStage<'_> {
     );
 
     if chunk.is_async_entry() {
-      return can_merge_without_changing_entry_signature
+      if can_merge_without_changing_entry_signature
         || is_runtime_only_atom
         || removed_entries_are_dynamic_entry_modules
-        || self.dynamic_entry_extra_exports_are_unobservable(chunk);
+        || self.dynamic_entry_extra_exports_are_unobservable(chunk)
+      {
+        return ReducedEntriesDecision::Accept;
+      }
+      if self.dynamic_entry_namespace_extraction_allowed(chunk)
+        && let ChunkKind::EntryPoint { module: entry_module_idx, .. } = &chunk.kind
+      {
+        return ReducedEntriesDecision::AcceptWithNamespaceExtraction {
+          chunk_idx,
+          entry_module_idx: *entry_module_idx,
+        };
+      }
+      return ReducedEntriesDecision::Reject;
     }
 
-    !matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
+    if !matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
       || can_merge_without_changing_entry_signature
       || is_runtime_only_atom
       || removed_entries_are_dynamic_entry_modules
+    {
+      ReducedEntriesDecision::Accept
+    } else {
+      ReducedEntriesDecision::Reject
+    }
   }
 
   fn is_runtime_only_atom(&self, atom: &ChunkAtom) -> bool {
@@ -171,6 +238,141 @@ impl GenerateStage<'_> {
       }
       _ => false,
     }
+  }
+
+  /// Extraction fallback for atoms whose extra exports are observable: keep the merge and
+  /// hide the extra exports the way Rollup does (`Chunk.ts` `generateFacades`). Rolldown
+  /// already owns that machinery for eliminated facade chunks —
+  /// `common_chunk_exported_facade_chunk_namespace` plus the finalizer's
+  /// `rewrite_dynamic_import_for_merged_entry` — so the pass only needs to opt the surviving
+  /// entry chunk into it.
+  ///
+  /// Extraction is refused when the simulated namespace cannot reproduce the entry's
+  /// observable interface: dynamic exports (CJS `export *`, a star chain reaching an
+  /// external) are format-dependent merges the namespace object cannot mirror, and a
+  /// statically known `then` export makes the chunk namespace thenable — `import()` of the
+  /// chunk would assimilate through it, handing the extraction callback the assimilated
+  /// value instead of the chunk namespace. Restricted to pure dynamic entries for the same
+  /// reason as the fast path above.
+  fn dynamic_entry_namespace_extraction_allowed(&self, chunk: &Chunk) -> bool {
+    let ChunkKind::EntryPoint { meta, module: entry_module_idx, .. } = &chunk.kind else {
+      return false;
+    };
+    if *meta != ChunkMeta::DynamicImported {
+      return false;
+    }
+    if self.link_output.module_table[*entry_module_idx].as_normal().is_none() {
+      return false;
+    }
+    let entry_meta = &self.link_output.metas[*entry_module_idx];
+    !entry_meta.has_dynamic_exports
+      && !entry_meta.canonical_exports(true).any(|(name, _)| name.as_str() == "then")
+  }
+
+  /// Opt each surviving dynamic entry chunk into the simulated-facade machinery: narrow the
+  /// entry's namespace statement to link-retained getters, include the namespace/wrapper
+  /// symbols, register the chunk in `common_chunk_exported_facade_chunk_namespace`, and
+  /// record the `__exportAll` runtime demand. This mirrors the recipe
+  /// `optimize_facade_entry_chunks` applies to eliminated facade chunks, and runs before the
+  /// standalone runtime chunk is extracted so the new helper demand participates in normal
+  /// runtime placement.
+  fn export_simulated_namespaces_for_dynamic_entries(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+    extraction_entries: &FxIndexMap<ChunkIdx, ModuleIdx>,
+    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+  ) {
+    let runtime_module_idx = self.link_output.runtime.id();
+    for &entry_module_idx in extraction_entries.values() {
+      // Same narrowing as facade elimination: the simulated namespace exposes only the
+      // getters link-time `import()` consumers retained, plus runtime helpers.
+      if !matches!(self.link_output.metas[entry_module_idx].wrap_kind(), WrapKind::Cjs) {
+        self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX]
+          .referenced_symbols
+          .retain(|item| match item {
+            rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
+              used_symbol_refs.contains(symbol_ref) || symbol_ref.owner == runtime_module_idx
+            }
+            rolldown_common::SymbolOrMemberExprRef::MemberExpr(_) => true,
+          });
+      }
+    }
+
+    let (mut stmt_info_included_vec, mut module_included_vec, mut module_namespace_reason_vec) =
+      linking_metadata_vec_to_included_info(&mut self.link_output.metas);
+    let body_demand_keys = compute_body_demand_keys(
+      &self.link_output.module_table.modules,
+      &self.link_output.stmt_infos,
+      &self.link_output.symbol_db,
+      self.options.treeshake.is_some(),
+      &self.link_output.user_defined_entry_modules,
+    );
+    let runtime = &self.link_output.runtime;
+    let context = &mut IncludeContext {
+      modules: &self.link_output.module_table.modules,
+      stmt_infos: &self.link_output.stmt_infos,
+      symbols: &self.link_output.symbol_db,
+      is_included_vec: &mut stmt_info_included_vec,
+      is_module_included_vec: &mut module_included_vec,
+      tree_shaking: self.options.treeshake.is_some(),
+      runtime_idx: self.link_output.runtime.id(),
+      metas: &self.link_output.metas,
+      used_symbol_refs,
+      used_external_symbols: &mut self.link_output.used_external_symbols,
+      constant_symbol_map: &self.link_output.global_constant_symbol_map,
+      options: self.options,
+      normal_symbol_exports_chain_map: &self.link_output.normal_symbol_exports_chain_map,
+      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
+      external_importer_modes: FxHashMap::default(),
+      module_inclusion_changed: false,
+      module_namespace_included_reason: &mut module_namespace_reason_vec,
+      inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
+      json_module_none_self_reference_included_symbol: FxHashMap::default(),
+      entry_module_idxs: &self.link_output.user_defined_entry_modules,
+      body_demand_keys: &body_demand_keys,
+      body_demand_swept: FxHashSet::default(),
+      pending: Vec::new(),
+    };
+
+    let mut needs_export_all_helper = false;
+    for (&chunk_idx, &entry_module_idx) in extraction_entries {
+      chunk_graph
+        .common_chunk_exported_facade_chunk_namespace
+        .entry(chunk_idx)
+        .or_default()
+        .insert(entry_module_idx);
+
+      let Some(module) = context.modules[entry_module_idx].as_normal() else {
+        continue;
+      };
+      let wrap_kind = context.metas[entry_module_idx].wrap_kind();
+      if matches!(wrap_kind, WrapKind::Cjs | WrapKind::Esm)
+        && let Some(wrapper_ref) = context.metas[entry_module_idx].wrapper_ref
+      {
+        include_symbol(context, wrapper_ref, SymbolIncludeReason::SimulatedFacadeChunk);
+      }
+      if matches!(wrap_kind, WrapKind::Esm | WrapKind::None) {
+        include_symbol(
+          context,
+          module.namespace_object_ref,
+          SymbolIncludeReason::SimulatedFacadeChunk,
+        );
+        context.module_namespace_included_reason[entry_module_idx]
+          .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
+        chunk_graph.chunk_table[chunk_idx].depended_runtime_helper.insert(RuntimeHelper::ExportAll);
+        needs_export_all_helper = true;
+      }
+    }
+    if needs_export_all_helper {
+      include_runtime_symbol(context, runtime, RuntimeHelper::ExportAll);
+    }
+
+    included_info_to_linking_metadata_vec(
+      &mut self.link_output.metas,
+      stmt_info_included_vec,
+      &module_included_vec,
+      &module_namespace_reason_vec,
+    );
   }
 
   fn removed_entries_are_dynamic_entry_modules(

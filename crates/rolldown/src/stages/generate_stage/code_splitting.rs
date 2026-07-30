@@ -976,7 +976,12 @@ impl GenerateStage<'_> {
         .sum::<usize>()
         .try_into()
         .expect("Too many entries, u32 overflowed.");
-      self.optimize_dynamic_entry_bits(index_splitting_info, chunk_graph, entries_len);
+      self.optimize_dynamic_entry_bits(
+        index_splitting_info,
+        chunk_graph,
+        entries_len,
+        used_symbol_refs,
+      );
     }
     self.extract_standalone_runtime_chunk(
       index_splitting_info,

@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+import { t as f0 } from "./vendor.js";
+//#region app.js
+console.log(f0(1));
+const lazyLoaded = import("./lazy.js").then((m) => m.fn());
+function then(resolve) {
+	resolve(lazyLoaded);
+}
+//#endregion
+export { lazyLoaded, then };
+
+```
+
+## lazy.js
+
+```js
+import { t as f0 } from "./vendor.js";
+//#region lazy.js
+function fn() {
+	return f0(3);
+}
+//#endregion
+export { fn };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+const result = import("./app.js");
+//#endregion
+export { result };
+
+```
+
+## vendor.js
+
+```js
+//#region vendor.js
+function f0(x) {
+	return x * 2 + 1;
+}
+//#endregion
+export { f0 as t };
+
+```

@@ -54,7 +54,8 @@ impl LinkStage<'_> {
           // observers land in: a module that merely reads a *name* off the same external renders no
           // `__toESM` call and must not demand the helper, or its chunk gains a cross-chunk import
           // whose binding then dies in DCE, leaving a bare `require` of the runtime chunk behind.
-          if unattributable_externals.contains(&namespace_ref) || observers.contains_key(&module_idx)
+          if unattributable_externals.contains(&namespace_ref)
+            || observers.contains_key(&module_idx)
           {
             reads_external_as_esm = true;
           }

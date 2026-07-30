@@ -1,0 +1,19 @@
+crates/rolldown_dev/src/bundle_coordinator.rs
+  s_9884f18bac89b9::t_d6093753b3a2b9 499-500,502-518
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4a41ff4d001b9db6d25b98dd5460216c62ebf44a",
+  "prompts": {},
+  "sessions": {
+    "s_9884f18bac89b9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f727b224-19a0-40d2-afa2-3412a5570143",
+        "model": "claude-opus-5"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

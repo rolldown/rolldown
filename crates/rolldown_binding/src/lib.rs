@@ -34,6 +34,33 @@ use napi_derive::napi;
 #[global_allocator]
 static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 
+#[cfg(all(
+  not(target_family = "wasm"),
+  not(feature = "default_global_allocator"),
+  not(target_env = "ohos")
+))]
+unsafe extern "C" {
+  fn mi_collect(force: bool);
+}
+
+#[cfg(all(
+  not(target_family = "wasm"),
+  not(feature = "default_global_allocator"),
+  not(target_env = "ohos")
+))]
+pub(crate) fn collect_allocator() {
+  // SAFETY: mimalloc's process-wide collection operation is thread-safe. A forced collection
+  // releases free pages left by the completed bundle before downstream tools run in Node.
+  unsafe { mi_collect(true) };
+}
+
+#[cfg(not(all(
+  not(target_family = "wasm"),
+  not(feature = "default_global_allocator"),
+  not(target_env = "ohos")
+)))]
+pub(crate) fn collect_allocator() {}
+
 pub mod binding_bundler;
 pub mod binding_dev_engine;
 pub mod binding_dev_options;

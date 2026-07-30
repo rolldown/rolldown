@@ -15,7 +15,7 @@ use crate::{
   plugin_context::{NativePluginContextImpl, PluginContextMeta},
   plugin_driver::{ContextLoadCompletionManager, hook_orders::PluginHookOrders},
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::hook_timing::HookTimingCollector,
+  types::{build_timings::BuildTimings, hook_timing::HookTimingCollector},
 };
 use rolldown_error::EventKindSwitcher;
 
@@ -112,6 +112,7 @@ impl PluginDriverFactory {
         context_load_completion_manager: ContextLoadCompletionManager::default(),
         tx,
         hook_timing_collector: hook_timing_collector.clone(),
+        build_timings: BuildTimings::default(),
       }
     })
   }

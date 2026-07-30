@@ -33,6 +33,7 @@ pub use crate::{
   },
   plugin_driver::{PluginDriver, PluginDriverFactory, SharedPluginDriver},
   pluginable::Pluginable,
+  types::build_timings::BuildTimings,
   types::custom_field::CustomField,
   types::hook_addon_args::HookAddonArgs,
   types::hook_build_end_args::HookBuildEndArgs,

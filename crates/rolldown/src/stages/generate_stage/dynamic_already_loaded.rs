@@ -2,8 +2,8 @@ use std::collections::VecDeque;
 
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  ChunkIdx, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx, PreserveEntrySignatures,
-  StmtInfoIdx,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
+  PreserveEntrySignatures, StmtInfoIdx, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -130,7 +130,8 @@ impl GenerateStage<'_> {
     if chunk.is_async_entry() {
       return can_merge_without_changing_entry_signature
         || is_runtime_only_atom
-        || removed_entries_are_dynamic_entry_modules;
+        || removed_entries_are_dynamic_entry_modules
+        || self.dynamic_entry_extra_exports_are_unobservable(chunk);
     }
 
     !matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
@@ -141,6 +142,35 @@ impl GenerateStage<'_> {
 
   fn is_runtime_only_atom(&self, atom: &ChunkAtom) -> bool {
     atom.modules.len() == 1 && atom.modules[0] == self.link_output.runtime.id()
+  }
+
+  /// Accept an atom with extra exports when they can never be observed through the dynamic
+  /// entry's namespace (#10263). This holds when every `import()` of the entry only reads a
+  /// statically known set of names (`DynamicImportExportsUsage::Partial`) and each of those
+  /// names resolves to one of the entry's own non-ambiguous exports: the chunk keeps exporting
+  /// the used names, and the generated names of the atom's exports are deconflicted against
+  /// them, so no recorded read can reach a merged binding.
+  ///
+  /// Restricted to pure dynamic entries — a user-defined or emitted entry's chunk file can be
+  /// loaded directly at runtime, so its observable namespace is not limited to the recorded
+  /// `import()` usage. Reads of names the entry does not export (`undefined` in source
+  /// semantics) also reject the merge, because a generated export name could later shadow them.
+  fn dynamic_entry_extra_exports_are_unobservable(&self, chunk: &Chunk) -> bool {
+    let ChunkKind::EntryPoint { meta, module: entry_module_idx, .. } = &chunk.kind else {
+      return false;
+    };
+    if *meta != ChunkMeta::DynamicImported {
+      return false;
+    }
+    match self.link_output.dynamic_import_exports_usage_map.get(entry_module_idx) {
+      Some(DynamicImportExportsUsage::Partial(used_names)) => {
+        let entry_meta = &self.link_output.metas[*entry_module_idx];
+        used_names
+          .iter()
+          .all(|used_name| entry_meta.canonical_exports(false).any(|(name, _)| name == used_name))
+      }
+      _ => false,
+    }
   }
 
   fn removed_entries_are_dynamic_entry_modules(

@@ -29,10 +29,7 @@ import {
 } from './normalize-transform-options';
 import { getParallelPluginInfo } from './parallel-plugin';
 import { getDefaultDevRuntime } from './default-dev-runtime';
-import {
-  type PluginTimingsRecorder,
-  summarizePluginTimings,
-} from './plugin-timings';
+import { type PluginTimingsRecorder, summarizePluginTimings } from './plugin-timings';
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],

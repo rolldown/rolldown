@@ -1,0 +1,31 @@
+packages/rolldown/tests/exports-consistency.test.ts
+  s_75c98066d042d3::t_bd5df52c3e7904 19-27
+packages/browser/package.json
+  s_e671b727de1257::t_8f30ac8d82f7cd 35-36
+packages/rolldown/package.json
+  s_e671b727de1257::t_99549fe7ceff93 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f8c10eeb8b97322f29d6bc7913077a9026af9e9c",
+  "prompts": {},
+  "sessions": {
+    "s_75c98066d042d3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fb19f-135a-7fc1-ad0f-1135eaa1ea8f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_e671b727de1257": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fb2ba-c039-78f2-ae37-60cff44ecfdc",
+        "model": "unknown"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

@@ -49,6 +49,10 @@ unsafe extern "C" {
   not(target_env = "ohos")
 ))]
 pub(crate) fn collect_allocator() {
+  // A completed bundle may still have heavy link-stage state being destroyed on a rayon worker.
+  // Wait for those frees before collecting, otherwise pages released just after `mi_collect` stay
+  // resident until a later build happens to trigger another collection.
+  rolldown::drain_deferred_drops();
   // SAFETY: mimalloc's process-wide collection operation is thread-safe. A forced collection
   // releases free pages left by the completed bundle before downstream tools run in Node.
   unsafe { mi_collect(true) };

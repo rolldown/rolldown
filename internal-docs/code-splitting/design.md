@@ -116,7 +116,8 @@ The defense splits by who owns the export name:
   public exports, `emitFile`-promised names, and whatever an `export * from` chain reaching an
   external module supplies at runtime. `order_wrap_host_can_expose_then_export` guards the restore
   path and the entry-facade decision guards the create path — see the entry-trigger facade bullet
-  above.
+  above. In addition to that, `dynamic_entry_supports_namespace_extraction`, which rewrites dynamic
+  importers to `.then((n) => n.<ns>)`, will avoid inlining the module into the dynamic entry.
 
 Deliberately kept: a dynamic-import target's own `then` export. Native `import()` of the source
 module assimilates the same way, so renaming it would diverge from source semantics rather than

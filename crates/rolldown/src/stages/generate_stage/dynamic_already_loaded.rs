@@ -201,12 +201,19 @@ impl GenerateStage<'_> {
     if self.link_output.module_table[entry_module_idx].as_normal().is_none() {
       return false;
     }
-    // If a module is exports a `then`, we cannot actually get its namespace from the dynamic import.
+
+    // If a module exports a `then`, we cannot actually get its namespace from the dynamic import.
     let symbol_db = &self.link_output.symbol_db;
-    !self.link_output.metas[entry_module_idx].resolved_exports.iter().any(|(name, export)| {
+    if self.link_output.metas[entry_module_idx].resolved_exports.iter().any(|(name, export)| {
       name.as_str() == "then"
         || symbol_db.canonical_ref_for(export.symbol_ref).name(symbol_db) == "then"
-    })
+    }) {
+      return false;
+    }
+
+    // If the entry has dynamic exports through `export * from`, it _might_
+    // have a `then` export.
+    !self.link_output.metas[entry_module_idx].has_dynamic_exports
   }
 
   /// Generates a definition for a fake module namespace for the inlined module, which is then

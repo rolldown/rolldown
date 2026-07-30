@@ -18,6 +18,11 @@ use crate::worker_manager::WorkerManager;
 use super::BindingPluginOptions;
 use super::JsPlugin;
 
+/// Hooks a worker plugin can declare but this plugin has no override for, so the call would
+/// reach the `Plugin` trait's no-op default. Reporting them would only make the engine run the
+/// hook's chain for a plugin that cannot answer it.
+const UNFORWARDED_HOOKS: HookUsage = HookUsage::HotUpdate;
+
 #[derive(Debug)]
 #[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct ParallelJsPlugin {
@@ -407,6 +412,6 @@ impl Plugin for ParallelJsPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    Plugin::register_hook_usage(self.first_plugin())
+    Plugin::register_hook_usage(self.first_plugin()) & !UNFORWARDED_HOOKS
   }
 }

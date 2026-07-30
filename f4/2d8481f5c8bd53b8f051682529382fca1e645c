@@ -1,0 +1,19 @@
+packages/test-dev-server/tests/playground/hmr-accept-outside-circular/__tests__/hmr-accept-outside-circular.spec.ts
+  s_72a057a530cd39::t_6cdfa5b4334fe1 40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f42d8481f5c8bd53b8f051682529382fca1e645c",
+  "prompts": {},
+  "sessions": {
+    "s_72a057a530cd39": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "da02bc75-625f-47f3-b8ad-d98fea9616e0",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

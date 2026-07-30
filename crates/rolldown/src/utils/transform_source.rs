@@ -1,11 +1,11 @@
 use std::sync::mpsc::Sender;
 
 use anyhow::Result;
-use rolldown_common::ModuleType;
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
   ModuleIdx, ResolvedId, SourcemapChainElement, side_effects::HookSideEffects,
 };
+use rolldown_common::{ModuleType, RepresentType};
 use rolldown_plugin::PluginDriver;
 
 #[inline]
@@ -19,6 +19,7 @@ pub async fn transform_source(
   sourcemap_chain: &mut Vec<SourcemapChainElement>,
   side_effects: &mut Option<HookSideEffects>,
   module_type: &mut ModuleType,
+  represent_type: &mut Option<RepresentType>,
   magic_string_tx: Option<Sender<SourceMapGenMsg>>,
 ) -> Result<String> {
   plugin_driver
@@ -29,6 +30,7 @@ pub async fn transform_source(
       sourcemap_chain,
       side_effects,
       module_type,
+      represent_type,
       magic_string_tx,
       &mut None,
     )

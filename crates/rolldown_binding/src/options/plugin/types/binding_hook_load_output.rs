@@ -1,4 +1,4 @@
-use rolldown::ModuleType;
+use rolldown::{ModuleType, RepresentType};
 
 use super::binding_hook_side_effects::BindingHookSideEffects;
 use crate::types::binding_sourcemap::BindingSourcemap;
@@ -14,6 +14,10 @@ pub struct BindingHookLoadOutput {
   pub module_side_effects: Option<BindingHookSideEffects>,
   pub map: Option<BindingSourcemap>,
   pub module_type: Option<String>,
+  #[napi(
+    ts_type = "'js' | 'json' | 'text' | 'base64' | 'dataurl' | 'binary' | 'empty' | 'url' | 'copy'"
+  )]
+  pub represent_type: Option<String>,
 }
 
 impl TryFrom<BindingHookLoadOutput> for rolldown_plugin::HookLoadOutput {
@@ -25,6 +29,7 @@ impl TryFrom<BindingHookLoadOutput> for rolldown_plugin::HookLoadOutput {
       map: value.map.map(TryInto::try_into).transpose()?,
       side_effects: value.module_side_effects.map(TryInto::try_into).transpose()?,
       module_type: value.module_type.map(|ty| ModuleType::from_str_with_fallback(ty.as_str())),
+      represent_type: value.represent_type.as_deref().map(RepresentType::try_from).transpose()?,
     })
   }
 }

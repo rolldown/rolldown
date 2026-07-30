@@ -37,7 +37,16 @@ type ModuleSideEffects = boolean | 'no-treeshake' | null;
 export { withFilter } from './with-filter';
 
 // ref: https://github.com/microsoft/TypeScript/issues/33471#issuecomment-1376364329
-/** @category Plugin APIs */
+/**
+ * The type of content contained by a module, similar to the HTTP `Content-Type` header.
+ *
+ * Use `representType` for the way that content is represented to importers.
+ * The representation-oriented values `base64`, `dataurl`, `binary`, `empty`,
+ * `asset`, and `copy` are deprecated. Use the corresponding `representType`
+ * value instead; `asset` maps to `representType: 'url'`.
+ *
+ * @category Plugin APIs
+ */
 export type ModuleType =
   | 'js'
   | 'jsx'
@@ -45,11 +54,37 @@ export type ModuleType =
   | 'tsx'
   | 'json'
   | 'text'
+  /** Deprecated: use `representType: 'base64'` instead. */
+  | 'base64'
+  /** Deprecated: use `representType: 'dataurl'` instead. */
+  | 'dataurl'
+  /** Deprecated: use `representType: 'binary'` instead. */
+  | 'binary'
+  /** Deprecated: use `representType: 'empty'` instead. */
+  | 'empty'
+  /** Deprecated: use `representType: 'url'` instead. */
+  | 'asset'
+  /** Deprecated: use `representType: 'copy'` instead. */
+  | 'copy'
+  | (string & {});
+
+/**
+ * The way a module is represented to its importers.
+ *
+ * This is metadata only and does not affect bundling behavior yet.
+ *
+ * @category Plugin APIs
+ */
+export type RepresentType =
+  | 'js'
+  | 'json'
+  | 'text'
   | 'base64'
   | 'dataurl'
   | 'binary'
   | 'empty'
-  | (string & {});
+  | 'url'
+  | 'copy';
 
 /** @category Plugin APIs */
 export type ImportKind = BindingHookResolveIdExtraArgs['kind'];
@@ -176,7 +211,20 @@ export interface SourceDescription
    * See [Source Code Transformations section](https://rolldown.rs/apis/plugin-api/transformations#source-code-transformations) for more details.
    */
   map?: SourceMapInput;
+  /**
+   * The type of content contained by the module, similar to the HTTP `Content-Type` header.
+   *
+   * Use `representType` for the way that content is represented to importers.
+   * The representation-oriented values `base64`, `dataurl`, `binary`, `empty`,
+   * `asset`, and `copy` are deprecated; `asset` maps to `representType: 'url'`.
+   */
   moduleType?: ModuleType;
+  /**
+   * The way the module is represented to its importers.
+   *
+   * This is metadata only and does not affect bundling behavior yet.
+   */
+  representType?: RepresentType;
 }
 
 /**

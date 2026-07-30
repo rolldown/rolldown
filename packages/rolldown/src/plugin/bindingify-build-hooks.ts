@@ -249,6 +249,7 @@ export function bindingifyTransform(
           (mapHandledByNativeChannel || ret.map === null ? null : undefined),
         moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
         moduleType: ret.moduleType,
+        representType: ret.representType,
       };
     },
     filter: bindingifyTransformFilter(options.filter),
@@ -295,6 +296,7 @@ export function bindingifyLoad(
         code: ret.code,
         map: bindingifySourcemap(map),
         moduleType: ret.moduleType,
+        representType: ret.representType,
         moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
       };
     },

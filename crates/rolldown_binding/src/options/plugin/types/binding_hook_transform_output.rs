@@ -1,5 +1,5 @@
 use napi::{Either, bindgen_prelude::Null};
-use rolldown::ModuleType;
+use rolldown::{ModuleType, RepresentType};
 use rolldown_plugin::{HookTransformOutput, HookTransformOutputMap};
 
 use super::binding_hook_side_effects::BindingHookSideEffects;
@@ -17,6 +17,10 @@ pub struct BindingHookTransformOutput {
   /// omitting the field, which mirrors Rollup's "possibly broken" semantics).
   pub map: Option<Either<BindingSourcemap, Null>>,
   pub module_type: Option<String>,
+  #[napi(
+    ts_type = "'js' | 'json' | 'text' | 'base64' | 'dataurl' | 'binary' | 'empty' | 'url' | 'copy'"
+  )]
+  pub represent_type: Option<String>,
 }
 
 impl TryFrom<BindingHookTransformOutput> for HookTransformOutput {
@@ -35,6 +39,7 @@ impl TryFrom<BindingHookTransformOutput> for HookTransformOutput {
       map,
       side_effects: value.module_side_effects.map(TryInto::try_into).transpose()?,
       module_type: value.module_type.map(|ty| ModuleType::from_str_with_fallback(ty.as_str())),
+      represent_type: value.represent_type.as_deref().map(RepresentType::try_from).transpose()?,
     })
   }
 }
@@ -51,6 +56,7 @@ impl From<HookTransformOutput> for BindingHookTransformOutput {
       map,
       module_side_effects: value.side_effects.map(Into::into),
       module_type: value.module_type.map(|v| v.to_string()),
+      represent_type: value.represent_type.map(|value| value.to_string()),
     }
   }
 }

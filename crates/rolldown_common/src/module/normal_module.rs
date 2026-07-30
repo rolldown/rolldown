@@ -6,7 +6,7 @@ use crate::{
   ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord, ResolvedId,
   StableModuleId, StmtInfoIdx,
 };
-use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
+use crate::{EcmaView, IndexModules, Interop, Module, ModuleType, RepresentType};
 use std::ops::{Deref, DerefMut};
 
 use itertools::Itertools;
@@ -29,6 +29,7 @@ pub struct NormalModule {
   pub debug_id: String,
   pub repr_name: String,
   pub module_type: ModuleType,
+  pub represent_type: Option<RepresentType>,
   pub ecma_view: EcmaView,
   pub originative_resolved_id: ResolvedId,
 }
@@ -113,6 +114,7 @@ impl NormalModule {
         exports
       },
       input_format: self.ecma_view.exports_kind,
+      represent_type: self.represent_type,
     }
   }
 

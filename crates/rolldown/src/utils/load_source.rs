@@ -1,8 +1,8 @@
 use std::{borrow::Cow, path::Path};
 
 use rolldown_common::{
-  ModuleIdx, ModuleType, NormalizedBundlerOptions, ResolvedId, SourcemapChainElement, StrOrBytes,
-  side_effects::HookSideEffects,
+  ModuleIdx, ModuleType, NormalizedBundlerOptions, RepresentType, ResolvedId,
+  SourcemapChainElement, StrOrBytes, side_effects::HookSideEffects,
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
@@ -19,9 +19,9 @@ pub async fn load_source<Fs: FileSystem + 'static>(
   asserted_module_type: Option<&ModuleType>,
   is_read_from_disk: &mut bool,
   module_idx: ModuleIdx,
-) -> anyhow::Result<(StrOrBytes, ModuleType)> {
-  let (maybe_source, mut maybe_module_type) = if resolved_id.id.is_empty_module() {
-    (Some(String::new()), Some(ModuleType::Empty))
+) -> anyhow::Result<(StrOrBytes, ModuleType, Option<RepresentType>)> {
+  let (maybe_source, mut maybe_module_type, represent_type) = if resolved_id.id.is_empty_module() {
+    (Some(String::new()), Some(ModuleType::Empty), None)
   } else {
     plugin_driver
       .load(&HookLoadArgs { id: &resolved_id.id, module_idx, asserted_module_type })
@@ -31,7 +31,11 @@ pub async fn load_source<Fs: FileSystem + 'static>(
         if let Some(v) = load_hook_output.side_effects {
           *side_effects = Some(v);
         }
-        (Some(load_hook_output.code.to_string()), load_hook_output.module_type)
+        (
+          Some(load_hook_output.code.to_string()),
+          load_hook_output.module_type,
+          load_hook_output.represent_type,
+        )
       })
       .unwrap_or_default()
   };
@@ -49,74 +53,18 @@ pub async fn load_source<Fs: FileSystem + 'static>(
     *is_read_from_disk = false;
   }
 
-  match (maybe_source, maybe_module_type) {
-    (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
-    (source, None) => {
-      let guessed = get_module_loader_from_file_extension(&resolved_id.id, &options.module_types);
-      match (source, guessed) {
-        (None, None) => {
-          // - Unknown module type,
-          // - No loader to load corresponding module
-          // - User don't specify moduleTypeMapping, we treated it as JS
-          Ok((
-            StrOrBytes::Str({
-              #[cfg(not(target_family = "wasm"))]
-              {
-                let id = resolved_id.id.clone();
-                tokio::runtime::Handle::current()
-                  .spawn_blocking(move || fs.read_to_string(Path::new(id.as_str())))
-                  .await??
-              }
-              #[cfg(target_family = "wasm")]
-              {
-                fs.read_to_string(Path::new(resolved_id.id.as_str()))?
-              }
-            }),
-            ModuleType::Js,
-          ))
-        }
-        (source, Some(guessed)) => match &guessed {
-          ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok((
-            StrOrBytes::Bytes({
-              match source {
-                Some(s) => s.into_bytes(),
-                None => {
-                  if cfg!(target_family = "wasm") {
-                    fs.read(Path::new(resolved_id.id.as_str()))?
-                  } else {
-                    let id = resolved_id.id.clone();
-                    tokio::runtime::Handle::current()
-                      .spawn_blocking(move || fs.read(Path::new(id.as_str())))
-                      .await??
-                  }
-                }
-              }
-            }),
-            guessed,
-          )),
-          ModuleType::Copy => Err(anyhow::format_err!(
-            "Encountered a module with type `copy`, but no plugin handled it. \
-               If you configured this file's extension as `copy` in `moduleTypes`, \
-               ensure the builtin copy-module plugin is enabled."
-          ))?,
-          ModuleType::Asset => Err(anyhow::format_err!(
-            "Encountered a module with type `asset`, but no plugin handled it. \
-               If you configured this file's extension as `asset` in `moduleTypes`, \
-               ensure the builtin asset-module plugin is enabled."
-          ))?,
-          ModuleType::Js
-          | ModuleType::Jsx
-          | ModuleType::Ts
-          | ModuleType::Tsx
-          | ModuleType::Json
-          | ModuleType::Text
-          | ModuleType::Empty
-          | ModuleType::Css
-          | ModuleType::Custom(_) => Ok((
-            StrOrBytes::Str({
-              if let Some(s) = source {
-                s
-              } else {
+  let source_and_module_type: anyhow::Result<(StrOrBytes, ModuleType)> =
+    match (maybe_source, maybe_module_type) {
+      (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
+      (source, None) => {
+        let guessed = get_module_loader_from_file_extension(&resolved_id.id, &options.module_types);
+        match (source, guessed) {
+          (None, None) => {
+            // - Unknown module type,
+            // - No loader to load corresponding module
+            // - User don't specify moduleTypeMapping, we treated it as JS
+            Ok((
+              StrOrBytes::Str({
                 #[cfg(not(target_family = "wasm"))]
                 {
                   let id = resolved_id.id.clone();
@@ -128,19 +76,78 @@ pub async fn load_source<Fs: FileSystem + 'static>(
                 {
                   fs.read_to_string(Path::new(resolved_id.id.as_str()))?
                 }
-              }
-            }),
-            guessed,
-          )),
-        },
-        (Some(source), None) => Ok((StrOrBytes::Str(source), ModuleType::Js)),
+              }),
+              ModuleType::Js,
+            ))
+          }
+          (source, Some(guessed)) => match &guessed {
+            ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok((
+              StrOrBytes::Bytes({
+                match source {
+                  Some(s) => s.into_bytes(),
+                  None => {
+                    if cfg!(target_family = "wasm") {
+                      fs.read(Path::new(resolved_id.id.as_str()))?
+                    } else {
+                      let id = resolved_id.id.clone();
+                      tokio::runtime::Handle::current()
+                        .spawn_blocking(move || fs.read(Path::new(id.as_str())))
+                        .await??
+                    }
+                  }
+                }
+              }),
+              guessed,
+            )),
+            ModuleType::Copy => Err(anyhow::format_err!(
+              "Encountered a module with type `copy`, but no plugin handled it. \
+               If you configured this file's extension as `copy` in `moduleTypes`, \
+               ensure the builtin copy-module plugin is enabled."
+            ))?,
+            ModuleType::Asset => Err(anyhow::format_err!(
+              "Encountered a module with type `asset`, but no plugin handled it. \
+               If you configured this file's extension as `asset` in `moduleTypes`, \
+               ensure the builtin asset-module plugin is enabled."
+            ))?,
+            ModuleType::Js
+            | ModuleType::Jsx
+            | ModuleType::Ts
+            | ModuleType::Tsx
+            | ModuleType::Json
+            | ModuleType::Text
+            | ModuleType::Empty
+            | ModuleType::Css
+            | ModuleType::Custom(_) => Ok((
+              StrOrBytes::Str({
+                if let Some(s) = source {
+                  s
+                } else {
+                  #[cfg(not(target_family = "wasm"))]
+                  {
+                    let id = resolved_id.id.clone();
+                    tokio::runtime::Handle::current()
+                      .spawn_blocking(move || fs.read_to_string(Path::new(id.as_str())))
+                      .await??
+                  }
+                  #[cfg(target_family = "wasm")]
+                  {
+                    fs.read_to_string(Path::new(resolved_id.id.as_str()))?
+                  }
+                }
+              }),
+              guessed,
+            )),
+          },
+          (Some(source), None) => Ok((StrOrBytes::Str(source), ModuleType::Js)),
+        }
       }
-    }
-    (None, Some(ty)) => {
-      assert!(asserted_module_type.is_some(), "Invalid state");
-      Ok((read_file_by_module_type(Path::new(resolved_id.id.as_str()), &ty, fs).await?, ty))
-    }
-  }
+      (None, Some(ty)) => {
+        assert!(asserted_module_type.is_some(), "Invalid state");
+        Ok((read_file_by_module_type(Path::new(resolved_id.id.as_str()), &ty, fs).await?, ty))
+      }
+    };
+  let (source, module_type) = source_and_module_type?;
+  Ok((source, module_type, represent_type))
 }
 
 /// ref: https://github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/internal/bundler/bundler.go#L1161-L1183

@@ -5,8 +5,8 @@ use oxc::span::Span;
 
 use rolldown_common::{
   ExportsKind, FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
-  NormalModule, NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, SourcemapChainElement,
-  StrOrBytes, try_extract_lazy_barrel_info,
+  NormalModule, NormalModuleTaskResult, RepresentType, ResolvedId, SourceMapGenMsg,
+  SourcemapChainElement, StrOrBytes, try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher, UnloadableDependencyContext,
@@ -103,12 +103,13 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         dynamically_imported_ids: FxIndexSet::default(),
         exports: vec![],
         input_format: ExportsKind::None,
+        represent_type: None,
       }),
     );
 
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
-    let (source, module_type) = self
+    let (source, module_type, represent_type) = self
       .load_source(&mut sourcemap_chain, &mut hook_side_effects, self.magic_string_tx.clone())
       .await?;
 
@@ -216,6 +217,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       idx: self.module_idx,
       exec_order: u32::MAX,
       module_type: module_type.clone(),
+      represent_type,
       ecma_view,
       originative_resolved_id: self.resolved_id.clone(),
     };
@@ -249,7 +251,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
     magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
-  ) -> BuildResult<(StrOrBytes, ModuleType)> {
+  ) -> BuildResult<(StrOrBytes, ModuleType, Option<RepresentType>)> {
     let mut is_read_from_disk = true;
     let result = load_source(
       &self.ctx.plugin_driver,
@@ -278,7 +280,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         self.ctx.plugin_driver.watch_files.insert(tsconfig_path.to_string_lossy().as_ref().into());
       }
     }
-    let (source, mut module_type) = result.map_err(|err| {
+    let (source, mut module_type, mut represent_type) = result.map_err(|err| {
       downcast_napi_error_diagnostics(err).unwrap_or_else(|e| {
         BuildDiagnostic::unloadable_dependency(
           self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
@@ -303,6 +305,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
           sourcemap_chain,
           hook_side_effects,
           &mut module_type,
+          &mut represent_type,
           magic_string_tx,
         )
         .await?;
@@ -319,6 +322,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         self.resolved_id.id
       ))?;
     }
-    Ok((source, module_type))
+    Ok((source, module_type, represent_type))
   }
 }

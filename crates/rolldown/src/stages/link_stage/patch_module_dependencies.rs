@@ -1,12 +1,26 @@
 use rayon::iter::ParallelIterator;
 use rolldown_common::{Module, ModuleIdx, RuntimeHelper, SymbolRef};
 use rolldown_utils::{index_vec_ext::IndexVecRefExt, indexmap::FxIndexSet};
+use rustc_hash::FxHashSet;
 
 use super::LinkStage;
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn patch_module_dependencies(&mut self) {
+    // Externals with an observer that inclusion could not attribute to a module that will get a
+    // chunk. Chunks do not exist yet, so `is_included` stands in for "will have a chunk"; for such
+    // an external, rendering falls back to wrapping every chunk emitting it, so every referencing
+    // module must demand the helper. Resolved once up front: the answer only depends on the
+    // external, and checking it inside the per-reference closure below would rescan a popular
+    // external's whole observer set for every module referencing it, making this pass quadratic.
+    let unattributable_externals: FxHashSet<SymbolRef> = self
+      .used_external_symbols
+      .iter_interop_uses()
+      .filter(|(_, observers)| observers.keys().any(|observer| !self.metas[*observer].is_included))
+      .map(|(namespace_ref, _)| *namespace_ref)
+      .collect();
+
     let processed_module_results = self
       .metas
       .par_iter_enumerated()
@@ -40,14 +54,8 @@ impl LinkStage<'_> {
           // observers land in: a module that merely reads a *name* off the same external renders no
           // `__toESM` call and must not demand the helper, or its chunk gains a cross-chunk import
           // whose binding then dies in DCE, leaving a bare `require` of the runtime chunk behind.
-          //
-          // Chunks do not exist yet, so `is_included` stands in for "will have a chunk". An
-          // observer that is *not* included cannot be attributed to one, and rendering falls back
-          // to wrapping every chunk emitting the external — so every referencing module needs the
-          // helper, exactly as before.
-          let has_unattributable_observer =
-            observers.keys().any(|observer| !self.metas[*observer].is_included);
-          if has_unattributable_observer || observers.contains_key(&module_idx) {
+          if unattributable_externals.contains(&namespace_ref) || observers.contains_key(&module_idx)
+          {
             reads_external_as_esm = true;
           }
         };

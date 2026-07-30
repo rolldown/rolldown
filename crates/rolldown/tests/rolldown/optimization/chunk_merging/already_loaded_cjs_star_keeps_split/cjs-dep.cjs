@@ -1,0 +1,1 @@
+exports.fromCjs = 'cjs-value';

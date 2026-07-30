@@ -1,0 +1,11 @@
+{
+  "_comment": "Negative boundary for the #10263 namespace extraction: `app.js` re-exports a star from a CommonJS module, so its export interface is dynamic (`has_dynamic_exports`) — the simulated namespace cannot mirror names only known at runtime. The merge is rejected and `vendor.js` keeps its own chunk.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

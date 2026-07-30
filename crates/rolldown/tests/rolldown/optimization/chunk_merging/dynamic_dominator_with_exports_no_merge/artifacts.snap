@@ -6,19 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic1.js
 
 ```js
-import "./sharedDynamic.js";
+// HIDDEN [\0rolldown/runtime.js]
+//#region sharedDynamic.js
+const sharedDynamic = true;
+//#endregion
 //#region dynamic1.js
+var dynamic1_exports = /* @__PURE__ */ __exportAll({ promise: () => promise });
 console.log(true);
 const promise = import("./dynamic2.js");
 //#endregion
-export { promise };
+export { sharedDynamic as n, promise, dynamic1_exports as t };
 
 ```
 
 ## dynamic2.js
 
 ```js
-import { t as sharedDynamic } from "./sharedDynamic.js";
+import { n as sharedDynamic } from "./dynamic1.js";
 export { sharedDynamic };
 
 ```
@@ -27,17 +31,7 @@ export { sharedDynamic };
 
 ```js
 //#region main.js
-import("./dynamic1.js").then(({ promise, ...ns }) => ns);
+import("./dynamic1.js").then((n) => n.t).then(({ promise, ...ns }) => ns);
 //#endregion
-
-```
-
-## sharedDynamic.js
-
-```js
-//#region sharedDynamic.js
-const sharedDynamic = true;
-//#endregion
-export { sharedDynamic as t };
 
 ```

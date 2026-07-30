@@ -1,0 +1,11 @@
+{
+  "_comment": "Namespace extraction for the #10263 already-loaded inlining: `main.js` reads a name `app.js` does not export (`undefined` in source semantics). The merge is still accepted because the `import()` call site extracts the entry's simulated namespace, which cannot be shadowed by the chunk's generated export names.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

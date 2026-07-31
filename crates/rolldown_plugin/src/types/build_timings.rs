@@ -1,6 +1,6 @@
 use std::{
   sync::atomic::{AtomicU64, Ordering},
-  time::Duration,
+  time::{Duration, Instant},
 };
 
 /// The two wall clocks that decide whether a build was plugin-bound.
@@ -12,24 +12,55 @@ use std::{
 /// with no plugin in it. Non-link time running far ahead of link time is what says the
 /// build is plugin-bound, so these are handed across the binding for the JavaScript side
 /// to gate its report on.
+///
+/// A build nobody is measuring keeps no clock at all: [`Self::start`] hands back `None`,
+/// and every recorder is a no-op on it. Whether it is measured is decided once, where the
+/// driver is built, from the same `checks.pluginTimings` that turns the JavaScript side's
+/// measurement on — the two have to agree, because a report needs both halves.
 #[derive(Debug, Default)]
 pub struct BuildTimings {
+  measured: bool,
   total_micros: AtomicU64,
   link_stage_micros: AtomicU64,
 }
 
 impl BuildTimings {
-  pub fn set_total(&self, elapsed: Duration) {
+  pub fn new(measured: bool) -> Self {
+    Self { measured, ..Self::default() }
+  }
+
+  /// The instant to measure a stretch of the build from, or `None` when it is not being
+  /// measured — then nothing downstream reads the clock, so there is no reason to take one.
+  ///
+  /// Pass what this returns to [`Self::record_total`] or [`Self::record_link_stage`].
+  pub fn start(&self) -> Option<Instant> {
+    self.measured.then(Instant::now)
+  }
+
+  pub fn record_total(&self, start: Option<Instant>) {
+    if let Some(start) = start {
+      self.set_total(start.elapsed());
+    }
+  }
+
+  pub fn record_link_stage(&self, start: Option<Instant>) {
+    if let Some(start) = start {
+      self.set_link_stage(start.elapsed());
+    }
+  }
+
+  fn set_total(&self, elapsed: Duration) {
     self.total_micros.store(Self::micros(elapsed), Ordering::Relaxed);
   }
 
-  pub fn set_link_stage(&self, elapsed: Duration) {
+  fn set_link_stage(&self, elapsed: Duration) {
     self.link_stage_micros.store(Self::micros(elapsed), Ordering::Relaxed);
   }
 
-  /// Zero until [`Self::set_total`] runs, which only the full `write`/`generate` paths do.
-  /// Watch, incremental and dev builds go straight to `bundle_write`/`bundle_generate`, so
-  /// they leave this at zero and nothing is reported for them.
+  /// Zero until [`Self::record_total`] runs, which only the full `write`/`generate` paths
+  /// do, and only when the build is being measured. Watch, incremental and dev builds go
+  /// straight to `bundle_write`/`bundle_generate`, so they leave this at zero and nothing
+  /// is reported for them.
   pub fn total_micros(&self) -> u64 {
     self.total_micros.load(Ordering::Relaxed)
   }
@@ -104,5 +135,22 @@ mod tests {
     assert!(!BuildTimings::default().plugins_are_slow());
     assert!(!timings(10_000_000, 0).plugins_are_slow());
     assert!(!timings(1_000, 10_000).plugins_are_slow());
+  }
+
+  #[test]
+  fn a_build_that_is_not_measured_keeps_no_clock() {
+    // Nobody will ask what it cost, so there is nothing to take: `start` hands back no
+    // instant, and the recorders it feeds have nothing to store.
+    let timings = BuildTimings::new(false);
+    assert!(timings.start().is_none());
+    timings.record_total(timings.start());
+    timings.record_link_stage(timings.start());
+    assert_eq!(timings.total_micros(), 0);
+    assert_eq!(timings.link_stage_micros(), 0);
+  }
+
+  #[test]
+  fn a_measured_build_starts_a_clock() {
+    assert!(BuildTimings::new(true).start().is_some());
   }
 }

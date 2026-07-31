@@ -17,7 +17,7 @@ pub use crate::{
   build_diagnostic::events::invalid_option::InvalidOptionType,
   build_diagnostic::events::plugin_error::CausedPlugin,
   build_diagnostic::events::plugin_timings::{
-    PluginTiming, PluginTimings, PluginTimingsMeasurement,
+    PluginTiming, PluginTimingKind, PluginTimings, PluginTimingsMeasurement,
   },
   build_diagnostic::events::require_tla::{ImportChainNote, RequireTla},
   build_diagnostic::events::resolve_error::DiagnosableResolveError,

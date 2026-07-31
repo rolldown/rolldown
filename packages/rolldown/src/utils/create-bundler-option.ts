@@ -10,7 +10,11 @@ import { getObjectPlugins } from '../plugin/plugin-driver';
 import { bindingifyInputOptions } from './bindingify-input-options';
 import { bindingifyOutputOptions } from './bindingify-output-options';
 import { initializeParallelPlugins } from './initialize-parallel-plugins';
-import { pluginTimingsRecorderFor } from './plugin-timings';
+import {
+  measureIfFunction,
+  OUTPUT_OPTIONS_OWNER,
+  pluginTimingsRecorderFor,
+} from './plugin-timings';
 import {
   ANONYMOUS_OUTPUT_PLUGIN_PREFIX,
   ANONYMOUS_PLUGIN_PREFIX,
@@ -69,6 +73,28 @@ export async function createBundlerOptions(
     measureTimings && inputOptions.checks?.pluginTimings !== false
       ? pluginTimingsRecorderFor(inputOptions)
       : undefined;
+
+  // `assetFileNames` and `sanitizeFileName` are read twice: once here on the way to Rust,
+  // and again by `this.emitFile` in a plugin context, which calls the user's option
+  // directly. Measuring at each consumer would count one call in two places, so these two
+  // are measured once at the source and passed on already wrapped.
+  if (timings) {
+    outputOptions = {
+      ...outputOptions,
+      assetFileNames: measureIfFunction(
+        timings,
+        OUTPUT_OPTIONS_OWNER,
+        'assetFileNames',
+        outputOptions.assetFileNames,
+      ),
+      sanitizeFileName: measureIfFunction(
+        timings,
+        OUTPUT_OPTIONS_OWNER,
+        'sanitizeFileName',
+        outputOptions.sanitizeFileName,
+      ),
+    };
+  }
 
   const parallelPluginInitResult = import.meta.browserBuild
     ? undefined

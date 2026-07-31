@@ -34,6 +34,7 @@
   "types": "./dist/index.d.mts",
   "imports": {
     "#default-runtime": "./dist/experimental-default-runtime.mjs",
+    "#runtime": "./dist/experimental-runtime.mjs",
     "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
   },
   "exports": {

@@ -32,7 +32,8 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "imports": {
-    "#default-runtime": "./dist/experimental-default-runtime.mjs"
+    "#default-runtime": "./dist/experimental-default-runtime.mjs",
+    "#runtime": "./dist/experimental-runtime.mjs"
   },
   "exports": {
     ".": {

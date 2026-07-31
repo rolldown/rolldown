@@ -56,6 +56,18 @@ const buildMeta = (function makeBuildMeta() {
 const bindingFile = nodePath.resolve('src/binding.cjs');
 const bindingFileWasi = nodePath.resolve('src/rolldown-binding.wasi.cjs');
 const bindingFileWasiBrowser = nodePath.resolve('src/rolldown-binding.wasi-browser.js');
+const commonRuntimeInputFile = nodePath.resolve(
+  __dirname,
+  '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js',
+);
+const runtimeBaseInputFile = nodePath.resolve(
+  __dirname,
+  '../../crates/rolldown/src/runtime/runtime-base.js',
+);
+const defaultRuntimeInputFile = nodePath.resolve(
+  __dirname,
+  '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-default.js',
+);
 
 const configs: BuildOptions[] = [
   withShared({
@@ -149,6 +161,9 @@ function withShared({
       target: 'node22',
       define: {
         'import.meta.browserBuild': String(isBrowserBuild),
+        __RUNTIME_STRING__: isBrowserBuild
+          ? JSON.stringify(readDefaultDevRuntimeSource())
+          : 'undefined',
       },
     },
   };
@@ -237,23 +252,11 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
 // The default runtime loader removes this generated first line before injecting the source into a
 // bundle, where the same helpers are already in scope.
 function generateRuntimeEntry() {
-  const commonRuntimeInputFile = nodePath.resolve(
-    __dirname,
-    '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js',
-  );
-  const runtimeBaseInputFile = nodePath.resolve(
-    __dirname,
-    '../../crates/rolldown/src/runtime/runtime-base.js',
-  );
-  const defaultInputFile = nodePath.resolve(
-    __dirname,
-    '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-default.js',
-  );
   const outputFile = nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime.d.ts');
 
   console.log(styleText('green', '[build:done]'), 'Generating dts from', commonRuntimeInputFile);
 
-  const commonRuntimeSource = fs.readFileSync(commonRuntimeInputFile, 'utf-8');
+  const { commonRuntimeSource, defaultRuntimeSource } = readDevRuntimeSources();
   const runtimeHelperImport =
     "import { __exportAll, __reExport, __toCommonJS, __toESM } from './experimental-runtime-base.mjs';\n";
   fs.writeFileSync(
@@ -264,9 +267,9 @@ function generateRuntimeEntry() {
     runtimeBaseInputFile,
     nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-base.mjs'),
   );
-  fs.copyFileSync(
-    defaultInputFile,
+  fs.writeFileSync(
     nodePath.resolve(buildMeta.buildOutputDir, 'experimental-default-runtime.mjs'),
+    defaultRuntimeSource,
   );
 
   const result = ts.transpileDeclaration(commonRuntimeSource, {
@@ -287,6 +290,18 @@ function generateRuntimeEntry() {
   } else {
     throw new Error('Failed to generate d.ts from runtime-extra-dev.js');
   }
+}
+
+function readDevRuntimeSources() {
+  return {
+    commonRuntimeSource: fs.readFileSync(commonRuntimeInputFile, 'utf-8'),
+    defaultRuntimeSource: fs.readFileSync(defaultRuntimeInputFile, 'utf-8'),
+  };
+}
+
+function readDefaultDevRuntimeSource() {
+  const { commonRuntimeSource, defaultRuntimeSource } = readDevRuntimeSources();
+  return `${commonRuntimeSource}\n${defaultRuntimeSource}`;
 }
 
 function getTsconfigCompilerOptionsForFile(file: string) {

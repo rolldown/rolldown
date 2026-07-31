@@ -1,5 +1,5 @@
 {
-  "_comment": "`app.js` contains `export * from 'ext'` with `ext` external, so part of its export interface only exists at runtime. Pins that those names stay observable through `import('./app.js')`, and how many chunks the shape currently produces.",
+  "_comment": "`app.js` contains `export * from 'ext'` with `ext` external, so part of its export interface only exists at runtime. Pins that those names stay observable through `import('./app.js')`, and how many chunks the shape currently produces. The entry's own direct external stars stay inside its materialized namespace as runtime `__reExport` merges, so those names remain observable while `shared.js` is inlined.",
   "config": {
     "input": [
       {

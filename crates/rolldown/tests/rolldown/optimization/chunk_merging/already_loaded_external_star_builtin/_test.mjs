@@ -13,6 +13,5 @@ const jsFiles = readdirSync(join(import.meta.dirname, 'dist')).filter((file) =>
   file.endsWith('.js'),
 );
 
-// main + app + lazy + shared: `shared.js` is not inlined into the dynamic
-// entry chunk today.
-assert.strictEqual(jsFiles.length, 4, `Expected 4 chunks but got: ${jsFiles.join(', ')}`);
+// The external star no longer blocks inlining: main + app(+shared) + lazy.
+assert.strictEqual(jsFiles.length, 3, `Expected 4 chunks but got: ${jsFiles.join(', ')}`);

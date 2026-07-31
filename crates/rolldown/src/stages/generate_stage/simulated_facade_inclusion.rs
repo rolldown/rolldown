@@ -1,6 +1,6 @@
 use rolldown_common::{
-  ModuleIdx, ModuleNamespaceIncludedReason, RuntimeHelper, StmtInfos, UsedSymbolRefsBuilder,
-  WrapKind,
+  ModuleIdx, ModuleNamespaceIncludedReason, RuntimeHelper, StmtInfos, TaggedSymbolRef,
+  UsedSymbolRefsBuilder, WrapKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -34,16 +34,23 @@ impl GenerateStage<'_> {
     // Instead, we should include the wrapper_ref (`require_xxx`), which will be handled
     // in the `include_simulated_facade_namespace` call.
     if !matches!(wrap_kind, WrapKind::Cjs) {
+      let namespace_stmt =
+        &mut self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX];
+      // Symbols the namespace statement declares itself — an external `export *` record's
+      // namespace binding, consumed by that statement's own `__reExport` merge — are
+      // structural rather than getters, so they must survive the narrowing.
+      let self_declared: FxHashSet<_> =
+        namespace_stmt.declared_symbols.iter().map(TaggedSymbolRef::inner).collect();
       // Filter in place to avoid cloning
-      self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX]
-        .referenced_symbols
-        .retain(|item| match item {
-          rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
-            // module namespace symbol requires `__exportAll` runtime helper
-            used_symbol_refs.contains(symbol_ref) || symbol_ref.owner == runtime_module_idx
-          }
-          rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
-        });
+      namespace_stmt.referenced_symbols.retain(|item| match item {
+        rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
+          // module namespace symbol requires `__exportAll` runtime helper
+          used_symbol_refs.contains(symbol_ref)
+            || symbol_ref.owner == runtime_module_idx
+            || self_declared.contains(symbol_ref)
+        }
+        rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
+      });
     }
   }
 

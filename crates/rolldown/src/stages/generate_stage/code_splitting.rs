@@ -666,6 +666,7 @@ impl GenerateStage<'_> {
       chunk.entry_level_external_module_idx.clear();
     }
 
+    let extraction_namespaces = &chunk_graph.common_chunk_exported_facade_chunk_namespace;
     let module_to_entry_level_external_rec_list_maps = chunk_graph
       .chunk_table
       .par_iter_enumerated()
@@ -673,6 +674,15 @@ impl GenerateStage<'_> {
         let ChunkKind::EntryPoint { module, .. } = &chunk.kind else {
           return None;
         };
+        // An entry whose `import()` call sites extract its simulated namespace must keep its
+        // external star re-exports inside that namespace as runtime `__reExport` merges:
+        // flattening them to a chunk-level `export *` would drop them from the extracted
+        // namespace, and would also let an external-supplied callable `then` make the chunk
+        // namespace thenable and hijack the extraction callback. See
+        // `dynamic_entry_supports_namespace_extraction` in dynamic_already_loaded.rs.
+        if extraction_namespaces.get(&idx).is_some_and(|entries| entries.contains(module)) {
+          return None;
+        }
         let mut q = VecDeque::from_iter([*module]);
         let mut visited = FxHashSet::default();
         let mut entry_external_module_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>> =

@@ -27,6 +27,7 @@ const jsFiles = readdirSync(join(import.meta.dirname, 'dist')).filter((file) =>
   file.endsWith('.js'),
 );
 
-// main + app + lazy + vendor: `vendor.js` is not inlined into the dynamic
-// entry chunk today.
-assert.strictEqual(jsFiles.length, 4, `Expected 4 chunks but got: ${jsFiles.join(', ')}`);
+// The external star no longer blocks inlining: main + app(+vendor) + lazy.
+// The external's runtime `then` now lands on the extracted namespace and
+// assimilates there instead of on the chunk namespace.
+assert.strictEqual(jsFiles.length, 3, `Expected 4 chunks but got: ${jsFiles.join(', ')}`);

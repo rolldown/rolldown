@@ -1,0 +1,11 @@
+{
+  "_comment": "`main.js` reads `m.n`, which is not an export of `app.js` and must keep resolving to `undefined`. A plain merge could shadow it with a minified export of the inlined `shared.js` (the chunk does export `compute as n`), so the merge goes through namespace extraction instead.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

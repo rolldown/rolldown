@@ -1,0 +1,62 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region shared.js
+var shared_exports = /* @__PURE__ */ __exportAll({ compute: () => compute });
+function compute(x) {
+	return x * 2;
+}
+var init_shared = __esmMin((() => {}));
+//#endregion
+//#region app.cjs
+var require_app = /* @__PURE__ */ __commonJSMin(((exports) => {
+	const { compute } = __toCommonJS(shared_exports);
+	exports.own = compute(21) + 1;
+	exports.done = import("./lazy.js").then((m) => m.lazyValue);
+}));
+//#endregion
+export default require_app();
+export { compute as n, init_shared as r, require_app as t };
+
+```
+
+## lazy.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as compute, r as init_shared } from "./app.js";
+//#region lazy.js
+var lazyValue;
+//#endregion
+__esmMin((() => {
+	init_shared();
+	lazyValue = compute(42);
+}))();
+export { lazyValue };
+
+```
+
+## main.js
+
+```js
+import { a as __toESM } from "./rolldown-runtime.js";
+//#region main.js
+const app = import("./app.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
+//#endregion
+export { app };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as a, __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```

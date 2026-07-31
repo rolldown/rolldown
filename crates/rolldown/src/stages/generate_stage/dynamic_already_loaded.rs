@@ -2,15 +2,19 @@ use std::collections::VecDeque;
 
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  ChunkIdx, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx, PreserveEntrySignatures,
-  StmtInfoIdx,
+  ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
+  PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, UsedSymbolRefsBuilder,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::chunk_graph::ChunkGraph;
 
-use super::{GenerateStage, code_splitting::IndexSplittingInfo};
+use super::{
+  GenerateStage, code_splitting::IndexSplittingInfo,
+  simulated_facade_inclusion::include_simulated_facade_namespace,
+};
 
 struct ChunkAtom {
   modules: Vec<ModuleIdx>,
@@ -24,13 +28,29 @@ struct DynamicEntryAnalysis {
   dynamically_dependent_entries_by_dynamic_entry: Vec<BitSet>,
 }
 
+enum ReducedEntriesAction {
+  Avoid,
+  Apply,
+  // The atom can be added to the dynamic entry chunk, but it needs care to preserve
+  // its namespace due to it being dynamically imported.
+  ApplyWithNamespaceExtraction { entry_chunk_idx: ChunkIdx, entry_module_idx: ModuleIdx },
+}
+
+impl ReducedEntriesAction {
+  fn apply_if(apply: bool) -> Self {
+    if apply { ReducedEntriesAction::Apply } else { ReducedEntriesAction::Avoid }
+  }
+}
+
 impl GenerateStage<'_> {
   pub(super) fn optimize_dynamic_entry_bits(
-    &self,
+    &mut self,
     index_splitting_info: &mut IndexSplittingInfo,
-    chunk_graph: &ChunkGraph,
+    chunk_graph: &mut ChunkGraph,
     entries_len: u32,
+    used_symbol_refs: &mut UsedSymbolRefsBuilder,
   ) {
+    let mut namespace_extractions = FxHashSet::default();
     let DynamicEntryAnalysis {
       dynamic_entry_indices,
       dynamic_entry_modules_by_entry,
@@ -68,23 +88,35 @@ impl GenerateStage<'_> {
           atoms[atom_idx].dependent_entries.clear_bit(entry_idx);
         }
       }
-      if atoms[atom_idx].dependent_entries != original_dependent_entries
-        && self.can_use_reduced_dependent_entries(
+      let action = if atoms[atom_idx].dependent_entries == original_dependent_entries {
+        ReducedEntriesAction::Avoid
+      } else {
+        self.can_use_reduced_dependent_entries(
           &atoms[atom_idx],
           &original_dependent_entries,
           &atoms[atom_idx].dependent_entries,
           chunk_graph,
           &dynamic_entry_modules_by_entry,
         )
+      };
+      if !matches!(action, ReducedEntriesAction::Avoid)
         && !Self::reduced_atom_graph_has_static_cycle(&atoms, &atom_dependencies)
       {
         changed = true;
+        if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
+          entry_chunk_idx,
+          entry_module_idx,
+        } = action
+        {
+          namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
+        }
       } else {
         atoms[atom_idx].dependent_entries = original_dependent_entries;
       }
     }
 
     if !changed {
+      debug_assert!(namespace_extractions.is_empty());
       return;
     }
 
@@ -95,6 +127,12 @@ impl GenerateStage<'_> {
         index_splitting_info[module_idx].share_count = share_count;
       }
     }
+
+    self.apply_dynamic_entry_namespace_extractions(
+      chunk_graph,
+      &namespace_extractions,
+      used_symbol_refs,
+    );
   }
 
   fn can_use_reduced_dependent_entries(
@@ -104,17 +142,18 @@ impl GenerateStage<'_> {
     dependent_entries: &BitSet,
     chunk_graph: &ChunkGraph,
     dynamic_entry_modules_by_entry: &[Option<ModuleIdx>],
-  ) -> bool {
+  ) -> ReducedEntriesAction {
     let bit_count = dependent_entries.bit_count();
     if bit_count != 1 {
-      return bit_count > 1;
+      return ReducedEntriesAction::apply_if(bit_count > 1);
     }
 
     let Some(entry_bit) = dependent_entries.index_of_one().next() else {
-      return false;
+      return ReducedEntriesAction::Avoid;
     };
-    let Some(chunk) = chunk_graph.chunk_table.get(ChunkIdx::from_raw(entry_bit)) else {
-      return false;
+    let entry_chunk_idx = ChunkIdx::from_raw(entry_bit);
+    let Some(chunk) = chunk_graph.chunk_table.get(entry_chunk_idx) else {
+      return ReducedEntriesAction::Avoid;
     };
 
     let can_merge_without_changing_entry_signature =
@@ -127,16 +166,108 @@ impl GenerateStage<'_> {
       dynamic_entry_modules_by_entry,
     );
 
-    if chunk.is_async_entry() {
-      return can_merge_without_changing_entry_signature
-        || is_runtime_only_atom
-        || removed_entries_are_dynamic_entry_modules;
-    }
-
-    !matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
-      || can_merge_without_changing_entry_signature
+    if can_merge_without_changing_entry_signature
       || is_runtime_only_atom
       || removed_entries_are_dynamic_entry_modules
+    {
+      return ReducedEntriesAction::Apply;
+    }
+
+    // If a chunk is a dynamic entry point, we may still inline into it by taking care of the namespace.
+    if let ChunkKind::EntryPoint { meta, module: entry_module_idx, .. } = chunk.kind
+      && meta == ChunkMeta::DynamicImported
+    {
+      if self.dynamic_entry_partial_usage_allows_plain_merge(entry_module_idx) {
+        return ReducedEntriesAction::Apply;
+      }
+      if self.dynamic_entry_supports_namespace_extraction(entry_module_idx) {
+        return ReducedEntriesAction::ApplyWithNamespaceExtraction {
+          entry_chunk_idx,
+          entry_module_idx,
+        };
+      }
+      return ReducedEntriesAction::Avoid;
+    }
+
+    ReducedEntriesAction::apply_if(
+      !chunk.is_async_entry()
+        && !matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict)),
+    )
+  }
+
+  /// If all the used exports of the dynamic import are statically known and actual exports
+  /// of the module, code will never observe the extra exports and we can avoid the extra
+  /// indirection of exporting a synthetic namespace.
+  fn dynamic_entry_partial_usage_allows_plain_merge(&self, entry_module_idx: ModuleIdx) -> bool {
+    let Some(DynamicImportExportsUsage::Partial(used)) =
+      self.link_output.dynamic_import_exports_usage_map.get(&entry_module_idx)
+    else {
+      return false;
+    };
+    let resolved_exports = &self.link_output.metas[entry_module_idx].resolved_exports;
+    used.iter().all(|name| resolved_exports.contains_key(name))
+  }
+
+  /// Whether `import()` of this dynamic entry can be preserved by exporting the
+  /// entry's namespace object from its chunk and rewriting every dynamic importer to
+  /// `.then((n) => n.<ns>)` (see `rewrite_dynamic_import_for_merged_entry`).
+  fn dynamic_entry_supports_namespace_extraction(&self, entry_module_idx: ModuleIdx) -> bool {
+    if self.options.preserve_modules || !self.options.minify_internal_exports {
+      return false;
+    }
+    if self.link_output.module_table[entry_module_idx].as_normal().is_none() {
+      return false;
+    }
+
+    // If a module exports a `then`, we cannot actually get its namespace from the dynamic import.
+    let symbol_db = &self.link_output.symbol_db;
+    if self.link_output.metas[entry_module_idx].resolved_exports.iter().any(|(name, export)| {
+      name.as_str() == "then"
+        || symbol_db.canonical_ref_for(export.symbol_ref).name(symbol_db) == "then"
+    }) {
+      return false;
+    }
+
+    // If the entry has dynamic exports through `export * from`, it _might_
+    // have a `then` export.
+    !self.link_output.metas[entry_module_idx].has_dynamic_exports
+  }
+
+  /// Generates a definition for a fake module namespace for the inlined module, which is then
+  /// exported. Dynamic importers of this atom from this chunk can then do `.then((n) => n.<ns>)`
+  /// to get that namespace.
+  fn apply_dynamic_entry_namespace_extractions(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+    namespace_extractions: &FxHashSet<(ChunkIdx, ModuleIdx)>,
+    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+  ) {
+    if namespace_extractions.is_empty() {
+      return;
+    }
+
+    for &(_, entry_module_idx) in namespace_extractions {
+      self.narrow_namespace_stmt_to_used_symbols(entry_module_idx, used_symbol_refs);
+    }
+
+    self.replay_link_stage_inclusion(used_symbol_refs, |context| {
+      let mut needs_export_all_helper = false;
+      for &(entry_chunk_idx, entry_module_idx) in namespace_extractions {
+        chunk_graph
+          .common_chunk_exported_facade_chunk_namespace
+          .entry(entry_chunk_idx)
+          .or_default()
+          .insert(entry_module_idx);
+
+        if include_simulated_facade_namespace(context, entry_module_idx) {
+          chunk_graph.chunk_table[entry_chunk_idx]
+            .depended_runtime_helper
+            .insert(RuntimeHelper::ExportAll);
+          needs_export_all_helper = true;
+        }
+      }
+      needs_export_all_helper
+    });
   }
 
   fn is_runtime_only_atom(&self, atom: &ChunkAtom) -> bool {

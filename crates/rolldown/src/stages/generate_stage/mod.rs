@@ -114,6 +114,7 @@ mod post_banner_footer;
 mod render_chunk_to_assets;
 mod resolve_file_urls;
 mod runtime_module_sweep;
+mod simulated_facade_inclusion;
 
 pub use compute_wrapped_esm_init_metadata::{FinalEsmInitMetadata, Sealed};
 

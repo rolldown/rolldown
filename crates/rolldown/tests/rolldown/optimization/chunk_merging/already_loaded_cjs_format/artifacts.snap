@@ -1,0 +1,62 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+const require_vendor = require("./vendor.js");
+//#region app.js
+console.log(require_vendor.f0(1));
+const done = Promise.resolve().then(() => require("./lazy.js")).then(({ fn }) => {
+	fn();
+});
+//#endregion
+exports.done = done;
+
+```
+
+## lazy.js
+
+```js
+const require_vendor = require("./vendor.js");
+//#region lazy.js
+function fn() {
+	console.log(require_vendor.f0(3));
+}
+//#endregion
+exports.fn = fn;
+
+```
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+//#region main.js
+const done = Promise.resolve().then(() => require("./app.js")).then(async (app) => {
+	await app.done;
+	return Object.keys(app).sort();
+});
+//#endregion
+exports.done = done;
+
+```
+
+## vendor.js
+
+```js
+//#region vendor.js
+function f0(x) {
+	return x * 2 + 1;
+}
+//#endregion
+Object.defineProperty(exports, "f0", {
+	enumerable: true,
+	get: function() {
+		return f0;
+	}
+});
+
+```

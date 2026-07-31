@@ -6,24 +6,37 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## app.js
 
 ```js
-const require_vendor = require("./vendor.js");
+// HIDDEN [\0rolldown/runtime.js]
+//#region vendor.js
+function f0(x) {
+	return x * 2 + 1;
+}
+//#endregion
 //#region app.js
-console.log(require_vendor.f0(1));
+var app_exports = /* @__PURE__ */ __exportAll({ done: () => done });
+console.log(f0(1));
 const done = Promise.resolve().then(() => require("./lazy.js")).then(({ fn }) => {
 	fn();
 });
 //#endregion
+Object.defineProperty(exports, "app_exports", {
+	enumerable: true,
+	get: function() {
+		return app_exports;
+	}
+});
 exports.done = done;
+exports.f0 = f0;
 
 ```
 
 ## lazy.js
 
 ```js
-const require_vendor = require("./vendor.js");
+const require_app = require("./app.js");
 //#region lazy.js
 function fn() {
-	console.log(require_vendor.f0(3));
+	console.log(require_app.f0(3));
 }
 //#endregion
 exports.fn = fn;
@@ -35,28 +48,11 @@ exports.fn = fn;
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#region main.js
-const done = Promise.resolve().then(() => require("./app.js")).then(async (app) => {
+const done = Promise.resolve().then(() => require("./app.js")).then((n) => n.app_exports).then(async (app) => {
 	await app.done;
 	return Object.keys(app).sort();
 });
 //#endregion
 exports.done = done;
-
-```
-
-## vendor.js
-
-```js
-//#region vendor.js
-function f0(x) {
-	return x * 2 + 1;
-}
-//#endregion
-Object.defineProperty(exports, "f0", {
-	enumerable: true,
-	get: function() {
-		return f0;
-	}
-});
 
 ```

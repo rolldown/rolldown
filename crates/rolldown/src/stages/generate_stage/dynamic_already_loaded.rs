@@ -212,19 +212,23 @@ impl GenerateStage<'_> {
   /// entry's namespace object from its chunk and rewriting every dynamic importer to
   /// `.then((n) => n.<ns>)` (see `rewrite_dynamic_import_for_merged_entry`).
   fn dynamic_entry_supports_namespace_extraction(&self, entry_module_idx: ModuleIdx) -> bool {
-    if self.options.preserve_modules || !self.options.minify_internal_exports {
-      return false;
-    }
     if self.link_output.module_table[entry_module_idx].as_normal().is_none() {
       return false;
     }
 
-    // If a module exports a `then`, we cannot actually get its namespace from the dynamic import.
-    let symbol_db = &self.link_output.symbol_db;
-    if self.link_output.metas[entry_module_idx].resolved_exports.iter().any(|(name, export)| {
-      name.as_str() == "then"
-        || symbol_db.canonical_ref_for(export.symbol_ref).name(symbol_db) == "then"
-    }) {
+    // A namespace carrying a callable `then` is assimilated by `import()`, so the extraction
+    // callback would receive whatever that `then` produces instead of the namespace. Only the
+    // export *name* can do that, so a local symbol named `then` exported under an alias is
+    // harmless — the alias is what lands in the namespace.
+    //
+    // No other export name can become `then`: the minified generator skips it and
+    // `ConflictResolver` reserves it, so an internal export named `then` deconflicts to
+    // `then$1` (see `THENABLE_HAZARD_EXPORT_NAME` in compute_cross_chunk_links.rs).
+    if self.link_output.metas[entry_module_idx]
+      .resolved_exports
+      .keys()
+      .any(|name| name.as_str() == "then")
+    {
       return false;
     }
 

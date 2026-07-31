@@ -130,15 +130,10 @@ impl TransformOptions {
   }
 
   pub fn should_transform_js(&self) -> bool {
-    match &self.inner {
-      TransformOptionsInner::Normal(opts) => {
-        opts.env.regexp.set_notation || opts.env.es2026.explicit_resource_management
-      }
-      TransformOptionsInner::Raw(_) => {
-        self.target.has_feature(ESFeature::ES2024UnicodeSetsRegex)
-          || self.target.has_feature(ESFeature::ES2026ExplicitResourceManagement)
-      }
-    }
+    // `self.target` is the single source both `Normal` env options and `Raw`
+    // per-file options are derived from, so it answers for both variants.
+    self.target.has_feature(ESFeature::ES2024UnicodeSetsRegex)
+      || self.target.has_feature(ESFeature::ES2026ExplicitResourceManagement)
   }
 
   pub fn options_for_file(

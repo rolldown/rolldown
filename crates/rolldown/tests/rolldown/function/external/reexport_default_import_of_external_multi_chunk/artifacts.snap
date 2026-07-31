@@ -39,7 +39,6 @@ exports.getAgentCtor = getAgentCtor;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-require("./rolldown-runtime.js");
 let node_https = require("node:https");
 //#region named-user.js
 function getAgentCtorFromNamed() {

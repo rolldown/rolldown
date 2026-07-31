@@ -58,9 +58,18 @@ pub(super) struct OrderLoweringInput<'a> {
   pub(super) tree_shaking: bool,
 }
 
+#[derive(Default)]
 pub(super) struct ConsumerLocalReexportPlan {
   modules: Vec<ModuleIdx>,
   carriers: Vec<OrderCjsCarrierPlan>,
+}
+
+impl ConsumerLocalReexportPlan {
+  fn is_empty(&self) -> bool {
+    // Carriers are only collected alongside their accepted owner module, so an empty module
+    // list implies an empty carrier list.
+    self.modules.is_empty()
+  }
 }
 
 struct OrderCjsCarrierPlan {
@@ -148,6 +157,10 @@ pub(super) fn synchronous_cycle_modules(modules: &IndexModules) -> FxHashSet<Mod
   cyclic
 }
 
+/// Eligibility here must stay independent of the order-wrap plan: pre-chunk placement, the
+/// on-demand projector probes, and real lowering each compute this plan on their own state and
+/// have to reach the same routing decision, or placement splits a barrel's leaves per consumer
+/// while emission keeps the monolithic interop body those chunks then `require()` in a cycle.
 pub(super) fn consumer_local_reexport_plan(
   input: &OrderLoweringInput<'_>,
   state: &OrderWrapState,
@@ -429,36 +442,30 @@ impl GenerateStage<'_> {
     order_state: &mut OrderWrapState,
   ) -> bool {
     let plan = &analysis.plan;
-    if plan.is_empty() {
-      // Entry-trigger facades are needed even with an empty plan: a pure interop graph can
-      // still share one entry's chunk with another entry. With nothing order-wrapped, the only
-      // candidates are interop-wrapped entries, so a pure-ESM graph has none and asks nothing.
-      //
-      // The three passes hoisted ahead of the query below are skipped here, which is safe only
-      // because an empty plan makes each one a no-op: nothing demands an order-wrap runtime
-      // helper, restoring is filtered by the plan, and `finalize_chunk_plan` already ran the
-      // namespace pass against this same default `order_state`.
-      let candidates = self.entry_facade_candidates(plan);
-      if candidates.is_empty() {
-        return false;
-      }
-      let import_edges = self.entry_facade_import_edges(chunk_graph, used_symbol_refs, order_state);
-      if !self.create_order_wrap_entry_facades(chunk_graph, candidates, &import_edges, order_state)
-      {
-        return false;
-      }
-      order_state.compute_runtime_symbol_closure(
-        &self.link_output.runtime,
-        &self.link_output.stmt_infos[self.link_output.runtime.id()],
-        &self.link_output.symbol_db,
-      );
-      chunk_graph.sort_chunk_modules(self.link_output, self.options);
-      self.renumber_live_chunks(chunk_graph);
-      return true;
-    }
-
-    let runtime_helper = self.esm_runtime_helper();
     let code_splitting_disabled = self.options.code_splitting.is_disabled();
+    // Consumer-local re-export routing is plan-independent: the pre-chunk probe applied it
+    // unconditionally and chunk placement already routed each carrier barrel's leaves per
+    // consumer. Lowering must therefore materialize the same routes even when no module needs
+    // an order wrapper — an unrouted emission would keep the barrel's monolithic interop body
+    // while its leaves sit in per-consumer entry chunks, leaving those chunks `require()`ing
+    // each other in a startup cycle (#10515).
+    //
+    // A single-entry build with code splitting disabled is the one case with no such consumer:
+    // placement has a single reachability bit, so the probe's routes moved nothing, and an empty
+    // plan there means strict lowering was a no-op, which the on-demand mode promises to keep
+    // byte-equivalent to the flag-off output (see `cjs_reexport_barrel_code_splitting_disabled`).
+    // Keep that contract by not routing, and return before the cycle scan and routing fixpoint
+    // below so this untouched case stays as cheap as it was. The disabled option alone is not
+    // enough: only dynamic entries are dropped in disabled mode, so a plugin-emitted chunk still
+    // adds a second entry whose per-entry placement consumes the probe's routes like any
+    // splitting build (`disabled_splitting_emitted_entry`). `entries` counts distinct entry
+    // modules where placement counts flattened entry points, but duplicate entry points on one
+    // module produce identical bit sets, so one entry module still means the routes moved
+    // nothing.
+    if plan.is_empty() && code_splitting_disabled && self.link_output.entries.len() <= 1 {
+      return self.apply_inert_order_wrap_plan(chunk_graph, used_symbol_refs, order_state, plan);
+    }
+    let runtime_helper = self.esm_runtime_helper();
     let cyclic_modules = synchronous_cycle_modules(&self.link_output.module_table.modules);
     let input = OrderLoweringInput {
       plan,
@@ -475,9 +482,20 @@ impl GenerateStage<'_> {
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
     };
+    let consumer_local_plan = consumer_local_reexport_plan(&input, order_state);
+    if plan.is_empty() && consumer_local_plan.is_empty() {
+      return self.apply_inert_order_wrap_plan(chunk_graph, used_symbol_refs, order_state, plan);
+    }
+
     let mut output =
       OrderLoweringOutput { symbols: &mut self.link_output.symbol_db, state: order_state };
-    lower_order_state(&input, &mut output, runtime_helper, code_splitting_disabled);
+    lower_order_state(
+      &input,
+      &mut output,
+      runtime_helper,
+      code_splitting_disabled,
+      &consumer_local_plan,
+    );
     let consumer_local_namespace_targets = self
       .link_output
       .module_table
@@ -565,6 +583,40 @@ impl GenerateStage<'_> {
     if fold_runtime_chunk {
       self.fold_runtime_chunk_after_order_lowering(chunk_graph, order_state);
     }
+    chunk_graph.sort_chunk_modules(self.link_output, self.options);
+    self.renumber_live_chunks(chunk_graph);
+    true
+  }
+
+  /// The no-lowering tail of [`GenerateStage::apply_order_wraps`]: nothing is order-wrapped and
+  /// no consumer-local route exists, so only entry-trigger facades can still be needed — a pure
+  /// interop graph can share one entry's chunk with another entry. With nothing lowered, the only
+  /// candidates are interop-wrapped entries, so a pure-ESM graph has none and asks nothing.
+  ///
+  /// The passes hoisted ahead of the facade query on the lowering path are skipped here, which is
+  /// safe only because an empty plan with no consumer-local routes makes each one a no-op:
+  /// nothing demands an order-wrap runtime helper, restoring is filtered by the plan, and
+  /// `finalize_chunk_plan` already ran the namespace pass against this same default `order_state`.
+  fn apply_inert_order_wrap_plan(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
+    order_state: &mut OrderWrapState,
+    plan: &OrderWrapPlan,
+  ) -> bool {
+    let candidates = self.entry_facade_candidates(plan);
+    if candidates.is_empty() {
+      return false;
+    }
+    let import_edges = self.entry_facade_import_edges(chunk_graph, used_symbol_refs, order_state);
+    if !self.create_order_wrap_entry_facades(chunk_graph, candidates, &import_edges, order_state) {
+      return false;
+    }
+    order_state.compute_runtime_symbol_closure(
+      &self.link_output.runtime,
+      &self.link_output.stmt_infos[self.link_output.runtime.id()],
+      &self.link_output.symbol_db,
+    );
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
     self.renumber_live_chunks(chunk_graph);
     true
@@ -1357,6 +1409,7 @@ fn lower_order_state(
   output: &mut OrderLoweringOutput<'_>,
   runtime_helper: RuntimeHelper,
   code_splitting_disabled: bool,
+  consumer_local_plan: &ConsumerLocalReexportPlan,
 ) {
   for module_idx in
     input.plan.modules().sorted_unstable_by_key(|idx| input.modules[*idx].exec_order())
@@ -1379,8 +1432,7 @@ fn lower_order_state(
     }
   }
 
-  let consumer_local_plan = consumer_local_reexport_plan(input, output.state);
-  apply_consumer_local_reexport_plan(input, output, runtime_helper, &consumer_local_plan);
+  apply_consumer_local_reexport_plan(input, output, runtime_helper, consumer_local_plan);
 
   let reexport_usage = collect_frozen_reexport_usage(input, output.state);
   output.state.set_nested_reexport_records(reexport_usage.nested_records.clone());

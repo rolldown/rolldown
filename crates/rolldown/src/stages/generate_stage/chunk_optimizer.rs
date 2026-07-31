@@ -5,28 +5,22 @@ use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType,
-  FacadeChunkEliminationReason, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTable,
-  NormalModule, PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, StmtInfos,
-  UsedSymbolRefsBuilder, WrapKind,
+  FacadeChunkEliminationReason, Module, ModuleIdx, ModuleTable, NormalModule,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, UsedSymbolRefsBuilder,
+  WrapKind,
 };
 use rolldown_utils::{BitSet, IndexBitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   chunk_graph::ChunkGraph,
-  stages::link_stage::{
-    IncludeContext, SymbolIncludeReason, compute_body_demand_keys, include_runtime_symbol,
-    include_symbol,
-  },
-  types::linking_metadata::{
-    LinkingMetadata, LinkingMetadataVec, included_info_to_linking_metadata_vec,
-    linking_metadata_vec_to_included_info,
-  },
+  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
 use super::{
   GenerateStage, chunk_ext::ChunkCreationReason, chunk_ext::ChunkDebugExt,
   code_splitting::IndexSplittingInfo,
+  simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
 /// Which hosts [`GenerateStage::try_merge_runtime_chunk`] may fold the runtime chunk into.
@@ -1000,168 +994,96 @@ impl GenerateStage<'_> {
       return;
     }
 
-    let runtime_module_idx = self.link_output.runtime.id();
     self.resolve_emitted_chunk_group_conflicts(
       chunk_graph,
       emitted_chunk_groups,
       &mut facade_eliminations,
     );
 
-    // Namespace symbols by default reference all exported symbols from the module.
-    // To preserve dynamic import tree shaking, we should only include symbols that were actually used during the linking stage.
-    // This ensures that including a namespace symbol doesn't inadvertently add unused exported symbols.
     for elimination in &facade_eliminations {
-      let entry_module_idx = elimination.entry_module_idx;
-      let wrap_kind = self.link_output.metas[entry_module_idx].wrap_kind();
-      if self.link_output.module_table[entry_module_idx].as_normal().is_none() {
-        continue;
-      }
-      // For CJS modules, we don't need to include `__exportAll` and the namespace symbols.
-      // Instead, we should include the wrapper_ref (`require_xxx`), which will be handled
-      // in the include_symbol call below.
-      if !matches!(wrap_kind, WrapKind::Cjs) {
-        // Filter in place to avoid cloning
-        self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX]
-          .referenced_symbols
-          .retain(|item| match item {
-            rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
-              // module namespace symbol requires `__exportAll` runtime helper
-              used_symbol_refs.contains(symbol_ref) || symbol_ref.owner == runtime_module_idx
-            }
-            rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
-          });
-      }
+      self.narrow_namespace_stmt_to_used_symbols(elimination.entry_module_idx, used_symbol_refs);
     }
-
-    let (mut stmt_info_included_vec, mut module_included_vec, mut module_namespace_reason_vec) =
-      linking_metadata_vec_to_included_info(&mut self.link_output.metas);
-
-    // Replay the link-stage inclusion semantics: side-effectful statements of
-    // user-declared side-effect-free modules join only through body demand.
-    // Already-included statements make the replayed edges no-ops.
-    let body_demand_keys = compute_body_demand_keys(
-      &self.link_output.module_table.modules,
-      &self.link_output.stmt_infos,
-      &self.link_output.symbol_db,
-      self.options.treeshake.is_some(),
-      &self.link_output.user_defined_entry_modules,
-    );
-
-    let runtime = &self.link_output.runtime;
-    let context = &mut IncludeContext {
-      modules: &self.link_output.module_table.modules,
-      stmt_infos: &self.link_output.stmt_infos,
-      symbols: &self.link_output.symbol_db,
-      is_included_vec: &mut stmt_info_included_vec,
-      is_module_included_vec: &mut module_included_vec,
-      tree_shaking: self.options.treeshake.is_some(),
-      runtime_idx: self.link_output.runtime.id(),
-      metas: &self.link_output.metas,
-      used_symbol_refs,
-      used_external_symbols: &mut self.link_output.used_external_symbols,
-      constant_symbol_map: &self.link_output.global_constant_symbol_map,
-      options: self.options,
-      normal_symbol_exports_chain_map: &self.link_output.normal_symbol_exports_chain_map,
-      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
-      external_importer_modes: FxHashMap::default(),
-      module_inclusion_changed: false,
-      module_namespace_included_reason: &mut module_namespace_reason_vec,
-      inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
-      json_module_none_self_reference_included_symbol: FxHashMap::default(),
-      entry_module_idxs: &self.link_output.user_defined_entry_modules,
-      body_demand_keys: &body_demand_keys,
-      body_demand_swept: FxHashSet::default(),
-      pending: Vec::new(),
-    };
 
     let mut runtime_dependent_chunks = FxHashSet::default();
 
-    let mut needs_export_all_helper = false;
-    for elimination in &facade_eliminations {
-      let FacadeChunkElimination { reason, entry_module_idx, from_chunk_idx, to_chunk_idx } =
-        elimination;
-      // Point the entry module to related common chunk
-      chunk_graph.entry_module_to_entry_chunk.remove(entry_module_idx);
+    self.replay_link_stage_inclusion(used_symbol_refs, |context| {
+      let mut needs_export_all_helper = false;
+      for elimination in &facade_eliminations {
+        let FacadeChunkElimination { reason, entry_module_idx, from_chunk_idx, to_chunk_idx } =
+          elimination;
+        // Point the entry module to related common chunk
+        chunk_graph.entry_module_to_entry_chunk.remove(entry_module_idx);
 
-      let Some(module) = context.modules[*entry_module_idx].as_normal() else {
-        continue;
-      };
+        let Some(module) = context.modules[*entry_module_idx].as_normal() else {
+          continue;
+        };
 
-      let wrap_kind = self.link_output.metas[*entry_module_idx].wrap_kind();
+        let wrap_kind = context.metas[*entry_module_idx].wrap_kind();
 
-      chunk_graph.entry_module_to_entry_chunk.insert(*entry_module_idx, *to_chunk_idx);
-      let from_chunk = &chunk_graph.chunk_table[*from_chunk_idx];
-      let ChunkKind::EntryPoint { meta: chunk_meta, .. } = from_chunk.kind else {
-        // We don't have any optimization to merge common chunks into other chunks.
-        continue;
-      };
+        chunk_graph.entry_module_to_entry_chunk.insert(*entry_module_idx, *to_chunk_idx);
+        let from_chunk = &chunk_graph.chunk_table[*from_chunk_idx];
+        let ChunkKind::EntryPoint { meta: chunk_meta, .. } = from_chunk.kind else {
+          // We don't have any optimization to merge common chunks into other chunks.
+          continue;
+        };
 
-      chunk_graph.post_chunk_optimization_operations.insert(
-        *from_chunk_idx,
+        chunk_graph.post_chunk_optimization_operations.insert(
+          *from_chunk_idx,
+          if chunk_meta.contains(ChunkMeta::EmittedChunk) {
+            PostChunkOptimizationOperation::RemovedWithPreservedExports
+          } else {
+            PostChunkOptimizationOperation::Removed
+          },
+        );
+
+        // Track emitted chunks so their export names are preserved (not minified)
         if chunk_meta.contains(ChunkMeta::EmittedChunk) {
-          PostChunkOptimizationOperation::RemovedWithPreservedExports
-        } else {
-          PostChunkOptimizationOperation::Removed
-        },
-      );
+          chunk_graph
+            .common_chunk_preserve_export_names_modules
+            .entry(*to_chunk_idx)
+            .or_default()
+            .insert(*entry_module_idx);
+        }
 
-      // Track emitted chunks so their export names are preserved (not minified)
-      if chunk_meta.contains(ChunkMeta::EmittedChunk) {
+        // If a chunk is not dynamically imported, we don't need to simulate a facade chunk.
+        if !chunk_meta.contains(ChunkMeta::DynamicImported) {
+          continue;
+        }
         chunk_graph
-          .common_chunk_preserve_export_names_modules
+          .common_chunk_exported_facade_chunk_namespace
           .entry(*to_chunk_idx)
           .or_default()
           .insert(*entry_module_idx);
-      }
 
-      // If a chunk is not dynamically imported, we don't need to simulate a facade chunk.
-      if !chunk_meta.contains(ChunkMeta::DynamicImported) {
-        continue;
-      }
-      chunk_graph
-        .common_chunk_exported_facade_chunk_namespace
-        .entry(*to_chunk_idx)
-        .or_default()
-        .insert(*entry_module_idx);
-
-      // Add debug info about eliminated facade chunk to target chunk
-      if self.options.experimental.is_attach_debug_info_full() || self.options.devtools {
-        let eliminated_chunk_name = chunk_graph.chunk_table[*from_chunk_idx]
-          .name
-          .as_ref()
-          .map_or_else(|| "unnamed".to_string(), ArcStr::to_string);
-        let module_stable_id = module.stable_id.to_string();
-        chunk_graph.chunk_table[*to_chunk_idx].debug_info.push(
-          ChunkDebugInfo::EliminatedFacadeChunk {
-            chunk_name: eliminated_chunk_name,
-            entry_module_id: module_stable_id,
-            reason: *reason,
-          },
-        );
-      }
-
-      // For CJS modules, include the wrapper_ref (require_xxx) instead of namespace
-      // and use ToEsm runtime helper instead of ExportAll
-      if matches!(wrap_kind, WrapKind::Cjs | WrapKind::Esm) {
-        if let Some(wrapper_ref) = self.link_output.metas[*entry_module_idx].wrapper_ref {
-          include_symbol(context, wrapper_ref, SymbolIncludeReason::SimulatedFacadeChunk);
+        // Add debug info about eliminated facade chunk to target chunk
+        if context.options.experimental.is_attach_debug_info_full() || context.options.devtools {
+          let eliminated_chunk_name = chunk_graph.chunk_table[*from_chunk_idx]
+            .name
+            .as_ref()
+            .map_or_else(|| "unnamed".to_string(), ArcStr::to_string);
+          let module_stable_id = module.stable_id.to_string();
+          chunk_graph.chunk_table[*to_chunk_idx].debug_info.push(
+            ChunkDebugInfo::EliminatedFacadeChunk {
+              chunk_name: eliminated_chunk_name,
+              entry_module_id: module_stable_id,
+              reason: *reason,
+            },
+          );
         }
-        runtime_dependent_chunks.insert(*to_chunk_idx);
+
+        // Wrapped modules make the target chunk depend on the runtime (wrapper/`__toESM` helpers).
+        if matches!(wrap_kind, WrapKind::Cjs | WrapKind::Esm) {
+          runtime_dependent_chunks.insert(*to_chunk_idx);
+        }
+        if include_simulated_facade_namespace(context, *entry_module_idx) {
+          let target_chunk = &mut chunk_graph.chunk_table[*to_chunk_idx];
+          target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
+          runtime_dependent_chunks.insert(*to_chunk_idx);
+          needs_export_all_helper = true;
+        }
       }
-      if matches!(wrap_kind, WrapKind::Esm | WrapKind::None) {
-        include_symbol(
-          context,
-          module.namespace_object_ref,
-          SymbolIncludeReason::SimulatedFacadeChunk,
-        );
-        context.module_namespace_included_reason[*entry_module_idx]
-          .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
-        let target_chunk = &mut chunk_graph.chunk_table[*to_chunk_idx];
-        target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
-        runtime_dependent_chunks.insert(*to_chunk_idx);
-        needs_export_all_helper = true;
-      }
-    }
+      needs_export_all_helper
+    });
 
     Self::apply_common_chunk_merges(
       chunk_graph,
@@ -1169,18 +1091,6 @@ impl GenerateStage<'_> {
       &mut runtime_dependent_chunks,
     );
 
-    if needs_export_all_helper {
-      include_runtime_symbol(context, runtime, RuntimeHelper::ExportAll);
-    }
-
-    // Restore the included info before materializing the runtime chunk, because
-    // facade elimination may be the first pass that includes a runtime helper.
-    included_info_to_linking_metadata_vec(
-      &mut self.link_output.metas,
-      stmt_info_included_vec,
-      &module_included_vec,
-      &module_namespace_reason_vec,
-    );
     self.extract_standalone_runtime_chunk(
       index_splitting_info,
       module_is_assigned,

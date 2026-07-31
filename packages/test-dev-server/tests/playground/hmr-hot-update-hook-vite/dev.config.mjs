@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { defineDevConfig } from '@rolldown/test-dev-server';
+import { defineDevConfig, slash } from '@rolldown/test-dev-server';
 
 // Mirror of `hmr-hot-update-hook`, but through VITE's plugin contracts: the
 // plugins below sit top-level in vite's plugin array, so the bundled-dev
@@ -61,7 +61,7 @@ const viteHotUpdatePlugin = {
       );
       assert(byId === ctx.modules[0], 'node identity must hold');
       const dep = this.environment.moduleGraph.getModuleById(
-        path.join(dir, 'dep.js'),
+        slash(path.join(dir, 'dep.js')),
       );
       assert(dep != null, 'dep.js must be resolvable from the module graph');
       assert(
@@ -71,7 +71,7 @@ const viteHotUpdatePlugin = {
       // dynamic-import edges: dyn.js is only imported via `import()`; its
       // importer must still be visible through the facade
       const dyn = this.environment.moduleGraph.getModuleById(
-        path.join(dir, 'dyn.js'),
+        slash(path.join(dir, 'dyn.js')),
       );
       assert(dyn != null, 'dyn.js must be resolvable from the module graph');
       assert(
@@ -86,7 +86,7 @@ const viteHotUpdatePlugin = {
     }
     if (ctx.file.endsWith('invalidate.txt')) {
       const dep = this.environment.moduleGraph.getModuleById(
-        path.join(dir, 'dep.js'),
+        slash(path.join(dir, 'dep.js')),
       );
       assert(dep != null, 'dep.js must be resolvable from the module graph');
       // tailwind pattern: buffer dep via invalidateModule; return [] so the
@@ -97,7 +97,7 @@ const viteHotUpdatePlugin = {
     }
     if (ctx.file.endsWith('custom.txt')) {
       const graph = this.environment.moduleGraph;
-      const depId = path.join(dir, 'dep.js');
+      const depId = slash(path.join(dir, 'dep.js'));
       const dep = graph.getModuleById(depId);
       assert(dep != null, 'dep.js must be resolvable from the module graph');
       // facade reads: by-file lookup hands out the SAME node, and the node's
@@ -114,7 +114,7 @@ const viteHotUpdatePlugin = {
         'node.info must expose the engine ModuleInfo',
       );
       // importedModules unions static and dynamic edges (main -> dep, main -> dyn)
-      const main = graph.getModuleById(path.join(dir, 'main.js'));
+      const main = graph.getModuleById(slash(path.join(dir, 'main.js')));
       assert(main != null, 'main.js must be resolvable from the module graph');
       const importedIds = [...main.importedModules].map((m) => m.id);
       assert(
@@ -171,7 +171,7 @@ const byFileSubModulePlugin = {
   name: 'test-by-file-sub-module',
   resolveId(source, importer) {
     if (source.endsWith('widget.js?part=extra') && importer) {
-      return path.join(path.dirname(importer), 'widget.js?part=extra');
+      return slash(path.join(path.dirname(importer), 'widget.js?part=extra'));
     }
   },
   load(id) {
@@ -240,7 +240,7 @@ const legacyReadChainB = {
       'the shared HmrContext must carry plugin A\'s reassigned read',
     );
     const dep = ctx.server.moduleGraph.getModuleById(
-      path.join(path.dirname(ctx.file), 'dep.js'),
+      slash(path.join(path.dirname(ctx.file), 'dep.js')),
     );
     assert(dep != null, 'dep.js must be resolvable from the mixed module graph');
     return [dep]; // positive signal: the patch ships dep, accept count +1

@@ -551,3 +551,70 @@ async fn late_order_wrapping_revalidates_output_file() {
     "unexpected diagnostic: {message}"
   );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn disabled_splitting_emitted_entry_routes_consumer_local_barrel() {
+  // `codeSplitting: false` rejects multiple `input`s at option validation, but a plugin-emitted
+  // chunk still adds a second entry whose per-entry placement consumes the pre-chunk probe's
+  // consumer-local routes. The inert-plan carve-out in `apply_order_wraps` must therefore key on
+  // the entry count rather than the option alone: with the entry-count clause dropped, this build
+  // takes the no-lowering fast path while placement has already split the CJS leaves per entry,
+  // and the emitted chunks `require()` each other in the #10515 startup cycle.
+  for on_demand in [false, true] {
+    let fixture_dir = format!("{FIXTURE_ROOT}/disabled_splitting_emitted_entry");
+    let output_dir = std::env::temp_dir().join(format!(
+      "rolldown-strict-order-disabled-emitted-{}-{}",
+      std::process::id(),
+      if on_demand { "on-demand" } else { "wrap-all" },
+    ));
+    let _ = std::fs::remove_dir_all(&output_dir);
+    let mut bundler = Bundler::with_plugins(
+      BundlerOptions {
+        input: Some(vec![InputItem {
+          name: Some("entry-a".to_string()),
+          import: "./entry-a.cjs".to_string(),
+        }]),
+        cwd: Some(fixture_dir.into()),
+        format: Some(OutputFormat::Cjs),
+        entry_filenames: Some("[name].js".to_string().into()),
+        chunk_filenames: Some("chunks/[name].js".to_string().into()),
+        dir: Some(output_dir.to_string_lossy().into_owned()),
+        strict_execution_order: Some(true),
+        code_splitting: Some(CodeSplittingMode::Bool(false)),
+        experimental: Some(rolldown_common::ExperimentalOptions {
+          on_demand_wrapping: Some(on_demand),
+          ..Default::default()
+        }),
+        ..Default::default()
+      },
+      vec![Arc::new(EmitTarget { id: "./entry-b.cjs", names: &["entry-b"] })],
+    )
+    .expect("failed to create bundler");
+
+    let assets: BTreeMap<String, String> = bundler
+      .write()
+      .await
+      .expect("build should succeed")
+      .assets
+      .into_iter()
+      .filter_map(|output| match output {
+        Output::Chunk(chunk) => Some((chunk.filename.to_string(), chunk.code.clone())),
+        Output::Asset(_) => None,
+      })
+      .collect();
+    let bundle = WrittenBundle { assets, output_dir };
+    assert!(
+      bundle.assets.contains_key("chunks/entry-b.js"),
+      "emitted entry should be a separate chunk; emitted files were {:?}",
+      bundle.assets.keys().collect::<Vec<_>>(),
+    );
+    execute_written_bundle(
+      &bundle.output_dir,
+      "import assert from 'node:assert';\n\
+       const entryA = await import('./entry-a.js');\n\
+       assert.strictEqual(entryA.a, 'a');\n\
+       const entryB = await import('./chunks/entry-b.js');\n\
+       assert.strictEqual(entryB.b, 'b');",
+    );
+  }
+}

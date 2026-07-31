@@ -13,8 +13,8 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, RuntimeHelper, SymbolRef, SymbolRefDb,
-  TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedImportRecord, RuntimeHelper, SymbolRef,
+  SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -28,6 +28,7 @@ type IndexChunkAllImportsFromExternalModules = IndexVec<ChunkIdx, FxIndexSet<Mod
 type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashMap<SymbolRef, Vec<CompactStr>>>;
 type IndexCrossChunkImports = IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>;
 type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
+type IndexChunkDynamicImportsFromExternalModules = IndexVec<ChunkIdx, FxIndexSet<ModuleIdx>>;
 type IndexImportsFromOtherChunks =
   IndexVec<ChunkIdx, FxHashMap<ChunkIdx, Vec<CrossChunkImportItem>>>;
 
@@ -49,6 +50,7 @@ struct CrossChunkLinkState {
   index_imports_from_other_chunks: IndexImportsFromOtherChunks,
   index_cross_chunk_imports: IndexCrossChunkImports,
   index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports,
+  index_chunk_dynamic_imports_from_external_modules: IndexChunkDynamicImportsFromExternalModules,
   order_live_symbols: FxHashSet<SymbolRef>,
   symbol_chunk_table: SymbolChunkTable,
 }
@@ -127,6 +129,7 @@ impl GenerateStage<'_> {
       index_imports_from_other_chunks,
       index_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
+      index_chunk_dynamic_imports_from_external_modules,
       order_live_symbols,
       symbol_chunk_table,
     } = self.compute_cross_chunk_link_state(
@@ -212,6 +215,7 @@ impl GenerateStage<'_> {
       index_sorted_imports_from_external_modules,
       index_sorted_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
+      index_chunk_dynamic_imports_from_external_modules,
       index_chunk_indirect_imports_from_external_modules.iter_mut(),
     ))
     .par_bridge()
@@ -222,6 +226,7 @@ impl GenerateStage<'_> {
         imports_from_external_modules,
         cross_chunk_imports,
         cross_chunk_dynamic_imports,
+        dynamic_imports_from_external_modules,
         chunk_indirect_imports_from_external_modules,
       )| {
         // deduplicated
@@ -233,6 +238,8 @@ impl GenerateStage<'_> {
         chunk.cross_chunk_imports = cross_chunk_imports;
         chunk.cross_chunk_dynamic_imports =
           cross_chunk_dynamic_imports.into_iter().collect::<Vec<_>>();
+        chunk.dynamic_imports_from_external_modules =
+          dynamic_imports_from_external_modules.into_iter().collect::<Vec<_>>();
         chunk.import_symbol_from_external_modules =
           std::mem::take(chunk_indirect_imports_from_external_modules);
       },
@@ -376,6 +383,9 @@ impl GenerateStage<'_> {
       index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()];
     let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
+    let mut index_chunk_dynamic_imports_from_external_modules:
+      IndexChunkDynamicImportsFromExternalModules =
+      index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
     let rendered_modules =
       order_state.has_import_overlays().then(|| super::rendered_module_set(chunk_graph));
     let symbols = &self.link_output.symbol_db;
@@ -398,6 +408,7 @@ impl GenerateStage<'_> {
       &mut index_chunk_depended_symbols,
       &mut index_chunk_direct_imports_from_external_modules,
       &mut index_cross_chunk_dynamic_imports,
+      &mut index_chunk_dynamic_imports_from_external_modules,
       used_symbol_refs,
       order_state,
       final_esm_init_metadata,
@@ -424,9 +435,59 @@ impl GenerateStage<'_> {
       index_imports_from_other_chunks,
       index_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
+      index_chunk_dynamic_imports_from_external_modules,
       order_live_symbols,
       symbol_chunk_table,
     }
+  }
+
+  fn collect_external_import(
+    &self,
+    importer_idx: ModuleIdx,
+    import_record: &ResolvedImportRecord,
+    external_module_idx: ModuleIdx,
+    imports_from_external_modules: &mut FxHashMap<ModuleIdx, Vec<(ModuleIdx, NamedImport)>>,
+    dynamic_imports_from_external_modules: &mut FxIndexSet<ModuleIdx>,
+  ) {
+    if matches!(import_record.kind, ImportKind::DynamicImport)
+      && import_record.dynamic_import_expr_info.as_ref().is_none_or(|info| {
+        self.link_output.metas[importer_idx].stmt_info_included.has_bit(info.stmt_info_idx)
+      })
+    {
+      dynamic_imports_from_external_modules.insert(external_module_idx);
+    }
+    // Ensure the external module is imported in case it has side effects.
+    if matches!(import_record.kind, ImportKind::Import)
+      && !import_record.meta.contains(ImportRecordMeta::IsExportStar)
+    {
+      imports_from_external_modules.entry(external_module_idx).or_default();
+    }
+  }
+
+  fn collect_dynamic_chunk_import(
+    &self,
+    chunk_graph: &ChunkGraph,
+    import_record: &ResolvedImportRecord,
+    importee_module_idx: ModuleIdx,
+    cross_chunk_dynamic_imports: &mut FxIndexSet<ChunkIdx>,
+  ) {
+    // The resolved module is not included in the module graph, skip it.
+    if !self.link_output.metas[importee_module_idx].is_included
+      || !matches!(import_record.kind, ImportKind::DynamicImport)
+    {
+      return;
+    }
+    // The finalizer rewrites `import()` specifiers through `entry_module_to_entry_chunk`, which
+    // diverges from the hosting chunk whenever the dynamic entry's facade chunk survives while
+    // another chunk hosts its body (order-wrap facade splits, or kept facades when common-chunk
+    // merging is off); record the chunk the emitted specifier actually names.
+    let importee_chunk = chunk_graph
+      .entry_module_to_entry_chunk
+      .get(&importee_module_idx)
+      .copied()
+      .or(chunk_graph.module_to_chunk[importee_module_idx])
+      .expect("importee chunk should exist");
+    cross_chunk_dynamic_imports.insert(importee_chunk);
   }
 
   /// - Derive each declared symbol's owning chunk, returned as the pass-local
@@ -439,6 +500,7 @@ impl GenerateStage<'_> {
     index_chunk_depended_symbols: &mut IndexChunkDependedSymbols,
     index_chunk_imports_from_external_modules: &mut IndexChunkImportsFromExternalModules,
     index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
+    index_chunk_dynamic_imports_from_external_modules: &mut IndexChunkDynamicImportsFromExternalModules,
     used_symbol_refs: &impl UsedSymbolRefsView,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
@@ -451,6 +513,7 @@ impl GenerateStage<'_> {
       index_chunk_depended_symbols.iter_mut(),
       index_chunk_imports_from_external_modules.iter_mut(),
       index_cross_chunk_dynamic_imports.iter_mut(),
+      index_chunk_dynamic_imports_from_external_modules.iter_mut(),
     ));
 
     chunks_iter.par_bridge().for_each(
@@ -459,6 +522,7 @@ impl GenerateStage<'_> {
         depended_symbols,
         imports_from_external_modules,
         cross_chunk_dynamic_imports,
+        dynamic_imports_from_external_modules,
       )| {
         let mut symbol_needs_to_assign = vec![];
         chunk.modules.iter().copied().for_each(|module_id| {
@@ -469,38 +533,20 @@ impl GenerateStage<'_> {
             .import_records
             .iter()
             .filter_map(|rec| rec.resolved_module.map(|module_idx| (rec, module_idx)))
-            .for_each(|(rec, module_idx)| {
-              match &self.link_output.module_table[module_idx] {
-                Module::Normal(_) => {
-                  // The the resolved module is not included in module graph, skip it.
-                  if !self.link_output.metas[module_idx].is_included {
-                    return;
-                  }
-                  if matches!(rec.kind, ImportKind::DynamicImport) {
-                    // The finalizer rewrites `import()` specifiers through
-                    // `entry_module_to_entry_chunk`, which diverges from the hosting chunk
-                    // whenever the dynamic entry's facade chunk survives while another chunk
-                    // hosts its body (order-wrap facade splits, or kept facades when
-                    // common-chunk merging is off); record the chunk the emitted specifier
-                    // actually names.
-                    let importee_chunk = chunk_graph
-                      .entry_module_to_entry_chunk
-                      .get(&module_idx)
-                      .copied()
-                      .or(chunk_graph.module_to_chunk[module_idx])
-                      .expect("importee chunk should exist");
-                    cross_chunk_dynamic_imports.insert(importee_chunk);
-                  }
-                }
-                Module::External(_) => {
-                  // Ensure the external module is imported in case it has side effects.
-                  if matches!(rec.kind, ImportKind::Import)
-                    && !rec.meta.contains(ImportRecordMeta::IsExportStar)
-                  {
-                    imports_from_external_modules.entry(module_idx).or_default();
-                  }
-                }
-              }
+            .for_each(|(rec, module_idx)| match &self.link_output.module_table[module_idx] {
+              Module::Normal(_) => self.collect_dynamic_chunk_import(
+                chunk_graph,
+                rec,
+                module_idx,
+                cross_chunk_dynamic_imports,
+              ),
+              Module::External(_) => self.collect_external_import(
+                module.idx,
+                rec,
+                module_idx,
+                imports_from_external_modules,
+                dynamic_imports_from_external_modules,
+              ),
             });
 
           module

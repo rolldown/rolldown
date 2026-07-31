@@ -90,6 +90,12 @@ pub fn generate_rendered_chunk(
           .expect("should have preliminary_filename")
           .clone()
       })
+      .chain(chunk.dynamic_imports_from_external_modules.iter().map(|idx| {
+        link_output.module_table[*idx]
+          .as_external()
+          .expect("dynamic_imports_from_external_modules should only contain external modules")
+          .get_file_name(*resolved_paths)
+      }))
       .collect(),
   }
 }

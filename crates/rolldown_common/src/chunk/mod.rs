@@ -86,6 +86,7 @@ pub struct Chunk {
   // Sorted by Chunk#exec_order of the imported chunks
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
+  pub dynamic_imports_from_external_modules: Vec<ModuleIdx>,
   pub bits: BitSet,
   pub imports_from_other_chunks: FxIndexMap<ChunkIdx, Vec<CrossChunkImportItem>>,
   // Only meaningful for cjs format

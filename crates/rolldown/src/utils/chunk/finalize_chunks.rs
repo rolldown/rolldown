@@ -220,6 +220,12 @@ pub async fn finalize_assets(
         .iter()
         .flat_map(|importee_idx| &index_chunk_to_instances[*importee_idx])
         .map(|importee_asset_idx| index_ins_chunk_to_filename[*importee_asset_idx].clone())
+        .chain(chunk.dynamic_imports_from_external_modules.iter().map(|idx| {
+          link_output.module_table[*idx]
+            .as_external()
+            .expect("dynamic_imports_from_external_modules should only contain external modules")
+            .get_file_name(resolved_paths)
+        }))
         .collect();
     }
   });

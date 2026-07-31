@@ -76,9 +76,11 @@ impl LinkStage<'_> {
               extended_dependencies.insert(ns.namespace_ref.owner);
             }
             // An entry export can be the *only* live reference to an external — no included
-            // statement mentions it. The recorded interop is bundle-wide, so this chunk still
-            // renders `__toESM(require(...))`; without this edge the helper has no cross-chunk
-            // binding here and finalization panics looking one up.
+            // statement mentions it, and no `named_imports` entry of this chunk covers it either.
+            // The observer recorded for it still lands here, so the chunk renders
+            // `__toESM(require(...))`; without this edge the helper has no cross-chunk binding here
+            // and finalization panics looking one up. Pinned by
+            // `external_interop_default_reexport_only_reachable_via_entry_export`.
             note_external_interop(canonical_ref);
           },
         );

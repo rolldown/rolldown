@@ -1,0 +1,12 @@
+{
+  "_comment": "`app.js` contains `export * from 'node:path'` with `node:path` external. Its exports should be available to the dynamic importer.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["node:path"]
+  }
+}

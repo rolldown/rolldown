@@ -3,8 +3,9 @@ use std::collections::VecDeque;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  ModuleNamespaceIncludedReason, PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, StmtInfos,
-  UsedSymbolRefsBuilder, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  ModuleNamespaceIncludedReason, NormalModule, PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx,
+  StmtInfos, SymbolRef, UsedSymbolRefsBuilder, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::{BitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -248,12 +249,16 @@ impl GenerateStage<'_> {
   /// entry chunk into it.
   ///
   /// Extraction is refused when the simulated namespace cannot reproduce the entry's
-  /// observable interface: dynamic exports (CJS `export *`, a star chain reaching an
-  /// external) are format-dependent merges the namespace object cannot mirror, and a
-  /// statically known `then` export makes the chunk namespace thenable — `import()` of the
-  /// chunk would assimilate through it, handing the extraction callback the assimilated
-  /// value instead of the chunk namespace. Restricted to pure dynamic entries for the same
-  /// reason as the fast path above.
+  /// observable interface: a statically known `then` export makes the chunk namespace
+  /// thenable — `import()` of the chunk would assimilate through it, handing the extraction
+  /// callback the assimilated value instead of the chunk namespace — and dynamic exports are
+  /// only acceptable when they come entirely from the entry's own direct external star
+  /// re-exports, because those are the exact records the materialized namespace merges at
+  /// runtime with `__reExport` (Rollup's `_mergeNamespaces`; the entry-level flatten is
+  /// skipped for extracted entries in `find_entry_level_external_module`). Other dynamic
+  /// sources — a CJS `export *` or a star chain that only reaches an external transitively —
+  /// keep the refusal. Restricted to pure dynamic entries for the same reason as the fast
+  /// path above.
   fn dynamic_entry_namespace_extraction_allowed(&self, chunk: &Chunk) -> bool {
     let ChunkKind::EntryPoint { meta, module: entry_module_idx, .. } = &chunk.kind else {
       return false;
@@ -261,12 +266,42 @@ impl GenerateStage<'_> {
     if *meta != ChunkMeta::DynamicImported {
       return false;
     }
-    if self.link_output.module_table[*entry_module_idx].as_normal().is_none() {
+    let Some(entry_module) = self.link_output.module_table[*entry_module_idx].as_normal() else {
+      return false;
+    };
+    let entry_meta = &self.link_output.metas[*entry_module_idx];
+    (!entry_meta.has_dynamic_exports
+      || self.dynamic_exports_explained_by_direct_external_stars(entry_module))
+      && !entry_meta.canonical_exports(true).any(|(name, _)| name.as_str() == "then")
+  }
+
+  /// Whether every source of the entry's dynamic exports is a direct `export * from
+  /// <external>` record on the entry itself. Only those records participate in the
+  /// materialized namespace's runtime `__reExport` merge, so any other source (the entry
+  /// being CommonJS, or a star into a normal module that itself has dynamic exports) means
+  /// the simulated namespace would lose runtime-only names.
+  fn dynamic_exports_explained_by_direct_external_stars(&self, module: &NormalModule) -> bool {
+    if module.exports_kind.is_commonjs() {
       return false;
     }
-    let entry_meta = &self.link_output.metas[*entry_module_idx];
-    !entry_meta.has_dynamic_exports
-      && !entry_meta.canonical_exports(true).any(|(name, _)| name.as_str() == "then")
+    let mut saw_external_star = false;
+    for rec in &module.import_records {
+      if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
+        continue;
+      }
+      let Some(resolved_idx) = rec.resolved_module else {
+        return false;
+      };
+      match &self.link_output.module_table[resolved_idx] {
+        rolldown_common::Module::External(_) => saw_external_star = true,
+        rolldown_common::Module::Normal(_) => {
+          if self.link_output.metas[resolved_idx].has_dynamic_exports {
+            return false;
+          }
+        }
+      }
+    }
+    saw_external_star
   }
 
   /// Opt each surviving dynamic entry chunk into the simulated-facade machinery: narrow the
@@ -285,16 +320,26 @@ impl GenerateStage<'_> {
     let runtime_module_idx = self.link_output.runtime.id();
     for &entry_module_idx in extraction_entries.values() {
       // Same narrowing as facade elimination: the simulated namespace exposes only the
-      // getters link-time `import()` consumers retained, plus runtime helpers.
+      // getters link-time `import()` consumers retained, plus runtime helpers. Symbols the
+      // namespace statement declares itself (an external star record's namespace binding,
+      // consumed by the statement's own `__reExport` merge) are structural, not getters,
+      // and must survive the narrowing.
       if !matches!(self.link_output.metas[entry_module_idx].wrap_kind(), WrapKind::Cjs) {
-        self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX]
-          .referenced_symbols
-          .retain(|item| match item {
-            rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
-              used_symbol_refs.contains(symbol_ref) || symbol_ref.owner == runtime_module_idx
-            }
-            rolldown_common::SymbolOrMemberExprRef::MemberExpr(_) => true,
-          });
+        let namespace_stmt =
+          &mut self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX];
+        let self_declared: FxHashSet<SymbolRef> = namespace_stmt
+          .declared_symbols
+          .iter()
+          .map(rolldown_common::TaggedSymbolRef::inner)
+          .collect();
+        namespace_stmt.referenced_symbols.retain(|item| match item {
+          rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
+            used_symbol_refs.contains(symbol_ref)
+              || symbol_ref.owner == runtime_module_idx
+              || self_declared.contains(symbol_ref)
+          }
+          rolldown_common::SymbolOrMemberExprRef::MemberExpr(_) => true,
+        });
       }
     }
 

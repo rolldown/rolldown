@@ -1,0 +1,12 @@
+{
+  "_comment": "External-star `then` forwarding for the #10263 namespace extraction: the external supplies a callable `then` only known at runtime. The runtime `__reExport` merge places it on the extracted simulated namespace, and because the chunk-level `export *` flatten is suppressed for extracted entries, the chunk namespace itself stays non-thenable — so `import('./app.js')` assimilates exactly when the extraction callback returns the merged namespace, matching the unbundled module (and Rollup).",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["ext-then"]
+  }
+}

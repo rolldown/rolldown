@@ -1,0 +1,12 @@
+{
+  "_comment": "External-star forwarding for the #10263 namespace extraction: `app.js` re-exports a star from external `node:path`, and the extracted simulated namespace merges the external namespace at runtime with `__reExport` (Rollup's `_mergeNamespaces`), so names only known at runtime survive the merge. `vendor.js` is inlined into `app.js`'s chunk.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["node:path"]
+  }
+}

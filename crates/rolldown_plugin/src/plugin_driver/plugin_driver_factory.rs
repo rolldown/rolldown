@@ -98,7 +98,9 @@ impl PluginDriverFactory {
         transform_dependencies,
         context_load_completion_manager: ContextLoadCompletionManager::default(),
         tx,
-        build_timings: BuildTimings::default(),
+        // The JavaScript side registers this callback only when it is measuring, so its
+        // presence is what says a report is coming and the clocks are worth keeping.
+        build_timings: BuildTimings::new(options.plugin_timings.is_some()),
       }
     })
   }

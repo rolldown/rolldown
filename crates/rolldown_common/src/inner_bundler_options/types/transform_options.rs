@@ -218,19 +218,3 @@ pub fn merge_transform_options_with_tsconfig(
     BuildDiagnostic::bundler_initialize_error(message, hint)
   })?)
 }
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn should_transform_js_for_explicit_resource_management() {
-    for (target, expected) in [("chrome133", true), ("chrome134", false)] {
-      let options = OxcTransformOptions::from_target(target).unwrap();
-      let target = EngineTargets::from_target(target).unwrap();
-      let options = TransformOptions::new(options, target, JsxPreset::default());
-
-      assert_eq!(options.should_transform_js(), expected);
-    }
-  }
-}

@@ -3,4 +3,4 @@ function acquireResource() {
 }
 
 using resource = acquireResource();
-console.log("acquired", resource);
+console.log('acquired', resource);

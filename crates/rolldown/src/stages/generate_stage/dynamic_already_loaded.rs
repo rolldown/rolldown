@@ -4,6 +4,7 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
   PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, UsedSymbolRefsBuilder,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -176,6 +177,9 @@ impl GenerateStage<'_> {
     if let ChunkKind::EntryPoint { meta, module: entry_module_idx, .. } = chunk.kind
       && meta == ChunkMeta::DynamicImported
     {
+      if self.dynamic_entry_partial_usage_allows_plain_merge(entry_module_idx) {
+        return ReducedEntriesAction::Apply;
+      }
       if self.dynamic_entry_supports_namespace_extraction(entry_module_idx) {
         return ReducedEntriesAction::ApplyWithNamespaceExtraction {
           entry_chunk_idx,
@@ -189,6 +193,19 @@ impl GenerateStage<'_> {
       !chunk.is_async_entry()
         && !matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict)),
     )
+  }
+
+  /// If all the used exports of the dynamic import are statically known and actual exports
+  /// of the module, code will never observe the extra exports and we can avoid the extra
+  /// indirection of exporting a synthetic namespace.
+  fn dynamic_entry_partial_usage_allows_plain_merge(&self, entry_module_idx: ModuleIdx) -> bool {
+    let Some(DynamicImportExportsUsage::Partial(used)) =
+      self.link_output.dynamic_import_exports_usage_map.get(&entry_module_idx)
+    else {
+      return false;
+    };
+    let resolved_exports = &self.link_output.metas[entry_module_idx].resolved_exports;
+    used.iter().all(|name| resolved_exports.contains_key(name))
   }
 
   /// Whether `import()` of this dynamic entry can be preserved by exporting the

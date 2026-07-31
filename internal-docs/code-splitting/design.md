@@ -118,6 +118,10 @@ The defense splits by who owns the export name:
   path and the entry-facade decision guards the create path — see the entry-trigger facade bullet
   above. In addition to that, `dynamic_entry_supports_namespace_extraction`, which rewrites dynamic
   importers to `.then((n) => n.<ns>)`, will avoid inlining the module into the dynamic entry.
+  Note that this is only needed when the exports used by the dynamic import are not a known subset
+  of the ones exported by the dynamic entry module. If they are a known subset, then we do not need
+  to generate this intermediate namespace and we can directly inline the module even though there
+  is a `then` export of `export * from` (see `dynamic_entry_partial_usage_allows_plain_merge`).
 
 Deliberately kept: a dynamic-import target's own `then` export. Native `import()` of the source
 module assimilates the same way, so renaming it would diverge from source semantics rather than

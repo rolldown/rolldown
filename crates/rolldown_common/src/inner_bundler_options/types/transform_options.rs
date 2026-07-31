@@ -131,8 +131,13 @@ impl TransformOptions {
 
   pub fn should_transform_js(&self) -> bool {
     match &self.inner {
-      TransformOptionsInner::Normal(opts) => opts.env.regexp.set_notation,
-      TransformOptionsInner::Raw(_) => self.target.has_feature(ESFeature::ES2024UnicodeSetsRegex),
+      TransformOptionsInner::Normal(opts) => {
+        opts.env.regexp.set_notation || opts.env.es2026.explicit_resource_management
+      }
+      TransformOptionsInner::Raw(_) => {
+        self.target.has_feature(ESFeature::ES2024UnicodeSetsRegex)
+          || self.target.has_feature(ESFeature::ES2026ExplicitResourceManagement)
+      }
     }
   }
 
@@ -189,6 +194,22 @@ impl Default for TransformOptions {
       inner: TransformOptionsInner::Normal(Arc::new(OxcTransformOptions::default())),
       target: EngineTargets::default(),
       jsx_preset: JsxPreset::default(),
+    }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn should_transform_js_for_explicit_resource_management() {
+    for (target, expected) in [("chrome133", true), ("chrome134", false)] {
+      let options = OxcTransformOptions::from_target(target).unwrap();
+      let target = EngineTargets::from_target(target).unwrap();
+      let options = TransformOptions::new(options, target, JsxPreset::default());
+
+      assert_eq!(options.should_transform_js(), expected);
     }
   }
 }

@@ -1,0 +1,7 @@
+{
+  "config": {
+    "transform": {
+      "target": "chrome133"
+    }
+  }
+}

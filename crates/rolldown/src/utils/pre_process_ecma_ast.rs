@@ -164,7 +164,8 @@ impl PreProcessEcmaAst {
     }
 
     // Step 3: Transform TypeScript and jsx.
-    // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
+    // Note: Currently, oxc_transform supports es syntax up to ES2026
+    // (explicit resource management).
     let is_not_js = !matches!(parsed_type, OxcParseType::Js);
     let mut preserve_jsx = false;
     if is_not_js

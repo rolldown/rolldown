@@ -27,10 +27,7 @@ use crate::{
   PluginContext,
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::{
-    build_timings::BuildTimings,
-    hook_timing::{HookTimingCollector, PluginTimingSummary},
-  },
+  types::build_timings::BuildTimings,
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
@@ -48,9 +45,8 @@ pub struct PluginDriver {
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
-  /// Timing collector for plugin hooks (None if plugin timing is disabled)
-  pub hook_timing_collector: Option<Arc<HookTimingCollector>>,
-  /// Wall clocks for the build as a whole, as opposed to what any one plugin cost.
+  /// Outlives the `Bundle` through `BundleHandle`, which is how the binding reads them
+  /// once the build has finished.
   pub build_timings: BuildTimings,
 }
 
@@ -62,9 +58,6 @@ impl PluginDriver {
     // by BundleFactory which manages its lifecycle (reset on full builds only)
     self.context_load_completion_manager.clear();
     self.file_emitter.clear();
-    if let Some(collector) = &self.hook_timing_collector {
-      collector.clear();
-    }
   }
 
   pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {
@@ -115,63 +108,6 @@ impl PluginDriver {
       .entry(module_idx)
       .or_insert_with(|| Arc::new(FxDashSet::default()))
       .insert(dependency);
-  }
-
-  /// Record hook timing if timing collection is enabled.
-  /// Returns `Some(Instant)` if timing is enabled, `None` otherwise.
-  #[inline]
-  #[must_use]
-  pub fn start_timing(&self) -> Option<std::time::Instant> {
-    self.hook_timing_collector.as_ref().map(|_| std::time::Instant::now())
-  }
-
-  /// Record the elapsed time for a plugin if timing collection is enabled.
-  #[inline]
-  pub fn record_timing(&self, plugin_idx: PluginIdx, start: Option<std::time::Instant>) {
-    if let (Some(collector), Some(start)) = (&self.hook_timing_collector, start) {
-      #[expect(clippy::cast_possible_truncation)]
-      collector.record(plugin_idx, start.elapsed().as_micros() as u64);
-    }
-  }
-
-  /// Record the elapsed time for the `output.codeSplitting` / `advancedChunks`
-  /// `groups[].name` chunk-name classifier (a user JS callback invoked directly from the
-  /// Rust core, not via a plugin hook) if timing collection is enabled.
-  #[inline]
-  pub fn record_code_splitting_name_timing(&self, start: Option<std::time::Instant>) {
-    if let (Some(collector), Some(start)) = (&self.hook_timing_collector, start) {
-      #[expect(clippy::cast_possible_truncation)]
-      collector.record_code_splitting_name(start.elapsed().as_micros() as u64);
-    }
-  }
-
-  /// Set total build time from start instant
-  #[inline]
-  pub fn set_total_build_time(&self, start: Option<std::time::Instant>) {
-    if let Some(start) = start {
-      self.build_timings.set_total(start.elapsed());
-    }
-  }
-
-  /// Set link stage time from start instant
-  #[inline]
-  pub fn set_link_stage_time(&self, start: Option<std::time::Instant>) {
-    if let Some(start) = start {
-      self.build_timings.set_link_stage(start.elapsed());
-    }
-  }
-
-  /// What each plugin, and each core-invoked output callback, cost this build.
-  ///
-  /// Raw and unaggregated: a build may produce several outputs, each with its own driver,
-  /// and the report merges them — see `plugin_timings_info`.
-  pub fn plugin_timing_summaries(&self) -> Vec<PluginTimingSummary> {
-    let Some(collector) = self.hook_timing_collector.as_ref() else {
-      return Vec::new();
-    };
-    let mut summaries = collector.get_summary();
-    summaries.extend(collector.get_output_callback_summary());
-    summaries
   }
 }
 

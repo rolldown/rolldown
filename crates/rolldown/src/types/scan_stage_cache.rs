@@ -275,9 +275,10 @@ impl ScanStageCache {
         user_defined_entry_modules.insert(idx);
       }
     }
-    // Entries emitted via `emitFile(type: 'chunk')` are only discovered by
-    // full scans (partial scans skip `buildStart`); their rows persist in
-    // `entry_points`, so keep their modules flagged as entries too.
+    // Entries emitted via `emitFile(type: 'chunk')` may not be re-discovered
+    // by a partial scan. HMR patch scans skip `buildStart` entirely, and in
+    // `ScanStage` partial scans the emitting hook may not re-run. Their rows
+    // persist in `entry_points`, so keep their modules flagged as entries too.
     for entry in &cache.entry_points {
       if matches!(entry.kind, rolldown_common::EntryPointKind::EmittedUserDefined) {
         user_defined_entry_modules.insert(entry.idx);

@@ -82,7 +82,7 @@ See [`HookFilter`](/reference/Interface.HookFilter) as well.
 
 ## Composable Filters
 
-For more complex filtering logic, Rolldown provides composable filter expressions via the [`@rolldown/pluginutils`](https://github.com/rolldown/rolldown/tree/main/packages/pluginutils) package. These allow you to build filters using logical operators like `and`, `or`, and `not`.
+For more complex filtering logic, Rolldown provides composable filter expressions via the [`@rolldown/pluginutils`](https://github.com/rolldown/plugins/tree/main/packages/pluginutils) package. These allow you to build filters using logical operators like `and`, `or`, and `not`.
 
 > [!WARNING]
 > Composable filters are not yet supported in Vite or unplugin. They can be used in Rolldown plugins only.
@@ -117,7 +117,7 @@ export default function myPlugin() {
 - `include(expr)` / `exclude(expr)` — Top-level include/exclude wrappers.
 - `queries(obj)` — Compose multiple query filters.
 
-See the [`@rolldown/pluginutils` README](https://github.com/rolldown/rolldown/tree/main/packages/pluginutils#readme) for the full API reference.
+See the [`@rolldown/pluginutils` README](https://github.com/rolldown/plugins/tree/main/packages/pluginutils#readme) for the full API reference.
 
 ## Interoperability
 

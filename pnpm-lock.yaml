@@ -158,7 +158,7 @@ catalogs:
       version: 2.39.0
     rolldown-plugin-dts:
       specifier: ^0.27.0
-      version: 0.27.6
+      version: 0.27.14
     rollup:
       specifier: ^4.60.4
       version: 4.62.2
@@ -321,7 +321,7 @@ importers:
     devDependencies:
       '@voidzero-dev/vitepress-theme':
         specifier: ^5.0.0
-        version: 5.0.4(change-case@5.4.4)(focus-trap@8.2.2)(vite@8.1.5(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3))
+        version: 5.0.4(change-case@5.4.4)(focus-trap@8.2.2)(vite@8.1.5(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3))
       typedoc:
         specifier: ^0.28.19
         version: 0.28.20(typescript@6.0.3)
@@ -336,13 +336,13 @@ importers:
         version: 1.1.3(typedoc-plugin-markdown@4.12.0(typedoc@0.28.20(typescript@6.0.3)))
       vitepress:
         specifier: ^2.0.0-alpha.18
-        version: 2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)
+        version: 2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)
       vitepress-plugin-feedback-tracker:
         specifier: ^0.2.0-alpha.1
-        version: 0.2.0-alpha.1(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3))
+        version: 0.2.0-alpha.1(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3))
       vitepress-plugin-graphviz:
         specifier: ^0.1.0
-        version: 0.1.0(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0))
+        version: 0.1.0(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0))
       vitepress-plugin-group-icons:
         specifier: ^1.7.5
         version: 1.7.5(vite@8.1.5(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
@@ -351,7 +351,7 @@ importers:
         version: 1.13.3(supports-color@10.2.2)
       vitepress-plugin-og:
         specifier: ^0.0.5
-        version: 0.0.5(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0))
+        version: 0.0.5(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0))
       void:
         specifier: ^0.10.8
         version: 0.10.10(arktype@2.2.0)(kysely@0.29.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(valibot@1.4.2(typescript@6.0.3))(vite@8.1.5(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.10)(vue@3.5.40(typescript@6.0.3))(zod@4.4.3)
@@ -603,7 +603,7 @@ importers:
         version: 'link:'
       rolldown-plugin-dts:
         specifier: 'catalog:'
-        version: 0.27.6(oxc-resolver@11.24.2)(rolldown@packages+rolldown)(typescript@6.0.3)
+        version: 0.27.14(oxc-resolver@11.24.2)(rolldown@packages+rolldown)(typescript@6.0.3)
       rollup:
         specifier: 'catalog:'
         version: 4.62.2
@@ -5418,8 +5418,18 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
+  '@yuku-codegen/binding-darwin-arm64@0.8.1':
+    resolution: {integrity: sha512-Ck0RmDBLc+R0dZpfTXmJFAvcuPf+npbJF1T/VhC9pPDGjNEOGwn4DwFcjhg//DfNIO+xgktsLSt5S4v0MFrToA==}
+    cpu: [arm64]
+    os: [darwin]
+
   '@yuku-codegen/binding-darwin-x64@0.5.48':
     resolution: {integrity: sha512-aRCTw0EZC4bVosmw//0OMYP5tGWFE0Cu5yUBFkUbhXx/iBzvORcJ2xPNlOp/vtCCo9Ys4vp8b0DigJV6uOVb2g==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@yuku-codegen/binding-darwin-x64@0.8.1':
+    resolution: {integrity: sha512-6BDLLWi8wHbCghgkajS+OeVJX2jLY9pY9HV/qH9daLP1XCyMSPssEiXjKyPiJq+St5b+zcPgMEBF8cgJDNhMMQ==}
     cpu: [x64]
     os: [darwin]
 
@@ -5428,8 +5438,19 @@ packages:
     cpu: [x64]
     os: [freebsd]
 
+  '@yuku-codegen/binding-freebsd-x64@0.8.1':
+    resolution: {integrity: sha512-Rd1PHfw2mxC8y00kWxYWDClnBC1NbSwPuq0zKLYPggE7mlOnV+eQ15futtaz/Q4BP+jOtEv9elxvP7by20h6Kw==}
+    cpu: [x64]
+    os: [freebsd]
+
   '@yuku-codegen/binding-linux-arm-gnu@0.5.48':
     resolution: {integrity: sha512-DuSQlk8bH4gpmW3/00P0NLagAcMv8jOxjT40cQmxKRkktr+SUOALCfkT89tdDq3qtY95NR2GXOZ7AjNh7KKqCw==}
+    cpu: [arm]
+    os: [linux]
+    libc: [glibc]
+
+  '@yuku-codegen/binding-linux-arm-gnu@0.8.1':
+    resolution: {integrity: sha512-/XGncN6jQ/CwXNgWwo+XnsUmILY1q1mbS1f38XnYOHw3DOKOISxVIAlD9IsmdrHLAUAncFlgFS3ky4OO9fvjyg==}
     cpu: [arm]
     os: [linux]
     libc: [glibc]
@@ -5440,8 +5461,20 @@ packages:
     os: [linux]
     libc: [musl]
 
+  '@yuku-codegen/binding-linux-arm-musl@0.8.1':
+    resolution: {integrity: sha512-Rxut53qx3JbTkQ8+A6I8Lrplwz55HQVCjEsTsWF1uOpfgALdvuKSMPIE0gVqefEEcOSA9ASklbNacmXwiqnaMw==}
+    cpu: [arm]
+    os: [linux]
+    libc: [musl]
+
   '@yuku-codegen/binding-linux-arm64-gnu@0.5.48':
     resolution: {integrity: sha512-mk5JVWh+0JOe5ue8k17kbYX8uGBoKt3ZqoCyxNh4nYAAcX7+X1tFUiU7jbjctu4vHeejCBFSTdQ021+V31cUCQ==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@yuku-codegen/binding-linux-arm64-gnu@0.8.1':
+    resolution: {integrity: sha512-hBNkUPHX04BjB2oIIgIlYT2tog9x0rmBVkZep0f4LLYyFhdJfYM/s2pJ0c8ehQhhkQaJFokW4CxGhiVvVLlzWg==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
@@ -5452,8 +5485,20 @@ packages:
     os: [linux]
     libc: [musl]
 
+  '@yuku-codegen/binding-linux-arm64-musl@0.8.1':
+    resolution: {integrity: sha512-ePZZnmOxArA4jA3AWlJj3WdY5z1ahQSLwAYrv7mozkJVcrBz2wZgy8l9ukcHFpTxPyhxCAea4gBSZEqqsCYE3A==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
   '@yuku-codegen/binding-linux-x64-gnu@0.5.48':
     resolution: {integrity: sha512-csd4M1EVrGaohM8acM6gq1zpUA/Rwe2ulUMBKUcwQXm/k6n7cq1A++qdew78SOVb4do3JH1WE+WFwoGQAcWc1w==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@yuku-codegen/binding-linux-x64-gnu@0.8.1':
+    resolution: {integrity: sha512-LGAEXnQ4Xg/BtOuEirABwa9ByUTXFjealqXXAHVFb8EEmZu5QeHLtsdB2MA2IcYVAgW/QPkyqfnd80R4FltI2A==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
@@ -5464,8 +5509,19 @@ packages:
     os: [linux]
     libc: [musl]
 
+  '@yuku-codegen/binding-linux-x64-musl@0.8.1':
+    resolution: {integrity: sha512-PPDMcQIKCNTOaLBBKh9SBM1EAPcsvnlShMAxq2D/twnSCSEUI9LfrR+G9J4P3o+46ZS4WN8mjZsj8p4PKOnKgw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
   '@yuku-codegen/binding-win32-arm64@0.5.48':
     resolution: {integrity: sha512-HI8qNrI8dWM5BuqIMKsqornRvTNFrE6sm5zToIJ9YIa9zt5+29P7fJ7Nr39EVf6dAWSb6q7JSpScJnRsQ+FgZA==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@yuku-codegen/binding-win32-arm64@0.8.1':
+    resolution: {integrity: sha512-W8A1QpstKYhg4e56s13L4ByQprQ1OXY3QFoNPIh6+4v/DEgqfhJ9ApU++e7zHQCQrhYjyQC/uWtxUcRqpyL/7Q==}
     cpu: [arm64]
     os: [win32]
 
@@ -5474,8 +5530,18 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@yuku-codegen/binding-win32-x64@0.8.1':
+    resolution: {integrity: sha512-zH7g7pLjfl3uZaNvYzd1PnCerU9fvhS16B7Z0z4Ai0S/oaGI53Y2xh8ylFDvDvmquEP7vay4O/zuLgvZeEsxVA==}
+    cpu: [x64]
+    os: [win32]
+
   '@yuku-parser/binding-darwin-arm64@0.5.48':
     resolution: {integrity: sha512-If8mb7HH3vqghJ2NNZ8SuHfhsnjVzOxJpB8xcNOXS5WjYrs2mUhHIh5KOIvK13hDOzh0htGeGK3A6MsiEqE7HQ==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@yuku-parser/binding-darwin-arm64@0.8.1':
+    resolution: {integrity: sha512-iKQinrhsdxsGJ38msw4KaD7yotWw5N2nqMLeOPD+ttpZQKJc9nGL3VHMtISzCJ9Q09g0N3m91mYRFnIbXfhhig==}
     cpu: [arm64]
     os: [darwin]
 
@@ -5484,13 +5550,29 @@ packages:
     cpu: [x64]
     os: [darwin]
 
+  '@yuku-parser/binding-darwin-x64@0.8.1':
+    resolution: {integrity: sha512-k7zt2H3sWbYzwTGAK2TT6ma18w1XpwFAWgmBHiaMGHVe63aArrtO+55r6g7chXJ4joB6lb8SxYFyRQ974xfawQ==}
+    cpu: [x64]
+    os: [darwin]
+
   '@yuku-parser/binding-freebsd-x64@0.5.48':
     resolution: {integrity: sha512-0GcUMrumLHheThY9r5Tp46gaZYzn0irWPS1Zba6WY+vVQfhUtzGiWgXxI6tuXX0N32kEaaEVRpkKctvo6Kx3aQ==}
     cpu: [x64]
     os: [freebsd]
 
+  '@yuku-parser/binding-freebsd-x64@0.8.1':
+    resolution: {integrity: sha512-tQjrlkE/vYEBXZ+pM59FerIVD4Zfs2OpRvN3e8oo12pTcAbwTTxteZKWaedfUsZr+gKO4tLLAaFaFIwa5fQJFw==}
+    cpu: [x64]
+    os: [freebsd]
+
   '@yuku-parser/binding-linux-arm-gnu@0.5.48':
     resolution: {integrity: sha512-8S5T5wjCC73dmmpQeZ49aYsSunIUM3D4Fc6rdK96c+Ayg/p3FmeSPF3xuLZHejcTmqJIIvnbfPlUF+rB6DITjQ==}
+    cpu: [arm]
+    os: [linux]
+    libc: [glibc]
+
+  '@yuku-parser/binding-linux-arm-gnu@0.8.1':
+    resolution: {integrity: sha512-LZQgyer5d5i1f5oot+x6EhANXPD4FeCgz2CiSiWFSFBeG1U2m5jz65LD8gZwzy4CP4QVxQFyX9BazVRskTbwuQ==}
     cpu: [arm]
     os: [linux]
     libc: [glibc]
@@ -5501,8 +5583,20 @@ packages:
     os: [linux]
     libc: [musl]
 
+  '@yuku-parser/binding-linux-arm-musl@0.8.1':
+    resolution: {integrity: sha512-69G1N4bPkygrus/ahtFxVdv9lzfvS65fuyMdDknn5BZU/gfFGBJyHeJ8UGgLPTyR3YptlJMuZhEkdgp6Qhfz2g==}
+    cpu: [arm]
+    os: [linux]
+    libc: [musl]
+
   '@yuku-parser/binding-linux-arm64-gnu@0.5.48':
     resolution: {integrity: sha512-KGYCBMqI2zfwyhgq5tpPVNe7jpUeYTBm8DhjdS+zqWNumde/PEC170QE5RHxcOAlsirIDeIUk0jqx+r/axoFSw==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@yuku-parser/binding-linux-arm64-gnu@0.8.1':
+    resolution: {integrity: sha512-XL5+JpKCl1ghQTnZezy41NzmPdk4rZ6s0Z8qvGsgNPJ6yrSD7Ne8iz20SZZd/nW720qHiJy/ux62rwzZ+/clMg==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
@@ -5513,8 +5607,20 @@ packages:
     os: [linux]
     libc: [musl]
 
+  '@yuku-parser/binding-linux-arm64-musl@0.8.1':
+    resolution: {integrity: sha512-Rj290yfrWlrV4/+HrAuoeJXMHdoNubJWKdhg1QDa/mvqa8MUYFd4IHuVYjP/WdQzEgOAWGrLC48vcnge6U3jbg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
   '@yuku-parser/binding-linux-x64-gnu@0.5.48':
     resolution: {integrity: sha512-d/6v9UnGglVu1WC2JQyv/5aWSi5fXZeGSlidCfmHp4+N65N1GDKUnFtys5MK5eAPeAjTgSHGGtOc/yCcKTlv3A==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@yuku-parser/binding-linux-x64-gnu@0.8.1':
+    resolution: {integrity: sha512-d3IDkhAxiUTVuGI6BKIMKUyLe7ZxMY5yLqyvvTqJD1WPnE0eJTsLeRFRBv7/HXsnAzDs0IgvoG5bjvUkHZ5kSg==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
@@ -5525,8 +5631,19 @@ packages:
     os: [linux]
     libc: [musl]
 
+  '@yuku-parser/binding-linux-x64-musl@0.8.1':
+    resolution: {integrity: sha512-Oyp+2gGYKK/AvN2ZoauRn1LGPdkjME5/TE/l4a9mT0JdNeiRTvno42383bt04MWnAZcYS4Hv7YsiFOXUBeLdpA==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
   '@yuku-parser/binding-win32-arm64@0.5.48':
     resolution: {integrity: sha512-w6cQQLbqj3Jcom5Q7ifm103NUOQ9d+Cb4VU5lkrZDjMnwVJ9Hzzg1vCQR7miJuF44vhCXldbme5UryE3giEKlA==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@yuku-parser/binding-win32-arm64@0.8.1':
+    resolution: {integrity: sha512-H77lYgICWRZycGmLaojzg0aSs3Z3v8SZWkcEjl1Ql3s+Km2SyiQcZ7RGq++Wh5nJxpiDJGAzYDC74XqMNm2ZHg==}
     cpu: [arm64]
     os: [win32]
 
@@ -5535,8 +5652,16 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@yuku-parser/binding-win32-x64@0.8.1':
+    resolution: {integrity: sha512-ABniFzqYYn64NUEgmHTb6JxEzAlpmPu4cpMFjMBlR6cJXqL+vd7K1ae/yrt+NhUduHkJWJqG4lbHbV2yp9el3w==}
+    cpu: [x64]
+    os: [win32]
+
   '@yuku-toolchain/types@0.5.43':
     resolution: {integrity: sha512-kSpvPntnXw5+lYjO71ffBEnQ5ycQ74KGIYknh0TS4xeyCuBkOqxyJumxZkMhLBBUCLjDAbx2+Icnr3Zh4ftjpQ==}
+
+  '@yuku-toolchain/types@0.8.1':
+    resolution: {integrity: sha512-HcGEV3kOn9evBTm2ARYOFNKAI7sY9twQozCVd9EVdlsBlnKi0a2iv8xXxYVHFCBQpX3SvvPXBhk8lcK6NUTdNg==}
 
   '@zkochan/which@2.0.3':
     resolution: {integrity: sha512-C1ReN7vt2/2O0fyTsx5xnbQuxBrmG5NMSbcIkPKCCfCTJgpZBsuRYzFXHj3nVq8vTfK7vxHUmzfCpSHgO7j4rg==}
@@ -7489,8 +7614,8 @@ packages:
     resolution: {integrity: sha512-OCVPnIObs4N29kxTjzLfUryOkvZEq+pf8jTF0lg8E7uETuWHA+v7j3c/xJmiqpX450191LlmZfUKkXxkTry7nA==}
     engines: {node: ^10 || ^12 || >=14}
 
-  postcss@8.5.23:
-    resolution: {integrity: sha512-g50586zr4bZmwFiTlflMu8E0bDTb5I5gertgwAKmsdUlTQIhZtunzUlD1WSzwcVWPoAVpsrA6vlfCD7oXvRwgg==}
+  postcss@8.5.25:
+    resolution: {integrity: sha512-DTPx3RWSSnWyzLxQnlH0rJP+EW5ekl16ZU4/psbIhA0e53kJfdgaN5vKM+xP7yJtXVu+nfdVFmlgFDEKAe4Pyw==}
     engines: {node: ^10 || ^12 || >=14}
 
   postgres-array@2.0.0:
@@ -7710,19 +7835,19 @@ packages:
     engines: {node: 20 || >=22}
     hasBin: true
 
-  rolldown-plugin-dts@0.27.6:
-    resolution: {integrity: sha512-LK/2xsCvFwpppMPlAYTmBSLcxqYXwPye/BSTgH0hpe1iEbs1j5bYHchRahADh1uHOqLzOOlgciRIJ201yPb0yQ==}
+  rolldown-plugin-dts@0.27.14:
+    resolution: {integrity: sha512-ZvuDDwoIpRK9RPxDXratCpklFO9QZZWndf/sd0VBFb4LEj0jj07UcHK9OCh7V4XiFz2Z89ziyBC2K6tJiDjrbw==}
     engines: {node: ^22.18.0 || >=24.11.0}
     peerDependencies:
-      '@ts-macro/tsc': ^0.3.6
-      '@typescript/native-preview': '>=7.0.0-dev.20260325.1'
+      '@typescript/native-preview': '*'
+      '@volar/typescript': ~2.4.0
       rolldown: ^1.0.0
-      typescript: ^5.0.0 || ^6.0.0 || ^7.0.0
+      typescript: ^5.0.0 || ^6.0.0 || ~7.0.0
       vue-tsc: ~3.2.0 || ~3.3.0
     peerDependenciesMeta:
-      '@ts-macro/tsc':
-        optional: true
       '@typescript/native-preview':
+        optional: true
+      '@volar/typescript':
         optional: true
       typescript:
         optional: true
@@ -8094,8 +8219,8 @@ packages:
     resolution: {integrity: sha512-Pugqs6M0m7Lv1I7FtxN4aoyToKg1C4tu+/381vH35y8oENM/Ai7f7C4StcoK4/+BSw9ebcS8jRiVrORFKCALLw==}
     engines: {node: ^20.0.0 || >=22.0.0}
 
-  tinyrainbow@3.1.0:
-    resolution: {integrity: sha512-Bf+ILmBgretUrdJxzXM0SgXLZ3XfiaUuOj/IKQHuTXip+05Xn+uyEYdVg0kYDipTBcLrCVyUzAPz7QmArb0mmw==}
+  tinyrainbow@3.1.1:
+    resolution: {integrity: sha512-yau8yJdTt989Mm0Bd/236QnzEiPf2xLLTqUZRUJOo/3CB078LSwzei343DgtJVmfJKJE3TMINY1u42SQsP6mXw==}
     engines: {node: '>=14.0.0'}
 
   to-regex-range@5.0.1:
@@ -8691,14 +8816,20 @@ packages:
   youch@4.1.0-beta.10:
     resolution: {integrity: sha512-rLfVLB4FgQneDr0dv1oddCVZmKjcJ6yX6mS4pU82Mq/Dt9a3cLZQ62pDBL4AUO+uVrCvtWz3ZFUL2HFAFJ/BXQ==}
 
-  yuku-ast@0.1.7:
-    resolution: {integrity: sha512-2RiMEWv500TixY5rJy6OZd4fSy9WYZKWh6gGbIJ7y7vAGcuCugWOWwOLGaQcRZrXcPUfqtLtvpaJ3SdXtWlhKA==}
+  yuku-ast@0.8.1:
+    resolution: {integrity: sha512-+k1E2f08y0k1+vpdD1KUCzDh2JXvwirMa8YR2Jr7VCS4zAo3eT5A/HbJCqaVGd6idaPY0gwLM9C4seEY4h10Hw==}
 
   yuku-codegen@0.5.48:
     resolution: {integrity: sha512-p7HxD5Xl4jzDzqMrGePAOeSHmRY4g58h4HuGq15weQFPxuPWd/W6e7nqp/+Lea6JfpOdBwJOAyXFqIZ/J9Zfnw==}
 
+  yuku-codegen@0.8.1:
+    resolution: {integrity: sha512-/4Sbg9K9HpCe3PidmMbs9TzJ62gq3KmQY279TB0EGKdMoM8LfcmIg4E9wS2J/ylbFuQaWcYqf5dBKr8zubdlKA==}
+
   yuku-parser@0.5.48:
     resolution: {integrity: sha512-OWBfhrpgK9+/4+IXG9oT8Bao4AhViQA7vdyNNH7EUg8dQYgwa70XtIBWTpCEme1P1ECyoDNYkn0wT63f8XRcVA==}
+
+  yuku-parser@0.8.1:
+    resolution: {integrity: sha512-YvUz2jdFMIq0QjN8LmI32ox+RBCn3l8VToAXVQ5QFfLTxSxmGZS6JP80ptePEju+CpeTdINLmUm7Ewodzh1QnQ==}
 
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
@@ -12008,7 +12139,7 @@ snapshots:
       magic-string: 0.30.21
       pngjs: 7.0.0
       sirv: 3.0.2
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.1.1
       vitest: 4.1.10(@types/node@24.10.3)(@vitest/browser-preview@4.1.10)(vite@8.1.5(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
       ws: 8.21.1
     transitivePeerDependencies:
@@ -12026,7 +12157,7 @@ snapshots:
       magic-string: 0.30.21
       pngjs: 7.0.0
       sirv: 3.0.2
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.1.1
       vitest: 4.1.10(@types/node@24.10.3)(@vitest/browser-preview@4.1.10)(vite@8.1.5(@types/node@24.10.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
       ws: 8.21.1
     transitivePeerDependencies:
@@ -12042,7 +12173,7 @@ snapshots:
       '@vitest/spy': 4.1.10
       '@vitest/utils': 4.1.10
       chai: 6.2.2
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.1.1
 
   '@vitest/mocker@4.1.10(vite@8.1.5(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))':
     dependencies:
@@ -12063,7 +12194,7 @@ snapshots:
 
   '@vitest/pretty-format@4.1.10':
     dependencies:
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.1.1
 
   '@vitest/runner@4.1.10':
     dependencies:
@@ -12083,14 +12214,14 @@ snapshots:
     dependencies:
       '@vitest/pretty-format': 4.1.10
       convert-source-map: 2.0.0
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.1.1
 
   '@voidzero-dev/vite-plus-core@0.2.6(@types/node@24.10.3)(esbuild@0.28.1)(jiti@2.7.0)(publint@0.3.22)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)':
     dependencies:
       '@oxc-project/runtime': 0.141.0
       '@oxc-project/types': 0.141.0
       lightningcss: 1.33.0
-      postcss: 8.5.23
+      postcss: 8.5.25
       yuku-codegen: 0.5.48
       yuku-parser: 0.5.48
     optionalDependencies:
@@ -12128,7 +12259,7 @@ snapshots:
   '@voidzero-dev/vite-plus-win32-x64-msvc@0.2.6':
     optional: true
 
-  '@voidzero-dev/vitepress-theme@5.0.4(change-case@5.4.4)(focus-trap@8.2.2)(vite@8.1.5(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3))':
+  '@voidzero-dev/vitepress-theme@5.0.4(change-case@5.4.4)(focus-trap@8.2.2)(vite@8.1.5(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3))':
     dependencies:
       '@docsearch/css': 4.6.3
       '@docsearch/js': 4.6.3
@@ -12145,7 +12276,7 @@ snapshots:
       minisearch: 7.2.0
       reka-ui: 2.10.1(vue@3.5.40(typescript@6.0.3))
       tailwindcss: 4.3.3
-      vitepress: 2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)
+      vitepress: 2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)
       vue: 3.5.40(typescript@6.0.3)
     transitivePeerDependencies:
       - '@vue/composition-api'
@@ -12195,7 +12326,7 @@ snapshots:
       '@vue/shared': 3.5.40
       estree-walker: 2.0.2
       magic-string: 0.30.21
-      postcss: 8.5.23
+      postcss: 8.5.25
       source-map-js: 1.2.1
 
   '@vue/compiler-ssr@3.5.40':
@@ -12265,70 +12396,138 @@ snapshots:
   '@yuku-codegen/binding-darwin-arm64@0.5.48':
     optional: true
 
+  '@yuku-codegen/binding-darwin-arm64@0.8.1':
+    optional: true
+
   '@yuku-codegen/binding-darwin-x64@0.5.48':
+    optional: true
+
+  '@yuku-codegen/binding-darwin-x64@0.8.1':
     optional: true
 
   '@yuku-codegen/binding-freebsd-x64@0.5.48':
     optional: true
 
+  '@yuku-codegen/binding-freebsd-x64@0.8.1':
+    optional: true
+
   '@yuku-codegen/binding-linux-arm-gnu@0.5.48':
+    optional: true
+
+  '@yuku-codegen/binding-linux-arm-gnu@0.8.1':
     optional: true
 
   '@yuku-codegen/binding-linux-arm-musl@0.5.48':
     optional: true
 
+  '@yuku-codegen/binding-linux-arm-musl@0.8.1':
+    optional: true
+
   '@yuku-codegen/binding-linux-arm64-gnu@0.5.48':
+    optional: true
+
+  '@yuku-codegen/binding-linux-arm64-gnu@0.8.1':
     optional: true
 
   '@yuku-codegen/binding-linux-arm64-musl@0.5.48':
     optional: true
 
+  '@yuku-codegen/binding-linux-arm64-musl@0.8.1':
+    optional: true
+
   '@yuku-codegen/binding-linux-x64-gnu@0.5.48':
+    optional: true
+
+  '@yuku-codegen/binding-linux-x64-gnu@0.8.1':
     optional: true
 
   '@yuku-codegen/binding-linux-x64-musl@0.5.48':
     optional: true
 
+  '@yuku-codegen/binding-linux-x64-musl@0.8.1':
+    optional: true
+
   '@yuku-codegen/binding-win32-arm64@0.5.48':
+    optional: true
+
+  '@yuku-codegen/binding-win32-arm64@0.8.1':
     optional: true
 
   '@yuku-codegen/binding-win32-x64@0.5.48':
     optional: true
 
+  '@yuku-codegen/binding-win32-x64@0.8.1':
+    optional: true
+
   '@yuku-parser/binding-darwin-arm64@0.5.48':
+    optional: true
+
+  '@yuku-parser/binding-darwin-arm64@0.8.1':
     optional: true
 
   '@yuku-parser/binding-darwin-x64@0.5.48':
     optional: true
 
+  '@yuku-parser/binding-darwin-x64@0.8.1':
+    optional: true
+
   '@yuku-parser/binding-freebsd-x64@0.5.48':
+    optional: true
+
+  '@yuku-parser/binding-freebsd-x64@0.8.1':
     optional: true
 
   '@yuku-parser/binding-linux-arm-gnu@0.5.48':
     optional: true
 
+  '@yuku-parser/binding-linux-arm-gnu@0.8.1':
+    optional: true
+
   '@yuku-parser/binding-linux-arm-musl@0.5.48':
+    optional: true
+
+  '@yuku-parser/binding-linux-arm-musl@0.8.1':
     optional: true
 
   '@yuku-parser/binding-linux-arm64-gnu@0.5.48':
     optional: true
 
+  '@yuku-parser/binding-linux-arm64-gnu@0.8.1':
+    optional: true
+
   '@yuku-parser/binding-linux-arm64-musl@0.5.48':
+    optional: true
+
+  '@yuku-parser/binding-linux-arm64-musl@0.8.1':
     optional: true
 
   '@yuku-parser/binding-linux-x64-gnu@0.5.48':
     optional: true
 
+  '@yuku-parser/binding-linux-x64-gnu@0.8.1':
+    optional: true
+
   '@yuku-parser/binding-linux-x64-musl@0.5.48':
+    optional: true
+
+  '@yuku-parser/binding-linux-x64-musl@0.8.1':
     optional: true
 
   '@yuku-parser/binding-win32-arm64@0.5.48':
     optional: true
 
+  '@yuku-parser/binding-win32-arm64@0.8.1':
+    optional: true
+
   '@yuku-parser/binding-win32-x64@0.5.48':
     optional: true
 
+  '@yuku-parser/binding-win32-x64@0.8.1':
+    optional: true
+
   '@yuku-toolchain/types@0.5.43': {}
+
+  '@yuku-toolchain/types@0.8.1': {}
 
   '@zkochan/which@2.0.3':
     dependencies:
@@ -14321,7 +14520,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postcss@8.5.23:
+  postcss@8.5.25:
     dependencies:
       nanoid: 3.3.16
       picocolors: 1.1.1
@@ -14567,15 +14766,15 @@ snapshots:
       glob: 13.0.6
       package-json-from-dist: 1.0.1
 
-  rolldown-plugin-dts@0.27.6(oxc-resolver@11.24.2)(rolldown@packages+rolldown)(typescript@6.0.3):
+  rolldown-plugin-dts@0.27.14(oxc-resolver@11.24.2)(rolldown@packages+rolldown)(typescript@6.0.3):
     dependencies:
       dts-resolver: 3.0.0(oxc-resolver@11.24.2)
       get-tsconfig: 5.0.0-beta.5
       obug: 2.1.4
       rolldown: link:packages/rolldown
-      yuku-ast: 0.1.7
-      yuku-codegen: 0.5.48
-      yuku-parser: 0.5.48
+      yuku-ast: 0.8.1
+      yuku-codegen: 0.8.1
+      yuku-parser: 0.8.1
     optionalDependencies:
       typescript: 6.0.3
     transitivePeerDependencies:
@@ -14587,7 +14786,7 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.5)
       lightningcss: 1.33.0
       picomatch: 4.0.5
-      postcss: 8.5.23
+      postcss: 8.5.25
       rolldown: 1.0.0-beta.53(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
       tinyglobby: 0.2.17
     optionalDependencies:
@@ -15004,7 +15203,7 @@ snapshots:
 
   tinypool@2.1.0: {}
 
-  tinyrainbow@3.1.0: {}
+  tinyrainbow@3.1.1: {}
 
   to-regex-range@5.0.1:
     dependencies:
@@ -15285,7 +15484,7 @@ snapshots:
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.5
-      postcss: 8.5.23
+      postcss: 8.5.25
       rolldown: 1.1.5
       tinyglobby: 0.2.17
     optionalDependencies:
@@ -15301,7 +15500,7 @@ snapshots:
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.5
-      postcss: 8.5.23
+      postcss: 8.5.25
       rolldown: 1.1.5
       tinyglobby: 0.2.17
     optionalDependencies:
@@ -15313,15 +15512,15 @@ snapshots:
       tsx: 4.23.1
       yaml: 2.9.0
 
-  vitepress-plugin-feedback-tracker@0.2.0-alpha.1(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3)):
+  vitepress-plugin-feedback-tracker@0.2.0-alpha.1(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3)):
     dependencies:
-      vitepress: 2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)
+      vitepress: 2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)
       vue: 3.5.40(typescript@6.0.3)
 
-  vitepress-plugin-graphviz@0.1.0(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)):
+  vitepress-plugin-graphviz@0.1.0(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)):
     dependencies:
       '@hpcc-js/wasm-graphviz': 1.22.0
-      vitepress: 2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)
+      vitepress: 2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)
 
   vitepress-plugin-group-icons@1.7.5(vite@8.1.5(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0)):
     dependencies:
@@ -15350,13 +15549,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  vitepress-plugin-og@0.0.5(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)):
+  vitepress-plugin-og@0.0.5(vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)):
     dependencies:
       sharp: 0.34.5
       ufo: 1.6.4
-      vitepress: 2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)
+      vitepress: 2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)
 
-  vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.23)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0):
+  vitepress@2.0.0-alpha.18(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(postcss@8.5.25)(terser@5.49.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0):
     dependencies:
       '@docsearch/css': 4.6.3
       '@docsearch/js': 4.6.3
@@ -15378,7 +15577,7 @@ snapshots:
       vite: rolldown-vite@7.3.1(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0)
       vue: 3.5.40(typescript@6.0.3)
     optionalDependencies:
-      postcss: 8.5.23
+      postcss: 8.5.25
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -15425,7 +15624,7 @@ snapshots:
       tinybench: 2.9.0
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.1.1
       vite: 8.1.5(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
@@ -15454,7 +15653,7 @@ snapshots:
       tinybench: 2.9.0
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.1.1
       vite: 8.1.5(@types/node@24.10.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
@@ -15716,9 +15915,9 @@ snapshots:
       cookie: 1.1.1
       youch-core: 0.3.3
 
-  yuku-ast@0.1.7:
+  yuku-ast@0.8.1:
     dependencies:
-      '@yuku-toolchain/types': 0.5.43
+      '@yuku-toolchain/types': 0.8.1
 
   yuku-codegen@0.5.48:
     dependencies:
@@ -15736,6 +15935,22 @@ snapshots:
       '@yuku-codegen/binding-win32-arm64': 0.5.48
       '@yuku-codegen/binding-win32-x64': 0.5.48
 
+  yuku-codegen@0.8.1:
+    dependencies:
+      '@yuku-toolchain/types': 0.8.1
+    optionalDependencies:
+      '@yuku-codegen/binding-darwin-arm64': 0.8.1
+      '@yuku-codegen/binding-darwin-x64': 0.8.1
+      '@yuku-codegen/binding-freebsd-x64': 0.8.1
+      '@yuku-codegen/binding-linux-arm-gnu': 0.8.1
+      '@yuku-codegen/binding-linux-arm-musl': 0.8.1
+      '@yuku-codegen/binding-linux-arm64-gnu': 0.8.1
+      '@yuku-codegen/binding-linux-arm64-musl': 0.8.1
+      '@yuku-codegen/binding-linux-x64-gnu': 0.8.1
+      '@yuku-codegen/binding-linux-x64-musl': 0.8.1
+      '@yuku-codegen/binding-win32-arm64': 0.8.1
+      '@yuku-codegen/binding-win32-x64': 0.8.1
+
   yuku-parser@0.5.48:
     dependencies:
       '@yuku-toolchain/types': 0.5.43
@@ -15751,6 +15966,23 @@ snapshots:
       '@yuku-parser/binding-linux-x64-musl': 0.5.48
       '@yuku-parser/binding-win32-arm64': 0.5.48
       '@yuku-parser/binding-win32-x64': 0.5.48
+
+  yuku-parser@0.8.1:
+    dependencies:
+      '@yuku-toolchain/types': 0.8.1
+      yuku-ast: 0.8.1
+    optionalDependencies:
+      '@yuku-parser/binding-darwin-arm64': 0.8.1
+      '@yuku-parser/binding-darwin-x64': 0.8.1
+      '@yuku-parser/binding-freebsd-x64': 0.8.1
+      '@yuku-parser/binding-linux-arm-gnu': 0.8.1
+      '@yuku-parser/binding-linux-arm-musl': 0.8.1
+      '@yuku-parser/binding-linux-arm64-gnu': 0.8.1
+      '@yuku-parser/binding-linux-arm64-musl': 0.8.1
+      '@yuku-parser/binding-linux-x64-gnu': 0.8.1
+      '@yuku-parser/binding-linux-x64-musl': 0.8.1
+      '@yuku-parser/binding-win32-arm64': 0.8.1
+      '@yuku-parser/binding-win32-x64': 0.8.1
 
   zod@4.4.3: {}
 

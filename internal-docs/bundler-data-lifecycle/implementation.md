@@ -58,6 +58,8 @@ Data that survives across all builds. It is either immutable configuration or in
 
 **Reset rules:** `module_infos` and `transform_dependencies` are reset to fresh `Arc::default()` on `FullBuild` and `IncrementalFullBuild` (via `BundleFactory::create_bundle`). They are preserved across `IncrementalBuild`.
 
+A second reset path exists: `PluginDriver::clear()` empties `module_infos`, `watch_files`, the `this.load` completion map, and the shared `FileEmitter` in place, while deliberately keeping `transform_dependencies`. It runs from `BundleHandle::close()` (reached via `ensure_last_bundle_closed` at the start of every `write()`/`generate()`/`scan()`, and from `Bundler::close()`) and from the watch task before every rebuild. The incremental build path never calls `ensure_last_bundle_closed`, so in dev this reset only happens when the engine closes.
+
 ### Tier 2: Bundle-Level (Per-Build)
 
 Data created fresh for each build and discarded (or consumed) when the build completes.

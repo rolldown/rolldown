@@ -1,12 +1,11 @@
 use std::{
   borrow::Cow,
   ffi::OsString,
-  fs,
   path::{self, Path, PathBuf},
   sync::Arc,
 };
 
-use oxc_resolver::{PackageJson, ResolveOptions, TsconfigDiscovery};
+use oxc_resolver::{FileSystem as _, FileSystemOs, PackageJson, ResolveOptions, TsconfigDiscovery};
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
 use rolldown_utils::{dashmap::FxDashSet, url::clean_url};
@@ -74,10 +73,11 @@ impl From<u8> for AdditionalOptions {
   }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct ResolverCaches {
   package_json: PackageJsonCache,
   importer_exists: FxDashSet<String>,
+  file_system: FileSystemOs,
 }
 
 #[derive(Debug)]
@@ -94,15 +94,23 @@ impl Resolvers {
     external_conditions: &Vec<String>,
     builtin_checker: Arc<BuiltinChecker>,
   ) -> Self {
-    let resolver_caches = Arc::new(ResolverCaches::default());
+    let file_system = FileSystemOs::new(base_options.yarn_pnp);
+    let resolver_caches = Arc::new(ResolverCaches {
+      package_json: PackageJsonCache::default(),
+      importer_exists: FxDashSet::default(),
+      file_system: file_system.clone(),
+    });
 
     let resolver_lock = Arc::new(ResolverLock::new());
 
-    let base_resolver = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions {
-      // NOTE: yarn_pnp option affects the underlying fs cache, so it should be consistent for all resolvers
-      yarn_pnp: base_options.yarn_pnp,
-      ..oxc_resolver::ResolveOptions::default()
-    });
+    let base_resolver = oxc_resolver::Resolver::new_with_file_system(
+      file_system,
+      oxc_resolver::ResolveOptions {
+        // NOTE: yarn_pnp option affects the underlying fs cache, so it should be consistent for all resolvers
+        yarn_pnp: base_options.yarn_pnp,
+        ..oxc_resolver::ResolveOptions::default()
+      },
+    );
 
     let resolvers = (0..RESOLVER_COUNT)
       .map(|v| {
@@ -475,7 +483,12 @@ impl Resolver {
     p: &str,
   ) -> Option<Arc<PackageJsonWithOptionalPeerDependencies>> {
     let pj = self.get_nearest_package_json(p)?;
-    Some(self.resolver_caches.package_json.cached_package_json_optional_peer_dep(&pj))
+    Some(
+      self
+        .resolver_caches
+        .package_json
+        .cached_package_json_optional_peer_dep(&pj, &self.resolver_caches.file_system),
+    )
   }
 
   pub fn resolve_bare_import(
@@ -553,7 +566,7 @@ impl Resolver {
           return true;
         }
 
-        let exists = fs::exists(importer).unwrap_or(false);
+        let exists = file_exists(&self.resolver_caches.file_system, importer);
         if exists {
           self.resolver_caches.importer_exists.insert(importer.to_string());
         }
@@ -564,6 +577,10 @@ impl Resolver {
   }
 }
 
+fn file_exists(file_system: &FileSystemOs, path: &str) -> bool {
+  file_system.metadata(Path::new(path)).is_ok()
+}
+
 fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {
   if dedupe.is_empty() {
     return false;
@@ -571,6 +588,31 @@ fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {
 
   let pkg_id = get_npm_package_name(specifier).unwrap_or(clean_url(specifier));
   dedupe.contains(pkg_id)
+}
+
+#[cfg(test)]
+mod pnp_tests {
+  use std::fs::{create_dir_all, remove_dir_all, write};
+
+  use super::{FileSystemOs, file_exists};
+  use oxc_resolver::FileSystem as _;
+
+  #[test]
+  fn pnp_file_system_recognizes_virtual_importer() {
+    let root = std::env::temp_dir().join(format!("rolldown-pnp-{}", std::process::id()));
+    let physical_file = root.join(".yarn/cache/pkg/index.js");
+    let virtual_file = root.join(".yarn/__virtual__/pkg-virtual/0/cache/pkg/index.js");
+
+    create_dir_all(physical_file.parent().unwrap()).unwrap();
+    write(&physical_file, b"export {};").unwrap();
+
+    assert!(!virtual_file.exists());
+    let file_system = FileSystemOs::new(true);
+    assert!(file_exists(&file_system, virtual_file.to_str().unwrap()));
+    assert_eq!(file_system.read_to_string(&virtual_file).unwrap(), "export {};");
+
+    remove_dir_all(root).unwrap();
+  }
 }
 
 fn get_path_with_prefix(specifier: &str, try_prefix: &str) -> Option<String> {

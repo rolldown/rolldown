@@ -99,6 +99,14 @@ impl PluginDriver {
       if skipped_plugins.has_bit(plugin_idx) {
         continue;
       }
+      if should_skip_plugin_for_lazy_proxy(
+        self.should_skip_user_plugins_for_lazy_proxy_modules,
+        args.specifier,
+        plugin_idx,
+        self.lazy_compilation_plugin_idx,
+      ) {
+        continue;
+      }
       let ret = async {
         trace_action!(action::HookResolveIdCallStart {
           action: "HookResolveIdCallStart",

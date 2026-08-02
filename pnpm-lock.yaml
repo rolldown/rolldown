@@ -283,7 +283,7 @@ importers:
         specifier: ^6.29.0
         version: 6.29.0
       playwright-chromium:
-        specifier: ^1.60.0
+        specifier: ^1.62.0
         version: 1.62.1
       publint:
         specifier: ^0.3.21
@@ -798,7 +798,7 @@ importers:
         version: 8.21.1
     devDependencies:
       playwright:
-        specifier: ^1.60.0
+        specifier: ^1.62.0
         version: 1.62.1
 
   packages/test-dev-server/tests/fixtures/defer-sync-scan-data:
@@ -1099,7 +1099,7 @@ importers:
         specifier: 'catalog:'
         version: 0.1.0
       '@oxlint/plugins':
-        specifier: ^1.75.0
+        specifier: ^1.76.0
         version: 1.76.0
       acorn:
         specifier: 'catalog:'

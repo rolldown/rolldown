@@ -106,7 +106,6 @@ impl Resolvers {
     let base_resolver = oxc_resolver::Resolver::new_with_file_system(
       file_system,
       oxc_resolver::ResolveOptions {
-        // NOTE: yarn_pnp option affects the underlying fs cache, so it should be consistent for all resolvers
         yarn_pnp: base_options.yarn_pnp,
         ..oxc_resolver::ResolveOptions::default()
       },
@@ -566,7 +565,7 @@ impl Resolver {
           return true;
         }
 
-        let exists = file_exists(&self.resolver_caches.file_system, importer);
+        let exists = self.resolver_caches.file_system.metadata(Path::new(importer)).is_ok();
         if exists {
           self.resolver_caches.importer_exists.insert(importer.to_string());
         }
@@ -575,10 +574,6 @@ impl Resolver {
     }
     false
   }
-}
-
-fn file_exists(file_system: &FileSystemOs, path: &str) -> bool {
-  file_system.metadata(Path::new(path)).is_ok()
 }
 
 fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {
@@ -594,7 +589,7 @@ fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {
 mod pnp_tests {
   use std::fs::{create_dir_all, remove_dir_all, write};
 
-  use super::{FileSystemOs, file_exists};
+  use super::FileSystemOs;
   use oxc_resolver::FileSystem as _;
 
   #[test]
@@ -608,7 +603,7 @@ mod pnp_tests {
 
     assert!(!virtual_file.exists());
     let file_system = FileSystemOs::new(true);
-    assert!(file_exists(&file_system, virtual_file.to_str().unwrap()));
+    assert!(file_system.metadata(&virtual_file).is_ok());
     assert_eq!(file_system.read_to_string(&virtual_file).unwrap(), "export {};");
 
     remove_dir_all(root).unwrap();

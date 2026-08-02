@@ -72,6 +72,21 @@ impl Hash for MatchImportKindNormal {
   }
 }
 
+/// Bookkeeping for a collected star branch so it can be promoted if the primary path turns out to
+/// be a cycle: the outer re-export hops accumulated up to the collection point, the branch's own
+/// export symbol, and where the branch was collected — the star-exporting module (and the name
+/// requested there) whose cached `resolved_exports` winner points into the cycle.
+#[derive(Debug)]
+struct StarBranchPromotion {
+  reexports_prefix: Vec<SymbolRef>,
+  export: SymbolRef,
+  star_module: ModuleIdx,
+  imported: Specifier,
+}
+
+/// Non-cycle star branches keyed by resolution, in collection order.
+type DedupedStarBranches = FxIndexMap<MatchImportKind, StarBranchPromotion>;
+
 #[derive(Debug, PartialEq, Eq, Hash)]
 #[expect(clippy::box_collection)]
 pub enum MatchImportKind {
@@ -1274,6 +1289,48 @@ impl BindImportsAndExportsContext<'_> {
     }
   }
 
+  /// Apply `ResolveExport`'s null-cycle rule to the collected star branches. Cycle branches are
+  /// dropped from the agreement set: `ResolveExport` skips a star branch that resolves to null
+  /// instead of failing the whole lookup. Walking a cycle also re-visits the same module once per
+  /// lap, which collects the surviving branches repeatedly — those duplicates would otherwise
+  /// show up as repeated exporters, and repeated files, in the ambiguity diagnostic. An
+  /// insertion-ordered map keeps source order for the "first branch wins" rule and the first
+  /// collection's promotion state while deduplicating in linear time, since a name supplied by N
+  /// distinct `export *` sources would otherwise make the scan quadratic.
+  ///
+  /// When the primary path was itself a cycle it resolves to null, so the binding is whatever the
+  /// remaining branches say: per `ResolveExport` the first non-null branch wins and the rest only
+  /// have to agree with it. The promoted branch's state is returned (its prefix already spliced
+  /// into the result) so the caller can realign the collection module's cached winner.
+  fn promote_first_surviving_star_branch(
+    ret: MatchImportKind,
+    ambiguous_results: Vec<(MatchImportKind, StarBranchPromotion)>,
+  ) -> (MatchImportKind, DedupedStarBranches, Option<StarBranchPromotion>) {
+    let mut deduped_ambiguous_results = DedupedStarBranches::default();
+    for (result, promotion_state) in ambiguous_results {
+      if !matches!(result, MatchImportKind::Cycle { .. }) {
+        deduped_ambiguous_results.entry(result).or_insert(promotion_state);
+      }
+    }
+
+    let (ret, promoted) = if matches!(ret, MatchImportKind::Cycle { .. }) {
+      if let Some((mut promoted, mut promotion)) = deduped_ambiguous_results.shift_remove_index(0) {
+        if let MatchImportKind::Normal(normal) = &mut promoted {
+          let mut reexports = std::mem::take(&mut promotion.reexports_prefix);
+          reexports.append(&mut normal.reexports);
+          normal.reexports = reexports;
+        }
+        (promoted, Some(promotion))
+      } else {
+        (ret, None)
+      }
+    } else {
+      (ret, None)
+    };
+
+    (ret, deduped_ambiguous_results, promoted)
+  }
+
   fn match_import_with_export(
     &mut self,
     index_modules: &IndexModules,
@@ -1290,14 +1347,20 @@ impl BindImportsAndExportsContext<'_> {
 
     let mut ambiguous_results = vec![];
     let mut reexports = vec![];
+    // The ambiguous-branch recursion below inherits a clone of the caller's stack, so a cycle can
+    // match a frame belonging to the *outer* request. Resolving that as null is still right for
+    // THIS request, but such a resolution is context-dependent and must not be persisted into the
+    // context-free `resolved_exports` cache: standalone, the collection module may resolve the
+    // name to a different branch, or find it ambiguous. Frames at `stack_base` and beyond were
+    // pushed by this invocation, so only a cycle hitting them justifies the cache write below.
+    let stack_base = ctx.tracker_stack.len();
+    let mut cycle_in_own_frames = false;
     let ret = loop {
-      if ctx
-        .tracker_stack
-        .iter()
-        .rev()
-        .any(|prev| prev.importer == tracker.importer && prev.imported_as == tracker.imported_as)
-      {
+      if let Some(matched) = ctx.tracker_stack.iter().rposition(|prev| {
+        prev.importer == tracker.importer && prev.imported_as == tracker.imported_as
+      }) {
         // ResolveExport treats an in-progress (module, binding) request as null.
+        cycle_in_own_frames = matched >= stack_base;
         break MatchImportKind::Cycle {
           importer: tracker.importer,
           imported: tracker.imported.clone(),
@@ -1358,7 +1421,15 @@ impl BindImportsAndExportsContext<'_> {
                   );
                   let mut reexports_prefix = reexports.clone();
                   reexports_prefix.push(another_named_import.imported_as);
-                  ambiguous_results.push((ambiguous_result, (reexports_prefix, *ambiguous_ref)));
+                  ambiguous_results.push((
+                    ambiguous_result,
+                    StarBranchPromotion {
+                      reexports_prefix,
+                      export: *ambiguous_ref,
+                      star_module: tracker.importee,
+                      imported: tracker.imported.clone(),
+                    },
+                  ));
                 }
               }
               _ => {
@@ -1367,7 +1438,12 @@ impl BindImportsAndExportsContext<'_> {
                     symbol: *ambiguous_ref,
                     reexports: vec![],
                   }),
-                  (reexports.clone(), *ambiguous_ref),
+                  StarBranchPromotion {
+                    reexports_prefix: reexports.clone(),
+                    export: *ambiguous_ref,
+                    star_module: tracker.importee,
+                    imported: tracker.imported.clone(),
+                  },
                 ));
               }
             }
@@ -1425,37 +1501,8 @@ impl BindImportsAndExportsContext<'_> {
 
     tracing::trace!("ambiguous_results {:#?}", ambiguous_results);
     tracing::trace!("ret {:#?}", ret);
-    // `ResolveExport` skips a star branch that resolves to null instead of failing the whole
-    // lookup, so cycles must not take part in the agreement check below. Walking a cycle also
-    // re-visits the same module once per lap, which collects the surviving branches repeatedly —
-    // those duplicates would otherwise show up as repeated exporters, and repeated files, in the
-    // ambiguity diagnostic. An insertion-ordered map keeps source order for the "first branch
-    // wins" rule and the first result's outer prefix while deduplicating in linear time, since a
-    // name supplied by N distinct `export *` sources would otherwise make this scan quadratic.
-    let mut deduped_ambiguous_results = FxIndexMap::default();
-    for (result, promotion_state) in ambiguous_results {
-      if !matches!(result, MatchImportKind::Cycle { .. }) {
-        deduped_ambiguous_results.entry(result).or_insert(promotion_state);
-      }
-    }
-
-    // A cycle resolves to null, so the binding is whatever the remaining star branches say. Per
-    // `ResolveExport` the first non-null branch wins and the rest only have to agree with it.
-    let (ret, promoted_export) = if matches!(ret, MatchImportKind::Cycle { .. }) {
-      if let Some((mut promoted, (mut reexports_prefix, promoted_export))) =
-        deduped_ambiguous_results.shift_remove_index(0)
-      {
-        if let MatchImportKind::Normal(normal) = &mut promoted {
-          reexports_prefix.append(&mut normal.reexports);
-          normal.reexports = reexports_prefix;
-        }
-        (promoted, Some(promoted_export))
-      } else {
-        (ret, None)
-      }
-    } else {
-      (ret, None)
-    };
+    let (ret, deduped_ambiguous_results, promoted) =
+      Self::promote_first_surviving_star_branch(ret, ambiguous_results);
 
     if let Some(symbol_ref) = ret.bound_symbol()
       && deduped_ambiguous_results.keys().any(|result| *result != ret)
@@ -1468,13 +1515,25 @@ impl BindImportsAndExportsContext<'_> {
       };
     }
 
-    // Keep the cached star-export winner aligned with the promoted branch.
-    if matches!(&ret, MatchImportKind::Normal(_))
-      && let Some(promoted_export) = promoted_export
-      && let Specifier::Literal(imported) = &tracker.imported
-      && let Some(resolved_export) = self.metas[tracker.importee].resolved_exports.get_mut(imported)
+    // A star-exporting module on the walked chain cached the cycle branch as its
+    // `resolved_exports` winner (`add_exports_for_export_star` records the first branch in source
+    // order — the one this walk just found circular), and module interfaces are generated from
+    // that raw winner (e.g. the per-module exports under `preserveModules`), so re-point it at
+    // the promoted branch. The write targets the module the branch was collected from: that is
+    // the module whose cached winner is stale. The loop-final `tracker.importee` is merely where
+    // the lap closed — for cycles longer than one named hop it is a different module whose own
+    // direct export must not be clobbered. `cycle_in_own_frames` keeps context-dependent
+    // resolutions (cycles against an outer request's frames) out of the cache. Per slot the write
+    // is idempotent — the promoted branch for a given (module, name) is deterministic — but a
+    // cycle threading several star modules only gets the collection module realigned; the other
+    // stale winners on the lap are a known limitation of this cache design.
+    if cycle_in_own_frames
+      && matches!(&ret, MatchImportKind::Normal(_))
+      && let Some(StarBranchPromotion { export, star_module, imported, .. }) = promoted
+      && let Specifier::Literal(imported) = &imported
+      && let Some(resolved_export) = self.metas[star_module].resolved_exports.get_mut(imported)
     {
-      resolved_export.symbol_ref = promoted_export;
+      resolved_export.symbol_ref = export;
     }
 
     if let Module::Normal(importee) = &self.index_modules[tracker.importee] {

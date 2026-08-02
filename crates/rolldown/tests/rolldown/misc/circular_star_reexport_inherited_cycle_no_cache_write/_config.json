@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "index.js"
+      }
+    ]
+  },
+  "expectError": true
+}

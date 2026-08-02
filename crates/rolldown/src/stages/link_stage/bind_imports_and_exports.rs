@@ -73,6 +73,7 @@ impl Hash for MatchImportKindNormal {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
+#[expect(clippy::box_collection)]
 pub enum MatchImportKind {
   // "sourceIndex" and "ref" are in use
   Normal(MatchImportKindNormal),

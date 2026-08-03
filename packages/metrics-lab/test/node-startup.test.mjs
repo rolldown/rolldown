@@ -34,7 +34,7 @@ test('every supported --ready form parses to its own probe kind', () => {
   assert.ok(!stdout.pattern.test('still booting'));
 });
 
-test('an unparseable ready spec names every supported form', () => {
+test('an unparsable ready spec names every supported form', () => {
   assert.throws(
     () => parseReadySpec('whenever'),
     (err) => {

@@ -1590,11 +1590,35 @@ impl GenerateStage<'_> {
 
       let mut resolver =
         ConflictResolver::with_capacity(index_chunk_exported_symbols[chunk_id].len());
+      // Same liveness rule as the cross-chunk import loop above (dynamic entries
+      // register their namespace refs among the exported-symbol candidates).
+      let is_live = |chunk_export: SymbolRef| {
+        if let Some(m) = self.link_output.module_table[chunk_export.owner].as_normal()
+          && m.namespace_object_ref == chunk_export
+        {
+          self.link_output.metas[chunk_export.owner].namespace_included
+        } else {
+          non_namespace_symbol_is_live(used_symbol_refs, order_live_symbols, chunk_export)
+        }
+      };
       // Names taken from source symbols can collide with `then`; reserving it up front deconflicts
       // those to `then$1` like any other collision. See
       // internal-docs/code-splitting/design.md ("Thenable chunk namespaces"). Predefined names take the `lst` branch below,
       // which re-reserves (a no-op) and emits them verbatim, so a public `then` still stays `then`.
       resolver.reserve(CompactStr::new_const(THENABLE_HAZARD_EXPORT_NAME));
+      // Every predefined name is a contract emitted verbatim, so reserve them all before naming
+      // anything. Reserving one as the loop reaches it is too late for a bundler-owned name the
+      // sort order puts first: it takes the bare name, the predefined entry emits it anyway, and
+      // the chunk carries the same export name twice. The minified branch above seeds
+      // `used_names` from the entry signature for the same reason.
+      for (chunk_export, predefined_names) in &index_chunk_exported_symbols[chunk_id] {
+        if predefined_names.is_empty() || !is_live(*chunk_export) {
+          continue;
+        }
+        for name in predefined_names {
+          resolver.reserve(CompactStr::new(name));
+        }
+      }
       for (chunk_export, predefined_names) in index_chunk_exported_symbols[chunk_id]
         .iter()
         .sorted_by_cached_key(|(symbol_ref, _predefined_names)| {
@@ -1606,16 +1630,7 @@ impl GenerateStage<'_> {
           )
         })
       {
-        // Same liveness rule as the cross-chunk import loop above (dynamic entries
-        // register their namespace refs among the exported-symbol candidates).
-        let is_live = if let Some(m) = self.link_output.module_table[chunk_export.owner].as_normal()
-          && m.namespace_object_ref == *chunk_export
-        {
-          self.link_output.metas[chunk_export.owner].namespace_included
-        } else {
-          non_namespace_symbol_is_live(used_symbol_refs, order_live_symbols, *chunk_export)
-        };
-        if !is_live {
+        if !is_live(*chunk_export) {
           continue;
         }
         let original_name: CompactStr = match predefined_names.as_slice() {

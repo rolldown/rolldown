@@ -1,0 +1,13 @@
+{
+  "_comment": "An attributed external export star must keep its `with` clause when the already-loaded pass considers extracting app.js's namespace. The runtime namespace import is not equivalent if it silently drops the module type.",
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["data.json"]
+  }
+}

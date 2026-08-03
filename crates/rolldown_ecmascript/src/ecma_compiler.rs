@@ -8,7 +8,9 @@ use oxc::{
     builder::AstBuilder,
   },
   codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions, LegalComment},
-  minifier::{Minifier, MinifierOptions},
+  minifier::{
+    ManglePropertiesOptions, Minifier, MinifierOptions, PropertyMangleCollection, PropertyMangler,
+  },
   parser::{ParseOptions, Parser},
   span::{SPAN, SourceType},
 };
@@ -116,12 +118,16 @@ impl EcmaCompiler {
     filename: &str,
     compress: bool,
     minify_options: MinifierOptions,
+    property_mangler: Option<&PropertyMangler>,
     codegen_options: CodegenOptions,
   ) -> (String, Option<SourceMap<'a>>) {
     let mut program = Parser::new(allocator, source_text, source_type)
       .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
       .parse()
       .program;
+    if let Some(property_mangler) = property_mangler {
+      property_mangler.rewrite(&mut program, allocator);
+    }
     let minifier = Minifier::new(minify_options);
     let ret = if compress {
       minifier.minify(allocator, &mut program)
@@ -137,6 +143,19 @@ impl EcmaCompiler {
       .with_private_member_mappings(ret.class_private_mappings)
       .build(&program);
     (ret.code, ret.map)
+  }
+
+  pub fn collect_property_mangle_candidates(
+    allocator: &Allocator,
+    source_text: &str,
+    source_type: SourceType,
+    options: &ManglePropertiesOptions,
+  ) -> PropertyMangleCollection {
+    let program = Parser::new(allocator, source_text, source_type)
+      .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
+      .parse()
+      .program;
+    PropertyMangleCollection::from_program(options, &program)
   }
 }
 

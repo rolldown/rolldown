@@ -1,10 +1,15 @@
-use oxc::codegen::{self, CodegenOptions, CommentOptions};
+use oxc::{
+  codegen::{self, CodegenOptions, CommentOptions},
+  minifier::{PropertyMangleCollection, PropertyMangler},
+};
 use oxc_allocator::AllocatorPool;
 use rolldown_common::{MinifyOptions, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::collapse_sourcemaps;
-use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
+use rolldown_utils::rayon::{
+  IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+};
 
 use crate::type_alias::IndexInstantiatedChunks;
 
@@ -16,12 +21,62 @@ impl GenerateStage<'_> {
     options: &NormalizedBundlerOptions,
     chunks: &mut IndexInstantiatedChunks,
   ) -> BuildResult<()> {
-    let (compress, minify_option, remove_whitespace) = match &options.minify {
+    let (compress, mut minify_option, remove_whitespace) = match &options.minify {
       MinifyOptions::Disabled => return Ok(()),
-      MinifyOptions::DeadCodeEliminationOnly(options) => (false, options, false),
-      MinifyOptions::Enabled((options, remove_whitespace)) => (true, options, *remove_whitespace),
+      MinifyOptions::DeadCodeEliminationOnly(options) => (false, options.clone(), false),
+      MinifyOptions::Enabled((options, remove_whitespace)) => {
+        (true, options.clone(), *remove_whitespace)
+      }
     };
     let allocator_pool = AllocatorPool::new(rayon::current_num_threads());
+
+    let has_multiple_property_mangle_chunks = minify_option.mangle_properties.is_some()
+      && chunks
+        .iter()
+        .filter(|chunk| {
+          !test_d_ts_pattern(chunk.preliminary_filename.as_str())
+            && matches!(chunk.kind, rolldown_common::InstantiationKind::Ecma(_))
+        })
+        .take(2)
+        .count()
+        > 1;
+
+    // Multiple chunks must contribute candidates before any chunk is rewritten. A single chunk
+    // keeps the option in `MinifierOptions`, which lets Oxc collect and rewrite during the normal
+    // parse instead of paying for the global collection pass.
+    let property_mangler = if has_multiple_property_mangle_chunks {
+      let property_options = minify_option
+        .mangle_properties
+        .take()
+        .expect("property options are present when coordination is enabled");
+      let collected = chunks
+        .par_iter()
+        .map(|chunk| -> anyhow::Result<Option<PropertyMangleCollection>> {
+          if test_d_ts_pattern(chunk.preliminary_filename.as_str())
+            || !matches!(chunk.kind, rolldown_common::InstantiationKind::Ecma(_))
+          {
+            return Ok(None);
+          }
+          let allocator_guard = allocator_pool.get();
+          Ok(Some(EcmaCompiler::collect_property_mangle_candidates(
+            &allocator_guard,
+            chunk.content.try_as_inner_str()?,
+            options.format.source_type().with_jsx(true),
+            &property_options,
+          )))
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+
+      let mut property_mangler = PropertyMangler::new(property_options);
+      for collected in collected.into_iter().flatten() {
+        property_mangler.merge_collected(collected);
+      }
+      property_mangler.assign();
+      Some(property_mangler)
+    } else {
+      None
+    };
+
     chunks.par_iter_mut().try_for_each(|chunk| -> anyhow::Result<()> {
       if test_d_ts_pattern(chunk.preliminary_filename.as_str()) {
         return Ok(());
@@ -57,6 +112,7 @@ impl GenerateStage<'_> {
               chunk.preliminary_filename.as_str(),
               compress,
               minify_option.clone(),
+              property_mangler.as_ref(),
               codegen_options,
             );
             let collapsed_map = match (&chunk.map, &new_map) {

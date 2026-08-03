@@ -1,4 +1,8 @@
-import type { MinifyOptions as BindingMinifyOptions, PreRenderedChunk } from '../binding.cjs';
+import type {
+  ManglePropertiesOptions as BindingManglePropertiesOptions,
+  MinifyOptions as BindingMinifyOptions,
+  PreRenderedChunk,
+} from '../binding.cjs';
 import type { RolldownOutputPluginOption } from '../plugin';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import type { ModuleInfo } from '../types/module-info';
@@ -100,7 +104,27 @@ export type CodeSplittingNameFunction = (
 /** @inline @category Code Splitting */
 export type CodeSplittingTestFunction = (id: string) => boolean | undefined | void;
 
-export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
+export interface ManglePropertiesOptions extends Omit<BindingManglePropertiesOptions, 'cache'> {
+  /**
+   * Stable mappings from original names to output names. `false` reserves an original name.
+   * Rolldown does not expose newly generated mappings, so provide a cache when mappings must
+   * remain stable across builds with different output graphs.
+   */
+  cache?: Record<string, string | false>;
+}
+
+export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap' | 'mangleProps'> & {
+  /**
+   * Mangle matching property names with one mapping shared by all rendered JavaScript chunks that
+   * Rolldown minifies. This is unsafe for indirect property access: arbitrary strings and property
+   * names lowered by earlier transforms into unannotated helper strings are not rewritten.
+   * Properties accessed through imported module namespace objects must also be reserved.
+   * External code, prebuilt chunks, post-minify addons, `.d.ts`/`.d.cts`/`.d.mts`-named chunks, and
+   * later output-hook mutations also do not participate. Exclude or reserve properties used across
+   * these boundaries.
+   */
+  mangleProps?: ManglePropertiesOptions;
+};
 
 export interface CommentsOptions {
   /**

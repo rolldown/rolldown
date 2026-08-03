@@ -15,12 +15,17 @@ use crate::{
 use napi::{Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
 use rolldown::{BundleHandle, BundlerConfig};
+use rolldown_error::{BuildDiagnostic, PluginTimings};
+use rolldown_plugin::BuildTimings;
 use std::sync::Arc;
 
 #[napi]
 pub struct BindingBundler {
   inner: ClassicBundler,
-  last_bundle_handle: Option<BundleHandle>,
+  /// Every build this bundler has run, in order. A `RolldownBuild` may `generate` more
+  /// than once, and the plugin-timing measurement accumulates across all of them, so the
+  /// clocks it is judged against are summed over all of them too.
+  bundle_handles: Vec<BundleHandle>,
 }
 
 #[napi]
@@ -28,7 +33,7 @@ impl BindingBundler {
   #[napi(constructor)]
   pub fn new() -> Self {
     let inner = ClassicBundler::new();
-    Self { inner, last_bundle_handle: None }
+    Self { inner, bundle_handles: Vec::new() }
   }
 
   #[napi]
@@ -45,7 +50,7 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.last_bundle_handle = Some(bundle.context());
+      self.bundle_handles.push(bundle.context());
     }
 
     let fut = async move {
@@ -96,7 +101,7 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.last_bundle_handle = Some(bundle.context());
+      self.bundle_handles.push(bundle.context());
     }
 
     let fut = async move {
@@ -146,7 +151,7 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.last_bundle_handle = Some(bundle.context());
+      self.bundle_handles.push(bundle.context());
     }
 
     let fut = async move {
@@ -183,9 +188,12 @@ impl BindingBundler {
   // - This also affects how the code is written in `Bundler::close()/inner.close()`, see the implementation there for more details.
   pub fn close<'env>(&mut self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let cleanup_fut = self.inner.close();
+    let handles = std::mem::take(&mut self.bundle_handles);
     spawn_boxed_future(env, async move {
       let res = cleanup_fut.await;
       handle_result(res)?;
+      // After the cleanup, so `closeBundle` is part of what the other side reports.
+      handle_result(report_plugin_timings(&handles).await)?;
       Ok(())
     })
   }
@@ -198,11 +206,47 @@ impl BindingBundler {
   #[napi]
   pub fn get_watch_files(&self) -> Vec<String> {
     self
-      .last_bundle_handle
-      .as_ref()
+      .bundle_handles
+      .last()
       .map(|handle| handle.watch_files().iter().map(|s| s.to_string()).collect())
       .unwrap_or_default()
   }
+}
+
+/// Ask the JavaScript side what its plugin callbacks cost, and warn if it is worth saying.
+///
+/// The gate lives here because the clocks it needs — the build and the link stage — are only
+/// visible on this side; what the callbacks actually cost is only visible on the other. The
+/// diagnostic then goes out through the usual path, so `checks.pluginTimings` filters it
+/// like any other.
+async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
+  let Some(last) = handles.last() else {
+    return Ok(());
+  };
+  let options = last.options();
+  let Some(get_timings) = options.plugin_timings.as_ref() else {
+    return Ok(());
+  };
+
+  // Summed over every output, because the measurement on the other side is: one
+  // `RolldownBuild` may generate more than once, and judging a cumulative measurement
+  // against only the last output's clocks would both suppress and inflate reports.
+  let total_micros: u64 =
+    handles.iter().map(|handle| handle.plugin_driver().build_timings.total_micros()).sum();
+  let link_micros: u64 =
+    handles.iter().map(|handle| handle.plugin_driver().build_timings.link_stage_micros()).sum();
+  if !BuildTimings::is_plugin_bound(total_micros, link_micros) {
+    return Ok(());
+  }
+
+  let measurement = get_timings.exec().await?;
+  #[expect(clippy::cast_precision_loss)]
+  let build_ms = total_micros as f64 / 1_000.0;
+  let Some(timings) = PluginTimings::new(build_ms, measurement) else {
+    return Ok(());
+  };
+  handle_warnings(vec![BuildDiagnostic::plugin_timings(timings).with_severity_warning()], options)
+    .await
 }
 
 impl BindingBundler {

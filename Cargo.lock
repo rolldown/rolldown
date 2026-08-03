@@ -1096,18 +1096,18 @@ checksum = "c22a2041e3874a055a4eb03ea2395aaccdefa84ce75b31d542d72a741c3c6ad3"
 
 [[package]]
 name = "json-strip-comments"
-version = "3.1.1"
+version = "3.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9301b34ecbe81051a62001a2dfa56d906628efdfbc68153e0a4d5eba58181ece"
+checksum = "01ed659c5f428031b9c1fb7de6729af2eb491654d4bcd416a5b5b704986b9658"
 dependencies = [
  "memchr",
 ]
 
 [[package]]
 name = "jsonschema"
-version = "0.49.1"
+version = "0.49.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9cc9116a0f75b7336e55eb2a2a0ddef86c37cadf02924a571751aa123d5a0290"
+checksum = "508004a5500f2e1f68af048f70feea2de86d35ab115d85716530860822aef397"
 dependencies = [
  "ahash",
  "bytecount",
@@ -1134,18 +1134,18 @@ dependencies = [
 
 [[package]]
 name = "jsonschema-regex"
-version = "0.49.1"
+version = "0.49.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "628a1f02bda4651d9a6088ee6386a92f0ee96255b0c99e9dfe1be91bf83bd838"
+checksum = "5a8b30cafa78358ae6cd1494a7d6410b89530e28bf567f862c869c667e900d9f"
 dependencies = [
  "regex-syntax",
 ]
 
 [[package]]
 name = "jsonschema-value"
-version = "0.49.1"
+version = "0.49.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75d94a372f8d81d070fd405065c6b1168d8248d1d6adad073ac708de254698c6"
+checksum = "5526bd381d230af94908d07e6835a33fd82a465e12f5f1e9c81f5c2aa23b3c21"
 dependencies = [
  "ahash",
  "bytecount",
@@ -1330,9 +1330,9 @@ checksum = "5282704fbe8d49b0cf8b08e3f33233416a528658f205c7e5ace63b582de0b11c"
 
 [[package]]
 name = "napi-derive"
-version = "3.6.1"
+version = "3.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d5c9c02556ea6dc99dffd36c1ce60141411657438501a125b675776d011ce92"
+checksum = "6d9002b2940f0184444754546e0fcd15182f56948e6f381968b019d549387c42"
 dependencies = [
  "convert_case",
  "ctor",
@@ -1344,9 +1344,9 @@ dependencies = [
 
 [[package]]
 name = "napi-derive-backend"
-version = "6.1.0"
+version = "6.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a9d8365cf97f54d9b6d6dbf83a25ca227ad7d6e920717426c599225aca6740b"
+checksum = "d60b5d773ad46c698c8cc2cd9fde0b283d39cbb7f71c04bee633c7bdba4423bd"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -2417,9 +2417,9 @@ dependencies = [
 
 [[package]]
 name = "referencing"
-version = "0.49.1"
+version = "0.49.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "978badf4419c9d0e1bc6e7466e99277f829d768257670c46d88121ca75e34bf7"
+checksum = "7af3eb523cce0df0af3c30d624b829b2dabd233172b5bc2615fcd03ceae8f746"
 dependencies = [
  "ahash",
  "fluent-uri",
@@ -2479,7 +2479,7 @@ checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
 
 [[package]]
 name = "rolldown"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "append-only-vec",
@@ -2667,7 +2667,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_common"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2703,7 +2703,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_dev"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2724,7 +2724,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_dev_common"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "derive_more",
  "rolldown_common",
@@ -2736,7 +2736,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_devtools"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "blake3",
  "rolldown_devtools_action",
@@ -2749,7 +2749,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_devtools_action"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "serde",
  "ts-rs",
@@ -2757,7 +2757,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_ecmascript"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "arcstr",
  "oxc",
@@ -2769,7 +2769,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_ecmascript_utils"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "memchr",
  "oxc",
@@ -2779,7 +2779,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_error"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2796,7 +2796,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_fs"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "oxc_resolver",
  "vfs",
@@ -2804,7 +2804,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_fs_watcher"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "rolldown-notify",
  "rolldown-notify-debouncer-full",
@@ -2813,7 +2813,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2842,7 +2842,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_asset_module"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "rolldown_common",
@@ -2854,7 +2854,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_bundle_analyzer"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "arcstr",
  "rolldown_common",
@@ -2868,7 +2868,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_chunk_import_map"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "arcstr",
  "rolldown_common",
@@ -2881,7 +2881,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_copy_module"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2894,7 +2894,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_data_url"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "arcstr",
  "base64-simd",
@@ -2907,7 +2907,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_esm_external_require"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "nodejs-built-in-modules",
  "rolldown_common",
@@ -2918,7 +2918,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_hmr"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "rolldown_common",
  "rolldown_plugin",
@@ -2926,7 +2926,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_isolated_declaration"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "arcstr",
  "oxc",
@@ -2940,7 +2940,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_lazy_compilation"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2953,7 +2953,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_oxc_runtime"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "arcstr",
  "phf",
@@ -2964,7 +2964,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_replace"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "oxc",
@@ -2980,7 +2980,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_utils"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -3133,7 +3133,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_vite_resolve"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -3187,7 +3187,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_resolver"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -3202,7 +3202,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_sourcemap"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "criterion2",
  "memchr",
@@ -3212,7 +3212,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_std_utils"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "regex",
  "sugar_path",
@@ -3258,7 +3258,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_tracing"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "tracing",
  "tracing-chrome",
@@ -3267,7 +3267,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_utils"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -3305,7 +3305,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_watcher"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -3325,7 +3325,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_workspace"
-version = "1.2.1"
+version = "1.2.2"
 
 [[package]]
 name = "ropey"
@@ -3388,9 +3388,9 @@ dependencies = [
 
 [[package]]
 name = "schemars"
-version = "1.2.1"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2b42f36aa1cd011945615b92222f6bf73c599a102a300334cd7f8dbeec726cc"
+checksum = "687274d293b6cdc6e73e0fee520bf2049650090d7164f87672d212a3c530cf4a"
 dependencies = [
  "dyn-clone",
  "ref-cast",
@@ -3401,14 +3401,14 @@ dependencies = [
 
 [[package]]
 name = "schemars_derive"
-version = "1.2.1"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d115b50f4aaeea07e79c1912f645c7513d81715d0420f8bc77a18c6260b307f"
+checksum = "d98c67716b46af2f0b8cf752abc930f6f9aecfbf671ecfb531db8a31dbe4e2ba"
 dependencies = [
  "proc-macro2",
  "quote",
  "serde_derive_internals",
- "syn 2.0.119",
+ "syn 3.0.3",
 ]
 
 [[package]]
@@ -3467,13 +3467,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive_internals"
-version = "0.29.1"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18d26a20a969b9e3fdf2fc2d9f21eda6c40e2de84c9408bb5d3b05d499aae711"
+checksum = "f852137cce035d6a4df67ccce505ff6b3e9fd3a10e3e52b24dc71e650bb1a9bd"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.119",
+ "syn 3.0.3",
 ]
 
 [[package]]
@@ -3609,7 +3609,7 @@ checksum = "d08889ec5408683408db66ad89e0e1f93dff55c73a4ccc71c427d5b277ee47e6"
 
 [[package]]
 name = "string_wizard"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "insta",
  "memchr",
@@ -3716,9 +3716,9 @@ dependencies = [
 
 [[package]]
 name = "testing_macros"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7442bd3ca09f38d4788dc5ebafbc1967c3717726b4b074db011d470b353548b"
+checksum = "5c21fb13b703fb0bf466ec891704055ec18e2a8c8d2d47c31b65d7006044e146"
 dependencies = [
  "anyhow",
  "glob",

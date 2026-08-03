@@ -2442,6 +2442,8 @@ export interface BindingInputOptions {
   keepNames?: boolean
   checks?: BindingChecksOptions
   deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
+  /** Asked for while the build is closing, so what it returns includes `closeBundle`. */
+  pluginTimings?: undefined | (() => BindingPluginTimingsMeasurement)
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
   devtools?: BindingDevtoolsOptions
   invalidateJsSideCache?: () => void
@@ -2710,6 +2712,33 @@ export interface BindingPluginOptions {
 export declare enum BindingPluginOrder {
   Pre = 0,
   Post = 1
+}
+
+/**
+ * What one callback cost, measured inside it on the JavaScript side — the one place the
+ * measurement exists, since this side can only bracket dispatch and completion.
+ */
+export interface BindingPluginTiming {
+  /** The plugin the callback belongs to, or the options it was configured on. */
+  owner: string
+  kind: 'plugin' | 'outputOption' | 'inputOption'
+  hook: string
+  calls: number
+  ms: number
+  maxInFlight: number
+  /** How much of `ms` is double counted because calls overlapped. */
+  overlapMs: number
+  /**
+   * Whether `ms` may be compared against another row's — false once two calls of this hook
+   * overlapped, because then their spans cover work each other was doing.
+   */
+  rankable: boolean
+}
+
+export interface BindingPluginTimingsMeasurement {
+  /** Wall time in which any measured callback was running, counting overlap once. */
+  busyMs: number
+  rows: Array<BindingPluginTiming>
 }
 
 export interface BindingPluginWithIndex {

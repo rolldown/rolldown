@@ -6,10 +6,17 @@ import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
 import { logger } from '../cli/logger';
+import {
+  measureHookCost,
+  measureIfFunction,
+  OUTPUT_OPTIONS_OWNER,
+  type PluginTimingsRecorder,
+} from './plugin-timings';
 
 export function bindingifyOutputOptions(
   outputOptions: OutputOptions,
   pluginContextData: PluginContextData,
+  timings: PluginTimingsRecorder | undefined,
 ): BindingOutputOptions {
   const {
     dir,
@@ -38,6 +45,7 @@ export function bindingifyOutputOptions(
     paths,
     generatedCode,
     file,
+    // Already measured at the source; see `createBundlerOptions`.
     sanitizeFileName,
     preserveModules,
     virtualDirname,
@@ -61,6 +69,7 @@ export function bindingifyOutputOptions(
     outputOptions.advancedChunks,
     manualChunks,
     pluginContextData,
+    timings,
   );
 
   return {
@@ -73,25 +82,51 @@ export function bindingifyOutputOptions(
     sourcemap: bindingifySourcemap(sourcemap),
     sourcemapBaseUrl,
     sourcemapDebugIds,
-    sourcemapFileNames,
+    sourcemapFileNames: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'sourcemapFileNames',
+      sourcemapFileNames,
+    ),
     sourcemapExcludeSources,
-    sourcemapIgnoreList: sourcemapIgnoreList ?? /node_modules/,
-    sourcemapPathTransform,
-    banner: bindingifyAddon(banner),
-    footer: bindingifyAddon(footer),
-    postBanner: bindingifyAddon(postBanner),
-    postFooter: bindingifyAddon(postFooter),
-    intro: bindingifyAddon(intro),
-    outro: bindingifyAddon(outro),
+    sourcemapIgnoreList: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'sourcemapIgnoreList',
+      sourcemapIgnoreList ?? /node_modules/,
+    ),
+    sourcemapPathTransform: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'sourcemapPathTransform',
+      sourcemapPathTransform,
+    ),
+    banner: bindingifyAddon(banner, 'banner', timings),
+    footer: bindingifyAddon(footer, 'footer', timings),
+    postBanner: bindingifyAddon(postBanner, 'postBanner', timings),
+    postFooter: bindingifyAddon(postFooter, 'postFooter', timings),
+    intro: bindingifyAddon(intro, 'intro', timings),
+    outro: bindingifyAddon(outro, 'outro', timings),
     extend: outputOptions.extend,
-    globals,
-    paths,
+    globals: measureIfFunction(timings, OUTPUT_OPTIONS_OWNER, 'globals', globals),
+    paths: measureIfFunction(timings, OUTPUT_OPTIONS_OWNER, 'paths', paths),
     generatedCode,
     esModule,
     name,
+    // Already measured at the source; see `createBundlerOptions`.
     assetFileNames: bindingifyAssetFilenames(assetFileNames),
-    entryFileNames,
-    chunkFileNames,
+    entryFileNames: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'entryFileNames',
+      entryFileNames,
+    ),
+    chunkFileNames: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'chunkFileNames',
+      chunkFileNames,
+    ),
     // TODO(sapphi-red): support parallel plugins
     plugins: [],
     minify: outputOptions.minify,
@@ -116,12 +151,19 @@ export function bindingifyOutputOptions(
 
 type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro';
 
-function bindingifyAddon(configAddon: OutputOptions[AddonKeys]): BindingOutputOptions[AddonKeys] {
+function bindingifyAddon(
+  configAddon: OutputOptions[AddonKeys],
+  name: AddonKeys | 'postBanner' | 'postFooter',
+  timings: PluginTimingsRecorder | undefined,
+): BindingOutputOptions[AddonKeys] {
   if (configAddon == null || configAddon === '') {
     return undefined;
   }
   if (typeof configAddon === 'function') {
-    return async (chunk) => configAddon(transformRenderedChunk(chunk));
+    // Measure the user's callback, not `transformRenderedChunk` around it, so the row is
+    // their work rather than the conversion their choice of a function forced.
+    const measured = measureHookCost(timings, OUTPUT_OPTIONS_OWNER, name, configAddon);
+    return async (chunk) => measured(transformRenderedChunk(chunk));
   }
   return configAddon;
 }
@@ -201,6 +243,7 @@ function bindingifyCodeSplitting(
   advancedChunks: OutputOptions['advancedChunks'],
   manualChunks: OutputOptions['manualChunks'],
   pluginContextData: PluginContextData,
+  timings: PluginTimingsRecorder | undefined,
 ): {
   inlineDynamicImports: BindingOutputOptions['inlineDynamicImports'];
   advancedChunks: BindingOutputOptions['manualCodeSplitting'];
@@ -313,13 +356,25 @@ function bindingifyCodeSplitting(
     advancedChunksResult = {
       ...restOptions,
       groups: groups?.map((group) => {
-        const { name, ...restGroup } = group;
+        const { name, test, ...restGroup } = group;
         return {
           ...restGroup,
+          test:
+            typeof test === 'function'
+              ? measureHookCost(timings, OUTPUT_OPTIONS_OWNER, 'codeSplitting groups[].test', test)
+              : test,
+          // The core calls this classifier directly rather than through a plugin, so it
+          // belongs to no plugin's rows — and it runs once per module, which is how it ends
+          // up dominating a build.
           name:
             typeof name === 'function'
-              ? (id: string, ctx: BindingChunkingContext) =>
-                  name(id, new ChunkingContextImpl(ctx, pluginContextData))
+              ? measureHookCost(
+                  timings,
+                  OUTPUT_OPTIONS_OWNER,
+                  'codeSplitting groups[].name',
+                  (id: string, ctx: BindingChunkingContext) =>
+                    name(id, new ChunkingContextImpl(ctx, pluginContextData)),
+                )
               : name,
         };
       }),

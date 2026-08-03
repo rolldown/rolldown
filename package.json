@@ -23,15 +23,15 @@
     "@types/node": "catalog:",
     "cjs-module-lexer": "^2.1.0",
     "knip": "^6.29.0",
-    "playwright-chromium": "^1.60.0",
+    "playwright-chromium": "^1.62.0",
     "publint": "^0.3.21",
     "remove-unused-vars": "^0.0.14",
     "rolldown": "workspace:*",
     "typescript": "catalog:",
-    "vite-plus": "^0.2.6"
+    "vite-plus": "^0.2.7"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
-  "packageManager": "pnpm@11.9.0"
+  "packageManager": "pnpm@11.17.0"
 }

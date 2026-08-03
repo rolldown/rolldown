@@ -28,4 +28,13 @@ Inclusion runs before chunking, so the record cannot name a chunk directly. It s
 
 An observer that ends up without a live chunk cannot be attributed, so every chunk emitting the external honours it — contributing only that observer's mode, not the bundle union. This fallback is load-bearing: narrowing it away under-approximates, which is what produced #10069.
 
-`patch_module_dependencies` stays bundle-wide on purpose. It runs before chunking and cannot know which chunks will wrap; over-supplying a runtime edge is dead weight (a bindings-less `require` of the runtime chunk), while under-supplying panics in helper finalization.
+A chunk that wraps also needs `__toESM` in its depended symbols, and the two decisions have to agree. Over-supplying costs output: a module that gains the edge without wrapping puts `__toESM` in its chunk's depended symbols, and the resulting cross-chunk import loses its binding to DCE while the side-effectful `require` of the runtime chunk survives — a bare `require("./rolldown-runtime.js")` for a helper nothing calls. Under-supplying is worse: a chunk that wraps without the edge references a helper it never imported, and finalization panics looking up the missing cross-chunk binding.
+
+They agree because the wrap arrives through exactly **two channels**, each carrying its own edge:
+
+- **Recorded observations.** `chunk_recorded_external_interop` wraps the chunks observers landed in, and `patch_module_dependencies` narrows the edge to those same observers. Entry-export references belong here and reach neither the statement walk nor any `named_imports`, so `note_external_interop` runs over `referenced_symbols_by_entry_point_chunk` too — dropping that call panics (`external_interop_default_reexport_only_reachable_via_entry_export`).
+- **Statically written imports.** `chunk_external_interop_modes` also wraps on the chunk's own `named_imports`, with no liveness filter: a default or namespace import whose binding nothing reads still wraps, and records no observer. The same `specifier_needs_interop` predicate supplies its edge twice over — `reference_needed_symbols` registers `__toESM` against the kept import statement, and `compute_chunk_imports` re-adds the cross-chunk import for any chunk whose direct external imports need interop (`external_interop_dead_default_import_keeps_helper`).
+
+So the invariant is pairwise, not one source answering both questions. Narrowing a channel's wrap without its edge — or the more tempting inverse, registering `ToEsm` only for imports tree-shaking kept alive — reopens the panic for the cases the other channel does not cover.
+
+Chunks do not exist yet when `patch_module_dependencies` runs, so `is_included` stands in for "will have a chunk". An observer that is not included cannot be attributed to one, and rendering falls back to wrapping every chunk emitting the external — so every referencing module keeps the edge, matching that fallback.

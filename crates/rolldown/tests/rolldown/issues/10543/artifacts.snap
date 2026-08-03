@@ -1,0 +1,79 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## icon.js
+
+```js
+import { r as init_w, t as P } from "./w.js";
+//#region icon.js
+init_w();
+const iconP = P;
+//#endregion
+export { iconP };
+
+```
+
+## lab.js
+
+```js
+import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region top.js
+var top_exports = /* @__PURE__ */ __exportAll({ t: () => 2 });
+var init_top = __esmMin((() => {}));
+//#endregion
+//#region lab.cjs
+var require_lab = /* @__PURE__ */ __commonJSMin(((exports) => {
+	const { t } = (init_top(), __toCommonJS(top_exports));
+	exports.t = t;
+}));
+//#endregion
+export default require_lab();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```
+
+## styles.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as V, r as init_w, t as P } from "./w.js";
+//#region system.js
+var util;
+//#endregion
+//#region styles.js
+__esmMin((() => {
+	util = 1;
+}))();
+init_w();
+globalThis.__entry_body_saw_w = globalThis.__w_side_effect;
+//#endregion
+export { P, V, util };
+
+```
+
+## w.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region w.js
+function P() {
+	return "v18";
+}
+var V;
+var init_w = __esmMin((() => {
+	globalThis.__w_side_effect = "ran";
+	V = "v18";
+}));
+//#endregion
+export { V as n, init_w as r, P as t };
+
+```

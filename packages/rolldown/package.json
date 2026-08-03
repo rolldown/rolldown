@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",
@@ -34,6 +34,7 @@
   "types": "./dist/index.d.mts",
   "imports": {
     "#default-runtime": "./dist/experimental-default-runtime.mjs",
+    "#runtime": "./dist/experimental-runtime.mjs",
     "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
   },
   "exports": {

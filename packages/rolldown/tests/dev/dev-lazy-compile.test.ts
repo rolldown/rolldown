@@ -2,7 +2,7 @@ import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { InputOptions, OutputOptions } from 'rolldown';
+import type { InputOptions, OutputOptions, Plugin } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map';
@@ -285,6 +285,83 @@ test(
     expect(seenTransformIds.some((id) => id.endsWith('lazy.js'))).toBe(true);
     expect(seenModuleParsedIds.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
     expect(seenModuleParsedIds.some((id) => id.endsWith('lazy.js'))).toBe(true);
+  },
+);
+
+// A virtual module behind a lazy proxy must stay loadable: re-resolving the proxy id
+// (`\0virtual:lazy-me?rolldown-lazy=1`) is claimed by the lazy compilation plugin itself
+// and never reaches user `resolveId` hooks, which only recognize the bare id.
+test(
+  'lazy proxy ids resolve without reaching user resolveId hooks',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-virtual-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const main = path.join(dir, 'main.js');
+    fs.writeFileSync(main, `globalThis.load = () => import('virtual:lazy-me');\n`);
+
+    const virtualId = '\0virtual:lazy-me';
+    const lazyProxyId = `${virtualId}?rolldown-lazy=1`;
+
+    const seenByOwner: string[] = [];
+    const seenByObserver: string[] = [];
+    let resolvedProxyId: string | null | undefined;
+    const virtualOwner: Plugin = {
+      name: 'virtual-owner',
+      resolveId(source) {
+        seenByOwner.push(source);
+        if (source === 'virtual:lazy-me' || source === virtualId) {
+          return virtualId;
+        }
+      },
+      load(id) {
+        if (id === virtualId) {
+          return `export const value = 1;\n`;
+        }
+      },
+      // The real module is only parsed once the proxy is fetched, so by now the proxy
+      // id is a registered lazy entry and re-resolving it must work.
+      async moduleParsed(moduleInfo) {
+        if (moduleInfo.id === virtualId) {
+          resolvedProxyId = (await this.resolve(lazyProxyId))?.id;
+        }
+      },
+    };
+    const observer: Plugin = {
+      name: 'observe-resolve-ids',
+      resolveId(source) {
+        seenByObserver.push(source);
+      },
+    };
+
+    const engine = await dev(
+      {
+        input: main,
+        plugins: [virtualOwner, observer],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('c1');
+    const chunk = await engine.compileEntry(lazyProxyId, 'c1');
+
+    expect(chunk.code).toContain('value');
+    expect(resolvedProxyId).toBe(lazyProxyId);
+    expect(seenByOwner.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
+    expect(seenByObserver.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
+    expect(seenByOwner).toContain('virtual:lazy-me');
+    expect(seenByOwner).toContain(virtualId);
   },
 );
 

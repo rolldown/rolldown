@@ -68,6 +68,7 @@ pub mod bundler_options {
         GlobalsOutputOption, PathsOutputOption, PreserveEntrySignatures,
       },
       platform::Platform,
+      plugin_timings_option::PluginTimingsOption,
       resolve_options::ResolveOptions,
       sanitize_filename::SanitizeFilename,
       source_map_type::SourceMapType,

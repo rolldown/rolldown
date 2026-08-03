@@ -282,6 +282,8 @@ pub fn prepare_build_context(
     // treeshaking, so it must be disabled as well.
     raw_treeshake = TreeshakeOptions::Boolean(false);
     experimental.lazy_barrel = Some(false);
+    // Dev rebuilds write only the changed chunks, so cleaning the output
+    // directory would delete chunks the browser can still ask for.
     clean_dir = false;
   }
 

@@ -106,6 +106,7 @@ impl Resolvers {
     let base_resolver = oxc_resolver::Resolver::new_with_file_system(
       file_system,
       oxc_resolver::ResolveOptions {
+        // NOTE: yarn_pnp option affects the underlying fs cache, so it should be consistent for all resolvers
         yarn_pnp: base_options.yarn_pnp,
         ..oxc_resolver::ResolveOptions::default()
       },

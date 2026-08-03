@@ -41,7 +41,7 @@ catalog:
   '@emnapi/core': 2.0.0-alpha.3
   '@emnapi/runtime': 2.0.0-alpha.3
   '@jridgewell/trace-mapping': ^0.3.31
-  '@napi-rs/cli': ^3.8.0
+  '@napi-rs/cli': ^3.8.2
   '@napi-rs/wasm-runtime': ^1.2.2
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
@@ -148,7 +148,7 @@ minimumReleaseAgeExclude:
   - vite-plus
   - vitepress-plugin-feedback-tracker@0.2.0-alpha.1
   - void
-  - '@napi-rs/wasm-runtime@1.2.1 || 1.2.2'
+  - '@napi-rs/wasm-runtime'
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false

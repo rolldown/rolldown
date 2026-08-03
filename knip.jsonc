@@ -61,6 +61,12 @@
         "unused-lib", // fixture dependency in packages/rolldown/tests/behaviors/emit-debug-data
       ],
     },
+    "packages/metrics-lab": {
+      // `lib/*.mjs` are toolkit modules: each exports its own primitives (VLQ decode,
+      // coverage painting, threshold constants) so they stay individually readable and
+      // unit-testable, even where only the module itself consumes them today.
+      "ignoreExportsUsedInFile": true,
+    },
     "packages/rollup-tests": {
       "entry": ["src/**/*.js", "test/**/*.{js,ts}"],
       "ignoreDependencies": [

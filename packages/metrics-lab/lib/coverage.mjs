@@ -23,7 +23,8 @@ import { OBSERVER_JS } from './measure.mjs';
 // --- sourcemap VLQ ---------------------------------------------------------
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-const B64_LOOKUP = new Map([...B64].map((c, i) => [c, i]));
+const B64_LOOKUP = new Map();
+for (let i = 0; i < B64.length; i++) B64_LOOKUP.set(B64[i], i);
 
 function decodeVlqSegment(str) {
   const out = [];
@@ -155,7 +156,7 @@ export function executedIntervals(bounds) {
 }
 
 function overlapBytes(spans, intervals) {
-  const executed = new Array(spans.length).fill(0);
+  const executed = Array.from({ length: spans.length }, () => 0);
   let j = 0;
   for (let i = 0; i < spans.length; i++) {
     const span = spans[i];

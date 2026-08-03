@@ -332,7 +332,12 @@ async function withServerAndBrowser(target, throttleOff, fn, { netScaleFlag = nu
   }
   const server = await startServer(distDir);
   const browser = await launchBrowser({ profileDir: CHROME_PROFILE_DIR });
-  cleanups.push(server.close, browser.close);
+  // Called through their owners: these are the SIGINT cleanups, so a `this` that
+  // went missing would only surface as a leaked browser/port on interrupt.
+  cleanups.push(
+    () => server.close(),
+    () => browser.close(),
+  );
   try {
     let throttle = null;
     if (!throttleOff) {

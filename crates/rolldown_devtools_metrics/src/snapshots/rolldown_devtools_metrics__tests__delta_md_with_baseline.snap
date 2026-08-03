@@ -1,0 +1,77 @@
+---
+source: crates/rolldown_devtools_metrics/src/tests.rs
+expression: "render::render_delta(&report)"
+---
+# Build-over-Build Delta
+
+Machine-readable version: `metrics.json` → `delta` / `baselineDelta`.
+
+## Vs previous build
+
+| Metric | Previous | Current | Δ | Δ% |
+| --- | --- | --- | --- | --- |
+| `build.generate_ms` | 40.0 ms | 40.0 ms | +0 ms | +0.0% |
+| `build.scan_ms` | 60.0 ms | 60.0 ms | +0 ms | +0.0% |
+| `build.total_ms` | 100.0 ms | 100.0 ms | +0 ms | +0.0% |
+| `chunks.duplicated_module_count` | 0 | 0 | +0 | n/a |
+| `modules.count` | 6 | 6 | +0 | +0.0% |
+| `modules.external_count` | 1 | 1 | +0 | +0.0% |
+| `modules.shared_across_entries_count` | 3 | 3 | +0 | +0.0% |
+| `output.asset_count` | 5 | 5 | +0 | +0.0% |
+| `output.chunk_count` | 4 | 4 | +0 | +0.0% |
+| `output.css_bytes` | 400 B | 400 B | +0 B | +0.0% |
+| `output.entry_count` | 3 | 3 | +0 | +0.0% |
+| `output.js_bytes` | 5.7 kB | 6.2 kB | +500 B | +8.6% |
+| `output.max_initial_load_bytes` | 4.4 kB | 4.9 kB | +500 B | +11.1% |
+| `output.other_bytes` | 0 B | 0 B | +0 B | n/a |
+| `output.total_bytes` | 6.1 kB | 6.5 kB | +500 B | +8.1% |
+| `packages.count` | 3 | 3 | +0 | +0.0% |
+| `packages.direct_count` | 1 | 1 | +0 | +0.0% |
+| `packages.duplicate_version_count` | 1 | 1 | +0 | +0.0% |
+| `packages.transitive_count` | 2 | 2 | +0 | +0.0% |
+| `plugins.hook_call_count` | 5 | 5 | +0 | +0.0% |
+| `plugins.hook_noop_call_count` | 3 | 3 | +0 | +0.0% |
+| `plugins.hook_time_ms` | 11.0 ms | 11.0 ms | +0 ms | +0.0% |
+
+### Per-entry initial load
+
+| Entry | Previous | Current | Δ | Δ% |
+| --- | --- | --- | --- | --- |
+| `src/a.ts` | 4.4 kB | 4.9 kB | +500 B | +11.1% |
+| `src/b.ts` | 3.7 kB | 3.7 kB | +0 B | +0.0% |
+| `src/lazy.ts` | 500 B | 500 B | +0 B | +0.0% |
+
+## Vs pinned baseline (`baseline.json`)
+
+| Metric | Previous | Current | Δ | Δ% |
+| --- | --- | --- | --- | --- |
+| `build.generate_ms` | 40.0 ms | 40.0 ms | +0 ms | +0.0% |
+| `build.scan_ms` | 60.0 ms | 60.0 ms | +0 ms | +0.0% |
+| `build.total_ms` | 100.0 ms | 100.0 ms | +0 ms | +0.0% |
+| `chunks.duplicated_module_count` | 0 | 0 | +0 | n/a |
+| `modules.count` | 6 | 6 | +0 | +0.0% |
+| `modules.external_count` | 1 | 1 | +0 | +0.0% |
+| `modules.shared_across_entries_count` | 3 | 3 | +0 | +0.0% |
+| `output.asset_count` | 5 | 5 | +0 | +0.0% |
+| `output.chunk_count` | 4 | 4 | +0 | +0.0% |
+| `output.css_bytes` | 400 B | 400 B | +0 B | +0.0% |
+| `output.entry_count` | 3 | 3 | +0 | +0.0% |
+| `output.js_bytes` | 5.2 kB | 6.2 kB | +1000 B | +18.9% |
+| `output.max_initial_load_bytes` | 3.9 kB | 4.9 kB | +1000 B | +25.0% |
+| `output.other_bytes` | 0 B | 0 B | +0 B | n/a |
+| `output.total_bytes` | 5.6 kB | 6.5 kB | +1000 B | +17.5% |
+| `packages.count` | 3 | 3 | +0 | +0.0% |
+| `packages.direct_count` | 1 | 1 | +0 | +0.0% |
+| `packages.duplicate_version_count` | 1 | 1 | +0 | +0.0% |
+| `packages.transitive_count` | 2 | 2 | +0 | +0.0% |
+| `plugins.hook_call_count` | 5 | 5 | +0 | +0.0% |
+| `plugins.hook_noop_call_count` | 3 | 3 | +0 | +0.0% |
+| `plugins.hook_time_ms` | 11.0 ms | 11.0 ms | +0 ms | +0.0% |
+
+### Per-entry initial load
+
+| Entry | Previous | Current | Δ | Δ% |
+| --- | --- | --- | --- | --- |
+| `src/a.ts` | 3.9 kB | 4.9 kB | +1000 B | +25.0% |
+| `src/b.ts` | 3.7 kB | 3.7 kB | +0 B | +0.0% |
+| `src/lazy.ts` | 500 B | 500 B | +0 B | +0.0% |

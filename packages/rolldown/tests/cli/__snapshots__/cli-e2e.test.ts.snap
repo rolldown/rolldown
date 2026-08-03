@@ -54,6 +54,10 @@ OPTIONS
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
+  --devtools.metricsDelta     Metrics mode: emit a build-over-build delta (default true).
+  --devtools.metricsDir <devtools.metricsDir>Metrics mode: output directory (default node_modules/.rolldown/metrics).
+  --devtools.metricsTopN <devtools.metricsTopN>Metrics mode: upper bound for every top-N list (default 20).
+  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'metrics': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.
   --devtools.sessionId <devtools.sessionId>Used to name the build.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
@@ -203,6 +207,10 @@ OPTIONS
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
+  --devtools.metricsDelta     Metrics mode: emit a build-over-build delta (default true).
+  --devtools.metricsDir <devtools.metricsDir>Metrics mode: output directory (default node_modules/.rolldown/metrics).
+  --devtools.metricsTopN <devtools.metricsTopN>Metrics mode: upper bound for every top-N list (default 20).
+  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'metrics': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.
   --devtools.sessionId <devtools.sessionId>Used to name the build.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
@@ -352,6 +360,10 @@ OPTIONS
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
+  --devtools.metricsDelta     Metrics mode: emit a build-over-build delta (default true).
+  --devtools.metricsDir <devtools.metricsDir>Metrics mode: output directory (default node_modules/.rolldown/metrics).
+  --devtools.metricsTopN <devtools.metricsTopN>Metrics mode: upper bound for every top-N list (default 20).
+  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'metrics': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.
   --devtools.sessionId <devtools.sessionId>Used to name the build.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
@@ -501,6 +513,10 @@ OPTIONS
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
+  --devtools.metricsDelta     Metrics mode: emit a build-over-build delta (default true).
+  --devtools.metricsDir <devtools.metricsDir>Metrics mode: output directory (default node_modules/.rolldown/metrics).
+  --devtools.metricsTopN <devtools.metricsTopN>Metrics mode: upper bound for every top-N list (default 20).
+  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'metrics': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.
   --devtools.sessionId <devtools.sessionId>Used to name the build.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.

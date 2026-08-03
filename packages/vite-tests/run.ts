@@ -6,8 +6,7 @@ import { x } from 'tinyexec';
 const VITE_DIR = path.resolve(import.meta.dirname, '../../vite');
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
 const OVERRIDES = [
-  `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`,
-  `  "@rolldown/pluginutils": ${path.resolve(import.meta.dirname, '../pluginutils')}`
+  `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`
 ];
 
 function printTitle(title: string) {

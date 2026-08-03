@@ -82,7 +82,7 @@ export function minCut(graph, target, protectedEdges = [], sourcesArg = null) {
 
   // If the sink is reachable from the source through INF-capacity edges alone, every cut
   // must include a protected edge — there is no valid cut. Check while caps are pristine.
-  const visited = new Array(total).fill(false);
+  const visited = Array.from({ length: total }, () => false);
   {
     const queue = [source];
     let head = 0;
@@ -103,8 +103,8 @@ export function minCut(graph, target, protectedEdges = [], sourcesArg = null) {
   }
 
   // --- Dinic max-flow ---
-  const level = new Array(total).fill(-1);
-  const iterPtr = new Array(total).fill(0);
+  const level = Array.from({ length: total }, () => -1);
+  const iterPtr = Array.from({ length: total }, () => 0);
 
   const buildLevels = () => {
     level.fill(-1);
@@ -181,7 +181,7 @@ export function minCut(graph, target, protectedEdges = [], sourcesArg = null) {
   // T = nodes that can still reach the sink in the residual graph (reverse BFS). Real
   // edges crossing from the source side (∉T) into T are the last-hop imports, and the
   // min-cut theorem guarantees they are saturated.
-  const canReach = new Array(total).fill(false);
+  const canReach = Array.from({ length: total }, () => false);
   {
     const queue = [sink];
     let head = 0;

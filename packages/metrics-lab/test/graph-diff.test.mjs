@@ -89,12 +89,18 @@ test('module leaving eager via a defer; graph-diff agrees with what-if', () => {
     ['entry'],
   );
   const diff = diffGraphs(before, after);
-  assert.deepEqual(diff.left.map((m) => m.id).sort(), ['charts', 'dep']);
+  assert.deepEqual(
+    diff.left.map((m) => m.id).sort((a, b) => a.localeCompare(b)),
+    ['charts', 'dep'],
+  );
   assert.equal(diff.leftBytes, 1300);
   assert.equal(diff.entered.length, 0);
   // THE cross-check: graph-diff's LEFT set == what-if's predicted removed set on `before`.
   const predicted = whatIf(before, indexOf(before, 'charts'));
-  assert.deepEqual(diff.left.map((m) => m.id).sort(), predicted.removed.map((m) => m.id).sort());
+  assert.deepEqual(
+    diff.left.map((m) => m.id).sort((a, b) => a.localeCompare(b)),
+    predicted.removed.map((m) => m.id).sort((a, b) => a.localeCompare(b)),
+  );
   assert.equal(diff.leftBytes, predicted.removedBytes);
 });
 
@@ -200,25 +206,28 @@ test('exclusion-aware grouping folds entered modules under a changed root, skipp
     ],
     ['entry'],
   );
-  // after: entry -> T -> u -> nd. T and nd are new-eager; u is an UNCHANGED intermediate
-  // on the dominator chain nd -> u -> T (u stays eager, same bytes).
+  // after: entry -> T -> u -> w. T and w are new-eager; u is an UNCHANGED intermediate
+  // on the dominator chain w -> u -> T (u stays eager, same bytes).
   const after = makeGraph(
     [
       { id: 'entry', bytes: 5, imports: [[1, false]] },
       { id: 'T', bytes: 30, imports: [[2, false]] },
       { id: 'u', bytes: 50, imports: [[3, false]] },
-      { id: 'nd', bytes: 70, imports: [] },
+      { id: 'w', bytes: 70, imports: [] },
     ],
     ['entry'],
   );
   const diff = diffGraphs(before, after);
-  assert.deepEqual(diff.entered.map((m) => m.id).sort(), ['T', 'nd']);
+  assert.deepEqual(
+    diff.entered.map((m) => m.id).sort((a, b) => a.localeCompare(b)),
+    ['T', 'w'],
+  );
   // one group rooted at T, holding both changed modules, with u reported as skipped
   assert.equal(diff.enteredGroups.length, 1);
   const g = diff.enteredGroups[0];
   assert.equal(g.rootId, 'T');
   assert.equal(g.count, 2);
-  assert.equal(g.bytes, 100); // T(30) + nd(70)
+  assert.equal(g.bytes, 100); // T(30) + w(70)
   assert.equal(g.skipped, 1); // u
 });
 

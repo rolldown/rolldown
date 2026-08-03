@@ -1,4 +1,66 @@
 
+## [1.2.2] - 2026-08-03
+
+### 🚀 Features
+
+- code-splitting: support inlining of shared deps in dynamic entries (#10526) by @nicolo-ribaudo
+- plugin: time the user callbacks configured on the options (#10509) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- dev: force `cleanDir` off in dev mode (#10579) by @shulaoda
+- dev: keep `?rolldown-lazy` proxy ids out of user `resolveId` hooks (#10580) by @btea
+- initialize re-exported wrapped ESM modules at the entry chunk (#10567) by @hyfdev
+- link: resolve circular star reexports as null (#10445) by @Nic-Polumeyv
+- transform: transformer gate skips newer syntax that oxc can lower (#10564) by @sekyungk
+- code-splitting: materialize consumer-local barrel routing when the order-wrap plan is empty (#10544) by @hyfdev
+- plugin: measure plugin hooks in JavaScript, report them from Rust (#10508) by @IWANABETHATGUY
+- plugin: include external dynamic imports in chunk metadata (#10557) by @hyfdev
+- plugin: report plugin timings after closeBundle has run (#10521) by @IWANABETHATGUY
+- browser: avoid using node builtin modules (#10542) by @sapphi-red
+
+### 🚜 Refactor
+
+- plugin: give the build's own clocks their own type (#10520) by @shulaoda
+
+### 📚 Documentation
+
+- correct stale `buildStart` comment in `ScanStageCache::merge` (#10577) by @shulaoda
+- update outdated pluginutils references (#10574) by @dogledogle
+
+### ⚡ Performance
+
+- external: drop the runtime import from chunks that never wrap (#10517) by @IWANABETHATGUY
+- plugin: clock the build only when it is being measured (#10558) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- vite-tests: drop the dead `@rolldown/pluginutils` pnpm override (#10575) by @IWANABETHATGUY
+- transform: group the transform-target fixtures and say why each exists (#10569) by @IWANABETHATGUY
+- dev: fix hmr-hot-update-hook-vite fixture on Windows (#10565) by @h-a-n-a
+- dev: match Vite's renamed full-reload log (#10547) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update napi (#10576) by @renovate[bot]
+- deps: bump `@napi-rs/wasm-runtime` to 1.2.2 (#10570) by @shulaoda
+- deps: update npm packages (#10583) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to ^0.28.0 (#10588) by @renovate[bot]
+- deps: update taiki-e/install-action action to v2.85.5 (#10587) by @renovate[bot]
+- deps: update codspeedhq/action action to v5 (#10584) by @renovate[bot]
+- deps: update github actions (#10582) by @renovate[bot]
+- deps: update rust crates (#10581) by @renovate[bot]
+- deps: update dependency vite-plus to v0.2.7 (#10568) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.27.14 (#10531) by @renovate[bot]
+- deps: update pnpm to v11.17.0 (#10571) by @renovate[bot]
+- deps: update @napi-rs/wasm-runtime to 1.2.1 (#10545) by @sapphi-red
+
+### ❤️ New Contributors
+
+* @sekyungk made their first contribution in [#10564](https://github.com/rolldown/rolldown/pull/10564)
+* @nicolo-ribaudo made their first contribution in [#10526](https://github.com/rolldown/rolldown/pull/10526)
+
+
 ## [1.2.1] - 2026-07-29
 
 ### 🚀 Features

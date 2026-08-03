@@ -40,7 +40,7 @@ const READY_MENU =
 
 /**
  * Parse a `--ready` spec into a probe descriptor. Throws with the full menu — an
- * unparseable spec is the one error where guessing a default would silently
+ * unparsable spec is the one error where guessing a default would silently
  * measure the wrong moment.
  */
 export function parseReadySpec(spec) {

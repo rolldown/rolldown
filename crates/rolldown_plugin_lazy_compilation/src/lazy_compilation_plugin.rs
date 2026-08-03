@@ -79,6 +79,20 @@ impl Plugin for LazyCompilationPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
+    // Re-resolution of a known proxy id (e.g. the dev server resolving the stub id to
+    // serve a lazy compilation request) is claimed here; unknown proxy ids fall through
+    // and stay unresolvable (cf. the unknown-lazy-id rejection in
+    // `HmrStage::compile_lazy_entry`).
+    if args.specifier.ends_with("?rolldown-lazy=1") && self.lazy_entries.contains(args.specifier) {
+      return Ok(Some(HookResolveIdOutput {
+        id: args.specifier.into(),
+        external: None,
+        normalize_external_id: None,
+        side_effects: None,
+        package_json_path: None,
+      }));
+    }
+
     if matches!(args.kind, ImportKind::DynamicImport) {
       // If the importer is a fetched proxy module, don't create another proxy.
       // This allows the fetched template's `import($MODULE_ID)` to resolve

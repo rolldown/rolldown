@@ -1,0 +1,57 @@
+Cargo.lock
+  s_9884f18bac89b9::t_30fb9f1d89b437 3042,3047
+crates/rolldown_binding/src/options/plugin/config/binding_vite_import_glob_plugin_config.rs
+  s_9884f18bac89b9::t_27134d5084802f 13-17
+crates/rolldown_dev/src/bundle_coordinator.rs
+  s_9884f18bac89b9::t_2d0bb7ff2658d0 499-500,502-518
+crates/rolldown_plugin_vite_import_glob/Cargo.toml
+  s_9884f18bac89b9::t_fc16b89f7bde9b 21,26
+crates/rolldown_plugin_vite_import_glob/src/lib.rs
+  s_9884f18bac89b9::t_30f63b3b178335 1,4-7,9,11-15,17,20-21,24-60,69,77-152,154-161,164-177
+crates/rolldown_plugin_vite_import_glob/src/matcher.rs
+  s_9884f18bac89b9::t_3ad1da5d0ee62a 1-259
+crates/rolldown_plugin_vite_import_glob/src/utils.rs
+  s_9884f18bac89b9::t_f30ac22c39ea61 20-21,32-38,88-92,491-513,526,530-541,701-709
+internal-docs/dev-engine/implementation.md
+  s_9884f18bac89b9::t_1cf691a8c892fd 571-572
+internal-docs/import-meta-glob/design.md
+  s_9884f18bac89b9::t_1f06a2577d8890 1-103
+internal-docs/import-meta-glob/implementation.md
+  s_9884f18bac89b9::t_a39f3c00c35bac 1-134
+knip.jsonc
+  s_9884f18bac89b9::t_67b1d42319fecd 116-124
+packages/test-dev-server/tests/playground/hmr-import-glob/__tests__/hmr-import-glob.spec.ts
+  s_9884f18bac89b9::t_50b9bc042c253e 1-90
+packages/test-dev-server/tests/playground/hmr-import-glob/dev.config.mjs
+  s_9884f18bac89b9::t_832a2e104e3a81 1-19
+packages/test-dev-server/tests/playground/hmr-import-glob/index.html
+  s_9884f18bac89b9::t_49bf055e0ac83b 1-9
+packages/test-dev-server/tests/playground/hmr-import-glob/main.js
+  s_9884f18bac89b9::t_4d62a6d13e94a6 1-25
+packages/test-dev-server/tests/playground/hmr-import-glob/nested/deep/x.js
+  s_9884f18bac89b9::t_8c0c32051f8de7 1
+packages/test-dev-server/tests/playground/hmr-import-glob/package.json
+  s_9884f18bac89b9::t_ca01fb03ed3964 1-12
+packages/test-dev-server/tests/playground/hmr-import-glob/pages/a.js
+  s_9884f18bac89b9::t_71cb3589d9a8e3 1
+packages/test-dev-server/tests/playground/hmr-import-glob/pages/b.js
+  s_9884f18bac89b9::t_9fdb0ca5b5dced 1
+pnpm-lock.yaml
+  s_9884f18bac89b9::t_59a8180ee3b39b 930-935
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5d97f6de5d69c752b8c469d6dc0c99d219e1c36d",
+  "prompts": {},
+  "sessions": {
+    "s_9884f18bac89b9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f727b224-19a0-40d2-afa2-3412a5570143",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

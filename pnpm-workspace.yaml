@@ -35,9 +35,9 @@ overrides:
   vitepress>vite: npm:rolldown-vite@latest
 
 catalog:
-  '@babel/core': ^7.29.7
-  '@babel/preset-env': ^7.29.7
-  '@babel/preset-typescript': ^7.29.7
+  '@babel/core': ^8.0.0
+  '@babel/preset-env': ^8.0.0
+  '@babel/preset-typescript': ^8.0.0
   '@emnapi/core': 2.0.0-alpha.3
   '@emnapi/runtime': 2.0.0-alpha.3
   '@jridgewell/trace-mapping': ^0.3.31
@@ -62,7 +62,7 @@ catalog:
   acorn: ^8.17.0
   astring: ^1.9.0
   cac: ^7.0.0
-  chalk: ^5.3.0
+  chalk: ^6.0.0
   change-case: ^5.4.4
   connect: ^3.7.0
   consola: ^3.4.2
@@ -70,7 +70,7 @@ catalog:
   diff: ^9.0.0
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8
-  execa: ^9.2.0
+  execa: ^10.0.0
   fast-glob: ^3.3.3
   follow-redirects: ^1.15.6
   fresh-import: ^0.2.1
@@ -94,7 +94,7 @@ catalog:
   tinybench: ^6.0.0
   tinyexec: ^1.0.1
   tsx: ^4.22.0
-  typescript: ^6.0.0
+  typescript: ^7.0.0
   unified: ^11.0.5
   valibot: 1.4.2
   vite: ^8.0.0

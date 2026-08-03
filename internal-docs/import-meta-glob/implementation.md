@@ -12,14 +12,14 @@ file back to the module that has to be re-transformed.
 
 ## Concept → file map
 
-| Concept                                          | Location                                                               |
-| ------------------------------------------------ | ---------------------------------------------------------------------- |
-| Plugin, `hotUpdate`                              | `src/lib.rs`                                                           |
-| Predicate table ops, post-build predicate        | `src/matcher.rs`                                                       |
-| AST visit, glob resolution, the walk             | `src/utils.rs`                                                         |
-| `hotUpdate` chain over plugins                   | `crates/rolldown_plugin/src/plugin_driver/watch_hooks.rs`              |
-| Where the chain runs in an HMR round             | `crates/rolldown/src/hmr/hmr_stage.rs`                                 |
-| Watch files → fs watcher (dev)                   | `crates/rolldown_dev/src/bundle_coordinator.rs` (`update_watch_paths`) |
+| Concept                                   | Location                                                               |
+| ----------------------------------------- | ---------------------------------------------------------------------- |
+| Plugin, `hotUpdate`                       | `src/lib.rs`                                                           |
+| Predicate table ops, post-build predicate | `src/matcher.rs`                                                       |
+| AST visit, glob resolution, the walk      | `src/utils.rs`                                                         |
+| `hotUpdate` chain over plugins            | `crates/rolldown_plugin/src/plugin_driver/watch_hooks.rs`              |
+| Where the chain runs in an HMR round      | `crates/rolldown/src/hmr/hmr_stage.rs`                                 |
+| Watch files → fs watcher (dev)            | `crates/rolldown_dev/src/bundle_coordinator.rs` (`update_watch_paths`) |
 
 ## Build-time walk (`utils.rs`)
 

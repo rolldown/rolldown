@@ -1866,11 +1866,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   self.order_cjs_carrier_init_call_expr(key, SPAN)
                 }
               };
-              program.body.push(ast::Statement::new_expression_statement(
-                SPAN,
-                init_expr,
-                self,
-              ));
+              program.body.push(ast::Statement::new_expression_statement(SPAN, init_expr, self));
             }
           }
           let overlay_records = self
@@ -1910,7 +1906,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let call_expr = CallExpression::new_re_export_call(
               self.finalized_expr_for_runtime_symbol("__reExport"),
               importer_namespace_ref,
-              importee_namespace_ref, self
+              importee_namespace_ref,
+              self,
             );
             program.body.push(ast::Statement::new_expression_statement(
               top_stmt.span(),
@@ -1953,10 +1950,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
                 // Same shared obligation gate as the import-declaration path; the statement is
                 // included by construction here.
-                let consumer_local_route = self
-                  .ctx
-                  .order_wrap_state
-                  .is_consumer_local_reexport_route(importee.idx);
+                let consumer_local_route =
+                  self.ctx.order_wrap_state.is_consumer_local_reexport_route(importee.idx);
                 if record_is_init_obligation(
                   ObligationPurpose::Emit,
                   self.ctx.order_wrap_state,
@@ -1984,26 +1979,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     false,
                     false,
                   );
-                  let mut init_expr = ast::Expression::new_call_expression(
-                    SPAN,
-                    wrapper_ref,
-                    None,
-                    [],
-                    false,
-                    self,
-                  );
+                  let mut init_expr =
+                    ast::Expression::new_call_expression(SPAN, wrapper_ref, None, [], false, self);
                   if importee_linking_info.is_tla_or_contains_tla_dependency {
-                    init_expr = ast::Expression::new_await_expression(
-                      SPAN,
-                      init_expr,
-                      self,
-                    );
+                    init_expr = ast::Expression::new_await_expression(SPAN, init_expr, self);
                   }
-                  program.body.push(ast::Statement::new_expression_statement(
-                    SPAN,
-                    init_expr,
-                    self,
-                  ));
+                  program
+                    .body
+                    .push(ast::Statement::new_expression_statement(SPAN, init_expr, self));
                 }
 
                 match importee.exports_kind {
@@ -2025,9 +2008,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       let call_expr = CallExpression::new_re_export_call(
                         self.finalized_expr_for_runtime_symbol("__reExport"),
                         importer_namespace_ref,
-                        importee_namespace_ref, self
+                        importee_namespace_ref,
+                        self,
                       );
-                      let call_expr = Expression::CallExpression(call_expr.into_in(self.allocator()));
+                      let call_expr =
+                        Expression::CallExpression(call_expr.into_in(self.allocator()));
                       // __reExport(exports, otherExports)
                       let stmt = ast::Statement::new_expression_statement(SPAN, call_expr, self);
                       program.body.push(stmt);
@@ -2073,8 +2058,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                           false,
                           self,
                         ),
-                        self.ctx.module.should_consider_node_esm_spec_for_static_import(), self
-                      ), self
+                        self.ctx.module.should_consider_node_esm_spec_for_static_import(),
+                        self,
+                      ),
+                      self,
                     );
 
                     // __reExport(importer_exports, __toESM(require_foo()))
@@ -2166,8 +2153,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               if func.id.is_none() {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
-                func.id =
-                  Some(BindingIdentifier::new_id(SPAN, canonical_name_for_default_export_ref, self));
+                func.id = Some(BindingIdentifier::new_id(
+                  SPAN,
+                  canonical_name_for_default_export_ref,
+                  self,
+                ));
 
                 // When keep_names is enabled, preserve "default" as the function name
                 if self.ctx.options.keep_names {
@@ -2188,8 +2178,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               if class.id.is_none() {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
-                class.id =
-                  Some(BindingIdentifier::new_id(SPAN, canonical_name_for_default_export_ref, self));
+                class.id = Some(BindingIdentifier::new_id(
+                  SPAN,
+                  canonical_name_for_default_export_ref,
+                  self,
+                ));
 
                 // When keep_names is enabled, preserve "default" as the class name
                 // Skip if class has static name property
@@ -2216,25 +2209,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           // Transfer span of ExportDefaultDeclaration to FunctionDeclaration to preserve the
           // comments
           *top_stmt.span_mut() = default_decl_span;
-        } else if matches!(&top_stmt, ast::Statement::ExportNamedDeclaration(named_decl) if named_decl.source.is_none())
-        {
-          let ast::Statement::ExportNamedDeclaration(named_decl) = top_stmt else { unreachable!() };
-          let named_decl_span = named_decl.span;
-          if let Some(mut decl) = named_decl.unbox().declaration {
-            // `export var foo = 1` => `var foo = 1`
-            // `export function foo() {}` => `function foo() {}`
-            // `export class Foo {}` => `class Foo {}`
-
-            *decl.span_mut() = named_decl_span;
-            top_stmt = ast::Statement::from(decl);
-          } else {
-            // `export { foo }`
-            // Remove this statement by ignoring it
-            return;
-          }
-        } else if let Some(named_decl) = top_stmt.as_export_named_declaration_mut() {
+        } else if let ast::Statement::ExportDeclaration(export_decl) = top_stmt {
+          // `export var foo = 1` => `var foo = 1`
+          // `export function foo() {}` => `function foo() {}`
+          // `export class Foo {}` => `class Foo {}`
+          let export_decl_span = export_decl.span;
+          let mut decl = export_decl.unbox().declaration;
+          *decl.span_mut() = export_decl_span;
+          top_stmt = ast::Statement::from(decl);
+        } else if matches!(top_stmt, ast::Statement::ExportNamedDeclaration(_)) {
+          // `export { foo }`
+          // Remove this statement by ignoring it
+          return;
+        } else if let Some(export_from_decl) = top_stmt.as_export_from_declaration_mut() {
           // `export { foo } from 'path'`
-          let rec_idx = self.ctx.module.imports[&named_decl.node_id()];
+          let rec_idx = self.ctx.module.imports[&export_from_decl.node_id()];
           if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
             return;
           }

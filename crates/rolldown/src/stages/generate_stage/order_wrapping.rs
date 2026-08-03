@@ -117,21 +117,17 @@ fn statement_has_no_local_wrapper_body(stmt: &Statement, keep_names: bool) -> bo
       matches!(export.declaration, ExportDefaultDeclarationKind::FunctionDeclaration(_))
         && !keep_names
     }
-    Statement::ExportNamedDeclaration(export) => match &export.declaration {
-      None => true,
-      Some(Declaration::FunctionDeclaration(_)) => !keep_names,
-      Some(_) => false,
+    Statement::ExportDeclaration(export) => match &export.declaration {
+      Declaration::FunctionDeclaration(_) => !keep_names,
+      _ => false,
     },
+    Statement::ExportNamedDeclaration(_) => true,
     _ => false,
   }
 }
 
 fn statement_is_direct_reexport(stmt: &Statement) -> bool {
-  match stmt {
-    Statement::ExportAllDeclaration(_) => true,
-    Statement::ExportNamedDeclaration(export) => export.source.is_some(),
-    _ => false,
-  }
+  matches!(stmt, Statement::ExportAllDeclaration(_) | Statement::ExportFromDeclaration(_))
 }
 
 pub(super) fn synchronous_cycle_modules(modules: &IndexModules) -> FxHashSet<ModuleIdx> {

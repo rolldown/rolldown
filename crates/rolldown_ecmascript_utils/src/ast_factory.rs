@@ -20,7 +20,7 @@ use oxc::{
   ast::{
     ast::{
       Argument, ArrowFunctionBody, ArrowFunctionExpression, AssignmentOperator, AssignmentTarget,
-      BindingIdentifier, BindingPattern, CallExpression, ClassElement, Declaration,
+      BindingIdentifier, BindingPattern, CallExpression, ClassElement,
       ExportDefaultDeclarationKind, ExportSpecifier, Expression, FormalParameter,
       FormalParameterKind, FormalParameters, FunctionBody, FunctionType, IdentifierName,
       ImportDeclarationSpecifier, ImportOrExportKind, MemberExpression, ModuleExportName,
@@ -670,12 +670,8 @@ pub trait StatementFactoryExt<'ast> {
     )
   }
 
-  /// `export { <local> as <exported>, ... };`, optionally with a `declaration`.
-  fn new_export_named_stmt<'a, T, I, B>(
-    declaration: Option<Declaration<'ast>>,
-    specifiers: I,
-    builder: &B,
-  ) -> Statement<'ast>
+  /// `export { <local> as <exported>, ... };`.
+  fn new_export_named_stmt<'a, T, I, B>(specifiers: I, builder: &B) -> Statement<'ast>
   where
     T: AsRef<str> + 'a,
     I: Iterator<Item = (&'a T, &'a (T, bool))>,
@@ -683,7 +679,6 @@ pub trait StatementFactoryExt<'ast> {
   {
     Statement::new_export_named_declaration(
       SPAN,
-      declaration,
       oxc::allocator::Vec::from_iter_in(
         specifiers.into_iter().map(|(local, (exported, legal_ident))| {
           ExportSpecifier::new(
@@ -713,9 +708,7 @@ pub trait StatementFactoryExt<'ast> {
         }),
         builder,
       ),
-      None,
       ImportOrExportKind::Value,
-      None,
       builder,
     )
   }

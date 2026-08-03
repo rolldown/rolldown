@@ -120,102 +120,102 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           program_body.push(stmt);
         }
       }
-      ast::Statement::ExportNamedDeclaration(mut decl) => {
-        if decl.source.is_some() {
-          // export {} from '...'
-          let rec_id = self.module.imports[&decl.node_id()];
-          let rec = &self.module.import_records[rec_id];
-          let Some(importee_idx) = rec.resolved_module else { return };
-          let importee = &self.modules[importee_idx];
-          self.dependencies.insert(importee_idx);
-          let binding_name = self.ensure_static_import_info(importee_idx, rec_id).to_string();
-          self.exports.extend(decl.specifiers.iter().map(|specifier| {
-            ObjectPropertyKind::new_lazy_export_property(
-              &specifier.exported.name(),
-              match &specifier.local {
-                ast::ModuleExportName::IdentifierName(ident) => {
-                  Expression::new_static_member_expression(
-                    SPAN,
-                    Expression::new_id_ref_expr(SPAN, &binding_name, &self.ast_builder),
-                    ast::IdentifierName::new(SPAN, ident.name, &self.ast_builder),
-                    false,
-                    &self.ast_builder,
-                  )
-                }
-                ast::ModuleExportName::StringLiteral(str) => {
-                  Expression::new_computed_member_expression(
-                    SPAN,
-                    Expression::new_id_ref_expr(SPAN, &binding_name, &self.ast_builder),
-                    ast::Expression::new_string_literal(SPAN, str.value, None, &self.ast_builder),
-                    false,
-                    &self.ast_builder,
-                  )
-                }
-                ast::ModuleExportName::IdentifierReference(_) => {
-                  unreachable!(
-                    "ModuleExportName IdentifierReference is invalid in ExportNamedDeclaration with source"
-                  )
-                }
-              },
-              matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_)),
-              &self.ast_builder,
-            )
-          }));
-          if let Some(stmt) = self.create_importee_binding_stmt(importee, &binding_name, decl.span)
-          {
-            program_body.push(stmt);
-          }
-        } else if let Some(declaration) = decl.declaration.take() {
-          match &declaration {
-            ast::Declaration::VariableDeclaration(var_decl) => {
-              // export var foo = 1
-              // export var { foo, bar } = { foo: 1, bar: 2 }
-              self.exports.extend(var_decl.declarations.iter().flat_map(|decl| {
-                decl.id.get_binding_identifiers().into_iter().map(|ident| {
-                  ObjectPropertyKind::new_lazy_export_property(
-                    ident.name.as_str(),
-                    Expression::new_identifier(SPAN, ident.name, &self.ast_builder),
-                    false,
-                    &self.ast_builder,
-                  )
-                })
-              }));
-            }
-            ast::Declaration::FunctionDeclaration(fn_decl) => {
-              // export function foo() {}
-              let id = fn_decl.id.as_ref().unwrap().name;
-              self.exports.push(ObjectPropertyKind::new_lazy_export_property(
-                id.as_str(),
-                Expression::new_identifier(SPAN, id, &self.ast_builder),
-                false,
-                &self.ast_builder,
-              ));
-            }
-            ast::Declaration::ClassDeclaration(cls_decl) => {
-              // export class Foo {}
-              let id = cls_decl.id.as_ref().unwrap().name;
-              self.exports.push(ObjectPropertyKind::new_lazy_export_property(
-                id.as_str(),
-                Expression::new_identifier(SPAN, id, &self.ast_builder),
-                false,
-                &self.ast_builder,
-              ));
-            }
-            _ => unreachable!("doesn't support ts now"),
-          }
-          program_body.push(ast::Statement::from(declaration));
-        } else {
-          // export { foo, bar as bar2 }
-          decl.specifiers.iter().for_each(|specifier| {
-            if let Some(symbol_id) = scoping.get_root_binding(specifier.local.name().into()) {
-              self
-                .named_exports
-                .insert(specifier.exported.name(), NamedExport { local_binding: symbol_id });
-            } else {
-              // TODO: export undefined variable
-            }
-          });
+      ast::Statement::ExportFromDeclaration(decl) => {
+        // export {} from '...'
+        let rec_id = self.module.imports[&decl.node_id()];
+        let rec = &self.module.import_records[rec_id];
+        let Some(importee_idx) = rec.resolved_module else { return };
+        let importee = &self.modules[importee_idx];
+        self.dependencies.insert(importee_idx);
+        let binding_name = self.ensure_static_import_info(importee_idx, rec_id).to_string();
+        self.exports.extend(decl.specifiers.iter().map(|specifier| {
+          ObjectPropertyKind::new_lazy_export_property(
+            &specifier.exported.name(),
+            match &specifier.local {
+              ast::ModuleExportName::IdentifierName(ident) => {
+                Expression::new_static_member_expression(
+                  SPAN,
+                  Expression::new_id_ref_expr(SPAN, &binding_name, &self.ast_builder),
+                  ast::IdentifierName::new(SPAN, ident.name, &self.ast_builder),
+                  false,
+                  &self.ast_builder,
+                )
+              }
+              ast::ModuleExportName::StringLiteral(str) => {
+                Expression::new_computed_member_expression(
+                  SPAN,
+                  Expression::new_id_ref_expr(SPAN, &binding_name, &self.ast_builder),
+                  ast::Expression::new_string_literal(SPAN, str.value, None, &self.ast_builder),
+                  false,
+                  &self.ast_builder,
+                )
+              }
+              ast::ModuleExportName::IdentifierReference(_) => {
+                unreachable!(
+                  "ModuleExportName IdentifierReference is invalid in ExportFromDeclaration"
+                )
+              }
+            },
+            matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_)),
+            &self.ast_builder,
+          )
+        }));
+        if let Some(stmt) = self.create_importee_binding_stmt(importee, &binding_name, decl.span) {
+          program_body.push(stmt);
         }
+      }
+      ast::Statement::ExportDeclaration(decl) => {
+        let declaration = decl.unbox().declaration;
+        match &declaration {
+          ast::Declaration::VariableDeclaration(var_decl) => {
+            // export var foo = 1
+            // export var { foo, bar } = { foo: 1, bar: 2 }
+            self.exports.extend(var_decl.declarations.iter().flat_map(|decl| {
+              decl.id.get_binding_identifiers().into_iter().map(|ident| {
+                ObjectPropertyKind::new_lazy_export_property(
+                  ident.name.as_str(),
+                  Expression::new_identifier(SPAN, ident.name, &self.ast_builder),
+                  false,
+                  &self.ast_builder,
+                )
+              })
+            }));
+          }
+          ast::Declaration::FunctionDeclaration(fn_decl) => {
+            // export function foo() {}
+            let id = fn_decl.id.as_ref().unwrap().name;
+            self.exports.push(ObjectPropertyKind::new_lazy_export_property(
+              id.as_str(),
+              Expression::new_identifier(SPAN, id, &self.ast_builder),
+              false,
+              &self.ast_builder,
+            ));
+          }
+          ast::Declaration::ClassDeclaration(cls_decl) => {
+            // export class Foo {}
+            let id = cls_decl.id.as_ref().unwrap().name;
+            self.exports.push(ObjectPropertyKind::new_lazy_export_property(
+              id.as_str(),
+              Expression::new_identifier(SPAN, id, &self.ast_builder),
+              false,
+              &self.ast_builder,
+            ));
+          }
+          _ => unreachable!("doesn't support ts now"),
+        }
+        program_body.push(ast::Statement::from(declaration));
+      }
+      ast::Statement::ExportNamedDeclaration(decl) => {
+        // export { foo, bar as bar2 }
+        decl.specifiers.iter().for_each(|specifier| {
+          if let Some(symbol_id) = scoping.get_root_binding(specifier.local.name().into()) {
+            self
+              .named_exports
+              .insert(specifier.exported.name(), NamedExport { local_binding: symbol_id });
+          } else {
+            // TODO: export undefined variable
+          }
+        });
       }
       ast::Statement::ExportDefaultDeclaration(decl) => match decl.unbox().declaration {
         ast::ExportDefaultDeclarationKind::FunctionDeclaration(mut function) => {

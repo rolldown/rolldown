@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use oxc::allocator::GetAllocator;
 use oxc::allocator::{Allocator, ReplaceWith, TakeIn};
-use oxc::ast::ast::{self, BindingPattern, Declaration, ImportOrExportKind, Statement};
+use oxc::ast::ast::{self, BindingPattern, Declaration, Statement};
 use oxc::ast::builder::{AstBuilder, GetAstBuilder};
 use oxc::ast_visit::{VisitJsMut, walk_js_mut};
 use oxc::span::{SPAN, Span};
@@ -82,14 +82,9 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
           self,
         );
         if let Some(named_decl_span) = named_decl_span {
-          Statement::new_export_named_declaration(
+          Statement::new_export_declaration(
             if i == 0 { named_decl_span } else { SPAN },
-            Some(Declaration::VariableDeclaration(new_decl)),
-            [],
-            // Since it is `export a = 1, b = 2;`, source should be `None`
-            None,
-            ImportOrExportKind::Value,
-            None,
+            Declaration::VariableDeclaration(new_decl),
             self,
           )
         } else {
@@ -136,14 +131,13 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
     top_level: bool,
   ) -> Option<Vec<Statement<'ast>>> {
     match stmt {
-      Statement::ExportNamedDeclaration(named_decl) => {
-        let named_decl_span = named_decl.span;
-        let Some(Declaration::VariableDeclaration(var_decl)) = named_decl.declaration.as_mut()
-        else {
+      Statement::ExportDeclaration(export_decl) => {
+        let export_decl_span = export_decl.span;
+        let Declaration::VariableDeclaration(var_decl) = &mut export_decl.declaration else {
           return None;
         };
         Self::should_split_var_declaration(var_decl)
-          .then(|| self.split_var_declaration(var_decl, Some(named_decl_span)))
+          .then(|| self.split_var_declaration(var_decl, Some(export_decl_span)))
       }
       Statement::VariableDeclaration(var_decl) => ((top_level || self.keep_names)
         && Self::should_split_var_declaration(var_decl))

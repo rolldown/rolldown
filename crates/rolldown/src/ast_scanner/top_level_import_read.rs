@@ -1,6 +1,6 @@
 use oxc::ast::ast::{
-  ArrowFunctionExpression, CallExpression, ExportNamedDeclaration, Expression, Function,
-  IdentifierReference, Statement,
+  ArrowFunctionExpression, CallExpression, ExportDeclaration, ExportFromDeclaration,
+  ExportNamedDeclaration, Expression, Function, IdentifierReference, Statement,
 };
 use oxc::ast_visit::{VisitJs, walk_js};
 use oxc::semantic::ScopeFlags;
@@ -114,13 +114,14 @@ impl<'ast> VisitJs<'ast> for TopLevelImportReadDetector<'_> {
     }
   }
 
-  // `export { a }` / `export { a } from '...'` forward bindings without reading them. Only the
-  // declaration half of an export (`export const x = imp`) evaluates at module-eval time.
-  fn visit_export_named_declaration(&mut self, it: &ExportNamedDeclaration<'ast>) {
-    if let Some(declaration) = &it.declaration {
-      self.visit_declaration(declaration);
-    }
+  // `export { a }` / `export { a } from '...'` forward bindings without reading them. An export
+  // declaration (`export const x = imp`) evaluates at module-eval time.
+  fn visit_export_declaration(&mut self, it: &ExportDeclaration<'ast>) {
+    self.visit_declaration(&it.declaration);
   }
+
+  fn visit_export_named_declaration(&mut self, _it: &ExportNamedDeclaration<'ast>) {}
+  fn visit_export_from_declaration(&mut self, _it: &ExportFromDeclaration<'ast>) {}
 }
 
 #[cfg(test)]

@@ -53,6 +53,8 @@ let member = StaticMemberExpression::boxed(SPAN, object, property, false, builde
 
 The naming maps mechanically: `alloc_X` → `X::boxed`, a plain value constructor `x` → `X::new`, and an enum constructor → `Enum::new_<variant>` (e.g. `Expression::new_call_expression` builds `Expression::CallExpression`). oxc's constructors are positional; preface a verbose chunk with a comment showing the JS it produces, as oxc itself recommends.
 
+Export construction follows oxc's syntax-specific node split: use `ExportDeclaration` for `export const …` / `export function …`, `ExportNamedDeclaration` for local clauses such as `export { foo }`, and `ExportFromDeclaration` for re-exports such as `export { foo } from "mod"`. Do not recreate the former overloaded shape with optional declaration or source fields; matching the syntax-specific type keeps invalid combinations unrepresentable.
+
 ### Rolldown-specific patterns → `new_*` associated functions on extension traits
 
 For constructions that compose several nodes into a recurring rolldown convention (CJS/ESM interop wrappers, `__toESM` / `__toCommonJS` calls, `.then` chains, …), add a `new_*` associated function to the extension trait for the node type it produces, rather than open-coding it at the call site. All the traits live in one module (`crates/rolldown_ecmascript_utils/src/ast_factory.rs`) and are re-exported from the crate root, so a call site pulls in the ones it needs with a single `use`, imported `as _`:

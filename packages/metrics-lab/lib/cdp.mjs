@@ -108,7 +108,12 @@ export async function launchBrowser({ profileDir }) {
   };
 }
 
-function connect(wsUrl) {
+/**
+ * Flat JSON-RPC client for a DevTools endpoint. Exported because Node's inspector
+ * speaks the same protocol on the same transport — `lib/node/launch.mjs` attaches
+ * to `Debugger listening on ws://…` with this exact client, minus the page domains.
+ */
+export function connect(wsUrl) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(wsUrl);
     let nextId = 1;

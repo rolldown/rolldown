@@ -53,6 +53,55 @@ every build also refreshes the build-side report under `state/rolldown-metrics/`
 `--features a,b`) to point at any other built app; candidates are then advisory
 per-module (the agent finds the import seams itself).
 
+## Server startup mode (node / deno)
+
+Same question — "what does the initial load pay for, and what can leave it?" — asked
+of a process coming up instead of a page loading.
+
+```bash
+node harness.mjs node-scan --entry dist/server.js --ready port:3000
+node harness.mjs node-scan            # target + readiness are remembered
+node harness.mjs node-scan --pin      # make this the fixed reference
+```
+
+| Command                                    | What it does                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node-scan`                                | Timed spawn→ready runs, then two instrumented runs: **what had to execute** to become ready (V8 precise coverage snapshotted at the readiness moment, attributed to source modules through the sourcemap) and **where the pre-ready CPU went** (sampling profile armed while the process is still paused at entry). Then the leads. |
+| `node-measure`                             | Timing only — no instrumented runs.                                                                                                                                                                                                                                                                                                 |
+| `graph` / `what-if` / `cut` / `graph-diff` | Work unchanged on a server build (`--dist <builtDir>` or `--report <dir>`): a top-level import and a render-blocking import are the same edge in the module graph.                                                                                                                                                                  |
+
+**Readiness is part of the target.** A server has no equivalent of first paint, so the
+target declares how it signals "up", and the spec is pinned with it — two scans that
+measured different moments are not comparable.
+
+| `--ready` spec                 | Ready when                                        |
+| ------------------------------ | ------------------------------------------------- |
+| `port:3000`                    | a TCP listener is accepting                       |
+| `stdout:listening on \d+`      | a line matching this regex is printed             |
+| `http://127.0.0.1:3000/health` | an HTTP probe returns 2xx                         |
+| `exit`                         | the process exits 0 (CLIs, lambda-shaped entries) |
+
+Other options: `--cache cold|warm|off`, `--args "..."`, `--exec <bin>` (deno, another
+node), `--cwd <dir>`, `--runs`, `--timeout <seconds>`, `--label`, `--pin`.
+
+Metrics are `runtime.startup_ms`, `runtime.boot_floor_ms` (what an empty script costs on
+this machine) and `runtime.app_startup_ms` (the difference — the part a bundle change can
+actually move), plus the same `delta` / `baselineDelta` shape the browser side writes.
+
+### What this mode does NOT do
+
+- **No throttle.** Server startup does no network I/O, so a throttle would invent a
+  dimension the measurement does not have. There is therefore no net-scale calibration
+  and no cross-scale comparability problem.
+- **The reported timing never runs under the inspector.** `--inspect-brk` shifts startup
+  by tens of ms; the instrumented runs are separate and used for attribution only.
+- **Bun is not supported.** It runs JavaScriptCore, whose inspector is the WebKit
+  protocol and whose profile/coverage formats are not V8's, so attribution cannot work
+  there. Deno is V8 + CDP and rides the same driver via `--exec`.
+- **Edge runtimes cannot be measured this way** — no local process, and cold start is
+  dominated by platform isolate boot. The static half (`graph`, `what-if`, `cut`) still
+  applies to an edge bundle; the measured half does not.
+
 ## The loop protocol (for an agent)
 
 1. **Baseline**: `gen` → `build` → `measure --runs 5 --label baseline` → `baseline`.
@@ -114,7 +163,12 @@ guard catches a defer that broke behavior.
   The signal is the delta between builds under identical conditions.
 - V8 coverage counts a module's top level as executed at evaluation, so real-world
   modules whose weight is top-level data look "used at paint" even if nothing reads
-  them — a known blind spot; judge those by size + manual inspection.
+  them — a known blind spot; judge those by size + manual inspection. The same blind
+  spot applies to `node-scan`'s cold-at-ready list.
+- Server startup readiness discovered by polling (`port:` / `http://`) quantizes to the
+  poll interval. When the addressable time is only a few intervals wide, `node-scan`
+  says so rather than reporting millisecond deltas it cannot resolve — judge byte and
+  module counts there, not milliseconds.
 - `defer`/`undefer` is a marker-block codemod, i.e. demo-app sugar for what an agent
   does on a real codebase: rewriting the import site into a post-paint `import()`.
 - Lab INP is meaningless (no real interaction); field metrics are Phase 3's

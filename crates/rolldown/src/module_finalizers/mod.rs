@@ -12,8 +12,8 @@ use oxc::{
   span::{GetSpan, GetSpanMut, SPAN, Span},
 };
 use rolldown_common::{
-  AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx,
-  ImportRecordMeta, InlineConstMode, MemberExprRefResolution, Module, ModuleIdx,
+  AstScopes, Chunk, ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, ExportsKind,
+  ImportRecordIdx, ImportRecordMeta, InlineConstMode, MemberExprRefResolution, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
   OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolRef, WrapKind,
 };
@@ -40,7 +40,8 @@ use sugar_path::SugarPath;
 
 use crate::esm_init_obligations::{
   ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
-  collect_wrapped_esm_init_targets_for_import_record, record_is_init_obligation,
+  collect_entry_reexported_wrapper_inits, collect_wrapped_esm_init_targets_for_import_record,
+  record_is_init_obligation,
 };
 use crate::stages::generate_stage::order_wrap_state::OrderCjsCarrierKey;
 use crate::utils;
@@ -343,6 +344,44 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       ast::Expression::new_sequence_expression(SPAN, exprs, &ast_builder),
       &ast_builder,
     ))
+  }
+
+  /// Off-strict, initialize the ESM-wrapped modules backing this entry's re-exported bindings
+  /// before the entry module's own body: ESM evaluates dependencies (including re-export
+  /// sources) before the importer's body, but when every connecting statement is tree-shaken no
+  /// statement position owns those `init_*()` calls (issue #10543). Only the missing ones are
+  /// prepended — a module already initialized at an included statement position keeps that call
+  /// (the shared `generated_init_esm_importee_ids` dedup). Facade entry chunks (entry hosted in
+  /// another chunk, so no body renders here) and wrapped entries (their body runs inside the
+  /// wrapper invoked at the chunk tail, after these calls' tail counterparts) take the
+  /// `render_wrapped_entry_chunk` path instead.
+  fn entry_reexported_wrapper_init_prelude(&mut self) -> Vec<Statement<'ast>> {
+    if self.ctx.options.is_strict_execution_order_enabled() {
+      return vec![];
+    }
+    let ChunkKind::EntryPoint { module: entry_id, .. } = self.ctx.chunk.kind else {
+      return vec![];
+    };
+    if entry_id != self.ctx.idx || !matches!(self.ctx.wrapper_mode(), ModuleWrapperMode::None) {
+      return vec![];
+    }
+    let inits = collect_entry_reexported_wrapper_inits(
+      entry_id,
+      self.ctx.linking_info,
+      self.ctx.linking_infos,
+      self.ctx.modules,
+      self.ctx.symbol_db,
+      Some(&self.ctx.chunk.canonical_names),
+    );
+    let mut stmts = vec![];
+    for init in inits {
+      if !self.generated_init_esm_importee_ids.insert(init.owner) {
+        continue;
+      }
+      let init_expr = self.wrapped_esm_init_call_expr(init.owner, SPAN, true, true);
+      stmts.push(ast::Statement::new_expression_statement(SPAN, init_expr, self));
+    }
+    stmts
   }
 
   /// If return true the import stmt should be removed,

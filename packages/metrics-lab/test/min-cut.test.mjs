@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { minCut } from '../lib/min-cut.mjs';
-import { deferAllInto, evalOverrides, whatIf } from '../lib/module-graph.mjs';
+import { evalOverrides, whatIf } from '../lib/module-graph.mjs';
 import { chain, indexOf, makeGraph } from './graph-fixtures.mjs';
 
 const cutIds = (graph, result) =>

@@ -55,6 +55,26 @@ import {
 } from './lib/module-graph.mjs';
 import { minCut } from './lib/min-cut.mjs';
 import { diffGraphs } from './lib/graph-diff.mjs';
+import {
+  POLL_MS,
+  assertReadyPortFree,
+  describeReady,
+  freshCacheDir,
+  parseReadySpec,
+  runEnv,
+} from './lib/node/launch.mjs';
+import {
+  NOISE_FLOOR_MS as NODE_NOISE_FLOOR_MS,
+  NOISE_FLOOR_PCT as NODE_NOISE_FLOOR_PCT,
+  coldModules,
+  gatherStartupSamples,
+  graphIdCandidates,
+  measureBootFloor,
+  profileStartup,
+  startupCoverage,
+  startupProfile,
+  summarizeStartup,
+} from './lib/node/measure.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const APP_DIR = path.join(ROOT, 'app');
@@ -332,7 +352,12 @@ async function withServerAndBrowser(target, throttleOff, fn, { netScaleFlag = nu
   }
   const server = await startServer(distDir);
   const browser = await launchBrowser({ profileDir: CHROME_PROFILE_DIR });
-  cleanups.push(server.close, browser.close);
+  // Called through their owners: these are the SIGINT cleanups, so a `this` that
+  // went missing would only surface as a leaked browser/port on interrupt.
+  cleanups.push(
+    () => server.close(),
+    () => browser.close(),
+  );
   try {
     let throttle = null;
     if (!throttleOff) {
@@ -2236,6 +2261,417 @@ async function cmdServe(argv) {
 
 // --- dispatch ----------------------------------------------------------------
 
+// --- server-runtime startup mode ---------------------------------------------------
+// The browser half of this harness measures a page load; this half measures a process
+// coming up. They share the question — "what does the initial load pay for, and what
+// can leave it?" — and therefore share the whole static half: `graph`, `what-if`, `cut`
+// and `graph-diff` price a deferral identically for a server bundle, because a
+// top-level import and a render-blocking import are the same edge in the module graph.
+// Only the measurement differs, and it differs completely: no navigation, no paint, no
+// transfer, so no throttle (see lib/node/measure.mjs).
+
+const NODE_TARGET_FILE = path.join(STATE_DIR, 'node-target.json');
+const NODE_CACHE_MODES = new Set(['cold', 'warm', 'off']);
+
+const NODE_TARGET_OPTS = {
+  entry: { type: 'string' },
+  ready: { type: 'string' },
+  args: { type: 'string' },
+  exec: { type: 'string' },
+  cache: { type: 'string' },
+  cwd: { type: 'string' },
+};
+
+function nodeTargetPaths(entry) {
+  const dir = path.join(STATE_DIR, 'node', targetSlug(entry));
+  return {
+    dir,
+    metrics: path.join(dir, 'startup-metrics.json'),
+    state: path.join(dir, '.state.json'),
+    baseline: path.join(dir, 'baseline.json'),
+    history: path.join(dir, 'history.jsonl'),
+  };
+}
+
+/**
+ * Resolve (and remember) the server target. Readiness is part of the target, not of a
+ * single invocation: a scan that measured "port 3000 accepting" and a later one that
+ * measured "process exited" are not comparable, so the spec is pinned with the entry
+ * and reused by every later bare command.
+ */
+function resolveNodeTarget(opts) {
+  const sticky = readJson(NODE_TARGET_FILE);
+  const entryArg = opts.entry ?? sticky?.entry;
+  if (!entryArg) {
+    throw new Error(
+      'no server target yet - name the BUILT entry script (the file you deploy) and how it\n' +
+        'signals readiness, e.g.\n' +
+        `  ${CLI} node-scan --entry dist/server.js --ready port:3000\n` +
+        `  ${CLI} node-scan --entry dist/cli.js --ready exit`,
+    );
+  }
+  const entry = path.resolve(entryArg);
+  if (!fs.existsSync(entry)) {
+    throw new Error(
+      `no such entry script: ${entry}\n` +
+        'Build the app first, then aim --entry at the BUILT file. Never change the build to fit\n' +
+        'this tool - aim the tool at the build instead.',
+    );
+  }
+  const readySpec = opts.ready ?? sticky?.ready ?? 'exit';
+  const cache = opts.cache ?? sticky?.cache ?? 'cold';
+  if (!NODE_CACHE_MODES.has(cache)) {
+    throw new Error(`--cache must be one of cold|warm|off (got ${cache}).`);
+  }
+  const target = {
+    entry,
+    dist: path.dirname(entry),
+    readySpec,
+    ready: parseReadySpec(readySpec),
+    args: (opts.args ?? sticky?.args ?? '').split(' ').filter(Boolean),
+    exec: opts.exec ?? sticky?.exec ?? process.execPath,
+    cwd: path.resolve(opts.cwd ?? sticky?.cwd ?? path.dirname(entry)),
+    cache,
+    paths: nodeTargetPaths(entry),
+  };
+  const changed =
+    sticky?.entry !== entry ||
+    sticky?.ready !== readySpec ||
+    sticky?.cache !== cache ||
+    sticky?.exec !== target.exec ||
+    sticky?.cwd !== target.cwd;
+  if (changed) {
+    writeJson(NODE_TARGET_FILE, {
+      entry,
+      ready: readySpec,
+      args: target.args.join(' '),
+      exec: target.exec,
+      cwd: target.cwd,
+      cache,
+      setAtMs: Date.now(),
+    });
+    console.log(`target: ${entry} (ready: ${describeReady(target.ready)}) - remembered`);
+  }
+  return target;
+}
+
+/**
+ * Run options for run `index`. In cold mode every run gets its own empty compile-cache
+ * dir, so each pays full parse+compile the way a fresh container does; warm mode shares
+ * one dir that the warmup run primes.
+ */
+function nodeRunOptsFactory(target, { timeoutMs = 60_000 } = {}) {
+  const slug = targetSlug(target.entry);
+  const shared = target.cache === 'warm' ? freshCacheDir(STATE_DIR, `${slug}-warm`) : null;
+  return (index) => ({
+    execPath: target.exec,
+    entry: target.entry,
+    args: target.args,
+    cwd: target.cwd,
+    ready: target.ready,
+    timeoutMs,
+    env: runEnv({
+      cacheMode: target.cache,
+      cacheDir: target.cache === 'cold' ? freshCacheDir(STATE_DIR, `${slug}-${index}`) : shared,
+    }),
+  });
+}
+
+function nodeEntrySources(target) {
+  const mapFile = `${target.entry}.map`;
+  if (!fs.existsSync(mapFile)) return null;
+  try {
+    return {
+      code: fs.readFileSync(target.entry, 'utf8'),
+      map: JSON.parse(fs.readFileSync(mapFile, 'utf8')),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function nodeModuleGraph(opts, target) {
+  return loadModuleGraph(
+    moduleGraphCandidates({ reportDir: opts.report, demoMetricsDir: null, dist: target.dist }),
+  );
+}
+
+async function cmdNodeMeasure(argv) {
+  const opts = parse(argv, {
+    ...NODE_TARGET_OPTS,
+    // Startup runs cost milliseconds, not the minutes a throttled navigation costs,
+    // so the default sample count is higher than the browser side's.
+    runs: { type: 'string', default: '7' },
+    warmup: { type: 'string', default: '1' },
+    label: { type: 'string', default: '' },
+    pin: { type: 'boolean', default: false },
+    timeout: { type: 'string', default: '60' },
+  });
+  const target = resolveNodeTarget(opts);
+  await assertReadyPortFree(target.ready);
+  const summary = await runNodeTiming(target, {
+    runs: Number(opts.runs),
+    warmup: Number(opts.warmup),
+    timeoutMs: Number(opts.timeout) * 1000,
+  });
+  const { report, hadBaseline } = writeNodeReport(target, summary, { label: opts.label });
+  printNodeSummary(report, hadBaseline);
+  if (opts.pin) pinNodeBaseline(target);
+  console.log(`\nfull report: ${target.paths.metrics}`);
+}
+
+async function runNodeTiming(target, { runs, warmup, timeoutMs }) {
+  const runOptsFor = nodeRunOptsFactory(target, { timeoutMs });
+  process.stderr.write(`boot floor (empty script on this runtime)...\n`);
+  const floor = await measureBootFloor({ execPath: target.exec });
+  const samples = await gatherStartupSamples(runOptsFor, {
+    runs,
+    warmup,
+    onSample: (i, run) =>
+      process.stderr.write(`run ${i + 1}/${runs}: ready in ${ms(run.elapsedMs)}\n`),
+  });
+  return summarizeStartup(samples, {
+    bootFloorMs: floor.length ? floor.sort((a, b) => a - b)[Math.floor(floor.length / 2)] : null,
+    ready: describeReady(target.ready),
+    // Only the polled probes quantize; stdout and exit are observed on the event itself.
+    resolutionMs: target.ready.kind === 'port' || target.ready.kind === 'http' ? POLL_MS : 0,
+  });
+}
+
+function writeNodeReport(target, summary, { label, coverage = null, profile = null }) {
+  const prev = readJson(target.paths.state);
+  const baseline = readJson(target.paths.baseline);
+  const report = {
+    schemaVersion: 1,
+    generatedAtMs: Date.now(),
+    label: label || null,
+    entry: target.entry,
+    ready: describeReady(target.ready),
+    cache: target.cache,
+    runs: summary.runs,
+    metrics: summary.metrics,
+    guard: summary.guard,
+    coverage,
+    profile,
+    delta: prev ? deltaSection(prev.metrics, summary.metrics) : null,
+    baselineDelta: baseline ? deltaSection(baseline.metrics, summary.metrics) : null,
+    samples: summary.samples,
+  };
+  writeJson(target.paths.metrics, report);
+  writeJson(target.paths.state, {
+    schemaVersion: 1,
+    tsMs: report.generatedAtMs,
+    label: report.label,
+    runs: report.runs,
+    ready: report.ready,
+    cache: report.cache,
+    metrics: report.metrics,
+  });
+  fs.appendFileSync(
+    target.paths.history,
+    `${JSON.stringify({
+      tsMs: report.generatedAtMs,
+      label: report.label,
+      metrics: report.metrics,
+      guard: report.guard,
+    })}\n`,
+  );
+  return { report, hadBaseline: Boolean(baseline) };
+}
+
+function pinNodeBaseline(target) {
+  const state = readJson(target.paths.state);
+  if (!state) throw new Error('nothing to pin - run node-scan first');
+  if (state.runs < 3) {
+    throw new Error(
+      `refusing to pin a ${state.runs}-run measurement - a thin median poisons every later delta. Re-run node-scan with the default sample count.`,
+    );
+  }
+  writeJson(target.paths.baseline, state);
+  console.log(`baseline pinned (startup ${ms(state.metrics['runtime.startup_ms'])})`);
+}
+
+function printNodeSummary(report, hadBaseline) {
+  const m = report.metrics;
+  console.log(
+    `\n${report.label ? `[${report.label}] ` : ''}${report.runs} runs, cache ${report.cache}`,
+  );
+  console.log(
+    `startup ${ms(m['runtime.startup_ms'])} (p75 ${ms(m['runtime.startup_p75_ms'])}) | ` +
+      `runtime boot floor ${ms(m['runtime.boot_floor_ms'])} | ` +
+      `app ${ms(m['runtime.app_startup_ms'])} | ready: ${report.ready}`,
+  );
+  const spread = report.guard.spreadPct;
+  console.log(
+    `guard: ${report.guard.allRunsCompleted ? 'PASS' : 'FAIL (a run never became ready)'}` +
+      `${spread > 25 ? ` - WARNING spread ${spread}% across runs: something outside the bundle moves this number, deltas are not trustworthy` : ''}`,
+  );
+  const limited = report.guard.resolutionLimited;
+  if (limited) {
+    console.log(
+      `  note: ${round(limited.appMs)}ms of addressable startup is only a few ${limited.resolutionMs}ms probe intervals wide -` +
+        ' changes smaller than a few ms cannot be resolved by a readiness poll. Judge byte/module counts here, not milliseconds.',
+    );
+  }
+  const base = report.baselineDelta?.['runtime.app_startup_ms'];
+  if (base) {
+    const floor = Math.max(NODE_NOISE_FLOOR_MS, (NODE_NOISE_FLOOR_PCT / 100) * base.prev);
+    const call =
+      Math.abs(base.delta) < floor
+        ? `within noise (floor ${Math.round(floor)}ms) - no effect proven`
+        : base.delta < 0
+          ? 'IMPROVEMENT beyond noise'
+          : 'REGRESSION beyond noise';
+    console.log(
+      `vs pinned baseline: app startup ${base.delta >= 0 ? '+' : ''}${Math.round(base.delta)}ms (${base.pct}%) - ${call}`,
+    );
+  } else if (!hadBaseline) {
+    console.log('no pinned baseline yet - pass --pin to make this the fixed reference');
+  }
+}
+
+// Everything in one go: timed runs, then the two instrumented runs that say where the
+// time went, then the leads. One command per iteration.
+async function cmdNodeScan(argv) {
+  const opts = parse(argv, {
+    ...NODE_TARGET_OPTS,
+    report: { type: 'string' },
+    runs: { type: 'string', default: '7' },
+    warmup: { type: 'string', default: '1' },
+    label: { type: 'string', default: '' },
+    pin: { type: 'boolean', default: false },
+    top: { type: 'string', default: '10' },
+    timeout: { type: 'string', default: '60' },
+  });
+  const target = resolveNodeTarget(opts);
+  await assertReadyPortFree(target.ready);
+  const timeoutMs = Number(opts.timeout) * 1000;
+  const summary = await runNodeTiming(target, {
+    runs: Number(opts.runs),
+    warmup: Number(opts.warmup),
+    timeoutMs,
+  });
+
+  const runOptsFor = nodeRunOptsFactory(target, { timeoutMs });
+  process.stderr.write('coverage run (what had to execute to become ready)...\n');
+  const cov = await startupCoverage(runOptsFor('cov'), { root: target.dist });
+
+  const sources = nodeEntrySources(target);
+  let profile = null;
+  if (sources) {
+    process.stderr.write('profile run (where the pre-ready time went)...\n');
+    const raw = await startupProfile(runOptsFor('prof'));
+    if (raw) {
+      profile = profileStartup(raw, {
+        code: sources.code,
+        map: sources.map,
+        entryUrlSuffix: `/${path.basename(target.entry)}`,
+      });
+    }
+  }
+
+  const { report, hadBaseline } = writeNodeReport(target, summary, {
+    label: opts.label,
+    coverage: {
+      moduleCount: cov.modules.length,
+      totalBytes: cov.modules.reduce((sum, m) => sum + m.totalBytes, 0),
+      readyBytes: cov.modules.reduce((sum, m) => sum + m.readyBytes, 0),
+      externalScriptCount: cov.externalScriptCount,
+      modules: cov.modules,
+      scripts: cov.scripts,
+    },
+    profile: profile
+      ? { totalMs: profile.totalMs, ownership: profile.ownership, rows: profile.rows.slice(0, 40) }
+      : null,
+  });
+  printNodeSummary(report, hadBaseline);
+  printNodeLeads(report, cov, profile, nodeModuleGraph(opts, target), Number(opts.top));
+  if (opts.pin) pinNodeBaseline(target);
+  console.log(`\nfull report: ${target.paths.metrics}`);
+}
+
+/**
+ * The leads, ordered so the first question answered is whether the bundle is the cost
+ * at all. A harness that always produces deferral advice will get deferral work done on
+ * an app whose startup is 80% native addon loading — and the number will not move.
+ */
+function printNodeLeads(report, cov, profile, graph, top) {
+  if (profile) {
+    const own = profile.ownership;
+    console.log(
+      `\npre-ready CPU ${round(own.accountedMs)}ms: app modules ${round(own.appMs)}ms (${own.appShare ?? 0}%), ` +
+        `runtime/native ${round(own.runtimeMs)}ms, engine ${round(own.engineMs)}ms`,
+    );
+    if ((own.appShare ?? 0) < 25) {
+      console.log(
+        '  the bundle is NOT the main cost here - most pre-ready time is outside your modules',
+      );
+      console.log(
+        '  (native addon load, TLS/crypto init, a DB or socket handshake). Deferring imports will',
+      );
+      console.log('  not move startup until that work moves. Top non-app frames:');
+      for (const row of profile.rows.filter((r) => !r.bucket.startsWith('(engine')).slice(0, 5)) {
+        console.log(`    ${String(round(row.ms)).padStart(7)}ms  ${row.bucket}`);
+      }
+    } else {
+      console.log('  top self-time before ready:');
+      for (const row of profile.rows.slice(0, Math.min(top, 8))) {
+        console.log(`    ${String(round(row.ms)).padStart(7)}ms  ${row.bucket}`);
+      }
+    }
+  } else {
+    console.log(
+      `\n(no boot profile: ${path.basename(report.entry)}.map is missing - build with sourcemaps to attribute pre-ready CPU to modules)`,
+    );
+  }
+
+  const cold = coldModules(cov.modules);
+  const totalBytes = cov.modules.reduce((sum, m) => sum + m.totalBytes, 0);
+  const readyBytes = cov.modules.reduce((sum, m) => sum + m.readyBytes, 0);
+  console.log(
+    `\nevaluated to become ready: ${kb(readyBytes)} of ${kb(totalBytes)} attributed ` +
+      `(${cov.modules.length} modules; ${cov.externalScriptCount} non-local script(s) not attributed)`,
+  );
+  if (cold.length) {
+    console.log(
+      `\ncold at ready - shipped into the startup path, never executed to get there (${cold.length}):`,
+    );
+    for (const mod of cold.slice(0, top)) {
+      const priced = graph ? priceDeferral(graph, mod.source) : null;
+      console.log(
+        `  ${kb(mod.totalBytes).padStart(10)}  ${mod.source}${priced ? `  -> deferring frees ${kb(priced.removedBytes)} / ${priced.removedCount} module(s)` : ''}`,
+      );
+    }
+    console.log(
+      `  next: ${CLI} what-if <module> prices the exact deferral; move the import into the handler that needs it.`,
+    );
+  } else {
+    console.log(
+      '\ncold at ready: none above the floor - the startup path is not carrying dead weight.',
+    );
+  }
+
+  if (!graph) {
+    console.log(
+      '\n(no module-graph.json: a rolldown devtools-metrics build would price every deferral statically -' +
+        ' set devtools = { mode: "metrics" } and rebuild, then `graph` / `what-if` / `cut` work on this target)',
+    );
+  }
+}
+
+/** Price a coverage-derived module against the build graph (see `graphIdCandidates`). */
+function priceDeferral(graph, source) {
+  for (const form of graphIdCandidates(source)) {
+    const hit = resolveModule(graph, form);
+    if (!hit || hit.ambiguous) continue;
+    const result = whatIf(graph, hit.index);
+    if (result.removedCount) return result;
+  }
+  return null;
+}
+
+const round = (v) => (v == null ? 0 : Math.round(v));
+
 async function cmdHelp() {
   console.log(`browser-loading perf harness - measurement + diagnosis; you drive the loop
 
@@ -2284,6 +2720,29 @@ individual commands (same target rules):
   target [<appDir>] [--demo]                show / set / clear the remembered target
          [--net-scale <1|2|4|8>]            ...and/or pin its throttle net-scale without probing
   gen | build | defer <f> | undefer <f> | status | serve    demo-app helpers (README.md)
+
+server startup mode (node/deno - a process coming up, not a page loading):
+  node-scan --entry dist/server.js --ready port:3000    timed spawn->ready runs + what had to
+                            execute to get there + where the pre-ready CPU went + leads.
+                            The entry and its readiness signal are remembered; later
+                            \`node-scan\` runs bare. --pin makes this the baseline.
+  node-measure              timing only, no instrumented runs
+  --ready <spec>            how the target signals it is up. This is part of the target -
+                            two scans with different specs are not comparable:
+                              port:3000            a TCP listener is accepting
+                              'stdout:ready on'    a line matching this regex is printed
+                              http://127.0.0.1:3000/health   an HTTP probe returns 2xx
+                              exit                 the process exits 0 (CLIs, lambda entries)
+  --cache cold|warm|off     V8 compile cache. cold (default) gives every run an empty cache,
+                            which is what a new container pays; warm shares one primed dir.
+                            Measuring warm by accident measures the cache, not the bundle.
+  --args "..." --exec <bin> --cwd <dir>    argv for the entry / the runtime binary (deno,
+                            an older node) / working directory
+  graph | what-if | cut | graph-diff       work unchanged on a server build - pass
+                            --dist <builtDir> or --report <dir>. A top-level import and a
+                            render-blocking import are the same edge in the module graph.
+  There is no throttle in this mode: server startup does no network I/O, so a throttle
+  would invent a dimension the measurement does not have.
 
 the loop:
   1. build the app; scan --app <appDir> (first scan pins the baseline)
@@ -2335,6 +2794,8 @@ const commands = {
   'graph-diff': cmdGraphDiff,
   baseline: cmdBaseline,
   target: cmdTarget,
+  'node-scan': cmdNodeScan,
+  'node-measure': cmdNodeMeasure,
   defer: (argv) => cmdDefer(argv, 'deferred'),
   undefer: (argv) => cmdDefer(argv, 'baseline'),
   status: cmdStatus,

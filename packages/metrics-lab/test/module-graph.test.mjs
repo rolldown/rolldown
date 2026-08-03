@@ -28,7 +28,7 @@ function oldWhatIf(graph, target, keep = []) {
   let changed = true;
   while (changed) {
     changed = false;
-    for (const v of [...inSet]) {
+    for (const v of Array.from(inSet)) {
       if (v === target) continue;
       const pinned = graph.staticPreds[v].some((p) => !inSet.has(p) || keepSet.has(p));
       if (pinned) {

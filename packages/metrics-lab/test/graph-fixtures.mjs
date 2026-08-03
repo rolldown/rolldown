@@ -20,7 +20,7 @@ export function makeGraph(nodes, entryIds) {
 
   // reverse post-order over static edges from the virtual root
   const postOrder = [];
-  const visited = new Array(n + 1).fill(false);
+  const visited = Array.from({ length: n + 1 }, () => false);
   const stack = [[root, 0]];
   visited[root] = true;
   while (stack.length) {
@@ -38,7 +38,7 @@ export function makeGraph(nodes, entryIds) {
       stack.pop();
     }
   }
-  const rpo = new Array(n + 1).fill(Infinity);
+  const rpo = Array.from({ length: n + 1 }, () => Infinity);
   postOrder
     .slice()
     .reverse()
@@ -54,7 +54,7 @@ export function makeGraph(nodes, entryIds) {
   }
   for (const e of entryIdxs) preds[e].push(root);
 
-  const idom = new Array(n + 1).fill(-1);
+  const idom = Array.from({ length: n + 1 }, () => -1);
   idom[root] = root;
   const intersect = (a0, b0) => {
     let a = a0;
@@ -85,8 +85,8 @@ export function makeGraph(nodes, entryIds) {
     }
   }
 
-  const retainedBytes = new Array(n + 1).fill(0);
-  const retainedCount = new Array(n + 1).fill(0);
+  const retainedBytes = Array.from({ length: n + 1 }, () => 0);
+  const retainedCount = Array.from({ length: n + 1 }, () => 0);
   for (let v = 0; v < n; v++) {
     if (staticReachable(v)) {
       retainedBytes[v] = nodes[v].bytes;
@@ -99,7 +99,7 @@ export function makeGraph(nodes, entryIds) {
     retainedCount[idom[v]] += retainedCount[v];
   }
 
-  const reachAll = new Array(n).fill(false);
+  const reachAll = Array.from({ length: n }, () => false);
   const s2 = [...entryIdxs];
   for (const e of entryIdxs) reachAll[e] = true;
   while (s2.length) {

@@ -33,10 +33,12 @@
 //! Purpose contracts are deliberately *not* identical, and each divergence is encoded (and
 //! justified) on [`ObligationPurpose`] rather than re-derived at call sites.
 
+use oxc_str::CompactStr;
 use rolldown_common::{
-  ChunkIdx, ConstExportMeta, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
-  IndexModules, InlineConstMode, Module, ModuleIdx, NormalModule, ResolvedImportRecord, Specifier,
-  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, WrapKind,
+  ChunkIdx, ConcatenateWrappedModuleKind, ConstExportMeta, ExportsKind, ImportKind,
+  ImportRecordIdx, ImportRecordMeta, IndexModules, InlineConstMode, Module, ModuleIdx,
+  NormalModule, ResolvedImportRecord, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  WrapKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -140,6 +142,106 @@ pub fn reexport_record_owns_hop(
   is_reexport: bool,
 ) -> bool {
   is_reexport && !order_state.is_nested_reexport_record(importer_idx, rec_idx)
+}
+
+/// An ESM-wrapped module whose `init_*` an entry must run because the entry re-exports one of its
+/// bindings (issue #10543).
+pub struct EntryReexportedWrapperInit {
+  pub owner: ModuleIdx,
+  pub wrapper_ref: SymbolRef,
+  /// A TLA-tainted wrapper renders as `await init_*()`. This can only surface in `esm` output:
+  /// the scanner rejects top-level await under every other format
+  /// (`AstScanner::handle_top_level_await`), so a TLA-tainted module never reaches emission
+  /// there.
+  pub tla_tainted: bool,
+}
+
+/// The record-less, off-strict obligation surface: the ESM-wrapped modules backing an entry's
+/// re-exported bindings. Named re-exports resolve symbol-to-symbol, so when every forwarding
+/// statement between the entry and such a module is tree-shaken, none of the record-scoped
+/// consumers above ever sees the obligation — yet ESM semantics require the module to be
+/// evaluated before the entry's bindings are read (issue #10543).
+///
+/// This is the single copy of the walk. Cross-chunk registration
+/// (`collect_depended_symbols`'s entry branch) consumes it with `canonical_names: None` to import
+/// every wrapper the entry may need; emission (the finalizer's entry body prelude and
+/// `render_wrapped_entry_chunk`'s tail path) consumes it with the chunk's assigned names to call
+/// exactly the reachable ones — so "everything emission calls, registration imported" is a fact
+/// about the code rather than two enumerations kept in sync by hand.
+///
+/// Same-chunk owners are deliberately kept: an unwrapped barrel gets no excluded-statement init
+/// metadata at all, so a fully tree-shaken same-chunk chain has no other call site. The one shape
+/// where same-chunk owners are always covered — an entry wrapped by propagation, whose whole
+/// static graph is wrapped with it — is filtered at its call site instead.
+///
+/// Results are in module execution order (dependencies before dependents). Both emission callers
+/// gate on `!is_strict_execution_order_enabled()`: strict execution order routes entry
+/// initialization through order-wrap lowering instead.
+pub fn collect_entry_reexported_wrapper_inits(
+  entry_id: ModuleIdx,
+  entry_meta: &LinkingMetadata,
+  metas: &LinkingMetadataVec,
+  modules: &IndexModules,
+  symbol_db: &SymbolRefDb,
+  canonical_names: Option<&FxHashMap<SymbolRef, CompactStr>>,
+) -> Vec<EntryReexportedWrapperInit> {
+  // Filter before sorting: entries whose exports resolve to no wrapped module at all — the
+  // overwhelmingly common case — should not pay for sorting their whole export map (a dep
+  // optimizer barrel entry can have thousands of exports).
+  let mut qualifying = entry_meta
+    .resolved_exports
+    .iter()
+    .filter_map(|(name, resolved_export)| {
+      if resolved_export.came_from_commonjs {
+        return None;
+      }
+      let canonical_ref = symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref);
+      if canonical_ref.owner == entry_id {
+        return None;
+      }
+      let owner_meta = &metas[canonical_ref.owner];
+      if !matches!(owner_meta.wrap_kind(), WrapKind::Esm)
+        // An inner concatenated module's body runs via its group's shared wrapper; its own
+        // `wrapper_ref` is not a callable declaration (mirrors the finalizer's emission skip).
+        || matches!(
+          owner_meta.concatenated_wrapped_module_kind,
+          ConcatenateWrappedModuleKind::Inner
+        )
+      {
+        return None;
+      }
+      let wrapper_ref = owner_meta.wrapper_ref?;
+      if wrapper_ref == canonical_ref {
+        return None;
+      }
+      let canonical_wrapper_ref = symbol_db.canonical_ref_for(wrapper_ref);
+      // Emission may only call a wrapper the chunk declares or imports; anything else would
+      // render as a dangling identifier. Registration passes `None`: it runs before chunk names
+      // exist and is what makes a wrapper reachable in the first place.
+      if let Some(canonical_names) = canonical_names
+        && !canonical_names.contains_key(&canonical_wrapper_ref)
+      {
+        return None;
+      }
+      Some((name, canonical_ref.owner, wrapper_ref, canonical_wrapper_ref, owner_meta))
+    })
+    .collect::<Vec<_>>();
+  // The export map iterates in hash order; sort the (rare) survivors by export name so the
+  // first-export-wins dedup below is deterministic.
+  qualifying.sort_unstable_by_key(|(name, ..)| *name);
+  let mut seen_wrappers = FxHashSet::default();
+  let mut inits = qualifying
+    .into_iter()
+    .filter_map(|(_, owner, wrapper_ref, canonical_wrapper_ref, owner_meta)| {
+      seen_wrappers.insert(canonical_wrapper_ref).then_some(EntryReexportedWrapperInit {
+        owner,
+        wrapper_ref,
+        tla_tainted: owner_meta.is_tla_or_contains_tla_dependency,
+      })
+    })
+    .collect::<Vec<_>>();
+  inits.sort_unstable_by_key(|init| modules[init.owner].exec_order());
+  inits
 }
 
 pub struct WrappedEsmInitTargetContext<'a> {

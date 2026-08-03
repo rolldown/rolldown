@@ -1,9 +1,0 @@
-{
-  "_comment": "`tsconfig` defaults to auto-discovery, which puts every other fixture on the `Raw` transform options variant. `false` pins the `Normal` variant instead, where the options are resolved once up front, so both variants are covered by the same target.",
-  "config": {
-    "tsconfig": false,
-    "transform": {
-      "target": "es2024"
-    }
-  }
-}

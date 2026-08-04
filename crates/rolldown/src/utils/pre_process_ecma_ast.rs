@@ -299,8 +299,8 @@ impl PreProcessEcmaAst {
 fn function_declaration_stmt_start(stmt: &Statement<'_>) -> Option<u32> {
   match stmt {
     Statement::FunctionDeclaration(decl) => Some(decl.span.start),
-    Statement::ExportNamedDeclaration(e) => match &e.declaration {
-      Some(Declaration::FunctionDeclaration(decl)) => Some(decl.span.start),
+    Statement::ExportDeclaration(e) => match &e.declaration {
+      Declaration::FunctionDeclaration(decl) => Some(decl.span.start),
       _ => None,
     },
     Statement::ExportDefaultDeclaration(e) => match &e.declaration {

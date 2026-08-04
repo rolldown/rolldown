@@ -270,7 +270,7 @@ impl FileEmitter {
         })
         .as_bytes(),
     )
-    // The reference id can be used for import.meta.ROLLDOWN_FILE_URL_referenceId and therefore needs to be a valid identifier.
+    // The reference id can be used for import.meta.ROLLDOWN_FILE_URL_referenceId and therefore needs to only contain characters allowed in identifiers.
     .replace('-', "$")
     .into()
   }
@@ -462,6 +462,7 @@ pub type SharedFileEmitter = Arc<FileEmitter>;
 #[cfg(test)]
 mod tests {
   use super::*;
+  use regex::Regex;
 
   /// Reference ids are the base64url encoding of a 128-bit xxhash (with `-` remapped to `$`),
   /// which is always 22 characters. The `import.meta.ROLLDOWN_FILE_URL_<referenceId>_<urlId>`
@@ -483,6 +484,48 @@ mod tests {
     // Name/file-name-based ids: chunks and explicitly named files, including edge-case inputs.
     for name in ["a", "index.js", "assets/deeply/nested/asset.name.txt", ""] {
       assert_eq!(emitter.assign_reference_id(Some(ArcStr::from(name))).len(), 22, "name={name:?}");
+    }
+  }
+
+  /// Generates a batch of ids and checks the format. Reference ids must contain only characters allowed
+  /// in JS identifiers, but they do not need to conform to the form of a JS identifier (e.g. leading number is allowed)
+  #[test]
+  fn emitted_reference_ids_have_the_expected_format() {
+    let emitter = FileEmitter::new(Arc::new(NormalizedBundlerOptions::default()));
+
+    let reference_ids = (0..64)
+      .map(|n| {
+        let name = format!("asset-{n}.txt");
+        emitter
+          .emit_file(
+            EmittedAsset {
+              name: Some(name.clone()),
+              source: StrOrBytes::Str(format!("payload for asset {n}")),
+              ..Default::default()
+            },
+            Some(FilenameTemplate::new(
+              "assets/[name]-[hash]".to_string(),
+              "output.assetFileNames",
+            )),
+            Some(ArcStr::from(name)),
+          )
+          .unwrap()
+      })
+      .collect::<Vec<_>>();
+
+    assert!(
+      reference_ids.iter().any(|id| id.starts_with(|c: char| c.is_ascii_digit())),
+      "expected at least one reference id to start with a digit, got {reference_ids:?}"
+    );
+
+    // equivalent of `REFERENCE_ID_REGEX` in `packages/rolldown/tests/src/utils.ts`
+    // `\w` in JS is ASCII-only, in rust it is unicode, so we write it out here
+    let reference_id_regex = Regex::new(r"^[A-Za-z0-9_$]+$").unwrap();
+    for id in &reference_ids {
+      assert!(
+        reference_id_regex.is_match(id),
+        "reference id does not match {reference_id_regex}: {id}"
+      );
     }
   }
 }

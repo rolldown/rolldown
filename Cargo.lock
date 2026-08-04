@@ -2683,6 +2683,7 @@ dependencies = [
  "oxc_resolver",
  "oxc_sourcemap",
  "oxc_str",
+ "regex",
  "rolldown_ecmascript",
  "rolldown_error",
  "rolldown_fs",

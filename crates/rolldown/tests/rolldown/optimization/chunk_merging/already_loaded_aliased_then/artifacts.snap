@@ -1,0 +1,112 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+import { t as f0 } from "./vendor.js";
+//#region app.js
+console.log(f0(1));
+const then = "not-a-function";
+const done = import("./lazy.js").then(({ fn }) => {
+	fn();
+});
+//#endregion
+export { done, then as ready };
+
+```
+
+## lazy.js
+
+```js
+import { t as f0 } from "./vendor.js";
+//#region lazy.js
+function fn() {
+	console.log(f0(3));
+}
+//#endregion
+export { fn };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+const done = import("./app.js").then(async (app) => {
+	await app.done;
+	return Object.keys(app).sort();
+});
+//#endregion
+export { done };
+
+```
+
+## vendor.js
+
+```js
+//#region vendor.js
+function f0(x) {
+	return x * 2 + 1;
+}
+//#endregion
+export { f0 as t };
+
+```
+
+# Assets
+
+## app.js
+
+```js
+import { f0 } from "./vendor.js";
+//#region app.js
+console.log(f0(1));
+const then = "not-a-function";
+const done = import("./lazy.js").then(({ fn }) => {
+	fn();
+});
+//#endregion
+export { done, then as ready };
+
+```
+
+## lazy.js
+
+```js
+import { f0 } from "./vendor.js";
+//#region lazy.js
+function fn() {
+	console.log(f0(3));
+}
+//#endregion
+export { fn };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+const done = import("./app.js").then(async (app) => {
+	await app.done;
+	return Object.keys(app).sort();
+});
+//#endregion
+export { done };
+
+```
+
+## vendor.js
+
+```js
+//#region vendor.js
+function f0(x) {
+	return x * 2 + 1;
+}
+//#endregion
+export { f0 };
+
+```
